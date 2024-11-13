@@ -1900,3 +1900,12 @@ func.func @matrix_multiply_scalable(%a: vector<[4]xf64>, %b: vector<4xf64>) {
 
   return
 }
+
+// -----
+
+func.func @flat_transpose_scalable(%arg0: vector<[16]xf32>) -> vector<[16]xf32> {
+  // expected-error @+1 {{'vector.flat_transpose' op operand #0 must be fixed-length vector of signless integer or signed integer or index or floating-point values of ranks 1, but got 'vector<[16]xf32>'}}
+  %0 = vector.flat_transpose %arg0 { rows = 4: i32, columns = 4: i32 }
+     : vector<[16]xf32> -> vector<[16]xf32>
+  return %0 : vector<[16]xf32>
+}

@@ -883,7 +883,8 @@ foreach mx = SchedMxList in {
   let Latency = 3, ReleaseAtCycles = [LMulLat] in {
     defm "" : LMULWriteResMX<"WriteVSHA2CHV", [SiFiveP400VEXQ0], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSHA2CLV", [SiFiveP400VEXQ0], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVSHA2MSV", [SiFiveP400VEXQ0], mx, IsWorstCase>;
+    foreach sew = !listremove(SchedSEWSet<mx>.val, [8, 16]) in
+    defm "" : LMULSEWWriteResMXSEW<"WriteVSHA2MSV", [SiFiveP400VEXQ0], mx, sew, IsWorstCase>;
   }
   // Zvkned
   let Latency = 2, ReleaseAtCycles = [LMulLat] in {
@@ -1213,7 +1214,7 @@ defm "" : LMULReadAdvance<"ReadVGMULV", 0>;
 // Zvknha or Zvknhb
 defm "" : LMULReadAdvance<"ReadVSHA2CHV", 0>;
 defm "" : LMULReadAdvance<"ReadVSHA2CLV", 0>;
-defm "" : LMULReadAdvance<"ReadVSHA2MSV", 0>;
+defm "" : LMULSEWReadAdvance<"ReadVSHA2MSV", 0>;
 // Zvkned
 defm "" : LMULReadAdvance<"ReadVAESMVV", 0>;
 defm "" : LMULReadAdvance<"ReadVAESKF1V", 0>;

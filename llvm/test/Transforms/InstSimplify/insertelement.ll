@@ -122,7 +122,7 @@ unreachable_infloop:
 
 define <4 x i32> @insert_into_splat(i32 %index) {
 ; CHECK-LABEL: @insert_into_splat(
-; CHECK-NEXT:    ret <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    ret <4 x i32> splat (i32 3)
 ;
   %I = insertelement <4 x i32> <i32 3, i32 3, i32 3, i32 3>, i32 3, i32 %index
   ret <4 x i32> %I

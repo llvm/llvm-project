@@ -180,7 +180,7 @@ std::optional<int64_t> getIConstantVRegSExtVal(Register VReg,
                                                const MachineRegisterInfo &MRI);
 
 /// \p VReg is defined by a G_CONSTANT, return the corresponding value.
-APInt getIConstantFromReg(Register VReg, const MachineRegisterInfo &MRI);
+const APInt &getIConstantFromReg(Register VReg, const MachineRegisterInfo &MRI);
 
 /// Simple struct used to hold a constant integer value and a virtual
 /// register.

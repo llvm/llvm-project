@@ -37,8 +37,7 @@ def warn_drv_invalid_arch_name_with_suggestion : Warning<
   "ignoring invalid /arch: argument '%0'; for %select{64|32}1-bit expected one of %2">,
   InGroup<UnusedCommandLineArgument>;
 def warn_drv_avr_mcu_not_specified : Warning<
-  "no target microcontroller specified on command line, cannot "
-  "link standard libraries, please pass -mmcu=<mcu name>">,
+  "no target microcontroller specified, please pass -mmcu=<mcu name>">,
   InGroup<AVRRtlibLinkingQuirks>;
 def warn_drv_avr_libc_not_found: Warning<
   "no avr-libc installation can be found on the system, "

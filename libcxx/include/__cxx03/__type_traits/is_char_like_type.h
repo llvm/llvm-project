@@ -9,10 +9,10 @@
 #ifndef _LIBCPP___TYPE_TRAITS_IS_CHAR_LIKE_TYPE_H
 #define _LIBCPP___TYPE_TRAITS_IS_CHAR_LIKE_TYPE_H
 
-#include <__config>
-#include <__type_traits/conjunction.h>
-#include <__type_traits/is_standard_layout.h>
-#include <__type_traits/is_trivial.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/conjunction.h>
+#include <__cxx03/__type_traits/is_standard_layout.h>
+#include <__cxx03/__type_traits/is_trivial.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

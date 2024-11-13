@@ -408,31 +408,31 @@ namespace std {
 #ifndef _LIBCPP_MDSPAN
 #define _LIBCPP_MDSPAN
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if _LIBCPP_STD_VER >= 23
-#  include <__fwd/mdspan.h>
-#  include <__mdspan/default_accessor.h>
-#  include <__mdspan/extents.h>
-#  include <__mdspan/layout_left.h>
-#  include <__mdspan/layout_right.h>
-#  include <__mdspan/layout_stride.h>
-#  include <__mdspan/mdspan.h>
+#  include <__cxx03/__fwd/mdspan.h>
+#  include <__cxx03/__mdspan/default_accessor.h>
+#  include <__cxx03/__mdspan/extents.h>
+#  include <__cxx03/__mdspan/layout_left.h>
+#  include <__cxx03/__mdspan/layout_right.h>
+#  include <__cxx03/__mdspan/layout_stride.h>
+#  include <__cxx03/__mdspan/mdspan.h>
 #endif
 
-#include <version>
+#include <__cxx03/version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <array>
-#  include <cinttypes>
-#  include <concepts>
-#  include <cstddef>
-#  include <limits>
-#  include <span>
+#  include <__cxx03/array>
+#  include <__cxx03/cinttypes>
+#  include <__cxx03/concepts>
+#  include <__cxx03/cstddef>
+#  include <__cxx03/limits>
+#  include <__cxx03/span>
 #endif
 
 #endif // _LIBCPP_MDSPAN

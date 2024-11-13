@@ -73,7 +73,7 @@ define <2 x i1> @reverse_false_v2i1() {
 }
 
 ; CHECK-LABEL: @reverse_true_v2i1(
-; CHECK-NEXT: ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT: ret <2 x i1> splat (i1 true)
 define <2 x i1> @reverse_true_v2i1() {
   %x = call <2 x i1> @llvm.bitreverse.v2i1(<2 x i1> <i1 true, i1 true>)
   ret <2 x i1> %x

@@ -108,7 +108,8 @@ std::optional<bool> isRefCountable(const clang::CXXRecordDecl *R) {
 }
 
 std::optional<bool> isCheckedPtrCapable(const clang::CXXRecordDecl *R) {
-  return isSmartPtrCompatible(R, "incrementPtrCount", "decrementPtrCount");
+  return isSmartPtrCompatible(R, "incrementCheckedPtrCount",
+                              "decrementCheckedPtrCount");
 }
 
 bool isRefType(const std::string &Name) {
@@ -173,6 +174,16 @@ std::optional<bool> isUncounted(const QualType T) {
   return isUncounted(T->getAsCXXRecordDecl());
 }
 
+std::optional<bool> isUnchecked(const QualType T) {
+  if (auto *Subst = dyn_cast<SubstTemplateTypeParmType>(T)) {
+    if (auto *Decl = Subst->getAssociatedDecl()) {
+      if (isCheckedPtr(safeGetName(Decl)))
+        return false;
+    }
+  }
+  return isUnchecked(T->getAsCXXRecordDecl());
+}
+
 std::optional<bool> isUncounted(const CXXRecordDecl* Class)
 {
   // Keep isRefCounted first as it's cheaper.
@@ -187,7 +198,7 @@ std::optional<bool> isUncounted(const CXXRecordDecl* Class)
 }
 
 std::optional<bool> isUnchecked(const CXXRecordDecl *Class) {
-  if (isCheckedPtr(Class))
+  if (!Class || isCheckedPtr(Class))
     return false; // Cheaper than below
   return isCheckedPtrCapable(Class);
 }
@@ -200,10 +211,24 @@ std::optional<bool> isUncountedPtr(const QualType T) {
   return false;
 }
 
+std::optional<bool> isUncheckedPtr(const QualType T) {
+  if (T->isPointerType() || T->isReferenceType()) {
+    if (auto *CXXRD = T->getPointeeCXXRecordDecl())
+      return isUnchecked(CXXRD);
+  }
+  return false;
+}
+
 std::optional<bool> isUnsafePtr(const QualType T) {
   if (T->isPointerType() || T->isReferenceType()) {
     if (auto *CXXRD = T->getPointeeCXXRecordDecl()) {
-      return isUncounted(CXXRD) || isUnchecked(CXXRD);
+      auto isUncountedPtr = isUncounted(CXXRD);
+      auto isUncheckedPtr = isUnchecked(CXXRD);
+      if (isUncountedPtr && isUncheckedPtr)
+        return *isUncountedPtr || *isUncheckedPtr;
+      if (isUncountedPtr)
+        return *isUncountedPtr;
+      return isUncheckedPtr;
     }
   }
   return false;

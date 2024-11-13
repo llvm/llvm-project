@@ -13,11 +13,10 @@
 #include <__compare/synth_three_way.h>
 #include <__concepts/different_from.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__fwd/array.h>
 #include <__fwd/pair.h>
 #include <__fwd/tuple.h>
-#include <__tuple/sfinae_helpers.h>
-#include <__tuple/tuple_element.h>
 #include <__tuple/tuple_indices.h>
 #include <__tuple/tuple_like_no_subrange.h>
 #include <__tuple/tuple_size.h>
@@ -43,7 +42,6 @@
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/piecewise_construct.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -132,8 +130,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
   };
 
   template <bool _MaybeEnable>
-  using _CheckArgsDep _LIBCPP_NODEBUG =
-      typename conditional< _MaybeEnable, _CheckArgs, __check_tuple_constructor_fail>::type;
+  using _CheckArgsDep _LIBCPP_NODEBUG = __conditional_t<_MaybeEnable, _CheckArgs, void>;
 
   template <bool _Dummy = true, __enable_if_t<_CheckArgsDep<_Dummy>::__enable_default(), int> = 0>
   explicit(!_CheckArgsDep<_Dummy>::__enable_implicit_default()) _LIBCPP_HIDE_FROM_ABI constexpr pair() noexcept(

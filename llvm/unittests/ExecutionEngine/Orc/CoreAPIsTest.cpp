@@ -9,6 +9,7 @@
 #include "OrcTestCommon.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/Testing/Support/Error.h"

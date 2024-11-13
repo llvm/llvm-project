@@ -267,3 +267,399 @@ let Predicates = [HasAMXCOMPLEX, In64BitMode] in {
     }
   } // SchedRW = [WriteSystem]
 }
+
+// AMX-FP8
+let Predicates = [HasAMXFP8, In64BitMode] in {
+  let SchedRW = [WriteSystem] in {
+    let Constraints = "$src1 = $dst" in {
+      class AMX_FP8_BASE<bits<8> Opcode, string Opstr> :
+        I<Opcode, MRMSrcReg4VOp3, (outs TILE:$dst),
+          (ins TILE:$src1, TILE:$src2, TILE:$src3),
+          !strconcat(Opstr, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
+          []>, VEX, VVVV;
+    }
+
+    def TDPBF8PS : AMX_FP8_BASE<0xfd, "tdpbf8ps">, T_MAP5, PS;
+    def TDPBHF8PS : AMX_FP8_BASE<0xfd, "tdpbhf8ps">, T_MAP5, XD;
+    def TDPHBF8PS : AMX_FP8_BASE<0xfd, "tdphbf8ps">, T_MAP5, XS;
+    def TDPHF8PS : AMX_FP8_BASE<0xfd, "tdphf8ps">, T_MAP5, PD;
+
+    let usesCustomInserter = 1 in {
+      // Pseudo instructions, using immediates instead of tile registers.
+      // To be translated to the actual instructions in X86ISelLowering.cpp
+      def PTDPBF8PS : PseudoI<(outs),
+                              (ins u8imm:$src1, u8imm:$src2, u8imm:$src3),
+                              [(int_x86_tdpbf8ps timm:$src1, timm:$src2,
+                                timm:$src3)]>;
+      def PTDPBHF8PS : PseudoI<(outs),
+                               (ins u8imm:$src1, u8imm:$src2, u8imm:$src3),
+                               [(int_x86_tdpbhf8ps timm:$src1, timm:$src2,
+                                 timm:$src3)]>;
+      def PTDPHBF8PS : PseudoI<(outs),
+                               (ins u8imm:$src1, u8imm:$src2, u8imm:$src3),
+                               [(int_x86_tdphbf8ps timm:$src1, timm:$src2,
+                                 timm:$src3)]>;
+      def PTDPHF8PS : PseudoI<(outs),
+                              (ins u8imm:$src1, u8imm:$src2, u8imm:$src3),
+                              [(int_x86_tdphf8ps timm:$src1, timm:$src2,
+                                timm:$src3)]>;
+    }
+
+    let Constraints = "$src4 = $dst" in {
+      def PTDPBF8PSV : PseudoI<(outs TILE:$dst),
+                               (ins GR16:$src1, GR16:$src2, GR16:$src3,
+                                    TILE:$src4, TILE:$src5, TILE:$src6),
+                               [(set TILE:$dst,
+                                (int_x86_tdpbf8ps_internal GR16:$src1,
+                                 GR16:$src2, GR16:$src3, TILE:$src4,
+                                 TILE:$src5, TILE:$src6))]>;
+      def PTDPBHF8PSV : PseudoI<(outs TILE:$dst),
+                               (ins GR16:$src1, GR16:$src2, GR16:$src3,
+                                    TILE:$src4, TILE:$src5, TILE:$src6),
+                               [(set TILE:$dst,
+                                (int_x86_tdpbhf8ps_internal GR16:$src1,
+                                 GR16:$src2, GR16:$src3, TILE:$src4,
+                                 TILE:$src5, TILE:$src6))]>;
+      def PTDPHBF8PSV : PseudoI<(outs TILE:$dst),
+                               (ins GR16:$src1, GR16:$src2, GR16:$src3,
+                                    TILE:$src4, TILE:$src5, TILE:$src6),
+                               [(set TILE:$dst,
+                                (int_x86_tdphbf8ps_internal GR16:$src1,
+                                 GR16:$src2, GR16:$src3, TILE:$src4,
+                                 TILE:$src5, TILE:$src6))]>;
+      def PTDPHF8PSV : PseudoI<(outs TILE:$dst),
+                               (ins GR16:$src1, GR16:$src2, GR16:$src3,
+                                    TILE:$src4, TILE:$src5, TILE:$src6),
+                               [(set TILE:$dst,
+                                (int_x86_tdphf8ps_internal GR16:$src1,
+                                 GR16:$src2, GR16:$src3, TILE:$src4,
+                                 TILE:$src5, TILE:$src6))]>;
+    }
+  }
+}
+
+let Predicates = [HasAMXTILE, In64BitMode], isPseudo = true, SchedRW = [WriteSystem] in {
+  let mayStore = 1 in
+  def PTILEPAIRSTORE : PseudoI<(outs), (ins opaquemem:$src1, TILEPair:$src2), []>;
+  let mayLoad = 1 in
+  def PTILEPAIRLOAD : PseudoI<(outs TILEPair:$dst), (ins opaquemem:$src), []>;
+}
+
+let Predicates = [HasAMXTRANSPOSE, In64BitMode] in {
+  let SchedRW = [WriteSystem] in {
+    def T2RPNTLVWZ0 : I<0x6e, MRMSrcMemFSIB, (outs TILEPair:$dst),
+                        (ins sibmem:$src), "t2rpntlvwz0\t{$src, $dst|$dst, $src}",
+                        []>, VEX, WIG, T8,PS;
+
+    def T2RPNTLVWZ0T1 : I<0x6f, MRMSrcMemFSIB, (outs TILEPair:$dst),
+                          (ins sibmem:$src), "t2rpntlvwz0t1\t{$src, $dst|$dst, $src}",
+                          []>, VEX, T8,PS;
+
+    def T2RPNTLVWZ1 : I<0x6e, MRMSrcMemFSIB, (outs TILEPair:$dst),
+                        (ins sibmem:$src), "t2rpntlvwz1\t{$src, $dst|$dst, $src}",
+                        []>, VEX, T8,PD;
+
+    def T2RPNTLVWZ1T1 : I<0x6f, MRMSrcMemFSIB, (outs TILEPair:$dst),
+                          (ins sibmem:$src), "t2rpntlvwz1t1\t{$src, $dst|$dst, $src}",
+                          []>, VEX, T8,PD;
+
+    def TTRANSPOSED : I<0x5f, MRMSrcReg, (outs TILE:$dst), (ins TILE:$src),
+                        "ttransposed\t{$src, $dst|$dst, $src}", []>, VEX, T8,XS;
+    let isPseudo = true in {
+      def PT2RPNTLVWZ0V : PseudoI<(outs TILEPair:$dst),
+                                  (ins GR16:$src1, GR16:$src2, GR16:$src3, opaquemem:$src4),
+                                  []>;
+      def PT2RPNTLVWZ0T1V : PseudoI<(outs TILEPair:$dst),
+                                  (ins GR16:$src1, GR16:$src2, GR16:$src3, opaquemem:$src4),
+                                  []>;
+      def PT2RPNTLVWZ1V : PseudoI<(outs TILEPair:$dst),
+                                  (ins GR16:$src1, GR16:$src2, GR16:$src3, opaquemem:$src4),
+                                  []>;
+      def PT2RPNTLVWZ1T1V : PseudoI<(outs TILEPair:$dst),
+                                  (ins GR16:$src1, GR16:$src2, GR16:$src3, opaquemem:$src4),
+                                  []>;
+    }
+
+    def PTTRANSPOSEDV : PseudoI<(outs TILE:$dst),
+                                (ins GR16:$src1, GR16:$src2, TILE:$src),
+                                [(set TILE: $dst,
+                                 (int_x86_ttransposed_internal GR16:$src1, GR16:$src2,
+                                  TILE:$src))]>;
+
+    let usesCustomInserter = 1 in {
+      def PT2RPNTLVWZ0 : PseudoI<(outs), (ins u8imm:$dst,
+                                 sibmem:$src1), []>;
+      def PT2RPNTLVWZ0T1 : PseudoI<(outs), (ins u8imm:$dst,
+                                   sibmem:$src1), []>;
+      def PT2RPNTLVWZ1 : PseudoI<(outs), (ins u8imm:$dst,
+                                 sibmem:$src1), []>;
+      def PT2RPNTLVWZ1T1 : PseudoI<(outs), (ins u8imm:$dst,
+                                   sibmem:$src1), []>;
+      def PTTRANSPOSED : PseudoI<(outs), (ins u8imm:$dst, u8imm:$src),
+                                 [(int_x86_ttransposed timm:$dst, timm:$src)]>;
+    }
+  }
+} // HasAMXTILE, HasAMXTRANSPOSE
+
+let Predicates = [HasAMXMOVRS, HasAMXTRANSPOSE, In64BitMode], SchedRW = [WriteSystem] in {
+  def T2RPNTLVWZ0RS   : I<0xf8, MRMSrcMemFSIB, (outs TILEPair:$dst),
+                        (ins sibmem:$src1),
+                        "t2rpntlvwz0rs\t{$src1, $dst|$dst, $src1}",
+                        []>, VEX, T_MAP5;
+  def T2RPNTLVWZ0RST1 : I<0xf9, MRMSrcMemFSIB, (outs TILEPair:$dst),
+                        (ins sibmem:$src1),
+                        "t2rpntlvwz0rst1\t{$src1, $dst|$dst, $src1}",
+                        []>, VEX, T_MAP5;
+  def T2RPNTLVWZ1RS   : I<0xf8, MRMSrcMemFSIB, (outs TILEPair:$dst),
+                        (ins sibmem:$src1),
+                        "t2rpntlvwz1rs\t{$src1, $dst|$dst, $src1}",
+                        []>, VEX, T_MAP5, PD;
+  def T2RPNTLVWZ1RST1 : I<0xf9, MRMSrcMemFSIB, (outs TILEPair:$dst),
+                        (ins sibmem:$src1),
+                        "t2rpntlvwz1rst1\t{$src1, $dst|$dst, $src1}",
+                        []>, VEX, T_MAP5, PD;
+  let isPseudo = true in {
+    def PT2RPNTLVWZ0RSV   : PseudoI<(outs TILEPair:$dst),
+                              (ins GR16:$src1, GR16:$src2, GR16:$src3, opaquemem:$src4),
+                              []>;
+    def PT2RPNTLVWZ0RST1V : PseudoI<(outs TILEPair:$dst),
+                              (ins GR16:$src1, GR16:$src2, GR16:$src3, opaquemem:$src4),
+                              []>;
+    def PT2RPNTLVWZ1RSV   : PseudoI<(outs TILEPair:$dst),
+                              (ins GR16:$src1, GR16:$src2, GR16:$src3, opaquemem:$src4),
+                              []>;
+    def PT2RPNTLVWZ1RST1V : PseudoI<(outs TILEPair:$dst),
+                              (ins GR16:$src1, GR16:$src2, GR16:$src3, opaquemem:$src4),
+                              []>;
+  }
+  let  usesCustomInserter = 1 in {
+    def PT2RPNTLVWZ0RS   : PseudoI<(outs), (ins u8imm:$dst, sibmem:$src1), []>;
+    def PT2RPNTLVWZ0RST1 : PseudoI<(outs), (ins u8imm:$dst, sibmem:$src1), []>;
+    def PT2RPNTLVWZ1RS   : PseudoI<(outs), (ins u8imm:$dst, sibmem:$src1), []>;
+    def PT2RPNTLVWZ1RST1 : PseudoI<(outs), (ins u8imm:$dst, sibmem:$src1), []>;
+  }
+} // HasAMXMOVRS, HasAMXTRANSPOSE
+
+let Predicates = [HasAMXMOVRS, In64BitMode], SchedRW = [WriteSystem] in {
+  def TILELOADDRS : I<0x4a, MRMSrcMemFSIB, (outs TILE:$dst),
+                    (ins sibmem:$src1),
+                    "tileloaddrs\t{$src1, $dst|$dst, $src1}",
+                    []>, VEX, T8, XD;
+  def TILELOADDRST1 : I<0x4a, MRMSrcMemFSIB, (outs TILE:$dst),
+                    (ins sibmem:$src1),
+                    "tileloaddrst1\t{$src1, $dst|$dst, $src1}",
+                    []>, VEX, T8, PD;
+
+  let isPseudo = true, mayLoad = 1 in {
+    def PTILELOADDRSV : PseudoI<(outs TILE:$dst), (ins GR16:$src1,
+                                                  GR16:$src2,
+                                                  opaquemem:$src3), []>;
+    def PTILELOADDRST1V : PseudoI<(outs TILE:$dst), (ins GR16:$src1,
+                                                    GR16:$src2,
+                                                    opaquemem:$src3), []>;
+  }
+
+  let usesCustomInserter = 1, mayLoad = 1 in {
+    def PTILELOADDRS : PseudoI<(outs), (ins u8imm:$src1, sibmem:$src2), []>;
+    def PTILELOADDRST1 : PseudoI<(outs), (ins u8imm:$src1, sibmem:$src2), []>;
+  }
+} // HasAMXMOVRS, In64BitMode
+
+multiclass m_tcvtrowd2ps {
+  let Predicates = [HasAMXAVX512, HasAVX10_2_512, In64BitMode] in {
+    let SchedRW = [WriteSystem] in {
+      def rri : Ii8<0x7, MRMSrcReg, (outs VR512:$dst),
+                    (ins TILE:$src1, i32u8imm:$src2),
+                    "tcvtrowd2ps\t{$src2, $src1, $dst|$dst, $src1, $src2}",
+                    []>, TA,XS, EVEX, EVEX_V512;
+      def rre : I<0x4A, MRMSrcReg4VOp3, (outs VR512:$dst),
+                  (ins TILE:$src1, GR32:$src2),
+                  "tcvtrowd2ps\t{$src2, $src1, $dst|$dst, $src1, $src2}",
+                  []>, T8,XS, EVEX, VVVV, EVEX_V512;
+    }
+  } // HasAMXAVX512, HasAVX10_2_512, In64BitMode
+}
+
+defm TCVTROWD2PS : m_tcvtrowd2ps;
+
+let Predicates = [HasAMXAVX512, HasAVX10_2_512, In64BitMode] in {
+  let SchedRW = [WriteSystem] in {
+    let  usesCustomInserter = 1 in {
+      def PTCVTROWD2PSrri : PseudoI<(outs VR512:$dst), (ins u8imm:$src1, i32u8imm:$src2),
+                                    [(set VR512:$dst, (int_x86_tcvtrowd2ps timm:$src1, imm:$src2))]>;
+      def PTCVTROWD2PSrre : PseudoI<(outs VR512:$dst), (ins u8imm:$src1, GR32:$src2),
+                                    [(set VR512:$dst, (int_x86_tcvtrowd2ps timm:$src1, GR32:$src2))]>;
+    }
+
+    def PTCVTROWD2PSrriV : PseudoI<(outs VR512:$dst),
+                                   (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u8imm:$src4),
+                                    [(set VR512: $dst,
+                                      (int_x86_tcvtrowd2ps_internal GR16:$src1, GR16:$src2,
+                                       TILE:$src3, imm:$src4))]>;
+    def PTCVTROWD2PSrreV : PseudoI<(outs VR512:$dst),
+                                   (ins GR16:$src1, GR16:$src2, TILE:$src3, GR32:$src4),
+                                   [(set VR512: $dst,
+                                     (int_x86_tcvtrowd2ps_internal GR16:$src1, GR16:$src2,
+                                      TILE:$src3, GR32:$src4))]>;
+    def PTCVTROWPS2PBF16HrriV : PseudoI<(outs VR512:$dst),
+                                        (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u8imm:$src4),
+                                        [(set VR512: $dst,
+                                          (int_x86_tcvtrowps2pbf16h_internal GR16:$src1, GR16:$src2,
+                                           TILE:$src3, imm:$src4))]>;
+    def PTCVTROWPS2PBF16HrreV : PseudoI<(outs VR512:$dst),
+                                        (ins GR16:$src1, GR16:$src2, TILE:$src3, GR32:$src4),
+                                        [(set VR512: $dst,
+                                          (int_x86_tcvtrowps2pbf16h_internal GR16:$src1, GR16:$src2,
+                                           TILE:$src3, GR32:$src4))]>;
+    def PTCVTROWPS2PBF16LrriV : PseudoI<(outs VR512:$dst),
+                                        (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u8imm:$src4),
+                                        [(set VR512: $dst,
+                                          (int_x86_tcvtrowps2pbf16l_internal GR16:$src1, GR16:$src2,
+                                           TILE:$src3, imm:$src4))]>;
+    def PTCVTROWPS2PBF16LrreV : PseudoI<(outs VR512:$dst),
+                                        (ins GR16:$src1, GR16:$src2, TILE:$src3, GR32:$src4),
+                                        [(set VR512: $dst,
+                                          (int_x86_tcvtrowps2pbf16l_internal GR16:$src1, GR16:$src2,
+                                           TILE:$src3, GR32:$src4))]>;
+    def PTCVTROWPS2PHHrriV : PseudoI<(outs VR512:$dst),
+                                     (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u8imm:$src4),
+                                     [(set VR512: $dst,
+                                       (int_x86_tcvtrowps2phh_internal GR16:$src1, GR16:$src2,
+                                        TILE:$src3, imm:$src4))]>;
+    def PTCVTROWPS2PHHrreV : PseudoI<(outs VR512:$dst),
+                                     (ins GR16:$src1, GR16:$src2, TILE:$src3, GR32:$src4),
+                                     [(set VR512: $dst,
+                                       (int_x86_tcvtrowps2phh_internal GR16:$src1, GR16:$src2,
+                                        TILE:$src3, GR32:$src4))]>;
+    def PTCVTROWPS2PHLrriV : PseudoI<(outs VR512:$dst),
+                                     (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u8imm:$src4),
+                                     [(set VR512: $dst,
+                                       (int_x86_tcvtrowps2phl_internal GR16:$src1, GR16:$src2,
+                                        TILE:$src3, imm:$src4))]>;
+    def PTCVTROWPS2PHLrreV : PseudoI<(outs VR512:$dst),
+                                     (ins GR16:$src1, GR16:$src2, TILE:$src3, GR32:$src4),
+                                     [(set VR512: $dst,
+                                       (int_x86_tcvtrowps2phl_internal GR16:$src1, GR16:$src2,
+                                        TILE:$src3, GR32:$src4))]>;
+  }
+}
+
+multiclass AMXAVX512_BASE<bits<8> Opcode1, bits<8> Opcode2, string Opstr,
+                                Prefix P1, Prefix P2> {
+  let Predicates = [HasAMXAVX512, HasAVX10_2_512, In64BitMode], SchedRW = [WriteSystem] in {
+    let OpPrefix = P1 in
+      def rre : I<Opcode1, MRMSrcReg4VOp3, (outs VR512:$dst),
+                  (ins TILE:$src1, GR32:$src2),
+                  !strconcat(Opstr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+                  []>, EVEX, VVVV, EVEX_V512, T8;
+    let OpPrefix = P2 in
+      def rri : Ii8<Opcode2, MRMSrcReg, (outs VR512:$dst),
+                    (ins TILE:$src1, i32u8imm:$src2),
+                    !strconcat(Opstr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+                    []>, EVEX, EVEX_V512, TA;
+    let usesCustomInserter = 1 in {
+      def "P"#NAME#"rre" : PseudoI<(outs VR512:$dst), (ins u8imm:$src1, GR32:$src2),
+                                   [(set VR512:$dst,
+                                    (!cast<Intrinsic>("int_x86_"#Opstr) timm:$src1, GR32:$src2))]>;
+      def "P"#NAME#"rri" : PseudoI<(outs VR512:$dst), (ins u8imm:$src1, i32u8imm:$src2),
+                                   [(set VR512:$dst,
+                                    (!cast<Intrinsic>("int_x86_"#Opstr) timm:$src1, imm:$src2))]>;
+    }
+  }
+}
+
+defm TCVTROWPS2PHH : AMXAVX512_BASE<0x6d, 0x07, "tcvtrowps2phh", PS, PS>;
+defm TCVTROWPS2PHL : AMXAVX512_BASE<0x6d, 0x77, "tcvtrowps2phl", PD, XD>;
+defm TCVTROWPS2PBF16H : AMXAVX512_BASE<0x6d, 0x07, "tcvtrowps2pbf16h", XD, XD>;
+defm TCVTROWPS2PBF16L : AMXAVX512_BASE<0x6d, 0x77, "tcvtrowps2pbf16l", XS, XS>;
+
+multiclass m_tilemovrow {
+  let Predicates = [HasAMXAVX512, HasAVX10_2_512, In64BitMode] in {
+    let SchedRW = [WriteSystem] in {
+      def rri : Ii8<0x7, MRMSrcReg, (outs VR512:$dst),
+                    (ins TILE:$src1, u8imm:$src2),
+                    "tilemovrow\t{$src2, $src1, $dst|$dst, $src1, $src2}",
+                    []>, TA,PD, EVEX, EVEX_V512;
+      def rre : I<0x4A, MRMSrcReg4VOp3, (outs VR512:$dst),
+                  (ins TILE:$src1, GR32:$src2),
+                  "tilemovrow\t{$src2, $src1, $dst|$dst, $src1, $src2}",
+                  []>, T8,PD, EVEX, VVVV, EVEX_V512;
+    }
+  } // HasAMXAVX512, HasAVX10_2_512, In64BitMode
+}
+
+defm TILEMOVROW : m_tilemovrow;
+
+let Predicates = [HasAMXAVX512, HasAVX10_2_512, In64BitMode] in {
+  let SchedRW = [WriteSystem] in {
+    let  usesCustomInserter = 1 in {
+      def PTILEMOVROWrri : PseudoI<(outs VR512:$dst), (ins u8imm:$src1, i32u8imm:$src2),
+                                   [(set VR512:$dst, (int_x86_tilemovrow timm:$src1, imm:$src2))]>;
+      def PTILEMOVROWrre : PseudoI<(outs VR512:$dst), (ins u8imm:$src1, GR32:$src2),
+                                   [(set VR512:$dst, (int_x86_tilemovrow timm:$src1, GR32:$src2))]>;
+    }
+
+    def PTILEMOVROWrriV : PseudoI<(outs VR512:$dst),
+                                  (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u8imm:$src4),
+                                  [(set VR512: $dst,
+                                    (int_x86_tilemovrow_internal GR16:$src1, GR16:$src2,
+                                     TILE:$src3, imm:$src4))]>;
+    def PTILEMOVROWrreV : PseudoI<(outs VR512:$dst),
+                                  (ins GR16:$src1, GR16:$src2, TILE:$src3, GR32:$src4),
+                                  [(set VR512: $dst,
+                                    (int_x86_tilemovrow_internal GR16:$src1, GR16:$src2,
+                                     TILE:$src3, GR32:$src4))]>;
+  }
+}
+
+let Predicates = [HasAMXTF32, In64BitMode] in {
+  let SchedRW = [WriteSystem] in {
+    let Constraints = "$src1 = $dst" in {
+      def TMMULTF32PS: I<0x48, MRMSrcReg4VOp3, (outs TILE:$dst),
+                         (ins TILE:$src1, TILE:$src2, TILE:$src3),
+                         "tmmultf32ps\t{$src3, $src2, $dst|$dst, $src2, $src3}",
+                         []>, VEX, VVVV, T8, PD;
+    }
+    let Constraints = "$src4 = $dst" in {
+      def PTMMULTF32PSV : PseudoI<(outs TILE:$dst),
+                                  (ins GR16:$src1, GR16:$src2, GR16:$src3,
+                                   TILE:$src4, TILE:$src5, TILE:$src6),
+                                  [(set TILE:$dst,
+                                    (int_x86_tmmultf32ps_internal GR16:$src1,
+                                     GR16:$src2, GR16:$src3, TILE:$src4,
+                                     TILE:$src5, TILE:$src6))]>;
+    }
+    let usesCustomInserter = 1 in {
+      def PTMMULTF32PS : PseudoI<(outs),
+                                 (ins u8imm:$src1, u8imm:$src2, u8imm:$src3),
+                                 [(int_x86_tmmultf32ps timm:$src1, timm:$src2,
+                                   timm:$src3)]>;
+    }
+  } // SchedRW = [WriteSystem]
+} // HasAMXTF32
+
+let Predicates = [HasAMXTF32, HasAMXTRANSPOSE, In64BitMode] in {
+  let SchedRW = [WriteSystem] in {
+    let Constraints = "$src1 = $dst" in {
+      def TTMMULTF32PS: I<0x48, MRMSrcReg4VOp3, (outs TILE:$dst),
+                         (ins TILE:$src1, TILE:$src2, TILE:$src3),
+                         "ttmmultf32ps\t{$src3, $src2, $dst|$dst, $src2, $src3}",
+                         []>, VEX, VVVV, T8, PS;
+    }
+    let Constraints = "$src4 = $dst" in {
+      def PTTMMULTF32PSV : PseudoI<(outs TILE:$dst),
+                                   (ins GR16:$src1, GR16:$src2, GR16:$src3,
+                                    TILE:$src4, TILE:$src5, TILE:$src6),
+                                   [(set TILE:$dst,
+                                     (int_x86_ttmmultf32ps_internal GR16:$src1,
+                                      GR16:$src2, GR16:$src3, TILE:$src4,
+                                      TILE:$src5, TILE:$src6))]>;
+    }
+    let usesCustomInserter = 1 in {
+      def PTTMMULTF32PS : PseudoI<(outs),
+                                  (ins u8imm:$src1, u8imm:$src2, u8imm:$src3),
+                                  [(int_x86_ttmmultf32ps timm:$src1, timm:$src2,
+                                    timm:$src3)]>;
+    }
+  } // SchedRW = [WriteSystem]
+} // HasAMXTF32, HasAMXTRANSPOSE

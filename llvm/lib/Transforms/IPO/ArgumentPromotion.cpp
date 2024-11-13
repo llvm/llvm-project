@@ -336,9 +336,9 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     }
 
     // There potentially are metadata uses for things like llvm.dbg.value.
-    // Replace them with undef, after handling the other regular uses.
-    auto RauwUndefMetadata = make_scope_exit(
-        [&]() { Arg.replaceAllUsesWith(UndefValue::get(Arg.getType())); });
+    // Replace them with poison, after handling the other regular uses.
+    auto RauwPoisonMetadata = make_scope_exit(
+        [&]() { Arg.replaceAllUsesWith(PoisonValue::get(Arg.getType())); });
 
     if (Arg.use_empty())
       continue;

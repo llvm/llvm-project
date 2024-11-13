@@ -44,7 +44,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 32;
+const unsigned VERSION_MAJOR = 33;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -2005,6 +2005,7 @@ enum StmtCode {
   // OpenACC Constructs/Exprs
   STMT_OPENACC_COMPUTE_CONSTRUCT,
   STMT_OPENACC_LOOP_CONSTRUCT,
+  STMT_OPENACC_COMBINED_CONSTRUCT,
   EXPR_OPENACC_ASTERISK_SIZE,
 
   // HLSL Constructs

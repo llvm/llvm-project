@@ -9,24 +9,24 @@
 #ifndef _LIBCPP___ALGORITHM_RANGES_COPY_N_H
 #define _LIBCPP___ALGORITHM_RANGES_COPY_N_H
 
-#include <__algorithm/copy.h>
-#include <__algorithm/in_out_result.h>
-#include <__algorithm/iterator_operations.h>
-#include <__algorithm/ranges_copy.h>
-#include <__config>
-#include <__functional/identity.h>
-#include <__iterator/concepts.h>
-#include <__iterator/incrementable_traits.h>
-#include <__iterator/unreachable_sentinel.h>
-#include <__iterator/wrap_iter.h>
-#include <__utility/move.h>
+#include <__cxx03/__algorithm/copy.h>
+#include <__cxx03/__algorithm/in_out_result.h>
+#include <__cxx03/__algorithm/iterator_operations.h>
+#include <__cxx03/__algorithm/ranges_copy.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/identity.h>
+#include <__cxx03/__iterator/concepts.h>
+#include <__cxx03/__iterator/incrementable_traits.h>
+#include <__cxx03/__iterator/unreachable_sentinel.h>
+#include <__cxx03/__iterator/wrap_iter.h>
+#include <__cxx03/__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

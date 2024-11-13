@@ -136,7 +136,7 @@ bool isValidLoopInterchangePermutation(ArrayRef<AffineForOp> loops,
 /// to inner. Returns the position in `inputNest` of the AffineForOp that
 /// becomes the new outermost loop of this nest. This method always succeeds,
 /// asserts out on invalid input / specifications.
-unsigned permuteLoops(MutableArrayRef<AffineForOp> inputNest,
+unsigned permuteLoops(ArrayRef<AffineForOp> inputNest,
                       ArrayRef<unsigned> permMap);
 
 // Sinks all sequential loops to the innermost levels (while preserving

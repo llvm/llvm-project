@@ -722,7 +722,7 @@ unsigned AArch64TargetInfo::multiVersionFeatureCost() const {
 bool AArch64TargetInfo::doesFeatureAffectCodeGen(StringRef Name) const {
   // FMV extensions which imply no backend features do not affect codegen.
   if (auto Ext = llvm::AArch64::parseFMVExtension(Name))
-    return !Ext->Features.empty();
+    return Ext->ID.has_value();
   return false;
 }
 
@@ -1714,7 +1714,7 @@ void DarwinAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
   if (Triple.isArm64e())
     Builder.defineMacro("__arm64e__", "1");
 
-  getDarwinDefines(Builder, Opts, Triple, PlatformName, PlatformMinVersion);
+  DarwinTargetInfo<AArch64leTargetInfo>::getOSDefines(Opts, Triple, Builder);
 }
 
 TargetInfo::BuiltinVaListKind

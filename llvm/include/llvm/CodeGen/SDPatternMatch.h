@@ -533,9 +533,7 @@ struct BinaryOpc_match {
       if (!Flags.has_value())
         return true;
 
-      SDNodeFlags TmpFlags = *Flags;
-      TmpFlags.intersectWith(N->getFlags());
-      return TmpFlags == *Flags;
+      return (*Flags & N->getFlags()) == *Flags;
     }
 
     return false;
@@ -668,9 +666,7 @@ inline BinaryOpc_match<LHS, RHS, true> m_Or(const LHS &L, const RHS &R) {
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, true> m_DisjointOr(const LHS &L,
                                                     const RHS &R) {
-  SDNodeFlags Flags;
-  Flags.setDisjoint(true);
-  return BinaryOpc_match<LHS, RHS, true>(ISD::OR, L, R, Flags);
+  return BinaryOpc_match<LHS, RHS, true>(ISD::OR, L, R, SDNodeFlags::Disjoint);
 }
 
 template <typename LHS, typename RHS>
@@ -813,9 +809,7 @@ template <typename Opnd_P, bool ExcludeChain = false> struct UnaryOpc_match {
       if (!Flags.has_value())
         return true;
 
-      SDNodeFlags TmpFlags = *Flags;
-      TmpFlags.intersectWith(N->getFlags());
-      return TmpFlags == *Flags;
+      return (*Flags & N->getFlags()) == *Flags;
     }
 
     return false;
@@ -848,9 +842,7 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_ZExt(const Opnd &Op) {
 
 template <typename Opnd>
 inline UnaryOpc_match<Opnd> m_NNegZExt(const Opnd &Op) {
-  SDNodeFlags Flags;
-  Flags.setNonNeg(true);
-  return UnaryOpc_match<Opnd>(ISD::ZERO_EXTEND, Op, Flags);
+  return UnaryOpc_match<Opnd>(ISD::ZERO_EXTEND, Op, SDNodeFlags::NonNeg);
 }
 
 template <typename Opnd> inline auto m_SExt(const Opnd &Op) {

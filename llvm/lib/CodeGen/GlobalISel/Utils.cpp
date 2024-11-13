@@ -214,8 +214,8 @@ bool llvm::canReplaceReg(Register DstReg, Register SrcReg,
 
   // Otherwise match if the Src is already a regclass that is covered by the Dst
   // RegBank.
-  return DstRBC.is<const RegisterBank *>() && MRI.getRegClassOrNull(SrcReg) &&
-         DstRBC.get<const RegisterBank *>()->covers(
+  return isa<const RegisterBank *>(DstRBC) && MRI.getRegClassOrNull(SrcReg) &&
+         cast<const RegisterBank *>(DstRBC)->covers(
              *MRI.getRegClassOrNull(SrcReg));
 }
 
@@ -287,7 +287,8 @@ std::optional<APInt> llvm::getIConstantVRegVal(Register VReg,
   return ValAndVReg->Value;
 }
 
-APInt llvm::getIConstantFromReg(Register Reg, const MachineRegisterInfo &MRI) {
+const APInt &llvm::getIConstantFromReg(Register Reg,
+                                       const MachineRegisterInfo &MRI) {
   MachineInstr *Const = MRI.getVRegDef(Reg);
   assert((Const && Const->getOpcode() == TargetOpcode::G_CONSTANT) &&
          "expected a G_CONSTANT on Reg");

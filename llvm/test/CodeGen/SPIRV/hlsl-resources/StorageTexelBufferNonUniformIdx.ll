@@ -1,5 +1,4 @@
-; TODO(pull/110270): verifier, fix G_BITCAST error "bitcast must change type"
-; RUN: llc -O0 -mtriple=spirv1.5-vulkan-library %s -o - | FileCheck %s
+; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv1.5-vulkan-library %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.5-vulkan-library %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: OpCapability Shader

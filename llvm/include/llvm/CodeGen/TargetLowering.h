@@ -2204,6 +2204,11 @@ public:
         "Generic atomicrmw expansion unimplemented on this target");
   }
 
+  /// Perform a cmpxchg expansion using a target-specific method.
+  virtual void emitExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) const {
+    llvm_unreachable("Generic cmpxchg expansion unimplemented on this target");
+  }
+
   /// Perform a bit test atomicrmw using a target-specific intrinsic. This
   /// represents the combined bit test intrinsic which will be lowered at a late
   /// stage by the backend.

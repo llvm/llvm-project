@@ -210,6 +210,12 @@ add_header_library(
 )
 
 add_header_library(
+  complex_type
+  HDRS
+    complex_type.h
+)
+
+add_header_library(
   integer_operations
   HDRS
     integer_operations.h
@@ -236,6 +242,9 @@ add_header_library(
   HDRS
     char_vector.h
   DEPENDS
+    libc.hdr.func.free
+    libc.hdr.func.malloc
+    libc.hdr.func.realloc
     libc.src.__support.common
 )
 

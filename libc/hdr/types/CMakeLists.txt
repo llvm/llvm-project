@@ -1,4 +1,37 @@
 add_proxy_header_library(
+  div_t
+  HDRS
+    div_t.h
+  DEPENDS
+    libc.hdr.stdlib_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.div_t
+    libc.include.stdlib
+)
+
+add_proxy_header_library(
+  ldiv_t
+  HDRS
+    ldiv_t.h
+  DEPENDS
+    libc.hdr.stdlib_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.ldiv_t
+    libc.include.stdlib
+)
+
+add_proxy_header_library(
+  lldiv_t
+  HDRS
+    lldiv_t.h
+  DEPENDS
+    libc.hdr.stdlib_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.lldiv_t
+    libc.include.stdlib
+)
+
+add_proxy_header_library(
   sigset_t
   HDRS
     sigset_t.h
@@ -47,11 +80,19 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  size_t
+  HDRS
+    size_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.size_t
+)
+
+add_proxy_header_library(
   mode_t
   HDRS
     mode_t.h
   DEPENDS
-    ../fcntl_overlay
+    libc.hdr.fcntl_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.mode_t
     libc.include.fcntl

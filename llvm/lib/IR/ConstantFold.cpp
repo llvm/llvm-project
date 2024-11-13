@@ -22,7 +22,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
@@ -902,11 +901,6 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
         Constant *ExtractIdx = ConstantInt::get(Ty, i);
         Constant *LHS = ConstantExpr::getExtractElement(C1, ExtractIdx);
         Constant *RHS = ConstantExpr::getExtractElement(C2, ExtractIdx);
-
-        // If any element of a divisor vector is zero, the whole op is poison.
-        if (Instruction::isIntDivRem(Opcode) && RHS->isNullValue())
-          return PoisonValue::get(VTy);
-
         Constant *Res = ConstantExpr::isDesirableBinOp(Opcode)
                             ? ConstantExpr::get(Opcode, LHS, RHS)
                             : ConstantFoldBinaryInstruction(Opcode, LHS, RHS);

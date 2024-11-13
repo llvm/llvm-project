@@ -131,6 +131,42 @@ defm USMOPA_MPPZZ_D : sme_int_outer_product_i64<0b100, "usmopa", int_aarch64_sme
 defm USMOPS_MPPZZ_D : sme_int_outer_product_i64<0b101, "usmops", int_aarch64_sme_usmops_wide>;
 }
 
+let Predicates = [HasSME2p2] in {
+  defm SMOP4A  : sme_quarter_outer_product_i8_i32<0b0, 0b0, 0b0, "smop4a">;
+  defm SMOP4S  : sme_quarter_outer_product_i8_i32<0b0, 0b0, 0b1, "smop4s">;
+  defm SUMOP4A : sme_quarter_outer_product_i8_i32<0b0, 0b1, 0b0, "sumop4a">;
+  defm SUMOP4S : sme_quarter_outer_product_i8_i32<0b0, 0b1, 0b1, "sumop4s">;
+  defm USMOP4A : sme_quarter_outer_product_i8_i32<0b1, 0b0, 0b0, "usmop4a">;
+  defm USMOP4S : sme_quarter_outer_product_i8_i32<0b1, 0b0, 0b1, "usmop4s">;
+  defm UMOP4A  : sme_quarter_outer_product_i8_i32<0b1, 0b1, 0b0, "umop4a">;
+  defm UMOP4S  : sme_quarter_outer_product_i8_i32<0b1, 0b1, 0b1, "umop4s">;
+
+  defm SMOP4A : sme_quarter_outer_product_i16_i32<0b0, 0b0, "smop4a">;
+  defm SMOP4S : sme_quarter_outer_product_i16_i32<0b0, 0b1, "smop4s">;
+  defm UMOP4A : sme_quarter_outer_product_i16_i32<0b1, 0b0, "umop4a">;
+  defm UMOP4S : sme_quarter_outer_product_i16_i32<0b1, 0b1, "umop4s">;
+}
+
+let Predicates = [HasSME2p2, HasSMEI16I64] in {
+  defm SMOP4A : sme_quarter_outer_product_i64<0b0, 0b0, 0b0, "smop4a">;
+  defm SMOP4S : sme_quarter_outer_product_i64<0b0, 0b0, 0b1, "smop4s">;
+  defm SUMOP4A : sme_quarter_outer_product_i64<0b0, 0b1, 0b0, "sumop4a">;
+  defm SUMOP4S : sme_quarter_outer_product_i64<0b0, 0b1, 0b1, "sumop4s">;
+  defm UMOP4A : sme_quarter_outer_product_i64<0b1, 0b1, 0b0, "umop4a">;
+  defm UMOP4S : sme_quarter_outer_product_i64<0b1, 0b1, 0b1, "umop4s">;
+  defm USMOP4A : sme_quarter_outer_product_i64<0b1, 0b0, 0b0, "usmop4a">;
+  defm USMOP4S : sme_quarter_outer_product_i64<0b1, 0b0, 0b1, "usmop4s">;
+}
+
+let Predicates = [HasSME2p2] in {
+def STMOPA_M2ZZZI_BtoS  : sme_int_sparse_outer_product_i32<0b00100, ZZ_b_mul_r, ZPR8,  "stmopa">;
+def STMOPA_M2ZZZI_HtoS  : sme_int_sparse_outer_product_i32<0b00101, ZZ_h_mul_r, ZPR16, "stmopa">;
+def UTMOPA_M2ZZZI_BtoS  : sme_int_sparse_outer_product_i32<0b11100, ZZ_b_mul_r, ZPR8,  "utmopa">;
+def UTMOPA_M2ZZZI_HtoS  : sme_int_sparse_outer_product_i32<0b10101, ZZ_h_mul_r, ZPR16, "utmopa">;
+def SUTMOPA_M2ZZZI_BtoS : sme_int_sparse_outer_product_i32<0b01100, ZZ_b_mul_r, ZPR8, "sutmopa">;
+def USTMOPA_M2ZZZI_BtoS : sme_int_sparse_outer_product_i32<0b10100, ZZ_b_mul_r, ZPR8, "ustmopa">;
+}
+
 let Predicates = [HasSME] in {
 //===----------------------------------------------------------------------===//
 // Loads and stores
@@ -1035,6 +1071,7 @@ let Predicates = [HasSME2p2, HasSMEF8F32], Uses = [FPMR, FPCR] in {
 
 let Predicates = [HasSME2p2, HasSMEF8F16], Uses = [FPMR, FPCR] in {
   def FTMOPA_M2ZZZI_BtoH : sme_tmopa_16b<0b01001, ZZ_b_mul_r, ZPR8, "ftmopa">;
+  defm FMOP4A : sme2_fmop4a_fp8_fp16_2way<"fmop4a">;
 } // [HasSME2p2, HasSMEF8F16],  Uses = [FPMR, FPCR]
 
 let Predicates = [HasSME2p2, HasSMEF16F16] in {
