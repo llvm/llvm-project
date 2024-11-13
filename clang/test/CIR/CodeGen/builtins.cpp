@@ -76,6 +76,25 @@ extern "C" char* test_memchr(const char arg[32]) {
   // LLVM: ret ptr [[RET]]
 }
 
+extern "C"  wchar_t* test_wmemchr(const wchar_t *wc) {
+  return __builtin_wmemchr(wc, 257u, 32);
+
+  // CIR-LABEL: test_wmemchr
+  // CIR: [[PATTERN:%.*]] = cir.const #cir.int<257> : !u32i 
+  // CIR: [[LEN:%.*]] = cir.const #cir.int<32> : !s32i 
+  // CIR: [[LEN_U64:%.*]] = cir.cast(integral, [[LEN]] : !s32i), !u64i 
+  // CIR: cir.call @wmemchr({{%.*}}, [[PATTERN]], [[LEN_U64]]) : (!cir.ptr<!u32i>, !u32i, !u64i) -> !cir.ptr<!u32i>
+
+  // LLVM: {{.*}}@test_wmemchr(ptr{{.*}}[[ARG:%.*]])
+  // LLVM: [[TMP0:%.*]] = alloca ptr, i64 1, align 8
+  // LLVM: store ptr [[ARG]], ptr [[TMP0]], align 8
+  // LLVM: [[SRC:%.*]] = load ptr, ptr [[TMP0]], align 8
+  // LLVM: [[RES:%.*]] = call ptr @wmemchr(ptr [[SRC]], i32 257, i64 32)
+  // LLVM: store ptr [[RES]], ptr [[RET_P:%.*]], align 8
+  // LLVM: [[RET:%.*]] = load ptr, ptr [[RET_P]], align 8
+  // LLVM: ret ptr [[RET]]
+}
+
 extern "C" void *test_return_address(void) {
   return __builtin_return_address(1);
 

@@ -1541,8 +1541,13 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     builder.createMemSet(loc, dest.getPointer(), byteVal, sizeOp);
     return RValue::get(dest.getPointer());
   }
-  case Builtin::BI__builtin_wmemchr:
-    llvm_unreachable("BI__builtin_wmemchr NYI");
+  case Builtin::BI__builtin_wmemchr: {
+    // The MSVC runtime library does not provide a definition of wmemchr, so we
+    // need an inline implementation.
+    if (getTarget().getTriple().isOSMSVCRT())
+      llvm_unreachable("BI__builtin_wmemchr NYI for OS with MSVC runtime");
+    break;
+  }
   case Builtin::BI__builtin_wmemcmp:
     llvm_unreachable("BI__builtin_wmemcmp NYI");
   case Builtin::BI__builtin_dwarf_cfa:
