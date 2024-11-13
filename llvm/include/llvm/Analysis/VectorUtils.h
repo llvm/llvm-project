@@ -152,7 +152,8 @@ bool isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
 
 /// Identifies if the vector form of the intrinsic is overloaded on the type of
 /// the operand at index \p OpdIdx, or on the return type if \p OpdIdx is -1.
-bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx);
+bool isVectorIntrinsicWithOverloadTypeAtArg(
+    Intrinsic::ID ID, int OpdIdx, const TargetTransformInfo *TTI = nullptr);
 
 /// Identifies if the vector form of the intrinsic that returns a struct is
 /// overloaded at the struct element index \p RetIdx.
