@@ -22746,19 +22746,15 @@ SDValue DAGCombiner::scalarizeExtractedVectorLoad(SDNode *EVE, EVT InVecVT,
 
 /// Transform a vector binary operation into a scalar binary operation by moving
 /// the math/logic after an extract element of a vector.
-static SDValue scalarizeExtractedBinop(SDNode *ExtElt, SelectionDAG &DAG,
-                                       const SDLoc &DL, bool LegalOperations) {
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+static bool scalarizeExtractedBinOpCommon(SDNode *ExtElt, SelectionDAG &DAG,
+                                          const SDLoc &DL, bool IsSetCC,
+                                          SDValue &ScalarOp1,
+                                          SDValue &ScalarOp2) {
   SDValue Vec = ExtElt->getOperand(0);
   SDValue Index = ExtElt->getOperand(1);
   auto *IndexC = dyn_cast<ConstantSDNode>(Index);
-  if (!IndexC || !TLI.isBinOp(Vec.getOpcode()) || !Vec.hasOneUse() ||
-      Vec->getNumValues() != 1)
-    return SDValue();
-
-  // Targets may want to avoid this to prevent an expensive register transfer.
-  if (!TLI.shouldScalarizeBinop(Vec))
-    return SDValue();
+  if (!IndexC || !Vec.hasOneUse() || Vec->getNumValues() != 1)
+    return false;
 
   // Extracting an element of a vector constant is constant-folded, so this
   // transform is just replacing a vector op with a scalar op while moving the
@@ -22772,13 +22768,46 @@ static SDValue scalarizeExtractedBinop(SDNode *ExtElt, SelectionDAG &DAG,
       ISD::isConstantSplatVector(Op1.getNode(), SplatVal)) {
     // extractelt (binop X, C), IndexC --> binop (extractelt X, IndexC), C'
     // extractelt (binop C, X), IndexC --> binop C', (extractelt X, IndexC)
-    EVT VT = ExtElt->getValueType(0);
-    SDValue Ext0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Op0, Index);
-    SDValue Ext1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Op1, Index);
-    return DAG.getNode(Vec.getOpcode(), DL, VT, Ext0, Ext1);
+    // extractelt (setcc X, C, op), IndexC -> setcc (extractelt X, IndexC)), C
+    // extractelt (setcc C, X, op), IndexC -> setcc (extractelt IndexC, X)), C
+    EVT VT = Op0->getValueType(0).getVectorElementType();
+    ScalarOp1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Op0, Index);
+    ScalarOp2 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Op1, Index);
+    return true;
   }
 
-  return SDValue();
+  return false;
+}
+
+static SDValue scalarizeExtractedBinOp(SDNode *ExtElt, SelectionDAG &DAG,
+                                       const SDLoc &DL) {
+  SDValue Op1, Op2;
+  SDValue Vec = ExtElt->getOperand(0);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!TLI.isBinOp(Vec.getOpcode()) || !TLI.shouldScalarizeBinop(Vec))
+    return SDValue();
+
+  if (!scalarizeExtractedBinOpCommon(ExtElt, DAG, DL, false, Op1, Op2))
+    return SDValue();
+
+  EVT VT = ExtElt->getValueType(0);
+  return DAG.getNode(Vec.getOpcode(), DL, VT, Op1, Op2);
+}
+
+static SDValue scalarizeExtractedSetCC(SDNode *ExtElt, SelectionDAG &DAG,
+                                       const SDLoc &DL) {
+  SDValue Op1, Op2;
+  SDValue Vec = ExtElt->getOperand(0);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (Vec.getOpcode() != ISD::SETCC || !TLI.shouldScalarizeSetCC(Vec))
+    return SDValue();
+
+  if (!scalarizeExtractedBinOpCommon(ExtElt, DAG, DL, true, Op1, Op2))
+    return SDValue();
+
+  EVT VT = ExtElt->getValueType(0);
+  return DAG.getSetCC(DL, VT, Op1, Op2,
+                      cast<CondCodeSDNode>(Vec->getOperand(2))->get());
 }
 
 // Given a ISD::EXTRACT_VECTOR_ELT, which is a glorified bit sequence extract,
@@ -23011,8 +23040,13 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     }
   }
 
-  if (SDValue BO = scalarizeExtractedBinop(N, DAG, DL, LegalOperations))
+  if (SDValue BO = scalarizeExtractedBinOp(N, DAG, DL))
     return BO;
+
+  // extract (setcc x, splat(y)), i -> setcc (extract x, i)), y
+  if (ScalarVT == VecVT.getVectorElementType())
+    if (SDValue SetCC = scalarizeExtractedSetCC(N, DAG, DL))
+      return SetCC;
 
   if (VecVT.isScalableVector())
     return SDValue();

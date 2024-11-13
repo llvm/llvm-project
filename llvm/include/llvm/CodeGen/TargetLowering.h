@@ -3342,6 +3342,10 @@ public:
     return false;
   }
 
+  /// Try to convert an extract element of a vector setcc operation into an
+  /// extract element followed by a scalar operation.
+  virtual bool shouldScalarizeSetCC(SDValue VecOp) const { return false; }
+
   /// Return true if extraction of a scalar element from the given vector type
   /// at the given index is cheap. For example, if scalar operations occur on
   /// the same register file as vector operations, then an extract element may
