@@ -187,12 +187,8 @@ def zext_is_sext : PatFrag<(ops node:$src), (zext node:$src), [{
 }]>;
 
 let Predicates = [IsRV64] in {
-def : LdPat<sextloadi8, LB, i32>;
 def : LdPat<extloadi8, LBU, i32>; // Prefer unsigned due to no c.lb in Zcb.
-def : LdPat<sextloadi16, LH, i32>;
 def : LdPat<extloadi16, LH, i32>;
-def : LdPat<zextloadi8, LBU, i32>;
-def : LdPat<zextloadi16, LHU, i32>;
 
 def : StPat<truncstorei8, SB, GPR, i32>;
 def : StPat<truncstorei16, SH, GPR, i32>;
