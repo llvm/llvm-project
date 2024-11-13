@@ -1896,8 +1896,8 @@ def LifetimeCaptureBy : DeclOrTypeAttr {
   let Documentation = [LifetimeCaptureByDocs];
   let AdditionalMembers = [{
 private:
-  SmallVector<IdentifierInfo*, 1> ArgIdents;
-  SmallVector<SourceLocation, 1> ArgLocs;
+  ArrayRef<IdentifierInfo*> ArgIdents;
+  ArrayRef<SourceLocation> ArgLocs;
 
 public:
   static constexpr int THIS = 0;
@@ -1905,16 +1905,14 @@ public:
   static constexpr int UNKNOWN = -2;
   static constexpr int GLOBAL = -3;
 
-  void setArgs(SmallVector<IdentifierInfo*>&& Idents,
-               SmallVector<SourceLocation>&& Locs) { 
-    assert(Idents.size() == Locs.size());
+  void setArgs(ArrayRef<IdentifierInfo*> Idents, ArrayRef<SourceLocation> Locs) {
     assert(Idents.size() == params_Size);
-    ArgIdents = std::move(Idents);
-    ArgLocs = std::move(Locs);
+    assert(Locs.size() == params_Size);
+    ArgIdents = Idents;
+    ArgLocs = Locs;
   }
-  
-  ArrayRef<IdentifierInfo*> getArgIdents() const { return ArgIdents; }
-  ArrayRef<SourceLocation> getArgLocs() const { return ArgLocs; }
+  auto getArgIdents() const { return ArgIdents; }
+  auto getArgLocs() const { return ArgLocs; }
   void setParamIdx(size_t Idx, int Val) { 
     assert(Idx < params_Size);
     params_[Idx] = Val;

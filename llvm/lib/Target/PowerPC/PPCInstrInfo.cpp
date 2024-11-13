@@ -5456,7 +5456,6 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
   BuildMI(*MBB, ++Iter, DL, TII->get(PPC::COPY), SrcReg)
       .addReg(NewDefinedReg, RegState::Kill, PPC::sub_32);
   LV->recomputeForSingleDefVirtReg(NewDefinedReg);
-  return;
 }
 
 // The isSignOrZeroExtended function is recursive. The parameter BinOpDepth

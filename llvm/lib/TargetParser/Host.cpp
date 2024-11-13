@@ -68,11 +68,15 @@ using namespace llvm;
 
 static std::unique_ptr<llvm::MemoryBuffer>
     LLVM_ATTRIBUTE_UNUSED getProcCpuinfoContent() {
+  const char *CPUInfoFile = "/proc/cpuinfo";
+  if (const char *CpuinfoIntercept = std::getenv("LLVM_CPUINFO"))
+    CPUInfoFile = CpuinfoIntercept;
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
-      llvm::MemoryBuffer::getFileAsStream("/proc/cpuinfo");
+      llvm::MemoryBuffer::getFileAsStream(CPUInfoFile);
+
   if (std::error_code EC = Text.getError()) {
-    llvm::errs() << "Can't read "
-                 << "/proc/cpuinfo: " << EC.message() << "\n";
+    llvm::errs() << "Can't read " << CPUInfoFile << ": " << EC.message()
+                 << "\n";
     return nullptr;
   }
   return std::move(*Text);
@@ -1882,6 +1886,7 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["amx-transpose"] = HasLeaf1E && ((EAX >> 5) & 1) && HasAMXSave;
   Features["amx-tf32"] = HasLeaf1E && ((EAX >> 6) & 1) && HasAMXSave;
   Features["amx-avx512"] = HasLeaf1E && ((EAX >> 7) & 1) && HasAMXSave;
+  Features["amx-movrs"] = HasLeaf1E && ((EAX >> 8) & 1) && HasAMXSave;
 
   bool HasLeaf24 =
       MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);

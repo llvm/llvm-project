@@ -321,9 +321,15 @@ struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
             builder.createIntegerConstant(loc, builder.getIndexType(), width);
       } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(
                      op.getInType())) {
-        mlir::Value width = builder.createIntegerConstant(
-            loc, builder.getIndexType(),
-            computeWidth(loc, seqTy.getEleTy(), kindMap));
+        std::size_t size = 0;
+        if (fir::isa_derived(seqTy.getEleTy())) {
+          mlir::Type structTy = typeConverter->convertType(seqTy.getEleTy());
+          size = dl->getTypeSizeInBits(structTy) / 8;
+        } else {
+          size = computeWidth(loc, seqTy.getEleTy(), kindMap);
+        }
+        mlir::Value width =
+            builder.createIntegerConstant(loc, builder.getIndexType(), size);
         mlir::Value nbElem;
         if (fir::sequenceWithNonConstantShape(seqTy)) {
           assert(!op.getShape().empty() && "expect shape with dynamic arrays");
@@ -507,8 +513,11 @@ struct CUFDataTransferOpConversion
   using OpRewritePattern::OpRewritePattern;
 
   CUFDataTransferOpConversion(mlir::MLIRContext *context,
-                              const mlir::SymbolTable &symtab)
-      : OpRewritePattern(context), symtab{symtab} {}
+                              const mlir::SymbolTable &symtab,
+                              mlir::DataLayout *dl,
+                              const fir::LLVMTypeConverter *typeConverter)
+      : OpRewritePattern(context), symtab{symtab}, dl{dl},
+        typeConverter{typeConverter} {}
 
   mlir::LogicalResult
   matchAndRewrite(cuf::DataTransferOp op,
@@ -576,7 +585,14 @@ struct CUFDataTransferOpConversion
           nbElement = builder.createIntegerConstant(
               loc, i64Ty, seqTy.getConstantArraySize());
       }
-      int width = computeWidth(loc, dstTy, kindMap);
+      unsigned width = 0;
+      if (fir::isa_derived(fir::unwrapSequenceType(dstTy))) {
+        mlir::Type structTy =
+            typeConverter->convertType(fir::unwrapSequenceType(dstTy));
+        width = dl->getTypeSizeInBits(structTy) / 8;
+      } else {
+        width = computeWidth(loc, dstTy, kindMap);
+      }
       mlir::Value widthValue = rewriter.create<mlir::arith::ConstantOp>(
           loc, i64Ty, rewriter.getIntegerAttr(i64Ty, width));
       mlir::Value bytes =
@@ -647,6 +663,8 @@ struct CUFDataTransferOpConversion
 
 private:
   const mlir::SymbolTable &symtab;
+  mlir::DataLayout *dl;
+  const fir::LLVMTypeConverter *typeConverter;
 };
 
 struct CUFLaunchOpConversion
@@ -749,6 +767,7 @@ void cuf::populateCUFToFIRConversionPatterns(
   patterns.insert<CUFAllocOpConversion>(patterns.getContext(), &dl, &converter);
   patterns.insert<CUFAllocateOpConversion, CUFDeallocateOpConversion,
                   CUFFreeOpConversion>(patterns.getContext());
-  patterns.insert<CUFDataTransferOpConversion, CUFLaunchOpConversion>(
-      patterns.getContext(), symtab);
+  patterns.insert<CUFDataTransferOpConversion>(patterns.getContext(), symtab,
+                                               &dl, &converter);
+  patterns.insert<CUFLaunchOpConversion>(patterns.getContext(), symtab);
 }
