@@ -302,28 +302,24 @@ defvar BarrierMode_AllMemoryBarrier                 = 10;
 defvar BarrierMode_AllMemoryBarrierWithGroupSync    = 11;
 
 // Intrinsic arg selection
-class Arg {
-  int index = -1;
-  int value = 0;
-  bit is_i8 = 0;
-  bit is_i32 = 0;
-}
-class ArgSelect<int index_> : Arg {
-  let index = index_;
-}
-class ArgI32<int value_> : Arg {
-  let value = value_;
-  let is_i32 = 1;
-}
-class ArgI8<int value_> : Arg {
-  let value = value_;
-  let is_i8 = 1;
-}
+class IntrinArgSelectType;
+def IntrinArgSelect_Index : IntrinArgSelectType;
+def IntrinArgSelect_I8    : IntrinArgSelectType;
+def IntrinArgSelect_I32   : IntrinArgSelectType;
 
-class IntrinsicSelect<Intrinsic intrinsic_, list<Arg> args_> {
-  Intrinsic intrinsic = intrinsic_;
-  list<Arg> args = args_;
+class IntrinArgSelect<IntrinArgSelectType type_, int value_> {
+  IntrinArgSelectType type = type_;
+  int value = value_;
 }
+class IntrinArgIndex<int index> : IntrinArgSelect<IntrinArgSelect_Index, index>;
+class IntrinArgI8   <int value> : IntrinArgSelect<IntrinArgSelect_I8,    value>;
+class IntrinArgI32  <int value> : IntrinArgSelect<IntrinArgSelect_I32,   value>;
+
+class IntrinWithArgs<Intrinsic intrinsic_, list<IntrinArgSelect> arg_selects_> {
+  Intrinsic intrinsic = intrinsic_;
+  list<IntrinArgSelect> arg_selects = arg_selects_;
+}
+class Intrin<Intrinsic intrinsic_> : IntrinWithArgs<intrinsic_, []> {}
 
 // Abstraction DXIL Operation
 class DXILOp<int opcode, DXILOpClass opclass> {
@@ -340,7 +336,7 @@ class DXILOp<int opcode, DXILOpClass opclass> {
   Intrinsic LLVMIntrinsic = ?;
 
   // Non-trivial LLVM Intrinsics DXIL Operation maps to
-  list<IntrinsicSelect> intrinsic_selects = [];
+  list<IntrinWithArgs> intrinsic_selects = [];
 
   // Result type of the op
   DXILOpParamType result;
@@ -951,9 +947,9 @@ def WaveAllBitCount : DXILOp<135, waveAllOp> {
 def Barrier : DXILOp<80, barrier> {
   let Doc = "inserts a memory barrier in the shader";
   let intrinsic_selects = [
-    IntrinsicSelect<
+    IntrinWithArgs<
         int_dx_group_memory_barrier_with_group_sync,
-        [ ArgI32<BarrierMode_GroupMemoryBarrierWithGroupSync> ]>,
+        [ IntrinArgI32<BarrierMode_GroupMemoryBarrierWithGroupSync> ]>,
   ];
 
   let arguments = [Int32Ty];

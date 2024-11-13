@@ -106,32 +106,25 @@ public:
     return false;
   }
 
-  struct ArgSelect {
-    enum class Type {
-      Index,
-      I8,
-      I32,
-    };
-    Type Type = Type::Index;
-    int Value = -1;
-  };
+#define DXIL_OP_INTRINSIC_ARG_SELECT_TYPES
+#include "DXILOperation.inc"
 
   [[nodiscard]] bool replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
-                                           ArrayRef<ArgSelect> ArgSelects) {
+                                           ArrayRef<IntrinArgSelect> ArgSelects) {
     bool IsVectorArgExpansion = isVectorArgExpansion(F);
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       OpBuilder.getIRB().SetInsertPoint(CI);
       SmallVector<Value *> Args;
       if (ArgSelects.size()) {
-        for (const ArgSelect &A : ArgSelects) {
+        for (const IntrinArgSelect &A : ArgSelects) {
           switch (A.Type) {
-          case ArgSelect::Type::Index:
+          case IntrinArgSelect::Type::Index:
             Args.push_back(CI->getArgOperand(A.Value));
             break;
-          case ArgSelect::Type::I8:
+          case IntrinArgSelect::Type::I8:
             Args.push_back(OpBuilder.getIRB().getInt8((uint8_t)A.Value));
             break;
-          case ArgSelect::Type::I32:
+          case IntrinArgSelect::Type::I32:
             Args.push_back(OpBuilder.getIRB().getInt32(A.Value));
             break;
           }
@@ -668,7 +661,7 @@ public:
 #define DXIL_OP_INTRINSIC(OpCode, Intrin, ...)                                 \
   case Intrin:                                                                 \
     HasErrors |=                                                               \
-        replaceFunctionWithOp(F, OpCode, ArrayRef<ArgSelect>{__VA_ARGS__});    \
+        replaceFunctionWithOp(F, OpCode, ArrayRef<IntrinArgSelect>{__VA_ARGS__});    \
     break;
 #include "DXILOperation.inc"
       case Intrinsic::dx_handle_fromBinding:
