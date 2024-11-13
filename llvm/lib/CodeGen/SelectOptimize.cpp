@@ -173,11 +173,11 @@ public:
         return getTrueValue(/*HonorInverts=*/false);
       if (auto *Sel = dyn_cast<SelectInst>(I))
         return Sel->getFalseValue();
-      // Or(zext) case - return the operand which is not the zext.
-      if (auto *BO = dyn_cast<BinaryOperator>(I)) {
-        // Return non-dependant on condition operand
+      // We are on the branch where the condition is zero, which means BinOp
+      // does not perform any computation, and we can simply return the operand
+      // that is not related to the condition
+      if (auto *BO = dyn_cast<BinaryOperator>(I))
         return BO->getOperand(1 - CondIdx);
-      }
 
       llvm_unreachable("Unhandled case in getFalseValue");
     }
@@ -199,7 +199,7 @@ public:
       }
       // If getTrue(False)Value() return nullptr, it means we are dealing with
       // select-like instructions on the branch where the actual computation is
-      // happening In that case the cost is equal to the cost of computation +
+      // happening. In that case the cost is equal to the cost of computation +
       // cost of non-dependant on condition operand
       InstructionCost Cost = TTI->getArithmeticInstrCost(
           getI()->getOpcode(), I->getType(), TargetTransformInfo::TCK_Latency,
@@ -208,9 +208,8 @@ public:
       auto TotalCost = Scaled64::get(*Cost.getValue());
       if (auto *OpI = dyn_cast<Instruction>(I->getOperand(1 - CondIdx))) {
         auto It = InstCostMap.find(OpI);
-        if (It != InstCostMap.end()) {
+        if (It != InstCostMap.end())
           TotalCost += It->second.NonPredCost;
-        }
       }
       return TotalCost;
     }
@@ -774,12 +773,10 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
   SmallPtrSet<Instruction *, 2> SeenCmp;
   std::map<Value *, SelectLikeInfo> SelectInfo;
 
-  BasicBlock::iterator BBIt = BB.begin();
-  while (BBIt != BB.end()) {
-    Instruction *I = &*BBIt++;
+  auto ProcessSelectInfo = [&SeenCmp, &SelectInfo](Instruction *I) -> void {
     if (auto *Cmp = dyn_cast<CmpInst>(I)) {
       SeenCmp.insert(Cmp);
-      continue;
+      return;
     }
 
     Value *Cond;
@@ -787,52 +784,58 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
         Cond->getType()->isIntegerTy(1)) {
       bool Inverted = match(Cond, m_Not(m_Value(Cond)));
       SelectInfo[I] = {Cond, true, Inverted, 0};
-      continue;
+      return;
     }
 
     if (match(I, m_Not(m_Value(Cond)))) {
       SelectInfo[I] = {Cond, true, true, 0};
-      continue;
+      return;
     }
 
     // Select instruction are what we are usually looking for.
     if (match(I, m_Select(m_Value(Cond), m_Value(), m_Value()))) {
       bool Inverted = match(Cond, m_Not(m_Value(Cond)));
       SelectInfo[I] = {Cond, false, Inverted, 0};
-      continue;
+      return;
     }
 
-    // An Or(zext(i1 X), Y) can also be treated like a select, with condition
+    // An Or(zext(i1 X), Y) can also be treated like a select, with condition X
+    // and values Y|1 and Y.
     if (auto *BO = dyn_cast<BinaryOperator>(I)) {
       if (BO->getType()->isIntegerTy(1) || BO->getOpcode() != Instruction::Or)
-        continue;
+        return;
 
       for (unsigned Idx = 0; Idx < 2; Idx++) {
         auto *Op = BO->getOperand(Idx);
-        if (SelectInfo.count(Op) && SelectInfo[Op].IsAuxiliary) {
-          Cond = SelectInfo[Op].Cond;
-          bool Inverted = SelectInfo[Op].IsInverted;
-          SelectInfo[I] = {Cond, false, Inverted, Idx};
+        auto It = SelectInfo.find(Op);
+        if (It != SelectInfo.end() && It->second.IsAuxiliary) {
+          SelectInfo[I] = {It->second.Cond, false, It->second.IsInverted, Idx};
           break;
         }
       }
-      continue;
     }
-  }
+  };
 
-  BBIt = BB.begin();
+  bool AlreadyProcessed = false;
+  BasicBlock::iterator BBIt = BB.begin();
   while (BBIt != BB.end()) {
     Instruction *I = &*BBIt++;
-    if (!SelectInfo.count(I) || SelectInfo[I].IsAuxiliary)
+    if (!AlreadyProcessed)
+      ProcessSelectInfo(I);
+    else
+      AlreadyProcessed = false;
+
+    auto It = SelectInfo.find(I);
+    if (It == SelectInfo.end() || It->second.IsAuxiliary)
       continue;
 
     if (!TTI->shouldTreatInstructionLikeSelect(I))
       continue;
 
-    Value *Cond = SelectInfo[I].Cond;
+    Value *Cond = It->second.Cond;
     SelectGroup SIGroup{Cond};
-    SIGroup.Selects.emplace_back(I, SelectInfo[I].IsInverted,
-                                 SelectInfo[I].ConditionIdx);
+    SIGroup.Selects.emplace_back(I, It->second.IsInverted,
+                                 It->second.ConditionIdx);
 
     if (!Cond->getType()->isIntegerTy(1))
       continue;
@@ -844,6 +847,7 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
 
     while (BBIt != BB.end()) {
       Instruction *NI = &*BBIt;
+      ProcessSelectInfo(NI);
       // Debug/pseudo instructions should be skipped and not prevent the
       // formation of a select group.
       if (NI->isDebugOrPseudoInst()) {
@@ -851,13 +855,18 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
         continue;
       }
 
-      if (!SelectInfo.count(NI))
+      It = SelectInfo.find(NI);
+      if (It == SelectInfo.end()) {
+        AlreadyProcessed = true;
         break;
+      }
 
       // Auxiliary with same condition
-      auto [CurrCond, IsAux, IsRev, CondIdx] = SelectInfo[NI];
-      if (Cond != CurrCond)
+      auto [CurrCond, IsAux, IsRev, CondIdx] = It->second;
+      if (Cond != CurrCond) {
+        AlreadyProcessed = true;
         break;
+      }
 
       if (!IsAux)
         SIGroup.Selects.emplace_back(NI, IsRev, CondIdx);
