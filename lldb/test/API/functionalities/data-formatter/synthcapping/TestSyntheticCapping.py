@@ -49,8 +49,8 @@ class SyntheticCappingTestCase(TestBase):
         self.addTearDownHook(cleanup)
 
         # set up the synthetic children provider
-        self.runCmd("script from fooSynthProvider import *")
-        self.runCmd("type synth add -l fooSynthProvider foo")
+        self.runCmd("script from SynthcappingSynthProvider import *")
+        self.runCmd("type synth add -l SynthcappingSynthProvider foo")
 
         # note that the value of fake_a depends on target byte order
         if process.GetByteOrder() == lldb.eByteOrderLittle:
@@ -71,7 +71,7 @@ class SyntheticCappingTestCase(TestBase):
         # num_children() should be called with at most max_num_children=257
         # (target.max-children-count + 1)
         self.expect(
-            "script fooSynthProvider.reset_max_num_children_max()", substrs=["257"]
+            "script SynthcappingSynthProvider.reset_max_num_children_max()", substrs=["257"]
         )
 
         # check that capping works
@@ -86,7 +86,7 @@ class SyntheticCappingTestCase(TestBase):
             ],
         )
         self.expect(
-            "script fooSynthProvider.reset_max_num_children_max()", substrs=["3"]
+            "script SynthcappingSynthProvider.reset_max_num_children_max()", substrs=["3"]
         )
 
         self.expect("frame variable f00_1", matching=False, substrs=["r = 34"])
@@ -95,5 +95,5 @@ class SyntheticCappingTestCase(TestBase):
 
         self.expect("frame variable f00_1", matching=True, substrs=["r = 34"])
         self.expect(
-            "script fooSynthProvider.reset_max_num_children_max()", substrs=["257"]
+            "script SynthcappingSynthProvider.reset_max_num_children_max()", substrs=["257"]
         )
