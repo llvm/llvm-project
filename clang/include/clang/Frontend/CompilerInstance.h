@@ -752,11 +752,10 @@ public:
   /// used by some diagnostics printers (for logging purposes only).
   ///
   /// \return The new object on success, or null on failure.
-  static IntrusiveRefCntPtr<DiagnosticsEngine>
-  createDiagnostics(DiagnosticOptions *Opts,
-                    DiagnosticConsumer *Client = nullptr,
-                    bool ShouldOwnClient = true,
-                    const CodeGenOptions *CodeGenOpts = nullptr);
+  static IntrusiveRefCntPtr<DiagnosticsEngine> createDiagnostics(
+      DiagnosticOptions *Opts, DiagnosticConsumer *Client = nullptr,
+      bool ShouldOwnClient = true, const CodeGenOptions *CodeGenOpts = nullptr,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
 
   /// Create the file manager and replace any existing one with it.
   ///
