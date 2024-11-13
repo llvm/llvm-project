@@ -1623,10 +1623,6 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
       !TRI->isConstantPhysReg(OpToFold.getReg()))
     return false;
 
-  if (OpToFold.isReg() &&
-      foldCopyToVGPROfScalarAddOfFrameIndex(DstReg, OpToFold.getReg(), MI))
-    return true;
-
   // Prevent folding operands backwards in the function. For example,
   // the COPY opcode must not be replaced by 1 in this example:
   //
@@ -1635,6 +1631,10 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
   //    %vgpr0 = V_MOV_B32_e32 1, implicit %exec
   if (!DstReg.isVirtual())
     return false;
+
+  if (OpToFold.isReg() &&
+      foldCopyToVGPROfScalarAddOfFrameIndex(DstReg, OpToFold.getReg(), MI))
+    return true;
 
   bool Changed = foldInstOperand(MI, OpToFold);
 

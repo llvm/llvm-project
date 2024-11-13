@@ -239,7 +239,7 @@ private:
   /// Lower bundles which only contain V_LOAD/STORE_IDX, as would be used
   /// to move data, and update the mode. MII is updated to point to the
   /// last V_MOV inserted.
-  void lowerMovBundle(MachineInstr &MI, MachineInstr *CoreMI,
+  void lowerMovBundle(MachineInstr &MI, MachineInstr &CoreMI,
                       MachineBasicBlock::instr_iterator &MII);
 
   /// Check if an instruction \p I is within a clause and returns a suitable
@@ -301,46 +301,48 @@ AMDGPULowerVGPREncoding::getMSBs(const MachineOperand &MO) const {
 }
 
 void AMDGPULowerVGPREncoding::lowerMovBundle(
-    MachineInstr &MI, MachineInstr *CoreMI,
+    MachineInstr &MI, MachineInstr &CoreMI,
     MachineBasicBlock::instr_iterator &MII) {
-  assert(CoreMI->getOpcode() == AMDGPU::V_STORE_IDX);
+  assert(CoreMI.getOpcode() == AMDGPU::V_STORE_IDX);
 
   // The RC in MachineInstrDesc for V_LOAD/STORE_IDX can contain many
-  // possible register sizes, we need to use the register info instead.
-  const auto *TRI = ST->getRegisterInfo();
-  MachineOperand &DataOp = MI.getOperand(
-      AMDGPU::getNamedOperandIdx(AMDGPU::V_STORE_IDX, AMDGPU::OpName::data_op));
-  const auto *RC = TRI->getPhysRegBaseClass(DataOp.getReg());
-  auto Size = TRI->getRegSizeInBits(*RC);
+  // possible register sizes, we need to use the MMO instead to determine size.
+  assert(CoreMI.hasOneMemOperand() && "V_LOAD/STORE_IDX must have one MMO");
+  MachineMemOperand *MMO = *CoreMI.memoperands_begin();
+  auto Size = MMO->getSizeInBits().getValue();
   if (Size % 32 != 0)
     report_fatal_error(
         "TODO-GFX13 Support lowering non-multiple-of-32-bit sizes for "
         "V_LOAD/STORE_IDX");
 
-  MachineInstr *LoadMI = CoreMI->getPrevNode();
+  MachineInstr *LoadMI = CoreMI.getPrevNode();
 
 #if !defined(NDEBUG)
   // Check if the value loaded by V_LOAD_IDX is the same as stored by
   // V_STORE_IDX
   assert(LoadMI->getOpcode() == AMDGPU::V_LOAD_IDX &&
          "V_LOAD_IDX + V_STORE_IDX Bundle was not created correctly");
-  MachineOperand &LoadDataOp = MI.getOperand(
-      AMDGPU::getNamedOperandIdx(AMDGPU::V_LOAD_IDX, AMDGPU::OpName::data_op));
-  const auto *LoadRC = TRI->getPhysRegBaseClass(DataOp.getReg());
-  auto LoadSize = TRI->getRegSizeInBits(*LoadRC);
+  assert(LoadMI->hasOneMemOperand() && "V_LOAD/STORE_IDX must have one MMO");
+  MachineMemOperand *LoadMMO = *LoadMI->memoperands_begin();
+  auto LoadSize = LoadMMO->getSizeInBits().getValue();
+  MachineOperand &DataOp = CoreMI.getOperand(
+      AMDGPU::getNamedOperandIdx(AMDGPU::V_STORE_IDX, AMDGPU::OpName::data_op));
+  const auto *TRI = ST->getRegisterInfo();
   unsigned StoreDataRegNum = TRI->getHWRegIndex(DataOp.getReg());
+  MachineOperand &LoadDataOp = LoadMI->getOperand(
+      AMDGPU::getNamedOperandIdx(AMDGPU::V_LOAD_IDX, AMDGPU::OpName::data_op));
   unsigned LoadDataRegNum = TRI->getHWRegIndex(LoadDataOp.getReg());
   assert(LoadSize == Size && LoadDataRegNum == StoreDataRegNum &&
          "V_LOAD_IDX + V_STORE_IDX Bundle was not created correctly");
 #endif
 
   Register StoreIdxReg = CoreMI
-                             ->getOperand(AMDGPU::getNamedOperandIdx(
+                             .getOperand(AMDGPU::getNamedOperandIdx(
                                  AMDGPU::V_STORE_IDX, AMDGPU::OpName::idx))
                              .getReg();
   int StoreOffsetIdx =
       AMDGPU::getNamedOperandIdx(AMDGPU::V_STORE_IDX, AMDGPU::OpName::offset);
-  unsigned StoreOffset = CoreMI->getOperand(StoreOffsetIdx).getImm();
+  unsigned StoreOffset = CoreMI.getOperand(StoreOffsetIdx).getImm();
 
   Register LoadIdxReg = LoadMI
                             ->getOperand(AMDGPU::getNamedOperandIdx(
@@ -370,7 +372,7 @@ void AMDGPULowerVGPREncoding::lowerMovBundle(
     MII = MachineBasicBlock::instr_iterator(MIB);
   }
   LoadMI->removeFromBundle();
-  CoreMI->removeFromBundle();
+  CoreMI.removeFromBundle();
   MI.eraseFromParent();
 }
 
@@ -380,15 +382,16 @@ void AMDGPULowerVGPREncoding::lowerIDX(MachineBasicBlock::instr_iterator &MII) {
   bool IsLoad = Opc == AMDGPU::V_LOAD_IDX;
 
   // The RC in MachineInstrDesc for V_LOAD/STORE_IDX can contain many
-  // possible register sizes, we need to use the register info instead.
-  const auto *TRI = ST->getRegisterInfo();
-  MachineOperand &DataOp =
-      MI.getOperand(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data_op));
-  const auto *RC = TRI->getPhysRegBaseClass(DataOp.getReg());
-  auto Size = TRI->getRegSizeInBits(*RC);
+  // possible register sizes, we need to use the MMO instead to determine size.
+  assert(MI.hasOneMemOperand() && "V_LOAD/STORE_IDX must have one MMO");
+  MachineMemOperand *MMO = *MI.memoperands_begin();
+  auto Size = MMO->getSizeInBits().getValue();
   assert((Size % 32) == 0 &&
          "TODO-GFX13 Support lowering non-multiple-of-32-bit sizes for "
          "V_LOAD/STORE_IDX");
+  const auto *TRI = ST->getRegisterInfo();
+  MachineOperand &DataOp =
+      MI.getOperand(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data_op));
   unsigned DataRegNum = TRI->getHWRegIndex(DataOp.getReg());
 
   Register IdxReg =
@@ -570,7 +573,7 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(
     return true;
   }
   if (CoreMI) {
-    lowerMovBundle(MI, CoreMI, MII);
+    lowerMovBundle(MI, *CoreMI, MII);
     return true;
   }
   assert(!TII->hasVGPRUses(MI) || MI.isMetaInstruction() || MI.isPseudo());
