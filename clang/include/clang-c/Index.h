@@ -2166,7 +2166,9 @@ enum CXCursorKind {
    */
   CXCursor_OpenACCLoopConstruct = 321,
 
-  CXCursor_LastStmt = CXCursor_OpenACCLoopConstruct,
+  CXCursor_OpenACCCombinedConstruct = 322,
+
+  CXCursor_LastStmt = CXCursor_OpenACCCombinedConstruct,
 
   /**
    * Cursor that represents the translation unit itself.
