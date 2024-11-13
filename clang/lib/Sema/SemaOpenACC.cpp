@@ -434,6 +434,7 @@ bool checkValidAfterDeviceType(
   // This is only a requirement on compute and loop constructs so far, so this
   // is fine otherwise.
   if (!isOpenACCComputeDirectiveKind(NewClause.getDirectiveKind()) &&
+      !isOpenACCCombinedDirectiveKind(NewClause.getDirectiveKind()) &&
       NewClause.getDirectiveKind() != OpenACCDirectiveKind::Loop)
     return false;
 
