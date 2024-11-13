@@ -254,10 +254,9 @@ static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
                                                   LocalVisitor Visit);
 
 template <typename T> static bool isRecordWithAttr(QualType Type) {
-  CXXRecordDecl *RD = Type.getNonReferenceType()->getAsCXXRecordDecl();
-  if (!RD)
-    return false;
-  return RD->hasAttr<T>();
+  if (auto *RD = Type.getNonReferenceType()->getAsCXXRecordDecl())
+    return RD->hasAttr<T>();
+  return false;
 }
 
 // Decl::isInStdNamespace will return false for iterators in some STL
