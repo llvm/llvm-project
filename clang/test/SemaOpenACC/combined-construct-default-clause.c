@@ -1,20 +1,22 @@
 // RUN: %clang_cc1 %s -fopenacc -verify
 
 void SingleOnly() {
-  #pragma acc parallel default(none)
-  while(0);
+  #pragma acc parallel loop default(none)
+  for(int i = 5; i < 10;++i);
 
-  // expected-error@+2{{OpenACC 'default' clause cannot appear more than once on a 'serial' directive}}
+  // expected-error@+2{{OpenACC 'default' clause cannot appear more than once on a 'serial loop' directive}}
   // expected-note@+1{{previous clause is here}}
-  #pragma acc serial default(present) self default(none)
-  while(0);
+  #pragma acc serial loop default(present) self default(none)
+  for(int i = 5; i < 10;++i);
 
   int i;
 
-  // expected-error@+2{{OpenACC 'default' clause cannot appear more than once on a 'kernels' directive}}
+  // expected-warning@+4{{OpenACC clause 'copy' not yet implemented}}
+  // expected-warning@+3{{OpenACC clause 'present' not yet implemented}}
+  // expected-error@+2{{OpenACC 'default' clause cannot appear more than once on a 'kernels loop' directive}}
   // expected-note@+1{{previous clause is here}}
-  #pragma acc kernels self default(present) present(i) default(none) copy(i)
-  while(0);
+  #pragma acc kernels loop self default(present) present(i) default(none) copy(i)
+  for(int i = 5; i < 10;++i);
 
   // expected-warning@+4{{OpenACC clause 'private' not yet implemented}}
   // expected-warning@+3{{OpenACC clause 'copy' not yet implemented}}
