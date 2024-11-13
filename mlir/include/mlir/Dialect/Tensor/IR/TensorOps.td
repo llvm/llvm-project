@@ -178,6 +178,9 @@ def Tensor_ConcatOp : Tensor_Op<"concat",
     int64_t getRank() {
       return ::llvm::cast<RankedTensorType>(getResult().getType()).getRank();
     }
+
+    // Method to decompose the operation into a sequence of insert_slices.
+    FailureOr<SmallVector<Value>> decomposeOperation(OpBuilder &builder);
   }];
 
   let hasCanonicalizer = 1;
