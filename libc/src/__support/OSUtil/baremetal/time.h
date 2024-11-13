@@ -13,7 +13,7 @@
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
-namespace internal{
+namespace internal {
 
 bool timespec_get_utc(struct timespec *ts);
 
