@@ -15,5 +15,5 @@ void test() {
 }
 
 // This test is passed if exploded_graph_rewriter handles dot file without errors.
-// CHECK: DEBUG:root:Line: digraph "Exploded Graph"
+// CHECK: DEBUG:root:Line: digraph "Exploded Graph" -- fail on windows!
 // CHECK: \"file\": \"scratch space\"
