@@ -15479,13 +15479,11 @@ Semantics:
 """"""""""
 
 The '``llvm.experimental.memset.pattern*``' intrinsic fills memory starting at
-the destination location with the given pattern ``<count>`` times. If the
-argument is known to be aligned to some boundary, this can be specified as an
-attribute on the argument. The pattern fills will respect the endianness of
-the target: i.e. on little endian targets, the least significant byte of the
-pattern is first in memory, while the most significant byte is first in memory
-for big endian targets. The memory address is incremented by the allocation
-size of the type.
+the destination location with the given pattern ``<count>`` times,
+incrementing by the allocation size of the type each time. The stores follows
+the usual semantics of store instructions, including regarding endianness and
+padding. If the argument is known to be aligned to some boundary, this can be
+specified as an attribute on the argument.
 
 If ``<count>`` is 0, it is no-op modulo the behavior of attributes attached to
 the arguments.
