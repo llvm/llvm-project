@@ -1692,7 +1692,25 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
 
   Value *TV = SI->getTrueValue();
   Value *FV = SI->getFalseValue();
-  if (!(isa<Constant>(TV) || isa<Constant>(FV)))
+  if ((Op.getOpcode() == Instruction::ExtractValue) &&
+      (isa<InsertValueInst>(TV) || isa<InsertValueInst>(FV))) {
+    // extract (select (cond, insert(agg, elem), FV))
+    // -> select (cond, elem, extract(FV))
+    ExtractValueInst *EV = dyn_cast<ExtractValueInst>(&Op);
+    Value *NewTV = simplifyExtractValueInst(TV, EV->getIndices(),
+                                            SQ.getWithInstruction(&Op));
+    Value *NewFV = simplifyExtractValueInst(FV, EV->getIndices(),
+                                            SQ.getWithInstruction(&Op));
+    if (!NewTV && !NewFV)
+      return nullptr;
+    Builder.SetInsertPoint(SI);
+    if (!NewTV)
+      NewTV = Builder.CreateExtractValue(TV, EV->getIndices());
+    if (!NewFV)
+      NewFV = Builder.CreateExtractValue(FV, EV->getIndices());
+    return SelectInst::Create(SI->getCondition(), NewTV, NewFV, "", nullptr,
+                              SI);
+  } else if (!(isa<Constant>(TV) || isa<Constant>(FV)))
     return nullptr;
 
   // Bool selects with constant operands can be folded to logical ops.
