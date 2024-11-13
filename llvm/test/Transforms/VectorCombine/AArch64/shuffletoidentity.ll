@@ -1080,11 +1080,9 @@ define <16 x i64> @operandbundles(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c) {
 
 define <8 x i8> @operandbundles_first(<8 x i8> %a) {
 ; CHECK-LABEL: @operandbundles_first(
-; CHECK-NEXT:    [[AB:%.*]] = shufflevector <8 x i8> [[A:%.*]], <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[AT:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
+; CHECK-NEXT:    [[AT:%.*]] = shufflevector <8 x i8> [[A:%.*]], <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
 ; CHECK-NEXT:    [[ABT:%.*]] = call <4 x i8> @llvm.abs.v4i8(<4 x i8> [[AT]], i1 false) [ "jl_roots"(ptr addrspace(10) null, ptr addrspace(10) null) ]
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[AT]], <4 x i8> [[AB]], <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i8> @llvm.abs.v8i8(<8 x i8> [[TMP1]], i1 false)
+; CHECK-NEXT:    [[R:%.*]] = call <8 x i8> @llvm.abs.v8i8(<8 x i8> [[A]], i1 false)
 ; CHECK-NEXT:    ret <8 x i8> [[R]]
 ;
   %ab = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -1098,10 +1096,8 @@ define <8 x i8> @operandbundles_first(<8 x i8> %a) {
 define <8 x i8> @operandbundles_second(<8 x i8> %a) {
 ; CHECK-LABEL: @operandbundles_second(
 ; CHECK-NEXT:    [[AB:%.*]] = shufflevector <8 x i8> [[A:%.*]], <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[AT:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
 ; CHECK-NEXT:    [[ABB:%.*]] = call <4 x i8> @llvm.abs.v4i8(<4 x i8> [[AB]], i1 false) [ "jl_roots"(ptr addrspace(10) null, ptr addrspace(10) null) ]
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[AT]], <4 x i8> [[AB]], <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i8> @llvm.abs.v8i8(<8 x i8> [[TMP1]], i1 false)
+; CHECK-NEXT:    [[R:%.*]] = call <8 x i8> @llvm.abs.v8i8(<8 x i8> [[A]], i1 false)
 ; CHECK-NEXT:    ret <8 x i8> [[R]]
 ;
   %ab = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
