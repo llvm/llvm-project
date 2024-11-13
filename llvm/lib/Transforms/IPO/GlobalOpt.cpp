@@ -2753,7 +2753,7 @@ static bool OptimizeNonTrivialIFuncs(
     unsigned I = 0;
     // Now try to redirect calls starting from higher priority callers.
     for (Function *Caller : Callers) {
-      assert (I < Callees.size() && "Found callers of equal priority");
+      assert(I < Callees.size() && "Found callers of equal priority");
 
       Function *Callee = Callees[I];
       uint64_t CallerBits = FeatureMask[Caller];

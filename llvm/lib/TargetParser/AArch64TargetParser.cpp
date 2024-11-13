@@ -52,7 +52,7 @@ std::optional<AArch64::FMVInfo>
 lookupFMVByID(llvm::AArch64::ArchExtKind ExtID) {
   for (const auto &I : llvm::AArch64::getFMVInfo())
     if (I.ID && *I.ID == ExtID)
-     return I;
+      return I;
   return {};
 }
 
