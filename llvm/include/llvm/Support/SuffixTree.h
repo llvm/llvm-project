@@ -197,12 +197,14 @@ public:
       return It;
     }
 
+#ifndef __swift__
     bool operator==(const RepeatedSubstringIterator &Other) const {
       return N == Other.N;
     }
     bool operator!=(const RepeatedSubstringIterator &Other) const {
       return !(*this == Other);
     }
+#endif
 
     RepeatedSubstringIterator(
         SuffixTreeInternalNode *N,
