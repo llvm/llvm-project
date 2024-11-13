@@ -211,12 +211,12 @@ void LowerModule::constructAttributeList(llvm::StringRef Name,
     switch (AI.getKind()) {
     case ABIArgInfo::Extend:
       if (AI.isSignExt())
-        Attrs.push_back(
-            rewriter.getNamedAttr("cir.signext", rewriter.getUnitAttr()));
+        Attrs.push_back(rewriter.getNamedAttr(
+            cir::CIRDialect::getSExtAttrName(), rewriter.getUnitAttr()));
       else
         // FIXME(cir): Add a proper abstraction to create attributes.
-        Attrs.push_back(
-            rewriter.getNamedAttr("cir.zeroext", rewriter.getUnitAttr()));
+        Attrs.push_back(rewriter.getNamedAttr(
+            cir::CIRDialect::getZExtAttrName(), rewriter.getUnitAttr()));
       [[fallthrough]];
     case ABIArgInfo::Direct:
       if (ArgNo == 0 && cir::MissingFeatures::chainCall())

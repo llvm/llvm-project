@@ -4448,7 +4448,7 @@ std::unique_ptr<cir::LowerModule> prepareLowerModule(mlir::ModuleOp module) {
   // If the triple is not present, e.g. CIR modules parsed from text, we
   // cannot init LowerModule properly.
   assert(!cir::MissingFeatures::makeTripleAlwaysPresent());
-  if (!module->hasAttr("cir.triple"))
+  if (!module->hasAttr(cir::CIRDialect::getTripleAttrName()))
     return {};
   return cir::createLowerModule(module, rewriter);
 }
@@ -4706,7 +4706,8 @@ void ConvertCIRToLLVMPass::buildGlobalAnnotationsVar(
     llvm::StringMap<mlir::LLVM::GlobalOp> &argStringGlobalsMap,
     llvm::MapVector<mlir::ArrayAttr, mlir::LLVM::GlobalOp> &argsVarMap) {
   mlir::ModuleOp module = getOperation();
-  mlir::Attribute attr = module->getAttr("cir.global_annotations");
+  mlir::Attribute attr =
+      module->getAttr(cir::CIRDialect::getGlobalAnnotationsAttrName());
   if (!attr)
     return;
   if (auto globalAnnotValues =
@@ -4834,8 +4835,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   // Allow operations that will be lowered directly to LLVM IR.
   target.addLegalOp<mlir::LLVM::ZeroOp>();
 
-  getOperation()->removeAttr("cir.sob");
-  getOperation()->removeAttr("cir.lang");
+  getOperation()->removeAttr(cir::CIRDialect::getSOBAttrName());
+  getOperation()->removeAttr(cir::CIRDialect::getLangAttrName());
 
   llvm::SmallVector<mlir::Operation *> ops;
   ops.push_back(module);
@@ -4845,8 +4846,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
     signalPassFailure();
 
   // Emit the llvm.global_ctors array.
-  buildCtorDtorList(module, "cir.global_ctors", "llvm.global_ctors",
-                    [](mlir::Attribute attr) {
+  buildCtorDtorList(module, cir::CIRDialect::getGlobalCtorsAttrName(),
+                    "llvm.global_ctors", [](mlir::Attribute attr) {
                       assert(mlir::isa<cir::GlobalCtorAttr>(attr) &&
                              "must be a GlobalCtorAttr");
                       auto ctorAttr = mlir::cast<cir::GlobalCtorAttr>(attr);
@@ -4854,8 +4855,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                                             ctorAttr.getPriority());
                     });
   // Emit the llvm.global_dtors array.
-  buildCtorDtorList(module, "cir.global_dtors", "llvm.global_dtors",
-                    [](mlir::Attribute attr) {
+  buildCtorDtorList(module, cir::CIRDialect::getGlobalDtorsAttrName(),
+                    "llvm.global_dtors", [](mlir::Attribute attr) {
                       assert(mlir::isa<cir::GlobalDtorAttr>(attr) &&
                              "must be a GlobalDtorAttr");
                       auto dtorAttr = mlir::cast<cir::GlobalDtorAttr>(attr);

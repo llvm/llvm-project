@@ -34,6 +34,15 @@ def CIR_Dialect : Dialect {
     // Names of CIR parameter attributes.
     static llvm::StringRef getSExtAttrName() { return "cir.signext"; }
     static llvm::StringRef getZExtAttrName() { return "cir.zeroext"; }
+    static llvm::StringRef getSOBAttrName() { return "cir.sob"; }
+    static llvm::StringRef getLangAttrName() { return "cir.lang"; }
+    static llvm::StringRef getTripleAttrName() { return "cir.triple"; }
+
+    static llvm::StringRef getGlobalCtorsAttrName() { return "cir.global_ctors"; }
+    static llvm::StringRef getGlobalDtorsAttrName() { return "cir.global_dtors"; }
+    static llvm::StringRef getGlobalAnnotationsAttrName() { return "cir.global_annotations"; }
+
+    static llvm::StringRef getOpenCLVersionAttrName() { return "cir.cl.version"; }
 
     void registerAttributes();
     void registerTypes();

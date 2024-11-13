@@ -260,5 +260,6 @@ void CIRGenModule::emitOpenCLMetadata() {
   auto clVersionAttr =
       cir::OpenCLVersionAttr::get(&getMLIRContext(), major, minor);
 
-  theModule->setAttr("cir.cl.version", clVersionAttr);
+  theModule->setAttr(cir::CIRDialect::getOpenCLVersionAttrName(),
+                     clVersionAttr);
 }

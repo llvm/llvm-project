@@ -236,8 +236,9 @@ createLowerModule(mlir::ModuleOp module, mlir::PatternRewriter &rewriter) {
       module->getAttr(mlir::LLVM::LLVMDialect::getDataLayoutAttrName()));
 
   // Fetch target information.
-  llvm::Triple triple(
-      mlir::cast<mlir::StringAttr>(module->getAttr("cir.triple")).getValue());
+  llvm::Triple triple(mlir::cast<mlir::StringAttr>(
+                          module->getAttr(cir::CIRDialect::getTripleAttrName()))
+                          .getValue());
   clang::TargetOptions targetOptions;
   targetOptions.Triple = triple.str();
   auto targetInfo = clang::targets::AllocateTarget(triple, targetOptions);
