@@ -1625,7 +1625,7 @@ public:
   }
 
   /// Return true if the specified condition code is legal or custom for a
-  /// comparison of on this target.
+  /// comparison of the specified types on this target.
   bool isCondCodeLegalOrCustom(ISD::CondCode CC, MVT VT) const {
     return getCondCodeAction(CC, VT) == Legal ||
            getCondCodeAction(CC, VT) == Custom;
