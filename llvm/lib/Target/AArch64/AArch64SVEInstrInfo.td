@@ -839,8 +839,8 @@ let Predicates = [HasSVEorSME] in {
   defm DUPM_ZI : sve_int_dup_mask_imm<"dupm">;
 
   // Splat immediate (predicated)
-  defm CPY_ZPmI  : sve_int_dup_imm_pred_merge<"cpy">;
-  defm CPY_ZPzI  : sve_int_dup_imm_pred_zero<"cpy">;
+  defm CPY_ZPmI  : sve_int_dup_imm_pred_merge<"cpy", AArch64dup_mt>;
+  defm CPY_ZPzI  : sve_int_dup_imm_pred_zero<"cpy", AArch64dup_mt>;
   defm FCPY_ZPmI : sve_int_dup_fpimm_pred<"fcpy">;
 
   // Splat scalar register (unpredicated, GPR or vector + element index)
@@ -891,26 +891,6 @@ let Predicates = [HasSVEorSME] in {
             (DUP_ZI_S $a, $b)>;
   def : Pat<(nxv2i64 (splat_vector (i64 (SVECpyDupImm64Pat i32:$a, i32:$b)))),
             (DUP_ZI_D $a, $b)>;
-
-  // Duplicate Int immediate to active vector elements (zeroing).
-  def : Pat<(nxv16i8 (AArch64dup_mt PPR:$pg, (i32 (SVECpyDupImm8Pat i32:$a, i32:$b)), (SVEDup0Undef))),
-            (CPY_ZPzI_B $pg, $a, $b)>;
-  def : Pat<(nxv8i16 (AArch64dup_mt PPR:$pg, (i32 (SVECpyDupImm16Pat i32:$a, i32:$b)), (SVEDup0Undef))),
-            (CPY_ZPzI_H $pg, $a, $b)>;
-  def : Pat<(nxv4i32 (AArch64dup_mt PPR:$pg, (i32 (SVECpyDupImm32Pat i32:$a, i32:$b)), (SVEDup0Undef))),
-            (CPY_ZPzI_S $pg, $a, $b)>;
-  def : Pat<(nxv2i64 (AArch64dup_mt PPR:$pg, (i64 (SVECpyDupImm64Pat i32:$a, i32:$b)), (SVEDup0Undef))),
-            (CPY_ZPzI_D $pg, $a, $b)>;
-
-  // Duplicate Int immediate to active vector elements (merging).
-  def : Pat<(nxv16i8 (AArch64dup_mt PPR:$pg, (i32 (SVECpyDupImm8Pat i32:$a, i32:$b)), (nxv16i8 ZPR:$z))),
-            (CPY_ZPmI_B $z, $pg, $a, $b)>;
-  def : Pat<(nxv8i16 (AArch64dup_mt PPR:$pg, (i32 (SVECpyDupImm16Pat i32:$a, i32:$b)), (nxv8i16 ZPR:$z))),
-            (CPY_ZPmI_H $z, $pg, $a, $b)>;
-  def : Pat<(nxv4i32 (AArch64dup_mt PPR:$pg, (i32 (SVECpyDupImm32Pat i32:$a, i32:$b)), (nxv4i32 ZPR:$z))),
-            (CPY_ZPmI_S $z, $pg, $a, $b)>;
-  def : Pat<(nxv2i64 (AArch64dup_mt PPR:$pg, (i64 (SVECpyDupImm64Pat i32:$a, i32:$b)), (nxv2i64 ZPR:$z))),
-            (CPY_ZPmI_D $z, $pg, $a, $b)>;
 
   // Duplicate immediate FP into all vector elements.
   def : Pat<(nxv2f16 (splat_vector (f16 fpimm:$val))),
