@@ -266,11 +266,9 @@ void IfClause() {
 }
 
 void SelfClause() {
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented, clause ignored}}
 #pragma acc serial loop self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented, clause ignored}}
 #pragma acc serial loop self, seq
   for(int i = 0; i < 5;++i) {}
 
@@ -293,18 +291,15 @@ void SelfClause() {
 #pragma acc serial loop self(, seq
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+2{{expected identifier}}
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected identifier}}
 #pragma acc serial loop self)
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+2{{expected identifier}}
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected identifier}}
 #pragma acc serial loop self) seq
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+2{{expected identifier}}
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected identifier}}
 #pragma acc serial loop self), seq
   for(int i = 0; i < 5;++i) {}
 

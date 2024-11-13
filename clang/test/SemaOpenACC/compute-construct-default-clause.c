@@ -16,7 +16,6 @@ void SingleOnly() {
   #pragma acc kernels self default(present) present(i) default(none) copy(i)
   while(0);
 
-  // expected-warning@+5{{OpenACC clause 'self' not yet implemented}}
   // expected-warning@+4{{OpenACC clause 'default' not yet implemented}}
   // expected-warning@+3{{OpenACC clause 'private' not yet implemented}}
   // expected-warning@+2{{OpenACC clause 'default' not yet implemented}}
@@ -24,7 +23,6 @@ void SingleOnly() {
   #pragma acc parallel loop self default(present) private(i) default(none) copy(i)
   for(int i = 0; i < 5; ++i);
 
-  // expected-warning@+2{{OpenACC clause 'self' not yet implemented, clause ignored}}
   // expected-error@+1{{expected '('}}
   #pragma acc serial loop self default private(i) default(none) if(i)
   for(int i = 0; i < 5; ++i);
