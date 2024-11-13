@@ -707,13 +707,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
     initLLVM();
     createFiles(args);
-    if (errorCount())
+    if (errCount(ctx))
       return;
 
     inferMachineType();
     setConfigs(ctx, args);
     checkOptions(ctx);
-    if (errorCount())
+    if (errCount(ctx))
       return;
 
     invokeELFT(link, args);
@@ -1724,7 +1724,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     parallel::strategy = hardware_concurrency(threads);
     ctx.arg.thinLTOJobs = v;
   } else if (parallel::strategy.compute_thread_count() > 16) {
-    log("set maximum concurrency to 16, specify --threads= to change");
+    Log(ctx) << "set maximum concurrency to 16, specify --threads= to change";
     parallel::strategy = hardware_concurrency(16);
   }
   if (auto *arg = args.getLastArg(OPT_thinlto_jobs_eq))
@@ -2082,7 +2082,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
 
   if (defaultScript && !hasScript)
     readLinkerScript(ctx, *defaultScript);
-  if (files.empty() && !hasInput && errorCount() == 0)
+  if (files.empty() && !hasInput && errCount(ctx) == 0)
     ErrAlways(ctx) << "no input files";
 }
 
@@ -2792,6 +2792,8 @@ static void readSecurityNotes(Ctx &ctx) {
       referenceFileName = (*it)->getName();
     }
   }
+  bool hasValidPauthAbiCoreInfo = llvm::any_of(
+      ctx.aarch64PauthAbiCoreInfo, [](uint8_t c) { return c != 0; });
 
   for (ELFFileBase *f : ctx.objectFiles) {
     uint32_t features = f->andFeatures;
@@ -2830,10 +2832,12 @@ static void readSecurityNotes(Ctx &ctx) {
                      "GNU_PROPERTY_X86_FEATURE_1_IBT property";
       features |= GNU_PROPERTY_X86_FEATURE_1_IBT;
     }
-    if (ctx.arg.zPacPlt && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_PAC)) {
+    if (ctx.arg.zPacPlt && !(hasValidPauthAbiCoreInfo ||
+                             (features & GNU_PROPERTY_AARCH64_FEATURE_1_PAC))) {
       Warn(ctx) << f
                 << ": -z pac-plt: file does not have "
-                   "GNU_PROPERTY_AARCH64_FEATURE_1_PAC property";
+                   "GNU_PROPERTY_AARCH64_FEATURE_1_PAC property and no valid "
+                   "PAuth core info present for this link job";
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
     }
     ctx.arg.andFeatures &= features;
@@ -2999,7 +3003,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   ctx.duplicates.clear();
 
   // Return if there were name resolution errors.
-  if (errorCount())
+  if (errCount(ctx))
     return;
 
   // We want to declare linker script's symbols early,
@@ -3062,7 +3066,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   reportBackrefs(ctx);
   writeArchiveStats(ctx);
   writeWhyExtract(ctx);
-  if (errorCount())
+  if (errCount(ctx))
     return;
 
   // Bail out if normal linked output is skipped due to LTO.

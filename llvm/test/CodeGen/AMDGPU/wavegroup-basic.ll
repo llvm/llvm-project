@@ -7,13 +7,13 @@
 define amdgpu_kernel void @wavegroup_kernel(ptr addrspace(1) %p) #0 "amdgpu-wavegroup-enable" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-dispatch-id" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" !reqd_work_group_size !{i32 32, i32 8, i32 1} {
 ; CHECK-LABEL: wavegroup_kernel:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_getreg_b32 s3, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
+; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_mul_i32 s4, s3, 2
-; CHECK-NEXT:    s_mul_i32 s33, s3, s2
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s4
+; CHECK-NEXT:    s_mul_i32 s1, s0, 2
+; CHECK-NEXT:    s_mul_i32 s33, s0, s4
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
-; CHECK-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; CHECK-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
 ; CHECK-NEXT:    s_bfe_u32 s2, ttmp8, 0x20019
 ; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; CHECK-NEXT:    s_lshl_b32 s3, ttmp9, 8
@@ -48,9 +48,9 @@ attributes #0 = {"amdgpu-flat-work-group-size"="256,256"}
 ; KERNEL-NEXT:         .amdhsa_group_segment_fixed_size 0
 ; KERNEL-NEXT:         .amdhsa_private_segment_fixed_size 0
 ; KERNEL-NEXT:         .amdhsa_kernarg_size 8
-; KERNEL-NEXT:         .amdhsa_user_sgpr_count 3
+; KERNEL-NEXT:         .amdhsa_user_sgpr_count 5
 ; KERNEL-NEXT:         .amdhsa_user_sgpr_dispatch_ptr 0
-; KERNEL-NEXT:         .amdhsa_user_sgpr_queue_ptr 0
+; KERNEL-NEXT:         .amdhsa_user_sgpr_queue_ptr 1
 ; KERNEL-NEXT:         .amdhsa_user_sgpr_kernarg_segment_ptr 1
 ; KERNEL-NEXT:         .amdhsa_user_sgpr_dispatch_id 0
 ; KERNEL-NEXT:         .amdhsa_user_sgpr_private_segment_size 1

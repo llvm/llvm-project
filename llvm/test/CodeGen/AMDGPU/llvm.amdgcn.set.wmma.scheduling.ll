@@ -22,7 +22,7 @@ define amdgpu_kernel void @test_disable_scheduling_stall_const() {
 define amdgpu_kernel void @test_set_scheduling_stall_var(i32 %val) {
 ; GFX13-LABEL: test_set_scheduling_stall_var:
 ; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b32 s0, s[2:3], 0x24
+; GFX13-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_setreg_b32 hwreg(HW_REG_SCHED_MODE, 4, 1), s0
 ; GFX13-NEXT:    s_endpgm

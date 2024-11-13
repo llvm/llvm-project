@@ -254,12 +254,32 @@ Function *IndirectCallEdge::GetCallee(ModuleList &images,
 
 /// @}
 
+AddressRange CollapseRanges(llvm::ArrayRef<AddressRange> ranges) {
+  if (ranges.empty())
+    return AddressRange();
+  if (ranges.size() == 1)
+    return ranges[0];
+
+  Address lowest_addr = ranges[0].GetBaseAddress();
+  addr_t highest_addr = lowest_addr.GetFileAddress() + ranges[0].GetByteSize();
+  for (const AddressRange &range : ranges.drop_front()) {
+    Address range_begin = range.GetBaseAddress();
+    addr_t range_end = range_begin.GetFileAddress() + range.GetByteSize();
+    if (range_begin.GetFileAddress() < lowest_addr.GetFileAddress())
+      lowest_addr = range_begin;
+    if (range_end > highest_addr)
+      highest_addr = range_end;
+  }
+  return AddressRange(lowest_addr, highest_addr - lowest_addr.GetFileAddress());
+}
+
 //
 Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
                    lldb::user_id_t type_uid, const Mangled &mangled, Type *type,
-                   const AddressRange &range)
+                   AddressRanges ranges)
     : UserID(func_uid), m_comp_unit(comp_unit), m_type_uid(type_uid),
-      m_type(type), m_mangled(mangled), m_block(func_uid), m_range(range),
+      m_type(type), m_mangled(mangled), m_block(func_uid),
+      m_ranges(std::move(ranges)), m_range(CollapseRanges(m_ranges)),
       m_frame_base(), m_flags(), m_prologue_byte_size(0) {
   m_block.SetParentScope(this);
   assert(comp_unit != nullptr);
@@ -406,14 +426,13 @@ void Function::GetDescription(Stream *s, lldb::DescriptionLevel level,
     llvm::interleaveComma(decl_context, *s, [&](auto &ctx) { ctx.Dump(*s); });
     *s << "}";
   }
-  *s << ", range = ";
-  Address::DumpStyle fallback_style;
-  if (level == eDescriptionLevelVerbose)
-    fallback_style = Address::DumpStyleModuleWithFileAddress;
-  else
-    fallback_style = Address::DumpStyleFileAddress;
-  GetAddressRange().Dump(s, target, Address::DumpStyleLoadAddress,
-                         fallback_style);
+  *s << ", range" << (m_ranges.size() > 1 ? "s" : "") << " = ";
+  Address::DumpStyle fallback_style =
+      level == eDescriptionLevelVerbose
+          ? Address::DumpStyleModuleWithFileAddress
+          : Address::DumpStyleFileAddress;
+  for (const AddressRange &range : m_ranges)
+    range.Dump(s, target, Address::DumpStyleLoadAddress, fallback_style);
 }
 
 void Function::Dump(Stream *s, bool show_context) const {
@@ -459,9 +478,9 @@ lldb::DisassemblerSP Function::GetInstructions(const ExecutionContext &exe_ctx,
                                                bool prefer_file_cache) {
   ModuleSP module_sp(GetAddressRange().GetBaseAddress().GetModule());
   if (module_sp && exe_ctx.HasTargetScope()) {
-    return Disassembler::DisassembleRange(module_sp->GetArchitecture(), nullptr,
-                                          flavor, exe_ctx.GetTargetRef(),
-                                          GetAddressRange(), !prefer_file_cache);
+    return Disassembler::DisassembleRange(
+        module_sp->GetArchitecture(), nullptr, nullptr, nullptr, flavor,
+        exe_ctx.GetTargetRef(), GetAddressRange(), !prefer_file_cache);
   }
   return lldb::DisassemblerSP();
 }

@@ -14,7 +14,7 @@ end
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPDepobjConstruct
 !PARSE-TREE: | Verbatim
 !PARSE-TREE: | OmpObject -> Designator -> DataRef -> Name = 'x'
-!PARSE-TREE: | OmpClause -> Depend -> OmpDependClause -> InOut
+!PARSE-TREE: | OmpClause -> Depend -> OmpDependClause -> TaskDep
 !PARSE-TREE: | | OmpTaskDependenceType -> Type = In
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'y'
 

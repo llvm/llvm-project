@@ -38,7 +38,6 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/SwitchLoweringUtils.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
@@ -2167,7 +2166,8 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::lifetime_start:
   case Intrinsic::lifetime_end: {
     // No stack colouring in O0, discard region information.
-    if (MF->getTarget().getOptLevel() == CodeGenOptLevel::None)
+    if (MF->getTarget().getOptLevel() == CodeGenOptLevel::None ||
+        MF->getFunction().hasOptNone())
       return true;
 
     unsigned Op = ID == Intrinsic::lifetime_start ? TargetOpcode::LIFETIME_START
@@ -2597,6 +2597,10 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return translateExtractVector(CI, MIRBuilder);
   case Intrinsic::vector_insert:
     return translateInsertVector(CI, MIRBuilder);
+  case Intrinsic::stepvector: {
+    MIRBuilder.buildStepVector(getOrCreateVReg(CI), 1);
+    return true;
+  }
   case Intrinsic::prefetch: {
     Value *Addr = CI.getOperand(0);
     unsigned RW = cast<ConstantInt>(CI.getOperand(1))->getZExtValue();
@@ -3227,8 +3231,10 @@ bool IRTranslator::translateExtractElement(const User &U,
                                            MachineIRBuilder &MIRBuilder) {
   // If it is a <1 x Ty> vector, use the scalar as it is
   // not a legal vector type in LLT.
-  if (cast<FixedVectorType>(U.getOperand(0)->getType())->getNumElements() == 1)
-    return translateCopy(U, *U.getOperand(0), MIRBuilder);
+  if (const FixedVectorType *FVT =
+          dyn_cast<FixedVectorType>(U.getOperand(0)->getType()))
+    if (FVT->getNumElements() == 1)
+      return translateCopy(U, *U.getOperand(0), MIRBuilder);
 
   Register Res = getOrCreateVReg(U);
   Register Val = getOrCreateVReg(*U.getOperand(0));
@@ -3545,7 +3551,6 @@ void IRTranslator::translateDbgValueRecord(Value *V, bool HasArgList,
     // pretty baked in right now.
     MIRBuilder.buildDirectDbgValue(Reg, Variable, Expression);
   }
-  return;
 }
 
 void IRTranslator::translateDbgDeclareRecord(Value *Address, bool HasArgList,

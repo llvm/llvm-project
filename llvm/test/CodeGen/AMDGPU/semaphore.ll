@@ -10,7 +10,7 @@
 define amdgpu_kernel void @test_sema(i32 %arg) {
 ; GFX13-LABEL: test_sema:
 ; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b32 s0, s[2:3], 0x24
+; GFX13-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX13-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SEMA2_STATE), 0
 ; GFX13-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SEMA1_STATE), 0xbc614e
 ; GFX13-NEXT:    s_wait_kmcnt 0x0

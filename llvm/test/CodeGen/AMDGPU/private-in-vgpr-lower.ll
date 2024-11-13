@@ -31,11 +31,11 @@ define amdgpu_kernel void @private_load_store() {
   ; SETIDX-LABEL: name: private_load_store
   ; SETIDX: bb.0.entry:
   ; SETIDX-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
-  ; SETIDX-NEXT:   BUNDLE implicit-def %5, implicit $idx1, implicit $exec {
+  ; SETIDX-NEXT:   BUNDLE implicit-def %6, implicit $idx1, implicit $exec {
   ; SETIDX-NEXT:     [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx1, 31, implicit $exec :: (dereferenceable load (s32) from %ir.p.1, addrspace 5)
   ; SETIDX-NEXT:     V_STORE_IDX internal [[V_LOAD_IDX]], $idx1, 32, implicit $exec :: (store (s32) into %ir.p.2, addrspace 5)
   ; SETIDX-NEXT:   }
-  ; SETIDX-NEXT:   BUNDLE implicit-def %8, implicit $idx1, implicit $exec {
+  ; SETIDX-NEXT:   BUNDLE implicit-def %9, implicit $idx1, implicit $exec {
   ; SETIDX-NEXT:     [[V_LOAD_IDX1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx1, 1, implicit $exec :: (dereferenceable load (s32) from %ir.q.1, addrspace 5)
   ; SETIDX-NEXT:     V_STORE_IDX internal [[V_LOAD_IDX1]], $idx1, 2, implicit $exec :: (store (s32) into %ir.q.2, addrspace 5)
   ; SETIDX-NEXT:   }

@@ -11,7 +11,7 @@ target triple = "amdgcn-amd-amdhsa"
 define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) {
 ; GFX1210-SDAG-LABEL: use_private_to_flat_addrspacecast:
 ; GFX1210-SDAG:       ; %bb.0:
-; GFX1210-SDAG-NEXT:    s_load_b32 s0, s[2:3], 0x24
+; GFX1210-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX1210-SDAG-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
@@ -28,7 +28,7 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %p
 ;
 ; GFX1210-GISEL-LABEL: use_private_to_flat_addrspacecast:
 ; GFX1210-GISEL:       ; %bb.0:
-; GFX1210-GISEL-NEXT:    s_load_b32 s0, s[2:3], 0x24
+; GFX1210-GISEL-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX1210-GISEL-NEXT:    v_mov_b64_e32 v[0:1], src_flat_scratch_base_lo
 ; GFX1210-GISEL-NEXT:    v_mbcnt_lo_u32_b32 v2, -1, 0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
@@ -51,7 +51,7 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %p
 ;
 ; GFX1300-SDAG-LABEL: use_private_to_flat_addrspacecast:
 ; GFX1300-SDAG:       ; %bb.0:
-; GFX1300-SDAG-NEXT:    s_load_b32 s0, s[2:3], 0x24
+; GFX1300-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX1300-SDAG-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX1300-SDAG-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1300-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -72,7 +72,7 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %p
 ;
 ; GFX1300-GISEL-LABEL: use_private_to_flat_addrspacecast:
 ; GFX1300-GISEL:       ; %bb.0:
-; GFX1300-GISEL-NEXT:    s_load_b32 s0, s[2:3], 0x24
+; GFX1300-GISEL-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX1300-GISEL-NEXT:    v_mbcnt_lo_u32_b32 v2, -1, 0
 ; GFX1300-GISEL-NEXT:    v_mov_b64_e32 v[0:1], src_flat_scratch_base_lo
 ; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -100,7 +100,7 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %p
 define amdgpu_kernel void @use_private_to_flat_addrspacecast_nonnull(ptr addrspace(5) %ptr) {
 ; GFX1210-SDAG-LABEL: use_private_to_flat_addrspacecast_nonnull:
 ; GFX1210-SDAG:       ; %bb.0:
-; GFX1210-SDAG-NEXT:    s_load_b32 s0, s[2:3], 0x24
+; GFX1210-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX1210-SDAG-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v1, 20, v0
@@ -113,7 +113,7 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast_nonnull(ptr addrspa
 ;
 ; GFX1210-GISEL-LABEL: use_private_to_flat_addrspacecast_nonnull:
 ; GFX1210-GISEL:       ; %bb.0:
-; GFX1210-GISEL-NEXT:    s_load_b32 s0, s[2:3], 0x24
+; GFX1210-GISEL-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX1210-GISEL-NEXT:    v_mbcnt_lo_u32_b32 v2, -1, 0
 ; GFX1210-GISEL-NEXT:    v_mov_b64_e32 v[0:1], src_flat_scratch_base_lo
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
@@ -128,7 +128,7 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast_nonnull(ptr addrspa
 ;
 ; GFX1300-SDAG-LABEL: use_private_to_flat_addrspacecast_nonnull:
 ; GFX1300-SDAG:       ; %bb.0:
-; GFX1300-SDAG-NEXT:    s_load_b32 s0, s[2:3], 0x24
+; GFX1300-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX1300-SDAG-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX1300-SDAG-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1300-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -144,7 +144,7 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast_nonnull(ptr addrspa
 ;
 ; GFX1300-GISEL-LABEL: use_private_to_flat_addrspacecast_nonnull:
 ; GFX1300-GISEL:       ; %bb.0:
-; GFX1300-GISEL-NEXT:    s_load_b32 s0, s[2:3], 0x24
+; GFX1300-GISEL-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX1300-GISEL-NEXT:    v_mbcnt_lo_u32_b32 v2, -1, 0
 ; GFX1300-GISEL-NEXT:    v_mov_b64_e32 v[0:1], src_flat_scratch_base_lo
 ; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v3, 0
@@ -166,7 +166,7 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast_nonnull(ptr addrspa
 define amdgpu_kernel void @use_flat_to_private_addrspacecast(ptr %ptr) {
 ; GFX1210-LABEL: use_flat_to_private_addrspacecast:
 ; GFX1210:       ; %bb.0:
-; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    s_sub_co_i32 s2, s0, src_flat_scratch_base_lo
@@ -178,7 +178,7 @@ define amdgpu_kernel void @use_flat_to_private_addrspacecast(ptr %ptr) {
 ;
 ; GFX1300-LABEL: use_flat_to_private_addrspacecast:
 ; GFX1300:       ; %bb.0:
-; GFX1300-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX1300-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    s_sub_co_i32 s2, s0, src_flat_scratch_base_lo
@@ -195,7 +195,7 @@ define amdgpu_kernel void @use_flat_to_private_addrspacecast(ptr %ptr) {
 define amdgpu_kernel void @use_flat_to_private_addrspacecast_nonnull(ptr %ptr) {
 ; GFX1210-SDAG-LABEL: use_flat_to_private_addrspacecast_nonnull:
 ; GFX1210-SDAG:       ; %bb.0:
-; GFX1210-SDAG-NEXT:    s_load_b32 s0, s[2:3], 0x24
+; GFX1210-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX1210-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-SDAG-NEXT:    s_sub_co_i32 s0, s0, src_flat_scratch_base_lo
@@ -205,7 +205,7 @@ define amdgpu_kernel void @use_flat_to_private_addrspacecast_nonnull(ptr %ptr) {
 ;
 ; GFX1210-GISEL-LABEL: use_flat_to_private_addrspacecast_nonnull:
 ; GFX1210-GISEL:       ; %bb.0:
-; GFX1210-GISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX1210-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1210-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_sub_co_i32 s0, s0, src_flat_scratch_base_lo
@@ -215,7 +215,7 @@ define amdgpu_kernel void @use_flat_to_private_addrspacecast_nonnull(ptr %ptr) {
 ;
 ; GFX1300-SDAG-LABEL: use_flat_to_private_addrspacecast_nonnull:
 ; GFX1300-SDAG:       ; %bb.0:
-; GFX1300-SDAG-NEXT:    s_load_b32 s0, s[2:3], 0x24
+; GFX1300-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX1300-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1300-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-SDAG-NEXT:    s_sub_co_i32 s0, s0, src_flat_scratch_base_lo
@@ -225,7 +225,7 @@ define amdgpu_kernel void @use_flat_to_private_addrspacecast_nonnull(ptr %ptr) {
 ;
 ; GFX1300-GISEL-LABEL: use_flat_to_private_addrspacecast_nonnull:
 ; GFX1300-GISEL:       ; %bb.0:
-; GFX1300-GISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX1300-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1300-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-GISEL-NEXT:    s_sub_co_i32 s0, s0, src_flat_scratch_base_lo
