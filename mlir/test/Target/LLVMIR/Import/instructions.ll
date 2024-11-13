@@ -383,6 +383,33 @@ define float @invariant_load(ptr %ptr) {
 
 ; // -----
 
+; CHECK-LABEL: @invariant_group_load
+; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
+define float @invariant_group_load(ptr %ptr) {
+  ; CHECK:  %[[VAL:.+]] = llvm.load %[[PTR]] invariant_group {alignment = 4 : i64} : !llvm.ptr -> f32
+  %1 = load float, ptr %ptr, align 4, !invariant.group !0
+  ; CHECK:  llvm.return %[[VAL]]
+  ret float %1
+}
+
+!0 = !{}
+
+; // -----
+
+; CHECK-LABEL: @invariant_group_store
+; CHECK-SAME:  %[[VAL:[a-zA-Z0-9]+]]
+; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
+define void @invariant_group_store(float %val, ptr %ptr) {
+  ; CHECK:  llvm.store %[[VAL]], %[[PTR]] invariant_group {alignment = 4 : i64} : f32, !llvm.ptr
+  store float %val, ptr %ptr, align 4, !invariant.group !0
+  ; CHECK:  llvm.return
+  ret void
+}
+
+!0 = !{}
+
+; // -----
+
 ; CHECK-LABEL: @atomic_load_store
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
 define void @atomic_load_store(ptr %ptr) {
