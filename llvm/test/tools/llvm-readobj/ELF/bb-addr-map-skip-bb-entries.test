@@ -1,4 +1,4 @@
-## This test checks how llvm-readobj prints for skipped BB entries(-skip-emit-bb-entries) file.
+## This test checks how llvm-readobj prints for skipped BB entries(-basic-block-address-map-skip-emit-bb-entries) file.
 
 ## Check 64-bit:
 # RUN: yaml2obj %s -DBITS=64 -o %t1.x64.o
