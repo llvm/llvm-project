@@ -84,11 +84,6 @@ def add_runtime(name):
 def get_asan_rtlib():
     if not "asan" in config.available_features or not "Darwin" in config.host_os:
         return ""
-    try:
-        import glob
-    except:
-        print("glob module not found, skipping get_asan_rtlib() lookup")
-        return ""
     # Find the asan rt lib
     resource_dir = (
         subprocess.check_output([config.host_cc.strip(), "-print-resource-dir"])
