@@ -239,7 +239,7 @@ static bool isValidElementType(Type *Ty) {
 /// returns the type of its value operand, for Cmp - the types of the compare
 /// operands and for insertelement - the type os the inserted operand.
 /// Otherwise, just the type of the value is returned.
-template <typename T> static Type *getValueType(T *V) {
+static Type *getValueType(Value *V) {
   if (auto *SI = dyn_cast<StoreInst>(V))
     return SI->getValueOperand()->getType();
   if (auto *CI = dyn_cast<CmpInst>(V))
