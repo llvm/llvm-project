@@ -11,8 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TypeDetail.h"
-
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -28,6 +26,17 @@ using namespace mlir;
 using namespace mlir::LLVM;
 
 constexpr const static uint64_t kBitsInByte = 8;
+
+static OptionalParseResult parseOptionalName(AsmParser &p, std::string &name) {
+  if (succeeded(p.parseOptionalString(&name)))
+    return std::nullopt;
+
+  return success();
+}
+
+static void printOptionalName(AsmPrinter &p, StringRef name) {
+  p.printString(name);
+}
 
 //===----------------------------------------------------------------------===//
 // custom<FunctionTypes>
@@ -421,85 +430,46 @@ bool LLVMStructType::isValidElementType(Type type) {
                     LLVMFunctionType, LLVMTokenType>(type);
 }
 
-LLVMStructType LLVMStructType::getIdentified(MLIRContext *context,
-                                             StringRef name) {
-  return Base::get(context, name, /*opaque=*/false);
-}
-
-LLVMStructType LLVMStructType::getIdentifiedChecked(
-    function_ref<InFlightDiagnostic()> emitError, MLIRContext *context,
-    StringRef name) {
-  return Base::getChecked(emitError, context, name, /*opaque=*/false);
-}
-
-LLVMStructType LLVMStructType::getNewIdentified(MLIRContext *context,
-                                                StringRef name,
-                                                ArrayRef<Type> elements,
-                                                bool isPacked) {
-  std::string stringName = name.str();
-  unsigned counter = 0;
-  do {
-    auto type = LLVMStructType::getIdentified(context, stringName);
-    if (type.isInitialized() || failed(type.setBody(elements, isPacked))) {
-      counter += 1;
-      stringName = (Twine(name) + "." + std::to_string(counter)).str();
-      continue;
-    }
-    return type;
-  } while (true);
-}
-
 LLVMStructType LLVMStructType::getLiteral(MLIRContext *context,
                                           ArrayRef<Type> types, bool isPacked) {
-  return Base::get(context, types, isPacked);
+  return Base::get(context, "", types, isPacked, /*opaque=*/false);
 }
 
 LLVMStructType
 LLVMStructType::getLiteralChecked(function_ref<InFlightDiagnostic()> emitError,
                                   MLIRContext *context, ArrayRef<Type> types,
                                   bool isPacked) {
-  return Base::getChecked(emitError, context, types, isPacked);
+  return Base::getChecked(emitError, context, "", types, isPacked,
+                          /*opaque=*/false);
 }
 
 LLVMStructType LLVMStructType::getOpaque(StringRef name, MLIRContext *context) {
-  return Base::get(context, name, /*opaque=*/true);
+  return Base::get(context, name, /*types=*/std::nullopt, /*packed=*/false,
+                   /*opaque=*/true);
 }
 
 LLVMStructType
 LLVMStructType::getOpaqueChecked(function_ref<InFlightDiagnostic()> emitError,
                                  MLIRContext *context, StringRef name) {
-  return Base::getChecked(emitError, context, name, /*opaque=*/true);
-}
-
-LogicalResult LLVMStructType::setBody(ArrayRef<Type> types, bool isPacked) {
-  assert(isIdentified() && "can only set bodies of identified structs");
-  assert(llvm::all_of(types, LLVMStructType::isValidElementType) &&
-         "expected valid body types");
-  return Base::mutate(types, isPacked);
-}
-
-bool LLVMStructType::isPacked() const { return getImpl()->isPacked(); }
-bool LLVMStructType::isIdentified() const { return getImpl()->isIdentified(); }
-bool LLVMStructType::isOpaque() {
-  return getImpl()->isIdentified() &&
-         (getImpl()->isOpaque() || !getImpl()->isInitialized());
-}
-bool LLVMStructType::isInitialized() { return getImpl()->isInitialized(); }
-StringRef LLVMStructType::getName() { return getImpl()->getIdentifier(); }
-ArrayRef<Type> LLVMStructType::getBody() const {
-  return isIdentified() ? getImpl()->getIdentifiedStructBody()
-                        : getImpl()->getTypeList();
+  return Base::getChecked(emitError, context, name, /*types=*/std::nullopt,
+                          /*packed=*/false, /*opaque=*/true);
 }
 
 LogicalResult
-LLVMStructType::verifyInvariants(function_ref<InFlightDiagnostic()>, StringRef,
-                                 bool) {
-  return success();
-}
+LLVMStructType::verify(function_ref<InFlightDiagnostic()> emitError,
+                       StringRef name, ArrayRef<Type> types, bool packed,
+                       bool opaque) {
+  if (opaque) {
+    if (packed)
+      return emitError() << "opaque struct cannot be packed";
 
-LogicalResult
-LLVMStructType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
-                                 ArrayRef<Type> types, bool) {
+    if (name.empty())
+      return emitError() << "only identified structs can be opaque";
+
+    if (!types.empty())
+      return emitError() << "opaque struct must not have a body";
+  }
+
   for (Type t : types)
     if (!isValidElementType(t))
       return emitError() << "invalid LLVM structure element type: " << t;
@@ -1026,6 +996,7 @@ void LLVMDialect::registerTypes() {
   addTypes<
 #define GET_TYPEDEF_LIST
 #include "mlir/Dialect/LLVMIR/LLVMTypes.cpp.inc"
+
       >();
 }
 

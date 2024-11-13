@@ -81,14 +81,6 @@ MLIR_CAPI_EXPORTED MlirType
 mlirLLVMStructTypeLiteralGetChecked(MlirLocation loc, intptr_t nFieldTypes,
                                     MlirType const *fieldTypes, bool isPacked);
 
-/// Creates an LLVM identified struct type with no body. If a struct type with
-/// this name already exists in the context, returns that type. Use
-/// mlirLLVMStructTypeIdentifiedNewGet to create a fresh struct type,
-/// potentially renaming it. The body should be set separatelty by calling
-/// mlirLLVMStructTypeSetBody, if it isn't set already.
-MLIR_CAPI_EXPORTED MlirType mlirLLVMStructTypeIdentifiedGet(MlirContext ctx,
-                                                            MlirStringRef name);
-
 /// Creates an LLVM identified struct type with no body and a name starting with
 /// the given prefix. If a struct with the exact name as the given prefix
 /// already exists, appends an unspecified suffix to the name so that the name
@@ -99,12 +91,6 @@ MLIR_CAPI_EXPORTED MlirType mlirLLVMStructTypeIdentifiedNewGet(
 
 MLIR_CAPI_EXPORTED MlirType mlirLLVMStructTypeOpaqueGet(MlirContext ctx,
                                                         MlirStringRef name);
-
-/// Sets the body of the identified struct if it hasn't been set yet. Returns
-/// whether the operation was successful.
-MLIR_CAPI_EXPORTED MlirLogicalResult
-mlirLLVMStructTypeSetBody(MlirType structType, intptr_t nFieldTypes,
-                          MlirType const *fieldTypes, bool isPacked);
 
 enum MlirLLVMCConv {
   MlirLLVMCConvC = 0,

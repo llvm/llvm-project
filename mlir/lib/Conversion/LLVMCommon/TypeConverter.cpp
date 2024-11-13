@@ -84,54 +84,13 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
       return success();
     }
 
-    if (type.isIdentified()) {
-      auto convertedType = LLVM::LLVMStructType::getIdentified(
-          type.getContext(), ("_Converted." + type.getName()).str());
-
-      SmallVectorImpl<Type> &recursiveStack = getCurrentThreadRecursiveStack();
-      if (llvm::count(recursiveStack, type)) {
-        results.push_back(convertedType);
-        return success();
-      }
-      recursiveStack.push_back(type);
-      auto popConversionCallStack = llvm::make_scope_exit(
-          [&recursiveStack]() { recursiveStack.pop_back(); });
-
-      SmallVector<Type> convertedElemTypes;
-      convertedElemTypes.reserve(type.getBody().size());
-      if (failed(convertTypes(type.getBody(), convertedElemTypes)))
-        return std::nullopt;
-
-      // If the converted type has not been initialized yet, just set its body
-      // to be the converted arguments and return.
-      if (!convertedType.isInitialized()) {
-        if (failed(
-                convertedType.setBody(convertedElemTypes, type.isPacked()))) {
-          return failure();
-        }
-        results.push_back(convertedType);
-        return success();
-      }
-
-      // If it has been initialized, has the same body and packed bit, just use
-      // it. This ensures that recursive structs keep being recursive rather
-      // than including a non-updated name.
-      if (TypeRange(convertedType.getBody()) == TypeRange(convertedElemTypes) &&
-          convertedType.isPacked() == type.isPacked()) {
-        results.push_back(convertedType);
-        return success();
-      }
-
-      return failure();
-    }
-
     SmallVector<Type> convertedSubtypes;
     convertedSubtypes.reserve(type.getBody().size());
     if (failed(convertTypes(type.getBody(), convertedSubtypes)))
       return std::nullopt;
 
-    results.push_back(LLVM::LLVMStructType::getLiteral(
-        type.getContext(), convertedSubtypes, type.isPacked()));
+    results.push_back(LLVM::LLVMStructType::get(
+        type.getContext(), type.getName(), convertedSubtypes, type.isPacked()));
     return success();
   });
   addConversion([&](LLVM::LLVMArrayType type) -> std::optional<Type> {

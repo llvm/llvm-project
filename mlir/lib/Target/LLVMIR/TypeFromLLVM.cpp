@@ -116,7 +116,7 @@ private:
     // using getIdentified is not possible, as type names in LLVM are not
     // guaranteed to be unique.
     translateTypes(type->subtypes(), subtypes);
-    LLVM::LLVMStructType translated = LLVM::LLVMStructType::getNewIdentified(
+    LLVM::LLVMStructType translated = LLVM::LLVMStructType::get(
         &context, type->getName(), subtypes, type->isPacked());
     knownTranslations.try_emplace(type, translated);
     return translated;
