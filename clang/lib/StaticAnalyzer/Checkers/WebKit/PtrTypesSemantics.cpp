@@ -164,9 +164,8 @@ static bool isPtrOfType(const clang::QualType T, Predicate Pred) {
 }
 
 bool isSafePtrType(const clang::QualType T) {
-  return isPtrOfType(T, [](auto Name) {
-    return isRefType(Name) || isCheckedPtr(Name);
-  });
+  return isPtrOfType(
+      T, [](auto Name) {return isRefType(Name) || isCheckedPtr(Name); });
 }
 
 bool isOwnerPtrType(const clang::QualType T) {
