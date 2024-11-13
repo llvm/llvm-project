@@ -25,7 +25,7 @@ using namespace llvm;
 using namespace gsym;
 
 Error CallSiteInfo::encode(FileWriter &O) const {
-  O.writeU64(ReturnAddress);
+  O.writeU64(ReturnOffset);
   O.writeU8(Flags);
   O.writeU32(MatchRegex.size());
   for (uint32_t Entry : MatchRegex)
@@ -37,11 +37,11 @@ Expected<CallSiteInfo> CallSiteInfo::decode(DataExtractor &Data,
                                             uint64_t &Offset) {
   CallSiteInfo CSI;
 
-  // Read ReturnAddress
+  // Read ReturnOffset
   if (!Data.isValidOffsetForDataOfSize(Offset, sizeof(uint64_t)))
     return createStringError(std::errc::io_error,
-                             "0x%8.8" PRIx64 ": missing ReturnAddress", Offset);
-  CSI.ReturnAddress = Data.getU64(&Offset);
+                             "0x%8.8" PRIx64 ": missing ReturnOffset", Offset);
+  CSI.ReturnOffset = Data.getU64(&Offset);
 
   // Read Flags
   if (!Data.isValidOffsetForDataOfSize(Offset, sizeof(uint8_t)))
@@ -138,8 +138,8 @@ template <> struct MappingTraits<FunctionYAML> {
 };
 
 template <> struct MappingTraits<FunctionsYAML> {
-  static void mapping(IO &io, FunctionsYAML &functionsYAML) {
-    io.mapRequired("functions", functionsYAML.functions);
+  static void mapping(IO &io, FunctionsYAML &FuncYAMLs) {
+    io.mapRequired("functions", FuncYAMLs.functions);
   }
 };
 
@@ -197,10 +197,9 @@ CallSiteInfoLoader::buildFunctionMap(std::vector<FunctionInfo> &Funcs) {
 }
 
 Error CallSiteInfoLoader::processYAMLFunctions(
-    const yaml::FunctionsYAML &functionsYAML,
-    StringMap<FunctionInfo *> &FuncMap) {
+    const yaml::FunctionsYAML &FuncYAMLs, StringMap<FunctionInfo *> &FuncMap) {
   // For each function in the YAML file
-  for (const auto &FuncYAML : functionsYAML.functions) {
+  for (const auto &FuncYAML : FuncYAMLs.functions) {
     auto It = FuncMap.find(FuncYAML.name);
     if (It == FuncMap.end())
       return createStringError(
@@ -216,7 +215,7 @@ Error CallSiteInfoLoader::processYAMLFunctions(
       CallSiteInfo CSI;
       // Since YAML has specifies relative return offsets, add the function
       // start address to make the offset absolute.
-      CSI.ReturnAddress = FuncInfo->Range.start() + CallSiteYAML.return_offset;
+      CSI.ReturnOffset = CallSiteYAML.return_offset;
       for (const auto &Regex : CallSiteYAML.match_regex) {
         uint32_t StrOffset = GCreator.insertString(Regex);
         CSI.MatchRegex.push_back(StrOffset);
@@ -241,7 +240,7 @@ Error CallSiteInfoLoader::processYAMLFunctions(
 }
 
 raw_ostream &gsym::operator<<(raw_ostream &OS, const CallSiteInfo &CSI) {
-  OS << "  Return=" << HEX64(CSI.ReturnAddress);
+  OS << "  Return=" << HEX64(CSI.ReturnOffset);
   OS << "  Flags=" << HEX8(CSI.Flags);
 
   OS << "  RegEx=";

@@ -8,39 +8,39 @@
 // RUN: llvm-gsymutil %t/call_sites_obj.gsym | FileCheck --check-prefix=CHECK-GSYM %s
 
 
-// CHECK-GSYM:      FunctionInfo @ 0x[[#%x,]]: [0x[[#%x,]] - 0x[[#%x,]]) "func_mainBin_dec_call_everything"
+// CHECK-GSYM:      FunctionInfo @ 0x[[#%x,FUNC_INFO:]]: [0x[[#%x,FUNC_START:]] - 0x[[#%x,FUNC_END:]]) "func_mainBin_dec_call_everything"
 // CHECK-GSYM-NEXT: LineTable:
                       // func_mainBin_dec_call_everything() {
-// CHECK-GSYM-NEXT:   0x[[#%x,]] {{.*}}/call_sites.cpp:16
+// CHECK-GSYM-NEXT:   0x[[#%x,ENTRY:]] {{.*}}/call_sites.cpp:16
                       // func_mainBin_dec_01();
-// CHECK-GSYM-NEXT:   0x[[ADDR_dec_01_call:[0-9a-f]+]] {{.*}}/call_sites.cpp:17
+// CHECK-GSYM-NEXT:   0x[[#%x,ADDR_DEC_01_CALL:]] {{.*}}/call_sites.cpp:17
                       // func_mainBin_dec_02();
-// CHECK-GSYM-NEXT:   0x[[ADDR_dec_02_call:[0-9a-f]+]] {{.*}}/call_sites.cpp:18
+// CHECK-GSYM-NEXT:   0x[[#%x,ADDR_DEC_02_CALL:]] {{.*}}/call_sites.cpp:18
                       // func_mainBin_dec_03();
-// CHECK-GSYM-NEXT:   [[ADDR_dec_03_call:0x[0-9a-f]+]] {{.*}}/call_sites.cpp:19
+// CHECK-GSYM-NEXT:   0x[[#%x,ADDR_DEC_03_CALL:]] {{.*}}/call_sites.cpp:19
                       // func_mainBin_inc_01();
-// CHECK-GSYM-NEXT:   [[ADDR_inc_01_call:0x[0-9a-f]+]] {{.*}}/call_sites.cpp:21
+// CHECK-GSYM-NEXT:   0x[[#%x,ADDR_INC_01_CALL:]] {{.*}}/call_sites.cpp:21
                       // func_mainBin_inc_02();
-// CHECK-GSYM-NEXT:   [[ADDR_inc_02_call:0x[0-9a-f]+]] {{.*}}/call_sites.cpp:22
+// CHECK-GSYM-NEXT:   0x[[#%x,ADDR_INC_02_CALL:]] {{.*}}/call_sites.cpp:22
                       // func_mainBin_inc_03();
-// CHECK-GSYM-NEXT:   [[ADDR_inc_03_call:0x[0-9a-f]+]] {{.*}}/call_sites.cpp:23
+// CHECK-GSYM-NEXT:   0x[[#%x,ADDR_INC_03_CALL:]] {{.*}}/call_sites.cpp:23
                       // g_func_ptr();
-// CHECK-GSYM-NEXT:   [[ADDR_func_call:0x[0-9a-f]+]] {{.*}}/call_sites.cpp:25
+// CHECK-GSYM-NEXT:   0x[[#%x,ADDR_FUNC_CALL:]] {{.*}}/call_sites.cpp:25
                       // g_extern_func_ptr();
-// CHECK-GSYM-NEXT:   [[ADDR_extern_func_call:0x[0-9a-f]+]] {{.*}}/call_sites.cpp:26
+// CHECK-GSYM-NEXT:   0x[[#%x,ADDR_EXTERN_FUNC_CALL:]] {{.*}}/call_sites.cpp:26
                       // g_volatile_var = 0;
-// CHECK-GSYM-NEXT:   [[ADDR_var_assign:0x[0-9a-f]+]] {{.*}}/call_sites.cpp:28
+// CHECK-GSYM-NEXT:   0x[[#%x,ADDR_VAR_ASSIGN:]] {{.*}}/call_sites.cpp:28
                       // }
-// CHECK-GSYM-NEXT:   [[#%x,]] {{.*}}/call_sites.cpp:29
-// CHECK-GSYM-NEXT: CallSites (by return address):
-// CHECK-GSYM-NEXT:   [[ADDR_dec_02_call]] Flags[InternalCall] MatchRegex[func_mainBin_dec_01]
-// CHECK-GSYM-NEXT:   [[ADDR_dec_03_call]] Flags[InternalCall] MatchRegex[func_mainBin_dec_02]
-// CHECK-GSYM-NEXT:   [[ADDR_inc_01_call]] Flags[InternalCall] MatchRegex[func_mainBin_dec_03]
-// CHECK-GSYM-NEXT:   [[ADDR_inc_02_call]] Flags[InternalCall] MatchRegex[func_mainBin_inc_01]
-// CHECK-GSYM-NEXT:   [[ADDR_inc_03_call]] Flags[InternalCall] MatchRegex[func_mainBin_inc_02]
-// CHECK-GSYM-NEXT:   [[ADDR_func_call]] Flags[InternalCall] MatchRegex[func_mainBin_inc_03]
-// CHECK-GSYM-NEXT:   [[ADDR_extern_func_call]] Flags[None] MatchRegex[.*func.*]
-// CHECK-GSYM-NEXT:   [[ADDR_var_assign]] Flags[ExternalCall] MatchRegex[.*extern_func.*]
+// CHECK-GSYM-NEXT:   0x[[#%x,]] {{.*}}/call_sites.cpp:29
+// CHECK-GSYM-NEXT: CallSites (by relative return offset):
+// CHECK-GSYM-NEXT:   0x[[#%.4x,sub(ADDR_DEC_02_CALL,FUNC_START)]] Flags[InternalCall] MatchRegex[func_mainBin_dec_01]
+// CHECK-GSYM-NEXT:   0x[[#%.4x,sub(ADDR_DEC_03_CALL,FUNC_START)]] Flags[InternalCall] MatchRegex[func_mainBin_dec_02]
+// CHECK-GSYM-NEXT:   0x[[#%.4x,sub(ADDR_INC_01_CALL,FUNC_START)]] Flags[InternalCall] MatchRegex[func_mainBin_dec_03]
+// CHECK-GSYM-NEXT:   0x[[#%.4x,sub(ADDR_INC_02_CALL,FUNC_START)]] Flags[InternalCall] MatchRegex[func_mainBin_inc_01]
+// CHECK-GSYM-NEXT:   0x[[#%.4x,sub(ADDR_INC_03_CALL,FUNC_START)]] Flags[InternalCall] MatchRegex[func_mainBin_inc_02]
+// CHECK-GSYM-NEXT:   0x[[#%.4x,sub(ADDR_FUNC_CALL,FUNC_START)]] Flags[InternalCall] MatchRegex[func_mainBin_inc_03]
+// CHECK-GSYM-NEXT:   0x[[#%.4x,sub(ADDR_EXTERN_FUNC_CALL,FUNC_START)]] Flags[None] MatchRegex[.*func.*]
+// CHECK-GSYM-NEXT:   0x[[#%.4x,sub(ADDR_VAR_ASSIGN,FUNC_START)]] Flags[ExternalCall] MatchRegex[.*extern_func.*]
 
 
 //--- callsites.yaml

@@ -424,7 +424,7 @@ void GsymReader::dump(raw_ostream &OS, const MergedFunctionsInfo &MFI) {
 }
 
 void GsymReader::dump(raw_ostream &OS, const CallSiteInfo &CSI) {
-  OS << HEX64(CSI.ReturnAddress);
+  OS << HEX16(CSI.ReturnOffset);
 
   std::string Flags;
   auto addFlag = [&](const char *Flag) {
@@ -456,7 +456,7 @@ void GsymReader::dump(raw_ostream &OS, const CallSiteInfo &CSI) {
 }
 
 void GsymReader::dump(raw_ostream &OS, const CallSiteInfoCollection &CSIC) {
-  OS << "CallSites (by return address):\n";
+  OS << "CallSites (by relative return offset):\n";
   for (const auto &CS : CSIC.CallSites) {
     OS.indent(2);
     dump(OS, CS);

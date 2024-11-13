@@ -40,8 +40,8 @@ struct CallSiteInfo {
     LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue*/ ExternalCall),
   };
 
-  /// The return address of the call site.
-  uint64_t ReturnAddress = 0;
+  /// The return offset of the call site - relative to the function start.
+  uint64_t ReturnOffset = 0;
 
   /// Offsets into the string table for function names regex patterns.
   std::vector<uint32_t> MatchRegex;
@@ -110,15 +110,14 @@ private:
 
   /// Processes the parsed YAML functions and updates the `FuncMap` accordingly.
   ///
-  /// \param functionsYAML A constant reference to an llvm::yaml::FunctionsYAML
+  /// \param FuncYAMLs A constant reference to an llvm::yaml::FunctionsYAML
   /// object containing parsed YAML data.
   /// \param FuncMap A reference to a StringMap mapping function names to
   /// FunctionInfo pointers.
   /// \returns An `llvm::Error` indicating success or describing any issues
   /// encountered during processing.
-  llvm::Error
-  processYAMLFunctions(const llvm::yaml::FunctionsYAML &functionsYAML,
-                       StringMap<FunctionInfo *> &FuncMap);
+  llvm::Error processYAMLFunctions(const llvm::yaml::FunctionsYAML &FuncYAMLs,
+                                   StringMap<FunctionInfo *> &FuncMap);
 
   /// Reference to the parent Gsym Creator object.
   GsymCreator &GCreator;
