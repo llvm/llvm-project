@@ -89,17 +89,15 @@ def get_asan_rtlib():
     except:
         print("glob module not found, skipping get_asan_rtlib() lookup")
         return ""
-    # The libclang_rt.asan_osx_dynamic.dylib path is obtained using the relative
-    # path from the host cc.
-    host_lib_dir = os.path.join(os.path.dirname(config.host_cc), "../lib")
-    asan_dylib_dir_pattern = (
-        host_lib_dir + "/clang/*/lib/darwin/libclang_rt.asan_osx_dynamic.dylib"
+    # Find the asan rt lib
+    resource_dir = (
+        subprocess.check_output([config.host_cc.strip(), "-print-resource-dir"])
+        .decode("utf-8")
+        .strip()
     )
-    found_dylibs = glob.glob(asan_dylib_dir_pattern)
-    found_dylibs = set([os.path.realpath(dylib_file) for dylib_file in found_dylibs])
-    if len(found_dylibs) != 1:
-        return ""
-    return next(iter(found_dylibs))
+    return os.path.join(
+        resource_dir, "lib", "darwin", "libclang_rt.asan_osx_dynamic.dylib"
+    )
 
 
 # On macOS, we can't do the DYLD_INSERT_LIBRARIES trick with a shim python
@@ -250,16 +248,17 @@ tools.extend(
 )
 
 python_executable = config.python_executable
-# Python configuration with sanitizer requires some magic preloading. This will only work on clang/linux.
-# TODO: detect Darwin/Windows situation (or mark these tests as unsupported on these platforms).
+# Python configuration with sanitizer requires some magic preloading. This will only work on clang/linux/darwin.
+# TODO: detect Windows situation (or mark these tests as unsupported on these platforms).
 if "asan" in config.available_features:
     if "Linux" in config.host_os:
         python_executable = f"LD_PRELOAD=$({config.host_cxx} -print-file-name=libclang_rt.asan-{config.host_arch}.so) {config.python_executable}"
     if "Darwin" in config.host_os:
+        # Ensure we use a non-shim Python executable, for the `DYLD_INSERT_LIBRARIES`
+        # env variable to take effect
         real_python_executable = find_real_python_interpreter()
         if real_python_executable:
             python_executable = real_python_executable
-            # Ensure Python is not wrapped, for DYLD_INSERT_LIBRARIES to take effect
             lit_config.note(
                 "Using {} instead of {}".format(
                     python_executable, config.python_executable
@@ -268,6 +267,8 @@ if "asan" in config.available_features:
 
         asan_rtlib = get_asan_rtlib()
         lit_config.note("Using ASan rtlib {}".format(asan_rtlib))
+        config.environment["MallocNanoZone"] = "0"
+        config.environment["ASAN_OPTIONS"] = "detect_stack_use_after_return=1"
         config.environment["DYLD_INSERT_LIBRARIES"] = asan_rtlib
 
 
