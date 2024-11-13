@@ -79,6 +79,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 
 #include "time-stat/ts-interface.h"
@@ -660,11 +661,13 @@ AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
       new TextDiagnosticPrinter(LogS, &*DiagOpts);
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs);
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagClient);
-  ProcessWarningOptions(Diags, *DiagOpts, /*ReportDiags=*/false);
+
+  auto VFS = llvm::vfs::getRealFileSystem();
+  ProcessWarningOptions(Diags, *DiagOpts,  *VFS, /*ReportDiags=*/false);
 
   Driver TheDriver((Twine(env::getLLVMPath()) + "/bin/clang").str(),
-                   llvm::sys::getDefaultTargetTriple(), Diags);
-  TheDriver.setTitle("AMDGPU Code Object Manager");
+                   llvm::sys::getDefaultTargetTriple(), Diags,
+                   "AMDGPU Code Object Manager", VFS);
   TheDriver.setCheckInputsExist(false);
 
   // Log arguments used to build compilation

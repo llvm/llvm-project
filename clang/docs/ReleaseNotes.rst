@@ -477,6 +477,9 @@ Attribute Changes in Clang
 - Fix a bug where clang doesn't automatically apply the ``[[gsl::Owner]]`` or
   ``[[gsl::Pointer]]`` to STL explicit template specialization decls. (#GH109442)
 
+- Clang now supports ``[[clang::lifetime_capture_by(X)]]``. Similar to lifetimebound, this can be
+  used to specify when a reference to a function parameter is captured by another capturing entity ``X``.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -903,6 +906,9 @@ New features
   attributes, are now verified. For example, for functions declared with the ``nonblocking``
   attribute, the compiler can generate warnings about the use of any language features, or calls to
   other functions, which may block.
+
+- Introduced ``-warning-suppression-mappings`` flag to control diagnostic
+  suppressions per file. See `documentation <https://clang.llvm.org/docs/WarningSuppressionMappings.html>_` for details.
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^

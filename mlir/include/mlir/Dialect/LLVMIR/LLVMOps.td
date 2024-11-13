@@ -350,6 +350,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
               UnitAttr:$volatile_,
               UnitAttr:$nontemporal,
               UnitAttr:$invariant,
+              UnitAttr:$invariantGroup,
               DefaultValuedAttr<
                 AtomicOrdering, "AtomicOrdering::not_atomic">:$ordering,
               OptionalAttr<StrAttr>:$syncscope);
@@ -385,6 +386,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     (`volatile` $volatile_^)? $addr
     (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
     (`invariant` $invariant^)?
+    (`invariant_group` $invariantGroup^)?
     attr-dict `:` qualified(type($addr)) `->` type($res)
   }];
   string llvmBuilder = [{
@@ -398,6 +400,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
      # setSyncScopeCode
      # setAlignmentCode
      # setNonTemporalMetadataCode
+     # setInvariantGroupCode
      # setAccessGroupsMetadataCode
      # setAliasAnalysisMetadataCode;
   string mlirBuilder = [{
@@ -407,6 +410,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
         alignment, loadInst->isVolatile(),
         loadInst->hasMetadata(llvm::LLVMContext::MD_nontemporal),
         loadInst->hasMetadata(llvm::LLVMContext::MD_invariant_load),
+        loadInst->hasMetadata(llvm::LLVMContext::MD_invariant_group),
         convertAtomicOrderingFromLLVM(loadInst->getOrdering()),
         getLLVMSyncScope(loadInst));
   }];
@@ -414,6 +418,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     OpBuilder<(ins "Type":$type, "Value":$addr,
       CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
       CArg<"bool", "false">:$isNonTemporal, CArg<"bool", "false">:$isInvariant,
+      CArg<"bool", "false">:$isInvariantGroup,
       CArg<"AtomicOrdering", "AtomicOrdering::not_atomic">:$ordering,
       CArg<"StringRef", "StringRef()">:$syncscope)>
   ];
@@ -430,6 +435,7 @@ def LLVM_StoreOp : LLVM_MemAccessOpBase<"store",
               OptionalAttr<I64Attr>:$alignment,
               UnitAttr:$volatile_,
               UnitAttr:$nontemporal,
+              UnitAttr:$invariantGroup,
               DefaultValuedAttr<
                 AtomicOrdering, "AtomicOrdering::not_atomic">:$ordering,
               OptionalAttr<StrAttr>:$syncscope);
@@ -463,6 +469,7 @@ def LLVM_StoreOp : LLVM_MemAccessOpBase<"store",
   let assemblyFormat = [{
     (`volatile` $volatile_^)? $value `,` $addr
     (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
+    (`invariant_group` $invariantGroup^)?
     attr-dict `:` type($value) `,` qualified(type($addr))
   }];
   string llvmBuilder = [{
@@ -471,6 +478,7 @@ def LLVM_StoreOp : LLVM_MemAccessOpBase<"store",
      # setSyncScopeCode
      # setAlignmentCode
      # setNonTemporalMetadataCode
+     # setInvariantGroupCode
      # setAccessGroupsMetadataCode
      # setAliasAnalysisMetadataCode;
   string mlirBuilder = [{
@@ -479,6 +487,7 @@ def LLVM_StoreOp : LLVM_MemAccessOpBase<"store",
     $_op = $_builder.create<LLVM::StoreOp>($_location, $value, $addr,
         alignment, storeInst->isVolatile(),
         storeInst->hasMetadata(llvm::LLVMContext::MD_nontemporal),
+        storeInst->hasMetadata(llvm::LLVMContext::MD_invariant_group),
         convertAtomicOrderingFromLLVM(storeInst->getOrdering()),
         getLLVMSyncScope(storeInst));
   }];
@@ -486,6 +495,7 @@ def LLVM_StoreOp : LLVM_MemAccessOpBase<"store",
     OpBuilder<(ins "Value":$value, "Value":$addr,
       CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
       CArg<"bool", "false">:$isNonTemporal,
+      CArg<"bool", "false">:$isInvariantGroup,
       CArg<"AtomicOrdering", "AtomicOrdering::not_atomic">:$ordering,
       CArg<"StringRef", "StringRef()">:$syncscope)>
   ];

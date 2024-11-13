@@ -486,6 +486,20 @@ func.func @invariant_load(%ptr : !llvm.ptr) -> i32 {
   func.return %0 : i32
 }
 
+// CHECK-LABEL: @invariant_group_load
+func.func @invariant_group_load(%ptr : !llvm.ptr) -> i32 {
+  // CHECK: llvm.load %{{.+}} invariant_group {alignment = 4 : i64} : !llvm.ptr -> i32
+  %0 = llvm.load %ptr invariant_group {alignment = 4 : i64} : !llvm.ptr -> i32
+  func.return %0 : i32
+}
+
+// CHECK-LABEL: @invariant_group_store
+func.func @invariant_group_store(%val: i32, %ptr : !llvm.ptr) {
+  // CHECK: llvm.store %{{.+}}, %{{.+}} invariant_group : i32, !llvm.ptr
+  llvm.store %val, %ptr invariant_group : i32, !llvm.ptr
+  func.return
+}
+
 llvm.mlir.global external constant @_ZTIi() : !llvm.ptr
 llvm.func @bar(!llvm.ptr, !llvm.ptr, !llvm.ptr)
 llvm.func @__gxx_personality_v0(...) -> i32
@@ -669,6 +683,16 @@ llvm.func @invariant(%p: !llvm.ptr) {
   %1 = llvm.intr.invariant.start 1, %p : !llvm.ptr
   // CHECK: llvm.intr.invariant.end %[[START]], 1, %[[P]] : !llvm.ptr
   llvm.intr.invariant.end %1, 1, %p : !llvm.ptr
+  llvm.return
+}
+
+// CHECK-LABEL: @invariant_group_intrinsics
+// CHECK-SAME: %[[P:.+]]: !llvm.ptr
+llvm.func @invariant_group_intrinsics(%p: !llvm.ptr) {
+  // CHECK: %{{.+}} = llvm.intr.launder.invariant.group %[[P]] : !llvm.ptr
+  %1 = llvm.intr.launder.invariant.group %p : !llvm.ptr
+  // CHECK: %{{.+}} = llvm.intr.strip.invariant.group %[[P]] : !llvm.ptr
+  %2 = llvm.intr.strip.invariant.group %p : !llvm.ptr
   llvm.return
 }
 
