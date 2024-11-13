@@ -477,7 +477,7 @@ enum NodeType : unsigned {
   MSRR,
 
   // Strict (exception-raising) floating point comparison
-  STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
+  STRICT_FCMP,
   STRICT_FCMPE,
 
   // SME ZA loads and stores
@@ -485,7 +485,8 @@ enum NodeType : unsigned {
   SME_ZA_STR,
 
   // NEON Load/Store with post-increment base updates
-  LD2post = ISD::FIRST_TARGET_MEMORY_OPCODE,
+  FIRST_MEMORY_OPCODE,
+  LD2post = FIRST_MEMORY_OPCODE,
   LD3post,
   LD4post,
   ST2post,
@@ -520,6 +521,7 @@ enum NodeType : unsigned {
   STP,
   STILP,
   STNP,
+  LAST_MEMORY_OPCODE = STNP,
 };
 
 } // end namespace AArch64ISD

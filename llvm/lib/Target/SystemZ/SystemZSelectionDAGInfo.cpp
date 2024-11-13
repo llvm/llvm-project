@@ -17,6 +17,29 @@ using namespace llvm;
 
 #define DEBUG_TYPE "systemz-selectiondag-info"
 
+bool SystemZSelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
+  return Opcode >= SystemZISD::FIRST_MEMORY_OPCODE &&
+         Opcode <= SystemZISD::LAST_MEMORY_OPCODE;
+}
+
+bool SystemZSelectionDAGInfo::isTargetStrictFPOpcode(unsigned Opcode) const {
+  switch (static_cast<SystemZISD::NodeType>(Opcode)) {
+  default:
+    return false;
+  case SystemZISD::STRICT_FCMP:
+  case SystemZISD::STRICT_FCMPS:
+  case SystemZISD::STRICT_VFCMPE:
+  case SystemZISD::STRICT_VFCMPH:
+  case SystemZISD::STRICT_VFCMPHE:
+  case SystemZISD::STRICT_VFCMPES:
+  case SystemZISD::STRICT_VFCMPHS:
+  case SystemZISD::STRICT_VFCMPHES:
+  case SystemZISD::STRICT_VEXTEND:
+  case SystemZISD::STRICT_VROUND:
+    return true;
+  }
+}
+
 static unsigned getMemMemLenAdj(unsigned Op) {
   return Op == SystemZISD::MEMSET_MVC ? 2 : 1;
 }

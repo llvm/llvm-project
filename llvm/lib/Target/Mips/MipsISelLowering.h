@@ -247,7 +247,7 @@ class TargetRegisterClass;
       DOUBLE_SELECT_I64,
 
       // Load/Store Left/Right nodes.
-      LWL = ISD::FIRST_TARGET_MEMORY_OPCODE,
+      LWL,
       LWR,
       SWL,
       SWR,

@@ -17,6 +17,7 @@
 #include "RISCVConstantPoolValue.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVRegisterInfo.h"
+#include "RISCVSelectionDAGInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -6392,14 +6393,12 @@ static unsigned getRISCVVLOp(SDValue Op) {
 /// Return true if a RISC-V target specified op has a passthru operand.
 static bool hasPassthruOp(unsigned Opcode) {
   assert(Opcode > RISCVISD::FIRST_NUMBER &&
-         Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
+         Opcode <= RISCVISD::LAST_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
-  static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    127 &&
-                RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
-                        ISD::FIRST_TARGET_STRICTFP_OPCODE ==
-                    21 &&
-                "adding target specific op should update this function");
+  static_assert(
+      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 127 &&
+      RISCVISD::LAST_STRICTFP_OPCODE - RISCVISD::FIRST_STRICTFP_OPCODE == 21 &&
+      "adding target specific op should update this function");
   if (Opcode >= RISCVISD::ADD_VL && Opcode <= RISCVISD::VFMAX_VL)
     return true;
   if (Opcode == RISCVISD::FCOPYSIGN_VL)
@@ -6418,14 +6417,12 @@ static bool hasPassthruOp(unsigned Opcode) {
 /// Return true if a RISC-V target specified op has a mask operand.
 static bool hasMaskOp(unsigned Opcode) {
   assert(Opcode > RISCVISD::FIRST_NUMBER &&
-         Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
+         Opcode <= RISCVISD::LAST_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
-  static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    127 &&
-                RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
-                        ISD::FIRST_TARGET_STRICTFP_OPCODE ==
-                    21 &&
-                "adding target specific op should update this function");
+  static_assert(
+      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 127 &&
+      RISCVISD::LAST_STRICTFP_OPCODE - RISCVISD::FIRST_STRICTFP_OPCODE == 21 &&
+      "adding target specific op should update this function");
   if (Opcode >= RISCVISD::TRUNCATE_VECTOR_VL && Opcode <= RISCVISD::SETCC_VL)
     return true;
   if (Opcode >= RISCVISD::VRGATHER_VX_VL && Opcode <= RISCVISD::VFIRST_VL)
@@ -15920,7 +15917,7 @@ static SDValue performFP_TO_INTCombine(SDNode *N,
   SDValue Src = N->getOperand(0);
 
   // Don't do this for strict-fp Src.
-  if (Src->isStrictFPOpcode() || Src->isTargetStrictFPOpcode())
+  if (Src->isStrictFPOpcode())
     return SDValue();
 
   // Ensure the FP type is legal.
@@ -16025,7 +16022,7 @@ static SDValue performFP_TO_INT_SATCombine(SDNode *N,
   SDValue Src = N->getOperand(0);
 
   // Don't do this for strict-fp Src.
-  if (Src->isStrictFPOpcode() || Src->isTargetStrictFPOpcode())
+  if (Src->isStrictFPOpcode())
     return SDValue();
 
   // Ensure the FP type is also legal.
@@ -16133,7 +16130,9 @@ static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc) {
 static SDValue combineVFMADD_VLWithVFNEG_VL(SDNode *N, SelectionDAG &DAG) {
   // Fold FNEG_VL into FMA opcodes.
   // The first operand of strict-fp is chain.
-  unsigned Offset = N->isTargetStrictFPOpcode();
+  bool IsStrict =
+      DAG.getSelectionDAGInfo().isTargetStrictFPOpcode(N->getOpcode());
+  unsigned Offset = IsStrict ? 1 : 0;
   SDValue A = N->getOperand(0 + Offset);
   SDValue B = N->getOperand(1 + Offset);
   SDValue C = N->getOperand(2 + Offset);
@@ -16160,7 +16159,7 @@ static SDValue combineVFMADD_VLWithVFNEG_VL(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   unsigned NewOpcode = negateFMAOpcode(N->getOpcode(), NegA != NegB, NegC);
-  if (N->isTargetStrictFPOpcode())
+  if (IsStrict)
     return DAG.getNode(NewOpcode, SDLoc(N), N->getVTList(),
                        {N->getOperand(0), A, B, C, Mask, VL});
   return DAG.getNode(NewOpcode, SDLoc(N), N->getValueType(0), A, B, C, Mask,
@@ -16176,7 +16175,7 @@ static SDValue performVFMADD_VLCombine(SDNode *N,
     return V;
 
   // FIXME: Ignore strict opcodes for now.
-  if (N->isTargetStrictFPOpcode())
+  if (DAG.getSelectionDAGInfo().isTargetStrictFPOpcode(N->getOpcode()))
     return SDValue();
 
   return combineOp_VLToVWOp_VL(N, DCI, Subtarget);
