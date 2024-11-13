@@ -502,7 +502,6 @@ bool checkValidAfterDeviceType(
   }
   S.Diag(NewClause.getBeginLoc(), diag::err_acc_clause_after_device_type)
       << NewClause.getClauseKind() << DeviceTypeClause.getClauseKind()
-      << isOpenACCComputeDirectiveKind(NewClause.getDirectiveKind())
       << NewClause.getDirectiveKind();
   S.Diag(DeviceTypeClause.getBeginLoc(), diag::note_acc_previous_clause_here);
   return true;
@@ -999,12 +998,13 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitWaitClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceTypeClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute' and 'loop'
-  // constructs, and 'compute'/'loop' constructs are the only construct that
-  // can do anything with this yet, so skip/treat as unimplemented in this
-  // case.
+  // Restrictions only properly implemented on 'compute', 'combined',  and
+  // 'loop' constructs, and 'compute'/'combined'/'loop' constructs are the only
+  // construct that can do anything with this yet, so skip/treat as
+  // unimplemented in this case.
   if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
-      Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop)
+      Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop &&
+      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()))
     return isNotImplemented();
 
   // TODO OpenACC: Once we get enough of the CodeGen implemented that we have

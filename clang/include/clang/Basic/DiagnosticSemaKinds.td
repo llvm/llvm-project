@@ -12686,7 +12686,7 @@ def err_acc_var_not_pointer_type
 def note_acc_expected_pointer_var : Note<"expected variable of pointer type">;
 def err_acc_clause_after_device_type
     : Error<"OpenACC clause '%0' may not follow a '%1' clause in a "
-            "%select{'%3'|compute}2 construct">;
+            "'%2' construct">;
 def err_acc_clause_cannot_combine
     : Error<"OpenACC clause '%0' may not appear on the same construct as a "
             "'%1' clause on a '%2' construct">;
