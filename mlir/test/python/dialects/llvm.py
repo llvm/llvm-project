@@ -42,12 +42,8 @@ def testStructType():
     # CHECK: !llvm.struct<"foo", opaque>
     # CHECK: !llvm.struct<"bar", opaque>
 
-    assert llvm.StructType.get("foo", []) == llvm.StructType.get(
-        "foo", []
-    )
-    assert llvm.StructType.get("foo", []) != llvm.StructType.get(
-        "bar", []
-    )
+    assert llvm.StructType.get("foo", []) == llvm.StructType.get("foo", [])
+    assert llvm.StructType.get("foo", []) != llvm.StructType.get("bar", [])
 
     foo_struct = llvm.StructType.get_opaque("foo")
     print(foo_struct.name)
