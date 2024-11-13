@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef EXCEPTION_TEST_HELPER_H
-#define EXCEPTION_TEST_HELPER_H
+#ifndef EXCEPTION_TEST_HELPERS_H
+#define EXCEPTION_TEST_HELPERS_H
 
 #include "count_new.h"
 
@@ -20,6 +20,11 @@ struct throwing_allocator {
 
   throwing_allocator(bool throw_on_ctor = true, bool throw_on_copy = false) : throw_on_copy_(throw_on_copy) {
     if (throw_on_ctor)
+      throw 0;
+  }
+
+  throwing_allocator(const throwing_allocator& rhs) : throw_on_copy_(rhs.throw_on_copy_) {
+    if (throw_on_copy_)
       throw 0;
   }
 
@@ -79,4 +84,4 @@ inline void check_new_delete_called() {
   assert(globalMemCounter.aligned_new_array_called == globalMemCounter.aligned_delete_array_called);
 }
 
-#endif // EXCEPTION_TEST_HELPER_H
+#endif // EXCEPTION_TEST_HELPERS_H

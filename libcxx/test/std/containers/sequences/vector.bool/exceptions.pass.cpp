@@ -101,7 +101,7 @@ int main(int, char**) {
   try { // Throw in vector(const vector&, const allocator_type&) from allocator
     throwing_allocator<bool> alloc(false, false);
     AllocVec vec(alloc);
-    vec.emplace_back(true);
+    vec.push_back(true);
     alloc.throw_on_copy_ = true;
     AllocVec vec2(vec, alloc);
   } catch (int) {
@@ -111,7 +111,7 @@ int main(int, char**) {
   try { // Throw in vector(vector&&, const allocator_type&) from allocator
     throwing_allocator<bool> alloc(false, false);
     AllocVec vec(alloc);
-    vec.emplace_back(true);
+    vec.push_back(true);
     alloc.throw_on_copy_ = true;
     AllocVec vec2(std::move(vec), alloc);
   } catch (int) {
