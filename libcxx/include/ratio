@@ -236,17 +236,11 @@ class _LIBCPP_TEMPLATE_VIS ratio {
   static _LIBCPP_CONSTEXPR const intmax_t __gcd = __static_gcd<__na, __da>;
 
 public:
-  static _LIBCPP_CONSTEXPR const intmax_t num = __s * __na / __gcd;
-  static _LIBCPP_CONSTEXPR const intmax_t den = __da / __gcd;
+  static inline _LIBCPP_CONSTEXPR const intmax_t num = __s * __na / __gcd;
+  static inline _LIBCPP_CONSTEXPR const intmax_t den = __da / __gcd;
 
   typedef ratio<num, den> type;
 };
-
-template <intmax_t _Num, intmax_t _Den>
-_LIBCPP_CONSTEXPR const intmax_t ratio<_Num, _Den>::num;
-
-template <intmax_t _Num, intmax_t _Den>
-_LIBCPP_CONSTEXPR const intmax_t ratio<_Num, _Den>::den;
 
 template <class _Tp>
 inline const bool __is_ratio_v = false;

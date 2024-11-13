@@ -36,7 +36,10 @@
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated")
 const bool _FilesystemClock::is_steady;
+_LIBCPP_DIAGNOSTIC_POP
 
 _FilesystemClock::time_point _FilesystemClock::now() noexcept {
   typedef chrono::duration<rep> __secs;
