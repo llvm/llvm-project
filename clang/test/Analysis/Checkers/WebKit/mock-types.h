@@ -197,4 +197,31 @@ public:
   int trivial() { return 0; }
 };
 
+namespace std {
+
+template <typename T>
+class unique_ptr {
+private:
+  T *t;
+
+public:
+  unique_ptr() : t(nullptr) { }
+  unique_ptr(T *t) : t(t) { }
+  ~unique_ptr() {
+    if (t)
+      delete t;
+  }
+  template <typename U> unique_ptr(unique_ptr<U>&& u)
+    : t(u.t)
+  {
+    u.t = nullptr;
+  }
+  T *get() const { return t; }
+  T *operator->() const { return t; }
+  T &operator*() { return *t; }
+  unique_ptr &operator=(T *) { return *this; }
+};
+
+};
+
 #endif

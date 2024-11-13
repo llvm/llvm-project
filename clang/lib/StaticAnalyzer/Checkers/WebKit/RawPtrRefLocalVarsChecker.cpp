@@ -281,13 +281,8 @@ public:
                 if (isa<IntegerLiteral>(InitArgOrigin))
                   return true;
 
-                if (auto *ME = dyn_cast<MemberExpr>(InitArgOrigin)) {
-                  if (auto *D = ME->getMemberDecl()) {
-                    auto T = D->getType();
-                    if (isSafePtrType(T) && T.isConstQualified())
-                      return true;
-                  }
-                }
+                if (isConstOwnerPtrMemberExpr(InitArgOrigin))
+                  return true;
 
                 if (auto *Ref = llvm::dyn_cast<DeclRefExpr>(InitArgOrigin)) {
                   if (auto *MaybeGuardian =

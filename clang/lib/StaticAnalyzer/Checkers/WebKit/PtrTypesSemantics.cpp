@@ -145,7 +145,8 @@ bool isCtorOfSafePtr(const clang::FunctionDecl *F) {
   return isCtorOfRefCounted(F) || isCtorOfCheckedPtr(F);
 }
 
-bool isSafePtrType(const clang::QualType T) {
+template <typename Predicate>
+static bool isPtrOfType(const clang::QualType T, Predicate Pred) {
   QualType type = T;
   while (!type.isNull()) {
     if (auto *elaboratedT = type->getAs<ElaboratedType>()) {
@@ -153,15 +154,26 @@ bool isSafePtrType(const clang::QualType T) {
       continue;
     }
     if (auto *specialT = type->getAs<TemplateSpecializationType>()) {
-      if (auto *decl = specialT->getTemplateName().getAsTemplateDecl()) {
-        auto name = decl->getNameAsString();
-        return isRefType(name) || isCheckedPtr(name);
-      }
+      if (auto *decl = specialT->getTemplateName().getAsTemplateDecl())
+        return Pred(decl->getNameAsString());
       return false;
     }
     return false;
   }
   return false;
+}
+
+bool isSafePtrType(const clang::QualType T) {
+  return isPtrOfType(T, [](auto Name) {
+    return isRefType(Name) || isCheckedPtr(Name);
+  });
+}
+
+bool isOwnerPtrType(const clang::QualType T) {
+  return isPtrOfType(T, [](auto Name) {
+    return isRefType(Name) || isCheckedPtr(Name) || Name == "unique_ptr" ||
+           Name == "UniqueRef" || Name == "LazyUniqueRef";
+  });
 }
 
 std::optional<bool> isUncounted(const QualType T) {
