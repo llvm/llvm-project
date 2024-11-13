@@ -307,6 +307,26 @@ void DebuggerThread::DebugLoop() {
           LLDB_LOG(log,
                    "Breakpoint exception is cue to detach from process {0:x}",
                    m_pid_to_detach.load());
+
+          // detaching with leaving breakpoint exception event on the queue may
+          // cause target process to crash so process events as possible since
+          // target threads are running at this time, there is possibility to
+          // have some breakpoint exception between last WaitForDebugEvent and
+          // DebugActiveProcessStop but ignore for now.
+          while (WaitForDebugEvent(&dbe, 0)) {
+            continue_status = DBG_CONTINUE;
+            if (dbe.dwDebugEventCode == EXCEPTION_DEBUG_EVENT &&
+                !(dbe.u.Exception.ExceptionRecord.ExceptionCode ==
+                      EXCEPTION_BREAKPOINT ||
+                  dbe.u.Exception.ExceptionRecord.ExceptionCode ==
+                      STATUS_WX86_BREAKPOINT ||
+                  dbe.u.Exception.ExceptionRecord.ExceptionCode ==
+                      EXCEPTION_SINGLE_STEP))
+              continue_status = DBG_EXCEPTION_NOT_HANDLED;
+            ::ContinueDebugEvent(dbe.dwProcessId, dbe.dwThreadId,
+                                 continue_status);
+          }
+
           ::DebugActiveProcessStop(m_pid_to_detach);
           m_detached = true;
         }
