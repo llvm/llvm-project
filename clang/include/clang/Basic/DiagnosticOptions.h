@@ -84,6 +84,7 @@ public:
     DefaultMacroBacktraceLimit = 6,
     DefaultTemplateBacktraceLimit = 10,
     DefaultConstexprBacktraceLimit = 10,
+    DefaultConstexprValueSizeLimit = 320,
     DefaultSpellCheckingLimit = 50,
     DefaultSnippetLineLimit = 16,
     DefaultShowLineNumbers = 1,

@@ -18,6 +18,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
@@ -714,11 +715,54 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
   case APValue::Indeterminate:
     Out << "<uninitialized>";
     return;
-  case APValue::Int:
+  case APValue::Int: {
+    const APSInt &Val = getInt();
+    if (const EnumType *ET = Ty->getAs<EnumType>()) {
+      // print the enumerator name if requested (and one exists)
+      if (Policy.UseEnumerators) {
+        for (const EnumConstantDecl *ECD : ET->getDecl()->enumerators()) {
+          if (APSInt::isSameValue(ECD->getInitVal(), Val)) {
+            if (ECD->isCXXClassMember())
+              ECD->printQualifiedName(Out, Policy);
+            else
+              ECD->printName(Out, Policy);
+            return;
+          }
+        }
+      }
+
+      // otherwise, we print it as a cast from `Val`
+      if (ET->hasUnnamedOrLocalType()) {
+        // e.g. `(unnamed enum at ...)7`, unless...
+        if (const EnumDecl *Defn = ET->getDecl()->getDefinition()) {
+          // ... can identify the defn somehow
+          if (const IdentifierInfo *II = Defn->getIdentifier())
+            Out << '(' << II->getName() << ')';
+          else if (const TypedefNameDecl *Typedef =
+                       Defn->getTypedefNameForAnonDecl()) {
+            assert(Typedef->getIdentifier() && "Typedef without identifier?");
+            Out << '(' << Typedef->getIdentifier()->getName() << ')';
+          } else if (const NamedDecl *ND = dyn_cast_if_present<NamedDecl>(
+                         Defn->getNextDeclInContext())) {
+            // if it's part of a declaration,  then use `(decltype(...))7`
+            Out << "(decltype(";
+            ND->printQualifiedName(Out);
+            Out << "))";
+          } else
+            Defn->printQualifiedName(Out);
+        } else
+          ET->getDecl()->printQualifiedName(Out);
+      } else {
+        // e.g. `(E)7` for some `enum E {};`
+        Out << '(' << Ty << ')';
+      }
+    }
+
     if (Ty->isBooleanType())
-      Out << (getInt().getBoolValue() ? "true" : "false");
+      Out << (Val.getBoolValue() ? "true" : "false");
     else
-      Out << getInt();
+      Out << Val;
+  }
     return;
   case APValue::Float:
     Out << GetApproxValue(getFloat());

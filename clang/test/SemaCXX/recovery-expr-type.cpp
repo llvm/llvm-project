@@ -154,7 +154,7 @@ enum Circular {             // expected-note {{not complete until the closing '}
 };
 // Enumerators can be evaluated (they evaluate as zero, but we don't care).
 static_assert(Circular_A == 0 && Circular_A != 0, ""); // expected-error {{static assertion failed}} \
-                                                       // expected-note {{evaluates to '0 != 0'}}
+                                                       // expected-note {{evaluates to 'Circular_A != 0'}}
 }
 
 namespace test14 {
