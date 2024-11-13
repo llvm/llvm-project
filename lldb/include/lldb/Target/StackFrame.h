@@ -304,7 +304,7 @@ public:
   ///
   /// \return
   ///     A shared pointer to the ValueObject described by var_expr.
-  lldb::ValueObjectSP GetValueForVariableExpressionPath(
+  lldb::ValueObjectSP LegacyGetValueForVariableExpressionPath(
       llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
       uint32_t options, lldb::VariableSP &var_sp, Status &error);
 
@@ -333,7 +333,14 @@ public:
   ///
   /// \return
   ///     A shared pointer to the ValueObject described by var_expr.
-  lldb::ValueObjectSP DILEvaluateVariableExpression(
+  lldb::ValueObjectSP DILGetValueForVariableExpressionPath(
+      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
+      uint32_t options, lldb::VariableSP &var_sp, Status &error);
+
+  /// Dispatch to either LegacyGetValueForVariableExpressionPath, or to
+  /// DILGetValueForVariableExpressionPath, based on target setting. Parameters
+  /// are identical to those for the two functions to which it dispatches.
+  lldb::ValueObjectSP GetValueForVariableExpressionPath(
       llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
       uint32_t options, lldb::VariableSP &var_sp, Status &error);
 

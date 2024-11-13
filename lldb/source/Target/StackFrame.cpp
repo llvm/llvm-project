@@ -505,16 +505,33 @@ StackFrame::GetInScopeVariableList(bool get_file_globals,
   return var_list_sp;
 }
 
-ValueObjectSP StackFrame::DILEvaluateVariableExpression(
+ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
+    llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
+    VariableSP &var_sp, Status &error) {
+  // Check to see if we should use the DIL implementation.
+  lldb::TargetSP target_sp = CalculateTarget();
+  ExecutionContext exe_ctx;
+  CalculateExecutionContext(exe_ctx);
+  bool use_DIL = target_sp->GetUseDIL(&exe_ctx);
+  if (use_DIL)
+    return DILGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
+                                                var_sp, error);
+  else
+    // Use the original implementation.
+    return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic,
+                                                   options, var_sp, error);
+}
+
+ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
     llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
     uint32_t options, lldb::VariableSP &var_sp, Status &error) {
   // This is a place-holder for the calls into the DIL parser and
   // evaluator.  For now, just call the "real" frame variable implementation.
-  return GetValueForVariableExpressionPath(var_expr, use_dynamic, options,
-                                           var_sp, error);
+  return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
+                                                 var_sp, error);
 }
 
-ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
+ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
     llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
     VariableSP &var_sp, Status &error) {
   llvm::StringRef original_var_expr = var_expr;
