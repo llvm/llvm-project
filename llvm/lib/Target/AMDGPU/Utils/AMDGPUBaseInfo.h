@@ -46,6 +46,7 @@ struct IsaVersion;
 /// within a generic family.
 namespace GenericVersion {
 static constexpr unsigned GFX9 = 1;
+static constexpr unsigned GFX9_4 = 1;
 static constexpr unsigned GFX10_1 = 1;
 static constexpr unsigned GFX10_3 = 1;
 static constexpr unsigned GFX11 = 1;

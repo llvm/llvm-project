@@ -112,6 +112,8 @@
 
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx9-generic -mattr=-xnack < %s | FileCheck --check-prefixes=GFX9_GENERIC_NOXNACK %s
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx9-generic -mattr=+xnack < %s | FileCheck --check-prefixes=GFX9_GENERIC_XNACK %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx9-4-generic -mattr=-xnack < %s | FileCheck --check-prefixes=GFX9_4_GENERIC_NOXNACK %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx9-4-generic -mattr=+xnack < %s | FileCheck --check-prefixes=GFX9_4_GENERIC_XNACK %s
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10-1-generic -mattr=-xnack < %s | FileCheck --check-prefixes=GFX10_1_GENERIC_NOXNACK %s
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10-1-generic -mattr=+xnack < %s | FileCheck --check-prefixes=GFX10_1_GENERIC_XNACK %s
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10-3-generic < %s | FileCheck --check-prefixes=GFX10_3_GENERIC %s
@@ -210,6 +212,8 @@
 
 ; GFX9_GENERIC_NOXNACK:     .amdgcn_target "amdgcn-amd-amdhsa--gfx9-generic:xnack-"
 ; GFX9_GENERIC_XNACK:       .amdgcn_target "amdgcn-amd-amdhsa--gfx9-generic:xnack+"
+; GFX9_4_GENERIC_NOXNACK:   .amdgcn_target "amdgcn-amd-amdhsa--gfx9-4-generic:xnack-"
+; GFX9_4_GENERIC_XNACK:     .amdgcn_target "amdgcn-amd-amdhsa--gfx9-4-generic:xnack+"
 ; GFX10_1_GENERIC_NOXNACK:  .amdgcn_target "amdgcn-amd-amdhsa--gfx10-1-generic:xnack-"
 ; GFX10_1_GENERIC_XNACK:    .amdgcn_target "amdgcn-amd-amdhsa--gfx10-1-generic:xnack+"
 ; GFX10_3_GENERIC:          .amdgcn_target "amdgcn-amd-amdhsa--gfx10-3-generic"
