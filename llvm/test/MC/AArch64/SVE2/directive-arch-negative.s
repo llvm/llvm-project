@@ -11,6 +11,7 @@ aesd z23.b, z23.b, z13.b
 // CHECK: error: instruction requires: sve-aes
 // CHECK-NEXT: aesd z23.b, z23.b, z13.b
 
+// nosve2-aes should disable sve-aes but not sve2.
 .arch armv9-a+sve2-aes+nosve2-aes
 aesd z23.b, z23.b, z13.b
 // CHECK: error: instruction requires: sve-aes
