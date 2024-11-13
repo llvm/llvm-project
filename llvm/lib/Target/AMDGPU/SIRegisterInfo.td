@@ -1242,11 +1242,9 @@ defm AV_1024 : AVRegClass<32, VReg_1024.RegTypes, (add VGPR_1024), (add AGPR_102
 // Allow any width of VGPR. Only used for the data operand of V_LOAD/STORE_IDX.
 def VGPR_IDX_DATA_OP_RC
     : SIRegisterClass<"AMDGPU",
-                      !listconcat(Reg16Types.types, Reg32Types.types,
-                                   Reg64Types.types, Reg128Types.types,
-                                   Reg256Types.types),
+                      Reg16Types.types,
                       16,
-                      (add VGPR_16, VGPR_32, VGPR_64, VGPR_128, VGPR_256,
+                      (add VGPR_16, VGPR_32, VGPR_64, VGPR_96, VGPR_128, VGPR_160, VGPR_192, VGPR_256, VReg_288, VReg_576,
                        STAGING_REG)> {
   let isAllocatable = 0;
   let HasVGPR = 1;

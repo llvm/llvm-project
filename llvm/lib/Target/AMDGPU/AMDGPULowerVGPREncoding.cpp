@@ -62,7 +62,13 @@ namespace {
 
 class AMDGPULowerVGPREncoding : public MachineFunctionPass {
   static constexpr unsigned VSrc0 = 0, VDst = 3;
-  static constexpr unsigned OpNum = 4;
+  static constexpr unsigned OpNum = 7;
+
+  enum class EncodeType : unsigned {
+    SET_VGPR_MSB = 0,
+    SET_VGPR_FRAMES = 1,
+    VOPM = 2
+  };
 
   struct OpMode {
     // No MSBs or index register set means they are not required to be
@@ -107,14 +113,15 @@ class AMDGPULowerVGPREncoding : public MachineFunctionPass {
       });
     }
 
-    unsigned encode(bool forSetVGPRFrames) const {
-      static constexpr unsigned BitsPerField = 2;
-      unsigned V = 0;
-      if (forSetVGPRFrames) {
+    unsigned encode(EncodeType type) const {
+      switch (type) {
+      case EncodeType::SET_VGPR_FRAMES: {
         // GFX13 layout:
         // [src0 idx_sel, src1 idx_sel, src2 idx_sel, dst idx_sel,
         //  src0 msb, src1 msb, src2 msb, dst msb]
+        static constexpr unsigned BitsPerField = 2;
         static constexpr unsigned MSBFieldsPos = 8;
+        unsigned V = 0;
         for (const auto &[I, Op] : enumerate(Ops)) {
           MCRegister R = Op.IdxReg.value_or(AMDGPU::IDX0);
           assert(AMDGPU::IDX0 <= R && R <= AMDGPU::IDX3);
@@ -123,11 +130,28 @@ class AMDGPULowerVGPREncoding : public MachineFunctionPass {
         }
         return V;
       }
-
-      // GFX1210 layout: [src0 msb, src1 msb, src2 msb, dst msb]
-      for (const auto &[I, Op] : enumerate(Ops))
-        V |= Op.MSBits.value_or(0) << (I * BitsPerField);
-      return V;
+      case EncodeType::VOPM: {
+        static constexpr unsigned BitsPerField = 4;
+        // GFX13 VOPM layout in idxs operand:
+        // [dst idx_sel, src0 idx_sel, src1 idx_sel, ... ]
+        unsigned V = 0;
+        for (const auto &[I, Op] : enumerate(Ops)) {
+          MCRegister R = Op.IdxReg.value_or(AMDGPU::IDX0);
+          assert(AMDGPU::IDX0 <= R && R <= AMDGPU::IDX3);
+          V |= (R - AMDGPU::IDX0) << (I * BitsPerField);
+        }
+        return V;
+      }
+      default: {
+        assert(type == EncodeType::SET_VGPR_MSB);
+        // GFX1210 layout: [src0 msb, src1 msb, src2 msb, dst msb]
+        static constexpr unsigned BitsPerField = 2;
+        unsigned V = 0;
+        for (const auto &[I, Op] : enumerate(Ops))
+          V |= Op.MSBits.value_or(0) << (I * BitsPerField);
+        return V;
+      }
+      }
     }
   };
 
@@ -225,25 +249,37 @@ private:
 };
 
 bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode, MachineInstr *I) {
+
+  if (AMDGPU::isVOPMPseudo(I->getOpcode())) {
+
+    MachineOperand *IdxsOp = TII->getNamedOperand(*I, AMDGPU::OpName::idxs);
+    assert(IdxsOp && IdxsOp->getImm() == 0);
+    IdxsOp->setImm(NewMode.encode(EncodeType::VOPM));
+
+    return true;
+  }
+
+  EncodeType encodeType = ST->hasVGPRIndexingRegisters()
+                              ? EncodeType::SET_VGPR_FRAMES
+                              : EncodeType::SET_VGPR_MSB;
+
   if (CurrentModeKnown) {
     bool Rewritten = false;
     if (!CurrentMode.update(NewMode, Rewritten))
       return false;
 
     if (MostRecentModeSet && !Rewritten) {
-      MostRecentModeSet->getOperand(0).setImm(
-          CurrentMode.encode(ST->hasVGPRIndexingRegisters()));
+      MostRecentModeSet->getOperand(0).setImm(CurrentMode.encode(encodeType));
       return true;
     }
   }
 
   I = handleClause(I);
-  MostRecentModeSet =
-      BuildMI(*I->getParent(), I, {},
-              TII->get(ST->hasVGPRIndexingRegisters()
-                           ? AMDGPU::S_SET_VGPR_FRAMES
-                           : AMDGPU::S_SET_VGPR_MSB))
-          .addImm(NewMode.encode(ST->hasVGPRIndexingRegisters()));
+  MostRecentModeSet = BuildMI(*I->getParent(), I, {},
+                              TII->get(ST->hasVGPRIndexingRegisters()
+                                           ? AMDGPU::S_SET_VGPR_FRAMES
+                                           : AMDGPU::S_SET_VGPR_MSB))
+                          .addImm(NewMode.encode(encodeType));
 
   CurrentMode = NewMode;
   CurrentModeKnown = true;
@@ -434,6 +470,10 @@ void AMDGPULowerVGPREncoding::lowerInstrOrBundle(MachineInstr &MI,
         assert(OffsetIdx != -1 && "Malformed V_LOAD/STORE_IDX instruction");
         unsigned Offset = II->getOperand(OffsetIdx).getImm();
         assert(Offset < ST->getAddressableNumVGPRs() - ByteSize / 4);
+        assert(
+            !ST->needsAlignedVGPRs() || ByteSize <= 4 ||
+            (Offset & 1) == 0 &&
+                "Instructions with odd offsets should not have been bundled");
         CoreOp->setReg(
             TRI->getAnyVGPRClassForBitWidth(ByteSize * 8)->getRegister(Offset));
         CoreOp->setIsUndef();
@@ -448,6 +488,10 @@ void AMDGPULowerVGPREncoding::lowerInstrOrBundle(MachineInstr &MI,
         II->getNextNode()->removeFromBundle();
       }
     }
+
+    // VOPM will not read or write the MODE register.
+    if (AMDGPU::isVOPMPseudo(CoreMI->getOpcode()))
+      continue;
 
     std::optional<unsigned> MSBits;
     if (CoreOp)

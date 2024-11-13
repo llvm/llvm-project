@@ -195,6 +195,7 @@ public:
     ImmTyMatrixBReuse,
     ImmTyScaleSel,
     ImmTyAuxData,
+    ImmTyIdxs,
     ImmTyByteSel,
     ImmTySignedA,
     ImmTySignedB,
@@ -1247,6 +1248,7 @@ public:
     case ImmTyMatrixBReuse: OS << "ImmTyMatrixBReuse"; break;
     case ImmTyScaleSel: OS << "ScaleSel" ; break;
     case ImmTyAuxData: OS << "ImmTyAuxData"; break;
+    case ImmTyIdxs: OS << "ImmTyIdxs"; break;
     case ImmTyByteSel: OS << "ByteSel" ; break;
     case ImmTySignedA: OS << "SignedA"; break;
     case ImmTySignedB: OS << "SignedB"; break;
@@ -4853,7 +4855,7 @@ AMDGPUAsmParser::validateLdsDirect(const MCInst &Inst) {
 bool AMDGPUAsmParser::validateRegOperands(const MCInst &Inst,
                                           const OperandVector &Operands) {
   unsigned Opc = Inst.getOpcode();
-  if (isVOPM(Opc) || Opc == V_SEND_VGPR_NEXT_B32_gfx13 ||
+  if (isVOPMAsmOnly(Opc) || Opc == V_SEND_VGPR_NEXT_B32_gfx13 ||
       Opc == V_SEND_VGPR_PREV_B32_gfx13)
     return true;
 
@@ -5589,7 +5591,7 @@ bool AMDGPUAsmParser::validateSetVgprMSB(const MCInst &Inst,
 bool AMDGPUAsmParser::validateVOPM(const MCInst &Inst,
                                    const OperandVector &Operands) {
   const unsigned Opcode = Inst.getOpcode();
-  if (!isVOPM(Opcode))
+  if (!isVOPMAsmOnly(Opcode))
     return true;
 
   // Validate srcC

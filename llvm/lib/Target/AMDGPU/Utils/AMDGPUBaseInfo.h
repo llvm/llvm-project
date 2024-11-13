@@ -583,7 +583,10 @@ LLVM_READONLY
 bool isVOPCAsmOnly(unsigned Opc);
 
 LLVM_READONLY
-bool isVOPM(unsigned Opc);
+bool isVOPMAsmOnly(unsigned Opc);
+
+LLVM_READONLY
+bool isVOPMPseudo(unsigned Opc);
 
 /// Returns true if MAI operation is a double precision GEMM.
 LLVM_READONLY
