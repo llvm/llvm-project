@@ -823,11 +823,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     uint32_t NumBlocksInBBRange = 0;
     uint32_t NumBBRanges = 1;
     typename ELFFile<ELFT>::uintX_t RangeBaseAddress = 0;
-<<<<<<< HEAD
-    std::vector<BBAddrMap::BBEntry> BBEntries;
     uint32_t TotalNumBlocks = 0;
-=======
->>>>>>> main
     if (FeatEnable.MultiBBRange) {
       NumBBRanges = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
       if (!Cur || ULEBSizeErr)
@@ -855,24 +851,23 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
         NumBlocksInBBRange = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
       }
       std::vector<BBAddrMap::BBEntry> BBEntries;
-      if (!FeatEnable.OmitBBEntries) {      
-      for (uint32_t BlockIndex = 0; !MetadataDecodeErr && !ULEBSizeErr && Cur &&
-                                    (BlockIndex < NumBlocksInBBRange);
-           ++BlockIndex) {
-        uint32_t ID = Version >= 2
-                          ? readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr)
-                          : BlockIndex;
-        uint32_t Offset = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-        uint32_t Size = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-        uint32_t MD = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-        if (Version >= 1) {
-          // Offset is calculated relative to the end of the previous BB.
-          Offset += PrevBBEndOffset;
-          PrevBBEndOffset = Offset + Size;
-        }
+      if (!FeatEnable.OmitBBEntries) {
+        for (uint32_t BlockIndex = 0; !MetadataDecodeErr && !ULEBSizeErr &&
+                                      Cur && (BlockIndex < NumBlocksInBBRange);
+             ++BlockIndex) {
+          uint32_t ID = Version >= 2
+                            ? readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr)
+                            : BlockIndex;
+          uint32_t Offset = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+          uint32_t Size = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+          uint32_t MD = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+          if (Version >= 1) {
+            // Offset is calculated relative to the end of the previous BB.
+            Offset += PrevBBEndOffset;
+            PrevBBEndOffset = Offset + Size;
+          }
         }
         TotalNumBlocks += BBEntries.size();
-        }
       }
       BBRangeEntries.push_back({RangeBaseAddress, std::move(BBEntries)});
     }
