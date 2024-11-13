@@ -29,9 +29,11 @@
 #include "Target.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Strings.h"
+#include "llvm/ADT/DenseMapInfoVariant.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/TimeProfiler.h"
+#include <variant>
 #include <vector>
 
 using namespace llvm;
@@ -42,6 +44,10 @@ using namespace lld;
 using namespace lld::elf;
 
 namespace {
+
+// Something that can be the most proximate reason that something else is alive.
+typedef std::variant<InputSectionBase *, Symbol *> LiveReason;
+
 template <class ELFT> class MarkLive {
 public:
   MarkLive(Ctx &ctx, unsigned partition) : ctx(ctx), partition(partition) {}
@@ -50,7 +56,10 @@ public:
   void moveToMain();
 
 private:
-  void enqueue(InputSectionBase *sec, uint64_t offset);
+  void enqueue(InputSectionBase *sec, uint64_t offset = 0,
+               Symbol *sym = nullptr,
+               std::optional<LiveReason> reason = std::nullopt);
+  void printWhyLive(Symbol *s) const;
   void markSymbol(Symbol *sym);
   void mark();
 
@@ -70,6 +79,12 @@ private:
   // There are normally few input sections whose names are valid C
   // identifiers, so we just store a SmallVector instead of a multimap.
   DenseMap<StringRef, SmallVector<InputSectionBase *, 0>> cNamedSections;
+
+  // The most proximate reason that something is live. If something doesn't have
+  // a recorded reason, it is either dead, intrinsically live, or an
+  // unreferenced symbol in a live section. (These cases are trivially
+  // detectable and need not be stored.)
+  DenseMap<LiveReason, LiveReason> whyLive;
 };
 } // namespace
 
@@ -101,6 +116,12 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
   Symbol &sym = sec.file->getRelocTargetSym(rel);
   sym.used = true;
 
+  LiveReason reason;
+  if (!ctx.arg.whyLive.empty()) {
+    Defined *reasonSym = sec.getEnclosingSymbol(rel.r_offset);
+    reason = reasonSym ? LiveReason(reasonSym) : LiveReason(&sec);
+  }
+
   if (auto *d = dyn_cast<Defined>(&sym)) {
     auto *relSec = dyn_cast_or_null<InputSectionBase>(d->section);
     if (!relSec)
@@ -119,17 +140,29 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
     // group/SHF_LINK_ORDER rules (b) if the associated text section should be
     // discarded, marking the LSDA will unnecessarily retain the text section.
     if (!(fromFDE && ((relSec->flags & (SHF_EXECINSTR | SHF_LINK_ORDER)) ||
-                      relSec->nextInSectionGroup)))
-      enqueue(relSec, offset);
+                      relSec->nextInSectionGroup))) {
+      Symbol *canonicalSym = d;
+      if (!ctx.arg.whyLive.empty() && d->isSection()) {
+        if (Symbol *s = relSec->getEnclosingSymbol(offset))
+          canonicalSym = s;
+        else
+          canonicalSym = nullptr;
+      }
+      enqueue(relSec, offset, canonicalSym, reason);
+    }
     return;
   }
 
-  if (auto *ss = dyn_cast<SharedSymbol>(&sym))
-    if (!ss->isWeak())
+  if (auto *ss = dyn_cast<SharedSymbol>(&sym)) {
+    if (!ss->isWeak()) {
       cast<SharedFile>(ss->file)->isNeeded = true;
+      if (!ctx.arg.whyLive.empty())
+        whyLive.try_emplace(&sym, reason);
+    }
+  }
 
   for (InputSectionBase *sec : cNamedSections.lookup(sym.getName()))
-    enqueue(sec, 0);
+    enqueue(sec, 0, nullptr, reason);
 }
 
 // The .eh_frame section is an unfortunate special case.
@@ -187,7 +220,8 @@ static bool isReserved(InputSectionBase *sec) {
 }
 
 template <class ELFT>
-void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset) {
+void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset,
+                             Symbol *sym, std::optional<LiveReason> reason) {
   // Usually, a whole section is marked as live or dead, but in mergeable
   // (splittable) sections, each piece of data has independent liveness bit.
   // So we explicitly tell it which offset is in use.
@@ -201,15 +235,71 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset) {
     return;
   sec->partition = sec->partition ? 1 : partition;
 
+  if (!ctx.arg.whyLive.empty() && reason) {
+    if (sym) {
+      // If a specific symbol is referenced, that makes it alive. It may in turn
+      // make its section alive.
+      whyLive.try_emplace(sym, *reason);
+      whyLive.try_emplace(sec, sym);
+    } else {
+      // Otherwise, the reference generically makes the section live.
+      whyLive.try_emplace(sec, *reason);
+    }
+  }
+
   // Add input section to the queue.
   if (InputSection *s = dyn_cast<InputSection>(sec))
     queue.push_back(s);
 }
 
+// Print the stack of reasons that the given symbol is live.
+template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
+  // Skip dead symbols. A symbol is dead if it belongs to a dead section.
+  if (auto *d = dyn_cast<Defined>(s)) {
+    auto *reason = dyn_cast_or_null<InputSectionBase>(d->section);
+    if (reason && !reason->isLive())
+      return;
+  }
+
+  auto msg = Msg(ctx);
+  msg << "live symbol: " << toStr(ctx, *s);
+
+  LiveReason cur = s;
+  while (true) {
+    auto it = whyLive.find(cur);
+    // If there is a specific reason this object is live...
+    if (it != whyLive.end()) {
+      cur = it->second;
+    } else {
+      // This object is live, but it has no tracked reason. It is either
+      // intrinsically live or an unreferenced symbol in a live section. Return
+      // in the first case.
+      if (!std::holds_alternative<Symbol *>(cur))
+        return;
+      auto *d = dyn_cast<Defined>(std::get<Symbol *>(cur));
+      if (!d)
+        return;
+      auto *reason = dyn_cast_or_null<InputSectionBase>(d->section);
+      if (!reason)
+        return;
+      cur = LiveReason{reason};
+    }
+
+    msg << "\n>>> kept live by ";
+    if (std::holds_alternative<Symbol *>(cur)) {
+      auto *s = std::get<Symbol *>(cur);
+      msg << toStr(ctx, *s);
+    } else {
+      auto *s = std::get<InputSectionBase *>(cur);
+      msg << toStr(ctx, s);
+    }
+  }
+}
+
 template <class ELFT> void MarkLive<ELFT>::markSymbol(Symbol *sym) {
   if (auto *d = dyn_cast_or_null<Defined>(sym))
     if (auto *isec = dyn_cast_or_null<InputSectionBase>(d->section))
-      enqueue(isec, d->value);
+      enqueue(isec, d->value, sym);
 }
 
 // This is the main function of the garbage collector.
@@ -256,7 +346,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
   }
   for (InputSectionBase *sec : ctx.inputSections) {
     if (sec->flags & SHF_GNU_RETAIN) {
-      enqueue(sec, 0);
+      enqueue(sec, 0, nullptr, std::nullopt);
       continue;
     }
     if (sec->flags & SHF_LINK_ORDER)
@@ -295,7 +385,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
     // Preserve special sections and those which are specified in linker
     // script KEEP command.
     if (isReserved(sec) || ctx.script->shouldKeep(sec)) {
-      enqueue(sec, 0);
+      enqueue(sec);
     } else if ((!ctx.arg.zStartStopGC || sec->name.starts_with("__libc_")) &&
                isValidCIdentifier(sec->name)) {
       // As a workaround for glibc libc.a before 2.34
@@ -323,11 +413,20 @@ template <class ELFT> void MarkLive<ELFT>::mark() {
       resolveReloc(sec, rel, false);
 
     for (InputSectionBase *isec : sec.dependentSections)
-      enqueue(isec, 0);
+      enqueue(isec, 0, nullptr, &sec);
 
     // Mark the next group member.
     if (sec.nextInSectionGroup)
-      enqueue(sec.nextInSectionGroup, 0);
+      enqueue(sec.nextInSectionGroup, 0, nullptr, &sec);
+  }
+
+  if (!ctx.arg.whyLive.empty()) {
+    for (Symbol *sym : ctx.symtab->getSymbols()) {
+      if (llvm::any_of(ctx.arg.whyLive, [sym](const llvm::GlobPattern &pat) {
+            return pat.match(sym->getName());
+          }))
+        printWhyLive(sym);
+    }
   }
 }
 
@@ -353,7 +452,7 @@ template <class ELFT> void MarkLive<ELFT>::moveToMain() {
       continue;
     if (ctx.symtab->find(("__start_" + sec->name).str()) ||
         ctx.symtab->find(("__stop_" + sec->name).str()))
-      enqueue(sec, 0);
+      enqueue(sec);
   }
 
   mark();
