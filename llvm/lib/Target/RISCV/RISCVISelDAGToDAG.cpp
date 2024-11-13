@@ -1632,7 +1632,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
             break;
           IsCmpMinimum = true;
         } else if (!IsUnsigned && CVal == APInt::getSignedMinValue(
-                                              Src1VT.getScalarSizeInBits())) {
+                                              Src1VT.getScalarSizeInBits())
+                                              .getSExtValue()) {
           IsCmpMinimum = true;
         }
       }
@@ -1708,7 +1709,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
             break;
           IsCmpMinimum = true;
         } else if (!IsUnsigned && CVal == APInt::getSignedMinValue(
-                                              Src1VT.getScalarSizeInBits())) {
+                                              Src1VT.getScalarSizeInBits())
+                                              .getSExtValue()) {
           IsCmpMinimum = true;
         }
       }
