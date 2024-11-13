@@ -71,5 +71,19 @@ void foo() {
 #pragma acc kernels loop dtype(AnotherIdent)
   for(int i = 0;i<5;++i);
 
+  int i;
+  float array[5];
+
+// CHECK: #pragma acc parallel self(i == 3)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc parallel loop self(i == 3)
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc kernels if(i == array[1])
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc kernels if(i == array[1])
+  for(int i = 0;i<5;++i);
 
 }
