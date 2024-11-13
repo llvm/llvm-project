@@ -33,3 +33,48 @@ entry:
   %call = tail call double @g(double %add, double %0)
   ret double %call
 }
+
+declare void @foo(ptr, ptr)
+
+define void @can_fold_with_call_in_chain(float %x, ptr noalias %a, ptr noalias %b) {
+; CHECK-LABEL: can_fold_with_call_in_chain:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushl %edi
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:    .cfi_def_cfa_offset 12
+; CHECK-NEXT:    subl $20, %esp
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset %esi, -12
+; CHECK-NEXT:    .cfi_offset %edi, -8
+; CHECK-NEXT:    flds 32(%esp)
+; CHECK-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; CHECK-NEXT:    movl 36(%esp), %edi
+; CHECK-NEXT:    movl 40(%esp), %esi
+; CHECK-NEXT:    movl %esi, 4(%esp)
+; CHECK-NEXT:    movl %edi, (%esp)
+; CHECK-NEXT:    calll foo@PLT
+; CHECK-NEXT:    leal 16(%esp), %eax
+; CHECK-NEXT:    movl %eax, 8(%esp)
+; CHECK-NEXT:    movl %edi, 4(%esp)
+; CHECK-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; CHECK-NEXT:    fstps (%esp)
+; CHECK-NEXT:    calll sincosf
+; CHECK-NEXT:    flds 16(%esp)
+; CHECK-NEXT:    fstps (%esi)
+; CHECK-NEXT:    addl $20, %esp
+; CHECK-NEXT:    .cfi_def_cfa_offset 12
+; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    popl %edi
+; CHECK-NEXT:    .cfi_def_cfa_offset 4
+; CHECK-NEXT:    retl
+entry:
+  %sin = tail call float @llvm.sin.f32(float %x)
+  %cos = tail call float @llvm.cos.f32(float %x)
+  call void @foo(ptr %a, ptr %b)
+  store float %sin, ptr %a, align 4
+  store float %cos, ptr %b, align 4
+  ret void
+}
+
