@@ -10607,6 +10607,9 @@ let Predicates = [HasLSFE] in {
 let Uses = [FPMR, FPCR] in
 defm FMMLA : SIMDThreeSameVectorFP8MatrixMul<"fmmla">;
 
+// Use the CSDB instruction as a barrier.
+def : Pat<(int_speculative_data_barrier), (HINT 0x14)>;
+
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"
 include "AArch64SMEInstrInfo.td"
