@@ -1347,27 +1347,46 @@ public:
     return InterleaveInfo.getInterleaveGroup(Instr);
   }
 
+  /// Calculate in advance whether a scalar epilogue is required when
+  /// vectorizing and not vectorizing. If \p Invalidate is true then
+  /// invalidate a previous decision.
+  void collectScalarEpilogueRequirements(bool Invalidate) {
+    auto NeedsScalarEpilogue = [&](bool IsVectorizing) -> bool {
+      if (!isScalarEpilogueAllowed()) {
+        LLVM_DEBUG(dbgs() << "LV: Loop does not require scalar epilogue");
+        return false;
+      }
+      // If we might exit from anywhere but the latch, must run the exiting
+      // iteration in scalar form.
+      if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch()) {
+        LLVM_DEBUG(dbgs() << "LV: Loop requires scalar epilogue: not exiting "
+                             "from latch block\n");
+        return true;
+      }
+      if (IsVectorizing && InterleaveInfo.requiresScalarEpilogue()) {
+        LLVM_DEBUG(dbgs() << "LV: Loop requires scalar epilogue: "
+                             "interleaved group requires scalar epilogue");
+        return true;
+      }
+      LLVM_DEBUG(dbgs() << "LV: Loop does not require scalar epilogue");
+      return false;
+    };
+
+    assert((Invalidate || !RequiresScalarEpilogue) &&
+           "Already determined scalar epilogue requirements!");
+    std::pair<bool, bool> Result;
+    Result.first = NeedsScalarEpilogue(true);
+    LLVM_DEBUG(dbgs() << ", when vectorizing\n");
+    Result.second = NeedsScalarEpilogue(false);
+    LLVM_DEBUG(dbgs() << ", when not vectorizing\n");
+    RequiresScalarEpilogue = Result;
+  }
+
   /// Returns true if we're required to use a scalar epilogue for at least
   /// the final iteration of the original loop.
   bool requiresScalarEpilogue(bool IsVectorizing) const {
-    if (!isScalarEpilogueAllowed()) {
-      LLVM_DEBUG(dbgs() << "LV: Loop does not require scalar epilogue\n");
-      return false;
-    }
-    // If we might exit from anywhere but the latch, must run the exiting
-    // iteration in scalar form.
-    if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch()) {
-      LLVM_DEBUG(dbgs() << "LV: Loop requires scalar epilogue: not exiting "
-                           "from latch block\n");
-      return true;
-    }
-    if (IsVectorizing && InterleaveInfo.requiresScalarEpilogue()) {
-      LLVM_DEBUG(dbgs() << "LV: Loop requires scalar epilogue: "
-                           "interleaved group requires scalar epilogue\n");
-      return true;
-    }
-    LLVM_DEBUG(dbgs() << "LV: Loop does not require scalar epilogue\n");
-    return false;
+    auto &CachedResult = *RequiresScalarEpilogue;
+    return IsVectorizing ? CachedResult.first : CachedResult.second;
   }
 
   /// Returns true if we're required to use a scalar epilogue for at least
@@ -1389,6 +1408,15 @@ public:
   /// loop hint annotation.
   bool isScalarEpilogueAllowed() const {
     return ScalarEpilogueStatus == CM_ScalarEpilogueAllowed;
+  }
+
+  /// Update the ScalarEpilogueStatus to a new value, potentially triggering a
+  /// recalculation of the scalar epilogue requirements.
+  void setScalarEpilogueStatus(ScalarEpilogueLowering Status) {
+    bool Changed = ScalarEpilogueStatus != Status;
+    ScalarEpilogueStatus = Status;
+    if (Changed)
+      collectScalarEpilogueRequirements(/*Invalidate=*/true);
   }
 
   /// Returns the TailFoldingStyle that is best for the current loop.
@@ -1771,6 +1799,9 @@ public:
 
   /// All element types found in the loop.
   SmallPtrSet<Type *, 16> ElementTypesInLoop;
+
+  /// Keeps track of whether we require a scalar epilogue.
+  std::optional<std::pair<bool, bool>> RequiresScalarEpilogue;
 };
 } // end namespace llvm
 
@@ -4058,7 +4089,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     if (ScalarEpilogueStatus == CM_ScalarEpilogueNotNeededUsePredicate) {
       LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking: vectorize with a "
                            "scalar epilogue instead.\n");
-      ScalarEpilogueStatus = CM_ScalarEpilogueAllowed;
+      setScalarEpilogueStatus(CM_ScalarEpilogueAllowed);
       return computeFeasibleMaxVF(MaxTC, UserVF, false);
     }
     return FixedScalableVFPair::getNone();
@@ -4074,6 +4105,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     // Note: There is no need to invalidate any cost modeling decisions here, as
     // none were taken so far.
     InterleaveInfo.invalidateGroupsRequiringScalarEpilogue();
+    collectScalarEpilogueRequirements(/*Invalidate=*/true);
   }
 
   FixedScalableVFPair MaxFactors = computeFeasibleMaxVF(MaxTC, UserVF, true);
@@ -4145,7 +4177,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   if (ScalarEpilogueStatus == CM_ScalarEpilogueNotNeededUsePredicate) {
     LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking: vectorize with a "
                          "scalar epilogue instead.\n");
-    ScalarEpilogueStatus = CM_ScalarEpilogueAllowed;
+    setScalarEpilogueStatus(CM_ScalarEpilogueAllowed);
     return MaxFactors;
   }
 
@@ -7058,6 +7090,7 @@ LoopVectorizationPlanner::planInVPlanNativePath(ElementCount UserVF) {
   if (!OrigLoop->isInnermost()) {
     // If the user doesn't provide a vectorization factor, determine a
     // reasonable one.
+    CM.collectScalarEpilogueRequirements(/*Invalidate=*/false);
     if (UserVF.isZero()) {
       VF = determineVPlanVF(TTI, CM);
       LLVM_DEBUG(dbgs() << "LV: VPlan computed VF " << VF << ".\n");
@@ -7102,6 +7135,7 @@ LoopVectorizationPlanner::planInVPlanNativePath(ElementCount UserVF) {
 
 void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   assert(OrigLoop->isInnermost() && "Inner loop expected.");
+  CM.collectScalarEpilogueRequirements(/*Invalidate=*/false);
   CM.collectValuesToIgnore();
   CM.collectElementTypesForWidening();
 
@@ -7116,11 +7150,13 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
         dbgs()
         << "LV: Invalidate all interleaved groups due to fold-tail by masking "
            "which requires masked-interleaved support.\n");
-    if (CM.InterleaveInfo.invalidateGroups())
+    if (CM.InterleaveInfo.invalidateGroups()) {
       // Invalidating interleave groups also requires invalidating all decisions
       // based on them, which includes widening decisions and uniform and scalar
       // values.
       CM.invalidateCostModelingDecisions();
+      CM.collectScalarEpilogueRequirements(/*Invalidate=*/true);
+    }
   }
 
   if (CM.foldTailByMasking())
