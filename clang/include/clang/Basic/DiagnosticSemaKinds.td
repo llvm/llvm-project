@@ -12368,7 +12368,7 @@ def err_preserve_enum_value_not_const: Error<
 def err_bit_cast_non_trivially_copyable : Error<
   "__builtin_bit_cast %select{source|destination}0 type must be trivially copyable">;
 def err_bit_cast_type_size_mismatch : Error<
-  "__builtin_bit_cast source size does not equal destination size (%0 vs %1)">;
+  "size of '__builtin_bit_cast' source type %0 does not match destination type %1 (%2 vs %3 bytes)">;
 
 // SYCL-specific diagnostics
 def warn_sycl_kernel_num_of_template_params : Warning<
@@ -12686,10 +12686,10 @@ def err_acc_var_not_pointer_type
 def note_acc_expected_pointer_var : Note<"expected variable of pointer type">;
 def err_acc_clause_after_device_type
     : Error<"OpenACC clause '%0' may not follow a '%1' clause in a "
-            "%select{'%3'|compute}2 construct">;
+            "'%2' construct">;
 def err_acc_clause_cannot_combine
     : Error<"OpenACC clause '%0' may not appear on the same construct as a "
-            "'%1' clause on a 'loop' construct">;
+            "'%1' clause on a '%2' construct">;
 def err_acc_reduction_num_gangs_conflict
     : Error<
           "OpenACC 'reduction' clause may not appear on a 'parallel' construct "
