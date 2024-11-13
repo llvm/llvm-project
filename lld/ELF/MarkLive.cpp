@@ -42,6 +42,11 @@ using namespace lld;
 using namespace lld::elf;
 
 namespace {
+struct LiveParent {
+  InputSectionBase *sec;
+  std::optional<uint64_t> offset;
+};
+
 template <class ELFT> class MarkLive {
 public:
   MarkLive(Ctx &ctx, unsigned partition) : ctx(ctx), partition(partition) {}
@@ -50,7 +55,7 @@ public:
   void moveToMain();
 
 private:
-  void enqueue(InputSectionBase *sec, uint64_t offset);
+  void enqueue(InputSectionBase *sec, uint64_t offset, std::optional<LiveParent> parent);
   void markSymbol(Symbol *sym);
   void mark();
 
@@ -101,6 +106,8 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
   Symbol &sym = sec.file->getRelocTargetSym(rel);
   sym.used = true;
 
+  LiveParent parent = {&sec, rel.r_offset};
+
   if (auto *d = dyn_cast<Defined>(&sym)) {
     auto *relSec = dyn_cast_or_null<InputSectionBase>(d->section);
     if (!relSec)
@@ -120,7 +127,7 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
     // discarded, marking the LSDA will unnecessarily retain the text section.
     if (!(fromFDE && ((relSec->flags & (SHF_EXECINSTR | SHF_LINK_ORDER)) ||
                       relSec->nextInSectionGroup)))
-      enqueue(relSec, offset);
+      enqueue(relSec, offset, parent);
     return;
   }
 
@@ -129,7 +136,7 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
       cast<SharedFile>(ss->file)->isNeeded = true;
 
   for (InputSectionBase *sec : cNamedSections.lookup(sym.getName()))
-    enqueue(sec, 0);
+    enqueue(sec, 0, parent);
 }
 
 // The .eh_frame section is an unfortunate special case.
@@ -187,7 +194,8 @@ static bool isReserved(InputSectionBase *sec) {
 }
 
 template <class ELFT>
-void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset) {
+void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset,
+                             std::optional<LiveParent> parent) {
   // Usually, a whole section is marked as live or dead, but in mergeable
   // (splittable) sections, each piece of data has independent liveness bit.
   // So we explicitly tell it which offset is in use.
@@ -209,7 +217,7 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset) {
 template <class ELFT> void MarkLive<ELFT>::markSymbol(Symbol *sym) {
   if (auto *d = dyn_cast_or_null<Defined>(sym))
     if (auto *isec = dyn_cast_or_null<InputSectionBase>(d->section))
-      enqueue(isec, d->value);
+      enqueue(isec, d->value, std::nullopt);
 }
 
 // This is the main function of the garbage collector.
@@ -256,7 +264,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
   }
   for (InputSectionBase *sec : ctx.inputSections) {
     if (sec->flags & SHF_GNU_RETAIN) {
-      enqueue(sec, 0);
+      enqueue(sec, 0, std::nullopt);
       continue;
     }
     if (sec->flags & SHF_LINK_ORDER)
@@ -295,7 +303,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
     // Preserve special sections and those which are specified in linker
     // script KEEP command.
     if (isReserved(sec) || ctx.script->shouldKeep(sec)) {
-      enqueue(sec, 0);
+      enqueue(sec, 0, std::nullopt);
     } else if ((!ctx.arg.zStartStopGC || sec->name.starts_with("__libc_")) &&
                isValidCIdentifier(sec->name)) {
       // As a workaround for glibc libc.a before 2.34
@@ -323,11 +331,11 @@ template <class ELFT> void MarkLive<ELFT>::mark() {
       resolveReloc(sec, rel, false);
 
     for (InputSectionBase *isec : sec.dependentSections)
-      enqueue(isec, 0);
+      enqueue(isec, 0, LiveParent{&sec, std::nullopt});
 
     // Mark the next group member.
     if (sec.nextInSectionGroup)
-      enqueue(sec.nextInSectionGroup, 0);
+      enqueue(sec.nextInSectionGroup, 0, LiveParent{&sec, std::nullopt});
   }
 }
 
@@ -353,7 +361,7 @@ template <class ELFT> void MarkLive<ELFT>::moveToMain() {
       continue;
     if (ctx.symtab->find(("__start_" + sec->name).str()) ||
         ctx.symtab->find(("__stop_" + sec->name).str()))
-      enqueue(sec, 0);
+      enqueue(sec, 0, std::nullopt);
   }
 
   mark();
