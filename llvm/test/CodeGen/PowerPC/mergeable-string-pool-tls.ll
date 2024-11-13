@@ -75,10 +75,9 @@ define void @print_tls_func() {
 ; LINUX64LE-NEXT:    addi r4, r3, a@tprel@l
 ; LINUX64LE-NEXT:    addis r3, r13, b@tprel@ha
 ; LINUX64LE-NEXT:    addi r5, r3, b@tprel@l
-; LINUX64LE-NEXT:    addis r3, r2, .L__ModuleStringPool@toc@ha
-; LINUX64LE-NEXT:    addi r6, r3, .L__ModuleStringPool@toc@l
-; LINUX64LE-NEXT:    addi r3, r6, 71
-; LINUX64LE-NEXT:    addi r6, r6, 56
+; LINUX64LE-NEXT:    addis r3, r2, .L_MergedGlobals@toc@ha
+; LINUX64LE-NEXT:    addi r6, r3, .L_MergedGlobals@toc@l
+; LINUX64LE-NEXT:    addi r3, r6, 72
 ; LINUX64LE-NEXT:    bl printf
 ; LINUX64LE-NEXT:    nop
 ; LINUX64LE-NEXT:    addi r1, r1, 96
@@ -106,12 +105,11 @@ define void @print_tls_func() {
 ; LINUX64BE-NEXT:    bl __tls_get_addr(b@tlsld)
 ; LINUX64BE-NEXT:    nop
 ; LINUX64BE-NEXT:    addis r3, r3, b@dtprel@ha
-; LINUX64BE-NEXT:    addi r5, r3, b@dtprel@l
-; LINUX64BE-NEXT:    addis r3, r2, .L__ModuleStringPool@toc@ha
-; LINUX64BE-NEXT:    addi r4, r3, .L__ModuleStringPool@toc@l
-; LINUX64BE-NEXT:    addi r3, r4, 71
-; LINUX64BE-NEXT:    addi r6, r4, 56
 ; LINUX64BE-NEXT:    mr r4, r30
+; LINUX64BE-NEXT:    addi r5, r3, b@dtprel@l
+; LINUX64BE-NEXT:    addis r3, r2, .L_MergedGlobals@toc@ha
+; LINUX64BE-NEXT:    addi r6, r3, .L_MergedGlobals@toc@l
+; LINUX64BE-NEXT:    addi r3, r6, 72
 ; LINUX64BE-NEXT:    bl printf
 ; LINUX64BE-NEXT:    nop
 ; LINUX64BE-NEXT:    ld r30, 112(r1) # 8-byte Folded Reload
@@ -154,7 +152,7 @@ define void @test_func() {
 ; CHECK32-NEXT:    lwz r0, 8(r1)
 ; CHECK32-NEXT:    mtlr r0
 ; CHECK32-NEXT:    blr
-;
+
 ; LINUX64LE-LABEL: test_func:
 ; LINUX64LE:       # %bb.0: # %entry
 ; LINUX64LE-NEXT:    mflr r0
@@ -162,9 +160,9 @@ define void @test_func() {
 ; LINUX64LE-NEXT:    std r0, 48(r1)
 ; LINUX64LE-NEXT:    .cfi_def_cfa_offset 32
 ; LINUX64LE-NEXT:    .cfi_offset lr, 16
-; LINUX64LE-NEXT:    addis r3, r2, .L__ModuleStringPool@toc@ha
-; LINUX64LE-NEXT:    addi r3, r3, .L__ModuleStringPool@toc@l
-; LINUX64LE-NEXT:    addi r3, r3, 16
+; LINUX64LE-NEXT:    addis r3, r2, .L_MergedGlobals@toc@ha
+; LINUX64LE-NEXT:    addi r3, r3, .L_MergedGlobals@toc@l
+; LINUX64LE-NEXT:    addi r3, r3, 32
 ; LINUX64LE-NEXT:    bl callee
 ; LINUX64LE-NEXT:    nop
 ; LINUX64LE-NEXT:    addi r1, r1, 32
@@ -179,9 +177,9 @@ define void @test_func() {
 ; LINUX64BE-NEXT:    std r0, 128(r1)
 ; LINUX64BE-NEXT:    .cfi_def_cfa_offset 112
 ; LINUX64BE-NEXT:    .cfi_offset lr, 16
-; LINUX64BE-NEXT:    addis r3, r2, .L__ModuleStringPool@toc@ha
-; LINUX64BE-NEXT:    addi r3, r3, .L__ModuleStringPool@toc@l
-; LINUX64BE-NEXT:    addi r3, r3, 16
+; LINUX64BE-NEXT:    addis r3, r2, .L_MergedGlobals@toc@ha
+; LINUX64BE-NEXT:    addi r3, r3, .L_MergedGlobals@toc@l
+; LINUX64BE-NEXT:    addi r3, r3, 32
 ; LINUX64BE-NEXT:    bl callee
 ; LINUX64BE-NEXT:    nop
 ; LINUX64BE-NEXT:    addi r1, r1, 112
@@ -229,8 +227,9 @@ define void @test_func2() {
 ; LINUX64LE-NEXT:    std r0, 48(r1)
 ; LINUX64LE-NEXT:    .cfi_def_cfa_offset 32
 ; LINUX64LE-NEXT:    .cfi_offset lr, 16
-; LINUX64LE-NEXT:    addis r3, r2, .L__ModuleStringPool@toc@ha
-; LINUX64LE-NEXT:    addi r3, r3, .L__ModuleStringPool@toc@l
+; LINUX64LE-NEXT:    addis r3, r2, .L_MergedGlobals@toc@ha
+; LINUX64LE-NEXT:    addi r3, r3, .L_MergedGlobals@toc@l
+; LINUX64LE-NEXT:    addi r3, r3, 16
 ; LINUX64LE-NEXT:    bl callee2
 ; LINUX64LE-NEXT:    nop
 ; LINUX64LE-NEXT:    addi r1, r1, 32
@@ -245,8 +244,9 @@ define void @test_func2() {
 ; LINUX64BE-NEXT:    std r0, 128(r1)
 ; LINUX64BE-NEXT:    .cfi_def_cfa_offset 112
 ; LINUX64BE-NEXT:    .cfi_offset lr, 16
-; LINUX64BE-NEXT:    addis r3, r2, .L__ModuleStringPool@toc@ha
-; LINUX64BE-NEXT:    addi r3, r3, .L__ModuleStringPool@toc@l
+; LINUX64BE-NEXT:    addis r3, r2, .L_MergedGlobals@toc@ha
+; LINUX64BE-NEXT:    addi r3, r3, .L_MergedGlobals@toc@l
+; LINUX64BE-NEXT:    addi r3, r3, 16
 ; LINUX64BE-NEXT:    bl callee2
 ; LINUX64BE-NEXT:    nop
 ; LINUX64BE-NEXT:    addi r1, r1, 112
@@ -332,49 +332,51 @@ entry:
 ; CHECK32-NEXT:	.tc b[TC],b[TL]@ld
 
 ; LINUX64LE: a:
-; LINUX64LE-NEXT:	.asciz	"tls1"
-; LINUX64LE-NEXT:	.size	a, 5
+; LINUX64LE-NEXT:       .asciz  "tls1"
+; LINUX64LE-NEXT:       .size   a, 5
 ; LINUX64LE: b:
-; LINUX64LE-NEXT:	.asciz	"tls2"
-; LINUX64LE-NEXT:	.size	b, 5
-; LINUX64LE: .L__ModuleStringPool:
-; LINUX64LE-NEXT:	.long	0x42af999a
-; LINUX64LE-NEXT:	.long	0x42b1999a
-; LINUX64LE-NEXT:	.long	0x42b3cccd
-; LINUX64LE-NEXT:	.long	0x42b5999a
-; LINUX64LE-NEXT:	.long	1
-; LINUX64LE-NEXT:	.long	2
-; LINUX64LE-NEXT:	.long	3
-; LINUX64LE-NEXT:	.long	4
-; LINUX64LE-NEXT:	.long	5
-; LINUX64LE-NEXT:	.long	6
-; LINUX64LE-NEXT:	.long	7
-; LINUX64LE-NEXT:	.long	8
-; LINUX64LE-NEXT:	.long	9
-; LINUX64LE-NEXT:	.long	10
-; LINUX64LE-NEXT:	.asciz	"Regular global"
-; LINUX64LE-NEXT:	.asciz	"TLS variable 1, 2 and non-TLS var: %s, %s, %s\n"
+; LINUX64LE-NEXT:       .asciz  "tls2"
+; LINUX64LE-NEXT:       .size   b, 5
+; LINUX64LE: .L_MergedGlobals:
+; LINUX64LE-NEXT:       .asciz  "Regular global"
+; LINUX64LE-NEXT:       .space  1
+; LINUX64LE-NEXT:       .long   0x42af999a
+; LINUX64LE-NEXT:       .long   0x42b1999a
+; LINUX64LE-NEXT:       .long   0x42b3cccd
+; LINUX64LE-NEXT:       .long   0x42b5999a
+; LINUX64LE-NEXT:       .long   1
+; LINUX64LE-NEXT:       .long   2
+; LINUX64LE-NEXT:       .long   3
+; LINUX64LE-NEXT:       .long   4
+; LINUX64LE-NEXT:       .long   5
+; LINUX64LE-NEXT:       .long   6
+; LINUX64LE-NEXT:       .long   7
+; LINUX64LE-NEXT:       .long   8
+; LINUX64LE-NEXT:       .long   9
+; LINUX64LE-NEXT:       .long   10
+; LINUX64LE-NEXT:       .asciz  "TLS variable 1, 2 and non-TLS var: %s, %s, %s\n"
 
 ; LINUX64BE: a:
-; LINUX64BE-NEXT:	.asciz	"tls1"
-; LINUX64BE-NEXT:	.size	a, 5
+; LINUX64BE-NEXT:       .asciz  "tls1"
+; LINUX64BE-NEXT:       .size   a, 5
 ; LINUX64BE: b:
-; LINUX64BE-NEXT:	.asciz	"tls2"
-; LINUX64BE-NEXT:	.size	b, 5
-; LINUX64BE: .L__ModuleStringPool:
-; LINUX64BE-NEXT:	.long	0x42af999a
-; LINUX64BE-NEXT:	.long	0x42b1999a
-; LINUX64BE-NEXT:	.long	0x42b3cccd
-; LINUX64BE-NEXT:	.long	0x42b5999a
-; LINUX64BE-NEXT:	.long	1
-; LINUX64BE-NEXT:	.long	2
-; LINUX64BE-NEXT:	.long	3
-; LINUX64BE-NEXT:	.long	4
-; LINUX64BE-NEXT:	.long	5
-; LINUX64BE-NEXT:	.long	6
-; LINUX64BE-NEXT:	.long	7
-; LINUX64BE-NEXT:	.long	8
-; LINUX64BE-NEXT:	.long	9
-; LINUX64BE-NEXT:	.long	10
-; LINUX64BE-NEXT:	.asciz	"Regular global"
-; LINUX64BE-NEXT:	.asciz	"TLS variable 1, 2 and non-TLS var: %s, %s, %s\n"
+; LINUX64BE-NEXT:       .asciz  "tls2"
+; LINUX64BE-NEXT:       .size   b, 5
+; LINUX64BE: .L_MergedGlobals:
+; LINUX64BE-NEXT:       .asciz  "Regular global"
+; LINUX64BE-NEXT:       .space  1
+; LINUX64BE-NEXT:       .long   0x42af999a
+; LINUX64BE-NEXT:       .long   0x42b1999a
+; LINUX64BE-NEXT:       .long   0x42b3cccd
+; LINUX64BE-NEXT:       .long   0x42b5999a
+; LINUX64BE-NEXT:       .long   1
+; LINUX64BE-NEXT:       .long   2
+; LINUX64BE-NEXT:       .long   3
+; LINUX64BE-NEXT:       .long   4
+; LINUX64BE-NEXT:       .long   5
+; LINUX64BE-NEXT:       .long   6
+; LINUX64BE-NEXT:       .long   7
+; LINUX64BE-NEXT:       .long   8
+; LINUX64BE-NEXT:       .long   9
+; LINUX64BE-NEXT:       .long   10
+; LINUX64BE-NEXT:       .asciz  "TLS variable 1, 2 and non-TLS var: %s, %s, %s\n"
