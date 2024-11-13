@@ -1896,8 +1896,8 @@ def LifetimeCaptureBy : DeclOrTypeAttr {
   let Documentation = [LifetimeCaptureByDocs];
   let AdditionalMembers = [{
 private:
-  MutableArrayRef<IdentifierInfo*> ArgIdents;
-  MutableArrayRef<SourceLocation> ArgLocs;
+  ArrayRef<IdentifierInfo*> ArgIdents;
+  ArrayRef<SourceLocation> ArgLocs;
 
 public:
   static constexpr int THIS = 0;
@@ -1905,20 +1905,14 @@ public:
   static constexpr int UNKNOWN = -2;
   static constexpr int GLOBAL = -3;
 
-  void CreateArgs(ASTContext &Ctx) {
-    ArgIdents =
-      MutableArrayRef<IdentifierInfo *>(new (Ctx) IdentifierInfo *[params_Size], params_Size);
-    ArgLocs =
-      MutableArrayRef<SourceLocation>(new (Ctx) SourceLocation[params_Size], params_Size);
+  void setArgs(  ArrayRef<IdentifierInfo*> Idents, ArrayRef<SourceLocation> Locs) {
+    assert(Idents.size() == params_Size);
+    assert(Locs.size() == params_Size);
+    ArgIdents = Idents;
+    ArgLocs = Locs;
   }
-  auto getArgIdents() const { 
-    assert(ArgIdents.size() == params_Size);
-    return ArgIdents;
-  }
-  auto getArgLocs() const { 
-    assert(ArgLocs.size() == params_Size);
-    return ArgLocs;
-  }
+  auto getArgIdents() const { return ArgIdents; }
+  auto getArgLocs() const { return ArgLocs; }
   void setParamIdx(size_t Idx, int Val) { 
     assert(Idx < params_Size);
     params_[Idx] = Val;

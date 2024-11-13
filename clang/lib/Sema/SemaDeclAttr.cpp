@@ -3878,12 +3878,10 @@ LifetimeCaptureByAttr *Sema::ParseLifetimeCaptureByAttr(const ParsedAttr &AL,
     return nullptr;
   }
   unsigned N = AL.getNumArgs();
-  SmallVector<int> FakeParamIndices(N, LifetimeCaptureByAttr::INVALID);
-  auto *CapturedBy = ::new (Context)
-      LifetimeCaptureByAttr(Context, AL, FakeParamIndices.data(), N);
-  CapturedBy->CreateArgs(Context);
-  MutableArrayRef<SourceLocation> ParamLocs = CapturedBy->getArgLocs();
-  MutableArrayRef<IdentifierInfo *> ParamIdents = CapturedBy->getArgIdents();
+  auto ParamIdents =
+      MutableArrayRef<IdentifierInfo *>(new (Context) IdentifierInfo *[N], N);
+  auto ParamLocs =
+      MutableArrayRef<SourceLocation>(new (Context) SourceLocation[N], N);
   bool IsValid = true;
   for (unsigned I = 0; I < N; ++I) {
     if (AL.isArgExpr(I)) {
@@ -3903,7 +3901,13 @@ LifetimeCaptureByAttr *Sema::ParseLifetimeCaptureByAttr(const ParsedAttr &AL,
     ParamIdents[I] = IdLoc->Ident;
     ParamLocs[I] = IdLoc->Loc;
   }
-  return IsValid ? CapturedBy : nullptr;
+  if (!IsValid)
+    return nullptr;
+  SmallVector<int> FakeParamIndices(N, LifetimeCaptureByAttr::INVALID);
+  auto *CapturedBy =
+      LifetimeCaptureByAttr::Create(Context, FakeParamIndices.data(), N, AL);
+  CapturedBy->setArgs(ParamIdents, ParamLocs);
+  return CapturedBy;
 }
 
 static void handleLifetimeCaptureByAttr(Sema &S, Decl *D,
