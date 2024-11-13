@@ -4,7 +4,7 @@
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
-// RUN:   -target-feature +sha2 -target-feature +aes \
+// RUN:  -fclangir -target-feature +sha2 -target-feature +aes \
 // RUN:   -disable-O0-optnone  -emit-llvm -o - %s \
 // RUN: | opt -S -passes=mem2reg,simplifycfg -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
@@ -21,5 +21,16 @@ uint8x16_t test_vaesmcq_u8(uint8x16_t data) {
 
   // LLVM: {{.*}}vaesmcq_u8(<16 x i8>{{.*}}[[DATA:%.*]])
   // LLVM: [[RES:%.*]] = call <16 x i8> @llvm.aarch64.crypto.aesmc(<16 x i8> [[DATA]])
+  // LLVM: ret <16 x i8> [[RES]]
+}
+
+uint8x16_t test_vaeseq_u8(uint8x16_t data, uint8x16_t key) {
+  return vaeseq_u8(data, key);
+
+  // CIR-LABEL: vaeseq_u8
+  // {{%.*}} = cir.llvm.intrinsic "aarch64.crypto.aese" {{%.*}} : (!cir.vector<!u8i x 16>) -> !cir.vector<!u8i x 16>
+
+  // LLVM: {{.*}}vaeseq_u8(<16 x i8>{{.*}}[[DATA:%.*]], <16 x i8>{{.*}}[[KEY:%.*]])
+  // LLVM: [[RES:%.*]] = call <16 x i8> @llvm.aarch64.crypto.aese(<16 x i8> [[DATA]], <16 x i8> [[KEY]])
   // LLVM: ret <16 x i8> [[RES]]
 }
