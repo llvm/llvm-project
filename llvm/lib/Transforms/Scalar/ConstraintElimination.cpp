@@ -164,6 +164,7 @@ struct FactOrCheck {
   }
 
   Instruction *getContextInst() const {
+    assert(!isConditionFact());
     if (Ty == EntryTy::UseCheck)
       return getContextInstForUse(*U);
     return Inst;
