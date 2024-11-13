@@ -416,6 +416,7 @@ enum ModifierType {
   MT_Plural,
   MT_Diff,
   MT_Ordinal,
+  MT_Human,
   MT_S,
   MT_Q,
   MT_ObjCClass,
@@ -434,6 +435,8 @@ static StringRef getModifierName(ModifierType MT) {
     return "plural";
   case MT_Ordinal:
     return "ordinal";
+  case MT_Human:
+    return "human";
   case MT_S:
     return "s";
   case MT_Q:
@@ -1030,6 +1033,7 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
                                .Case("plural", MT_Plural)
                                .Case("s", MT_S)
                                .Case("ordinal", MT_Ordinal)
+                               .Case("human", MT_Human)
                                .Case("q", MT_Q)
                                .Case("objcclass", MT_ObjCClass)
                                .Case("objcinstance", MT_ObjCInstance)
@@ -1131,7 +1135,8 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
     case MT_Placeholder:
     case MT_ObjCClass:
     case MT_ObjCInstance:
-    case MT_Ordinal: {
+    case MT_Ordinal:
+    case MT_Human: {
       Parsed.push_back(New<PlaceholderPiece>(ModType, parseModifier(Text)));
       continue;
     }
@@ -1786,33 +1791,17 @@ void clang::EmitClangDiagGroups(const RecordKeeper &Records, raw_ostream &OS) {
 // Diagnostic name index generation
 //===----------------------------------------------------------------------===//
 
-namespace {
-struct RecordIndexElement
-{
-  RecordIndexElement() {}
-  explicit RecordIndexElement(Record const &R)
-      : Name(std::string(R.getName())) {}
-
-  std::string Name;
-};
-} // end anonymous namespace.
-
 void clang::EmitClangDiagsIndexName(const RecordKeeper &Records,
                                     raw_ostream &OS) {
-  ArrayRef<const Record *> Diags =
+  std::vector<const Record *> Diags =
       Records.getAllDerivedDefinitions("Diagnostic");
 
-  std::vector<RecordIndexElement> Index;
-  Index.reserve(Diags.size());
-  for (const Record *R : Diags)
-    Index.push_back(RecordIndexElement(*R));
-
-  sort(Index, [](const RecordIndexElement &Lhs, const RecordIndexElement &Rhs) {
-    return Lhs.Name < Rhs.Name;
+  sort(Diags, [](const Record *LHS, const Record *RHS) {
+    return LHS->getName() < RHS->getName();
   });
 
-  for (const auto &Elem : Index)
-    OS << "DIAG_NAME_INDEX(" << Elem.Name << ")\n";
+  for (const Record *Elem : Diags)
+    OS << "DIAG_NAME_INDEX(" << Elem->getName() << ")\n";
 }
 
 //===----------------------------------------------------------------------===//

@@ -528,6 +528,14 @@ void Language::GetDefaultExceptionResolverDescription(bool catch_on,
   s.Printf("Exception breakpoint (catch: %s throw: %s)",
            catch_on ? "on" : "off", throw_on ? "on" : "off");
 }
+
+std::optional<bool> Language::GetBooleanFromString(llvm::StringRef str) const {
+  return llvm::StringSwitch<std::optional<bool>>(str)
+      .Case("true", {true})
+      .Case("false", {false})
+      .Default({});
+}
+
 // Constructor
 Language::Language() = default;
 
