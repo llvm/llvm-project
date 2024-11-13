@@ -179,8 +179,8 @@ static cl::list<std::string>
 /// such functions to report failures (whether/when it's a good practice or not
 /// is a different topic).
 ///
-/// This option is enabled to keep unreachable function as possible devirtualize
-/// targets to conservatively keep the program behavior.
+/// This option is enabled to keep an unreachable function as a possible
+/// devirtualize target to conservatively keep the program behavior.
 ///
 /// TODO: Make a pure virtual class's deleting destructor precisely identifiable
 /// in LLVM for more devirtualization.
