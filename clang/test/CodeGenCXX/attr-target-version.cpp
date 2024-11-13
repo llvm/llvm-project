@@ -220,7 +220,7 @@ int bar() {
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_Z3barv(
-// CHECK-SAME: ) #[[ATTR1]] {
+// CHECK-SAME: ) #[[ATTR11:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M:%.*]] = alloca [[STRUCT_MYCLASS:%.*]], align 1
 // CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN7MyClass3gooEi(ptr noundef nonnull align 1 dereferenceable(1) [[M]], i32 noundef 1)
