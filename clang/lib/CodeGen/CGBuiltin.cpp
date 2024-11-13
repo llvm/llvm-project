@@ -5179,8 +5179,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     Value *Order = EmitScalarExpr(E->getArg(0));
     Value *Scope = EmitScalarExpr(E->getArg(1));
-    if (auto Ord = dyn_cast<llvm::ConstantInt>(Order);
-        auto Scp = dyn_cast<llvm::ConstantInt>(Scope)) {
+    auto Ord = dyn_cast<llvm::ConstantInt>(Order);
+    auto Scp = dyn_cast<llvm::ConstantInt>(Scope);
+    if (Ord && Scp) {
       SyncScope SS = ScopeModel->isValid(Scp->getZExtValue())
                          ? ScopeModel->map(Scp->getZExtValue())
                          : ScopeModel->map(ScopeModel->getFallBackValue());
@@ -5225,7 +5226,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     llvm::SmallVector<std::pair<llvm::BasicBlock *, llvm::AtomicOrdering>>
         OrderBBs;
-    if (auto Ord = dyn_cast<llvm::ConstantInt>(Order)) {
+    if (Ord) {
       switch (Ord->getZExtValue()) {
       case 0:  // memory_order_relaxed
       default: // invalid order
@@ -5272,7 +5273,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     for (auto &[OrderBB, Ordering] : OrderBBs) {
       Builder.SetInsertPoint(OrderBB);
-      if (auto Scp = dyn_cast<llvm::ConstantInt>(Scope)) {
+      if (Scp) {
         SyncScope SS = ScopeModel->isValid(Scp->getZExtValue())
                            ? ScopeModel->map(Scp->getZExtValue())
                            : ScopeModel->map(ScopeModel->getFallBackValue());
