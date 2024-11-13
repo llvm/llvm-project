@@ -3628,28 +3628,18 @@ void VPAliasLaneMaskRecipe::execute(VPTransformState &State) {
   Value *SinkValue = State.get(getSinkValue(), true);
   Value *SourceValue = State.get(getSourceValue(), true);
 
-  Value *Diff = Builder.CreateSub(SourceValue, SinkValue, "sub.diff");
-  auto *Type = Diff->getType();
-  Value *Zero = ConstantInt::get(Type, 0);
-  if (!WriteAfterRead)
-    Diff = Builder.CreateIntrinsic(
-        Intrinsic::abs, {Type},
-        {Diff, ConstantInt::getFalse(Builder.getInt1Ty())}, nullptr, "sub.abs");
-
-  Value *DiffDiv = Builder.CreateSDiv(Diff, Zero, "diff");
-  // If the difference is positive then some elements may alias
-  auto CmpCode = WriteAfterRead ? CmpInst::Predicate::ICMP_SLE
-                                : CmpInst::Predicate::ICMP_EQ;
-  Value *Cmp = Builder.CreateICmp(CmpCode, DiffDiv, Zero, "neg.compare");
-
-  // Splat the compare result then OR it with a lane mask
-  Value *Splat = Builder.CreateVectorSplat(State.VF, Cmp);
-  Value *DiffMask = Builder.CreateIntrinsic(
-      Intrinsic::get_active_lane_mask,
-      {VectorType::get(Builder.getInt1Ty(), State.VF), Type}, {Zero, DiffDiv},
-      nullptr, "ptr.diff.lane.mask");
-  Value *Or = Builder.CreateBinOp(Instruction::BinaryOps::Or, DiffMask, Splat);
-  State.set(this, Or, /*IsScalar=*/false);
+  unsigned IntrinsicID = WriteAfterRead
+                             ? Intrinsic::experimental_loop_dependence_war_mask
+                             : Intrinsic::experimental_loop_dependence_raw_mask;
+  Value *SourceAsPtr = Builder.CreateCast(Instruction::IntToPtr, SourceValue,
+                                          Builder.getPtrTy());
+  Value *SinkAsPtr =
+      Builder.CreateCast(Instruction::IntToPtr, SinkValue, Builder.getPtrTy());
+  Value *AliasMask = Builder.CreateIntrinsic(
+      IntrinsicID, {VectorType::get(Builder.getInt1Ty(), State.VF)},
+      {SourceAsPtr, SinkAsPtr, Builder.getInt64(getAccessedElementSize())},
+      nullptr, "alias.lane.mask");
+  State.set(this, AliasMask, /*IsScalar=*/false);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

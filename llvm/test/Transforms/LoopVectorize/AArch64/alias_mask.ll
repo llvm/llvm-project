@@ -5,10 +5,10 @@ define dso_local void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-LABEL: define dso_local void @alias_mask(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B4:%.*]] = ptrtoint ptr [[B]] to i64
-; CHECK-NEXT:    [[C3:%.*]] = ptrtoint ptr [[C]] to i64
 ; CHECK-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[C1:%.*]] = ptrtoint ptr [[C]] to i64
+; CHECK-NEXT:    [[B3:%.*]] = ptrtoint ptr [[B]] to i64
+; CHECK-NEXT:    [[C2:%.*]] = ptrtoint ptr [[C]] to i64
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i64 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP11]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
@@ -16,29 +16,23 @@ define dso_local void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 16
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[C1]], [[B2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[C2]], [[B3]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 16
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP7]], 16
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP6]], 1
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], [[TMP5]]
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP4]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP6]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 16
-; CHECK-NEXT:    [[SUB_DIFF:%.*]] = sub i64 [[B4]], [[C3]]
-; CHECK-NEXT:    [[DIFF:%.*]] = sdiv i64 [[SUB_DIFF]], 0
-; CHECK-NEXT:    [[NEG_COMPARE:%.*]] = icmp sle i64 [[DIFF]], 0
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i1> poison, i1 [[NEG_COMPARE]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i1> [[DOTSPLATINSERT]], <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
-; CHECK-NEXT:    [[PTR_DIFF_LANE_MASK:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[DIFF]])
-; CHECK-NEXT:    [[TMP8:%.*]] = or <vscale x 16 x i1> [[PTR_DIFF_LANE_MASK]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 16
-; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 [[N]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp ugt i64 [[N]], [[TMP10]]
+; CHECK-NEXT:    [[ALIAS_LANE_MASK:%.*]] = call <vscale x 16 x i1> @llvm.get.alias.lane.mask.nxv16i1.i64(i64 [[B2]], i64 [[C1]], i32 1, i1 true)
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP15:%.*]] = mul i64 [[TMP8]], 16
+; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 [[N]], [[TMP15]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ugt i64 [[N]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i64 [[TMP11]], i64 0
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[N]])
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -46,21 +40,21 @@ define dso_local void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP15:%.*]] = and <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], [[TMP8]]
+; CHECK-NEXT:    [[TMP25:%.*]] = and <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], [[ALIAS_LANE_MASK]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i32 0
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[TMP17]], i32 1, <vscale x 16 x i1> [[TMP15]], <vscale x 16 x i8> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[TMP17]], i32 1, <vscale x 16 x i1> [[TMP25]], <vscale x 16 x i8> poison)
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[TMP18]], i32 0
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[TMP19]], i32 1, <vscale x 16 x i1> [[TMP15]], <vscale x 16 x i8> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[TMP19]], i32 1, <vscale x 16 x i1> [[TMP25]], <vscale x 16 x i8> poison)
 ; CHECK-NEXT:    [[TMP20:%.*]] = add <vscale x 16 x i8> [[WIDE_MASKED_LOAD5]], [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[TMP21]], i32 0
-; CHECK-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP20]], ptr [[TMP22]], i32 1, <vscale x 16 x i1> [[TMP15]])
-; CHECK-NEXT:    [[TMP23:%.*]] = zext <vscale x 16 x i1> [[TMP8]] to <vscale x 16 x i8>
-; CHECK-NEXT:    [[TMP24:%.*]] = call i8 @llvm.vector.reduce.add.nxv16i8(<vscale x 16 x i8> [[TMP23]])
-; CHECK-NEXT:    [[TMP25:%.*]] = zext i8 [[TMP24]] to i64
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP25]]
+; CHECK-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP20]], ptr [[TMP22]], i32 1, <vscale x 16 x i1> [[TMP25]])
+; CHECK-NEXT:    [[TMP28:%.*]] = zext <vscale x 16 x i1> [[ALIAS_LANE_MASK]] to <vscale x 16 x i8>
+; CHECK-NEXT:    [[TMP23:%.*]] = call i8 @llvm.vector.reduce.add.nxv16i8(<vscale x 16 x i8> [[TMP28]])
+; CHECK-NEXT:    [[TMP24:%.*]] = zext i8 [[TMP23]] to i64
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP24]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX]], i64 [[TMP13]])
 ; CHECK-NEXT:    [[TMP26:%.*]] = xor <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], shufflevector (<vscale x 16 x i1> insertelement (<vscale x 16 x i1> poison, i1 true, i64 0), <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <vscale x 16 x i1> [[TMP26]], i32 0
@@ -91,10 +85,10 @@ define i32 @alias_mask_read_after_write(ptr noalias %a, ptr %b, ptr %c, i64 %n) 
 ; CHECK-LABEL: define i32 @alias_mask_read_after_write(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C4:%.*]] = ptrtoint ptr [[C]] to i64
-; CHECK-NEXT:    [[B3:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[C2:%.*]] = ptrtoint ptr [[C]] to i64
 ; CHECK-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B]] to i64
+; CHECK-NEXT:    [[C3:%.*]] = ptrtoint ptr [[C]] to i64
+; CHECK-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[CMP19:%.*]] = icmp sgt i64 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP19]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
@@ -103,30 +97,23 @@ define i32 @alias_mask_read_after_write(ptr noalias %a, ptr %b, ptr %c, i64 %n) 
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 4
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[B1]], [[C2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[B2]], [[C3]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP8]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP7]], 1
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], [[TMP6]]
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP5]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP7]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 4
-; CHECK-NEXT:    [[SUB_DIFF:%.*]] = sub i64 [[C4]], [[B3]]
-; CHECK-NEXT:    [[SUB_ABS:%.*]] = call i64 @llvm.abs.i64(i64 [[SUB_DIFF]], i1 false)
-; CHECK-NEXT:    [[DIFF:%.*]] = sdiv i64 [[SUB_ABS]], 0
-; CHECK-NEXT:    [[NEG_COMPARE:%.*]] = icmp eq i64 [[DIFF]], 0
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[NEG_COMPARE]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i1> [[DOTSPLATINSERT]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[PTR_DIFF_LANE_MASK:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[DIFF]])
-; CHECK-NEXT:    [[TMP9:%.*]] = or <vscale x 4 x i1> [[PTR_DIFF_LANE_MASK]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 4
-; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 [[N]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp ugt i64 [[N]], [[TMP11]]
+; CHECK-NEXT:    [[ALIAS_LANE_MASK:%.*]] = call <vscale x 4 x i1> @llvm.get.alias.lane.mask.nxv4i1.i64(i64 [[C2]], i64 [[B1]], i32 4, i1 false)
+; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP9]], 4
+; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 [[N]], [[TMP16]]
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ugt i64 [[N]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i64 [[TMP12]], i64 0
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[N]])
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -135,23 +122,23 @@ define i32 @alias_mask_read_after_write(ptr noalias %a, ptr %b, ptr %c, i64 %n) 
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP25:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP16:%.*]] = and <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], [[TMP9]]
+; CHECK-NEXT:    [[TMP31:%.*]] = and <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], [[ALIAS_LANE_MASK]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[TMP17]], i32 0
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr [[TMP18]], i32 2, <vscale x 4 x i1> [[TMP16]], <vscale x 4 x i32> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr [[TMP18]], i32 2, <vscale x 4 x i1> [[TMP31]], <vscale x 4 x i32> poison)
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[TMP19]], i32 0
-; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[WIDE_MASKED_LOAD]], ptr [[TMP20]], i32 2, <vscale x 4 x i1> [[TMP16]])
+; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[WIDE_MASKED_LOAD]], ptr [[TMP20]], i32 2, <vscale x 4 x i1> [[TMP31]])
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[TMP21]], i32 0
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr [[TMP22]], i32 2, <vscale x 4 x i1> [[TMP16]], <vscale x 4 x i32> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr [[TMP22]], i32 2, <vscale x 4 x i1> [[TMP31]], <vscale x 4 x i32> poison)
 ; CHECK-NEXT:    [[TMP23:%.*]] = add <vscale x 4 x i32> [[WIDE_MASKED_LOAD]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = add <vscale x 4 x i32> [[TMP23]], [[WIDE_MASKED_LOAD5]]
-; CHECK-NEXT:    [[TMP25]] = select <vscale x 4 x i1> [[TMP16]], <vscale x 4 x i32> [[TMP24]], <vscale x 4 x i32> [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP26:%.*]] = zext <vscale x 4 x i1> [[TMP9]] to <vscale x 4 x i8>
-; CHECK-NEXT:    [[TMP27:%.*]] = call i8 @llvm.vector.reduce.add.nxv4i8(<vscale x 4 x i8> [[TMP26]])
-; CHECK-NEXT:    [[TMP28:%.*]] = zext i8 [[TMP27]] to i64
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP28]]
+; CHECK-NEXT:    [[TMP25]] = select <vscale x 4 x i1> [[TMP31]], <vscale x 4 x i32> [[TMP24]], <vscale x 4 x i32> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP32:%.*]] = zext <vscale x 4 x i1> [[ALIAS_LANE_MASK]] to <vscale x 4 x i8>
+; CHECK-NEXT:    [[TMP26:%.*]] = call i8 @llvm.vector.reduce.add.nxv4i8(<vscale x 4 x i8> [[TMP32]])
+; CHECK-NEXT:    [[TMP27:%.*]] = zext i8 [[TMP26]] to i64
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP27]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX]], i64 [[TMP14]])
 ; CHECK-NEXT:    [[TMP29:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <vscale x 4 x i1> [[TMP29]], i32 0

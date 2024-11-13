@@ -121,13 +121,9 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT7]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; PRED-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 16 x i64> [[BROADCAST_SPLAT6]], i32 0
 ; PRED-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 16 x i64> [[BROADCAST_SPLAT]], i32 0
-; PRED-NEXT:    [[SUB_DIFF:%.*]] = sub i64 [[TMP10]], [[TMP9]]
-; PRED-NEXT:    [[DIFF:%.*]] = sdiv i64 [[SUB_DIFF]], 0
-; PRED-NEXT:    [[NEG_COMPARE:%.*]] = icmp sle i64 [[DIFF]], 0
-; PRED-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i1> poison, i1 [[NEG_COMPARE]], i64 0
-; PRED-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i1> [[DOTSPLATINSERT]], <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
-; PRED-NEXT:    [[PTR_DIFF_LANE_MASK:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[DIFF]])
-; PRED-NEXT:    [[TMP11:%.*]] = or <vscale x 16 x i1> [[PTR_DIFF_LANE_MASK]], [[DOTSPLAT]]
+; PRED-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP10]] to ptr
+; PRED-NEXT:    [[TMP34:%.*]] = inttoptr i64 [[TMP9]] to ptr
+; PRED-NEXT:    [[TMP11:%.*]] = call <vscale x 16 x i1> @llvm.experimental.loop.dependence.war.mask.nxv16i1(ptr [[TMP19]], ptr [[TMP34]], i64 1)
 ; PRED-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP12]], 16
 ; PRED-NEXT:    [[TMP14:%.*]] = sub i64 [[TMP0]], [[TMP13]]
