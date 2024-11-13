@@ -830,7 +830,7 @@ struct BBAddrMap {
     bool BBFreq : 1;
     bool BrProb : 1;
     bool MultiBBRange : 1;
-    bool NoBBEntries : 1;
+    bool OmitBBEntries : 1;
 
     bool hasPGOAnalysis() const { return FuncEntryCount || BBFreq || BrProb; }
 
@@ -842,7 +842,7 @@ struct BBAddrMap {
              (static_cast<uint8_t>(BBFreq) << 1) |
              (static_cast<uint8_t>(BrProb) << 2) |
              (static_cast<uint8_t>(MultiBBRange) << 3) |
-             (static_cast<uint8_t>(NoBBEntries) << 4);
+             (static_cast<uint8_t>(OmitBBEntries) << 4);
     }
 
     // Decodes from minimum bit width representation and validates no
@@ -861,9 +861,9 @@ struct BBAddrMap {
 
     bool operator==(const Features &Other) const {
       return std::tie(FuncEntryCount, BBFreq, BrProb, MultiBBRange,
-                      NoBBEntries) ==
+                      OmitBBEntries) ==
              std::tie(Other.FuncEntryCount, Other.BBFreq, Other.BrProb,
-                      Other.MultiBBRange, Other.NoBBEntries);
+                      Other.MultiBBRange, Other.OmitBBEntries);
     }
   };
 

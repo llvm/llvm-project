@@ -161,11 +161,12 @@ static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
         "Enable extended information within the SHT_LLVM_BB_ADDR_MAP that is "
         "extracted from PGO related analysis."));
 
-static cl::opt<bool>
-    SkipEmitBBEntries("skip-emit-bb-entries",
-                      cl::desc("Skip emitting basic block entries in the "
-                               "SHT_LLVM_BB_ADDR_MAP section"),
-                      cl::Hidden, cl::init(false));
+static cl::opt<bool> BBAddrMapSkipEmitBBEntries(
+    "basic-block-address-map-skip-bb-entries",
+    cl::desc("Skip emitting basic block entries in the SHT_LLVM_BB_ADDR_MAP "
+             "section. It's used to save binary size when BB entries are "
+             "unnecessary for some PGOAnalysisMap features."),
+    cl::Hidden, cl::init(false));
 
 static cl::opt<bool> EmitJumpTableSizesSection(
     "emit-jump-table-sizes-section",
@@ -1418,14 +1419,14 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
       AllFeatures ||
       (!NoFeatures && PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BrProb));
 
-  if ((BBFreqEnabled || BrProbEnabled) && SkipEmitBBEntries) {
+  if ((BBFreqEnabled || BrProbEnabled) && BBAddrMapSkipEmitBBEntries) {
     MF.getFunction().getContext().emitError(
         "BB entries info is required for BBFreq and BrProb "
         "features");
   }
   return {FuncEntryCountEnabled, BBFreqEnabled, BrProbEnabled,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
-          static_cast<bool>(SkipEmitBBEntries)};
+          static_cast<bool>(BBAddrMapSkipEmitBBEntries)};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
@@ -1483,7 +1484,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       PrevMBBEndSymbol = MBBSymbol;
     }
 
-    if (!Features.NoBBEntries) {
+    if (!Features.OmitBBEntries) {
       // TODO: Remove this check when version 1 is deprecated.
       if (BBAddrMapVersion > 1) {
         OutStreamer->AddComment("BB id");

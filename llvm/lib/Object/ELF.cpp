@@ -852,8 +852,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
         NumBlocksInBBRange = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
       }
 
-      if (!FeatEnable.NoBBEntries) {
-
+      if (!FeatEnable.OmitBBEntries) {
         for (uint32_t BlockIndex = 0; !MetadataDecodeErr && !ULEBSizeErr &&
                                       Cur && (BlockIndex < NumBlocksInBBRange);
              ++BlockIndex) {

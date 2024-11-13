@@ -1500,9 +1500,7 @@ void ELFState<ELFT>::writeSectionContent(
           BBR.NumBlocks.value_or(BBR.BBEntries ? BBR.BBEntries->size() : 0);
       SHeader.sh_size += sizeof(uintX_t) + CBA.writeULEB128(NumBlocks);
       // Write all BBEntries in this BBRange.
-      if (!BBR.BBEntries)
-        continue;
-      if (FeatureOrErr->NoBBEntries)
+      if (!BBR.BBEntries || FeatureOrErr->OmitBBEntries)
         continue;
       for (const ELFYAML::BBAddrMapEntry::BBEntry &BBE : *BBR.BBEntries) {
         ++TotalNumBlocks;
