@@ -941,11 +941,15 @@ Expected<TargetExtType *> TargetExtType::checkParams(TargetExtType *TTy) {
         "type parameter and one integer parameter");
 
   // Opaque types in the AMDGPU name space.
-  if (TTy->Name == "amdgcn.named.barrier" &&
-      (TTy->getNumTypeParameters() != 0 || TTy->getNumIntParameters() != 1)) {
-    return createStringError("target extension type amdgcn.named.barrier "
-                             "should have no type parameters "
-                             "and one integer parameter");
+  if (TTy->Name == "amdgcn.named.barrier") {
+    if (TTy->getNumTypeParameters() != 0 || TTy->getNumIntParameters() != 1)
+      return createStringError(
+          "target extension type amdgcn.named.barrier should have no type "
+          "parameters and one integer parameter");
+    if (TTy->getIntParameter(0) > 1)
+      return createStringError(
+          "target extension type amdgcn.named.barrier should have one integer "
+          "parameter in the value 0 or 1");
   }
   if (TTy->Name == "amdgcn.semaphore" &&
       (TTy->getNumTypeParameters() != 0 || TTy->getNumIntParameters() != 1)) {
