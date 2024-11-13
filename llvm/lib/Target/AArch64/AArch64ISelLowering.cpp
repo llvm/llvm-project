@@ -5826,8 +5826,7 @@ SDValue LowerVectorMatch(SDValue Op, SelectionDAG &DAG) {
     // If Op2 is not a full 128-bit vector, we always need to broadcast it.
     unsigned Op2BitWidth = Op2VT.getFixedSizeInBits();
     MVT Op2IntVT = MVT::getIntegerVT(Op2BitWidth);
-    MVT Op2PromotedVT = MVT::getVectorVT(Op2IntVT, 128 / Op2BitWidth,
-                                         /*IsScalable=*/true);
+    EVT Op2PromotedVT = getPackedSVEVectorVT(Op2IntVT);
     Op2 = DAG.getBitcast(MVT::getVectorVT(Op2IntVT, 1), Op2);
     Op2 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, Op2IntVT, Op2,
                       DAG.getConstant(0, dl, MVT::i64));
