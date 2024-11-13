@@ -590,6 +590,30 @@ DeletionKind LLVM::InvariantEndOp::removeBlockingUses(
   return DeletionKind::Delete;
 }
 
+bool LLVM::LaunderInvariantGroupOp::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  return forwardToUsers(*this, newBlockingUses);
+}
+
+DeletionKind LLVM::LaunderInvariantGroupOp::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
+bool LLVM::StripInvariantGroupOp::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  return forwardToUsers(*this, newBlockingUses);
+}
+
+DeletionKind LLVM::StripInvariantGroupOp::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
 bool LLVM::DbgDeclareOp::canUsesBeRemoved(
     const SmallPtrSetImpl<OpOperand *> &blockingUses,
     SmallVectorImpl<OpOperand *> &newBlockingUses,
