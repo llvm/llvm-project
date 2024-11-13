@@ -208,12 +208,12 @@ public:
 } // end namespace sema
 } // end namespace clang
 
-void clang::injectASTMutatorIntoASTContext(ASTContext &Context,
-                                           EvalASTMutator *ASTMutator) {
+void clang::injectSemaProxyIntoASTContext(ASTContext &Context,
+                                           SemaProxy *ASTMutator) {
   Context.ASTMutator = ASTMutator;
 }
 
-SemaASTMutator::SemaASTMutator(Sema &SemaRef) : SemaRef(SemaRef) {}
+SemaProxyImpl::SemaProxyImpl(Sema &SemaRef) : SemaRef(SemaRef) {}
 
 const unsigned Sema::MaxAlignmentExponent;
 const uint64_t Sema::MaximumAlignment;
@@ -228,7 +228,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       LateTemplateParser(nullptr), LateTemplateParserCleanup(nullptr),
       OpaqueParser(nullptr), CurContext(nullptr), ExternalSource(nullptr),
       StackHandler(Diags), CurScope(nullptr), Ident_super(nullptr),
-      ASTMutator(*this), AMDGPUPtr(std::make_unique<SemaAMDGPU>(*this)),
+      SemaProxy(*this), AMDGPUPtr(std::make_unique<SemaAMDGPU>(*this)),
       ARMPtr(std::make_unique<SemaARM>(*this)),
       AVRPtr(std::make_unique<SemaAVR>(*this)),
       BPFPtr(std::make_unique<SemaBPF>(*this)),
@@ -309,7 +309,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
   /// Initialize ASTMutator within ASTContext.
   /// This is very intentionally not a part of public interface
   /// of ASTContext.
-  injectASTMutatorIntoASTContext(Context, getASTMutator());
+  injectSemaProxyIntoASTContext(Context, getSemaProxy());
 }
 
 // Anchor Sema's type info to this TU.
@@ -2811,7 +2811,7 @@ Attr *Sema::CreateAnnotationAttr(const ParsedAttr &AL) {
   return CreateAnnotationAttr(AL, Str, Args);
 }
 
-void SemaASTMutator::InstantiateFunctionDefinition(
+void SemaProxyImpl::InstantiateFunctionDefinition(
     SourceLocation PointOfInstantiation, FunctionDecl *Function, bool Recursive,
     bool DefinitionRequired, bool AtEndOfTU) {
   SemaRef.InstantiateFunctionDefinition(

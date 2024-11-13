@@ -182,10 +182,10 @@ struct TypeInfoChars {
   }
 };
 
-// Interface that allows constant evaluator to mutate AST.
-// Sema is the only entity that can implement this.
-struct EvalASTMutator {
-  virtual ~EvalASTMutator() = default;
+// Interface that allows constant evaluator to call Sema
+// and mutate the AST.
+struct SemaProxy {
+  virtual ~SemaProxy() = default;
 
   virtual void
   InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
@@ -684,13 +684,13 @@ private:
 
   /// Implementation of the interface that Sema provides during its
   /// construction.
-  EvalASTMutator *ASTMutator = nullptr;
+  SemaProxy *ASTMutator = nullptr;
 
 public:
   /// Returns an object that is capable of modifying AST,
   /// or nullptr if it's not available. The latter happens when
   /// Sema is not available.
-  EvalASTMutator *getASTMutator() const { return ASTMutator; }
+  SemaProxy *getSemaProxy() const { return ASTMutator; }
 
   IdentifierTable &Idents;
   SelectorTable &Selectors;
@@ -3530,9 +3530,9 @@ private:
   void ReleaseDeclContextMaps();
 
   /// This is a function that is implemented in the Sema layer,
-  /// that needs friendship to initialize ASTMutator without this capability
-  /// being available in the public interface of ASTContext.
-  friend void injectASTMutatorIntoASTContext(ASTContext &, EvalASTMutator *);
+  /// that needs friendship to initialize SemaProxy without this capability
+  /// being exposed in the public interface of ASTContext.
+  friend void injectSemaProxyIntoASTContext(ASTContext &, SemaProxy *);
 
 public:
   enum PragmaSectionFlag : unsigned {

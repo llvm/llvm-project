@@ -353,11 +353,11 @@ struct SkipBodyInfo {
   NamedDecl *New = nullptr;
 };
 
-/// Implementation of EvalASTMutator interface that enables constant evaluator
-/// to modify AST, e.g. to instantiate templates.
-struct SemaASTMutator : EvalASTMutator {
+/// Implementation of SemaProxy interface that enables constant evaluator
+/// to call Sema and modify AST, e.g. to instantiate templates.
+struct SemaProxyImpl : SemaProxy {
   Sema &SemaRef;
-  SemaASTMutator(Sema &SemaRef);
+  SemaProxyImpl(Sema &SemaRef);
   void InstantiateFunctionDefinition(
       SourceLocation PointOfInstantiation, FunctionDecl *Function,
       bool Recursive, bool DefinitionRequired, bool AtEndOfTU) override;
@@ -1053,8 +1053,8 @@ public:
   /// CurContext - This is the current declaration context of parsing.
   DeclContext *CurContext;
 
-  /// Get a Sema implementation of EvalASTMutator interface.
-  SemaASTMutator *getASTMutator() { return &ASTMutator; }
+  /// Get a Sema implementation of SemaProxy interface.
+  SemaProxyImpl *getSemaProxy() { return &SemaProxy; }
 
   SemaAMDGPU &AMDGPU() {
     assert(AMDGPUPtr);
@@ -1213,9 +1213,9 @@ private:
 
   mutable IdentifierInfo *Ident_super;
 
-  /// EvalASTMutator implementation that can be passed to constant evaluator
+  /// SemaProxy implementation that can be passed to constant evaluator
   /// to enable it to do AST mutations, e.g. template instantiation.
-  SemaASTMutator ASTMutator;
+  SemaProxyImpl SemaProxy;
 
   std::unique_ptr<SemaAMDGPU> AMDGPUPtr;
   std::unique_ptr<SemaARM> ARMPtr;
