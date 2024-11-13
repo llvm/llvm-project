@@ -603,9 +603,7 @@ bool PCHValidator::ReadDiagnosticOptions(
       new DiagnosticsEngine(DiagIDs, DiagOpts.get()));
   // This should never fail, because we would have processed these options
   // before writing them to an ASTFile.
-  ProcessWarningOptions(*Diags, *DiagOpts,
-                        PP.getFileManager().getVirtualFileSystem(),
-                        /*Report*/ false);
+  ProcessWarningOptions(*Diags, *DiagOpts, /*Report*/false);
 
   ModuleManager &ModuleMgr = Reader.getModuleManager();
   assert(ModuleMgr.size() >= 1 && "what ASTFile is this then");
