@@ -3947,7 +3947,7 @@ def atomic_thread_fence_acq_rel_cta :
   Requires<[hasPTX<60>, hasSM<70>]>;
 
 def fpimm_any_zero : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(+0.0) | Imm.isExactlyValue(-0.0);
+  return Imm.isZero();
 }]>;
 
 def fpimm_positive_zero_v2f16 : PatFrag<(ops), (v2f16 (bitconvert (i32 0)))>;
