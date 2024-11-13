@@ -8,7 +8,7 @@
 define amdgpu_kernel void @v_omod_div2_f32_enable_ieee_signed_zeros(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #4 {
 ; SI-LABEL: v_omod_div2_f32_enable_ieee_signed_zeros:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -25,7 +25,7 @@ define amdgpu_kernel void @v_omod_div2_f32_enable_ieee_signed_zeros(ptr addrspac
 ;
 ; VI-LABEL: v_omod_div2_f32_enable_ieee_signed_zeros:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
@@ -43,7 +43,7 @@ define amdgpu_kernel void @v_omod_div2_f32_enable_ieee_signed_zeros(ptr addrspac
 ;
 ; GFX11-LABEL: v_omod_div2_f32_enable_ieee_signed_zeros:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -57,7 +57,7 @@ define amdgpu_kernel void @v_omod_div2_f32_enable_ieee_signed_zeros(ptr addrspac
 ;
 ; GFX12-LABEL: v_omod_div2_f32_enable_ieee_signed_zeros:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -82,7 +82,7 @@ define amdgpu_kernel void @v_omod_div2_f32_enable_ieee_signed_zeros(ptr addrspac
 define amdgpu_kernel void @v_omod_div2_f64_enable_ieee_signed_zeros(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #4 {
 ; SI-LABEL: v_omod_div2_f64_enable_ieee_signed_zeros:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
@@ -99,7 +99,7 @@ define amdgpu_kernel void @v_omod_div2_f64_enable_ieee_signed_zeros(ptr addrspac
 ;
 ; VI-LABEL: v_omod_div2_f64_enable_ieee_signed_zeros:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
@@ -117,7 +117,7 @@ define amdgpu_kernel void @v_omod_div2_f64_enable_ieee_signed_zeros(ptr addrspac
 ;
 ; GFX11-LABEL: v_omod_div2_f64_enable_ieee_signed_zeros:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
@@ -131,7 +131,7 @@ define amdgpu_kernel void @v_omod_div2_f64_enable_ieee_signed_zeros(ptr addrspac
 ;
 ; GFX12-LABEL: v_omod_div2_f64_enable_ieee_signed_zeros:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
@@ -156,7 +156,7 @@ define amdgpu_kernel void @v_omod_div2_f64_enable_ieee_signed_zeros(ptr addrspac
 define amdgpu_kernel void @v_omod_div2_f32_enable_ieee_nsz(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; SI-LABEL: v_omod_div2_f32_enable_ieee_nsz:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -173,7 +173,7 @@ define amdgpu_kernel void @v_omod_div2_f32_enable_ieee_nsz(ptr addrspace(1) %out
 ;
 ; VI-LABEL: v_omod_div2_f32_enable_ieee_nsz:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
@@ -191,7 +191,7 @@ define amdgpu_kernel void @v_omod_div2_f32_enable_ieee_nsz(ptr addrspace(1) %out
 ;
 ; GFX11-LABEL: v_omod_div2_f32_enable_ieee_nsz:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -205,7 +205,7 @@ define amdgpu_kernel void @v_omod_div2_f32_enable_ieee_nsz(ptr addrspace(1) %out
 ;
 ; GFX12-LABEL: v_omod_div2_f32_enable_ieee_nsz:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -230,7 +230,7 @@ define amdgpu_kernel void @v_omod_div2_f32_enable_ieee_nsz(ptr addrspace(1) %out
 define amdgpu_kernel void @v_omod_div2_f64_enable_ieee_nsz(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #5 {
 ; SI-LABEL: v_omod_div2_f64_enable_ieee_nsz:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
@@ -247,7 +247,7 @@ define amdgpu_kernel void @v_omod_div2_f64_enable_ieee_nsz(ptr addrspace(1) %out
 ;
 ; VI-LABEL: v_omod_div2_f64_enable_ieee_nsz:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
@@ -265,7 +265,7 @@ define amdgpu_kernel void @v_omod_div2_f64_enable_ieee_nsz(ptr addrspace(1) %out
 ;
 ; GFX11-LABEL: v_omod_div2_f64_enable_ieee_nsz:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
@@ -279,7 +279,7 @@ define amdgpu_kernel void @v_omod_div2_f64_enable_ieee_nsz(ptr addrspace(1) %out
 ;
 ; GFX12-LABEL: v_omod_div2_f64_enable_ieee_nsz:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 3, v0

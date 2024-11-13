@@ -31,14 +31,14 @@ void uses() {
 #pragma acc serial
   {
 #pragma acc loop reduction(+:CoS, I, F)
-    for(;;){}
+    for(int i = 0; i < 5; ++i){}
   }
 
 #pragma acc serial
   {
   // expected-error@+1{{OpenACC 'reduction' variable must be of scalar type, sub-array, or a composite of scalar types; type is 'int[5]'}}
 #pragma acc loop reduction(+:Array)
-    for(;;){}
+    for(int i = 0; i < 5; ++i){}
   }
 
 #pragma acc serial
@@ -46,17 +46,17 @@ void uses() {
   // expected-error@+2{{OpenACC 'reduction' composite variable must not have non-scalar field}}
   // expected-note@#COS_FIELD{{invalid field is here}}
 #pragma acc loop reduction(+:ChC)
-    for(;;){}
+    for(int i = 0; i < 5; ++i){}
   }
 
 #pragma acc serial
   {
 #pragma acc loop reduction(+:I)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     // expected-error@+2{{OpenACC 'reduction' variable must have the same operator in all nested constructs (& vs +)}}
     // expected-note@-3{{previous clause is here}}
 #pragma acc loop reduction(&:I)
-      for(;;) {
+      for(int i = 0; i < 5; ++i) {
       }
     }
   }
@@ -64,11 +64,11 @@ void uses() {
 #pragma acc serial
   {
 #pragma acc loop reduction(+:I)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     // expected-error@+2{{OpenACC 'reduction' variable must have the same operator in all nested constructs (& vs +)}}
     // expected-note@-3{{previous clause is here}}
 #pragma acc loop reduction(&:I)
-      for(;;) {
+      for(int i = 0; i < 5; ++i) {
       }
     }
   }
@@ -76,12 +76,12 @@ void uses() {
 #pragma acc serial
   {
 #pragma acc loop reduction(+:I)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
 #pragma acc serial
     // expected-error@+2{{OpenACC 'reduction' variable must have the same operator in all nested constructs (& vs +)}}
     // expected-note@-4{{previous clause is here}}
 #pragma acc loop reduction(&:I)
-      for(;;) {
+      for(int i = 0; i < 5; ++i) {
       }
     }
   }
@@ -90,11 +90,11 @@ void uses() {
     // expected-error@+2{{OpenACC 'reduction' variable must have the same operator in all nested constructs (& vs +)}}
     // expected-note@-2{{previous clause is here}}
 #pragma acc loop reduction(&:I)
-  for(;;){}
+  for(int i = 0; i < 5; ++i){}
 
 #pragma acc serial
 #pragma acc loop reduction(&:I)
-  for(;;) {
+  for(int i = 0; i < 5; ++i) {
     // expected-error@+2{{OpenACC 'reduction' variable must have the same operator in all nested constructs (+ vs &)}}
     // expected-note@-3{{previous clause is here}}
 #pragma acc serial reduction(+:I)
@@ -104,7 +104,7 @@ void uses() {
 #pragma acc parallel
   {
 #pragma acc loop reduction(+:I) gang(dim:1)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     }
   }
 
@@ -113,7 +113,7 @@ void uses() {
   // expected-error@+2{{OpenACC 'gang' clause with a 'dim' value greater than 1 cannot appear on the same 'loop' construct as a 'reduction' clause}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc loop reduction(+:I) gang(dim:2)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     }
   }
 
@@ -122,7 +122,7 @@ void uses() {
   // expected-error@+2{{OpenACC 'reduction' clause cannot appear on the same 'loop' construct as a 'gang' clause with a 'dim' value greater than 1}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc loop gang(dim:2) reduction(+:I)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     }
   }
 
@@ -131,7 +131,7 @@ void uses() {
   // expected-error@+2{{OpenACC 'reduction' clause cannot appear on the same 'loop' construct as a 'gang' clause with a 'dim' value greater than 1}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc loop gang gang(dim:1) gang(dim:2) reduction(+:I)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     }
   }
 
@@ -141,7 +141,7 @@ void uses() {
     // expected-note@+2{{previous clause is here}}
     // expected-note@-4{{previous clause is here}}
 #pragma acc loop gang(dim:1) reduction(+:I)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     }
   }
 
@@ -151,7 +151,7 @@ void uses() {
     // expected-note@+2{{previous clause is here}}
     // expected-note@-4{{previous clause is here}}
 #pragma acc loop reduction(+:I) gang(dim:1)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     }
   }
 }
@@ -167,14 +167,14 @@ void templ_uses() {
 #pragma acc serial
   {
 #pragma acc loop reduction(+:CoS, I)
-    for(;;){}
+    for(int i = 0; i < 5; ++i){}
   }
 
 #pragma acc serial
   {
   // expected-error@+1{{OpenACC 'reduction' variable must be of scalar type, sub-array, or a composite of scalar types; type is 'int[5]'}}
 #pragma acc loop reduction(+:Array)
-    for(;;){}
+    for(int i = 0; i < 5; ++i){}
   }
 
 #pragma acc serial
@@ -182,17 +182,17 @@ void templ_uses() {
   // expected-error@+2{{OpenACC 'reduction' composite variable must not have non-scalar field}}
   // expected-note@#COS_FIELD{{invalid field is here}}
 #pragma acc loop reduction(+:ChC)
-    for(;;){}
+    for(int i = 0; i < 5; ++i){}
   }
 
 #pragma acc serial
   {
 #pragma acc loop reduction(+:I)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     // expected-error@+2{{OpenACC 'reduction' variable must have the same operator in all nested constructs (& vs +)}}
     // expected-note@-3{{previous clause is here}}
 #pragma acc loop reduction(&:I)
-      for(;;) {
+      for(int i = 0; i < 5; ++i) {
       }
     }
   }
@@ -200,11 +200,11 @@ void templ_uses() {
 #pragma acc serial
   {
 #pragma acc loop reduction(+:Array[3])
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     // expected-error@+2{{OpenACC 'reduction' variable must have the same operator in all nested constructs (& vs +)}}
     // expected-note@-3{{previous clause is here}}
 #pragma acc loop reduction(&:Array[3])
-      for(;;) {
+      for(int i = 0; i < 5; ++i) {
       }
     }
   }
@@ -212,11 +212,11 @@ void templ_uses() {
 #pragma acc serial
   {
 #pragma acc loop reduction(+:Array[0:3])
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     // expected-error@+2{{OpenACC 'reduction' variable must have the same operator in all nested constructs (& vs +)}}
     // expected-note@-3{{previous clause is here}}
 #pragma acc loop reduction(&:Array[1:4])
-      for(;;) {
+      for(int i = 0; i < 5; ++i) {
       }
     }
   }
@@ -224,11 +224,11 @@ void templ_uses() {
 #pragma acc serial
   {
 #pragma acc loop reduction(+:I)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     // expected-error@+2{{OpenACC 'reduction' variable must have the same operator in all nested constructs (& vs +)}}
     // expected-note@-3{{previous clause is here}}
 #pragma acc serial reduction(&:I)
-      for(;;) {
+      for(int i = 0; i < 5; ++i) {
       }
     }
   }
@@ -236,7 +236,7 @@ void templ_uses() {
 #pragma acc parallel
   {
 #pragma acc loop reduction(+:I) gang(dim:One)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     }
   }
 
@@ -245,7 +245,7 @@ void templ_uses() {
   // expected-error@+2{{OpenACC 'gang' clause with a 'dim' value greater than 1 cannot appear on the same 'loop' construct as a 'reduction' clause}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc loop reduction(+:I) gang(dim:2)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     }
   }
 
@@ -254,7 +254,7 @@ void templ_uses() {
   // expected-error@+2{{OpenACC 'reduction' clause cannot appear on the same 'loop' construct as a 'gang' clause with a 'dim' value greater than 1}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc loop gang(dim:2) reduction(+:I)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     }
   }
 #pragma acc parallel
@@ -262,7 +262,7 @@ void templ_uses() {
   // expected-error@+2{{OpenACC 'gang' clause with a 'dim' value greater than 1 cannot appear on the same 'loop' construct as a 'reduction' clause}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc loop reduction(+:I) gang(dim:Two)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     }
   }
 
@@ -271,7 +271,7 @@ void templ_uses() {
   // expected-error@+2{{OpenACC 'reduction' clause cannot appear on the same 'loop' construct as a 'gang' clause with a 'dim' value greater than 1}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc loop gang(dim:Two) reduction(+:I)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     }
   }
 
@@ -279,7 +279,7 @@ void templ_uses() {
 #pragma acc parallel num_gangs(One)
   {
 #pragma acc loop reduction(+:I) gang(dim:One)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     }
   }
 
@@ -289,7 +289,7 @@ void templ_uses() {
     // expected-note@+2{{previous clause is here}}
     // expected-note@-4{{previous clause is here}}
 #pragma acc loop reduction(+:I) gang(dim:One)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     }
   }
 
@@ -299,14 +299,14 @@ void templ_uses() {
     // expected-note@+2{{previous clause is here}}
     // expected-note@-4{{previous clause is here}}
 #pragma acc loop gang(dim:One) reduction(+:I)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     }
   }
 
 #pragma acc parallel num_gangs(One)
   {
 #pragma acc loop reduction(+:I) gang(dim:1)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     }
   }
 
@@ -316,7 +316,7 @@ void templ_uses() {
     // expected-note@+2{{previous clause is here}}
     // expected-note@-4{{previous clause is here}}
 #pragma acc loop reduction(+:I) gang(dim:1)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     }
   }
 
@@ -326,14 +326,14 @@ void templ_uses() {
     // expected-note@+2{{previous clause is here}}
     // expected-note@-4{{previous clause is here}}
 #pragma acc loop gang(dim:1) reduction(+:I)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     }
   }
 
 #pragma acc parallel num_gangs(1)
   {
 #pragma acc loop reduction(+:I) gang(dim:One)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     }
   }
 
@@ -343,7 +343,7 @@ void templ_uses() {
     // expected-note@+2{{previous clause is here}}
     // expected-note@-4{{previous clause is here}}
 #pragma acc loop reduction(+:I) gang(dim:One)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     }
   }
 
@@ -353,7 +353,7 @@ void templ_uses() {
     // expected-note@+2{{previous clause is here}}
     // expected-note@-4{{previous clause is here}}
 #pragma acc loop gang(dim:One) reduction(+:I)
-    for(;;) {
+    for(int i = 0; i < 5; ++i) {
     }
   }
 }

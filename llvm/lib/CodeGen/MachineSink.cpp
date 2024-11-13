@@ -19,13 +19,13 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -38,6 +38,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -48,13 +49,11 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <utility>
@@ -122,6 +121,7 @@ namespace {
     MachineDominatorTree *DT = nullptr;      // Machine dominator tree
     MachinePostDominatorTree *PDT = nullptr; // Machine post dominator tree
     MachineCycleInfo *CI = nullptr;
+    ProfileSummaryInfo *PSI = nullptr;
     MachineBlockFrequencyInfo *MBFI = nullptr;
     const MachineBranchProbabilityInfo *MBPI = nullptr;
     AliasAnalysis *AA = nullptr;
@@ -198,6 +198,7 @@ namespace {
       AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
       AU.addPreserved<MachineCycleInfoWrapperPass>();
       AU.addPreserved<MachineLoopInfoWrapperPass>();
+      AU.addRequired<ProfileSummaryInfoWrapperPass>();
       if (UseBlockFreqInfo)
         AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
       AU.addRequired<TargetPassConfig>();
@@ -284,6 +285,7 @@ char &llvm::MachineSinkingID = MachineSinking::ID;
 
 INITIALIZE_PASS_BEGIN(MachineSinking, DEBUG_TYPE,
                       "Machine code sinking", false, false)
+INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineCycleInfoWrapperPass)
@@ -722,6 +724,7 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
   DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   PDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
   CI = &getAnalysis<MachineCycleInfoWrapperPass>().getCycleInfo();
+  PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   MBFI = UseBlockFreqInfo
              ? &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI()
              : nullptr;
@@ -1217,12 +1220,12 @@ MachineSinking::GetAllSortedSuccessors(MachineInstr &MI, MachineBasicBlock *MBB,
 
   // Sort Successors according to their cycle depth or block frequency info.
   llvm::stable_sort(
-      AllSuccs, [this](const MachineBasicBlock *L, const MachineBasicBlock *R) {
+      AllSuccs, [&](const MachineBasicBlock *L, const MachineBasicBlock *R) {
         uint64_t LHSFreq = MBFI ? MBFI->getBlockFreq(L).getFrequency() : 0;
         uint64_t RHSFreq = MBFI ? MBFI->getBlockFreq(R).getFrequency() : 0;
-        bool HasBlockFreq = LHSFreq != 0 || RHSFreq != 0;
-        return HasBlockFreq ? LHSFreq < RHSFreq
-                            : CI->getCycleDepth(L) < CI->getCycleDepth(R);
+        if (llvm::shouldOptimizeForSize(MBB, PSI, MBFI) || !LHSFreq || !RHSFreq)
+          return CI->getCycleDepth(L) < CI->getCycleDepth(R);
+        return LHSFreq < RHSFreq;
       });
 
   auto it = AllSuccessors.insert(std::make_pair(MBB, AllSuccs));

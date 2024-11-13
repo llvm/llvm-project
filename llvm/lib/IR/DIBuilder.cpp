@@ -265,10 +265,11 @@ DIBasicType *DIBuilder::createNullPtrType() {
 
 DIBasicType *DIBuilder::createBasicType(StringRef Name, uint64_t SizeInBits,
                                         unsigned Encoding,
-                                        DINode::DIFlags Flags) {
+                                        DINode::DIFlags Flags,
+                                        uint32_t NumExtraInhabitants) {
   assert(!Name.empty() && "Unable to create type without name");
   return DIBasicType::get(VMContext, dwarf::DW_TAG_base_type, Name, SizeInBits,
-                          0, Encoding, Flags);
+                          0, Encoding, NumExtraInhabitants, Flags);
 }
 
 DIStringType *DIBuilder::createStringType(StringRef Name, uint64_t SizeInBits) {
@@ -520,11 +521,14 @@ DICompositeType *DIBuilder::createStructType(
     DIScope *Context, StringRef Name, DIFile *File, unsigned LineNumber,
     uint64_t SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
     DIType *DerivedFrom, DINodeArray Elements, unsigned RunTimeLang,
-    DIType *VTableHolder, StringRef UniqueIdentifier) {
+    DIType *VTableHolder, StringRef UniqueIdentifier,
+    uint32_t NumExtraInhabitants) {
   auto *R = DICompositeType::get(
       VMContext, dwarf::DW_TAG_structure_type, Name, File, LineNumber,
       getNonCompileUnitScope(Context), DerivedFrom, SizeInBits, AlignInBits, 0,
-      Flags, Elements, RunTimeLang, VTableHolder, nullptr, UniqueIdentifier);
+      Flags, Elements, RunTimeLang, VTableHolder, nullptr, UniqueIdentifier,
+      nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+      NumExtraInhabitants);
   trackIfUnresolved(R);
   return R;
 }
@@ -1029,8 +1033,8 @@ DbgInstPtr DIBuilder::insertDbgValueIntrinsic(Value *V,
   DbgInstPtr DVI = insertDbgValueIntrinsic(
       V, VarInfo, Expr, DL, InsertBefore ? InsertBefore->getParent() : nullptr,
       InsertBefore);
-  if (DVI.is<Instruction *>())
-    cast<CallInst>(DVI.get<Instruction *>())->setTailCall();
+  if (auto *Inst = dyn_cast<Instruction *>(DVI))
+    cast<CallInst>(Inst)->setTailCall();
   return DVI;
 }
 

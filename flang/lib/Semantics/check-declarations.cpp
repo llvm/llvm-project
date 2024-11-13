@@ -928,7 +928,9 @@ void CheckHelper::CheckObjectEntity(
         details.cudaDataAttr().value_or(common::CUDADataAttr::Device) !=
             common::CUDADataAttr::Device &&
         details.cudaDataAttr().value_or(common::CUDADataAttr::Device) !=
-            common::CUDADataAttr::Managed) {
+            common::CUDADataAttr::Managed &&
+        details.cudaDataAttr().value_or(common::CUDADataAttr::Device) !=
+            common::CUDADataAttr::Shared) {
       Warn(common::UsageWarning::CUDAUsage,
           "Dummy argument '%s' may not have ATTRIBUTES(%s) in a device subprogram"_warn_en_US,
           symbol.name(),

@@ -5,7 +5,7 @@
 define protected amdgpu_kernel void @test(ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
 ; GFX940-LABEL: test:
 ; GFX940:       ; %bb.0: ; %entry
-; GFX940-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x0
+; GFX940-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX940-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX940-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX940-NEXT:    v_mov_b32_e32 v3, v0

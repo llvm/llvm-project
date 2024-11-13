@@ -31,8 +31,6 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/DebugLoc.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 
