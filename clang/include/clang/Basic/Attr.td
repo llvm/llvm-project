@@ -1905,7 +1905,7 @@ public:
   static constexpr int UNKNOWN = -2;
   static constexpr int GLOBAL = -3;
 
-  void setArgs(  ArrayRef<IdentifierInfo*> Idents, ArrayRef<SourceLocation> Locs) {
+  void setArgs(ArrayRef<IdentifierInfo*> Idents, ArrayRef<SourceLocation> Locs) {
     assert(Idents.size() == params_Size);
     assert(Locs.size() == params_Size);
     ArgIdents = Idents;
