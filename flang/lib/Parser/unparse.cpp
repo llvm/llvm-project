@@ -2932,11 +2932,9 @@ public:
       Word("*");
     }
   }
-  void Unparse(const CUFKernelDoConstruct::Directive &x) {
-    Word("!$CUF KERNEL DO");
-    Walk(" (", std::get<std::optional<ScalarIntConstantExpr>>(x.t), ")");
+  void Unparse(const CUFKernelDoConstruct::LaunchConfiguration &x) {
     Word(" <<<");
-    const auto &grid{std::get<1>(x.t)};
+    const auto &grid{std::get<0>(x.t)};
     if (grid.empty()) {
       Word("*");
     } else if (grid.size() == 1) {
@@ -2945,7 +2943,7 @@ public:
       Walk("(", grid, ",", ")");
     }
     Word(",");
-    const auto &block{std::get<2>(x.t)};
+    const auto &block{std::get<1>(x.t)};
     if (block.empty()) {
       Word("*");
     } else if (block.size() == 1) {
@@ -2953,10 +2951,16 @@ public:
     } else {
       Walk("(", block, ",", ")");
     }
-    if (const auto &stream{std::get<3>(x.t)}) {
+    if (const auto &stream{std::get<2>(x.t)}) {
       Word(",STREAM="), Walk(*stream);
     }
     Word(">>>");
+  }
+  void Unparse(const CUFKernelDoConstruct::Directive &x) {
+    Word("!$CUF KERNEL DO");
+    Walk(" (", std::get<std::optional<ScalarIntConstantExpr>>(x.t), ")");
+    Walk(std::get<std::optional<CUFKernelDoConstruct::LaunchConfiguration>>(
+        x.t));
     Walk(" ", std::get<std::list<CUFReduction>>(x.t), " ");
     Word("\n");
   }
