@@ -95,21 +95,15 @@ struct AnalysisInfoMixin : PassInfoMixin<DerivedT> {
   /// This ID is a pointer type that is guaranteed to be 8-byte aligned and thus
   /// suitable for use in sets, maps, and other data structures that use the low
   /// bits of pointers.
-  ///
-  /// Note that this requires the derived type provide a static \c AnalysisKey
-  /// member called \c Key.
-  ///
-  /// FIXME: The only reason the mixin type itself can't declare the Key value
-  /// is that some compilers cannot correctly unique a templated static variable
-  /// so it has the same addresses in each instantiation. The only currently
-  /// known platform with this limitation is Windows DLL builds, specifically
-  /// building each part of LLVM as a DLL. If we ever remove that build
-  /// configuration, this mixin can provide the static key as well.
   static AnalysisKey *ID() {
     static_assert(std::is_base_of<AnalysisInfoMixin, DerivedT>::value,
                   "Must pass the derived type as the template argument!");
     return &DerivedT::Key;
   }
+
+private:
+  /// Opaque, unique ID for this analysis type.
+  static constexpr AnalysisKey Key = {};
 };
 
 namespace detail {
