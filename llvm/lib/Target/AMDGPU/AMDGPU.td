@@ -1451,11 +1451,7 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureDPALU_DPP,
    FeaturePackedFP32Ops,
    FeatureMAIInsts,
-   FeatureFP8Insts,
-   FeatureFP8ConversionInsts,
-   FeatureCvtFP8VOP1Bug,
    FeaturePkFmacF16Inst,
-   FeatureXF32Insts,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
    FeatureAtomicBufferGlobalPkAddF16Insts,
@@ -1476,15 +1472,36 @@ def FeatureISAVersion9_4_Common : FeatureSet<
 
 def FeatureISAVersion9_4_0 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
-    [FeatureForceStoreSC0SC1])>;
+    [
+      FeatureForceStoreSC0SC1,
+      FeatureFP8Insts,
+      FeatureFP8ConversionInsts,
+      FeatureCvtFP8VOP1Bug,
+      FeatureXF32Insts
+    ])>;
 
 def FeatureISAVersion9_4_1 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
-    [FeatureForceStoreSC0SC1])>;
+    [
+      FeatureForceStoreSC0SC1,
+      FeatureFP8Insts,
+      FeatureFP8ConversionInsts,
+      FeatureCvtFP8VOP1Bug,
+      FeatureXF32Insts
+    ])>;
 
 def FeatureISAVersion9_4_2 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
-    [])>;
+    [
+      FeatureFP8Insts,
+      FeatureFP8ConversionInsts,
+      FeatureCvtFP8VOP1Bug,
+      FeatureXF32Insts
+    ])>;
+
+def FeatureISAVersion9_4_Generic : FeatureSet<
+  !listconcat(FeatureISAVersion9_4_Common.Features,
+    [FeatureRequiresCOV6])>;
 
 def FeatureISAVersion10_Common : FeatureSet<
   [FeatureGFX10,
