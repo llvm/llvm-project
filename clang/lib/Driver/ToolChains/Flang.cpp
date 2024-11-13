@@ -414,6 +414,9 @@ void Flang::addTargetOptions(const ArgList &Args,
   case llvm::Triple::ppc64le:
     AddPPCTargetArgs(Args, CmdArgs);
     break;
+  case llvm::Triple::loongarch64:
+    getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
+    break;
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_fveclib)) {
