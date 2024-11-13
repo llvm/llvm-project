@@ -274,7 +274,7 @@ ReplaceableMetadataImpl::getAllDbgVariableRecordUsers() {
     OwnerTy Owner = Pair.second.first;
     if (Owner.isNull())
       continue;
-    if (!Owner.is<DebugValueUser *>())
+    if (!isa<DebugValueUser *>(Owner))
       continue;
     DVRUsersWithID.push_back(&UseMap[Pair.first]);
   }
@@ -288,7 +288,7 @@ ReplaceableMetadataImpl::getAllDbgVariableRecordUsers() {
   });
   SmallVector<DbgVariableRecord *> DVRUsers;
   for (auto UserWithID : DVRUsersWithID)
-    DVRUsers.push_back(UserWithID->first.get<DebugValueUser *>()->getUser());
+    DVRUsers.push_back(cast<DebugValueUser *>(UserWithID->first)->getUser());
   return DVRUsers;
 }
 
@@ -396,8 +396,8 @@ void ReplaceableMetadataImpl::replaceAllUsesWith(Metadata *MD) {
       continue;
     }
 
-    if (Owner.is<DebugValueUser *>()) {
-      Owner.get<DebugValueUser *>()->handleChangedValue(Pair.first, MD);
+    if (auto *DVU = dyn_cast<DebugValueUser *>(Owner)) {
+      DVU->handleChangedValue(Pair.first, MD);
       continue;
     }
 
@@ -436,7 +436,7 @@ void ReplaceableMetadataImpl::resolveAllUses(bool ResolveUsers) {
     auto Owner = Pair.second.first;
     if (!Owner)
       continue;
-    if (!Owner.is<Metadata *>())
+    if (!isa<Metadata *>(Owner))
       continue;
 
     // Resolve MDNodes that point at this.

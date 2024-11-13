@@ -11,7 +11,6 @@
 
 #include <__algorithm/copy.h>
 #include <__algorithm/fill_n.h>
-#include <__algorithm/iterator_operations.h>
 #include <__algorithm/max.h>
 #include <__algorithm/min.h>
 #include <__algorithm/move.h>
@@ -22,6 +21,7 @@
 #include <__debug_utils/sanitizers.h>
 #include <__format/enable_insertable.h>
 #include <__fwd/vector.h>
+#include <__iterator/advance.h>
 #include <__iterator/bounded_iter.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
@@ -822,7 +822,7 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
   __end_       = __begin_; // All the objects have been destroyed by relocating them.
   std::swap(this->__begin_, __v.__begin_);
   std::swap(this->__end_, __v.__end_);
-  std::swap(this->__end_cap(), __v.__end_cap_);
+  std::swap(this->__end_cap(), __v.__cap_);
   __v.__first_ = __v.__begin_;
   __annotate_new(size());
 }
@@ -852,7 +852,7 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
 
   std::swap(this->__begin_, __v.__begin_);
   std::swap(this->__end_, __v.__end_);
-  std::swap(this->__end_cap(), __v.__end_cap_);
+  std::swap(this->__end_cap(), __v.__cap_);
   __v.__first_ = __v.__begin_;
   __annotate_new(size());
   return __ret;
@@ -1033,7 +1033,7 @@ vector<_Tp, _Allocator>::__assign_with_size(_ForwardIterator __first, _Sentinel 
       std::copy(__first, __mid, this->__begin_);
       __construct_at_end(__mid, __last, __new_size - size());
     } else {
-      pointer __m = std::__copy<_ClassicAlgPolicy>(__first, __last, this->__begin_).second;
+      pointer __m = std::__copy(__first, __last, this->__begin_).second;
       this->__destruct_at_end(__m);
     }
   } else {
@@ -1381,7 +1381,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 bool vector<_Tp, _Allocator>::__invariants() const
 #if _LIBCPP_STD_VER >= 20
 template <>
 inline constexpr bool __format::__enable_insertable<vector<char>> = true;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 inline constexpr bool __format::__enable_insertable<vector<wchar_t>> = true;
 #  endif

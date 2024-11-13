@@ -12,8 +12,6 @@
 // datasets to give an impression how the amount of multibyte UTF-8 sequences
 // and larger grapheme clusters affect the performance.
 
-#ifndef _LIBCPP_HAS_NO_UNICODE
-
 #  include <concepts>
 #  include <format>
 #  include <string_view>
@@ -21,6 +19,8 @@
 #  include "benchmark/benchmark.h"
 #  include "make_string.h"
 #  include "test_macros.h"
+
+#if _LIBCPP_HAS_UNICODE
 
 #  define SV(S) MAKE_STRING_VIEW(CharT, S)
 

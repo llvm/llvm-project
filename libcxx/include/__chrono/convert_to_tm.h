@@ -180,8 +180,7 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _ChronoT& __value) {
     // Has no time information.
   } else if constexpr (same_as<_ChronoT, chrono::local_info>) {
     // Has no time information.
-#    if !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&                          \
-        !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#    if _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
   } else if constexpr (__is_specialization_v<_ChronoT, chrono::zoned_time>) {
     return std::__convert_to_tm<_Tm>(
         chrono::sys_time<typename _ChronoT::duration>{__value.get_local_time().time_since_epoch()});

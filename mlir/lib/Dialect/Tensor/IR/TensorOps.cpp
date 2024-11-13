@@ -980,7 +980,10 @@ struct FoldEmptyTensorWithDimOp : public OpRewritePattern<DimOp> {
     auto emptyTensorOp = dimOp.getSource().getDefiningOp<EmptyOp>();
     if (!emptyTensorOp || !maybeConstantIndex)
       return failure();
-    if (!emptyTensorOp.getType().isDynamicDim(*maybeConstantIndex))
+    auto emptyTensorType = emptyTensorOp.getType();
+    if (*maybeConstantIndex < 0 ||
+        *maybeConstantIndex >= emptyTensorType.getRank() ||
+        !emptyTensorType.isDynamicDim(*maybeConstantIndex))
       return failure();
     rewriter.replaceOp(dimOp,
                        emptyTensorOp.getDynamicSize(*maybeConstantIndex));
@@ -4795,6 +4798,7 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
     PackOp newOp = rewriter.create<PackOp>(
         op.getLoc(), newOperands[0], newOperands[1], op.getInnerDimsPos(),
         newMixedTileSizes, op.getPaddingValue(), op.getOuterDimsPerm());
+    newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
 
     // Replace op.
     Value oldResult = op.getResult();

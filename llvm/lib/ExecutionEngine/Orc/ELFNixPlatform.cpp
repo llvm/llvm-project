@@ -14,6 +14,7 @@
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/ppc64.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
@@ -372,6 +373,7 @@ ELFNixPlatform::standardRuntimeUtilityAliases() {
           {"__orc_rt_run_program", "__orc_rt_elfnix_run_program"},
           {"__orc_rt_jit_dlerror", "__orc_rt_elfnix_jit_dlerror"},
           {"__orc_rt_jit_dlopen", "__orc_rt_elfnix_jit_dlopen"},
+          {"__orc_rt_jit_dlupdate", "__orc_rt_elfnix_jit_dlupdate"},
           {"__orc_rt_jit_dlclose", "__orc_rt_elfnix_jit_dlclose"},
           {"__orc_rt_jit_dlsym", "__orc_rt_elfnix_jit_dlsym"},
           {"__orc_rt_log_error", "__orc_rt_log_error_to_stderr"}};

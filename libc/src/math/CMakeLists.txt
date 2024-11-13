@@ -131,6 +131,7 @@ add_math_entrypoint_object(exp10)
 add_math_entrypoint_object(exp10f)
 add_math_entrypoint_object(exp10f16)
 
+add_math_entrypoint_object(exp10m1f)
 add_math_entrypoint_object(exp10m1f16)
 
 add_math_entrypoint_object(expm1)
@@ -502,6 +503,7 @@ add_math_entrypoint_object(tanf)
 add_math_entrypoint_object(tanh)
 add_math_entrypoint_object(tanhf)
 add_math_entrypoint_object(tanhf16)
+add_math_entrypoint_object(tanpif16)
 
 add_math_entrypoint_object(tgamma)
 add_math_entrypoint_object(tgammaf)

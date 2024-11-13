@@ -499,6 +499,159 @@ def CP_ASYNC_BULK_WAIT_GROUP_READ :
   Requires<[hasPTX<80>, hasSM<90>]>;
 
 //-----------------------------------
+// TMA Async Tensor Copy Functions
+//-----------------------------------
+
+// From Global to Shared memory (G2S)
+class G2S_STRINGS<int dim, string mode, bit mc, bit ch, bit is_shared32 = 0> {
+  string prefix = "cp.async.bulk.tensor";
+  string dir = "shared::cluster.global";
+  string completion = "mbarrier::complete_tx::bytes";
+  string inst_name = prefix
+                     # "." # dim # "d"
+                     # "." # dir
+                     # "." # mode
+                     # "." # completion
+                     # !if(mc, ".multicast::cluster", "")
+                     # !if(ch, ".L2::cache_hint", "");
+  string intr_name = "CP_ASYNC_BULK_TENSOR_G2S_"
+                     # dim # "D"
+                     # !if(is_shared32, "_SHARED32", "")
+                     # !if(!eq(mode, "tile"), "_TILE", "_IM2COL");
+}
+
+multiclass CP_ASYNC_BULK_TENSOR_G2S_INTR<int dim, bit is_shared32, string mode> {
+  defvar dims_dag = !dag(ins, !listsplat(Int32Regs, dim), !foreach(i, !range(dim), "d" # i));
+  defvar dims_str = !interleave(!foreach(i, !range(dim), "$d" # i), ", ");
+  defvar asm_str_default = " [$dst], [$tmap, {{" # dims_str # "}}], [$mbar]";
+  defvar rc = !if(is_shared32, Int32Regs, Int64Regs);
+
+  defvar num_im2col = !if(!ge(dim, 3), !add(dim, -2), 0);
+  defvar im2col_dag = !if(!eq(mode, "im2col"),
+    !dag(ins, !listsplat(Int16Regs, num_im2col), !foreach(i, !range(num_im2col), "im2col" # i)),
+    (ins));
+  defvar im2col_str = !interleave(!foreach(i, !range(num_im2col), "$im2col" # i), ", ");
+  defvar im2col_asm_str = ", {{" # im2col_str # "}}";
+
+  defvar asm_str = !if(!eq(mode, "im2col"),
+    !strconcat(asm_str_default, im2col_asm_str), asm_str_default);
+
+  def "": NVPTXInst<(outs),
+          !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag),
+          !strconcat(G2S_STRINGS<dim, mode, 0, 0>.inst_name, asm_str, ";"), []>,
+          Requires<[hasPTX<80>, hasSM<90>]>;
+  def _MC: NVPTXInst<(outs),
+           !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int16Regs:$mc)),
+           !strconcat(G2S_STRINGS<dim, mode, 1, 0>.inst_name, asm_str, ", $mc;"), []>,
+           Requires<[hasPTX<80>, hasSM<90>]>;
+  def _CH: NVPTXInst<(outs),
+           !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int64Regs:$ch)),
+           !strconcat(G2S_STRINGS<dim, mode, 0, 1>.inst_name, asm_str, ", $ch;"), []>,
+           Requires<[hasPTX<80>, hasSM<90>]>;
+  def _MC_CH: NVPTXInst<(outs),
+              !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int16Regs:$mc, Int64Regs:$ch)),
+              !strconcat(G2S_STRINGS<dim, mode, 1, 1>.inst_name, asm_str, ", $mc, $ch;"), []>,
+              Requires<[hasPTX<80>, hasSM<90>]>;
+}
+
+foreach dim = [1, 2, 3, 4, 5] in {
+  foreach shared32 = [true, false] in {
+    foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
+      defm G2S_STRINGS<dim, mode, 0, 0, shared32>.intr_name :
+        CP_ASYNC_BULK_TENSOR_G2S_INTR<dim, shared32, mode>;
+    }
+  }
+}
+
+// From Shared to Global memory (S2G)
+class S2G_STRINGS<int dim, string mode, bit ch, bit is_shared32 = 0> {
+  string prefix = "cp.async.bulk.tensor";
+  string dir = "global.shared::cta";
+  string completion = "bulk_group";
+  string inst_name = prefix
+                     # "." # dim # "d"
+                     # "." # dir
+                     # "." # mode
+                     # "." # completion
+                     # !if(ch, ".L2::cache_hint", "");
+  string intr_name = "CP_ASYNC_BULK_TENSOR_S2G_"
+                     # dim # "D"
+                     # !if(is_shared32, "_SHARED32", "")
+                     # !if(!eq(mode, "tile"), "_TILE", "_IM2COL");
+}
+
+multiclass CP_ASYNC_BULK_TENSOR_S2G_INTR<int dim, bit shared32, string mode> {
+  defvar dims_dag = !dag(ins, !listsplat(Int32Regs, dim), !foreach(i, !range(dim), "d" # i));
+  defvar dims_str = !interleave(!foreach(i, !range(dim), "$d" # i), ", ");
+  defvar asm_str = " [$tmap, {{" # dims_str # "}}], [$src]";
+  defvar rc = !if(shared32, Int32Regs, Int64Regs);
+
+  def "": NVPTXInst<(outs),
+          !con((ins rc:$src, Int64Regs:$tmap), dims_dag),
+          !strconcat(S2G_STRINGS<dim, mode, 0>.inst_name, asm_str, ";"), []>,
+          Requires<[hasPTX<80>, hasSM<90>]>;
+  def _CH: NVPTXInst<(outs),
+           !con((ins rc:$src, Int64Regs:$tmap), dims_dag, (ins Int64Regs:$ch)),
+           !strconcat(S2G_STRINGS<dim, mode, 1>.inst_name, asm_str, ", $ch;"), []>,
+           Requires<[hasPTX<80>, hasSM<90>]>;
+}
+
+foreach dim = [1, 2, 3, 4, 5] in {
+  foreach shared32 = [true, false] in {
+    foreach mode = !if(!ge(dim, 3), ["tile", "im2col_no_offs"], ["tile"]) in {
+      defm S2G_STRINGS<dim, mode, 0, shared32>.intr_name :
+        CP_ASYNC_BULK_TENSOR_S2G_INTR<dim, shared32, mode>;
+    }
+  }
+}
+
+// TMA Prefetch from Global memory to L2 cache
+class PREFETCH_STRINGS<int dim, string mode, bit ch> {
+  string prefix = "cp.async.bulk.prefetch.tensor";
+  string dir = "L2.global";
+  string inst_name = prefix
+                     # "." # dim # "d"
+                     # "." # dir
+                     # "." # mode
+                     # !if(ch, ".L2::cache_hint", "");
+  string intr_name = "CP_ASYNC_BULK_TENSOR_PREFETCH_"
+                     # dim # "D"
+                     # !if(!eq(mode, "tile"), "_TILE", "_IM2COL");
+}
+
+multiclass CP_ASYNC_BULK_TENSOR_PREFETCH_INTR<int dim, string mode> {
+  defvar dims_dag = !dag(ins, !listsplat(Int32Regs, dim), !foreach(i, !range(dim), "d" # i));
+  defvar dims_str = !interleave(!foreach(i, !range(dim), "$d" # i), ", ");
+  defvar asm_str_default = " [$tmap, {{" # dims_str # "}}]";
+
+  defvar num_im2col = !if(!ge(dim, 3), !add(dim, -2), 0);
+  defvar im2col_dag = !if(!eq(mode, "im2col"),
+    !dag(ins, !listsplat(Int16Regs, num_im2col), !foreach(i, !range(num_im2col), "im2col" # i)),
+    (ins));
+  defvar im2col_str = !interleave(!foreach(i, !range(num_im2col), "$im2col" # i), ", ");
+  defvar im2col_asm_str = ", {{" # im2col_str # "}}";
+
+  defvar asm_str = !if(!eq(mode, "im2col"),
+    !strconcat(asm_str_default, im2col_asm_str), asm_str_default);
+
+  def "": NVPTXInst<(outs),
+          !con((ins Int64Regs:$tmap), dims_dag, im2col_dag),
+          !strconcat(PREFETCH_STRINGS<dim, mode, 0>.inst_name, asm_str, ";"), []>,
+          Requires<[hasPTX<80>, hasSM<90>]>;
+  def _CH: NVPTXInst<(outs),
+           !con((ins Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int64Regs:$ch)),
+           !strconcat(PREFETCH_STRINGS<dim, mode, 1>.inst_name, asm_str, ", $ch;"), []>,
+           Requires<[hasPTX<80>, hasSM<90>]>;
+}
+
+foreach dim = [1, 2, 3, 4, 5] in {
+  foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
+    defm PREFETCH_STRINGS<dim, mode, 0>.intr_name :
+      CP_ASYNC_BULK_TENSOR_PREFETCH_INTR<dim, mode>;
+  }
+}
+
+//-----------------------------------
 // MBarrier Functions
 //-----------------------------------
 
