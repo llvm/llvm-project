@@ -4324,11 +4324,11 @@ let Predicates = [HasSVE2p2orSME2p2] in {
   defm LASTP_XPP  : sve_int_pcount_pred_tmp<0b010, "lastp">;
 
   // SVE reverse within elements, zeroing predicate
-  defm RBIT_ZPzZ : sve_int_perm_rev_rbit_z<"rbit">;
-  defm REVB_ZPzZ : sve_int_perm_rev_revb_z<"revb">;
-  defm REVH_ZPzZ : sve_int_perm_rev_revh_z<"revh">;
-  def  REVW_ZPzZ : sve_int_perm_rev_z<0b11, 0b0110, "revw", ZPR64>;
-  def  REVD_ZPzZ : sve_int_perm_rev_z<0b00, 0b1110, "revd", ZPR128>;
+  defm RBIT_ZPzZ   : sve_int_perm_rev_rbit_z<"rbit">;
+  defm REVB_ZPzZ   : sve_int_perm_rev_revb_z<"revb">;
+  defm REVH_ZPzZ   : sve_int_perm_rev_revh_z<"revh">;
+  def  REVW_ZPzZ_D : sve_int_perm_rev_z<0b11, 0b0110, "revw", ZPR64>;
+  defm REVD_ZPzZ   : sve_int_perm_revd_z<"revd", AArch64revd_mt>;
 } // End HasSME2p2orSVE2p2
 
 //===----------------------------------------------------------------------===//
@@ -4651,3 +4651,41 @@ multiclass sve2_int_un_pred_arit_pat<SDPatternOperator op> {
 
 defm SQABS : sve2_int_un_pred_arit_pat<int_aarch64_sve_sqabs>;
 defm SQNEG : sve2_int_un_pred_arit_pat<int_aarch64_sve_sqneg>;
+
+multiclass sve_int_perm_rev_rbit_pat<SDPatternOperator op> {
+  let Predicates = [HasSVE2p2orSME2p2] in {
+    def : SVE_1_Op_PassthruUndefZero_Pat<nxv16i8, op, nxv16i1, nxv16i8, !cast<Instruction>(NAME # _ZPzZ_B)>;
+    def : SVE_1_Op_PassthruUndefZero_Pat<nxv8i16, op, nxv8i1,  nxv8i16, !cast<Instruction>(NAME # _ZPzZ_H)>;
+    def : SVE_1_Op_PassthruUndefZero_Pat<nxv4i32, op, nxv4i1,  nxv4i32, !cast<Instruction>(NAME # _ZPzZ_S)>;
+    def : SVE_1_Op_PassthruUndefZero_Pat<nxv2i64, op, nxv2i1,  nxv2i64, !cast<Instruction>(NAME # _ZPzZ_D)>;
+  }
+}
+
+defm RBIT : sve_int_perm_rev_rbit_pat<AArch64rbit_mt>;
+
+multiclass sve_int_perm_rev_revb_pat<SDPatternOperator op> {
+  let Predicates = [HasSVE2p2orSME2p2] in {
+    def : SVE_1_Op_PassthruUndefZero_Pat<nxv8i16, op, nxv8i1,  nxv8i16, !cast<Instruction>(NAME # _ZPzZ_H)>;
+    def : SVE_1_Op_PassthruUndefZero_Pat<nxv4i32, op, nxv4i1,  nxv4i32, !cast<Instruction>(NAME # _ZPzZ_S)>;
+    def : SVE_1_Op_PassthruUndefZero_Pat<nxv2i64, op, nxv2i1,  nxv2i64, !cast<Instruction>(NAME # _ZPzZ_D)>;
+  }
+}
+
+defm REVB : sve_int_perm_rev_revb_pat<AArch64revb_mt>;
+
+multiclass sve_int_perm_rev_revh_pat<SDPatternOperator op> {
+  let Predicates = [HasSVE2p2orSME2p2] in {
+    def : SVE_1_Op_PassthruUndefZero_Pat<nxv4i32, op, nxv4i1,  nxv4i32, !cast<Instruction>(NAME # _ZPzZ_S)>;
+    def : SVE_1_Op_PassthruUndefZero_Pat<nxv2i64, op, nxv2i1,  nxv2i64, !cast<Instruction>(NAME # _ZPzZ_D)>;
+  }
+}
+
+defm REVH : sve_int_perm_rev_revh_pat<AArch64revh_mt>;
+
+multiclass sve_int_perm_rev_revw_pat<SDPatternOperator op> {
+  let Predicates = [HasSVE2p2orSME2p2] in {
+    def : SVE_1_Op_PassthruUndefZero_Pat<nxv2i64, op, nxv2i1,  nxv2i64, !cast<Instruction>(NAME # _ZPzZ_D)>;
+  }
+}
+
+defm REVW : sve_int_perm_rev_revw_pat<AArch64revw_mt>;
