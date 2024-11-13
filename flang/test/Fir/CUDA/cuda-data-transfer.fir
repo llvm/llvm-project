@@ -327,4 +327,39 @@ func.func @_QPtest_array_type() {
 // CHECK: %[[BYTES:.*]] = arith.muli %c10{{.*}}, %c12{{.*}} : i64
 // CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{.*}}, %{{.*}}, %[[BYTES]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> none
 
+func.func @_QPshape_shift() {
+  %c0_i32 = arith.constant 0 : i32
+  %c11 = arith.constant 11 : index
+  %c10 = arith.constant 10 : index
+  %0 = cuf.alloc !fir.array<10xi32> {bindc_name = "cdev", data_attr = #cuf.cuda<device>, uniq_name = "_QFshape_shiftEcdev"} -> !fir.ref<!fir.array<10xi32>>
+  %1 = fir.shape_shift %c11, %c10 : (index, index) -> !fir.shapeshift<1>
+  %2:2 = hlfir.declare %0(%1) {data_attr = #cuf.cuda<device>, uniq_name = "_QFshape_shiftEcdev"} : (!fir.ref<!fir.array<10xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  cuf.data_transfer %c0_i32 to %2#1, %1 : !fir.shapeshift<1> {transfer_kind = #cuf.cuda_transfer<host_device>} : i32, !fir.ref<!fir.array<10xi32>>
+  cuf.free %2#1 : !fir.ref<!fir.array<10xi32>> {data_attr = #cuf.cuda<device>}
+  return
+}
+
+// CHECK-LABEL: func.func @_QPshape_shift()
+// CHECK: fir.call @_FortranACUFDataTransferDescDescNoRealloc
+
+func.func @_QPshape_shift2() {
+  %c11 = arith.constant 11 : index
+  %c10 = arith.constant 10 : index
+  %0 = fir.alloca !fir.array<10xi32> {bindc_name = "ahost", uniq_name = "_QFshape_shift2Eahost"}
+  %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %2:2 = hlfir.declare %0(%1) {uniq_name = "_QFshape_shift2Eahost"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  %3 = cuf.alloc !fir.array<10xi32> {bindc_name = "cdev", data_attr = #cuf.cuda<device>, uniq_name = "_QFshape_shift2Ecdev"} -> !fir.ref<!fir.array<10xi32>>
+  %4 = fir.shape_shift %c11, %c10 : (index, index) -> !fir.shapeshift<1>
+  %5:2 = hlfir.declare %3(%4) {data_attr = #cuf.cuda<device>, uniq_name = "_QFshape_shift2Ecdev"} : (!fir.ref<!fir.array<10xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  cuf.data_transfer %2#0 to %5#1, %4 : !fir.shapeshift<1> {transfer_kind = #cuf.cuda_transfer<host_device>} : !fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>
+  cuf.free %5#1 : !fir.ref<!fir.array<10xi32>> {data_attr = #cuf.cuda<device>}
+  return
+}
+
+// CHECK-LABEL: func.func @_QPshape_shift2()
+// CHECK: %[[C10:.*]] = fir.convert %c10{{.*}} : (index) -> i64
+// CHECK: %[[BYTES:.*]] = arith.muli %[[C10]], %c4{{.*}} : i64
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{.*}}, %{{.*}}, %[[BYTES]], %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> none
+
+
 } // end of module

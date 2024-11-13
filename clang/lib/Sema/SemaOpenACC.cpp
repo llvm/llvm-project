@@ -434,6 +434,7 @@ bool checkValidAfterDeviceType(
   // This is only a requirement on compute and loop constructs so far, so this
   // is fine otherwise.
   if (!isOpenACCComputeDirectiveKind(NewClause.getDirectiveKind()) &&
+      !isOpenACCCombinedDirectiveKind(NewClause.getDirectiveKind()) &&
       NewClause.getDirectiveKind() != OpenACCDirectiveKind::Loop)
     return false;
 
@@ -625,10 +626,11 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitTileClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitIfClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute' constructs, and
-  // 'compute' constructs are the only construct that can do anything with
-  // this yet, so skip/treat as unimplemented in this case.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+  // Restrictions only properly implemented on 'compute'/'combined' constructs,
+  // and 'compute'/'combined' constructs are the only construct that can do
+  // anything with this yet, so skip/treat as unimplemented in this case.
+  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
+      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()))
     return isNotImplemented();
 
   // There is no prose in the standard that says duplicates aren't allowed,
@@ -661,7 +663,8 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitSelfClause(
   // Restrictions only properly implemented on 'compute' constructs, and
   // 'compute' constructs are the only construct that can do anything with
   // this yet, so skip/treat as unimplemented in this case.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
+      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()))
     return isNotImplemented();
 
   // TODO OpenACC: When we implement this for 'update', this takes a
