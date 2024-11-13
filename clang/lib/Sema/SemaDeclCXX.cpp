@@ -16291,6 +16291,16 @@ static inline bool CheckOperatorNewDeleteTypes(
     }
     return SemaRef.Context.getCanonicalType(T);
   };
+
+  unsigned FirstNonTypeParam = 0;
+  if (FnDecl->isTypeAwareOperatorNewOrDelete()) {
+    if (!SemaRef.getLangOpts().TypeAwareAllocators) {
+      return SemaRef.Diag(FnDecl->getLocation(),
+                          diag::err_unsupported_type_aware_allocator);
+    }
+    ++FirstNonTypeParam;
+  }
+
   auto *FnType = FnDecl->getType()->castAs<FunctionType>();
   QualType CanResultType = NormalizeType(FnType->getReturnType());
   QualType CanExpectedResultType = NormalizeType(ExpectedResultType);
@@ -16314,15 +16324,6 @@ static inline bool CheckOperatorNewDeleteTypes(
                       diag::err_operator_new_delete_template_too_few_parameters)
         << FnDecl->getDeclName();
 
-  unsigned FirstNonTypeParam = 0;
-  if (FnDecl->isTypeAwareOperatorNewOrDelete()) {
-    if (!SemaRef.getLangOpts().TypeAwareAllocators) {
-      return SemaRef.Diag(FnDecl->getLocation(),
-                          diag::err_unsupported_type_aware_allocator);
-    }
-    ++FirstNonTypeParam;
-  }
-
   // The function decl must have at least 1 parameter.
   if (FnDecl->getNumParams() <= FirstNonTypeParam)
     return SemaRef.Diag(FnDecl->getLocation(),
@@ -16340,7 +16341,8 @@ static inline bool CheckOperatorNewDeleteTypes(
     return SemaRef.Diag(FnDecl->getLocation(), FirstParamType->isDependentType()
                                                    ? DependentParamTypeDiag
                                                    : InvalidParamTypeDiag)
-           << FnDecl->getDeclName() << ExpectedFirstParamType;
+           << FnDecl->getDeclName() << FirstNonTypeParam
+           << ExpectedFirstParamType;
   }
 
   *MinimumNonDefaultArgs = FirstNonTypeParam + 1;
@@ -16368,7 +16370,7 @@ CheckOperatorNewDeclaration(Sema &SemaRef, const FunctionDecl *FnDecl) {
           diag::err_operator_new_dependent_param_type,
           diag::err_operator_new_param_type, &MinimumNonDefaultArgs))
     return true;
-  assert(MinimumNonDefaultArgs > 0);
+  assert(MinimumNonDefaultArgs > 0 && MinimumNonDefaultArgs <= 2);
   // C++ [basic.stc.dynamic.allocation]p1:
   //  The first parameter shall not have an associated default argument.
   for (unsigned Idx = 0; Idx < MinimumNonDefaultArgs; ++Idx) {
@@ -16376,7 +16378,7 @@ CheckOperatorNewDeclaration(Sema &SemaRef, const FunctionDecl *FnDecl) {
     if (ParamDecl->hasDefaultArg()) {
       return SemaRef.Diag(FnDecl->getLocation(),
                           diag::err_operator_new_default_arg)
-             << FnDecl->getDeclName() << ParamDecl->getDefaultArgRange();
+             << FnDecl->getDeclName() << Idx << ParamDecl->getDefaultArgRange();
     }
   }
   return false;
@@ -16412,7 +16414,7 @@ CheckOperatorDeleteDeclaration(Sema &SemaRef, FunctionDecl *FnDecl) {
           diag::err_operator_delete_param_type, &MinimumNonDefaultArgs))
     return true;
 
-  assert(MinimumNonDefaultArgs > 0);
+  assert(MinimumNonDefaultArgs > 0 && MinimumNonDefaultArgs <= 2);
   // C++ P0722:
   //   A destroying operator delete shall be a usual deallocation function.
   if (MD && !MD->getParent()->isDependentContext() &&

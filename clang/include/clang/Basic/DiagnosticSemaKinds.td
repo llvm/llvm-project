@@ -9694,16 +9694,17 @@ def warn_operator_new_returns_null : Warning<
   "%select{| or 'noexcept'}1">, InGroup<OperatorNewReturnsNull>;
 
 def err_operator_new_dependent_param_type : Error<
-  "%0 cannot take a dependent type as first parameter; "
-  "use size_t (%1) instead">;
+  "%select{|type aware}1 %0 cannot take a dependent type as %select{first|second}1 parameter; "
+  "use size_t (%2) instead">;
 def err_operator_new_param_type : Error<
-  "%0 takes type size_t (%1) as first parameter">;
+  "%select{|type aware}1 %0 takes type size_t (%2) as %select{first|second}1 parameter">;
 def err_operator_new_default_arg: Error<
   "parameter of %0 cannot have a default argument">;
 def err_operator_delete_dependent_param_type : Error<
-  "%0 cannot take a dependent type as first parameter; use %1 instead">;
+  "%select{|type aware}1 %0 cannot take a dependent type as %select{first|second}1 parameter; "
+  "use %2 instead">;
 def err_operator_delete_param_type : Error<
-  "first parameter of %0 must have type %1">;
+  "%select{first|second}1 parameter of%select{|type aware}1 %0 must have type %2">;
 def err_destroying_operator_delete_not_usual : Error<
   "destroying operator delete can have only an optional size and optional "
   "alignment parameter">;

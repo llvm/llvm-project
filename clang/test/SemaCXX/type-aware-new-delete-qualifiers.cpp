@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -DNO_TADD -std=c++17    -fexperimental-cxx-type-aware-allocators
+// RUN: %clang_cc1 -fsyntax-only -verify %s -DNO_TADD -std=c++23 -fexperimental-cxx-type-aware-allocators
 
 namespace std {
   template <class T> struct type_identity {

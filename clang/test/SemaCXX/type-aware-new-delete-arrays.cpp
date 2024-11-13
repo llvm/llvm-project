@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++2c -fexperimental-cxx-type-aware-allocators -fexceptions -Wall -Wpedantic
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions -Wall -Wpedantic
 
 namespace std {
   template <class T> struct type_identity {};

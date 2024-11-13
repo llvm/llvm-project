@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s          -std=c++17 -fexperimental-cxx-type-aware-allocators
-// RUN: %clang_cc1 -fsyntax-only -verify %s -DNO_TAA -std=c++17 -fno-experimental-cxx-type-aware-allocators
+// RUN: %clang_cc1 -fsyntax-only -verify %s          -std=c++23 -fexperimental-cxx-type-aware-allocators
+// RUN: %clang_cc1 -fsyntax-only -verify %s -DNO_TAA -std=c++23 -fno-experimental-cxx-type-aware-allocators
 
 namespace std {
   template <class T> struct type_identity {};
@@ -80,16 +80,36 @@ template <typename T> void *operator new(TypeIdentityAlias3<T>, size_t); // #21
 #endif
 
 
-// Invalid free declarations - need to update error text
 template <typename T> void *operator new(T, size_t);
-// expected-error@-1 {{'operator new' cannot take a dependent type as first parameter; use size_t ('unsigned long') instead}}
+// expected-error@-1 {{'operator new' cannot take a dependent type as first parameter}}
 
 template <typename T> void operator delete(T, void*);
-// expected-error@-1 {{'operator delete' cannot take a dependent type as first parameter; use 'void *' instead}}
+// expected-error@-1 {{'operator delete' cannot take a dependent type as first parameter}}
 
 template <typename T> struct S {
   typedef std::type_identity<T> type_identity;
+  typedef size_t size_ty;
+  typedef void *ptr_ty;
 };
 
 template <typename T> void *operator new(typename S<T>::type_identity, size_t);
-// expected-error@-1 {{'operator new' cannot take a dependent type as first parameter; use size_t ('unsigned long') instead}}
+// expected-error@-1 {{'operator new' cannot take a dependent type as first parameter}}
+
+#if !defined(NO_TAA)
+template <typename U> void *operator new(std::type_identity<int>, U);
+// expected-error@-1 {{type aware 'operator new' cannot take a dependent type as second parameter}}
+template <typename U> void operator delete(std::type_identity<int>, U);
+// expected-error@-1 {{type aware 'operator delete' cannot take a dependent type as second parameter}}
+template <typename T, typename U> void *operator new(std::type_identity<T>, U);
+// expected-error@-1 {{type aware 'operator new' cannot take a dependent type as second parameter}}
+template <typename T, typename U> void operator delete(std::type_identity<T>, U);
+// expected-error@-1 {{type aware 'operator delete' cannot take a dependent type as second parameter}}
+template <typename U> void *operator new(std::type_identity<int>, typename S<U>::size_ty);
+// expected-error@-1 {{type aware 'operator new' cannot take a dependent type as second parameter}}
+template <typename U> void operator delete(std::type_identity<int>, typename S<U>::ptr_ty);
+// expected-error@-1 {{type aware 'operator delete' cannot take a dependent type as second parameter}}
+template <typename T, typename U> void *operator new(std::type_identity<T>, typename S<U>::size_ty);
+// expected-error@-1 {{type aware 'operator new' cannot take a dependent type as second parameter}}
+template <typename T, typename U> void operator delete(std::type_identity<T>, typename S<U>::ptr_ty);
+// expected-error@-1 {{type aware 'operator delete' cannot take a dependent type as second parameter}}
+#endif

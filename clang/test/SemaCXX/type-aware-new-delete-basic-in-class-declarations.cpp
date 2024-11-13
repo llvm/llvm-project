@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -DNO_TADD -std=c++17    -fexperimental-cxx-type-aware-allocators
-// RUN: %clang_cc1 -fsyntax-only -verify %s           -std=c++17    -fexperimental-cxx-type-aware-allocators -fexperimental-cxx-type-aware-destroying-delete
-// RUN: %clang_cc1 -fsyntax-only -verify %s -DNO_TAA  -std=c++17 -fno-experimental-cxx-type-aware-allocators
+// RUN: %clang_cc1 -fsyntax-only -verify %s -DNO_TADD -std=c++23    -fexperimental-cxx-type-aware-allocators
+// RUN: %clang_cc1 -fsyntax-only -verify %s           -std=c++23    -fexperimental-cxx-type-aware-allocators -fexperimental-cxx-type-aware-destroying-delete
+// RUN: %clang_cc1 -fsyntax-only -verify %s -DNO_TAA  -std=c++23 -fno-experimental-cxx-type-aware-allocators
 
 namespace std {
   template <class T> struct type_identity {};
@@ -59,6 +59,57 @@ struct S5 {
 #if defined(NO_TAA)
   // expected-error@#10 {{type aware allocation operators are disabled, enable with '-fexperimental-cxx-type-aware-allocators'}}
 #else
-  // expected-error@#10 {{'operator delete' cannot take a dependent type as first parameter; use 'void *'}}
+  // expected-error@#10 {{type aware 'operator delete' cannot take a dependent type as second parameter}}
 #endif
 };
+
+struct S6 {
+  template <typename T> void *operator new(std::type_identity<S6>, T); // #11
+#if defined(NO_TAA)
+  // expected-error@#11 {{type aware allocation operators are disabled, enable with '-fexperimental-cxx-type-aware-allocators'}}
+#else
+  // expected-error@#11 {{type aware 'operator new' cannot take a dependent type as second parameter}}
+#endif
+  template <typename T> void operator delete(std::type_identity<S6>, T); // #12
+#if defined(NO_TAA)
+  // expected-error@#12 {{type aware allocation operators are disabled, enable with '-fexperimental-cxx-type-aware-allocators'}}
+#else
+  // expected-error@#12 {{type aware 'operator delete' cannot take a dependent type as second parameter}}
+#endif
+};
+
+#if !defined(NO_TAA)
+template <typename U>
+struct S7 {
+  template <typename T> void *operator new(std::type_identity<T>, U); // #13
+  // expected-error@#13 {{type aware 'operator new' cannot take a dependent type as second parameter;}}
+  template <typename T> void operator delete(std::type_identity<T>, U); // #14
+  // expected-error@#14 {{type aware 'operator delete' cannot take a dependent type as second parameter;}}
+#if !defined(NO_TADD)
+  template <typename T> void operator delete(std::type_identity<T>, S7 *, std::destroying_delete_t, U); // #15
+#endif
+  void operator delete(S7 *, std::destroying_delete_t, U); // #16
+};
+
+void f() {
+  S7<int> s;
+  // expected-note@-1 {{in instantiation of template class 'S7<int>' requested here}}
+#if !defined(NO_TADD)
+  // expected-error@#15 {{destroying operator delete can have only an optional size and optional alignment parameter}}
+#endif
+  // expected-error@#16 {{destroying operator delete can have only an optional size and optional alignment parameter}}
+}
+
+struct S8 {
+  template <typename T, typename U> void *operator new(std::type_identity<T>, U); // #17
+  // expected-error@#17 {{type aware 'operator new' cannot take a dependent type as second parameter;}}
+  template <typename T, typename U> void operator delete(std::type_identity<T>, U); // #18
+  // expected-error@#18 {{type aware 'operator delete' cannot take a dependent type as second parameter;}}
+#if !defined(NO_TADD)
+  template <typename T, typename U> void operator delete(std::type_identity<T>, S8 *, std::destroying_delete_t, U); // #19
+  // expected-error@#19 {{destroying operator delete can have only an optional size and optional alignment parameter}}
+#endif
+};
+
+
+#endif
