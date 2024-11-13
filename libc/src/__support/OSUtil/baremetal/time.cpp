@@ -11,11 +11,13 @@
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace internal {
 
-extern "C" int __llvm_libc_time_utc_get(struct timespec *ts);
+extern "C" int __llvm_libc_timespec_get_utc(struct timespec *ts);
 
-int time_utc_get(struct timespec *ts) {
-  return __llvm_libc_time_utc_get(ts);
+bool timespec_get_utc(struct timespec *ts) {
+  return __llvm_libc_timespec_get_utc(ts);
 }
 
+} // namespace internal
 } // namespace LIBC_NAMESPACE_DECL

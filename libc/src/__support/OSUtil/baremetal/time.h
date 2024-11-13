@@ -13,9 +13,11 @@
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace internal{
 
-int time_utc_get(struct timespec *ts);
+bool timespec_get_utc(struct timespec *ts);
 
+} // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_BAREMETAL_IO_H

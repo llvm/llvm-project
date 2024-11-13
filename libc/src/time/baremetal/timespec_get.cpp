@@ -8,18 +8,21 @@
 
 #include "src/time/timespec_get.h"
 #include "hdr/time_macros.h"
+#include "src/__support/OSUtil/baremetal/time.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/OSUtil/baremetal/time.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, timespec_get, (struct timespec *ts, int base)) {
+LLVM_LIBC_FUNCTION(int, timespec_get, (struct timespec * ts, int base)) {
   if (base != TIME_UTC) {
     return 0;
   }
 
-  return time_utc_get(ts);
+  if (!internal::timespec_get_utc(ts)) {
+    return 0;
+  }
+  return base;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
