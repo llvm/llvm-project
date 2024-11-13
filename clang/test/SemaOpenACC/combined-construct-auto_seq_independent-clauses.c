@@ -195,10 +195,8 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented}}
 #pragma acc parallel loop auto default_async(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented}}
 #pragma acc parallel loop auto device_type(*)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented}}
 #pragma acc parallel loop auto dtype(*)
   for(unsigned i = 0; i < 5; ++i);
   // TODOexpected-error@+1{{OpenACC 'async' clause is not valid on 'parallel loop' directive}}
@@ -371,10 +369,8 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented}}
 #pragma acc parallel loop default_async(1) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented}}
 #pragma acc parallel loop device_type(*) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented}}
 #pragma acc parallel loop dtype(*) auto
   for(unsigned i = 0; i < 5; ++i);
   // TODOexpected-error@+1{{OpenACC 'async' clause is not valid on 'parallel loop' directive}}
@@ -548,10 +544,8 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented}}
 #pragma acc parallel loop independent default_async(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented}}
 #pragma acc parallel loop independent device_type(*)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented}}
 #pragma acc parallel loop independent dtype(*)
   for(unsigned i = 0; i < 5; ++i);
   // TODOexpected-error@+1{{OpenACC 'async' clause is not valid on 'parallel loop' directive}}
@@ -724,10 +718,8 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented}}
 #pragma acc parallel loop default_async(1) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented}}
 #pragma acc parallel loop device_type(*) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented}}
 #pragma acc parallel loop dtype(*) independent
   for(unsigned i = 0; i < 5; ++i);
   // TODOexpected-error@+1{{OpenACC 'async' clause is not valid on 'parallel loop' directive}}
@@ -907,10 +899,8 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented}}
 #pragma acc parallel loop seq default_async(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented}}
 #pragma acc parallel loop seq device_type(*)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented}}
 #pragma acc parallel loop seq dtype(*)
   for(unsigned i = 0; i < 5; ++i);
   // TODOexpected-error@+1{{OpenACC 'async' clause is not valid on 'parallel loop' directive}}
@@ -1089,10 +1079,8 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented}}
 #pragma acc parallel loop default_async(1) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented}}
 #pragma acc parallel loop device_type(*) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented}}
 #pragma acc parallel loop dtype(*) seq
   for(unsigned i = 0; i < 5; ++i);
   // TODOexpected-error@+1{{OpenACC 'async' clause is not valid on 'parallel loop' directive}}
