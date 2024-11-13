@@ -316,19 +316,57 @@ define i16 @test25_as1(ptr addrspace(1) %P, i64 %A) {
 }
 
 @Arr_as2 = external addrspace(2) global [42 x i16]
-define i64 @zext_ptrtoint_sub_ptrtoint_as2(ptr addrspace(1) %p, i32 %offset) {
+define i64 @zext_ptrtoint_sub_ptrtoint_as2(i32 %offset) {
 ; CHECK-LABEL: @zext_ptrtoint_sub_ptrtoint_as2(
 ; CHECK-NEXT:  %A.idx = shl nsw i32 %offset, 1
-; CHECK-NEXT:  %D = zext i32 %A.idx to i64
+; CHECK-NEXT:  %D = sext i32 %A.idx to i64
 ; CHECK-NEXT:  ret i64 %D
-  %A = getelementptr inbounds bfloat, ptr addrspace(2) @Arr_as2, i32 %offset
+  %A = getelementptr nusw bfloat, ptr addrspace(2) @Arr_as2, i32 %offset
   %B = ptrtoint ptr addrspace(2) %A to i32
   %C = zext i32 %B to i64
   %D = sub i64 %C, ptrtoint (ptr addrspace(2) @Arr_as2 to i64)
   ret i64 %D
 }
 
-define i64 @ptrtoint_sub_zext_ptrtoint_as2(ptr addrspace(2) %p, i32 %offset) {
+define i64 @zext_ptrtoint_sub_ptrtoint_as2_nuw(i32 %offset) {
+; CHECK-LABEL: @zext_ptrtoint_sub_ptrtoint_as2_nuw(
+; CHECK-NEXT:  %A.idx = shl nuw i32 %offset, 1
+; CHECK-NEXT:  %D = zext i32 %A.idx to i64
+; CHECK-NEXT:  ret i64 %D
+  %A = getelementptr nuw bfloat, ptr addrspace(2) @Arr_as2, i32 %offset
+  %B = ptrtoint ptr addrspace(2) %A to i32
+  %C = zext i32 %B to i64
+  %D = sub i64 %C, ptrtoint (ptr addrspace(2) @Arr_as2 to i64)
+  ret i64 %D
+}
+
+define i64 @zext_ptrtoint_sub_zext_ptrtoint_as2(i32 %offset) {
+; CHECK-LABEL: @zext_ptrtoint_sub_zext_ptrtoint_as2(
+; CHECK-NEXT:  %A.idx = shl nsw i32 %offset, 1
+; CHECK-NEXT:  %E = sext i32 %A.idx to i64
+; CHECK-NEXT:  ret i64 %E
+  %A = getelementptr nusw bfloat, ptr addrspace(2) @Arr_as2, i32 %offset
+  %B = ptrtoint ptr addrspace(2) %A to i32
+  %C = zext i32 %B to i64
+  %D = zext i32 ptrtoint (ptr addrspace(2) @Arr_as2 to i32) to i64
+  %E = sub i64 %C, %D
+  ret i64 %E
+}
+
+define i64 @zext_ptrtoint_sub_zext_ptrtoint_as2_nuw(i32 %offset) {
+; CHECK-LABEL: @zext_ptrtoint_sub_zext_ptrtoint_as2_nuw(
+; CHECK-NEXT:  %A.idx = shl nuw i32 %offset, 1
+; CHECK-NEXT:  %E = zext i32 %A.idx to i64
+; CHECK-NEXT:  ret i64 %E
+  %A = getelementptr nuw bfloat, ptr addrspace(2) @Arr_as2, i32 %offset
+  %B = ptrtoint ptr addrspace(2) %A to i32
+  %C = zext i32 %B to i64
+  %D = zext i32 ptrtoint (ptr addrspace(2) @Arr_as2 to i32) to i64
+  %E = sub i64 %C, %D
+  ret i64 %E
+}
+
+define i64 @ptrtoint_sub_zext_ptrtoint_as2(i32 %offset) {
 ; CHECK-LABEL: @ptrtoint_sub_zext_ptrtoint_as2(
 ; CHECK-NEXT:  %A = getelementptr inbounds bfloat, ptr addrspace(2) @Arr_as2, i32 %offset
 ; CHECK-NEXT:  %B = ptrtoint ptr addrspace(2) %A to i32

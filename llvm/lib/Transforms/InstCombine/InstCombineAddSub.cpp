@@ -2632,13 +2632,16 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
       return replaceInstUsesWith(I, Res);
 
   if (match(Op0, m_ZExt(m_PtrToInt(m_Value(LHSOp)))) &&
-      match(Op1, m_PtrToInt(m_Value(RHSOp))) && isa<GlobalValue>(RHSOp)) {
-    Value *Offset;
-    if (match(LHSOp, m_GEP(m_Specific(RHSOp), m_Value(Offset)))) {
-      auto *GEP = cast<GEPOperator>(LHSOp);
-      if (GEP->isInBounds()) {
-        Value *Res = Builder.CreateZExt(EmitGEPOffset(GEP), I.getType());
-        return replaceInstUsesWith(I, Res);
+      match(Op1, m_ZExtOrSelf(m_PtrToInt(m_Value(RHSOp))))) {
+    if (auto *GEP = dyn_cast<GEPOperator>(LHSOp)) {
+      if (GEP->getPointerOperand() == RHSOp) {
+        if (GEP->hasNoUnsignedWrap() || GEP->hasNoUnsignedSignedWrap()) {
+          Value *Offset = EmitGEPOffset(GEP);
+          Value *Res = GEP->hasNoUnsignedWrap()
+                           ? Builder.CreateZExt(Offset, I.getType())
+                           : Builder.CreateSExt(Offset, I.getType());
+          return replaceInstUsesWith(I, Res);
+        }
       }
     }
   }
