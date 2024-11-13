@@ -479,12 +479,11 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
       if (frame) {
         VariableSP var_sp;
         Status error;
-        ValueObjectSP value_sp;
-        value_sp = frame->GetValueForVariableExpressionPath(
+        ValueObjectSP value_sp(frame->GetValueForVariableExpressionPath(
             var_path, eNoDynamicValues,
             StackFrame::eExpressionPathOptionCheckPtrVsMember |
                 StackFrame::eExpressionPathOptionsAllowDirectIVarAccess,
-            var_sp, error);
+            var_sp, error));
         sb_value.SetSP(value_sp, use_dynamic);
       }
     }
