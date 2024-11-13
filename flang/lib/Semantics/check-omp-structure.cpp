@@ -981,14 +981,12 @@ void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
   // constructs inside LOOP may add the relevant information. Scan reduction is
   // supported only in loop constructs, so same checks are not applicable to
   // other directives.
-
   for (const auto &clause : clauseList.v) {
     if (const auto *reductionClause{
             std::get_if<parser::OmpClause::Reduction>(&clause.u)}) {
       const auto &maybeModifier{
           std::get<std::optional<ReductionModifier>>(reductionClause->v.t)};
       if (maybeModifier && *maybeModifier == ReductionModifier::Inscan) {
-
         const auto &objectList{
             std::get<parser::OmpObjectList>(reductionClause->v.t)};
         auto checkReductionSymbolInScan = [&](const parser::Name *name) {

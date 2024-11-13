@@ -21,7 +21,6 @@
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
-#include <iostream>
 #include <list>
 #include <map>
 #include <sstream>
@@ -459,16 +458,12 @@ public:
   }
 
   // 2.15.3 Data-Sharing Attribute Clauses
-  void ResolveNames(const parser::OmpObjectList &objList);
-
   bool Pre(const parser::OmpClause::Inclusive &x) {
-    const auto &objectList{x.v};
-    ResolveNames(objectList);
+    ResolveOmpObjectList(x.v, Symbol::Flag::OmpInclusiveScan);
     return false;
   }
   bool Pre(const parser::OmpClause::Exclusive &x) {
-    const auto &objectList{x.v};
-    ResolveNames(objectList);
+    ResolveOmpObjectList(x.v, Symbol::Flag::OmpExclusiveScan);
     return false;
   }
   void Post(const parser::OmpDefaultClause &);
@@ -705,8 +700,9 @@ private:
       Symbol::Flag::OmpUseDevicePtr, Symbol::Flag::OmpUseDeviceAddr,
       Symbol::Flag::OmpIsDevicePtr, Symbol::Flag::OmpHasDeviceAddr};
 
-  Symbol::Flags ompFlagsRequireMark{
-      Symbol::Flag::OmpThreadprivate, Symbol::Flag::OmpDeclareTarget};
+  Symbol::Flags ompFlagsRequireMark{Symbol::Flag::OmpThreadprivate,
+      Symbol::Flag::OmpDeclareTarget, Symbol::Flag::OmpExclusiveScan,
+      Symbol::Flag::OmpInclusiveScan};
 
   Symbol::Flags dataCopyingAttributeFlags{
       Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpCopyPrivate};
@@ -2969,20 +2965,5 @@ void OmpAttributeVisitor::IssueNonConformanceWarning(
   }
   context_.Warn(common::UsageWarning::OpenMPUsage, source, "%s"_warn_en_US,
       warnStrOS.str());
-}
-void OmpAttributeVisitor::ResolveNames(const parser::OmpObjectList &objList) {
-  for (const auto &ompObj : objList.v) {
-    common::visit(
-        common::visitors{
-            [&](const parser::Designator &designator) {
-              if (const auto *name{
-                      semantics::getDesignatorNameIfDataRef(designator)}) {
-                ResolveName(name);
-              }
-            },
-            [&](const auto &name) { ResolveName(&name); },
-        },
-        ompObj.u);
-  }
 }
 } // namespace Fortran::semantics

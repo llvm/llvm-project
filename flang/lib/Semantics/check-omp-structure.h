@@ -75,11 +75,10 @@ public:
   using ReductionModifier = parser::OmpReductionClause::ReductionModifier;
   using Symbol = Fortran::semantics::Symbol;
   class ScanReductionInfo {
-
-  public:
-    std::set<Symbol *> usedInScanDirective;
+    std::set<Symbol *> usedInScan;
     std::map<Symbol *, ReductionModifier> reductionMod;
 
+  public:
     void mapSymbolsToReductionModifiers(
         const parser::OmpObjectList &x, const ReductionModifier &modifier) {
       for (const auto &ompObject : x.v) {
@@ -92,11 +91,11 @@ public:
     }
 
     void markSymbolAsUsedInScanConstruct(Symbol *sym) {
-      usedInScanDirective.insert(sym);
+      usedInScan.insert(sym);
     }
 
     bool findSymbolInScanConstruct(Symbol *sym) {
-      if (usedInScanDirective.find(sym) != usedInScanDirective.end()) {
+      if (usedInScan.find(sym) != usedInScan.end()) {
         return true;
       }
       return false;
