@@ -4,7 +4,7 @@
 // RUN: llvm-cov report --show-branch-summary %t.o -instr-profile %t.profdata -show-functions -path-equivalence=/tmp,%S/Inputs %S/Inputs/branch-templates.cpp | FileCheck %s -check-prefix=REPORT
 // RUN: llvm-cov report --show-branch-summary %t.o -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs | FileCheck %s -check-prefix=REPORTFILE
 
-// REPORT: Name                        Regions    Miss   Cover     Lines    Miss   Cover  Branches    Miss   Cover
+// REPORT:      Name                        Regions    Miss   Cover     Lines    Miss   Cover  Branches    Miss   Cover
 // REPORT-NEXT: ---
 // REPORT-NEXT: main                              7       1  85.71%        10       1  90.00%         6       3  50.00%
 // REPORT-NEXT: _Z4funcIiEiT_                     5       2  60.00%         7       3  57.14%         2       1  50.00%
@@ -21,8 +21,8 @@
 // respectively).  This is returned by: FunctionCoverageSummary::get(const
 // InstantiationGroup &Group, ...)
 
-// REPORTFILE: Filename                      Regions    Missed Regions     Cover   Functions  Missed Functions  Executed       Lines      Missed Lines     Cover    Branches   Missed Branches     Cover
+// REPORTFILE:      Filename                 Regions    Missed Regions     Cover   Functions  Missed Functions  Executed       Lines      Missed Lines     Cover    Branches   Missed Branches     Cover
 // REPORTFILE-NEXT: ---
 // REPORTFILE-NEXT: branch-templates.cpp          12                 3    75.00%           2                 0   100.00%          17                 4    76.47%           8                 4    50.00%
 // REPORTFILE-NEXT: ---
-// REPORTFILE-NEXT: TOTAL                              12                 3    75.00%           2                 0   100.00%          17                 4    76.47%           8                 4    50.00%
+// REPORTFILE-NEXT: TOTAL                         12                 3    75.00%           2                 0   100.00%          17                 4    76.47%           8                 4    50.00%
