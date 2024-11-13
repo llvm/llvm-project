@@ -366,6 +366,7 @@ isInUnspecifiedUntypedContext(internal::Matcher<Stmt> InnerMatcher) {
 //   4. `std::span<T>{a, n}`, where `a` is of an array-of-T with constant size
 //   `n`
 //   5. `std::span<T>{any, 0}`
+//   6. `std::span<T>{std::addressof(...), 1}`
 AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
   assert(Node.getNumArgs() == 2 &&
          "expecting a two-parameter std::span constructor");
@@ -409,6 +410,15 @@ AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
         UnaryOperator::Opcode::UO_AddrOf)
       // Check form 3:
       return Arg1CV && Arg1CV->isOne();
+    break;
+  case Stmt::CallExprClass:
+    if (const auto *CE = dyn_cast<CallExpr>(Arg0)) {
+      const auto FnDecl = CE->getDirectCallee();
+      if (FnDecl && FnDecl->getNameAsString() == "addressof" &&
+          FnDecl->isInStdNamespace()) {
+        return Arg1CV && Arg1CV->isOne();
+      }
+    }
     break;
   default:
     break;
