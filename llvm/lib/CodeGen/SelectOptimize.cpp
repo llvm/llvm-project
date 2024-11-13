@@ -218,7 +218,7 @@ public:
 private:
   // Select groups consist of consecutive select-like instructions with the same
   // condition. Between select-likes could be any number of auxiliary
-  // instructions related to the condition like not, sext/zext, ashr/lshr
+  // instructions related to the condition like not, zext
   struct SelectGroup {
     Value *Condition;
     SmallVector<SelectLike, 2> Selects;
@@ -494,14 +494,7 @@ static Value *getTrueOrFalseValue(
 
   auto *CBO = BO->clone();
   auto CondIdx = SI.getConditionOpIndex();
-  auto *AuxI = cast<Instruction>(CBO->getOperand(CondIdx));
-  if (isa<ZExtInst>(AuxI) || isa<LShrOperator>(AuxI)) {
-    CBO->setOperand(CondIdx, ConstantInt::get(CBO->getType(), 1));
-  } else {
-    assert((isa<SExtInst>(AuxI) || isa<AShrOperator>(AuxI)) &&
-           "Non-supported type of operand");
-    CBO->setOperand(CondIdx, ConstantInt::get(CBO->getType(), -1));
-  }
+  CBO->setOperand(CondIdx, ConstantInt::get(CBO->getType(), 1));
 
   unsigned OtherIdx = 1 - CondIdx;
   if (auto *IV = dyn_cast<Instruction>(CBO->getOperand(OtherIdx))) {
@@ -759,10 +752,8 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
   // Represents something that can be considered as select instruction.
   // Auxiliary instruction are instructions that depends on a condition and have
   // zero or some constant value on True/False branch, such as:
-  // * ZExt(1bit), SExt(1bit)
+  // * ZExt(1bit)
   // * Not(1bit)
-  // * AShr(Xbit), X-1, LShr(XBit), X-1, where there is a condition like Xbit <=
-  // 0 somewhere above in BB
   struct SelectLikeInfo {
     Value *Cond;
     bool IsAuxiliary;
@@ -770,15 +761,9 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
     unsigned ConditionIdx;
   };
 
-  SmallPtrSet<Instruction *, 2> SeenCmp;
   std::map<Value *, SelectLikeInfo> SelectInfo;
 
-  auto ProcessSelectInfo = [&SeenCmp, &SelectInfo](Instruction *I) -> void {
-    if (auto *Cmp = dyn_cast<CmpInst>(I)) {
-      SeenCmp.insert(Cmp);
-      return;
-    }
-
+  auto ProcessSelectInfo = [&SelectInfo](Instruction *I) -> void {
     Value *Cond;
     if (match(I, m_OneUse(m_ZExt(m_Value(Cond)))) &&
         Cond->getType()->isIntegerTy(1)) {
