@@ -8,7 +8,6 @@ int stpncpy;
 int strdup;
 int strndup;
 int index;
-int reallocarray;
 int rindex;
 int bzero;
 int strcasecmp;
