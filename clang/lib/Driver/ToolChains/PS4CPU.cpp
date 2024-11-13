@@ -303,10 +303,12 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // with the SDK. The scripts are inside <sdkroot>/target/lib, which is
     // added as a search path elsewhere.
     // "PRX" has long stood for "PlayStation Relocatable eXecutable".
-    CmdArgs.push_back("--default-script");
-    CmdArgs.push_back(Static   ? "static.script"
-                      : Shared ? "prx.script"
-                               : "main.script");
+    if (!Args.hasArgNoClaim(options::OPT_T)) {
+      CmdArgs.push_back("--default-script");
+      CmdArgs.push_back(Static   ? "static.script"
+                        : Shared ? "prx.script"
+                                 : "main.script");
+    }
   }
 
   if (Static)
