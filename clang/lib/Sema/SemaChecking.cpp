@@ -2212,7 +2212,9 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (CheckBuiltinTargetInSupported(
             *this, TheCall,
             {llvm::Triple::x86, llvm::Triple::x86_64, llvm::Triple::arm,
-             llvm::Triple::thumb, llvm::Triple::aarch64, llvm::Triple::amdgcn}))
+             llvm::Triple::thumb, llvm::Triple::aarch64, llvm::Triple::amdgcn,
+             llvm::Triple::ppc, llvm::Triple::ppc64, llvm::Triple::ppcle,
+             llvm::Triple::ppc64le}))
       return ExprError();
     break;
 
@@ -2971,6 +2973,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     }
     break;
   }
+  case Builtin::BI__builtin_counted_by_ref:
+    if (BuiltinCountedByRef(TheCall))
+      return ExprError();
+    break;
   }
 
   if (getLangOpts().HLSL && HLSL().CheckBuiltinFunctionCall(BuiltinID, TheCall))
@@ -5570,6 +5576,55 @@ bool Sema::BuiltinSetjmp(CallExpr *TheCall) {
   if (!Context.getTargetInfo().hasSjLjLowering())
     return Diag(TheCall->getBeginLoc(), diag::err_builtin_setjmp_unsupported)
            << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
+  return false;
+}
+
+bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
+  if (checkArgCount(TheCall, 1))
+    return true;
+
+  ExprResult ArgRes = UsualUnaryConversions(TheCall->getArg(0));
+  if (ArgRes.isInvalid())
+    return true;
+
+  // For simplicity, we support only limited expressions for the argument.
+  // Specifically a pointer to a flexible array member:'ptr->array'. This
+  // allows us to reject arguments with complex casting, which really shouldn't
+  // be a huge problem.
+  const Expr *Arg = ArgRes.get()->IgnoreParenImpCasts();
+  if (!isa<PointerType>(Arg->getType()) && !Arg->getType()->isArrayType())
+    return Diag(Arg->getBeginLoc(),
+                diag::err_builtin_counted_by_ref_must_be_flex_array_member)
+           << Arg->getSourceRange();
+
+  if (Arg->HasSideEffects(Context))
+    return Diag(Arg->getBeginLoc(),
+                diag::err_builtin_counted_by_ref_has_side_effects)
+           << Arg->getSourceRange();
+
+  if (const auto *ME = dyn_cast<MemberExpr>(Arg)) {
+    if (!ME->isFlexibleArrayMemberLike(
+            Context, getLangOpts().getStrictFlexArraysLevel()))
+      return Diag(Arg->getBeginLoc(),
+                  diag::err_builtin_counted_by_ref_must_be_flex_array_member)
+             << Arg->getSourceRange();
+
+    if (auto *CATy =
+            ME->getMemberDecl()->getType()->getAs<CountAttributedType>();
+        CATy && CATy->getKind() == CountAttributedType::CountedBy) {
+      const auto *FAMDecl = cast<FieldDecl>(ME->getMemberDecl());
+      if (const FieldDecl *CountFD = FAMDecl->findCountedByField()) {
+        TheCall->setType(Context.getPointerType(CountFD->getType()));
+        return false;
+      }
+    }
+  } else {
+    return Diag(Arg->getBeginLoc(),
+                diag::err_builtin_counted_by_ref_must_be_flex_array_member)
+           << Arg->getSourceRange();
+  }
+
+  TheCall->setType(Context.getPointerType(Context.VoidTy));
   return false;
 }
 

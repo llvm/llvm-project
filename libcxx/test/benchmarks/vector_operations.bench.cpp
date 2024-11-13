@@ -6,11 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <deque>
 #include <functional>
+#include <memory>
+#include <string>
 #include <vector>
 
 #include "benchmark/benchmark.h"

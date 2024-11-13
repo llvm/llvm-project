@@ -1056,13 +1056,17 @@ private:
                                        static_cast<uint8_t *>(view.buf));
 
     py::module numpy = py::module::import("numpy");
-    py::object packbits_func = numpy.attr("packbits");
-    py::object packed_booleans =
-        packbits_func(unpackedArray, "bitorder"_a = "little");
-    py::buffer_info pythonBuffer = packed_booleans.cast<py::buffer>().request();
+    py::object packbitsFunc = numpy.attr("packbits");
+    py::object packedBooleans =
+        packbitsFunc(unpackedArray, "bitorder"_a = "little");
+    py::buffer_info pythonBuffer = packedBooleans.cast<py::buffer>().request();
 
     MlirType bitpackedType =
         getShapedType(mlirIntegerTypeGet(context, 1), explicitShape, view);
+    assert(pythonBuffer.itemsize == 1 && "Packbits must return uint8");
+    // Notice that `mlirDenseElementsAttrRawBufferGet` copies the memory of
+    // packedBooleans, hence the MlirAttribute will remain valid even when
+    // packedBooleans get reclaimed by the end of the function.
     return mlirDenseElementsAttrRawBufferGet(bitpackedType, pythonBuffer.size,
                                              pythonBuffer.ptr);
   }
@@ -1084,30 +1088,42 @@ private:
     py::array_t<uint8_t> packedArray(numBitpackedBytes, bitpackedData);
 
     py::module numpy = py::module::import("numpy");
-    py::object unpackbits_func = numpy.attr("unpackbits");
-    py::object unpacked_booleans =
-        unpackbits_func(packedArray, "bitorder"_a = "little");
-    py::buffer_info pythonBuffer =
-        unpacked_booleans.cast<py::buffer>().request();
+    py::object unpackbitsFunc = numpy.attr("unpackbits");
+    py::object equalFunc = numpy.attr("equal");
+    py::object reshapeFunc = numpy.attr("reshape");
+    py::array unpackedBooleans =
+        unpackbitsFunc(packedArray, "bitorder"_a = "little");
 
+    // Unpackbits operates on bytes and gives back a flat 0 / 1 integer array.
+    // We need to:
+    //   1. Slice away the padded bits
+    //   2. Make the boolean array have the correct shape
+    //   3. Convert the array to a boolean array
+    unpackedBooleans = unpackedBooleans[py::slice(0, numBooleans, 1)];
+    unpackedBooleans = equalFunc(unpackedBooleans, 1);
+
+    std::vector<intptr_t> shape;
     MlirType shapedType = mlirAttributeGetType(*this);
-    return bufferInfo<bool>(shapedType, (bool *)pythonBuffer.ptr, "?");
+    intptr_t rank = mlirShapedTypeGetRank(shapedType);
+    for (intptr_t i = 0; i < rank; ++i) {
+      shape.push_back(mlirShapedTypeGetDimSize(shapedType, i));
+    }
+    unpackedBooleans = reshapeFunc(unpackedBooleans, shape);
+
+    // Make sure the returned py::buffer_view claims ownership of the data in
+    // `pythonBuffer` so it remains valid when Python reads it
+    py::buffer pythonBuffer = unpackedBooleans.cast<py::buffer>();
+    return pythonBuffer.request();
   }
 
   template <typename Type>
   py::buffer_info bufferInfo(MlirType shapedType,
                              const char *explicitFormat = nullptr) {
+    intptr_t rank = mlirShapedTypeGetRank(shapedType);
     // Prepare the data for the buffer_info.
-    // Buffer is configured for read-only access inside the `bufferInfo` call.
+    // Buffer is configured for read-only access below.
     Type *data = static_cast<Type *>(
         const_cast<void *>(mlirDenseElementsAttrGetRawData(*this)));
-    return bufferInfo<Type>(shapedType, data, explicitFormat);
-  }
-
-  template <typename Type>
-  py::buffer_info bufferInfo(MlirType shapedType, Type *data,
-                             const char *explicitFormat = nullptr) {
-    intptr_t rank = mlirShapedTypeGetRank(shapedType);
     // Prepare the shape for the buffer_info.
     SmallVector<intptr_t, 4> shape;
     for (intptr_t i = 0; i < rank; ++i)

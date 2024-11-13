@@ -92,3 +92,11 @@ transform.sequence failures(propagate) {
   transform.structured.vectorize %arg0 vector_sizes [%0 : !transform.param<i64>, 2] : !transform.any_op, !transform.param<i64>
 
 }
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error@below {{expected '('}}
+  %res = transform.structured.generalize %arg0 : !transform.any_op -> !transform.any_op 
+}

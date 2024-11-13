@@ -2659,7 +2659,8 @@ Error BitcodeReader::parseTypeTableBody() {
       }
       if (EltTys.size() != Record.size()-1)
         return error("Invalid named struct record");
-      Res->setBody(EltTys, Record[0]);
+      if (auto E = Res->setBodyOrError(EltTys, Record[0]))
+        return E;
       ContainedIDs.append(Record.begin() + 1, Record.end());
       ResultTy = Res;
       break;
@@ -7958,7 +7959,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       break;
 
     case bitc::FS_CFI_FUNCTION_DEFS: {
-      std::set<std::string> &CfiFunctionDefs = TheIndex.cfiFunctionDefs();
+      std::set<std::string, std::less<>> &CfiFunctionDefs =
+          TheIndex.cfiFunctionDefs();
       for (unsigned I = 0; I != Record.size(); I += 2)
         CfiFunctionDefs.insert(
             {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});
@@ -7966,7 +7968,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     }
 
     case bitc::FS_CFI_FUNCTION_DECLS: {
-      std::set<std::string> &CfiFunctionDecls = TheIndex.cfiFunctionDecls();
+      std::set<std::string, std::less<>> &CfiFunctionDecls =
+          TheIndex.cfiFunctionDecls();
       for (unsigned I = 0; I != Record.size(); I += 2)
         CfiFunctionDecls.insert(
             {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});

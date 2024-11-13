@@ -4514,6 +4514,8 @@ static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
 
   Args.addOptOutFlag(CmdArgs, options::OPT_fspell_checking,
                      options::OPT_fno_spell_checking);
+
+  Args.addLastArg(CmdArgs, options::OPT_warning_suppression_mappings_EQ);
 }
 
 DwarfFissionKind tools::getDebugFissionKind(const Driver &D,
@@ -5358,6 +5360,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     } else if (JA.getType() == types::TY_RewrittenLegacyObjC) {
       CmdArgs.push_back("-rewrite-objc");
       rewriteKind = RK_Fragile;
+    } else if (JA.getType() == types::TY_CIR) {
+      CmdArgs.push_back("-emit-cir");
     } else {
       assert(JA.getType() == types::TY_PP_Asm && "Unexpected output type!");
     }

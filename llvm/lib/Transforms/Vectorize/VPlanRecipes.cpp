@@ -24,7 +24,6 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/VectorBuilder.h"
@@ -1485,6 +1484,8 @@ void VPWidenCastRecipe::execute(VPTransformState &State) {
   Value *Cast = Builder.CreateCast(Instruction::CastOps(Opcode), A, DestTy);
   State.set(this, Cast);
   State.addMetadata(Cast, cast_or_null<Instruction>(getUnderlyingValue()));
+  if (auto *CastOp = dyn_cast<Instruction>(Cast))
+    setFlags(CastOp);
 }
 
 InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
