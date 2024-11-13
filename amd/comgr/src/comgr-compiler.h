@@ -41,9 +41,6 @@
 
 #include "comgr.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Frontend/TextDiagnosticPrinter.h"
-#include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/DiagnosticPrinter.h"
 
 namespace COMGR {
 
@@ -52,39 +49,6 @@ namespace COMGR {
 /// @warning No more than one public method should be called on a constructed
 /// object before it is destructed.
 class AMDGPUCompiler {
-  struct AMDGPUCompilerDiagnosticHandler : public llvm::DiagnosticHandler {
-    AMDGPUCompiler *Compiler = nullptr;
-
-    AMDGPUCompilerDiagnosticHandler(AMDGPUCompiler *Compiler)
-        : Compiler(Compiler) {}
-
-    bool handleDiagnostics(const llvm::DiagnosticInfo &DI) override {
-      assert(Compiler && "Compiler cannot be nullptr");
-      unsigned Severity = DI.getSeverity();
-      switch (Severity) {
-      case llvm::DS_Error:
-        Compiler->LogS << "ERROR: ";
-        break;
-      case llvm::DS_Warning:
-        Compiler->LogS << "WARNING: ";
-        break;
-      case llvm::DS_Remark:
-        Compiler->LogS << "REMARK: ";
-        break;
-      case llvm::DS_Note:
-        Compiler->LogS << "NOTE: ";
-        break;
-      default:
-        Compiler->LogS << "(Unknown DiagnosticInfo Severity): ";
-        break;
-      }
-      llvm::DiagnosticPrinterRawOStream DP(Compiler->LogS);
-      DI.print(DP);
-      Compiler->LogS << "\n";
-      return true;
-    }
-  };
-
   DataAction *ActionInfo;
   DataSet *InSet;
   amd_comgr_data_set_t OutSetT;

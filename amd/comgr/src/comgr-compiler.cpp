@@ -38,6 +38,7 @@
 
 #include "comgr-compiler.h"
 #include "comgr-device-libs.h"
+#include "comgr-diagnostic-handler.h"
 #include "comgr-env.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Driver.h"
@@ -51,6 +52,7 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
+#include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/FrontendTool/Utils.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/LLVMContext.h"
@@ -1355,7 +1357,7 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
   SMDiagnostic SMDiag;
   LLVMContext Context;
   Context.setDiagnosticHandler(
-      std::make_unique<AMDGPUCompilerDiagnosticHandler>(this), true);
+      std::make_unique<AMDGPUCompilerDiagnosticHandler>(this->LogS), true);
 
   auto Composite = std::make_unique<llvm::Module>("llvm-link", Context);
   Linker L(*Composite);
@@ -1869,7 +1871,7 @@ amd_comgr_status_t AMDGPUCompiler::translateSpirvToBitcode() {
 
   LLVMContext Context;
   Context.setDiagnosticHandler(
-    std::make_unique<AMDGPUCompilerDiagnosticHandler>(this), true);
+      std::make_unique<AMDGPUCompilerDiagnosticHandler>(this->LogS), true);
 
   for (auto *Input : InSet->DataObjects) {
 

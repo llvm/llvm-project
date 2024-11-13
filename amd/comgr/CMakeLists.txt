@@ -72,6 +72,7 @@ set(SOURCES
   src/comgr-compiler.cpp
   src/comgr.cpp
   src/comgr-device-libs.cpp
+  src/comgr-diagnostic-handler.cpp
   src/comgr-disassembly.cpp
   src/comgr-elfdump.cpp
   src/comgr-env.cpp
