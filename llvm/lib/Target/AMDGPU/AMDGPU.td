@@ -1606,9 +1606,6 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureDPALU_DPP,
    FeaturePackedFP32Ops,
    FeatureMAIInsts,
-   FeatureFP8Insts,
-   FeatureFP8ConversionInsts,
-   FeatureCvtFP8VOP1Bug,
    FeaturePkFmacF16Inst,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
@@ -1641,22 +1638,42 @@ def FeatureISAVersion9_5_Common : FeatureSet<
    FeatureFP6BF6ConversionScaleInsts,
    FeatureDot12Insts,
    FeatureDot13Insts,
-   FeatureAtomicBufferPkAddBF16Inst
+   FeatureAtomicBufferPkAddBF16Inst,
+   FeatureFP8Insts
    ])>;
 
 def FeatureISAVersion9_4_0 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
-    [FeatureForceStoreSC0SC1,
-     FeatureXF32Insts])>;
+    [
+      FeatureForceStoreSC0SC1,
+      FeatureFP8Insts,
+      FeatureFP8ConversionInsts,
+      FeatureCvtFP8VOP1Bug,
+      FeatureXF32Insts
+    ])>;
 
 def FeatureISAVersion9_4_1 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
-    [FeatureForceStoreSC0SC1,
-     FeatureXF32Insts])>;
+    [
+      FeatureForceStoreSC0SC1,
+      FeatureFP8Insts,
+      FeatureFP8ConversionInsts,
+      FeatureCvtFP8VOP1Bug,
+      FeatureXF32Insts
+    ])>;
 
 def FeatureISAVersion9_4_2 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
-    [FeatureXF32Insts])>;
+    [
+      FeatureFP8Insts,
+      FeatureFP8ConversionInsts,
+      FeatureCvtFP8VOP1Bug,
+      FeatureXF32Insts
+    ])>;
+
+def FeatureISAVersion9_4_Generic : FeatureSet<
+  !listconcat(FeatureISAVersion9_4_Common.Features,
+    [FeatureRequiresCOV6])>;
 
 def FeatureISAVersion9_5_0 : FeatureSet<FeatureISAVersion9_5_Common.Features>;
 

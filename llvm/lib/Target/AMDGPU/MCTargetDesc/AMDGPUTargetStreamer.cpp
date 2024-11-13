@@ -123,6 +123,7 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201: AK = GK_GFX1201; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX120E: AK = GK_GFX120E; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC:     AK = GK_GFX9_GENERIC; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC:   AK = GK_GFX9_4_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC:  AK = GK_GFX10_1_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC:  AK = GK_GFX10_3_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC:    AK = GK_GFX11_GENERIC; break;
@@ -212,6 +213,7 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX120E: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX120E;
   case GK_GFX120F: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX120F;
   case GK_GFX9_GENERIC:     return ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC;
+  case GK_GFX9_4_GENERIC:   return ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC;
   case GK_GFX10_1_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC;
   case GK_GFX10_3_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC;
   case GK_GFX11_GENERIC:    return ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC;
@@ -828,6 +830,9 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsV6() {
     switch (parseArchAMDGCN(STI.getCPU())) {
     case AMDGPU::GK_GFX9_GENERIC:
       Version = GenericVersion::GFX9;
+      break;
+    case AMDGPU::GK_GFX9_4_GENERIC:
+      Version = GenericVersion::GFX9_4;
       break;
     case AMDGPU::GK_GFX10_1_GENERIC:
       Version = GenericVersion::GFX10_1;
