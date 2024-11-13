@@ -3055,7 +3055,7 @@ static bool SimplifyTree(TreePatternNodePtr &N) {
       N->getExtType(0).isValueTypeByHwMode(false) &&
       !N->getExtType(0).empty() &&
       N->getExtType(0) == N->getChild(0).getExtType(0) &&
-      N->getName().empty()) {
+      N->getName().empty() && N->getPredicateCalls().empty()) {
     N = N->getChildShared(0);
     SimplifyTree(N);
     return true;

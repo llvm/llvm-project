@@ -4,8 +4,9 @@
 define <4 x i32> @xor_shl_splat_vec_one(i32 %x, <4 x i32> %y) nounwind {
 ; CHECK-LABEL: xor_shl_splat_vec_one:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.w $vr1, 1
-; CHECK-NEXT:    vbitrev.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vreplgr2vr.w $vr1, $a0
+; CHECK-NEXT:    vsll.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbitrevi.w $vr0, $vr0, 0
 ; CHECK-NEXT:    ret
 entry:
   %ins = insertelement <4 x i32> poison, i32 %x, i64 0
