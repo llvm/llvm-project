@@ -8791,16 +8791,14 @@ effectively re-enable instrumentation for specific types or variables.
 Like ``wraps``, ``no_wraps`` persists through implicit type promotions and will
 be automatically applied to the result type of arithmetic expressions
 containing a wrapping operand. ``-Wimplicitly-discarded-wraps-attribute``
-warnings can be caused in situations where the ``wraps`` attribute cannot
-persist through implicit type conversions. Disable this with
+warnings can be caused in situations where the ``wraps`` or ``no_wraps``
+attribute cannot persist through implicit type conversions. Disable this with
 ``-Wno-implicitly-discarded-wraps-attribute``.
 
-
 Applying both ``__attribute__((wraps))`` and ``__attribute__((no_wraps))``
-results in an error, as you should only use one or the other.
-
-Note that ``no_wraps`` makes no guarantees about the definedness of arithmetic
-overflow. Instead, use ``-fwrapv`` or ``-fno-strict-overflow``.
+results in an error, as you should only use one or the other. Arithmetic binary
+operators containing both a `wraps` and `no_wraps`-attributed type will only
+persist the `no_wraps` attribute towards the final resulting type.
 
 Like ``wraps``, ``no_wraps`` may also be used with function parameters or
 declarations of variables as well as members of structures but can not be used
