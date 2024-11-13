@@ -1791,8 +1791,8 @@ void clang::EmitClangDiagsIndexName(const RecordKeeper &Records,
   std::vector<const Record *> Diags =
       Records.getAllDerivedDefinitions("Diagnostic");
 
-  sort(Diags, [](const Record *Lhs, const Record *Rhs) {
-    return Lhs->getName() < Rhs->getName();
+  sort(Diags, [](const Record *LHS, const Record *RHS) {
+    return LHS->getName() < RHS->getName();
   });
 
   for (const Record *Elem : Diags)
