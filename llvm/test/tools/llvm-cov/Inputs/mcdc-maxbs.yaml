@@ -11,22 +11,81 @@ Sections:
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         8A68DC3E925EACF9B1000000C67EFC36662A3548DEBA335F42BD13F502010107010502151519111D1D210109090D1101031003020C0107000C05001A009B8080800805001B0023020024018380808008020103003C02000B0021280A04000B003B02000C0014301506010302000C0014150018002030190A03000200180020110025003B110026002E301D0E0204000026002E1D0032003A3021120400000032003A06010116003001001700212803020017002F30091601020000170021090025002F300D1A0200000025002F
+    CovFun:
+      - FuncName:        sub
+        Signature:       0x48352A6636FC7EC6
+        FilenamesRef:    0xF513BD425F33BADE
+        Filenames:
+          - mcdc-maxbs.c
+          - mcdc-maxbs.c
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 1 } ]
+          - [ { Sub: 0 }, { Ref: 5 } ]
+          - [ { Ref: 5 }, { Ref: 6 } ]
+          - [ { Ref: 4 }, { Ref: 7 } ]
+          - [ { Ref: 7 }, { Ref: 8 } ]
+          - [ { Ref: 0 }, { Ref: 2 } ]
+          - [ { Ref: 2 }, { Ref: 3 } ]
+        Records:
+          - { File: 0, dLoc: [ 3, 16, 3, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 7, 0, 12 ], Expansion: 1 }
+          - { File: 0, dLoc: [ 0, 26, 0, 27 ], isGap: true, Ref: 1 }
+          - { File: 0, dLoc: [ 0, 27, 0, 35 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 36, 1, 3 ], isGap: true, Sub: 0 }
+          - { File: 0, dLoc: [ 1, 3, 0, 60 ], Sub: 0 }
+          - { File: 0, dLoc: [ 0, 11, 0, 33 ], Sub: 0 }
+          - { File: 0, dLoc: [ 0, 11, 0, 59 ], Decision: { BIdx: 10, NCond: 4 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 20 ], Sub: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 20 ], Branch: { True: { Ref: 5 }, False: { Sub: 1 }, MCDC: [ 1, 3, 2 ] } }
+          - { File: 0, dLoc: [ 0, 24, 0, 32 ], Ref: 5 }
+          - { File: 0, dLoc: [ 0, 24, 0, 32 ], Branch: { True: { Ref: 6 }, False: { Sub: 2 }, MCDC: [ 3, 0, 2 ] } }
+          - { File: 0, dLoc: [ 0, 37, 0, 59 ], Ref: 4 }
+          - { File: 0, dLoc: [ 0, 38, 0, 46 ], Ref: 4 }
+          - { File: 0, dLoc: [ 0, 38, 0, 46 ], Branch: { True: { Ref: 7 }, False: { Sub: 3 }, MCDC: [ 2, 4, 0 ] } }
+          - { File: 0, dLoc: [ 0, 50, 0, 58 ], Ref: 7 }
+          - { File: 0, dLoc: [ 0, 50, 0, 58 ], Branch: { True: { Ref: 8 }, False: { Sub: 4 }, MCDC: [ 4, 0, 0 ] } }
+          - { File: 1, dLoc: [ 1, 22, 0, 48 ], Ref: 0 }
+          - { File: 1, dLoc: [ 0, 23, 0, 33 ], Ref: 0 }
+          - { File: 1, dLoc: [ 0, 23, 0, 47 ], Decision: { BIdx: 3, NCond: 2 } }
+          - { File: 1, dLoc: [ 0, 23, 0, 33 ], Branch: { True: { Ref: 2 }, False: { Sub: 5 }, MCDC: [ 1, 2, 0 ] } }
+          - { File: 1, dLoc: [ 0, 37, 0, 47 ], Ref: 2 }
+          - { File: 1, dLoc: [ 0, 37, 0, 47 ], Branch: { True: { Ref: 3 }, False: { Sub: 6 }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (1)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         FAD58DE7366495DB2A0000005C83010000000000DEBA335F42BD13F5010101010506010B01020201010B0010200502000B0010050012009380808008050013001902001C001D
+    CovFun:
+      - FuncName:        main
+        Signature:       0x1835C
+        FilenamesRef:    0xF513BD425F33BADE
+        Filenames:
+          - mcdc-maxbs.c
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 1 } ]
+        Records:
+          - { File: 0, dLoc: [ 11, 1, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 11, 0, 16 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 11, 0, 16 ], Branch: { True: { Ref: 1 }, False: { Sub: 0 } } }
+          - { File: 0, dLoc: [ 0, 18, 0, 19 ], isGap: true, Ref: 1 }
+          - { File: 0, dLoc: [ 0, 19, 0, 25 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 28, 0, 29 ], Sub: 0 }
   - Name:            __llvm_covmap
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         00000000110000000000000006000000020E00000C6D6364632D6D617862732E63000000
+    CovMap:
+      - Version:         6
+        FnBlobHash:      0xF513BD425F33BADE
+        Filenames:
+          - mcdc-maxbs.c
   - Name:            __llvm_prf_names
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_GNU_RETAIN ]
     AddressAlign:    0x1
-    Content:         0800737562016D61696E
+    PrfNames:
+      - Names:
+          - sub
+          - main
   - Type:            SectionHeaderTable
     Sections:
       - Name:            .strtab

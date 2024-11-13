@@ -11,27 +11,145 @@ Sections:
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         3A78E0F3B66AACDC090000001800000000000000013BA98035CEA5EE0101000101062C0037
+    CovFun:
+      - FuncName:        func1
+        Signature:       0x18
+        FilenamesRef:    0xEEA5CE3580A93B01
+        Filenames:
+          - mcdc-macro.c
+        Expressions:     []
+        Records:
+          - { File: 0, dLoc: [ 6, 44, 0, 55 ], Ref: 0 }
   - Name:            '__llvm_covfun (1)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         7DF4935F4A5A2865CB010000B13C91C439097C05013BA98035CEA5EE0C0101010101010101010101010A0121090D012D013D3D41191D111541455155494D2401083A07020101070008010007000D01000700120100070012010007001728090500070017302102010502000700080C000C000D1400110012090016001730060D02000000160017050018018580808008050105000C0101070008010007000D280C020007000D302D0A010200000700081C000C000D29000E018580808008290105000C01010700080100070014010007002028190600070020303D0E010302000700083D000C00143D000D000E304112030402000D000E240012001339001800202C0019001A39001A001F34001E001F350021018580808008350105000C0321020B000C01000B000C300000050402000B000C0819030B001301000B001E01000B001E301D16040302000B00133C000C000D110017001E30151A0300020017001E4400180019022D020B000C300000020000000B000C0241010B000C30451E040002000B000C0339020B000C39000B000C300000020600000B000C014C040B000C0119010B000C0111010B000C0751030B001339000B001E305522060500000B001354000C000D490017001E304D260500000017001E5C001800190151010B000C0149010B000C
+    CovFun:
+      - FuncName:        func
+        Signature:       0x57C0939C4913CB1
+        FilenamesRef:    0xEEA5CE3580A93B01
+        Filenames:
+          - mcdc-macro.c
+          - mcdc-macro.c
+          - mcdc-macro.c
+          - mcdc-macro.c
+          - mcdc-macro.c
+          - mcdc-macro.c
+          - mcdc-macro.c
+          - mcdc-macro.c
+          - mcdc-macro.c
+          - mcdc-macro.c
+          - mcdc-macro.c
+          - mcdc-macro.c
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 8 } ]
+          - [ { Ref: 2 }, { Ref: 3 } ]
+          - [ { Ref: 0 }, { Ref: 11 } ]
+          - [ { Ref: 0 }, { Ref: 15 } ]
+          - [ { Ref: 15 }, { Ref: 16 } ]
+          - [ { Ref: 6 }, { Ref: 7 } ]
+          - [ { Ref: 4 }, { Ref: 5 } ]
+          - [ { Ref: 16 }, { Ref: 17 } ]
+          - [ { Ref: 20 }, { Ref: 21 } ]
+          - [ { Ref: 18 }, { Ref: 19 } ]
+        Records:
+          - { File: 0, dLoc: [ 8, 58, 7, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 7, 0, 8 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 7, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 7, 0, 18 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 7, 0, 18 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 7, 0, 23 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 7, 0, 23 ], Decision: { BIdx: 9, NCond: 5 } }
+          - { File: 0, dLoc: [ 0, 7, 0, 8 ], Branch: { True: { Ref: 8 }, False: { Sub: 0 }, MCDC: [ 1, 5, 2 ] } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Expansion: 1 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Expansion: 2 }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Ref: 2 }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Branch: { True: { Sub: 1 }, False: { Ref: 3 }, MCDC: [ 2, 0, 0 ] } }
+          - { File: 0, dLoc: [ 0, 24, 1, 5 ], isGap: true, Ref: 1 }
+          - { File: 0, dLoc: [ 1, 5, 0, 12 ], Ref: 1 }
+          - { File: 0, dLoc: [ 1, 7, 0, 8 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 7, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 7, 0, 13 ], Decision: { BIdx: 12, NCond: 2 } }
+          - { File: 0, dLoc: [ 0, 7, 0, 8 ], Branch: { True: { Ref: 11 }, False: { Sub: 2 }, MCDC: [ 1, 2, 0 ] } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Expansion: 3 }
+          - { File: 0, dLoc: [ 0, 14, 1, 5 ], isGap: true, Ref: 10 }
+          - { File: 0, dLoc: [ 1, 5, 0, 12 ], Ref: 10 }
+          - { File: 0, dLoc: [ 1, 7, 0, 8 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 7, 0, 20 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 7, 0, 32 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 7, 0, 32 ], Decision: { BIdx: 25, NCond: 6 } }
+          - { File: 0, dLoc: [ 0, 7, 0, 8 ], Branch: { True: { Ref: 15 }, False: { Sub: 3 }, MCDC: [ 1, 3, 2 ] } }
+          - { File: 0, dLoc: [ 0, 12, 0, 20 ], Ref: 15 }
+          - { File: 0, dLoc: [ 0, 13, 0, 14 ], Ref: 15 }
+          - { File: 0, dLoc: [ 0, 13, 0, 14 ], Branch: { True: { Ref: 16 }, False: { Sub: 4 }, MCDC: [ 3, 4, 2 ] } }
+          - { File: 0, dLoc: [ 0, 18, 0, 19 ], Expansion: 4 }
+          - { File: 0, dLoc: [ 0, 24, 0, 32 ], Ref: 14 }
+          - { File: 0, dLoc: [ 0, 25, 0, 26 ], Expansion: 5 }
+          - { File: 0, dLoc: [ 0, 26, 0, 31 ], Ref: 14 }
+          - { File: 0, dLoc: [ 0, 30, 0, 31 ], Expansion: 6 }
+          - { File: 0, dLoc: [ 0, 33, 1, 5 ], isGap: true, Ref: 13 }
+          - { File: 0, dLoc: [ 1, 5, 0, 12 ], Ref: 13 }
+          - { File: 1, dLoc: [ 2, 11, 0, 12 ], Ref: 8 }
+          - { File: 1, dLoc: [ 0, 11, 0, 12 ], Ref: 0 }
+          - { File: 1, dLoc: [ 0, 11, 0, 12 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 5, 4, 2 ] } }
+          - { File: 2, dLoc: [ 3, 11, 0, 19 ], Ref: 6 }
+          - { File: 2, dLoc: [ 0, 11, 0, 30 ], Ref: 0 }
+          - { File: 2, dLoc: [ 0, 11, 0, 30 ], Ref: 0 }
+          - { File: 2, dLoc: [ 0, 11, 0, 19 ], Branch: { True: { Ref: 7 }, False: { Sub: 5 }, MCDC: [ 4, 3, 2 ] } }
+          - { File: 2, dLoc: [ 0, 12, 0, 13 ], Expansion: 7 }
+          - { File: 2, dLoc: [ 0, 23, 0, 30 ], Ref: 4 }
+          - { File: 2, dLoc: [ 0, 23, 0, 30 ], Branch: { True: { Ref: 5 }, False: { Sub: 6 }, MCDC: [ 3, 0, 2 ] } }
+          - { File: 2, dLoc: [ 0, 24, 0, 25 ], Expansion: 8 }
+          - { File: 3, dLoc: [ 2, 11, 0, 12 ], Ref: 11 }
+          - { File: 3, dLoc: [ 0, 11, 0, 12 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 2, 0, 0 ] } }
+          - { File: 4, dLoc: [ 1, 11, 0, 12 ], Ref: 16 }
+          - { File: 4, dLoc: [ 0, 11, 0, 12 ], Branch: { True: { Ref: 17 }, False: { Sub: 7 }, MCDC: [ 4, 0, 2 ] } }
+          - { File: 5, dLoc: [ 2, 11, 0, 12 ], Ref: 14 }
+          - { File: 5, dLoc: [ 0, 11, 0, 12 ], Ref: 14 }
+          - { File: 5, dLoc: [ 0, 11, 0, 12 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 2, 6, 0 ] } }
+          - { File: 6, dLoc: [ 4, 11, 0, 12 ], Expansion: 9 }
+          - { File: 7, dLoc: [ 1, 11, 0, 12 ], Ref: 6 }
+          - { File: 8, dLoc: [ 1, 11, 0, 12 ], Ref: 4 }
+          - { File: 9, dLoc: [ 3, 11, 0, 19 ], Ref: 20 }
+          - { File: 9, dLoc: [ 0, 11, 0, 30 ], Ref: 14 }
+          - { File: 9, dLoc: [ 0, 11, 0, 19 ], Branch: { True: { Ref: 21 }, False: { Sub: 8 }, MCDC: [ 6, 5, 0 ] } }
+          - { File: 9, dLoc: [ 0, 12, 0, 13 ], Expansion: 10 }
+          - { File: 9, dLoc: [ 0, 23, 0, 30 ], Ref: 18 }
+          - { File: 9, dLoc: [ 0, 23, 0, 30 ], Branch: { True: { Ref: 19 }, False: { Sub: 9 }, MCDC: [ 5, 0, 0 ] } }
+          - { File: 9, dLoc: [ 0, 24, 0, 25 ], Expansion: 11 }
+          - { File: 10, dLoc: [ 1, 11, 0, 12 ], Ref: 20 }
+          - { File: 11, dLoc: [ 1, 11, 0, 12 ], Ref: 18 }
   - Name:            '__llvm_covfun (2)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         FAD58DE7366495DB090000001800000000000000013BA98035CEA5EE0101000101110C0302
+    CovFun:
+      - FuncName:        main
+        Signature:       0x18
+        FilenamesRef:    0xEEA5CE3580A93B01
+        Filenames:
+          - mcdc-macro.c
+        Expressions:     []
+        Records:
+          - { File: 0, dLoc: [ 17, 12, 3, 2 ], Ref: 0 }
   - Name:            __llvm_covmap
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         00000000110000000000000006000000020E00000C6D6364632D6D6163726F2E63000000
+    CovMap:
+      - Version:         6
+        FnBlobHash:      0xEEA5CE3580A93B01
+        Filenames:
+          - mcdc-macro.c
   - Name:            __llvm_prf_names
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_GNU_RETAIN ]
     AddressAlign:    0x1
-    Content:         0F0066756E63310166756E63016D61696E
+    PrfNames:
+      - Names:
+          - func1
+          - func
+          - main
   - Type:            SectionHeaderTable
     Sections:
       - Name:            .strtab

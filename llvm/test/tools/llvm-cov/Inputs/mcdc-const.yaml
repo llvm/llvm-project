@@ -11,22 +11,67 @@ Sections:
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         8AC9CB6DFFBEFE928600000091E438CFA3000000A8826E3AB548EA6F01010201151D2113010A2B04021001010001010107000F010007001B0100070020280B050007002001000800093015020104030008000915000D000E300000040003000D000E110013001B1100140015300000030502001400151D0019001A3021060500020019001A09001F0020300000020000001F00200500210185808080080501050024
+    CovFun:
+      - FuncName:        _Z4testbbbb
+        Signature:       0xA3CF38E491
+        FilenamesRef:    0x6FEA48B53A6E82A8
+        Filenames:
+          - mcdc-const.cpp
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 5 } ]
+          - [ { Ref: 7 }, { Ref: 8 } ]
+        Records:
+          - { File: 0, dLoc: [ 10, 43, 4, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 1, 0, 1 ], Skip: {  } }
+          - { File: 0, dLoc: [ 1, 7, 0, 15 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 7, 0, 27 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 7, 0, 32 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 7, 0, 32 ], Decision: { BIdx: 11, NCond: 5 } }
+          - { File: 0, dLoc: [ 0, 8, 0, 9 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 8, 0, 9 ], Branch: { True: { Ref: 5 }, False: { Sub: 0 }, MCDC: [ 1, 4, 3 ] } }
+          - { File: 0, dLoc: [ 0, 13, 0, 14 ], Ref: 5 }
+          - { File: 0, dLoc: [ 0, 13, 0, 14 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 4, 0, 3 ] } }
+          - { File: 0, dLoc: [ 0, 19, 0, 27 ], Ref: 4 }
+          - { File: 0, dLoc: [ 0, 20, 0, 21 ], Ref: 4 }
+          - { File: 0, dLoc: [ 0, 20, 0, 21 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 3, 5, 2 ] } }
+          - { File: 0, dLoc: [ 0, 25, 0, 26 ], Ref: 7 }
+          - { File: 0, dLoc: [ 0, 25, 0, 26 ], Branch: { True: { Ref: 8 }, False: { Sub: 1 }, MCDC: [ 5, 0, 2 ] } }
+          - { File: 0, dLoc: [ 0, 31, 0, 32 ], Ref: 2 }
+          - { File: 0, dLoc: [ 0, 31, 0, 32 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 2, 0, 0 ] } }
+          - { File: 0, dLoc: [ 0, 33, 1, 5 ], isGap: true, Ref: 1 }
+          - { File: 0, dLoc: [ 1, 5, 0, 36 ], Ref: 1 }
   - Name:            '__llvm_covfun (1)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         FAD58DE7366495DB130000001800000000000000A8826E3AB548EA6F01010003011101090210050100011002010001
+    CovFun:
+      - FuncName:        main
+        Signature:       0x18
+        FilenamesRef:    0x6FEA48B53A6E82A8
+        Filenames:
+          - mcdc-const.cpp
+        Expressions:     []
+        Records:
+          - { File: 0, dLoc: [ 17, 1, 9, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 5, 1, 0, 1 ], Skip: {  } }
+          - { File: 0, dLoc: [ 2, 1, 0, 1 ], Skip: {  } }
   - Name:            __llvm_covmap
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         00000000130000000000000006000000021000000E6D6364632D636F6E73742E63707000
+    CovMap:
+      - Version:         6
+        FnBlobHash:      0x6FEA48B53A6E82A8
+        Filenames:
+          - mcdc-const.cpp
   - Name:            __llvm_prf_names
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_GNU_RETAIN ]
     AddressAlign:    0x1
-    Content:         10005F5A347465737462626262016D61696E
+    PrfNames:
+      - Names:
+          - _Z4testbbbb
+          - main
   - Type:            SectionHeaderTable
     Sections:
       - Name:            .strtab

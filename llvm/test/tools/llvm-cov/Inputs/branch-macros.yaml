@@ -10,23 +10,199 @@ Sections:
   - Name:            '__llvm_covfun (1)'
     Type:            SHT_PROGBITS
     AddressAlign:    0x8
-    Content:         F0A0ED2C305C0BB3A8010000A9166572A6C7691F5CCB403140FE0666150000000000000000000000000000000000000000000F014545493D4135392D3101050509010D0D1101151519011D1D21012525291401101911020C010C0011140015001A1C020C001124020C00122C020C001234020C001201020A000B01000A001001000A001501000A001A204502000A000B45000F0010204906000F00103D0014001520410A00140015350019001A20390E0019001A2D001E001F203112001E001F0301050F001701000F0017200516000F00170205060F001720091A000F00170301070F001F3C00100015440019001E014C0910001501540A100016015C0B1000160301050F001701000F0017200D1E000F0017020D060F0017201122000F00170301070F001F64001000156C0019001E017409100015017C0A1000160301050F001701000F0017201526000F00170215060F001720192A000F00170301070F001F8401001000158C010019001E019401091000150301050F001701000F0017201D2E000F0017021D060F0017202132000F00170301070F001F9C0100100015A4010019001E0301050F001701000F0017202536000F00170225060F001720293A000F0017
+    CovFun:
+      - FuncName:        _Z4funcii
+        Signature:       0x1F69C7A6726516A9
+        FilenamesRef:    0x6606FE403140CB5C
+        Filenames:
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 17 } ]
+          - [ { Ref: 17 }, { Ref: 18 } ]
+          - [ { Ref: 15 }, { Ref: 16 } ]
+          - [ { Ref: 13 }, { Ref: 14 } ]
+          - [ { Ref: 11 }, { Ref: 12 } ]
+          - [ { Ref: 0 }, { Ref: 1 } ]
+          - [ { Ref: 1 }, { Ref: 2 } ]
+          - [ { Ref: 0 }, { Ref: 3 } ]
+          - [ { Ref: 3 }, { Ref: 4 } ]
+          - [ { Ref: 0 }, { Ref: 5 } ]
+          - [ { Ref: 5 }, { Ref: 6 } ]
+          - [ { Ref: 0 }, { Ref: 7 } ]
+          - [ { Ref: 7 }, { Ref: 8 } ]
+          - [ { Ref: 0 }, { Ref: 9 } ]
+          - [ { Ref: 9 }, { Ref: 10 } ]
+        Records:
+          - { File: 0, dLoc: [ 16, 25, 17, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 17 ], Expansion: 1 }
+          - { File: 0, dLoc: [ 0, 21, 0, 26 ], Expansion: 2 }
+          - { File: 0, dLoc: [ 2, 12, 0, 17 ], Expansion: 3 }
+          - { File: 0, dLoc: [ 2, 12, 0, 18 ], Expansion: 4 }
+          - { File: 0, dLoc: [ 2, 12, 0, 18 ], Expansion: 5 }
+          - { File: 0, dLoc: [ 2, 12, 0, 18 ], Expansion: 6 }
+          - { File: 0, dLoc: [ 2, 10, 0, 11 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 10, 0, 16 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 10, 0, 21 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 10, 0, 26 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 10, 0, 11 ], Branch: { True: { Ref: 17 }, False: { Sub: 0 } } }
+          - { File: 0, dLoc: [ 0, 15, 0, 16 ], Ref: 17 }
+          - { File: 0, dLoc: [ 0, 15, 0, 16 ], Branch: { True: { Ref: 18 }, False: { Sub: 1 } } }
+          - { File: 0, dLoc: [ 0, 20, 0, 21 ], Ref: 15 }
+          - { File: 0, dLoc: [ 0, 20, 0, 21 ], Branch: { True: { Ref: 16 }, False: { Sub: 2 } } }
+          - { File: 0, dLoc: [ 0, 25, 0, 26 ], Ref: 13 }
+          - { File: 0, dLoc: [ 0, 25, 0, 26 ], Branch: { True: { Ref: 14 }, False: { Sub: 3 } } }
+          - { File: 0, dLoc: [ 0, 30, 0, 31 ], Ref: 11 }
+          - { File: 0, dLoc: [ 0, 30, 0, 31 ], Branch: { True: { Ref: 12 }, False: { Sub: 4 } } }
+          - { File: 1, dLoc: [ 5, 15, 0, 23 ], Ref: 0 }
+          - { File: 1, dLoc: [ 0, 15, 0, 23 ], Ref: 0 }
+          - { File: 1, dLoc: [ 0, 15, 0, 23 ], Branch: { True: { Ref: 1 }, False: { Sub: 5 } } }
+          - { File: 2, dLoc: [ 6, 15, 0, 23 ], Ref: 1 }
+          - { File: 2, dLoc: [ 0, 15, 0, 23 ], Branch: { True: { Ref: 2 }, False: { Sub: 6 } } }
+          - { File: 3, dLoc: [ 7, 15, 0, 31 ], Ref: 0 }
+          - { File: 3, dLoc: [ 0, 16, 0, 21 ], Expansion: 7 }
+          - { File: 3, dLoc: [ 0, 25, 0, 30 ], Expansion: 8 }
+          - { File: 4, dLoc: [ 9, 16, 0, 21 ], Expansion: 9 }
+          - { File: 5, dLoc: [ 10, 16, 0, 22 ], Expansion: 10 }
+          - { File: 6, dLoc: [ 11, 16, 0, 22 ], Expansion: 11 }
+          - { File: 7, dLoc: [ 5, 15, 0, 23 ], Ref: 0 }
+          - { File: 7, dLoc: [ 0, 15, 0, 23 ], Ref: 0 }
+          - { File: 7, dLoc: [ 0, 15, 0, 23 ], Branch: { True: { Ref: 3 }, False: { Sub: 7 } } }
+          - { File: 8, dLoc: [ 6, 15, 0, 23 ], Ref: 3 }
+          - { File: 8, dLoc: [ 0, 15, 0, 23 ], Branch: { True: { Ref: 4 }, False: { Sub: 8 } } }
+          - { File: 9, dLoc: [ 7, 15, 0, 31 ], Ref: 0 }
+          - { File: 9, dLoc: [ 0, 16, 0, 21 ], Expansion: 12 }
+          - { File: 9, dLoc: [ 0, 25, 0, 30 ], Expansion: 13 }
+          - { File: 10, dLoc: [ 9, 16, 0, 21 ], Expansion: 14 }
+          - { File: 11, dLoc: [ 10, 16, 0, 22 ], Expansion: 15 }
+          - { File: 12, dLoc: [ 5, 15, 0, 23 ], Ref: 0 }
+          - { File: 12, dLoc: [ 0, 15, 0, 23 ], Ref: 0 }
+          - { File: 12, dLoc: [ 0, 15, 0, 23 ], Branch: { True: { Ref: 5 }, False: { Sub: 9 } } }
+          - { File: 13, dLoc: [ 6, 15, 0, 23 ], Ref: 5 }
+          - { File: 13, dLoc: [ 0, 15, 0, 23 ], Branch: { True: { Ref: 6 }, False: { Sub: 10 } } }
+          - { File: 14, dLoc: [ 7, 15, 0, 31 ], Ref: 0 }
+          - { File: 14, dLoc: [ 0, 16, 0, 21 ], Expansion: 16 }
+          - { File: 14, dLoc: [ 0, 25, 0, 30 ], Expansion: 17 }
+          - { File: 15, dLoc: [ 9, 16, 0, 21 ], Expansion: 18 }
+          - { File: 16, dLoc: [ 5, 15, 0, 23 ], Ref: 0 }
+          - { File: 16, dLoc: [ 0, 15, 0, 23 ], Ref: 0 }
+          - { File: 16, dLoc: [ 0, 15, 0, 23 ], Branch: { True: { Ref: 7 }, False: { Sub: 11 } } }
+          - { File: 17, dLoc: [ 6, 15, 0, 23 ], Ref: 7 }
+          - { File: 17, dLoc: [ 0, 15, 0, 23 ], Branch: { True: { Ref: 8 }, False: { Sub: 12 } } }
+          - { File: 18, dLoc: [ 7, 15, 0, 31 ], Ref: 0 }
+          - { File: 18, dLoc: [ 0, 16, 0, 21 ], Expansion: 19 }
+          - { File: 18, dLoc: [ 0, 25, 0, 30 ], Expansion: 20 }
+          - { File: 19, dLoc: [ 5, 15, 0, 23 ], Ref: 0 }
+          - { File: 19, dLoc: [ 0, 15, 0, 23 ], Ref: 0 }
+          - { File: 19, dLoc: [ 0, 15, 0, 23 ], Branch: { True: { Ref: 9 }, False: { Sub: 13 } } }
+          - { File: 20, dLoc: [ 6, 15, 0, 23 ], Ref: 9 }
+          - { File: 20, dLoc: [ 0, 15, 0, 23 ], Branch: { True: { Ref: 10 }, False: { Sub: 14 } } }
   - Name:            __llvm_covfun
     Type:            SHT_PROGBITS
     AddressAlign:    0x8
-    Content:         B01D983FC6736395C8000000403729A19E990E4D5CCB403140FE06660D0000000000000000000000000006050905150519191D010D0D110301241A07020C010E0014140018001D011C0B1000160505080F0026200209000F002624001000152C0018001D3400200025013C0A1000160305070F001F44001000154C0019001E0115060F00170106050F00170154091000150305050F001705000F001720190A000F00170219060F0017201D0E000F00170401070F001F01000F001F5C00100015640019001E0301050F001701000F0017200D12000F0017020D060F0017201116000F0017
+    CovFun:
+      - FuncName:        _Z5func2ii
+        Signature:       0x4D0E999EA1293740
+        FilenamesRef:    0x6606FE403140CB5C
+        Filenames:
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+          - '/tmp/branch-macros.cpp'
+        Expressions:
+          - [ { Ref: 1 }, { Ref: 2 } ]
+          - [ { Ref: 1 }, { Ref: 5 } ]
+          - [ { Ref: 1 }, { Ref: 6 } ]
+          - [ { Ref: 6 }, { Ref: 7 } ]
+          - [ { Ref: 0 }, { Ref: 3 } ]
+          - [ { Ref: 3 }, { Ref: 4 } ]
+        Records:
+          - { File: 0, dLoc: [ 36, 26, 7, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 14, 0, 20 ], Expansion: 1 }
+          - { File: 0, dLoc: [ 0, 24, 0, 29 ], Expansion: 2 }
+          - { File: 1, dLoc: [ 11, 16, 0, 22 ], Expansion: 3 }
+          - { File: 2, dLoc: [ 8, 15, 0, 38 ], Ref: 1 }
+          - { File: 2, dLoc: [ 0, 15, 0, 38 ], Branch: { True: { Sub: 0 }, False: { Ref: 2 } } }
+          - { File: 2, dLoc: [ 0, 16, 0, 21 ], Expansion: 4 }
+          - { File: 2, dLoc: [ 0, 24, 0, 29 ], Expansion: 5 }
+          - { File: 2, dLoc: [ 0, 32, 0, 37 ], Expansion: 6 }
+          - { File: 3, dLoc: [ 10, 16, 0, 22 ], Expansion: 7 }
+          - { File: 4, dLoc: [ 7, 15, 0, 31 ], Ref: 1 }
+          - { File: 4, dLoc: [ 0, 16, 0, 21 ], Expansion: 8 }
+          - { File: 4, dLoc: [ 0, 25, 0, 30 ], Expansion: 9 }
+          - { File: 5, dLoc: [ 6, 15, 0, 23 ], Ref: 5 }
+          - { File: 6, dLoc: [ 5, 15, 0, 23 ], Sub: 1 }
+          - { File: 7, dLoc: [ 9, 16, 0, 21 ], Expansion: 10 }
+          - { File: 8, dLoc: [ 5, 15, 0, 23 ], Ref: 1 }
+          - { File: 8, dLoc: [ 0, 15, 0, 23 ], Ref: 1 }
+          - { File: 8, dLoc: [ 0, 15, 0, 23 ], Branch: { True: { Ref: 6 }, False: { Sub: 2 } } }
+          - { File: 9, dLoc: [ 6, 15, 0, 23 ], Ref: 6 }
+          - { File: 9, dLoc: [ 0, 15, 0, 23 ], Branch: { True: { Ref: 7 }, False: { Sub: 3 } } }
+          - { File: 10, dLoc: [ 7, 15, 0, 31 ], Ref: 0 }
+          - { File: 10, dLoc: [ 0, 15, 0, 31 ], Ref: 0 }
+          - { File: 10, dLoc: [ 0, 16, 0, 21 ], Expansion: 11 }
+          - { File: 10, dLoc: [ 0, 25, 0, 30 ], Expansion: 12 }
+          - { File: 11, dLoc: [ 5, 15, 0, 23 ], Ref: 0 }
+          - { File: 11, dLoc: [ 0, 15, 0, 23 ], Ref: 0 }
+          - { File: 11, dLoc: [ 0, 15, 0, 23 ], Branch: { True: { Ref: 3 }, False: { Sub: 4 } } }
+          - { File: 12, dLoc: [ 6, 15, 0, 23 ], Ref: 3 }
+          - { File: 12, dLoc: [ 0, 15, 0, 23 ], Branch: { True: { Ref: 4 }, False: { Sub: 5 } } }
   - Name:            '__llvm_covfun (2)'
     Type:            SHT_PROGBITS
     AddressAlign:    0x8
-    Content:         FAD58DE7366495DB0900000018000000000000005CCB403140FE066601000001012F010502
+    CovFun:
+      - FuncName:        main
+        Signature:       0x18
+        FilenamesRef:    0x6606FE403140CB5C
+        Filenames:
+          - '/tmp/branch-macros.cpp'
+        Expressions:     []
+        Records:
+          - { File: 0, dLoc: [ 47, 1, 5, 2 ], Ref: 0 }
   - Name:            __llvm_covmap
     Type:            SHT_PROGBITS
     AddressAlign:    0x8
-    Content:         000000001A0000000000000003000000011700162F746D702F6272616E63682D6D6163726F732E6370700000
+    CovMap:
+      - Version:         3
+        FnBlobHash:      0x6606FE403140CB5C
+        Filenames:
+          - '/tmp/branch-macros.cpp'
   - Name:            __llvm_prf_names
     Type:            SHT_PROGBITS
     AddressAlign:    0x1
-    Content:         19005F5A3466756E636969015F5A3566756E63326969016D61696E
+    PrfNames:
+      - Names:
+          - _Z4funcii
+          - _Z5func2ii
+          - main
   - Type:            SectionHeaderTable
     Sections:
       - Name:            .strtab

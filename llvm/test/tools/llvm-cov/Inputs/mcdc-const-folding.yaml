@@ -11,137 +11,579 @@ Sections:
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         AA19D25F7410F1EA300000000E06000000000000B975BFDE464C3C13010101050906010314020201010C000D280302000C0012300000010200000C000D050011001230090202000000110012
+    CovFun:
+      - FuncName:        _Z5case0b
+        Signature:       0x60E
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:
+          - [ { Ref: 1 }, { Ref: 2 } ]
+        Records:
+          - { File: 0, dLoc: [ 3, 20, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 18 ], Decision: { BIdx: 3, NCond: 2 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 1, 2, 0 ] } }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Branch: { True: { Ref: 2 }, False: { Sub: 0 }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (1)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         92691AC8D7253F8B300000000E06000000000000B975BFDE464C3C13010101010506010614020201010C000D280302000C0012300502010200000C000D050011001230000002000000110012
+    CovFun:
+      - FuncName:        _Z5case1b
+        Signature:       0x60E
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 1 } ]
+        Records:
+          - { File: 0, dLoc: [ 6, 20, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 18 ], Decision: { BIdx: 3, NCond: 2 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Branch: { True: { Ref: 1 }, False: { Sub: 0 }, MCDC: [ 1, 2, 0 ] } }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (2)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         9A7D6FA40D389A5B300000000E06000000000000B975BFDE464C3C13010101050906010914020201010C000D280302000C0012300000010200000C000D050011001230090202000000110012
+    CovFun:
+      - FuncName:        _Z5case2b
+        Signature:       0x60E
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:
+          - [ { Ref: 1 }, { Ref: 2 } ]
+        Records:
+          - { File: 0, dLoc: [ 9, 20, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 18 ], Decision: { BIdx: 3, NCond: 2 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 1, 2, 0 ] } }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Branch: { True: { Ref: 2 }, False: { Sub: 0 }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (3)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         3CC016E1B5A95933300000000E06000000000000B975BFDE464C3C13010101010506010C14020201010C000D280302000C0012300502010200000C000D050011001230000002000000110012
+    CovFun:
+      - FuncName:        _Z5case3b
+        Signature:       0x60E
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 1 } ]
+        Records:
+          - { File: 0, dLoc: [ 12, 20, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 18 ], Decision: { BIdx: 3, NCond: 2 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Branch: { True: { Ref: 1 }, False: { Sub: 0 }, MCDC: [ 1, 2, 0 ] } }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (4)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         98207F8F78271E50300000000F06000000000000B975BFDE464C3C13010101050906010F14020201010C000D280302000C0012300000010002000C000D050011001230020902000000110012
+    CovFun:
+      - FuncName:        _Z5case4b
+        Signature:       0x60F
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:
+          - [ { Ref: 1 }, { Ref: 2 } ]
+        Records:
+          - { File: 0, dLoc: [ 15, 20, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 18 ], Decision: { BIdx: 3, NCond: 2 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 1, 0, 2 ] } }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Branch: { True: { Sub: 0 }, False: { Ref: 2 }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (5)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         0969FC47730492F1300000000F06000000000000B975BFDE464C3C13010101010506011214020201010C000D280302000C0012300205010002000C000D050011001230000002000000110012
+    CovFun:
+      - FuncName:        _Z5case5b
+        Signature:       0x60F
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 1 } ]
+        Records:
+          - { File: 0, dLoc: [ 18, 20, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 18 ], Decision: { BIdx: 3, NCond: 2 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Branch: { True: { Sub: 0 }, False: { Ref: 1 }, MCDC: [ 1, 0, 2 ] } }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (6)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         0ECB0EF7963F6F79300000000F06000000000000B975BFDE464C3C13010101050906011514020201010C000D280302000C0012300000010002000C000D050011001230020902000000110012
+    CovFun:
+      - FuncName:        _Z5case6b
+        Signature:       0x60F
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:
+          - [ { Ref: 1 }, { Ref: 2 } ]
+        Records:
+          - { File: 0, dLoc: [ 21, 20, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 18 ], Decision: { BIdx: 3, NCond: 2 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 1, 0, 2 ] } }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Branch: { True: { Sub: 0 }, False: { Ref: 2 }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (7)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         123E012CB073B24A300000000F06000000000000B975BFDE464C3C13010101010506011814020201010C000D280302000C0012300205010002000C000D050011001230000002000000110012
+    CovFun:
+      - FuncName:        _Z5case7b
+        Signature:       0x60F
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 1 } ]
+        Records:
+          - { File: 0, dLoc: [ 24, 20, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 18 ], Decision: { BIdx: 3, NCond: 2 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Branch: { True: { Sub: 0 }, False: { Ref: 1 }, MCDC: [ 1, 0, 2 ] } }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (8)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         C2EA1D70E059B55D460000008E83010000000000B975BFDE464C3C130101020D11050909011C1C020201010C000D01000C0012280403000C0017300000010300000C000D0D0011001230110203020000110012050016001730090602000000160017
+    CovFun:
+      - FuncName:        _Z5case8bb
+        Signature:       0x1838E
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:
+          - [ { Ref: 3 }, { Ref: 4 } ]
+          - [ { Ref: 1 }, { Ref: 2 } ]
+        Records:
+          - { File: 0, dLoc: [ 28, 28, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 18 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 23 ], Decision: { BIdx: 4, NCond: 3 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 1, 3, 0 ] } }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Ref: 3 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Branch: { True: { Ref: 4 }, False: { Sub: 0 }, MCDC: [ 3, 2, 0 ] } }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Branch: { True: { Ref: 2 }, False: { Sub: 1 }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (9)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         24244E16CFFB9F53460000008E83010000000000B975BFDE464C3C13010102010D050909011F1C020201010C000D01000C0012280403000C0017300D02010300000C000D0D0011001230000003020000110012050016001730090602000000160017
+    CovFun:
+      - FuncName:        _Z5case9bb
+        Signature:       0x1838E
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 3 } ]
+          - [ { Ref: 1 }, { Ref: 2 } ]
+        Records:
+          - { File: 0, dLoc: [ 31, 28, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 18 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 23 ], Decision: { BIdx: 4, NCond: 3 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Branch: { True: { Ref: 3 }, False: { Sub: 0 }, MCDC: [ 1, 3, 0 ] } }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Ref: 3 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 3, 2, 0 ] } }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Branch: { True: { Ref: 2 }, False: { Sub: 1 }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (10)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         CC9CCD1D2ED1627D460000008E83010000000000B975BFDE464C3C130101020D1105090901221C020201010C000D01000C0012280403000C0017300000010300000C000D0D0011001230110203020000110012050016001730090602000000160017
+    CovFun:
+      - FuncName:        _Z5caseabb
+        Signature:       0x1838E
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:
+          - [ { Ref: 3 }, { Ref: 4 } ]
+          - [ { Ref: 1 }, { Ref: 2 } ]
+        Records:
+          - { File: 0, dLoc: [ 34, 28, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 18 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 23 ], Decision: { BIdx: 4, NCond: 3 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 1, 3, 0 ] } }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Ref: 3 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Branch: { True: { Ref: 4 }, False: { Sub: 0 }, MCDC: [ 3, 2, 0 ] } }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Branch: { True: { Ref: 2 }, False: { Sub: 1 }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (11)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         69198FBDA5C488EE460000008E83010000000000B975BFDE464C3C13010102010D05090901251C020201010C000D01000C0012280403000C0017300D02010300000C000D0D0011001230000003020000110012050016001730090602000000160017
+    CovFun:
+      - FuncName:        _Z5casebbb
+        Signature:       0x1838E
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 3 } ]
+          - [ { Ref: 1 }, { Ref: 2 } ]
+        Records:
+          - { File: 0, dLoc: [ 37, 28, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 18 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 23 ], Decision: { BIdx: 4, NCond: 3 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Branch: { True: { Ref: 3 }, False: { Sub: 0 }, MCDC: [ 1, 3, 0 ] } }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Ref: 3 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 3, 2, 0 ] } }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Branch: { True: { Ref: 2 }, False: { Sub: 1 }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (12)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         A753680B241373ED46000000CF83010000000000B975BFDE464C3C130101020D1105090901281C020201010C000D01000C0012280403000C0017300000010003000C000D0D0011001230021103000200110012050016001730060902000000160017
+    CovFun:
+      - FuncName:        _Z5casecbb
+        Signature:       0x183CF
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:
+          - [ { Ref: 3 }, { Ref: 4 } ]
+          - [ { Ref: 1 }, { Ref: 2 } ]
+        Records:
+          - { File: 0, dLoc: [ 40, 28, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 18 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 23 ], Decision: { BIdx: 4, NCond: 3 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 1, 0, 3 ] } }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Ref: 3 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Branch: { True: { Sub: 0 }, False: { Ref: 4 }, MCDC: [ 3, 0, 2 ] } }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Branch: { True: { Sub: 1 }, False: { Ref: 2 }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (13)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         54BD46601EA033AC46000000CF83010000000000B975BFDE464C3C13010102010D050909012B1C020201010C000D01000C0012280403000C001730020D010003000C000D0D0011001230000003000200110012050016001730060902000000160017
+    CovFun:
+      - FuncName:        _Z5casedbb
+        Signature:       0x183CF
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 3 } ]
+          - [ { Ref: 1 }, { Ref: 2 } ]
+        Records:
+          - { File: 0, dLoc: [ 43, 28, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 18 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 23 ], Decision: { BIdx: 4, NCond: 3 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Branch: { True: { Sub: 0 }, False: { Ref: 3 }, MCDC: [ 1, 0, 3 ] } }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Ref: 3 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 3, 0, 2 ] } }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Branch: { True: { Sub: 1 }, False: { Ref: 2 }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (14)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         39953E03B6ADA13B46000000CF83010000000000B975BFDE464C3C130101020D11050909012E1C020201010C000D01000C0012280403000C0017300000010003000C000D0D0011001230021103000200110012050016001730060902000000160017
+    CovFun:
+      - FuncName:        _Z5caseebb
+        Signature:       0x183CF
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:
+          - [ { Ref: 3 }, { Ref: 4 } ]
+          - [ { Ref: 1 }, { Ref: 2 } ]
+        Records:
+          - { File: 0, dLoc: [ 46, 28, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 18 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 23 ], Decision: { BIdx: 4, NCond: 3 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 1, 0, 3 ] } }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Ref: 3 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Branch: { True: { Sub: 0 }, False: { Ref: 4 }, MCDC: [ 3, 0, 2 ] } }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Branch: { True: { Sub: 1 }, False: { Ref: 2 }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (15)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         9BCFA8D8AA6B9E2046000000CF83010000000000B975BFDE464C3C13010102010D05090901311C020201010C000D01000C0012280403000C001730020D010003000C000D0D0011001230000003000200110012050016001730060902000000160017
+    CovFun:
+      - FuncName:        _Z5casefbb
+        Signature:       0x183CF
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 3 } ]
+          - [ { Ref: 1 }, { Ref: 2 } ]
+        Records:
+          - { File: 0, dLoc: [ 49, 28, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 18 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 23 ], Decision: { BIdx: 4, NCond: 3 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Branch: { True: { Sub: 0 }, False: { Ref: 3 }, MCDC: [ 1, 0, 3 ] } }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Ref: 3 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 3, 0, 2 ] } }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Branch: { True: { Sub: 1 }, False: { Ref: 2 }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (16)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         4F2882F8142D1DD9460000008E83010000000000B975BFDE464C3C13010102010D0D110901351C020201010C000D01000C0012280403000C0017300D02010300000C000D0D0011001230110603020000110012050016001730000002000000160017
+    CovFun:
+      - FuncName:        _Z5casegbb
+        Signature:       0x1838E
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 3 } ]
+          - [ { Ref: 3 }, { Ref: 4 } ]
+        Records:
+          - { File: 0, dLoc: [ 53, 28, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 18 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 23 ], Decision: { BIdx: 4, NCond: 3 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Branch: { True: { Ref: 3 }, False: { Sub: 0 }, MCDC: [ 1, 3, 0 ] } }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Ref: 3 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Branch: { True: { Ref: 4 }, False: { Sub: 1 }, MCDC: [ 3, 2, 0 ] } }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (17)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         98DB88AFB7497C76460000008E83010000000000B975BFDE464C3C13010102010D05090901381C020201010C000D01000C0012280403000C0017300D02010300000C000D0D0011001230000003020000110012050016001730090602000000160017
+    CovFun:
+      - FuncName:        _Z5casehbb
+        Signature:       0x1838E
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 3 } ]
+          - [ { Ref: 1 }, { Ref: 2 } ]
+        Records:
+          - { File: 0, dLoc: [ 56, 28, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 18 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 23 ], Decision: { BIdx: 4, NCond: 3 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Branch: { True: { Ref: 3 }, False: { Sub: 0 }, MCDC: [ 1, 3, 0 ] } }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Ref: 3 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 3, 2, 0 ] } }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Branch: { True: { Ref: 2 }, False: { Sub: 1 }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (18)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         596357935D55EEBA460000008E83010000000000B975BFDE464C3C13010102010D0D1109013B1C020201010C000D01000C0012280403000C0017300D02010300000C000D0D0011001230110603020000110012050016001730000002000000160017
+    CovFun:
+      - FuncName:        _Z5caseibb
+        Signature:       0x1838E
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 3 } ]
+          - [ { Ref: 3 }, { Ref: 4 } ]
+        Records:
+          - { File: 0, dLoc: [ 59, 28, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 18 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 23 ], Decision: { BIdx: 4, NCond: 3 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Branch: { True: { Ref: 3 }, False: { Sub: 0 }, MCDC: [ 1, 3, 0 ] } }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Ref: 3 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Branch: { True: { Ref: 4 }, False: { Sub: 1 }, MCDC: [ 3, 2, 0 ] } }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (19)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         3237FBD998D0D824460000008E83010000000000B975BFDE464C3C13010102010D050909013E1C020201010C000D01000C0012280403000C0017300D02010300000C000D0D0011001230000003020000110012050016001730090602000000160017
+    CovFun:
+      - FuncName:        _Z5casejbb
+        Signature:       0x1838E
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 3 } ]
+          - [ { Ref: 1 }, { Ref: 2 } ]
+        Records:
+          - { File: 0, dLoc: [ 62, 28, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 18 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 23 ], Decision: { BIdx: 4, NCond: 3 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Branch: { True: { Ref: 3 }, False: { Sub: 0 }, MCDC: [ 1, 3, 0 ] } }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Ref: 3 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 3, 2, 0 ] } }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Branch: { True: { Ref: 2 }, False: { Sub: 1 }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (20)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         D656F1340A0C4ED846000000CF83010000000000B975BFDE464C3C13010102010D0D110901411C020201010C000D01000C0012280403000C001730020D010003000C000D0D0011001230061103000200110012050016001730000002000000160017
+    CovFun:
+      - FuncName:        _Z5casekbb
+        Signature:       0x183CF
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 3 } ]
+          - [ { Ref: 3 }, { Ref: 4 } ]
+        Records:
+          - { File: 0, dLoc: [ 65, 28, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 18 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 23 ], Decision: { BIdx: 4, NCond: 3 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Branch: { True: { Sub: 0 }, False: { Ref: 3 }, MCDC: [ 1, 0, 3 ] } }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Ref: 3 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Branch: { True: { Sub: 1 }, False: { Ref: 4 }, MCDC: [ 3, 0, 2 ] } }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (21)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         5E66CCF22EE6A4AC46000000CF83010000000000B975BFDE464C3C13010102010D05090901441C020201010C000D01000C0012280403000C001730020D010003000C000D0D0011001230000003000200110012050016001730060902000000160017
+    CovFun:
+      - FuncName:        _Z5caselbb
+        Signature:       0x183CF
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 3 } ]
+          - [ { Ref: 1 }, { Ref: 2 } ]
+        Records:
+          - { File: 0, dLoc: [ 68, 28, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 18 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 23 ], Decision: { BIdx: 4, NCond: 3 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Branch: { True: { Sub: 0 }, False: { Ref: 3 }, MCDC: [ 1, 0, 3 ] } }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Ref: 3 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 3, 0, 2 ] } }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Branch: { True: { Sub: 1 }, False: { Ref: 2 }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (22)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         7C4DEA109976A2E846000000CF83010000000000B975BFDE464C3C13010102010D0D110901471C020201010C000D01000C0012280403000C001730020D010003000C000D0D0011001230061103000200110012050016001730000002000000160017
+    CovFun:
+      - FuncName:        _Z5casembb
+        Signature:       0x183CF
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 3 } ]
+          - [ { Ref: 3 }, { Ref: 4 } ]
+        Records:
+          - { File: 0, dLoc: [ 71, 28, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 18 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 23 ], Decision: { BIdx: 4, NCond: 3 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Branch: { True: { Sub: 0 }, False: { Ref: 3 }, MCDC: [ 1, 0, 3 ] } }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Ref: 3 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Branch: { True: { Sub: 1 }, False: { Ref: 4 }, MCDC: [ 3, 0, 2 ] } }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (23)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         E25997DF8D6D856B46000000CF83010000000000B975BFDE464C3C13010102010D050909014A1C020201010C000D01000C0012280403000C001730020D010003000C000D0D0011001230000003000200110012050016001730060902000000160017
+    CovFun:
+      - FuncName:        _Z5casenbb
+        Signature:       0x183CF
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 3 } ]
+          - [ { Ref: 1 }, { Ref: 2 } ]
+        Records:
+          - { File: 0, dLoc: [ 74, 28, 2, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 12, 0, 13 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 18 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 12, 0, 23 ], Decision: { BIdx: 4, NCond: 3 } }
+          - { File: 0, dLoc: [ 0, 12, 0, 13 ], Branch: { True: { Sub: 0 }, False: { Ref: 3 }, MCDC: [ 1, 0, 3 ] } }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Ref: 3 }
+          - { File: 0, dLoc: [ 0, 17, 0, 18 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 3, 0, 2 ] } }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 22, 0, 23 ], Branch: { True: { Sub: 1 }, False: { Ref: 2 }, MCDC: [ 2, 0, 0 ] } }
   - Name:            '__llvm_covfun (24)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         FAD58DE7366495DB1D0000001800000000000000B975BFDE464C3C1301010005014F0121021004010001100901000110090100011009010001
+    CovFun:
+      - FuncName:        main
+        Signature:       0x18
+        FilenamesRef:    0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
+        Expressions:     []
+        Records:
+          - { File: 0, dLoc: [ 79, 1, 33, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 4, 1, 0, 1 ], Skip: {  } }
+          - { File: 0, dLoc: [ 9, 1, 0, 1 ], Skip: {  } }
+          - { File: 0, dLoc: [ 9, 1, 0, 1 ], Skip: {  } }
+          - { File: 0, dLoc: [ 9, 1, 0, 1 ], Skip: {  } }
   - Name:            __llvm_covmap
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         000000001B000000000000000600000002180000166D6364632D636F6E73742D666F6C64696E672E63707000
+    CovMap:
+      - Version:         6
+        FnBlobHash:      0x133C4C46DEBF75B9
+        Filenames:
+          - mcdc-const-folding.cpp
   - Name:            __llvm_prf_names
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_GNU_RETAIN ]
     AddressAlign:    0x1
-    Content:         8402005F5A35636173653062015F5A35636173653162015F5A35636173653262015F5A35636173653362015F5A35636173653462015F5A35636173653562015F5A35636173653662015F5A35636173653762015F5A3563617365386262015F5A3563617365396262015F5A3563617365616262015F5A3563617365626262015F5A3563617365636262015F5A3563617365646262015F5A3563617365656262015F5A3563617365666262015F5A3563617365676262015F5A3563617365686262015F5A3563617365696262015F5A35636173656A6262015F5A35636173656B6262015F5A35636173656C6262015F5A35636173656D6262015F5A35636173656E6262016D61696E
+    PrfNames:
+      - Names:
+          - _Z5case0b
+          - _Z5case1b
+          - _Z5case2b
+          - _Z5case3b
+          - _Z5case4b
+          - _Z5case5b
+          - _Z5case6b
+          - _Z5case7b
+          - _Z5case8bb
+          - _Z5case9bb
+          - _Z5caseabb
+          - _Z5casebbb
+          - _Z5casecbb
+          - _Z5casedbb
+          - _Z5caseebb
+          - _Z5casefbb
+          - _Z5casegbb
+          - _Z5casehbb
+          - _Z5caseibb
+          - _Z5casejbb
+          - _Z5casekbb
+          - _Z5caselbb
+          - _Z5casembb
+          - _Z5casenbb
+          - main
   - Type:            SectionHeaderTable
     Sections:
       - Name:            .strtab

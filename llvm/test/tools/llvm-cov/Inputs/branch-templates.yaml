@@ -10,27 +10,113 @@ Sections:
   - Name:            '__llvm_covfun (3)'
     Type:            SHT_PROGBITS
     AddressAlign:    0x8
-    Content:         FAD58DE7366495DB5D00000058242991A4449202DDC07F26680C05B801000301050109010D0D011D0C0902010107001320050200070013050014018580808008050105001601010700172009060007001709001801858080800809010500160101070017200D0A000700170D00180185808080080D01050016
+    CovFun:
+      - FuncName:        main
+        Signature:       0x29244A491292458
+        FilenamesRef:    0xB8050C68267FC0DD
+        Filenames:
+          - '/tmp/branch-templates.cpp'
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 1 } ]
+          - [ { Ref: 0 }, { Ref: 2 } ]
+          - [ { Ref: 0 }, { Ref: 3 } ]
+        Records:
+          - { File: 0, dLoc: [ 29, 12, 9, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 7, 0, 19 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 7, 0, 19 ], Branch: { True: { Ref: 1 }, False: { Sub: 0 } } }
+          - { File: 0, dLoc: [ 0, 20, 1, 5 ], isGap: true, Ref: 1 }
+          - { File: 0, dLoc: [ 1, 5, 0, 22 ], Ref: 1 }
+          - { File: 0, dLoc: [ 1, 7, 0, 23 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 7, 0, 23 ], Branch: { True: { Ref: 2 }, False: { Sub: 1 } } }
+          - { File: 0, dLoc: [ 0, 24, 1, 5 ], isGap: true, Ref: 2 }
+          - { File: 0, dLoc: [ 1, 5, 0, 22 ], Ref: 2 }
+          - { File: 0, dLoc: [ 1, 7, 0, 23 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 7, 0, 23 ], Branch: { True: { Ref: 3 }, False: { Sub: 2 } } }
+          - { File: 0, dLoc: [ 0, 24, 1, 5 ], isGap: true, Ref: 3 }
+          - { File: 0, dLoc: [ 1, 5, 0, 22 ], Ref: 3 }
   - Name:            '__llvm_covfun (1)'
     Type:            SHT_PROGBITS
     AddressAlign:    0x8
-    Content:         5427717259E0E43E4A0000001136619202000000DDC07F26680C05B801000101050A010D0F0602010106000720050200060007050008018580808008050105000D02000D008E8080800802000E028580808008020205000D00000D0183808080080001030102
+    CovFun:
+      - FuncName:        _Z4funcIiEiT_
+        Signature:       0x292613611
+        FilenamesRef:    0xB8050C68267FC0DD
+        Filenames:
+          - '/tmp/branch-templates.cpp'
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 1 } ]
+        Records:
+          - { File: 0, dLoc: [ 13, 15, 6, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 6, 0, 7 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 6, 0, 7 ], Branch: { True: { Ref: 1 }, False: { Sub: 0 } } }
+          - { File: 0, dLoc: [ 0, 8, 1, 5 ], isGap: true, Ref: 1 }
+          - { File: 0, dLoc: [ 1, 5, 0, 13 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 13, 0, 14 ], isGap: true, Sub: 0 }
+          - { File: 0, dLoc: [ 0, 14, 2, 5 ], isGap: true, Sub: 0 }
+          - { File: 0, dLoc: [ 2, 5, 0, 13 ], Sub: 0 }
+          - { File: 0, dLoc: [ 0, 13, 1, 3 ], isGap: true, Zero: {  } }
+          - { File: 0, dLoc: [ 1, 3, 1, 2 ], Zero: {  } }
   - Name:            '__llvm_covfun (2)'
     Type:            SHT_PROGBITS
     AddressAlign:    0x8
-    Content:         4B7E22082F0551AA4A0000001136619202000000DDC07F26680C05B801000101050A010D0F0602010106000720050200060007050008018580808008050105000D02000D008E8080800802000E028580808008020205000D00000D0183808080080001030102
+    CovFun:
+      - FuncName:        _Z4funcIbEiT_
+        Signature:       0x292613611
+        FilenamesRef:    0xB8050C68267FC0DD
+        Filenames:
+          - '/tmp/branch-templates.cpp'
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 1 } ]
+        Records:
+          - { File: 0, dLoc: [ 13, 15, 6, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 6, 0, 7 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 6, 0, 7 ], Branch: { True: { Ref: 1 }, False: { Sub: 0 } } }
+          - { File: 0, dLoc: [ 0, 8, 1, 5 ], isGap: true, Ref: 1 }
+          - { File: 0, dLoc: [ 1, 5, 0, 13 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 13, 0, 14 ], isGap: true, Sub: 0 }
+          - { File: 0, dLoc: [ 0, 14, 2, 5 ], isGap: true, Sub: 0 }
+          - { File: 0, dLoc: [ 2, 5, 0, 13 ], Sub: 0 }
+          - { File: 0, dLoc: [ 0, 13, 1, 3 ], isGap: true, Zero: {  } }
+          - { File: 0, dLoc: [ 1, 3, 1, 2 ], Zero: {  } }
   - Name:            __llvm_covfun
     Type:            SHT_PROGBITS
     AddressAlign:    0x8
-    Content:         AC1440BC3DA3E41A4A0000001136619202000000DDC07F26680C05B801000101050A010D0F0602010106000720050200060007050008018580808008050105000D02000D008E8080800802000E028580808008020205000D00000D0183808080080001030102
+    CovFun:
+      - FuncName:        _Z4funcIfEiT_
+        Signature:       0x292613611
+        FilenamesRef:    0xB8050C68267FC0DD
+        Filenames:
+          - '/tmp/branch-templates.cpp'
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 1 } ]
+        Records:
+          - { File: 0, dLoc: [ 13, 15, 6, 2 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 6, 0, 7 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 6, 0, 7 ], Branch: { True: { Ref: 1 }, False: { Sub: 0 } } }
+          - { File: 0, dLoc: [ 0, 8, 1, 5 ], isGap: true, Ref: 1 }
+          - { File: 0, dLoc: [ 1, 5, 0, 13 ], Ref: 1 }
+          - { File: 0, dLoc: [ 0, 13, 0, 14 ], isGap: true, Sub: 0 }
+          - { File: 0, dLoc: [ 0, 14, 2, 5 ], isGap: true, Sub: 0 }
+          - { File: 0, dLoc: [ 2, 5, 0, 13 ], Sub: 0 }
+          - { File: 0, dLoc: [ 0, 13, 1, 3 ], isGap: true, Zero: {  } }
+          - { File: 0, dLoc: [ 1, 3, 1, 2 ], Zero: {  } }
   - Name:            __llvm_covmap
     Type:            SHT_PROGBITS
     AddressAlign:    0x8
-    Content:         000000001D0000000000000003000000011A00192F746D702F6272616E63682D74656D706C617465732E637070000000
+    CovMap:
+      - Version:         3
+        FnBlobHash:      0xB8050C68267FC0DD
+        Filenames:
+          - '/tmp/branch-templates.cpp'
   - Name:            __llvm_prf_names
     Type:            SHT_PROGBITS
     AddressAlign:    0x1
-    Content:         2E006D61696E015F5A3466756E6349694569545F015F5A3466756E6349624569545F015F5A3466756E6349664569545F
+    PrfNames:
+      - Names:
+          - main
+          - _Z4funcIiEiT_
+          - _Z4funcIbEiT_
+          - _Z4funcIfEiT_
   - Type:            SectionHeaderTable
     Sections:
       - Name:            .strtab
