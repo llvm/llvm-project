@@ -1214,8 +1214,12 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
       assert(shouldLifetimeExtendThroughPath(Path) ==
                  PathLifetimeKind::NoExtend &&
              "No lifetime extension in function calls");
-      SemaRef.Diag(DiagLoc, diag::warn_dangling_reference_captured)
-          << CapEntity->Entity << DiagRange;
+      if (CapEntity->Entity != nullptr)
+        SemaRef.Diag(DiagLoc, diag::warn_dangling_reference_captured)
+            << true << CapEntity->Entity << DiagRange;
+      else
+        SemaRef.Diag(DiagLoc, diag::warn_dangling_reference_captured)
+            << false << "<ignore>" << DiagRange;
       return false;
     }
 

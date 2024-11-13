@@ -16,6 +16,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/AttrIterator.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -3233,7 +3234,10 @@ void Sema::CheckArgAlignment(SourceLocation Loc, NamedDecl *FDecl,
 void Sema::checkLifetimeCaptureBy(FunctionDecl *FD, bool IsMemberFunction,
                                   const Expr *ThisArg,
                                   ArrayRef<const Expr *> Args) {
-  auto GetArgAt = [&](int Idx) {
+  auto GetArgAt = [&](int Idx) -> Expr * {
+    if (Idx == LifetimeCaptureByAttr::GLOBAL ||
+        Idx == LifetimeCaptureByAttr::UNKNOWN)
+      return nullptr;
     if (IsMemberFunction && Idx == 0)
       return const_cast<Expr *>(ThisArg);
     return const_cast<Expr *>(Args[Idx - int(IsMemberFunction)]);

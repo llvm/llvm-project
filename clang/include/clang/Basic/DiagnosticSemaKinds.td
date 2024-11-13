@@ -10231,7 +10231,7 @@ def warn_dangling_pointer_assignment : Warning<
    "will be destroyed at the end of the full-expression">,
    InGroup<DanglingAssignment>;
 def warn_dangling_reference_captured : Warning<
-   "object captured by '%0' will be destroyed at the end of the full-expression">,
+   "object whose reference is captured%select{| by '%1'}0 will be destroyed at the end of the full-expression">,
    InGroup<DanglingCapture>;
 
 // For non-floating point, expressions of the form x == x or x != x

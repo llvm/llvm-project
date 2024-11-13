@@ -26,12 +26,14 @@ struct AssignedEntity {
 };
 
 struct CapturingEntity {
-  //  In an function call involving a lifetime capture, this would be the
-  //  argument capturing the lifetime of another argument.
+  // In an function call involving a lifetime capture, this would be the
+  // argument capturing the lifetime of another argument.
   //    void addToSet(std::string_view sv [[clang::lifetime_capture_by(setsv)]],
   //                  set<std::string_view>& setsv);
   //    set<std::string_view> setsv;
   //    addToSet(std::string(), setsv); // Here 'setsv' is the 'Entity'.
+  //
+  // This is 'nullptr' when the capturing entity is 'global' or 'unknown'.
   Expr *Entity = nullptr;
 };
 
