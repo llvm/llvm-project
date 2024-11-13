@@ -589,10 +589,12 @@ public:
 
     uint8_t Copyable =
         endian::readNext<uint8_t, llvm::endianness::little>(Data);
-    if (Copyable == kSwiftNonCopyable)
-      Info.setSwiftCopyable(std::optional(false));
-    else if (Copyable == kSwiftCopyable)
-      Info.setSwiftCopyable(std::optional(true));
+    if (Copyable == kSwiftConforms || Copyable == kSwiftDoesNotConform)
+      Info.setSwiftCopyable(std::optional(Copyable == kSwiftConforms));
+    uint8_t Escapable =
+        endian::readNext<uint8_t, llvm::endianness::little>(Data);
+    if (Escapable == kSwiftConforms || Escapable == kSwiftDoesNotConform)
+      Info.setSwiftEscapable(std::optional(Escapable == kSwiftConforms));
 
     unsigned ImportAsLength =
         endian::readNext<uint16_t, llvm::endianness::little>(Data);
