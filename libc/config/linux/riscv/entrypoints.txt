@@ -728,8 +728,8 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.kbits
     libc.src.stdfix.ukbits
     # TODO: https://github.com/llvm/llvm-project/issues/115778
-    # libc.src.stdfix.lkbits
-    # libc.src.stdfix.ulkbits
+    libc.src.stdfix.lkbits
+    libc.src.stdfix.ulkbits
   )
 endif()
 
