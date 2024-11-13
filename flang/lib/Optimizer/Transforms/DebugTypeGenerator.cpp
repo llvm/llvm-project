@@ -685,11 +685,6 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
                         llvmTypeConverter.getIndexTypeBitwidth(),
                         llvm::dwarf::DW_ATE_signed);
   } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(Ty)) {
-    if (mlir::isa<fir::ClassType>(Ty))
-      return convertPointerLikeType(boxTy.unwrapInnerType(), fileAttr, scope,
-                                    declOp, /*genAllocated=*/false,
-                                    /*genAssociated=*/true);
-
     auto elTy = boxTy.getEleTy();
     if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(elTy))
       return convertBoxedSequenceType(seqTy, fileAttr, scope, declOp, false,
@@ -702,7 +697,9 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
       return convertPointerLikeType(ptrTy.getElementType(), fileAttr, scope,
                                     declOp, /*genAllocated=*/false,
                                     /*genAssociated=*/true);
-    return genPlaceholderType(context);
+    return convertPointerLikeType(elTy, fileAttr, scope, declOp,
+                                  /*genAllocated=*/false,
+                                  /*genAssociated=*/false);
   } else {
     // FIXME: These types are currently unhandled. We are generating a
     // placeholder type to allow us to test supported bits.
