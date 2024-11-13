@@ -69,8 +69,7 @@ class LLVM_IntArithmeticOpWithOverflowFlag<string mnemonic, string instName,
     $res = op;
   }];
   let assemblyFormat = [{
-    $lhs `,` $rhs `` custom<OverflowFlags>($overflowFlags)
-    `` custom<LLVMOpAttrs>(attr-dict) `:` type($res)
+    $lhs `,` $rhs `` custom<OverflowFlags>($overflowFlags) attr-dict `:` type($res)
   }];
   string llvmBuilder =
     "$res = builder.Create" # instName #
@@ -88,7 +87,7 @@ class LLVM_IntArithmeticOpWithExactFlag<string mnemonic, string instName,
     $res = op;
   }];
   let assemblyFormat = [{
-    (`exact` $isExact^)? $lhs `,` $rhs custom<LLVMOpAttrs>(attr-dict) `:` type($res)
+    (`exact` $isExact^)? $lhs `,` $rhs attr-dict `:` type($res)
   }];
   string llvmBuilder =
     "$res = builder.Create" # instName #
