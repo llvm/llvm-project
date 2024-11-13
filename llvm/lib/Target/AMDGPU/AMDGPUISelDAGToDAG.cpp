@@ -22,6 +22,7 @@
 #include "SIISelLowering.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
