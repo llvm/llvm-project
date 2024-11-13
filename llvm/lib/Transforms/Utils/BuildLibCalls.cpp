@@ -581,8 +581,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setAllocFamily(F, "malloc");
     Changed |= setAllocKind(F, AllocFnKind::Realloc);
     Changed |= setAllocatedPointerParam(F, 0);
-    Changed |= setAllocSize(F, 1, std::nullopt);
-    Changed |= setAllocSize(F, 2, std::nullopt);
+    Changed |= setAllocSize(F, 1, 2);
     Changed |= setOnlyAccessesInaccessibleMemOrArgMem(F);
     Changed |= setRetNoUndef(F);
     Changed |= setDoesNotThrow(F);
