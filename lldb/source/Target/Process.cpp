@@ -6191,7 +6191,7 @@ Status Process::GetMemoryRegionInfo(lldb::addr_t load_addr,
       (range_info.GetRange().GetByteSize() == 0 ||
        range_info.GetRange().GetByteSize() == UINT64_MAX))
     error =
-        Status::FromErrorString("Invalid memory region from scripted process");
+        Status::FromErrorString("Invalid memory region");
 
   return error;
 }
