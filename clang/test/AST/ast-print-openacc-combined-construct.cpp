@@ -86,4 +86,14 @@ void foo() {
 #pragma acc kernels loop if(i == array[1])
   for(int i = 0;i<5;++i);
 
+// CHECK: #pragma acc parallel loop default(none)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc parallel loop default(none)
+  for(int i = 0;i<5;++i);
+// CHECK: #pragma acc serial loop default(present)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc serial loop default(present)
+  for(int i = 0;i<5;++i);
 }
