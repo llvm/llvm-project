@@ -21,10 +21,10 @@ Lead Maintainer
 clang-tidy
 ----------
 | Congcong Cai
-| congcongcai0907\@163.com (email), HerrCai0907 (GitHub), HerrCai0907 (Discourse)
+| congcongcai0907@163.com (email), HerrCai0907 (GitHub), HerrCai0907 (Discourse)
 
 | Julian Schmidt
-| git.julian.schmidt\@gmail.com (email), 5chmidti (GitHub), 5chmidti (Discourse), 5chmidti (Discord)
+| git.julian.schmidt@gmail.com (email), 5chmidti (GitHub), 5chmidti (Discourse), 5chmidti (Discord)
 
 
 clang-query
