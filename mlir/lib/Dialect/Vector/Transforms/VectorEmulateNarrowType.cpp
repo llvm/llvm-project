@@ -52,7 +52,9 @@ using namespace mlir;
 ///
 ///   %mask = [1, 1, 0, 0, 0, 0]
 ///
-/// will first be padded with number of `intraDataOffset` zeros:
+/// will first be padded in the front with number of `intraDataOffset` zeros,
+/// and pad zeros in the back to make the number of elements a multiple of
+/// `scale` (just to make it easier to compute). The new mask will be:
 ///   %mask = [0, 1, 1, 0, 0, 0, 0, 0]
 ///
 /// then it will return the following new compressed mask:
@@ -62,7 +64,8 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
                                                   Location loc, Value mask,
                                                   int origElements, int scale,
                                                   int intraDataOffset = 0) {
-  auto numElements = (intraDataOffset + origElements + scale - 1) / scale;
+  assert(intraDataOffset < scale && "intraDataOffset must be less than scale");
+  auto numElements = llvm::divideCeil(intraDataOffset + origElements, scale);
 
   Operation *maskOp = mask.getDefiningOp();
   SmallVector<vector::ExtractOp, 2> extractOps;
@@ -190,6 +193,26 @@ static Value dynamicallyExtractSubVector(OpBuilder &rewriter, Location loc,
     auto extractOp =
         rewriter.create<vector::ExtractOp>(loc, source, extractLoc);
     dest = rewriter.create<vector::InsertOp>(loc, extractOp, dest, i);
+  }
+  return dest;
+}
+
+/// Inserts a 1-D subvector into a 1-D `dest` vector at index `destOffsetVar`.
+static Value dynamicallyInsertSubVector(RewriterBase &rewriter, Location loc,
+                                        TypedValue<VectorType> source,
+                                        Value dest, OpFoldResult destOffsetVar,
+                                        size_t length) {
+  assert(length > 0 && "length must be greater than 0");
+  Value destOffsetVal =
+      getValueOrCreateConstantIndexOp(rewriter, loc, destOffsetVar);
+  for (size_t i = 0; i < length; ++i) {
+    auto insertLoc = i == 0
+                         ? destOffsetVal
+                         : rewriter.create<arith::AddIOp>(
+                               loc, rewriter.getIndexType(), destOffsetVal,
+                               rewriter.create<arith::ConstantIndexOp>(loc, i));
+    auto extractOp = rewriter.create<vector::ExtractOp>(loc, source, i);
+    dest = rewriter.create<vector::InsertOp>(loc, extractOp, dest, insertLoc);
   }
   return dest;
 }
@@ -466,18 +489,16 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
         emulatedVectorLoad(rewriter, loc, adaptor.getBase(), linearizedIndices,
                            numElements, oldElementType, newElementType);
 
-    if (foldedIntraVectorOffset) {
-      if (isUnalignedEmulation) {
-        result =
-            staticallyExtractSubvector(rewriter, loc, op.getType(), result,
-                                       *foldedIntraVectorOffset, origElements);
-      }
-    } else {
+    if (!foldedIntraVectorOffset) {
       auto resultVector = rewriter.create<arith::ConstantOp>(
           loc, op.getType(), rewriter.getZeroAttr(op.getType()));
       result = dynamicallyExtractSubVector(
           rewriter, loc, dyn_cast<TypedValue<VectorType>>(result), resultVector,
           linearizedInfo.intraDataOffset, origElements);
+    } else if (isUnalignedEmulation) {
+      result =
+          staticallyExtractSubvector(rewriter, loc, op.getType(), result,
+                                     *foldedIntraVectorOffset, origElements);
     }
     rewriter.replaceOp(op, result);
     return success();
@@ -572,27 +593,26 @@ struct ConvertVectorMaskedLoad final
             ? getConstantIntValue(linearizedInfo.intraDataOffset)
             : 0;
 
-    if (!foldedIntraVectorOffset) {
-      // unimplemented case for dynamic intra vector offset
-      return failure();
-    }
-
-    FailureOr<Operation *> newMask =
-        getCompressedMaskOp(rewriter, loc, op.getMask(), origElements, scale,
-                            *foldedIntraVectorOffset);
+    int64_t maxIntraDataOffset = foldedIntraVectorOffset.value_or(scale - 1);
+    FailureOr<Operation *> newMask = getCompressedMaskOp(
+        rewriter, loc, op.getMask(), origElements, scale, maxIntraDataOffset);
     if (failed(newMask))
       return failure();
 
+    Value passthru = op.getPassThru();
+
     auto numElements =
-        llvm::divideCeil(*foldedIntraVectorOffset + origElements, scale);
+        llvm::divideCeil(maxIntraDataOffset + origElements, scale);
     auto loadType = VectorType::get(numElements, newElementType);
     auto newBitcastType = VectorType::get(numElements * scale, oldElementType);
 
-    Value passthru = op.getPassThru();
-    if (isUnalignedEmulation) {
-      // create an empty vector of the new type
-      auto emptyVector = rewriter.create<arith::ConstantOp>(
-          loc, newBitcastType, rewriter.getZeroAttr(newBitcastType));
+    auto emptyVector = rewriter.create<arith::ConstantOp>(
+        loc, newBitcastType, rewriter.getZeroAttr(newBitcastType));
+    if (!foldedIntraVectorOffset) {
+      passthru = dynamicallyInsertSubVector(
+          rewriter, loc, dyn_cast<TypedValue<VectorType>>(passthru),
+          emptyVector, linearizedInfo.intraDataOffset, origElements);
+    } else if (isUnalignedEmulation) {
       passthru = staticallyInsertSubvector(rewriter, loc, passthru, emptyVector,
                                            *foldedIntraVectorOffset);
     }
@@ -611,20 +631,27 @@ struct ConvertVectorMaskedLoad final
         rewriter.create<vector::BitCastOp>(loc, newBitcastType, newLoad);
 
     Value mask = op.getMask();
-    if (isUnalignedEmulation) {
-      auto newSelectMaskType =
-          VectorType::get(numElements * scale, rewriter.getI1Type());
-      // TODO: can fold if op's mask is constant
-      auto emptyVector = rewriter.create<arith::ConstantOp>(
-          loc, newSelectMaskType, rewriter.getZeroAttr(newSelectMaskType));
-      mask = staticallyInsertSubvector(rewriter, loc, op.getMask(), emptyVector,
+    auto newSelectMaskType =
+        VectorType::get(numElements * scale, rewriter.getI1Type());
+    // TODO: try to fold if op's mask is constant
+    auto emptyMask = rewriter.create<arith::ConstantOp>(
+        loc, newSelectMaskType, rewriter.getZeroAttr(newSelectMaskType));
+    if (!foldedIntraVectorOffset) {
+      mask = dynamicallyInsertSubVector(
+          rewriter, loc, dyn_cast<TypedValue<VectorType>>(mask), emptyMask,
+          linearizedInfo.intraDataOffset, origElements);
+    } else if (isUnalignedEmulation) {
+      mask = staticallyInsertSubvector(rewriter, loc, op.getMask(), emptyMask,
                                        *foldedIntraVectorOffset);
     }
 
     Value result =
         rewriter.create<arith::SelectOp>(loc, mask, bitCast, passthru);
-
-    if (isUnalignedEmulation) {
+    if (!foldedIntraVectorOffset) {
+      result = dynamicallyExtractSubVector(
+          rewriter, loc, dyn_cast<TypedValue<VectorType>>(result),
+          op.getPassThru(), linearizedInfo.intraDataOffset, origElements);
+    } else if (isUnalignedEmulation) {
       result =
           staticallyExtractSubvector(rewriter, loc, op.getType(), result,
                                      *foldedIntraVectorOffset, origElements);
@@ -685,10 +712,9 @@ struct ConvertVectorTransferRead final
             ? getConstantIntValue(linearizedInfo.intraDataOffset)
             : 0;
 
-    auto maxIntraVectorOffset =
-        foldedIntraVectorOffset ? *foldedIntraVectorOffset : scale - 1;
+    int64_t maxIntraDataOffset = foldedIntraVectorOffset.value_or(scale - 1);
     auto numElements =
-        llvm::divideCeil(maxIntraVectorOffset + origElements, scale);
+        llvm::divideCeil(maxIntraDataOffset + origElements, scale);
 
     auto newRead = rewriter.create<vector::TransferReadOp>(
         loc, VectorType::get(numElements, newElementType), adaptor.getSource(),
@@ -699,18 +725,16 @@ struct ConvertVectorTransferRead final
         loc, VectorType::get(numElements * scale, oldElementType), newRead);
 
     Value result = bitCast->getResult(0);
-    if (foldedIntraVectorOffset) {
-      if (isUnalignedEmulation) {
-        result =
-            staticallyExtractSubvector(rewriter, loc, op.getType(), result,
-                                       *foldedIntraVectorOffset, origElements);
-      }
-    } else {
+    if (!foldedIntraVectorOffset) {
       auto zeros = rewriter.create<arith::ConstantOp>(
           loc, op.getType(), rewriter.getZeroAttr(op.getType()));
       result = dynamicallyExtractSubVector(rewriter, loc, bitCast, zeros,
                                            linearizedInfo.intraDataOffset,
                                            origElements);
+    } else if (isUnalignedEmulation) {
+      result =
+          staticallyExtractSubvector(rewriter, loc, op.getType(), result,
+                                     *foldedIntraVectorOffset, origElements);
     }
     rewriter.replaceOp(op, result);
 
