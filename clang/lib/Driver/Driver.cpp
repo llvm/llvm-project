@@ -1315,6 +1315,9 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   // Ignore -pipe.
   Args.ClaimAllArgs(options::OPT_pipe);
 
+  // Ignore -time.
+  Args.ClaimAllArgs(options::OPT_time);
+
   // Extract -ccc args.
   //
   // FIXME: We need to figure out where this behavior should live. Most of it
