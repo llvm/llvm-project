@@ -6184,7 +6184,16 @@ Status Process::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                     MemoryRegionInfo &range_info) {
   if (const lldb::ABISP &abi = GetABI())
     load_addr = abi->FixAnyAddress(load_addr);
-  return DoGetMemoryRegionInfo(load_addr, range_info);
+  Status error = DoGetMemoryRegionInfo(load_addr, range_info);
+  // Reject a region of {0,0} or {0,UINT64_MAX}, neither are
+  // meaningful responses.
+  if (error.Success() && range_info.GetRange().GetRangeBase() == 0 &&
+      (range_info.GetRange().GetByteSize() == 0 ||
+       range_info.GetRange().GetByteSize() == UINT64_MAX))
+    error =
+        Status::FromErrorString("Invalid memory region from scripted process");
+
+  return error;
 }
 
 Status Process::GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list) {
