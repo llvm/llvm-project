@@ -254,32 +254,32 @@ const char *amdgpu::dlr::getLinkCommandArgs(
   // not the installed compiler.
   std::string LibDeviceName = "/libomptarget-amdgpu-" + GPUArch.str() + ".bc";
 
-  // Check if libomptarget device bitcode can be found in a LIBRARY_PATH dir
-  bool EnvOmpLibDeviceFound = false;
-  for (auto &EnvLibraryPath : EnvironmentLibraryPaths) {
-    std::string EnvOmpLibDevice = EnvLibraryPath + LibDeviceName;
-    if (llvm::sys::fs::exists(EnvOmpLibDevice)) {
-      EnvOmpLibDeviceFound = true;
-      BCLibs.push_back(EnvOmpLibDevice);
-      break;
+  if (!Args.hasArg(options::OPT_nogpulib)) {
+    // Check if libomptarget device bitcode can be found in a LIBRARY_PATH dir
+    bool EnvOmpLibDeviceFound = false;
+    for (auto &EnvLibraryPath : EnvironmentLibraryPaths) {
+      std::string EnvOmpLibDevice = EnvLibraryPath + LibDeviceName;
+      if (llvm::sys::fs::exists(EnvOmpLibDevice)) {
+        EnvOmpLibDeviceFound = true;
+        BCLibs.push_back(EnvOmpLibDevice);
+        break;
+      }
     }
-  }
 
-  // If not found in LIBRARY_PATH, use default for the correct LibSuffix.
-  if (!EnvOmpLibDeviceFound) {
-    StringRef bc_file_suf = Args.MakeArgString(C.getDriver().Dir + "/../" +
-                                               LibSuffix + LibDeviceName);
-    StringRef bc_file_lib =
-        Args.MakeArgString(C.getDriver().Dir + "/../lib" + LibDeviceName);
-    if (llvm::sys::fs::exists(bc_file_suf))
-      BCLibs.push_back(Args.MakeArgString(bc_file_suf));
-    else if (llvm::sys::fs::exists(bc_file_lib))
-      // In case a LibSuffix version not found, use suffix "lib"
-      BCLibs.push_back(Args.MakeArgString(bc_file_lib));
-  }
+    // If not found in LIBRARY_PATH, use default for the correct LibSuffix.
+    if (!EnvOmpLibDeviceFound) {
+      StringRef bc_file_suf = Args.MakeArgString(C.getDriver().Dir + "/../" +
+                                                 LibSuffix + LibDeviceName);
+      StringRef bc_file_lib =
+          Args.MakeArgString(C.getDriver().Dir + "/../lib" + LibDeviceName);
+      if (llvm::sys::fs::exists(bc_file_suf))
+        BCLibs.push_back(Args.MakeArgString(bc_file_suf));
+      else if (llvm::sys::fs::exists(bc_file_lib))
+        // In case a LibSuffix version not found, use suffix "lib"
+        BCLibs.push_back(Args.MakeArgString(bc_file_lib));
+    }
 
-  if (!AsanRTL.empty()) {
-    if (!Args.hasArg(options::OPT_nogpulib)) {
+    if (!AsanRTL.empty()) {
       // asanrtl is dependent on ockl so for every asanrtl bitcode linking
       // requires ockl but viceversa is not true.
       std::string OcklRTL(RocmInstallation.getOCKLPath());
@@ -288,12 +288,12 @@ const char *amdgpu::dlr::getLinkCommandArgs(
       else
         BCLibs.push_back(OcklRTL);
     }
-  }
 
-  // Add the generic set of libraries, OpenMP subset only
-  BCLibs.append(amdgpu::dlr::getCommonDeviceLibNames(
-      C.getArgs(), C.getDriver(), GPUArch.str(), /* isOpenMP=*/true,
-      RocmInstallation));
+    // Add the generic set of libraries, OpenMP subset only
+    BCLibs.append(amdgpu::dlr::getCommonDeviceLibNames(
+        C.getArgs(), C.getDriver(), GPUArch.str(), /* isOpenMP=*/true,
+        RocmInstallation));
+  }
 
   llvm::for_each(BCLibs, [&](StringRef BCFile) {
     LastLinkArgs.push_back(Args.MakeArgString(BCFile));
