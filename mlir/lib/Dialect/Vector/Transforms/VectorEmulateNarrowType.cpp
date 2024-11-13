@@ -57,17 +57,18 @@ using namespace mlir;
 ///
 ///   %mask = [1, 1, 0, 0, 0, 0]
 ///
-/// will first be padded in the front with number of `numFrontPadElems` zeros,
-/// and pad zeros in the back to make the number of elements a multiple of
-/// `numSrcElemesPerDest` (just to make it easier to compute). The new mask will
-/// be:
+/// will first be padded in the front with `numFrontPadElems` zeros, and zeros
+/// will be added in the back to make the number of elements a multiple of
+/// `numSrcElemsPerDest` (for easier computation). The resulting mask will be:
+///
 ///   %mask = [0, 1, 1, 0, 0, 0, 0, 0]
 ///
 /// then it will return the following new compressed mask:
 ///
 ///   %mask = [1, 1, 0, 0]
 ///
-/// NOTE: `numFrontPadElems` must be strictly smaller than `numSrcElemsPerDest`.
+/// NOTE: `numFrontPadElems` is assumed to be strictly smaller than
+/// `numSrcElemsPerDest`.
 static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
                                                   Location loc, Value mask,
                                                   int numSrcElems,
