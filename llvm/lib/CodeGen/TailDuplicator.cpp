@@ -573,14 +573,6 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
   if (TailBB.isSuccessor(&TailBB))
     return false;
 
-  // Duplicating a BB which has both multiple predecessors and successors will
-  // result in a complex CFG and also may cause huge amount of PHI nodes. If we
-  // want to remove this limitation, we have to address
-  // https://github.com/llvm/llvm-project/issues/78578.
-  if (TailBB.pred_size() > TailDupPredSize &&
-      TailBB.succ_size() > TailDupSuccSize)
-    return false;
-
   // Set the limit on the cost to duplicate. When optimizing for size,
   // duplicate only one, because one branch instruction can be eliminated to
   // compensate for the duplication.
@@ -618,6 +610,7 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
   // Check the instructions in the block to determine whether tail-duplication
   // is invalid or unlikely to be profitable.
   unsigned InstrCount = 0;
+  unsigned NumPhis = 0;
   for (MachineInstr &MI : TailBB) {
     // Non-duplicable things shouldn't be tail-duplicated.
     // CFI instructions are marked as non-duplicable, because Darwin compact
@@ -660,6 +653,20 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
       InstrCount += 1;
 
     if (InstrCount > MaxDuplicateCount)
+      return false;
+    NumPhis += MI.isPHI();
+  }
+
+  // Duplicating a BB which has both multiple predecessors and successors will
+  // may cause huge amount of PHI nodes. If we want to remove this limitation,
+  // we have to address https://github.com/llvm/llvm-project/issues/78578.
+  if (TailBB.pred_size() > TailDupPredSize &&
+      TailBB.succ_size() > TailDupSuccSize) {
+    // If TailBB or any of its successors contains a phi, we may have to add a
+    // large number of additional phis with additional incoming values.
+    if (NumPhis != 0 || any_of(TailBB.successors(), [](MachineBasicBlock *MBB) {
+          return any_of(*MBB, [](MachineInstr &MI) { return MI.isPHI(); });
+        }))
       return false;
   }
 
