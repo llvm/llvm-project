@@ -1543,3 +1543,29 @@ namespace capture_pack {
   static_assert(v == 123);
 #endif
 }
+
+namespace std {
+  class type_info;
+}
+
+namespace p0588r1 {
+void doit() {
+  // behavior changes since P0588R1
+  const int x = 10;
+  auto L = [=](auto a) {
+    return [=](auto b) {
+      DEFINE_SELECTOR(a);
+      F_CALL(x, a);
+      return 0;
+    };
+  };
+
+  auto L0 = L('c');
+  ASSERT_CLOSURE_SIZE_EXACT(L0, sizeof(int));
+  auto L1 = L(1);
+  ASSERT_CLOSURE_SIZE_EXACT(L1, sizeof(int));
+
+  auto ltid = [=] { typeid(x); };
+  ASSERT_CLOSURE_SIZE_EXACT(ltid, sizeof(int));
+}
+}
