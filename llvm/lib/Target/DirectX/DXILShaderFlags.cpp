@@ -105,14 +105,6 @@ void ComputedShaderFlags::print(raw_ostream &OS) const {
   OS << ";\n";
 }
 
-/// Insert the pair <Func, FlagMask> into the sorted vector
-/// FunctionFlags. The insertion is expected to be in-order and hence
-/// is done at the end of the already sorted list.
-void DXILModuleShaderFlagsInfo::insertInorderFunctionFlags(
-    const Function *Func, ComputedShaderFlags FlagMask) {
-  FunctionFlags.push_back({Func, FlagMask});
-}
-
 const SmallVector<std::pair<Function const *, ComputedShaderFlags>> &
 DXILModuleShaderFlagsInfo::getFunctionFlags() const {
   return FunctionFlags;

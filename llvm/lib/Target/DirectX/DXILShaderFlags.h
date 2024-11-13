@@ -81,7 +81,6 @@ struct DXILModuleShaderFlagsInfo {
   const ComputedShaderFlags &getModuleFlags() const;
   const SmallVector<std::pair<Function const *, ComputedShaderFlags>> &
   getFunctionFlags() const;
-  void insertInorderFunctionFlags(const Function *, ComputedShaderFlags);
 
 private:
   // Shader Flag mask representing module-level properties. These are
