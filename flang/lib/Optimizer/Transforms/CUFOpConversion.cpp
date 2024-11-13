@@ -321,9 +321,15 @@ struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
             builder.createIntegerConstant(loc, builder.getIndexType(), width);
       } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(
                      op.getInType())) {
-        mlir::Value width = builder.createIntegerConstant(
-            loc, builder.getIndexType(),
-            computeWidth(loc, seqTy.getEleTy(), kindMap));
+        std::size_t size = 0;
+        if (fir::isa_derived(seqTy.getEleTy())) {
+          mlir::Type structTy = typeConverter->convertType(seqTy.getEleTy());
+          size = dl->getTypeSizeInBits(structTy) / 8;
+        } else {
+          size = computeWidth(loc, seqTy.getEleTy(), kindMap);
+        }
+        mlir::Value width =
+            builder.createIntegerConstant(loc, builder.getIndexType(), size);
         mlir::Value nbElem;
         if (fir::sequenceWithNonConstantShape(seqTy)) {
           assert(!op.getShape().empty() && "expect shape with dynamic arrays");
@@ -564,13 +570,21 @@ struct CUFDataTransferOpConversion
       mlir::Type i64Ty = builder.getI64Type();
       mlir::Value nbElement;
       if (op.getShape()) {
-        auto shapeOp =
-            mlir::dyn_cast<fir::ShapeOp>(op.getShape().getDefiningOp());
-        nbElement = rewriter.create<fir::ConvertOp>(loc, i64Ty,
-                                                    shapeOp.getExtents()[0]);
-        for (unsigned i = 1; i < shapeOp.getExtents().size(); ++i) {
-          auto operand = rewriter.create<fir::ConvertOp>(
-              loc, i64Ty, shapeOp.getExtents()[i]);
+        llvm::SmallVector<mlir::Value> extents;
+        if (auto shapeOp =
+                mlir::dyn_cast<fir::ShapeOp>(op.getShape().getDefiningOp())) {
+          extents = shapeOp.getExtents();
+        } else if (auto shapeShiftOp = mlir::dyn_cast<fir::ShapeShiftOp>(
+                       op.getShape().getDefiningOp())) {
+          for (auto i : llvm::enumerate(shapeShiftOp.getPairs()))
+            if (i.index() & 1)
+              extents.push_back(i.value());
+        }
+
+        nbElement = rewriter.create<fir::ConvertOp>(loc, i64Ty, extents[0]);
+        for (unsigned i = 1; i < extents.size(); ++i) {
+          auto operand =
+              rewriter.create<fir::ConvertOp>(loc, i64Ty, extents[i]);
           nbElement =
               rewriter.create<mlir::arith::MulIOp>(loc, nbElement, operand);
         }
@@ -580,8 +594,9 @@ struct CUFDataTransferOpConversion
               loc, i64Ty, seqTy.getConstantArraySize());
       }
       unsigned width = 0;
-      if (fir::isa_derived(dstTy)) {
-        mlir::Type structTy = typeConverter->convertType(dstTy);
+      if (fir::isa_derived(fir::unwrapSequenceType(dstTy))) {
+        mlir::Type structTy =
+            typeConverter->convertType(fir::unwrapSequenceType(dstTy));
         width = dl->getTypeSizeInBits(structTy) / 8;
       } else {
         width = computeWidth(loc, dstTy, kindMap);

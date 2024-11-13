@@ -686,6 +686,16 @@ llvm.func @invariant(%p: !llvm.ptr) {
   llvm.return
 }
 
+// CHECK-LABEL: @invariant_group_intrinsics
+// CHECK-SAME: %[[P:.+]]: !llvm.ptr
+llvm.func @invariant_group_intrinsics(%p: !llvm.ptr) {
+  // CHECK: %{{.+}} = llvm.intr.launder.invariant.group %[[P]] : !llvm.ptr
+  %1 = llvm.intr.launder.invariant.group %p : !llvm.ptr
+  // CHECK: %{{.+}} = llvm.intr.strip.invariant.group %[[P]] : !llvm.ptr
+  %2 = llvm.intr.strip.invariant.group %p : !llvm.ptr
+  llvm.return
+}
+
 // CHECK-LABEL: @vararg_func
 llvm.func @vararg_func(%arg0: i32, ...) {
   // CHECK: %[[C:.*]] = llvm.mlir.constant(1 : i32)
