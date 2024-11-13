@@ -325,8 +325,23 @@ define amdgpu_kernel void @kernel_alloca_offset_use_asm_vgpr() {
   ret void
 }
 
+; GCN-LABEL: {{^}}live_out_physreg_copy_add_fi:
+; GCN: s_or_b32 [[FI:s[0-9]+]], s{{[0-9]+}}, 4
+; GCN: v_mov_b32_e32 v0, [[FI]]
+; GCN: v_mov_b32_e32 v1
+; GCN: s_swappc_b64
+define void @live_out_physreg_copy_add_fi(ptr %fptr) #2 {
+bb:
+  %alloca = alloca [4 x i32], align 16, addrspace(5)
+  %addrspacecast = addrspacecast ptr addrspace(5) %alloca to ptr
+  %getelementptr = getelementptr i8, ptr %addrspacecast, i64 4
+  call void %fptr(ptr %getelementptr) #2
+  ret void
+}
+
 declare void @llvm.lifetime.start.p5(i64, ptr addrspace(5) nocapture) #1
 declare void @llvm.lifetime.end.p5(i64, ptr addrspace(5) nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
+attributes #2 = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
