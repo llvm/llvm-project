@@ -469,7 +469,7 @@ public:
                                                     !cpp::is_same_v<T, bool>>>
   LIBC_INLINE constexpr BigInt(T v) {
     constexpr size_t T_SIZE = sizeof(T) * CHAR_BIT;
-    const bool is_neg = Signed && (v < 0);
+    const bool is_neg = v < 0;
     for (size_t i = 0; i < WORD_COUNT; ++i) {
       if (v == 0) {
         extend(i, is_neg);
@@ -503,6 +503,12 @@ public:
 
   // TODO: Reuse the Sign type.
   LIBC_INLINE constexpr bool is_neg() const { return SIGNED && get_msb(); }
+
+  template <size_t OtherBits, bool OtherSigned, typename OtherWordType>
+  LIBC_INLINE constexpr explicit
+  operator BigInt<OtherBits, OtherSigned, OtherWordType>() const {
+    return BigInt<OtherBits, OtherSigned, OtherWordType>(this);
+  }
 
   template <typename T> LIBC_INLINE constexpr explicit operator T() const {
     return to<T>();
@@ -1058,6 +1064,8 @@ struct WordTypeSelector : cpp::type_identity<
 // Except if we request 16 or 32 bits explicitly.
 template <> struct WordTypeSelector<16> : cpp::type_identity<uint16_t> {};
 template <> struct WordTypeSelector<32> : cpp::type_identity<uint32_t> {};
+template <> struct WordTypeSelector<96> : cpp::type_identity<uint32_t> {};
+
 template <size_t Bits>
 using WordTypeSelectorT = typename WordTypeSelector<Bits>::type;
 } // namespace internal

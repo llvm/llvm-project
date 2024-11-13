@@ -4,9 +4,7 @@ set( LLVM_LINK_COMPONENTS
   LineEditor
   Option
   OrcJIT
-  OrcShared
   Support
-  TargetParser
   )
 
 add_clang_tool(clang-repl

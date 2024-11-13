@@ -278,7 +278,7 @@ C2y Feature Support
   which adds the ``i`` and ``j`` suffixes for the creation of a ``_Complex``
   constant value. Clang has always supported these suffixes as a GNU extension,
   so ``-Wgnu-imaginary-constant`` no longer has effect in C modes, as this is
-  not a C2y extension in C. ``-Wgnu-imaginary-constant`` still applies in C++
+  now a C2y extension in C. ``-Wgnu-imaginary-constant`` still applies in C++
   modes.
 
 - Clang updated conformance for `N3370 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3370.htm>`_
@@ -318,6 +318,7 @@ C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
 - Clang now supports `N3029 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3029.htm>`_ Improved Normal Enumerations.
+- Clang now officially supports `N3030 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3030.htm>`_ Enhancements to Enumerations. Clang already supported it as an extension, so there were no changes to compiler behavior.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -661,6 +662,8 @@ Bug Fixes to AST Handling
 - Fixed a crash that occurred when dividing by zero in complex integer division. (#GH55390).
 - Fixed a bug in ``ASTContext::getRawCommentForAnyRedecl()`` where the function could
   sometimes incorrectly return null even if a comment was present. (#GH108145)
+- Clang now correctly parses the argument of the ``relates``, ``related``, ``relatesalso``,
+  and ``relatedalso`` comment commands.
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^

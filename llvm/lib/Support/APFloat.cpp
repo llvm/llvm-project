@@ -3947,7 +3947,6 @@ void IEEEFloat::initFromFloat8E8M0FNUAPInt(const APInt &api) {
   // Handle fcNormal...
   category = fcNormal;
   exponent = myexponent - 127; // 127 is bias
-  return;
 }
 template <const fltSemantics &S>
 void IEEEFloat::initFromIEEEAPInt(const APInt &api) {

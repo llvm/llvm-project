@@ -9046,7 +9046,7 @@ bool Sema::RequireCompleteType(SourceLocation Loc, QualType T,
 }
 
 bool Sema::hasStructuralCompatLayout(Decl *D, Decl *Suggested) {
-  llvm::DenseSet<std::pair<Decl *, Decl *>> NonEquivalentDecls;
+  StructuralEquivalenceContext::NonEquivalentDeclSet NonEquivalentDecls;
   if (!Suggested)
     return false;
 

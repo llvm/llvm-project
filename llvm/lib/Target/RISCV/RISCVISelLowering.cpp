@@ -9390,8 +9390,6 @@ static inline void promoteVCIXScalar(const SDValue &Op,
         isa<ConstantSDNode>(ScalarOp) ? ISD::SIGN_EXTEND : ISD::ANY_EXTEND;
     ScalarOp = DAG.getNode(ExtOpc, DL, XLenVT, ScalarOp);
   }
-
-  return;
 }
 
 static void processVCIXOperands(SDValue &OrigOp,
