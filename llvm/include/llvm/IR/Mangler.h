@@ -56,6 +56,12 @@ void emitLinkerFlagsForUsedCOFF(raw_ostream &OS, const GlobalValue *GV,
 std::optional<std::string> getArm64ECMangledFunctionName(StringRef Name);
 std::optional<std::string> getArm64ECDemangledFunctionName(StringRef Name);
 
+/// Check if an ARM64EC function name is mangled.
+bool inline isArm64ECMangledFunctionName(StringRef Name) {
+  return Name[0] == '#' ||
+         (Name[0] == '?' && Name.find("@$$h") != StringRef::npos);
+}
+
 } // End llvm namespace
 
 #endif
