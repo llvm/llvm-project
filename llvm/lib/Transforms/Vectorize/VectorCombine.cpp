@@ -1783,9 +1783,9 @@ bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
   InstructionCost NewCost =
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, ShuffleSrcTy,
                          NewMask, CostKind, 0, nullptr, {V0, V1});
-  if (!I.getOperand(0)->hasOneUse())
+  if (!ShufI0->hasOneUse())
     NewCost += InnerCost0;
-  if (!I.getOperand(1)->hasOneUse())
+  if (!ShufI1->hasOneUse())
     NewCost += InnerCost1;
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two shuffles: " << I
