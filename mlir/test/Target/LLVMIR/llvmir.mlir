@@ -1967,6 +1967,20 @@ llvm.func @nontemporal_store_and_load(%ptr : !llvm.ptr) -> i32 {
 
 // -----
 
+// Check that invariant group attribute is exported as metadata node.
+llvm.func @nontemporal_store_and_load(%ptr : !llvm.ptr) -> i32 {
+  %val = llvm.mlir.constant(42 : i32) : i32
+  // CHECK: store i32 42, ptr %{{.*}} !invariant.group ![[NODE:[0-9]+]]
+  llvm.store %val, %ptr invariant_group : i32, !llvm.ptr
+  // CHECK: %{{.*}} = load i32, ptr %{{.*}} !invariant.group ![[NODE]]
+  %1 = llvm.load %ptr invariant_group : !llvm.ptr -> i32
+  llvm.return %1 : i32
+}
+
+// CHECK: ![[NODE]] = !{}
+
+// -----
+
 llvm.func @atomic_store_and_load(%ptr : !llvm.ptr) {
   // CHECK: load atomic
   // CHECK-SAME:  acquire, align 4
