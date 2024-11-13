@@ -16,7 +16,7 @@ struct throwing_allocator {
   using value_type      = T;
   using is_always_equal = std::false_type;
 
-  bool throw_on_copy_   = false; 
+  bool throw_on_copy_ = false;
 
   throwing_allocator(bool throw_on_ctor = true, bool throw_on_copy = false) : throw_on_copy_(throw_on_copy) {
     if (throw_on_ctor)
@@ -33,7 +33,9 @@ struct throwing_allocator {
   void deallocate(T* ptr, std::size_t n) { std::allocator<T>().deallocate(ptr, n); }
 
   template <class U>
-  friend bool operator==(const throwing_allocator&, const throwing_allocator<U>&) { return true; }
+  friend bool operator==(const throwing_allocator&, const throwing_allocator<U>&) {
+    return true;
+  }
 };
 
 template <class T, class IterCat>
