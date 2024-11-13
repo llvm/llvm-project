@@ -482,12 +482,11 @@ TYPE_PARSER(construct<OmpUpdateClause>(
 
 // 2.9.5 ORDER ([order-modifier :]concurrent)
 TYPE_PARSER(construct<OmpOrderModifier>(
-    "REPRODUCIBLE" >> pure(OmpOrderModifier::Kind::Reproducible)) ||
+                "REPRODUCIBLE" >> pure(OmpOrderModifier::Kind::Reproducible)) ||
     construct<OmpOrderModifier>(
-    "UNCONSTRAINED" >> pure(OmpOrderModifier::Kind::Unconstrained)))
+        "UNCONSTRAINED" >> pure(OmpOrderModifier::Kind::Unconstrained)))
 
-TYPE_PARSER(construct<OmpOrderClause>(
-    maybe(Parser<OmpOrderModifier>{} / ":"),
+TYPE_PARSER(construct<OmpOrderClause>(maybe(Parser<OmpOrderModifier>{} / ":"),
     "CONCURRENT" >> pure(OmpOrderClause::Type::Concurrent)))
 
 // OMP 5.2 12.6.1 grainsize([ prescriptiveness :] scalar-integer-expression)
