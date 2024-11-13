@@ -548,7 +548,7 @@ bool DAP::RunLLDBCommands(llvm::StringRef prefix,
                           llvm::ArrayRef<std::string> commands) {
   bool required_command_failed = false;
   std::string output =
-      ::RunLLDBCommands(prefix, commands, required_command_failed);
+      ::RunLLDBCommands(debugger, prefix, commands, required_command_failed);
   SendOutput(OutputType::Console, output);
   return !required_command_failed;
 }
@@ -692,7 +692,7 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
   const auto packet_type = GetString(object, "type");
   if (packet_type == "request") {
     const auto command = GetString(object, "command");
-    auto handler_pos = request_handlers.find(std::string(command));
+    auto handler_pos = request_handlers.find(command);
     if (handler_pos != request_handlers.end()) {
       handler_pos->second(object);
       return true; // Success
