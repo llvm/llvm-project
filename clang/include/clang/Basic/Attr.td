@@ -1896,8 +1896,8 @@ def LifetimeCaptureBy : DeclOrTypeAttr {
   let Documentation = [LifetimeCaptureByDocs];
   let AdditionalMembers = [{
 private:
-  IdentifierInfo** ArgIdents;
-  SourceLocation* ArgLocs;
+  MutableArrayRef<IdentifierInfo*> ArgIdents;
+  MutableArrayRef<SourceLocation> ArgLocs;
 
 public:
   static constexpr int THIS = 0;
@@ -1905,13 +1905,20 @@ public:
   static constexpr int UNKNOWN = -2;
   static constexpr int GLOBAL = -3;
 
-  void setArgs(IdentifierInfo **Idents, SourceLocation *Locs) {
-    ArgIdents = Idents;
-    ArgLocs = Locs;
+  void CreateArgs(ASTContext &Ctx) {
+    ArgIdents =
+      MutableArrayRef<IdentifierInfo *>(new (Ctx) IdentifierInfo *[params_Size], params_Size);
+    ArgLocs =
+      MutableArrayRef<SourceLocation>(new (Ctx) SourceLocation[params_Size], params_Size);
   }
-  
-  auto getArgIdents() const { return ArrayRef<IdentifierInfo*>(ArgIdents, params_Size); }
-  auto getArgLocs() const { return ArrayRef<SourceLocation>(ArgLocs, params_Size); }
+  auto getArgIdents() const { 
+    assert(ArgIdents.size() == params_Size);
+    return ArgIdents;
+  }
+  auto getArgLocs() const { 
+    assert(ArgLocs.size() == params_Size);
+    return ArgLocs;
+  }
   void setParamIdx(size_t Idx, int Val) { 
     assert(Idx < params_Size);
     params_[Idx] = Val;
