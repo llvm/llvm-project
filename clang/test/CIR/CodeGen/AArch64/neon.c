@@ -9234,49 +9234,78 @@ uint64x2_t test_vmull_u32(uint32x2_t a, uint32x2_t b) {
 //   return vqdmull_s32(a, b);
 // }
 
-// NYI-LABEL: @test_vqdmlal_s16(
-// NYI:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <4 x i16> %b to <8 x i8>
-// NYI:   [[TMP2:%.*]] = bitcast <4 x i16> %c to <8 x i8>
-// NYI:   [[VQDMLAL2_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %b, <4 x i16> %c)
-// NYI:   [[VQDMLAL_V3_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqadd.v4i32(<4 x i32> %a, <4 x i32> [[VQDMLAL2_I]])
-// NYI:   ret <4 x i32> [[VQDMLAL_V3_I]]
-// int32x4_t test_vqdmlal_s16(int32x4_t a, int16x4_t b, int16x4_t c) {
-//   return vqdmlal_s16(a, b, c);
-// }
+int32x4_t test_vqdmlal_s16(int32x4_t a, int16x4_t b, int16x4_t c) {
+  return vqdmlal_s16(a, b, c);
 
-// NYI-LABEL: @test_vqdmlal_s32(
-// NYI:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <2 x i32> %b to <8 x i8>
-// NYI:   [[TMP2:%.*]] = bitcast <2 x i32> %c to <8 x i8>
-// NYI:   [[VQDMLAL2_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> %b, <2 x i32> %c)
-// NYI:   [[VQDMLAL_V3_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqadd.v2i64(<2 x i64> %a, <2 x i64> [[VQDMLAL2_I]])
-// NYI:   ret <2 x i64> [[VQDMLAL_V3_I]]
-// int64x2_t test_vqdmlal_s32(int64x2_t a, int32x2_t b, int32x2_t c) {
-//   return vqdmlal_s32(a, b, c);
-// }
+  // CIR-LABEL: vqdmlal_s16
+  // CIR: {{%.*}} = cir.llvm.intrinsic "aarch64.neon.sqdmull" {{%.*}}, {{%.*}} :
+  // CIR-SAME: (!cir.vector<!s16i x 4>, !cir.vector<!s16i x 4>) -> !cir.vector<!s32i x 4>
+  // CIR: {{%.*}} = cir.llvm.intrinsic "aarch64.neon.sqadd" {{%.*}}, {{%.*}} :
+  // CIR-SAME: (!cir.vector<!s32i x 4>, !cir.vector<!s32i x 4>) -> !cir.vector<!s32i x 4>
 
-// NYI-LABEL: @test_vqdmlsl_s16(
-// NYI:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <4 x i16> %b to <8 x i8>
-// NYI:   [[TMP2:%.*]] = bitcast <4 x i16> %c to <8 x i8>
-// NYI:   [[VQDMLAL2_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %b, <4 x i16> %c)
-// NYI:   [[VQDMLSL_V3_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqsub.v4i32(<4 x i32> %a, <4 x i32> [[VQDMLAL2_I]])
-// NYI:   ret <4 x i32> [[VQDMLSL_V3_I]]
-// int32x4_t test_vqdmlsl_s16(int32x4_t a, int16x4_t b, int16x4_t c) {
-//   return vqdmlsl_s16(a, b, c);
-// }
+  // LLVM: {{.*}}test_vqdmlal_s16(<4 x i32>{{.*}}[[a:%.*]], <4 x i16>{{.*}}[[b:%.*]], <4 x i16>{{.*}}[[c:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <4 x i32> [[a]] to <16 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <4 x i16> [[b]] to <8 x i8>
+  // LLVM:   [[TMP2:%.*]] = bitcast <4 x i16> [[c]] to <8 x i8>
+  // LLVM:   [[VQDMLAL2_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[b]], <4 x i16> [[c]])
+  // LLVM:   [[VQDMLAL_V3_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqadd.v4i32(<4 x i32> [[a]], <4 x i32> [[VQDMLAL2_I]])
+  // LLVM:   ret <4 x i32> [[VQDMLAL_V3_I]]
+}
 
-// NYI-LABEL: @test_vqdmlsl_s32(
-// NYI:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <2 x i32> %b to <8 x i8>
-// NYI:   [[TMP2:%.*]] = bitcast <2 x i32> %c to <8 x i8>
-// NYI:   [[VQDMLAL2_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> %b, <2 x i32> %c)
-// NYI:   [[VQDMLSL_V3_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqsub.v2i64(<2 x i64> %a, <2 x i64> [[VQDMLAL2_I]])
-// NYI:   ret <2 x i64> [[VQDMLSL_V3_I]]
-// int64x2_t test_vqdmlsl_s32(int64x2_t a, int32x2_t b, int32x2_t c) {
-//   return vqdmlsl_s32(a, b, c);
-// }
+int64x2_t test_vqdmlal_s32(int64x2_t a, int32x2_t b, int32x2_t c) {
+  return vqdmlal_s32(a, b, c);
+
+  // CIR-LABEL: vqdmlal_s32
+  // CIR: {{%.*}} = cir.llvm.intrinsic "aarch64.neon.sqdmull" {{%.*}}, {{%.*}} :
+  // CIR-SAME: (!cir.vector<!s32i x 2>, !cir.vector<!s32i x 2>) -> !cir.vector<!s64i x 2>
+  // CIR: {{%.*}} = cir.llvm.intrinsic "aarch64.neon.sqadd" {{%.*}}, {{%.*}} :
+  // CIR-SAME: (!cir.vector<!s64i x 2>, !cir.vector<!s64i x 2>) -> !cir.vector<!s64i x 2>
+
+  // LLVM: {{.*}}test_vqdmlal_s32(<2 x i64>{{.*}}[[a:%.*]], <2 x i32>{{.*}}[[b:%.*]], <2 x i32>{{.*}}[[c:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <2 x i64> [[a]] to <16 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <2 x i32> [[b]] to <8 x i8>
+  // LLVM:   [[TMP2:%.*]] = bitcast <2 x i32> [[c]] to <8 x i8>
+  // LLVM:   [[VQDMLAL2_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[b]], <2 x i32> [[c]])
+  // LLVM:   [[VQDMLAL_V3_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqadd.v2i64(<2 x i64> [[a]], <2 x i64> [[VQDMLAL2_I]])
+  // LLVM:   ret <2 x i64> [[VQDMLAL_V3_I]]
+}
+
+
+int32x4_t test_vqdmlsl_s16(int32x4_t a, int16x4_t b, int16x4_t c) {
+  return vqdmlsl_s16(a, b, c);
+
+  // CIR-LABEL: vqdmlsl_s16
+  // CIR: {{%.*}} = cir.llvm.intrinsic "aarch64.neon.sqdmull" {{%.*}}, {{%.*}} :
+  // CIR-SAME: (!cir.vector<!s16i x 4>, !cir.vector<!s16i x 4>) -> !cir.vector<!s32i x 4>
+  // CIR: {{%.*}} = cir.llvm.intrinsic "aarch64.neon.sqsub" {{%.*}}, {{%.*}} :
+  // CIR-SAME: (!cir.vector<!s32i x 4>, !cir.vector<!s32i x 4>) -> !cir.vector<!s32i x 4>
+
+  // LLVM: {{.*}}test_vqdmlsl_s16(<4 x i32>{{.*}}[[a:%.*]], <4 x i16>{{.*}}[[b:%.*]], <4 x i16>{{.*}}[[c:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <4 x i32> [[a]] to <16 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <4 x i16> [[b]] to <8 x i8>
+  // LLVM:   [[TMP2:%.*]] = bitcast <4 x i16> [[c]] to <8 x i8>
+  // LLVM:   [[VQDMLSL2_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[b]], <4 x i16> [[c]])
+  // LLVM:   [[VQDMLSL_V3_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqsub.v4i32(<4 x i32> [[a]], <4 x i32> [[VQDMLSL2_I]])
+  // LLVM:   ret <4 x i32> [[VQDMLSL_V3_I]]
+}
+
+int64x2_t test_vqdmlsl_s32(int64x2_t a, int32x2_t b, int32x2_t c) {
+  return vqdmlsl_s32(a, b, c);
+
+  // CIR-LABEL: vqdmlsl_s32
+  // CIR: {{%.*}} = cir.llvm.intrinsic "aarch64.neon.sqdmull" {{%.*}}, {{%.*}} :
+  // CIR-SAME: (!cir.vector<!s32i x 2>, !cir.vector<!s32i x 2>) -> !cir.vector<!s64i x 2>
+  // CIR: {{%.*}} = cir.llvm.intrinsic "aarch64.neon.sqsub" {{%.*}}, {{%.*}} :
+  // CIR-SAME: (!cir.vector<!s64i x 2>, !cir.vector<!s64i x 2>) -> !cir.vector<!s64i x 2>
+
+  // LLVM: {{.*}}test_vqdmlsl_s32(<2 x i64>{{.*}}[[a:%.*]], <2 x i32>{{.*}}[[b:%.*]], <2 x i32>{{.*}}[[c:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <2 x i64> [[a]] to <16 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <2 x i32> [[b]] to <8 x i8>
+  // LLVM:   [[TMP2:%.*]] = bitcast <2 x i32> [[c]] to <8 x i8>
+  // LLVM:   [[VQDMLSL2_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[b]], <2 x i32> [[c]])
+  // LLVM:   [[VQDMLSL_V3_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqsub.v2i64(<2 x i64> [[a]], <2 x i64> [[VQDMLSL2_I]])
+  // LLVM:   ret <2 x i64> [[VQDMLSL_V3_I]]
+}
 
 // NYI-LABEL: @test_vqdmull_high_s16(
 // NYI:   [[SHUFFLE_I_I:%.*]] = shufflevector <8 x i16> %a, <8 x i16> %a, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
