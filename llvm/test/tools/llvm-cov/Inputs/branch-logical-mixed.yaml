@@ -1,21 +1,22 @@
 --- !ELF
 FileHeader:
-  Class:           ELFCLASS32
+  Class:           ELFCLASS64
   Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_GNU
   Type:            ET_REL
-  Machine:         EM_ARM
-  Flags:           [ EF_ARM_EABI_VER5 ]
+  Machine:         EM_X86_64
   SectionHeaderStringTable: .strtab
 Sections:
   - Name:            __llvm_covfun
     Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
     CovFun:
       - FuncName:        _Z4funcii
-        Signature:       0x83C88F515FCF34F8
-        FilenamesRef:    0x433778095298742
+        Signature:       0x75869EC9191CB289
+        FilenamesRef:    0xE846BD6FE050298F
         Filenames:
-          - '/tmp/branch-logical-mixed.cpp'
+          - branch-logical-mixed.cpp
         Expressions:
           - [ { Ref: 0 }, { Ref: 9 } ]
           - [ { Ref: 9 }, { Ref: 10 } ]
@@ -29,45 +30,46 @@ Sections:
           - [ { Ref: 15 }, { Ref: 16 } ]
           - [ { Ref: 13 }, { Ref: 14 } ]
           - [ { Ref: 11 }, { Ref: 12 } ]
-          - [ { Ref: 0 }, { Ref: 31 } ]
-          - [ { Ref: 31 }, { Ref: 32 } ]
-          - [ { Ref: 29 }, { Ref: 33 } ]
-          - [ { Ref: 33 }, { Ref: 34 } ]
-          - [ { Ref: 27 }, { Ref: 35 } ]
-          - [ { Ref: 35 }, { Ref: 36 } ]
-          - [ { Ref: 25 }, { Ref: 37 } ]
-          - [ { Ref: 37 }, { Ref: 38 } ]
-          - [ { Ref: 23 }, { Ref: 39 } ]
-          - [ { Ref: 39 }, { Ref: 40 } ]
-          - [ { Ref: 21 }, { Ref: 41 } ]
-          - [ { Ref: 41 }, { Ref: 42 } ]
-          - [ { Ref: 0 }, { Ref: 53 } ]
+          - [ { Ref: 0 }, { Ref: 26 } ]
+          - [ { Ref: 26 }, { Ref: 27 } ]
+          - [ { Ref: 25 }, { Ref: 28 } ]
+          - [ { Ref: 28 }, { Ref: 29 } ]
+          - [ { Ref: 24 }, { Ref: 30 } ]
+          - [ { Ref: 30 }, { Ref: 31 } ]
+          - [ { Ref: 23 }, { Ref: 32 } ]
+          - [ { Ref: 32 }, { Ref: 33 } ]
+          - [ { Ref: 22 }, { Ref: 34 } ]
+          - [ { Ref: 34 }, { Ref: 35 } ]
+          - [ { Ref: 21 }, { Ref: 36 } ]
+          - [ { Ref: 36 }, { Ref: 37 } ]
+          - [ { Ref: 0 }, { Ref: 43 } ]
+          - [ { Ref: 43 }, { Ref: 44 } ]
+          - [ { Ref: 42 }, { Ref: 45 } ]
+          - [ { Ref: 45 }, { Ref: 46 } ]
+          - [ { Ref: 41 }, { Ref: 47 } ]
+          - [ { Ref: 47 }, { Ref: 48 } ]
+          - [ { Ref: 40 }, { Ref: 49 } ]
+          - [ { Ref: 49 }, { Ref: 50 } ]
+          - [ { Ref: 39 }, { Ref: 51 } ]
+          - [ { Ref: 51 }, { Ref: 52 } ]
+          - [ { Ref: 38 }, { Ref: 53 } ]
           - [ { Ref: 53 }, { Ref: 54 } ]
-          - [ { Ref: 51 }, { Ref: 55 } ]
-          - [ { Ref: 55 }, { Ref: 56 } ]
-          - [ { Ref: 49 }, { Ref: 57 } ]
-          - [ { Ref: 57 }, { Ref: 58 } ]
-          - [ { Ref: 47 }, { Ref: 59 } ]
-          - [ { Ref: 59 }, { Ref: 60 } ]
-          - [ { Ref: 45 }, { Ref: 61 } ]
-          - [ { Ref: 61 }, { Ref: 62 } ]
-          - [ { Ref: 43 }, { Ref: 63 } ]
-          - [ { Ref: 63 }, { Ref: 64 } ]
-          - [ { Ref: 0 }, { Ref: 65 } ]
-          - [ { Ref: 0 }, { Ref: 65 } ]
-          - [ { Ref: 0 }, { Ref: 65 } ]
-          - [ { Ref: 0 }, { Ref: 66 } ]
-          - [ { Ref: 0 }, { Ref: 66 } ]
-          - [ { Ref: 0 }, { Ref: 66 } ]
-          - [ { Ref: 0 }, { Ref: 67 } ]
-          - [ { Ref: 0 }, { Ref: 67 } ]
-          - [ { Ref: 0 }, { Ref: 67 } ]
-          - [ { Ref: 0 }, { Ref: 68 } ]
-          - [ { Ref: 0 }, { Ref: 68 } ]
-          - [ { Ref: 0 }, { Ref: 68 } ]
+          - [ { Ref: 0 }, { Ref: 55 } ]
+          - [ { Ref: 0 }, { Ref: 55 } ]
+          - [ { Ref: 0 }, { Ref: 55 } ]
+          - [ { Ref: 0 }, { Ref: 56 } ]
+          - [ { Ref: 0 }, { Ref: 56 } ]
+          - [ { Ref: 0 }, { Ref: 56 } ]
+          - [ { Ref: 0 }, { Ref: 57 } ]
+          - [ { Ref: 0 }, { Ref: 57 } ]
+          - [ { Ref: 0 }, { Ref: 57 } ]
+          - [ { Ref: 0 }, { Ref: 58 } ]
+          - [ { Ref: 0 }, { Ref: 58 } ]
+          - [ { Ref: 0 }, { Ref: 58 } ]
         Records:
           - { File: 0, dLoc: [ 8, 25, 67, 2 ], Ref: 0 }
-          - { File: 0, dLoc: [ 8, 12, 0, 14 ], Ref: 0 }
+          - { File: 0, dLoc: [ 7, 1, 0, 1 ], Skip: {  } }
+          - { File: 0, dLoc: [ 1, 12, 0, 14 ], Ref: 0 }
           - { File: 0, dLoc: [ 0, 12, 1, 14 ], Ref: 0 }
           - { File: 0, dLoc: [ 0, 12, 2, 14 ], Ref: 0 }
           - { File: 0, dLoc: [ 0, 12, 3, 14 ], Ref: 0 }
@@ -83,7 +85,8 @@ Sections:
           - { File: 0, dLoc: [ 0, 12, 0, 14 ], Branch: { True: { Ref: 4 }, False: { Sub: 4 } } }
           - { File: 0, dLoc: [ 1, 12, 0, 14 ], Ref: 1 }
           - { File: 0, dLoc: [ 0, 12, 0, 14 ], Branch: { True: { Ref: 2 }, False: { Sub: 5 } } }
-          - { File: 0, dLoc: [ 2, 12, 0, 14 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 1, 0, 1 ], Skip: {  } }
+          - { File: 0, dLoc: [ 1, 12, 0, 14 ], Ref: 0 }
           - { File: 0, dLoc: [ 0, 12, 1, 14 ], Ref: 0 }
           - { File: 0, dLoc: [ 0, 12, 2, 14 ], Ref: 0 }
           - { File: 0, dLoc: [ 0, 12, 3, 14 ], Ref: 0 }
@@ -99,120 +102,129 @@ Sections:
           - { File: 0, dLoc: [ 0, 12, 0, 14 ], Branch: { True: { Sub: 10 }, False: { Ref: 14 } } }
           - { File: 0, dLoc: [ 1, 12, 0, 14 ], Ref: 11 }
           - { File: 0, dLoc: [ 0, 12, 0, 14 ], Branch: { True: { Sub: 11 }, False: { Ref: 12 } } }
-          - { File: 0, dLoc: [ 2, 12, 1, 16 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 1, 0, 1 ], Skip: {  } }
+          - { File: 0, dLoc: [ 1, 12, 1, 16 ], Ref: 0 }
           - { File: 0, dLoc: [ 0, 12, 3, 16 ], Ref: 0 }
           - { File: 0, dLoc: [ 0, 12, 5, 16 ], Ref: 0 }
           - { File: 0, dLoc: [ 0, 12, 7, 16 ], Ref: 0 }
           - { File: 0, dLoc: [ 0, 12, 9, 16 ], Ref: 0 }
           - { File: 0, dLoc: [ 0, 13, 0, 15 ], Ref: 0 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Ref: 31 }, False: { Sub: 12 } } }
-          - { File: 0, dLoc: [ 1, 13, 0, 15 ], Ref: 31 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Ref: 32 }, False: { Sub: 13 } } }
-          - { File: 0, dLoc: [ 1, 12, 1, 16 ], Ref: 29 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Ref: 29 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Ref: 33 }, False: { Sub: 14 } } }
-          - { File: 0, dLoc: [ 1, 13, 0, 15 ], Ref: 33 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Ref: 34 }, False: { Sub: 15 } } }
-          - { File: 0, dLoc: [ 1, 12, 1, 16 ], Ref: 27 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Ref: 27 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Ref: 35 }, False: { Sub: 16 } } }
-          - { File: 0, dLoc: [ 1, 13, 0, 15 ], Ref: 35 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Ref: 36 }, False: { Sub: 17 } } }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Ref: 26 }, False: { Sub: 12 } } }
+          - { File: 0, dLoc: [ 1, 13, 0, 15 ], Ref: 26 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Ref: 27 }, False: { Sub: 13 } } }
           - { File: 0, dLoc: [ 1, 12, 1, 16 ], Ref: 25 }
           - { File: 0, dLoc: [ 0, 13, 0, 15 ], Ref: 25 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Ref: 37 }, False: { Sub: 18 } } }
-          - { File: 0, dLoc: [ 1, 13, 0, 15 ], Ref: 37 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Ref: 38 }, False: { Sub: 19 } } }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Ref: 28 }, False: { Sub: 14 } } }
+          - { File: 0, dLoc: [ 1, 13, 0, 15 ], Ref: 28 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Ref: 29 }, False: { Sub: 15 } } }
+          - { File: 0, dLoc: [ 1, 12, 1, 16 ], Ref: 24 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Ref: 24 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Ref: 30 }, False: { Sub: 16 } } }
+          - { File: 0, dLoc: [ 1, 13, 0, 15 ], Ref: 30 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Ref: 31 }, False: { Sub: 17 } } }
           - { File: 0, dLoc: [ 1, 12, 1, 16 ], Ref: 23 }
           - { File: 0, dLoc: [ 0, 13, 0, 15 ], Ref: 23 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Ref: 39 }, False: { Sub: 20 } } }
-          - { File: 0, dLoc: [ 1, 13, 0, 15 ], Ref: 39 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Ref: 40 }, False: { Sub: 21 } } }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Ref: 32 }, False: { Sub: 18 } } }
+          - { File: 0, dLoc: [ 1, 13, 0, 15 ], Ref: 32 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Ref: 33 }, False: { Sub: 19 } } }
+          - { File: 0, dLoc: [ 1, 12, 1, 16 ], Ref: 22 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Ref: 22 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Ref: 34 }, False: { Sub: 20 } } }
+          - { File: 0, dLoc: [ 1, 13, 0, 15 ], Ref: 34 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Ref: 35 }, False: { Sub: 21 } } }
           - { File: 0, dLoc: [ 1, 12, 1, 16 ], Ref: 21 }
           - { File: 0, dLoc: [ 0, 13, 0, 15 ], Ref: 21 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Ref: 41 }, False: { Sub: 22 } } }
-          - { File: 0, dLoc: [ 1, 13, 0, 15 ], Ref: 41 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Ref: 42 }, False: { Sub: 23 } } }
-          - { File: 0, dLoc: [ 2, 12, 1, 16 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Ref: 36 }, False: { Sub: 22 } } }
+          - { File: 0, dLoc: [ 1, 13, 0, 15 ], Ref: 36 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Ref: 37 }, False: { Sub: 23 } } }
+          - { File: 0, dLoc: [ 1, 1, 0, 1 ], Skip: {  } }
+          - { File: 0, dLoc: [ 1, 12, 1, 16 ], Ref: 0 }
           - { File: 0, dLoc: [ 0, 12, 3, 16 ], Ref: 0 }
           - { File: 0, dLoc: [ 0, 12, 5, 16 ], Ref: 0 }
           - { File: 0, dLoc: [ 0, 12, 7, 16 ], Ref: 0 }
           - { File: 0, dLoc: [ 0, 12, 9, 16 ], Ref: 0 }
           - { File: 0, dLoc: [ 0, 13, 0, 15 ], Ref: 0 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Sub: 24 }, False: { Ref: 53 } } }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Sub: 24 }, False: { Ref: 43 } } }
+          - { File: 0, dLoc: [ 1, 13, 0, 15 ], Ref: 43 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Sub: 25 }, False: { Ref: 44 } } }
+          - { File: 0, dLoc: [ 1, 12, 1, 16 ], Ref: 42 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Ref: 42 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Sub: 26 }, False: { Ref: 45 } } }
+          - { File: 0, dLoc: [ 1, 13, 0, 15 ], Ref: 45 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Sub: 27 }, False: { Ref: 46 } } }
+          - { File: 0, dLoc: [ 1, 12, 1, 16 ], Ref: 41 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Ref: 41 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Sub: 28 }, False: { Ref: 47 } } }
+          - { File: 0, dLoc: [ 1, 13, 0, 15 ], Ref: 47 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Sub: 29 }, False: { Ref: 48 } } }
+          - { File: 0, dLoc: [ 1, 12, 1, 16 ], Ref: 40 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Ref: 40 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Sub: 30 }, False: { Ref: 49 } } }
+          - { File: 0, dLoc: [ 1, 13, 0, 15 ], Ref: 49 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Sub: 31 }, False: { Ref: 50 } } }
+          - { File: 0, dLoc: [ 1, 12, 1, 16 ], Ref: 39 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Ref: 39 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Sub: 32 }, False: { Ref: 51 } } }
+          - { File: 0, dLoc: [ 1, 13, 0, 15 ], Ref: 51 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Sub: 33 }, False: { Ref: 52 } } }
+          - { File: 0, dLoc: [ 1, 12, 1, 16 ], Ref: 38 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Ref: 38 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Sub: 34 }, False: { Ref: 53 } } }
           - { File: 0, dLoc: [ 1, 13, 0, 15 ], Ref: 53 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Sub: 25 }, False: { Ref: 54 } } }
-          - { File: 0, dLoc: [ 1, 12, 1, 16 ], Ref: 51 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Ref: 51 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Sub: 26 }, False: { Ref: 55 } } }
-          - { File: 0, dLoc: [ 1, 13, 0, 15 ], Ref: 55 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Sub: 27 }, False: { Ref: 56 } } }
-          - { File: 0, dLoc: [ 1, 12, 1, 16 ], Ref: 49 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Ref: 49 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Sub: 28 }, False: { Ref: 57 } } }
-          - { File: 0, dLoc: [ 1, 13, 0, 15 ], Ref: 57 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Sub: 29 }, False: { Ref: 58 } } }
-          - { File: 0, dLoc: [ 1, 12, 1, 16 ], Ref: 47 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Ref: 47 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Sub: 30 }, False: { Ref: 59 } } }
-          - { File: 0, dLoc: [ 1, 13, 0, 15 ], Ref: 59 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Sub: 31 }, False: { Ref: 60 } } }
-          - { File: 0, dLoc: [ 1, 12, 1, 16 ], Ref: 45 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Ref: 45 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Sub: 32 }, False: { Ref: 61 } } }
-          - { File: 0, dLoc: [ 1, 13, 0, 15 ], Ref: 61 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Sub: 33 }, False: { Ref: 62 } } }
-          - { File: 0, dLoc: [ 1, 12, 1, 16 ], Ref: 43 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Ref: 43 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Sub: 34 }, False: { Ref: 63 } } }
-          - { File: 0, dLoc: [ 1, 13, 0, 15 ], Ref: 63 }
-          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Sub: 35 }, False: { Ref: 64 } } }
-          - { File: 0, dLoc: [ 2, 7, 0, 8 ], Ref: 0 }
-          - { File: 0, dLoc: [ 0, 7, 0, 8 ], Branch: { True: { Ref: 65 }, False: { Sub: 38 } } }
-          - { File: 0, dLoc: [ 0, 9, 1, 5 ], isGap: true, Ref: 65 }
-          - { File: 0, dLoc: [ 1, 5, 0, 22 ], Ref: 65 }
+          - { File: 0, dLoc: [ 0, 13, 0, 15 ], Branch: { True: { Sub: 35 }, False: { Ref: 54 } } }
+          - { File: 0, dLoc: [ 1, 1, 0, 1 ], Skip: {  } }
+          - { File: 0, dLoc: [ 1, 7, 0, 8 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 7, 0, 8 ], Branch: { True: { Ref: 55 }, False: { Sub: 38 } } }
+          - { File: 0, dLoc: [ 0, 9, 1, 5 ], isGap: true, Ref: 55 }
+          - { File: 0, dLoc: [ 1, 5, 0, 22 ], Ref: 55 }
           - { File: 0, dLoc: [ 0, 23, 2, 5 ], isGap: true, Sub: 38 }
           - { File: 0, dLoc: [ 2, 5, 0, 22 ], Sub: 38 }
-          - { File: 0, dLoc: [ 2, 7, 0, 8 ], Ref: 0 }
-          - { File: 0, dLoc: [ 0, 7, 0, 8 ], Branch: { True: { Ref: 66 }, False: { Sub: 41 } } }
-          - { File: 0, dLoc: [ 0, 9, 1, 5 ], isGap: true, Ref: 66 }
-          - { File: 0, dLoc: [ 1, 5, 0, 22 ], Ref: 66 }
+          - { File: 0, dLoc: [ 1, 1, 0, 1 ], Skip: {  } }
+          - { File: 0, dLoc: [ 1, 7, 0, 8 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 7, 0, 8 ], Branch: { True: { Ref: 56 }, False: { Sub: 41 } } }
+          - { File: 0, dLoc: [ 0, 9, 1, 5 ], isGap: true, Ref: 56 }
+          - { File: 0, dLoc: [ 1, 5, 0, 22 ], Ref: 56 }
           - { File: 0, dLoc: [ 0, 23, 2, 5 ], isGap: true, Sub: 41 }
           - { File: 0, dLoc: [ 2, 5, 0, 22 ], Sub: 41 }
-          - { File: 0, dLoc: [ 2, 7, 0, 8 ], Ref: 0 }
-          - { File: 0, dLoc: [ 0, 7, 0, 8 ], Branch: { True: { Ref: 67 }, False: { Sub: 44 } } }
-          - { File: 0, dLoc: [ 0, 9, 1, 5 ], isGap: true, Ref: 67 }
-          - { File: 0, dLoc: [ 1, 5, 0, 22 ], Ref: 67 }
+          - { File: 0, dLoc: [ 1, 1, 0, 1 ], Skip: {  } }
+          - { File: 0, dLoc: [ 1, 7, 0, 8 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 7, 0, 8 ], Branch: { True: { Ref: 57 }, False: { Sub: 44 } } }
+          - { File: 0, dLoc: [ 0, 9, 1, 5 ], isGap: true, Ref: 57 }
+          - { File: 0, dLoc: [ 1, 5, 0, 22 ], Ref: 57 }
           - { File: 0, dLoc: [ 0, 23, 2, 5 ], isGap: true, Sub: 44 }
           - { File: 0, dLoc: [ 2, 5, 0, 22 ], Sub: 44 }
-          - { File: 0, dLoc: [ 2, 7, 0, 8 ], Ref: 0 }
-          - { File: 0, dLoc: [ 0, 7, 0, 8 ], Branch: { True: { Ref: 68 }, False: { Sub: 47 } } }
-          - { File: 0, dLoc: [ 0, 9, 1, 5 ], isGap: true, Ref: 68 }
-          - { File: 0, dLoc: [ 1, 5, 0, 22 ], Ref: 68 }
+          - { File: 0, dLoc: [ 1, 1, 0, 1 ], Skip: {  } }
+          - { File: 0, dLoc: [ 1, 7, 0, 8 ], Ref: 0 }
+          - { File: 0, dLoc: [ 0, 7, 0, 8 ], Branch: { True: { Ref: 58 }, False: { Sub: 47 } } }
+          - { File: 0, dLoc: [ 0, 9, 1, 5 ], isGap: true, Ref: 58 }
+          - { File: 0, dLoc: [ 1, 5, 0, 22 ], Ref: 58 }
           - { File: 0, dLoc: [ 0, 23, 2, 5 ], isGap: true, Sub: 47 }
           - { File: 0, dLoc: [ 2, 5, 0, 22 ], Sub: 47 }
   - Name:            '__llvm_covfun (1)'
     Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
     CovFun:
       - FuncName:        main
         Signature:       0x18
-        FilenamesRef:    0x433778095298742
+        FilenamesRef:    0xE846BD6FE050298F
         Filenames:
-          - '/tmp/branch-logical-mixed.cpp'
+          - branch-logical-mixed.cpp
         Expressions:     []
         Records:
           - { File: 0, dLoc: [ 79, 1, 4, 2 ], Ref: 0 }
   - Name:            __llvm_covmap
     Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
     CovMap:
-      - Version:         3
-        FnBlobHash:      0x433778095298742
+      - Version:         6
+        FnBlobHash:      0xE846BD6FE050298F
         Filenames:
-          - '/tmp/branch-logical-mixed.cpp'
+          - branch-logical-mixed.cpp
   - Name:            __llvm_prf_names
     Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_GNU_RETAIN ]
     AddressAlign:    0x1
     PrfNames:
       - Names:
@@ -227,6 +239,9 @@ Sections:
       - Name:            __llvm_prf_names
       - Name:            .symtab
 Symbols:
+  - Name:            __llvm_covmap
+    Type:            STT_SECTION
+    Section:         __llvm_covmap
   - Name:            __llvm_prf_names
     Type:            STT_SECTION
     Section:         __llvm_prf_names
@@ -234,7 +249,7 @@ Symbols:
     Type:            STT_OBJECT
     Section:         __llvm_covfun
     Binding:         STB_WEAK
-    Size:            0x3DC
+    Size:            0x3F7
     Other:           [ STV_HIDDEN ]
   - Name:            __covrec_DB956436E78DD5FAu
     Type:            STT_OBJECT

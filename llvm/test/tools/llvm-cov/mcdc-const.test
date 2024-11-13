@@ -6,10 +6,10 @@
 
 //      CHECKGENERALCASE:  ------------------
 // CHECKGENERALCASE-NEXT:  |  Branch (12:8): [True: 4, False: 1]
-// CHECKGENERALCASE-NEXT:  |  Branch (12:13): [Folded - Ignored]
-// CHECKGENERALCASE-NEXT:  |  Branch (12:20): [Folded - Ignored]
+// CHECKGENERALCASE-NEXT:  |  Branch (12:13): [True: 4, Folded]
+// CHECKGENERALCASE-NEXT:  |  Branch (12:20): [Folded, False: 1]
 // CHECKGENERALCASE-NEXT:  |  Branch (12:25): [True: 0, False: 0]
-// CHECKGENERALCASE-NEXT:  |  Branch (12:31): [Folded - Ignored]
+// CHECKGENERALCASE-NEXT:  |  Branch (12:31): [Folded, False: 1]
 // CHECKGENERALCASE-NEXT:  ------------------
 // CHECKGENERALCASE-NEXT:  |---> MC/DC Decision Region (12:7) to (12:32)
 // CHECKGENERALCASE-NEXT:  |

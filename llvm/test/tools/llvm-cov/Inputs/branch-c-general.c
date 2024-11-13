@@ -254,7 +254,7 @@ int main(int argc, const char *argv[]) {
   conditional_operator();
   do_fallthrough();
   static_func();
-  extern void __llvm_profile_write_file();
-  __llvm_profile_write_file();
+  (void)0;
+  (void)0;
   return 0;
 }

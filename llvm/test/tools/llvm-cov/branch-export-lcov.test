@@ -25,18 +25,18 @@
 // CHECK-DAG: BRDA:34,0,0,1
 // CHECK-DAG: BRDA:34,0,1,5
 // CHECK-DAG: BRDA:41,0,0,1
-// CHECK-DAG: BRDA:41,0,1,4
+// CHECK-DAG: BRDA:41,0,1,0
 // CHECK-DAG: BRDA:43,0,0,1
-// CHECK-DAG: BRDA:43,0,1,4
-// CHECK-DAG: BRDA:45,0,0,0
-// CHECK-DAG: BRDA:45,0,1,5
+// CHECK-DAG: BRDA:43,0,1,0
+// CHECK-DAG: BRDA:45,0,0,-
+// CHECK-DAG: BRDA:45,0,1,-
 // CHECK-DAG: BRDA:47,0,0,3
-// CHECK-DAG: BRDA:47,0,1,2
+// CHECK-DAG: BRDA:47,0,1,0
 // CHECK-DAG: BRDA:53,0,0,50
 // CHECK-DAG: BRDA:53,0,1,5
 // CHECK-NOT: BRDA
-// CHECK: BRF:30
-// CHECK: BRH:26
+// CHECK: BRF:26
+// CHECK: BRH:22
 
 // Check recursive macro-expansions.
 // RUN: yaml2obj %S/Inputs/branch-macros.yaml -o %t-branch-macros.o

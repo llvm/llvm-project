@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
   int i = 0;
   if (argc < 3)                       // CHECK: Branch ([[@LINE]]:7): [True: 16.67%, False: 83.33%]
   {
-    __llvm_profile_write_file();
+    (void)0;
     return 0;
   }
 
@@ -38,13 +38,13 @@ int main(int argc, char *argv[])
 
   switch (a)
   {
-    case 0:                           // CHECK: Branch ([[@LINE]]:5): [True: 20.00%, False: 80.00%]
+    case 0:                           // CHECK: Branch ([[@LINE]]:5): [True: 100.00%, Folded]
       printf("case0\n");
-    case 2:                           // CHECK: Branch ([[@LINE]]:5): [True: 20.00%, False: 80.00%]
+    case 2:                           // CHECK: Branch ([[@LINE]]:5): [True: 100.00%, Folded]
       printf("case2\n");
-    case 3:                           // CHECK: Branch ([[@LINE]]:5): [True: 0.00%, False: 100.00%]
+    case 3:                           // CHECK: Branch ([[@LINE]]:5): [True: 0.00%, Folded]
       printf("case3\n");
-    default: break;                   // CHECK: Branch ([[@LINE]]:5): [True: 60.00%, False: 40.00%]
+    default: break;                   // CHECK: Branch ([[@LINE]]:5): [True: 100.00%, Folded]
   }
 
   i = 0;
@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
     printf("loop\n");
   } while (i++ < 10);                 // CHECK: Branch ([[@LINE]]:12): [True: 90.91%, False: 9.09%]
 
-  __llvm_profile_write_file();
+  (void)b;
 
-  return b;
+  return 0;
 }

@@ -1,41 +1,42 @@
 --- !ELF
 FileHeader:
-  Class:           ELFCLASS32
+  Class:           ELFCLASS64
   Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_GNU
   Type:            ET_REL
-  Machine:         EM_ARM
-  Flags:           [ EF_ARM_EABI_VER5 ]
+  Machine:         EM_X86_64
   SectionHeaderStringTable: .strtab
 Sections:
-  - Name:            '__llvm_covfun (1)'
+  - Name:            __llvm_covfun
     Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
     CovFun:
       - FuncName:        _Z4funcii
-        Signature:       0x1F69C7A6726516A9
-        FilenamesRef:    0x6606FE403140CB5C
+        Signature:       0x654340310C838D2
+        FilenamesRef:    0x5D8FCE3E3196E693
         Filenames:
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
         Expressions:
           - [ { Ref: 0 }, { Ref: 17 } ]
           - [ { Ref: 17 }, { Ref: 18 } ]
@@ -56,11 +57,16 @@ Sections:
           - { File: 0, dLoc: [ 16, 25, 17, 2 ], Ref: 0 }
           - { File: 0, dLoc: [ 1, 12, 0, 17 ], Expansion: 1 }
           - { File: 0, dLoc: [ 0, 21, 0, 26 ], Expansion: 2 }
-          - { File: 0, dLoc: [ 2, 12, 0, 17 ], Expansion: 3 }
-          - { File: 0, dLoc: [ 2, 12, 0, 18 ], Expansion: 4 }
-          - { File: 0, dLoc: [ 2, 12, 0, 18 ], Expansion: 5 }
-          - { File: 0, dLoc: [ 2, 12, 0, 18 ], Expansion: 6 }
-          - { File: 0, dLoc: [ 2, 10, 0, 11 ], Ref: 0 }
+          - { File: 0, dLoc: [ 1, 1, 0, 92 ], Skip: {  } }
+          - { File: 0, dLoc: [ 1, 12, 0, 17 ], Expansion: 3 }
+          - { File: 0, dLoc: [ 1, 1, 0, 98 ], Skip: {  } }
+          - { File: 0, dLoc: [ 1, 12, 0, 18 ], Expansion: 4 }
+          - { File: 0, dLoc: [ 1, 1, 0, 104 ], Skip: {  } }
+          - { File: 0, dLoc: [ 1, 12, 0, 18 ], Expansion: 5 }
+          - { File: 0, dLoc: [ 1, 1, 0, 110 ], Skip: {  } }
+          - { File: 0, dLoc: [ 1, 12, 0, 18 ], Expansion: 6 }
+          - { File: 0, dLoc: [ 1, 1, 0, 116 ], Skip: {  } }
+          - { File: 0, dLoc: [ 1, 10, 0, 11 ], Ref: 0 }
           - { File: 0, dLoc: [ 0, 10, 0, 16 ], Ref: 0 }
           - { File: 0, dLoc: [ 0, 10, 0, 21 ], Ref: 0 }
           - { File: 0, dLoc: [ 0, 10, 0, 26 ], Ref: 0 }
@@ -73,6 +79,7 @@ Sections:
           - { File: 0, dLoc: [ 0, 25, 0, 26 ], Branch: { True: { Ref: 14 }, False: { Sub: 3 } } }
           - { File: 0, dLoc: [ 0, 30, 0, 31 ], Ref: 11 }
           - { File: 0, dLoc: [ 0, 30, 0, 31 ], Branch: { True: { Ref: 12 }, False: { Sub: 4 } } }
+          - { File: 0, dLoc: [ 1, 1, 4, 85 ], Skip: {  } }
           - { File: 1, dLoc: [ 5, 15, 0, 23 ], Ref: 0 }
           - { File: 1, dLoc: [ 0, 15, 0, 23 ], Ref: 0 }
           - { File: 1, dLoc: [ 0, 15, 0, 23 ], Branch: { True: { Ref: 1 }, False: { Sub: 5 } } }
@@ -116,27 +123,28 @@ Sections:
           - { File: 19, dLoc: [ 0, 15, 0, 23 ], Branch: { True: { Ref: 9 }, False: { Sub: 13 } } }
           - { File: 20, dLoc: [ 6, 15, 0, 23 ], Ref: 9 }
           - { File: 20, dLoc: [ 0, 15, 0, 23 ], Branch: { True: { Ref: 10 }, False: { Sub: 14 } } }
-  - Name:            __llvm_covfun
+  - Name:            '__llvm_covfun (1)'
     Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
     CovFun:
       - FuncName:        _Z5func2ii
-        Signature:       0x4D0E999EA1293740
-        FilenamesRef:    0x6606FE403140CB5C
+        Signature:       0xC465B88D2C9E9B03
+        FilenamesRef:    0x5D8FCE3E3196E693
         Filenames:
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
-          - '/tmp/branch-macros.cpp'
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
+          - branch-macros.cpp
         Expressions:
           - [ { Ref: 1 }, { Ref: 2 } ]
           - [ { Ref: 1 }, { Ref: 5 } ]
@@ -148,6 +156,7 @@ Sections:
           - { File: 0, dLoc: [ 36, 26, 7, 2 ], Ref: 0 }
           - { File: 0, dLoc: [ 1, 14, 0, 20 ], Expansion: 1 }
           - { File: 0, dLoc: [ 0, 24, 0, 29 ], Expansion: 2 }
+          - { File: 0, dLoc: [ 1, 1, 3, 96 ], Skip: {  } }
           - { File: 1, dLoc: [ 11, 16, 0, 22 ], Expansion: 3 }
           - { File: 2, dLoc: [ 8, 15, 0, 38 ], Ref: 1 }
           - { File: 2, dLoc: [ 0, 15, 0, 38 ], Branch: { True: { Sub: 0 }, False: { Ref: 2 } } }
@@ -177,26 +186,29 @@ Sections:
           - { File: 12, dLoc: [ 0, 15, 0, 23 ], Branch: { True: { Ref: 4 }, False: { Sub: 5 } } }
   - Name:            '__llvm_covfun (2)'
     Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
     CovFun:
       - FuncName:        main
         Signature:       0x18
-        FilenamesRef:    0x6606FE403140CB5C
+        FilenamesRef:    0x5D8FCE3E3196E693
         Filenames:
-          - '/tmp/branch-macros.cpp'
+          - branch-macros.cpp
         Expressions:     []
         Records:
           - { File: 0, dLoc: [ 47, 1, 5, 2 ], Ref: 0 }
   - Name:            __llvm_covmap
     Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
     CovMap:
-      - Version:         3
-        FnBlobHash:      0x6606FE403140CB5C
+      - Version:         6
+        FnBlobHash:      0x5D8FCE3E3196E693
         Filenames:
-          - '/tmp/branch-macros.cpp'
+          - branch-macros.cpp
   - Name:            __llvm_prf_names
     Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_GNU_RETAIN ]
     AddressAlign:    0x1
     PrfNames:
       - Names:
@@ -206,27 +218,30 @@ Sections:
   - Type:            SectionHeaderTable
     Sections:
       - Name:            .strtab
-      - Name:            '__llvm_covfun (1)'
       - Name:            __llvm_covfun
+      - Name:            '__llvm_covfun (1)'
       - Name:            '__llvm_covfun (2)'
       - Name:            __llvm_covmap
       - Name:            __llvm_prf_names
       - Name:            .symtab
 Symbols:
+  - Name:            __llvm_covmap
+    Type:            STT_SECTION
+    Section:         __llvm_covmap
   - Name:            __llvm_prf_names
     Type:            STT_SECTION
     Section:         __llvm_prf_names
-  - Name:            __covrec_956373C63F981DB0u
+  - Name:            __covrec_B30B5C302CEDA0F0u
     Type:            STT_OBJECT
     Section:         __llvm_covfun
     Binding:         STB_WEAK
-    Size:            0xE4
+    Size:            0x1E2
     Other:           [ STV_HIDDEN ]
-  - Name:            __covrec_B30B5C302CEDA0F0u
+  - Name:            __covrec_956373C63F981DB0u
     Type:            STT_OBJECT
     Section:         '__llvm_covfun (1)'
     Binding:         STB_WEAK
-    Size:            0x1C4
+    Size:            0xE9
     Other:           [ STV_HIDDEN ]
   - Name:            __covrec_DB956436E78DD5FAu
     Type:            STT_OBJECT

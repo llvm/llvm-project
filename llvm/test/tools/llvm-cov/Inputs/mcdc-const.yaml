@@ -19,6 +19,7 @@ Sections:
           - mcdc-const.cpp
         Expressions:
           - [ { Ref: 0 }, { Ref: 5 } ]
+          - [ { Ref: 4 }, { Ref: 7 } ]
           - [ { Ref: 7 }, { Ref: 8 } ]
         Records:
           - { File: 0, dLoc: [ 10, 43, 4, 2 ], Ref: 0 }
@@ -30,14 +31,14 @@ Sections:
           - { File: 0, dLoc: [ 0, 8, 0, 9 ], Ref: 0 }
           - { File: 0, dLoc: [ 0, 8, 0, 9 ], Branch: { True: { Ref: 5 }, False: { Sub: 0 }, MCDC: [ 1, 4, 3 ] } }
           - { File: 0, dLoc: [ 0, 13, 0, 14 ], Ref: 5 }
-          - { File: 0, dLoc: [ 0, 13, 0, 14 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 4, 0, 3 ] } }
+          - { File: 0, dLoc: [ 0, 13, 0, 14 ], Branch: { True: { Ref: 6 }, False: { Zero: {  } }, MCDC: [ 4, 0, 3 ] } }
           - { File: 0, dLoc: [ 0, 19, 0, 27 ], Ref: 4 }
           - { File: 0, dLoc: [ 0, 20, 0, 21 ], Ref: 4 }
-          - { File: 0, dLoc: [ 0, 20, 0, 21 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 3, 5, 2 ] } }
+          - { File: 0, dLoc: [ 0, 20, 0, 21 ], Branch: { True: { Zero: {  } }, False: { Sub: 1 }, MCDC: [ 3, 5, 2 ] } }
           - { File: 0, dLoc: [ 0, 25, 0, 26 ], Ref: 7 }
-          - { File: 0, dLoc: [ 0, 25, 0, 26 ], Branch: { True: { Ref: 8 }, False: { Sub: 1 }, MCDC: [ 5, 0, 2 ] } }
+          - { File: 0, dLoc: [ 0, 25, 0, 26 ], Branch: { True: { Ref: 8 }, False: { Sub: 2 }, MCDC: [ 5, 0, 2 ] } }
           - { File: 0, dLoc: [ 0, 31, 0, 32 ], Ref: 2 }
-          - { File: 0, dLoc: [ 0, 31, 0, 32 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 2, 0, 0 ] } }
+          - { File: 0, dLoc: [ 0, 31, 0, 32 ], Branch: { True: { Zero: {  } }, False: { Ref: 3 }, MCDC: [ 2, 0, 0 ] } }
           - { File: 0, dLoc: [ 0, 33, 1, 5 ], isGap: true, Ref: 1 }
           - { File: 0, dLoc: [ 1, 5, 0, 36 ], Ref: 1 }
   - Name:            '__llvm_covfun (1)'
@@ -91,7 +92,7 @@ Symbols:
     Type:            STT_OBJECT
     Section:         __llvm_covfun
     Binding:         STB_WEAK
-    Size:            0xA2
+    Size:            0xA4
     Other:           [ STV_HIDDEN ]
   - Name:            __covrec_DB956436E78DD5FAu
     Type:            STT_OBJECT
