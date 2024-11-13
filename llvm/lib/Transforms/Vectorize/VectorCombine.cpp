@@ -450,6 +450,8 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
   // TODO: Evaluate whether that always results in lowest cost. Alternatively,
   //       check the cost of creating a broadcast shuffle and shuffling both
   //       operands to element 0.
+  unsigned BestExtIndex = Extract0Cost > Extract1Cost ? Ext0Index : Ext1Index;
+  unsigned BestInsIndex = Extract0Cost > Extract1Cost ? Ext1Index : Ext0Index;
   InstructionCost CheapExtractCost = std::min(Extract0Cost, Extract1Cost);
 
   // Extra uses of the extracts mean that we include those costs in the
@@ -485,8 +487,18 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
     // ShufMask = { poison, poison, 0, poison }
     // TODO: The cost model has an option for a "broadcast" shuffle
     //       (splat-from-element-0), but no option for a more general splat.
-    NewCost +=
-        TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, VecTy);
+    if (auto *FixedVecTy = dyn_cast<FixedVectorType>(VecTy)) {
+      SmallVector<int> ShuffleMask(FixedVecTy->getNumElements(),
+                                   PoisonMaskElem);
+      ShuffleMask[BestInsIndex] = BestExtIndex;
+      NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
+                                    VecTy, ShuffleMask, CostKind, 0, nullptr,
+                                    {ConvertToShuffle});
+    } else {
+      NewCost +=
+          TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, VecTy,
+                             {}, CostKind, 0, nullptr, {ConvertToShuffle});
+    }
   }
 
   // Aggressively form a vector op if the cost is equal because the transform

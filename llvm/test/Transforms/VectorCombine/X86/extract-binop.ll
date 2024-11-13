@@ -404,11 +404,17 @@ define float @ext0_ext8_fmul_v16f32(<16 x float> %x) {
 }
 
 define float @ext14_ext15_fmul_v16f32(<16 x float> %x) {
-; CHECK-LABEL: @ext14_ext15_fmul_v16f32(
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <16 x float> [[X:%.*]], i32 14
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <16 x float> [[X]], i32 15
-; CHECK-NEXT:    [[R:%.*]] = fadd float [[E0]], [[E1]]
-; CHECK-NEXT:    ret float [[R]]
+; SSE-LABEL: @ext14_ext15_fmul_v16f32(
+; SSE-NEXT:    [[E0:%.*]] = extractelement <16 x float> [[X:%.*]], i32 14
+; SSE-NEXT:    [[E1:%.*]] = extractelement <16 x float> [[X]], i32 15
+; SSE-NEXT:    [[R:%.*]] = fadd float [[E0]], [[E1]]
+; SSE-NEXT:    ret float [[R]]
+;
+; AVX-LABEL: @ext14_ext15_fmul_v16f32(
+; AVX-NEXT:    [[SHIFT:%.*]] = shufflevector <16 x float> [[X:%.*]], <16 x float> poison, <16 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 15, i32 poison>
+; AVX-NEXT:    [[TMP1:%.*]] = fadd <16 x float> [[X]], [[SHIFT]]
+; AVX-NEXT:    [[R:%.*]] = extractelement <16 x float> [[TMP1]], i32 14
+; AVX-NEXT:    ret float [[R]]
 ;
   %e0 = extractelement <16 x float> %x, i32 14
   %e1 = extractelement <16 x float> %x, i32 15
