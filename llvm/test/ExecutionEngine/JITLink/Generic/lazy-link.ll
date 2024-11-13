@@ -9,7 +9,9 @@
 ; RUN: llc -filetype=obj -o %t/main.o %s
 ; RUN: llvm-jitlink -noexec -show-linked-files %t/main.o -lazy %t/foo.o \
 ; RUN:     -lazy %t/x.o | FileCheck %s
-
+;
+; UNSUPPORTED: system-windows
+;
 ; CHECK: Linking {{.*}}main.o
 ; CHECK-DAG: Linking <indirect stubs graph #1>
 ; CHECK-DAG: Linking {{.*}}x.o
