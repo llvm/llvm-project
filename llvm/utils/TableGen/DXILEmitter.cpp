@@ -184,13 +184,6 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
                            OpName);
   }
 
-  {
-    DXILIntrinsicSelect IntrSelect;
-    IntrSelect.Intrinsic = GetIntrinsicName(R->getValue("LLVMIntrinsic"));
-    if (IntrSelect.Intrinsic.size())
-      IntrinsicSelects.emplace_back(std::move(IntrSelect));
-  }
-
   auto IntrinsicSelectRecords = R->getValueAsListOfDefs("intrinsic_selects");
   if (IntrinsicSelectRecords.size()) {
     if (IntrinsicSelects.size()) {
