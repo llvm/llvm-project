@@ -2985,12 +2985,16 @@ void SPIRVInstructionSelector::selectImageWriteIntrinsic(
   // that we will need to change the return type of the intrinsic.
   // We will do that when we can, but for now trying to move forward with other
   // issues.
+  Register ImageReg = I.getOperand(1).getReg();
+  assert(MRI->getVRegDef(ImageReg)->getParent() == I.getParent() &&
+         "The image must be loaded in the same basic block as its use.");
+  Register CoordinateReg = I.getOperand(2).getReg();
   Register DataReg = I.getOperand(3).getReg();
   assert(GR.getResultType(DataReg)->getOpcode() == SPIRV::OpTypeVector);
   assert(GR.getScalarOrVectorComponentCount(GR.getResultType(DataReg)) == 4);
   BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpImageWrite))
-      .addUse(I.getOperand(1).getReg())
-      .addUse(I.getOperand(2).getReg())
+      .addUse(ImageReg)
+      .addUse(CoordinateReg)
       .addUse(DataReg);
 }
 
