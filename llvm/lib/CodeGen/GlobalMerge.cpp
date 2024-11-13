@@ -79,6 +79,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -632,10 +633,13 @@ void GlobalMergeImpl::setMustKeepGlobalVariables(Module &M) {
   for (Function &F : M) {
     for (BasicBlock &BB : F) {
       Instruction *Pad = BB.getFirstNonPHI();
-      if (!Pad->isEHPad())
+      auto *II = dyn_cast<IntrinsicInst>(Pad);
+      if (!Pad->isEHPad() &&
+          !(II && II->getIntrinsicID() == Intrinsic::eh_typeid_for))
         continue;
 
-      // Keep globals used by landingpads and catchpads.
+      // Keep globals used by landingpads, catchpads,
+      // or intrinsics that require a plain global.
       for (const Use &U : Pad->operands()) {
         if (const GlobalVariable *GV =
                 dyn_cast<GlobalVariable>(U->stripPointerCasts()))

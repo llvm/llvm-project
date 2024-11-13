@@ -2547,7 +2547,6 @@ void DroppedVariableStats::runBeforePass(StringRef PassID, Any IR) {
     return this->runOnModule(M, true);
   if (auto *F = unwrapIR<Function>(IR))
     return this->runOnFunction(F, true);
-  return;
 }
 
 void DroppedVariableStats::runOnFunction(const Function *F, bool Before) {
@@ -2661,7 +2660,6 @@ void DroppedVariableStats::runAfterPass(StringRef PassID, Any IR,
 
   DebugVariablesStack.pop_back();
   InlinedAts.pop_back();
-  return;
 }
 
 bool DroppedVariableStats::isScopeChildOfOrEqualTo(DIScope *Scope,
