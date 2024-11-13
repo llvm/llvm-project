@@ -7819,9 +7819,8 @@ randomized.
 def HLSLSV_GroupIDDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-The ``SV_GroupID`` semantic, when applied to an input parameter, specifies a
-data binding to map the group id to the specified parameter. This attribute is
-only supported in compute shaders.
+The ``SV_GroupID`` semantic, when applied to an input parameter, specifies which
+thread group a shader is executing in. This attribute is only supported in compute shaders.
 
 The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupid
   }];
