@@ -6,10 +6,14 @@ tbx z0.b, z1.b, z2.b
 // CHECK: error: instruction requires: sve2 or sme
 // CHECK-NEXT: tbx z0.b, z1.b, z2.b
 
-.cpu generic+sve2-aes
-.cpu generic+nosve2-aes
+.cpu generic+sve2-aes+nosve2-aes
 aesd z23.b, z23.b, z13.b
-// CHECK: error: instruction requires: sve2-aes
+// CHECK: error: instruction requires: sve-aes
+// CHECK-NEXT: aesd z23.b, z23.b, z13.b
+
+.cpu generic+sve-aes+nosve-aes
+aesd z23.b, z23.b, z13.b
+// CHECK: error: instruction requires: sve2 sve-aes
 // CHECK-NEXT: aesd z23.b, z23.b, z13.b
 
 .cpu generic+sve2-sm4
