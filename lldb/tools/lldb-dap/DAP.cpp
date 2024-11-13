@@ -548,7 +548,7 @@ bool DAP::RunLLDBCommands(llvm::StringRef prefix,
                           llvm::ArrayRef<std::string> commands) {
   bool required_command_failed = false;
   std::string output =
-      ::RunLLDBCommands(prefix, commands, required_command_failed);
+      ::RunLLDBCommands(debugger, prefix, commands, required_command_failed);
   SendOutput(OutputType::Console, output);
   return !required_command_failed;
 }

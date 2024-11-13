@@ -227,7 +227,13 @@ std::pair<Value *, Value *> ShapeCalculator::getShape(IntrinsicInst *II,
   case Intrinsic::x86_t2rpntlvwz1t1_internal:
   case Intrinsic::x86_tileloadd64_internal:
   case Intrinsic::x86_tileloaddt164_internal:
-  case Intrinsic::x86_tilestored64_internal: {
+  case Intrinsic::x86_tilestored64_internal:
+  case Intrinsic::x86_t2rpntlvwz0rs_internal:
+  case Intrinsic::x86_t2rpntlvwz0rst1_internal:
+  case Intrinsic::x86_t2rpntlvwz1rs_internal:
+  case Intrinsic::x86_t2rpntlvwz1rst1_internal:
+  case Intrinsic::x86_tileloaddrs64_internal:
+  case Intrinsic::x86_tileloaddrst164_internal: {
     Row = II->getArgOperand(0);
     Col = II->getArgOperand(1);
     break;
@@ -241,7 +247,8 @@ std::pair<Value *, Value *> ShapeCalculator::getShape(IntrinsicInst *II,
   case Intrinsic::x86_tdpbusd_internal:
   case Intrinsic::x86_tdpbuud_internal:
   case Intrinsic::x86_tdpbf16ps_internal:
-  case Intrinsic::x86_tdpfp16ps_internal: {
+  case Intrinsic::x86_tdpfp16ps_internal:
+  case Intrinsic::x86_tmmultf32ps_internal: {
     switch (OpNo) {
     case 3:
       Row = II->getArgOperand(0);
@@ -280,7 +287,8 @@ std::pair<Value *, Value *> ShapeCalculator::getShape(IntrinsicInst *II,
   case Intrinsic::x86_ttdpfp16ps_internal:
   case Intrinsic::x86_ttcmmimfp16ps_internal:
   case Intrinsic::x86_ttcmmrlfp16ps_internal:
-  case Intrinsic::x86_tconjtcmmimfp16ps_internal: {
+  case Intrinsic::x86_tconjtcmmimfp16ps_internal:
+  case Intrinsic::x86_ttmmultf32ps_internal: {
     switch (OpNo) {
     case 3:
       Row = II->getArgOperand(0);

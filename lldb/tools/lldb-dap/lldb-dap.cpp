@@ -236,7 +236,7 @@ void SendTerminatedEvent() {
   llvm::call_once(g_dap.terminated_event_flag, [&] {
     g_dap.RunTerminateCommands();
     // Send a "terminated" event
-    llvm::json::Object event(CreateTerminatedEventObject());
+    llvm::json::Object event(CreateTerminatedEventObject(g_dap.target));
     g_dap.SendJSON(llvm::json::Value(std::move(event)));
   });
 }
@@ -288,13 +288,13 @@ void SendThreadStoppedEvent() {
       if (num_threads_with_reason == 0) {
         lldb::SBThread thread = process.GetThreadAtIndex(0);
         g_dap.focus_tid = thread.GetThreadID();
-        g_dap.SendJSON(CreateThreadStopped(thread, stop_id));
+        g_dap.SendJSON(CreateThreadStopped(g_dap, thread, stop_id));
       } else {
         for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
           lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
           g_dap.thread_ids.insert(thread.GetThreadID());
           if (ThreadHasStopReason(thread)) {
-            g_dap.SendJSON(CreateThreadStopped(thread, stop_id));
+            g_dap.SendJSON(CreateThreadStopped(g_dap, thread, stop_id));
           }
         }
       }
@@ -688,7 +688,8 @@ bool FillStackFrames(lldb::SBThread &thread, llvm::json::Array &stack_frames,
   for (int64_t i = start_frame;
        static_cast<int64_t>(stack_frames.size()) < levels; i++) {
     if (i == -1) {
-      stack_frames.emplace_back(CreateExtendedStackFrameLabel(thread));
+      stack_frames.emplace_back(
+          CreateExtendedStackFrameLabel(thread, g_dap.frame_format));
       continue;
     }
 
@@ -699,7 +700,7 @@ bool FillStackFrames(lldb::SBThread &thread, llvm::json::Array &stack_frames,
       break;
     }
 
-    stack_frames.emplace_back(CreateStackFrame(frame));
+    stack_frames.emplace_back(CreateStackFrame(frame, g_dap.frame_format));
   }
 
   if (g_dap.display_extended_backtrace && reached_end_of_stack) {
@@ -1614,8 +1615,8 @@ void request_evaluate(const llvm::json::Object &request) {
     if (frame.IsValid()) {
       g_dap.focus_tid = frame.GetThread().GetThreadID();
     }
-    auto result =
-        RunLLDBCommandsVerbatim(llvm::StringRef(), {std::string(expression)});
+    auto result = RunLLDBCommandsVerbatim(g_dap.debugger, llvm::StringRef(),
+                                          {std::string(expression)});
     EmplaceSafeString(body, "result", result);
     body.try_emplace("variablesReference", (int64_t)0);
   } else {
@@ -1656,7 +1657,7 @@ void request_evaluate(const llvm::json::Object &request) {
       else
         EmplaceSafeString(response, "message", "evaluate failed");
     } else {
-      VariableDescription desc(value);
+      VariableDescription desc(value, g_dap.enable_auto_variable_summaries);
       EmplaceSafeString(body, "result", desc.GetResult(context));
       EmplaceSafeString(body, "type", desc.display_type_name);
       int64_t var_ref = 0;
@@ -1775,7 +1776,7 @@ void request_modules(const llvm::json::Object &request) {
   llvm::json::Array modules;
   for (size_t i = 0; i < g_dap.target.GetNumModules(); i++) {
     lldb::SBModule module = g_dap.target.GetModuleAtIndex(i);
-    modules.emplace_back(CreateModule(module));
+    modules.emplace_back(CreateModule(g_dap.target, module));
   }
 
   llvm::json::Object body;
@@ -3678,7 +3679,7 @@ void request_threads(const llvm::json::Object &request) {
   llvm::json::Array threads;
   for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
     lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
-    threads.emplace_back(CreateThread(thread));
+    threads.emplace_back(CreateThread(thread, g_dap.thread_format));
   }
   if (threads.size() == 0) {
     response["success"] = llvm::json::Value(false);
@@ -3819,7 +3820,7 @@ void request_setVariable(const llvm::json::Object &request) {
     lldb::SBError error;
     bool success = variable.SetValueFromCString(value.data(), error);
     if (success) {
-      VariableDescription desc(variable);
+      VariableDescription desc(variable, g_dap.enable_auto_variable_summaries);
       EmplaceSafeString(body, "result", desc.display_value);
       EmplaceSafeString(body, "type", desc.display_type_name);
 
@@ -3927,13 +3928,13 @@ void request_variables(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
   llvm::json::Array variables;
-  auto arguments = request.getObject("arguments");
+  const auto *arguments = request.getObject("arguments");
   const auto variablesReference =
       GetUnsigned(arguments, "variablesReference", 0);
   const int64_t start = GetSigned(arguments, "start", 0);
   const int64_t count = GetSigned(arguments, "count", 0);
   bool hex = false;
-  auto format = arguments->getObject("format");
+  const auto *format = arguments->getObject("format");
   if (format)
     hex = GetBoolean(format, "hex", false);
 
@@ -4009,7 +4010,8 @@ void request_variables(const llvm::json::Object &request) {
       int64_t var_ref =
           g_dap.variables.InsertVariable(variable, /*is_permanent=*/false);
       variables.emplace_back(CreateVariable(
-          variable, var_ref, hex,
+          variable, var_ref, hex, g_dap.enable_auto_variable_summaries,
+          g_dap.enable_synthetic_child_debugging,
           variable_name_counts[GetNonNullVariableName(variable)] > 1));
     }
   } else {
@@ -4025,7 +4027,9 @@ void request_variables(const llvm::json::Object &request) {
             g_dap.variables.IsPermanentVariableReference(variablesReference);
         int64_t var_ref = g_dap.variables.InsertVariable(child, is_permanent);
         variables.emplace_back(CreateVariable(
-            child, var_ref, hex, /*is_name_duplicated=*/false, custom_name));
+            child, var_ref, hex, g_dap.enable_auto_variable_summaries,
+            g_dap.enable_synthetic_child_debugging,
+            /*is_name_duplicated=*/false, custom_name));
       };
       const int64_t num_children = variable.GetNumChildren();
       int64_t end_idx = start + ((count == 0) ? num_children : count);

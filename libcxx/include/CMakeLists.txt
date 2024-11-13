@@ -495,16 +495,17 @@ set(files
   __locale
   __locale_dir/locale_base_api.h
   __locale_dir/locale_base_api/android.h
-  __locale_dir/locale_base_api/apple.h
   __locale_dir/locale_base_api/bsd_locale_defaults.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
-  __locale_dir/locale_base_api/freebsd.h
   __locale_dir/locale_base_api/fuchsia.h
   __locale_dir/locale_base_api/ibm.h
   __locale_dir/locale_base_api/musl.h
   __locale_dir/locale_base_api/openbsd.h
   __locale_dir/locale_base_api/win32.h
   __locale_dir/locale_guard.h
+  __locale_dir/support/apple.h
+  __locale_dir/support/bsd_like.h
+  __locale_dir/support/freebsd.h
   __math/abs.h
   __math/copysign.h
   __math/error_functions.h
@@ -879,6 +880,7 @@ set(files
   __utility/priority_tag.h
   __utility/private_constructor_tag.h
   __utility/rel_ops.h
+  __utility/scope_guard.h
   __utility/small_buffer.h
   __utility/swap.h
   __utility/to_underlying.h
@@ -1057,7 +1059,7 @@ endforeach()
 # "include" for dependency tracking.
 add_custom_command(OUTPUT "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
   COMMAND "${Python3_EXECUTABLE}" "${LIBCXX_SOURCE_DIR}/utils/generate_iwyu_mapping.py" "-o" "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
-  DEPENDS ${_all_includes}
+  DEPENDS "${LIBCXX_SOURCE_DIR}/utils/libcxx/header_information.py"
   COMMENT "Generate the mapping file for include-what-you-use"
 )
 list(APPEND _all_includes "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp")
