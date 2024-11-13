@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef VECTOR_EXCEPTION_TEST_HELPER_H
-#define VECTOR_EXCEPTION_TEST_HELPER_H
+#ifndef EXCEPTION_TEST_HELPER_H
+#define EXCEPTION_TEST_HELPER_H
 
 #include "count_new.h"
 
@@ -79,4 +79,4 @@ inline void check_new_delete_called() {
   assert(globalMemCounter.aligned_new_array_called == globalMemCounter.aligned_delete_array_called);
 }
 
-#endif // VECTOR_EXCEPTION_TEST_HELPER_H
+#endif // EXCEPTION_TEST_HELPER_H
