@@ -307,12 +307,8 @@ bool DXILFlattenArraysVisitor::visit(Function &F) {
   bool MadeChange = false;
   ReversePostOrderTraversal<Function *> RPOT(&F);
   for (BasicBlock *BB : make_early_inc_range(RPOT)) {
-    for (Instruction &I : make_early_inc_range(*BB)) {
-      if (InstVisitor::visit(I) && I.getType()->isVoidTy()) {
-        I.eraseFromParent();
-        MadeChange = true;
-      }
-    }
+    for (Instruction &I : make_early_inc_range(*BB))
+      MadeChange |= InstVisitor::visit(I);
   }
   finish();
   return MadeChange;
