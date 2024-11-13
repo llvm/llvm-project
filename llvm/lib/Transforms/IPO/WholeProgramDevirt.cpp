@@ -167,6 +167,28 @@ static cl::list<std::string>
                       cl::desc("Prevent function(s) from being devirtualized"),
                       cl::Hidden, cl::CommaSeparated);
 
+/// With Clang, a pure virtual class's deleting destructor is emitted as a
+/// `llvm.trap` intrinsic followed by an unreachable IR instruction. In the
+/// context of whole program devirtualization, the deleting destructor of a pure
+/// virtual class won't be invoked by the source code so safe to skip as a
+/// devirtualize target.
+///
+/// However, not all unreachable functions are safe to skip. In some cases, the
+/// program intends to run such functions and terminate, for instance, a unit
+/// test may run a death test. A non-test program might (or allowed to) invoke
+/// such functions to report failures (whether/when it's a good practice or not
+/// is a different topic).
+///
+/// This option is enabled to keep an unreachable function as a possible
+/// devirtualize target to conservatively keep the program behavior.
+///
+/// TODO: Make a pure virtual class's deleting destructor precisely identifiable
+/// in Clang's codegen for more devirtualization in LLVM.
+static cl::opt<bool> WholeProgramDevirtKeepUnreachableFunction(
+    "wholeprogramdevirt-keep-unreachable-function",
+    cl::desc("Regard unreachable functions as possible devirtualize targets."),
+    cl::Hidden, cl::init(true));
+
 /// If explicitly specified, the devirt module pass will stop transformation
 /// once the total number of devirtualizations reach the cutoff value. Setting
 /// this option to 0 explicitly will do 0 devirtualization.
@@ -386,6 +408,9 @@ template <> struct DenseMapInfo<VTableSlotSummary> {
 //   2) All function summaries indicate it's unreachable
 //   3) There is no non-function with the same GUID (which is rare)
 static bool mustBeUnreachableFunction(ValueInfo TheFnVI) {
+  if (WholeProgramDevirtKeepUnreachableFunction)
+    return false;
+
   if ((!TheFnVI) || TheFnVI.getSummaryList().empty()) {
     // Returns false if ValueInfo is absent, or the summary list is empty
     // (e.g., function declarations).
@@ -2241,6 +2266,8 @@ DevirtModule::lookUpFunctionValueInfo(Function *TheFn,
 
 bool DevirtModule::mustBeUnreachableFunction(
     Function *const F, ModuleSummaryIndex *ExportSummary) {
+  if (WholeProgramDevirtKeepUnreachableFunction)
+    return false;
   // First, learn unreachability by analyzing function IR.
   if (!F->isDeclaration()) {
     // A function must be unreachable if its entry block ends with an
