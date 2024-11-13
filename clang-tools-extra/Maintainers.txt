@@ -18,6 +18,12 @@ Lead Maintainer
 | klimek@google.com (email), r4nt (GitHub)
 
 
+clang-tidy
+----------
+| Congcong Cai
+| congcongcai0907\@163.com (email), HerrCai0907 (GitHub), HerrCai0907 (Discourse)
+
+
 clang-query
 -----------
 | Aaron Ballman
