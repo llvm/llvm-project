@@ -580,6 +580,23 @@ static void getOperandsForBranch(Register CondReg, RISCVCC::CondCode &CC,
   CC = getRISCVCCFromICmp(Pred);
 }
 
+/// Select the RISC-V opcode for the G_LOAD or G_STORE operation \p GenericOpc,
+/// appropriate for the (value) register bank \p RegBankID and of memory access
+/// size \p OpSize.
+/// \returns \p GenericOpc if the combination is unsupported.
+static unsigned selectLoadStoreOp(unsigned GenericOpc, unsigned RegBankID,
+                                  unsigned OpSize) {
+  const bool IsStore = GenericOpc == TargetOpcode::G_STORE;
+  if (RegBankID == RISCV::GPRBRegBankID) {
+    switch (OpSize) {
+    case 16:
+      return IsStore ? RISCV::SH : RISCV::LH;
+    }
+  }
+
+  return GenericOpc;
+}
+
 bool RISCVInstructionSelector::select(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
@@ -786,6 +803,54 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return selectMergeValues(MI, MIB);
   case TargetOpcode::G_UNMERGE_VALUES:
     return selectUnmergeValues(MI, MIB);
+  case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_STORE: {
+    GLoadStore &LdSt = cast<GLoadStore>(MI);
+    LLT PtrTy = MRI->getType(LdSt.getPointerReg());
+
+    if (PtrTy != LLT::pointer(0, STI.getXLen())) {
+      LLVM_DEBUG(dbgs() << "Load/Store pointer has type: " << PtrTy
+                        << ", expected: " << LLT::pointer(0, STI.getXLen())
+                        << '\n');
+      return false;
+    }
+
+#ifndef NDEBUG
+    const RegisterBank &PtrRB =
+        *RBI.getRegBank(LdSt.getPointerReg(), *MRI, TRI);
+    // Check that the pointer register is valid.
+    assert(PtrRB.getID() == RISCV::GPRBRegBankID &&
+           "Load/Store pointer operand isn't a GPR");
+#endif
+
+    unsigned MemSizeInBits = LdSt.getMemSizeInBits().getValue();
+
+    const Register ValReg = LdSt.getReg(0);
+    const RegisterBank &RB = *RBI.getRegBank(ValReg, *MRI, TRI);
+
+    const unsigned NewOpc =
+        selectLoadStoreOp(MI.getOpcode(), RB.getID(), MemSizeInBits);
+    if (NewOpc == MI.getOpcode())
+      return false;
+
+    // Check if we can fold anything into the addressing mode.
+    auto AddrModeFns = selectAddrRegImm(MI.getOperand(1));
+    if (!AddrModeFns)
+      return false;
+
+    // Folded something. Create a new instruction and return it.
+    auto NewInst = MIB.buildInstr(NewOpc, {}, {}, MI.getFlags());
+    if (isa<GStore>(MI))
+      NewInst.addUse(ValReg);
+    else
+      NewInst.addDef(ValReg);
+    NewInst.cloneMemRefs(MI);
+    for (auto &Fn : *AddrModeFns)
+      Fn(NewInst);
+    MI.eraseFromParent();
+
+    return constrainSelectedInstRegOperands(*NewInst, TII, TRI, RBI);
+  }
   default:
     return false;
   }
