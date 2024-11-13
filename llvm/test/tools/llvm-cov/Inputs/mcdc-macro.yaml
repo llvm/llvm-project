@@ -91,7 +91,7 @@ Sections:
           - { File: 0, dLoc: [ 1, 5, 0, 12 ], Ref: 13 }
           - { File: 1, dLoc: [ 2, 11, 0, 12 ], Ref: 8 }
           - { File: 1, dLoc: [ 0, 11, 0, 12 ], Ref: 0 }
-          - { File: 1, dLoc: [ 0, 11, 0, 12 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 5, 4, 2 ] } }
+          - { File: 1, dLoc: [ 0, 11, 0, 12 ], Branch: { True: { Ref: 9 }, False: { Zero: {  } }, MCDC: [ 5, 4, 2 ] } }
           - { File: 2, dLoc: [ 3, 11, 0, 19 ], Ref: 6 }
           - { File: 2, dLoc: [ 0, 11, 0, 30 ], Ref: 0 }
           - { File: 2, dLoc: [ 0, 11, 0, 30 ], Ref: 0 }
@@ -101,12 +101,12 @@ Sections:
           - { File: 2, dLoc: [ 0, 23, 0, 30 ], Branch: { True: { Ref: 5 }, False: { Sub: 6 }, MCDC: [ 3, 0, 2 ] } }
           - { File: 2, dLoc: [ 0, 24, 0, 25 ], Expansion: 8 }
           - { File: 3, dLoc: [ 2, 11, 0, 12 ], Ref: 11 }
-          - { File: 3, dLoc: [ 0, 11, 0, 12 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 2, 0, 0 ] } }
+          - { File: 3, dLoc: [ 0, 11, 0, 12 ], Branch: { True: { Ref: 12 }, False: { Zero: {  } }, MCDC: [ 2, 0, 0 ] } }
           - { File: 4, dLoc: [ 1, 11, 0, 12 ], Ref: 16 }
           - { File: 4, dLoc: [ 0, 11, 0, 12 ], Branch: { True: { Ref: 17 }, False: { Sub: 7 }, MCDC: [ 4, 0, 2 ] } }
           - { File: 5, dLoc: [ 2, 11, 0, 12 ], Ref: 14 }
           - { File: 5, dLoc: [ 0, 11, 0, 12 ], Ref: 14 }
-          - { File: 5, dLoc: [ 0, 11, 0, 12 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 2, 6, 0 ] } }
+          - { File: 5, dLoc: [ 0, 11, 0, 12 ], Branch: { True: { Ref: 20 }, False: { Zero: {  } }, MCDC: [ 2, 6, 0 ] } }
           - { File: 6, dLoc: [ 4, 11, 0, 12 ], Expansion: 9 }
           - { File: 7, dLoc: [ 1, 11, 0, 12 ], Ref: 6 }
           - { File: 8, dLoc: [ 1, 11, 0, 12 ], Ref: 4 }

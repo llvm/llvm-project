@@ -78,6 +78,6 @@ extern "C" { extern void __llvm_profile_write_file(void); }
 int main(int argc, char *argv[])
 {
   func(atoi(argv[1]), atoi(argv[2]));
-  __llvm_profile_write_file();
+  (void)0;
   return 0;
 }

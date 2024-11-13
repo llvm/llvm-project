@@ -25,7 +25,7 @@ int func(T x) {
               // CHECK-LABEL: _Z4funcIfEiT_:
               // CHECK: |  |  Branch ([[@LINE-12]]:6): [True: 0, False: 1]
 
-extern "C" { extern void __llvm_profile_write_file(void); }
+
 int main() {
   if (func<int>(0))      // CHECK: |  Branch ([[@LINE]]:7): [True: 1, False: 0]
     printf("case1\n");
@@ -33,6 +33,6 @@ int main() {
     printf("case2\n");
   if (func<float>(0.0))  // CHECK: |  Branch ([[@LINE]]:7): [True: 1, False: 0]
     printf("case3\n");
-  __llvm_profile_write_file();
+  (void)0;
   return 0;
 }
