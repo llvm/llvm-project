@@ -33,4 +33,28 @@ define void @cse_nonzero_offset(ptr addrspace(1) %out, <4 x i32> %in) {
   ret void
 }
 
+define i32 @readanylane_readanylane_divergent_block(i1 %cond, i32 %arg) {
+; CHECK-LABEL: define i32 @readanylane_readanylane_divergent_block(
+; CHECK-SAME: i1 [[COND:%.*]], i32 [[ARG:%.*]]) {
+; CHECK-NEXT:  [[_ENTRY:.*:]]
+; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readanylane.i32(i32 [[ARG]])
+; CHECK-NEXT:    br i1 [[COND]], [[DOTTHEN:label %.*]], [[DOTEXIT:label %.*]]
+; CHECK:       [[_THEN:.*:]]
+; CHECK-NEXT:    br [[DOTEXIT]]
+; CHECK:       [[_EXIT:.*:]]
+; CHECK-NEXT:    ret i32 [[READ0]]
+;
+.entry:
+  %read0 = call i32 @llvm.amdgcn.readanylane.i32(i32 %arg)
+  br i1 %cond, label %.then, label %.exit
+
+.then:
+  %read1 = call i32 @llvm.amdgcn.readanylane.i32(i32 %arg)
+  br label %.exit
+
+.exit:
+  %result = phi i32 [ %read0, %.entry ], [ %read1, %.then ]
+  ret i32 %result
+}
+
 declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> nocapture, i32, i32)

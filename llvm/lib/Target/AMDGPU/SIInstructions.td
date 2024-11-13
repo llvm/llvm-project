@@ -546,8 +546,13 @@ def SI_MASKED_UNREACHABLE : SPseudoInstSI <(outs), (ins),
   let maybeAtomic = 0;
 }
 
-def SI_READANYLANE : SPseudoInstSI <(outs SReg_32:$dst), (ins VGPR_32:$src)> {
-  let SALU = 1;
+def SI_READANYLANE : VPseudoInstSI <(outs SReg_32:$dst), (ins VGPR_32:$src)> {
+  let Uses = [EXEC];
+  let VALU = 1;
+  let hasSideEffects = 0;
+  let isConvergent = 1;
+  let mayLoad = 0;
+  let mayStore = 0;
 }
 
 // Used as an isel pseudo to directly emit initialization with an

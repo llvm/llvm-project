@@ -98,11 +98,9 @@ bool AMDGPUInstructionSelector::isVCC(Register Reg,
 
 bool AMDGPUInstructionSelector::constrainCopyLikeIntrin(MachineInstr &MI,
                                                         unsigned NewOpc) const {
-  const bool NeedExec = NewOpc != AMDGPU::SI_READANYLANE;
   MI.setDesc(TII.get(NewOpc));
   MI.removeOperand(1); // Remove intrinsic ID.
-  if (NeedExec)
-    MI.addOperand(*MF, MachineOperand::CreateReg(AMDGPU::EXEC, false, true));
+  MI.addOperand(*MF, MachineOperand::CreateReg(AMDGPU::EXEC, false, true));
 
   MachineOperand &Dst = MI.getOperand(0);
   MachineOperand &Src = MI.getOperand(1);
@@ -115,7 +113,8 @@ bool AMDGPUInstructionSelector::constrainCopyLikeIntrin(MachineInstr &MI,
     = TRI.getConstrainedRegClassForOperand(Dst, *MRI);
   const TargetRegisterClass *SrcRC
     = TRI.getConstrainedRegClassForOperand(Src, *MRI);
-  if (!DstRC || (NeedExec && DstRC != SrcRC))
+  // READANYLANE allows input is vgpr and output is sgpr.
+  if (!DstRC || (NewOpc != AMDGPU::SI_READANYLANE && DstRC != SrcRC))
     return false;
 
   return RBI.constrainGenericRegister(Dst.getReg(), *DstRC, *MRI) &&

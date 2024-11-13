@@ -7,7 +7,7 @@ define void @test_readanylane_i1(ptr addrspace(1) %out, i1 %src) #1 {
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s0, v2
-; CHECK-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; CHECK-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-SDAG-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-SDAG-NEXT:    v_mov_b32_e32 v2, s0
 ; CHECK-SDAG-NEXT:    global_store_b8 v[0:1], v2, off
@@ -17,7 +17,7 @@ define void @test_readanylane_i1(ptr addrspace(1) %out, i1 %src) #1 {
 ; CHECK-GISEL:       ; %bb.0:
 ; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
-; CHECK-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; CHECK-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-GISEL-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; CHECK-GISEL-NEXT:    global_store_b8 v[0:1], v2, off
@@ -56,7 +56,7 @@ define void @test_readanylane_i1_select(ptr addrspace(1) %out, i32 %src, i32 %sr
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 42, v2
 ; CHECK-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
-; CHECK-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
+; CHECK-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s0, v4
 ; CHECK-SDAG-NEXT:    s_bitcmp1_b32 s0, 0
 ; CHECK-SDAG-NEXT:    s_cselect_b32 vcc_lo, -1, 0
@@ -69,7 +69,7 @@ define void @test_readanylane_i1_select(ptr addrspace(1) %out, i32 %src, i32 %sr
 ; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 42, v2
 ; CHECK-GISEL-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
-; CHECK-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
+; CHECK-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s0, v4
 ; CHECK-GISEL-NEXT:    s_and_b32 s0, 1, s0
 ; CHECK-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -89,7 +89,7 @@ define void @test_readanylane_i16(i16 %src) #1 {
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; CHECK-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-SDAG-NEXT:    s_and_b32 s0, s0, 0xffff
 ; CHECK-SDAG-NEXT:    ;;#ASMSTART
 ; CHECK-SDAG-NEXT:    ; use s0
@@ -368,7 +368,7 @@ define void @test_readanylane_suck(i1 %cond, i32 %src) #1 {
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s0, v1
-; CHECK-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; CHECK-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; CHECK-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; CHECK-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-SDAG-NEXT:    s_xor_b32 s2, vcc_lo, -1
@@ -390,7 +390,7 @@ define void @test_readanylane_suck(i1 %cond, i32 %src) #1 {
 ; CHECK-GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; CHECK-GISEL-NEXT:    s_mov_b32 s0, 0
-; CHECK-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; CHECK-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; CHECK-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; CHECK-GISEL-NEXT:    s_xor_b32 s3, vcc_lo, -1
 ; CHECK-GISEL-NEXT:    s_and_saveexec_b32 s2, s3

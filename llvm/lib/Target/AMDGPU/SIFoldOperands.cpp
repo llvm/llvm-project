@@ -1120,7 +1120,6 @@ void SIFoldOperandsImpl::foldOperand(
         (UseOpc == AMDGPU::V_READLANE_B32 &&
          (int)UseOpIdx ==
          AMDGPU::getNamedOperandIdx(UseOpc, AMDGPU::OpName::src0))) {
-      const bool NeedExec = UseOpc != AMDGPU::SI_READANYLANE;
       // %vgpr = V_MOV_B32 imm
       // %sgpr = V_READFIRSTLANE_B32 %vgpr
       // =>
@@ -1138,8 +1137,7 @@ void SIFoldOperandsImpl::foldOperand(
           UseMI->getOperand(1).ChangeToImmediate(OpToFold.getImm());
         else
           UseMI->getOperand(1).ChangeToFrameIndex(OpToFold.getIndex());
-        if (NeedExec)
-          UseMI->removeOperand(2); // Remove exec read (or src1 for readlane)
+        UseMI->removeOperand(2); // Remove exec read (or src1 for readlane)
         return;
       }
 
@@ -1158,8 +1156,7 @@ void SIFoldOperandsImpl::foldOperand(
         UseMI->getOperand(1).setReg(OpToFold.getReg());
         UseMI->getOperand(1).setSubReg(OpToFold.getSubReg());
         UseMI->getOperand(1).setIsKill(false);
-        if (NeedExec)
-          UseMI->removeOperand(2); // Remove exec read (or src1 for readlane)
+        UseMI->removeOperand(2); // Remove exec read (or src1 for readlane)
         return;
       }
     }

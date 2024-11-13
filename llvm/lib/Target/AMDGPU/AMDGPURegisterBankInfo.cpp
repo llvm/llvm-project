@@ -4659,7 +4659,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       [[fallthrough]];
     }
     case Intrinsic::amdgcn_readanylane:
-      [[fallthrough]];
     case Intrinsic::amdgcn_readfirstlane: {
       unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
       unsigned SrcSize = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();
