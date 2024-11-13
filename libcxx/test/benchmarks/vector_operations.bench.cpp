@@ -13,6 +13,8 @@
 #include <cstring>
 #include <deque>
 #include <functional>
+#include <memory>
+#include <string>
 #include <vector>
 
 #include "benchmark/benchmark.h"

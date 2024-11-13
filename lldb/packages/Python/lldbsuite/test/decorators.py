@@ -997,7 +997,10 @@ def skipUnlessAArch64MTELinuxCompiler(func):
         f.close()
 
         cmd = f"{compiler_path} -x c -o {f.name} -"
-        if subprocess.run(cmd, input="int main() {}".encode()).returncode != 0:
+        if (
+            subprocess.run(cmd, shell=True, input="int main() {}".encode()).returncode
+            != 0
+        ):
             os.remove(f.name)
             # Cannot compile at all, don't skip the test
             # so that we report the broken compiler normally.
@@ -1014,7 +1017,7 @@ def skipUnlessAArch64MTELinuxCompiler(func):
                 void* ptr = __arm_mte_create_random_tag((void*)(0), 0);
             }"""
         cmd = f"{compiler_path} -march=armv8.5-a+memtag -x c -o {f.name} -"
-        res = subprocess.run(cmd, input=test_src.encode())
+        res = subprocess.run(cmd, shell=True, input=test_src.encode())
         os.remove(f.name)
         if res.returncode != 0:
             return "Toolchain does not support MTE"

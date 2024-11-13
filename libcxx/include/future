@@ -378,7 +378,7 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>; 
 #  include <__memory/allocator_traits.h>
 #  include <__memory/compressed_pair.h>
 #  include <__memory/pointer_traits.h>
-#  include <__memory/shared_ptr.h>
+#  include <__memory/shared_count.h>
 #  include <__memory/unique_ptr.h>
 #  include <__memory/uses_allocator.h>
 #  include <__system_error/error_category.h>

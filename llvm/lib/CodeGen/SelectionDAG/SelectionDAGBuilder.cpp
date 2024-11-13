@@ -1223,7 +1223,6 @@ void SelectionDAGBuilder::handleDebugDeclare(Value *Address,
                         << " (could not emit func-arg dbg_value)\n");
     }
   }
-  return;
 }
 
 void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {

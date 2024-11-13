@@ -621,6 +621,26 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  tanpif16
+  SRCS
+    tanpif16.cpp
+  HDRS
+    ../tanpif16.h
+  DEPENDS
+    .sincosf16_utils
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.optimization
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   fabs
   SRCS
     fabs.cpp

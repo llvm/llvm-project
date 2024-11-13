@@ -3383,6 +3383,20 @@ def err_callback_callee_is_variadic : Error<
   "'callback' attribute callee may not be variadic">;
 def err_callback_implicit_this_not_available : Error<
   "'callback' argument at position %0 references unavailable implicit 'this'">;
+
+def err_capture_by_attribute_multiple : Error<
+  "multiple 'lifetime_capture' attributes specified">;
+def err_capture_by_attribute_no_entity : Error<
+  "'lifetime_capture_by' attribute specifies no capturing entity">;
+def err_capture_by_implicit_this_not_available : Error<
+  "'lifetime_capture_by' argument references unavailable implicit 'this'">;
+def err_capture_by_attribute_argument_unknown : Error<
+  "'lifetime_capture_by' attribute argument %0 is not a known function parameter"
+  "; must be a function parameter, 'this', 'global' or 'unknown'">;
+def err_capture_by_references_itself : Error<"'lifetime_capture_by' argument references itself">;
+def err_capture_by_param_uses_reserved_name : Error<
+  "parameter cannot be named '%select{global|unknown}0' while using 'lifetime_capture_by(%select{global|unknown}0)'">;
+
 def err_init_method_bad_return_type : Error<
   "init methods must return an object pointer type, not %0">;
 def err_attribute_invalid_size : Error<
@@ -6241,8 +6255,9 @@ def err_typecheck_negative_array_size : Error<"array size is negative">;
 def warn_typecheck_function_qualifiers_ignored : Warning<
   "'%0' qualifier on function type %1 has no effect">,
   InGroup<IgnoredQualifiers>;
-def warn_typecheck_function_qualifiers_unspecified : Warning<
-  "'%0' qualifier on function type %1 has unspecified behavior">;
+def ext_typecheck_function_qualifiers_unspecified : ExtWarn<
+  "'%0' qualifier on function type %1 has no effect and is a Clang extension">,
+  InGroup<IgnoredQualifiers>;
 def warn_typecheck_reference_qualifiers : Warning<
   "'%0' qualifier on reference type %1 has no effect">,
   InGroup<IgnoredReferenceQualifiers>;
@@ -12612,11 +12627,11 @@ def note_acc_previous_clause_here : Note<"previous clause is here">;
 def note_acc_previous_expr_here : Note<"previous expression is here">;
 def err_acc_branch_in_out_compute_construct
     : Error<"invalid %select{branch|return|throw}0 %select{out of|into}1 "
-            "OpenACC Compute Construct">;
+            "OpenACC Compute/Combined Construct">;
 def note_acc_branch_into_compute_construct
-    : Note<"invalid branch into OpenACC Compute Construct">;
+    : Note<"invalid branch into OpenACC Compute/Combined Construct">;
 def note_acc_branch_out_of_compute_construct
-    : Note<"invalid branch out of OpenACC Compute Construct">;
+    : Note<"invalid branch out of OpenACC Compute/Combined Construct">;
 def warn_acc_if_self_conflict
     : Warning<"OpenACC construct 'self' has no effect when an 'if' clause "
               "evaluates to true">,
@@ -12690,7 +12705,7 @@ def err_acc_reduction_composite_member_type :Error<
     "OpenACC 'reduction' composite variable must not have non-scalar field">;
 def note_acc_reduction_composite_member_loc : Note<"invalid field is here">;
 def err_acc_loop_not_for_loop
-    : Error<"OpenACC 'loop' construct can only be applied to a 'for' loop">;
+    : Error<"OpenACC '%0' construct can only be applied to a 'for' loop">;
 def note_acc_construct_here : Note<"'%0' construct is here">;
 def err_acc_loop_spec_conflict
     : Error<"OpenACC clause '%0' on '%1' construct conflicts with previous "
@@ -12747,6 +12762,19 @@ def err_acc_gang_reduction_numgangs_conflict
 def err_reduction_op_mismatch
     : Error<"OpenACC 'reduction' variable must have the same operator in all "
             "nested constructs (%0 vs %1)">;
+def err_acc_loop_variable_type
+    : Error<"loop variable of loop associated with an OpenACC '%0' construct "
+            "must be of integer, pointer, or random-access-iterator type (is "
+            "%1)">;
+def err_acc_loop_variable
+    : Error<"OpenACC '%0' construct must have initialization clause in "
+            "canonical form ('var = init' or 'T var = init')">;
+def err_acc_loop_terminating_condition
+    : Error<"OpenACC '%0' construct must have a terminating condition">;
+def err_acc_loop_not_monotonic
+    : Error<"OpenACC '%0' variable must monotonically increase or decrease "
+            "('++', '--', or compound assignment)">;
+
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_global_load_lds_size_valid_value : Note<"size must be 1, 2, or 4">;

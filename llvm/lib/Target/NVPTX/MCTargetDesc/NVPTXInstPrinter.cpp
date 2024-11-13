@@ -373,6 +373,12 @@ void NVPTXInstPrinter::printOffseti32imm(const MCInst *MI, int OpNum,
   }
 }
 
+void NVPTXInstPrinter::printHexu32imm(const MCInst *MI, int OpNum,
+                                      raw_ostream &O, const char *Modifier) {
+  int64_t Imm = MI->getOperand(OpNum).getImm();
+  O << formatHex(Imm) << "U";
+}
+
 void NVPTXInstPrinter::printProtoIdent(const MCInst *MI, int OpNum,
                                        raw_ostream &O, const char *Modifier) {
   const MCOperand &Op = MI->getOperand(OpNum);

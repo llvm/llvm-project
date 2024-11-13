@@ -1279,7 +1279,8 @@ void BitcodeFile::parseLazy() {
 }
 
 MachineTypes BitcodeFile::getMachineType() const {
-  switch (Triple(obj->getTargetTriple()).getArch()) {
+  Triple t(obj->getTargetTriple());
+  switch (t.getArch()) {
   case Triple::x86_64:
     return AMD64;
   case Triple::x86:
@@ -1288,7 +1289,7 @@ MachineTypes BitcodeFile::getMachineType() const {
   case Triple::thumb:
     return ARMNT;
   case Triple::aarch64:
-    return ARM64;
+    return t.isWindowsArm64EC() ? ARM64EC : ARM64;
   default:
     return IMAGE_FILE_MACHINE_UNKNOWN;
   }
