@@ -629,12 +629,18 @@ bool SemaX86::CheckBuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall) {
     return false;
   case X86::BI__builtin_ia32_tileloadd64:
   case X86::BI__builtin_ia32_tileloaddt164:
+  case X86::BI__builtin_ia32_tileloaddrs64:
+  case X86::BI__builtin_ia32_tileloaddrst164:
   case X86::BI__builtin_ia32_tilestored64:
   case X86::BI__builtin_ia32_tilezero:
   case X86::BI__builtin_ia32_t2rpntlvwz0:
   case X86::BI__builtin_ia32_t2rpntlvwz0t1:
   case X86::BI__builtin_ia32_t2rpntlvwz1:
   case X86::BI__builtin_ia32_t2rpntlvwz1t1:
+  case X86::BI__builtin_ia32_t2rpntlvwz0rst1:
+  case X86::BI__builtin_ia32_t2rpntlvwz1rs:
+  case X86::BI__builtin_ia32_t2rpntlvwz1rst1:
+  case X86::BI__builtin_ia32_t2rpntlvwz0rs:
   case X86::BI__builtin_ia32_tcvtrowps2pbf16h:
   case X86::BI__builtin_ia32_tcvtrowps2pbf16l:
   case X86::BI__builtin_ia32_tcvtrowps2phh:

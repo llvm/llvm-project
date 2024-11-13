@@ -3882,7 +3882,7 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(
   unsigned Mods = 0;
   MachineInstr *MI = MRI.getVRegDef(Src);
 
-  if (MI && MI->getOpcode() == AMDGPU::G_FNEG &&
+  if (MI->getOpcode() == AMDGPU::G_FNEG &&
       // It's possible to see an f32 fneg here, but unlikely.
       // TODO: Treat f32 fneg as only high bit.
       MRI.getType(Src) == LLT::fixed_vector(2, 16)) {
@@ -4705,24 +4705,24 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
   // offsets.
   std::optional<int> FI;
   Register VAddr = Root.getReg();
-  if (const MachineInstr *RootDef = MRI->getVRegDef(Root.getReg())) {
-    Register PtrBase;
-    int64_t ConstOffset;
-    std::tie(PtrBase, ConstOffset) = getPtrBaseWithConstantOffset(VAddr, *MRI);
-    if (ConstOffset != 0) {
-      if (TII.isLegalMUBUFImmOffset(ConstOffset) &&
-          (!STI.privateMemoryResourceIsRangeChecked() ||
-           KB->signBitIsZero(PtrBase))) {
-        const MachineInstr *PtrBaseDef = MRI->getVRegDef(PtrBase);
-        if (PtrBaseDef->getOpcode() == AMDGPU::G_FRAME_INDEX)
-          FI = PtrBaseDef->getOperand(1).getIndex();
-        else
-          VAddr = PtrBase;
-        Offset = ConstOffset;
-      }
-    } else if (RootDef->getOpcode() == AMDGPU::G_FRAME_INDEX) {
-      FI = RootDef->getOperand(1).getIndex();
+
+  const MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
+  Register PtrBase;
+  int64_t ConstOffset;
+  std::tie(PtrBase, ConstOffset) = getPtrBaseWithConstantOffset(VAddr, *MRI);
+  if (ConstOffset != 0) {
+    if (TII.isLegalMUBUFImmOffset(ConstOffset) &&
+        (!STI.privateMemoryResourceIsRangeChecked() ||
+         KB->signBitIsZero(PtrBase))) {
+      const MachineInstr *PtrBaseDef = MRI->getVRegDef(PtrBase);
+      if (PtrBaseDef->getOpcode() == AMDGPU::G_FRAME_INDEX)
+        FI = PtrBaseDef->getOperand(1).getIndex();
+      else
+        VAddr = PtrBase;
+      Offset = ConstOffset;
     }
+  } else if (RootDef->getOpcode() == AMDGPU::G_FRAME_INDEX) {
+    FI = RootDef->getOperand(1).getIndex();
   }
 
   return {{[=](MachineInstrBuilder &MIB) { // rsrc
@@ -4944,9 +4944,6 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffset(
 std::pair<Register, unsigned>
 AMDGPUInstructionSelector::selectDS1Addr1OffsetImpl(MachineOperand &Root) const {
   const MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
-  if (!RootDef)
-    return std::pair(Root.getReg(), 0);
-
   int64_t ConstAddr = 0;
 
   Register PtrBase;
@@ -5009,9 +5006,6 @@ std::pair<Register, unsigned>
 AMDGPUInstructionSelector::selectDSReadWrite2Impl(MachineOperand &Root,
                                                   unsigned Size) const {
   const MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
-  if (!RootDef)
-    return std::pair(Root.getReg(), 0);
-
   int64_t ConstAddr = 0;
 
   Register PtrBase;

@@ -11,7 +11,6 @@
 
 #include <__algorithm/copy.h>
 #include <__algorithm/fill_n.h>
-#include <__algorithm/iterator_operations.h>
 #include <__algorithm/max.h>
 #include <__algorithm/min.h>
 #include <__algorithm/move.h>
@@ -22,6 +21,7 @@
 #include <__debug_utils/sanitizers.h>
 #include <__format/enable_insertable.h>
 #include <__fwd/vector.h>
+#include <__iterator/advance.h>
 #include <__iterator/bounded_iter.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
@@ -1033,7 +1033,7 @@ vector<_Tp, _Allocator>::__assign_with_size(_ForwardIterator __first, _Sentinel 
       std::copy(__first, __mid, this->__begin_);
       __construct_at_end(__mid, __last, __new_size - size());
     } else {
-      pointer __m = std::__copy<_ClassicAlgPolicy>(__first, __last, this->__begin_).second;
+      pointer __m = std::__copy(__first, __last, this->__begin_).second;
       this->__destruct_at_end(__m);
     }
   } else {

@@ -163,6 +163,7 @@ def OMPC_DistSchedule : Clause<"dist_schedule"> {
 }
 def OMPC_Doacross : Clause<"doacross"> {
   let clangClass = "OMPDoacrossClause";
+  let flangClass = "OmpDoacrossClause";
 }
 def OMPC_DynamicAllocators : Clause<"dynamic_allocators"> {
   let clangClass = "OMPDynamicAllocatorsClause";

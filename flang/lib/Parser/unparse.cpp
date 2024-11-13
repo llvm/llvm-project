@@ -2235,35 +2235,15 @@ public:
         std::get<std::optional<OmpNumTasksClause::Prescriptiveness>>(x.t), ":");
     Walk(std::get<ScalarIntExpr>(x.t));
   }
-  void Unparse(const OmpDependSinkVecLength &x) {
-    Walk(std::get<DefinedOperator>(x.t));
-    Walk(std::get<ScalarIntConstantExpr>(x.t));
+  void Unparse(const OmpDoacross::Sink &x) {
+    Word("SINK: ");
+    Walk(x.v.v);
   }
-  void Unparse(const OmpDependSinkVec &x) {
-    Walk(std::get<Name>(x.t));
-    Walk(std::get<std::optional<OmpDependSinkVecLength>>(x.t));
-  }
-  void Unparse(const OmpDependClause::InOut &x) {
+  void Unparse(const OmpDoacross::Source &) { Word("SOURCE"); }
+  void Unparse(const OmpDependClause::TaskDep &x) {
     Walk(std::get<OmpTaskDependenceType>(x.t));
     Put(":");
     Walk(std::get<OmpObjectList>(x.t));
-  }
-  bool Pre(const OmpDependClause &x) {
-    return common::visit(
-        common::visitors{
-            [&](const OmpDependClause::Source &) {
-              Word("SOURCE");
-              return false;
-            },
-            [&](const OmpDependClause::Sink &y) {
-              Word("SINK:");
-              Walk(y.v);
-              Put(")");
-              return false;
-            },
-            [&](const OmpDependClause::InOut &) { return true; },
-        },
-        x.u);
   }
   void Unparse(const OmpDefaultmapClause &x) {
     Walk(std::get<OmpDefaultmapClause::ImplicitBehavior>(x.t));
@@ -2952,11 +2932,9 @@ public:
       Word("*");
     }
   }
-  void Unparse(const CUFKernelDoConstruct::Directive &x) {
-    Word("!$CUF KERNEL DO");
-    Walk(" (", std::get<std::optional<ScalarIntConstantExpr>>(x.t), ")");
+  void Unparse(const CUFKernelDoConstruct::LaunchConfiguration &x) {
     Word(" <<<");
-    const auto &grid{std::get<1>(x.t)};
+    const auto &grid{std::get<0>(x.t)};
     if (grid.empty()) {
       Word("*");
     } else if (grid.size() == 1) {
@@ -2965,7 +2943,7 @@ public:
       Walk("(", grid, ",", ")");
     }
     Word(",");
-    const auto &block{std::get<2>(x.t)};
+    const auto &block{std::get<1>(x.t)};
     if (block.empty()) {
       Word("*");
     } else if (block.size() == 1) {
@@ -2973,10 +2951,16 @@ public:
     } else {
       Walk("(", block, ",", ")");
     }
-    if (const auto &stream{std::get<3>(x.t)}) {
+    if (const auto &stream{std::get<2>(x.t)}) {
       Word(",STREAM="), Walk(*stream);
     }
     Word(">>>");
+  }
+  void Unparse(const CUFKernelDoConstruct::Directive &x) {
+    Word("!$CUF KERNEL DO");
+    Walk(" (", std::get<std::optional<ScalarIntConstantExpr>>(x.t), ")");
+    Walk(std::get<std::optional<CUFKernelDoConstruct::LaunchConfiguration>>(
+        x.t));
     Walk(" ", std::get<std::list<CUFReduction>>(x.t), " ");
     Word("\n");
   }
