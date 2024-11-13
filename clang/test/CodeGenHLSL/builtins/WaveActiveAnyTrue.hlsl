@@ -13,5 +13,6 @@ bool test(bool p1) {
   // CHECK-SPIRV:  %[[RET:.*]] = call spir_func i1 @llvm.spv.wave.activeanytrue(i1 %{{[a-zA-Z0-9]+}}) [ "convergencectrl"(token %[[#entry_tok0]]) ]
   // CHECK-DXIL:  %[[RET:.*]] = call i1 @llvm.dx.wave.activeanytrue(i1 %{{[a-zA-Z0-9]+}})
   // CHECK:  ret i1 %[[RET]]
+  // CHECK: fex
   return WaveActiveAnyTrue(p1);
 }

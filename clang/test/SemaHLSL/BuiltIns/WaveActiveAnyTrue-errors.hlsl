@@ -15,7 +15,7 @@ struct Foo
   int a;
 };
 
-bool test_type_check_2(Foo p0) {
+bool test_type_check(Foo p0) {
   return __builtin_hlsl_wave_active_any_true(p0);
   // expected-error@-1 {{no viable conversion from 'Foo' to 'bool'}}
 }

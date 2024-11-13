@@ -19113,14 +19113,9 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     llvm::Type *Ty = Op->getType();
     assert(Ty->isIntegerTy(1) && "wave_active_any_true operand must be a bool");
 
-    llvm::FunctionType *FT =
-        llvm::FunctionType::get(Ty, {Ty}, /*isVarArg=*/false);
-    llvm::StringRef Name = Intrinsic::getName(
-        CGM.getHLSLRuntime().getWaveActiveAnyTrueIntrinsic());
-    return EmitRuntimeCall(CGM.CreateRuntimeFunction(FT, Name, {},
-                                                     /*Local=*/false,
-                                                     /*AssumeConvergent=*/true),
-                           {Op}, "hlsl.wave.activeanytrue");
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveActiveAnyTrueIntrinsic();
+    return EmitRuntimeCall(
+        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID), {Op});
   }
   case Builtin::BI__builtin_hlsl_wave_active_count_bits: {
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
