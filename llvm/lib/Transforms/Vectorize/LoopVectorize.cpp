@@ -4790,14 +4790,14 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
                "Trip count SCEV must be computable");
         RemainingIterations = SE.getURemExpr(
             TC, SE.getConstant(TCType, MainLoopVF.getKnownMinValue() * IC));
-        const APInt MaxRemainingIterations =
-            SE.getUnsignedRangeMax(RemainingIterations);
-        // Guard against huge trip counts.
-        if (MaxRemainingIterations.getActiveBits() <= 32) {
-          MaxTripCount = MaxRemainingIterations.getZExtValue();
-          LLVM_DEBUG(dbgs() << "LEV: Maximum Trip Count for Epilogue: "
-                            << MaxTripCount << "\n");
+        MaxTripCount = MainLoopVF.getKnownMinValue() * IC - 1;
+        if (SE.isKnownPredicate(CmpInst::ICMP_ULT, RemainingIterations,
+                                SE.getConstant(TCType, MaxTripCount))) {
+          MaxTripCount =
+              SE.getUnsignedRangeMax(RemainingIterations).getZExtValue();
         }
+        LLVM_DEBUG(dbgs() << "LEV: Maximum Trip Count for Epilogue: "
+                          << MaxTripCount << "\n");
       }
       if (SE.isKnownPredicate(
               CmpInst::ICMP_UGT,
