@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
 
 ;void f(long a[], long N, long M) {
 ;  long i, j, k;

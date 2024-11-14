@@ -9,10 +9,11 @@
 #ifndef LLVM_LIBC_SRC_SPAWN_FILE_ACTIONS_H
 #define LLVM_LIBC_SRC_SPAWN_FILE_ACTIONS_H
 
+#include "src/__support/macros/config.h"
 #include <spawn.h> // For mode_t
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 struct BaseSpawnFileAction {
   enum ActionType {
@@ -67,6 +68,6 @@ struct SpawnFileDup2Action : public BaseSpawnFileAction {
         newfd(new_fdesc) {}
 };
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SPAWN_FILE_ACTIONS_H

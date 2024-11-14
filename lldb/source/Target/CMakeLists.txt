@@ -36,6 +36,7 @@ add_lldb_library(lldbTarget
   RegisterFlags.cpp
   RegisterNumber.cpp
   RemoteAwarePlatform.cpp
+  ScriptedThreadPlan.cpp
   SectionLoadHistory.cpp
   SectionLoadList.cpp
   StackFrame.cpp
@@ -57,8 +58,8 @@ add_lldb_library(lldbTarget
   ThreadPlanCallFunctionUsingABI.cpp
   ThreadPlanCallOnFunctionExit.cpp
   ThreadPlanCallUserExpression.cpp
-  ThreadPlanPython.cpp
   ThreadPlanRunToAddress.cpp
+  ThreadPlanSingleThreadTimeout.cpp
   ThreadPlanShouldStopHere.cpp
   ThreadPlanStepInRange.cpp
   ThreadPlanStepInstruction.cpp
@@ -78,6 +79,7 @@ add_lldb_library(lldbTarget
   UnixSignals.cpp
   UnwindAssembly.cpp
   UnwindLLDB.cpp
+  VerboseTrapFrameRecognizer.cpp
 
   LINK_LIBS
     lldbBreakpoint

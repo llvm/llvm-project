@@ -60,3 +60,26 @@ template<class T1> C1<X<X<T1>>> auto t3() {
 template C1<X<X<int>>> auto t3<int>();
 static_assert(is_same<decltype(t3<int>()), X<X<X<int>>>>);
 #endif
+
+namespace GH95735 {
+
+int g(int fn) {
+  return [f = fn](auto tpl) noexcept(noexcept(f)) { return f; }(0);
+}
+
+int foo(auto... fn) {
+  // FIXME: This one hits the assertion "if the exception specification is dependent,
+  // then the noexcept expression should be value-dependent" in the constructor of
+  // FunctionProtoType.
+  // One possible solution is to update Sema::canThrow() to consider expressions
+  // (e.g. DeclRefExpr/FunctionParmPackExpr) involving unexpanded parameters as Dependent.
+  // This would effectively add an extra value-dependent flag to the noexcept expression.
+  // However, I'm afraid that would also cause ABI breakage.
+  // [...f = fn](auto tpl) noexcept(noexcept(f)) { return 0; }(0);
+  [...f = fn](auto tpl) noexcept(noexcept(g(fn...))) { return 0; }(0);
+  return [...f = fn](auto tpl) noexcept(noexcept(g(f...))) { return 0; }(0);
+}
+
+int v = foo(42);
+
+} // namespace GH95735

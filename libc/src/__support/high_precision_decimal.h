@@ -11,10 +11,11 @@
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/ctype_utils.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 struct LShiftTableEntry {
@@ -409,7 +410,8 @@ public:
       result *= 10;
       ++cur_digit;
     }
-    return result + this->should_round_up(this->decimal_point, round);
+    return result + static_cast<unsigned int>(
+                        this->should_round_up(this->decimal_point, round));
   }
 
   // Extra functions for testing.
@@ -421,6 +423,6 @@ public:
 };
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_HIGH_PRECISION_DECIMAL_H

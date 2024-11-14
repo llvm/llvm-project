@@ -1,0 +1,206 @@
+# The content of this test is modfied upon the output obtained from running
+# `bin/llc -O2 -stop-before=machine-outliner <path_to_llvm_project>/llvm/test/CodeGen/AArch64/machine-outliner-sort-per-priority.ll -o -`
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
+
+--- |
+  declare i32 @foo()
+
+  define void @f1() #0 { ret void }
+  define void @f2() #0 { ret void }
+  define void @f3() #0 { ret void }
+  define void @f4() #0 { ret void }
+  define void @f5() #0 { ret void }
+  define void @f6() #0 { ret void }
+
+  attributes #0 = { minsize }
+...
+---
+# CHECK-LABEL: name:            f1
+# CHECK-LABEL: bb.0:
+# CHECK-NEXT: liveins: $lr
+# CHECK-NEXT: {{ $}}
+# CHECK-NEXT: $x5 = ORRXrs $xzr, $lr, 0
+# CHECK-NEXT: BL @OUTLINED_FUNCTION_1
+# CHECK-NEXT: $lr = ORRXrs $xzr, $x5, 0
+# CHECK-NEXT: $w5 = MOVZWi 11, 0
+# CHECK-NEXT: TCRETURNdi @OUTLINED_FUNCTION_0
+name:            f1
+tracksRegLiveness: true
+frameInfo:
+  isCalleeSavedInfoValid: true
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0:
+    $w0 = MOVZWi 1, 0
+    $w1 = MOVZWi 2, 0
+    $w2 = MOVZWi 3, 0
+    $w3 = MOVZWi 4, 0
+    $w4 = MOVZWi 5, 0
+    $w5 = MOVZWi 11, 0
+    $w6 = MOVZWi 6, 0
+    $w7 = MOVZWi 7, 0
+    TCRETURNdi @foo, 0, csr_darwin_aarch64_aapcs, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $w2, implicit killed $w3, implicit killed $w4, implicit killed $w5, implicit killed $w6, implicit killed $w7
+
+...
+---
+# CHECK-LABEL: name:            f2
+# CHECK-LABEL: bb.0:
+# CHECK-NEXT: liveins: $lr
+# CHECK-NEXT: {{ $}}
+# CHECK-NEXT: $x5 = ORRXrs $xzr, $lr, 0
+# CHECK-NEXT: BL @OUTLINED_FUNCTION_1
+# CHECK-NEXT: $lr = ORRXrs $xzr, $x5, 0
+# CHECK-NEXT: $w5 = MOVZWi 12, 0
+# CHECK-NEXT: TCRETURNdi @OUTLINED_FUNCTION_0
+name:            f2
+tracksRegLiveness: true
+frameInfo:
+  isCalleeSavedInfoValid: true
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0:
+    $w0 = MOVZWi 1, 0
+    $w1 = MOVZWi 2, 0
+    $w2 = MOVZWi 3, 0
+    $w3 = MOVZWi 4, 0
+    $w4 = MOVZWi 5, 0
+    $w5 = MOVZWi 12, 0
+    $w6 = MOVZWi 6, 0
+    $w7 = MOVZWi 7, 0
+    TCRETURNdi @foo, 0, csr_darwin_aarch64_aapcs, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $w2, implicit killed $w3, implicit killed $w4, implicit killed $w5, implicit killed $w6, implicit killed $w7
+
+...
+---
+# CHECK-LABEL: name:            f3
+# CHECK-LABEL: bb.0:
+# CHECK-NEXT: liveins: $lr
+# CHECK-NEXT: {{ $}}
+# CHECK-NEXT: $x5 = ORRXrs $xzr, $lr, 0
+# CHECK-NEXT: BL @OUTLINED_FUNCTION_1
+# CHECK-NEXT: $lr = ORRXrs $xzr, $x5, 0
+# CHECK-NEXT: $w5 = MOVZWi 13, 0
+# CHECK-NEXT: TCRETURNdi @OUTLINED_FUNCTION_0
+name:            f3
+tracksRegLiveness: true
+frameInfo:
+  isCalleeSavedInfoValid: true
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0:
+    $w0 = MOVZWi 1, 0
+    $w1 = MOVZWi 2, 0
+    $w2 = MOVZWi 3, 0
+    $w3 = MOVZWi 4, 0
+    $w4 = MOVZWi 5, 0
+    $w5 = MOVZWi 13, 0
+    $w6 = MOVZWi 6, 0
+    $w7 = MOVZWi 7, 0
+    TCRETURNdi @foo, 0, csr_darwin_aarch64_aapcs, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $w2, implicit killed $w3, implicit killed $w4, implicit killed $w5, implicit killed $w6, implicit killed $w7
+
+...
+---
+# CHECK-LABEL: name:            f4
+# CHECK-LABEL: bb.0:
+# CHECK-NEXT: liveins: $lr
+# CHECK-NEXT: {{ $}}
+# CHECK-NEXT: $x5 = ORRXrs $xzr, $lr, 0
+# CHECK-NEXT: BL @OUTLINED_FUNCTION_1
+# CHECK-NEXT: $lr = ORRXrs $xzr, $x5, 0
+# CHECK-NEXT: $w5 = MOVZWi 14, 0
+# CHECK-NEXT: TCRETURNdi @OUTLINED_FUNCTION_0
+name:            f4
+tracksRegLiveness: true
+frameInfo:
+  isCalleeSavedInfoValid: true
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0:
+    $w0 = MOVZWi 1, 0
+    $w1 = MOVZWi 2, 0
+    $w2 = MOVZWi 3, 0
+    $w3 = MOVZWi 4, 0
+    $w4 = MOVZWi 5, 0
+    $w5 = MOVZWi 14, 0
+    $w6 = MOVZWi 6, 0
+    $w7 = MOVZWi 7, 0
+    TCRETURNdi @foo, 0, csr_darwin_aarch64_aapcs, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $w2, implicit killed $w3, implicit killed $w4, implicit killed $w5, implicit killed $w6, implicit killed $w7
+
+...
+---
+# CHECK-LABEL: name:            f5
+# CHECK-LABEL: bb.0:
+# CHECK-NEXT: liveins: $lr
+# CHECK-NEXT: {{ $}}
+# CHECK-NEXT: $x5 = ORRXrs $xzr, $lr, 0
+# CHECK-NEXT: BL @OUTLINED_FUNCTION_1
+# CHECK-NEXT: $lr = ORRXrs $xzr, $x5, 0
+# CHECK-NOT: @OUTLINED_FUNCTION_0
+name:            f5
+tracksRegLiveness: true
+frameInfo:
+  isCalleeSavedInfoValid: true
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0:
+    $w0 = MOVZWi 1, 0
+    $w1 = MOVZWi 2, 0
+    $w2 = MOVZWi 3, 0
+    $w3 = MOVZWi 4, 0
+    $w4 = MOVZWi 5, 0
+    $w5 = MOVZWi 15, 0
+    $w6 = MOVZWi 8, 0
+    $w7 = MOVZWi 9, 0
+    TCRETURNdi @foo, 0, csr_darwin_aarch64_aapcs, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $w2, implicit killed $w3, implicit killed $w4, implicit killed $w5, implicit killed $w6, implicit killed $w7
+
+...
+---
+# CHECK-LABEL: name:            f6
+# CHECK-LABEL: bb.0:
+# CHECK-NEXT: liveins: $lr
+# CHECK-NEXT: {{ $}}
+# CHECK-NEXT: $x5 = ORRXrs $xzr, $lr, 0
+# CHECK-NEXT: BL @OUTLINED_FUNCTION_1
+# CHECK-NEXT: $lr = ORRXrs $xzr, $x5, 0
+# CHECK-NOT: @OUTLINED_FUNCTION_0
+name:            f6
+tracksRegLiveness: true
+frameInfo:
+  isCalleeSavedInfoValid: true
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0:
+    $w0 = MOVZWi 1, 0
+    $w1 = MOVZWi 2, 0
+    $w2 = MOVZWi 3, 0
+    $w3 = MOVZWi 4, 0
+    $w4 = MOVZWi 5, 0
+    $w5 = MOVZWi 16, 0
+    $w6 = MOVZWi 9, 0
+    $w7 = MOVZWi 8, 0
+    TCRETURNdi @foo, 0, csr_darwin_aarch64_aapcs, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $w2, implicit killed $w3, implicit killed $w4, implicit killed $w5, implicit killed $w6, implicit killed $w7
+
+...
+
+# CHECK-LABEL: name:            OUTLINED_FUNCTION_0
+# CHECK-LABEL: bb.0:
+# CHECK-NEXT: liveins: $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $lr, $d8, $d9, $d10, $d11, $d12, $d13, $d14, $d15, $w0, $w1, $w2, $w3, $w4, $w5
+# CHECK-NEXT: {{ $}}
+# CHECK-NEXT: $w6 = MOVZWi 6, 0
+# CHECK-NEXT: $w7 = MOVZWi 7, 0
+
+# CHECK-LABEL: name:            OUTLINED_FUNCTION_1
+# CHECK-LABEL: bb.0:
+# CHECK-NEXT: liveins: $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $lr, $d8, $d9, $d10, $d11, $d12, $d13, $d14, $d15
+# CHECK-NEXT: {{ $}}
+# CHECK-NEXT: $w0 = MOVZWi 1, 0
+# CHECK-NEXT: $w1 = MOVZWi 2, 0
+# CHECK-NEXT: $w2 = MOVZWi 3, 0
+# CHECK-NEXT: $w3 = MOVZWi 4, 0
+# CHECK-NEXT: $w4 = MOVZWi 5, 0
+# CHECK-NEXT: RET $lr

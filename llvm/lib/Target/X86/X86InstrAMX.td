@@ -74,7 +74,7 @@ let SchedRW = [WriteSystem] in {
                                             GR16:$src2, opaquemem:$src3,
                                             TILE:$src4), []>;
     let isPseudo = true, isReMaterializable = 1, isAsCheapAsAMove = 1,
-        canFoldAsLoad = 1 in
+        canFoldAsLoad = 1, usesCustomInserter = 1 in
       def PTILEZEROV : PseudoI<(outs TILE:$dst), (ins GR16:$src1, GR16:$src2),
                                 [(set TILE:$dst, (int_x86_tilezero_internal
                                   GR16:$src1, GR16:$src2))]>;

@@ -13,10 +13,11 @@
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 // A class which stores the normalized form of a floating point value.
@@ -52,7 +53,7 @@ template <typename T> struct NormalFloat {
       return;
 
     unsigned normalization_shift = evaluate_normalization_shift(mantissa);
-    mantissa = mantissa << normalization_shift;
+    mantissa <<= normalization_shift;
     exponent -= normalization_shift;
   }
 
@@ -110,9 +111,11 @@ template <typename T> struct NormalFloat {
       if (shift <= FPBits<T>::FRACTION_LEN + 1) {
         // Generate a subnormal number. Might lead to loss of precision.
         // We round to nearest and round halfway cases to even.
-        const StorageType shift_out_mask = (StorageType(1) << shift) - 1;
+        const StorageType shift_out_mask =
+            static_cast<StorageType>(StorageType(1) << shift) - 1;
         const StorageType shift_out_value = mantissa & shift_out_mask;
-        const StorageType halfway_value = StorageType(1) << (shift - 1);
+        const StorageType halfway_value =
+            static_cast<StorageType>(StorageType(1) << (shift - 1));
         result.set_biased_exponent(0);
         result.set_mantissa(mantissa >> shift);
         StorageType new_mantissa = result.get_mantissa();
@@ -135,7 +138,8 @@ template <typename T> struct NormalFloat {
       }
     }
 
-    result.set_biased_exponent(exponent + FPBits<T>::EXP_BIAS);
+    result.set_biased_exponent(
+        static_cast<StorageType>(exponent + FPBits<T>::EXP_BIAS));
     result.set_mantissa(mantissa);
     return result.get_val();
   }
@@ -155,7 +159,7 @@ private:
     // Normalize subnormal numbers.
     if (bits.is_subnormal()) {
       unsigned shift = evaluate_normalization_shift(bits.get_mantissa());
-      mantissa = StorageType(bits.get_mantissa()) << shift;
+      mantissa = static_cast<StorageType>(bits.get_mantissa() << shift);
       exponent = 1 - FPBits<T>::EXP_BIAS - shift;
     } else {
       exponent = bits.get_biased_exponent() - FPBits<T>::EXP_BIAS;
@@ -264,6 +268,6 @@ template <> LIBC_INLINE NormalFloat<long double>::operator long double() const {
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_NORMALFLOAT_H

@@ -1,11 +1,12 @@
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
+#include "clang/CodeGen/ObjectFilePCHContainerWriter.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Rewrite/Core/Rewriter.h"
+#include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
 

@@ -174,3 +174,35 @@ TEST(DependencyScanningFilesystem, CacheStatOnExists) {
   EXPECT_EQ(InstrumentingFS->NumStatusCalls, 2u);
   EXPECT_EQ(InstrumentingFS->NumExistsCalls, 0u);
 }
+
+TEST(DependencyScanningFilesystem, CacheStatFailures) {
+  auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  InMemoryFS->setCurrentWorkingDirectory("/");
+  InMemoryFS->addFile("/dir/vector", 0, llvm::MemoryBuffer::getMemBuffer(""));
+  InMemoryFS->addFile("/cache/a.pcm", 0, llvm::MemoryBuffer::getMemBuffer(""));
+
+  auto InstrumentingFS =
+      llvm::makeIntrusiveRefCnt<InstrumentingFilesystem>(InMemoryFS);
+
+  DependencyScanningFilesystemSharedCache SharedCache;
+  DependencyScanningWorkerFilesystem DepFS(SharedCache, InstrumentingFS);
+
+  DepFS.status("/dir");
+  DepFS.status("/dir");
+  EXPECT_EQ(InstrumentingFS->NumStatusCalls, 1u);
+
+  DepFS.status("/dir/vector");
+  DepFS.status("/dir/vector");
+  EXPECT_EQ(InstrumentingFS->NumStatusCalls, 2u);
+
+  DepFS.setBypassedPathPrefix("/cache");
+  DepFS.exists("/cache/a.pcm");
+  EXPECT_EQ(InstrumentingFS->NumStatusCalls, 3u);
+  DepFS.exists("/cache/a.pcm");
+  EXPECT_EQ(InstrumentingFS->NumStatusCalls, 4u);
+
+  DepFS.resetBypassedPathPrefix();
+  DepFS.exists("/cache/a.pcm");
+  DepFS.exists("/cache/a.pcm");
+  EXPECT_EQ(InstrumentingFS->NumStatusCalls, 5u);
+}

@@ -994,7 +994,7 @@ namespace placement_new_delete {
   constexpr bool bad(int which) {
     switch (which) {
     case 0:
-      delete new (placement_new_arg{}) int; // expected-note {{call to placement 'operator new'}}
+      delete new (placement_new_arg{}) int; // expected-note {{this placement new expression is not supported in constant expressions}}
       break;
 
     case 1:
@@ -1012,7 +1012,7 @@ namespace placement_new_delete {
     case 4:
       // FIXME: This technically follows the standard's rules, but it seems
       // unreasonable to expect implementations to support this.
-      delete new (std::align_val_t{64}) Overaligned; // expected-note {{placement new expression is not yet supported}}
+      delete new (std::align_val_t{64}) Overaligned; // expected-note {{this placement new expression is not supported in constant expressions}}
       break;
     }
 

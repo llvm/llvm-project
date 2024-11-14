@@ -798,14 +798,14 @@ const InferredResultType &Operator::getInferredResultType(int index) const {
 ArrayRef<SMLoc> Operator::getLoc() const { return def.getLoc(); }
 
 bool Operator::hasDescription() const {
-  return def.getValue("description") != nullptr;
+  return !getDescription().trim().empty();
 }
 
 StringRef Operator::getDescription() const {
   return def.getValueAsString("description");
 }
 
-bool Operator::hasSummary() const { return def.getValue("summary") != nullptr; }
+bool Operator::hasSummary() const { return !getSummary().trim().empty(); }
 
 StringRef Operator::getSummary() const {
   return def.getValueAsString("summary");

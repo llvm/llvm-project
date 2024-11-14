@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_STRING_BCOPY_H
 #define LLVM_LIBC_SRC_STRING_BCOPY_H
 
+#include "src/__support/macros/config.h"
 #include <stddef.h> // size_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 void bcopy(const void *src, void *dest, size_t count);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_BCOPY_H

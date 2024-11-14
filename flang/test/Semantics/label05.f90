@@ -7,6 +7,12 @@
 ! CHECK: error: Label '90' is in a construct that prevents its use as a branch target here
 ! CHECK: error: Label '91' is in a construct that prevents its use as a branch target here
 ! CHECK: error: Label '92' is in a construct that prevents its use as a branch target here
+! CHECK: error: Label '30' is in a construct that prevents its use as a branch target here
+! CHECK: error: Label '31' is in a construct that prevents its use as a branch target here
+! CHECK-NOT: error: Label '32' is in a construct that prevents its use as a branch target here
+! CHECK: error: Label '40' is in a construct that prevents its use as a branch target here
+! CHECK: error: Label '41' is in a construct that prevents its use as a branch target here
+! CHECK-NOT: error: Label '42' is in a construct that prevents its use as a branch target here
 
 subroutine sub00(a,b,n,m)
   real a(n,m)
@@ -58,3 +64,29 @@ subroutine sub04(a,n)
   end where
   if (n - 3) 90, 91, 92
 end subroutine sub04
+
+subroutine sub05(a)
+  real a(..)
+  select rank (a)
+  rank(1)
+31  goto 30
+  rank(2)
+    goto 32
+32  continue
+30  continue
+  end select
+  goto 31
+end
+
+subroutine sub06(a)
+  class(*) a
+  select type (a)
+  type is (integer)
+41  goto 40
+  type is (real)
+    goto 42
+42  continue
+40  continue
+  end select
+  goto 41
+end

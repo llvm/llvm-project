@@ -34,7 +34,7 @@ public:
   }
 
   void Set(size_t bytes, ConnectionStatus status, llvm::StringRef error_msg) {
-    m_error.SetErrorString(error_msg.data());
+    m_error = Status::FromErrorString(error_msg.data());
     m_bytes = bytes;
     m_status = status;
   }

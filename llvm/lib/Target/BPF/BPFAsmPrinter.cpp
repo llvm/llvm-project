@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
@@ -61,9 +62,7 @@ bool BPFAsmPrinter::doInitialization(Module &M) {
   // Only emit BTF when debuginfo available.
   if (MAI->doesSupportDebugInformation() && !M.debug_compile_units().empty()) {
     BTF = new BTFDebug(this);
-    Handlers.push_back(HandlerInfo(std::unique_ptr<BTFDebug>(BTF), "emit",
-                                   "Debug Info Emission", "BTF",
-                                   "BTF Emission"));
+    DebugHandlers.push_back(std::unique_ptr<BTFDebug>(BTF));
   }
 
   return false;

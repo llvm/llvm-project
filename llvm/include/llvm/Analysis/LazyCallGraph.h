@@ -55,11 +55,8 @@
 namespace llvm {
 
 class Constant;
-class Function;
 template <class GraphType> struct GraphTraits;
 class Module;
-class TargetLibraryInfo;
-class Value;
 
 /// A lazily constructed view of the call graph of a module.
 ///
@@ -111,7 +108,6 @@ class LazyCallGraph {
 public:
   class Node;
   class EdgeSequence;
-  class SCC;
   class RefSCC;
 
   /// A class used to represent edges in the call graph.
@@ -832,7 +828,7 @@ public:
     /// self-edges and edge removals which result in a spanning tree with no
     /// more cycles.
     [[nodiscard]] SmallVector<RefSCC *, 1>
-    removeInternalRefEdge(Node &SourceN, ArrayRef<Node *> TargetNs);
+    removeInternalRefEdges(ArrayRef<std::pair<Node *, Node *>> Edges);
 
     /// A convenience wrapper around the above to handle trivial cases of
     /// inserting a new call edge.
@@ -943,6 +939,11 @@ public:
   LazyCallGraph(LazyCallGraph &&G);
   LazyCallGraph &operator=(LazyCallGraph &&RHS);
 
+#if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
+  /// Verify that every RefSCC is valid.
+  void verify();
+#endif
+
   bool invalidate(Module &, const PreservedAnalyses &PA,
                   ModuleAnalysisManager::Invalidator &);
 
@@ -1051,18 +1052,18 @@ public:
   /// once SCCs have started to be formed. These routines have strict contracts
   /// but may be called at any point.
 
-  /// Remove a dead function from the call graph (typically to delete it).
+  /// Remove dead functions from the call graph.
   ///
-  /// Note that the function must have an empty use list, and the call graph
-  /// must be up-to-date prior to calling this. That means it is by itself in
-  /// a maximal SCC which is by itself in a maximal RefSCC, etc. No structural
-  /// changes result from calling this routine other than potentially removing
-  /// entry points into the call graph.
+  /// These functions should have already been passed to markDeadFunction().
+  /// This is done as a batch to prevent compile time blowup as a result of
+  /// handling a single function at a time.
+  void removeDeadFunctions(ArrayRef<Function *> DeadFs);
+
+  /// Mark a function as dead to be removed later by removeDeadFunctions().
   ///
-  /// If SCC formation has begun, this function must not be part of the current
-  /// DFS in order to call this safely. Typically, the function will have been
-  /// fully visited by the DFS prior to calling this routine.
-  void removeDeadFunction(Function &F);
+  /// The function body should have no incoming or outgoing call or ref edges.
+  /// For example, a function with a single "unreachable" instruction.
+  void markDeadFunction(Function &F);
 
   /// Add a new function split/outlined from an existing function.
   ///

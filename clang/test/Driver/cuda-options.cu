@@ -1,6 +1,4 @@
 // Tests CUDA compilation pipeline construction in Driver.
-// REQUIRES: x86-registered-target
-// REQUIRES: nvptx-registered-target
 
 // Simple compilation case. Compile device-side to PTX assembly and make sure
 // we use it on the host side.

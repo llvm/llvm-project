@@ -186,7 +186,7 @@ private:
 
   void CheckLoopItrVariableIsInt(const parser::OpenMPLoopConstruct &x);
   void CheckDoWhile(const parser::OpenMPLoopConstruct &x);
-  void CheckCycleConstraints(const parser::OpenMPLoopConstruct &x);
+  void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
   template <typename T, typename D> bool IsOperatorValid(const T &, const D &);
   void CheckAtomicMemoryOrderClause(
       const parser::OmpAtomicClauseList *, const parser::OmpAtomicClauseList *);
@@ -205,6 +205,7 @@ private:
   bool CheckIntrinsicOperator(
       const parser::DefinedOperator::IntrinsicOperator &);
   void CheckReductionTypeList(const parser::OmpClause::Reduction &);
+  void CheckReductionModifier(const parser::OmpClause::Reduction &);
   void CheckMasterNesting(const parser::OpenMPBlockConstruct &x);
   void ChecksOnOrderedAsBlock();
   void CheckBarrierNesting(const parser::OpenMPSimpleStandaloneConstruct &x);

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fobjc-arc -S -emit-llvm -o /dev/null
+// RUN: %clang_cc1 %s -fobjc-arc -emit-llvm -o /dev/null
 
 // Don't crash if the argument type and the parameter type in an indirect copy
 // restore expression have different qualification.

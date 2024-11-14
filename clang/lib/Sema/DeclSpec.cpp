@@ -377,6 +377,8 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_typename_pack_indexing:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case TST_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case TST_##Name:
+#include "clang/Basic/HLSLIntangibleTypes.def"
       return false;
 
     case TST_decltype_auto:
@@ -416,6 +418,7 @@ bool Declarator::isDeclarationOfFunction() const {
 bool Declarator::isStaticMember() {
   assert(getContext() == DeclaratorContext::Member);
   return getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static ||
+         (!isDeclarationOfFunction() && !getTemplateParameterLists().empty()) ||
          (getName().getKind() == UnqualifiedIdKind::IK_OperatorFunctionId &&
           CXXMethodDecl::isStaticOverloadedOperator(
               getName().OperatorFunctionId.Operator));
@@ -607,6 +610,10 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_##ImgType##_t: \
     return #ImgType "_t";
 #include "clang/Basic/OpenCLImageTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case DeclSpec::TST_##Name:                                                   \
+    return #Name;
+#include "clang/Basic/HLSLIntangibleTypes.def"
   case DeclSpec::TST_error:       return "(error)";
   }
   llvm_unreachable("Unknown typespec!");
@@ -1145,7 +1152,7 @@ void DeclSpec::SaveWrittenBuiltinSpecs() {
 }
 
 /// Finish - This does final analysis of the declspec, rejecting things like
-/// "_Imaginary" (lacking an FP type). After calling this method, DeclSpec is
+/// "_Complex" (lacking an FP type). After calling this method, DeclSpec is
 /// guaranteed to be self-consistent, even if an error occurred.
 void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
   // Before possibly changing their values, save specs as written.
@@ -1330,8 +1337,8 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
     break;
   }
 
-  // TODO: if the implementation does not implement _Complex or _Imaginary,
-  // disallow their use.  Need information about the backend.
+  // TODO: if the implementation does not implement _Complex, disallow their
+  // use. Need information about the backend.
   if (TypeSpecComplex != TSC_unspecified) {
     if (TypeSpecType == TST_unspecified) {
       S.Diag(TSCLoc, diag::ext_plain_complex)

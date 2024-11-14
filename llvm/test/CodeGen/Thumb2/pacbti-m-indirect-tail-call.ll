@@ -28,7 +28,7 @@ entry:
 
 declare dso_local i32 @g(i32) local_unnamed_addr #0
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind "sign-return-address"="non-leaf"}
 
 !llvm.module.flags = !{!0, !1, !2}
 

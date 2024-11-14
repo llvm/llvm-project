@@ -1,0 +1,7 @@
+header: sys-syscall.h
+standards: Linux
+macros: []
+types: []
+enums: []
+functions: []
+objects: []

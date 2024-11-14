@@ -37,6 +37,8 @@ int32_t shuffle(uint64_t Mask, int32_t Var, int32_t SrcLane);
 int32_t shuffleDown(uint64_t Mask, int32_t Var, uint32_t LaneDelta,
                     int32_t Width);
 
+uint64_t ballotSync(uint64_t Mask, int32_t Pred);
+
 /// AMDGCN Implementation
 ///
 ///{
@@ -55,6 +57,10 @@ int32_t shuffleDown(uint64_t Mask, int32_t Var, uint32_t LaneDelta,
   int Index = Self + LaneDelta;
   Index = (int)(LaneDelta + (Self & (Width - 1))) >= Width ? Self : Index;
   return __builtin_amdgcn_ds_bpermute(Index << 2, Var);
+}
+
+uint64_t ballotSync(uint64_t Mask, int32_t Pred) {
+  return Mask & __builtin_amdgcn_ballot_w64(Pred);
 }
 
 bool isSharedMemPtr(const void *Ptr) {
@@ -80,6 +86,10 @@ int32_t shuffleDown(uint64_t Mask, int32_t Var, uint32_t Delta, int32_t Width) {
   return __nvvm_shfl_sync_down_i32(Mask, Var, Delta, T);
 }
 
+uint64_t ballotSync(uint64_t Mask, int32_t Pred) {
+  return __nvvm_vote_ballot_sync(static_cast<uint32_t>(Mask), Pred);
+}
+
 bool isSharedMemPtr(const void *Ptr) { return __nvvm_isspacep_shared(Ptr); }
 
 #pragma omp end declare variant
@@ -103,6 +113,19 @@ int32_t utils::shuffleDown(uint64_t Mask, int32_t Var, uint32_t Delta,
   return impl::shuffleDown(Mask, Var, Delta, Width);
 }
 
+int64_t utils::shuffleDown(uint64_t Mask, int64_t Var, uint32_t Delta,
+                           int32_t Width) {
+  uint32_t Lo, Hi;
+  utils::unpack(Var, Lo, Hi);
+  Hi = impl::shuffleDown(Mask, Hi, Delta, Width);
+  Lo = impl::shuffleDown(Mask, Lo, Delta, Width);
+  return utils::pack(Lo, Hi);
+}
+
+uint64_t utils::ballotSync(uint64_t Mask, int32_t Pred) {
+  return impl::ballotSync(Mask, Pred);
+}
+
 bool utils::isSharedMemPtr(void *Ptr) { return impl::isSharedMemPtr(Ptr); }
 
 extern "C" {
@@ -111,11 +134,7 @@ int32_t __kmpc_shuffle_int32(int32_t Val, int16_t Delta, int16_t SrcLane) {
 }
 
 int64_t __kmpc_shuffle_int64(int64_t Val, int16_t Delta, int16_t Width) {
-  uint32_t lo, hi;
-  utils::unpack(Val, lo, hi);
-  hi = impl::shuffleDown(lanes::All, hi, Delta, Width);
-  lo = impl::shuffleDown(lanes::All, lo, Delta, Width);
-  return utils::pack(lo, hi);
+  return utils::shuffleDown(lanes::All, Val, Delta, Width);
 }
 }
 

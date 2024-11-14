@@ -31,8 +31,8 @@ using llvm::support::ulittle32_t;
 
 namespace lld::coff {
 
-SectionChunk::SectionChunk(ObjFile *f, const coff_section *h)
-    : Chunk(SectionKind), file(f), header(h), repl(this) {
+SectionChunk::SectionChunk(ObjFile *f, const coff_section *h, Kind k)
+    : Chunk(k), file(f), header(h), repl(this) {
   // Initialize relocs.
   if (file)
     setRelocs(file->getCOFFObj()->getRelocations(header));
@@ -410,6 +410,12 @@ void SectionChunk::writeTo(uint8_t *buf) const {
 
     applyRelocation(buf + rel.VirtualAddress, rel);
   }
+
+  // Write the offset to EC entry thunk preceding section contents. The low bit
+  // is always set, so it's effectively an offset from the last byte of the
+  // offset.
+  if (Defined *entryThunk = getEntryThunk())
+    write32le(buf - sizeof(uint32_t), entryThunk->getRVA() - rva + 1);
 }
 
 void SectionChunk::applyRelocation(uint8_t *off,
@@ -1064,6 +1070,40 @@ void AbsolutePointerChunk::writeTo(uint8_t *buf) const {
     write64le(buf, value);
   } else {
     write32le(buf, value);
+  }
+}
+
+void ECExportThunkChunk::writeTo(uint8_t *buf) const {
+  memcpy(buf, ECExportThunkCode, sizeof(ECExportThunkCode));
+  write32le(buf + 10, target->getRVA() - rva - 14);
+}
+
+size_t CHPECodeRangesChunk::getSize() const {
+  return exportThunks.size() * sizeof(chpe_code_range_entry);
+}
+
+void CHPECodeRangesChunk::writeTo(uint8_t *buf) const {
+  auto ranges = reinterpret_cast<chpe_code_range_entry *>(buf);
+
+  for (uint32_t i = 0; i < exportThunks.size(); i++) {
+    Chunk *thunk = exportThunks[i].first;
+    uint32_t start = thunk->getRVA();
+    ranges[i].StartRva = start;
+    ranges[i].EndRva = start + thunk->getSize();
+    ranges[i].EntryPoint = start;
+  }
+}
+
+size_t CHPERedirectionChunk::getSize() const {
+  return exportThunks.size() * sizeof(chpe_redirection_entry);
+}
+
+void CHPERedirectionChunk::writeTo(uint8_t *buf) const {
+  auto entries = reinterpret_cast<chpe_redirection_entry *>(buf);
+
+  for (uint32_t i = 0; i < exportThunks.size(); i++) {
+    entries[i].Source = exportThunks[i].first->getRVA();
+    entries[i].Destination = exportThunks[i].second->getRVA();
   }
 }
 

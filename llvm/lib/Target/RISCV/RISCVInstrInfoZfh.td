@@ -272,6 +272,7 @@ def : Pat<(f16 (fabs FPR16:$rs1)), (FSGNJX_H $rs1, $rs1)>;
 def : Pat<(riscv_fclass (f16 FPR16:$rs1)), (FCLASS_H $rs1)>;
 
 def : PatFprFpr<fcopysign, FSGNJ_H, FPR16, f16>;
+def : PatFprFpr<riscv_fsgnjx, FSGNJX_H, FPR16, f16>;
 def : Pat<(f16 (fcopysign FPR16:$rs1, (f16 (fneg FPR16:$rs2)))), (FSGNJN_H $rs1, $rs2)>;
 def : Pat<(f16 (fcopysign FPR16:$rs1, FPR32:$rs2)),
           (FSGNJ_H $rs1, (FCVT_H_S $rs2, FRM_DYN))>;
@@ -314,6 +315,7 @@ def : Pat<(fabs FPR16INX:$rs1), (FSGNJX_H_INX $rs1, $rs1)>;
 def : Pat<(riscv_fclass FPR16INX:$rs1), (FCLASS_H_INX $rs1)>;
 
 def : PatFprFpr<fcopysign, FSGNJ_H_INX, FPR16INX, f16>;
+def : PatFprFpr<riscv_fsgnjx, FSGNJX_H_INX, FPR16INX, f16>;
 def : Pat<(fcopysign FPR16INX:$rs1, (fneg FPR16INX:$rs2)), (FSGNJN_H_INX $rs1, $rs2)>;
 def : Pat<(fcopysign FPR16INX:$rs1, FPR32INX:$rs2),
           (FSGNJ_H_INX $rs1, (FCVT_H_S_INX $rs2, FRM_DYN))>;
@@ -345,6 +347,8 @@ def : Pat<(fneg (any_fma_nsz FPR16INX:$rs1, FPR16INX:$rs2, FPR16INX:$rs3)),
 foreach Ext = ZfhExts in {
   defm : PatFprFpr_m<fminnum, FMIN_H, Ext>;
   defm : PatFprFpr_m<fmaxnum, FMAX_H, Ext>;
+  defm : PatFprFpr_m<fminimumnum, FMIN_H, Ext>;
+  defm : PatFprFpr_m<fmaximumnum, FMAX_H, Ext>;
   defm : PatFprFpr_m<riscv_fmin, FMIN_H, Ext>;
   defm : PatFprFpr_m<riscv_fmax, FMAX_H, Ext>;
 }
@@ -456,7 +460,6 @@ def : Pat<(any_fpextend FPR16INX:$rs1), (FCVT_S_H_INX FPR16INX:$rs1, FRM_RNE)>;
 // Moves (no conversion)
 def : Pat<(f16 (riscv_fmv_h_x GPR:$src)), (COPY_TO_REGCLASS GPR:$src, GPR)>;
 def : Pat<(riscv_fmv_x_anyexth FPR16INX:$src), (COPY_TO_REGCLASS FPR16INX:$src, GPR)>;
-def : Pat<(riscv_fmv_x_signexth FPR16INX:$src), (COPY_TO_REGCLASS FPR16INX:$src, GPR)>;
 
 def : Pat<(fcopysign FPR32INX:$rs1, FPR16INX:$rs2), (FSGNJ_S_INX $rs1, (FCVT_S_H_INX $rs2, FRM_RNE))>;
 } // Predicates = [HasStdExtZhinxmin]

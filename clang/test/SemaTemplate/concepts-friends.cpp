@@ -504,3 +504,24 @@ template struct Z<int>;
 Y y(1);
 
 }
+
+namespace GH98258 {
+
+struct S {
+  template <typename U>
+  friend void f() requires requires { []<typename V>(V){}; } {
+    return;
+  }
+
+  template <typename U>
+  friend void f2() requires requires { [](auto){}; } {
+    return;
+  }
+
+  template <typename U>
+  friend void f3() requires requires { []<int X>(){ return X; }; } {
+    return;
+  }
+};
+
+}
