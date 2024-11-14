@@ -116,16 +116,22 @@ struct Variables {
 };
 
 struct StartDebuggingRequestHandler : public lldb::SBCommandPluginInterface {
+  DAP &dap;
+  explicit StartDebuggingRequestHandler(DAP &d) : dap(d) {};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
 
 struct ReplModeRequestHandler : public lldb::SBCommandPluginInterface {
+  DAP &dap;
+  explicit ReplModeRequestHandler(DAP &d) : dap(d) {};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
 
 struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
+  DAP &dap;
+  explicit SendEventRequestHandler(DAP &d) : dap(d) {};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
@@ -171,7 +177,7 @@ struct DAP {
   // the old process here so we can detect this case and keep running.
   lldb::pid_t restarting_process_id;
   bool configuration_done_sent;
-  std::map<std::string, RequestCallback> request_handlers;
+  std::map<std::string, RequestCallback, std::less<>> request_handlers;
   bool waiting_for_run_in_terminal;
   ProgressEventReporter progress_event_reporter;
   // Keep track of the last stop thread index IDs as threads won't go away

@@ -707,8 +707,8 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
              .addSimpleTemplateParams({"element_type"})
              .Record;
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupBufferType(Decl, *SemaPtr, ResourceClass::SRV,
-                    ResourceKind::TypedBuffer, /*IsROV=*/false,
+    setupBufferType(Decl, *SemaPtr, ResourceClass::SRV, ResourceKind::RawBuffer,
+                    /*IsROV=*/false,
                     /*RawBuffer=*/true)
         .addArraySubscriptOperators()
         .completeDefinition();
@@ -718,12 +718,34 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
              .addSimpleTemplateParams({"element_type"})
              .Record;
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
-                    ResourceKind::TypedBuffer, /*IsROV=*/false,
+    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
+                    /*IsROV=*/false,
                     /*RawBuffer=*/true)
         .addArraySubscriptOperators()
         .addIncrementCounterMethod()
         .addDecrementCounterMethod()
+        .completeDefinition();
+  });
+
+  Decl =
+      BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "AppendStructuredBuffer")
+          .addSimpleTemplateParams(*SemaPtr, {"element_type"})
+          .Record;
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
+                    /*IsROV=*/false,
+                    /*RawBuffer=*/true)
+        .completeDefinition();
+  });
+
+  Decl =
+      BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "ConsumeStructuredBuffer")
+          .addSimpleTemplateParams(*SemaPtr, {"element_type"})
+          .Record;
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
+                    /*IsROV=*/false,
+                    /*RawBuffer=*/true)
         .completeDefinition();
   });
 

@@ -360,9 +360,7 @@ static void addReplicateRegions(VPlan &Plan) {
     // Record predicated instructions for above packing optimizations.
     VPBlockBase *Region = createReplicateRegion(RepR, Plan);
     Region->setParent(CurrentBlock->getParent());
-    VPBlockUtils::disconnectBlocks(CurrentBlock, SplitBlock);
-    VPBlockUtils::connectBlocks(CurrentBlock, Region);
-    VPBlockUtils::connectBlocks(Region, SplitBlock);
+    VPBlockUtils::insertOnEdge(CurrentBlock, SplitBlock, Region);
   }
 }
 

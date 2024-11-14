@@ -24,7 +24,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
-#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/ByteProvider.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
@@ -2376,9 +2375,7 @@ void SITargetLowering::allocateSpecialInputSGPRs(
   if (UserSGPRInfo.hasDispatchPtr())
     allocateSGPR64Input(CCInfo, ArgInfo.DispatchPtr);
 
-  const Module *M = MF.getFunction().getParent();
-  if (UserSGPRInfo.hasQueuePtr() &&
-      AMDGPU::getAMDHSACodeObjectVersion(*M) < AMDGPU::AMDHSA_COV5)
+  if (UserSGPRInfo.hasQueuePtr())
     allocateSGPR64Input(CCInfo, ArgInfo.QueuePtr);
 
   // Implicit arg ptr takes the place of the kernarg segment pointer. This is a
@@ -2429,9 +2426,7 @@ void SITargetLowering::allocateHSAUserSGPRs(CCState &CCInfo,
     CCInfo.AllocateReg(DispatchPtrReg);
   }
 
-  const Module *M = MF.getFunction().getParent();
-  if (UserSGPRInfo.hasQueuePtr() &&
-      AMDGPU::getAMDHSACodeObjectVersion(*M) < AMDGPU::AMDHSA_COV5) {
+  if (UserSGPRInfo.hasQueuePtr()) {
     Register QueuePtrReg = Info.addQueuePtr(TRI);
     MF.addLiveIn(QueuePtrReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(QueuePtrReg);
@@ -14011,13 +14006,11 @@ static void placeSources(ByteProvider<SDValue> &Src0,
   Src0s.push_back(
       {*Src0.Src,
        ((Src0.SrcOffset % 4) << (8 * (3 - Step)) | (ZeroMask & ~FMask)),
-       Src1.SrcOffset / 4});
+       Src0.SrcOffset / 4});
   Src1s.push_back(
       {*Src1.Src,
        ((Src1.SrcOffset % 4) << (8 * (3 - Step)) | (ZeroMask & ~FMask)),
        Src1.SrcOffset / 4});
-
-  return;
 }
 
 static SDValue resolveSources(SelectionDAG &DAG, SDLoc SL,

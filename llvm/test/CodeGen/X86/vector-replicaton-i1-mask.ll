@@ -3303,7 +3303,7 @@ define void @mask_replication_factor5_vf8(ptr %in.maskvec, ptr %in.vec, ptr %out
 ; AVX512BW-ONLY:       # %bb.0:
 ; AVX512BW-ONLY-NEXT:    kmovw (%rdi), %k0
 ; AVX512BW-ONLY-NEXT:    vpmovm2b %k0, %zmm0
-; AVX512BW-ONLY-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
+; AVX512BW-ONLY-NEXT:    vpbroadcastq %xmm0, %zmm0
 ; AVX512BW-ONLY-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[0,0,0,0,0,1,1,1,1,1,2,2,2,2,2,3,19,19,19,19,20,20,20,20,20,21,21,21,21,21,22,22,38,38,38,39,39,39,39,39,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX512BW-ONLY-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512BW-ONLY-NEXT:    movabsq $1099511627775, %rax # imm = 0xFFFFFFFFFF
@@ -9332,7 +9332,7 @@ define void @mask_replication_factor7_vf8(ptr %in.maskvec, ptr %in.vec, ptr %out
 ; AVX512BW-ONLY:       # %bb.0:
 ; AVX512BW-ONLY-NEXT:    kmovw (%rdi), %k0
 ; AVX512BW-ONLY-NEXT:    vpmovm2b %k0, %zmm0
-; AVX512BW-ONLY-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
+; AVX512BW-ONLY-NEXT:    vpbroadcastq %xmm0, %zmm0
 ; AVX512BW-ONLY-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[0,0,0,0,0,0,0,1,1,1,1,1,1,1,2,2,18,18,18,18,18,19,19,19,19,19,19,19,20,20,20,20,36,36,36,37,37,37,37,37,37,37,38,38,38,38,38,38,54,55,55,55,55,55,55,55,u,u,u,u,u,u,u,u]
 ; AVX512BW-ONLY-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512BW-ONLY-NEXT:    movabsq $72057594037927935, %rax # imm = 0xFFFFFFFFFFFFFF
@@ -12935,7 +12935,7 @@ define void @mask_replication_factor8_vf8(ptr %in.maskvec, ptr %in.vec, ptr %out
 ; AVX512BW-ONLY:       # %bb.0:
 ; AVX512BW-ONLY-NEXT:    kmovq (%rdi), %k0
 ; AVX512BW-ONLY-NEXT:    vpmovm2b %k0, %zmm0
-; AVX512BW-ONLY-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
+; AVX512BW-ONLY-NEXT:    vpbroadcastq %xmm0, %zmm0
 ; AVX512BW-ONLY-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,18,18,18,18,18,18,18,18,19,19,19,19,19,19,19,19,36,36,36,36,36,36,36,36,37,37,37,37,37,37,37,37,54,54,54,54,54,54,54,54,55,55,55,55,55,55,55,55]
 ; AVX512BW-ONLY-NEXT:    vpmovb2m %zmm0, %k1
 ; AVX512BW-ONLY-NEXT:    kshiftrd $16, %k1, %k2

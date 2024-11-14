@@ -87,6 +87,60 @@ def IntegerOverflowFlagsInterface : OpInterface<"IntegerOverflowFlagsInterface">
   ];
 }
 
+def ExactFlagInterface : OpInterface<"ExactFlagInterface"> {
+  let description = [{
+    This interface defines an LLVM operation with an exact flag and
+    provides a uniform API for accessing it.
+  }];
+
+  let cppNamespace = "::mlir::LLVM";
+
+  let methods = [
+    InterfaceMethod<[{
+      Get the exact flag for the operation.
+    }], "bool", "getIsExact", (ins), [{}], [{
+      return $_op.getProperties().isExact;
+    }]>,
+    InterfaceMethod<[{
+      Set the exact flag for the operation.
+    }], "void", "setIsExact", (ins "bool":$isExact), [{}], [{
+      $_op.getProperties().isExact = isExact;
+    }]>,
+    StaticInterfaceMethod<[{
+      Get the attribute name of the isExact property.
+    }], "StringRef", "getIsExactName", (ins), [{}], [{
+      return "isExact";
+    }]>,
+  ];
+}
+
+def NonNegFlagInterface : OpInterface<"NonNegFlagInterface"> {
+  let description = [{
+    This interface defines an LLVM operation with an nneg flag and
+    provides a uniform API for accessing it.
+  }];
+
+  let cppNamespace = "::mlir::LLVM";
+
+  let methods = [
+    InterfaceMethod<[{
+      Get the nneg flag for the operation.
+    }], "bool", "getNonNeg", (ins), [{}], [{
+      return $_op.getProperties().nonNeg;
+    }]>,
+    InterfaceMethod<[{
+      Set the nneg flag for the operation.
+    }], "void", "setNonNeg", (ins "bool":$nonNeg), [{}], [{
+      $_op.getProperties().nonNeg = nonNeg;
+    }]>,
+    StaticInterfaceMethod<[{
+      Get the attribute name of the nonNeg property.
+    }], "StringRef", "getNonNegName", (ins), [{}], [{
+      return "nonNeg";
+    }]>,
+  ];
+}
+
 def BranchWeightOpInterface : OpInterface<"BranchWeightOpInterface"> {
   let description = [{
     An interface for operations that can carry branch weights metadata. It
