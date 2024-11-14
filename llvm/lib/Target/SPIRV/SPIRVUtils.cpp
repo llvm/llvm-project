@@ -162,6 +162,26 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
   }
 }
 
+MachineBasicBlock::iterator getOpVariableMBBIt(MachineInstr &I) {
+  MachineFunction *MF = I.getParent()->getParent();
+  MachineBasicBlock *MBB = &MF->front();
+  MachineBasicBlock::iterator It = MBB->SkipPHIsAndLabels(MBB->begin()),
+                              E = MBB->end();
+  bool IsHeader = false;
+  unsigned Opcode;
+  for (; It != E && It != I; ++It) {
+    Opcode = It->getOpcode();
+    if (Opcode == SPIRV::OpFunction || Opcode == SPIRV::OpFunctionParameter) {
+      IsHeader = true;
+    } else if (IsHeader &&
+               !(Opcode == SPIRV::ASSIGN_TYPE || Opcode == SPIRV::OpLabel)) {
+      ++It;
+      break;
+    }
+  }
+  return It;
+}
+
 SPIRV::StorageClass::StorageClass
 addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
   switch (AddrSpace) {

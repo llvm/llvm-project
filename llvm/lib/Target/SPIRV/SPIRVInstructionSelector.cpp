@@ -1191,7 +1191,7 @@ bool SPIRVInstructionSelector::selectOverflowArith(Register ResVReg,
   // "Result Type must be from OpTypeStruct. The struct must have two members,
   // and the two members must be the same type."
   Type *ResElemTy = cast<StructType>(ResTy)->getElementType(0);
-  ResTy = StructType::create(SmallVector<Type *, 2>{ResElemTy, ResElemTy});
+  ResTy = StructType::get(ResElemTy, ResElemTy);
   // Build SPIR-V types and constant(s) if needed.
   MachineIRBuilder MIRBuilder(I);
   SPIRVType *StructType = GR.getOrCreateSPIRVType(
@@ -3178,22 +3178,9 @@ bool SPIRVInstructionSelector::selectFrameIndex(Register ResVReg,
                                                 MachineInstr &I) const {
   // Change order of instructions if needed: all OpVariable instructions in a
   // function must be the first instructions in the first block
-  MachineFunction *MF = I.getParent()->getParent();
-  MachineBasicBlock *MBB = &MF->front();
-  auto It = MBB->SkipPHIsAndLabels(MBB->begin()), E = MBB->end();
-  bool IsHeader = false;
-  unsigned Opcode;
-  for (; It != E && It != I; ++It) {
-    Opcode = It->getOpcode();
-    if (Opcode == SPIRV::OpFunction || Opcode == SPIRV::OpFunctionParameter) {
-      IsHeader = true;
-    } else if (IsHeader &&
-               !(Opcode == SPIRV::ASSIGN_TYPE || Opcode == SPIRV::OpLabel)) {
-      ++It;
-      break;
-    }
-  }
-  return BuildMI(*MBB, It, It->getDebugLoc(), TII.get(SPIRV::OpVariable))
+  auto It = getOpVariableMBBIt(I);
+  return BuildMI(*It->getParent(), It, It->getDebugLoc(),
+                 TII.get(SPIRV::OpVariable))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
       .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function))
