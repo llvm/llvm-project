@@ -5036,6 +5036,7 @@ int main(int argc, char *argv[]) {
 
   DAP dap;
   dap.debug_adaptor_path = program_path.str().str();
+  dap.repl_mode = defaultReplMode;
 
   RegisterRequestCallbacks(dap);
 
