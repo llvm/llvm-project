@@ -3192,6 +3192,8 @@ lldb::Encoding TypeSystemSwiftTypeRef::GetEncoding(opaque_compiler_type_t type,
     using namespace swift::Demangle;
     Demangler dem;
     auto *node = DemangleCanonicalType(dem, type);
+    if (!node)
+      return lldb::eEncodingInvalid;
     auto kind = node->getKind();
 
     if (kind == Node::Kind::BuiltinTypeName) {
