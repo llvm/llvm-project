@@ -316,22 +316,25 @@ class IntrinArgI8   <int value> : IntrinArgSelect<IntrinArgSelect_I8,    value>;
 class IntrinArgI32  <int value> : IntrinArgSelect<IntrinArgSelect_I32,   value>;
 
 // Select which intrinsic to lower from for a DXILOp.
-// If the intrinsic is the only argument given to IntrinSelect, then the arguments of the intrinsic will be copied
-// in the same order. Example:
-//   let intrinsic_selects = [
+// If the intrinsic is the only argument given to IntrinSelect, then the
+// arguments of the intrinsic will be copied in the same order. Example:
+//   let intrinsics = [
 //     IntrinSelect<int_dx_my_intrinsic>,
 //     IntrinSelect<int_dx_my_intrinsic2>,
 //   ]
 //=========================================================================================
-// Using IntrinArgIndex<>, arguments of the intrinsic can be copied in specific order:
-//   let intrinsic_selects = [
+// Using IntrinArgIndex<>, arguments of the intrinsic can be copied to the DXIL
+// OP in specific order:
+//   let intrinsics = [
 //     IntrinSelect<int_dx_my_intrinsic,
 //       [IntrinArgIndex<2>, IntrinArgIndex<1>, IntrinArgIndex<0>> ]
 //     >,
 //   ]
 //=========================================================================================
-// to the dxil op. This can be used in conjunction with IntrinArgIndex:
-//   let intrinsic_selects = [
+// Using IntrinArgI8<> and IntrinArgI32<>, integer constants can be added
+// directly to the dxil op. This can be used in conjunction with
+// IntrinArgIndex:
+//   let intrinsics = [
 //     IntrinSelect<int_dx_wave_active_usum,
 //       [ IntrinArgIndex<0>, IntrinArgI8<0>, IntrinArgI8<1> ]
 //     >,
@@ -357,7 +360,7 @@ class DXILOp<int opcode, DXILOpClass opclass> {
   DXILOpClass OpClass = opclass;
 
   // LLVM Intrinsics DXIL Operation maps from
-  list<IntrinSelect> intrinsic_selects = [];
+  list<IntrinSelect> intrinsics = [];
 
   // Result type of the op
   DXILOpParamType result;
@@ -379,7 +382,7 @@ class DXILOp<int opcode, DXILOpClass opclass> {
 
 def Abs :  DXILOp<6, unary> {
   let Doc = "Returns the absolute value of the input.";
-  let intrinsic_selects = [ IntrinSelect<int_fabs> ];
+  let intrinsics = [ IntrinSelect<int_fabs> ];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy]>];
@@ -389,7 +392,7 @@ def Abs :  DXILOp<6, unary> {
 
 def Saturate :  DXILOp<7, unary> {
   let Doc = "Clamps a single or double precision floating point value to [0.0f...1.0f].";
-  let intrinsic_selects = [ IntrinSelect<int_dx_saturate> ];
+  let intrinsics = [ IntrinSelect<int_dx_saturate> ];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy]>];
@@ -399,7 +402,7 @@ def Saturate :  DXILOp<7, unary> {
 
 def IsInf :  DXILOp<9, isSpecialFloat> {
   let Doc = "Determines if the specified value is infinite.";
-  let intrinsic_selects = [ IntrinSelect<int_dx_isinf> ];
+  let intrinsics = [ IntrinSelect<int_dx_isinf> ];
   let arguments = [OverloadTy];
   let result = Int1Ty;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -409,7 +412,7 @@ def IsInf :  DXILOp<9, isSpecialFloat> {
 
 def Cos :  DXILOp<12, unary> {
   let Doc = "Returns cosine(theta) for theta in radians.";
-  let intrinsic_selects = [ IntrinSelect<int_cos> ];
+  let intrinsics = [ IntrinSelect<int_cos> ];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -419,7 +422,7 @@ def Cos :  DXILOp<12, unary> {
 
 def Sin :  DXILOp<13, unary> {
   let Doc = "Returns sine(theta) for theta in radians.";
-  let intrinsic_selects = [ IntrinSelect<int_sin> ];
+  let intrinsics = [ IntrinSelect<int_sin> ];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -429,7 +432,7 @@ def Sin :  DXILOp<13, unary> {
 
 def Tan :  DXILOp<14, unary> {
   let Doc = "Returns tangent(theta) for theta in radians.";
-  let intrinsic_selects = [ IntrinSelect<int_tan> ];
+  let intrinsics = [ IntrinSelect<int_tan> ];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -439,7 +442,7 @@ def Tan :  DXILOp<14, unary> {
 
 def ACos :  DXILOp<15, unary> {
   let Doc = "Returns the arccosine of the specified value.";
-  let intrinsic_selects = [ IntrinSelect<int_acos> ];
+  let intrinsics = [ IntrinSelect<int_acos> ];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -449,7 +452,7 @@ def ACos :  DXILOp<15, unary> {
 
 def ASin :  DXILOp<16, unary> {
   let Doc = "Returns the arcsine of the specified value.";
-  let intrinsic_selects = [ IntrinSelect<int_asin> ];
+  let intrinsics = [ IntrinSelect<int_asin> ];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -459,7 +462,7 @@ def ASin :  DXILOp<16, unary> {
 
 def ATan :  DXILOp<17, unary> {
   let Doc = "Returns the arctangent of the specified value.";
-  let intrinsic_selects = [ IntrinSelect<int_atan> ];
+  let intrinsics = [ IntrinSelect<int_atan> ];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -469,7 +472,7 @@ def ATan :  DXILOp<17, unary> {
 
 def HCos :  DXILOp<18, unary> {
   let Doc = "Returns the hyperbolic cosine of the specified value.";
-  let intrinsic_selects = [ IntrinSelect<int_cosh> ];
+  let intrinsics = [ IntrinSelect<int_cosh> ];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -479,7 +482,7 @@ def HCos :  DXILOp<18, unary> {
 
 def HSin :  DXILOp<19, unary> {
   let Doc = "Returns the hyperbolic sine of the specified value.";
-  let intrinsic_selects = [ IntrinSelect<int_sinh> ];
+  let intrinsics = [ IntrinSelect<int_sinh> ];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -489,7 +492,7 @@ def HSin :  DXILOp<19, unary> {
 
 def HTan :  DXILOp<20, unary> {
   let Doc = "Returns the hyperbolic tan of the specified value.";
-  let intrinsic_selects = [ IntrinSelect<int_tanh> ];
+  let intrinsics = [ IntrinSelect<int_tanh> ];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -500,7 +503,7 @@ def HTan :  DXILOp<20, unary> {
 def Exp2 :  DXILOp<21, unary> {
   let Doc = "Returns the base 2 exponential, or 2**x, of the specified value. "
             "exp2(x) = 2**x.";
-  let intrinsic_selects = [ IntrinSelect<int_exp2> ];
+  let intrinsics = [ IntrinSelect<int_exp2> ];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -511,7 +514,7 @@ def Exp2 :  DXILOp<21, unary> {
 def Frac :  DXILOp<22, unary> {
   let Doc = "Returns a fraction from 0 to 1 that represents the decimal part "
             "of the input.";
-  let intrinsic_selects = [ IntrinSelect<int_dx_frac> ];
+  let intrinsics = [ IntrinSelect<int_dx_frac> ];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -521,7 +524,7 @@ def Frac :  DXILOp<22, unary> {
 
 def Log2 :  DXILOp<23, unary> {
   let Doc = "Returns the base-2 logarithm of the specified value.";
-  let intrinsic_selects = [ IntrinSelect<int_log2> ];
+  let intrinsics = [ IntrinSelect<int_log2> ];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -532,7 +535,7 @@ def Log2 :  DXILOp<23, unary> {
 def Sqrt :  DXILOp<24, unary> {
   let Doc = "Returns the square root of the specified floating-point value, "
             "per component.";
-  let intrinsic_selects = [ IntrinSelect<int_sqrt> ];
+  let intrinsics = [ IntrinSelect<int_sqrt> ];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -543,7 +546,7 @@ def Sqrt :  DXILOp<24, unary> {
 def RSqrt :  DXILOp<25, unary> {
   let Doc = "Returns the reciprocal of the square root of the specified value. "
             "rsqrt(x) = 1 / sqrt(x).";
-  let intrinsic_selects = [ IntrinSelect<int_dx_rsqrt> ];
+  let intrinsics = [ IntrinSelect<int_dx_rsqrt> ];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -554,7 +557,7 @@ def RSqrt :  DXILOp<25, unary> {
 def Round :  DXILOp<26, unary> {
   let Doc = "Returns the input rounded to the nearest integer within a "
             "floating-point type.";
-  let intrinsic_selects = [ IntrinSelect<int_roundeven> ];
+  let intrinsics = [ IntrinSelect<int_roundeven> ];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -565,7 +568,7 @@ def Round :  DXILOp<26, unary> {
 def Floor :  DXILOp<27, unary> {
   let Doc =
       "Returns the largest integer that is less than or equal to the input.";
-  let intrinsic_selects = [ IntrinSelect<int_floor> ];
+  let intrinsics = [ IntrinSelect<int_floor> ];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -576,7 +579,7 @@ def Floor :  DXILOp<27, unary> {
 def Ceil :  DXILOp<28, unary> {
   let Doc = "Returns the smallest integer that is greater than or equal to the "
             "input.";
-  let intrinsic_selects = [ IntrinSelect<int_ceil> ];
+  let intrinsics = [ IntrinSelect<int_ceil> ];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -586,7 +589,7 @@ def Ceil :  DXILOp<28, unary> {
 
 def Trunc :  DXILOp<29, unary> {
   let Doc = "Returns the specified value truncated to the integer component.";
-  let intrinsic_selects = [ IntrinSelect<int_trunc> ];
+  let intrinsics = [ IntrinSelect<int_trunc> ];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -596,7 +599,7 @@ def Trunc :  DXILOp<29, unary> {
 
 def Rbits :  DXILOp<30, unary> {
   let Doc = "Returns the specified value with its bits reversed.";
-  let intrinsic_selects = [ IntrinSelect<int_bitreverse> ];
+  let intrinsics = [ IntrinSelect<int_bitreverse> ];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads =
@@ -641,7 +644,7 @@ def FirstbitSHi :  DXILOp<34, unaryBits> {
 
 def FMax :  DXILOp<35, binary> {
   let Doc = "Float maximum. FMax(a,b) = a > b ? a : b";
-  let intrinsic_selects = [ IntrinSelect<int_maxnum> ];
+  let intrinsics = [ IntrinSelect<int_maxnum> ];
   let arguments = [OverloadTy, OverloadTy];
   let result = OverloadTy;
   let overloads =
@@ -652,7 +655,7 @@ def FMax :  DXILOp<35, binary> {
 
 def FMin :  DXILOp<36, binary> {
   let Doc = "Float minimum. FMin(a,b) = a < b ? a : b";
-  let intrinsic_selects = [ IntrinSelect<int_minnum> ];
+  let intrinsics = [ IntrinSelect<int_minnum> ];
   let arguments = [OverloadTy, OverloadTy];
   let result = OverloadTy;
   let overloads =
@@ -663,7 +666,7 @@ def FMin :  DXILOp<36, binary> {
 
 def SMax :  DXILOp<37, binary> {
   let Doc = "Signed integer maximum. SMax(a,b) = a > b ? a : b";
-  let intrinsic_selects = [ IntrinSelect<int_smax> ];
+  let intrinsics = [ IntrinSelect<int_smax> ];
   let arguments = [OverloadTy, OverloadTy];
   let result = OverloadTy;
   let overloads =
@@ -674,7 +677,7 @@ def SMax :  DXILOp<37, binary> {
 
 def SMin :  DXILOp<38, binary> {
   let Doc = "Signed integer minimum. SMin(a,b) = a < b ? a : b";
-  let intrinsic_selects = [ IntrinSelect<int_smin> ];
+  let intrinsics = [ IntrinSelect<int_smin> ];
   let arguments = [OverloadTy, OverloadTy];
   let result = OverloadTy;
   let overloads =
@@ -685,7 +688,7 @@ def SMin :  DXILOp<38, binary> {
 
 def UMax :  DXILOp<39, binary> {
   let Doc = "Unsigned integer maximum. UMax(a,b) = a > b ? a : b";
-  let intrinsic_selects = [ IntrinSelect<int_umax> ];
+  let intrinsics = [ IntrinSelect<int_umax> ];
   let arguments = [OverloadTy, OverloadTy];
   let result = OverloadTy;
   let overloads =
@@ -696,7 +699,7 @@ def UMax :  DXILOp<39, binary> {
 
 def UMin :  DXILOp<40, binary> {
   let Doc = "Unsigned integer minimum. UMin(a,b) = a < b ? a : b";
-  let intrinsic_selects = [ IntrinSelect<int_umin> ];
+  let intrinsics = [ IntrinSelect<int_umin> ];
   let arguments = [OverloadTy, OverloadTy];
   let result = OverloadTy;
   let overloads =
@@ -708,7 +711,7 @@ def UMin :  DXILOp<40, binary> {
 def FMad :  DXILOp<46, tertiary> {
   let Doc = "Floating point arithmetic multiply/add operation. fmad(m,a,b) = m "
             "* a + b.";
-  let intrinsic_selects = [ IntrinSelect<int_fmuladd> ];
+  let intrinsics = [ IntrinSelect<int_fmuladd> ];
   let arguments = [OverloadTy, OverloadTy, OverloadTy];
   let result = OverloadTy;
   let overloads =
@@ -720,7 +723,7 @@ def FMad :  DXILOp<46, tertiary> {
 def IMad :  DXILOp<48, tertiary> {
   let Doc = "Signed integer arithmetic multiply/add operation. imad(m,a,b) = m "
             "* a + b.";
-  let intrinsic_selects = [ IntrinSelect<int_dx_imad> ];
+  let intrinsics = [ IntrinSelect<int_dx_imad> ];
   let arguments = [OverloadTy, OverloadTy, OverloadTy];
   let result = OverloadTy;
   let overloads =
@@ -732,7 +735,7 @@ def IMad :  DXILOp<48, tertiary> {
 def UMad :  DXILOp<49, tertiary> {
   let Doc = "Unsigned integer arithmetic multiply/add operation. umad(m,a, = m "
             "* a + b.";
-  let intrinsic_selects = [ IntrinSelect<int_dx_umad> ];
+  let intrinsics = [ IntrinSelect<int_dx_umad> ];
   let arguments = [OverloadTy, OverloadTy, OverloadTy];
   let result = OverloadTy;
   let overloads =
@@ -744,7 +747,7 @@ def UMad :  DXILOp<49, tertiary> {
 def Dot2 :  DXILOp<54, dot2> {
   let Doc = "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + "
             "a[n]*b[n] where n is 0 to 1 inclusive";
-  let intrinsic_selects = [ IntrinSelect<int_dx_dot2> ];
+  let intrinsics = [ IntrinSelect<int_dx_dot2> ];
   let arguments = !listsplat(OverloadTy, 4);
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -755,7 +758,7 @@ def Dot2 :  DXILOp<54, dot2> {
 def Dot3 :  DXILOp<55, dot3> {
   let Doc = "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + "
             "a[n]*b[n] where n is 0 to 2 inclusive";
-  let intrinsic_selects = [ IntrinSelect<int_dx_dot3> ];
+  let intrinsics = [ IntrinSelect<int_dx_dot3> ];
   let arguments = !listsplat(OverloadTy, 6);
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -766,7 +769,7 @@ def Dot3 :  DXILOp<55, dot3> {
 def Dot4 :  DXILOp<56, dot4> {
   let Doc = "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + "
             "a[n]*b[n] where n is 0 to 3 inclusive";
-  let intrinsic_selects = [ IntrinSelect<int_dx_dot4> ];
+  let intrinsics = [ IntrinSelect<int_dx_dot4> ];
   let arguments = !listsplat(OverloadTy, 8);
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -831,7 +834,7 @@ def Discard : DXILOp<82, discard> {
 
 def ThreadId :  DXILOp<93, threadId> {
   let Doc = "Reads the thread ID";
-  let intrinsic_selects = [ IntrinSelect<int_dx_thread_id> ];
+  let intrinsics = [ IntrinSelect<int_dx_thread_id> ];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
@@ -841,7 +844,7 @@ def ThreadId :  DXILOp<93, threadId> {
 
 def GroupId :  DXILOp<94, groupId> {
   let Doc = "Reads the group ID (SV_GroupID)";
-  let intrinsic_selects = [ IntrinSelect<int_dx_group_id> ];
+  let intrinsics = [ IntrinSelect<int_dx_group_id> ];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
@@ -851,7 +854,7 @@ def GroupId :  DXILOp<94, groupId> {
 
 def ThreadIdInGroup :  DXILOp<95, threadIdInGroup> {
   let Doc = "Reads the thread ID within the group  (SV_GroupThreadID)";
-  let intrinsic_selects = [ IntrinSelect<int_dx_thread_id_in_group> ];
+  let intrinsics = [ IntrinSelect<int_dx_thread_id_in_group> ];
   let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
@@ -862,7 +865,7 @@ def ThreadIdInGroup :  DXILOp<95, threadIdInGroup> {
 def FlattenedThreadIdInGroup :  DXILOp<96, flattenedThreadIdInGroup> {
   let Doc = "Provides a flattened index for a given thread within a given "
             "group (SV_GroupIndex)";
-  let intrinsic_selects = [ IntrinSelect<int_dx_flattened_thread_id_in_group> ];
+  let intrinsics = [ IntrinSelect<int_dx_flattened_thread_id_in_group> ];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
   let stages = [Stages<DXIL1_0, [compute, mesh, amplification, node]>];
@@ -931,7 +934,7 @@ def WaveActiveAnyTrue : DXILOp<113, waveAnyTrue> {
 
 def WaveIsFirstLane :  DXILOp<110, waveIsFirstLane> {
   let Doc = "returns 1 for the first lane in the wave";
-  let intrinsic_selects = [ IntrinSelect<int_dx_wave_is_first_lane> ];
+  let intrinsics = [ IntrinSelect<int_dx_wave_is_first_lane> ];
   let arguments = [];
   let result = Int1Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -940,7 +943,7 @@ def WaveIsFirstLane :  DXILOp<110, waveIsFirstLane> {
 
 def WaveReadLaneAt:  DXILOp<117, waveReadLaneAt> {
   let Doc = "returns the value from the specified lane";
-  let intrinsic_selects = [ IntrinSelect<int_dx_wave_readlane> ];
+  let intrinsics = [ IntrinSelect<int_dx_wave_readlane> ];
   let arguments = [OverloadTy, Int32Ty];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int1Ty, Int16Ty, Int32Ty, Int64Ty]>];
@@ -950,7 +953,7 @@ def WaveReadLaneAt:  DXILOp<117, waveReadLaneAt> {
 
 def WaveGetLaneIndex : DXILOp<111, waveGetLaneIndex> {
   let Doc = "returns the index of the current lane in the wave";
-  let intrinsic_selects = [ IntrinSelect<int_dx_wave_getlaneindex> ];
+  let intrinsics = [ IntrinSelect<int_dx_wave_getlaneindex> ];
   let arguments = [];
   let result = Int32Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -967,7 +970,7 @@ def WaveAllBitCount : DXILOp<135, waveAllOp> {
 
 def Barrier : DXILOp<80, barrier> {
   let Doc = "inserts a memory barrier in the shader";
-  let intrinsic_selects = [
+  let intrinsics = [
     IntrinSelect<
         int_dx_group_memory_barrier_with_group_sync,
         [ IntrinArgI32<BarrierMode_GroupMemoryBarrierWithGroupSync> ]>,

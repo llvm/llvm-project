@@ -185,23 +185,16 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
                            OpName);
   }
 
-  auto IntrinsicSelectRecords = R->getValueAsListOfDefs("intrinsic_selects");
+  auto IntrinsicSelectRecords = R->getValueAsListOfDefs("intrinsics");
   if (IntrinsicSelectRecords.size()) {
-    if (IntrinsicSelects.size()) {
-      PrintFatalError(
-          R, Twine("LLVMIntrinsic and intrinsic_selects cannot be both "
-                   "defined for DXIL operation - ") +
-                 OpName);
-    } else {
-      for (const Record *R : IntrinsicSelectRecords) {
-        DXILIntrinsicSelect IntrSelect;
-        IntrSelect.Intrinsic = GetIntrinsicName(R->getValue("intrinsic"));
-        auto Args = R->getValueAsListOfDefs("arg_selects");
-        for (const Record *ArgSelect : Args) {
-          IntrSelect.ArgSelectRecords.emplace_back(ArgSelect);
-        }
-        IntrinsicSelects.emplace_back(std::move(IntrSelect));
+    for (const Record *R : IntrinsicSelectRecords) {
+      DXILIntrinsicSelect IntrSelect;
+      IntrSelect.Intrinsic = GetIntrinsicName(R->getValue("intrinsic"));
+      auto Args = R->getValueAsListOfDefs("arg_selects");
+      for (const Record *ArgSelect : Args) {
+        IntrSelect.ArgSelectRecords.emplace_back(ArgSelect);
       }
+      IntrinsicSelects.emplace_back(std::move(IntrSelect));
     }
   }
 }
@@ -440,19 +433,13 @@ static void emitDXILIntrinsicMap(ArrayRef<DXILOperationDesc> Ops,
 /// Emit the IntrinArgSelect type for DirectX intrinsic to DXIL Op lowering
 static void emitDXILIntrinsicArgSelectTypes(const RecordKeeper &Records,
                                             raw_ostream &OS) {
-  OS << "#ifdef DXIL_OP_INTRINSIC_ARG_SELECT_TYPES\n";
-  OS << "struct IntrinArgSelect {\n";
-  OS << "  enum class Type {\n";
+  OS << "#ifdef DXIL_OP_INTRINSIC_ARG_SELECT_TYPE\n";
   for (const Record *Records :
        Records.getAllDerivedDefinitions("IntrinArgSelectType")) {
     StringRef StrippedName = StripIntrinArgSelectTypePrefix(Records->getName());
-    OS << "    " << StrippedName << ",\n";
+    OS << "DXIL_OP_INTRINSIC_ARG_SELECT_TYPE(" << StrippedName << ")\n";
   }
-  OS << "  };\n";
-  OS << "  Type Type;\n";
-  OS << "  int Value;\n";
-  OS << "};\n";
-  OS << "#undef DXIL_OP_INTRINSIC_ARG_SELECT_TYPES\n";
+  OS << "#undef DXIL_OP_INTRINSIC_ARG_SELECT_TYPE\n";
   OS << "#endif\n\n";
 }
 

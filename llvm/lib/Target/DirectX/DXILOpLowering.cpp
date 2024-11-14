@@ -106,13 +106,22 @@ public:
     return false;
   }
 
-#define DXIL_OP_INTRINSIC_ARG_SELECT_TYPES
+  struct IntrinArgSelect {
+    enum class Type {
+#define DXIL_OP_INTRINSIC_ARG_SELECT_TYPE(name) name,
 #include "DXILOperation.inc"
+    };
+    Type Type;
+    int Value;
+  };
 
   [[nodiscard]] bool
   replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
                         ArrayRef<IntrinArgSelect> ArgSelects) {
     bool IsVectorArgExpansion = isVectorArgExpansion(F);
+    assert(!IsVectorArgExpansion ||
+           ArgSelects.empty() &&
+               "Cann't do vector arg expansion when using arg selects.");
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       OpBuilder.getIRB().SetInsertPoint(CI);
       SmallVector<Value *> Args;
