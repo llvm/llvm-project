@@ -1303,7 +1303,9 @@ Error IndexedMemProfReader::deserializeV3(const unsigned char *Start,
   FrameBase = Ptr;
   CallStackBase = Start + CallStackPayloadOffset;
 
-  // Compute the number of elements in the radix tree array.
+  // Compute the number of elements in the radix tree array.  Since we use this
+  // to reserve enough bits in a BitVector, it's totally OK if we overestimate
+  // this number a little bit because of padding just before the next section.
   RadixTreeSize = (RecordPayloadOffset - CallStackPayloadOffset) /
                   sizeof(memprof::LinearFrameId);
 
