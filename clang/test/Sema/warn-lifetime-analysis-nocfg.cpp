@@ -816,30 +816,30 @@ struct X {
 ///////////////////////////
 // Detect dangling cases.
 ///////////////////////////
-void captureInt(const int& i [[clang::lifetime_capture_by(x)]], X& x);
-void captureRValInt(int&& i [[clang::lifetime_capture_by(x)]], X& x);
-void noCaptureInt(int i [[clang::lifetime_capture_by(x)]], X& x);
+void captureInt(const int &i [[clang::lifetime_capture_by(x)]], X &x);
+void captureRValInt(int &&i [[clang::lifetime_capture_by(x)]], X &x);
+void noCaptureInt(int i [[clang::lifetime_capture_by(x)]], X &x);
 
 std::string_view substr(const std::string& s [[clang::lifetimebound]]);
 std::string_view strcopy(const std::string& s);
 
-void captureSV(std::string_view s [[clang::lifetime_capture_by(x)]], X& x);
-void captureRValSV(std::string_view&& sv [[clang::lifetime_capture_by(x)]], X& x);
-void noCaptureSV(std::string_view sv, X& x);
-void captureS(const std::string& s [[clang::lifetime_capture_by(x)]], X& x);
-void captureRValS(std::string&& s [[clang::lifetime_capture_by(x)]], X& x);
+void captureSV(std::string_view s [[clang::lifetime_capture_by(x)]], X &x);
+void captureRValSV(std::string_view &&sv [[clang::lifetime_capture_by(x)]], X &x);
+void noCaptureSV(std::string_view sv, X &x);
+void captureS(const std::string &s [[clang::lifetime_capture_by(x)]], X &x);
+void captureRValS(std::string &&s [[clang::lifetime_capture_by(x)]], X &x);
 
-const std::string& getLB(const std::string& s[[clang::lifetimebound]]);
-const std::string& getLB(std::string_view sv[[clang::lifetimebound]]);
-const std::string* getPointerLB(const std::string& s[[clang::lifetimebound]]);
-const std::string* getPointerNoLB(const std::string& s);
+const std::string& getLB(const std::string &s [[clang::lifetimebound]]);
+const std::string& getLB(std::string_view sv [[clang::lifetimebound]]);
+const std::string* getPointerLB(const std::string &s [[clang::lifetimebound]]);
+const std::string* getPointerNoLB(const std::string &s);
 
-void capturePointer(const std::string* sp [[clang::lifetime_capture_by(x)]], X& x);
+void capturePointer(const std::string* sp [[clang::lifetime_capture_by(x)]], X &x);
 
 struct ThisIsCaptured {
-  void capture(X& x) [[clang::lifetime_capture_by(x)]];
-  void bar(X& x) [[clang::lifetime_capture_by(abcd)]]; // expected-error {{'lifetime_capture_by' attribute argument 'abcd' is not a known function parameter}}
-  void baz(X& x) [[clang::lifetime_capture_by(this)]]; // expected-error {{'lifetime_capture_by' argument references itself}}
+  void capture(X &x) [[clang::lifetime_capture_by(x)]];
+  void bar(X &x) [[clang::lifetime_capture_by(abcd)]]; // expected-error {{'lifetime_capture_by' attribute argument 'abcd' is not a known function parameter}}
+  void baz(X &x) [[clang::lifetime_capture_by(this)]]; // expected-error {{'lifetime_capture_by' argument references itself}}
 };
 
 void captureByGlobal(std::string_view s [[clang::lifetime_capture_by(global)]]);

@@ -1122,9 +1122,9 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
                       const InitializedEntity *ExtendingEntity, LifetimeKind LK,
                       const AssignedEntity *AEntity,
                       const CapturingEntity *CapEntity, Expr *Init) {
-  assert((AEntity && LK == LK_Assignment) ||
-         (CapEntity && LK == LK_LifetimeCapture) ||
-         (InitEntity && LK != LK_Assignment));
+  assert(!AEntity || LK == LK_Assignment);
+  assert(!CapEntity || LK == LK_LifetimeCapture);
+  assert(!InitEntity || (LK != LK_Assignment && LK != LK_LifetimeCapture));
   // If this entity doesn't have an interesting lifetime, don't bother looking
   // for temporaries within its initializer.
   if (LK == LK_FullExpression)
@@ -1439,14 +1439,17 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
   };
   bool HasReferenceBinding = Init->isGLValue();
   llvm::SmallVector<IndirectLocalPathEntry, 8> Path;
-  if (LK == LK_Assignment &&
-      shouldRunGSLAssignmentAnalysis(SemaRef, *AEntity)) {
-    Path.push_back(
-        {isAssignmentOperatorLifetimeBound(AEntity->AssignmentOperator)
-             ? IndirectLocalPathEntry::LifetimeBoundCall
-             : IndirectLocalPathEntry::GslPointerAssignment,
-         Init});
-  } else if (LK == LK_LifetimeCapture) {
+  switch (LK) {
+  case LK_Assignment: {
+    if (shouldRunGSLAssignmentAnalysis(SemaRef, *AEntity))
+      Path.push_back(
+          {isAssignmentOperatorLifetimeBound(AEntity->AssignmentOperator)
+               ? IndirectLocalPathEntry::LifetimeBoundCall
+               : IndirectLocalPathEntry::GslPointerAssignment,
+           Init});
+    break;
+  }
+  case LK_LifetimeCapture: {
     Path.push_back({IndirectLocalPathEntry::LifetimeCapture, Init});
     if (isRecordWithAttr<PointerAttr>(Init->getType()))
       HasReferenceBinding = false;
@@ -1455,6 +1458,10 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
     if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(Init);
         MTE && isPointerLikeType(Init->getType()))
       Init = MTE->getSubExpr();
+    break;
+  }
+  default:
+    break;
   }
 
   if (HasReferenceBinding)
