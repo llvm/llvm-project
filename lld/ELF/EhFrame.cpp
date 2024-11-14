@@ -41,8 +41,9 @@ public:
 
 private:
   template <class P> void failOn(const P *loc, const Twine &msg) {
-    fatal("corrupted .eh_frame: " + msg + "\n>>> defined in " +
-          isec->getObjMsg((const uint8_t *)loc - isec->content().data()));
+    Fatal(ctx) << "corrupted .eh_frame: " << msg << "\n>>> defined in "
+               << isec->getObjMsg((const uint8_t *)loc -
+                                  isec->content().data());
   }
 
   uint8_t readByte();

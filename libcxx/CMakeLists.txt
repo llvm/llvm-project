@@ -47,6 +47,10 @@ include(HandleCompilerRT)
 # Basic options ---------------------------------------------------------------
 option(LIBCXX_ENABLE_SHARED "Build libc++ as a shared library." ON)
 option(LIBCXX_ENABLE_STATIC "Build libc++ as a static library." ON)
+option(LIBCXX_ENABLE_EXCEPTIONS "Enable exceptions in the built library." ON)
+option(LIBCXX_ENABLE_RTTI
+  "Use runtime type information.
+  This option may only be set to OFF when LIBCXX_ENABLE_EXCEPTIONS=OFF." ON)
 option(LIBCXX_ENABLE_FILESYSTEM
   "Whether to include support for parts of the library that rely on a filesystem being
    available on the platform. This includes things like most parts of <filesystem> and
@@ -97,6 +101,10 @@ option(LIBCXX_ENABLE_WIDE_CHARACTERS
    support the C functionality for wide characters. When wide characters are
    not supported, several parts of the library will be disabled, notably the
    wide character specializations of std::basic_string." ON)
+option(LIBCXX_ENABLE_THREADS "Build libc++ with support for threads." ON)
+option(LIBCXX_ENABLE_MONOTONIC_CLOCK
+  "Build libc++ with support for a monotonic clock.
+  This option may only be set to OFF when LIBCXX_ENABLE_THREADS=OFF." ON)
 
 # To use time zone support in libc++ the platform needs to have the IANA
 # database installed. Libc++ will fail to build if this is enabled on a
@@ -150,12 +158,19 @@ message(STATUS "Using libc++ testing configuration: ${LIBCXX_TEST_CONFIG}")
 set(LIBCXX_TEST_PARAMS "" CACHE STRING
     "A list of parameters to run the Lit test suite with.")
 
-# Benchmark options -----------------------------------------------------------
-option(LIBCXX_INCLUDE_BENCHMARKS "Build the libc++ benchmarks and their dependencies" ON)
-
-set(LIBCXX_BENCHMARK_TEST_ARGS_DEFAULT --benchmark_min_time=0.01)
-set(LIBCXX_BENCHMARK_TEST_ARGS "${LIBCXX_BENCHMARK_TEST_ARGS_DEFAULT}" CACHE STRING
-    "Arguments to pass when running the benchmarks using check-cxx-benchmarks")
+# TODO: Figure out how to build GoogleBenchmark on those platforms, and how to build when exceptions or RTTI is disabled
+if (WIN32 OR MINGW OR ANDROID OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX"
+    OR NOT LIBCXX_ENABLE_LOCALIZATION
+    OR NOT LIBCXX_ENABLE_THREADS
+    OR NOT LIBCXX_ENABLE_FILESYSTEM
+    OR NOT LIBCXX_ENABLE_RANDOM_DEVICE
+    OR NOT LIBCXX_ENABLE_EXCEPTIONS
+    OR NOT LIBCXX_ENABLE_RTTI)
+  set(_include_benchmarks OFF)
+else()
+  set(_include_benchmarks ON)
+endif()
+option(LIBCXX_INCLUDE_BENCHMARKS "Build the libc++ benchmarks and their dependencies" ${_include_benchmarks})
 
 option(LIBCXX_INCLUDE_DOCS "Build the libc++ documentation." ${LLVM_INCLUDE_DOCS})
 set(LIBCXX_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
@@ -277,14 +292,6 @@ if (LIBCXX_BUILD_32_BITS)
 endif()
 
 # Feature options -------------------------------------------------------------
-option(LIBCXX_ENABLE_EXCEPTIONS "Use exceptions." ON)
-option(LIBCXX_ENABLE_RTTI
-  "Use runtime type information.
-   This option may only be set to OFF when LIBCXX_ENABLE_EXCEPTIONS=OFF." ON)
-option(LIBCXX_ENABLE_THREADS "Build libc++ with support for threads." ON)
-option(LIBCXX_ENABLE_MONOTONIC_CLOCK
-  "Build libc++ with support for a monotonic clock.
-   This option may only be set to OFF when LIBCXX_ENABLE_THREADS=OFF." ON)
 option(LIBCXX_HAS_MUSL_LIBC "Build libc++ with support for the Musl C library" OFF)
 option(LIBCXX_HAS_PTHREAD_API "Ignore auto-detection and force use of pthread API" OFF)
 option(LIBCXX_HAS_WIN32_THREAD_API "Ignore auto-detection and force use of win32 thread API" OFF)

@@ -15,13 +15,26 @@ def UnsignedShortAccumType : NamedType<"unsigned short accum">;
 def UnsignedAccumType : NamedType<"unsigned accum">;
 def UnsignedLongAccumType : NamedType<"unsigned long accum">;
 
+def IntHrT : NamedType <"int_hr_t">;
+def IntRT : NamedType<"int_r_t">;
+def IntLrT : NamedType<"int_lr_t">;
+def IntHkT : NamedType<"int_hk_t">;
+def IntKT : NamedType<"int_k_t">;
+def IntLkT : NamedType<"int_lk_t">;
+def UIntUhrT : NamedType<"uint_uhr_t">;
+def UIntUrT : NamedType<"uint_ur_t">;
+def UIntUlrT : NamedType<"uint_ulr_t">;
+def UIntUhkT : NamedType<"uint_uhk_t">;
+def UIntUkT : NamedType<"uint_uk_t">;
+def UIntUlkT : NamedType<"uint_ulk_t">;
+
 def StdcExt : StandardSpec<"stdc_ext"> {
   // From ISO/IEC TR 18037:2008 standard:
   // https://standards.iso.org/ittf/PubliclyAvailableStandards/c051126_ISO_IEC_TR_18037_2008.zip
   HeaderSpec StdFix = HeaderSpec<
       "stdfix.h",
       [],  // macros
-      [],  // types
+      [IntHrT,IntRT, IntLrT, IntHkT, IntKT, IntLkT, UIntUhrT, UIntUrT, UIntUlrT, UIntUhkT, UIntUkT, UIntUlkT],  // types
       [],  // enums
       [    // functions
           GuardedFunctionSpec<"abshr", RetValSpec<ShortFractType>, [ArgSpec<ShortFractType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
@@ -47,6 +60,19 @@ def StdcExt : StandardSpec<"stdc_ext"> {
           GuardedFunctionSpec<"rounduhk", RetValSpec<UnsignedShortAccumType>, [ArgSpec<UnsignedShortAccumType>, ArgSpec<IntType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
           GuardedFunctionSpec<"rounduk", RetValSpec<UnsignedAccumType>, [ArgSpec<UnsignedAccumType>, ArgSpec<IntType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
           GuardedFunctionSpec<"roundulk", RetValSpec<UnsignedLongAccumType>, [ArgSpec<UnsignedLongAccumType>, ArgSpec<IntType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+
+          GuardedFunctionSpec<"hrbits", RetValSpec<ShortFractType>, [ArgSpec<IntHrT>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+          GuardedFunctionSpec<"rbits", RetValSpec<FractType>, [ArgSpec<IntRT>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+          GuardedFunctionSpec<"lrbits", RetValSpec<LongFractType>, [ArgSpec<IntLrT>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+          GuardedFunctionSpec<"hkbits", RetValSpec<ShortAccumType>, [ArgSpec<IntHkT>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+          GuardedFunctionSpec<"kbits", RetValSpec<AccumType>, [ArgSpec<IntKT>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+          GuardedFunctionSpec<"lkbits", RetValSpec<LongAccumType>, [ArgSpec<IntLkT>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+          GuardedFunctionSpec<"uhrbits", RetValSpec<UnsignedShortFractType>, [ArgSpec<UIntUhrT>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+          GuardedFunctionSpec<"urbits", RetValSpec<UnsignedFractType>, [ArgSpec<UIntUrT>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+          GuardedFunctionSpec<"ukbits", RetValSpec<UnsignedAccumType>, [ArgSpec<UIntUkT>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+          GuardedFunctionSpec<"ulrbits", RetValSpec<UnsignedLongFractType>, [ArgSpec<UIntUlrT>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+          GuardedFunctionSpec<"uhkbits", RetValSpec<UnsignedShortAccumType>, [ArgSpec<UIntUhkT>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+          GuardedFunctionSpec<"ulkbits", RetValSpec<UnsignedLongAccumType>, [ArgSpec<UIntUlkT>], "LIBC_COMPILER_HAS_FIXED_POINT">,
       ]
   >;
 

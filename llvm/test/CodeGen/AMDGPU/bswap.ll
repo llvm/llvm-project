@@ -19,7 +19,7 @@ declare i48 @llvm.bswap.i48(i48) #1
 define amdgpu_kernel void @test_bswap_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_bswap_i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_load_dword s4, s[2:3], 0x0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
@@ -34,7 +34,7 @@ define amdgpu_kernel void @test_bswap_i32(ptr addrspace(1) %out, ptr addrspace(1
 ;
 ; VI-LABEL: test_bswap_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x10203
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
@@ -49,7 +49,7 @@ define amdgpu_kernel void @test_bswap_i32(ptr addrspace(1) %out, ptr addrspace(1
 ;
 ; GFX11-LABEL: test_bswap_i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
@@ -67,7 +67,7 @@ define amdgpu_kernel void @test_bswap_i32(ptr addrspace(1) %out, ptr addrspace(1
 define amdgpu_kernel void @test_bswap_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_bswap_v2i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
@@ -85,7 +85,7 @@ define amdgpu_kernel void @test_bswap_v2i32(ptr addrspace(1) %out, ptr addrspace
 ;
 ; VI-LABEL: test_bswap_v2i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x10203
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
@@ -101,7 +101,7 @@ define amdgpu_kernel void @test_bswap_v2i32(ptr addrspace(1) %out, ptr addrspace
 ;
 ; GFX11-LABEL: test_bswap_v2i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_load_b64 s[4:5], s[2:3], 0x0
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
@@ -120,7 +120,7 @@ define amdgpu_kernel void @test_bswap_v2i32(ptr addrspace(1) %out, ptr addrspace
 define amdgpu_kernel void @test_bswap_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_bswap_v4i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
@@ -144,7 +144,7 @@ define amdgpu_kernel void @test_bswap_v4i32(ptr addrspace(1) %out, ptr addrspace
 ;
 ; VI-LABEL: test_bswap_v4i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x10203
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
@@ -162,7 +162,7 @@ define amdgpu_kernel void @test_bswap_v4i32(ptr addrspace(1) %out, ptr addrspace
 ;
 ; GFX11-LABEL: test_bswap_v4i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_load_b128 s[4:7], s[2:3], 0x0
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
@@ -183,7 +183,7 @@ define amdgpu_kernel void @test_bswap_v4i32(ptr addrspace(1) %out, ptr addrspace
 define amdgpu_kernel void @test_bswap_v8i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_bswap_v8i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_load_dwordx8 s[4:11], s[2:3], 0x0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
@@ -220,7 +220,7 @@ define amdgpu_kernel void @test_bswap_v8i32(ptr addrspace(1) %out, ptr addrspace
 ;
 ; VI-LABEL: test_bswap_v8i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[8:11], s[2:3], 0x24
+; VI-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v4, 0x10203
 ; VI-NEXT:    s_mov_b32 s15, 0xf000
 ; VI-NEXT:    s_mov_b32 s14, -1
@@ -243,7 +243,7 @@ define amdgpu_kernel void @test_bswap_v8i32(ptr addrspace(1) %out, ptr addrspace
 ;
 ; GFX11-LABEL: test_bswap_v8i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[8:11], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b128 s[8:11], s[4:5], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_load_b256 s[0:7], s[10:11], 0x0
 ; GFX11-NEXT:    s_mov_b32 s11, 0x31016000
@@ -270,7 +270,7 @@ define amdgpu_kernel void @test_bswap_v8i32(ptr addrspace(1) %out, ptr addrspace
 define amdgpu_kernel void @test_bswap_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_bswap_i64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
@@ -288,7 +288,7 @@ define amdgpu_kernel void @test_bswap_i64(ptr addrspace(1) %out, ptr addrspace(1
 ;
 ; VI-LABEL: test_bswap_i64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x10203
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
@@ -304,7 +304,7 @@ define amdgpu_kernel void @test_bswap_i64(ptr addrspace(1) %out, ptr addrspace(1
 ;
 ; GFX11-LABEL: test_bswap_i64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_load_b64 s[4:5], s[2:3], 0x0
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
@@ -323,7 +323,7 @@ define amdgpu_kernel void @test_bswap_i64(ptr addrspace(1) %out, ptr addrspace(1
 define amdgpu_kernel void @test_bswap_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_bswap_v2i64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
@@ -347,7 +347,7 @@ define amdgpu_kernel void @test_bswap_v2i64(ptr addrspace(1) %out, ptr addrspace
 ;
 ; VI-LABEL: test_bswap_v2i64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x10203
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
@@ -365,7 +365,7 @@ define amdgpu_kernel void @test_bswap_v2i64(ptr addrspace(1) %out, ptr addrspace
 ;
 ; GFX11-LABEL: test_bswap_v2i64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_load_b128 s[4:7], s[2:3], 0x0
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
@@ -386,7 +386,7 @@ define amdgpu_kernel void @test_bswap_v2i64(ptr addrspace(1) %out, ptr addrspace
 define amdgpu_kernel void @test_bswap_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_bswap_v4i64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_load_dwordx8 s[4:11], s[2:3], 0x0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
@@ -423,7 +423,7 @@ define amdgpu_kernel void @test_bswap_v4i64(ptr addrspace(1) %out, ptr addrspace
 ;
 ; VI-LABEL: test_bswap_v4i64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[8:11], s[2:3], 0x24
+; VI-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v4, 0x10203
 ; VI-NEXT:    s_mov_b32 s15, 0xf000
 ; VI-NEXT:    s_mov_b32 s14, -1
@@ -446,7 +446,7 @@ define amdgpu_kernel void @test_bswap_v4i64(ptr addrspace(1) %out, ptr addrspace
 ;
 ; GFX11-LABEL: test_bswap_v4i64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[8:11], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b128 s[8:11], s[4:5], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_load_b256 s[0:7], s[10:11], 0x0
 ; GFX11-NEXT:    s_mov_b32 s11, 0x31016000

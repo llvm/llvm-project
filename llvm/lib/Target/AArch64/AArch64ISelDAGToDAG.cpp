@@ -31,6 +31,11 @@ using namespace llvm;
 #define DEBUG_TYPE "aarch64-isel"
 #define PASS_NAME "AArch64 Instruction Selection"
 
+// https://github.com/llvm/llvm-project/issues/114425
+#if defined(_WIN32) && !defined(__clang__) && !defined(NDEBUG)
+#pragma inline_depth(0)
+#endif
+
 //===--------------------------------------------------------------------===//
 /// AArch64DAGToDAGISel - AArch64 specific code to select AArch64 machine
 /// instructions for SelectionDAG operations.
@@ -1528,7 +1533,6 @@ void AArch64DAGToDAGISel::SelectPtrauthAuth(SDNode *N) {
 
   SDNode *AUT = CurDAG->getMachineNode(AArch64::AUT, DL, MVT::i64, Ops);
   ReplaceNode(N, AUT);
-  return;
 }
 
 void AArch64DAGToDAGISel::SelectPtrauthResign(SDNode *N) {
@@ -1562,7 +1566,6 @@ void AArch64DAGToDAGISel::SelectPtrauthResign(SDNode *N) {
 
   SDNode *AUTPAC = CurDAG->getMachineNode(AArch64::AUTPAC, DL, MVT::i64, Ops);
   ReplaceNode(N, AUTPAC);
-  return;
 }
 
 bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {

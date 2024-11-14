@@ -246,7 +246,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #  else
 #    define _LIBCPP_GET_C_LOCALE __cloc()
 // Get the C locale object
-_LIBCPP_EXPORTED_FROM_ABI locale_t __cloc();
+_LIBCPP_EXPORTED_FROM_ABI __locale::__locale_t __cloc();
 #    define __cloc_defined
 #  endif
 
@@ -1042,7 +1042,7 @@ _InputIterator num_get<_CharT, _InputIterator>::do_get(
   }
   // Stage 3
   __buf.resize(__a_end - __a);
-  if (__libcpp_sscanf_l(__buf.c_str(), _LIBCPP_GET_C_LOCALE, "%p", &__v) != 1)
+  if (__locale::__sscanf(__buf.c_str(), _LIBCPP_GET_C_LOCALE, "%p", &__v) != 1)
     __err = ios_base::failbit;
   // EOF checked
   if (__b == __e)
@@ -1125,11 +1125,11 @@ void __num_put<_CharT>::__widen_and_group_float(
     *__oe++ = __ct.widen(*__nf++);
     *__oe++ = __ct.widen(*__nf++);
     for (__ns = __nf; __ns < __ne; ++__ns)
-      if (!isxdigit_l(*__ns, _LIBCPP_GET_C_LOCALE))
+      if (!__locale::__isxdigit(*__ns, _LIBCPP_GET_C_LOCALE))
         break;
   } else {
     for (__ns = __nf; __ns < __ne; ++__ns)
-      if (!isdigit_l(*__ns, _LIBCPP_GET_C_LOCALE))
+      if (!__locale::__isdigit(*__ns, _LIBCPP_GET_C_LOCALE))
         break;
   }
   if (__grouping.empty()) {
@@ -1330,7 +1330,7 @@ _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::_
   _LIBCPP_DIAGNOSTIC_PUSH
   _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
   _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
-  int __nc = __libcpp_snprintf_l(__nar, sizeof(__nar), _LIBCPP_GET_C_LOCALE, __fmt, __v);
+  int __nc = __locale::__snprintf(__nar, sizeof(__nar), _LIBCPP_GET_C_LOCALE, __fmt, __v);
   _LIBCPP_DIAGNOSTIC_POP
   char* __ne = __nar + __nc;
   char* __np = this->__identify_padding(__nar, __ne, __iob);
@@ -1383,15 +1383,15 @@ _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::_
   _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
   _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
   if (__specify_precision)
-    __nc = __libcpp_snprintf_l(__nb, __nbuf, _LIBCPP_GET_C_LOCALE, __fmt, (int)__iob.precision(), __v);
+    __nc = __locale::__snprintf(__nb, __nbuf, _LIBCPP_GET_C_LOCALE, __fmt, (int)__iob.precision(), __v);
   else
-    __nc = __libcpp_snprintf_l(__nb, __nbuf, _LIBCPP_GET_C_LOCALE, __fmt, __v);
+    __nc = __locale::__snprintf(__nb, __nbuf, _LIBCPP_GET_C_LOCALE, __fmt, __v);
   unique_ptr<char, void (*)(void*)> __nbh(nullptr, free);
   if (__nc > static_cast<int>(__nbuf - 1)) {
     if (__specify_precision)
-      __nc = __libcpp_asprintf_l(&__nb, _LIBCPP_GET_C_LOCALE, __fmt, (int)__iob.precision(), __v);
+      __nc = __locale::__asprintf(&__nb, _LIBCPP_GET_C_LOCALE, __fmt, (int)__iob.precision(), __v);
     else
-      __nc = __libcpp_asprintf_l(&__nb, _LIBCPP_GET_C_LOCALE, __fmt, __v);
+      __nc = __locale::__asprintf(&__nb, _LIBCPP_GET_C_LOCALE, __fmt, __v);
     if (__nc == -1)
       __throw_bad_alloc();
     __nbh.reset(__nb);
@@ -1436,7 +1436,7 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob, char_ty
   // Stage 1 - Get pointer in narrow char
   const unsigned __nbuf = 20;
   char __nar[__nbuf];
-  int __nc   = __libcpp_snprintf_l(__nar, sizeof(__nar), _LIBCPP_GET_C_LOCALE, "%p", __v);
+  int __nc   = __locale::__snprintf(__nar, sizeof(__nar), _LIBCPP_GET_C_LOCALE, "%p", __v);
   char* __ne = __nar + __nc;
   char* __np = this->__identify_padding(__nar, __ne, __iob);
   // Stage 2 - Widen __nar
@@ -1998,7 +1998,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_get<wchar_t>;
 
 class _LIBCPP_EXPORTED_FROM_ABI __time_get {
 protected:
-  locale_t __loc_;
+  __locale::__locale_t __loc_;
 
   __time_get(const char* __nm);
   __time_get(const string& __nm);
@@ -2093,7 +2093,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_get_byname<wchar_t>;
 #  endif
 
 class _LIBCPP_EXPORTED_FROM_ABI __time_put {
-  locale_t __loc_;
+  __locale::__locale_t __loc_;
 
 protected:
   _LIBCPP_HIDE_FROM_ABI __time_put() : __loc_(_LIBCPP_GET_C_LOCALE) {}
@@ -2926,7 +2926,7 @@ _OutputIterator money_put<_CharT, _OutputIterator>::do_put(
   unique_ptr<char_type, void (*)(void*)> __hd(0, free);
   // secure memory for digit storage
   if (static_cast<size_t>(__n) > __bs - 1) {
-    __n = __libcpp_asprintf_l(&__bb, _LIBCPP_GET_C_LOCALE, "%.0Lf", __units);
+    __n = __locale::__asprintf(&__bb, _LIBCPP_GET_C_LOCALE, "%.0Lf", __units);
     if (__n == -1)
       __throw_bad_alloc();
     __hn.reset(__bb);
