@@ -278,6 +278,13 @@ struct BuiltinTypeDeclBuilder {
     return *this;
   }
 
+  Expr *getConstantIntExpr(int value) {
+    ASTContext &AST = S.getASTContext();
+    return IntegerLiteral::Create(
+        AST, llvm::APInt(AST.getTypeSize(AST.IntTy), value, true), AST.IntTy,
+        SourceLocation());
+  }
+
   TemplateParameterListBuilder addTemplateArgumentList();
   BuiltinTypeDeclBuilder &addSimpleTemplateParams(ArrayRef<StringRef> Names);
 
@@ -352,10 +359,18 @@ struct TemplateParameterListBuilder {
 //
 // The builder needs to have all of the method parameters before it can create
 // a CXXMethodDecl. It collects them in addParam calls and when a first
-// method that builds the body is called it creates the CXXMethodDecl and
-// ParmVarDecls instances. These can then be referenced from the body building
-// methods. Destructor or an explicit call to finalizeMethod() will complete
-// the method definition.
+// method that builds the body is called or when access to 'this` is needed it
+// creates the CXXMethodDecl and ParmVarDecls instances. These can then be
+// referenced from the body building methods. Destructor or an explicit call to
+// finalizeMethod() will complete the method definition.
+//
+// The callBuiltin helper method passes in the resource handle as the first
+// argument of the builtin call. If this is not desired it takes a bool flag to
+// disable this.
+//
+// If the method that is being built has a non-void return type the
+// finalizeMethod will create a return statent with the value of the last
+// statement (unless the last statement is already a ReturnStmt).
 struct BuiltinTypeMethodBuilder {
   struct MethodParam {
     const IdentifierInfo &NameII;
@@ -434,24 +449,30 @@ private:
     Method->setParams({ParmDecls});
   }
 
-  void addResourceHandleToParms(SmallVector<Expr *> &Parms) {
+public:
+  ~BuiltinTypeMethodBuilder() { finalizeMethod(); }
+
+  Expr *getResourceHandleExpr() {
+    // The first statement added to a method or access to 'this' creates the
+    // declaration.
+    if (!Method)
+      createMethodDecl();
+
     ASTContext &AST = DeclBuilder.S.getASTContext();
     FieldDecl *HandleField = DeclBuilder.getResourceHandleField();
     auto *This = CXXThisExpr::Create(
         AST, SourceLocation(), Method->getFunctionObjectParameterType(), true);
-    Parms.push_back(MemberExpr::CreateImplicit(AST, This, false, HandleField,
-                                               HandleField->getType(),
-                                               VK_LValue, OK_Ordinary));
+    return MemberExpr::CreateImplicit(AST, This, false, HandleField,
+                                      HandleField->getType(), VK_LValue,
+                                      OK_Ordinary);
   }
-
-public:
-  ~BuiltinTypeMethodBuilder() { finalizeMethod(); }
 
   BuiltinTypeMethodBuilder &
   callBuiltin(StringRef BuiltinName, ArrayRef<Expr *> CallParms,
               bool AddResourceHandleAsFirstArg = true) {
 
-    // The first statement added to a method creates the declaration.
+    // The first statement added to a method or access to 'this` creates the
+    // declaration.
     if (!Method)
       createMethodDecl();
 
@@ -463,7 +484,7 @@ public:
 
     SmallVector<Expr *> NewCallParms;
     if (AddResourceHandleAsFirstArg) {
-      addResourceHandleToParms(NewCallParms);
+      NewCallParms.push_back(getResourceHandleExpr());
       for (auto *P : CallParms)
         NewCallParms.push_back(P);
     }
@@ -533,24 +554,18 @@ BuiltinTypeDeclBuilder::addSimpleTemplateParams(ArrayRef<StringRef> Names) {
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addIncrementCounterMethod() {
-  ASTContext &AST = S.getASTContext();
-  Expr *One = IntegerLiteral::Create(
-      AST, llvm::APInt(AST.getTypeSize(AST.IntTy), 1, true), AST.IntTy,
-      SourceLocation());
   return BuiltinTypeMethodBuilder(S, *this, "IncrementCounter",
-                                  AST.UnsignedIntTy)
-      .callBuiltin("__builtin_hlsl_buffer_update_counter", {One})
+                                  S.getASTContext().UnsignedIntTy)
+      .callBuiltin("__builtin_hlsl_buffer_update_counter",
+                   {getConstantIntExpr(1)})
       .finalizeMethod();
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDecrementCounterMethod() {
-  ASTContext &AST = S.getASTContext();
-  Expr *NegOne = IntegerLiteral::Create(
-      AST, llvm::APInt(AST.getTypeSize(AST.IntTy), -1, true), AST.IntTy,
-      SourceLocation());
   return BuiltinTypeMethodBuilder(S, *this, "DecrementCounter",
-                                  AST.UnsignedIntTy)
-      .callBuiltin("__builtin_hlsl_buffer_update_counter", {NegOne})
+                                  S.getASTContext().UnsignedIntTy)
+      .callBuiltin("__builtin_hlsl_buffer_update_counter",
+                   {getConstantIntExpr(-1)})
       .finalizeMethod();
 }
 
