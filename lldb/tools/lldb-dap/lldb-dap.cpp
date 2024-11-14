@@ -5034,9 +5034,7 @@ int main(int argc, char *argv[]) {
   auto terminate_debugger =
       llvm::make_scope_exit([] { lldb::SBDebugger::Terminate(); });
 
-  DAP dap;
-  dap.debug_adaptor_path = program_path.str().str();
-  dap.repl_mode = defaultReplMode;
+  DAP dap = DAP(program_path.str(), defaultReplMode);
 
   RegisterRequestCallbacks(dap);
 
