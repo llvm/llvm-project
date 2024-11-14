@@ -76,7 +76,7 @@ if (NOT APPLE) # On Apple platforms, we always use -nostdlib++ so we don't need 
 endif()
 
 if (FUCHSIA)
-    add_library_flags(zircon)
+    add_link_flags("-Wl,--push-state,--as-needed,-lzircon,--pop-state")
 endif()
 
 if (NOT LIBCXXABI_USE_COMPILER_RT)
