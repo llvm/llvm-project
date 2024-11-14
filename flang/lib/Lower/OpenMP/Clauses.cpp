@@ -12,6 +12,7 @@
 #include "flang/Evaluate/expression.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/symbol.h"
 
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -571,7 +572,8 @@ Defaultmap make(const parser::OmpClause::Defaultmap &inp,
   );
 
   CLAUSET_ENUM_CONVERT( //
-      convert2, wrapped::VariableCategory, Defaultmap::VariableCategory,
+      convert2, parser::OmpVariableCategory::Value,
+      Defaultmap::VariableCategory,
       // clang-format off
       MS(Aggregate,    Aggregate)
       MS(All,          All)
@@ -581,10 +583,11 @@ Defaultmap make(const parser::OmpClause::Defaultmap &inp,
       // clang-format on
   );
 
+  auto &mods{semantics::OmpGetModifiers(inp.v)};
   auto &t0 = std::get<wrapped::ImplicitBehavior>(inp.v.t);
-  auto &t1 = std::get<std::optional<wrapped::VariableCategory>>(inp.v.t);
+  auto *t1 = semantics::OmpGetUniqueModifier<parser::OmpVariableCategory>(mods);
 
-  auto category = t1 ? convert2(*t1) : Defaultmap::VariableCategory::All;
+  auto category = t1 ? convert2(t1->v) : Defaultmap::VariableCategory::All;
   return Defaultmap{{/*ImplicitBehavior=*/convert1(t0),
                      /*VariableCategory=*/category}};
 }
@@ -1173,10 +1176,9 @@ ProcBind make(const parser::OmpClause::ProcBind &inp,
 Reduction make(const parser::OmpClause::Reduction &inp,
                semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpReductionClause
-  using wrapped = parser::OmpReductionClause;
-
   CLAUSET_ENUM_CONVERT( //
-      convert, wrapped::ReductionModifier, Reduction::ReductionModifier,
+      convert, parser::OmpReductionModifier::Value,
+      Reduction::ReductionModifier,
       // clang-format off
       MS(Inscan,  Inscan)
       MS(Task,    Task)
@@ -1184,16 +1186,17 @@ Reduction make(const parser::OmpClause::Reduction &inp,
       // clang-format on
   );
 
-  auto &t0 =
-      std::get<std::optional<parser::OmpReductionClause::ReductionModifier>>(
-          inp.v.t);
-  auto &t1 = std::get<parser::OmpReductionIdentifier>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *t0 =
+      semantics::OmpGetUniqueModifier<parser::OmpReductionModifier>(mods);
+  auto *t1 =
+      semantics::OmpGetUniqueModifier<parser::OmpReductionIdentifier>(mods);
   auto &t2 = std::get<parser::OmpObjectList>(inp.v.t);
   return Reduction{
       {/*ReductionModifier=*/t0
-           ? std::make_optional<Reduction::ReductionModifier>(convert(*t0))
+           ? std::make_optional<Reduction::ReductionModifier>(convert(t0->v))
            : std::nullopt,
-       /*ReductionIdentifiers=*/{makeReductionOperator(t1, semaCtx)},
+       /*ReductionIdentifiers=*/{makeReductionOperator(*t1, semaCtx)},
        /*List=*/makeObjects(t2, semaCtx)}};
 }
 
@@ -1314,10 +1317,12 @@ Permutation make(const parser::OmpClause::Permutation &inp,
 TaskReduction make(const parser::OmpClause::TaskReduction &inp,
                    semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpReductionClause
-  auto &t0 = std::get<parser::OmpReductionIdentifier>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *t0 =
+      semantics::OmpGetUniqueModifier<parser::OmpReductionIdentifier>(mods);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
   return TaskReduction{
-      {/*ReductionIdentifiers=*/{makeReductionOperator(t0, semaCtx)},
+      {/*ReductionIdentifiers=*/{makeReductionOperator(*t0, semaCtx)},
        /*List=*/makeObjects(t1, semaCtx)}};
 }
 
