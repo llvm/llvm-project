@@ -1418,3 +1418,13 @@ void test_prefetch(generic void *fptr, global void *gptr) {
   __builtin_amdgcn_flat_prefetch(fptr, 0);
   __builtin_amdgcn_global_prefetch(gptr, 8);
 }
+
+// CHECK-LABEL: @test_s_cluster_barrier(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    call void @llvm.amdgcn.s.cluster.barrier()
+// CHECK-NEXT:    ret void
+//
+void test_s_cluster_barrier()
+{
+  __builtin_amdgcn_s_cluster_barrier();
+}

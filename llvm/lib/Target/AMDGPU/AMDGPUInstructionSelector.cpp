@@ -1871,12 +1871,14 @@ bool AMDGPUInstructionSelector::selectSBarrier(MachineInstr &MI) const {
 
   // On GFX12 lower s_barrier into s_barrier_signal_imm and s_barrier_wait
   if (STI.hasSplitBarriers()) {
+    int BarTy =
+        cast<GIntrinsic>(MI).getIntrinsicID() == Intrinsic::amdgcn_s_barrier
+            ? AMDGPU::Barrier::WORKGROUP
+            : AMDGPU::Barrier::CLUSTER;
     MachineBasicBlock *MBB = MI.getParent();
     const DebugLoc &DL = MI.getDebugLoc();
-    BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::S_BARRIER_SIGNAL_IMM))
-        .addImm(AMDGPU::Barrier::WORKGROUP);
-    BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::S_BARRIER_WAIT))
-        .addImm(AMDGPU::Barrier::WORKGROUP);
+    BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::S_BARRIER_SIGNAL_IMM)).addImm(BarTy);
+    BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::S_BARRIER_WAIT)).addImm(BarTy);
     MI.eraseFromParent();
     return true;
   }
@@ -2201,6 +2203,7 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_init_whole_wave:
     return selectInitWholeWave(I);
   case Intrinsic::amdgcn_s_barrier:
+  case Intrinsic::amdgcn_s_cluster_barrier:
     return selectSBarrier(I);
   case Intrinsic::amdgcn_raw_buffer_load_lds:
   case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
