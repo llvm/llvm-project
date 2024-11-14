@@ -24,8 +24,10 @@
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PassManagerInternal.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -235,6 +237,82 @@ using MachineFunctionPassManager = PassManager<MachineFunction>;
 /// Returns the minimum set of Analyses that all machine function passes must
 /// preserve.
 PreservedAnalyses getMachineFunctionPassPreservedAnalyses();
+
+/// For migrating to new pass manager
+/// Provides a common interface to fetch analyses instead of doing it twice in
+/// the *LegacyPass::runOnMachineFunction and NPM Pass::run.
+///
+/// NPM analyses must have the LegacyWrapper type to indicate which legacy
+/// analysis to run. Legacy wrapper analyses must have `getResult()` method.
+/// This can be added on a needs-to basis.
+///
+/// Outer analyses passes(Module or Function) can also be requested through
+/// `getAnalysis` or `getCachedAnalysis`.
+class MFAnalysisGetter {
+private:
+  Pass *LegacyPass;
+  MachineFunctionAnalysisManager *MFAM;
+
+  template <typename T>
+  using type_of_run =
+      typename function_traits<decltype(&T::run)>::template arg_t<0>;
+
+  template <typename T>
+  static constexpr bool IsFunctionAnalysis =
+      std::is_same_v<Function, type_of_run<T>>;
+
+  template <typename T>
+  static constexpr bool IsModuleAnalysis =
+      std::is_same_v<Module, type_of_run<T>>;
+
+public:
+  MFAnalysisGetter(Pass *LegacyPass) : LegacyPass(LegacyPass) {}
+  MFAnalysisGetter(MachineFunctionAnalysisManager *MFAM) : MFAM(MFAM) {}
+
+  /// Outer analyses requested from NPM will be cached results and can be null
+  template <typename AnalysisT>
+  typename AnalysisT::Result *getAnalysis(MachineFunction &MF) {
+    if (MFAM) {
+      // need a proxy to get the result for outer analyses
+      // this can return null
+      if constexpr (IsModuleAnalysis<AnalysisT>)
+        return MFAM->getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+            .getCachedResult<AnalysisT>(*MF.getFunction().getParent());
+      else if constexpr (IsFunctionAnalysis<AnalysisT>) {
+        return &MFAM->getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                    .getManager()
+                    .getResult<AnalysisT>(MF.getFunction());
+      }
+      return &MFAM->getResult<AnalysisT>(MF);
+    }
+    return &LegacyPass->getAnalysis<typename AnalysisT::LegacyWrapper>()
+                .getResult();
+  }
+
+  template <typename AnalysisT>
+  typename AnalysisT::Result *getCachedAnalysis(MachineFunction &MF) {
+    if (MFAM) {
+      if constexpr (IsFunctionAnalysis<AnalysisT>) {
+        return MFAM->getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+            .getManager()
+            .getCachedResult<AnalysisT>(MF.getFunction());
+      } else if constexpr (IsModuleAnalysis<AnalysisT>)
+        return MFAM->getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+            .getCachedResult<AnalysisT>(*MF.getFunction().getParent());
+
+      return &MFAM->getCachedResult<AnalysisT>(MF);
+    }
+
+    if (auto *P =
+            LegacyPass->getAnalysisIfAvailable<AnalysisT::LegacyWrapper>())
+      return &P->getResult();
+    return nullptr;
+  }
+
+  /// This is not intended to be used to invoke getAnalysis()
+  Pass *getLegacyPass() const { return LegacyPass; }
+  MachineFunctionAnalysisManager *getMFAM() const { return MFAM; }
+};
 
 } // end namespace llvm
 
