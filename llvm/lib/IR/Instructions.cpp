@@ -32,6 +32,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -1584,7 +1585,7 @@ bool GetElementPtrInst::accumulateConstantOffset(const DataLayout &DL,
 
 bool GetElementPtrInst::collectOffset(
     const DataLayout &DL, unsigned BitWidth,
-    MapVector<Value *, APInt> &VariableOffsets,
+    SmallMapVector<Value *, APInt, 4> &VariableOffsets,
     APInt &ConstantOffset) const {
   // Delegate to the generic GEPOperator implementation.
   return cast<GEPOperator>(this)->collectOffset(DL, BitWidth, VariableOffsets,
@@ -3469,6 +3470,36 @@ bool CmpInst::isEquality(Predicate P) {
   if (FCmpInst::isFPPredicate(P))
     return FCmpInst::isEquality(P);
   llvm_unreachable("Unsupported predicate kind");
+}
+
+// Returns true if either operand of CmpInst is a provably non-zero
+// floating-point constant.
+static bool hasNonZeroFPOperands(const CmpInst *Cmp) {
+  auto *LHS = dyn_cast<Constant>(Cmp->getOperand(0));
+  auto *RHS = dyn_cast<Constant>(Cmp->getOperand(1));
+  if (auto *Const = LHS ? LHS : RHS) {
+    using namespace llvm::PatternMatch;
+    return match(Const, m_NonZeroNotDenormalFP());
+  }
+  return false;
+}
+
+// Floating-point equality is not an equivalence when comparing +0.0 with
+// -0.0, when comparing NaN with another value, or when flushing
+// denormals-to-zero.
+bool CmpInst::isEquivalence(bool Invert) const {
+  switch (Invert ? getInversePredicate() : getPredicate()) {
+  case CmpInst::Predicate::ICMP_EQ:
+    return true;
+  case CmpInst::Predicate::FCMP_UEQ:
+    if (!hasNoNaNs())
+      return false;
+    [[fallthrough]];
+  case CmpInst::Predicate::FCMP_OEQ:
+    return hasNonZeroFPOperands(this);
+  default:
+    return false;
+  }
 }
 
 CmpInst::Predicate CmpInst::getInversePredicate(Predicate pred) {

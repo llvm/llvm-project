@@ -129,7 +129,7 @@ private:
 
   llvm::SmallMapVector<IdentifierInfo *, TokenType, 8> Macros;
 
-  llvm::SmallPtrSet<IdentifierInfo *, 8> TypeNames;
+  llvm::SmallPtrSet<IdentifierInfo *, 8> TemplateNames, TypeNames;
 
   bool FormattingDisabled;
 

@@ -1,6 +1,10 @@
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
 
+#ifdef __SIZEOF_INT128__
+// CHECK: @PR11705 = global i128 0
+__int128_t PR11705 = (__int128_t)&PR11705;
+#endif
 
 int arr[2];
 // CHECK: @pastEnd = constant ptr getelementptr (i8, ptr @arr, i64 8)

@@ -39,14 +39,13 @@ module transitive {
 // CHECK-NEXT:   "modules": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "clang-module-deps": [],
-// CHECK-NEXT:       "clang-modulemap-file": "{{.*}}/__inferred_module.map",
+// CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/Inputs/frameworks/module.modulemap",
 // CHECK-NEXT:       "command-line": [
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "{{.*}}/Framework.h"
-// CHECK-NEXT:         "{{.*}}/__inferred_module.map"
-// CHECK-NEXT:         "{{.*}}/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/frameworks/Framework.framework/Headers/Framework.h"
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/frameworks/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [
 // CHECK-NEXT:         {

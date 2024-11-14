@@ -139,7 +139,7 @@ TEST_F(ScalarEvolutionsTest, SimplifiedPHI) {
   auto *Ty = Type::getInt32Ty(Context);
   auto *PN = PHINode::Create(Ty, 2, "", LoopBB->begin());
   PN->addIncoming(Constant::getNullValue(Ty), EntryBB);
-  PN->addIncoming(UndefValue::get(Ty), LoopBB);
+  PN->addIncoming(PoisonValue::get(Ty), LoopBB);
   ScalarEvolution SE = buildSE(*F);
   const SCEV *S1 = SE.getSCEV(PN);
   const SCEV *S2 = SE.getSCEV(PN);
@@ -984,7 +984,7 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstantAccum) {
   // entry:
   BranchInst::Create(LoopBB, EntryBB);
   // loop:
-  auto *MinInt32 = ConstantInt::get(Context, APInt(32, 0x80000000U, true));
+  auto *MinInt32 = ConstantInt::get(Context, APInt(32, 0x80000000U));
   auto *Int32_16 = ConstantInt::get(Context, APInt(32, 16));
   auto *Br = BranchInst::Create(
       LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)), LoopBB);

@@ -133,7 +133,7 @@ func.func @materialize_read(%M: index, %N: index, %O: index, %P: index) {
     affine.for %i1 = 0 to %N {
       affine.for %i2 = 0 to %O {
         affine.for %i3 = 0 to %P step 5 {
-          %f = vector.transfer_read %A[%i0, %i1, %i2, %i3], %f0 {in_bounds = [false, true, false], permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, 0, d0)>} : memref<?x?x?x?xf32>, vector<5x4x3xf32>
+          %f = vector.transfer_read %A[%i0, %i1, %i2, %i3], %f0 {permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, 0, d0)>} : memref<?x?x?x?xf32>, vector<5x4x3xf32>
           // Add a dummy use to prevent dead code elimination from removing
           // transfer read ops.
           "dummy_use"(%f) : (vector<5x4x3xf32>) -> ()
@@ -503,11 +503,11 @@ func.func @transfer_read_within_async_execute(%A : memref<2x2xf32>) -> !async.to
 
 // CHECK-LABEL: transfer_read_with_tensor
 func.func @transfer_read_with_tensor(%arg: tensor<f32>) -> vector<1xf32> {
-    // CHECK:      %[[EXTRACTED:.*]] = tensor.extract %{{.*}}[] : tensor<f32>
-    // CHECK-NEXT: %[[RESULT:.*]] = vector.broadcast %[[EXTRACTED]] : f32 to vector<1xf32>
+    // CHECK:      %[[EXTRACTED:.*]] = vector.transfer_read %{{.*}}[], %{{.*}} : tensor<f32>, vector<f32>
+    // CHECK-NEXT: %[[RESULT:.*]] = vector.broadcast %[[EXTRACTED]] : vector<f32> to vector<1xf32>
     // CHECK-NEXT: return %[[RESULT]] : vector<1xf32>
     %f0 = arith.constant 0.0 : f32
-    %0 = vector.transfer_read %arg[], %f0 {in_bounds = [true], permutation_map = affine_map<()->(0)>} :
+    %0 = vector.transfer_read %arg[], %f0 {permutation_map = affine_map<()->(0)>} :
       tensor<f32>, vector<1xf32>
     return %0: vector<1xf32>
 }
@@ -746,7 +746,7 @@ func.func @cannot_lower_transfer_read_with_leading_scalable(%arg0: memref<?x4xf3
 func.func @does_not_crash_on_unpack_one_dim(%subview:  memref<1x1x1x1xi32>, %mask: vector<1x1xi1>) -> vector<1x1x1x1xi32> {
   %c0 = arith.constant 0 : index
   %c0_i32 = arith.constant 0 : i32
-  %3 = vector.transfer_read %subview[%c0, %c0, %c0, %c0], %c0_i32, %mask {in_bounds = [false, true, true, false], permutation_map = #map1}
+  %3 = vector.transfer_read %subview[%c0, %c0, %c0, %c0], %c0_i32, %mask {permutation_map = #map1}
           : memref<1x1x1x1xi32>, vector<1x1x1x1xi32>
   return %3 : vector<1x1x1x1xi32>
 }

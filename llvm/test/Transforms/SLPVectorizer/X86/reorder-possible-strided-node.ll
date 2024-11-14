@@ -5,20 +5,17 @@ define void @test() {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr i32, ptr null, i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr i32, ptr null, i64 33
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr i32, ptr null, i64 7
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX13]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr null, align 4
 ; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr i32, ptr null, i64 60
+; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x i32>, ptr null, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[ARRAYIDX22]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[TMP10]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP8]], <2 x i32> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[TMP9]], i32 2
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> [[TMP1]], [[TMP8]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> [[TMP1]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr <4 x i32> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    store <4 x i32> [[TMP11]], ptr getelementptr inbounds ([4 x i32], ptr null, i64 8, i64 0), align 16
@@ -67,20 +64,17 @@ define void @test1() {
 ; CHECK-LABEL: define void @test1(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr i32, ptr null, i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr i32, ptr null, i64 33
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr i32, ptr null, i64 7
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX13]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr null, align 4
 ; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr i32, ptr null, i64 60
+; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x i32>, ptr null, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[ARRAYIDX22]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> poison, i32 [[TMP10]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i32> [[TMP8]], <2 x i32> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 1>
 ; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[TMP9]], i32 2
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> [[TMP1]], [[TMP8]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> [[TMP1]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext <4 x i32> [[TMP3]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr <4 x i64> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc <4 x i64> [[TMP5]] to <4 x i32>
@@ -131,20 +125,17 @@ define void @test_div() {
 ; CHECK-LABEL: define void @test_div(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr i32, ptr null, i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr i32, ptr null, i64 33
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr i32, ptr null, i64 7
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX13]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr null, align 4
 ; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr i32, ptr null, i64 60
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr null, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[ARRAYIDX22]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 1>
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP9:%.*]] = mul <4 x i32> [[TMP1]], [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = mul <4 x i32> [[TMP1]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = udiv <4 x i32> [[TMP9]], <i32 2, i32 1, i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr getelementptr inbounds ([4 x i32], ptr null, i64 8, i64 0), align 16
@@ -193,20 +184,17 @@ define void @test_rem() {
 ; CHECK-LABEL: define void @test_rem(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr i32, ptr null, i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr i32, ptr null, i64 33
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr i32, ptr null, i64 7
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX13]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr null, align 4
 ; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr i32, ptr null, i64 60
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr null, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[ARRAYIDX22]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 1>
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP9:%.*]] = mul <4 x i32> [[TMP1]], [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = mul <4 x i32> [[TMP1]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = urem <4 x i32> [[TMP9]], <i32 1, i32 1, i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr getelementptr inbounds ([4 x i32], ptr null, i64 8, i64 0), align 16

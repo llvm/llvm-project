@@ -19,6 +19,7 @@
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
@@ -451,6 +452,9 @@ unsigned AArch64FastISel::materializeGV(const GlobalValue *GV) {
   // MachO still uses GOT for large code-model accesses, but ELF requires
   // movz/movk sequences, which FastISel doesn't handle yet.
   if (!Subtarget->useSmallAddressing() && !Subtarget->isTargetMachO())
+    return 0;
+
+  if (FuncInfo.MF->getInfo<AArch64FunctionInfo>()->hasELFSignedGOT())
     return 0;
 
   unsigned OpFlags = Subtarget->ClassifyGlobalReference(GV, TM);

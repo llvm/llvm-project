@@ -1294,8 +1294,8 @@ bool BinaryContext::handleAArch64Veneer(uint64_t Address, bool MatchOnly) {
     Veneer->getOrCreateLocalLabel(Address);
     Veneer->setMaxSize(TotalSize);
     Veneer->updateState(BinaryFunction::State::Disassembled);
-    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: handling veneer function at 0x" << Address
-                      << "\n");
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: handling veneer function at 0x"
+                      << Twine::utohexstr(Address) << "\n");
     return true;
   };
 
@@ -2021,6 +2021,9 @@ BinaryContext::getBaseAddressForMapping(uint64_t MMapAddress,
   // Find a segment with a matching file offset.
   for (auto &KV : SegmentMapInfo) {
     const SegmentInfo &SegInfo = KV.second;
+    // Only consider executable segments.
+    if (!SegInfo.IsExecutable)
+      continue;
     // FileOffset is got from perf event,
     // and it is equal to alignDown(SegInfo.FileOffset, pagesize).
     // If the pagesize is not equal to SegInfo.Alignment.

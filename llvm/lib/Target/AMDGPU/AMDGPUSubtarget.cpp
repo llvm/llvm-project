@@ -190,7 +190,7 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getWavesPerEU(
 }
 
 static unsigned getReqdWorkGroupSize(const Function &Kernel, unsigned Dim) {
-  auto Node = Kernel.getMetadata("reqd_work_group_size");
+  auto *Node = Kernel.getMetadata("reqd_work_group_size");
   if (Node && Node->getNumOperands() == 3)
     return mdconst::extract<ConstantInt>(Node->getOperand(Dim))->getZExtValue();
   return std::numeric_limits<unsigned>::max();
@@ -314,6 +314,9 @@ uint64_t AMDGPUSubtarget::getExplicitKernArgSize(const Function &F,
   MaxAlign = Align(1);
 
   for (const Argument &Arg : F.args()) {
+    if (Arg.hasAttribute("amdgpu-hidden-argument"))
+      continue;
+
     const bool IsByRef = Arg.hasByRefAttr();
     Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
     Align Alignment = DL.getValueOrABITypeAlignment(
@@ -368,5 +371,6 @@ const AMDGPUSubtarget &AMDGPUSubtarget::get(const TargetMachine &TM, const Funct
 
 SmallVector<unsigned>
 AMDGPUSubtarget::getMaxNumWorkGroups(const Function &F) const {
-  return AMDGPU::getIntegerVecAttribute(F, "amdgpu-max-num-workgroups", 3);
+  return AMDGPU::getIntegerVecAttribute(F, "amdgpu-max-num-workgroups", 3,
+                                        std::numeric_limits<uint32_t>::max());
 }

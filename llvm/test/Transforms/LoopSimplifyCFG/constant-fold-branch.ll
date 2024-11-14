@@ -154,8 +154,8 @@ exit:
 }
 
 ; Check that we can eliminate several dead blocks.
-define i32 @dead_block_propogate_test_branch_loop(i32 %end) {
-; CHECK-LABEL: @dead_block_propogate_test_branch_loop(
+define i32 @dead_block_propagate_test_branch_loop(i32 %end) {
+; CHECK-LABEL: @dead_block_propagate_test_branch_loop(
 ; CHECK-NEXT:  preheader:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
@@ -192,8 +192,8 @@ exit:
 }
 
 ; Check that we can eliminate several blocks while removing a switch.
-define i32 @dead_block_propogate_test_switch_loop(i32 %end) {
-; CHECK-LABEL: @dead_block_propogate_test_switch_loop(
+define i32 @dead_block_propagate_test_switch_loop(i32 %end) {
+; CHECK-LABEL: @dead_block_propagate_test_switch_loop(
 ; CHECK-NEXT:  preheader:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:

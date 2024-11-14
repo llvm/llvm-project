@@ -45,11 +45,6 @@ def note_using : Note<"using">;
 def note_possibility : Note<"one possibility">;
 def note_also_found : Note<"also found">;
 
-def warn_next_larger_fp_type_same_size_than_fp : Warning<
-  "higher precision floating-point type size has the same size than "
-  "floating-point type size">,
-  InGroup<DiagGroup<"higher-precision-fp">>;
-
 // Parse && Lex
 
 let CategoryName = "Lexical or Preprocessor Issue" in {
@@ -394,13 +389,14 @@ def remark_sloc_usage : Remark<
   "source manager location address space usage:">,
   InGroup<DiagGroup<"sloc-usage">>, DefaultRemark, ShowInSystemHeader;
 def note_total_sloc_usage : Note<
-  "%0B in local locations, %1B in locations loaded from AST files, for a total "
-  "of %2B (%3%% of available space)">;
+  "%0B (%1B) in local locations, %2B (%3B) "
+  "in locations loaded from AST files, for a total of %4B (%5B) "
+  "(%6%% of available space)">;
 def note_file_sloc_usage : Note<
-  "file entered %0 time%s0 using %1B of space"
-  "%plural{0:|: plus %2B for macro expansions}2">;
+  "file entered %0 time%s0 using %1B (%2B) of space"
+  "%plural{0:|: plus %3B (%4B) for macro expansions}3">;
 def note_file_misc_sloc_usage : Note<
-  "%0 additional files entered using a total of %1B of space">;
+  "%0 additional files entered using a total of %1B (%2B) of space">;
 
 // Modules
 def err_module_format_unhandled : Error<

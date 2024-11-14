@@ -751,17 +751,6 @@ Error RISCVISAInfo::checkDependency() {
   if (HasZvl && !HasVector)
     return getExtensionRequiresError("zvl*b", "v' or 'zve*");
 
-  if (!HasVector)
-    for (auto Ext :
-         {"zvbb", "zvbc32e", "zvkb", "zvkg", "zvkgs", "zvkned", "zvknha", "zvksed", "zvksh"})
-      if (Exts.count(Ext))
-        return getExtensionRequiresError(Ext, "v' or 'zve*");
-
-  if (!Exts.count("zve64x"))
-    for (auto Ext : {"zvknhb", "zvbc"})
-      if (Exts.count(Ext))
-        return getExtensionRequiresError(Ext, "v' or 'zve64*");
-
   if ((HasZcmt || Exts.count("zcmp")) && HasD && (HasC || Exts.count("zcd")))
     return getError(Twine("'") + (HasZcmt ? "zcmt" : "zcmp") +
                     "' extension is incompatible with '" +
@@ -1049,7 +1038,7 @@ constexpr static RISCVExtBit RISCVBitPositions[] = {
     {"zvksed", 0, 57},    {"zvksh", 0, 58},
     {"zvkt", 0, 59},      {"zve32x", 0, 60},
     {"zve32f", 0, 61},    {"zve64x", 0, 62},
-    {"zve64x", 0, 63},    {"zve64d", 1, 0},
+    {"zve64f", 0, 63},    {"zve64d", 1, 0},
     {"zimop", 1, 1},      {"zca", 1, 2},
     {"zcb", 1, 3},        {"zcd", 1, 4},
     {"zcf", 1, 5},        {"zcmop", 1, 6},

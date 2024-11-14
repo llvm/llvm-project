@@ -693,7 +693,7 @@ bool RISCVDAGToDAGISel::tryIndexedLoad(SDNode *Node) {
 
   // The constants that can be encoded in the THeadMemIdx instructions
   // are of the form (sign_extend(imm5) << imm2).
-  int64_t Shift;
+  unsigned Shift;
   for (Shift = 0; Shift < 4; Shift++)
     if (isInt<5>(Offset >> Shift) && ((Offset % (1LL << Shift)) == 0))
       break;
@@ -889,29 +889,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   }
   case ISD::ConstantFP: {
     const APFloat &APF = cast<ConstantFPSDNode>(Node)->getValueAPF();
-    int FPImm = static_cast<const RISCVTargetLowering *>(TLI)->getLegalZfaFPImm(
-        APF, VT);
-    if (FPImm >= 0) {
-      unsigned Opc;
-      switch (VT.SimpleTy) {
-      default:
-        llvm_unreachable("Unexpected size");
-      case MVT::f16:
-        Opc = RISCV::FLI_H;
-        break;
-      case MVT::f32:
-        Opc = RISCV::FLI_S;
-        break;
-      case MVT::f64:
-        Opc = RISCV::FLI_D;
-        break;
-      }
-      SDNode *Res = CurDAG->getMachineNode(
-          Opc, DL, VT, CurDAG->getTargetConstant(FPImm, DL, XLenVT));
-
-      ReplaceNode(Node, Res);
-      return;
-    }
 
     bool NegZeroF64 = APF.isNegZero() && VT == MVT::f64;
     SDValue Imm;
@@ -951,7 +928,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     }
 
     SDNode *Res;
-    if (Opc == RISCV::FCVT_D_W_IN32X || Opc == RISCV::FCVT_D_W)
+    if (VT.SimpleTy == MVT::f16 && Opc == RISCV::COPY) {
+      Res =
+          CurDAG->getTargetExtractSubreg(RISCV::sub_16, DL, VT, Imm).getNode();
+    } else if (VT.SimpleTy == MVT::f32 && Opc == RISCV::COPY) {
+      Res =
+          CurDAG->getTargetExtractSubreg(RISCV::sub_32, DL, VT, Imm).getNode();
+    } else if (Opc == RISCV::FCVT_D_W_IN32X || Opc == RISCV::FCVT_D_W)
       Res = CurDAG->getMachineNode(
           Opc, DL, VT, Imm,
           CurDAG->getTargetConstant(RISCVFPRndMode::RNE, DL, XLenVT));
@@ -2748,7 +2731,7 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
 }
 
 /// Similar to SelectAddrRegImm, except that the least significant 5 bits of
-/// Offset shoule be all zeros.
+/// Offset should be all zeros.
 bool RISCVDAGToDAGISel::SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base,
                                                  SDValue &Offset) {
   if (SelectAddrFrameIndex(Addr, Base, Offset))
@@ -2953,6 +2936,14 @@ bool RISCVDAGToDAGISel::selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
                         CurDAG->getSignedConstant(-CVal, DL, N->getValueType(0),
                                                   /*isTarget=*/true)),
                     0);
+      return true;
+    }
+    if (isPowerOf2_64(CVal) && Subtarget->hasStdExtZbs()) {
+      Val = SDValue(
+          CurDAG->getMachineNode(
+              RISCV::BINVI, DL, N->getValueType(0), LHS,
+              CurDAG->getTargetConstant(Log2_64(CVal), DL, N->getValueType(0))),
+          0);
       return true;
     }
   }
@@ -3375,7 +3366,7 @@ bool RISCVDAGToDAGISel::selectSimm5Shl2(SDValue N, SDValue &Simm5,
                                         SDValue &Shl2) {
   if (auto *C = dyn_cast<ConstantSDNode>(N)) {
     int64_t Offset = C->getSExtValue();
-    int64_t Shift;
+    unsigned Shift;
     for (Shift = 0; Shift < 4; Shift++)
       if (isInt<5>(Offset >> Shift) && ((Offset % (1LL << Shift)) == 0))
         break;
@@ -3552,13 +3543,6 @@ bool RISCVDAGToDAGISel::selectScalarFPAsInt(SDValue N, SDValue &Imm) {
 
   MVT VT = CFP->getSimpleValueType(0);
 
-  // Even if this FPImm requires an additional FNEG (i.e. the second element of
-  // the returned pair is true) we still prefer FLI + FNEG over immediate
-  // materialization as the latter might generate a longer instruction sequence.
-  if (static_cast<const RISCVTargetLowering *>(TLI)->getLegalZfaFPImm(APF,
-                                                                      VT) >= 0)
-    return false;
-
   MVT XLenVT = Subtarget->getXLenVT();
   if (VT == MVT::f64 && !Subtarget->is64Bit()) {
     assert(APF.isNegZero() && "Unexpected constant.");
@@ -3724,6 +3708,15 @@ static bool isImplicitDef(SDValue V) {
   return V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
 }
 
+static bool hasGPROut(unsigned Opc) {
+  switch (RISCV::getRVVMCOpcode(Opc)) {
+  case RISCV::VCPOP_M:
+  case RISCV::VFIRST_M:
+    return true;
+  }
+  return false;
+}
+
 // Optimize masked RVV pseudo instructions with a known all-ones mask to their
 // corresponding "unmasked" pseudo versions. The mask we're interested in will
 // take the form of a V0 physical register operand, with a glued
@@ -3753,8 +3746,9 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(MachineSDNode *N) {
 #endif
 
   SmallVector<SDValue, 8> Ops;
-  // Skip the passthru operand at index 0 if !UseTUPseudo.
-  for (unsigned I = !UseTUPseudo, E = N->getNumOperands(); I != E; I++) {
+  // Skip the passthru operand at index 0 if !UseTUPseudo and no GPR out.
+  bool ShouldSkip = !UseTUPseudo && !hasGPROut(Opc);
+  for (unsigned I = ShouldSkip, E = N->getNumOperands(); I != E; I++) {
     // Skip the mask, and the Glue.
     SDValue Op = N->getOperand(I);
     if (I == MaskOpIdx || Op.getValueType() == MVT::Glue)

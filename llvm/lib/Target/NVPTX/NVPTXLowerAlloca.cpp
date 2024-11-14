@@ -24,9 +24,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "NVPTXUtilities.h"
-#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -55,8 +55,8 @@ public:
 
 char NVPTXLowerAlloca::ID = 1;
 
-INITIALIZE_PASS(NVPTXLowerAlloca, "nvptx-lower-alloca",
-                "Lower Alloca", false, false)
+INITIALIZE_PASS(NVPTXLowerAlloca, "nvptx-lower-alloca", "Lower Alloca", false,
+                false)
 
 // =============================================================================
 // Main function for this pass.
@@ -70,14 +70,38 @@ bool NVPTXLowerAlloca::runOnFunction(Function &F) {
     for (auto &I : BB) {
       if (auto allocaInst = dyn_cast<AllocaInst>(&I)) {
         Changed = true;
+
+        PointerType *AllocInstPtrTy =
+            cast<PointerType>(allocaInst->getType()->getScalarType());
+        unsigned AllocAddrSpace = AllocInstPtrTy->getAddressSpace();
+        assert((AllocAddrSpace == ADDRESS_SPACE_GENERIC ||
+                AllocAddrSpace == ADDRESS_SPACE_LOCAL) &&
+               "AllocaInst can only be in Generic or Local address space for "
+               "NVPTX.");
+
+        Instruction *AllocaInLocalAS = allocaInst;
         auto ETy = allocaInst->getAllocatedType();
-        auto LocalAddrTy = PointerType::get(ETy, ADDRESS_SPACE_LOCAL);
-        auto NewASCToLocal = new AddrSpaceCastInst(allocaInst, LocalAddrTy, "");
-        auto GenericAddrTy = PointerType::get(ETy, ADDRESS_SPACE_GENERIC);
-        auto NewASCToGeneric =
-            new AddrSpaceCastInst(NewASCToLocal, GenericAddrTy, "");
-        NewASCToLocal->insertAfter(allocaInst);
-        NewASCToGeneric->insertAfter(NewASCToLocal);
+
+        // We need to make sure that LLVM has info that alloca needs to go to
+        // ADDRESS_SPACE_LOCAL for InferAddressSpace pass.
+        //
+        // For allocas in ADDRESS_SPACE_LOCAL, we add addrspacecast to
+        // ADDRESS_SPACE_LOCAL and back to ADDRESS_SPACE_GENERIC, so that
+        // the alloca's users still use a generic pointer to operate on.
+        //
+        // For allocas already in ADDRESS_SPACE_LOCAL, we just need
+        // addrspacecast to ADDRESS_SPACE_GENERIC.
+        if (AllocAddrSpace == ADDRESS_SPACE_GENERIC) {
+          auto ASCastToLocalAS = new AddrSpaceCastInst(
+              allocaInst, PointerType::get(ETy, ADDRESS_SPACE_LOCAL), "");
+          ASCastToLocalAS->insertAfter(allocaInst);
+          AllocaInLocalAS = ASCastToLocalAS;
+        }
+
+        auto AllocaInGenericAS = new AddrSpaceCastInst(
+            AllocaInLocalAS, PointerType::get(ETy, ADDRESS_SPACE_GENERIC), "");
+        AllocaInGenericAS->insertAfter(AllocaInLocalAS);
+
         for (Use &AllocaUse : llvm::make_early_inc_range(allocaInst->uses())) {
           // Check Load, Store, GEP, and BitCast Uses on alloca and make them
           // use the converted generic address, in order to expose non-generic
@@ -87,23 +111,23 @@ bool NVPTXLowerAlloca::runOnFunction(Function &F) {
           auto LI = dyn_cast<LoadInst>(AllocaUse.getUser());
           if (LI && LI->getPointerOperand() == allocaInst &&
               !LI->isVolatile()) {
-            LI->setOperand(LI->getPointerOperandIndex(), NewASCToGeneric);
+            LI->setOperand(LI->getPointerOperandIndex(), AllocaInGenericAS);
             continue;
           }
           auto SI = dyn_cast<StoreInst>(AllocaUse.getUser());
           if (SI && SI->getPointerOperand() == allocaInst &&
               !SI->isVolatile()) {
-            SI->setOperand(SI->getPointerOperandIndex(), NewASCToGeneric);
+            SI->setOperand(SI->getPointerOperandIndex(), AllocaInGenericAS);
             continue;
           }
           auto GI = dyn_cast<GetElementPtrInst>(AllocaUse.getUser());
           if (GI && GI->getPointerOperand() == allocaInst) {
-            GI->setOperand(GI->getPointerOperandIndex(), NewASCToGeneric);
+            GI->setOperand(GI->getPointerOperandIndex(), AllocaInGenericAS);
             continue;
           }
           auto BI = dyn_cast<BitCastInst>(AllocaUse.getUser());
           if (BI && BI->getOperand(0) == allocaInst) {
-            BI->setOperand(0, NewASCToGeneric);
+            BI->setOperand(0, AllocaInGenericAS);
             continue;
           }
         }

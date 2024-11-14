@@ -1106,7 +1106,7 @@ OpEmitter::OpEmitter(const Operator &op,
   genFolderDecls();
   genTypeInterfaceMethods();
   genOpInterfaceMethods();
-  generateOpFormat(op, opClass);
+  generateOpFormat(op, opClass, emitHelper.hasProperties());
   genSideEffectInterfaceMethods();
 }
 void OpEmitter::emitDecl(
@@ -1411,7 +1411,6 @@ void OpEmitter::genPropertiesSupport() {
         // Backward compat for now, TODO: Remove at some point.
         os << "   if (!attr) attr = dict.get(\"result_segment_sizes\");";
       }
-      os.flush();
 
       setPropMethod << "{\n"
                     << formatv(propFromAttrFmt,
@@ -1445,7 +1444,6 @@ void OpEmitter::genPropertiesSupport() {
         // Backward compat for now
         os << "   if (!attr) attr = dict.get(\"result_segment_sizes\");";
       }
-      os.flush();
 
       setPropMethod << formatv(R"decl(
   {{
@@ -2505,7 +2503,8 @@ void OpEmitter::genSeparateArgParamBuilder() {
                       {1}.regions, inferredReturnTypes)))
           {1}.addTypes(inferredReturnTypes);
         else
-          ::llvm::report_fatal_error("Failed to infer result type(s).");)",
+          ::mlir::detail::reportFatalInferReturnTypesError({1});
+        )",
                       opClass.getClassName(), builderOpState);
       return;
     }
@@ -3585,6 +3584,24 @@ void OpEmitter::genTypeInterfaceMethods() {
   fctx.addSubst("_ctxt", "context");
   body << "  ::mlir::Builder odsBuilder(context);\n";
 
+  // Preprocessing stage to verify all accesses to operands are valid.
+  int maxAccessedIndex = -1;
+  for (int i = 0, e = op.getNumResults(); i != e; ++i) {
+    const InferredResultType &infer = op.getInferredResultType(i);
+    if (!infer.isArg())
+      continue;
+    Operator::OperandOrAttribute arg =
+        op.getArgToOperandOrAttribute(infer.getIndex());
+    if (arg.kind() == Operator::OperandOrAttribute::Kind::Operand) {
+      maxAccessedIndex =
+          std::max(maxAccessedIndex, arg.operandOrAttributeIndex());
+    }
+  }
+  if (maxAccessedIndex != -1) {
+    body << "  if (operands.size() <= " << Twine(maxAccessedIndex) << ")\n";
+    body << "    return ::mlir::failure();\n";
+  }
+
   // Process the type inference graph in topological order, starting from types
   // that are always fully-inferred: operands and results with constructible
   // types. The type inference graph here will always be a DAG, so this gives
@@ -3601,7 +3618,8 @@ void OpEmitter::genTypeInterfaceMethods() {
       if (infer.isArg()) {
         // If this is an operand, just index into operand list to access the
         // type.
-        auto arg = op.getArgToOperandOrAttribute(infer.getIndex());
+        Operator::OperandOrAttribute arg =
+            op.getArgToOperandOrAttribute(infer.getIndex());
         if (arg.kind() == Operator::OperandOrAttribute::Kind::Operand) {
           typeStr = ("operands[" + Twine(arg.operandOrAttributeIndex()) +
                      "].getType()")
@@ -4188,10 +4206,8 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
                     "    bool operator!=(const Properties &rhs) const {\n"
                     "      return !(*this == rhs);\n"
                     "    }\n";
-    comparatorOs.flush();
     os << comparator;
     os << "  };\n";
-    os.flush();
 
     genericAdaptorBase.declare<ExtraClassDeclaration>(std::move(declarations));
   }
@@ -4284,6 +4300,19 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
                                          "Properties{}, "
                                          "{}");
     }
+  }
+
+  // Create a constructor that creates a new generic adaptor by copying
+  // everything from another adaptor, except for the values.
+  {
+    SmallVector<MethodParameter> paramList;
+    paramList.emplace_back("RangeT", "values");
+    paramList.emplace_back("const " + op.getGenericAdaptorName() + "Base &",
+                           "base");
+    auto *constructor =
+        genericAdaptor.addConstructor<Method::Inline>(paramList);
+    constructor->addMemberInitializer("Base", "base");
+    constructor->addMemberInitializer("odsOperands", "values");
   }
 
   // Create constructors constructing the adaptor from an instance of the op.
@@ -4502,7 +4531,7 @@ void OpOperandAdaptorEmitter::emitDef(
 
 /// Emit the class declarations or definitions for the given op defs.
 static void
-emitOpClasses(const RecordKeeper &recordKeeper,
+emitOpClasses(const RecordKeeper &records,
               const std::vector<const Record *> &defs, raw_ostream &os,
               const StaticVerifierFunctionEmitter &staticVerifierEmitter,
               bool emitDecl) {
@@ -4539,7 +4568,7 @@ emitOpClasses(const RecordKeeper &recordKeeper,
 }
 
 /// Emit the declarations for the provided op classes.
-static void emitOpClassDecls(const RecordKeeper &recordKeeper,
+static void emitOpClassDecls(const RecordKeeper &records,
                              const std::vector<const Record *> &defs,
                              raw_ostream &os) {
   // First emit forward declaration for each class, this allows them to refer
@@ -4554,37 +4583,37 @@ static void emitOpClassDecls(const RecordKeeper &recordKeeper,
   IfDefScope scope("GET_OP_CLASSES", os);
   if (defs.empty())
     return;
-  StaticVerifierFunctionEmitter staticVerifierEmitter(os, recordKeeper);
+  StaticVerifierFunctionEmitter staticVerifierEmitter(os, records);
   staticVerifierEmitter.collectOpConstraints(defs);
-  emitOpClasses(recordKeeper, defs, os, staticVerifierEmitter,
+  emitOpClasses(records, defs, os, staticVerifierEmitter,
                 /*emitDecl=*/true);
 }
 
 /// Emit the definitions for the provided op classes.
-static void emitOpClassDefs(const RecordKeeper &recordKeeper,
+static void emitOpClassDefs(const RecordKeeper &records,
                             ArrayRef<const Record *> defs, raw_ostream &os,
                             StringRef constraintPrefix = "") {
   if (defs.empty())
     return;
 
   // Generate all of the locally instantiated methods first.
-  StaticVerifierFunctionEmitter staticVerifierEmitter(os, recordKeeper,
+  StaticVerifierFunctionEmitter staticVerifierEmitter(os, records,
                                                       constraintPrefix);
   os << formatv(opCommentHeader, "Local Utility Method", "Definitions");
   staticVerifierEmitter.collectOpConstraints(defs);
   staticVerifierEmitter.emitOpConstraints(defs);
 
   // Emit the classes.
-  emitOpClasses(recordKeeper, defs, os, staticVerifierEmitter,
+  emitOpClasses(records, defs, os, staticVerifierEmitter,
                 /*emitDecl=*/false);
 }
 
 /// Emit op declarations for all op records.
-static bool emitOpDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
-  emitSourceFileHeader("Op Declarations", os, recordKeeper);
+static bool emitOpDecls(const RecordKeeper &records, raw_ostream &os) {
+  emitSourceFileHeader("Op Declarations", os, records);
 
-  std::vector<const Record *> defs = getRequestedOpDefinitions(recordKeeper);
-  emitOpClassDecls(recordKeeper, defs, os);
+  std::vector<const Record *> defs = getRequestedOpDefinitions(records);
+  emitOpClassDecls(records, defs, os);
 
   // If we are generating sharded op definitions, emit the sharded op
   // registration hooks.
@@ -4610,7 +4639,7 @@ static bool emitOpDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
 
 /// Generate the dialect op registration hook and the op class definitions for a
 /// shard of ops.
-static void emitOpDefShard(const RecordKeeper &recordKeeper,
+static void emitOpDefShard(const RecordKeeper &records,
                            ArrayRef<const Record *> defs,
                            const Dialect &dialect, unsigned shardIndex,
                            unsigned shardCount, raw_ostream &os) {
@@ -4644,14 +4673,14 @@ static void emitOpDefShard(const RecordKeeper &recordKeeper,
   os << "}\n";
 
   // Generate the per-shard op definitions.
-  emitOpClassDefs(recordKeeper, defs, os, indexStr);
+  emitOpClassDefs(records, defs, os, indexStr);
 }
 
 /// Emit op definitions for all op records.
-static bool emitOpDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
-  emitSourceFileHeader("Op Definitions", os, recordKeeper);
+static bool emitOpDefs(const RecordKeeper &records, raw_ostream &os) {
+  emitSourceFileHeader("Op Definitions", os, records);
 
-  std::vector<const Record *> defs = getRequestedOpDefinitions(recordKeeper);
+  std::vector<const Record *> defs = getRequestedOpDefinitions(records);
   SmallVector<ArrayRef<const Record *>, 4> shardedDefs;
   shardOpDefinitions(defs, shardedDefs);
 
@@ -4666,7 +4695,7 @@ static bool emitOpDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
     }
     {
       IfDefScope scope("GET_OP_CLASSES", os);
-      emitOpClassDefs(recordKeeper, defs, os);
+      emitOpClassDefs(records, defs, os);
     }
     return false;
   }
@@ -4675,7 +4704,7 @@ static bool emitOpDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
     return false;
   Dialect dialect = Operator(defs.front()).getDialect();
   for (auto [idx, value] : llvm::enumerate(shardedDefs)) {
-    emitOpDefShard(recordKeeper, value, dialect, idx, shardedDefs.size(), os);
+    emitOpDefShard(records, value, dialect, idx, shardedDefs.size(), os);
   }
   return false;
 }

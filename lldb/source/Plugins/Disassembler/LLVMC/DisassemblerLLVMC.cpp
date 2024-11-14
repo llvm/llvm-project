@@ -583,7 +583,6 @@ public:
         lldb::addr_t pc = m_address.GetFileAddress();
         m_using_file_addr = true;
 
-        const bool data_from_file = disasm->m_data_from_file;
         bool use_hex_immediates = true;
         Disassembler::HexImmediateStyle hex_style = Disassembler::eHexStyleC;
 
@@ -593,12 +592,10 @@ public:
             use_hex_immediates = target->GetUseHexImmediates();
             hex_style = target->GetHexImmediateStyle();
 
-            if (!data_from_file) {
-              const lldb::addr_t load_addr = m_address.GetLoadAddress(target);
-              if (load_addr != LLDB_INVALID_ADDRESS) {
-                pc = load_addr;
-                m_using_file_addr = false;
-              }
+            const lldb::addr_t load_addr = m_address.GetLoadAddress(target);
+            if (load_addr != LLDB_INVALID_ADDRESS) {
+              pc = load_addr;
+              m_using_file_addr = false;
             }
           }
         }
@@ -1365,8 +1362,6 @@ void DisassemblerLLVMC::MCDisasmInstance::PrintMCInst(
   m_instr_printer_up->printInst(&mc_inst, pc, llvm::StringRef(),
                                 *m_subtarget_info_up, inst_stream);
   m_instr_printer_up->setCommentStream(llvm::nulls());
-
-  comments_stream.flush();
 
   static std::string g_newlines("\r\n");
 

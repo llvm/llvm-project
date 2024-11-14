@@ -116,6 +116,41 @@ findPrologueEnd(MachineFunction &MF, MachineBasicBlock::iterator &PrologueEnd) {
   return nullptr;
 }
 
+// Represents the point within a basic block where we can insert an instruction.
+// Note that we need the MachineBasicBlock* as well as the iterator since the
+// iterator can point to the end of the block. Instructions are inserted
+// *before* the iterator.
+struct InsertionPoint {
+  MachineBasicBlock *MBB;
+  MachineBasicBlock::iterator Iterator;
+};
+
+// Inserts a `.cfi_remember_state` instruction before PrologueEnd and a
+// `.cfi_restore_state` instruction before DstInsertPt. Returns an iterator
+// to the first instruction after the inserted `.cfi_restore_state` instruction.
+static InsertionPoint
+insertRememberRestorePair(const InsertionPoint &RememberInsertPt,
+                          const InsertionPoint &RestoreInsertPt) {
+  MachineFunction &MF = *RememberInsertPt.MBB->getParent();
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+
+  // Insert the `.cfi_remember_state` instruction.
+  unsigned CFIIndex =
+      MF.addFrameInst(MCCFIInstruction::createRememberState(nullptr));
+  BuildMI(*RememberInsertPt.MBB, RememberInsertPt.Iterator, DebugLoc(),
+          TII.get(TargetOpcode::CFI_INSTRUCTION))
+      .addCFIIndex(CFIIndex);
+
+  // Insert the `.cfi_restore_state` instruction.
+  CFIIndex = MF.addFrameInst(MCCFIInstruction::createRestoreState(nullptr));
+
+  return {RestoreInsertPt.MBB,
+          std::next(BuildMI(*RestoreInsertPt.MBB, RestoreInsertPt.Iterator,
+                            DebugLoc(), TII.get(TargetOpcode::CFI_INSTRUCTION))
+                        .addCFIIndex(CFIIndex)
+                        ->getIterator())};
+}
+
 bool CFIFixup::runOnMachineFunction(MachineFunction &MF) {
   const TargetFrameLowering &TFL = *MF.getSubtarget().getFrameLowering();
   if (!TFL.enableCFIFixup(MF))
@@ -174,15 +209,13 @@ bool CFIFixup::runOnMachineFunction(MachineFunction &MF) {
   // Every block inherits the frame state (as recorded in the unwind tables)
   // of the previous block. If the intended frame state is different, insert
   // compensating CFI instructions.
-  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   bool Change = false;
   // `InsertPt` always points to the point in a preceding block where we have to
   // insert a `.cfi_remember_state`, in the case that the current block needs a
   // `.cfi_restore_state`.
-  MachineBasicBlock *InsertMBB = PrologueBlock;
-  MachineBasicBlock::iterator InsertPt = PrologueEnd;
+  InsertionPoint InsertPt = {PrologueBlock, PrologueEnd};
 
-  assert(InsertPt != PrologueBlock->begin() &&
+  assert(PrologueEnd != PrologueBlock->begin() &&
          "Inconsistent notion of \"prologue block\"");
 
   // No point starting before the prologue block.
@@ -210,20 +243,11 @@ bool CFIFixup::runOnMachineFunction(MachineFunction &MF) {
     if (!Info.StrongNoFrameOnEntry && Info.HasFrameOnEntry && !HasFrame) {
       // Reset to the "after prologue" state.
 
-      // Insert a `.cfi_remember_state` into the last block known to have a
-      // stack frame.
-      unsigned CFIIndex =
-          MF.addFrameInst(MCCFIInstruction::createRememberState(nullptr));
-      BuildMI(*InsertMBB, InsertPt, DebugLoc(),
-              TII.get(TargetOpcode::CFI_INSTRUCTION))
-          .addCFIIndex(CFIIndex);
-      // Insert a `.cfi_restore_state` at the beginning of the current block.
-      CFIIndex = MF.addFrameInst(MCCFIInstruction::createRestoreState(nullptr));
-      InsertPt = BuildMI(*CurrBB, CurrBB->begin(), DebugLoc(),
-                         TII.get(TargetOpcode::CFI_INSTRUCTION))
-                     .addCFIIndex(CFIIndex);
-      ++InsertPt;
-      InsertMBB = &*CurrBB;
+      // There's an earlier block known to have a stack frame. Insert a
+      // `.cfi_remember_state` instruction into that block and a
+      // `.cfi_restore_state` instruction at the beginning of the current block.
+      InsertPt = insertRememberRestorePair(
+          InsertPt, InsertionPoint{&*CurrBB, CurrBB->begin()});
       Change = true;
     } else if ((Info.StrongNoFrameOnEntry || !Info.HasFrameOnEntry) &&
                HasFrame) {

@@ -115,7 +115,6 @@ add_integration_test(
   SRCS
     pthread_name_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.pthread
     libc.src.errno.errno
     libc.src.pthread.pthread_create
@@ -185,8 +184,8 @@ add_integration_test(
     pthread_join_test.cpp
   DEPENDS
     libc.include.pthread
-    libc.include.errno
     libc.include.stdio
+    libc.src.errno.errno
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_join
 )
@@ -199,7 +198,7 @@ add_integration_test(
     pthread_create_test.cpp
   DEPENDS
     libc.include.pthread
-    libc.include.errno
+    libc.src.errno.errno
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_join
     libc.src.pthread.pthread_attr_getdetachstate

@@ -37,7 +37,6 @@ end subroutine s4
 !                    Check we do call FortranAInitialize on the derived type
 ! CHECK:             %[[VAL_30:.*]] = fir.call @_FortranAInitialize(%[[VAL_28]], %[[VAL_29]], %[[VAL_27]]) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32) -> none
 ! CHECK:             omp.wsloop {
-! CHECK:             omp.terminator
 ! CHECK:           }
 ! CHECK:           %[[VAL_39:.*]] = fir.embox %[[VAL_9]]#1 : (!fir.ref<!fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}>>) -> !fir.box<!fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}>>
 ! CHECK:           %[[VAL_40:.*]] = fir.convert %[[VAL_39]] : (!fir.box<!fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}>>) -> !fir.box<none>

@@ -14,7 +14,7 @@
 #ifndef OMPTARGET_SHARED_UTILS_H
 #define OMPTARGET_SHARED_UTILS_H
 
-#include "Types.h"
+#include <stdint.h>
 
 namespace utils {
 

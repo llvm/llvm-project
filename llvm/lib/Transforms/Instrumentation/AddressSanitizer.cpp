@@ -71,11 +71,11 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 #include "llvm/Transforms/Utils/ASanStackFrameLayout.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
@@ -489,7 +489,7 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
                  TargetTriple.getArch() == Triple::ppc64le;
   bool IsSystemZ = TargetTriple.getArch() == Triple::systemz;
   bool IsX86_64 = TargetTriple.getArch() == Triple::x86_64;
-  bool IsMIPSN32ABI = TargetTriple.getEnvironment() == Triple::GNUABIN32;
+  bool IsMIPSN32ABI = TargetTriple.isABIN32();
   bool IsMIPS32 = TargetTriple.isMIPS32();
   bool IsMIPS64 = TargetTriple.isMIPS64();
   bool IsArmOrThumb = TargetTriple.isARM() || TargetTriple.isThumb();
@@ -1109,11 +1109,8 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
     // alloca. We have a special @llvm.get.dynamic.area.offset intrinsic for
     // this purpose.
     if (!isa<ReturnInst>(InstBefore)) {
-      Function *DynamicAreaOffsetFunc = Intrinsic::getDeclaration(
-          InstBefore->getModule(), Intrinsic::get_dynamic_area_offset,
-          {IntptrTy});
-
-      Value *DynamicAreaOffset = IRB.CreateCall(DynamicAreaOffsetFunc, {});
+      Value *DynamicAreaOffset = IRB.CreateIntrinsic(
+          Intrinsic::get_dynamic_area_offset, {IntptrTy}, {});
 
       DynamicAreaPtr = IRB.CreateAdd(IRB.CreatePtrToInt(SavedStack, IntptrTy),
                                      DynamicAreaOffset);
@@ -1865,11 +1862,9 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
 
   if (UseCalls && ClOptimizeCallbacks) {
     const ASanAccessInfo AccessInfo(IsWrite, CompileKernel, AccessSizeIndex);
-    Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-    IRB.CreateCall(
-        Intrinsic::getDeclaration(M, Intrinsic::asan_check_memaccess),
-        {IRB.CreatePointerCast(Addr, PtrTy),
-         ConstantInt::get(Int32Ty, AccessInfo.Packed)});
+    IRB.CreateIntrinsic(Intrinsic::asan_check_memaccess, {},
+                        {IRB.CreatePointerCast(Addr, PtrTy),
+                         ConstantInt::get(Int32Ty, AccessInfo.Packed)});
     return;
   }
 
@@ -2960,6 +2955,10 @@ bool AddressSanitizer::instrumentFunction(Function &F,
 
   bool FunctionModified = false;
 
+  // Do not apply any instrumentation for naked functions.
+  if (F.hasFnAttribute(Attribute::Naked))
+    return FunctionModified;
+
   // If needed, insert __asan_init before checking for SanitizeAddress attr.
   // This function needs to be called even if the function body is not
   // instrumented.
@@ -3053,9 +3052,7 @@ bool AddressSanitizer::instrumentFunction(Function &F,
                    OperandsToInstrument.size() + IntrinToInstrument.size() >
                        (unsigned)InstrumentationWithCallsThreshold);
   const DataLayout &DL = F.getDataLayout();
-  ObjectSizeOpts ObjSizeOpts;
-  ObjSizeOpts.RoundToAlign = true;
-  ObjectSizeOffsetVisitor ObjSizeVis(DL, TLI, F.getContext(), ObjSizeOpts);
+  ObjectSizeOffsetVisitor ObjSizeVis(DL, TLI, F.getContext());
 
   // Instrument.
   int NumInstrumented = 0;

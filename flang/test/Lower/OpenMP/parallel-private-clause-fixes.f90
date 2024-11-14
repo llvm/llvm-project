@@ -91,7 +91,6 @@
 ! CHECK:               fir.store %[[VAL_12]]#1 to %[[PRIV_J_DECL]]#1 : !fir.ref<i32>
 ! CHECK:               omp.yield
 ! CHECK:             }
-! CHECK:             omp.terminator
 ! CHECK:           }
 ! CHECK:           omp.terminator
 ! CHECK:         }

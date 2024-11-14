@@ -155,7 +155,7 @@
 // CHECK-SAME: "-targets={{.*}},hipv4-amdgcn-amd-amdhsa--gfx803,hipv4-amdgcn-amd-amdhsa--gfx900"
 // CHECK-SAME: "-input={{.*}}" "-input=[[IMG_DEV1]]" "-input=[[IMG_DEV2]]" "-output=[[BUNDLE]]"
 
-// CHECK: [[MC:".*llvm-mc.*"]] "-triple" [[HOST]] "-o" [[OBJBUNDLE:".*o"]] "{{.*}}.mcin" "--filetype=obj"
+// CHECK: [[MC:".*clang.*"]] "-target" [[HOST]] "-o" [[OBJBUNDLE:".*o"]] "{{.*}}.mcin"
 
 // output the executable
 // LNX: [[LD:".*ld.*"]] {{.*}}"-o" "a.out" {{.*}} [[A_OBJ_HOST]] [[B_OBJ_HOST]] [[OBJBUNDLE]]

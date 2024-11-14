@@ -141,8 +141,8 @@ public:
   /// are in the same block and A properly dominates B within the block, or if
   /// the block that contains A properly dominates the block that contains B. In
   /// an SSACFG region, Operation A dominates Operation B in the same block if A
-  /// preceeds B. In a Graph region, all operations in a block dominate all
-  /// other operations in the same block.
+  /// preceeds B. In a Graph region, all operations in a block properly dominate
+  /// all operations in the same block.
   ///
   /// The `enclosingOpOk` flag says whether we should return true if the B op
   /// is enclosed by a region on A.
@@ -176,9 +176,14 @@ public:
   /// Return true if the specified block A properly dominates block B, i.e.: if
   /// block A contains block B, or if the region which contains block A also
   /// contains block B or some parent of block B and block A dominates that
-  /// block in that kind of region. In an SSACFG region, block A dominates
-  /// block B if all control flow paths from the entry block to block B flow
-  /// through block A. In a Graph region, all blocks dominate all other blocks.
+  /// block in that kind of region.
+  ///
+  /// In an SSACFG region, block A dominates block B if all control flow paths
+  /// from the entry block to block B flow through block A.
+  ///
+  /// Graph regions have only a single block. To be consistent with "proper
+  /// dominance" of ops, the single block is considered to properly dominate
+  /// itself in a graph region.
   bool properlyDominates(Block *a, Block *b) const {
     return super::properlyDominates(a, b);
   }
@@ -197,20 +202,20 @@ public:
   using super::super;
 
   /// Return true if operation A properly postdominates operation B.
-  bool properlyPostDominates(Operation *a, Operation *b);
+  bool properlyPostDominates(Operation *a, Operation *b) const;
 
   /// Return true if operation A postdominates operation B.
-  bool postDominates(Operation *a, Operation *b) {
+  bool postDominates(Operation *a, Operation *b) const {
     return a == b || properlyPostDominates(a, b);
   }
 
   /// Return true if the specified block A properly postdominates block B.
-  bool properlyPostDominates(Block *a, Block *b) {
+  bool properlyPostDominates(Block *a, Block *b) const {
     return super::properlyDominates(a, b);
   }
 
   /// Return true if the specified block A postdominates block B.
-  bool postDominates(Block *a, Block *b) {
+  bool postDominates(Block *a, Block *b) const {
     return a == b || properlyPostDominates(a, b);
   }
 };

@@ -811,6 +811,7 @@ def Tosa_MulOp : Tosa_ElementwiseOp<"mul", [
   );
 
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -881,7 +882,7 @@ def Tosa_TableOp : Tosa_InferShapedTypeOp<"table"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor: $input,
+    Tosa_Tensor: $input1,
     Tosa_Tensor1D: $table
   );
 
@@ -890,7 +891,7 @@ def Tosa_TableOp : Tosa_InferShapedTypeOp<"table"> {
   );
 
   let assemblyFormat = [{
-    $input `,` $table attr-dict `:` `(` type($input) `,` type($table) `)` `->` type($output)
+    $input1 `,` $table attr-dict `:` `(` type($input1) `,` type($table) `)` `->` type($output)
   }];
 
   let hasVerifier = 1;
@@ -1640,7 +1641,7 @@ def Tosa_ReverseOp: Tosa_Op<"reverse", [
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input,
+    Tosa_Tensor:$input1,
     I32Attr:$axis
   );
 
@@ -1667,7 +1668,7 @@ def Tosa_SliceOp : Tosa_InferShapedTypeOp<"slice"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input,
+    Tosa_Tensor:$input1,
     DenseI64ArrayAttr:$start,
     DenseI64ArrayAttr:$size
   );
@@ -1877,21 +1878,23 @@ def Tosa_RescaleOp: Tosa_Op<"rescale", [Pure,
 
   let description = [{
     Rescale quantized values into a new domain. Supported rescalings are:
-    Mode                    Input   Output
-    signed 8 to 8           int8    int8
-    signed 8 to 16          int8    int16
-    signed 8 to 32          int8    int32
-    signed 16 to 8          int16   int8
-    signed 16 to 16         int16   int16
-    signed 16 to 32         int16   int32
-    signed 32 to 8          int32   int8
-    signed 32 to 16         int32   int16
-    signed 32 to 32         int32   int32
-    signed 48 to 8          int48   int8
-    signed 48 to 16         int48   int16
-    signed 48 to 32         int48   int32
-    unsigned 8 to signed 8  uint8   int8
-    signed 8 to unsigned 8  int8    uint8
+
+    | Mode                   | Input | Output |
+    |------------------------|-------|--------|
+    | signed 8 to 8          | int8  | int8   |
+    | signed 8 to 16         | int8  | int16  |
+    | signed 8 to 32         | int8  | int32  |
+    | signed 16 to 8         | int16 | int8   |
+    | signed 16 to 16        | int16 | int16  |
+    | signed 16 to 32        | int16 | int32  |
+    | signed 32 to 8         | int32 | int8   |
+    | signed 32 to 16        | int32 | int16  |
+    | signed 32 to 32        | int32 | int32  |
+    | signed 48 to 8         | int48 | int8   |
+    | signed 48 to 16        | int48 | int16  |
+    | signed 48 to 32        | int48 | int32  |
+    | unsigned 8 to signed 8 | uint8 | int8   |
+    | signed 8 to unsigned 8 | int8  | uint8  |
   }];
 
   let arguments = (ins

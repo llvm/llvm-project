@@ -566,14 +566,15 @@ define <2 x i64> @vpmerge_vx_v2i64(i64 %a, <2 x i64> %vb, <2 x i1> %m, i32 zeroe
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, tu, ma
 ; RV32-NEXT:    vmerge.vvm v8, v8, v9, v0
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpmerge_vx_v2i64:
@@ -586,14 +587,15 @@ define <2 x i64> @vpmerge_vx_v2i64(i64 %a, <2 x i64> %vb, <2 x i1> %m, i32 zeroe
 ; RV32ZVFHMIN:       # %bb.0:
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, -16
 ; RV32ZVFHMIN-NEXT:    .cfi_def_cfa_offset 16
-; RV32ZVFHMIN-NEXT:    sw a1, 12(sp)
 ; RV32ZVFHMIN-NEXT:    sw a0, 8(sp)
+; RV32ZVFHMIN-NEXT:    sw a1, 12(sp)
 ; RV32ZVFHMIN-NEXT:    addi a0, sp, 8
 ; RV32ZVFHMIN-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32ZVFHMIN-NEXT:    vlse64.v v9, (a0), zero
 ; RV32ZVFHMIN-NEXT:    vsetvli zero, a2, e64, m1, tu, ma
 ; RV32ZVFHMIN-NEXT:    vmerge.vvm v8, v8, v9, v0
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, 16
+; RV32ZVFHMIN-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZVFHMIN-NEXT:    ret
 ;
 ; RV64ZVFHMIN-LABEL: vpmerge_vx_v2i64:
@@ -635,14 +637,15 @@ define <4 x i64> @vpmerge_vx_v4i64(i64 %a, <4 x i64> %vb, <4 x i1> %m, i32 zeroe
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, tu, ma
 ; RV32-NEXT:    vmerge.vvm v8, v8, v10, v0
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpmerge_vx_v4i64:
@@ -655,14 +658,15 @@ define <4 x i64> @vpmerge_vx_v4i64(i64 %a, <4 x i64> %vb, <4 x i1> %m, i32 zeroe
 ; RV32ZVFHMIN:       # %bb.0:
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, -16
 ; RV32ZVFHMIN-NEXT:    .cfi_def_cfa_offset 16
-; RV32ZVFHMIN-NEXT:    sw a1, 12(sp)
 ; RV32ZVFHMIN-NEXT:    sw a0, 8(sp)
+; RV32ZVFHMIN-NEXT:    sw a1, 12(sp)
 ; RV32ZVFHMIN-NEXT:    addi a0, sp, 8
 ; RV32ZVFHMIN-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32ZVFHMIN-NEXT:    vlse64.v v10, (a0), zero
 ; RV32ZVFHMIN-NEXT:    vsetvli zero, a2, e64, m2, tu, ma
 ; RV32ZVFHMIN-NEXT:    vmerge.vvm v8, v8, v10, v0
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, 16
+; RV32ZVFHMIN-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZVFHMIN-NEXT:    ret
 ;
 ; RV64ZVFHMIN-LABEL: vpmerge_vx_v4i64:
@@ -704,14 +708,15 @@ define <8 x i64> @vpmerge_vx_v8i64(i64 %a, <8 x i64> %vb, <8 x i1> %m, i32 zeroe
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32-NEXT:    vlse64.v v12, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m4, tu, ma
 ; RV32-NEXT:    vmerge.vvm v8, v8, v12, v0
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpmerge_vx_v8i64:
@@ -724,14 +729,15 @@ define <8 x i64> @vpmerge_vx_v8i64(i64 %a, <8 x i64> %vb, <8 x i1> %m, i32 zeroe
 ; RV32ZVFHMIN:       # %bb.0:
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, -16
 ; RV32ZVFHMIN-NEXT:    .cfi_def_cfa_offset 16
-; RV32ZVFHMIN-NEXT:    sw a1, 12(sp)
 ; RV32ZVFHMIN-NEXT:    sw a0, 8(sp)
+; RV32ZVFHMIN-NEXT:    sw a1, 12(sp)
 ; RV32ZVFHMIN-NEXT:    addi a0, sp, 8
 ; RV32ZVFHMIN-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32ZVFHMIN-NEXT:    vlse64.v v12, (a0), zero
 ; RV32ZVFHMIN-NEXT:    vsetvli zero, a2, e64, m4, tu, ma
 ; RV32ZVFHMIN-NEXT:    vmerge.vvm v8, v8, v12, v0
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, 16
+; RV32ZVFHMIN-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZVFHMIN-NEXT:    ret
 ;
 ; RV64ZVFHMIN-LABEL: vpmerge_vx_v8i64:
@@ -773,14 +779,15 @@ define <16 x i64> @vpmerge_vx_v16i64(i64 %a, <16 x i64> %vb, <16 x i1> %m, i32 z
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v16, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, tu, ma
 ; RV32-NEXT:    vmerge.vvm v8, v8, v16, v0
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpmerge_vx_v16i64:
@@ -793,14 +800,15 @@ define <16 x i64> @vpmerge_vx_v16i64(i64 %a, <16 x i64> %vb, <16 x i1> %m, i32 z
 ; RV32ZVFHMIN:       # %bb.0:
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, -16
 ; RV32ZVFHMIN-NEXT:    .cfi_def_cfa_offset 16
-; RV32ZVFHMIN-NEXT:    sw a1, 12(sp)
 ; RV32ZVFHMIN-NEXT:    sw a0, 8(sp)
+; RV32ZVFHMIN-NEXT:    sw a1, 12(sp)
 ; RV32ZVFHMIN-NEXT:    addi a0, sp, 8
 ; RV32ZVFHMIN-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32ZVFHMIN-NEXT:    vlse64.v v16, (a0), zero
 ; RV32ZVFHMIN-NEXT:    vsetvli zero, a2, e64, m8, tu, ma
 ; RV32ZVFHMIN-NEXT:    vmerge.vvm v8, v8, v16, v0
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, 16
+; RV32ZVFHMIN-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZVFHMIN-NEXT:    ret
 ;
 ; RV64ZVFHMIN-LABEL: vpmerge_vx_v16i64:
@@ -1209,7 +1217,9 @@ define <32 x double> @vpmerge_vv_v32f64(<32 x double> %va, <32 x double> %vb, <3
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %v = call <32 x double> @llvm.vp.merge.v32f64(<32 x i1> %m, <32 x double> %va, <32 x double> %vb, i32 %evl)
   ret <32 x double> %v

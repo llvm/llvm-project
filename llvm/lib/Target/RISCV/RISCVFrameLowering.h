@@ -37,8 +37,6 @@ public:
   void processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                            RegScavenger *RS) const override;
 
-  bool hasFP(const MachineFunction &MF) const override;
-
   bool hasBP(const MachineFunction &MF) const;
 
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
@@ -83,6 +81,8 @@ public:
 protected:
   const RISCVSubtarget &STI;
 
+  bool hasFPImpl(const MachineFunction &MF) const override;
+
 private:
   void determineFrameLayout(MachineFunction &MF) const;
   void adjustStackForRVV(MachineFunction &MF, MachineBasicBlock &MBB,
@@ -91,6 +91,12 @@ private:
   void emitCalleeSavedRVVPrologCFI(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MI,
                                    bool HasFP) const;
+  void emitCalleeSavedRVVEpilogCFI(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MI) const;
+  void deallocateStack(MachineFunction &MF, MachineBasicBlock &MBB,
+                       MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
+                       uint64_t &StackSize, int64_t CFAOffset) const;
+
   std::pair<int64_t, Align>
   assignRVVStackObjectOffsets(MachineFunction &MF) const;
 };

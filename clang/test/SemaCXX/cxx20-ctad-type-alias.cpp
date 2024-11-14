@@ -481,3 +481,35 @@ struct Out {
 Out<float>::B out(100); // deduced to Out<float>::A<float>;
 static_assert(__is_same(decltype(out), Out<float>::A<float>));
 }
+
+namespace GH111508 {
+
+template <typename V> struct S {
+  using T = V;
+  T Data;
+};
+
+template <typename V> using Alias = S<V>;
+
+Alias A(42);
+
+} // namespace GH111508
+
+namespace GH113518 {
+
+template <class T, unsigned N> struct array {
+  T value[N];
+};
+
+template <typename Tp, typename... Up>
+array(Tp, Up...) -> array<Tp, 1 + sizeof...(Up)>;
+
+template <typename T> struct ArrayType {
+  template <unsigned size> using Array = array<T, size>;
+};
+
+template <ArrayType<int>::Array array> void test() {}
+
+void foo() { test<{1, 2, 3}>(); }
+
+} // namespace GH113518

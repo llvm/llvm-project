@@ -87,6 +87,12 @@ createLoongArchObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
              : nullptr;
 }
 
+static MCTargetStreamer *
+createLoongArchAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
+                                 MCInstPrinter *InstPrint) {
+  return new LoongArchTargetAsmStreamer(S, OS);
+}
+
 namespace {
 
 class LoongArchMCInstrAnalysis : public MCInstrAnalysis {
@@ -212,5 +218,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchTargetMC() {
     TargetRegistry::RegisterELFStreamer(*T, createLoongArchELFStreamer);
     TargetRegistry::RegisterObjectTargetStreamer(
         *T, createLoongArchObjectTargetStreamer);
+    TargetRegistry::RegisterAsmTargetStreamer(*T,
+                                              createLoongArchAsmTargetStreamer);
   }
 }

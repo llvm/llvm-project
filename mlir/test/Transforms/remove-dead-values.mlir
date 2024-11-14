@@ -1,13 +1,25 @@
 // RUN: mlir-opt %s -remove-dead-values -split-input-file -verify-diagnostics | FileCheck %s
 
 // The IR remains untouched because of the presence of a non-function-like
-// symbol op (module @dont_touch_unacceptable_ir).
+// symbol op inside the module (const @__dont_touch_unacceptable_ir).
 //
+module {
 // expected-error @+1 {{cannot optimize an IR with non-function symbol ops, non-call symbol user ops or branch ops}}
-module @dont_touch_unacceptable_ir {
-  func.func @has_cleanable_simple_op(%arg0 : i32) {
-    %non_live = arith.addi %arg0, %arg0 : i32
-    return
+  memref.global "private" constant @__dont_touch_unacceptable_ir : memref<i32> = dense<0>
+  func.func @main(%arg0: i32) -> i32 {
+    return %arg0 : i32
+  }
+}
+
+// -----
+
+// Dead values are removed from the IR even if the module has a name
+//
+module @named_module_acceptable {
+  func.func @main(%arg0: tensor<10xf32>) -> tensor<10xf32> {
+    %0 = tensor.empty() : tensor<10xbf16>
+    // CHECK-NOT: tensor.empty
+    return %arg0 : tensor<10xf32>
   }
 }
 
@@ -357,3 +369,8 @@ func.func @kernel(%arg0: memref<18xf32>) {
 // CHECK: gpu.launch blocks
 // CHECK: memref.store
 // CHECK-NEXT: gpu.terminator
+
+// -----
+
+// CHECK: func.func private @no_block_func_declaration()
+func.func private @no_block_func_declaration() -> ()

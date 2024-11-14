@@ -201,6 +201,13 @@ protected:
     if (target->GetDisableSTDIO())
       m_options.launch_info.GetFlags().Set(eLaunchFlagDisableSTDIO);
 
+    if (!m_options.launch_info.GetWorkingDirectory()) {
+      if (llvm::StringRef wd = target->GetLaunchWorkingDirectory();
+          !wd.empty()) {
+        m_options.launch_info.SetWorkingDirectory(FileSpec(wd));
+      }
+    }
+
     // Merge the launch info environment with the target environment.
     Environment target_env = target->GetEnvironment();
     m_options.launch_info.GetEnvironment().insert(target_env.begin(),
@@ -1420,7 +1427,7 @@ protected:
 
       PlatformSP platform_sp = process->GetTarget().GetPlatform();
       if (!platform_sp) {
-        result.AppendError("Couldn'retrieve the target's platform");
+        result.AppendError("Couldn't retrieve the target's platform");
         return;
       }
 

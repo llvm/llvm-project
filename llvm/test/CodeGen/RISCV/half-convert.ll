@@ -2033,8 +2033,6 @@ define i64 @fcvt_l_h(half %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    call __fixsfdi
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -2792,8 +2790,6 @@ define i64 @fcvt_lu_h(half %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    call __fixunssfdi
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -5540,10 +5536,12 @@ define half @bitcast_h_i16(i16 %a) nounwind {
 ;
 ; CHECKIZHINX-LABEL: bitcast_h_i16:
 ; CHECKIZHINX:       # %bb.0:
+; CHECKIZHINX-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZDINXZHINX-LABEL: bitcast_h_i16:
 ; CHECKIZDINXZHINX:       # %bb.0:
+; CHECKIZDINXZHINX-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; CHECKIZDINXZHINX-NEXT:    ret
 ;
 ; RV32I-LABEL: bitcast_h_i16:
@@ -5592,18 +5590,22 @@ define half @bitcast_h_i16(i16 %a) nounwind {
 ;
 ; CHECK32-IZHINXMIN-LABEL: bitcast_h_i16:
 ; CHECK32-IZHINXMIN:       # %bb.0:
+; CHECK32-IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; CHECK32-IZHINXMIN-NEXT:    ret
 ;
 ; CHECK64-IZHINXMIN-LABEL: bitcast_h_i16:
 ; CHECK64-IZHINXMIN:       # %bb.0:
+; CHECK64-IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; CHECK64-IZHINXMIN-NEXT:    ret
 ;
 ; CHECK32-IZDINXZHINXMIN-LABEL: bitcast_h_i16:
 ; CHECK32-IZDINXZHINXMIN:       # %bb.0:
+; CHECK32-IZDINXZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; CHECK32-IZDINXZHINXMIN-NEXT:    ret
 ;
 ; CHECK64-IZDINXZHINXMIN-LABEL: bitcast_h_i16:
 ; CHECK64-IZDINXZHINXMIN:       # %bb.0:
+; CHECK64-IZDINXZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; CHECK64-IZDINXZHINXMIN-NEXT:    ret
   %1 = bitcast i16 %a to half
   ret half %1
@@ -5627,10 +5629,12 @@ define i16 @bitcast_i16_h(half %a) nounwind {
 ;
 ; CHECKIZHINX-LABEL: bitcast_i16_h:
 ; CHECKIZHINX:       # %bb.0:
+; CHECKIZHINX-NEXT:    # kill: def $x10_h killed $x10_h def $x10
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZDINXZHINX-LABEL: bitcast_i16_h:
 ; CHECKIZDINXZHINX:       # %bb.0:
+; CHECKIZDINXZHINX-NEXT:    # kill: def $x10_h killed $x10_h def $x10
 ; CHECKIZDINXZHINX-NEXT:    ret
 ;
 ; RV32I-LABEL: bitcast_i16_h:
@@ -5671,18 +5675,22 @@ define i16 @bitcast_i16_h(half %a) nounwind {
 ;
 ; CHECK32-IZHINXMIN-LABEL: bitcast_i16_h:
 ; CHECK32-IZHINXMIN:       # %bb.0:
+; CHECK32-IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
 ; CHECK32-IZHINXMIN-NEXT:    ret
 ;
 ; CHECK64-IZHINXMIN-LABEL: bitcast_i16_h:
 ; CHECK64-IZHINXMIN:       # %bb.0:
+; CHECK64-IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
 ; CHECK64-IZHINXMIN-NEXT:    ret
 ;
 ; CHECK32-IZDINXZHINXMIN-LABEL: bitcast_i16_h:
 ; CHECK32-IZDINXZHINXMIN:       # %bb.0:
+; CHECK32-IZDINXZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
 ; CHECK32-IZDINXZHINXMIN-NEXT:    ret
 ;
 ; CHECK64-IZDINXZHINXMIN-LABEL: bitcast_i16_h:
 ; CHECK64-IZDINXZHINXMIN:       # %bb.0:
+; CHECK64-IZDINXZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
 ; CHECK64-IZDINXZHINXMIN-NEXT:    ret
   %1 = bitcast half %a to i16
   ret i16 %1

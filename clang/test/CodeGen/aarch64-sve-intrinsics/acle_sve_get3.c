@@ -26,13 +26,19 @@
 
 // CHECK-LABEL: @test_svget3_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv48i8(<vscale x 48 x i8> [[TUPLE:%.*]], i64 0)
-// CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[TUPLE_COERCE0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[TUPLE_COERCE1:%.*]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], <vscale x 16 x i8> [[TUPLE_COERCE2:%.*]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]], 0
+// CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP3]]
 //
 // CPP-CHECK-LABEL: @_Z14test_svget3_s810svint8x3_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv48i8(<vscale x 48 x i8> [[TUPLE:%.*]], i64 0)
-// CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[TUPLE_COERCE0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[TUPLE_COERCE1:%.*]], 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], <vscale x 16 x i8> [[TUPLE_COERCE2:%.*]], 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]], 0
+// CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP3]]
 //
 svint8_t test_svget3_s8(svint8x3_t tuple) ATTR
 {
@@ -41,13 +47,19 @@ svint8_t test_svget3_s8(svint8x3_t tuple) ATTR
 
 // CHECK-LABEL: @test_svget3_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv24i16(<vscale x 24 x i16> [[TUPLE:%.*]], i64 16)
-// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } poison, <vscale x 8 x i16> [[TUPLE_COERCE0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], <vscale x 8 x i16> [[TUPLE_COERCE1:%.*]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], <vscale x 8 x i16> [[TUPLE_COERCE2:%.*]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], 2
+// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP3]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svget3_s1611svint16x3_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv24i16(<vscale x 24 x i16> [[TUPLE:%.*]], i64 16)
-// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } poison, <vscale x 8 x i16> [[TUPLE_COERCE0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], <vscale x 8 x i16> [[TUPLE_COERCE1:%.*]], 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], <vscale x 8 x i16> [[TUPLE_COERCE2:%.*]], 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], 2
+// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP3]]
 //
 svint16_t test_svget3_s16(svint16x3_t tuple) ATTR
 {
@@ -56,13 +68,19 @@ svint16_t test_svget3_s16(svint16x3_t tuple) ATTR
 
 // CHECK-LABEL: @test_svget3_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv12i32(<vscale x 12 x i32> [[TUPLE:%.*]], i64 4)
-// CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } poison, <vscale x 4 x i32> [[TUPLE_COERCE0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], <vscale x 4 x i32> [[TUPLE_COERCE1:%.*]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], <vscale x 4 x i32> [[TUPLE_COERCE2:%.*]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP2]], 1
+// CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP3]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svget3_s3211svint32x3_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv12i32(<vscale x 12 x i32> [[TUPLE:%.*]], i64 4)
-// CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } poison, <vscale x 4 x i32> [[TUPLE_COERCE0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], <vscale x 4 x i32> [[TUPLE_COERCE1:%.*]], 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], <vscale x 4 x i32> [[TUPLE_COERCE2:%.*]], 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP2]], 1
+// CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP3]]
 //
 svint32_t test_svget3_s32(svint32x3_t tuple) ATTR
 {
@@ -71,13 +89,19 @@ svint32_t test_svget3_s32(svint32x3_t tuple) ATTR
 
 // CHECK-LABEL: @test_svget3_s64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv6i64(<vscale x 6 x i64> [[TUPLE:%.*]], i64 0)
-// CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } poison, <vscale x 2 x i64> [[TUPLE_COERCE0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], <vscale x 2 x i64> [[TUPLE_COERCE1:%.*]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], <vscale x 2 x i64> [[TUPLE_COERCE2:%.*]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP2]], 0
+// CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP3]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svget3_s6411svint64x3_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv6i64(<vscale x 6 x i64> [[TUPLE:%.*]], i64 0)
-// CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } poison, <vscale x 2 x i64> [[TUPLE_COERCE0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], <vscale x 2 x i64> [[TUPLE_COERCE1:%.*]], 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], <vscale x 2 x i64> [[TUPLE_COERCE2:%.*]], 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP2]], 0
+// CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP3]]
 //
 svint64_t test_svget3_s64(svint64x3_t tuple) ATTR
 {
@@ -86,13 +110,19 @@ svint64_t test_svget3_s64(svint64x3_t tuple) ATTR
 
 // CHECK-LABEL: @test_svget3_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv48i8(<vscale x 48 x i8> [[TUPLE:%.*]], i64 32)
-// CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[TUPLE_COERCE0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[TUPLE_COERCE1:%.*]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], <vscale x 16 x i8> [[TUPLE_COERCE2:%.*]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]], 2
+// CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP3]]
 //
 // CPP-CHECK-LABEL: @_Z14test_svget3_u811svuint8x3_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv48i8(<vscale x 48 x i8> [[TUPLE:%.*]], i64 32)
-// CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[TUPLE_COERCE0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[TUPLE_COERCE1:%.*]], 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], <vscale x 16 x i8> [[TUPLE_COERCE2:%.*]], 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]], 2
+// CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP3]]
 //
 svuint8_t test_svget3_u8(svuint8x3_t tuple) ATTR
 {
@@ -101,13 +131,19 @@ svuint8_t test_svget3_u8(svuint8x3_t tuple) ATTR
 
 // CHECK-LABEL: @test_svget3_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv24i16(<vscale x 24 x i16> [[TUPLE:%.*]], i64 8)
-// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } poison, <vscale x 8 x i16> [[TUPLE_COERCE0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], <vscale x 8 x i16> [[TUPLE_COERCE1:%.*]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], <vscale x 8 x i16> [[TUPLE_COERCE2:%.*]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], 1
+// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP3]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svget3_u1612svuint16x3_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv24i16(<vscale x 24 x i16> [[TUPLE:%.*]], i64 8)
-// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } poison, <vscale x 8 x i16> [[TUPLE_COERCE0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], <vscale x 8 x i16> [[TUPLE_COERCE1:%.*]], 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], <vscale x 8 x i16> [[TUPLE_COERCE2:%.*]], 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], 1
+// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP3]]
 //
 svuint16_t test_svget3_u16(svuint16x3_t tuple) ATTR
 {
@@ -116,13 +152,19 @@ svuint16_t test_svget3_u16(svuint16x3_t tuple) ATTR
 
 // CHECK-LABEL: @test_svget3_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv12i32(<vscale x 12 x i32> [[TUPLE:%.*]], i64 0)
-// CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } poison, <vscale x 4 x i32> [[TUPLE_COERCE0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], <vscale x 4 x i32> [[TUPLE_COERCE1:%.*]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], <vscale x 4 x i32> [[TUPLE_COERCE2:%.*]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP2]], 0
+// CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP3]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svget3_u3212svuint32x3_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv12i32(<vscale x 12 x i32> [[TUPLE:%.*]], i64 0)
-// CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } poison, <vscale x 4 x i32> [[TUPLE_COERCE0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], <vscale x 4 x i32> [[TUPLE_COERCE1:%.*]], 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], <vscale x 4 x i32> [[TUPLE_COERCE2:%.*]], 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP2]], 0
+// CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP3]]
 //
 svuint32_t test_svget3_u32(svuint32x3_t tuple) ATTR
 {
@@ -131,13 +173,19 @@ svuint32_t test_svget3_u32(svuint32x3_t tuple) ATTR
 
 // CHECK-LABEL: @test_svget3_u64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv6i64(<vscale x 6 x i64> [[TUPLE:%.*]], i64 4)
-// CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } poison, <vscale x 2 x i64> [[TUPLE_COERCE0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], <vscale x 2 x i64> [[TUPLE_COERCE1:%.*]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], <vscale x 2 x i64> [[TUPLE_COERCE2:%.*]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP2]], 2
+// CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP3]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svget3_u6412svuint64x3_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv6i64(<vscale x 6 x i64> [[TUPLE:%.*]], i64 4)
-// CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } poison, <vscale x 2 x i64> [[TUPLE_COERCE0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], <vscale x 2 x i64> [[TUPLE_COERCE1:%.*]], 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], <vscale x 2 x i64> [[TUPLE_COERCE2:%.*]], 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP2]], 2
+// CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP3]]
 //
 svuint64_t test_svget3_u64(svuint64x3_t tuple) ATTR
 {
@@ -146,13 +194,19 @@ svuint64_t test_svget3_u64(svuint64x3_t tuple) ATTR
 
 // CHECK-LABEL: @test_svget3_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv24f16(<vscale x 24 x half> [[TUPLE:%.*]], i64 8)
-// CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } poison, <vscale x 8 x half> [[TUPLE_COERCE0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], <vscale x 8 x half> [[TUPLE_COERCE1:%.*]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP1]], <vscale x 8 x half> [[TUPLE_COERCE2:%.*]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP2]], 1
+// CHECK-NEXT:    ret <vscale x 8 x half> [[TMP3]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svget3_f1613svfloat16x3_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv24f16(<vscale x 24 x half> [[TUPLE:%.*]], i64 8)
-// CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } poison, <vscale x 8 x half> [[TUPLE_COERCE0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], <vscale x 8 x half> [[TUPLE_COERCE1:%.*]], 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP1]], <vscale x 8 x half> [[TUPLE_COERCE2:%.*]], 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP2]], 1
+// CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP3]]
 //
 svfloat16_t test_svget3_f16(svfloat16x3_t tuple) ATTR
 {
@@ -161,13 +215,19 @@ svfloat16_t test_svget3_f16(svfloat16x3_t tuple) ATTR
 
 // CHECK-LABEL: @test_svget3_f32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.vector.extract.nxv4f32.nxv12f32(<vscale x 12 x float> [[TUPLE:%.*]], i64 0)
-// CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } poison, <vscale x 4 x float> [[TUPLE_COERCE0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], <vscale x 4 x float> [[TUPLE_COERCE1:%.*]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]], <vscale x 4 x float> [[TUPLE_COERCE2:%.*]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP2]], 0
+// CHECK-NEXT:    ret <vscale x 4 x float> [[TMP3]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svget3_f3213svfloat32x3_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.vector.extract.nxv4f32.nxv12f32(<vscale x 12 x float> [[TUPLE:%.*]], i64 0)
-// CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } poison, <vscale x 4 x float> [[TUPLE_COERCE0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], <vscale x 4 x float> [[TUPLE_COERCE1:%.*]], 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]], <vscale x 4 x float> [[TUPLE_COERCE2:%.*]], 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP2]], 0
+// CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP3]]
 //
 svfloat32_t test_svget3_f32(svfloat32x3_t tuple) ATTR
 {
@@ -176,13 +236,19 @@ svfloat32_t test_svget3_f32(svfloat32x3_t tuple) ATTR
 
 // CHECK-LABEL: @test_svget3_f64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.vector.extract.nxv2f64.nxv6f64(<vscale x 6 x double> [[TUPLE:%.*]], i64 4)
-// CHECK-NEXT:    ret <vscale x 2 x double> [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } poison, <vscale x 2 x double> [[TUPLE_COERCE0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], <vscale x 2 x double> [[TUPLE_COERCE1:%.*]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP1]], <vscale x 2 x double> [[TUPLE_COERCE2:%.*]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP2]], 2
+// CHECK-NEXT:    ret <vscale x 2 x double> [[TMP3]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svget3_f6413svfloat64x3_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.vector.extract.nxv2f64.nxv6f64(<vscale x 6 x double> [[TUPLE:%.*]], i64 4)
-// CPP-CHECK-NEXT:    ret <vscale x 2 x double> [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } poison, <vscale x 2 x double> [[TUPLE_COERCE0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], <vscale x 2 x double> [[TUPLE_COERCE1:%.*]], 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP1]], <vscale x 2 x double> [[TUPLE_COERCE2:%.*]], 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP2]], 2
+// CPP-CHECK-NEXT:    ret <vscale x 2 x double> [[TMP3]]
 //
 svfloat64_t test_svget3_f64(svfloat64x3_t tuple) ATTR
 {

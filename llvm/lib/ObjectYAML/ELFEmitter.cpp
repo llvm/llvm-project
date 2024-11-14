@@ -966,7 +966,7 @@ ELFState<ELFT>::toELFSymbols(ArrayRef<ELFYAML::Symbol> Symbols,
       Symbol.st_shndx = *Sym.Index;
 
     Symbol.st_value = Sym.Value.value_or(yaml::Hex64(0));
-    Symbol.st_other = Sym.Other ? *Sym.Other : 0;
+    Symbol.st_other = Sym.Other.value_or(0);
     Symbol.st_size = Sym.Size.value_or(yaml::Hex64(0));
   }
 
@@ -1655,7 +1655,7 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     VerDef.vd_flags = E.Flags.value_or(0);
     VerDef.vd_ndx = E.VersionNdx.value_or(0);
     VerDef.vd_hash = E.Hash.value_or(0);
-    VerDef.vd_aux = sizeof(Elf_Verdef);
+    VerDef.vd_aux = E.VDAux.value_or(sizeof(Elf_Verdef));
     VerDef.vd_cnt = E.VerNames.size();
     if (I == Section.Entries->size() - 1)
       VerDef.vd_next = 0;
@@ -1665,13 +1665,13 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     CBA.write((const char *)&VerDef, sizeof(Elf_Verdef));
 
     for (size_t J = 0; J < E.VerNames.size(); ++J, ++AuxCnt) {
-      Elf_Verdaux VernAux;
-      VernAux.vda_name = DotDynstr.getOffset(E.VerNames[J]);
+      Elf_Verdaux VerdAux;
+      VerdAux.vda_name = DotDynstr.getOffset(E.VerNames[J]);
       if (J == E.VerNames.size() - 1)
-        VernAux.vda_next = 0;
+        VerdAux.vda_next = 0;
       else
-        VernAux.vda_next = sizeof(Elf_Verdaux);
-      CBA.write((const char *)&VernAux, sizeof(Elf_Verdaux));
+        VerdAux.vda_next = sizeof(Elf_Verdaux);
+      CBA.write((const char *)&VerdAux, sizeof(Elf_Verdaux));
     }
   }
 

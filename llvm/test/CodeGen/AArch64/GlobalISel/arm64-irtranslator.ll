@@ -2345,6 +2345,14 @@ define float @test_atan_f32(float %x) {
   ret float %y
 }
 
+declare float @llvm.atan2.f32(float, float)
+define float @test_atan2_f32(float %x, float %y) {
+  ; CHECK-LABEL: name:            test_atan2_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FATAN2 %{{[0-9]+}}
+  %z = call float @llvm.atan2.f32(float %x, float %y)
+  ret float %z
+}
+
 declare float @llvm.cosh.f32(float)
 define float @test_cosh_f32(float %x) {
   ; CHECK-LABEL: name:            test_cosh_f32

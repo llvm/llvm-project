@@ -3,10 +3,10 @@
 
 ; CHECK: [[INFO_IDX:0x[^ ]*]] | LF_BUILDINFO
 ; CHECK-NEXT:          0x{{.*}}: `D:\src\scopes\clang`
-; CHECK-NEXT:          <no type>: ``
+; CHECK-NEXT:          0x{{.*}}: ``
 ; CHECK-NEXT:          0x{{.*}}: `D:\src\scopes\foo.cpp`
 ; CHECK-NEXT:          0x{{.*}}: ``
-; CHECK-NEXT:          <no type>: ``
+; CHECK-NEXT:          0x{{.*}}: ``
 
 ; CHECK: {{.*}} | S_BUILDINFO [size = 8] BuildId = `[[INFO_IDX]]`
 

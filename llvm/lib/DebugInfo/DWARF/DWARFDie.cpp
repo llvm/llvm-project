@@ -319,8 +319,8 @@ DWARFDie::getAttributeValueAsReferencedDie(const DWARFFormValue &V) const {
     if (DWARFUnit *SpecUnit = U->getUnitVector().getUnitForOffset(*Offset))
       Result = SpecUnit->getDIEForOffset(*Offset);
   } else if (std::optional<uint64_t> Sig = V.getAsSignatureReference()) {
-    if (DWARFTypeUnit *TU = U->getContext().getTypeUnitForHash(
-            U->getVersion(), *Sig, U->isDWOUnit()))
+    if (DWARFTypeUnit *TU =
+            U->getContext().getTypeUnitForHash(*Sig, U->isDWOUnit()))
       Result = TU->getDIEForOffset(TU->getTypeOffset() + TU->getOffset());
   }
   return Result;
@@ -329,12 +329,19 @@ DWARFDie::getAttributeValueAsReferencedDie(const DWARFFormValue &V) const {
 DWARFDie DWARFDie::resolveTypeUnitReference() const {
   if (auto Attr = find(DW_AT_signature)) {
     if (std::optional<uint64_t> Sig = Attr->getAsReferenceUVal()) {
-      if (DWARFTypeUnit *TU = U->getContext().getTypeUnitForHash(
-              U->getVersion(), *Sig, U->isDWOUnit()))
+      if (DWARFTypeUnit *TU =
+              U->getContext().getTypeUnitForHash(*Sig, U->isDWOUnit()))
         return TU->getDIEForOffset(TU->getTypeOffset() + TU->getOffset());
     }
   }
   return *this;
+}
+
+DWARFDie DWARFDie::resolveReferencedType(dwarf::Attribute Attr) const {
+  return getAttributeValueAsReferencedDie(Attr).resolveTypeUnitReference();
+}
+DWARFDie DWARFDie::resolveReferencedType(const DWARFFormValue &V) const {
+  return getAttributeValueAsReferencedDie(V).resolveTypeUnitReference();
 }
 
 std::optional<uint64_t> DWARFDie::getRangesBaseAttribute() const {
@@ -777,12 +784,12 @@ bool DWARFAttribute::mayHaveLocationExpr(dwarf::Attribute Attr) {
 namespace llvm {
 
 void dumpTypeQualifiedName(const DWARFDie &DIE, raw_ostream &OS) {
-  DWARFTypePrinter(OS).appendQualifiedName(DIE);
+  DWARFTypePrinter<DWARFDie>(OS).appendQualifiedName(DIE);
 }
 
 void dumpTypeUnqualifiedName(const DWARFDie &DIE, raw_ostream &OS,
                              std::string *OriginalFullName) {
-  DWARFTypePrinter(OS).appendUnqualifiedName(DIE, OriginalFullName);
+  DWARFTypePrinter<DWARFDie>(OS).appendUnqualifiedName(DIE, OriginalFullName);
 }
 
 } // namespace llvm

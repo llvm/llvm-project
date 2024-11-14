@@ -1155,6 +1155,14 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   for (unsigned I = 0; I != NumParams; ++I)
     Params.push_back(readDeclAs<ParmVarDecl>());
   FD->setParams(Reader.getContext(), Params);
+
+  // If the declaration is a SYCL kernel entry point function as indicated by
+  // the presence of a sycl_kernel_entry_point attribute, register it so that
+  // associated metadata is recreated.
+  if (FD->hasAttr<SYCLKernelEntryPointAttr>()) {
+    ASTContext &C = Reader.getContext();
+    C.registerSYCLEntryPointFunction(FD);
+  }
 }
 
 void ASTDeclReader::VisitObjCMethodDecl(ObjCMethodDecl *MD) {
@@ -1539,7 +1547,8 @@ void ASTDeclReader::VisitFieldDecl(FieldDecl *FD) {
   else if (Bits & 1)
     FD->setBitWidth(Record.readExpr());
 
-  if (!FD->getDeclName()) {
+  if (!FD->getDeclName() ||
+      FD->isPlaceholderVar(Reader.getContext().getLangOpts())) {
     if (auto *Tmpl = readDeclAs<FieldDecl>())
       Reader.getContext().setInstantiatedFromUnnamedFieldDecl(FD, Tmpl);
   }
@@ -2566,7 +2575,7 @@ void ASTDeclReader::VisitClassTemplatePartialSpecializationDecl(
   // These are read/set from/to the first declaration.
   if (ThisDeclID == Redecl.getFirstID()) {
     D->InstantiatedFromMember.setPointer(
-      readDeclAs<ClassTemplatePartialSpecializationDecl>());
+        readDeclAs<ClassTemplatePartialSpecializationDecl>());
     D->InstantiatedFromMember.setInt(Record.readInt());
   }
 }
@@ -4168,8 +4177,7 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
   D->setDeclContext(Context.getTranslationUnitDecl());
 
   // Reading some declarations can result in deep recursion.
-  clang::runWithSufficientStackSpace([&] { warnStackExhausted(DeclLoc); },
-                                     [&] { Reader.Visit(D); });
+  runWithSufficientStackSpace(DeclLoc, [&] { Reader.Visit(D); });
 
   // If this declaration is also a declaration context, get the
   // offsets for its tables of lexical and visible declarations.
@@ -4350,6 +4358,16 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
           Update.Mod, Update.Data,
           reader::ASTDeclContextNameLookupTrait(*this, *Update.Mod));
     DC->setHasExternalVisibleStorage(true);
+  }
+
+  // Load any pending lambdas for the function.
+  if (auto *FD = dyn_cast<FunctionDecl>(D); FD && FD->isCanonicalDecl()) {
+    if (auto IT = FunctionToLambdasMap.find(ID);
+        IT != FunctionToLambdasMap.end()) {
+      for (auto LID : IT->second)
+        GetDecl(LID);
+      FunctionToLambdasMap.erase(IT);
+    }
   }
 }
 

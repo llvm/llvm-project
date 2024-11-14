@@ -286,6 +286,7 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
   case spirv::Decoration::Restrict:
   case spirv::Decoration::RestrictPointer:
   case spirv::Decoration::NoContraction:
+  case spirv::Decoration::Constant:
     // For unit attributes and decoration attributes, the args list
     // has no values so we do nothing.
     if (isa<UnitAttr, DecorationAttr>(attr))
@@ -915,7 +916,7 @@ uint32_t Serializer::prepareConstantInt(Location loc, IntegerAttr intAttr,
     value.print(rss, /*isSigned=*/false);
 
     emitError(loc, "cannot serialize ")
-        << bitwidth << "-bit integer literal: " << rss.str();
+        << bitwidth << "-bit integer literal: " << valueStr;
     return 0;
   }
   }
@@ -968,7 +969,7 @@ uint32_t Serializer::prepareConstantFp(Location loc, FloatAttr floatAttr,
     value.print(rss);
 
     emitError(loc, "cannot serialize ")
-        << floatAttr.getType() << "-typed float literal: " << rss.str();
+        << floatAttr.getType() << "-typed float literal: " << valueStr;
     return 0;
   }
 

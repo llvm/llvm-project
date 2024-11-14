@@ -1,7 +1,7 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1 -Werror
 ! Check out-of-range subscripts
 subroutine subr(da)
-  real a(10), da(2,1)
+  real a(10), da(2,1), empty(1:0,1)
   integer, parameter :: n(2) = [1, 2]
   integer unknown
   !ERROR: DATA statement designator 'a(0_8)' is out of range
@@ -39,4 +39,10 @@ subroutine subr(da)
   print *, da(1,0)
   !WARNING: Subscript 2 is greater than upper bound 1 for dimension 2 of array
   print *, da(1,2)
+  print *, empty([(j,j=1,0)],1) ! ok
+  print *, empty(1:0,1) ! ok
+  print *, empty(:,1) ! ok
+  print *, empty(i:j,k) ! ok
+  !ERROR: Empty array dimension 1 cannot be subscripted as an element or non-empty array section
+  print *, empty(i,1)
 end

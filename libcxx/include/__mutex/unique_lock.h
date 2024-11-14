@@ -34,28 +34,28 @@ private:
   bool __owns_;
 
 public:
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI unique_lock() _NOEXCEPT : __m_(nullptr), __owns_(false) {}
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI explicit unique_lock(mutex_type& __m)
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI unique_lock() _NOEXCEPT : __m_(nullptr), __owns_(false) {}
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI explicit unique_lock(mutex_type& __m)
       : __m_(std::addressof(__m)), __owns_(true) {
     __m_->lock();
   }
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI unique_lock(mutex_type& __m, defer_lock_t) _NOEXCEPT
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI unique_lock(mutex_type& __m, defer_lock_t) _NOEXCEPT
       : __m_(std::addressof(__m)),
         __owns_(false) {}
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI unique_lock(mutex_type& __m, try_to_lock_t)
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI unique_lock(mutex_type& __m, try_to_lock_t)
       : __m_(std::addressof(__m)), __owns_(__m.try_lock()) {}
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI unique_lock(mutex_type& __m, adopt_lock_t)
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI unique_lock(mutex_type& __m, adopt_lock_t)
       : __m_(std::addressof(__m)), __owns_(true) {}
 
   template <class _Clock, class _Duration>
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI unique_lock(mutex_type& __m, const chrono::time_point<_Clock, _Duration>& __t)
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI unique_lock(mutex_type& __m, const chrono::time_point<_Clock, _Duration>& __t)
       : __m_(std::addressof(__m)), __owns_(__m.try_lock_until(__t)) {}
 
   template <class _Rep, class _Period>
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI unique_lock(mutex_type& __m, const chrono::duration<_Rep, _Period>& __d)
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI unique_lock(mutex_type& __m, const chrono::duration<_Rep, _Period>& __d)
       : __m_(std::addressof(__m)), __owns_(__m.try_lock_for(__d)) {}
 
   _LIBCPP_HIDE_FROM_ABI ~unique_lock() {
@@ -66,7 +66,7 @@ public:
   unique_lock(unique_lock const&)            = delete;
   unique_lock& operator=(unique_lock const&) = delete;
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI unique_lock(unique_lock&& __u) _NOEXCEPT
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI unique_lock(unique_lock&& __u) _NOEXCEPT
       : __m_(__u.__m_),
         __owns_(__u.__owns_) {
     __u.__m_    = nullptr;

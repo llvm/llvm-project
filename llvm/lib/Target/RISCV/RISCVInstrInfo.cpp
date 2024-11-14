@@ -104,11 +104,13 @@ Register RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
     MemBytes = 1;
     break;
   case RISCV::LH:
+  case RISCV::LH_INX:
   case RISCV::LHU:
   case RISCV::FLH:
     MemBytes = 2;
     break;
   case RISCV::LW:
+  case RISCV::LW_INX:
   case RISCV::FLW:
   case RISCV::LWU:
     MemBytes = 4;
@@ -144,10 +146,12 @@ Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
     MemBytes = 1;
     break;
   case RISCV::SH:
+  case RISCV::SH_INX:
   case RISCV::FSH:
     MemBytes = 2;
     break;
   case RISCV::SW:
+  case RISCV::SW_INX:
   case RISCV::FSW:
     MemBytes = 4;
     break;
@@ -175,17 +179,10 @@ bool RISCVInstrInfo::isReallyTriviallyReMaterializable(
   case RISCV::VMV_S_X:
   case RISCV::VFMV_S_F:
   case RISCV::VID_V:
-    if (MI.getOperand(1).isUndef() &&
-        /* After RISCVInsertVSETVLI most pseudos will have implicit uses on vl
-           and vtype.  Make sure we only rematerialize before RISCVInsertVSETVLI
-           i.e. -riscv-vsetvl-after-rvv-regalloc=true */
-        !MI.hasRegisterImplicitUseOperand(RISCV::VTYPE))
-      return true;
-    break;
+    return MI.getOperand(1).isUndef();
   default:
-    break;
+    return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
   }
-  return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
 }
 
 static bool forwardCopyWillClobberTuple(unsigned DstReg, unsigned SrcReg,
@@ -462,6 +459,20 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  if (RISCV::GPRF16RegClass.contains(DstReg, SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(RISCV::PseudoMV_FPR16INX), DstReg)
+        .addReg(SrcReg,
+                getKillRegState(KillSrc) | getRenamableRegState(RenamableSrc));
+    return;
+  }
+
+  if (RISCV::GPRF32RegClass.contains(DstReg, SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(RISCV::PseudoMV_FPR32INX), DstReg)
+        .addReg(SrcReg,
+                getKillRegState(KillSrc) | getRenamableRegState(RenamableSrc));
+    return;
+  }
+
   if (RISCV::GPRPairRegClass.contains(DstReg, SrcReg)) {
     // Emit an ADDI for both parts of GPRPair.
     BuildMI(MBB, MBBI, DL, get(RISCV::ADDI),
@@ -583,6 +594,12 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     Opcode = TRI->getRegSizeInBits(RISCV::GPRRegClass) == 32 ?
              RISCV::SW : RISCV::SD;
     IsScalableVector = false;
+  } else if (RISCV::GPRF16RegClass.hasSubClassEq(RC)) {
+    Opcode = RISCV::SH_INX;
+    IsScalableVector = false;
+  } else if (RISCV::GPRF32RegClass.hasSubClassEq(RC)) {
+    Opcode = RISCV::SW_INX;
+    IsScalableVector = false;
   } else if (RISCV::GPRPairRegClass.hasSubClassEq(RC)) {
     Opcode = RISCV::PseudoRV32ZdinxSD;
     IsScalableVector = false;
@@ -666,6 +683,12 @@ void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     Opcode = TRI->getRegSizeInBits(RISCV::GPRRegClass) == 32 ?
              RISCV::LW : RISCV::LD;
     IsScalableVector = false;
+  } else if (RISCV::GPRF16RegClass.hasSubClassEq(RC)) {
+    Opcode = RISCV::LH_INX;
+    IsScalableVector = false;
+  } else if (RISCV::GPRF32RegClass.hasSubClassEq(RC)) {
+    Opcode = RISCV::LW_INX;
+    IsScalableVector = false;
   } else if (RISCV::GPRPairRegClass.hasSubClassEq(RC)) {
     Opcode = RISCV::PseudoRV32ZdinxLD;
     IsScalableVector = false;
@@ -736,8 +759,6 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
     MachineBasicBlock::iterator InsertPt, int FrameIndex, LiveIntervals *LIS,
     VirtRegMap *VRM) const {
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
-
   // The below optimizations narrow the load so they are only valid for little
   // endian.
   // TODO: Support big endian by adding an offset into the frame object?
@@ -763,6 +784,47 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
       LoadOpc = RISCV::LBU;
       break;
     }
+    if (RISCV::getRVVMCOpcode(MI.getOpcode()) == RISCV::VMV_X_S) {
+      unsigned Log2SEW =
+          MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
+      if (STI.getXLen() < (1U << Log2SEW))
+        return nullptr;
+      switch (Log2SEW) {
+      case 3:
+        LoadOpc = RISCV::LB;
+        break;
+      case 4:
+        LoadOpc = RISCV::LH;
+        break;
+      case 5:
+        LoadOpc = RISCV::LW;
+        break;
+      case 6:
+        LoadOpc = RISCV::LD;
+        break;
+      default:
+        llvm_unreachable("Unexpected SEW");
+      }
+      break;
+    }
+    if (RISCV::getRVVMCOpcode(MI.getOpcode()) == RISCV::VFMV_F_S) {
+      unsigned Log2SEW =
+          MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
+      switch (Log2SEW) {
+      case 4:
+        LoadOpc = RISCV::FLH;
+        break;
+      case 5:
+        LoadOpc = RISCV::FLW;
+        break;
+      case 6:
+        LoadOpc = RISCV::FLD;
+        break;
+      default:
+        llvm_unreachable("Unexpected SEW");
+      }
+      break;
+    }
     return nullptr;
   case RISCV::SEXT_H:
     LoadOpc = RISCV::LH;
@@ -776,17 +838,11 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     break;
   }
 
-  MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo::getFixedStack(MF, FrameIndex),
-      MachineMemOperand::MOLoad, MFI.getObjectSize(FrameIndex),
-      MFI.getObjectAlign(FrameIndex));
-
   Register DstReg = MI.getOperand(0).getReg();
   return BuildMI(*MI.getParent(), InsertPt, MI.getDebugLoc(), get(LoadOpc),
                  DstReg)
       .addFrameIndex(FrameIndex)
-      .addImm(0)
-      .addMemOperand(MMO);
+      .addImm(0);
 }
 
 void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
@@ -1505,6 +1561,10 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   }
 
   switch (Opcode) {
+  case RISCV::PseudoMV_FPR16INX:
+  case RISCV::PseudoMV_FPR32INX:
+    // MV is always compressible to either c.mv or c.li rd, 0.
+    return STI.hasStdExtCOrZca() ? 2 : 4;
   case TargetOpcode::STACKMAP:
     // The upper bound for a stackmap intrinsic is the full length of its shadow
     return StackMapOpers(&MI).getNumPatchBytes();
@@ -2476,6 +2536,28 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_SPIMM:
           Ok = (Imm & 0xf) == 0;
           break;
+        case RISCVOp::OPERAND_FRMARG:
+          Ok = RISCVFPRndMode::isValidRoundingMode(Imm);
+          break;
+        case RISCVOp::OPERAND_RTZARG:
+          Ok = Imm == RISCVFPRndMode::RTZ;
+          break;
+        case RISCVOp::OPERAND_COND_CODE:
+          Ok = Imm >= 0 && Imm < RISCVCC::COND_INVALID;
+          break;
+        case RISCVOp::OPERAND_VEC_POLICY:
+          Ok = (Imm & (RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC)) == Imm;
+          break;
+        case RISCVOp::OPERAND_SEW:
+          Ok = Imm == 0 || (Imm >= 3 && Imm <= 6);
+          break;
+        case RISCVOp::OPERAND_VEC_RM:
+          assert(RISCVII::hasRoundModeOp(Desc.TSFlags));
+          if (RISCVII::usesVXRM(Desc.TSFlags))
+            Ok = isUInt<2>(Imm);
+          else
+            Ok = RISCVFPRndMode::isValidRoundingMode(Imm);
+          break;
         }
         if (!Ok) {
           ErrInfo = "Invalid immediate";
@@ -2548,6 +2630,13 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
+  if (int Idx = RISCVII::getFRMOpNum(Desc);
+      Idx >= 0 && MI.getOperand(Idx).getImm() == RISCVFPRndMode::DYN &&
+      !MI.readsRegister(RISCV::FRM, /*TRI=*/nullptr)) {
+    ErrInfo = "dynamic rounding mode should read FRM";
+    return false;
+  }
+
   return true;
 }
 
@@ -2560,8 +2649,10 @@ bool RISCVInstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI, Register Reg,
   case RISCV::LB:
   case RISCV::LBU:
   case RISCV::LH:
+  case RISCV::LH_INX:
   case RISCV::LHU:
   case RISCV::LW:
+  case RISCV::LW_INX:
   case RISCV::LWU:
   case RISCV::LD:
   case RISCV::FLH:
@@ -2569,7 +2660,9 @@ bool RISCVInstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI, Register Reg,
   case RISCV::FLD:
   case RISCV::SB:
   case RISCV::SH:
+  case RISCV::SH_INX:
   case RISCV::SW:
+  case RISCV::SW_INX:
   case RISCV::SD:
   case RISCV::FSH:
   case RISCV::FSW:
@@ -2632,14 +2725,18 @@ bool RISCVInstrInfo::getMemOperandsWithOffsetWidth(
   case RISCV::LBU:
   case RISCV::SB:
   case RISCV::LH:
+  case RISCV::LH_INX:
   case RISCV::LHU:
   case RISCV::FLH:
   case RISCV::SH:
+  case RISCV::SH_INX:
   case RISCV::FSH:
   case RISCV::LW:
+  case RISCV::LW_INX:
   case RISCV::LWU:
   case RISCV::FLW:
   case RISCV::SW:
+  case RISCV::SW_INX:
   case RISCV::FSW:
   case RISCV::LD:
   case RISCV::FLD:
@@ -3025,7 +3122,6 @@ std::string RISCVInstrInfo::createMIROperandComment(
        << (Policy & RISCVII::MASK_AGNOSTIC ? "ma" : "mu");
   }
 
-  OS.flush();
   return Comment;
 }
 
@@ -4027,4 +4123,18 @@ unsigned RISCV::getDestLog2EEW(const MCInstrDesc &Desc, unsigned Log2SEW) {
   unsigned Scaled = Log2SEW + (DestEEW - 1);
   assert(Scaled >= 3 && Scaled <= 6);
   return Scaled;
+}
+
+/// Given two VL operands, do we know that LHS <= RHS?
+bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
+  if (LHS.isReg() && RHS.isReg() && LHS.getReg().isVirtual() &&
+      LHS.getReg() == RHS.getReg())
+    return true;
+  if (RHS.isImm() && RHS.getImm() == RISCV::VLMaxSentinel)
+    return true;
+  if (LHS.isImm() && LHS.getImm() == RISCV::VLMaxSentinel)
+    return false;
+  if (!LHS.isImm() || !RHS.isImm())
+    return false;
+  return LHS.getImm() <= RHS.getImm();
 }

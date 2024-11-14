@@ -275,3 +275,33 @@ F:
   %gep2 = getelementptr nuw i8, ptr %p, i64 1
   ret ptr %gep2
 }
+
+define i1 @hoist_icmp_flags_preserve(i1 %C, i32 %x, i32 %y) {
+; CHECK-LABEL: @hoist_icmp_flags_preserve(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[Z1:%.*]] = icmp samesign ult i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[Z1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %z1 = icmp samesign ult i32 %x, %y
+  ret i1 %z1
+F:
+  %z2 = icmp samesign ult i32 %x, %y
+  ret i1 %z2
+}
+
+define i1 @hoist_icmp_flags_drop(i1 %C, i32 %x, i32 %y) {
+; CHECK-LABEL: @hoist_icmp_flags_drop(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[Z1:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[Z1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %z1 = icmp ult i32 %x, %y
+  ret i1 %z1
+F:
+  %z2 = icmp samesign ult i32 %x, %y
+  ret i1 %z2
+}

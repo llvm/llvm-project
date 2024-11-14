@@ -16,7 +16,6 @@
 #include "lldb/Utility/Flags.h"
 
 #include "lldb/Core/FormatEntity.h"
-#include "lldb/Core/ValueObjectList.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/StackID.h"
@@ -24,6 +23,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UserID.h"
+#include "lldb/ValueObject/ValueObjectList.h"
 
 namespace lldb_private {
 
@@ -195,14 +195,10 @@ public:
   /// \param [out] value
   ///   The address of the CFA for this frame, if available.
   ///
-  /// \param [out] error_ptr
-  ///   If there is an error determining the CFA address, this may contain a
-  ///   string explaining the failure.
-  ///
   /// \return
-  ///   Returns true if the CFA value was successfully set in value.  Some
-  ///   frames may be unable to provide this value; they will return false.
-  bool GetFrameBaseValue(Scalar &value, Status *error_ptr);
+  ///   If there is an error determining the CFA address, return an error
+  ///   explaining the failure. Success otherwise.
+  llvm::Error GetFrameBaseValue(Scalar &value);
 
   /// Get the DWARFExpressionList corresponding to the Canonical Frame Address.
   ///

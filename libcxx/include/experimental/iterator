@@ -54,6 +54,8 @@ namespace std {
 
 #include <__config>
 #include <__memory/addressof.h>
+#include <__ostream/basic_ostream.h>
+#include <__string/char_traits.h>
 #include <__type_traits/decay.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
@@ -120,6 +122,7 @@ _LIBCPP_END_NAMESPACE_LFTS
 _LIBCPP_POP_MACROS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <cstddef>
 #  include <iosfwd>
 #  include <type_traits>
 #endif

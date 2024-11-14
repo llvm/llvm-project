@@ -785,6 +785,9 @@ public:
   // A corrupted chunk will not be reported as owned, which is WAI.
   bool isOwned(const void *Ptr) {
     initThreadMaybe();
+    // If the allocation is not owned, the tags could be wrong.
+    ScopedDisableMemoryTagChecks x(
+        useMemoryTagging<AllocatorConfig>(Primary.Options.load()));
 #ifdef GWP_ASAN_HOOKS
     if (GuardedAlloc.pointerIsMine(Ptr))
       return true;
@@ -1252,22 +1255,26 @@ private:
     else
       Header->State = Chunk::State::Quarantined;
 
-    void *BlockBegin;
-    if (LIKELY(!useMemoryTagging<AllocatorConfig>(Options))) {
+    if (LIKELY(!useMemoryTagging<AllocatorConfig>(Options)))
       Header->OriginOrWasZeroed = 0U;
-      if (BypassQuarantine && allocatorSupportsMemoryTagging<AllocatorConfig>())
-        Ptr = untagPointer(Ptr);
-      BlockBegin = getBlockBegin(Ptr, Header);
-    } else {
+    else {
       Header->OriginOrWasZeroed =
           Header->ClassId && !TSDRegistry.getDisableMemInit();
-      BlockBegin =
-          retagBlock(Options, TaggedPtr, Ptr, Header, Size, BypassQuarantine);
     }
 
     Chunk::storeHeader(Cookie, Ptr, Header);
 
     if (BypassQuarantine) {
+      void *BlockBegin;
+      if (LIKELY(!useMemoryTagging<AllocatorConfig>(Options))) {
+        // Must do this after storeHeader because loadHeader uses a tagged ptr.
+        if (allocatorSupportsMemoryTagging<AllocatorConfig>())
+          Ptr = untagPointer(Ptr);
+        BlockBegin = getBlockBegin(Ptr, Header);
+      } else {
+        BlockBegin = retagBlock(Options, TaggedPtr, Ptr, Header, Size, true);
+      }
+
       const uptr ClassId = Header->ClassId;
       if (LIKELY(ClassId)) {
         bool CacheDrained;
@@ -1285,6 +1292,8 @@ private:
         Secondary.deallocate(Options, BlockBegin);
       }
     } else {
+      if (UNLIKELY(useMemoryTagging<AllocatorConfig>(Options)))
+        retagBlock(Options, TaggedPtr, Ptr, Header, Size, false);
       typename TSDRegistryT::ScopedTSD TSD(TSDRegistry);
       Quarantine.put(&TSD->getQuarantineCache(),
                      QuarantineCallback(*this, TSD->getCache()), Ptr, Size);

@@ -112,6 +112,25 @@ llvm.func @cos_test(%arg0: f32, %arg1: vector<8xf32>) {
   llvm.return
 }
 
+// CHECK-LABEL: @hyperbolic_trig_test
+llvm.func @hyperbolic_trig_test(%arg0: f32, %arg1: vector<8xf32>) {
+  // CHECK: call float @llvm.sinh.f32
+  llvm.intr.sinh(%arg0) : (f32) -> f32
+  // CHECK: call <8 x float> @llvm.sinh.v8f32
+  llvm.intr.sinh(%arg1) : (vector<8xf32>) -> vector<8xf32>
+
+  // CHECK: call float @llvm.cosh.f32
+  llvm.intr.cosh(%arg0) : (f32) -> f32
+  // CHECK: call <8 x float> @llvm.cosh.v8f32
+  llvm.intr.cosh(%arg1) : (vector<8xf32>) -> vector<8xf32>
+
+  // CHECK: call float @llvm.tanh.f32
+  llvm.intr.tanh(%arg0) : (f32) -> f32
+  // CHECK: call <8 x float> @llvm.tanh.v8f32
+  llvm.intr.tanh(%arg1) : (vector<8xf32>) -> vector<8xf32>
+  llvm.return
+}
+
 // CHECK-LABEL: @copysign_test
 llvm.func @copysign_test(%arg0: f32, %arg1: f32, %arg2: vector<8xf32>, %arg3: vector<8xf32>) {
   // CHECK: call float @llvm.copysign.f32
@@ -341,6 +360,21 @@ llvm.func @umin_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector
   "llvm.intr.umin"(%arg0, %arg1) : (i32, i32) -> i32
   // CHECK: call <8 x i32> @llvm.umin.v8i32
   "llvm.intr.umin"(%arg2, %arg3) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL: @assume_without_opbundles
+llvm.func @assume_without_opbundles(%cond: i1) {
+  // CHECK: call void @llvm.assume(i1 %{{.+}})
+  llvm.intr.assume %cond : i1
+  llvm.return
+}
+
+// CHECK-LABEL: @assume_with_opbundles
+llvm.func @assume_with_opbundles(%cond: i1, %p: !llvm.ptr) {
+  %0 = llvm.mlir.constant(8 : i32) : i32
+  // CHECK: call void @llvm.assume(i1 %{{.+}}) [ "align"(ptr %{{.+}}, i32 8) ]
+  llvm.intr.assume %cond ["align"(%p, %0 : !llvm.ptr, i32)] : i1
   llvm.return
 }
 
@@ -798,6 +832,18 @@ llvm.func @vector_predication_intrinsics(%A: vector<8xi32>, %B: vector<8xi32>,
   // CHECK: call <8 x i32> @llvm.vp.xor.v8i32
   "llvm.intr.vp.xor" (%A, %B, %mask, %evl) :
          (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  // CHECK: call <8 x i32> @llvm.vp.smax.v8i32
+  "llvm.intr.vp.smax" (%A, %B, %mask, %evl) :
+         (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  // CHECK: call <8 x i32> @llvm.vp.smin.v8i32
+  "llvm.intr.vp.smin" (%A, %B, %mask, %evl) :
+         (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  // CHECK: call <8 x i32> @llvm.vp.umax.v8i32
+  "llvm.intr.vp.umax" (%A, %B, %mask, %evl) :
+         (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  // CHECK: call <8 x i32> @llvm.vp.umin.v8i32
+  "llvm.intr.vp.umin" (%A, %B, %mask, %evl) :
+         (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
 
   // CHECK: call <8 x float> @llvm.vp.fadd.v8f32
   "llvm.intr.vp.fadd" (%C, %D, %mask, %evl) :
@@ -1123,6 +1169,10 @@ llvm.func @experimental_constrained_fptrunc(%s: f64, %v: vector<4xf32>) {
 // CHECK-DAG: declare <8 x i32> @llvm.vp.or.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
 // CHECK-DAG: declare <8 x i32> @llvm.vp.and.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
 // CHECK-DAG: declare <8 x i32> @llvm.vp.xor.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
+// CHECK-DAG: declare <8 x i32> @llvm.vp.smax.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
+// CHECK-DAG: declare <8 x i32> @llvm.vp.smin.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
+// CHECK-DAG: declare <8 x i32> @llvm.vp.umax.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
+// CHECK-DAG: declare <8 x i32> @llvm.vp.umin.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
 // CHECK-DAG: declare <8 x float> @llvm.vp.fadd.v8f32(<8 x float>, <8 x float>, <8 x i1>, i32)
 // CHECK-DAG: declare <8 x float> @llvm.vp.fsub.v8f32(<8 x float>, <8 x float>, <8 x i1>, i32)
 // CHECK-DAG: declare <8 x float> @llvm.vp.fmul.v8f32(<8 x float>, <8 x float>, <8 x i1>, i32)

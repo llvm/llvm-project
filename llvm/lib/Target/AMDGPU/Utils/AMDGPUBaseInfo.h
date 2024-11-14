@@ -870,6 +870,8 @@ bool isInvalidSingleUseConsumerInst(unsigned Opc);
 LLVM_READONLY
 bool isInvalidSingleUseProducerInst(unsigned Opc);
 
+bool isDPMACCInstruction(unsigned Opc);
+
 LLVM_READONLY
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc);
 
@@ -917,7 +919,8 @@ getIntegerPairAttribute(const Function &F, StringRef Name,
 ///
 /// \returns false if any error occurs.
 SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
-                                             unsigned Size);
+                                             unsigned Size,
+                                             unsigned DefaultVal = 0);
 
 /// Represents the counter values to wait for in an s_waitcnt instruction.
 ///
@@ -1314,18 +1317,18 @@ unsigned hasKernargPreload(const MCSubtargetInfo &STI);
 bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST);
 
 /// Is Reg - scalar register
-bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI);
+bool isSGPR(MCRegister Reg, const MCRegisterInfo *TRI);
 
 /// \returns if \p Reg occupies the high 16-bits of a 32-bit register.
 bool isHi16Reg(MCRegister Reg, const MCRegisterInfo &MRI);
 
 /// If \p Reg is a pseudo reg, return the correct hardware register given
 /// \p STI otherwise return \p Reg.
-unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI);
+MCRegister getMCReg(MCRegister Reg, const MCSubtargetInfo &STI);
 
 /// Convert hardware register \p Reg to a pseudo register
 LLVM_READNONE
-unsigned mc2PseudoReg(unsigned Reg);
+MCRegister mc2PseudoReg(MCRegister Reg);
 
 LLVM_READNONE
 bool isInlineValue(unsigned Reg);

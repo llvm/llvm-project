@@ -208,6 +208,9 @@ namespace std {
 #include <__algorithm/min.h>
 #include <__assert>
 #include <__config>
+#include <__cstddef/nullptr_t.h>
+#include <__cstddef/ptrdiff_t.h>
+#include <__cstddef/size_t.h>
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
 #include <__fwd/ostream.h>
@@ -233,7 +236,6 @@ namespace std {
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/remove_reference.h>
 #include <__type_traits/type_identity.h>
-#include <cstddef>
 #include <iosfwd>
 #include <limits>
 #include <stdexcept>
@@ -396,7 +398,7 @@ public:
     return numeric_limits<size_type>::max() / sizeof(value_type);
   }
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool empty() const _NOEXCEPT { return __size_ == 0; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool empty() const _NOEXCEPT { return __size_ == 0; }
 
   // [string.view.access], element access
   _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_reference operator[](size_type __pos) const _NOEXCEPT {
@@ -901,7 +903,7 @@ struct __string_view_hash : public __unary_function<basic_string_view<_CharT, ch
 template <>
 struct hash<basic_string_view<char, char_traits<char> > > : __string_view_hash<char> {};
 
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#if _LIBCPP_HAS_CHAR8_T
 template <>
 struct hash<basic_string_view<char8_t, char_traits<char8_t> > > : __string_view_hash<char8_t> {};
 #endif
@@ -912,7 +914,7 @@ struct hash<basic_string_view<char16_t, char_traits<char16_t> > > : __string_vie
 template <>
 struct hash<basic_string_view<char32_t, char_traits<char32_t> > > : __string_view_hash<char32_t> {};
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 struct hash<basic_string_view<wchar_t, char_traits<wchar_t> > > : __string_view_hash<wchar_t> {};
 #endif
@@ -924,14 +926,14 @@ inline _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<char> operator""sv(cons
   return basic_string_view<char>(__str, __len);
 }
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 inline _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<wchar_t>
 operator""sv(const wchar_t* __str, size_t __len) noexcept {
   return basic_string_view<wchar_t>(__str, __len);
 }
 #  endif
 
-#  ifndef _LIBCPP_HAS_NO_CHAR8_T
+#  if _LIBCPP_HAS_CHAR8_T
 inline _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<char8_t>
 operator""sv(const char8_t* __str, size_t __len) noexcept {
   return basic_string_view<char8_t>(__str, __len);

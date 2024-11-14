@@ -102,12 +102,13 @@ namespace MultilevelSpecialization {
   // default argument -- how far back do we look when determining whether a
   // parameter was expanded from a pack?
   //   -- zygoloid 2020-06-02
-  template<typename ...T> struct B {
+  template<typename ...T> struct B { // #cwg2233-B
     template <T... V> void f(int i = 0, int (&... arr)[V]);
   };
   template<> template<int a, int b>
     void B<int, int>::f(int i, int (&arr1)[a], int (&arr2)[b]) {}
     // since-cxx11-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'cwg2233::MultilevelSpecialization::B<int, int>'}}
+    //   since-cxx11-note@#cwg2233-B {{defined here}}
   template<> template<>
     void B<int, int>::f<1, 1>(int i, int (&arr1a)[1], int (&arr2a)[1]) {}
 }

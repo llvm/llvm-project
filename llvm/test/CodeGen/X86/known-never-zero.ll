@@ -555,9 +555,9 @@ define <4 x i32> @smax_known_zero_vec(<4 x i32> %x, <4 x i32> %y) {
 ; X86-NEXT:    por %xmm2, %xmm0
 ; X86-NEXT:    pcmpeqd %xmm1, %xmm1
 ; X86-NEXT:    paddd %xmm0, %xmm1
-; X86-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
-; X86-NEXT:    pxor %xmm1, %xmm0
-; X86-NEXT:    pcmpgtd %xmm1, %xmm0
+; X86-NEXT:    pand %xmm1, %xmm0
+; X86-NEXT:    pxor %xmm1, %xmm1
+; X86-NEXT:    pcmpeqd %xmm1, %xmm0
 ; X86-NEXT:    psrld $31, %xmm0
 ; X86-NEXT:    retl
 ;
@@ -566,10 +566,10 @@ define <4 x i32> @smax_known_zero_vec(<4 x i32> %x, <4 x i32> %y) {
 ; X64-NEXT:    vpmaxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
-; X64-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vpminud %xmm1, %xmm0, %xmm1
+; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vpandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %z = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %x, <4 x i32> <i32 54, i32 23, i32 12, i32 1>)
   %r = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %z)

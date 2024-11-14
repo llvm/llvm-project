@@ -24,7 +24,7 @@
 using namespace llvm;
 using namespace llvm::AMDGPU;
 
-void AMDGPUInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void AMDGPUInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   // FIXME: The current implementation of
   // AsmParser::parseRegisterOrRegisterNumber in MC implies we either emit this
   // as an integer or we provide a name which represents a physical register.
@@ -315,10 +315,10 @@ void AMDGPUInstPrinter::printSymbolicFormat(const MCInst *MI,
   }
 }
 
-void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
+void AMDGPUInstPrinter::printRegOperand(MCRegister Reg, raw_ostream &O,
                                         const MCRegisterInfo &MRI) {
 #if !defined(NDEBUG)
-  switch (RegNo) {
+  switch (Reg.id()) {
   case AMDGPU::FP_REG:
   case AMDGPU::SP_REG:
   case AMDGPU::PRIVATE_RSRC_REG:
@@ -328,7 +328,7 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
   }
 #endif
 
-  O << getRegisterName(RegNo);
+  O << getRegisterName(Reg);
 }
 
 void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
@@ -1503,8 +1503,21 @@ void AMDGPUInstPrinter::printSwizzle(const MCInst *MI, unsigned OpNo,
 
   O << " offset:";
 
-  if ((Imm & QUAD_PERM_ENC_MASK) == QUAD_PERM_ENC) {
+  // Rotate and FFT modes
+  if (Imm >= ROTATE_MODE_LO && AMDGPU::isGFX9Plus(STI)) {
+    if (Imm >= FFT_MODE_LO) {
+      O << "swizzle(" << IdSymbolic[ID_FFT] << ',' << (Imm & FFT_SWIZZLE_MASK)
+        << ')';
+    } else if (Imm >= ROTATE_MODE_LO) {
+      O << "swizzle(" << IdSymbolic[ID_ROTATE] << ','
+        << ((Imm >> ROTATE_DIR_SHIFT) & ROTATE_DIR_MASK) << ','
+        << ((Imm >> ROTATE_SIZE_SHIFT) & ROTATE_SIZE_MASK) << ')';
+    }
+    return;
+  }
 
+  // Basic mode
+  if ((Imm & QUAD_PERM_ENC_MASK) == QUAD_PERM_ENC) {
     O << "swizzle(" << IdSymbolic[ID_QUAD_PERM];
     for (unsigned I = 0; I < LANE_NUM; ++I) {
       O << ",";

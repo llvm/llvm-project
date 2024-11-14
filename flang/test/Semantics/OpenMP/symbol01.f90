@@ -62,7 +62,7 @@ program mm
   !REF: /mm/OtherConstruct1/i
   !REF: /mm/OtherConstruct1/y
   x = a+i+y
-  !DEF: /mm/OtherConstruct1/c HostAssoc REAL(4)
+  !DEF: /mm/OtherConstruct1/c (OmpShared) HostAssoc REAL(4)
   c = 3.0
  end do
 end program

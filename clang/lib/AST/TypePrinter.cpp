@@ -1413,7 +1413,9 @@ void TypePrinter::AppendScope(DeclContext *DC, raw_ostream &OS,
 
     // Only suppress an inline namespace if the name has the same lookup
     // results in the enclosing namespace.
-    if (Policy.SuppressInlineNamespace && NS->isInline() && NameInScope &&
+    if (Policy.SuppressInlineNamespace !=
+            PrintingPolicy::SuppressInlineNamespaceMode::None &&
+        NS->isInline() && NameInScope &&
         NS->isRedundantInlineQualifierFor(NameInScope))
       return AppendScope(DC->getParent(), OS, NameInScope);
 
@@ -1932,6 +1934,14 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     return;
   }
 
+  if (T->getAttrKind() == attr::SwiftAttr) {
+    if (auto *swiftAttr = dyn_cast_or_null<SwiftAttrAttr>(T->getAttr())) {
+      OS << " __attribute__((swift_attr(\"" << swiftAttr->getAttribute()
+         << "\")))";
+    }
+    return;
+  }
+
   OS << " __attribute__((";
   switch (T->getAttrKind()) {
 #define TYPE_ATTR(NAME)
@@ -1945,6 +1955,8 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
 
   case attr::HLSLResourceClass:
   case attr::HLSLROV:
+  case attr::HLSLRawBuffer:
+  case attr::HLSLContainedType:
     llvm_unreachable("HLSL resource type attributes handled separately");
 
   case attr::OpenCLPrivateAddressSpace:
@@ -1990,6 +2002,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::NonAllocating:
   case attr::Blocking:
   case attr::Allocating:
+  case attr::SwiftAttr:
     llvm_unreachable("This attribute should have been handled already");
 
   case attr::NSReturnsRetained:
@@ -2078,6 +2091,16 @@ void TypePrinter::printHLSLAttributedResourceAfter(
      << ")]]";
   if (Attrs.IsROV)
     OS << " [[hlsl::is_rov]]";
+  if (Attrs.RawBuffer)
+    OS << " [[hlsl::raw_buffer]]";
+
+  QualType ContainedTy = T->getContainedType();
+  if (!ContainedTy.isNull()) {
+    OS << " [[hlsl::contained_type(";
+    printBefore(ContainedTy, OS);
+    printAfter(ContainedTy, OS);
+    OS << ")]]";
+  }
 }
 
 void TypePrinter::printObjCInterfaceBefore(const ObjCInterfaceType *T,

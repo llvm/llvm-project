@@ -567,15 +567,13 @@ define dso_local i32 @_Z6squarePi(ptr %P, ptr %P1, i1 %cond) {
 ; BASIC-NEXT:    store i32 0, ptr [[P1]], align 4
 ; BASIC-NEXT:    br i1 [[COND]], label [[C:%.*]], label [[B]]
 ; BASIC:       B:
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 4), "nonnull"(ptr [[P]]), "align"(ptr [[P]], i64 8) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 8) ]
 ; BASIC-NEXT:    store i32 0, ptr [[P]], align 8
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P1]], i64 4), "nonnull"(ptr [[P1]]), "align"(ptr [[P1]], i64 8) ]
 ; BASIC-NEXT:    store i32 0, ptr [[P1]], align 8
 ; BASIC-NEXT:    br label [[C]]
 ; BASIC:       C:
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 4), "nonnull"(ptr [[P]]), "align"(ptr [[P]], i64 32) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 32) ]
 ; BASIC-NEXT:    store i32 0, ptr [[P]], align 32
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P1]], i64 4), "nonnull"(ptr [[P1]]), "align"(ptr [[P1]], i64 4) ]
 ; BASIC-NEXT:    store i32 0, ptr [[P1]], align 4
 ; BASIC-NEXT:    ret i32 0
 ;
@@ -593,15 +591,13 @@ define dso_local i32 @_Z6squarePi(ptr %P, ptr %P1, i1 %cond) {
 ; ALL-NEXT:    store i32 0, ptr [[P1]], align 4
 ; ALL-NEXT:    br i1 [[COND]], label [[C:%.*]], label [[B]]
 ; ALL:       B:
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 4), "nonnull"(ptr [[P]]), "align"(ptr [[P]], i64 8) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 8) ]
 ; ALL-NEXT:    store i32 0, ptr [[P]], align 8
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P1]], i64 4), "nonnull"(ptr [[P1]]), "align"(ptr [[P1]], i64 8) ]
 ; ALL-NEXT:    store i32 0, ptr [[P1]], align 8
 ; ALL-NEXT:    br label [[C]]
 ; ALL:       C:
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 4), "nonnull"(ptr [[P]]), "align"(ptr [[P]], i64 32) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 32) ]
 ; ALL-NEXT:    store i32 0, ptr [[P]], align 32
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P1]], i64 4), "nonnull"(ptr [[P1]]), "align"(ptr [[P1]], i64 4) ]
 ; ALL-NEXT:    store i32 0, ptr [[P1]], align 4
 ; ALL-NEXT:    ret i32 0
 ;
@@ -619,15 +615,13 @@ define dso_local i32 @_Z6squarePi(ptr %P, ptr %P1, i1 %cond) {
 ; WITH-AC-NEXT:    store i32 0, ptr [[P1]], align 4
 ; WITH-AC-NEXT:    br i1 [[COND]], label [[C:%.*]], label [[B]]
 ; WITH-AC:       B:
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 4), "nonnull"(ptr [[P]]), "align"(ptr [[P]], i64 8) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 8) ]
 ; WITH-AC-NEXT:    store i32 0, ptr [[P]], align 8
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P1]], i64 4), "nonnull"(ptr [[P1]]), "align"(ptr [[P1]], i64 8) ]
 ; WITH-AC-NEXT:    store i32 0, ptr [[P1]], align 8
 ; WITH-AC-NEXT:    br label [[C]]
 ; WITH-AC:       C:
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 4), "nonnull"(ptr [[P]]), "align"(ptr [[P]], i64 32) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 32) ]
 ; WITH-AC-NEXT:    store i32 0, ptr [[P]], align 32
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P1]], i64 4), "nonnull"(ptr [[P1]]), "align"(ptr [[P1]], i64 4) ]
 ; WITH-AC-NEXT:    store i32 0, ptr [[P1]], align 4
 ; WITH-AC-NEXT:    ret i32 0
 ;
@@ -667,12 +661,12 @@ define dso_local i32 @_Z6squarePi(ptr %P, ptr %P1, i1 %cond) {
 ; FULL-SIMPLIFY-NEXT:    store i32 0, ptr [[P1]], align 4
 ; FULL-SIMPLIFY-NEXT:    br i1 [[COND]], label [[C:%.*]], label [[B]]
 ; FULL-SIMPLIFY:       B:
-; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "ignore"(ptr undef, i64 4), "ignore"(ptr undef), "align"(ptr [[P]], i64 8) ]
+; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 8) ]
 ; FULL-SIMPLIFY-NEXT:    store i32 0, ptr [[P]], align 8
 ; FULL-SIMPLIFY-NEXT:    store i32 0, ptr [[P1]], align 8
 ; FULL-SIMPLIFY-NEXT:    br label [[C]]
 ; FULL-SIMPLIFY:       C:
-; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "ignore"(ptr undef, i64 4), "ignore"(ptr undef), "align"(ptr [[P]], i64 32) ]
+; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 32) ]
 ; FULL-SIMPLIFY-NEXT:    store i32 0, ptr [[P]], align 32
 ; FULL-SIMPLIFY-NEXT:    store i32 0, ptr [[P1]], align 4
 ; FULL-SIMPLIFY-NEXT:    ret i32 0
@@ -830,10 +824,10 @@ define dso_local i32 @terminator(ptr %P) personality ptr @__gxx_personality_v0 {
 ; BASIC-SAME: (ptr [[P:%.*]]) personality ptr @__gxx_personality_v0 {
 ; BASIC-NEXT:  bb:
 ; BASIC-NEXT:    invoke void @may_throwv2(ptr nonnull [[P]])
-; BASIC-NEXT:    to label [[EXIT:%.*]] unwind label [[CATCH:%.*]]
+; BASIC-NEXT:            to label [[EXIT:%.*]] unwind label [[CATCH:%.*]]
 ; BASIC:       Catch:
 ; BASIC-NEXT:    [[V:%.*]] = landingpad { ptr, i32 }
-; BASIC-NEXT:    catch ptr null
+; BASIC-NEXT:            catch ptr null
 ; BASIC-NEXT:    br label [[EXIT]]
 ; BASIC:       Exit:
 ; BASIC-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[BB:%.*]] ], [ 0, [[CATCH]] ]
@@ -843,10 +837,10 @@ define dso_local i32 @terminator(ptr %P) personality ptr @__gxx_personality_v0 {
 ; ALL-SAME: (ptr [[P:%.*]]) personality ptr @__gxx_personality_v0 {
 ; ALL-NEXT:  bb:
 ; ALL-NEXT:    invoke void @may_throwv2(ptr nonnull [[P]])
-; ALL-NEXT:    to label [[EXIT:%.*]] unwind label [[CATCH:%.*]]
+; ALL-NEXT:            to label [[EXIT:%.*]] unwind label [[CATCH:%.*]]
 ; ALL:       Catch:
 ; ALL-NEXT:    [[V:%.*]] = landingpad { ptr, i32 }
-; ALL-NEXT:    catch ptr null
+; ALL-NEXT:            catch ptr null
 ; ALL-NEXT:    br label [[EXIT]]
 ; ALL:       Exit:
 ; ALL-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[BB:%.*]] ], [ 0, [[CATCH]] ]
@@ -856,10 +850,10 @@ define dso_local i32 @terminator(ptr %P) personality ptr @__gxx_personality_v0 {
 ; WITH-AC-SAME: (ptr [[P:%.*]]) personality ptr @__gxx_personality_v0 {
 ; WITH-AC-NEXT:  bb:
 ; WITH-AC-NEXT:    invoke void @may_throwv2(ptr nonnull [[P]])
-; WITH-AC-NEXT:    to label [[EXIT:%.*]] unwind label [[CATCH:%.*]]
+; WITH-AC-NEXT:            to label [[EXIT:%.*]] unwind label [[CATCH:%.*]]
 ; WITH-AC:       Catch:
 ; WITH-AC-NEXT:    [[V:%.*]] = landingpad { ptr, i32 }
-; WITH-AC-NEXT:    catch ptr null
+; WITH-AC-NEXT:            catch ptr null
 ; WITH-AC-NEXT:    br label [[EXIT]]
 ; WITH-AC:       Exit:
 ; WITH-AC-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[BB:%.*]] ], [ 0, [[CATCH]] ]
@@ -869,10 +863,10 @@ define dso_local i32 @terminator(ptr %P) personality ptr @__gxx_personality_v0 {
 ; CROSS-BLOCK-SAME: (ptr [[P:%.*]]) personality ptr @__gxx_personality_v0 {
 ; CROSS-BLOCK-NEXT:  bb:
 ; CROSS-BLOCK-NEXT:    invoke void @may_throwv2(ptr nonnull [[P]])
-; CROSS-BLOCK-NEXT:    to label [[EXIT:%.*]] unwind label [[CATCH:%.*]]
+; CROSS-BLOCK-NEXT:            to label [[EXIT:%.*]] unwind label [[CATCH:%.*]]
 ; CROSS-BLOCK:       Catch:
 ; CROSS-BLOCK-NEXT:    [[V:%.*]] = landingpad { ptr, i32 }
-; CROSS-BLOCK-NEXT:    catch ptr null
+; CROSS-BLOCK-NEXT:            catch ptr null
 ; CROSS-BLOCK-NEXT:    br label [[EXIT]]
 ; CROSS-BLOCK:       Exit:
 ; CROSS-BLOCK-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[BB:%.*]] ], [ 0, [[CATCH]] ]
@@ -882,10 +876,10 @@ define dso_local i32 @terminator(ptr %P) personality ptr @__gxx_personality_v0 {
 ; FULL-SIMPLIFY-SAME: (ptr [[P:%.*]]) personality ptr @__gxx_personality_v0 {
 ; FULL-SIMPLIFY-NEXT:  bb:
 ; FULL-SIMPLIFY-NEXT:    invoke void @may_throwv2(ptr nonnull [[P]])
-; FULL-SIMPLIFY-NEXT:    to label [[EXIT:%.*]] unwind label [[CATCH:%.*]]
+; FULL-SIMPLIFY-NEXT:            to label [[EXIT:%.*]] unwind label [[CATCH:%.*]]
 ; FULL-SIMPLIFY:       Catch:
 ; FULL-SIMPLIFY-NEXT:    [[V:%.*]] = landingpad { ptr, i32 }
-; FULL-SIMPLIFY-NEXT:    catch ptr null
+; FULL-SIMPLIFY-NEXT:            catch ptr null
 ; FULL-SIMPLIFY-NEXT:    br label [[EXIT]]
 ; FULL-SIMPLIFY:       Exit:
 ; FULL-SIMPLIFY-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[BB:%.*]] ], [ 0, [[CATCH]] ]

@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <vector>
 using namespace llvm;
 
 #define DEBUG_TYPE "attr-enum"
@@ -117,10 +117,20 @@ void Attributes::emitAttributeProperties(raw_ostream &OS) {
   OS << "static const uint8_t AttrPropTable[] = {\n";
   for (StringRef KindName : {"EnumAttr", "TypeAttr", "IntAttr",
                              "ConstantRangeAttr", "ConstantRangeListAttr"}) {
+    bool AllowIntersectAnd = KindName == "EnumAttr";
+    bool AllowIntersectMin = KindName == "IntAttr";
     for (auto *A : Records.getAllDerivedDefinitions(KindName)) {
       OS << "0";
-      for (Init *P : *A->getValueAsListInit("Properties"))
+      for (const Init *P : *A->getValueAsListInit("Properties")) {
+        if (!AllowIntersectAnd &&
+            cast<DefInit>(P)->getDef()->getName() == "IntersectAnd")
+          PrintFatalError("'IntersectAnd' only compatible with 'EnumAttr'");
+        if (!AllowIntersectMin &&
+            cast<DefInit>(P)->getDef()->getName() == "IntersectMin")
+          PrintFatalError("'IntersectMin' only compatible with 'IntAttr'");
+
         OS << " | AttributeProperty::" << cast<DefInit>(P)->getDef()->getName();
+      }
       OS << ",\n";
     }
   }

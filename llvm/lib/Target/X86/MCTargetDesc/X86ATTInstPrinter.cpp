@@ -19,7 +19,6 @@
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
@@ -35,7 +34,7 @@ using namespace llvm;
 #define PRINT_ALIAS_INSTR
 #include "X86GenAsmWriter.inc"
 
-void X86ATTInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void X86ATTInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   markup(OS, Markup::Register) << '%' << getRegisterName(Reg);
 }
 
@@ -516,8 +515,7 @@ void X86ATTInstPrinter::printU8Imm(const MCInst *MI, unsigned Op,
 
 void X86ATTInstPrinter::printSTiRegOperand(const MCInst *MI, unsigned OpNo,
                                            raw_ostream &OS) {
-  const MCOperand &Op = MI->getOperand(OpNo);
-  unsigned Reg = Op.getReg();
+  MCRegister Reg = MI->getOperand(OpNo).getReg();
   // Override the default printing to print st(0) instead st.
   if (Reg == X86::ST0)
     markup(OS, Markup::Register) << "%st(0)";

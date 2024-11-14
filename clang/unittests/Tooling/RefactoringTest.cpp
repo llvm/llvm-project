@@ -135,7 +135,6 @@ static bool checkReplacementError(llvm::Error &&Error,
            << "\n";
     }
   });
-  OS.flush();
   if (ErrorMessage.empty()) return true;
   llvm::errs() << ErrorMessage;
   return false;

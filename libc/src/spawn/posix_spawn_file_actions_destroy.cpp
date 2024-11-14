@@ -9,11 +9,12 @@
 #include "posix_spawn_file_actions_destroy.h"
 
 #include "file_actions.h"
+
 #include "src/__support/CPP/new.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/errno/libc_errno.h"
 
-#include <errno.h>
 #include <spawn.h>
 
 namespace LIBC_NAMESPACE_DECL {

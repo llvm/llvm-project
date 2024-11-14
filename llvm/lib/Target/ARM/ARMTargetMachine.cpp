@@ -241,7 +241,9 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
       Options.EABIVersion == EABI::Unknown) {
     // musl is compatible with glibc with regard to EABI version
     if ((TargetTriple.getEnvironment() == Triple::GNUEABI ||
+         TargetTriple.getEnvironment() == Triple::GNUEABIT64 ||
          TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
+         TargetTriple.getEnvironment() == Triple::GNUEABIHFT64 ||
          TargetTriple.getEnvironment() == Triple::MuslEABI ||
          TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
          TargetTriple.getEnvironment() == Triple::OpenHOS) &&
@@ -640,3 +642,5 @@ bool ARMBaseTargetMachine::parseMachineFunctionInfo(
   MF.getInfo<ARMFunctionInfo>()->initializeBaseYamlFields(YamlMFI);
   return false;
 }
+
+void ARMBaseTargetMachine::reset() { SubtargetMap.clear(); }

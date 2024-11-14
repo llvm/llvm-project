@@ -89,9 +89,9 @@ class JumpThreadingPass : public PassInfoMixin<JumpThreadingPass> {
   bool ChangedSinceLastAnalysisUpdate = false;
   bool HasGuards = false;
 #ifndef LLVM_ENABLE_ABI_BREAKING_CHECKS
-  SmallPtrSet<const BasicBlock *, 16> LoopHeaders;
-#else
   SmallSet<AssertingVH<const BasicBlock>, 16> LoopHeaders;
+#else
+  SmallPtrSet<const BasicBlock *, 16> LoopHeaders;
 #endif
 
   unsigned BBDupThreshold;

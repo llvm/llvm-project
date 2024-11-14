@@ -267,6 +267,12 @@ void MCStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                   Discriminator);
 }
 
+void MCStreamer::emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) {
+  getContext()
+      .getMCDwarfLineTable(getContext().getDwarfCompileUnitID())
+      .endCurrentSeqAndEmitLineStreamLabel(this, Loc, Name);
+}
+
 MCSymbol *MCStreamer::getDwarfLineTableSymbol(unsigned CUID) {
   MCDwarfLineTable &Table = getContext().getMCDwarfLineTable(CUID);
   if (!Table.getLabel()) {
@@ -676,6 +682,16 @@ void MCStreamer::emitCFINegateRAState(SMLoc Loc) {
   MCSymbol *Label = emitCFILabel();
   MCCFIInstruction Instruction =
       MCCFIInstruction::createNegateRAState(Label, Loc);
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->Instructions.push_back(Instruction);
+}
+
+void MCStreamer::emitCFINegateRAStateWithPC(SMLoc Loc) {
+  MCSymbol *Label = emitCFILabel();
+  MCCFIInstruction Instruction =
+      MCCFIInstruction::createNegateRAStateWithPC(Label, Loc);
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;

@@ -627,6 +627,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1150, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1151, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1152, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1153, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1200, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1201, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, EF_AMDGPU_MACH);
@@ -1920,6 +1921,7 @@ void MappingTraits<ELFYAML::VerdefEntry>::mapping(IO &IO,
   IO.mapOptional("Flags", E.Flags);
   IO.mapOptional("VersionNdx", E.VersionNdx);
   IO.mapOptional("Hash", E.Hash);
+  IO.mapOptional("VDAux", E.VDAux);
   IO.mapRequired("Names", E.VerNames);
 }
 

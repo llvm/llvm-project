@@ -37,6 +37,7 @@ static_library("LLVMPowerPCCodeGen") {
     ":PPCGenFastISel",
     ":PPCGenGlobalISel",
     ":PPCGenRegisterBank",
+    "AsmParser:PPCGenAsmMatcher",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",

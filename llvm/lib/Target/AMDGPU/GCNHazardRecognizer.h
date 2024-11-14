@@ -46,7 +46,7 @@ private:
   const GCNSubtarget &ST;
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;
-  TargetSchedModel TSchedModel;
+  const TargetSchedModel &TSchedModel;
   bool RunLdsBranchVmemWARHazardFixup;
   BitVector VALUReadHazardSGPRs;
   bool UseVALUReadHazardExhaustiveSearch;

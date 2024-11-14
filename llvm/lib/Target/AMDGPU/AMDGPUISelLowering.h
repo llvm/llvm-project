@@ -201,7 +201,7 @@ public:
                                NegatibleCost &Cost,
                                unsigned Depth) const override;
 
-  bool isNarrowingProfitable(EVT SrcVT, EVT DestVT) const override;
+  bool isNarrowingProfitable(SDNode *N, EVT SrcVT, EVT DestVT) const override;
 
   bool isDesirableToCommuteWithShift(const SDNode *N,
                                      CombineLevel Level) const override;
@@ -387,9 +387,6 @@ public:
   MVT getFenceOperandTy(const DataLayout &DL) const override {
     return MVT::i32;
   }
-
-  bool shouldSinkOperands(Instruction *I,
-                          SmallVectorImpl<Use *> &Ops) const override;
 };
 
 namespace AMDGPUISD {

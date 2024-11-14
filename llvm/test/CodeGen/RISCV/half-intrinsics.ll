@@ -153,8 +153,8 @@ define half @powi_f16(half %a, i32 %b) nounwind {
 ; RV64IZHINX:       # %bb.0:
 ; RV64IZHINX-NEXT:    addi sp, sp, -16
 ; RV64IZHINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IZHINX-NEXT:    sext.w a1, a1
 ; RV64IZHINX-NEXT:    fcvt.s.h a0, a0
+; RV64IZHINX-NEXT:    sext.w a1, a1
 ; RV64IZHINX-NEXT:    call __powisf2
 ; RV64IZHINX-NEXT:    fcvt.h.s a0, a0
 ; RV64IZHINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -233,8 +233,8 @@ define half @powi_f16(half %a, i32 %b) nounwind {
 ; RV64IZHINXMIN:       # %bb.0:
 ; RV64IZHINXMIN-NEXT:    addi sp, sp, -16
 ; RV64IZHINXMIN-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IZHINXMIN-NEXT:    sext.w a1, a1
 ; RV64IZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV64IZHINXMIN-NEXT:    sext.w a1, a1
 ; RV64IZHINXMIN-NEXT:    call __powisf2
 ; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; RV64IZHINXMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -1797,17 +1797,10 @@ define half @fabs_f16(half %a) nounwind {
 ; CHECKIZFH-NEXT:    fabs.h fa0, fa0
 ; CHECKIZFH-NEXT:    ret
 ;
-; RV32IZHINX-LABEL: fabs_f16:
-; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    slli a0, a0, 17
-; RV32IZHINX-NEXT:    srli a0, a0, 17
-; RV32IZHINX-NEXT:    ret
-;
-; RV64IZHINX-LABEL: fabs_f16:
-; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    slli a0, a0, 49
-; RV64IZHINX-NEXT:    srli a0, a0, 49
-; RV64IZHINX-NEXT:    ret
+; CHECKIZHINX-LABEL: fabs_f16:
+; CHECKIZHINX:       # %bb.0:
+; CHECKIZHINX-NEXT:    fabs.h a0, a0
+; CHECKIZHINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fabs_f16:
 ; RV32I:       # %bb.0:
@@ -1839,14 +1832,18 @@ define half @fabs_f16(half %a) nounwind {
 ;
 ; RV32IZHINXMIN-LABEL: fabs_f16:
 ; RV32IZHINXMIN:       # %bb.0:
+; RV32IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
 ; RV32IZHINXMIN-NEXT:    slli a0, a0, 17
 ; RV32IZHINXMIN-NEXT:    srli a0, a0, 17
+; RV32IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV32IZHINXMIN-NEXT:    ret
 ;
 ; RV64IZHINXMIN-LABEL: fabs_f16:
 ; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
 ; RV64IZHINXMIN-NEXT:    slli a0, a0, 49
 ; RV64IZHINXMIN-NEXT:    srli a0, a0, 49
+; RV64IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV64IZHINXMIN-NEXT:    ret
   %1 = call half @llvm.fabs.f16(half %a)
   ret half %1
@@ -2094,20 +2091,26 @@ define half @copysign_f16(half %a, half %b) nounwind {
 ;
 ; RV32IZHINXMIN-LABEL: copysign_f16:
 ; RV32IZHINXMIN:       # %bb.0:
+; RV32IZHINXMIN-NEXT:    # kill: def $x11_h killed $x11_h def $x11
+; RV32IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
 ; RV32IZHINXMIN-NEXT:    lui a2, 1048568
 ; RV32IZHINXMIN-NEXT:    and a1, a1, a2
 ; RV32IZHINXMIN-NEXT:    slli a0, a0, 17
 ; RV32IZHINXMIN-NEXT:    srli a0, a0, 17
 ; RV32IZHINXMIN-NEXT:    or a0, a0, a1
+; RV32IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV32IZHINXMIN-NEXT:    ret
 ;
 ; RV64IZHINXMIN-LABEL: copysign_f16:
 ; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    # kill: def $x11_h killed $x11_h def $x11
+; RV64IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
 ; RV64IZHINXMIN-NEXT:    lui a2, 1048568
 ; RV64IZHINXMIN-NEXT:    and a1, a1, a2
 ; RV64IZHINXMIN-NEXT:    slli a0, a0, 49
 ; RV64IZHINXMIN-NEXT:    srli a0, a0, 49
 ; RV64IZHINXMIN-NEXT:    or a0, a0, a1
+; RV64IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV64IZHINXMIN-NEXT:    ret
   %1 = call half @llvm.copysign.f16(half %a, half %b)
   ret half %1
@@ -2835,6 +2838,7 @@ define i1 @isnan_d_fpclass(half %x) {
 ;
 ; RV32IZHINXMIN-LABEL: isnan_d_fpclass:
 ; RV32IZHINXMIN:       # %bb.0:
+; RV32IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
 ; RV32IZHINXMIN-NEXT:    slli a0, a0, 17
 ; RV32IZHINXMIN-NEXT:    srli a0, a0, 17
 ; RV32IZHINXMIN-NEXT:    li a1, 31
@@ -2844,6 +2848,7 @@ define i1 @isnan_d_fpclass(half %x) {
 ;
 ; RV64IZHINXMIN-LABEL: isnan_d_fpclass:
 ; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
 ; RV64IZHINXMIN-NEXT:    slli a0, a0, 49
 ; RV64IZHINXMIN-NEXT:    srli a0, a0, 49
 ; RV64IZHINXMIN-NEXT:    li a1, 31
@@ -3015,7 +3020,12 @@ define half @maximumnum_half(half %x, half %y) {
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s2, 0(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
+; RV32I-NEXT:    .cfi_restore s0
+; RV32I-NEXT:    .cfi_restore s1
+; RV32I-NEXT:    .cfi_restore s2
 ; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: maximumnum_half:
@@ -3046,7 +3056,12 @@ define half @maximumnum_half(half %x, half %y) {
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    .cfi_restore s0
+; RV64I-NEXT:    .cfi_restore s1
+; RV64I-NEXT:    .cfi_restore s2
 ; RV64I-NEXT:    addi sp, sp, 32
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: maximumnum_half:
@@ -3109,7 +3124,12 @@ define half @minimumnum_half(half %x, half %y) {
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s2, 0(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
+; RV32I-NEXT:    .cfi_restore s0
+; RV32I-NEXT:    .cfi_restore s1
+; RV32I-NEXT:    .cfi_restore s2
 ; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: minimumnum_half:
@@ -3140,7 +3160,12 @@ define half @minimumnum_half(half %x, half %y) {
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    .cfi_restore s0
+; RV64I-NEXT:    .cfi_restore s1
+; RV64I-NEXT:    .cfi_restore s2
 ; RV64I-NEXT:    addi sp, sp, 32
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: minimumnum_half:

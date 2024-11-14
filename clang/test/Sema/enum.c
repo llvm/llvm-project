@@ -1,23 +1,23 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple %s -fsyntax-only -verify -pedantic
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu %s -fsyntax-only -std=c23 -verify -pedantic
+// RUN: %clang_cc1 -triple %itanium_abi_triple %s -fsyntax-only -verify=expected,pre-c23 -pedantic
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu %s -fsyntax-only -std=c23 -verify=expected -pedantic
 enum e {A,
-        B = 42LL << 32,        // expected-warning {{ISO C restricts enumerator values to range of 'int'}}
+        B = 42LL << 32,        // pre-c23-warning {{enumerator value which exceeds the range of 'int' is a C23 extension}}
       C = -4, D = 12456 };
 
 enum f { a = -2147483648, b = 2147483647 }; // ok.
 
 enum g {  // too negative
-   c = -2147483649,         // expected-warning {{ISO C restricts enumerator values to range of 'int'}}
+   c = -2147483649,         // pre-c23-warning {{enumerator value which exceeds the range of 'int' is a C23 extension}}
    d = 2147483647 };
 enum h { e = -2147483648, // too pos
-   f = 2147483648,           // expected-warning {{ISO C restricts enumerator values to range of 'int'}}
-  i = 0xFFFF0000 // expected-warning {{too large}}
+   f = 2147483648,           // pre-c23-warning {{enumerator value which exceeds the range of 'int' is a C23 extension}}
+  i = 0xFFFF0000 // pre-c23-warning {{too large}}
 };
 
 // minll maxull
 enum x                      // expected-warning {{enumeration values exceed range of largest integer}}
-{ y = -9223372036854775807LL-1,  // expected-warning {{ISO C restricts enumerator values to range of 'int'}}
-z = 9223372036854775808ULL };    // expected-warning {{ISO C restricts enumerator values to range of 'int'}}
+{ y = -9223372036854775807LL-1,  // pre-c23-warning {{enumerator value which exceeds the range of 'int' is a C23 extension}}
+z = 9223372036854775808ULL };    // pre-c23-warning {{enumerator value which exceeds the range of 'int' is a C23 extension}}
 
 int test(void) {
   return sizeof(enum e) ;
@@ -169,13 +169,16 @@ enum class GH42372_2 {
   One
 };
 
+enum IncOverflow {
+  V2 = __INT_MAX__,
+  V3 // pre-c23-warning {{incremented enumerator value which exceeds the range of 'int' is a C23 extension}}
+};
+
 #if __STDC_VERSION__ >= 202311L
 // FIXME: GCC picks __uint128_t as the underlying type for the enumeration
 // value and Clang picks unsigned long long.
-// FIXME: Clang does not yet implement WG14 N3029, so the warning about
-// restricting enumerator values to 'int' is not correct.
 enum GH59352 { // expected-warning {{enumeration values exceed range of largest integer}}
- BigVal = 66666666666666666666wb // expected-warning {{ISO C restricts enumerator values to range of 'int' (66666666666666666666 is too large)}}
+ BigVal = 66666666666666666666wb
 };
 _Static_assert(BigVal == 66666666666666666666wb); /* expected-error {{static assertion failed due to requirement 'BigVal == 66666666666666666666wb'}}
                                                      expected-note {{expression evaluates to '11326434445538011818 == 66666666666666666666'}}
@@ -191,4 +194,38 @@ _Static_assert(
     __uint128_t : 1
     )
 );
+
+#include <limits.h>
+
+void fooinc23() {
+  enum E1 {
+    V1 = INT_MAX
+  } e1;
+
+  enum E2 {
+    V2 = INT_MAX,
+    V3
+  } e2;
+
+  enum E3 {
+    V4 = INT_MAX,
+    V5 = LONG_MIN
+  } e3;
+
+  enum E4 {
+    V6 = 1u,
+    V7 = 2wb
+  } e4;
+
+  _Static_assert(_Generic(V1, int : 1));
+  _Static_assert(_Generic(V2, int : 0, unsigned int : 1));
+  _Static_assert(_Generic(V3, int : 0, unsigned int : 1));
+  _Static_assert(_Generic(V4, int : 0, signed long : 1));
+  _Static_assert(_Generic(V5, int : 0, signed long : 1));
+  _Static_assert(_Generic(V6, int : 1));
+  _Static_assert(_Generic(V7, int : 1));
+  _Static_assert(_Generic((enum E4){}, unsigned int : 1));
+
+}
+
 #endif // __STDC_VERSION__ >= 202311L

@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -371,15 +372,16 @@ static void generateUnrolledLoop(
   loopBodyBlock->getTerminator()->setOperands(lastYielded);
 }
 
-/// Unrolls 'forOp' by 'unrollFactor', returns success if the loop is unrolled.
-LogicalResult mlir::loopUnrollByFactor(
+/// Unrolls 'forOp' by 'unrollFactor', returns the unrolled main loop and the
+/// eplilog loop, if the loop is unrolled.
+FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     scf::ForOp forOp, uint64_t unrollFactor,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn) {
   assert(unrollFactor > 0 && "expected positive unroll factor");
 
   // Return if the loop body is empty.
   if (llvm::hasSingleElement(forOp.getBody()->getOperations()))
-    return success();
+    return UnrolledLoopInfo{forOp, std::nullopt};
 
   // Compute tripCount = ceilDiv((upperBound - lowerBound), step) and populate
   // 'upperBoundUnrolled' and 'stepUnrolled' for static and dynamic cases.
@@ -401,7 +403,7 @@ LogicalResult mlir::loopUnrollByFactor(
       if (*constTripCount == 1 &&
           failed(forOp.promoteIfSingleIteration(rewriter)))
         return failure();
-      return success();
+      return UnrolledLoopInfo{forOp, std::nullopt};
     }
 
     int64_t tripCountEvenMultiple =
@@ -449,11 +451,12 @@ LogicalResult mlir::loopUnrollByFactor(
         boundsBuilder.create<arith::MulIOp>(loc, step, unrollFactorCst);
   }
 
+  UnrolledLoopInfo resultLoops;
+
   // Create epilogue clean up loop starting at 'upperBoundUnrolled'.
   if (generateEpilogueLoop) {
     OpBuilder epilogueBuilder(forOp->getContext());
-    epilogueBuilder.setInsertionPoint(forOp->getBlock(),
-                                      std::next(Block::iterator(forOp)));
+    epilogueBuilder.setInsertionPointAfter(forOp);
     auto epilogueForOp = cast<scf::ForOp>(epilogueBuilder.clone(*forOp));
     epilogueForOp.setLowerBound(upperBoundUnrolled);
 
@@ -466,7 +469,8 @@ LogicalResult mlir::loopUnrollByFactor(
     }
     epilogueForOp->setOperands(epilogueForOp.getNumControlOperands(),
                                epilogueForOp.getInitArgs().size(), results);
-    (void)epilogueForOp.promoteIfSingleIteration(rewriter);
+    if (epilogueForOp.promoteIfSingleIteration(rewriter).failed())
+      resultLoops.epilogueLoopOp = epilogueForOp;
   }
 
   // Create unrolled loop.
@@ -488,8 +492,9 @@ LogicalResult mlir::loopUnrollByFactor(
       },
       annotateFn, iterArgs, yieldedValues);
   // Promote the loop body up if this has turned into a single iteration loop.
-  (void)forOp.promoteIfSingleIteration(rewriter);
-  return success();
+  if (forOp.promoteIfSingleIteration(rewriter).failed())
+    resultLoops.mainLoopOp = forOp;
+  return resultLoops;
 }
 
 /// Check if bounds of all inner loops are defined outside of `forOp`
@@ -671,9 +676,26 @@ LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
   return success();
 }
 
+Range emitNormalizedLoopBoundsForIndexType(RewriterBase &rewriter, Location loc,
+                                           OpFoldResult lb, OpFoldResult ub,
+                                           OpFoldResult step) {
+  Range normalizedLoopBounds;
+  normalizedLoopBounds.offset = rewriter.getIndexAttr(0);
+  normalizedLoopBounds.stride = rewriter.getIndexAttr(1);
+  AffineExpr s0, s1, s2;
+  bindSymbols(rewriter.getContext(), s0, s1, s2);
+  AffineExpr e = (s1 - s0).ceilDiv(s2);
+  normalizedLoopBounds.size =
+      affine::makeComposedFoldedAffineApply(rewriter, loc, e, {lb, ub, step});
+  return normalizedLoopBounds;
+}
+
 Range mlir::emitNormalizedLoopBounds(RewriterBase &rewriter, Location loc,
                                      OpFoldResult lb, OpFoldResult ub,
                                      OpFoldResult step) {
+  if (getType(lb).isIndex()) {
+    return emitNormalizedLoopBoundsForIndexType(rewriter, loc, lb, ub, step);
+  }
   // For non-index types, generate `arith` instructions
   // Check if the loop is already known to have a constant zero lower bound or
   // a constant one step.
@@ -714,9 +736,38 @@ Range mlir::emitNormalizedLoopBounds(RewriterBase &rewriter, Location loc,
   return {newLowerBound, newUpperBound, newStep};
 }
 
+static void denormalizeInductionVariableForIndexType(RewriterBase &rewriter,
+                                                     Location loc,
+                                                     Value normalizedIv,
+                                                     OpFoldResult origLb,
+                                                     OpFoldResult origStep) {
+  AffineExpr d0, s0, s1;
+  bindSymbols(rewriter.getContext(), s0, s1);
+  bindDims(rewriter.getContext(), d0);
+  AffineExpr e = d0 * s1 + s0;
+  OpFoldResult denormalizedIv = affine::makeComposedFoldedAffineApply(
+      rewriter, loc, e, ArrayRef<OpFoldResult>{normalizedIv, origLb, origStep});
+  Value denormalizedIvVal =
+      getValueOrCreateConstantIndexOp(rewriter, loc, denormalizedIv);
+  SmallPtrSet<Operation *, 1> preservedUses;
+  // If an `affine.apply` operation is generated for denormalization, the use
+  // of `origLb` in those ops must not be replaced. These arent not generated
+  // when `origLb == 0` and `origStep == 1`.
+  if (!isConstantIntValue(origLb, 0) || !isConstantIntValue(origStep, 1)) {
+    if (Operation *preservedUse = denormalizedIvVal.getDefiningOp()) {
+      preservedUses.insert(preservedUse);
+    }
+  }
+  rewriter.replaceAllUsesExcept(normalizedIv, denormalizedIvVal, preservedUses);
+}
+
 void mlir::denormalizeInductionVariable(RewriterBase &rewriter, Location loc,
                                         Value normalizedIv, OpFoldResult origLb,
                                         OpFoldResult origStep) {
+  if (getType(origLb).isIndex()) {
+    return denormalizeInductionVariableForIndexType(rewriter, loc, normalizedIv,
+                                                    origLb, origStep);
+  }
   Value denormalizedIv;
   SmallPtrSet<Operation *, 2> preserve;
   bool isStepOne = isConstantIntValue(origStep, 1);
@@ -739,10 +790,29 @@ void mlir::denormalizeInductionVariable(RewriterBase &rewriter, Location loc,
   rewriter.replaceAllUsesExcept(normalizedIv, denormalizedIv, preserve);
 }
 
+static OpFoldResult getProductOfIndexes(RewriterBase &rewriter, Location loc,
+                                        ArrayRef<OpFoldResult> values) {
+  assert(!values.empty() && "unexecpted empty array");
+  AffineExpr s0, s1;
+  bindSymbols(rewriter.getContext(), s0, s1);
+  AffineExpr mul = s0 * s1;
+  OpFoldResult products = rewriter.getIndexAttr(1);
+  for (auto v : values) {
+    products = affine::makeComposedFoldedAffineApply(
+        rewriter, loc, mul, ArrayRef<OpFoldResult>{products, v});
+  }
+  return products;
+}
+
 /// Helper function to multiply a sequence of values.
 static Value getProductOfIntsOrIndexes(RewriterBase &rewriter, Location loc,
                                        ArrayRef<Value> values) {
   assert(!values.empty() && "unexpected empty list");
+  if (getType(values.front()).isIndex()) {
+    SmallVector<OpFoldResult> ofrs = getAsOpFoldResult(values);
+    OpFoldResult product = getProductOfIndexes(rewriter, loc, ofrs);
+    return getValueOrCreateConstantIndexOp(rewriter, loc, product);
+  }
   std::optional<Value> productOf;
   for (auto v : values) {
     auto vOne = getConstantIntValue(v);
@@ -757,7 +827,7 @@ static Value getProductOfIntsOrIndexes(RewriterBase &rewriter, Location loc,
   if (!productOf) {
     productOf = rewriter
                     .create<arith::ConstantOp>(
-                        loc, rewriter.getOneAttr(values.front().getType()))
+                        loc, rewriter.getOneAttr(getType(values.front())))
                     .getResult();
   }
   return productOf.value();
@@ -774,6 +844,16 @@ static Value getProductOfIntsOrIndexes(RewriterBase &rewriter, Location loc,
 static std::pair<SmallVector<Value>, SmallPtrSet<Operation *, 2>>
 delinearizeInductionVariable(RewriterBase &rewriter, Location loc,
                              Value linearizedIv, ArrayRef<Value> ubs) {
+
+  if (linearizedIv.getType().isIndex()) {
+    Operation *delinearizedOp =
+        rewriter.create<affine::AffineDelinearizeIndexOp>(loc, linearizedIv,
+                                                          ubs);
+    auto resultVals = llvm::map_to_vector(
+        delinearizedOp->getResults(), [](OpResult r) -> Value { return r; });
+    return {resultVals, SmallPtrSet<Operation *, 2>{delinearizedOp}};
+  }
+
   SmallVector<Value> delinearizedIvs(ubs.size());
   SmallPtrSet<Operation *, 2> preservedUsers;
 

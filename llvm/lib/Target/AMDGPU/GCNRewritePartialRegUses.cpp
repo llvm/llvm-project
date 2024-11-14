@@ -397,7 +397,7 @@ void GCNRewritePartialRegUses::updateLiveIntervals(Register OldReg,
   }
   if (NewLI.empty())
     NewLI.assign(OldLI, Allocator);
-  NewLI.verify(MRI);
+  assert(NewLI.verify(MRI));
   LIS->removeInterval(OldReg);
 }
 

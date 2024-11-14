@@ -6,6 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This file is shared with libc++. You should also be careful when adding
+// dependencies to this file, since it needs to build for all libc++ targets.
+// -----------------------------------------------------------------------------
+
 #ifndef LLVM_LIBC_SRC___SUPPORT_HIGH_PRECISION_DECIMAL_H
 #define LLVM_LIBC_SRC___SUPPORT_HIGH_PRECISION_DECIMAL_H
 
@@ -23,6 +29,11 @@ struct LShiftTableEntry {
   char const *power_of_five;
 };
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This interface is shared with libc++, if you change this interface you need
+// to update it in both libc and libc++.
+// -----------------------------------------------------------------------------
 // This is used in both this file and in the main str_to_float.h.
 // TODO: Figure out where to put this.
 enum class RoundDirection { Up, Down, Nearest };

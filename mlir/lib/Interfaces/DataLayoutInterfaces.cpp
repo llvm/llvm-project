@@ -29,7 +29,7 @@ using namespace mlir;
   os << "neither the scoping op nor the type class provide data layout "
         "information for "
      << type;
-  llvm::report_fatal_error(Twine(os.str()));
+  llvm::report_fatal_error(Twine(message));
 }
 
 /// Returns the bitwidth of the index type if specified in the param list.
@@ -790,13 +790,22 @@ mlir::detail::verifyTargetSystemSpec(TargetSystemSpecInterface spec,
   DenseMap<StringAttr, DataLayoutEntryInterface> deviceDescKeys;
   DenseSet<TargetSystemSpecInterface::DeviceID> deviceIDs;
   for (const auto &entry : spec.getEntries()) {
-    TargetDeviceSpecInterface targetDeviceSpec = entry.second;
+    auto targetDeviceSpec =
+        dyn_cast<TargetDeviceSpecInterface>(entry.getValue());
+
+    if (!targetDeviceSpec)
+      return failure();
+
     // First, verify individual target device desc specs.
     if (failed(targetDeviceSpec.verifyEntry(loc)))
       return failure();
 
     // Check that device IDs are unique across all entries.
-    TargetSystemSpecInterface::DeviceID deviceID = entry.first;
+    auto deviceID =
+        llvm::dyn_cast<TargetSystemSpecInterface::DeviceID>(entry.getKey());
+    if (!deviceID)
+      return failure();
+
     if (!deviceIDs.insert(deviceID).second) {
       return failure();
     }

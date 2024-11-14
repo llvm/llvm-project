@@ -5,7 +5,7 @@
 ! `mergeable` clause
 !===============================================================================
 
-! CHECK: not yet implemented: OpenMP Block construct clause
+! CHECK: not yet implemented: Unhandled clause MERGEABLE in TASK construct
 subroutine omp_task_mergeable()
   !$omp task mergeable
   call foo()

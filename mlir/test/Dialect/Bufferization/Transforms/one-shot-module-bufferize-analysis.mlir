@@ -1348,3 +1348,15 @@ func.func @private_func_aliasing(%t: tensor<?xf32>) -> f32 {
   %2 = tensor.extract %1[%c0] : tensor<6xf32>
   return %2 : f32
 }
+
+// -----
+
+// CHECK-LABEL: func @recursive_function
+func.func @recursive_function(%a: tensor<?xf32>, %b: tensor<?xf32>) -> (tensor<?xf32>, tensor<?xf32>) {
+  // The analysis does not support recursive function calls and is conservative
+  // around them.
+  // CHECK: call @recursive_function
+  // CHECK-SAME: {__inplace_operands_attr__ = ["false", "false"]}
+  %0:2 = call @recursive_function(%a, %b) : (tensor<?xf32>, tensor<?xf32>) -> (tensor<?xf32>, tensor<?xf32>)
+  return %0#0, %0#1 : tensor<?xf32>, tensor<?xf32>
+}

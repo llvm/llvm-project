@@ -939,10 +939,10 @@ define i1 @extract_value_uadd_fail2(<2 x i8> %xx, <2 x i8> %yy, i32 %idx) {
 
 define i1 @extract_value_uadd_fail3(<2 x i8> %xx, <2 x i8> %yy) {
 ; CHECK-LABEL: @extract_value_uadd_fail3(
-; CHECK-NEXT:    [[X0:%.*]] = and <2 x i8> [[XX:%.*]], <i8 127, i8 127>
-; CHECK-NEXT:    [[Y0:%.*]] = and <2 x i8> [[YY:%.*]], <i8 127, i8 127>
-; CHECK-NEXT:    [[X:%.*]] = add nuw <2 x i8> [[X0]], <i8 1, i8 1>
-; CHECK-NEXT:    [[Y:%.*]] = add nuw <2 x i8> [[Y0]], <i8 1, i8 1>
+; CHECK-NEXT:    [[X0:%.*]] = and <2 x i8> [[XX:%.*]], splat (i8 127)
+; CHECK-NEXT:    [[Y0:%.*]] = and <2 x i8> [[YY:%.*]], splat (i8 127)
+; CHECK-NEXT:    [[X:%.*]] = add nuw <2 x i8> [[X0]], splat (i8 1)
+; CHECK-NEXT:    [[Y:%.*]] = add nuw <2 x i8> [[Y0]], splat (i8 1)
 ; CHECK-NEXT:    [[ADD_UOV:%.*]] = call { <2 x i8>, <2 x i1> } @llvm.uadd.with.overflow.v2i8(<2 x i8> [[X]], <2 x i8> [[Y]])
 ; CHECK-NEXT:    [[ADD:%.*]] = extractvalue { <2 x i8>, <2 x i1> } [[ADD_UOV]], 0
 ; CHECK-NEXT:    [[UOV:%.*]] = extractvalue { <2 x i8>, <2 x i1> } [[ADD_UOV]], 1
@@ -2049,6 +2049,71 @@ if:
 
 exit:
   ret i16 %conv
+}
+
+define i1 @mul_nuw_nsw_nonneg_const(i8 %x) {
+; CHECK-LABEL: @mul_nuw_nsw_nonneg_const(
+; CHECK-NEXT:    ret i1 true
+;
+  %mul = mul nuw nsw i8 %x, 3
+  %cmp = icmp sgt i8 %mul, -1
+  ret i1 %cmp
+}
+
+define i1 @mul_nuw_nsw_nonneg_const_missing_nuw(i8 %x) {
+; CHECK-LABEL: @mul_nuw_nsw_nonneg_const_missing_nuw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul nsw i8 %x, 3
+  %cmp = icmp sgt i8 %mul, -1
+  ret i1 %cmp
+}
+
+define i1 @mul_nuw_nsw_nonneg_const_missing_nsw(i8 %x) {
+; CHECK-LABEL: @mul_nuw_nsw_nonneg_const_missing_nsw(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[MUL]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul nuw i8 %x, 3
+  %cmp = icmp sgt i8 %mul, -1
+  ret i1 %cmp
+}
+
+define i1 @mul_nuw_nsw_nonneg_can_be_one(i8 %x, i8 %y) {
+; CHECK-LABEL: @mul_nuw_nsw_nonneg_can_be_one(
+; CHECK-NEXT:    [[Y_NNEG:%.*]] = and i8 [[Y:%.*]], 127
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i8 [[X:%.*]], [[Y_NNEG]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[MUL]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %y.nneg = and i8 %y, 127
+  %mul = mul nuw nsw i8 %x, %y.nneg
+  %cmp = icmp sgt i8 %mul, -1
+  ret i1 %cmp
+}
+
+define i1 @mul_nuw_nsw_nonneg_cant_be_one(i8 %x, i8 %y) {
+; CHECK-LABEL: @mul_nuw_nsw_nonneg_cant_be_one(
+; CHECK-NEXT:    ret i1 true
+;
+  %y.nneg = and i8 %y, 127
+  %y.nneg.not.one = or i8 %y.nneg, 2
+  %mul = mul nuw nsw i8 %x, %y.nneg.not.one
+  %cmp = icmp sgt i8 %mul, -1
+  ret i1 %cmp
+}
+
+define i1 @mul_nuw_nsw_nonneg_cant_be_one_commuted(i8 %x, i8 %y) {
+; CHECK-LABEL: @mul_nuw_nsw_nonneg_cant_be_one_commuted(
+; CHECK-NEXT:    ret i1 true
+;
+  %y.nneg = and i8 %y, 127
+  %y.nneg.not.one = or i8 %y.nneg, 2
+  %mul = mul nuw nsw i8 %y.nneg.not.one, %x
+  %cmp = icmp sgt i8 %mul, -1
+  ret i1 %cmp
 }
 
 declare void @dummy()

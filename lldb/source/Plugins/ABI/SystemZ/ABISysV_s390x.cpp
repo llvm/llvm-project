@@ -14,9 +14,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObjectConstResult.h"
-#include "lldb/Core/ValueObjectMemory.h"
-#include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -29,6 +26,9 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectMemory.h"
+#include "lldb/ValueObject/ValueObjectRegister.h"
 #include <optional>
 
 using namespace lldb;
@@ -644,7 +644,7 @@ bool ABISysV_s390x::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
 
 bool ABISysV_s390x::GetFallbackRegisterLocation(
     const RegisterInfo *reg_info,
-    UnwindPlan::Row::RegisterLocation &unwind_regloc) {
+    UnwindPlan::Row::AbstractRegisterLocation &unwind_regloc) {
   // If a volatile register is being requested, we don't want to forward the
   // next frame's register contents up the stack -- the register is not
   // retrievable at this frame.

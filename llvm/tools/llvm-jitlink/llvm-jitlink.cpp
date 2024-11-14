@@ -15,6 +15,7 @@
 #include "llvm-jitlink.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX, LLVM_ENABLE_THREADS
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
 #include "llvm/ExecutionEngine/Orc/COFFVCRuntimeSupport.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
@@ -30,6 +31,7 @@
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LoadLinkableFile.h"
+#include "llvm/ExecutionEngine/Orc/MachO.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
@@ -264,6 +266,17 @@ static cl::opt<bool> UseSharedMemory(
 static cl::opt<std::string>
     OverrideTriple("triple", cl::desc("Override target triple detection"),
                    cl::init(""), cl::cat(JITLinkCategory));
+
+static cl::opt<bool> AllLoad("all_load",
+                             cl::desc("Load all members of static archives"),
+                             cl::init(false), cl::cat(JITLinkCategory));
+
+static cl::opt<bool> ForceLoadObjC(
+    "ObjC",
+    cl::desc("Load all members of static archives that implement "
+             "Objective-C classes or categories, or Swift structs, "
+             "classes or extensions"),
+    cl::init(false), cl::cat(JITLinkCategory));
 
 static ExitOnError ExitOnErr;
 
@@ -1033,16 +1046,16 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     PlatformJD->addToLinkOrder(*ProcessSymsJD);
 
     if (TT.isOSBinFormatMachO()) {
-      if (auto P = MachOPlatform::Create(ES, ObjLayer, *PlatformJD,
-                                         OrcRuntime.c_str()))
+      if (auto P =
+              MachOPlatform::Create(ObjLayer, *PlatformJD, OrcRuntime.c_str()))
         ES.setPlatform(std::move(*P));
       else {
         Err = P.takeError();
         return;
       }
     } else if (TT.isOSBinFormatELF()) {
-      if (auto P = ELFNixPlatform::Create(ES, ObjLayer, *PlatformJD,
-                                          OrcRuntime.c_str()))
+      if (auto P =
+              ELFNixPlatform::Create(ObjLayer, *PlatformJD, OrcRuntime.c_str()))
         ES.setPlatform(std::move(*P));
       else {
         Err = P.takeError();
@@ -1057,9 +1070,9 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
         return loadAndLinkDynamicLibrary(JD, DLLName);
       };
 
-      if (auto P = COFFPlatform::Create(ES, ObjLayer, *PlatformJD,
-                                        OrcRuntime.c_str(),
-                                        std::move(LoadDynLibrary)))
+      if (auto P =
+              COFFPlatform::Create(ObjLayer, *PlatformJD, OrcRuntime.c_str(),
+                                   std::move(LoadDynLibrary)))
         ES.setPlatform(std::move(*P));
       else {
         Err = P.takeError();
@@ -1189,7 +1202,7 @@ void Session::modifyPassConfig(const Triple &TT,
 }
 
 Expected<JITDylib *> Session::getOrLoadDynamicLibrary(StringRef LibPath) {
-  auto It = DynLibJDs.find(LibPath.str());
+  auto It = DynLibJDs.find(LibPath);
   if (It != DynLibJDs.end()) {
     return It->second;
   }
@@ -1728,7 +1741,7 @@ static Error addSectCreates(Session &S,
 
     StringRef SCArg(*SCItr);
 
-    auto [SectAndFileName, ExtraSymbolsString] = SCArg.split('@');
+    auto [SectAndFileName, ExtraSymbolsString] = SCArg.rsplit('@');
     auto [SectName, FileName] = SectAndFileName.rsplit(',');
     if (SectName.empty())
       return make_error<StringError>("In -sectcreate=" + SCArg +
@@ -1957,10 +1970,9 @@ static Error addLibraries(Session &S,
              });
 
   // 3. Process library loads.
-  auto AddArchive = [&](const char *Path, const LibraryLoad &LL)
+  auto AddArchive = [&](JITDylib &JD, const char *Path, const LibraryLoad &LL)
       -> Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>> {
-    unique_function<Expected<MaterializationUnit::Interface>(
-        ExecutionSession & ES, MemoryBufferRef ObjBuffer)>
+    StaticLibraryDefinitionGenerator::GetObjectFileInterface
         GetObjFileInterface;
     switch (LL.Modifier) {
     case LibraryLoad::Standard:
@@ -1970,8 +1982,17 @@ static Error addLibraries(Session &S,
       GetObjFileInterface = getObjectFileInterfaceHidden;
       break;
     }
+
+    StaticLibraryDefinitionGenerator::VisitMembersFunction VisitMembers;
+    if (AllLoad)
+      VisitMembers = StaticLibraryDefinitionGenerator::loadAllObjectFileMembers(
+          S.ObjLayer, JD);
+    else if (S.ES.getTargetTriple().isOSBinFormatMachO() && ForceLoadObjC)
+      VisitMembers = ForceLoadMachOArchiveMembers(S.ObjLayer, JD, true);
+
     auto G = StaticLibraryDefinitionGenerator::Load(
-        S.ObjLayer, Path, std::move(GetObjFileInterface));
+        S.ObjLayer, Path, std::move(VisitMembers),
+        std::move(GetObjFileInterface));
     if (!G)
       return G.takeError();
 
@@ -2009,7 +2030,7 @@ static Error addLibraries(Session &S,
     }
 
     if (LL.IsPath) {
-      auto G = AddArchive(LL.LibName.c_str(), LL);
+      auto G = AddArchive(JD, LL.LibName.c_str(), LL);
       if (!G)
         return createFileError(LL.LibName, G.takeError());
       JD.addGenerator(std::move(*G));
@@ -2065,7 +2086,7 @@ static Error addLibraries(Session &S,
         }
         case file_magic::archive:
         case file_magic::macho_universal_binary: {
-          auto G = AddArchive(LibPath.data(), LL);
+          auto G = AddArchive(JD, LibPath.data(), LL);
           if (!G)
             return G.takeError();
           JD.addGenerator(std::move(*G));

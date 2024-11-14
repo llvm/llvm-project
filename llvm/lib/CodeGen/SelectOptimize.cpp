@@ -244,22 +244,25 @@ public:
     Scaled64 getTrueOpCost(DenseMap<const Instruction *, CostInfo> &InstCostMap,
                            const TargetTransformInfo *TTI) {
       if (isa<SelectInst>(I))
-        if (auto *I = dyn_cast<Instruction>(getTrueValue()))
-          return InstCostMap.contains(I) ? InstCostMap[I].NonPredCost
+        if (auto *I = dyn_cast<Instruction>(getTrueValue())) {
+          auto It = InstCostMap.find(I);
+          return It != InstCostMap.end() ? It->second.NonPredCost
                                          : Scaled64::getZero();
+        }
 
       // Or case - add the cost of an extra Or to the cost of the False case.
       if (isa<BinaryOperator>(I))
-        if (auto I = dyn_cast<Instruction>(getFalseValue()))
-          if (InstCostMap.contains(I)) {
+        if (auto I = dyn_cast<Instruction>(getFalseValue())) {
+          auto It = InstCostMap.find(I);
+          if (It != InstCostMap.end()) {
             InstructionCost OrCost = TTI->getArithmeticInstrCost(
                 Instruction::Or, I->getType(), TargetTransformInfo::TCK_Latency,
                 {TargetTransformInfo::OK_AnyValue,
                  TargetTransformInfo::OP_None},
                 {TTI::OK_UniformConstantValue, TTI::OP_PowerOf2});
-            return InstCostMap[I].NonPredCost +
-                   Scaled64::get(*OrCost.getValue());
+            return It->second.NonPredCost + Scaled64::get(*OrCost.getValue());
           }
+        }
 
       return Scaled64::getZero();
     }
@@ -270,15 +273,17 @@ public:
     getFalseOpCost(DenseMap<const Instruction *, CostInfo> &InstCostMap,
                    const TargetTransformInfo *TTI) {
       if (isa<SelectInst>(I))
-        if (auto *I = dyn_cast<Instruction>(getFalseValue()))
-          return InstCostMap.contains(I) ? InstCostMap[I].NonPredCost
+        if (auto *I = dyn_cast<Instruction>(getFalseValue())) {
+          auto It = InstCostMap.find(I);
+          return It != InstCostMap.end() ? It->second.NonPredCost
                                          : Scaled64::getZero();
+        }
 
       // Or case - return the cost of the false case
       if (isa<BinaryOperator>(I))
         if (auto I = dyn_cast<Instruction>(getFalseValue()))
-          if (InstCostMap.contains(I))
-            return InstCostMap[I].NonPredCost;
+          if (auto It = InstCostMap.find(I); It != InstCostMap.end())
+            return It->second.NonPredCost;
 
       return Scaled64::getZero();
     }
@@ -431,7 +436,7 @@ PreservedAnalyses SelectOptimizeImpl::run(Function &F,
   BFI = &FAM.getResult<BlockFrequencyAnalysis>(F);
 
   // When optimizing for size, selects are preferable over branches.
-  if (F.hasOptSize() || llvm::shouldOptimizeForSize(&F, PSI, BFI))
+  if (llvm::shouldOptimizeForSize(&F, PSI, BFI))
     return PreservedAnalyses::all();
 
   LI = &FAM.getResult<LoopAnalysis>(F);
@@ -467,7 +472,7 @@ bool SelectOptimizeImpl::runOnFunction(Function &F, Pass &P) {
   TSchedModel.init(TSI);
 
   // When optimizing for size, selects are preferable over branches.
-  if (F.hasOptSize() || llvm::shouldOptimizeForSize(&F, PSI, BFI))
+  if (llvm::shouldOptimizeForSize(&F, PSI, BFI))
     return false;
 
   return optimizeSelects(F);
