@@ -1,4 +1,4 @@
-## This test checks how llvm-readobj prints for skipped BB entries(-basic-block-address-map-skip-emit-bb-entries) file.
+## This test checks how llvm-readobj prints skipped BB entries (-basic-block-address-map-skip-emit-bb-entries).
 
 ## Check 64-bit:
 # RUN: yaml2obj %s -DBITS=64 -o %t1.x64.o
@@ -66,10 +66,9 @@ Sections:
         Feature: 0x17
         BBRanges:
           - BaseAddress: 0x11111
-            BBEntries:
     PGOAnalyses:
       - FuncEntryCount: 100
-  - Name: '.llvm_bb_addr_map (1)'
+  - Name: '.llvm_bb_addr_map2'
     Type: SHT_LLVM_BB_ADDR_MAP
     Link: .text.bar
     Entries:
@@ -77,7 +76,6 @@ Sections:
         Feature: 0x17
         BBRanges:
           - BaseAddress: 0x33333
-            BBEntries:
     PGOAnalyses:
       - FuncEntryCount: 89
 Symbols:
