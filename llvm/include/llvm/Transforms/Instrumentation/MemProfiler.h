@@ -18,6 +18,7 @@
 
 namespace llvm {
 class Function;
+class IndexedInstrProfReader;
 class Module;
 class TargetLibraryInfo;
 
@@ -65,6 +66,21 @@ namespace memprof {
 // list of call sites, each of the form {LineLocation, CalleeGUID}.
 DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>>
 extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI);
+
+struct LineLocationHash {
+  uint64_t operator()(const LineLocation &Loc) const {
+    return Loc.getHashCode();
+  }
+};
+
+using LocToLocMap =
+    std::unordered_map<LineLocation, LineLocation, LineLocationHash>;
+
+// Compute an undrifting map.  The result is a map from caller GUIDs to an inner
+// map that maps source locations in the profile to those in the current IR.
+DenseMap<uint64_t, LocToLocMap>
+computeUndriftMap(Module &M, IndexedInstrProfReader *MemProfReader,
+                  const TargetLibraryInfo &TLI);
 
 } // namespace memprof
 } // namespace llvm
