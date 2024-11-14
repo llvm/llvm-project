@@ -1674,9 +1674,6 @@ IndexedMemProfReader::getMemProfCallerCalleePairs() const {
   memprof::LinearFrameIdConverter FrameIdConv(FrameBase);
   memprof::CallerCalleePairExtractor Extractor(CallStackBase, FrameIdConv);
 
-  // Collect the set of linear call stack IDs.  Since we expect a lot of
-  // duplicates, we first collect them in the form a bit vector before
-  // processing them.
   for (const memprof::IndexedMemProfRecord &IndexedRecord :
        MemProfRecordTable->data())
     for (const memprof::IndexedAllocationInfo &IndexedAI :
