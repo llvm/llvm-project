@@ -103,6 +103,7 @@ enum class OffloadArch {
   GFX909,
   GFX90a,
   GFX90c,
+  GFX9_4_GENERIC,
   GFX940,
   GFX941,
   GFX942,

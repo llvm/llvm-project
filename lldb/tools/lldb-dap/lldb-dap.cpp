@@ -1615,8 +1615,8 @@ void request_evaluate(const llvm::json::Object &request) {
     if (frame.IsValid()) {
       g_dap.focus_tid = frame.GetThread().GetThreadID();
     }
-    auto result =
-        RunLLDBCommandsVerbatim(llvm::StringRef(), {std::string(expression)});
+    auto result = RunLLDBCommandsVerbatim(g_dap.debugger, llvm::StringRef(),
+                                          {std::string(expression)});
     EmplaceSafeString(body, "result", result);
     body.try_emplace("variablesReference", (int64_t)0);
   } else {
@@ -1889,14 +1889,14 @@ void request_initialize(const llvm::json::Object &request) {
       "lldb-dap", "Commands for managing lldb-dap.");
   if (GetBoolean(arguments, "supportsStartDebuggingRequest", false)) {
     cmd.AddCommand(
-        "start-debugging", new StartDebuggingRequestHandler(),
+        "start-debugging", new StartDebuggingRequestHandler(g_dap),
         "Sends a startDebugging request from the debug adapter to the client "
         "to start a child debug session of the same type as the caller.");
   }
   cmd.AddCommand(
-      "repl-mode", new ReplModeRequestHandler(),
+      "repl-mode", new ReplModeRequestHandler(g_dap),
       "Get or set the repl behavior of lldb-dap evaluation requests.");
-  cmd.AddCommand("send-event", new SendEventRequestHandler(),
+  cmd.AddCommand("send-event", new SendEventRequestHandler(g_dap),
                  "Sends an DAP event to the client.");
 
   g_dap.progress_event_thread = std::thread(ProgressEventThreadFunction);
