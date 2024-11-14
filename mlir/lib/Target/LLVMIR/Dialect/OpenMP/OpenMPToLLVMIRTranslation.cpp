@@ -3491,23 +3491,32 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
       [&moduleTranslation](
           llvm::OpenMPIRBuilder::DeviceInfoTy type,
           llvm::ArrayRef<BlockArgument> blockArgs,
-          llvm::OpenMPIRBuilder::MapValuesArrayTy &basePointers,
-          llvm::OpenMPIRBuilder::MapDeviceInfoArrayTy &devicePointers,
+          llvm::SmallVectorImpl<Value> &useDeviceVars, MapInfoData &mapInfoData,
           llvm::function_ref<llvm::Value *(llvm::Value *)> mapper = nullptr) {
-        // Get a range to iterate over `basePointers` after filtering based on
-        // `devicePointers` and the given device info type.
-        auto basePtrRange = llvm::map_range(
-            llvm::make_filter_range(
-                llvm::zip_equal(basePointers, devicePointers),
-                [type](auto x) { return std::get<1>(x) == type; }),
-            [](auto x) { return std::get<0>(x); });
+        for (auto [arg, useDevVar] :
+             llvm::zip_equal(blockArgs, useDeviceVars)) {
 
-        // Map block arguments to the corresponding processed base pointer. If
-        // a mapper is not specified, map the block argument to the base pointer
-        // directly.
-        for (auto [arg, basePointer] : llvm::zip_equal(blockArgs, basePtrRange))
-          moduleTranslation.mapValue(arg, mapper ? mapper(basePointer)
-                                                 : basePointer);
+          auto getMapBasePtr = [](omp::MapInfoOp mapInfoOp) {
+            return mapInfoOp.getVarPtrPtr() ? mapInfoOp.getVarPtrPtr()
+                                            : mapInfoOp.getVarPtr();
+          };
+
+          auto useDevMap = cast<omp::MapInfoOp>(useDevVar.getDefiningOp());
+          for (auto [mapClause, devicePointer, basePointer] : llvm::zip_equal(
+                   mapInfoData.MapClause, mapInfoData.DevicePointers,
+                   mapInfoData.BasePointers)) {
+            auto mapOp = cast<omp::MapInfoOp>(mapClause);
+            if (getMapBasePtr(mapOp) != getMapBasePtr(useDevMap) ||
+                devicePointer != type)
+              continue;
+
+            if (llvm::Value *devPtrInfoMap =
+                    mapper ? mapper(basePointer) : basePointer) {
+              moduleTranslation.mapValue(arg, devPtrInfoMap);
+              break;
+            }
+          }
+        }
       };
 
   using BodyGenTy = llvm::OpenMPIRBuilder::BodyGenTy;
@@ -3525,16 +3534,17 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
 
         mapUseDevice(llvm::OpenMPIRBuilder::DeviceInfoTy::Address,
                      blockArgIface.getUseDeviceAddrBlockArgs(),
-                     combinedInfo.BasePointers, combinedInfo.DevicePointers,
+                     useDeviceAddrVars, mapData,
                      [&](llvm::Value *basePointer) -> llvm::Value * {
+                       if (!info.DevicePtrInfoMap[basePointer].second)
+                         return nullptr;
                        return builder.CreateLoad(
                            builder.getPtrTy(),
                            info.DevicePtrInfoMap[basePointer].second);
                      });
         mapUseDevice(llvm::OpenMPIRBuilder::DeviceInfoTy::Pointer,
-                     blockArgIface.getUseDevicePtrBlockArgs(),
-                     combinedInfo.BasePointers, combinedInfo.DevicePointers,
-                     [&](llvm::Value *basePointer) {
+                     blockArgIface.getUseDevicePtrBlockArgs(), useDevicePtrVars,
+                     mapData, [&](llvm::Value *basePointer) {
                        return info.DevicePtrInfoMap[basePointer].second;
                      });
 
@@ -3554,10 +3564,10 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
         if (ompBuilder->Config.IsTargetDevice.value_or(false)) {
           mapUseDevice(llvm::OpenMPIRBuilder::DeviceInfoTy::Address,
                        blockArgIface.getUseDeviceAddrBlockArgs(),
-                       mapData.BasePointers, mapData.DevicePointers);
+                       useDeviceAddrVars, mapData);
           mapUseDevice(llvm::OpenMPIRBuilder::DeviceInfoTy::Pointer,
                        blockArgIface.getUseDevicePtrBlockArgs(),
-                       mapData.BasePointers, mapData.DevicePointers);
+                       useDevicePtrVars, mapData);
         }
 
         if (failed(inlineConvertOmpRegions(region, "omp.data.region", builder,
@@ -3945,6 +3955,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
     if (!mapData.IsDeclareTarget[i] && !mapData.IsAMember[i])
       kernelInput.push_back(mapData.OriginalValue[i]);
   }
+
   SmallVector<llvm::OpenMPIRBuilder::DependData> dds;
   buildDependData(targetOp.getDependKinds(), targetOp.getDependVars(),
                   moduleTranslation, dds);
