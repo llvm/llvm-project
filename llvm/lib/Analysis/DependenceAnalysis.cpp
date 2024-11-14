@@ -722,9 +722,15 @@ static AliasResult underlyingObjectsAlias(AAResults *AA, LoopInfo *LI,
   const Value *AObj = getUnderlyingObject(LocA.Ptr);
   const Value *BObj = getUnderlyingObject(LocB.Ptr);
 
-  // If the underlying objects are the same, they must alias.
-  if (AObj == BObj)
+  if (AObj == BObj) {
+    // The dependence test gets confused if the size of the memory accesses
+    // differ.
+    if (LocA.Size != LocB.Size)
+      return AliasResult::MayAlias;
+
+    // If the underlying objects are the same, they must alias.
     return AliasResult::MustAlias;
+  }
 
   if (auto *APhi = dyn_cast<PHINode>(AObj)) {
     if (auto *BPhi = dyn_cast<PHINode>(BObj)) {
