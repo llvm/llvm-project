@@ -2385,9 +2385,8 @@ define <2 x i32> @do_stuff(<2 x i64> %0, <2 x i64> %1) {
 ;
 ; CHECK-GI-LABEL: do_stuff:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
-; CHECK-GI-NEXT:    ext v2.16b, v1.16b, v2.16b, #8
+; CHECK-GI-NEXT:    mov d2, v1.d[1]
 ; CHECK-GI-NEXT:    umull v0.2d, v2.2s, v0.2s
 ; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-GI-NEXT:    add v0.2s, v0.2s, v1.2s

@@ -1594,6 +1594,13 @@ def combine_shuffle_undef_rhs : GICombineRule<
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])
 >;
 
+def combine_shuffle_disjoint_mask : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
+        [{ return Helper.matchShuffleDisjointMask(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])
+>;
+
 // match_extract_of_element and insert_vector_elt_oob must be the first!
 def vector_ops_combines: GICombineGroup<[
 match_extract_of_element_undef_vector,
@@ -1945,7 +1952,8 @@ def constant_fold_binops : GICombineGroup<[constant_fold_binop,
 def prefer_sign_combines : GICombineGroup<[nneg_zext]>;
 
 def shuffle_combines : GICombineGroup<[combine_shuffle_concat,
-                                       combine_shuffle_undef_rhs]>;
+                                       combine_shuffle_undef_rhs,
+                                       combine_shuffle_disjoint_mask]>;
 
 def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     vector_ops_combines, freeze_combines, cast_combines,
