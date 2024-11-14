@@ -722,7 +722,7 @@ ConnectionFileDescriptor::ConnectFD(llvm::StringRef s,
 ConnectionStatus ConnectionFileDescriptor::ConnectFile(
     llvm::StringRef s, socket_id_callback_type socket_id_callback,
     Status *error_ptr) {
-#if !defined(__AIX__)
+#if !defined(_AIX)
 #if LLDB_ENABLE_POSIX
   std::string addr_str = s.str();
   // file:///PATH

@@ -3920,6 +3920,19 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known.Zero.setBitsFrom(1);
     break;
   }
+  case ISD::MGATHER:
+  case ISD::MLOAD: {
+    ISD::LoadExtType ETy =
+        (Opcode == ISD::MGATHER)
+            ? cast<MaskedGatherSDNode>(Op)->getExtensionType()
+            : cast<MaskedLoadSDNode>(Op)->getExtensionType();
+    if (ETy == ISD::ZEXTLOAD) {
+      EVT MemVT = cast<MemSDNode>(Op)->getMemoryVT();
+      KnownBits Known0(MemVT.getScalarSizeInBits());
+      return Known0.zext(BitWidth);
+    }
+    break;
+  }
   case ISD::LOAD: {
     LoadSDNode *LD = cast<LoadSDNode>(Op);
     const Constant *Cst = TLI->getTargetConstantFromLoad(LD);

@@ -67,7 +67,7 @@ public:
 
   bool ReadPC(lldb::addr_t &start_pc);
 
-#ifdef __AIX__
+#ifdef _AIX
   bool ReadLR(lldb::addr_t &lr);
 #endif
 

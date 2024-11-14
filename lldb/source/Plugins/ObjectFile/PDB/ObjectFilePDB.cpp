@@ -117,7 +117,7 @@ size_t ObjectFilePDB::GetModuleSpecifications(
   llvm::BumpPtrAllocator allocator;
   std::unique_ptr<PDBFile> pdb_file = loadPDBFile(file.GetPath(), allocator);
   if (!pdb_file){
-#if !defined(__AIX__)
+#if !defined(_AIX)
     return initial_count;
 #else
     return specs.GetSize() - initial_count;
@@ -127,7 +127,7 @@ size_t ObjectFilePDB::GetModuleSpecifications(
   auto info_stream = pdb_file->getPDBInfoStream();
   if (!info_stream) {
     llvm::consumeError(info_stream.takeError());
-#if !defined(__AIX__)
+#if !defined(_AIX)
     return initial_count;
 #else
     return specs.GetSize() - initial_count;
@@ -136,7 +136,7 @@ size_t ObjectFilePDB::GetModuleSpecifications(
   auto dbi_stream = pdb_file->getPDBDbiStream();
   if (!dbi_stream) {
     llvm::consumeError(dbi_stream.takeError());
-#if !defined(__AIX__)
+#if !defined(_AIX)
     return initial_count;
 #else
     return specs.GetSize() - initial_count;

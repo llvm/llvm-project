@@ -32,7 +32,7 @@
 
 #include "llvm/Support/VersionTuple.h"
 
-#if defined(__AIX__)
+#if defined(_AIX)
 struct ld_xinfo;
 #endif
 
@@ -200,7 +200,7 @@ public:
   Status GetMemoryRegionInfo(lldb::addr_t addr, MemoryRegionInfo &range_info);
 
   std::optional<uint32_t> GetWatchpointSlotCount();
-#if defined(__AIX__)
+#if defined(_AIX)
   Status GetLDXINFO(struct ld_xinfo *info_ptr);
 #endif
 

@@ -46,7 +46,7 @@ bool lldb_private::InferiorCallMmap(Process *process, addr_t &allocated_addr,
   function_options.include_inlines = false;
 
   SymbolContextList sc_list;
-#if !defined(__AIX__)
+#if !defined(_AIX)
   process->GetTarget().GetImages().FindFunctions(
       ConstString("mmap"), eFunctionNameTypeFull, function_options, sc_list);
 #else
@@ -122,7 +122,7 @@ bool lldb_private::InferiorCallMmap(Process *process, addr_t &allocated_addr,
         MmapArgList args =
             process->GetTarget().GetPlatform()->GetMmapArgumentList(
                 arch, addr, length, prot_arg, flags, fd, offset);
-#if defined(__AIX__)
+#if defined(_AIX)
         lldb::ThreadPlanSP call_plan_sp(
             new ThreadPlanCallFunction(*thread, mmap_range.GetBaseAddress(),
                                        toc_range.GetBaseAddress(),

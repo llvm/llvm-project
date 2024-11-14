@@ -65,7 +65,7 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VersionTuple.h"
 
-#if defined(__AIX__)
+#if defined(_AIX)
 struct ld_xinfo;
 #endif
 
@@ -1884,7 +1884,7 @@ public:
   Status GetMemoryRegionInfo(lldb::addr_t load_addr,
                              MemoryRegionInfo &range_info);
 
-#if defined(__AIX__)
+#if defined(_AIX)
   Status GetLDXINFO(struct ld_xinfo *info_ptr);
 #endif
 
@@ -2823,7 +2823,7 @@ protected:
         "Process::DoGetMemoryRegionInfo() not supported");
   }
 
-#if defined(__AIX__)
+#if defined(_AIX)
   virtual Status DoGetLDXINFO(struct ld_xinfo *info_ptr) {
     return Status("Process::DoGetLDXINFO() not supported");
   }

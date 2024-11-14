@@ -48,7 +48,7 @@
 #include "ProcessGDBRemote.h"
 #include "ProcessGDBRemoteLog.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
-#if defined(__AIX__)
+#if defined(_AIX)
 #include <sys/ldr.h>
 #endif
 
@@ -3011,7 +3011,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qLDXINFO(StringExtractorGDBRemote &pack
     return SendErrorResponse(0xff);
   }
 
-#if defined(__AIX__)
+#if defined(_AIX)
   // FIXME: buffer size
   struct ld_xinfo info[64];
   if (ptrace64(PT_LDXINFO, m_current_process->GetID(), (long long)&(info[0]), sizeof(info), nullptr) != 0) {

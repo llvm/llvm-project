@@ -31,7 +31,7 @@
 // Define these constants from AIX mman.h for use when targeting remote aix
 // systems even when host has different values.
 
-#if defined(__AIX__)
+#if defined(_AIX)
 #include <sys/mman.h>
 #endif
 
@@ -80,7 +80,7 @@ void PlatformAIX::Initialize() {
   PlatformPOSIX::Initialize();
 
   if (g_initialize_count++ == 0) {
-#if defined(__AIX__)
+#if defined(_AIX)
     PlatformSP default_platform_sp(new PlatformAIX(true));
     default_platform_sp->SetSystemArchitecture(HostInfo::GetArchitecture());
     Platform::SetHostPlatform(default_platform_sp);
@@ -294,7 +294,7 @@ MmapArgList PlatformAIX::GetMmapArgumentList(const ArchSpec &arch,
                                                addr_t addr, addr_t length,
                                                unsigned prot, unsigned flags,
                                                addr_t fd, addr_t offset) {
-#if defined(__AIX__)
+#if defined(_AIX)
   unsigned flags_platform = MAP_VARIABLE | MAP_PRIVATE | MAP_ANONYMOUS;
 #else
   unsigned flags_platform = 0;

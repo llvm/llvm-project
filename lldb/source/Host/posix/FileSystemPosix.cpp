@@ -11,7 +11,7 @@
 // C includes
 #include <dirent.h>
 #include <fcntl.h>
-#if !defined(__AIX__)
+#if !defined(_AIX)
 #include <sys/mount.h>
 #endif
 #include <sys/param.h>

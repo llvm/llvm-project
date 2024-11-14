@@ -68,7 +68,7 @@ uint32_t UnwindLLDB::DoGetFrameCount() {
   return m_frames.size();
 }
 
-#ifdef __AIX__
+#ifdef _AIX
 bool UGLY_HACK_NULL_TOPFRAME = false;
 #endif
 
@@ -95,7 +95,7 @@ bool UnwindLLDB::AddFirstFrame() {
   if (!reg_ctx_sp->ReadPC(first_cursor_sp->start_pc))
     goto unwind_done;
 
-#ifdef __AIX__
+#ifdef _AIX
   lldb::addr_t lr;
   if (!reg_ctx_sp->ReadLR(lr))
     goto unwind_done;

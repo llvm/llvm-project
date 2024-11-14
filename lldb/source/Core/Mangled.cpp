@@ -167,7 +167,7 @@ static char *GetItaniumDemangledStr(const char *M) {
            "Expected demangled_size to return length including trailing null");
   }
 
-#if !defined(__AIX__)  
+#if !defined(_AIX)  
   if (Log *log = GetLog(LLDBLog::Demangle)) {
     if (demangled_cstr)
       LLDB_LOGF(log, "demangled itanium: %s -> \"%s\"", M, demangled_cstr);

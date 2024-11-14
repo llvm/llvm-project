@@ -263,7 +263,7 @@ bool Section::ResolveContainedAddress(addr_t offset, Address &so_addr,
 
 bool Section::ContainsFileAddress(addr_t vm_addr) const {
   const addr_t file_addr = GetFileAddress();
-#ifdef __AIX__
+#ifdef _AIX
   if (file_addr == 0)
     return false;
 #endif
