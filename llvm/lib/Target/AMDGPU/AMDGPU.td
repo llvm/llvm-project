@@ -1627,7 +1627,10 @@ def FeatureISAVersion9_4_Common : FeatureSet<
 
 def FeatureISAVersion9_5_Common : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
-  [FeatureGFX950Insts,
+  [FeatureFP8Insts,
+   FeatureFP8ConversionInsts,
+   FeatureCvtFP8VOP1Bug,
+   FeatureGFX950Insts,
    FeatureAddressableLocalMemorySize163840,
    FeaturePrngInst,
    FeatureBF16ConversionInsts,
@@ -1638,8 +1641,7 @@ def FeatureISAVersion9_5_Common : FeatureSet<
    FeatureFP6BF6ConversionScaleInsts,
    FeatureDot12Insts,
    FeatureDot13Insts,
-   FeatureAtomicBufferPkAddBF16Inst,
-   FeatureFP8Insts
+   FeatureAtomicBufferPkAddBF16Inst
    ])>;
 
 def FeatureISAVersion9_4_0 : FeatureSet<
