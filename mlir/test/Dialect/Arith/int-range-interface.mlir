@@ -253,6 +253,8 @@ func.func @ceil_divsi(%arg0 : index) -> i1 {
 // CHECK: %[[ret:.*]] = arith.constant true
 // CHECK: return %[[ret]]
 func.func @ceil_divsi_intmin_bug_115293() -> i1 {
+    %intMin_i64 = test.with_bounds { smin = -9223372036854775808 : si64, smax = -9223372036854775808 : si64, umin = 9223372036854775808 : ui64, umax = 9223372036854775808 : ui64 } : i64
+
     %cIntMin_i64 = arith.constant -9223372036854775808 : i64
     %cDenom_i64 = arith.constant 1189465982 : i64
     %cRes_i64 = arith.constant 7754212542 : i64
