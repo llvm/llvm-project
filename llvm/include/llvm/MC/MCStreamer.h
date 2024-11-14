@@ -323,6 +323,8 @@ public:
     return GenerateCasFriendlyDebugInfo;
   }
 
+  MCSymbol *emitLineTableLabel();
+
   /// When emitting an object file, create and emit a real label. When emitting
   /// textual assembly, this should do nothing to avoid polluting our output.
   virtual MCSymbol *emitCFILabel();
