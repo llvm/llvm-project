@@ -172,7 +172,7 @@ Error AutoLoadDynamicLibrarySearchGenerator::tryToGenerate(
 
 Error AutoLoadDynamicLibrarySearchGenerator::tryToResolve(
     SymbolNameSet CandidateSyms,
-    ExecutorProcessControl::ResolveSymbolsCompleteFn OnCompleteFn) {
+    DylibManager::ResolveSymbolsCompleteFn OnCompleteFn) {
 
   LLVM_DEBUG({
     dbgs() << "AutoLoadDynamicLibrarySearchGenerator trying to resolve "
@@ -185,7 +185,7 @@ Error AutoLoadDynamicLibrarySearchGenerator::tryToResolve(
     LookupSymbols.add(S, SymbolLookupFlags::WeaklyReferencedSymbol);
   }
 
-  EPC.resolveSymbolsAsync(LookupSymbols, std::move(OnCompleteFn));
+  EPC.getDylibMgr().resolveSymbolsAsync(LookupSymbols, std::move(OnCompleteFn));
 
   return Error::success();
 }

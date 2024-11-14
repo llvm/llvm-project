@@ -104,7 +104,7 @@ public:
 
   Error
   tryToResolve(SymbolNameSet CandidateSyms,
-               ExecutorProcessControl::ResolveSymbolsCompleteFn OnCompleteFn);
+               DylibManager::ResolveSymbolsCompleteFn OnCompleteFn);
 
 private:
   ExecutorProcessControl &EPC;

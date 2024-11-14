@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_DYLIBMANAGER_H
 #define LLVM_EXECUTIONENGINE_ORC_DYLIBMANAGER_H
 
+#include "llvm/ExecutionEngine/Orc/Shared/AutoLoadDylibUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
@@ -60,6 +61,9 @@ public:
   using SymbolLookupCompleteFn =
       unique_function<void(Expected<std::vector<tpctypes::LookupResult>>)>;
 
+  using ResolveSymbolsCompleteFn =
+      unique_function<void(Expected<std::vector<ResolveResult>>)>;
+
   /// Search for symbols in the target process.
   ///
   /// The result of the lookup is a 2-dimensional array of target addresses
@@ -68,6 +72,9 @@ public:
   /// symbol is not found then it be assigned a '0' value.
   virtual void lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
                                   SymbolLookupCompleteFn F) = 0;
+
+  virtual void resolveSymbolsAsync(ArrayRef<SymbolLookupSet> Request,
+                                   ResolveSymbolsCompleteFn F) = 0;
 };
 
 } // end namespace llvm::orc

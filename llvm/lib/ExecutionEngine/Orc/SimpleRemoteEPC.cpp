@@ -60,7 +60,7 @@ static void
 resolveSymbolsAsyncHelper(EPCGenericDylibManager &DylibMgr,
                           ArrayRef<SymbolLookupSet> Request,
                           std::vector<ResolveResult> Result,
-                          SimpleRemoteEPC::ResolveSymbolsCompleteFn Complete) {
+                          DylibManager::ResolveSymbolsCompleteFn Complete) {
   if (Request.empty())
     return Complete(std::move(Result));
 
@@ -92,7 +92,7 @@ void SimpleRemoteEPC::lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
 
 void SimpleRemoteEPC::resolveSymbolsAsync(ArrayRef<SymbolLookupSet> Request,
                                           ResolveSymbolsCompleteFn Complete) {
-  resolveSymbolsAsyncHelper(*DylibMgr, Request, {}, std::move(Complete));
+  resolveSymbolsAsyncHelper(*EPCDylibMgr, Request, {}, std::move(Complete));
 }
 
 Expected<int32_t> SimpleRemoteEPC::runAsMain(ExecutorAddr MainFnAddr,
