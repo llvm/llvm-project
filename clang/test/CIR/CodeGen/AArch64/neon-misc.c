@@ -860,3 +860,50 @@ uint32x2_t test_vqmovn_u64(uint64x2_t a) {
   // LLVM:   [[VQMOVN_V1_I:%.*]] = call <2 x i32> @llvm.aarch64.neon.uqxtn.v2i32(<2 x i64> [[A]])
   // LLVM:   ret <2 x i32> [[VQMOVN_V1_I]]
 }
+float32x2_t test_vcvt_f32_s32(int32x2_t a) {
+  return vcvt_f32_s32(a);
+
+  // CIR-LABEL: vcvt_f32_s32
+  // {{%.*}} = cir.cast(int_to_float, {{%.*}} : !cir.vector<!s32i x 2>), !cir.vector<!cir.float x 2>
+
+  // LLVM: {{.*}}test_vcvt_f32_s32(<2 x i32>{{.*}}[[a:%.*]])
+  // LLVM:  [[TMP0:%.*]] = bitcast <2 x i32> [[a]] to <8 x i8>
+  // LLVM:  [[VCVT_I:%.*]] = sitofp <2 x i32> [[a]] to <2 x float>
+  // LLVM:  ret <2 x float> [[VCVT_I]]
+}
+
+float32x2_t test_vcvt_f32_u32(uint32x2_t a) {
+  return vcvt_f32_u32(a);
+
+  // CIR-LABEL: vcvt_f32_u32
+  // {{%.*}} = cir.cast(int_to_float, {{%.*}} : !cir.vector<!u32i x 2>), !cir.vector<!cir.float x 2>
+
+  // LLVM: {{.*}}test_vcvt_f32_u32(<2 x i32>{{.*}}[[a:%.*]])
+  // LLVM:  [[TMP0:%.*]] = bitcast <2 x i32> [[a]] to <8 x i8>
+  // LLVM:  [[VCVT_I:%.*]] = uitofp <2 x i32> [[a]] to <2 x float>
+  // LLVM:  ret <2 x float> [[VCVT_I]]
+}
+
+float32x4_t test_vcvtq_f32_s32(int32x4_t a) {
+  return vcvtq_f32_s32(a);
+
+  // CIR-LABEL: vcvtq_f32_s32
+  // {{%.*}} = cir.cast(int_to_float, {{%.*}} : !cir.vector<!s32i x 4>), !cir.vector<!cir.float x 4>
+
+  // LLVM: {{.*}}test_vcvtq_f32_s32(<4 x i32>{{.*}}[[a:%.*]])
+  // LLVM:  [[TMP0:%.*]] = bitcast <4 x i32> [[a]] to <16 x i8>
+  // LLVM:  [[VCVT_I:%.*]] = sitofp <4 x i32> [[a]] to <4 x float>
+  // LLVM:  ret <4 x float> [[VCVT_I]]
+}
+
+float32x4_t test_vcvtq_f32_u32(uint32x4_t a) {
+  return vcvtq_f32_u32(a);
+
+  // CIR-LABEL: vcvtq_f32_u32
+  // {{%.*}} = cir.cast(int_to_float, {{%.*}} : !cir.vector<!u32i x 4>), !cir.vector<!cir.float x 4>
+
+  // LLVM: {{.*}}test_vcvtq_f32_u32(<4 x i32>{{.*}}[[a:%.*]])
+  // LLVM:  [[TMP0:%.*]] = bitcast <4 x i32> [[a]] to <16 x i8>
+  // LLVM:  [[VCVT_I:%.*]] = uitofp <4 x i32> [[a]] to <4 x float>
+  // LLVM:  ret <4 x float> [[VCVT_I]]
+}

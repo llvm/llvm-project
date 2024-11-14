@@ -2317,6 +2317,7 @@ mlir::Value CIRGenFunction::emitCommonNeonBuiltinExpr(
   // Determine the type of this overloaded NEON intrinsic.
   NeonTypeFlags neonType(neonTypeConst->getZExtValue());
   bool isUnsigned = neonType.isUnsigned();
+  bool isQuad = neonType.isQuad();
   const bool hasLegalHalfType = getTarget().hasLegalHalfType();
   // The value of allowBFloatArgsAndRet is true for AArch64, but it should
   // come from ABI info.
@@ -2377,6 +2378,13 @@ mlir::Value CIRGenFunction::emitCommonNeonBuiltinExpr(
                             ? "aarch64.neon.sqadd"
                             : "aarch64.neon.sqsub",
                         vTy, getLoc(e->getExprLoc()));
+  }
+  case NEON::BI__builtin_neon_vcvt_f32_v:
+  case NEON::BI__builtin_neon_vcvtq_f32_v: {
+    ops[0] = builder.createBitcast(ops[0], ty);
+    ty = GetNeonType(this, NeonTypeFlags(NeonTypeFlags::Float32, false, isQuad),
+                     hasLegalHalfType);
+    return builder.createCast(cir::CastKind::int_to_float, ops[0], ty);
   }
   case NEON::BI__builtin_neon_vext_v:
   case NEON::BI__builtin_neon_vextq_v: {
