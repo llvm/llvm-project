@@ -70,7 +70,7 @@ public:
     /// @returns The lower half of the size range.
     LIBC_INLINE SizeRange lower() const { return {min, width / 2}; }
 
-    /// @returns The lower half of the size range.
+    /// @returns The upper half of the size range.
     LIBC_INLINE SizeRange upper() const { return {min + width / 2, width / 2}; }
 
     /// @returns The largest size in this range.
