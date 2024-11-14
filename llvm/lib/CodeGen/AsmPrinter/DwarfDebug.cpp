@@ -2277,6 +2277,10 @@ static void recordSourceLine(AsmPrinter &Asm, unsigned Line, unsigned Col,
 
 const MachineInstr *
 DwarfDebug::emitInitialLocDirective(const MachineFunction &MF, unsigned CUID) {
+  // Don't deal with functions that have no instructions.
+  if (llvm::all_of(MF, [](const MachineBasicBlock &MBB) { return MBB.empty(); }))
+    return nullptr;
+
   std::pair<const MachineInstr *, bool> PrologEnd = findPrologueEndLoc(&MF);
   const MachineInstr *PrologEndLoc = PrologEnd.first;
   bool IsEmptyPrologue = PrologEnd.second;
