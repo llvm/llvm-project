@@ -12857,11 +12857,10 @@ const SCEV *ScalarEvolution::getUDivCeilSCEV(const SCEV *N, const SCEV *D) {
   return getAddExpr(MinNOne, getUDivExpr(NMinusOne, D));
 }
 
-const SCEV *ScalarEvolution::computeMaxBECountForLT(const SCEV *Start,
-                                                    const SCEV *Stride,
-                                                    const SCEV *End,
-                                                    unsigned BitWidth,
-                                                    bool IsSigned) {
+const SCEV *
+ScalarEvolution::computeMaxBECountForLT(const SCEV *Start, const SCEV *Stride,
+                                        const SCEV *End, const Loop *L,
+                                        unsigned BitWidth, bool IsSigned) {
   // The logic in this function assumes we can represent a positive stride.
   // If we can't, the backedge-taken count must be zero.
   if (IsSigned && BitWidth == 1)
@@ -12895,8 +12894,10 @@ const SCEV *ScalarEvolution::computeMaxBECountForLT(const SCEV *Start,
   // the case End = RHS of the loop termination condition. This is safe because
   // in the other case (End - Start) is zero, leading to a zero maximum backedge
   // taken count.
-  APInt MaxEnd = IsSigned ? APIntOps::smin(getSignedRangeMax(End), Limit)
-                          : APIntOps::umin(getUnsignedRangeMax(End), Limit);
+  const SCEV *GuardedEnd = applyLoopGuards(End, L);
+  APInt MaxEnd = IsSigned
+                     ? APIntOps::smin(getSignedRangeMax(GuardedEnd), Limit)
+                     : APIntOps::umin(getUnsignedRangeMax(GuardedEnd), Limit);
 
   // MaxBECount = ceil((max(MaxEnd, MinStart) - MinStart) / Stride)
   MaxEnd = IsSigned ? APIntOps::smax(MaxEnd, MinStart)
@@ -13150,7 +13151,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       // loop (RHS), and the fact that IV does not overflow (which is
       // checked above).
       const SCEV *MaxBECount = computeMaxBECountForLT(
-          Start, Stride, RHS, getTypeSizeInBits(LHS->getType()), IsSigned);
+          Start, Stride, RHS, L, getTypeSizeInBits(LHS->getType()), IsSigned);
       return ExitLimit(getCouldNotCompute() /* ExactNotTaken */, MaxBECount,
                        MaxBECount, false /*MaxOrZero*/, Predicates);
     }
@@ -13334,7 +13335,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     MaxOrZero = true;
   } else {
     ConstantMaxBECount = computeMaxBECountForLT(
-        Start, Stride, RHS, getTypeSizeInBits(LHS->getType()), IsSigned);
+        Start, Stride, RHS, L, getTypeSizeInBits(LHS->getType()), IsSigned);
   }
 
   if (isa<SCEVCouldNotCompute>(ConstantMaxBECount) &&

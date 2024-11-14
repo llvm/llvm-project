@@ -2218,8 +2218,8 @@ private:
   ///   actually doesn't, or we'd have to immediately execute UB)
   /// We *don't* assert these preconditions so please be careful.
   const SCEV *computeMaxBECountForLT(const SCEV *Start, const SCEV *Stride,
-                                     const SCEV *End, unsigned BitWidth,
-                                     bool IsSigned);
+                                     const SCEV *End, const Loop *L,
+                                     unsigned BitWidth, bool IsSigned);
 
   /// Verify if an linear IV with positive stride can overflow when in a
   /// less-than comparison, knowing the invariant term of the comparison,
