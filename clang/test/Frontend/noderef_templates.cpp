@@ -3,8 +3,8 @@
 #define NODEREF __attribute__((noderef))
 
 template <typename T>
-int func(T NODEREF *a) { // expected-note 2 {{a declared here}}
-  return *a + 1;         // expected-warning 2 {{dereferencing a; was declared with a 'noderef' type}}
+int func(T NODEREF *a) { // expected-note 3 {{a declared here}}
+  return *a + 1;         // expected-warning 3 {{dereferencing a; was declared with a 'noderef' type}}
 }
 
 void func() {

@@ -17,7 +17,7 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -global-isel  -mattr=+d -target-abi lp64d \
 ; RUN:     -verify-machineinstrs \
 ; RUN:   | FileCheck -check-prefixes=RV64,LP64D %s
-; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv32 -global-isel \
+; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=riscv32 -global-isel \
 ; RUN:     -frame-pointer=all -target-abi ilp32 -verify-machineinstrs \
 ; RUN:   | FileCheck -check-prefixes=RV32-WITHFP %s
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -global-isel \
@@ -156,7 +156,7 @@ define i32 @va1(ptr %fmt, ...) {
   ret i32 %1
 }
 
-define i32 @va1_va_arg(ptr %fmt, ...) nounwind {
+define iXLen @va1_va_arg(ptr %fmt, ...) nounwind {
 ; RV32-LABEL: va1_va_arg:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -48
@@ -191,11 +191,11 @@ define i32 @va1_va_arg(ptr %fmt, ...) nounwind {
 ; RV64-NEXT:    addi a0, sp, 24
 ; RV64-NEXT:    sd a0, 8(sp)
 ; RV64-NEXT:    ld a0, 8(sp)
-; RV64-NEXT:    addi a0, a0, 3
-; RV64-NEXT:    andi a0, a0, -4
-; RV64-NEXT:    addi a1, a0, 4
+; RV64-NEXT:    addi a0, a0, 7
+; RV64-NEXT:    andi a0, a0, -8
+; RV64-NEXT:    addi a1, a0, 8
 ; RV64-NEXT:    sd a1, 8(sp)
-; RV64-NEXT:    lw a0, 0(a0)
+; RV64-NEXT:    ld a0, 0(a0)
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
@@ -241,25 +241,25 @@ define i32 @va1_va_arg(ptr %fmt, ...) nounwind {
 ; RV64-WITHFP-NEXT:    addi a0, s0, 8
 ; RV64-WITHFP-NEXT:    sd a0, -24(s0)
 ; RV64-WITHFP-NEXT:    ld a0, -24(s0)
-; RV64-WITHFP-NEXT:    addi a0, a0, 3
-; RV64-WITHFP-NEXT:    andi a0, a0, -4
-; RV64-WITHFP-NEXT:    addi a1, a0, 4
+; RV64-WITHFP-NEXT:    addi a0, a0, 7
+; RV64-WITHFP-NEXT:    andi a0, a0, -8
+; RV64-WITHFP-NEXT:    addi a1, a0, 8
 ; RV64-WITHFP-NEXT:    sd a1, -24(s0)
-; RV64-WITHFP-NEXT:    lw a0, 0(a0)
+; RV64-WITHFP-NEXT:    ld a0, 0(a0)
 ; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    addi sp, sp, 96
 ; RV64-WITHFP-NEXT:    ret
   %va = alloca ptr
   call void @llvm.va_start(ptr %va)
-  %1 = va_arg ptr %va, i32
+  %1 = va_arg ptr %va, iXLen
   call void @llvm.va_end(ptr %va)
-  ret i32 %1
+  ret iXLen %1
 }
 
 ; Ensure the adjustment when restoring the stack pointer using the frame
 ; pointer is correct
-define i32 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
+define iXLen @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
 ; RV32-LABEL: va1_va_arg_alloca:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -48
@@ -312,14 +312,12 @@ define i32 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
 ; RV64-NEXT:    addi a0, s0, 8
 ; RV64-NEXT:    sd a0, -32(s0)
 ; RV64-NEXT:    ld a0, -32(s0)
-; RV64-NEXT:    addi a0, a0, 3
-; RV64-NEXT:    andi a0, a0, -4
-; RV64-NEXT:    addi a1, a0, 4
+; RV64-NEXT:    addi a0, a0, 7
+; RV64-NEXT:    andi a0, a0, -8
+; RV64-NEXT:    addi a1, a0, 8
 ; RV64-NEXT:    sd a1, -32(s0)
-; RV64-NEXT:    lw s1, 0(a0)
-; RV64-NEXT:    slli a0, s1, 32
-; RV64-NEXT:    srli a0, a0, 32
-; RV64-NEXT:    addi a0, a0, 15
+; RV64-NEXT:    ld s1, 0(a0)
+; RV64-NEXT:    addi a0, s1, 15
 ; RV64-NEXT:    andi a0, a0, -16
 ; RV64-NEXT:    sub a0, sp, a0
 ; RV64-NEXT:    mv sp, a0
@@ -384,14 +382,12 @@ define i32 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
 ; RV64-WITHFP-NEXT:    addi a0, s0, 8
 ; RV64-WITHFP-NEXT:    sd a0, -32(s0)
 ; RV64-WITHFP-NEXT:    ld a0, -32(s0)
-; RV64-WITHFP-NEXT:    addi a0, a0, 3
-; RV64-WITHFP-NEXT:    andi a0, a0, -4
-; RV64-WITHFP-NEXT:    addi a1, a0, 4
+; RV64-WITHFP-NEXT:    addi a0, a0, 7
+; RV64-WITHFP-NEXT:    andi a0, a0, -8
+; RV64-WITHFP-NEXT:    addi a1, a0, 8
 ; RV64-WITHFP-NEXT:    sd a1, -32(s0)
-; RV64-WITHFP-NEXT:    lw s1, 0(a0)
-; RV64-WITHFP-NEXT:    slli a0, s1, 32
-; RV64-WITHFP-NEXT:    srli a0, a0, 32
-; RV64-WITHFP-NEXT:    addi a0, a0, 15
+; RV64-WITHFP-NEXT:    ld s1, 0(a0)
+; RV64-WITHFP-NEXT:    addi a0, s1, 15
 ; RV64-WITHFP-NEXT:    andi a0, a0, -16
 ; RV64-WITHFP-NEXT:    sub a0, sp, a0
 ; RV64-WITHFP-NEXT:    mv sp, a0
@@ -405,11 +401,11 @@ define i32 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
 ; RV64-WITHFP-NEXT:    ret
   %va = alloca ptr
   call void @llvm.va_start(ptr %va)
-  %1 = va_arg ptr %va, i32
-  %2 = alloca i8, i32 %1
+  %1 = va_arg ptr %va, iXLen
+  %2 = alloca i8, iXLen %1
   call void @notdead(ptr %2)
   call void @llvm.va_end(ptr %va)
-  ret i32 %1
+  ret iXLen %1
 }
 
 define void @va1_caller() nounwind {
@@ -633,9 +629,9 @@ define i64 @va2(ptr %fmt, ...) nounwind {
 ; RV32-WITHFP-NEXT:    sw a5, 20(s0)
 ; RV32-WITHFP-NEXT:    sw a6, 24(s0)
 ; RV32-WITHFP-NEXT:    sw a7, 28(s0)
-; RV32-WITHFP-NEXT:    addi a0, a0, 7
-; RV32-WITHFP-NEXT:    andi a1, a0, -8
-; RV32-WITHFP-NEXT:    addi a0, a0, 8
+; RV32-WITHFP-NEXT:    addi a1, a0, 7
+; RV32-WITHFP-NEXT:    andi a1, a1, -8
+; RV32-WITHFP-NEXT:    addi a0, a0, 15
 ; RV32-WITHFP-NEXT:    sw a0, -12(s0)
 ; RV32-WITHFP-NEXT:    lw a0, 0(a1)
 ; RV32-WITHFP-NEXT:    lw a1, 4(a1)
@@ -686,9 +682,9 @@ define i64 @va2(ptr %fmt, ...) nounwind {
 }
 
 ; This test is slightly different than the SelectionDAG counterpart because
-; narrowScalar and widenScalar for G_VAARG on types outside of [s32, sXLen]
+; narrowScalar and widenScalar for G_VAARG on types other than sXLen
 ; are not implemented yet.
-define i64 @va2_va_arg(ptr %fmt, ...) nounwind {
+define iXLen @va2_va_arg(ptr %fmt, ...) nounwind {
 ; RV32-LABEL: va2_va_arg:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -48
@@ -707,7 +703,6 @@ define i64 @va2_va_arg(ptr %fmt, ...) nounwind {
 ; RV32-NEXT:    addi a1, a0, 4
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    lw a0, 0(a0)
-; RV32-NEXT:    li a1, 0
 ; RV32-NEXT:    addi sp, sp, 48
 ; RV32-NEXT:    ret
 ;
@@ -724,13 +719,11 @@ define i64 @va2_va_arg(ptr %fmt, ...) nounwind {
 ; RV64-NEXT:    addi a0, sp, 24
 ; RV64-NEXT:    sd a0, 8(sp)
 ; RV64-NEXT:    ld a0, 8(sp)
-; RV64-NEXT:    addi a0, a0, 3
-; RV64-NEXT:    andi a0, a0, -4
-; RV64-NEXT:    addi a1, a0, 4
+; RV64-NEXT:    addi a0, a0, 7
+; RV64-NEXT:    andi a0, a0, -8
+; RV64-NEXT:    addi a1, a0, 8
 ; RV64-NEXT:    sd a1, 8(sp)
-; RV64-NEXT:    lw a0, 0(a0)
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ld a0, 0(a0)
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
@@ -755,7 +748,6 @@ define i64 @va2_va_arg(ptr %fmt, ...) nounwind {
 ; RV32-WITHFP-NEXT:    addi a1, a0, 4
 ; RV32-WITHFP-NEXT:    sw a1, -12(s0)
 ; RV32-WITHFP-NEXT:    lw a0, 0(a0)
-; RV32-WITHFP-NEXT:    li a1, 0
 ; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    addi sp, sp, 48
@@ -777,23 +769,20 @@ define i64 @va2_va_arg(ptr %fmt, ...) nounwind {
 ; RV64-WITHFP-NEXT:    addi a0, s0, 8
 ; RV64-WITHFP-NEXT:    sd a0, -24(s0)
 ; RV64-WITHFP-NEXT:    ld a0, -24(s0)
-; RV64-WITHFP-NEXT:    addi a0, a0, 3
-; RV64-WITHFP-NEXT:    andi a0, a0, -4
-; RV64-WITHFP-NEXT:    addi a1, a0, 4
+; RV64-WITHFP-NEXT:    addi a0, a0, 7
+; RV64-WITHFP-NEXT:    andi a0, a0, -8
+; RV64-WITHFP-NEXT:    addi a1, a0, 8
 ; RV64-WITHFP-NEXT:    sd a1, -24(s0)
-; RV64-WITHFP-NEXT:    lw a0, 0(a0)
-; RV64-WITHFP-NEXT:    slli a0, a0, 32
-; RV64-WITHFP-NEXT:    srli a0, a0, 32
+; RV64-WITHFP-NEXT:    ld a0, 0(a0)
 ; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    addi sp, sp, 96
 ; RV64-WITHFP-NEXT:    ret
   %va = alloca ptr
   call void @llvm.va_start(ptr %va)
-  %1 = va_arg ptr %va, i32
+  %1 = va_arg ptr %va, iXLen
   call void @llvm.va_end(ptr %va)
-  %2 = zext i32 %1 to i64
-  ret i64 %2
+  ret iXLen %1
 }
 
 define void @va2_caller() nounwind {
@@ -987,9 +976,9 @@ define i64 @va3(i32 %a, i64 %b, ...) nounwind {
 ; RV32-WITHFP-NEXT:    sw a5, 12(s0)
 ; RV32-WITHFP-NEXT:    sw a6, 16(s0)
 ; RV32-WITHFP-NEXT:    sw a7, 20(s0)
-; RV32-WITHFP-NEXT:    addi a0, a0, 7
-; RV32-WITHFP-NEXT:    andi a3, a0, -8
-; RV32-WITHFP-NEXT:    addi a0, a0, 8
+; RV32-WITHFP-NEXT:    addi a3, a0, 7
+; RV32-WITHFP-NEXT:    andi a3, a3, -8
+; RV32-WITHFP-NEXT:    addi a0, a0, 15
 ; RV32-WITHFP-NEXT:    sw a0, -12(s0)
 ; RV32-WITHFP-NEXT:    lw a4, 0(a3)
 ; RV32-WITHFP-NEXT:    lw a3, 4(a3)
@@ -1047,26 +1036,25 @@ define i64 @va3(i32 %a, i64 %b, ...) nounwind {
 ; This test is slightly different than the SelectionDAG counterpart because
 ; narrowScalar and widenScalar for G_VAARG on types outside of [s32, sXLen]
 ; are not implemented yet.
-define i64 @va3_va_arg(i32 %a, i64 %b, ...) nounwind {
+define iXLen @va3_va_arg(iXLen %a, iXLen %b, ...) nounwind {
 ; RV32-LABEL: va3_va_arg:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -32
+; RV32-NEXT:    sw a2, 8(sp)
 ; RV32-NEXT:    sw a3, 12(sp)
 ; RV32-NEXT:    sw a4, 16(sp)
 ; RV32-NEXT:    sw a5, 20(sp)
 ; RV32-NEXT:    sw a6, 24(sp)
 ; RV32-NEXT:    sw a7, 28(sp)
-; RV32-NEXT:    addi a0, sp, 12
+; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    sw a0, 4(sp)
 ; RV32-NEXT:    lw a0, 4(sp)
 ; RV32-NEXT:    addi a0, a0, 3
 ; RV32-NEXT:    andi a0, a0, -4
-; RV32-NEXT:    addi a3, a0, 4
-; RV32-NEXT:    sw a3, 4(sp)
-; RV32-NEXT:    lw a3, 0(a0)
-; RV32-NEXT:    add a0, a1, a3
-; RV32-NEXT:    sltu a1, a0, a3
-; RV32-NEXT:    add a1, a2, a1
+; RV32-NEXT:    addi a2, a0, 4
+; RV32-NEXT:    sw a2, 4(sp)
+; RV32-NEXT:    lw a0, 0(a0)
+; RV32-NEXT:    add a0, a1, a0
 ; RV32-NEXT:    addi sp, sp, 32
 ; RV32-NEXT:    ret
 ;
@@ -1082,13 +1070,11 @@ define i64 @va3_va_arg(i32 %a, i64 %b, ...) nounwind {
 ; RV64-NEXT:    addi a0, sp, 16
 ; RV64-NEXT:    sd a0, 8(sp)
 ; RV64-NEXT:    ld a0, 8(sp)
-; RV64-NEXT:    addi a0, a0, 3
-; RV64-NEXT:    andi a0, a0, -4
-; RV64-NEXT:    addi a2, a0, 4
+; RV64-NEXT:    addi a0, a0, 7
+; RV64-NEXT:    andi a0, a0, -8
+; RV64-NEXT:    addi a2, a0, 8
 ; RV64-NEXT:    sd a2, 8(sp)
-; RV64-NEXT:    lw a0, 0(a0)
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ld a0, 0(a0)
 ; RV64-NEXT:    add a0, a1, a0
 ; RV64-NEXT:    addi sp, sp, 64
 ; RV64-NEXT:    ret
@@ -1099,22 +1085,21 @@ define i64 @va3_va_arg(i32 %a, i64 %b, ...) nounwind {
 ; RV32-WITHFP-NEXT:    sw ra, 20(sp) # 4-byte Folded Spill
 ; RV32-WITHFP-NEXT:    sw s0, 16(sp) # 4-byte Folded Spill
 ; RV32-WITHFP-NEXT:    addi s0, sp, 24
+; RV32-WITHFP-NEXT:    sw a2, 0(s0)
 ; RV32-WITHFP-NEXT:    sw a3, 4(s0)
 ; RV32-WITHFP-NEXT:    sw a4, 8(s0)
 ; RV32-WITHFP-NEXT:    sw a5, 12(s0)
 ; RV32-WITHFP-NEXT:    sw a6, 16(s0)
 ; RV32-WITHFP-NEXT:    sw a7, 20(s0)
-; RV32-WITHFP-NEXT:    addi a0, s0, 4
+; RV32-WITHFP-NEXT:    mv a0, s0
 ; RV32-WITHFP-NEXT:    sw a0, -12(s0)
 ; RV32-WITHFP-NEXT:    lw a0, -12(s0)
 ; RV32-WITHFP-NEXT:    addi a0, a0, 3
 ; RV32-WITHFP-NEXT:    andi a0, a0, -4
-; RV32-WITHFP-NEXT:    addi a3, a0, 4
-; RV32-WITHFP-NEXT:    sw a3, -12(s0)
-; RV32-WITHFP-NEXT:    lw a3, 0(a0)
-; RV32-WITHFP-NEXT:    add a0, a1, a3
-; RV32-WITHFP-NEXT:    sltu a1, a0, a3
-; RV32-WITHFP-NEXT:    add a1, a2, a1
+; RV32-WITHFP-NEXT:    addi a2, a0, 4
+; RV32-WITHFP-NEXT:    sw a2, -12(s0)
+; RV32-WITHFP-NEXT:    lw a0, 0(a0)
+; RV32-WITHFP-NEXT:    add a0, a1, a0
 ; RV32-WITHFP-NEXT:    lw ra, 20(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    lw s0, 16(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    addi sp, sp, 48
@@ -1135,13 +1120,11 @@ define i64 @va3_va_arg(i32 %a, i64 %b, ...) nounwind {
 ; RV64-WITHFP-NEXT:    mv a0, s0
 ; RV64-WITHFP-NEXT:    sd a0, -24(s0)
 ; RV64-WITHFP-NEXT:    ld a0, -24(s0)
-; RV64-WITHFP-NEXT:    addi a0, a0, 3
-; RV64-WITHFP-NEXT:    andi a0, a0, -4
-; RV64-WITHFP-NEXT:    addi a2, a0, 4
+; RV64-WITHFP-NEXT:    addi a0, a0, 7
+; RV64-WITHFP-NEXT:    andi a0, a0, -8
+; RV64-WITHFP-NEXT:    addi a2, a0, 8
 ; RV64-WITHFP-NEXT:    sd a2, -24(s0)
-; RV64-WITHFP-NEXT:    lw a0, 0(a0)
-; RV64-WITHFP-NEXT:    slli a0, a0, 32
-; RV64-WITHFP-NEXT:    srli a0, a0, 32
+; RV64-WITHFP-NEXT:    ld a0, 0(a0)
 ; RV64-WITHFP-NEXT:    add a0, a1, a0
 ; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
@@ -1149,11 +1132,10 @@ define i64 @va3_va_arg(i32 %a, i64 %b, ...) nounwind {
 ; RV64-WITHFP-NEXT:    ret
   %va = alloca ptr
   call void @llvm.va_start(ptr %va)
-  %1 = va_arg ptr %va, i32
+  %1 = va_arg ptr %va, iXLen
   call void @llvm.va_end(ptr %va)
-  %2 = zext i32 %1 to i64
-  %3 = add i64 %b, %2
-  ret i64 %3
+  %3 = add iXLen %b, %1
+  ret iXLen %3
 }
 
 define void @va3_caller() nounwind {
@@ -1222,7 +1204,7 @@ define void @va3_caller() nounwind {
 
 declare void @llvm.va_copy(ptr, ptr)
 
-define i32 @va4_va_copy(i32 %argno, ...) nounwind {
+define iXLen @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV32-LABEL: va4_va_copy:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -48
@@ -1288,12 +1270,12 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV64-NEXT:    addi a0, sp, 40
 ; RV64-NEXT:    sd a0, 8(sp)
 ; RV64-NEXT:    ld a0, 8(sp)
-; RV64-NEXT:    addi a0, a0, 3
-; RV64-NEXT:    andi a0, a0, -4
-; RV64-NEXT:    addi a1, a0, 4
+; RV64-NEXT:    addi a0, a0, 7
+; RV64-NEXT:    andi a0, a0, -8
+; RV64-NEXT:    addi a1, a0, 8
 ; RV64-NEXT:    sd a1, 8(sp)
 ; RV64-NEXT:    ld a1, 8(sp)
-; RV64-NEXT:    lw s0, 0(a0)
+; RV64-NEXT:    ld s0, 0(a0)
 ; RV64-NEXT:    sd a1, 0(sp)
 ; RV64-NEXT:    lw a0, 4(sp)
 ; RV64-NEXT:    lwu a1, 0(sp)
@@ -1301,26 +1283,26 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    call notdead
 ; RV64-NEXT:    ld a0, 8(sp)
-; RV64-NEXT:    addi a0, a0, 3
-; RV64-NEXT:    andi a0, a0, -4
-; RV64-NEXT:    addi a1, a0, 4
+; RV64-NEXT:    addi a0, a0, 7
+; RV64-NEXT:    andi a0, a0, -8
+; RV64-NEXT:    addi a1, a0, 8
 ; RV64-NEXT:    sd a1, 8(sp)
 ; RV64-NEXT:    ld a1, 8(sp)
-; RV64-NEXT:    lw a0, 0(a0)
-; RV64-NEXT:    addi a1, a1, 3
-; RV64-NEXT:    andi a1, a1, -4
-; RV64-NEXT:    addi a2, a1, 4
+; RV64-NEXT:    ld a0, 0(a0)
+; RV64-NEXT:    addi a1, a1, 7
+; RV64-NEXT:    andi a1, a1, -8
+; RV64-NEXT:    addi a2, a1, 8
 ; RV64-NEXT:    sd a2, 8(sp)
 ; RV64-NEXT:    ld a2, 8(sp)
-; RV64-NEXT:    lw a1, 0(a1)
-; RV64-NEXT:    addi a2, a2, 3
-; RV64-NEXT:    andi a2, a2, -4
-; RV64-NEXT:    addi a3, a2, 4
+; RV64-NEXT:    ld a1, 0(a1)
+; RV64-NEXT:    addi a2, a2, 7
+; RV64-NEXT:    andi a2, a2, -8
+; RV64-NEXT:    addi a3, a2, 8
 ; RV64-NEXT:    sd a3, 8(sp)
-; RV64-NEXT:    lw a2, 0(a2)
+; RV64-NEXT:    ld a2, 0(a2)
 ; RV64-NEXT:    add a0, a0, s0
 ; RV64-NEXT:    add a1, a1, a2
-; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 96
@@ -1396,12 +1378,12 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV64-WITHFP-NEXT:    addi a0, s0, 8
 ; RV64-WITHFP-NEXT:    sd a0, -32(s0)
 ; RV64-WITHFP-NEXT:    ld a0, -32(s0)
-; RV64-WITHFP-NEXT:    addi a0, a0, 3
-; RV64-WITHFP-NEXT:    andi a0, a0, -4
-; RV64-WITHFP-NEXT:    addi a1, a0, 4
+; RV64-WITHFP-NEXT:    addi a0, a0, 7
+; RV64-WITHFP-NEXT:    andi a0, a0, -8
+; RV64-WITHFP-NEXT:    addi a1, a0, 8
 ; RV64-WITHFP-NEXT:    sd a1, -32(s0)
 ; RV64-WITHFP-NEXT:    ld a1, -32(s0)
-; RV64-WITHFP-NEXT:    lw s1, 0(a0)
+; RV64-WITHFP-NEXT:    ld s1, 0(a0)
 ; RV64-WITHFP-NEXT:    sd a1, -40(s0)
 ; RV64-WITHFP-NEXT:    lw a0, -36(s0)
 ; RV64-WITHFP-NEXT:    lwu a1, -40(s0)
@@ -1409,26 +1391,26 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV64-WITHFP-NEXT:    or a0, a0, a1
 ; RV64-WITHFP-NEXT:    call notdead
 ; RV64-WITHFP-NEXT:    ld a0, -32(s0)
-; RV64-WITHFP-NEXT:    addi a0, a0, 3
-; RV64-WITHFP-NEXT:    andi a0, a0, -4
-; RV64-WITHFP-NEXT:    addi a1, a0, 4
+; RV64-WITHFP-NEXT:    addi a0, a0, 7
+; RV64-WITHFP-NEXT:    andi a0, a0, -8
+; RV64-WITHFP-NEXT:    addi a1, a0, 8
 ; RV64-WITHFP-NEXT:    sd a1, -32(s0)
 ; RV64-WITHFP-NEXT:    ld a1, -32(s0)
-; RV64-WITHFP-NEXT:    lw a0, 0(a0)
-; RV64-WITHFP-NEXT:    addi a1, a1, 3
-; RV64-WITHFP-NEXT:    andi a1, a1, -4
-; RV64-WITHFP-NEXT:    addi a2, a1, 4
+; RV64-WITHFP-NEXT:    ld a0, 0(a0)
+; RV64-WITHFP-NEXT:    addi a1, a1, 7
+; RV64-WITHFP-NEXT:    andi a1, a1, -8
+; RV64-WITHFP-NEXT:    addi a2, a1, 8
 ; RV64-WITHFP-NEXT:    sd a2, -32(s0)
 ; RV64-WITHFP-NEXT:    ld a2, -32(s0)
-; RV64-WITHFP-NEXT:    lw a1, 0(a1)
-; RV64-WITHFP-NEXT:    addi a2, a2, 3
-; RV64-WITHFP-NEXT:    andi a2, a2, -4
-; RV64-WITHFP-NEXT:    addi a3, a2, 4
+; RV64-WITHFP-NEXT:    ld a1, 0(a1)
+; RV64-WITHFP-NEXT:    addi a2, a2, 7
+; RV64-WITHFP-NEXT:    andi a2, a2, -8
+; RV64-WITHFP-NEXT:    addi a3, a2, 8
 ; RV64-WITHFP-NEXT:    sd a3, -32(s0)
-; RV64-WITHFP-NEXT:    lw a2, 0(a2)
+; RV64-WITHFP-NEXT:    ld a2, 0(a2)
 ; RV64-WITHFP-NEXT:    add a0, a0, s1
 ; RV64-WITHFP-NEXT:    add a1, a1, a2
-; RV64-WITHFP-NEXT:    addw a0, a0, a1
+; RV64-WITHFP-NEXT:    add a0, a0, a1
 ; RV64-WITHFP-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
@@ -1437,19 +1419,19 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
   %vargs = alloca ptr
   %wargs = alloca ptr
   call void @llvm.va_start(ptr %vargs)
-  %1 = va_arg ptr %vargs, i32
+  %1 = va_arg ptr %vargs, iXLen
   call void @llvm.va_copy(ptr %wargs, ptr %vargs)
   %2 = load ptr, ptr %wargs, align 4
   call void @notdead(ptr %2)
-  %3 = va_arg ptr %vargs, i32
-  %4 = va_arg ptr %vargs, i32
-  %5 = va_arg ptr %vargs, i32
+  %3 = va_arg ptr %vargs, iXLen
+  %4 = va_arg ptr %vargs, iXLen
+  %5 = va_arg ptr %vargs, iXLen
   call void @llvm.va_end(ptr %vargs)
   call void @llvm.va_end(ptr %wargs)
-  %add1 = add i32 %3, %1
-  %add2 = add i32 %add1, %4
-  %add3 = add i32 %add2, %5
-  ret i32 %add3
+  %add1 = add iXLen %3, %1
+  %add2 = add iXLen %add1, %4
+  %add3 = add iXLen %add2, %5
+  ret iXLen %add3
 }
 
 ; The va5_aligned_stack_callee and caller function are ommitted from this file
@@ -1460,7 +1442,7 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
 ; specified in LLVM IR. We must ensure the vararg save area is
 ; still set up correctly.
 
-define i32 @va6_no_fixed_args(...) nounwind {
+define iXLen @va6_no_fixed_args(...) nounwind {
 ; RV32-LABEL: va6_no_fixed_args:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -48
@@ -1497,11 +1479,11 @@ define i32 @va6_no_fixed_args(...) nounwind {
 ; RV64-NEXT:    addi a0, sp, 16
 ; RV64-NEXT:    sd a0, 8(sp)
 ; RV64-NEXT:    ld a0, 8(sp)
-; RV64-NEXT:    addi a0, a0, 3
-; RV64-NEXT:    andi a0, a0, -4
-; RV64-NEXT:    addi a1, a0, 4
+; RV64-NEXT:    addi a0, a0, 7
+; RV64-NEXT:    andi a0, a0, -8
+; RV64-NEXT:    addi a1, a0, 8
 ; RV64-NEXT:    sd a1, 8(sp)
-; RV64-NEXT:    lw a0, 0(a0)
+; RV64-NEXT:    ld a0, 0(a0)
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
@@ -1549,20 +1531,20 @@ define i32 @va6_no_fixed_args(...) nounwind {
 ; RV64-WITHFP-NEXT:    mv a0, s0
 ; RV64-WITHFP-NEXT:    sd a0, -24(s0)
 ; RV64-WITHFP-NEXT:    ld a0, -24(s0)
-; RV64-WITHFP-NEXT:    addi a0, a0, 3
-; RV64-WITHFP-NEXT:    andi a0, a0, -4
-; RV64-WITHFP-NEXT:    addi a1, a0, 4
+; RV64-WITHFP-NEXT:    addi a0, a0, 7
+; RV64-WITHFP-NEXT:    andi a0, a0, -8
+; RV64-WITHFP-NEXT:    addi a1, a0, 8
 ; RV64-WITHFP-NEXT:    sd a1, -24(s0)
-; RV64-WITHFP-NEXT:    lw a0, 0(a0)
+; RV64-WITHFP-NEXT:    ld a0, 0(a0)
 ; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    addi sp, sp, 96
 ; RV64-WITHFP-NEXT:    ret
   %va = alloca ptr
   call void @llvm.va_start(ptr %va)
-  %1 = va_arg ptr %va, i32
+  %1 = va_arg ptr %va, iXLen
   call void @llvm.va_end(ptr %va)
-  ret i32 %1
+  ret iXLen %1
 }
 
 ; TODO: improve constant materialization of stack addresses
@@ -1742,7 +1724,7 @@ define i32 @va_large_stack(ptr %fmt, ...) {
   ret i32 %1
 }
 
-define i32 @va_vprintf(ptr %fmt, ptr %arg_start) {
+define iXLen @va_vprintf(ptr %fmt, ptr %arg_start) {
 ; RV32-LABEL: va_vprintf:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
@@ -1767,11 +1749,11 @@ define i32 @va_vprintf(ptr %fmt, ptr %arg_start) {
 ; RV64-NEXT:    ld a0, 8(sp)
 ; RV64-NEXT:    sd a0, 0(sp)
 ; RV64-NEXT:    ld a0, 0(sp)
-; RV64-NEXT:    addi a0, a0, 3
-; RV64-NEXT:    andi a0, a0, -4
-; RV64-NEXT:    addi a1, a0, 4
+; RV64-NEXT:    addi a0, a0, 7
+; RV64-NEXT:    andi a0, a0, -8
+; RV64-NEXT:    addi a1, a0, 8
 ; RV64-NEXT:    sd a1, 0(sp)
-; RV64-NEXT:    lw a0, 0(a0)
+; RV64-NEXT:    ld a0, 0(a0)
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
 ;
@@ -1813,11 +1795,11 @@ define i32 @va_vprintf(ptr %fmt, ptr %arg_start) {
 ; RV64-WITHFP-NEXT:    ld a0, -24(s0)
 ; RV64-WITHFP-NEXT:    sd a0, -32(s0)
 ; RV64-WITHFP-NEXT:    ld a0, -32(s0)
-; RV64-WITHFP-NEXT:    addi a0, a0, 3
-; RV64-WITHFP-NEXT:    andi a0, a0, -4
-; RV64-WITHFP-NEXT:    addi a1, a0, 4
+; RV64-WITHFP-NEXT:    addi a0, a0, 7
+; RV64-WITHFP-NEXT:    andi a0, a0, -8
+; RV64-WITHFP-NEXT:    addi a1, a0, 8
 ; RV64-WITHFP-NEXT:    sd a1, -32(s0)
-; RV64-WITHFP-NEXT:    lw a0, 0(a0)
+; RV64-WITHFP-NEXT:    ld a0, 0(a0)
 ; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    addi sp, sp, 32
@@ -1826,9 +1808,9 @@ define i32 @va_vprintf(ptr %fmt, ptr %arg_start) {
   %args_cp = alloca ptr
   store ptr %arg_start, ptr %args
   call void @llvm.va_copy(ptr %args_cp, ptr %args)
-  %width = va_arg ptr %args_cp, i32
+  %width = va_arg ptr %args_cp, iXLen
   call void @llvm.va_end(ptr %args_cp)
-  ret i32 %width
+  ret iXLen %width
 }
 
 define i32 @va_printf(ptr %fmt, ...) {

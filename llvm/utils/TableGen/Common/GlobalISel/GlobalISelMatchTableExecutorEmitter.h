@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_GLOBALISELMATCHTABLEEXECUTOREMITTER_H
-#define LLVM_UTILS_TABLEGEN_GLOBALISELMATCHTABLEEXECUTOREMITTER_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_GLOBALISELMATCHTABLEEXECUTOREMITTER_H
+#define LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_GLOBALISELMATCHTABLEEXECUTOREMITTER_H
 
 #include "Common/SubtargetFeatureInfo.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -182,10 +182,6 @@ public:
   /// Emit additional content in emitExecutorImpl
   virtual void emitAdditionalImpl(raw_ostream &OS) {}
 
-  /// Emit additional content in emitTemporariesDecl.
-  virtual void emitAdditionalTemporariesDecl(raw_ostream &OS,
-                                             StringRef Indent) {}
-
   /// Emit additional content in emitTemporariesInit.
   virtual void emitAdditionalTemporariesInit(raw_ostream &OS) {}
 
@@ -227,4 +223,4 @@ public:
 };
 } // namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_GLOBALISELMATCHTABLEEXECUTOREMITTER_H

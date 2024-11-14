@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-isl-arg=--no-schedule-serialize-sccs -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-isl-arg=--no-schedule-serialize-sccs '-passes=polly-opt-isl,print<polly-ast>' -disable-output < %s | FileCheck %s
 ;
 ;
 ;    void tf(int C[256][256][256], int A0[256][256][256], int A1[256][256][256]) {
@@ -17,7 +17,7 @@
 ; checks whether they are tiled after being fused when polly-opt-fusion equals
 ; "max".
 ;
-; CHECK-LABEL: Printing analysis 'Polly - Generate an AST from the SCoP (isl)' for region: 'for.cond => for.end56' in function 'tf':
+; CHECK-LABEL: :: isl ast :: tf :: %for.cond---%for.end56 
 ; CHECK:       1st level tiling - Tiles
 ; CHECK-NEXT:     for (int c0 = 0; c0 <= 7; c0 += 1)
 ; CHECK-NEXT:       for (int c1 = 0; c1 <= 7; c1 += 1)

@@ -384,7 +384,7 @@ private:
   SmallVector<NamedAttribute, 4> attributes;
 
   /// The properties of the op.
-  SmallVector<NamedProperty> properties;
+  SmallVector<NamedProperty, 4> properties;
 
   /// The arguments of the op (operands and native attributes).
   SmallVector<Argument, 4> arguments;

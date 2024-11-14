@@ -873,3 +873,39 @@ func.func @lower_to_loops_with_rank_reducing_subviews(
 //       CHECKPARALLEL:     %[[VAL:.+]] = memref.load %{{.+}}[%[[IV]]]
 //       CHECKPARALLEL:     memref.store %[[VAL]], %{{.+}}[%[[IV]]]
 //       CHECKPARALLEL:   }
+
+// -----
+
+func.func @transpose(%input: memref<?xf32>,
+                     %init: memref<?xf32>) {
+  linalg.transpose ins(%input:memref<?xf32>)
+                   outs(%init:memref<?xf32>)
+                   permutation = [0]
+  return
+}
+// CHECK-LABEL:   func.func @transpose(
+// CHECK-SAME:                         %[[VAL_0:.*]]: memref<?xf32>,
+// CHECK-SAME:                         %[[VAL_1:.*]]: memref<?xf32>) {
+//      CHECK:      %[[VAL_2:.*]] = arith.constant 1 : index
+//      CHECK:      %[[VAL_3:.*]] = arith.constant 0 : index
+//      CHECK:      %[[VAL_4:.*]] = memref.dim %[[VAL_0]], %[[VAL_3]] : memref<?xf32>
+//      CHECK:      scf.for %[[VAL_5:.*]] = %[[VAL_3]] to %[[VAL_4]] step %[[VAL_2]] {
+//      CHECK:        %[[VAL_6:.*]] = memref.load %[[VAL_0]]{{\[}}%[[VAL_5]]] : memref<?xf32>
+//      CHECK:        memref.store %[[VAL_6]], %[[VAL_1]]{{\[}}%[[VAL_5]]] : memref<?xf32>
+//      CHECK:      }
+//      CHECK:      return
+//      CHECK:    }
+
+// CHECKPARALLEL-LABEL:   func.func @transpose(
+// CHECKPARALLEL-SAME:                         %[[VAL_0:.*]]: memref<?xf32>,
+// CHECKPARALLEL-SAME:                         %[[VAL_1:.*]]: memref<?xf32>) {
+//      CHECKPARALLEL:      %[[VAL_2:.*]] = arith.constant 1 : index
+//      CHECKPARALLEL:      %[[VAL_3:.*]] = arith.constant 0 : index
+//      CHECKPARALLEL:      %[[VAL_4:.*]] = memref.dim %[[VAL_0]], %[[VAL_3]] : memref<?xf32>
+//      CHECKPARALLEL:      scf.parallel (%[[VAL_5:.*]]) = (%[[VAL_3]]) to (%[[VAL_4]]) step (%[[VAL_2]]) {
+//      CHECKPARALLEL:        %[[VAL_6:.*]] = memref.load %[[VAL_0]]{{\[}}%[[VAL_5]]] : memref<?xf32>
+//      CHECKPARALLEL:        memref.store %[[VAL_6]], %[[VAL_1]]{{\[}}%[[VAL_5]]] : memref<?xf32>
+//      CHECKPARALLEL:        scf.reduce
+//      CHECKPARALLEL:      }
+//      CHECKPARALLEL:      return
+//      CHECKPARALLEL:    }

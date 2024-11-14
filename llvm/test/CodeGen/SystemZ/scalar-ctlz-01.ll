@@ -43,10 +43,10 @@ define i32 @f2(i32 %arg) {
 define i32 @f3(i32 %arg) {
 ; CHECK-LABEL: f3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    llgfr %r0, %r2
+; CHECK-NEXT:    # kill: def $r2l killed $r2l def $r2d
+; CHECK-NEXT:    sllg %r0, %r2, 32
 ; CHECK-NEXT:    flogr %r2, %r0
-; CHECK-NEXT:    aghi %r2, -32
-; CHECK-NEXT:    # kill: def $r2l killed $r2l killed $r2d
+; CHECK-NEXT:    # kill: def $r2l killed $r2l killed $r2q
 ; CHECK-NEXT:    br %r14
   %1 = tail call i32 @llvm.ctlz.i32(i32 %arg, i1 true)
   ret i32 %1
@@ -69,10 +69,9 @@ define i16 @f5(i16 %arg) {
 ; CHECK-LABEL: f5:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $r2l killed $r2l def $r2d
-; CHECK-NEXT:    llghr %r0, %r2
-; CHECK-NEXT:    flogr %r0, %r0
-; CHECK-NEXT:    aghi %r0, -32
-; CHECK-NEXT:    ahik %r2, %r0, -16
+; CHECK-NEXT:    sllg %r0, %r2, 48
+; CHECK-NEXT:    flogr %r2, %r0
+; CHECK-NEXT:    # kill: def $r2l killed $r2l killed $r2q
 ; CHECK-NEXT:    br %r14
   %1 = tail call i16 @llvm.ctlz.i16(i16 %arg, i1 true)
   ret i16 %1
@@ -95,10 +94,9 @@ define i8 @f7(i8 %arg) {
 ; CHECK-LABEL: f7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $r2l killed $r2l def $r2d
-; CHECK-NEXT:    llgcr %r0, %r2
-; CHECK-NEXT:    flogr %r0, %r0
-; CHECK-NEXT:    aghi %r0, -32
-; CHECK-NEXT:    ahik %r2, %r0, -24
+; CHECK-NEXT:    sllg %r0, %r2, 56
+; CHECK-NEXT:    flogr %r2, %r0
+; CHECK-NEXT:    # kill: def $r2l killed $r2l killed $r2q
 ; CHECK-NEXT:    br %r14
   %1 = tail call i8 @llvm.ctlz.i8(i8 %arg, i1 true)
   ret i8 %1

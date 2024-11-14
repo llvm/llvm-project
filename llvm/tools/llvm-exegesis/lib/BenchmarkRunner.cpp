@@ -379,7 +379,7 @@ private:
 
     if (ChildSignalInfo.si_signo == SIGSEGV)
       return make_error<SnippetSegmentationFault>(
-          reinterpret_cast<intptr_t>(ChildSignalInfo.si_addr));
+          reinterpret_cast<uintptr_t>(ChildSignalInfo.si_addr));
 
     return make_error<SnippetSignal>(ChildSignalInfo.si_signo);
   }
@@ -466,9 +466,21 @@ private:
 // segfaults in the program. Unregister the rseq region so that we can safely
 // unmap it later
 #ifdef GLIBC_INITS_RSEQ
-    long RseqDisableOutput =
-        syscall(SYS_rseq, (intptr_t)__builtin_thread_pointer() + __rseq_offset,
-                __rseq_size, RSEQ_FLAG_UNREGISTER, RSEQ_SIG);
+    unsigned int RseqStructSize = __rseq_size;
+
+    // Glibc v2.40 (the change is also expected to be backported to v2.35)
+    // changes the definition of __rseq_size to be the usable area of the struct
+    // rather than the actual size of the struct. v2.35 uses only 20 bytes of
+    // the 32 byte struct. For now, it should be safe to assume that if the
+    // usable size is less than 32, the actual size of the struct will be 32
+    // bytes given alignment requirements.
+    if (__rseq_size < 32)
+      RseqStructSize = 32;
+
+    long RseqDisableOutput = syscall(
+        SYS_rseq,
+        reinterpret_cast<uintptr_t>(__builtin_thread_pointer()) + __rseq_offset,
+        RseqStructSize, RSEQ_FLAG_UNREGISTER, RSEQ_SIG);
     if (RseqDisableOutput != 0)
       exit(ChildProcessExitCodeE::RSeqDisableFailed);
 #endif // GLIBC_INITS_RSEQ
@@ -491,7 +503,7 @@ private:
     char *FunctionDataCopy =
         (char *)mmap(MapAddress, FunctionDataCopySize, PROT_READ | PROT_WRITE,
                      MapFlags, 0, 0);
-    if ((intptr_t)FunctionDataCopy == -1)
+    if (reinterpret_cast<intptr_t>(FunctionDataCopy) == -1)
       exit(ChildProcessExitCodeE::FunctionDataMappingFailed);
 
     memcpy(FunctionDataCopy, this->Function.FunctionBytes.data(),
@@ -504,8 +516,8 @@ private:
     if (!AuxMemFDOrError)
       exit(ChildProcessExitCodeE::AuxiliaryMemorySetupFailed);
 
-    ((void (*)(size_t, int))(intptr_t)FunctionDataCopy)(FunctionDataCopySize,
-                                                        *AuxMemFDOrError);
+    ((void (*)(size_t, int))(uintptr_t)FunctionDataCopy)(FunctionDataCopySize,
+                                                         *AuxMemFDOrError);
 
     exit(0);
   }

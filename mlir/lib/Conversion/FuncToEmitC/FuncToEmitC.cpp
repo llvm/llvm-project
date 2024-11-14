@@ -31,15 +31,14 @@ public:
   LogicalResult
   matchAndRewrite(func::CallOp callOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Multiple results func was not converted to `emitc.func`.
+    // Multiple results func cannot be converted to `emitc.func`.
     if (callOp.getNumResults() > 1)
       return rewriter.notifyMatchFailure(
           callOp, "only functions with zero or one result can be converted");
 
-    rewriter.replaceOpWithNewOp<emitc::CallOp>(
-        callOp,
-        callOp.getNumResults() ? callOp.getResult(0).getType() : nullptr,
-        adaptor.getOperands(), callOp->getAttrs());
+    rewriter.replaceOpWithNewOp<emitc::CallOp>(callOp, callOp.getResultTypes(),
+                                               adaptor.getOperands(),
+                                               callOp->getAttrs());
 
     return success();
   }

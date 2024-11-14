@@ -227,7 +227,7 @@ class IntEnumAttr<I intType, string name, string summary,
                           stringToSymbolFnName # [{(enumKeyword);
     if (maybeEnum)
       return *maybeEnum;
-    return {(::mlir::LogicalResult)($_parser.emitError(loc) << "expected " }] #
+    return {(::llvm::LogicalResult)($_parser.emitError(loc) << "expected " }] #
     [{<< "}] # cppType # [{" << " to be one of: " << }] #
     !interleave(!foreach(enum, enumerants, "\"" # enum.str # "\""),
                 [{ << ", " << }]) # [{)};
@@ -300,7 +300,7 @@ class BitEnumAttr<I intType, string name, string summary,
       auto maybeEnum = }] # cppNamespace # "::" #
                             stringToSymbolFnName # [{(enumKeyword);
       if (!maybeEnum) {
-          return {(::mlir::LogicalResult)($_parser.emitError(loc) << }] #
+          return {(::llvm::LogicalResult)($_parser.emitError(loc) << }] #
               [{"expected " << "}] # cppType # [{" << " to be one of: " << }] #
               !interleave(!foreach(enum, enumerants, "\"" # enum.str # "\""),
                           [{ << ", " << }]) # [{)};

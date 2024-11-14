@@ -47,7 +47,7 @@ define void @licm(ptr align 8 dereferenceable(8) %_M_start.i, i64 %numElem) {
 ; O23-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; O23-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; O23:       middle.block:
-; O23-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[NUMELEM]]
+; O23-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[NUMELEM]], [[N_VEC]]
 ; O23-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_PREHEADER]]
 ; O23:       for.body.preheader:
 ; O23-NEXT:    [[K_02_PH:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[N_VEC]], [[MIDDLE_BLOCK]] ]

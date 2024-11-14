@@ -18,6 +18,7 @@ static constexpr TagNameItem tagData[] = {
     {PRIV_SPEC, "Tag_priv_spec"},
     {PRIV_SPEC_MINOR, "Tag_priv_spec_minor"},
     {PRIV_SPEC_REVISION, "Tag_priv_spec_revision"},
+    {ATOMIC_ABI, "Tag_atomic_abi"},
 };
 
 constexpr TagNameMap RISCVAttributeTags{tagData};

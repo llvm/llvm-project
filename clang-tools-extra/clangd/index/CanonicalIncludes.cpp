@@ -18,9 +18,11 @@ namespace {
 const std::pair<llvm::StringRef, llvm::StringRef> IncludeMappings[] = {
     {"include/__stdarg___gnuc_va_list.h", "<cstdarg>"},
     {"include/__stdarg___va_copy.h", "<cstdarg>"},
+    {"include/__stdarg_header_macro.h", "<cstdarg>"},
     {"include/__stdarg_va_arg.h", "<cstdarg>"},
     {"include/__stdarg_va_copy.h", "<cstdarg>"},
     {"include/__stdarg_va_list.h", "<cstdarg>"},
+    {"include/__stddef_header_macro.h", "<cstddef>"},
     {"include/__stddef_max_align_t.h", "<cstddef>"},
     {"include/__stddef_null.h", "<cstddef>"},
     {"include/__stddef_nullptr_t.h", "<cstddef>"},

@@ -18,11 +18,14 @@ class ValueType<int size, int value> {
   int Value = value;
   int nElem = 1;
   ValueType ElementType = ?;
-  int isOverloaded = false;
-  int isInteger = false;
-  int isFP = false;
-  int isVector = false;
-  int isScalable = false;
+  bit isOverloaded = false;
+  bit isInteger = false;
+  bit isFP = false;
+  bit isVector = false;
+  bit isScalable = false;
+  // Indicates this VT should be included in the
+  // [FIRST_VALUETYPE,LAST_VALUETYPE] range.
+  bit isNormalValueType = true;
 }
 
 class VTAny<int value> : ValueType<0, value> {
@@ -271,44 +274,51 @@ def nxv4f64  : VTScalableVec<4,  f64, 188>;  // n x  4 x  f64 vector value
 def nxv8f64  : VTScalableVec<8,  f64, 189>;  // n x  8 x  f64 vector value
 
 def x86mmx    : ValueType<64,   190>;  // X86 MMX value
-def FlagVT    : ValueType<0,    191> { // Pre-RA sched glue
-  let LLVMName = "Glue";
-}
+def Glue      : ValueType<0,    191>;  // Pre-RA sched glue
 def isVoid    : ValueType<0,    192>;  // Produces no value
 def untyped   : ValueType<8,    193> { // Produces an untyped value
   let LLVMName = "Untyped";
 }
 def funcref   : ValueType<0,    194>;  // WebAssembly's funcref type
 def externref : ValueType<0,    195>;  // WebAssembly's externref type
-def x86amx    : ValueType<8192, 196>;  // X86 AMX value
-def i64x8     : ValueType<512,  197>;  // 8 Consecutive GPRs (AArch64)
+def exnref    : ValueType<0,    196>;  // WebAssembly's exnref type
+def x86amx    : ValueType<8192, 197>;  // X86 AMX value
+def i64x8     : ValueType<512,  198>;  // 8 Consecutive GPRs (AArch64)
 def aarch64svcount
-              : ValueType<16,  198>;  // AArch64 predicate-as-counter
-def spirvbuiltin : ValueType<0, 199>; // SPIR-V's builtin type
+              : ValueType<16,  199>;  // AArch64 predicate-as-counter
+def spirvbuiltin : ValueType<0, 200>; // SPIR-V's builtin type
 
-def token      : ValueType<0, 248>;  // TokenTy
-def MetadataVT : ValueType<0, 249> { // Metadata
+let isNormalValueType = false in {
+def token      : ValueType<0, 504>;  // TokenTy
+def MetadataVT : ValueType<0, 505> { // Metadata
   let LLVMName = "Metadata";
 }
 
 // Pseudo valuetype mapped to the current pointer size to any address space.
 // Should only be used in TableGen.
-def iPTRAny    : VTAny<250>;
+def iPTRAny    : VTAny<506>;
 
 // Pseudo valuetype to represent "vector of any size"
-def vAny       : VTAny<251>;
+// Should only be used in TableGen.
+def vAny       : VTAny<507>;
 
 // Pseudo valuetype to represent "float of any format"
-def fAny       : VTAny<252>;
+// Should only be used in TableGen.
+def fAny       : VTAny<508>;
 
 // Pseudo valuetype to represent "integer of any bit width"
-def iAny       : VTAny<253>;
+// Should only be used in TableGen.
+def iAny       : VTAny<509>;
 
 // Pseudo valuetype mapped to the current pointer size.
-def iPTR       : ValueType<0, 254>;
+// Should only be used in TableGen.
+def iPTR       : ValueType<0, 510>;
 
 // Pseudo valuetype to represent "any type of any size".
-def Any        : VTAny<255>;
+// Should only be used in TableGen.
+def Any        : VTAny<511>;
+
+} // isNormalValueType = false
 
 } // end defset ValueTypes
 

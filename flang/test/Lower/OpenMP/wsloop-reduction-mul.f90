@@ -55,7 +55,7 @@
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1 : i32
 ! CHECK:           hlfir.assign %[[VAL_4]] to %[[VAL_3]]#0 : i32, !fir.ref<i32>
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_5:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
+! CHECK:             %[[VAL_5:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 ! CHECK:             %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QFsimple_int_reductionEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_7:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_8:.*]] = arith.constant 10 : i32
@@ -93,7 +93,7 @@ end subroutine
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1.000000e+00 : f32
 ! CHECK:           hlfir.assign %[[VAL_4]] to %[[VAL_3]]#0 : f32, !fir.ref<f32>
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_5:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
+! CHECK:             %[[VAL_5:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 ! CHECK:             %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QFsimple_real_reductionEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_7:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_8:.*]] = arith.constant 10 : i32
@@ -132,7 +132,7 @@ end subroutine
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1 : i32
 ! CHECK:           hlfir.assign %[[VAL_4]] to %[[VAL_3]]#0 : i32, !fir.ref<i32>
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_5:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
+! CHECK:             %[[VAL_5:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 ! CHECK:             %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QFsimple_int_reduction_switch_orderEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_7:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_8:.*]] = arith.constant 10 : i32
@@ -170,7 +170,7 @@ end subroutine
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1.000000e+00 : f32
 ! CHECK:           hlfir.assign %[[VAL_4]] to %[[VAL_3]]#0 : f32, !fir.ref<f32>
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_5:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
+! CHECK:             %[[VAL_5:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 ! CHECK:             %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QFsimple_real_reduction_switch_orderEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_7:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_8:.*]] = arith.constant 10 : i32
@@ -217,7 +217,7 @@ end subroutine
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 1 : i32
 ! CHECK:           hlfir.assign %[[VAL_10]] to %[[VAL_7]]#0 : i32, !fir.ref<i32>
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_11:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
+! CHECK:             %[[VAL_11:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 ! CHECK:             %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] {uniq_name = "_QFmultiple_int_reductions_same_typeEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_13:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_14:.*]] = arith.constant 10 : i32
@@ -277,7 +277,7 @@ end subroutine
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 1.000000e+00 : f32
 ! CHECK:           hlfir.assign %[[VAL_10]] to %[[VAL_7]]#0 : f32, !fir.ref<f32>
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_11:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
+! CHECK:             %[[VAL_11:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 ! CHECK:             %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] {uniq_name = "_QFmultiple_real_reductions_same_typeEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_13:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_14:.*]] = arith.constant 10 : i32
@@ -344,7 +344,7 @@ end subroutine
 ! CHECK:           %[[VAL_13:.*]] = arith.constant 1.000000e+00 : f64
 ! CHECK:           hlfir.assign %[[VAL_13]] to %[[VAL_3]]#0 : f64, !fir.ref<f64>
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_14:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
+! CHECK:             %[[VAL_14:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 ! CHECK:             %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_14]] {uniq_name = "_QFmultiple_reductions_different_typeEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_16:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_17:.*]] = arith.constant 10 : i32

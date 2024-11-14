@@ -19,6 +19,7 @@ parser.add_argument("output")
 parser.add_argument("prefix", nargs="?", default="FDATA", help="Custom FDATA prefix")
 parser.add_argument("--nmtool", default="nm", help="Path to nm tool")
 parser.add_argument("--no-lbr", action="store_true")
+parser.add_argument("--no-redefine", action="store_true")
 
 args = parser.parse_args()
 
@@ -90,6 +91,8 @@ nm_output = subprocess.run(
 symbols = {}
 for symline in nm_output.splitlines():
     symval, _, symname = symline.split(maxsplit=2)
+    if symname in symbols and args.no_redefine:
+        continue
     symbols[symname] = symval
 
 

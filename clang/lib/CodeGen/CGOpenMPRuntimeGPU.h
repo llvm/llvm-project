@@ -150,9 +150,6 @@ public:
       CodeGenFunction &CGF,
       const std::pair<llvm::Value *, llvm::Value *> &AddrSizePair) override;
 
-  /// Get the GPU warp size.
-  llvm::Value *getGPUWarpSize(CodeGenFunction &CGF);
-
   /// Get the id of the current thread on the GPU.
   llvm::Value *getGPUThreadID(CodeGenFunction &CGF);
 

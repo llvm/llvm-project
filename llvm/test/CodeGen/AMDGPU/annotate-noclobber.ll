@@ -1,4 +1,5 @@
-; RUN: opt -S --amdgpu-annotate-uniform < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa --amdgpu-annotate-uniform < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-annotate-uniform < %s | FileCheck -check-prefix=OPT %s
 target datalayout = "A5"
 
 

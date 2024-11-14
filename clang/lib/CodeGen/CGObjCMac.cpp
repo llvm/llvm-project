@@ -2217,9 +2217,8 @@ CGObjCCommonMac::EmitMessageSend(CodeGen::CodeGenFunction &CGF,
 
   llvm::CallBase *CallSite;
   CGCallee Callee = CGCallee::forDirect(BitcastFn);
-  RValue rvalue = CGF.EmitCall(MSI.CallInfo, Callee, Return, ActualArgs,
-                               &CallSite);
-
+  RValue rvalue =
+      CGF.EmitCall(MSI.CallInfo, Callee, Return, ActualArgs, &CallSite);
   // Mark the call as noreturn if the method is marked noreturn and the
   // receiver cannot be null.
   if (Method && Method->hasAttr<NoReturnAttr>() && !ReceiverCanBeNull) {
@@ -4072,7 +4071,7 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
 
     llvm::MDBuilder MDHelper(CGM.getLLVMContext());
     Builder.CreateCondBr(Builder.CreateICmpEQ(selfValue, Zero), SelfIsNilBlock,
-                         ContBlock, MDHelper.createBranchWeights(1, 1 << 20));
+                         ContBlock, MDHelper.createUnlikelyBranchWeights());
 
     CGF.EmitBlock(SelfIsNilBlock);
 

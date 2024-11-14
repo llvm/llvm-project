@@ -612,7 +612,7 @@ define zeroext i1 @oneuse_trunc_sext(i32 %arg) {
 ; CHECK-NEXT:    call void @use8(i8 [[T3]])
 ; CHECK-NEXT:    [[T4:%.*]] = sext i8 [[T3]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[T4]])
-; CHECK-NEXT:    [[T5:%.*]] = icmp eq i32 [[T4]], [[ARG]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp eq i32 [[ARG]], [[T4]]
 ; CHECK-NEXT:    call void @use1(i1 [[T5]])
 ; CHECK-NEXT:    [[T6:%.*]] = and i1 [[T2]], [[T5]]
 ; CHECK-NEXT:    ret i1 [[T6]]
@@ -641,7 +641,7 @@ define zeroext i1 @oneuse_trunc_sext_logical(i32 %arg) {
 ; CHECK-NEXT:    call void @use8(i8 [[T3]])
 ; CHECK-NEXT:    [[T4:%.*]] = sext i8 [[T3]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[T4]])
-; CHECK-NEXT:    [[T5:%.*]] = icmp eq i32 [[T4]], [[ARG]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp eq i32 [[ARG]], [[T4]]
 ; CHECK-NEXT:    call void @use1(i1 [[T5]])
 ; CHECK-NEXT:    [[T6:%.*]] = select i1 [[T2]], i1 [[T5]], i1 false
 ; CHECK-NEXT:    ret i1 [[T6]]

@@ -18,7 +18,7 @@ struct Ok {
   const int *pc;
   std::unique_ptr<int> up;
   std::shared_ptr<int> sp;
-  gsl::not_null<int> n;
+  gsl::not_null<int*> n;
 };
 
 struct ConstMember {
@@ -60,7 +60,7 @@ struct Ok2 {
   const Foo *pc;
   std::unique_ptr<Foo> up;
   std::shared_ptr<Foo> sp;
-  gsl::not_null<Foo> n;
+  gsl::not_null<Foo*> n;
 };
 
 struct ConstMember2 {

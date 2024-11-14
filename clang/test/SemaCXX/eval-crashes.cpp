@@ -61,3 +61,13 @@ struct array {
   array() : data(*new int[1][2]) {}
 };
 }
+
+namespace GH96670 {
+inline constexpr long ullNil = -1;
+
+template<typename T = long, const T &Nil = ullNil>
+struct Test {};
+
+inline constexpr long lNil = -1;
+Test<long, lNil> c;
+}
