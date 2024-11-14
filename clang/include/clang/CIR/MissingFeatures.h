@@ -261,7 +261,6 @@ struct MissingFeatures {
   static bool X86TypeClassification() { return false; }
 
   static bool ABIClangTypeKind() { return false; }
-  static bool ABIEnterStructForCoercedAccess() { return false; }
   static bool ABIFuncPtr() { return false; }
   static bool ABIInRegAttribute() { return false; }
   static bool ABINestedRecordLayout() { return false; }

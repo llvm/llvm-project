@@ -16,7 +16,7 @@ module {
   cir.global external @u2 = #cir.zero : !ty_U2_
   cir.global external @u3 = #cir.zero : !ty_U3_
   // CHECK: llvm.mlir.global external @u2() {addr_space = 0 : i32} : !llvm.struct<"union.U2", (f64)>
-  // CHECK: llvm.mlir.global external @u3() {addr_space = 0 : i32} : !llvm.struct<"union.U3", (i32)>
+  // CHECK: llvm.mlir.global external @u3() {addr_space = 0 : i32} : !llvm.struct<"union.U3", (struct<"union.U1", (i32)>)>
 
   // CHECK: llvm.func @test
   cir.func @test(%arg0: !cir.ptr<!ty_U1_>) {

@@ -39,3 +39,33 @@ U init() {
   U u;
   return u;
 }
+
+typedef union {
+
+  struct {
+    short a;
+    char b;
+    char c;
+  };
+
+  int x;
+} A;
+
+void passA(A x) {}
+
+// CIR: cir.func {{.*@callA}}()
+// CIR:   %[[#V0:]] = cir.alloca !ty_A, !cir.ptr<!ty_A>, ["x"] {alignment = 4 : i64}
+// CIR:   %[[#V1:]] = cir.cast(bitcast, %[[#V0:]] : !cir.ptr<!ty_A>), !cir.ptr<!s32i>
+// CIR:   %[[#V2:]] = cir.load %[[#V1]] : !cir.ptr<!s32i>, !s32i
+// CIR:   %[[#V3:]] = cir.cast(integral, %[[#V2]] : !s32i), !u64i
+// CIR:   cir.call @passA(%[[#V3]]) : (!u64i) -> ()
+
+// LLVM: void @callA()
+// LLVM:   %[[#V0:]] = alloca %union.A, i64 1, align 4
+// LLVM:   %[[#V1:]] = load i32, ptr %[[#V0]], align 4
+// LLVM:   %[[#V2:]] = sext i32 %[[#V1]] to i64
+// LLVM:   call void @passA(i64 %[[#V2]])
+void callA() {
+  A x;
+  passA(x);
+}
