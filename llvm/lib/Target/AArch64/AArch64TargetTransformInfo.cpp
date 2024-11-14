@@ -5244,6 +5244,10 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     if (I->getType()->isScalableTy())
       return false;
 
+    if (cast<VectorType>(I->getType())->getElementType()->isHalfTy() &&
+        !ST->hasFullFP16())
+      return false;
+
     // Sink splats for index lane variants
     if (isSplatShuffle(I->getOperand(0)))
       Ops.push_back(&I->getOperandUse(0));
