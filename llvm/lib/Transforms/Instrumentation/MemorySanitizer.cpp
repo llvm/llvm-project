@@ -5707,8 +5707,7 @@ struct VarArgPowerPCHelper : public VarArgHelperBase {
            "finalizeInstrumentation called twice");
     IRBuilder<> IRB(MSV.FnPrologueEnd);
     VAArgSize = IRB.CreateLoad(MS.IntptrTy, MS.VAArgOverflowSizeTLS);
-    Value *CopySize =
-        IRB.CreateAdd(ConstantInt::get(MS.IntptrTy, 0), VAArgSize);
+    Value *CopySize = VAArgSize;
 
     if (!VAStartInstrumentationList.empty()) {
       // If there is a va_start in this function, make a backup copy of
@@ -5721,7 +5720,7 @@ struct VarArgPowerPCHelper : public VarArgHelperBase {
 
       Value *SrcSize = IRB.CreateBinaryIntrinsic(
           Intrinsic::umin, CopySize,
-          ConstantInt::get(MS.IntptrTy, kParamTLSSize));
+          ConstantInt::get(IRB.getInt64Ty(), kParamTLSSize));
       IRB.CreateMemCpy(VAArgTLSCopy, kShadowTLSAlignment, MS.VAArgTLS,
                        kShadowTLSAlignment, SrcSize);
     }

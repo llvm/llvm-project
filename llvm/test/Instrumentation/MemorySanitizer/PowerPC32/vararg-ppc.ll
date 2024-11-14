@@ -7,8 +7,7 @@ target triple = "powerpc--linux"
 define i32 @foo(i32 %guard, ...) {
 ; CHECK-LABEL: define i32 @foo(
 ; CHECK-SAME: i32 [[GUARD:%.*]], ...) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 0, [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = alloca i8, i64 [[TMP2]], align 8
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP3]], i8 0, i64 [[TMP2]], i1 false)
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP2]], i64 800)
@@ -59,7 +58,6 @@ declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 define i32 @bar() {
 ; CHECK-LABEL: define i32 @bar() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 0, [[TMP1]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
@@ -87,7 +85,6 @@ define i32 @bar() {
 define i32 @bar2() {
 ; CHECK-LABEL: define i32 @bar2() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 0, [[TMP1]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
@@ -111,7 +108,6 @@ define i32 @bar2() {
 define i32 @bar4() {
 ; CHECK-LABEL: define i32 @bar4() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 0, [[TMP1]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    store [2 x i64] zeroinitializer, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
@@ -132,7 +128,6 @@ define i32 @bar4() {
 define i32 @bar5() {
 ; CHECK-LABEL: define i32 @bar5() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 0, [[TMP1]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    store [2 x i128] zeroinitializer, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
@@ -154,7 +149,6 @@ define i32 @bar6(ptr %arg) {
 ; CHECK-LABEL: define i32 @bar6(
 ; CHECK-SAME: ptr [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 0, [[TMP1]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[ARG]] to i64
@@ -182,7 +176,6 @@ define i32 @bar7(ptr %arg) {
 ; CHECK-LABEL: define i32 @bar7(
 ; CHECK-SAME: ptr [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 0, [[TMP1]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[ARG]] to i64
@@ -212,7 +205,6 @@ define dso_local i64 @many_args() {
 ; CHECK-LABEL: define dso_local i64 @many_args() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 0, [[TMP0]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    store i64 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
