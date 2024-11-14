@@ -16,6 +16,12 @@
 
 namespace mlir {
 namespace detail {
+/// Parse a floating point value from an integer literal token.
+FailureOr<APFloat>
+parseFloatFromIntegerLiteral(function_ref<InFlightDiagnostic()> emitError,
+                             const Token &tok, bool isNegative,
+                             const llvm::fltSemantics &semantics);
+
 //===----------------------------------------------------------------------===//
 // Parser
 //===----------------------------------------------------------------------===//
@@ -150,12 +156,6 @@ public:
 
   /// Parse an optional integer value only in decimal format from the stream.
   OptionalParseResult parseOptionalDecimalInteger(APInt &result);
-
-  /// Parse a floating point value from an integer literal token.
-  ParseResult parseFloatFromIntegerLiteral(std::optional<APFloat> &result,
-                                           const Token &tok, bool isNegative,
-                                           const llvm::fltSemantics &semantics,
-                                           size_t typeSizeInBits);
 
   /// Returns true if the current token corresponds to a keyword.
   bool isCurrentTokenAKeyword() const {

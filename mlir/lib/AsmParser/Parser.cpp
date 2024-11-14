@@ -67,6 +67,38 @@
 using namespace mlir;
 using namespace mlir::detail;
 
+/// Parse a floating point value from an integer literal token.
+FailureOr<APFloat> detail::parseFloatFromIntegerLiteral(
+    function_ref<InFlightDiagnostic()> emitError, const Token &tok,
+    bool isNegative, const llvm::fltSemantics &semantics) {
+  StringRef spelling = tok.getSpelling();
+  bool isHex = spelling.size() > 1 && spelling[1] == 'x';
+  if (!isHex) {
+    auto error = emitError();
+    error << "unexpected decimal integer literal for a "
+             "floating point value";
+    error.attachNote() << "add a trailing dot to make the literal a float";
+    return failure();
+  }
+  if (isNegative) {
+    emitError() << "hexadecimal float literal should not have a "
+                   "leading minus";
+    return failure();
+  }
+
+  APInt intValue;
+  tok.getSpelling().getAsInteger(isHex ? 0 : 10, intValue);
+  auto typeSizeInBits = APFloat::semanticsSizeInBits(semantics);
+  if (intValue.getActiveBits() > typeSizeInBits) {
+    return emitError() << "hexadecimal float constant out of range for type";
+    return failure();
+  }
+
+  APInt truncatedValue(typeSizeInBits, intValue.getNumWords(),
+                       intValue.getRawData());
+  return APFloat(semantics, truncatedValue);
+}
+
 //===----------------------------------------------------------------------===//
 // CodeComplete
 //===----------------------------------------------------------------------===//
@@ -343,37 +375,6 @@ OptionalParseResult Parser::parseOptionalDecimalInteger(APInt &result) {
   // Process the negative sign if present.
   if (negative)
     result.negate();
-
-  return success();
-}
-
-/// Parse a floating point value from an integer literal token.
-ParseResult Parser::parseFloatFromIntegerLiteral(
-    std::optional<APFloat> &result, const Token &tok, bool isNegative,
-    const llvm::fltSemantics &semantics, size_t typeSizeInBits) {
-  SMLoc loc = tok.getLoc();
-  StringRef spelling = tok.getSpelling();
-  bool isHex = spelling.size() > 1 && spelling[1] == 'x';
-  if (!isHex) {
-    return emitError(loc, "unexpected decimal integer literal for a "
-                          "floating point value")
-               .attachNote()
-           << "add a trailing dot to make the literal a float";
-  }
-  if (isNegative) {
-    return emitError(loc, "hexadecimal float literal should not have a "
-                          "leading minus");
-  }
-
-  APInt intValue;
-  tok.getSpelling().getAsInteger(isHex ? 0 : 10, intValue);
-  if (intValue.getActiveBits() > typeSizeInBits)
-    return emitError(loc, "hexadecimal float constant out of range for type");
-
-  APInt truncatedValue(typeSizeInBits, intValue.getNumWords(),
-                       intValue.getRawData());
-
-  result.emplace(semantics, truncatedValue);
 
   return success();
 }

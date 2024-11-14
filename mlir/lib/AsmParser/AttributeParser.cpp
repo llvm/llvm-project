@@ -422,10 +422,10 @@ Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
   }
 
   if (auto floatType = dyn_cast<FloatType>(type)) {
-    std::optional<APFloat> result;
-    if (failed(parseFloatFromIntegerLiteral(result, tok, isNegative,
-                                            floatType.getFloatSemantics(),
-                                            floatType.getWidth())))
+    auto emitErrorAtTok = [&]() { return emitError(tok.getLoc()); };
+    FailureOr<APFloat> result = parseFloatFromIntegerLiteral(
+        emitErrorAtTok, tok, isNegative, floatType.getFloatSemantics());
+    if (failed(result))
       return Attribute();
     return FloatAttr::get(floatType, *result);
   }
@@ -661,10 +661,10 @@ TensorLiteralParser::getFloatAttrElements(SMLoc loc, FloatType eltTy,
 
     // Handle hexadecimal float literals.
     if (token.is(Token::integer) && token.getSpelling().starts_with("0x")) {
-      std::optional<APFloat> result;
-      if (failed(p.parseFloatFromIntegerLiteral(result, token, isNegative,
-                                                eltTy.getFloatSemantics(),
-                                                eltTy.getWidth())))
+      auto emitErrorAtTok = [&]() { return p.emitError(token.getLoc()); };
+      FailureOr<APFloat> result = parseFloatFromIntegerLiteral(
+          emitErrorAtTok, token, isNegative, eltTy.getFloatSemantics());
+      if (failed(result))
         return failure();
 
       floatValues.push_back(*result);
@@ -911,10 +911,12 @@ ParseResult DenseArrayElementParser::parseFloatElement(Parser &p) {
   auto floatType = cast<FloatType>(type);
   if (p.consumeIf(Token::integer)) {
     // Parse an integer literal as a float.
-    if (p.parseFloatFromIntegerLiteral(result, token, isNegative,
-                                       floatType.getFloatSemantics(),
-                                       floatType.getWidth()))
+    auto emitErrorAtTok = [&]() { return p.emitError(token.getLoc()); };
+    FailureOr<APFloat> fromIntLit = parseFloatFromIntegerLiteral(
+        emitErrorAtTok, token, isNegative, floatType.getFloatSemantics());
+    if (failed(fromIntLit))
       return failure();
+    result = *fromIntLit;
   } else if (p.consumeIf(Token::floatliteral)) {
     // Parse a floating point literal.
     std::optional<double> val = token.getFloatingPointValue();
