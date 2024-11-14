@@ -2904,24 +2904,6 @@ void CodeGenFunction::EmitMultiVersionResolver(
   }
 }
 
-static unsigned getPriorityFromAttrString(StringRef AttrStr) {
-  SmallVector<StringRef, 8> Attrs;
-
-  AttrStr.split(Attrs, ';');
-
-  // Default Priority is zero.
-  unsigned Priority = 0;
-  for (auto Attr : Attrs) {
-    if (Attr.consume_front("priority=")) {
-      unsigned Result;
-      if (!Attr.getAsInteger(0, Result))
-        Priority = Result;
-    }
-  }
-
-  return Priority;
-}
-
 void CodeGenFunction::EmitRISCVMultiVersionResolver(
     llvm::Function *Resolver, ArrayRef<MultiVersionResolverOption> Options) {
 
@@ -2939,20 +2921,10 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
   bool HasDefault = false;
   unsigned DefaultIndex = 0;
 
-  SmallVector<CodeGenFunction::MultiVersionResolverOption, 10> CurrOptions(
-      Options);
-
-  llvm::stable_sort(
-      CurrOptions, [](const CodeGenFunction::MultiVersionResolverOption &LHS,
-                      const CodeGenFunction::MultiVersionResolverOption &RHS) {
-        return getPriorityFromAttrString(LHS.Conditions.Features[0]) >
-               getPriorityFromAttrString(RHS.Conditions.Features[0]);
-      });
-
   // Check the each candidate function.
-  for (unsigned Index = 0; Index < CurrOptions.size(); Index++) {
+  for (unsigned Index = 0; Index < Options.size(); Index++) {
 
-    if (CurrOptions[Index].Conditions.Features[0].starts_with("default")) {
+    if (Options[Index].Conditions.Features[0].starts_with("default")) {
       HasDefault = true;
       DefaultIndex = Index;
       continue;
@@ -2963,7 +2935,7 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
     std::vector<std::string> TargetAttrFeats =
         getContext()
             .getTargetInfo()
-            .parseTargetAttr(CurrOptions[Index].Conditions.Features[0])
+            .parseTargetAttr(Options[Index].Conditions.Features[0])
             .Features;
 
     if (TargetAttrFeats.empty())
@@ -3004,7 +2976,7 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
     llvm::BasicBlock *RetBlock = createBasicBlock("resolver_return", Resolver);
     CGBuilderTy RetBuilder(*this, RetBlock);
     CreateMultiVersionResolverReturn(
-        CGM, Resolver, RetBuilder, CurrOptions[Index].Function, SupportsIFunc);
+        CGM, Resolver, RetBuilder, Options[Index].Function, SupportsIFunc);
     llvm::BasicBlock *ElseBlock = createBasicBlock("resolver_else", Resolver);
 
     Builder.SetInsertPoint(CurBlock);
@@ -3017,7 +2989,7 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
   if (HasDefault) {
     Builder.SetInsertPoint(CurBlock);
     CreateMultiVersionResolverReturn(CGM, Resolver, Builder,
-                                     CurrOptions[DefaultIndex].Function,
+                                     Options[DefaultIndex].Function,
                                      SupportsIFunc);
     return;
   }

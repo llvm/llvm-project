@@ -705,18 +705,8 @@ AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
   return std::nullopt;
 }
 
-unsigned AArch64TargetInfo::multiVersionSortPriority(StringRef Name) const {
-  if (Name == "default")
-    return 0;
-  if (auto Ext = llvm::AArch64::parseFMVExtension(Name))
-    return Ext->Priority;
-  return 0;
-}
-
-unsigned AArch64TargetInfo::multiVersionFeatureCost() const {
-  // Take the maximum priority as per feature cost, so more features win.
-  constexpr unsigned MaxFMVPriority = 1000;
-  return MaxFMVPriority;
+unsigned AArch64TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
+  return llvm::AArch64::getFMVPriority(Features);
 }
 
 bool AArch64TargetInfo::doesFeatureAffectCodeGen(StringRef Name) const {

@@ -4216,22 +4216,11 @@ static void ReplaceUsesOfNonProtoTypeWithRealFunction(llvm::GlobalValue *Old,
                                                       llvm::Function *NewFn);
 
 static unsigned
-TargetMVPriority(const TargetInfo &TI,
-                 const CodeGenFunction::MultiVersionResolverOption &RO) {
-  unsigned Priority = 0;
-  unsigned NumFeatures = 0;
-  for (StringRef Feat : RO.Conditions.Features) {
-    Priority = std::max(Priority, TI.multiVersionSortPriority(Feat));
-    NumFeatures++;
-  }
-
-  if (!RO.Conditions.Architecture.empty())
-    Priority = std::max(
-        Priority, TI.multiVersionSortPriority(RO.Conditions.Architecture));
-
-  Priority += TI.multiVersionFeatureCost() * NumFeatures;
-
-  return Priority;
+getFMVPriority(const TargetInfo &TI,
+               const CodeGenFunction::MultiVersionResolverOption &RO) {
+  llvm::SmallVector<StringRef, 8> Features{RO.Conditions.Features};
+  Features.push_back(RO.Conditions.Architecture);
+  return TI.getFMVPriority(Features);
 }
 
 // Multiversion functions should be at most 'WeakODRLinkage' so that a different
@@ -4362,7 +4351,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
     llvm::stable_sort(
         Options, [&TI](const CodeGenFunction::MultiVersionResolverOption &LHS,
                        const CodeGenFunction::MultiVersionResolverOption &RHS) {
-          return TargetMVPriority(TI, LHS) > TargetMVPriority(TI, RHS);
+          return getFMVPriority(TI, LHS) > getFMVPriority(TI, RHS);
         });
     CodeGenFunction CGF(*this);
     CGF.EmitMultiVersionResolver(ResolverFunc, Options);

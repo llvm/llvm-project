@@ -476,6 +476,21 @@ ParsedTargetAttr RISCVTargetInfo::parseTargetAttr(StringRef Features) const {
   return Ret;
 }
 
+unsigned RISCVTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
+  SmallVector<StringRef, 8> Attrs;
+  Features[0].split(Attrs, ';');
+  // Default Priority is zero.
+  unsigned Priority = 0;
+  for (auto Attr : Attrs) {
+    if (Attr.consume_front("priority=")) {
+      unsigned Result;
+      if (!Attr.getAsInteger(0, Result))
+        Priority = Result;
+    }
+  }
+  return Priority;
+}
+
 TargetInfo::CallingConvCheckResult
 RISCVTargetInfo::checkCallingConvention(CallingConv CC) const {
   switch (CC) {
