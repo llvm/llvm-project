@@ -647,7 +647,7 @@ func.func @sinh() {
   call @sinh_8xf32(%v3) : (vector<8xf32>) -> ()
 
   // CHECK: nan
-  %nan = arith.constant 0x7fc00000 : f32
+  %nan = arith.constant nan : f32
   call @sinh_f32(%nan) : (f32) -> ()
 
  return
@@ -693,7 +693,7 @@ func.func @cosh() {
   call @cosh_8xf32(%v3) : (vector<8xf32>) -> ()
 
   // CHECK: nan
-  %nan = arith.constant 0x7fc00000 : f32
+  %nan = arith.constant nan : f32
   call @cosh_f32(%nan) : (f32) -> ()
 
  return
