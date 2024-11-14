@@ -700,7 +700,39 @@ public:
   /// CL2.0 adds:
   ///   __generic is a superset of any address space except for __constant.
   static bool isAddressSpaceSupersetOf(LangAS A, LangAS B,
-                                       const ASTContext &Ctx);
+                                       const ASTContext &Ctx) {
+    // Address spaces must match exactly.
+    return A == B ||
+           // Otherwise in OpenCLC v2.0 s6.5.5: every address space except
+           // for __constant can be used as __generic.
+           (A == LangAS::opencl_generic && B != LangAS::opencl_constant) ||
+           // We also define global_device and global_host address spaces,
+           // to distinguish global pointers allocated on host from pointers
+           // allocated on device, which are a subset of __global.
+           (A == LangAS::opencl_global && (B == LangAS::opencl_global_device ||
+                                           B == LangAS::opencl_global_host)) ||
+           (A == LangAS::sycl_global && (B == LangAS::sycl_global_device ||
+                                         B == LangAS::sycl_global_host)) ||
+           // Consider pointer size address spaces to be equivalent to default.
+           ((isPtrSizeAddressSpace(A) || A == LangAS::Default) &&
+            (isPtrSizeAddressSpace(B) || B == LangAS::Default)) ||
+           // Default is a superset of SYCL address spaces.
+           (A == LangAS::Default &&
+            (B == LangAS::sycl_private || B == LangAS::sycl_local ||
+             B == LangAS::sycl_global || B == LangAS::sycl_global_device ||
+             B == LangAS::sycl_global_host)) ||
+           // In HIP device compilation, any cuda address space is allowed
+           // to implicitly cast into the default address space.
+           (A == LangAS::Default &&
+            (B == LangAS::cuda_constant || B == LangAS::cuda_device ||
+             B == LangAS::cuda_shared)) ||
+           // Conversions from target specific address spaces may be legal
+           // depending on the target information.
+           isTargetAddressSpaceSupersetOf(A, B, Ctx);
+  }
+
+  static bool isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
+                                             const ASTContext &Ctx);
 
   /// Returns true if the address space in these qualifiers is equal to or
   /// a superset of the address space in the argument qualifiers.
