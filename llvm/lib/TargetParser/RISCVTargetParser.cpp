@@ -22,7 +22,7 @@ namespace RISCV {
 
 enum CPUKind : unsigned {
 #define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_SCALAR_UNALIGN,                   \
-             FAST_VECTOR_UNALIGN)                                              \
+             FAST_VECTOR_UNALIGN, MVENDORID, MARCHID, MIMPID)                  \
   CK_##ENUM,
 #define TUNE_PROC(ENUM, NAME) CK_##ENUM,
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
@@ -33,13 +33,24 @@ struct CPUInfo {
   StringLiteral DefaultMarch;
   bool FastScalarUnalignedAccess;
   bool FastVectorUnalignedAccess;
+  uint32_t MVendorID;
+  uint64_t MArchID;
+  uint64_t MImpID;
   bool is64Bit() const { return DefaultMarch.starts_with("rv64"); }
 };
 
 constexpr CPUInfo RISCVCPUInfo[] = {
 #define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_SCALAR_UNALIGN,                   \
-             FAST_VECTOR_UNALIGN)                                              \
-  {NAME, DEFAULT_MARCH, FAST_SCALAR_UNALIGN, FAST_VECTOR_UNALIGN},
+             FAST_VECTOR_UNALIGN, MVENDORID, MARCHID, MIMPID)                  \
+  {                                                                            \
+      NAME,                                                                    \
+      DEFAULT_MARCH,                                                           \
+      FAST_SCALAR_UNALIGN,                                                     \
+      FAST_VECTOR_UNALIGN,                                                     \
+      MVENDORID,                                                               \
+      MARCHID,                                                                 \
+      MIMPID,                                                                  \
+  },
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
 };
 
@@ -58,6 +69,32 @@ bool hasFastScalarUnalignedAccess(StringRef CPU) {
 bool hasFastVectorUnalignedAccess(StringRef CPU) {
   const CPUInfo *Info = getCPUInfoByName(CPU);
   return Info && Info->FastVectorUnalignedAccess;
+}
+
+bool hasValidCPUModel(StringRef CPU) {
+  const CPUInfo *Info = getCPUInfoByName(CPU);
+  return Info && Info->MVendorID && Info->MArchID && Info->MImpID;
+}
+
+uint32_t getVendorID(StringRef CPU) {
+  const CPUInfo *Info = getCPUInfoByName(CPU);
+  if (!Info)
+    return false;
+  return Info->MVendorID;
+}
+
+uint64_t getArchID(StringRef CPU) {
+  const CPUInfo *Info = getCPUInfoByName(CPU);
+  if (!Info)
+    return false;
+  return Info->MArchID;
+}
+
+uint64_t getImplID(StringRef CPU) {
+  const CPUInfo *Info = getCPUInfoByName(CPU);
+  if (!Info)
+    return false;
+  return Info->MImpID;
 }
 
 bool parseCPU(StringRef CPU, bool IsRV64) {

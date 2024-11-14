@@ -67,6 +67,7 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/X86TargetParser.h"
 #include <optional>
 #include <sstream>
@@ -22505,6 +22506,57 @@ Value *CodeGenFunction::EmitHexagonBuiltinExpr(unsigned BuiltinID,
   return nullptr;
 }
 
+Value *CodeGenFunction::EmitRISCVCpuIs(const CallExpr *E) {
+  const Expr *CPUExpr = E->getArg(0)->IgnoreParenCasts();
+  StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
+  return EmitRISCVCpuIs(CPUStr);
+}
+
+Value *CodeGenFunction::EmitRISCVCpuIs(StringRef CPUStr) {
+  llvm::Type *Int32Ty = Builder.getInt32Ty();
+  llvm::Type *Int64Ty = Builder.getInt64Ty();
+  llvm::Type *MXLenType =
+      CGM.getTarget().getTriple().isArch32Bit() ? Int32Ty : Int64Ty;
+
+  llvm::Type *StructTy = llvm::StructType::get(Int32Ty, MXLenType, MXLenType);
+  llvm::Constant *RISCVCPUModel =
+      CGM.CreateRuntimeVariable(StructTy, "__riscv_cpu_model");
+  cast<llvm::GlobalValue>(RISCVCPUModel)->setDSOLocal(true);
+
+  auto loadRISCVCPUID = [&](unsigned Index, llvm::Type *ValueTy,
+                            CGBuilderTy &Builder, CodeGenModule &CGM) {
+    llvm::Value *GEPIndices[] = {Builder.getInt32(0),
+                                 llvm::ConstantInt::get(Int32Ty, Index)};
+    Value *Ptr = Builder.CreateInBoundsGEP(StructTy, RISCVCPUModel, GEPIndices);
+    Value *CPUID = Builder.CreateAlignedLoad(
+        ValueTy, Ptr,
+        CharUnits::fromQuantity(ValueTy->getScalarSizeInBits() / 8));
+    return CPUID;
+  };
+
+  // Compare mvendorid.
+  Value *VendorID = loadRISCVCPUID(0, Int32Ty, Builder, CGM);
+  Value *Result = Builder.CreateICmpEQ(
+      VendorID,
+      llvm::ConstantInt::get(Int32Ty, llvm::RISCV::getVendorID(CPUStr)));
+
+  // Compare marchid.
+  Value *ArchID = loadRISCVCPUID(1, MXLenType, Builder, CGM);
+  Result = Builder.CreateAnd(
+      Result, Builder.CreateICmpEQ(
+                  ArchID, llvm::ConstantInt::get(
+                              MXLenType, llvm::RISCV::getArchID(CPUStr))));
+
+  // Compare mimplid.
+  Value *ImplID = loadRISCVCPUID(2, MXLenType, Builder, CGM);
+  Result = Builder.CreateAnd(
+      Result, Builder.CreateICmpEQ(
+                  ImplID, llvm::ConstantInt::get(
+                              MXLenType, llvm::RISCV::getImplID(CPUStr))));
+
+  return Result;
+}
+
 Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
                                              const CallExpr *E,
                                              ReturnValueSlot ReturnValue) {
@@ -22513,6 +22565,8 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     return EmitRISCVCpuSupports(E);
   if (BuiltinID == Builtin::BI__builtin_cpu_init)
     return EmitRISCVCpuInit();
+  if (BuiltinID == Builtin::BI__builtin_cpu_is)
+    return EmitRISCVCpuIs(E);
 
   SmallVector<Value *, 4> Ops;
   llvm::Type *ResultType = ConvertType(E->getType());

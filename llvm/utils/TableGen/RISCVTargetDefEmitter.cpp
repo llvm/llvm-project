@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/RISCVISAUtils.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -166,7 +167,7 @@ static void emitRISCVProfiles(const RecordKeeper &Records, raw_ostream &OS) {
 static void emitRISCVProcs(const RecordKeeper &RK, raw_ostream &OS) {
   OS << "#ifndef PROC\n"
      << "#define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_SCALAR_UNALIGN"
-     << ", FAST_VECTOR_UNALIGN)\n"
+     << ", FAST_VECTOR_UNALIGN, MVENDORID, MARCHID, MIMPID)\n"
      << "#endif\n\n";
 
   // Iterate on all definition records.
@@ -182,6 +183,10 @@ static void emitRISCVProcs(const RecordKeeper &RK, raw_ostream &OS) {
       return Feature->getValueAsString("Name") == "unaligned-vector-mem";
     });
 
+    bool IsRV64 = any_of(Features, [&](auto &Feature) {
+      return Feature->getValueAsString("Name") == "64bit";
+    });
+
     OS << "PROC(" << Rec->getName() << ", {\"" << Rec->getValueAsString("Name")
        << "\"}, {\"";
 
@@ -192,8 +197,17 @@ static void emitRISCVProcs(const RecordKeeper &RK, raw_ostream &OS) {
       printMArch(OS, Features);
     else
       OS << MArch;
+
+    uint32_t MVendorID = Rec->getValueAsInt("MVendorID");
+    uint64_t MArchID = Rec->getValueAsInt("MArchID");
+    uint64_t MImpID = Rec->getValueAsInt("MImpID");
+
     OS << "\"}, " << FastScalarUnalignedAccess << ", "
-       << FastVectorUnalignedAccess << ")\n";
+       << FastVectorUnalignedAccess;
+    OS << ", " << format_hex(MVendorID, 10);
+    OS << ", " << format_hex(MArchID, IsRV64 ? 18 : 10);
+    OS << ", " << format_hex(MImpID, IsRV64 ? 18 : 10);
+    OS << ")\n";
   }
   OS << "\n#undef PROC\n";
   OS << "\n";
