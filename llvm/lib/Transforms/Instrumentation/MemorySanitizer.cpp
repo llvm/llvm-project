@@ -6127,8 +6127,7 @@ struct VarArgI386Helper : public VarArgHelperBase {
 
     // Instrument va_start.
     // Copy va_list shadow from the backup copy of the TLS contents.
-    for (size_t i = 0, n = VAStartInstrumentationList.size(); i < n; i++) {
-      CallInst *OrigInst = VAStartInstrumentationList[i];
+    for (CallInst *OrigInst : VAStartInstrumentationList) {
       NextNodeIRBuilder IRB(OrigInst);
       Value *VAListTag = OrigInst->getArgOperand(0);
       Type *RegSaveAreaPtrTy = PointerType::getUnqual(*MS.C);
