@@ -1,5 +1,10 @@
 // RUN: llvm-mc -triple aarch64 -filetype asm -o - %s 2>&1 | FileCheck %s
 
+// SVE2 should imply SVE
+.arch armv9-a+sve2
+add z23.d, z13.d, z8.d
+// CHECK: add z23.d, z13.d, z8.d
+
 .arch armv9-a+sve2
 tbx z0.b, z1.b, z2.b
 // CHECK: tbx z0.b, z1.b, z2.b
