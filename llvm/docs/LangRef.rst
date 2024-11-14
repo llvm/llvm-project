@@ -6818,7 +6818,9 @@ tuples this way:
 A memory access with an access tag ``(BaseTy1, AccessTy1, Offset1)``
 aliases a memory access with an access tag ``(BaseTy2, AccessTy2,
 Offset2)`` if either ``(BaseTy1, Offset1)`` is reachable from ``(Base2,
-Offset2)`` via the ``Parent`` relation or vice versa.
+Offset2)`` via the ``Parent`` relation or vice versa. If memory accesses
+alias even though they are noalias according to ``!tbaa`` metadata, the
+behavior is undefined.
 
 As a concrete example, the type descriptor graph for the following program
 
@@ -6939,7 +6941,7 @@ noalias memory-access sets. This means that some collection of memory access
 instructions (loads, stores, memory-accessing calls, etc.) that carry
 ``noalias`` metadata can specifically be specified not to alias with some other
 collection of memory access instructions that carry ``alias.scope`` metadata. If
-accesses from different collections alias, the behaivor is undefined. Each type
+accesses from different collections alias, the behavior is undefined. Each type
 of metadata specifies a list of scopes where each scope has an id and a domain.
 
 When evaluating an aliasing query, if for some domain, the set
