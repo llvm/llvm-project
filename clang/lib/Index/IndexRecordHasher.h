@@ -10,6 +10,7 @@
 #define LLVM_CLANG_LIB_INDEX_INDEXRECORDHASHER_H
 
 #include <array>
+#include <stdint.h>
 
 namespace clang {
 class ASTContext;
