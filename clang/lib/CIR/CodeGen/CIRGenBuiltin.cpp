@@ -1255,9 +1255,22 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_nondeterministic_value:
     llvm_unreachable("BI__builtin_nondeterministic_value NYI");
 
-  case Builtin::BI__builtin_elementwise_abs:
-    llvm_unreachable("BI__builtin_elementwise_abs NYI");
-
+  case Builtin::BI__builtin_elementwise_abs: {
+    mlir::Type cirTy = ConvertType(E->getArg(0)->getType());
+    bool isIntTy = cir::isIntOrIntVectorTy(cirTy);
+    if (!isIntTy) {
+      if (cir::isAnyFloatingPointType(cirTy)) {
+        return emitUnaryFPBuiltin<cir::FAbsOp>(*this, *E);
+      }
+      assert(!MissingFeatures::fpUnaryOPsSupportVectorType());
+      llvm_unreachable("unsupported type for BI__builtin_elementwise_abs");
+    }
+    mlir::Value arg = emitScalarExpr(E->getArg(0));
+    auto call = getBuilder().create<cir::AbsOp>(getLoc(E->getExprLoc()),
+                                                arg.getType(), arg, false);
+    mlir::Value result = call->getResult(0);
+    return RValue::get(result);
+  }
   case Builtin::BI__builtin_elementwise_acos:
     llvm_unreachable("BI__builtin_elementwise_acos NYI");
   case Builtin::BI__builtin_elementwise_asin:

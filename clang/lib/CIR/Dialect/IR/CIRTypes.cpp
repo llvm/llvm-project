@@ -828,7 +828,7 @@ bool cir::isAnyFloatingPointType(mlir::Type t) {
 }
 
 //===----------------------------------------------------------------------===//
-// Floating-point and Float-point Vecotr type helpers
+// Floating-point and Float-point Vector type helpers
 //===----------------------------------------------------------------------===//
 
 bool cir::isFPOrFPVectorTy(mlir::Type t) {
@@ -838,6 +838,18 @@ bool cir::isFPOrFPVectorTy(mlir::Type t) {
         mlir::dyn_cast<cir::VectorType>(t).getEltType());
   }
   return isAnyFloatingPointType(t);
+}
+
+//===----------------------------------------------------------------------===//
+// CIR Integer and Integer Vector type helpers
+//===----------------------------------------------------------------------===//
+
+bool cir::isIntOrIntVectorTy(mlir::Type t) {
+
+  if (isa<cir::VectorType>(t)) {
+    return isa<cir::IntType>(mlir::dyn_cast<cir::VectorType>(t).getEltType());
+  }
+  return isa<cir::IntType>(t);
 }
 
 //===----------------------------------------------------------------------===//

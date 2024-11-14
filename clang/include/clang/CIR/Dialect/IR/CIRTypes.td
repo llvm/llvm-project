@@ -60,6 +60,9 @@ def CIR_IntType : CIR_Type<"Int", "int",
     bool isPrimitive() const {
       return isValidPrimitiveIntBitwidth(getWidth());
     }
+    bool isSignedPrimitive() const {
+      return isPrimitive() && isSigned();
+    }
 
     /// Returns a minimum bitwidth of cir::IntType
     static unsigned minBitwidth() { return 1; }
@@ -538,8 +541,22 @@ def IntegerVector : Type<
     ]>, "!cir.vector of !cir.int"> {
 }
 
+// Vector of signed integral type
+def SignedIntegerVector : Type<
+    And<[
+      CPred<"::mlir::isa<::cir::VectorType>($_self)">,
+      CPred<"::mlir::isa<::cir::IntType>("
+            "::mlir::cast<::cir::VectorType>($_self).getEltType())">,
+      CPred<"::mlir::cast<::cir::IntType>("
+            "::mlir::cast<::cir::VectorType>($_self).getEltType())"
+            ".isSignedPrimitive()">
+    ]>, "!cir.vector of !cir.int"> {
+}
+
 // Constraints
 def CIR_AnyIntOrVecOfInt: AnyTypeOf<[CIR_IntType, IntegerVector]>;
+def CIR_AnySignedIntOrVecOfSignedInt: AnyTypeOf<
+                                        [PrimitiveSInt, SignedIntegerVector]>;
 
 // Pointer to Arrays
 def ArrayPtr : Type<
