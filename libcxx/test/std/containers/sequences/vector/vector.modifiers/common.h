@@ -40,28 +40,6 @@ struct Throws {
 bool Throws::sThrows = false;
 #endif
 
-struct Tracker {
-  int copy_assignments = 0;
-  int move_assignments = 0;
-};
-
-struct TrackedAssignment {
-  Tracker* tracker_;
-  TEST_CONSTEXPR_CXX14 explicit TrackedAssignment(Tracker* tracker) : tracker_(tracker) {}
-
-  TrackedAssignment(TrackedAssignment const&) = default;
-  TrackedAssignment(TrackedAssignment&&)      = default;
-
-  TEST_CONSTEXPR_CXX14 TrackedAssignment& operator=(TrackedAssignment const&) {
-    tracker_->copy_assignments++;
-    return *this;
-  }
-  TEST_CONSTEXPR_CXX14 TrackedAssignment& operator=(TrackedAssignment&&) {
-    tracker_->move_assignments++;
-    return *this;
-  }
-};
-
 struct NonTriviallyRelocatable {
   int value_;
   TEST_CONSTEXPR NonTriviallyRelocatable() : value_(0) {}

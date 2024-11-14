@@ -34,11 +34,13 @@
 #include <__memory/allocator.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/compressed_pair.h>
+#include <__memory/is_trivially_allocator_relocatable.h>
 #include <__memory/noexcept_move_assign_container.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
 #include <__memory/temp_value.h>
 #include <__memory/uninitialized_algorithms.h>
+#include <__memory/uninitialized_relocate.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/container_compatible_range.h>
@@ -515,8 +517,36 @@ public:
   }
 #endif
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __position);
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __first, const_iterator __last);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __position) {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __position != end(), "vector::erase(iterator) called with a non-dereferenceable iterator");
+    return erase(__position, __position + 1);
+  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __cfirst, const_iterator __clast) {
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__cfirst <= __clast, "vector::erase(first, last) called with invalid range");
+
+    iterator __first = begin() + std::distance(cbegin(), __cfirst);
+    iterator __last  = begin() + std::distance(cbegin(), __clast);
+    if (__first == __last)
+      return __last;
+
+    auto __n = std::distance(__first, __last);
+
+    // If the value_type is nothrow move constructible, we destroy the range being erased and we
+    // relocate the tail of the vector into the created gap. This is especially efficient if the
+    // elements are trivially relocatable. Otherwise, we use the standard technique with move-assignments.
+    if constexpr (is_nothrow_move_constructible<value_type>::value) {
+      std::__allocator_destroy(this->__alloc_, __first, __last);
+      std::__uninitialized_allocator_relocate(this->__alloc_, __last, end(), __first);
+    } else {
+      auto __new_end = std::move(__last, end(), __first);
+      std::__allocator_destroy(this->__alloc_, __new_end, end());
+    }
+
+    this->__end_ -= __n;
+    __annotate_shrink(size() + __n);
+    return __first;
+  }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT {
     size_type __old_size = size();
@@ -1106,28 +1136,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 inline
 #if _LIBCPP_STD_VER >= 17
   return *(__end - 1);
 #endif
-}
-
-template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::iterator
-vector<_Tp, _Allocator>::erase(const_iterator __position) {
-  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-      __position != end(), "vector::erase(iterator) called with a non-dereferenceable iterator");
-  difference_type __ps = __position - cbegin();
-  pointer __p          = this->__begin_ + __ps;
-  this->__destruct_at_end(std::move(__p + 1, this->__end_, __p));
-  return __make_iter(__p);
-}
-
-template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
-vector<_Tp, _Allocator>::erase(const_iterator __first, const_iterator __last) {
-  _LIBCPP_ASSERT_VALID_INPUT_RANGE(__first <= __last, "vector::erase(first, last) called with invalid range");
-  pointer __p = this->__begin_ + (__first - begin());
-  if (__first != __last) {
-    this->__destruct_at_end(std::move(__p + (__last - __first), this->__end_, __p));
-  }
-  return __make_iter(__p);
 }
 
 template <class _Tp, class _Allocator>
