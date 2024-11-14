@@ -1303,6 +1303,10 @@ Error IndexedMemProfReader::deserializeV3(const unsigned char *Start,
   FrameBase = Ptr;
   CallStackBase = Start + CallStackPayloadOffset;
 
+  // Compute the number of elements in the radix tree array.
+  RadixTreeSize = (RecordPayloadOffset - CallStackPayloadOffset) /
+                  sizeof(memprof::LinearFrameId);
+
   // Now initialize the table reader with a pointer into data buffer.
   MemProfRecordTable.reset(MemProfRecordHashTable::Create(
       /*Buckets=*/Start + RecordTableOffset,
@@ -1674,11 +1678,22 @@ IndexedMemProfReader::getMemProfCallerCalleePairs() const {
   memprof::LinearFrameIdConverter FrameIdConv(FrameBase);
   memprof::CallerCalleePairExtractor Extractor(CallStackBase, FrameIdConv);
 
+  // The set of linear call stack IDs that we need to traverse from.  We expect
+  // the set to be dense, so we use a BitVector.
+  BitVector Worklist(RadixTreeSize);
+
+  // Collect the set of linear call stack IDs.  Since we expect a lot of
+  // duplicates, we first collect them in the form of a bit vector before
+  // processing them.
   for (const memprof::IndexedMemProfRecord &IndexedRecord :
        MemProfRecordTable->data())
     for (const memprof::IndexedAllocationInfo &IndexedAI :
          IndexedRecord.AllocSites)
-      Extractor(IndexedAI.CSId);
+      Worklist.set(IndexedAI.CSId);
+
+  // Collect caller-callee pairs for each linear call stack ID in Worklist.
+  for (unsigned CS : Worklist.set_bits())
+    Extractor(CS);
 
   DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>> Pairs =
       std::move(Extractor.CallerCalleePairs);
