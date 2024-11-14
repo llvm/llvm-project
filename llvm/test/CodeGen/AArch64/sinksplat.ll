@@ -234,14 +234,14 @@ define <4 x float> @fmul(ptr %x, ptr %y) {
 ; CHECK-LABEL: fmul:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    ld1r { v1.4s }, [x0]
+; CHECK-NEXT:    ldr s1, [x0]
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  .LBB7_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr q2, [x1, x8]
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp w8, #16
-; CHECK-NEXT:    fmul v2.4s, v2.4s, v1.4s
+; CHECK-NEXT:    fmul v2.4s, v2.4s, v1.s[0]
 ; CHECK-NEXT:    fadd v0.4s, v2.4s, v0.4s
 ; CHECK-NEXT:    b.eq .LBB7_1
 ; CHECK-NEXT:  // %bb.2: // %l2
@@ -275,10 +275,9 @@ define <4 x float> @fmuladd(<4 x float> %x, ptr %y) {
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldr q2, [x0]
 ; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    dup v1.4s, v1.s[3]
 ; CHECK-NEXT:  .LBB8_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    fmla v0.4s, v1.4s, v2.4s
+; CHECK-NEXT:    fmla v0.4s, v2.4s, v1.s[3]
 ; CHECK-NEXT:    subs w8, w8, #1
 ; CHECK-NEXT:    b.eq .LBB8_1
 ; CHECK-NEXT:  // %bb.2: // %l2

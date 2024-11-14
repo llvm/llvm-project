@@ -5239,6 +5239,14 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     // Is it profitable to sink if we found two of the same type of extends.
     return !Ops.empty() && (NumSExts == 2 || NumZExts == 2);
   }
+  case Instruction::FMul: {
+    // Sink splats for index lane variants
+    if (isSplatShuffle(I->getOperand(0)))
+      Ops.push_back(&I->getOperandUse(0));
+    if (isSplatShuffle(I->getOperand(1)))
+      Ops.push_back(&I->getOperandUse(1));
+    return !Ops.empty();
+  }
   default:
     return false;
   }
