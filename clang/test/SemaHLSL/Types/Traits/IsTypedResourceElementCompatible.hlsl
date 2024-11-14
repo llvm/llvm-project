@@ -39,6 +39,14 @@ _Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(int8), "");
 typedef int MyInt;
 _Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(MyInt), "");
 
+// bool and enums not allowed
+_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(bool), "");
+_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(vector<bool, 2>), "");
+
+enum numbers { one, two, three };
+
+_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(numbers), "");
+
 // size exceeds 16 bytes, and exceeds element count limit after splitting 64 bit types into 32 bit types
 _Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(double3), "");
 

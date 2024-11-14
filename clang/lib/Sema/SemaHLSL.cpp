@@ -2224,6 +2224,10 @@ bool SemaHLSL::IsTypedResourceElementCompatible(clang::QualType QT) {
     if (ArraySize > 4)
       return false;
 
+    QualType ElTy = VT->getElementType();
+    if (ElTy->isBooleanType())
+      return false;
+
     if (SemaRef.Context.getTypeSize(QT) / 8 > 16)
       return false;
     return true;
