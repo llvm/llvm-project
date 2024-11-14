@@ -170,10 +170,11 @@ else()
   #    flang_rt.dynamic, this results in a recursive dependency when invoking
   #    the linker.
   #
-  #  * The externally-visible functions must either by annotated with
+  #  * The externally-visible functions must either be annotated with
   #    __declspec(dllexport), or listed in a exports file. A possible workaround
   #    is CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS which would also export the internal
-  #    C++ symbols.
+  #    C++ symbols and still requires global data symbols by be annotated
+  #    manually.
   #
   #add_win_flangrt_library(SHARED dynamic     MultiThreadedDLL)
   #add_win_flangrt_library(SHARED dynamic_dbg MultiThreadedDebugDLL)
