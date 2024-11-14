@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -triple spirv-pc-vulkan-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=SPIRV
 
 // NOTE: The type name number and whether the struct is packed or not will mostly
-// likely change once subscript operators are properly implemented (llvm/llvm-project#95956)
+// likely change once subscript operators are properly implemented (llvm/llvm-project#95956) 
 // and theinterim field of the contained type is removed.
 
 // DXIL: %"class.hlsl::RWBuffer" = type { target("dx.TypedBuffer", i16, 1, 0, 1) }
