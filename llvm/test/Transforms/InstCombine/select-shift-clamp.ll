@@ -175,7 +175,7 @@ define <2 x i32> @select_uge_lshr_clamp_umin_v2i32(<2 x i32> %a0, <2 x i32> %a1,
 ; CHECK-LABEL: @select_uge_lshr_clamp_umin_v2i32(
 ; CHECK-NEXT:    [[A1:%.*]] = freeze <2 x i32> [[A3:%.*]]
 ; CHECK-NEXT:    [[S:%.*]] = lshr <2 x i32> [[A0:%.*]], [[A1]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt <2 x i32> [[A1]], <i32 31, i32 31>
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt <2 x i32> [[A1]], splat (i32 31)
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C]], <2 x i32> [[A2:%.*]], <2 x i32> [[S]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
@@ -223,8 +223,8 @@ define i17 @select_uge_lshr_clamp_umin_i17_badlimit(i17 %a0, i17 %a1, i17 %a2) {
 define range(i64 0, -9223372036854775807) <4 x i64> @PR109888(<4 x i64> %0) {
 ; CHECK-LABEL: @PR109888(
 ; CHECK-NEXT:    [[TMP0:%.*]] = freeze <4 x i64> [[TMP1:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw <4 x i64> <i64 1, i64 1, i64 1, i64 1>, [[TMP0]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult <4 x i64> [[TMP0]], <i64 64, i64 64, i64 64, i64 64>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw <4 x i64> splat (i64 1), [[TMP0]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult <4 x i64> [[TMP0]], splat (i64 64)
 ; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[C]], <4 x i64> [[TMP2]], <4 x i64> zeroinitializer
 ; CHECK-NEXT:    ret <4 x i64> [[R]]
 ;

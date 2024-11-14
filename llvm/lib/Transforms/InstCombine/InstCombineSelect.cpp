@@ -2772,6 +2772,7 @@ static Instruction *foldSelectWithClampedShift(SelectInst &SI,
 
   auto MatchClampedShift = [&](Value *V, Value *Amt) -> BinaryOperator * {
     Value *X, *Limit;
+    Instruction *I;
 
     // Fold (select (icmp_ugt A, BW-1), TrueVal, (shift X, (umin A, C)))
     //  --> (select (icmp_ugt A, BW-1), TrueVal, (shift X, A))
@@ -2789,13 +2790,15 @@ static Instruction *foldSelectWithClampedShift(SelectInst &SI,
     //  --> (select (icmp_ugt A, BW-1), (shift X, A), FalseVal)
     // Fold (select (icmp_ult A, BW), (shift X, (and A, C)), FalseVal)
     //  --> (select (icmp_ult A, BW), (shift X, A), FalseVal)
-    // iff Pow2 element width and C masks all amt bits.
+    // iff Pow2 element width we just demand the amt mask bits.
     if (isPowerOf2_64(BW) &&
-        match(V, m_OneUse(m_Shift(m_Value(X),
-                                  m_And(m_Specific(Amt), m_Value(Limit)))))) {
-      KnownBits KnownLimit = IC.computeKnownBits(Limit, 0, &SI);
-      if (KnownLimit.countMinTrailingOnes() >= Log2_64(BW))
-        return cast<BinaryOperator>(V);
+        match(V, m_OneUse(m_Shift(m_Value(X), m_Instruction(I))))) {
+      KnownBits Known(BW);
+      APInt DemandedBits = APInt::getLowBitsSet(BW, Log2_64(BW));
+      if (Value *NewAmt = IC.SimplifyMultipleUseDemandedBits(
+              I, DemandedBits, Known, /*Depth=*/0,
+              IC.getSimplifyQuery().getWithInstruction(I)))
+        return Amt == NewAmt ? cast<BinaryOperator>(V) : nullptr;
     }
 
     return nullptr;
