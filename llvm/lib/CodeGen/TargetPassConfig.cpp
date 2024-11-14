@@ -141,6 +141,9 @@ static cl::opt<RunOutliner> EnableMachineOutliner(
                           "Disable all outlining"),
                // Sentinel value for unspecified option.
                clEnumValN(RunOutliner::AlwaysOutline, "", "")));
+static cl::opt<bool> EnableGlobalMergeFunc(
+    "enable-global-merge-func", cl::Hidden,
+    cl::desc("Enable global merge functions that are based on hash function"));
 // Disable the pass to fix unwind information. Whether the pass is included in
 // the pipeline is controlled via the target options, this option serves as
 // manual override.
@@ -489,6 +492,7 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
 
   SET_BOOLEAN_OPTION(EarlyLiveIntervals)
   SET_BOOLEAN_OPTION(EnableBlockPlacementStats)
+  SET_BOOLEAN_OPTION(EnableGlobalMergeFunc)
   SET_BOOLEAN_OPTION(EnableImplicitNullChecks)
   SET_BOOLEAN_OPTION(EnableMachineOutliner)
   SET_BOOLEAN_OPTION(MISchedPostRA)
@@ -884,6 +888,9 @@ void TargetPassConfig::addIRPasses() {
   // Convert conditional moves to conditional jumps when profitable.
   if (getOptLevel() != CodeGenOptLevel::None && !DisableSelectOptimize)
     addPass(createSelectOptimizePass());
+
+  if (EnableGlobalMergeFunc)
+    addPass(createGlobalMergeFuncPass());
 }
 
 /// Turn exception handling constructs into something the code generators can

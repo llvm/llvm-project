@@ -14,10 +14,42 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CGData/StableFunctionMap.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "stable-function-map"
 
 using namespace llvm;
+
+static cl::opt<unsigned>
+    GlobalMergingMinMerges("global-merging-min-merges",
+                           cl::desc("Minimum number of similar functions with "
+                                    "the same hash required for merging."),
+                           cl::init(2), cl::Hidden);
+static cl::opt<unsigned> GlobalMergingMinInstrs(
+    "global-merging-min-instrs",
+    cl::desc("The minimum instruction count required when merging functions."),
+    cl::init(1), cl::Hidden);
+static cl::opt<unsigned> GlobalMergingMaxParams(
+    "global-merging-max-params",
+    cl::desc(
+        "The maximum number of parameters allowed when merging functions."),
+    cl::init(std::numeric_limits<unsigned>::max()), cl::Hidden);
+static cl::opt<unsigned> GlobalMergingParamOverhead(
+    "global-merging-param-overhead",
+    cl::desc("The overhead cost associated with each parameter when merging "
+             "functions."),
+    cl::init(2), cl::Hidden);
+static cl::opt<unsigned>
+    GlobalMergingCallOverhead("global-merging-call-overhead",
+                              cl::desc("The overhead cost associated with each "
+                                       "function call when merging functions."),
+                              cl::init(1), cl::Hidden);
+static cl::opt<unsigned> GlobalMergingExtraThreshold(
+    "global-merging-extra-threshold",
+    cl::desc("An additional cost threshold that must be exceeded for merging "
+             "to be considered beneficial."),
+    cl::init(0), cl::Hidden);
 
 unsigned StableFunctionMap::getIdOrCreateForName(StringRef Name) {
   auto It = NameToId.find(Name);
@@ -117,7 +149,38 @@ static void removeIdenticalIndexPair(
       SF->IndexOperandHashMap->erase(Pair);
 }
 
-void StableFunctionMap::finalize() {
+static bool isProfitable(
+    const SmallVector<std::unique_ptr<StableFunctionMap::StableFunctionEntry>>
+        &SFS) {
+  unsigned StableFunctionCount = SFS.size();
+  if (StableFunctionCount < GlobalMergingMinMerges)
+    return false;
+
+  unsigned InstCount = SFS[0]->InstCount;
+  if (InstCount < GlobalMergingMinInstrs)
+    return false;
+
+  unsigned ParamCount = SFS[0]->IndexOperandHashMap->size();
+  if (ParamCount > GlobalMergingMaxParams)
+    return false;
+
+  unsigned Benefit = InstCount * (StableFunctionCount - 1);
+  unsigned Cost =
+      (GlobalMergingParamOverhead * ParamCount + GlobalMergingCallOverhead) *
+          StableFunctionCount +
+      GlobalMergingExtraThreshold;
+
+  bool Result = Benefit > Cost;
+  LLVM_DEBUG(dbgs() << "isProfitable: Hash = " << SFS[0]->Hash << ", "
+                    << "StableFunctionCount = " << StableFunctionCount
+                    << ", InstCount = " << InstCount
+                    << ", ParamCount = " << ParamCount
+                    << ", Benefit = " << Benefit << ", Cost = " << Cost
+                    << ", Result = " << (Result ? "true" : "false") << "\n");
+  return Result;
+}
+
+void StableFunctionMap::finalize(bool SkipTrim) {
   for (auto It = HashToFuncs.begin(); It != HashToFuncs.end(); ++It) {
     auto &[StableHash, SFS] = *It;
 
@@ -158,9 +221,15 @@ void StableFunctionMap::finalize() {
       continue;
     }
 
+    if (SkipTrim)
+      continue;
+
     // Trim the index pair that has the same operand hash across
     // stable functions.
     removeIdenticalIndexPair(SFS);
+
+    if (!isProfitable(SFS))
+      HashToFuncs.erase(It);
   }
 
   Finalized = true;
