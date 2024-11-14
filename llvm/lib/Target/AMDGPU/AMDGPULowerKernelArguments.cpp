@@ -13,7 +13,6 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"

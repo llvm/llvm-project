@@ -14,7 +14,6 @@
 
 #include "AMDGPUMCResourceInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSymbol.h"
