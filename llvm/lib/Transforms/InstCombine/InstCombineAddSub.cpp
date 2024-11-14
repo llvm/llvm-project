@@ -2631,14 +2631,16 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
                                                /* IsNUW */ false))
       return replaceInstUsesWith(I, Res);
 
-  if (match(Op0, m_ZExt(m_PtrToInt(m_Value(LHSOp)))) &&
+  if (match(Op0, m_ZExt(m_PtrToIntSameSize(DL, m_Value(LHSOp)))) &&
       match(Op1, m_ZExtOrSelf(m_PtrToInt(m_Value(RHSOp))))) {
     if (auto *GEP = dyn_cast<GEPOperator>(LHSOp)) {
       if (GEP->getPointerOperand() == RHSOp) {
         if (GEP->hasNoUnsignedWrap() || GEP->hasNoUnsignedSignedWrap()) {
           Value *Offset = EmitGEPOffset(GEP);
           Value *Res = GEP->hasNoUnsignedWrap()
-                           ? Builder.CreateZExt(Offset, I.getType())
+                           ? Builder.CreateZExt(
+                                 Offset, I.getType(), "",
+                                 /*IsNonNeg=*/GEP->hasNoUnsignedSignedWrap())
                            : Builder.CreateSExt(Offset, I.getType());
           return replaceInstUsesWith(I, Res);
         }
