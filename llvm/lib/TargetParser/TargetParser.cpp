@@ -538,9 +538,8 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     case GK_GFX940:
       Features["fp8-insts"] = true;
       Features["fp8-conversion-insts"] = true;
-      if (parseArchAMDGCN(GPU) != GK_GFX950) {
-      Features["xf32-insts"] = true;
-      }
+      if (parseArchAMDGCN(GPU) != GK_GFX950)
+        Features["xf32-insts"] = true;
       [[fallthrough]];
     case GK_GFX9_4_GENERIC:
       Features["gfx940-insts"] = true;
