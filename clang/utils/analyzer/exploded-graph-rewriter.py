@@ -86,6 +86,8 @@ class ProgramPoint:
                 if json_pp["location"] is not None
                 else None
             )
+        elif self.kind == "CallEnter":
+            self.callee_decl = json_pp["callee_decl"] if "callee_decl" in json_pp else "None"
         elif self.kind == "BlockEntrance":
             self.block_id = json_pp["block_id"]
 
@@ -617,6 +619,13 @@ class DotDumpVisitor:
                 '<td align="left" width="0">'
                 '<font color="%s">%s</font></td>'
                 '<td align="left">[B%d]</td></tr>' % (color, p.kind, p.block_id)
+            )
+        elif p.kind == "CallEnter":
+            self._dump(
+                '<td width="0"></td>'
+                '<td align="left" width="0">'
+                '<font color="%s">%s</font></td>'
+                '<td align="left">%s</td></tr>' % (color, p.kind, p.callee_decl)
             )
         else:
             # TODO: Print more stuff for other kinds of points.
