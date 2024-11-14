@@ -15242,15 +15242,13 @@ void ScalarEvolution::LoopGuards::collectFromPHI(
     const BasicBlock *InBlock = Phi.getIncomingBlock(IncomingIdx);
     if (!VisitedBlocks.insert(InBlock).second)
       return {nullptr, scCouldNotCompute};
-    if (!IncomingGuards.contains(InBlock)) {
-      LoopGuards G(SE);
-      collectFromBlock(SE, G, Phi.getParent(), InBlock, VisitedBlocks,
+    auto [G, Inserted] = IncomingGuards.try_emplace(InBlock, LoopGuards(SE));
+    if (Inserted)
+      collectFromBlock(SE, G->second, Phi.getParent(), InBlock, VisitedBlocks,
                        Depth + 1);
-      IncomingGuards.try_emplace(InBlock, std::move(G));
-    }
-    const LoopGuards &G = IncomingGuards.at(InBlock);
-    auto S = G.RewriteMap.find(SE.getSCEV(Phi.getIncomingValue(IncomingIdx)));
-    if (S == G.RewriteMap.end())
+    auto S = G->second.RewriteMap.find(
+        SE.getSCEV(Phi.getIncomingValue(IncomingIdx)));
+    if (S == G->second.RewriteMap.end())
       return {nullptr, scCouldNotCompute};
     auto *SM = dyn_cast_if_present<SCEVMinMaxExpr>(S->second);
     if (!SM)
