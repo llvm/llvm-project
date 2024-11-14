@@ -27,7 +27,8 @@ namespace {
 static const char *ReductionIntOpcodes[] = {
     "add", "mul", "and", "or", "xor", "smin", "smax", "umin", "umax"};
 
-static const char *ReductionFPOpcodes[] = {"fadd", "fmul", "fmin", "fmax"};
+static const char *ReductionFPOpcodes[] = {"fadd", "fmul",     "fmin",
+                                           "fmax", "fminimum", "fmaximum"};
 
 class VPIntrinsicTest : public testing::Test {
 protected:
@@ -106,6 +107,8 @@ protected:
            "@llvm.experimental.vp.strided.load.v8i32.p1i32.i32(i32 "
            "addrspace(1)*, i32, <8 x i1>, i32) ";
     Str << " declare <8 x i32> @llvm.vp.gather.v8i32.v8p0i32(<8 x i32*>, <8 x "
+           "i1>, i32) ";
+    Str << " declare <8 x i32> @llvm.experimental.vp.splat.v8i32(i32, <8 x "
            "i1>, i32) ";
 
     for (const char *ReductionOpcode : ReductionIntOpcodes)
@@ -362,6 +365,59 @@ TEST_F(VPIntrinsicTest, IntrinsicIDRoundTrip) {
     ++FullTripCounts;
   }
   ASSERT_NE(FullTripCounts, 0u);
+}
+
+/// Check that going from intrinsic to VP intrinsic and back results in the same
+/// intrinsic.
+TEST_F(VPIntrinsicTest, IntrinsicToVPRoundTrip) {
+  bool IsFullTrip = false;
+  Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic + 1;
+  for (; IntrinsicID < Intrinsic::num_intrinsics; IntrinsicID++) {
+    Intrinsic::ID VPID = VPIntrinsic::getForIntrinsic(IntrinsicID);
+    // No equivalent VP intrinsic available.
+    if (VPID == Intrinsic::not_intrinsic)
+      continue;
+
+    // Return itself if passed intrinsic ID is VP intrinsic.
+    if (VPIntrinsic::isVPIntrinsic(IntrinsicID)) {
+      ASSERT_EQ(IntrinsicID, VPID);
+      continue;
+    }
+
+    std::optional<Intrinsic::ID> RoundTripIntrinsicID =
+        VPIntrinsic::getFunctionalIntrinsicIDForVP(VPID);
+    // No equivalent non-predicated intrinsic available.
+    if (!RoundTripIntrinsicID)
+      continue;
+
+    ASSERT_EQ(*RoundTripIntrinsicID, IntrinsicID);
+    IsFullTrip = true;
+  }
+  ASSERT_TRUE(IsFullTrip);
+}
+
+/// Check that going from VP intrinsic to equivalent non-predicated intrinsic
+/// and back results in the same intrinsic.
+TEST_F(VPIntrinsicTest, VPToNonPredIntrinsicRoundTrip) {
+  std::unique_ptr<Module> M = createVPDeclarationModule();
+  assert(M);
+
+  bool IsFullTrip = false;
+  for (const auto &VPDecl : *M) {
+    auto VPID = VPDecl.getIntrinsicID();
+    std::optional<Intrinsic::ID> NonPredID =
+        VPIntrinsic::getFunctionalIntrinsicIDForVP(VPID);
+
+    // No equivalent non-predicated intrinsic available
+    if (!NonPredID)
+      continue;
+
+    Intrinsic::ID RoundTripVPID = VPIntrinsic::getForIntrinsic(*NonPredID);
+
+    ASSERT_EQ(RoundTripVPID, VPID);
+    IsFullTrip = true;
+  }
+  ASSERT_TRUE(IsFullTrip);
 }
 
 /// Check that VPIntrinsic::getDeclarationForParams works.

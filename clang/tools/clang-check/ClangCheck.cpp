@@ -16,7 +16,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTConsumer.h"
-#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Driver/Options.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"

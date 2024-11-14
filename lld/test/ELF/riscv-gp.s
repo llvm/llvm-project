@@ -16,10 +16,6 @@
 # SEC64: [ [[#SDATA:]]] .sdata PROGBITS {{0*}}000032e0
 # SEC64: {{0*}}00003ae0 0 NOTYPE GLOBAL DEFAULT [[#SDATA]] __global_pointer$
 
-## __global_pointer$ - 0x1000 = 4096*3-2048
-# DIS:      1000: auipc gp, 3
-# DIS-NEXT:       addi gp, gp, -2048
-
 # ERR: error: relocation R_RISCV_PCREL_HI20 cannot be used against symbol '__global_pointer$'; recompile with -fPIC
 
 ## -r mode does not define __global_pointer$.

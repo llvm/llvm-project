@@ -1,7 +1,6 @@
 ;; Some quoted arguments below don't work properly on Windows when llvm-lit
-;; invokes the cmd shell to run the commands. Just require running in a
-;; posix shell, to keep being able to test this corner case on Unix at least.
-; REQUIRES: shell
+;; invokes the cmd shell to run the commands.
+; UNSUPPORTED: system-windows
 
 ; RUN: llvm-windres -### --include-dir %p/incdir1 --include %p/incdir2 "-DFOO1=\\\"foo bar\\\"" -UFOO2 -D FOO3 --preprocessor-arg "-DFOO4=\\\"baz baz\\\"" -DFOO5=\"bar\" %p/Inputs/empty.rc %t.res | FileCheck %s --check-prefix=CHECK1
 ; RUN: llvm-windres -### --include-dir %p/incdir1 --include %p/incdir2 "-DFOO1=\"foo bar\"" -UFOO2 -D FOO3 --preprocessor-arg "-DFOO4=\"baz baz\"" "-DFOO5=bar" %p/Inputs/empty.rc %t.res --use-temp-file | FileCheck %s --check-prefix=CHECK1

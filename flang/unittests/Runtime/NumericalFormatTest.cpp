@@ -753,6 +753,8 @@ TEST(IOApiTests, FormatDoubleValues) {
       {"(F5.0,';')", 0.49999999999999994, "   0.;"},
       {"(F5.0,';')", 0.5, "   0.;"},
       {"(F5.0,';')", 0.5000000000000001, "   1.;"},
+      {"(ES0.0E0,';')", 0.666, "7.E-1;"},
+      {"(EN0.0E0,';')", 0.666, "666.E-3;"},
   };
 
   for (auto const &[format, value, expect] : individualTestCases) {

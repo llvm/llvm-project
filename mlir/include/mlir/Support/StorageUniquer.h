@@ -10,7 +10,6 @@
 #define MLIR_SUPPORT_STORAGEUNIQUER_H
 
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"

@@ -122,7 +122,7 @@ class Foo {
         },
         {
           "kind": "text",
-          "spelling": "<"
+          "spelling": " <"
         },
         {
           "kind": "keyword",
@@ -257,7 +257,7 @@ class Foo {
         },
         {
           "kind": "text",
-          "spelling": "<> "
+          "spelling": " <> "
         },
         {
           "kind": "typeIdentifier",

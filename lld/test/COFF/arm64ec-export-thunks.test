@@ -1,0 +1,218 @@
+REQUIRES: aarch64, x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows arm64ec-data.s -o arm64ec-data.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows arm64ec-func.s -o arm64ec-func.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows antidep-func.s -o antidep-func.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows arm64ec-data-sym.s -o arm64ec-data-sym.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows x86_64-func.s -o x86_64-func.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
+
+RUN: lld-link -out:exports.dll -machine:arm64ec arm64ec-func.obj x86_64-func.obj loadconfig-arm64ec.obj \
+RUN:          arm64ec-data.obj -dll -noentry -export:arm64ec_func -export:func=arm64ec_func \
+RUN:          -export:x86_64_func -export:data_sym,DATA
+
+RUN: llvm-objdump -d exports.dll | FileCheck -check-prefix=EXP-DISASM %s
+EXP-DISASM:      Disassembly of section .text:
+EXP-DISASM-EMPTY:
+EXP-DISASM-NEXT: 0000000180001000 <.text>:
+EXP-DISASM-NEXT: 180001000: 90000008     adrp    x8, 0x180001000 <.text>
+EXP-DISASM-NEXT: 180001004: 52800040     mov     w0, #0x2
+EXP-DISASM-NEXT: 180001008: d65f03c0     ret
+EXP-DISASM-NEXT:                 ...
+EXP-DISASM-EMPTY:
+EXP-DISASM-NEXT: 0000000180002000 <x86_64_func>:
+EXP-DISASM-NEXT: 180002000: e8 fb ef ff ff               callq   0x180001000 <.text>
+EXP-DISASM-NEXT: 180002005: b8 03 00 00 00               movl    $0x3, %eax
+EXP-DISASM-NEXT: 18000200a: c3                           retq
+EXP-DISASM-EMPTY:
+EXP-DISASM-NEXT: Disassembly of section .hexpthk:
+EXP-DISASM-EMPTY:
+EXP-DISASM-NEXT: 0000000180003000 <func>:
+EXP-DISASM-NEXT: 180003000: 48 8b c4                     movq    %rsp, %rax
+EXP-DISASM-NEXT: 180003003: 48 89 58 20                  movq    %rbx, 0x20(%rax)
+EXP-DISASM-NEXT: 180003007: 55                           pushq   %rbp
+EXP-DISASM-NEXT: 180003008: 5d                           popq    %rbp
+EXP-DISASM-NEXT: 180003009: e9 f2 df ff ff               jmp     0x180001000 <.text>
+EXP-DISASM-NEXT: 18000300e: cc                           int3
+EXP-DISASM-NEXT: 18000300f: cc                           int3
+EXP-DISASM-EMPTY:
+EXP-DISASM-NEXT: 0000000180003010 <arm64ec_func>:
+EXP-DISASM-NEXT: 180003010: 48 8b c4                     movq    %rsp, %rax
+EXP-DISASM-NEXT: 180003013: 48 89 58 20                  movq    %rbx, 0x20(%rax)
+EXP-DISASM-NEXT: 180003017: 55                           pushq   %rbp
+EXP-DISASM-NEXT: 180003018: 5d                           popq    %rbp
+EXP-DISASM-NEXT: 180003019: e9 e2 df ff ff               jmp     0x180001000 <.text>
+EXP-DISASM-NEXT: 18000301e: cc                           int3
+EXP-DISASM-NEXT: 18000301f: cc                           int3
+
+RUN: llvm-objdump -p exports.dll | FileCheck -check-prefix=EXP-EXPORT %s
+EXP-EXPORT:      Ordinal      RVA  Name
+EXP-EXPORT-NEXT:       1   0x3010  arm64ec_func
+EXP-EXPORT-NEXT:       2   0x7000  data_sym
+EXP-EXPORT-NEXT:       3   0x3000  func
+EXP-EXPORT-NEXT:       4   0x2000  x86_64_func
+
+RUN: llvm-readobj --coff-load-config exports.dll | FileCheck -check-prefix=EXP-CHPE %s
+EXP-CHPE:       CodeMap [
+EXP-CHPE-NEXT:    0x1000 - 0x100C  ARM64EC
+EXP-CHPE-NEXT:    0x2000 - 0x3020  X64
+EXP-CHPE-NEXT:  ]
+EXP-CHPE-NEXT:  CodeRangesToEntryPoints [
+EXP-CHPE-NEXT:    0x3000 - 0x3010 -> 0x3000
+EXP-CHPE-NEXT:    0x3010 - 0x3020 -> 0x3010
+EXP-CHPE-NEXT:  ]
+EXP-CHPE-NEXT:  RedirectionMetadata [
+EXP-CHPE-NEXT:    0x3000 -> 0x1000
+EXP-CHPE-NEXT:    0x3010 -> 0x1000
+EXP-CHPE-NEXT:  ]
+
+RUN: llvm-readobj --sections exports.dll | FileCheck --check-prefix=A64XRM %s
+
+A64XRM:      Name: .a64xrm (2E 61 36 34 78 72 6D 00)
+A64XRM-NEXT: VirtualSize: 0x10
+A64XRM-NEXT: VirtualAddress: 0x6000
+A64XRM-NEXT: RawDataSize: 512
+A64XRM-NEXT: PointerToRawData:
+A64XRM-NEXT: PointerToRelocations: 0x0
+A64XRM-NEXT: PointerToLineNumbers: 0x0
+A64XRM-NEXT: RelocationCount: 0
+A64XRM-NEXT: LineNumberCount: 0
+A64XRM-NEXT: Characteristics [ (0x40000040)
+A64XRM-NEXT:   IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+A64XRM-NEXT:   IMAGE_SCN_MEM_READ (0x40000000)
+A64XRM-NEXT: ]
+
+RUN: llvm-objdump -s --section=.test exports.dll | FileCheck --check-prefix=EXP-DATA %s
+EXP-DATA: 180007000 00300000 10300000
+
+RUN: lld-link -out:exports2.dll -machine:arm64ec antidep-func.obj x86_64-func.obj loadconfig-arm64ec.obj \
+RUN:          arm64ec-data.obj -dll -noentry -export:arm64ec_func -export:func=arm64ec_func \
+RUN:          -export:x86_64_func -export:data_sym,DATA
+
+RUN: llvm-objdump -d exports2.dll | FileCheck -check-prefix=EXP-DISASM %s
+RUN: llvm-objdump -p exports2.dll | FileCheck -check-prefix=EXP-EXPORT %s
+RUN: llvm-objdump -s --section=.test exports2.dll | FileCheck --check-prefix=EXP-DATA %s
+RUN: llvm-readobj --coff-load-config exports2.dll | FileCheck -check-prefix=EXP-CHPE %s
+
+RUN: lld-link -out:entry.dll -machine:arm64ec arm64ec-func.obj loadconfig-arm64ec.obj -dll -entry:arm64ec_func
+
+RUN: llvm-objdump -d entry.dll | FileCheck -check-prefix=ENTRY-DISASM %s
+ENTRY-DISASM:      Disassembly of section .text:
+ENTRY-DISASM-EMPTY:
+ENTRY-DISASM-NEXT: 0000000180001000 <.text>:
+ENTRY-DISASM-NEXT: 180001000: 90000008     adrp    x8, 0x180001000 <.text>
+ENTRY-DISASM-NEXT: 180001004: 52800040     mov     w0, #0x2                // =2
+ENTRY-DISASM-NEXT: 180001008: d65f03c0     ret
+ENTRY-DISASM-EMPTY:
+ENTRY-DISASM-NEXT: Disassembly of section .hexpthk:
+ENTRY-DISASM-EMPTY:
+ENTRY-DISASM-NEXT: 0000000180002000 <.hexpthk>:
+ENTRY-DISASM-NEXT: 180002000: 48 8b c4                     movq    %rsp, %rax
+ENTRY-DISASM-NEXT: 180002003: 48 89 58 20                  movq    %rbx, 0x20(%rax)
+ENTRY-DISASM-NEXT: 180002007: 55                           pushq   %rbp
+ENTRY-DISASM-NEXT: 180002008: 5d                           popq    %rbp
+ENTRY-DISASM-NEXT: 180002009: e9 f2 ef ff ff               jmp     0x180001000 <.text>
+ENTRY-DISASM-NEXT: 18000200e: cc                           int3
+ENTRY-DISASM-NEXT: 18000200f: cc                           int3
+
+RUN: llvm-readobj --headers entry.dll | FileCheck -check-prefix=ENTRY %s
+ENTRY: AddressOfEntryPoint: 0x2000
+
+RUN: llvm-readobj --coff-load-config entry.dll | FileCheck -check-prefix=ENTRY-CHPE %s
+ENTRY-CHPE:       CodeMap [
+ENTRY-CHPE-NEXT:    0x1000 - 0x100C  ARM64EC
+ENTRY-CHPE-NEXT:    0x2000 - 0x2010  X64
+ENTRY-CHPE-NEXT:  ]
+ENTRY-CHPE-NEXT:  CodeRangesToEntryPoints [
+ENTRY-CHPE-NEXT:    0x2000 - 0x2010 -> 0x2000
+ENTRY-CHPE-NEXT:  ]
+ENTRY-CHPE-NEXT:  RedirectionMetadata [
+ENTRY-CHPE-NEXT:    0x2000 -> 0x1000
+ENTRY-CHPE-NEXT:  ]
+
+
+Test exporting data symbol as a function:
+
+RUN: lld-link -out:data-func.dll -machine:arm64ec arm64ec-data-sym.obj loadconfig-arm64ec.obj -dll -noentry -export:data_sym
+
+RUN: llvm-readobj --hex-dump=.test data-func.dll | FileCheck --check-prefix=DATAFUNC-TEST %s
+DATAFUNC-TEST:      Hex dump of section '.test':
+DATAFUNC-TEST-NEXT: 0x180003000 00000000                            ....
+
+RUN: llvm-readobj --coff-exports --hex-dump=.test data-func.dll | FileCheck --check-prefix=DATAFUNC-EXP %s
+DATAFUNC-EXP:      Export {
+DATAFUNC-EXP-NEXT:   Ordinal: 1
+DATAFUNC-EXP-NEXT:   Name: data_sym
+DATAFUNC-EXP-NEXT:   RVA: 0x3000
+DATAFUNC-EXP-NEXT: }
+
+
+Test mingw-style auto-export:
+
+RUN: lld-link -out:export-all.dll -machine:arm64ec arm64ec-func.obj loadconfig-arm64ec.obj -dll -noentry -lldmingw
+RUN: llvm-objdump -d export-all.dll | FileCheck --check-prefix=EXPORT-ALL %s
+
+EXPORT-ALL:     Disassembly of section .text:
+EXPORT-ALL-EMPTY:
+EXPORT-ALL-NEXT: 0000000180001000 <.text>:
+EXPORT-ALL-NEXT: 180001000: 90000008     adrp    x8, 0x180001000 <.text>
+EXPORT-ALL-NEXT: 180001004: 52800040     mov     w0, #0x2                // =2
+EXPORT-ALL-NEXT: 180001008: d65f03c0     ret
+EXPORT-ALL-EMPTY:
+EXPORT-ALL-NEXT: Disassembly of section .hexpthk:
+EXPORT-ALL-EMPTY:
+EXPORT-ALL-NEXT: 0000000180002000 <arm64ec_func>:
+EXPORT-ALL-NEXT: 180002000: 48 8b c4                     movq    %rsp, %rax
+EXPORT-ALL-NEXT: 180002003: 48 89 58 20                  movq    %rbx, 0x20(%rax)
+EXPORT-ALL-NEXT: 180002007: 55                           pushq   %rbp
+EXPORT-ALL-NEXT: 180002008: 5d                           popq    %rbp
+EXPORT-ALL-NEXT: 180002009: e9 f2 ef ff ff               jmp     0x180001000 <.text>
+EXPORT-ALL-NEXT: 18000200e: cc                           int3
+EXPORT-ALL-NEXT: 18000200f: cc                           int3
+
+
+#--- arm64ec-func.s
+    .text
+    .globl arm64ec_func
+    .p2align 2, 0x0
+arm64ec_func:
+    adrp x8,arm64ec_func
+    mov w0, #2
+    ret
+
+#--- antidep-func.s
+    .text
+    .globl "#arm64ec_func"
+    .p2align 2, 0x0
+"#arm64ec_func":
+    adrp x8,arm64ec_func
+    mov w0, #2
+    ret
+
+    .weak_anti_dep arm64ec_func
+arm64ec_func = "#arm64ec_func"
+
+#--- arm64ec-data.s
+    .section .test, "r"
+    .globl data_sym
+    .p2align 2, 0x0
+data_sym:
+    .rva "EXP+#func"
+    .rva "EXP+#arm64ec_func"
+
+#--- x86_64-func.s
+    .text
+    .globl x86_64_func
+    .p2align 2, 0x0
+x86_64_func:
+    call arm64ec_func
+    movl $3, %eax
+    retq
+
+#--- arm64ec-data-sym.s
+    .section .test, "r"
+    .globl data_sym
+    .p2align 2, 0x0
+data_sym:
+    .word 0

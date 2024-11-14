@@ -604,7 +604,8 @@ bool WasmWriter::writeWasm(raw_ostream &OS) {
     if (auto S = dyn_cast<WasmYAML::CustomSection>(Sec.get()))
       SecName = S->Name;
     if (!Checker.isValidSectionOrder(Sec->Type, SecName)) {
-      reportError("out of order section type: " + Twine(Sec->Type));
+      reportError("out of order section type: " +
+                  wasm::sectionTypeToString(Sec->Type));
       return false;
     }
     encodeULEB128(Sec->Type, OS);

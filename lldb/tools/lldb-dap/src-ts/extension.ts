@@ -14,13 +14,29 @@ function createDefaultLLDBDapOptions(): LLDBDapOptions {
       session: vscode.DebugSession,
       packageJSONExecutable: vscode.DebugAdapterExecutable | undefined,
     ): Promise<vscode.DebugAdapterExecutable | undefined> {
-      const path = vscode.workspace
-        .getConfiguration("lldb-dap", session.workspaceFolder)
-        .get<string>("executable-path");
-      if (path) {
-        return new vscode.DebugAdapterExecutable(path, []);
+      const config = vscode.workspace
+        .getConfiguration("lldb-dap", session.workspaceFolder);
+      const path = config.get<string>("executable-path");
+      const log_path = config.get<string>("log-path");
+
+      let env : { [key: string]: string } = {};
+      if (log_path) {
+        env["LLDBDAP_LOG"] = log_path;
       }
-      return packageJSONExecutable;
+
+      if (path) {
+        return new vscode.DebugAdapterExecutable(path, [], {env});
+      } else if (packageJSONExecutable) {
+        return new vscode.DebugAdapterExecutable(packageJSONExecutable.command, packageJSONExecutable.args, {
+          ...packageJSONExecutable.options,
+          env: {
+            ...packageJSONExecutable.options?.env,
+            ...env
+          }
+        });
+      } else {
+        return undefined;
+      }
     },
   };
 }

@@ -312,13 +312,13 @@ Status ABISysV_arc::SetReturnValueObject(StackFrameSP &frame_sp,
                                          ValueObjectSP &new_value_sp) {
   Status result;
   if (!new_value_sp) {
-    result.SetErrorString("Empty value object for return value.");
+    result = Status::FromErrorString("Empty value object for return value.");
     return result;
   }
 
   CompilerType compiler_type = new_value_sp->GetCompilerType();
   if (!compiler_type) {
-    result.SetErrorString("Null clang type for return value.");
+    result = Status::FromErrorString("Null clang type for return value.");
     return result;
   }
 
@@ -327,7 +327,8 @@ Status ABISysV_arc::SetReturnValueObject(StackFrameSP &frame_sp,
   bool is_signed = false;
   if (!compiler_type.IsIntegerOrEnumerationType(is_signed) &&
       !compiler_type.IsPointerType()) {
-    result.SetErrorString("We don't support returning other types at present");
+    result = Status::FromErrorString(
+        "We don't support returning other types at present");
     return result;
   }
 
@@ -335,7 +336,7 @@ Status ABISysV_arc::SetReturnValueObject(StackFrameSP &frame_sp,
   size_t num_bytes = new_value_sp->GetData(data, result);
 
   if (result.Fail()) {
-    result.SetErrorStringWithFormat(
+    result = Status::FromErrorStringWithFormat(
         "Couldn't convert return value to raw data: %s", result.AsCString());
     return result;
   }
@@ -347,8 +348,8 @@ Status ABISysV_arc::SetReturnValueObject(StackFrameSP &frame_sp,
     auto reg_info =
         reg_ctx.GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
     if (!reg_ctx.WriteRegisterFromUnsigned(reg_info, raw_value)) {
-      result.SetErrorStringWithFormat("Couldn't write value to register %s",
-                                      reg_info->name);
+      result = Status::FromErrorStringWithFormat(
+          "Couldn't write value to register %s", reg_info->name);
       return result;
     }
 
@@ -359,14 +360,14 @@ Status ABISysV_arc::SetReturnValueObject(StackFrameSP &frame_sp,
     reg_info =
         reg_ctx.GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG2);
     if (!reg_ctx.WriteRegisterFromUnsigned(reg_info, raw_value)) {
-      result.SetErrorStringWithFormat("Couldn't write value to register %s",
-                                      reg_info->name);
+      result = Status::FromErrorStringWithFormat(
+          "Couldn't write value to register %s", reg_info->name);
     }
 
     return result;
   }
 
-  result.SetErrorString(
+  result = Status::FromErrorString(
       "We don't support returning large integer values at present.");
   return result;
 }

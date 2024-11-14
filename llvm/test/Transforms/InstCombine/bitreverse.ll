@@ -403,7 +403,7 @@ define i64 @PR59897(i1 %X1_2) {
 define i16 @rev_xor_lhs_rev16(i16 %a, i16 %b) #0 {
 ; CHECK-LABEL: @rev_xor_lhs_rev16(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[B:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i16 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i16 [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[TMP2]]
 ;
   %1 = tail call i16 @llvm.bitreverse.i16(i16 %a)
@@ -475,7 +475,7 @@ define <2 x i32> @rev_xor_rhs_i32vec(<2 x i32> %a, <2 x i32> %b) #0 {
 define i64 @rev_and_rhs_rev64_multiuse1(i64 %a, i64 %b) #0 {
 ; CHECK-LABEL: @rev_and_rhs_rev64_multiuse1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.bitreverse.i64(i64 [[B:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i64 @llvm.bitreverse.i64(i64 [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
@@ -490,7 +490,7 @@ define i64 @rev_and_rhs_rev64_multiuse1(i64 %a, i64 %b) #0 {
 define i64 @rev_and_rhs_rev64_multiuse2(i64 %a, i64 %b) #0 {
 ; CHECK-LABEL: @rev_and_rhs_rev64_multiuse2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.bitreverse.i64(i64 [[B:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i64 @llvm.bitreverse.i64(i64 [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]

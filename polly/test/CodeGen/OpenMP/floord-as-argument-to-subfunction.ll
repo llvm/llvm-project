@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-opt-isl -polly-opt-max-coefficient=-1 -polly-parallel -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-opt-isl -polly-opt-max-coefficient=-1 -polly-parallel -passes=polly-codegen -S < %s | FileCheck %s
 ;
 ; Check that we do not crash but generate parallel code
 ;

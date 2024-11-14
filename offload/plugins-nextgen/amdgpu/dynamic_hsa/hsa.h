@@ -31,6 +31,7 @@ typedef enum {
   HSA_STATUS_ERROR = 0x1000,
   HSA_STATUS_ERROR_INVALID_CODE_OBJECT = 0x1010,
   HSA_STATUS_ERROR_NOT_INITIALIZED = 0x100B,
+  HSA_STATUS_ERROR_EXCEPTION = 0x1016,
 } hsa_status_t;
 
 hsa_status_t hsa_status_string(hsa_status_t status, const char **status_string);

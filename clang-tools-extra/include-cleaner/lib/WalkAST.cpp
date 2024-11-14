@@ -23,7 +23,6 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
@@ -267,18 +266,19 @@ public:
     return true;
   }
 
-  // Report a reference from explicit specializations to the specialized
-  // template. Implicit ones are filtered out by RAV and explicit instantiations
-  // are already traversed through typelocs.
+  // Report a reference from explicit specializations/instantiations to the
+  // specialized template. Implicit ones are filtered out by RAV.
   bool
   VisitClassTemplateSpecializationDecl(ClassTemplateSpecializationDecl *CTSD) {
-    if (CTSD->isExplicitSpecialization())
+    if (clang::isTemplateExplicitInstantiationOrSpecialization(
+            CTSD->getTemplateSpecializationKind()))
       report(CTSD->getLocation(),
              CTSD->getSpecializedTemplate()->getTemplatedDecl());
     return true;
   }
   bool VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *VTSD) {
-    if (VTSD->isExplicitSpecialization())
+    if (clang::isTemplateExplicitInstantiationOrSpecialization(
+            VTSD->getTemplateSpecializationKind()))
       report(VTSD->getLocation(),
              VTSD->getSpecializedTemplate()->getTemplatedDecl());
     return true;
@@ -347,6 +347,15 @@ public:
     report(E->getExprLoc(),
            const_cast<CXXRecordDecl *>(E->getBestDynamicClassType()),
            RefType::Implicit);
+    return true;
+  }
+
+  bool VisitCXXNewExpr(CXXNewExpr *E) {
+    report(E->getExprLoc(), E->getOperatorNew(), RefType::Ambiguous);
+    return true;
+  }
+  bool VisitCXXDeleteExpr(CXXDeleteExpr *E) {
+    report(E->getExprLoc(), E->getOperatorDelete(), RefType::Ambiguous);
     return true;
   }
 };
