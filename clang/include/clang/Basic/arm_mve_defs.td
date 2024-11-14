@@ -118,6 +118,8 @@ def fcmp_gt: IRBuilder<"CreateFCmpOGT">;
 def fcmp_ge: IRBuilder<"CreateFCmpOGE">;
 def fcmp_lt: IRBuilder<"CreateFCmpOLT">;
 def fcmp_le: IRBuilder<"CreateFCmpOLE">;
+def fcmp_ult: IRBuilder<"CreateFCmpULT">;
+def fcmp_ule: IRBuilder<"CreateFCmpULE">;
 def splat: CGHelperFn<"ARMMVEVectorSplat">;
 def select: IRBuilder<"CreateSelect">;
 def fneg: IRBuilder<"CreateFNeg">;
