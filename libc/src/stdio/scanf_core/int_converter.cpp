@@ -80,7 +80,8 @@ int convert_int(Reader *reader, const FormatSection &to_conv) {
     is_signed = true;
   } else if (to_conv.conv_name == 'o') {
     base = 8;
-  } else if (to_lower(to_conv.conv_name) == 'x' || to_conv.conv_name == 'p') {
+  } else if (internal::tolower(to_conv.conv_name) == 'x' ||
+             to_conv.conv_name == 'p') {
     base = 16;
   } else if (to_conv.conv_name == 'd') {
     base = 10;
@@ -122,7 +123,7 @@ int convert_int(Reader *reader, const FormatSection &to_conv) {
         return READ_OK;
       }
 
-      if (to_lower(cur_char) == 'x') {
+      if (internal::tolower(cur_char) == 'x') {
         // This is a valid hex prefix.
 
         is_number = false;
@@ -175,17 +176,18 @@ int convert_int(Reader *reader, const FormatSection &to_conv) {
 
   const uintmax_t max_div_by_base = MAX / base;
 
-  if (internal::isalnum(cur_char) && b36_char_to_int(cur_char) < base) {
+  if (internal::isalnum(cur_char) &&
+      internal::b36_char_to_int(cur_char) < base) {
     is_number = true;
   }
 
   bool has_overflow = false;
   size_t i = 0;
   for (; i < max_width && internal::isalnum(cur_char) &&
-         b36_char_to_int(cur_char) < base;
+         internal::b36_char_to_int(cur_char) < base;
        ++i, cur_char = reader->getc()) {
 
-    uintmax_t cur_digit = b36_char_to_int(cur_char);
+    uintmax_t cur_digit = internal::b36_char_to_int(cur_char);
 
     if (result == MAX) {
       has_overflow = true;

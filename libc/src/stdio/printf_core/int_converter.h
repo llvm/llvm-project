@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/ctype_utils.h"
 #include "src/__support/integer_to_string.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/converter_utils.h"
@@ -22,11 +23,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
-
-// These functions only work on characters that are already known to be in the
-// alphabet. Their behavior is undefined otherwise.
-LIBC_INLINE constexpr char to_lower(char a) { return a | 32; }
-LIBC_INLINE constexpr bool is_lower(char a) { return (a & 32) > 0; }
 
 namespace details {
 
@@ -49,14 +45,14 @@ LIBC_INLINE constexpr size_t num_buf_size() {
 
 LIBC_INLINE cpp::optional<cpp::string_view>
 num_to_strview(uintmax_t num, cpp::span<char> bufref, char conv_name) {
-  if (to_lower(conv_name) == 'x') {
-    if (is_lower(conv_name))
+  if (internal::tolower(conv_name) == 'x') {
+    if (internal::islower(conv_name))
       return HexFmt::format_to(bufref, num);
     else
       return HexFmtUppercase::format_to(bufref, num);
   } else if (conv_name == 'o') {
     return OctFmt::format_to(bufref, num);
-  } else if (to_lower(conv_name) == 'b') {
+  } else if (internal::tolower(conv_name) == 'b') {
     return BinFmt::format_to(bufref, num);
   } else {
     return DecFmt::format_to(bufref, num);
@@ -72,7 +68,6 @@ LIBC_INLINE int convert_int(Writer *writer, const FormatSection &to_conv) {
   uintmax_t num = static_cast<uintmax_t>(to_conv.conv_val_raw);
   bool is_negative = false;
   FormatFlags flags = to_conv.flags;
-  const char a = is_lower(to_conv.conv_name) ? 'a' : 'A';
 
   // If the conversion is signed, then handle negative values.
   if (to_conv.conv_name == 'd' || to_conv.conv_name == 'i') {
@@ -116,16 +111,16 @@ LIBC_INLINE int convert_int(Writer *writer, const FormatSection &to_conv) {
   // conversions. Since hexadecimal is unsigned these will never conflict.
   size_t prefix_len;
   char prefix[2];
-  if ((to_lower(to_conv.conv_name) == 'x') &&
+  if ((internal::tolower(to_conv.conv_name) == 'x') &&
       ((flags & FormatFlags::ALTERNATE_FORM) != 0) && num != 0) {
     prefix_len = 2;
     prefix[0] = '0';
-    prefix[1] = a + ('x' - 'a');
-  } else if ((to_lower(to_conv.conv_name) == 'b') &&
+    prefix[1] = internal::islower(to_conv.conv_name) ? 'x' : 'X';
+  } else if ((internal::tolower(to_conv.conv_name) == 'b') &&
              ((flags & FormatFlags::ALTERNATE_FORM) != 0) && num != 0) {
     prefix_len = 2;
     prefix[0] = '0';
-    prefix[1] = a + ('b' - 'a');
+    prefix[1] = internal::islower(to_conv.conv_name) ? 'b' : 'B';
   } else {
     prefix_len = (sign_char == 0 ? 0 : 1);
     prefix[0] = sign_char;
