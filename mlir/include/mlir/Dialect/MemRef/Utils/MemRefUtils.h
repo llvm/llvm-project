@@ -44,9 +44,9 @@ bool isStaticShapeAndContiguousRowMajor(MemRefType type);
 ///   is also scaled down by `dstBits`/`srcBits`. If `indices` is not provided
 ///   0, is returned for the linearized index.
 /// - If the size of the load/store is smaller than the linearized memref
-/// load/store, the memory region emulated is larger than the actual memory
-/// region needed. `intraDataOffset` returns the element offset of the data
-/// relevant at the beginning.
+///   load/store, the memory region emulated is larger than the actual memory
+///   region needed. `intraDataOffset` returns the element offset of the data
+///   relevant at the beginning.
 struct LinearizedMemRefInfo {
   OpFoldResult linearizedOffset;
   OpFoldResult linearizedSize;
