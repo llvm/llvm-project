@@ -58919,6 +58919,12 @@ bool X86TargetLowering::IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const {
     if (IsFoldableAtomicRMW(N0, Op) ||
         (Commute && IsFoldableAtomicRMW(N1, Op)))
       return false;
+    // When ZU is enabled, we prefer to not promote for MUL by a constant,
+    // since a 16b imulzu will not incur partial-write stalls, and may be
+    // able to fold away a zero-extend of the 16b result.
+    if (Subtarget.hasZU() && Op.getOpcode() == ISD::MUL &&
+        (isa<ConstantSDNode>(N0) || isa<ConstantSDNode>(N1)))
+      return false;
   }
   }
 
