@@ -15,7 +15,7 @@ target datalayout = "n8:16:32:64"
 @ptr = common global ptr null, align 8
 
 
-define i32 @test1(i1 %arg) {
+define i32 @test1() {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 -1, ptr @idx, align 4
@@ -93,7 +93,7 @@ for.end:
 }
 
 
-define void @test2(ptr %a, ptr %b, i8 %limit) {
+define void @test2(ptr %a, ptr %b, i8 %limit, i1 %arg) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[LIMIT:%.*]] to i32
