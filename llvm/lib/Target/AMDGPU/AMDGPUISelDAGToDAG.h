@@ -17,6 +17,7 @@
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIModeRegisterDefaults.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Target/TargetMachine.h"
 
