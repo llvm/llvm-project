@@ -364,6 +364,8 @@ __atomic_notify_all_native<sizeof(__cxx_contention_t)>(void const* __location) n
 // =============================================================
 // Old dylib exported symbols, for backwards compatibility
 // =============================================================
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wmissing-prototypes")
 
 _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(void const volatile* __location) noexcept {
   __atomic_notify_global_table(const_cast<void const*>(__location));
@@ -409,5 +411,7 @@ _LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t
 __libcpp_atomic_monitor(__cxx_atomic_contention_t const volatile* __location) noexcept {
   return __cxx_atomic_load(__location, memory_order_acquire);
 }
+
+_LIBCPP_DIAGNOSTIC_POP
 
 _LIBCPP_END_NAMESPACE_STD

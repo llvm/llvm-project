@@ -720,7 +720,7 @@ __get_sys_info(sys_seconds __time,
 // Iff the "offsets" are the same '__current.__end' is replaced with
 // '__next.__end', which effectively merges the two objects in one object. The
 // function returns true if a merge occurred.
-[[nodiscard]] bool __merge_continuation(sys_info& __current, const sys_info& __next) {
+[[nodiscard]] static bool __merge_continuation(sys_info& __current, const sys_info& __next) {
   if (__current.end != __next.begin)
     return false;
 

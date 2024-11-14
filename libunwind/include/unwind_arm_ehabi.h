@@ -125,8 +125,11 @@ _Unwind_VRS_Pop(_Unwind_Context *context, _Unwind_VRS_RegClass regclass,
                 uint32_t discriminator,
                 _Unwind_VRS_DataRepresentation representation);
 
+extern _Unwind_Reason_Code __gnu_unwind_frame(_Unwind_Exception *,
+                                              _Unwind_Context *);
+
 #if defined(_LIBUNWIND_UNWIND_LEVEL1_EXTERNAL_LINKAGE)
-#define _LIBUNWIND_EXPORT_UNWIND_LEVEL1 extern
+#define _LIBUNWIND_EXPORT_UNWIND_LEVEL1 extern __inline__
 #else
 #define _LIBUNWIND_EXPORT_UNWIND_LEVEL1 static __inline__
 #endif
