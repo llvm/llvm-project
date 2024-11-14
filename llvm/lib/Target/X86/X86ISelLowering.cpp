@@ -37502,15 +37502,21 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::PTDPBUUD:
   case X86::PTDPBF16PS:
   case X86::PTDPFP16PS:
+  case X86::PTCMMIMFP16PS:
+  case X86::PTCMMRLFP16PS:
   case X86::PTDPBF8PS:
   case X86::PTDPBHF8PS:
   case X86::PTDPHBF8PS:
   case X86::PTDPHF8PS:
+  case X86::PTTDPBF16PS:
+  case X86::PTTDPFP16PS:
+  case X86::PTTCMMIMFP16PS:
+  case X86::PTTCMMRLFP16PS:
+  case X86::PTCONJTCMMIMFP16PS:
   case X86::PTMMULTF32PS:
   case X86::PTTMMULTF32PS: {
     unsigned Opc;
     switch (MI.getOpcode()) {
-    // clang-format off
     default: llvm_unreachable("illegal opcode!");
     case X86::PTDPBSSD: Opc = X86::TDPBSSD; break;
     case X86::PTDPBSUD: Opc = X86::TDPBSUD; break;
@@ -37518,13 +37524,37 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     case X86::PTDPBUUD: Opc = X86::TDPBUUD; break;
     case X86::PTDPBF16PS: Opc = X86::TDPBF16PS; break;
     case X86::PTDPFP16PS: Opc = X86::TDPFP16PS; break;
+    case X86::PTCMMIMFP16PS:
+      Opc = X86::TCMMIMFP16PS;
+      break;
+    case X86::PTCMMRLFP16PS:
+      Opc = X86::TCMMRLFP16PS;
+      break;
     case X86::PTDPBF8PS: Opc = X86::TDPBF8PS; break;
     case X86::PTDPBHF8PS: Opc = X86::TDPBHF8PS; break;
     case X86::PTDPHBF8PS: Opc = X86::TDPHBF8PS; break;
     case X86::PTDPHF8PS: Opc = X86::TDPHF8PS; break;
-    case X86::PTMMULTF32PS: Opc = X86::TMMULTF32PS; break;
-    case X86::PTTMMULTF32PS: Opc = X86::TTMMULTF32PS; break;
-    // clang-format on
+    case X86::PTTDPBF16PS:
+      Opc = X86::TTDPBF16PS;
+      break;
+    case X86::PTTDPFP16PS:
+      Opc = X86::TTDPFP16PS;
+      break;
+    case X86::PTTCMMIMFP16PS:
+      Opc = X86::TTCMMIMFP16PS;
+      break;
+    case X86::PTTCMMRLFP16PS:
+      Opc = X86::TTCMMRLFP16PS;
+      break;
+    case X86::PTCONJTCMMIMFP16PS:
+      Opc = X86::TCONJTCMMIMFP16PS;
+      break;
+    case X86::PTMMULTF32PS:
+      Opc = X86::TMMULTF32PS;
+      break;
+    case X86::PTTMMULTF32PS:
+      Opc = X86::TTMMULTF32PS;
+      break;
     }
 
     MachineInstrBuilder MIB = BuildMI(*BB, MI, MIMD, TII->get(Opc));
@@ -37595,33 +37625,14 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.eraseFromParent(); // The pseudo is gone now.
     return BB;
   }
-  case X86::PTCMMIMFP16PS:
-  case X86::PTCMMRLFP16PS: {
-    const MIMetadata MIMD(MI);
-    unsigned Opc;
-    switch (MI.getOpcode()) {
-    // clang-format off
-    default: llvm_unreachable("Unexpected instruction!");
-    case X86::PTCMMIMFP16PS:     Opc = X86::TCMMIMFP16PS;     break;
-    case X86::PTCMMRLFP16PS:     Opc = X86::TCMMRLFP16PS;     break;
-    // clang-format on
-    }
-    MachineInstrBuilder MIB = BuildMI(*BB, MI, MIMD, TII->get(Opc));
-    MIB.addReg(TMMImmToTMMReg(MI.getOperand(0).getImm()), RegState::Define);
-    MIB.addReg(TMMImmToTMMReg(MI.getOperand(0).getImm()), RegState::Undef);
-    MIB.addReg(TMMImmToTMMReg(MI.getOperand(1).getImm()), RegState::Undef);
-    MIB.addReg(TMMImmToTMMReg(MI.getOperand(2).getImm()), RegState::Undef);
-    MI.eraseFromParent(); // The pseudo is gone now.
-    return BB;
-  }
-  case X86::PT2RPNTLVWZ0RS:
-  case X86::PT2RPNTLVWZ0RST1:
-  case X86::PT2RPNTLVWZ1RS:
-  case X86::PT2RPNTLVWZ1RST1:
   case X86::PT2RPNTLVWZ0:
   case X86::PT2RPNTLVWZ0T1:
   case X86::PT2RPNTLVWZ1:
-  case X86::PT2RPNTLVWZ1T1: {
+  case X86::PT2RPNTLVWZ1T1:
+  case X86::PT2RPNTLVWZ0RS:
+  case X86::PT2RPNTLVWZ0RST1:
+  case X86::PT2RPNTLVWZ1RS:
+  case X86::PT2RPNTLVWZ1RST1: {
     const DebugLoc &DL = MI.getDebugLoc();
     unsigned Opc;
     switch (MI.getOpcode()) {
@@ -37663,10 +37674,13 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.eraseFromParent();      // The pseudo is gone now.
     return BB;
   }
-  case X86::PTTRANSPOSED: {
+  case X86::PTTRANSPOSED:
+  case X86::PTCONJTFP16: {
     const DebugLoc &DL = MI.getDebugLoc();
+    unsigned Opc = MI.getOpcode() == X86::PTTRANSPOSED ? X86::TTRANSPOSED
+                                                       : X86::TCONJTFP16;
 
-    MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(X86::TTRANSPOSED));
+    MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(Opc));
     MIB.addReg(TMMImmToTMMReg(MI.getOperand(0).getImm()), RegState::Define);
     MIB.addReg(TMMImmToTMMReg(MI.getOperand(1).getImm()), RegState::Undef);
 
