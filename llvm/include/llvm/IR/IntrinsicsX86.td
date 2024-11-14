@@ -7877,3 +7877,20 @@ def int_x86_avx10_vmovrsw512 : ClangBuiltin<"__builtin_ia32_vmovrsw512">,
         DefaultAttrsIntrinsic<[llvm_v32i16_ty], [llvm_ptr_ty],
                   [IntrReadMem]>;
 }
+
+let TargetPrefix = "x86" in {
+def int_x86_movrsqi : ClangBuiltin<"__builtin_ia32_movrsqi">,
+        Intrinsic<[llvm_i8_ty], [llvm_ptr_ty],
+                  [IntrReadMem]>;
+def int_x86_movrshi : ClangBuiltin<"__builtin_ia32_movrshi">,
+        Intrinsic<[llvm_i16_ty], [llvm_ptr_ty],
+                  [IntrReadMem]>;
+def int_x86_movrssi : ClangBuiltin<"__builtin_ia32_movrssi">,
+        Intrinsic<[llvm_i32_ty], [llvm_ptr_ty],
+                  [IntrReadMem]>;
+def int_x86_movrsdi : ClangBuiltin<"__builtin_ia32_movrsdi">,
+        Intrinsic<[llvm_i64_ty], [llvm_ptr_ty],
+                  [IntrReadMem]>;
+def int_x86_prefetchrs : ClangBuiltin<"__builtin_ia32_prefetchrs">,
+        Intrinsic<[], [llvm_ptr_ty], []>;
+}

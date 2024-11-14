@@ -752,6 +752,7 @@ X86 Support
 - Support ISA of ``AMX-MOVRS``.
 - Support ISA of ``AMX-AVX512``.
 - Support ISA of ``AMX-TF32``.
+- Support ISA of ``MOVRS``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
