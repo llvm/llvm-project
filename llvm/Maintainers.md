@@ -208,6 +208,12 @@ anton@korobeynikov.info (email), [asl](https://github.com/asl) (GitHub)
 
 Justin Holewinski \
 jholewinski@nvidia.com (email), [jholewinski](https://github.com/jholewinski) (GitHub)
+Artem Belevich \
+tra@google.com (email), [Artem-B](https://github.com/Artem-B) (GitHub)
+Alex MacLean \
+amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub)
+Justin Fargnoli \
+jfargnoli@nvidia.com (email), [justinfargnoli](https://github.com/justinfargnoli) (GitHub)
 
 #### PowerPC backend
 
