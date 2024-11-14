@@ -3,7 +3,7 @@
 
 ; Zeroing.
 
-define dso_local <vscale x 16 x i8> @mov_z_b(<vscale x 16 x i1> %pg) {
+define <vscale x 16 x i8> @mov_z_b(<vscale x 16 x i1> %pg) {
 ; CHECK-LABEL: mov_z_b:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.b, p0/z, #1 // =0x1
@@ -12,7 +12,7 @@ define dso_local <vscale x 16 x i8> @mov_z_b(<vscale x 16 x i1> %pg) {
   ret <vscale x 16 x i8> %r
 }
 
-define dso_local <vscale x 8 x i16> @mov_z_h(<vscale x 8 x i1> %pg) {
+define <vscale x 8 x i16> @mov_z_h(<vscale x 8 x i1> %pg) {
 ; CHECK-LABEL: mov_z_h:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.h, p0/z, #1 // =0x1
@@ -21,7 +21,7 @@ define dso_local <vscale x 8 x i16> @mov_z_h(<vscale x 8 x i1> %pg) {
   ret <vscale x 8 x i16> %r
 }
 
-define dso_local <vscale x 4 x i32> @mov_z_s(<vscale x 4 x i1> %pg) {
+define <vscale x 4 x i32> @mov_z_s(<vscale x 4 x i1> %pg) {
 ; CHECK-LABEL: mov_z_s:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
@@ -30,7 +30,7 @@ define dso_local <vscale x 4 x i32> @mov_z_s(<vscale x 4 x i1> %pg) {
   ret <vscale x 4 x i32> %r
 }
 
-define dso_local <vscale x 2 x i64> @mov_z_d(<vscale x 2 x i1> %pg) {
+define <vscale x 2 x i64> @mov_z_d(<vscale x 2 x i1> %pg) {
 ; CHECK-LABEL: mov_z_d:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, p0/z, #1 // =0x1
@@ -41,7 +41,7 @@ define dso_local <vscale x 2 x i64> @mov_z_d(<vscale x 2 x i1> %pg) {
 
 ; Merging.
 
-define dso_local <vscale x 16 x i8> @mov_m_b(<vscale x 16 x i8> %zd, <vscale x 16 x i1> %pg) {
+define <vscale x 16 x i8> @mov_m_b(<vscale x 16 x i8> %zd, <vscale x 16 x i1> %pg) {
 ; CHECK-LABEL: mov_m_b:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.b, p0/m, #1 // =0x1
@@ -50,7 +50,7 @@ define dso_local <vscale x 16 x i8> @mov_m_b(<vscale x 16 x i8> %zd, <vscale x 1
   ret <vscale x 16 x i8> %r
 }
 
-define dso_local <vscale x 8 x i16> @mov_m_h(<vscale x 8 x i16> %zd, <vscale x 8 x i1> %pg) {
+define <vscale x 8 x i16> @mov_m_h(<vscale x 8 x i16> %zd, <vscale x 8 x i1> %pg) {
 ; CHECK-LABEL: mov_m_h:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.h, p0/m, #1 // =0x1
@@ -59,7 +59,7 @@ define dso_local <vscale x 8 x i16> @mov_m_h(<vscale x 8 x i16> %zd, <vscale x 8
   ret <vscale x 8 x i16> %r
 }
 
-define dso_local <vscale x 4 x i32> @mov_m_s(<vscale x 4 x i32> %zd, <vscale x 4 x i1> %pg) {
+define <vscale x 4 x i32> @mov_m_s(<vscale x 4 x i32> %zd, <vscale x 4 x i1> %pg) {
 ; CHECK-LABEL: mov_m_s:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.s, p0/m, #1 // =0x1
@@ -68,7 +68,7 @@ define dso_local <vscale x 4 x i32> @mov_m_s(<vscale x 4 x i32> %zd, <vscale x 4
   ret <vscale x 4 x i32> %r
 }
 
-define dso_local <vscale x 2 x i64> @mov_m_d(<vscale x 2 x i64> %zd, <vscale x 2 x i1> %pg) {
+define <vscale x 2 x i64> @mov_m_d(<vscale x 2 x i64> %zd, <vscale x 2 x i1> %pg) {
 ; CHECK-LABEL: mov_m_d:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, p0/m, #1 // =0x1
