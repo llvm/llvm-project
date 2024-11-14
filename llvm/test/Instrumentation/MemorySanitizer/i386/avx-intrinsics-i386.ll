@@ -2,12 +2,13 @@
 ; RUN: opt %s -S -passes=msan 2>&1 | FileCheck %s
 
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
+target triple = "i386-unknown-linux-gnu"
 
 define <4 x double> @test_x86_avx_addsub_pd_256(<4 x double> %a0, <4 x double> %a1) #0 {
 ; CHECK-LABEL: @test_x86_avx_addsub_pd_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i64> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.x86.avx.addsub.pd.256(<4 x double> [[A0:%.*]], <4 x double> [[A1:%.*]])
@@ -24,6 +25,7 @@ define <8 x float> @test_x86_avx_addsub_ps_256(<8 x float> %a0, <8 x float> %a1)
 ; CHECK-LABEL: @test_x86_avx_addsub_ps_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx.addsub.ps.256(<8 x float> [[A0:%.*]], <8 x float> [[A1:%.*]])
@@ -38,21 +40,22 @@ declare <8 x float> @llvm.x86.avx.addsub.ps.256(<8 x float>, <8 x float>) nounwi
 
 define <4 x double> @test_x86_avx_blendv_pd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> %a2) #0 {
 ; CHECK-LABEL: @test_x86_avx_blendv_pd_256(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP12:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP15:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x double> [[A2:%.*]] to <4 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = ashr <4 x i64> [[TMP4]], splat (i64 63)
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <4 x double> [[A2:%.*]] to <4 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr <4 x i64> [[TMP13]], splat (i64 63)
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc <4 x i64> [[TMP5]] to <4 x i1>
-; CHECK-NEXT:    [[TMP7:%.*]] = ashr <4 x i64> [[TMP1]], splat (i64 63)
+; CHECK-NEXT:    [[TMP7:%.*]] = ashr <4 x i64> [[TMP4]], splat (i64 63)
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc <4 x i64> [[TMP7]] to <4 x i1>
-; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> [[TMP2]], <4 x i64> [[TMP3]]
+; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> [[TMP2]], <4 x i64> [[TMP12]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <4 x double> [[A1:%.*]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <4 x double> [[A0:%.*]] to <4 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = xor <4 x i64> [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = or <4 x i64> [[TMP12]], [[TMP2]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or <4 x i64> [[TMP13]], [[TMP3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i64> [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i64> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP14:%.*]] = or <4 x i64> [[_MSPROP]], [[TMP12]]
 ; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <4 x i1> [[TMP8]], <4 x i64> [[TMP14]], <4 x i64> [[TMP9]]
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.x86.avx.blendv.pd.256(<4 x double> [[A0]], <4 x double> [[A1]], <4 x double> [[A2]])
 ; CHECK-NEXT:    store <4 x i64> [[_MSPROP_SELECT]], ptr @__msan_retval_tls, align 8
@@ -66,21 +69,22 @@ declare <4 x double> @llvm.x86.avx.blendv.pd.256(<4 x double>, <4 x double>, <4 
 
 define <8 x float> @test_x86_avx_blendv_ps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2) #0 {
 ; CHECK-LABEL: @test_x86_avx_blendv_ps_256(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP12:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP15:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x float> [[A2:%.*]] to <8 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = ashr <8 x i32> [[TMP4]], splat (i32 31)
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <8 x float> [[A2:%.*]] to <8 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr <8 x i32> [[TMP13]], splat (i32 31)
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc <8 x i32> [[TMP5]] to <8 x i1>
-; CHECK-NEXT:    [[TMP7:%.*]] = ashr <8 x i32> [[TMP1]], splat (i32 31)
+; CHECK-NEXT:    [[TMP7:%.*]] = ashr <8 x i32> [[TMP4]], splat (i32 31)
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc <8 x i32> [[TMP7]] to <8 x i1>
-; CHECK-NEXT:    [[TMP9:%.*]] = select <8 x i1> [[TMP6]], <8 x i32> [[TMP2]], <8 x i32> [[TMP3]]
+; CHECK-NEXT:    [[TMP9:%.*]] = select <8 x i1> [[TMP6]], <8 x i32> [[TMP2]], <8 x i32> [[TMP12]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <8 x float> [[A1:%.*]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <8 x float> [[A0:%.*]] to <8 x i32>
-; CHECK-NEXT:    [[TMP12:%.*]] = xor <8 x i32> [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = or <8 x i32> [[TMP12]], [[TMP2]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or <8 x i32> [[TMP13]], [[TMP3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <8 x i32> [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i32> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP14:%.*]] = or <8 x i32> [[_MSPROP]], [[TMP12]]
 ; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <8 x i1> [[TMP8]], <8 x i32> [[TMP14]], <8 x i32> [[TMP9]]
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float> [[A0]], <8 x float> [[A1]], <8 x float> [[A2]])
 ; CHECK-NEXT:    store <8 x i32> [[_MSPROP_SELECT]], ptr @__msan_retval_tls, align 8
@@ -96,6 +100,7 @@ define <4 x double> @test_x86_avx_cmp_pd_256(<4 x double> %a0, <4 x double> %a1)
 ; CHECK-LABEL: @test_x86_avx_cmp_pd_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i64> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i64> [[TMP3]], zeroinitializer
@@ -114,6 +119,7 @@ define <8 x float> @test_x86_avx_cmp_ps_256(<8 x float> %a0, <8 x float> %a1) #0
 ; CHECK-LABEL: @test_x86_avx_cmp_ps_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <8 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <8 x i32> [[TMP3]], zeroinitializer
@@ -130,6 +136,7 @@ define <8 x float> @test_x86_avx_cmp_ps_256_pseudo_op(<8 x float> %a0, <8 x floa
 ; CHECK-LABEL: @test_x86_avx_cmp_ps_256_pseudo_op(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP99:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <8 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <8 x i32> [[TMP3]], zeroinitializer
@@ -302,14 +309,15 @@ declare <8 x float> @llvm.x86.avx.cmp.ps.256(<8 x float>, <8 x float>, i8) nounw
 define <4 x float> @test_x86_avx_cvt_pd2_ps_256(<4 x double> %a0) #0 {
 ; CHECK-LABEL: @test_x86_avx_cvt_pd2_ps_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i64> [[TMP1]] to i256
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1:![0-9]+]]
-; CHECK:       3:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP5:%.*]], !prof [[PROF1:![0-9]+]]
+; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK:       5:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.avx.cvt.pd2.ps.256(<4 x double> [[A0:%.*]])
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
@@ -323,14 +331,15 @@ declare <4 x float> @llvm.x86.avx.cvt.pd2.ps.256(<4 x double>) nounwind readnone
 define <4 x i32> @test_x86_avx_cvt_pd2dq_256(<4 x double> %a0) #0 {
 ; CHECK-LABEL: @test_x86_avx_cvt_pd2dq_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i64> [[TMP1]] to i256
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
+; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK:       5:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.x86.avx.cvt.pd2dq.256(<4 x double> [[A0:%.*]])
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
@@ -344,14 +353,15 @@ declare <4 x i32> @llvm.x86.avx.cvt.pd2dq.256(<4 x double>) nounwind readnone
 define <8 x i32> @test_x86_avx_cvt_ps2dq_256(<8 x float> %a0) #0 {
 ; CHECK-LABEL: @test_x86_avx_cvt_ps2dq_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i32> [[TMP1]] to i256
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
+; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK:       5:
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x i32> @llvm.x86.avx.cvt.ps2dq.256(<8 x float> [[A0:%.*]])
 ; CHECK-NEXT:    store <8 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i32> [[RES]]
@@ -365,14 +375,15 @@ declare <8 x i32> @llvm.x86.avx.cvt.ps2dq.256(<8 x float>) nounwind readnone
 define <4 x i32> @test_x86_avx_cvtt_pd2dq_256(<4 x double> %a0) #0 {
 ; CHECK-LABEL: @test_x86_avx_cvtt_pd2dq_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i64> [[TMP1]] to i256
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
+; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK:       5:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.x86.avx.cvtt.pd2dq.256(<4 x double> [[A0:%.*]])
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
@@ -386,14 +397,15 @@ declare <4 x i32> @llvm.x86.avx.cvtt.pd2dq.256(<4 x double>) nounwind readnone
 define <8 x i32> @test_x86_avx_cvtt_ps2dq_256(<8 x float> %a0) #0 {
 ; CHECK-LABEL: @test_x86_avx_cvtt_ps2dq_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i32> [[TMP1]] to i256
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
+; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK:       5:
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x i32> @llvm.x86.avx.cvtt.ps2dq.256(<8 x float> [[A0:%.*]])
 ; CHECK-NEXT:    store <8 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i32> [[RES]]
@@ -408,6 +420,7 @@ define <8 x float> @test_x86_avx_dp_ps_256(<8 x float> %a0, <8 x float> %a1) #0 
 ; CHECK-LABEL: @test_x86_avx_dp_ps_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP11:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <8 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = select <8 x i1> <i1 false, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false>, <8 x i32> [[TMP3]], <8 x i32> zeroinitializer
@@ -434,6 +447,7 @@ define <4 x double> @test_x86_avx_hadd_pd_256(<4 x double> %a0, <4 x double> %a1
 ; CHECK-LABEL: @test_x86_avx_hadd_pd_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i64> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> [[A0:%.*]], <4 x double> [[A1:%.*]])
@@ -450,6 +464,7 @@ define <8 x float> @test_x86_avx_hadd_ps_256(<8 x float> %a0, <8 x float> %a1) #
 ; CHECK-LABEL: @test_x86_avx_hadd_ps_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> [[A0:%.*]], <8 x float> [[A1:%.*]])
@@ -466,6 +481,7 @@ define <4 x double> @test_x86_avx_hsub_pd_256(<4 x double> %a0, <4 x double> %a1
 ; CHECK-LABEL: @test_x86_avx_hsub_pd_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i64> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.x86.avx.hsub.pd.256(<4 x double> [[A0:%.*]], <4 x double> [[A1:%.*]])
@@ -482,6 +498,7 @@ define <8 x float> @test_x86_avx_hsub_ps_256(<8 x float> %a0, <8 x float> %a1) #
 ; CHECK-LABEL: @test_x86_avx_hsub_ps_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx.hsub.ps.256(<8 x float> [[A0:%.*]], <8 x float> [[A1:%.*]])
@@ -497,17 +514,18 @@ declare <8 x float> @llvm.x86.avx.hsub.ps.256(<8 x float>, <8 x float>) nounwind
 define <32 x i8> @test_x86_avx_ldu_dq_256(ptr %a0) #0 {
 ; CHECK-LABEL: @test_x86_avx_ldu_dq_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[A0:%.*]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
+; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], -2147483649
 ; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <32 x i8>, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
-; CHECK:       5:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
+; CHECK:       6:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       6:
+; CHECK:       7:
 ; CHECK-NEXT:    [[RES:%.*]] = call <32 x i8> @llvm.x86.avx.ldu.dq.256(ptr [[A0]])
 ; CHECK-NEXT:    store <32 x i8> [[_MSLD]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <32 x i8> [[RES]]
@@ -522,16 +540,17 @@ define <2 x double> @test_x86_avx_maskload_pd(ptr %a0, <2 x i64> %mask) #0 {
 ; CHECK-LABEL: @test_x86_avx_maskload_pd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i64> [[TMP2]] to i128
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP3]], 0
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
-; CHECK:       4:
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       5:
+; CHECK:       6:
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.x86.avx.maskload.pd(ptr [[A0:%.*]], <2 x i64> [[MASK:%.*]])
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
@@ -546,16 +565,17 @@ define <4 x double> @test_x86_avx_maskload_pd_256(ptr %a0, <4 x i64> %mask) #0 {
 ; CHECK-LABEL: @test_x86_avx_maskload_pd_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64> [[TMP2]] to i256
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP3]], 0
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
-; CHECK:       4:
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       5:
+; CHECK:       6:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.x86.avx.maskload.pd.256(ptr [[A0:%.*]], <4 x i64> [[MASK:%.*]])
 ; CHECK-NEXT:    store <4 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x double> [[RES]]
@@ -570,16 +590,17 @@ define <4 x float> @test_x86_avx_maskload_ps(ptr %a0, <4 x i32> %mask) #0 {
 ; CHECK-LABEL: @test_x86_avx_maskload_ps(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP2]] to i128
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP3]], 0
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
-; CHECK:       4:
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       5:
+; CHECK:       6:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.avx.maskload.ps(ptr [[A0:%.*]], <4 x i32> [[MASK:%.*]])
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
@@ -594,16 +615,17 @@ define <8 x float> @test_x86_avx_maskload_ps_256(ptr %a0, <8 x i32> %mask) #0 {
 ; CHECK-LABEL: @test_x86_avx_maskload_ps_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i32> [[TMP2]] to i256
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP3]], 0
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
-; CHECK:       4:
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       5:
+; CHECK:       6:
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx.maskload.ps.256(ptr [[A0:%.*]], <8 x i32> [[MASK:%.*]])
 ; CHECK-NEXT:    store <8 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x float> [[RES]]
@@ -619,6 +641,7 @@ define void @test_x86_avx_maskstore_pd(ptr %a0, <2 x i64> %mask, <2 x double> %a
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i64> [[TMP2]] to i128
@@ -627,11 +650,11 @@ define void @test_x86_avx_maskstore_pd(ptr %a0, <2 x i64> %mask, <2 x double> %a
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP3]] to i128
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP5]], 0
 ; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
-; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
-; CHECK:       6:
+; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
+; CHECK:       7:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       7:
+; CHECK:       8:
 ; CHECK-NEXT:    call void @llvm.x86.avx.maskstore.pd(ptr [[A0:%.*]], <2 x i64> [[MASK:%.*]], <2 x double> [[A2:%.*]])
 ; CHECK-NEXT:    ret void
 ;
@@ -646,6 +669,7 @@ define void @test_x86_avx_maskstore_pd_256(ptr %a0, <4 x i64> %mask, <4 x double
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 40) to ptr), align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i64> [[TMP2]] to i256
@@ -654,11 +678,11 @@ define void @test_x86_avx_maskstore_pd_256(ptr %a0, <4 x i64> %mask, <4 x double
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i64> [[TMP3]] to i256
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i256 [[TMP5]], 0
 ; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
-; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
-; CHECK:       6:
+; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
+; CHECK:       7:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       7:
+; CHECK:       8:
 ; CHECK-NEXT:    call void @llvm.x86.avx.maskstore.pd.256(ptr [[A0:%.*]], <4 x i64> [[MASK:%.*]], <4 x double> [[A2:%.*]])
 ; CHECK-NEXT:    ret void
 ;
@@ -673,6 +697,7 @@ define void @test_x86_avx_maskstore_ps(ptr %a0, <4 x i32> %mask, <4 x float> %a2
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP2]] to i128
@@ -681,11 +706,11 @@ define void @test_x86_avx_maskstore_ps(ptr %a0, <4 x i32> %mask, <4 x float> %a2
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP5]], 0
 ; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
-; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
-; CHECK:       6:
+; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
+; CHECK:       7:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       7:
+; CHECK:       8:
 ; CHECK-NEXT:    call void @llvm.x86.avx.maskstore.ps(ptr [[A0:%.*]], <4 x i32> [[MASK:%.*]], <4 x float> [[A2:%.*]])
 ; CHECK-NEXT:    ret void
 ;
@@ -700,6 +725,7 @@ define void @test_x86_avx_maskstore_ps_256(ptr %a0, <8 x i32> %mask, <8 x float>
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 40) to ptr), align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i32> [[TMP2]] to i256
@@ -708,11 +734,11 @@ define void @test_x86_avx_maskstore_ps_256(ptr %a0, <8 x i32> %mask, <8 x float>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i32> [[TMP3]] to i256
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i256 [[TMP5]], 0
 ; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
-; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
-; CHECK:       6:
+; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
+; CHECK:       7:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       7:
+; CHECK:       8:
 ; CHECK-NEXT:    call void @llvm.x86.avx.maskstore.ps.256(ptr [[A0:%.*]], <8 x i32> [[MASK:%.*]], <8 x float> [[A2:%.*]])
 ; CHECK-NEXT:    ret void
 ;
@@ -726,6 +752,7 @@ define <4 x double> @test_x86_avx_max_pd_256(<4 x double> %a0, <4 x double> %a1)
 ; CHECK-LABEL: @test_x86_avx_max_pd_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i64> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.x86.avx.max.pd.256(<4 x double> [[A0:%.*]], <4 x double> [[A1:%.*]])
@@ -742,6 +769,7 @@ define <8 x float> @test_x86_avx_max_ps_256(<8 x float> %a0, <8 x float> %a1) #0
 ; CHECK-LABEL: @test_x86_avx_max_ps_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx.max.ps.256(<8 x float> [[A0:%.*]], <8 x float> [[A1:%.*]])
@@ -758,6 +786,7 @@ define <4 x double> @test_x86_avx_min_pd_256(<4 x double> %a0, <4 x double> %a1)
 ; CHECK-LABEL: @test_x86_avx_min_pd_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i64> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.x86.avx.min.pd.256(<4 x double> [[A0:%.*]], <4 x double> [[A1:%.*]])
@@ -774,6 +803,7 @@ define <8 x float> @test_x86_avx_min_ps_256(<8 x float> %a0, <8 x float> %a1) #0
 ; CHECK-LABEL: @test_x86_avx_min_ps_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx.min.ps.256(<8 x float> [[A0:%.*]], <8 x float> [[A1:%.*]])
@@ -789,14 +819,15 @@ declare <8 x float> @llvm.x86.avx.min.ps.256(<8 x float>, <8 x float>) nounwind 
 define i32 @test_x86_avx_movmsk_pd_256(<4 x double> %a0) #0 {
 ; CHECK-LABEL: @test_x86_avx_movmsk_pd_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i64> [[TMP1]] to i256
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
+; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK:       5:
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.x86.avx.movmsk.pd.256(<4 x double> [[A0:%.*]])
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -810,14 +841,15 @@ declare i32 @llvm.x86.avx.movmsk.pd.256(<4 x double>) nounwind readnone
 define i32 @test_x86_avx_movmsk_ps_256(<8 x float> %a0) #0 {
 ; CHECK-LABEL: @test_x86_avx_movmsk_ps_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i32> [[TMP1]] to i256
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
+; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK:       5:
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> [[A0:%.*]])
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -832,6 +864,7 @@ define i32 @test_x86_avx_ptestc_256(<4 x i64> %a0, <4 x i64> %a1) #0 {
 ; CHECK-LABEL: @test_x86_avx_ptestc_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i64> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i64> [[TMP3]], zeroinitializer
@@ -851,6 +884,7 @@ define i32 @test_x86_avx_ptestnzc_256(<4 x i64> %a0, <4 x i64> %a1) #0 {
 ; CHECK-LABEL: @test_x86_avx_ptestnzc_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i64> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i64> [[TMP3]], zeroinitializer
@@ -870,6 +904,7 @@ define i32 @test_x86_avx_ptestz_256(<4 x i64> %a0, <4 x i64> %a1) #0 {
 ; CHECK-LABEL: @test_x86_avx_ptestz_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i64> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i64> [[TMP3]], zeroinitializer
@@ -888,6 +923,7 @@ declare i32 @llvm.x86.avx.ptestz.256(<4 x i64>, <4 x i64>) nounwind readnone
 define <8 x float> @test_x86_avx_rcp_ps_256(<8 x float> %a0) #0 {
 ; CHECK-LABEL: @test_x86_avx_rcp_ps_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx.rcp.ps.256(<8 x float> [[A0:%.*]])
 ; CHECK-NEXT:    store <8 x i32> [[TMP1]], ptr @__msan_retval_tls, align 8
@@ -902,14 +938,15 @@ declare <8 x float> @llvm.x86.avx.rcp.ps.256(<8 x float>) nounwind readnone
 define <4 x double> @test_x86_avx_round_pd_256(<4 x double> %a0) #0 {
 ; CHECK-LABEL: @test_x86_avx_round_pd_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i64> [[TMP1]] to i256
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
+; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK:       5:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> [[A0:%.*]], i32 7)
 ; CHECK-NEXT:    store <4 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x double> [[RES]]
@@ -923,14 +960,15 @@ declare <4 x double> @llvm.x86.avx.round.pd.256(<4 x double>, i32) nounwind read
 define <8 x float> @test_x86_avx_round_ps_256(<8 x float> %a0) #0 {
 ; CHECK-LABEL: @test_x86_avx_round_ps_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i32> [[TMP1]] to i256
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
+; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK:       5:
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> [[A0:%.*]], i32 7)
 ; CHECK-NEXT:    store <8 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x float> [[RES]]
@@ -944,6 +982,7 @@ declare <8 x float> @llvm.x86.avx.round.ps.256(<8 x float>, i32) nounwind readno
 define <8 x float> @test_x86_avx_rsqrt_ps_256(<8 x float> %a0) #0 {
 ; CHECK-LABEL: @test_x86_avx_rsqrt_ps_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float> [[A0:%.*]])
 ; CHECK-NEXT:    store <8 x i32> [[TMP1]], ptr @__msan_retval_tls, align 8
@@ -958,17 +997,18 @@ define <2 x double> @test_x86_avx_vpermilvar_pd(<2 x double> %a0, <2 x i64> %a1)
 ; CHECK-LABEL: @test_x86_avx_vpermilvar_pd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP3]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i64> [[TMP2]] to i128
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP4]], 0
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
-; CHECK:       5:
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
+; CHECK:       6:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       6:
+; CHECK:       7:
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.x86.avx.vpermilvar.pd(<2 x double> [[A0:%.*]], <2 x i64> [[A1:%.*]])
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
@@ -983,17 +1023,18 @@ define <4 x double> @test_x86_avx_vpermilvar_pd_256(<4 x double> %a0, <4 x i64> 
 ; CHECK-LABEL: @test_x86_avx_vpermilvar_pd_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64> [[TMP1]] to i256
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP3]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i64> [[TMP2]] to i256
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP4]], 0
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
-; CHECK:       5:
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
+; CHECK:       6:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       6:
+; CHECK:       7:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> [[A0:%.*]], <4 x i64> [[A1:%.*]])
 ; CHECK-NEXT:    store <4 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x double> [[RES]]
@@ -1006,14 +1047,15 @@ declare <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double>, <4 x i64>) no
 define <4 x double> @test_x86_avx_vpermilvar_pd_256_2(<4 x double> %a0) #0 {
 ; CHECK-LABEL: @test_x86_avx_vpermilvar_pd_256_2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i64> [[TMP1]] to i256
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
+; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK:       5:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> [[A0:%.*]], <4 x i64> <i64 2, i64 0, i64 0, i64 2>)
 ; CHECK-NEXT:    store <4 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x double> [[RES]]
@@ -1026,17 +1068,18 @@ define <4 x float> @test_x86_avx_vpermilvar_ps(<4 x float> %a0, <4 x i32> %a1) #
 ; CHECK-LABEL: @test_x86_avx_vpermilvar_ps(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP3]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP2]] to i128
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP4]], 0
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
-; CHECK:       5:
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
+; CHECK:       6:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       6:
+; CHECK:       7:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> [[A0:%.*]], <4 x i32> [[A1:%.*]])
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
@@ -1048,16 +1091,17 @@ define <4 x float> @test_x86_avx_vpermilvar_ps_load(<4 x float> %a0, ptr %a1) #0
 ; CHECK-LABEL: @test_x86_avx_vpermilvar_ps_load(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
+; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK:       5:
 ; CHECK-NEXT:    [[A2:%.*]] = load <4 x i32>, ptr [[A1:%.*]], align 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A1]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], -2147483649
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <4 x i32>, ptr [[TMP7]], align 16
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i32> [[TMP2]] to i128
@@ -1065,11 +1109,11 @@ define <4 x float> @test_x86_avx_vpermilvar_ps_load(<4 x float> %a0, ptr %a1) #0
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <4 x i32> [[_MSLD]] to i128
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP9]], 0
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP1]], [[_MSCMP2]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF1]]
-; CHECK:       10:
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF1]]
+; CHECK:       11:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       11:
+; CHECK:       12:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> [[A0:%.*]], <4 x i32> [[A2]])
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
@@ -1085,17 +1129,18 @@ define <8 x float> @test_x86_avx_vpermilvar_ps_256(<8 x float> %a0, <8 x i32> %a
 ; CHECK-LABEL: @test_x86_avx_vpermilvar_ps_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i32> [[TMP1]] to i256
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP3]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i32> [[TMP2]] to i256
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP4]], 0
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
-; CHECK:       5:
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
+; CHECK:       6:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       6:
+; CHECK:       7:
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> [[A0:%.*]], <8 x i32> [[A1:%.*]])
 ; CHECK-NEXT:    store <8 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x float> [[RES]]
@@ -1110,6 +1155,7 @@ define i32 @test_x86_avx_vtestc_pd(<2 x double> %a0, <2 x double> %a1) #0 {
 ; CHECK-LABEL: @test_x86_avx_vtestc_pd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i64> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <2 x i64> [[TMP3]], zeroinitializer
@@ -1129,6 +1175,7 @@ define i32 @test_x86_avx_vtestc_pd_256(<4 x double> %a0, <4 x double> %a1) #0 {
 ; CHECK-LABEL: @test_x86_avx_vtestc_pd_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i64> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i64> [[TMP3]], zeroinitializer
@@ -1148,6 +1195,7 @@ define i32 @test_x86_avx_vtestc_ps(<4 x float> %a0, <4 x float> %a1) #0 {
 ; CHECK-LABEL: @test_x86_avx_vtestc_ps(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i32> [[TMP3]], zeroinitializer
@@ -1167,6 +1215,7 @@ define i32 @test_x86_avx_vtestc_ps_256(<8 x float> %a0, <8 x float> %a1) #0 {
 ; CHECK-LABEL: @test_x86_avx_vtestc_ps_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <8 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <8 x i32> [[TMP3]], zeroinitializer
@@ -1186,6 +1235,7 @@ define i32 @test_x86_avx_vtestnzc_pd(<2 x double> %a0, <2 x double> %a1) #0 {
 ; CHECK-LABEL: @test_x86_avx_vtestnzc_pd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i64> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <2 x i64> [[TMP3]], zeroinitializer
@@ -1205,6 +1255,7 @@ define i32 @test_x86_avx_vtestnzc_pd_256(<4 x double> %a0, <4 x double> %a1) #0 
 ; CHECK-LABEL: @test_x86_avx_vtestnzc_pd_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i64> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i64> [[TMP3]], zeroinitializer
@@ -1224,6 +1275,7 @@ define i32 @test_x86_avx_vtestnzc_ps(<4 x float> %a0, <4 x float> %a1) #0 {
 ; CHECK-LABEL: @test_x86_avx_vtestnzc_ps(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i32> [[TMP3]], zeroinitializer
@@ -1243,6 +1295,7 @@ define i32 @test_x86_avx_vtestnzc_ps_256(<8 x float> %a0, <8 x float> %a1) #0 {
 ; CHECK-LABEL: @test_x86_avx_vtestnzc_ps_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <8 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <8 x i32> [[TMP3]], zeroinitializer
@@ -1262,6 +1315,7 @@ define i32 @test_x86_avx_vtestz_pd(<2 x double> %a0, <2 x double> %a1) #0 {
 ; CHECK-LABEL: @test_x86_avx_vtestz_pd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i64> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <2 x i64> [[TMP3]], zeroinitializer
@@ -1281,6 +1335,7 @@ define i32 @test_x86_avx_vtestz_pd_256(<4 x double> %a0, <4 x double> %a1) #0 {
 ; CHECK-LABEL: @test_x86_avx_vtestz_pd_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i64> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i64> [[TMP3]], zeroinitializer
@@ -1300,6 +1355,7 @@ define i32 @test_x86_avx_vtestz_ps(<4 x float> %a0, <4 x float> %a1) #0 {
 ; CHECK-LABEL: @test_x86_avx_vtestz_ps(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i32> [[TMP3]], zeroinitializer
@@ -1319,6 +1375,7 @@ define i32 @test_x86_avx_vtestz_ps_256(<8 x float> %a0, <8 x float> %a1) #0 {
 ; CHECK-LABEL: @test_x86_avx_vtestz_ps_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <8 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <8 x i32> [[TMP3]], zeroinitializer
@@ -1336,6 +1393,7 @@ declare i32 @llvm.x86.avx.vtestz.ps.256(<8 x float>, <8 x float>) nounwind readn
 
 define void @test_x86_avx_vzeroall() #0 {
 ; CHECK-LABEL: @test_x86_avx_vzeroall(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    call void @llvm.x86.avx.vzeroall()
 ; CHECK-NEXT:    ret void
@@ -1348,6 +1406,7 @@ declare void @llvm.x86.avx.vzeroall() nounwind
 
 define void @test_x86_avx_vzeroupper() #0 {
 ; CHECK-LABEL: @test_x86_avx_vzeroupper(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    call void @llvm.x86.avx.vzeroupper()
 ; CHECK-NEXT:    ret void
@@ -1361,19 +1420,20 @@ define void @movnt_dq(ptr %p, <2 x i64> %a1) nounwind #0 {
 ; CHECK-LABEL: @movnt_dq(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[A2:%.*]] = add <2 x i64> [[A1:%.*]], splat (i64 1)
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = shufflevector <2 x i64> [[_MSPROP]], <2 x i64> splat (i64 -1), <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[A3:%.*]] = shufflevector <2 x i64> [[A2]], <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
+; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK:       5:
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P:%.*]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], -2147483649
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    store <4 x i64> [[_MSPROP1]], ptr [[TMP7]], align 32
 ; CHECK-NEXT:    store <4 x i64> [[A3]], ptr [[P]], align 32, !nontemporal [[META2:![0-9]+]]
@@ -1389,16 +1449,17 @@ declare void @llvm.x86.avx.movnt.dq.256(ptr, <4 x i64>) nounwind
 define void @movnt_ps(ptr %p, <8 x float> %a) nounwind #0 {
 ; CHECK-LABEL: @movnt_ps(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
+; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK:       5:
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P:%.*]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], -2147483649
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    store <8 x i32> [[TMP2]], ptr [[TMP7]], align 32
 ; CHECK-NEXT:    store <8 x float> [[A:%.*]], ptr [[P]], align 32, !nontemporal [[META2]]
@@ -1414,17 +1475,18 @@ define void @movnt_pd(ptr %p, <4 x double> %a1) nounwind #0 {
 ; CHECK-LABEL: @movnt_pd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i64> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[A2:%.*]] = fadd <4 x double> [[A1:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
+; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK:       5:
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P:%.*]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], -2147483649
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    store <4 x i64> [[_MSPROP]], ptr [[TMP7]], align 32
 ; CHECK-NEXT:    store <4 x double> [[A2]], ptr [[P]], align 32, !nontemporal [[META2]]
@@ -1441,6 +1503,7 @@ define <2 x i64> @test_x86_pclmulqdq(<2 x i64> %a0, <2 x i64> %a1) #0 {
 ; CHECK-LABEL: @test_x86_pclmulqdq(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP2]], <2 x i64> poison, <2 x i32> zeroinitializer
