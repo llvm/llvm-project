@@ -2641,7 +2641,7 @@ std::optional<RegionBindingsRef> RegionStoreManager::tryBindSmallStruct(
   //   Direct [ 0..31]: Derived{Conj{}, w.width}
   //   Direct [32..63]: Derived{Conj{}, w.height}
   // Instead, we should just bind that Conjured value instead.
-  if (auto Val = getUniqueDefaultBinding(LCV)) {
+  if (std::optional<SVal> Val = getUniqueDefaultBinding(LCV)) {
     return B.addBinding(BindingKey::Make(R, BindingKey::Default), Val.value());
   }
 
