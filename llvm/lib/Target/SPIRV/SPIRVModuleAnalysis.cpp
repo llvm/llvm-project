@@ -663,7 +663,8 @@ void RequirementHandler::initAvailableCapabilitiesForOpenCL(
   // Add the min requirements for different OpenCL and SPIR-V versions.
   addAvailableCaps({Capability::Addresses, Capability::Float16Buffer,
                     Capability::Kernel, Capability::Vector16,
-                    Capability::Groups, Capability::GenericPointer});
+                    Capability::Groups, Capability::GenericPointer,
+                    Capability::StorageImageReadWithoutFormat});
   if (ST.hasOpenCLFullProfile())
     addAvailableCaps({Capability::Int64, Capability::Int64Atomics});
   if (ST.hasOpenCLImageSupport()) {
@@ -721,6 +722,10 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
          Capability::UniformTexelBufferArrayNonUniformIndexingEXT,
          Capability::StorageTexelBufferArrayNonUniformIndexingEXT});
   }
+
+  // Became core in Vulkan 1.3
+  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 6)))
+    addAvailableCaps({Capability::StorageImageReadWithoutFormat});
 }
 
 } // namespace SPIRV
@@ -1005,6 +1010,13 @@ void addOpAccessChainReqs(const MachineInstr &Instr,
       Handler.addRequirements(
           SPIRV::Capability::StorageImageArrayDynamicIndexing);
   }
+}
+
+static bool isImageTypeWithUnknownFormat(SPIRVType *TypeInst) {
+  if (TypeInst->getOpcode() != SPIRV::OpTypeImage)
+    return false;
+  assert(TypeInst->getOperand(7).isImm() && "The image format must be an imm.");
+  return TypeInst->getOperand(7).getImm() == 0;
 }
 
 static void AddDotProductRequirements(const MachineInstr &MI,
@@ -1413,6 +1425,14 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpUDot:
     AddDotProductRequirements(MI, Reqs, ST);
     break;
+  case SPIRV::OpImageRead: {
+    Register ImageReg = MI.getOperand(2).getReg();
+    SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(ImageReg);
+    if (isImageTypeWithUnknownFormat(TypeDef))
+      Reqs.addCapability(SPIRV::Capability::StorageImageReadWithoutFormat);
+    break;
+  }
+
   default:
     break;
   }

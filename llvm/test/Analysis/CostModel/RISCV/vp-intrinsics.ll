@@ -709,6 +709,432 @@ define void @and() {
   ret void
 }
 
+
+define void @smax() {
+; CHECK-LABEL: 'smax'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t0 = call <2 x i8> @llvm.vp.smax.v2i8(<2 x i8> undef, <2 x i8> undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t2 = call <4 x i8> @llvm.vp.smax.v4i8(<4 x i8> undef, <4 x i8> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t4 = call <8 x i8> @llvm.vp.smax.v8i8(<8 x i8> undef, <8 x i8> undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t6 = call <16 x i8> @llvm.vp.smax.v16i8(<16 x i8> undef, <16 x i8> undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t8 = call <2 x i16> @llvm.vp.smax.v2i16(<2 x i16> undef, <2 x i16> undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t10 = call <4 x i16> @llvm.vp.smax.v4i16(<4 x i16> undef, <4 x i16> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t12 = call <8 x i16> @llvm.vp.smax.v8i16(<8 x i16> undef, <8 x i16> undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t14 = call <16 x i16> @llvm.vp.smax.v16i16(<16 x i16> undef, <16 x i16> undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t16 = call <2 x i32> @llvm.vp.smax.v2i32(<2 x i32> undef, <2 x i32> undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t18 = call <4 x i32> @llvm.vp.smax.v4i32(<4 x i32> undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t20 = call <8 x i32> @llvm.vp.smax.v8i32(<8 x i32> undef, <8 x i32> undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t22 = call <16 x i32> @llvm.vp.smax.v16i32(<16 x i32> undef, <16 x i32> undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t24 = call <2 x i64> @llvm.vp.smax.v2i64(<2 x i64> undef, <2 x i64> undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t26 = call <4 x i64> @llvm.vp.smax.v4i64(<4 x i64> undef, <4 x i64> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t28 = call <8 x i64> @llvm.vp.smax.v8i64(<8 x i64> undef, <8 x i64> undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t30 = call <16 x i64> @llvm.vp.smax.v16i64(<16 x i64> undef, <16 x i64> undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t32 = call <vscale x 2 x i8> @llvm.vp.smax.nxv2i8(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t34 = call <vscale x 4 x i8> @llvm.vp.smax.nxv4i8(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t36 = call <vscale x 8 x i8> @llvm.vp.smax.nxv8i8(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t38 = call <vscale x 16 x i8> @llvm.vp.smax.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t40 = call <vscale x 2 x i16> @llvm.vp.smax.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t42 = call <vscale x 4 x i16> @llvm.vp.smax.nxv4i16(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t44 = call <vscale x 8 x i16> @llvm.vp.smax.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t46 = call <vscale x 16 x i16> @llvm.vp.smax.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t48 = call <vscale x 2 x i32> @llvm.vp.smax.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t50 = call <vscale x 4 x i32> @llvm.vp.smax.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t52 = call <vscale x 8 x i32> @llvm.vp.smax.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t54 = call <vscale x 16 x i32> @llvm.vp.smax.nxv16i32(<vscale x 16 x i32> undef, <vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t56 = call <vscale x 2 x i64> @llvm.vp.smax.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t58 = call <vscale x 4 x i64> @llvm.vp.smax.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t60 = call <vscale x 8 x i64> @llvm.vp.smax.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t62 = call <vscale x 16 x i64> @llvm.vp.smax.nxv16i64(<vscale x 16 x i64> undef, <vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPEBASED-LABEL: 'smax'
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %t0 = call <2 x i8> @llvm.vp.smax.v2i8(<2 x i8> undef, <2 x i8> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: %t2 = call <4 x i8> @llvm.vp.smax.v4i8(<4 x i8> undef, <4 x i8> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 77 for instruction: %t4 = call <8 x i8> @llvm.vp.smax.v8i8(<8 x i8> undef, <8 x i8> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 157 for instruction: %t6 = call <16 x i8> @llvm.vp.smax.v16i8(<16 x i8> undef, <16 x i8> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %t8 = call <2 x i16> @llvm.vp.smax.v2i16(<2 x i16> undef, <2 x i16> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: %t10 = call <4 x i16> @llvm.vp.smax.v4i16(<4 x i16> undef, <4 x i16> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 77 for instruction: %t12 = call <8 x i16> @llvm.vp.smax.v8i16(<8 x i16> undef, <8 x i16> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 172 for instruction: %t14 = call <16 x i16> @llvm.vp.smax.v16i16(<16 x i16> undef, <16 x i16> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %t16 = call <2 x i32> @llvm.vp.smax.v2i32(<2 x i32> undef, <2 x i32> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: %t18 = call <4 x i32> @llvm.vp.smax.v4i32(<4 x i32> undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %t20 = call <8 x i32> @llvm.vp.smax.v8i32(<8 x i32> undef, <8 x i32> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 172 for instruction: %t22 = call <16 x i32> @llvm.vp.smax.v16i32(<16 x i32> undef, <16 x i32> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %t24 = call <2 x i64> @llvm.vp.smax.v2i64(<2 x i64> undef, <2 x i64> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t26 = call <4 x i64> @llvm.vp.smax.v4i64(<4 x i64> undef, <4 x i64> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %t28 = call <8 x i64> @llvm.vp.smax.v8i64(<8 x i64> undef, <8 x i64> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 172 for instruction: %t30 = call <16 x i64> @llvm.vp.smax.v16i64(<16 x i64> undef, <16 x i64> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t32 = call <vscale x 2 x i8> @llvm.vp.smax.nxv2i8(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t34 = call <vscale x 4 x i8> @llvm.vp.smax.nxv4i8(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t36 = call <vscale x 8 x i8> @llvm.vp.smax.nxv8i8(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t38 = call <vscale x 16 x i8> @llvm.vp.smax.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t40 = call <vscale x 2 x i16> @llvm.vp.smax.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t42 = call <vscale x 4 x i16> @llvm.vp.smax.nxv4i16(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t44 = call <vscale x 8 x i16> @llvm.vp.smax.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t46 = call <vscale x 16 x i16> @llvm.vp.smax.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t48 = call <vscale x 2 x i32> @llvm.vp.smax.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t50 = call <vscale x 4 x i32> @llvm.vp.smax.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t52 = call <vscale x 8 x i32> @llvm.vp.smax.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t54 = call <vscale x 16 x i32> @llvm.vp.smax.nxv16i32(<vscale x 16 x i32> undef, <vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t56 = call <vscale x 2 x i64> @llvm.vp.smax.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t58 = call <vscale x 4 x i64> @llvm.vp.smax.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t60 = call <vscale x 8 x i64> @llvm.vp.smax.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t62 = call <vscale x 16 x i64> @llvm.vp.smax.nxv16i64(<vscale x 16 x i64> undef, <vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %t0 = call <2 x i8> @llvm.vp.smax.v2i8(<2 x i8> undef, <2 x i8> undef, <2 x i1> undef, i32 undef)
+  %t2 = call <4 x i8> @llvm.vp.smax.v4i8(<4 x i8> undef, <4 x i8> undef, <4 x i1> undef, i32 undef)
+  %t4 = call <8 x i8> @llvm.vp.smax.v8i8(<8 x i8> undef, <8 x i8> undef, <8 x i1> undef, i32 undef)
+  %t6 = call <16 x i8> @llvm.vp.smax.v16i8(<16 x i8> undef, <16 x i8> undef, <16 x i1> undef, i32 undef)
+  %t8 = call <2 x i16> @llvm.vp.smax.v2i16(<2 x i16> undef, <2 x i16> undef, <2 x i1> undef, i32 undef)
+  %t10 = call <4 x i16> @llvm.vp.smax.v4i16(<4 x i16> undef, <4 x i16> undef, <4 x i1> undef, i32 undef)
+  %t12 = call <8 x i16> @llvm.vp.smax.v8i16(<8 x i16> undef, <8 x i16> undef, <8 x i1> undef, i32 undef)
+  %t14 = call <16 x i16> @llvm.vp.smax.v16i16(<16 x i16> undef, <16 x i16> undef, <16 x i1> undef, i32 undef)
+  %t16 = call <2 x i32> @llvm.vp.smax.v2i32(<2 x i32> undef, <2 x i32> undef, <2 x i1> undef, i32 undef)
+  %t18 = call <4 x i32> @llvm.vp.smax.v4i32(<4 x i32> undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+  %t20 = call <8 x i32> @llvm.vp.smax.v8i32(<8 x i32> undef, <8 x i32> undef, <8 x i1> undef, i32 undef)
+  %t22 = call <16 x i32> @llvm.vp.smax.v16i32(<16 x i32> undef, <16 x i32> undef, <16 x i1> undef, i32 undef)
+  %t24 = call <2 x i64> @llvm.vp.smax.v2i64(<2 x i64> undef, <2 x i64> undef, <2 x i1> undef, i32 undef)
+  %t26 = call <4 x i64> @llvm.vp.smax.v4i64(<4 x i64> undef, <4 x i64> undef, <4 x i1> undef, i32 undef)
+  %t28 = call <8 x i64> @llvm.vp.smax.v8i64(<8 x i64> undef, <8 x i64> undef, <8 x i1> undef, i32 undef)
+  %t30 = call <16 x i64> @llvm.vp.smax.v16i64(<16 x i64> undef, <16 x i64> undef, <16 x i1> undef, i32 undef)
+  %t32 = call <vscale x 2 x i8> @llvm.vp.smax.nxv2i8(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
+  %t34 = call <vscale x 4 x i8> @llvm.vp.smax.nxv4i8(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
+  %t36 = call <vscale x 8 x i8> @llvm.vp.smax.nxv8i8(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
+  %t38 = call <vscale x 16 x i8> @llvm.vp.smax.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
+  %t40 = call <vscale x 2 x i16> @llvm.vp.smax.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
+  %t42 = call <vscale x 4 x i16> @llvm.vp.smax.nxv4i16(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
+  %t44 = call <vscale x 8 x i16> @llvm.vp.smax.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
+  %t46 = call <vscale x 16 x i16> @llvm.vp.smax.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
+  %t48 = call <vscale x 2 x i32> @llvm.vp.smax.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
+  %t50 = call <vscale x 4 x i32> @llvm.vp.smax.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
+  %t52 = call <vscale x 8 x i32> @llvm.vp.smax.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
+  %t54 = call <vscale x 16 x i32> @llvm.vp.smax.nxv16i32(<vscale x 16 x i32> undef, <vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
+  %t56 = call <vscale x 2 x i64> @llvm.vp.smax.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
+  %t58 = call <vscale x 4 x i64> @llvm.vp.smax.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
+  %t60 = call <vscale x 8 x i64> @llvm.vp.smax.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
+  %t62 = call <vscale x 16 x i64> @llvm.vp.smax.nxv16i64(<vscale x 16 x i64> undef, <vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
+  ret void
+}
+
+
+define void @smin() {
+; CHECK-LABEL: 'smin'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t0 = call <2 x i8> @llvm.vp.smin.v2i8(<2 x i8> undef, <2 x i8> undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t2 = call <4 x i8> @llvm.vp.smin.v4i8(<4 x i8> undef, <4 x i8> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t4 = call <8 x i8> @llvm.vp.smin.v8i8(<8 x i8> undef, <8 x i8> undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t6 = call <16 x i8> @llvm.vp.smin.v16i8(<16 x i8> undef, <16 x i8> undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t8 = call <2 x i16> @llvm.vp.smin.v2i16(<2 x i16> undef, <2 x i16> undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t10 = call <4 x i16> @llvm.vp.smin.v4i16(<4 x i16> undef, <4 x i16> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t12 = call <8 x i16> @llvm.vp.smin.v8i16(<8 x i16> undef, <8 x i16> undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t14 = call <16 x i16> @llvm.vp.smin.v16i16(<16 x i16> undef, <16 x i16> undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t16 = call <2 x i32> @llvm.vp.smin.v2i32(<2 x i32> undef, <2 x i32> undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t18 = call <4 x i32> @llvm.vp.smin.v4i32(<4 x i32> undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t20 = call <8 x i32> @llvm.vp.smin.v8i32(<8 x i32> undef, <8 x i32> undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t22 = call <16 x i32> @llvm.vp.smin.v16i32(<16 x i32> undef, <16 x i32> undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t24 = call <2 x i64> @llvm.vp.smin.v2i64(<2 x i64> undef, <2 x i64> undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t26 = call <4 x i64> @llvm.vp.smin.v4i64(<4 x i64> undef, <4 x i64> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t28 = call <8 x i64> @llvm.vp.smin.v8i64(<8 x i64> undef, <8 x i64> undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t30 = call <16 x i64> @llvm.vp.smin.v16i64(<16 x i64> undef, <16 x i64> undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t32 = call <vscale x 2 x i8> @llvm.vp.smin.nxv2i8(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t34 = call <vscale x 4 x i8> @llvm.vp.smin.nxv4i8(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t36 = call <vscale x 8 x i8> @llvm.vp.smin.nxv8i8(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t38 = call <vscale x 16 x i8> @llvm.vp.smin.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t40 = call <vscale x 2 x i16> @llvm.vp.smin.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t42 = call <vscale x 4 x i16> @llvm.vp.smin.nxv4i16(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t44 = call <vscale x 8 x i16> @llvm.vp.smin.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t46 = call <vscale x 16 x i16> @llvm.vp.smin.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t48 = call <vscale x 2 x i32> @llvm.vp.smin.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t50 = call <vscale x 4 x i32> @llvm.vp.smin.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t52 = call <vscale x 8 x i32> @llvm.vp.smin.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t54 = call <vscale x 16 x i32> @llvm.vp.smin.nxv16i32(<vscale x 16 x i32> undef, <vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t56 = call <vscale x 2 x i64> @llvm.vp.smin.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t58 = call <vscale x 4 x i64> @llvm.vp.smin.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t60 = call <vscale x 8 x i64> @llvm.vp.smin.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t62 = call <vscale x 16 x i64> @llvm.vp.smin.nxv16i64(<vscale x 16 x i64> undef, <vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPEBASED-LABEL: 'smin'
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %t0 = call <2 x i8> @llvm.vp.smin.v2i8(<2 x i8> undef, <2 x i8> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: %t2 = call <4 x i8> @llvm.vp.smin.v4i8(<4 x i8> undef, <4 x i8> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 77 for instruction: %t4 = call <8 x i8> @llvm.vp.smin.v8i8(<8 x i8> undef, <8 x i8> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 157 for instruction: %t6 = call <16 x i8> @llvm.vp.smin.v16i8(<16 x i8> undef, <16 x i8> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %t8 = call <2 x i16> @llvm.vp.smin.v2i16(<2 x i16> undef, <2 x i16> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: %t10 = call <4 x i16> @llvm.vp.smin.v4i16(<4 x i16> undef, <4 x i16> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 77 for instruction: %t12 = call <8 x i16> @llvm.vp.smin.v8i16(<8 x i16> undef, <8 x i16> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 172 for instruction: %t14 = call <16 x i16> @llvm.vp.smin.v16i16(<16 x i16> undef, <16 x i16> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %t16 = call <2 x i32> @llvm.vp.smin.v2i32(<2 x i32> undef, <2 x i32> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: %t18 = call <4 x i32> @llvm.vp.smin.v4i32(<4 x i32> undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %t20 = call <8 x i32> @llvm.vp.smin.v8i32(<8 x i32> undef, <8 x i32> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 172 for instruction: %t22 = call <16 x i32> @llvm.vp.smin.v16i32(<16 x i32> undef, <16 x i32> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %t24 = call <2 x i64> @llvm.vp.smin.v2i64(<2 x i64> undef, <2 x i64> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t26 = call <4 x i64> @llvm.vp.smin.v4i64(<4 x i64> undef, <4 x i64> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %t28 = call <8 x i64> @llvm.vp.smin.v8i64(<8 x i64> undef, <8 x i64> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 172 for instruction: %t30 = call <16 x i64> @llvm.vp.smin.v16i64(<16 x i64> undef, <16 x i64> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t32 = call <vscale x 2 x i8> @llvm.vp.smin.nxv2i8(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t34 = call <vscale x 4 x i8> @llvm.vp.smin.nxv4i8(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t36 = call <vscale x 8 x i8> @llvm.vp.smin.nxv8i8(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t38 = call <vscale x 16 x i8> @llvm.vp.smin.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t40 = call <vscale x 2 x i16> @llvm.vp.smin.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t42 = call <vscale x 4 x i16> @llvm.vp.smin.nxv4i16(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t44 = call <vscale x 8 x i16> @llvm.vp.smin.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t46 = call <vscale x 16 x i16> @llvm.vp.smin.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t48 = call <vscale x 2 x i32> @llvm.vp.smin.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t50 = call <vscale x 4 x i32> @llvm.vp.smin.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t52 = call <vscale x 8 x i32> @llvm.vp.smin.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t54 = call <vscale x 16 x i32> @llvm.vp.smin.nxv16i32(<vscale x 16 x i32> undef, <vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t56 = call <vscale x 2 x i64> @llvm.vp.smin.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t58 = call <vscale x 4 x i64> @llvm.vp.smin.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t60 = call <vscale x 8 x i64> @llvm.vp.smin.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t62 = call <vscale x 16 x i64> @llvm.vp.smin.nxv16i64(<vscale x 16 x i64> undef, <vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %t0 = call <2 x i8> @llvm.vp.smin.v2i8(<2 x i8> undef, <2 x i8> undef, <2 x i1> undef, i32 undef)
+  %t2 = call <4 x i8> @llvm.vp.smin.v4i8(<4 x i8> undef, <4 x i8> undef, <4 x i1> undef, i32 undef)
+  %t4 = call <8 x i8> @llvm.vp.smin.v8i8(<8 x i8> undef, <8 x i8> undef, <8 x i1> undef, i32 undef)
+  %t6 = call <16 x i8> @llvm.vp.smin.v16i8(<16 x i8> undef, <16 x i8> undef, <16 x i1> undef, i32 undef)
+  %t8 = call <2 x i16> @llvm.vp.smin.v2i16(<2 x i16> undef, <2 x i16> undef, <2 x i1> undef, i32 undef)
+  %t10 = call <4 x i16> @llvm.vp.smin.v4i16(<4 x i16> undef, <4 x i16> undef, <4 x i1> undef, i32 undef)
+  %t12 = call <8 x i16> @llvm.vp.smin.v8i16(<8 x i16> undef, <8 x i16> undef, <8 x i1> undef, i32 undef)
+  %t14 = call <16 x i16> @llvm.vp.smin.v16i16(<16 x i16> undef, <16 x i16> undef, <16 x i1> undef, i32 undef)
+  %t16 = call <2 x i32> @llvm.vp.smin.v2i32(<2 x i32> undef, <2 x i32> undef, <2 x i1> undef, i32 undef)
+  %t18 = call <4 x i32> @llvm.vp.smin.v4i32(<4 x i32> undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+  %t20 = call <8 x i32> @llvm.vp.smin.v8i32(<8 x i32> undef, <8 x i32> undef, <8 x i1> undef, i32 undef)
+  %t22 = call <16 x i32> @llvm.vp.smin.v16i32(<16 x i32> undef, <16 x i32> undef, <16 x i1> undef, i32 undef)
+  %t24 = call <2 x i64> @llvm.vp.smin.v2i64(<2 x i64> undef, <2 x i64> undef, <2 x i1> undef, i32 undef)
+  %t26 = call <4 x i64> @llvm.vp.smin.v4i64(<4 x i64> undef, <4 x i64> undef, <4 x i1> undef, i32 undef)
+  %t28 = call <8 x i64> @llvm.vp.smin.v8i64(<8 x i64> undef, <8 x i64> undef, <8 x i1> undef, i32 undef)
+  %t30 = call <16 x i64> @llvm.vp.smin.v16i64(<16 x i64> undef, <16 x i64> undef, <16 x i1> undef, i32 undef)
+  %t32 = call <vscale x 2 x i8> @llvm.vp.smin.nxv2i8(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
+  %t34 = call <vscale x 4 x i8> @llvm.vp.smin.nxv4i8(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
+  %t36 = call <vscale x 8 x i8> @llvm.vp.smin.nxv8i8(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
+  %t38 = call <vscale x 16 x i8> @llvm.vp.smin.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
+  %t40 = call <vscale x 2 x i16> @llvm.vp.smin.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
+  %t42 = call <vscale x 4 x i16> @llvm.vp.smin.nxv4i16(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
+  %t44 = call <vscale x 8 x i16> @llvm.vp.smin.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
+  %t46 = call <vscale x 16 x i16> @llvm.vp.smin.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
+  %t48 = call <vscale x 2 x i32> @llvm.vp.smin.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
+  %t50 = call <vscale x 4 x i32> @llvm.vp.smin.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
+  %t52 = call <vscale x 8 x i32> @llvm.vp.smin.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
+  %t54 = call <vscale x 16 x i32> @llvm.vp.smin.nxv16i32(<vscale x 16 x i32> undef, <vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
+  %t56 = call <vscale x 2 x i64> @llvm.vp.smin.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
+  %t58 = call <vscale x 4 x i64> @llvm.vp.smin.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
+  %t60 = call <vscale x 8 x i64> @llvm.vp.smin.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
+  %t62 = call <vscale x 16 x i64> @llvm.vp.smin.nxv16i64(<vscale x 16 x i64> undef, <vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
+  ret void
+}
+
+define void @umax() {
+; CHECK-LABEL: 'umax'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t0 = call <2 x i8> @llvm.vp.umax.v2i8(<2 x i8> undef, <2 x i8> undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t2 = call <4 x i8> @llvm.vp.umax.v4i8(<4 x i8> undef, <4 x i8> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t4 = call <8 x i8> @llvm.vp.umax.v8i8(<8 x i8> undef, <8 x i8> undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t6 = call <16 x i8> @llvm.vp.umax.v16i8(<16 x i8> undef, <16 x i8> undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t8 = call <2 x i16> @llvm.vp.umax.v2i16(<2 x i16> undef, <2 x i16> undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t10 = call <4 x i16> @llvm.vp.umax.v4i16(<4 x i16> undef, <4 x i16> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t12 = call <8 x i16> @llvm.vp.umax.v8i16(<8 x i16> undef, <8 x i16> undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t14 = call <16 x i16> @llvm.vp.umax.v16i16(<16 x i16> undef, <16 x i16> undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t16 = call <2 x i32> @llvm.vp.umax.v2i32(<2 x i32> undef, <2 x i32> undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t18 = call <4 x i32> @llvm.vp.umax.v4i32(<4 x i32> undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t20 = call <8 x i32> @llvm.vp.umax.v8i32(<8 x i32> undef, <8 x i32> undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t22 = call <16 x i32> @llvm.vp.umax.v16i32(<16 x i32> undef, <16 x i32> undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t24 = call <2 x i64> @llvm.vp.umax.v2i64(<2 x i64> undef, <2 x i64> undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t26 = call <4 x i64> @llvm.vp.umax.v4i64(<4 x i64> undef, <4 x i64> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t28 = call <8 x i64> @llvm.vp.umax.v8i64(<8 x i64> undef, <8 x i64> undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t30 = call <16 x i64> @llvm.vp.umax.v16i64(<16 x i64> undef, <16 x i64> undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t32 = call <vscale x 2 x i8> @llvm.vp.umax.nxv2i8(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t34 = call <vscale x 4 x i8> @llvm.vp.umax.nxv4i8(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t36 = call <vscale x 8 x i8> @llvm.vp.umax.nxv8i8(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t38 = call <vscale x 16 x i8> @llvm.vp.umax.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t40 = call <vscale x 2 x i16> @llvm.vp.umax.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t42 = call <vscale x 4 x i16> @llvm.vp.umax.nxv4i16(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t44 = call <vscale x 8 x i16> @llvm.vp.umax.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t46 = call <vscale x 16 x i16> @llvm.vp.umax.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t48 = call <vscale x 2 x i32> @llvm.vp.umax.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t50 = call <vscale x 4 x i32> @llvm.vp.umax.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t52 = call <vscale x 8 x i32> @llvm.vp.umax.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t54 = call <vscale x 16 x i32> @llvm.vp.umax.nxv16i32(<vscale x 16 x i32> undef, <vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t56 = call <vscale x 2 x i64> @llvm.vp.umax.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t58 = call <vscale x 4 x i64> @llvm.vp.umax.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t60 = call <vscale x 8 x i64> @llvm.vp.umax.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t62 = call <vscale x 16 x i64> @llvm.vp.umax.nxv16i64(<vscale x 16 x i64> undef, <vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPEBASED-LABEL: 'umax'
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %t0 = call <2 x i8> @llvm.vp.umax.v2i8(<2 x i8> undef, <2 x i8> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: %t2 = call <4 x i8> @llvm.vp.umax.v4i8(<4 x i8> undef, <4 x i8> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 77 for instruction: %t4 = call <8 x i8> @llvm.vp.umax.v8i8(<8 x i8> undef, <8 x i8> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 157 for instruction: %t6 = call <16 x i8> @llvm.vp.umax.v16i8(<16 x i8> undef, <16 x i8> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %t8 = call <2 x i16> @llvm.vp.umax.v2i16(<2 x i16> undef, <2 x i16> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: %t10 = call <4 x i16> @llvm.vp.umax.v4i16(<4 x i16> undef, <4 x i16> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 77 for instruction: %t12 = call <8 x i16> @llvm.vp.umax.v8i16(<8 x i16> undef, <8 x i16> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 172 for instruction: %t14 = call <16 x i16> @llvm.vp.umax.v16i16(<16 x i16> undef, <16 x i16> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %t16 = call <2 x i32> @llvm.vp.umax.v2i32(<2 x i32> undef, <2 x i32> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: %t18 = call <4 x i32> @llvm.vp.umax.v4i32(<4 x i32> undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %t20 = call <8 x i32> @llvm.vp.umax.v8i32(<8 x i32> undef, <8 x i32> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 172 for instruction: %t22 = call <16 x i32> @llvm.vp.umax.v16i32(<16 x i32> undef, <16 x i32> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %t24 = call <2 x i64> @llvm.vp.umax.v2i64(<2 x i64> undef, <2 x i64> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t26 = call <4 x i64> @llvm.vp.umax.v4i64(<4 x i64> undef, <4 x i64> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %t28 = call <8 x i64> @llvm.vp.umax.v8i64(<8 x i64> undef, <8 x i64> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 172 for instruction: %t30 = call <16 x i64> @llvm.vp.umax.v16i64(<16 x i64> undef, <16 x i64> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t32 = call <vscale x 2 x i8> @llvm.vp.umax.nxv2i8(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t34 = call <vscale x 4 x i8> @llvm.vp.umax.nxv4i8(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t36 = call <vscale x 8 x i8> @llvm.vp.umax.nxv8i8(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t38 = call <vscale x 16 x i8> @llvm.vp.umax.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t40 = call <vscale x 2 x i16> @llvm.vp.umax.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t42 = call <vscale x 4 x i16> @llvm.vp.umax.nxv4i16(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t44 = call <vscale x 8 x i16> @llvm.vp.umax.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t46 = call <vscale x 16 x i16> @llvm.vp.umax.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t48 = call <vscale x 2 x i32> @llvm.vp.umax.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t50 = call <vscale x 4 x i32> @llvm.vp.umax.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t52 = call <vscale x 8 x i32> @llvm.vp.umax.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t54 = call <vscale x 16 x i32> @llvm.vp.umax.nxv16i32(<vscale x 16 x i32> undef, <vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t56 = call <vscale x 2 x i64> @llvm.vp.umax.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t58 = call <vscale x 4 x i64> @llvm.vp.umax.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t60 = call <vscale x 8 x i64> @llvm.vp.umax.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t62 = call <vscale x 16 x i64> @llvm.vp.umax.nxv16i64(<vscale x 16 x i64> undef, <vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %t0 = call <2 x i8> @llvm.vp.umax.v2i8(<2 x i8> undef, <2 x i8> undef, <2 x i1> undef, i32 undef)
+  %t2 = call <4 x i8> @llvm.vp.umax.v4i8(<4 x i8> undef, <4 x i8> undef, <4 x i1> undef, i32 undef)
+  %t4 = call <8 x i8> @llvm.vp.umax.v8i8(<8 x i8> undef, <8 x i8> undef, <8 x i1> undef, i32 undef)
+  %t6 = call <16 x i8> @llvm.vp.umax.v16i8(<16 x i8> undef, <16 x i8> undef, <16 x i1> undef, i32 undef)
+  %t8 = call <2 x i16> @llvm.vp.umax.v2i16(<2 x i16> undef, <2 x i16> undef, <2 x i1> undef, i32 undef)
+  %t10 = call <4 x i16> @llvm.vp.umax.v4i16(<4 x i16> undef, <4 x i16> undef, <4 x i1> undef, i32 undef)
+  %t12 = call <8 x i16> @llvm.vp.umax.v8i16(<8 x i16> undef, <8 x i16> undef, <8 x i1> undef, i32 undef)
+  %t14 = call <16 x i16> @llvm.vp.umax.v16i16(<16 x i16> undef, <16 x i16> undef, <16 x i1> undef, i32 undef)
+  %t16 = call <2 x i32> @llvm.vp.umax.v2i32(<2 x i32> undef, <2 x i32> undef, <2 x i1> undef, i32 undef)
+  %t18 = call <4 x i32> @llvm.vp.umax.v4i32(<4 x i32> undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+  %t20 = call <8 x i32> @llvm.vp.umax.v8i32(<8 x i32> undef, <8 x i32> undef, <8 x i1> undef, i32 undef)
+  %t22 = call <16 x i32> @llvm.vp.umax.v16i32(<16 x i32> undef, <16 x i32> undef, <16 x i1> undef, i32 undef)
+  %t24 = call <2 x i64> @llvm.vp.umax.v2i64(<2 x i64> undef, <2 x i64> undef, <2 x i1> undef, i32 undef)
+  %t26 = call <4 x i64> @llvm.vp.umax.v4i64(<4 x i64> undef, <4 x i64> undef, <4 x i1> undef, i32 undef)
+  %t28 = call <8 x i64> @llvm.vp.umax.v8i64(<8 x i64> undef, <8 x i64> undef, <8 x i1> undef, i32 undef)
+  %t30 = call <16 x i64> @llvm.vp.umax.v16i64(<16 x i64> undef, <16 x i64> undef, <16 x i1> undef, i32 undef)
+  %t32 = call <vscale x 2 x i8> @llvm.vp.umax.nxv2i8(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
+  %t34 = call <vscale x 4 x i8> @llvm.vp.umax.nxv4i8(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
+  %t36 = call <vscale x 8 x i8> @llvm.vp.umax.nxv8i8(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
+  %t38 = call <vscale x 16 x i8> @llvm.vp.umax.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
+  %t40 = call <vscale x 2 x i16> @llvm.vp.umax.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
+  %t42 = call <vscale x 4 x i16> @llvm.vp.umax.nxv4i16(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
+  %t44 = call <vscale x 8 x i16> @llvm.vp.umax.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
+  %t46 = call <vscale x 16 x i16> @llvm.vp.umax.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
+  %t48 = call <vscale x 2 x i32> @llvm.vp.umax.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
+  %t50 = call <vscale x 4 x i32> @llvm.vp.umax.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
+  %t52 = call <vscale x 8 x i32> @llvm.vp.umax.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
+  %t54 = call <vscale x 16 x i32> @llvm.vp.umax.nxv16i32(<vscale x 16 x i32> undef, <vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
+  %t56 = call <vscale x 2 x i64> @llvm.vp.umax.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
+  %t58 = call <vscale x 4 x i64> @llvm.vp.umax.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
+  %t60 = call <vscale x 8 x i64> @llvm.vp.umax.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
+  %t62 = call <vscale x 16 x i64> @llvm.vp.umax.nxv16i64(<vscale x 16 x i64> undef, <vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
+  ret void
+}
+
+define void @umin() {
+; CHECK-LABEL: 'umin'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t0 = call <2 x i8> @llvm.vp.umin.v2i8(<2 x i8> undef, <2 x i8> undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t2 = call <4 x i8> @llvm.vp.umin.v4i8(<4 x i8> undef, <4 x i8> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t4 = call <8 x i8> @llvm.vp.umin.v8i8(<8 x i8> undef, <8 x i8> undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t6 = call <16 x i8> @llvm.vp.umin.v16i8(<16 x i8> undef, <16 x i8> undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t8 = call <2 x i16> @llvm.vp.umin.v2i16(<2 x i16> undef, <2 x i16> undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t10 = call <4 x i16> @llvm.vp.umin.v4i16(<4 x i16> undef, <4 x i16> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t12 = call <8 x i16> @llvm.vp.umin.v8i16(<8 x i16> undef, <8 x i16> undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t14 = call <16 x i16> @llvm.vp.umin.v16i16(<16 x i16> undef, <16 x i16> undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t16 = call <2 x i32> @llvm.vp.umin.v2i32(<2 x i32> undef, <2 x i32> undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t18 = call <4 x i32> @llvm.vp.umin.v4i32(<4 x i32> undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t20 = call <8 x i32> @llvm.vp.umin.v8i32(<8 x i32> undef, <8 x i32> undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t22 = call <16 x i32> @llvm.vp.umin.v16i32(<16 x i32> undef, <16 x i32> undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t24 = call <2 x i64> @llvm.vp.umin.v2i64(<2 x i64> undef, <2 x i64> undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t26 = call <4 x i64> @llvm.vp.umin.v4i64(<4 x i64> undef, <4 x i64> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t28 = call <8 x i64> @llvm.vp.umin.v8i64(<8 x i64> undef, <8 x i64> undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t30 = call <16 x i64> @llvm.vp.umin.v16i64(<16 x i64> undef, <16 x i64> undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t32 = call <vscale x 2 x i8> @llvm.vp.umin.nxv2i8(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t34 = call <vscale x 4 x i8> @llvm.vp.umin.nxv4i8(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t36 = call <vscale x 8 x i8> @llvm.vp.umin.nxv8i8(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t38 = call <vscale x 16 x i8> @llvm.vp.umin.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t40 = call <vscale x 2 x i16> @llvm.vp.umin.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t42 = call <vscale x 4 x i16> @llvm.vp.umin.nxv4i16(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t44 = call <vscale x 8 x i16> @llvm.vp.umin.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t46 = call <vscale x 16 x i16> @llvm.vp.umin.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t48 = call <vscale x 2 x i32> @llvm.vp.umin.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t50 = call <vscale x 4 x i32> @llvm.vp.umin.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t52 = call <vscale x 8 x i32> @llvm.vp.umin.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t54 = call <vscale x 16 x i32> @llvm.vp.umin.nxv16i32(<vscale x 16 x i32> undef, <vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t56 = call <vscale x 2 x i64> @llvm.vp.umin.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t58 = call <vscale x 4 x i64> @llvm.vp.umin.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t60 = call <vscale x 8 x i64> @llvm.vp.umin.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t62 = call <vscale x 16 x i64> @llvm.vp.umin.nxv16i64(<vscale x 16 x i64> undef, <vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPEBASED-LABEL: 'umin'
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %t0 = call <2 x i8> @llvm.vp.umin.v2i8(<2 x i8> undef, <2 x i8> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: %t2 = call <4 x i8> @llvm.vp.umin.v4i8(<4 x i8> undef, <4 x i8> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 77 for instruction: %t4 = call <8 x i8> @llvm.vp.umin.v8i8(<8 x i8> undef, <8 x i8> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 157 for instruction: %t6 = call <16 x i8> @llvm.vp.umin.v16i8(<16 x i8> undef, <16 x i8> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %t8 = call <2 x i16> @llvm.vp.umin.v2i16(<2 x i16> undef, <2 x i16> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: %t10 = call <4 x i16> @llvm.vp.umin.v4i16(<4 x i16> undef, <4 x i16> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 77 for instruction: %t12 = call <8 x i16> @llvm.vp.umin.v8i16(<8 x i16> undef, <8 x i16> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 172 for instruction: %t14 = call <16 x i16> @llvm.vp.umin.v16i16(<16 x i16> undef, <16 x i16> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %t16 = call <2 x i32> @llvm.vp.umin.v2i32(<2 x i32> undef, <2 x i32> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: %t18 = call <4 x i32> @llvm.vp.umin.v4i32(<4 x i32> undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %t20 = call <8 x i32> @llvm.vp.umin.v8i32(<8 x i32> undef, <8 x i32> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 172 for instruction: %t22 = call <16 x i32> @llvm.vp.umin.v16i32(<16 x i32> undef, <16 x i32> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %t24 = call <2 x i64> @llvm.vp.umin.v2i64(<2 x i64> undef, <2 x i64> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t26 = call <4 x i64> @llvm.vp.umin.v4i64(<4 x i64> undef, <4 x i64> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %t28 = call <8 x i64> @llvm.vp.umin.v8i64(<8 x i64> undef, <8 x i64> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 172 for instruction: %t30 = call <16 x i64> @llvm.vp.umin.v16i64(<16 x i64> undef, <16 x i64> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t32 = call <vscale x 2 x i8> @llvm.vp.umin.nxv2i8(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t34 = call <vscale x 4 x i8> @llvm.vp.umin.nxv4i8(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t36 = call <vscale x 8 x i8> @llvm.vp.umin.nxv8i8(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t38 = call <vscale x 16 x i8> @llvm.vp.umin.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t40 = call <vscale x 2 x i16> @llvm.vp.umin.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t42 = call <vscale x 4 x i16> @llvm.vp.umin.nxv4i16(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t44 = call <vscale x 8 x i16> @llvm.vp.umin.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t46 = call <vscale x 16 x i16> @llvm.vp.umin.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t48 = call <vscale x 2 x i32> @llvm.vp.umin.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t50 = call <vscale x 4 x i32> @llvm.vp.umin.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t52 = call <vscale x 8 x i32> @llvm.vp.umin.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t54 = call <vscale x 16 x i32> @llvm.vp.umin.nxv16i32(<vscale x 16 x i32> undef, <vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t56 = call <vscale x 2 x i64> @llvm.vp.umin.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t58 = call <vscale x 4 x i64> @llvm.vp.umin.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t60 = call <vscale x 8 x i64> @llvm.vp.umin.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t62 = call <vscale x 16 x i64> @llvm.vp.umin.nxv16i64(<vscale x 16 x i64> undef, <vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %t0 = call <2 x i8> @llvm.vp.umin.v2i8(<2 x i8> undef, <2 x i8> undef, <2 x i1> undef, i32 undef)
+  %t2 = call <4 x i8> @llvm.vp.umin.v4i8(<4 x i8> undef, <4 x i8> undef, <4 x i1> undef, i32 undef)
+  %t4 = call <8 x i8> @llvm.vp.umin.v8i8(<8 x i8> undef, <8 x i8> undef, <8 x i1> undef, i32 undef)
+  %t6 = call <16 x i8> @llvm.vp.umin.v16i8(<16 x i8> undef, <16 x i8> undef, <16 x i1> undef, i32 undef)
+  %t8 = call <2 x i16> @llvm.vp.umin.v2i16(<2 x i16> undef, <2 x i16> undef, <2 x i1> undef, i32 undef)
+  %t10 = call <4 x i16> @llvm.vp.umin.v4i16(<4 x i16> undef, <4 x i16> undef, <4 x i1> undef, i32 undef)
+  %t12 = call <8 x i16> @llvm.vp.umin.v8i16(<8 x i16> undef, <8 x i16> undef, <8 x i1> undef, i32 undef)
+  %t14 = call <16 x i16> @llvm.vp.umin.v16i16(<16 x i16> undef, <16 x i16> undef, <16 x i1> undef, i32 undef)
+  %t16 = call <2 x i32> @llvm.vp.umin.v2i32(<2 x i32> undef, <2 x i32> undef, <2 x i1> undef, i32 undef)
+  %t18 = call <4 x i32> @llvm.vp.umin.v4i32(<4 x i32> undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+  %t20 = call <8 x i32> @llvm.vp.umin.v8i32(<8 x i32> undef, <8 x i32> undef, <8 x i1> undef, i32 undef)
+  %t22 = call <16 x i32> @llvm.vp.umin.v16i32(<16 x i32> undef, <16 x i32> undef, <16 x i1> undef, i32 undef)
+  %t24 = call <2 x i64> @llvm.vp.umin.v2i64(<2 x i64> undef, <2 x i64> undef, <2 x i1> undef, i32 undef)
+  %t26 = call <4 x i64> @llvm.vp.umin.v4i64(<4 x i64> undef, <4 x i64> undef, <4 x i1> undef, i32 undef)
+  %t28 = call <8 x i64> @llvm.vp.umin.v8i64(<8 x i64> undef, <8 x i64> undef, <8 x i1> undef, i32 undef)
+  %t30 = call <16 x i64> @llvm.vp.umin.v16i64(<16 x i64> undef, <16 x i64> undef, <16 x i1> undef, i32 undef)
+  %t32 = call <vscale x 2 x i8> @llvm.vp.umin.nxv2i8(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
+  %t34 = call <vscale x 4 x i8> @llvm.vp.umin.nxv4i8(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
+  %t36 = call <vscale x 8 x i8> @llvm.vp.umin.nxv8i8(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
+  %t38 = call <vscale x 16 x i8> @llvm.vp.umin.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
+  %t40 = call <vscale x 2 x i16> @llvm.vp.umin.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
+  %t42 = call <vscale x 4 x i16> @llvm.vp.umin.nxv4i16(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
+  %t44 = call <vscale x 8 x i16> @llvm.vp.umin.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
+  %t46 = call <vscale x 16 x i16> @llvm.vp.umin.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
+  %t48 = call <vscale x 2 x i32> @llvm.vp.umin.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
+  %t50 = call <vscale x 4 x i32> @llvm.vp.umin.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
+  %t52 = call <vscale x 8 x i32> @llvm.vp.umin.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
+  %t54 = call <vscale x 16 x i32> @llvm.vp.umin.nxv16i32(<vscale x 16 x i32> undef, <vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
+  %t56 = call <vscale x 2 x i64> @llvm.vp.umin.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
+  %t58 = call <vscale x 4 x i64> @llvm.vp.umin.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
+  %t60 = call <vscale x 8 x i64> @llvm.vp.umin.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
+  %t62 = call <vscale x 16 x i64> @llvm.vp.umin.nxv16i64(<vscale x 16 x i64> undef, <vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
+  ret void
+}
+
 define void @abs() {
 ; CHECK-LABEL: 'abs'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = call <2 x i8> @llvm.vp.abs.v2i8(<2 x i8> undef, i1 false, <2 x i1> undef, i32 undef)
@@ -1218,37 +1644,37 @@ define void @reduce_add() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; TYPEBASED-LABEL: 'reduce_add'
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %1 = call i8 @llvm.vp.reduce.add.v2i8(i8 undef, <2 x i8> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %1 = call i8 @llvm.vp.reduce.add.v2i8(i8 undef, <2 x i8> undef, <2 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %2 = call i8 @llvm.vector.reduce.add.v2i8(<2 x i8> undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %3 = call i8 @llvm.vp.reduce.add.v4i8(i8 undef, <4 x i8> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %3 = call i8 @llvm.vp.reduce.add.v4i8(i8 undef, <4 x i8> undef, <4 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %4 = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %5 = call i8 @llvm.vp.reduce.add.v8i8(i8 undef, <8 x i8> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %5 = call i8 @llvm.vp.reduce.add.v8i8(i8 undef, <8 x i8> undef, <8 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %6 = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 110 for instruction: %7 = call i8 @llvm.vp.reduce.add.v16i8(i8 undef, <16 x i8> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %7 = call i8 @llvm.vp.reduce.add.v16i8(i8 undef, <16 x i8> undef, <16 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %8 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %9 = call i64 @llvm.vp.reduce.add.v2i64(i64 undef, <2 x i64> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %9 = call i64 @llvm.vp.reduce.add.v2i64(i64 undef, <2 x i64> undef, <2 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %10 = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %11 = call i64 @llvm.vp.reduce.add.v4i64(i64 undef, <4 x i64> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %11 = call i64 @llvm.vp.reduce.add.v4i64(i64 undef, <4 x i64> undef, <4 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %12 = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %13 = call i64 @llvm.vp.reduce.add.v8i64(i64 undef, <8 x i64> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %13 = call i64 @llvm.vp.reduce.add.v8i64(i64 undef, <8 x i64> undef, <8 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %14 = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 110 for instruction: %15 = call i64 @llvm.vp.reduce.add.v16i64(i64 undef, <16 x i64> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %15 = call i64 @llvm.vp.reduce.add.v16i64(i64 undef, <16 x i64> undef, <16 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %16 = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> undef)
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %17 = call i8 @llvm.vp.reduce.add.nxv8i8(i8 undef, <vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %17 = call i8 @llvm.vp.reduce.add.nxv8i8(i8 undef, <vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %18 = call i8 @llvm.vector.reduce.add.nxv2i8(<vscale x 2 x i8> undef)
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %19 = call i8 @llvm.vp.reduce.add.nxv4i8(i8 undef, <vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %19 = call i8 @llvm.vp.reduce.add.nxv4i8(i8 undef, <vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %20 = call i8 @llvm.vector.reduce.add.nxv4i8(<vscale x 4 x i8> undef)
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %21 = call i8 @llvm.vp.reduce.add.nxv8i8(i8 undef, <vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %21 = call i8 @llvm.vp.reduce.add.nxv8i8(i8 undef, <vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %22 = call i8 @llvm.vector.reduce.add.nxv8i8(<vscale x 8 x i8> undef)
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %23 = call i8 @llvm.vp.reduce.add.nxv16i8(i8 undef, <vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %23 = call i8 @llvm.vp.reduce.add.nxv16i8(i8 undef, <vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %24 = call i8 @llvm.vector.reduce.add.nxv16i8(<vscale x 16 x i8> undef)
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %25 = call i64 @llvm.vp.reduce.add.nxv2i64(i64 undef, <vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %25 = call i64 @llvm.vp.reduce.add.nxv2i64(i64 undef, <vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %26 = call i64 @llvm.vector.reduce.add.nxv2i64(<vscale x 2 x i64> undef)
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %27 = call i64 @llvm.vp.reduce.add.nxv4i64(i64 undef, <vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %27 = call i64 @llvm.vp.reduce.add.nxv4i64(i64 undef, <vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %28 = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> undef)
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %29 = call i64 @llvm.vp.reduce.add.nxv8i64(i64 undef, <vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %29 = call i64 @llvm.vp.reduce.add.nxv8i64(i64 undef, <vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %30 = call i64 @llvm.vector.reduce.add.nxv8i64(<vscale x 8 x i64> undef)
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %31 = call i64 @llvm.vp.reduce.add.nxv16i64(i64 undef, <vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %31 = call i64 @llvm.vp.reduce.add.nxv16i64(i64 undef, <vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %32 = call i64 @llvm.vector.reduce.add.nxv16i64(<vscale x 16 x i64> undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
@@ -1324,37 +1750,37 @@ define void @reduce_fadd() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; TYPEBASED-LABEL: 'reduce_fadd'
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %1 = call float @llvm.vp.reduce.fadd.v2f32(float undef, <2 x float> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %1 = call float @llvm.vp.reduce.fadd.v2f32(float undef, <2 x float> undef, <2 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %2 = call float @llvm.vector.reduce.fadd.v2f32(float undef, <2 x float> undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %3 = call float @llvm.vp.reduce.fadd.v4f32(float undef, <4 x float> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %3 = call float @llvm.vp.reduce.fadd.v4f32(float undef, <4 x float> undef, <4 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %4 = call float @llvm.vector.reduce.fadd.v4f32(float undef, <4 x float> undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %5 = call float @llvm.vp.reduce.fadd.v8f32(float undef, <8 x float> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %5 = call float @llvm.vp.reduce.fadd.v8f32(float undef, <8 x float> undef, <8 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %6 = call float @llvm.vector.reduce.fadd.v8f32(float undef, <8 x float> undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 110 for instruction: %7 = call float @llvm.vp.reduce.fadd.v16f32(float undef, <16 x float> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %7 = call float @llvm.vp.reduce.fadd.v16f32(float undef, <16 x float> undef, <16 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %8 = call float @llvm.vector.reduce.fadd.v16f32(float undef, <16 x float> undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %9 = call double @llvm.vp.reduce.fadd.v2f64(double undef, <2 x double> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %9 = call double @llvm.vp.reduce.fadd.v2f64(double undef, <2 x double> undef, <2 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %10 = call double @llvm.vector.reduce.fadd.v2f64(double undef, <2 x double> undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %11 = call double @llvm.vp.reduce.fadd.v4f64(double undef, <4 x double> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %11 = call double @llvm.vp.reduce.fadd.v4f64(double undef, <4 x double> undef, <4 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %12 = call double @llvm.vector.reduce.fadd.v4f64(double undef, <4 x double> undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %13 = call double @llvm.vp.reduce.fadd.v8f64(double undef, <8 x double> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %13 = call double @llvm.vp.reduce.fadd.v8f64(double undef, <8 x double> undef, <8 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %14 = call double @llvm.vector.reduce.fadd.v8f64(double undef, <8 x double> undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 110 for instruction: %15 = call double @llvm.vp.reduce.fadd.v16f64(double undef, <16 x double> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %15 = call double @llvm.vp.reduce.fadd.v16f64(double undef, <16 x double> undef, <16 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %16 = call double @llvm.vector.reduce.fadd.v16f64(double undef, <16 x double> undef)
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %17 = call float @llvm.vp.reduce.fadd.nxv2f32(float undef, <vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %17 = call float @llvm.vp.reduce.fadd.nxv2f32(float undef, <vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %18 = call float @llvm.vector.reduce.fadd.nxv2f32(float undef, <vscale x 2 x float> undef)
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %19 = call float @llvm.vp.reduce.fadd.nxv4f32(float undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %19 = call float @llvm.vp.reduce.fadd.nxv4f32(float undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %20 = call float @llvm.vector.reduce.fadd.nxv4f32(float undef, <vscale x 4 x float> undef)
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %21 = call float @llvm.vp.reduce.fadd.nxv8f32(float undef, <vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %21 = call float @llvm.vp.reduce.fadd.nxv8f32(float undef, <vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %22 = call float @llvm.vector.reduce.fadd.nxv8f32(float undef, <vscale x 8 x float> undef)
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %23 = call float @llvm.vp.reduce.fadd.nxv16f32(float undef, <vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %23 = call float @llvm.vp.reduce.fadd.nxv16f32(float undef, <vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %24 = call float @llvm.vector.reduce.fadd.nxv16f32(float undef, <vscale x 16 x float> undef)
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %25 = call double @llvm.vp.reduce.fadd.nxv2f64(double undef, <vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %25 = call double @llvm.vp.reduce.fadd.nxv2f64(double undef, <vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %26 = call double @llvm.vector.reduce.fadd.nxv2f64(double undef, <vscale x 2 x double> undef)
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %27 = call double @llvm.vp.reduce.fadd.nxv4f64(double undef, <vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %27 = call double @llvm.vp.reduce.fadd.nxv4f64(double undef, <vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %28 = call double @llvm.vector.reduce.fadd.nxv4f64(double undef, <vscale x 4 x double> undef)
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %29 = call double @llvm.vp.reduce.fadd.nxv8f64(double undef, <vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %29 = call double @llvm.vp.reduce.fadd.nxv8f64(double undef, <vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %30 = call double @llvm.vector.reduce.fadd.nxv8f64(double undef, <vscale x 8 x double> undef)
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %31 = call double @llvm.vp.reduce.fadd.nxv16f64(double undef, <vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %31 = call double @llvm.vp.reduce.fadd.nxv16f64(double undef, <vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %32 = call double @llvm.vector.reduce.fadd.nxv16f64(double undef, <vscale x 16 x double> undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
@@ -1393,113 +1819,311 @@ define void @reduce_fadd() {
   ret void
 }
 
+define void @reduce_other() {
+; CHECK-LABEL: 'reduce_other'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %1 = call i32 @llvm.vp.reduce.xor.v4i32(i32 undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %2 = call i32 @llvm.vp.reduce.and.v4i32(i32 undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %3 = call i32 @llvm.vp.reduce.or.v4i32(i32 undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %4 = call i32 @llvm.vp.reduce.mul.v4i32(i32 undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %5 = call i32 @llvm.vp.reduce.smin.v4i32(i32 undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %6 = call i32 @llvm.vp.reduce.smax.v4i32(i32 undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %7 = call i32 @llvm.vp.reduce.umin.v4i32(i32 undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %8 = call i32 @llvm.vp.reduce.umax.v4i32(i32 undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %9 = call i32 @llvm.vp.reduce.mul.nxv4i32(i32 undef, <vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %10 = call float @llvm.vp.reduce.fmul.nxv4f32(float undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %11 = call float @llvm.vp.reduce.fmin.nxv4f32(float undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %12 = call float @llvm.vp.reduce.fminimum.nxv4f32(float undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %13 = call float @llvm.vp.reduce.fmax.nxv4f32(float undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %14 = call float @llvm.vp.reduce.fmaximum.nxv4f32(float undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPEBASED-LABEL: 'reduce_other'
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %1 = call i32 @llvm.vp.reduce.xor.v4i32(i32 undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %2 = call i32 @llvm.vp.reduce.and.v4i32(i32 undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %3 = call i32 @llvm.vp.reduce.or.v4i32(i32 undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %4 = call i32 @llvm.vp.reduce.mul.v4i32(i32 undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %5 = call i32 @llvm.vp.reduce.smin.v4i32(i32 undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %6 = call i32 @llvm.vp.reduce.smax.v4i32(i32 undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %7 = call i32 @llvm.vp.reduce.umin.v4i32(i32 undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %8 = call i32 @llvm.vp.reduce.umax.v4i32(i32 undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %9 = call i32 @llvm.vp.reduce.mul.nxv4i32(i32 undef, <vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %10 = call float @llvm.vp.reduce.fmul.nxv4f32(float undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %11 = call float @llvm.vp.reduce.fmin.nxv4f32(float undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %12 = call float @llvm.vp.reduce.fminimum.nxv4f32(float undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %13 = call float @llvm.vp.reduce.fmax.nxv4f32(float undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %14 = call float @llvm.vp.reduce.fmaximum.nxv4f32(float undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  call i32 @llvm.vp.reduce.xor.v4i32(i32 undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+  call i32 @llvm.vp.reduce.and.v4i32(i32 undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+  call i32 @llvm.vp.reduce.or.v4i32(i32 undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+  call i32 @llvm.vp.reduce.mul.v4i32(i32 undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+  call i32 @llvm.vp.reduce.smin.v4i32(i32 undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+  call i32 @llvm.vp.reduce.smax.v4i32(i32 undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+  call i32 @llvm.vp.reduce.umin.v4i32(i32 undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+  call i32 @llvm.vp.reduce.umax.v4i32(i32 undef, <4 x i32> undef, <4 x i1> undef, i32 undef)
+
+  call i32 @llvm.vp.reduce.mul.v4i32(i32 undef, <vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
+
+  call float @llvm.vp.reduce.fmul.nxv4f32(float undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+  call float @llvm.vp.reduce.fmin.nxv4f32(float undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+  call float @llvm.vp.reduce.fminimum.nxv4f32(float undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+  call float @llvm.vp.reduce.fmax.nxv4f32(float undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+  call float @llvm.vp.reduce.fmaximum.nxv4f32(float undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+  ret void
+}
+
+
 define void @vp_fadd(){
 ; CHECK-LABEL: 'vp_fadd'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t0 = call <2 x float> @llvm.vp.fadd.v2f32(<2 x float> undef, <2 x float> undef, <2 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t1 = fadd <2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t2 = call <4 x float> @llvm.vp.fadd.v4f32(<4 x float> undef, <4 x float> undef, <4 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t3 = fadd <4 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t4 = call <8 x float> @llvm.vp.fadd.v8f32(<8 x float> undef, <8 x float> undef, <8 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t5 = fadd <8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t6 = call <16 x float> @llvm.vp.fadd.v16f32(<16 x float> undef, <16 x float> undef, <16 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t7 = fadd <16 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t8 = call <2 x double> @llvm.vp.fadd.v2f64(<2 x double> undef, <2 x double> undef, <2 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t9 = fadd <2 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t10 = call <4 x double> @llvm.vp.fadd.v4f64(<4 x double> undef, <4 x double> undef, <4 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t11 = fadd <4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t12 = call <8 x double> @llvm.vp.fadd.v8f64(<8 x double> undef, <8 x double> undef, <8 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t13 = fadd <8 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t14 = call <16 x double> @llvm.vp.fadd.v16f64(<16 x double> undef, <16 x double> undef, <16 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t15 = fadd <16 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t17 = call <vscale x 2 x float> @llvm.vp.fadd.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t18 = fadd <vscale x 2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t19 = call <vscale x 4 x float> @llvm.vp.fadd.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t20 = fadd <vscale x 4 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t21 = call <vscale x 8 x float> @llvm.vp.fadd.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t22 = fadd <vscale x 8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t23 = call <vscale x 16 x float> @llvm.vp.fadd.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t24 = fadd <vscale x 16 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t25 = call <vscale x 2 x double> @llvm.vp.fadd.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t26 = fadd <vscale x 2 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t27 = call <vscale x 4 x double> @llvm.vp.fadd.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t28 = fadd <vscale x 4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t29 = call <vscale x 8 x double> @llvm.vp.fadd.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t30 = fadd <vscale x 8 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %t31 = call <vscale x 16 x double> @llvm.vp.fadd.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %t32 = fadd <vscale x 16 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; TYPEBASED-LABEL: 'vp_fadd'
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t0 = call <2 x float> @llvm.vp.fadd.v2f32(<2 x float> undef, <2 x float> undef, <2 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t1 = fadd <2 x float> undef, undef
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t2 = call <4 x float> @llvm.vp.fadd.v4f32(<4 x float> undef, <4 x float> undef, <4 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t3 = fadd <4 x float> undef, undef
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t4 = call <8 x float> @llvm.vp.fadd.v8f32(<8 x float> undef, <8 x float> undef, <8 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t5 = fadd <8 x float> undef, undef
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t6 = call <16 x float> @llvm.vp.fadd.v16f32(<16 x float> undef, <16 x float> undef, <16 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t7 = fadd <16 x float> undef, undef
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t8 = call <2 x double> @llvm.vp.fadd.v2f64(<2 x double> undef, <2 x double> undef, <2 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t9 = fadd <2 x double> undef, undef
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t10 = call <4 x double> @llvm.vp.fadd.v4f64(<4 x double> undef, <4 x double> undef, <4 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t11 = fadd <4 x double> undef, undef
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t12 = call <8 x double> @llvm.vp.fadd.v8f64(<8 x double> undef, <8 x double> undef, <8 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t13 = fadd <8 x double> undef, undef
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t14 = call <16 x double> @llvm.vp.fadd.v16f64(<16 x double> undef, <16 x double> undef, <16 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t15 = fadd <16 x double> undef, undef
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t17 = call <vscale x 2 x float> @llvm.vp.fadd.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t18 = fadd <vscale x 2 x float> undef, undef
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t19 = call <vscale x 4 x float> @llvm.vp.fadd.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t20 = fadd <vscale x 4 x float> undef, undef
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t21 = call <vscale x 8 x float> @llvm.vp.fadd.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t22 = fadd <vscale x 8 x float> undef, undef
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t23 = call <vscale x 16 x float> @llvm.vp.fadd.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t24 = fadd <vscale x 16 x float> undef, undef
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t25 = call <vscale x 2 x double> @llvm.vp.fadd.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t26 = fadd <vscale x 2 x double> undef, undef
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t27 = call <vscale x 4 x double> @llvm.vp.fadd.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t28 = fadd <vscale x 4 x double> undef, undef
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t29 = call <vscale x 8 x double> @llvm.vp.fadd.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t30 = fadd <vscale x 8 x double> undef, undef
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %t31 = call <vscale x 16 x double> @llvm.vp.fadd.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %t32 = fadd <vscale x 16 x double> undef, undef
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %t0 = call <2 x float> @llvm.vp.fadd.v2f32(<2 x float> undef, <2 x float> undef, <2 x i1> undef, i32 undef)
-  %t1 = fadd <2 x float> undef, undef
   %t2 = call <4 x float> @llvm.vp.fadd.v4f32(<4 x float> undef, <4 x float> undef, <4 x i1> undef, i32 undef)
-  %t3 = fadd <4 x float> undef, undef
   %t4 = call <8 x float> @llvm.vp.fadd.v8f32(<8 x float> undef, <8 x float> undef, <8 x i1> undef, i32 undef)
-  %t5 = fadd <8 x float> undef, undef
   %t6 = call <16 x float> @llvm.vp.fadd.v16f32(<16 x float> undef, <16 x float> undef, <16 x i1> undef, i32 undef)
-  %t7 = fadd <16 x float> undef, undef
+
   %t8 = call <2 x double> @llvm.vp.fadd.v2f64(<2 x double> undef, <2 x double> undef, <2 x i1> undef, i32 undef)
-  %t9 = fadd <2 x double> undef, undef
   %t10 = call <4 x double> @llvm.vp.fadd.v4f64(<4 x double> undef, <4 x double> undef, <4 x i1> undef, i32 undef)
-  %t11 = fadd <4 x double> undef, undef
   %t12 = call <8 x double> @llvm.vp.fadd.v8f64(<8 x double> undef, <8 x double> undef, <8 x i1> undef, i32 undef)
-  %t13 = fadd <8 x double> undef, undef
   %t14 = call <16 x double> @llvm.vp.fadd.v16f64(<16 x double> undef, <16 x double> undef, <16 x i1> undef, i32 undef)
-  %t15 = fadd <16 x double> undef, undef
+
   %t17 = call <vscale x 2 x float> @llvm.vp.fadd.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
-  %t18 = fadd <vscale x 2 x float> undef, undef
   %t19 = call <vscale x 4 x float> @llvm.vp.fadd.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
-  %t20 = fadd <vscale x 4 x float> undef, undef
   %t21 = call <vscale x 8 x float> @llvm.vp.fadd.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
-  %t22 = fadd <vscale x 8 x float> undef, undef
   %t23 = call <vscale x 16 x float> @llvm.vp.fadd.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
-  %t24 = fadd <vscale x 16 x float> undef, undef
+
   %t25 = call <vscale x 2 x double> @llvm.vp.fadd.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
-  %t26 = fadd <vscale x 2 x double> undef, undef
   %t27 = call <vscale x 4 x double> @llvm.vp.fadd.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
-  %t28 = fadd <vscale x 4 x double> undef, undef
   %t29 = call <vscale x 8 x double> @llvm.vp.fadd.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-  %t30 = fadd <vscale x 8 x double> undef, undef
   %t31 = call <vscale x 16 x double> @llvm.vp.fadd.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
   %t32 = fadd <vscale x 16 x double> undef, undef
 
   ret void
 }
 
+define void @vp_fsub(){
+; CHECK-LABEL: 'vp_fsub'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t0 = call <2 x float> @llvm.vp.fsub.v2f32(<2 x float> undef, <2 x float> undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t2 = call <4 x float> @llvm.vp.fsub.v4f32(<4 x float> undef, <4 x float> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t4 = call <8 x float> @llvm.vp.fsub.v8f32(<8 x float> undef, <8 x float> undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t6 = call <16 x float> @llvm.vp.fsub.v16f32(<16 x float> undef, <16 x float> undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t8 = call <2 x double> @llvm.vp.fsub.v2f64(<2 x double> undef, <2 x double> undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t10 = call <4 x double> @llvm.vp.fsub.v4f64(<4 x double> undef, <4 x double> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t12 = call <8 x double> @llvm.vp.fsub.v8f64(<8 x double> undef, <8 x double> undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t14 = call <16 x double> @llvm.vp.fsub.v16f64(<16 x double> undef, <16 x double> undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t17 = call <vscale x 2 x float> @llvm.vp.fsub.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t19 = call <vscale x 4 x float> @llvm.vp.fsub.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t21 = call <vscale x 8 x float> @llvm.vp.fsub.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t23 = call <vscale x 16 x float> @llvm.vp.fsub.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t25 = call <vscale x 2 x double> @llvm.vp.fsub.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t27 = call <vscale x 4 x double> @llvm.vp.fsub.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t29 = call <vscale x 8 x double> @llvm.vp.fsub.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %t31 = call <vscale x 16 x double> @llvm.vp.fsub.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPEBASED-LABEL: 'vp_fsub'
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t0 = call <2 x float> @llvm.vp.fsub.v2f32(<2 x float> undef, <2 x float> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t2 = call <4 x float> @llvm.vp.fsub.v4f32(<4 x float> undef, <4 x float> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t4 = call <8 x float> @llvm.vp.fsub.v8f32(<8 x float> undef, <8 x float> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t6 = call <16 x float> @llvm.vp.fsub.v16f32(<16 x float> undef, <16 x float> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t8 = call <2 x double> @llvm.vp.fsub.v2f64(<2 x double> undef, <2 x double> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t10 = call <4 x double> @llvm.vp.fsub.v4f64(<4 x double> undef, <4 x double> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t12 = call <8 x double> @llvm.vp.fsub.v8f64(<8 x double> undef, <8 x double> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t14 = call <16 x double> @llvm.vp.fsub.v16f64(<16 x double> undef, <16 x double> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t17 = call <vscale x 2 x float> @llvm.vp.fsub.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t19 = call <vscale x 4 x float> @llvm.vp.fsub.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t21 = call <vscale x 8 x float> @llvm.vp.fsub.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t23 = call <vscale x 16 x float> @llvm.vp.fsub.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t25 = call <vscale x 2 x double> @llvm.vp.fsub.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t27 = call <vscale x 4 x double> @llvm.vp.fsub.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t29 = call <vscale x 8 x double> @llvm.vp.fsub.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %t31 = call <vscale x 16 x double> @llvm.vp.fsub.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %t0 = call <2 x float> @llvm.vp.fsub.v2f32(<2 x float> undef, <2 x float> undef, <2 x i1> undef, i32 undef)
+  %t2 = call <4 x float> @llvm.vp.fsub.v4f32(<4 x float> undef, <4 x float> undef, <4 x i1> undef, i32 undef)
+  %t4 = call <8 x float> @llvm.vp.fsub.v8f32(<8 x float> undef, <8 x float> undef, <8 x i1> undef, i32 undef)
+  %t6 = call <16 x float> @llvm.vp.fsub.v16f32(<16 x float> undef, <16 x float> undef, <16 x i1> undef, i32 undef)
+
+  %t8 = call <2 x double> @llvm.vp.fsub.v2f64(<2 x double> undef, <2 x double> undef, <2 x i1> undef, i32 undef)
+  %t10 = call <4 x double> @llvm.vp.fsub.v4f64(<4 x double> undef, <4 x double> undef, <4 x i1> undef, i32 undef)
+  %t12 = call <8 x double> @llvm.vp.fsub.v8f64(<8 x double> undef, <8 x double> undef, <8 x i1> undef, i32 undef)
+  %t14 = call <16 x double> @llvm.vp.fsub.v16f64(<16 x double> undef, <16 x double> undef, <16 x i1> undef, i32 undef)
+
+  %t17 = call <vscale x 2 x float> @llvm.vp.fsub.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
+  %t19 = call <vscale x 4 x float> @llvm.vp.fsub.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+  %t21 = call <vscale x 8 x float> @llvm.vp.fsub.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
+  %t23 = call <vscale x 16 x float> @llvm.vp.fsub.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
+
+  %t25 = call <vscale x 2 x double> @llvm.vp.fsub.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
+  %t27 = call <vscale x 4 x double> @llvm.vp.fsub.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+  %t29 = call <vscale x 8 x double> @llvm.vp.fsub.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
+  %t31 = call <vscale x 16 x double> @llvm.vp.fsub.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
+
+  ret void
+}
+
+define void @vp_fmul(){
+; CHECK-LABEL: 'vp_fmul'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t0 = call <2 x float> @llvm.vp.fmul.v2f32(<2 x float> undef, <2 x float> undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t2 = call <4 x float> @llvm.vp.fmul.v4f32(<4 x float> undef, <4 x float> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t4 = call <8 x float> @llvm.vp.fmul.v8f32(<8 x float> undef, <8 x float> undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t6 = call <16 x float> @llvm.vp.fmul.v16f32(<16 x float> undef, <16 x float> undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t8 = call <2 x double> @llvm.vp.fmul.v2f64(<2 x double> undef, <2 x double> undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t10 = call <4 x double> @llvm.vp.fmul.v4f64(<4 x double> undef, <4 x double> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t12 = call <8 x double> @llvm.vp.fmul.v8f64(<8 x double> undef, <8 x double> undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t14 = call <16 x double> @llvm.vp.fmul.v16f64(<16 x double> undef, <16 x double> undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t17 = call <vscale x 2 x float> @llvm.vp.fmul.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t19 = call <vscale x 4 x float> @llvm.vp.fmul.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t21 = call <vscale x 8 x float> @llvm.vp.fmul.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t23 = call <vscale x 16 x float> @llvm.vp.fmul.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t25 = call <vscale x 2 x double> @llvm.vp.fmul.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t27 = call <vscale x 4 x double> @llvm.vp.fmul.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t29 = call <vscale x 8 x double> @llvm.vp.fmul.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %t31 = call <vscale x 16 x double> @llvm.vp.fmul.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPEBASED-LABEL: 'vp_fmul'
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t0 = call <2 x float> @llvm.vp.fmul.v2f32(<2 x float> undef, <2 x float> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t2 = call <4 x float> @llvm.vp.fmul.v4f32(<4 x float> undef, <4 x float> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t4 = call <8 x float> @llvm.vp.fmul.v8f32(<8 x float> undef, <8 x float> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t6 = call <16 x float> @llvm.vp.fmul.v16f32(<16 x float> undef, <16 x float> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t8 = call <2 x double> @llvm.vp.fmul.v2f64(<2 x double> undef, <2 x double> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t10 = call <4 x double> @llvm.vp.fmul.v4f64(<4 x double> undef, <4 x double> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t12 = call <8 x double> @llvm.vp.fmul.v8f64(<8 x double> undef, <8 x double> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t14 = call <16 x double> @llvm.vp.fmul.v16f64(<16 x double> undef, <16 x double> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t17 = call <vscale x 2 x float> @llvm.vp.fmul.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t19 = call <vscale x 4 x float> @llvm.vp.fmul.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t21 = call <vscale x 8 x float> @llvm.vp.fmul.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t23 = call <vscale x 16 x float> @llvm.vp.fmul.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t25 = call <vscale x 2 x double> @llvm.vp.fmul.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t27 = call <vscale x 4 x double> @llvm.vp.fmul.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t29 = call <vscale x 8 x double> @llvm.vp.fmul.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %t31 = call <vscale x 16 x double> @llvm.vp.fmul.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %t0 = call <2 x float> @llvm.vp.fmul.v2f32(<2 x float> undef, <2 x float> undef, <2 x i1> undef, i32 undef)
+  %t2 = call <4 x float> @llvm.vp.fmul.v4f32(<4 x float> undef, <4 x float> undef, <4 x i1> undef, i32 undef)
+  %t4 = call <8 x float> @llvm.vp.fmul.v8f32(<8 x float> undef, <8 x float> undef, <8 x i1> undef, i32 undef)
+  %t6 = call <16 x float> @llvm.vp.fmul.v16f32(<16 x float> undef, <16 x float> undef, <16 x i1> undef, i32 undef)
+
+  %t8 = call <2 x double> @llvm.vp.fmul.v2f64(<2 x double> undef, <2 x double> undef, <2 x i1> undef, i32 undef)
+  %t10 = call <4 x double> @llvm.vp.fmul.v4f64(<4 x double> undef, <4 x double> undef, <4 x i1> undef, i32 undef)
+  %t12 = call <8 x double> @llvm.vp.fmul.v8f64(<8 x double> undef, <8 x double> undef, <8 x i1> undef, i32 undef)
+  %t14 = call <16 x double> @llvm.vp.fmul.v16f64(<16 x double> undef, <16 x double> undef, <16 x i1> undef, i32 undef)
+
+  %t17 = call <vscale x 2 x float> @llvm.vp.fmul.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
+  %t19 = call <vscale x 4 x float> @llvm.vp.fmul.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+  %t21 = call <vscale x 8 x float> @llvm.vp.fmul.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
+  %t23 = call <vscale x 16 x float> @llvm.vp.fmul.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
+
+  %t25 = call <vscale x 2 x double> @llvm.vp.fmul.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
+  %t27 = call <vscale x 4 x double> @llvm.vp.fmul.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+  %t29 = call <vscale x 8 x double> @llvm.vp.fmul.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
+  %t31 = call <vscale x 16 x double> @llvm.vp.fmul.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
+
+  ret void
+}
+
+define void @vp_fdiv(){
+; CHECK-LABEL: 'vp_fdiv'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t0 = call <2 x float> @llvm.vp.fdiv.v2f32(<2 x float> undef, <2 x float> undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t2 = call <4 x float> @llvm.vp.fdiv.v4f32(<4 x float> undef, <4 x float> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t4 = call <8 x float> @llvm.vp.fdiv.v8f32(<8 x float> undef, <8 x float> undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t6 = call <16 x float> @llvm.vp.fdiv.v16f32(<16 x float> undef, <16 x float> undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t8 = call <2 x double> @llvm.vp.fdiv.v2f64(<2 x double> undef, <2 x double> undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t10 = call <4 x double> @llvm.vp.fdiv.v4f64(<4 x double> undef, <4 x double> undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t12 = call <8 x double> @llvm.vp.fdiv.v8f64(<8 x double> undef, <8 x double> undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t14 = call <16 x double> @llvm.vp.fdiv.v16f64(<16 x double> undef, <16 x double> undef, <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t17 = call <vscale x 2 x float> @llvm.vp.fdiv.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t19 = call <vscale x 4 x float> @llvm.vp.fdiv.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t21 = call <vscale x 8 x float> @llvm.vp.fdiv.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t23 = call <vscale x 16 x float> @llvm.vp.fdiv.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t25 = call <vscale x 2 x double> @llvm.vp.fdiv.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t27 = call <vscale x 4 x double> @llvm.vp.fdiv.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t29 = call <vscale x 8 x double> @llvm.vp.fdiv.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %t31 = call <vscale x 16 x double> @llvm.vp.fdiv.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPEBASED-LABEL: 'vp_fdiv'
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t0 = call <2 x float> @llvm.vp.fdiv.v2f32(<2 x float> undef, <2 x float> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t2 = call <4 x float> @llvm.vp.fdiv.v4f32(<4 x float> undef, <4 x float> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t4 = call <8 x float> @llvm.vp.fdiv.v8f32(<8 x float> undef, <8 x float> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t6 = call <16 x float> @llvm.vp.fdiv.v16f32(<16 x float> undef, <16 x float> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t8 = call <2 x double> @llvm.vp.fdiv.v2f64(<2 x double> undef, <2 x double> undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t10 = call <4 x double> @llvm.vp.fdiv.v4f64(<4 x double> undef, <4 x double> undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t12 = call <8 x double> @llvm.vp.fdiv.v8f64(<8 x double> undef, <8 x double> undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t14 = call <16 x double> @llvm.vp.fdiv.v16f64(<16 x double> undef, <16 x double> undef, <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t17 = call <vscale x 2 x float> @llvm.vp.fdiv.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t19 = call <vscale x 4 x float> @llvm.vp.fdiv.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t21 = call <vscale x 8 x float> @llvm.vp.fdiv.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t23 = call <vscale x 16 x float> @llvm.vp.fdiv.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t25 = call <vscale x 2 x double> @llvm.vp.fdiv.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t27 = call <vscale x 4 x double> @llvm.vp.fdiv.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t29 = call <vscale x 8 x double> @llvm.vp.fdiv.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %t31 = call <vscale x 16 x double> @llvm.vp.fdiv.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %t0 = call <2 x float> @llvm.vp.fdiv.v2f32(<2 x float> undef, <2 x float> undef, <2 x i1> undef, i32 undef)
+  %t2 = call <4 x float> @llvm.vp.fdiv.v4f32(<4 x float> undef, <4 x float> undef, <4 x i1> undef, i32 undef)
+  %t4 = call <8 x float> @llvm.vp.fdiv.v8f32(<8 x float> undef, <8 x float> undef, <8 x i1> undef, i32 undef)
+  %t6 = call <16 x float> @llvm.vp.fdiv.v16f32(<16 x float> undef, <16 x float> undef, <16 x i1> undef, i32 undef)
+
+  %t8 = call <2 x double> @llvm.vp.fdiv.v2f64(<2 x double> undef, <2 x double> undef, <2 x i1> undef, i32 undef)
+  %t10 = call <4 x double> @llvm.vp.fdiv.v4f64(<4 x double> undef, <4 x double> undef, <4 x i1> undef, i32 undef)
+  %t12 = call <8 x double> @llvm.vp.fdiv.v8f64(<8 x double> undef, <8 x double> undef, <8 x i1> undef, i32 undef)
+  %t14 = call <16 x double> @llvm.vp.fdiv.v16f64(<16 x double> undef, <16 x double> undef, <16 x i1> undef, i32 undef)
+
+  %t17 = call <vscale x 2 x float> @llvm.vp.fdiv.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
+  %t19 = call <vscale x 4 x float> @llvm.vp.fdiv.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+  %t21 = call <vscale x 8 x float> @llvm.vp.fdiv.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
+  %t23 = call <vscale x 16 x float> @llvm.vp.fdiv.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
+
+  %t25 = call <vscale x 2 x double> @llvm.vp.fdiv.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
+  %t27 = call <vscale x 4 x double> @llvm.vp.fdiv.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+  %t29 = call <vscale x 8 x double> @llvm.vp.fdiv.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
+  %t31 = call <vscale x 16 x double> @llvm.vp.fdiv.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
+
+  ret void
+}
 
 declare <2 x i8> @llvm.vp.add.v2i8(<2 x i8>, <2 x i8>, <2 x i1>, i32)
 declare <4 x i8> @llvm.vp.add.v4i8(<4 x i8>, <4 x i8>, <4 x i1>, i32)

@@ -1324,9 +1324,9 @@ disabling all warnings wins.
 Controlling Diagnostics via Suppression Mappings
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Warning suppression mappings enable users to suppress Clang's diagnostics in a
-per-file granular manner. Enabling enforcement of diagnostics in specific parts
-of the project, even if there are violations in some headers.
+Warning suppression mappings enable users to suppress Clang's diagnostics at a
+per-file granularity. This allows enforcing diagnostics in specific parts of the
+project even if there are violations in some headers.
 
 .. code-block:: console
 
