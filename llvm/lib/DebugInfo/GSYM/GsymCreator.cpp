@@ -386,9 +386,10 @@ uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
 }
 
 StringRef GsymCreator::getString(uint32_t offset) {
-  assert(StringOffsetMap.count(offset) &&
+  auto I = StringOffsetMap.find(offset);
+  assert(I != StringOffsetMap.end() && 
          "GsymCreator::getString expects a valid offset as parameter.");
-  return StringOffsetMap.find(offset)->second.val();
+  return I->second.val();
 }
 
 void GsymCreator::addFunctionInfo(FunctionInfo &&FI) {

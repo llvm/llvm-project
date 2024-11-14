@@ -1,4 +1,4 @@
-//===- CallSiteInfo.cpp ----------------------------------*- C++ -*-===//
+//===- CallSiteInfo.cpp -----------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -160,10 +160,10 @@ Error CallSiteInfoLoader::loadYAML(std::vector<FunctionInfo> &Funcs,
 
   // Step 2: Parse YAML content
   yaml::FunctionsYAML FuncsYAML;
-  yaml::Input yin(Buffer->getMemBufferRef());
-  yin >> FuncsYAML;
-  if (yin.error())
-    return createStringError(yin.error(), "Error parsing YAML file: %s\n",
+  yaml::Input Yin(Buffer->getMemBufferRef());
+  Yin >> FuncsYAML;
+  if (Yin.error())
+    return createStringError(Yin.error(), "Error parsing YAML file: %s\n",
                              Buffer->getBufferIdentifier().str().c_str());
 
   // Step 3: Build function map from Funcs
