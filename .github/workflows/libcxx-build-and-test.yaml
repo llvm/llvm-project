@@ -49,7 +49,8 @@ env:
 jobs:
   stage1:
     if: github.repository_owner == 'llvm'
-    runs-on: libcxx-runners-set
+    runs-on:
+      group: fozzie-runners-1
     container: ghcr.io/libcxx/actions-builder:testing-2024-09-21
     continue-on-error: false
     strategy:
@@ -86,7 +87,8 @@ jobs:
             **/crash_diagnostics/*
   stage2:
     if: github.repository_owner == 'llvm'
-    runs-on: libcxx-runners-set
+    runs-on:
+      group: fozzie-runners-1
     container: ghcr.io/libcxx/actions-builder:testing-2024-09-21
     needs: [ stage1 ]
     continue-on-error: false
@@ -161,20 +163,21 @@ jobs:
           'generic-static',
           'bootstrapping-build'
         ]
-        machine: [ 'libcxx-runners-set' ]
+        machine: [ 'fozzie-runners-1' ]
         include:
         - config: 'generic-cxx26'
-          machine: libcxx-runners-set
+          machine: fozzie-runners-1
         - config: 'generic-asan'
-          machine: libcxx-runners-set
+          machine: fozzie-runners-1
         - config: 'generic-tsan'
-          machine: libcxx-runners-set
+          machine: fozzie-runners-1
         - config: 'generic-ubsan'
-          machine: libcxx-runners-set
+          machine: fozzie-runners-1
         # Use a larger machine for MSAN to avoid timeout and memory allocation issues.
         - config: 'generic-msan'
-          machine: libcxx-runners-set
-    runs-on: ${{ matrix.machine }}
+          machine: fozzie-runners-1
+    runs-on:
+      group: ${{ matrix.machine }}
     container: ghcr.io/libcxx/actions-builder:testing-2024-09-21
     steps:
       - uses: actions/checkout@v4
