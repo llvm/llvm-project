@@ -1919,14 +1919,14 @@ static cir::VectorType GetNeonType(CIRGenFunction *CGF, NeonTypeFlags TypeFlags,
                                 V1Ty ? 1 : (4 << IsQuad));
   case NeonTypeFlags::BFloat16:
     if (AllowBFloatArgsAndRet)
-      llvm_unreachable("NYI");
+      llvm_unreachable("NeonTypeFlags::BFloat16 NYI");
     else
-      llvm_unreachable("NYI");
+      llvm_unreachable("NeonTypeFlags::BFloat16 NYI");
   case NeonTypeFlags::Float16:
     if (HasLegalHalfType)
-      llvm_unreachable("NYI");
+      llvm_unreachable("NeonTypeFlags::Float16 NYI");
     else
-      llvm_unreachable("NYI");
+      llvm_unreachable("NeonTypeFlags::Float16 NYI");
   case NeonTypeFlags::Int32:
     return cir::VectorType::get(CGF->getBuilder().getContext(),
                                 TypeFlags.isUnsigned() ? CGF->UInt32Ty
@@ -1942,7 +1942,7 @@ static cir::VectorType GetNeonType(CIRGenFunction *CGF, NeonTypeFlags TypeFlags,
     // FIXME: i128 and f128 doesn't get fully support in Clang and llvm.
     // There is a lot of i128 and f128 API missing.
     // so we use v16i8 to represent poly128 and get pattern matched.
-    llvm_unreachable("NYI");
+    llvm_unreachable("NeonTypeFlags::Poly128 NYI");
   case NeonTypeFlags::Float32:
     return cir::VectorType::get(CGF->getBuilder().getContext(),
                                 CGF->getCIRGenModule().FloatTy,
@@ -2013,25 +2013,25 @@ static mlir::Value emitAArch64TblBuiltinExpr(CIRGenFunction &CGF,
   // argument that specifies the vector type, need to handle each case.
   switch (BuiltinID) {
   case NEON::BI__builtin_neon_vtbl1_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vtbl1_v NYI");
   }
   case NEON::BI__builtin_neon_vtbl2_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vtbl2_v NYI");
   }
   case NEON::BI__builtin_neon_vtbl3_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vtbl3_v NYI");
   }
   case NEON::BI__builtin_neon_vtbl4_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vtbl4_v NYI");
   }
   case NEON::BI__builtin_neon_vtbx1_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vtbx1_v NYI");
   }
   case NEON::BI__builtin_neon_vtbx2_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vtbx2_v NYI");
   }
   case NEON::BI__builtin_neon_vtbx3_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vtbx3_v NYI");
   }
   case NEON::BI__builtin_neon_vqtbl1_v:
   case NEON::BI__builtin_neon_vqtbl1q_v:
@@ -2576,7 +2576,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
     return emitAArch64SMEBuiltinExpr(BuiltinID, E);
 
   if (BuiltinID == Builtin::BI__builtin_cpu_supports)
-    llvm_unreachable("NYI");
+    llvm_unreachable("Builtin::BI__builtin_cpu_supports NYI");
 
   unsigned HintID = static_cast<unsigned>(-1);
   switch (BuiltinID) {
@@ -2612,94 +2612,94 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_trap) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__builtin_arm_trap NYI");
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_get_sme_state) {
     // Create call to __arm_sme_state and store the results to the two pointers.
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__builtin_arm_get_sme_state NYI");
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rbit) {
     assert((getContext().getTypeSize(E->getType()) == 32) &&
            "rbit of unusual size!");
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__builtin_arm_rbit NYI");
   }
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rbit64) {
     assert((getContext().getTypeSize(E->getType()) == 64) &&
            "rbit of unusual size!");
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__builtin_arm_rbit64 NYI");
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_clz ||
       BuiltinID == clang::AArch64::BI__builtin_arm_clz64) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__builtin_arm_clz64 NYI");
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_cls) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__builtin_arm_cls NYI");
   }
   if (BuiltinID == clang::AArch64::BI__builtin_arm_cls64) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__builtin_arm_cls64 NYI");
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rint32zf ||
       BuiltinID == clang::AArch64::BI__builtin_arm_rint32z) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__builtin_arm_rint32z NYI");
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rint64zf ||
       BuiltinID == clang::AArch64::BI__builtin_arm_rint64z) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__builtin_arm_rint64z NYI");
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rint32xf ||
       BuiltinID == clang::AArch64::BI__builtin_arm_rint32x) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__builtin_arm_rint32x NYI");
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rint64xf ||
       BuiltinID == clang::AArch64::BI__builtin_arm_rint64x) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__builtin_arm_rint64x NYI");
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_jcvt) {
     assert((getContext().getTypeSize(E->getType()) == 32) &&
            "__jcvt of unusual size!");
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__builtin_arm_jcvt NYI");
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_ld64b ||
       BuiltinID == clang::AArch64::BI__builtin_arm_st64b ||
       BuiltinID == clang::AArch64::BI__builtin_arm_st64bv ||
       BuiltinID == clang::AArch64::BI__builtin_arm_st64bv0) {
-    llvm_unreachable("NYI");
+    llvm_unreachable(" clang::AArch64::BI__builtin_arm_st64bv0 like NYI");
 
     if (BuiltinID == clang::AArch64::BI__builtin_arm_ld64b) {
       // Load from the address via an LLVM intrinsic, receiving a
       // tuple of 8 i64 words, and store each one to ValPtr.
-      llvm_unreachable("NYI");
+      llvm_unreachable("clang::AArch64::BI__builtin_arm_ld64b NYI");
     } else {
       // Load 8 i64 words from ValPtr, and store them to the address
       // via an LLVM intrinsic.
-      llvm_unreachable("NYI");
+      llvm_unreachable("clang::AArch64::BI__builtin_arm_st64b NYI");
     }
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rndr ||
       BuiltinID == clang::AArch64::BI__builtin_arm_rndrrs) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__builtin_arm_rndrrs NYI");
   }
 
   if (BuiltinID == clang::AArch64::BI__clear_cache) {
     assert(E->getNumArgs() == 2 && "__clear_cache takes 2 arguments");
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__clear_cache NYI");
   }
 
   if ((BuiltinID == clang::AArch64::BI__builtin_arm_ldrex ||
        BuiltinID == clang::AArch64::BI__builtin_arm_ldaex) &&
       getContext().getTypeSize(E->getType()) == 128) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__builtin_arm_ldaex NYI");
   } else if (BuiltinID == clang::AArch64::BI__builtin_arm_ldrex ||
              BuiltinID == clang::AArch64::BI__builtin_arm_ldaex) {
     return emitArmLdrexNon128Intrinsic(BuiltinID, E, *this);
@@ -2708,28 +2708,28 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   if ((BuiltinID == clang::AArch64::BI__builtin_arm_strex ||
        BuiltinID == clang::AArch64::BI__builtin_arm_stlex) &&
       getContext().getTypeSize(E->getArg(0)->getType()) == 128) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__builtin_arm_stlex NYI");
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_strex ||
       BuiltinID == clang::AArch64::BI__builtin_arm_stlex) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__builtin_arm_stlex NYI");
   }
 
   if (BuiltinID == clang::AArch64::BI__getReg) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__getReg NYI");
   }
 
   if (BuiltinID == clang::AArch64::BI__break) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__break NYI");
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_clrex) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__builtin_arm_clrex NYI");
   }
 
   if (BuiltinID == clang::AArch64::BI_ReadWriteBarrier)
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI_ReadWriteBarrier");
 
   // CRC32
   // FIXME(cir): get rid of LLVM when this gets implemented.
@@ -2743,16 +2743,16 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   case clang::AArch64::BI__builtin_arm_crc32cw:
   case clang::AArch64::BI__builtin_arm_crc32d:
   case clang::AArch64::BI__builtin_arm_crc32cd:
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__builtin_arm_crc32cd NYI");
   }
 
   if (CRCIntrinsicID != llvm::Intrinsic::not_intrinsic) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__builtin_arm_crc32cd NYI");
   }
 
   // Memory Operations (MOPS)
   if (BuiltinID == AArch64::BI__builtin_arm_mops_memset_tag) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__builtin_arm_crc32cd NYI");
   }
 
   // Memory Tagging Extensions (MTE) Intrinsics
@@ -2765,11 +2765,11 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   case clang::AArch64::BI__builtin_arm_ldg:
   case clang::AArch64::BI__builtin_arm_stg:
   case clang::AArch64::BI__builtin_arm_subp:
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__builtin_arm_subp NYI");
   }
 
   if (MTEIntrinsicID != llvm::Intrinsic::not_intrinsic) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("llvm::Intrinsic::not_intrinsic NYI");
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rsr ||
@@ -2781,12 +2781,12 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
       BuiltinID == clang::AArch64::BI__builtin_arm_wsr128 ||
       BuiltinID == clang::AArch64::BI__builtin_arm_wsrp) {
 
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__builtin_arm_wsrp NYI");
     if (BuiltinID == clang::AArch64::BI__builtin_arm_rsr ||
         BuiltinID == clang::AArch64::BI__builtin_arm_rsr64 ||
         BuiltinID == clang::AArch64::BI__builtin_arm_rsr128 ||
         BuiltinID == clang::AArch64::BI__builtin_arm_rsrp)
-      llvm_unreachable("NYI");
+      llvm_unreachable("clang::AArch64::BI__builtin_arm_rsrp NYI");
 
     bool IsPointerBuiltin = BuiltinID == clang::AArch64::BI__builtin_arm_rsrp ||
                             BuiltinID == clang::AArch64::BI__builtin_arm_wsrp;
@@ -2798,11 +2798,11 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                     BuiltinID == clang::AArch64::BI__builtin_arm_wsr128;
 
     if (Is32Bit) {
-      llvm_unreachable("NYI");
+      llvm_unreachable("clang::AArch64::BI__builtin_arm_wsr NYI");
     } else if (Is128Bit) {
-      llvm_unreachable("NYI");
+      llvm_unreachable("clang::AArch64::BI__builtin_arm_wsr128 NYI");
     } else if (IsPointerBuiltin) {
-      llvm_unreachable("NYI");
+      llvm_unreachable("clang::AArch64::BI__builtin_arm_wsrp NYI");
     } else {
       llvm_unreachable("NYI");
     };
@@ -2811,21 +2811,21 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_sponentry) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__builtin_sponentry NYI");
   }
 
   if (BuiltinID == clang::AArch64::BI_ReadStatusReg ||
       BuiltinID == clang::AArch64::BI_WriteStatusReg) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI_WriteStatusReg NYI");
   }
 
   if (BuiltinID == clang::AArch64::BI_AddressOfReturnAddress) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI_AddressOfReturnAddress NYI");
   }
 
   if (BuiltinID == clang::AArch64::BI__mulh ||
       BuiltinID == clang::AArch64::BI__umulh) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI__umulh NYI");
   }
 
   if (BuiltinID == AArch64::BI__writex18byte ||
@@ -2833,48 +2833,48 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
       BuiltinID == AArch64::BI__writex18dword ||
       BuiltinID == AArch64::BI__writex18qword) {
     // Read x18 as i8*
-    llvm_unreachable("NYI");
+    llvm_unreachable("AArch64::BI__writex18qword NYI");
   }
 
   if (BuiltinID == AArch64::BI__readx18byte ||
       BuiltinID == AArch64::BI__readx18word ||
       BuiltinID == AArch64::BI__readx18dword ||
       BuiltinID == AArch64::BI__readx18qword) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("AArch64::BI__readx18qword NYI");
   }
 
   if (BuiltinID == AArch64::BI_CopyDoubleFromInt64 ||
       BuiltinID == AArch64::BI_CopyFloatFromInt32 ||
       BuiltinID == AArch64::BI_CopyInt32FromFloat ||
       BuiltinID == AArch64::BI_CopyInt64FromDouble) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("AArch64::BI_CopyInt64FromDouble NYI");
   }
 
   if (BuiltinID == AArch64::BI_CountLeadingOnes ||
       BuiltinID == AArch64::BI_CountLeadingOnes64 ||
       BuiltinID == AArch64::BI_CountLeadingZeros ||
       BuiltinID == AArch64::BI_CountLeadingZeros64) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("AArch64::BI_CountLeadingZeros64 NYI");
 
     if (BuiltinID == AArch64::BI_CountLeadingOnes ||
         BuiltinID == AArch64::BI_CountLeadingOnes64)
-      llvm_unreachable("NYI");
+      llvm_unreachable("AArch64::BI_CountLeadingOnes64 NYI");
 
-    llvm_unreachable("NYI");
+    llvm_unreachable("BI_CountLeadingZeros64 NYI");
   }
 
   if (BuiltinID == AArch64::BI_CountLeadingSigns ||
       BuiltinID == AArch64::BI_CountLeadingSigns64) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("BI_CountLeadingSigns64 NYI");
   }
 
   if (BuiltinID == AArch64::BI_CountOneBits ||
       BuiltinID == AArch64::BI_CountOneBits64) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("AArch64::BI_CountOneBits64 NYI");
   }
 
   if (BuiltinID == AArch64::BI__prefetch) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("AArch64::BI__prefetch NYI");
   }
 
   if (BuiltinID == NEON::BI__builtin_neon_vcvth_bf16_f32)
@@ -2884,7 +2884,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   // evaluation.
   if (std::optional<CIRGenFunction::MSVCIntrin> MsvcIntId =
           translateAarch64ToMsvcIntrin(BuiltinID))
-    llvm_unreachable("NYI");
+    llvm_unreachable("translateAarch64ToMsvcIntrin NYI");
 
   // Some intrinsics are equivalent - if they are use the base intrinsic ID.
   auto It = llvm::find_if(NEONEquivalentIntrinsicMap, [BuiltinID](auto &P) {
@@ -2934,7 +2934,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
       SISDMap, BuiltinID, AArch64SISDIntrinsicsProvenSorted);
 
   if (Builtin) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("Builtin from findARMVectorIntrinsicInMap NYI");
   }
 
   const Expr *Arg = E->getArg(E->getNumArgs() - 1);
@@ -2951,15 +2951,15 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   default:
     break;
   case NEON::BI__builtin_neon_vabsh_f16:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vabsh_f16 NYI");
   case NEON::BI__builtin_neon_vaddq_p128: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vaddq_p128 NYI");
   }
   case NEON::BI__builtin_neon_vldrq_p128: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vldrq_p128 NYI");
   }
   case NEON::BI__builtin_neon_vstrq_p128: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vstrq_p128 NYI");
   }
   case NEON::BI__builtin_neon_vcvts_f32_u32:
   case NEON::BI__builtin_neon_vcvtd_f64_u64:
@@ -2968,8 +2968,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   case NEON::BI__builtin_neon_vcvts_f32_s32:
   case NEON::BI__builtin_neon_vcvtd_f64_s64: {
     if (usgn)
-      llvm_unreachable("NYI");
-    llvm_unreachable("NYI");
+      llvm_unreachable("NEON::BI__builtin_neon_vcvtd_f64_s64 NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vcvtd_f64_s64 NYI");
   }
   case NEON::BI__builtin_neon_vcvth_f16_u16:
   case NEON::BI__builtin_neon_vcvth_f16_u32:
@@ -2980,8 +2980,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   case NEON::BI__builtin_neon_vcvth_f16_s32:
   case NEON::BI__builtin_neon_vcvth_f16_s64: {
     if (usgn)
-      llvm_unreachable("NYI");
-    llvm_unreachable("NYI");
+      llvm_unreachable("NEON::BI__builtin_neon_vcvth_f16_s64 NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vcvth_f16_s64 NYI");
   }
   case NEON::BI__builtin_neon_vcvtah_u16_f16:
   case NEON::BI__builtin_neon_vcvtmh_u16_f16:
@@ -2993,80 +2993,80 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   case NEON::BI__builtin_neon_vcvtnh_s16_f16:
   case NEON::BI__builtin_neon_vcvtph_s16_f16:
   case NEON::BI__builtin_neon_vcvth_s16_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vcvth_s16_f16 NYI");
   }
   case NEON::BI__builtin_neon_vcaleh_f16:
   case NEON::BI__builtin_neon_vcalth_f16:
   case NEON::BI__builtin_neon_vcageh_f16:
   case NEON::BI__builtin_neon_vcagth_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vcagth_f16 NYI");
   }
   case NEON::BI__builtin_neon_vcvth_n_s16_f16:
   case NEON::BI__builtin_neon_vcvth_n_u16_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vcvth_n_u16_f16 NYI");
   }
   case NEON::BI__builtin_neon_vcvth_n_f16_s16:
   case NEON::BI__builtin_neon_vcvth_n_f16_u16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vcvth_n_f16_u16 NYI");
   }
   case NEON::BI__builtin_neon_vpaddd_s64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vpaddd_s64 NYI");
   }
   case NEON::BI__builtin_neon_vpaddd_f64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vpaddd_f64 NYI");
   }
   case NEON::BI__builtin_neon_vpadds_f32: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vpadds_f32 NYI");
   }
   case NEON::BI__builtin_neon_vceqzd_s64:
   case NEON::BI__builtin_neon_vceqzd_f64:
   case NEON::BI__builtin_neon_vceqzs_f32:
   case NEON::BI__builtin_neon_vceqzh_f16:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vceqzh_f16 NYI");
   case NEON::BI__builtin_neon_vcgezd_s64:
   case NEON::BI__builtin_neon_vcgezd_f64:
   case NEON::BI__builtin_neon_vcgezs_f32:
   case NEON::BI__builtin_neon_vcgezh_f16:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vcgezh_f16 NYI");
   case NEON::BI__builtin_neon_vclezd_s64:
   case NEON::BI__builtin_neon_vclezd_f64:
   case NEON::BI__builtin_neon_vclezs_f32:
   case NEON::BI__builtin_neon_vclezh_f16:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vclezh_f16 NYI");
   case NEON::BI__builtin_neon_vcgtzd_s64:
   case NEON::BI__builtin_neon_vcgtzd_f64:
   case NEON::BI__builtin_neon_vcgtzs_f32:
   case NEON::BI__builtin_neon_vcgtzh_f16:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vcgtzh_f16 NYI");
   case NEON::BI__builtin_neon_vcltzd_s64:
   case NEON::BI__builtin_neon_vcltzd_f64:
   case NEON::BI__builtin_neon_vcltzs_f32:
   case NEON::BI__builtin_neon_vcltzh_f16:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vcltzh_f16 NYI");
 
   case NEON::BI__builtin_neon_vceqzd_u64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vceqzd_u64 NYI");
   }
   case NEON::BI__builtin_neon_vceqd_f64:
   case NEON::BI__builtin_neon_vcled_f64:
   case NEON::BI__builtin_neon_vcltd_f64:
   case NEON::BI__builtin_neon_vcged_f64:
   case NEON::BI__builtin_neon_vcgtd_f64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vcgtd_f64 NYI");
   }
   case NEON::BI__builtin_neon_vceqs_f32:
   case NEON::BI__builtin_neon_vcles_f32:
   case NEON::BI__builtin_neon_vclts_f32:
   case NEON::BI__builtin_neon_vcges_f32:
   case NEON::BI__builtin_neon_vcgts_f32: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vcgts_f32 NYI");
   }
   case NEON::BI__builtin_neon_vceqh_f16:
   case NEON::BI__builtin_neon_vcleh_f16:
   case NEON::BI__builtin_neon_vclth_f16:
   case NEON::BI__builtin_neon_vcgeh_f16:
   case NEON::BI__builtin_neon_vcgth_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vcgth_f16 NYI");
   }
   case NEON::BI__builtin_neon_vceqd_s64:
   case NEON::BI__builtin_neon_vceqd_u64:
@@ -3078,11 +3078,11 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   case NEON::BI__builtin_neon_vcged_s64:
   case NEON::BI__builtin_neon_vcled_u64:
   case NEON::BI__builtin_neon_vcled_s64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vcled_s64 NYI");
   }
   case NEON::BI__builtin_neon_vtstd_s64:
   case NEON::BI__builtin_neon_vtstd_u64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vtstd_u64 NYI");
   }
   case NEON::BI__builtin_neon_vset_lane_i8:
   case NEON::BI__builtin_neon_vset_lane_i16:
@@ -3102,13 +3102,13 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
     // No support for now as no real/test case for them
     // at the moment, the implementation should be the same as above
     // vset_lane or vsetq_lane intrinsics
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vsetq_lane_bf16 NYI");
   case NEON::BI__builtin_neon_vset_lane_f64:
     // The vector type needs a cast for the v1f64 variant.
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vset_lane_f64 NYI");
   case NEON::BI__builtin_neon_vsetq_lane_f64:
     // The vector type needs a cast for the v2f64 variant.
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vsetq_lane_f64 NYI");
 
   case NEON::BI__builtin_neon_vget_lane_i8:
   case NEON::BI__builtin_neon_vdupb_lane_i8:
@@ -3183,85 +3183,85 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
     return builder.create<cir::VecExtractOp>(getLoc(E->getExprLoc()), Ops[0],
                                              emitScalarExpr(E->getArg(1)));
   case NEON::BI__builtin_neon_vaddh_f16:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vaddh_f16 NYI");
   case NEON::BI__builtin_neon_vsubh_f16:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vsubh_f16 NYI");
   case NEON::BI__builtin_neon_vmulh_f16:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vmulh_f16 NYI");
   case NEON::BI__builtin_neon_vdivh_f16:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vdivh_f16 NYI");
   case NEON::BI__builtin_neon_vfmah_f16:
     // NEON intrinsic puts accumulator first, unlike the LLVM fma.
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vfmah_f16 NYI");
   case NEON::BI__builtin_neon_vfmsh_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vfmsh_f16 NYI");
   }
   case NEON::BI__builtin_neon_vaddd_s64:
   case NEON::BI__builtin_neon_vaddd_u64:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vaddd_u64 NYI");
   case NEON::BI__builtin_neon_vsubd_s64:
   case NEON::BI__builtin_neon_vsubd_u64:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vsubd_u64 NYI");
   case NEON::BI__builtin_neon_vqdmlalh_s16:
   case NEON::BI__builtin_neon_vqdmlslh_s16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vqdmlslh_s16 NYI");
   }
   case NEON::BI__builtin_neon_vqshlud_n_s64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vqshlud_n_s64 NYI");
   }
   case NEON::BI__builtin_neon_vqshld_n_u64:
   case NEON::BI__builtin_neon_vqshld_n_s64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vqshld_n_s64 NYI");
   }
   case NEON::BI__builtin_neon_vrshrd_n_u64:
   case NEON::BI__builtin_neon_vrshrd_n_s64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vrshrd_n_s64 NYI");
   }
   case NEON::BI__builtin_neon_vrsrad_n_u64:
   case NEON::BI__builtin_neon_vrsrad_n_s64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vrsrad_n_s64 NYI");
   }
   case NEON::BI__builtin_neon_vshld_n_s64:
   case NEON::BI__builtin_neon_vshld_n_u64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vshld_n_u64 NYI");
   }
   case NEON::BI__builtin_neon_vshrd_n_s64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vshrd_n_s64 NYI");
   }
   case NEON::BI__builtin_neon_vshrd_n_u64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vshrd_n_u64 NYI");
   }
   case NEON::BI__builtin_neon_vsrad_n_s64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vsrad_n_s64 NYI");
   }
   case NEON::BI__builtin_neon_vsrad_n_u64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vsrad_n_u64 NYI");
   }
   case NEON::BI__builtin_neon_vqdmlalh_lane_s16:
   case NEON::BI__builtin_neon_vqdmlalh_laneq_s16:
   case NEON::BI__builtin_neon_vqdmlslh_lane_s16:
   case NEON::BI__builtin_neon_vqdmlslh_laneq_s16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vqdmlslh_laneq_s16 NYI");
   }
   case NEON::BI__builtin_neon_vqdmlals_s32:
   case NEON::BI__builtin_neon_vqdmlsls_s32: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vqdmlsls_s32 NYI");
   }
   case NEON::BI__builtin_neon_vqdmlals_lane_s32:
   case NEON::BI__builtin_neon_vqdmlals_laneq_s32:
   case NEON::BI__builtin_neon_vqdmlsls_lane_s32:
   case NEON::BI__builtin_neon_vqdmlsls_laneq_s32: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vqdmlsls_laneq_s32 NYI");
   }
   case NEON::BI__builtin_neon_vget_lane_bf16:
   case NEON::BI__builtin_neon_vduph_lane_bf16:
   case NEON::BI__builtin_neon_vduph_lane_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vduph_lane_f16 NYI");
   }
   case NEON::BI__builtin_neon_vgetq_lane_bf16:
   case NEON::BI__builtin_neon_vduph_laneq_bf16:
   case NEON::BI__builtin_neon_vduph_laneq_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vduph_laneq_f16 NYI");
   }
   case NEON::BI__builtin_neon_vcvt_bf16_f32:
   case NEON::BI__builtin_neon_vcvtq_low_bf16_f32:
@@ -3270,7 +3270,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
 
   case clang::AArch64::BI_InterlockedAdd:
   case clang::AArch64::BI_InterlockedAdd64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("clang::AArch64::BI_InterlockedAdd64 NYI");
   }
   }
 
@@ -3298,19 +3298,19 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
     return nullptr;
   case NEON::BI__builtin_neon_vbsl_v:
   case NEON::BI__builtin_neon_vbslq_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vbslq_v NYI");
   }
   case NEON::BI__builtin_neon_vfma_lane_v:
   case NEON::BI__builtin_neon_vfmaq_lane_v: { // Only used for FP types
     // The ARM builtins (and instructions) have the addend as the first
     // operand, but the 'fma' intrinsics have it last. Swap it around here.
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vfmaq_lane_v NYI");
   }
   case NEON::BI__builtin_neon_vfma_laneq_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vfma_laneq_v NYI");
   }
   case NEON::BI__builtin_neon_vfmaq_laneq_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vfmaq_laneq_v NYI");
   }
   case NEON::BI__builtin_neon_vfmah_lane_f16:
   case NEON::BI__builtin_neon_vfmas_lane_f32:
@@ -3318,7 +3318,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   case NEON::BI__builtin_neon_vfmas_laneq_f32:
   case NEON::BI__builtin_neon_vfmad_lane_f64:
   case NEON::BI__builtin_neon_vfmad_laneq_f64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vfmad_laneq_f64 NYI");
   }
   case NEON::BI__builtin_neon_vmull_v: {
     llvm::StringRef name = usgn ? "aarch64.neon.umull" : "aarch64.neon.smull";
@@ -3331,9 +3331,9 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   }
   case NEON::BI__builtin_neon_vmax_v:
   case NEON::BI__builtin_neon_vmaxq_v:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vmaxq_v NYI");
   case NEON::BI__builtin_neon_vmaxh_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vmaxh_f16 NYI");
   }
   case NEON::BI__builtin_neon_vmin_v:
   case NEON::BI__builtin_neon_vminq_v: {
@@ -3344,7 +3344,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                         getLoc(E->getExprLoc()));
   }
   case NEON::BI__builtin_neon_vminh_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vminh_f16 NYI");
   }
   case NEON::BI__builtin_neon_vabd_v:
   case NEON::BI__builtin_neon_vabdq_v: {
@@ -3356,33 +3356,33 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   }
   case NEON::BI__builtin_neon_vpadal_v:
   case NEON::BI__builtin_neon_vpadalq_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vpadalq_v NYI");
   }
   case NEON::BI__builtin_neon_vpmin_v:
   case NEON::BI__builtin_neon_vpminq_v:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vpminq_v NYI");
   case NEON::BI__builtin_neon_vpmax_v:
   case NEON::BI__builtin_neon_vpmaxq_v:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vpmaxq_v NYI");
   case NEON::BI__builtin_neon_vminnm_v:
   case NEON::BI__builtin_neon_vminnmq_v:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vminnmq_v NYI");
   case NEON::BI__builtin_neon_vminnmh_f16:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vminnmh_f16 NYI");
   case NEON::BI__builtin_neon_vmaxnm_v:
   case NEON::BI__builtin_neon_vmaxnmq_v:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vmaxnmq_v NYI");
   case NEON::BI__builtin_neon_vmaxnmh_f16:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vmaxnmh_f16 NYI");
   case NEON::BI__builtin_neon_vrecpss_f32: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vrecpss_f32 NYI");
   }
   case NEON::BI__builtin_neon_vrecpsd_f64:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vrecpsd_f64 NYI");
   case NEON::BI__builtin_neon_vrecpsh_f16:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vrecpsh_f16 NYI");
   case NEON::BI__builtin_neon_vqshrun_n_v:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vqshrun_n_v NYI");
   case NEON::BI__builtin_neon_vqrshrun_n_v:
     // The prototype of builtin_neon_vqrshrun_n can be found at
     // https://developer.arm.com/architectures/instruction-sets/intrinsics/
@@ -3392,7 +3392,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
          SInt32Ty},
         Ops, "aarch64.neon.sqrshrun", ty, getLoc(E->getExprLoc()));
   case NEON::BI__builtin_neon_vqshrn_n_v:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vqshrn_n_v NYI");
   case NEON::BI__builtin_neon_vrshrn_n_v:
     return emitNeonCall(
         builder,
@@ -3402,9 +3402,9 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
          SInt32Ty},
         Ops, "aarch64.neon.rshrn", ty, getLoc(E->getExprLoc()));
   case NEON::BI__builtin_neon_vqrshrn_n_v:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vqrshrn_n_v NYI");
   case NEON::BI__builtin_neon_vrndah_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vrndah_f16 NYI");
   }
   case NEON::BI__builtin_neon_vrnda_v:
   case NEON::BI__builtin_neon_vrndaq_v: {
@@ -3413,21 +3413,21 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                         getLoc(E->getExprLoc()));
   }
   case NEON::BI__builtin_neon_vrndih_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vrndih_f16 NYI");
   }
   case NEON::BI__builtin_neon_vrndmh_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vrndmh_f16 NYI");
   }
   case NEON::BI__builtin_neon_vrndm_v:
   case NEON::BI__builtin_neon_vrndmq_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vrndmq_v NYI");
   }
   case NEON::BI__builtin_neon_vrndnh_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vrndnh_f16 NYI");
   }
   case NEON::BI__builtin_neon_vrndn_v:
   case NEON::BI__builtin_neon_vrndnq_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vrndnq_v NYI");
   }
   case NEON::BI__builtin_neon_vrndns_f32: {
     mlir::Value arg0 = emitScalarExpr(E->getArg(0));
@@ -3436,58 +3436,58 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                         getCIRGenModule().FloatTy, getLoc(E->getExprLoc()));
   }
   case NEON::BI__builtin_neon_vrndph_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vrndph_f16 NYI");
   }
   case NEON::BI__builtin_neon_vrndp_v:
   case NEON::BI__builtin_neon_vrndpq_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vrndpq_v NYI");
   }
   case NEON::BI__builtin_neon_vrndxh_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vrndxh_f16 NYI");
   }
   case NEON::BI__builtin_neon_vrndx_v:
   case NEON::BI__builtin_neon_vrndxq_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vrndxq_v NYI");
   }
   case NEON::BI__builtin_neon_vrndh_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vrndh_f16 NYI");
   }
   case NEON::BI__builtin_neon_vrnd32x_f32:
   case NEON::BI__builtin_neon_vrnd32xq_f32:
   case NEON::BI__builtin_neon_vrnd32x_f64:
   case NEON::BI__builtin_neon_vrnd32xq_f64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vrnd32xq_f64 NYI");
   }
   case NEON::BI__builtin_neon_vrnd32z_f32:
   case NEON::BI__builtin_neon_vrnd32zq_f32:
   case NEON::BI__builtin_neon_vrnd32z_f64:
   case NEON::BI__builtin_neon_vrnd32zq_f64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vrnd32zq_f64 NYI");
   }
   case NEON::BI__builtin_neon_vrnd64x_f32:
   case NEON::BI__builtin_neon_vrnd64xq_f32:
   case NEON::BI__builtin_neon_vrnd64x_f64:
   case NEON::BI__builtin_neon_vrnd64xq_f64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vrnd64xq_f64 NYI");
   }
   case NEON::BI__builtin_neon_vrnd64z_f32:
   case NEON::BI__builtin_neon_vrnd64zq_f32:
   case NEON::BI__builtin_neon_vrnd64z_f64:
   case NEON::BI__builtin_neon_vrnd64zq_f64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vrnd64zq_f64 NYI");
   }
   case NEON::BI__builtin_neon_vrnd_v:
   case NEON::BI__builtin_neon_vrndq_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vrndq_v NYI");
   }
   case NEON::BI__builtin_neon_vcvt_f64_v:
   case NEON::BI__builtin_neon_vcvtq_f64_v:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vcvtq_f64_v NYI");
   case NEON::BI__builtin_neon_vcvt_f64_f32: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vcvt_f64_f32 NYI");
   }
   case NEON::BI__builtin_neon_vcvt_f32_f64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vcvt_f32_f64 NYI");
   }
   case NEON::BI__builtin_neon_vcvt_s32_v:
   case NEON::BI__builtin_neon_vcvt_u32_v:
@@ -3501,7 +3501,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   case NEON::BI__builtin_neon_vcvtq_u64_v:
   case NEON::BI__builtin_neon_vcvtq_s16_f16:
   case NEON::BI__builtin_neon_vcvtq_u16_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vcvtq_u16_f16 NYI");
   }
   case NEON::BI__builtin_neon_vcvta_s16_f16:
   case NEON::BI__builtin_neon_vcvta_u16_f16:
@@ -3515,7 +3515,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   case NEON::BI__builtin_neon_vcvtaq_s64_v:
   case NEON::BI__builtin_neon_vcvta_u64_v:
   case NEON::BI__builtin_neon_vcvtaq_u64_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vcvtaq_u64_v NYI");
   }
   case NEON::BI__builtin_neon_vcvtm_s16_f16:
   case NEON::BI__builtin_neon_vcvtm_s32_v:
@@ -3529,7 +3529,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   case NEON::BI__builtin_neon_vcvtmq_s64_v:
   case NEON::BI__builtin_neon_vcvtm_u64_v:
   case NEON::BI__builtin_neon_vcvtmq_u64_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vcvtmq_u64_v NYI");
   }
   case NEON::BI__builtin_neon_vcvtn_s16_f16:
   case NEON::BI__builtin_neon_vcvtn_s32_v:
@@ -3543,7 +3543,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   case NEON::BI__builtin_neon_vcvtnq_s64_v:
   case NEON::BI__builtin_neon_vcvtn_u64_v:
   case NEON::BI__builtin_neon_vcvtnq_u64_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vcvtnq_u64_v NYI");
   }
   case NEON::BI__builtin_neon_vcvtp_s16_f16:
   case NEON::BI__builtin_neon_vcvtp_s32_v:
@@ -3557,181 +3557,181 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   case NEON::BI__builtin_neon_vcvtpq_s64_v:
   case NEON::BI__builtin_neon_vcvtp_u64_v:
   case NEON::BI__builtin_neon_vcvtpq_u64_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vcvtpq_u64_v NYI");
   }
   case NEON::BI__builtin_neon_vmulx_v:
   case NEON::BI__builtin_neon_vmulxq_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vmulxq_v NYI");
   }
   case NEON::BI__builtin_neon_vmulxh_lane_f16:
   case NEON::BI__builtin_neon_vmulxh_laneq_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vmulxh_laneq_f16 NYI");
   }
   case NEON::BI__builtin_neon_vmul_lane_v:
   case NEON::BI__builtin_neon_vmul_laneq_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vmul_laneq_v NYI");
   }
   case NEON::BI__builtin_neon_vnegd_s64:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vnegd_s64 NYI");
   case NEON::BI__builtin_neon_vnegh_f16:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vnegh_f16 NYI");
   case NEON::BI__builtin_neon_vpmaxnm_v:
   case NEON::BI__builtin_neon_vpmaxnmq_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vpmaxnmq_v NYI");
   }
   case NEON::BI__builtin_neon_vpminnm_v:
   case NEON::BI__builtin_neon_vpminnmq_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vpminnmq_v NYI");
   }
   case NEON::BI__builtin_neon_vsqrth_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vsqrth_f16 NYI");
   }
   case NEON::BI__builtin_neon_vsqrt_v:
   case NEON::BI__builtin_neon_vsqrtq_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vsqrtq_v NYI");
   }
   case NEON::BI__builtin_neon_vrbit_v:
   case NEON::BI__builtin_neon_vrbitq_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vrbitq_v NYI");
   }
   case NEON::BI__builtin_neon_vaddv_u8:
     // FIXME: These are handled by the AArch64 scalar code.
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vaddv_u8 NYI");
     [[fallthrough]];
   case NEON::BI__builtin_neon_vaddv_s8: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vaddv_s8 NYI");
   }
   case NEON::BI__builtin_neon_vaddv_u16:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vaddv_u16 NYI");
     [[fallthrough]];
   case NEON::BI__builtin_neon_vaddv_s16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vaddv_s16 NYI");
   }
   case NEON::BI__builtin_neon_vaddvq_u8:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vaddvq_u8 NYI");
     [[fallthrough]];
   case NEON::BI__builtin_neon_vaddvq_s8: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vaddvq_s8 NYI");
   }
   case NEON::BI__builtin_neon_vaddvq_u16:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vaddvq_u16 NYI");
     [[fallthrough]];
   case NEON::BI__builtin_neon_vaddvq_s16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vaddvq_s16 NYI");
   }
   case NEON::BI__builtin_neon_vmaxv_u8: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vmaxv_u8 NYI");
   }
   case NEON::BI__builtin_neon_vmaxv_u16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vmaxv_u16 NYI");
   }
   case NEON::BI__builtin_neon_vmaxvq_u8: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vmaxvq_u8 NYI");
   }
   case NEON::BI__builtin_neon_vmaxvq_u16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vmaxvq_u16 NYI");
   }
   case NEON::BI__builtin_neon_vmaxv_s8: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vmaxv_s8 NYI");
   }
   case NEON::BI__builtin_neon_vmaxv_s16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vmaxv_s16 NYI");
   }
   case NEON::BI__builtin_neon_vmaxvq_s8: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vmaxvq_s8 NYI");
   }
   case NEON::BI__builtin_neon_vmaxvq_s16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vmaxvq_s16 NYI");
   }
   case NEON::BI__builtin_neon_vmaxv_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vmaxv_f16 NYI");
   }
   case NEON::BI__builtin_neon_vmaxvq_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vmaxvq_f16 NYI");
   }
   case NEON::BI__builtin_neon_vminv_u8: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vminv_u8 NYI");
   }
   case NEON::BI__builtin_neon_vminv_u16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vminv_u16 NYI");
   }
   case NEON::BI__builtin_neon_vminvq_u8: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vminvq_u8 NYI");
   }
   case NEON::BI__builtin_neon_vminvq_u16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vminvq_u16 NYI");
   }
   case NEON::BI__builtin_neon_vminv_s8: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vminv_s8 NYI");
   }
   case NEON::BI__builtin_neon_vminv_s16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vminv_s16 NYI");
   }
   case NEON::BI__builtin_neon_vminvq_s8: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vminvq_s8 NYI");
   }
   case NEON::BI__builtin_neon_vminvq_s16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vminvq_s16 NYI");
   }
   case NEON::BI__builtin_neon_vminv_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vminv_f16 NYI");
   }
   case NEON::BI__builtin_neon_vminvq_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vminvq_f16 NYI");
   }
   case NEON::BI__builtin_neon_vmaxnmv_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vmaxnmv_f16 NYI");
   }
   case NEON::BI__builtin_neon_vmaxnmvq_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vmaxnmvq_f16 NYI");
   }
   case NEON::BI__builtin_neon_vminnmv_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vminnmv_f16 NYI");
   }
   case NEON::BI__builtin_neon_vminnmvq_f16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vminnmvq_f16 NYI");
   }
   case NEON::BI__builtin_neon_vmul_n_f64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vmul_n_f64 NYI");
   }
   case NEON::BI__builtin_neon_vaddlv_u8: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vaddlv_u8 NYI");
   }
   case NEON::BI__builtin_neon_vaddlv_u16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vaddlv_u16 NYI");
   }
   case NEON::BI__builtin_neon_vaddlvq_u8: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vaddlvq_u8 NYI");
   }
   case NEON::BI__builtin_neon_vaddlvq_u16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vaddlvq_u16 NYI");
   }
   case NEON::BI__builtin_neon_vaddlv_s8: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vaddlv_s8 NYI");
   }
   case NEON::BI__builtin_neon_vaddlv_s16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vaddlv_s16 NYI");
   }
   case NEON::BI__builtin_neon_vaddlvq_s8: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vaddlvq_s8 NYI");
   }
   case NEON::BI__builtin_neon_vaddlvq_s16: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vaddlvq_s16 NYI");
   }
   case NEON::BI__builtin_neon_vsri_n_v:
   case NEON::BI__builtin_neon_vsriq_n_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vsriq_n_v NYI");
   }
   case NEON::BI__builtin_neon_vsli_n_v:
   case NEON::BI__builtin_neon_vsliq_n_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vsliq_n_v NYI");
   }
   case NEON::BI__builtin_neon_vsra_n_v:
   case NEON::BI__builtin_neon_vsraq_n_v:
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vsraq_n_v NYI");
   case NEON::BI__builtin_neon_vrsra_n_v:
   case NEON::BI__builtin_neon_vrsraq_n_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vrsraq_n_v NYI");
   }
   case NEON::BI__builtin_neon_vld1_v:
   case NEON::BI__builtin_neon_vld1q_v: {
@@ -3755,7 +3755,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   }
   case NEON::BI__builtin_neon_vldap1_lane_s64:
   case NEON::BI__builtin_neon_vldap1q_lane_s64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vldap1q_lane_s64 NYI");
   }
   case NEON::BI__builtin_neon_vld1_dup_v:
   case NEON::BI__builtin_neon_vld1q_dup_v: {
@@ -3775,67 +3775,67 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   }
   case NEON::BI__builtin_neon_vstl1_lane_s64:
   case NEON::BI__builtin_neon_vstl1q_lane_s64: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vstl1q_lane_s64 NYI");
   }
   case NEON::BI__builtin_neon_vld2_v:
   case NEON::BI__builtin_neon_vld2q_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vld2q_v NYI");
   }
   case NEON::BI__builtin_neon_vld3_v:
   case NEON::BI__builtin_neon_vld3q_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vld3q_v NYI");
   }
   case NEON::BI__builtin_neon_vld4_v:
   case NEON::BI__builtin_neon_vld4q_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vld4q_v NYI");
   }
   case NEON::BI__builtin_neon_vld2_dup_v:
   case NEON::BI__builtin_neon_vld2q_dup_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vld2q_dup_v NYI");
   }
   case NEON::BI__builtin_neon_vld3_dup_v:
   case NEON::BI__builtin_neon_vld3q_dup_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vld3q_dup_v NYI");
   }
   case NEON::BI__builtin_neon_vld4_dup_v:
   case NEON::BI__builtin_neon_vld4q_dup_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vld4q_dup_v NYI");
   }
   case NEON::BI__builtin_neon_vld2_lane_v:
   case NEON::BI__builtin_neon_vld2q_lane_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vld2q_lane_v NYI");
   }
   case NEON::BI__builtin_neon_vld3_lane_v:
   case NEON::BI__builtin_neon_vld3q_lane_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vld3q_lane_v NYI");
   }
   case NEON::BI__builtin_neon_vld4_lane_v:
   case NEON::BI__builtin_neon_vld4q_lane_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vld4q_lane_v NYI");
   }
   case NEON::BI__builtin_neon_vst2_v:
   case NEON::BI__builtin_neon_vst2q_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vst2q_v NYI");
   }
   case NEON::BI__builtin_neon_vst2_lane_v:
   case NEON::BI__builtin_neon_vst2q_lane_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vst2q_lane_v NYI");
   }
   case NEON::BI__builtin_neon_vst3_v:
   case NEON::BI__builtin_neon_vst3q_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vst3q_v NYI");
   }
   case NEON::BI__builtin_neon_vst3_lane_v:
   case NEON::BI__builtin_neon_vst3q_lane_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vst3q_lane_v NYI");
   }
   case NEON::BI__builtin_neon_vst4_v:
   case NEON::BI__builtin_neon_vst4q_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vst4q_v NYI");
   }
   case NEON::BI__builtin_neon_vst4_lane_v:
   case NEON::BI__builtin_neon_vst4q_lane_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vst4q_lane_v NYI");
   }
   case NEON::BI__builtin_neon_vtrn_v:
   case NEON::BI__builtin_neon_vtrnq_v: {
@@ -3877,43 +3877,43 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   }
   case NEON::BI__builtin_neon_vuzp_v:
   case NEON::BI__builtin_neon_vuzpq_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vuzpq_v NYI");
   }
   case NEON::BI__builtin_neon_vzip_v:
   case NEON::BI__builtin_neon_vzipq_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vzipq_v NYI");
   }
   case NEON::BI__builtin_neon_vqtbl1q_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vqtbl1q_v NYI");
   }
   case NEON::BI__builtin_neon_vqtbl2q_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vqtbl2q_v NYI");
   }
   case NEON::BI__builtin_neon_vqtbl3q_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vqtbl3q_v NYI");
   }
   case NEON::BI__builtin_neon_vqtbl4q_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vqtbl4q_v NYI");
   }
   case NEON::BI__builtin_neon_vqtbx1q_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vqtbx1q_v NYI");
   }
   case NEON::BI__builtin_neon_vqtbx2q_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vqtbx2q_v NYI");
   }
   case NEON::BI__builtin_neon_vqtbx3q_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vqtbx3q_v NYI");
   }
   case NEON::BI__builtin_neon_vqtbx4q_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vqtbx4q_v NYI");
   }
   case NEON::BI__builtin_neon_vsqadd_v:
   case NEON::BI__builtin_neon_vsqaddq_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vsqaddq_v NYI");
   }
   case NEON::BI__builtin_neon_vuqadd_v:
   case NEON::BI__builtin_neon_vuqaddq_v: {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NEON::BI__builtin_neon_vuqaddq_v NYI");
   }
   }
 }
