@@ -7510,8 +7510,6 @@ template <> struct DenseMapInfo<const SwitchSuccWrapper *> {
     BranchInst *BBI = cast<BranchInst>(B->getTerminator());
     assert(ABI->isUnconditional() && BBI->isUnconditional() &&
            "Only supporting unconditional branches for now");
-    assert(ABI->getNumSuccessors() == 1 &&
-           "Expected unconditional branches to have one successor");
     if (ABI->getSuccessor(0) != BBI->getSuccessor(0))
       return false;
 
@@ -7539,7 +7537,7 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
   SmallPtrSet<BasicBlock *, 8> Seen;
   DenseMap<PHINode *, DenseMap<BasicBlock *, Value *>> PhiPredIVs;
   SmallVector<SwitchSuccWrapper> Cases;
-  Cases.reserve(SI->getNumCases());
+  Cases.reserve(SI->getNumSuccessors());
 
   for (unsigned I = 0; I < SI->getNumSuccessors(); ++I) {
     BasicBlock *BB = SI->getSuccessor(I);

@@ -138,3 +138,35 @@ define i32 @switch_duplicate_arms_multipred(i1 %0, i32 %1, i32 %2, i32 %3, i32 %
   %10 = phi i32 [ %4, %6 ], [ %3, %8 ], [ %3, %7 ]
   ret i32 %10
 }
+
+define i32 @switch_dup_default(i32 %0, i32 %1, i32 %2, i32 %3) {
+; SIMPLIFY-CFG-LABEL: define i32 @switch_dup_default(
+; SIMPLIFY-CFG-SAME: i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]]) {
+; SIMPLIFY-CFG-NEXT:    [[COND:%.*]] = icmp eq i32 [[TMP1]], 0
+; SIMPLIFY-CFG-NEXT:    [[TMP8:%.*]] = select i1 [[COND]], i32 [[TMP3]], i32 [[TMP2]]
+; SIMPLIFY-CFG-NEXT:    ret i32 [[TMP8]]
+;
+; O3-LABEL: define i32 @switch_dup_default(
+; O3-SAME: i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; O3-NEXT:    [[COND:%.*]] = icmp eq i32 [[TMP1]], 0
+; O3-NEXT:    [[TMP8:%.*]] = select i1 [[COND]], i32 [[TMP3]], i32 [[TMP2]]
+; O3-NEXT:    ret i32 [[TMP8]]
+;
+  switch i32 %1, label %7 [
+  i32 0, label %5
+  i32 1, label %6
+  ]
+
+5:
+  br label %8
+
+6:
+  br label %8
+
+7:
+  br label %8
+
+8:
+  %9 = phi i32 [ %3, %5 ], [ %2, %6 ], [ %2, %7 ]
+  ret i32 %9
+}
