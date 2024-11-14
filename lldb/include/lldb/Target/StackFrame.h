@@ -304,42 +304,6 @@ public:
   ///
   /// \return
   ///     A shared pointer to the ValueObject described by var_expr.
-  lldb::ValueObjectSP LegacyGetValueForVariableExpressionPath(
-      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-      uint32_t options, lldb::VariableSP &var_sp, Status &error);
-
-  /// Create a ValueObject for a variable name / pathname, possibly including
-  /// simple dereference/child selection syntax.
-  ///
-  /// \param[in] var_expr
-  ///     The string specifying a variable to base the VariableObject off
-  ///     of.
-  ///
-  /// \param[in] use_dynamic
-  ///     Whether the correct dynamic type of an object pointer should be
-  ///     determined before creating the object, or if the static type is
-  ///     sufficient.  One of the DynamicValueType enumerated values.
-  ///
-  /// \param[in] options
-  ///     An unsigned integer of flags, values from
-  ///     StackFrame::ExpressionPathOption
-  ///     enum.
-  /// \param[in] var_sp
-  ///     A VariableSP that will be set to the variable described in the
-  ///     var_expr path.
-  ///
-  /// \param[in] error
-  ///     Record any errors encountered while evaluating var_expr.
-  ///
-  /// \return
-  ///     A shared pointer to the ValueObject described by var_expr.
-  lldb::ValueObjectSP DILGetValueForVariableExpressionPath(
-      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-      uint32_t options, lldb::VariableSP &var_sp, Status &error);
-
-  /// Dispatch to either LegacyGetValueForVariableExpressionPath, or to
-  /// DILGetValueForVariableExpressionPath, based on target setting. Parameters
-  /// are identical to those for the two functions to which it dispatches.
   lldb::ValueObjectSP GetValueForVariableExpressionPath(
       llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
       uint32_t options, lldb::VariableSP &var_sp, Status &error);
@@ -555,6 +519,16 @@ protected:
   bool HasCachedData() const;
 
 private:
+  /// Private methods, called from GetValueForVariableExpressionPath.
+  /// See that method for documentation of parameters and return value.
+  lldb::ValueObjectSP LegacyGetValueForVariableExpressionPath(
+      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
+      uint32_t options, lldb::VariableSP &var_sp, Status &error);
+
+  lldb::ValueObjectSP DILGetValueForVariableExpressionPath(
+      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
+      uint32_t options, lldb::VariableSP &var_sp, Status &error);
+
   /// For StackFrame only.
   /// \{
   lldb::ThreadWP m_thread_wp;

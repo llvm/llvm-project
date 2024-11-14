@@ -510,19 +510,16 @@ StackFrame::GetInScopeVariableList(bool get_file_globals,
 ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
     VariableSP &var_sp, Status &error) {
-  // Check to see if we should use the DIL implementation.
-  lldb::TargetSP target_sp = CalculateTarget();
   ExecutionContext exe_ctx;
   CalculateExecutionContext(exe_ctx);
-  //bool use_DIL = target_sp->GetUseDIL(&exe_ctx);
+  //bool use_DIL = exe_ctx.GetTargetRef().GetUseDIL(&exe_ctx);
   bool use_DIL = true;
   if (use_DIL)
-    return DILGetValueForVariableExpressionPath(var_expr, use_dynamic,
-                                                options, var_sp, error);
-  else
-    // Use the original implementation.
-    return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic,
-                                                   options, var_sp, error);
+    return DILGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
+                                                var_sp, error);
+
+  return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
+                                                 var_sp, error);
 }
 
 ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
