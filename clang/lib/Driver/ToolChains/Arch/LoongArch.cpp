@@ -14,7 +14,6 @@
 #include "clang/Driver/Options.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/LoongArchTargetParser.h"
-#include <string>
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -141,7 +140,7 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
     ArchName = MArch->getValue();
   ArchName = postProcessTargetCPUString(ArchName, Triple);
   llvm::LoongArch::getArchFeatures(ArchName, Features);
-  if ((std::string)(MArch->getValue()) == "native")
+  if (MArch && StringRef(MArch->getValue()) == "native")
     for (auto &F : llvm::sys::getHostCPUFeatures())
       Features.push_back(
           Args.MakeArgString((F.second ? "+" : "-") + F.first()));
