@@ -8,6 +8,6 @@
 
 #include "src/__support/File/file.h"
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
 
 extern "C" FILE *stdin;

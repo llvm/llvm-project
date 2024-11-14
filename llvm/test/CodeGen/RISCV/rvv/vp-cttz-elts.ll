@@ -6,8 +6,8 @@ define iXLen @bool_vec(<vscale x 2 x i1> %src, <vscale x 2 x i1> %m, i32 %evl) {
 ; RV32-LABEL: bool_vec:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vmv1r.v v9, v0
-; RV32-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; RV32-NEXT:    vfirst.m a1, v9, v0.t
 ; RV32-NEXT:    bltz a1, .LBB0_2
 ; RV32-NEXT:  # %bb.1:
@@ -20,8 +20,8 @@ define iXLen @bool_vec(<vscale x 2 x i1> %src, <vscale x 2 x i1> %m, i32 %evl) {
 ; RV64-NEXT:    vmv1r.v v9, v0
 ; RV64-NEXT:    slli a0, a0, 32
 ; RV64-NEXT:    srli a0, a0, 32
-; RV64-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; RV64-NEXT:    vmv1r.v v0, v8
+; RV64-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; RV64-NEXT:    vfirst.m a1, v9, v0.t
 ; RV64-NEXT:    bltz a1, .LBB0_2
 ; RV64-NEXT:  # %bb.1:
@@ -36,8 +36,8 @@ define iXLen @bool_vec_zero_poison(<vscale x 2 x i1> %src, <vscale x 2 x i1> %m,
 ; RV32-LABEL: bool_vec_zero_poison:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vmv1r.v v9, v0
-; RV32-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; RV32-NEXT:    vfirst.m a0, v9, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -46,8 +46,8 @@ define iXLen @bool_vec_zero_poison(<vscale x 2 x i1> %src, <vscale x 2 x i1> %m,
 ; RV64-NEXT:    vmv1r.v v9, v0
 ; RV64-NEXT:    slli a0, a0, 32
 ; RV64-NEXT:    srli a0, a0, 32
-; RV64-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; RV64-NEXT:    vmv1r.v v0, v8
+; RV64-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; RV64-NEXT:    vfirst.m a0, v9, v0.t
 ; RV64-NEXT:    ret
   %r = call iXLen @llvm.vp.cttz.elts.iXLen.nxv2i1(<vscale x 2 x i1> %src, i1 1, <vscale x 2 x i1> %m, i32 %evl)

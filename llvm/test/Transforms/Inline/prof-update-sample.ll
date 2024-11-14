@@ -52,7 +52,6 @@ define void @caller() {
 !17 = !{!"branch_weights", i32 400}
 !18 = !{!"VP", i32 0, i64 140, i64 111, i64 80, i64 222, i64 40, i64 333, i64 20}
 ; CHECK: ![[ENTRY_COUNT]] = !{!"function_entry_count", i64 600}
-; CHECK: ![[COUNT_CALLEE1]] = !{!"branch_weights", i32 2000}
 ; CHECK: ![[COUNT_CALLEE]] = !{!"branch_weights", i32 1200}
 ; CHECK: ![[COUNT_IND_CALLEE]] = !{!"VP", i32 0, i64 84, i64 111, i64 48, i64 222, i64 24, i64 333, i64 12}
 ; CHECK: ![[COUNT_CALLER]] = !{!"branch_weights", i32 800}

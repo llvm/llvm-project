@@ -28,16 +28,14 @@ FunctionPass *createBPFISelDag(BPFTargetMachine &TM);
 FunctionPass *createBPFMISimplifyPatchablePass();
 FunctionPass *createBPFMIPeepholePass();
 FunctionPass *createBPFMIPreEmitPeepholePass();
-FunctionPass *createBPFMIPreEmitCheckingPass();
 
 InstructionSelector *createBPFInstructionSelector(const BPFTargetMachine &,
                                                   const BPFSubtarget &,
                                                   const BPFRegisterBankInfo &);
 
 void initializeBPFCheckAndAdjustIRPass(PassRegistry&);
-void initializeBPFDAGToDAGISelPass(PassRegistry &);
+void initializeBPFDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeBPFMIPeepholePass(PassRegistry &);
-void initializeBPFMIPreEmitCheckingPass(PassRegistry&);
 void initializeBPFMIPreEmitPeepholePass(PassRegistry &);
 void initializeBPFMISimplifyPatchablePass(PassRegistry &);
 

@@ -179,7 +179,7 @@ RelExpr SystemZ::getRelExpr(RelType type, const Symbol &s,
 void SystemZ::writeGotHeader(uint8_t *buf) const {
   // _GLOBAL_OFFSET_TABLE_[0] holds the value of _DYNAMIC.
   // _GLOBAL_OFFSET_TABLE_[1] and [2] are reserved.
-  write64be(buf, mainPart->dynamic->getVA());
+  write64be(buf, ctx.mainPart->dynamic->getVA());
 }
 
 void SystemZ::writeGotPlt(uint8_t *buf, const Symbol &s) const {
@@ -438,7 +438,7 @@ bool SystemZ::relaxOnce(int pass) const {
   // we need to validate the target symbol is in-range and aligned.
   SmallVector<InputSection *, 0> storage;
   bool changed = false;
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage)) {

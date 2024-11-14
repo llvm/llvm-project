@@ -10,16 +10,16 @@ class OperatingSystem(ScriptedThread):
     """
     Class that provides data for an instance of a LLDB 'OperatingSystemPython' plug-in class.
 
-    ```
-    thread_info = {
-        "tid": tid,
-        "name": "four",
-        "queue": "queue4",
-        "state": "stopped",
-        "stop_reason": "none",
-        "core" : 2
-    }
-    ```
+    .. code-block:: python
+
+        thread_info = {
+            "tid": tid,
+            "name": "four",
+            "queue": "queue4",
+            "state": "stopped",
+            "stop_reason": "none",
+            "core" : 2
+        }
 
     - tid : thread ID (mandatory)
     - name : thread name (optional key/value pair)

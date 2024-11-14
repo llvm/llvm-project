@@ -30,7 +30,7 @@
 define amdgpu_kernel void @cluster_load_cluster_store(ptr noalias %lb, ptr noalias %sb) {
 ; GFX9-LABEL: cluster_load_cluster_store:
 ; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
@@ -49,20 +49,20 @@ define amdgpu_kernel void @cluster_load_cluster_store(ptr noalias %lb, ptr noali
 ;
 ; GFX10-LABEL: cluster_load_cluster_store:
 ; GFX10:       ; %bb.0: ; %bb
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_add_u32 s4, s0, 8
-; GFX10-NEXT:    s_addc_u32 s5, s1, 0
-; GFX10-NEXT:    s_add_u32 s6, s0, 16
-; GFX10-NEXT:    v_mov_b32_e32 v0, s0
-; GFX10-NEXT:    s_addc_u32 s7, s1, 0
-; GFX10-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-NEXT:    s_add_u32 s0, s0, 24
-; GFX10-NEXT:    v_mov_b32_e32 v2, s4
-; GFX10-NEXT:    s_addc_u32 s1, s1, 0
-; GFX10-NEXT:    v_mov_b32_e32 v3, s5
-; GFX10-NEXT:    v_mov_b32_e32 v4, s6
-; GFX10-NEXT:    v_mov_b32_e32 v5, s7
+; GFX10-NEXT:    s_add_u32 s0, s4, 8
+; GFX10-NEXT:    s_addc_u32 s1, s5, 0
+; GFX10-NEXT:    s_add_u32 s2, s4, 16
+; GFX10-NEXT:    v_mov_b32_e32 v3, s1
+; GFX10-NEXT:    s_addc_u32 s3, s5, 0
+; GFX10-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-NEXT:    v_mov_b32_e32 v2, s0
+; GFX10-NEXT:    s_add_u32 s0, s4, 24
+; GFX10-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-NEXT:    s_addc_u32 s1, s5, 0
+; GFX10-NEXT:    v_mov_b32_e32 v5, s3
+; GFX10-NEXT:    v_mov_b32_e32 v4, s2
 ; GFX10-NEXT:    v_mov_b32_e32 v7, s1
 ; GFX10-NEXT:    v_mov_b32_e32 v6, s0
 ; GFX10-NEXT:    s_clause 0x3
@@ -70,16 +70,16 @@ define amdgpu_kernel void @cluster_load_cluster_store(ptr noalias %lb, ptr noali
 ; GFX10-NEXT:    flat_load_dword v9, v[2:3]
 ; GFX10-NEXT:    flat_load_dword v10, v[4:5]
 ; GFX10-NEXT:    flat_load_dword v11, v[6:7]
-; GFX10-NEXT:    s_add_u32 s0, s2, 8
-; GFX10-NEXT:    s_addc_u32 s1, s3, 0
-; GFX10-NEXT:    v_mov_b32_e32 v0, s2
+; GFX10-NEXT:    s_add_u32 s0, s6, 8
+; GFX10-NEXT:    s_addc_u32 s1, s7, 0
+; GFX10-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX10-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s0
-; GFX10-NEXT:    s_add_u32 s0, s2, 16
-; GFX10-NEXT:    s_addc_u32 s1, s3, 0
-; GFX10-NEXT:    v_mov_b32_e32 v1, s3
-; GFX10-NEXT:    s_add_u32 s2, s2, 24
-; GFX10-NEXT:    s_addc_u32 s3, s3, 0
+; GFX10-NEXT:    s_add_u32 s0, s6, 16
+; GFX10-NEXT:    s_addc_u32 s1, s7, 0
+; GFX10-NEXT:    s_add_u32 s2, s6, 24
+; GFX10-NEXT:    v_mov_b32_e32 v1, s7
+; GFX10-NEXT:    s_addc_u32 s3, s7, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX10-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX10-NEXT:    v_mov_b32_e32 v7, s3
@@ -96,7 +96,7 @@ define amdgpu_kernel void @cluster_load_cluster_store(ptr noalias %lb, ptr noali
 ;
 ; GFX11-LABEL: cluster_load_cluster_store:
 ; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    s_clause 0x3
@@ -155,7 +155,7 @@ bb:
 define amdgpu_kernel void @cluster_load_valu_cluster_store(ptr noalias %lb, ptr noalias %sb) {
 ; GFX9-LABEL: cluster_load_valu_cluster_store:
 ; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
@@ -175,20 +175,20 @@ define amdgpu_kernel void @cluster_load_valu_cluster_store(ptr noalias %lb, ptr 
 ;
 ; GFX10-LABEL: cluster_load_valu_cluster_store:
 ; GFX10:       ; %bb.0: ; %bb
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_add_u32 s4, s0, 8
-; GFX10-NEXT:    s_addc_u32 s5, s1, 0
-; GFX10-NEXT:    v_mov_b32_e32 v2, s4
-; GFX10-NEXT:    s_add_u32 s6, s0, 16
-; GFX10-NEXT:    v_mov_b32_e32 v3, s5
-; GFX10-NEXT:    v_mov_b32_e32 v0, s0
-; GFX10-NEXT:    s_addc_u32 s7, s1, 0
-; GFX10-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-NEXT:    s_add_u32 s0, s0, 24
-; GFX10-NEXT:    s_addc_u32 s1, s1, 0
-; GFX10-NEXT:    v_mov_b32_e32 v4, s6
-; GFX10-NEXT:    v_mov_b32_e32 v5, s7
+; GFX10-NEXT:    s_add_u32 s0, s4, 8
+; GFX10-NEXT:    s_addc_u32 s1, s5, 0
+; GFX10-NEXT:    s_add_u32 s2, s4, 16
+; GFX10-NEXT:    v_mov_b32_e32 v3, s1
+; GFX10-NEXT:    v_mov_b32_e32 v2, s0
+; GFX10-NEXT:    s_addc_u32 s3, s5, 0
+; GFX10-NEXT:    s_add_u32 s0, s4, 24
+; GFX10-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-NEXT:    s_addc_u32 s1, s5, 0
+; GFX10-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-NEXT:    v_mov_b32_e32 v5, s3
+; GFX10-NEXT:    v_mov_b32_e32 v4, s2
 ; GFX10-NEXT:    flat_load_dword v6, v[2:3]
 ; GFX10-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s0
@@ -196,18 +196,18 @@ define amdgpu_kernel void @cluster_load_valu_cluster_store(ptr noalias %lb, ptr 
 ; GFX10-NEXT:    flat_load_dword v8, v[0:1]
 ; GFX10-NEXT:    flat_load_dword v9, v[4:5]
 ; GFX10-NEXT:    flat_load_dword v10, v[2:3]
-; GFX10-NEXT:    s_add_u32 s0, s2, 8
-; GFX10-NEXT:    s_addc_u32 s1, s3, 0
-; GFX10-NEXT:    s_add_u32 s4, s2, 16
+; GFX10-NEXT:    s_add_u32 s0, s6, 8
+; GFX10-NEXT:    s_addc_u32 s1, s7, 0
+; GFX10-NEXT:    s_add_u32 s2, s6, 16
 ; GFX10-NEXT:    v_mov_b32_e32 v3, s1
-; GFX10-NEXT:    s_addc_u32 s5, s3, 0
-; GFX10-NEXT:    v_mov_b32_e32 v0, s2
+; GFX10-NEXT:    s_addc_u32 s3, s7, 0
+; GFX10-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s0
-; GFX10-NEXT:    s_add_u32 s0, s2, 24
-; GFX10-NEXT:    v_mov_b32_e32 v1, s3
-; GFX10-NEXT:    v_mov_b32_e32 v4, s4
-; GFX10-NEXT:    s_addc_u32 s1, s3, 0
-; GFX10-NEXT:    v_mov_b32_e32 v5, s5
+; GFX10-NEXT:    s_add_u32 s0, s6, 24
+; GFX10-NEXT:    v_mov_b32_e32 v1, s7
+; GFX10-NEXT:    v_mov_b32_e32 v5, s3
+; GFX10-NEXT:    s_addc_u32 s1, s7, 0
+; GFX10-NEXT:    v_mov_b32_e32 v4, s2
 ; GFX10-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(3)
 ; GFX10-NEXT:    v_add_nc_u32_e32 v11, 1, v6
 ; GFX10-NEXT:    v_mov_b32_e32 v7, s1
@@ -223,7 +223,7 @@ define amdgpu_kernel void @cluster_load_valu_cluster_store(ptr noalias %lb, ptr 
 ;
 ; GFX11-LABEL: cluster_load_valu_cluster_store:
 ; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    s_clause 0x3

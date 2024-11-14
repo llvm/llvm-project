@@ -8,10 +8,11 @@
 
 #include "src/math/nanf128.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/str_to_float.h"
 #include "src/errno/libc_errno.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float128, nanf128, (const char *arg)) {
   auto result = internal::strtonan<float128>(arg);
@@ -20,4 +21,4 @@ LLVM_LIBC_FUNCTION(float128, nanf128, (const char *arg)) {
   return result.value;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

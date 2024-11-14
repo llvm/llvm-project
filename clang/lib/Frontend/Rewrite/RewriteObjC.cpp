@@ -32,6 +32,7 @@
 #if CLANG_ENABLE_OBJC_REWRITER
 
 using namespace clang;
+using llvm::RewriteBuffer;
 using llvm::utostr;
 
 namespace {

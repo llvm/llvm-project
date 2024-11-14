@@ -75,6 +75,7 @@ program omp_nest_barrier
   end do
   !$omp end critical
 
+  !WARNING: OpenMP directive 'master' has been deprecated, please use 'masked' instead.
   !$omp master
   do i = 1, 10
     k = k + 1
@@ -107,6 +108,7 @@ program omp_nest_barrier
   end do
   !$omp end ordered
 
+  !WARNING: OpenMP directive 'master' has been deprecated, please use 'masked' instead.
   !$omp master
   do i = 1, 10
     !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.

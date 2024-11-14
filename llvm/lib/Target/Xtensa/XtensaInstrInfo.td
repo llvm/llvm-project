@@ -138,7 +138,8 @@ let Defs = [SAR] in {
 }
 
 def EXTUI : RRR_Inst<0x00, 0x04, 0x00, (outs AR:$r), (ins AR:$t, uimm5:$imm1, imm1_16:$imm2),
-                    "extui\t$r, $t, $imm1, $imm2", []> {
+                    "extui\t$r, $t, $imm1, $imm2",
+                    [(set AR:$r, (Xtensa_extui AR:$t, uimm5:$imm1, imm1_16:$imm2))]> {
   bits<5> imm1;
   bits<4> imm2;
 
@@ -471,6 +472,12 @@ def : Pat<(Xtensa_call (i32 texternalsym:$dst)),
 def : Pat<(Xtensa_call AR:$dst),
           (CALLX0 AR:$dst)>;
 
+let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1, Size = 3 in {
+  def BR_JT: Pseudo<(outs), (ins AR:$s, i32imm:$jt),
+                    "!br_jt_p, $s, $jt",
+                    [(Xtensa_brjt AR:$s, tjumptable:$jt)]>;
+}
+
 //===----------------------------------------------------------------------===//
 // Mem barrier instructions
 //===----------------------------------------------------------------------===//
@@ -558,4 +565,13 @@ let Defs = [SP], Uses = [SP] in {
   def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                                "#ADJCALLSTACKUP",
                                [(Xtensa_callseq_end timm:$amt1, timm:$amt2)]>;
+}
+
+//===----------------------------------------------------------------------===//
+// Generic select instruction
+//===----------------------------------------------------------------------===//
+let usesCustomInserter = 1 in {
+  def SELECT : Pseudo<(outs AR:$dst), (ins AR:$lhs, AR:$rhs, AR:$t, AR:$f, i32imm:$cond),
+                     "!select $dst, $lhs, $rhs, $t, $f, $cond",
+                     [(set i32:$dst, (Xtensa_select_cc i32:$lhs, i32:$rhs, i32:$t, i32:$f, imm:$cond))]>;
 }

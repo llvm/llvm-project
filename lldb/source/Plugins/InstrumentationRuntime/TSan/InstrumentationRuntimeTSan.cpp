@@ -770,15 +770,15 @@ std::string InstrumentationRuntimeTSan::GetLocationDescription(
             Sprintf("Location is a %ld-byte heap object at 0x%llx", size, addr);
       }
     } else if (type == "stack") {
-      tid_t tid = loc->GetAsDictionary()
-                      ->GetValueForKey("thread_id")
-                      ->GetUnsignedIntegerValue();
+      lldb::tid_t tid = loc->GetAsDictionary()
+                            ->GetValueForKey("thread_id")
+                            ->GetUnsignedIntegerValue();
 
       result = Sprintf("Location is stack of thread %d", tid);
     } else if (type == "tls") {
-      tid_t tid = loc->GetAsDictionary()
-                      ->GetValueForKey("thread_id")
-                      ->GetUnsignedIntegerValue();
+      lldb::tid_t tid = loc->GetAsDictionary()
+                            ->GetValueForKey("thread_id")
+                            ->GetUnsignedIntegerValue();
 
       result = Sprintf("Location is TLS of thread %d", tid);
     } else if (type == "fd") {
@@ -948,7 +948,7 @@ static std::string GenerateThreadName(const std::string &path,
   if (path == "mops") {
     size_t size =
         o->GetObjectForDotSeparatedPath("size")->GetUnsignedIntegerValue();
-    tid_t thread_id =
+    lldb::tid_t thread_id =
         o->GetObjectForDotSeparatedPath("thread_id")->GetUnsignedIntegerValue();
     bool is_write =
         o->GetObjectForDotSeparatedPath("is_write")->GetBooleanValue();
@@ -979,7 +979,7 @@ static std::string GenerateThreadName(const std::string &path,
   }
 
   if (path == "threads") {
-    tid_t thread_id =
+    lldb::tid_t thread_id =
         o->GetObjectForDotSeparatedPath("thread_id")->GetUnsignedIntegerValue();
     result = Sprintf("Thread %zu created", thread_id);
   }
@@ -987,7 +987,7 @@ static std::string GenerateThreadName(const std::string &path,
   if (path == "locs") {
     std::string type = std::string(
         o->GetAsDictionary()->GetValueForKey("type")->GetStringValue());
-    tid_t thread_id =
+    lldb::tid_t thread_id =
         o->GetObjectForDotSeparatedPath("thread_id")->GetUnsignedIntegerValue();
     int fd = o->GetObjectForDotSeparatedPath("file_descriptor")
                  ->GetSignedIntegerValue();
@@ -1007,7 +1007,7 @@ static std::string GenerateThreadName(const std::string &path,
   }
 
   if (path == "stacks") {
-    tid_t thread_id =
+    lldb::tid_t thread_id =
         o->GetObjectForDotSeparatedPath("thread_id")->GetUnsignedIntegerValue();
     result = Sprintf("Thread %" PRIu64, thread_id);
   }
@@ -1034,7 +1034,7 @@ static void AddThreadsForPath(const std::string &path,
 
         StructuredData::ObjectSP thread_id_obj =
             o->GetObjectForDotSeparatedPath("thread_os_id");
-        tid_t tid =
+        lldb::tid_t tid =
             thread_id_obj ? thread_id_obj->GetUnsignedIntegerValue() : 0;
 
         ThreadSP new_thread_sp =

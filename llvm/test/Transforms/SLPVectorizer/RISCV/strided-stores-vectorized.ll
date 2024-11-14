@@ -5,11 +5,11 @@ define void @store_reverse(ptr %p3) {
 ; CHECK-LABEL: @store_reverse(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[P3:%.*]], i64 8
-; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i64, ptr [[P3]], i64 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i64, ptr [[P3]], i64 7
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr [[P3]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[ARRAYIDX1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl <4 x i64> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v4i64.p0.i64(<4 x i64> [[TMP2]], ptr align 8 [[ARRAYIDX14]], i64 -8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, i32 4)
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v4i64.p0.i64(<4 x i64> [[TMP2]], ptr align 8 [[ARRAYIDX2]], i64 -8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, i32 4)
 ; CHECK-NEXT:    ret void
 ;
 entry:

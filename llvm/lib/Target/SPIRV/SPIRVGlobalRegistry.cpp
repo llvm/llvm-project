@@ -72,17 +72,14 @@ void SPIRVGlobalRegistry::assignSPIRVTypeToVReg(SPIRVType *SpirvType,
   VRegToTypeMap[&MF][VReg] = SpirvType;
 }
 
-static Register createTypeVReg(MachineIRBuilder &MIRBuilder) {
-  auto &MRI = MIRBuilder.getMF().getRegInfo();
-  auto Res = MRI.createGenericVirtualRegister(LLT::scalar(32));
+static Register createTypeVReg(MachineRegisterInfo &MRI) {
+  auto Res = MRI.createGenericVirtualRegister(LLT::scalar(64));
   MRI.setRegClass(Res, &SPIRV::TYPERegClass);
   return Res;
 }
 
-static Register createTypeVReg(MachineRegisterInfo &MRI) {
-  auto Res = MRI.createGenericVirtualRegister(LLT::scalar(32));
-  MRI.setRegClass(Res, &SPIRV::TYPERegClass);
-  return Res;
+inline Register createTypeVReg(MachineIRBuilder &MIRBuilder) {
+  return createTypeVReg(MIRBuilder.getMF().getRegInfo());
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOpTypeBool(MachineIRBuilder &MIRBuilder) {
@@ -90,10 +87,28 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeBool(MachineIRBuilder &MIRBuilder) {
       .addDef(createTypeVReg(MIRBuilder));
 }
 
-SPIRVType *SPIRVGlobalRegistry::getOpTypeInt(uint32_t Width,
+unsigned SPIRVGlobalRegistry::adjustOpTypeIntWidth(unsigned Width) const {
+  if (Width > 64)
+    report_fatal_error("Unsupported integer width!");
+  const SPIRVSubtarget &ST = cast<SPIRVSubtarget>(CurMF->getSubtarget());
+  if (ST.canUseExtension(
+          SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers))
+    return Width;
+  if (Width <= 8)
+    Width = 8;
+  else if (Width <= 16)
+    Width = 16;
+  else if (Width <= 32)
+    Width = 32;
+  else
+    Width = 64;
+  return Width;
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOpTypeInt(unsigned Width,
                                              MachineIRBuilder &MIRBuilder,
                                              bool IsSigned) {
-  assert(Width <= 64 && "Unsupported integer width!");
+  Width = adjustOpTypeIntWidth(Width);
   const SPIRVSubtarget &ST =
       cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
   if (ST.canUseExtension(
@@ -102,15 +117,7 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeInt(uint32_t Width,
         .addImm(SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers);
     MIRBuilder.buildInstr(SPIRV::OpCapability)
         .addImm(SPIRV::Capability::ArbitraryPrecisionIntegersINTEL);
-  } else if (Width <= 8)
-    Width = 8;
-  else if (Width <= 16)
-    Width = 16;
-  else if (Width <= 32)
-    Width = 32;
-  else if (Width <= 64)
-    Width = 64;
-
+  }
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeInt)
                  .addDef(createTypeVReg(MIRBuilder))
                  .addImm(Width)
@@ -147,27 +154,25 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeVector(uint32_t NumElems,
   return MIB;
 }
 
-std::tuple<Register, ConstantInt *, bool>
+std::tuple<Register, ConstantInt *, bool, unsigned>
 SPIRVGlobalRegistry::getOrCreateConstIntReg(uint64_t Val, SPIRVType *SpvType,
                                             MachineIRBuilder *MIRBuilder,
                                             MachineInstr *I,
                                             const SPIRVInstrInfo *TII) {
-  const IntegerType *LLVMIntTy;
-  if (SpvType)
-    LLVMIntTy = cast<IntegerType>(getTypeForSPIRVType(SpvType));
-  else
-    LLVMIntTy = IntegerType::getInt32Ty(CurMF->getFunction().getContext());
+  assert(SpvType);
+  const IntegerType *LLVMIntTy =
+      cast<IntegerType>(getTypeForSPIRVType(SpvType));
+  unsigned BitWidth = getScalarOrVectorBitWidth(SpvType);
   bool NewInstr = false;
   // Find a constant in DT or build a new one.
   ConstantInt *CI = ConstantInt::get(const_cast<IntegerType *>(LLVMIntTy), Val);
   Register Res = DT.find(CI, CurMF);
   if (!Res.isValid()) {
-    unsigned BitWidth = SpvType ? getScalarOrVectorBitWidth(SpvType) : 32;
     // TODO: handle cases where the type is not 32bit wide
     // TODO: https://github.com/llvm/llvm-project/issues/88129
-    LLT LLTy = LLT::scalar(32);
-    Res = CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
-    CurMF->getRegInfo().setRegClass(Res, &SPIRV::IDRegClass);
+    Res =
+        CurMF->getRegInfo().createGenericVirtualRegister(LLT::scalar(BitWidth));
+    CurMF->getRegInfo().setRegClass(Res, &SPIRV::iIDRegClass);
     if (MIRBuilder)
       assignTypeToVReg(LLVMIntTy, Res, *MIRBuilder);
     else
@@ -175,7 +180,7 @@ SPIRVGlobalRegistry::getOrCreateConstIntReg(uint64_t Val, SPIRVType *SpvType,
     DT.add(CI, CurMF, Res);
     NewInstr = true;
   }
-  return std::make_tuple(Res, CI, NewInstr);
+  return std::make_tuple(Res, CI, NewInstr, BitWidth);
 }
 
 std::tuple<Register, ConstantFP *, bool, unsigned>
@@ -183,28 +188,20 @@ SPIRVGlobalRegistry::getOrCreateConstFloatReg(APFloat Val, SPIRVType *SpvType,
                                               MachineIRBuilder *MIRBuilder,
                                               MachineInstr *I,
                                               const SPIRVInstrInfo *TII) {
-  const Type *LLVMFloatTy;
+  assert(SpvType);
   LLVMContext &Ctx = CurMF->getFunction().getContext();
-  unsigned BitWidth = 32;
-  if (SpvType)
-    LLVMFloatTy = getTypeForSPIRVType(SpvType);
-  else {
-    LLVMFloatTy = Type::getFloatTy(Ctx);
-    if (MIRBuilder)
-      SpvType = getOrCreateSPIRVType(LLVMFloatTy, *MIRBuilder);
-  }
+  const Type *LLVMFloatTy = getTypeForSPIRVType(SpvType);
+  unsigned BitWidth = getScalarOrVectorBitWidth(SpvType);
   bool NewInstr = false;
   // Find a constant in DT or build a new one.
   auto *const CI = ConstantFP::get(Ctx, Val);
   Register Res = DT.find(CI, CurMF);
   if (!Res.isValid()) {
-    if (SpvType)
-      BitWidth = getScalarOrVectorBitWidth(SpvType);
     // TODO: handle cases where the type is not 32bit wide
     // TODO: https://github.com/llvm/llvm-project/issues/88129
-    LLT LLTy = LLT::scalar(32);
-    Res = CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
-    CurMF->getRegInfo().setRegClass(Res, &SPIRV::IDRegClass);
+    Res =
+        CurMF->getRegInfo().createGenericVirtualRegister(LLT::scalar(BitWidth));
+    CurMF->getRegInfo().setRegClass(Res, &SPIRV::fIDRegClass);
     if (MIRBuilder)
       assignTypeToVReg(LLVMFloatTy, Res, *MIRBuilder);
     else
@@ -259,7 +256,8 @@ Register SPIRVGlobalRegistry::getOrCreateConstInt(uint64_t Val, MachineInstr &I,
   ConstantInt *CI;
   Register Res;
   bool New;
-  std::tie(Res, CI, New) =
+  unsigned BitWidth;
+  std::tie(Res, CI, New, BitWidth) =
       getOrCreateConstIntReg(Val, SpvType, nullptr, &I, &TII);
   // If we have found Res register which is defined by the passed G_CONSTANT
   // machine instruction, a new constant instruction should be created.
@@ -271,7 +269,7 @@ Register SPIRVGlobalRegistry::getOrCreateConstInt(uint64_t Val, MachineInstr &I,
     MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantI))
               .addDef(Res)
               .addUse(getSPIRVTypeID(SpvType));
-    addNumImm(APInt(getScalarOrVectorBitWidth(SpvType), Val), MIB);
+    addNumImm(APInt(BitWidth, Val), MIB);
   } else {
     MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantNull))
               .addDef(Res)
@@ -287,39 +285,36 @@ Register SPIRVGlobalRegistry::buildConstantInt(uint64_t Val,
                                                MachineIRBuilder &MIRBuilder,
                                                SPIRVType *SpvType,
                                                bool EmitIR) {
+  assert(SpvType);
   auto &MF = MIRBuilder.getMF();
-  const IntegerType *LLVMIntTy;
-  if (SpvType)
-    LLVMIntTy = cast<IntegerType>(getTypeForSPIRVType(SpvType));
-  else
-    LLVMIntTy = IntegerType::getInt32Ty(MF.getFunction().getContext());
+  const IntegerType *LLVMIntTy =
+      cast<IntegerType>(getTypeForSPIRVType(SpvType));
   // Find a constant in DT or build a new one.
   const auto ConstInt =
       ConstantInt::get(const_cast<IntegerType *>(LLVMIntTy), Val);
   Register Res = DT.find(ConstInt, &MF);
   if (!Res.isValid()) {
-    unsigned BitWidth = SpvType ? getScalarOrVectorBitWidth(SpvType) : 32;
-    LLT LLTy = LLT::scalar(EmitIR ? BitWidth : 32);
+    unsigned BitWidth = getScalarOrVectorBitWidth(SpvType);
+    LLT LLTy = LLT::scalar(BitWidth);
     Res = MF.getRegInfo().createGenericVirtualRegister(LLTy);
-    MF.getRegInfo().setRegClass(Res, &SPIRV::IDRegClass);
+    MF.getRegInfo().setRegClass(Res, &SPIRV::iIDRegClass);
     assignTypeToVReg(LLVMIntTy, Res, MIRBuilder,
                      SPIRV::AccessQualifier::ReadWrite, EmitIR);
     DT.add(ConstInt, &MIRBuilder.getMF(), Res);
     if (EmitIR) {
       MIRBuilder.buildConstant(Res, *ConstInt);
     } else {
+      Register SpvTypeReg = getSPIRVTypeID(SpvType);
       MachineInstrBuilder MIB;
       if (Val) {
-        assert(SpvType);
         MIB = MIRBuilder.buildInstr(SPIRV::OpConstantI)
                   .addDef(Res)
-                  .addUse(getSPIRVTypeID(SpvType));
+                  .addUse(SpvTypeReg);
         addNumImm(APInt(BitWidth, Val), MIB);
       } else {
-        assert(SpvType);
         MIB = MIRBuilder.buildInstr(SPIRV::OpConstantNull)
                   .addDef(Res)
-                  .addUse(getSPIRVTypeID(SpvType));
+                  .addUse(SpvTypeReg);
       }
       const auto &Subtarget = CurMF->getSubtarget();
       constrainSelectedInstRegOperands(*MIB, *Subtarget.getInstrInfo(),
@@ -343,8 +338,9 @@ Register SPIRVGlobalRegistry::buildConstantFP(APFloat Val,
   const auto ConstFP = ConstantFP::get(Ctx, Val);
   Register Res = DT.find(ConstFP, &MF);
   if (!Res.isValid()) {
-    Res = MF.getRegInfo().createGenericVirtualRegister(LLT::scalar(32));
-    MF.getRegInfo().setRegClass(Res, &SPIRV::IDRegClass);
+    Res = MF.getRegInfo().createGenericVirtualRegister(
+        LLT::scalar(getScalarOrVectorBitWidth(SpvType)));
+    MF.getRegInfo().setRegClass(Res, &SPIRV::fIDRegClass);
     assignSPIRVTypeToVReg(SpvType, Res, MF);
     DT.add(ConstFP, &MF, Res);
 
@@ -358,11 +354,9 @@ Register SPIRVGlobalRegistry::buildConstantFP(APFloat Val,
   return Res;
 }
 
-Register SPIRVGlobalRegistry::getOrCreateBaseRegister(Constant *Val,
-                                                      MachineInstr &I,
-                                                      SPIRVType *SpvType,
-                                                      const SPIRVInstrInfo &TII,
-                                                      unsigned BitWidth) {
+Register SPIRVGlobalRegistry::getOrCreateBaseRegister(
+    Constant *Val, MachineInstr &I, SPIRVType *SpvType,
+    const SPIRVInstrInfo &TII, unsigned BitWidth, bool ZeroAsNull) {
   SPIRVType *Type = SpvType;
   if (SpvType->getOpcode() == SPIRV::OpTypeVector ||
       SpvType->getOpcode() == SPIRV::OpTypeArray) {
@@ -372,19 +366,19 @@ Register SPIRVGlobalRegistry::getOrCreateBaseRegister(Constant *Val,
   if (Type->getOpcode() == SPIRV::OpTypeFloat) {
     SPIRVType *SpvBaseType = getOrCreateSPIRVFloatType(BitWidth, I, TII);
     return getOrCreateConstFP(dyn_cast<ConstantFP>(Val)->getValue(), I,
-                              SpvBaseType, TII);
+                              SpvBaseType, TII, ZeroAsNull);
   }
   assert(Type->getOpcode() == SPIRV::OpTypeInt);
   SPIRVType *SpvBaseType = getOrCreateSPIRVIntegerType(BitWidth, I, TII);
   return getOrCreateConstInt(Val->getUniqueInteger().getSExtValue(), I,
-                             SpvBaseType, TII);
+                             SpvBaseType, TII, ZeroAsNull);
 }
 
 Register SPIRVGlobalRegistry::getOrCreateCompositeOrNull(
     Constant *Val, MachineInstr &I, SPIRVType *SpvType,
     const SPIRVInstrInfo &TII, Constant *CA, unsigned BitWidth,
     unsigned ElemCnt, bool ZeroAsNull) {
-  // Find a constant vector in DT or build a new one.
+  // Find a constant vector or array in DT or build a new one.
   Register Res = DT.find(CA, CurMF);
   // If no values are attached, the composite is null constant.
   bool IsNull = Val->isNullValue() && ZeroAsNull;
@@ -394,14 +388,15 @@ Register SPIRVGlobalRegistry::getOrCreateCompositeOrNull(
     // TODO: can moved below once sorting of types/consts/defs is implemented.
     Register SpvScalConst;
     if (!IsNull)
-      SpvScalConst = getOrCreateBaseRegister(Val, I, SpvType, TII, BitWidth);
+      SpvScalConst =
+          getOrCreateBaseRegister(Val, I, SpvType, TII, BitWidth, ZeroAsNull);
 
     // TODO: handle cases where the type is not 32bit wide
     // TODO: https://github.com/llvm/llvm-project/issues/88129
-    LLT LLTy = LLT::scalar(32);
+    LLT LLTy = LLT::scalar(64);
     Register SpvVecConst =
         CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
-    CurMF->getRegInfo().setRegClass(SpvVecConst, &SPIRV::IDRegClass);
+    CurMF->getRegInfo().setRegClass(SpvVecConst, &SPIRV::iIDRegClass);
     assignSPIRVTypeToVReg(SpvType, SpvVecConst, *CurMF);
     DT.add(CA, CurMF, SpvVecConst);
     MachineInstrBuilder MIB;
@@ -464,20 +459,28 @@ Register SPIRVGlobalRegistry::getOrCreateConstVector(APFloat Val,
                                     ZeroAsNull);
 }
 
-Register
-SPIRVGlobalRegistry::getOrCreateConsIntArray(uint64_t Val, MachineInstr &I,
-                                             SPIRVType *SpvType,
-                                             const SPIRVInstrInfo &TII) {
+Register SPIRVGlobalRegistry::getOrCreateConstIntArray(
+    uint64_t Val, size_t Num, MachineInstr &I, SPIRVType *SpvType,
+    const SPIRVInstrInfo &TII) {
   const Type *LLVMTy = getTypeForSPIRVType(SpvType);
   assert(LLVMTy->isArrayTy());
   const ArrayType *LLVMArrTy = cast<ArrayType>(LLVMTy);
   Type *LLVMBaseTy = LLVMArrTy->getElementType();
-  auto *ConstInt = ConstantInt::get(LLVMBaseTy, Val);
-  auto *ConstArr =
-      ConstantArray::get(const_cast<ArrayType *>(LLVMArrTy), {ConstInt});
+  Constant *CI = ConstantInt::get(LLVMBaseTy, Val);
   SPIRVType *SpvBaseTy = getSPIRVTypeForVReg(SpvType->getOperand(1).getReg());
   unsigned BW = getScalarOrVectorBitWidth(SpvBaseTy);
-  return getOrCreateCompositeOrNull(ConstInt, I, SpvType, TII, ConstArr, BW,
+  // The following is reasonably unique key that is better that [Val]. The naive
+  // alternative would be something along the lines of:
+  //   SmallVector<Constant *> NumCI(Num, CI);
+  //   Constant *UniqueKey =
+  //     ConstantArray::get(const_cast<ArrayType*>(LLVMArrTy), NumCI);
+  // that would be a truly unique but dangerous key, because it could lead to
+  // the creation of constants of arbitrary length (that is, the parameter of
+  // memset) which were missing in the original module.
+  Constant *UniqueKey = ConstantStruct::getAnon(
+      {PoisonValue::get(const_cast<ArrayType *>(LLVMArrTy)),
+       ConstantInt::get(LLVMBaseTy, Val), ConstantInt::get(LLVMBaseTy, Num)});
+  return getOrCreateCompositeOrNull(CI, I, SpvType, TII, UniqueKey, BW,
                                     LLVMArrTy->getNumElements());
 }
 
@@ -492,10 +495,10 @@ Register SPIRVGlobalRegistry::getOrCreateIntCompositeOrNull(
           getOrCreateSPIRVIntegerType(BitWidth, MIRBuilder);
       SpvScalConst = buildConstantInt(Val, MIRBuilder, SpvBaseType, EmitIR);
     }
-    LLT LLTy = EmitIR ? LLT::fixed_vector(ElemCnt, BitWidth) : LLT::scalar(32);
+    LLT LLTy = EmitIR ? LLT::fixed_vector(ElemCnt, BitWidth) : LLT::scalar(64);
     Register SpvVecConst =
         CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
-    CurMF->getRegInfo().setRegClass(SpvVecConst, &SPIRV::IDRegClass);
+    CurMF->getRegInfo().setRegClass(SpvVecConst, &SPIRV::iIDRegClass);
     assignSPIRVTypeToVReg(SpvType, SpvVecConst, *CurMF);
     DT.add(CA, CurMF, SpvVecConst);
     if (EmitIR) {
@@ -536,24 +539,6 @@ SPIRVGlobalRegistry::getOrCreateConsIntVector(uint64_t Val,
 }
 
 Register
-SPIRVGlobalRegistry::getOrCreateConsIntArray(uint64_t Val,
-                                             MachineIRBuilder &MIRBuilder,
-                                             SPIRVType *SpvType, bool EmitIR) {
-  const Type *LLVMTy = getTypeForSPIRVType(SpvType);
-  assert(LLVMTy->isArrayTy());
-  const ArrayType *LLVMArrTy = cast<ArrayType>(LLVMTy);
-  Type *LLVMBaseTy = LLVMArrTy->getElementType();
-  const auto ConstInt = ConstantInt::get(LLVMBaseTy, Val);
-  auto ConstArr =
-      ConstantArray::get(const_cast<ArrayType *>(LLVMArrTy), {ConstInt});
-  SPIRVType *SpvBaseTy = getSPIRVTypeForVReg(SpvType->getOperand(1).getReg());
-  unsigned BW = getScalarOrVectorBitWidth(SpvBaseTy);
-  return getOrCreateIntCompositeOrNull(Val, MIRBuilder, SpvType, EmitIR,
-                                       ConstArr, BW,
-                                       LLVMArrTy->getNumElements());
-}
-
-Register
 SPIRVGlobalRegistry::getOrCreateConstNullPtr(MachineIRBuilder &MIRBuilder,
                                              SPIRVType *SpvType) {
   const Type *LLVMTy = getTypeForSPIRVType(SpvType);
@@ -565,7 +550,7 @@ SPIRVGlobalRegistry::getOrCreateConstNullPtr(MachineIRBuilder &MIRBuilder,
   if (!Res.isValid()) {
     LLT LLTy = LLT::pointer(LLVMPtrTy->getAddressSpace(), PointerSize);
     Res = CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
-    CurMF->getRegInfo().setRegClass(Res, &SPIRV::IDRegClass);
+    CurMF->getRegInfo().setRegClass(Res, &SPIRV::iIDRegClass);
     assignSPIRVTypeToVReg(SpvType, Res, *CurMF);
     MIRBuilder.buildInstr(SPIRV::OpConstantNull)
         .addDef(Res)
@@ -588,7 +573,7 @@ Register SPIRVGlobalRegistry::buildConstantSampler(
   auto Sampler =
       ResReg.isValid()
           ? ResReg
-          : MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::IDRegClass);
+          : MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::iIDRegClass);
   auto Res = MIRBuilder.buildInstr(SPIRV::OpConstantSampler)
                  .addDef(Sampler)
                  .addUse(getSPIRVTypeID(SampTy))
@@ -651,7 +636,6 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
 
   // Set to Reg the same type as ResVReg has.
   auto MRI = MIRBuilder.getMRI();
-  assert(MRI->getType(ResVReg).isPointer() && "Pointer type is expected");
   if (Reg != ResVReg) {
     LLT RegLLTy =
         LLT::pointer(MRI->getType(ResVReg).getAddressSpace(), getPointerSize());
@@ -691,6 +675,13 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
     buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::BuiltIn,
                     {static_cast<uint32_t>(BuiltInId)});
 
+  // If it's a global variable with "spirv.Decorations" metadata node
+  // recognize it as a SPIR-V friendly LLVM IR and parse "spirv.Decorations"
+  // arguments.
+  MDNode *GVarMD = nullptr;
+  if (GVar && (GVarMD = GVar->getMetadata("spirv.Decorations")) != nullptr)
+    buildOpSpirvDecorations(Reg, MIRBuilder, GVarMD);
+
   return Reg;
 }
 
@@ -700,8 +691,9 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeArray(uint32_t NumElems,
                                                bool EmitIR) {
   assert((ElemType->getOpcode() != SPIRV::OpTypeVoid) &&
          "Invalid array element type");
+  SPIRVType *SpvTypeInt32 = getOrCreateSPIRVIntegerType(32, MIRBuilder);
   Register NumElementsVReg =
-      buildConstantInt(NumElems, MIRBuilder, nullptr, EmitIR);
+      buildConstantInt(NumElems, MIRBuilder, SpvTypeInt32, EmitIR);
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeArray)
                  .addDef(createTypeVReg(MIRBuilder))
                  .addUse(getSPIRVTypeID(ElemType))
@@ -725,8 +717,7 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeStruct(const StructType *Ty,
                                                 bool EmitIR) {
   SmallVector<Register, 4> FieldTypes;
   for (const auto &Elem : Ty->elements()) {
-    SPIRVType *ElemTy =
-        findSPIRVType(toTypedPointer(Elem, Ty->getContext()), MIRBuilder);
+    SPIRVType *ElemTy = findSPIRVType(toTypedPointer(Elem), MIRBuilder);
     assert(ElemTy && ElemTy->getOpcode() != SPIRV::OpTypeVoid &&
            "Invalid struct element type");
     FieldTypes.push_back(getSPIRVTypeID(ElemTy));
@@ -793,6 +784,7 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeFunctionWithArgs(
 SPIRVType *SPIRVGlobalRegistry::findSPIRVType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccQual, bool EmitIR) {
+  Ty = adjustIntTypeByWidth(Ty);
   Register Reg = DT.find(Ty, &MIRBuilder.getMF());
   if (Reg.isValid())
     return getSPIRVTypeForVReg(Reg);
@@ -806,6 +798,27 @@ Register SPIRVGlobalRegistry::getSPIRVTypeID(const SPIRVType *SpirvType) const {
   if (SpirvType->getOpcode() == SPIRV::OpTypeForwardPointer)
     return SpirvType->uses().begin()->getReg();
   return SpirvType->defs().begin()->getReg();
+}
+
+// We need to use a new LLVM integer type if there is a mismatch between
+// number of bits in LLVM and SPIRV integer types to let DuplicateTracker
+// ensure uniqueness of a SPIRV type by the corresponding LLVM type. Without
+// such an adjustment SPIRVGlobalRegistry::getOpTypeInt() could create the
+// same "OpTypeInt 8" type for a series of LLVM integer types with number of
+// bits less than 8. This would lead to duplicate type definitions
+// eventually due to the method that DuplicateTracker utilizes to reason
+// about uniqueness of type records.
+const Type *SPIRVGlobalRegistry::adjustIntTypeByWidth(const Type *Ty) const {
+  if (auto IType = dyn_cast<IntegerType>(Ty)) {
+    unsigned SrcBitWidth = IType->getBitWidth();
+    if (SrcBitWidth > 1) {
+      unsigned BitWidth = adjustOpTypeIntWidth(SrcBitWidth);
+      // Maybe change source LLVM type to keep DuplicateTracker consistent.
+      if (SrcBitWidth != BitWidth)
+        Ty = IntegerType::get(Ty->getContext(), BitWidth);
+    }
+  }
+  return Ty;
 }
 
 SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
@@ -898,7 +911,7 @@ SPIRVType *SPIRVGlobalRegistry::restOfCreateSPIRVType(
   SPIRVType *SpirvType = createSPIRVType(Ty, MIRBuilder, AccessQual, EmitIR);
   TypesInProcessing.erase(Ty);
   VRegToTypeMap[&MIRBuilder.getMF()][getSPIRVTypeID(SpirvType)] = SpirvType;
-  SPIRVToLLVMType[SpirvType] = Ty;
+  SPIRVToLLVMType[SpirvType] = unifyPtrType(Ty);
   Register Reg = DT.find(Ty, &MIRBuilder.getMF());
   // Do not add OpTypeForwardPointer to DT, a corresponding normal pointer type
   // will be added later. For special types it is already added to DT.
@@ -935,15 +948,17 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccessQual, bool EmitIR) {
   Register Reg;
-  if (!isPointerTy(Ty))
+  if (!isPointerTy(Ty)) {
+    Ty = adjustIntTypeByWidth(Ty);
     Reg = DT.find(Ty, &MIRBuilder.getMF());
-  else if (isTypedPointerTy(Ty))
+  } else if (isTypedPointerTy(Ty)) {
     Reg = DT.find(cast<TypedPointerType>(Ty)->getElementType(),
                   getPointerAddressSpace(Ty), &MIRBuilder.getMF());
-  else
+  } else {
     Reg =
         DT.find(Type::getInt8Ty(MIRBuilder.getMF().getFunction().getContext()),
                 getPointerAddressSpace(Ty), &MIRBuilder.getMF());
+  }
 
   if (Reg.isValid() && !isSpecialOpaqueType(Ty))
     return getSPIRVTypeForVReg(Reg);
@@ -1040,12 +1055,14 @@ bool SPIRVGlobalRegistry::isScalarOrVectorSigned(const SPIRVType *Type) const {
   return IntType && IntType->getOperand(2).getImm() != 0;
 }
 
+SPIRVType *SPIRVGlobalRegistry::getPointeeType(SPIRVType *PtrType) {
+  return PtrType && PtrType->getOpcode() == SPIRV::OpTypePointer
+             ? getSPIRVTypeForVReg(PtrType->getOperand(2).getReg())
+             : nullptr;
+}
+
 unsigned SPIRVGlobalRegistry::getPointeeTypeOp(Register PtrReg) {
-  SPIRVType *PtrType = getSPIRVTypeForVReg(PtrReg);
-  SPIRVType *ElemType =
-      PtrType && PtrType->getOpcode() == SPIRV::OpTypePointer
-          ? getSPIRVTypeForVReg(PtrType->getOperand(2).getReg())
-          : nullptr;
+  SPIRVType *ElemType = getPointeeType(getSPIRVTypeForVReg(PtrReg));
   return ElemType ? ElemType->getOpcode() : 0;
 }
 
@@ -1082,9 +1099,9 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeImage(
     uint32_t Depth, uint32_t Arrayed, uint32_t Multisampled, uint32_t Sampled,
     SPIRV::ImageFormat::ImageFormat ImageFormat,
     SPIRV::AccessQualifier::AccessQualifier AccessQual) {
-  SPIRV::ImageTypeDescriptor TD(SPIRVToLLVMType.lookup(SampledType), Dim, Depth,
-                                Arrayed, Multisampled, Sampled, ImageFormat,
-                                AccessQual);
+  auto TD = SPIRV::make_descr_image(SPIRVToLLVMType.lookup(SampledType), Dim,
+                                    Depth, Arrayed, Multisampled, Sampled,
+                                    ImageFormat, AccessQual);
   if (auto *Res = checkSpecialInstr(TD, MIRBuilder))
     return Res;
   Register ResVReg = createTypeVReg(MIRBuilder);
@@ -1103,7 +1120,7 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeImage(
 
 SPIRVType *
 SPIRVGlobalRegistry::getOrCreateOpTypeSampler(MachineIRBuilder &MIRBuilder) {
-  SPIRV::SamplerTypeDescriptor TD;
+  auto TD = SPIRV::make_descr_sampler();
   if (auto *Res = checkSpecialInstr(TD, MIRBuilder))
     return Res;
   Register ResVReg = createTypeVReg(MIRBuilder);
@@ -1114,7 +1131,7 @@ SPIRVGlobalRegistry::getOrCreateOpTypeSampler(MachineIRBuilder &MIRBuilder) {
 SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypePipe(
     MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccessQual) {
-  SPIRV::PipeTypeDescriptor TD(AccessQual);
+  auto TD = SPIRV::make_descr_pipe(AccessQual);
   if (auto *Res = checkSpecialInstr(TD, MIRBuilder))
     return Res;
   Register ResVReg = createTypeVReg(MIRBuilder);
@@ -1126,7 +1143,7 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypePipe(
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeDeviceEvent(
     MachineIRBuilder &MIRBuilder) {
-  SPIRV::DeviceEventTypeDescriptor TD;
+  auto TD = SPIRV::make_descr_event();
   if (auto *Res = checkSpecialInstr(TD, MIRBuilder))
     return Res;
   Register ResVReg = createTypeVReg(MIRBuilder);
@@ -1136,7 +1153,7 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeDeviceEvent(
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeSampledImage(
     SPIRVType *ImageType, MachineIRBuilder &MIRBuilder) {
-  SPIRV::SampledImageTypeDescriptor TD(
+  auto TD = SPIRV::make_descr_sampled_image(
       SPIRVToLLVMType.lookup(MIRBuilder.getMF().getRegInfo().getVRegDef(
           ImageType->getOperand(1).getReg())),
       ImageType);
@@ -1147,6 +1164,27 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeSampledImage(
   return MIRBuilder.buildInstr(SPIRV::OpTypeSampledImage)
       .addDef(ResVReg)
       .addUse(getSPIRVTypeID(ImageType));
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeCoopMatr(
+    MachineIRBuilder &MIRBuilder, const TargetExtType *ExtensionType,
+    const SPIRVType *ElemType, uint32_t Scope, uint32_t Rows, uint32_t Columns,
+    uint32_t Use) {
+  Register ResVReg = DT.find(ExtensionType, &MIRBuilder.getMF());
+  if (ResVReg.isValid())
+    return MIRBuilder.getMF().getRegInfo().getUniqueVRegDef(ResVReg);
+  ResVReg = createTypeVReg(MIRBuilder);
+  SPIRVType *SpvTypeInt32 = getOrCreateSPIRVIntegerType(32, MIRBuilder);
+  SPIRVType *SpirvTy =
+      MIRBuilder.buildInstr(SPIRV::OpTypeCooperativeMatrixKHR)
+          .addDef(ResVReg)
+          .addUse(getSPIRVTypeID(ElemType))
+          .addUse(buildConstantInt(Scope, MIRBuilder, SpvTypeInt32, true))
+          .addUse(buildConstantInt(Rows, MIRBuilder, SpvTypeInt32, true))
+          .addUse(buildConstantInt(Columns, MIRBuilder, SpvTypeInt32, true))
+          .addUse(buildConstantInt(Use, MIRBuilder, SpvTypeInt32, true));
+  DT.add(ExtensionType, &MIRBuilder.getMF(), ResVReg);
+  return SpirvTy;
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeByOpcode(
@@ -1228,7 +1266,7 @@ SPIRVType *SPIRVGlobalRegistry::finishCreatingSPIRVType(const Type *LLVMTy,
                                                         SPIRVType *SpirvType) {
   assert(CurMF == SpirvType->getMF());
   VRegToTypeMap[CurMF][getSPIRVTypeID(SpirvType)] = SpirvType;
-  SPIRVToLLVMType[SpirvType] = LLVMTy;
+  SPIRVToLLVMType[SpirvType] = unifyPtrType(LLVMTy);
   return SpirvType;
 }
 
@@ -1251,9 +1289,15 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVType(unsigned BitWidth,
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVIntegerType(
     unsigned BitWidth, MachineInstr &I, const SPIRVInstrInfo &TII) {
+  // Maybe adjust bit width to keep DuplicateTracker consistent. Without
+  // such an adjustment SPIRVGlobalRegistry::getOpTypeInt() could create, for
+  // example, the same "OpTypeInt 8" type for a series of LLVM integer types
+  // with number of bits less than 8, causing duplicate type definitions.
+  BitWidth = adjustOpTypeIntWidth(BitWidth);
   Type *LLVMTy = IntegerType::get(CurMF->getFunction().getContext(), BitWidth);
   return getOrCreateSPIRVType(BitWidth, I, TII, SPIRV::OpTypeInt, LLVMTy);
 }
+
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVFloatType(
     unsigned BitWidth, MachineInstr &I, const SPIRVInstrInfo &TII) {
   LLVMContext &Ctx = CurMF->getFunction().getContext();
@@ -1329,8 +1373,8 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVArrayType(
   if (Reg.isValid())
     return getSPIRVTypeForVReg(Reg);
   MachineBasicBlock &BB = *I.getParent();
-  SPIRVType *SpirvType = getOrCreateSPIRVIntegerType(32, I, TII);
-  Register Len = getOrCreateConstInt(NumElements, I, SpirvType, TII);
+  SPIRVType *SpvTypeInt32 = getOrCreateSPIRVIntegerType(32, I, TII);
+  Register Len = getOrCreateConstInt(NumElements, I, SpvTypeInt32, TII);
   auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpTypeArray))
                  .addDef(createTypeVReg(CurMF->getRegInfo()))
                  .addUse(getSPIRVTypeID(BaseType))
@@ -1379,9 +1423,9 @@ Register SPIRVGlobalRegistry::getOrCreateUndef(MachineInstr &I,
   Register Res = DT.find(UV, CurMF);
   if (Res.isValid())
     return Res;
-  LLT LLTy = LLT::scalar(32);
+  LLT LLTy = LLT::scalar(64);
   Res = CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
-  CurMF->getRegInfo().setRegClass(Res, &SPIRV::IDRegClass);
+  CurMF->getRegInfo().setRegClass(Res, &SPIRV::iIDRegClass);
   assignSPIRVTypeToVReg(SpvType, Res, *CurMF);
   DT.add(UV, CurMF, Res);
 
@@ -1393,4 +1437,62 @@ Register SPIRVGlobalRegistry::getOrCreateUndef(MachineInstr &I,
   constrainSelectedInstRegOperands(*MIB, *ST.getInstrInfo(),
                                    *ST.getRegisterInfo(), *ST.getRegBankInfo());
   return Res;
+}
+
+const TargetRegisterClass *
+SPIRVGlobalRegistry::getRegClass(SPIRVType *SpvType) const {
+  unsigned Opcode = SpvType->getOpcode();
+  switch (Opcode) {
+  case SPIRV::OpTypeFloat:
+    return &SPIRV::fIDRegClass;
+  case SPIRV::OpTypePointer:
+    return &SPIRV::pIDRegClass;
+  case SPIRV::OpTypeVector: {
+    SPIRVType *ElemType = getSPIRVTypeForVReg(SpvType->getOperand(1).getReg());
+    unsigned ElemOpcode = ElemType ? ElemType->getOpcode() : 0;
+    if (ElemOpcode == SPIRV::OpTypeFloat)
+      return &SPIRV::vfIDRegClass;
+    if (ElemOpcode == SPIRV::OpTypePointer)
+      return &SPIRV::vpIDRegClass;
+    return &SPIRV::vIDRegClass;
+  }
+  }
+  return &SPIRV::iIDRegClass;
+}
+
+inline unsigned getAS(SPIRVType *SpvType) {
+  return storageClassToAddressSpace(
+      static_cast<SPIRV::StorageClass::StorageClass>(
+          SpvType->getOperand(1).getImm()));
+}
+
+LLT SPIRVGlobalRegistry::getRegType(SPIRVType *SpvType) const {
+  unsigned Opcode = SpvType ? SpvType->getOpcode() : 0;
+  switch (Opcode) {
+  case SPIRV::OpTypeInt:
+  case SPIRV::OpTypeFloat:
+  case SPIRV::OpTypeBool:
+    return LLT::scalar(getScalarOrVectorBitWidth(SpvType));
+  case SPIRV::OpTypePointer:
+    return LLT::pointer(getAS(SpvType), getPointerSize());
+  case SPIRV::OpTypeVector: {
+    SPIRVType *ElemType = getSPIRVTypeForVReg(SpvType->getOperand(1).getReg());
+    LLT ET;
+    switch (ElemType ? ElemType->getOpcode() : 0) {
+    case SPIRV::OpTypePointer:
+      ET = LLT::pointer(getAS(ElemType), getPointerSize());
+      break;
+    case SPIRV::OpTypeInt:
+    case SPIRV::OpTypeFloat:
+    case SPIRV::OpTypeBool:
+      ET = LLT::scalar(getScalarOrVectorBitWidth(ElemType));
+      break;
+    default:
+      ET = LLT::scalar(64);
+    }
+    return LLT::fixed_vector(
+        static_cast<unsigned>(SpvType->getOperand(2).getImm()), ET);
+  }
+  }
+  return LLT::scalar(64);
 }

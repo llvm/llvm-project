@@ -101,7 +101,7 @@ class ARMTTIImpl : public BasicTTIImplBase<ARMTTIImpl> {
 
 public:
   explicit ARMTTIImpl(const ARMBaseTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
   bool areInlineCompatible(const Function *Caller,
@@ -303,7 +303,7 @@ public:
   /// If the AM is supported, the return value must be >= 0.
   /// If the AM is not supported, the return value must be negative.
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
-                                       int64_t BaseOffset, bool HasBaseReg,
+                                       StackOffset BaseOffset, bool HasBaseReg,
                                        int64_t Scale, unsigned AddrSpace) const;
 
   bool maybeLoweredToCall(Instruction &I);

@@ -84,6 +84,8 @@ protected:
   // combining and will be updated to reflect any changes.
   LoopInfo *LI;
 
+  ReversePostOrderTraversal<BasicBlock *> &RPOT;
+
   bool MadeIRChange = false;
 
   /// Edges that are known to never be taken.
@@ -98,12 +100,13 @@ public:
                TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
                DominatorTree &DT, OptimizationRemarkEmitter &ORE,
                BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
-               ProfileSummaryInfo *PSI, const DataLayout &DL, LoopInfo *LI)
+               ProfileSummaryInfo *PSI, const DataLayout &DL, LoopInfo *LI,
+               ReversePostOrderTraversal<BasicBlock *> &RPOT)
       : TTI(TTI), Builder(Builder), Worklist(Worklist),
         MinimizeSize(MinimizeSize), AA(AA), AC(AC), TLI(TLI), DT(DT), DL(DL),
         SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
            /*CanUseUndef*/ true, &DC),
-        ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), LI(LI) {}
+        ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), LI(LI), RPOT(RPOT) {}
 
   virtual ~InstCombiner() = default;
 
@@ -132,21 +135,18 @@ public:
   /// This routine maps IR values to various complexity ranks:
   ///   0 -> undef
   ///   1 -> Constants
-  ///   2 -> Other non-instructions
-  ///   3 -> Arguments
-  ///   4 -> Cast and (f)neg/not instructions
-  ///   5 -> Other instructions
+  ///   2 -> Cast and (f)neg/not instructions
+  ///   3 -> Other instructions and arguments
   static unsigned getComplexity(Value *V) {
-    if (isa<Instruction>(V)) {
-      if (isa<CastInst>(V) || match(V, m_Neg(PatternMatch::m_Value())) ||
-          match(V, m_Not(PatternMatch::m_Value())) ||
-          match(V, m_FNeg(PatternMatch::m_Value())))
-        return 4;
-      return 5;
-    }
-    if (isa<Argument>(V))
-      return 3;
-    return isa<Constant>(V) ? (isa<UndefValue>(V) ? 0 : 1) : 2;
+    if (isa<Constant>(V))
+      return isa<UndefValue>(V) ? 0 : 1;
+
+    if (isa<CastInst>(V) || match(V, m_Neg(PatternMatch::m_Value())) ||
+        match(V, m_Not(PatternMatch::m_Value())) ||
+        match(V, m_FNeg(PatternMatch::m_Value())))
+      return 2;
+
+    return 3;
   }
 
   /// Predicate canonicalization reduces the number of patterns that need to be
@@ -504,7 +504,14 @@ public:
 
   virtual bool SimplifyDemandedBits(Instruction *I, unsigned OpNo,
                                     const APInt &DemandedMask, KnownBits &Known,
-                                    unsigned Depth = 0) = 0;
+                                    unsigned Depth, const SimplifyQuery &Q) = 0;
+
+  bool SimplifyDemandedBits(Instruction *I, unsigned OpNo,
+                            const APInt &DemandedMask, KnownBits &Known) {
+    return SimplifyDemandedBits(I, OpNo, DemandedMask, Known,
+                                /*Depth=*/0, SQ.getWithInstruction(I));
+  }
+
   virtual Value *
   SimplifyDemandedVectorElts(Value *V, APInt DemandedElts, APInt &UndefElts,
                              unsigned Depth = 0,

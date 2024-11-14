@@ -7,7 +7,7 @@ namespace clang {
 namespace format {
 namespace {
 
-class SortImportsTestJava : public ::testing::Test {
+class SortImportsTestJava : public testing::Test {
 protected:
   std::vector<tooling::Range> GetCodeRange(StringRef Code) {
     return std::vector<tooling::Range>(1, tooling::Range(0, Code.size()));
