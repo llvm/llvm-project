@@ -21,6 +21,7 @@
 #include "CodeGenPGO.h"
 #include "EHScopeStack.h"
 #include "VarBypassDetector.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/CurrentSourceLocExprScope.h"
 #include "clang/AST/ExprCXX.h"
@@ -614,6 +615,10 @@ public:
 
   /// True if the current statement has noconvergent attribute.
   bool InNoConvergentAttributedStmt = false;
+
+  /// HLSL Branch attribute.
+  HLSLBranchHintAttr::Spelling HLSLBranchHintAttributedSpelling =
+      HLSLBranchHintAttr::SpellingNotCalculated;
 
   // The CallExpr within the current statement that the musttail attribute
   // applies to.  nullptr if there is no 'musttail' on the current statement.
@@ -1611,6 +1616,8 @@ private:
 
   /// Bitmap used by MC/DC to track condition outcomes of a boolean expression.
   Address MCDCCondBitmapAddr = Address::invalid();
+
+  llvm::MDNode *createControlFlowHint(HLSLBranchHintAttr::Spelling S) const;
 
   /// Calculate branch weights appropriate for PGO data
   llvm::MDNode *createProfileWeights(uint64_t TrueCount,

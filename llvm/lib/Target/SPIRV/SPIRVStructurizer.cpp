@@ -14,6 +14,7 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
+#include "llvm-c/Core.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -25,6 +26,8 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
@@ -97,7 +100,7 @@ BasicBlock *getDesignatedMergeBlock(Instruction *I) {
       II->getIntrinsicID() != Intrinsic::spv_selection_merge)
     return nullptr;
 
-  BlockAddress *BA = cast<BlockAddress>(II->getOperand(0));
+  BlockAddress *BA = cast<BlockAddress>(II->getOperand(1));
   return BA->getBasicBlock();
 }
 
@@ -646,8 +649,13 @@ class SPIRVStructurizer : public FunctionPass {
       Builder.SetInsertPoint(Header->getTerminator());
 
       auto MergeAddress = BlockAddress::get(BB.getParent(), &BB);
-      SmallVector<Value *, 1> Args = {MergeAddress};
-      // [jderezende] TODO: Pass metadata from Header->getTerminator() to modify the intrinsic
+
+      MDNode *BranchMdNode = getDxBranchHint(*Header->getTerminator());
+      Value *MDNodeValue =
+          MetadataAsValue::get(Builder.getContext(), BranchMdNode);
+
+      SmallVector<Value *, 2> Args = {MDNodeValue, MergeAddress};
+
       Builder.CreateIntrinsic(Intrinsic::spv_selection_merge, {}, {Args});
 
       Modified = true;

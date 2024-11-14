@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVMetadata.h"
+#include "llvm/IR/Metadata.h"
 
 using namespace llvm;
 
@@ -81,5 +82,4 @@ MDString *getOCLKernelArgTypeQual(const Function &F, unsigned ArgIdx) {
       "Kernel attributes are attached/belong only to OpenCL kernel functions");
   return getOCLKernelArgAttribute(F, ArgIdx, "kernel_arg_type_qual");
 }
-
 } // namespace llvm

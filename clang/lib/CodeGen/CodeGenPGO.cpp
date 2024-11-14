@@ -13,10 +13,14 @@
 #include "CodeGenPGO.h"
 #include "CodeGenFunction.h"
 #include "CoverageMappingGen.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MD5.h"
@@ -1448,6 +1452,19 @@ static uint32_t scaleBranchWeight(uint64_t Weight, uint64_t Scale) {
   uint64_t Scaled = Weight / Scale + 1;
   assert(Scaled <= UINT32_MAX && "overflow 32-bits");
   return Scaled;
+}
+
+llvm::MDNode *
+CodeGenFunction::createControlFlowHint(HLSLBranchHintAttr::Spelling S) const {
+  llvm::MDBuilder MDHelper(CGM.getLLVMContext());
+
+  SmallVector<llvm::Metadata *, 2> Vals(llvm::ArrayRef<llvm::Metadata *>{
+      MDHelper.createString("dx.controlflow.hints"),
+      S == HLSLBranchHintAttr::Spelling::Microsoft_branch
+          ? MDHelper.createConstant(llvm::ConstantInt::get(Int32Ty, 1))
+          : MDHelper.createConstant(llvm::ConstantInt::get(Int32Ty, 2))});
+
+  return llvm::MDNode::get(CGM.getLLVMContext(), Vals);
 }
 
 llvm::MDNode *CodeGenFunction::createProfileWeights(uint64_t TrueCount,
