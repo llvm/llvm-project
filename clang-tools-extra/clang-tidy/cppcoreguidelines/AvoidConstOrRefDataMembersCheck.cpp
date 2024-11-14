@@ -13,13 +13,8 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
-namespace {
 
-AST_MATCHER(FieldDecl, isMemberOfLambda) {
-  return Node.getParent()->isLambda();
-}
-
-bool hasCopyConstructor(CXXRecordDecl const &Node) {
+static bool hasCopyConstructor(CXXRecordDecl const &Node) {
   if (Node.needsOverloadResolutionForCopyConstructor() &&
       Node.needsImplicitCopyConstructor()) {
     // unresolved
@@ -38,7 +33,7 @@ bool hasCopyConstructor(CXXRecordDecl const &Node) {
   return false;
 }
 
-bool hasMoveConstructor(CXXRecordDecl const &Node) {
+static bool hasMoveConstructor(CXXRecordDecl const &Node) {
   if (Node.needsOverloadResolutionForMoveConstructor() &&
       Node.needsImplicitMoveConstructor()) {
     // unresolved
@@ -57,7 +52,7 @@ bool hasMoveConstructor(CXXRecordDecl const &Node) {
   return false;
 }
 
-bool hasCopyAssignment(CXXRecordDecl const &Node) {
+static bool hasCopyAssignment(CXXRecordDecl const &Node) {
   if (Node.needsOverloadResolutionForCopyAssignment() &&
       Node.needsImplicitCopyAssignment()) {
     // unresolved
@@ -76,7 +71,7 @@ bool hasCopyAssignment(CXXRecordDecl const &Node) {
   return false;
 }
 
-bool hasMoveAssignment(CXXRecordDecl const &Node) {
+static bool hasMoveAssignment(CXXRecordDecl const &Node) {
   if (Node.needsOverloadResolutionForMoveAssignment() &&
       Node.needsImplicitMoveAssignment()) {
     // unresolved
@@ -93,6 +88,12 @@ bool hasMoveAssignment(CXXRecordDecl const &Node) {
     if (Method->isMoveAssignmentOperator())
       return !Method->isDeleted();
   return false;
+}
+
+namespace {
+
+AST_MATCHER(FieldDecl, isMemberOfLambda) {
+  return Node.getParent()->isLambda();
 }
 
 AST_MATCHER(CXXRecordDecl, isCopyableOrMovable) {
