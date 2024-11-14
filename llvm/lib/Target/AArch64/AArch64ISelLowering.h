@@ -514,12 +514,6 @@ enum NodeType : unsigned {
   STP,
   STILP,
   STNP,
-
-  // Memory Operations
-  MOPS_MEMSET,
-  MOPS_MEMSET_TAGGING,
-  MOPS_MEMCOPY,
-  MOPS_MEMMOVE,
 };
 
 } // end namespace AArch64ISD
