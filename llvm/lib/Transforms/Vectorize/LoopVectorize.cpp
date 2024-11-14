@@ -7397,18 +7397,18 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       if (Instruction *UI = GetInstructionForCost(&R))
         SeenInstrs.insert(UI);
       // VPExtendedReductionRecipe contains a folded extend instruction.
-      if (auto *ExtendedRed = dyn_cast<VPExtendedReductionRecipe>(&R))
-        SeenInstrs.insert(ExtendedRed->getExtInstr());
-      // VPMulAccRecipe constians a mul and otional extend instructions.
-      else if (auto *MulAcc = dyn_cast<VPMulAccRecipe>(&R)) {
-        SeenInstrs.insert(MulAcc->getMulInstr());
-        if (MulAcc->isExtended()) {
-          SeenInstrs.insert(MulAcc->getExt0Instr());
-          SeenInstrs.insert(MulAcc->getExt1Instr());
-          if (auto *Ext = MulAcc->getExtInstr())
-            SeenInstrs.insert(Ext);
-        }
-      }
+      // if (auto *ExtendedRed = dyn_cast<VPExtendedReductionRecipe>(&R))
+      //   SeenInstrs.insert(ExtendedRed->getExtInstr());
+      // // VPMulAccRecipe constians a mul and otional extend instructions.
+      // else if (auto *MulAcc = dyn_cast<VPMulAccRecipe>(&R)) {
+      //   SeenInstrs.insert(MulAcc->getMulInstr());
+      //   if (MulAcc->isExtended()) {
+      //     SeenInstrs.insert(MulAcc->getExt0Instr());
+      //     SeenInstrs.insert(MulAcc->getExt1Instr());
+      //     if (auto *Ext = MulAcc->getExtInstr())
+      //       SeenInstrs.insert(Ext);
+      //   }
+      // }
     }
   }
 
