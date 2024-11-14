@@ -197,11 +197,6 @@ def : Pat<(zext_is_sext GPR:$src), (ADDIW GPR:$src, 0)>;
 
 let Predicates = [IsRV64, NotHasStdExtZba] in {
 def : Pat<(zext GPR:$src), (SRLI (i64 (SLLI GPR:$src, 32)), 32)>;
-
-// If we're shifting a 32-bit zero extended value left by 0-31 bits, use 2
-// shifts instead of 3. This can occur when unsigned is used to index an array.
-def : Pat<(shl (zext GPR:$rs), uimm5:$shamt),
-          (SRLI (i64 (SLLI GPR:$rs, 32)), (ImmSubFrom32 uimm5:$shamt))>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -209,10 +204,5 @@ def : Pat<(shl (zext GPR:$rs), uimm5:$shamt),
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZba, IsRV64] in {
-def : Pat<(shl (i64 (zext GPR:$rs1)), uimm5:$shamt),
-          (SLLI_UW GPR:$rs1, uimm5:$shamt)>;
-
-def : Pat<(i64 (add_like_non_imm12 (zext GPR:$rs1), GPR:$rs2)),
-          (ADD_UW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(zext GPR:$src), (ADD_UW GPR:$src, (XLenVT X0))>;
 }
