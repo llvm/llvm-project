@@ -1,20 +1,18 @@
-; RUN: llc %s -mtriple=dxil-pc-shadermodel6.3-library --filetype=asm -o - | FileCheck %s
+; RUN: opt -S -passes='dxil-data-scalarization,scalarizer<load-store>,dxil-op-lower' -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
 
 ; Make sure we can store groupshared, static vectors and arrays of vectors
 
 @"arrayofVecData" = local_unnamed_addr addrspace(3) global [2 x <3 x float>] zeroinitializer, align 16
 @"vecData" = external addrspace(3) global <4 x i32>, align 4
 
-
-; CHECK: @arrayofVecData.scalarized.1dim = local_unnamed_addr addrspace(3) global [6 x float] zeroinitializer, align 16
+; CHECK: @arrayofVecData.scalarized = local_unnamed_addr addrspace(3) global [2 x [3 x float]] zeroinitializer, align 16
 ; CHECK: @vecData.scalarized = external addrspace(3) global [4 x i32], align 4
 ; CHECK-NOT: @arrayofVecData
-; CHECK-NOT: @arrayofVecData.scalarized
 ; CHECK-NOT: @vecData
 
 ; CHECK-LABEL: store_array_vec_test
 define void @store_array_vec_test () local_unnamed_addr #0 {
-    ; CHECK-COUNT-6: store float {{1|2|3|4|6}}.000000e+00, ptr addrspace(3) {{(.*@arrayofVecData.scalarized.1dim.*|%.*)}}, align {{4|8|16}}
+    ; CHECK-COUNT-6: store float {{1|2|3|4|6}}.000000e+00, ptr addrspace(3) {{(.*@arrayofVecData.scalarized.*|%.*)}}, align {{4|8|16}}
     ; CHECK-NEXT: ret void
     store <3 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>, ptr addrspace(3) @"arrayofVecData", align 16 
     store <3 x float> <float 2.000000e+00, float 4.000000e+00, float 6.000000e+00>, ptr addrspace(3)   getelementptr inbounds (i8, ptr addrspace(3) @"arrayofVecData", i32 16), align 16 
