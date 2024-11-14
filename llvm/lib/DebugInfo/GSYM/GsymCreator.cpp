@@ -385,8 +385,8 @@ uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
   return StrOff;
 }
 
-StringRef GsymCreator::getString(uint32_t offset) {
-  auto I = StringOffsetMap.find(offset);
+StringRef GsymCreator::getString(uint32_t Offset) {
+  auto I = StringOffsetMap.find(Offset);
   assert(I != StringOffsetMap.end() &&
          "GsymCreator::getString expects a valid offset as parameter.");
   return I->second.val();

@@ -71,10 +71,10 @@ Expected<CallSiteInfo> CallSiteInfo::decode(DataExtractor &Data,
 
 Error CallSiteInfoCollection::encode(FileWriter &O) const {
   O.writeU32(CallSites.size());
-  for (const CallSiteInfo &CSI : CallSites) {
+  for (const CallSiteInfo &CSI : CallSites)
     if (Error Err = CSI.encode(O))
       return Err;
-  }
+
   return Error::success();
 }
 
@@ -175,23 +175,17 @@ Error CallSiteInfoLoader::loadYAML(std::vector<FunctionInfo> &Funcs,
 
 StringMap<FunctionInfo *>
 CallSiteInfoLoader::buildFunctionMap(std::vector<FunctionInfo> &Funcs) {
+  // If the function name is already in the map, don't update it. This way we
+  // preferentially use the first encountered function. Since symbols are
+  // loaded from dSYM first, we end up preferring keeping track of symbols
+  // from dSYM rather than from the symbol table - which is what we want to
+  // do.
   StringMap<FunctionInfo *> FuncMap;
-  auto insertFunc = [&](auto &Function) {
-    StringRef FuncName = GCreator.getString(Function.Name);
-    // If the function name is already in the map, don't update it. This way we
-    // preferentially use the first encountered function. Since symbols are
-    // loaded from dSYM first, we end up preferring keeping track of symbols
-    // from dSYM rather than from the symbol table - which is what we want to
-    // do.
-    if (FuncMap.count(FuncName))
-      return;
-    FuncMap[FuncName] = &Function;
-  };
   for (auto &Func : Funcs) {
-    insertFunc(Func);
-    if (Func.MergedFunctions.has_value())
-      for (auto &MFunc : Func.MergedFunctions->MergedFunctions)
-        insertFunc(MFunc);
+    FuncMap.try_emplace(GCreator.getString(Func.Name), &Func);
+    if (auto MFuncs = Func.MergedFunctions)
+      for (auto &MFunc : MFuncs->MergedFunctions)
+        FuncMap.try_emplace(GCreator.getString(MFunc.Name), &MFunc);
   }
   return FuncMap;
 }
