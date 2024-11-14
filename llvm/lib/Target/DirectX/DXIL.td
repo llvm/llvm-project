@@ -776,7 +776,6 @@ def Discard : DXILOp<82, discard> {
   let arguments = [Int1Ty];
   let result = VoidTy;
   let stages = [Stages<DXIL1_0, [pixel]>];
-  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
 def ThreadId :  DXILOp<93, threadId> {
