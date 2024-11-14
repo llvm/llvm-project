@@ -163,6 +163,7 @@ def OMPC_DistSchedule : Clause<"dist_schedule"> {
 }
 def OMPC_Doacross : Clause<"doacross"> {
   let clangClass = "OMPDoacrossClause";
+  let flangClass = "OmpDoacrossClause";
 }
 def OMPC_DynamicAllocators : Clause<"dynamic_allocators"> {
   let clangClass = "OMPDynamicAllocatorsClause";
@@ -624,8 +625,8 @@ def OMP_Critical : Directive<"critical"> {
   let category = CA_Executable;
 }
 def OMP_DeclareMapper : Directive<"declare mapper"> {
-  let allowedClauses = [
-    VersionedClause<OMPC_Map>,
+  let requiredClauses = [
+    VersionedClause<OMPC_Map, 45>,
   ];
   let association = AS_None;
   let category = CA_Declarative;

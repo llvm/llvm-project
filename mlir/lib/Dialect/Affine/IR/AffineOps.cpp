@@ -4556,6 +4556,26 @@ LogicalResult AffineDelinearizeIndexOp::verify() {
   return success();
 }
 
+LogicalResult
+AffineDelinearizeIndexOp::fold(FoldAdaptor adaptor,
+                               SmallVectorImpl<OpFoldResult> &result) {
+  if (adaptor.getLinearIndex() == nullptr)
+    return failure();
+
+  if (!adaptor.getDynamicBasis().empty())
+    return failure();
+
+  int64_t highPart = cast<IntegerAttr>(adaptor.getLinearIndex()).getInt();
+  Type attrType = getLinearIndex().getType();
+  for (int64_t modulus : llvm::reverse(getStaticBasis().drop_front())) {
+    result.push_back(IntegerAttr::get(attrType, llvm::mod(highPart, modulus)));
+    highPart = llvm::divideFloorSigned(highPart, modulus);
+  }
+  result.push_back(IntegerAttr::get(attrType, highPart));
+  std::reverse(result.begin(), result.end());
+  return success();
+}
+
 namespace {
 
 // Drops delinearization indices that correspond to unit-extent basis
@@ -4586,7 +4606,8 @@ struct DropUnitExtentBasis
     }
 
     if (newOperands.size() == delinearizeOp.getStaticBasis().size())
-      return failure();
+      return rewriter.notifyMatchFailure(delinearizeOp,
+                                         "no unit basis elements");
 
     if (!newOperands.empty()) {
       auto newDelinearizeOp = rewriter.create<affine::AffineDelinearizeIndexOp>(
@@ -4619,17 +4640,48 @@ struct DropDelinearizeOneBasisElement
   LogicalResult matchAndRewrite(affine::AffineDelinearizeIndexOp delinearizeOp,
                                 PatternRewriter &rewriter) const override {
     if (delinearizeOp.getStaticBasis().size() != 1)
-      return failure();
+      return rewriter.notifyMatchFailure(delinearizeOp,
+                                         "doesn't have a length-1 basis");
     rewriter.replaceOp(delinearizeOp, delinearizeOp.getLinearIndex());
     return success();
   }
 };
 
+/// If a `affine.delinearize_index`'s input is a `affine.linearize_index
+/// disjoint` and the two operations have the same basis, replace the
+/// delinearizeation results with the inputs of the `affine.linearize_index`
+/// since they are exact inverses of each other.
+///
+/// The `disjoint` flag is needed on the `affine.linearize_index` because
+/// otherwise, there is no guarantee that the inputs to the linearization are
+/// in-bounds the way the outputs of the delinearization would be.
+struct CancelDelinearizeOfLinearizeDisjointExact
+    : public OpRewritePattern<affine::AffineDelinearizeIndexOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(affine::AffineDelinearizeIndexOp delinearizeOp,
+                                PatternRewriter &rewriter) const override {
+    auto linearizeOp = delinearizeOp.getLinearIndex()
+                           .getDefiningOp<affine::AffineLinearizeIndexOp>();
+    if (!linearizeOp)
+      return rewriter.notifyMatchFailure(delinearizeOp,
+                                         "index doesn't come from linearize");
+
+    if (!linearizeOp.getDisjoint() ||
+        linearizeOp.getMixedBasis() != delinearizeOp.getMixedBasis())
+      return rewriter.notifyMatchFailure(
+          linearizeOp, "not disjoint or basis doesn't match delinearize");
+
+    rewriter.replaceOp(delinearizeOp, linearizeOp.getMultiIndex());
+    return success();
+  }
+};
 } // namespace
 
 void affine::AffineDelinearizeIndexOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
-  patterns.insert<DropDelinearizeOneBasisElement, DropUnitExtentBasis>(context);
+  patterns.insert<CancelDelinearizeOfLinearizeDisjointExact,
+                  DropDelinearizeOneBasisElement, DropUnitExtentBasis>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4683,6 +4735,26 @@ LogicalResult AffineLinearizeIndexOp::verify() {
   return success();
 }
 
+OpFoldResult AffineLinearizeIndexOp::fold(FoldAdaptor adaptor) {
+  if (llvm::any_of(adaptor.getMultiIndex(),
+                   [](Attribute a) { return a == nullptr; }))
+    return nullptr;
+
+  if (!adaptor.getDynamicBasis().empty())
+    return nullptr;
+
+  int64_t result = 0;
+  int64_t stride = 1;
+  for (auto [indexAttr, length] :
+       llvm::zip_equal(llvm::reverse(adaptor.getMultiIndex()),
+                       llvm::reverse(getStaticBasis()))) {
+    result = result + cast<IntegerAttr>(indexAttr).getInt() * stride;
+    stride = stride * length;
+  }
+
+  return IntegerAttr::get(getResult().getType(), result);
+}
+
 namespace {
 /// Rewrite `affine.linearize_index disjoint [%...a, %x, %...b] by (%...c, 1,
 /// %...d)` to `affine.linearize_index disjoint [%...a, %...b] by (%...c,
@@ -4723,7 +4795,8 @@ struct DropLinearizeUnitComponentsIfDisjointOrZero final
       }
     }
     if (newIndices.size() == numIndices)
-      return failure();
+      return rewriter.notifyMatchFailure(op,
+                                         "no unit basis entries to replace");
 
     if (newIndices.size() == 0) {
       rewriter.replaceOpWithNewOp<arith::ConstantIndexOp>(op, 0);
@@ -4734,11 +4807,93 @@ struct DropLinearizeUnitComponentsIfDisjointOrZero final
     return success();
   }
 };
+
+/// Rewrite `affine.linearize_index [%%x] by (%b)`, into `%x`.
+///
+/// By definition, that operation is `affine.apply affine_map<()[s0] -> (s0)>,`
+/// which is the identity.
+struct DropLinearizeOneBasisElement final
+    : OpRewritePattern<affine::AffineLinearizeIndexOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(affine::AffineLinearizeIndexOp op,
+                                PatternRewriter &rewriter) const override {
+    if (op.getStaticBasis().size() != 1 || op.getMultiIndex().size() != 1)
+      return rewriter.notifyMatchFailure(op, "doesn't have a a length-1 basis");
+    rewriter.replaceOp(op, op.getMultiIndex().front());
+    return success();
+  }
+};
+
+/// Cancel out linearize_index(delinearize_index(x, B), B).
+///
+/// That is, rewrite
+/// ```
+/// %0:N = affine.delinearize_index %x by (%b1, %b2, ... %bN)
+/// %y = affine.linearize_index [%0#0, %0#1, ... %0#(N-1)] by (%b1, %b2, ...
+/// %bN)
+/// ```
+/// to replacing `%y` with `%x`.
+struct CancelLinearizeOfDelinearizeExact final
+    : OpRewritePattern<affine::AffineLinearizeIndexOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(affine::AffineLinearizeIndexOp linearizeOp,
+                                PatternRewriter &rewriter) const override {
+    auto delinearizeOp = linearizeOp.getMultiIndex()
+                             .front()
+                             .getDefiningOp<affine::AffineDelinearizeIndexOp>();
+    if (!delinearizeOp)
+      return rewriter.notifyMatchFailure(
+          linearizeOp, "last entry doesn't come from a delinearize");
+
+    if (linearizeOp.getMixedBasis() != delinearizeOp.getMixedBasis())
+      return rewriter.notifyMatchFailure(
+          linearizeOp,
+          "basis of linearize and delinearize don't match exactly");
+
+    if (delinearizeOp.getResults() != linearizeOp.getMultiIndex())
+      return rewriter.notifyMatchFailure(
+          linearizeOp, "not all indices come from delinearize");
+
+    rewriter.replaceOp(linearizeOp, delinearizeOp.getLinearIndex());
+    return success();
+  }
+};
+
+/// Strip leading zero from affine.linearize_index.
+///
+/// `affine.linearize_index [%c0, ...a] by (%x, ...b)` can be rewritten
+/// to `affine.linearize_index [...a] by (...b)` in all cases.
+struct DropLinearizeLeadingZero final
+    : OpRewritePattern<affine::AffineLinearizeIndexOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(affine::AffineLinearizeIndexOp op,
+                                PatternRewriter &rewriter) const override {
+    Value leadingIdx = op.getMultiIndex().front();
+    if (!matchPattern(leadingIdx, m_Zero()))
+      return failure();
+
+    if (op.getMultiIndex().size() == 1) {
+      rewriter.replaceOp(op, leadingIdx);
+      return success();
+    }
+
+    SmallVector<OpFoldResult> mixedBasis = op.getMixedBasis();
+    rewriter.replaceOpWithNewOp<affine::AffineLinearizeIndexOp>(
+        op, op.getMultiIndex().drop_front(),
+        ArrayRef<OpFoldResult>(mixedBasis).drop_front(), op.getDisjoint());
+    return success();
+  }
+};
 } // namespace
 
 void affine::AffineLinearizeIndexOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
-  patterns.add<DropLinearizeUnitComponentsIfDisjointOrZero>(context);
+  patterns.add<CancelLinearizeOfDelinearizeExact, DropLinearizeLeadingZero,
+               DropLinearizeOneBasisElement,
+               DropLinearizeUnitComponentsIfDisjointOrZero>(context);
 }
 
 //===----------------------------------------------------------------------===//

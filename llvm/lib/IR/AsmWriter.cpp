@@ -2235,6 +2235,8 @@ static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
   else
     Printer.printMetadata("rank", N->getRawRank(), /*ShouldSkipNull */ true);
   Printer.printMetadata("annotations", N->getRawAnnotations());
+  if (auto *Specification = N->getRawSpecification())
+    Printer.printMetadata("specification", Specification);
   Out << ")";
 }
 
@@ -4679,7 +4681,6 @@ void AssemblyWriter::printDbgMarker(const DbgMarker &Marker) {
   Out << "  DbgMarker -> { ";
   printInstruction(*Marker.MarkedInstr);
   Out << " }";
-  return;
 }
 
 void AssemblyWriter::printDbgRecord(const DbgRecord &DR) {

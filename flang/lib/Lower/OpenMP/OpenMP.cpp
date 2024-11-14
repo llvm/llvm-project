@@ -1916,10 +1916,36 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   mlir::omp::TaskOperands clauseOps;
   genTaskClauses(converter, semaCtx, stmtCtx, item->clauses, loc, clauseOps);
 
+  if (!enableDelayedPrivatization)
+    return genOpWithBody<mlir::omp::TaskOp>(
+        OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
+                          llvm::omp::Directive::OMPD_task)
+            .setClauses(&item->clauses),
+        queue, item, clauseOps);
+
+  DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
+                           lower::omp::isLastItemInQueue(item, queue),
+                           /*useDelayedPrivatization=*/true, &symTable);
+  dsp.processStep1(&clauseOps);
+
+  EntryBlockArgs taskArgs;
+  taskArgs.priv.syms = dsp.getDelayedPrivSymbols();
+  taskArgs.priv.vars = clauseOps.privateVars;
+
+  auto genRegionEntryCB = [&](mlir::Operation *op) {
+    genEntryBlock(converter, taskArgs, op->getRegion(0));
+    bindEntryBlockArgs(converter,
+                       llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(op),
+                       taskArgs);
+    return llvm::to_vector(taskArgs.priv.syms);
+  };
+
   return genOpWithBody<mlir::omp::TaskOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_task)
-          .setClauses(&item->clauses),
+          .setClauses(&item->clauses)
+          .setDataSharingProcessor(&dsp)
+          .setGenRegionEntryCb(genRegionEntryCB),
       queue, item, clauseOps);
 }
 
@@ -2595,6 +2621,13 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OpenMPDeclareSimdConstruct &declareSimdConstruct) {
   TODO(converter.getCurrentLocation(), "OpenMPDeclareSimdConstruct");
+}
+
+static void
+genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+       semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
+       const parser::OpenMPDeclareMapperConstruct &declareMapperConstruct) {
+  TODO(converter.getCurrentLocation(), "OpenMPDeclareMapperConstruct");
 }
 
 static void
