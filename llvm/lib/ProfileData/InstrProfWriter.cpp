@@ -774,7 +774,7 @@ static Error writeMemProfV3(ProfOStream &OS,
 
   uint64_t CallStackPayloadOffset = OS.tell();
   // The number of elements in the call stack array.
-  unsigned NumElements;
+  unsigned NumElements = 0;
   llvm::DenseMap<memprof::CallStackId, memprof::LinearCallStackId>
       MemProfCallStackIndexes =
           writeMemProfCallStackArray(OS, MemProfData.CallStacks,
