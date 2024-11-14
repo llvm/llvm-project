@@ -190,7 +190,7 @@ If the code is C/C++ based and invokes Fortran routines, one can either use Clan
 or Flang as the linker driver.  If Clang is used, it will automatically all
 required runtime libraries needed by C++ (e.g., for STL) to the linker invocation.
 In this case, one has to explicitly provide the Fortran runtime library
-`flang_ty`.  An alternative is to use Flang to link.
+`flang_rt`.  An alternative is to use Flang to link.
 In this case, it may be required to explicitly supply C++ runtime libraries.
 
 On Darwin, the logical root where the system libraries are located (sysroot)
