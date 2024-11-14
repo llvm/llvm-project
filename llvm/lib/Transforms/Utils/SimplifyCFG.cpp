@@ -7450,7 +7450,7 @@ struct SwitchSuccWrapper {
   // be important to equality though.
   unsigned SuccNum;
   BasicBlock *Dest;
-  DenseMap<PHINode *, DenseMap<BasicBlock *, Value *>> *PhiPredIVs;
+  DenseMap<PHINode *, SmallDenseMap<BasicBlock *, Value *, 8>> *PhiPredIVs;
 };
 
 namespace llvm {
@@ -7473,14 +7473,13 @@ template <> struct DenseMapInfo<const SwitchSuccWrapper *> {
     assert(Succ->size() == 1 && "Expected just a single branch in the BB");
 
     // Since we assume the BB is just a single BranchInst with a single
-    // succsessor, we hash as the BB and the incoming Values of its successor
+    // successor, we hash as the BB and the incoming Values of its successor
     // PHIs. Initially, we tried to just use the successor BB as the hash, but
-    // this had poor performance. We find that the extra computation of getting
-    // the incoming PHI values here leads to better performance on overall Set
-    // performance. We also tried to build a map from BB -> Succs.IncomingValues
-    // ahead of time and passing it in SwitchSuccWrapper, but this slowed down
-    // the average compile time without having any impact on the worst case
-    // compile time.
+    // including the incoming PHI values leads to better performance.
+    // We also tried to build a map from BB -> Succs.IncomingValues ahead of
+    // time and passing it in SwitchSuccWrapper, but this slowed down the
+    // average compile time without having any impact on the worst case compile
+    // time.
     BasicBlock *BB = BI->getSuccessor(0);
     SmallVector<Value *> PhiValsForBB;
     for (PHINode &Phi : BB->phis())
@@ -7535,7 +7534,7 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
   // getIncomingValueForBlock is O(|Preds|).
   SmallPtrSet<PHINode *, 8> Phis;
   SmallPtrSet<BasicBlock *, 8> Seen;
-  DenseMap<PHINode *, DenseMap<BasicBlock *, Value *>> PhiPredIVs;
+  DenseMap<PHINode *, SmallDenseMap<BasicBlock *, Value *, 8>> PhiPredIVs;
   SmallVector<SwitchSuccWrapper> Cases;
   Cases.reserve(SI->getNumSuccessors());
 
@@ -7547,10 +7546,6 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
     if (BB->size() != 1)
       continue;
 
-    Instruction *T = BB->getTerminator();
-    if (!T)
-      continue;
-
     // FIXME: This case needs some extra care because the terminators other than
     // SI need to be updated.
     if (BB->hasNPredecessorsOrMore(2))
@@ -7559,7 +7554,7 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
     // FIXME: Relax that the terminator is a BranchInst by checking for equality
     // on other kinds of terminators. We decide to only support unconditional
     // branches for now for compile time reasons.
-    auto *BI = dyn_cast<BranchInst>(T);
+    auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
     if (!BI || BI->isConditional())
       continue;
 
@@ -7577,7 +7572,7 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
   PhiPredIVs.reserve(Phis.size());
   for (PHINode *Phi : Phis) {
     PhiPredIVs[Phi] =
-        DenseMap<BasicBlock *, Value *>(Phi->getNumIncomingValues());
+        SmallDenseMap<BasicBlock *, Value *, 8>(Phi->getNumIncomingValues());
     for (auto &IV : Phi->incoming_values())
       PhiPredIVs[Phi].insert({Phi->getIncomingBlock(IV), IV.get()});
   }
@@ -7590,8 +7585,7 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
   // SwitchSuccWrapper instead of just BasicBlock because we'd like to pass
   // around information to isEquality, getHashValue, and when doing the
   // replacement with better performance.
-  DenseSet<const SwitchSuccWrapper *, DenseMapInfo<const SwitchSuccWrapper *>>
-      ReplaceWith;
+  DenseSet<const SwitchSuccWrapper *> ReplaceWith;
   ReplaceWith.reserve(Cases.size());
 
   SmallVector<DominatorTree::UpdateType> Updates;
