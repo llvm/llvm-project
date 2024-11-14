@@ -207,7 +207,7 @@ static Error isTrivialOperatorNode(const TreePatternNode &N) {
     if (Predicate.isImmediatePattern())
       continue;
 
-    if (Predicate.hasNoUse())
+    if (Predicate.hasNoUse() || Predicate.hasOneUse())
       continue;
 
     if (Predicate.isNonExtLoad() || Predicate.isAnyExtLoad() ||
@@ -782,6 +782,10 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       InsnMatcher.addPredicate<NoUsePredicateMatcher>();
       HasAddedBuiltinMatcher = true;
     }
+    if (Predicate.hasOneUse()) {
+      InsnMatcher.addPredicate<OneUsePredicateMatcher>();
+      HasAddedBuiltinMatcher = true;
+    }
 
     if (Predicate.hasGISelPredicateCode()) {
       if (Predicate.usesOperands()) {
@@ -1158,7 +1162,7 @@ Error GlobalISelEmitter::importChildMatcher(
       OperandMatcher &OM =
           InsnOperand.getInsnMatcher().addOperand(0, "", TempOpIdx);
       if (auto Error =
-              OM.addTypeCheckPredicate(VTy, false /* OperandIsAPointer */))
+              OM.addTypeCheckPredicate(TypeSetByHwMode(VTy), false /* OperandIsAPointer */))
         return failedImport(toString(std::move(Error)) +
                             " for result of Src pattern operator");
 
@@ -2244,8 +2248,10 @@ GlobalISelEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules,
                                                const Matcher *B) {
     auto *L = static_cast<const RuleMatcher *>(A);
     auto *R = static_cast<const RuleMatcher *>(B);
-    return std::tuple(OpcodeOrder[L->getOpcode()], L->getNumOperands()) <
-           std::tuple(OpcodeOrder[R->getOpcode()], R->getNumOperands());
+    return std::tuple(OpcodeOrder[L->getOpcode()],
+                      L->insnmatchers_front().getNumOperandMatchers()) <
+           std::tuple(OpcodeOrder[R->getOpcode()],
+                      R->insnmatchers_front().getNumOperandMatchers());
   });
 
   for (Matcher *Rule : InputRules)
@@ -2353,7 +2359,7 @@ void GlobalISelEmitter::emitTestSimplePredicate(raw_ostream &OS) {
 }
 
 void GlobalISelEmitter::emitRunCustomAction(raw_ostream &OS) {
-  OS << "void " << getClassName()
+  OS << "bool " << getClassName()
      << "::runCustomAction(unsigned, const MatcherState&, NewMIVector &) const "
         "{\n"
      << "    llvm_unreachable(\"" + getClassName() +
@@ -2465,9 +2471,8 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   // Sort and remove duplicates to get a list of unique renderer functions, in
   // case some were mentioned more than once.
   llvm::sort(CustomRendererFns);
-  CustomRendererFns.erase(
-      std::unique(CustomRendererFns.begin(), CustomRendererFns.end()),
-      CustomRendererFns.end());
+  CustomRendererFns.erase(llvm::unique(CustomRendererFns),
+                          CustomRendererFns.end());
 
   // Create a table containing the LLT objects needed by the matcher and an enum
   // for the matcher to reference them with.

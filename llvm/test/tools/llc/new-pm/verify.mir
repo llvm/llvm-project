@@ -1,0 +1,10 @@
+# RUN: not --crash llc -mtriple=x86_64-pc-linux-gnu -debug-pass-manager -passes='module(function(machine-function(trigger-verifier-error)))' -filetype=null %s 2>&1 | FileCheck %s
+
+# CHECK: Verifying machine function f
+# CHECK: Broken machine function found after pass "TriggerVerifierErrorPass"
+---
+name: f
+body: |
+  bb.0:
+    RET 0
+...

@@ -34,8 +34,10 @@ void LoongArchAsmPrinter::emitInstruction(const MachineInstr *MI) {
       MI->getOpcode(), getSubtargetInfo().getFeatureBits());
 
   // Do any auto-generated pseudo lowerings.
-  if (emitPseudoExpansionLowering(*OutStreamer, MI))
+  if (MCInst OutInst; lowerPseudoInstExpansion(MI, OutInst)) {
+    EmitToStreamer(*OutStreamer, OutInst);
     return;
+  }
 
   switch (MI->getOpcode()) {
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
@@ -128,10 +130,16 @@ bool LoongArchAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   OS << "$" << LoongArchInstPrinter::getRegisterName(BaseMO.getReg());
   // Print the offset operand.
   const MachineOperand &OffsetMO = MI->getOperand(OpNo + 1);
+  MCOperand MCO;
+  if (!lowerOperand(OffsetMO, MCO))
+    return true;
   if (OffsetMO.isReg())
     OS << ", $" << LoongArchInstPrinter::getRegisterName(OffsetMO.getReg());
   else if (OffsetMO.isImm())
     OS << ", " << OffsetMO.getImm();
+  else if (OffsetMO.isGlobal() || OffsetMO.isBlockAddress() ||
+           OffsetMO.isMCSymbol())
+    OS << ", " << *MCO.getExpr();
   else
     return true;
 

@@ -1012,6 +1012,10 @@ def StridedLayoutAttr : Builtin_Attr<"StridedLayout", "strided_layout",
   let extraClassDeclaration = [{
     /// Print the attribute to the given output stream.
     void print(raw_ostream &os) const;
+
+    /// Returns true if this layout is static, i.e. the strides and offset all
+    /// have a known value > 0.
+    bool hasStaticLayout() const;
   }];
 }
 

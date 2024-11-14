@@ -29,9 +29,13 @@ endfunction()
 # cache file to CMake via -C. e.g.
 #
 # cmake -D LLVM_RELEASE_ENABLE_PGO=ON -C Release.cmake
+set (DEFAULT_RUNTIMES "compiler-rt;libcxx")
+if (NOT WIN32)
+  list(APPEND DEFAULT_RUNTIMES "libcxxabi" "libunwind")
+endif()
 set(LLVM_RELEASE_ENABLE_LTO THIN CACHE STRING "")
-set(LLVM_RELEASE_ENABLE_PGO OFF CACHE BOOL "")
-set(LLVM_RELEASE_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
+set(LLVM_RELEASE_ENABLE_PGO ON CACHE BOOL "")
+set(LLVM_RELEASE_ENABLE_RUNTIMES ${DEFAULT_RUNTIMES} CACHE STRING "")
 set(LLVM_RELEASE_ENABLE_PROJECTS "clang;lld;lldb;clang-tools-extra;bolt;polly;mlir;flang" CACHE STRING "")
 # Note we don't need to add install here, since it is one of the pre-defined
 # steps.
@@ -91,4 +95,6 @@ endif()
 # Final Stage Config (stage2)
 set_final_stage_var(LLVM_ENABLE_RUNTIMES "${LLVM_RELEASE_ENABLE_RUNTIMES}" STRING)
 set_final_stage_var(LLVM_ENABLE_PROJECTS "${LLVM_RELEASE_ENABLE_PROJECTS}" STRING)
+set_final_stage_var(CPACK_GENERATOR "TXZ" STRING)
+set_final_stage_var(CPACK_ARCHIVE_THREADS "0" STRING)
 

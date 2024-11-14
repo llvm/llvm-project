@@ -49,27 +49,15 @@ class TestTypoDetection(unittest.TestCase):
         results = list(fcl.find_potential_directives(content))
         assert len(results) == 3
         pos, match = results[0]
-        assert (
-            pos.line == 1
-            and pos.start_column == len("junk; ") + 1
-            and pos.end_column == len(lines[0]) - 1
-        )
+        assert pos.as_str() == "1:7-11"
         assert match == "CHCK1"
 
         pos, match = results[1]
-        assert (
-            pos.line == 2
-            and pos.start_column == len("junk// ") + 1
-            and pos.end_column == len(lines[1]) - 1
-        )
+        assert pos.as_str() == "2:8-12"
         assert match == "CHCK2"
 
         pos, match = results[2]
-        assert (
-            pos.line == 3
-            and pos.start_column == 1
-            and pos.end_column == len(lines[2]) - 1
-        )
+        assert pos.as_str() == "3:1-10"
         assert match == "SOME CHCK3"
 
     def test_levenshtein(self):

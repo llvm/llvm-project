@@ -70,3 +70,31 @@ define i32 @mask_offset_scale_zext_i32_i64(ptr %base, i32 %i) {
   %load = load i32, ptr %arrayidx, align 4
   ret i32 %load
 }
+
+; PR97533 - multiple uses of shl node (add + gep) in the same dependency chain.
+define i64 @add_shl_zext(ptr %ptr, i8 %arg) nounwind {
+; X86-LABEL: add_shl_zext:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl 4(%esi,%ecx,4), %edx
+; X86-NEXT:    leal (,%ecx,8), %eax
+; X86-NEXT:    addl (%esi,%ecx,4), %eax
+; X86-NEXT:    adcl $0, %edx
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: add_shl_zext:
+; X64:       # %bb.0:
+; X64-NEXT:    movzbl %sil, %eax
+; X64-NEXT:    shll $3, %eax
+; X64-NEXT:    addq (%rdi,%rax), %rax
+; X64-NEXT:    retq
+  %idx = zext i8 %arg to i64
+  %gep = getelementptr ptr, ptr %ptr, i64 %idx
+  %val = load i64, ptr %gep, align 8
+  %shl = shl i64 %idx, 3
+  %sum = add i64 %val, %shl
+  ret i64 %sum
+}

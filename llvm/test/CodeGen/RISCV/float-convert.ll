@@ -336,17 +336,23 @@ start:
 }
 declare i32 @llvm.fptoui.sat.i32.f32(float)
 
-define i32 @fmv_x_w(float %a, float %b) nounwind {
+define signext i32 @fmv_x_w(float %a, float %b) nounwind {
 ; CHECKIF-LABEL: fmv_x_w:
 ; CHECKIF:       # %bb.0:
 ; CHECKIF-NEXT:    fadd.s fa5, fa0, fa1
 ; CHECKIF-NEXT:    fmv.x.w a0, fa5
 ; CHECKIF-NEXT:    ret
 ;
-; CHECKIZFINX-LABEL: fmv_x_w:
-; CHECKIZFINX:       # %bb.0:
-; CHECKIZFINX-NEXT:    fadd.s a0, a0, a1
-; CHECKIZFINX-NEXT:    ret
+; RV32IZFINX-LABEL: fmv_x_w:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    fadd.s a0, a0, a1
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: fmv_x_w:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    fadd.s a0, a0, a1
+; RV64IZFINX-NEXT:    sext.w a0, a0
+; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fmv_x_w:
 ; RV32I:       # %bb.0:
@@ -362,6 +368,7 @@ define i32 @fmv_x_w(float %a, float %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    call __addsf3
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -1247,11 +1254,9 @@ define signext i32 @fcvt_s_w_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ;
 ; RV64IZFINX-LABEL: fcvt_s_w_demanded_bits:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    addiw a2, a0, 1
-; RV64IZFINX-NEXT:    addi a0, a0, 1
-; RV64IZFINX-NEXT:    fcvt.s.w a0, a0
-; RV64IZFINX-NEXT:    sw a0, 0(a1)
-; RV64IZFINX-NEXT:    mv a0, a2
+; RV64IZFINX-NEXT:    addiw a0, a0, 1
+; RV64IZFINX-NEXT:    fcvt.s.w a2, a0
+; RV64IZFINX-NEXT:    sw a2, 0(a1)
 ; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_s_w_demanded_bits:

@@ -1127,8 +1127,7 @@ define <8 x i8> @test_bitcastv1f64tov8i8(<1 x i64> %a) #0 {
 ; CHECK-SD-LABEL: test_bitcastv1f64tov8i8:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    fmov x8, d0
-; CHECK-SD-NEXT:    scvtf d0, x8
+; CHECK-SD-NEXT:    scvtf d0, d0
 ; CHECK-SD-NEXT:    neg v0.8b, v0.8b
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1147,8 +1146,7 @@ define <4 x i16> @test_bitcastv1f64tov4i16(<1 x i64> %a) #0 {
 ; CHECK-SD-LABEL: test_bitcastv1f64tov4i16:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    fmov x8, d0
-; CHECK-SD-NEXT:    scvtf d0, x8
+; CHECK-SD-NEXT:    scvtf d0, d0
 ; CHECK-SD-NEXT:    neg v0.4h, v0.4h
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1167,8 +1165,7 @@ define <2 x i32> @test_bitcastv1f64tov2i32(<1 x i64> %a) #0 {
 ; CHECK-SD-LABEL: test_bitcastv1f64tov2i32:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    fmov x8, d0
-; CHECK-SD-NEXT:    scvtf d0, x8
+; CHECK-SD-NEXT:    scvtf d0, d0
 ; CHECK-SD-NEXT:    neg v0.2s, v0.2s
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1187,8 +1184,7 @@ define <1 x i64> @test_bitcastv1f64tov1i64(<1 x i64> %a) #0 {
 ; CHECK-SD-LABEL: test_bitcastv1f64tov1i64:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    fmov x8, d0
-; CHECK-SD-NEXT:    scvtf d0, x8
+; CHECK-SD-NEXT:    scvtf d0, d0
 ; CHECK-SD-NEXT:    neg d0, d0
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1209,8 +1205,7 @@ define <2 x float> @test_bitcastv1f64tov2f32(<1 x i64> %a) #0 {
 ; CHECK-LABEL: test_bitcastv1f64tov2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    scvtf d0, x8
+; CHECK-NEXT:    scvtf d0, d0
 ; CHECK-NEXT:    fneg v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %vcvt.i = sitofp <1 x i64> %a to <1 x double>
@@ -1488,8 +1483,7 @@ define <4 x i16> @test_dup_v2i32_v4i16(<2 x i32> %a) {
 ; CHECK-GI-LABEL: test_dup_v2i32_v4i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov s0, v0.s[1]
-; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
 ; CHECK-GI-NEXT:    dup v0.4h, w8
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1510,8 +1504,7 @@ define <8 x i16> @test_dup_v4i32_v8i16(<4 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: test_dup_v4i32_v8i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov s0, v0.s[3]
-; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    mov w8, v0.s[3]
 ; CHECK-GI-NEXT:    dup v0.8h, w8
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1578,8 +1571,7 @@ define <8 x i16> @test_dup_v2i64_v8i16(<2 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: test_dup_v2i64_v8i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    fmov x8, d0
+; CHECK-GI-NEXT:    mov x8, v0.d[1]
 ; CHECK-GI-NEXT:    dup v0.8h, w8
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1626,8 +1618,7 @@ define <4 x i16> @test_dup_v4i32_v4i16(<4 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: test_dup_v4i32_v4i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov s0, v0.s[1]
-; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
 ; CHECK-GI-NEXT:    dup v0.4h, w8
 ; CHECK-GI-NEXT:    ret
 entry:

@@ -611,14 +611,14 @@ define void @uzp_v8i16(ptr %a, ptr %b) #1 {
 ; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    uzp1 v2.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    uzp2 v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    add v0.8h, v2.8h, v0.8h
+; CHECK-NEXT:    eor v0.16b, v2.16b, v0.16b
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <8 x i16>, ptr %a
   %tmp2 = load <8 x i16>, ptr %b
   %tmp3 = shufflevector <8 x i16> %tmp1, <8 x i16> %tmp2, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %tmp4 = shufflevector <8 x i16> %tmp1, <8 x i16> %tmp2, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-  %tmp5 = add <8 x i16> %tmp3, %tmp4
+  %tmp5 = xor <8 x i16> %tmp3, %tmp4
   store <8 x i16> %tmp5, ptr %a
   ret void
 }

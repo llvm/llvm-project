@@ -45,7 +45,7 @@ enum CondCode {
 };
 
 CondCode getOppositeBranchCondition(CondCode);
-unsigned getBrCond(CondCode CC);
+unsigned getBrCond(CondCode CC, bool Imm = false);
 
 } // end of namespace RISCVCC
 
@@ -65,7 +65,7 @@ public:
   explicit RISCVInstrInfo(RISCVSubtarget &STI);
 
   MCInst getNop() const override;
-  const MCInstrDesc &getBrCond(RISCVCC::CondCode CC) const;
+  const MCInstrDesc &getBrCond(RISCVCC::CondCode CC, bool Imm = false) const;
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
@@ -76,13 +76,16 @@ public:
   Register isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
                               unsigned &MemBytes) const override;
 
+  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+
   void copyPhysRegVector(MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                          MCRegister DstReg, MCRegister SrcReg, bool KillSrc,
                          const TargetRegisterClass *RegClass) const;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                    const DebugLoc &DL, MCRegister DstReg, MCRegister SrcReg,
-                   bool KillSrc) const override;
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
 
   void storeRegToStackSlot(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI, Register SrcReg,
@@ -204,11 +207,13 @@ public:
 
   // Calculate target-specific information for a set of outlining candidates.
   std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
+      const MachineModuleInfo &MMI,
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
 
   // Return if/how a given MachineInstr should be outlined.
   virtual outliner::InstrType
-  getOutliningTypeImpl(MachineBasicBlock::iterator &MBBI,
+  getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                       MachineBasicBlock::iterator &MBBI,
                        unsigned Flags) const override;
 
   // Insert a custom frame for outlined functions.
@@ -283,6 +288,8 @@ public:
 
   ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>
   getSerializableMachineMemOperandTargetFlags() const override;
+
+  unsigned getTailDuplicateSize(CodeGenOptLevel OptLevel) const override;
 
   unsigned getUndefInitOpcode(unsigned RegClassID) const override {
     switch (RegClassID) {
@@ -379,7 +386,6 @@ struct RISCVMaskedPseudoInfo {
   uint16_t MaskedPseudo;
   uint16_t UnmaskedPseudo;
   uint8_t MaskOpIdx;
-  uint8_t MaskAffectsResult : 1;
 };
 #define GET_RISCVMaskedPseudosTable_DECL
 #include "RISCVGenSearchableTables.inc"

@@ -9,9 +9,7 @@
 
 define i1 @fabs_sqrt_src_maybe_nan(double %arg0, double %arg1) {
 ; CHECK-LABEL: @fabs_sqrt_src_maybe_nan(
-; CHECK-NEXT:    [[FABS:%.*]] = call double @llvm.fabs.f64(double [[ARG0:%.*]])
-; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.sqrt.f64(double [[FABS]])
-; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[OP]], 0.000000e+00
+; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[ARG0:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[TMP]]
 ;
   %fabs = call double @llvm.fabs.f64(double %arg0)
@@ -64,7 +62,7 @@ define i1 @nnan_fadd(double %arg0, double %arg1) {
 define i1 @nnan_fadd_maybe_nan_lhs(double %arg0, double %arg1) {
 ; CHECK-LABEL: @nnan_fadd_maybe_nan_lhs(
 ; CHECK-NEXT:    [[NNAN_ARG1:%.*]] = fadd nnan double [[ARG1:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[OP:%.*]] = fadd double [[NNAN_ARG1]], [[ARG0:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = fadd double [[ARG0:%.*]], [[NNAN_ARG1]]
 ; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[OP]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[TMP]]
 ;

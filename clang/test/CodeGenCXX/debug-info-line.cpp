@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -w -debug-info-kind=line-tables-only -std=c++11 -fexceptions -fcxx-exceptions -S -mllvm -no-discriminators -emit-llvm %s -o - -triple %itanium_abi_triple | FileCheck %s
-// RUN: %clang_cc1 -w -debug-info-kind=line-tables-only -std=c++11 -fexceptions -fcxx-exceptions -S -mllvm -no-discriminators -emit-llvm %s -o - -triple i686-linux-gnu | FileCheck %s
-// RUN: %clang_cc1 -w -debug-info-kind=line-directives-only -std=c++11 -fexceptions -fcxx-exceptions -S -mllvm -no-discriminators -emit-llvm %s -o - -triple %itanium_abi_triple | FileCheck %s
-// RUN: %clang_cc1 -w -debug-info-kind=line-directives-only -std=c++11 -fexceptions -fcxx-exceptions -S -mllvm -no-discriminators -emit-llvm %s -o - -triple i686-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -w -debug-info-kind=line-tables-only -std=c++11 -fexceptions -fcxx-exceptions -mllvm -no-discriminators -emit-llvm %s -o - -triple %itanium_abi_triple | FileCheck %s
+// RUN: %clang_cc1 -w -debug-info-kind=line-tables-only -std=c++11 -fexceptions -fcxx-exceptions -mllvm -no-discriminators -emit-llvm %s -o - -triple i686-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -w -debug-info-kind=line-directives-only -std=c++11 -fexceptions -fcxx-exceptions -mllvm -no-discriminators -emit-llvm %s -o - -triple %itanium_abi_triple | FileCheck %s
+// RUN: %clang_cc1 -w -debug-info-kind=line-directives-only -std=c++11 -fexceptions -fcxx-exceptions -mllvm -no-discriminators -emit-llvm %s -o - -triple i686-linux-gnu | FileCheck %s
 
 int &src();
 int *sink();

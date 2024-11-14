@@ -116,7 +116,7 @@ for.body.epil.2:                                  ; preds = %for.body.epil.1
 
 declare dso_local i32 @g(i32, ptr) local_unnamed_addr #0
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind "sign-return-address"="non-leaf"}
 
 !llvm.module.flags = !{!0, !1, !2}
 

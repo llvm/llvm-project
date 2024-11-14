@@ -130,7 +130,7 @@ void test_indirect_arg_private(void) {
 // AMDGCN-LABEL: define{{.*}} amdgpu_kernel void @KernelOneMember
 // AMDGCN-SAME:  (<2 x i32> %[[u_coerce:.*]])
 // AMDGCN:  %[[u:.*]] = alloca %struct.StructOneMember, align 8, addrspace(5)
-// AMDGCN:  %[[coerce_dive:.*]] = getelementptr inbounds %struct.StructOneMember, ptr addrspace(5) %[[u]], i32 0, i32 0
+// AMDGCN:  %[[coerce_dive:.*]] = getelementptr inbounds nuw %struct.StructOneMember, ptr addrspace(5) %[[u]], i32 0, i32 0
 // AMDGCN:  store <2 x i32> %[[u_coerce]], ptr addrspace(5) %[[coerce_dive]]
 // AMDGCN:  call void @FuncOneMember(<2 x i32>
 kernel void KernelOneMember(struct StructOneMember u) {
@@ -145,7 +145,9 @@ kernel void KernelOneMemberSpir(global struct StructOneMember* u) {
 
 // AMDGCN-LABEL: define{{.*}} amdgpu_kernel void @KernelLargeOneMember(
 // AMDGCN:  %[[U:.*]] = alloca %struct.LargeStructOneMember, align 8, addrspace(5)
-// AMDGCN:  store %struct.LargeStructOneMember %u.coerce, ptr addrspace(5) %[[U]], align 8
+// AMDGCN:  %[[U_ELEM:.*]] = getelementptr inbounds nuw %struct.LargeStructOneMember, ptr addrspace(5) %[[U]], i32 0, i32 0
+// AMDGCN:  %[[EXTRACT:.*]] = extractvalue %struct.LargeStructOneMember %u.coerce, 0
+// AMDGCN:  store [100 x <2 x i32>] %[[EXTRACT]], ptr addrspace(5) %[[U_ELEM]], align 8
 // AMDGCN:  call void @FuncOneLargeMember(ptr addrspace(5) noundef byref(%struct.LargeStructOneMember) align 8 %[[U]])
 kernel void KernelLargeOneMember(struct LargeStructOneMember u) {
   FuncOneLargeMember(u);
@@ -177,7 +179,12 @@ kernel void KernelTwoMember(struct StructTwoMember u) {
 // AMDGCN-LABEL: define{{.*}} amdgpu_kernel void @KernelLargeTwoMember
 // AMDGCN-SAME:  (%struct.LargeStructTwoMember %[[u_coerce:.*]])
 // AMDGCN:  %[[u:.*]] = alloca %struct.LargeStructTwoMember, align 8, addrspace(5)
-// AMDGCN:  store %struct.LargeStructTwoMember %[[u_coerce]], ptr addrspace(5) %[[u]]
+// AMDGCN:  %[[U_PTR0:.*]] = getelementptr inbounds nuw %struct.LargeStructTwoMember, ptr addrspace(5) %[[u]], i32 0, i32 0
+// AMDGCN:  %[[EXTRACT0:.*]] = extractvalue %struct.LargeStructTwoMember %u.coerce, 0
+// AMDGCN:  store [40 x <2 x i32>] %[[EXTRACT0]], ptr addrspace(5) %[[U_PTR0]]
+// AMDGCN:  %[[U_PTR1:.*]] = getelementptr inbounds nuw %struct.LargeStructTwoMember, ptr addrspace(5) %[[u]], i32 0, i32 1
+// AMDGCN:  %[[EXTRACT1:.*]] = extractvalue %struct.LargeStructTwoMember %u.coerce, 1
+// AMDGCN:  store [20 x <2 x i32>] %[[EXTRACT1]], ptr addrspace(5) %[[U_PTR1]]
 // AMDGCN:  call void @FuncLargeTwoMember(ptr addrspace(5) noundef byref(%struct.LargeStructTwoMember) align 8 %[[u]])
 kernel void KernelLargeTwoMember(struct LargeStructTwoMember u) {
   FuncLargeTwoMember(u);

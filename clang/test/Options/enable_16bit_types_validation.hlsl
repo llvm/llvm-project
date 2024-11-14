@@ -9,11 +9,11 @@
 // HV_invalid_2017: error: '-enable-16bit-types' option requires target HLSL Version >= 2018 and shader model >= 6.2, but HLSL Version is 'hlsl2017' and shader model is '6.4'
 // TP_invalid: error: '-enable-16bit-types' option requires target HLSL Version >= 2018 and shader model >= 6.2, but HLSL Version is 'hlsl2021' and shader model is '6.0'
 
-// valid_2021: "dxil-unknown-shadermodel6.4-library"
+// valid_2021: "dxilv1.4-unknown-shadermodel6.4-library"
 // valid_2021-SAME: "-std=hlsl2021"
 // valid_2021-SAME: "-fnative-half-type"
 
-// valid_2018: "dxil-unknown-shadermodel6.4-library"
+// valid_2018: "dxilv1.4-unknown-shadermodel6.4-library"
 // valid_2018-SAME: "-std=hlsl2018"
 // valid_2018-SAME: "-fnative-half-type"
 

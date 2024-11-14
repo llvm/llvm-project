@@ -84,7 +84,7 @@ def compactPropertyRanges(input: list[PropertyRange]) -> list[PropertyRange]:
     return result
 
 
-DATA_ARRAY_TEMPLATE = """
+DATA_ARRAY_TEMPLATE = r"""
 /// The entries of the characters to escape in format's debug string.
 ///
 /// Contains the entries for [format.string.escaped]/2.2.1.2.1
@@ -131,7 +131,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[{size}] = {{
 /// more details.
 
 ///
-/// \pre The code point is a valid Unicode code point.
+/// \\pre The code point is a valid Unicode code point.
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool __needs_escape(const char32_t __code_point) noexcept {{
 
   // The entries in the gap at the end.

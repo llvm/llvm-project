@@ -26,10 +26,13 @@ using namespace ompx;
 extern "C" {
 void __assert_assume(bool condition) { __builtin_assume(condition); }
 
-void __assert_fail(const char *expr, const char *file, unsigned line,
-                   const char *function) {
+#ifndef OMPTARGET_HAS_LIBC
+[[gnu::weak]] void __assert_fail(const char *expr, const char *file,
+                                 unsigned line, const char *function) {
   __assert_fail_internal(expr, nullptr, file, line, function);
 }
+#endif
+
 void __assert_fail_internal(const char *expr, const char *msg, const char *file,
                             unsigned line, const char *function) {
   if (msg) {

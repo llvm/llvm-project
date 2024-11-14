@@ -3104,3 +3104,112 @@ define half @fnmsub_s_contract(half %a, half %b, half %c) nounwind {
   %2 = fsub contract half %c, %1
   ret half %2
 }
+
+define half @fsgnjx_f16(half %x, half %y) nounwind {
+; CHECKIZFH-LABEL: fsgnjx_f16:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fsgnjx.h fa0, fa1, fa0
+; CHECKIZFH-NEXT:    ret
+;
+; CHECK-ZHINX-LABEL: fsgnjx_f16:
+; CHECK-ZHINX:       # %bb.0:
+; CHECK-ZHINX-NEXT:    fsgnjx.h a0, a1, a0
+; CHECK-ZHINX-NEXT:    ret
+;
+; RV32I-LABEL: fsgnjx_f16:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    li a2, 15
+; RV32I-NEXT:    slli a2, a2, 10
+; RV32I-NEXT:    or s1, a0, a2
+; RV32I-NEXT:    slli a0, a1, 16
+; RV32I-NEXT:    srli a0, a0, 16
+; RV32I-NEXT:    call __extendhfsf2
+; RV32I-NEXT:    mv s0, a0
+; RV32I-NEXT:    lui a0, 12
+; RV32I-NEXT:    addi a0, a0, -1024
+; RV32I-NEXT:    and a0, s1, a0
+; RV32I-NEXT:    call __extendhfsf2
+; RV32I-NEXT:    mv a1, s0
+; RV32I-NEXT:    call __mulsf3
+; RV32I-NEXT:    call __truncsfhf2
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fsgnjx_f16:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -32
+; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    li a2, 15
+; RV64I-NEXT:    slli a2, a2, 10
+; RV64I-NEXT:    or s1, a0, a2
+; RV64I-NEXT:    slli a0, a1, 48
+; RV64I-NEXT:    srli a0, a0, 48
+; RV64I-NEXT:    call __extendhfsf2
+; RV64I-NEXT:    mv s0, a0
+; RV64I-NEXT:    lui a0, 12
+; RV64I-NEXT:    addiw a0, a0, -1024
+; RV64I-NEXT:    and a0, s1, a0
+; RV64I-NEXT:    call __extendhfsf2
+; RV64I-NEXT:    mv a1, s0
+; RV64I-NEXT:    call __mulsf3
+; RV64I-NEXT:    call __truncsfhf2
+; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 32
+; RV64I-NEXT:    ret
+;
+; CHECK-RV32-FSGNJ-LABEL: fsgnjx_f16:
+; CHECK-RV32-FSGNJ:       # %bb.0:
+; CHECK-RV32-FSGNJ-NEXT:    addi sp, sp, -16
+; CHECK-RV32-FSGNJ-NEXT:    lui a0, %hi(.LCPI23_0)
+; CHECK-RV32-FSGNJ-NEXT:    flh fa5, %lo(.LCPI23_0)(a0)
+; CHECK-RV32-FSGNJ-NEXT:    fsh fa0, 12(sp)
+; CHECK-RV32-FSGNJ-NEXT:    fsh fa5, 8(sp)
+; CHECK-RV32-FSGNJ-NEXT:    lbu a0, 13(sp)
+; CHECK-RV32-FSGNJ-NEXT:    lbu a1, 9(sp)
+; CHECK-RV32-FSGNJ-NEXT:    andi a0, a0, 128
+; CHECK-RV32-FSGNJ-NEXT:    andi a1, a1, 127
+; CHECK-RV32-FSGNJ-NEXT:    or a0, a1, a0
+; CHECK-RV32-FSGNJ-NEXT:    sb a0, 9(sp)
+; CHECK-RV32-FSGNJ-NEXT:    flh fa5, 8(sp)
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa4, fa1
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-RV32-FSGNJ-NEXT:    fmul.s fa5, fa5, fa4
+; CHECK-RV32-FSGNJ-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-RV32-FSGNJ-NEXT:    addi sp, sp, 16
+; CHECK-RV32-FSGNJ-NEXT:    ret
+;
+; CHECK-RV64-FSGNJ-LABEL: fsgnjx_f16:
+; CHECK-RV64-FSGNJ:       # %bb.0:
+; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, -16
+; CHECK-RV64-FSGNJ-NEXT:    lui a0, %hi(.LCPI23_0)
+; CHECK-RV64-FSGNJ-NEXT:    flh fa5, %lo(.LCPI23_0)(a0)
+; CHECK-RV64-FSGNJ-NEXT:    fsh fa0, 8(sp)
+; CHECK-RV64-FSGNJ-NEXT:    fsh fa5, 0(sp)
+; CHECK-RV64-FSGNJ-NEXT:    lbu a0, 9(sp)
+; CHECK-RV64-FSGNJ-NEXT:    lbu a1, 1(sp)
+; CHECK-RV64-FSGNJ-NEXT:    andi a0, a0, 128
+; CHECK-RV64-FSGNJ-NEXT:    andi a1, a1, 127
+; CHECK-RV64-FSGNJ-NEXT:    or a0, a1, a0
+; CHECK-RV64-FSGNJ-NEXT:    sb a0, 1(sp)
+; CHECK-RV64-FSGNJ-NEXT:    flh fa5, 0(sp)
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa4, fa1
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-RV64-FSGNJ-NEXT:    fmul.s fa5, fa5, fa4
+; CHECK-RV64-FSGNJ-NEXT:    fcvt.h.s fa0, fa5
+; CHECK-RV64-FSGNJ-NEXT:    addi sp, sp, 16
+; CHECK-RV64-FSGNJ-NEXT:    ret
+  %z = call half @llvm.copysign.f16(half 1.0, half %x)
+  %mul = fmul half %z, %y
+  ret half %mul
+}

@@ -911,6 +911,26 @@ func.func @identity_buffer(%arg0 : memref<?xf32>, %arg1: memref<?xf32>) {
 
 // -----
 
+#map = affine_map<(d0, d1) -> (d1, d0)>
+func.func @erase_non_identity_noop(%arg0 : tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %0 = linalg.generic {
+    indexing_maps = [#map, #map],
+    iterator_types = ["parallel", "parallel"]
+  } ins(%arg0 : tensor<?x?xf32>)
+    outs(%arg1 : tensor<?x?xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    linalg.yield %in: f32
+  } -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32> 
+}
+
+// Do not erase ops with buffer semantics.
+// CHECK-LABEL: func @erase_non_identity_noop
+//  CHECK-SAME:   (%[[ARG0:.*]]: tensor<?x?xf32>, %[[ARG1:.*]]: tensor<?x?xf32>)
+//       CHECK:   return %[[ARG0]] : tensor<?x?xf32>
+
+// -----
+
 // Just make sure that we don't crash.
 
 // CHECK-LABEL: func @dedeplicate_regression_test
@@ -1017,7 +1037,7 @@ func.func @broadcast_same_shape(%input: tensor<2x3xf32>, %init: tensor<2x3xf32>)
   return %0 : tensor<2x3xf32>
 }
 
-// ----
+// -----
 
 func.func @transpose_1d(%input: tensor<16xf32>,
                         %init: tensor<16xf32>) -> tensor<16xf32> {
@@ -1051,3 +1071,164 @@ func.func @transpose_identity_perm(%input: tensor<16x32x64xf32>,
 //   CHECK-NOT:   linalg.transpose
 //       CHECK:   return %[[INPUT]] : tensor<16x32x64xf32>
 
+// -----
+
+func.func @transpose_transpose_cancel(%input: tensor<5x4x3xf32>, 
+                                      %init1: tensor<4x3x5xf32>, 
+                                      %init2: tensor<5x4x3xf32>) -> tensor<5x4x3xf32> {
+  // CHECK-LABEL: @transpose_transpose_cancel
+  //  CHECK-SAME:     %[[INPUT:[a-zA-Z0-9]+]]: tensor<5x4x3xf32>
+  //  CHECK-SAME:     %[[INIT1:[a-zA-Z0-9]+]]: tensor<4x3x5xf32>
+  //  CHECK-SAME:     %[[INIT2:[a-zA-Z0-9]+]]: tensor<5x4x3xf32>
+  //   CHECK-NOT:   linalg.transpose
+  //       CHECK:   return %[[INPUT]] : tensor<5x4x3xf32>
+  %transpose1 = linalg.transpose
+      ins(%input:tensor<5x4x3xf32>)
+      outs(%init1:tensor<4x3x5xf32>)
+      permutation = [1, 2, 0]
+  %transpose2 = linalg.transpose
+      ins(%transpose1:tensor<4x3x5xf32>)
+      outs(%init2:tensor<5x4x3xf32>)
+      permutation = [2, 0, 1]
+  func.return %transpose2 : tensor<5x4x3xf32>
+}
+
+// -----
+
+func.func @transpose_transpose_fold(%input: tensor<5x4x3xf32>,
+                                    %init1: tensor<4x3x5xf32>,
+                                    %init2: tensor<3x4x5xf32>) -> tensor<3x4x5xf32> {
+  // CHECK-LABEL: @transpose_transpose_fold
+  //  CHECK-SAME:     %[[INPUT:[a-zA-Z0-9]+]]: tensor<5x4x3xf32>
+  //  CHECK-SAME:     %[[INIT1:[a-zA-Z0-9]+]]: tensor<4x3x5xf32>
+  //  CHECK-SAME:     %[[INIT2:[a-zA-Z0-9]+]]: tensor<3x4x5xf32>
+  //       CHECK:   %[[TRANSPOSE:.+]] = linalg.transpose ins(%[[INPUT]] : tensor<5x4x3xf32>) outs(%[[INIT2]] : tensor<3x4x5xf32>) permutation = [2, 1, 0]
+  //   CHECK-NOT:   linalg.transpose
+  //       CHECK:   return %[[TRANSPOSE]] : tensor<3x4x5xf32>
+  %transpose1 = linalg.transpose
+      ins(%input:tensor<5x4x3xf32>)
+      outs(%init1:tensor<4x3x5xf32>)
+      permutation = [1, 2, 0]
+  %transpose2 = linalg.transpose
+      ins(%transpose1:tensor<4x3x5xf32>)
+      outs(%init2:tensor<3x4x5xf32>)
+      permutation = [1, 0, 2]
+  func.return %transpose2 : tensor<3x4x5xf32>
+}
+
+// -----
+
+func.func @broadcast_transpose_fold(%input: tensor<2x4x5xf32>,
+                                    %init1: tensor<1x2x3x4x5x6xf32>,
+                                    %init2: tensor<1x6x2x3x5x4xf32>) -> tensor<1x6x2x3x5x4xf32> {
+  // CHECK-LABEL: @broadcast_transpose_fold
+  //  CHECK-SAME:     %[[INPUT:[a-zA-Z0-9]+]]: tensor<2x4x5xf32>
+  //  CHECK-SAME:     %[[INIT1:[a-zA-Z0-9]+]]: tensor<1x2x3x4x5x6xf32>
+  //  CHECK-SAME:     %[[INIT2:[a-zA-Z0-9]+]]: tensor<1x6x2x3x5x4xf32>
+  //       CHECK:   %[[TMP_INIT:.+]] = tensor.empty() : tensor<2x5x4xf32>
+  //       CHECK:   %[[TRANSPOSE:.+]] = linalg.transpose ins(%[[INPUT]] : tensor<2x4x5xf32>) outs(%[[TMP_INIT]] : tensor<2x5x4xf32>) permutation = [0, 2, 1]
+  //       CHECK:   %[[BROADCAST:.+]] = linalg.broadcast ins(%[[TRANSPOSE]] : tensor<2x5x4xf32>) outs(%[[INIT2]] : tensor<1x6x2x3x5x4xf32>) dimensions = [0, 3, 1]
+  //       CHECK:   return %[[BROADCAST]] : tensor<1x6x2x3x5x4xf32>
+  %broadcast = linalg.broadcast
+      ins(%input : tensor<2x4x5xf32>)
+      outs(%init1 : tensor<1x2x3x4x5x6xf32>)
+      dimensions = [0, 2, 5]
+  %transpose = linalg.transpose
+      ins(%broadcast : tensor<1x2x3x4x5x6xf32>)
+      outs(%init2 : tensor<1x6x2x3x5x4xf32>)
+      permutation = [0, 5, 1, 2, 4, 3]
+  func.return %transpose : tensor<1x6x2x3x5x4xf32>
+}
+
+// -----
+
+func.func @broadcast_transpose_fold_dynamic(%input: tensor<?x?x5xf32>,
+                                            %init1: tensor<1x?x3x?x5x6xf32>,
+                                            %init2: tensor<1x3x?x6x5x?xf32>) -> tensor<1x3x?x6x5x?xf32> {
+  // CHECK-LABEL: @broadcast_transpose_fold_dynamic
+  //  CHECK-SAME:     %[[INPUT:[a-zA-Z0-9]+]]: tensor<?x?x5xf32>
+  //  CHECK-SAME:     %[[INIT1:[a-zA-Z0-9]+]]: tensor<1x?x3x?x5x6xf32>
+  //  CHECK-SAME:     %[[INIT2:[a-zA-Z0-9]+]]: tensor<1x3x?x6x5x?xf32>
+  //   CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
+  //   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+  //       CHECK:   %[[DIM0:.+]] = tensor.dim %[[INPUT]], %[[C0]] : tensor<?x?x5xf32>
+  //       CHECK:   %[[DIM1:.+]] = tensor.dim %[[INPUT]], %[[C1]] : tensor<?x?x5xf32>
+  //       CHECK:   %[[TMP_INIT:.+]] = tensor.empty(%[[DIM1]], %[[DIM0]]) : tensor<?x5x?xf32>
+  //       CHECK:   %[[TRANSPOSE:.+]] = linalg.transpose ins(%[[INPUT]] : tensor<?x?x5xf32>) outs(%[[TMP_INIT]] : tensor<?x5x?xf32>) permutation = [1, 2, 0]
+  //       CHECK:   %[[BROADCAST:.+]] = linalg.broadcast ins(%[[TRANSPOSE]] : tensor<?x5x?xf32>) outs(%[[INIT2]] : tensor<1x3x?x6x5x?xf32>) dimensions = [0, 1, 3]
+  //       CHECK:   return %[[BROADCAST]] : tensor<1x3x?x6x5x?xf32>
+  %broadcast = linalg.broadcast
+      ins(%input : tensor<?x?x5xf32>)
+      outs(%init1 : tensor<1x?x3x?x5x6xf32>)
+      dimensions = [0, 2, 5]
+  %transpose = linalg.transpose
+      ins(%broadcast : tensor<1x?x3x?x5x6xf32>)
+      outs(%init2 : tensor<1x3x?x6x5x?xf32>)
+      permutation = [0, 2, 3, 5, 4, 1]
+  func.return %transpose : tensor<1x3x?x6x5x?xf32>
+}
+
+// -----
+
+func.func @broadcast_transpose_fold_2dim(%input: tensor<2xf32>,
+                                         %init1: tensor<2x4xf32>,
+                                         %init2: tensor<4x2xf32>) -> tensor<4x2xf32> {
+  // CHECK-LABEL: @broadcast_transpose_fold_2dim
+  //  CHECK-SAME:     %[[INPUT:[a-zA-Z0-9]+]]: tensor<2xf32>
+  //  CHECK-SAME:     %[[INIT1:[a-zA-Z0-9]+]]: tensor<2x4xf32>
+  //  CHECK-SAME:     %[[INIT2:[a-zA-Z0-9]+]]: tensor<4x2xf32>
+  //       CHECK:   %[[BROADCAST:.+]] = linalg.broadcast ins(%[[INPUT]] : tensor<2xf32>) outs(%[[INIT2]] : tensor<4x2xf32>) dimensions = [0]
+  //       CHECK:   return %[[BROADCAST]] : tensor<4x2xf32>
+  %broadcast = linalg.broadcast
+      ins(%input : tensor<2xf32>)
+      outs(%init1 : tensor<2x4xf32>)
+      dimensions = [1]
+  %transpose = linalg.transpose
+      ins(%broadcast : tensor<2x4xf32>)
+      outs(%init2 : tensor<4x2xf32>)
+      permutation = [1, 0]
+  func.return %transpose : tensor<4x2xf32>
+}
+
+// -----
+
+func.func @concats_of_fill(
+    %arg0 : index, %arg1 : index, %arg2 : index, %arg3 : index)
+    -> tensor<5x?x?xf32>
+{
+  %cst0 = arith.constant 0.0 : f32
+  %cst1 = arith.constant 0.0 : f32
+  %0 = tensor.empty(%arg0, %arg1) : tensor<5x?x?xf32>
+  %1 = linalg.fill ins(%cst0 : f32) outs(%0 : tensor<5x?x?xf32>) -> tensor<5x?x?xf32>
+  %2 = tensor.empty(%arg2, %arg3) : tensor<5x?x?xf32>
+  %3 = linalg.fill ins(%cst1 : f32) outs(%2 : tensor<5x?x?xf32>) -> tensor<5x?x?xf32>
+  %4 = tensor.concat dim(1) %1, %3 : (tensor<5x?x?xf32>, tensor<5x?x?xf32>) -> tensor<5x?x?xf32>
+  return %4 : tensor<5x?x?xf32>
+}
+//       CHECK: func @concats_of_fill(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: index)
+//   CHECK-DAG:   %[[CST:.+]] = arith.constant 0.0
+//   CHECK-DAG:   %[[EMPTY0:.+]] = tensor.empty(%[[ARG0]], %[[ARG1]])
+//   CHECK-DAG:   %[[EMPTY1:.+]] = tensor.empty(%[[ARG2]], %[[ARG3]])
+//       CHECK:   %[[CONCAT:.+]] = tensor.concat dim(1) %[[EMPTY0]], %[[EMPTY1]]
+//       CHECK:   %[[FILL:.+]] = linalg.fill ins(%[[CST]] : f32) outs(%[[CONCAT]] :
+//       CHECK:   return %[[FILL]]
+
+// -----
+
+func.func @transpose_buffer(%input: memref<?xf32>,
+                            %init: memref<?xf32>) {
+  linalg.transpose ins(%input:memref<?xf32>)
+                   outs(%init:memref<?xf32>)
+                   permutation = [0]
+  func.return
+}
+
+// CHECK-LABEL:   func.func @transpose_buffer(
+//  CHECK-SAME:            %[[VAL_0:.*]]: memref<?xf32>,
+//  CHECK-SAME:            %[[VAL_1:.*]]: memref<?xf32>) {
+//       CHECK:     linalg.transpose ins(%[[VAL_0]] : memref<?xf32>)
+//  CHECK-SAME:       outs(%[[VAL_1]] : memref<?xf32>) permutation = [0]
