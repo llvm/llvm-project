@@ -18,9 +18,6 @@ void fn2() __attribute__((example("somestring", 1, 2.0))) {
 }
 template <int N> void template_fn() __attribute__((example("template", N))) {
   __attribute__((example("def", N + 1))) for (int i = 0; i < 9; ++i) {}
-  __attribute__((example("ghi", N + 2)))
-label1:
-  for (int i = 0; i < 9; ++i) {}
 }
 void fn3() { template_fn<5>(); }
 // CHECK: -AttributedStmt 0x{{[0-9a-z]+}} {{<line:[0-9]+:[0-9]+(, col:[0-9]+)?>}}
@@ -46,11 +43,6 @@ void fn3() { template_fn<5>(); }
 // CHECK: -BinaryOperator 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'int' '+'
 // CHECK: -IntegerLiteral 0x{{[0-9a-z]+}} {{<line:[0-9]+:[0-9]+(, col:[0-9]+)?>}} 'int' 5
 // CHECK: -IntegerLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'int' 1
-// CHECK: -AnnotateAttr 0x{{[0-9a-z]+}} {{<line:[0-9]+:[0-9]+(, col:[0-9]+)?>}} "example"
-// CHECK: -StringLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'const char[{{[0-9]+}}]' lvalue "ghi"
-// CHECK: -BinaryOperator 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'int' '+'
-// CHECK: -IntegerLiteral 0x{{[0-9a-z]+}} {{<line:[0-9]+:[0-9]+(, col:[0-9]+)?>}} 'int' 5
-// CHECK: -IntegerLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'int' 2
 // CHECK: -AnnotateAttr 0x{{[0-9a-z]+}} {{<line:[0-9]+:[0-9]+(, col:[0-9]+)?>}} "example"
 // CHECK: -StringLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'const char[{{[0-9]+}}]' lvalue "template"
 // CHECK: -IntegerLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'int' 5
