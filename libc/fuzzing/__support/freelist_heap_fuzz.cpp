@@ -18,9 +18,9 @@
 #include "src/string/memory_utils/inline_memset.h"
 
 using LIBC_NAMESPACE::FreeListHeap;
+using LIBC_NAMESPACE::inline_memset;
 using LIBC_NAMESPACE::cpp::nullopt;
 using LIBC_NAMESPACE::cpp::optional;
-using LIBC_NAMESPACE::inline_memset;
 
 // Record of an outstanding allocation.
 struct Alloc {
