@@ -1107,17 +1107,22 @@ private:
     };
     if (obj.attrs.test(Attrs::Optional))
       addMLIRAttr(fir::getOptionalAttrName());
-    // Skipping obj.attrs.test(Attrs::Asynchronous), this does not impact the
-    // way the argument is passed given flang implement asynch IO synchronously.
-    // TODO: it would be safer to treat them as volatile because since Fortran
-    // 2018 asynchronous can also be used for C defined asynchronous user
-    // processes (see 18.10.4 Asynchronous communication).
     if (obj.attrs.test(Attrs::Contiguous))
       addMLIRAttr(fir::getContiguousAttrName());
     if (obj.attrs.test(Attrs::Value))
       isValueAttr = true; // TODO: do we want an mlir::Attribute as well?
-    if (obj.attrs.test(Attrs::Volatile))
+    if (obj.attrs.test(Attrs::Volatile)) {
       TODO(loc, "VOLATILE in procedure interface");
+      addMLIRAttr(fir::getVolatileAttrName());
+    }
+    // obj.attrs.test(Attrs::Asynchronous) does not impact the way the argument
+    // is passed given flang implement asynch IO synchronously. However, it's
+    // added to determine whether the argument is captured.
+    // TODO: it would be safer to treat them as volatile because since Fortran
+    // 2018 asynchronous can also be used for C defined asynchronous user
+    // processes (see 18.10.4 Asynchronous communication).
+    if (obj.attrs.test(Attrs::Asynchronous))
+      addMLIRAttr(fir::getAsynchronousAttrName());
     if (obj.attrs.test(Attrs::Target))
       addMLIRAttr(fir::getTargetAttrName());
     if (obj.cudaDataAttr)
