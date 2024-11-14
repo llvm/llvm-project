@@ -18,7 +18,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/IR/ReplaceConstant.h"
 
 #define DEBUG_TYPE "amdgpu-memory-utils"

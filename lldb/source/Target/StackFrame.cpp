@@ -508,6 +508,29 @@ StackFrame::GetInScopeVariableList(bool get_file_globals,
 ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
     VariableSP &var_sp, Status &error) {
+  ExecutionContext exe_ctx;
+  CalculateExecutionContext(exe_ctx);
+  bool use_DIL = exe_ctx.GetTargetRef().GetUseDIL(&exe_ctx);
+  if (use_DIL)
+    return DILGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
+                                                var_sp, error);
+
+  return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
+                                                 var_sp, error);
+}
+
+ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
+    llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
+    uint32_t options, lldb::VariableSP &var_sp, Status &error) {
+  // This is a place-holder for the calls into the DIL parser and
+  // evaluator.  For now, just call the "real" frame variable implementation.
+  return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
+                                                 var_sp, error);
+}
+
+ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
+    llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
+    VariableSP &var_sp, Status &error) {
   llvm::StringRef original_var_expr = var_expr;
   // We can't fetch variable information for a history stack frame.
   if (IsHistorical())
@@ -1918,15 +1941,15 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
       if (m_sc.comp_unit && m_sc.line_entry.IsValid()) {
         have_debuginfo = true;
         if (source_lines_before > 0 || source_lines_after > 0) {
+          SupportFileSP source_file_sp = m_sc.line_entry.file_sp;
           uint32_t start_line = m_sc.line_entry.line;
           if (!start_line && m_sc.function) {
-            FileSpec source_file;
-            m_sc.function->GetStartLineSourceInfo(source_file, start_line);
+            m_sc.function->GetStartLineSourceInfo(source_file_sp, start_line);
           }
 
           size_t num_lines =
               target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
-                  m_sc.line_entry.file_sp, start_line, m_sc.line_entry.column,
+                  source_file_sp, start_line, m_sc.line_entry.column,
                   source_lines_before, source_lines_after, "->", &strm);
           if (num_lines != 0)
             have_source = true;
