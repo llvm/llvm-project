@@ -45,7 +45,7 @@ class LLVM_ArithmeticOpBase<Type type, string mnemonic,
                     LLVM_ScalarOrVectorOf<type>:$rhs);
   let results = (outs LLVM_ScalarOrVectorOf<type>:$res);
   let builders = [LLVM_OneResultOpBuilder];
-  let assemblyFormat = "$lhs `,` $rhs custom<LLVMOpAttrs>(attr-dict) `:` type($res)";
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($res)";
   string llvmInstName = instName;
 }
 class LLVM_IntArithmeticOp<string mnemonic, string instName,
@@ -118,7 +118,7 @@ class LLVM_UnaryFloatArithmeticOp<Type type, string mnemonic,
     DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
   let results = (outs type:$res);
   let builders = [LLVM_OneResultOpBuilder];
-  let assemblyFormat = "$operand custom<LLVMOpAttrs>(attr-dict) `:` type($res)";
+  let assemblyFormat = "$operand attr-dict `:` type($res)";
   string llvmInstName = instName;
   string mlirBuilder = [{
     auto op = $_builder.create<$_qualCppClassName>($_location, $operand);
