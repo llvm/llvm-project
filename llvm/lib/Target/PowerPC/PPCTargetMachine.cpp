@@ -20,7 +20,6 @@
 #include "PPCTargetObjectFile.h"
 #include "PPCTargetTransformInfo.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
@@ -150,7 +149,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   initializeGlobalISel(PR);
   initializePPCCTRLoopsPass(PR);
   initializePPCDAGToDAGISelLegacyPass(PR);
-  initializePPCMergeStringPoolPass(PR);
 }
 
 static bool isLittleEndianTriple(const Triple &T) {
@@ -503,16 +501,9 @@ bool PPCPassConfig::addPreISel() {
   // Specifying the command line option overrides the AIX default.
   if ((EnableGlobalMerge.getNumOccurrences() > 0)
           ? EnableGlobalMerge
-          : (TM->getTargetTriple().isOSAIX() &&
-             getOptLevel() != CodeGenOptLevel::None))
+          : getOptLevel() != CodeGenOptLevel::None)
     addPass(createGlobalMergePass(TM, GlobalMergeMaxOffset, false, false, true,
                                   true));
-
-  if ((MergeStringPool.getNumOccurrences() > 0)
-          ? MergeStringPool
-          : (TM->getTargetTriple().isOSLinux() &&
-             getOptLevel() != CodeGenOptLevel::None))
-    addPass(createPPCMergeStringPoolPass());
 
   if (!DisableInstrFormPrep && getOptLevel() != CodeGenOptLevel::None)
     addPass(createPPCLoopInstrFormPrepPass(getPPCTargetMachine()));

@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/FinalizeISel.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GlobalMerge.h"
+#include "llvm/CodeGen/GlobalMergeFunctions.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
@@ -713,6 +714,9 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
   // Convert conditional moves to conditional jumps when profitable.
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableSelectOptimize)
     addPass(SelectOptimizePass(&TM));
+
+  if (Opt.EnableGlobalMergeFunc)
+    addPass(GlobalMergeFuncPass());
 }
 
 /// Turn exception handling constructs into something the code generators can

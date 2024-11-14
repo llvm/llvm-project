@@ -30,7 +30,6 @@
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCPredicates.h"
 #include "PPC.h"
-#include "PPCInstrBuilder.h"
 #include "PPCInstrInfo.h"
 #include "PPCMachineFunctionInfo.h"
 #include "PPCTargetMachine.h"
@@ -500,7 +499,6 @@ bool PPCMIPeephole::simplifyCode() {
           NumConvertedToImmediateForm++;
           SomethingChanged = true;
           Simplified = true;
-          continue;
         }
       }
     } while (SomethingChanged && FixedPointRegToImm);
