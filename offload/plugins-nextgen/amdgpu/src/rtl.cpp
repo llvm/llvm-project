@@ -749,7 +749,8 @@ struct AMDGPUKernelTy : public GenericKernelTy {
         OMPX_BigJumpLoopOccupancyBasedOpt(
             "OMPX_BIGJUMPLOOP_OCCUPANCY_BASED_OPT", false),
         OMPX_XTeamReductionOccupancyBasedOpt(
-            "OMPX_XTEAMREDUCTION_OCCUPANCY_BASED_OPT", false) {}
+            "OMPX_XTEAMREDUCTION_OCCUPANCY_BASED_OPT", false),
+        OMPX_EnableRuntimeAutotuning("OMPX_ENABLE_RUNTIME_AUTOTUNING", false) {}
 
   /// Initialize the AMDGPU kernel.
   Error initImpl(GenericDeviceTy &Device, DeviceImageTy &Image) override {
@@ -884,6 +885,9 @@ struct AMDGPUKernelTy : public GenericKernelTy {
 
   /// Envar to enable occupancy-based optimization for cross team reduction.
   BoolEnvar OMPX_XTeamReductionOccupancyBasedOpt;
+
+  /// Envar to enable runtime tuning.
+  BoolEnvar OMPX_EnableRuntimeAutotuning;
 
 private:
   /// The kernel object to execute.
@@ -1683,6 +1687,13 @@ private:
     double TicksToTime;
   };
 
+  /// Utility struct holding arguments for post kernel run processing.
+  struct PostKernelRunProcessingArgsTy {
+    hsa_agent_t Agent;
+    AMDGPUSignalTy *Signal;
+    double TicksToTime;
+  };
+
   using AMDGPUStreamCallbackTy = Error(void *Data);
 
   /// The stream is composed of N stream's slots. The struct below represents
@@ -1881,6 +1892,9 @@ private:
   /// Use synchronous copy back.
   bool UseSyncCopyBack;
 
+  /// Arguments for the callback function.
+  PostKernelRunProcessingArgsTy PostKernelRunProcessingArgs;
+
   /// Return the current number of asychronous operations on the stream.
   uint32_t size() const { return NextSlot; }
 
@@ -2042,6 +2056,31 @@ private:
     return Plugin::success();
   }
 
+  static uint64_t getKernelDuration(PostKernelRunProcessingArgsTy *Args) {
+    assert(Args->Signal &&
+           "Invalid AMDGPUSignal Pointer in post kernel run processing");
+    hsa_amd_profiling_dispatch_time_t TimeRec;
+    hsa_status_t Status = hsa_amd_profiling_get_dispatch_time(
+        Args->Agent, Args->Signal->get(), &TimeRec);
+
+    uint64_t StartTime = TimeRec.start * Args->TicksToTime;
+    uint64_t EndTime = TimeRec.end * Args->TicksToTime;
+
+    return EndTime - StartTime;
+  }
+
+  /// Callback funtion to process the data for each kernel run.
+  static Error postKernelRunProcessingAction(void *Data) {
+    assert(Data && "Invalid data pointer for post kernel run processing");
+    PostKernelRunProcessingArgsTy *Args =
+        reinterpret_cast<PostKernelRunProcessingArgsTy *>(Data);
+
+    uint64_t KernelDuration = getKernelDuration(Args);
+    fprintf(stderr, "Kernel Duration: %lu ns\n", KernelDuration);
+
+    return Plugin::success();
+  }
+
 #ifdef OMPT_SUPPORT
   static Error timeKernelInNsAsync(void *Data) {
     assert(Data && "Invalid data pointer in OMPT profiling");
@@ -2123,6 +2162,18 @@ public:
         return Err;
     }
 #endif
+
+    // If runtime autotuning is enabled, setup the callback functions to process
+    // the data after kernel completed.
+    if (Kernel.OMPX_EnableRuntimeAutotuning) {
+      PostKernelRunProcessingArgs.Agent = Agent;
+      PostKernelRunProcessingArgs.Signal = OutputSignal;
+      PostKernelRunProcessingArgs.TicksToTime = 1.0;
+
+      if (auto Err = Slots[Curr].schedCallback(postKernelRunProcessingAction,
+                                               &PostKernelRunProcessingArgs))
+        return Err;
+    }
 
     // Push the kernel with the output signal and an input signal (optional)
     DP("Using Queue: %p with HSA Queue: %p\n", Queue, Queue->getHsaQueue());
