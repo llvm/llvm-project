@@ -160,7 +160,6 @@ def ARMintretglue    : SDNode<"ARMISD::INTRET_GLUE", SDT_ARMcall,
                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def ARMcmov          : SDNode<"ARMISD::CMOV", SDT_ARMCMov,
                               [SDNPInGlue]>;
-def ARMsubs          : SDNode<"ARMISD::SUBS", SDTIntBinOp, [SDNPOutGlue]>;
 
 def ARMssat   : SDNode<"ARMISD::SSAT", SDTIntSatNoShOp, []>;
 
@@ -372,12 +371,14 @@ def ARMVCCElse : PatLeaf<(i32 2)>;
 
 // imm_neg_XFORM - Return the negation of an i32 immediate value.
 def imm_neg_XFORM : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(-(int)N->getZExtValue(), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedConstant(-(int)N->getZExtValue(), SDLoc(N), MVT::i32,
+                                   /*isTarget=*/true);
 }]>;
 
 // imm_not_XFORM - Return the complement of a i32 immediate value.
 def imm_not_XFORM : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(~(int)N->getZExtValue(), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedConstant(~(int)N->getZExtValue(), SDLoc(N), MVT::i32,
+                                   /*isTarget=*/true);
 }]>;
 def gi_imm_not_XFORM : GICustomOperandRenderer<"renderInvertedImm">,
   GISDNodeXFormEquiv<imm_not_XFORM>;
@@ -3878,14 +3879,6 @@ defm SUB  : AsI1_bin_irs<0b0010, "sub",
 let isAdd = 1 in
 defm ADDS : AsI1_bin_s_irs<IIC_iALUi, IIC_iALUr, IIC_iALUsr, ARMaddc, 1>;
 defm SUBS : AsI1_bin_s_irs<IIC_iALUi, IIC_iALUr, IIC_iALUsr, ARMsubc>;
-
-def : ARMPat<(ARMsubs GPR:$Rn, mod_imm:$imm), (SUBSri $Rn, mod_imm:$imm)>;
-def : ARMPat<(ARMsubs GPR:$Rn, GPR:$Rm), (SUBSrr $Rn, $Rm)>;
-def : ARMPat<(ARMsubs GPR:$Rn, so_reg_imm:$shift),
-             (SUBSrsi $Rn, so_reg_imm:$shift)>;
-def : ARMPat<(ARMsubs GPR:$Rn, so_reg_reg:$shift),
-             (SUBSrsr $Rn, so_reg_reg:$shift)>;
-
 
 let isAdd = 1 in
 defm ADC : AI1_adde_sube_irs<0b0101, "adc", ARMadde, 1>;

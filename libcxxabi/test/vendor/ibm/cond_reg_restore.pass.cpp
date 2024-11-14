@@ -10,7 +10,7 @@
 // on AIX. Option -O3 is required so that the compiler will re-use the value
 // in the condition register instead of re-evaluating the condition expression.
 
-// REQUIRES: target=powerpc{{(64)?}}-ibm-aix
+// REQUIRES: target={{.+}}-aix{{.*}}
 // ADDITIONAL_COMPILE_FLAGS: -O3
 // UNSUPPORTED: no-exceptions
 

@@ -58,10 +58,11 @@ void LLVMDialect::registerAttributes() {
 bool DINodeAttr::classof(Attribute attr) {
   return llvm::isa<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
                    DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
-                   DILabelAttr, DILexicalBlockAttr, DILexicalBlockFileAttr,
-                   DILocalVariableAttr, DIModuleAttr, DINamespaceAttr,
-                   DINullTypeAttr, DISubprogramAttr, DISubrangeAttr,
-                   DISubroutineTypeAttr>(attr);
+                   DIImportedEntityAttr, DILabelAttr, DILexicalBlockAttr,
+                   DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
+                   DINamespaceAttr, DINullTypeAttr, DIStringTypeAttr,
+                   DISubprogramAttr, DISubrangeAttr, DISubroutineTypeAttr>(
+      attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -83,12 +84,21 @@ bool DILocalScopeAttr::classof(Attribute attr) {
 }
 
 //===----------------------------------------------------------------------===//
+// DIVariableAttr
+//===----------------------------------------------------------------------===//
+
+bool DIVariableAttr::classof(Attribute attr) {
+  return llvm::isa<DILocalVariableAttr, DIGlobalVariableAttr>(attr);
+}
+
+//===----------------------------------------------------------------------===//
 // DITypeAttr
 //===----------------------------------------------------------------------===//
 
 bool DITypeAttr::classof(Attribute attr) {
   return llvm::isa<DINullTypeAttr, DIBasicTypeAttr, DICompositeTypeAttr,
-                   DIDerivedTypeAttr, DISubroutineTypeAttr>(attr);
+                   DIDerivedTypeAttr, DIStringTypeAttr, DISubroutineTypeAttr>(
+      attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -192,16 +202,17 @@ void printExpressionArg(AsmPrinter &printer, uint64_t opcode,
 
 DIRecursiveTypeAttrInterface
 DICompositeTypeAttr::withRecId(DistinctAttr recId) {
-  return DICompositeTypeAttr::get(getContext(), getTag(), recId, getName(),
-                                  getFile(), getLine(), getScope(),
-                                  getBaseType(), getFlags(), getSizeInBits(),
-                                  getAlignInBits(), getElements());
+  return DICompositeTypeAttr::get(
+      getContext(), getTag(), recId, getName(), getFile(), getLine(),
+      getScope(), getBaseType(), getFlags(), getSizeInBits(), getAlignInBits(),
+      getElements(), getDataLocation(), getRank(), getAllocated(),
+      getAssociated());
 }
 
 DIRecursiveTypeAttrInterface
 DICompositeTypeAttr::getRecSelf(DistinctAttr recId) {
   return DICompositeTypeAttr::get(recId.getContext(), 0, recId, {}, {}, 0, {},
-                                  {}, DIFlags(), 0, 0, {});
+                                  {}, DIFlags(), 0, 0, {}, {}, {}, {}, {});
 }
 
 //===----------------------------------------------------------------------===//

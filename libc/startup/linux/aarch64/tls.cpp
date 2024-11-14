@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/OSUtil/syscall.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "startup/linux/do_start.h"
@@ -18,7 +19,7 @@
 // Source documentation:
 // https://github.com/ARM-software/abi-aa/tree/main/sysvabi64
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 #ifdef SYS_mmap2
 static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap2;
@@ -80,7 +81,18 @@ void cleanup_tls(uintptr_t addr, uintptr_t size) {
 }
 
 bool set_thread_ptr(uintptr_t val) {
-  __arm_wsr64("tpidr_el0", val);
+// The PR for __arm_wsr64 support in GCC was merged on Dec 6, 2023, and it is
+// not yet usable in 13.3.0
+// https://github.com/gcc-mirror/gcc/commit/fc42900d21abd5eacb7537c3c8ffc5278d510195
+#if __has_builtin(__builtin_arm_wsr64)
+  __builtin_arm_wsr64("tpidr_el0", val);
+#elif __has_builtin(__builtin_aarch64_wsr)
+  __builtin_aarch64_wsr("tpidr_el0", val);
+#elif defined(__GNUC__)
+  asm volatile("msr tpidr_el0, %0" ::"r"(val));
+#else
+#error "Unsupported compiler"
+#endif
   return true;
 }
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

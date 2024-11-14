@@ -12,7 +12,7 @@
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.exe.bolt >> addr.txt
 ; RUN: cat addr.txt | FileCheck -check-prefix=BOLT %s
 
-; Tests we generate range when linker GCs only function used in CU
+;; Tests we generate range when linker GCs only function used in CU
 
 ; BOLT: Addrs:
 ; BOLT-NEXT: 0x[[#%.16x,ADDR:]]

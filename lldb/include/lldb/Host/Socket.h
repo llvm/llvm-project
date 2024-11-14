@@ -19,6 +19,7 @@
 #include "lldb/Utility/Status.h"
 
 #ifdef _WIN32
+#include "lldb/Host/Pipe.h"
 #include "lldb/Host/windows/windows.h"
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -32,11 +33,34 @@ namespace lldb_private {
 
 #if defined(_WIN32)
 typedef SOCKET NativeSocket;
+typedef lldb::pipe_t shared_fd_t;
 #else
 typedef int NativeSocket;
+typedef NativeSocket shared_fd_t;
 #endif
+class Socket;
 class TCPSocket;
 class UDPSocket;
+
+class SharedSocket {
+public:
+  static const shared_fd_t kInvalidFD;
+
+  SharedSocket(const Socket *socket, Status &error);
+
+  shared_fd_t GetSendableFD() { return m_fd; }
+
+  Status CompleteSending(lldb::pid_t child_pid);
+
+  static Status GetNativeSocket(shared_fd_t fd, NativeSocket &socket);
+
+private:
+#ifdef _WIN32
+  Pipe m_socket_pipe;
+  NativeSocket m_socket;
+#endif
+  shared_fd_t m_fd;
+};
 
 class Socket : public IOObject {
 public:
@@ -59,6 +83,10 @@ public:
   static const NativeSocket kInvalidSocketValue;
 
   ~Socket() override;
+
+  static const char *FindSchemeByProtocol(const SocketProtocol protocol);
+  static bool FindProtocolByScheme(const char *scheme,
+                                   SocketProtocol &protocol);
 
   static llvm::Error Initialize();
   static void Terminate();

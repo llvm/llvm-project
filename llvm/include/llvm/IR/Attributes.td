@@ -47,6 +47,9 @@ class ComplexStrAttr<string S, list<AttrProperty> P> : Attr<S, P>;
 /// ConstantRange attribute.
 class ConstantRangeAttr<string S, list<AttrProperty> P> : Attr<S, P>;
 
+/// ConstantRangeList attribute.
+class ConstantRangeListAttr<string S, list<AttrProperty> P> : Attr<S, P>;
+
 /// Target-independent enum attributes.
 
 /// Alignment of parameter (5 bits) stored as log2 of alignment with +1 bias.
@@ -109,8 +112,14 @@ def ElementType : TypeAttr<"elementtype", [ParamAttr]>;
 /// symbol.
 def FnRetThunkExtern : EnumAttr<"fn_ret_thunk_extern", [FnAttr]>;
 
+/// Function has a hybrid patchable thunk.
+def HybridPatchable : EnumAttr<"hybrid_patchable", [FnAttr]>;
+
 /// Pass structure in an alloca.
 def InAlloca : TypeAttr<"inalloca", [ParamAttr]>;
+
+/// Pointer argument memory is initialized.
+def Initializes : ConstantRangeListAttr<"initializes", [ParamAttr]>;
 
 /// Source said inlining was desirable.
 def InlineHint : EnumAttr<"inlinehint", [FnAttr]>;
@@ -203,6 +212,9 @@ def NoSanitizeBounds : EnumAttr<"nosanitize_bounds", [FnAttr]>;
 /// No SanitizeCoverage instrumentation.
 def NoSanitizeCoverage : EnumAttr<"nosanitize_coverage", [FnAttr]>;
 
+/// No SanitizeRealtime instrumentation.
+def NoSanitizeRealtime : EnumAttr<"nosanitize_realtime", [FnAttr]>;
+
 /// Null pointer in address space zero is valid.
 def NullPointerIsValid : EnumAttr<"null_pointer_is_valid", [FnAttr]>;
 
@@ -284,6 +296,12 @@ def SanitizeHWAddress : EnumAttr<"sanitize_hwaddress", [FnAttr]>;
 
 /// MemTagSanitizer is on.
 def SanitizeMemTag : EnumAttr<"sanitize_memtag", [FnAttr]>;
+
+/// NumericalStabilitySanitizer is on.
+def SanitizeNumericalStability : EnumAttr<"sanitize_numerical_stability", [FnAttr]>;
+
+/// RealtimeSanitizer is on.
+def SanitizeRealtime : EnumAttr<"sanitize_realtime", [FnAttr]>;
 
 /// Speculative Load Hardening is enabled.
 ///
@@ -372,6 +390,8 @@ def : CompatRule<"isEqual<SanitizeThreadAttr>">;
 def : CompatRule<"isEqual<SanitizeMemoryAttr>">;
 def : CompatRule<"isEqual<SanitizeHWAddressAttr>">;
 def : CompatRule<"isEqual<SanitizeMemTagAttr>">;
+def : CompatRule<"isEqual<SanitizeNumericalStabilityAttr>">;
+def : CompatRule<"isEqual<SanitizeRealtimeAttr>">;
 def : CompatRule<"isEqual<SafeStackAttr>">;
 def : CompatRule<"isEqual<ShadowCallStackAttr>">;
 def : CompatRule<"isEqual<UseSampleProfileAttr>">;

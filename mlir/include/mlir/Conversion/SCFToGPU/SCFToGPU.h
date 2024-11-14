@@ -12,7 +12,6 @@
 
 namespace mlir {
 class ConversionTarget;
-struct LogicalResult;
 class MLIRContext;
 class Value;
 class Operation;

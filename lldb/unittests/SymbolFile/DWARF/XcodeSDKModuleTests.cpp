@@ -162,7 +162,9 @@ DWARF:
   ModuleSP module = t.GetModule();
   ASSERT_NE(module, nullptr);
 
-  auto path_or_err = PlatformDarwin::ResolveSDKPathFromDebugInfo(*module);
+  auto platform_sp = Platform::GetHostPlatform();
+  ASSERT_TRUE(platform_sp);
+  auto path_or_err = platform_sp->ResolveSDKPathFromDebugInfo(*module);
   EXPECT_FALSE(static_cast<bool>(path_or_err));
   llvm::consumeError(path_or_err.takeError());
 }
@@ -206,7 +208,9 @@ DWARF:
   ModuleSP module = t.GetModule();
   ASSERT_NE(module, nullptr);
 
-  auto path_or_err = PlatformDarwin::ResolveSDKPathFromDebugInfo(*module);
+  auto platform_sp = Platform::GetHostPlatform();
+  ASSERT_TRUE(platform_sp);
+  auto path_or_err = platform_sp->ResolveSDKPathFromDebugInfo(*module);
   EXPECT_FALSE(static_cast<bool>(path_or_err));
   llvm::consumeError(path_or_err.takeError());
 }
@@ -254,7 +258,9 @@ DWARF:
   ModuleSP module = t.GetModule();
   ASSERT_NE(module, nullptr);
 
-  auto sdk_or_err = PlatformDarwin::GetSDKPathFromDebugInfo(*module);
+  auto platform_sp = Platform::GetHostPlatform();
+  ASSERT_TRUE(platform_sp);
+  auto sdk_or_err = platform_sp->GetSDKPathFromDebugInfo(*module);
   ASSERT_TRUE(static_cast<bool>(sdk_or_err));
 
   auto [sdk, found_mismatch] = *sdk_or_err;

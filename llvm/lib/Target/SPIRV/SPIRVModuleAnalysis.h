@@ -20,7 +20,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 
 namespace llvm {
 class SPIRVSubtarget;
@@ -34,9 +33,11 @@ enum ModuleSectionType {
   MB_EntryPoints, // All OpEntryPoint instructions (if any).
   //  MB_ExecutionModes, MB_DebugSourceAndStrings,
   MB_DebugNames,           // All OpName and OpMemberName intrs.
+  MB_DebugStrings,         // All OpString intrs.
   MB_DebugModuleProcessed, // All OpModuleProcessed instructions.
   MB_Annotations,          // OpDecorate, OpMemberDecorate etc.
   MB_TypeConstVars,        // OpTypeXXX, OpConstantXXX, and global OpVariables.
+  MB_NonSemanticGlobalDI,  // OpExtInst with e.g. DebugSource, DebugTypeBasic.
   MB_ExtFuncDecls,         // OpFunction etc. to declare for external funcs.
   NUM_MODULE_SECTIONS      // Total number of sections requiring basic blocks.
 };

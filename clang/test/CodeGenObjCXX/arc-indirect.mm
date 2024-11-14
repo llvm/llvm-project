@@ -17,6 +17,6 @@ struct S {
 
 // CHECK-GNUSTEP: define internal void @_i_C__object_struct_(ptr inalloca(<{ ptr, ptr, ptr, %struct.S, [3 x i8] }>) %0)
 // CHECK-DARWIN: define internal void @"\01-[C object:struct:]"(ptr inalloca(<{ ptr, ptr, ptr, %struct.S, [3 x i8] }>) %0)
-// CHECK: %obj = getelementptr inbounds <{ ptr, ptr, ptr, %struct.S, [3 x i8] }>, ptr %0, i32 0, i32 2
+// CHECK: %obj = getelementptr inbounds nuw <{ ptr, ptr, ptr, %struct.S, [3 x i8] }>, ptr %0, i32 0, i32 2
 // CHECK: %[[INSTANCE:[0-9]+]] = load ptr, ptr %obj, align 4
 // CHECK: call void @llvm.objc.storeStrong(ptr %obj, ptr %[[INSTANCE]])

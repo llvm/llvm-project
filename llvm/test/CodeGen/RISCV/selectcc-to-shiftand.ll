@@ -262,3 +262,26 @@ define i64 @sel_shift_bool_i64(i1 %t) {
   %shl = select i1 %t, i64 65536, i64 0
   ret i64 %shl
 }
+
+; FIXME: This should use sraiw+and
+define i64 @sraiw_andi(i32 signext %0, i32 signext %1) nounwind {
+; RV32-LABEL: sraiw_andi:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    srai a0, a0, 2
+; RV32-NEXT:    srli a0, a0, 29
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: sraiw_andi:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    sraiw a0, a0, 31
+; RV64-NEXT:    andi a0, a0, 7
+; RV64-NEXT:    ret
+entry:
+  %3 = add i32 %0, %1
+  %4 = icmp sgt i32 %3, -1
+  %5 = select i1 %4, i64 0, i64 7
+  ret i64 %5
+}
