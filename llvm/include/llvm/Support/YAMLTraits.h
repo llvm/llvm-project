@@ -2007,11 +2007,6 @@ struct SequenceTraits<
     : SequenceTraitsImpl<std::vector<T>, SequenceElementTraits<T>::flow> {};
 template <typename T, unsigned N>
 struct SequenceTraits<
-    std::array<T, N>,
-    std::enable_if_t<CheckIsBool<SequenceElementTraits<T>::flow>::value>>
-    : SequenceTraitsImpl<std::array<T, N>, SequenceElementTraits<T>::flow> {};
-template <typename T, unsigned N>
-struct SequenceTraits<
     SmallVector<T, N>,
     std::enable_if_t<CheckIsBool<SequenceElementTraits<T>::flow>::value>>
     : SequenceTraitsImpl<SmallVector<T, N>, SequenceElementTraits<T>::flow> {};
