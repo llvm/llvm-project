@@ -504,6 +504,10 @@ public:
     if (!Callee)
       return false;
 
+    auto Name = safeGetName(Callee);
+    if (Name == "ref" || Name == "incrementCheckedPtrCount")
+      return true;
+
     std::optional<bool> IsGetterOfRefCounted = isGetterOfSafePtr(Callee);
     if (IsGetterOfRefCounted && *IsGetterOfRefCounted)
       return true;
