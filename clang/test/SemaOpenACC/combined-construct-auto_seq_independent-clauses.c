@@ -56,16 +56,10 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
 #pragma acc parallel loop auto nohost
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC clause 'default' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'default' not yet implemented}}
 #pragma acc parallel loop auto default(none)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'if' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
 #pragma acc parallel loop auto if(1)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'self' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
 #pragma acc parallel loop auto self
   for(unsigned i = 0; i < 5; ++i);
   // TODOexpected-error@+1{{OpenACC 'copy' clause is not valid on 'parallel loop' directive}}
@@ -230,16 +224,10 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
 #pragma acc parallel loop nohost auto
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'default' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'default' not yet implemented}}
 #pragma acc parallel loop default(none) auto
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'if' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
 #pragma acc parallel loop if(1) auto
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'self' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
 #pragma acc parallel loop self auto
   for(unsigned i = 0; i < 5; ++i);
   // TODOexpected-error@+1{{OpenACC 'copy' clause is not valid on 'parallel loop' directive}}
@@ -405,16 +393,10 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
 #pragma acc parallel loop independent nohost
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'default' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'default' not yet implemented}}
 #pragma acc parallel loop independent default(none)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'if' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
 #pragma acc parallel loop independent if(1)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'self' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
 #pragma acc parallel loop independent self
   for(unsigned i = 0; i < 5; ++i);
   // TODOexpected-error@+1{{OpenACC 'copy' clause is not valid on 'parallel loop' directive}}
@@ -579,16 +561,10 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
 #pragma acc parallel loop nohost independent
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'default' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'default' not yet implemented}}
 #pragma acc parallel loop default(none) independent
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'if' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
 #pragma acc parallel loop if(1) independent
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'self' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
 #pragma acc parallel loop self independent
   for(unsigned i = 0; i < 5; ++i);
   // TODOexpected-error@+1{{OpenACC 'copy' clause is not valid on 'parallel loop' directive}}
@@ -760,16 +736,10 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
 #pragma acc parallel loop seq nohost
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'default' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'default' not yet implemented}}
 #pragma acc parallel loop seq default(none)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'if' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
 #pragma acc parallel loop seq if(1)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'self' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
 #pragma acc parallel loop seq self
   for(unsigned i = 0; i < 5; ++i);
   // TODOexpected-error@+1{{OpenACC 'copy' clause is not valid on 'parallel loop' directive}}
@@ -940,16 +910,10 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
 #pragma acc parallel loop nohost seq
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'default' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'default' not yet implemented}}
 #pragma acc parallel loop default(none) seq
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'if' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
 #pragma acc parallel loop if(1) seq
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'self' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
 #pragma acc parallel loop self seq
   for(unsigned i = 0; i < 5; ++i);
   // TODOexpected-error@+1{{OpenACC 'copy' clause is not valid on 'parallel loop' directive}}

@@ -860,6 +860,15 @@ TYPE_PARSER(
 TYPE_PARSER(sourced(construct<OpenMPDeclareTargetConstruct>(
     verbatim("DECLARE TARGET"_tok), Parser<OmpDeclareTargetSpecifier>{})))
 
+// declare-mapper-specifier
+TYPE_PARSER(construct<OmpDeclareMapperSpecifier>(
+    maybe(name / ":" / !":"_tok), typeSpec / "::", name))
+
+// OpenMP 5.2: 5.8.8 Declare Mapper Construct
+TYPE_PARSER(sourced(construct<OpenMPDeclareMapperConstruct>(
+    verbatim("DECLARE MAPPER"_tok),
+    "(" >> Parser<OmpDeclareMapperSpecifier>{} / ")", Parser<OmpClauseList>{})))
+
 TYPE_PARSER(construct<OmpReductionCombiner>(Parser<AssignmentStmt>{}) ||
     construct<OmpReductionCombiner>(
         construct<OmpReductionCombiner::FunctionCombiner>(
@@ -968,6 +977,8 @@ TYPE_PARSER(startOmpLine >>
     withMessage("expected OpenMP construct"_err_en_US,
         sourced(construct<OpenMPDeclarativeConstruct>(
                     Parser<OpenMPDeclareReductionConstruct>{}) ||
+            construct<OpenMPDeclarativeConstruct>(
+                Parser<OpenMPDeclareMapperConstruct>{}) ||
             construct<OpenMPDeclarativeConstruct>(
                 Parser<OpenMPDeclareSimdConstruct>{}) ||
             construct<OpenMPDeclarativeConstruct>(
