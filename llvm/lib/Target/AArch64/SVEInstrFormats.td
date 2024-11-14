@@ -529,7 +529,6 @@ class SVE_1_Op_PassthruZero_Pat<ValueType vtd, SDPatternOperator op, ValueType v
    : Pat<(vtd (op (vtd (SVEDup0)), vt1:$Op1, vt2:$Op2)),
         (inst (IMPLICIT_DEF), $Op1, $Op2)>;
 
-
 class SVE_1_Op_Imm_OptLsl_Pat<ValueType vt, SDPatternOperator op, ZPRRegOp zprty,
                               ValueType it, ComplexPattern cpx, Instruction inst>
   : Pat<(vt (op (vt zprty:$Op1), (vt (splat_vector (it (cpx i32:$imm, i32:$shift)))))),
@@ -4964,7 +4963,7 @@ multiclass sve_int_un_pred_arit_bitwise_fp_z<bits<3> opc, string asm, SDPatternO
   def : SVE_1_Op_PassthruUndefZero_Pat<nxv2f64, op, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _D)>;
 }
 
-multiclass sve_int_un_pred_arit_hsd<SDPatternOperator op> {
+multiclass sve_fp_un_pred_arit_hsd<SDPatternOperator op> {
   def _H_UNDEF : PredOneOpPassthruPseudo<NAME # _H, ZPR16>;
   def _S_UNDEF : PredOneOpPassthruPseudo<NAME # _S, ZPR32>;
   def _D_UNDEF : PredOneOpPassthruPseudo<NAME # _D, ZPR64>;
