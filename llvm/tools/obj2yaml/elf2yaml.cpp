@@ -81,8 +81,7 @@ class ELFDumper {
   Expected<ELFYAML::RelrSection *> dumpRelrSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::RawContentSection *>
   dumpContentSection(const Elf_Shdr *Shdr);
-  Expected<ELFYAML::CustomRawContentSection *>
-  dumpCustomRawContentSection(const Elf_Shdr *Shdr);
+  Expected<ELFYAML::CustomSection *> dumpCustomSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::SymtabShndxSection *>
   dumpSymtabShndxSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::NoBitsSection *> dumpNoBitsSection(const Elf_Shdr *Shdr);
@@ -662,7 +661,7 @@ ELFDumper<ELFT>::dumpSections() {
       if (!NameOrErr)
         return NameOrErr.takeError();
 
-      if (auto ResultOrErr = dumpCustomRawContentSection(&Sec)) {
+      if (auto ResultOrErr = dumpCustomSection(&Sec)) {
         auto *Ptr = *ResultOrErr;
         if (Ptr) {
           if (Error E = Add(Ptr))
@@ -1672,14 +1671,14 @@ ELFDumper<ELFT>::dumpMipsABIFlags(const Elf_Shdr *Shdr) {
 }
 
 template <class ELFT>
-Expected<ELFYAML::CustomRawContentSection *>
-ELFDumper<ELFT>::dumpCustomRawContentSection(const Elf_Shdr *Shdr) {
+Expected<ELFYAML::CustomSection *>
+ELFDumper<ELFT>::dumpCustomSection(const Elf_Shdr *Shdr) {
   Expected<StringRef> NameOrErr = getUniquedSectionName(*Shdr);
   if (Error E = NameOrErr.takeError())
     return nullptr;
   auto Name = std::move(*NameOrErr);
 
-  auto S = Opt.makeCustomRawContentSection(Name);
+  auto S = Opt.makeCustomSection(Name);
   if (!S)
     return nullptr;
 

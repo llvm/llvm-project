@@ -32,8 +32,8 @@ ELFYAML::Chunk::~Chunk() = default;
 ELFYAML::Opt::~Opt() = default;
 const char ELFYAML::Opt::ID = 'E';
 
-std::unique_ptr<ELFYAML::CustomRawContentSection>
-ELFYAML::Opt::makeCustomRawContentSection(StringRef Name) const {
+std::unique_ptr<ELFYAML::CustomSection>
+ELFYAML::Opt::makeCustomSection(StringRef Name) const {
   return nullptr;
 }
 
@@ -1599,11 +1599,11 @@ static bool isInteger(StringRef Val) {
 void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
     IO &IO, std::unique_ptr<ELFYAML::Chunk> &Section) {
   if (!IO.outputting()) {
-    /// Prepare CustomRawContentSection by Name for ELFEmitter.
+    /// Prepare CustomSection by Name for ELFEmitter.
     if (auto *Opt = dyn_cast<ELFYAML::Opt>(IO.Opt)) {
       StringRef Name;
       IO.mapOptional("Name", Name);
-      if (auto S = Opt->makeCustomRawContentSection(Name)) {
+      if (auto S = Opt->makeCustomSection(Name)) {
         commonSectionMapping(IO, *S);
         S->sectionMapping(IO);
         Section = std::move(S);
@@ -1761,7 +1761,7 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
         Section = std::make_unique<ELFYAML::RawContentSection>();
     }
 
-    if (auto S = dyn_cast<ELFYAML::CustomRawContentSection>(Section.get())) {
+    if (auto S = dyn_cast<ELFYAML::CustomSection>(Section.get())) {
       commonSectionMapping(IO, *S);
       S->sectionMapping(IO);
     } else if (auto S = dyn_cast<ELFYAML::RawContentSection>(Section.get()))

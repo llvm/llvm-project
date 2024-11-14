@@ -211,7 +211,7 @@ struct Chunk {
     Dynamic,
     Group,
     RawContent,
-    CustomRawContent,
+    CustomContent,
     Relocation,
     Relr,
     NoBits,
@@ -400,10 +400,10 @@ struct RawContentSection : Section {
 };
 
 /// Abstract base class for non-blob contents.
-struct CustomRawContentSection : Section {
+struct CustomSection : Section {
   std::optional<llvm::yaml::Hex64> Info;
 
-  CustomRawContentSection() : Section(ChunkKind::CustomRawContent) {}
+  CustomSection() : Section(ChunkKind::CustomContent) {}
 
   /// Apply mappings.
   virtual void sectionMapping(yaml::IO &IO) = 0;
@@ -415,7 +415,7 @@ struct CustomRawContentSection : Section {
   virtual std::string encode() const = 0;
 
   static bool classof(const Chunk *S) {
-    return S->Kind == ChunkKind::CustomRawContent;
+    return S->Kind == ChunkKind::CustomContent;
   }
 };
 
@@ -796,14 +796,14 @@ public:
   }
   ~Opt();
 
-  /// Create an empty new object of CustomRawContentSection.
+  /// Create an empty new object of CustomSection.
   /// Its contents will be filled later.
   /// This is called:
   ///   - Before preMapping for elf2yaml.
   ///   - After preMapping for yaml2elf.
   /// Returns nullptr to delegate default actions.
-  virtual std::unique_ptr<CustomRawContentSection>
-  makeCustomRawContentSection(StringRef Name) const;
+  virtual std::unique_ptr<CustomSection>
+  makeCustomSection(StringRef Name) const;
 
   /// Called before mapping sections for prettyprinting yaml.
   virtual void preMapping(const ELFYAML::Object &Object, bool IsOutputting);

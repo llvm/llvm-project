@@ -252,7 +252,7 @@ template <class ELFT> class ELFState {
                            const ELFYAML::NoBitsSection &Section,
                            ContiguousBlobAccumulator &CBA);
   void writeSectionContent(Elf_Shdr &SHeader,
-                           const ELFYAML::CustomRawContentSection &Section,
+                           const ELFYAML::CustomSection &Section,
                            ContiguousBlobAccumulator &CBA);
   void writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::RawContentSection &Section,
@@ -862,7 +862,7 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
     if (!isa<ELFYAML::NoBitsSection>(Sec) && (Sec->Content || Sec->Size))
       SHeader.sh_size = writeContent(CBA, Sec->Content, Sec->Size);
 
-    if (auto S = dyn_cast<ELFYAML::CustomRawContentSection>(Sec)) {
+    if (auto S = dyn_cast<ELFYAML::CustomSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
     } else if (auto S = dyn_cast<ELFYAML::RawContentSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
@@ -1270,9 +1270,9 @@ void ELFState<ELFT>::writeSectionContent(
 }
 
 template <class ELFT>
-void ELFState<ELFT>::writeSectionContent(
-    Elf_Shdr &SHeader, const ELFYAML::CustomRawContentSection &Section,
-    ContiguousBlobAccumulator &CBA) {
+void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
+                                         const ELFYAML::CustomSection &Section,
+                                         ContiguousBlobAccumulator &CBA) {
   if (Section.Info)
     SHeader.sh_info = *Section.Info;
 
