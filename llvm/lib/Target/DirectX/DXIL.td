@@ -859,7 +859,6 @@ def WaveActiveAnyTrue : DXILOp<113, waveAnyTrue> {
   let arguments = [Int1Ty];
   let result = Int1Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
-  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
 def WaveIsFirstLane :  DXILOp<110, waveIsFirstLane> {
