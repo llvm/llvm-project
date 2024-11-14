@@ -249,6 +249,19 @@ func.func @ceil_divsi(%arg0 : index) -> i1 {
     func.return %10 : i1
 }
 
+// CHECK-LABEL: func @ceil_divsi_intmin_bug_115293
+// CHECK: %[[ret:.*]] = arith.constant true
+// CHECK: return %[[ret]]
+func.func @ceil_divsi_intmin_bug_115293() -> i1 {
+    %cIntMin_i64 = arith.constant -9223372036854775808 : i64
+    %cDenom_i64 = arith.constant 1189465982 : i64
+    %cRes_i64 = arith.constant 7754212542 : i64
+
+    %0 = arith.ceildivsi %cIntMin_i64, %cDenom_i64 : i64
+    %1 = arith.cmpi eq, %0, %cRes_i64 : i64
+    func.return %1 : i1
+}
+
 // CHECK-LABEL: func @floor_divsi
 // CHECK: %[[true:.*]] = arith.constant true
 // CHECK: return %[[true]]
