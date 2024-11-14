@@ -631,9 +631,9 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __uninitialized_allocat
     auto __iter = __first;
     while (__iter != __last) {
 #if _LIBCPP_HAS_EXCEPTIONS
-      allocator_traits<_Alloc>::construct(__alloc, __result, std::move_if_noexcept(*__iter));
+      allocator_traits<_Alloc>::construct(__alloc, std::__to_address(__result), std::move_if_noexcept(*__iter));
 #else
-      allocator_traits<_Alloc>::construct(__alloc, __result, std::move(*__iter));
+      allocator_traits<_Alloc>::construct(__alloc, std::__to_address(__result), std::move(*__iter));
 #endif
       ++__iter;
       ++__result;
