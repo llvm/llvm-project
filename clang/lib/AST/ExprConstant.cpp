@@ -13528,6 +13528,20 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(DidOverflow, E);
   }
 
+  case Builtin::BI__builtin_reduce_add: {
+    APValue Source;
+    if (!EvaluateAsRValue(Info, E->getArg(0), Source))
+      return false;
+
+    auto SourceLen = Source.getVectorLength();
+    APSInt Reduced = Source.getVectorElt(0).getInt();
+    for (unsigned EltNum = 1; EltNum < SourceLen; ++EltNum) {
+      Reduced += Source.getVectorElt(EltNum).getInt();
+    }
+
+    return Success(Reduced, E);
+  }
+
   case clang::X86::BI__builtin_ia32_addcarryx_u32:
   case clang::X86::BI__builtin_ia32_addcarryx_u64:
   case clang::X86::BI__builtin_ia32_subborrow_u32:

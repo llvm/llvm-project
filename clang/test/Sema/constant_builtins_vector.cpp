@@ -723,3 +723,9 @@ not within the bounds of the input vectors; index of -1 found at position 0 is n
 permitted in a constexpr context}}
         vector4charConst1,
         vector4charConst2, -1, -1, -1, -1);
+
+static_assert(__builtin_reduce_add((vector4char){}) == 0);
+static_assert(__builtin_reduce_add((vector4char){1, 2, 3, 4}) == 10);
+static_assert(__builtin_reduce_add((vector4short){10, 20, 30, 40}) == 100);
+static_assert(__builtin_reduce_add((vector4int){100, 200, 300, 400}) == 1000);
+static_assert(__builtin_reduce_add((vector4long){1000, 2000, 3000, 4000}) == 10000);
