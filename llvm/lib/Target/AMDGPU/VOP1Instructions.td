@@ -76,6 +76,7 @@ class VOP1_Real <VOP1_Pseudo ps, int EncodingFamily, string real_name = ps.Mnemo
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;
   let OtherPredicates    = ps.OtherPredicates;
+  let True16Predicate    = ps.True16Predicate;
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let AsmVariantName     = ps.AsmVariantName;
   let Constraints        = ps.Constraints;
@@ -735,7 +736,7 @@ def VOP_SWAP_I16 : VOPProfile_True16<VOP_I16_I16> {
                      VOPSrcEncodedDstOperand_t16Lo128:$vdst1);
   let Ins32 = (ins VOPSrcEncodedDstOperand_t16Lo128:$src0,
                    VOPDstOperand_t16Lo128:$src1);
-  let Asm32 = " $vdst, $src0";
+  let Asm32 = "$vdst, $src0";
 }
 
 let SubtargetPredicate = isGFX11Plus in {
