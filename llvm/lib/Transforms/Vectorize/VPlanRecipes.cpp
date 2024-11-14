@@ -2267,8 +2267,6 @@ InstructionCost VPMulAccRecipe::computeCost(ElementCount VF,
   Type *ElementTy = isExtended() ? RdxDesc.getRecurrenceType()
                                  : Ctx.Types.inferScalarType(getVecOp0());
   auto *VectorTy = cast<VectorType>(ToVectorTy(ElementTy, VF));
-  auto *SrcVecTy =
-      cast<VectorType>(ToVectorTy(Ctx.Types.inferScalarType(getVecOp0()), VF));
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   unsigned Opcode = RdxDesc.getOpcode();
 
@@ -2286,25 +2284,29 @@ InstructionCost VPMulAccRecipe::computeCost(ElementCount VF,
   if (isExtended()) {
     auto *SrcTy = cast<VectorType>(
         ToVectorTy(Ctx.Types.inferScalarType(getVecOp0()), VF));
+    auto *DestTy = cast<VectorType>(ToVectorTy(getResultType(), VF));
     TTI::CastContextHint CCH0 =
         computeCCH(getVecOp0()->getDefiningRecipe(), VF);
-    ExtendedCost = Ctx.TTI.getCastInstrCost(getExtOpcode(), VectorTy, SrcVecTy,
-                                            CCH0, TTI::TCK_RecipThroughput);
+    ExtendedCost = Ctx.TTI.getCastInstrCost(
+        Ext0Instr->getOpcode(), DestTy, SrcTy, CCH0, TTI::TCK_RecipThroughput,
+        dyn_cast_if_present<Instruction>(getExt0Instr()));
     TTI::CastContextHint CCH1 =
         computeCCH(getVecOp0()->getDefiningRecipe(), VF);
-    ExtendedCost += Ctx.TTI.getCastInstrCost(getExtOpcode(), VectorTy, SrcVecTy,
-                                             CCH1, TTI::TCK_RecipThroughput);
+    ExtendedCost += Ctx.TTI.getCastInstrCost(
+        Ext1Instr->getOpcode(), DestTy, SrcTy, CCH1, TTI::TCK_RecipThroughput,
+        dyn_cast_if_present<Instruction>(getExt1Instr()));
   }
 
   // Mul cost
   InstructionCost MulCost;
   SmallVector<const Value *, 4> Operands;
+  Operands.append(MulInstr->value_op_begin(), MulInstr->value_op_end());
   if (isExtended())
     MulCost = Ctx.TTI.getArithmeticInstrCost(
         Instruction::Mul, VectorTy, CostKind,
         {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
         {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
-        Operands, nullptr, &Ctx.TLI);
+        Operands, MulInstr, &Ctx.TLI);
   else {
     VPValue *RHS = getVecOp1();
     // Certain instructions can be cheaper to vectorize if they have a constant
@@ -2317,15 +2319,15 @@ InstructionCost VPMulAccRecipe::computeCost(ElementCount VF,
     if (RHSInfo.Kind == TargetTransformInfo::OK_AnyValue &&
         RHS->isDefinedOutsideLoopRegions())
       RHSInfo.Kind = TargetTransformInfo::OK_UniformValue;
-    Operands.append(
-        {getVecOp0()->getUnderlyingValue(), RHS->getUnderlyingValue()});
     MulCost = Ctx.TTI.getArithmeticInstrCost(
         Instruction::Mul, VectorTy, CostKind,
         {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
-        RHSInfo, Operands, nullptr, &Ctx.TLI);
+        RHSInfo, Operands, MulInstr, &Ctx.TLI);
   }
 
   // MulAccReduction Cost
+  VectorType *SrcVecTy =
+      cast<VectorType>(ToVectorTy(Ctx.Types.inferScalarType(getVecOp0()), VF));
   InstructionCost MulAccCost =
       Ctx.TTI.getMulAccReductionCost(isZExt(), ElementTy, SrcVecTy, CostKind);
 
@@ -2409,7 +2411,6 @@ void VPExtendedReductionRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPMulAccRecipe::print(raw_ostream &O, const Twine &Indent,
                            VPSlotTracker &SlotTracker) const {
   const RecurrenceDescriptor &RdxDesc = getRecurrenceDescriptor();
-  Type *ElementTy = RdxDesc.getRecurrenceType();
   O << Indent << "MULACC-REDUCE ";
   printAsOperand(O, SlotTracker);
   O << " = ";
@@ -2417,23 +2418,27 @@ void VPMulAccRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " + ";
   if (isa<FPMathOperator>(getUnderlyingInstr()))
     O << getUnderlyingInstr()->getFastMathFlags();
+  if (isOuterExtended())
+    O << " (";
   O << "reduce." << Instruction::getOpcodeName(RdxDesc.getOpcode()) << " (";
   O << "mul ";
   if (isExtended())
     O << "(";
   getVecOp0()->printAsOperand(O, SlotTracker);
   if (isExtended())
-    O << " extended to " << *ElementTy << "), (";
+    O << " extended to " << *getResultType() << "), (";
   else
     O << ", ";
   getVecOp1()->printAsOperand(O, SlotTracker);
   if (isExtended())
-    O << " extended to " << *ElementTy << ")";
+    O << " extended to " << *getResultType() << ")";
   if (isConditional()) {
     O << ", ";
     getCondOp()->printAsOperand(O, SlotTracker);
   }
   O << ")";
+  if (isOuterExtended())
+    O << " extended to " << *RdxDesc.getRecurrenceType() << ")";
   if (RdxDesc.IntermediateStore)
     O << " (with final reduction value stored in invariant address sank "
          "outside of loop)";
