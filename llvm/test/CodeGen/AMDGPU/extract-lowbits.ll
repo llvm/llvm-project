@@ -120,6 +120,20 @@ define i32 @bzhi32_c0(i32 %val, i32 %numlowbits) nounwind {
   ret i32 %masked
 }
 
+define i32 @bzhi32_c0_clamp(i32 %val, i32 %numlowbits) nounwind {
+; GCN-LABEL: bzhi32_c0_clamp:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 31, v1
+; GCN-NEXT:    v_bfe_u32 v0, v0, 0, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %low5bits = and i32 %numlowbits, 31
+  %numhighbits = sub i32 32, %low5bits
+  %mask = lshr i32 -1, %numhighbits
+  %masked = and i32 %mask, %val
+  ret i32 %masked
+}
+
 define i32 @bzhi32_c1_indexzext(i32 %val, i8 %numlowbits) nounwind {
 ; SI-LABEL: bzhi32_c1_indexzext:
 ; SI:       ; %bb.0:
