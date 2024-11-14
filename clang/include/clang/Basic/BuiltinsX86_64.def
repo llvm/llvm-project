@@ -148,6 +148,10 @@ TARGET_BUILTIN(__builtin_ia32_tcvtrowps2phl_internal, "V32xUsUsV256iUi", "n", "a
 TARGET_BUILTIN(__builtin_ia32_tilemovrow_internal, "V16iUsUsV256iUi", "n", "amx-avx512,avx10.2-512")
 TARGET_BUILTIN(__builtin_ia32_tmmultf32ps_internal, "V256iUsUsUsV256iV256iV256i", "n", "amx-tf32")
 TARGET_BUILTIN(__builtin_ia32_ttmmultf32ps_internal, "V256iUsUsUsV256iV256iV256i", "n", "amx-tf32,amx-transpose")
+TARGET_BUILTIN(__builtin_ia32_tdpbf8ps_internal, "V256iUsUsUsV256iV256iV256i", "n", "amx-fp8")
+TARGET_BUILTIN(__builtin_ia32_tdpbhf8ps_internal, "V256iUsUsUsV256iV256iV256i", "n", "amx-fp8")
+TARGET_BUILTIN(__builtin_ia32_tdphbf8ps_internal, "V256iUsUsUsV256iV256iV256i", "n", "amx-fp8")
+TARGET_BUILTIN(__builtin_ia32_tdphf8ps_internal, "V256iUsUsUsV256iV256iV256i", "n", "amx-fp8")
 
 // AMX
 TARGET_BUILTIN(__builtin_ia32_tile_loadconfig, "vvC*", "n", "amx-tile")
