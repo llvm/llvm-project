@@ -73,6 +73,7 @@ private:
   llvm::DICompileUnit *translateImpl(DICompileUnitAttr attr);
   llvm::DICompositeType *translateImpl(DICompositeTypeAttr attr);
   llvm::DIDerivedType *translateImpl(DIDerivedTypeAttr attr);
+  llvm::DIStringType *translateImpl(DIStringTypeAttr attr);
   llvm::DIFile *translateImpl(DIFileAttr attr);
   llvm::DILabel *translateImpl(DILabelAttr attr);
   llvm::DILexicalBlock *translateImpl(DILexicalBlockAttr attr);
@@ -80,6 +81,7 @@ private:
   llvm::DILocalScope *translateImpl(DILocalScopeAttr attr);
   llvm::DILocalVariable *translateImpl(DILocalVariableAttr attr);
   llvm::DIGlobalVariable *translateImpl(DIGlobalVariableAttr attr);
+  llvm::DIVariable *translateImpl(DIVariableAttr attr);
   llvm::DIModule *translateImpl(DIModuleAttr attr);
   llvm::DINamespace *translateImpl(DINamespaceAttr attr);
   llvm::DIScope *translateImpl(DIScopeAttr attr);
@@ -87,6 +89,12 @@ private:
   llvm::DISubrange *translateImpl(DISubrangeAttr attr);
   llvm::DISubroutineType *translateImpl(DISubroutineTypeAttr attr);
   llvm::DIType *translateImpl(DITypeAttr attr);
+
+  /// Currently, DIImportedEntityAttr does not have a scope field to avoid a
+  /// cyclic dependency.  The scope information is obtained from the entity
+  /// which holds the list of DIImportedEntityAttr. This requires that scope
+  /// information be passed to translate function.
+  llvm::DIImportedEntity *translate(DIImportedEntityAttr attr, llvm::DIScope *);
 
   /// Attributes that support self recursion need to implement an additional
   /// method to hook into `translateRecursive`.
@@ -102,6 +110,10 @@ private:
   /// Constructs a string metadata node from the string attribute. Returns
   /// nullptr if `stringAttr` is null or contains and empty string.
   llvm::MDString *getMDStringOrNull(StringAttr stringAttr);
+
+  /// Constructs a DIExpression metadata node from the DIExpressionAttr. Returns
+  /// nullptr if `DIExpressionAttr` is null.
+  llvm::DIExpression *getExpressionAttrOrNull(DIExpressionAttr attr);
 
   /// A mapping between mlir location+scope and the corresponding llvm debug
   /// metadata.

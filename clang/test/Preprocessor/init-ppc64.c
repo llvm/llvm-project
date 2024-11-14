@@ -632,6 +632,27 @@
 // PPCPOWER10:#define __PCREL__ 1
 // PPCPOWER10-NOT:#define __ROP_PROTECT__ 1
 //
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-cpu pwr11 -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPCPOWER11 %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-cpu power11 -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPCPOWER11 %s
+//
+// PPCPOWER11:#define _ARCH_PPC 1
+// PPCPOWER11:#define _ARCH_PPC64 1
+// PPCPOWER11:#define _ARCH_PPCGR 1
+// PPCPOWER11:#define _ARCH_PPCSQ 1
+// PPCPOWER11:#define _ARCH_PWR10 1
+// PPCPOWER11:#define _ARCH_PWR11 1
+// PPCPOWER11:#define _ARCH_PWR4 1
+// PPCPOWER11:#define _ARCH_PWR5 1
+// PPCPOWER11:#define _ARCH_PWR5X 1
+// PPCPOWER11:#define _ARCH_PWR6 1
+// PPCPOWER11-NOT:#define _ARCH_PWR6X 1
+// PPCPOWER11:#define _ARCH_PWR7 1
+// PPCPOWER11:#define _ARCH_PWR8 1
+// PPCPOWER11:#define _ARCH_PWR9 1
+// PPCPOWER11:#define __MMA__ 1
+// PPCPOWER11:#define __PCREL__ 1
+// PPCPOWER11-NOT:#define __ROP_PROTECT__ 1
+//
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-cpu future -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPCFUTURE %s
 //
 // PPCFUTURE:#define _ARCH_PPC 1
@@ -639,6 +660,7 @@
 // PPCFUTURE:#define _ARCH_PPCGR 1
 // PPCFUTURE:#define _ARCH_PPCSQ 1
 // PPCFUTURE:#define _ARCH_PWR10 1
+// PPCFUTURE:#define _ARCH_PWR11 1
 // PPCFUTURE:#define _ARCH_PWR4 1
 // PPCFUTURE:#define _ARCH_PWR5 1
 // PPCFUTURE:#define _ARCH_PWR5X 1

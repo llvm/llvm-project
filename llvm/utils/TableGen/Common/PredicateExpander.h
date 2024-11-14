@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_PREDICATEEXPANDER_H
-#define LLVM_UTILS_TABLEGEN_PREDICATEEXPANDER_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_PREDICATEEXPANDER_H
+#define LLVM_UTILS_TABLEGEN_COMMON_PREDICATEEXPANDER_H
 
 #include "llvm/ADT/StringRef.h"
 #include <vector>
@@ -128,4 +128,4 @@ public:
 
 } // namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_COMMON_PREDICATEEXPANDER_H

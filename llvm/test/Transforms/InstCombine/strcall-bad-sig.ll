@@ -42,7 +42,7 @@ declare ptr @strncasecmp(ptr, ptr)
 
 define ptr @call_bad_strncasecmp() {
 ; CHECK-LABEL: @call_bad_strncasecmp(
-; CHECK-NEXT:    [[CMP:%.*]] = call ptr @strncasecmp(ptr nonnull @a, ptr nonnull getelementptr inbounds ([2 x i8], ptr @a, i64 0, i64 1))
+; CHECK-NEXT:    [[CMP:%.*]] = call ptr @strncasecmp(ptr nonnull @a, ptr nonnull getelementptr inbounds (i8, ptr @a, i64 1))
 ; CHECK-NEXT:    ret ptr [[CMP]]
 ;
   %p1 = getelementptr [2 x i8], ptr @a, i32 0, i32 1
@@ -55,7 +55,7 @@ declare i1 @strcoll(ptr, ptr, ptr)
 
 define i1 @call_bad_strcoll() {
 ; CHECK-LABEL: @call_bad_strcoll(
-; CHECK-NEXT:    [[I:%.*]] = call i1 @strcoll(ptr nonnull @a, ptr nonnull getelementptr inbounds ([2 x i8], ptr @a, i64 0, i64 1), ptr nonnull @a)
+; CHECK-NEXT:    [[I:%.*]] = call i1 @strcoll(ptr nonnull @a, ptr nonnull getelementptr inbounds (i8, ptr @a, i64 1), ptr nonnull @a)
 ; CHECK-NEXT:    ret i1 [[I]]
 ;
   %p1 = getelementptr [2 x i8], ptr @a, i32 0, i32 1
@@ -80,7 +80,7 @@ declare i1 @strtok(ptr, ptr, i1)
 
 define i1 @call_bad_strtok() {
 ; CHECK-LABEL: @call_bad_strtok(
-; CHECK-NEXT:    [[RET:%.*]] = call i1 @strtok(ptr nonnull @a, ptr nonnull getelementptr inbounds ([2 x i8], ptr @a, i64 0, i64 1), i1 false)
+; CHECK-NEXT:    [[RET:%.*]] = call i1 @strtok(ptr nonnull @a, ptr nonnull getelementptr inbounds (i8, ptr @a, i64 1), i1 false)
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %p1 = getelementptr [2 x i8], ptr @a, i32 0, i32 1
@@ -94,7 +94,7 @@ declare i1 @strtok_r(ptr, ptr)
 
 define i1 @call_bad_strtok_r() {
 ; CHECK-LABEL: @call_bad_strtok_r(
-; CHECK-NEXT:    [[RET:%.*]] = call i1 @strtok_r(ptr nonnull @a, ptr nonnull getelementptr inbounds ([2 x i8], ptr @a, i64 0, i64 1))
+; CHECK-NEXT:    [[RET:%.*]] = call i1 @strtok_r(ptr nonnull @a, ptr nonnull getelementptr inbounds (i8, ptr @a, i64 1))
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %p1 = getelementptr [2 x i8], ptr @a, i32 0, i32 1
@@ -146,7 +146,7 @@ declare ptr @strxfrm(ptr, ptr)
 
 define ptr @call_bad_strxfrm() {
 ; CHECK-LABEL: @call_bad_strxfrm(
-; CHECK-NEXT:    [[RET:%.*]] = call ptr @strxfrm(ptr nonnull @a, ptr nonnull getelementptr inbounds ([2 x i8], ptr @a, i64 0, i64 1))
+; CHECK-NEXT:    [[RET:%.*]] = call ptr @strxfrm(ptr nonnull @a, ptr nonnull getelementptr inbounds (i8, ptr @a, i64 1))
 ; CHECK-NEXT:    ret ptr [[RET]]
 ;
   %p1 = getelementptr [2 x i8], ptr @a, i32 0, i32 1

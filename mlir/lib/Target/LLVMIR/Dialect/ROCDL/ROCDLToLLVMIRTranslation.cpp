@@ -17,9 +17,9 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
-#include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
@@ -32,12 +32,9 @@ static llvm::Value *createIntrinsicCallWithRange(llvm::IRBuilderBase &builder,
   auto *inst = llvm::cast<llvm::CallInst>(
       createIntrinsicCall(builder, intrinsic, {}, {}));
   if (maybeRange) {
-    SmallVector<llvm::APInt, 2> apInts;
-    for (int32_t i : maybeRange.asArrayRef())
-      apInts.push_back(llvm::APInt(32, i));
-    llvm::MDBuilder mdBuilder(builder.getContext());
-    llvm::MDNode *range = mdBuilder.createRange(apInts[0], apInts[1]);
-    inst->setMetadata(llvm::LLVMContext::MD_range, range);
+    llvm::ConstantRange Range(APInt(32, maybeRange[0]),
+                              APInt(32, maybeRange[1]));
+    inst->addRangeRetAttr(Range);
   }
   return inst;
 }
@@ -131,6 +128,23 @@ public:
       attrValueStream << "1," << value.getInt();
       llvmFunc->addFnAttr("amdgpu-flat-work-group-size", llvmAttrValue);
     }
+    if (dialect->getWavesPerEuAttrHelper().getName() == attribute.getName()) {
+      auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
+      if (!func)
+        return op->emitOpError(Twine(attribute.getName()) +
+                               " is only supported on `llvm.func` operations");
+      auto value = dyn_cast<IntegerAttr>(attribute.getValue());
+      if (!value)
+        return op->emitOpError(Twine(attribute.getName()) +
+                               " must be an integer");
+
+      llvm::Function *llvmFunc =
+          moduleTranslation.lookupFunction(func.getName());
+      llvm::SmallString<8> llvmAttrValue;
+      llvm::raw_svector_ostream attrValueStream(llvmAttrValue);
+      attrValueStream << value.getInt();
+      llvmFunc->addFnAttr("amdgpu-waves-per-eu", llvmAttrValue);
+    }
     if (dialect->getFlatWorkGroupSizeAttrHelper().getName() ==
         attribute.getName()) {
       auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
@@ -161,6 +175,21 @@ public:
       llvm::Function *llvmFunc =
           moduleTranslation.lookupFunction(func.getName());
       llvmFunc->addFnAttr("uniform-work-group-size",
+                          value.getValue() ? "true" : "false");
+    }
+    if (dialect->getUnsafeFpAtomicsAttrHelper().getName() ==
+        attribute.getName()) {
+      auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
+      if (!func)
+        return op->emitOpError(Twine(attribute.getName()) +
+                               " is only supported on `llvm.func` operations");
+      auto value = dyn_cast<BoolAttr>(attribute.getValue());
+      if (!value)
+        return op->emitOpError(Twine(attribute.getName()) +
+                               " must be a boolean");
+      llvm::Function *llvmFunc =
+          moduleTranslation.lookupFunction(func.getName());
+      llvmFunc->addFnAttr("amdgpu-unsafe-fp-atomics",
                           value.getValue() ? "true" : "false");
     }
     // Set reqd_work_group_size metadata

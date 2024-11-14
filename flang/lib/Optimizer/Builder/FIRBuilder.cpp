@@ -14,11 +14,13 @@
 #include "flang/Optimizer/Builder/Runtime/Assign.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -176,8 +178,9 @@ mlir::Value fir::FirOpBuilder::createRealConstant(mlir::Location loc,
   llvm_unreachable("should use builtin floating-point type");
 }
 
-static llvm::SmallVector<mlir::Value>
-elideExtentsAlreadyInType(mlir::Type type, mlir::ValueRange shape) {
+llvm::SmallVector<mlir::Value>
+fir::factory::elideExtentsAlreadyInType(mlir::Type type,
+                                        mlir::ValueRange shape) {
   auto arrTy = mlir::dyn_cast<fir::SequenceType>(type);
   if (shape.empty() || !arrTy)
     return {};
@@ -191,8 +194,9 @@ elideExtentsAlreadyInType(mlir::Type type, mlir::ValueRange shape) {
   return dynamicShape;
 }
 
-static llvm::SmallVector<mlir::Value>
-elideLengthsAlreadyInType(mlir::Type type, mlir::ValueRange lenParams) {
+llvm::SmallVector<mlir::Value>
+fir::factory::elideLengthsAlreadyInType(mlir::Type type,
+                                        mlir::ValueRange lenParams) {
   if (lenParams.empty())
     return {};
   if (auto arrTy = mlir::dyn_cast<fir::SequenceType>(type))
@@ -211,9 +215,9 @@ mlir::Value fir::FirOpBuilder::allocateLocal(
   // Convert the shape extents to `index`, as needed.
   llvm::SmallVector<mlir::Value> indices;
   llvm::SmallVector<mlir::Value> elidedShape =
-      elideExtentsAlreadyInType(ty, shape);
+      fir::factory::elideExtentsAlreadyInType(ty, shape);
   llvm::SmallVector<mlir::Value> elidedLenParams =
-      elideLengthsAlreadyInType(ty, lenParams);
+      fir::factory::elideLengthsAlreadyInType(ty, lenParams);
   auto idxTy = getIndexType();
   for (mlir::Value sh : elidedShape)
     indices.push_back(createConvert(loc, idxTy, sh));
@@ -245,16 +249,20 @@ mlir::Value fir::FirOpBuilder::allocateLocal(
 
 /// Get the block for adding Allocas.
 mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
+  if (auto accComputeRegionIface =
+          getRegion().getParentOfType<mlir::acc::ComputeRegionOpInterface>()) {
+    return accComputeRegionIface.getAllocaBlock();
+  }
+
   if (auto ompOutlineableIface =
           getRegion()
               .getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>()) {
     return ompOutlineableIface.getAllocaBlock();
   }
-  if (getRegion().getParentOfType<mlir::omp::DeclareReductionOp>())
-    return &getRegion().front();
-  if (auto accRecipeIface =
-          getRegion().getParentOfType<mlir::acc::RecipeInterface>()) {
-    return accRecipeIface.getAllocaBlock(getRegion());
+
+  if (auto recipeIface =
+          getRegion().getParentOfType<mlir::accomp::RecipeInterface>()) {
+    return recipeIface.getAllocaBlock(getRegion());
   }
 
   return getEntryBlock();
@@ -263,29 +271,34 @@ mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
 mlir::Value fir::FirOpBuilder::createTemporaryAlloc(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
     mlir::ValueRange lenParams, mlir::ValueRange shape,
-    llvm::ArrayRef<mlir::NamedAttribute> attrs) {
+    llvm::ArrayRef<mlir::NamedAttribute> attrs,
+    std::optional<Fortran::common::CUDADataAttr> cudaAttr) {
   assert(!mlir::isa<fir::ReferenceType>(type) && "cannot be a reference");
   // If the alloca is inside an OpenMP Op which will be outlined then pin
   // the alloca here.
   const bool pinned =
       getRegion().getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>();
-  mlir::Value temp =
-      create<fir::AllocaOp>(loc, type, /*unique_name=*/llvm::StringRef{}, name,
-                            pinned, lenParams, shape, attrs);
-  return temp;
+  if (cudaAttr) {
+    cuf::DataAttributeAttr attr = cuf::getDataAttribute(getContext(), cudaAttr);
+    return create<cuf::AllocOp>(loc, type, /*unique_name=*/llvm::StringRef{},
+                                name, attr, lenParams, shape, attrs);
+  } else {
+    return create<fir::AllocaOp>(loc, type, /*unique_name=*/llvm::StringRef{},
+                                 name, pinned, lenParams, shape, attrs);
+  }
 }
 
 /// Create a temporary variable on the stack. Anonymous temporaries have no
 /// `name` value. Temporaries do not require a uniqued name.
-mlir::Value
-fir::FirOpBuilder::createTemporary(mlir::Location loc, mlir::Type type,
-                                   llvm::StringRef name, mlir::ValueRange shape,
-                                   mlir::ValueRange lenParams,
-                                   llvm::ArrayRef<mlir::NamedAttribute> attrs) {
+mlir::Value fir::FirOpBuilder::createTemporary(
+    mlir::Location loc, mlir::Type type, llvm::StringRef name,
+    mlir::ValueRange shape, mlir::ValueRange lenParams,
+    llvm::ArrayRef<mlir::NamedAttribute> attrs,
+    std::optional<Fortran::common::CUDADataAttr> cudaAttr) {
   llvm::SmallVector<mlir::Value> dynamicShape =
-      elideExtentsAlreadyInType(type, shape);
+      fir::factory::elideExtentsAlreadyInType(type, shape);
   llvm::SmallVector<mlir::Value> dynamicLength =
-      elideLengthsAlreadyInType(type, lenParams);
+      fir::factory::elideLengthsAlreadyInType(type, lenParams);
   InsertPoint insPt;
   const bool hoistAlloc = dynamicShape.empty() && dynamicLength.empty();
   if (hoistAlloc) {
@@ -293,8 +306,8 @@ fir::FirOpBuilder::createTemporary(mlir::Location loc, mlir::Type type,
     setInsertionPointToStart(getAllocaBlock());
   }
 
-  mlir::Value ae =
-      createTemporaryAlloc(loc, type, name, dynamicLength, dynamicShape, attrs);
+  mlir::Value ae = createTemporaryAlloc(loc, type, name, dynamicLength,
+                                        dynamicShape, attrs, cudaAttr);
 
   if (hoistAlloc)
     restoreInsertionPoint(insPt);
@@ -306,9 +319,9 @@ mlir::Value fir::FirOpBuilder::createHeapTemporary(
     mlir::ValueRange shape, mlir::ValueRange lenParams,
     llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   llvm::SmallVector<mlir::Value> dynamicShape =
-      elideExtentsAlreadyInType(type, shape);
+      fir::factory::elideExtentsAlreadyInType(type, shape);
   llvm::SmallVector<mlir::Value> dynamicLength =
-      elideLengthsAlreadyInType(type, lenParams);
+      fir::factory::elideLengthsAlreadyInType(type, lenParams);
 
   assert(!mlir::isa<fir::ReferenceType>(type) && "cannot be a reference");
   return create<fir::AllocMemOp>(loc, type, /*unique_name=*/llvm::StringRef{},
@@ -320,18 +333,18 @@ mlir::Value fir::FirOpBuilder::createHeapTemporary(
 fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
     mlir::StringAttr linkage, mlir::Attribute value, bool isConst,
-    bool isTarget, fir::CUDADataAttributeAttr cudaAttr) {
+    bool isTarget, cuf::DataAttributeAttr dataAttr) {
   if (auto global = getNamedGlobal(name))
     return global;
   auto module = getModule();
   auto insertPt = saveInsertionPoint();
   setInsertionPoint(module.getBody(), module.getBody()->end());
   llvm::SmallVector<mlir::NamedAttribute> attrs;
-  if (cudaAttr) {
+  if (dataAttr) {
     auto globalOpName = mlir::OperationName(fir::GlobalOp::getOperationName(),
                                             module.getContext());
     attrs.push_back(mlir::NamedAttribute(
-        fir::GlobalOp::getCudaAttrAttrName(globalOpName), cudaAttr));
+        fir::GlobalOp::getDataAttrAttrName(globalOpName), dataAttr));
   }
   auto glob = create<fir::GlobalOp>(loc, name, isConst, isTarget, type, value,
                                     linkage, attrs);
@@ -344,7 +357,7 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
 fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name, bool isConst,
     bool isTarget, std::function<void(FirOpBuilder &)> bodyBuilder,
-    mlir::StringAttr linkage, fir::CUDADataAttributeAttr cudaAttr) {
+    mlir::StringAttr linkage, cuf::DataAttributeAttr dataAttr) {
   if (auto global = getNamedGlobal(name))
     return global;
   auto module = getModule();
@@ -361,6 +374,22 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   if (symbolTable)
     symbolTable->insert(glob);
   return glob;
+}
+
+std::pair<fir::TypeInfoOp, mlir::OpBuilder::InsertPoint>
+fir::FirOpBuilder::createTypeInfoOp(mlir::Location loc,
+                                    fir::RecordType recordType,
+                                    fir::RecordType parentType) {
+  mlir::ModuleOp module = getModule();
+  if (fir::TypeInfoOp typeInfo =
+          fir::lookupTypeInfoOp(recordType.getName(), module, symbolTable))
+    return {typeInfo, InsertPoint{}};
+  InsertPoint insertPoint = saveInsertionPoint();
+  setInsertionPoint(module.getBody(), module.getBody()->end());
+  auto typeInfo = create<fir::TypeInfoOp>(loc, recordType, parentType);
+  if (symbolTable)
+    symbolTable->insert(typeInfo);
+  return {typeInfo, insertPoint};
 }
 
 mlir::Value fir::FirOpBuilder::convertWithSemantics(
@@ -437,13 +466,19 @@ mlir::Value fir::FirOpBuilder::convertWithSemantics(
   return createConvert(loc, toTy, val);
 }
 
-mlir::Value fir::FirOpBuilder::createConvert(mlir::Location loc,
-                                             mlir::Type toTy, mlir::Value val) {
+mlir::Value fir::factory::createConvert(mlir::OpBuilder &builder,
+                                        mlir::Location loc, mlir::Type toTy,
+                                        mlir::Value val) {
   if (val.getType() != toTy) {
     assert(!fir::isa_derived(toTy));
-    return create<fir::ConvertOp>(loc, toTy, val);
+    return builder.create<fir::ConvertOp>(loc, toTy, val);
   }
   return val;
+}
+
+mlir::Value fir::FirOpBuilder::createConvert(mlir::Location loc,
+                                             mlir::Type toTy, mlir::Value val) {
+  return fir::factory::createConvert(*this, loc, toTy, val);
 }
 
 void fir::FirOpBuilder::createStoreWithConvert(mlir::Location loc,
@@ -660,7 +695,8 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc, mlir::Type boxType,
   mlir::Type valueOrSequenceType = fir::unwrapPassByRefType(boxType);
   return create<fir::EmboxOp>(
       loc, boxType, addr, shape, slice,
-      elideLengthsAlreadyInType(valueOrSequenceType, lengths), tdesc);
+      fir::factory::elideLengthsAlreadyInType(valueOrSequenceType, lengths),
+      tdesc);
 }
 
 void fir::FirOpBuilder::dumpFunc() { getFunction().dump(); }
@@ -1516,21 +1552,44 @@ mlir::Value fir::factory::genMaxWithZero(fir::FirOpBuilder &builder,
                                                zero);
 }
 
+static std::pair<mlir::Value, mlir::Type>
+genCPtrOrCFunptrFieldIndex(fir::FirOpBuilder &builder, mlir::Location loc,
+                           mlir::Type cptrTy) {
+  auto recTy = mlir::cast<fir::RecordType>(cptrTy);
+  assert(recTy.getTypeList().size() == 1);
+  auto addrFieldName = recTy.getTypeList()[0].first;
+  mlir::Type addrFieldTy = recTy.getTypeList()[0].second;
+  auto fieldIndexType = fir::FieldType::get(cptrTy.getContext());
+  mlir::Value addrFieldIndex = builder.create<fir::FieldIndexOp>(
+      loc, fieldIndexType, addrFieldName, recTy,
+      /*typeParams=*/mlir::ValueRange{});
+  return {addrFieldIndex, addrFieldTy};
+}
+
 mlir::Value fir::factory::genCPtrOrCFunptrAddr(fir::FirOpBuilder &builder,
                                                mlir::Location loc,
                                                mlir::Value cPtr,
                                                mlir::Type ty) {
-  assert(mlir::isa<fir::RecordType>(ty));
-  auto recTy = mlir::dyn_cast<fir::RecordType>(ty);
-  assert(recTy.getTypeList().size() == 1);
-  auto fieldName = recTy.getTypeList()[0].first;
-  mlir::Type fieldTy = recTy.getTypeList()[0].second;
-  auto fieldIndexType = fir::FieldType::get(ty.getContext());
-  mlir::Value field =
-      builder.create<fir::FieldIndexOp>(loc, fieldIndexType, fieldName, recTy,
-                                        /*typeParams=*/mlir::ValueRange{});
-  return builder.create<fir::CoordinateOp>(loc, builder.getRefType(fieldTy),
-                                           cPtr, field);
+  auto [addrFieldIndex, addrFieldTy] =
+      genCPtrOrCFunptrFieldIndex(builder, loc, ty);
+  return builder.create<fir::CoordinateOp>(loc, builder.getRefType(addrFieldTy),
+                                           cPtr, addrFieldIndex);
+}
+
+mlir::Value fir::factory::genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
+                                                mlir::Location loc,
+                                                mlir::Value cPtr) {
+  mlir::Type cPtrTy = fir::unwrapRefType(cPtr.getType());
+  if (fir::isa_ref_type(cPtr.getType())) {
+    mlir::Value cPtrAddr =
+        fir::factory::genCPtrOrCFunptrAddr(builder, loc, cPtr, cPtrTy);
+    return builder.create<fir::LoadOp>(loc, cPtrAddr);
+  }
+  auto [addrFieldIndex, addrFieldTy] =
+      genCPtrOrCFunptrFieldIndex(builder, loc, cPtrTy);
+  auto arrayAttr =
+      builder.getArrayAttr({builder.getIntegerAttr(builder.getIndexType(), 0)});
+  return builder.create<fir::ExtractValueOp>(loc, addrFieldTy, cPtr, arrayAttr);
 }
 
 fir::BoxValue fir::factory::createBoxValue(fir::FirOpBuilder &builder,
@@ -1569,15 +1628,6 @@ fir::BoxValue fir::factory::createBoxValue(fir::FirOpBuilder &builder,
       },
       [](const auto &) {});
   return fir::BoxValue(box, lbounds, explicitTypeParams);
-}
-
-mlir::Value fir::factory::genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
-                                                mlir::Location loc,
-                                                mlir::Value cPtr) {
-  mlir::Type cPtrTy = fir::unwrapRefType(cPtr.getType());
-  mlir::Value cPtrAddr =
-      fir::factory::genCPtrOrCFunptrAddr(builder, loc, cPtr, cPtrTy);
-  return builder.create<fir::LoadOp>(loc, cPtrAddr);
 }
 
 mlir::Value fir::factory::createNullBoxProc(fir::FirOpBuilder &builder,

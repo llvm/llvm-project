@@ -149,10 +149,14 @@ class Constraint<Pred pred, string desc = ""> {
 
 // Subclass for constraints on a type.
 class TypeConstraint<Pred predicate, string summary = "",
-                     string cppClassNameParam = "::mlir::Type"> :
+                     string cppTypeParam = "::mlir::Type",
+                     string cppFunctionNameParam = ""> :
     Constraint<predicate, summary> {
   // The name of the C++ Type class if known, or Type if not.
-  string cppClassName = cppClassNameParam;
+  string cppType = cppTypeParam;
+  // The name of the C++ function that is generated for this type constraint.
+  // If empty, no C++ function is generated.
+  string cppFunctionName = cppFunctionNameParam;
 }
 
 // Subclass for constraints on an attribute.

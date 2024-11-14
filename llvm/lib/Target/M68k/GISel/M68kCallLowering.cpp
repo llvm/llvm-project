@@ -103,7 +103,7 @@ bool M68kCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
   const M68kTargetLowering &TLI = *getTLI<M68kTargetLowering>();
   CCAssignFn *AssignFn =
       TLI.getCCAssignFn(F.getCallingConv(), true, F.isVarArg());
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
   if (!VRegs.empty()) {
     SmallVector<ArgInfo, 8> SplitArgs;
     ArgInfo OrigArg{VRegs, Val->getType(), 0};
@@ -125,7 +125,7 @@ bool M68kCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                             FunctionLoweringInfo &FLI) const {
   MachineFunction &MF = MIRBuilder.getMF();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const auto &DL = F.getParent()->getDataLayout();
+  const auto &DL = F.getDataLayout();
   auto &TLI = *getTLI<M68kTargetLowering>();
 
   SmallVector<ArgInfo, 8> SplitArgs;
@@ -191,7 +191,7 @@ bool M68kCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MachineFunction &MF = MIRBuilder.getMF();
   Function &F = MF.getFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
   const M68kTargetLowering &TLI = *getTLI<M68kTargetLowering>();
   const M68kSubtarget &STI = MF.getSubtarget<M68kSubtarget>();
   const TargetInstrInfo &TII = *STI.getInstrInfo();

@@ -5,7 +5,7 @@
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/test.s -o %t/test.o
 # RUN: %lld -arch arm64 -dylib -install_name @executable_path/libfoo.dylib %t/foo.o -o %t/libfoo.dylib
 # RUN: %lld -arch arm64 -dylib -install_name @executable_path/libbar.dylib %t/bar.o -o %t/libbar.dylib
-# RUN: %lld -arch arm64 -lSystem %t/libfoo.dylib %t/libbar.dylib %t/test.o -o %t/test
+# RUN: %lld -arch arm64 -lSystem %t/libfoo.dylib %t/libbar.dylib %t/test.o -o %t/test -no_fixup_chains
 
 # RUN: llvm-objdump --no-print-imm-hex --macho -d --no-show-raw-insn --section="__TEXT,__stubs" --section="__TEXT,__stub_helper" %t/test | FileCheck %s
 

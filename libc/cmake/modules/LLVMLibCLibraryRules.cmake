@@ -84,94 +84,6 @@ function(get_all_object_file_deps result fq_deps_list)
 endfunction()
 
 # A rule to build a library from a collection of entrypoint objects and bundle
-# it into a GPU fatbinary. Usage is the same as 'add_entrypoint_library'.
-# Usage:
-#     add_gpu_entrypoint_library(
-#       DEPENDS <list of add_entrypoint_object targets>
-#     )
-function(add_gpu_entrypoint_library target_name base_target_name)
-  cmake_parse_arguments(
-    "ENTRYPOINT_LIBRARY"
-    "" # No optional arguments
-    "" # No single value arguments
-    "DEPENDS" # Multi-value arguments
-    ${ARGN}
-  )
-  if(NOT ENTRYPOINT_LIBRARY_DEPENDS)
-    message(FATAL_ERROR "'add_entrypoint_library' target requires a DEPENDS list "
-                        "of 'add_entrypoint_object' targets.")
-  endif()
-
-  get_fq_deps_list(fq_deps_list ${ENTRYPOINT_LIBRARY_DEPENDS})
-  get_all_object_file_deps(all_deps "${fq_deps_list}")
-
-  # The GPU 'libc' needs to be exported in a format that can be linked with
-  # offloading langauges like OpenMP or CUDA. This wraps every GPU object into a
-  # fat binary and adds them to a static library.
-  set(objects "")
-  foreach(dep IN LISTS all_deps)
-    set(object $<$<STREQUAL:$<TARGET_NAME_IF_EXISTS:${dep}>,${dep}>:$<TARGET_OBJECTS:${dep}>>)
-    string(FIND ${dep} "." last_dot_loc REVERSE)
-    math(EXPR name_loc "${last_dot_loc} + 1")
-    string(SUBSTRING ${dep} ${name_loc} -1 name)
-    if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-      set(prefix --image=arch=generic,triple=nvptx64-nvidia-cuda,feature=+ptx63)
-    elseif(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
-      set(prefix --image=arch=generic,triple=amdgcn-amd-amdhsa)
-    endif()
-
-    # Use the 'clang-offload-packager' to merge these files into a binary blob.
-    add_custom_command(
-      OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/binary/${name}.gpubin"
-      COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/binary
-      COMMAND ${LIBC_CLANG_OFFLOAD_PACKAGER}
-              "${prefix},file=$<JOIN:${object},,file=>" -o
-              ${CMAKE_CURRENT_BINARY_DIR}/binary/${name}.gpubin
-      DEPENDS ${dep} ${base_target_name}
-      COMMENT "Packaging LLVM offloading binary for '${object}'"
-    )
-    add_custom_target(${dep}.__gpubin__ DEPENDS ${dep}
-                      "${CMAKE_CURRENT_BINARY_DIR}/binary/${name}.gpubin")
-
-    # CMake does not permit setting the name on object files. In order to have
-    # human readable names we create an empty stub file with the entrypoint
-    # name. This empty file will then have the created binary blob embedded.
-    add_custom_command(
-      OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/stubs/${name}.cpp"
-      COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/stubs
-      COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/stubs/${name}.cpp
-      DEPENDS ${dep} ${dep}.__gpubin__ ${base_target_name}
-    )
-    add_custom_target(${dep}.__stub__
-                      DEPENDS ${dep}.__gpubin__ "${CMAKE_CURRENT_BINARY_DIR}/stubs/${name}.cpp")
-
-    add_library(${dep}.__fatbin__
-      EXCLUDE_FROM_ALL OBJECT
-      "${CMAKE_CURRENT_BINARY_DIR}/stubs/${name}.cpp"
-    )
-
-    # This is always compiled for the LLVM host triple instead of the native GPU
-    # triple that is used by default in the build.
-    target_compile_options(${dep}.__fatbin__ BEFORE PRIVATE -nostdlib)
-    target_compile_options(${dep}.__fatbin__ PRIVATE
-      --target=${LLVM_HOST_TRIPLE}
-      "SHELL:-Xclang -fembed-offload-object=${CMAKE_CURRENT_BINARY_DIR}/binary/${name}.gpubin")
-    add_dependencies(${dep}.__fatbin__
-                     ${dep} ${dep}.__stub__ ${dep}.__gpubin__ ${base_target_name})
-
-    # Set the list of newly create fat binaries containing embedded device code.
-    list(APPEND objects $<TARGET_OBJECTS:${dep}.__fatbin__>)
-  endforeach()
-
-  add_library(
-    ${target_name}
-    STATIC
-      ${objects}
-  )
-  set_target_properties(${target_name} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR})
-endfunction(add_gpu_entrypoint_library)
-
-# A rule to build a library from a collection of entrypoint objects and bundle
 # it in a single LLVM-IR bitcode file.
 # Usage:
 #     add_gpu_entrypoint_library(
@@ -199,16 +111,9 @@ function(add_bitcode_entrypoint_library target_name base_target_name)
     list(APPEND objects ${object})
   endforeach()
 
-  set(output ${CMAKE_CURRENT_BINARY_DIR}/${target_name}.bc)
-  add_custom_command(
-    OUTPUT ${output}
-    COMMAND ${LIBC_LLVM_LINK} ${objects} -o ${output}
-    DEPENDS ${all_deps} ${base_target_name}
-    COMMENT "Linking LLVM-IR bitcode for ${base_target_name}"
-    COMMAND_EXPAND_LISTS
-  )
-  add_custom_target(${target_name} DEPENDS ${output} ${all_deps})
-  set_target_properties(${target_name} PROPERTIES TARGET_OBJECT ${output})
+  add_executable(${target_name} ${objects})
+  target_link_options(${target_name} PRIVATE
+                      "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm")
 endfunction(add_bitcode_entrypoint_library)
 
 # A rule to build a library from a collection of entrypoint objects.

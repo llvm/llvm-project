@@ -50,11 +50,11 @@ entry:
   br i1 %d_cmp, label %if, label %else
 
 if:
-  %res_if = atomicrmw fadd ptr  addrspace(1) %out, float %in seq_cst
+  %res_if = atomicrmw fadd ptr addrspace(1) %out, float %in seq_cst
   br label %endif
 
 else:
-  %res_else = atomicrmw fadd ptr  addrspace(1) %out, float %in seq_cst
+  %res_else = atomicrmw fadd ptr addrspace(1) %out, float %in seq_cst
   br label %endif
 
 endif:
@@ -63,4 +63,4 @@ endif:
   ret void
 }
 
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
+attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }

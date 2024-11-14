@@ -21,7 +21,7 @@ namespace       clang {
       AT_noinline, AT_no_instrument_function, AT_nonnull, AT_noreturn,
       AT_nothrow, AT_nsobject, AT_objc_exception, AT_override,
       AT_cf_returns_not_retained, AT_cf_returns_retained,
-      AT_ns_returns_not_retained, AT_ns_returns_retained, AT_objc_gc, 
+      AT_ns_returns_not_retained, AT_ns_returns_retained, AT_objc_gc,
       AT_overloadable, AT_ownership_holds, AT_ownership_returns,
       AT_ownership_takes, AT_packed, AT_pascal, AT_pure, AT_regparm,
       AT_section, AT_sentinel, AT_stdcall, AT_thiscall, AT_transparent_union,
@@ -467,7 +467,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Punctuation: "{" [45:41 - 45:42] CompoundStmt=
 // CHECK-tokens: Keyword: "return" [45:43 - 45:49] ReturnStmt=
 // CHECK-tokens: Identifier: "a" [45:50 - 45:51] DeclRefExpr=a:45:28
-// CHECK-tokens: Punctuation: "<" [45:52 - 45:53] BinaryOperator=
+// CHECK-tokens: Punctuation: "<" [45:52 - 45:53] BinaryOperator=<
 // CHECK-tokens: Identifier: "b" [45:54 - 45:55] DeclRefExpr=b:45:38
 // CHECK-tokens: Punctuation: "?" [45:56 - 45:57] ConditionalOperator=
 // CHECK-tokens: Identifier: "a" [45:58 - 45:59] DeclRefExpr=a:45:28
@@ -566,11 +566,11 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Punctuation: "{" [52:43 - 52:44] CompoundStmt=
 // CHECK-tokens: Keyword: "return" [53:5 - 53:11] ReturnStmt=
 // CHECK-tokens: Identifier: "Length" [53:12 - 53:18] MemberRefExpr=Length:44:10
-// CHECK-tokens: Punctuation: ">=" [53:19 - 53:21] BinaryOperator=
+// CHECK-tokens: Punctuation: ">=" [53:19 - 53:21] BinaryOperator=>=
 // CHECK-tokens: Identifier: "Prefix" [53:22 - 53:28] DeclRefExpr=Prefix:52:29
 // CHECK-tokens: Punctuation: "." [53:28 - 53:29] MemberRefExpr=Length:44:10
 // CHECK-tokens: Identifier: "Length" [53:29 - 53:35] MemberRefExpr=Length:44:10
-// CHECK-tokens: Punctuation: "&&" [53:36 - 53:38] BinaryOperator=
+// CHECK-tokens: Punctuation: "&&" [53:36 - 53:38] BinaryOperator=&&
 // CHECK-tokens: Identifier: "memcmp" [54:11 - 54:17] DeclRefExpr=memcmp:7:7
 // CHECK-tokens: Punctuation: "(" [54:17 - 54:18] CallExpr=memcmp:7:7
 // CHECK-tokens: Identifier: "Data" [54:18 - 54:22]  MemberRefExpr=Data:43:15
@@ -583,7 +583,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Punctuation: "." [54:43 - 54:44] MemberRefExpr=Length:44:10
 // CHECK-tokens: Identifier: "Length" [54:44 - 54:50] MemberRefExpr=Length:44:10
 // CHECK-tokens: Punctuation: ")" [54:50 - 54:51] CallExpr=memcmp:7:7
-// CHECK-tokens: Punctuation: "==" [54:52 - 54:54] BinaryOperator=
+// CHECK-tokens: Punctuation: "==" [54:52 - 54:54] BinaryOperator===
 // CHECK-tokens: Literal: "0" [54:55 - 54:56] IntegerLiteral=
 // CHECK-tokens: Punctuation: ";" [54:56 - 54:57] CompoundStmt=
 // CHECK-tokens: Punctuation: "}" [55:3 - 55:4] CompoundStmt=
@@ -597,17 +597,17 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Punctuation: "{" [56:41 - 56:42] CompoundStmt=
 // CHECK-tokens: Keyword: "return" [57:5 - 57:11] ReturnStmt=
 // CHECK-tokens: Identifier: "Length" [57:12 - 57:18] MemberRefExpr=Length:44:10
-// CHECK-tokens: Punctuation: ">=" [57:19 - 57:21] BinaryOperator=
+// CHECK-tokens: Punctuation: ">=" [57:19 - 57:21] BinaryOperator=>=
 // CHECK-tokens: Identifier: "Suffix" [57:22 - 57:28] DeclRefExpr=Suffix:56:27
 // CHECK-tokens: Punctuation: "." [57:28 - 57:29] MemberRefExpr=Length:44:10
 // CHECK-tokens: Identifier: "Length" [57:29 - 57:35] MemberRefExpr=Length:44:10
-// CHECK-tokens: Punctuation: "&&" [57:36 - 57:38] BinaryOperator=
+// CHECK-tokens: Punctuation: "&&" [57:36 - 57:38] BinaryOperator=&&
 // CHECK-tokens: Identifier: "memcmp" [58:7 - 58:13] DeclRefExpr=memcmp:7:7
 // CHECK-tokens: Punctuation: "(" [58:13 - 58:14] CallExpr=memcmp:7:7
 // CHECK-tokens: Identifier: "end" [58:14 - 58:17] MemberRefExpr=end:50:12
 // CHECK-tokens: Punctuation: "(" [58:17 - 58:18] CallExpr=end:50:12
 // CHECK-tokens: Punctuation: ")" [58:18 - 58:19] CallExpr=end:50:12
-// CHECK-tokens: Punctuation: "-" [58:20 - 58:21] BinaryOperator=
+// CHECK-tokens: Punctuation: "-" [58:20 - 58:21] BinaryOperator=-
 // CHECK-tokens: Identifier: "Suffix" [58:22 - 58:28] DeclRefExpr=Suffix:56:27
 // CHECK-tokens: Punctuation: "." [58:28 - 58:29] MemberRefExpr=Length:44:10
 // CHECK-tokens: Identifier: "Length" [58:29 - 58:35] MemberRefExpr=Length:44:10
@@ -620,7 +620,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Punctuation: "." [58:56 - 58:57] MemberRefExpr=Length:44:10
 // CHECK-tokens: Identifier: "Length" [58:57 - 58:63] MemberRefExpr=Length:44:10
 // CHECK-tokens: Punctuation: ")" [58:63 - 58:64] CallExpr=memcmp:7:7
-// CHECK-tokens: Punctuation: "==" [58:65 - 58:67] BinaryOperator=
+// CHECK-tokens: Punctuation: "==" [58:65 - 58:67] BinaryOperator===
 // CHECK-tokens: Literal: "0" [58:68 - 58:69] IntegerLiteral=
 // CHECK-tokens: Punctuation: ";" [58:69 - 58:70] CompoundStmt=
 // CHECK-tokens: Punctuation: "}" [59:3 - 59:4] CompoundStmt=
@@ -641,7 +641,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Identifier: "StringRef" [61:12 - 61:21] TypeRef=class llvm::StringRef:38:7
 // CHECK-tokens: Punctuation: "(" [61:21 - 61:22] CallExpr=StringRef:49:3
 // CHECK-tokens: Identifier: "Data" [61:22 - 61:26]  MemberRefExpr=Data:43:15
-// CHECK-tokens: Punctuation: "+" [61:27 - 61:28] BinaryOperator=
+// CHECK-tokens: Punctuation: "+" [61:27 - 61:28] BinaryOperator=+
 // CHECK-tokens: Identifier: "Start" [61:29 - 61:34] DeclRefExpr=Start:60:27
 // CHECK-tokens: Punctuation: "," [61:34 - 61:35] CallExpr=StringRef:49:3
 // CHECK-tokens: Identifier: "min" [61:36 - 61:39] DeclRefExpr=min:45:17
@@ -649,7 +649,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Identifier: "N" [61:40 - 61:41] DeclRefExpr=N:60:41
 // CHECK-tokens: Punctuation: "," [61:41 - 61:42] CallExpr=min:45:17
 // CHECK-tokens: Identifier: "Length" [61:43 - 61:49]  MemberRefExpr=Length:44:10
-// CHECK-tokens: Punctuation: "-" [61:50 - 61:51] BinaryOperator=
+// CHECK-tokens: Punctuation: "-" [61:50 - 61:51] BinaryOperator=-
 // CHECK-tokens: Identifier: "Start" [61:52 - 61:57] DeclRefExpr=Start:60:27
 // CHECK-tokens: Punctuation: ")" [61:57 - 61:58] CallExpr=min:45:17
 // CHECK-tokens: Punctuation: ")" [61:58 - 61:59] CallExpr=StringRef:49:3
@@ -738,7 +738,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Punctuation: ")" [74:47 - 74:48] ParenExpr=
 // CHECK-tokens: Punctuation: "->" [74:48 - 74:50] MemberRefExpr=second:4:55
 // CHECK-tokens: Identifier: "second" [74:50 - 74:56] MemberRefExpr=second:4:55
-// CHECK-tokens: Punctuation: "-" [74:57 - 74:58] BinaryOperator=
+// CHECK-tokens: Punctuation: "-" [74:57 - 74:58] BinaryOperator=-
 // CHECK-tokens: Literal: "2" [74:59 - 74:60] IntegerLiteral=
 // CHECK-tokens: Punctuation: ";" [74:60 - 74:61] DeclStmt=
 // CHECK-tokens: Keyword: "return" [75:5 - 75:11] ReturnStmt=
@@ -752,7 +752,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Literal: "0" [75:27 - 75:28] IntegerLiteral=
 // CHECK-tokens: Punctuation: "]" [75:28 - 75:29] ArraySubscriptExpr=
 // CHECK-tokens: Punctuation: ")" [75:29 - 75:30] ParenExpr=
-// CHECK-tokens: Punctuation: "|" [75:31 - 75:32] BinaryOperator=
+// CHECK-tokens: Punctuation: "|" [75:31 - 75:32] BinaryOperator=|
 // CHECK-tokens: Punctuation: "(" [75:33 - 75:34] ParenExpr=
 // CHECK-tokens: Punctuation: "(" [75:34 - 75:35] ParenExpr=
 // CHECK-tokens: Punctuation: "(" [75:35 - 75:36] CStyleCastExpr=
@@ -763,11 +763,11 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Literal: "1" [75:48 - 75:49] IntegerLiteral=
 // CHECK-tokens: Punctuation: "]" [75:49 - 75:50] ArraySubscriptExpr=
 // CHECK-tokens: Punctuation: ")" [75:50 - 75:51] ParenExpr=
-// CHECK-tokens: Punctuation: "<<" [75:52 - 75:54] BinaryOperator=
+// CHECK-tokens: Punctuation: "<<" [75:52 - 75:54] BinaryOperator=<<
 // CHECK-tokens: Literal: "8" [75:55 - 75:56] IntegerLiteral=
 // CHECK-tokens: Punctuation: ")" [75:56 - 75:57] ParenExpr=
 // CHECK-tokens: Punctuation: ")" [75:57 - 75:58] ParenExpr=
-// CHECK-tokens: Punctuation: "-" [75:59 - 75:60] BinaryOperator=
+// CHECK-tokens: Punctuation: "-" [75:59 - 75:60] BinaryOperator=-
 // CHECK-tokens: Literal: "1" [75:61 - 75:62] IntegerLiteral=
 // CHECK-tokens: Punctuation: ";" [75:62 - 75:63] CompoundStmt=
 // CHECK-tokens: Punctuation: "}" [76:3 - 76:4] CompoundStmt=
@@ -924,7 +924,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Punctuation: "(" [102:26 - 102:27] CallExpr=startswith:52:8
 // CHECK-tokens: Literal: ""__"" [102:27 - 102:31] StringLiteral=
 // CHECK-tokens: Punctuation: ")" [102:31 - 102:32] CallExpr=startswith:52:8
-// CHECK-tokens: Punctuation: "&&" [102:33 - 102:35] BinaryOperator=
+// CHECK-tokens: Punctuation: "&&" [102:33 - 102:35] BinaryOperator=&&
 // CHECK-tokens: Identifier: "AttrName" [102:36 - 102:44] DeclRefExpr=AttrName:101:19
 // CHECK-tokens: Punctuation: "." [102:44 - 102:45] MemberRefExpr=endswith:56:8
 // CHECK-tokens: Identifier: "endswith" [102:45 - 102:53] MemberRefExpr=endswith:56:8
@@ -945,7 +945,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Identifier: "size" [103:44 - 103:48] MemberRefExpr=size:51:10
 // CHECK-tokens: Punctuation: "(" [103:48 - 103:49] CallExpr=size:51:10
 // CHECK-tokens: Punctuation: ")" [103:49 - 103:50] CallExpr=size:51:10
-// CHECK-tokens: Punctuation: "-" [103:51 - 103:52] BinaryOperator=
+// CHECK-tokens: Punctuation: "-" [103:51 - 103:52] BinaryOperator=-
 // CHECK-tokens: Literal: "4" [103:53 - 103:54] IntegerLiteral=
 // CHECK-tokens: Punctuation: ")" [103:54 - 103:55] CallExpr=substr:60:13
 // CHECK-tokens: Punctuation: ";" [103:55 - 103:56] CompoundStmt=
@@ -1647,7 +1647,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK: 45:41: CompoundStmt= Extent=[45:41 - 45:66]
 // CHECK: 45:43: ReturnStmt= Extent=[45:43 - 45:63]
 // CHECK: 45:50: ConditionalOperator= Extent=[45:50 - 45:63]
-// CHECK: 45:50: BinaryOperator= Extent=[45:50 - 45:55]
+// CHECK: 45:50: BinaryOperator=< Extent=[45:50 - 45:55]
 // CHECK: 45:50: DeclRefExpr=a:45:28 Extent=[45:50 - 45:51]
 // CHECK: 45:54: DeclRefExpr=b:45:38 Extent=[45:54 - 45:55]
 // CHECK: 45:58: DeclRefExpr=a:45:28 Extent=[45:58 - 45:59]
@@ -1695,13 +1695,13 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK: 52:19: TypeRef=class llvm::StringRef:38:7 Extent=[52:19 - 52:28]
 // CHECK: 52:43: CompoundStmt= Extent=[52:43 - 55:4]
 // CHECK: 53:5: ReturnStmt= Extent=[53:5 - 54:56]
-// CHECK: 53:12: BinaryOperator= Extent=[53:12 - 54:56]
-// CHECK: 53:12: BinaryOperator= Extent=[53:12 - 53:35]
+// CHECK: 53:12: BinaryOperator=&& Extent=[53:12 - 54:56]
+// CHECK: 53:12: BinaryOperator=>= Extent=[53:12 - 53:35]
 // CHECK: 53:12: UnexposedExpr=Length:44:10 Extent=[53:12 - 53:18]
 // CHECK: 53:12: MemberRefExpr=Length:44:10 Extent=[53:12 - 53:18]
 // CHECK: 53:29: MemberRefExpr=Length:44:10 SingleRefName=[53:29 - 53:35] RefName=[53:29 - 53:35] Extent=[53:22 - 53:35]
 // CHECK: 53:22: DeclRefExpr=Prefix:52:29 Extent=[53:22 - 53:28]
-// CHECK: 54:11: BinaryOperator= Extent=[54:11 - 54:56]
+// CHECK: 54:11: BinaryOperator=== Extent=[54:11 - 54:56]
 // CHECK: 54:11: CallExpr=memcmp:7:7 Extent=[54:11 - 54:51]
 // CHECK: 54:11: UnexposedExpr=memcmp:7:7 Extent=[54:11 - 54:17]
 // CHECK: 54:11: DeclRefExpr=memcmp:7:7 Extent=[54:11 - 54:17]
@@ -1718,18 +1718,18 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK: 56:17: TypeRef=class llvm::StringRef:38:7 Extent=[56:17 - 56:26]
 // CHECK: 56:41: CompoundStmt= Extent=[56:41 - 59:4]
 // CHECK: 57:5: ReturnStmt= Extent=[57:5 - 58:69]
-// CHECK: 57:12: BinaryOperator= Extent=[57:12 - 58:69]
-// CHECK: 57:12: BinaryOperator= Extent=[57:12 - 57:35]
+// CHECK: 57:12: BinaryOperator=&& Extent=[57:12 - 58:69]
+// CHECK: 57:12: BinaryOperator=>= Extent=[57:12 - 57:35]
 // CHECK: 57:12: UnexposedExpr=Length:44:10 Extent=[57:12 - 57:18]
 // CHECK: 57:12: MemberRefExpr=Length:44:10 Extent=[57:12 - 57:18]
 // CHECK: 57:29: MemberRefExpr=Length:44:10 SingleRefName=[57:29 - 57:35] RefName=[57:29 - 57:35] Extent=[57:22 - 57:35]
 // CHECK: 57:22: DeclRefExpr=Suffix:56:27 Extent=[57:22 - 57:28]
-// CHECK: 58:7: BinaryOperator= Extent=[58:7 - 58:69]
+// CHECK: 58:7: BinaryOperator=== Extent=[58:7 - 58:69]
 // CHECK: 58:7: CallExpr=memcmp:7:7 Extent=[58:7 - 58:64]
 // CHECK: 58:7: UnexposedExpr=memcmp:7:7 Extent=[58:7 - 58:13]
 // CHECK: 58:7: DeclRefExpr=memcmp:7:7 Extent=[58:7 - 58:13]
 // CHECK: 58:14: UnexposedExpr= Extent=[58:14 - 58:35]
-// CHECK: 58:14: BinaryOperator= Extent=[58:14 - 58:35]
+// CHECK: 58:14: BinaryOperator=- Extent=[58:14 - 58:35]
 // CHECK: 58:14: CallExpr=end:50:12 Extent=[58:14 - 58:19]
 // CHECK: 58:14: MemberRefExpr=end:50:12 Extent=[58:14 - 58:17]
 // CHECK: 58:29: MemberRefExpr=Length:44:10 SingleRefName=[58:29 - 58:35] RefName=[58:29 - 58:35] Extent=[58:22 - 58:35]
@@ -1753,7 +1753,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK: 61:12: UnexposedExpr=StringRef:49:3 Extent=[61:12 - 61:59]
 // CHECK: 61:12: CallExpr=StringRef:49:3 Extent=[61:12 - 61:59]
 // CHECK: 61:12: TypeRef=class llvm::StringRef:38:7 Extent=[61:12 - 61:21]
-// CHECK: 61:22: BinaryOperator= Extent=[61:22 - 61:34]
+// CHECK: 61:22: BinaryOperator=+ Extent=[61:22 - 61:34]
 // CHECK: 61:22: UnexposedExpr=Data:43:15 Extent=[61:22 - 61:26]
 // CHECK: 61:22: MemberRefExpr=Data:43:15 Extent=[61:22 - 61:26]
 // CHECK: 61:29: DeclRefExpr=Start:60:27 Extent=[61:29 - 61:34]
@@ -1761,7 +1761,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK: 61:36: UnexposedExpr=min:45:17 Extent=[61:36 - 61:39]
 // CHECK: 61:36: DeclRefExpr=min:45:17 Extent=[61:36 - 61:39]
 // CHECK: 61:40: DeclRefExpr=N:60:41 Extent=[61:40 - 61:41]
-// CHECK: 61:43: BinaryOperator= Extent=[61:43 - 61:57]
+// CHECK: 61:43: BinaryOperator=- Extent=[61:43 - 61:57]
 // CHECK: 61:43: UnexposedExpr=Length:44:10 Extent=[61:43 - 61:49]
 // CHECK: 61:43: MemberRefExpr=Length:44:10 Extent=[61:43 - 61:49]
 // CHECK: 61:52: DeclRefExpr=Start:60:27 Extent=[61:52 - 61:57]
@@ -1789,7 +1789,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK: 73:25: TypeRef=class clang::IdentifierInfo:66:7 Extent=[73:25 - 73:39]
 // CHECK: 74:5: DeclStmt= Extent=[74:5 - 74:61]
 // CHECK: 74:17: VarDecl=p:74:17 (Definition) Extent=[74:5 - 74:60]
-// CHECK: 74:21: BinaryOperator= Extent=[74:21 - 74:60]
+// CHECK: 74:21: BinaryOperator=- Extent=[74:21 - 74:60]
 // CHECK: 74:50: UnexposedExpr=second:4:55 Extent=[74:21 - 74:56]
 // CHECK: 74:50: MemberRefExpr=second:4:55 SingleRefName=[74:50 - 74:56] RefName=[74:50 - 74:56] Extent=[74:21 - 74:56]
 // CHECK: 74:21: ParenExpr= Extent=[74:21 - 74:48]
@@ -1798,9 +1798,9 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK: 74:43: CXXThisExpr= Extent=[74:43 - 74:47]
 // CHECK: 74:59: IntegerLiteral= Extent=[74:59 - 74:60]
 // CHECK: 75:5: ReturnStmt= Extent=[75:5 - 75:62]
-// CHECK: 75:12: BinaryOperator= Extent=[75:12 - 75:62]
+// CHECK: 75:12: BinaryOperator=- Extent=[75:12 - 75:62]
 // CHECK: 75:12: ParenExpr= Extent=[75:12 - 75:58]
-// CHECK: 75:13: BinaryOperator= Extent=[75:13 - 75:57]
+// CHECK: 75:13: BinaryOperator=| Extent=[75:13 - 75:57]
 // CHECK: 75:13: ParenExpr= Extent=[75:13 - 75:30]
 // CHECK: 75:14: CStyleCastExpr= Extent=[75:14 - 75:29]
 // CHECK: 75:25: UnexposedExpr= Extent=[75:25 - 75:29]
@@ -1809,7 +1809,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK: 75:25: DeclRefExpr=p:74:17 Extent=[75:25 - 75:26]
 // CHECK: 75:27: IntegerLiteral= Extent=[75:27 - 75:28]
 // CHECK: 75:33: ParenExpr= Extent=[75:33 - 75:57]
-// CHECK: 75:34: BinaryOperator= Extent=[75:34 - 75:56]
+// CHECK: 75:34: BinaryOperator=<< Extent=[75:34 - 75:56]
 // CHECK: 75:34: ParenExpr= Extent=[75:34 - 75:51]
 // CHECK: 75:35: CStyleCastExpr= Extent=[75:35 - 75:50]
 // CHECK: 75:46: UnexposedExpr= Extent=[75:46 - 75:50]
@@ -1878,7 +1878,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK: 101:36: MemberRefExpr=getName:77:19 SingleRefName=[101:36 - 101:43] RefName=[101:36 - 101:43] Extent=[101:30 - 101:43]
 // CHECK: 101:30: DeclRefExpr=Name:100:67 Extent=[101:30 - 101:34]
 // CHECK: 102:3: IfStmt= Extent=[102:3 - 103:55]
-// CHECK: 102:7: BinaryOperator= Extent=[102:7 - 102:59]
+// CHECK: 102:7: BinaryOperator=&& Extent=[102:7 - 102:59]
 // CHECK: 102:7: CallExpr=startswith:52:8 Extent=[102:7 - 102:32]
 // CHECK: 102:16: MemberRefExpr=startswith:52:8 SingleRefName=[102:16 - 102:26] RefName=[102:16 - 102:26] Extent=[102:7 - 102:26]
 // CHECK: 102:7: UnexposedExpr=AttrName:101:19 Extent=[102:7 - 102:15]
@@ -1910,7 +1910,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK: 103:16: DeclRefExpr=AttrName:101:19 Extent=[103:16 - 103:24]
 // CHECK: 103:32: UnexposedExpr= Extent=[103:32 - 103:33]
 // CHECK: 103:32: IntegerLiteral= Extent=[103:32 - 103:33]
-// CHECK: 103:35: BinaryOperator= Extent=[103:35 - 103:54]
+// CHECK: 103:35: BinaryOperator=- Extent=[103:35 - 103:54]
 // CHECK: 103:35: CallExpr=size:51:10 Extent=[103:35 - 103:50]
 // CHECK: 103:44: MemberRefExpr=size:51:10 SingleRefName=[103:44 - 103:48] RefName=[103:44 - 103:48] Extent=[103:35 - 103:48]
 // CHECK: 103:35: UnexposedExpr=AttrName:101:19 Extent=[103:35 - 103:43]

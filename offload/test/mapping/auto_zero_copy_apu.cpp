@@ -7,13 +7,7 @@
 // RUN: env HSA_XNACK=0 LIBOMPTARGET_INFO=30 %libomptarget-run-generic 2>&1 \
 // RUN: | %fcheck-generic -check-prefix=INFO_COPY -check-prefix=CHECK
 
-// UNSUPPORTED: aarch64-unknown-linux-gnu
-// UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
-// UNSUPPORTED: nvptx64-nvidia-cuda
-// UNSUPPORTED: nvptx64-nvidia-cuda-LTO
-// UNSUPPORTED: x86_64-pc-linux-gnu
-// UNSUPPORTED: x86_64-pc-linux-gnu-LTO
-
+// REQUIRES: amdgpu
 // REQUIRES: apu
 
 // clang-format on

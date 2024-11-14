@@ -1,4 +1,4 @@
-; RUN: opt < %s -disable-output -passes='print<cycles>' 2>&1 | FileCheck %s -check-prefix=CHECK
+; RUN: opt < %s -disable-output -passes='verify<cycles>,print<cycles>' 2>&1 | FileCheck %s -check-prefix=CHECK
 
 define void @empty() {
 ; CHECK-LABEL: CycleInfo for function: empty

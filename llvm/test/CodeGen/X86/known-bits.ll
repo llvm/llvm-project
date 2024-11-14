@@ -115,7 +115,7 @@ define i128 @knownbits_mask_addc_shl(i64 %a0, i64 %a1, i64 %a2) nounwind {
 ; X64-NEXT:    andq $-1024, %rdi # imm = 0xFC00
 ; X64-NEXT:    andq $-1024, %rsi # imm = 0xFC00
 ; X64-NEXT:    addq %rdi, %rsi
-; X64-NEXT:    adcq $0, %rdx
+; X64-NEXT:    adcl $0, %edx
 ; X64-NEXT:    shldq $54, %rsi, %rdx
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq

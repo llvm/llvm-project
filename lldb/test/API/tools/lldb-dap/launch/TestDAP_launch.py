@@ -13,7 +13,6 @@ import os
 
 class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
-    @skipIfRemote
     def test_default(self):
         """
         Tests the default launch of a simple program. No arguments,
@@ -29,7 +28,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.assertIn(program, lines[0], "make sure program path is in first argument")
 
     @skipIfWindows
-    @skipIfRemote
     def test_termination(self):
         """
         Tests the correct termination of lldb-dap upon a 'disconnect'
@@ -50,7 +48,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(self.dap_server.process.poll(), 0)
 
     @skipIfWindows
-    @skipIfRemote
     def test_stopOnEntry(self):
         """
         Tests the default launch of a simple program that stops at the
@@ -70,7 +67,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                     )
 
     @skipIfWindows
-    @skipIfRemote
     def test_cwd(self):
         """
         Tests the default launch of a simple program with a current working
@@ -97,7 +93,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.assertTrue(found, "verified program working directory")
 
     @skipIfWindows
-    @skipIfRemote
     def test_debuggerRoot(self):
         """
         Tests the "debuggerRoot" will change the working directory of
@@ -127,7 +122,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_exit()
 
     @skipIfWindows
-    @skipIfRemote
     def test_sourcePath(self):
         """
         Tests the "sourcePath" will set the target.source-map.
@@ -153,7 +147,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_exit()
 
     @skipIfWindows
-    @skipIfRemote
     def test_disableSTDIO(self):
         """
         Tests the default launch of a simple program with STDIO disabled.
@@ -168,7 +161,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     @skipIfLinux  # shell argument expansion doesn't seem to work on Linux
     @expectedFailureAll(oslist=["freebsd", "netbsd"], bugnumber="llvm.org/pr48349")
-    @skipIfRemote
     def test_shellExpandArguments_enabled(self):
         """
         Tests the default launch of a simple program with shell expansion
@@ -191,7 +183,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                 )
 
     @skipIfWindows
-    @skipIfRemote
     def test_shellExpandArguments_disabled(self):
         """
         Tests the default launch of a simple program with shell expansion
@@ -214,7 +205,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                 )
 
     @skipIfWindows
-    @skipIfRemote
     def test_args(self):
         """
         Tests launch of a simple program with arguments
@@ -240,7 +230,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
             )
 
     @skipIfWindows
-    @skipIfRemote
     def test_environment(self):
         """
         Tests launch of a simple program with environment variables
@@ -270,7 +259,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
             )
 
     @skipIfWindows
-    @skipIfRemote
     @skipIf(
         archs=["arm", "aarch64"]
     )  # failed run https://lab.llvm.org/buildbot/#/builders/96/builds/6933
@@ -349,12 +337,14 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         # Get output from the console. This should contain both the
         # "exitCommands" that were run after the second breakpoint was hit
         # and the "terminateCommands" due to the debugging session ending
-        output = self.collect_console(duration=1.0)
+        output = self.collect_console(
+            timeout_secs=1.0,
+            pattern=terminateCommands[0],
+        )
         self.verify_commands("exitCommands", output, exitCommands)
         self.verify_commands("terminateCommands", output, terminateCommands)
 
     @skipIfWindows
-    @skipIfRemote
     def test_extra_launch_commands(self):
         """
         Tests the "launchCommands" with extra launching settings
@@ -420,7 +410,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.verify_commands("exitCommands", output, exitCommands)
 
     @skipIfWindows
-    @skipIfRemote
     def test_failing_launch_commands(self):
         """
         Tests "launchCommands" failures prevents a launch.
@@ -458,7 +447,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         # Verify all "launchCommands" were founc in console output
         # The launch should fail due to the invalid command.
         self.verify_commands("launchCommands", output, launchCommands)
-        self.assertRegex(output, r"unable to find executable for '/bad/path/")
+        self.assertRegex(output, r"bad/path/.*does not exist")
 
     @skipIfWindows
     @skipIfNetBSD  # Hangs on NetBSD as well
@@ -481,5 +470,39 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         # Once it's disconnected the console should contain the
         # "terminateCommands"
         self.dap_server.request_disconnect(terminateDebuggee=True)
-        output = self.collect_console(duration=1.0)
+        output = self.collect_console(
+            timeout_secs=1.0,
+            pattern=terminateCommands[0],
+        )
         self.verify_commands("terminateCommands", output, terminateCommands)
+
+    @skipIfWindows
+    def test_version(self):
+        """
+        Tests that "initialize" response contains the "version" string the same
+        as the one returned by "version" command.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+
+        source = "main.c"
+        breakpoint_line = line_number(source, "// breakpoint 1")
+        lines = [breakpoint_line]
+        # Set breakpoint in the thread function so we can step the threads
+        breakpoint_ids = self.set_source_breakpoints(source, lines)
+        self.continue_to_breakpoints(breakpoint_ids)
+
+        version_eval_response = self.dap_server.request_evaluate(
+            "`version", context="repl"
+        )
+        version_eval_output = version_eval_response["body"]["result"]
+
+        # The first line is the prompt line like "(lldb) version", so we skip it.
+        version_eval_output_without_prompt_line = version_eval_output.splitlines()[1:]
+        lldb_json = self.dap_server.get_initialize_value("__lldb")
+        version_string = lldb_json["version"]
+        self.assertEqual(
+            version_eval_output_without_prompt_line,
+            version_string.splitlines(),
+            "version string does not match",
+        )

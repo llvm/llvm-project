@@ -7,7 +7,7 @@ declare void @use.i8(i8)
 define i1 @cmpeq_rorr_to_rorl(i8 %x, i8 %C) {
 ; CHECK-LABEL: @cmpeq_rorr_to_rorl(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 [[C:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x_rorr = call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 %C)
@@ -65,7 +65,7 @@ define i1 @cmpne_rorr_rorr(i8 %x, i8 %C0, i8 %C1) {
 ; CHECK-LABEL: @cmpne_rorr_rorr(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 [[C0:%.*]], [[C1:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 [[TMP1]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP2]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x_rorr0 = call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 %C0)
@@ -78,7 +78,7 @@ define i1 @cmpne_rorrX_rorrY(i8 %x, i8 %y, i8 %C0, i8 %C1) {
 ; CHECK-LABEL: @cmpne_rorrX_rorrY(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 [[C0:%.*]], [[C1:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.fshr.i8(i8 [[X:%.*]], i8 [[X]], i8 [[TMP1]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP2]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[Y:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x_rorr0 = call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 %C0)
@@ -135,7 +135,7 @@ define i1 @cmpeq_rorlXC_rorlYC_multiuse1(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[Y_RORL1:%.*]] = call i8 @llvm.fshl.i8(i8 [[Y:%.*]], i8 [[Y]], i8 3)
 ; CHECK-NEXT:    call void @use.i8(i8 [[Y_RORL1]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 3)
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Y]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x_rorl0 = call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 6)

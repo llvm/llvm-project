@@ -16,7 +16,7 @@
 
 #include <stddef.h> // size_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LIBC_INLINE bool inline_memmove_small_size_x86(Ptr dst, CPtr src,
                                                size_t count) {
@@ -115,6 +115,6 @@ LIBC_INLINE void inline_memmove_follow_up_x86(Ptr dst, CPtr src, size_t count) {
   }
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMMOVE_H

@@ -20,6 +20,7 @@
 // CHECK-NEXT:       "{{.*}}A.h",
 // CHECK-NEXT:       "{{.*}}module.modulemap"
 // CHECK-NEXT:     ],
+// CHECK-NEXT:     "link-libraries": [],
 // CHECK-NEXT:     "name": "A"
 // CHECK-NEXT:   }
 

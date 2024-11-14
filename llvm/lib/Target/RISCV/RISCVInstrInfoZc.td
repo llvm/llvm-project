@@ -183,7 +183,7 @@ let Predicates = [HasStdExtZcb] in
 def C_ZEXT_B  : RVZcArith_r<0b11000 , "c.zext.b">,
                 Sched<[WriteIALU, ReadIALU]>;
 
-let Predicates = [HasStdExtZcb, HasStdExtMOrZmmul] in
+let Predicates = [HasStdExtZcb, HasStdExtZmmul] in
 def C_MUL     : CA_ALU<0b100111, 0b10, "c.mul", GPRC>,
                 Sched<[WriteIMul, ReadIMul, ReadIMul]>;
 
@@ -270,13 +270,13 @@ def CM_JALT : RVInst16CJ<0b101, 0b10, (outs), (ins uimm8ge32:$index),
 } // DecoderNamespace = "RVZcmt", Predicates = [HasStdExtZcmt]...
 
 
-let Predicates = [HasStdExtZcb, HasStdExtMOrZmmul] in{
+let Predicates = [HasStdExtZcb, HasStdExtZmmul] in{
 def : CompressPat<(MUL GPRC:$rs1, GPRC:$rs1, GPRC:$rs2),
                   (C_MUL GPRC:$rs1, GPRC:$rs2)>;
 let isCompressOnly = true in
 def : CompressPat<(MUL GPRC:$rs1, GPRC:$rs2, GPRC:$rs1),
                   (C_MUL GPRC:$rs1, GPRC:$rs2)>;
-} // Predicates = [HasStdExtZcb, HasStdExtMOrZmmul]
+} // Predicates = [HasStdExtZcb, HasStdExtZmmul]
 
 let Predicates = [HasStdExtZcb, HasStdExtZbb] in{
 def : CompressPat<(SEXT_B GPRC:$rs1, GPRC:$rs1),

@@ -256,15 +256,17 @@ static const Symbol &FollowHostAssoc(const Symbol &symbol) {
 }
 
 bool IsHostAssociated(const Symbol &symbol, const Scope &scope) {
-  return DoesScopeContain(
-      &GetProgramUnitOrBlockConstructContaining(FollowHostAssoc(symbol)),
-      GetProgramUnitOrBlockConstructContaining(scope));
+  const Symbol &base{FollowHostAssoc(symbol)};
+  return base.owner().IsTopLevel() ||
+      DoesScopeContain(&GetProgramUnitOrBlockConstructContaining(base),
+          GetProgramUnitOrBlockConstructContaining(scope));
 }
 
 bool IsHostAssociatedIntoSubprogram(const Symbol &symbol, const Scope &scope) {
-  return DoesScopeContain(
-      &GetProgramUnitOrBlockConstructContaining(FollowHostAssoc(symbol)),
-      GetProgramUnitContaining(scope));
+  const Symbol &base{FollowHostAssoc(symbol)};
+  return base.owner().IsTopLevel() ||
+      DoesScopeContain(&GetProgramUnitOrBlockConstructContaining(base),
+          GetProgramUnitContaining(scope));
 }
 
 bool IsInStmtFunction(const Symbol &symbol) {
@@ -683,7 +685,7 @@ bool IsInitialized(const Symbol &symbol, bool ignoreDataStatements,
     return true;
   } else if (IsPointer(symbol)) {
     return !ignorePointer;
-  } else if (IsNamedConstant(symbol) || IsFunctionResult(symbol)) {
+  } else if (IsNamedConstant(symbol)) {
     return false;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
     if (!object->isDummy() && object->type()) {
@@ -864,7 +866,7 @@ const Symbol *HasImpureFinal(const Symbol &original, std::optional<int> rank) {
 
 bool MayRequireFinalization(const DerivedTypeSpec &derived) {
   return IsFinalizable(derived) ||
-      FindPolymorphicAllocatableUltimateComponent(derived);
+      FindPolymorphicAllocatablePotentialComponent(derived);
 }
 
 bool HasAllocatableDirectComponent(const DerivedTypeSpec &derived) {
@@ -1133,12 +1135,12 @@ std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
   return std::nullopt;
 }
 
-std::list<SourceName> OrderParameterNames(const Symbol &typeSymbol) {
-  std::list<SourceName> result;
+SymbolVector OrderParameterNames(const Symbol &typeSymbol) {
+  SymbolVector result;
   if (const DerivedTypeSpec * spec{typeSymbol.GetParentTypeSpec()}) {
     result = OrderParameterNames(spec->typeSymbol());
   }
-  const auto &paramNames{typeSymbol.get<DerivedTypeDetails>().paramNames()};
+  const auto &paramNames{typeSymbol.get<DerivedTypeDetails>().paramNameOrder()};
   result.insert(result.end(), paramNames.begin(), paramNames.end());
   return result;
 }
@@ -1148,7 +1150,7 @@ SymbolVector OrderParameterDeclarations(const Symbol &typeSymbol) {
   if (const DerivedTypeSpec * spec{typeSymbol.GetParentTypeSpec()}) {
     result = OrderParameterDeclarations(spec->typeSymbol());
   }
-  const auto &paramDecls{typeSymbol.get<DerivedTypeDetails>().paramDecls()};
+  const auto &paramDecls{typeSymbol.get<DerivedTypeDetails>().paramDeclOrder()};
   result.insert(result.end(), paramDecls.begin(), paramDecls.end());
   return result;
 }
@@ -1402,11 +1404,11 @@ DirectComponentIterator::const_iterator FindAllocatableOrPointerDirectComponent(
   return std::find_if(directs.begin(), directs.end(), IsAllocatableOrPointer);
 }
 
-UltimateComponentIterator::const_iterator
-FindPolymorphicAllocatableUltimateComponent(const DerivedTypeSpec &derived) {
-  UltimateComponentIterator ultimates{derived};
+PotentialComponentIterator::const_iterator
+FindPolymorphicAllocatablePotentialComponent(const DerivedTypeSpec &derived) {
+  PotentialComponentIterator potentials{derived};
   return std::find_if(
-      ultimates.begin(), ultimates.end(), IsPolymorphicAllocatable);
+      potentials.begin(), potentials.end(), IsPolymorphicAllocatable);
 }
 
 const Symbol *FindUltimateComponent(const DerivedTypeSpec &derived,
@@ -1556,8 +1558,9 @@ bool IsAutomaticallyDestroyed(const Symbol &symbol) {
   return symbol.has<ObjectEntityDetails>() &&
       (symbol.owner().kind() == Scope::Kind::Subprogram ||
           symbol.owner().kind() == Scope::Kind::BlockConstruct) &&
-      (!IsDummy(symbol) || IsIntentOut(symbol)) && !IsPointer(symbol) &&
-      !IsSaved(symbol) && !FindCommonBlockContaining(symbol);
+      !IsNamedConstant(symbol) && (!IsDummy(symbol) || IsIntentOut(symbol)) &&
+      !IsPointer(symbol) && !IsSaved(symbol) &&
+      !FindCommonBlockContaining(symbol);
 }
 
 const std::optional<parser::Name> &MaybeGetNodeName(
