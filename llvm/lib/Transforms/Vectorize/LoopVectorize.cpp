@@ -6567,8 +6567,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
                  CmpInst::BAD_ICMP_PREDICATE, CostKind);
     }
 
-    // When tail folding with EVL, if the phi is part of an out of loop reduction
-    // then it will be transformed into a wide vp_merge.
+    // When tail folding with EVL, if the phi is part of an out of loop
+    // reduction then it will be transformed into a wide vp_merge.
     if (VF.isVector() && foldTailWithEVL() &&
         Legal->getReductionVars().contains(Phi) && !isInLoopReduction(Phi)) {
       IntrinsicCostAttributes ICA(
