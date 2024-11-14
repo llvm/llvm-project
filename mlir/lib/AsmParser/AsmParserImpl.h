@@ -288,32 +288,13 @@ public:
     bool isNegative = parser.consumeIf(Token::minus);
     Token curTok = parser.getToken();
     auto emitErrorAtTok = [&]() { return emitError(curTok.getLoc(), ""); };
-
-    // Check for a floating point value.
-    if (curTok.is(Token::floatliteral)) {
-      auto val = curTok.getFloatingPointValue();
-      if (!val)
-        return emitErrorAtTok() << "floating point value too large";
-      parser.consumeToken(Token::floatliteral);
-      result = APFloat(isNegative ? -*val : *val);
-      bool losesInfo;
-      result.convert(semantics, APFloat::rmNearestTiesToEven, &losesInfo);
-      return success();
-    }
-
-    // Check for a hexadecimal float value.
-    if (curTok.is(Token::integer)) {
-      FailureOr<APFloat> apResult = parseFloatFromIntegerLiteral(
-          emitErrorAtTok, curTok, isNegative, semantics);
-      if (failed(apResult))
-        return failure();
-
-      result = *apResult;
-      parser.consumeToken(Token::integer);
-      return success();
-    }
-
-    return emitErrorAtTok() << "expected floating point literal";
+    FailureOr<APFloat> apResult =
+        parseFloatFromLiteral(emitErrorAtTok, curTok, isNegative, semantics);
+    if (failed(apResult))
+      return failure();
+    parser.consumeToken();
+    result = *apResult;
+    return success();
   }
 
   /// Parse a floating point value from the stream.

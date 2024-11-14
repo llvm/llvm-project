@@ -658,36 +658,12 @@ TensorLiteralParser::getFloatAttrElements(SMLoc loc, FloatType eltTy,
   for (const auto &signAndToken : storage) {
     bool isNegative = signAndToken.first;
     const Token &token = signAndToken.second;
-
-    // Handle hexadecimal float literals.
-    if (token.is(Token::integer) && token.getSpelling().starts_with("0x")) {
-      auto emitErrorAtTok = [&]() { return p.emitError(token.getLoc()); };
-      FailureOr<APFloat> result = parseFloatFromIntegerLiteral(
-          emitErrorAtTok, token, isNegative, eltTy.getFloatSemantics());
-      if (failed(result))
-        return failure();
-
-      floatValues.push_back(*result);
-      continue;
-    }
-
-    // Check to see if any decimal integers or booleans were parsed.
-    if (!token.is(Token::floatliteral))
-      return p.emitError()
-             << "expected floating-point elements, but parsed integer";
-
-    // Build the float values from tokens.
-    auto val = token.getFloatingPointValue();
-    if (!val)
-      return p.emitError("floating point value too large for attribute");
-
-    APFloat apVal(isNegative ? -*val : *val);
-    if (!eltTy.isF64()) {
-      bool unused;
-      apVal.convert(eltTy.getFloatSemantics(), APFloat::rmNearestTiesToEven,
-                    &unused);
-    }
-    floatValues.push_back(apVal);
+    auto emitErrorAtTok = [&]() { return p.emitError(token.getLoc()); };
+    FailureOr<APFloat> result = parseFloatFromLiteral(
+        emitErrorAtTok, token, isNegative, eltTy.getFloatSemantics());
+    if (failed(result))
+      return failure();
+    floatValues.push_back(*result);
   }
   return success();
 }
@@ -905,34 +881,15 @@ ParseResult DenseArrayElementParser::parseIntegerElement(Parser &p) {
 
 ParseResult DenseArrayElementParser::parseFloatElement(Parser &p) {
   bool isNegative = p.consumeIf(Token::minus);
-
   Token token = p.getToken();
-  std::optional<APFloat> result;
-  auto floatType = cast<FloatType>(type);
-  if (p.consumeIf(Token::integer)) {
-    // Parse an integer literal as a float.
-    auto emitErrorAtTok = [&]() { return p.emitError(token.getLoc()); };
-    FailureOr<APFloat> fromIntLit = parseFloatFromIntegerLiteral(
-        emitErrorAtTok, token, isNegative, floatType.getFloatSemantics());
-    if (failed(fromIntLit))
-      return failure();
-    result = *fromIntLit;
-  } else if (p.consumeIf(Token::floatliteral)) {
-    // Parse a floating point literal.
-    std::optional<double> val = token.getFloatingPointValue();
-    if (!val)
-      return failure();
-    result = APFloat(isNegative ? -*val : *val);
-    if (!type.isF64()) {
-      bool unused;
-      result->convert(floatType.getFloatSemantics(),
-                      APFloat::rmNearestTiesToEven, &unused);
-    }
-  } else {
-    return p.emitError("expected integer or floating point literal");
-  }
-
-  append(result->bitcastToAPInt());
+  auto emitErrorAtTok = [&]() { return p.emitError(token.getLoc()); };
+  FailureOr<APFloat> fromIntLit =
+      parseFloatFromLiteral(emitErrorAtTok, token, isNegative,
+                            cast<FloatType>(type).getFloatSemantics());
+  if (failed(fromIntLit))
+    return failure();
+  p.consumeToken();
+  append(fromIntLit->bitcastToAPInt());
   return success();
 }
 

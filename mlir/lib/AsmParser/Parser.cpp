@@ -99,6 +99,29 @@ FailureOr<APFloat> detail::parseFloatFromIntegerLiteral(
   return APFloat(semantics, truncatedValue);
 }
 
+FailureOr<APFloat>
+detail::parseFloatFromLiteral(function_ref<InFlightDiagnostic()> emitError,
+                              const Token &tok, bool isNegative,
+                              const llvm::fltSemantics &semantics) {
+  // Check for a floating point value.
+  if (tok.is(Token::floatliteral)) {
+    auto val = tok.getFloatingPointValue();
+    if (!val)
+      return emitError() << "floating point value too large";
+
+    APFloat result(isNegative ? -*val : *val);
+    bool unused;
+    result.convert(semantics, APFloat::rmNearestTiesToEven, &unused);
+    return result;
+  }
+
+  // Check for a hexadecimal float value.
+  if (tok.is(Token::integer))
+    return parseFloatFromIntegerLiteral(emitError, tok, isNegative, semantics);
+
+  return emitError() << "expected floating point literal";
+}
+
 //===----------------------------------------------------------------------===//
 // CodeComplete
 //===----------------------------------------------------------------------===//

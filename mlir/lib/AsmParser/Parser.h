@@ -22,6 +22,12 @@ parseFloatFromIntegerLiteral(function_ref<InFlightDiagnostic()> emitError,
                              const Token &tok, bool isNegative,
                              const llvm::fltSemantics &semantics);
 
+/// Parse a floating point value from a literal.
+FailureOr<APFloat>
+parseFloatFromLiteral(function_ref<InFlightDiagnostic()> emitError,
+                      const Token &tok, bool isNegative,
+                      const llvm::fltSemantics &semantics);
+
 //===----------------------------------------------------------------------===//
 // Parser
 //===----------------------------------------------------------------------===//
