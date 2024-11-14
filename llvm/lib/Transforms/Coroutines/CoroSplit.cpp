@@ -190,7 +190,6 @@ private:
   void replaceRetconOrAsyncSuspendUses();
   void replaceCoroSuspends();
   void replaceCoroEnds();
-  void replaceSwiftErrorOps();
   void salvageDebugInfo();
   void handleFinalSuspend();
 };
@@ -750,10 +749,6 @@ collectDbgVariableIntrinsics(Function &F) {
   return {Intrinsics, DbgVariableRecords};
 }
 
-void CoroCloner::replaceSwiftErrorOps() {
-  ::replaceSwiftErrorOps(*NewF, Shape, &VMap);
-}
-
 void CoroCloner::salvageDebugInfo() {
   auto [Worklist, DbgVariableRecords] = collectDbgVariableIntrinsics(*NewF);
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
@@ -1203,9 +1198,6 @@ void CoroCloner::create() {
 
   // Handle suspends.
   replaceCoroSuspends();
-
-  // Handle swifterror.
-  replaceSwiftErrorOps();
 
   // Remove coro.end intrinsics.
   replaceCoroEnds();
