@@ -793,21 +793,21 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       }
     } else if (actualIsNull) {
       if (dummyIsOptional) {
-      } else if (dummy.intent == common::Intent::In) {
-        // Extension (Intel, NAG, XLF): a NULL() pointer is an acceptable
-        // actual argument for an INTENT(IN) allocatable dummy, and it
-        // is treated as an unassociated allocatable.
-        if (context.ShouldWarn(
-                common::LanguageFeature::NullActualForAllocatable)) {
-          messages.Say(common::LanguageFeature::NullActualForAllocatable,
-              "Allocatable %s is associated with a null pointer"_port_en_US,
-              dummyName);
-        }
-      } else {
+      } else if (dummy.intent == common::Intent::Default &&
+          context.ShouldWarn(
+              common::UsageWarning::NullActualForDefaultIntentAllocatable)) {
         messages.Say(
-            "A null pointer may not be associated with allocatable %s without INTENT(IN)"_err_en_US,
+            "A null pointer should not be associated with allocatable %s without INTENT(IN)"_warn_en_US,
+            dummyName);
+      } else if (dummy.intent == common::Intent::In &&
+          context.ShouldWarn(
+              common::LanguageFeature::NullActualForAllocatable)) {
+        messages.Say(common::LanguageFeature::NullActualForAllocatable,
+            "Allocatable %s is associated with a null pointer"_port_en_US,
             dummyName);
       }
+      // INTENT(OUT) and INTENT(IN OUT) cases are caught elsewhere as being
+      // undefinable actual arguments.
     } else {
       messages.Say(
           "ALLOCATABLE %s must be associated with an ALLOCATABLE actual argument"_err_en_US,
@@ -1292,19 +1292,24 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                 } else if (object.attrs.test(characteristics::DummyDataObject::
                                    Attr::Allocatable) &&
                     evaluate::IsNullPointer(*expr)) {
-                  if (object.intent == common::Intent::In) {
-                    // Extension (Intel, NAG, XLF); see CheckExplicitDataArg.
-                    if (context.ShouldWarn(common::LanguageFeature::
-                                NullActualForAllocatable)) {
-                      messages.Say(
-                          common::LanguageFeature::NullActualForAllocatable,
-                          "Allocatable %s is associated with NULL()"_port_en_US,
-                          dummyName);
-                    }
-                  } else {
+                  if (object.intent == common::Intent::Out ||
+                      object.intent == common::Intent::InOut) {
                     messages.Say(
-                        "NULL() actual argument '%s' may not be associated with allocatable %s without INTENT(IN)"_err_en_US,
+                        "NULL() actual argument '%s' may not be associated with allocatable dummy argument %s that is INTENT(OUT) or INTENT(IN OUT)"_err_en_US,
                         expr->AsFortran(), dummyName);
+                  } else if (object.intent == common::Intent::Default &&
+                      context.ShouldWarn(common::UsageWarning::
+                              NullActualForDefaultIntentAllocatable)) {
+                    messages.Say(common::UsageWarning::
+                                     NullActualForDefaultIntentAllocatable,
+                        "NULL() actual argument '%s' should not be associated with allocatable dummy argument %s without INTENT(IN)"_warn_en_US,
+                        expr->AsFortran(), dummyName);
+                  } else if (context.ShouldWarn(common::LanguageFeature::
+                                     NullActualForAllocatable)) {
+                    messages.Say(
+                        common::LanguageFeature::NullActualForAllocatable,
+                        "Allocatable %s is associated with %s"_port_en_US,
+                        dummyName, expr->AsFortran());
                   }
                 } else {
                   messages.Say(
