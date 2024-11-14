@@ -256,6 +256,10 @@ public:
 
   bool GetInjectLocalVariables(ExecutionContext *exe_ctx) const;
 
+  bool GetUseDIL(ExecutionContext *exe_ctx) const;
+
+  void SetUseDIL(ExecutionContext *exe_ctx, bool b);
+
   void SetRequireHardwareBreakpoints(bool b);
 
   bool GetRequireHardwareBreakpoints() const;
