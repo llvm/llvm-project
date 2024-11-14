@@ -132,10 +132,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   auto PtrVecTys = {nxv1p0, nxv2p0, nxv4p0, nxv8p0, nxv16p0};
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR, G_XOR})
-      .legalFor({s32, sXLen})
+      .legalFor({sXLen})
       .legalIf(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST))
       .widenScalarToNextPow2(0)
-      .clampScalar(0, s32, sXLen);
+      .clampScalar(0, sXLen, sXLen);
 
   getActionDefinitionsBuilder(
       {G_UADDE, G_UADDO, G_USUBE, G_USUBO}).lower();
@@ -147,31 +147,23 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .lower();
 
   getActionDefinitionsBuilder({G_SHL, G_ASHR, G_LSHR})
-      .legalFor({{s32, s32}, {sXLen, sXLen}})
+      .legalFor({{sXLen, sXLen}})
+      .customFor(ST.is64Bit(), {{s32, s32}})
       .widenScalarToNextPow2(0)
-      .clampScalar(1, s32, sXLen)
-      .clampScalar(0, s32, sXLen)
-      .minScalarSameAs(1, 0)
-      .maxScalarSameAs(1, 0);
+      .clampScalar(1, sXLen, sXLen)
+      .clampScalar(0, sXLen, sXLen);
 
-  auto &ExtActions =
-      getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
-          .legalIf(all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
-                       typeIsLegalIntOrFPVec(1, IntOrFPVecTys, ST)));
-  if (ST.is64Bit()) {
-    ExtActions.legalFor({{sXLen, s32}});
-    getActionDefinitionsBuilder(G_SEXT_INREG)
-        .customFor({s32, sXLen})
-        .maxScalar(0, sXLen)
-        .lower();
-  } else {
-    getActionDefinitionsBuilder(G_SEXT_INREG)
-        .customFor({s32})
-        .maxScalar(0, sXLen)
-        .lower();
-  }
-  ExtActions.customIf(typeIsLegalBoolVec(1, BoolVecTys, ST))
+  getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
+      .legalIf(all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
+                   typeIsLegalIntOrFPVec(1, IntOrFPVecTys, ST)))
+      .legalFor(ST.is64Bit(), {{sXLen, s32}})
+      .customIf(typeIsLegalBoolVec(1, BoolVecTys, ST))
       .maxScalar(0, sXLen);
+
+  getActionDefinitionsBuilder(G_SEXT_INREG)
+      .customFor({sXLen})
+      .clampScalar(0, sXLen, sXLen)
+      .lower();
 
   // Merge/Unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
@@ -235,10 +227,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   }
 
   getActionDefinitionsBuilder(G_CONSTANT)
-      .legalFor({s32, p0})
+      .legalFor({p0})
+      .legalFor(!ST.is64Bit(), {s32})
       .customFor(ST.is64Bit(), {s64})
       .widenScalarToNextPow2(0)
-      .clampScalar(0, s32, sXLen);
+      .clampScalar(0, sXLen, sXLen);
 
   // TODO: transform illegal vector types into legal vector type
   getActionDefinitionsBuilder(
@@ -288,8 +281,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
        {s32, p0, s32, getScalarMemAlign(32)},
        {p0, p0, sXLen, getScalarMemAlign(XLen)}});
   ExtLoadActions.legalForTypesWithMemDesc(
-      {{s32, p0, s8, getScalarMemAlign(8)},
-       {s32, p0, s16, getScalarMemAlign(16)}});
+      {{sXLen, p0, s8, getScalarMemAlign(8)},
+       {sXLen, p0, s16, getScalarMemAlign(16)}});
   if (XLen == 64) {
     LoadActions.legalForTypesWithMemDesc(
         {{s64, p0, s8, getScalarMemAlign(8)},
@@ -302,9 +295,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
          {s64, p0, s32, getScalarMemAlign(32)},
          {s64, p0, s64, getScalarMemAlign(64)}});
     ExtLoadActions.legalForTypesWithMemDesc(
-        {{s64, p0, s8, getScalarMemAlign(8)},
-         {s64, p0, s16, getScalarMemAlign(16)},
-         {s64, p0, s32, getScalarMemAlign(32)}});
+        {{s64, p0, s32, getScalarMemAlign(32)}});
   } else if (ST.hasStdExtD()) {
     LoadActions.legalForTypesWithMemDesc(
         {{s64, p0, s64, getScalarMemAlign(64)}});
@@ -386,7 +377,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .lowerIfMemSizeNotByteSizePow2()
       .lower();
 
-  ExtLoadActions.widenScalarToNextPow2(0).clampScalar(0, s32, sXLen).lower();
+  ExtLoadActions.widenScalarToNextPow2(0).clampScalar(0, sXLen, sXLen).lower();
 
   getActionDefinitionsBuilder({G_PTR_ADD, G_PTRMASK}).legalFor({{p0, sXLen}});
 
@@ -414,9 +405,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   if (ST.hasStdExtZmmul()) {
     getActionDefinitionsBuilder(G_MUL)
-        .legalFor({s32, sXLen})
+        .legalFor({sXLen})
         .widenScalarToNextPow2(0)
-        .clampScalar(0, s32, sXLen);
+        .clampScalar(0, sXLen, sXLen);
 
     // clang-format off
     getActionDefinitionsBuilder({G_SMULH, G_UMULH})
@@ -1166,6 +1157,12 @@ static unsigned getRISCVWOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
     llvm_unreachable("Unexpected opcode");
+  case TargetOpcode::G_ASHR:
+    return RISCV::G_SRAW;
+  case TargetOpcode::G_LSHR:
+    return RISCV::G_SRLW;
+  case TargetOpcode::G_SHL:
+    return RISCV::G_SLLW;
   case TargetOpcode::G_SDIV:
     return RISCV::G_DIVW;
   case TargetOpcode::G_UDIV:
@@ -1222,6 +1219,34 @@ bool RISCVLegalizerInfo::legalizeCustom(
 
     return Helper.lower(MI, 0, /* Unused hint type */ LLT()) ==
            LegalizerHelper::Legalized;
+  }
+  case TargetOpcode::G_ASHR:
+  case TargetOpcode::G_LSHR:
+  case TargetOpcode::G_SHL: {
+    if (getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI)) {
+      // We don't need a custom node for shift by constant. Just widen the
+      // source and the shift amount.
+      unsigned ExtOpc = TargetOpcode::G_ANYEXT;
+      if (MI.getOpcode() == TargetOpcode::G_ASHR)
+        ExtOpc = TargetOpcode::G_SEXT;
+      else if (MI.getOpcode() == TargetOpcode::G_LSHR)
+        ExtOpc = TargetOpcode::G_ZEXT;
+
+      Helper.Observer.changingInstr(MI);
+      Helper.widenScalarSrc(MI, sXLen, 1, ExtOpc);
+      Helper.widenScalarSrc(MI, sXLen, 2, TargetOpcode::G_ZEXT);
+      Helper.widenScalarDst(MI, sXLen);
+      Helper.Observer.changedInstr(MI);
+      return true;
+    }
+
+    Helper.Observer.changingInstr(MI);
+    Helper.widenScalarSrc(MI, sXLen, 1, TargetOpcode::G_ANYEXT);
+    Helper.widenScalarSrc(MI, sXLen, 2, TargetOpcode::G_ANYEXT);
+    Helper.widenScalarDst(MI, sXLen);
+    MI.setDesc(MIRBuilder.getTII().get(getRISCVWOpcode(MI.getOpcode())));
+    Helper.Observer.changedInstr(MI);
+    return true;
   }
   case TargetOpcode::G_SDIV:
   case TargetOpcode::G_UDIV:

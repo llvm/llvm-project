@@ -13,9 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "ASTTableGen.h"
-#include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/Error.h"
-#include <optional>
+#include "llvm/TableGen/Record.h"
 
 using namespace llvm;
 using namespace clang;

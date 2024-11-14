@@ -407,7 +407,8 @@ def AffineIfOp : Affine_Op<"if",
     }
     ```
   }];
-  let arguments = (ins Variadic<AnyType>);
+  let arguments = (ins Variadic<AnyType>,
+                       IntegerSetAttr:$condition);
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$thenRegion, AnyRegion:$elseRegion);
 
@@ -1090,7 +1091,7 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index",
   let results = (outs Variadic<Index>:$multi_index);
 
   let assemblyFormat = [{
-    $linear_index `into` ` `
+    $linear_index `into`
     custom<DynamicIndexList>($dynamic_basis, $static_basis, "::mlir::AsmParser::Delimiter::Paren")
     attr-dict `:` type($multi_index)
   }];
@@ -1110,6 +1111,7 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index",
   }];
 
   let hasVerifier = 1;
+  let hasFolder = 1;
   let hasCanonicalizer = 1;
 }
 
@@ -1158,7 +1160,7 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
 
   let assemblyFormat = [{
     (`disjoint` $disjoint^)? ` `
-    `[` $multi_index `]` `by` ` `
+    `[` $multi_index `]` `by`
     custom<DynamicIndexList>($dynamic_basis, $static_basis, "::mlir::AsmParser::Delimiter::Paren")
     attr-dict `:` type($linear_index)
   }];
@@ -1179,6 +1181,7 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
   }];
 
   let hasVerifier = 1;
+  let hasFolder = 1;
   let hasCanonicalizer = 1;
 }
 

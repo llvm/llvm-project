@@ -19,10 +19,8 @@
 #include "AArch64TargetTransformInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "TargetInfo/AArch64TargetInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/CodeGen/CFIFixup.h"
 #include "llvm/CodeGen/CSEConfigBase.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
@@ -51,6 +49,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/CFGuard.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/LowerIFunc.h"
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 #include <memory>
 #include <optional>
@@ -572,6 +571,11 @@ void AArch64TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
         LPM.addPass(LoopIdiomVectorizePass());
       });
+  if (getTargetTriple().isOSWindows())
+    PB.registerPipelineEarlySimplificationEPCallback(
+        [](ModulePassManager &PM, OptimizationLevel, ThinOrFullLTOPhase) {
+          PM.addPass(LowerIFuncPass());
+        });
 }
 
 TargetTransformInfo
