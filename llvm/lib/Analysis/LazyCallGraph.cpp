@@ -1775,8 +1775,9 @@ void LazyCallGraph::addSplitRefRecursiveFunctions(
       if (F1 == F2)
         continue;
       Node &N2 = get(*F2);
-      assert(!N1->lookup(N2)->isCall() &&
-             "Edges between new functions must be ref edges");
+      assert(!N1->lookup(N2) ||
+             (!N1->lookup(N2)->isCall() &&
+              "Edges between new functions must be ref edges"));
     }
   }
 #endif
