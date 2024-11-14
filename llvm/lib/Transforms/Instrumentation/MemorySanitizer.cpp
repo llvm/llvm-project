@@ -5728,23 +5728,18 @@ struct VarArgPowerPCHelper : public VarArgHelperBase {
 
     // Instrument va_start.
     // Copy va_list shadow from the backup copy of the TLS contents.
+    Triple TargetTriple(F.getParent()->getTargetTriple());
     for (CallInst *OrigInst : VAStartInstrumentationList) {
       NextNodeIRBuilder IRB(OrigInst);
       Value *VAListTag = OrigInst->getArgOperand(0);
-      Value *RegSaveAreaPtrPtr;
-
-      Triple TargetTriple(F.getParent()->getTargetTriple());
+      Value *RegSaveAreaPtrPtr = IRB.CreatePtrToInt(VAListTag, MS.IntptrTy);
 
       // In PPC32 va_list_tag is a struct, whereas in PPC64 it's a pointer
-      if (TargetTriple.isPPC64()) {
-        RegSaveAreaPtrPtr = IRB.CreateIntToPtr(
-            IRB.CreatePtrToInt(VAListTag, MS.IntptrTy), MS.PtrTy);
-      } else {
-        RegSaveAreaPtrPtr = IRB.CreateIntToPtr(
-            IRB.CreateAdd(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
-                          ConstantInt::get(MS.IntptrTy, 8)),
-            MS.PtrTy);
+      if (!TargetTriple.isPPC64()) {
+        RegSaveAreaPtrPtr =
+            IRB.CreateAdd(RegSaveAreaPtrPtr, ConstantInt::get(MS.IntptrTy, 8));
       }
+      RegSaveAreaPtrPtr = IRB.CreateIntToPtr(RegSaveAreaPtrPtr, MS.PtrTy);
 
       Value *RegSaveAreaPtr = IRB.CreateLoad(MS.PtrTy, RegSaveAreaPtrPtr);
       Value *RegSaveAreaShadowPtr, *RegSaveAreaOriginPtr;
