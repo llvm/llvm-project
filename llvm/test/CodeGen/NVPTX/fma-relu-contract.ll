@@ -1281,5 +1281,5 @@ define <2 x bfloat> @fma_bf16x2_expanded_maxnum_no_nans(<2 x bfloat> %a, <2 x bf
   ret <2 x bfloat> %3
 }
 
-attributes #0 = { "no-nans-fp-math"="true" "unsafe-fp-math"="true" }
+attributes #0 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "unsafe-fp-math"="true" }
 attributes #1 = { "unsafe-fp-math"="true" }
