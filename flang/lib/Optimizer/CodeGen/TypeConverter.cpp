@@ -136,16 +136,6 @@ mlir::Type LLVMTypeConverter::indexType() const {
 std::optional<llvm::LogicalResult> LLVMTypeConverter::convertRecordType(
     fir::RecordType derived, llvm::SmallVectorImpl<mlir::Type> &results) {
   auto name = fir::NameUniquer::dropTypeConversionMarkers(derived.getName());
-  auto st = mlir::LLVM::LLVMStructType::getIdentified(&getContext(), name);
-
-  auto &callStack = getCurrentThreadRecursiveStack();
-  if (llvm::count(callStack, derived)) {
-    results.push_back(st);
-    return mlir::success();
-  }
-  callStack.push_back(derived);
-  auto popConversionCallStack =
-      llvm::make_scope_exit([&callStack]() { callStack.pop_back(); });
 
   llvm::SmallVector<mlir::Type> members;
   for (auto mem : derived.getTypeList()) {
@@ -156,8 +146,8 @@ std::optional<llvm::LogicalResult> LLVMTypeConverter::convertRecordType(
     else
       members.push_back(mlir::cast<mlir::Type>(convertType(mem.second)));
   }
-  if (mlir::failed(st.setBody(members, /*isPacked=*/false)))
-    return mlir::failure();
+  auto st = mlir::LLVM::LLVMStructType::get(&getContext(), name, members,
+                                            /*isPacked=*/false);
   results.push_back(st);
   return mlir::success();
 }
