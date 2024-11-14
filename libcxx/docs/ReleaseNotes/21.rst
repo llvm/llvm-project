@@ -48,6 +48,9 @@ Improvements and New Features
 
 - Updated formatting library to Unicode 16.0.0.
 
+- The ``std::vector::erase`` function has been optimized for types that can be relocated trivially (such as ``std::string``),
+  yielding speed ups witnessed to be around 2x for these types (but subject to the use case).
+
 Deprecations and Removals
 -------------------------
 
