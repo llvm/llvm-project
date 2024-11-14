@@ -1060,10 +1060,10 @@ define i64 @explode_16xi64(<16 x i64> %v) {
 ; RV64-NEXT:    add a5, a5, a6
 ; RV64-NEXT:    add a5, a5, a7
 ; RV64-NEXT:    add a0, a0, a5
-; RV64-NEXT:    add t0, t0, t1
-; RV64-NEXT:    add t0, t0, t2
-; RV64-NEXT:    add t0, t0, t3
-; RV64-NEXT:    add a0, a0, t0
+; RV64-NEXT:    add t1, t0, t1
+; RV64-NEXT:    add t1, t1, t2
+; RV64-NEXT:    add t1, t1, t3
+; RV64-NEXT:    add a0, a0, t1
 ; RV64-NEXT:    add t4, t4, t5
 ; RV64-NEXT:    add a0, a0, t4
 ; RV64-NEXT:    addi sp, s0, -256
