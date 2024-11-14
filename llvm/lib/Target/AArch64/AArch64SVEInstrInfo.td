@@ -432,19 +432,10 @@ def AArch64bic_node : SDNode<"AArch64ISD::BIC",  SDT_AArch64Arith_Unpred>;
 
 def SDT_AArch64addw : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>]>;
 
-def AArch64saddwt_node : SDNode<"AArch64ISD::SADDWT", SDT_AArch64addw>;
-def AArch64saddwb_node : SDNode<"AArch64ISD::SADDWB", SDT_AArch64addw>;
-def AArch64uaddwt_node : SDNode<"AArch64ISD::UADDWT", SDT_AArch64addw>;
-def AArch64uaddwb_node : SDNode<"AArch64ISD::UADDWB", SDT_AArch64addw>;
-
-def AArch64saddwt : PatFrag<(ops node:$op1, node:$op2),
-                              (AArch64saddwt_node node:$op1, node:$op2)>;
-def AArch64saddwb : PatFrag<(ops node:$op1, node:$op2),
-                              (AArch64saddwb_node node:$op1, node:$op2)>;
-def AArch64uaddwt : PatFrag<(ops node:$op1, node:$op2),
-                              (AArch64uaddwt_node node:$op1, node:$op2)>;
-def AArch64uaddwb : PatFrag<(ops node:$op1, node:$op2),
-                              (AArch64uaddwb_node node:$op1, node:$op2)>;
+def AArch64saddwt : SDNode<"AArch64ISD::SADDWT", SDT_AArch64addw>;
+def AArch64saddwb : SDNode<"AArch64ISD::SADDWB", SDT_AArch64addw>;
+def AArch64uaddwt : SDNode<"AArch64ISD::UADDWT", SDT_AArch64addw>;
+def AArch64uaddwb : SDNode<"AArch64ISD::UADDWB", SDT_AArch64addw>;
 
 def AArch64bic : PatFrags<(ops node:$op1, node:$op2),
                           [(and node:$op1, (xor node:$op2, (splat_vector (i32 -1)))),

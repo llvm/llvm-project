@@ -21911,10 +21911,10 @@ SDValue tryLowerPartialReductionToWideAdd(SDNode *N,
     return SDValue();
 
   bool InputIsSigned = ExtInputOpcode == ISD::SIGN_EXTEND;
-  auto BottomISD = InputIsSigned ? AArch64ISD::SADDWB : AArch64ISD::UADDWB;
-  auto TopISD = InputIsSigned ? AArch64ISD::SADDWT : AArch64ISD::UADDWT;
-  auto BottomNode = DAG.getNode(BottomISD, DL, AccVT, Acc, Input);
-  return DAG.getNode(TopISD, DL, AccVT, BottomNode, Input);
+  auto BottomOpcode = InputIsSigned ? AArch64ISD::SADDWB : AArch64ISD::UADDWB;
+  auto TopOpcode = InputIsSigned ? AArch64ISD::SADDWT : AArch64ISD::UADDWT;
+  auto BottomNode = DAG.getNode(BottomOpcode, DL, AccVT, Acc, Input);
+  return DAG.getNode(TopOpcode, DL, AccVT, BottomNode, Input);
 }
 
 static SDValue performIntrinsicCombine(SDNode *N,
