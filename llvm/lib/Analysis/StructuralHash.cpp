@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the StructuralHashPrinterPass and the
-// PreservedFunctionHashAnalysis and PreservedModuleHashAnalysis keys.
+// This file defines the StructuralHashPrinterPass and the 
+// PreservedFunctionHashAnalysis and PreservedModuleHashAnalysis keys. 
 //
-// The StructuralHashPrinterPass is used to show the structural hash of all
+// The StructuralHashPrinterPass is used to show the structural hash of all 
 // functions in a module and the module itself.
 //
 //===----------------------------------------------------------------------===//
