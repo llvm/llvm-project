@@ -2800,6 +2800,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::s_clamp, GL::SClamp);
   case Intrinsic::spv_wave_active_countbits:
     return selectWaveActiveCountBits(ResVReg, ResType, I);
+  case Intrinsic::spv_wave_any:
+    return selectWaveActiveAnyTrue(ResVReg, ResType, I);
   case Intrinsic::spv_wave_is_first_lane: {
     SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
     return BuildMI(BB, I, I.getDebugLoc(),
@@ -2808,8 +2810,6 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
         .addUse(GR.getSPIRVTypeID(ResType))
         .addUse(GR.getOrCreateConstInt(3, I, IntTy, TII));
   }
-  case Intrinsic::spv_wave_activeanytrue:
-    return selectWaveActiveAnyTrue(ResVReg, ResType, I);
   case Intrinsic::spv_wave_readlane:
     return selectWaveReadLaneAt(ResVReg, ResType, I);
   case Intrinsic::spv_step:

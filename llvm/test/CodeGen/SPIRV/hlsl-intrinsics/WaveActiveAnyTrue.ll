@@ -5,13 +5,13 @@
 ; CHECK: %[[#uint:]] = OpTypeInt 32 0
 ; CHECK: %[[#scope:]] = OpConstant %[[#uint]] 3
 
-; CHECK-LABEL: Begin function test_wave_aat
-define i1 @test_wave_aat(i1 %p1) {
+; CHECK-LABEL: Begin function test_wave_any
+define i1 @test_wave_any(i1 %p1) {
 entry:
 ; CHECK: %[[#param:]] = OpFunctionParameter %[[#bool]]
 ; CHECK: %[[#ret:]] = OpGroupNonUniformAny %[[#bool]] %[[#scope]] %[[#param]]
-  %ret = call i1 @llvm.spv.wave.activeanytrue(i1 %p1)
+  %ret = call i1 @llvm.spv.wave.any(i1 %p1)
   ret i1 %ret
 }
 
-declare i1 @llvm.spv.wave.activeanytrue(i1)
+declare i1 @llvm.spv.wave.any(i1)

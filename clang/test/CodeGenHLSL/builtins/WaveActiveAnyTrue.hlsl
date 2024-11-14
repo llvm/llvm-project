@@ -10,8 +10,8 @@
 // CHECK-LABEL: test
 bool test(bool p1) {
   // CHECK-SPIRV: %[[#entry_tok0:]] = call token @llvm.experimental.convergence.entry()
-  // CHECK-SPIRV:  %[[RET:.*]] = call spir_func i1 @llvm.spv.wave.activeanytrue(i1 %{{[a-zA-Z0-9]+}}) [ "convergencectrl"(token %[[#entry_tok0]]) ]
-  // CHECK-DXIL:  %[[RET:.*]] = call i1 @llvm.dx.wave.activeanytrue(i1 %{{[a-zA-Z0-9]+}})
+  // CHECK-SPIRV:  %[[RET:.*]] = call spir_func i1 @llvm.spv.wave.any(i1 %{{[a-zA-Z0-9]+}}) [ "convergencectrl"(token %[[#entry_tok0]]) ]
+  // CHECK-DXIL:  %[[RET:.*]] = call i1 @llvm.dx.wave.any(i1 %{{[a-zA-Z0-9]+}})
   // CHECK:  ret i1 %[[RET]]
   return WaveActiveAnyTrue(p1);
 }
