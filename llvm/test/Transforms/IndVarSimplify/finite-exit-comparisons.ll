@@ -1064,7 +1064,7 @@ define i8 @test_drop_icmp_samesign(i1 %cond, i32 range(i32 0, 32) %x) {
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[CALL2:%.*]] = call i8 @callee()
-; CHECK-NEXT:    [[COND2:%.*]] = icmp samesign ugt i8 [[TMP0]], [[CALL2]]
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ugt i8 [[TMP0]], [[CALL2]]
 ; CHECK-NEXT:    br i1 [[COND2]], label [[FOR_BODY]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    [[CALL2_LCSSA:%.*]] = phi i8 [ [[CALL2]], [[FOR_BODY]] ]
