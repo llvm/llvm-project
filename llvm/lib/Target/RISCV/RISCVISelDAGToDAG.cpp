@@ -16,7 +16,6 @@
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "RISCVISelLowering.h"
 #include "RISCVInstrInfo.h"
-#include "RISCVMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Alignment.h"
@@ -1616,21 +1615,28 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       SDValue Src1 = Node->getOperand(1);
       SDValue Src2 = Node->getOperand(2);
       bool IsUnsigned = IntNo == Intrinsic::riscv_vmsgeu;
-      bool IsCmpUnsignedZero = false;
+      bool IsCmpConstant = false;
+      bool IsCmpMinimum = false;
       // Only custom select scalar second operand.
       if (Src2.getValueType() != XLenVT)
         break;
       // Small constants are handled with patterns.
+      int64_t CVal = 0;
+      MVT Src1VT = Src1.getSimpleValueType();
       if (auto *C = dyn_cast<ConstantSDNode>(Src2)) {
-        int64_t CVal = C->getSExtValue();
+        IsCmpConstant = true;
+        CVal = C->getSExtValue();
         if (CVal >= -15 && CVal <= 16) {
           if (!IsUnsigned || CVal != 0)
             break;
-          IsCmpUnsignedZero = true;
+          IsCmpMinimum = true;
+        } else if (!IsUnsigned && CVal == APInt::getSignedMinValue(
+                                              Src1VT.getScalarSizeInBits())
+                                              .getSExtValue()) {
+          IsCmpMinimum = true;
         }
       }
-      MVT Src1VT = Src1.getSimpleValueType();
-      unsigned VMSLTOpcode, VMNANDOpcode, VMSetOpcode;
+      unsigned VMSLTOpcode, VMNANDOpcode, VMSetOpcode, VMSGTOpcode;
       switch (RISCVTargetLowering::getLMUL(Src1VT)) {
       default:
         llvm_unreachable("Unexpected LMUL!");
@@ -1638,6 +1644,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   case RISCVII::VLMUL::lmulenum:                                               \
     VMSLTOpcode = IsUnsigned ? RISCV::PseudoVMSLTU_VX_##suffix                 \
                              : RISCV::PseudoVMSLT_VX_##suffix;                 \
+    VMSGTOpcode = IsUnsigned ? RISCV::PseudoVMSGTU_VX_##suffix                 \
+                             : RISCV::PseudoVMSGT_VX_##suffix;                 \
     VMNANDOpcode = RISCV::PseudoVMNAND_MM_##suffix;                            \
     VMSetOpcode = RISCV::PseudoVMSET_M_##suffix_b;                             \
     break;
@@ -1655,9 +1663,18 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       SDValue VL;
       selectVLOp(Node->getOperand(3), VL);
 
-      // If vmsgeu with 0 immediate, expand it to vmset.
-      if (IsCmpUnsignedZero) {
+      // If vmsge(u) with minimum value, expand it to vmset.
+      if (IsCmpMinimum) {
         ReplaceNode(Node, CurDAG->getMachineNode(VMSetOpcode, DL, VT, VL, SEW));
+        return;
+      }
+
+      if (IsCmpConstant) {
+        SDValue Imm =
+            selectImm(CurDAG, SDLoc(Src2), XLenVT, CVal - 1, *Subtarget);
+
+        ReplaceNode(Node, CurDAG->getMachineNode(VMSGTOpcode, DL, VT,
+                                                 {Src1, Imm, VL, SEW}));
         return;
       }
 
@@ -1675,22 +1692,29 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       SDValue Src1 = Node->getOperand(2);
       SDValue Src2 = Node->getOperand(3);
       bool IsUnsigned = IntNo == Intrinsic::riscv_vmsgeu_mask;
-      bool IsCmpUnsignedZero = false;
+      bool IsCmpConstant = false;
+      bool IsCmpMinimum = false;
       // Only custom select scalar second operand.
       if (Src2.getValueType() != XLenVT)
         break;
       // Small constants are handled with patterns.
+      MVT Src1VT = Src1.getSimpleValueType();
+      int64_t CVal = 0;
       if (auto *C = dyn_cast<ConstantSDNode>(Src2)) {
-        int64_t CVal = C->getSExtValue();
+        IsCmpConstant = true;
+        CVal = C->getSExtValue();
         if (CVal >= -15 && CVal <= 16) {
           if (!IsUnsigned || CVal != 0)
             break;
-          IsCmpUnsignedZero = true;
+          IsCmpMinimum = true;
+        } else if (!IsUnsigned && CVal == APInt::getSignedMinValue(
+                                              Src1VT.getScalarSizeInBits())
+                                              .getSExtValue()) {
+          IsCmpMinimum = true;
         }
       }
-      MVT Src1VT = Src1.getSimpleValueType();
       unsigned VMSLTOpcode, VMSLTMaskOpcode, VMXOROpcode, VMANDNOpcode,
-          VMOROpcode;
+          VMOROpcode, VMSGTMaskOpcode;
       switch (RISCVTargetLowering::getLMUL(Src1VT)) {
       default:
         llvm_unreachable("Unexpected LMUL!");
@@ -1700,6 +1724,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
                              : RISCV::PseudoVMSLT_VX_##suffix;                 \
     VMSLTMaskOpcode = IsUnsigned ? RISCV::PseudoVMSLTU_VX_##suffix##_MASK      \
                                  : RISCV::PseudoVMSLT_VX_##suffix##_MASK;      \
+    VMSGTMaskOpcode = IsUnsigned ? RISCV::PseudoVMSGTU_VX_##suffix##_MASK      \
+                                 : RISCV::PseudoVMSGT_VX_##suffix##_MASK;      \
     break;
         CASE_VMSLT_OPCODES(LMUL_F8, MF8, B1)
         CASE_VMSLT_OPCODES(LMUL_F4, MF4, B2)
@@ -1737,8 +1763,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       SDValue MaskedOff = Node->getOperand(1);
       SDValue Mask = Node->getOperand(4);
 
-      // If vmsgeu_mask with 0 immediate, expand it to vmor mask, maskedoff.
-      if (IsCmpUnsignedZero) {
+      // If vmsge(u) with minimum value, expand it to vmor mask, maskedoff.
+      if (IsCmpMinimum) {
         // We don't need vmor if the MaskedOff and the Mask are the same
         // value.
         if (Mask == MaskedOff) {
@@ -1768,6 +1794,16 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
                                            RISCV::V0, Mask, SDValue());
       SDValue Glue = Chain.getValue(1);
       SDValue V0 = CurDAG->getRegister(RISCV::V0, VT);
+
+      if (IsCmpConstant) {
+        SDValue Imm =
+            selectImm(CurDAG, SDLoc(Src2), XLenVT, CVal - 1, *Subtarget);
+
+        ReplaceNode(Node, CurDAG->getMachineNode(
+                              VMSGTMaskOpcode, DL, VT,
+                              {MaskedOff, Src1, Imm, V0, VL, SEW, Glue}));
+        return;
+      }
 
       // Otherwise use
       // vmslt{u}.vx vd, va, x, v0.t; vmxor.mm vd, vd, v0
@@ -3708,6 +3744,15 @@ static bool isImplicitDef(SDValue V) {
   return V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
 }
 
+static bool hasGPROut(unsigned Opc) {
+  switch (RISCV::getRVVMCOpcode(Opc)) {
+  case RISCV::VCPOP_M:
+  case RISCV::VFIRST_M:
+    return true;
+  }
+  return false;
+}
+
 // Optimize masked RVV pseudo instructions with a known all-ones mask to their
 // corresponding "unmasked" pseudo versions. The mask we're interested in will
 // take the form of a V0 physical register operand, with a glued
@@ -3737,8 +3782,9 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(MachineSDNode *N) {
 #endif
 
   SmallVector<SDValue, 8> Ops;
-  // Skip the passthru operand at index 0 if !UseTUPseudo.
-  for (unsigned I = !UseTUPseudo, E = N->getNumOperands(); I != E; I++) {
+  // Skip the passthru operand at index 0 if !UseTUPseudo and no GPR out.
+  bool ShouldSkip = !UseTUPseudo && !hasGPROut(Opc);
+  for (unsigned I = ShouldSkip, E = N->getNumOperands(); I != E; I++) {
     // Skip the mask, and the Glue.
     SDValue Op = N->getOperand(I);
     if (I == MaskOpIdx || Op.getValueType() == MVT::Glue)

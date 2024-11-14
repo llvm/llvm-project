@@ -165,7 +165,7 @@ static void handleUleb128(Ctx &ctx, uint8_t *loc, uint64_t val) {
   const char *error = nullptr;
   uint64_t orig = decodeULEB128(loc, &count, nullptr, &error);
   if (count > maxcount || (count == maxcount && error))
-    errorOrWarn(getErrorLoc(ctx, loc) + "extra space for uleb128");
+    Err(ctx) << getErrorLoc(ctx, loc) << "extra space for uleb128";
   uint64_t mask = count < maxcount ? (1ULL << 7 * count) - 1 : -1ULL;
   encodeULEB128((orig + val) & mask, loc, count);
 }
@@ -250,9 +250,9 @@ uint32_t LoongArch::calcEFlags() const {
 
     if ((flags & EF_LOONGARCH_ABI_MODIFIER_MASK) !=
         (target & EF_LOONGARCH_ABI_MODIFIER_MASK))
-      error(toString(f) +
-            ": cannot link object files with different ABI from " +
-            toString(targetFile));
+      ErrAlways(ctx) << f
+                     << ": cannot link object files with different ABI from "
+                     << targetFile;
 
     // We cannot process psABI v1.x / object ABI v0 files (containing stack
     // relocations), unlike ld.bfd.
@@ -270,7 +270,7 @@ uint32_t LoongArch::calcEFlags() const {
     // and the few impacted users are advised to simply rebuild world or
     // reinstall a recent system.
     if ((flags & EF_LOONGARCH_OBJABI_MASK) != EF_LOONGARCH_OBJABI_V1)
-      error(toString(f) + ": unsupported object file ABI version");
+      ErrAlways(ctx) << f << ": unsupported object file ABI version";
   }
 
   return target;
@@ -528,8 +528,8 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   //
   // [1]: https://web.archive.org/web/20230709064026/https://github.com/loongson/LoongArch-Documentation/issues/51
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -774,10 +774,10 @@ static bool relax(Ctx &ctx, InputSection &sec) {
         remove = allBytes - curBytes;
       // If we can't satisfy this alignment, we've found a bad input.
       if (LLVM_UNLIKELY(static_cast<int32_t>(remove) < 0)) {
-        errorOrWarn(getErrorLoc(ctx, (const uint8_t *)loc) +
-                    "insufficient padding bytes for " + lld::toString(r.type) +
-                    ": " + Twine(allBytes) + " bytes available for " +
-                    "requested alignment of " + Twine(align) + " bytes");
+        Err(ctx) << getErrorLoc(ctx, (const uint8_t *)loc)
+                 << "insufficient padding bytes for " << lld::toString(r.type)
+                 << ": " << Twine(allBytes) << " bytes available for "
+                 << "requested alignment of " << Twine(align) << " bytes";
         remove = 0;
       }
       break;
@@ -808,7 +808,7 @@ static bool relax(Ctx &ctx, InputSection &sec) {
   }
   // Inform assignAddresses that the size has changed.
   if (!isUInt<32>(delta))
-    fatal("section size decrease is too large: " + Twine(delta));
+    Fatal(ctx) << "section size decrease is too large: " << Twine(delta);
   sec.bytesDropped = delta;
   return changed;
 }
@@ -839,7 +839,7 @@ bool LoongArch::relaxOnce(int pass) const {
 }
 
 void LoongArch::finalizeRelax(int passes) const {
-  log("relaxation passes: " + Twine(passes));
+  Log(ctx) << "relaxation passes: " << Twine(passes);
   SmallVector<InputSection *, 0> storage;
   for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))

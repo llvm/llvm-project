@@ -30,7 +30,7 @@ define void @trunc_iv_steps_with_epilogue(ptr %A, i64 %N) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[A]], i32 [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP7]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP8]], align 1
-; CHECK-NEXT:    [[TMP9:%.*]] = add <4 x i8> [[WIDE_LOAD]], <i8 2, i8 2, i8 2, i8 2>
+; CHECK-NEXT:    [[TMP9:%.*]] = add <4 x i8> [[WIDE_LOAD]], splat (i8 2)
 ; CHECK-NEXT:    store <4 x i8> [[TMP9]], ptr [[TMP8]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -54,7 +54,7 @@ define void @trunc_iv_steps_with_epilogue(ptr %A, i64 %N) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[A]], i32 [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP13]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i8>, ptr [[TMP14]], align 1
-; CHECK-NEXT:    [[TMP15:%.*]] = add <4 x i8> [[WIDE_LOAD6]], <i8 2, i8 2, i8 2, i8 2>
+; CHECK-NEXT:    [[TMP15:%.*]] = add <4 x i8> [[WIDE_LOAD6]], splat (i8 2)
 ; CHECK-NEXT:    store <4 x i8> [[TMP15]], ptr [[TMP14]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT7]] = add nuw i64 [[INDEX5]], 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT7]], [[N_VEC3]]
