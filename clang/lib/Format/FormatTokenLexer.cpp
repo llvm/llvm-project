@@ -1186,6 +1186,14 @@ FormatToken *FormatTokenLexer::getNextToken() {
         Column = 0;
         break;
       case '\f':
+        if (Style.KeepFormFeed && !FormatTok->HasFormFeedBefore &&
+            // The form feed is immediately preceded and followed by a newline.
+            i > 0 && Text[i - 1] == '\n' &&
+            ((i + 1 < e && Text[i + 1] == '\n') ||
+             (i + 2 < e && Text[i + 1] == '\r' && Text[i + 2] == '\n'))) {
+          FormatTok->HasFormFeedBefore = true;
+        }
+        [[fallthrough]];
       case '\v':
         Column = 0;
         break;

@@ -281,8 +281,7 @@ void DIEBuilder::buildTypeUnits(DebugStrOffsetsWriter *StrOffsetWriter,
     for (auto &Row : TUIndex.getRows()) {
       uint64_t Signature = Row.getSignature();
       // manually populate TypeUnit to UnitVector
-      DwarfContext->getTypeUnitForHash(DwarfContext->getMaxVersion(), Signature,
-                                       true);
+      DwarfContext->getTypeUnitForHash(Signature, true);
     }
   }
   const unsigned int CUNum = getCUNum(DwarfContext, isDWO());

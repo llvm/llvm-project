@@ -11,6 +11,6 @@ __kernel void testPipe( pipe int test )
     // SPIR: store i32 4, ptr %s, align 4
     // SPIR64: store target("spirv.Pipe", 0) %test, ptr %test.addr, align 8
     // SPIR64: store i32 8, ptr %s, align 4
-    // AMDGCN: store ptr addrspace(1) %test, ptr addrspace(5) %test.addr, align 8
-    // AMDGCN: store i32 8, ptr addrspace(5) %s, align 4
+    // AMDGCN: store ptr addrspace(1) %test, ptr %test{{.*}}, align 8
+    // AMDGCN: store i32 8, ptr %s{{.*}}, align 4
 }

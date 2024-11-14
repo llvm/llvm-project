@@ -84,6 +84,9 @@ llvm::Error SystemInitializerFull::Initialize() {
   // Use the Debugger's LLDBAssert callback.
   SetLLDBAssertCallback(Debugger::AssertCallback);
 
+  // Use the system log to report errors that would otherwise get dropped.
+  SetLLDBErrorLog(GetLog(SystemLog::System));
+
   LLDB_LOG(GetLog(SystemLog::System), "{0}", GetVersion());
 
   return llvm::Error::success();

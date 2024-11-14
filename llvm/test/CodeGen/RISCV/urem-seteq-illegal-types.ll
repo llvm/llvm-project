@@ -329,6 +329,7 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV32-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    mv s0, a0
 ; RV32-NEXT:    lbu a0, 4(a0)
 ; RV32-NEXT:    lw a1, 0(s0)
@@ -351,6 +352,7 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV32-NEXT:    addi a0, a0, -1638
 ; RV32-NEXT:    andi a0, a0, 2047
 ; RV32-NEXT:    sltiu s1, a0, 2
+; RV32-NEXT:    xori s4, s1, 1
 ; RV32-NEXT:    li a1, 1463
 ; RV32-NEXT:    mv a0, s2
 ; RV32-NEXT:    call __mulsi3
@@ -358,23 +360,22 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV32-NEXT:    andi a0, a0, 2047
 ; RV32-NEXT:    sltiu a0, a0, 293
 ; RV32-NEXT:    addi s3, s3, -1
-; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    addi s1, s1, -1
-; RV32-NEXT:    slli a1, s1, 21
-; RV32-NEXT:    srli a1, a1, 31
-; RV32-NEXT:    andi a2, s3, 2047
+; RV32-NEXT:    addi a0, a0, -1
+; RV32-NEXT:    andi a1, s3, 2047
 ; RV32-NEXT:    andi a0, a0, 2047
 ; RV32-NEXT:    slli a0, a0, 11
 ; RV32-NEXT:    slli s1, s1, 22
 ; RV32-NEXT:    or a0, a0, s1
-; RV32-NEXT:    or a0, a2, a0
+; RV32-NEXT:    or a0, a1, a0
 ; RV32-NEXT:    sw a0, 0(s0)
-; RV32-NEXT:    sb a1, 4(s0)
+; RV32-NEXT:    sb s4, 4(s0)
 ; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 32
 ; RV32-NEXT:    ret
 ;
@@ -457,16 +458,15 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV32M-NEXT:    addi a1, a1, -1638
 ; RV32M-NEXT:    andi a1, a1, 2047
 ; RV32M-NEXT:    sltiu a1, a1, 2
-; RV32M-NEXT:    li a4, 1463
-; RV32M-NEXT:    mul a3, a3, a4
+; RV32M-NEXT:    xori a4, a1, 1
+; RV32M-NEXT:    li a5, 1463
+; RV32M-NEXT:    mul a3, a3, a5
 ; RV32M-NEXT:    addi a3, a3, -1463
 ; RV32M-NEXT:    andi a3, a3, 2047
 ; RV32M-NEXT:    sltiu a3, a3, 293
 ; RV32M-NEXT:    addi a2, a2, -1
-; RV32M-NEXT:    addi a3, a3, -1
 ; RV32M-NEXT:    addi a1, a1, -1
-; RV32M-NEXT:    slli a4, a1, 21
-; RV32M-NEXT:    srli a4, a4, 31
+; RV32M-NEXT:    addi a3, a3, -1
 ; RV32M-NEXT:    andi a2, a2, 2047
 ; RV32M-NEXT:    andi a3, a3, 2047
 ; RV32M-NEXT:    slli a3, a3, 11

@@ -37,28 +37,7 @@ define void @wrapping_ptr_nonint_addrspace(ptr %arg) {
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr addrspace(13) [[SCEVGEP]], [[LOAD3]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr addrspace(13) [[SCEVGEP2]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 0, [[CALL]]
-; CHECK-NEXT:    [[TMP6:%.*]] = shl nsw i64 [[SEXT]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = add nsw i64 [[TMP6]], -4
-; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr addrspace(13) [[LOAD3]], i64 [[TMP7]]
-; CHECK-NEXT:    [[MUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[TMP5]])
-; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 0, [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr addrspace(13) [[SCEVGEP3]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt ptr addrspace(13) [[TMP9]], [[SCEVGEP3]]
-; CHECK-NEXT:    [[TMP11:%.*]] = or i1 [[TMP10]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr addrspace(13) [[LOAD3]], i64 -4
-; CHECK-NEXT:    [[MUL5:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[TMP5]])
-; CHECK-NEXT:    [[MUL_RESULT6:%.*]] = extractvalue { i64, i1 } [[MUL5]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW7:%.*]] = extractvalue { i64, i1 } [[MUL5]], 1
-; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 0, [[MUL_RESULT6]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr addrspace(13) [[SCEVGEP4]], i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp ugt ptr addrspace(13) [[TMP13]], [[SCEVGEP4]]
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP14]], [[MUL_OVERFLOW7]]
-; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP11]], [[TMP15]]
-; CHECK-NEXT:    [[LVER_SAFE:%.*]] = or i1 [[FOUND_CONFLICT]], [[TMP16]]
-; CHECK-NEXT:    br i1 [[LVER_SAFE]], label %[[LOOP_PH_LVER_ORIG:.*]], label %[[LOOP_PH:.*]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[LOOP_PH_LVER_ORIG:.*]], label %[[LOOP_PH:.*]]
 ; CHECK:       [[LOOP_PH_LVER_ORIG]]:
 ; CHECK-NEXT:    br label %[[LOOP_LVER_ORIG:.*]]
 ; CHECK:       [[LOOP_LVER_ORIG]]:
@@ -82,10 +61,10 @@ define void @wrapping_ptr_nonint_addrspace(ptr %arg) {
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(13) [[LOAD3]], i64 [[ADD1]]
 ; CHECK-NEXT:    store i32 [[LOAD4]], ptr addrspace(13) [[GEP1]], align 4, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[VALUE_PHI3]], [[CALL]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT_LOOPEXIT8:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT_LOOPEXIT3:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[EXIT_LOOPEXIT8]]:
+; CHECK:       [[EXIT_LOOPEXIT3]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void

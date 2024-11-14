@@ -41,7 +41,7 @@ namespace {
     unsigned DepthLimit = (unsigned)-1;
 
 #ifndef NDEBUG
-    bool ContainsFunctionParmPackExpr = false;
+    bool ContainsIntermediatePacks = false;
 #endif
 
     void addUnexpanded(NamedDecl *ND, SourceLocation Loc = SourceLocation()) {
@@ -113,6 +113,11 @@ namespace {
         if (TTP->isParameterPack())
           addUnexpanded(TTP);
       }
+
+#ifndef NDEBUG
+      ContainsIntermediatePacks |=
+          (bool)Template.getAsSubstTemplateTemplateParmPack();
+#endif
 
       return inherited::TraverseTemplateName(Template);
     }
@@ -297,13 +302,28 @@ namespace {
 
 #ifndef NDEBUG
     bool TraverseFunctionParmPackExpr(FunctionParmPackExpr *) {
-      ContainsFunctionParmPackExpr = true;
+      ContainsIntermediatePacks = true;
       return true;
     }
 
-    bool containsFunctionParmPackExpr() const {
-      return ContainsFunctionParmPackExpr;
+    bool TraverseSubstNonTypeTemplateParmPackExpr(
+        SubstNonTypeTemplateParmPackExpr *) {
+      ContainsIntermediatePacks = true;
+      return true;
     }
+
+    bool VisitSubstTemplateTypeParmPackType(SubstTemplateTypeParmPackType *) {
+      ContainsIntermediatePacks = true;
+      return true;
+    }
+
+    bool
+    VisitSubstTemplateTypeParmPackTypeLoc(SubstTemplateTypeParmPackTypeLoc) {
+      ContainsIntermediatePacks = true;
+      return true;
+    }
+
+    bool containsIntermediatePacks() const { return ContainsIntermediatePacks; }
 #endif
   };
 }
@@ -439,21 +459,20 @@ bool Sema::DiagnoseUnexpandedParameterPack(Expr *E,
   if (!E->containsUnexpandedParameterPack())
     return false;
 
-  // FunctionParmPackExprs are special:
-  //
-  // 1) they're used to model DeclRefExprs to packs that have been expanded but
-  // had that expansion held off in the process of transformation.
-  //
-  // 2) they always have the unexpanded dependencies but don't introduce new
-  // unexpanded packs.
-  //
-  // We might encounter a FunctionParmPackExpr being a full expression, which a
-  // larger CXXFoldExpr would expand.
   SmallVector<UnexpandedParameterPack, 2> Unexpanded;
   CollectUnexpandedParameterPacksVisitor Visitor(Unexpanded);
   Visitor.TraverseStmt(E);
-  assert((!Unexpanded.empty() || Visitor.containsFunctionParmPackExpr()) &&
+#ifndef NDEBUG
+  // The expression might contain a type/subexpression that has been substituted
+  // but has the expansion held off, e.g. a FunctionParmPackExpr which a larger
+  // CXXFoldExpr would expand. It's only possible when expanding a lambda as a
+  // pattern of a fold expression, so don't fire on an empty result in that
+  // case.
+  bool LambdaReferencingOuterPacks =
+      getEnclosingLambdaOrBlock() && Visitor.containsIntermediatePacks();
+  assert((!Unexpanded.empty() || LambdaReferencingOuterPacks) &&
          "Unable to find unexpanded parameter packs");
+#endif
   return DiagnoseUnexpandedParameterPacks(E->getBeginLoc(), UPPC, Unexpanded);
 }
 

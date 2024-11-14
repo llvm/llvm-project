@@ -38,7 +38,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeEarlyIfConverterLegacyPass(Registry);
   initializeEarlyIfPredicatorPass(Registry);
   initializeEarlyMachineLICMPass(Registry);
-  initializeEarlyTailDuplicatePass(Registry);
+  initializeEarlyTailDuplicateLegacyPass(Registry);
   initializeExpandLargeDivRemLegacyPassPass(Registry);
   initializeExpandLargeFpConvertLegacyPassPass(Registry);
   initializeExpandMemCmpLegacyPassPass(Registry);
@@ -99,7 +99,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeMachineUniformityInfoPrinterPassPass(Registry);
   initializeMachineVerifierLegacyPassPass(Registry);
   initializeObjCARCContractLegacyPassPass(Registry);
-  initializeOptimizePHIsPass(Registry);
+  initializeOptimizePHIsLegacyPass(Registry);
   initializePEIPass(Registry);
   initializePHIEliminationPass(Registry);
   initializePatchableFunctionPass(Registry);
@@ -131,14 +131,14 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeStackProtectorPass(Registry);
   initializeStackSlotColoringPass(Registry);
   initializeStripDebugMachineModulePass(Registry);
-  initializeTailDuplicatePass(Registry);
+  initializeTailDuplicateLegacyPass(Registry);
   initializeTargetPassConfigPass(Registry);
   initializeTwoAddressInstructionLegacyPassPass(Registry);
   initializeTypePromotionLegacyPass(Registry);
   initializeUnpackMachineBundlesPass(Registry);
   initializeUnreachableBlockElimLegacyPassPass(Registry);
   initializeUnreachableMachineBlockElimPass(Registry);
-  initializeVirtRegMapPass(Registry);
+  initializeVirtRegMapWrapperLegacyPass(Registry);
   initializeVirtRegRewriterPass(Registry);
   initializeWasmEHPreparePass(Registry);
   initializeWinEHPreparePass(Registry);

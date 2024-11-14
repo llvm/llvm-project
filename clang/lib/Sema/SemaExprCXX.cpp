@@ -5032,6 +5032,7 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsScalar:
   case UTT_IsCompound:
   case UTT_IsMemberPointer:
+  case UTT_IsTypedResourceElementCompatible:
     // Fall-through
 
     // These traits are modeled on type predicates in C++0x [meta.unary.prop]
@@ -5713,7 +5714,16 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     if (DiagnoseVLAInCXXTypeTrait(Self, TInfo,
                                   tok::kw___builtin_hlsl_is_intangible))
       return false;
-    return Self.HLSL().IsIntangibleType(T);
+    return T->isHLSLIntangibleType();
+
+  case UTT_IsTypedResourceElementCompatible:
+    assert(Self.getLangOpts().HLSL &&
+           "typed resource element compatible types are an HLSL-only feature");
+    if (Self.RequireCompleteType(TInfo->getTypeLoc().getBeginLoc(), T,
+                                 diag::err_incomplete_type))
+      return false;
+
+    return Self.HLSL().IsTypedResourceElementCompatible(T);
   }
 }
 
@@ -9444,11 +9454,11 @@ Sema::BuildExprRequirement(
     ExprResult Constraint = SubstExpr(IDC, MLTAL);
     if (Constraint.isInvalid()) {
       return new (Context) concepts::ExprRequirement(
-          concepts::createSubstDiagAt(*this, IDC->getExprLoc(),
-                                      [&](llvm::raw_ostream &OS) {
-                                        IDC->printPretty(OS, /*Helper=*/nullptr,
-                                                         getPrintingPolicy());
-                                      }),
+          createSubstDiagAt(IDC->getExprLoc(),
+                            [&](llvm::raw_ostream &OS) {
+                              IDC->printPretty(OS, /*Helper=*/nullptr,
+                                               getPrintingPolicy());
+                            }),
           IsSimple, NoexceptLoc, ReturnTypeRequirement);
     }
     SubstitutedConstraintExpr =

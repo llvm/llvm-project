@@ -170,8 +170,8 @@ RelExpr SystemZ::getRelExpr(RelType type, const Symbol &s,
     return R_GOT_PC;
 
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -188,7 +188,7 @@ void SystemZ::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 
 void SystemZ::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   if (ctx.arg.writeAddends)
-    write64be(buf, s.getVA());
+    write64be(buf, s.getVA(ctx));
 }
 
 void SystemZ::writePltHeader(uint8_t *buf) const {

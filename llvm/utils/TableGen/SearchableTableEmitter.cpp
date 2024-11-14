@@ -96,7 +96,6 @@ struct GenericTable {
 class SearchableTableEmitter {
   const RecordKeeper &Records;
   std::unique_ptr<CodeGenTarget> Target;
-  std::unique_ptr<CodeGenIntrinsicMap> Intrinsics;
   std::vector<std::unique_ptr<GenericEnum>> Enums;
   DenseMap<const Record *, GenericEnum *> EnumMap;
   std::set<std::string> PreprocessorGuards;

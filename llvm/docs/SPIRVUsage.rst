@@ -179,6 +179,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Provides additional information to a compiler, similar to the llvm.assume and llvm.expect intrinsics.
    * - ``SPV_KHR_float_controls``
      - Provides new execution modes to control floating-point computations by overriding an implementation’s default behavior for rounding modes, denormals, signed zero, and infinities.
+   * - ``SPV_KHR_integer_dot_product``
+     - Adds instructions for dot product operations on integer vectors with optional accumulation. Integer vectors includes 4-component vector of 8 bit integers and 4-component vectors of 8 bit integers packed into 32-bit integers.
    * - ``SPV_KHR_linkonce_odr``
      - Allows to use the LinkOnceODR linkage type that lets a function or global variable to be merged with other functions or global variables of the same name when linkage occurs.
    * - ``SPV_KHR_no_integer_wrap_decoration``
@@ -390,6 +392,14 @@ SPIR-V backend, along with their descriptions and argument details.
        If `arraySize > 1`, then the binding represents an array of resources\
        of the given size, and the handle for the resource at the given index is returned.\
        If the index is possibly non-uniform, then `isUniformIndex` must get set to true.
+   * - `int_spv_typeBufferLoad`
+     - Scalar or vector
+     - `[spirv.Image ImageBuffer, 32-bit Integer coordinate]`
+     - Loads a value from a Vulkan image buffer at the given coordinate. The \
+       image buffer data is assumed to be stored as a 4-element vector. If the \
+       return type is a scalar, then the first element of the vector is \
+       returned. If the return type is an n-element vector, then the first \
+       n-elements of the 4-element vector are returned.
 
 .. _spirv-builtin-functions:
 

@@ -259,6 +259,15 @@ llvm.func @nvvm_vote(%0 : i32, %1 : i1) -> i32 {
   llvm.return %3 : i32
 }
 
+// CHECK-LABEL: @nvvm_elect_sync
+llvm.func @nvvm_elect_sync() -> i1 {
+  // CHECK: %[[RES:.*]] = call { i32, i1 } @llvm.nvvm.elect.sync(i32 -1)
+  // CHECK-NEXT: %[[PRED:.*]] = extractvalue { i32, i1 } %[[RES]], 1
+  // CHECK-NEXT: ret i1 %[[PRED]]
+  %0 = nvvm.elect.sync -> i1
+  llvm.return %0 : i1
+}
+
 // CHECK-LABEL: @nvvm_mma_mn8n8k4_row_col_f32_f32
 llvm.func @nvvm_mma_mn8n8k4_row_col_f32_f32(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
                     %b0 : vector<2xf16>, %b1 : vector<2xf16>,

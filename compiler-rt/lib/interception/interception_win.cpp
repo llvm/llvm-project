@@ -187,8 +187,12 @@ static uptr GetMmapGranularity() {
   return si.dwAllocationGranularity;
 }
 
+UNUSED static uptr RoundDownTo(uptr size, uptr boundary) {
+  return size & ~(boundary - 1);
+}
+
 UNUSED static uptr RoundUpTo(uptr size, uptr boundary) {
-  return (size + boundary - 1) & ~(boundary - 1);
+  return RoundDownTo(size + boundary - 1, boundary);
 }
 
 // FIXME: internal_str* and internal_mem* functions should be moved from the
@@ -285,8 +289,11 @@ static void WriteJumpInstruction(uptr from, uptr target) {
 
 static void WriteShortJumpInstruction(uptr from, uptr target) {
   sptr offset = target - from - kShortJumpInstructionLength;
-  if (offset < -128 || offset > 127)
+  if (offset < -128 || offset > 127) {
+    ReportError("interception_win: cannot write short jmp from %p to %p\n",
+                (void *)from, (void *)target);
     InterceptionFailed();
+  }
   *(u8*)from = 0xEB;
   *(u8*)(from + 1) = (u8)offset;
 }
@@ -340,32 +347,78 @@ struct TrampolineMemoryRegion {
   uptr max_size;
 };
 
-UNUSED static const uptr kTrampolineScanLimitRange = 1ull << 31;  // 2 gig
+UNUSED static const uptr kTrampolineRangeLimit = 1ull << 31;  // 2 gig
 static const int kMaxTrampolineRegion = 1024;
 static TrampolineMemoryRegion TrampolineRegions[kMaxTrampolineRegion];
 
-static void *AllocateTrampolineRegion(uptr image_address, size_t granularity) {
-#if SANITIZER_WINDOWS64
-  uptr address = image_address;
-  uptr scanned = 0;
-  while (scanned < kTrampolineScanLimitRange) {
-    MEMORY_BASIC_INFORMATION info;
-    if (!::VirtualQuery((void*)address, &info, sizeof(info)))
-      return nullptr;
+static void *AllocateTrampolineRegion(uptr min_addr, uptr max_addr,
+                                      uptr func_addr, size_t granularity) {
+#  if SANITIZER_WINDOWS64
+  // Clamp {min,max}_addr to the accessible address space.
+  SYSTEM_INFO system_info;
+  ::GetSystemInfo(&system_info);
+  uptr min_virtual_addr =
+      RoundUpTo((uptr)system_info.lpMinimumApplicationAddress, granularity);
+  uptr max_virtual_addr =
+      RoundDownTo((uptr)system_info.lpMaximumApplicationAddress, granularity);
+  if (min_addr < min_virtual_addr)
+    min_addr = min_virtual_addr;
+  if (max_addr > max_virtual_addr)
+    max_addr = max_virtual_addr;
 
-    // Check whether a region can be allocated at |address|.
+  // This loop probes the virtual address space to find free memory in the
+  // [min_addr, max_addr] interval. The search starts from func_addr and
+  // proceeds "outwards" towards the interval bounds using two probes, lo_addr
+  // and hi_addr, for addresses lower/higher than func_addr. At each step, it
+  // considers the probe closest to func_addr. If that address is not free, the
+  // probe is advanced (lower or higher depending on the probe) to the next
+  // memory block and the search continues.
+  uptr lo_addr = RoundDownTo(func_addr, granularity);
+  uptr hi_addr = RoundUpTo(func_addr, granularity);
+  while (lo_addr >= min_addr || hi_addr <= max_addr) {
+    // Consider the in-range address closest to func_addr.
+    uptr addr;
+    if (lo_addr < min_addr)
+      addr = hi_addr;
+    else if (hi_addr > max_addr)
+      addr = lo_addr;
+    else
+      addr = (hi_addr - func_addr < func_addr - lo_addr) ? hi_addr : lo_addr;
+
+    MEMORY_BASIC_INFORMATION info;
+    if (!::VirtualQuery((void *)addr, &info, sizeof(info))) {
+      ReportError(
+          "interception_win: VirtualQuery in AllocateTrampolineRegion failed "
+          "for %p\n",
+          (void *)addr);
+      return nullptr;
+    }
+
+    // Check whether a region can be allocated at |addr|.
     if (info.State == MEM_FREE && info.RegionSize >= granularity) {
-      void *page = ::VirtualAlloc((void*)RoundUpTo(address, granularity),
-                                  granularity,
-                                  MEM_RESERVE | MEM_COMMIT,
-                                  PAGE_EXECUTE_READWRITE);
+      void *page =
+          ::VirtualAlloc((void *)addr, granularity, MEM_RESERVE | MEM_COMMIT,
+                         PAGE_EXECUTE_READWRITE);
+      if (page == nullptr)
+        ReportError(
+            "interception_win: VirtualAlloc in AllocateTrampolineRegion failed "
+            "for %p\n",
+            (void *)addr);
       return page;
     }
 
-    // Move to the next region.
-    address = (uptr)info.BaseAddress + info.RegionSize;
-    scanned += info.RegionSize;
+    if (addr == lo_addr)
+      lo_addr =
+          RoundDownTo((uptr)info.AllocationBase - granularity, granularity);
+    if (addr == hi_addr)
+      hi_addr =
+          RoundUpTo((uptr)info.BaseAddress + info.RegionSize, granularity);
   }
+
+  ReportError(
+      "interception_win: AllocateTrampolineRegion failed to find free memory; "
+      "min_addr: %p, max_addr: %p, func_addr: %p, granularity: %zu\n",
+      (void *)min_addr, (void *)max_addr, granularity);
   return nullptr;
 #else
   return ::VirtualAlloc(nullptr,
@@ -387,17 +440,17 @@ void TestOnlyReleaseTrampolineRegions() {
 }
 
 static uptr AllocateMemoryForTrampoline(uptr func_address, size_t size) {
-  uptr image_address = func_address;
+#  if SANITIZER_WINDOWS64
+  uptr min_addr = func_address - kTrampolineRangeLimit;
+  uptr max_addr = func_address + kTrampolineRangeLimit - size;
 
-#if SANITIZER_WINDOWS64
-  // Allocate memory after the module (DLL or EXE file), but within 2GB
-  // of the start of the module so that any address within the module can be
-  // referenced with PC-relative operands.
+  // Allocate memory within 2GB of the module (DLL or EXE file) so that any
+  // address within the module can be referenced with PC-relative operands.
   // This allows us to not just jump to the trampoline with a PC-relative
   // offset, but to relocate any instructions that we copy to the trampoline
   // which have references to the original module. If we can't find the base
   // address of the module (e.g. if func_address is in mmap'ed memory), just
-  // use func_address as is.
+  // stay within 2GB of func_address.
   HMODULE module;
   if (::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
                            GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
@@ -405,19 +458,32 @@ static uptr AllocateMemoryForTrampoline(uptr func_address, size_t size) {
     MODULEINFO module_info;
     if (::GetModuleInformation(::GetCurrentProcess(), module,
                                 &module_info, sizeof(module_info))) {
-      image_address = (uptr)module_info.lpBaseOfDll;
+      min_addr = (uptr)module_info.lpBaseOfDll + module_info.SizeOfImage -
+                 kTrampolineRangeLimit;
+      max_addr = (uptr)module_info.lpBaseOfDll + kTrampolineRangeLimit - size;
     }
   }
-#endif
 
-  // Find a region within 2G with enough space to allocate |size| bytes.
+  // Check for overflow.
+  if (min_addr > func_address)
+    min_addr = 0;
+  if (max_addr < func_address)
+    max_addr = ~(uptr)0;
+#  else
+  uptr min_addr = 0;
+  uptr max_addr = ~min_addr;
+#  endif
+
+  // Find a region within [min_addr,max_addr] with enough space to allocate
+  // |size| bytes.
   TrampolineMemoryRegion *region = nullptr;
   for (size_t bucket = 0; bucket < kMaxTrampolineRegion; ++bucket) {
     TrampolineMemoryRegion* current = &TrampolineRegions[bucket];
     if (current->content == 0) {
       // No valid region found, allocate a new region.
       size_t bucket_size = GetMmapGranularity();
-      void *content = AllocateTrampolineRegion(image_address, bucket_size);
+      void *content = AllocateTrampolineRegion(min_addr, max_addr, func_address,
+                                               bucket_size);
       if (content == nullptr)
         return 0U;
 
@@ -427,13 +493,9 @@ static uptr AllocateMemoryForTrampoline(uptr func_address, size_t size) {
       region = current;
       break;
     } else if (current->max_size - current->allocated_size > size) {
-#if SANITIZER_WINDOWS64
-        // In 64-bits, the memory space must be allocated within 2G boundary.
-        uptr next_address = current->content + current->allocated_size;
-        if (next_address < image_address ||
-            next_address - image_address >= 0x7FFF0000)
-          continue;
-#endif
+      uptr next_address = current->content + current->allocated_size;
+      if (next_address < min_addr || next_address > max_addr)
+        continue;
       // The space can be allocated in the current region.
       region = current;
       break;
@@ -769,6 +831,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
 
   switch (*(u32*)(address)) {
     case 0x1ab60f44:  // 44 0f b6 1a : movzx r11d, BYTE PTR [rdx]
+      return 4;
     case 0x24448b48:  // 48 8b 44 24 XX : mov rax, QWORD ptr [rsp + XX]
     case 0x246c8948:  // 48 89 6C 24 XX : mov QWORD ptr [rsp + XX], rbp
     case 0x245c8948:  // 48 89 5c 24 XX : mov QWORD PTR [rsp + XX], rbx
@@ -871,8 +934,14 @@ static bool CopyInstructions(uptr to, uptr from, size_t size) {
       // this will be untrue if relocated_offset \notin [-2**31, 2**31)
       s64 delta = to - from;
       s64 relocated_offset = *(s32 *)(to + cursor + rel_offset) - delta;
-      if (-0x8000'0000ll > relocated_offset || relocated_offset > 0x7FFF'FFFFll)
+      if (-0x8000'0000ll > relocated_offset ||
+          relocated_offset > 0x7FFF'FFFFll) {
+        ReportError(
+            "interception_win: CopyInstructions relocated_offset %lld outside "
+            "32-bit range\n",
+            (long long)relocated_offset);
         return false;
+      }
 #  else
       // on 32-bit, the relative offset will always be correct
       s32 delta = to - from;
@@ -1166,19 +1235,27 @@ uptr InternalGetProcAddress(void *module, const char *func_name) {
         // exported directory.
         char function_name[256];
         size_t funtion_name_length = _strlen(func);
-        if (funtion_name_length >= sizeof(function_name) - 1)
+        if (funtion_name_length >= sizeof(function_name) - 1) {
+          ReportError("interception_win: func too long: '%s'\n", func);
           InterceptionFailed();
+        }
 
         _memcpy(function_name, func, funtion_name_length);
         function_name[funtion_name_length] = '\0';
         char* separator = _strchr(function_name, '.');
-        if (!separator)
+        if (!separator) {
+          ReportError("interception_win: no separator in '%s'\n",
+                      function_name);
           InterceptionFailed();
+        }
         *separator = '\0';
 
         void* redirected_module = GetModuleHandleA(function_name);
-        if (!redirected_module)
+        if (!redirected_module) {
+          ReportError("interception_win: GetModuleHandleA failed for '%s'\n",
+                      function_name);
           InterceptionFailed();
+        }
         return InternalGetProcAddress(redirected_module, separator + 1);
       }
 

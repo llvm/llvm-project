@@ -91,7 +91,10 @@
 ; RUN:	-enable-memprof-indirect-call-support=true \
 ; RUN:  -supports-hot-cold-new \
 ; RUN:  -r=%t/foo.o,_Z3fooR2B0j,plx \
+; RUN:  -r=%t/foo.o,_ZN2B03barEj.abc,plx \
 ; RUN:  -r=%t/foo.o,_Z3xyzR2B0j, \
+; RUN:  -r=%t/foo.o,_ZN2B03barEj, \
+; RUN:  -r=%t/foo.o,_ZN1B3barEj, \
 ; RUN:  -r=%t/main.o,_Z3fooR2B0j, \
 ; RUN:  -r=%t/main.o,_Znwm, \
 ; RUN:  -r=%t/main.o,_ZdlPvm, \
@@ -112,16 +115,19 @@
 ; RUN:  -pass-remarks=. -save-temps \
 ; RUN:  -o %t.out 2>&1 | FileCheck %s --check-prefix=STATS \
 ; RUN:  --check-prefix=STATS-BE --check-prefix=REMARKS-MAIN \
-; RUN:  --check-prefix=REMARKS-FOO
+; RUN:  --check-prefix=REMARKS-FOO --check-prefix=REMARKS-FOO-IMPORT
 
-; RUN: llvm-dis %t.out.2.4.opt.bc -o - | FileCheck %s --check-prefix=IR
+; RUN: llvm-dis %t.out.2.4.opt.bc -o - | FileCheck %s --check-prefix=IR --check-prefix=IR-IMPORT
 
 ;; Try again but with distributed ThinLTO
 ; RUN: llvm-lto2 run %t/main.o %t/foo.o -enable-memprof-context-disambiguation \
 ; RUN:  -supports-hot-cold-new \
 ; RUN:  -thinlto-distributed-indexes \
 ; RUN:  -r=%t/foo.o,_Z3fooR2B0j,plx \
+; RUN:  -r=%t/foo.o,_ZN2B03barEj.abc,plx \
 ; RUN:  -r=%t/foo.o,_Z3xyzR2B0j, \
+; RUN:  -r=%t/foo.o,_ZN2B03barEj, \
+; RUN:  -r=%t/foo.o,_ZN1B3barEj, \
 ; RUN:  -r=%t/main.o,_Z3fooR2B0j, \
 ; RUN:  -r=%t/main.o,_Znwm, \
 ; RUN:  -r=%t/main.o,_ZdlPvm, \
@@ -145,8 +151,9 @@
 ; RUN:  -enable-memprof-indirect-call-support=true \
 ; RUN:  -summary-file=%t/foo.o.thinlto.bc -memprof-import-summary=%t/foo.o.thinlto.bc \
 ; RUN:  -enable-import-metadata -stats -pass-remarks=. \
-; RUN:  %t/foo.o -S 2>&1 | FileCheck %s --check-prefix=IR \
-; RUN:  --check-prefix=STATS-BE-DISTRIB --check-prefix=REMARKS-FOO
+; RUN:  %t/foo.o -S 2>&1 | FileCheck %s --check-prefix=IR --check-prefix=IR-IMPORT \
+; RUN:  --check-prefix=STATS-BE-DISTRIB --check-prefix=REMARKS-FOO \
+; RUN:	--check-prefix=REMARKS-FOO-IMPORT
 
 ;; Retry with the ICP-disabled object file, and make sure we disable it again
 ;; so we don't look for the synthesized callsite records when applying imports.
@@ -155,7 +162,10 @@
 ; RUN:	-enable-memprof-indirect-call-support=false \
 ; RUN:  -supports-hot-cold-new \
 ; RUN:  -r=%t/foo.noicp.o,_Z3fooR2B0j,plx \
+; RUN:  -r=%t/foo.noicp.o,_ZN2B03barEj.abc,plx \
 ; RUN:  -r=%t/foo.noicp.o,_Z3xyzR2B0j, \
+; RUN:  -r=%t/foo.noicp.o,_ZN2B03barEj, \
+; RUN:  -r=%t/foo.noicp.o,_ZN1B3barEj, \
 ; RUN:  -r=%t/main.o,_Z3fooR2B0j, \
 ; RUN:  -r=%t/main.o,_Znwm, \
 ; RUN:  -r=%t/main.o,_ZdlPvm, \
@@ -176,14 +186,89 @@
 ; RUN:  -pass-remarks=. -save-temps \
 ; RUN:  -o %t.noicp.out 2>&1 | FileCheck %s --implicit-check-not "created clone"
 
-; RUN: llvm-dis %t.noicp.out.2.4.opt.bc -o - | FileCheck %s --implicit-check-not "_Z3fooR2B0j.memprof"
+;; Verify that we did not do any cloning of the function with the indirect call
+;; when memprof ICP is off. However, we should still have removed the callsite
+;; metadata.
+; RUN: llvm-dis %t.noicp.out.2.4.opt.bc -o - | FileCheck %s --implicit-check-not "_Z3fooR2B0j.memprof" --implicit-check-not "!callsite"
+
+;; Run in-process ThinLTO again, but with importing disabled by setting the
+;; instruction limit to 0. Ensure that the existing declarations of B::bar
+;; and B0::bar are sufficient to allow for the promotion and cloning.
+; RUN: llvm-lto2 run %t/main.o %t/foo.o -enable-memprof-context-disambiguation \
+; RUN:	-import-instr-limit=0 \
+; RUN:	-enable-memprof-indirect-call-support=true \
+; RUN:  -supports-hot-cold-new \
+; RUN:  -r=%t/foo.o,_Z3fooR2B0j,plx \
+; RUN:  -r=%t/foo.o,_ZN2B03barEj.abc,plx \
+; RUN:  -r=%t/foo.o,_Z3xyzR2B0j, \
+; RUN:  -r=%t/foo.o,_ZN2B03barEj, \
+; RUN:  -r=%t/foo.o,_ZN1B3barEj, \
+; RUN:  -r=%t/main.o,_Z3fooR2B0j, \
+; RUN:  -r=%t/main.o,_Znwm, \
+; RUN:  -r=%t/main.o,_ZdlPvm, \
+; RUN:  -r=%t/main.o,_Z8externalPi, \
+; RUN:  -r=%t/main.o,main,plx \
+; RUN:  -r=%t/main.o,_ZN2B03barEj,plx \
+; RUN:  -r=%t/main.o,_ZN1B3barEj,plx \
+; RUN:  -r=%t/main.o,_ZTV1B,plx \
+; RUN:  -r=%t/main.o,_ZTVN10__cxxabiv120__si_class_type_infoE,plx \
+; RUN:  -r=%t/main.o,_ZTS1B,plx \
+; RUN:  -r=%t/main.o,_ZTVN10__cxxabiv117__class_type_infoE,plx \
+; RUN:  -r=%t/main.o,_ZTS2B0,plx \
+; RUN:  -r=%t/main.o,_ZTI2B0,plx \
+; RUN:  -r=%t/main.o,_ZTI1B,plx \
+; RUN:  -r=%t/main.o,_ZTV2B0,plx \
+; RUN:	-thinlto-threads=1 \
+; RUN:  -memprof-verify-ccg -memprof-verify-nodes -stats \
+; RUN:  -pass-remarks=. -save-temps \
+; RUN:  -o %t.out 2>&1 | FileCheck %s --check-prefix=STATS \
+; RUN:  --check-prefix=STATS-BE-NOIMPORT --check-prefix=REMARKS-MAIN \
+; RUN:  --check-prefix=REMARKS-FOO
+
+; RUN: llvm-dis %t.out.2.4.opt.bc -o - | FileCheck %s --check-prefix=IR --check-prefix=IR-NOIMPORT
+
+;; Run it gain but with -memprof-require-definition-for-promotion, and confirm
+;; that no promotions occur.
+; RUN: llvm-lto2 run %t/main.o %t/foo.o -enable-memprof-context-disambiguation \
+; RUN:	-import-instr-limit=0 \
+; RUN:	-memprof-require-definition-for-promotion \
+; RUN:	-enable-memprof-indirect-call-support=true \
+; RUN:  -supports-hot-cold-new \
+; RUN:  -r=%t/foo.o,_Z3fooR2B0j,plx \
+; RUN:  -r=%t/foo.o,_ZN2B03barEj.abc,plx \
+; RUN:  -r=%t/foo.o,_Z3xyzR2B0j, \
+; RUN:  -r=%t/foo.o,_ZN2B03barEj, \
+; RUN:  -r=%t/foo.o,_ZN1B3barEj, \
+; RUN:  -r=%t/main.o,_Z3fooR2B0j, \
+; RUN:  -r=%t/main.o,_Znwm, \
+; RUN:  -r=%t/main.o,_ZdlPvm, \
+; RUN:  -r=%t/main.o,_Z8externalPi, \
+; RUN:  -r=%t/main.o,main,plx \
+; RUN:  -r=%t/main.o,_ZN2B03barEj,plx \
+; RUN:  -r=%t/main.o,_ZN1B3barEj,plx \
+; RUN:  -r=%t/main.o,_ZTV1B,plx \
+; RUN:  -r=%t/main.o,_ZTVN10__cxxabiv120__si_class_type_infoE,plx \
+; RUN:  -r=%t/main.o,_ZTS1B,plx \
+; RUN:  -r=%t/main.o,_ZTVN10__cxxabiv117__class_type_infoE,plx \
+; RUN:  -r=%t/main.o,_ZTS2B0,plx \
+; RUN:  -r=%t/main.o,_ZTI2B0,plx \
+; RUN:  -r=%t/main.o,_ZTI1B,plx \
+; RUN:  -r=%t/main.o,_ZTV2B0,plx \
+; RUN:	-thinlto-threads=1 \
+; RUN:  -memprof-verify-ccg -memprof-verify-nodes \
+; RUN:  -pass-remarks=. \
+; RUN:  -o %t.out 2>&1 | FileCheck %s --implicit-check-not Promote
 
 ; REMARKS-MAIN: call in clone main assigned to call function clone _Z3fooR2B0j.memprof.1
 ; REMARKS-MAIN: call in clone main assigned to call function clone _Z3fooR2B0j.memprof.1
 ; REMARKS-MAIN: created clone _ZN2B03barEj.memprof.1
 ; REMARKS-MAIN: call in clone _ZN2B03barEj marked with memprof allocation attribute notcold
 ; REMARKS-MAIN: call in clone _ZN2B03barEj.memprof.1 marked with memprof allocation attribute cold
+; REMARKS-MAIN: call in clone _ZN2B03barEj marked with memprof allocation attribute notcold
+; REMARKS-MAIN: call in clone _ZN2B03barEj.memprof.1 marked with memprof allocation attribute cold
 ; REMARKS-MAIN: created clone _ZN1B3barEj.memprof.1
+; REMARKS-MAIN: call in clone _ZN1B3barEj marked with memprof allocation attribute notcold
+; REMARKS-MAIN: call in clone _ZN1B3barEj.memprof.1 marked with memprof allocation attribute cold
 ; REMARKS-MAIN: call in clone _ZN1B3barEj marked with memprof allocation attribute notcold
 ; REMARKS-MAIN: call in clone _ZN1B3barEj.memprof.1 marked with memprof allocation attribute cold
 ; REMARKS-FOO: created clone _Z3fooR2B0j.memprof.1
@@ -198,30 +283,36 @@
 ; REMARKS-FOO: call in clone _Z3fooR2B0j promoted and assigned to call function clone _ZN2B03barEj
 ; REMARKS-FOO: Promote indirect call to _ZN2B03barEj with count 2 out of 2
 ; REMARKS-FOO: call in clone _Z3fooR2B0j.memprof.1 promoted and assigned to call function clone _ZN2B03barEj.memprof.1
-; REMARKS-FOO: created clone _ZN2B03barEj.memprof.1
-; REMARKS-FOO: call in clone _ZN2B03barEj marked with memprof allocation attribute notcold
-; REMARKS-FOO: call in clone _ZN2B03barEj.memprof.1 marked with memprof allocation attribute cold
-; REMARKS-FOO: created clone _ZN1B3barEj.memprof.1
-; REMARKS-FOO: call in clone _ZN1B3barEj marked with memprof allocation attribute notcold
-; REMARKS-FOO: call in clone _ZN1B3barEj.memprof.1 marked with memprof allocation attribute cold
+; REMARKS-FOO-IMPORT: created clone _ZN2B03barEj.memprof.1
+; REMARKS-FOO-IMPORT: call in clone _ZN2B03barEj marked with memprof allocation attribute notcold
+; REMARKS-FOO-IMPORT: call in clone _ZN2B03barEj.memprof.1 marked with memprof allocation attribute cold
+; REMARKS-FOO-IMPORT: created clone _ZN1B3barEj.memprof.1
+; REMARKS-FOO-IMPORT: call in clone _ZN1B3barEj marked with memprof allocation attribute notcold
+; REMARKS-FOO-IMPORT: call in clone _ZN1B3barEj.memprof.1 marked with memprof allocation attribute cold
 
-; STATS: 2 memprof-context-disambiguation - Number of cold static allocations (possibly cloned) during whole program analysis
-; STATS-BE: 4 memprof-context-disambiguation - Number of cold static allocations (possibly cloned) during ThinLTO backend
-; STATS: 2 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned) during whole program analysis
-; STATS-BE: 4 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned) during ThinLTO backend
+; STATS: 4 memprof-context-disambiguation - Number of cold static allocations (possibly cloned) during whole program analysis
+; STATS-BE: 8 memprof-context-disambiguation - Number of cold static allocations (possibly cloned) during ThinLTO backend
+; STATS-BE-NOIMPORT: 4 memprof-context-disambiguation - Number of cold static allocations (possibly cloned) during ThinLTO backend
+; STATS: 4 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned) during whole program analysis
+; STATS-BE: 8 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned) during ThinLTO backend
+; STATS-BE-NOIMPORT: 4 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned) during ThinLTO backend
 ; STATS: 3 memprof-context-disambiguation - Number of function clones created during whole program analysis
 ; STATS-BE: 5 memprof-context-disambiguation - Number of function clones created during ThinLTO backend
+; STATS-BE-NOIMPORT: 3 memprof-context-disambiguation - Number of function clones created during ThinLTO backend
 
+; IR-NOIMPORT: foo
 ; IR: define {{.*}} @_Z3fooR2B0j(
-; IR:   %1 = icmp eq ptr %0, @_ZN1B3barEj
-; IR:   br i1 %1, label %if.true.direct_targ, label %if.false.orig_indirect
+; IR:   %[[R1:[0-9]+]] = icmp eq ptr %0, @_ZN1B3barEj
+; IR:   br i1 %[[R1]], label %if.true.direct_targ, label %if.false.orig_indirect
 ; IR: if.true.direct_targ:
-; IR:   call {{.*}} @_Znwm(i64 noundef 4) #[[NOTCOLD:[0-9]+]]
+; IR-IMPORT:   call {{.*}} @_Znwm(i64 noundef 4) #[[NOTCOLD:[0-9]+]]
+; IR-NOIMPORT: call {{.*}} @_ZN1B3barEj(
 ; IR: if.false.orig_indirect:
-; IR:   %2 = icmp eq ptr %0, @_ZN2B03barEj
-; IR:   br i1 %2, label %if.true.direct_targ1, label %if.false.orig_indirect2
+; IR:   %[[R2:[0-9]+]] = icmp eq ptr %0, @_ZN2B03barEj
+; IR:   br i1 %[[R2]], label %if.true.direct_targ1, label %if.false.orig_indirect2
 ; IR: if.true.direct_targ1:
-; IR:   call {{.*}} @_Znwm(i64 noundef 4) #[[NOTCOLD]]
+; IR-IMPORT:   call {{.*}} @_Znwm(i64 noundef 4) #[[NOTCOLD]]
+; IR-NOIMPORT: call {{.*}} @_ZN2B03barEj(
 ; IR: if.false.orig_indirect2:
 ; IR:   call {{.*}} %0
 
@@ -229,23 +320,25 @@
 ;; We should still compare against the original versions of bar since that is
 ;; what is in the vtable. However, we should have called the cloned versions
 ;; that perform cold allocations, which were subsequently inlined.
-; IR:   %1 = icmp eq ptr %0, @_ZN1B3barEj
-; IR:   br i1 %1, label %if.true.direct_targ, label %if.false.orig_indirect
+; IR:   %[[R3:[0-9]+]] = icmp eq ptr %0, @_ZN1B3barEj
+; IR:   br i1 %[[R3]], label %if.true.direct_targ, label %if.false.orig_indirect
 ; IR: if.true.direct_targ:
-; IR:   call {{.*}} @_Znwm(i64 noundef 4) #[[COLD:[0-9]+]]
+; IR-IMPORT:   call {{.*}} @_Znwm(i64 noundef 4) #[[COLD:[0-9]+]]
+; IR-NOIMPORT: call {{.*}} @_ZN1B3barEj.memprof.1(
 ; IR: if.false.orig_indirect:
-; IR:   %2 = icmp eq ptr %0, @_ZN2B03barEj
-; IR:   br i1 %2, label %if.true.direct_targ1, label %if.false.orig_indirect2
+; IR:   %[[R4:[0-9]+]] = icmp eq ptr %0, @_ZN2B03barEj
+; IR:   br i1 %[[R4]], label %if.true.direct_targ1, label %if.false.orig_indirect2
 ; IR: if.true.direct_targ1:
-; IR:   call {{.*}} @_Znwm(i64 noundef 4) #[[COLD]]
+; IR-IMPORT:   call {{.*}} @_Znwm(i64 noundef 4) #[[COLD]]
+; IR-NOIMPORT: call {{.*}} @_ZN2B03barEj.memprof.1(
 ; IR: if.false.orig_indirect2:
 ; IR:   call {{.*}} %0
 
-; IR: attributes #[[NOTCOLD]] = {{.*}} "memprof"="notcold"
-; IR: attributes #[[COLD]] = {{.*}} "memprof"="cold"
+; IR-IMPORT: attributes #[[NOTCOLD]] = {{.*}} "memprof"="notcold"
+; IR-IMPORT: attributes #[[COLD]] = {{.*}} "memprof"="cold"
 
-; STATS-BE-DISTRIB: 2 memprof-context-disambiguation - Number of cold static allocations (possibly cloned) during ThinLTO backend
-; STATS-BE-DISTRIB: 2 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned) during ThinLTO backend
+; STATS-BE-DISTRIB: 4 memprof-context-disambiguation - Number of cold static allocations (possibly cloned) during ThinLTO backend
+; STATS-BE-DISTRIB: 4 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned) during ThinLTO backend
 ; STATS-BE-DISTRIB: 3 memprof-context-disambiguation - Number of function clones created during ThinLTO backend
 
 ;--- foo.ll
@@ -253,6 +346,17 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:
 target triple = "x86_64-unknown-linux-gnu"
 
 declare i32 @_Z3xyzR2B0j(ptr %b)
+
+;; Add a function that has the same name as one of the indirect callees, but
+;; with a suffix, to make sure we don't incorrectly pick the wrong one as the
+;; promoted target (which happens if we attempt to canonicalize the names
+;; when building the ICP symtab).
+define i32 @_ZN2B03barEj.abc(ptr %this, i32 %s) {
+  ret i32 0
+}
+
+declare i32 @_ZN2B03barEj(ptr %this, i32 %s)
+declare i32 @_ZN1B3barEj(ptr %this, i32 %s)
 
 define i32 @_Z3fooR2B0j(ptr %b) {
 entry:
@@ -295,6 +399,9 @@ declare i32 @_Z3fooR2B0j(ptr, i32)
 define i32 @_ZN2B03barEj(ptr %this, i32 %s) {
 entry:
   %call = tail call ptr @_Znwm(i64 noundef 4) #0, !memprof !33, !callsite !38
+  ;; Second allocation in this function, to ensure that indirect edges to the
+  ;; same callee are partitioned correctly.
+  %call2 = tail call ptr @_Znwm(i64 noundef 4) #0, !memprof !45, !callsite !50
   store volatile i32 0, ptr %call, align 4
   ret i32 0
 }
@@ -308,6 +415,9 @@ declare void @_ZdlPvm()
 define i32 @_ZN1B3barEj(ptr %this, i32 %s) {
 entry:
   %call = tail call ptr @_Znwm(i64 noundef 4) #0, !memprof !39, !callsite !44
+  ;; Second allocation in this function, to ensure that indirect edges to the
+  ;; same callee are partitioned correctly.
+  %call2 = tail call ptr @_Znwm(i64 noundef 4) #0, !memprof !51, !callsite !56
   store volatile i32 0, ptr %call, align 4
   ret i32 0
 }
@@ -364,3 +474,15 @@ attributes #0 = { builtin allocsize(0) }
 !42 = !{!43, !"cold"}
 !43 = !{i64 4457553070050523782, i64 -2101080423462424381, i64 -6490791336773930154}
 !44 = !{i64 4457553070050523782}
+!45 = !{!46, !48}
+!46 = !{!47, !"notcold"}
+!47 = !{i64 456, i64 -2101080423462424381, i64 5188446645037944434}
+!48 = !{!49, !"cold"}
+!49 = !{i64 456, i64 -2101080423462424381, i64 5583420417449503557}
+!50 = !{i64 456}
+!51 = !{!52, !54}
+!52 = !{!53, !"notcold"}
+!53 = !{i64 789, i64 -2101080423462424381, i64 132626519179914298}
+!54 = !{!55, !"cold"}
+!55 = !{i64 789, i64 -2101080423462424381, i64 -6490791336773930154}
+!56 = !{i64 789}

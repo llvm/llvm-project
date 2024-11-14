@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -37,6 +38,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/ProfileSummary.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -875,14 +877,22 @@ LiveIntervals::hasPHIKill(const LiveInterval &LI, const VNInfo *VNI) const {
 
 float LiveIntervals::getSpillWeight(bool isDef, bool isUse,
                                     const MachineBlockFrequencyInfo *MBFI,
-                                    const MachineInstr &MI) {
-  return getSpillWeight(isDef, isUse, MBFI, MI.getParent());
+                                    const MachineInstr &MI,
+                                    ProfileSummaryInfo *PSI) {
+  return getSpillWeight(isDef, isUse, MBFI, MI.getParent(), PSI);
 }
 
 float LiveIntervals::getSpillWeight(bool isDef, bool isUse,
                                     const MachineBlockFrequencyInfo *MBFI,
-                                    const MachineBasicBlock *MBB) {
-  return (isDef + isUse) * MBFI->getBlockFreqRelativeToEntryBlock(MBB);
+                                    const MachineBasicBlock *MBB,
+                                    ProfileSummaryInfo *PSI) {
+  float Weight = isDef + isUse;
+  const auto *MF = MBB->getParent();
+  // When optimizing for size we only consider the codesize impact of spilling
+  // the register, not the runtime impact.
+  if (PSI && llvm::shouldOptimizeForSize(MF, PSI, MBFI))
+    return Weight;
+  return Weight * MBFI->getBlockFreqRelativeToEntryBlock(MBB);
 }
 
 LiveRange::Segment

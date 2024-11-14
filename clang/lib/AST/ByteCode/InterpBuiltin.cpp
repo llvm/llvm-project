@@ -10,6 +10,7 @@
 #include "Compiler.h"
 #include "EvalEmitter.h"
 #include "Interp.h"
+#include "InterpBuiltinBitCast.h"
 #include "PrimType.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/RecordLayout.h"
@@ -1253,6 +1254,10 @@ static bool interp__builtin_ia32_bextr(InterpState &S, CodePtr OpPC,
                                        const InterpFrame *Frame,
                                        const Function *Func,
                                        const CallExpr *Call) {
+  if (Call->getNumArgs() != 2 || !Call->getArg(0)->getType()->isIntegerType() ||
+      !Call->getArg(1)->getType()->isIntegerType())
+    return false;
+
   PrimType ValT = *S.Ctx.classify(Call->getArg(0));
   PrimType IndexT = *S.Ctx.classify(Call->getArg(1));
   APSInt Val = peekToAPSInt(S.Stk, ValT,
@@ -1281,7 +1286,9 @@ static bool interp__builtin_ia32_bzhi(InterpState &S, CodePtr OpPC,
                                       const Function *Func,
                                       const CallExpr *Call) {
   QualType CallType = Call->getType();
-  if (!CallType->isIntegerType())
+  if (Call->getNumArgs() != 2 || !Call->getArg(0)->getType()->isIntegerType() ||
+      !Call->getArg(1)->getType()->isIntegerType() ||
+      !CallType->isIntegerType())
     return false;
 
   PrimType ValT = *S.Ctx.classify(Call->getArg(0));
@@ -1306,7 +1313,8 @@ static bool interp__builtin_ia32_lzcnt(InterpState &S, CodePtr OpPC,
                                        const Function *Func,
                                        const CallExpr *Call) {
   QualType CallType = Call->getType();
-  if (!CallType->isIntegerType())
+  if (!CallType->isIntegerType() ||
+      !Call->getArg(0)->getType()->isIntegerType())
     return false;
 
   APSInt Val = peekToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(0)));
@@ -1319,7 +1327,8 @@ static bool interp__builtin_ia32_tzcnt(InterpState &S, CodePtr OpPC,
                                        const Function *Func,
                                        const CallExpr *Call) {
   QualType CallType = Call->getType();
-  if (!CallType->isIntegerType())
+  if (!CallType->isIntegerType() ||
+      !Call->getArg(0)->getType()->isIntegerType())
     return false;
 
   APSInt Val = peekToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(0)));
@@ -1331,6 +1340,10 @@ static bool interp__builtin_ia32_pdep(InterpState &S, CodePtr OpPC,
                                       const InterpFrame *Frame,
                                       const Function *Func,
                                       const CallExpr *Call) {
+  if (Call->getNumArgs() != 2 || !Call->getArg(0)->getType()->isIntegerType() ||
+      !Call->getArg(1)->getType()->isIntegerType())
+    return false;
+
   PrimType ValT = *S.Ctx.classify(Call->getArg(0));
   PrimType MaskT = *S.Ctx.classify(Call->getArg(1));
 
@@ -1352,6 +1365,10 @@ static bool interp__builtin_ia32_pext(InterpState &S, CodePtr OpPC,
                                       const InterpFrame *Frame,
                                       const Function *Func,
                                       const CallExpr *Call) {
+  if (Call->getNumArgs() != 2 || !Call->getArg(0)->getType()->isIntegerType() ||
+      !Call->getArg(1)->getType()->isIntegerType())
+    return false;
+
   PrimType ValT = *S.Ctx.classify(Call->getArg(0));
   PrimType MaskT = *S.Ctx.classify(Call->getArg(1));
 
@@ -1656,6 +1673,15 @@ static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
 
   return CheckNewDeleteForms(
       S, OpPC, *AllocForm, DynamicAllocator::Form::Operator, BlockDesc, Source);
+}
+
+static bool interp__builtin_arithmetic_fence(InterpState &S, CodePtr OpPC,
+                                             const InterpFrame *Frame,
+                                             const Function *Func,
+                                             const CallExpr *Call) {
+  const Floating &Arg0 = S.Stk.peek<Floating>();
+  S.Stk.push<Floating>(Arg0);
+  return true;
 }
 
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
@@ -2096,6 +2122,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
 
   case Builtin::BI__builtin_operator_delete:
     if (!interp__builtin_operator_delete(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__arithmetic_fence:
+    if (!interp__builtin_arithmetic_fence(S, OpPC, Frame, F, Call))
       return false;
     break;
 
