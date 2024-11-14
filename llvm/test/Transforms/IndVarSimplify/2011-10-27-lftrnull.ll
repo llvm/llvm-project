@@ -22,22 +22,18 @@ define void @test(i1 %arg) nounwind {
 ; CHECK:       for.body.lr.ph.i81:
 ; CHECK-NEXT:    br label [[FOR_BODY_I86:%.*]]
 ; CHECK:       for.body.i86:
-; CHECK-NEXT:    [[CMP196_I:%.*]] = icmp ult i32 0, undef
-; CHECK-NEXT:    br i1 [[CMP196_I]], label [[FOR_BODY21_LR_PH_I:%.*]], label [[FOR_END_I129:%.*]]
+; CHECK-NEXT:    br i1 false, label [[FOR_BODY21_LR_PH_I:%.*]], label [[FOR_END_I129:%.*]]
 ; CHECK:       for.body21.lr.ph.i:
 ; CHECK-NEXT:    br label [[FOR_BODY21_I:%.*]]
 ; CHECK:       for.body21.i:
 ; CHECK-NEXT:    [[DESTYPIXELPTR_010_I:%.*]] = phi ptr [ null, [[FOR_BODY21_LR_PH_I]] ], [ [[INCDEC_PTR_I:%.*]], [[IF_END_I126:%.*]] ]
-; CHECK-NEXT:    [[X_09_I:%.*]] = phi i32 [ 0, [[FOR_BODY21_LR_PH_I]] ], [ [[INC_I125:%.*]], [[IF_END_I126]] ]
 ; CHECK-NEXT:    br i1 [[ARG]], label [[IF_END_I126]], label [[IF_ELSE_I124:%.*]]
 ; CHECK:       if.else.i124:
 ; CHECK-NEXT:    store i8 undef, ptr [[DESTYPIXELPTR_010_I]], align 1
 ; CHECK-NEXT:    br label [[IF_END_I126]]
 ; CHECK:       if.end.i126:
 ; CHECK-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds i8, ptr [[DESTYPIXELPTR_010_I]], i32 1
-; CHECK-NEXT:    [[INC_I125]] = add nuw i32 [[X_09_I]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC_I125]], undef
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY21_I]], label [[FOR_END_I129_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_BODY21_I]], label [[FOR_END_I129_LOOPEXIT:%.*]]
 ; CHECK:       for.end.i129.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END_I129]]
 ; CHECK:       for.end.i129:
@@ -65,8 +61,7 @@ for.body.lr.ph.i81:                               ; preds = %if.then165
   br label %for.body.i86
 
 for.body.i86:                                     ; preds = %for.end.i129, %for.body.lr.ph.i81
-  %cmp196.i = icmp ult i32 0, undef
-  br i1 %cmp196.i, label %for.body21.lr.ph.i, label %for.end.i129
+  br i1 false, label %for.body21.lr.ph.i, label %for.end.i129
 
 for.body21.lr.ph.i:                               ; preds = %for.body.i86
   br label %for.body21.i
@@ -83,8 +78,7 @@ if.else.i124:                                     ; preds = %for.body21.i
 if.end.i126:                                      ; preds = %if.else.i124, %for.body21.i
   %incdec.ptr.i = getelementptr inbounds i8, ptr %destYPixelPtr.010.i, i32 1
   %inc.i125 = add i32 %x.09.i, 1
-  %cmp19.i = icmp ult i32 %inc.i125, undef
-  br i1 %cmp19.i, label %for.body21.i, label %for.end.i129
+  br i1 %arg, label %for.body21.i, label %for.end.i129
 
 for.end.i129:                                     ; preds = %if.end.i126, %for.body.i86
   br i1 %arg, label %for.body.i86, label %while.cond
