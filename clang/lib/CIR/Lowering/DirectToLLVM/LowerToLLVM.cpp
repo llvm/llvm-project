@@ -1290,6 +1290,8 @@ struct ConvertCIRToLLVMPass
       llvm::StringMap<mlir::LLVM::GlobalOp> &argStringGlobalsMap,
       llvm::MapVector<mlir::ArrayAttr, mlir::LLVM::GlobalOp> &argsVarMap);
 
+  void processCIRAttrs(mlir::ModuleOp moduleOp);
+
   virtual StringRef getArgument() const override { return "cir-flat-to-llvm"; }
 };
 
@@ -4785,6 +4787,18 @@ void ConvertCIRToLLVMPass::buildGlobalAnnotationsVar(
   }
 }
 
+void ConvertCIRToLLVMPass::processCIRAttrs(mlir::ModuleOp module) {
+  // Lower the module attributes to LLVM equivalents.
+  if (auto tripleAttr = module->getAttr(cir::CIRDialect::getTripleAttrName()))
+    module->setAttr(mlir::LLVM::LLVMDialect::getTargetTripleAttrName(),
+                    tripleAttr);
+
+  // Strip the CIR attributes.
+  module->removeAttr(cir::CIRDialect::getSOBAttrName());
+  module->removeAttr(cir::CIRDialect::getLangAttrName());
+  module->removeAttr(cir::CIRDialect::getTripleAttrName());
+}
+
 void ConvertCIRToLLVMPass::runOnOperation() {
   llvm::TimeTraceScope scope("Convert CIR to LLVM Pass");
 
@@ -4835,8 +4849,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   // Allow operations that will be lowered directly to LLVM IR.
   target.addLegalOp<mlir::LLVM::ZeroOp>();
 
-  getOperation()->removeAttr(cir::CIRDialect::getSOBAttrName());
-  getOperation()->removeAttr(cir::CIRDialect::getLangAttrName());
+  processCIRAttrs(module);
 
   llvm::SmallVector<mlir::Operation *> ops;
   ops.push_back(module);

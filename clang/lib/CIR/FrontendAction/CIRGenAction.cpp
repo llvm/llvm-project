@@ -292,8 +292,6 @@ public:
                                feOptions.ClangIRDisableCIRVerifier,
                                !feOptions.ClangIRCallConvLowering);
 
-      llvmModule->setTargetTriple(targetOptions.Triple);
-
       BackendAction backendAction = getBackendActionFromOutputType(action);
 
       emitBackendOutput(compilerInstance, codeGenOptions,
