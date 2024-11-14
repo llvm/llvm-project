@@ -77,7 +77,6 @@ endif()
 
 if (FUCHSIA)
     add_link_flags("-Wl,--push-state,--as-needed,-lzircon,--pop-state")
-    # add_library_flags(zircon)
 endif()
 
 if (NOT LIBCXXABI_USE_COMPILER_RT)
