@@ -111,8 +111,11 @@ int main(int, char**) {
   ASSERT_SAME_TYPE(std::wctype_t, decltype(std::wctype("")));
   ASSERT_SAME_TYPE(std::wint_t, decltype(std::towlower(w)));
   ASSERT_SAME_TYPE(std::wint_t, decltype(std::towupper(w)));
+  // towctrans and wctrans were added in Android API 26.
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 26
   ASSERT_SAME_TYPE(std::wint_t, decltype(std::towctrans(w, std::wctrans_t())));
   ASSERT_SAME_TYPE(std::wctrans_t, decltype(std::wctrans("")));
+#endif
 
   return 0;
 }

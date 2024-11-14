@@ -109,5 +109,8 @@ ASSERT_SAME_TYPE(int,       decltype(iswctype(w, wct)));
 ASSERT_SAME_TYPE(wctype_t,  decltype(wctype("")));
 ASSERT_SAME_TYPE(wint_t,    decltype(towlower(w)));
 ASSERT_SAME_TYPE(wint_t,    decltype(towupper(w)));
+// towctrans and wctrans were added in Android API 26.
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 26
 ASSERT_SAME_TYPE(wint_t,    decltype(towctrans(w, wctr)));
 ASSERT_SAME_TYPE(wctrans_t, decltype(wctrans("")));
+#endif

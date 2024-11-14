@@ -141,7 +141,10 @@ int main(int, char**)
     wchar_t* pw = 0;
     const wchar_t* pwc = 0;
     char* pc = 0;
+    // mblen was added in Android API 26.
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 26
     static_assert((std::is_same<decltype(std::mblen("",0)), int>::value), "");
+#endif
     static_assert((std::is_same<decltype(std::mbtowc(pw,"",0)), int>::value), "");
     static_assert((std::is_same<decltype(std::wctomb(pc,L' ')), int>::value), "");
     static_assert((std::is_same<decltype(std::mbstowcs(pw,"",0)), std::size_t>::value), "");
