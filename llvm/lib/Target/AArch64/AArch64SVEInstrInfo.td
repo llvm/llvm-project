@@ -665,8 +665,8 @@ let Predicates = [HasSVEorSME] in {
   defm FNEG_ZPmZ : sve_int_un_pred_arit_bitwise_fp<0b101, "fneg", AArch64fneg_mt>;
 
   let Predicates = [HasSVEorSME, UseUnaryUndefPseudos] in {
-    defm FABS_ZPmZ : sve_int_un_pred_arit_hsd<AArch64fabs_mt>;
-    defm FNEG_ZPmZ : sve_int_un_pred_arit_hsd<AArch64fneg_mt>;
+    defm FABS_ZPmZ : sve_fp_un_pred_arit_hsd<AArch64fabs_mt>;
+    defm FNEG_ZPmZ : sve_fp_un_pred_arit_hsd<AArch64fneg_mt>;
 
     defm ABS_ZPmZ : sve_int_un_pred_arit_bhsd<AArch64abs_mt>;
     defm NEG_ZPmZ : sve_int_un_pred_arit_bhsd<AArch64neg_mt>;
