@@ -417,11 +417,12 @@ New Compiler Flags
   will cause Clang to generate code that tries to preserve the lifetimes of
   source variables, meaning that variables will typically be visible in a
   debugger more often. The ``-fextend-this-ptr`` flag has the same behaviour,
-  but applies only to the ``this`` variable in C++ class member functions. Note
-  that this flag modifies the optimizations that Clang performs, which will
-  result in reduced performance in generated code; however, this feature will
-  not extend the lifetime of some variables in cases where doing so would have
-  too severe an impact on generated code performance.
+  but applies only to the ``this`` variable in C++ class member functions,
+  meaning its effect is a strict subset of ``-fextend-lifetimes``. Note that
+  this flag modifies the optimizations that Clang performs, which will result
+  in reduced performance in generated code; however, this feature will not
+  extend the lifetime of some variables in cases where doing so would have too
+  severe of an impact on generated code performance.
 
 Deprecated Compiler Flags
 -------------------------
