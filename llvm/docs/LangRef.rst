@@ -15749,16 +15749,17 @@ all types however.
 
 ::
 
-      declare float     @llvm.atan2.f32(float  %X, float %Y)
-      declare double    @llvm.atan2.f64(double %X, double %Y)
-      declare x86_fp80  @llvm.atan2.f80(x86_fp80  %X, x86_fp80 %Y)
-      declare fp128     @llvm.atan2.f128(fp128 %X, fp128 %Y)
-      declare ppc_fp128 @llvm.atan2.ppcf128(ppc_fp128  %X, ppc_fp128 %Y)
+      declare float     @llvm.atan2.f32(float  %Y, float %X)
+      declare double    @llvm.atan2.f64(double %Y, double %X)
+      declare x86_fp80  @llvm.atan2.f80(x86_fp80  %Y, x86_fp80 %X)
+      declare fp128     @llvm.atan2.f128(fp128 %Y, fp128 %X)
+      declare ppc_fp128 @llvm.atan2.ppcf128(ppc_fp128  %Y, ppc_fp128 %X)
 
 Overview:
 """""""""
 
-The '``llvm.atan2.*``' intrinsics return the arctangent of the operand.
+The '``llvm.atan2.*``' intrinsics return the arctangent of ``Y/X`` accounting
+for the quadrant.
 
 Arguments:
 """"""""""
@@ -20003,6 +20004,33 @@ the follow sequence of operations:
 
 The ``mask`` operand will apply to at least the gather and scatter operations.
 
+'``llvm.experimental.vector.extract.last.active``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This is an overloaded intrinsic.
+
+::
+
+    declare i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> %data, <4 x i1> %mask, i32 %passthru)
+    declare i16 @llvm.experimental.vector.extract.last.active.nxv8i16(<vscale x 8 x i16> %data, <vscale x 8 x i1> %mask, i16 %passthru)
+
+Arguments:
+""""""""""
+
+The first argument is the data vector to extract a lane from. The second is a
+mask vector controlling the extraction. The third argument is a passthru
+value.
+
+The two input vectors must have the same number of elements, and the type of
+the passthru value must match that of the elements of the data vector.
+
+Semantics:
+""""""""""
+
+The '``llvm.experimental.vector.extract.last.active``' intrinsic will extract an
+element from the data vector at the index matching the highest active lane of
+the mask vector. If no mask lanes are active then the passthru value is
+returned instead.
 
 .. _int_vector_compress:
 
@@ -20089,6 +20117,44 @@ are undefined.
       return out;
     }
 
+
+'``llvm.experimental.vector.match.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic.
+
+::
+
+    declare <<n> x i1> @llvm.experimental.vector.match(<<n> x <ty>> %op1, <<m> x <ty>> %op2, <<n> x i1> %mask)
+    declare <vscale x <n> x i1> @llvm.experimental.vector.match(<vscale x <n> x <ty>> %op1, <<m> x <ty>> %op2, <vscale x <n> x i1> %mask)
+
+Overview:
+"""""""""
+
+Find active elements of the first argument matching any elements of the second.
+
+Arguments:
+""""""""""
+
+The first argument is the search vector, the second argument the vector of
+elements we are searching for (i.e. for which we consider a match successful),
+and the third argument is a mask that controls which elements of the first
+argument are active. The first two arguments must be vectors of matching
+integer element types. The first and third arguments and the result type must
+have matching element counts (fixed or scalable). The second argument must be a
+fixed vector, but its length may be different from the remaining arguments.
+
+Semantics:
+""""""""""
+
+The '``llvm.experimental.vector.match``' intrinsic compares each active element
+in the first argument against the elements of the second argument, placing
+``1`` in the corresponding element of the output vector if any equality
+comparison is successful, and ``0`` otherwise. Inactive elements in the mask
+are set to ``0`` in the output.
 
 Matrix Intrinsics
 -----------------
@@ -27259,6 +27325,42 @@ Semantics:
 This function returns the arctangent of the specified operand, returning the
 same values as the libm ``atan`` functions would, and handles error
 conditions in the same way.
+
+'``llvm.experimental.constrained.atan2``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <type>
+      @llvm.experimental.constrained.atan2(<type> <op1>,
+                                           <type> <op2>,
+                                           metadata <rounding mode>,
+                                           metadata <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.atan2``' intrinsic returns the arctangent
+of ``<op1>`` divided by ``<op2>`` accounting for the quadrant.
+
+Arguments:
+""""""""""
+
+The first two arguments and the return value are floating-point numbers of the
+same type.
+
+The third and fourth arguments specify the rounding mode and exception
+behavior as described above.
+
+Semantics:
+""""""""""
+
+This function returns the quadrant-specific arctangent using the specified
+operands, returning the same values as the libm ``atan2`` functions would, and
+handles error conditions in the same way.
 
 '``llvm.experimental.constrained.sinh``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

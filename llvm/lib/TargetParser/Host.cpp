@@ -68,11 +68,15 @@ using namespace llvm;
 
 static std::unique_ptr<llvm::MemoryBuffer>
     LLVM_ATTRIBUTE_UNUSED getProcCpuinfoContent() {
+  const char *CPUInfoFile = "/proc/cpuinfo";
+  if (const char *CpuinfoIntercept = std::getenv("LLVM_CPUINFO"))
+    CPUInfoFile = CpuinfoIntercept;
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
-      llvm::MemoryBuffer::getFileAsStream("/proc/cpuinfo");
+      llvm::MemoryBuffer::getFileAsStream(CPUInfoFile);
+
   if (std::error_code EC = Text.getError()) {
-    llvm::errs() << "Can't read "
-                 << "/proc/cpuinfo: " << EC.message() << "\n";
+    llvm::errs() << "Can't read " << CPUInfoFile << ": " << EC.message()
+                 << "\n";
     return nullptr;
   }
   return std::move(*Text);
@@ -2006,6 +2010,15 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["lasx"] = hwcap & (1UL << 5); // HWCAP_LOONGARCH_LASX
   Features["lvz"] = hwcap & (1UL << 9);  // HWCAP_LOONGARCH_LVZ
 
+  Features["frecipe"] = cpucfg2 & (1U << 25); // CPUCFG.2.FRECIPE
+  Features["lam-bh"] = cpucfg2 & (1U << 27);  // CPUCFG.2.LAM_BH
+
+  // TODO: Need to complete.
+  // Features["div32"] = cpucfg2 & (1U << 26);       // CPUCFG.2.DIV32
+  // Features["lamcas"] = cpucfg2 & (1U << 28);      // CPUCFG.2.LAMCAS
+  // Features["llacq-screl"] = cpucfg2 & (1U << 29); // CPUCFG.2.LLACQ_SCREL
+  // Features["scq"] = cpucfg2 & (1U << 30);         // CPUCFG.2.SCQ
+  // Features["ld-seq-sa"] = cpucfg3 & (1U << 23); // CPUCFG.3.LD_SEQ_SA
   return Features;
 }
 #elif defined(__linux__) && defined(__riscv)
