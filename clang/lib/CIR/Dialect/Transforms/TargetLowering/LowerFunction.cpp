@@ -704,6 +704,14 @@ LowerFunction::buildFunctionEpilog(const LowerFunctionInfo &FI) {
         if (auto al = findAlloca(ret)) {
           rewriter.replaceAllUsesWith(al.getResult(), RVAddr);
           rewriter.eraseOp(al);
+          rewriter.setInsertionPoint(ret);
+
+          auto retInputs = ret.getInput();
+          assert(retInputs.size() == 1 && "return should only have one input");
+          if (auto load = mlir::dyn_cast<LoadOp>(retInputs[0].getDefiningOp()))
+            if (load.getResult().use_empty())
+              rewriter.eraseOp(load);
+
           rewriter.replaceOpWithNewOp<ReturnOp>(ret);
         }
       });
@@ -952,6 +960,15 @@ mlir::Value LowerFunction::rewriteCallOp(FuncType calleeTy, FuncOp origCallee,
   return CallResult;
 }
 
+mlir::Value createAlloca(mlir::Location loc, mlir::Type type,
+                         LowerFunction &CGF) {
+  auto align = CGF.LM.getDataLayout().getABITypeAlign(type);
+  auto alignAttr = CGF.getRewriter().getI64IntegerAttr(align.value());
+  return CGF.getRewriter().create<AllocaOp>(
+      loc, CGF.getRewriter().getType<PointerType>(type), type,
+      /*name=*/llvm::StringRef(""), alignAttr);
+}
+
 // NOTE(cir): This method has partial parity to CodeGenFunction's EmitCall
 // method in CGCall.cpp. When incrementing it, use the original codegen as a
 // reference: add ABI-specific stuff and skip codegen stuff.
@@ -984,10 +1001,12 @@ mlir::Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
   CIRToCIRArgMapping IRFunctionArgs(LM.getContext(), CallInfo);
   llvm::SmallVector<mlir::Value, 16> IRCallArgs(IRFunctionArgs.totalIRArgs());
 
+  mlir::Value sRetPtr;
   // If the call returns a temporary with struct return, create a temporary
   // alloca to hold the result, unless one is given to us.
   if (RetAI.isIndirect() || RetAI.isCoerceAndExpand() || RetAI.isInAlloca()) {
-    cir_cconv_unreachable("NYI");
+    sRetPtr = createAlloca(loc, RetTy, *this);
+    IRCallArgs[IRFunctionArgs.getSRetArgNo()] = sRetPtr;
   }
 
   cir_cconv_assert(!cir::MissingFeatures::swift());
@@ -1079,6 +1098,32 @@ mlir::Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
           cir_cconv_unreachable("NYI");
         IRCallArgs[FirstIRArg] = Load;
       }
+
+      break;
+    }
+    case ABIArgInfo::Indirect:
+    case ABIArgInfo::IndirectAliased: {
+      assert(NumIRArgs == 1);
+      // TODO(cir): For aggregate types
+      // We want to avoid creating an unnecessary temporary+copy here;
+      // however, we need one in three cases:
+      // 1. If the argument is not byval, and we are required to copy the
+      // 2. If the argument is byval, RV is not sufficiently aligned, and
+      //    source.  (This case doesn't occur on any common architecture.)
+      //    we cannot force it to be sufficiently aligned.
+      // 3. If the argument is byval, but RV is not located in default
+      //    or alloca address space.
+      cir_cconv_assert(!::cir::MissingFeatures::skipTempCopy());
+
+      mlir::Value alloca = findAlloca(I->getDefiningOp());
+
+      // since they are a ARM-specific feature.
+      if (::cir::MissingFeatures::undef())
+        cir_cconv_unreachable("NYI");
+
+      IRCallArgs[FirstIRArg] = alloca;
+
+      // NOTE(cir): Skipping Emissions, lifetime markers.
 
       break;
     }
@@ -1216,6 +1261,10 @@ mlir::Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
       // NOTE(cir): No need to convert from a temp to an RValue. This is
       // done in CIRGen
       return RetVal;
+    }
+    case ABIArgInfo::Indirect: {
+      auto load = rewriter.create<LoadOp>(loc, sRetPtr);
+      return load.getResult();
     }
     default:
       llvm::errs() << "Unhandled ABIArgInfo kind: " << RetAI.getKind() << "\n";

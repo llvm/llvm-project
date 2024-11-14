@@ -404,6 +404,8 @@ struct MissingFeatures {
   static bool itaniumRecordLayoutBuilderFinishLayout() { return false; }
 
   static bool mustProgress() { return false; }
+
+  static bool skipTempCopy() { return false; }
 };
 
 } // namespace cir
