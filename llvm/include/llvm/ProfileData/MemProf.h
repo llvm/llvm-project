@@ -1134,7 +1134,7 @@ public:
              const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes,
              llvm::DenseMap<FrameId, FrameStat> &FrameHistogram);
 
-  const std::vector<LinearFrameId> &getRadixArray() const { return RadixArray; }
+  ArrayRef<LinearFrameId> getRadixArray() const { return RadixArray; }
 
   llvm::DenseMap<CallStackId, LinearCallStackId> takeCallStackPos() {
     return std::move(CallStackPos);
