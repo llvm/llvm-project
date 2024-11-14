@@ -25,11 +25,10 @@ bool LoongArchCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                         const Value *Val,
                                         ArrayRef<Register> VRegs,
                                         FunctionLoweringInfo &FLI) const {
-  MachineInstrBuilder Ret = MIRBuilder.buildInstrNoInsert(LoongArch::PseudoRET);
-
   if (Val != nullptr)
     return false;
 
+  MachineInstrBuilder Ret = MIRBuilder.buildInstrNoInsert(LoongArch::PseudoRET);
   MIRBuilder.insertInstr(Ret);
   return true;
 }
