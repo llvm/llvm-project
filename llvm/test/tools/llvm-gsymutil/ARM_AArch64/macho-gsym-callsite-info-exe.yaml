@@ -11,7 +11,7 @@
 
 
 # CHECK-GSYM:      FunctionInfo @ 0x[[#%x,]]: [0x[[#%x,]] - 0x[[#%x,]]) "func_mainBin_dec_call_everything"
-# CHECK-GSYM-NEXT: CallSites (by return address):
+# CHECK-GSYM-NEXT: CallSites (by relative return offset):
 # CHECK-GSYM-NEXT:   0x[[#%x,]] Flags[InternalCall] MatchRegex[func_mainBin_dec_01]
 # CHECK-GSYM-NEXT:   0x[[#%x,]] Flags[InternalCall] MatchRegex[func_mainBin_dec_02]
 # CHECK-GSYM-NEXT:   0x[[#%x,]] Flags[InternalCall] MatchRegex[func_mainBin_dec_03]
