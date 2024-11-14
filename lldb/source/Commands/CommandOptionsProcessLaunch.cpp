@@ -127,6 +127,10 @@ Status CommandOptionsProcessLaunch::SetOptionValue(
     break;
   }
 
+  case 'M':
+    memory_tagging = true;
+    break;
+
   case 'c':
     if (!option_arg.empty())
       launch_info.SetShell(FileSpec(option_arg));

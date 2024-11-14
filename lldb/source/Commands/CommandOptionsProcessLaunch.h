@@ -34,6 +34,7 @@ public:
       lldb_private::ExecutionContext *execution_context) override {
     launch_info.Clear();
     disable_aslr = lldb_private::eLazyBoolCalculate;
+    memory_tagging = false;
   }
 
   llvm::ArrayRef<lldb_private::OptionDefinition> GetDefinitions() override;
@@ -42,6 +43,7 @@ public:
 
   lldb_private::ProcessLaunchInfo launch_info;
   lldb_private::LazyBool disable_aslr;
+  bool memory_tagging;
 }; // CommandOptionsProcessLaunch
 
 } // namespace lldb_private

@@ -181,6 +181,9 @@ protected:
       disable_aslr = target->GetDisableASLR();
     }
 
+    if (m_options.memory_tagging == eLazyBoolYes)
+      m_options.launch_info.GetFlags().Set(eLaunchFlagMemoryTagging);
+
     if (!m_class_options.GetName().empty()) {
       m_options.launch_info.SetProcessPluginName("ScriptedProcess");
       ScriptedMetadataSP metadata_sp = std::make_shared<ScriptedMetadata>(
