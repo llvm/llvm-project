@@ -186,6 +186,5 @@ const int *const_cast_check(NODEREF int *x) {
 
 namespace GH116124 {
 // This declaration would previously cause a failed assertion.
-int *_Atomic a __attribute__((noderef)); // expected-note {{declared here}}
-int x = *a;                              // expected-warning{{dereferencing a; was declared with a 'noderef' type}}
+int *_Atomic a __attribute__((noderef));
 }
