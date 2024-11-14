@@ -18,7 +18,6 @@ define linkonce_odr dso_local void @_Z4testIcEvT_(i8 noundef signext %arg) sanit
 ; CHECK-SAME: i8 noundef signext [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 0, [[TMP11]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[ARG_ADDR:%.*]] = alloca i8, align 1
@@ -63,7 +62,6 @@ define linkonce_odr dso_local void @_Z4testIiEvT_(i32 noundef %arg) sanitize_mem
 ; CHECK-SAME: i32 noundef [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 0, [[TMP11]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[ARG_ADDR:%.*]] = alloca i32, align 4
@@ -105,7 +103,6 @@ define linkonce_odr dso_local void @_Z4testIfEvT_(float noundef %arg) sanitize_m
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP13:%.*]] = add i64 0, [[TMP12]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[ARG_ADDR:%.*]] = alloca float, align 4
@@ -150,7 +147,6 @@ define linkonce_odr dso_local void @_Z4testIdEvT_(double noundef %arg) sanitize_
 ; CHECK-SAME: double noundef [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 0, [[TMP11]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[ARG_ADDR:%.*]] = alloca double, align 8
@@ -192,7 +188,6 @@ define linkonce_odr dso_local void @_Z4testIeEvT_(x86_fp80 noundef %arg) sanitiz
 ; CHECK-SAME: x86_fp80 noundef [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 0, [[TMP11]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i80, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[ARG_ADDR:%.*]] = alloca x86_fp80, align 16
@@ -234,7 +229,6 @@ define linkonce_odr dso_local void @_Z4testI6IntIntEvT_(i64 %arg.coerce) sanitiz
 ; CHECK-SAME: i64 [[ARG_COERCE:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = add i64 0, [[TMP10]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[ARG:%.*]] = alloca [[STRUCT_INTINT:%.*]], align 8
@@ -276,7 +270,6 @@ define linkonce_odr dso_local void @_Z4testI10Int64Int64EvT_(i64 %arg.coerce0, i
 ; CHECK-SAME: i64 [[ARG_COERCE0:%.*]], i64 [[ARG_COERCE1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP18:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP19:%.*]] = add i64 0, [[TMP18]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
@@ -336,7 +329,6 @@ define linkonce_odr dso_local void @_Z4testI12DoubleDoubleEvT_(double %arg.coerc
 ; CHECK-SAME: double [[ARG_COERCE0:%.*]], double [[ARG_COERCE1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP18:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP19:%.*]] = add i64 0, [[TMP18]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
@@ -400,7 +392,6 @@ define linkonce_odr dso_local void @_Z4testI7Double4EvT_(ptr noundef byval(%stru
 ; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP2]], ptr align 8 @__msan_param_tls, i64 32, i1 false)
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = add i64 0, [[TMP9]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARG]])
@@ -434,7 +425,6 @@ define linkonce_odr dso_local void @_Z4testI11DoubleFloatEvT_(double %arg.coerce
 ; CHECK-SAME: double [[ARG_COERCE0:%.*]], float [[ARG_COERCE1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP18:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP19:%.*]] = add i64 0, [[TMP18]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
@@ -498,7 +488,6 @@ define linkonce_odr dso_local void @_Z4testI11LongDouble2EvT_(ptr noundef byval(
 ; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP2]], ptr align 8 @__msan_param_tls, i64 32, i1 false)
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = add i64 0, [[TMP9]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARG]])
@@ -534,7 +523,6 @@ define linkonce_odr dso_local void @_Z4testI11LongDouble4EvT_(ptr noundef byval(
 ; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP2]], ptr align 8 @__msan_param_tls, i64 64, i1 false)
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = add i64 0, [[TMP9]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARG]])
@@ -567,8 +555,7 @@ define linkonce_odr dso_local void @_Z5test2IcEvT_iz(i8 noundef signext %t, i32 
 ; CHECK-LABEL: define linkonce_odr dso_local void @_Z5test2IcEvT_iz(
 ; CHECK-SAME: i8 noundef signext [[T:%.*]], i32 noundef [[N:%.*]], ...) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 0, [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca i8, i64 [[TMP1]], align 8
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP2]], i8 0, i64 [[TMP1]], i1 false)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
@@ -620,8 +607,7 @@ define linkonce_odr dso_local void @_Z5test2IiEvT_iz(i32 noundef %t, i32 noundef
 ; CHECK-LABEL: define linkonce_odr dso_local void @_Z5test2IiEvT_iz(
 ; CHECK-SAME: i32 noundef [[T:%.*]], i32 noundef [[N:%.*]], ...) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 0, [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca i8, i64 [[TMP1]], align 8
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP2]], i8 0, i64 [[TMP1]], i1 false)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
@@ -665,8 +651,7 @@ define linkonce_odr dso_local void @_Z5test2IfEvT_iz(float noundef %t, i32 nound
 ; CHECK-LABEL: define linkonce_odr dso_local void @_Z5test2IfEvT_iz(
 ; CHECK-SAME: float noundef [[T:%.*]], i32 noundef [[N:%.*]], ...) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 0, [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca i8, i64 [[TMP1]], align 8
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP2]], i8 0, i64 [[TMP1]], i1 false)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
@@ -710,8 +695,7 @@ define linkonce_odr dso_local void @_Z5test2IdEvT_iz(double noundef %t, i32 noun
 ; CHECK-LABEL: define linkonce_odr dso_local void @_Z5test2IdEvT_iz(
 ; CHECK-SAME: double noundef [[T:%.*]], i32 noundef [[N:%.*]], ...) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 0, [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca i8, i64 [[TMP1]], align 8
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP2]], i8 0, i64 [[TMP1]], i1 false)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
@@ -755,8 +739,7 @@ define linkonce_odr dso_local void @_Z5test2IeEvT_iz(x86_fp80 noundef %t, i32 no
 ; CHECK-LABEL: define linkonce_odr dso_local void @_Z5test2IeEvT_iz(
 ; CHECK-SAME: x86_fp80 noundef [[T:%.*]], i32 noundef [[N:%.*]], ...) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 0, [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca i8, i64 [[TMP1]], align 8
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP2]], i8 0, i64 [[TMP1]], i1 false)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
@@ -800,8 +783,7 @@ define linkonce_odr dso_local void @_Z5test2I6IntIntEvT_iz(i64 %t.coerce, i32 no
 ; CHECK-LABEL: define linkonce_odr dso_local void @_Z5test2I6IntIntEvT_iz(
 ; CHECK-SAME: i64 [[T_COERCE:%.*]], i32 noundef [[N:%.*]], ...) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 0, [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca i8, i64 [[TMP1]], align 8
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP2]], i8 0, i64 [[TMP1]], i1 false)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
@@ -845,8 +827,7 @@ define linkonce_odr dso_local void @_Z5test2I10Int64Int64EvT_iz(i64 %t.coerce0, 
 ; CHECK-LABEL: define linkonce_odr dso_local void @_Z5test2I10Int64Int64EvT_iz(
 ; CHECK-SAME: i64 [[T_COERCE0:%.*]], i64 [[T_COERCE1:%.*]], i32 noundef [[N:%.*]], ...) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 0, [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca i8, i64 [[TMP1]], align 8
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP2]], i8 0, i64 [[TMP1]], i1 false)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
@@ -890,8 +871,7 @@ define linkonce_odr dso_local void @_Z5test2I12DoubleDoubleEvT_iz(double %t.coer
 ; CHECK-LABEL: define linkonce_odr dso_local void @_Z5test2I12DoubleDoubleEvT_iz(
 ; CHECK-SAME: double [[T_COERCE0:%.*]], double [[T_COERCE1:%.*]], i32 noundef [[N:%.*]], ...) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 0, [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca i8, i64 [[TMP1]], align 8
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP2]], i8 0, i64 [[TMP1]], i1 false)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
@@ -935,8 +915,7 @@ define linkonce_odr dso_local void @_Z5test2I7Double4EvT_iz(ptr noundef byval(%s
 ; CHECK-LABEL: define linkonce_odr dso_local void @_Z5test2I7Double4EvT_iz(
 ; CHECK-SAME: ptr noundef byval([[STRUCT_DOUBLE4:%.*]]) align 8 [[T:%.*]], i32 noundef [[N:%.*]], ...) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 0, [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca i8, i64 [[TMP1]], align 8
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP2]], i8 0, i64 [[TMP1]], i1 false)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
@@ -980,8 +959,7 @@ define linkonce_odr dso_local void @_Z5test2I11DoubleFloatEvT_iz(double %t.coerc
 ; CHECK-LABEL: define linkonce_odr dso_local void @_Z5test2I11DoubleFloatEvT_iz(
 ; CHECK-SAME: double [[T_COERCE0:%.*]], float [[T_COERCE1:%.*]], i32 noundef [[N:%.*]], ...) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 0, [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca i8, i64 [[TMP1]], align 8
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP2]], i8 0, i64 [[TMP1]], i1 false)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
@@ -1025,8 +1003,7 @@ define linkonce_odr dso_local void @_Z5test2I11LongDouble2EvT_iz(ptr noundef byv
 ; CHECK-LABEL: define linkonce_odr dso_local void @_Z5test2I11LongDouble2EvT_iz(
 ; CHECK-SAME: ptr noundef byval([[STRUCT_LONGDOUBLE2:%.*]]) align 16 [[T:%.*]], i32 noundef [[N:%.*]], ...) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 0, [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca i8, i64 [[TMP1]], align 8
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP2]], i8 0, i64 [[TMP1]], i1 false)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
@@ -1070,8 +1047,7 @@ define linkonce_odr dso_local void @_Z5test2I11LongDouble4EvT_iz(ptr noundef byv
 ; CHECK-LABEL: define linkonce_odr dso_local void @_Z5test2I11LongDouble4EvT_iz(
 ; CHECK-SAME: ptr noundef byval([[STRUCT_LONGDOUBLE4:%.*]]) align 16 [[T:%.*]], i32 noundef [[N:%.*]], ...) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 0, [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca i8, i64 [[TMP1]], align 8
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP2]], i8 0, i64 [[TMP1]], i1 false)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
@@ -1120,7 +1096,6 @@ define linkonce_odr dso_local void @_Z4test3I11LongDouble4EvT_(ptr noundef byval
 ; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP2]], ptr align 8 @__msan_param_tls, i64 64, i1 false)
 ; CHECK-NEXT:    [[TMP39:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP40:%.*]] = add i64 0, [[TMP39]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARG]])

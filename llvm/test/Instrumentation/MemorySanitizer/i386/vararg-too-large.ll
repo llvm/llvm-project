@@ -11,7 +11,6 @@ define dso_local i64 @many_args() {
 ; CHECK-LABEL: define dso_local i64 @many_args() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 0, [[TMP0]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    store i64 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8

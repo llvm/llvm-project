@@ -16,7 +16,6 @@ define dso_local i32 @test(i32 %a, i32 %b, i32 %c) local_unnamed_addr {
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 0, [[TMP0]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
@@ -36,7 +35,6 @@ define dso_local i32 @test(i32 %a, i32 %b, i32 %c) local_unnamed_addr {
 ; ORIGIN-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) local_unnamed_addr {
 ; ORIGIN-NEXT:  [[ENTRY:.*:]]
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; ORIGIN-NEXT:    [[TMP1:%.*]] = add i64 0, [[TMP2]]
 ; ORIGIN-NEXT:    call void @llvm.donothing()
 ; ORIGIN-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
 ; ORIGIN-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
@@ -58,7 +56,6 @@ define dso_local i32 @test(i32 %a, i32 %b, i32 %c) local_unnamed_addr {
 ; ORIGIN2-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) local_unnamed_addr {
 ; ORIGIN2-NEXT:  [[ENTRY:.*:]]
 ; ORIGIN2-NEXT:    [[TMP2:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; ORIGIN2-NEXT:    [[TMP1:%.*]] = add i64 0, [[TMP2]]
 ; ORIGIN2-NEXT:    call void @llvm.donothing()
 ; ORIGIN2-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
 ; ORIGIN2-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
@@ -85,8 +82,7 @@ define dso_local i32 @sum(i32 %n, ...) local_unnamed_addr #0 {
 ; CHECK-LABEL: define dso_local i32 @sum(
 ; CHECK-SAME: i32 [[N:%.*]], ...) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 0, [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca i8, i64 [[TMP1]], align 8
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP2]], i8 0, i64 [[TMP1]], i1 false)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
@@ -176,8 +172,7 @@ define dso_local i32 @sum(i32 %n, ...) local_unnamed_addr #0 {
 ; ORIGIN-LABEL: define dso_local i32 @sum(
 ; ORIGIN-SAME: i32 [[N:%.*]], ...) local_unnamed_addr {
 ; ORIGIN-NEXT:  [[ENTRY:.*]]:
-; ORIGIN-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; ORIGIN-NEXT:    [[TMP1:%.*]] = add i64 0, [[TMP0]]
+; ORIGIN-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = alloca i8, i64 [[TMP1]], align 8
 ; ORIGIN-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP2]], i8 0, i64 [[TMP1]], i1 false)
 ; ORIGIN-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
@@ -279,8 +274,7 @@ define dso_local i32 @sum(i32 %n, ...) local_unnamed_addr #0 {
 ; ORIGIN2-LABEL: define dso_local i32 @sum(
 ; ORIGIN2-SAME: i32 [[N:%.*]], ...) local_unnamed_addr {
 ; ORIGIN2-NEXT:  [[ENTRY:.*]]:
-; ORIGIN2-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; ORIGIN2-NEXT:    [[TMP1:%.*]] = add i64 0, [[TMP0]]
+; ORIGIN2-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; ORIGIN2-NEXT:    [[TMP2:%.*]] = alloca i8, i64 [[TMP1]], align 8
 ; ORIGIN2-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP2]], i8 0, i64 [[TMP1]], i1 false)
 ; ORIGIN2-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
@@ -450,7 +444,6 @@ define dso_local i80 @test_i80(i80 %a, i80 %b, i80 %c) local_unnamed_addr {
 ; CHECK-SAME: i80 [[A:%.*]], i80 [[B:%.*]], i80 [[C:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 0, [[TMP0]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    store i80 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
@@ -470,7 +463,6 @@ define dso_local i80 @test_i80(i80 %a, i80 %b, i80 %c) local_unnamed_addr {
 ; ORIGIN-SAME: i80 [[A:%.*]], i80 [[B:%.*]], i80 [[C:%.*]]) local_unnamed_addr {
 ; ORIGIN-NEXT:  [[ENTRY:.*:]]
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; ORIGIN-NEXT:    [[TMP1:%.*]] = add i64 0, [[TMP2]]
 ; ORIGIN-NEXT:    call void @llvm.donothing()
 ; ORIGIN-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
 ; ORIGIN-NEXT:    store i80 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
@@ -492,7 +484,6 @@ define dso_local i80 @test_i80(i80 %a, i80 %b, i80 %c) local_unnamed_addr {
 ; ORIGIN2-SAME: i80 [[A:%.*]], i80 [[B:%.*]], i80 [[C:%.*]]) local_unnamed_addr {
 ; ORIGIN2-NEXT:  [[ENTRY:.*:]]
 ; ORIGIN2-NEXT:    [[TMP2:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
-; ORIGIN2-NEXT:    [[TMP1:%.*]] = add i64 0, [[TMP2]]
 ; ORIGIN2-NEXT:    call void @llvm.donothing()
 ; ORIGIN2-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
 ; ORIGIN2-NEXT:    store i80 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8

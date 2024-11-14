@@ -19,7 +19,6 @@ define dso_local i32 @main() sanitize_memory {
 ; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
 ; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
 ; CHECK-NEXT:    [[TMP18:%.*]] = load i64, ptr [[VA_ARG_OVERFLOW_SIZE]], align 8
-; CHECK-NEXT:    [[TMP19:%.*]] = add i64 0, [[TMP18]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    call void @__msan_poison_alloca(ptr [[RETVAL]], i64 4, ptr @[[GLOB0:[0-9]+]])
@@ -58,11 +57,11 @@ define dso_local i32 @main() sanitize_memory {
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i64, ptr [[TMP15]], align 8
 ; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP16]], align 8
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSLD]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB20:.*]], label %[[BB21:.*]], !prof [[PROF1:![0-9]+]]
-; CHECK:       [[BB20]]:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB19:.*]], label %[[BB20:.*]], !prof [[PROF1:![0-9]+]]
+; CHECK:       [[BB19]]:
 ; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP17]]) #[[ATTR2:[0-9]+]]
-; CHECK-NEXT:    br label %[[BB21]]
-; CHECK:       [[BB21]]:
+; CHECK-NEXT:    br label %[[BB20]]
+; CHECK:       [[BB20]]:
 ; CHECK-NEXT:    call void asm "btsq $2, $1
 ; CHECK-NEXT:    [[TMP20:%.*]] = load i8, ptr [[BIT]], align 1
 ; CHECK-NEXT:    [[TMP21:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_load_1(ptr [[BIT]])
@@ -72,11 +71,11 @@ define dso_local i32 @main() sanitize_memory {
 ; CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP23]], align 4
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = trunc i8 [[_MSLD1]] to i1
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP20]] to i1
-; CHECK-NEXT:    br i1 [[_MSPROP]], label %[[BB27:.*]], label %[[BB28:.*]], !prof [[PROF1]]
-; CHECK:       [[BB27]]:
+; CHECK-NEXT:    br i1 [[_MSPROP]], label %[[BB26:.*]], label %[[BB27:.*]], !prof [[PROF1]]
+; CHECK:       [[BB26]]:
 ; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP24]]) #[[ATTR2]]
-; CHECK-NEXT:    br label %[[BB28]]
-; CHECK:       [[BB28]]:
+; CHECK-NEXT:    br label %[[BB27]]
+; CHECK:       [[BB27]]:
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    store i32 0, ptr [[RETVAL_SHADOW]], align 8
@@ -97,7 +96,6 @@ define dso_local i32 @main() sanitize_memory {
 ; CONS-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
 ; CONS-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
 ; CONS-NEXT:    [[TMP18:%.*]] = load i64, ptr [[VA_ARG_OVERFLOW_SIZE]], align 8
-; CONS-NEXT:    [[TMP19:%.*]] = add i64 0, [[TMP18]]
 ; CONS-NEXT:    call void @llvm.donothing()
 ; CONS-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 ; CONS-NEXT:    call void @__msan_poison_alloca(ptr [[RETVAL]], i64 4, ptr @[[GLOB0:[0-9]+]])
@@ -138,11 +136,11 @@ define dso_local i32 @main() sanitize_memory {
 ; CONS-NEXT:    call void @__msan_instrument_asm_store(ptr [[BIT]], i64 1)
 ; CONS-NEXT:    call void @__msan_instrument_asm_store(ptr [[ADDR]], i64 8)
 ; CONS-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSLD]], 0
-; CONS-NEXT:    br i1 [[_MSCMP]], label %[[BB20:.*]], label %[[BB21:.*]], !prof [[PROF1:![0-9]+]]
-; CONS:       [[BB20]]:
+; CONS-NEXT:    br i1 [[_MSCMP]], label %[[BB19:.*]], label %[[BB20:.*]], !prof [[PROF1:![0-9]+]]
+; CONS:       [[BB19]]:
 ; CONS-NEXT:    call void @__msan_warning(i32 [[TMP17]]) #[[ATTR2:[0-9]+]]
-; CONS-NEXT:    br label %[[BB21]]
-; CONS:       [[BB21]]:
+; CONS-NEXT:    br label %[[BB20]]
+; CONS:       [[BB20]]:
 ; CONS-NEXT:    call void asm "btsq $2, $1
 ; CONS-NEXT:    [[TMP20:%.*]] = load i8, ptr [[BIT]], align 1
 ; CONS-NEXT:    [[TMP21:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_load_1(ptr [[BIT]])
@@ -152,11 +150,11 @@ define dso_local i32 @main() sanitize_memory {
 ; CONS-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP23]], align 4
 ; CONS-NEXT:    [[_MSPROP:%.*]] = trunc i8 [[_MSLD1]] to i1
 ; CONS-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP20]] to i1
-; CONS-NEXT:    br i1 [[_MSPROP]], label %[[BB27:.*]], label %[[BB28:.*]], !prof [[PROF1]]
-; CONS:       [[BB27]]:
+; CONS-NEXT:    br i1 [[_MSPROP]], label %[[BB26:.*]], label %[[BB27:.*]], !prof [[PROF1]]
+; CONS:       [[BB26]]:
 ; CONS-NEXT:    call void @__msan_warning(i32 [[TMP24]]) #[[ATTR2]]
-; CONS-NEXT:    br label %[[BB28]]
-; CONS:       [[BB28]]:
+; CONS-NEXT:    br label %[[BB27]]
+; CONS:       [[BB27]]:
 ; CONS-NEXT:    br i1 [[TOBOOL]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CONS:       [[IF_THEN]]:
 ; CONS-NEXT:    store i32 0, ptr [[RETVAL_SHADOW]], align 8
