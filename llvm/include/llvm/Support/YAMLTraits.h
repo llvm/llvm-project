@@ -39,18 +39,6 @@ class VersionTuple;
 
 namespace yaml {
 
-/// The base class of options.
-class Opt {
-public:
-  virtual ~Opt();
-
-  static bool classof(const Opt *Obj) { return (Obj->OptClassID == &ID); }
-  const char *OptClassID = &ID;
-
-private:
-  static const char ID;
-};
-
 enum class NodeKind : uint8_t {
   Scalar,
   Map,
@@ -974,13 +962,28 @@ private:
     }
   }
 
+public:
+  /// The base class of options.
+  class OptBase {
+  public:
+    virtual ~OptBase();
+
+    static bool classof(const OptBase *Obj) {
+      return (Obj->OptBaseClassID == &ID);
+    }
+    const char *OptBaseClassID = &ID;
+
+  private:
+    static const char ID;
+  };
+
 private:
   void *Ctxt;
-  Opt DefaultOpt;
+  OptBase DefaultOpt;
 
 public:
   /// This may be overwritten in derivered classes.
-  Opt *Opt = &DefaultOpt;
+  OptBase *Opt = &DefaultOpt;
 };
 
 namespace detail {

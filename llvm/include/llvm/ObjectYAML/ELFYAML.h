@@ -788,11 +788,11 @@ bool shouldAllocateFileSpace(ArrayRef<ProgramHeader> Phdrs,
 ///
 /// Derivered classes should not modify OptClassID to ensue that
 /// dyn_cast<ELFYAML::Opt> can find this interface.
-class Opt : public yaml::Opt {
+class Opt : public yaml::IO::OptBase {
 public:
   Opt() {
+    OptBaseClassID = &ID;
     OptClassID = &ID;
-    ELFOptClassID = &ID;
   }
   ~Opt();
 
@@ -811,13 +811,15 @@ public:
   virtual void postMapping(const ELFYAML::Object &Object,
                            bool IsOutputting) = 0;
 
-  /// Tell IO::Opt to be this and derivered classes.
-  static bool classof(const yaml::Opt *Obj) { return (Obj->OptClassID == &ID); }
+  /// Tell IO::OptBase to be this and derivered classes.
+  static bool classof(const yaml::IO::OptBase *Obj) {
+    return (Obj->OptBaseClassID == &ID);
+  }
 
   /// This will be not needed unless the pointer to ELFYAML::Opt would
   /// be cast further.
-  static bool classof(const Opt *Obj) { return (Obj->ELFOptClassID == &ID); }
-  const char *ELFOptClassID;
+  static bool classof(const Opt *Obj) { return (Obj->OptClassID == &ID); }
+  const char *OptClassID;
 
 private:
   static const char ID;
