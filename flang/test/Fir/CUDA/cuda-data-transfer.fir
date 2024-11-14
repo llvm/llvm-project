@@ -385,4 +385,22 @@ func.func @_QPdevice_addr_conv() {
 // CHECK: fir.embox %[[DEV_ADDR_CONV]](%{{.*}}) : (!fir.ref<!fir.array<4xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<4xf32>>
 // CHECK: fir.call @_FortranACUFDataTransferDescDescNoRealloc
 
+func.func @_QQchar_transfer() attributes {fir.bindc_name = "char_transfer"} {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %0 = cuf.alloc !fir.array<10x!fir.char<1>>(%c1 : index) {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFEa"} -> !fir.ref<!fir.array<10x!fir.char<1>>>
+  %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %2 = fir.declare %0(%1) typeparams %c1 {data_attr = #cuf.cuda<device>, uniq_name = "_QFEa"} : (!fir.ref<!fir.array<10x!fir.char<1>>>, !fir.shape<1>, index) -> !fir.ref<!fir.array<10x!fir.char<1>>>
+  %3 = fir.alloca !fir.array<10x!fir.char<1>> {bindc_name = "b", uniq_name = "_QFEb"}
+  %4 = fir.declare %3(%1) typeparams %c1 {uniq_name = "_QFEb"} : (!fir.ref<!fir.array<10x!fir.char<1>>>, !fir.shape<1>, index) -> !fir.ref<!fir.array<10x!fir.char<1>>>
+  cuf.data_transfer %4 to %2 {transfer_kind = #cuf.cuda_transfer<host_device>} : !fir.ref<!fir.array<10x!fir.char<1>>>, !fir.ref<!fir.array<10x!fir.char<1>>>
+  cuf.free %2 : !fir.ref<!fir.array<10x!fir.char<1>>> {data_attr = #cuf.cuda<device>}
+  return
+}
+
+// CHECK-LABEL:  func.func @_QQchar_transfer()
+// CHECK: fir.call @_FortranACUFMemAlloc
+// CHECK: %[[BYTES:.*]] = arith.muli %c10{{.*}}, %c1{{.*}} : i64
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{.*}}, %{{.*}}, %[[BYTES]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> none
+
 } // end of module
