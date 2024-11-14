@@ -309,7 +309,7 @@ define double @external_use_without_fast_math(ptr %a, i64 %n) {
 ; AUTO_VEC-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
 ; AUTO_VEC-NEXT:    br i1 [[NITER_NCMP_7]], label [[FOR_END_UNR_LCSSA]], label [[FOR_BODY]]
 ; AUTO_VEC:       for.end.unr-lcssa:
-; AUTO_VEC-NEXT:    [[J_LCSSA_PH:%.*]] = phi double [ undef, [[ENTRY:%.*]] ], [ [[J_NEXT_6]], [[FOR_BODY]] ]
+; AUTO_VEC-NEXT:    [[J_LCSSA_PH:%.*]] = phi double [ poison, [[ENTRY:%.*]] ], [ [[J_NEXT_6]], [[FOR_BODY]] ]
 ; AUTO_VEC-NEXT:    [[I_UNR:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[I_NEXT_7]], [[FOR_BODY]] ]
 ; AUTO_VEC-NEXT:    [[J_UNR:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[J_NEXT_7]], [[FOR_BODY]] ]
 ; AUTO_VEC-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i64 [[XTRAITER]], 0

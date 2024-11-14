@@ -166,19 +166,19 @@ uses the function `buffer-file-name'."
         (let ((status (apply #'call-process-region
                              nil nil clang-format-executable
                              nil `(,temp-buffer ,temp-file) nil
-                             `("-output-replacements-xml"
+                             `("--output-replacements-xml"
                                ;; Guard against a nil assume-file-name.
                                ;; If the clang-format option -assume-filename
                                ;; is given a blank string it will crash as per
                                ;; the following bug report
                                ;; https://bugs.llvm.org/show_bug.cgi?id=34667
                                ,@(and assume-file-name
-                                      (list "-assume-filename" assume-file-name))
-                               ,@(and style (list "-style" style))
-                               "-fallback-style" ,clang-format-fallback-style
-                               "-offset" ,(number-to-string file-start)
-                               "-length" ,(number-to-string (- file-end file-start))
-                               "-cursor" ,(number-to-string cursor))))
+                                      (list "--assume-filename" assume-file-name))
+                               ,@(and style (list "--style" style))
+                               "--fallback-style" ,clang-format-fallback-style
+                               "--offset" ,(number-to-string file-start)
+                               "--length" ,(number-to-string (- file-end file-start))
+                               "--cursor" ,(number-to-string cursor))))
               (stderr (with-temp-buffer
                         (unless (zerop (cadr (insert-file-contents temp-file)))
                           (insert ": "))

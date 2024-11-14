@@ -235,7 +235,7 @@ void MatcherGen::EmitLeafMatchCode(const TreePatternNode &N) {
     if (N.hasName())
       return;
     // An unnamed ValueType as in (sext_inreg GPR:$foo, i8).
-    return AddMatcher(new CheckValueTypeMatcher(LeafRec->getName()));
+    return AddMatcher(new CheckValueTypeMatcher(llvm::getValueType(LeafRec)));
   }
 
   if ( // Handle register references.  Nothing to do here, they always match.

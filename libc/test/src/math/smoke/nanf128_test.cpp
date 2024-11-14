@@ -53,7 +53,7 @@ TEST_F(LlvmLibcNanf128Test, RandomString) {
            QUIET_NAN);
 }
 
-#ifndef LIBC_HAVE_ADDRESS_SANITIZER
+#if !defined(LIBC_HAVE_ADDRESS_SANITIZER) && defined(LIBC_TARGET_OS_IS_LINUX)
 #include <signal.h>
 TEST_F(LlvmLibcNanf128Test, InvalidInput) {
   EXPECT_DEATH([] { LIBC_NAMESPACE::nanf128(nullptr); }, WITH_SIGNAL(SIGSEGV));

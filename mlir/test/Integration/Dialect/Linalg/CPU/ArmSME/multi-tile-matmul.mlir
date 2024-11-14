@@ -1,11 +1,12 @@
 // RUN: mlir-opt %s \
 // RUN:   -transform-interpreter -test-transform-dialect-erase-schedule  \
 // RUN:   -one-shot-bufferize="bufferize-function-boundaries" -canonicalize \
-// RUN:   -test-lower-to-arm-sme -test-lower-to-llvm | \
+// RUN:   -test-lower-to-arm-sme -convert-vector-to-llvm="enable-arm-sve" \
+// RUN:   -test-lower-to-llvm | \
 // RUN: %mcr_aarch64_cmd \
 // RUN:   -e=main -entry-point-result=void \
 // RUN:   -march=aarch64 -mattr="+sve,+sme" \
-// RUN:   -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils,%arm_sme_abi_shlib,%mlir_arm_runner_utils | \
+// RUN:   -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils,%native_arm_sme_abi_shlib,%native_mlir_arm_runner_utils | \
 // RUN: FileCheck %s
 
 /// This is very similar to the SME matmul.mlir test, except that it uses a tile
@@ -72,7 +73,7 @@ module attributes {transform.with_named_sequence} {
     // Step 1: Tile for size [8] x [8] (unrolled by 4), which corresponds to
     // (2 x SVLs) x (2 x SVLs), where SVLs is the number of 32-bit elements in a
     // vector of SVL bits. This uses all four 32-bit SME virtual tiles.
-    %tiled_linalg_op, %loop_i, %loop_j, %loop_k = transform.structured.tile_using_for %matmul[[8], [8], 4]
+    %tiled_linalg_op, %loop_i, %loop_j, %loop_k = transform.structured.tile_using_for %matmul tile_sizes [[8], [8], 4]
       : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">, !transform.op<"scf.for">, !transform.op<"scf.for">)
 
     // Step 2: Vectorize.

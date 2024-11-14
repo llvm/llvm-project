@@ -21,6 +21,7 @@ struct unsized_it {
   using difference_type = std::ptrdiff_t;
 
   value_type& operator*() const;
+  unsized_it& operator++();
   bool operator==(const unsized_it&) const;
   difference_type operator-(const unsized_it&) const { return 0; }
 };

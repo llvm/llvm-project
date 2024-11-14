@@ -2,7 +2,7 @@
 # RUN: llvm-mc -triple=arm64 -mattr=+v8a,+fp-armv8 -disassemble < %s | FileCheck %s
 # RUN: llvm-mc -triple=arm64 -mattr=+v8a,+fp-armv8,+fullfp16 -disassemble < %s | FileCheck %s --check-prefix=CHECK --check-prefix=FP16
 # RUN: llvm-mc -triple=arm64 -mattr=+v8.2a -disassemble < %s | FileCheck %s --check-prefix=CHECK-V82
-# RUN: llvm-mc -triple=arm64 -mattr=+v8.3a -disassemble < %s | FileCheck %s --check-prefix=CHECK-V83
+# RUN: llvm-mc -triple=arm64 -mattr=+ccidx -disassemble < %s | FileCheck %s --check-prefix=CHECK-V83
 
 #------------------------------------------------------------------------------
 # Add/sub (immediate)
@@ -3245,6 +3245,7 @@
 # CHECK: msr      {{sctlr_el2|SCTLR_EL2}}, x12
 # CHECK: msr      {{sctlr_el3|SCTLR_EL3}}, x12
 # CHECK: msr      {{actlr_el1|ACTLR_EL1}}, x12
+# CHECK: msr      {{actlr_el12|ACTLR_EL12}}, x12
 # CHECK: msr      {{actlr_el2|ACTLR_EL2}}, x12
 # CHECK: msr      {{actlr_el3|ACTLR_EL3}}, x12
 # CHECK: msr      {{cpacr_el1|CPACR_EL1}}, x12
@@ -3575,6 +3576,7 @@
 # CHECK: mrs      x9, {{sctlr_el2|SCTLR_EL2}}
 # CHECK: mrs      x9, {{sctlr_el3|SCTLR_EL3}}
 # CHECK: mrs      x9, {{actlr_el1|ACTLR_EL1}}
+# CHECK: mrs      x9, {{actlr_el12|ACTLR_EL12}}
 # CHECK: mrs      x9, {{actlr_el2|ACTLR_EL2}}
 # CHECK: mrs      x9, {{actlr_el3|ACTLR_EL3}}
 # CHECK: mrs      x9, {{cpacr_el1|CPACR_EL1}}
@@ -3867,6 +3869,7 @@
 0xc 0x10 0x1c 0xd5
 0xc 0x10 0x1e 0xd5
 0x2c 0x10 0x18 0xd5
+0x2c 0x10 0x1d 0xd5
 0x2c 0x10 0x1c 0xd5
 0x2c 0x10 0x1e 0xd5
 0x4c 0x10 0x18 0xd5
@@ -4199,6 +4202,7 @@
 0x9 0x10 0x3c 0xd5
 0x9 0x10 0x3e 0xd5
 0x29 0x10 0x38 0xd5
+0x29 0x10 0x3d 0xd5
 0x29 0x10 0x3c 0xd5
 0x29 0x10 0x3e 0xd5
 0x49 0x10 0x38 0xd5

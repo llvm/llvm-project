@@ -58,13 +58,13 @@ bool UnrolledInstAnalyzer::simplifyInstWithSCEV(Instruction *I) {
   auto *Base = dyn_cast<SCEVUnknown>(SE.getPointerBase(S));
   if (!Base)
     return false;
-  auto *Offset =
-      dyn_cast<SCEVConstant>(SE.getMinusSCEV(ValueAtIteration, Base));
+  std::optional<APInt> Offset =
+      SE.computeConstantDifference(ValueAtIteration, Base);
   if (!Offset)
     return false;
   SimplifiedAddress Address;
   Address.Base = Base->getValue();
-  Address.Offset = Offset->getValue();
+  Address.Offset = *Offset;
   SimplifiedAddresses[I] = Address;
   return false;
 }
@@ -84,7 +84,7 @@ bool UnrolledInstAnalyzer::visitBinaryOperator(BinaryOperator &I) {
       RHS = SimpleRHS;
 
   Value *SimpleV = nullptr;
-  const DataLayout &DL = I.getModule()->getDataLayout();
+  const DataLayout &DL = I.getDataLayout();
   if (auto FI = dyn_cast<FPMathOperator>(&I))
     SimpleV =
         simplifyBinOp(I.getOpcode(), LHS, RHS, FI->getFastMathFlags(), DL);
@@ -105,7 +105,7 @@ bool UnrolledInstAnalyzer::visitLoad(LoadInst &I) {
   auto AddressIt = SimplifiedAddresses.find(AddrOp);
   if (AddressIt == SimplifiedAddresses.end())
     return false;
-  ConstantInt *SimplifiedAddrOp = AddressIt->second.Offset;
+  const APInt &SimplifiedAddrOp = AddressIt->second.Offset;
 
   auto *GV = dyn_cast<GlobalVariable>(AddressIt->second.Base);
   // We're only interested in loads that can be completely folded to a
@@ -125,9 +125,9 @@ bool UnrolledInstAnalyzer::visitLoad(LoadInst &I) {
     return false;
 
   unsigned ElemSize = CDS->getElementType()->getPrimitiveSizeInBits() / 8U;
-  if (SimplifiedAddrOp->getValue().getActiveBits() > 64)
+  if (SimplifiedAddrOp.getActiveBits() > 64)
     return false;
-  int64_t SimplifiedAddrOpV = SimplifiedAddrOp->getSExtValue();
+  int64_t SimplifiedAddrOpV = SimplifiedAddrOp.getSExtValue();
   if (SimplifiedAddrOpV < 0) {
     // FIXME: For now we conservatively ignore out of bound accesses, but
     // we're allowed to perform the optimization in this case.
@@ -157,7 +157,7 @@ bool UnrolledInstAnalyzer::visitCastInst(CastInst &I) {
   // analysis, which operates on integers (and, e.g., might convert i8* null to
   // i32 0).
   if (CastInst::castIsValid(I.getOpcode(), Op, I.getType())) {
-    const DataLayout &DL = I.getModule()->getDataLayout();
+    const DataLayout &DL = I.getDataLayout();
     if (Value *V = simplifyCastInst(I.getOpcode(), Op, I.getType(), DL)) {
       SimplifiedValues[&I] = V;
       return true;
@@ -187,14 +187,16 @@ bool UnrolledInstAnalyzer::visitCmpInst(CmpInst &I) {
         SimplifiedAddress &LHSAddr = SimplifiedLHS->second;
         SimplifiedAddress &RHSAddr = SimplifiedRHS->second;
         if (LHSAddr.Base == RHSAddr.Base) {
-          LHS = LHSAddr.Offset;
-          RHS = RHSAddr.Offset;
+          bool Res = ICmpInst::compare(LHSAddr.Offset, RHSAddr.Offset,
+                                       I.getPredicate());
+          SimplifiedValues[&I] = ConstantInt::getBool(I.getType(), Res);
+          return true;
         }
       }
     }
   }
 
-  const DataLayout &DL = I.getModule()->getDataLayout();
+  const DataLayout &DL = I.getDataLayout();
   if (Value *V = simplifyCmpInst(I.getPredicate(), LHS, RHS, DL)) {
     SimplifiedValues[&I] = V;
     return true;

@@ -36,3 +36,20 @@ class X {
 
 int main() {} // expected-note {{previous definition is here}}
 int main(int,char**) {} // expected-error {{conflicting types for 'main'}}
+
+
+namespace GH93456 {
+
+struct X {
+  static void f(); // expected-note {{previous declaration is here}}
+  void f() const;
+  // expected-error@-1 {{static and non-static member functions with the same parameter types cannot be overloaded}}
+};
+
+struct Y {
+  void f() const; // expected-note {{previous declaration is here}}
+  static void f();
+  // expected-error@-1 {{static and non-static member functions with the same parameter types cannot be overloaded}}
+};
+
+}

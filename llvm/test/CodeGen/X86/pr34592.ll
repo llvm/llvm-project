@@ -8,38 +8,40 @@ define <16 x i64> @pluto(<16 x i64> %arg, <16 x i64> %arg1, <16 x i64> %arg2, <1
 ; CHECK-O0-NEXT:    pushq %rbp
 ; CHECK-O0-NEXT:    movq %rsp, %rbp
 ; CHECK-O0-NEXT:    andq $-32, %rsp
-; CHECK-O0-NEXT:    subq $32, %rsp
+; CHECK-O0-NEXT:    subq $64, %rsp
 ; CHECK-O0-NEXT:    vmovaps %ymm4, %ymm10
 ; CHECK-O0-NEXT:    vmovaps %ymm3, %ymm9
+; CHECK-O0-NEXT:    vmovaps %ymm2, (%rsp) # 32-byte Spill
 ; CHECK-O0-NEXT:    vmovaps %ymm1, %ymm8
+; CHECK-O0-NEXT:    vmovaps %ymm0, %ymm3
+; CHECK-O0-NEXT:    vmovaps (%rsp), %ymm0 # 32-byte Reload
 ; CHECK-O0-NEXT:    vmovaps 240(%rbp), %ymm4
-; CHECK-O0-NEXT:    vmovaps 208(%rbp), %ymm3
-; CHECK-O0-NEXT:    vmovaps 176(%rbp), %ymm1
-; CHECK-O0-NEXT:    vmovaps 144(%rbp), %ymm1
+; CHECK-O0-NEXT:    vmovaps 208(%rbp), %ymm1
+; CHECK-O0-NEXT:    vmovaps 176(%rbp), %ymm2
+; CHECK-O0-NEXT:    vmovaps 144(%rbp), %ymm2
 ; CHECK-O0-NEXT:    vmovaps 112(%rbp), %ymm11
 ; CHECK-O0-NEXT:    vmovaps 80(%rbp), %ymm11
 ; CHECK-O0-NEXT:    vmovaps 48(%rbp), %ymm11
 ; CHECK-O0-NEXT:    vmovaps 16(%rbp), %ymm11
-; CHECK-O0-NEXT:    vpblendd {{.*#+}} ymm0 = ymm6[0,1,2,3,4,5],ymm2[6,7]
-; CHECK-O0-NEXT:    vpunpcklqdq {{.*#+}} ymm1 = ymm1[0],ymm3[0],ymm1[2],ymm3[2]
-; CHECK-O0-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,1,3]
+; CHECK-O0-NEXT:    vpblendd {{.*#+}} ymm0 = ymm6[0,1,2,3,4,5],ymm0[6,7]
+; CHECK-O0-NEXT:    vpunpcklqdq {{.*#+}} ymm2 = ymm2[0],ymm1[0],ymm2[2],ymm1[2]
+; CHECK-O0-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[0,2,1,3]
 ; CHECK-O0-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,1,2,1]
-; CHECK-O0-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5],ymm0[6,7]
-; CHECK-O0-NEXT:    vperm2i128 {{.*#+}} ymm1 = ymm7[2,3],ymm6[0,1]
-; CHECK-O0-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; CHECK-O0-NEXT:    vpblendd {{.*#+}} ymm2 = ymm1[0,1],ymm2[2,3],ymm1[4,5,6,7]
+; CHECK-O0-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm2[2,3,4,5],ymm0[6,7]
+; CHECK-O0-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm7[2,3],ymm6[0,1]
+; CHECK-O0-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-O0-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1],ymm3[2,3],ymm2[4,5,6,7]
+; CHECK-O0-NEXT:    vmovaps %xmm1, %xmm3
+; CHECK-O0-NEXT:    vmovaps %xmm7, %xmm1
+; CHECK-O0-NEXT:    vpblendd {{.*#+}} xmm3 = xmm1[0,1],xmm3[2,3]
+; CHECK-O0-NEXT:    # implicit-def: $ymm1
+; CHECK-O0-NEXT:    vmovaps %xmm3, %xmm1
+; CHECK-O0-NEXT:    vpermq {{.*#+}} ymm3 = ymm1[0,0,1,3]
+; CHECK-O0-NEXT:    vpslldq {{.*#+}} ymm1 = zero,zero,zero,zero,zero,zero,zero,zero,ymm5[0,1,2,3,4,5,6,7],zero,zero,zero,zero,zero,zero,zero,zero,ymm5[16,17,18,19,20,21,22,23]
+; CHECK-O0-NEXT:    vpblendd {{.*#+}} ymm3 = ymm1[0,1],ymm3[2,3,4,5],ymm1[6,7]
 ; CHECK-O0-NEXT:    vpunpcklqdq {{.*#+}} ymm1 = ymm7[0],ymm5[0],ymm7[2],ymm5[2]
-; CHECK-O0-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,1,2,3]
-; CHECK-O0-NEXT:    vpermq {{.*#+}} ymm4 = ymm4[1,1,1,1]
-; CHECK-O0-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1],ymm4[2,3,4,5],ymm1[6,7]
-; CHECK-O0-NEXT:    vmovaps %xmm3, %xmm4
-; CHECK-O0-NEXT:    vmovaps %xmm7, %xmm3
-; CHECK-O0-NEXT:    vpblendd {{.*#+}} xmm4 = xmm3[0,1],xmm4[2,3]
-; CHECK-O0-NEXT:    # implicit-def: $ymm3
-; CHECK-O0-NEXT:    vmovaps %xmm4, %xmm3
-; CHECK-O0-NEXT:    vpermq {{.*#+}} ymm4 = ymm3[0,0,1,3]
-; CHECK-O0-NEXT:    vpslldq {{.*#+}} ymm3 = zero,zero,zero,zero,zero,zero,zero,zero,ymm5[0,1,2,3,4,5,6,7],zero,zero,zero,zero,zero,zero,zero,zero,ymm5[16,17,18,19,20,21,22,23]
-; CHECK-O0-NEXT:    vpblendd {{.*#+}} ymm3 = ymm3[0,1],ymm4[2,3,4,5],ymm3[6,7]
+; CHECK-O0-NEXT:    vpblendd {{.*#+}} ymm1 = ymm4[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-O0-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,1,1,3]
 ; CHECK-O0-NEXT:    movq %rbp, %rsp
 ; CHECK-O0-NEXT:    popq %rbp
 ; CHECK-O0-NEXT:    retq

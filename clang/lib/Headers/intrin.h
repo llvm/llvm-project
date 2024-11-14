@@ -329,6 +329,36 @@ static __inline__ void __DEFAULT_FN_ATTRS __stosq(unsigned __int64 *__dst,
 static __inline__ void __DEFAULT_FN_ATTRS __halt(void) {
   __asm__ volatile("hlt");
 }
+
+static inline unsigned char __inbyte(unsigned short port) {
+  unsigned char ret;
+  __asm__ __volatile__("inb %w1, %b0" : "=a"(ret) : "Nd"(port));
+  return ret;
+}
+
+static inline unsigned short __inword(unsigned short port) {
+  unsigned short ret;
+  __asm__ __volatile__("inw %w1, %w0" : "=a"(ret) : "Nd"(port));
+  return ret;
+}
+
+static inline unsigned long __indword(unsigned short port) {
+  unsigned long ret;
+  __asm__ __volatile__("inl %w1, %k0" : "=a"(ret) : "Nd"(port));
+  return ret;
+}
+
+static inline void __outbyte(unsigned short port, unsigned char data) {
+  __asm__ __volatile__("outb %b0, %w1" : : "a"(data), "Nd"(port));
+}
+
+static inline void __outword(unsigned short port, unsigned short data) {
+  __asm__ __volatile__("outw %w0, %w1" : : "a"(data), "Nd"(port));
+}
+
+static inline void __outdword(unsigned short port, unsigned long data) {
+  __asm__ __volatile__("outl %k0, %w1" : : "a"(data), "Nd"(port));
+}
 #endif
 
 #if defined(__i386__) || defined(__x86_64__) || defined(__aarch64__)
@@ -378,7 +408,10 @@ unsigned int _CountLeadingSigns64(__int64);
 unsigned int _CountOneBits(unsigned long);
 unsigned int _CountOneBits64(unsigned __int64);
 
-void __cdecl __prefetch(void *);
+unsigned int __hlt(unsigned int, ...);
+
+void __cdecl __prefetch(const void *);
+
 #endif
 
 /*----------------------------------------------------------------------------*\

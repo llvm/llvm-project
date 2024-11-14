@@ -44,6 +44,8 @@ public:
 
   MCSymbol *GetConstantPoolIndexSymbol(const MachineOperand &MO) const;
 
+  MCSymbol *GetJumpTableSymbol(const MachineOperand &MO) const;
+
   MCOperand LowerSymbolOperand(const MachineOperand &MO,
                                MachineOperand::MachineOperandType MOTy,
                                unsigned Offset) const;

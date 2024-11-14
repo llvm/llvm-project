@@ -38,8 +38,10 @@ static void TestBinOpExhaustive(Fn1 PropagateFn, Fn2 EvalFn) {
 
           APInt AB1R = PropagateFn(0, AOut, Known1Redacted, Known2Redacted);
           APInt AB2R = PropagateFn(1, AOut, Known1Redacted, Known2Redacted);
-          EXPECT_EQ(AB1, AB1R);
-          EXPECT_EQ(AB2, AB2R);
+          if (!Known1Redacted.hasConflict() && !Known2Redacted.hasConflict()) {
+            EXPECT_EQ(AB1, AB1R);
+            EXPECT_EQ(AB2, AB2R);
+          }
         }
         ForeachNumInKnownBits(Known1, [&](APInt Value1) {
           ForeachNumInKnownBits(Known2, [&](APInt Value2) {

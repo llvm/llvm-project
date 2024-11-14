@@ -45,8 +45,7 @@ Progress::~Progress() {
   // Make sure to always report progress completed when this object is
   // destructed so it indicates the progress dialog/activity should go away.
   std::lock_guard<std::mutex> guard(m_mutex);
-  if (!m_completed)
-    m_completed = m_total;
+  m_completed = m_total;
   ReportProgress();
 
   // Report to the ProgressManager if that subsystem is enabled.
@@ -172,7 +171,7 @@ void ProgressManager::ReportProgress(
   Debugger::ReportProgress(progress_data.progress_id, progress_data.title, "",
                            completed, Progress::kNonDeterministicTotal,
                            progress_data.debugger_id,
-                           Debugger::eBroadcastBitProgressCategory);
+                           lldb::eBroadcastBitProgressCategory);
 }
 
 void ProgressManager::Expire(llvm::StringRef key) {

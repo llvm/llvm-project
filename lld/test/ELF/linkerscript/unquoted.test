@@ -1,0 +1,25 @@
+# REQUIRES: x86
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 /dev/null -o 0.o
+
+#--- empty.lds
+#--- 1.lds
+
+SECTIONS /*
+#--- 1a.lds
+foo = 3;
+INCLUDE "empty.lds"
+INCLUDE "1.lds"
+
+# RUN: not ld.lld -shared 0.o -T 1.lds 2>&1 | FileCheck %s --check-prefix=CHECK1 --match-full-lines --strict-whitespace
+# RUN: not ld.lld -shared 0.o -T 1a.lds 2>&1 | FileCheck %s --check-prefix=CHECK1 --match-full-lines --strict-whitespace
+#      CHECK1:{{.*}}error: 1.lds:2: unclosed comment in a linker script
+# CHECK1-NEXT:>>> SECTIONS /*
+# CHECK1-NEXT:>>> ^
+
+#--- 2.lds
+INCLUDE "empty.lds"
+"
+# RUN: not ld.lld -shared 0.o -T 2.lds 2>&1 | FileCheck %s --check-prefix=CHECK2 --match-full-lines --strict-whitespace
+#      CHECK2:{{.*}}error: 2.lds:2: unclosed quote
+# CHECK2-NOT:{{.}}

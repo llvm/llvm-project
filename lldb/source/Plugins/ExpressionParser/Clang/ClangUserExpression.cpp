@@ -161,7 +161,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
                                       "generic context";
 
         if (!variable_list_sp) {
-          err.SetErrorString(thisErrorString);
+          err = Status::FromErrorString(thisErrorString);
           return;
         }
 
@@ -170,7 +170,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
         if (!this_var_sp || !this_var_sp->IsInScope(frame) ||
             !this_var_sp->LocationIsValidForFrame(frame)) {
-          err.SetErrorString(thisErrorString);
+          err = Status::FromErrorString(thisErrorString);
           return;
         }
       }
@@ -191,7 +191,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
                                       "are in a generic context";
 
         if (!variable_list_sp) {
-          err.SetErrorString(selfErrorString);
+          err = Status::FromErrorString(selfErrorString);
           return;
         }
 
@@ -200,7 +200,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
         if (!self_variable_sp || !self_variable_sp->IsInScope(frame) ||
             !self_variable_sp->LocationIsValidForFrame(frame)) {
-          err.SetErrorString(selfErrorString);
+          err = Status::FromErrorString(selfErrorString);
           return;
         }
       }
@@ -219,9 +219,10 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
     // whatever runtime the debug info says the object pointer belongs to.  Do
     // that here.
 
-    ClangASTMetadata *metadata =
-        TypeSystemClang::DeclContextGetMetaData(decl_context, function_decl);
-    if (metadata && metadata->HasObjectPtr()) {
+    if (std::optional<ClangASTMetadata> metadata =
+            TypeSystemClang::DeclContextGetMetaData(decl_context,
+                                                    function_decl);
+        metadata && metadata->HasObjectPtr()) {
       lldb::LanguageType language = metadata->GetObjectPtrLanguage();
       if (language == lldb::eLanguageTypeC_plus_plus) {
         if (m_enforce_valid_object) {
@@ -234,7 +235,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
                                         "are in a generic context";
 
           if (!variable_list_sp) {
-            err.SetErrorString(thisErrorString);
+            err = Status::FromErrorString(thisErrorString);
             return;
           }
 
@@ -243,7 +244,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
           if (!this_var_sp || !this_var_sp->IsInScope(frame) ||
               !this_var_sp->LocationIsValidForFrame(frame)) {
-            err.SetErrorString(thisErrorString);
+            err = Status::FromErrorString(thisErrorString);
             return;
           }
         }
@@ -261,7 +262,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
               "generic context";
 
           if (!variable_list_sp) {
-            err.SetErrorString(selfErrorString);
+            err = Status::FromErrorString(selfErrorString);
             return;
           }
 
@@ -270,21 +271,21 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
           if (!self_variable_sp || !self_variable_sp->IsInScope(frame) ||
               !self_variable_sp->LocationIsValidForFrame(frame)) {
-            err.SetErrorString(selfErrorString);
+            err = Status::FromErrorString(selfErrorString);
             return;
           }
 
           Type *self_type = self_variable_sp->GetType();
 
           if (!self_type) {
-            err.SetErrorString(selfErrorString);
+            err = Status::FromErrorString(selfErrorString);
             return;
           }
 
           CompilerType self_clang_type = self_type->GetForwardCompilerType();
 
           if (!self_clang_type) {
-            err.SetErrorString(selfErrorString);
+            err = Status::FromErrorString(selfErrorString);
             return;
           }
 
@@ -295,7 +296,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
             m_in_objectivec_method = true;
             m_needs_object_ptr = true;
           } else {
-            err.SetErrorString(selfErrorString);
+            err = Status::FromErrorString(selfErrorString);
             return;
           }
         } else {
@@ -331,12 +332,11 @@ bool ClangUserExpression::SetupPersistentState(DiagnosticManager &diagnostic_man
       m_result_delegate.RegisterPersistentState(persistent_state);
     } else {
       diagnostic_manager.PutString(
-          eDiagnosticSeverityError,
-          "couldn't start parsing (no persistent data)");
+          lldb::eSeverityError, "couldn't start parsing (no persistent data)");
       return false;
     }
   } else {
-    diagnostic_manager.PutString(eDiagnosticSeverityError,
+    diagnostic_manager.PutString(lldb::eSeverityError,
                                  "error: couldn't start parsing (no target)");
     return false;
   }
@@ -384,12 +384,11 @@ static void SetupDeclVendor(ExecutionContext &exe_ctx, Target *target,
     // The error stream already contains several Clang diagnostics that might
     // be either errors or warnings, so just print them all as one remark
     // diagnostic to prevent that the message starts with "error: error:".
-    diagnostic_manager.PutString(eDiagnosticSeverityRemark,
-                                 error_stream.GetString());
+    diagnostic_manager.PutString(lldb::eSeverityInfo, error_stream.GetString());
     return;
   }
 
-  diagnostic_manager.PutString(eDiagnosticSeverityError,
+  diagnostic_manager.PutString(lldb::eSeverityError,
                                "Unknown error while loading modules needed for "
                                "current compilation unit.");
 }
@@ -424,7 +423,7 @@ void ClangUserExpression::CreateSourceCode(
 
     if (!m_source_code->GetText(m_transformed_text, exe_ctx, !m_ctx_obj,
                                 for_completion, modules_to_import)) {
-      diagnostic_manager.PutString(eDiagnosticSeverityError,
+      diagnostic_manager.PutString(lldb::eSeverityError,
                                    "couldn't construct expression body");
       return;
     }
@@ -531,7 +530,7 @@ bool ClangUserExpression::PrepareForParsing(
   ScanContext(exe_ctx, err);
 
   if (!err.Success()) {
-    diagnostic_manager.PutString(eDiagnosticSeverityWarning, err.AsCString());
+    diagnostic_manager.PutString(lldb::eSeverityWarning, err.AsCString());
   }
 
   ////////////////////////////////////
@@ -564,7 +563,7 @@ bool ClangUserExpression::TryParse(
 
   if (!DeclMap()->WillParse(exe_ctx, GetMaterializer())) {
     diagnostic_manager.PutString(
-        eDiagnosticSeverityError,
+        lldb::eSeverityError,
         "current process state is unsuitable for expression parsing");
     return false;
   }
@@ -611,9 +610,9 @@ bool ClangUserExpression::TryParse(
     if (!jit_error.Success()) {
       const char *error_cstr = jit_error.AsCString();
       if (error_cstr && error_cstr[0])
-        diagnostic_manager.PutString(eDiagnosticSeverityError, error_cstr);
+        diagnostic_manager.PutString(lldb::eSeverityError, error_cstr);
       else
-        diagnostic_manager.PutString(eDiagnosticSeverityError,
+        diagnostic_manager.PutString(lldb::eSeverityError,
                                      "expression can't be interpreted or run");
       return false;
     }
@@ -663,7 +662,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   Target *target = exe_ctx.GetTargetPtr();
 
   if (!target) {
-    diagnostic_manager.PutString(eDiagnosticSeverityError, "invalid target");
+    diagnostic_manager.PutString(lldb::eSeverityError, "invalid target");
     return false;
   }
 
@@ -699,23 +698,6 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   }
   if (!parse_success)
     return false;
-
-  if (exe_ctx.GetProcessPtr() && execution_policy == eExecutionPolicyTopLevel) {
-    Status static_init_error =
-        m_parser->RunStaticInitializers(m_execution_unit_sp, exe_ctx);
-
-    if (!static_init_error.Success()) {
-      const char *error_cstr = static_init_error.AsCString();
-      if (error_cstr && error_cstr[0])
-        diagnostic_manager.Printf(eDiagnosticSeverityError,
-                                  "%s\n",
-                                  error_cstr);
-      else
-        diagnostic_manager.PutString(eDiagnosticSeverityError,
-                                     "couldn't run static initializers\n");
-      return false;
-    }
-  }
 
   if (m_execution_unit_sp) {
     bool register_execution_unit = false;
@@ -825,7 +807,7 @@ bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
 
   if (!DeclMap()->WillParse(exe_ctx, GetMaterializer())) {
     diagnostic_manager.PutString(
-        eDiagnosticSeverityError,
+        lldb::eSeverityError,
         "current process state is unsuitable for expression parsing");
 
     return false;
@@ -879,7 +861,7 @@ lldb::addr_t ClangUserExpression::GetCppObjectPointer(
   lldb::addr_t ret = valobj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
 
   if (ret == LLDB_INVALID_ADDRESS) {
-    err.SetErrorStringWithFormatv(
+    err = Status::FromErrorStringWithFormatv(
         "Couldn't load '{0}' because its value couldn't be evaluated",
         object_name);
     return LLDB_INVALID_ADDRESS;
@@ -902,7 +884,7 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
 
     if (!m_in_cplusplus_method && !m_in_objectivec_method) {
       diagnostic_manager.PutString(
-          eDiagnosticSeverityError,
+          lldb::eSeverityError,
           "need object pointer but don't know the language");
       return false;
     }
@@ -919,8 +901,8 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
       object_ptr = m_ctx_obj->GetAddressOf(false, &address_type);
       if (object_ptr == LLDB_INVALID_ADDRESS ||
           address_type != eAddressTypeLoad)
-        object_ptr_error.SetErrorString("Can't get context object's "
-                                        "debuggee address");
+        object_ptr_error = Status::FromErrorString("Can't get context object's "
+                                                   "debuggee address");
     } else {
       if (m_in_cplusplus_method) {
         object_ptr =
@@ -944,7 +926,7 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
 
       if (!object_ptr_error.Success()) {
         diagnostic_manager.Printf(
-            eDiagnosticSeverityWarning,
+            lldb::eSeverityWarning,
             "couldn't get cmd pointer (substituting NULL): %s",
             object_ptr_error.AsCString());
         cmd_ptr = 0;

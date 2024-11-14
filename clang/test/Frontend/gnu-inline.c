@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fgnuc-version=4.2.1 -std=c89 -fsyntax-only -x c -E -dM %s | FileCheck --check-prefix=GNU-INLINE %s
-// RUN: %clang_cc1 -fgnuc-version=4.2.1 -std=c99 -fsyntax-only -x c -E -dM %s | FileCheck --check-prefix=STDC-INLINE %s
-// RUN: %clang_cc1 -fgnuc-version=4.2.1 -std=c99 -fgnu89-inline -fsyntax-only -x c -E -dM %s | FileCheck --check-prefix=GNU-INLINE %s
-// RUN: %clang_cc1 -fgnuc-version=4.2.1 -fsyntax-only -x c++ -E -dM %s | FileCheck --check-prefix=GNU-INLINE %s
+// RUN: %clang_cc1 -fgnuc-version=4.2.1 -std=c89 -x c -E -dM %s | FileCheck --check-prefix=GNU-INLINE %s
+// RUN: %clang_cc1 -fgnuc-version=4.2.1 -std=c99 -x c -E -dM %s | FileCheck --check-prefix=STDC-INLINE %s
+// RUN: %clang_cc1 -fgnuc-version=4.2.1 -std=c99 -fgnu89-inline -x c -E -dM %s | FileCheck --check-prefix=GNU-INLINE %s
+// RUN: %clang_cc1 -fgnuc-version=4.2.1 -x c++ -E -dM %s | FileCheck --check-prefix=GNU-INLINE %s
 // RUN: not %clang_cc1 -fgnu89-inline -fgnuc-version=4.2.1 -fsyntax-only -x c++ %s 2>&1 | FileCheck --check-prefix=CXX %s
 // RUN: not %clang_cc1 -fgnu89-inline -fgnuc-version=4.2.1 -fsyntax-only -x objective-c++ %s 2>&1 | FileCheck --check-prefix=OBJCXX %s
 

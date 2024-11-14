@@ -111,7 +111,7 @@ class X86TTIImpl : public BasicTTIImplBase<X86TTIImpl> {
 
 public:
   explicit X86TTIImpl(const X86TargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
   /// \name Scalar TTI Implementations
@@ -132,6 +132,7 @@ public:
   /// @{
 
   unsigned getNumberOfRegisters(unsigned ClassID) const;
+  bool hasConditionalLoadStoreForType(Type *Ty = nullptr) const;
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
   unsigned getLoadStoreVecRegBitWidth(unsigned AS) const;
   unsigned getMaxInterleaveFactor(ElementCount VF);
@@ -253,7 +254,7 @@ public:
   /// If the AM is supported, the return value must be >= 0.
   /// If the AM is not supported, it returns a negative value.
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
-                                       int64_t BaseOffset, bool HasBaseReg,
+                                       StackOffset BaseOffset, bool HasBaseReg,
                                        int64_t Scale, unsigned AddrSpace) const;
 
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
@@ -293,11 +294,10 @@ public:
   bool supportsEfficientVectorElementLoadStore() const;
   bool enableInterleavedAccessVectorization();
 
+  InstructionCost getBranchMispredictPenalty() const;
+
 private:
   bool supportsGather() const;
-  InstructionCost getGSScalarCost(unsigned Opcode, TTI::TargetCostKind CostKind,
-                                  Type *DataTy, bool VariableMask,
-                                  Align Alignment, unsigned AddressSpace);
   InstructionCost getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                                   Type *DataTy, const Value *Ptr,
                                   Align Alignment, unsigned AddressSpace);

@@ -1630,38 +1630,32 @@ MipsConstantIslands::fixupConditionalBr(ImmBranch &Br) {
 }
 
 void MipsConstantIslands::prescanForConstants() {
-  unsigned J = 0;
-  (void)J;
   for (MachineBasicBlock &B : *MF) {
-    for (MachineBasicBlock::instr_iterator I = B.instr_begin(),
-                                           EB = B.instr_end();
-         I != EB; ++I) {
-      switch(I->getDesc().getOpcode()) {
-        case Mips::LwConstant32: {
-          PrescannedForConstants = true;
-          LLVM_DEBUG(dbgs() << "constant island constant " << *I << "\n");
-          J = I->getNumOperands();
-          LLVM_DEBUG(dbgs() << "num operands " << J << "\n");
-          MachineOperand& Literal = I->getOperand(1);
-          if (Literal.isImm()) {
-            int64_t V = Literal.getImm();
-            LLVM_DEBUG(dbgs() << "literal " << V << "\n");
-            Type *Int32Ty =
-              Type::getInt32Ty(MF->getFunction().getContext());
-            const Constant *C = ConstantInt::get(Int32Ty, V);
-            unsigned index = MCP->getConstantPoolIndex(C, Align(4));
-            I->getOperand(2).ChangeToImmediate(index);
-            LLVM_DEBUG(dbgs() << "constant island constant " << *I << "\n");
-            I->setDesc(TII->get(Mips::LwRxPcTcp16));
-            I->removeOperand(1);
-            I->removeOperand(1);
-            I->addOperand(MachineOperand::CreateCPI(index, 0));
-            I->addOperand(MachineOperand::CreateImm(4));
-          }
-          break;
+    for (MachineInstr &MI : B) {
+      switch (MI.getDesc().getOpcode()) {
+      case Mips::LwConstant32: {
+        PrescannedForConstants = true;
+        LLVM_DEBUG(dbgs() << "constant island constant " << MI << "\n");
+        LLVM_DEBUG(dbgs() << "num operands " << MI.getNumOperands() << "\n");
+        MachineOperand &Literal = MI.getOperand(1);
+        if (Literal.isImm()) {
+          int64_t V = Literal.getImm();
+          LLVM_DEBUG(dbgs() << "literal " << V << "\n");
+          Type *Int32Ty = Type::getInt32Ty(MF->getFunction().getContext());
+          const Constant *C = ConstantInt::get(Int32Ty, V);
+          unsigned index = MCP->getConstantPoolIndex(C, Align(4));
+          MI.getOperand(2).ChangeToImmediate(index);
+          LLVM_DEBUG(dbgs() << "constant island constant " << MI << "\n");
+          MI.setDesc(TII->get(Mips::LwRxPcTcp16));
+          MI.removeOperand(1);
+          MI.removeOperand(1);
+          MI.addOperand(MachineOperand::CreateCPI(index, 0));
+          MI.addOperand(MachineOperand::CreateImm(4));
         }
-        default:
-          break;
+        break;
+      }
+      default:
+        break;
       }
     }
   }

@@ -18,9 +18,7 @@ define void @vadd_vv_nxv1i8(ptr %pa, ptr %pb) {
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle8.v v9, (a1)
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %va = load <vscale x 1 x i8>, ptr %pa
@@ -38,9 +36,7 @@ define void @vadd_vv_nxv1i16(ptr %pa, ptr %pb) {
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
-; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %va = load <vscale x 1 x i16>, ptr %pa
@@ -58,9 +54,7 @@ define void @vadd_vv_nxv1i32(ptr %pa, ptr %pb) {
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vle32.v v9, (a1)
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %va = load <vscale x 1 x i32>, ptr %pa
@@ -78,9 +72,7 @@ define void @vfadd_vv_nxv1f32(ptr %pa, ptr %pb) {
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vle32.v v9, (a1)
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %va = load <vscale x 1 x float>, ptr %pa

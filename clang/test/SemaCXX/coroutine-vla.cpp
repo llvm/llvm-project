@@ -16,6 +16,12 @@ struct promise
     void unhandled_exception();
 };
 
+// Test that we won't report the error incorrectly.
+void bar(int n) {
+  int array[n];
+  return;
+}
+
 coroutine foo(int n) {
   int array[n]; // expected-error {{variable length arrays in a coroutine are not supported}}
   co_return;

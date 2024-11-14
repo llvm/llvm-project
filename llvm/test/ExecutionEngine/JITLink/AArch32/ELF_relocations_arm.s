@@ -23,23 +23,29 @@
 	.syntax unified
 
 # CHECK-TYPE: {{[0-9a-f]+}} R_ARM_CALL call_target_arm
-# CHECK-INSTR: 	00000000 <call_site>:
+# CHECK-INSTR: 	00000000 <call_site_a2a>:
 # CHECK-INSTR: 	       0: ebfffffe     bl
-# CHECK-INSTR: 	       4: ebfffffe     bl
-# CHECK-INSTR: 	0000000c <call_target_arm>
-# CHECK-INSTR: 	00000010 <call_target_thumb>
-# ARM branch offset is 8, because it accounts for an additional prefetch
-# instruction that increments PC even though it is implicit
-# jitlink-check: decode_operand(call_site + 0, 0) = call_target_arm   - (call_site +  8)
-# jitlink-check: decode_operand(call_site + 4, 0) = call_target_thumb - (call_site + 12)
-	.globl	call_site
-	.type	call_site,%function
+# CHECK-INSTR: 	00000008 <call_site_a2t>:
+# CHECK-INSTR: 	       8: ebfffffe     bl
+# CHECK-INSTR: 	00000010 <call_target_arm>
+# CHECK-INSTR: 	00000014 <call_target_thumb>
+# jitlink-check: decode_operand(call_site_a2a, 0) = call_target_arm   - next_pc(call_site_a2a)
+# jitlink-check: decode_operand(call_site_a2t, 0) = call_target_thumb - next_pc(call_site_a2t)
+	.globl	call_site_a2a
+	.type	call_site_a2a, %function
 	.p2align	2
-call_site:
+call_site_a2a:
 	bl	call_target_arm
+	bx	lr
+	.size	call_site_a2a, .-call_site_a2a
+
+	.globl	call_site_a2t
+	.type	call_site_a2t,%function
+	.p2align	2
+call_site_a2t:
 	bl	call_target_thumb
 	bx	lr
-	.size	call_site, .-call_site
+	.size	call_site_a2t, .-call_site_a2t
 
 	.globl	call_target_arm
 	.type	call_target_arm,%function
@@ -59,10 +65,10 @@ call_target_thumb:
 	.code 32
 
 # CHECK-TYPE: {{[0-9a-f]+}} R_ARM_JUMP24 jump24_target
-# CHECK-INSTR: 	00000014 <jump24_site>:
-# CHECK-INSTR: 	      14: eafffffe     b
-# CHECK-INSTR: 	00000018 <jump24_target>
-# jitlink-check: decode_operand(jump24_site, 0) = jump24_target - (jump24_site + 8)
+# CHECK-INSTR: 	00000018 <jump24_site>:
+# CHECK-INSTR: 	      18: eafffffe     b
+# CHECK-INSTR: 	0000001c <jump24_target>
+# jitlink-check: decode_operand(jump24_site, 0) = jump24_target - next_pc(jump24_site)
 	.globl	jump24_site
 	.type	jump24_site,%function
 	.p2align	2

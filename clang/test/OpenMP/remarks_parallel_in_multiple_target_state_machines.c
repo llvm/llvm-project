@@ -4,7 +4,7 @@
 
 // host-no-diagnostics
 
-void baz(void) __attribute__((assume("omp_no_openmp")));
+[[omp::assume("omp_no_openmp")]] void baz(void);
 
 void bar1(void) {
 #pragma omp parallel // #0
@@ -24,7 +24,7 @@ void foo1(void) {
                          // all-remark@#2 {{Rewriting generic-mode kernel with a customized state machine. [OMP131]}}
 
   {
-    baz();           // all-remark {{Value has potential side effects preventing SPMD-mode execution. Add `__attribute__((assume("ompx_spmd_amenable")))` to the called function to override. [OMP121]}}
+    baz();           // all-remark {{Value has potential side effects preventing SPMD-mode execution. Add `[[omp::assume("ompx_spmd_amenable")]]` to the called function to override. [OMP121]}}
 #pragma omp parallel // #3
     {
     }
@@ -39,7 +39,7 @@ void foo2(void) {
 #pragma omp target teams // #5
                          // all-remark@#5 {{Rewriting generic-mode kernel with a customized state machine. [OMP131]}}
   {
-    baz();           // all-remark {{Value has potential side effects preventing SPMD-mode execution. Add `__attribute__((assume("ompx_spmd_amenable")))` to the called function to override. [OMP121]}}
+    baz();           // all-remark {{Value has potential side effects preventing SPMD-mode execution. Add `[[omp::assume("ompx_spmd_amenable")]]` to the called function to override. [OMP121]}}
 #pragma omp parallel // #6
     {
     }
@@ -57,7 +57,7 @@ void foo3(void) {
 #pragma omp target teams // #8
                          // all-remark@#8 {{Rewriting generic-mode kernel with a customized state machine. [OMP131]}}
   {
-    baz();           // all-remark {{Value has potential side effects preventing SPMD-mode execution. Add `__attribute__((assume("ompx_spmd_amenable")))` to the called function to override. [OMP121]}}
+    baz();           // all-remark {{Value has potential side effects preventing SPMD-mode execution. Add `[[omp::assume("ompx_spmd_amenable")]]` to the called function to override. [OMP121]}}
 #pragma omp parallel // #9
     {
     }
