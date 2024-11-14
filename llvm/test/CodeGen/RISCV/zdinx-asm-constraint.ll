@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+zdinx -verify-machineinstrs < %s \
 ; RUN:   -target-abi=ilp32 -mattr=+zhinx | FileCheck %s
 
-;; These tests cover the use of `r` and `cr` constraints for floating point values on rv32.
+;; These tests cover the use of `r`, `R`, and `cr` constraints for floating point values on rv32.
 ;;
 ;; In particular, there is significant complexity around using paired GPRs for double values on rv32.
 
@@ -26,8 +26,8 @@ entry:
   ret void
 }
 
-define dso_local void @zdinx_asm_Pr(ptr nocapture noundef writeonly %a, double noundef %b, double noundef %c) nounwind {
-; CHECK-LABEL: zdinx_asm_Pr:
+define dso_local void @zdinx_asm_R(ptr nocapture noundef writeonly %a, double noundef %b, double noundef %c) nounwind {
+; CHECK-LABEL: zdinx_asm_R:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
@@ -47,7 +47,7 @@ define dso_local void @zdinx_asm_Pr(ptr nocapture noundef writeonly %a, double n
 ; CHECK-NEXT:    ret
 entry:
   %arrayidx = getelementptr inbounds double, ptr %a, i32 1
-  %0 = tail call double asm "fsgnjx.d $0, $1, $2", "=^Pr,^Pr,^Pr"(double %b, double %c)
+  %0 = tail call double asm "fsgnjx.d $0, $1, $2", "=R,R,R"(double %b, double %c)
   store double %0, ptr %arrayidx, align 8
   ret void
 }

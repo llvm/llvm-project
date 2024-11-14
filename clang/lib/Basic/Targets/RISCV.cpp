@@ -108,14 +108,10 @@ bool RISCVTargetInfo::validateAsmConstraint(
       return true;
     }
     return false;
-  case 'P':
-    // An even-odd register pair - GPR
-    if (Name[1] == 'r') {
-      Info.setAllowsRegister();
-      Name += 1;
-      return true;
-    }
-    return false;
+  case 'R':
+    // An even-odd GPR pair
+    Info.setAllowsRegister();
+    return true;
   case 'v':
     // A vector register.
     if (Name[1] == 'r' || Name[1] == 'd' || Name[1] == 'm') {
@@ -130,9 +126,8 @@ bool RISCVTargetInfo::validateAsmConstraint(
 std::string RISCVTargetInfo::convertConstraint(const char *&Constraint) const {
   std::string R;
   switch (*Constraint) {
-  // c*, P*, and v* are all two-letter constraints on RISC-V.
+  // c* and v* are two-letter constraints on RISC-V.
   case 'c':
-  case 'P':
   case 'v':
     R = std::string("^") + std::string(Constraint, 2);
     Constraint += 1;

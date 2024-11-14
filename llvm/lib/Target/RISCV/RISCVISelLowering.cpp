@@ -20458,6 +20458,7 @@ RISCVTargetLowering::getConstraintType(StringRef Constraint) const {
     default:
       break;
     case 'f':
+    case 'R':
       return C_RegisterClass;
     case 'I':
     case 'J':
@@ -20473,8 +20474,6 @@ RISCVTargetLowering::getConstraintType(StringRef Constraint) const {
     if (Constraint == "vr" || Constraint == "vd" || Constraint == "vm")
       return C_RegisterClass;
     if (Constraint == "cr" || Constraint == "cf")
-      return C_RegisterClass;
-    if (Constraint == "Pr")
       return C_RegisterClass;
   }
   return TargetLowering::getConstraintType(Constraint);
@@ -20519,6 +20518,10 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
           return std::make_pair(0U, &RISCV::GPRNoX0RegClass);
       }
       break;
+    case 'R':
+      if (VT == MVT::f64 && !Subtarget.is64Bit() && Subtarget.hasStdExtZdinx())
+        return std::make_pair(0U, &RISCV::GPRF64PairCRegClass);
+      return std::make_pair(0U, &RISCV::GPRPairNoX0RegClass);
     default:
       break;
     }
@@ -20578,10 +20581,6 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       if (Subtarget.hasStdExtZdinx() && Subtarget.is64Bit())
         return std::make_pair(0U, &RISCV::GPRCRegClass);
     }
-  } else if (Constraint == "Pr") {
-    if (VT == MVT::f64 && !Subtarget.is64Bit() && Subtarget.hasStdExtZdinx())
-      return std::make_pair(0U, &RISCV::GPRF64PairCRegClass);
-    return std::make_pair(0U, &RISCV::GPRPairNoX0RegClass);
   }
 
   // Clang will correctly decode the usage of register name aliases into their

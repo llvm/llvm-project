@@ -2,8 +2,8 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s
 
-define i128 @test_Pr_wide_scalar_simple(i128 noundef %0) nounwind {
-; CHECK-LABEL: test_Pr_wide_scalar_simple:
+define i128 @test_R_wide_scalar_simple(i128 noundef %0) nounwind {
+; CHECK-LABEL: test_R_wide_scalar_simple:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    # a2 <- a0
@@ -12,12 +12,12 @@ define i128 @test_Pr_wide_scalar_simple(i128 noundef %0) nounwind {
 ; CHECK-NEXT:    mv a1, a3
 ; CHECK-NEXT:    ret
 entry:
-  %1 = call i128 asm sideeffect "/* $0 <- $1 */", "=&^Pr,^Pr"(i128 %0)
+  %1 = call i128 asm sideeffect "/* $0 <- $1 */", "=&R,R"(i128 %0)
   ret i128 %1
 }
 
-define i64 @test_Pr_wide_scalar_with_ops(i64 noundef %0) nounwind {
-; CHECK-LABEL: test_Pr_wide_scalar_with_ops:
+define i64 @test_R_wide_scalar_with_ops(i64 noundef %0) nounwind {
+; CHECK-LABEL: test_R_wide_scalar_with_ops:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    #APP
@@ -29,7 +29,7 @@ entry:
   %1 = zext i64 %0 to i128
   %2 = shl i128 %1, 64
   %3 = or i128 %1, %2
-  %4 = call i128 asm sideeffect "/* $0 <- $1 */", "=&^Pr,^Pr"(i128 %3)
+  %4 = call i128 asm sideeffect "/* $0 <- $1 */", "=&R,R"(i128 %3)
   %5 = trunc i128 %4 to i64
   %6 = lshr i128 %4, 64
   %7 = trunc i128 %6 to i64
@@ -37,8 +37,8 @@ entry:
   ret i64 %8
 }
 
-define i128 @test_Pr_wide_scalar_inout(ptr %0, i128 noundef %1) nounwind {
-; CHECK-LABEL: test_Pr_wide_scalar_inout:
+define i128 @test_R_wide_scalar_inout(ptr %0, i128 noundef %1) nounwind {
+; CHECK-LABEL: test_R_wide_scalar_inout:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    mv a3, a2
@@ -63,7 +63,7 @@ entry:
   store i128 %1, ptr %3, align 16
   %4 = load ptr, ptr %2, align 8
   %5 = load i128, ptr %3, align 16
-  %6 = call { ptr, i128 } asm sideeffect "/* $0; $1 */", "=r,=^Pr,0,1"(ptr %4, i128 %5)
+  %6 = call { ptr, i128 } asm sideeffect "/* $0; $1 */", "=r,=R,0,1"(ptr %4, i128 %5)
   %7 = extractvalue { ptr, i128} %6, 0
   %8 = extractvalue { ptr, i128 } %6, 1
   store ptr %7, ptr %2, align 8

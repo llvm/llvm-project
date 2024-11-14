@@ -12,7 +12,7 @@ define i64 @test_Pr_wide_scalar_simple(i64 noundef %0) nounwind {
 ; CHECK-NEXT:    mv a1, a3
 ; CHECK-NEXT:    ret
 entry:
-  %1 = call i64 asm sideeffect "/* $0 <- $1 */", "=&^Pr,^Pr"(i64 %0)
+  %1 = call i64 asm sideeffect "/* $0 <- $1 */", "=&R,R"(i64 %0)
   ret i64 %1
 }
 
@@ -29,7 +29,7 @@ entry:
   %1 = zext i32 %0 to i64
   %2 = shl i64 %1, 32
   %3 = or i64 %1, %2
-  %4 = call i64 asm sideeffect "/* $0 <- $1 */", "=&^Pr,^Pr"(i64 %3)
+  %4 = call i64 asm sideeffect "/* $0 <- $1 */", "=&R,R"(i64 %3)
   %5 = trunc i64 %4 to i32
   %6 = lshr i64 %4, 32
   %7 = trunc i64 %6 to i32
@@ -63,7 +63,7 @@ entry:
   store i64 %1, ptr %3, align 8
   %4 = load ptr, ptr %2, align 4
   %5 = load i64, ptr %3, align 8
-  %6 = call { ptr, i64 } asm sideeffect "/* $0; $1 */", "=r,=^Pr,0,1"(ptr %4, i64 %5)
+  %6 = call { ptr, i64 } asm sideeffect "/* $0; $1 */", "=r,=R,0,1"(ptr %4, i64 %5)
   %7 = extractvalue { ptr, i64} %6, 0
   %8 = extractvalue { ptr, i64 } %6, 1
   store ptr %7, ptr %2, align 4
