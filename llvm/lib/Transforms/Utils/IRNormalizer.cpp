@@ -19,7 +19,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/StructuralHash.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -692,8 +691,5 @@ SetVector<int> IRNormalizer::getOutputFootprint(
 PreservedAnalyses IRNormalizerPass::run(Function &F,
                                         FunctionAnalysisManager &AM) const {
   IRNormalizer{}.runOnFunction(F);
-  auto PA = PreservedAnalyses::all();
-  PA.abandon<PreservedFunctionHashAnalysis>();
-  PA.abandon<PreservedModuleHashAnalysis>();
-  return PA;
+  return PreservedAnalyses::all();
 }
