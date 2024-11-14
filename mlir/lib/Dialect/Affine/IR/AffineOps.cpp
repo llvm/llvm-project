@@ -4574,7 +4574,7 @@ AffineDelinearizeIndexOp::fold(FoldAdaptor adaptor,
                                SmallVectorImpl<OpFoldResult> &result) {
   // If we won't be doing any division or modulo (no basis or the one basis
   // element is purely advisory), simply return the input value.
-  if (getStaticBasis().size() == static_cast<size_t>(hasOuterBound())) {
+  if (getNumResults() == 1) {
     result.push_back(getLinearIndex());
     return success();
   }
@@ -4598,6 +4598,20 @@ AffineDelinearizeIndexOp::fold(FoldAdaptor adaptor,
   result.push_back(IntegerAttr::get(attrType, highPart));
   std::reverse(result.begin(), result.end());
   return success();
+}
+
+SmallVector<OpFoldResult> AffineDelinearizeIndexOp::getEffectiveBasis() {
+  OpBuilder builder(getContext());
+  if (hasOuterBound()) {
+    if (getStaticBasis().front() == ::mlir::ShapedType::kDynamic)
+      return getMixedValues(getStaticBasis().drop_front(),
+                            getDynamicBasis().drop_front(), builder);
+
+    return getMixedValues(getStaticBasis().drop_front(), getDynamicBasis(),
+                          builder);
+  }
+
+  return getMixedValues(getStaticBasis(), getDynamicBasis(), builder);
 }
 
 namespace {
@@ -4771,6 +4785,20 @@ OpFoldResult AffineLinearizeIndexOp::fold(FoldAdaptor adaptor) {
         cast<IntegerAttr>(adaptor.getMultiIndex().front()).getInt() * stride;
 
   return IntegerAttr::get(getResult().getType(), result);
+}
+
+SmallVector<OpFoldResult> AffineLinearizeIndexOp::getEffectiveBasis() {
+  OpBuilder builder(getContext());
+  if (hasOuterBound()) {
+    if (getStaticBasis().front() == ::mlir::ShapedType::kDynamic)
+      return getMixedValues(getStaticBasis().drop_front(),
+                            getDynamicBasis().drop_front(), builder);
+
+    return getMixedValues(getStaticBasis().drop_front(), getDynamicBasis(),
+                          builder);
+  }
+
+  return ::mlir::getMixedValues(getStaticBasis(), getDynamicBasis(), builder);
 }
 
 namespace {

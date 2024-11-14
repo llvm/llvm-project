@@ -1082,7 +1082,7 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index", [Pure]> {
     %indices_2 = affine.apply #map2()[%linear_index]
     ```
 
-    The basis may either contain `N` or `N-1` elements, where `N` is the nubrer of results.
+    The basis may either contain `N` or `N-1` elements, where `N` is the number of results.
     If there are N basis elements, the first one will not be used during computations,
     but may be used during analysis and canonicalization to eliminate terms from
     the `affine.delinearize_index` or to enable conclusions about the total size of
@@ -1134,17 +1134,7 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index", [Pure]> {
 
     /// Return a vector that contains the basis of the operation, removing
     /// the outer bound if one is present.
-    SmallVector<OpFoldResult> getEffectiveBasis() {
-      OpBuilder builder(getContext());
-      if (hasOuterBound()) {
-        if (getStaticBasis().front() == ::mlir::ShapedType::kDynamic)
-          return ::mlir::getMixedValues(getStaticBasis().drop_front(), getDynamicBasis().drop_front(), builder);
-
-        return ::mlir::getMixedValues(getStaticBasis().drop_front(), getDynamicBasis(), builder);
-      }
-
-      return ::mlir::getMixedValues(getStaticBasis(), getDynamicBasis(), builder);
-    }
+    SmallVector<OpFoldResult> getEffectiveBasis();
   }];
 
   let hasVerifier = 1;
@@ -1232,17 +1222,7 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
 
     /// Return a vector that contains the basis of the operation, removing
     /// the outer bound if one is present.
-    SmallVector<OpFoldResult> getEffectiveBasis() {
-      OpBuilder builder(getContext());
-      if (hasOuterBound()) {
-        if (getStaticBasis().front() == ::mlir::ShapedType::kDynamic)
-          return ::mlir::getMixedValues(getStaticBasis().drop_front(), getDynamicBasis().drop_front(), builder);
-
-        return ::mlir::getMixedValues(getStaticBasis().drop_front(), getDynamicBasis(), builder);
-      }
-
-      return ::mlir::getMixedValues(getStaticBasis(), getDynamicBasis(), builder);
-    }
+    SmallVector<OpFoldResult> getEffectiveBasis();
   }];
 
   let hasVerifier = 1;
