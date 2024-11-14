@@ -54,3 +54,8 @@ add_llvm_external_project(clang-tools-extra extra)
 add_clang_subdirectory(libclang)
 add_clang_subdirectory(amdgpu-arch)
 add_clang_subdirectory(nvptx-arch)
+
+option(CLANG_ENABLE_AMDCLANG "Enable amdclang" ON)
+if (CLANG_ENABLE_AMDCLANG)
+  add_subdirectory(amdllvm)
+endif()
