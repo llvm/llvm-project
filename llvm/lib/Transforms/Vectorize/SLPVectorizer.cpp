@@ -2222,7 +2222,7 @@ public:
       MapVector<unsigned, std::pair<unsigned, unsigned>> HashMap;
       // Try to be closer to the original results, if we have multiple lanes
       // with same cost. If 2 lanes have the same cost, use the one with the
-      // lowest index.
+      // highest index.
       for (int I = getNumLanes(); I > 0; --I) {
         unsigned Lane = I - 1;
         OperandsOrderData NumFreeOpsHash =
