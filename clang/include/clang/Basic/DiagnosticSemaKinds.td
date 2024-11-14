@@ -3283,7 +3283,7 @@ def warn_unsupported_target_attribute
               "attribute ignored">,
       InGroup<IgnoredAttributes>;
 def err_target_version_unsupported
-    : Error<"target_version attribute is not supported in this target">;
+    : Error<"target_version attribute is not supported on this target">;
 def err_attribute_unsupported
     : Error<"%0 attribute is not supported on targets missing %1;"
             " specify an appropriate -march= or -mcpu=">;
