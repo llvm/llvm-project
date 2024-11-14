@@ -608,6 +608,9 @@ public: // Part of public interface to class.
     return getBinding(getRegionBindings(S), L, T);
   }
 
+  std::optional<SVal>
+  getUniqueDefaultBinding(nonloc::LazyCompoundVal LCV) const;
+
   std::optional<SVal> getDefaultBinding(Store S, const MemRegion *R) override {
     RegionBindingsRef B = getRegionBindings(S);
     // Default bindings are always applied over a base region so look up the
@@ -2605,9 +2608,43 @@ RegionBindingsRef RegionStoreManager::bindVector(RegionBindingsConstRef B,
   return NewB;
 }
 
+std::optional<SVal>
+RegionStoreManager::getUniqueDefaultBinding(nonloc::LazyCompoundVal LCV) const {
+  const MemRegion *BaseR = LCV.getRegion();
+
+  // We only handle base regions.
+  if (BaseR != BaseR->getBaseRegion())
+    return std::nullopt;
+
+  const auto *Cluster = getRegionBindings(LCV.getStore()).lookup(BaseR);
+  if (!Cluster || !llvm::hasSingleElement(*Cluster))
+    return std::nullopt;
+
+  const auto [Key, Value] = *Cluster->begin();
+  return Key.isDirect() ? std::optional<SVal>{} : Value;
+}
+
 std::optional<RegionBindingsRef> RegionStoreManager::tryBindSmallStruct(
     RegionBindingsConstRef B, const TypedValueRegion *R, const RecordDecl *RD,
     nonloc::LazyCompoundVal LCV) {
+  // If we try to copy a Conjured value representing the value of the whole
+  // struct, don't try to element-wise copy each field.
+  // That would unnecessarily bind Derived symbols slicing off the subregion for
+  // the field from the whole Conjured symbol.
+  //
+  //   struct Window { int width; int height; };
+  //   Window getWindow(); <-- opaque fn.
+  //   Window w = getWindow(); <-- conjures a new Window.
+  //   Window w2 = w; <-- trivial copy "w", calling "tryBindSmallStruct"
+  //
+  // We should not end up with a new Store for "w2" like this:
+  //   Direct [ 0..31]: Derived{Conj{}, w.width}
+  //   Direct [32..63]: Derived{Conj{}, w.height}
+  // Instead, we should just bind that Conjured value instead.
+  if (std::optional<SVal> Val = getUniqueDefaultBinding(LCV)) {
+    return B.addBinding(BindingKey::Make(R, BindingKey::Default), Val.value());
+  }
+
   FieldVector Fields;
 
   if (const CXXRecordDecl *Class = dyn_cast<CXXRecordDecl>(RD))
