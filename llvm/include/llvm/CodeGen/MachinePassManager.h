@@ -250,8 +250,8 @@ PreservedAnalyses getMachineFunctionPassPreservedAnalyses();
 /// `getAnalysis` or `getCachedAnalysis`.
 class MFAnalysisGetter {
 private:
-  Pass *LegacyPass;
-  MachineFunctionAnalysisManager *MFAM;
+  Pass *LegacyPass = nullptr;
+  MachineFunctionAnalysisManager *MFAM = nullptr;
 
   template <typename T>
   using type_of_run =
@@ -259,11 +259,11 @@ private:
 
   template <typename T>
   static constexpr bool IsFunctionAnalysis =
-      std::is_same_v<Function, type_of_run<T>>;
+      std::is_same_v<Function &, type_of_run<T>>;
 
   template <typename T>
   static constexpr bool IsModuleAnalysis =
-      std::is_same_v<Module, type_of_run<T>>;
+      std::is_same_v<Module &, type_of_run<T>>;
 
 public:
   MFAnalysisGetter(Pass *LegacyPass) : LegacyPass(LegacyPass) {}
