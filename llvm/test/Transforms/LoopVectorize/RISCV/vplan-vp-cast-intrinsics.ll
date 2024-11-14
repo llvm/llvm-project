@@ -4,7 +4,7 @@
 ; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
 ; RUN: -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-max=128 -disable-output < %s 2>&1 | FileCheck --check-prefix=IF-EVL %s
 
-define void @vp_sext(ptr noalias %a, ptr noalias %b, i64 %N) {
+define void @vp_sext(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL: VPlan 'Final VPlan for VF={vscale x 1,vscale x 2},UF={1}' {
 ; IF-EVL-NEXT: Live-in vp<[[VFUF:%[0-9]+]]> = VF * UF
 ; IF-EVL-NEXT: Live-in vp<[[VTC:%[0-9]+]]> = vector-trip-count
@@ -23,7 +23,7 @@ define void @vp_sext(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; IF-EVL-NEXT:     CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[SEXT:%.+]]> = call llvm.vp.sext(ir<[[LD1]]>, vp<[[EVL]]>)
+; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[SEXT:%.+]]> = call llvm.vp.sext(ir<[[LD1]]>, ir<true>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR2]]>, ir<[[SEXT]]>, vp<[[EVL]]>
@@ -54,7 +54,7 @@ exit:
   ret void
 }
 
-define void @vp_zext(ptr noalias %a, ptr noalias %b, i64 %N) {
+define void @vp_zext(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL: VPlan 'Final VPlan for VF={vscale x 1,vscale x 2},UF={1}' {
 ; IF-EVL-NEXT: Live-in vp<[[VFUF:%[0-9]+]]> = VF * UF
 ; IF-EVL-NEXT: Live-in vp<[[VTC:%[0-9]+]]> = vector-trip-count
@@ -73,7 +73,7 @@ define void @vp_zext(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; IF-EVL-NEXT:     CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[ZEXT:%.+]]> = call llvm.vp.zext(ir<[[LD1]]>, vp<[[EVL]]>)
+; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[ZEXT:%.+]]> = call llvm.vp.zext(ir<[[LD1]]>, ir<true>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR2]]>, ir<[[ZEXT]]>, vp<[[EVL]]>
@@ -102,7 +102,7 @@ exit:
   ret void
 }
 
-define void @vp_truncate(ptr noalias %a, ptr noalias %b, i64 %N) {
+define void @vp_truncate(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL: VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}' {
 ; IF-EVL-NEXT: Live-in vp<[[VFUF:%[0-9]+]]> = VF * UF
 ; IF-EVL-NEXT: Live-in vp<[[VTC:%[0-9]+]]> = vector-trip-count
@@ -121,7 +121,7 @@ define void @vp_truncate(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; IF-EVL-NEXT:     CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[TRUNC:%.+]]> = call llvm.vp.trunc(ir<[[LD1]]>, vp<[[EVL]]>)
+; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[TRUNC:%.+]]> = call llvm.vp.trunc(ir<[[LD1]]>, ir<true>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR2]]>, ir<[[TRUNC]]>, vp<[[EVL]]>
@@ -150,7 +150,7 @@ exit:
   ret void
 }
 
-define void @vp_fpext(ptr noalias %a, ptr noalias %b, i64 %N) {
+define void @vp_fpext(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL: VPlan 'Final VPlan for VF={vscale x 1,vscale x 2},UF={1}' {
 ; IF-EVL-NEXT: Live-in vp<[[VFUF:%[0-9]+]]> = VF * UF
 ; IF-EVL-NEXT: Live-in vp<[[VTC:%[0-9]+]]> = vector-trip-count
@@ -169,7 +169,7 @@ define void @vp_fpext(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; IF-EVL-NEXT:     CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[FPEXT:%.+]]> = call llvm.vp.fpext(ir<[[LD1]]>, vp<[[EVL]]>)
+; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[FPEXT:%.+]]> = call llvm.vp.fpext(ir<[[LD1]]>, ir<true>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR2]]>, ir<[[FPEXT]]>, vp<[[EVL]]>
@@ -198,7 +198,7 @@ exit:
   ret void
 }
 
-define void @vp_fptrunct(ptr noalias %a, ptr noalias %b, i64 %N) {
+define void @vp_fptrunct(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL: VPlan 'Final VPlan for VF={vscale x 1,vscale x 2},UF={1}' {
 ; IF-EVL-NEXT: Live-in vp<[[VFUF:%[0-9]+]]> = VF * UF
 ; IF-EVL-NEXT: Live-in vp<[[VTC:%[0-9]+]]> = vector-trip-count
@@ -217,7 +217,7 @@ define void @vp_fptrunct(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; IF-EVL-NEXT:     CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[FPTRUNC:%.+]]> = call llvm.vp.fptrunc(ir<[[LD1]]>, vp<[[EVL]]>)
+; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[FPTRUNC:%.+]]> = call llvm.vp.fptrunc(ir<[[LD1]]>, ir<true>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR2]]>, ir<[[FPTRUNC]]>, vp<[[EVL]]>
@@ -246,7 +246,7 @@ exit:
   ret void
 }
 
-define void @vp_fptosi(ptr noalias %a, ptr noalias %b, i64 %N) {
+define void @vp_fptosi(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL: VPlan 'Final VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}' {
 ; IF-EVL-NEXT: Live-in vp<[[VFUF:%[0-9]+]]> = VF * UF
 ; IF-EVL-NEXT: Live-in vp<[[VTC:%[0-9]+]]> = vector-trip-count
@@ -265,7 +265,7 @@ define void @vp_fptosi(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; IF-EVL-NEXT:     CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[FPTOSI:%.+]]> = call llvm.vp.fptoui(ir<[[LD1]]>, vp<[[EVL]]>)
+; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[FPTOSI:%.+]]> = call llvm.vp.fptoui(ir<[[LD1]]>, ir<true>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR2]]>, ir<[[FPTOSI]]>, vp<[[EVL]]>
@@ -294,7 +294,7 @@ exit:
   ret void
 }
 
-define void @vp_inttofp(ptr noalias %a, ptr noalias %b, i64 %N) {
+define void @vp_inttofp(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL: VPlan 'Final VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}' {
 ; IF-EVL-NEXT: Live-in vp<[[VFUF:%[0-9]+]]> = VF * UF
 ; IF-EVL-NEXT: Live-in vp<[[VTC:%[0-9]+]]> = vector-trip-count
@@ -313,7 +313,7 @@ define void @vp_inttofp(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; IF-EVL-NEXT:     CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[SITOFP:%.+]]> = call llvm.vp.sitofp(ir<[[LD1]]>, vp<[[EVL]]>)
+; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[SITOFP:%.+]]> = call llvm.vp.sitofp(ir<[[LD1]]>, ir<true>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR2]]>, ir<[[SITOFP]]>, vp<[[EVL]]>
@@ -342,7 +342,7 @@ exit:
   ret void
 }
 
-define void @vp_uinttofp(ptr noalias %a, ptr noalias %b, i64 %N) {
+define void @vp_uinttofp(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL: VPlan 'Final VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}' {
 ; IF-EVL-NEXT: Live-in vp<[[VFUF:%[0-9]+]]> = VF * UF
 ; IF-EVL-NEXT: Live-in vp<[[VTC:%[0-9]+]]> = vector-trip-count
@@ -361,7 +361,7 @@ define void @vp_uinttofp(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; IF-EVL-NEXT:     CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[UITOFP:%.+]]> = call llvm.vp.uitofp(ir<[[LD1]]>, vp<[[EVL]]>)
+; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[UITOFP:%.+]]> = call llvm.vp.uitofp(ir<[[LD1]]>, ir<true>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR2]]>, ir<[[UITOFP]]>, vp<[[EVL]]>
