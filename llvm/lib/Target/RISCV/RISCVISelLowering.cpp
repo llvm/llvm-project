@@ -18156,17 +18156,17 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
   // LD/ST, it can still complete the folding optimization operation performed
   // above.
   auto isLDST = [&]() {
-    bool canOptAwlays = false;
+    bool CanOptAlways = false;
     if (N0->getOpcode() == ISD::ADD && !N0->hasOneUse()) {
       for (SDNode *Use : N0->uses()) {
         // This use is the one we're on right now. Skip it
         if (Use == N || Use->getOpcode() == ISD::SELECT)
           continue;
         if (!isa<StoreSDNode>(Use) && !isa<LoadSDNode>(Use)) {
-          canOptAwlays = false;
+          CanOptAlways = false;
           break;
         }
-        canOptAwlays = true;
+        CanOptAlways = true;
       }
     }
 
@@ -18177,20 +18177,20 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
         if (Use == N0.getNode() || Use->getOpcode() == ISD::SELECT)
           continue;
         if (!isa<StoreSDNode>(Use) && !isa<LoadSDNode>(Use)) {
-          canOptAwlays = false;
+          CanOptAlways = false;
           break;
         }
-        canOptAwlays = true;
+        CanOptAlways = true;
       }
     }
-    return canOptAwlays;
+    return CanOptAlways;
   };
 
   if (Ty.isScalarInteger() &&
       (N0.getOpcode() == ISD::ADD || N0.getOpcode() == ISD::OR)) {
-    if (N0.getOpcode() == ISD::ADD && !N0->hasOneUse()) {
+    if (N0.getOpcode() == ISD::ADD && !N0->hasOneUse())
       return isLDST();
-    }
+
     auto *C1 = dyn_cast<ConstantSDNode>(N0->getOperand(1));
     auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
     if (C1 && C2) {
