@@ -508,6 +508,29 @@ StackFrame::GetInScopeVariableList(bool get_file_globals,
 ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
     VariableSP &var_sp, Status &error) {
+  ExecutionContext exe_ctx;
+  CalculateExecutionContext(exe_ctx);
+  bool use_DIL = exe_ctx.GetTargetRef().GetUseDIL(&exe_ctx);
+  if (use_DIL)
+    return DILGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
+                                                var_sp, error);
+
+  return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
+                                                 var_sp, error);
+}
+
+ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
+    llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
+    uint32_t options, lldb::VariableSP &var_sp, Status &error) {
+  // This is a place-holder for the calls into the DIL parser and
+  // evaluator.  For now, just call the "real" frame variable implementation.
+  return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
+                                                 var_sp, error);
+}
+
+ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
+    llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
+    VariableSP &var_sp, Status &error) {
   llvm::StringRef original_var_expr = var_expr;
   // We can't fetch variable information for a history stack frame.
   if (IsHistorical())
