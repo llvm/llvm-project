@@ -50993,7 +50993,8 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
 }
 
 // Canonicalize OR(AND(X,C),AND(Y,~C)) -> OR(AND(X,C),ANDNP(C,Y))
-static SDValue canonicalizeBitSelect(SDNode *N, SelectionDAG &DAG,
+static SDValue canonicalizeBitSelect(SDNode *N, const SDLoc &DL,
+                                     SelectionDAG &DAG,
                                      const X86Subtarget &Subtarget) {
   assert(N->getOpcode() == ISD::OR && "Unexpected Opcode");
 
@@ -51032,8 +51033,6 @@ static SDValue canonicalizeBitSelect(SDNode *N, SelectionDAG &DAG,
     if (EltBits0[i] != ~EltBits1[i])
       return SDValue();
   }
-
-  SDLoc DL(N);
 
   if (useVPTERNLOG(Subtarget, VT)) {
     // Emit a VPTERNLOG node directly - 0xCA is the imm code for A?B:C.
@@ -51097,7 +51096,8 @@ static bool matchLogicBlend(SDNode *N, SDValue &X, SDValue &Y, SDValue &Mask) {
 //   (or (and (m, (sub 0, x)), (pandn m, x)))
 // into:
 //   (sub (xor X, M), M)
-static SDValue combineLogicBlendIntoPBLENDV(SDNode *N, SelectionDAG &DAG,
+static SDValue combineLogicBlendIntoPBLENDV(SDNode *N, const SDLoc &DL,
+                                            SelectionDAG &DAG,
                                             const X86Subtarget &Subtarget) {
   assert(N->getOpcode() == ISD::OR && "Unexpected Opcode");
 
@@ -51121,8 +51121,6 @@ static SDValue combineLogicBlendIntoPBLENDV(SDNode *N, SelectionDAG &DAG,
   // TODO: Attempt to handle floating point cases as well?
   if (!MaskVT.isInteger() || DAG.ComputeNumSignBits(Mask) != EltBits)
     return SDValue();
-
-  SDLoc DL(N);
 
   // Attempt to combine to conditional negate: (sub (xor X, M), M)
   if (SDValue Res = combineLogicBlendIntoConditionalNegate(VT, Mask, X, Y, DL,
@@ -51607,10 +51605,10 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
   if (SDValue R = combineCompareEqual(N, DAG, DCI, Subtarget))
     return R;
 
-  if (SDValue R = canonicalizeBitSelect(N, DAG, Subtarget))
+  if (SDValue R = canonicalizeBitSelect(N, dl, DAG, Subtarget))
     return R;
 
-  if (SDValue R = combineLogicBlendIntoPBLENDV(N, DAG, Subtarget))
+  if (SDValue R = combineLogicBlendIntoPBLENDV(N, dl, DAG, Subtarget))
     return R;
 
   // (0 - SetCC) | C -> (zext (not SetCC)) * (C + 1) - 1 if we can get a LEA out of it.
