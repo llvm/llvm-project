@@ -48,6 +48,13 @@ bool hasValidBranchWeightMD(const Instruction &I);
 /// Nullptr otherwise.
 MDNode *getBranchWeightMDNode(const Instruction &I);
 
+/// Get the branching metadata information
+///
+/// \param I The Instruction to get the weights from.
+/// \returns A pointer to I's branch weights metadata node, if it exists.
+/// Nullptr otherwise.
+MDNode *getDxBranchHint(const Instruction &I);
+
 /// Get the valid branch weights metadata node
 ///
 /// \param I The Instruction to get the weights from.

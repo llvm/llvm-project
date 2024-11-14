@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "spirv-isel"
@@ -2799,17 +2800,38 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     }
     return MIB.constrainAllUses(TII, TRI, RBI);
   }
-  case Intrinsic::spv_loop_merge:
-  case Intrinsic::spv_selection_merge: {
-    const auto Opcode = IID == Intrinsic::spv_selection_merge
-                            ? SPIRV::OpSelectionMerge
-                            : SPIRV::OpLoopMerge;
-    auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode));
+  case Intrinsic::spv_loop_merge: {
+    auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpLoopMerge));
     for (unsigned i = 1; i < I.getNumExplicitOperands(); ++i) {
       assert(I.getOperand(i).isMBB());
       MIB.addMBB(I.getOperand(i).getMBB());
     }
     MIB.addImm(SPIRV::SelectionControl::None);
+    return MIB.constrainAllUses(TII, TRI, RBI);
+  }
+  case Intrinsic::spv_selection_merge: {
+
+    auto SelectionControl = SPIRV::SelectionControl::None;
+    const MDNode *MDOp = I.getOperand(1).getMetadata();
+    if (MDOp->getNumOperands() > 0) {
+      ConstantInt *BranchHint =
+          mdconst::extract<ConstantInt>(MDOp->getOperand(1));
+
+      if (BranchHint->equalsInt(2))
+        SelectionControl = SPIRV::SelectionControl::Flatten;
+      else if (BranchHint->equalsInt(1))
+        SelectionControl = SPIRV::SelectionControl::DontFlatten;
+      else
+        llvm_unreachable("Invalid value for SelectionControl");
+    }
+
+    auto MIB =
+        BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSelectionMerge));
+    for (unsigned i = 2; i < I.getNumExplicitOperands(); ++i) {
+      assert(I.getOperand(i).isMBB());
+      MIB.addMBB(I.getOperand(i).getMBB());
+    }
+    MIB.addImm(SelectionControl);
     return MIB.constrainAllUses(TII, TRI, RBI);
   }
   case Intrinsic::spv_cmpxchg:

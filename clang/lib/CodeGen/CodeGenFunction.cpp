@@ -24,6 +24,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
@@ -2057,6 +2058,7 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
 
   llvm::MDNode *Weights = nullptr;
   llvm::MDNode *Unpredictable = nullptr;
+  llvm::MDNode *ControlFlowHint = nullptr;
 
   // If the branch has a condition wrapped by __builtin_unpredictable,
   // create metadata that specifies that the branch is unpredictable.
@@ -2081,8 +2083,19 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
     Weights = createProfileWeights(TrueCount, CurrentCount - TrueCount);
   }
 
+  switch (HLSLBranchHintAttributedSpelling) {
+
+  case HLSLBranchHintAttr::Microsoft_branch:
+  case HLSLBranchHintAttr::Microsoft_flatten:
+    ControlFlowHint = createControlFlowHint(HLSLBranchHintAttributedSpelling);
+    break;
+  case HLSLBranchHintAttr::SpellingNotCalculated:
+    break;
+  }
+
   // [jderezende] TODO: Emit branch metadata marking it as flatten/branch, if exists.
-  Builder.CreateCondBr(CondV, TrueBlock, FalseBlock, Weights, Unpredictable);
+  Builder.CreateCondBr(CondV, TrueBlock, FalseBlock, Weights, Unpredictable,
+                       ControlFlowHint);
 }
 
 /// ErrorUnsupported - Print out an error that codegen doesn't support the
