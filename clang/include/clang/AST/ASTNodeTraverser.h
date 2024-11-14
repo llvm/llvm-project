@@ -801,8 +801,10 @@ public:
   }
 
   void VisitLabelStmt(const LabelStmt *Node) {
-    for (const auto *A : Node->getDecl()->getAttrs())
-      Visit(A);
+    if (Node->getDecl()->hasAttrs()) {
+      for (const auto *A : Node->getDecl()->getAttrs())
+        Visit(A);
+    }
   }
 
   void VisitCXXCatchStmt(const CXXCatchStmt *Node) {
