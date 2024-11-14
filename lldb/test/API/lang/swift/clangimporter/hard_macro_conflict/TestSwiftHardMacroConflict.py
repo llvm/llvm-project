@@ -33,12 +33,3 @@ class TestSwiftHardMacroConflict(TestBase):
         threads = lldbutil.get_threads_stopped_at_breakpoint(
             process, b_breakpoint)
         self.expect("expression foo", error=True)
-
-        per_module_fallback = 0
-        import io
-        with open(log, "r", encoding='utf-8') as logfile:
-            for line in logfile:
-                if 'SwiftASTContextForExpressions("Framework")' in line:
-                    per_module_fallback += 1
-        self.assertGreater(per_module_fallback, 0,
-                           "failed to create per-module scratch context")

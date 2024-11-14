@@ -2346,8 +2346,7 @@ ProcessModule(Module &module, std::string m_description,
 
 lldb::TypeSystemSP
 SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
-                                TypeSystemSwiftTypeRef &typeref_typesystem,
-                                bool fallback) {
+                                TypeSystemSwiftTypeRef &typeref_typesystem) {
   TargetSP target = typeref_typesystem.GetTargetWP().lock();
   if (!SwiftASTContextSupportsLanguage(language))
     return lldb::TypeSystemSP();
@@ -2360,10 +2359,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   {
     llvm::raw_string_ostream ss(m_description);
     ss << "SwiftASTContext";
-    if (fallback)
-      ss << "ForExpressions";
-    else
-      ss << "ForModule";
+    ss << "ForModule";
     ss << '(' << '"';
     module.GetDescription(ss, eDescriptionLevelBrief);
     ss << '"' << ')';
@@ -2423,20 +2419,15 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   }
 
   // If there is a target this may be a fallback scratch context.
-  assert((!fallback || target) && "fallback context must specify a target");
-  std::shared_ptr<SwiftASTContext> swift_ast_sp(
-      fallback
-          ? static_cast<SwiftASTContext *>(new SwiftASTContextForExpressions(
-                m_description, typeref_typesystem))
-          : static_cast<SwiftASTContext *>(new SwiftASTContextForModule(
-                m_description, typeref_typesystem)));
+  std::shared_ptr<SwiftASTContext> swift_ast_sp(static_cast<SwiftASTContext *>(
+      new SwiftASTContextForModule(m_description, typeref_typesystem)));
   bool suppress_config_log = false;
   auto defer_log =
-      llvm::make_scope_exit([swift_ast_sp, &suppress_config_log, fallback] {
+      llvm::make_scope_exit([swift_ast_sp, &suppress_config_log] {
         // To avoid spamming the log with useless info, we don't log the
         // configuration if everything went fine and the current module
         // doesn't have any Swift contents (i.e., the shared cache dylibs).
-        if (!suppress_config_log || fallback)
+        if (!suppress_config_log)
           swift_ast_sp->LogConfiguration();
       });
 

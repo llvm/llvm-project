@@ -1606,14 +1606,6 @@ public:
 
   void SetREPL(lldb::LanguageType language, lldb::REPLSP repl_sp);
 
-  /// Enable the use of a separate sscratch type system per lldb::Module.
-  void SetUseScratchTypesystemPerModule(bool value) {
-    m_use_scratch_typesystem_per_module = value;
-  }
-  bool UseScratchTypesystemPerModule() const {
-    return m_use_scratch_typesystem_per_module;
-  }
-
 public:
   StackFrameRecognizerManager &GetFrameRecognizerManager() {
     return *m_frame_recognizer_manager_up;

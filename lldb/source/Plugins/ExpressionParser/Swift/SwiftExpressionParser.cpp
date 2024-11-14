@@ -1084,7 +1084,6 @@ struct ModuleImportError : public llvm::ErrorInfo<ModuleImportError> {
   ModuleImportError(llvm::Twine message, bool is_new_dylib = false)
       : msg(message.str()), is_new_dylib(is_new_dylib) {}
   void log(llvm::raw_ostream &OS) const override {
-    OS << "error while processing module import: ";
     OS << msg;
   }
   std::error_code convertToErrorCode() const override {
@@ -1453,7 +1452,8 @@ SwiftExpressionParser::ParseAndImport(
         // fatal error state. One way this can happen is if the import
         // triggered a dylib import, in which case the context is
         // purposefully poisoned.
-        msg = "import may have triggered a dylib import";
+        msg = "import may have triggered a dylib import, "
+              "resetting compiler state";
       }
       return make_error<ModuleImportError>(msg, /*is_new_dylib=*/true);
     }
@@ -1722,14 +1722,8 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
           // There are no fallback contexts in REPL and playgrounds.
           if (repl || playground)
             return;
-          if (!m_sc.target_sp->UseScratchTypesystemPerModule()) {
-            // This, together with the fatal error forces
-            // a per-module scratch to be instantiated on
-            // retry.
-            m_sc.target_sp->SetUseScratchTypesystemPerModule(true);
-            m_swift_ast_ctx.RaiseFatalError(MIE.message());
-            retry = true;
-          }
+          // The fatal error causes a new compiler to be instantiated on retry.
+          m_swift_ast_ctx.RaiseFatalError(MIE.message());
         },
         [&](const SwiftASTContextError &SACE) {
           DiagnoseSwiftASTContextError();
@@ -1745,9 +1739,7 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
         });
 
     // Signal that we want to retry the expression exactly once with a
-    // fresh SwiftASTContext initialized with the flags from the
-    // current lldb::Module / Swift dylib to avoid header search
-    // mismatches.
+    // fresh SwiftASTContext.
     if (retry)
       return ParseResult::retry_fresh_context;
 

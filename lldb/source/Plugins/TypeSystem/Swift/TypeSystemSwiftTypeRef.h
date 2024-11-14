@@ -520,10 +520,6 @@ public:
                                        Target &target,
                                        const char *extra_options);
 
-  /// For per-module fallback contexts.
-  TypeSystemSwiftTypeRefForExpressions(lldb::LanguageType language,
-                                       Target &target, Module &module);
-
   SwiftASTContext *GetSwiftASTContext(const SymbolContext &sc) const override;
   SwiftASTContext *
   GetSwiftASTContextOrNull(const SymbolContext &sc) const override;
