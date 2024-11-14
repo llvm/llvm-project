@@ -180,28 +180,25 @@ void BlockSignals(__sanitizer_sigset_t *oldset) {
 #  if SANITIZER_LINUX
   __sanitizer_sigset_t currentset;
 
-#  if !SANITIZER_ANDROID
-  // FIXME: https://github.com/google/sanitizers/issues/1816
-  SetSigProcMask(NULL, &currentset);
-#    endif  // SANITIZER_ANDROID
-#  endif    // SANITIZER_LINUX
-
   __sanitizer_sigset_t newset;
   internal_sigfillset(&newset);
-#  if SANITIZER_LINUX && !SANITIZER_ANDROID
+
+#    if !SANITIZER_ANDROID
+  // FIXME: https://github.com/google/sanitizers/issues/1816
+  SetSigProcMask(NULL, &currentset);
+
   // Glibc uses SIGSETXID signal during setuid call. If this signal is blocked
   // on any thread, setuid call hangs.
   // See test/sanitizer_common/TestCases/Linux/setuid.c.
   KeepUnblocked(newset, currentset, 33);
-#  endif
-#  if SANITIZER_LINUX
+#    endif  // !SANITIZER_ANDROID
+
   // Seccomp-BPF-sandboxed processes rely on SIGSYS to handle trapped syscalls.
   // If this signal is blocked, such calls cannot be handled and the process may
   // hang.
   KeepUnblocked(newset, currentset, 31);
-#  endif
 
-#  if SANITIZER_LINUX && !SANITIZER_ANDROID
+#    if !SANITIZER_ANDROID
   // Don't block synchronous signals
   // but also don't unblock signals that the user had deliberately blocked.
   // FIXME: https://github.com/google/sanitizers/issues/1816
@@ -212,9 +209,10 @@ void BlockSignals(__sanitizer_sigset_t *oldset) {
   KeepUnblocked(newset, currentset, SIGABRT);
   KeepUnblocked(newset, currentset, SIGFPE);
   KeepUnblocked(newset, currentset, SIGPIPE);
-#  endif
+#    endif  //! SANITIZER_ANDROID
 
   SetSigProcMask(&newset, oldset);
+#  endif  // SANITIZER_LINUX
 }
 
 ScopedBlockSignals::ScopedBlockSignals(__sanitizer_sigset_t *copy) {
