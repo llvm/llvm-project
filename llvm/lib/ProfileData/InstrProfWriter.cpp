@@ -601,7 +601,8 @@ writeMemProfCallStackArray(
         &MemProfCallStackData,
     llvm::DenseMap<memprof::FrameId, memprof::LinearFrameId>
         &MemProfFrameIndexes,
-    llvm::DenseMap<memprof::FrameId, memprof::FrameStat> &FrameHistogram) {
+    llvm::DenseMap<memprof::FrameId, memprof::FrameStat> &FrameHistogram,
+    unsigned &NumElements) {
   llvm::DenseMap<memprof::CallStackId, memprof::LinearCallStackId>
       MemProfCallStackIndexes;
 
@@ -610,6 +611,7 @@ writeMemProfCallStackArray(
                 FrameHistogram);
   for (auto I : Builder.getRadixArray())
     OS.write32(I);
+  NumElements = Builder.getRadixArray().size();
   MemProfCallStackIndexes = Builder.takeCallStackPos();
 
   // Release the memory of this vector as it is no longer needed.
@@ -771,14 +773,25 @@ static Error writeMemProfV3(ProfOStream &OS,
       writeMemProfFrameArray(OS, MemProfData.Frames, FrameHistogram);
 
   uint64_t CallStackPayloadOffset = OS.tell();
+  // The number of elements in the call stack array.
+  unsigned NumElements = 0;
   llvm::DenseMap<memprof::CallStackId, memprof::LinearCallStackId>
-      MemProfCallStackIndexes = writeMemProfCallStackArray(
-          OS, MemProfData.CallStacks, MemProfFrameIndexes, FrameHistogram);
+      MemProfCallStackIndexes =
+          writeMemProfCallStackArray(OS, MemProfData.CallStacks,
+                                     MemProfFrameIndexes, FrameHistogram,
+                                     NumElements);
 
   uint64_t RecordPayloadOffset = OS.tell();
   uint64_t RecordTableOffset =
       writeMemProfRecords(OS, MemProfData.Records, &Schema, memprof::Version3,
                           &MemProfCallStackIndexes);
+
+  // IndexedMemProfReader::deserializeV3 computes the number of elements in the
+  // call stack array from the difference between CallStackPayloadOffset and
+  // RecordPayloadOffset.  Verify that the computation works.
+  assert(CallStackPayloadOffset +
+             NumElements * sizeof(memprof::LinearFrameId) ==
+         RecordPayloadOffset);
 
   uint64_t Header[] = {
       CallStackPayloadOffset,
