@@ -4017,7 +4017,8 @@ purposes of calls. For example:
 
 If a type is trivial for the purposes of calls, has a non-trivial destructor,
 and is passed as an argument by value, the convention is that the callee will
-destroy the object before returning.
+destroy the object before returning. The lifetime of the copy of the parameter
+in the caller ends without a destructor call when the call begins.
 
 If a type is trivial for the purpose of calls, it is assumed to be trivially
 relocatable for the purpose of ``__is_trivially_relocatable``.
