@@ -70,15 +70,10 @@ define <8 x i8> @test_vextd_undef(<8 x i8> %tmp1, <8 x i8> %tmp2) {
 }
 
 define <8 x i8> @test_vextd_undef2(<8 x i8> %tmp1, <8 x i8> %tmp2) {
-; CHECK-SD-LABEL: test_vextd_undef2:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v0.8b, v0.8b, v0.8b, #6
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vextd_undef2:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v0.8b, v1.8b, v0.8b, #6
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vextd_undef2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v0.8b, v0.8b, v0.8b, #6
+; CHECK-NEXT:    ret
   %tmp3 = shufflevector <8 x i8> %tmp1, <8 x i8> %tmp2, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 2, i32 3, i32 4, i32 5>
   ret <8 x i8> %tmp3
 }
