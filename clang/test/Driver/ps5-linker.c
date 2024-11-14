@@ -53,6 +53,7 @@
 // CHECK-EXE-SAME: "--unresolved-symbols=report-all"
 // CHECK-EXE-SAME: "-z" "now"
 // CHECK-EXE-SAME: "-z" "start-stop-visibility=hidden"
+// CHECK-EXE-SAME: "-z" "rodynamic"
 // CHECK-EXE-SAME: "-z" "common-page-size=0x4000"
 // CHECK-EXE-SAME: "-z" "max-page-size=0x4000"
 // CHECK-EXE-SAME: "-z" "dead-reloc-in-nonalloc=.debug_*=0xffffffffffffffff"
@@ -66,18 +67,23 @@
 // CHECK-NO-EXE-NOT: "--unresolved-symbols
 // CHECK-NO-EXE-NOT: "-z"
 
-// Test that an appropriate linker script is supplied by the driver.
+// Test that an appropriate linker script is supplied by the driver, but can
+// be overridden with -T.
 
 // RUN: %clang --target=x86_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-SCRIPT -DSCRIPT=main %s
 // RUN: %clang --target=x86_64-sie-ps5 %s -shared -### 2>&1 | FileCheck --check-prefixes=CHECK-SCRIPT -DSCRIPT=prx %s
 // RUN: %clang --target=x86_64-sie-ps5 %s -static -### 2>&1 | FileCheck --check-prefixes=CHECK-SCRIPT -DSCRIPT=static %s
 // RUN: %clang --target=x86_64-sie-ps5 %s -r -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-SCRIPT %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -T custom.script -### 2>&1 | FileCheck --check-prefixes=CHECK-CUSTOM-SCRIPT --implicit-check-not "\"{{-T|--script|--default-script}}\"" %s
 
 // CHECK-SCRIPT: {{ld(\.exe)?}}"
 // CHECK-SCRIPT-SAME: "--default-script" "[[SCRIPT]].script"
 
 // CHECK-NO-SCRIPT: {{ld(\.exe)?}}"
 // CHECK-NO-SCRIPT-NOT: "--default-script"
+
+// CHECK-CUSTOM-SCRIPT: {{ld(\.exe)?}}"
+// CHECK-CUSTOM-SCRIPT-SAME: "-T" "custom.script"
 
 // Test that -static is forwarded to the linker
 
@@ -88,13 +94,13 @@
 
 // Test the driver's control over the JustMyCode behavior with linker flags.
 
-// RUN: %clang --target=x86_64-sie-ps5 -fjmc %s -### 2>&1 | FileCheck --check-prefixes=CHECK,CHECK-LIB %s
-// RUN: %clang --target=x86_64-sie-ps5 -flto -fjmc %s -### 2>&1 | FileCheck --check-prefixes=CHECK,CHECK-LIB %s
+// RUN: %clang --target=x86_64-sie-ps5 -fjmc %s -### 2>&1 | FileCheck --check-prefixes=CHECK,CHECK-JMC %s
+// RUN: %clang --target=x86_64-sie-ps5 -flto -fjmc %s -### 2>&1 | FileCheck --check-prefixes=CHECK,CHECK-JMC %s
 
 // CHECK: -plugin-opt=-enable-jmc-instrument
 
 // Check the default library name.
-// CHECK-LIB: "--whole-archive" "-lSceJmc_nosubmission" "--no-whole-archive"
+// CHECK-JMC: "--push-state" "--whole-archive" "-lSceJmc_nosubmission" "--pop-state"
 
 // Test the driver's control over the -fcrash-diagnostics-dir behavior with linker flags.
 

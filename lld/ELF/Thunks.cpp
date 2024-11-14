@@ -1373,9 +1373,8 @@ Thunk::Thunk(Ctx &ctx, Symbol &d, int64_t a)
 Thunk::~Thunk() = default;
 
 static Thunk *addThunkAArch64(Ctx &ctx, RelType type, Symbol &s, int64_t a) {
-  if (type != R_AARCH64_CALL26 && type != R_AARCH64_JUMP26 &&
-      type != R_AARCH64_PLT32)
-    fatal("unrecognized relocation type");
+  assert(is_contained({R_AARCH64_CALL26, R_AARCH64_JUMP26, R_AARCH64_PLT32},
+                      type));
   bool mayNeedLandingPad =
       (ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) &&
       !isAArch64BTILandingPad(ctx, s, a);
@@ -1418,8 +1417,9 @@ static Thunk *addThunkArmv4(Ctx &ctx, RelType reloc, Symbol &s, int64_t a) {
       return make<ThumbV4ABSLongThunk>(ctx, s, a);
     return make<ThumbV4ABSLongBXThunk>(ctx, s, a);
   }
-  fatal("relocation " + toString(reloc) + " to " + toString(s) +
-        " not supported for Armv4 or Armv4T target");
+  Fatal(ctx) << "relocation " << reloc << " to " << &s
+             << " not supported for Armv4 or Armv4T target";
+  llvm_unreachable("");
 }
 
 // Creates a thunk for Thumb-ARM interworking compatible with Armv5 and Armv6.
@@ -1438,8 +1438,9 @@ static Thunk *addThunkArmv5v6(Ctx &ctx, RelType reloc, Symbol &s, int64_t a) {
       return make<ARMV4PILongBXThunk>(ctx, s, a);
     return make<ARMV5LongLdrPcThunk>(ctx, s, a);
   }
-  fatal("relocation " + toString(reloc) + " to " + toString(s) +
-        " not supported for Armv5 or Armv6 targets");
+  Fatal(ctx) << "relocation " << reloc << " to " << &s
+             << " not supported for Armv5 or Armv6 targets";
+  llvm_unreachable("");
 }
 
 // Create a thunk for Thumb long branch on V6-M.
@@ -1458,16 +1459,19 @@ static Thunk *addThunkV6M(Ctx &ctx, const InputSection &isec, RelType reloc,
       if (!isPureCode)
         return make<ThumbV6MPILongThunk>(ctx, s, a);
 
-      fatal("relocation " + toString(reloc) + " to " + toString(s) +
-            " not supported for Armv6-M targets for position independent"
-            " and execute only code");
+      Fatal(ctx)
+          << "relocation " << reloc << " to " << &s
+          << " not supported for Armv6-M targets for position independent"
+             " and execute only code";
+      llvm_unreachable("");
     }
     if (isPureCode)
       return make<ThumbV6MABSXOLongThunk>(ctx, s, a);
     return make<ThumbV6MABSLongThunk>(ctx, s, a);
   }
-  fatal("relocation " + toString(reloc) + " to " + toString(s) +
-        " not supported for Armv6-M targets");
+  Fatal(ctx) << "relocation " << reloc << " to " << &s
+             << " not supported for Armv6-M targets";
+  llvm_unreachable("");
 }
 
 // Creates a thunk for Thumb-ARM interworking or branch range extension.
@@ -1513,7 +1517,7 @@ static Thunk *addThunkArm(Ctx &ctx, const InputSection &isec, RelType reloc,
       return make<ThumbV7PILongThunk>(ctx, s, a);
     return make<ThumbV7ABSLongThunk>(ctx, s, a);
   }
-  fatal("unrecognized relocation type");
+  llvm_unreachable("");
 }
 
 static Thunk *addThunkAVR(Ctx &ctx, RelType type, Symbol &s, int64_t a) {
@@ -1522,7 +1526,7 @@ static Thunk *addThunkAVR(Ctx &ctx, RelType type, Symbol &s, int64_t a) {
   case R_AVR_HI8_LDI_GS:
     return make<AVRThunk>(ctx, s, a);
   default:
-    fatal("unrecognized relocation type " + toString(type));
+    llvm_unreachable("");
   }
 }
 

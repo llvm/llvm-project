@@ -67,9 +67,10 @@ private:
             isa<ObjCIvarRegion, CXXDerivedObjectRegion>(r)) &&
            "Not a base");
   }
-public:
 
+public:
   bool isDirect() const { return P.getInt() & Direct; }
+  bool isDefault() const { return !isDirect(); }
   bool hasSymbolicOffset() const { return P.getInt() & Symbolic; }
 
   const MemRegion *getRegion() const { return P.getPointer(); }
@@ -232,27 +233,86 @@ public:
 
   void printJson(raw_ostream &Out, const char *NL = "\n",
                  unsigned int Space = 0, bool IsDot = false) const {
-    for (iterator I = begin(), E = end(); I != E; ++I) {
-      // TODO: We might need a .printJson for I.getKey() as well.
+    using namespace llvm;
+    DenseMap<const MemRegion *, std::string> StringifyCache;
+    auto ToString = [&StringifyCache](const MemRegion *R) {
+      auto [Place, Inserted] = StringifyCache.try_emplace(R);
+      if (!Inserted)
+        return Place->second;
+      std::string Res;
+      raw_string_ostream OS(Res);
+      OS << R;
+      Place->second = Res;
+      return Res;
+    };
+
+    using Cluster =
+        std::pair<const MemRegion *, ImmutableMap<BindingKey, SVal>>;
+    using Binding = std::pair<BindingKey, SVal>;
+
+    const auto MemSpaceBeforeRegionName = [&ToString](const Cluster *L,
+                                                      const Cluster *R) {
+      if (isa<MemSpaceRegion>(L->first) && !isa<MemSpaceRegion>(R->first))
+        return true;
+      if (!isa<MemSpaceRegion>(L->first) && isa<MemSpaceRegion>(R->first))
+        return false;
+      return ToString(L->first) < ToString(R->first);
+    };
+
+    const auto SymbolicBeforeOffset = [&ToString](const BindingKey &L,
+                                                  const BindingKey &R) {
+      if (L.hasSymbolicOffset() && !R.hasSymbolicOffset())
+        return true;
+      if (!L.hasSymbolicOffset() && R.hasSymbolicOffset())
+        return false;
+      if (L.hasSymbolicOffset() && R.hasSymbolicOffset())
+        return ToString(L.getRegion()) < ToString(R.getRegion());
+      return L.getOffset() < R.getOffset();
+    };
+
+    const auto DefaultBindingBeforeDirectBindings =
+        [&SymbolicBeforeOffset](const Binding *LPtr, const Binding *RPtr) {
+          const BindingKey &L = LPtr->first;
+          const BindingKey &R = RPtr->first;
+          if (L.isDefault() && !R.isDefault())
+            return true;
+          if (!L.isDefault() && R.isDefault())
+            return false;
+          assert(L.isDefault() == R.isDefault());
+          return SymbolicBeforeOffset(L, R);
+        };
+
+    const auto AddrOf = [](const auto &Item) { return &Item; };
+
+    std::vector<const Cluster *> SortedClusters;
+    SortedClusters.reserve(std::distance(begin(), end()));
+    append_range(SortedClusters, map_range(*this, AddrOf));
+    llvm::sort(SortedClusters, MemSpaceBeforeRegionName);
+
+    for (auto [Idx, C] : llvm::enumerate(SortedClusters)) {
+      const auto &[BaseRegion, Bindings] = *C;
       Indent(Out, Space, IsDot)
-          << "{ \"cluster\": \"" << I.getKey() << "\", \"pointer\": \""
-          << (const void *)I.getKey() << "\", \"items\": [" << NL;
+          << "{ \"cluster\": \"" << BaseRegion << "\", \"pointer\": \""
+          << (const void *)BaseRegion << "\", \"items\": [" << NL;
+
+      std::vector<const Binding *> SortedBindings;
+      SortedBindings.reserve(std::distance(Bindings.begin(), Bindings.end()));
+      append_range(SortedBindings, map_range(Bindings, AddrOf));
+      llvm::sort(SortedBindings, DefaultBindingBeforeDirectBindings);
 
       ++Space;
-      const ClusterBindings &CB = I.getData();
-      for (ClusterBindings::iterator CI = CB.begin(), CE = CB.end(); CI != CE;
-           ++CI) {
-        Indent(Out, Space, IsDot) << "{ " << CI.getKey() << ", \"value\": ";
-        CI.getData().printJson(Out, /*AddQuotes=*/true);
+      for (auto [Idx, B] : llvm::enumerate(SortedBindings)) {
+        const auto &[Key, Value] = *B;
+        Indent(Out, Space, IsDot) << "{ " << Key << ", \"value\": ";
+        Value.printJson(Out, /*AddQuotes=*/true);
         Out << " }";
-        if (std::next(CI) != CE)
+        if (Idx != SortedBindings.size() - 1)
           Out << ',';
         Out << NL;
       }
-
       --Space;
       Indent(Out, Space, IsDot) << "]}";
-      if (std::next(I) != E)
+      if (Idx != SortedClusters.size() - 1)
         Out << ',';
       Out << NL;
     }

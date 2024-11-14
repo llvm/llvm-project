@@ -1020,6 +1020,7 @@ cc_library(
         ":basic",
         ":basic_builtins_gen",
         ":lex",
+        ":support",
         ":type_nodes_gen",
         "//llvm:BinaryFormat",
         "//llvm:Core",

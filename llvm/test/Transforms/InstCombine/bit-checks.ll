@@ -290,8 +290,8 @@ define i32 @main4(i32 %argc) {
 
 define <2 x i32> @main4_splat(<2 x i32> %argc) {
 ; CHECK-LABEL: @main4_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[ARGC:%.*]], <i32 55, i32 55>
-; CHECK-NEXT:    [[AND_COND:%.*]] = icmp ne <2 x i32> [[TMP1]], <i32 55, i32 55>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[ARGC:%.*]], splat (i32 55)
+; CHECK-NEXT:    [[AND_COND:%.*]] = icmp ne <2 x i32> [[TMP1]], splat (i32 55)
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext <2 x i1> [[AND_COND]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[STOREMERGE]]
 ;
@@ -1356,7 +1356,7 @@ define <2 x i1> @no_masks_with_logical_or_vec_poison1(<2 x i32> %a, <2 x i32> %b
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne <2 x i32> [[B:%.*]], <i32 63, i32 poison>
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[A:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[OR2:%.*]] = select <2 x i1> [[TMP2]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[CMP2]]
+; CHECK-NEXT:    [[OR2:%.*]] = select <2 x i1> [[TMP2]], <2 x i1> splat (i1 true), <2 x i1> [[CMP2]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR2]]
 ;
   %cmp1 = icmp ne <2 x i32> %a, <i32 0, i32 poison>
@@ -1371,8 +1371,8 @@ define <2 x i1> @no_masks_with_logical_or_vec_poison2(<2 x i32> %a, <2 x i32> %b
 ; CHECK-LABEL: @no_masks_with_logical_or_vec_poison2(
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne <2 x i32> [[B:%.*]], <i32 63, i32 poison>
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[OR2:%.*]] = select <2 x i1> [[TMP2]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[CMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], splat (i32 -1)
+; CHECK-NEXT:    [[OR2:%.*]] = select <2 x i1> [[TMP2]], <2 x i1> splat (i1 true), <2 x i1> [[CMP2]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR2]]
 ;
   %cmp1 = icmp ne <2 x i32> %a, <i32 -1, i32 poison>

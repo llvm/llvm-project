@@ -1592,7 +1592,9 @@ define <15 x i64> @vp_ctlz_v15i64(<15 x i64> %va, <15 x i1> %m, i32 zeroext %evl
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 4
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-NEXT:    addi sp, sp, 48
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vp_ctlz_v15i64:
@@ -1708,6 +1710,7 @@ define <15 x i64> @vp_ctlz_v15i64_unmasked(<15 x i64> %va, i32 zeroext %evl) {
 ; RV32-NEXT:    li a0, 56
 ; RV32-NEXT:    vsrl.vx v8, v8, a0
 ; RV32-NEXT:    addi sp, sp, 32
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vp_ctlz_v15i64_unmasked:
@@ -1855,7 +1858,9 @@ define <16 x i64> @vp_ctlz_v16i64(<16 x i64> %va, <16 x i1> %m, i32 zeroext %evl
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 4
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-NEXT:    addi sp, sp, 48
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vp_ctlz_v16i64:
@@ -1971,6 +1976,7 @@ define <16 x i64> @vp_ctlz_v16i64_unmasked(<16 x i64> %va, i32 zeroext %evl) {
 ; RV32-NEXT:    li a0, 56
 ; RV32-NEXT:    vsrl.vx v8, v8, a0
 ; RV32-NEXT:    addi sp, sp, 32
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vp_ctlz_v16i64_unmasked:
@@ -2339,7 +2345,9 @@ define <32 x i64> @vp_ctlz_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %evl
 ; RV32-NEXT:    li a1, 56
 ; RV32-NEXT:    mul a0, a0, a1
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-NEXT:    addi sp, sp, 48
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vp_ctlz_v32i64:
@@ -2450,7 +2458,9 @@ define <32 x i64> @vp_ctlz_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %evl
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 4
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %v = call <32 x i64> @llvm.vp.ctlz.v32i64(<32 x i64> %va, i1 false, <32 x i1> %m, i32 %evl)
   ret <32 x i64> %v
@@ -2582,7 +2592,9 @@ define <32 x i64> @vp_ctlz_v32i64_unmasked(<32 x i64> %va, i32 zeroext %evl) {
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 4
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-NEXT:    addi sp, sp, 48
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vp_ctlz_v32i64_unmasked:
@@ -4228,7 +4240,9 @@ define <15 x i64> @vp_ctlz_zero_undef_v15i64(<15 x i64> %va, <15 x i1> %m, i32 z
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 4
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-NEXT:    addi sp, sp, 48
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vp_ctlz_zero_undef_v15i64:
@@ -4344,6 +4358,7 @@ define <15 x i64> @vp_ctlz_zero_undef_v15i64_unmasked(<15 x i64> %va, i32 zeroex
 ; RV32-NEXT:    li a0, 56
 ; RV32-NEXT:    vsrl.vx v8, v8, a0
 ; RV32-NEXT:    addi sp, sp, 32
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vp_ctlz_zero_undef_v15i64_unmasked:
@@ -4489,7 +4504,9 @@ define <16 x i64> @vp_ctlz_zero_undef_v16i64(<16 x i64> %va, <16 x i1> %m, i32 z
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 4
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-NEXT:    addi sp, sp, 48
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vp_ctlz_zero_undef_v16i64:
@@ -4605,6 +4622,7 @@ define <16 x i64> @vp_ctlz_zero_undef_v16i64_unmasked(<16 x i64> %va, i32 zeroex
 ; RV32-NEXT:    li a0, 56
 ; RV32-NEXT:    vsrl.vx v8, v8, a0
 ; RV32-NEXT:    addi sp, sp, 32
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vp_ctlz_zero_undef_v16i64_unmasked:
@@ -4971,7 +4989,9 @@ define <32 x i64> @vp_ctlz_zero_undef_v32i64(<32 x i64> %va, <32 x i1> %m, i32 z
 ; RV32-NEXT:    li a1, 56
 ; RV32-NEXT:    mul a0, a0, a1
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-NEXT:    addi sp, sp, 48
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vp_ctlz_zero_undef_v32i64:
@@ -5082,7 +5102,9 @@ define <32 x i64> @vp_ctlz_zero_undef_v32i64(<32 x i64> %va, <32 x i1> %m, i32 z
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 4
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %v = call <32 x i64> @llvm.vp.ctlz.v32i64(<32 x i64> %va, i1 true, <32 x i1> %m, i32 %evl)
   ret <32 x i64> %v
@@ -5214,7 +5236,9 @@ define <32 x i64> @vp_ctlz_zero_undef_v32i64_unmasked(<32 x i64> %va, i32 zeroex
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 4
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-NEXT:    addi sp, sp, 48
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vp_ctlz_zero_undef_v32i64_unmasked:

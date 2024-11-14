@@ -96,13 +96,6 @@ void RTDEF(CUFDataTransferPtrPtr)(void *dst, void *src, std::size_t bytes,
   CUDA_REPORT_IF_ERROR(cudaMemcpy(dst, src, bytes, kind));
 }
 
-void RTDEF(CUFDataTransferDescPtr)(Descriptor *desc, void *addr,
-    std::size_t bytes, unsigned mode, const char *sourceFile, int sourceLine) {
-  Terminator terminator{sourceFile, sourceLine};
-  terminator.Crash(
-      "not yet implemented: CUDA data transfer from a pointer to a descriptor");
-}
-
 void RTDEF(CUFDataTransferPtrDesc)(void *addr, Descriptor *desc,
     std::size_t bytes, unsigned mode, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
@@ -125,6 +118,24 @@ void RTDECL(CUFDataTransferDescDesc)(Descriptor *dstDesc, Descriptor *srcDesc,
   }
   Fortran::runtime::Assign(
       *dstDesc, *srcDesc, terminator, MaybeReallocate, memmoveFct);
+}
+
+void RTDECL(CUFDataTransferDescDescNoRealloc)(Descriptor *dstDesc,
+    Descriptor *srcDesc, unsigned mode, const char *sourceFile,
+    int sourceLine) {
+  MemmoveFct memmoveFct;
+  Terminator terminator{sourceFile, sourceLine};
+  if (mode == kHostToDevice) {
+    memmoveFct = &MemmoveHostToDevice;
+  } else if (mode == kDeviceToHost) {
+    memmoveFct = &MemmoveDeviceToHost;
+  } else if (mode == kDeviceToDevice) {
+    memmoveFct = &MemmoveDeviceToDevice;
+  } else {
+    terminator.Crash("host to host copy not supported");
+  }
+  Fortran::runtime::Assign(
+      *dstDesc, *srcDesc, terminator, NoAssignFlags, memmoveFct);
 }
 
 void RTDECL(CUFDataTransferGlobalDescDesc)(Descriptor *dstDesc,

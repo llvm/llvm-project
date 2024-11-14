@@ -80,14 +80,14 @@ std::string ScriptLexer::getCurrentLocation() {
 
 // We don't want to record cascading errors. Keep only the first one.
 void ScriptLexer::setError(const Twine &msg) {
-  if (errorCount())
+  if (errCount(ctx))
     return;
 
   std::string s = (getCurrentLocation() + ": " + msg).str();
   if (prevTok.size())
     s += "\n>>> " + getLine().str() + "\n>>> " +
          std::string(getColumnNumber(), ' ') + "^";
-  error(s);
+  ErrAlways(ctx) << s;
 }
 
 void ScriptLexer::lex() {
@@ -116,7 +116,8 @@ void ScriptLexer::lex() {
       if (e == StringRef::npos) {
         size_t lineno =
             StringRef(curBuf.begin, s.data() - curBuf.begin).count('\n');
-        error(curBuf.filename + ":" + Twine(lineno + 1) + ": unclosed quote");
+        ErrAlways(ctx) << curBuf.filename << ":" << Twine(lineno + 1)
+                       << ": unclosed quote";
         return;
       }
 
@@ -195,7 +196,7 @@ StringRef ScriptLexer::skipSpace(StringRef s) {
 }
 
 // Used to determine whether to stop parsing. Treat errors like EOF.
-bool ScriptLexer::atEOF() { return eof || errorCount(); }
+bool ScriptLexer::atEOF() { return eof || errCount(ctx); }
 
 StringRef ScriptLexer::next() {
   prevTok = peek();
@@ -227,7 +228,7 @@ bool ScriptLexer::consume(StringRef tok) {
 void ScriptLexer::skip() { (void)next(); }
 
 void ScriptLexer::expect(StringRef expect) {
-  if (errorCount())
+  if (errCount(ctx))
     return;
   StringRef tok = next();
   if (tok != expect) {

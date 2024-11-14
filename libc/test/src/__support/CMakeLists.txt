@@ -1,6 +1,6 @@
 add_custom_target(libc-support-tests)
 
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+if(NOT LIBC_TARGET_OS_IS_GPU)
   add_libc_test(
     block_test
     SUITE
@@ -57,11 +57,11 @@ add_libc_test(
 )
 
 add_libc_test(
-  endian_test
+  endian_internal_test
   SUITE
     libc-support-tests
   SRCS
-    endian_test.cpp
+    endian_internal_test.cpp
   DEPENDS
     libc.src.__support.common
 )

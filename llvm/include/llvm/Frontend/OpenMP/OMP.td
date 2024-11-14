@@ -71,9 +71,21 @@ def OMPC_AtomicDefaultMemOrder : Clause<"atomic_default_mem_order"> {
   let clangClass = "OMPAtomicDefaultMemOrderClause";
   let flangClass = "OmpAtomicDefaultMemOrderClause";
 }
+
+def OMP_BIND_parallel : ClauseVal<"parallel",1,1> {}
+def OMP_BIND_teams : ClauseVal<"teams",2,1> {}
+def OMP_BIND_thread : ClauseVal<"thread",3,1> { let isDefault = true; }
 def OMPC_Bind : Clause<"bind"> {
   let clangClass = "OMPBindClause";
+  let flangClass = "OmpBindClause";
+  let enumClauseValue = "BindKind";
+  let allowedClauseValues = [
+    OMP_BIND_parallel,
+    OMP_BIND_teams,
+    OMP_BIND_thread
+  ];
 }
+
 def OMP_CANCELLATION_CONSTRUCT_Parallel : ClauseVal<"parallel", 1, 1> {}
 def OMP_CANCELLATION_CONSTRUCT_Loop : ClauseVal<"loop", 2, 1> {}
 def OMP_CANCELLATION_CONSTRUCT_Sections : ClauseVal<"sections", 3, 1> {}
@@ -151,6 +163,7 @@ def OMPC_DistSchedule : Clause<"dist_schedule"> {
 }
 def OMPC_Doacross : Clause<"doacross"> {
   let clangClass = "OMPDoacrossClause";
+  let flangClass = "OmpDoacrossClause";
 }
 def OMPC_DynamicAllocators : Clause<"dynamic_allocators"> {
   let clangClass = "OMPDynamicAllocatorsClause";
