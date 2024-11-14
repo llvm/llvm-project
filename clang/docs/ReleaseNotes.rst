@@ -271,6 +271,8 @@ Resolutions to C++ Defect Reports
 C Language Changes
 ------------------
 
+- Extend clang's ``<limits.h>`` to define ``LONG_LONG_*`` macros for Android's bionic.
+
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
