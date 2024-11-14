@@ -1358,7 +1358,7 @@ Currently, only the following parameter attributes are defined:
     This indicates that memory locations accessed via pointer values
     :ref:`based <pointeraliasing>` on the argument or return value are not also
     accessed, during the execution of the function, via pointer values not
-    *based* on the argument or return value.This guarantee only holds for
+    *based* on the argument or return value. This guarantee only holds for
     memory locations that are *modified*, by any means, during the execution of
     the function. If there are other accesses not based on the argument or
     return value, the behavior is undefined. The attribute on a return value
