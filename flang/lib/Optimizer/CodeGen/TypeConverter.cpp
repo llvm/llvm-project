@@ -169,14 +169,10 @@ mlir::Type LLVMTypeConverter::convertBoxTypeAsStruct(BaseBoxType box,
   // remove fir.heap/fir.ref/fir.ptr
   if (auto removeIndirection = fir::dyn_cast_ptrEleTy(ele))
     ele = removeIndirection;
-  auto eleTy = convertType(ele);
+
   // base_addr*
-  if (mlir::isa<SequenceType>(ele) &&
-      mlir::isa<mlir::LLVM::LLVMPointerType>(eleTy))
-    dataDescFields.push_back(eleTy);
-  else
-    dataDescFields.push_back(
-        mlir::LLVM::LLVMPointerType::get(eleTy.getContext()));
+  dataDescFields.push_back(mlir::LLVM::LLVMPointerType::get(ele.getContext()));
+
   // elem_len
   dataDescFields.push_back(
       getDescFieldTypeModel<kElemLenPosInBox>()(&getContext()));
