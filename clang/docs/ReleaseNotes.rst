@@ -271,6 +271,8 @@ Resolutions to C++ Defect Reports
 C Language Changes
 ------------------
 
+- Extend clang's ``<limits.h>`` to define ``LONG_LONG_*`` macros for Android's bionic.
+
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
@@ -553,6 +555,8 @@ Bug Fixes in This Version
   the unsupported type instead of the ``register`` keyword (#GH109776).
 - Fixed a crash when emit ctor for global variant with flexible array init (#GH113187).
 - Fixed a crash when GNU statement expression contains invalid statement (#GH113468).
+- Fixed a failed assertion when using ``__attribute__((noderef))`` on an
+  ``_Atomic``-qualified type (#GH116124).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
