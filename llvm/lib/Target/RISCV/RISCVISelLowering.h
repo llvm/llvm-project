@@ -1051,6 +1051,9 @@ private:
 
   SDValue emitFlushICache(SelectionDAG &DAG, SDValue InChain, SDValue Start,
                           SDValue End, SDValue Flags, SDLoc DL) const;
+
+  std::pair<const TargetRegisterClass *, uint8_t>
+  findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT) const override;
 };
 
 namespace RISCVVIntrinsicsTable {

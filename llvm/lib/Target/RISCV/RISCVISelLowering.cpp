@@ -21996,6 +21996,24 @@ SDValue RISCVTargetLowering::expandIndirectJTBranch(const SDLoc &dl,
   return TargetLowering::expandIndirectJTBranch(dl, Value, Addr, JTI, DAG);
 }
 
+// Some types are listed in the GPR register class to support isel patterns for
+// GISel, but are not legal in SelectionDAG. This prevents the default
+// implementation from finding a register clss for them.
+std::pair<const TargetRegisterClass *, uint8_t>
+RISCVTargetLowering::findRepresentativeClass(const TargetRegisterInfo *TRI,
+                                             MVT VT) const {
+  const TargetRegisterClass *RRC = nullptr;
+  uint8_t Cost = 1;
+  switch (VT.SimpleTy) {
+  default:
+    return TargetLowering::findRepresentativeClass(TRI, VT);
+  case MVT::i8: case MVT::i16: case MVT::i32:
+    RRC = &RISCV::GPRRegClass;
+    break;
+  }
+  return std::make_pair(RRC, Cost);
+}
+
 namespace llvm::RISCVVIntrinsicsTable {
 
 #define GET_RISCVVIntrinsicsTable_IMPL
