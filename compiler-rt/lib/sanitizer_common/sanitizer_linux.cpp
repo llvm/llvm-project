@@ -177,11 +177,11 @@ static void KeepUnblocked(__sanitizer_sigset_t &newset,
 
 // Block asynchronous signals
 void BlockSignals(__sanitizer_sigset_t *oldset) {
-#  if SANITIZER_LINUX
-  __sanitizer_sigset_t currentset;
-
   __sanitizer_sigset_t newset;
   internal_sigfillset(&newset);
+
+#  if SANITIZER_LINUX
+  __sanitizer_sigset_t currentset;
 
 #    if !SANITIZER_ANDROID
   // FIXME: https://github.com/google/sanitizers/issues/1816
@@ -211,8 +211,9 @@ void BlockSignals(__sanitizer_sigset_t *oldset) {
   KeepUnblocked(newset, currentset, SIGPIPE);
 #    endif  //! SANITIZER_ANDROID
 
-  SetSigProcMask(&newset, oldset);
 #  endif  // SANITIZER_LINUX
+
+  SetSigProcMask(&newset, oldset);
 }
 
 ScopedBlockSignals::ScopedBlockSignals(__sanitizer_sigset_t *copy) {
