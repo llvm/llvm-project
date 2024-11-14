@@ -350,11 +350,33 @@ OptionalParseResult Parser::parseOptionalDecimalInteger(APInt &result) {
 ParseResult Parser::parseFloatFromLiteral(std::optional<APFloat> &result,
                                           const Token &tok, bool isNegative,
                                           const llvm::fltSemantics &semantics) {
+  // Check for inf keyword.
+  if (tok.is(Token::kw_inf)) {
+    if (!APFloat::semanticsHasInf(semantics))
+      return emitError(tok.getLoc())
+             << "floating point type does not support infinity";
+    result = APFloat::getInf(semantics, isNegative);
+    return success();
+  }
+
+  // Check for NaN keyword.
+  if (tok.is(Token::kw_nan)) {
+    if (!APFloat::semanticsHasNaN(semantics))
+      return emitError(tok.getLoc())
+             << "floating point type does not support NaN";
+    result = APFloat::getNaN(semantics, isNegative);
+    return success();
+  }
+
   // Check for a floating point value.
   if (tok.is(Token::floatliteral)) {
     auto val = tok.getFloatingPointValue();
     if (!val)
       return emitError(tok.getLoc()) << "floating point value too large";
+    if (std::fpclassify(*val) == FP_ZERO &&
+        !APFloat::semanticsHasZero(semantics))
+      return emitError(tok.getLoc())
+             << "floating point type does not support zero";
 
     result.emplace(isNegative ? -*val : *val);
     bool unused;

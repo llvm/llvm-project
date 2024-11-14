@@ -752,7 +752,7 @@ func.func @cmpf_nan() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1
 // CHECK-LABEL: func @cmpf_inf
 func.func @cmpf_inf() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1) {
   %c42 = arith.constant 42. : f32
-  %cpinf = arith.constant 0x7F800000 : f32
+  %cpinf = arith.constant inf : f32
   // CHECK-DAG: [[F:%.+]] = arith.constant false
   // CHECK-DAG: [[T:%.+]] = arith.constant true
   // CHECK-NEXT: return [[F]],

@@ -101,7 +101,7 @@ module attributes {transform.with_named_sequence} {
 
 func.func @reduction_sequence(%arg0: tensor<30x3xf32>) -> tensor<30x3xf32> {
   %cst = arith.constant 0.000000e+00 : f32
-  %cst_0 = arith.constant 0xFF800000 : f32
+  %cst_0 = arith.constant -inf : f32
   %0 = tensor.empty() : tensor<30xf32>
   %1 = linalg.fill ins(%cst_0 : f32) outs(%0 : tensor<30xf32>) -> tensor<30xf32>
   %2 = linalg.generic {

@@ -1880,7 +1880,7 @@ func.func @test_minimumf(%arg0 : f32) -> (f32, f32, f32) {
   // CHECK-NEXT:  %[[X:.+]] = arith.minimumf %arg0, %[[C0]]
   // CHECK-NEXT:  return %[[X]], %arg0, %arg0
   %c0 = arith.constant 0.0 : f32
-  %inf = arith.constant 0x7F800000 : f32
+  %inf = arith.constant inf : f32
   %0 = arith.minimumf %c0, %arg0 : f32
   %1 = arith.minimumf %arg0, %arg0 : f32
   %2 = arith.minimumf %inf, %arg0 : f32
@@ -1895,7 +1895,7 @@ func.func @test_maximumf(%arg0 : f32) -> (f32, f32, f32) {
   // CHECK-NEXT:  %[[X:.+]] = arith.maximumf %arg0, %[[C0]]
   // CHECK-NEXT:   return %[[X]], %arg0, %arg0
   %c0 = arith.constant 0.0 : f32
-  %-inf = arith.constant 0xFF800000 : f32
+  %-inf = arith.constant -inf : f32
   %0 = arith.maximumf %c0, %arg0 : f32
   %1 = arith.maximumf %arg0, %arg0 : f32
   %2 = arith.maximumf %-inf, %arg0 : f32
@@ -1910,7 +1910,7 @@ func.func @test_minnumf(%arg0 : f32) -> (f32, f32, f32) {
   // CHECK-NEXT:  %[[X:.+]] = arith.minnumf %arg0, %[[C0]]
   // CHECK-NEXT:  return %[[X]], %arg0, %arg0
   %c0 = arith.constant 0.0 : f32
-  %inf = arith.constant 0x7F800000 : f32
+  %inf = arith.constant inf : f32
   %0 = arith.minnumf %c0, %arg0 : f32
   %1 = arith.minnumf %arg0, %arg0 : f32
   %2 = arith.minnumf %inf, %arg0 : f32
@@ -1925,7 +1925,7 @@ func.func @test_maxnumf(%arg0 : f32) -> (f32, f32, f32) {
   // CHECK-NEXT:  %[[X:.+]] = arith.maxnumf %arg0, %[[C0]]
   // CHECK-NEXT:   return %[[X]], %arg0, %arg0
   %c0 = arith.constant 0.0 : f32
-  %-inf = arith.constant 0xFF800000 : f32
+  %-inf = arith.constant -inf : f32
   %0 = arith.maxnumf %c0, %arg0 : f32
   %1 = arith.maxnumf %arg0, %arg0 : f32
   %2 = arith.maxnumf %-inf, %arg0 : f32
@@ -2024,7 +2024,7 @@ func.func @test_cmpf(%arg0 : f32) -> (i1, i1, i1, i1) {
 //   CHECK-DAG:   %[[T:.*]] = arith.constant true
 //   CHECK-DAG:   %[[F:.*]] = arith.constant false
 //       CHECK:   return %[[F]], %[[F]], %[[T]], %[[T]]
-  %nan = arith.constant 0x7fffffff : f32
+  %nan = arith.constant nan : f32
   %0 = arith.cmpf olt, %nan, %arg0 : f32
   %1 = arith.cmpf olt, %arg0, %nan : f32
   %2 = arith.cmpf ugt, %nan, %arg0 : f32
