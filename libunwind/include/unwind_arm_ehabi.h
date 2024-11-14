@@ -126,7 +126,7 @@ _Unwind_VRS_Pop(_Unwind_Context *context, _Unwind_VRS_RegClass regclass,
                 _Unwind_VRS_DataRepresentation representation);
 
 #if defined(_LIBUNWIND_UNWIND_LEVEL1_EXTERNAL_LINKAGE)
-#define _LIBUNWIND_EXPORT_UNWIND_LEVEL1 extern
+#define _LIBUNWIND_EXPORT_UNWIND_LEVEL1 extern __inline__
 #else
 #define _LIBUNWIND_EXPORT_UNWIND_LEVEL1 static __inline__
 #endif
