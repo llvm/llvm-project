@@ -142,9 +142,9 @@ int main(int, char**) {
     const wchar_t* pwc = 0;
     char* pc = 0;
     // mblen was added in Android API 26.
-#if !defined(__ANDROID__) || __ANDROID_API__ >= 26
+#  if !defined(__ANDROID__) || __ANDROID_API__ >= 26
     ASSERT_SAME_TYPE(int,    decltype(mblen("",0)));
-#endif
+#  endif
     ASSERT_SAME_TYPE(int,    decltype(mbtowc(pw,"",0)));
     ASSERT_SAME_TYPE(int,    decltype(wctomb(pc,L' ')));
     ASSERT_SAME_TYPE(size_t, decltype(mbstowcs(pw,"",0)));
