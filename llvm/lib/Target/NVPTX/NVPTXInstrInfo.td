@@ -3967,21 +3967,17 @@ def NVPTX_fmaxnum_nsz : PatFrag<(ops node:$a, node:$b),
   return N->getFlags().hasNoSignedZeros() || TM.Options.NoSignedZerosFPMath;
 }]>;
 
-multiclass FMARELU<RegisterClass RC, string OpVecString = "">  {
-  def _F16# !toupper(OpVecString) : NVPTXInst<(outs RC:$dst), (ins RC:$a, RC:$b, RC:$c),
-    !strconcat("fma.rn.relu.f16", OpVecString, "\t$dst, $a, $b, $c;"), []>,
-    Requires<[useFP16Math, hasPTX<70>, hasSM<80>]>;
-  // FTZ variants are only supported by fp16, not bf16
-  def _F16# !toupper(OpVecString) #_FTZ : NVPTXInst<(outs RC:$dst), (ins RC:$a, RC:$b, RC:$c),
-    !strconcat("fma.rn.ftz.relu.f16", OpVecString, "\t$dst, $a, $b, $c;"), []>,
-    Requires<[useFP16Math, hasPTX<70>, hasSM<80>]>;
-  def _BF16# !toupper(OpVecString) : NVPTXInst<(outs RC:$dst), (ins RC:$a, RC:$b, RC:$c),
-    !strconcat("fma.rn.relu.bf16", OpVecString, "\t$dst, $a, $b, $c;"), []>,
-    Requires<[hasBF16Math, hasPTX<70>, hasSM<80>]>;
-}
+class FMARELU<RegisterClass RC, string OpVecString, list<Predicate> Preds>
+  : NVPTXInst<(outs RC:$dst), (ins RC:$a, RC:$b, RC:$c),
+      !strconcat(OpVecString, "\t$dst, $a, $b, $c;"), []>,
+      Requires<Preds>;
 
-defm FMARELU : FMARELU<Int16Regs>;
-defm FMARELU : FMARELU<Int32Regs, "x2">;
+def FMARELU_F16 : FMARELU<Int16Regs, "fma.rn.relu.f16", [useFP16Math, hasPTX<70>, hasSM<80>]>;
+def FMARELU_F16_FTZ : FMARELU<Int16Regs, "fma.rn.ftz.relu.f16", [useFP16Math, hasPTX<70>, hasSM<80>]>;
+def FMARELU_BF16 : FMARELU<Int16Regs, "fma.rn.relu.bf16", [hasBF16Math, hasPTX<70>, hasSM<80>]>;
+def FMARELU_F16X2 : FMARELU<Int32Regs, "fma.rn.relu.f16x2", [useFP16Math, hasPTX<70>, hasSM<80>]>;
+def FMARELU_F16X2_FTZ : FMARELU<Int32Regs, "fma.rn.ftz.relu.f16x2", [useFP16Math, hasPTX<70>, hasSM<80>]>;
+def FMARELU_BF16X2 : FMARELU<Int32Regs, "fma.rn.relu.bf16x2", [hasBF16Math, hasPTX<70>, hasSM<80>]>;
 
 // FTZ
 def : Pat<(f16 (NVPTX_fmaxnum_nsz (NVPTX_fma_oneuse_and_nnan Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm_any_zero)),
