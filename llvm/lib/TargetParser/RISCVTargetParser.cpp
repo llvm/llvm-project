@@ -73,7 +73,7 @@ bool hasFastVectorUnalignedAccess(StringRef CPU) {
 
 bool hasValidCPUModel(StringRef CPU) {
   const CPUInfo *Info = getCPUInfoByName(CPU);
-  return Info && Info->MVendorID && Info->MArchID && Info->MImpID;
+  return Info && Info->MVendorID;
 }
 
 uint32_t getVendorID(StringRef CPU) {
