@@ -22,6 +22,7 @@
 #include "CoroInternal.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PriorityWorklist.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -628,8 +629,8 @@ void CoroCloner::replaceRetconOrAsyncSuspendUses() {
 
   // Otherwise, we need to create an aggregate.
   Value *Agg = PoisonValue::get(NewS->getType());
-  for (size_t I = 0, E = Args.size(); I != E; ++I)
-    Agg = Builder.CreateInsertValue(Agg, Args[I], I);
+  for (auto Arg : llvm::enumerate(Args))
+    Agg = Builder.CreateInsertValue(Agg, Arg.value(), Arg.index());
 
   NewS->replaceAllUsesWith(Agg);
 }
@@ -1833,8 +1834,8 @@ void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
 
   // Create a continuation function for each of the suspend points.
   Clones.reserve(Shape.CoroSuspends.size());
-  for (size_t Idx = 0, End = Shape.CoroSuspends.size(); Idx != End; ++Idx) {
-    auto *Suspend = cast<CoroSuspendAsyncInst>(Shape.CoroSuspends[Idx]);
+  for (auto CS : llvm::enumerate(Shape.CoroSuspends)) {
+    auto *Suspend = cast<CoroSuspendAsyncInst>(CS.value());
 
     // Create the clone declaration.
     auto ResumeNameSuffix = ".resume.";
@@ -1850,8 +1851,8 @@ void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
     }
     auto *Continuation = createCloneDeclaration(
         F, Shape,
-        UseSwiftMangling ? ResumeNameSuffix + Twine(Idx) + "_"
-                         : ResumeNameSuffix + Twine(Idx),
+        UseSwiftMangling ? ResumeNameSuffix + Twine(CS.index()) + "_"
+                         : ResumeNameSuffix + Twine(CS.index()),
         NextF, Suspend);
     Clones.push_back(Continuation);
 
@@ -1884,12 +1885,12 @@ void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
   }
 
   assert(Clones.size() == Shape.CoroSuspends.size());
-  for (size_t Idx = 0, End = Shape.CoroSuspends.size(); Idx != End; ++Idx) {
-    auto *Suspend = Shape.CoroSuspends[Idx];
-    auto *Clone = Clones[Idx];
+  for (auto CS : llvm::enumerate(Shape.CoroSuspends)) {
+    auto *Suspend = CS.value();
+    auto *Clone = Clones[CS.index()];
 
-    CoroCloner::createClone(F, "resume." + Twine(Idx), Shape, Clone, Suspend,
-                            TTI);
+    CoroCloner::createClone(F, "resume." + Twine(CS.index()), Shape, Clone,
+                            Suspend, TTI);
   }
 }
 
@@ -1938,6 +1939,7 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
 
   // Create a unique return block.
   BasicBlock *ReturnBB = nullptr;
+  PHINode *ContinuationPhi = nullptr;
   SmallVector<PHINode *, 4> ReturnPHIs;
 
   // Create all the functions in order after the main function.
@@ -1945,12 +1947,12 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
 
   // Create a continuation function for each of the suspend points.
   Clones.reserve(Shape.CoroSuspends.size());
-  for (size_t i = 0, e = Shape.CoroSuspends.size(); i != e; ++i) {
-    auto Suspend = cast<CoroSuspendRetconInst>(Shape.CoroSuspends[i]);
+  for (auto CS : llvm::enumerate(Shape.CoroSuspends)) {
+    auto Suspend = cast<CoroSuspendRetconInst>(CS.value());
 
     // Create the clone declaration.
-    auto Continuation =
-        createCloneDeclaration(F, Shape, ".resume." + Twine(i), NextF, nullptr);
+    auto Continuation = createCloneDeclaration(
+        F, Shape, ".resume." + Twine(CS.index()), NextF, nullptr);
     Clones.push_back(Continuation);
 
     // Insert a branch to the unified return block immediately before
@@ -1968,12 +1970,12 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
 
       IRBuilder<> Builder(ReturnBB);
 
-      // Create PHIs for all the return values.
-      assert(ReturnPHIs.empty());
-
       // First, the continuation.
-      ReturnPHIs.push_back(Builder.CreatePHI(Continuation->getType(),
-                                             Shape.CoroSuspends.size()));
+      ContinuationPhi =
+          Builder.CreatePHI(Continuation->getType(), Shape.CoroSuspends.size());
+
+      // Create PHIs for all other return values.
+      assert(ReturnPHIs.empty());
 
       // Next, all the directly-yielded values.
       for (auto *ResultTy : Shape.getRetconResultTypes())
@@ -1987,18 +1989,18 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
       // We can't rely on the types matching up because that type would
       // have to be infinite.
       auto CastedContinuationTy =
-          (ReturnPHIs.size() == 1 ? RetTy : RetTy->getStructElementType(0));
+          (ReturnPHIs.empty() ? RetTy : RetTy->getStructElementType(0));
       auto *CastedContinuation =
-          Builder.CreateBitCast(ReturnPHIs[0], CastedContinuationTy);
+          Builder.CreateBitCast(ContinuationPhi, CastedContinuationTy);
 
-      Value *RetV;
-      if (ReturnPHIs.size() == 1) {
-        RetV = CastedContinuation;
-      } else {
+      Value *RetV = CastedContinuation;
+      if (!ReturnPHIs.empty()) {
+        auto ValueIdx = 0;
         RetV = PoisonValue::get(RetTy);
-        RetV = Builder.CreateInsertValue(RetV, CastedContinuation, 0);
-        for (size_t I = 1, E = ReturnPHIs.size(); I != E; ++I)
-          RetV = Builder.CreateInsertValue(RetV, ReturnPHIs[I], I);
+        RetV = Builder.CreateInsertValue(RetV, CastedContinuation, ValueIdx++);
+
+        for (auto Phi : ReturnPHIs)
+          RetV = Builder.CreateInsertValue(RetV, Phi, ValueIdx++);
       }
 
       Builder.CreateRet(RetV);
@@ -2006,20 +2008,20 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
 
     // Branch to the return block.
     Branch->setSuccessor(0, ReturnBB);
-    ReturnPHIs[0]->addIncoming(Continuation, SuspendBB);
-    size_t NextPHIIndex = 1;
-    for (auto &VUse : Suspend->value_operands())
-      ReturnPHIs[NextPHIIndex++]->addIncoming(&*VUse, SuspendBB);
-    assert(NextPHIIndex == ReturnPHIs.size());
+    assert(ContinuationPhi);
+    ContinuationPhi->addIncoming(Continuation, SuspendBB);
+    for (auto [Phi, VUse] :
+         llvm::zip_equal(ReturnPHIs, Suspend->value_operands()))
+      Phi->addIncoming(VUse, SuspendBB);
   }
 
   assert(Clones.size() == Shape.CoroSuspends.size());
-  for (size_t i = 0, e = Shape.CoroSuspends.size(); i != e; ++i) {
-    auto Suspend = Shape.CoroSuspends[i];
-    auto Clone = Clones[i];
+  for (auto CS : llvm::enumerate(Shape.CoroSuspends)) {
+    auto Suspend = CS.value();
+    auto Clone = Clones[CS.index()];
 
-    CoroCloner::createClone(F, "resume." + Twine(i), Shape, Clone, Suspend,
-                            TTI);
+    CoroCloner::createClone(F, "resume." + Twine(CS.index()), Shape, Clone,
+                            Suspend, TTI);
   }
 }
 
