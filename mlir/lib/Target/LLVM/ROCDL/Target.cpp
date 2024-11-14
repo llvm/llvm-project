@@ -430,13 +430,12 @@ std::optional<SmallVector<char, 0>> SerializeGPUModuleBase::moduleToObjectImpl(
     getOperation().emitError() << "failed translating the module to ISA";
     return std::nullopt;
   }
-#define DEBUG_TYPE "serialize-to-isa"
-  LLVM_DEBUG({
+  if (targetOptions.getDumpISA()) {
     llvm::dbgs() << "ISA for module: "
                  << cast<gpu::GPUModuleOp>(getOperation()).getNameAttr() << "\n"
                  << *serializedISA << "\n";
-  });
-#undef DEBUG_TYPE
+  }
+
   // Return ISA assembly code if the compilation target is assembly.
   if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Assembly)
     return SmallVector<char, 0>(serializedISA->begin(), serializedISA->end());

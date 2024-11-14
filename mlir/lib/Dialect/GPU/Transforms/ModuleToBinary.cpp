@@ -70,7 +70,7 @@ void GpuModuleToBinaryPass::runOnOperation() {
   };
 
   TargetOptions targetOptions(toolkitPath, linkFiles, cmdOptions, *targetFormat,
-                              lazyTableBuilder);
+                              lazyTableBuilder, dumpISA, dumpMachineISA);
   if (failed(transformGpuModulesToBinaries(
           getOperation(), OffloadingLLVMTranslationAttrInterface(nullptr),
           targetOptions)))

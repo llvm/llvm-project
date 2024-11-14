@@ -292,8 +292,8 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
     return std::nullopt;
   TmpFile cubinFile;
   if (createFatbin) {
-    Twine cubinFilename = ptxFile->first + ".cubin";
-    cubinFile = TmpFile(cubinFilename.str(), llvm::FileRemover(cubinFilename));
+    std::string cubinFilename = (ptxFile->first + ".cubin").str();
+    cubinFile = TmpFile(cubinFilename, llvm::FileRemover(cubinFilename));
   } else {
     cubinFile.first = binaryFile->first;
   }
@@ -402,8 +402,8 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
                                 /*MemoryLimit=*/0,
                                 /*ErrMsg=*/&message))
     return emitLogError("`ptxas`");
-#define DEBUG_TYPE "dump-sass"
-  LLVM_DEBUG({
+
+  if (targetOptions.getDumpMachineISA()) {
     std::optional<std::string> nvdisasm = findTool("nvdisasm");
     SmallVector<StringRef> nvdisasmArgs(
         {StringRef("nvdisasm"), StringRef(cubinFile.first)});
@@ -417,11 +417,10 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> logBuffer =
         llvm::MemoryBuffer::getFile(logFile->first);
     if (logBuffer && !(*logBuffer)->getBuffer().empty()) {
-      llvm::dbgs() << "Output:\n" << (*logBuffer)->getBuffer() << "\n";
-      llvm::dbgs().flush();
+      llvm::errs() << "Output:\n" << (*logBuffer)->getBuffer() << "\n";
+      llvm::errs().flush();
     }
-  });
-#undef DEBUG_TYPE
+  }
 
   // Invoke `fatbin`.
   message.clear();
@@ -572,12 +571,13 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
     getOperation().emitError() << "Failed translating the module to ISA.";
     return std::nullopt;
   }
-#define DEBUG_TYPE "serialize-to-isa"
-  LLVM_DEBUG({
-    llvm::dbgs() << "PTX for module: " << getOperation().getNameAttr() << "\n";
-    llvm::dbgs() << *serializedISA << "\n";
-    llvm::dbgs().flush();
-  });
+  if (targetOptions.getDumpISA()) {
+    llvm::errs() << "// Generated PTX for module: "
+                 << getOperation().getNameAttr() << "\n";
+    llvm::errs() << *serializedISA << "\n";
+    llvm::errs().flush();
+  }
+
 #undef DEBUG_TYPE
 
   // Return PTX if the compilation target is `assembly`.

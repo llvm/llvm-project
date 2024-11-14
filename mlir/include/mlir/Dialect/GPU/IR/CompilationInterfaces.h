@@ -52,7 +52,8 @@ public:
       StringRef toolkitPath = {}, ArrayRef<std::string> linkFiles = {},
       StringRef cmdOptions = {},
       CompilationTarget compilationTarget = getDefaultCompilationTarget(),
-      function_ref<SymbolTable *()> getSymbolTableCallback = {});
+      function_ref<SymbolTable *()> getSymbolTableCallback = {},
+      bool dumpISA = false, bool dumpMachineISA = false);
 
   /// Returns the typeID.
   TypeID getTypeID() const;
@@ -65,6 +66,12 @@ public:
 
   /// Returns the command line options.
   StringRef getCmdOptions() const;
+
+  /// Returns the dump-isa command line options.
+  bool getDumpISA() const;
+
+  /// Returns the dump-machine-isa command line options.
+  bool getDumpMachineISA() const;
 
   /// Returns a tokenization of the command line options.
   std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
@@ -90,7 +97,8 @@ protected:
       TypeID typeID, StringRef toolkitPath = {},
       ArrayRef<std::string> linkFiles = {}, StringRef cmdOptions = {},
       CompilationTarget compilationTarget = getDefaultCompilationTarget(),
-      function_ref<SymbolTable *()> getSymbolTableCallback = {});
+      function_ref<SymbolTable *()> getSymbolTableCallback = {},
+      bool dumpISA = false, bool dumpMachineISA = false);
 
   /// Path to the target toolkit.
   std::string toolkitPath;
@@ -101,6 +109,12 @@ protected:
   /// An optional set of command line options to be used by the compilation
   /// process.
   std::string cmdOptions;
+
+  /// An optional flag to dump generated ISA.
+  bool dumpISA = false;
+
+  /// An optional flag to dump generated and disassembled machine ISA.
+  bool dumpMachineISA = false;
 
   /// Compilation process target format.
   CompilationTarget compilationTarget;

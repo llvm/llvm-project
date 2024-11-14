@@ -95,7 +95,15 @@ def GpuModuleToBinaryPass
     Option<"cmdOptions", "opts", "std::string", [{""}],
            "Command line options to pass to the tools.">,
     Option<"compilationTarget", "format", "std::string", [{"fatbin"}],
-           "The target representation of the compilation process.">
+           "The target representation of the compilation process.">,           
+    Option<"dumpISA", "dump-isa", "bool",
+           /*default=*/"false",
+           "Dumps generated ISA to the error output.">,
+    Option<"dumpMachineISA", "dump-machine-isa", "bool",
+           /*default=*/"false",
+           "Dumps the generated machine-level ISA to the error output. "
+           "If the generated ISA is virtual, it instead dumps the"
+           "machine-level equivalent.">
   ];
 }
 

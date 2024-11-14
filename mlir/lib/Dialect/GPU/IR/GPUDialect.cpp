@@ -2302,17 +2302,25 @@ KernelMetadataAttr KernelTableAttr::lookup(StringAttr key) const {
 TargetOptions::TargetOptions(
     StringRef toolkitPath, ArrayRef<std::string> linkFiles,
     StringRef cmdOptions, CompilationTarget compilationTarget,
-    function_ref<SymbolTable *()> getSymbolTableCallback)
+    function_ref<SymbolTable *()> getSymbolTableCallback, bool dumpISA,
+    bool dumpMachineISA)
     : TargetOptions(TypeID::get<TargetOptions>(), toolkitPath, linkFiles,
-                    cmdOptions, compilationTarget, getSymbolTableCallback) {}
+                    cmdOptions, compilationTarget, getSymbolTableCallback,
+                    dumpISA, dumpMachineISA) {}
 
 TargetOptions::TargetOptions(
     TypeID typeID, StringRef toolkitPath, ArrayRef<std::string> linkFiles,
     StringRef cmdOptions, CompilationTarget compilationTarget,
-    function_ref<SymbolTable *()> getSymbolTableCallback)
+    function_ref<SymbolTable *()> getSymbolTableCallback, bool dumpISA,
+    bool dumpMachineISA)
     : toolkitPath(toolkitPath.str()), linkFiles(linkFiles),
-      cmdOptions(cmdOptions.str()), compilationTarget(compilationTarget),
+      cmdOptions(cmdOptions.str()), dumpISA(dumpISA),
+      dumpMachineISA(dumpMachineISA), compilationTarget(compilationTarget),
       getSymbolTableCallback(getSymbolTableCallback), typeID(typeID) {}
+
+bool TargetOptions::getDumpISA() const { return dumpISA; }
+
+bool TargetOptions::getDumpMachineISA() const { return dumpMachineISA; }
 
 TypeID TargetOptions::getTypeID() const { return typeID; }
 

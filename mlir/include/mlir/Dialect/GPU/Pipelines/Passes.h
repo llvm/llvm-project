@@ -53,6 +53,12 @@ struct GPUToNVVMPipelineOptions
           "Whether to use the bareptr calling convention on the host (warning "
           "this should be false until the GPU layering is fixed)"),
       llvm::cl::init(false)};
+  PassOptions::Option<bool> dumpPtx{
+      *this, "dump-ptx", llvm::cl::desc("Dumps PTX code to the error output"),
+      llvm::cl::init(false)};
+  PassOptions::Option<bool> dumpSass{
+      *this, "dump-sass", llvm::cl::desc("Dumps SASS code to the error output"),
+      llvm::cl::init(false)};
 };
 
 //===----------------------------------------------------------------------===//

@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:  | mlir-opt -gpu-lower-to-nvvm-pipeline -debug-only=dump-sass \
+// RUN:  | mlir-opt -gpu-lower-to-nvvm-pipeline="dump-sass=true" \
 // RUN:  2>&1 | FileCheck %s
 
 // CHECK: MOV
