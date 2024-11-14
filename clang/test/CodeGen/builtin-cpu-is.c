@@ -111,12 +111,9 @@ void nehalem(void) {
 #endif
 
 #ifdef __riscv
-// CHECK-RV64-LABEL: define dso_local signext i32 @test_riscv(
-// CHECK-RV64-SAME: i32 noundef signext [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-RV64-LABEL: define dso_local signext i32 @test_cpu_is_veyron_v1(
+// CHECK-RV64-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-RV64-NEXT:  [[ENTRY:.*:]]
-// CHECK-RV64-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK-RV64-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
-// CHECK-RV64-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = load i32, ptr @__riscv_cpu_model, align 4
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 1567
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr inbounds ({ i32, i64, i64 }, ptr @__riscv_cpu_model, i32 0, i32 1), align 8
@@ -125,20 +122,10 @@ void nehalem(void) {
 // CHECK-RV64-NEXT:    [[TMP5:%.*]] = load i64, ptr getelementptr inbounds ({ i32, i64, i64 }, ptr @__riscv_cpu_model, i32 0, i32 2), align 8
 // CHECK-RV64-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 273
 // CHECK-RV64-NEXT:    [[TMP7:%.*]] = and i1 [[TMP4]], [[TMP6]]
-// CHECK-RV64-NEXT:    br i1 [[TMP7]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
-// CHECK-RV64:       [[IF_THEN]]:
-// CHECK-RV64-NEXT:    store i32 3, ptr [[RETVAL]], align 4
-// CHECK-RV64-NEXT:    br label %[[RETURN:.*]]
-// CHECK-RV64:       [[IF_END]]:
-// CHECK-RV64-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK-RV64-NEXT:    br label %[[RETURN]]
-// CHECK-RV64:       [[RETURN]]:
-// CHECK-RV64-NEXT:    [[TMP8:%.*]] = load i32, ptr [[RETVAL]], align 4
-// CHECK-RV64-NEXT:    ret i32 [[TMP8]]
+// CHECK-RV64-NEXT:    [[CONV:%.*]] = zext i1 [[TMP7]] to i32
+// CHECK-RV64-NEXT:    ret i32 [[CONV]]
 //
-int test_riscv(int a) {
-  if (__builtin_cpu_is("veyron-v1"))
-    return 3;
-  return 0;
+int test_cpu_is_veyron_v1() {
+  return __builtin_cpu_is("veyron-v1");
 }
 #endif
