@@ -32,8 +32,6 @@ using namespace lldb_dap;
 
 namespace lldb_dap {
 
-DAP g_dap;
-
 DAP::DAP()
     : broadcaster("lldb-dap"), exception_breakpoints(),
       focus_tid(LLDB_INVALID_THREAD_ID), stop_at_entry(false), is_attach(false),
@@ -693,15 +691,15 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
   if (packet_type == "request") {
     const auto command = GetString(object, "command");
     auto handler_pos = request_handlers.find(command);
-    if (handler_pos != request_handlers.end()) {
-      handler_pos->second(object);
-      return true; // Success
-    } else {
+    if (handler_pos == request_handlers.end()) {
       if (log)
         *log << "error: unhandled command \"" << command.data() << "\""
              << std::endl;
       return false; // Fail
     }
+
+    handler_pos->second(*this, object);
+    return true; // Success
   }
 
   if (packet_type == "response") {

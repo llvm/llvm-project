@@ -63,7 +63,7 @@ enum DAPBroadcasterBits {
   eBroadcastBitStopProgressThread = 1u << 1
 };
 
-typedef void (*RequestCallback)(const llvm::json::Object &command);
+typedef void (*RequestCallback)(DAP &dap, const llvm::json::Object &command);
 typedef void (*ResponseCallback)(llvm::Expected<llvm::json::Value> value);
 
 enum class PacketStatus {
@@ -352,8 +352,6 @@ private:
   // JSON bytes.
   void SendJSON(const std::string &json_str);
 };
-
-extern DAP g_dap;
 
 } // namespace lldb_dap
 
