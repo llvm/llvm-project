@@ -1442,8 +1442,10 @@ namespace {
     };
 
     unsigned NumPlacementArgs : 30;
-    AlignedAllocationMode PassAlignmentToPlacementDelete : 1;
-    TypeAwareAllocationMode PassTypeToPlacementDelete : 1;
+    LLVM_PREFERRED_TYPE(AlignedAllocationMode)
+    unsigned PassAlignmentToPlacementDelete : 1;
+    LLVM_PREFERRED_TYPE(TypeAwareAllocationMode)
+    unsigned PassTypeToPlacementDelete : 1;
     const FunctionDecl *OperatorDelete;
     ValueTy Ptr;
     ValueTy AllocSize;
@@ -1464,10 +1466,10 @@ namespace {
                         const ImplicitAllocationParameters &IAP,
                         CharUnits AllocAlign)
         : NumPlacementArgs(NumPlacementArgs),
-          PassAlignmentToPlacementDelete(IAP.PassAlignment),
-          PassTypeToPlacementDelete(IAP.PassTypeIdentity),
+          PassAlignmentToPlacementDelete(isAlignedAllocation(IAP.PassAlignment)),
           OperatorDelete(OperatorDelete), Ptr(Ptr), AllocSize(AllocSize),
-          AllocAlign(AllocAlign) {}
+          AllocAlign(AllocAlign) {
+          }
 
     void setPlacementArg(unsigned I, RValueTy Arg, QualType Type) {
       assert(I < NumPlacementArgs && "index out of range");
@@ -1477,17 +1479,27 @@ namespace {
     void Emit(CodeGenFunction &CGF, Flags flags) override {
       const auto *FPT = OperatorDelete->getType()->castAs<FunctionProtoType>();
       CallArgList DeleteArgs;
-
-      // The first argument is always a void* (or C* for a destroying operator
-      // delete for class type C).
-      DeleteArgs.add(Traits::get(CGF, Ptr), FPT->getParamType(0));
+      unsigned FirstNonTypeArg = 0;
+      TypeAwareAllocationMode TypeAwareDeallocation = TypeAwareAllocationMode::No;
+      if (OperatorDelete->isTypeAwareOperatorNewOrDelete()) {
+        TypeAwareDeallocation = TypeAwareAllocationMode::Yes;
+        QualType SpecializedTypeIdentity = FPT->getParamType(0);
+        ++FirstNonTypeArg;
+        CXXScalarValueInitExpr TypeIdentityParam(SpecializedTypeIdentity, nullptr, SourceLocation());
+        DeleteArgs.add(CGF.EmitAnyExprToTemp(&TypeIdentityParam),
+                          SpecializedTypeIdentity);
+      }
+      // The first non type tag argument is always a void* (or C* for a destroying
+      // operator  delete for class type C).
+      DeleteArgs.add(Traits::get(CGF, Ptr), FPT->getParamType(FirstNonTypeArg));
 
       // Figure out what other parameters we should be implicitly passing.
       UsualDeleteParams Params;
       if (NumPlacementArgs) {
         // A placement deallocation function is implicitly passed an alignment
         // if the placement allocation function was, but is never passed a size.
-        Params.Alignment = PassAlignmentToPlacementDelete;
+        Params.Alignment = alignedAllocationModeFromBool(PassAlignmentToPlacementDelete);
+        Params.TypeAwareDelete = TypeAwareDeallocation;
       } else {
         // For a non-placement new-expression, 'operator delete' can take a
         // size and/or an alignment if it has the right parameters.

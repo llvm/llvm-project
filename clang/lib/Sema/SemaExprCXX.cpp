@@ -1942,7 +1942,7 @@ static bool CheckDeleteOperator(Sema &S, SourceLocation StartLoc,
 /// Select the correct "usual" deallocation function to use from a selection of
 /// deallocation functions (either global or class-scope).
 static UsualDeallocFnInfo resolveDeallocationOverload(
-    Sema &S, LookupResult &R, ImplicitDeallocationParameters IDP,
+    Sema &S, LookupResult &R, const ImplicitDeallocationParameters& IDP,
     QualType DeallocType,
     llvm::SmallVectorImpl<UsualDeallocFnInfo> *BestFns = nullptr) {
 
@@ -2923,6 +2923,9 @@ bool Sema::FindAllocationFunctions(
     if (std::optional<QualType> SpecializedTypeIdentity =
             instantiateSpecializedTypeIdentity(AllocElemType)) {
       TypeIdentity = *SpecializedTypeIdentity;
+      if (RequireCompleteType(StartLoc, TypeIdentity,
+                                diag::err_incomplete_type))
+      return true;
     } else {
       IAP.PassTypeIdentity = TypeAwareAllocationMode::No;
     }
@@ -4092,8 +4095,13 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
     // delete that we are going to call (non-virtually); converting to void*
     // is trivial and left to AST consumers to handle.
     unsigned PointeeIndex = 0;
-    if (isTypeAwareOperatorNewOrDelete(OperatorDelete))
+    if (isTypeAwareOperatorNewOrDelete(OperatorDelete)) {
+      QualType TypeIdentity = OperatorDelete->getParamDecl(0)->getType();
+      if (RequireCompleteType(StartLoc, TypeIdentity,
+                                diag::err_incomplete_type))
+        return ExprError();
       PointeeIndex = 1;
+    }
     QualType ParamType = OperatorDelete->getParamDecl(PointeeIndex)->getType();
     if (!IsVirtualDelete && !ParamType->getPointeeType()->isVoidType()) {
       Qualifiers Qs = Pointee.getQualifiers();
