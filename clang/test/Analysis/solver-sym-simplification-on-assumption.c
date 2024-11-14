@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 %s \
+// RUN: %clang_analyze_cc1 -triple=x86_64-unknown-linux-gnu %s \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -verify
 
