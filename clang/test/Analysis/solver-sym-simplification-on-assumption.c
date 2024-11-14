@@ -21,16 +21,17 @@ void test_derived_sym_simplification_on_assume(int s0, int s1) {
     return;
   clang_analyzer_value(s1); // expected-warning{{[1, 2147483647]}}
 
+  clang_analyzer_eval(elem); // expected-warning{{UNKNOWN}}
   if (elem-- == 0)
     return;
 
   if (s0 > 1)
     return;
-  clang_analyzer_value(s0); // expected-warning{{1}}
+  clang_analyzer_eval(s0 == 1); // expected-warning{{TRUE}}
 
   if (s1 > 1)
     return;
-  clang_analyzer_value(s1); // expected-warning{{1}}
+  clang_analyzer_eval(s1 == 1); // expected-warning{{TRUE}}
 
   clang_analyzer_eval(elem); // expected-warning{{FALSE}}
 }
