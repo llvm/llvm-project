@@ -13,9 +13,7 @@ declare <2 x bfloat> @llvm.cos.f16(<2 x bfloat> %a) #0
 ; CHECK-DAG:  cvt.f32.bf16     [[AF1:%f[0-9]+]], [[A1]];
 ; CHECK-DAG:  sin.approx.f32  [[RF0:%f[0-9]+]], [[AF0]];
 ; CHECK-DAG:  sin.approx.f32  [[RF1:%f[0-9]+]], [[AF1]];
-; CHECK-DAG:  cvt.rn.bf16.f32  [[R0:%rs[0-9]+]], [[RF0]];
-; CHECK-DAG:  cvt.rn.bf16.f32  [[R1:%rs[0-9]+]], [[RF1]];
-; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
+; CHECK:      cvt.rn.bf16x2.f32         [[R:%r[0-9]+]], [[RF0]], [[RF1]]
 ; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x bfloat> @test_sin(<2 x bfloat> %a) #0 #1 {
@@ -30,9 +28,7 @@ define <2 x bfloat> @test_sin(<2 x bfloat> %a) #0 #1 {
 ; CHECK-DAG:  cvt.f32.bf16     [[AF1:%f[0-9]+]], [[A1]];
 ; CHECK-DAG:  cos.approx.f32  [[RF0:%f[0-9]+]], [[AF0]];
 ; CHECK-DAG:  cos.approx.f32  [[RF1:%f[0-9]+]], [[AF1]];
-; CHECK-DAG:  cvt.rn.bf16.f32  [[R0:%rs[0-9]+]], [[RF0]];
-; CHECK-DAG:  cvt.rn.bf16.f32  [[R1:%rs[0-9]+]], [[RF1]];
-; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
+; CHECK:      cvt.rn.bf16x2.f32         [[R:%r[0-9]+]], [[RF0]], [[RF1]]
 ; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define <2 x bfloat> @test_cos(<2 x bfloat> %a) #0 #1 {
