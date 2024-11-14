@@ -1,4 +1,64 @@
-// RUN: %clang_cc1 -std=gnu++20 -fsyntax-only -verify %s
+// RUN: split-file %s %t
+// RUN: %clang_cc1 -std=gnu++20 -fsyntax-only -ast-dump -verify %t/good_annotate.cpp | FileCheck %s
+// RUN: %clang_cc1 -std=gnu++20 -fsyntax-only -verify %t/bad_annotate.cpp
+//--- good_annotate.cpp
+// expected-no-diagnostics
+
+void f() {
+  [[clang::annotate("decl", 1)]] int i = 0;
+  [[clang::annotate("stmt", 2)]] i += 1;
+[[clang::annotate("label", 3)]] label1:
+  i += 2;
+}
+
+// CHECK: -FunctionDecl 0x{{[0-9a-z]+}} {{.*:[0-9]+:[0-9]+, line:[0-9]+:[0-9]+> line:[0-9]+:[0-9]+}} f 'void ()'
+// CHECK: -VarDecl 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?> col:[0-9]+}} used i 'int'
+// CHECK: -AnnotateAttr 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} "decl"
+// CHECK: -IntegerLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'int' 1
+// CHECK: -AttributedStmt 0x{{[0-9a-z]+}} {{<line:[0-9]+:[0-9]+(, col:[0-9]+)?>}}
+// CHECK: -AnnotateAttr 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} "stmt"
+// CHECK: -IntegerLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'int' 2
+// CHECK: -LabelStmt 0x{{[0-9a-z]+}} {{<line:[0-9]+:[0-9]+(, line:[0-9]+:[0-9]+)?>}} 'label1'
+// CHECK: -AnnotateAttr 0x{{[0-9a-z]+}} {{<line:[0-9]+:[0-9]+(, col:[0-9]+)?>}} "label"
+// CHECK: -IntegerLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'int' 3
+// CHECK: -CompoundAssignOperator 0x{{[0-9a-z]+}} {{<line:[0-9]+:[0-9]+(, col:[0-9]+)?>}}
+
+template <typename T> void g() {
+  [[clang::annotate("tmpl_decl", 4)]] T j = 0;
+  [[clang::annotate("tmpl_stmt", 5)]] j += 1;
+[[clang::annotate("tmpl_label", 6)]] label2:
+  j += 2;
+}
+
+// CHECK: -FunctionTemplateDecl 0x{{[0-9a-z]+}} {{.*:[0-9]+:[0-9]+, line:[0-9]+:[0-9]+> line:[0-9]+:[0-9]+}} g
+// CHECK: -VarDecl 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?> col:[0-9]+}} referenced j 'T'
+// CHECK: -AnnotateAttr 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} "tmpl_decl"
+// CHECK: -IntegerLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'int' 4
+// CHECK: -AttributedStmt 0x{{[0-9a-z]+}} {{<line:[0-9]+:[0-9]+(, col:[0-9]+)?>}}
+// CHECK: -AnnotateAttr 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} "tmpl_stmt"
+// CHECK: -IntegerLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'int' 5
+// CHECK: -LabelStmt 0x{{[0-9a-z]+}} {{<line:[0-9]+:[0-9]+(, line:[0-9]+:[0-9]+)?>}} 'label2'
+// CHECK: -AnnotateAttr 0x{{[0-9a-z]+}} {{<line:[0-9]+:[0-9]+(, col:[0-9]+)?>}} "tmpl_label"
+// CHECK: -IntegerLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'int' 6
+// CHECK: -CompoundAssignOperator 0x{{[0-9a-z]+}} {{<line:[0-9]+:[0-9]+(, col:[0-9]+)?>}}
+
+void h() {
+  g<int>();
+}
+
+// CHECK: -FunctionDecl 0x{{[0-9a-z]+}} {{.*:[0-9]+:[0-9]+, line:[0-9]+:[0-9]+> line:[0-9]+:[0-9]+}} used g 'void ()' implicit_instantiation
+// CHECK: -VarDecl 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?> col:[0-9]+}} used j 'int'
+// CHECK: -AnnotateAttr 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} "tmpl_decl"
+// CHECK: -IntegerLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'int' 4
+// CHECK: -AttributedStmt 0x{{[0-9a-z]+}} {{<line:[0-9]+:[0-9]+(, col:[0-9]+)?>}}
+// CHECK: -AnnotateAttr 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} Implicit "tmpl_stmt"
+// CHECK: -IntegerLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'int' 5
+// CHECK: -LabelStmt 0x{{[0-9a-z]+}} {{<line:[0-9]+:[0-9]+(, line:[0-9]+:[0-9]+)?>}} 'label2'
+// CHECK: -AnnotateAttr 0x{{[0-9a-z]+}} {{<line:[0-9]+:[0-9]+(, col:[0-9]+)?>}} "tmpl_label"
+// CHECK: -IntegerLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'int' 6
+// CHECK: -CompoundAssignOperator 0x{{[0-9a-z]+}} {{<line:[0-9]+:[0-9]+(, col:[0-9]+)?>}}
+
+//--- bad_annotate.cpp
 
 template<bool If, typename Type>
 struct enable_if {
