@@ -228,7 +228,7 @@ SourceLocation CXXScalarValueInitExpr::getBeginLoc() const {
 // CXXNewExpr
 CXXNewExpr::CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
                        FunctionDecl *OperatorDelete,
-                       ImplicitAllocationParameters IAP,
+                       const ImplicitAllocationParameters &IAP,
                        bool UsualArrayDeleteWantsSize,
                        ArrayRef<Expr *> PlacementArgs, SourceRange TypeIdParens,
                        std::optional<Expr *> ArraySize,
@@ -247,8 +247,9 @@ CXXNewExpr::CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
 
   CXXNewExprBits.IsGlobalNew = IsGlobalNew;
   CXXNewExprBits.IsArray = ArraySize.has_value();
-  CXXNewExprBits.ShouldPassAlignment = IAP.passAlignment();
-  CXXNewExprBits.ShouldPassTypeIdentity = IAP.passTypeIdentity();
+  CXXNewExprBits.ShouldPassAlignment = isAlignedAllocation(IAP.PassAlignment);
+  CXXNewExprBits.ShouldPassTypeIdentity =
+      isTypeAwareAllocation(IAP.PassTypeIdentity);
   CXXNewExprBits.UsualArrayDeleteWantsSize = UsualArrayDeleteWantsSize;
   CXXNewExprBits.HasInitializer = Initializer != nullptr;
   CXXNewExprBits.StoredInitializationStyle =
@@ -293,7 +294,7 @@ CXXNewExpr::CXXNewExpr(EmptyShell Empty, bool IsArray,
 
 CXXNewExpr *CXXNewExpr::Create(
     const ASTContext &Ctx, bool IsGlobalNew, FunctionDecl *OperatorNew,
-    FunctionDecl *OperatorDelete, ImplicitAllocationParameters IAP,
+    FunctionDecl *OperatorDelete, const ImplicitAllocationParameters &IAP,
     bool UsualArrayDeleteWantsSize, ArrayRef<Expr *> PlacementArgs,
     SourceRange TypeIdParens, std::optional<Expr *> ArraySize,
     CXXNewInitializationStyle InitializationStyle, Expr *Initializer,

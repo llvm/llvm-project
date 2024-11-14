@@ -1380,10 +1380,10 @@ RValue CodeGenFunction::EmitBuiltinNewDeleteCall(const FunctionProtoType *Type,
 namespace {
 /// The parameters to pass to a usual operator delete.
 struct UsualDeleteParams {
-  bool TypedAwareDelete = false;
+  TypeAwareAllocationMode TypeAwareDelete = TypeAwareAllocationMode::No;
   bool DestroyingDelete = false;
   bool Size = false;
-  bool Alignment = false;
+  AlignedAllocationMode Alignment = AlignedAllocationMode::No;
 };
 }
 
@@ -1396,7 +1396,7 @@ static UsualDeleteParams getUsualDeleteParams(const FunctionDecl *FD) {
   if (FD->isTypeAwareOperatorNewOrDelete()) {
     // Assume Sema has ensured a non-pointer first parameter is
     // a type identity.
-    Params.TypedAwareDelete = true;
+    Params.TypeAwareDelete = TypeAwareAllocationMode::Yes;
     assert(AI != AE);
     ++AI;
   }
@@ -1418,7 +1418,7 @@ static UsualDeleteParams getUsualDeleteParams(const FunctionDecl *FD) {
   }
 
   if (AI != AE && (*AI)->isAlignValT()) {
-    Params.Alignment = true;
+    Params.Alignment = AlignedAllocationMode::Yes;
     ++AI;
   }
 
@@ -1442,10 +1442,8 @@ namespace {
     };
 
     unsigned NumPlacementArgs : 30;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned PassAlignmentToPlacementDelete : 1;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned PassTypeToPlacementDelete : 1;
+    AlignedAllocationMode PassAlignmentToPlacementDelete : 1;
+    TypeAwareAllocationMode PassTypeToPlacementDelete : 1;
     const FunctionDecl *OperatorDelete;
     ValueTy Ptr;
     ValueTy AllocSize;
@@ -1462,12 +1460,12 @@ namespace {
 
     CallDeleteDuringNew(size_t NumPlacementArgs,
                         const FunctionDecl *OperatorDelete, ValueTy Ptr,
-                        ValueTy AllocSize, bool PassTypeToPlacementDelete,
-                        bool PassAlignmentToPlacementDelete,
+                        ValueTy AllocSize,
+                        const ImplicitAllocationParameters &IAP,
                         CharUnits AllocAlign)
         : NumPlacementArgs(NumPlacementArgs),
-          PassAlignmentToPlacementDelete(PassAlignmentToPlacementDelete),
-          PassTypeToPlacementDelete(PassTypeToPlacementDelete),
+          PassAlignmentToPlacementDelete(IAP.PassAlignment),
+          PassTypeToPlacementDelete(IAP.PassTypeIdentity),
           OperatorDelete(OperatorDelete), Ptr(Ptr), AllocSize(AllocSize),
           AllocAlign(AllocAlign) {}
 
@@ -1508,7 +1506,7 @@ namespace {
       // is an enum whose underlying type is std::size_t.
       // FIXME: Use the right type as the parameter type. Note that in a call
       // to operator delete(size_t, ...), we may not have it available.
-      if (Params.Alignment)
+      if (isAlignedAllocation(Params.Alignment))
         DeleteArgs.add(RValue::get(llvm::ConstantInt::get(
                            CGF.SizeTy, AllocAlign.getQuantity())),
                        CGF.getContext().getSizeType());
@@ -1549,8 +1547,8 @@ static void EnterNewDeleteCleanup(CodeGenFunction &CGF,
 
     DirectCleanup *Cleanup = CGF.EHStack.pushCleanupWithExtra<DirectCleanup>(
         EHCleanup, E->getNumPlacementArgs(), E->getOperatorDelete(),
-        NewPtr.emitRawPointer(CGF), AllocSize, E->passTypeIdentity(),
-        E->passAlignment(), AllocAlign);
+        NewPtr.emitRawPointer(CGF), AllocSize,
+        E->implicitAllocationParameters(), AllocAlign);
     for (unsigned I = 0, N = E->getNumPlacementArgs(); I != N; ++I) {
       auto &Arg = NewArgs[I + NumNonPlacementArgs];
       Cleanup->setPlacementArg(I, Arg.getRValue(CGF), Arg.Ty);
@@ -1577,8 +1575,8 @@ static void EnterNewDeleteCleanup(CodeGenFunction &CGF,
   ConditionalCleanup *Cleanup =
       CGF.EHStack.pushCleanupWithExtra<ConditionalCleanup>(
           EHCleanup, E->getNumPlacementArgs(), E->getOperatorDelete(),
-          SavedNewPtr, SavedAllocSize, E->passTypeIdentity(),
-          E->passAlignment(), AllocAlign);
+          SavedNewPtr, SavedAllocSize, E->implicitAllocationParameters(),
+          AllocAlign);
   for (unsigned I = 0, N = E->getNumPlacementArgs(); I != N; ++I) {
     auto &Arg = NewArgs[I + NumNonPlacementArgs];
     Cleanup->setPlacementArg(
@@ -1649,8 +1647,9 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   } else {
     const FunctionProtoType *allocatorType =
       allocator->getType()->castAs<FunctionProtoType>();
+    ImplicitAllocationParameters IAP = E->implicitAllocationParameters();
     unsigned ParamsToSkip = 0;
-    if (E->passTypeIdentity()) {
+    if (isTypeAwareAllocation(IAP.PassTypeIdentity)) {
       QualType SpecializedTypeIdentity = allocatorType->getParamType(0);
       CXXScalarValueInitExpr TypeIdentityParam(SpecializedTypeIdentity, nullptr,
                                                SourceLocation());
@@ -1670,7 +1669,7 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
     }
 
     // The allocation alignment may be passed as the second argument.
-    if (E->passAlignment()) {
+    if (isAlignedAllocation(IAP.PassAlignment)) {
       QualType AlignValT = sizeType;
       if (allocatorType->getNumParams() > IndexOfAlignArg) {
         AlignValT = allocatorType->getParamType(IndexOfAlignArg);
@@ -1830,7 +1829,7 @@ void CodeGenFunction::EmitDeleteCall(const FunctionDecl *DeleteFD,
   auto ParamTypeIt = DeleteFTy->param_type_begin();
 
   llvm::AllocaInst *TypeIdentityArg = nullptr;
-  if (Params.TypedAwareDelete) {
+  if (isTypeAwareAllocation(Params.TypeAwareDelete)) {
     QualType SpecializedTypeIdentity = *ParamTypeIt++;
     CXXScalarValueInitExpr TypeIdentityParam(SpecializedTypeIdentity, nullptr,
                                              SourceLocation());
@@ -1874,7 +1873,7 @@ void CodeGenFunction::EmitDeleteCall(const FunctionDecl *DeleteFD,
   }
 
   // Pass the alignment if the delete function has an align_val_t parameter.
-  if (Params.Alignment) {
+  if (isAlignedAllocation(Params.Alignment)) {
     QualType AlignValType = *ParamTypeIt++;
     CharUnits DeleteTypeAlign =
         getContext().toCharUnitsFromBits(getContext().getTypeAlignIfKnown(

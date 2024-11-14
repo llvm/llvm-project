@@ -1919,8 +1919,9 @@ void ASTStmtWriter::VisitCXXNewExpr(CXXNewExpr *E) {
   Record.push_back(E->isParenTypeId());
 
   Record.push_back(E->isGlobalNew());
-  Record.push_back(E->passAlignment());
-  Record.push_back(E->passTypeIdentity());
+  ImplicitAllocationParameters IAP = E->implicitAllocationParameters();
+  Record.push_back(isAlignedAllocation(IAP.PassAlignment));
+  Record.push_back(isTypeAwareAllocation(IAP.PassTypeIdentity));
   Record.push_back(E->doesUsualArrayDeleteWantSize());
   Record.push_back(E->CXXNewExprBits.HasInitializer);
   Record.push_back(E->CXXNewExprBits.StoredInitializationStyle);
