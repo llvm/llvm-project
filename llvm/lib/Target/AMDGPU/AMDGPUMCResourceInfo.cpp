@@ -95,7 +95,7 @@ void MCResourceInfo::assignResourceInfoExpr(
     int64_t LocalValue, ResourceInfoKind RIK, AMDGPUMCExpr::VariantKind Kind,
     const MachineFunction &MF, const SmallVectorImpl<const Function *> &Callees,
     MCContext &OutContext) {
-  const LLVMTargetMachine &TM = MF.getTarget();
+  const TargetMachine &TM = MF.getTarget();
   MCSymbol *FnSym = TM.getSymbol(&MF.getFunction());
   const MCConstantExpr *LocalConstExpr =
       MCConstantExpr::create(LocalValue, OutContext);
@@ -137,7 +137,7 @@ void MCResourceInfo::gatherResourceInfo(
     addMaxSGPRCandidate(FRI.NumExplicitSGPR);
   }
 
-  const LLVMTargetMachine &TM = MF.getTarget();
+  const TargetMachine &TM = MF.getTarget();
   MCSymbol *FnSym = TM.getSymbol(&MF.getFunction());
 
   auto SetMaxReg = [&](MCSymbol *MaxSym, int32_t numRegs,
@@ -221,7 +221,7 @@ void MCResourceInfo::gatherResourceInfo(
 
 const MCExpr *MCResourceInfo::createTotalNumVGPRs(const MachineFunction &MF,
                                                   MCContext &Ctx) {
-  const LLVMTargetMachine &TM = MF.getTarget();
+  const TargetMachine &TM = MF.getTarget();
   MCSymbol *FnSym = TM.getSymbol(&MF.getFunction());
   return AMDGPUMCExpr::createTotalNumVGPR(
       getSymRefExpr(FnSym->getName(), RIK_NumAGPR, Ctx),
@@ -231,7 +231,7 @@ const MCExpr *MCResourceInfo::createTotalNumVGPRs(const MachineFunction &MF,
 const MCExpr *MCResourceInfo::createTotalNumSGPRs(const MachineFunction &MF,
                                                   bool hasXnack,
                                                   MCContext &Ctx) {
-  const LLVMTargetMachine &TM = MF.getTarget();
+  const TargetMachine &TM = MF.getTarget();
   MCSymbol *FnSym = TM.getSymbol(&MF.getFunction());
   return MCBinaryExpr::createAdd(
       getSymRefExpr(FnSym->getName(), RIK_NumSGPR, Ctx),
