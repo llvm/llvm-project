@@ -14,6 +14,7 @@ define amdgpu_kernel void @foo(ptr addrspace(1) noalias %arg_in_0, ptr addrspace
 ; CHECK-ORIG-OPS-NEXT:    .cfi_undefined 16
 ; CHECK-ORIG-OPS-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CHECK-ORIG-OPS-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-ORIG-OPS-NEXT:    .loc 1 0 0 prologue_end ; gdb_simple.f95:0:0
 ; CHECK-ORIG-OPS-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-ORIG-OPS-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-ORIG-OPS-NEXT:    s_waitcnt lgkmcnt(0)
@@ -41,6 +42,7 @@ define amdgpu_kernel void @foo(ptr addrspace(1) noalias %arg_in_0, ptr addrspace
 ; CHECK-USER-OPS-NEXT:    .cfi_undefined 16
 ; CHECK-USER-OPS-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CHECK-USER-OPS-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-USER-OPS-NEXT:    .loc 1 0 0 prologue_end ; gdb_simple.f95:0:0
 ; CHECK-USER-OPS-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-USER-OPS-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-USER-OPS-NEXT:    s_waitcnt lgkmcnt(0)

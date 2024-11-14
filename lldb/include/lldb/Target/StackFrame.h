@@ -519,6 +519,16 @@ protected:
   bool HasCachedData() const;
 
 private:
+  /// Private methods, called from GetValueForVariableExpressionPath.
+  /// See that method for documentation of parameters and return value.
+  lldb::ValueObjectSP LegacyGetValueForVariableExpressionPath(
+      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
+      uint32_t options, lldb::VariableSP &var_sp, Status &error);
+
+  lldb::ValueObjectSP DILGetValueForVariableExpressionPath(
+      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
+      uint32_t options, lldb::VariableSP &var_sp, Status &error);
+
   /// For StackFrame only.
   /// \{
   lldb::ThreadWP m_thread_wp;
