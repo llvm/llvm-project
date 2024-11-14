@@ -5612,8 +5612,6 @@ struct VarArgPowerPCHelper : public VarArgHelperBase {
       : VarArgHelperBase(F, MS, MSV, VAListTagSize) {}
 
   void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
-    const DataLayout &DL = F.getDataLayout();
-
     // For PowerPC, we need to deal with alignment of stack arguments -
     // they are mostly aligned to 8 bytes, but vectors and i128 arrays
     // are aligned to 16 bytes, byvals can be aligned to 8 or 16 bytes,
@@ -5635,6 +5633,7 @@ struct VarArgPowerPCHelper : public VarArgHelperBase {
       VAArgBase = 8;
     }
     unsigned VAArgOffset = VAArgBase;
+    const DataLayout &DL = F.getDataLayout();
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
       bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
