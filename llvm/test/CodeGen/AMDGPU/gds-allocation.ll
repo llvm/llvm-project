@@ -106,7 +106,7 @@ define amdgpu_kernel void @gds_global_align_plus_attr(ptr addrspace(1) %out) #0 
 define amdgpu_kernel void @gds_extern_align(ptr addrspace(1) %out, ptr addrspace(2) %gds.arg) #0 {
 ; GCN-LABEL: gds_extern_align:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dword s0, s[0:1], 0x8
+; GCN-NEXT:    s_load_dword s0, s[2:3], 0x8
 ; GCN-NEXT:    v_mov_b32_e32 v0, 5
 ; GCN-NEXT:    s_movk_i32 m0, 0x401
 ; GCN-NEXT:    s_movk_i32 s1, 0x400

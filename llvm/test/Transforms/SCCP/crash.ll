@@ -28,7 +28,7 @@ define i32 @test2([4 x i32] %A) {
   ret i32 %B
 }
 
-define x86_mmx @test3() {
-  %load = load x86_mmx, ptr null
-  ret x86_mmx %load
+define <1 x i64> @test3() {
+  %load = load <1 x i64>, ptr null
+  ret <1 x i64> %load
 }

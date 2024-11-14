@@ -37,7 +37,7 @@ void MemprofThreadContext::OnFinished() {
   thread = nullptr;
 }
 
-static ALIGNED(16) char thread_registry_placeholder[sizeof(ThreadRegistry)];
+alignas(16) static char thread_registry_placeholder[sizeof(ThreadRegistry)];
 static ThreadRegistry *memprof_thread_registry;
 
 static Mutex mu_for_thread_context;

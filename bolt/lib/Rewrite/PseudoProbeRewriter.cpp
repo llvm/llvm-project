@@ -19,6 +19,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/LEB128.h"
+#include <memory>
 
 #undef DEBUG_TYPE
 #define DEBUG_TYPE "pseudo-probe-rewriter"
@@ -48,6 +49,7 @@ static cl::opt<PrintPseudoProbesOptions> PrintPseudoProbes(
                clEnumValN(PPP_All, "all", "enable all debugging printout")),
     cl::Hidden, cl::cat(BoltCategory));
 
+extern cl::opt<bool> ProfileUsePseudoProbes;
 } // namespace opts
 
 namespace {
@@ -72,23 +74,38 @@ class PseudoProbeRewriter final : public MetadataRewriter {
   void parsePseudoProbe();
 
   /// PseudoProbe decoder
-  MCPseudoProbeDecoder ProbeDecoder;
+  std::shared_ptr<MCPseudoProbeDecoder> ProbeDecoderPtr;
 
 public:
   PseudoProbeRewriter(BinaryContext &BC)
-      : MetadataRewriter("pseudo-probe-rewriter", BC) {}
+      : MetadataRewriter("pseudo-probe-rewriter", BC),
+        ProbeDecoderPtr(std::make_shared<MCPseudoProbeDecoder>()) {
+    BC.setPseudoProbeDecoder(ProbeDecoderPtr);
+  }
 
+  Error preCFGInitializer() override;
   Error postEmitFinalizer() override;
+
+  ~PseudoProbeRewriter() override { ProbeDecoderPtr.reset(); }
 };
 
+Error PseudoProbeRewriter::preCFGInitializer() {
+  if (opts::ProfileUsePseudoProbes)
+    parsePseudoProbe();
+
+  return Error::success();
+}
+
 Error PseudoProbeRewriter::postEmitFinalizer() {
-  parsePseudoProbe();
+  if (!opts::ProfileUsePseudoProbes)
+    parsePseudoProbe();
   updatePseudoProbes();
 
   return Error::success();
 }
 
 void PseudoProbeRewriter::parsePseudoProbe() {
+  MCPseudoProbeDecoder &ProbeDecoder(*ProbeDecoderPtr);
   PseudoProbeDescSection = BC.getUniqueSectionByName(".pseudo_probe_desc");
   PseudoProbeSection = BC.getUniqueSectionByName(".pseudo_probe");
 
@@ -126,7 +143,6 @@ void PseudoProbeRewriter::parsePseudoProbe() {
   if (!ProbeDecoder.buildAddress2ProbeMap(
           reinterpret_cast<const uint8_t *>(Contents.data()), Contents.size(),
           GuidFilter, FuncStartAddrs)) {
-    ProbeDecoder.getAddress2ProbesMap().clear();
     errs() << "BOLT-WARNING: fail in building Address2ProbeMap\n";
     return;
   }
@@ -138,9 +154,19 @@ void PseudoProbeRewriter::parsePseudoProbe() {
     ProbeDecoder.printGUID2FuncDescMap(outs());
     ProbeDecoder.printProbesForAllAddresses(outs());
   }
+
+  for (const auto &FuncDesc : ProbeDecoder.getGUID2FuncDescMap()) {
+    uint64_t GUID = FuncDesc.FuncGUID;
+    if (!FuncStartAddrs.contains(GUID))
+      continue;
+    BinaryFunction *BF = BC.getBinaryFunctionAtAddress(FuncStartAddrs[GUID]);
+    assert(BF);
+    BF->setGUID(GUID);
+  }
 }
 
 void PseudoProbeRewriter::updatePseudoProbes() {
+  MCPseudoProbeDecoder &ProbeDecoder(*ProbeDecoderPtr);
   // check if there is pseudo probe section decoded
   if (ProbeDecoder.getAddress2ProbesMap().empty())
     return;
@@ -148,13 +174,13 @@ void PseudoProbeRewriter::updatePseudoProbes() {
   AddressProbesMap &Address2ProbesMap = ProbeDecoder.getAddress2ProbesMap();
   const GUIDProbeFunctionMap &GUID2Func = ProbeDecoder.getGUID2FuncDescMap();
 
-  for (auto &AP : Address2ProbesMap) {
-    BinaryFunction *F = BC.getBinaryFunctionContainingAddress(AP.first);
+  for (MCDecodedPseudoProbe &Probe : Address2ProbesMap) {
+    uint64_t Address = Probe.getAddress();
+    BinaryFunction *F = BC.getBinaryFunctionContainingAddress(Address);
     // If F is removed, eliminate all probes inside it from inline tree
     // Setting probes' addresses as INT64_MAX means elimination
     if (!F) {
-      for (MCDecodedPseudoProbe &Probe : AP.second)
-        Probe.setAddress(INT64_MAX);
+      Probe.setAddress(INT64_MAX);
       continue;
     }
     // If F is not emitted, the function will remain in the same address as its
@@ -162,45 +188,36 @@ void PseudoProbeRewriter::updatePseudoProbes() {
     if (!F->isEmitted())
       continue;
 
-    uint64_t Offset = AP.first - F->getAddress();
+    uint64_t Offset = Address - F->getAddress();
     const BinaryBasicBlock *BB = F->getBasicBlockContainingOffset(Offset);
     uint64_t BlkOutputAddress = BB->getOutputAddressRange().first;
     // Check if block output address is defined.
     // If not, such block is removed from binary. Then remove the probes from
     // inline tree
     if (BlkOutputAddress == 0) {
-      for (MCDecodedPseudoProbe &Probe : AP.second)
-        Probe.setAddress(INT64_MAX);
+      Probe.setAddress(INT64_MAX);
       continue;
     }
 
-    unsigned ProbeTrack = AP.second.size();
-    std::list<MCDecodedPseudoProbe>::iterator Probe = AP.second.begin();
-    while (ProbeTrack != 0) {
-      if (Probe->isBlock()) {
-        Probe->setAddress(BlkOutputAddress);
-      } else if (Probe->isCall()) {
-        // A call probe may be duplicated due to ICP
-        // Go through output of InputOffsetToAddressMap to collect all related
-        // probes
-        auto CallOutputAddresses = BC.getIOAddressMap().lookupAll(AP.first);
-        auto CallOutputAddress = CallOutputAddresses.first;
-        if (CallOutputAddress == CallOutputAddresses.second) {
-          Probe->setAddress(INT64_MAX);
-        } else {
-          Probe->setAddress(CallOutputAddress->second);
-          CallOutputAddress = std::next(CallOutputAddress);
-        }
-
-        while (CallOutputAddress != CallOutputAddresses.second) {
-          AP.second.push_back(*Probe);
-          AP.second.back().setAddress(CallOutputAddress->second);
-          Probe->getInlineTreeNode()->addProbes(&(AP.second.back()));
-          CallOutputAddress = std::next(CallOutputAddress);
-        }
+    if (Probe.isBlock()) {
+      Probe.setAddress(BlkOutputAddress);
+    } else if (Probe.isCall()) {
+      // A call probe may be duplicated due to ICP
+      // Go through output of InputOffsetToAddressMap to collect all related
+      // probes
+      auto CallOutputAddresses = BC.getIOAddressMap().lookupAll(Address);
+      auto CallOutputAddress = CallOutputAddresses.first;
+      if (CallOutputAddress == CallOutputAddresses.second) {
+        Probe.setAddress(INT64_MAX);
+      } else {
+        Probe.setAddress(CallOutputAddress->second);
+        CallOutputAddress = std::next(CallOutputAddress);
       }
-      Probe = std::next(Probe);
-      ProbeTrack--;
+
+      while (CallOutputAddress != CallOutputAddresses.second) {
+        ProbeDecoder.addInjectedProbe(Probe, CallOutputAddress->second);
+        CallOutputAddress = std::next(CallOutputAddress);
+      }
     }
   }
 
@@ -216,22 +233,16 @@ void PseudoProbeRewriter::updatePseudoProbes() {
             BinaryBlock.getName();
 
     // scan all addresses -> correlate probe to block when print out
-    std::vector<uint64_t> Addresses;
-    for (auto &Entry : Address2ProbesMap)
-      Addresses.push_back(Entry.first);
-    llvm::sort(Addresses);
-    for (uint64_t Key : Addresses) {
-      for (MCDecodedPseudoProbe &Probe : Address2ProbesMap[Key]) {
-        if (Probe.getAddress() == INT64_MAX)
-          outs() << "Deleted Probe: ";
-        else
-          outs() << "Address: " << format_hex(Probe.getAddress(), 8) << " ";
-        Probe.print(outs(), GUID2Func, true);
-        // print block name only if the probe is block type and undeleted.
-        if (Probe.isBlock() && Probe.getAddress() != INT64_MAX)
-          outs() << format_hex(Probe.getAddress(), 8) << " Probe is in "
-                 << Addr2BlockNames[Probe.getAddress()] << "\n";
-      }
+    for (MCDecodedPseudoProbe &Probe : Address2ProbesMap) {
+      if (Probe.getAddress() == INT64_MAX)
+        outs() << "Deleted Probe: ";
+      else
+        outs() << "Address: " << format_hex(Probe.getAddress(), 8) << " ";
+      Probe.print(outs(), GUID2Func, true);
+      // print block name only if the probe is block type and undeleted.
+      if (Probe.isBlock() && Probe.getAddress() != INT64_MAX)
+        outs() << format_hex(Probe.getAddress(), 8) << " Probe is in "
+               << Addr2BlockNames[Probe.getAddress()] << "\n";
     }
     outs() << "=======================================\n";
   }
@@ -241,6 +252,7 @@ void PseudoProbeRewriter::updatePseudoProbes() {
 }
 
 void PseudoProbeRewriter::encodePseudoProbes() {
+  MCPseudoProbeDecoder &ProbeDecoder(*ProbeDecoderPtr);
   // Buffer for new pseudo probes section
   SmallString<8> Contents;
   MCDecodedPseudoProbe *LastProbe = nullptr;
@@ -306,7 +318,7 @@ void PseudoProbeRewriter::encodePseudoProbes() {
       ProbeDecoder.getDummyInlineRoot();
   for (auto Child = Root.getChildren().begin();
        Child != Root.getChildren().end(); ++Child)
-    Inlinees[Child->first] = Child->second.get();
+    Inlinees[Child->getInlineSite()] = &*Child;
 
   for (auto Inlinee : Inlinees)
     // INT64_MAX is "placeholder" of unused callsite index field in the pair
@@ -332,25 +344,37 @@ void PseudoProbeRewriter::encodePseudoProbes() {
     EmitInt(Cur->Guid, 8);
     // Emit number of probes in this node
     uint64_t Deleted = 0;
-    for (MCDecodedPseudoProbe *&Probe : Cur->getProbes())
+    for (MCDecodedPseudoProbe *&Probe :
+         llvm::make_pointer_range(Cur->getProbes()))
       if (Probe->getAddress() == INT64_MAX)
         Deleted++;
     LLVM_DEBUG(dbgs() << "Deleted Probes:" << Deleted << "\n");
-    uint64_t ProbesSize = Cur->getProbes().size() - Deleted;
+    size_t InjectedProbes = ProbeDecoder.getNumInjectedProbes(Cur);
+    uint64_t ProbesSize = Cur->getProbes().size() - Deleted + InjectedProbes;
     EmitULEB128IntValue(ProbesSize);
     // Emit number of direct inlinees
     EmitULEB128IntValue(Cur->getChildren().size());
     // Emit probes in this group
-    for (MCDecodedPseudoProbe *&Probe : Cur->getProbes()) {
+    for (MCDecodedPseudoProbe *&Probe :
+         llvm::make_pointer_range(Cur->getProbes())) {
       if (Probe->getAddress() == INT64_MAX)
         continue;
       EmitDecodedPseudoProbe(Probe);
       LastProbe = Probe;
     }
+    if (InjectedProbes) {
+      for (MCDecodedPseudoProbe *&Probe :
+           llvm::make_pointer_range(ProbeDecoder.getInjectedProbes(Cur))) {
+        if (Probe->getAddress() == INT64_MAX)
+          continue;
+        EmitDecodedPseudoProbe(Probe);
+        LastProbe = Probe;
+      }
+    }
 
     for (auto Child = Cur->getChildren().begin();
          Child != Cur->getChildren().end(); ++Child)
-      Inlinees[Child->first] = Child->second.get();
+      Inlinees[Child->getInlineSite()] = &*Child;
     for (const auto &Inlinee : Inlinees) {
       assert(Cur->Guid != 0 && "non root tree node must have nonzero Guid");
       NextNodes.push_back({std::get<1>(Inlinee.first), Inlinee.second});

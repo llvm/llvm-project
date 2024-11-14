@@ -333,37 +333,14 @@ template <typename T> MDNode *ResourceTable<T>::write(Module &M) const {
   return MDNode::get(M.getContext(), MDs);
 }
 
-void Resources::write(Module &M) const {
-  Metadata *ResourceMDs[4] = {nullptr, nullptr, nullptr, nullptr};
-
-  ResourceMDs[1] = UAVs.write(M);
-
-  ResourceMDs[2] = CBuffers.write(M);
-
-  bool HasResource = ResourceMDs[0] != nullptr || ResourceMDs[1] != nullptr ||
-                     ResourceMDs[2] != nullptr || ResourceMDs[3] != nullptr;
-
-  if (HasResource) {
-    NamedMDNode *DXResMD = M.getOrInsertNamedMetadata("dx.resources");
-    DXResMD->addOperand(MDNode::get(M.getContext(), ResourceMDs));
-  }
-
-  NamedMDNode *Entry = M.getNamedMetadata("hlsl.uavs");
-  if (Entry)
-    Entry->eraseFromParent();
+Metadata *Resources::writeUAVs(Module &M) const { return UAVs.write(M); }
+void Resources::printUAVs(raw_ostream &OS) const { UAVs.print(OS); }
+Metadata *Resources::writeCBuffers(Module &M) const {
+  return CBuffers.write(M);
 }
+void Resources::printCBuffers(raw_ostream &OS) const { CBuffers.print(OS); }
 
-void Resources::print(raw_ostream &O) const {
-  O << ";\n"
-    << "; Resource Bindings:\n"
-    << ";\n"
-    << "; Name                                 Type  Format         Dim      "
-       "ID      HLSL Bind  Count\n"
-    << "; ------------------------------ ---------- ------- ----------- "
-       "------- -------------- ------\n";
-
-  CBuffers.print(O);
-  UAVs.print(O);
+void Resources::dump() const {
+  printCBuffers(dbgs());
+  printUAVs(dbgs());
 }
-
-void Resources::dump() const { print(dbgs()); }

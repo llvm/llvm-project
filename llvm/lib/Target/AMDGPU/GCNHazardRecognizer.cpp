@@ -14,6 +14,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/TargetParser/TargetParser.h"
@@ -446,10 +447,10 @@ void GCNHazardRecognizer::RecedeCycle() {
 // Helper Functions
 //===----------------------------------------------------------------------===//
 
-typedef enum { HazardFound, HazardExpired, NoHazardFound } HazardFnResult;
+using HazardFnResult = enum { HazardFound, HazardExpired, NoHazardFound };
 
-typedef function_ref<bool(const MachineInstr &, int WaitStates)> IsExpiredFn;
-typedef function_ref<unsigned int(const MachineInstr &)> GetNumWaitStatesFn;
+using IsExpiredFn = function_ref<bool(const MachineInstr &, int WaitStates)>;
+using GetNumWaitStatesFn = function_ref<unsigned int(const MachineInstr &)>;
 
 // Search for a hazard in a block and its predecessors.
 template <typename StateT>
@@ -875,11 +876,76 @@ GCNHazardRecognizer::checkVALUHazardsHelper(const MachineOperand &Def,
     return DataIdx >= 0 &&
            TRI->regsOverlap(MI.getOperand(DataIdx).getReg(), Reg);
   };
+
   int WaitStatesNeededForDef =
     VALUWaitStates - getWaitStatesSince(IsHazardFn, VALUWaitStates);
   WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForDef);
 
   return WaitStatesNeeded;
+}
+
+/// Dest sel forwarding issue occurs if additional logic is needed to swizzle /
+/// pack the computed value into correct bit position of the dest register. This
+/// occurs if we have SDWA with dst_sel != DWORD or if we have op_sel with
+/// dst_sel that is not aligned to the register. This function analayzes the \p
+/// MI and \returns an operand with dst forwarding issue, or nullptr if
+/// none exists.
+static const MachineOperand *
+getDstSelForwardingOperand(const MachineInstr &MI, const GCNSubtarget &ST) {
+  if (!SIInstrInfo::isVALU(MI))
+    return nullptr;
+
+  const SIInstrInfo *TII = ST.getInstrInfo();
+
+  unsigned Opcode = MI.getOpcode();
+
+  // There are three different types of instructions
+  // which produce forwarded dest: 1. SDWA with dst_sel != DWORD, 2. VOP3
+  // which write hi bits (e.g. op_sel[3] == 1), and 3. CVR_SR_FP8_F32 and
+  // CVT_SR_BF8_F32 with op_sel[3:2]
+  // != 0
+  if (SIInstrInfo::isSDWA(MI)) {
+    // Type 1: SDWA with dst_sel != DWORD
+    if (auto *DstSel = TII->getNamedOperand(MI, AMDGPU::OpName::dst_sel))
+      if (DstSel->getImm() == AMDGPU::SDWA::DWORD)
+        return nullptr;
+  } else {
+    // Type 2 && Type 3: (VOP3 which write the hi bits) || (CVT_SR_FP8_F32 and
+    // CVT_SR_BF8_F32 with op_sel[3:2] != 0)
+    if (!AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::op_sel) ||
+        !(TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)->getImm() &
+              SISrcMods::DST_OP_SEL ||
+          (AMDGPU::isFP8DstSelInst(Opcode) &&
+           (TII->getNamedOperand(MI, AMDGPU::OpName::src2_modifiers)->getImm() &
+            SISrcMods::OP_SEL_0))))
+      return nullptr;
+  }
+
+  return TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
+}
+
+/// Checks whether the provided \p MI "consumes" the operand with a Dest sel
+/// fowarding issue \p Dst . We may "consume" the Dst via a standard explicit
+/// RAW, or through irregular ways (e.g implicit RAW, certain types of WAW)
+static bool consumesDstSelForwardingOperand(const MachineInstr *VALU,
+                                            const MachineOperand *Dst,
+                                            const SIRegisterInfo *TRI) {
+  // We must consider implicit reads of the VALU. SDWA with dst_sel and
+  // UNUSED_PRESERVE will implicitly read the result from forwarded dest,
+  // and we must account for that hazard.
+  // We also must account for WAW hazards. In particular, WAW with dest
+  // preserve semantics (e.g. VOP3 with op_sel, VOP2 &&
+  // !zeroesHigh16BitsOfDest) will read the forwarded dest for parity
+  // check for ECC. Without accounting for this hazard, the ECC will be
+  // wrong.
+  // TODO: limit to RAW (including implicit reads) + problematic WAW (i.e.
+  // complete zeroesHigh16BitsOfDest)
+  for (auto &Operand : VALU->operands()) {
+    if (Operand.isReg() && TRI->regsOverlap(Dst->getReg(), Operand.getReg())) {
+      return true;
+    }
+  }
+  return false;
 }
 
 int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) {
@@ -912,27 +978,18 @@ int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) {
   if (ST.hasDstSelForwardingHazard()) {
     const int Shift16DefWaitstates = 1;
 
-    auto IsShift16BitDefFn = [this, VALU](const MachineInstr &MI) {
-      if (!SIInstrInfo::isVALU(MI))
-        return false;
-      const SIInstrInfo *TII = ST.getInstrInfo();
-      if (SIInstrInfo::isSDWA(MI)) {
-        if (auto *DstSel = TII->getNamedOperand(MI, AMDGPU::OpName::dst_sel))
-          if (DstSel->getImm() == AMDGPU::SDWA::DWORD)
-            return false;
-      } else {
-        if (!AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::op_sel) ||
-            !(TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)
-                  ->getImm() &
-              SISrcMods::DST_OP_SEL))
-          return false;
-      }
+    auto IsShift16BitDefFn = [this, VALU](const MachineInstr &ProducerMI) {
       const SIRegisterInfo *TRI = ST.getRegisterInfo();
-      if (auto *Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst)) {
-        Register Def = Dst->getReg();
+      const MachineOperand *ForwardedDst =
+          getDstSelForwardingOperand(ProducerMI, ST);
+      if (ForwardedDst) {
+        return consumesDstSelForwardingOperand(VALU, ForwardedDst, TRI);
+      }
 
-        for (const MachineOperand &Use : VALU->explicit_uses()) {
-          if (Use.isReg() && TRI->regsOverlap(Def, Use.getReg()))
+      if (ProducerMI.isInlineAsm()) {
+        // Assume inline asm has dst forwarding hazard
+        for (auto &Def : ProducerMI.all_defs()) {
+          if (consumesDstSelForwardingOperand(VALU, &Def, TRI))
             return true;
         }
       }
@@ -1029,7 +1086,7 @@ int GCNHazardRecognizer::checkInlineAsmHazards(MachineInstr *IA) {
   // problematic thus far.
 
   // see checkVALUHazards()
-  if (!ST.has12DWordStoreHazard())
+  if (!ST.has12DWordStoreHazard() && !ST.hasDstSelForwardingHazard())
     return 0;
 
   const MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -1038,9 +1095,43 @@ int GCNHazardRecognizer::checkInlineAsmHazards(MachineInstr *IA) {
   for (const MachineOperand &Op :
        llvm::drop_begin(IA->operands(), InlineAsm::MIOp_FirstOperand)) {
     if (Op.isReg() && Op.isDef()) {
-      WaitStatesNeeded =
-          std::max(WaitStatesNeeded, checkVALUHazardsHelper(Op, MRI));
+      if (!TRI.isVectorRegister(MRI, Op.getReg()))
+        continue;
+
+      if (ST.has12DWordStoreHazard()) {
+        WaitStatesNeeded =
+            std::max(WaitStatesNeeded, checkVALUHazardsHelper(Op, MRI));
+      }
     }
+  }
+
+  if (ST.hasDstSelForwardingHazard()) {
+    const int Shift16DefWaitstates = 1;
+
+    auto IsShift16BitDefFn = [this, &IA](const MachineInstr &ProducerMI) {
+      const MachineOperand *Dst = getDstSelForwardingOperand(ProducerMI, ST);
+      // Assume inline asm reads the dst
+      if (Dst)
+        return IA->modifiesRegister(Dst->getReg(), &TRI) ||
+               IA->readsRegister(Dst->getReg(), &TRI);
+
+      if (ProducerMI.isInlineAsm()) {
+        // If MI is inline asm, assume it has dst forwarding hazard
+        for (auto &Def : ProducerMI.all_defs()) {
+          if (IA->modifiesRegister(Def.getReg(), &TRI) ||
+              IA->readsRegister(Def.getReg(), &TRI)) {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    };
+
+    int WaitStatesNeededForDef =
+        Shift16DefWaitstates -
+        getWaitStatesSince(IsShift16BitDefFn, Shift16DefWaitstates);
+    WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForDef);
   }
 
   return WaitStatesNeeded;
@@ -1104,6 +1195,7 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
   fixWMMAHazards(MI);
   fixShift64HighRegBug(MI);
   fixVALUMaskWriteHazard(MI);
+  fixRequiredExportPriority(MI);
 }
 
 bool GCNHazardRecognizer::fixVcmpxPermlaneHazards(MachineInstr *MI) {
@@ -2759,6 +2851,38 @@ bool GCNHazardRecognizer::ShouldPreferAnother(SUnit *SU) {
   return false;
 }
 
+// Adjust global offsets for instructions bundled with S_GETPC_B64 after
+// insertion of a new instruction.
+static void updateGetPCBundle(MachineInstr *NewMI) {
+  if (!NewMI->isBundled())
+    return;
+
+  // Find start of bundle.
+  auto I = NewMI->getIterator();
+  while (I->isBundledWithPred())
+    I--;
+  if (I->isBundle())
+    I++;
+
+  // Bail if this is not an S_GETPC bundle.
+  if (I->getOpcode() != AMDGPU::S_GETPC_B64)
+    return;
+
+  // Update offsets of any references in the bundle.
+  const unsigned NewBytes = 4;
+  assert(NewMI->getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
+         "Unexpected instruction insertion in bundle");
+  auto NextMI = std::next(NewMI->getIterator());
+  auto End = NewMI->getParent()->end();
+  while (NextMI != End && NextMI->isBundledWithPred()) {
+    for (auto &Operand : NextMI->operands()) {
+      if (Operand.isGlobal())
+        Operand.setOffset(Operand.getOffset() + NewBytes);
+    }
+    NextMI++;
+  }
+}
+
 bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
   if (!ST.hasVALUMaskWriteHazard())
     return false;
@@ -2876,21 +3000,121 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
   auto NextMI = std::next(MI->getIterator());
 
   // Add s_waitcnt_depctr sa_sdst(0) after SALU write.
-  BuildMI(*MI->getParent(), NextMI, MI->getDebugLoc(),
-          TII.get(AMDGPU::S_WAITCNT_DEPCTR))
-      .addImm(AMDGPU::DepCtr::encodeFieldSaSdst(0));
+  auto NewMI = BuildMI(*MI->getParent(), NextMI, MI->getDebugLoc(),
+                       TII.get(AMDGPU::S_WAITCNT_DEPCTR))
+                   .addImm(AMDGPU::DepCtr::encodeFieldSaSdst(0));
 
   // SALU write may be s_getpc in a bundle.
-  if (MI->getOpcode() == AMDGPU::S_GETPC_B64) {
-    // Update offsets of any references in the bundle.
-    while (NextMI != MI->getParent()->end() &&
-           NextMI->isBundledWithPred()) {
-      for (auto &Operand : NextMI->operands()) {
-        if (Operand.isGlobal())
-          Operand.setOffset(Operand.getOffset() + 4);
-      }
-      NextMI++;
-    }
+  updateGetPCBundle(NewMI);
+
+  return true;
+}
+
+static bool ensureEntrySetPrio(MachineFunction *MF, int Priority,
+                               const SIInstrInfo &TII) {
+  MachineBasicBlock &EntryMBB = MF->front();
+  if (EntryMBB.begin() != EntryMBB.end()) {
+    auto &EntryMI = *EntryMBB.begin();
+    if (EntryMI.getOpcode() == AMDGPU::S_SETPRIO &&
+        EntryMI.getOperand(0).getImm() >= Priority)
+      return false;
+  }
+
+  BuildMI(EntryMBB, EntryMBB.begin(), DebugLoc(), TII.get(AMDGPU::S_SETPRIO))
+      .addImm(Priority);
+  return true;
+}
+
+bool GCNHazardRecognizer::fixRequiredExportPriority(MachineInstr *MI) {
+  if (!ST.hasRequiredExportPriority())
+    return false;
+
+  // Assume the following shader types will never have exports,
+  // and avoid adding or adjusting S_SETPRIO.
+  MachineBasicBlock *MBB = MI->getParent();
+  MachineFunction *MF = MBB->getParent();
+  auto CC = MF->getFunction().getCallingConv();
+  switch (CC) {
+  case CallingConv::AMDGPU_CS:
+  case CallingConv::AMDGPU_CS_Chain:
+  case CallingConv::AMDGPU_CS_ChainPreserve:
+  case CallingConv::AMDGPU_KERNEL:
+    return false;
+  default:
+    break;
+  }
+
+  const int MaxPriority = 3;
+  const int NormalPriority = 2;
+  const int PostExportPriority = 0;
+
+  auto It = MI->getIterator();
+  switch (MI->getOpcode()) {
+  case AMDGPU::S_ENDPGM:
+  case AMDGPU::S_ENDPGM_SAVED:
+  case AMDGPU::S_ENDPGM_ORDERED_PS_DONE:
+  case AMDGPU::SI_RETURN_TO_EPILOG:
+    // Ensure shader with calls raises priority at entry.
+    // This ensures correct priority if exports exist in callee.
+    if (MF->getFrameInfo().hasCalls())
+      return ensureEntrySetPrio(MF, NormalPriority, TII);
+    return false;
+  case AMDGPU::S_SETPRIO: {
+    // Raise minimum priority unless in workaround.
+    auto &PrioOp = MI->getOperand(0);
+    int Prio = PrioOp.getImm();
+    bool InWA = (Prio == PostExportPriority) &&
+                (It != MBB->begin() && TII.isEXP(*std::prev(It)));
+    if (InWA || Prio >= NormalPriority)
+      return false;
+    PrioOp.setImm(std::min(Prio + NormalPriority, MaxPriority));
+    return true;
+  }
+  default:
+    if (!TII.isEXP(*MI))
+      return false;
+    break;
+  }
+
+  // Check entry priority at each export (as there will only be a few).
+  // Note: amdgpu_gfx can only be a callee, so defer to caller setprio.
+  bool Changed = false;
+  if (CC != CallingConv::AMDGPU_Gfx)
+    Changed = ensureEntrySetPrio(MF, NormalPriority, TII);
+
+  auto NextMI = std::next(It);
+  bool EndOfShader = false;
+  if (NextMI != MBB->end()) {
+    // Only need WA at end of sequence of exports.
+    if (TII.isEXP(*NextMI))
+      return Changed;
+    // Assume appropriate S_SETPRIO after export means WA already applied.
+    if (NextMI->getOpcode() == AMDGPU::S_SETPRIO &&
+        NextMI->getOperand(0).getImm() == PostExportPriority)
+      return Changed;
+    EndOfShader = NextMI->getOpcode() == AMDGPU::S_ENDPGM;
+  }
+
+  const DebugLoc &DL = MI->getDebugLoc();
+
+  // Lower priority.
+  BuildMI(*MBB, NextMI, DL, TII.get(AMDGPU::S_SETPRIO))
+      .addImm(PostExportPriority);
+
+  if (!EndOfShader) {
+    // Wait for exports to complete.
+    BuildMI(*MBB, NextMI, DL, TII.get(AMDGPU::S_WAITCNT_EXPCNT))
+        .addReg(AMDGPU::SGPR_NULL)
+        .addImm(0);
+  }
+
+  BuildMI(*MBB, NextMI, DL, TII.get(AMDGPU::S_NOP)).addImm(0);
+  BuildMI(*MBB, NextMI, DL, TII.get(AMDGPU::S_NOP)).addImm(0);
+
+  if (!EndOfShader) {
+    // Return to normal (higher) priority.
+    BuildMI(*MBB, NextMI, DL, TII.get(AMDGPU::S_SETPRIO))
+        .addImm(NormalPriority);
   }
 
   return true;

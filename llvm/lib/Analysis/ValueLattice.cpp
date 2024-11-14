@@ -8,6 +8,7 @@
 
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/IR/Instructions.h"
 
 namespace llvm {
 Constant *

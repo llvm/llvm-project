@@ -79,23 +79,23 @@ __INT32_TYPE__ *m3(struct Empty s, __int128_t i) __attribute__((alloc_align(2)))
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i128, align 16
 // CHECK-NEXT:    [[E:%.*]] = alloca [[STRUCT_EMPTY:%.*]], align 1
 // CHECK-NEXT:    [[COERCE:%.*]] = alloca i128, align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds { i64, i64 }, ptr [[A]], i32 0, i32 0
-// CHECK-NEXT:    store i64 [[A_COERCE0:%.*]], ptr [[TMP1]], align 16
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds { i64, i64 }, ptr [[A]], i32 0, i32 1
-// CHECK-NEXT:    store i64 [[A_COERCE1:%.*]], ptr [[TMP2]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[A]], i32 0, i32 0
+// CHECK-NEXT:    store i64 [[A_COERCE0:%.*]], ptr [[TMP0]], align 16
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[A]], i32 0, i32 1
+// CHECK-NEXT:    store i64 [[A_COERCE1:%.*]], ptr [[TMP1]], align 8
 // CHECK-NEXT:    [[A1:%.*]] = load i128, ptr [[A]], align 16
 // CHECK-NEXT:    store i128 [[A1]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP3:%.*]] = load i128, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store i128 [[TMP3]], ptr [[COERCE]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds { i64, i64 }, ptr [[COERCE]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[TMP5]], align 16
-// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds { i64, i64 }, ptr [[COERCE]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP7]], align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call ptr @m3(i64 noundef [[TMP6]], i64 noundef [[TMP8]])
-// CHECK-NEXT:    [[CASTED_ALIGN:%.*]] = trunc i128 [[TMP3]] to i64
+// CHECK-NEXT:    [[TMP2:%.*]] = load i128, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store i128 [[TMP2]], ptr [[COERCE]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[COERCE]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr [[TMP3]], align 16
+// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[COERCE]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[TMP5]], align 8
+// CHECK-NEXT:    [[CALL:%.*]] = call ptr @m3(i64 noundef [[TMP4]], i64 noundef [[TMP6]])
+// CHECK-NEXT:    [[CASTED_ALIGN:%.*]] = trunc i128 [[TMP2]] to i64
 // CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[CALL]], i64 [[CASTED_ALIGN]]) ]
-// CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[CALL]], align 4
-// CHECK-NEXT:    ret i32 [[TMP9]]
+// CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[CALL]], align 4
+// CHECK-NEXT:    ret i32 [[TMP7]]
 //
 __INT32_TYPE__ test5(__int128_t a) {
   struct Empty e;
@@ -109,27 +109,27 @@ __INT32_TYPE__ *m4(struct MultiArgs s, __int128_t i) __attribute__((alloc_align(
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i128, align 16
 // CHECK-NEXT:    [[E:%.*]] = alloca [[STRUCT_MULTIARGS:%.*]], align 8
 // CHECK-NEXT:    [[COERCE:%.*]] = alloca i128, align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds { i64, i64 }, ptr [[A]], i32 0, i32 0
-// CHECK-NEXT:    store i64 [[A_COERCE0:%.*]], ptr [[TMP1]], align 16
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds { i64, i64 }, ptr [[A]], i32 0, i32 1
-// CHECK-NEXT:    store i64 [[A_COERCE1:%.*]], ptr [[TMP2]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[A]], i32 0, i32 0
+// CHECK-NEXT:    store i64 [[A_COERCE0:%.*]], ptr [[TMP0]], align 16
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[A]], i32 0, i32 1
+// CHECK-NEXT:    store i64 [[A_COERCE1:%.*]], ptr [[TMP1]], align 8
 // CHECK-NEXT:    [[A1:%.*]] = load i128, ptr [[A]], align 16
 // CHECK-NEXT:    store i128 [[A1]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP3:%.*]] = load i128, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds { i64, i64 }, ptr [[E]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP2:%.*]] = load i128, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[E]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr [[TMP3]], align 8
+// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[E]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[TMP5]], align 8
-// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds { i64, i64 }, ptr [[E]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP7]], align 8
-// CHECK-NEXT:    store i128 [[TMP3]], ptr [[COERCE]], align 16
-// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds { i64, i64 }, ptr [[COERCE]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP11:%.*]] = load i64, ptr [[TMP10]], align 16
-// CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds { i64, i64 }, ptr [[COERCE]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP13:%.*]] = load i64, ptr [[TMP12]], align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call ptr @m4(i64 [[TMP6]], i64 [[TMP8]], i64 noundef [[TMP11]], i64 noundef [[TMP13]])
-// CHECK-NEXT:    [[CASTED_ALIGN:%.*]] = trunc i128 [[TMP3]] to i64
+// CHECK-NEXT:    store i128 [[TMP2]], ptr [[COERCE]], align 16
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[COERCE]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP7]], align 16
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[COERCE]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP10:%.*]] = load i64, ptr [[TMP9]], align 8
+// CHECK-NEXT:    [[CALL:%.*]] = call ptr @m4(i64 [[TMP4]], i64 [[TMP6]], i64 noundef [[TMP8]], i64 noundef [[TMP10]])
+// CHECK-NEXT:    [[CASTED_ALIGN:%.*]] = trunc i128 [[TMP2]] to i64
 // CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[CALL]], i64 [[CASTED_ALIGN]]) ]
-// CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[CALL]], align 4
-// CHECK-NEXT:    ret i32 [[TMP14]]
+// CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[CALL]], align 4
+// CHECK-NEXT:    ret i32 [[TMP11]]
 //
 __INT32_TYPE__ test6(__int128_t a) {
   struct MultiArgs e;

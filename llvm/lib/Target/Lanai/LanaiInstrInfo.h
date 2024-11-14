@@ -49,7 +49,9 @@ public:
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
                    const DebugLoc &DL, MCRegister DestinationRegister,
-                   MCRegister SourceRegister, bool KillSource) const override;
+                   MCRegister SourceRegister, bool KillSource,
+                   bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
 
   void storeRegToStackSlot(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator Position,

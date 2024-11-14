@@ -79,4 +79,8 @@ void WarnMaybeNotUsed(int val1, int val2) {
   // expected-error@+1{{use of undeclared identifier 'invalid'}}
 #pragma acc parallel if(invalid) self(val1)
   while(0);
+
+  // expected-error@+1{{OpenACC 'self' clause is not valid on 'loop' directive}}
+#pragma acc loop self
+  for(;;);
 }

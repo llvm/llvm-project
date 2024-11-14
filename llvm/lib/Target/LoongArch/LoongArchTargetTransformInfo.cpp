@@ -26,8 +26,6 @@ TypeSize LoongArchTTIImpl::getRegisterBitWidth(
   case TargetTransformInfo::RGK_Scalar:
     return TypeSize::getFixed(ST->is64Bit() ? 64 : 32);
   case TargetTransformInfo::RGK_FixedWidthVector:
-    if (!ST->hasExpAutoVec())
-      return DefSize;
     if (ST->hasExtLASX())
       return TypeSize::getFixed(256);
     if (ST->hasExtLSX())
@@ -67,6 +65,10 @@ unsigned LoongArchTTIImpl::getRegisterClassForType(bool Vector,
   }
 
   return LoongArchRegisterClass::GPRRC;
+}
+
+unsigned LoongArchTTIImpl::getMaxInterleaveFactor(ElementCount VF) {
+  return ST->getMaxInterleaveFactor();
 }
 
 const char *LoongArchTTIImpl::getRegisterClassName(unsigned ClassID) const {

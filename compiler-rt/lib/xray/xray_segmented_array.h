@@ -56,8 +56,7 @@ public:
   //     kCacheLineSize-multiple segments, minus the size of two pointers.
   //
   //   - Request cacheline-multiple sized elements from the allocator.
-  static constexpr uint64_t AlignedElementStorageSize =
-      sizeof(typename std::aligned_storage<sizeof(T), alignof(T)>::type);
+  static constexpr uint64_t AlignedElementStorageSize = sizeof(T);
 
   static constexpr uint64_t SegmentControlBlockSize = sizeof(Segment *) * 2;
 

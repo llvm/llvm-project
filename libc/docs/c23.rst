@@ -42,31 +42,35 @@ Additions:
   * rsqrt*
   * __STDC_IEC_60559_DFP__ functions (_Decimal32, _Decimal64, _Decimal128)
   * compoundn*
-  * totalorder*
-  * totalordermag*
-  * getpayload*
-  * setpayload*
+  * totalorder* |check|
+  * totalordermag* |check|
+  * getpayload* |check|
+  * setpayload* |check|
+  * setpayloadsig* |check|
   * iscannonical
   * issignaling
   * issubnormal
   * iszero
-  * llogb*
+  * llogb* |check|
   * pown*
   * powr*
   * rootn*
   * roundeven* |check|
-  * fromfp*
-  * ufromfp*
-  * fromfpx*
-  * nextup*
-  * nextdown*
-  * canonicalize*
-  * fmaximum*
-  * fminimum*
-  * fmaximum_mag*
-  * fminimum_mag*
-  * fmaximum_mag_num*
-  * fminimum_mag_num*
+  * fromfp* |check|
+  * ufromfp* |check|
+  * fromfpx* |check|
+  * ufromfpx* |check|
+  * nextup* |check|
+  * nextdown* |check|
+  * canonicalize* |check|
+  * fmaximum* |check|
+  * fminimum* |check|
+  * fmaximum_mag* |check|
+  * fminimum_mag* |check|
+  * fmaximum_num* |check|
+  * fminimum_num* |check|
+  * fmaximum_mag_num* |check|
+  * fminimum_mag_num* |check|
   * fadd*
   * fsub*
   * fmul*

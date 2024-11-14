@@ -77,8 +77,7 @@ ARCTargetStreamer::~ARCTargetStreamer() = default;
 
 static MCTargetStreamer *createTargetAsmStreamer(MCStreamer &S,
                                                  formatted_raw_ostream &OS,
-                                                 MCInstPrinter *InstPrint,
-                                                 bool isVerboseAsm) {
+                                                 MCInstPrinter *InstPrint) {
   return new ARCTargetStreamer(S);
 }
 

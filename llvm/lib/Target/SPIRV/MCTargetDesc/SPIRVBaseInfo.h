@@ -197,6 +197,11 @@ namespace GLSLExtInst {
 #include "SPIRVGenTables.inc"
 } // namespace GLSLExtInst
 
+namespace NonSemanticExtInst {
+#define GET_NonSemanticExtInst_DECL
+#include "SPIRVGenTables.inc"
+} // namespace NonSemanticExtInst
+
 namespace Opcode {
 #define GET_Opcode_DECL
 #include "SPIRVGenTables.inc"

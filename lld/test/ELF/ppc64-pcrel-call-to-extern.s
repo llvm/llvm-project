@@ -73,9 +73,7 @@
 
 ## DT_PLTGOT points to .plt
 # SEC: .plt              NOBITS          0000000010030168 040168 000028 00  WA  0   0  8
-# SEC-OG: .plt              NOBITS          0000000010030158 040158 000028 00  WA  0   0  8
 # SEC: 0x0000000000000003 (PLTGOT)      0x10030168
-# SEC-OG: 0x0000000000000003 (PLTGOT)      0x10030168
 
 ## DT_PLTGOT points to .plt
 # SEC-NOP10: .plt              NOBITS          0000000010030168 040168 000028 00  WA  0   0  8
@@ -86,11 +84,8 @@
 ## Check that we emit 3 R_PPC64_JMP_SLOT in .rela.plt.
 # REL:      .rela.plt {
 # REL-NEXT:   0x10030178 R_PPC64_JMP_SLOT callee_global_stother0 0x0
-# REL-NEXT-OG:   0x10030168 R_PPC64_JMP_SLOT callee_global_stother0 0x0
 # REL-NEXT:   0x10030180 R_PPC64_JMP_SLOT callee_global_stother1 0x0
-# REL-NEXT-OG:   0x10030170 R_PPC64_JMP_SLOT callee_global_stother1 0x0
 # REL-NEXT:   0x10030188 R_PPC64_JMP_SLOT callee_global_TOC 0x0
-# REL-NEXT-OG:   0x10030178 R_PPC64_JMP_SLOT callee_global_TOC 0x0
 # REL-NEXT: }
 
 # REL-NOP10:      .rela.plt {

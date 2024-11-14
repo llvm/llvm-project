@@ -53,18 +53,18 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
     RelaxedSIMD,
   } SIMDLevel = NoSIMD;
 
-  bool HasNontrappingFPToInt = false;
-  bool HasSignExt = false;
-  bool HasExceptionHandling = false;
-  bool HasBulkMemory = false;
   bool HasAtomics = false;
-  bool HasMutableGlobals = false;
-  bool HasMultivalue = false;
-  bool HasTailCall = false;
-  bool HasReferenceTypes = false;
+  bool HasBulkMemory = false;
+  bool HasExceptionHandling = false;
   bool HasExtendedConst = false;
+  bool HasFP16 = false;
   bool HasMultiMemory = false;
-  bool HasHalfPrecision = false;
+  bool HasMultivalue = false;
+  bool HasMutableGlobals = false;
+  bool HasNontrappingFPToInt = false;
+  bool HasReferenceTypes = false;
+  bool HasSignExt = false;
+  bool HasTailCall = false;
 
   std::string ABI;
 
@@ -90,6 +90,7 @@ public:
 
   StringRef getABI() const override;
   bool setABI(const std::string &Name) override;
+  bool useFP16ConversionIntrinsics() const override { return !HasFP16; }
 
 protected:
   void getTargetDefines(const LangOptions &Opts,

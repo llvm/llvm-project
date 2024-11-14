@@ -48,8 +48,8 @@ Error PLTCall::runOnFunctions(BinaryContext &BC) {
     return Error::success();
 
   uint64_t NumCallsOptimized = 0;
-  for (auto &It : BC.getBinaryFunctions()) {
-    BinaryFunction &Function = It.second;
+  for (auto &BFI : BC.getBinaryFunctions()) {
+    BinaryFunction &Function = BFI.second;
     if (!shouldOptimize(Function))
       continue;
 
@@ -61,18 +61,21 @@ Error PLTCall::runOnFunctions(BinaryContext &BC) {
       if (opts::PLT == OT_HOT && !BB.getKnownExecutionCount())
         continue;
 
-      for (MCInst &Instr : BB) {
-        if (!BC.MIB->isCall(Instr))
+      for (auto II = BB.begin(); II != BB.end(); II++) {
+        if (!BC.MIB->isCall(*II))
           continue;
-        const MCSymbol *CallSymbol = BC.MIB->getTargetSymbol(Instr);
+        const MCSymbol *CallSymbol = BC.MIB->getTargetSymbol(*II);
         if (!CallSymbol)
           continue;
         const BinaryFunction *CalleeBF = BC.getFunctionForSymbol(CallSymbol);
         if (!CalleeBF || !CalleeBF->isPLTFunction())
           continue;
-        BC.MIB->convertCallToIndirectCall(Instr, CalleeBF->getPLTSymbol(),
-                                          BC.Ctx.get());
-        BC.MIB->addAnnotation(Instr, "PLTCall", true);
+        const InstructionListType NewCode = BC.MIB->createIndirectPltCall(
+            *II, CalleeBF->getPLTSymbol(), BC.Ctx.get());
+        II = BB.replaceInstruction(II, NewCode);
+        assert(!NewCode.empty() && "PLT Call replacement must be non-empty");
+        std::advance(II, NewCode.size() - 1);
+        BC.MIB->addAnnotation(*II, "PLTCall", true);
         ++NumCallsOptimized;
       }
     }

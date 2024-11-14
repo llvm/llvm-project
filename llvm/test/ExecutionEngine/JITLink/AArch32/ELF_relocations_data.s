@@ -50,7 +50,7 @@ target1_abs32:
 # The +12 accounts for the ARM branch offset (8) and the .LPC offset (4), which
 # is stored as initial addend inline.
 # FIXME: We shouldn't need to substract the 64-bit sign-extension manually.
-# jitlink-check: *{4}got_prel_offset = got_addr(out.o, target) - (got_prel + 12) - 0xffffffff00000000
+# jitlink-check: *{4}got_prel_offset = got_addr(out.o, target) - (next_pc(got_prel) + 4) - 0xffffffff00000000
 	.globl	got_prel
 	.type	got_prel,%function
 	.p2align	2

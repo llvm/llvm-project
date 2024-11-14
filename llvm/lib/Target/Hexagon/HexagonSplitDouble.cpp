@@ -71,8 +71,8 @@ namespace {
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineLoopInfo>();
-      AU.addPreserved<MachineLoopInfo>();
+      AU.addRequired<MachineLoopInfoWrapperPass>();
+      AU.addPreserved<MachineLoopInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -1191,7 +1191,7 @@ bool HexagonSplitDoubleRegs::runOnMachineFunction(MachineFunction &MF) {
   TRI = ST.getRegisterInfo();
   TII = ST.getInstrInfo();
   MRI = &MF.getRegInfo();
-  MLI = &getAnalysis<MachineLoopInfo>();
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
 
   UUSetMap P2Rs;
   LoopRegMap IRM;

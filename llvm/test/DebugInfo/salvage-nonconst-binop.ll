@@ -3,9 +3,9 @@
 ; Tests the salvaging of binary operators that use more than one non-constant
 ; SSA value.
 
-; CHECK: call void @llvm.dbg.value(metadata !DIArgList(i32 %a, i32 %b),
+; CHECK: #dbg_value(!DIArgList(i32 %a, i32 %b),
 ; CHECK-SAME: ![[VAR_C:[0-9]+]],
-; CHECK-SAME: !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value))
+; CHECK-SAME: !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value),
 
 ; CHECK: ![[VAR_C]] = !DILocalVariable(name: "c"
 

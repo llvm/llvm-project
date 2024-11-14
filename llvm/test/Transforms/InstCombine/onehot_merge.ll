@@ -48,7 +48,7 @@ define i1 @foo1_and(i32 %k, i32 %c1, i32 %c2) {
 ; CHECK-NEXT:    [[T:%.*]] = shl nuw i32 1, [[C1:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = shl nuw i32 1, [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[T]], [[T4]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[K:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[K:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp ne i32 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
@@ -68,7 +68,7 @@ define i1 @foo1_and_logical(i32 %k, i32 %c1, i32 %c2) {
 ; CHECK-NEXT:    [[T4:%.*]] = shl nuw i32 1, [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[T4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[T]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], [[K:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[K:%.*]], [[TMP2]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp ne i32 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
@@ -87,7 +87,7 @@ define <2 x i1> @foo1_and_vector(<2 x i32> %k, <2 x i32> %c1, <2 x i32> %c2) {
 ; CHECK-NEXT:    [[T:%.*]] = shl nuw <2 x i32> <i32 1, i32 1>, [[C1:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = shl nuw <2 x i32> <i32 1, i32 1>, [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[T]], [[T4]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], [[K:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[K:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp ne <2 x i32> [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
@@ -213,7 +213,7 @@ define i1 @foo1_or(i32 %k, i32 %c1, i32 %c2) {
 ; CHECK-NEXT:    [[T:%.*]] = shl nuw i32 1, [[C1:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = shl nuw i32 1, [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[T]], [[T4]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[K:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[K:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp eq i32 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
@@ -233,7 +233,7 @@ define i1 @foo1_or_logical(i32 %k, i32 %c1, i32 %c2) {
 ; CHECK-NEXT:    [[T4:%.*]] = shl nuw i32 1, [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[T4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[T]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], [[K:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[K:%.*]], [[TMP2]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp eq i32 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
@@ -252,7 +252,7 @@ define <2 x i1> @foo1_or_vector(<2 x i32> %k, <2 x i32> %c1, <2 x i32> %c2) {
 ; CHECK-NEXT:    [[T:%.*]] = shl nuw <2 x i32> <i32 1, i32 1>, [[C1:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = shl nuw <2 x i32> <i32 1, i32 1>, [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[T]], [[T4]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], [[K:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[K:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp eq <2 x i32> [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
@@ -336,7 +336,7 @@ define i1 @foo1_and_signbit_lshr(i32 %k, i32 %c1, i32 %c2) {
 ; CHECK-NEXT:    [[T:%.*]] = shl nuw i32 1, [[C1:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = lshr exact i32 -2147483648, [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[T]], [[T4]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[K:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[K:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp ne i32 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
@@ -356,7 +356,7 @@ define i1 @foo1_and_signbit_lshr_logical(i32 %k, i32 %c1, i32 %c2) {
 ; CHECK-NEXT:    [[T4:%.*]] = lshr exact i32 -2147483648, [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[T4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[T]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], [[K:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[K:%.*]], [[TMP2]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp ne i32 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
@@ -375,7 +375,7 @@ define <2 x i1> @foo1_and_signbit_lshr_vector(<2 x i32> %k, <2 x i32> %c1, <2 x 
 ; CHECK-NEXT:    [[T:%.*]] = shl nuw <2 x i32> <i32 1, i32 1>, [[C1:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = lshr exact <2 x i32> <i32 -2147483648, i32 -2147483648>, [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[T]], [[T4]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], [[K:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[K:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp ne <2 x i32> [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
@@ -394,7 +394,7 @@ define i1 @foo1_or_signbit_lshr(i32 %k, i32 %c1, i32 %c2) {
 ; CHECK-NEXT:    [[T:%.*]] = shl nuw i32 1, [[C1:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = lshr exact i32 -2147483648, [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[T]], [[T4]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[K:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[K:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp eq i32 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
@@ -414,7 +414,7 @@ define i1 @foo1_or_signbit_lshr_logical(i32 %k, i32 %c1, i32 %c2) {
 ; CHECK-NEXT:    [[T4:%.*]] = lshr exact i32 -2147483648, [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[T4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[T]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], [[K:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[K:%.*]], [[TMP2]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp eq i32 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
@@ -433,7 +433,7 @@ define <2 x i1> @foo1_or_signbit_lshr_vector(<2 x i32> %k, <2 x i32> %c1, <2 x i
 ; CHECK-NEXT:    [[T:%.*]] = shl nuw <2 x i32> <i32 1, i32 1>, [[C1:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = lshr exact <2 x i32> <i32 -2147483648, i32 -2147483648>, [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[T]], [[T4]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], [[K:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[K:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp eq <2 x i32> [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
@@ -618,7 +618,7 @@ define i1 @foo1_and_extra_use_shl(i32 %k, i32 %c1, i32 %c2, ptr %p) {
 ; CHECK-NEXT:    store i32 [[T0]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[T1:%.*]] = shl nuw i32 1, [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[T0]], [[T1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[K:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[K:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp ne i32 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
@@ -640,7 +640,7 @@ define i1 @foo1_and_extra_use_shl_logical(i32 %k, i32 %c1, i32 %c2, ptr %p) {
 ; CHECK-NEXT:    [[T1:%.*]] = shl nuw i32 1, [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[T1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[T0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], [[K:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[K:%.*]], [[TMP2]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp ne i32 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
@@ -663,7 +663,7 @@ define i1 @foo1_and_extra_use_and(i32 %k, i32 %c1, i32 %c2, ptr %p) {
 ; CHECK-NEXT:    [[T2:%.*]] = and i32 [[T0]], [[K:%.*]]
 ; CHECK-NEXT:    store i32 [[T2]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[T0]], [[T1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[K]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[K]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp ne i32 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
@@ -686,7 +686,7 @@ define i1 @foo1_and_extra_use_and_logical(i32 %k, i32 %c1, i32 %c2, ptr %p) {
 ; CHECK-NEXT:    store i32 [[T2]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[T1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[T0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], [[K]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[K]], [[TMP2]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp ne i32 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
@@ -710,7 +710,7 @@ define i1 @foo1_and_extra_use_cmp(i32 %k, i32 %c1, i32 %c2, ptr %p) {
 ; CHECK-NEXT:    [[T3:%.*]] = icmp eq i32 [[T2]], 0
 ; CHECK-NEXT:    store i1 [[T3]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[T0]], [[T1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[K]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[K]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp ne i32 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
@@ -734,7 +734,7 @@ define i1 @foo1_and_extra_use_cmp_logical(i32 %k, i32 %c1, i32 %c2, ptr %p) {
 ; CHECK-NEXT:    store i1 [[T3]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[T1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[T0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], [[K]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[K]], [[TMP2]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp ne i32 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
@@ -756,7 +756,7 @@ define i1 @foo1_and_extra_use_shl2(i32 %k, i32 %c1, i32 %c2, ptr %p) {
 ; CHECK-NEXT:    [[T1:%.*]] = shl nuw i32 1, [[C2:%.*]]
 ; CHECK-NEXT:    store i32 [[T1]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[T0]], [[T1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[K:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[K:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp ne i32 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
@@ -778,7 +778,7 @@ define i1 @foo1_and_extra_use_shl2_logical(i32 %k, i32 %c1, i32 %c2, ptr %p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[T1]]
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[T0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], [[K:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[K:%.*]], [[TMP2]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp ne i32 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
@@ -801,7 +801,7 @@ define i1 @foo1_and_extra_use_and2(i32 %k, i32 %c1, i32 %c2, ptr %p) {
 ; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T1]], [[K:%.*]]
 ; CHECK-NEXT:    store i32 [[T4]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[T0]], [[T1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[K]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[K]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp ne i32 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
@@ -824,7 +824,7 @@ define i1 @foo1_and_extra_use_and2_logical(i32 %k, i32 %c1, i32 %c2, ptr %p) {
 ; CHECK-NEXT:    [[T4:%.*]] = and i32 [[TMP1]], [[K:%.*]]
 ; CHECK-NEXT:    store i32 [[T4]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[T0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], [[K]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[K]], [[TMP2]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp ne i32 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
@@ -848,7 +848,7 @@ define i1 @foo1_and_extra_use_cmp2(i32 %k, i32 %c1, i32 %c2, ptr %p) {
 ; CHECK-NEXT:    [[T5:%.*]] = icmp eq i32 [[T4]], 0
 ; CHECK-NEXT:    store i1 [[T5]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[T0]], [[T1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[K]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[K]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp ne i32 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
@@ -872,7 +872,7 @@ define i1 @foo1_and_extra_use_cmp2_logical(i32 %k, i32 %c1, i32 %c2, ptr %p) {
 ; CHECK-NEXT:    [[T5:%.*]] = icmp eq i32 [[T4]], 0
 ; CHECK-NEXT:    store i1 [[T5]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[T0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], [[K]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[K]], [[TMP2]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp ne i32 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
