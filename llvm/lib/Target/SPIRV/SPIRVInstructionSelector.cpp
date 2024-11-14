@@ -2941,7 +2941,8 @@ void SPIRVInstructionSelector::extractSubvector(
     Register &ResVReg, const SPIRVType *ResType, Register &ReadReg,
     MachineInstr &InsertionPoint) const {
   SPIRVType *InputType = GR.getResultType(ReadReg);
-  uint64_t InputSize = GR.getScalarOrVectorComponentCount(InputType);
+  [[maybe_unused]] uint64_t InputSize =
+      GR.getScalarOrVectorComponentCount(InputType);
   uint64_t ResultSize = GR.getScalarOrVectorComponentCount(ResType);
   assert(InputSize > 1 && "The input must be a vector.");
   assert(ResultSize > 1 && "The result must be a vector.");
