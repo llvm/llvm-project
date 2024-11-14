@@ -173,7 +173,6 @@ def : StPat<store, SD, GPR, PtrVT>;
 // RV64 i32 patterns not used by SelectionDAG
 //===----------------------------------------------------------------------===//
 
-def simm12i32 : ImmLeaf<i32, [{return isInt<12>(Imm);}]>;
 def uimm5i32 : ImmLeaf<i32, [{return isUInt<5>(Imm);}]>;
 
 def zext_is_sext : PatFrag<(ops node:$src), (zext node:$src), [{
@@ -182,12 +181,8 @@ def zext_is_sext : PatFrag<(ops node:$src), (zext node:$src), [{
 }]>;
 
 let Predicates = [IsRV64] in {
-def : LdPat<sextloadi8, LB, i32>;
 def : LdPat<extloadi8, LBU, i32>; // Prefer unsigned due to no c.lb in Zcb.
-def : LdPat<sextloadi16, LH, i32>;
 def : LdPat<extloadi16, LH, i32>;
-def : LdPat<zextloadi8, LBU, i32>;
-def : LdPat<zextloadi16, LHU, i32>;
 
 def : StPat<truncstorei8, SB, GPR, i32>;
 def : StPat<truncstorei16, SH, GPR, i32>;
@@ -195,35 +190,6 @@ def : StPat<truncstorei16, SH, GPR, i32>;
 def : Pat<(anyext GPR:$src), (COPY GPR:$src)>;
 def : Pat<(sext GPR:$src), (ADDIW GPR:$src, 0)>;
 def : Pat<(trunc GPR:$src), (COPY GPR:$src)>;
-
-def : PatGprGpr<add, ADDW, i32, i32>;
-def : PatGprGpr<sub, SUBW, i32, i32>;
-def : PatGprGpr<and, AND, i32, i32>;
-def : PatGprGpr<or, OR, i32, i32>;
-def : PatGprGpr<xor, XOR, i32, i32>;
-def : PatGprGpr<shl, SLLW, i32, i32>;
-def : PatGprGpr<srl, SRLW, i32, i32>;
-def : PatGprGpr<sra, SRAW, i32, i32>;
-
-def : Pat<(i32 (add GPR:$rs1, simm12i32:$imm)),
-          (ADDIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (and GPR:$rs1, simm12i32:$imm)),
-          (ANDI GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (or GPR:$rs1, simm12i32:$imm)),
-          (ORI GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (xor GPR:$rs1, simm12i32:$imm)),
-          (XORI GPR:$rs1, (i64 (as_i64imm $imm)))>;
-
-def : Pat<(i32 (shl GPR:$rs1, uimm5i32:$imm)),
-          (SLLIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (srl GPR:$rs1, uimm5i32:$imm)),
-          (SRLIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (sra GPR:$rs1, uimm5i32:$imm)),
-          (SRAIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
-
-def : Pat<(i32 (and GPR:$rs, TrailingOnesMask:$mask)),
-          (SRLI (i32 (SLLI $rs, (i64 (XLenSubTrailingOnes $mask)))),
-                (i64 (XLenSubTrailingOnes $mask)))>;
 
 // Use sext if the sign bit of the input is 0.
 def : Pat<(zext_is_sext GPR:$src), (ADDIW GPR:$src, 0)>;
@@ -239,29 +205,8 @@ def : Pat<(shl (zext GPR:$rs), uimm5:$shamt),
 }
 
 //===----------------------------------------------------------------------===//
-// M RV64 i32 legalization patterns.
-//===----------------------------------------------------------------------===//
-
-let Predicates = [HasStdExtZmmul, IsRV64] in {
-def : PatGprGpr<mul, MULW, i32, i32>;
-}
-
-//===----------------------------------------------------------------------===//
 // Zb* RV64 i32 patterns not used by SelectionDAG.
 //===----------------------------------------------------------------------===//
-
-let Predicates = [HasStdExtZbb, IsRV64] in {
-def : Pat<(i32 (sext_inreg GPR:$rs1, i8)), (SEXT_B GPR:$rs1)>;
-def : Pat<(i32 (sext_inreg GPR:$rs1, i16)), (SEXT_H GPR:$rs1)>;
-
-def : Pat<(i32 (and GPR:$rs, 0xFFFF)), (ZEXT_H_RV64 GPR:$rs)>;
-} // Predicates = [HasStdExtZbb, IsRV64]
-
-let Predicates = [HasStdExtZbbOrZbkb, IsRV64] in {
-def : Pat<(i32 (and GPR:$rs1, (not GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (or  GPR:$rs1, (not GPR:$rs2))), (ORN  GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (xor GPR:$rs1, (not GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
-} // Predicates = [HasStdExtZbbOrZbkb, IsRV64]
 
 let Predicates = [HasStdExtZba, IsRV64] in {
 def : Pat<(shl (i64 (zext GPR:$rs1)), uimm5:$shamt),
@@ -270,10 +215,4 @@ def : Pat<(shl (i64 (zext GPR:$rs1)), uimm5:$shamt),
 def : Pat<(i64 (add_like_non_imm12 (zext GPR:$rs1), GPR:$rs2)),
           (ADD_UW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(zext GPR:$src), (ADD_UW GPR:$src, (XLenVT X0))>;
-
-foreach i = {1,2,3} in {
-  defvar shxadd = !cast<Instruction>("SH"#i#"ADD");
-  def : Pat<(i32 (add_like_non_imm12 (shl GPR:$rs1, (i32 i)), GPR:$rs2)),
-            (shxadd GPR:$rs1, GPR:$rs2)>;
-}
 }

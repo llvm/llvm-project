@@ -83,13 +83,11 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrItineraries.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/BranchProbability.h"
@@ -20138,8 +20136,8 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     else if (Op.getOpcode() == ARMISD::CSINV)
       std::swap(KnownOp1.Zero, KnownOp1.One);
     else if (Op.getOpcode() == ARMISD::CSNEG)
-      KnownOp1 = KnownBits::mul(
-          KnownOp1, KnownBits::makeConstant(APInt(32, -1)));
+      KnownOp1 = KnownBits::mul(KnownOp1,
+                                KnownBits::makeConstant(APInt::getAllOnes(32)));
 
     Known = KnownOp0.intersectWith(KnownOp1);
     break;

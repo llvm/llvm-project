@@ -603,7 +603,9 @@ bool PCHValidator::ReadDiagnosticOptions(
       new DiagnosticsEngine(DiagIDs, DiagOpts.get()));
   // This should never fail, because we would have processed these options
   // before writing them to an ASTFile.
-  ProcessWarningOptions(*Diags, *DiagOpts, /*Report*/false);
+  ProcessWarningOptions(*Diags, *DiagOpts,
+                        PP.getFileManager().getVirtualFileSystem(),
+                        /*Report*/ false);
 
   ModuleManager &ModuleMgr = Reader.getModuleManager();
   assert(ModuleMgr.size() >= 1 && "what ASTFile is this then");
@@ -3521,6 +3523,9 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
           SpecialTypes.push_back(getGlobalTypeID(F, Record[I]));
         break;
       }
+
+      if (Record.empty())
+        break;
 
       if (SpecialTypes.size() != Record.size())
         return llvm::createStringError(std::errc::illegal_byte_sequence,
@@ -9904,7 +9909,7 @@ void ASTReader::finishPendingActions() {
       auto ExtensionsPair = PendingObjCExtensionIvarRedeclarations.back().first;
       auto DuplicateIvars =
           PendingObjCExtensionIvarRedeclarations.back().second;
-      llvm::DenseSet<std::pair<Decl *, Decl *>> NonEquivalentDecls;
+      StructuralEquivalenceContext::NonEquivalentDeclSet NonEquivalentDecls;
       StructuralEquivalenceContext Ctx(
           ExtensionsPair.first->getASTContext(),
           ExtensionsPair.second->getASTContext(), NonEquivalentDecls,

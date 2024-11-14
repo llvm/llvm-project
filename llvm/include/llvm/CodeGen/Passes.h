@@ -507,6 +507,9 @@ namespace llvm {
   /// This pass frees the memory occupied by the MachineFunction.
   FunctionPass *createFreeMachineFunctionPass();
 
+  /// This pass performs merging similar functions globally.
+  ModulePass *createGlobalMergeFuncPass();
+
   /// This pass performs outlining on machine instructions directly before
   /// printing assembly.
   ModulePass *createMachineOutlinerPass(bool RunOnAllFunctions = true);

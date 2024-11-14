@@ -17,8 +17,9 @@ define amdgpu_kernel void @v_ubfe_sub_i32(ptr addrspace(1) %out, ptr addrspace(1
 ; SI-NEXT:    buffer_load_dword v3, v[0:1], s[4:7], 0 addr64 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    s_mov_b64 s[2:3], s[6:7]
-; SI-NEXT:    v_and_b32_e32 v3, 31, v3
-; SI-NEXT:    v_bfe_u32 v2, v2, 0, v3
+; SI-NEXT:    v_sub_i32_e32 v3, vcc, 32, v3
+; SI-NEXT:    v_lshlrev_b32_e32 v2, v3, v2
+; SI-NEXT:    v_lshrrev_b32_e32 v2, v3, v2
 ; SI-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-NEXT:    s_endpgm
 ;
@@ -37,8 +38,9 @@ define amdgpu_kernel void @v_ubfe_sub_i32(ptr addrspace(1) %out, ptr addrspace(1
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v2
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    v_and_b32_e32 v2, 31, v4
-; VI-NEXT:    v_bfe_u32 v2, v3, 0, v2
+; VI-NEXT:    v_sub_u32_e32 v2, vcc, 32, v4
+; VI-NEXT:    v_lshlrev_b32_e32 v3, v2, v3
+; VI-NEXT:    v_lshrrev_b32_e32 v2, v2, v3
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -47,8 +49,7 @@ define amdgpu_kernel void @v_ubfe_sub_i32(ptr addrspace(1) %out, ptr addrspace(1
   %out.gep = getelementptr i32, ptr addrspace(1) %out, i32 %id.x
   %src = load volatile i32, ptr addrspace(1) %in0.gep
   %width = load volatile i32, ptr addrspace(1) %in0.gep
-  %width5 = and i32 %width, 31
-  %sub = sub i32 32, %width5
+  %sub = sub i32 32, %width
   %shl = shl i32 %src, %sub
   %bfe = lshr i32 %shl, %sub
   store i32 %bfe, ptr addrspace(1) %out.gep
@@ -71,7 +72,6 @@ define amdgpu_kernel void @v_ubfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, p
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_and_b32_e32 v3, 31, v3
 ; SI-NEXT:    v_sub_i32_e32 v3, vcc, 32, v3
 ; SI-NEXT:    v_lshlrev_b32_e32 v2, v3, v2
 ; SI-NEXT:    v_lshrrev_b32_e32 v3, v3, v2
@@ -95,8 +95,7 @@ define amdgpu_kernel void @v_ubfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, p
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v2
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    v_and_b32_e32 v2, 31, v4
-; VI-NEXT:    v_sub_u32_e32 v2, vcc, 32, v2
+; VI-NEXT:    v_sub_u32_e32 v2, vcc, 32, v4
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, v2, v3
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, v2, v3
 ; VI-NEXT:    flat_store_dword v[0:1], v2
@@ -109,8 +108,7 @@ define amdgpu_kernel void @v_ubfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, p
   %out.gep = getelementptr i32, ptr addrspace(1) %out, i32 %id.x
   %src = load volatile i32, ptr addrspace(1) %in0.gep
   %width = load volatile i32, ptr addrspace(1) %in0.gep
-  %width5 = and i32 %width, 31
-  %sub = sub i32 32, %width5
+  %sub = sub i32 32, %width
   %shl = shl i32 %src, %sub
   %bfe = lshr i32 %shl, %sub
   store i32 %bfe, ptr addrspace(1) %out.gep
@@ -221,8 +219,9 @@ define amdgpu_kernel void @v_sbfe_sub_i32(ptr addrspace(1) %out, ptr addrspace(1
 ; SI-NEXT:    buffer_load_dword v3, v[0:1], s[4:7], 0 addr64 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    s_mov_b64 s[2:3], s[6:7]
-; SI-NEXT:    v_and_b32_e32 v3, 31, v3
-; SI-NEXT:    v_bfe_i32 v2, v2, 0, v3
+; SI-NEXT:    v_sub_i32_e32 v3, vcc, 32, v3
+; SI-NEXT:    v_lshlrev_b32_e32 v2, v3, v2
+; SI-NEXT:    v_ashrrev_i32_e32 v2, v3, v2
 ; SI-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-NEXT:    s_endpgm
 ;
@@ -241,8 +240,9 @@ define amdgpu_kernel void @v_sbfe_sub_i32(ptr addrspace(1) %out, ptr addrspace(1
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v2
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    v_and_b32_e32 v2, 31, v4
-; VI-NEXT:    v_bfe_i32 v2, v3, 0, v2
+; VI-NEXT:    v_sub_u32_e32 v2, vcc, 32, v4
+; VI-NEXT:    v_lshlrev_b32_e32 v3, v2, v3
+; VI-NEXT:    v_ashrrev_i32_e32 v2, v2, v3
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -251,8 +251,7 @@ define amdgpu_kernel void @v_sbfe_sub_i32(ptr addrspace(1) %out, ptr addrspace(1
   %out.gep = getelementptr i32, ptr addrspace(1) %out, i32 %id.x
   %src = load volatile i32, ptr addrspace(1) %in0.gep
   %width = load volatile i32, ptr addrspace(1) %in0.gep
-  %width5 = and i32 %width, 31
-  %sub = sub i32 32, %width5
+  %sub = sub i32 32, %width
   %shl = shl i32 %src, %sub
   %bfe = ashr i32 %shl, %sub
   store i32 %bfe, ptr addrspace(1) %out.gep
