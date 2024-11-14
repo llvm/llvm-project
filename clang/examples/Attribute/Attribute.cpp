@@ -41,9 +41,9 @@ struct ExampleAttrInfo : public ParsedAttrInfo {
   bool diagAppertainsToDecl(Sema &S, const ParsedAttr &Attr,
                             const Decl *D) const override {
     // This attribute appertains to functions only.
-    if (!isa<FunctionDecl>(D)) {
+    if (!isa<FunctionDecl>(D) && !isa<LabelDecl>(D)) {
       S.Diag(Attr.getLoc(), diag::warn_attribute_wrong_decl_type_str)
-          << Attr << Attr.isRegularKeywordAttribute() << "functions";
+          << Attr << Attr.isRegularKeywordAttribute() << "functions or labels";
       return false;
     }
     return true;
@@ -52,7 +52,7 @@ struct ExampleAttrInfo : public ParsedAttrInfo {
   AttrHandling handleDeclAttribute(Sema &S, Decl *D,
                                    const ParsedAttr &Attr) const override {
     // Check if the decl is at file scope.
-    if (!D->getDeclContext()->isFileContext()) {
+    if (!D->getDeclContext()->isFileContext() && !isa<LabelDecl>(D)) {
       unsigned ID = S.getDiagnostics().getCustomDiagID(
           DiagnosticsEngine::Error,
           "'example' attribute only allowed at file scope");
