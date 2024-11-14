@@ -630,6 +630,9 @@ void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
   addAvailableCaps({Capability::Shader, Capability::Linkage, Capability::Int8,
                     Capability::Int16});
 
+  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 3)))
+    addAvailableCaps({Capability::GroupNonUniformVote});
+
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 6)))
     addAvailableCaps({Capability::DotProduct, Capability::DotProductInputAll,
                       Capability::DotProductInput4x8Bit,
@@ -675,7 +678,6 @@ void RequirementHandler::initAvailableCapabilitiesForOpenCL(
     addAvailableCaps({Capability::SubgroupDispatch, Capability::PipeStorage});
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 3)))
     addAvailableCaps({Capability::GroupNonUniform,
-                      Capability::GroupNonUniformVote,
                       Capability::GroupNonUniformArithmetic,
                       Capability::GroupNonUniformBallot,
                       Capability::GroupNonUniformClustered,
