@@ -22007,7 +22007,9 @@ RISCVTargetLowering::findRepresentativeClass(const TargetRegisterInfo *TRI,
   switch (VT.SimpleTy) {
   default:
     return TargetLowering::findRepresentativeClass(TRI, VT);
-  case MVT::i8: case MVT::i16: case MVT::i32:
+  case MVT::i8:
+  case MVT::i16:
+  case MVT::i32:
     RRC = &RISCV::GPRRegClass;
     break;
   }
