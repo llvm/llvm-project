@@ -7,6 +7,7 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 declare <2 x bfloat> @llvm.sin.f16(<2 x bfloat> %a) #0
 declare <2 x bfloat> @llvm.cos.f16(<2 x bfloat> %a) #0
 
+
 define <2 x bfloat> @test_sin(<2 x bfloat> %a) #0 #1 {
 ; CHECK-LABEL: test_sin(
 ; CHECK:       {
