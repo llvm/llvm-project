@@ -218,23 +218,33 @@ struct BuiltinTypeDeclBuilder {
     auto FnProtoLoc = TSInfo->getTypeLoc().getAs<FunctionProtoTypeLoc>();
     FnProtoLoc.setParam(0, IdxParam);
 
-    // FIXME: Placeholder to make sure we return the correct type - create
-    // field of element_type and return reference to it. This field will go
-    // away once indexing into resources is properly implemented in
-    // llvm/llvm-project#95956.
-    if (Fields.count("e") == 0) {
-      addMemberVariable("e", ElemTy, {});
-    }
-    FieldDecl *ElemFieldDecl = Fields["e"];
-
     auto *This =
         CXXThisExpr::Create(AST, SourceLocation(),
                             MethodDecl->getFunctionObjectParameterType(), true);
-    Expr *ElemField = MemberExpr::CreateImplicit(
-        AST, This, false, ElemFieldDecl, ElemFieldDecl->getType(), VK_LValue,
-        OK_Ordinary);
-    auto *Return =
-        ReturnStmt::Create(AST, SourceLocation(), ElemField, nullptr);
+    FieldDecl *Handle = Fields["__handle"];
+    auto *HandleExpr = MemberExpr::CreateImplicit(
+        AST, This, false, Handle, Handle->getType(), VK_LValue, OK_Ordinary);
+
+    auto *IndexExpr = DeclRefExpr::Create(
+        AST, NestedNameSpecifierLoc(), SourceLocation(), IdxParam, false,
+        DeclarationNameInfo(IdxParam->getDeclName(), SourceLocation()),
+        AST.UnsignedIntTy, VK_PRValue);
+
+    FunctionDecl *FD =
+        lookupBuiltinFunction(SemaRef, "__builtin_hlsl_resource_getpointer");
+    DeclRefExpr *Builtin = DeclRefExpr::Create(
+        AST, NestedNameSpecifierLoc(), SourceLocation(), FD, false,
+        FD->getNameInfo(), AST.BuiltinFnTy, VK_PRValue);
+
+    // TODO: Map to an hlsl_device address space.
+    QualType ElemPtrTy = AST.getPointerType(ElemTy);
+    Expr *Call = CallExpr::Create(AST, Builtin, {HandleExpr, IndexExpr},
+                                  ElemPtrTy, VK_PRValue,
+                                  SourceLocation(), FPOptionsOverride());
+    Expr *Deref = UnaryOperator::Create(
+        AST, Call, UO_Deref, ElemTy, VK_PRValue, OK_Ordinary, SourceLocation(),
+        /*CanOverflow=*/false, FPOptionsOverride());
+    auto *Return = ReturnStmt::Create(AST, SourceLocation(), Deref, nullptr);
 
     MethodDecl->setBody(CompoundStmt::Create(AST, {Return}, FPOptionsOverride(),
                                              SourceLocation(),

@@ -1926,6 +1926,25 @@ static bool CheckResourceHandle(
 // returning an ExprError
 bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_resource_getpointer: {
+    if (SemaRef.checkArgCount(TheCall, 2))
+      return true;
+    auto *ResourceTy =
+        TheCall->getArg(0)->getType()->getAs<HLSLAttributedResourceType>();
+    if (!ResourceTy) {
+      SemaRef.Diag(TheCall->getBeginLoc(),
+                   diag::err_hlsl_builtin_requires_resource)
+          << TheCall->getArg(0)->getSourceRange();
+      return true;
+    }
+
+    QualType ContainedTy = ResourceTy->getContainedType();
+    // TODO: Map to an hlsl_device address space.
+    TheCall->setType(getASTContext().getPointerType(ContainedTy));
+    TheCall->setValueKind(VK_LValue);
+
+    break;
+  }
   case Builtin::BI__builtin_hlsl_all:
   case Builtin::BI__builtin_hlsl_any: {
     if (SemaRef.checkArgCount(TheCall, 1))
