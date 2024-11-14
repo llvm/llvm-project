@@ -169,12 +169,6 @@ def : LdPat<load, LD, PtrVT>;
 def : StPat<store, SD, GPR, PtrVT>;
 }
 
-let Predicates = [IsRV64] in {
-// FIXME: Temporary until i32->i64 zext is no longer legal.
-def : Pat <(srl (zext GPR:$rs1), uimm5:$shamt),
-           (SRLIW GPR:$rs1, uimm5:$shamt)>;
-}
-
 //===----------------------------------------------------------------------===//
 // RV64 i32 patterns not used by SelectionDAG
 //===----------------------------------------------------------------------===//
