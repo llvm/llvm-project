@@ -136,6 +136,16 @@ public:
     func(InType(1.0), in.min_denormal);
     EXPECT_FP_EXCEPTION(FE_INEXACT);
   }
+
+  void test_mixed_normality(AddFunc func) {
+    if (LIBC_NAMESPACE::fputil::get_fp_type<OutType>() !=
+        LIBC_NAMESPACE::fputil::get_fp_type<InType>())
+      return;
+
+    EXPECT_FP_EQ(FPBits::create_value(Sign::POS, 2U, 0b1U).get_val(),
+                 func(InFPBits::create_value(Sign::POS, 2U, 0U).get_val(),
+                      InFPBits::create_value(Sign::POS, 2U, 0b10U).get_val()));
+  }
 };
 
 #define LIST_ADD_TESTS(OutType, InType, func)                                  \
@@ -145,6 +155,7 @@ public:
     test_invalid_operations(&func);                                            \
   }                                                                            \
   TEST_F(LlvmLibcAddTest, RangeErrors) { test_range_errors(&func); }           \
-  TEST_F(LlvmLibcAddTest, InexactResults) { test_inexact_results(&func); }
+  TEST_F(LlvmLibcAddTest, InexactResults) { test_inexact_results(&func); }     \
+  TEST_F(LlvmLibcAddTest, MixedNormality) { test_mixed_normality(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_ADDTEST_H
