@@ -71,6 +71,9 @@ public:
   virtual Value *FoldShuffleVector(Value *V1, Value *V2,
                                    ArrayRef<int> Mask) const = 0;
 
+  virtual Value *FoldInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
+                                  Value *Idx) const = 0;
+
   virtual Value *FoldCast(Instruction::CastOps Op, Value *V,
                           Type *DestTy) const = 0;
 

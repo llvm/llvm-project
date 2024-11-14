@@ -107,6 +107,11 @@ public:
     return nullptr;
   }
 
+  Value *FoldInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
+                          Value *Idx) const override {
+    return nullptr;
+  }
+
   Value *FoldCast(Instruction::CastOps Op, Value *V,
                   Type *DestTy) const override {
     return nullptr;
