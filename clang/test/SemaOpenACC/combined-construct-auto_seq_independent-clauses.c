@@ -190,8 +190,6 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop auto dtype(*)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'async' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented}}
 #pragma acc parallel loop auto async
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'tile' not yet implemented}}
@@ -355,8 +353,6 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop dtype(*) auto
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'async' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented}}
 #pragma acc parallel loop async auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'tile' not yet implemented}}
@@ -521,8 +517,6 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop independent dtype(*)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'async' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented}}
 #pragma acc parallel loop independent async
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'tile' not yet implemented}}
@@ -686,8 +680,6 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop dtype(*) independent
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'async' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented}}
 #pragma acc parallel loop async independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'tile' not yet implemented}}
@@ -858,8 +850,6 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop seq dtype(*)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'async' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented}}
 #pragma acc parallel loop seq async
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'tile' not yet implemented}}
@@ -1029,8 +1019,6 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop dtype(*) seq
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'async' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented}}
 #pragma acc parallel loop async seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'tile' not yet implemented}}
