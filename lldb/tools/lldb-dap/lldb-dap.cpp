@@ -4963,16 +4963,16 @@ int main(int argc, char *argv[]) {
     return EXIT_SUCCESS;
   }
 
-  ReplMode defaultReplMode = ReplMode::Auto;
+  ReplMode default_repl_mode = ReplMode::Auto;
   if (input_args.hasArg(OPT_repl_mode)) {
     llvm::opt::Arg *repl_mode = input_args.getLastArg(OPT_repl_mode);
     llvm::StringRef repl_mode_value = repl_mode->getValue();
     if (repl_mode_value == "auto") {
-      defaultReplMode = ReplMode::Auto;
+      default_repl_mode = ReplMode::Auto;
     } else if (repl_mode_value == "variable") {
-      defaultReplMode = ReplMode::Variable;
+      default_repl_mode = ReplMode::Variable;
     } else if (repl_mode_value == "command") {
-      defaultReplMode = ReplMode::Command;
+      default_repl_mode = ReplMode::Command;
     } else {
       llvm::errs()
           << "'" << repl_mode_value
@@ -5034,7 +5034,7 @@ int main(int argc, char *argv[]) {
   auto terminate_debugger =
       llvm::make_scope_exit([] { lldb::SBDebugger::Terminate(); });
 
-  DAP dap = DAP(program_path.str(), defaultReplMode);
+  DAP dap = DAP(program_path.str(), default_repl_mode);
 
   RegisterRequestCallbacks(dap);
 
