@@ -8,9 +8,9 @@ target triple = "aarch64--linux-gnu"
 
 ; CHECK-COST-LABEL: sadd
 ; CHECK-COST: Found an estimated cost of 6 for VF 1 For instruction:   %1 = tail call i16 @llvm.sadd.sat.i16(i16 %0, i16 %offset)
-; CHECK-COST: Found an estimated cost of 4 for VF 2 For instruction:   %1 = tail call i16 @llvm.sadd.sat.i16(i16 %0, i16 %offset)
-; CHECK-COST: Found an estimated cost of 1 for VF 4 For instruction:   %1 = tail call i16 @llvm.sadd.sat.i16(i16 %0, i16 %offset)
-; CHECK-COST: Found an estimated cost of 1 for VF 8 For instruction:   %1 = tail call i16 @llvm.sadd.sat.i16(i16 %0, i16 %offset)
+; CHECK-COST: Cost of 4 for VF 2: WIDEN-INTRINSIC ir<%1> = call llvm.sadd.sat(ir<%0>, ir<%offset>)
+; CHECK-COST: Cost of 1 for VF 4: WIDEN-INTRINSIC ir<%1> = call llvm.sadd.sat(ir<%0>, ir<%offset>)
+; CHECK-COST: Cost of 1 for VF 8: WIDEN-INTRINSIC ir<%1> = call llvm.sadd.sat(ir<%0>, ir<%offset>)
 
 define void @saddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr nocapture noalias %pDst, i32 %blockSize) #0 {
 ; CHECK-LABEL: @saddsat(
@@ -95,10 +95,10 @@ while.end:                                        ; preds = %while.body, %entry
 
 ; CHECK-COST-LABEL: umin
 ; CHECK-COST: Found an estimated cost of 2 for VF 1 For instruction:   %1 = tail call i8 @llvm.umin.i8(i8 %0, i8 %offset)
-; CHECK-COST: Found an estimated cost of 1 for VF 2 For instruction:   %1 = tail call i8 @llvm.umin.i8(i8 %0, i8 %offset)
-; CHECK-COST: Found an estimated cost of 1 for VF 4 For instruction:   %1 = tail call i8 @llvm.umin.i8(i8 %0, i8 %offset)
-; CHECK-COST: Found an estimated cost of 1 for VF 8 For instruction:   %1 = tail call i8 @llvm.umin.i8(i8 %0, i8 %offset)
-; CHECK-COST: Found an estimated cost of 1 for VF 16 For instruction:   %1 = tail call i8 @llvm.umin.i8(i8 %0, i8 %offset)
+; CHECK-COST: Cost of 1 for VF 2: WIDEN-INTRINSIC ir<%1> = call llvm.umin(ir<%0>, ir<%offset>)
+; CHECK-COST: Cost of 1 for VF 4: WIDEN-INTRINSIC ir<%1> = call llvm.umin(ir<%0>, ir<%offset>)
+; CHECK-COST: Cost of 1 for VF 8: WIDEN-INTRINSIC ir<%1> = call llvm.umin(ir<%0>, ir<%offset>)
+; CHECK-COST: Cost of 1 for VF 16: WIDEN-INTRINSIC ir<%1> = call llvm.umin(ir<%0>, ir<%offset>)
 
 define void @umin(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocapture noalias %pDst, i32 %blockSize) #0 {
 ; CHECK-LABEL: @umin(
