@@ -30,8 +30,8 @@ namespace clang {
 
 template<typename T> class CanProxy;
 template<typename T> struct CanProxyAdaptor;
-class CXXRecordDecl;
 class ASTContext;
+class CXXRecordDecl;
 class EnumDecl;
 class Expr;
 class IdentifierInfo;
