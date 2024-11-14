@@ -18332,7 +18332,7 @@ bool Sema::CheckOverridingFunctionReturnType(const CXXMethodDecl *New,
 
 
   // The new class type must have the same or less qualifiers as the old type.
-  if (!OldClassTy.isAtLeastAsQualifiedAs(NewClassTy)) {
+  if (!OldClassTy.isAtLeastAsQualifiedAs(NewClassTy, getASTContext())) {
     Diag(New->getLocation(),
          diag::err_covariant_return_type_class_type_not_same_or_less_qualified)
         << New->getDeclName() << NewTy << OldTy

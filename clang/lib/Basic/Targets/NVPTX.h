@@ -17,6 +17,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
@@ -24,27 +25,26 @@ namespace clang {
 namespace targets {
 
 static const unsigned NVPTXAddrSpaceMap[] = {
-    0, // Default
-    1, // opencl_global
-    3, // opencl_local
-    4, // opencl_constant
-    0, // opencl_private
-    // FIXME: generic has to be added to the target
-    0, // opencl_generic
-    1, // opencl_global_device
-    1, // opencl_global_host
-    1, // cuda_device
-    4, // cuda_constant
-    3, // cuda_shared
-    1, // sycl_global
-    1, // sycl_global_device
-    1, // sycl_global_host
-    3, // sycl_local
-    0, // sycl_private
-    0, // ptr32_sptr
-    0, // ptr32_uptr
-    0, // ptr64
-    0, // hlsl_groupshared
+    llvm::NVPTXAS::ADDRESS_SPACE_GENERIC, // Default
+    llvm::NVPTXAS::ADDRESS_SPACE_GLOBAL,  // opencl_global
+    llvm::NVPTXAS::ADDRESS_SPACE_SHARED,  // opencl_local
+    llvm::NVPTXAS::ADDRESS_SPACE_CONST,   // opencl_constant
+    llvm::NVPTXAS::ADDRESS_SPACE_GENERIC, // opencl_private
+    llvm::NVPTXAS::ADDRESS_SPACE_GENERIC, // opencl_generic
+    llvm::NVPTXAS::ADDRESS_SPACE_GLOBAL,  // opencl_global_device
+    llvm::NVPTXAS::ADDRESS_SPACE_GLOBAL,  // opencl_global_host
+    llvm::NVPTXAS::ADDRESS_SPACE_GLOBAL,  // cuda_device
+    llvm::NVPTXAS::ADDRESS_SPACE_CONST,   // cuda_constant
+    llvm::NVPTXAS::ADDRESS_SPACE_SHARED,  // cuda_shared
+    llvm::NVPTXAS::ADDRESS_SPACE_GLOBAL,  // sycl_global
+    llvm::NVPTXAS::ADDRESS_SPACE_GLOBAL,  // sycl_global_device
+    llvm::NVPTXAS::ADDRESS_SPACE_GLOBAL,  // sycl_global_host
+    llvm::NVPTXAS::ADDRESS_SPACE_SHARED,  // sycl_local
+    llvm::NVPTXAS::ADDRESS_SPACE_GENERIC, // sycl_private
+    llvm::NVPTXAS::ADDRESS_SPACE_GENERIC, // ptr32_sptr
+    llvm::NVPTXAS::ADDRESS_SPACE_GENERIC, // ptr32_uptr
+    llvm::NVPTXAS::ADDRESS_SPACE_GENERIC, // ptr64
+    llvm::NVPTXAS::ADDRESS_SPACE_GENERIC, // hlsl_groupshared
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -88,6 +88,20 @@ public:
   }
 
   bool hasFeature(StringRef Feature) const override;
+
+  virtual bool isAddressSpaceSupersetOf(LangAS A, LangAS B) const override {
+    // The generic address space AS(0) is a superset of all the other address
+    // spaces used by the backend target.
+    return A == B ||
+           ((A == LangAS::Default ||
+             (isTargetAddressSpace(A) &&
+              toTargetAddressSpace(A) ==
+                  llvm::NVPTXAS::ADDRESS_SPACE_GENERIC)) &&
+            isTargetAddressSpace(B) &&
+            toTargetAddressSpace(B) >= llvm::NVPTXAS::ADDRESS_SPACE_GENERIC &&
+            toTargetAddressSpace(B) <= llvm::NVPTXAS::ADDRESS_SPACE_LOCAL &&
+            toTargetAddressSpace(B) != 2);
+  }
 
   ArrayRef<const char *> getGCCRegNames() const override;
 
