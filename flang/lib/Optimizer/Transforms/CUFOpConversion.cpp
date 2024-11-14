@@ -283,7 +283,7 @@ static int computeWidth(mlir::Location loc, mlir::Type type,
         mlir::cast<mlir::FloatType>(t.getElementType()).getWidth() / 8;
     width = 2 * elemSize;
   } else {
-    llvm::report_fatal_error("unsupported type");
+    mlir::emitError(loc, "unsupported type");
   }
   return width;
 }
