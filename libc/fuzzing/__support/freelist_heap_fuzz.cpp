@@ -17,7 +17,10 @@
 #include "src/string/memory_utils/inline_memmove.h"
 #include "src/string/memory_utils/inline_memset.h"
 
-using namespace LIBC_NAMESPACE;
+using LIBC_NAMESPACE::FreeListHeap;
+using LIBC_NAMESPACE::cpp::nullopt;
+using LIBC_NAMESPACE::cpp::optional;
+using LIBC_NAMESPACE::inline_memset;
 
 // Record of an outstanding allocation.
 struct Alloc {
@@ -55,8 +58,8 @@ public:
   Alloc &operator[](size_t idx) { return allocs[idx]; }
 
   void erase_idx(size_t idx) {
-    inline_memmove(&allocs[idx], &allocs[idx + 1],
-                   sizeof(Alloc) * (size_ - idx - 1));
+    LIBC_NAMESPACE::inline_memmove(&allocs[idx], &allocs[idx + 1],
+                                   sizeof(Alloc) * (size_ - idx - 1));
     --size_;
   }
 
@@ -69,11 +72,11 @@ private:
 
 // Choose a T value by casting libfuzzer data or exit.
 template <typename T>
-cpp::optional<T> choose(const uint8_t *&data, size_t &remainder) {
+optional<T> choose(const uint8_t *&data, size_t &remainder) {
   if (sizeof(T) > remainder)
-    return cpp::nullopt;
+    return nullopt;
   T out;
-  inline_memcpy(&out, data, sizeof(T));
+  LIBC_NAMESPACE::inline_memcpy(&out, data, sizeof(T));
   data += sizeof(T);
   remainder -= sizeof(T);
   return out;
@@ -89,32 +92,30 @@ enum class AllocType : uint8_t {
 };
 
 template <>
-cpp::optional<AllocType> choose<AllocType>(const uint8_t *&data,
-                                           size_t &remainder) {
+optional<AllocType> choose<AllocType>(const uint8_t *&data, size_t &remainder) {
   auto raw = choose<uint8_t>(data, remainder);
   if (!raw)
-    return cpp::nullopt;
+    return nullopt;
   return static_cast<AllocType>(
       *raw % static_cast<uint8_t>(AllocType::NUM_ALLOC_TYPES));
 }
 
 constexpr size_t heap_size = 64 * 1024;
 
-cpp::optional<size_t> choose_size(const uint8_t *&data, size_t &remainder) {
+optional<size_t> choose_size(const uint8_t *&data, size_t &remainder) {
   auto raw = choose<size_t>(data, remainder);
   if (!raw)
-    return cpp::nullopt;
+    return nullopt;
   return *raw % heap_size;
 }
 
-cpp::optional<size_t> choose_alloc_idx(const AllocVec &allocs,
-                                       const uint8_t *&data,
-                                       size_t &remainder) {
+optional<size_t> choose_alloc_idx(const AllocVec &allocs, const uint8_t *&data,
+                                  size_t &remainder) {
   if (allocs.empty())
-    return cpp::nullopt;
+    return nullopt;
   auto raw = choose<size_t>(data, remainder);
   if (!raw)
-    return cpp::nullopt;
+    return nullopt;
   return *raw % allocs.size();
 }
 
@@ -125,7 +126,7 @@ cpp::optional<size_t> choose_alloc_idx(const AllocVec &allocs,
   TYPE NAME = *maybe_##NAME
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t remainder) {
-  FreeListHeapBuffer<heap_size> heap;
+  LIBC_NAMESPACE::FreeListHeapBuffer<heap_size> heap;
   AllocVec allocs(heap);
 
   uint8_t canary = 0;
@@ -144,7 +145,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t remainder) {
         break;
       case AllocType::ALIGNED_ALLOC: {
         ASSIGN_OR_RETURN(size_t, alignment, choose_size(data, remainder));
-        alignment = cpp::bit_ceil(alignment);
+        alignment = LIBC_NAMESPACE::cpp::bit_ceil(alignment);
         ptr = heap.aligned_allocate(alignment, alloc_size);
         break;
       }
