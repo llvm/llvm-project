@@ -608,11 +608,8 @@ public: // Part of public interface to class.
     return getBinding(getRegionBindings(S), L, T);
   }
 
-  /// Returns the value of the default binding of region \p BaseR
-  /// if and only if that is the unique binding in the cluster of \p BaseR.
-  /// \p BaseR must be a base region.
-  std::optional<SVal> getUniqueDefaultBinding(Store S,
-                                              const MemRegion *BaseR) const;
+  std::optional<SVal>
+  getUniqueDefaultBinding(nonloc::LazyCompoundVal LCV) const;
 
   std::optional<SVal> getDefaultBinding(Store S, const MemRegion *R) override {
     RegionBindingsRef B = getRegionBindings(S);
@@ -2612,10 +2609,14 @@ RegionBindingsRef RegionStoreManager::bindVector(RegionBindingsConstRef B,
 }
 
 std::optional<SVal>
-RegionStoreManager::getUniqueDefaultBinding(Store S,
-                                            const MemRegion *BaseR) const {
-  assert(BaseR == BaseR->getBaseRegion() && "Expecting a base region");
-  const auto *Cluster = getRegionBindings(S).lookup(BaseR);
+RegionStoreManager::getUniqueDefaultBinding(nonloc::LazyCompoundVal LCV) const {
+  const MemRegion *BaseR = LCV.getRegion();
+
+  // We only handle base regions.
+  if (BaseR != BaseR->getBaseRegion())
+    return std::nullopt;
+
+  const auto *Cluster = getRegionBindings(LCV.getStore()).lookup(BaseR);
   if (!Cluster || !llvm::hasSingleElement(*Cluster))
     return std::nullopt;
 
@@ -2640,11 +2641,8 @@ std::optional<RegionBindingsRef> RegionStoreManager::tryBindSmallStruct(
   //   Direct [ 0..31]: Derived{Conj{}, w.width}
   //   Direct [32..63]: Derived{Conj{}, w.height}
   // Instead, we should just bind that Conjured value instead.
-  if (LCV.getRegion()->getBaseRegion() == LCV.getRegion()) {
-    if (auto Val = getUniqueDefaultBinding(LCV.getStore(), LCV.getRegion())) {
-      return B.addBinding(BindingKey::Make(R, BindingKey::Default),
-                          Val.value());
-    }
+  if (auto Val = getUniqueDefaultBinding(LCV)) {
+    return B.addBinding(BindingKey::Make(R, BindingKey::Default), Val.value());
   }
 
   FieldVector Fields;
