@@ -104,5 +104,5 @@ let TargetPrefix = "spv" in {
   def int_spv_firstbitshigh : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_anyint_ty], [IntrNoMem]>;
 
   def int_spv_bufferUpdateCounter
-      : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty, llvm_i32_ty], [IntrWriteMem]>;
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty, llvm_i32_ty], [IntrInaccessibleMemOrArgMemOnly]>;
 }

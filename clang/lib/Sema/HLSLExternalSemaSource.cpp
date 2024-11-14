@@ -247,10 +247,11 @@ struct BuiltinTypeDeclBuilder {
   }
 
   FieldDecl *getResourceHandleField() {
-    FieldDecl *FD = Fields["h"];
-    assert(FD && FD->getType()->isHLSLAttributedResourceType() &&
-           "record does not have resource handle");
-    return FD;
+    auto I = Fields.find("h");
+    assert(I != Fields.end() &&
+           I->second->getType()->isHLSLAttributedResourceType() &&
+           "record does not have resource handle field");
+    return I->second;
   }
 
   QualType getFirstTemplateTypeParam() {
@@ -263,7 +264,6 @@ struct BuiltinTypeDeclBuilder {
   }
 
   BuiltinTypeDeclBuilder &startDefinition() {
-    // we might already have complete definition from a precompiled header
     assert(!Record->isCompleteDefinition() && "record is already complete");
     Record->startDefinition();
     return *this;
@@ -401,11 +401,7 @@ public:
                                      HLSLParamModifierAttr::Spelling Modifier =
                                          HLSLParamModifierAttr::Keyword_in) {
     assert(Method == nullptr && "Cannot add param, method already created");
-
-    const IdentifierInfo &II = DeclBuilder.S.getASTContext().Idents.get(
-        Name, tok::TokenKind::identifier);
-    Params.emplace_back(II, Ty, Modifier);
-    return *this;
+    llvm_unreachable("not yet implemented");
   }
 
 private:
@@ -459,9 +455,9 @@ public:
       createMethodDecl();
 
     ASTContext &AST = DeclBuilder.S.getASTContext();
-    FieldDecl *HandleField = DeclBuilder.getResourceHandleField();
-    auto *This = CXXThisExpr::Create(
+    CXXThisExpr *This = CXXThisExpr::Create(
         AST, SourceLocation(), Method->getFunctionObjectParameterType(), true);
+    FieldDecl *HandleField = DeclBuilder.getResourceHandleField();
     return MemberExpr::CreateImplicit(AST, This, false, HandleField,
                                       HandleField->getType(), VK_LValue,
                                       OK_Ordinary);
@@ -505,7 +501,9 @@ public:
 
     if (!Method->hasBody()) {
       ASTContext &AST = DeclBuilder.S.getASTContext();
-      if (ReturnTy != AST.VoidTy && !StmtsList.empty()) {
+      assert((ReturnTy == AST.VoidTy || !StmtsList.empty()) &&
+             "nothing to return from non-void method");
+      if (ReturnTy != AST.VoidTy) {
         if (Expr *LastExpr = dyn_cast<Expr>(StmtsList.back())) {
           assert(AST.hasSameUnqualifiedType(
                      isa<CallExpr>(LastExpr)
@@ -514,9 +512,11 @@ public:
                      ReturnTy) &&
                  "Return type of the last statement must match the return type "
                  "of the method");
-          StmtsList.pop_back();
-          StmtsList.push_back(
-              ReturnStmt::Create(AST, SourceLocation(), LastExpr, nullptr));
+          if (!isa<ReturnStmt>(LastExpr)) {
+            StmtsList.pop_back();
+            StmtsList.push_back(
+                ReturnStmt::Create(AST, SourceLocation(), LastExpr, nullptr));
+          }
         }
       }
 

@@ -1698,6 +1698,16 @@ static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
   return true;
 }
 
+bool CheckArgTypeIsCorrect(Sema *S, Expr *Arg, QualType ExpectedType) {
+  QualType ArgType = Arg->getType();
+  if (!S->getASTContext().hasSameUnqualifiedType(ArgType, ExpectedType)) {
+    S->Diag(Arg->getBeginLoc(), diag::err_typecheck_convert_incompatible)
+        << ArgType << ExpectedType << 1 << 0 << 0;
+    return true;
+  }
+  return false;
+}
+
 bool CheckArgTypeIsCorrect(
     Sema *S, Expr *Arg, QualType ExpectedType,
     llvm::function_ref<bool(clang::QualType PassedType)> Check) {
@@ -1880,25 +1890,24 @@ static bool CheckVectorSelect(Sema *S, CallExpr *TheCall) {
   return false;
 }
 
-static bool CheckResourceHandle(Sema *S, CallExpr *TheCall, unsigned ArgIndex) {
+static bool CheckResourceHandle(
+    Sema *S, CallExpr *TheCall, unsigned ArgIndex,
+    llvm::function_ref<bool(const HLSLAttributedResourceType *ResType)> Check =
+        nullptr) {
   assert(TheCall->getNumArgs() >= ArgIndex);
   QualType ArgType = TheCall->getArg(ArgIndex)->getType();
-  if (!ArgType.getTypePtr()
-           ->getUnqualifiedDesugaredType()
-           ->isHLSLAttributedResourceType()) {
+  const HLSLAttributedResourceType *ResTy =
+      dyn_cast<HLSLAttributedResourceType>(
+          ArgType.getTypePtr()->getUnqualifiedDesugaredType());
+  if (!ResTy) {
     S->Diag(TheCall->getArg(0)->getBeginLoc(),
             diag::err_typecheck_expect_hlsl_resource)
         << ArgType;
     return true;
   }
-  return false;
-}
-
-static bool CheckInt(Sema *S, CallExpr *TheCall, unsigned ArgIndex) {
-  assert(TheCall->getNumArgs() >= ArgIndex);
-  QualType ArgType = TheCall->getArg(ArgIndex)->getType();
-  if (!ArgType->isIntegerType()) {
-    S->Diag(TheCall->getArg(0)->getBeginLoc(), diag::err_typecheck_expect_int)
+  if (Check && Check(ResTy)) {
+    S->Diag(TheCall->getArg(ArgIndex)->getExprLoc(),
+            diag::err_invalid_hlsl_resource_type)
         << ArgType;
     return true;
   }
@@ -2187,9 +2196,14 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_buffer_update_counter: {
+    auto checkResTy = [](const HLSLAttributedResourceType *ResTy) -> bool {
+      return !(ResTy->getAttrs().ResourceClass == ResourceClass::UAV &&
+               ResTy->getAttrs().RawBuffer && ResTy->hasContainedType());
+    };
     if (SemaRef.checkArgCount(TheCall, 2) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0) ||
-        CheckInt(&SemaRef, TheCall, 1))
+        CheckResourceHandle(&SemaRef, TheCall, 0, checkResTy) ||
+        CheckArgTypeIsCorrect(&SemaRef, TheCall->getArg(1),
+                              SemaRef.getASTContext().IntTy))
       return true;
     Expr *OffsetExpr = TheCall->getArg(1);
     std::optional<llvm::APSInt> Offset =
