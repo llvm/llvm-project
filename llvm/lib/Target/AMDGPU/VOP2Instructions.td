@@ -766,16 +766,16 @@ defm V_SUBB_U32 : VOP2bInst <"v_subb_u32", VOP2b_I32_I1_I32_I32_I1, null_frag, "
 defm V_SUBBREV_U32 : VOP2bInst <"v_subbrev_u32", VOP2b_I32_I1_I32_I32_I1, null_frag, "v_subb_u32">;
 
 
-let SubtargetPredicate = HasAddNoCarryInsts, isReMaterializable = 1 in { 
+let SubtargetPredicate = HasAddNoCarryInsts, isReMaterializable = 1 in {
   defm V_SUB_U32 : VOP2Inst <"v_sub_u32", VOP_I32_I32_I32_ARITH, null_frag, "v_sub_u32">;
   defm V_SUBREV_U32 : VOP2Inst <"v_subrev_u32", VOP_I32_I32_I32_ARITH, null_frag, "v_sub_u32">;
 }
 
-let SubtargetPredicate = HasAddNoCarryInsts, isReMaterializable = 1, isAdd = 1 in { 
+let SubtargetPredicate = HasAddNoCarryInsts, isReMaterializable = 1, isAdd = 1 in {
   defm V_ADD_U32 : VOP2Inst_VOPD <"v_add_u32", VOP_I32_I32_I32_ARITH, 0x10, "v_add_nc_u32", null_frag, "v_add_u32">;
 }
 
-let isAdd = 1 in { 
+let isAdd = 1 in {
   defm V_ADD_CO_U32 : VOP2bInst <"v_add_co_u32", VOP2b_I32_I1_I32_I32, null_frag, "v_add_co_u32">;
   defm V_ADDC_U32 : VOP2bInst <"v_addc_u32", VOP2b_I32_I1_I32_I32_I1, null_frag, "v_addc_u32">;
 }
@@ -2290,10 +2290,10 @@ multiclass Base_VOP2_Real_e32e64_vi <bits<6> op> :
 
 } // End AssemblerPredicate = isGFX8GFX9, DecoderNamespace = "GFX8"
 
-multiclass VOP2_SDWA_Real <bits<6> op> {
+multiclass VOP2_SDWA8_Real <bits<6> op> {
   if !cast<VOP2_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA then
   def _sdwa_vi :
-    VOP_SDWA_Real <!cast<VOP2_SDWA_Pseudo>(NAME#"_sdwa")>,
+    VOP_SDWA8_Real <!cast<VOP2_SDWA_Pseudo>(NAME#"_sdwa")>,
     VOP2_SDWAe <op{5-0}, !cast<VOP2_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
 }
 
@@ -2321,7 +2321,7 @@ multiclass VOP2be_Real_e32e64_vi_only <bits<6> op, string OpName, string AsmName
     }
   if !cast<VOP2_Pseudo>(OpName#"_e32").Pfl.HasExtSDWA then
     def _sdwa_vi :
-      VOP_SDWA_Real <!cast<VOP2_SDWA_Pseudo>(OpName#"_sdwa")>,
+      VOP_SDWA8_Real <!cast<VOP2_SDWA_Pseudo>(OpName#"_sdwa")>,
       VOP2_SDWAe <op{5-0}, !cast<VOP2_SDWA_Pseudo>(OpName#"_sdwa").Pfl> {
         VOP2_SDWA_Pseudo ps = !cast<VOP2_SDWA_Pseudo>(OpName#"_sdwa");
         let AsmString = AsmName # ps.AsmOperands;
@@ -2337,7 +2337,7 @@ multiclass VOP2be_Real_e32e64_vi_only <bits<6> op, string OpName, string AsmName
 
 } // End AssemblerPredicate = isGFX8Only, DecoderNamespace = "GFX8"
 
-let AssemblerPredicate = isGFX9Only, DecoderNamespace = "GFX9" in {
+let DecoderNamespace = "GFX9" in {
 
 multiclass VOP2be_Real_e32e64_gfx9 <bits<6> op, string OpName, string AsmName> {
   def _e32_gfx9 :
@@ -2386,10 +2386,10 @@ multiclass VOP2_Real_e32e64_gfx9 <bits<6> op> {
       VOP2_DPPe<op, !cast<VOP2_DPP_Pseudo>(NAME#"_dpp")>;
 }
 
-} // End AssemblerPredicate = isGFX9Only, DecoderNamespace = "GFX9"
+} // End DecoderNamespace = "GFX9"
 
 multiclass VOP2_Real_e32e64_vi <bits<6> op> :
-  Base_VOP2_Real_e32e64_vi<op>, VOP2_SDWA_Real<op>, VOP2_SDWA9_Real<op> {
+  Base_VOP2_Real_e32e64_vi<op>, VOP2_SDWA8_Real<op>, VOP2_SDWA9_Real<op> {
 
   if !cast<VOP2_Pseudo>(NAME#"_e32").Pfl.HasExtDPP then
     def _dpp_vi :
@@ -2401,7 +2401,7 @@ defm V_CNDMASK_B32        : VOP2_Real_e32e64_vi <0x0>;
 defm V_ADD_F32            : VOP2_Real_e32e64_vi <0x1>;
 defm V_SUB_F32            : VOP2_Real_e32e64_vi <0x2>;
 defm V_SUBREV_F32         : VOP2_Real_e32e64_vi <0x3>;
-let AssemblerPredicate = isGCN3ExcludingGFX90A in
+let OtherPredicates = [isGCN3ExcludingGFX90A] in
 defm V_MUL_LEGACY_F32     : VOP2_Real_e32e64_vi <0x4>;
 defm V_MUL_F32            : VOP2_Real_e32e64_vi <0x5>;
 defm V_MUL_I32_I24        : VOP2_Real_e32e64_vi <0x6>;
@@ -2431,6 +2431,7 @@ defm V_ADDC_U32           : VOP2be_Real_e32e64_vi_only <0x1c, "V_ADDC_U32",    "
 defm V_SUBB_U32           : VOP2be_Real_e32e64_vi_only <0x1d, "V_SUBB_U32",    "v_subb_u32">;
 defm V_SUBBREV_U32        : VOP2be_Real_e32e64_vi_only <0x1e, "V_SUBBREV_U32", "v_subbrev_u32">;
 
+let AssemblerPredicate = isGFX9Only in {
 defm V_ADD_CO_U32         : VOP2be_Real_e32e64_gfx9 <0x19, "V_ADD_CO_U32",     "v_add_co_u32">;
 defm V_SUB_CO_U32         : VOP2be_Real_e32e64_gfx9 <0x1a, "V_SUB_CO_U32",     "v_sub_co_u32">;
 defm V_SUBREV_CO_U32      : VOP2be_Real_e32e64_gfx9 <0x1b, "V_SUBREV_CO_U32",  "v_subrev_co_u32">;
@@ -2441,6 +2442,7 @@ defm V_SUBBREV_CO_U32     : VOP2be_Real_e32e64_gfx9 <0x1e, "V_SUBBREV_U32", "v_s
 defm V_ADD_U32            : VOP2_Real_e32e64_gfx9 <0x34>;
 defm V_SUB_U32            : VOP2_Real_e32e64_gfx9 <0x35>;
 defm V_SUBREV_U32         : VOP2_Real_e32e64_gfx9 <0x36>;
+} // End AssemblerPredicate = isGFX9Only
 
 defm V_BFM_B32            : VOP2_Real_e64only_vi <0x293>;
 defm V_BCNT_U32_B32       : VOP2_Real_e64only_vi <0x28b>;
@@ -2518,7 +2520,7 @@ defm V_XNOR_B32 : VOP2_Real_e32e64_vi <0x3d>;
 
 } // End SubtargetPredicate = HasDLInsts
 
-let AssemblerPredicate = isGFX90APlus, DecoderNamespace = "GFX90A" in {
+let DecoderNamespace = "GFX90A" in {
   multiclass VOP2_Real_e32_gfx90a <bits<6> op> {
     def _e32_gfx90a :
       VOP2_Real<!cast<VOP2_Pseudo>(NAME#"_e32"), SIEncodingFamily.GFX90A>,
@@ -2551,7 +2553,7 @@ let SubtargetPredicate = HasFmacF64Inst in {
   defm V_FMAC_F64       : VOP2_Real_e32e64_gfx90a <0x4>;
 } // End SubtargetPredicate = HasFmacF64Inst
 
-let SubtargetPredicate = isGFX90APlus, IsSingle = 1 in {
+let IsSingle = 1 in {
   defm V_MUL_LEGACY_F32 : VOP2_Real_e64_gfx90a <0x2a1>;
 }
 
