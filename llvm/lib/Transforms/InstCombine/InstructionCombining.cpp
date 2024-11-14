@@ -1709,9 +1709,9 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   }
 
   // Make sure that one of the select arms folds successfully.
-  Value *NewTV = simplifyOperationIntoSelectOperand(Op, SI, /*IsTrueArm*/ true);
+  Value *NewTV = simplifyOperationIntoSelectOperand(Op, SI, /*IsTrueArm=*/true);
   Value *NewFV =
-      simplifyOperationIntoSelectOperand(Op, SI, /*IsTrueArm*/ false);
+      simplifyOperationIntoSelectOperand(Op, SI, /*IsTrueArm=*/false);
   if (!NewTV && !NewFV)
     return nullptr;
 
