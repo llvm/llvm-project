@@ -5685,7 +5685,8 @@ struct VarArgPowerPCHelper : public VarArgHelperBase {
            "finalizeInstrumentation called twice");
     IRBuilder<> IRB(MSV.FnPrologueEnd);
     VAArgSize = IRB.CreateLoad(IRB.getInt64Ty(), MS.VAArgOverflowSizeTLS);
-    Value *CopySize = VAArgSize;
+    Value *CopySize =
+        IRB.CreateAdd(ConstantInt::get(MS.IntptrTy, 0), VAArgSize);
 
     if (!VAStartInstrumentationList.empty()) {
       // If there is a va_start in this function, make a backup copy of
@@ -5698,7 +5699,7 @@ struct VarArgPowerPCHelper : public VarArgHelperBase {
 
       Value *SrcSize = IRB.CreateBinaryIntrinsic(
           Intrinsic::umin, CopySize,
-          ConstantInt::get(IRB.getInt64Ty(), kParamTLSSize));
+          ConstantInt::get(MS.IntptrTy, kParamTLSSize));
       IRB.CreateMemCpy(VAArgTLSCopy, kShadowTLSAlignment, MS.VAArgTLS,
                        kShadowTLSAlignment, SrcSize);
     }
@@ -6044,7 +6045,8 @@ struct VarArgGenericHelper : public VarArgHelperBase {
            "finalizeInstrumentation called twice");
     IRBuilder<> IRB(MSV.FnPrologueEnd);
     VAArgSize = IRB.CreateLoad(IRB.getInt64Ty(), MS.VAArgOverflowSizeTLS);
-    Value *CopySize = VAArgSize;
+    Value *CopySize =
+        IRB.CreateAdd(ConstantInt::get(MS.IntptrTy, 0), VAArgSize);
 
     if (!VAStartInstrumentationList.empty()) {
       // If there is a va_start in this function, make a backup copy of
@@ -6056,7 +6058,7 @@ struct VarArgGenericHelper : public VarArgHelperBase {
 
       Value *SrcSize = IRB.CreateBinaryIntrinsic(
           Intrinsic::umin, CopySize,
-          ConstantInt::get(IRB.getInt64Ty(), kParamTLSSize));
+          ConstantInt::get(MS.IntptrTy, kParamTLSSize));
       IRB.CreateMemCpy(VAArgTLSCopy, kShadowTLSAlignment, MS.VAArgTLS,
                        kShadowTLSAlignment, SrcSize);
     }
