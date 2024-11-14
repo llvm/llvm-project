@@ -230,29 +230,34 @@ l2:
   ret <4 x i32> %c
 }
 
-define <4 x float> @fmul(<4 x float> %x, ptr %y) {
+define <4 x float> @fmul(ptr %x, ptr %y) {
 ; CHECK-LABEL: fmul:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    ldr q2, [x0]
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    fmul v1.4s, v2.4s, v1.s[3]
+; CHECK-NEXT:    ld1r { v1.4s }, [x0]
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  .LBB7_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    fadd v0.4s, v1.4s, v0.4s
-; CHECK-NEXT:    subs w8, w8, #1
+; CHECK-NEXT:    ldr q2, [x1, x8]
+; CHECK-NEXT:    add x8, x8, #16
+; CHECK-NEXT:    cmp w8, #16
+; CHECK-NEXT:    fmul v2.4s, v2.4s, v1.4s
+; CHECK-NEXT:    fadd v0.4s, v2.4s, v0.4s
 ; CHECK-NEXT:    b.eq .LBB7_1
 ; CHECK-NEXT:  // %bb.2: // %l2
 ; CHECK-NEXT:    ret
 entry:
-  %a = shufflevector <4 x float> %x, <4 x float> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %x.val = load float, ptr %x
+  %x.ins = insertelement <4 x float> poison, float %x.val, i64 0
+  %a = shufflevector <4 x float> %x.ins, <4 x float> undef, <4 x i32> zeroinitializer
   br label %l1
 
 l1:
   %p = phi i32 [ 0, %entry ], [ %pa, %l1 ]
   %q = phi <4 x float> [ zeroinitializer, %entry ], [ %c, %l1 ]
-  %l = load <4 x float>, ptr %y
+  %idx.y = mul nuw nsw i32 %p, 4
+  %ptr.y = getelementptr float, ptr %y, i32 %idx.y
+  %l = load <4 x float>, ptr %ptr.y
   %b = fmul <4 x float> %l, %a
   %c = fadd <4 x float> %b, %q
   %pa = add i32 %p, 1
