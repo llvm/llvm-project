@@ -5,7 +5,11 @@
 // RUN: env LLVM_PROFILE_FILE="%c%t.profraw" %run %t.exe
 // RUN: llvm-profdata show --counts --all-functions %t.profraw | FileCheck %s -check-prefix=CHECK-COUNTS
 // RUN: llvm-profdata merge -o %t.profdata %t.profraw
-// RUN: %if !target={{.*aix.*}} %{ llvm-cov report %t.exe -instr-profile %t.profdata | FileCheck %s -check-prefix=CHECK-COVERAGE %}
+//
+// COM: The "report" and "show" commands of llvm-cov are not supported on AIX.
+// RUN: %if !target={{.*aix.*}} %{ \
+// RUN:   llvm-cov report %t.exe -instr-profile %t.profdata | FileCheck %s -check-prefix=CHECK-COVERAGE \
+// RUN: %}
 
 // CHECK-COUNTS: Counters:
 // CHECK-COUNTS-NEXT:   main:
