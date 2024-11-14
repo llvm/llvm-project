@@ -164,33 +164,56 @@ void SetSigProcMask(__sanitizer_sigset_t *set, __sanitizer_sigset_t *oldset) {
   CHECK_EQ(0, internal_sigprocmask(SIG_SETMASK, set, oldset));
 }
 
+#  if SANITIZER_LINUX
+// Deletes the specified signal from newset, if it is not present in oldset
+// Equivalently: newset[signum] = newset[signum] & oldset[signum]
+static void KeepUnblocked(__sanitizer_sigset_t &newset,
+                          __sanitizer_sigset_t &oldset, int signum) {
+  // FIXME: https://github.com/google/sanitizers/issues/1816
+  if (SANITIZER_ANDROID || !internal_sigismember(&oldset, signum))
+    internal_sigdelset(&newset, signum);
+}
+#  endif
+
 // Block asynchronous signals
 void BlockSignals(__sanitizer_sigset_t *oldset) {
-  __sanitizer_sigset_t set;
-  internal_sigfillset(&set);
-#  if SANITIZER_LINUX && !SANITIZER_ANDROID
+  __sanitizer_sigset_t newset;
+  internal_sigfillset(&newset);
+
+#  if SANITIZER_LINUX
+  __sanitizer_sigset_t currentset;
+
+#    if !SANITIZER_ANDROID
+  // FIXME: https://github.com/google/sanitizers/issues/1816
+  SetSigProcMask(NULL, &currentset);
+
   // Glibc uses SIGSETXID signal during setuid call. If this signal is blocked
   // on any thread, setuid call hangs.
   // See test/sanitizer_common/TestCases/Linux/setuid.c.
-  internal_sigdelset(&set, 33);
-#  endif
-#  if SANITIZER_LINUX
+  KeepUnblocked(newset, currentset, 33);
+#    endif  // !SANITIZER_ANDROID
+
   // Seccomp-BPF-sandboxed processes rely on SIGSYS to handle trapped syscalls.
   // If this signal is blocked, such calls cannot be handled and the process may
   // hang.
-  internal_sigdelset(&set, 31);
+  KeepUnblocked(newset, currentset, 31);
 
+#    if !SANITIZER_ANDROID
   // Don't block synchronous signals
-  internal_sigdelset(&set, SIGSEGV);
-  internal_sigdelset(&set, SIGBUS);
-  internal_sigdelset(&set, SIGILL);
-  internal_sigdelset(&set, SIGTRAP);
-  internal_sigdelset(&set, SIGABRT);
-  internal_sigdelset(&set, SIGFPE);
-  internal_sigdelset(&set, SIGPIPE);
-#  endif
+  // but also don't unblock signals that the user had deliberately blocked.
+  // FIXME: https://github.com/google/sanitizers/issues/1816
+  KeepUnblocked(newset, currentset, SIGSEGV);
+  KeepUnblocked(newset, currentset, SIGBUS);
+  KeepUnblocked(newset, currentset, SIGILL);
+  KeepUnblocked(newset, currentset, SIGTRAP);
+  KeepUnblocked(newset, currentset, SIGABRT);
+  KeepUnblocked(newset, currentset, SIGFPE);
+  KeepUnblocked(newset, currentset, SIGPIPE);
+#    endif  //! SANITIZER_ANDROID
 
-  SetSigProcMask(&set, oldset);
+#  endif  // SANITIZER_LINUX
+
+  SetSigProcMask(&newset, oldset);
 }
 
 ScopedBlockSignals::ScopedBlockSignals(__sanitizer_sigset_t *copy) {
