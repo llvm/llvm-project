@@ -32,6 +32,19 @@ ELFYAML::Chunk::~Chunk() = default;
 ELFYAML::Opt::~Opt() = default;
 const char ELFYAML::Opt::ID = 'E';
 
+std::unique_ptr<ELFYAML::CustomRawContentSection>
+ELFYAML::Opt::makeCustomRawContentSection(StringRef Name) const {
+  return nullptr;
+}
+
+/// Called before mapping sections for prettyprinting yaml.
+void ELFYAML::Opt::preMapping(const ELFYAML::Object &Object,
+                              bool IsOutputting) {}
+
+/// Called after mapping sections to gather members for the file format.
+void ELFYAML::Opt::postMapping(const ELFYAML::Object &Object,
+                               bool IsOutputting) {}
+
 namespace ELFYAML {
 ELF_ELFOSABI Object::getOSAbi() const { return Header.OSABI; }
 

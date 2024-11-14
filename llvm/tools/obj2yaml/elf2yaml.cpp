@@ -22,19 +22,7 @@
 using namespace llvm;
 
 namespace {
-class DumperOpt : public ELFYAML::Opt {
-public:
-  std::unique_ptr<ELFYAML::CustomRawContentSection>
-  makeCustomRawContentSection(StringRef Name) const override {
-    return nullptr;
-  }
-  void preMapping(const ELFYAML::Object &Object, bool IsOutputting) override {
-    // Do nothing.
-  }
-  void postMapping(const ELFYAML::Object &Object, bool IsOutputting) override {
-    // Do nothing.
-  }
-};
+struct DumperOpt : public ELFYAML::Opt {};
 
 template <class ELFT>
 class ELFDumper {

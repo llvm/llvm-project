@@ -59,19 +59,7 @@ cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
                                     cl::value_desc("filename"), cl::init("-"),
                                     cl::Prefix, cl::cat(Cat));
 
-class EmitterOpt : public ELFYAML::Opt {
-public:
-  std::unique_ptr<ELFYAML::CustomRawContentSection>
-  makeCustomRawContentSection(StringRef Name) const override {
-    return nullptr;
-  }
-  void preMapping(const ELFYAML::Object &Object, bool IsOutputting) override {
-    // Do nothing.
-  }
-  void postMapping(const ELFYAML::Object &Object, bool IsOutputting) override {
-    // Do nothing.
-  }
-};
+struct EmitterOpt : public ELFYAML::Opt {};
 } // namespace
 
 static std::optional<std::string> preprocess(StringRef Buf,

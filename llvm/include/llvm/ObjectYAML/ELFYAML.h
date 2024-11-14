@@ -778,8 +778,8 @@ struct Object {
 bool shouldAllocateFileSpace(ArrayRef<ProgramHeader> Phdrs,
                              const NoBitsSection &S);
 
-/// ELFYAML::Opt -- Abstract base class for ELFYAML to provide
-/// the interface for handling CustomRawConetentSection.
+/// ELFYAML::Opt -- Null base class for ELFYAML to provide the
+/// interface for handling CustomRawConetentSection.
 ///
 /// Users in ELFYAML should obtain the pointer with
 /// dyn_cast<ELFYAML::Opt> if IO::Opt is the instance from yaml::Opt.
@@ -801,15 +801,15 @@ public:
   /// This is called:
   ///   - Before preMapping for elf2yaml.
   ///   - After preMapping for yaml2elf.
+  /// Returns nullptr to delegate default actions.
   virtual std::unique_ptr<CustomRawContentSection>
-  makeCustomRawContentSection(StringRef Name) const = 0;
+  makeCustomRawContentSection(StringRef Name) const;
 
   /// Called before mapping sections for prettyprinting yaml.
-  virtual void preMapping(const ELFYAML::Object &Object, bool IsOutputting) = 0;
+  virtual void preMapping(const ELFYAML::Object &Object, bool IsOutputting);
 
   /// Called after mapping sections to gather members for the file format.
-  virtual void postMapping(const ELFYAML::Object &Object,
-                           bool IsOutputting) = 0;
+  virtual void postMapping(const ELFYAML::Object &Object, bool IsOutputting);
 
   /// Tell IO::OptBase to be this and derivered classes.
   static bool classof(const yaml::IO::OptBase *Obj) {
