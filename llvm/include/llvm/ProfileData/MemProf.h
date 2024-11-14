@@ -963,8 +963,11 @@ using CallEdgeTy = std::pair<LineLocation, uint64_t>;
 //
 //   auto Pairs = std::move(Extractor.CallerCalleePairs);
 struct CallerCalleePairExtractor {
+  // The base address of the radix tree array.
   const unsigned char *CallStackBase;
+  // A functor to convert a linear FrameId to a Frame.
   std::function<Frame(LinearFrameId)> FrameIdToFrame;
+  // A map from caller GUIDs to lists of call sites in respective callers.
   DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> CallerCalleePairs;
 
   CallerCalleePairExtractor() = delete;
