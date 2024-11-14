@@ -30,7 +30,7 @@ using MachineUniformityInfo = GenericUniformityInfo<MachineSSAContext>;
 /// everything is uniform.
 MachineUniformityInfo computeMachineUniformityInfo(
     MachineFunction &F, const MachineCycleInfo &cycleInfo,
-    const MachineDomTree &domTree, bool HasBranchDivergence);
+    const MachineDominatorTree &domTree, bool HasBranchDivergence);
 
 /// Legacy analysis pass which computes a \ref MachineUniformityInfo.
 class MachineUniformityAnalysisPass : public MachineFunctionPass {

@@ -20,7 +20,7 @@
     .text
 #endif
 
-#if !defined(__USING_SJLJ_EXCEPTIONS__)
+#if !defined(__USING_SJLJ_EXCEPTIONS__) && !defined(__wasm__)
 
 #if defined(__i386__)
 
@@ -1108,7 +1108,11 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 #
 DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   ISTORE    x1, (RISCV_ISIZE * 0)(a0) // store ra as pc
+#if defined(__riscv_32e)
+  .irp i,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+#else
   .irp i,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+#endif
     ISTORE x\i, (RISCV_ISIZE * \i)(a0)
   .endr
 
@@ -1177,6 +1181,6 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 
   WEAK_ALIAS(__unw_getcontext, unw_getcontext)
 
-#endif /* !defined(__USING_SJLJ_EXCEPTIONS__) */
+#endif /* !defined(__USING_SJLJ_EXCEPTIONS__) && !defined(__wasm__) */
 
 NO_EXEC_STACK_DIRECTIVE

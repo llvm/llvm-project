@@ -156,7 +156,7 @@ constexpr void test_comparator_invocation_count() {
   // The comparator is invoked only `min(left.size(), right.size())` times
   test_lexicographical_compare<const int*, const int*>(
       std::array{0, 1, 2}, std::array{0, 1, 2, 3}, compare_last_digit_counting, std::strong_ordering::less);
-#if _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_DEBUG
+#if defined(_LIBCPP_HARDENING_MODE) && _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_DEBUG
   assert(compare_invocation_count <= 3);
 #else
   assert(compare_invocation_count <= 6);

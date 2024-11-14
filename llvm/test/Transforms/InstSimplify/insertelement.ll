@@ -119,3 +119,11 @@ unreachable_infloop:
   %bogus = insertelement <2 x i64> %bogus, i64 undef, i32 1
   br label %unreachable_infloop
 }
+
+define <4 x i32> @insert_into_splat(i32 %index) {
+; CHECK-LABEL: @insert_into_splat(
+; CHECK-NEXT:    ret <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+;
+  %I = insertelement <4 x i32> <i32 3, i32 3, i32 3, i32 3>, i32 3, i32 %index
+  ret <4 x i32> %I
+}

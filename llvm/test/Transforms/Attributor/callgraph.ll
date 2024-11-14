@@ -6,7 +6,7 @@
 ; RUN: opt -passes=attributor --attributor-assume-closed-world -S < %s | FileCheck %s --check-prefixes=CHECK,UPTO2,UNLIM,CWRLD
 
 ;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = global ptr @usedByGlobal
+; CHECK: @G = global ptr @usedByGlobal
 ;.
 define dso_local void @func1() {
 ; CHECK-LABEL: @func1(
@@ -67,7 +67,7 @@ define dso_local void @func2(i1 %c) {
 ;
 ; LIMI0-LABEL: @func2(
 ; LIMI0-NEXT:    [[F:%.*]] = select i1 [[C:%.*]], ptr @internal_good, ptr @func4
-; LIMI0-NEXT:    call void [[F]](), !callees !0
+; LIMI0-NEXT:    call void [[F]](), !callees [[META0:![0-9]+]]
 ; LIMI0-NEXT:    ret void
 ;
   %f = select i1 %c, ptr @internal_good, ptr @func4
@@ -98,7 +98,7 @@ define void @func5(i32 %0) {
 ; LIMI0-LABEL: @func5(
 ; LIMI0-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP0:%.*]], 0
 ; LIMI0-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], ptr @func4, ptr @func3
-; LIMI0-NEXT:    call void [[TMP3]](), !callees !1
+; LIMI0-NEXT:    call void [[TMP3]](), !callees [[META1:![0-9]+]]
 ; LIMI0-NEXT:    ret void
 ;
   %2 = icmp ne i32 %0, 0
@@ -178,7 +178,7 @@ define i32 @non_matching_fp1(i1 %c1, i1 %c2, i1 %c) {
 ; LIMI2-NEXT:    [[CALL2:%.*]] = call i32 @retI32(i32 42)
 ; LIMI2-NEXT:    br label [[TMP7]]
 ; LIMI2:       6:
-; LIMI2-NEXT:    [[CALL3:%.*]] = call i32 [[FP]](i32 42), !callees !0
+; LIMI2-NEXT:    [[CALL3:%.*]] = call i32 [[FP]](i32 42), !callees [[META0:![0-9]+]]
 ; LIMI2-NEXT:    br label [[TMP7]]
 ; LIMI2:       7:
 ; LIMI2-NEXT:    [[CALL_PHI:%.*]] = phi i32 [ [[CALL1]], [[TMP2]] ], [ [[CALL2]], [[TMP5]] ], [ [[CALL3]], [[TMP6]] ]
@@ -188,7 +188,7 @@ define i32 @non_matching_fp1(i1 %c1, i1 %c2, i1 %c) {
 ; LIMI0-NEXT:    [[FP1:%.*]] = select i1 [[C1:%.*]], ptr @retI32, ptr @takeI32
 ; LIMI0-NEXT:    [[FP2:%.*]] = select i1 [[C2:%.*]], ptr @retFloatTakeFloat, ptr @void
 ; LIMI0-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr [[FP1]], ptr [[FP2]]
-; LIMI0-NEXT:    [[CALL:%.*]] = call i32 [[FP]](i32 42), !callees !2
+; LIMI0-NEXT:    [[CALL:%.*]] = call i32 [[FP]](i32 42), !callees [[META2:![0-9]+]]
 ; LIMI0-NEXT:    ret i32 [[CALL]]
 ;
   %fp1 = select i1 %c1, ptr @retI32, ptr @takeI32
@@ -241,7 +241,7 @@ define i32 @non_matching_fp1_noundef(i1 %c1, i1 %c2, i1 %c) {
 ; LIMI2-NEXT:    [[CALL2:%.*]] = call i32 @retI32(i32 42)
 ; LIMI2-NEXT:    br label [[TMP7]]
 ; LIMI2:       6:
-; LIMI2-NEXT:    [[CALL3:%.*]] = call i32 [[FP]](i32 42), !callees !1
+; LIMI2-NEXT:    [[CALL3:%.*]] = call i32 [[FP]](i32 42), !callees [[META1:![0-9]+]]
 ; LIMI2-NEXT:    br label [[TMP7]]
 ; LIMI2:       7:
 ; LIMI2-NEXT:    [[CALL_PHI:%.*]] = phi i32 [ [[CALL1]], [[TMP2]] ], [ [[CALL2]], [[TMP5]] ], [ [[CALL3]], [[TMP6]] ]
@@ -251,7 +251,7 @@ define i32 @non_matching_fp1_noundef(i1 %c1, i1 %c2, i1 %c) {
 ; LIMI0-NEXT:    [[FP1:%.*]] = select i1 [[C1:%.*]], ptr @retI32, ptr @takeI32
 ; LIMI0-NEXT:    [[FP2:%.*]] = select i1 [[C2:%.*]], ptr @retFloatTakeFloatFloatNoundef, ptr @void
 ; LIMI0-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr [[FP1]], ptr [[FP2]]
-; LIMI0-NEXT:    [[CALL:%.*]] = call i32 [[FP]](i32 42), !callees !3
+; LIMI0-NEXT:    [[CALL:%.*]] = call i32 [[FP]](i32 42), !callees [[META3:![0-9]+]]
 ; LIMI0-NEXT:    ret i32 [[CALL]]
 ;
   %fp1 = select i1 %c1, ptr @retI32, ptr @takeI32
@@ -567,7 +567,7 @@ define void @func7(ptr %unknown) {
 ; UPTO2-NEXT:    ret void
 ;
 ; LIMI0-LABEL: @func7(
-; LIMI0-NEXT:    call void [[UNKNOWN:%.*]](), !callees !1
+; LIMI0-NEXT:    call void [[UNKNOWN:%.*]](), !callees [[META1]]
 ; LIMI0-NEXT:    ret void
 ;
   call void %unknown(), !callees !2
@@ -578,17 +578,17 @@ define void @func7(ptr %unknown) {
 define void @undef_in_callees() {
 ; UNLIM-LABEL: @undef_in_callees(
 ; UNLIM-NEXT:  cond.end.i:
-; UNLIM-NEXT:    call void undef(ptr undef, i32 undef, ptr undef), !callees !2
+; UNLIM-NEXT:    call void undef(ptr undef, i32 undef, ptr undef), !callees [[META2:![0-9]+]]
 ; UNLIM-NEXT:    ret void
 ;
 ; LIMI2-LABEL: @undef_in_callees(
 ; LIMI2-NEXT:  cond.end.i:
-; LIMI2-NEXT:    call void undef(ptr undef, i32 undef, ptr undef), !callees !4
+; LIMI2-NEXT:    call void undef(ptr undef, i32 undef, ptr undef), !callees [[META4:![0-9]+]]
 ; LIMI2-NEXT:    ret void
 ;
 ; LIMI0-LABEL: @undef_in_callees(
 ; LIMI0-NEXT:  cond.end.i:
-; LIMI0-NEXT:    call void undef(ptr undef, i32 undef, ptr undef), !callees !6
+; LIMI0-NEXT:    call void undef(ptr undef, i32 undef, ptr undef), !callees [[META6:![0-9]+]]
 ; LIMI0-NEXT:    ret void
 ;
 cond.end.i:
@@ -689,25 +689,35 @@ define void @as_cast(ptr %arg) {
 ; UTC_ARGS: --enable
 
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+; OUNLM: attributes #[[ATTR0:[0-9]+]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
-; UNLIM: [[META0:![0-9]+]] = !{!1}
-; UNLIM: [[META1:![0-9]+]] = !{i64 0, i1 false}
-; UNLIM: [[META2:![0-9]+]] = distinct !{ptr undef, ptr null}
+; LIMI2: attributes #[[ATTR0:[0-9]+]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
-; LIMI2: [[META0:![0-9]+]] = !{ptr @void, ptr @retFloatTakeFloat}
-; LIMI2: [[META1:![0-9]+]] = !{ptr @void}
-; LIMI2: [[META2:![0-9]+]] = !{!3}
-; LIMI2: [[META3:![0-9]+]] = !{i64 0, i1 false}
-; LIMI2: [[META4:![0-9]+]] = distinct !{ptr undef, ptr null}
+; LIMI0: attributes #[[ATTR0:[0-9]+]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
-; LIMI0: [[META0:![0-9]+]] = !{ptr @func4, ptr @internal_good}
-; LIMI0: [[META1:![0-9]+]] = !{ptr @func3, ptr @func4}
-; LIMI0: [[META2:![0-9]+]] = !{ptr @takeI32, ptr @retI32, ptr @void, ptr @retFloatTakeFloat}
-; LIMI0: [[META3:![0-9]+]] = !{ptr @takeI32, ptr @retI32, ptr @void}
-; LIMI0: [[META4:![0-9]+]] = !{!5}
-; LIMI0: [[META5:![0-9]+]] = !{i64 0, i1 false}
-; LIMI0: [[META6:![0-9]+]] = distinct !{ptr undef, ptr null}
+; CWRLD: attributes #[[ATTR0:[0-9]+]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+;.
+; OUNLM: [[META0:![0-9]+]] = !{[[META1:![0-9]+]]}
+; OUNLM: [[META1]] = !{i64 0, i1 false}
+; OUNLM: [[META2]] = distinct !{ptr undef, ptr null}
+;.
+; LIMI2: [[META0]] = !{ptr @void, ptr @retFloatTakeFloat}
+; LIMI2: [[META1]] = !{ptr @void}
+; LIMI2: [[META2:![0-9]+]] = !{[[META3:![0-9]+]]}
+; LIMI2: [[META3]] = !{i64 0, i1 false}
+; LIMI2: [[META4]] = distinct !{ptr undef, ptr null}
+;.
+; LIMI0: [[META0]] = !{ptr @func4, ptr @internal_good}
+; LIMI0: [[META1]] = !{ptr @func3, ptr @func4}
+; LIMI0: [[META2]] = !{ptr @takeI32, ptr @retI32, ptr @void, ptr @retFloatTakeFloat}
+; LIMI0: [[META3]] = !{ptr @takeI32, ptr @retI32, ptr @void}
+; LIMI0: [[META4:![0-9]+]] = !{[[META5:![0-9]+]]}
+; LIMI0: [[META5]] = !{i64 0, i1 false}
+; LIMI0: [[META6]] = distinct !{ptr undef, ptr null}
+;.
+; CWRLD: [[META0:![0-9]+]] = !{[[META1:![0-9]+]]}
+; CWRLD: [[META1]] = !{i64 0, i1 false}
+; CWRLD: [[META2]] = distinct !{ptr undef, ptr null}
 ;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; DOT: {{.*}}

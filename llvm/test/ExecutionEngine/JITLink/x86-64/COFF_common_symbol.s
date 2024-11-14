@@ -6,7 +6,7 @@
 #
 # CHECK: Creating graph symbols...
 # CHECK:      7: Creating defined graph symbol for COFF symbol "var" in (common) (index: 0)
-# CHECK-NEXT:   0x0 (block + 0x00000000): size: 0x00000004, linkage: strong, scope: default, dead  -   var
+# CHECK-NEXT:   0x0 (block + 0x00000000): size: 0x00000004, linkage: weak, scope: default, dead  -   var
 
 	.text
 

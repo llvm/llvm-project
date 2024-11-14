@@ -58,16 +58,7 @@ typedef double fp_t;
 #define REP_C UINT64_C
 #define significandBits 52
 
-static __inline int rep_clz(rep_t a) {
-#if defined __LP64__
-  return __builtin_clzl(a);
-#else
-  if (a & REP_C(0xffffffff00000000))
-    return clzsi(a >> 32);
-  else
-    return 32 + clzsi(a & REP_C(0xffffffff));
-#endif
-}
+static inline int rep_clz(rep_t a) { return __builtin_clzll(a); }
 
 #define loWord(a) (a & 0xffffffffU)
 #define hiWord(a) (a >> 32)

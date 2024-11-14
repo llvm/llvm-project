@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
@@ -109,7 +110,7 @@ public:
     AU.setPreservesAll();
     AU.addRequired<RegAllocEvictionAdvisorAnalysis>();
     AU.addRequired<RegAllocPriorityAdvisorAnalysis>();
-    AU.addRequired<MachineBlockFrequencyInfo>();
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -212,7 +213,7 @@ static const std::vector<int64_t> PerLiveRangeShape{1, NumberOfInterferences};
   M(float, mbb_frequencies, MBBFrequencyShape,                                 \
     "A vector of machine basic block frequencies")                             \
   M(int64_t, mbb_mapping, InstructionsShape,                                   \
-    "A vector of indicies mapping instructions to MBBs")
+    "A vector of indices mapping instructions to MBBs")
 #else
 #define RA_EVICT_FIRST_DEVELOPMENT_FEATURE(M)
 #define RA_EVICT_REST_DEVELOPMENT_FEATURES(M)
@@ -387,8 +388,8 @@ private:
   std::vector<TensorSpec> InputFeatures;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineBlockFrequencyInfo>();
-    AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     RegAllocEvictionAdvisorAnalysis::getAnalysisUsage(AU);
   }
 
@@ -405,8 +406,9 @@ private:
             InteractiveChannelBaseName + ".in");
     }
     return std::make_unique<MLEvictAdvisor>(
-        MF, RA, Runner.get(), getAnalysis<MachineBlockFrequencyInfo>(),
-        getAnalysis<MachineLoopInfo>());
+        MF, RA, Runner.get(),
+        getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI(),
+        getAnalysis<MachineLoopInfoWrapperPass>().getLI());
   }
   std::unique_ptr<MLModelRunner> Runner;
 };
@@ -494,8 +496,8 @@ private:
   std::vector<TensorSpec> TrainingInputFeatures;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineBlockFrequencyInfo>();
-    AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     RegAllocEvictionAdvisorAnalysis::getAnalysisUsage(AU);
   }
 
@@ -543,8 +545,9 @@ private:
     if (Log)
       Log->switchContext(MF.getName());
     return std::make_unique<DevelopmentModeEvictAdvisor>(
-        MF, RA, Runner.get(), getAnalysis<MachineBlockFrequencyInfo>(),
-        getAnalysis<MachineLoopInfo>(), Log.get());
+        MF, RA, Runner.get(),
+        getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI(),
+        getAnalysis<MachineLoopInfoWrapperPass>().getLI(), Log.get());
   }
 
   std::unique_ptr<MLModelRunner> Runner;
@@ -940,7 +943,7 @@ void MLEvictAdvisor::extractFeatures(
 #undef SET
 }
 
-void extractInstructionFeatures(
+void llvm::extractInstructionFeatures(
     SmallVectorImpl<LRStartEndInfo> &LRPosInfo, MLModelRunner *RegallocRunner,
     function_ref<int(SlotIndex)> GetOpcode,
     function_ref<float(SlotIndex)> GetMBBFreq,
@@ -1057,13 +1060,12 @@ void extractInstructionFeatures(
   }
 }
 
-void extractMBBFrequency(const SlotIndex CurrentIndex,
-                         const size_t CurrentInstructionIndex,
-                         std::map<MachineBasicBlock *, size_t> &VisitedMBBs,
-                         function_ref<float(SlotIndex)> GetMBBFreq,
-                         MachineBasicBlock *CurrentMBBReference,
-                         MLModelRunner *RegallocRunner, const int MBBFreqIndex,
-                         const int MBBMappingIndex) {
+void llvm::extractMBBFrequency(
+    const SlotIndex CurrentIndex, const size_t CurrentInstructionIndex,
+    std::map<MachineBasicBlock *, size_t> &VisitedMBBs,
+    function_ref<float(SlotIndex)> GetMBBFreq,
+    MachineBasicBlock *CurrentMBBReference, MLModelRunner *RegallocRunner,
+    const int MBBFreqIndex, const int MBBMappingIndex) {
   size_t CurrentMBBIndex = VisitedMBBs[CurrentMBBReference];
   float CurrentMBBFreq = GetMBBFreq(CurrentIndex);
   if (CurrentMBBIndex < ModelMaxSupportedMBBCount) {
@@ -1138,7 +1140,8 @@ bool RegAllocScoring::runOnMachineFunction(MachineFunction &MF) {
   auto GetReward = [&]() {
     if (!CachedReward)
       CachedReward = static_cast<float>(
-          calculateRegAllocScore(MF, getAnalysis<MachineBlockFrequencyInfo>())
+          calculateRegAllocScore(
+              MF, getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI())
               .getScore());
     return *CachedReward;
   };

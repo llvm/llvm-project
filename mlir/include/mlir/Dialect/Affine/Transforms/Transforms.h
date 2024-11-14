@@ -16,7 +16,6 @@
 
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
 class AffineMap;

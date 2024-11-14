@@ -81,7 +81,7 @@ define i32 @neg_extra_use_or_lshr_i32(i32 %x, ptr %p) {
 define i32 @neg_or_extra_use_lshr_i32(i32 %x, ptr %p) {
 ; CHECK-LABEL: @neg_or_extra_use_lshr_i32(
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NEG]], [[X]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X]], [[NEG]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[OR]], 31
 ; CHECK-NEXT:    store i32 [[OR]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[SHR]]

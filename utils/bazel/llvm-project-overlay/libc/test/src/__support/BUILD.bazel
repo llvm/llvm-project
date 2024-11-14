@@ -99,6 +99,7 @@ libc_test(
     name = "fixedvector_test",
     srcs = ["fixedvector_test.cpp"],
     deps = [
+        "//libc:__support_cpp_array",
         "//libc:__support_fixedvector",
     ],
 )

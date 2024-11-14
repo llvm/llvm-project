@@ -297,6 +297,10 @@ public:
   /// \param[in] current_command_args
   ///    The command arguments.
   ///
+  /// \param[in] index
+  ///    This is for internal use - it is how the completion request is tracked
+  ///    in CommandObjectMultiword, and should otherwise be ignored.
+  ///
   /// \return
   ///     std::nullopt if there is no special repeat command - it will use the
   ///     current command line.
@@ -365,12 +369,13 @@ protected:
            "currently stopped.";
   }
 
-  // This is for use in the command interpreter, when you either want the
-  // selected target, or if no target is present you want to prime the dummy
-  // target with entities that will be copied over to new targets.
-  Target &GetSelectedOrDummyTarget(bool prefer_dummy = false);
-  Target &GetSelectedTarget();
   Target &GetDummyTarget();
+
+  // This is for use in the command interpreter, and returns the most relevant
+  // target. In order of priority, that's the target from the command object's
+  // execution context, the target from the interpreter's execution context, the
+  // selected target or the dummy target.
+  Target &GetTarget();
 
   // If a command needs to use the "current" thread, use this call. Command
   // objects will have an ExecutionContext to use, and that may or may not have

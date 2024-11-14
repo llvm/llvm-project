@@ -95,16 +95,16 @@ NativeRegisterContextLinux_riscv64::ReadRegister(const RegisterInfo *reg_info,
   Status error;
 
   if (!reg_info) {
-    error.SetErrorString("reg_info NULL");
+    error = Status::FromErrorString("reg_info NULL");
     return error;
   }
 
   const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
 
   if (reg == LLDB_INVALID_REGNUM)
-    return Status("no lldb regnum for %s", reg_info && reg_info->name
-                                               ? reg_info->name
-                                               : "<unknown register>");
+    return Status::FromErrorStringWithFormat(
+        "no lldb regnum for %s",
+        reg_info && reg_info->name ? reg_info->name : "<unknown register>");
 
   if (reg == gpr_x0_riscv) {
     reg_value.SetUInt(0, reg_info->byte_size);
@@ -132,8 +132,9 @@ NativeRegisterContextLinux_riscv64::ReadRegister(const RegisterInfo *reg_info,
     assert(offset < GetFPRSize());
     src = (uint8_t *)GetFPRBuffer() + offset;
   } else
-    return Status("failed - register wasn't recognized to be a GPR or an FPR, "
-                  "write strategy unknown");
+    return Status::FromErrorString(
+        "failed - register wasn't recognized to be a GPR or an FPR, "
+        "write strategy unknown");
 
   reg_value.SetFromMemoryData(*reg_info, src, reg_info->byte_size,
                               eByteOrderLittle, error);
@@ -146,14 +147,14 @@ Status NativeRegisterContextLinux_riscv64::WriteRegister(
   Status error;
 
   if (!reg_info)
-    return Status("reg_info NULL");
+    return Status::FromErrorString("reg_info NULL");
 
   const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
 
   if (reg == LLDB_INVALID_REGNUM)
-    return Status("no lldb regnum for %s", reg_info->name != nullptr
-                                               ? reg_info->name
-                                               : "<unknown register>");
+    return Status::FromErrorStringWithFormat(
+        "no lldb regnum for %s",
+        reg_info->name != nullptr ? reg_info->name : "<unknown register>");
 
   if (reg == gpr_x0_riscv) {
     // do nothing.
@@ -186,7 +187,7 @@ Status NativeRegisterContextLinux_riscv64::WriteRegister(
     return WriteFPR();
   }
 
-  return Status("Failed to write register value");
+  return Status::FromErrorString("Failed to write register value");
 }
 
 Status NativeRegisterContextLinux_riscv64::ReadAllRegisterValues(
@@ -216,14 +217,14 @@ Status NativeRegisterContextLinux_riscv64::WriteAllRegisterValues(
   Status error;
 
   if (!data_sp) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "NativeRegisterContextLinux_riscv64::%s invalid data_sp provided",
         __FUNCTION__);
     return error;
   }
 
   if (data_sp->GetByteSize() != REG_CONTEXT_SIZE) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "NativeRegisterContextLinux_riscv64::%s data_sp contained mismatched "
         "data size, expected %" PRIu64 ", actual %" PRIu64,
         __FUNCTION__, REG_CONTEXT_SIZE, data_sp->GetByteSize());
@@ -232,10 +233,11 @@ Status NativeRegisterContextLinux_riscv64::WriteAllRegisterValues(
 
   uint8_t *src = const_cast<uint8_t *>(data_sp->GetBytes());
   if (src == nullptr) {
-    error.SetErrorStringWithFormat("NativeRegisterContextLinux_riscv64::%s "
-                                   "DataBuffer::GetBytes() returned a null "
-                                   "pointer",
-                                   __FUNCTION__);
+    error = Status::FromErrorStringWithFormat(
+        "NativeRegisterContextLinux_riscv64::%s "
+        "DataBuffer::GetBytes() returned a null "
+        "pointer",
+        __FUNCTION__);
     return error;
   }
   ::memcpy(GetGPRBuffer(), src, GetRegisterInfoInterface().GetGPRSize());

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only %s -ast-dump | FileCheck %s
+// RUN: %clang_cc1 %s -ast-dump | FileCheck %s
 
 @interface NSString
 @end

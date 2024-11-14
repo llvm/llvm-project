@@ -38,6 +38,8 @@ namespace {
 /// with Transform dialect operations.
 class PDLExtension : public transform::TransformDialectExtension<PDLExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(PDLExtension)
+
   void init() {
     registerTransformOps<
 #define GET_OP_LIST

@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_VARLENCODEEMITTERGEN_H
-#define LLVM_UTILS_TABLEGEN_VARLENCODEEMITTERGEN_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_VARLENCODEEMITTERGEN_H
+#define LLVM_UTILS_TABLEGEN_COMMON_VARLENCODEEMITTERGEN_H
 
 #include "llvm/TableGen/Record.h"
 
@@ -56,4 +56,5 @@ public:
 void emitVarLenCodeEmitter(RecordKeeper &R, raw_ostream &OS);
 
 } // end namespace llvm
-#endif
+
+#endif // LLVM_UTILS_TABLEGEN_COMMON_VARLENCODEEMITTERGEN_H

@@ -51,21 +51,24 @@ module {
 // CHECK:           %[[VAL_20:.*]] = llvm.getelementptr %[[VAL_0]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
 // CHECK:           %[[VAL_21:.*]] = llvm.load %[[VAL_20]] {tbaa = [#[[$BOXT]]]} : !llvm.ptr -> i64
 // CHECK:           %[[VAL_22:.*]] = llvm.getelementptr %[[VAL_0]][0, 4] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
-// CHECK:           %[[VAL_23:.*]] = llvm.load %[[VAL_22]] {tbaa = [#[[$BOXT]]]} : !llvm.ptr -> i32
+// CHECK:           %[[VAL_23:.*]] = llvm.load %[[VAL_22]] {tbaa = [#[[$BOXT]]]} : !llvm.ptr -> i8
+// CHECK-NEXT:      %[[VAL_23_EXT:.*]] = llvm.sext %[[VAL_23]] : i8 to i32
+// CHECK:           %[[EXTRA_GEP:.*]] = llvm.getelementptr %[[VAL_0]][0, 6] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
+// CHECK:           %[[EXTRA:.*]] = llvm.load %[[EXTRA_GEP]] {tbaa = [#tbaa_tag]} : !llvm.ptr -> i8
 // CHECK:           %[[VAL_24:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, ptr, array<1 x i64>)>
 // CHECK:           %[[VAL_25:.*]] = llvm.insertvalue %[[VAL_21]], %[[VAL_24]][1] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, ptr, array<1 x i64>)>
-// CHECK:           %[[VAL_26:.*]] = llvm.mlir.constant(20180515 : i32) : i32
+// CHECK:           %[[VAL_26:.*]] = llvm.mlir.constant(20240719 : i32) : i32
 // CHECK:           %[[VAL_27:.*]] = llvm.insertvalue %[[VAL_26]], %[[VAL_25]][2] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, ptr, array<1 x i64>)>
 // CHECK:           %[[VAL_28:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:           %[[VAL_29:.*]] = llvm.trunc %[[VAL_28]] : i32 to i8
 // CHECK:           %[[VAL_30:.*]] = llvm.insertvalue %[[VAL_29]], %[[VAL_27]][3] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, ptr, array<1 x i64>)>
-// CHECK:           %[[VAL_31:.*]] = llvm.trunc %[[VAL_23]] : i32 to i8
+// CHECK:           %[[VAL_31:.*]] = llvm.trunc %[[VAL_23_EXT]] : i32 to i8
 // CHECK:           %[[VAL_32:.*]] = llvm.insertvalue %[[VAL_31]], %[[VAL_30]][4] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, ptr, array<1 x i64>)>
 // CHECK:           %[[VAL_33:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:           %[[VAL_34:.*]] = llvm.trunc %[[VAL_33]] : i32 to i8
 // CHECK:           %[[VAL_35:.*]] = llvm.insertvalue %[[VAL_34]], %[[VAL_32]][5] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, ptr, array<1 x i64>)>
-// CHECK:           %[[VAL_36:.*]] = llvm.mlir.constant(1 : i32) : i32
-// CHECK:           %[[VAL_37:.*]] = llvm.trunc %[[VAL_36]] : i32 to i8
+// CHECK:           %[[VAL_36:.*]] = llvm.mlir.constant(1 : ui8) : i8
+// CHECK:           %[[VAL_37:.*]] = llvm.or %[[EXTRA]], %[[VAL_36]]  : i8
 // CHECK:           %[[VAL_38:.*]] = llvm.insertvalue %[[VAL_37]], %[[VAL_35]][6] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, ptr, array<1 x i64>)>
 // CHECK:           %[[VAL_40B:.*]] = llvm.insertvalue %[[VAL_19]], %[[VAL_38]][7] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, ptr, array<1 x i64>)>
 // CHECK:           %[[VAL_40:.*]] = llvm.insertvalue %{{.*}}, %[[VAL_40B]][8, 0] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, ptr, array<1 x i64>)>
@@ -149,24 +152,23 @@ module {
 // CHECK:           %[[VAL_22:.*]] = llvm.getelementptr %[[VAL_3]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
 // CHECK:           %[[VAL_23:.*]] = llvm.load %[[VAL_22]] {tbaa = [#[[$BOXT]]]} : !llvm.ptr -> i64
 // CHECK:           %[[VAL_24:.*]] = llvm.getelementptr %[[VAL_3]][0, 4] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
-// CHECK:           %[[VAL_25:.*]] = llvm.load %[[VAL_24]] {tbaa = [#[[$BOXT]]]} : !llvm.ptr -> i32
+// CHECK:           %[[VAL_25:.*]] = llvm.load %[[VAL_24]] {tbaa = [#[[$BOXT]]]} : !llvm.ptr -> i8
+// CHECK-NEXT:      %[[VAL_25_EXT:.*]] = llvm.sext %[[VAL_25]] : i8 to i32
 // CHECK:           %[[VAL_26:.*]] = llvm.getelementptr %[[VAL_3]][0, 8] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
 // CHECK:           %[[VAL_27:.*]] = llvm.load %[[VAL_26]] {tbaa = [#[[$BOXT]]]} : !llvm.ptr -> !llvm.ptr
 // CHECK:           %[[VAL_28:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
 // CHECK:           %[[VAL_29:.*]] = llvm.insertvalue %[[VAL_23]], %[[VAL_28]][1] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
-// CHECK:           %[[VAL_30:.*]] = llvm.mlir.constant(20180515 : i32) : i32
+// CHECK:           %[[VAL_30:.*]] = llvm.mlir.constant(20240719 : i32) : i32
 // CHECK:           %[[VAL_31:.*]] = llvm.insertvalue %[[VAL_30]], %[[VAL_29]][2] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
 // CHECK:           %[[VAL_32:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:           %[[VAL_33:.*]] = llvm.trunc %[[VAL_32]] : i32 to i8
 // CHECK:           %[[VAL_34:.*]] = llvm.insertvalue %[[VAL_33]], %[[VAL_31]][3] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
-// CHECK:           %[[VAL_35:.*]] = llvm.trunc %[[VAL_25]] : i32 to i8
+// CHECK:           %[[VAL_35:.*]] = llvm.trunc %[[VAL_25_EXT]] : i32 to i8
 // CHECK:           %[[VAL_36:.*]] = llvm.insertvalue %[[VAL_35]], %[[VAL_34]][4] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
 // CHECK:           %[[VAL_37:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:           %[[VAL_38:.*]] = llvm.trunc %[[VAL_37]] : i32 to i8
 // CHECK:           %[[VAL_39:.*]] = llvm.insertvalue %[[VAL_38]], %[[VAL_36]][5] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
-// CHECK:           %[[VAL_40:.*]] = llvm.mlir.constant(1 : i32) : i32
-// CHECK:           %[[VAL_41:.*]] = llvm.trunc %[[VAL_40]] : i32 to i8
-// CHECK:           %[[VAL_42:.*]] = llvm.insertvalue %[[VAL_41]], %[[VAL_39]][6] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
+// CHECK:           %[[VAL_42:.*]] = llvm.insertvalue %{{.*}}, %[[VAL_39]][6] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
 // CHECK:           %[[VAL_44B:.*]] = llvm.insertvalue %[[VAL_27]], %[[VAL_42]][8] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
 // CHECK:           %[[VAL_44:.*]] = llvm.insertvalue %{{.*}}, %[[VAL_44B]][9, 0] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
 // CHECK:           %[[VAL_45:.*]] = llvm.getelementptr %[[VAL_3]][0, 7, 0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
@@ -206,7 +208,7 @@ module {
 // CHECK:           %[[VAL_3:.*]] = llvm.mlir.constant(-1 : i32) : i32
 // CHECK:           %[[VAL_4:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
 // CHECK:           %[[VAL_5:.*]] = llvm.insertvalue %[[VAL_2]], %[[VAL_4]][1] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
-// CHECK:           %[[VAL_6:.*]] = llvm.mlir.constant(20180515 : i32) : i32
+// CHECK:           %[[VAL_6:.*]] = llvm.mlir.constant(20240719 : i32) : i32
 // CHECK:           %[[VAL_7:.*]] = llvm.insertvalue %[[VAL_6]], %[[VAL_5]][2] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
 // CHECK:           %[[VAL_8:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:           %[[VAL_9:.*]] = llvm.trunc %[[VAL_8]] : i32 to i8
@@ -247,9 +249,10 @@ func.func @tbaa(%arg0: !fir.box<!fir.array<*:f64>>) -> i32 {
 
 // CHECK-LABEL:   llvm.func @tbaa(
 // CHECK-SAME:                    %[[VAL_0:.*]]: !llvm.ptr) -> i32 {
-// CHECK:           %[[VAL_1:.*]] = llvm.getelementptr %[[VAL_0]][0, 3] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
-// CHECK:           %[[VAL_2:.*]] = llvm.load %[[VAL_1]] {tbaa = [#[[$BOXT]]]} : !llvm.ptr -> i32
-// CHECK:           llvm.return %[[VAL_2]] : i32
+// CHECK:           %[[VAL_1:.*]] = llvm.getelementptr %[[VAL_0]][0, 3] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<15 x array<3 x i64>>)>
+// CHECK:           %[[VAL_2:.*]] = llvm.load %[[VAL_1]] {tbaa = [#[[$BOXT]]]} : !llvm.ptr -> i8
+// CHECK:           %[[VAL_3:.*]] = llvm.sext %[[VAL_2]] : i8 to i32
+// CHECK:           llvm.return %[[VAL_3]] : i32
 // CHECK:         }
 
 // -----
@@ -266,10 +269,10 @@ func.func @tbaa(%arg0: !fir.box<!fir.array<*:f64>>) -> i1 {
 
 // CHECK-LABEL:   llvm.func @tbaa(
 // CHECK-SAME:                    %[[VAL_0:.*]]: !llvm.ptr) -> i1 {
-// CHECK:           %[[VAL_1:.*]] = llvm.getelementptr %[[VAL_0]][0, 3] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
-// CHECK:           %[[VAL_2:.*]] = llvm.load %[[VAL_1]] {tbaa = [#[[$BOXT]]]} : !llvm.ptr -> i32
-// CHECK:           %[[VAL_3:.*]] = llvm.mlir.constant(0 : i32) : i32
-// CHECK:           %[[VAL_4:.*]] = llvm.icmp "ne" %[[VAL_2]], %[[VAL_3]] : i32
+// CHECK:           %[[VAL_1:.*]] = llvm.getelementptr %[[VAL_0]][0, 3] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<15 x array<3 x i64>>)>
+// CHECK:           %[[VAL_2:.*]] = llvm.load %[[VAL_1]] {tbaa = [#[[$BOXT]]]} : !llvm.ptr -> i8
+// CHECK:           %[[VAL_3:.*]] = llvm.mlir.constant(0 : i64) : i8
+// CHECK:           %[[VAL_4:.*]] = llvm.icmp "ne" %[[VAL_2]], %[[VAL_3]] : i8
 // CHECK:           llvm.return %[[VAL_4]] : i1
 // CHECK:         }
 
@@ -288,8 +291,9 @@ func.func @tbaa(%arg0: !fir.box<f32>) -> i32 {
 // CHECK-LABEL:   llvm.func @tbaa(
 // CHECK-SAME:                               %[[VAL_0:.*]]: !llvm.ptr) -> i32 {
 // CHECK:           %[[VAL_1:.*]] = llvm.getelementptr %[[VAL_0]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
-// CHECK:           %[[VAL_2:.*]] = llvm.load %[[VAL_1]] {tbaa = [#[[$BOXT]]]} : !llvm.ptr -> i32
-// CHECK:           llvm.return %[[VAL_2]] : i32
+// CHECK:           %[[VAL_2:.*]] = llvm.load %[[VAL_1]] {tbaa = [#[[$BOXT]]]} : !llvm.ptr -> i64
+// CHECK:           %[[VAL_3:.*]] = llvm.trunc %[[VAL_2]] : i64 to i32
+// CHECK:           llvm.return %[[VAL_3]] : i32
 // CHECK:         }
 
 // -----
@@ -306,10 +310,11 @@ func.func @tbaa(%arg0: !fir.box<!fir.array<*:f64>>) -> i1 {
 
 // CHECK-LABEL:   llvm.func @tbaa(
 // CHECK-SAME:                    %[[VAL_0:.*]]: !llvm.ptr) -> i1 {
-// CHECK:           %[[VAL_1:.*]] = llvm.getelementptr %[[VAL_0]][0, 5] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
-// CHECK:           %[[VAL_2:.*]] = llvm.load %[[VAL_1]] {tbaa = [#[[$BOXT]]]} : !llvm.ptr -> i32
+// CHECK:           %[[VAL_1:.*]] = llvm.getelementptr %[[VAL_0]][0, 5] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<15 x array<3 x i64>>)>
+// CHECK:           %[[VAL_2:.*]] = llvm.load %[[VAL_1]] {tbaa = [#[[$BOXT]]]} : !llvm.ptr -> i8
+// CHECK:           %[[VAL_2_I32:.*]] = llvm.sext %[[VAL_2]] : i8 to i32
 // CHECK:           %[[VAL_3:.*]] = llvm.mlir.constant(2 : i32) : i32
-// CHECK:           %[[VAL_4:.*]] = llvm.and %[[VAL_2]], %[[VAL_3]]  : i32
+// CHECK:           %[[VAL_4:.*]] = llvm.and %[[VAL_2_I32]], %[[VAL_3]]  : i32
 // CHECK:           %[[VAL_5:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:           %[[VAL_6:.*]] = llvm.icmp "ne" %[[VAL_4]], %[[VAL_5]] : i32
 // CHECK:           llvm.return %[[VAL_6]] : i1
@@ -378,3 +383,50 @@ func.func @tbaa(%arg0: !fir.ref<!fir.array<2x!fir.type<_QMtypesTt{x:!fir.box<!fi
 // CHECK-LABEL:   llvm.func @tbaa(
 // CHECK: llvm.load{{.*}}{tbaa = [#[[$ANYT]]]}
 // CHECK: llvm.store{{.*}}{tbaa = [#[[$ANYT]]]}
+
+// -----
+
+func.func @test_assumed_rank_load(%arg0: !fir.ref<!fir.box<!fir.array<*:f64>>>) -> () {
+  %0 = fir.load %arg0 : !fir.ref<!fir.box<!fir.array<*:f64>>>
+  fir.call @some_assumed_rank_func(%0) : (!fir.box<!fir.array<*:f64>>) -> ()
+  return
+}
+func.func private @some_assumed_rank_func(!fir.box<!fir.array<*:f64>>) -> ()
+
+// CHECK-DAG:     #[[ROOT:.*]] = #llvm.tbaa_root<id = "Flang function root ">
+// CHECK-DAG:     #[[ANYACC:.*]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[ROOT]], 0>}>
+// CHECK-DAG:     #[[BOXMEM:.*]] = #llvm.tbaa_type_desc<id = "descriptor member", members = {<#[[ANYACC]], 0>}>
+// CHECK-DAG:     #[[$BOXT:.*]] = #llvm.tbaa_tag<base_type = #[[BOXMEM]], access_type = #[[BOXMEM]], offset = 0>
+
+// CHECK-LABEL:   llvm.func @test_assumed_rank_load(
+// CHECK-SAME:                                      %[[VAL_0:.*]]: !llvm.ptr) {
+// CHECK:           %[[VAL_1:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK:           %[[VAL_2:.*]] = llvm.alloca %[[VAL_1]] x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<15 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
+// CHECK:           %[[VAL_3:.*]] = llvm.mlir.constant(24 : i32) : i32
+// CHECK:           %[[VAL_4:.*]] = llvm.getelementptr %[[VAL_0]][0, 3] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<15 x array<3 x i64>>)>
+// CHECK:           %[[VAL_5:.*]] = llvm.load %[[VAL_4]] {tbaa = [#[[$BOXT]]]} : !llvm.ptr -> i8
+// CHECK:           %[[VAL_6:.*]] = llvm.sext %[[VAL_5]] : i8 to i32
+// CHECK:           %[[VAL_7:.*]] = llvm.mlir.constant(24 : i32) : i32
+// CHECK:           %[[VAL_8:.*]] = llvm.mul %[[VAL_7]], %[[VAL_6]] : i32
+// CHECK:           %[[VAL_9:.*]] = llvm.add %[[VAL_3]], %[[VAL_8]] : i32
+// CHECK:           "llvm.intr.memcpy"(%[[VAL_2]], %[[VAL_0]], %[[VAL_9]]) <{isVolatile = false, tbaa = [#[[$BOXT]]]}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK:           llvm.call @some_assumed_rank_func(%[[VAL_2]]) : (!llvm.ptr) -> ()
+
+// -----
+
+func.func @store_assumed_rank_box(%box: !fir.box<!fir.array<*:f32>>, %ref: !fir.ref<!fir.box<!fir.array<*:f32>>>) {
+  fir.store %box to %ref : !fir.ref<!fir.box<!fir.array<*:f32>>>
+  return
+}
+
+// CHECK-DAG:     #[[ROOT:.*]] = #llvm.tbaa_root<id = "Flang function root ">
+// CHECK-DAG:     #[[ANYACC:.*]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[ROOT]], 0>}>
+// CHECK-DAG:     #[[BOXMEM:.*]] = #llvm.tbaa_type_desc<id = "descriptor member", members = {<#[[ANYACC]], 0>}>
+// CHECK-DAG:     #[[$BOXT:.*]] = #llvm.tbaa_tag<base_type = #[[BOXMEM]], access_type = #[[BOXMEM]], offset = 0>
+
+// CHECK-LABEL:   llvm.func @store_assumed_rank_box(
+// CHECK-SAME:                                      %[[VAL_0:[^:]*]]: !llvm.ptr,
+// CHECK-SAME:                                      %[[VAL_1:.*]]: !llvm.ptr) {
+// CHECK:           %[[VAL_3:.*]] = llvm.getelementptr %[[VAL_0]][0, 3] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<15 x array<3 x i64>>)>
+// CHECK:           %[[VAL_4:.*]] = llvm.load %[[VAL_3]] {tbaa = [#[[$BOXT]]]} : !llvm.ptr -> i8
+// CHECK:           "llvm.intr.memcpy"(%[[VAL_1]], %[[VAL_0]], %{{.*}}) <{isVolatile = false, tbaa = [#[[$BOXT]]]}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
