@@ -5240,6 +5240,10 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     return !Ops.empty() && (NumSExts == 2 || NumZExts == 2);
   }
   case Instruction::FMul: {
+    // For SVE the lane-indexing is within 128-bits, so we can't fold splats.
+    if (I->getType()->isScalableTy())
+      return false;
+
     // Sink splats for index lane variants
     if (isSplatShuffle(I->getOperand(0)))
       Ops.push_back(&I->getOperandUse(0));

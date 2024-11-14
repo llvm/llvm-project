@@ -426,13 +426,12 @@ l2:
 define <vscale x 4 x float> @fmul_scalable(ptr %x, ptr %y) {
 ; CHECK-LABEL: fmul_scalable:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    ldr s1, [x0]
 ; CHECK-NEXT:    mov z0.s, #0 // =0x0
 ; CHECK-NEXT:    sxtw x8, w8
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov w9, #1 // =0x1
-; CHECK-NEXT:    mov z1.s, s1
+; CHECK-NEXT:    ld1rw { z1.s }, p0/z, [x0]
 ; CHECK-NEXT:    lsl x8, x8, #2
 ; CHECK-NEXT:  .LBB13_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
