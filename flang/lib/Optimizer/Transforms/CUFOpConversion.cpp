@@ -140,8 +140,9 @@ mlir::Value getDeviceAddress(mlir::PatternRewriter &rewriter,
   llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
       builder, loc, fTy, inputArg, sourceFile, sourceLine)};
   auto call = rewriter.create<fir::CallOp>(loc, callee, args);
-
-  return call->getResult(0);
+  mlir::Value cast = createConvertOp(
+      rewriter, loc, declareOp.getMemref().getType(), call->getResult(0));
+  return cast;
 }
 
 template <typename OpTy>
