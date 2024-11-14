@@ -54,7 +54,7 @@ struct OpStage {
 
 struct OpAttribute {
   Version DXILVersion;
-  uint32_t ValidAttrs;
+  llvm::SmallVector<dxil::Attribute> ValidAttrs;
 };
 
 static const char *getOverloadTypeName(OverloadKind Kind) {
@@ -367,6 +367,20 @@ static std::optional<size_t> getPropIndex(ArrayRef<T> PropList,
   return std::nullopt;
 }
 
+static void setDXILAttribute(CallInst *CI, dxil::Attribute Attr) {
+  switch (Attr) {
+  case dxil::Attribute::ReadNone:
+    return CI->setDoesNotAccessMemory();
+  case dxil::Attribute::ReadOnly:
+    return CI->setOnlyReadsMemory();
+  case dxil::Attribute::NoReturn:
+    return CI->setDoesNotReturn();
+  case dxil::Attribute::NoDuplicate:
+    return CI->setCannotDuplicate();
+  }
+  llvm_unreachable("Invalid function attribute specified for DXIL operation");
+}
+
 namespace llvm {
 namespace dxil {
 
@@ -461,7 +475,17 @@ Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
   OpArgs.push_back(IRB.getInt32(llvm::to_underlying(OpCode)));
   OpArgs.append(Args.begin(), Args.end());
 
-  return IRB.CreateCall(DXILFn, OpArgs, Name);
+  // Create the function call instruction
+  CallInst *CI = IRB.CreateCall(DXILFn, OpArgs, Name);
+
+  // We then need to attach available function attributes
+  for (auto OpAttr : Prop->Attributes)
+    if (VersionTuple(OpAttr.DXILVersion.Major, OpAttr.DXILVersion.Minor) <=
+        DXILVersion)
+      for (auto Attr : OpAttr.ValidAttrs)
+        setDXILAttribute(CI, Attr);
+
+  return CI;
 }
 
 CallInst *DXILOpBuilder::createOp(dxil::OpCode OpCode, ArrayRef<Value *> Args,

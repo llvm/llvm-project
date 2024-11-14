@@ -30,6 +30,11 @@ enum class OpParamType : unsigned {
 #include "DXILOperation.inc"
 };
 
+enum class Attribute : unsigned {
+#define DXIL_ATTRIBUTE(Name) Name,
+#include "DXILOperation.inc"
+};
+
 } // namespace dxil
 } // namespace llvm
 

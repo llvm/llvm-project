@@ -266,18 +266,18 @@ def miss : DXILShaderStage;
 def all_stages : DXILShaderStage;
 // Denote support for DXIL Op to have been removed
 def removed : DXILShaderStage;
+
 // DXIL Op attributes
 
+// A function attribute denotes that there is a corresponding LLVM function
+// attribute that will be set when building the DXIL op. The mapping for
+// non-trivial cases is defined by setDXILAttribute in DXILOpBuilder.cpp
 class DXILAttribute;
 
-def ReadOnly : DXILAttribute;
 def ReadNone : DXILAttribute;
-def IsDerivative : DXILAttribute;
-def IsGradient : DXILAttribute;
-def IsFeedback : DXILAttribute;
-def IsWave : DXILAttribute;
-def NeedsUniformInputs : DXILAttribute;
-def IsBarrier : DXILAttribute;
+def ReadOnly : DXILAttribute;
+def NoDuplicate : DXILAttribute;
+def NoReturn : DXILAttribute;
 
 class Overloads<Version ver, list<DXILOpParamType> ols> {
   Version dxil_version = ver;
@@ -291,7 +291,7 @@ class Stages<Version ver, list<DXILShaderStage> st> {
 
 class Attributes<Version ver = DXIL1_0, list<DXILAttribute> attrs> {
   Version dxil_version = ver;
-  list<DXILAttribute> op_attrs = attrs;
+  list<DXILAttribute> fn_attrs = attrs;
 }
 
 defvar BarrierMode_DeviceMemoryBarrier              = 2;

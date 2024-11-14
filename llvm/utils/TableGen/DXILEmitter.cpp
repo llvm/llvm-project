@@ -315,41 +315,37 @@ static std::string getStageMaskString(ArrayRef<const Record *> Recs) {
 // by input records
 //
 /// \param Recs A vector of records of TableGen Attribute records
-/// \return std::string string representation of stages mask string
+/// \return std::string string representation of attributes list string
 ///         predicated by DXIL Version. E.g.,
-//          {{{1, 0}, Mask1}, {{1, 2}, Mask2}, ...}
-static std::string getAttributeMaskString(ArrayRef<const Record *> Recs) {
-  std::string MaskString = "";
+//          {{{1, 0}, {Attr1, ...}}, {{1, 2}, {Attr2, ...}}, ...}
+static std::string getAttributeListString(ArrayRef<const Record *> Recs) {
+  std::string ListString = "";
   std::string Prefix = "";
-  MaskString.append("{");
+  ListString.append("{");
 
   for (const auto *Rec : Recs) {
     unsigned Major = Rec->getValueAsDef("dxil_version")->getValueAsInt("Major");
     unsigned Minor = Rec->getValueAsDef("dxil_version")->getValueAsInt("Minor");
-    MaskString.append(Prefix)
+    ListString.append(Prefix)
         .append("{{")
         .append(std::to_string(Major))
         .append(", ")
-        .append(std::to_string(Minor).append("}, "));
+        .append(std::to_string(Minor).append("}, {"));
 
-    std::string PipePrefix = "";
-    auto Attrs = Rec->getValueAsListOfDefs("op_attrs");
-    if (Attrs.empty()) {
-      MaskString.append("Attribute::None");
-    } else {
-      for (const auto *Attr : Attrs) {
-        MaskString.append(PipePrefix)
-            .append("Attribute::")
-            .append(Attr->getName());
-        PipePrefix = " | ";
-      }
+    std::string CommaPrefix = "";
+    auto Attrs = Rec->getValueAsListOfDefs("fn_attrs");
+    for (const auto *Attr : Attrs) {
+      ListString.append(CommaPrefix)
+          .append("dxil::Attribute::")
+          .append(Attr->getName());
+      CommaPrefix = ", ";
     }
-
-    MaskString.append("}");
+    ListString.append("}"); // End of Attrs
+    ListString.append("}"); // End of Rec
     Prefix = ", ";
   }
-  MaskString.append("}");
-  return MaskString;
+  ListString.append("}"); // End of List
+  return ListString;
 }
 
 /// Emit a mapping of DXIL opcode to opname
@@ -378,6 +374,15 @@ static void emitDXILOpParamTypes(const RecordKeeper &Records, raw_ostream &OS) {
        Records.getAllDerivedDefinitions("DXILOpParamType"))
     OS << "DXIL_OP_PARAM_TYPE(" << OpParamType->getName() << ")\n";
   OS << "#undef DXIL_OP_PARAM_TYPE\n";
+  OS << "#endif\n\n";
+}
+
+/// Emit a list of DXIL op function attributes
+static void emitDXILAttributes(const RecordKeeper &Records, raw_ostream &OS) {
+  OS << "#ifdef DXIL_ATTRIBUTE\n";
+  for (const Record *Attr : Records.getAllDerivedDefinitions("DXILAttribute"))
+    OS << "DXIL_ATTRIBUTE(" << Attr->getName() << ")\n";
+  OS << "#undef DXIL_ATTRIBUTE\n";
   OS << "#endif\n\n";
 }
 
@@ -477,7 +482,7 @@ static void emitDXILOperationTable(ArrayRef<DXILOperationDesc> Ops,
        << OpClassStrings.get(Op.OpClass.data()) << ", "
        << getOverloadMaskString(Op.OverloadRecs) << ", "
        << getStageMaskString(Op.StageRecs) << ", "
-       << getAttributeMaskString(Op.AttrRecs) << ", " << Op.OverloadParamIndex
+       << getAttributeListString(Op.AttrRecs) << ", " << Op.OverloadParamIndex
        << " }";
     Prefix = ",\n";
   }
@@ -582,6 +587,7 @@ static void emitDxilOperation(const RecordKeeper &Records, raw_ostream &OS) {
   emitDXILOpCodes(DXILOps, OS);
   emitDXILOpClasses(Records, OS);
   emitDXILOpParamTypes(Records, OS);
+  emitDXILAttributes(Records, OS);
   emitDXILOpFunctionTypes(DXILOps, OS);
   emitDXILIntrinsicArgSelectTypes(Records, OS);
   emitDXILIntrinsicMap(DXILOps, OS);
