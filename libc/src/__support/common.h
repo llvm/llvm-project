@@ -21,9 +21,24 @@
 #define LLVM_LIBC_FUNCTION_ATTR
 #endif
 
+// Allow each function `func` can have extra attributes specified by defining:
+// `LLVM_LIBC_FUNCTION_ATTR_func` macro, which should always start with
+// "LLVM_LIBC_EMPTY,"
+//
+// For example:
+// #define LLVM_LIBC_FUNCTION_ATTR_memcpy LLVM_LIBC_EMPTY, __attribute__((weak))
+#define LLVM_LIBC_EMPTY
+
+#define GET_SECOND(first, second, ...) second
+#define EXPAND_THEN_SECOND(name) GET_SECOND(name, LLVM_LIBC_EMPTY, )
+
+#define LLVM_LIBC_ATTR(name) EXPAND_THEN_SECOND(LLVM_LIBC_FUNCTION_ATTR_##name)
+#define EXPAND_ATTR(name) LLVM_LIBC_ATTR(name)
+
 // MacOS needs to be excluded because it does not support aliasing.
 #if defined(LIBC_COPT_PUBLIC_PACKAGING) && (!defined(__APPLE__))
 #define LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)                           \
+  EXPAND_ATTR(name)                                                            \
   LLVM_LIBC_FUNCTION_ATTR decltype(LIBC_NAMESPACE::name)                       \
       __##name##_impl__ __asm__(#name);                                        \
   decltype(LIBC_NAMESPACE::name) name [[gnu::alias(#name)]];                   \
