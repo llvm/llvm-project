@@ -57,7 +57,7 @@
 ///    The 1st source tile. Max size is 1024 Bytes.
 /// \param b
 ///    The 2nd source tile. Max size is 1024 Bytes.
-#define _tile_tdpbf16ps(dst, a, b) __builtin_ia32_ttdpbf16ps(dst, a, b)
+#define _tile_tdpbf16ps(dst, a, b) __builtin_ia32_ttdpbf16ps((dst), (a), (b))
 
 /// This is internal intrinsic. C/C++ user should avoid calling it directly.
 static __inline__ _tile1024i __DEFAULT_FN_ATTRS

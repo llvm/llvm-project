@@ -37549,8 +37549,12 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     case X86::PTCONJTCMMIMFP16PS:
       Opc = X86::TCONJTCMMIMFP16PS;
       break;
-    case X86::PTMMULTF32PS: Opc = X86::TMMULTF32PS; break;
-    case X86::PTTMMULTF32PS: Opc = X86::TTMMULTF32PS; break;
+    case X86::PTMMULTF32PS:
+      Opc = X86::TMMULTF32PS;
+      break;
+    case X86::PTTMMULTF32PS:
+      Opc = X86::TTMMULTF32PS;
+      break;
     }
 
     MachineInstrBuilder MIB = BuildMI(*BB, MI, MIMD, TII->get(Opc));

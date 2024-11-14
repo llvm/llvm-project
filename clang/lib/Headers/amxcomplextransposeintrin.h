@@ -63,7 +63,8 @@
 ///    The 1st source tile. Max size is 1024 Bytes.
 /// \param b
 ///    The 2nd source tile. Max size is 1024 Bytes.
-#define _tile_tcmmimfp16ps(dst, a, b) __builtin_ia32_ttcmmimfp16ps(dst, a, b)
+#define _tile_tcmmimfp16ps(dst, a, b)                                          \
+  __builtin_ia32_ttcmmimfp16ps((dst), (a), (b))
 
 /// Perform matrix multiplication of two tiles containing complex elements and
 ///    accumulate the results into a packed single precision tile. Each dword
@@ -108,7 +109,8 @@
 ///    The 1st source tile. Max size is 1024 Bytes.
 /// \param b
 ///    The 2nd source tile. Max size is 1024 Bytes.
-#define _tile_tcmmrlfp16ps(dst, a, b) __builtin_ia32_ttcmmrlfp16ps(dst, a, b)
+#define _tile_tcmmrlfp16ps(dst, a, b)                                          \
+  __builtin_ia32_ttcmmrlfp16ps((dst), (a), (b))
 
 /// Perform matrix conjugate transpose and multiplication of two tiles
 ///    containing complex elements and accumulate the results into a packed
@@ -155,7 +157,7 @@
 /// \param b
 ///    The 2nd source tile. Max size is 1024 Bytes.
 #define _tile_conjtcmmimfp16ps(dst, a, b)                                      \
-  __builtin_ia32_tconjtcmmimfp16ps(dst, a, b)
+  __builtin_ia32_tconjtcmmimfp16ps((dst), (a), (b))
 
 /// Perform conjugate transpose of an FP16-pair of complex elements from \a a
 ///    and writes the result to \a dst.
@@ -184,7 +186,7 @@
 ///    The destination tile. Max size is 1024 Bytes.
 /// \param a
 ///    The source tile. Max size is 1024 Bytes.
-#define _tile_conjtfp16(dst, a) __builtin_ia32_tconjtfp16(dst, a)
+#define _tile_conjtfp16(dst, a) __builtin_ia32_tconjtfp16((dst), (a))
 
 static __inline__ _tile1024i __DEFAULT_FN_ATTRS _tile_tcmmimfp16ps_internal(
     unsigned short m, unsigned short n, unsigned short k, _tile1024i dst,
@@ -204,8 +206,8 @@ static __inline__ _tile1024i __DEFAULT_FN_ATTRS _tile_conjtcmmimfp16ps_internal(
   return __builtin_ia32_tconjtcmmimfp16ps_internal(m, n, k, dst, src1, src2);
 }
 
-static __inline__ _tile1024i __DEFAULT_FN_ATTRS _tile_conjtfp16_internal(
-    unsigned short m, unsigned short n, _tile1024i src) {
+static __inline__ _tile1024i __DEFAULT_FN_ATTRS
+_tile_conjtfp16_internal(unsigned short m, unsigned short n, _tile1024i src) {
   return __builtin_ia32_tconjtfp16_internal(m, n, src);
 }
 
