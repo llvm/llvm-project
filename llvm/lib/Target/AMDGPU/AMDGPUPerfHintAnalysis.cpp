@@ -12,12 +12,15 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPU.h"
 #include "AMDGPUPerfHintAnalysis.h"
+#include "AMDGPU.h"
+#include "AMDGPUTargetMachine.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/Analysis/CallGraphSCCPass.h"
+#include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -54,12 +57,6 @@ static cl::opt<unsigned>
 STATISTIC(NumMemBound, "Number of functions marked as memory bound");
 STATISTIC(NumLimitWave, "Number of functions marked as needing limit wave");
 
-char llvm::AMDGPUPerfHintAnalysis::ID = 0;
-char &llvm::AMDGPUPerfHintAnalysisID = AMDGPUPerfHintAnalysis::ID;
-
-INITIALIZE_PASS(AMDGPUPerfHintAnalysis, DEBUG_TYPE,
-                "Analysis if a function is memory bound", true, true)
-
 namespace {
 
 struct AMDGPUPerfHint {
@@ -67,8 +64,8 @@ struct AMDGPUPerfHint {
 
 public:
   AMDGPUPerfHint(AMDGPUPerfHintAnalysis::FuncInfoMap &FIM_,
-                 const TargetLowering *TLI_)
-      : FIM(FIM_), DL(nullptr), TLI(TLI_) {}
+                 const SITargetLowering *TLI_)
+      : FIM(FIM_), TLI(TLI_) {}
 
   bool runOnFunction(Function &F);
 
@@ -95,9 +92,9 @@ private:
 
   AMDGPUPerfHintAnalysis::FuncInfoMap &FIM;
 
-  const DataLayout *DL;
+  const DataLayout *DL = nullptr;
 
-  const TargetLowering *TLI;
+  const SITargetLowering *TLI;
 
   AMDGPUPerfHintAnalysis::FuncInfo *visit(const Function &F);
   static bool isMemBound(const AMDGPUPerfHintAnalysis::FuncInfo &F);
@@ -388,30 +385,25 @@ bool AMDGPUPerfHint::MemAccessInfo::isLargeStride(
                << Reference.print() << "Result:" << Result << '\n');
   return Result;
 }
-} // namespace
 
-bool AMDGPUPerfHintAnalysis::runOnSCC(CallGraphSCC &SCC) {
-  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
-  if (!TPC)
-    return false;
+class AMDGPUPerfHintAnalysisLegacy : public CallGraphSCCPass {
+private:
+  // FIXME: This is relying on maintaining state between different SCCs.
+  AMDGPUPerfHintAnalysis Impl;
 
-  const TargetMachine &TM = TPC->getTM<TargetMachine>();
+public:
+  static char ID;
 
-  bool Changed = false;
-  for (CallGraphNode *I : SCC) {
-    Function *F = I->getFunction();
-    if (!F || F->isDeclaration())
-      continue;
+  AMDGPUPerfHintAnalysisLegacy() : CallGraphSCCPass(ID) {}
 
-    const TargetSubtargetInfo *ST = TM.getSubtargetImpl(*F);
-    AMDGPUPerfHint Analyzer(FIM, ST->getTargetLowering());
+  bool runOnSCC(CallGraphSCC &SCC) override;
 
-    if (Analyzer.runOnFunction(*F))
-      Changed = true;
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
   }
+};
 
-  return Changed;
-}
+} // namespace
 
 bool AMDGPUPerfHintAnalysis::isMemoryBound(const Function *F) const {
   auto FI = FIM.find(F);
@@ -427,4 +419,75 @@ bool AMDGPUPerfHintAnalysis::needsWaveLimiter(const Function *F) const {
     return false;
 
   return AMDGPUPerfHint::needLimitWave(FI->second);
+}
+
+bool AMDGPUPerfHintAnalysis::runOnSCC(const GCNTargetMachine &TM,
+                                      CallGraphSCC &SCC) {
+  bool Changed = false;
+  for (CallGraphNode *I : SCC) {
+    Function *F = I->getFunction();
+    if (!F || F->isDeclaration())
+      continue;
+
+    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*F);
+    AMDGPUPerfHint Analyzer(FIM, ST.getTargetLowering());
+
+    if (Analyzer.runOnFunction(*F))
+      Changed = true;
+  }
+
+  return Changed;
+}
+
+bool AMDGPUPerfHintAnalysis::run(const GCNTargetMachine &TM,
+                                 LazyCallGraph &CG) {
+  bool Changed = false;
+
+  CG.buildRefSCCs();
+
+  for (LazyCallGraph::RefSCC &RC : CG.postorder_ref_sccs()) {
+    for (LazyCallGraph::SCC &SCC : RC) {
+      if (SCC.size() != 1)
+        continue;
+      Function &F = SCC.begin()->getFunction();
+      // TODO: Skip without norecurse, or interposable?
+      if (F.isDeclaration())
+        continue;
+
+      const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+      AMDGPUPerfHint Analyzer(FIM, ST.getTargetLowering());
+      if (Analyzer.runOnFunction(F))
+        Changed = true;
+    }
+  }
+
+  return Changed;
+}
+
+char AMDGPUPerfHintAnalysisLegacy::ID = 0;
+char &llvm::AMDGPUPerfHintAnalysisLegacyID = AMDGPUPerfHintAnalysisLegacy::ID;
+
+INITIALIZE_PASS(AMDGPUPerfHintAnalysisLegacy, DEBUG_TYPE,
+                "Analysis if a function is memory bound", true, true)
+
+bool AMDGPUPerfHintAnalysisLegacy::runOnSCC(CallGraphSCC &SCC) {
+  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
+  if (!TPC)
+    return false;
+
+  const GCNTargetMachine &TM = TPC->getTM<GCNTargetMachine>();
+  return Impl.runOnSCC(TM, SCC);
+}
+
+PreservedAnalyses AMDGPUPerfHintAnalysisPass::run(Module &M,
+                                                  ModuleAnalysisManager &AM) {
+  auto &CG = AM.getResult<LazyCallGraphAnalysis>(M);
+
+  bool Changed = Impl->run(TM, CG);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserve<LazyCallGraphAnalysis>();
+  return PA;
 }

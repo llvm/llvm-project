@@ -98,7 +98,7 @@ define i32 @test1(ptr nocapture %a, i64 %n) {
 ; CHECK:       latchexit.unr-lcssa.loopexit:
 ; CHECK-NEXT:    br label [[LATCHEXIT_UNR_LCSSA]]
 ; CHECK:       latchexit.unr-lcssa:
-; CHECK-NEXT:    [[SUM_0_LCSSA_PH:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ [[ADD_7]], [[LATCHEXIT_UNR_LCSSA_LOOPEXIT]] ]
+; CHECK-NEXT:    [[SUM_0_LCSSA_PH:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[ADD_7]], [[LATCHEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDVARS_IV_NEXT_7]], [[LATCHEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[SUM_02_UNR:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ADD_7]], [[LATCHEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i64 [[XTRAITER]], 0
@@ -255,7 +255,7 @@ define i32 @test1(ptr nocapture %a, i64 %n) {
 ; ENABLED-NEXT:    [[SUM_02_UNR_PH:%.*]] = phi i32 [ [[ADD_7]], [[LATCH_7]] ]
 ; ENABLED-NEXT:    br label [[LATCHEXIT_UNR_LCSSA]]
 ; ENABLED:       latchexit.unr-lcssa:
-; ENABLED-NEXT:    [[SUM_0_LCSSA_PH:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ [[SUM_0_LCSSA_PH_PH]], [[LATCHEXIT_UNR_LCSSA_LOOPEXIT]] ]
+; ENABLED-NEXT:    [[SUM_0_LCSSA_PH:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[SUM_0_LCSSA_PH_PH]], [[LATCHEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; ENABLED-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDVARS_IV_UNR_PH]], [[LATCHEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; ENABLED-NEXT:    [[SUM_02_UNR:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[SUM_02_UNR_PH]], [[LATCHEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; ENABLED-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
@@ -469,7 +469,7 @@ define i32 @test2(ptr nocapture %a, i64 %n) {
 ; ENABLED-NEXT:    [[SUM_02_UNR_PH:%.*]] = phi i32 [ [[ADD_7]], [[LATCH_7]] ]
 ; ENABLED-NEXT:    br label [[LATCHEXIT_UNR_LCSSA]]
 ; ENABLED:       latchexit.unr-lcssa:
-; ENABLED-NEXT:    [[SUM_0_LCSSA_PH:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ [[SUM_0_LCSSA_PH_PH]], [[LATCHEXIT_UNR_LCSSA_LOOPEXIT]] ]
+; ENABLED-NEXT:    [[SUM_0_LCSSA_PH:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[SUM_0_LCSSA_PH_PH]], [[LATCHEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; ENABLED-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDVARS_IV_UNR_PH]], [[LATCHEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; ENABLED-NEXT:    [[SUM_02_UNR:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[SUM_02_UNR_PH]], [[LATCHEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; ENABLED-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
@@ -826,7 +826,7 @@ define i32 @test5(ptr nocapture %a, i64 %n) {
 ; CHECK:       latchexit.unr-lcssa.loopexit:
 ; CHECK-NEXT:    br label [[LATCHEXIT_UNR_LCSSA]]
 ; CHECK:       latchexit.unr-lcssa:
-; CHECK-NEXT:    [[SUM_0_LCSSA_PH:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ [[ADD_7]], [[LATCHEXIT_UNR_LCSSA_LOOPEXIT]] ]
+; CHECK-NEXT:    [[SUM_0_LCSSA_PH:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[ADD_7]], [[LATCHEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDVARS_IV_NEXT_7]], [[LATCHEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[SUM_02_UNR:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ADD_7]], [[LATCHEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i64 [[XTRAITER]], 0
@@ -988,7 +988,7 @@ define i32 @test5(ptr nocapture %a, i64 %n) {
 ; ENABLED-NEXT:    [[SUM_02_UNR_PH:%.*]] = phi i32 [ [[ADD_7]], [[LATCH_7]] ]
 ; ENABLED-NEXT:    br label [[LATCHEXIT_UNR_LCSSA]]
 ; ENABLED:       latchexit.unr-lcssa:
-; ENABLED-NEXT:    [[SUM_0_LCSSA_PH:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ [[SUM_0_LCSSA_PH_PH]], [[LATCHEXIT_UNR_LCSSA_LOOPEXIT]] ]
+; ENABLED-NEXT:    [[SUM_0_LCSSA_PH:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[SUM_0_LCSSA_PH_PH]], [[LATCHEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; ENABLED-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDVARS_IV_UNR_PH]], [[LATCHEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; ENABLED-NEXT:    [[SUM_02_UNR:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[SUM_02_UNR_PH]], [[LATCHEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; ENABLED-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0

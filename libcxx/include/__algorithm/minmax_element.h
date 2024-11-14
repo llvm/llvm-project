@@ -84,7 +84,7 @@ minmax_element(_ForwardIterator __first, _ForwardIterator __last, _Compare __com
   static_assert(
       __has_forward_iterator_category<_ForwardIterator>::value, "std::minmax_element requires a ForwardIterator");
   static_assert(
-      __is_callable<_Compare, decltype(*__first), decltype(*__first)>::value, "The comparator has to be callable");
+      __is_callable<_Compare&, decltype(*__first), decltype(*__first)>::value, "The comparator has to be callable");
   auto __proj = __identity();
   return std::__minmax_element_impl(__first, __last, __comp, __proj);
 }

@@ -308,9 +308,9 @@ entry:
 ; DIS-NEXT:                                       mflr 0
 ; DIS-NEXT:                                       stwu 1, -32(1)
 ; DIS-NEXT:                                       stw 0, 40(1)
-; DIS-NEXT:                                       li 5, 1
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 3, 2, 0
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU       (idx: [[#NFA+21]]) IThreadLocalVarUninit[TE]
+; DIS-NEXT:                                       li 5, 1
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                lwz 4, 0(3)
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL       (idx: [[#NFA+21]]) IThreadLocalVarUninit[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                bla 0

@@ -68,9 +68,8 @@ bool isDereferenceableAndAlignedPointer(const Value *V, Align Alignment,
 /// If it is not obviously safe to load from the specified pointer, we do a
 /// quick local scan of the basic block containing ScanFrom, to determine if
 /// the address is already accessed.
-bool isSafeToLoadUnconditionally(Value *V, Align Alignment, APInt &Size,
-                                 const DataLayout &DL,
-                                 Instruction *ScanFrom = nullptr,
+bool isSafeToLoadUnconditionally(Value *V, Align Alignment, const APInt &Size,
+                                 const DataLayout &DL, Instruction *ScanFrom,
                                  AssumptionCache *AC = nullptr,
                                  const DominatorTree *DT = nullptr,
                                  const TargetLibraryInfo *TLI = nullptr);
@@ -86,6 +85,11 @@ bool isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
                                        ScalarEvolution &SE, DominatorTree &DT,
                                        AssumptionCache *AC = nullptr);
 
+/// Return true if the loop \p L cannot fault on any iteration and only
+/// contains read-only memory accesses.
+bool isDereferenceableReadOnlyLoop(Loop *L, ScalarEvolution *SE,
+                                   DominatorTree *DT, AssumptionCache *AC);
+
 /// Return true if we know that executing a load from this value cannot trap.
 ///
 /// If DT and ScanFrom are specified this method performs context-sensitive
@@ -95,11 +99,17 @@ bool isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
 /// quick local scan of the basic block containing ScanFrom, to determine if
 /// the address is already accessed.
 bool isSafeToLoadUnconditionally(Value *V, Type *Ty, Align Alignment,
-                                 const DataLayout &DL,
-                                 Instruction *ScanFrom = nullptr,
+                                 const DataLayout &DL, Instruction *ScanFrom,
                                  AssumptionCache *AC = nullptr,
                                  const DominatorTree *DT = nullptr,
                                  const TargetLibraryInfo *TLI = nullptr);
+
+/// Return true if speculation of the given load must be suppressed to avoid
+/// ordering or interfering with an active sanitizer.  If not suppressed,
+/// dereferenceability and alignment must be proven separately.  Note: This
+/// is only needed for raw reasoning; if you use the interface below
+/// (isSafeToSpeculativelyExecute), this is handled internally.
+bool mustSuppressSpeculation(const LoadInst &LI);
 
 /// The default number of maximum instructions to scan in the block, used by
 /// FindAvailableLoadedValue().

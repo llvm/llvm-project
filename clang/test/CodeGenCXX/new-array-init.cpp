@@ -172,14 +172,14 @@ void string_sufficient_paren() {
 void aggr_exact() {
   // CHECK-NOT: icmp
   // CHECK: %[[MEM:.*]] = call noalias noundef nonnull ptr @_Zna{{.}}(i{{32|64}} noundef 16)
-  // CHECK: %[[FIELD:.*]] = getelementptr inbounds %[[AGGR:.*]], ptr %[[MEM]], i32 0, i32 0{{$}}
+  // CHECK: %[[FIELD:.*]] = getelementptr inbounds nuw %[[AGGR:.*]], ptr %[[MEM]], i32 0, i32 0{{$}}
   // CHECK: store i32 1, ptr %[[FIELD]]
-  // CHECK: %[[FIELD:.*]] = getelementptr inbounds %[[AGGR]], ptr %[[MEM]], i32 0, i32 1{{$}}
+  // CHECK: %[[FIELD:.*]] = getelementptr inbounds nuw %[[AGGR]], ptr %[[MEM]], i32 0, i32 1{{$}}
   // CHECK: store i32 2, ptr %[[FIELD]]
   // CHECK: %[[PTR1:.*]] = getelementptr inbounds %[[AGGR]], ptr %[[MEM]], i32 1{{$}}
-  // CHECK: %[[FIELD:.*]] = getelementptr inbounds %[[AGGR]], ptr %[[PTR1]], i32 0, i32 0{{$}}
+  // CHECK: %[[FIELD:.*]] = getelementptr inbounds nuw %[[AGGR]], ptr %[[PTR1]], i32 0, i32 0{{$}}
   // CHECK: store i32 3, ptr %[[FIELD]]
-  // CHECK: %[[FIELD:.*]] = getelementptr inbounds %[[AGGR]], ptr %[[PTR1]], i32 0, i32 1{{$}}
+  // CHECK: %[[FIELD:.*]] = getelementptr inbounds nuw %[[AGGR]], ptr %[[PTR1]], i32 0, i32 1{{$}}
   // CHECK: store i32 0, ptr %[[FIELD]]
   // CHECK-NOT: store
   // CHECK-NOT: memset
@@ -191,14 +191,14 @@ void aggr_exact() {
 void aggr_sufficient(int n) {
   // CHECK: icmp ult i32 %{{.*}}, 2
   // CHECK: %[[MEM:.*]] = call noalias noundef nonnull ptr @_Zna{{.}}(
-  // CHECK: %[[FIELD:.*]] = getelementptr inbounds %[[AGGR:.*]], ptr %[[MEM]], i32 0, i32 0{{$}}
+  // CHECK: %[[FIELD:.*]] = getelementptr inbounds nuw %[[AGGR:.*]], ptr %[[MEM]], i32 0, i32 0{{$}}
   // CHECK: store i32 1, ptr %[[FIELD]]
-  // CHECK: %[[FIELD:.*]] = getelementptr inbounds %[[AGGR]], ptr %[[MEM]], i32 0, i32 1{{$}}
+  // CHECK: %[[FIELD:.*]] = getelementptr inbounds nuw %[[AGGR]], ptr %[[MEM]], i32 0, i32 1{{$}}
   // CHECK: store i32 2, ptr %[[FIELD]]
   // CHECK: %[[PTR1:.*]] = getelementptr inbounds %[[AGGR]], ptr %[[MEM]], i32 1{{$}}
-  // CHECK: %[[FIELD:.*]] = getelementptr inbounds %[[AGGR]], ptr %[[PTR1]], i32 0, i32 0{{$}}
+  // CHECK: %[[FIELD:.*]] = getelementptr inbounds nuw %[[AGGR]], ptr %[[PTR1]], i32 0, i32 0{{$}}
   // CHECK: store i32 3, ptr %[[FIELD]]
-  // CHECK: %[[FIELD:.*]] = getelementptr inbounds %[[AGGR]], ptr %[[PTR1]], i32 0, i32 1{{$}}
+  // CHECK: %[[FIELD:.*]] = getelementptr inbounds nuw %[[AGGR]], ptr %[[PTR1]], i32 0, i32 1{{$}}
   // CHECK: store i32 0, ptr %[[FIELD]]
   // CHECK: %[[PTR2:.*]] = getelementptr inbounds %[[AGGR]], ptr %[[PTR1]], i32 1{{$}}
   // CHECK: %[[REMAIN:.*]] = sub i32 {{.*}}, 16

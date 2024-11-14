@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve -run-pass=localstackalloc -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve -passes=localstackalloc -o - %s | FileCheck %s
 
 --- |
   ; ModuleID = '<stdin>'

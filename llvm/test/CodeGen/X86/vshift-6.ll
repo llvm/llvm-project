@@ -32,9 +32,9 @@ define <16 x i8> @do_not_crash(ptr, ptr, ptr, i32, i64, i8) {
 ; X86-NEXT:    movb %al, (%ecx)
 ; X86-NEXT:    movd %eax, %xmm1
 ; X86-NEXT:    psllq $56, %xmm1
-; X86-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-NEXT:    pcmpeqd %xmm3, %xmm3
 ; X86-NEXT:    psllw $5, %xmm1
+; X86-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-NEXT:    pxor %xmm2, %xmm2
 ; X86-NEXT:    pxor %xmm0, %xmm0
 ; X86-NEXT:    pcmpgtb %xmm1, %xmm0
@@ -64,9 +64,9 @@ define <16 x i8> @do_not_crash(ptr, ptr, ptr, i32, i64, i8) {
 ; X64-NEXT:    movb %r9b, (%rdi)
 ; X64-NEXT:    movd %r9d, %xmm1
 ; X64-NEXT:    psllq $56, %xmm1
-; X64-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-NEXT:    pcmpeqd %xmm2, %xmm2
 ; X64-NEXT:    psllw $5, %xmm1
+; X64-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-NEXT:    pxor %xmm3, %xmm3
 ; X64-NEXT:    pxor %xmm0, %xmm0
 ; X64-NEXT:    pcmpgtb %xmm1, %xmm0

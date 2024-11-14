@@ -37,15 +37,16 @@ merge_label:
 ; CHECK: [[COND:%.+]] = OpIEqual [[BOOL]] [[A]] [[B]]
 ; CHECK: OpBranchConditional [[COND]] [[TRUE_LABEL:%.+]] [[FALSE_LABEL:%.+]]
 
-; CHECK: [[TRUE_LABEL]] = OpLabel
-; CHECK: [[V1:%.+]] = OpFunctionCall [[I32]] [[FOO]]
-; CHECK: OpBranch [[MERGE_LABEL:%.+]]
-
 ; CHECK: [[FALSE_LABEL]] = OpLabel
 ; CHECK: [[V2:%.+]] = OpFunctionCall [[I32]] [[BAR]]
-; CHECK: OpBranch [[MERGE_LABEL]]
+; CHECK: OpBranch [[MERGE_LABEL:%.+]]
 
 ; CHECK: [[MERGE_LABEL]] = OpLabel
-; CHECK-NEXT: [[V:%.+]] = OpPhi [[I32]] [[V1]] [[TRUE_LABEL]] [[V2]] [[FALSE_LABEL]]
+; CHECK-NEXT: [[V:%.+]] = OpPhi [[I32]] [[V1:%.+]] [[TRUE_LABEL]] [[V2]] [[FALSE_LABEL]]
 ; CHECK: OpReturnValue [[V]]
+
+; CHECK: [[TRUE_LABEL]] = OpLabel
+; CHECK: [[V1]] = OpFunctionCall [[I32]] [[FOO]]
+; CHECK: OpBranch [[MERGE_LABEL]]
+
 ; CHECK-NEXT: OpFunctionEnd

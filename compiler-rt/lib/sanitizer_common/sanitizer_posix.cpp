@@ -130,8 +130,8 @@ static void *MmapFixedImpl(uptr fixed_addr, uptr size, bool tolerate_enomem,
     if (tolerate_enomem && reserrno == ENOMEM)
       return nullptr;
     char mem_type[40];
-    internal_snprintf(mem_type, sizeof(mem_type), "memory at address 0x%zx",
-                      fixed_addr);
+    internal_snprintf(mem_type, sizeof(mem_type), "memory at address %p",
+                      (void *)fixed_addr);
     ReportMmapFailureAndDie(size, mem_type, "allocate", reserrno);
   }
   IncreaseTotalMmap(size);

@@ -66,9 +66,6 @@ public:
 
   llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) override;
 
-  ValueObject *CreateChildAtIndex(size_t idx, bool synthetic_array_member,
-                                  int32_t synthetic_index) override;
-
   lldb::ValueType GetValueType() const override;
 
   ConstString GetTypeName() override;
@@ -94,6 +91,11 @@ protected:
 
 private:
   ValueObjectVTable(ValueObject &parent);
+
+  ValueObject *CreateChildAtIndex(size_t idx) override;
+  ValueObject *CreateSyntheticArrayMember(size_t idx) override {
+    return nullptr;
+  }
 
   // For ValueObject only
   ValueObjectVTable(const ValueObjectVTable &) = delete;

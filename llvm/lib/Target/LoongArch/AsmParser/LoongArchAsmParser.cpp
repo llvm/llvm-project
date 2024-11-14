@@ -245,6 +245,16 @@ public:
            VK == LoongArchMCExpr::VK_LoongArch_None;
   }
 
+  bool isTPRelAddSymbol() const {
+    int64_t Imm;
+    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    // Must be of 'immediate' type but not a constant.
+    if (!isImm() || evaluateConstantImm(getImm(), Imm, VK))
+      return false;
+    return LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
+           VK == LoongArchMCExpr::VK_LoongArch_TLS_LE_ADD_R;
+  }
+
   bool isUImm1() const { return isUImm<1>(); }
   bool isUImm2() const { return isUImm<2>(); }
   bool isUImm2plus1() const { return isUImm<2, 1>(); }
@@ -276,6 +286,7 @@ public:
                        VK == LoongArchMCExpr::VK_LoongArch_PCALA_LO12 ||
                        VK == LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12 ||
                        VK == LoongArchMCExpr::VK_LoongArch_TLS_IE_PC_LO12 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_LE_LO12_R ||
                        VK == LoongArchMCExpr::VK_LoongArch_TLS_DESC_PC_LO12 ||
                        VK == LoongArchMCExpr::VK_LoongArch_TLS_DESC_LD;
     return IsConstantImm
@@ -391,6 +402,7 @@ public:
                        VK == LoongArchMCExpr::VK_LoongArch_TLS_LD_HI20 ||
                        VK == LoongArchMCExpr::VK_LoongArch_TLS_IE_HI20 ||
                        VK == LoongArchMCExpr::VK_LoongArch_TLS_LE_HI20 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_LE_HI20_R ||
                        VK == LoongArchMCExpr::VK_LoongArch_TLS_DESC_HI20;
     return IsConstantImm
                ? isInt<20>(Imm) && IsValidKind
@@ -432,6 +444,24 @@ public:
     bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
                        VK == LoongArchMCExpr::VK_LoongArch_CALL36;
 
+    return IsConstantImm
+               ? isInt<20>(Imm) && IsValidKind
+               : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
+                     IsValidKind;
+  }
+
+  bool isSImm20pcaddi() const {
+    if (!isImm())
+      return false;
+
+    int64_t Imm;
+    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
+                       VK == LoongArchMCExpr::VK_LoongArch_PCREL20_S2 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_LD_PCREL20_S2 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_GD_PCREL20_S2 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_DESC_PCREL20_S2;
     return IsConstantImm
                ? isInt<20>(Imm) && IsValidKind
                : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
@@ -1284,8 +1314,8 @@ void LoongArchAsmParser::emitFuncCall36(MCInst &Inst, SMLoc IDLoc,
   // expands to:
   //   pcaddu18i $rj, %call36(sym)
   //   jirl      $r0, $rj, 0
-  unsigned ScratchReg =
-      IsTailCall ? Inst.getOperand(0).getReg() : (unsigned)LoongArch::R1;
+  MCRegister ScratchReg =
+      IsTailCall ? Inst.getOperand(0).getReg() : MCRegister(LoongArch::R1);
   const MCExpr *Sym =
       IsTailCall ? Inst.getOperand(1).getExpr() : Inst.getOperand(0).getExpr();
   const LoongArchMCExpr *LE = LoongArchMCExpr::create(
@@ -1296,7 +1326,7 @@ void LoongArchAsmParser::emitFuncCall36(MCInst &Inst, SMLoc IDLoc,
       getSTI());
   Out.emitInstruction(
       MCInstBuilder(LoongArch::JIRL)
-          .addReg(IsTailCall ? (unsigned)LoongArch::R0 : ScratchReg)
+          .addReg(IsTailCall ? MCRegister(LoongArch::R0) : ScratchReg)
           .addReg(ScratchReg)
           .addImm(0),
       getSTI());
@@ -1664,6 +1694,12 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         /*Upper=*/(1 << 19) - 1,
         "operand must be a symbol with modifier (e.g. %call36) or an integer "
         "in the range");
+  case Match_InvalidSImm20pcaddi:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, /*Lower=*/-(1 << 19),
+        /*Upper=*/(1 << 19) - 1,
+        "operand must be a symbol with modifier (e.g. %pcrel_20) or an integer "
+        "in the range");
   case Match_InvalidSImm21lsl2:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, /*Lower=*/-(1 << 22), /*Upper=*/(1 << 22) - 4,
@@ -1685,6 +1721,10 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidBareSymbol: {
     SMLoc ErrorLoc = ((LoongArchOperand &)*Operands[ErrorInfo]).getStartLoc();
     return Error(ErrorLoc, "operand must be a bare symbol name");
+  }
+  case Match_InvalidTPRelAddSymbol: {
+    SMLoc ErrorLoc = ((LoongArchOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(ErrorLoc, "operand must be a symbol with %le_add_r modifier");
   }
   }
   llvm_unreachable("Unknown match type detected!");

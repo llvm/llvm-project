@@ -69,7 +69,7 @@ define i32 @test(ptr nocapture readonly %x) {
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[OUTEREND]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[OUTERLOOP]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[CONV114]], [[OUTERLOOP]] ], [ [[TMP15]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[TMP15]], [[MIDDLE_BLOCK]] ], [ [[CONV114]], [[OUTERLOOP]] ]
 ; CHECK-NEXT:    br label [[INNERLOOP:%.*]]
 ; CHECK:       innerloop:
 ; CHECK-NEXT:    [[I_2132:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC129:%.*]], [[INNERLOOP]] ]
@@ -88,7 +88,7 @@ define i32 @test(ptr nocapture readonly %x) {
 ; CHECK-NEXT:    [[SUB127]] = fsub fast double [[DVAL1_4131]], [[MUL126]]
 ; CHECK-NEXT:    [[INC129]] = add nuw nsw i32 [[I_2132]], 1
 ; CHECK-NEXT:    [[EXITCOND143:%.*]] = icmp eq i32 [[INC129]], [[T]]
-; CHECK-NEXT:    br i1 [[EXITCOND143]], label [[OUTEREND]], label [[INNERLOOP]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND143]], label [[OUTEREND]], label [[INNERLOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       outerend:
 ; CHECK-NEXT:    [[SUB127_LCSSA:%.*]] = phi double [ [[SUB127]], [[INNERLOOP]] ], [ [[TMP15]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[CONV138:%.*]] = fptosi double [[SUB127_LCSSA]] to i32

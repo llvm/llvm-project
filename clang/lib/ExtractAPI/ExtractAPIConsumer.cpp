@@ -286,78 +286,59 @@ public:
   MacroCallback(const SourceManager &SM, APISet &API, Preprocessor &PP)
       : SM(SM), API(API), PP(PP) {}
 
-  void MacroDefined(const Token &MacroNameToken,
-                    const MacroDirective *MD) override {
-    auto *MacroInfo = MD->getMacroInfo();
-
-    if (MacroInfo->isBuiltinMacro())
-      return;
-
-    auto SourceLoc = MacroNameToken.getLocation();
-    if (SM.isWrittenInBuiltinFile(SourceLoc) ||
-        SM.isWrittenInCommandLineFile(SourceLoc))
-      return;
-
-    PendingMacros.emplace_back(MacroNameToken, MD);
-  }
-
-  // If a macro gets undefined at some point during preprocessing of the inputs
-  // it means that it isn't an exposed API and we should therefore not add a
-  // macro definition for it.
-  void MacroUndefined(const Token &MacroNameToken, const MacroDefinition &MD,
-                      const MacroDirective *Undef) override {
-    // If this macro wasn't previously defined we don't need to do anything
-    // here.
-    if (!Undef)
-      return;
-
-    llvm::erase_if(PendingMacros, [&MD, this](const PendingMacro &PM) {
-      return MD.getMacroInfo()->isIdenticalTo(*PM.MD->getMacroInfo(), PP,
-                                              /*Syntactically*/ false);
-    });
-  }
-
   void EndOfMainFile() override {
-    for (auto &PM : PendingMacros) {
-      // `isUsedForHeaderGuard` is only set when the preprocessor leaves the
-      // file so check for it here.
-      if (PM.MD->getMacroInfo()->isUsedForHeaderGuard())
+    for (const auto &M : PP.macros()) {
+      auto *II = M.getFirst();
+      auto MD = PP.getMacroDefinition(II);
+      auto *MI = MD.getMacroInfo();
+
+      if (!MI)
         continue;
 
-      if (!shouldMacroBeIncluded(PM))
+      // Ignore header guard macros
+      if (MI->isUsedForHeaderGuard())
         continue;
 
-      StringRef Name = PM.MacroNameToken.getIdentifierInfo()->getName();
-      PresumedLoc Loc = SM.getPresumedLoc(PM.MacroNameToken.getLocation());
+      // Ignore builtin macros and ones defined via the command line.
+      if (MI->isBuiltinMacro())
+        continue;
+
+      auto DefLoc = MI->getDefinitionLoc();
+
+      if (SM.isWrittenInBuiltinFile(DefLoc) ||
+          SM.isWrittenInCommandLineFile(DefLoc))
+        continue;
+
+      auto AssociatedModuleMacros = MD.getModuleMacros();
+      StringRef OwningModuleName;
+      if (!AssociatedModuleMacros.empty())
+        OwningModuleName = AssociatedModuleMacros.back()
+                               ->getOwningModule()
+                               ->getTopLevelModuleName();
+
+      if (!shouldMacroBeIncluded(DefLoc, OwningModuleName))
+        continue;
+
+      StringRef Name = II->getName();
+      PresumedLoc Loc = SM.getPresumedLoc(DefLoc);
       SmallString<128> USR;
-      index::generateUSRForMacro(Name, PM.MacroNameToken.getLocation(), SM,
-                                 USR);
-
+      index::generateUSRForMacro(Name, DefLoc, SM, USR);
       API.createRecord<extractapi::MacroDefinitionRecord>(
           USR, Name, SymbolReference(), Loc,
-          DeclarationFragmentsBuilder::getFragmentsForMacro(Name, PM.MD),
+          DeclarationFragmentsBuilder::getFragmentsForMacro(Name, MI),
           DeclarationFragmentsBuilder::getSubHeadingForMacro(Name),
-          SM.isInSystemHeader(PM.MacroNameToken.getLocation()));
+          SM.isInSystemHeader(DefLoc));
     }
-
-    PendingMacros.clear();
   }
 
-protected:
-  struct PendingMacro {
-    Token MacroNameToken;
-    const MacroDirective *MD;
-
-    PendingMacro(const Token &MacroNameToken, const MacroDirective *MD)
-        : MacroNameToken(MacroNameToken), MD(MD) {}
-  };
-
-  virtual bool shouldMacroBeIncluded(const PendingMacro &PM) { return true; }
+  virtual bool shouldMacroBeIncluded(const SourceLocation &MacroLoc,
+                                     StringRef ModuleName) {
+    return true;
+  }
 
   const SourceManager &SM;
   APISet &API;
   Preprocessor &PP;
-  llvm::SmallVector<PendingMacro> PendingMacros;
 };
 
 class APIMacroCallback : public MacroCallback {
@@ -366,9 +347,10 @@ public:
                    LocationFileChecker &LCF)
       : MacroCallback(SM, API, PP), LCF(LCF) {}
 
-  bool shouldMacroBeIncluded(const PendingMacro &PM) override {
+  bool shouldMacroBeIncluded(const SourceLocation &MacroLoc,
+                             StringRef ModuleName) override {
     // Do not include macros from external files
-    return LCF(PM.MacroNameToken.getLocation());
+    return LCF(MacroLoc) || API.ProductName == ModuleName;
   }
 
 private:

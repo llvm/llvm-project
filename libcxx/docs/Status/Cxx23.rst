@@ -18,8 +18,6 @@ In February 2023, the C++ standard committee approved this draft, and sent it to
 
 This page shows the status of libc++; the status of clang's support of the language features is `here <https://clang.llvm.org/cxx_status.html#cxx23>`__.
 
-.. attention:: Features in unreleased drafts of the standard are subject to change.
-
 The groups that have contributed papers:
 
 -  CWG - Core Language Working group
@@ -46,6 +44,9 @@ Paper Status
    .. [#note-P2520R0] P2520R0: Libc++ implemented this paper as a DR in C++20 as well.
    .. [#note-P2711R1] P2711R1: ``join_with_view`` hasn't been done yet since this type isn't implemented yet.
    .. [#note-P2770R0] P2770R0: ``join_with_view`` hasn't been done yet since this type isn't implemented yet.
+   .. [#note-LWG3494] LWG3494: That LWG issue was superseded by `P2017R1 <https://wg21.link/P2017R1>`__.
+   .. [#note-LWG3481] LWG3481: That LWG issue was superseded by `P2415R2 <https://wg21.link/P2415R2>`__.
+   .. [#note-LWG3265] LWG3265: That LWG issue was resolved by `LWG3435 <https://wg21.link/LWG3435>`__.
    .. [#note-P2693R1] P2693R1: The formatter for ``std::thread::id`` is implemented.
       The formatter for ``stacktrace`` is not implemented, since ``stacktrace`` is
       not implemented yet.

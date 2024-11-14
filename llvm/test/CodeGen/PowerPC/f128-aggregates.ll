@@ -283,7 +283,7 @@ define fp128 @testMixedAggregate([3 x i128] %a.coerce) {
 ;
 ; CHECK-BE-LABEL: testMixedAggregate:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    mtvsrdd v2, r8, r7
+; CHECK-BE-NEXT:    mtvsrdd v2, r7, r8
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: testMixedAggregate:
@@ -310,7 +310,7 @@ define fp128 @testMixedAggregate_02([4 x i128] %a.coerce) {
 ;
 ; CHECK-BE-LABEL: testMixedAggregate_02:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    mtvsrdd v2, r6, r5
+; CHECK-BE-NEXT:    mtvsrdd v2, r5, r6
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: testMixedAggregate_02:
@@ -344,7 +344,7 @@ define fp128 @testMixedAggregate_03([4 x i128] %sa.coerce) {
 ; CHECK-BE-LABEL: testMixedAggregate_03:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    mtvsrwa v2, r4
-; CHECK-BE-NEXT:    mtvsrdd v3, r6, r5
+; CHECK-BE-NEXT:    mtvsrdd v3, r5, r6
 ; CHECK-BE-NEXT:    xscvsdqp v2, v2
 ; CHECK-BE-NEXT:    xsaddqp v2, v3, v2
 ; CHECK-BE-NEXT:    mtvsrd v3, r9
@@ -467,7 +467,7 @@ define fp128 @testUnion_01([1 x i128] %a.coerce) {
 ;
 ; CHECK-BE-LABEL: testUnion_01:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    mtvsrdd v2, r4, r3
+; CHECK-BE-NEXT:    mtvsrdd v2, r3, r4
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: testUnion_01:
@@ -494,7 +494,7 @@ define fp128 @testUnion_02([1 x i128] %a.coerce) {
 ;
 ; CHECK-BE-LABEL: testUnion_02:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    mtvsrdd v2, r4, r3
+; CHECK-BE-NEXT:    mtvsrdd v2, r3, r4
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: testUnion_02:
@@ -521,7 +521,7 @@ define fp128 @testUnion_03([4 x i128] %a.coerce) {
 ;
 ; CHECK-BE-LABEL: testUnion_03:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    mtvsrdd v2, r8, r7
+; CHECK-BE-NEXT:    mtvsrdd v2, r7, r8
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: testUnion_03:

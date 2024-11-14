@@ -46,7 +46,7 @@
 // CHECK:           %[[VAL_36_BYTESIZE:.*]] = llvm.mul %[[VAL_35]], %[[VAL_31_LEN]]  : i64
 // CHECK:           %[[VAL_37:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>
 // CHECK:           %[[VAL_38:.*]] = llvm.insertvalue %[[VAL_36_BYTESIZE]], %[[VAL_37]][1] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>
-// CHECK:           %[[VAL_39:.*]] = llvm.mlir.constant(20180515 : i32) : i32
+// CHECK:           %[[VAL_39:.*]] = llvm.mlir.constant(20240719 : i32) : i32
 // CHECK:           %[[VAL_40:.*]] = llvm.insertvalue %[[VAL_39]], %[[VAL_38]][2] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>
 // CHECK:           %[[VAL_41:.*]] = llvm.mlir.constant(2 : i32) : i32
 // CHECK:           %[[VAL_42:.*]] = llvm.trunc %[[VAL_41]] : i32 to i8
@@ -142,7 +142,7 @@ func.func @test_char4(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.cha
 // CHECK:           %[[VAL_36_BYTESIZE:.*]] = llvm.mul %[[VAL_35]], %[[VAL_16_BYTESIZE]]  : i64
 // CHECK:           %[[VAL_37:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>
 // CHECK:           %[[VAL_38:.*]] = llvm.insertvalue %[[VAL_36_BYTESIZE]], %[[VAL_37]][1] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>
-// CHECK:           %[[VAL_39:.*]] = llvm.mlir.constant(20180515 : i32) : i32
+// CHECK:           %[[VAL_39:.*]] = llvm.mlir.constant(20240719 : i32) : i32
 // CHECK:           %[[VAL_40:.*]] = llvm.insertvalue %[[VAL_39]], %[[VAL_38]][2] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>
 // CHECK:           %[[VAL_41:.*]] = llvm.mlir.constant(2 : i32) : i32
 // CHECK:           %[[VAL_42:.*]] = llvm.trunc %[[VAL_41]] : i32 to i8

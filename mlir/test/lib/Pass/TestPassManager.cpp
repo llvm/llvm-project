@@ -54,7 +54,7 @@ struct TestOptionsPass
     : public PassWrapper<TestOptionsPass, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestOptionsPass)
 
-  enum Enum { One, Two };
+  enum Enum { Zero, One, Two };
 
   struct Options : public PassPipelineOptions<Options> {
     ListOption<int> listOption{*this, "list",
@@ -66,7 +66,15 @@ struct TestOptionsPass
     Option<Enum> enumOption{
         *this, "enum", llvm::cl::desc("Example enum option"),
         llvm::cl::values(clEnumValN(0, "zero", "Example zero value"),
-                         clEnumValN(1, "one", "Example one value"))};
+                         clEnumValN(1, "one", "Example one value"),
+                         clEnumValN(2, "two", "Example two value"))};
+
+    Options() = default;
+    Options(const Options &rhs) { *this = rhs; }
+    Options &operator=(const Options &rhs) {
+      copyOptionValuesFrom(rhs);
+      return *this;
+    }
   };
   TestOptionsPass() = default;
   TestOptionsPass(const TestOptionsPass &) : PassWrapper() {}
@@ -92,7 +100,37 @@ struct TestOptionsPass
   Option<Enum> enumOption{
       *this, "enum", llvm::cl::desc("Example enum option"),
       llvm::cl::values(clEnumValN(0, "zero", "Example zero value"),
-                       clEnumValN(1, "one", "Example one value"))};
+                       clEnumValN(1, "one", "Example one value"),
+                       clEnumValN(2, "two", "Example two value"))};
+};
+
+struct TestOptionsSuperPass
+    : public PassWrapper<TestOptionsSuperPass, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestOptionsSuperPass)
+
+  struct Options : public PassPipelineOptions<Options> {
+    ListOption<TestOptionsPass::Options> listOption{
+        *this, "super-list",
+        llvm::cl::desc("Example list of PassPipelineOptions option")};
+
+    Options() = default;
+  };
+
+  TestOptionsSuperPass() = default;
+  TestOptionsSuperPass(const TestOptionsSuperPass &) : PassWrapper() {}
+  TestOptionsSuperPass(const Options &options) {
+    listOption = options.listOption;
+  }
+
+  void runOnOperation() final {}
+  StringRef getArgument() const final { return "test-options-super-pass"; }
+  StringRef getDescription() const final {
+    return "Test options of options parsing capabilities";
+  }
+
+  ListOption<TestOptionsPass::Options> listOption{
+      *this, "list",
+      llvm::cl::desc("Example list of PassPipelineOptions option")};
 };
 
 /// A test pass that always aborts to enable testing the crash recovery
@@ -220,6 +258,7 @@ static void testNestedPipelineTextual(OpPassManager &pm) {
 namespace mlir {
 void registerPassManagerTestPass() {
   PassRegistration<TestOptionsPass>();
+  PassRegistration<TestOptionsSuperPass>();
 
   PassRegistration<TestModulePass>();
 
@@ -247,6 +286,15 @@ void registerPassManagerTestPass() {
           "Parses options using pass pipeline registration",
           [](OpPassManager &pm, const TestOptionsPass::Options &options) {
             pm.addPass(std::make_unique<TestOptionsPass>(options));
+          });
+
+  PassPipelineRegistration<TestOptionsSuperPass::Options>
+      registerOptionsSuperPassPipeline(
+          "test-options-super-pass-pipeline",
+          "Parses options of PassPipelineOptions using pass pipeline "
+          "registration",
+          [](OpPassManager &pm, const TestOptionsSuperPass::Options &options) {
+            pm.addPass(std::make_unique<TestOptionsSuperPass>(options));
           });
 }
 } // namespace mlir
