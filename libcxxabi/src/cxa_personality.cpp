@@ -62,6 +62,11 @@
 #  define __ptrauth_scan_results_landingpad_intptr
 #endif
 
+// The functions defined in this file are magic functions called only by the compiler.
+#ifdef __clang__
+#  pragma clang diagnostic ignored "-Wmissing-prototypes"
+#endif
+
 // TODO: This is a temporary workaround for libc++abi to recognize that it's being
 // built against LLVM's libunwind. LLVM's libunwind started reporting _LIBUNWIND_VERSION
 // in LLVM 15 -- we can remove this workaround after shipping LLVM 17. Once we remove
@@ -1119,9 +1124,6 @@ __gxx_personality_seh0(PEXCEPTION_RECORD ms_exc, void *this_frame,
 #endif
 
 #else
-
-extern "C" _Unwind_Reason_Code __gnu_unwind_frame(_Unwind_Exception*,
-                                                  _Unwind_Context*);
 
 // Helper function to unwind one frame.
 // ARM EHABI 7.3 and 7.4: If the personality function returns _URC_CONTINUE_UNWIND, the
