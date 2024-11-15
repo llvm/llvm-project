@@ -37,12 +37,12 @@ public:
 
 #define LANGOPT(Name, Bits, Default) unsigned Name : Bits;
 #define ENUM_LANGOPT(Name, Type, Bits, Default)
-#include "flang/Common/LangOptions.def"
+#include "flang/Support/LangOptions.def"
 
 protected:
 #define LANGOPT(Name, Bits, Default)
 #define ENUM_LANGOPT(Name, Type, Bits, Default) unsigned Name : Bits;
-#include "flang/Common/LangOptions.def"
+#include "flang/Support/LangOptions.def"
 };
 
 /// Tracks various options which control the dialect of Fortran that is
@@ -55,7 +55,7 @@ public:
 #define ENUM_LANGOPT(Name, Type, Bits, Default) \
   Type get##Name() const { return static_cast<Type>(Name); } \
   void set##Name(Type Value) { Name = static_cast<unsigned>(Value); }
-#include "flang/Common/LangOptions.def"
+#include "flang/Support/LangOptions.def"
 
   /// Name of the IR file that contains the result of the OpenMP target
   /// host code generation.
