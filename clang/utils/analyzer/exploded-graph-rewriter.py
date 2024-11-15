@@ -87,7 +87,7 @@ class ProgramPoint:
                 else None
             )
         elif self.kind == "CallEnter":
-            self.callee_decl = json_pp["callee_decl"] if "callee_decl" in json_pp else "None"
+            self.callee_decl = json_pp.get("callee_decl", "None")
         elif self.kind == "BlockEntrance":
             self.block_id = json_pp["block_id"]
 
