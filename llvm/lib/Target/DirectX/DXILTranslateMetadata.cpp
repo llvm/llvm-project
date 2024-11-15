@@ -315,24 +315,21 @@ static void translateMetadata(Module &M, const DXILResourceMap &DRM,
   MDTuple *Signatures = nullptr;
 
   if (MMDI.ShaderProfile == Triple::EnvironmentType::Library) {
-    // Create a consolidated shader flag mask of all functions in the library
-    // to be used as shader flags mask value associated with top-level library
-    // entry metadata.
-    uint64_t ConsolidatedMask = ShaderFlags.getModuleFlags();
-    for (const auto &FunFlags : ShaderFlags.getFunctionFlags()) {
-      ConsolidatedMask |= FunFlags.second;
-    }
+    // Get the combined shader flag mask of all functions in the library to be
+    // used as shader flags mask value associated with top-level library entry
+    // metadata.
+    uint64_t CombinedMask = ShaderFlags.getCombinedFlags();
     EntryFnMDNodes.emplace_back(
-        emitTopLevelLibraryNode(M, ResourceMD, ConsolidatedMask));
+        emitTopLevelLibraryNode(M, ResourceMD, CombinedMask));
   } else if (MMDI.EntryPropertyVec.size() > 1) {
     M.getContext().diagnose(DiagnosticInfoTranslateMD(
         M, "Non-library shader: One and only one entry expected"));
   }
 
   for (const EntryProperties &EntryProp : MMDI.EntryPropertyVec) {
-    Expected<const ComputedShaderFlags &> ECSF =
+    Expected<const ComputedShaderFlags &> EntrySFMask =
         ShaderFlags.getShaderFlagsMask(EntryProp.Entry);
-    if (Error E = ECSF.takeError()) {
+    if (Error E = EntrySFMask.takeError()) {
       M.getContext().diagnose(
           DiagnosticInfoTranslateMD(M, toString(std::move(E))));
     }
@@ -341,12 +338,7 @@ static void translateMetadata(Module &M, const DXILResourceMap &DRM,
     // top-level library node. Hence it is not emitted.
     uint64_t EntryShaderFlags = 0;
     if (MMDI.ShaderProfile != Triple::EnvironmentType::Library) {
-      // TODO: Create a consolidated shader flag mask of all the entry
-      // functions and its callees. The following is correct only if
-      // EntryProp.Entry has no call instructions.
-      EntryShaderFlags = *ECSF | ShaderFlags.getModuleFlags();
-    }
-    if (MMDI.ShaderProfile != Triple::EnvironmentType::Library) {
+      EntryShaderFlags = *EntrySFMask;
       if (EntryProp.ShaderStage != MMDI.ShaderProfile) {
         M.getContext().diagnose(DiagnosticInfoTranslateMD(
             M,

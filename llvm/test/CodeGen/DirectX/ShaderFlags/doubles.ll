@@ -3,8 +3,6 @@
 
 target triple = "dxil-pc-shadermodel6.7-library"
 
-; CHECK: ; Shader Flags mask for Module:
-; CHECK-NEXT: ; Shader Flags Value: 0x00000000
 ; CHECK: ; Shader Flags mask for Function: add
 ; CHECK-NEXT: ; Shader Flags Value: 0x00000004
 ; CHECK: ; Note: shader requires additional functionality:

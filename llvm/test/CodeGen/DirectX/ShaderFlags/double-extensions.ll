@@ -2,10 +2,7 @@
 
 target triple = "dxil-pc-shadermodel6.7-library"
 
-; CHECK: ; Shader Flags mask for Module:
-; CHECK-NEXT: ; Shader Flags Value: 0x00000000
-; CHECK-NEXT: ;
-; CHECK-NEXT: ; Shader Flags mask for Function: test_fdiv_double
+; CHECK: ; Shader Flags mask for Function: test_fdiv_double
 ; CHECK-NEXT: ; Shader Flags Value: 0x00000044
 ; CHECK-NEXT: ;
 ; CHECK-NEXT: ; Note: shader requires additional functionality:

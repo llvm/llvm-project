@@ -47,8 +47,8 @@ public:
 };
 } // namespace
 
-void DXILModuleShaderFlagsInfo::updateFuctionFlags(ComputedShaderFlags &CSF,
-                                                   const Instruction &I) {
+void DXILModuleShaderFlagsInfo::updateFunctionFlags(ComputedShaderFlags &CSF,
+                                                    const Instruction &I) {
   if (!CSF.Doubles) {
     CSF.Doubles = I.getType()->isDoubleTy();
   }
@@ -71,7 +71,7 @@ void DXILModuleShaderFlagsInfo::updateFuctionFlags(ComputedShaderFlags &CSF,
   }
 }
 
-bool DXILModuleShaderFlagsInfo::initialize(const Module &M) {
+DXILModuleShaderFlagsInfo::DXILModuleShaderFlagsInfo(const Module &M) {
   // Collect shader flags for each of the functions
   for (const auto &F : M.getFunctionList()) {
     if (F.isDeclaration())
@@ -79,12 +79,13 @@ bool DXILModuleShaderFlagsInfo::initialize(const Module &M) {
     ComputedShaderFlags CSF{};
     for (const auto &BB : F)
       for (const auto &I : BB)
-        updateFuctionFlags(CSF, I);
+        updateFunctionFlags(CSF, I);
     // Insert shader flag mask for function F
     FunctionFlags.push_back({&F, CSF});
+    // Update combined shader flags mask
+    CombinedSFMask |= CSF;
   }
   llvm::sort(FunctionFlags);
-  return true;
 }
 
 void ComputedShaderFlags::print(raw_ostream &OS) const {
@@ -105,15 +106,13 @@ void ComputedShaderFlags::print(raw_ostream &OS) const {
   OS << ";\n";
 }
 
-const SmallVector<std::pair<Function const *, ComputedShaderFlags>> &
-DXILModuleShaderFlagsInfo::getFunctionFlags() const {
-  return FunctionFlags;
+/// Get the combined shader flag mask of all module functions.
+const ComputedShaderFlags DXILModuleShaderFlagsInfo::getCombinedFlags() const {
+  return CombinedSFMask;
 }
 
-const ComputedShaderFlags &DXILModuleShaderFlagsInfo::getModuleFlags() const {
-  return ModuleFlags;
-}
-
+/// Return the shader flags mask of the specified function Func, if one exists.
+/// else an error
 Expected<const ComputedShaderFlags &>
 DXILModuleShaderFlagsInfo::getShaderFlagsMask(const Function *Func) const {
   std::pair<Function const *, ComputedShaderFlags> V{Func, {}};
@@ -125,25 +124,21 @@ DXILModuleShaderFlagsInfo::getShaderFlagsMask(const Function *Func) const {
   return Iter->second;
 }
 
+//===----------------------------------------------------------------------===//
+// ShaderFlagsAnalysis and ShaderFlagsAnalysisPrinterPass
+
+// Provide an explicit template instantiation for the static ID.
 AnalysisKey ShaderFlagsAnalysis::Key;
 
 DXILModuleShaderFlagsInfo ShaderFlagsAnalysis::run(Module &M,
                                                    ModuleAnalysisManager &AM) {
-  DXILModuleShaderFlagsInfo MSFI;
-  MSFI.initialize(M);
+  DXILModuleShaderFlagsInfo MSFI(M);
   return MSFI;
-}
-
-bool ShaderFlagsAnalysisWrapper::runOnModule(Module &M) {
-  MSFI.initialize(M);
-  return false;
 }
 
 PreservedAnalyses ShaderFlagsAnalysisPrinter::run(Module &M,
                                                   ModuleAnalysisManager &AM) {
   DXILModuleShaderFlagsInfo FlagsInfo = AM.getResult<ShaderFlagsAnalysis>(M);
-  OS << "; Shader Flags mask for Module:\n";
-  FlagsInfo.getModuleFlags().print(OS);
   for (const auto &F : M.getFunctionList()) {
     if (F.isDeclaration())
       continue;
@@ -158,6 +153,16 @@ PreservedAnalyses ShaderFlagsAnalysisPrinter::run(Module &M,
 
   return PreservedAnalyses::all();
 }
+
+//===----------------------------------------------------------------------===//
+// ShaderFlagsAnalysis and ShaderFlagsAnalysisPrinterPass
+
+bool ShaderFlagsAnalysisWrapper::runOnModule(Module &M) {
+  MSFI.reset(new DXILModuleShaderFlagsInfo(M));
+  return false;
+}
+
+void ShaderFlagsAnalysisWrapper::releaseMemory() { MSFI.reset(); }
 
 char ShaderFlagsAnalysisWrapper::ID = 0;
 

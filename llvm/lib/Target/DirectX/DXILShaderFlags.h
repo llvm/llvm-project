@@ -21,6 +21,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
+#include <memory>
 
 namespace llvm {
 class Module;
@@ -69,28 +70,34 @@ struct ComputedShaderFlags {
     return ModuleFlags;
   }
 
+  ComputedShaderFlags &operator|=(const uint64_t IVal) {
+#define SHADER_FEATURE_FLAG(FeatureBit, DxilModuleBit, FlagName, Str)          \
+  FlagName |= (IVal & getMask(DxilModuleBit));
+#define DXIL_MODULE_FLAG(DxilModuleBit, FlagName, Str)                         \
+  FlagName |= (IVal & getMask(DxilModuleBit));
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+    return *this;
+  }
+
   void print(raw_ostream &OS = dbgs()) const;
   LLVM_DUMP_METHOD void dump() const { print(); }
 };
 
 struct DXILModuleShaderFlagsInfo {
-  bool initialize(const Module &M);
+  DXILModuleShaderFlagsInfo(const Module &);
   Expected<const ComputedShaderFlags &>
-  getShaderFlagsMask(const Function *Func) const;
-  bool hasShaderFlagsMask(const Function *Func) const;
-  const ComputedShaderFlags &getModuleFlags() const;
-  const SmallVector<std::pair<Function const *, ComputedShaderFlags>> &
-  getFunctionFlags() const;
+  getShaderFlagsMask(const Function *) const;
+  const ComputedShaderFlags getCombinedFlags() const;
 
 private:
-  // Shader Flag mask representing module-level properties. These are
-  // represented using the macro DXIL_MODULE_FLAG
-  ComputedShaderFlags ModuleFlags;
-  // Vector of Function-Shader Flag mask pairs representing properties of each
-  // of the functions in the module. Shader Flags of each function are those
-  // represented using the macro SHADER_FEATURE_FLAG.
+  /// Vector of Function-Shader Flag mask pairs representing properties of each
+  /// of the functions in the module. Shader Flags of each function represent
+  /// both module-level and function-level flags
   SmallVector<std::pair<Function const *, ComputedShaderFlags>> FunctionFlags;
-  void updateFuctionFlags(ComputedShaderFlags &CSF, const Instruction &I);
+  /// Combined Shader Flag Mask of all functions of the module
+  ComputedShaderFlags CombinedSFMask{};
+
+  void updateFunctionFlags(ComputedShaderFlags &CSF, const Instruction &I);
 };
 
 class ShaderFlagsAnalysis : public AnalysisInfoMixin<ShaderFlagsAnalysis> {
@@ -120,16 +127,17 @@ public:
 /// This is required because the passes that will depend on this are codegen
 /// passes which run through the legacy pass manager.
 class ShaderFlagsAnalysisWrapper : public ModulePass {
-  DXILModuleShaderFlagsInfo MSFI;
+  std::unique_ptr<DXILModuleShaderFlagsInfo> MSFI;
 
 public:
   static char ID;
 
   ShaderFlagsAnalysisWrapper() : ModulePass(ID) {}
 
-  const DXILModuleShaderFlagsInfo &getShaderFlags() { return MSFI; }
+  const DXILModuleShaderFlagsInfo &getShaderFlags() { return *MSFI; }
 
   bool runOnModule(Module &M) override;
+  void releaseMemory() override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
