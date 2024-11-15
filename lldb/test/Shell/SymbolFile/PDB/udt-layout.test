@@ -1,4 +1,4 @@
-REQUIRES: system-windows, lld
+REQUIRES: target-windows, lld
 RUN: %build --compiler=clang-cl --output=%t.exe %S/Inputs/UdtLayoutTest.cpp
 RUN: %lldb -b -s %S/Inputs/UdtLayoutTest.script -- %t.exe | FileCheck %s
 
