@@ -29721,12 +29721,13 @@ void AArch64TargetLowering::verifyTargetSDNode(const SDNode *N) const {
     EVT Op0VT = N->getOperand(0).getValueType();
     EVT Op1VT = N->getOperand(1).getValueType();
     assert(VT.isVector() && Op0VT.isVector() && Op1VT.isVector() &&
-           "Expected vectors!");
-    assert(VT.getSizeInBits() == Op0VT.getSizeInBits() &&
-           Op0VT.getSizeInBits() == Op1VT.getSizeInBits() &&
+           VT.isInteger() && Op0VT.isInteger() && Op1VT.isInteger() &&
+           "Expected integer vectors!");
+    assert(VT == Op0VT &&
+           "Expected result and first input to have the same type!");
+    assert(Op0VT.getSizeInBits() == Op1VT.getSizeInBits() &&
            "Expected vectors of equal size!");
     assert(Op0VT.getVectorElementCount() * 2 == Op1VT.getVectorElementCount() &&
-           Op0VT.getVectorElementCount() == VT.getVectorElementCount() &&
            "Expected result vector and first input vector to have half the "
            "lanes of the second input vector!");
     break;
