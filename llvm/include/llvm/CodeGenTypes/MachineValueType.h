@@ -306,14 +306,13 @@ namespace llvm {
     /// be set and the runtime size will be a positive integer multiple of the
     /// base size.
     TypeSize getSizeInBits() const {
-      // clang-format off
       static constexpr TypeSize SizeTable[] = {
 #define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
-    TypeSize(Sz, Sc || Tup || Ty == aarch64svcount /* FIXME: Not in the td. */),
+    TypeSize(Sz, Sc || Tup || Ty == aarch64svcount /* FIXME: Not in the td.    \
+                                                    */),
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
       };
-      // clang-format on
 
       switch (SimpleTy) {
       case INVALID_SIMPLE_VALUE_TYPE:

@@ -21311,6 +21311,7 @@ bool RISCVTargetLowering::splitValueIntoRegisterParts(
   }
 
   if (ValueVT.isRISCVVectorTuple() && PartVT.isRISCVVectorTuple()) {
+#ifndef NDEBUG
     unsigned ValNF = ValueVT.getRISCVVectorTupleNumFields();
     [[maybe_unused]] unsigned ValLMUL =
         divideCeil(ValueVT.getSizeInBits().getKnownMinValue(),
@@ -21322,6 +21323,7 @@ bool RISCVTargetLowering::splitValueIntoRegisterParts(
     assert(ValNF == PartNF && ValLMUL == PartLMUL &&
            "RISC-V vector tuple type only accepts same register class type "
            "TUPLE_INSERT");
+#endif
 
     Val = DAG.getNode(RISCVISD::TUPLE_INSERT, DL, PartVT, DAG.getUNDEF(PartVT),
                       Val, DAG.getVectorIdxConstant(0, DL));
