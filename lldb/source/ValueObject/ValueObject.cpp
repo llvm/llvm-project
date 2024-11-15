@@ -84,14 +84,6 @@ using namespace lldb_private;
 
 static user_id_t g_value_obj_uid = 0;
 
-#ifdef LLDB_ENABLE_SWIFT
-static const ExecutionContextRef *GetSwiftExeCtx(ValueObject &valobj) {
-  return (valobj.GetPreferredDisplayLanguage() == eLanguageTypeSwift)
-             ? &valobj.GetExecutionContextRef()
-             : nullptr;
-}
-#endif // LLDB_ENABLE_SWIFT
-
 // ValueObject constructor
 ValueObject::ValueObject(ValueObject &parent)
     : m_parent(&parent), m_update_point(parent.GetUpdatePoint()),
@@ -1821,11 +1813,12 @@ bool ValueObject::GetDeclaration(Declaration &decl) {
 }
 
 #ifdef LLDB_ENABLE_SWIFT
-std::optional<SwiftScratchContextReader> ValueObject::GetSwiftScratchContext() {
+TypeSystemSwiftTypeRefForExpressionsSP ValueObject::GetSwiftScratchContext() {
   lldb::TargetSP target_sp(GetTargetSP());
   if (!target_sp)
-    return std::nullopt;
+    return {};
   Status error;
+  // FIXME: Not holding on to the lock isn't great fo determinism.
   ExecutionContext ctx = GetExecutionContextRef().Lock(false);
   auto *exe_scope = ctx.GetBestExecutionContextScope();
   return target_sp->GetSwiftScratchContext(error, *exe_scope);
@@ -2844,9 +2837,6 @@ llvm::Error ValueObject::Dump(Stream &s) {
 
 llvm::Error ValueObject::Dump(Stream &s,
                               const DumpValueObjectOptions &options) {
-#ifdef LLDB_ENABLE_SWIFT
-  auto swift_scratch_ctx_lock = SwiftScratchContextLock(GetSwiftExeCtx(*this));
-#endif // LLDB_ENABLE_SWIFT
   ValueObjectPrinter printer(*this, &s, options);
   return printer.PrintValueObject();
 }

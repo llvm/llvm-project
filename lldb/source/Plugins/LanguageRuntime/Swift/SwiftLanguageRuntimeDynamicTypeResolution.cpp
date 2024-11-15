@@ -274,26 +274,25 @@ void SwiftLanguageRuntimeImpl::PopLocalBuffer() {
 class LLDBTypeInfoProvider : public swift::remote::TypeInfoProvider {
   SwiftLanguageRuntimeImpl &m_runtime;
   Status m_error;
-  std::optional<SwiftScratchContextReader> m_reader;
+  TypeSystemSwiftTypeRefForExpressionsSP m_ts;
 
 public:
   LLDBTypeInfoProvider(SwiftLanguageRuntimeImpl &runtime,
                        ExecutionContextScope *exe_scope)
       : m_runtime(runtime),
-        m_reader(m_runtime.GetProcess().GetTarget().GetSwiftScratchContext(
+        m_ts(m_runtime.GetProcess().GetTarget().GetSwiftScratchContext(
             m_error,
             exe_scope ? *exe_scope : m_runtime.GetProcess().GetTarget())) {}
   LLDBTypeInfoProvider(SwiftLanguageRuntimeImpl &runtime,
                        ExecutionContext *exe_ctx)
       : m_runtime(runtime),
-        m_reader(m_runtime.GetProcess().GetTarget().GetSwiftScratchContext(
+        m_ts(m_runtime.GetProcess().GetTarget().GetSwiftScratchContext(
             m_error, exe_ctx ? *exe_ctx->GetBestExecutionContextScope()
                              : m_runtime.GetProcess().GetTarget())) {}
 
   swift::remote::TypeInfoProvider::IdType getId() override {
-    if (m_reader)
-      return (void *)((char *)m_reader->get() +
-                      m_reader->get()->GetGeneration() +
+    if (m_ts)
+      return (void *)((char *)m_ts.get() + m_ts->GetGeneration() +
                       m_runtime.GetGeneration());
     return (void *)0;
   }
@@ -305,12 +304,12 @@ public:
              "[LLDBTypeInfoProvider] Looking up debug type info for {0}",
              mangledName);
 
-    if (!m_reader) {
+    if (!m_ts) {
       LLDB_LOG(GetLog(LLDBLog::Types),
                "[LLDBTypeInfoProvider] no scratch context");
       return nullptr;
     }
-    TypeSystemSwiftTypeRef &typesystem = *m_reader->get();
+    TypeSystemSwiftTypeRef &typesystem = *m_ts;
 
     // Materialize a Clang type from the debug info.
     assert(swift::Demangle::getManglingPrefixLength(mangledName) == 0);
@@ -379,7 +378,9 @@ public:
     ExecutionContext exe_ctx;
     process.CalculateExecutionContext(exe_ctx);
     auto *exe_scope = exe_ctx.GetBestExecutionContextScope();
-    TypeSystemSwiftTypeRef &typesystem = *m_reader->get();
+    if (!m_ts)
+      return nullptr;
+    TypeSystemSwiftTypeRef &typesystem = *m_ts;
     // Build a TypeInfo for the Clang type.
     auto size = clang_type.GetByteSize(exe_scope);
     auto bit_align = clang_type.GetTypeBitAlign(exe_scope);
@@ -1768,20 +1769,6 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Pack(
   return true;
 }
 
-#ifndef NDEBUG
-bool SwiftLanguageRuntimeImpl::IsScratchContextLocked(Target &target) {
-  if (target.GetSwiftScratchContextLock().try_lock()) {
-    target.GetSwiftScratchContextLock().unlock();
-    return false;
-  }
-  return true;
-}
-
-bool SwiftLanguageRuntimeImpl::IsScratchContextLocked(TargetSP target) {
-  return target ? IsScratchContextLocked(*target) : true;
-}
-#endif
-
 static bool IsPrivateNSClass(NodePointer node) {
   if (!node || node->getKind() != Node::Kind::Type ||
       node->getNumChildren() == 0)
@@ -2306,13 +2293,7 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
   // canonicalization in GetCanonicalDemangleTree() must be performed in
   // the original context as to resolve type aliases correctly.
   auto &target = m_process.GetTarget();
-  auto maybe_scratch_ctx = target.GetSwiftScratchContext(error, stack_frame);
-  if (!maybe_scratch_ctx) {
-    LLDB_LOG(GetLog(LLDBLog::Expressions | LLDBLog::Types),
-             "No scratch context available.");
-    return ts.GetTypeFromMangledTypename(mangled_name);
-  }
-  auto scratch_ctx = maybe_scratch_ctx->get();
+  auto scratch_ctx = target.GetSwiftScratchContext(error, stack_frame);
   if (!scratch_ctx) {
     LLDB_LOG(GetLog(LLDBLog::Expressions | LLDBLog::Types),
              "No scratch context available.");
@@ -2678,15 +2659,11 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ClangType(
   }
 
   // Import the remangled dynamic name into the scratch context.
-  assert(IsScratchContextLocked(in_value.GetTargetSP()) &&
-         "Swift scratch context not locked ahead of dynamic type resolution");
-  std::optional<SwiftScratchContextReader> maybe_scratch_ctx =
-      in_value.GetSwiftScratchContext();
-  if (!maybe_scratch_ctx)
+  auto scratch_ctx = in_value.GetSwiftScratchContext();
+  if (!scratch_ctx)
     return false;
   CompilerType swift_type =
-      maybe_scratch_ctx->get()->GetTypeFromMangledTypename(
-          ConstString(remangled));
+      scratch_ctx->GetTypeFromMangledTypename(ConstString(remangled));
 
   // Roll back the ObjC dynamic type resolution.
   if (!swift_type)
@@ -3001,13 +2978,11 @@ SwiftLanguageRuntimeImpl::GetSwiftRuntimeTypeInfo(
 
   // Resolve all generic type parameters in the type for the current
   // frame. Generic parameter binding has to happen in the scratch
-  // context, so we lock it while we are in this function.
-  std::unique_ptr<SwiftScratchContextLock> lock;
+  // context.
   if (exe_scope)
     if (StackFrame *frame = exe_scope->CalculateStackFrame().get()) {
       ExecutionContext exe_ctx;
       frame->CalculateExecutionContext(exe_ctx);
-      lock = std::make_unique<SwiftScratchContextLock>(&exe_ctx);
       type = BindGenericTypeParameters(*frame, type);
     }
 

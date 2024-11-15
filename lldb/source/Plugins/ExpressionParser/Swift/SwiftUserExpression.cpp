@@ -743,7 +743,7 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                        target->GetExecutableModule());
   else
     sc = frame->GetSymbolContext(lldb::eSymbolContextFunction);
-  auto *swift_ast_ctx = m_swift_scratch_ctx->get()->GetSwiftASTContext(sc);
+  auto *swift_ast_ctx = m_swift_scratch_ctx->GetSwiftASTContext(sc);
   m_swift_ast_ctx =
       llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(swift_ast_ctx);
 

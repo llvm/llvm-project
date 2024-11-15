@@ -406,6 +406,10 @@ public:
 
 protected:
   /// Helper that creates an AST type from \p type.
+  ///
+  /// FIXME: This API is dangerous, it would be better to return a
+  /// CompilerType so the caller isn't responsible for matching the
+  /// exact same SwiftASTContext.
   void *ReconstructType(lldb::opaque_compiler_type_t type,
                         const ExecutionContext *exe_ctx = nullptr);
   void *ReconstructType(lldb::opaque_compiler_type_t type,
@@ -479,12 +483,24 @@ protected:
 
   /// Perform an action on all subling SwiftASTContexts.
   void NotifyAllTypeSystems(std::function<void(lldb::TypeSystemSP)> fn);
-  
+
+  struct TypeSystemAndCount {
+    lldb::TypeSystemSP typesystem;
+    /// Count how often this typesystem was initialized.
+    unsigned char retry_count = 0;
+  };
+
   mutable std::mutex m_swift_ast_context_lock;
   /// The "precise" SwiftASTContexts managed by this scratch context. There
   /// exists one per Swift module. The keys in this map are module names.
-  mutable llvm::DenseMap<const char *, lldb::TypeSystemSP>
+  mutable llvm::DenseMap<const char *, TypeSystemAndCount>
       m_swift_ast_context_map;
+  /// A list of types that turn SwiftASTContext into a fatal error
+  /// state after type reconstruction (presumably due to additional
+  /// module imports). The key is a pair of SymbolContext string and
+  /// mangled type name.
+  mutable llvm::DenseSet<std::pair<const char *, const char *>>
+      m_dangerous_types;
 
   mutable std::unique_ptr<SwiftDWARFImporterForClangTypes>
       m_dwarf_importer_for_clang_types_up;

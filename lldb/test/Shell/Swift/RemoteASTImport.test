@@ -43,11 +43,14 @@
 # RUN:          -Xlinker RemoteASTImport.swiftmodule  -L. -lLibrary
 # RUN: %lldb %t/a.out -s %s | FileCheck %s
 
+# This would create lots of RemoteAST queries that a user would not see.
+settings set symbols.swift-validate-typesystem false
+
 b Library.swift:10
 run
 expression input
 
-# FIXME: This test previously only worked because the erro reporting
+# FIXME: This test previously only worked because the error reporting
 # wasn't wired up correctly, but actually failed at testing what is
 # mentioned in the comment!
 #

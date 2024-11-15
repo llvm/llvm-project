@@ -1055,16 +1055,14 @@ SwiftLanguage::GetHardcodedSynthetics() {
         LLDB_LOGV(log, "[Matching CxxBridgedSyntheticChildProvider] - "
                        "Could not get the swift runtime.");
 
-      std::optional<SwiftScratchContextReader> scratch_ctx_reader =
-          valobj.GetSwiftScratchContext();
-      if (!scratch_ctx_reader || !scratch_ctx_reader->get()) {
+      auto ts = valobj.GetSwiftScratchContext();
+      if (!ts) {
         LLDB_LOGV(log, "[Matching CxxBridgedSyntheticChildProvider] - "
                        "Could not get the Swift scratch context.");
         return nullptr;
       }
-      auto &ts = *scratch_ctx_reader->get();
       CompilerType swift_type = ExtractSwiftTypeFromCxxInteropTypeName(
-          type, swift_type_name, ts, *swift_runtime);
+          type, swift_type_name, *ts, *swift_runtime);
       if (!swift_type) {
         LLDB_LOGV(log,
                   "[Matching CxxBridgedSyntheticChildProvider] - "
@@ -1251,7 +1249,6 @@ SwiftLanguage::GetPossibleFormattersMatches(
   if (valobj.GetObjectRuntimeLanguage() == eLanguageTypeObjC)
     return result;
 
-  SwiftScratchContextLock scratch_ctx_lock(&valobj.GetExecutionContextRef());
   CompilerType compiler_type(valobj.GetCompilerType());
 
   const bool check_cpp = false;
@@ -1374,25 +1371,23 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
             if (target) {
               const bool create_on_demand = false;
               Status error;
-              std::optional<SwiftScratchContextReader> maybe_scratch_ctx =
-                  target->GetSwiftScratchContext(error, *exe_scope,
-                                                 create_on_demand);
+              auto scratch_ctx = target->GetSwiftScratchContext(
+                  error, *exe_scope, create_on_demand);
               if (auto frame_sp = exe_scope->CalculateStackFrame()) {
                 auto &sc =
                     frame_sp->GetSymbolContext(lldb::eSymbolContextFunction);
-                if (maybe_scratch_ctx)
-                  if (auto scratch_ctx = maybe_scratch_ctx->get())
-                    if (SwiftASTContext *ast_ctx =
-                            scratch_ctx->GetSwiftASTContext(sc)) {
-                      ConstString cs_input{input};
-                      Mangled mangled(cs_input);
-                      if (mangled.GuessLanguage() == eLanguageTypeSwift) {
-                        auto candidate =
-                            ast_ctx->GetTypeFromMangledTypename(cs_input);
-                        if (candidate.IsValid())
-                          results.insert(candidate);
-                      }
+                if (scratch_ctx)
+                  if (SwiftASTContext *ast_ctx =
+                          scratch_ctx->GetSwiftASTContext(sc)) {
+                    ConstString cs_input{input};
+                    Mangled mangled(cs_input);
+                    if (mangled.GuessLanguage() == eLanguageTypeSwift) {
+                      auto candidate =
+                          ast_ctx->GetTypeFromMangledTypename(cs_input);
+                      if (candidate.IsValid())
+                        results.insert(candidate);
                     }
+                  }
               }
             }
           }
@@ -1448,79 +1443,76 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
             Target *target = exe_scope->CalculateTarget().get();
             const bool create_on_demand = false;
             Status error;
-            std::optional<SwiftScratchContextReader> maybe_scratch_ctx =
-                target->GetSwiftScratchContext(error, *exe_scope,
-                                               create_on_demand);
+            auto scratch_ctx = target->GetSwiftScratchContext(error, *exe_scope,
+                                                              create_on_demand);
             if (auto frame_sp = exe_scope->CalculateStackFrame()) {
               const SymbolContext &sc =
                   frame_sp->GetSymbolContext(lldb::eSymbolContextFunction);
-              if (maybe_scratch_ctx)
-                if (auto scratch_ctx = maybe_scratch_ctx->get())
-                  if (SwiftASTContext *ast_ctx =
-                          scratch_ctx->GetSwiftASTContext(sc)) {
-                    auto iter = ast_ctx->GetModuleCache().begin(),
-                         end = ast_ctx->GetModuleCache().end();
+              if (scratch_ctx)
+                if (SwiftASTContext *ast_ctx =
+                        scratch_ctx->GetSwiftASTContext(sc)) {
+                  auto iter = ast_ctx->GetModuleCache().begin(),
+                       end = ast_ctx->GetModuleCache().end();
 
-                    std::vector<llvm::StringRef> name_parts;
-                    SplitDottedName(input, name_parts);
+                  std::vector<llvm::StringRef> name_parts;
+                  SplitDottedName(input, name_parts);
 
-                    std::function<void(const swift::ModuleDecl *)> lookup_func =
-                        [&ast_ctx, input, name_parts,
-                         &results](const swift::ModuleDecl *module) -> void {
-                      for (auto imported_module :
-                           swift::namelookup::getAllImports(module)) {
-                        auto module = imported_module.importedModule;
-                        TypesOrDecls local_results;
-                        ast_ctx->FindTypesOrDecls(input, module, local_results,
-                                                  false);
-                        std::optional<TypeOrDecl> candidate;
-                        if (local_results.empty() && name_parts.size() > 1) {
-                          size_t idx_of_deeper = 1;
-                          // if you're looking for Swift.Int in module Swift,
-                          // try looking for Int
-                          if (name_parts.front() == module->getName().str()) {
-                            candidate = ast_ctx->FindTypeOrDecl(
-                                name_parts[1].str().c_str(), module);
-                            idx_of_deeper = 2;
-                          }
-                          // this is probably the top-level name of a nested
-                          // type String.UTF8View
-                          else {
-                            candidate = ast_ctx->FindTypeOrDecl(
-                                name_parts[0].str().c_str(), module);
-                          }
-                          if (candidate.has_value()) {
-                            TypesOrDecls candidates{candidate.value()};
-                            for (; idx_of_deeper < name_parts.size();
-                                 idx_of_deeper++) {
-                              TypesOrDecls new_candidates;
-                              for (auto candidate : candidates) {
-                                ast_ctx->FindContainedTypeOrDecl(
-                                    name_parts[idx_of_deeper], candidate,
-                                    new_candidates);
-                              }
-                              candidates = new_candidates;
-                            }
+                  std::function<void(const swift::ModuleDecl *)> lookup_func =
+                      [&ast_ctx, input, name_parts,
+                       &results](const swift::ModuleDecl *module) -> void {
+                    for (auto imported_module :
+                         swift::namelookup::getAllImports(module)) {
+                      auto module = imported_module.importedModule;
+                      TypesOrDecls local_results;
+                      ast_ctx->FindTypesOrDecls(input, module, local_results,
+                                                false);
+                      std::optional<TypeOrDecl> candidate;
+                      if (local_results.empty() && name_parts.size() > 1) {
+                        size_t idx_of_deeper = 1;
+                        // if you're looking for Swift.Int in module Swift,
+                        // try looking for Int
+                        if (name_parts.front() == module->getName().str()) {
+                          candidate = ast_ctx->FindTypeOrDecl(
+                              name_parts[1].str().c_str(), module);
+                          idx_of_deeper = 2;
+                        }
+                        // this is probably the top-level name of a nested
+                        // type String.UTF8View
+                        else {
+                          candidate = ast_ctx->FindTypeOrDecl(
+                              name_parts[0].str().c_str(), module);
+                        }
+                        if (candidate.has_value()) {
+                          TypesOrDecls candidates{candidate.value()};
+                          for (; idx_of_deeper < name_parts.size();
+                               idx_of_deeper++) {
+                            TypesOrDecls new_candidates;
                             for (auto candidate : candidates) {
-                              if (candidate)
-                                results.insert(candidate);
+                              ast_ctx->FindContainedTypeOrDecl(
+                                  name_parts[idx_of_deeper], candidate,
+                                  new_candidates);
                             }
+                            candidates = new_candidates;
                           }
-                        } else if (local_results.size() > 0) {
-                          for (const auto &result : local_results)
-                            results.insert(result);
-                        } else if (local_results.empty() && module &&
-                                   name_parts.size() == 1 &&
-                                   name_parts.front() ==
-                                       module->getName().str())
-                          results.insert(
-                              ToCompilerType(swift::ModuleType::get(module)));
-                      }
-                    };
+                          for (auto candidate : candidates) {
+                            if (candidate)
+                              results.insert(candidate);
+                          }
+                        }
+                      } else if (local_results.size() > 0) {
+                        for (const auto &result : local_results)
+                          results.insert(result);
+                      } else if (local_results.empty() && module &&
+                                 name_parts.size() == 1 &&
+                                 name_parts.front() == module->getName().str())
+                        results.insert(
+                            ToCompilerType(swift::ModuleType::get(module)));
+                    }
+                  };
 
-                    for (; iter != end; iter++)
-                      lookup_func(&iter->second);
-                  }
+                  for (; iter != end; iter++)
+                    lookup_func(&iter->second);
+                }
             }
           }
 
@@ -1663,7 +1655,6 @@ bool SwiftLanguage::IsUninitializedReference(ValueObject &valobj) {
 bool SwiftLanguage::GetFunctionDisplayName(
     const SymbolContext *sc, const ExecutionContext *exe_ctx,
     FunctionNameRepresentation representation, Stream &s) {
-  SwiftScratchContextLock scratch_ctx_lock(exe_ctx);
   switch (representation) {
   case Language::FunctionNameRepresentation::eName:
     // No need to customize this.

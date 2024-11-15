@@ -1064,17 +1064,6 @@ public:
 
     if (m_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift) {
 #ifdef LLDB_ENABLE_SWIFT
-      Status status;
-      std::optional<SwiftScratchContextReader> maybe_type_system =
-          target_sp->GetSwiftScratchContext(status, *exe_scope);
-      if (!maybe_type_system) {
-        err = Status::FromErrorStringWithFormat(
-            "Couldn't dematerialize a result variable: "
-            "couldn't get the corresponding type "
-            "system: %s",
-            llvm::toString(std::move(error)).c_str());
-        return;
-      }
       persistent_state = target_sp->GetPersistentExpressionStateForLanguage(
           lldb::eLanguageTypeSwift);
 #endif // LLDB_ENABLE_SWIFT

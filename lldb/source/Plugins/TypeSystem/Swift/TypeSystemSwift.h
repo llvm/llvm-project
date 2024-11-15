@@ -30,6 +30,7 @@ namespace lldb_private {
 class TypeSystemClang;
 class SwiftASTContext;
 class TypeSystemSwiftTypeRef;
+class TypeSystemSwiftTypeRefForExpressions;
 /// The implementation of lldb::Type's m_payload field for TypeSystemSwift.
 class TypePayloadSwift {
   /// Layout: bit 1 ... IsFixedValueBuffer.
@@ -325,7 +326,11 @@ protected:
   std::string m_description;
   /// The module this typesystem belongs to if any.
   Module *m_module = nullptr;
-  };
+};
+
+typedef std::shared_ptr<TypeSystemSwift> TypeSystemSwiftSP;
+typedef std::shared_ptr<TypeSystemSwiftTypeRefForExpressions>
+    TypeSystemSwiftTypeRefForExpressionsSP;
 
 } // namespace lldb_private
 

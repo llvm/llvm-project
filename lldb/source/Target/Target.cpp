@@ -1951,13 +1951,6 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
     };
     m_scratch_type_system_map.ForEach(notify_callback);
 
-    // This is a DenseMap, but we're fine iterating over it because
-    // it doens't matter in which order we notify the ASTContext(s).
-    for (auto &language : m_scratch_typesystem_for_module) {
-      TypeSystemSP type_system = language.second;
-      notify_callback(type_system);
-    }
-
     module_list.ClearModuleDependentCaches();
     auto data_sp =
         std::make_shared<TargetEventData>(shared_from_this(), module_list);
@@ -2717,104 +2710,6 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
   if (!type_system_or_err)
     return type_system_or_err.takeError();
 
-#ifdef LLDB_ENABLE_SWIFT
-  if (language == eLanguageTypeSwift) {
-    if (auto *swift_scratch_ctx =
-            llvm::dyn_cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
-                type_system_or_err->get())) {
-      auto *swift_ast_ctx =
-          llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
-              swift_scratch_ctx->GetSwiftASTContextOrNull(
-                  SymbolContext(GetExecutableModule())));
-      // Replace the scratch context if it contains fatal errors or
-      // needs to be replaced because new lldb::Modules were loaded.
-      if (swift_ast_ctx && (swift_ast_ctx->CheckProcessChanged() ||
-                            swift_ast_ctx->HasFatalErrors())) {
-        // If it is safe to replace the scratch context, do so. If
-        // try_lock() fails, then a higher stack frame (or another
-        // thread) is holding a read lock to the scratch context and
-        // replacing it could cause a use-after-free later on.
-        auto &lock = GetSwiftScratchContextLock();
-        if (lock.try_lock()) {
-          std::lock_guard<std::shared_mutex> unlock(lock, std::adopt_lock);
-          if (m_use_scratch_typesystem_per_module)
-            DisplayFallbackSwiftContextErrors(swift_ast_ctx);
-          else if (StreamSP errs = GetDebugger().GetAsyncErrorStream()) {
-            if (swift_ast_ctx->HasFatalErrors()) {
-              errs->Printf(
-                  "warning: Swift error in scratch context: %s.\n",
-                  swift_ast_ctx->GetFatalErrors().AsCString("unknown error"));
-              auto *module_name = GetExecutableModule()
-                                      ->GetPlatformFileSpec()
-                                      .GetFilename()
-                                      .AsCString();
-              errs->Printf("Shared Swift state for %s has developed fatal "
-                           "errors and is being discarded.\n",
-                           module_name);
-              errs->PutCString("REPL definitions and persistent names/types "
-                               "will be lost.\n\n");
-              errs->Flush();
-            }
-          }
-
-          m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
-          type_system_or_err =
-              m_scratch_type_system_map.GetTypeSystemForLanguage(
-                  language, this, create_on_demand, compiler_options);
-          if (!type_system_or_err)
-            return type_system_or_err.takeError();
-
-          if (auto *new_swift_scratch_ctx =
-                  llvm::dyn_cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
-                      type_system_or_err->get())) {
-            auto report_error = [&](std::string message) {
-              m_cant_make_scratch_type_system[language] = true;
-              m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
-              type_system_or_err = llvm::make_error<llvm::StringError>(
-                  message, llvm::inconvertibleErrorCode());
-            };
-            auto *new_swift_ast_ctx = new_swift_scratch_ctx->GetSwiftASTContext(
-                SymbolContext(GetExecutableModule()));
-            if (!new_swift_ast_ctx)
-              report_error("Failed to construct SwiftASTContextForExpressions");
-            else if (new_swift_ast_ctx->HasFatalErrors()) {
-              DiagnosticManager diag_mgr;
-              new_swift_ast_ctx->PrintDiagnostics(diag_mgr);
-              std::string error_diagnostics = diag_mgr.GetString();
-              if (StreamSP error_stream_sp =
-                      GetDebugger().GetAsyncErrorStream()) {
-                error_stream_sp->PutCString(
-                    "Can't construct shared Swift state "
-                    "for this process after repeated "
-                    "attempts.\n");
-                error_stream_sp->PutCString("Giving up.  Fatal errors:\n");
-                error_stream_sp->PutCString(error_diagnostics.c_str());
-                error_stream_sp->Flush();
-              }
-              report_error(error_diagnostics);
-            }
-          }
-        }
-      }
-    } else if (create_on_demand) {
-      if (StreamSP error_stream_sp = GetDebugger().GetAsyncErrorStream()) {
-        auto module = GetExecutableModule();
-        const char *module_name = "[no executable module]";
-        if (module)
-          module_name = GetExecutableModule()
-                            ->GetPlatformFileSpec()
-                            .GetFilename()
-                            .AsCString();
-        error_stream_sp->Printf(
-            "Shared Swift state for %s could not be initialized.\n",
-            module_name);
-        error_stream_sp->PutCString(
-            "The REPL and expressions are unavailable.\n");
-        error_stream_sp->Flush();
-      }
-    }
-  }
-#endif // LLDB_ENABLE_SWIFT
   return type_system_or_err;
 }
 
@@ -2895,7 +2790,7 @@ Target::GetSwiftPersistentExpressionState(ExecutionContextScope &exe_scope) {
   if (!maybe_swift_ast_context)
     return nullptr;
   return (SwiftPersistentExpressionState *)
-      maybe_swift_ast_context->get()->GetPersistentExpressionState();
+      maybe_swift_ast_context->GetPersistentExpressionState();
 }
 #endif // LLDB_ENABLE_SWIFT
 
@@ -2991,122 +2886,46 @@ Target::CreateUtilityFunction(std::string expression, std::string name,
 }
 
 #ifdef LLDB_ENABLE_SWIFT
-std::optional<SwiftScratchContextReader>
+TypeSystemSwiftTypeRefForExpressionsSP
 Target::GetSwiftScratchContext(Status &error, ExecutionContextScope &exe_scope,
                                bool create_on_demand, bool for_playground) {
-  Log *log = GetLog(LLDBLog::Target | LLDBLog::Types | LLDBLog::Expressions);
   LLDB_SCOPED_TIMER();
 
   SymbolContext sc;
-  Module *lldb_module = nullptr;
   if (!for_playground)
-    if (lldb::StackFrameSP stack_frame = exe_scope.CalculateStackFrame()) {
+    if (lldb::StackFrameSP stack_frame = exe_scope.CalculateStackFrame())
       sc = stack_frame->GetSymbolContext(lldb::eSymbolContextEverything);
-      lldb_module = sc.module_sp.get();
-    }
   if (!sc.module_sp)
     sc = SymbolContext(GetExecutableModule());
 
-  auto get_cached_module_ts =
-      [&](Module *lldb_module) -> TypeSystemSwiftTypeRefForExpressions * {
-    ModuleLanguage key = {lldb_module, lldb::eLanguageTypeSwift};
-    auto cached = m_scratch_typesystem_for_module.find(key);
-    if (cached != m_scratch_typesystem_for_module.end())
-      return llvm::cast<TypeSystemSwiftTypeRefForExpressions>(
-          cached->second.get());
-    return nullptr;
-  };
-
-  std::optional<SwiftScratchContextReader> reader;
-  // FIXME: Don't return the project-wide context after requesting the
-  // module-wide one.
-  if (!reader) {
+  TypeSystemSwiftTypeRefForExpressionsSP ts;
+  if (!ts) {
     std::shared_lock<std::shared_mutex> lock(GetSwiftScratchContextLock());
     auto type_system_or_err = GetScratchTypeSystemForLanguage(
         eLanguageTypeSwift, create_on_demand, for_playground ? "" : nullptr);
     if (type_system_or_err) {
-      if (auto *ts = llvm::cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
-              type_system_or_err->get())) {
-        reader = SwiftScratchContextReader(std::move(lock), *ts);
-        if (log)
-          log->PutCString("returned project-wide scratch context");
+      if (auto *ts_ptr =
+              llvm::cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
+                  type_system_or_err->get())) {
+        ts = std::static_pointer_cast<TypeSystemSwiftTypeRefForExpressions>(
+            ts_ptr->shared_from_this());
       }
     } else
       llvm::consumeError(type_system_or_err.takeError());
   }
 
-  if (reader) {
+  if (ts) {
     // Perform compile unit imports.
-    assert(reader->get());
     StackFrameSP frame_sp = exe_scope.CalculateStackFrame();
     if (frame_sp && frame_sp.get()) {
       SymbolContext sc =
           frame_sp->GetSymbolContext(lldb::eSymbolContextEverything);
-      Status status = reader->get()->PerformCompileUnitImports(sc);
+      Status status = ts->PerformCompileUnitImports(sc);
       if (status.Fail())
         Debugger::ReportError(status.AsCString(), GetDebugger().GetID());
     }
   }
-  return reader;
-}
-
-static std::shared_mutex *
-GetSwiftScratchContextMutex(const ExecutionContext *exe_ctx) {
-  if (!exe_ctx)
-    return nullptr;
-  ExecutionContextScope *exe_scope = exe_ctx->GetBestExecutionContextScope();
-  if (auto target = exe_scope->CalculateTarget())
-    return &target->GetSwiftScratchContextLock();
-  return nullptr;
-}
-
-SwiftScratchContextReader::SwiftScratchContextReader(
-    std::shared_lock<std::shared_mutex> &&lock,
-    TypeSystemSwiftTypeRefForExpressions &ts)
-    : m_lock(std::move(lock)), m_ts(&ts) {}
-
-SwiftScratchContextLock::SwiftScratchContextLock(
-    const ExecutionContext *exe_ctx) {
-  if (auto *mutex = GetSwiftScratchContextMutex(exe_ctx)) {
-    std::shared_lock<std::shared_mutex> tmp(*mutex);
-    lock.swap(tmp);
-  }
-}
-
-static std::shared_mutex *
-GetSwiftScratchContextMutex(const ExecutionContextRef *exe_ctx_ref) {
-  if (!exe_ctx_ref)
-    return nullptr;
-  ExecutionContext exe_ctx(exe_ctx_ref);
-  return GetSwiftScratchContextMutex(&exe_ctx);
-}
-
-SwiftScratchContextLock::SwiftScratchContextLock(
-    const ExecutionContextRef *exe_ctx_ref) {
-  if (auto *mutex = GetSwiftScratchContextMutex(exe_ctx_ref)) {
-    std::shared_lock<std::shared_mutex> tmp(*mutex);
-    lock.swap(tmp);
-  }
-}
-
-void Target::DisplayFallbackSwiftContextErrors(
-    SwiftASTContextForExpressions *swift_ast_ctx) {
-  assert(m_use_scratch_typesystem_per_module);
-  StreamSP errs = GetDebugger().GetAsyncErrorStream();
-  if (!errs || m_did_display_scratch_fallback_warning ||
-      !swift_ast_ctx->HasFatalErrors())
-    return;
-
-  m_did_display_scratch_fallback_warning = true;
-  errs->Printf(
-      "warning: Swift error in fallback scratch context: %s\n\nnote: This "
-      "error message is displayed only once. If the error displayed above is "
-      "due to conflicting search paths to Clang modules in different images of "
-      "the debugged executable, this can slow down debugging of Swift code "
-      "significantly, since a fresh Swift context has to be created every time "
-      "a conflict is encountered.\n\n",
-      swift_ast_ctx->GetFatalErrors().AsCString("unknown error"));
-  errs->Flush();
+  return ts;
 }
 
 bool Target::IsSwiftREPL() {
