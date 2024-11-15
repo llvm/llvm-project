@@ -11,13 +11,13 @@ define <8 x i7> @vssub_vv_v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 zeroe
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vadd.vv v9, v9, v9
-; CHECK-NEXT:    vsra.vi v9, v9, 1
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
+; CHECK-NEXT:    li a1, 63
+; CHECK-NEXT:    vsra.vi v9, v9, 1
 ; CHECK-NEXT:    vsra.vi v8, v8, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vsub.vv v8, v8, v9, v0.t
-; CHECK-NEXT:    li a0, 63
-; CHECK-NEXT:    vmin.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    vmin.vx v8, v8, a1, v0.t
 ; CHECK-NEXT:    li a0, 192
 ; CHECK-NEXT:    vmax.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
@@ -386,12 +386,12 @@ define <256 x i8> @vssub_vi_v258i8(<256 x i8> %va, <256 x i1> %m, i32 zeroext %e
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    li a2, 128
+; CHECK-NEXT:    addi a3, a1, -128
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a0)
-; CHECK-NEXT:    addi a0, a1, -128
-; CHECK-NEXT:    sltu a3, a1, a0
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a3, a3, a0
+; CHECK-NEXT:    sltu a0, a1, a3
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    and a3, a0, a3
 ; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
 ; CHECK-NEXT:    vssub.vx v16, v16, a0, v0.t
