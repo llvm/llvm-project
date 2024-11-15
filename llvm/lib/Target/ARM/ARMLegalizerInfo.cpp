@@ -472,8 +472,7 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     // To get the default FP mode all control bits are cleared:
     // FPSCR = FPSCR & (FPStatusBits | FPReservedBits)
     LLT FPEnvTy = LLT::scalar(32);
-    auto FPEnv = MRI.createGenericVirtualRegister(FPEnvTy);
-    MIRBuilder.buildGetFPEnv(FPEnv);
+    auto FPEnv = MIRBuilder.buildGetFPEnv(FPEnvTy);
     auto NotModeBitMask = MIRBuilder.buildConstant(
         FPEnvTy, ARM::FPStatusBits | ARM::FPReservedBits);
     auto NewFPSCR = MIRBuilder.buildAnd(FPEnvTy, FPEnv, NotModeBitMask);
