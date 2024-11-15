@@ -510,8 +510,7 @@ bool RISCVTargetInfo::validateGlobalRegisterVariable(
 }
 
 bool RISCVTargetInfo::validateCpuIs(StringRef CPUName) const {
-  llvm::Triple Triple = getTriple();
-  assert(Triple.isOSLinux() &&
+  assert(getTriple().isOSLinux() &&
          "__builtin_cpu_is() is only supported for Linux.");
 
   return llvm::RISCV::hasValidCPUModel(CPUName);

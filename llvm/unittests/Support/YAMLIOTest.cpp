@@ -3366,15 +3366,6 @@ struct FixedArray {
   int values[4];
 };
 
-struct StdArray {
-  StdArray() {
-    // Initialize to int max as a sentinel value.
-    for (auto &v : values)
-      v = std::numeric_limits<int>::max();
-  }
-  std::array<int, 4> values;
-};
-
 namespace llvm {
 namespace yaml {
 template <> struct MappingTraits<FixedArray> {
@@ -3383,21 +3374,11 @@ template <> struct MappingTraits<FixedArray> {
     io.mapRequired("Values", array);
   }
 };
-template <> struct MappingTraits<StdArray> {
-  static void mapping(IO &io, StdArray &st) {
-    io.mapRequired("Values", st.values);
-  }
-};
 } // namespace yaml
 } // namespace llvm
 
-using TestTypes = ::testing::Types<FixedArray, StdArray>;
-
-template <typename T> class YAMLIO : public testing::Test {};
-TYPED_TEST_SUITE(YAMLIO, TestTypes, );
-
-TYPED_TEST(YAMLIO, FixedSizeArray) {
-  TypeParam faval;
+TEST(YAMLIO, FixedSizeArray) {
+  FixedArray faval;
   Input yin("---\nValues:  [ 1, 2, 3, 4 ]\n...\n");
   yin >> faval;
 
@@ -3419,9 +3400,9 @@ TYPED_TEST(YAMLIO, FixedSizeArray) {
   ASSERT_EQ(serialized, expected);
 }
 
-TYPED_TEST(YAMLIO, FixedSizeArrayMismatch) {
+TEST(YAMLIO, FixedSizeArrayMismatch) {
   {
-    TypeParam faval;
+    FixedArray faval;
     Input yin("---\nValues:  [ 1, 2, 3 ]\n...\n");
     yin >> faval;
 
@@ -3434,7 +3415,7 @@ TYPED_TEST(YAMLIO, FixedSizeArrayMismatch) {
   }
 
   {
-    TypeParam faval;
+    FixedArray faval;
     Input yin("---\nValues:  [ 1, 2, 3, 4, 5 ]\n...\n");
     yin >> faval;
 
