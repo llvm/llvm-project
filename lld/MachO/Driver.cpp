@@ -1328,20 +1328,22 @@ static void codegenDataGenerate() {
   OutlinedHashTreeRecord globalOutlineRecord;
   StableFunctionMapRecord globalMergeRecord;
   for (ConcatInputSection *isec : inputSections) {
-    if (isec->getSegName() == segment_names::data &&
-        isec->getName() == section_names::outlinedHashTree) {
+    if (isec->getSegName() != segment_names::data)
+      continue;
+    if (isec->getName() == section_names::outlinedHashTree) {
       // Read outlined hash tree from each section.
       OutlinedHashTreeRecord localOutlineRecord;
+      // Use a pointer to allow modification by the function.
       auto *data = isec->data.data();
       localOutlineRecord.deserialize(data);
 
       // Merge it to the global hash tree.
       globalOutlineRecord.merge(localOutlineRecord);
     }
-    if (isec->getSegName() == segment_names::data &&
-        isec->getName() == section_names::functionmap) {
+    if (isec->getName() == section_names::functionMap) {
       // Read stable functions from each section.
       StableFunctionMapRecord localMergeRecord;
+      // Use a pointer to allow modification by the function.
       auto *data = isec->data.data();
       localMergeRecord.deserialize(data);
 
