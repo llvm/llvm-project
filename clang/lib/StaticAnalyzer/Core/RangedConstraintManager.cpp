@@ -23,14 +23,7 @@ RangedConstraintManager::~RangedConstraintManager() {}
 ProgramStateRef RangedConstraintManager::assumeSym(ProgramStateRef State,
                                                    SymbolRef Sym,
                                                    bool Assumption) {
-  SVal SimplifiedVal = simplifyToSVal(State, Sym);
-  if (SimplifiedVal.isConstant()) {
-    bool Feasible = SimplifiedVal.isZeroConstant() != Assumption;
-    return Feasible ? State : nullptr;
-  }
-
-  if (SymbolRef SimplifiedSym = SimplifiedVal.getAsSymbol())
-    Sym = SimplifiedSym;
+  Sym = simplify(State, Sym);
 
   // Handle SymbolData.
   if (isa<SymbolData>(Sym))
