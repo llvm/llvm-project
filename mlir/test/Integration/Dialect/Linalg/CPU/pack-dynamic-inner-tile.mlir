@@ -1,6 +1,6 @@
 // DEFINE: %{compile} =  mlir-opt %s \
 // DEFINE: -transform-interpreter -test-transform-dialect-erase-schedule |\
-// DEFINE:  mlir-opt --test-linalg-transform-patterns="test-generalize-tensor-pack"\
+// DEFINE:  mlir-opt --test-linalg-transform-patterns="test-decompose-tensor-pack"\
 // DEFINE:    --test-transform-dialect-erase-schedule \
 // DEFINE:    -one-shot-bufferize="bufferize-function-boundaries" \
 // DEFINE:    -buffer-deallocation-pipeline="private-function-dynamic-ownership" \
