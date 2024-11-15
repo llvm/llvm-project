@@ -13,6 +13,7 @@
 #include "llvm/IR/Type.h"
 #include "LLVMContextImpl.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -58,14 +59,17 @@ bool Type::isIntegerTy(unsigned Bitwidth) const {
   return isIntegerTy() && cast<IntegerType>(this)->getBitWidth() == Bitwidth;
 }
 
-bool Type::isScalableTy() const {
+bool Type::isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const {
   if (const auto *ATy = dyn_cast<ArrayType>(this))
-    return ATy->getElementType()->isScalableTy();
-  if (const auto *STy = dyn_cast<StructType>(this)) {
-    SmallPtrSet<Type *, 4> Visited;
-    return STy->containsScalableVectorType(&Visited);
-  }
+    return ATy->getElementType()->isScalableTy(Visited);
+  if (const auto *STy = dyn_cast<StructType>(this))
+    return STy->isScalableTy(Visited);
   return getTypeID() == ScalableVectorTyID || isScalableTargetExtTy();
+}
+
+bool Type::isScalableTy() const {
+  SmallPtrSet<const Type *, 4> Visited;
+  return isScalableTy(Visited);
 }
 
 const fltSemantics &Type::getFltSemantics() const {
@@ -394,29 +398,21 @@ StructType *StructType::get(LLVMContext &Context, ArrayRef<Type*> ETypes,
   return ST;
 }
 
-bool StructType::containsScalableVectorType(
-    SmallPtrSetImpl<Type *> *Visited) const {
+bool StructType::isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const {
   if ((getSubclassData() & SCDB_ContainsScalableVector) != 0)
     return true;
 
   if ((getSubclassData() & SCDB_NotContainsScalableVector) != 0)
     return false;
 
-  if (Visited && !Visited->insert(const_cast<StructType *>(this)).second)
+  if (!Visited.insert(this).second)
     return false;
 
   for (Type *Ty : elements()) {
-    if (isa<ScalableVectorType>(Ty)) {
+    if (Ty->isScalableTy(Visited)) {
       const_cast<StructType *>(this)->setSubclassData(
           getSubclassData() | SCDB_ContainsScalableVector);
       return true;
-    }
-    if (auto *STy = dyn_cast<StructType>(Ty)) {
-      if (STy->containsScalableVectorType(Visited)) {
-        const_cast<StructType *>(this)->setSubclassData(
-            getSubclassData() | SCDB_ContainsScalableVector);
-        return true;
-      }
     }
   }
 
@@ -441,20 +437,37 @@ bool StructType::containsHomogeneousTypes() const {
 }
 
 void StructType::setBody(ArrayRef<Type*> Elements, bool isPacked) {
+  cantFail(setBodyOrError(Elements, isPacked));
+}
+
+Error StructType::setBodyOrError(ArrayRef<Type *> Elements, bool isPacked) {
   assert(isOpaque() && "Struct body already set!");
+
+  if (auto E = checkBody(Elements))
+    return E;
 
   setSubclassData(getSubclassData() | SCDB_HasBody);
   if (isPacked)
     setSubclassData(getSubclassData() | SCDB_Packed);
 
   NumContainedTys = Elements.size();
+  ContainedTys = Elements.empty()
+                     ? nullptr
+                     : Elements.copy(getContext().pImpl->Alloc).data();
 
-  if (Elements.empty()) {
-    ContainedTys = nullptr;
-    return;
+  return Error::success();
+}
+
+Error StructType::checkBody(ArrayRef<Type *> Elements) {
+  SmallSetVector<Type *, 4> Worklist(Elements.begin(), Elements.end());
+  for (unsigned I = 0; I < Worklist.size(); ++I) {
+    Type *Ty = Worklist[I];
+    if (Ty == this)
+      return createStringError(Twine("identified structure type '") +
+                               getName() + "' is recursive");
+    Worklist.insert(Ty->subtype_begin(), Ty->subtype_end());
   }
-
-  ContainedTys = Elements.copy(getContext().pImpl->Alloc).data();
+  return Error::success();
 }
 
 void StructType::setName(StringRef Name) {
@@ -839,6 +852,14 @@ Expected<TargetExtType *> TargetExtType::checkParams(TargetExtType *TTy) {
         "target extension type riscv.vector.tuple should have one "
         "type parameter and one integer parameter");
 
+  // Opaque types in the AMDGPU name space.
+  if (TTy->Name == "amdgcn.named.barrier" &&
+      (TTy->getNumTypeParameters() != 0 || TTy->getNumIntParameters() != 1)) {
+    return createStringError("target extension type amdgcn.named.barrier "
+                             "should have no type parameters "
+                             "and one integer parameter");
+  }
+
   return TTy;
 }
 
@@ -883,6 +904,12 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   // DirectX resources
   if (Name.starts_with("dx."))
     return TargetTypeInfo(PointerType::get(C, 0));
+
+  // Opaque types in the AMDGPU name space.
+  if (Name == "amdgcn.named.barrier") {
+    return TargetTypeInfo(FixedVectorType::get(Type::getInt32Ty(C), 4),
+                          TargetExtType::CanBeGlobal);
+  }
 
   return TargetTypeInfo(Type::getVoidTy(C));
 }

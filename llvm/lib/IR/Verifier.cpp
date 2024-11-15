@@ -53,13 +53,11 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -2235,9 +2233,9 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
   }
 
   Check(!(Attrs.hasFnAttr(Attribute::SanitizeRealtime) &&
-          Attrs.hasFnAttr(Attribute::SanitizeRealtimeUnsafe)),
+          Attrs.hasFnAttr(Attribute::SanitizeRealtimeBlocking)),
         "Attributes "
-        "'sanitize_realtime and sanitize_realtime_unsafe' are incompatible!",
+        "'sanitize_realtime and sanitize_realtime_blocking' are incompatible!",
         V);
 
   if (Attrs.hasFnAttr(Attribute::OptimizeForDebugging)) {
@@ -4107,8 +4105,7 @@ void Verifier::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   Check(GEP.getSourceElementType()->isSized(), "GEP into unsized type!", &GEP);
 
   if (auto *STy = dyn_cast<StructType>(GEP.getSourceElementType())) {
-    SmallPtrSet<Type *, 4> Visited;
-    Check(!STy->containsScalableVectorType(&Visited),
+    Check(!STy->isScalableTy(),
           "getelementptr cannot target structure that contains scalable vector"
           "type",
           &GEP);
@@ -4122,8 +4119,9 @@ void Verifier::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       GetElementPtrInst::getIndexedType(GEP.getSourceElementType(), Idxs);
   Check(ElTy, "Invalid indices for GEP pointer type!", &GEP);
 
-  Check(GEP.getType()->isPtrOrPtrVectorTy() &&
-            GEP.getResultElementType() == ElTy,
+  PointerType *PtrTy = dyn_cast<PointerType>(GEP.getType()->getScalarType());
+
+  Check(PtrTy && GEP.getResultElementType() == ElTy,
         "GEP is not of right type for indices!", &GEP, ElTy);
 
   if (auto *GEPVTy = dyn_cast<VectorType>(GEP.getType())) {
@@ -4145,10 +4143,8 @@ void Verifier::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     }
   }
 
-  if (auto *PTy = dyn_cast<PointerType>(GEP.getType())) {
-    Check(GEP.getAddressSpace() == PTy->getAddressSpace(),
-          "GEP address space doesn't match type", &GEP);
-  }
+  Check(GEP.getAddressSpace() == PtrTy->getAddressSpace(),
+        "GEP address space doesn't match type", &GEP);
 
   visitInstruction(GEP);
 }
@@ -4999,14 +4995,35 @@ void Verifier::visitMemProfMetadata(Instruction &I, MDNode *MD) {
     MDNode *StackMD = dyn_cast<MDNode>(MIB->getOperand(0));
     visitCallStackMetadata(StackMD);
 
-    // Check that remaining operands, except possibly the last, are MDString.
-    Check(llvm::all_of(MIB->operands().drop_front().drop_back(),
-                       [](const MDOperand &Op) { return isa<MDString>(Op); }),
-          "Not all !memprof MemInfoBlock operands 1 to N-1 are MDString", MIB);
-    // The last operand might be the total profiled size so can be an integer.
-    auto &LastOperand = MIB->operands().back();
-    Check(isa<MDString>(LastOperand) || mdconst::hasa<ConstantInt>(LastOperand),
-          "Last !memprof MemInfoBlock operand not MDString or int", MIB);
+    // The next set of 1 or more operands should be MDString.
+    unsigned I = 1;
+    for (; I < MIB->getNumOperands(); ++I) {
+      if (!isa<MDString>(MIB->getOperand(I))) {
+        Check(I > 1,
+              "!memprof MemInfoBlock second operand should be an MDString",
+              MIB);
+        break;
+      }
+    }
+
+    // Any remaining should be MDNode that are pairs of integers
+    for (; I < MIB->getNumOperands(); ++I) {
+      MDNode *OpNode = dyn_cast<MDNode>(MIB->getOperand(I));
+      Check(OpNode, "Not all !memprof MemInfoBlock operands 2 to N are MDNode",
+            MIB);
+      Check(OpNode->getNumOperands() == 2,
+            "Not all !memprof MemInfoBlock operands 2 to N are MDNode with 2 "
+            "operands",
+            MIB);
+      // Check that all of Op's operands are ConstantInt.
+      Check(llvm::all_of(OpNode->operands(),
+                         [](const MDOperand &Op) {
+                           return mdconst::hasa<ConstantInt>(Op);
+                         }),
+            "Not all !memprof MemInfoBlock operands 2 to N are MDNode with "
+            "ConstantInt operands",
+            MIB);
+    }
   }
 }
 
@@ -5523,7 +5540,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::memcpy_inline:
   case Intrinsic::memmove:
   case Intrinsic::memset:
-  case Intrinsic::memset_inline: {
+  case Intrinsic::memset_inline:
+  case Intrinsic::experimental_memset_pattern: {
     break;
   }
   case Intrinsic::memcpy_element_unordered_atomic:
@@ -6151,6 +6169,31 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
               VecTy->getScalarSizeInBits() >= 8,
           "stepvector only supported for vectors of integers "
           "with a bitwidth of at least 8.",
+          &Call);
+    break;
+  }
+  case Intrinsic::experimental_vector_match: {
+    Value *Op1 = Call.getArgOperand(0);
+    Value *Op2 = Call.getArgOperand(1);
+    Value *Mask = Call.getArgOperand(2);
+
+    VectorType *Op1Ty = dyn_cast<VectorType>(Op1->getType());
+    VectorType *Op2Ty = dyn_cast<VectorType>(Op2->getType());
+    VectorType *MaskTy = dyn_cast<VectorType>(Mask->getType());
+
+    Check(Op1Ty && Op2Ty && MaskTy, "Operands must be vectors.", &Call);
+    Check(isa<FixedVectorType>(Op2Ty),
+          "Second operand must be a fixed length vector.", &Call);
+    Check(Op1Ty->getElementType()->isIntegerTy(),
+          "First operand must be a vector of integers.", &Call);
+    Check(Op1Ty->getElementType() == Op2Ty->getElementType(),
+          "First two operands must have the same element type.", &Call);
+    Check(Op1Ty->getElementCount() == MaskTy->getElementCount(),
+          "First operand and mask must have the same number of elements.",
+          &Call);
+    Check(MaskTy->getElementType()->isIntegerTy(1),
+          "Mask must be a vector of i1's.", &Call);
+    Check(Call.getType() == MaskTy, "Return type must match the mask type.",
           &Call);
     break;
   }

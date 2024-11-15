@@ -717,9 +717,9 @@ bool Sema::handlerCanCatch(QualType HandlerType, QualType ExceptionType) {
     Qualifiers EQuals, HQuals;
     ExceptionType = Context.getUnqualifiedArrayType(
         ExceptionType->getPointeeType(), EQuals);
-    HandlerType = Context.getUnqualifiedArrayType(
-        HandlerType->getPointeeType(), HQuals);
-    if (!HQuals.compatiblyIncludes(EQuals))
+    HandlerType =
+        Context.getUnqualifiedArrayType(HandlerType->getPointeeType(), HQuals);
+    if (!HQuals.compatiblyIncludes(EQuals, getASTContext()))
       return false;
 
     if (HandlerType->isVoidType() && ExceptionType->isObjectType())
@@ -1406,6 +1406,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
     // Most statements can throw if any substatement can throw.
   case Stmt::OpenACCComputeConstructClass:
   case Stmt::OpenACCLoopConstructClass:
+  case Stmt::OpenACCCombinedConstructClass:
   case Stmt::AttributedStmtClass:
   case Stmt::BreakStmtClass:
   case Stmt::CapturedStmtClass:

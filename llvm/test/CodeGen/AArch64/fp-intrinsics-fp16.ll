@@ -595,7 +595,7 @@ define i32 @lrint_f16(half %x) #0 {
 ; CHECK-FP16-NEXT:    frintx h0, h0
 ; CHECK-FP16-NEXT:    fcvtzs w0, h0
 ; CHECK-FP16-NEXT:    ret
-  %val = call i32 @llvm.experimental.constrained.lrint.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %val = call i32 @llvm.experimental.constrained.lrint.i32.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret i32 %val
 }
 
@@ -612,7 +612,7 @@ define i64 @llrint_f16(half %x) #0 {
 ; CHECK-FP16-NEXT:    frintx h0, h0
 ; CHECK-FP16-NEXT:    fcvtzs x0, h0
 ; CHECK-FP16-NEXT:    ret
-  %val = call i64 @llvm.experimental.constrained.llrint.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %val = call i64 @llvm.experimental.constrained.llrint.i64.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret i64 %val
 }
 
@@ -693,7 +693,7 @@ define i32 @lround_f16(half %x) #0 {
 ; CHECK-FP16:       // %bb.0:
 ; CHECK-FP16-NEXT:    fcvtas w0, h0
 ; CHECK-FP16-NEXT:    ret
-  %val = call i32 @llvm.experimental.constrained.lround.f16(half %x, metadata !"fpexcept.strict") #0
+  %val = call i32 @llvm.experimental.constrained.lround.i32.f16(half %x, metadata !"fpexcept.strict") #0
   ret i32 %val
 }
 
@@ -708,7 +708,7 @@ define i64 @llround_f16(half %x) #0 {
 ; CHECK-FP16:       // %bb.0:
 ; CHECK-FP16-NEXT:    fcvtas x0, h0
 ; CHECK-FP16-NEXT:    ret
-  %val = call i64 @llvm.experimental.constrained.llround.f16(half %x, metadata !"fpexcept.strict") #0
+  %val = call i64 @llvm.experimental.constrained.llround.i64.f16(half %x, metadata !"fpexcept.strict") #0
   ret i64 %val
 }
 
@@ -1277,14 +1277,14 @@ declare half @llvm.experimental.constrained.exp.f16(half, metadata, metadata)
 declare half @llvm.experimental.constrained.exp2.f16(half, metadata, metadata)
 declare half @llvm.experimental.constrained.rint.f16(half, metadata, metadata)
 declare half @llvm.experimental.constrained.nearbyint.f16(half, metadata, metadata)
-declare i32 @llvm.experimental.constrained.lrint.f16(half, metadata, metadata)
-declare i64 @llvm.experimental.constrained.llrint.f16(half, metadata, metadata)
+declare i32 @llvm.experimental.constrained.lrint.i32.f16(half, metadata, metadata)
+declare i64 @llvm.experimental.constrained.llrint.i64.f16(half, metadata, metadata)
 declare half @llvm.experimental.constrained.maxnum.f16(half, half, metadata)
 declare half @llvm.experimental.constrained.minnum.f16(half, half, metadata)
 declare half @llvm.experimental.constrained.ceil.f16(half, metadata)
 declare half @llvm.experimental.constrained.floor.f16(half, metadata)
-declare i32 @llvm.experimental.constrained.lround.f16(half, metadata)
-declare i64 @llvm.experimental.constrained.llround.f16(half, metadata)
+declare i32 @llvm.experimental.constrained.lround.i32.f16(half, metadata)
+declare i64 @llvm.experimental.constrained.llround.i64.f16(half, metadata)
 declare half @llvm.experimental.constrained.round.f16(half, metadata)
 declare half @llvm.experimental.constrained.roundeven.f16(half, metadata)
 declare half @llvm.experimental.constrained.trunc.f16(half, metadata)

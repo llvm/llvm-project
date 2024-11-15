@@ -371,7 +371,7 @@ bool DummyDataObject::IsCompatibleWith(const DummyDataObject &actual,
   }
   if (!attrs.test(Attr::Value) &&
       !common::AreCompatibleCUDADataAttrs(cudaDataAttr, actual.cudaDataAttr,
-          ignoreTKR,
+          ignoreTKR, warning,
           /*allowUnifiedMatchingRule=*/false)) {
     if (whyNot) {
       *whyNot = "incompatible CUDA data attributes";
@@ -1771,7 +1771,7 @@ bool DistinguishUtils::Distinguishable(
       x.intent != common::Intent::In) {
     return true;
   } else if (!common::AreCompatibleCUDADataAttrs(x.cudaDataAttr, y.cudaDataAttr,
-                 x.ignoreTKR | y.ignoreTKR,
+                 x.ignoreTKR | y.ignoreTKR, nullptr,
                  /*allowUnifiedMatchingRule=*/false)) {
     return true;
   } else if (features_.IsEnabled(

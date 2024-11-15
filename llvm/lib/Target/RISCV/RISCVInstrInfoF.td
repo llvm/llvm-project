@@ -134,6 +134,8 @@ def frmarg : Operand<XLenVT> {
   let ParserMatchClass = FRMArg;
   let PrintMethod = "printFRMArg";
   let DecoderMethod = "decodeFRMArg";
+  let OperandType = "OPERAND_FRMARG";
+  let OperandNamespace = "RISCVOp";
 }
 
 // Variants of the rounding mode operand that default to 'rne'. This is used
@@ -154,6 +156,8 @@ def frmarglegacy : Operand<XLenVT> {
   let ParserMatchClass = FRMArgLegacy;
   let PrintMethod = "printFRMArgLegacy";
   let DecoderMethod = "decodeFRMArg";
+  let OperandType = "OPERAND_FRMARG";
+  let OperandNamespace = "RISCVOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -716,7 +720,7 @@ def : Pat<(f32 (bitconvert (i32 GPR:$rs1))), (EXTRACT_SUBREG GPR:$rs1, sub_32)>;
 def : Pat<(i32 (bitconvert FPR32INX:$rs1)), (INSERT_SUBREG (XLenVT (IMPLICIT_DEF)), FPR32INX:$rs1, sub_32)>;
 } // Predicates = [HasStdExtZfinx]
 
-let Predicates = [HasStdExtF] in {
+let Predicates = [HasStdExtF, IsRV32] in {
 // float->[u]int. Round-to-zero must be used.
 def : Pat<(i32 (any_fp_to_sint FPR32:$rs1)), (FCVT_W_S $rs1, FRM_RTZ)>;
 def : Pat<(i32 (any_fp_to_uint FPR32:$rs1)), (FCVT_WU_S $rs1, FRM_RTZ)>;
@@ -734,9 +738,9 @@ def : Pat<(i32 (any_lround FPR32:$rs1)), (FCVT_W_S $rs1, FRM_RMM)>;
 // [u]int->float. Match GCC and default to using dynamic rounding mode.
 def : Pat<(any_sint_to_fp (i32 GPR:$rs1)), (FCVT_S_W $rs1, FRM_DYN)>;
 def : Pat<(any_uint_to_fp (i32 GPR:$rs1)), (FCVT_S_WU $rs1, FRM_DYN)>;
-} // Predicates = [HasStdExtF]
+} // Predicates = [HasStdExtF, IsRV32]
 
-let Predicates = [HasStdExtZfinx] in {
+let Predicates = [HasStdExtZfinx, IsRV32] in {
 // float->[u]int. Round-to-zero must be used.
 def : Pat<(i32 (any_fp_to_sint FPR32INX:$rs1)), (FCVT_W_S_INX $rs1, FRM_RTZ)>;
 def : Pat<(i32 (any_fp_to_uint FPR32INX:$rs1)), (FCVT_WU_S_INX $rs1, FRM_RTZ)>;
@@ -754,7 +758,7 @@ def : Pat<(i32 (any_lround FPR32INX:$rs1)), (FCVT_W_S_INX $rs1, FRM_RMM)>;
 // [u]int->float. Match GCC and default to using dynamic rounding mode.
 def : Pat<(any_sint_to_fp (i32 GPR:$rs1)), (FCVT_S_W_INX $rs1, FRM_DYN)>;
 def : Pat<(any_uint_to_fp (i32 GPR:$rs1)), (FCVT_S_WU_INX $rs1, FRM_DYN)>;
-} // Predicates = [HasStdExtZfinx]
+} // Predicates = [HasStdExtZfinx, IsRV32]
 
 let Predicates = [HasStdExtF, IsRV64] in {
 // Moves (no conversion)

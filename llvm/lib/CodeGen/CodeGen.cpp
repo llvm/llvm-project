@@ -38,7 +38,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeEarlyIfConverterLegacyPass(Registry);
   initializeEarlyIfPredicatorPass(Registry);
   initializeEarlyMachineLICMPass(Registry);
-  initializeEarlyTailDuplicatePass(Registry);
+  initializeEarlyTailDuplicateLegacyPass(Registry);
   initializeExpandLargeDivRemLegacyPassPass(Registry);
   initializeExpandLargeFpConvertLegacyPassPass(Registry);
   initializeExpandMemCmpLegacyPassPass(Registry);
@@ -113,8 +113,8 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeRABasicPass(Registry);
   initializeRAGreedyPass(Registry);
   initializeRegAllocFastPass(Registry);
-  initializeRegUsageInfoCollectorPass(Registry);
-  initializeRegUsageInfoPropagationPass(Registry);
+  initializeRegUsageInfoCollectorLegacyPass(Registry);
+  initializeRegUsageInfoPropagationLegacyPass(Registry);
   initializeRegisterCoalescerPass(Registry);
   initializeRemoveLoadsIntoFakeUsesPass(Registry);
   initializeRemoveRedundantDebugValuesPass(Registry);
@@ -131,7 +131,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeStackProtectorPass(Registry);
   initializeStackSlotColoringPass(Registry);
   initializeStripDebugMachineModulePass(Registry);
-  initializeTailDuplicatePass(Registry);
+  initializeTailDuplicateLegacyPass(Registry);
   initializeTargetPassConfigPass(Registry);
   initializeTwoAddressInstructionLegacyPassPass(Registry);
   initializeTypePromotionLegacyPass(Registry);

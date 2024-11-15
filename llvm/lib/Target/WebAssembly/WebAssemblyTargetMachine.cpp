@@ -21,7 +21,6 @@
 #include "WebAssemblyTargetTransformInfo.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -115,7 +114,7 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, std::optional<Reloc::Model> RM,
     std::optional<CodeModel::Model> CM, CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(
+    : CodeGenTargetMachineImpl(
           T,
           TT.isArch64Bit()
               ? (TT.isOSEmscripten() ? "e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-"
@@ -233,13 +232,30 @@ public:
 
 private:
   FeatureBitset coalesceFeatures(const Module &M) {
-    FeatureBitset Features =
-        WasmTM
-            ->getSubtargetImpl(std::string(WasmTM->getTargetCPU()),
-                               std::string(WasmTM->getTargetFeatureString()))
-            ->getFeatureBits();
-    for (auto &F : M)
+    // Union the features of all defined functions. Start with an empty set, so
+    // that if a feature is disabled in every function, we'll compute it as
+    // disabled. If any function lacks a target-features attribute, it'll
+    // default to the target CPU from the `TargetMachine`.
+    FeatureBitset Features;
+    bool AnyDefinedFuncs = false;
+    for (auto &F : M) {
+      if (F.isDeclaration())
+        continue;
+
       Features |= WasmTM->getSubtargetImpl(F)->getFeatureBits();
+      AnyDefinedFuncs = true;
+    }
+
+    // If we have no defined functions, use the target CPU from the
+    // `TargetMachine`.
+    if (!AnyDefinedFuncs) {
+      Features =
+          WasmTM
+              ->getSubtargetImpl(std::string(WasmTM->getTargetCPU()),
+                                 std::string(WasmTM->getTargetFeatureString()))
+              ->getFeatureBits();
+    }
+
     return Features;
   }
 

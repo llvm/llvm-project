@@ -211,7 +211,7 @@ static inline std::string getErrorLoc(Ctx &ctx, const uint8_t *loc) {
 void processArmCmseSymbols(Ctx &);
 
 template <class ELFT> uint32_t calcMipsEFlags(Ctx &);
-uint8_t getMipsFpAbiFlag(uint8_t oldFlag, uint8_t newFlag,
+uint8_t getMipsFpAbiFlag(Ctx &, uint8_t oldFlag, uint8_t newFlag,
                          llvm::StringRef fileName);
 bool isMipsN32Abi(Ctx &, const InputFile &f);
 bool isMicroMips(Ctx &);
@@ -229,7 +229,7 @@ unsigned getPPCDSFormOp(unsigned secondaryOp);
 // offset between GEP and LEP is encoded in a function's st_other flags.
 // This function will return the offset (in bytes) from the global entry-point
 // to the local entry-point.
-unsigned getPPC64GlobalEntryToLocalEntryOffset(uint8_t stOther);
+unsigned getPPC64GlobalEntryToLocalEntryOffset(Ctx &, uint8_t stOther);
 
 // Write a prefixed instruction, which is a 4-byte prefix followed by a 4-byte
 // instruction (regardless of endianness). Therefore, the prefix is always in
@@ -327,6 +327,8 @@ inline uint64_t overwriteULEB128(uint8_t *bufLoc, uint64_t val) {
   *bufLoc = val;
   return val;
 }
+
+const ELFSyncStream &operator<<(const ELFSyncStream &, RelType);
 } // namespace elf
 } // namespace lld
 

@@ -9,8 +9,8 @@
 #ifndef _LIBCPP___COROUTINE_COROUTINE_TRAITS_H
 #define _LIBCPP___COROUTINE_COROUTINE_TRAITS_H
 
-#include <__config>
-#include <__type_traits/void_t.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/void_t.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

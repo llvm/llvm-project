@@ -57,8 +57,7 @@ void SystemZInstPrinterCommon::printOperand(const MCOperand &MO,
     llvm_unreachable("Invalid operand");
 }
 
-void SystemZInstPrinterCommon::printRegName(raw_ostream &O,
-                                            MCRegister Reg) const {
+void SystemZInstPrinterCommon::printRegName(raw_ostream &O, MCRegister Reg) {
   printFormattedRegName(&MAI, Reg, O);
 }
 

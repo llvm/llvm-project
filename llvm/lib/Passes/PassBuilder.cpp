@@ -46,6 +46,7 @@
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/InlineSizeEstimatorAnalysis.h"
 #include "llvm/Analysis/InstCount.h"
+#include "llvm/Analysis/LastRunTrackingAnalysis.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/Lint.h"
@@ -90,6 +91,7 @@
 #include "llvm/CodeGen/FinalizeISel.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GlobalMerge.h"
+#include "llvm/CodeGen/GlobalMergeFunctions.h"
 #include "llvm/CodeGen/HardwareLoops.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
@@ -118,6 +120,9 @@
 #include "llvm/CodeGen/PHIElimination.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/RegAllocFast.h"
+#include "llvm/CodeGen/RegUsageInfoCollector.h"
+#include "llvm/CodeGen/RegUsageInfoPropagate.h"
+#include "llvm/CodeGen/RegisterUsageInfo.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SelectOptimize.h"
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
@@ -125,6 +130,7 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackColoring.h"
 #include "llvm/CodeGen/StackProtector.h"
+#include "llvm/CodeGen/TailDuplication.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TwoAddressInstructionPass.h"
 #include "llvm/CodeGen/TypePromotion.h"
@@ -290,7 +296,6 @@
 #include "llvm/Transforms/Scalar/SpeculativeExecution.h"
 #include "llvm/Transforms/Scalar/StraightLineStrengthReduce.h"
 #include "llvm/Transforms/Scalar/StructurizeCFG.h"
-#include "llvm/Transforms/Scalar/TLSVariableHoist.h"
 #include "llvm/Transforms/Scalar/TailRecursionElimination.h"
 #include "llvm/Transforms/Scalar/WarnMissedTransforms.h"
 #include "llvm/Transforms/Utils/AddDiscriminators.h"
@@ -304,9 +309,9 @@
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/FixIrreducible.h"
 #include "llvm/Transforms/Utils/HelloWorld.h"
+#include "llvm/Transforms/Utils/IRNormalizer.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
 #include "llvm/Transforms/Utils/InstructionNamer.h"
-#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/LCSSA.h"
 #include "llvm/Transforms/Utils/LibCallsShrinkWrap.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
@@ -1175,9 +1180,17 @@ Expected<std::string> parseMemProfUsePassOptions(StringRef Params) {
   return Result;
 }
 
-Expected<bool> parseStructuralHashPrinterPassOptions(StringRef Params) {
-  return PassBuilder::parseSinglePassOption(Params, "detailed",
-                                            "StructuralHashPrinterPass");
+Expected<StructuralHashOptions>
+parseStructuralHashPrinterPassOptions(StringRef Params) {
+  if (Params.empty())
+    return StructuralHashOptions::None;
+  if (Params == "detailed")
+    return StructuralHashOptions::Detailed;
+  if (Params == "call-target-ignored")
+    return StructuralHashOptions::CallTargetIgnored;
+  return make_error<StringError>(
+      formatv("invalid structural hash printer parameter '{0}' ", Params).str(),
+      inconvertibleErrorCode());
 }
 
 Expected<bool> parseWinEHPrepareOptions(StringRef Params) {

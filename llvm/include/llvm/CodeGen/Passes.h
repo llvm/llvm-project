@@ -261,11 +261,11 @@ namespace llvm {
 
   /// TailDuplicate - Duplicate blocks with unconditional branches
   /// into tails of their predecessors.
-  extern char &TailDuplicateID;
+  extern char &TailDuplicateLegacyID;
 
   /// Duplicate blocks with unconditional branches into tails of their
   /// predecessors. Variant that works before register allocation.
-  extern char &EarlyTailDuplicateID;
+  extern char &EarlyTailDuplicateLegacyID;
 
   /// MachineTraceMetrics - This pass computes critical path and CPU resource
   /// usage in an ensemble of traces.
@@ -480,7 +480,8 @@ namespace llvm {
   Pass *createGlobalMergePass(const TargetMachine *TM, unsigned MaximalOffset,
                               bool OnlyOptimizeForSize = false,
                               bool MergeExternalByDefault = false,
-                              bool MergeConstantByDefault = false);
+                              bool MergeConstantByDefault = false,
+                              bool MergeConstAggressiveByDefault = false);
 
   /// This pass splits the stack into a safe stack and an unsafe stack to
   /// protect against stack-based overflow vulnerabilities.
@@ -505,6 +506,9 @@ namespace llvm {
 
   /// This pass frees the memory occupied by the MachineFunction.
   FunctionPass *createFreeMachineFunctionPass();
+
+  /// This pass performs merging similar functions globally.
+  ModulePass *createGlobalMergeFuncPass();
 
   /// This pass performs outlining on machine instructions directly before
   /// printing assembly.

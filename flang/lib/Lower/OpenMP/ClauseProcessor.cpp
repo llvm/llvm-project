@@ -121,22 +121,29 @@ genProcBindKindAttr(fir::FirOpBuilder &firOpBuilder,
 }
 
 static mlir::omp::ClauseTaskDependAttr
-genDependKindAttr(fir::FirOpBuilder &firOpBuilder,
-                  const omp::clause::Depend::TaskDependenceType kind) {
+genDependKindAttr(lower::AbstractConverter &converter,
+                  const omp::clause::DependenceType kind) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::Location currentLocation = converter.getCurrentLocation();
+
   mlir::omp::ClauseTaskDepend pbKind;
   switch (kind) {
-  case omp::clause::Depend::TaskDependenceType::In:
+  case omp::clause::DependenceType::In:
     pbKind = mlir::omp::ClauseTaskDepend::taskdependin;
     break;
-  case omp::clause::Depend::TaskDependenceType::Out:
+  case omp::clause::DependenceType::Out:
     pbKind = mlir::omp::ClauseTaskDepend::taskdependout;
     break;
-  case omp::clause::Depend::TaskDependenceType::Inout:
+  case omp::clause::DependenceType::Inout:
     pbKind = mlir::omp::ClauseTaskDepend::taskdependinout;
     break;
-  case omp::clause::Depend::TaskDependenceType::Mutexinoutset:
-  case omp::clause::Depend::TaskDependenceType::Inoutset:
-  case omp::clause::Depend::TaskDependenceType::Depobj:
+  case omp::clause::DependenceType::Mutexinoutset:
+  case omp::clause::DependenceType::Inoutset:
+    TODO(currentLocation, "INOUTSET and MUTEXINOUTSET are not supported yet");
+    break;
+  case omp::clause::DependenceType::Depobj:
+  case omp::clause::DependenceType::Sink:
+  case omp::clause::DependenceType::Source:
     llvm_unreachable("unhandled parser task dependence type");
     break;
   }
@@ -793,37 +800,43 @@ bool ClauseProcessor::processCopyprivate(
 }
 
 bool ClauseProcessor::processDepend(mlir::omp::DependClauseOps &result) const {
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  auto process = [&](const omp::clause::Depend &clause,
+                     const parser::CharBlock &) {
+    using Depend = omp::clause::Depend;
+    if (!std::holds_alternative<Depend::TaskDep>(clause.u)) {
+      TODO(converter.getCurrentLocation(),
+           "DEPEND clause with SINK or SOURCE is not supported yet");
+    }
+    auto &taskDep = std::get<Depend::TaskDep>(clause.u);
+    auto depType = std::get<clause::DependenceType>(taskDep.t);
+    auto &objects = std::get<omp::ObjectList>(taskDep.t);
 
-  return findRepeatableClause<omp::clause::Depend>(
-      [&](const omp::clause::Depend &clause, const parser::CharBlock &) {
-        using Depend = omp::clause::Depend;
-        assert(std::holds_alternative<Depend::WithLocators>(clause.u) &&
-               "Only the modern form is handled at the moment");
-        auto &modern = std::get<Depend::WithLocators>(clause.u);
-        auto kind = std::get<Depend::TaskDependenceType>(modern.t);
-        auto &objects = std::get<omp::ObjectList>(modern.t);
+    if (std::get<std::optional<omp::clause::Iterator>>(taskDep.t)) {
+      TODO(converter.getCurrentLocation(),
+           "Support for iterator modifiers is not implemented yet");
+    }
+    mlir::omp::ClauseTaskDependAttr dependTypeOperand =
+        genDependKindAttr(converter, depType);
+    result.dependKinds.append(objects.size(), dependTypeOperand);
 
-        mlir::omp::ClauseTaskDependAttr dependTypeOperand =
-            genDependKindAttr(firOpBuilder, kind);
-        result.dependKinds.append(objects.size(), dependTypeOperand);
+    for (const omp::Object &object : objects) {
+      assert(object.ref() && "Expecting designator");
 
-        for (const omp::Object &object : objects) {
-          assert(object.ref() && "Expecting designator");
+      if (evaluate::ExtractSubstring(*object.ref())) {
+        TODO(converter.getCurrentLocation(),
+             "substring not supported for task depend");
+      } else if (evaluate::IsArrayElement(*object.ref())) {
+        TODO(converter.getCurrentLocation(),
+             "array sections not supported for task depend");
+      }
 
-          if (evaluate::ExtractSubstring(*object.ref())) {
-            TODO(converter.getCurrentLocation(),
-                 "substring not supported for task depend");
-          } else if (evaluate::IsArrayElement(*object.ref())) {
-            TODO(converter.getCurrentLocation(),
-                 "array sections not supported for task depend");
-          }
+      semantics::Symbol *sym = object.sym();
+      const mlir::Value variable = converter.getSymbolAddress(*sym);
+      result.dependVars.push_back(variable);
+    }
+  };
 
-          semantics::Symbol *sym = object.sym();
-          const mlir::Value variable = converter.getSymbolAddress(*sym);
-          result.dependVars.push_back(variable);
-        }
-      });
+  return findRepeatableClause<omp::clause::Depend>(process);
 }
 
 bool ClauseProcessor::processHasDeviceAddr(
@@ -1009,16 +1022,22 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
 
   auto callbackFn = [&](const auto &clause, const parser::CharBlock &source) {
     mlir::Location clauseLocation = converter.genLocation(source);
-
+    const auto &[expectation, mapper, iterator, objects] = clause.t;
     // TODO Support motion modifiers: present, mapper, iterator.
+    if (expectation) {
+      TODO(clauseLocation, "PRESENT modifier is not supported yet");
+    } else if (mapper) {
+      TODO(clauseLocation, "Mapper modifier is not supported yet");
+    } else if (iterator) {
+      TODO(clauseLocation, "Iterator modifier is not supported yet");
+    }
     constexpr llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
         std::is_same_v<llvm::remove_cvref_t<decltype(clause)>, omp::clause::To>
             ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO
             : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
 
-    processMapObjects(stmtCtx, clauseLocation, std::get<ObjectList>(clause.t),
-                      mapTypeBits, parentMemberIndices, result.mapVars,
-                      mapSymbols);
+    processMapObjects(stmtCtx, clauseLocation, objects, mapTypeBits,
+                      parentMemberIndices, result.mapVars, mapSymbols);
   };
 
   bool clauseFound = findRepeatableClause<omp::clause::To>(callbackFn);

@@ -37,7 +37,6 @@
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
@@ -400,6 +399,8 @@ namespace {
     SDValue PromoteIntShiftOp(SDValue Op);
     SDValue PromoteExtend(SDValue Op);
     bool PromoteLoad(SDValue Op);
+
+    SDValue foldShiftToAvg(SDNode *N);
 
     SDValue combineMinNumMaxNum(const SDLoc &DL, EVT VT, SDValue LHS,
                                 SDValue RHS, SDValue True, SDValue False,
@@ -1210,7 +1211,7 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
     SDNodeFlags NewFlags;
     if (N0.getOpcode() == ISD::ADD && N0->getFlags().hasNoUnsignedWrap() &&
         Flags.hasNoUnsignedWrap())
-      NewFlags.setNoUnsignedWrap(true);
+      NewFlags |= SDNodeFlags::NoUnsignedWrap;
 
     if (DAG.isConstantIntBuildVectorOrConstantInt(N1)) {
       // Reassociate: (op (op x, c1), c2) -> (op x, (op c1, c2))
@@ -2329,6 +2330,8 @@ static bool isTruncateOf(SelectionDAG &DAG, SDValue N, SDValue &Op,
   if (N->getOpcode() == ISD::TRUNCATE) {
     Op = N->getOperand(0);
     Known = DAG.computeKnownBits(Op);
+    if (N->getFlags().hasNoUnsignedWrap())
+      Known.Zero.setBitsFrom(N.getScalarValueSizeInBits());
     return true;
   }
 
@@ -2892,11 +2895,11 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
         if (N->getFlags().hasNoUnsignedWrap() &&
             N0->getFlags().hasNoUnsignedWrap() &&
             N0.getOperand(0)->getFlags().hasNoUnsignedWrap()) {
-          Flags.setNoUnsignedWrap(true);
+          Flags |= SDNodeFlags::NoUnsignedWrap;
           if (N->getFlags().hasNoSignedWrap() &&
               N0->getFlags().hasNoSignedWrap() &&
               N0.getOperand(0)->getFlags().hasNoSignedWrap())
-            Flags.setNoSignedWrap(true);
+            Flags |= SDNodeFlags::NoSignedWrap;
         }
         SDValue Mul = DAG.getNode(ISD::MUL, SDLoc(N1), VT, A,
                                   DAG.getConstant(CM, DL, VT), Flags);
@@ -2920,12 +2923,12 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
             N0->getFlags().hasNoUnsignedWrap() &&
             OMul->getFlags().hasNoUnsignedWrap() &&
             OMul.getOperand(0)->getFlags().hasNoUnsignedWrap()) {
-          Flags.setNoUnsignedWrap(true);
+          Flags |= SDNodeFlags::NoUnsignedWrap;
           if (N->getFlags().hasNoSignedWrap() &&
               N0->getFlags().hasNoSignedWrap() &&
               OMul->getFlags().hasNoSignedWrap() &&
               OMul.getOperand(0)->getFlags().hasNoSignedWrap())
-            Flags.setNoSignedWrap(true);
+            Flags |= SDNodeFlags::NoSignedWrap;
         }
         SDValue Mul = DAG.getNode(ISD::MUL, SDLoc(N1), VT, A,
                                   DAG.getConstant(CM, DL, VT), Flags);
@@ -2987,11 +2990,8 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
 
   // fold (a+b) -> (a|b) iff a and b share no bits.
   if ((!LegalOperations || TLI.isOperationLegal(ISD::OR, VT)) &&
-      DAG.haveNoCommonBitsSet(N0, N1)) {
-    SDNodeFlags Flags;
-    Flags.setDisjoint(true);
-    return DAG.getNode(ISD::OR, DL, VT, N0, N1, Flags);
-  }
+      DAG.haveNoCommonBitsSet(N0, N1))
+    return DAG.getNode(ISD::OR, DL, VT, N0, N1, SDNodeFlags::Disjoint);
 
   // Fold (add (vscale * C0), (vscale * C1)) to (vscale * (C0 + C1)).
   if (N0.getOpcode() == ISD::VSCALE && N1.getOpcode() == ISD::VSCALE) {
@@ -5354,6 +5354,27 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
           DAG.getNode(ISD::ADD, DL, VT, N0, DAG.getAllOnesConstant(DL, VT)));
   }
 
+  // Fold avgfloor((add nw x,y), 1) -> avgceil(x,y)
+  // Fold avgfloor((add nw x,1), y) -> avgceil(x,y)
+  if ((Opcode == ISD::AVGFLOORU && hasOperation(ISD::AVGCEILU, VT)) ||
+      (Opcode == ISD::AVGFLOORS && hasOperation(ISD::AVGCEILS, VT))) {
+    SDValue Add;
+    if (sd_match(N,
+                 m_c_BinOp(Opcode,
+                           m_AllOf(m_Value(Add), m_Add(m_Value(X), m_Value(Y))),
+                           m_One())) ||
+        sd_match(N, m_c_BinOp(Opcode,
+                              m_AllOf(m_Value(Add), m_Add(m_Value(X), m_One())),
+                              m_Value(Y)))) {
+
+      if (IsSigned && Add->getFlags().hasNoSignedWrap())
+        return DAG.getNode(ISD::AVGCEILS, DL, VT, X, Y);
+
+      if (!IsSigned && Add->getFlags().hasNoUnsignedWrap())
+        return DAG.getNode(ISD::AVGCEILU, DL, VT, X, Y);
+    }
+  }
+
   return SDValue();
 }
 
@@ -7075,8 +7096,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     // fold (and (masked_load) (splat_vec (x, ...))) to zext_masked_load
     auto *MLoad = dyn_cast<MaskedLoadSDNode>(N0);
     ConstantSDNode *Splat = isConstOrConstSplat(N1, true, true);
-    if (MLoad && MLoad->getExtensionType() == ISD::EXTLOAD && Splat &&
-        N1.hasOneUse()) {
+    if (MLoad && MLoad->getExtensionType() == ISD::EXTLOAD && Splat) {
       EVT LoadVT = MLoad->getMemoryVT();
       EVT ExtVT = VT;
       if (TLI.isLoadExtLegal(ISD::ZEXTLOAD, ExtVT, LoadVT)) {
@@ -7353,6 +7373,36 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   if (SDValue R = foldLogicOfShifts(N, N1, N0, DAG))
     return R;
 
+  // Fold (and X, (bswap (not Y))) -> (and X, (not (bswap Y)))
+  // Fold (and X, (bitreverse (not Y))) -> (and X, (not (bitreverse Y)))
+  SDValue X, Y, Z, NotY;
+  for (unsigned Opc : {ISD::BSWAP, ISD::BITREVERSE})
+    if (sd_match(N,
+                 m_And(m_Value(X), m_OneUse(m_UnaryOp(Opc, m_Value(NotY))))) &&
+        sd_match(NotY, m_Not(m_Value(Y))) &&
+        (TLI.hasAndNot(SDValue(N, 0)) || NotY->hasOneUse()))
+      return DAG.getNode(ISD::AND, DL, VT, X,
+                         DAG.getNOT(DL, DAG.getNode(Opc, DL, VT, Y), VT));
+
+  // Fold (and X, (rot (not Y), Z)) -> (and X, (not (rot Y, Z)))
+  for (unsigned Opc : {ISD::ROTL, ISD::ROTR})
+    if (sd_match(N, m_And(m_Value(X),
+                          m_OneUse(m_BinOp(Opc, m_Value(NotY), m_Value(Z))))) &&
+        sd_match(NotY, m_Not(m_Value(Y))) &&
+        (TLI.hasAndNot(SDValue(N, 0)) || NotY->hasOneUse()))
+      return DAG.getNode(ISD::AND, DL, VT, X,
+                         DAG.getNOT(DL, DAG.getNode(Opc, DL, VT, Y, Z), VT));
+
+  // Fold (and (srl X, C), 1) -> (srl X, BW-1) for signbit extraction
+  // If we are shifting down an extended sign bit, see if we can simplify
+  // this to shifting the MSB directly to expose further simplifications.
+  // This pattern often appears after sext_inreg legalization.
+  APInt Amt;
+  if (sd_match(N, m_And(m_Srl(m_Value(X), m_ConstInt(Amt)), m_One())) &&
+      Amt.ult(BitWidth - 1) && Amt.uge(BitWidth - DAG.ComputeNumSignBits(X)))
+    return DAG.getNode(ISD::SRL, DL, VT, X,
+                       DAG.getShiftAmountConstant(BitWidth - 1, VT, DL));
+
   // Masking the negated extension of a boolean is just the zero-extended
   // boolean:
   // and (sub 0, zext(bool X)), 1 --> zext(bool X)
@@ -7360,16 +7410,13 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   //
   // Note: the SimplifyDemandedBits fold below can make an information-losing
   // transform, and then we have no way to find this better fold.
-  if (N1C && N1C->isOne() && N0.getOpcode() == ISD::SUB) {
-    if (isNullOrNullSplat(N0.getOperand(0))) {
-      SDValue SubRHS = N0.getOperand(1);
-      if (SubRHS.getOpcode() == ISD::ZERO_EXTEND &&
-          SubRHS.getOperand(0).getScalarValueSizeInBits() == 1)
-        return SubRHS;
-      if (SubRHS.getOpcode() == ISD::SIGN_EXTEND &&
-          SubRHS.getOperand(0).getScalarValueSizeInBits() == 1)
-        return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, SubRHS.getOperand(0));
-    }
+  if (sd_match(N, m_And(m_Sub(m_Zero(), m_Value(X)), m_One()))) {
+    if (X.getOpcode() == ISD::ZERO_EXTEND &&
+        X.getOperand(0).getScalarValueSizeInBits() == 1)
+      return X;
+    if (X.getOpcode() == ISD::SIGN_EXTEND &&
+        X.getOperand(0).getScalarValueSizeInBits() == 1)
+      return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, X.getOperand(0));
   }
 
   // fold (and (sign_extend_inreg x, i16 to i32), 1) -> (and x, 1)
@@ -9536,11 +9583,8 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
 
   // fold (a^b) -> (a|b) iff a and b share no bits.
   if ((!LegalOperations || TLI.isOperationLegal(ISD::OR, VT)) &&
-      DAG.haveNoCommonBitsSet(N0, N1)) {
-    SDNodeFlags Flags;
-    Flags.setDisjoint(true);
-    return DAG.getNode(ISD::OR, DL, VT, N0, N1, Flags);
-  }
+      DAG.haveNoCommonBitsSet(N0, N1))
+    return DAG.getNode(ISD::OR, DL, VT, N0, N1, SDNodeFlags::Disjoint);
 
   // look for 'add-like' folds:
   // XOR(N0,MIN_SIGNED_VALUE) == ADD(N0,MIN_SIGNED_VALUE)
@@ -10190,7 +10234,7 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
       SDNodeFlags Flags;
       // Preserve the disjoint flag for Or.
       if (N0.getOpcode() == ISD::OR && N0->getFlags().hasDisjoint())
-        Flags.setDisjoint(true);
+        Flags |= SDNodeFlags::Disjoint;
       return DAG.getNode(N0.getOpcode(), DL, VT, Shl0, Shl1, Flags);
     }
   }
@@ -10615,6 +10659,9 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
   if (SDValue NarrowLoad = reduceLoadWidth(N))
     return NarrowLoad;
 
+  if (SDValue AVG = foldShiftToAvg(N))
+    return AVG;
+
   return SDValue();
 }
 
@@ -10868,6 +10915,9 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
   // it matches the appropriate pattern detected in combineShiftToMULH.
   if (SDValue MULH = combineShiftToMULH(N, DL, DAG, TLI))
     return MULH;
+
+  if (SDValue AVG = foldShiftToAvg(N))
+    return AVG;
 
   return SDValue();
 }
@@ -11380,6 +11430,53 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
   default:
     return SDValue();
   }
+}
+
+SDValue DAGCombiner::foldShiftToAvg(SDNode *N) {
+  const unsigned Opcode = N->getOpcode();
+
+  // Convert (sr[al] (add n[su]w x, y)) -> (avgfloor[su] x, y)
+  if (Opcode != ISD::SRA && Opcode != ISD::SRL)
+    return SDValue();
+
+  unsigned FloorISD = 0;
+  auto VT = N->getValueType(0);
+  bool IsUnsigned = false;
+
+  // Decide wether signed or unsigned.
+  switch (Opcode) {
+  case ISD::SRA:
+    if (!hasOperation(ISD::AVGFLOORS, VT))
+      return SDValue();
+    FloorISD = ISD::AVGFLOORS;
+    break;
+  case ISD::SRL:
+    IsUnsigned = true;
+    if (!hasOperation(ISD::AVGFLOORU, VT))
+      return SDValue();
+    FloorISD = ISD::AVGFLOORU;
+    break;
+  default:
+    return SDValue();
+  }
+
+  // Captured values.
+  SDValue A, B, Add;
+
+  // Match floor average as it is common to both floor/ceil avgs.
+  if (!sd_match(N, m_BinOp(Opcode,
+                           m_AllOf(m_Value(Add), m_Add(m_Value(A), m_Value(B))),
+                           m_One())))
+    return SDValue();
+
+  // Can't optimize adds that may wrap.
+  if (IsUnsigned && !Add->getFlags().hasNoUnsignedWrap())
+    return SDValue();
+
+  if (!IsUnsigned && !Add->getFlags().hasNoSignedWrap())
+    return SDValue();
+
+  return DAG.getNode(FloorISD, SDLoc(N), N->getValueType(0), {A, B});
 }
 
 /// Generate Min/Max node
@@ -13793,23 +13890,27 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
     unsigned OpBits   = Op.getScalarValueSizeInBits();
     unsigned MidBits  = N0.getScalarValueSizeInBits();
     unsigned DestBits = VT.getScalarSizeInBits();
-    unsigned NumSignBits = DAG.ComputeNumSignBits(Op);
 
-    if (OpBits == DestBits) {
-      // Op is i32, Mid is i8, and Dest is i32.  If Op has more than 24 sign
-      // bits, it is already ready.
-      if (NumSignBits > DestBits-MidBits)
+    if (N0->getFlags().hasNoSignedWrap() ||
+        DAG.ComputeNumSignBits(Op) > OpBits - MidBits) {
+      if (OpBits == DestBits) {
+        // Op is i32, Mid is i8, and Dest is i32.  If Op has more than 24 sign
+        // bits, it is already ready.
         return Op;
-    } else if (OpBits < DestBits) {
-      // Op is i32, Mid is i8, and Dest is i64.  If Op has more than 24 sign
-      // bits, just sext from i32.
-      if (NumSignBits > OpBits-MidBits)
+      }
+
+      if (OpBits < DestBits) {
+        // Op is i32, Mid is i8, and Dest is i64.  If Op has more than 24 sign
+        // bits, just sext from i32.
         return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Op);
-    } else {
+      }
+
       // Op is i64, Mid is i8, and Dest is i32.  If Op has more than 56 sign
       // bits, just truncate to i32.
-      if (NumSignBits > OpBits-MidBits)
-        return DAG.getNode(ISD::TRUNCATE, DL, VT, Op);
+      SDNodeFlags Flags;
+      Flags.setNoSignedWrap(true);
+      Flags.setNoUnsignedWrap(N0->getFlags().hasNoUnsignedWrap());
+      return DAG.getNode(ISD::TRUNCATE, DL, VT, Op, Flags);
     }
 
     // fold (sext (truncate x)) -> (sextinreg x).
@@ -13902,11 +14003,8 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
   // fold (sext x) -> (zext x) if the sign bit is known zero.
   if (!TLI.isSExtCheaperThanZExt(N0.getValueType(), VT) &&
       (!LegalOperations || TLI.isOperationLegal(ISD::ZERO_EXTEND, VT)) &&
-      DAG.SignBitIsZero(N0)) {
-    SDNodeFlags Flags;
-    Flags.setNonNeg(true);
-    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0, Flags);
-  }
+      DAG.SignBitIsZero(N0))
+    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0, SDNodeFlags::NonNeg);
 
   if (SDValue NewVSel = matchVSelectOpSizesWithSetCC(N))
     return NewVSel;
@@ -14083,24 +14181,28 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
       unsigned OpBits = SrcVT.getScalarSizeInBits();
       unsigned MidBits = MinVT.getScalarSizeInBits();
       unsigned DestBits = VT.getScalarSizeInBits();
-      unsigned NumSignBits = DAG.ComputeNumSignBits(Op);
 
-      if (OpBits == DestBits) {
-        // Op is i32, Mid is i8, and Dest is i32.  If Op has more than 24 sign
-        // bits, it is already ready.
-        if (NumSignBits > DestBits - MidBits)
+      if (N0->getFlags().hasNoSignedWrap() ||
+          DAG.ComputeNumSignBits(Op) > OpBits - MidBits) {
+        if (OpBits == DestBits) {
+          // Op is i32, Mid is i8, and Dest is i32.  If Op has more than 24 sign
+          // bits, it is already ready.
           return Op;
-      } else if (OpBits < DestBits) {
-        // Op is i32, Mid is i8, and Dest is i64.  If Op has more than 24 sign
-        // bits, just sext from i32.
-        // FIXME: This can probably be ZERO_EXTEND nneg?
-        if (NumSignBits > OpBits - MidBits)
+        }
+
+        if (OpBits < DestBits) {
+          // Op is i32, Mid is i8, and Dest is i64.  If Op has more than 24 sign
+          // bits, just sext from i32.
+          // FIXME: This can probably be ZERO_EXTEND nneg?
           return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Op);
-      } else {
+        }
+
         // Op is i64, Mid is i8, and Dest is i32.  If Op has more than 56 sign
         // bits, just truncate to i32.
-        if (NumSignBits > OpBits - MidBits)
-          return DAG.getNode(ISD::TRUNCATE, DL, VT, Op);
+        SDNodeFlags Flags;
+        Flags.setNoSignedWrap(true);
+        Flags.setNoUnsignedWrap(true);
+        return DAG.getNode(ISD::TRUNCATE, DL, VT, Op, Flags);
       }
     }
 
@@ -14787,10 +14889,9 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
   uint64_t PtrOff = PtrAdjustmentInBits / 8;
   SDLoc DL(LN0);
   // The original load itself didn't wrap, so an offset within it doesn't.
-  SDNodeFlags Flags;
-  Flags.setNoUnsignedWrap(true);
-  SDValue NewPtr = DAG.getMemBasePlusOffset(
-      LN0->getBasePtr(), TypeSize::getFixed(PtrOff), DL, Flags);
+  SDValue NewPtr =
+      DAG.getMemBasePlusOffset(LN0->getBasePtr(), TypeSize::getFixed(PtrOff),
+                               DL, SDNodeFlags::NoUnsignedWrap);
   AddToWorklist(NewPtr.getNode());
 
   SDValue Load;

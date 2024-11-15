@@ -1753,11 +1753,14 @@ void CGOpenMPRuntimeGPU::emitReduction(
     Idx++;
   }
 
-  CGF.Builder.restoreIP(OMPBuilder.createReductionsGPU(
-      OmpLoc, AllocaIP, CodeGenIP, ReductionInfos, false, TeamsReduction,
-      DistributeReduction, llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
-      CGF.getTarget().getGridValue(), C.getLangOpts().OpenMPCUDAReductionBufNum,
-      RTLoc));
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
+      OMPBuilder.createReductionsGPU(
+          OmpLoc, AllocaIP, CodeGenIP, ReductionInfos, false, TeamsReduction,
+          DistributeReduction, llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
+          CGF.getTarget().getGridValue(),
+          C.getLangOpts().OpenMPCUDAReductionBufNum, RTLoc);
+  assert(AfterIP && "unexpected error creating GPU reductions");
+  CGF.Builder.restoreIP(*AfterIP);
   return;
 }
 
@@ -2298,6 +2301,7 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::GFX909:
       case OffloadArch::GFX90a:
       case OffloadArch::GFX90c:
+      case OffloadArch::GFX9_4_GENERIC:
       case OffloadArch::GFX940:
       case OffloadArch::GFX941:
       case OffloadArch::GFX942:

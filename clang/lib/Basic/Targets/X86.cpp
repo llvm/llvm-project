@@ -38,6 +38,14 @@ static constexpr Builtin::Info BuiltinInfoX86[] = {
   {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
   {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
+#include "clang/Basic/BuiltinsX86.inc"
+
+#define BUILTIN(ID, TYPE, ATTRS)                                               \
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
 #include "clang/Basic/BuiltinsX86_64.def"
 };
 
@@ -420,6 +428,16 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAMXTILE = true;
     } else if (Feature == "+amx-complex") {
       HasAMXCOMPLEX = true;
+    } else if (Feature == "+amx-fp8") {
+      HasAMXFP8 = true;
+    } else if (Feature == "+amx-movrs") {
+      HasAMXMOVRS = true;
+    } else if (Feature == "+amx-transpose") {
+      HasAMXTRANSPOSE = true;
+    } else if (Feature == "+amx-avx512") {
+      HasAMXAVX512 = true;
+    } else if (Feature == "+amx-tf32") {
+      HasAMXTF32 = true;
     } else if (Feature == "+cmpccxadd") {
       HasCMPCCXADD = true;
     } else if (Feature == "+raoint") {
@@ -939,6 +957,16 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AMX_FP16__");
   if (HasAMXCOMPLEX)
     Builder.defineMacro("__AMX_COMPLEX__");
+  if (HasAMXFP8)
+    Builder.defineMacro("__AMX_FP8__");
+  if (HasAMXMOVRS)
+    Builder.defineMacro("__AMX_MOVRS__");
+  if (HasAMXTRANSPOSE)
+    Builder.defineMacro("__AMX_TRANSPOSE__");
+  if (HasAMXAVX512)
+    Builder.defineMacro("__AMX_AVX512__");
+  if (HasAMXTF32)
+    Builder.defineMacro("__AMX_TF32__");
   if (HasCMPCCXADD)
     Builder.defineMacro("__CMPCCXADD__");
   if (HasRAOINT)
@@ -1064,11 +1092,16 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
   return llvm::StringSwitch<bool>(Name)
       .Case("adx", true)
       .Case("aes", true)
+      .Case("amx-avx512", true)
       .Case("amx-bf16", true)
       .Case("amx-complex", true)
       .Case("amx-fp16", true)
+      .Case("amx-fp8", true)
       .Case("amx-int8", true)
+      .Case("amx-movrs", true)
+      .Case("amx-tf32", true)
       .Case("amx-tile", true)
+      .Case("amx-transpose", true)
       .Case("avx", true)
       .Case("avx10.1-256", true)
       .Case("avx10.1-512", true)
@@ -1182,11 +1215,16 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Case("adx", HasADX)
       .Case("aes", HasAES)
+      .Case("amx-avx512", HasAMXAVX512)
       .Case("amx-bf16", HasAMXBF16)
       .Case("amx-complex", HasAMXCOMPLEX)
       .Case("amx-fp16", HasAMXFP16)
+      .Case("amx-fp8", HasAMXFP8)
       .Case("amx-int8", HasAMXINT8)
+      .Case("amx-movrs", HasAMXMOVRS)
+      .Case("amx-tf32", HasAMXTF32)
       .Case("amx-tile", HasAMXTILE)
+      .Case("amx-transpose", HasAMXTRANSPOSE)
       .Case("avx", SSELevel >= AVX)
       .Case("avx10.1-256", HasAVX10_1)
       .Case("avx10.1-512", HasAVX10_1_512)
@@ -1465,7 +1503,7 @@ bool X86TargetInfo::validateAsmConstraint(
     }
   case 'f': // Any x87 floating point stack register.
     // Constraint 'f' cannot be used for output operands.
-    if (Info.ConstraintStr[0] == '=')
+    if (Info.ConstraintStr[0] == '=' || Info.ConstraintStr[0] == '+')
       return false;
     Info.setAllowsRegister();
     return true;

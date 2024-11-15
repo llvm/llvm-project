@@ -153,9 +153,10 @@ NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
                                        CodeGenOptLevel OL, bool is64bit)
     // The pic relocation model is used regardless of what the client has
     // specified, as it is the only relocation model currently supported.
-    : LLVMTargetMachine(T, computeDataLayout(is64bit, UseShortPointersOpt), TT,
-                        CPU, FS, Options, Reloc::PIC_,
-                        getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(T,
+                               computeDataLayout(is64bit, UseShortPointersOpt),
+                               TT, CPU, FS, Options, Reloc::PIC_,
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       is64bit(is64bit), TLOF(std::make_unique<NVPTXTargetObjectFile>()),
       Subtarget(TT, std::string(CPU), std::string(FS), *this),
       StrPool(StrAlloc) {
@@ -302,6 +303,8 @@ void NVPTXPassConfig::addAddressSpaceInferencePasses() {
   // be eliminated by SROA.
   addPass(createSROAPass());
   addPass(createNVPTXLowerAllocaPass());
+  // TODO: Consider running InferAddressSpaces during opt, earlier in the
+  // compilation flow.
   addPass(createInferAddressSpacesPass());
   addPass(createNVPTXAtomicLowerPass());
 }
@@ -332,7 +335,7 @@ void NVPTXPassConfig::addIRPasses() {
   disablePass(&PrologEpilogCodeInserterID);
   disablePass(&MachineLateInstrsCleanupID);
   disablePass(&MachineCopyPropagationID);
-  disablePass(&TailDuplicateID);
+  disablePass(&TailDuplicateLegacyID);
   disablePass(&StackMapLivenessID);
   disablePass(&PostRAMachineSinkingID);
   disablePass(&PostRASchedulerID);
@@ -461,7 +464,7 @@ void NVPTXPassConfig::addOptimizedRegAlloc() {
 
 void NVPTXPassConfig::addMachineSSAOptimization() {
   // Pre-ra tail duplication.
-  if (addPass(&EarlyTailDuplicateID))
+  if (addPass(&EarlyTailDuplicateLegacyID))
     printAndVerify("After Pre-RegAlloc TailDuplicate");
 
   // Optimize PHIs before DCE: removing dead PHI cycles may make more

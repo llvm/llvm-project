@@ -15,9 +15,11 @@
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/TypedPointerType.h"
+#include <queue>
 #include <string>
 #include <unordered_set>
 
@@ -62,7 +64,9 @@ class SPIRVSubtarget;
 class PartialOrderingVisitor {
   DomTreeBuilder::BBDomTree DT;
   LoopInfo LI;
-  std::unordered_set<BasicBlock *> Visited = {};
+
+  std::unordered_set<BasicBlock *> Queued = {};
+  std::queue<BasicBlock *> ToVisit = {};
 
   struct OrderInfo {
     size_t Rank;
@@ -79,6 +83,9 @@ class PartialOrderingVisitor {
   // Internal function used to determine the partial ordering.
   // Visits |BB| with the current rank being |Rank|.
   size_t visit(BasicBlock *BB, size_t Rank);
+
+  size_t GetNodeRank(BasicBlock *BB) const;
+  bool CanBeVisited(BasicBlock *BB) const;
 
 public:
   // Build the visitor to operate on the function F.
@@ -132,6 +139,10 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
 // Add an OpDecorate instruction by "spirv.Decorations" metadata node.
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
                              const MDNode *GVarMD);
+
+// Return a valid position for the OpVariable instruction inside a function,
+// i.e., at the beginning of the first block of the function.
+MachineBasicBlock::iterator getOpVariableMBBIt(MachineInstr &I);
 
 // Convert a SPIR-V storage class to the corresponding LLVM IR address space.
 // TODO: maybe the following two functions should be handled in the subtarget
