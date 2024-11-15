@@ -229,7 +229,7 @@ unsigned getPPCDSFormOp(unsigned secondaryOp);
 // offset between GEP and LEP is encoded in a function's st_other flags.
 // This function will return the offset (in bytes) from the global entry-point
 // to the local entry-point.
-unsigned getPPC64GlobalEntryToLocalEntryOffset(uint8_t stOther);
+unsigned getPPC64GlobalEntryToLocalEntryOffset(Ctx &, uint8_t stOther);
 
 // Write a prefixed instruction, which is a 4-byte prefix followed by a 4-byte
 // instruction (regardless of endianness). Therefore, the prefix is always in

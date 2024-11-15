@@ -190,7 +190,7 @@ static bool isDuplex(uint32_t insn) {
   return (instParsePacketEnd & insn) == 0;
 }
 
-static uint32_t findMaskR6(uint32_t insn) {
+static uint32_t findMaskR6(Ctx &ctx, uint32_t insn) {
   if (isDuplex(insn))
     return 0x03f00000;
 
@@ -198,8 +198,8 @@ static uint32_t findMaskR6(uint32_t insn) {
     if ((0xff000000 & insn) == i.cmpMask)
       return i.relocMask;
 
-  ErrAlways(ctx) << "unrecognized instruction for 6_X relocation: 0x"
-                 << utohexstr(insn);
+  Err(ctx) << "unrecognized instruction for 6_X relocation: 0x"
+           << utohexstr(insn);
   return 0;
 }
 
@@ -217,7 +217,7 @@ static uint32_t findMaskR11(uint32_t insn) {
   return 0x06003fe0;
 }
 
-static uint32_t findMaskR16(uint32_t insn) {
+static uint32_t findMaskR16(Ctx &ctx, uint32_t insn) {
   if (isDuplex(insn))
     return 0x03f00000;
 
@@ -246,8 +246,7 @@ static uint32_t findMaskR16(uint32_t insn) {
     if ((0xff000000 & insn) == i.cmpMask)
       return i.relocMask;
 
-  ErrAlways(ctx) << "unrecognized instruction for 16_X type: 0x"
-                 << utohexstr(insn);
+  Err(ctx) << "unrecognized instruction for 16_X type: 0x" << utohexstr(insn);
   return 0;
 }
 
@@ -260,7 +259,7 @@ void Hexagon::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_HEX_6_PCREL_X:
   case R_HEX_6_X:
-    or32le(loc, applyMask(findMaskR6(read32le(loc)), val));
+    or32le(loc, applyMask(findMaskR6(ctx, read32le(loc)), val));
     break;
   case R_HEX_8_X:
     or32le(loc, applyMask(findMaskR8(read32le(loc)), val));
@@ -289,10 +288,10 @@ void Hexagon::relocate(uint8_t *loc, const Relocation &rel,
   case R_HEX_GOT_16_X:
   case R_HEX_GOTREL_16_X:
   case R_HEX_TPREL_16_X:
-    or32le(loc, applyMask(findMaskR16(read32le(loc)), val & 0x3f));
+    or32le(loc, applyMask(findMaskR16(ctx, read32le(loc)), val & 0x3f));
     break;
   case R_HEX_TPREL_16:
-    or32le(loc, applyMask(findMaskR16(read32le(loc)), val & 0xffff));
+    or32le(loc, applyMask(findMaskR16(ctx, read32le(loc)), val & 0xffff));
     break;
   case R_HEX_32:
   case R_HEX_32_PCREL:

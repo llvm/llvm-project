@@ -197,7 +197,8 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
 } // namespace lld
 
 // Parses a linker -m option.
-static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef emul) {
+static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(Ctx &ctx,
+                                                             StringRef emul) {
   uint8_t osabi = 0;
   StringRef s = emul;
   if (s.ends_with("_fbsd")) {
@@ -578,7 +579,7 @@ static GnuStackKind getZGnuStack(opt::InputArgList &args) {
   return ret;
 }
 
-static uint8_t getZStartStopVisibility(opt::InputArgList &args) {
+static uint8_t getZStartStopVisibility(Ctx &ctx, opt::InputArgList &args) {
   uint8_t ret = STV_PROTECTED;
   for (auto *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
@@ -1556,7 +1557,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zStackSize = args::getZOptionValue(args, OPT_z, "stack-size", 0);
   ctx.arg.zStartStopGC =
       getZFlag(args, "start-stop-gc", "nostart-stop-gc", true);
-  ctx.arg.zStartStopVisibility = getZStartStopVisibility(args);
+  ctx.arg.zStartStopVisibility = getZStartStopVisibility(ctx, args);
   ctx.arg.zText = getZFlag(args, "text", "notext", true);
   ctx.arg.zWxneeded = hasZOption(args, "wxneeded");
   setUnresolvedSymbolPolicy(ctx, args);
@@ -1759,7 +1760,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   if (auto *arg = args.getLastArg(OPT_m)) {
     StringRef s = arg->getValue();
     std::tie(ctx.arg.ekind, ctx.arg.emachine, ctx.arg.osabi) =
-        parseEmulation(s);
+        parseEmulation(ctx, s);
     ctx.arg.mipsN32Abi =
         (s.starts_with("elf32btsmipn32") || s.starts_with("elf32ltsmipn32"));
     ctx.arg.emulation = s;
@@ -2756,17 +2757,19 @@ static void redirectSymbols(Ctx &ctx, ArrayRef<WrappedSymbol> wrapped) {
     ctx.symtab->wrap(w.sym, w.real, w.wrap);
 }
 
-static void reportMissingFeature(StringRef config, const Twine &report) {
+static void reportMissingFeature(Ctx &ctx, StringRef config,
+                                 const Twine &report) {
   if (config == "error")
     ErrAlways(ctx) << report;
   else if (config == "warning")
     Warn(ctx) << report;
 }
 
-static void checkAndReportMissingFeature(StringRef config, uint32_t features,
-                                         uint32_t mask, const Twine &report) {
+static void checkAndReportMissingFeature(Ctx &ctx, StringRef config,
+                                         uint32_t features, uint32_t mask,
+                                         const Twine &report) {
   if (!(features & mask))
-    reportMissingFeature(config, report);
+    reportMissingFeature(ctx, config, report);
 }
 
 // To enable CET (x86's hardware-assisted control flow enforcement), each
@@ -2805,22 +2808,22 @@ static void readSecurityNotes(Ctx &ctx) {
     uint32_t features = f->andFeatures;
 
     checkAndReportMissingFeature(
-        ctx.arg.zBtiReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_BTI,
+        ctx, ctx.arg.zBtiReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_BTI,
         toString(f) + ": -z bti-report: file does not have "
                       "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property");
 
     checkAndReportMissingFeature(
-        ctx.arg.zGcsReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_GCS,
+        ctx, ctx.arg.zGcsReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_GCS,
         toString(f) + ": -z gcs-report: file does not have "
                       "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property");
 
     checkAndReportMissingFeature(
-        ctx.arg.zCetReport, features, GNU_PROPERTY_X86_FEATURE_1_IBT,
+        ctx, ctx.arg.zCetReport, features, GNU_PROPERTY_X86_FEATURE_1_IBT,
         toString(f) + ": -z cet-report: file does not have "
                       "GNU_PROPERTY_X86_FEATURE_1_IBT property");
 
     checkAndReportMissingFeature(
-        ctx.arg.zCetReport, features, GNU_PROPERTY_X86_FEATURE_1_SHSTK,
+        ctx, ctx.arg.zCetReport, features, GNU_PROPERTY_X86_FEATURE_1_SHSTK,
         toString(f) + ": -z cet-report: file does not have "
                       "GNU_PROPERTY_X86_FEATURE_1_SHSTK property");
 
@@ -2852,7 +2855,7 @@ static void readSecurityNotes(Ctx &ctx) {
       continue;
 
     if (f->aarch64PauthAbiCoreInfo.empty()) {
-      reportMissingFeature(ctx.arg.zPauthReport,
+      reportMissingFeature(ctx, ctx.arg.zPauthReport,
                            toString(f) +
                                ": -z pauth-report: file does not have AArch64 "
                                "PAuth core info while '" +

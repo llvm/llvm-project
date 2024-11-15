@@ -2625,7 +2625,8 @@ struct SectionOffset {
 
 // Check whether sections overlap for a specific address range (file offsets,
 // load and virtual addresses).
-static void checkOverlap(StringRef name, std::vector<SectionOffset> &sections,
+static void checkOverlap(Ctx &ctx, StringRef name,
+                         std::vector<SectionOffset> &sections,
                          bool isVirtualAddr) {
   llvm::sort(sections, [=](const SectionOffset &a, const SectionOffset &b) {
     return a.offset < b.offset;
@@ -2676,7 +2677,7 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
     if (sec->size > 0 && sec->type != SHT_NOBITS &&
         (!ctx.arg.oFormatBinary || (sec->flags & SHF_ALLOC)))
       fileOffs.push_back({sec, sec->offset});
-  checkOverlap("file", fileOffs, false);
+  checkOverlap(ctx, "file", fileOffs, false);
 
   // When linking with -r there is no need to check for overlapping virtual/load
   // addresses since those addresses will only be assigned when the final
@@ -2693,7 +2694,7 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
   for (OutputSection *sec : ctx.outputSections)
     if (sec->size > 0 && (sec->flags & SHF_ALLOC) && !(sec->flags & SHF_TLS))
       vmas.push_back({sec, sec->addr});
-  checkOverlap("virtual address", vmas, true);
+  checkOverlap(ctx, "virtual address", vmas, true);
 
   // Finally, check that the load addresses don't overlap. This will usually be
   // the same as the virtual addresses but can be different when using a linker
@@ -2702,7 +2703,7 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
   for (OutputSection *sec : ctx.outputSections)
     if (sec->size > 0 && (sec->flags & SHF_ALLOC) && !(sec->flags & SHF_TLS))
       lmas.push_back({sec, sec->getLMA()});
-  checkOverlap("load address", lmas, false);
+  checkOverlap(ctx, "load address", lmas, false);
 }
 
 // The entry point address is chosen in the following ways.

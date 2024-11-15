@@ -1107,7 +1107,7 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
 
 template <class ELFT>
 static void
-addTaggedSymbolReferences(InputSectionBase &sec,
+addTaggedSymbolReferences(Ctx &ctx, InputSectionBase &sec,
                           DenseMap<Symbol *, unsigned> &referenceCount) {
   assert(sec.type == SHT_AARCH64_MEMTAG_GLOBALS_STATIC);
 
@@ -1163,7 +1163,7 @@ void elf::createTaggedSymbols(Ctx &ctx) {
       if (!section || section->type != SHT_AARCH64_MEMTAG_GLOBALS_STATIC ||
           section == &InputSection::discarded)
         continue;
-      invokeELFT(addTaggedSymbolReferences, *section,
+      invokeELFT(addTaggedSymbolReferences, ctx, *section,
                  taggedSymbolReferenceCount);
     }
   }
