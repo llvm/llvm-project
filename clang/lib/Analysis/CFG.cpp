@@ -456,6 +456,36 @@ reverse_children::reverse_children(Stmt *S) {
                                 IE->getNumInits());
       return;
     }
+    case Stmt::AttributedStmtClass: {
+      AttributedStmt *attrStmt = cast<AttributedStmt>(S);
+      assert(attrStmt);
+
+      {
+        // for an attributed stmt, the "children()" returns only the NullStmt
+        // (;) but semantically the "children" are supposed to be the
+        // expressions _within_ i.e. the two square brackets i.e. [[ HERE ]]
+        // so we add the subexpressions first, _then_ add the "children"
+
+        for (const Attr *attr : attrStmt->getAttrs()) {
+
+          // i.e. one `assume()`
+          CXXAssumeAttr const *assumeAttr = llvm::dyn_cast<CXXAssumeAttr>(attr);
+          if (!assumeAttr) {
+            continue;
+          }
+          // Only handles [[ assume(<assumption>) ]] right now
+          Expr *assumption = assumeAttr->getAssumption();
+          childrenBuf.push_back(assumption);
+        }
+
+        // children() for an AttributedStmt is NullStmt(;)
+        llvm::append_range(childrenBuf, attrStmt->children());
+
+        // This needs to be done *after* childrenBuf has been populated.
+        children = childrenBuf;
+      }
+      return;
+    }
     default:
       break;
   }
@@ -2475,6 +2505,14 @@ static bool isFallthroughStatement(const AttributedStmt *A) {
   return isFallthrough;
 }
 
+static bool isCXXAssumeAttr(const AttributedStmt *A) {
+  bool hasAssumeAttr = hasSpecificAttr<CXXAssumeAttr>(A->getAttrs());
+
+  assert((!hasAssumeAttr || isa<NullStmt>(A->getSubStmt())) &&
+         "expected [[assume]] not to have children");
+  return hasAssumeAttr;
+}
+
 CFGBlock *CFGBuilder::VisitAttributedStmt(AttributedStmt *A,
                                           AddStmtChoice asc) {
   // AttributedStmts for [[likely]] can have arbitrary statements as children,
@@ -2486,6 +2524,11 @@ CFGBlock *CFGBuilder::VisitAttributedStmt(AttributedStmt *A,
   // also no children, and omit the others. None of the other current StmtAttrs
   // have semantic meaning for the CFG.
   if (isFallthroughStatement(A) && asc.alwaysAdd(*this, A)) {
+    autoCreateBlock();
+    appendStmt(Block, A);
+  }
+
+  if (isCXXAssumeAttr(A) && asc.alwaysAdd(*this, A)) {
     autoCreateBlock();
     appendStmt(Block, A);
   }
