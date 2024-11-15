@@ -1025,9 +1025,4 @@ def warn_unpacked_field
 def warn_unaligned_access : Warning<
   "field %1 within %0 is less aligned than %2 and is usually due to %0 being "
   "packed, which can lead to unaligned accesses">, InGroup<UnalignedAccess>, DefaultIgnore;
-
-def warn_side_effects_on_ast_unavailable : Warning<
-  "%select{instantiation of a function template}0"
-  " did not happen, because internal program representation is immutable">,
-  InGroup<SideEffectsUnavailable>;
 }

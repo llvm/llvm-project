@@ -2814,6 +2814,8 @@ Attr *Sema::CreateAnnotationAttr(const ParsedAttr &AL) {
 
 void SemaProxyImpl::InstantiateFunctionDefinition(
     SourceLocation PointOfInstantiation, FunctionDecl *Function) {
+  if (getIgnoreSideEffectsOnAST())
+    return;
   SemaRef.InstantiateFunctionDefinition(
       PointOfInstantiation, Function, /*Recursive=*/true,
       /*DefinitionRequired=*/true, /*AtEndOfTU=*/false);

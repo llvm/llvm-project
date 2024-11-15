@@ -187,9 +187,15 @@ struct TypeInfoChars {
 struct SemaProxy {
   virtual ~SemaProxy() = default;
 
+  bool getIgnoreSideEffectsOnAST();
+  void setIgnoreSideEffectsOnAST(bool ignore = true);
+
   virtual void
   InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
                                 FunctionDecl *Function) = 0;
+
+private:
+  bool IgnoreSideEffectsOnAST = false;
 };
 
 /// Holds long-lived AST nodes (such as types and decls) that can be

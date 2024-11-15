@@ -14496,11 +14496,20 @@ bool ASTContext::useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
   return Result;
 }
 
+bool SemaProxy::getIgnoreSideEffectsOnAST() { return IgnoreSideEffectsOnAST; }
+
+void SemaProxy::setIgnoreSideEffectsOnAST(bool Ignore) {
+  IgnoreSideEffectsOnAST = Ignore;
+}
+
 UnimplementedSemaProxy::UnimplementedSemaProxy(ASTContext &Ctx) : Ctx(Ctx) {}
 
 void UnimplementedSemaProxy::InstantiateFunctionDefinition(
     SourceLocation PointOfInstantiation, FunctionDecl *Function) {
-  Ctx.getDiagnostics().Report(PointOfInstantiation,
-                              diag::warn_side_effects_on_ast_unavailable)
-      << 0;
+  if (getIgnoreSideEffectsOnAST())
+    return;
+  llvm_unreachable(
+      "AST mutation was requested without clang::Sema available. "
+      "Consider providing it, or disabling side effects on AST via "
+      "ASTContext.getSemaProxy().setIgnoreSideEffectsOnAST(true).");
 }
