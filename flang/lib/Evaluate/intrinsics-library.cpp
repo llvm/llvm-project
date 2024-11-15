@@ -16,7 +16,6 @@
 #include "host.h"
 #include "flang/Common/erfc-scaled.h"
 #include "flang/Common/idioms.h"
-#include "flang/Common/static-multimap-view.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Support/static-multimap-view.h"
 #include <cfloat>
