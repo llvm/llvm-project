@@ -173,6 +173,7 @@ def OMPC_Enter : Clause<"enter"> {
 }
 def OMPC_Exclusive : Clause<"exclusive"> {
   let clangClass = "OMPExclusiveClause";
+  let flangClass = "OmpObjectList";
 }
 def OMPC_Fail : Clause<"fail"> {
   let clangClass = "OMPFailClause";
@@ -230,6 +231,7 @@ def OMPC_Inbranch : Clause<"inbranch"> {
 }
 def OMPC_Inclusive : Clause<"inclusive"> {
   let clangClass = "OMPInclusiveClause";
+  let flangClass = "OmpObjectList";
 }
 def OMPC_Indirect : Clause<"indirect"> {
 }
@@ -903,8 +905,8 @@ def OMP_Reverse : Directive<"reverse"> {
 }
 def OMP_Scan : Directive<"scan"> {
   let allowedClauses = [
-    VersionedClause<OMPC_Exclusive, 50>,
-    VersionedClause<OMPC_Inclusive, 50>,
+    VersionedClause<OMPC_Exclusive>,
+    VersionedClause<OMPC_Inclusive>,
   ];
   let association = AS_Separating;
   let category = CA_Subsidiary;
