@@ -167,6 +167,11 @@ def AArch64st1q_scatter : SDNode<"AArch64ISD::SST1Q_PRED", SDT_AArch64_SCATTER_V
 // AArch64 SVE/SVE2 - the remaining node definitions
 //
 
+// Alias masks
+def SDT_AArch64Mask : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisInt<1>, SDTCisSameAs<2, 1>, SDTCVecEltisVT<0,i1>]>;
+def AArch64whilewr : SDNode<"AArch64ISD::WHILEWR", SDT_AArch64Mask>;
+def AArch64whilerw : SDNode<"AArch64ISD::WHILERW", SDT_AArch64Mask>;
+
 // SVE CNT/INC/RDVL
 def sve_rdvl_imm : ComplexPattern<i64, 1, "SelectRDVLImm<-32, 31, 16>">;
 def sve_cnth_imm : ComplexPattern<i64, 1, "SelectRDVLImm<1, 16, 8>">;
@@ -4125,9 +4130,9 @@ let Predicates = [HasSVE2_or_SME] in {
   defm WHILEHI_PXX : sve_int_while8_rr<0b101, "whilehi", int_aarch64_sve_whilehi, get_active_lane_mask>;
 
   // SVE2 pointer conflict compare
-  defm WHILEWR_PXX : sve2_int_while_rr<0b0, "whilewr", "int_aarch64_sve_whilewr">;
-  defm WHILERW_PXX : sve2_int_while_rr<0b1, "whilerw", "int_aarch64_sve_whilerw">;
-} // End HasSVE2_or_SME
+  defm WHILEWR_PXX : sve2_int_while_rr<0b0, "whilewr", AArch64whilewr>;
+  defm WHILERW_PXX : sve2_int_while_rr<0b1, "whilerw", AArch64whilerw>;
+} // End HasSVE2orSME
 
 let Predicates = [HasSVEAES, HasNonStreamingSVE_or_SSVE_AES] in {
   // SVE2 crypto destructive binary operations
