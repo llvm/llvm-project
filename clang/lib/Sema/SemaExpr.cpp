@@ -9202,17 +9202,17 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
   // __builtin_counted_by_ref cannot be assigned to a variable, used in
   // function call, or in a return.
   auto FindBuiltinCountedByRefExpr = [&](Expr *E) -> CallExpr * {
-    struct BuiltinCountedByRefVisitor
-        : public RecursiveASTVisitor<BuiltinCountedByRefVisitor> {
+    struct BuiltinCountedByRefVisitor : DynamicRecursiveASTVisitor {
       CallExpr *TheCall = nullptr;
-      bool VisitCallExpr(CallExpr *CE) {
+      bool VisitCallExpr(CallExpr *CE) override {
         if (CE->getBuiltinCallee() == Builtin::BI__builtin_counted_by_ref) {
           TheCall = CE;
           return false;
         }
         return true;
       }
-      bool VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *UE) {
+      bool
+      VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *UE) override {
         // A UnaryExprOrTypeTraitExpr---e.g. sizeof, __alignof, etc.---isn't
         // the same as a CallExpr, so if we find a __builtin_counted_by_ref()
         // call in one, ignore it.
@@ -13783,13 +13783,12 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
   // subscript on the LHS.
   int DiagOption = -1;
   auto FindInvalidUseOfBoundsSafetyCounter = [&](Expr *E) -> CallExpr * {
-    struct BuiltinCountedByRefVisitor
-        : public RecursiveASTVisitor<BuiltinCountedByRefVisitor> {
+    struct BuiltinCountedByRefVisitor : DynamicRecursiveASTVisitor {
       CallExpr *CE = nullptr;
       bool InvalidUse = false;
       int Option = -1;
 
-      bool VisitCallExpr(CallExpr *E) {
+      bool VisitCallExpr(CallExpr *E) override {
         if (E->getBuiltinCallee() == Builtin::BI__builtin_counted_by_ref) {
           CE = E;
           return false;
@@ -13797,12 +13796,12 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
         return true;
       }
 
-      bool VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
+      bool VisitArraySubscriptExpr(ArraySubscriptExpr *E) override {
         InvalidUse = true;
         Option = 0; // report 'array expression' in diagnostic.
         return true;
       }
-      bool VisitBinaryOperator(BinaryOperator *E) {
+      bool VisitBinaryOperator(BinaryOperator *E) override {
         InvalidUse = true;
         Option = 1; // report 'binary expression' in diagnostic.
         return true;
