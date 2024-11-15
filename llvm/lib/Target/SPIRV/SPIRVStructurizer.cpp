@@ -14,11 +14,11 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
-#include "llvm-c/Core.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
@@ -26,7 +26,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
-#include "llvm/IR/Metadata.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -100,7 +99,7 @@ BasicBlock *getDesignatedMergeBlock(Instruction *I) {
       II->getIntrinsicID() != Intrinsic::spv_selection_merge)
     return nullptr;
 
-  BlockAddress *BA = cast<BlockAddress>(II->getOperand(1));
+  BlockAddress *BA = cast<BlockAddress>(II->getOperand(0));
   return BA->getBasicBlock();
 }
 
@@ -649,14 +648,7 @@ class SPIRVStructurizer : public FunctionPass {
       Builder.SetInsertPoint(Header->getTerminator());
 
       auto MergeAddress = BlockAddress::get(BB.getParent(), &BB);
-
-      MDNode *BranchMdNode = getDxBranchHint(*Header->getTerminator());
-      Value *MDNodeValue =
-          MetadataAsValue::get(Builder.getContext(), BranchMdNode);
-
-      SmallVector<Value *, 2> Args = {MDNodeValue, MergeAddress};
-
-      Builder.CreateIntrinsic(Intrinsic::spv_selection_merge, {}, {Args});
+      createOpSelectMerge(&Builder, MergeAddress);
 
       Modified = true;
     }
@@ -778,10 +770,9 @@ class SPIRVStructurizer : public FunctionPass {
       BasicBlock *Merge = Candidates[0];
 
       auto MergeAddress = BlockAddress::get(Merge->getParent(), Merge);
-      SmallVector<Value *, 1> Args = {MergeAddress};
       IRBuilder<> Builder(&BB);
       Builder.SetInsertPoint(BB.getTerminator());
-      Builder.CreateIntrinsic(Intrinsic::spv_selection_merge, {}, {Args});
+      createOpSelectMerge(&Builder, MergeAddress);
     }
 
     return Modified;
@@ -1114,8 +1105,7 @@ class SPIRVStructurizer : public FunctionPass {
         Builder.SetInsertPoint(Header->getTerminator());
 
         auto MergeAddress = BlockAddress::get(Merge->getParent(), Merge);
-        SmallVector<Value *, 1> Args = {MergeAddress};
-        Builder.CreateIntrinsic(Intrinsic::spv_selection_merge, {}, {Args});
+        createOpSelectMerge(&Builder, MergeAddress);
         continue;
       }
 
@@ -1129,8 +1119,7 @@ class SPIRVStructurizer : public FunctionPass {
       Builder.SetInsertPoint(Header->getTerminator());
 
       auto MergeAddress = BlockAddress::get(NewMerge->getParent(), NewMerge);
-      SmallVector<Value *, 1> Args = {MergeAddress};
-      Builder.CreateIntrinsic(Intrinsic::spv_selection_merge, {}, {Args});
+      createOpSelectMerge(&Builder, MergeAddress);
     }
 
     return Modified;
@@ -1216,6 +1205,18 @@ public:
 
     AU.addPreserved<SPIRVConvergenceRegionAnalysisWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
+  }
+
+  void createOpSelectMerge(IRBuilder<> *Builder, BlockAddress *MergeAddress) {
+    Instruction *BBTerminatoInst = Builder->GetInsertBlock()->getTerminator();
+
+    MDNode *BranchMdNode = getDxBranchHint(*BBTerminatoInst);
+    Value *MDNodeValue =
+        MetadataAsValue::get(Builder->getContext(), BranchMdNode);
+
+    llvm::SmallVector<llvm::Value *, 2> Args = {MergeAddress, MDNodeValue};
+
+    Builder->CreateIntrinsic(Intrinsic::spv_selection_merge, {}, {Args});
   }
 };
 } // namespace llvm

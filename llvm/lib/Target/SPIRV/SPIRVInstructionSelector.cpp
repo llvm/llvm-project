@@ -2788,7 +2788,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_selection_merge: {
 
     auto SelectionControl = SPIRV::SelectionControl::None;
-    const MDNode *MDOp = I.getOperand(1).getMetadata();
+    const MDNode *MDOp =
+        I.getOperand(I.getNumExplicitOperands() - 1).getMetadata();
     if (MDOp->getNumOperands() > 0) {
       ConstantInt *BranchHint =
           mdconst::extract<ConstantInt>(MDOp->getOperand(1));
@@ -2803,7 +2804,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
 
     auto MIB =
         BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSelectionMerge));
-    for (unsigned i = 2; i < I.getNumExplicitOperands(); ++i) {
+    for (unsigned i = 1; i < I.getNumExplicitOperands() - 1; ++i) {
       assert(I.getOperand(i).isMBB());
       MIB.addMBB(I.getOperand(i).getMBB());
     }
