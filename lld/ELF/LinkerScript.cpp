@@ -1766,7 +1766,7 @@ void LinkerScript::recordError(const Twine &msg) {
   msg.toVector(str);
 }
 
-static void checkMemoryRegion(const MemoryRegion *region,
+static void checkMemoryRegion(Ctx &ctx, const MemoryRegion *region,
                               const OutputSection *osec, uint64_t addr) {
   uint64_t osecEnd = addr + osec->size;
   uint64_t regionEnd = region->getOrigin() + region->getLength();
@@ -1782,9 +1782,9 @@ void LinkerScript::checkFinalScriptConditions() const {
     Err(ctx) << err;
   for (const OutputSection *sec : ctx.outputSections) {
     if (const MemoryRegion *memoryRegion = sec->memRegion)
-      checkMemoryRegion(memoryRegion, sec, sec->addr);
+      checkMemoryRegion(ctx, memoryRegion, sec, sec->addr);
     if (const MemoryRegion *lmaRegion = sec->lmaRegion)
-      checkMemoryRegion(lmaRegion, sec, sec->getLMA());
+      checkMemoryRegion(ctx, lmaRegion, sec, sec->getLMA());
   }
 }
 
