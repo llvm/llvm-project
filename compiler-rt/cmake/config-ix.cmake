@@ -189,6 +189,7 @@ check_include_files("sys/auxv.h"    COMPILER_RT_HAS_AUXV)
 # Libraries.
 check_library_exists(dl dlopen "" COMPILER_RT_HAS_LIBDL)
 check_library_exists(rt shm_open "" COMPILER_RT_HAS_LIBRT)
+check_library_exists(resolv dn_expand "" COMPILER_RT_HAS_LIBRESOLV)
 check_library_exists(m pow "" COMPILER_RT_HAS_LIBM)
 check_library_exists(pthread pthread_create "" COMPILER_RT_HAS_LIBPTHREAD)
 check_library_exists(execinfo backtrace "" COMPILER_RT_HAS_LIBEXECINFO)

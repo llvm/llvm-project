@@ -74,6 +74,7 @@ append_list_if(COMPILER_RT_HAS_LIBRT rt MEMPROF_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBM m MEMPROF_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBPTHREAD pthread MEMPROF_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBLOG log MEMPROF_DYNAMIC_LIBS)
+append_list_if(COMPILER_RT_HAS_LIBRESOLV resolv MEMPROF_DYNAMIC_LIBS)
 
 # Compile MemProf sources into an object library.
 
