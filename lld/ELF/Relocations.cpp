@@ -2366,9 +2366,8 @@ bool ThunkCreator::createThunks(uint32_t pass,
             uint64_t src = isec->getVA(rel.offset);
 
             // If we are a relocation to an existing Thunk, check if it is
-            // still in range, or if it needs a landing pad created. If not
-            // range then Rel will be altered to point to its original target
-            // so another Thunk can be generated.
+            // still in range. If not then Rel will be altered to point to its
+            // original target so another Thunk can be generated.
             if (pass > 0 && normalizeExistingThunk(rel, src))
               continue;
 
