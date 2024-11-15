@@ -791,6 +791,7 @@ will only be done through the following process:
       library features LLVM should use; avoid miscompiles in particular compiler
       versions, etc).
     - Detail downsides on important platforms (e.g. Ubuntu LTS status).
+    - See the :doc:`RFC process <RFCProcess>` documentation for more details.
 
   * Once the RFC reaches consensus, update the CMake toolchain version checks as
     well as the :doc:`getting started<GettingStarted>` guide.  This provides a
@@ -979,7 +980,8 @@ Those wishing to add a new target to LLVM must follow the procedure below:
    your target and how it follows all the requirements and what work has been
    done and will need to be done to accommodate the official target requirements.
    Make sure to expose any and all controversial issues, changes needed in the
-   base code, table gen, etc.
+   base code, table gen, etc. See the :doc:`RFC process <RFCProcess>`
+   documentation for more details.
 3. Once the response is positive, the LLVM community can start reviewing the
    actual patches (but they can be prepared before, to support the RFC). Create
    a sequence of N patches, numbered '1/N' to 'N/N' (make sure N is an actual
@@ -1030,7 +1032,8 @@ components to a high bar similar to "official targets", they:
    clear path to resolving them.
  * Must be proposed through the LLVM RFC process, and have its addition approved
    by the LLVM community - this ultimately mediates the resolution of the
-   "should" concerns above.
+   "should" concerns above. See the :doc:`RFC process <RFCProcess>`
+   documentation for more details.
 
 If you have a project that you think would make sense to add to the LLVM
 monorepo, please start an RFC topic on the `LLVM Discourse forums`_ to kick off
@@ -1074,7 +1077,8 @@ criteria:
    suggested wording below).
  * Must be proposed through the LLVM RFC process, and have its addition
    approved by the LLVM community - this ultimately mediates the resolution of
-   the "should" concerns above.
+   the "should" concerns above. See the :doc:`RFC process <RFCProcess>`
+   documentation for more details.
 
 That said, the project need not have any code to get started, and need not have
 an established community at all!  Furthermore, incubating projects may pass
