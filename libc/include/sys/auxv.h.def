@@ -11,7 +11,7 @@
 
 #include "__llvm-libc-common.h"
 
-#include "llvm-libc-macros/sys-auxv-macros.h"
+#include "../llvm-libc-macros/sys-auxv-macros.h"
 
 %%public_api()
 

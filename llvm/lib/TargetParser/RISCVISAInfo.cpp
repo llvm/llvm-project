@@ -751,17 +751,6 @@ Error RISCVISAInfo::checkDependency() {
   if (HasZvl && !HasVector)
     return getExtensionRequiresError("zvl*b", "v' or 'zve*");
 
-  if (!HasVector)
-    for (auto Ext :
-         {"zvbb", "zvbc32e", "zvkb", "zvkg", "zvkgs", "zvkned", "zvknha", "zvksed", "zvksh"})
-      if (Exts.count(Ext))
-        return getExtensionRequiresError(Ext, "v' or 'zve*");
-
-  if (!Exts.count("zve64x"))
-    for (auto Ext : {"zvknhb", "zvbc"})
-      if (Exts.count(Ext))
-        return getExtensionRequiresError(Ext, "v' or 'zve64*");
-
   if ((HasZcmt || Exts.count("zcmp")) && HasD && (HasC || Exts.count("zcd")))
     return getError(Twine("'") + (HasZcmt ? "zcmt" : "zcmp") +
                     "' extension is incompatible with '" +
@@ -770,11 +759,6 @@ Error RISCVISAInfo::checkDependency() {
 
   if (XLen != 32 && Exts.count("zcf"))
     return getError("'zcf' is only supported for 'rv32'");
-
-  if (!(Exts.count("a") || Exts.count("zaamo")))
-    for (auto Ext : {"zacas", "zabha"})
-      if (Exts.count(Ext))
-        return getExtensionRequiresError(Ext, "a' or 'zaamo");
 
   if (Exts.count("xwchc") != 0) {
     if (XLen != 32)

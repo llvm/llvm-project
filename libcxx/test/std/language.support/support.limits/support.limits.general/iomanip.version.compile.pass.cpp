@@ -32,7 +32,7 @@
 
 #elif TEST_STD_VER == 14
 
-# if !defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION
 #   ifndef __cpp_lib_quoted_string_io
 #     error "__cpp_lib_quoted_string_io should be defined in c++14"
 #   endif
@@ -41,13 +41,13 @@
 #   endif
 # else
 #   ifdef __cpp_lib_quoted_string_io
-#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)' is not met!"
+#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION' is not met!"
 #   endif
 # endif
 
 #elif TEST_STD_VER == 17
 
-# if !defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION
 #   ifndef __cpp_lib_quoted_string_io
 #     error "__cpp_lib_quoted_string_io should be defined in c++17"
 #   endif
@@ -56,13 +56,13 @@
 #   endif
 # else
 #   ifdef __cpp_lib_quoted_string_io
-#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)' is not met!"
+#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION' is not met!"
 #   endif
 # endif
 
 #elif TEST_STD_VER == 20
 
-# if !defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION
 #   ifndef __cpp_lib_quoted_string_io
 #     error "__cpp_lib_quoted_string_io should be defined in c++20"
 #   endif
@@ -71,13 +71,13 @@
 #   endif
 # else
 #   ifdef __cpp_lib_quoted_string_io
-#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)' is not met!"
+#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION' is not met!"
 #   endif
 # endif
 
 #elif TEST_STD_VER == 23
 
-# if !defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION
 #   ifndef __cpp_lib_quoted_string_io
 #     error "__cpp_lib_quoted_string_io should be defined in c++23"
 #   endif
@@ -86,13 +86,13 @@
 #   endif
 # else
 #   ifdef __cpp_lib_quoted_string_io
-#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)' is not met!"
+#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION' is not met!"
 #   endif
 # endif
 
 #elif TEST_STD_VER > 23
 
-# if !defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION
 #   ifndef __cpp_lib_quoted_string_io
 #     error "__cpp_lib_quoted_string_io should be defined in c++26"
 #   endif
@@ -101,7 +101,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_quoted_string_io
-#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)' is not met!"
+#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION' is not met!"
 #   endif
 # endif
 

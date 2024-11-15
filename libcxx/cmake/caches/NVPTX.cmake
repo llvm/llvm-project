@@ -27,6 +27,10 @@ set(LIBCXXABI_ENABLE_SHARED OFF CACHE BOOL "")
 set(LIBCXXABI_ENABLE_THREADS OFF CACHE BOOL "")
 set(LIBCXXABI_USE_LLVM_UNWINDER OFF CACHE BOOL "")
 
+# Test configuration.
+set(LIBCXX_TEST_CONFIG "nvptx-libc++-shared.cfg.in" CACHE STRING "")
+set(LIBCXX_TEST_PARAMS "optimization=none;long_tests=False;executor=nvptx-loader" CACHE STRING "")
+
 # Necessary compile flags for NVPTX.
 set(LIBCXX_ADDITIONAL_COMPILE_FLAGS
     "-nogpulib;-flto;-fconvergent-functions;--cuda-feature=+ptx63" CACHE STRING "")

@@ -97,8 +97,8 @@ define void @PR37005(ptr %base, ptr %in) {
 ; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds i8, ptr [[E1]], i64 48
 ; CHECK-NEXT:    [[E4:%.*]] = getelementptr inbounds ptr, ptr [[E2]], <2 x i64> <i64 0, i64 1>
 ; CHECK-NEXT:    [[PI1:%.*]] = ptrtoint <2 x ptr> [[E4]] to <2 x i64>
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr <2 x i64> [[PI1]], <i64 14, i64 14>
-; CHECK-NEXT:    [[SL1:%.*]] = and <2 x i64> [[TMP0]], <i64 1125899906842496, i64 1125899906842496>
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr <2 x i64> [[PI1]], splat (i64 14)
+; CHECK-NEXT:    [[SL1:%.*]] = and <2 x i64> [[TMP0]], splat (i64 1125899906842496)
 ; CHECK-NEXT:    [[E5:%.*]] = getelementptr inbounds i8, ptr [[BASE:%.*]], <2 x i64> [[SL1]]
 ; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, <2 x ptr> [[E5]], i64 80
 ; CHECK-NEXT:    call void @blackhole(<2 x ptr> [[E6]])
@@ -159,8 +159,8 @@ define void @PR37005_3(<2 x ptr> %base, ptr %in) {
 ; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds i8, ptr [[E1]], i64 48
 ; CHECK-NEXT:    [[E4:%.*]] = getelementptr inbounds ptr, ptr [[E2]], <2 x i64> <i64 0, i64 1>
 ; CHECK-NEXT:    [[PI1:%.*]] = ptrtoint <2 x ptr> [[E4]] to <2 x i64>
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr <2 x i64> [[PI1]], <i64 14, i64 14>
-; CHECK-NEXT:    [[SL1:%.*]] = and <2 x i64> [[TMP0]], <i64 1125899906842496, i64 1125899906842496>
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr <2 x i64> [[PI1]], splat (i64 14)
+; CHECK-NEXT:    [[SL1:%.*]] = and <2 x i64> [[TMP0]], splat (i64 1125899906842496)
 ; CHECK-NEXT:    [[E5:%.*]] = getelementptr inbounds i8, <2 x ptr> [[BASE:%.*]], <2 x i64> [[SL1]]
 ; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, <2 x ptr> [[E5]], i64 80
 ; CHECK-NEXT:    call void @blackhole(<2 x ptr> [[E6]])
@@ -189,7 +189,7 @@ define void @PR51485(<2 x i64> %v) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[SL1:%.*]] = shl nuw nsw <2 x i64> [[V:%.*]], <i64 7, i64 7>
+; CHECK-NEXT:    [[SL1:%.*]] = shl nuw nsw <2 x i64> [[V:%.*]], splat (i64 7)
 ; CHECK-NEXT:    [[E5:%.*]] = getelementptr inbounds i8, ptr @PR51485, <2 x i64> [[SL1]]
 ; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, <2 x ptr> [[E5]], i64 80
 ; CHECK-NEXT:    call void @blackhole(<2 x ptr> [[E6]])
@@ -217,7 +217,7 @@ define float @gep_cross_loop(ptr %_arg_, ptr %_arg_3, float %_arg_8) {
 ; CHECK:       for.cond.i:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[ADD11_I:%.*]], [[FOR_BODY_I:%.*]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I:%.*]], [[FOR_BODY_I]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX]], 17
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[IDX]], 17
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY_I]], label [[FOR_COND_I_I_I_PREHEADER:%.*]]
 ; CHECK:       for.cond.i.i.i.preheader:
 ; CHECK-NEXT:    ret float [[SUM]]

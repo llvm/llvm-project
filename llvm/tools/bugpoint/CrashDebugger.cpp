@@ -245,7 +245,7 @@ static void RemoveFunctionReferences(Module *M, const char *Name) {
   auto *NewValElemTy = OldUsedVal->getType()->getElementType();
   auto *NewValTy = ArrayType::get(NewValElemTy, Used.size());
   auto *NewUsedVal = ConstantArray::get(NewValTy, Used);
-  UsedVar->mutateType(NewUsedVal->getType()->getPointerTo());
+  UsedVar->mutateType(PointerType::getUnqual(M->getContext()));
   UsedVar->setInitializer(NewUsedVal);
 }
 

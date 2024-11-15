@@ -22,12 +22,9 @@ body:             |
     ; CHECK-NEXT: $x10 = COPY [[ROLW]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = COPY $x10
-    %1:gprb(s32) = G_TRUNC %0(s64)
-    %2:gprb(s64) = COPY $x11
-    %6:gprb(s32) = G_TRUNC %2(s64)
-    %4:gprb(s32) = G_ROTL %1, %6(s32)
-    %5:gprb(s64) = G_ANYEXT %4(s32)
-    $x10 = COPY %5(s64)
+    %1:gprb(s64) = COPY $x11
+    %2:gprb(s64) = G_ROLW %0, %1(s64)
+    $x10 = COPY %2(s64)
     PseudoRET implicit $x10
 
 ...
@@ -72,12 +69,9 @@ body:             |
     ; CHECK-NEXT: $x10 = COPY [[RORW]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = COPY $x10
-    %1:gprb(s32) = G_TRUNC %0(s64)
-    %2:gprb(s64) = COPY $x11
-    %6:gprb(s32) = G_TRUNC %2(s64)
-    %4:gprb(s32) = G_ROTR %1, %6(s32)
-    %5:gprb(s64) = G_ANYEXT %4(s32)
-    $x10 = COPY %5(s64)
+    %1:gprb(s64) = COPY $x11
+    %2:gprb(s64) = G_RORW %0, %1(s64)
+    $x10 = COPY %2(s64)
     PseudoRET implicit $x10
 
 ...
@@ -117,15 +111,13 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[RORIW:%[0-9]+]]:gpr = RORIW [[COPY]], 15
+    ; CHECK-NEXT: [[RORIW:%[0-9]+]]:gpr = RORIW [[COPY]], 17
     ; CHECK-NEXT: $x10 = COPY [[RORIW]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = COPY $x10
-    %1:gprb(s32) = G_TRUNC %0(s64)
-    %2:gprb(s32) = G_CONSTANT i32 15
-    %3:gprb(s32) = G_ROTL %1, %2(s32)
-    %4:gprb(s64) = G_ANYEXT %3(s32)
-    $x10 = COPY %4(s64)
+    %1:gprb(s64) = G_CONSTANT i64 15
+    %2:gprb(s64) = G_ROLW %0, %1(s64)
+    $x10 = COPY %2(s64)
     PseudoRET implicit $x10
 
 ...
@@ -165,16 +157,13 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 15
-    ; CHECK-NEXT: [[RORW:%[0-9]+]]:gpr = RORW [[COPY]], [[ADDI]]
-    ; CHECK-NEXT: $x10 = COPY [[RORW]]
+    ; CHECK-NEXT: [[RORIW:%[0-9]+]]:gpr = RORIW [[COPY]], 15
+    ; CHECK-NEXT: $x10 = COPY [[RORIW]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = COPY $x10
-    %1:gprb(s32) = G_TRUNC %0(s64)
-    %2:gprb(s32) = G_CONSTANT i32 15
-    %3:gprb(s32) = G_ROTR %1, %2(s32)
-    %4:gprb(s64) = G_ANYEXT %3(s32)
-    $x10 = COPY %4(s64)
+    %1:gprb(s64) = G_CONSTANT i64 15
+    %2:gprb(s64) = G_RORW %0, %1(s64)
+    $x10 = COPY %2(s64)
     PseudoRET implicit $x10
 
 ...

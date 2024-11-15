@@ -43,9 +43,10 @@ class StdCXXDisassembleTestCase(TestBase):
         # At this point, lib_stdcxx is the full path to the stdc++ library and
         # module is the corresponding SBModule.
 
-        self.expect(
-            lib_stdcxx, "Libraray StdC++ is located", exe=False, substrs=["lib"]
-        )
+        if "lib" not in lib_stdcxx:
+            self.skipTest(
+                "This test requires libstdc++.so or libc++.dylib in the target's module list."
+            )
 
         self.runCmd("image dump symtab '%s'" % lib_stdcxx)
         raw_output = self.res.GetOutput()

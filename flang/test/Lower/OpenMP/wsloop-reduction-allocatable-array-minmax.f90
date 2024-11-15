@@ -252,7 +252,6 @@ end program
 ! CHECK:                 hlfir.destroy %[[VAL_68]] : !hlfir.expr<?xi32>
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }
@@ -295,7 +294,6 @@ end program
 ! CHECK:                 hlfir.destroy %[[VAL_100]] : !hlfir.expr<?xi32>
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }

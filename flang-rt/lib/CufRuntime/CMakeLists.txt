@@ -15,7 +15,9 @@ add_flangrt_library(${CUFRT_LIBNAME}
   allocator.cpp
   allocatable.cpp
   descriptor.cpp
+  kernel.cpp
   memory.cpp
+  registration.cpp
 )
 target_include_directories(${CUFRT_LIBNAME} PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
 

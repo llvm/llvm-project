@@ -234,6 +234,10 @@ def SDTCatchret : SDTypeProfile<0, 2, [     // catchret
   SDTCisVT<0, OtherVT>, SDTCisVT<1, OtherVT>
 ]>;
 
+def SDTCleanupret : SDTypeProfile<0, 1, [   // cleanupret
+  SDTCisVT<0, OtherVT>
+]>;
+
 def SDTNone : SDTypeProfile<0, 0, []>;      // ret, trap
 
 def SDTUBSANTrap : SDTypeProfile<0, 1, []>;      // ubsantrap
@@ -534,6 +538,7 @@ def ftan       : SDNode<"ISD::FTAN"       , SDTFPUnaryOp>;
 def fasin      : SDNode<"ISD::FASIN"      , SDTFPUnaryOp>;
 def facos      : SDNode<"ISD::FACOS"      , SDTFPUnaryOp>;
 def fatan      : SDNode<"ISD::FATAN"      , SDTFPUnaryOp>;
+def fatan2     : SDNode<"ISD::FATAN2"     , SDTFPBinOp>;
 def fsinh      : SDNode<"ISD::FSINH"      , SDTFPUnaryOp>;
 def fcosh      : SDNode<"ISD::FCOSH"      , SDTFPUnaryOp>;
 def ftanh      : SDNode<"ISD::FTANH"      , SDTFPUnaryOp>;
@@ -602,6 +607,8 @@ def strict_facos      : SDNode<"ISD::STRICT_FACOS",
                                SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_fatan      : SDNode<"ISD::STRICT_FATAN",
                                SDTFPUnaryOp, [SDNPHasChain]>;
+def strict_fatan2     : SDNode<"ISD::STRICT_FATAN2",
+                               SDTFPBinOp, [SDNPHasChain]>;
 def strict_fsinh      : SDNode<"ISD::STRICT_FSINH",
                                SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_fcosh      : SDNode<"ISD::STRICT_FCOSH",
@@ -694,7 +701,7 @@ def brind      : SDNode<"ISD::BRIND"      , SDTBrind,  [SDNPHasChain]>;
 def br         : SDNode<"ISD::BR"         , SDTBr,     [SDNPHasChain]>;
 def catchret   : SDNode<"ISD::CATCHRET"   , SDTCatchret,
                         [SDNPHasChain, SDNPSideEffect]>;
-def cleanupret : SDNode<"ISD::CLEANUPRET" , SDTNone,   [SDNPHasChain]>;
+def cleanupret : SDNode<"ISD::CLEANUPRET" , SDTCleanupret, [SDNPHasChain]>;
 
 def trap       : SDNode<"ISD::TRAP"       , SDTNone,
                         [SDNPHasChain, SDNPSideEffect]>;
@@ -1588,6 +1595,9 @@ def any_facos      : PatFrags<(ops node:$src),
 def any_fatan      : PatFrags<(ops node:$src),
                               [(strict_fatan node:$src),
                                (fatan node:$src)]>;
+def any_fatan2      : PatFrags<(ops node:$src1, node:$src2),
+                              [(strict_fatan2 node:$src1, node:$src2),
+                               (fatan2 node:$src1, node:$src2)]>;
 def any_fsinh      : PatFrags<(ops node:$src),
                               [(strict_fsinh node:$src),
                                (fsinh node:$src)]>;

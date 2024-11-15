@@ -1240,11 +1240,11 @@ define i64 @test_ints_stack(i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6
 ; ASM64PWR4-NEXT:    lwz 5, 132(1)
 ; ASM64PWR4-NEXT:    add 3, 3, 4
 ; ASM64PWR4-NEXT:    add 3, 3, 12
-; ASM64PWR4-NEXT:    std 31, -8(1) # 8-byte Folded Spill
+; ASM64PWR4-NEXT:    std 2, -8(1) # 8-byte Folded Spill
 ; ASM64PWR4-NEXT:    add 3, 3, 5
-; ASM64PWR4-NEXT:    lwz 31, 140(1)
+; ASM64PWR4-NEXT:    lwz 2, 140(1)
 ; ASM64PWR4-NEXT:    lwa 11, 148(1)
-; ASM64PWR4-NEXT:    add 3, 3, 31
+; ASM64PWR4-NEXT:    add 3, 3, 2
 ; ASM64PWR4-NEXT:    add 3, 3, 11
 ; ASM64PWR4-NEXT:    ld 4, 152(1)
 ; ASM64PWR4-NEXT:    lwz 0, 164(1)
@@ -1252,7 +1252,7 @@ define i64 @test_ints_stack(i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6
 ; ASM64PWR4-NEXT:    lwa 5, 172(1)
 ; ASM64PWR4-NEXT:    add 3, 3, 0
 ; ASM64PWR4-NEXT:    add 3, 3, 5
-; ASM64PWR4-NEXT:    ld 31, -8(1) # 8-byte Folded Reload
+; ASM64PWR4-NEXT:    ld 2, -8(1) # 8-byte Folded Reload
 ; ASM64PWR4-NEXT:    blr
 entry:
   %add = add nsw i32 %i1, %i2

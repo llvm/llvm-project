@@ -21,7 +21,6 @@ subroutine simple_parallel_do
   end do
   ! CHECK:      omp.yield
   ! CHECK:      omp.terminator
-  ! CHECK:      omp.terminator
   !$OMP END PARALLEL DO
 end subroutine
 
@@ -51,7 +50,6 @@ subroutine parallel_do_with_parallel_clauses(cond, nt)
   end do
   ! CHECK:      omp.yield
   ! CHECK:      omp.terminator
-  ! CHECK:      omp.terminator
   !$OMP END PARALLEL DO
 end subroutine
 
@@ -76,7 +74,6 @@ subroutine parallel_do_with_clauses(nt)
     print*, i
   end do
   ! CHECK:      omp.yield
-  ! CHECK:      omp.terminator
   ! CHECK:      omp.terminator
   !$OMP END PARALLEL DO
 end subroutine
@@ -119,7 +116,6 @@ subroutine parallel_do_with_privatisation_clauses(cond,nt)
     print*, i, cond, nt
   end do
   ! CHECK:      omp.yield
-  ! CHECK:    omp.terminator
   ! CHECK:    omp.terminator
   !$OMP END PARALLEL DO
 end subroutine
@@ -165,7 +161,6 @@ end subroutine parallel_private_do
 ! CHECK:                 fir.call @_QPfoo(%[[I_PRIV_DECL]]#1, %[[COND_DECL]]#1, %[[NT_PRIV_DECL]]#1) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.logical<4>>, !fir.ref<i32>) -> ()
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }
@@ -212,7 +207,6 @@ end subroutine omp_parallel_multiple_firstprivate_do
 ! CHECK:                 fir.call @_QPbar(%[[I_PRIV_DECL]]#1, %[[A_PRIV_DECL]]#1) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> ()
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }
@@ -264,7 +258,6 @@ end subroutine parallel_do_private
 ! CHECK:                 fir.call @_QPfoo(%[[I_PRIV_DECL]]#1, %[[COND_PRIV_DECL]]#1, %[[NT_PRIV_DECL]]#1) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.logical<4>>, !fir.ref<i32>) -> ()
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }
@@ -317,7 +310,6 @@ end subroutine omp_parallel_do_multiple_firstprivate
 ! CHECK:                 fir.call @_QPbar(%[[I_PRIV_DECL]]#1, %[[A_PRIV_DECL]]#1) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> ()
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }

@@ -19,8 +19,9 @@ LLVM_LIBC_FUNCTION(int, fclose, (::FILE * stream)) {
   uint64_t ret = 0;
   uintptr_t file = reinterpret_cast<uintptr_t>(stream);
   rpc::Client::Port port = rpc::client.open<RPC_CLOSE_FILE>();
-  port.send_and_recv([=](rpc::Buffer *buffer) { buffer->data[0] = file; },
-                     [&](rpc::Buffer *buffer) { ret = buffer->data[0]; });
+  port.send_and_recv(
+      [=](rpc::Buffer *buffer, uint32_t) { buffer->data[0] = file; },
+      [&](rpc::Buffer *buffer, uint32_t) { ret = buffer->data[0]; });
   port.close();
 
   if (ret != 0)

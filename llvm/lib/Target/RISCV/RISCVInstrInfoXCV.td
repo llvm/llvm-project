@@ -818,7 +818,7 @@ let Predicates = [HasVendorXCVbi, IsRV32], AddedComplexity = 2 in {
 
   let usesCustomInserter = 1 in
   def Select_GPR_Using_CC_Imm : Pseudo<(outs GPR:$dst),
-                             (ins GPR:$lhs, simm5:$imm5, ixlenimm:$cc,
+                             (ins GPR:$lhs, simm5:$imm5, cond_code:$cc,
                               GPR:$truev, GPR:$falsev), []>;
 
 

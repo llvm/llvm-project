@@ -350,7 +350,6 @@ subroutine skipped_default_clause_checks()
 !CHECK-NEXT: omp.loop_nest (%[[ARG:.*]]) {{.*}} {
 !CHECK: omp.yield
 !CHECK: }
-!CHECK: omp.terminator
 !CHECK: }
 !CHECK: omp.terminator
 !CHECK: }

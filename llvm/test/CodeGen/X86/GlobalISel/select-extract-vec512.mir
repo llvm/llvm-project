@@ -27,8 +27,8 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
-# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
-# ALL-NEXT:   - { id: 1, class: vr128x, preferred-register: '' }
+# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '', flags: [   ] }
+# ALL-NEXT:   - { id: 1, class: vr128x, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -53,8 +53,8 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
-# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
-# ALL-NEXT:   - { id: 1, class: vr128x, preferred-register: '' }
+# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '', flags: [   ] }
+# ALL-NEXT:   - { id: 1, class: vr128x, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -79,8 +79,8 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
-# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
-# ALL-NEXT:   - { id: 1, class: vr256x, preferred-register: '' }
+# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '', flags: [   ] }
+# ALL-NEXT:   - { id: 1, class: vr256x, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -105,8 +105,8 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
-# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
-# ALL-NEXT:   - { id: 1, class: vr256x, preferred-register: '' }
+# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '', flags: [   ] }
+# ALL-NEXT:   - { id: 1, class: vr256x, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }

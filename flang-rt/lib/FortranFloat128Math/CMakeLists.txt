@@ -52,6 +52,7 @@ set(sources
   norm2.cpp
   pow.cpp
   random.cpp
+  remainder.cpp
   round.cpp
   rrspacing.cpp
   scale.cpp

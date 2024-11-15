@@ -570,9 +570,7 @@ public:
   getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
   /// Override to support customized stack guard loading.
-  bool useLoadStackGuardNode() const override {
-    return true;
-  }
+  bool useLoadStackGuardNode(const Module &M) const override { return true; }
   void insertSSPDeclarations(Module &M) const override {
   }
 
