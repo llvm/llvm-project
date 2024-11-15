@@ -99,6 +99,47 @@ static void initializeAlloca(CodeGenFunction &CGF, AllocaInst *AI, Value *Size,
   I->addAnnotationMetadata("auto-init");
 }
 
+static Value *handleHlslClip(const CallExpr *E, CodeGenFunction *CGF) {
+  Value *Op0 = CGF->EmitScalarExpr(E->getArg(0));
+
+  Constant *FZeroConst = ConstantFP::getZero(CGF->FloatTy);
+  Value *CMP;
+  Value *LastInstr;
+
+  if (const auto *VecTy = E->getArg(0)->getType()->getAs<clang::VectorType>()) {
+    FZeroConst = ConstantVector::getSplat(
+        ElementCount::getFixed(VecTy->getNumElements()), FZeroConst);
+    auto *FCompInst = CGF->Builder.CreateFCmpOLT(Op0, FZeroConst);
+    CMP = CGF->Builder.CreateIntrinsic(
+        CGF->Builder.getInt1Ty(), CGF->CGM.getHLSLRuntime().getAnyIntrinsic(),
+        {FCompInst}, nullptr);
+  } else
+    CMP = CGF->Builder.CreateFCmpOLT(Op0, FZeroConst);
+
+  if (CGF->CGM.getTarget().getTriple().isDXIL())
+    LastInstr = CGF->Builder.CreateIntrinsic(
+        CGF->VoidTy, llvm::Intrinsic::dx_discard, {CMP}, nullptr);
+  else if (CGF->CGM.getTarget().getTriple().isSPIRV()) {
+    BasicBlock *LT0 = CGF->createBasicBlock("lt0", CGF->CurFn);
+    BasicBlock *End = CGF->createBasicBlock("end", CGF->CurFn);
+
+    CGF->Builder.CreateCondBr(CMP, LT0, End);
+
+    CGF->Builder.SetInsertPoint(LT0);
+
+    CGF->Builder.CreateIntrinsic(CGF->VoidTy, llvm::Intrinsic::spv_discard, {},
+                                 nullptr);
+
+    LastInstr = CGF->Builder.CreateBr(End);
+
+    CGF->Builder.SetInsertPoint(End);
+  } else {
+    llvm_unreachable("Backend Codegen not supported.");
+  }
+
+  return LastInstr;
+}
+
 static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
   Value *Op0 = CGF->EmitScalarExpr(E->getArg(0));
   const auto *OutArg1 = dyn_cast<HLSLOutArgExpr>(E->getArg(1));
@@ -19208,6 +19249,10 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
            "asuint operands types mismatch");
     return handleHlslSplitdouble(E, this);
   }
+  case Builtin::BI__builtin_hlsl_elementwise_clip:
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           "clip operands types mismatch");
+    return handleHlslClip(E, this);
   }
   return nullptr;
 }
