@@ -16,11 +16,25 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, timespec_get, (struct timespec * ts, int base)) {
-  if (base != TIME_UTC) {
+  clockid_t clockid;
+  switch (base) {
+  case TIME_UTC:
+    clockid = CLOCK_REALTIME;
+    break;
+  case TIME_MONOTONIC:
+    clockid = CLOCK_MONOTONIC;
+    break;
+  case TIME_ACTIVE:
+    clockid = CLOCK_PROCESS_CPUTIME_ID;
+    break;
+  case TIME_THREAD_ACTIVE:
+    clockid = CLOCK_THREAD_CPUTIME_ID;
+    break;
+  default:
     return 0;
   }
 
-  auto result = internal::clock_gettime(CLOCK_REALTIME, ts);
+  auto result = internal::clock_gettime(clockid, ts);
   if (!result.has_value()) {
     libc_errno = result.error();
     return 0;

@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/time_macros.h"
+#include "hdr/types/struct_timespec.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/time/timespec_get.h"
 #include "test/UnitTest/Test.h"
-
-#include <time.h>
 
 TEST(LlvmLibcTimespecGet, Utc) {
 #ifndef LIBC_TARGET_ARCH_IS_GPU
@@ -19,6 +19,22 @@ TEST(LlvmLibcTimespecGet, Utc) {
   result = LIBC_NAMESPACE::timespec_get(&ts, TIME_UTC);
   ASSERT_EQ(result, TIME_UTC);
   ASSERT_GT(ts.tv_sec, time_t(0));
+#endif
+}
+
+TEST(LlvmLibcTimespecGet, Monotonic) {
+#ifndef LIBC_TARGET_ARCH_IS_GPU
+  timespec ts1, ts2;
+  int result;
+  result = LIBC_NAMESPACE::timespec_get(&ts1, TIME_MONOTONIC);
+  ASSERT_EQ(result, TIME_MONOTONIC);
+  ASSERT_GT(ts1.tv_sec, time_t(0));
+  result = LIBC_NAMESPACE::timespec_get(&ts2, TIME_MONOTONIC);
+  ASSERT_EQ(result, TIME_MONOTONIC);
+  ASSERT_GE(ts2.tv_sec, ts1.tv_sec); // The monotonic time should increase.
+  if (ts2.tv_sec == ts1.tv_sec) {
+    ASSERT_GE(ts2.tv_nsec, ts1.tv_nsec);
+  }
 #endif
 }
 

@@ -15,13 +15,11 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, timespec_get, (struct timespec * ts, int base)) {
-  if (base != TIME_UTC) {
+  if (base != TIME_UTC)
     return 0;
-  }
 
-  if (!internal::timespec_get_utc(ts)) {
+  if (!internal::timespec_get_utc(ts))
     return 0;
-  }
   return base;
 }
 
