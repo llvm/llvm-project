@@ -11,8 +11,8 @@
 // Use Reference<A> in place of a real A& reference when assignability is
 // required; safer than a bare pointer because it's guaranteed to not be null.
 
-#ifndef FORTRAN_COMMON_REFERENCE_H_
-#define FORTRAN_COMMON_REFERENCE_H_
+#ifndef FORTRAN_SUPPORT_REFERENCE_H_
+#define FORTRAN_SUPPORT_REFERENCE_H_
 #include <type_traits>
 namespace Fortran::common {
 template <typename A> class Reference {
@@ -60,4 +60,4 @@ private:
 };
 template <typename A> Reference(A &) -> Reference<A>;
 } // namespace Fortran::common
-#endif
+#endif /* FORTRAN_SUPPORT_REFERENCE_H_ */
