@@ -620,7 +620,7 @@ static Attr *handleHLSLLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
 }
 
 static Attr *handleHLSLBranchHint(Sema &S, Stmt *St, const ParsedAttr &A,
-                                    SourceRange Range) {
+                                  SourceRange Range) {
 
   return ::new (S.Context) HLSLBranchHintAttr(S.Context, A);
 }
