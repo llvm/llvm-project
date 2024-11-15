@@ -9,9 +9,6 @@
 #include "flang/Runtime/CUDA/memory.h"
 #include "../flang_rt/terminator.h"
 #include "flang/Runtime/CUDA/common.h"
-#include "../flang_rt/terminator.h"
-#include "../terminator.h"
-#include "flang/Runtime/CUDA/common.h"
 
 #include "cuda_runtime.h"
 
