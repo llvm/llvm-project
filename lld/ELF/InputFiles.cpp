@@ -71,7 +71,7 @@ const ELFSyncStream &elf::operator<<(const ELFSyncStream &s,
   return s << toString(f);
 }
 
-static ELFKind getELFKind(MemoryBufferRef mb, StringRef archiveName) {
+static ELFKind getELFKind(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName) {
   unsigned char size;
   unsigned char endian;
   std::tie(size, endian) = getElfArchType(mb.getBuffer());
@@ -1350,7 +1350,7 @@ static bool isNonCommonDef(Ctx &ctx, ELFKind ekind, MemoryBufferRef mb,
 
 static bool isNonCommonDef(Ctx &ctx, MemoryBufferRef mb, StringRef symName,
                            StringRef archiveName) {
-  switch (getELFKind(mb, archiveName)) {
+  switch (getELFKind(ctx, mb, archiveName)) {
   case ELF32LEKind:
     return isNonCommonDef<ELF32LE>(ctx, ELF32LEKind, mb, symName, archiveName);
   case ELF32BEKind:
@@ -1367,8 +1367,8 @@ static bool isNonCommonDef(Ctx &ctx, MemoryBufferRef mb, StringRef symName,
 unsigned SharedFile::vernauxNum;
 
 SharedFile::SharedFile(Ctx &ctx, MemoryBufferRef m, StringRef defaultSoName)
-    : ELFFileBase(ctx, SharedKind, getELFKind(m, ""), m), soName(defaultSoName),
-      isNeeded(!ctx.arg.asNeeded) {}
+    : ELFFileBase(ctx, SharedKind, getELFKind(ctx, m, ""), m),
+      soName(defaultSoName), isNeeded(!ctx.arg.asNeeded) {}
 
 // Parse the version definitions in the object file if present, and return a
 // vector whose nth element contains a pointer to the Elf_Verdef for version
@@ -1641,7 +1641,8 @@ static ELFKind getBitcodeELFKind(const Triple &t) {
   return t.isArch64Bit() ? ELF64BEKind : ELF32BEKind;
 }
 
-static uint16_t getBitcodeMachineKind(StringRef path, const Triple &t) {
+static uint16_t getBitcodeMachineKind(Ctx &ctx, StringRef path,
+                                      const Triple &t) {
   switch (t.getArch()) {
   case Triple::aarch64:
   case Triple::aarch64_be:
@@ -1732,7 +1733,7 @@ BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
 
   Triple t(obj->getTargetTriple());
   ekind = getBitcodeELFKind(t);
-  emachine = getBitcodeMachineKind(mb.getBufferIdentifier(), t);
+  emachine = getBitcodeMachineKind(ctx, mb.getBufferIdentifier(), t);
   osabi = getOsAbi(t);
 }
 
@@ -1883,7 +1884,7 @@ InputFile *elf::createInternalFile(Ctx &ctx, StringRef name) {
 ELFFileBase *elf::createObjFile(Ctx &ctx, MemoryBufferRef mb,
                                 StringRef archiveName, bool lazy) {
   ELFFileBase *f;
-  switch (getELFKind(mb, archiveName)) {
+  switch (getELFKind(ctx, mb, archiveName)) {
   case ELF32LEKind:
     f = make<ObjFile<ELF32LE>>(ctx, ELF32LEKind, mb, archiveName);
     break;

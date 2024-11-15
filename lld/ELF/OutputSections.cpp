@@ -308,8 +308,8 @@ static void fill(uint8_t *buf, size_t size,
 }
 
 #if LLVM_ENABLE_ZLIB
-static SmallVector<uint8_t, 0> deflateShard(ArrayRef<uint8_t> in, int level,
-                                            int flush) {
+static SmallVector<uint8_t, 0> deflateShard(Ctx &ctx, ArrayRef<uint8_t> in,
+                                            int level, int flush) {
   // 15 and 8 are default. windowBits=-15 is negative to generate raw deflate
   // data with no zlib header or trailer.
   z_stream s = {};
@@ -432,7 +432,7 @@ template <class ELFT> void OutputSection::maybeCompress(Ctx &ctx) {
     // concatenated with the next shard.
     auto shardsAdler = std::make_unique<uint32_t[]>(numShards);
     parallelFor(0, numShards, [&](size_t i) {
-      shardsOut[i] = deflateShard(shardsIn[i], level,
+      shardsOut[i] = deflateShard(ctx, shardsIn[i], level,
                                   i != numShards - 1 ? Z_SYNC_FLUSH : Z_FINISH);
       shardsAdler[i] = adler32(1, shardsIn[i].data(), shardsIn[i].size());
     });
