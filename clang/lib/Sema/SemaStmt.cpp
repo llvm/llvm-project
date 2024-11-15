@@ -214,19 +214,20 @@ static bool DiagnoseNoDiscard(Sema &S, const NamedDecl *OffendingDecl,
   if (Msg.empty()) {
     if (OffendingDecl)
       return S.Diag(Loc, diag::warn_unused_return_type)
-             << IsCtor << A << OffendingDecl << R1 << R2;
+             << IsCtor << A << OffendingDecl << false << R1 << R2;
     if (IsCtor)
-      return S.Diag(Loc, diag::warn_unused_constructor) << A << R1 << R2;
-    return S.Diag(Loc, diag::warn_unused_result) << A << R1 << R2;
+      return S.Diag(Loc, diag::warn_unused_constructor)
+             << A << false << R1 << R2;
+    return S.Diag(Loc, diag::warn_unused_result) << A << false << R1 << R2;
   }
 
   if (OffendingDecl)
-    return S.Diag(Loc, diag::warn_unused_return_type_msg)
-           << IsCtor << A << OffendingDecl << Msg << R1 << R2;
+    return S.Diag(Loc, diag::warn_unused_return_type)
+           << IsCtor << A << OffendingDecl << true << Msg << R1 << R2;
   if (IsCtor)
-    return S.Diag(Loc, diag::warn_unused_constructor_msg)
-           << A << Msg << R1 << R2;
-  return S.Diag(Loc, diag::warn_unused_result_msg) << A << Msg << R1 << R2;
+    return S.Diag(Loc, diag::warn_unused_constructor)
+           << A << true << Msg << R1 << R2;
+  return S.Diag(Loc, diag::warn_unused_result) << A << true << Msg << R1 << R2;
 }
 
 void Sema::DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID) {
