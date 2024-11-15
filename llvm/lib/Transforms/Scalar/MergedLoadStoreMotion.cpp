@@ -255,7 +255,15 @@ void MergedLoadStoreMotion::sinkStoresAndGEPs(BasicBlock *BB, StoreInst *S0,
   BasicBlock::iterator InsertPt = BB->getFirstInsertionPt();
   // Intersect optional metadata.
   S0->andIRFlags(S1);
-  S0->dropUnknownNonDebugMetadata();
+
+  // Keep metadata present on both instructions.
+  SmallVector<std::pair<unsigned, MDNode *>> MDs;
+  S0->getAllMetadataOtherThanDebugLoc(MDs);
+  SmallVector<unsigned> CommonMDs;
+  for (const auto &[Kind, MD] : MDs)
+    if (S1->getMetadata(Kind) == MD)
+      CommonMDs.push_back(Kind);
+  S0->dropUnknownNonDebugMetadata(CommonMDs);
   S0->applyMergedLocation(S0->getDebugLoc(), S1->getDebugLoc());
   S0->mergeDIAssignID(S1);
 
