@@ -70,6 +70,7 @@ public:
         ) {
   }
   using llvmOmpClause = const llvm::omp::Clause;
+  using ReductionModifier = parser::OmpReductionClause::ReductionModifier;
 
   void Enter(const parser::OpenMPConstruct &);
   void Leave(const parser::OpenMPConstruct &);
@@ -229,10 +230,11 @@ private:
   bool CheckIntrinsicOperator(
       const parser::DefinedOperator::IntrinsicOperator &);
   void CheckReductionTypeList(const parser::OmpClause::Reduction &);
-  void CheckReductionModifier(const parser::OmpClause::Reduction &);
+  void CheckReductionModifier(const ReductionModifier &);
   void CheckMasterNesting(const parser::OpenMPBlockConstruct &x);
   void ChecksOnOrderedAsBlock();
   void CheckBarrierNesting(const parser::OpenMPSimpleStandaloneConstruct &x);
+  void CheckScan(const parser::OpenMPSimpleStandaloneConstruct &x);
   void ChecksOnOrderedAsStandalone();
   void CheckOrderedDependClause(std::optional<std::int64_t> orderedValue);
   void CheckReductionArraySection(const parser::OmpObjectList &ompObjectList);
