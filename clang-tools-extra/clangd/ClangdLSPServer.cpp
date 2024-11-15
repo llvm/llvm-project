@@ -1427,7 +1427,10 @@ void ClangdLSPServer::applyConfiguration(
                                 std::move(Entry.second.compilationCommand),
                                 /*Output=*/"");
     if (Old != New) {
-      CDB->setCompileCommand(File, std::move(New));
+      if (New.CommandLine.empty() && New.Directory.empty())
+        CDB->setCompileCommand(File, std::nullopt);
+      else
+        CDB->setCompileCommand(File, std::move(New));
       ModifiedFiles.insert(File);
     }
   }
