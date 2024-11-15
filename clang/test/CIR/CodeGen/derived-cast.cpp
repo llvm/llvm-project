@@ -26,7 +26,7 @@ A *B::getAsA() {
 // CIR: %[[VAL_2:.*]] = cir.alloca !cir.ptr<!ty_A>, !cir.ptr<!cir.ptr<!ty_A>>, ["__retval"] {alignment = 8 : i64}
 // CIR: %[[VAL_3:.*]] = cir.load %[[VAL_1]] : !cir.ptr<!cir.ptr<!ty_B>>, !cir.ptr<!ty_B>
 // CIR: %[[VAL_4:.*]] = cir.derived_class_addr(%[[VAL_3]] : !cir.ptr<!ty_B> nonnull) [4] -> !cir.ptr<!ty_X>
-// CIR: %[[VAL_5:.*]] = cir.base_class_addr(%[[VAL_4]] : !cir.ptr<!ty_X>) [0] -> !cir.ptr<!ty_A>
+// CIR: %[[VAL_5:.*]] = cir.base_class_addr(%[[VAL_4]] : !cir.ptr<!ty_X> nonnull) [0] -> !cir.ptr<!ty_A>
 // CIR: cir.store %[[VAL_5]], %[[VAL_2]] : !cir.ptr<!ty_A>, !cir.ptr<!cir.ptr<!ty_A>>
 // CIR: %[[VAL_6:.*]] = cir.load %[[VAL_2]] : !cir.ptr<!cir.ptr<!ty_A>>, !cir.ptr<!ty_A>
 // CIR: cir.return %[[VAL_6]] : !cir.ptr<!ty_A>

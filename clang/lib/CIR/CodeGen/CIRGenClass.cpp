@@ -1572,10 +1572,12 @@ CIRGenFunction::getAddressOfBaseClass(Address Value,
 
   // If there is no virtual base, use cir.base_class_addr.  It takes care of
   // the adjustment and the null pointer check.
-  if (!VBase) {
+  if (NonVirtualOffset.isZero() && !VBase) {
     if (sanitizePerformTypeCheck()) {
       llvm_unreachable("NYI: sanitizePerformTypeCheck");
     }
+    return builder.createBaseClassAddr(getLoc(Loc), Value, BaseValueTy, 0,
+                                       /*assumeNotNull=*/true);
   }
 
   if (sanitizePerformTypeCheck()) {
