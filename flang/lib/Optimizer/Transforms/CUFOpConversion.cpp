@@ -268,24 +268,23 @@ static bool inDeviceContext(mlir::Operation *op) {
 static int computeWidth(mlir::Location loc, mlir::Type type,
                         fir::KindMapping &kindMap) {
   auto eleTy = fir::unwrapSequenceType(type);
-  int width = 0;
-  if (auto t{mlir::dyn_cast<mlir::IntegerType>(eleTy)}) {
-    width = t.getWidth() / 8;
-  } else if (auto t{mlir::dyn_cast<mlir::FloatType>(eleTy)}) {
-    width = t.getWidth() / 8;
-  } else if (eleTy.isInteger(1)) {
-    width = 1;
-  } else if (auto t{mlir::dyn_cast<fir::LogicalType>(eleTy)}) {
-    int kind = t.getFKind();
-    width = kindMap.getLogicalBitsize(kind) / 8;
-  } else if (auto t{mlir::dyn_cast<mlir::ComplexType>(eleTy)}) {
+  if (auto t{mlir::dyn_cast<mlir::IntegerType>(eleTy)})
+    return t.getWidth() / 8;
+  if (auto t{mlir::dyn_cast<mlir::FloatType>(eleTy)})
+    return t.getWidth() / 8;
+  if (eleTy.isInteger(1))
+    return 1;
+  if (auto t{mlir::dyn_cast<fir::LogicalType>(eleTy)})
+    return kindMap.getLogicalBitsize(t.getFKind()) / 8;
+  if (auto t{mlir::dyn_cast<mlir::ComplexType>(eleTy)}) {
     int elemSize =
         mlir::cast<mlir::FloatType>(t.getElementType()).getWidth() / 8;
-    width = 2 * elemSize;
-  } else {
-    mlir::emitError(loc, "unsupported type");
+    return 2 * elemSize;
   }
-  return width;
+  if (auto t{mlir::dyn_cast_or_null<fir::CharacterType>(eleTy)})
+    return kindMap.getCharacterBitsize(t.getFKind()) / 8;
+  mlir::emitError(loc, "unsupported type");
+  return 0;
 }
 
 struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
