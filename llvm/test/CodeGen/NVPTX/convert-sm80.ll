@@ -233,7 +233,7 @@ define <2 x bfloat> @fold_ff2bf16x2(float %a, float %b) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [fold_ff2bf16x2_param_0];
 ; CHECK-NEXT:    ld.param.f32 %f2, [fold_ff2bf16x2_param_1];
-; CHECK-NEXT:    cvt.rn.bf16x2.f32 %r1, %f1, %f2;
+; CHECK-NEXT:    cvt.rn.bf16x2.f32 %r1, %f2, %f1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %ah = fptrunc float %a to bfloat
@@ -252,7 +252,7 @@ define <2 x half> @fold_ff2f16x2(float %a, float %b) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [fold_ff2f16x2_param_0];
 ; CHECK-NEXT:    ld.param.f32 %f2, [fold_ff2f16x2_param_1];
-; CHECK-NEXT:    cvt.rn.f16x2.f32 %r1, %f1, %f2;
+; CHECK-NEXT:    cvt.rn.f16x2.f32 %r1, %f2, %f1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %ah = fptrunc float %a to half
