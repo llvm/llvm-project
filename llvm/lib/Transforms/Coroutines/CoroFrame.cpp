@@ -16,7 +16,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CoroInternal.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/StackLifetime.h"

@@ -23,6 +23,7 @@ def SDT_LoongArchV2R : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                      SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>]>;
 def SDT_LoongArchV1RUimm: SDTypeProfile<1, 2, [SDTCisVec<0>,
                                         SDTCisSameAs<0,1>, SDTCisVT<2, i64>]>;
+def SDT_LoongArchVreplgr2vr : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<0>, SDTCisInt<1>]>;
 def SDT_LoongArchVFRECIPE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVec<0>, SDTCisSameAs<0, 1>]>;
 def SDT_LoongArchVFRSQRTE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVec<0>, SDTCisSameAs<0, 1>]>;
 
@@ -52,6 +53,8 @@ def loongarch_vilvh: SDNode<"LoongArchISD::VILVH", SDT_LoongArchV2R>;
 
 def loongarch_vshuf4i: SDNode<"LoongArchISD::VSHUF4I", SDT_LoongArchV1RUimm>;
 def loongarch_vreplvei: SDNode<"LoongArchISD::VREPLVEI", SDT_LoongArchV1RUimm>;
+def loongarch_vreplgr2vr: SDNode<"LoongArchISD::VREPLGR2VR", SDT_LoongArchVreplgr2vr>;
+
 def loongarch_vfrecipe: SDNode<"LoongArchISD::FRECIPE", SDT_LoongArchVFRECIPE>;
 def loongarch_vfrsqrte: SDNode<"LoongArchISD::FRSQRTE", SDT_LoongArchVFRSQRTE>;
 
@@ -1736,6 +1739,15 @@ def : Pat<(lsxsplati8 GPR:$rj), (VREPLGR2VR_B GPR:$rj)>;
 def : Pat<(lsxsplati16 GPR:$rj), (VREPLGR2VR_H GPR:$rj)>;
 def : Pat<(lsxsplati32 GPR:$rj), (VREPLGR2VR_W GPR:$rj)>;
 def : Pat<(lsxsplati64 GPR:$rj), (VREPLGR2VR_D GPR:$rj)>;
+
+def : Pat<(v16i8 (loongarch_vreplgr2vr GRLenVT:$rj)),
+          (v16i8 (VREPLGR2VR_B GRLenVT:$rj))>;
+def : Pat<(v8i16 (loongarch_vreplgr2vr GRLenVT:$rj)),
+          (v8i16 (VREPLGR2VR_H GRLenVT:$rj))>;
+def : Pat<(v4i32 (loongarch_vreplgr2vr GRLenVT:$rj)),
+          (v4i32 (VREPLGR2VR_W GRLenVT:$rj))>;
+def : Pat<(v2i64 (loongarch_vreplgr2vr GRLenVT:$rj)),
+          (v2i64 (VREPLGR2VR_D GRLenVT:$rj))>;
 
 // VREPLVE_{B/H/W/D}
 def : Pat<(loongarch_vreplve v16i8:$vj, GRLenVT:$rk),

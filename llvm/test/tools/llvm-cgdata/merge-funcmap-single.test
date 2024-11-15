@@ -13,7 +13,7 @@ RUN: sed "s/<RAW_1_BYTES>/$(cat %t/raw-single-bytes.txt)/g" %t/merge-single-temp
 RUN: llc -filetype=obj -mtriple arm64-apple-darwin %t/merge-single.ll -o %t/merge-single.o
 
 # Merge an object file having cgdata (__llvm_merge)
-RUN: llvm-cgdata -m %t/merge-single.o -o %t/merge-single.cgdata
+RUN: llvm-cgdata -m --skip-trim %t/merge-single.o -o %t/merge-single.cgdata
 RUN: llvm-cgdata -s %t/merge-single.cgdata | FileCheck %s
 CHECK: Stable function map:
 CHECK-NEXT:  Unique hash Count: 1

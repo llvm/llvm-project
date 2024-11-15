@@ -10,31 +10,33 @@ define {<16 x i1>, <16 x i1>} @vector_deinterleave_load_v16i1_v32i1(ptr %p) {
 ; CHECK-LABEL: vector_deinterleave_load_v16i1_v32i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; CHECK-NEXT:    vlm.v v0, (a0)
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v10, v8, 1, v0
+; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vadd.vv v11, v9, v9
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v0, v0, 2
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vrgather.vv v9, v10, v11
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
+; CHECK-NEXT:    vlm.v v8, (a0)
 ; CHECK-NEXT:    li a0, -256
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vadd.vv v11, v9, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vadd.vi v12, v11, -16
-; CHECK-NEXT:    vrgather.vv v9, v8, v12, v0.t
-; CHECK-NEXT:    vmsne.vi v9, v9, 0
-; CHECK-NEXT:    vadd.vi v12, v11, 1
-; CHECK-NEXT:    vrgather.vv v13, v10, v12
-; CHECK-NEXT:    vadd.vi v10, v11, -15
-; CHECK-NEXT:    vrgather.vv v13, v8, v10, v0.t
-; CHECK-NEXT:    vmsne.vi v8, v13, 0
-; CHECK-NEXT:    vmv.v.v v0, v9
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
+; CHECK-NEXT:    vslidedown.vi v0, v8, 2
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vadd.vi v11, v11, -15
+; CHECK-NEXT:    vmerge.vim v13, v10, 1, v0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmerge.vim v14, v10, 1, v0
+; CHECK-NEXT:    vnsrl.wi v8, v14, 0
+; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vrgather.vv v8, v13, v12, v0.t
+; CHECK-NEXT:    vnsrl.wi v12, v14, 8
+; CHECK-NEXT:    vmsne.vi v10, v8, 0
+; CHECK-NEXT:    vrgather.vv v12, v13, v11, v0.t
+; CHECK-NEXT:    vmsne.vi v8, v12, 0
+; CHECK-NEXT:    vmv.v.v v0, v10
 ; CHECK-NEXT:    ret
   %vec = load <32 x i1>, ptr %p
   %retval = call {<16 x i1>, <16 x i1>} @llvm.vector.deinterleave2.v32i1(<32 x i1> %vec)
