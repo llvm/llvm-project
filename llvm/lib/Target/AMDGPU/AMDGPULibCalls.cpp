@@ -20,11 +20,8 @@
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
 #include <cmath>
 
 #define DEBUG_TYPE "amdgpu-simplifylib"
@@ -788,7 +785,8 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
               B.CreateFPToSI(FPOp->getOperand(1), PownType->getParamType(1));
           // Have to drop any nofpclass attributes on the original call site.
           Call->removeParamAttrs(
-              1, AttributeFuncs::typeIncompatible(CastedArg->getType()));
+              1, AttributeFuncs::typeIncompatible(CastedArg->getType(),
+                                                  Call->getParamAttributes(1)));
           Call->setCalledFunction(PownFunc);
           Call->setArgOperand(1, CastedArg);
           return fold_pow(FPOp, B, PownInfo) || true;

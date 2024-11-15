@@ -1259,7 +1259,7 @@ private:
 
   bool parseConditional() {
     while (CurrentToken) {
-      if (CurrentToken->is(tok::colon)) {
+      if (CurrentToken->is(tok::colon) && CurrentToken->is(TT_Unknown)) {
         CurrentToken->setType(TT_ConditionalExpr);
         next();
         return true;
@@ -5509,8 +5509,10 @@ static bool isAllmanLambdaBrace(const FormatToken &Tok) {
 bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
                                      const FormatToken &Right) const {
   const FormatToken &Left = *Right.Previous;
-  if (Right.NewlinesBefore > 1 && Style.MaxEmptyLinesToKeep > 0)
+  if (Right.NewlinesBefore > 1 && Style.MaxEmptyLinesToKeep > 0 &&
+      (!Style.RemoveEmptyLinesInUnwrappedLines || &Right == Line.First)) {
     return true;
+  }
 
   if (Style.BreakFunctionDefinitionParameters && Line.MightBeFunctionDecl &&
       Line.mightBeFunctionDefinition() && Left.MightBeFunctionDeclParen &&

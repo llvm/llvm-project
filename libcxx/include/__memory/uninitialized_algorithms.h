@@ -25,6 +25,7 @@
 #include <__type_traits/extent.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_constant_evaluated.h>
+#include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_assignable.h>
 #include <__type_traits/is_trivially_constructible.h>
 #include <__type_traits/is_trivially_relocatable.h>
@@ -375,7 +376,7 @@ __allocator_destroy_multidimensional(_Alloc& __alloc, _BidirIter __first, _Bidir
     return;
 
   if constexpr (is_array_v<_ValueType>) {
-    static_assert(!__libcpp_is_unbounded_array<_ValueType>::value,
+    static_assert(!__is_unbounded_array_v<_ValueType>,
                   "arrays of unbounded arrays don't exist, but if they did we would mess up here");
 
     using _Element = remove_extent_t<_ValueType>;
@@ -611,26 +612,28 @@ struct __allocator_has_trivial_destroy<allocator<_Tp>, _Up> : true_type {};
 //                 [__first, __last) doesn't contain any objects
 //
 // The strong exception guarantee is provided if any of the following are true:
-// - is_nothrow_move_constructible<_Tp>
-// - is_copy_constructible<_Tp>
-// - __libcpp_is_trivially_relocatable<_Tp>
-template <class _Alloc, class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
-__uninitialized_allocator_relocate(_Alloc& __alloc, _Tp* __first, _Tp* __last, _Tp* __result) {
+// - is_nothrow_move_constructible<_ValueType>
+// - is_copy_constructible<_ValueType>
+// - __libcpp_is_trivially_relocatable<_ValueType>
+template <class _Alloc, class _ContiguousIterator>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __uninitialized_allocator_relocate(
+    _Alloc& __alloc, _ContiguousIterator __first, _ContiguousIterator __last, _ContiguousIterator __result) {
+  static_assert(__libcpp_is_contiguous_iterator<_ContiguousIterator>::value, "");
+  using _ValueType = typename iterator_traits<_ContiguousIterator>::value_type;
   static_assert(__is_cpp17_move_insertable<_Alloc>::value,
                 "The specified type does not meet the requirements of Cpp17MoveInsertable");
-  if (__libcpp_is_constant_evaluated() || !__libcpp_is_trivially_relocatable<_Tp>::value ||
-      !__allocator_has_trivial_move_construct<_Alloc, _Tp>::value ||
-      !__allocator_has_trivial_destroy<_Alloc, _Tp>::value) {
+  if (__libcpp_is_constant_evaluated() || !__libcpp_is_trivially_relocatable<_ValueType>::value ||
+      !__allocator_has_trivial_move_construct<_Alloc, _ValueType>::value ||
+      !__allocator_has_trivial_destroy<_Alloc, _ValueType>::value) {
     auto __destruct_first = __result;
-    auto __guard =
-        std::__make_exception_guard(_AllocatorDestroyRangeReverse<_Alloc, _Tp*>(__alloc, __destruct_first, __result));
+    auto __guard          = std::__make_exception_guard(
+        _AllocatorDestroyRangeReverse<_Alloc, _ContiguousIterator>(__alloc, __destruct_first, __result));
     auto __iter = __first;
     while (__iter != __last) {
 #if _LIBCPP_HAS_EXCEPTIONS
-      allocator_traits<_Alloc>::construct(__alloc, __result, std::move_if_noexcept(*__iter));
+      allocator_traits<_Alloc>::construct(__alloc, std::__to_address(__result), std::move_if_noexcept(*__iter));
 #else
-      allocator_traits<_Alloc>::construct(__alloc, __result, std::move(*__iter));
+      allocator_traits<_Alloc>::construct(__alloc, std::__to_address(__result), std::move(*__iter));
 #endif
       ++__iter;
       ++__result;
@@ -638,7 +641,10 @@ __uninitialized_allocator_relocate(_Alloc& __alloc, _Tp* __first, _Tp* __last, _
     __guard.__complete();
     std::__allocator_destroy(__alloc, __first, __last);
   } else {
-    __builtin_memcpy(__result, __first, sizeof(_Tp) * (__last - __first));
+    // Casting to void* to suppress clang complaining that this is technically UB.
+    __builtin_memcpy(static_cast<void*>(std::__to_address(__result)),
+                     std::__to_address(__first),
+                     sizeof(_ValueType) * (__last - __first));
   }
 }
 

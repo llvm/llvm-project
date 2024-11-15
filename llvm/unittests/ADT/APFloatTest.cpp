@@ -832,7 +832,8 @@ TEST(APFloatTest, IsSmallestNormalized) {
     EXPECT_FALSE(APFloat::getZero(Semantics, false).isSmallestNormalized());
     EXPECT_FALSE(APFloat::getZero(Semantics, true).isSmallestNormalized());
 
-    if (APFloat::hasNanOrInf(Semantics)) {
+    if (APFloat::semanticsHasNanOrInf(Semantics)) {
+      // Types that do not support Inf will return NaN when asked for Inf.
       EXPECT_FALSE(APFloat::getInf(Semantics, false).isSmallestNormalized());
       EXPECT_FALSE(APFloat::getInf(Semantics, true).isSmallestNormalized());
 
@@ -5985,6 +5986,9 @@ TEST(APFloatTest, Float8E8M0FNUExhaustive) {
     APFloat test(APFloat::Float8E8M0FNU(), APInt(8, i));
     SCOPED_TRACE("i=" + std::to_string(i));
 
+    // bitcastToAPInt
+    EXPECT_EQ(i, test.bitcastToAPInt());
+
     // isLargest
     if (i == 254) {
       EXPECT_TRUE(test.isLargest());
@@ -7341,7 +7345,8 @@ TEST(APFloatTest, getExactLog2) {
     EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, false).getExactLog2Abs());
     EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, true).getExactLog2Abs());
 
-    if (APFloat::hasNanOrInf(Semantics)) {
+    if (APFloat::semanticsHasNanOrInf(Semantics)) {
+      // Types that do not support Inf will return NaN when asked for Inf.
       EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics).getExactLog2());
       EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics, true).getExactLog2());
       EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, false).getExactLog2());

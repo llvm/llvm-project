@@ -304,12 +304,12 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
     CurrentElement->setBitSize(*FormValue.getAsUnsignedConstant());
     break;
   case dwarf::DW_AT_call_file:
-    CurrentElement->setCallFilenameIndex(GetAsUnsignedConstant());
+    CurrentElement->setCallFilenameIndex(IncrementFileIndex
+                                             ? GetAsUnsignedConstant() + 1
+                                             : GetAsUnsignedConstant());
     break;
   case dwarf::DW_AT_call_line:
-    CurrentElement->setCallLineNumber(IncrementFileIndex
-                                          ? GetAsUnsignedConstant() + 1
-                                          : GetAsUnsignedConstant());
+    CurrentElement->setCallLineNumber(GetAsUnsignedConstant());
     break;
   case dwarf::DW_AT_comp_dir:
     CompileUnit->setCompilationDirectory(dwarf::toStringRef(FormValue));
@@ -1139,9 +1139,8 @@ void LVDWARFReader::updateReference(dwarf::Attribute Attr,
 // Get an element given the DIE offset.
 LVElement *LVDWARFReader::getElementForOffset(LVOffset Offset,
                                               LVElement *Element, bool IsType) {
-  auto Iter = ElementTable.try_emplace(Offset).first;
   // Update the element and all the references pointing to this element.
-  LVElementEntry &Entry = Iter->second;
+  LVElementEntry &Entry = ElementTable[Offset];
   if (!Entry.Element) {
     if (IsType)
       Entry.Types.insert(Element);

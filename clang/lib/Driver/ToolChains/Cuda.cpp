@@ -634,14 +634,25 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   std::vector<StringRef> Features;
   getNVPTXTargetFeatures(C.getDriver(), getToolChain().getTriple(), Args,
                          Features);
-  for (StringRef Feature : Features)
-    CmdArgs.append({"--feature", Args.MakeArgString(Feature)});
+  CmdArgs.push_back(
+      Args.MakeArgString("--plugin-opt=-mattr=" + llvm::join(Features, ",")));
 
   // Add paths for the default clang library path.
   SmallString<256> DefaultLibPath =
       llvm::sys::path::parent_path(TC.getDriver().Dir);
   llvm::sys::path::append(DefaultLibPath, CLANG_INSTALL_LIBDIR_BASENAME);
   CmdArgs.push_back(Args.MakeArgString(Twine("-L") + DefaultLibPath));
+
+  if (Args.hasArg(options::OPT_stdlib))
+    CmdArgs.append({"-lc", "-lm"});
+  if (Args.hasArg(options::OPT_startfiles)) {
+    std::optional<std::string> IncludePath = getToolChain().getStdlibPath();
+    if (!IncludePath)
+      IncludePath = "/lib";
+    SmallString<128> P(*IncludePath);
+    llvm::sys::path::append(P, "crt1.o");
+    CmdArgs.push_back(Args.MakeArgString(P));
+  }
 
   C.addCommand(std::make_unique<Command>(
       JA, *this,

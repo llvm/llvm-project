@@ -11579,6 +11579,9 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
   LValue Subobject = This;
   Subobject.addArray(Info, ExprToVisit, CAT);
   auto Eval = [&](const Expr *Init, unsigned ArrayIndex) {
+    if (Init->isValueDependent())
+      return EvaluateDependentExpr(Init, Info);
+
     if (!EvaluateInPlace(Result.getArrayInitializedElt(ArrayIndex), Info,
                          Subobject, Init) ||
         !HandleLValueArrayAdjustment(Info, Init, Subobject,
@@ -13096,6 +13099,20 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
 
     return Success(Val.popcount() % 2, E);
+  }
+
+  case Builtin::BI__builtin_abs:
+  case Builtin::BI__builtin_labs:
+  case Builtin::BI__builtin_llabs: {
+    APSInt Val;
+    if (!EvaluateInteger(E->getArg(0), Val, Info))
+      return false;
+    if (Val == APSInt(APInt::getSignedMinValue(Val.getBitWidth()),
+                      /*IsUnsigned=*/false))
+      return false;
+    if (Val.isNegative())
+      Val.negate();
+    return Success(Val, E);
   }
 
   case Builtin::BI__builtin_popcount:

@@ -69,9 +69,9 @@ BPFTargetMachine::BPFTargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
-                        getEffectiveRelocModel(RM),
-                        getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT), TT, CPU, FS, Options,
+                               getEffectiveRelocModel(RM),
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<TargetLoweringObjectFileELF>()),
       Subtarget(TT, std::string(CPU), std::string(FS), *this) {
   initAsmInfo();
@@ -138,7 +138,7 @@ void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         FPM.addPass(BPFPreserveStaticOffsetPass(false));
       });
   PB.registerPipelineEarlySimplificationEPCallback(
-      [=](ModulePassManager &MPM, OptimizationLevel) {
+      [=](ModulePassManager &MPM, OptimizationLevel, ThinOrFullLTOPhase) {
         MPM.addPass(BPFAdjustOptPass());
       });
 }

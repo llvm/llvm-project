@@ -14,9 +14,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObjectConstResult.h"
-#include "lldb/Core/ValueObjectMemory.h"
-#include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -29,6 +26,9 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectMemory.h"
+#include "lldb/ValueObject/ValueObjectRegister.h"
 #include <optional>
 
 using namespace lldb;
@@ -78,12 +78,6 @@ enum dwarf_regnums {
 };
 
 static const RegisterInfo g_register_infos_mips64[] = {
-    //  NAME      ALT    SZ OFF ENCODING        FORMAT         EH_FRAME
-    //  DWARF                   GENERIC                     PROCESS PLUGIN
-    //  LLDB NATIVE
-    //  ========  ======  == === =============  ==========     =============
-    //  =================       ====================        =================
-    //  ====================
     {"r0",
      "zero",
      8,

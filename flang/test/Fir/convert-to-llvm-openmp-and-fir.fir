@@ -781,11 +781,11 @@ func.func @_QPsimple_reduction(%arg0: !fir.ref<!fir.array<100x!fir.logical<4>>> 
 // -----
 
 // CHECK: llvm.func @_QPs
-// CHECK: omp.atomic.read %{{.*}} = %{{.*}}   : !llvm.ptr, !llvm.struct<(f32, f32)>
+// CHECK: omp.atomic.read %{{.*}} = %{{.*}}   : !llvm.ptr, !llvm.ptr, !llvm.struct<(f32, f32)>
 
 func.func @_QPs(%arg0: !fir.ref<complex<f32>> {fir.bindc_name = "x"}) {
   %0 = fir.alloca complex<f32> {bindc_name = "v", uniq_name = "_QFsEv"}
-  omp.atomic.read %0 = %arg0   : !fir.ref<complex<f32>>, complex<f32>
+  omp.atomic.read %0 = %arg0   : !fir.ref<complex<f32>>, !fir.ref<complex<f32>>, complex<f32>
   return
 }
 
@@ -799,8 +799,8 @@ func.func @_QPs(%arg0: !fir.ref<complex<f32>> {fir.bindc_name = "x"}) {
 //CHECK:  omp.parallel   {
 //CHECK:    %[[CONST_1:.*]] = llvm.mlir.constant(1 : i32) : i32
 //CHECK:    %[[ALLOCA_1:.*]] = llvm.alloca %[[CONST_1:.*]] x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
-//CHECK:    %[[LOAD:.*]] = llvm.load %[[ALLOCA]] : !llvm.ptr -> !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
-//CHECK:    llvm.store %[[LOAD]], %[[ALLOCA_1]] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>, !llvm.ptr
+//CHECK:    %[[SIZE:.*]] = llvm.mlir.constant(24 : i32) : i32
+//CHECK:    "llvm.intr.memcpy"(%[[ALLOCA_1]], %[[ALLOCA]], %[[SIZE]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 //CHECK:    %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA_1]][0, 0] : (!llvm.ptr) -> !llvm.ptr
 //CHECK:    %[[LOAD_2:.*]] = llvm.load %[[GEP]] : !llvm.ptr -> !llvm.ptr
 //CHECK:    omp.terminator
@@ -1065,3 +1065,51 @@ func.func @omp_map_common_block_using_common_block_members() {
 }
 
 fir.global common @var_common_(dense<0> : vector<8xi8>) {alignment = 4 : i64} : !fir.array<8xi8>
+
+// -----
+
+
+func.func @use_string(%arg0 : !fir.ref<!fir.char<1,?>>) {
+  return
+}
+
+func.func @use_index(%arg0 : index) {
+  return
+}
+
+// CHECK-LABEL:   llvm.func @alloca_hoisting_openmp() {
+// CHECK:           %[[VAL_0:.*]] = llvm.mlir.constant(6 : index) : i64
+// CHECK:           %[[VAL_1:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(42 : i32) : i32
+// CHECK:           omp.parallel {
+// CHECK:             %[[VAL_3:.*]] = llvm.mlir.constant(6 : index) : i64
+// CHECK:             %[[VAL_4:.*]] = llvm.alloca %[[VAL_3]] x i8 : (i64) -> !llvm.ptr
+// CHECK:             omp.wsloop {
+// CHECK:               omp.loop_nest (%[[VAL_5:.*]]) : i32 = (%[[VAL_1]]) to (%[[VAL_2]]) inclusive step (%[[VAL_1]]) {
+// CHECK:                 %[[VAL_6:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:                 llvm.call @use_string(%[[VAL_4]]) : (!llvm.ptr) -> ()
+// CHECK:                 omp.yield
+// CHECK:               }
+// CHECK:             }
+// CHECK:             omp.terminator
+// CHECK:           }
+// CHECK:           llvm.call @use_index(%[[VAL_0]]) : (i64) -> ()
+// CHECK:           llvm.return
+// CHECK:         }
+func.func @alloca_hoisting_openmp() {
+  %c6 = arith.constant 6 : index
+  %c1_i32 = arith.constant 1 : i32
+  %c42_i32 = arith.constant 42 : i32
+  omp.parallel {
+    omp.wsloop {
+      omp.loop_nest (%arg0) : i32 = (%c1_i32) to (%c42_i32) inclusive step (%c1_i32) {
+        %0 = fir.alloca !fir.char<1,?>(%c6 : index)
+        fir.call @use_string(%0) : (!fir.ref<!fir.char<1,?>>) -> ()
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+  fir.call @use_index(%c6) : (index) -> ()
+  return
+}

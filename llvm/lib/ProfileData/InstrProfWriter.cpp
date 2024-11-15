@@ -19,6 +19,7 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/ProfileCommon.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
@@ -28,6 +29,7 @@
 #include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
+#include <ctime>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -184,13 +186,25 @@ public:
 InstrProfWriter::InstrProfWriter(
     bool Sparse, uint64_t TemporalProfTraceReservoirSize,
     uint64_t MaxTemporalProfTraceLength, bool WritePrevVersion,
-    memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema)
+    memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema,
+    bool MemprofGenerateRandomHotness,
+    unsigned MemprofGenerateRandomHotnessSeed)
     : Sparse(Sparse), MaxTemporalProfTraceLength(MaxTemporalProfTraceLength),
       TemporalProfTraceReservoirSize(TemporalProfTraceReservoirSize),
       InfoObj(new InstrProfRecordWriterTrait()),
       WritePrevVersion(WritePrevVersion),
       MemProfVersionRequested(MemProfVersionRequested),
-      MemProfFullSchema(MemProfFullSchema) {}
+      MemProfFullSchema(MemProfFullSchema),
+      MemprofGenerateRandomHotness(MemprofGenerateRandomHotness) {
+  // Set up the random number seed if requested.
+  if (MemprofGenerateRandomHotness) {
+    unsigned seed = MemprofGenerateRandomHotnessSeed
+                        ? MemprofGenerateRandomHotnessSeed
+                        : std::time(nullptr);
+    errs() << "random hotness seed = " << seed << "\n";
+    std::srand(seed);
+  }
+}
 
 InstrProfWriter::~InstrProfWriter() { delete InfoObj; }
 
@@ -273,13 +287,34 @@ void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
 
 void InstrProfWriter::addMemProfRecord(
     const Function::GUID Id, const memprof::IndexedMemProfRecord &Record) {
-  auto [Iter, Inserted] = MemProfData.Records.insert({Id, Record});
+  auto NewRecord = Record;
+  // Provoke random hotness values if requested. We specify the lifetime access
+  // density and lifetime length that will result in a cold or not cold hotness.
+  // See the logic in getAllocType() in Analysis/MemoryProfileInfo.cpp.
+  if (MemprofGenerateRandomHotness) {
+    for (auto &Alloc : NewRecord.AllocSites) {
+      // To get a not cold context, set the lifetime access density to the
+      // maximum value and the lifetime to 0.
+      uint64_t NewTLAD = std::numeric_limits<uint64_t>::max();
+      uint64_t NewTL = 0;
+      bool IsCold = std::rand() % 2;
+      if (IsCold) {
+        // To get a cold context, set the lifetime access density to 0 and the
+        // lifetime to the maximum value.
+        NewTLAD = 0;
+        NewTL = std::numeric_limits<uint64_t>::max();
+      }
+      Alloc.Info.setTotalLifetimeAccessDensity(NewTLAD);
+      Alloc.Info.setTotalLifetime(NewTL);
+    }
+  }
+  auto [Iter, Inserted] = MemProfData.Records.insert({Id, NewRecord});
   // If we inserted a new record then we are done.
   if (Inserted) {
     return;
   }
   memprof::IndexedMemProfRecord &Existing = Iter->second;
-  Existing.merge(Record);
+  Existing.merge(NewRecord);
 }
 
 bool InstrProfWriter::addMemProfFrame(const memprof::FrameId Id,
@@ -566,7 +601,8 @@ writeMemProfCallStackArray(
         &MemProfCallStackData,
     llvm::DenseMap<memprof::FrameId, memprof::LinearFrameId>
         &MemProfFrameIndexes,
-    llvm::DenseMap<memprof::FrameId, memprof::FrameStat> &FrameHistogram) {
+    llvm::DenseMap<memprof::FrameId, memprof::FrameStat> &FrameHistogram,
+    unsigned &NumElements) {
   llvm::DenseMap<memprof::CallStackId, memprof::LinearCallStackId>
       MemProfCallStackIndexes;
 
@@ -575,6 +611,7 @@ writeMemProfCallStackArray(
                 FrameHistogram);
   for (auto I : Builder.getRadixArray())
     OS.write32(I);
+  NumElements = Builder.getRadixArray().size();
   MemProfCallStackIndexes = Builder.takeCallStackPos();
 
   // Release the memory of this vector as it is no longer needed.
@@ -736,14 +773,25 @@ static Error writeMemProfV3(ProfOStream &OS,
       writeMemProfFrameArray(OS, MemProfData.Frames, FrameHistogram);
 
   uint64_t CallStackPayloadOffset = OS.tell();
+  // The number of elements in the call stack array.
+  unsigned NumElements = 0;
   llvm::DenseMap<memprof::CallStackId, memprof::LinearCallStackId>
-      MemProfCallStackIndexes = writeMemProfCallStackArray(
-          OS, MemProfData.CallStacks, MemProfFrameIndexes, FrameHistogram);
+      MemProfCallStackIndexes =
+          writeMemProfCallStackArray(OS, MemProfData.CallStacks,
+                                     MemProfFrameIndexes, FrameHistogram,
+                                     NumElements);
 
   uint64_t RecordPayloadOffset = OS.tell();
   uint64_t RecordTableOffset =
       writeMemProfRecords(OS, MemProfData.Records, &Schema, memprof::Version3,
                           &MemProfCallStackIndexes);
+
+  // IndexedMemProfReader::deserializeV3 computes the number of elements in the
+  // call stack array from the difference between CallStackPayloadOffset and
+  // RecordPayloadOffset.  Verify that the computation works.
+  assert(CallStackPayloadOffset +
+             NumElements * sizeof(memprof::LinearFrameId) ==
+         RecordPayloadOffset);
 
   uint64_t Header[] = {
       CallStackPayloadOffset,

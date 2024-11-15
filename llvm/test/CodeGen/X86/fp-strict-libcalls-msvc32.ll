@@ -228,6 +228,26 @@ define float @atan(float %x) #0 {
   ret float %result
 }
 
+define float @atan2(float %x, float %y) #0 {
+; CHECK-LABEL: atan2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    subl $20, %esp
+; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fstpl (%esp)
+; CHECK-NEXT:    wait
+; CHECK-NEXT:    calll _atan2
+; CHECK-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-NEXT:    wait
+; CHECK-NEXT:    addl $20, %esp
+; CHECK-NEXT:    retl
+  %result = call float @llvm.experimental.constrained.atan2.f32(float %x, float %y, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret float %result
+}
+
 define float @cosh(float %x) #0 {
 ; CHECK-LABEL: cosh:
 ; CHECK:       # %bb.0:
@@ -263,6 +283,7 @@ define float @sinh(float %x) #0 {
 }
 
 define float @tanh(float %x) #0 {
+; CHECK-LABEL: tanh:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
@@ -293,6 +314,7 @@ declare float @llvm.experimental.constrained.tan.f32(float, metadata, metadata)
 declare float @llvm.experimental.constrained.acos.f32(float, metadata, metadata)
 declare float @llvm.experimental.constrained.asin.f32(float, metadata, metadata)
 declare float @llvm.experimental.constrained.atan.f32(float, metadata, metadata)
+declare float @llvm.experimental.constrained.atan2.f32(float, float, metadata, metadata)
 declare float @llvm.experimental.constrained.cosh.f32(float, metadata, metadata)
 declare float @llvm.experimental.constrained.sinh.f32(float, metadata, metadata)
 declare float @llvm.experimental.constrained.tanh.f32(float, metadata, metadata)

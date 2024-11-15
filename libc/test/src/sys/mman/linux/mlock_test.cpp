@@ -20,11 +20,8 @@
 #include "src/sys/resource/getrlimit.h"
 #include "src/unistd/sysconf.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
-#include "test/UnitTest/LibcTest.h"
 #include "test/UnitTest/Test.h"
 
-#include <asm-generic/errno-base.h>
-#include <asm-generic/mman.h>
 #include <linux/capability.h>
 #include <sys/mman.h>
 #include <sys/resource.h>

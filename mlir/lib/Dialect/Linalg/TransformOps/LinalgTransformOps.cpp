@@ -253,6 +253,12 @@ void transform::ApplyFoldAddIntoDestPatternsOp::populatePatterns(
   linalg::populateFoldAddIntoDestPatterns(patterns);
 }
 
+void transform::ApplyPadVectorizationPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populatePadOpVectorizationPatterns(patterns);
+  linalg::populateInsertSliceVectorizationPatterns(patterns);
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
@@ -2357,10 +2363,10 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
     return DiagnosedSilenceableFailure::success();
   };
 
+  SmallVector<Operation *> opList;
   if (isMultiwaySplit) {
 
     // Split a single target operation at multiple points.
-    SmallVector<Operation *> opList;
     TilingInterface head, tail;
     Operation *target = payload.front();
 
@@ -2400,8 +2406,6 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
     // Append any leftover parts to the end of the result list.
     if (tail)
       opList.push_back(tail.getOperation());
-    results.set(cast<OpResult>(getFirst()), opList);
-    results.set(cast<OpResult>(getSecond()), {});
 
   } else {
     // Split each target operation.
@@ -2447,9 +2451,11 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
       return diag;
     }
 
-    results.set(cast<OpResult>(getFirst()), first);
-    results.set(cast<OpResult>(getSecond()), second);
+    opList.append(first);
+    if (second.size())
+      opList.append(second);
   }
+  results.set(cast<OpResult>(getSplitList()), opList);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -2501,7 +2507,7 @@ ParseResult SplitOp::parse(OpAsmParser &parser, OperationState &result) {
   result.addAttribute(
       SplitOp::getStaticChunkSizesAttrName(result.name).getValue(),
       staticChunkSizes);
-  result.addTypes({targetType, targetType});
+  result.addTypes(targetType);
   return success();
 }
 
@@ -3477,8 +3483,12 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
 
   patterns.add<CopyVectorizationPattern>(ctx);
 
+  // Add misc. vectorization patterns (e.g. for tensor.insert_slice)
+  linalg::populateInsertSliceVectorizationPatterns(patterns);
+
   if (getVectorizePadding())
     linalg::populatePadOpVectorizationPatterns(patterns);
+  vector::populateVectorStepLoweringPatterns(patterns);
 
   TrackingListener listener(state, *this);
   GreedyRewriteConfig config;
@@ -3558,7 +3568,7 @@ transform::HoistRedundantVectorTransfersOp::applyToOne(
   // WARNING: This hoisting does not model parallelism and is generally
   // incorrect when used on distributed loops with memref semantics!
   // TODO: obsolete and should be retired.
-  linalg::hoistRedundantVectorTransfers(target);
+  linalg::hoistRedundantVectorTransfers(target, getVerifyNonZeroTrip());
   results.push_back(target);
   return DiagnosedSilenceableFailure::success();
 }

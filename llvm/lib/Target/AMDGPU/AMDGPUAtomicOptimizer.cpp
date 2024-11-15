@@ -407,16 +407,14 @@ Value *AMDGPUAtomicOptimizerImpl::buildReduction(IRBuilder<> &B,
                                                  Value *const Identity) const {
   Type *AtomicTy = V->getType();
   Module *M = B.GetInsertBlock()->getModule();
-  Function *UpdateDPP = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::amdgcn_update_dpp, AtomicTy);
 
   // Reduce within each row of 16 lanes.
   for (unsigned Idx = 0; Idx < 4; Idx++) {
     V = buildNonAtomicBinOp(
         B, Op, V,
-        B.CreateCall(UpdateDPP,
-                     {Identity, V, B.getInt32(DPP::ROW_XMASK0 | 1 << Idx),
-                      B.getInt32(0xf), B.getInt32(0xf), B.getFalse()}));
+        B.CreateIntrinsic(Intrinsic::amdgcn_update_dpp, AtomicTy,
+                          {Identity, V, B.getInt32(DPP::ROW_XMASK0 | 1 << Idx),
+                           B.getInt32(0xf), B.getInt32(0xf), B.getFalse()}));
   }
 
   // Reduce within each pair of rows (i.e. 32 lanes).
@@ -582,7 +580,7 @@ std::pair<Value *, Value *> AMDGPUAtomicOptimizerImpl::buildScanIteratively(
   auto *ActiveBits = B.CreatePHI(WaveTy, 2, "ActiveBits");
   ActiveBits->addIncoming(Ballot, EntryBB);
 
-  // Use llvm.cttz instrinsic to find the lowest remaining active lane.
+  // Use llvm.cttz intrinsic to find the lowest remaining active lane.
   auto *FF1 =
       B.CreateIntrinsic(Intrinsic::cttz, WaveTy, {ActiveBits, B.getTrue()});
 

@@ -11,7 +11,6 @@
 
 ; RUN: obj2yaml %t.o -o %t.yaml
 ; RUN: FileCheck %s --input-file=%t.yaml --check-prefix=CHECK-YAML
-; RUN: yaml2obj %t.yaml -o %t.o
 ; RUN: llvm-readelf -r %t.o | FileCheck %s --check-prefix=CHECK-RELOCS
 
 ;; Check we don't create relocations referencing a section symbol for sanitize_memtag globals.

@@ -32,14 +32,9 @@ struct prefer_underscore_version_flip {
   size_t find(const char *s, size_t pos = 0) const;
 };
 
-struct prefer_underscore_version_inherit : public string_like {
-  bool startsWith(const char *s) const;
-};
-
 void test(std::string s, std::string_view sv, sub_string ss, sub_sub_string sss,
           string_like sl, string_like_camel slc, prefer_underscore_version puv,
-          prefer_underscore_version_flip puvf,
-          prefer_underscore_version_inherit puvi) {
+          prefer_underscore_version_flip puvf) {
   s.find("a") == 0;
   // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of find() == 0
   // CHECK-FIXES: s.starts_with("a");
@@ -152,12 +147,6 @@ void test(std::string s, std::string_view sv, sub_string ss, sub_sub_string sss,
   puvf.find("a") == 0;
   // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
   // CHECK-FIXES: puvf.starts_with("a");
-
-  // Here, the subclass has startsWith, the superclass has starts_with.
-  // We prefer the version from the subclass.
-  puvi.find("a") == 0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use startsWith
-  // CHECK-FIXES: puvi.startsWith("a");
 
   s.compare(0, 1, "a") == 0;
   // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of compare() == 0

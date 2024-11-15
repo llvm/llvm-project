@@ -1290,9 +1290,8 @@ public:
       if (AllowContraction) {
         // Use fmuladd for floating point operations and let the backend decide
         // if that's profitable.
-        Function *FMulAdd = Intrinsic::getOrInsertDeclaration(
-            Func.getParent(), Intrinsic::fmuladd, A->getType());
-        return Builder.CreateCall(FMulAdd, {A, B, Sum});
+        return Builder.CreateIntrinsic(Intrinsic::fmuladd, A->getType(),
+                                       {A, B, Sum});
       }
       NumComputeOps += getNumOps(A->getType());
       Value *Mul = Builder.CreateFMul(A, B);
@@ -1463,9 +1462,12 @@ public:
       if (!CanBeFlattened(Op))
         return;
 
-      if (match(Op, m_BinOp()) && ShapeMap.find(Op) != ShapeMap.end()) {
-        ShapeMap[Op] = ShapeMap[Op].t();
-        return;
+      if (match(Op, m_BinOp())) {
+        auto It = ShapeMap.find(Op);
+        if (It != ShapeMap.end()) {
+          It->second = It->second.t();
+          return;
+        }
       }
 
       FusedInsts.insert(cast<Instruction>(Op));

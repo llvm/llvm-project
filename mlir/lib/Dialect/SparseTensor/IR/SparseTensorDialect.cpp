@@ -1142,16 +1142,18 @@ bool mlir::sparse_tensor::isBlockSparsity(AffineMap dimToLvl) {
       auto pos = dimOp.getPosition();
       if (binOp.getKind() == AffineExprKind::FloorDiv) {
         // Expect only one floordiv for each dimension.
-        if (coeffientMap.find(pos) != coeffientMap.end())
+        auto [it, inserted] = coeffientMap.try_emplace(pos);
+        if (!inserted)
           return false;
         // Record coefficient of the floordiv.
-        coeffientMap[pos] = conOp.getValue();
+        it->second = conOp.getValue();
       } else if (binOp.getKind() == AffineExprKind::Mod) {
         // Expect floordiv before mod.
-        if (coeffientMap.find(pos) == coeffientMap.end())
+        auto it = coeffientMap.find(pos);
+        if (it == coeffientMap.end())
           return false;
         // Expect mod to have the same coefficient as floordiv.
-        if (conOp.getValue() != coeffientMap[pos])
+        if (conOp.getValue() != it->second)
           return false;
         hasBlock = true;
       } else {
@@ -1160,9 +1162,8 @@ bool mlir::sparse_tensor::isBlockSparsity(AffineMap dimToLvl) {
     } else if (auto dimOp = dyn_cast<AffineDimExpr>(result)) {
       auto pos = dimOp.getPosition();
       // Expect dim to be unset.
-      if (coeffientMap.find(pos) != coeffientMap.end())
+      if (!coeffientMap.try_emplace(pos, 0).second)
         return false;
-      coeffientMap[pos] = 0;
     } else {
       return false;
     }

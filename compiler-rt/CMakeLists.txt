@@ -44,6 +44,22 @@ include(CompilerRTUtils)
 include(CMakeDependentOption)
 include(GetDarwinLinkerVersion)
 
+include(CheckCXXCompilerFlag)
+
+# Check if we can compile with --no-default-config, or if that omits a config
+# file that is essential for the toolchain to work properly.
+#
+# Using CMAKE_REQUIRED_FLAGS to make sure the flag is used both for compilation
+# and for linking.
+#
+# Doing this test early on, to see if the flag works on the toolchain
+# out of the box. Later on, we end up adding -nostdlib and similar flags
+# to all test compiles, which easily can give false positives on this test.
+set(OLD_CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
+set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} --no-default-config")
+check_cxx_compiler_flag("" COMPILER_RT_HAS_NO_DEFAULT_CONFIG_FLAG)
+set(CMAKE_REQUIRED_FLAGS "${OLD_CMAKE_REQUIRED_FLAGS}")
+
 option(COMPILER_RT_BUILD_BUILTINS "Build builtins" ON)
 mark_as_advanced(COMPILER_RT_BUILD_BUILTINS)
 option(COMPILER_RT_DISABLE_AARCH64_FMV "Disable AArch64 Function Multi Versioning support" OFF)

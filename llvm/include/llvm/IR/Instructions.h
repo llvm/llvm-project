@@ -48,6 +48,7 @@ class APInt;
 class BasicBlock;
 class ConstantInt;
 class DataLayout;
+struct KnownBits;
 class StringRef;
 class Type;
 class Value;
@@ -1304,6 +1305,11 @@ public:
   /// Return result of `LHS Pred RHS` comparison.
   static bool compare(const APInt &LHS, const APInt &RHS,
                       ICmpInst::Predicate Pred);
+
+  /// Return result of `LHS Pred RHS`, if it can be determined from the
+  /// KnownBits. Otherwise return nullopt.
+  static std::optional<bool> compare(const KnownBits &LHS, const KnownBits &RHS,
+                                     ICmpInst::Predicate Pred);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
@@ -4958,6 +4964,16 @@ inline Align getLoadStoreAlignment(const Value *I) {
   if (auto *LI = dyn_cast<LoadInst>(I))
     return LI->getAlign();
   return cast<StoreInst>(I)->getAlign();
+}
+
+/// A helper function that set the alignment of load or store instruction.
+inline void setLoadStoreAlignment(Value *I, Align NewAlign) {
+  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+         "Expected Load or Store instruction");
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    LI->setAlignment(NewAlign);
+  else
+    cast<StoreInst>(I)->setAlignment(NewAlign);
 }
 
 /// A helper function that returns the address space of the pointer operand of

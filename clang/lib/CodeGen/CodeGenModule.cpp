@@ -342,7 +342,7 @@ CodeGenModule::CodeGenModule(ASTContext &C,
     : Context(C), LangOpts(C.getLangOpts()), FS(FS), HeaderSearchOpts(HSO),
       PreprocessorOpts(PPO), CodeGenOpts(CGO), TheModule(M), Diags(diags),
       Target(C.getTargetInfo()), ABI(createCXXABI(*this)),
-      VMContext(M.getContext()), VTables(*this),
+      VMContext(M.getContext()), VTables(*this), StackHandler(diags),
       SanitizerMD(new SanitizerMetadata(*this)) {
 
   // Initialize the type cache.
@@ -1595,17 +1595,9 @@ void CodeGenModule::ErrorUnsupported(const Decl *D, const char *Type) {
   getDiags().Report(Context.getFullLoc(D->getLocation()), DiagID) << Msg;
 }
 
-void CodeGenModule::warnStackExhausted(SourceLocation Loc) {
-  // Only warn about this once.
-  if (!WarnedStackExhausted) {
-    getDiags().Report(Loc, diag::warn_stack_exhausted);
-    WarnedStackExhausted = true;
-  }
-}
-
 void CodeGenModule::runWithSufficientStackSpace(SourceLocation Loc,
                                                 llvm::function_ref<void()> Fn) {
-  clang::runWithSufficientStackSpace([&] { warnStackExhausted(Loc); }, Fn);
+  StackHandler.runWithSufficientStackSpace(Loc, Fn);
 }
 
 llvm::ConstantInt *CodeGenModule::getSize(CharUnits size) {
@@ -4911,6 +4903,52 @@ GetRuntimeFunctionDecl(ASTContext &C, StringRef Name) {
   return nullptr;
 }
 
+static void setWindowsItaniumDLLImport(CodeGenModule &CGM, bool Local,
+                                       llvm::Function *F, StringRef Name) {
+  // In Windows Itanium environments, try to mark runtime functions
+  // dllimport. For Mingw and MSVC, don't. We don't really know if the user
+  // will link their standard library statically or dynamically. Marking
+  // functions imported when they are not imported can cause linker errors
+  // and warnings.
+  if (!Local && CGM.getTriple().isWindowsItaniumEnvironment() &&
+      !CGM.getCodeGenOpts().LTOVisibilityPublicStd) {
+    const FunctionDecl *FD = GetRuntimeFunctionDecl(CGM.getContext(), Name);
+    if (!FD || FD->hasAttr<DLLImportAttr>()) {
+      F->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
+      F->setLinkage(llvm::GlobalValue::ExternalLinkage);
+    }
+  }
+}
+
+llvm::FunctionCallee CodeGenModule::CreateRuntimeFunction(
+    QualType ReturnTy, ArrayRef<QualType> ArgTys, StringRef Name,
+    llvm::AttributeList ExtraAttrs, bool Local, bool AssumeConvergent) {
+  if (AssumeConvergent) {
+    ExtraAttrs =
+        ExtraAttrs.addFnAttribute(VMContext, llvm::Attribute::Convergent);
+  }
+
+  QualType FTy = Context.getFunctionType(ReturnTy, ArgTys,
+                                         FunctionProtoType::ExtProtoInfo());
+  const CGFunctionInfo &Info = getTypes().arrangeFreeFunctionType(
+      Context.getCanonicalType(FTy).castAs<FunctionProtoType>());
+  auto *ConvTy = getTypes().GetFunctionType(Info);
+  llvm::Constant *C = GetOrCreateLLVMFunction(
+      Name, ConvTy, GlobalDecl(), /*ForVTable=*/false,
+      /*DontDefer=*/false, /*IsThunk=*/false, ExtraAttrs);
+
+  if (auto *F = dyn_cast<llvm::Function>(C)) {
+    if (F->empty()) {
+      SetLLVMFunctionAttributes(GlobalDecl(), Info, F, /*IsThunk*/ false);
+      // FIXME: Set calling-conv properly in ExtProtoInfo
+      F->setCallingConv(getRuntimeCC());
+      setWindowsItaniumDLLImport(*this, Local, F, Name);
+      setDSOLocal(F);
+    }
+  }
+  return {ConvTy, C};
+}
+
 /// CreateRuntimeFunction - Create a new runtime function with the specified
 /// type and name.
 llvm::FunctionCallee
@@ -4930,24 +4968,12 @@ CodeGenModule::CreateRuntimeFunction(llvm::FunctionType *FTy, StringRef Name,
   if (auto *F = dyn_cast<llvm::Function>(C)) {
     if (F->empty()) {
       F->setCallingConv(getRuntimeCC());
-
-      // In Windows Itanium environments, try to mark runtime functions
-      // dllimport. For Mingw and MSVC, don't. We don't really know if the user
-      // will link their standard library statically or dynamically. Marking
-      // functions imported when they are not imported can cause linker errors
-      // and warnings.
-      if (!Local && getTriple().isWindowsItaniumEnvironment() &&
-          !getCodeGenOpts().LTOVisibilityPublicStd) {
-        const FunctionDecl *FD = GetRuntimeFunctionDecl(Context, Name);
-        if (!FD || FD->hasAttr<DLLImportAttr>()) {
-          F->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
-          F->setLinkage(llvm::GlobalValue::ExternalLinkage);
-        }
-      }
+      setWindowsItaniumDLLImport(*this, Local, F, Name);
       setDSOLocal(F);
       // FIXME: We should use CodeGenModule::SetLLVMFunctionAttributes() instead
       // of trying to approximate the attributes using the LLVM function
-      // signature. This requires revising the API of CreateRuntimeFunction().
+      // signature.  The other overload of CreateRuntimeFunction does this; it
+      // should be used for new code.
       markRegisterParameterAttributes(F);
     }
   }
@@ -5537,12 +5563,14 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
         T = D->getType();
 
       if (getLangOpts().CPlusPlus) {
-        if (InitDecl->hasFlexibleArrayInit(getContext()))
-          ErrorUnsupported(D, "flexible array initializer");
         Init = EmitNullConstant(T);
-
         if (!IsDefinitionAvailableExternally)
           NeedsGlobalCtor = true;
+        if (InitDecl->hasFlexibleArrayInit(getContext())) {
+          ErrorUnsupported(D, "flexible array initializer");
+          // We cannot create ctor for flexible array initializer
+          NeedsGlobalCtor = false;
+        }
       } else {
         ErrorUnsupported(D, "static initializer");
         Init = llvm::UndefValue::get(getTypes().ConvertType(T));
@@ -5633,6 +5661,9 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
     }
     getCUDARuntime().handleVarRegistration(D, *GV);
   }
+
+  if (LangOpts.HLSL)
+    getHLSLRuntime().handleGlobalVarDefinition(D, GV);
 
   GV->setInitializer(Init);
   if (emitter)
@@ -7149,8 +7180,8 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     // For C++ standard modules we are done - we will call the module
     // initializer for imported modules, and that will likewise call those for
     // any imports it has.
-    if (CXX20ModuleInits && Import->getImportedOwningModule() &&
-        !Import->getImportedOwningModule()->isModuleMapModule())
+    if (CXX20ModuleInits && Import->getImportedModule() &&
+        Import->getImportedModule()->isNamedModule())
       break;
 
     // For clang C++ module map modules the initializers for sub-modules are

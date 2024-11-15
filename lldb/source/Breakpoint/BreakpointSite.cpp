@@ -87,6 +87,23 @@ void BreakpointSite::GetDescription(Stream *s, lldb::DescriptionLevel level) {
   m_constituents.GetDescription(s, level);
 }
 
+std::optional<uint32_t> BreakpointSite::GetSuggestedStackFrameIndex() {
+
+  std::optional<uint32_t> result;
+  std::lock_guard<std::recursive_mutex> guard(m_constituents_mutex);
+  for (BreakpointLocationSP loc_sp : m_constituents.BreakpointLocations()) {
+    std::optional<uint32_t> loc_frame_index =
+        loc_sp->GetSuggestedStackFrameIndex();
+    if (loc_frame_index) {
+      if (result)
+        result = std::max(*loc_frame_index, *result);
+      else
+        result = loc_frame_index;
+    }
+  }
+  return result;
+}
+
 bool BreakpointSite::IsInternal() const { return m_constituents.IsInternal(); }
 
 uint8_t *BreakpointSite::GetTrapOpcodeBytes() { return &m_trap_opcode[0]; }

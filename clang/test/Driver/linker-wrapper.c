@@ -250,3 +250,7 @@ __attribute__((visibility("protected"), used)) int x;
 //       MLLVM-SAME: -Xlinker -mllvm=-pass-remarks=foo,bar
 //  OFFLOAD-OPT-NOT: -Xlinker -mllvm=-pass-remarks=foo,bar
 // OFFLOAD-OPT-SAME: {{$}}
+
+// Error handling when --linker-path is not provided for clang-linker-wrapper
+// RUN: not clang-linker-wrapper 2>&1 | FileCheck --check-prefix=LINKER-PATH-NOT-PROVIDED %s
+// LINKER-PATH-NOT-PROVIDED: linker path missing, must pass 'linker-path'

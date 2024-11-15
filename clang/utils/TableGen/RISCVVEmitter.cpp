@@ -16,15 +16,12 @@
 
 #include "clang/Support/RISCVVIntrinsicUtils.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
-#include <numeric>
 #include <optional>
 
 using namespace llvm;
@@ -169,7 +166,7 @@ static VectorTypeModifier getTupleVTM(unsigned NF) {
 
 static unsigned getIndexedLoadStorePtrIdx(const RVVIntrinsic *RVVI) {
   // We need a special rule for segment load/store since the data width is not
-  // encoded in the instrinsic name itself.
+  // encoded in the intrinsic name itself.
   const StringRef IRName = RVVI->getIRName();
   constexpr unsigned RVV_VTA = 0x1;
   constexpr unsigned RVV_VMA = 0x2;
@@ -192,7 +189,7 @@ static unsigned getIndexedLoadStorePtrIdx(const RVVIntrinsic *RVVI) {
 static unsigned getSegInstLog2SEW(StringRef InstName) {
   // clang-format off
   // We need a special rule for indexed segment load/store since the data width
-  // is not encoded in the instrinsic name itself.
+  // is not encoded in the intrinsic name itself.
   if (InstName.starts_with("vloxseg") || InstName.starts_with("vluxseg") ||
       InstName.starts_with("vsoxseg") || InstName.starts_with("vsuxseg"))
     return (unsigned)-1;

@@ -2,6 +2,9 @@
 
 // XFAIL: hwasan
 
+// No pthread barriers on Darwin.
+// UNSUPPORTED: darwin
+
 #include <assert.h>
 #include <pthread.h>
 #include <sanitizer/lsan_interface.h>

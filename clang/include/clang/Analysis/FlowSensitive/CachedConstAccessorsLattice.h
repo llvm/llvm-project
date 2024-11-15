@@ -154,11 +154,12 @@ LatticeEffect CachedConstAccessorsLattice<Base>::join(
   // are non-identical but equivalent. This is likely to be sufficient in
   // practice, and it reduces implementation complexity considerably.
 
-  ConstMethodReturnValues = internal::joinConstMethodMap<Value>(
-      ConstMethodReturnValues, Other.ConstMethodReturnValues, Effect);
+  ConstMethodReturnValues =
+      clang::dataflow::internal::joinConstMethodMap<dataflow::Value>(
+          ConstMethodReturnValues, Other.ConstMethodReturnValues, Effect);
 
   ConstMethodReturnStorageLocations =
-      internal::joinConstMethodMap<StorageLocation>(
+      clang::dataflow::internal::joinConstMethodMap<dataflow::StorageLocation>(
           ConstMethodReturnStorageLocations,
           Other.ConstMethodReturnStorageLocations, Effect);
 
@@ -193,9 +194,8 @@ StorageLocation *
 CachedConstAccessorsLattice<Base>::getOrCreateConstMethodReturnStorageLocation(
     const RecordStorageLocation &RecordLoc, const CallExpr *CE,
     Environment &Env, llvm::function_ref<void(StorageLocation &)> Initialize) {
-  QualType Type = CE->getType();
-  assert(!Type.isNull());
-  assert(CE->isGLValue() || Type->isRecordType());
+  assert(!CE->getType().isNull());
+  assert(CE->isGLValue() || CE->getType()->isRecordType());
   auto &ObjMap = ConstMethodReturnStorageLocations[&RecordLoc];
   const FunctionDecl *DirectCallee = CE->getDirectCallee();
   if (DirectCallee == nullptr)

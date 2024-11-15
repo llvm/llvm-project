@@ -93,7 +93,7 @@ public:
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
     // No aliases.
-    return std::nullopt;
+    return {};
   }
 
   bool validateAsmConstraint(const char *&Name,

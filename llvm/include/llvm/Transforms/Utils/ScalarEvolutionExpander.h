@@ -126,6 +126,11 @@ class SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
   /// "expanded" form.
   bool LSRMode;
 
+  /// When true, rewrite any divisors of UDiv expressions that may be 0 to
+  /// umax(Divisor, 1) to avoid introducing UB. If the divisor may be poison,
+  /// freeze it first.
+  bool SafeUDivMode = false;
+
   typedef IRBuilder<InstSimplifyFolder, IRBuilderCallbackInserter> BuilderType;
   BuilderType Builder;
 

@@ -772,6 +772,20 @@ static bool isAddressBase(const SDValue &N) {
   }
 }
 
+static bool AllowARIIWithZeroDisp(SDNode *Parent) {
+  if (!Parent)
+    return false;
+  switch (Parent->getOpcode()) {
+  case ISD::LOAD:
+  case ISD::STORE:
+  case ISD::ATOMIC_LOAD:
+  case ISD::ATOMIC_STORE:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool M68kDAGToDAGISel::SelectARII(SDNode *Parent, SDValue N, SDValue &Disp,
                                   SDValue &Base, SDValue &Index) {
   M68kISelAddressMode AM(M68kISelAddressMode::AddrType::ARII);
@@ -811,8 +825,7 @@ bool M68kDAGToDAGISel::SelectARII(SDNode *Parent, SDValue N, SDValue &Disp,
   // The idea here is that we want to use AddrType::ARII without displacement
   // only if necessary like memory operations, otherwise this must be lowered
   // into addition
-  if (AM.Disp == 0 && (!Parent || (Parent->getOpcode() != ISD::LOAD &&
-                                   Parent->getOpcode() != ISD::STORE))) {
+  if (AM.Disp == 0 && !AllowARIIWithZeroDisp(Parent)) {
     LLVM_DEBUG(dbgs() << "REJECT: Displacement is Zero\n");
     return false;
   }

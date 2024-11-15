@@ -34,7 +34,7 @@ NVPTXInstPrinter::NVPTXInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
                                    const MCRegisterInfo &MRI)
     : MCInstPrinter(MAI, MII, MRI) {}
 
-void NVPTXInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void NVPTXInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   // Decode the virtual register
   // Must be kept in sync with NVPTXAsmPrinter::encodeVirtualRegister
   unsigned RCId = (Reg.id() >> 28);
@@ -361,6 +361,22 @@ void NVPTXInstPrinter::printMemOperand(const MCInst *MI, int OpNum,
     O << "+";
     printOperand(MI, OpNum + 1, O);
   }
+}
+
+void NVPTXInstPrinter::printOffseti32imm(const MCInst *MI, int OpNum,
+                                         raw_ostream &O, const char *Modifier) {
+  auto &Op = MI->getOperand(OpNum);
+  assert(Op.isImm() && "Invalid operand");
+  if (Op.getImm() != 0) {
+    O << "+";
+    printOperand(MI, OpNum, O);
+  }
+}
+
+void NVPTXInstPrinter::printHexu32imm(const MCInst *MI, int OpNum,
+                                      raw_ostream &O, const char *Modifier) {
+  int64_t Imm = MI->getOperand(OpNum).getImm();
+  O << formatHex(Imm) << "U";
 }
 
 void NVPTXInstPrinter::printProtoIdent(const MCInst *MI, int OpNum,

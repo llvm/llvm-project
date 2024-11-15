@@ -56,7 +56,7 @@ void __rtsan::InitializeSuppressions() {
   CHECK_EQ(nullptr, suppression_ctx);
 
   // We will use suppression_ctx == nullptr as an early out
-  if (flags().suppressions[0] == '\0')
+  if (!flags().ContainsSuppresionFile())
     return;
 
   suppression_ctx = new (suppression_placeholder)
@@ -91,4 +91,17 @@ bool __rtsan::IsStackTraceSuppressed(const StackTrace &stack) {
     }
   }
   return false;
+}
+
+bool __rtsan::IsFunctionSuppressed(const char *function_name) {
+  if (suppression_ctx == nullptr)
+    return false;
+
+  const char *flag_name = ConvertTypeToFlagName(ErrorType::FunctionNameMatches);
+
+  if (!suppression_ctx->HasSuppressionType(flag_name))
+    return false;
+
+  Suppression *s;
+  return suppression_ctx->Match(function_name, flag_name, &s);
 }

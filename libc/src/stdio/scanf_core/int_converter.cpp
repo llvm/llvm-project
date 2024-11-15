@@ -124,13 +124,24 @@ int convert_int(Reader *reader, const FormatSection &to_conv) {
 
       if (to_lower(cur_char) == 'x') {
         // This is a valid hex prefix.
+
+        is_number = false;
+        // A valid hex prefix is not necessarily a valid number. For the
+        // conversion to be valid it needs to use all of the characters it
+        // consumes. From the standard:
+        // 7.23.6.2 paragraph 9: "An input item is defined as the longest
+        // sequence of input characters which does not exceed any specified
+        // field width and which is, or is a prefix of, a matching input
+        // sequence."
+        // 7.23.6.2 paragraph 10: "If the input item is not a matching sequence,
+        // the execution of the directive fails: this condition is a matching
+        // failure"
         base = 16;
         if (max_width > 1) {
           --max_width;
           cur_char = reader->getc();
         } else {
-          write_int_with_length(0, to_conv);
-          return READ_OK;
+          return MATCHING_FAILURE;
         }
 
       } else {
@@ -198,6 +209,9 @@ int convert_int(Reader *reader, const FormatSection &to_conv) {
   // last one back.
   reader->ungetc(cur_char);
 
+  if (!is_number)
+    return MATCHING_FAILURE;
+
   if (has_overflow) {
     write_int_with_length(MAX, to_conv);
   } else {
@@ -207,8 +221,6 @@ int convert_int(Reader *reader, const FormatSection &to_conv) {
     write_int_with_length(result, to_conv);
   }
 
-  if (!is_number)
-    return MATCHING_FAILURE;
   return READ_OK;
 }
 

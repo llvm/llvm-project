@@ -1097,3 +1097,20 @@ struct C4 {
                                   // expected-warning {{volatile-qualified parameter type 'const volatile C4' is deprecated}}
 };
 }
+
+
+namespace GH112559 {
+struct Wrap  {};
+struct S {
+    constexpr operator Wrap (this const S& self) {
+        return Wrap{};
+    };
+    constexpr int operator <<(this Wrap self, int i) {
+        return 0;
+    }
+};
+// Purposefully invalid expression to check an assertion in the
+// expression recovery machinery.
+static_assert((S{} << 11) == a);
+// expected-error@-1 {{use of undeclared identifier 'a'}}
+}

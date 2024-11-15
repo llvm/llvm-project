@@ -473,7 +473,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasSVE2p1)
     Builder.defineMacro("__ARM_FEATURE_SVE2p1", "1");
 
-  if (HasSVE2 && HasSVE2AES)
+  if (HasSVE2 && HasSVEAES)
     Builder.defineMacro("__ARM_FEATURE_SVE2_AES", "1");
 
   if (HasSVE2 && HasSVE2BitPerm)
@@ -722,7 +722,7 @@ unsigned AArch64TargetInfo::multiVersionFeatureCost() const {
 bool AArch64TargetInfo::doesFeatureAffectCodeGen(StringRef Name) const {
   // FMV extensions which imply no backend features do not affect codegen.
   if (auto Ext = llvm::AArch64::parseFMVExtension(Name))
-    return !Ext->Features.empty();
+    return Ext->ID.has_value();
   return false;
 }
 
@@ -765,13 +765,11 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("i8mm", HasMatMul)
       .Case("bf16", HasBFloat16)
       .Case("sve", FPU & SveMode)
-      .Case("sve-bf16", FPU & SveMode && HasBFloat16)
-      .Case("sve-i8mm", FPU & SveMode && HasMatMul)
       .Case("sve-b16b16", HasSVEB16B16)
       .Case("f32mm", FPU & SveMode && HasMatmulFP32)
       .Case("f64mm", FPU & SveMode && HasMatmulFP64)
       .Case("sve2", FPU & SveMode && HasSVE2)
-      .Case("sve2-pmull128", FPU & SveMode && HasSVE2AES)
+      .Case("sve-aes", HasSVEAES)
       .Case("sve2-bitperm", FPU & SveMode && HasSVE2BitPerm)
       .Case("sve2-sha3", FPU & SveMode && HasSVE2SHA3)
       .Case("sve2-sm4", FPU & SveMode && HasSVE2SM4)
@@ -784,7 +782,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("sme-fa64", HasSMEFA64)
       .Case("sme-f16f16", HasSMEF16F16)
       .Case("sme-b16b16", HasSMEB16B16)
-      .Cases("memtag", "memtag2", HasMTE)
+      .Case("memtag", HasMTE)
       .Case("sb", HasSB)
       .Case("predres", HasPredRes)
       .Cases("ssbs", "ssbs2", HasSSBS)
@@ -863,12 +861,10 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSVE2 = true;
       HasSVE2p1 = true;
     }
-    if (Feature == "+sve2-aes") {
+    if (Feature == "+sve-aes") {
       FPU |= NeonMode;
-      FPU |= SveMode;
       HasFullFP16 = true;
-      HasSVE2 = true;
-      HasSVE2AES = true;
+      HasSVEAES = true;
     }
     if (Feature == "+sve2-sha3") {
       FPU |= NeonMode;
@@ -1716,26 +1712,10 @@ void DarwinAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
   if (Triple.isArm64e())
     Builder.defineMacro("__arm64e__", "1");
 
-  getDarwinDefines(Builder, Opts, Triple, PlatformName, PlatformMinVersion);
+  DarwinTargetInfo<AArch64leTargetInfo>::getOSDefines(Opts, Triple, Builder);
 }
 
 TargetInfo::BuiltinVaListKind
 DarwinAArch64TargetInfo::getBuiltinVaListKind() const {
   return TargetInfo::CharPtrBuiltinVaList;
-}
-
-// 64-bit RenderScript is aarch64
-RenderScript64TargetInfo::RenderScript64TargetInfo(const llvm::Triple &Triple,
-                                                   const TargetOptions &Opts)
-    : AArch64leTargetInfo(llvm::Triple("aarch64", Triple.getVendorName(),
-                                       Triple.getOSName(),
-                                       Triple.getEnvironmentName()),
-                          Opts) {
-  IsRenderScriptTarget = true;
-}
-
-void RenderScript64TargetInfo::getTargetDefines(const LangOptions &Opts,
-                                                MacroBuilder &Builder) const {
-  Builder.defineMacro("__RENDERSCRIPT__");
-  AArch64leTargetInfo::getTargetDefines(Opts, Builder);
 }

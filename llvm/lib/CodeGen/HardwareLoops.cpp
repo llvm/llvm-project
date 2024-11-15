@@ -30,7 +30,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -512,8 +511,7 @@ Value* HardwareLoop::InsertIterationSetup(Value *LoopCountInit) {
                                    : Intrinsic::test_set_loop_iterations)
                          : (UsePhi ? Intrinsic::start_loop_iterations
                                    : Intrinsic::set_loop_iterations);
-  Function *LoopIter = Intrinsic::getOrInsertDeclaration(M, ID, Ty);
-  Value *LoopSetup = Builder.CreateCall(LoopIter, LoopCountInit);
+  Value *LoopSetup = Builder.CreateIntrinsic(ID, Ty, LoopCountInit);
 
   // Use the return value of the intrinsic to control the entry of the loop.
   if (UseLoopGuard) {
@@ -541,10 +539,9 @@ void HardwareLoop::InsertLoopDec() {
           Attribute::StrictFP))
     CondBuilder.setIsFPConstrained(true);
 
-  Function *DecFunc = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::loop_decrement, LoopDecrement->getType());
   Value *Ops[] = { LoopDecrement };
-  Value *NewCond = CondBuilder.CreateCall(DecFunc, Ops);
+  Value *NewCond = CondBuilder.CreateIntrinsic(Intrinsic::loop_decrement,
+                                               LoopDecrement->getType(), Ops);
   Value *OldCond = ExitBranch->getCondition();
   ExitBranch->setCondition(NewCond);
 
@@ -565,10 +562,9 @@ Instruction* HardwareLoop::InsertLoopRegDec(Value *EltsRem) {
           Attribute::StrictFP))
     CondBuilder.setIsFPConstrained(true);
 
-  Function *DecFunc = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::loop_decrement_reg, {EltsRem->getType()});
   Value *Ops[] = { EltsRem, LoopDecrement };
-  Value *Call = CondBuilder.CreateCall(DecFunc, Ops);
+  Value *Call = CondBuilder.CreateIntrinsic(Intrinsic::loop_decrement_reg,
+                                            {EltsRem->getType()}, Ops);
 
   LLVM_DEBUG(dbgs() << "HWLoops: Inserted loop dec: " << *Call << "\n");
   return cast<Instruction>(Call);

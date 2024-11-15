@@ -34,7 +34,6 @@ using namespace serialization;
 namespace clang {
   class ASTDeclWriter : public DeclVisitor<ASTDeclWriter, void> {
     ASTWriter &Writer;
-    ASTContext &Context;
     ASTRecordWriter Record;
 
     serialization::DeclCode Code;
@@ -45,7 +44,7 @@ namespace clang {
   public:
     ASTDeclWriter(ASTWriter &Writer, ASTContext &Context,
                   ASTWriter::RecordDataImpl &Record, bool GeneratingReducedBMI)
-        : Writer(Writer), Context(Context), Record(Writer, Record),
+        : Writer(Writer), Record(Context, Writer, Record),
           Code((serialization::DeclCode)0), AbbrevToUse(0),
           GeneratingReducedBMI(GeneratingReducedBMI) {}
 
@@ -207,7 +206,7 @@ namespace clang {
       return Common->PartialSpecializations;
     }
     ArrayRef<Decl> getPartialSpecializations(FunctionTemplateDecl::Common *) {
-      return std::nullopt;
+      return {};
     }
 
     template<typename DeclTy>
@@ -217,7 +216,7 @@ namespace clang {
       // If we have any lazy specializations, and the external AST source is
       // our chained AST reader, we can just write out the DeclIDs. Otherwise,
       // we need to resolve them to actual declarations.
-      if (Writer.Chain != Writer.Context->getExternalSource() &&
+      if (Writer.Chain != Record.getASTContext().getExternalSource() &&
           Common->LazySpecializations) {
         D->LoadLazySpecializations();
         assert(!Common->LazySpecializations);
@@ -811,8 +810,8 @@ void ASTDeclWriter::VisitObjCMethodDecl(ObjCMethodDecl *D) {
   Record.push_back(D->isRedeclaration());
   Record.push_back(D->hasRedeclaration());
   if (D->hasRedeclaration()) {
-    assert(Context.getObjCMethodRedeclaration(D));
-    Record.AddDeclRef(Context.getObjCMethodRedeclaration(D));
+    assert(Record.getASTContext().getObjCMethodRedeclaration(D));
+    Record.AddDeclRef(Record.getASTContext().getObjCMethodRedeclaration(D));
   }
 
   // FIXME: stable encoding for @required/@optional
@@ -1038,8 +1037,9 @@ void ASTDeclWriter::VisitFieldDecl(FieldDecl *D) {
   else if (D->BitField)
     Record.AddStmt(D->getBitWidth());
 
-  if (!D->getDeclName())
-    Record.AddDeclRef(Context.getInstantiatedFromUnnamedFieldDecl(D));
+  if (!D->getDeclName() || D->isPlaceholderVar(Writer.getLangOpts()))
+    Record.AddDeclRef(
+        Record.getASTContext().getInstantiatedFromUnnamedFieldDecl(D));
 
   if (D->getDeclContext() == D->getLexicalDeclContext() &&
       !D->hasAttrs() &&
@@ -1118,11 +1118,11 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
     // strong definition in the module interface is provided by the
     // compilation of that unit, not by its users. (Inline variables are still
     // emitted in module users.)
-    ModulesCodegen =
-        (Writer.WritingModule->isInterfaceOrPartition() ||
-         (D->hasAttr<DLLExportAttr>() &&
-          Writer.Context->getLangOpts().BuildingPCHWithObjectFile)) &&
-        Writer.Context->GetGVALinkageForVariable(D) >= GVA_StrongExternal;
+    ModulesCodegen = (Writer.WritingModule->isInterfaceOrPartition() ||
+                      (D->hasAttr<DLLExportAttr>() &&
+                       Writer.getLangOpts().BuildingPCHWithObjectFile)) &&
+                     Record.getASTContext().GetGVALinkageForVariable(D) >=
+                         GVA_StrongExternal;
   }
   VarDeclBits.addBit(ModulesCodegen);
 
@@ -1163,7 +1163,7 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
     Writer.AddDeclRef(D, Writer.ModularCodegenDecls);
 
   if (D->hasAttr<BlocksAttr>()) {
-    BlockVarCopyInit Init = Writer.Context->getBlockVarCopyInit(D);
+    BlockVarCopyInit Init = Record.getASTContext().getBlockVarCopyInit(D);
     Record.AddStmt(Init.getCopyExpr());
     if (Init.getCopyExpr())
       Record.push_back(Init.canThrow());
@@ -1411,7 +1411,7 @@ void ASTDeclWriter::VisitUsingDecl(UsingDecl *D) {
   Record.AddDeclarationNameLoc(D->DNLoc, D->getDeclName());
   Record.AddDeclRef(D->FirstUsingShadow.getPointer());
   Record.push_back(D->hasTypename());
-  Record.AddDeclRef(Context.getInstantiatedFromUsingDecl(D));
+  Record.AddDeclRef(Record.getASTContext().getInstantiatedFromUsingDecl(D));
   Code = serialization::DECL_USING;
 }
 
@@ -1421,7 +1421,7 @@ void ASTDeclWriter::VisitUsingEnumDecl(UsingEnumDecl *D) {
   Record.AddSourceLocation(D->getEnumLoc());
   Record.AddTypeSourceInfo(D->getEnumType());
   Record.AddDeclRef(D->FirstUsingShadow.getPointer());
-  Record.AddDeclRef(Context.getInstantiatedFromUsingEnumDecl(D));
+  Record.AddDeclRef(Record.getASTContext().getInstantiatedFromUsingEnumDecl(D));
   Code = serialization::DECL_USING_ENUM;
 }
 
@@ -1440,7 +1440,8 @@ void ASTDeclWriter::VisitUsingShadowDecl(UsingShadowDecl *D) {
   Record.AddDeclRef(D->getTargetDecl());
   Record.push_back(D->getIdentifierNamespace());
   Record.AddDeclRef(D->UsingOrNextShadow);
-  Record.AddDeclRef(Context.getInstantiatedFromUsingShadowDecl(D));
+  Record.AddDeclRef(
+      Record.getASTContext().getInstantiatedFromUsingShadowDecl(D));
 
   if (D->getDeclContext() == D->getLexicalDeclContext() &&
       D->getFirstDecl() == D->getMostRecentDecl() && !D->hasAttrs() &&
@@ -1544,7 +1545,7 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
   // FIXME: Avoid adding the key function if the class is defined in
   // module purview since in that case the key function is meaningless.
   if (D->isCompleteDefinition())
-    Record.AddDeclRef(Context.getCurrentKeyFunction(D));
+    Record.AddDeclRef(Record.getASTContext().getCurrentKeyFunction(D));
 
   Code = serialization::DECL_CXX_RECORD;
 }
@@ -1713,13 +1714,14 @@ void ASTDeclWriter::VisitRequiresExprBodyDecl(RequiresExprBodyDecl *D) {
 void ASTDeclWriter::VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D) {
   VisitRedeclarable(D);
 
-  Record.push_back(D->isMemberSpecialization());
-
   // Emit data to initialize CommonOrPrev before VisitTemplateDecl so that
   // getCommonPtr() can be used while this is still initializing.
-  if (D->isFirstDecl())
+  if (D->isFirstDecl()) {
     // This declaration owns the 'common' pointer, so serialize that data now.
     Record.AddDeclRef(D->getInstantiatedFromMemberTemplate());
+    if (D->getInstantiatedFromMemberTemplate())
+      Record.push_back(D->isMemberSpecialization());
+  }
 
   VisitTemplateDecl(D);
   Record.push_back(D->getIdentifierNamespace());
@@ -1734,7 +1736,8 @@ void ASTDeclWriter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   // Force emitting the corresponding deduction guide in reduced BMI mode.
   // Otherwise, the deduction guide may be optimized out incorrectly.
   if (Writer.isGeneratingReducedBMI()) {
-    auto Name = Context.DeclarationNames.getCXXDeductionGuideName(D);
+    auto Name =
+        Record.getASTContext().DeclarationNames.getCXXDeductionGuideName(D);
     for (auto *DG : D->getDeclContext()->noload_lookup(Name))
       Writer.GetDeclRef(DG->getCanonicalDecl());
   }
@@ -1790,8 +1793,9 @@ void ASTDeclWriter::VisitClassTemplateSpecializationDecl(
   // FIXME: Would it be more efficient to add a callback register function
   // in sema to register the deduction guide?
   if (Writer.isWritingStdCXXNamedModules()) {
-    auto Name = Context.DeclarationNames.getCXXDeductionGuideName(
-        D->getSpecializedTemplate());
+    auto Name =
+        Record.getASTContext().DeclarationNames.getCXXDeductionGuideName(
+            D->getSpecializedTemplate());
     for (auto *DG : D->getDeclContext()->noload_lookup(Name))
       Writer.GetDeclRef(DG->getCanonicalDecl());
   }
@@ -1805,10 +1809,11 @@ void ASTDeclWriter::VisitClassTemplatePartialSpecializationDecl(
 
   VisitClassTemplateSpecializationDecl(D);
 
-  Record.push_back(D->isMemberSpecialization());
   // These are read/set from/to the first declaration.
-  if (D->isFirstDecl())
+  if (D->getPreviousDecl() == nullptr) {
     Record.AddDeclRef(D->getInstantiatedFromMember());
+    Record.push_back(D->isMemberSpecialization());
+  }
 
   Code = serialization::DECL_CLASS_TEMPLATE_PARTIAL_SPECIALIZATION;
 }
@@ -1872,11 +1877,12 @@ void ASTDeclWriter::VisitVarTemplatePartialSpecializationDecl(
   Record.AddTemplateParameterList(D->getTemplateParameters());
 
   VisitVarTemplateSpecializationDecl(D);
-  Record.push_back(D->isMemberSpecialization());
 
   // These are read/set from/to the first declaration.
-  if (D->isFirstDecl())
+  if (D->getPreviousDecl() == nullptr) {
     Record.AddDeclRef(D->getInstantiatedFromMember());
+    Record.push_back(D->isMemberSpecialization());
+  }
 
   Code = serialization::DECL_VAR_TEMPLATE_PARTIAL_SPECIALIZATION;
 }
@@ -2019,8 +2025,10 @@ void ASTDeclWriter::VisitDeclContext(DeclContext *DC) {
     // details.
     Writer.DelayedNamespace.push_back(cast<NamespaceDecl>(DC));
   } else {
-    LexicalOffset = Writer.WriteDeclContextLexicalBlock(Context, DC);
-    VisibleOffset = Writer.WriteDeclContextVisibleBlock(Context, DC);
+    LexicalOffset =
+        Writer.WriteDeclContextLexicalBlock(Record.getASTContext(), DC);
+    VisibleOffset =
+        Writer.WriteDeclContextVisibleBlock(Record.getASTContext(), DC);
   }
 
   Record.AddOffset(LexicalOffset);
@@ -2877,18 +2885,18 @@ void ASTRecordWriter::AddFunctionDefinition(const FunctionDecl *FD) {
       // strong definition in the module interface is provided by the
       // compilation of that unit, not by its users. (Inline functions are still
       // emitted in module users.)
-      Linkage = Writer->Context->GetGVALinkageForFunction(FD);
+      Linkage = getASTContext().GetGVALinkageForFunction(FD);
       ModulesCodegen = *Linkage >= GVA_StrongExternal;
     }
-    if (Writer->Context->getLangOpts().ModulesCodegen ||
+    if (Writer->getLangOpts().ModulesCodegen ||
         (FD->hasAttr<DLLExportAttr>() &&
-         Writer->Context->getLangOpts().BuildingPCHWithObjectFile)) {
+         Writer->getLangOpts().BuildingPCHWithObjectFile)) {
 
       // Under -fmodules-codegen, codegen is performed for all non-internal,
       // non-always_inline functions, unless they are available elsewhere.
       if (!FD->hasAttr<AlwaysInlineAttr>()) {
         if (!Linkage)
-          Linkage = Writer->Context->GetGVALinkageForFunction(FD);
+          Linkage = getASTContext().GetGVALinkageForFunction(FD);
         ModulesCodegen =
             *Linkage != GVA_Internal && *Linkage != GVA_AvailableExternally;
       }

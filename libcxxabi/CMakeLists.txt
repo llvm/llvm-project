@@ -222,8 +222,7 @@ set(LIBCXXABI_CXX_FLAGS "")
 set(LIBCXXABI_COMPILE_FLAGS "")
 set(LIBCXXABI_LINK_FLAGS "")
 set(LIBCXXABI_LIBRARIES "")
-set(LIBCXXABI_ADDITIONAL_COMPILE_FLAGS "" CACHE STRING
-    "Additional Compile only flags which can be provided in cache")
+set(LIBCXXABI_ADDITIONAL_COMPILE_FLAGS "" CACHE STRING "See documentation LIBCXX_ADDITIONAL_COMPILE_FLAGS")
 set(LIBCXXABI_ADDITIONAL_LIBRARIES "" CACHE STRING
     "Additional libraries libc++abi is linked to which can be provided in cache")
 

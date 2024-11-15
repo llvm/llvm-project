@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -convert-vector-to-llvm -split-input-file | FileCheck -D$IDX_TYPE=i32 %s
-// RUN: mlir-opt %s --convert-vector-to-llvm='force-32bit-vector-indices=0' | FileCheck  -D$IDX_TYPE=i64 %s
+// RUN: mlir-opt %s -convert-vector-to-llvm -split-input-file | FileCheck '-D$IDX_TYPE=i32' %s
+// RUN: mlir-opt %s --convert-vector-to-llvm='force-32bit-vector-indices=0' | FileCheck '-D$IDX_TYPE=i64' %s
 
 func.func @transfer_read_write_1d(%A : memref<?xf32>, %base: index) -> vector<17xf32> {
   %f7 = arith.constant 7.0: f32

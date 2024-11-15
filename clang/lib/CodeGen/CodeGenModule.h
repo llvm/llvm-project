@@ -26,6 +26,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/ProfileList.h"
+#include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/XRayLists.h"
 #include "clang/Lex/PreprocessorOptions.h"
@@ -336,7 +337,7 @@ private:
   std::unique_ptr<llvm::IndexedInstrProfReader> PGOReader;
   InstrProfStats PGOStats;
   std::unique_ptr<llvm::SanitizerStatReport> SanStats;
-  bool WarnedStackExhausted = false;
+  StackExhaustionHandler StackHandler;
 
   // A set of references that have only been seen via a weakref so far. This is
   // used to remove the weak of the reference if we ever see a direct reference
@@ -752,8 +753,7 @@ public:
 
   llvm::MDNode *getNoObjCARCExceptionsMetadata() {
     if (!NoObjCARCExceptionsMetadata)
-      NoObjCARCExceptionsMetadata =
-          llvm::MDNode::get(getLLVMContext(), std::nullopt);
+      NoObjCARCExceptionsMetadata = llvm::MDNode::get(getLLVMContext(), {});
     return NoObjCARCExceptionsMetadata;
   }
 
@@ -1180,8 +1180,7 @@ public:
   llvm::Constant *getBuiltinLibFunction(const FunctionDecl *FD,
                                         unsigned BuiltinID);
 
-  llvm::Function *getIntrinsic(unsigned IID,
-                               ArrayRef<llvm::Type *> Tys = std::nullopt);
+  llvm::Function *getIntrinsic(unsigned IID, ArrayRef<llvm::Type *> Tys = {});
 
   /// Emit code for a single top level declaration.
   void EmitTopLevelDecl(Decl *D);
@@ -1248,8 +1247,20 @@ public:
   /// Create or return a runtime function declaration with the specified type
   /// and name. If \p AssumeConvergent is true, the call will have the
   /// convergent attribute added.
+  ///
+  /// For new code, please use the overload that takes a QualType; it sets
+  /// function attributes more accurately.
   llvm::FunctionCallee
   CreateRuntimeFunction(llvm::FunctionType *Ty, StringRef Name,
+                        llvm::AttributeList ExtraAttrs = llvm::AttributeList(),
+                        bool Local = false, bool AssumeConvergent = false);
+
+  /// Create or return a runtime function declaration with the specified type
+  /// and name. If \p AssumeConvergent is true, the call will have the
+  /// convergent attribute added.
+  llvm::FunctionCallee
+  CreateRuntimeFunction(QualType ReturnTy, ArrayRef<QualType> ArgTys,
+                        StringRef Name,
                         llvm::AttributeList ExtraAttrs = llvm::AttributeList(),
                         bool Local = false, bool AssumeConvergent = false);
 
@@ -1297,9 +1308,6 @@ public:
 
   /// Print out an error that codegen doesn't support the specified decl yet.
   void ErrorUnsupported(const Decl *D, const char *Type);
-
-  /// Warn that the stack is nearly exhausted.
-  void warnStackExhausted(SourceLocation Loc);
 
   /// Run some code with "sufficient" stack space. (Currently, at least 256K is
   /// guaranteed). Produces a warning if we're low on stack space and allocates

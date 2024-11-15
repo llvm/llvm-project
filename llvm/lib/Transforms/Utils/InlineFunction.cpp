@@ -181,8 +181,20 @@ namespace {
       }
     }
   };
-
 } // end anonymous namespace
+
+static IntrinsicInst *getConvergenceEntry(BasicBlock &BB) {
+  auto *I = BB.getFirstNonPHI();
+  while (I) {
+    if (auto *IntrinsicCall = dyn_cast<ConvergenceControlInst>(I)) {
+      if (IntrinsicCall->isEntry()) {
+        return IntrinsicCall;
+      }
+    }
+    I = I->getNextNode();
+  }
+  return nullptr;
+}
 
 /// Get or create a target for the branch from ResumeInsts.
 BasicBlock *LandingPadInliningInfo::getInnerResumeDest() {
@@ -1453,7 +1465,7 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
             }
           }
           AL = AL.addParamAttributes(Context, I, NewAB);
-        } else {
+        } else if (NewInnerCB->getArgOperand(I)->getType()->isPointerTy()) {
           // Check if the underlying value for the parameter is an argument.
           const Value *UnderlyingV =
               getUnderlyingObject(InnerCB->getArgOperand(I));
@@ -1461,10 +1473,13 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
           if (!Arg)
             continue;
           ArgNo = Arg->getArgNo();
+        } else {
+          continue;
         }
 
         // If so, propagate its access attributes.
         AL = AL.addParamAttributes(Context, I, ValidObjParamAttrs[ArgNo]);
+
         // We can have conflicting attributes from the inner callsite and
         // to-be-inlined callsite. In that case, choose the most
         // restrictive.
@@ -2115,7 +2130,6 @@ void llvm::updateProfileCallee(
 static void
 inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
                            const SmallVectorImpl<ReturnInst *> &Returns) {
-  Module *Mod = CB.getModule();
   assert(objcarc::isRetainOrClaimRV(RVCallKind) && "unexpected ARC function");
   bool IsRetainRV = RVCallKind == objcarc::ARCInstKind::RetainRV,
        IsUnsafeClaimRV = !IsRetainRV;
@@ -2147,9 +2161,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
         //   call.
         if (IsUnsafeClaimRV) {
           Builder.SetInsertPoint(II);
-          Function *IFn =
-              Intrinsic::getOrInsertDeclaration(Mod, Intrinsic::objc_release);
-          Builder.CreateCall(IFn, RetOpnd, "");
+          Builder.CreateIntrinsic(Intrinsic::objc_release, {}, RetOpnd);
         }
         II->eraseFromParent();
         InsertRetainCall = false;
@@ -2183,9 +2195,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
       // matching autoreleaseRV or an annotated call in the callee. Emit a call
       // to objc_retain.
       Builder.SetInsertPoint(RI);
-      Function *IFn =
-          Intrinsic::getOrInsertDeclaration(Mod, Intrinsic::objc_retain);
-      Builder.CreateCall(IFn, RetOpnd, "");
+      Builder.CreateIntrinsic(Intrinsic::objc_retain, {}, RetOpnd);
     }
   }
 }
@@ -2501,15 +2511,10 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   // fully implements convergence control tokens, there is no mixing of
   // controlled and uncontrolled convergent operations in the whole program.
   if (CB.isConvergent()) {
-    auto *I = CalledFunc->getEntryBlock().getFirstNonPHI();
-    if (auto *IntrinsicCall = dyn_cast<IntrinsicInst>(I)) {
-      if (IntrinsicCall->getIntrinsicID() ==
-          Intrinsic::experimental_convergence_entry) {
-        if (!ConvergenceControlToken) {
-          return InlineResult::failure(
-              "convergent call needs convergencectrl operand");
-        }
-      }
+    if (!ConvergenceControlToken &&
+        getConvergenceEntry(CalledFunc->getEntryBlock())) {
+      return InlineResult::failure(
+          "convergent call needs convergencectrl operand");
     }
   }
 
@@ -2800,13 +2805,10 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   }
 
   if (ConvergenceControlToken) {
-    auto *I = FirstNewBlock->getFirstNonPHI();
-    if (auto *IntrinsicCall = dyn_cast<IntrinsicInst>(I)) {
-      if (IntrinsicCall->getIntrinsicID() ==
-          Intrinsic::experimental_convergence_entry) {
-        IntrinsicCall->replaceAllUsesWith(ConvergenceControlToken);
-        IntrinsicCall->eraseFromParent();
-      }
+    IntrinsicInst *IntrinsicCall = getConvergenceEntry(*FirstNewBlock);
+    if (IntrinsicCall) {
+      IntrinsicCall->replaceAllUsesWith(ConvergenceControlToken);
+      IntrinsicCall->eraseFromParent();
     }
   }
 
@@ -3120,8 +3122,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
         else
           Builder.CreateRet(NewDeoptCall);
         // Since the ret type is changed, remove the incompatible attributes.
-        NewDeoptCall->removeRetAttrs(
-            AttributeFuncs::typeIncompatible(NewDeoptCall->getType()));
+        NewDeoptCall->removeRetAttrs(AttributeFuncs::typeIncompatible(
+            NewDeoptCall->getType(), NewDeoptCall->getRetAttributes()));
       }
 
       // Leave behind the normal returns so we can merge control flow.

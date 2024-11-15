@@ -16,7 +16,6 @@
 #include "lldb/Utility/Flags.h"
 
 #include "lldb/Core/FormatEntity.h"
-#include "lldb/Core/ValueObjectList.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/StackID.h"
@@ -24,6 +23,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UserID.h"
+#include "lldb/ValueObject/ValueObjectList.h"
 
 namespace lldb_private {
 
@@ -408,6 +408,18 @@ public:
   /// system implementation details this way.
   bool IsHidden();
 
+  /// Get the frame's demangled name.
+  ///
+  ///  /// \return
+  ///   A C-String containing the function demangled name. Can be null.
+  const char *GetFunctionName();
+
+  /// Get the frame's demangled display name.
+  ///
+  ///  /// \return
+  ///   A C-String containing the function demangled display name. Can be null.
+  const char *GetDisplayFunctionName();
+
   /// Query this frame to find what frame it is in this Thread's
   /// StackFrameList.
   ///
@@ -519,6 +531,16 @@ protected:
   bool HasCachedData() const;
 
 private:
+  /// Private methods, called from GetValueForVariableExpressionPath.
+  /// See that method for documentation of parameters and return value.
+  lldb::ValueObjectSP LegacyGetValueForVariableExpressionPath(
+      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
+      uint32_t options, lldb::VariableSP &var_sp, Status &error);
+
+  lldb::ValueObjectSP DILGetValueForVariableExpressionPath(
+      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
+      uint32_t options, lldb::VariableSP &var_sp, Status &error);
+
   /// For StackFrame only.
   /// \{
   lldb::ThreadWP m_thread_wp;

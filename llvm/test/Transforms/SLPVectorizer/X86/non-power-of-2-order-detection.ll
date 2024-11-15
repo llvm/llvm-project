@@ -7,10 +7,11 @@ define void @e(ptr %c, i64 %0) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[C]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i8, ptr [[TMP1]], i64 96
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 112
-; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ARRAYIDX1]], align 8
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr i8, ptr [[TMP1]], i64 104
+; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[C]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x ptr>, ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[TMP18:%.*]] = load <2 x ptr>, ptr [[ARRAYIDX5]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x ptr> [[TMP18]], <2 x ptr> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x ptr> [[TMP5]], <2 x ptr> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <6 x ptr> poison, ptr [[TMP2]], i32 2
@@ -18,11 +19,11 @@ define void @e(ptr %c, i64 %0) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <6 x ptr> @llvm.vector.insert.v6p0.v2p0(<6 x ptr> [[TMP8]], <2 x ptr> [[TMP4]], i64 0)
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <6 x ptr> @llvm.vector.insert.v6p0.v2p0(<6 x ptr> [[TMP9]], <2 x ptr> [[TMP6]], i64 4)
 ; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint <6 x ptr> [[TMP10]] to <6 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <6 x i64> [[TMP11]], <6 x i64> poison, <32 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <6 x i64> [[TMP11]], <6 x i64> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5>
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <32 x i64> poison, i64 [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <32 x i64> [[TMP13]], <32 x i64> poison, <32 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP15:%.*]] = or <32 x i64> [[TMP14]], [[TMP12]]
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp ult <32 x i64> [[TMP15]], <i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16>
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp ult <32 x i64> [[TMP15]], splat (i64 16)
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i1 @llvm.vector.reduce.or.v32i1(<32 x i1> [[TMP16]])
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[FOR_BODY:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

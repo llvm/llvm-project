@@ -547,13 +547,7 @@ public:
   void mergeRels();
   void partitionRels();
   void finalizeContents() override;
-  static bool classof(const SectionBase *d) {
-    return SyntheticSection::classof(d) &&
-           (d->type == llvm::ELF::SHT_RELA || d->type == llvm::ELF::SHT_REL ||
-            d->type == llvm::ELF::SHT_RELR ||
-            (d->type == llvm::ELF::SHT_AARCH64_AUTH_RELR &&
-             elf::ctx.arg.emachine == llvm::ELF::EM_AARCH64));
-  }
+
   int32_t dynamicTag, sizeDynamicTag;
   SmallVector<DynamicReloc, 0> relocs;
 
@@ -877,7 +871,7 @@ public:
 protected:
   void init(llvm::function_ref<void(InputFile *, InputChunk &, OutputChunk &)>);
   static void
-  parseDebugNames(InputChunk &inputChunk, OutputChunk &chunk,
+  parseDebugNames(Ctx &, InputChunk &inputChunk, OutputChunk &chunk,
                   llvm::DWARFDataExtractor &namesExtractor,
                   llvm::DataExtractor &strExtractor,
                   llvm::function_ref<SmallVector<uint32_t, 0>(
