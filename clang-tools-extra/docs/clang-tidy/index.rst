@@ -12,6 +12,7 @@ See also:
    The list of clang-tidy checks <checks/list>
    Clang-tidy IDE/Editor Integrations <Integrations>
    Getting Involved <Contributing>
+   External Clang-Tidy Examples <ExternalClang-TidyExamples>
 
 :program:`clang-tidy` is a clang-based C++ "linter" tool. Its purpose is to
 provide an extensible framework for diagnosing and fixing typical programming

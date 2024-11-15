@@ -113,7 +113,7 @@ class UnwindContext {
   Locs PersonalityLocs;
   Locs PersonalityIndexLocs;
   Locs HandlerDataLocs;
-  int FPReg;
+  MCRegister FPReg;
 
 public:
   UnwindContext(MCAsmParser &P) : Parser(P), FPReg(ARM::SP) {}
@@ -132,8 +132,8 @@ public:
   void recordHandlerData(SMLoc L) { HandlerDataLocs.push_back(L); }
   void recordPersonalityIndex(SMLoc L) { PersonalityIndexLocs.push_back(L); }
 
-  void saveFPReg(int Reg) { FPReg = Reg; }
-  int getFPReg() const { return FPReg; }
+  void saveFPReg(MCRegister Reg) { FPReg = Reg; }
+  MCRegister getFPReg() const { return FPReg; }
 
   void emitFnStartLocNotes() const {
     for (const SMLoc &Loc : FnStartLocs)
@@ -712,7 +712,7 @@ public:
   bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
   ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                SMLoc &EndLoc) override;
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
   bool ParseDirective(AsmToken DirectiveID) override;
 
@@ -723,7 +723,7 @@ public:
   checkEarlyTargetMatchPredicate(MCInst &Inst,
                                  const OperandVector &Operands) override;
 
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
@@ -759,7 +759,7 @@ public:
   bool hasMVE() const { return getSTI().hasFeature(ARM::HasMVEIntegerOps); }
 
   // Return the low-subreg of a given Q register.
-  unsigned getDRegFromQReg(unsigned QReg) const {
+  MCRegister getDRegFromQReg(MCRegister QReg) const {
     return MRI->getSubReg(QReg, ARM::dsub_0);
   }
 
@@ -808,7 +808,7 @@ class ARMOperand : public MCParsedAsmOperand {
   } Kind;
 
   SMLoc StartLoc, EndLoc, AlignmentLoc;
-  SmallVector<unsigned, 8> Registers;
+  SmallVector<MCRegister, 8> Registers;
 
   ARMAsmParser *Parser;
 
@@ -862,12 +862,12 @@ class ARMOperand : public MCParsedAsmOperand {
   };
 
   struct RegOp {
-    unsigned RegNum;
+    MCRegister RegNum;
   };
 
   // A vector register list is a sequential list of 1 to 4 registers.
   struct VectorListOp {
-    unsigned RegNum;
+    MCRegister RegNum;
     unsigned Count;
     unsigned LaneIndex;
     bool isDoubleSpaced;
@@ -883,11 +883,11 @@ class ARMOperand : public MCParsedAsmOperand {
 
   /// Combined record for all forms of ARM address expressions.
   struct MemoryOp {
-    unsigned BaseRegNum;
+    MCRegister BaseRegNum;
     // Offset is in OffsetReg or OffsetImm. If both are zero, no offset
     // was specified.
     const MCExpr *OffsetImm;  // Offset immediate value
-    unsigned OffsetRegNum;    // Offset register num, when OffsetImm == NULL
+    MCRegister OffsetRegNum;  // Offset register num, when OffsetImm == NULL
     ARM_AM::ShiftOpc ShiftType; // Shift type for OffsetReg
     unsigned ShiftImm;        // shift for OffsetReg.
     unsigned Alignment;       // 0 = no alignment specified
@@ -896,7 +896,7 @@ class ARMOperand : public MCParsedAsmOperand {
   };
 
   struct PostIdxRegOp {
-    unsigned RegNum;
+    MCRegister RegNum;
     bool isAdd;
     ARM_AM::ShiftOpc ShiftTy;
     unsigned ShiftImm;
@@ -909,14 +909,14 @@ class ARMOperand : public MCParsedAsmOperand {
 
   struct RegShiftedRegOp {
     ARM_AM::ShiftOpc ShiftTy;
-    unsigned SrcReg;
-    unsigned ShiftReg;
+    MCRegister SrcReg;
+    MCRegister ShiftReg;
     unsigned ShiftImm;
   };
 
   struct RegShiftedImmOp {
     ARM_AM::ShiftOpc ShiftTy;
-    unsigned SrcReg;
+    MCRegister SrcReg;
     unsigned ShiftImm;
   };
 
@@ -1005,7 +1005,7 @@ public:
     return Reg.RegNum;
   }
 
-  const SmallVectorImpl<unsigned> &getRegList() const {
+  const SmallVectorImpl<MCRegister> &getRegList() const {
     assert((Kind == k_RegisterList || Kind == k_RegisterListWithAPSR ||
             Kind == k_DPRRegisterList || Kind == k_SPRRegisterList ||
             Kind == k_FPSRegisterListWithVPR ||
@@ -1483,8 +1483,8 @@ public:
     if (!isGPRMem())
       return false;
     // No offset of any kind.
-    return Memory.OffsetRegNum == 0 && Memory.OffsetImm == nullptr &&
-     (alignOK || Memory.Alignment == Alignment);
+    return !Memory.OffsetRegNum && Memory.OffsetImm == nullptr &&
+           (alignOK || Memory.Alignment == Alignment);
   }
   bool isMemNoOffsetT2(bool alignOK = false, unsigned Alignment = 0) const {
     if (!isGPRMem())
@@ -1495,8 +1495,8 @@ public:
       return false;
 
     // No offset of any kind.
-    return Memory.OffsetRegNum == 0 && Memory.OffsetImm == nullptr &&
-     (alignOK || Memory.Alignment == Alignment);
+    return !Memory.OffsetRegNum && Memory.OffsetImm == nullptr &&
+           (alignOK || Memory.Alignment == Alignment);
   }
   bool isMemNoOffsetT2NoSp(bool alignOK = false, unsigned Alignment = 0) const {
     if (!isGPRMem())
@@ -1507,8 +1507,8 @@ public:
       return false;
 
     // No offset of any kind.
-    return Memory.OffsetRegNum == 0 && Memory.OffsetImm == nullptr &&
-     (alignOK || Memory.Alignment == Alignment);
+    return !Memory.OffsetRegNum && Memory.OffsetImm == nullptr &&
+           (alignOK || Memory.Alignment == Alignment);
   }
   bool isMemNoOffsetT(bool alignOK = false, unsigned Alignment = 0) const {
     if (!isGPRMem())
@@ -1519,11 +1519,11 @@ public:
       return false;
 
     // No offset of any kind.
-    return Memory.OffsetRegNum == 0 && Memory.OffsetImm == nullptr &&
-     (alignOK || Memory.Alignment == Alignment);
+    return !Memory.OffsetRegNum && Memory.OffsetImm == nullptr &&
+           (alignOK || Memory.Alignment == Alignment);
   }
   bool isMemPCRelImm12() const {
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum || Memory.Alignment != 0)
       return false;
     // Base register must be PC.
     if (Memory.BaseRegNum != ARM::PC)
@@ -1754,7 +1754,7 @@ public:
   }
 
   bool isMemThumbRIs4() const {
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 ||
+    if (!isGPRMem() || Memory.OffsetRegNum ||
         !isARMLowRegister(Memory.BaseRegNum) || Memory.Alignment != 0)
       return false;
     // Immediate offset, multiple of 4 in range [0, 124].
@@ -1767,7 +1767,7 @@ public:
   }
 
   bool isMemThumbRIs2() const {
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 ||
+    if (!isGPRMem() || Memory.OffsetRegNum ||
         !isARMLowRegister(Memory.BaseRegNum) || Memory.Alignment != 0)
       return false;
     // Immediate offset, multiple of 4 in range [0, 62].
@@ -1780,7 +1780,7 @@ public:
   }
 
   bool isMemThumbRIs1() const {
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 ||
+    if (!isGPRMem() || Memory.OffsetRegNum ||
         !isARMLowRegister(Memory.BaseRegNum) || Memory.Alignment != 0)
       return false;
     // Immediate offset in range [0, 31].
@@ -1793,8 +1793,8 @@ public:
   }
 
   bool isMemThumbSPI() const {
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 ||
-        Memory.BaseRegNum != ARM::SP || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum || Memory.BaseRegNum != ARM::SP ||
+        Memory.Alignment != 0)
       return false;
     // Immediate offset, multiple of 4 in range [0, 1020].
     if (!Memory.OffsetImm) return true;
@@ -1811,7 +1811,7 @@ public:
     // and we reject it.
     if (isImm() && !isa<MCConstantExpr>(getImm()))
       return true;
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum || Memory.Alignment != 0)
       return false;
     // Immediate offset a multiple of 4 in range [-1020, 1020].
     if (!Memory.OffsetImm) return true;
@@ -1830,7 +1830,7 @@ public:
     // and we reject it.
     if (isImm() && !isa<MCConstantExpr>(getImm()))
       return true;
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0 ||
+    if (!isGPRMem() || Memory.OffsetRegNum || Memory.Alignment != 0 ||
         !ARMMCRegisterClasses[ARM::GPRnopcRegClassID].contains(
             Memory.BaseRegNum))
       return false;
@@ -1845,7 +1845,7 @@ public:
   }
 
   bool isMemImm0_1020s4Offset() const {
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum || Memory.Alignment != 0)
       return false;
     // Immediate offset a multiple of 4 in range [0, 1020].
     if (!Memory.OffsetImm) return true;
@@ -1857,7 +1857,7 @@ public:
   }
 
   bool isMemImm8Offset() const {
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum || Memory.Alignment != 0)
       return false;
     // Base reg of PC isn't allowed for these encodings.
     if (Memory.BaseRegNum == ARM::PC) return false;
@@ -1873,7 +1873,7 @@ public:
 
   template<unsigned Bits, unsigned RegClassID>
   bool isMemImm7ShiftedOffset() const {
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0 ||
+    if (!isGPRMem() || Memory.OffsetRegNum || Memory.Alignment != 0 ||
         !ARMMCRegisterClasses[RegClassID].contains(Memory.BaseRegNum))
       return false;
 
@@ -1924,7 +1924,7 @@ public:
   }
 
   template <int shift> bool isMemRegQOffset() const {
-    if (!isMVEMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isMVEMem() || Memory.OffsetRegNum || Memory.Alignment != 0)
       return false;
 
     if (!ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(
@@ -1952,7 +1952,7 @@ public:
   }
 
   bool isMemPosImm8Offset() const {
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum || Memory.Alignment != 0)
       return false;
     // Immediate offset in range [0, 255].
     if (!Memory.OffsetImm) return true;
@@ -1964,7 +1964,7 @@ public:
   }
 
   bool isMemNegImm8Offset() const {
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum || Memory.Alignment != 0)
       return false;
     // Base reg of PC isn't allowed for these encodings.
     if (Memory.BaseRegNum == ARM::PC) return false;
@@ -1979,7 +1979,7 @@ public:
   }
 
   bool isMemUImm12Offset() const {
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum || Memory.Alignment != 0)
       return false;
     // Immediate offset in range [0, 4095].
     if (!Memory.OffsetImm) return true;
@@ -1998,7 +1998,7 @@ public:
     if (isImm() && !isa<MCConstantExpr>(getImm()))
       return true;
 
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum || Memory.Alignment != 0)
       return false;
     // Immediate offset in range [-4095, 4095].
     if (!Memory.OffsetImm) return true;
@@ -2547,9 +2547,9 @@ public:
   void addVPTPredROperands(MCInst &Inst, unsigned N) const {
     assert(N == 4 && "Invalid number of operands!");
     addVPTPredNOperands(Inst, N-1);
-    unsigned RegNum;
+    MCRegister RegNum;
     if (getVPTPred() == ARMVCC::None) {
-      RegNum = 0;
+      RegNum = MCRegister();
     } else {
       unsigned NextOpIndex = Inst.getNumOperands();
       auto &MCID = Parser->getInstrDesc(Inst.getOpcode());
@@ -2630,15 +2630,15 @@ public:
 
   void addRegListOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    const SmallVectorImpl<unsigned> &RegList = getRegList();
-    for (unsigned Reg : RegList)
+    const SmallVectorImpl<MCRegister> &RegList = getRegList();
+    for (MCRegister Reg : RegList)
       Inst.addOperand(MCOperand::createReg(Reg));
   }
 
   void addRegListWithAPSROperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    const SmallVectorImpl<unsigned> &RegList = getRegList();
-    for (unsigned Reg : RegList)
+    const SmallVectorImpl<MCRegister> &RegList = getRegList();
+    for (MCRegister Reg : RegList)
       Inst.addOperand(MCOperand::createReg(Reg));
   }
 
@@ -3393,7 +3393,7 @@ public:
     else if (isDReg() && !Parser->hasMVE()) {
       Inst.addOperand(MCOperand::createReg(Reg.RegNum));
     } else if (isQReg() && !Parser->hasMVE()) {
-      auto DPair = Parser->getDRegFromQReg(Reg.RegNum);
+      MCRegister DPair = Parser->getDRegFromQReg(Reg.RegNum);
       DPair = Parser->getMRI()->getMatchingSuperReg(
           DPair, ARM::dsub_0, &ARMMCRegisterClasses[ARM::DPairRegClassID]);
       Inst.addOperand(MCOperand::createReg(DPair));
@@ -3684,10 +3684,10 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<ARMOperand> CreateCCOut(unsigned RegNum, SMLoc S,
+  static std::unique_ptr<ARMOperand> CreateCCOut(MCRegister Reg, SMLoc S,
                                                  ARMAsmParser &Parser) {
     auto Op = std::make_unique<ARMOperand>(k_CCOut, Parser);
-    Op->Reg.RegNum = RegNum;
+    Op->Reg.RegNum = Reg;
     Op->StartLoc = S;
     Op->EndLoc = S;
     return Op;
@@ -3703,19 +3703,19 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<ARMOperand> CreateReg(unsigned RegNum, SMLoc S,
-                                               SMLoc E, ARMAsmParser &Parser) {
+  static std::unique_ptr<ARMOperand> CreateReg(MCRegister Reg, SMLoc S, SMLoc E,
+                                               ARMAsmParser &Parser) {
     auto Op = std::make_unique<ARMOperand>(k_Register, Parser);
-    Op->Reg.RegNum = RegNum;
+    Op->Reg.RegNum = Reg;
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
   }
 
   static std::unique_ptr<ARMOperand>
-  CreateShiftedRegister(ARM_AM::ShiftOpc ShTy, unsigned SrcReg,
-                        unsigned ShiftReg, unsigned ShiftImm, SMLoc S, SMLoc E,
-                        ARMAsmParser &Parser) {
+  CreateShiftedRegister(ARM_AM::ShiftOpc ShTy, MCRegister SrcReg,
+                        MCRegister ShiftReg, unsigned ShiftImm, SMLoc S,
+                        SMLoc E, ARMAsmParser &Parser) {
     auto Op = std::make_unique<ARMOperand>(k_ShiftedRegister, Parser);
     Op->RegShiftedReg.ShiftTy = ShTy;
     Op->RegShiftedReg.SrcReg = SrcReg;
@@ -3727,7 +3727,7 @@ public:
   }
 
   static std::unique_ptr<ARMOperand>
-  CreateShiftedImmediate(ARM_AM::ShiftOpc ShTy, unsigned SrcReg,
+  CreateShiftedImmediate(ARM_AM::ShiftOpc ShTy, MCRegister SrcReg,
                          unsigned ShiftImm, SMLoc S, SMLoc E,
                          ARMAsmParser &Parser) {
     auto Op = std::make_unique<ARMOperand>(k_ShiftedImmediate, Parser);
@@ -3793,7 +3793,7 @@ public:
   }
 
   static std::unique_ptr<ARMOperand>
-  CreateRegList(SmallVectorImpl<std::pair<unsigned, unsigned>> &Regs,
+  CreateRegList(SmallVectorImpl<std::pair<unsigned, MCRegister>> &Regs,
                 SMLoc StartLoc, SMLoc EndLoc, ARMAsmParser &Parser) {
     assert(Regs.size() > 0 && "RegList contains no registers?");
     KindTy Kind = k_RegisterList;
@@ -3827,10 +3827,10 @@ public:
   }
 
   static std::unique_ptr<ARMOperand>
-  CreateVectorList(unsigned RegNum, unsigned Count, bool isDoubleSpaced,
-                   SMLoc S, SMLoc E, ARMAsmParser &Parser) {
+  CreateVectorList(MCRegister Reg, unsigned Count, bool isDoubleSpaced, SMLoc S,
+                   SMLoc E, ARMAsmParser &Parser) {
     auto Op = std::make_unique<ARMOperand>(k_VectorList, Parser);
-    Op->VectorList.RegNum = RegNum;
+    Op->VectorList.RegNum = Reg;
     Op->VectorList.Count = Count;
     Op->VectorList.isDoubleSpaced = isDoubleSpaced;
     Op->StartLoc = S;
@@ -3839,10 +3839,10 @@ public:
   }
 
   static std::unique_ptr<ARMOperand>
-  CreateVectorListAllLanes(unsigned RegNum, unsigned Count, bool isDoubleSpaced,
+  CreateVectorListAllLanes(MCRegister Reg, unsigned Count, bool isDoubleSpaced,
                            SMLoc S, SMLoc E, ARMAsmParser &Parser) {
     auto Op = std::make_unique<ARMOperand>(k_VectorListAllLanes, Parser);
-    Op->VectorList.RegNum = RegNum;
+    Op->VectorList.RegNum = Reg;
     Op->VectorList.Count = Count;
     Op->VectorList.isDoubleSpaced = isDoubleSpaced;
     Op->StartLoc = S;
@@ -3851,11 +3851,11 @@ public:
   }
 
   static std::unique_ptr<ARMOperand>
-  CreateVectorListIndexed(unsigned RegNum, unsigned Count, unsigned Index,
+  CreateVectorListIndexed(MCRegister Reg, unsigned Count, unsigned Index,
                           bool isDoubleSpaced, SMLoc S, SMLoc E,
                           ARMAsmParser &Parser) {
     auto Op = std::make_unique<ARMOperand>(k_VectorListIndexed, Parser);
-    Op->VectorList.RegNum = RegNum;
+    Op->VectorList.RegNum = Reg;
     Op->VectorList.Count = Count;
     Op->VectorList.LaneIndex = Index;
     Op->VectorList.isDoubleSpaced = isDoubleSpaced;
@@ -3884,14 +3884,14 @@ public:
   }
 
   static std::unique_ptr<ARMOperand>
-  CreateMem(unsigned BaseRegNum, const MCExpr *OffsetImm, unsigned OffsetRegNum,
+  CreateMem(MCRegister BaseReg, const MCExpr *OffsetImm, MCRegister OffsetReg,
             ARM_AM::ShiftOpc ShiftType, unsigned ShiftImm, unsigned Alignment,
             bool isNegative, SMLoc S, SMLoc E, ARMAsmParser &Parser,
             SMLoc AlignmentLoc = SMLoc()) {
     auto Op = std::make_unique<ARMOperand>(k_Memory, Parser);
-    Op->Memory.BaseRegNum = BaseRegNum;
+    Op->Memory.BaseRegNum = BaseReg;
     Op->Memory.OffsetImm = OffsetImm;
-    Op->Memory.OffsetRegNum = OffsetRegNum;
+    Op->Memory.OffsetRegNum = OffsetReg;
     Op->Memory.ShiftType = ShiftType;
     Op->Memory.ShiftImm = ShiftImm;
     Op->Memory.Alignment = Alignment;
@@ -3903,10 +3903,10 @@ public:
   }
 
   static std::unique_ptr<ARMOperand>
-  CreatePostIdxReg(unsigned RegNum, bool isAdd, ARM_AM::ShiftOpc ShiftTy,
+  CreatePostIdxReg(MCRegister Reg, bool isAdd, ARM_AM::ShiftOpc ShiftTy,
                    unsigned ShiftImm, SMLoc S, SMLoc E, ARMAsmParser &Parser) {
     auto Op = std::make_unique<ARMOperand>(k_PostIndexRegister, Parser);
-    Op->PostIdxReg.RegNum = RegNum;
+    Op->PostIdxReg.RegNum = Reg;
     Op->PostIdxReg.isAdd = isAdd;
     Op->PostIdxReg.ShiftTy = ShiftTy;
     Op->PostIdxReg.ShiftImm = ShiftImm;
@@ -4103,9 +4103,8 @@ void ARMOperand::print(raw_ostream &OS) const {
   case k_FPDRegisterListWithVPR: {
     OS << "<register_list ";
 
-    const SmallVectorImpl<unsigned> &RegList = getRegList();
-    for (SmallVectorImpl<unsigned>::const_iterator
-           I = RegList.begin(), E = RegList.end(); I != E; ) {
+    const SmallVectorImpl<MCRegister> &RegList = getRegList();
+    for (auto I = RegList.begin(), E = RegList.end(); I != E;) {
       OS << RegName(*I);
       if (++I < E) OS << ", ";
     }
@@ -4311,11 +4310,11 @@ int ARMAsmParser::tryParseShiftRegister(OperandVector &Operands) {
       (ARMOperand *)Operands.pop_back_val().release());
   if (!PrevOp->isReg())
     return Error(PrevOp->getStartLoc(), "shift must be of a register");
-  int SrcReg = PrevOp->getReg();
+  MCRegister SrcReg = PrevOp->getReg();
 
   SMLoc EndLoc;
   int64_t Imm = 0;
-  int ShiftReg = 0;
+  MCRegister ShiftReg;
   if (ShiftTy == ARM_AM::rrx) {
     // RRX Doesn't have an explicit shift amount. The encoder expects
     // the shift register to be the same as the source register. Seems odd,
@@ -4569,13 +4568,13 @@ ParseStatus ARMAsmParser::parseCoprocOptionOperand(OperandVector &Operands) {
 // For register list parsing, we need to map from raw GPR register numbering
 // to the enumeration values. The enumeration values aren't sorted by
 // register number due to our using "sp", "lr" and "pc" as canonical names.
-static unsigned getNextRegister(unsigned Reg) {
+static MCRegister getNextRegister(MCRegister Reg) {
   // If this is a GPR, we need to do it manually, otherwise we can rely
   // on the sort ordering of the enumeration since the other reg-classes
   // are sane.
   if (!ARMMCRegisterClasses[ARM::GPRRegClassID].contains(Reg))
     return Reg + 1;
-  switch(Reg) {
+  switch (Reg.id()) {
   default: llvm_unreachable("Invalid GPR number!");
   case ARM::R0:  return ARM::R1;  case ARM::R1:  return ARM::R2;
   case ARM::R2:  return ARM::R3;  case ARM::R3:  return ARM::R4;
@@ -4591,8 +4590,8 @@ static unsigned getNextRegister(unsigned Reg) {
 // Insert an <Encoding, Register> pair in an ordered vector. Return true on
 // success, or false, if duplicate encoding found.
 static bool
-insertNoDuplicates(SmallVectorImpl<std::pair<unsigned, unsigned>> &Regs,
-                   unsigned Enc, unsigned Reg) {
+insertNoDuplicates(SmallVectorImpl<std::pair<unsigned, MCRegister>> &Regs,
+                   unsigned Enc, MCRegister Reg) {
   Regs.emplace_back(Enc, Reg);
   for (auto I = Regs.rbegin(), J = I + 1, E = Regs.rend(); J != E; ++I, ++J) {
     if (J->first == Enc) {
@@ -4626,7 +4625,7 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands, bool EnforceOrder,
   // The reglist instructions have at most 16 registers, so reserve
   // space for that many.
   int EReg = 0;
-  SmallVector<std::pair<unsigned, unsigned>, 16> Registers;
+  SmallVector<std::pair<unsigned, MCRegister>, 16> Registers;
 
   // Allow Q regs and just interpret them as the two D sub-registers.
   if (ARMMCRegisterClasses[ARM::QPRRegClassID].contains(Reg)) {
@@ -6983,9 +6982,9 @@ bool ARMAsmParser::CDEConvertDualRegOperand(StringRef Mnemonic,
   if (!Op2.isReg())
     return Error(Op2.getStartLoc(), Op2Diag);
 
-  unsigned RNext;
-  unsigned RPair;
-  switch (Op2.getReg()) {
+  MCRegister RNext;
+  MCRegister RPair;
+  switch (Op2.getReg().id()) {
   default:
     return Error(Op2.getStartLoc(), Op2Diag);
   case ARM::R0:
@@ -7052,7 +7051,7 @@ void removeVPTCondCode(OperandVector &Operands, unsigned &MnemonicOpsEndInd) {
 }
 
 /// Parse an arm instruction mnemonic followed by its operands.
-bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+bool ARMAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                     SMLoc NameLoc, OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
 
@@ -7409,9 +7408,9 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     const MCRegisterClass &MRC = MRI->getRegClass(ARM::GPRRegClassID);
     // Adjust only if Op1 is a GPR.
     if (Op1.isReg() && MRC.contains(Op1.getReg())) {
-      unsigned Reg1 = Op1.getReg();
+      MCRegister Reg1 = Op1.getReg();
       unsigned Rt = MRI->getEncodingValue(Reg1);
-      unsigned Reg2 = Op2.getReg();
+      MCRegister Reg2 = Op2.getReg();
       unsigned Rt2 = MRI->getEncodingValue(Reg2);
       // Rt2 must be Rt + 1.
       if (Rt + 1 != Rt2)
@@ -7426,7 +7425,7 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
             IsLoad ? "destination operands must start start at an even register"
                    : "source operands must start start at an even register");
 
-      unsigned NewReg = MRI->getMatchingSuperReg(
+      MCRegister NewReg = MRI->getMatchingSuperReg(
           Reg1, ARM::gsub_0, &(MRI->getRegClass(ARM::GPRPairRegClassID)));
       Operands[Idx] = ARMOperand::CreateReg(NewReg, Op1.getStartLoc(),
                                             Op2.getEndLoc(), *this);
@@ -7460,11 +7459,11 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 // 'false' otherwise. If Reg is in the register list or is HiReg, set
 // 'containsReg' to true.
 static bool checkLowRegisterList(const MCInst &Inst, unsigned OpNo,
-                                 unsigned Reg, unsigned HiReg,
+                                 MCRegister Reg, MCRegister HiReg,
                                  bool &containsReg) {
   containsReg = false;
   for (unsigned i = OpNo; i < Inst.getNumOperands(); ++i) {
-    unsigned OpReg = Inst.getOperand(i).getReg();
+    MCRegister OpReg = Inst.getOperand(i).getReg();
     if (OpReg == Reg)
       containsReg = true;
     // Anything other than a low register isn't legal here.
@@ -7476,9 +7475,9 @@ static bool checkLowRegisterList(const MCInst &Inst, unsigned OpNo,
 
 // Check if the specified regisgter is in the register list of the inst,
 // starting at the indicated operand number.
-static bool listContainsReg(const MCInst &Inst, unsigned OpNo, unsigned Reg) {
+static bool listContainsReg(const MCInst &Inst, unsigned OpNo, MCRegister Reg) {
   for (unsigned i = OpNo, e = Inst.getNumOperands(); i < e; ++i) {
-    unsigned OpReg = Inst.getOperand(i).getReg();
+    MCRegister OpReg = Inst.getOperand(i).getReg();
     if (OpReg == Reg)
       return true;
   }
@@ -7776,7 +7775,7 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
       return true;
     break;
   case ARM::t2BXJ: {
-    const unsigned RmReg = Inst.getOperand(0).getReg();
+    const MCRegister RmReg = Inst.getOperand(0).getReg();
     // Rm = SP is no longer unpredictable in v8-A
     if (RmReg == ARM::SP && !hasV8Ops())
       return Error(Operands[MnemonicOpsEndInd]->getStartLoc(),
@@ -8054,7 +8053,7 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     //
     // Thumb LDM instructions are writeback iff the base register is not
     // in the register list.
-    unsigned Rn = Inst.getOperand(0).getReg();
+    MCRegister Rn = Inst.getOperand(0).getReg();
     bool HasWritebackToken =
         (static_cast<ARMOperand &>(*Operands[MnemonicOpsEndInd + 1])
              .isToken() &&
@@ -8062,7 +8061,8 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
                  .getToken() == "!");
 
     bool ListContainsBase;
-    if (checkLowRegisterList(Inst, 3, Rn, 0, ListContainsBase) && !isThumbTwo())
+    if (checkLowRegisterList(Inst, 3, Rn, MCRegister(), ListContainsBase) &&
+        !isThumbTwo())
       return Error(
           Operands[getRegListInd(Operands, MnemonicOpsEndInd)]->getStartLoc(),
           "registers must be in range r0-r7");
@@ -8141,7 +8141,8 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
   // switched to the t2 encodings in processInstruction() if necessary.
   case ARM::tPOP: {
     bool ListContainsBase;
-    if (checkLowRegisterList(Inst, 2, 0, ARM::PC, ListContainsBase) &&
+    if (checkLowRegisterList(Inst, 2, MCRegister(), ARM::PC,
+                             ListContainsBase) &&
         !isThumbTwo())
       return Error(Operands[MnemonicOpsEndInd]->getStartLoc(),
                    "registers must be in range r0-r7 or pc");
@@ -8151,7 +8152,8 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
   }
   case ARM::tPUSH: {
     bool ListContainsBase;
-    if (checkLowRegisterList(Inst, 2, 0, ARM::LR, ListContainsBase) &&
+    if (checkLowRegisterList(Inst, 2, MCRegister(), ARM::LR,
+                             ListContainsBase) &&
         !isThumbTwo())
       return Error(Operands[MnemonicOpsEndInd]->getStartLoc(),
                    "registers must be in range r0-r7 or lr");
@@ -8508,8 +8510,8 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
   case ARM::t2SMLSLD:
   case ARM::t2SMLSLDX:
   case ARM::t2SMULL: {
-    unsigned RdHi = Inst.getOperand(0).getReg();
-    unsigned RdLo = Inst.getOperand(1).getReg();
+    MCRegister RdHi = Inst.getOperand(0).getReg();
+    MCRegister RdLo = Inst.getOperand(1).getReg();
     if(RdHi == RdLo) {
       return Error(Loc,
                    "unpredictable instruction, RdHi and RdLo must be different");
@@ -8980,8 +8982,7 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
   }
   // Alias for alternate form of 'ADR Rd, #imm' instruction.
   case ARM::ADDri: {
-    if (Inst.getOperand(1).getReg() != ARM::PC ||
-        Inst.getOperand(5).getReg() != 0 ||
+    if (Inst.getOperand(1).getReg() != ARM::PC || Inst.getOperand(5).getReg() ||
         !(Inst.getOperand(2).isExpr() || Inst.getOperand(2).isImm()))
       return false;
     MCInst TmpInst;
@@ -10701,7 +10702,7 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
   case ARM::t2ADDspImm:
   case ARM::t2SUBspImm: {
     // Prefer T1 encoding if possible
-    if (Inst.getOperand(5).getReg() != 0 || HasWideQualifier)
+    if (Inst.getOperand(5).getReg() || HasWideQualifier)
       break;
     unsigned V = Inst.getOperand(2).getImm();
     if (V & 3 || V > ((1 << 7) - 1) << 2)
@@ -10730,9 +10731,7 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
       Transform = true;
       Swap = true;
     }
-    if (!Transform ||
-        Inst.getOperand(5).getReg() != 0 ||
-        HasWideQualifier)
+    if (!Transform || Inst.getOperand(5).getReg() || HasWideQualifier)
       break;
     MCInst TmpInst;
     TmpInst.setOpcode(ARM::tADDhirr);
@@ -10786,14 +10785,14 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     // doesn't match what tLDMIA can do, we need to use the 32-bit encoding
     // instead if we're in Thumb2. Otherwise, this should have generated
     // an error in validateInstruction().
-    unsigned Rn = Inst.getOperand(0).getReg();
+    MCRegister Rn = Inst.getOperand(0).getReg();
     bool hasWritebackToken =
         (static_cast<ARMOperand &>(*Operands[MnemonicOpsEndInd + 1])
              .isToken() &&
          static_cast<ARMOperand &>(*Operands[MnemonicOpsEndInd + 1])
                  .getToken() == "!");
     bool listContainsBase;
-    if (checkLowRegisterList(Inst, 3, Rn, 0, listContainsBase) ||
+    if (checkLowRegisterList(Inst, 3, Rn, MCRegister(), listContainsBase) ||
         (!listContainsBase && !hasWritebackToken) ||
         (listContainsBase && hasWritebackToken)) {
       // 16-bit encoding isn't sufficient. Switch to the 32-bit version.
@@ -10812,9 +10811,9 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     // If the register list contains any high registers, we need to use
     // the 32-bit encoding instead if we're in Thumb2. Otherwise, this
     // should have generated an error in validateInstruction().
-    unsigned Rn = Inst.getOperand(0).getReg();
+    MCRegister Rn = Inst.getOperand(0).getReg();
     bool listContainsBase;
-    if (checkLowRegisterList(Inst, 4, Rn, 0, listContainsBase)) {
+    if (checkLowRegisterList(Inst, 4, Rn, MCRegister(), listContainsBase)) {
       // 16-bit encoding isn't sufficient. Switch to the 32-bit version.
       assert(isThumbTwo());
       Inst.setOpcode(ARM::t2STMIA_UPD);
@@ -10827,7 +10826,7 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     // If the register list contains any high registers, we need to use
     // the 32-bit encoding instead if we're in Thumb2. Otherwise, this
     // should have generated an error in validateInstruction().
-    if (!checkLowRegisterList(Inst, 2, 0, ARM::PC, listContainsBase))
+    if (!checkLowRegisterList(Inst, 2, MCRegister(), ARM::PC, listContainsBase))
       return false;
     assert(isThumbTwo());
     Inst.setOpcode(ARM::t2LDMIA_UPD);
@@ -10838,7 +10837,7 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
   }
   case ARM::tPUSH: {
     bool listContainsBase;
-    if (!checkLowRegisterList(Inst, 2, 0, ARM::LR, listContainsBase))
+    if (!checkLowRegisterList(Inst, 2, MCRegister(), ARM::LR, listContainsBase))
       return false;
     assert(isThumbTwo());
     Inst.setOpcode(ARM::t2STMDB_UPD);
@@ -11225,7 +11224,7 @@ unsigned ARMAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
         continue;
       }
 
-      unsigned Reg = Op.getReg();
+      MCRegister Reg = Op.getReg();
       if ((Reg == ARM::SP) && !hasV8Ops())
         return Match_RequiresV8;
       else if (Reg == ARM::PC)
@@ -11351,7 +11350,7 @@ static std::string ARMMnemonicSpellCheck(StringRef S, const FeatureBitset &FBS,
                                          unsigned VariantID = 0);
 
 static const char *getSubtargetFeatureName(uint64_t Val);
-bool ARMAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+bool ARMAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                            OperandVector &Operands,
                                            MCStreamer &Out, uint64_t &ErrorInfo,
                                            bool MatchingInlineAsm) {
@@ -11428,7 +11427,7 @@ bool ARMAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   llvm_unreachable("Implement any new match types added!");
 }
 
-/// parseDirective parses the arm specific directives
+/// ParseDirective parses the arm specific directives
 bool ARMAsmParser::ParseDirective(AsmToken DirectiveID) {
   const MCContext::Environment Format = getContext().getObjectFileType();
   bool IsMachO = Format == MCContext::IsMachO;
@@ -12116,12 +12115,11 @@ bool ARMAsmParser::parseDirectiveSetFP(SMLoc L) {
   if (Parser.parseEOL())
     return true;
 
-  getTargetStreamer().emitSetFP(static_cast<unsigned>(FPReg),
-                                static_cast<unsigned>(SPReg), Offset);
+  getTargetStreamer().emitSetFP(FPReg, SPReg, Offset);
   return false;
 }
 
-/// parseDirective
+/// parseDirectivePad
 ///  ::= .pad offset
 bool ARMAsmParser::parseDirectivePad(SMLoc L) {
   MCAsmParser &Parser = getParser();
@@ -12520,7 +12518,7 @@ bool ARMAsmParser::parseDirectiveSEHSaveRegs(SMLoc L, bool Wide) {
   ARMOperand &Op = (ARMOperand &)*Operands[0];
   if (!Op.isRegList())
     return Error(L, ".seh_save_regs{_w} expects GPR registers");
-  const SmallVectorImpl<unsigned> &RegList = Op.getRegList();
+  const SmallVectorImpl<MCRegister> &RegList = Op.getRegList();
   uint32_t Mask = 0;
   for (size_t i = 0; i < RegList.size(); ++i) {
     unsigned Reg = MRI->getEncodingValue(RegList[i]);
@@ -12562,7 +12560,7 @@ bool ARMAsmParser::parseDirectiveSEHSaveFRegs(SMLoc L) {
   ARMOperand &Op = (ARMOperand &)*Operands[0];
   if (!Op.isDPRRegList())
     return Error(L, ".seh_save_fregs expects DPR registers");
-  const SmallVectorImpl<unsigned> &RegList = Op.getRegList();
+  const SmallVectorImpl<MCRegister> &RegList = Op.getRegList();
   uint32_t Mask = 0;
   for (size_t i = 0; i < RegList.size(); ++i) {
     unsigned Reg = MRI->getEncodingValue(RegList[i]);

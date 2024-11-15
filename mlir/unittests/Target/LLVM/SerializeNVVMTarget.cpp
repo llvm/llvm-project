@@ -18,6 +18,7 @@
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
 
+#include "llvm/Config/llvm-config.h" // for LLVM_HAS_NVPTX_TARGET
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Process.h"

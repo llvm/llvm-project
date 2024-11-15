@@ -59,8 +59,7 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = std::nullopt,
-      const Instruction *CxtI = nullptr) {
+      ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr) {
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
     if (ISD == ISD::ADD && CostKind == TTI::TCK_RecipThroughput)
       return SCEVCheapExpansionBudget.getValue() + 1;

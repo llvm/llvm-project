@@ -5,6 +5,7 @@
 
 ; CHECK-LABEL: Pass Arguments:
 ; CHECK-NEXT: Target Library Information
+; CHECK-NEXT: Target Transform Information
 ; CHECK-NEXT: ModulePass Manager
 ; CHECK-NEXT:   DXIL Intrinsic Expansion
 ; CHECK-NEXT:   FunctionPass Manager

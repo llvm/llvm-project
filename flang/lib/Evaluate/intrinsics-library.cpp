@@ -22,8 +22,9 @@
 #include <functional>
 #if HAS_QUADMATHLIB
 #include "quadmath.h"
-#include "flang/Common/float128.h"
 #endif
+#include "flang/Common/float128.h"
+#include "flang/Common/float80.h"
 #include <type_traits>
 
 namespace Fortran::evaluate {
@@ -414,7 +415,7 @@ template <> struct HostRuntimeLibrary<double, LibraryVersion::LibmExtensions> {
   static_assert(map.Verify(), "map must be sorted");
 };
 
-#if LDBL_MANT_DIG == 80 || LDBL_MANT_DIG == 113
+#if HAS_FLOAT80 || HAS_LDBL128
 template <>
 struct HostRuntimeLibrary<long double, LibraryVersion::LibmExtensions> {
   using F = FuncPointer<long double, long double>;
@@ -430,7 +431,7 @@ struct HostRuntimeLibrary<long double, LibraryVersion::LibmExtensions> {
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
 };
-#endif // LDBL_MANT_DIG == 80 || LDBL_MANT_DIG == 113
+#endif // HAS_FLOAT80 || HAS_LDBL128
 #endif //_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600
 
 /// Define pgmath description

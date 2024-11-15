@@ -45,6 +45,7 @@
 #include "ToolChains/SPIRV.h"
 #include "ToolChains/Solaris.h"
 #include "ToolChains/TCE.h"
+#include "ToolChains/UEFI.h"
 #include "ToolChains/VEToolchain.h"
 #include "ToolChains/WebAssembly.h"
 #include "ToolChains/XCore.h"
@@ -667,11 +668,17 @@ static llvm::Triple computeTargetTriple(const Driver &D,
         if (Target.getEnvironment() == llvm::Triple::GNU ||
             Target.getEnvironment() == llvm::Triple::GNUABI64)
           Target.setEnvironment(llvm::Triple::GNUABIN32);
+        else if (Target.getEnvironment() == llvm::Triple::Musl ||
+                 Target.getEnvironment() == llvm::Triple::MuslABI64)
+          Target.setEnvironment(llvm::Triple::MuslABIN32);
       } else if (ABIName == "64") {
         Target = Target.get64BitArchVariant();
         if (Target.getEnvironment() == llvm::Triple::GNU ||
             Target.getEnvironment() == llvm::Triple::GNUABIN32)
           Target.setEnvironment(llvm::Triple::GNUABI64);
+        else if (Target.getEnvironment() == llvm::Triple::Musl ||
+                 Target.getEnvironment() == llvm::Triple::MuslABIN32)
+          Target.setEnvironment(llvm::Triple::MuslABI64);
       }
     }
   }
@@ -6415,6 +6422,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
     case llvm::Triple::AMDPAL:
     case llvm::Triple::Mesa3D:
       TC = std::make_unique<toolchains::AMDGPUToolChain>(*this, Target, Args);
+      break;
+    case llvm::Triple::UEFI:
+      TC = std::make_unique<toolchains::UEFI>(*this, Target, Args);
       break;
     case llvm::Triple::Win32:
       switch (Target.getEnvironment()) {

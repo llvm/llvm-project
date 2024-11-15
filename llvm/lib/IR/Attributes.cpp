@@ -1608,7 +1608,7 @@ AttributeList AttributeList::addRangeRetAttr(LLVMContext &C,
 
 AttributeList AttributeList::addAllocSizeParamAttr(
     LLVMContext &C, unsigned Index, unsigned ElemSizeArg,
-    const std::optional<unsigned> &NumElemsArg) {
+    const std::optional<unsigned> &NumElemsArg) const {
   AttrBuilder B(C);
   B.addAllocSizeAttr(ElemSizeArg, NumElemsArg);
   return addParamAttributes(C, Index, B);

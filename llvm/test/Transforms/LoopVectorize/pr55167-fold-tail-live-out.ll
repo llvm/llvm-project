@@ -6,12 +6,13 @@ define i32 @test(i32 %a, i1 %c.1, i1 %c.2 ) #0 {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i32> [[BROADCAST_SPLAT]], <i32 1, i32 1>
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i1> poison, i1 [[C_1:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT1]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <2 x i1> poison, i1 [[C_2:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT3]], <2 x i1> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -22,7 +23,6 @@ define i32 @test(i32 %a, i1 %c.1, i1 %c.2 ) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT4]], <i1 true, i1 true>
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <2 x i1> [[TMP4]], <2 x i1> [[TMP6]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[TMP0]], <i32 20, i32 20>
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i32> [[BROADCAST_SPLAT]], <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP4]], <2 x i1> [[BROADCAST_SPLAT4]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP5]], <2 x i32> <i32 9, i32 9>, <2 x i32> [[VEC_IND]]

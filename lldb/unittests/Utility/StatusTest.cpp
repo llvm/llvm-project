@@ -70,6 +70,14 @@ TEST(StatusTest, ErrorConversion) {
   llvm::Error foo = Status::FromErrorString("foo").ToError();
   EXPECT_TRUE(bool(foo));
   EXPECT_EQ("foo", llvm::toString(std::move(foo)));
+
+  llvm::Error eperm = llvm::errorCodeToError({EPERM, std::generic_category()});
+  llvm::Error eintr = llvm::errorCodeToError({EINTR, std::generic_category()});
+  llvm::Error elist = llvm::joinErrors(std::move(eperm), std::move(eintr));
+  elist = llvm::joinErrors(std::move(elist), llvm::createStringError("foo"));
+  Status list = Status::FromError(std::move(elist));
+  EXPECT_EQ((int)list.GetError(), EPERM);
+  EXPECT_EQ(list.GetType(), eErrorTypePOSIX);
 }
 
 #ifdef _WIN32

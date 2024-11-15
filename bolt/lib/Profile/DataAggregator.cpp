@@ -2043,7 +2043,8 @@ std::error_code DataAggregator::parseMMapEvents() {
             // size of the mapping, but we know it should not exceed the segment
             // alignment value. Hence we are performing an approximate check.
             return SegInfo.Address >= MMapInfo.MMapAddress &&
-                   SegInfo.Address - MMapInfo.MMapAddress < SegInfo.Alignment;
+                   SegInfo.Address - MMapInfo.MMapAddress < SegInfo.Alignment &&
+                   SegInfo.IsExecutable;
           });
       if (!MatchFound) {
         errs() << "PERF2BOLT-WARNING: ignoring mapping of " << NameToUse

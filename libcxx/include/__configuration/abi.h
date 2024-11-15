@@ -18,6 +18,25 @@
 #  pragma GCC system_header
 #endif
 
+// FIXME: ABI detection should be done via compiler builtin macros. This
+// is just a placeholder until Clang implements such macros. For now assume
+// that Windows compilers pretending to be MSVC++ target the Microsoft ABI,
+// and allow the user to explicitly specify the ABI to handle cases where this
+// heuristic falls short.
+#if defined(_LIBCPP_ABI_FORCE_ITANIUM) && defined(_LIBCPP_ABI_FORCE_MICROSOFT)
+#  error "Only one of _LIBCPP_ABI_FORCE_ITANIUM and _LIBCPP_ABI_FORCE_MICROSOFT can be defined"
+#elif defined(_LIBCPP_ABI_FORCE_ITANIUM)
+#  define _LIBCPP_ABI_ITANIUM
+#elif defined(_LIBCPP_ABI_FORCE_MICROSOFT)
+#  define _LIBCPP_ABI_MICROSOFT
+#else
+#  if defined(_WIN32) && defined(_MSC_VER)
+#    define _LIBCPP_ABI_MICROSOFT
+#  else
+#    define _LIBCPP_ABI_ITANIUM
+#  endif
+#endif
+
 #if _LIBCPP_ABI_VERSION >= 2
 // Change short string representation so that string data starts at offset 0,
 // improving its alignment in some cases.
@@ -98,6 +117,13 @@
 // and WCHAR_MAX. This ABI setting determines whether we should instead track whether the fill
 // value has been initialized using a separate boolean, which changes the ABI.
 #  define _LIBCPP_ABI_IOS_ALLOW_ARBITRARY_FILL_VALUE
+// Historically, libc++ used a type called `__compressed_pair` to reduce storage needs in cases of empty types (e.g. an
+// empty allocator in std::vector). We switched to using `[[no_unique_address]]`. However, for ABI compatibility reasons
+// we had to add artificial padding in a few places.
+//
+// This setting disables the addition of such artificial padding, leading to a more optimal
+// representation for several types.
+#  define _LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING
 #elif _LIBCPP_ABI_VERSION == 1
 #  if !(defined(_LIBCPP_OBJECT_FORMAT_COFF) || defined(_LIBCPP_OBJECT_FORMAT_XCOFF))
 // Enable compiling copies of now inline methods into the dylib to support
@@ -149,6 +175,11 @@
 //
 // ABI impact: changes the iterator type of `vector` (except `vector<bool>`).
 // #define _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
+
+// [[msvc::no_unique_address]] seems to mostly affect empty classes, so the padding scheme for Itanium doesn't work.
+#if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING)
+#  define _LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING
+#endif
 
 #if defined(_LIBCPP_COMPILER_CLANG_BASED)
 #  if defined(__APPLE__)

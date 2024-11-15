@@ -89,7 +89,7 @@ struct __minmax {
     // vectorize the code.
     if constexpr (contiguous_range<_Range> && is_integral_v<_ValueT> &&
                   __is_cheap_to_copy<_ValueT> & __is_identity<_Proj>::value &&
-                  __desugars_to_v<__less_tag, _Comp, _ValueT, _ValueT>) {
+                  __desugars_to_v<__totally_ordered_less_tag, _Comp, _ValueT, _ValueT>) {
       minmax_result<_ValueT> __result = {__r[0], __r[0]};
       for (auto __e : __r) {
         if (__e < __result.min)

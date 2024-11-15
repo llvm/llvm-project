@@ -1101,51 +1101,6 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
 
   return Result;
 
-  //  switch (Clause.getClauseKind()) {
-  //  case OpenACCClauseKind::PresentOrCopy:
-  //  case OpenACCClauseKind::PCopy:
-  //    Diag(Clause.getBeginLoc(), diag::warn_acc_deprecated_alias_name)
-  //        << Clause.getClauseKind() << OpenACCClauseKind::Copy;
-  //    LLVM_FALLTHROUGH;
-  //  case OpenACCClauseKind::PresentOrCreate:
-  //  case OpenACCClauseKind::PCreate:
-  //    Diag(Clause.getBeginLoc(), diag::warn_acc_deprecated_alias_name)
-  //        << Clause.getClauseKind() << OpenACCClauseKind::Create;
-  //    LLVM_FALLTHROUGH;
-  //
-  //
-  //
-  //
-  //  case OpenACCClauseKind::DType:
-  //
-  //
-  //
-  //
-  //
-  //
-  //
-  //
-  //  case OpenACCClauseKind::Gang:
-  //  case OpenACCClauseKind::Worker:
-  //  case OpenACCClauseKind::Vector: {
-  //    // OpenACC 3.3 2.9:
-  //    // A 'gang', 'worker', or 'vector' clause may not appear if a 'seq'
-  //    clause
-  //    // appears.
-  //    const auto *Itr =
-  //        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCSeqClause>);
-  //
-  //    if (Itr != ExistingClauses.end()) {
-  //      Diag(Clause.getBeginLoc(), diag::err_acc_clause_cannot_combine)
-  //          << Clause.getClauseKind() << (*Itr)->getClauseKind();
-  //      Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
-  //    }
-  //    // Not yet implemented, so immediately drop to the 'not yet implemented'
-  //    // diagnostic.
-  //    break;
-  //  }
-  //  */
-
 }
 
 /// OpenACC 3.3 section 2.5.15:

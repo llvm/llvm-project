@@ -38,7 +38,7 @@ end:
 }
 
 define i64 @test_sext_from_implied_cond(i32 %a, i32 %b) {
-; CHECK-LABEL: define i64 @test_sext_from_implied_cond(
+; CHECK-LABEL: define range(i64 0, 2147483647) i64 @test_sext_from_implied_cond(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:    [[A_CMP:%.*]] = icmp slt i32 [[A]], 0
 ; CHECK-NEXT:    br i1 [[A_CMP]], label [[END:%.*]], label [[L1:%.*]]

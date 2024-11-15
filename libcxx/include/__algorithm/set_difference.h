@@ -15,7 +15,6 @@
 #include <__algorithm/iterator_operations.h>
 #include <__config>
 #include <__functional/identity.h>
-#include <__functional/invoke.h>
 #include <__iterator/iterator_traits.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/move.h>

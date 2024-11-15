@@ -269,13 +269,11 @@ static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
   case llvm::Triple::mipsel:
     return "elf32ltsmip";
   case llvm::Triple::mips64:
-    if (tools::mips::hasMipsAbiArg(Args, "n32") ||
-        T.getEnvironment() == llvm::Triple::GNUABIN32)
+    if (tools::mips::hasMipsAbiArg(Args, "n32") || T.isABIN32())
       return "elf32btsmipn32";
     return "elf64btsmip";
   case llvm::Triple::mips64el:
-    if (tools::mips::hasMipsAbiArg(Args, "n32") ||
-        T.getEnvironment() == llvm::Triple::GNUABIN32)
+    if (tools::mips::hasMipsAbiArg(Args, "n32") || T.isABIN32())
       return "elf32ltsmipn32";
     return "elf64ltsmip";
   case llvm::Triple::systemz:
@@ -572,7 +570,8 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // to generate executables. As Fortran runtime depends on the C runtime,
   // these dependencies need to be listed before the C runtime below (i.e.
   // AddRunTimeLibs).
-  if (D.IsFlangMode()) {
+  if (D.IsFlangMode() &&
+      !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
     addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
     CmdArgs.push_back("-lm");

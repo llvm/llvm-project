@@ -2757,7 +2757,11 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
       bool FPOffsetFits = !ForSimm || FPOffset >= -256;
       PreferFP |= Offset > -FPOffset && !SVEStackSize;
 
-      if (MFI.hasVarSizedObjects()) {
+      if (FPOffset >= 0) {
+        // If the FPOffset is positive, that'll always be best, as the SP/BP
+        // will be even further away.
+        UseFP = true;
+      } else if (MFI.hasVarSizedObjects()) {
         // If we have variable sized objects, we can use either FP or BP, as the
         // SP offset is unknown. We can use the base pointer if we have one and
         // FP is not preferred. If not, we're stuck with using FP.
@@ -2769,11 +2773,6 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
         // else we can use BP and FP, but the offset from FP won't fit.
         // That will make us scavenge registers which we can probably avoid by
         // using BP. If it won't fit for BP either, we'll scavenge anyway.
-      } else if (FPOffset >= 0) {
-        // Use SP or FP, whichever gives us the best chance of the offset
-        // being in range for direct access. If the FPOffset is positive,
-        // that'll always be best, as the SP will be even further away.
-        UseFP = true;
       } else if (MF.hasEHFunclets() && !RegInfo->hasBasePointer(MF)) {
         // Funclets access the locals contained in the parent's stack frame
         // via the frame pointer, so we have to use the FP in the parent

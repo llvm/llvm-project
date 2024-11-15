@@ -103,32 +103,32 @@ class PPCAsmParser : public MCTargetAsmParser {
 
   bool isPPC64() const { return IsPPC64; }
 
-  bool MatchRegisterName(MCRegister &RegNo, int64_t &IntVal);
+  bool matchRegisterName(MCRegister &RegNo, int64_t &IntVal);
 
   bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
   ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                SMLoc &EndLoc) override;
 
-  const MCExpr *ExtractModifierFromExpr(const MCExpr *E,
+  const MCExpr *extractModifierFromExpr(const MCExpr *E,
                                         PPCMCExpr::VariantKind &Variant);
-  const MCExpr *FixupVariantKind(const MCExpr *E);
-  bool ParseExpression(const MCExpr *&EVal);
+  const MCExpr *fixupVariantKind(const MCExpr *E);
+  bool parseExpression(const MCExpr *&EVal);
 
-  bool ParseOperand(OperandVector &Operands);
+  bool parseOperand(OperandVector &Operands);
 
-  bool ParseDirectiveWord(unsigned Size, AsmToken ID);
-  bool ParseDirectiveTC(unsigned Size, AsmToken ID);
-  bool ParseDirectiveMachine(SMLoc L);
-  bool ParseDirectiveAbiVersion(SMLoc L);
-  bool ParseDirectiveLocalEntry(SMLoc L);
-  bool ParseGNUAttribute(SMLoc L);
+  bool parseDirectiveWord(unsigned Size, AsmToken ID);
+  bool parseDirectiveTC(unsigned Size, AsmToken ID);
+  bool parseDirectiveMachine(SMLoc L);
+  bool parseDirectiveAbiVersion(SMLoc L);
+  bool parseDirectiveLocalEntry(SMLoc L);
+  bool parseGNUAttribute(SMLoc L);
 
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
 
-  void ProcessInstruction(MCInst &Inst, const OperandVector &Ops);
+  void processInstruction(MCInst &Inst, const OperandVector &Ops);
 
   /// @name Auto-generated Match Functions
   /// {
@@ -150,7 +150,7 @@ public:
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
   }
 
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
   bool ParseDirective(AsmToken DirectiveID) override;
@@ -818,7 +818,7 @@ addNegOperand(MCInst &Inst, MCOperand &Op, MCContext &Ctx) {
   Inst.addOperand(MCOperand::createExpr(MCUnaryExpr::createMinus(Expr, Ctx)));
 }
 
-void PPCAsmParser::ProcessInstruction(MCInst &Inst,
+void PPCAsmParser::processInstruction(MCInst &Inst,
                                       const OperandVector &Operands) {
   int Opcode = Inst.getOpcode();
   switch (Opcode) {
@@ -1252,7 +1252,7 @@ void PPCAsmParser::ProcessInstruction(MCInst &Inst,
 static std::string PPCMnemonicSpellCheck(StringRef S, const FeatureBitset &FBS,
                                          unsigned VariantID = 0);
 
-bool PPCAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+bool PPCAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                            OperandVector &Operands,
                                            MCStreamer &Out, uint64_t &ErrorInfo,
                                            bool MatchingInlineAsm) {
@@ -1261,7 +1261,7 @@ bool PPCAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   switch (MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm)) {
   case Match_Success:
     // Post-process instructions (typically extended mnemonics)
-    ProcessInstruction(Inst, Operands);
+    processInstruction(Inst, Operands);
     Inst.setLoc(IDLoc);
     Out.emitInstruction(Inst, getSTI());
     return false;
@@ -1291,7 +1291,7 @@ bool PPCAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   llvm_unreachable("Implement any new match types added!");
 }
 
-bool PPCAsmParser::MatchRegisterName(MCRegister &RegNo, int64_t &IntVal) {
+bool PPCAsmParser::matchRegisterName(MCRegister &RegNo, int64_t &IntVal) {
   if (getParser().getTok().is(AsmToken::Percent))
     getParser().Lex(); // Eat the '%'.
 
@@ -1364,7 +1364,7 @@ ParseStatus PPCAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
   EndLoc = Tok.getEndLoc();
   Reg = PPC::NoRegister;
   int64_t IntVal;
-  if (MatchRegisterName(Reg, IntVal))
+  if (matchRegisterName(Reg, IntVal))
     return ParseStatus::NoMatch;
   return ParseStatus::Success;
 }
@@ -1375,9 +1375,9 @@ ParseStatus PPCAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
 /// variant, return the corresponding PPCMCExpr::VariantKind,
 /// and a modified expression using the default symbol variant.
 /// Otherwise, return NULL.
-const MCExpr *PPCAsmParser::
-ExtractModifierFromExpr(const MCExpr *E,
-                        PPCMCExpr::VariantKind &Variant) {
+const MCExpr *
+PPCAsmParser::extractModifierFromExpr(const MCExpr *E,
+                                      PPCMCExpr::VariantKind &Variant) {
   MCContext &Context = getParser().getContext();
   Variant = PPCMCExpr::VK_PPC_None;
 
@@ -1426,7 +1426,7 @@ ExtractModifierFromExpr(const MCExpr *E,
 
   case MCExpr::Unary: {
     const MCUnaryExpr *UE = cast<MCUnaryExpr>(E);
-    const MCExpr *Sub = ExtractModifierFromExpr(UE->getSubExpr(), Variant);
+    const MCExpr *Sub = extractModifierFromExpr(UE->getSubExpr(), Variant);
     if (!Sub)
       return nullptr;
     return MCUnaryExpr::create(UE->getOpcode(), Sub, Context);
@@ -1435,8 +1435,8 @@ ExtractModifierFromExpr(const MCExpr *E,
   case MCExpr::Binary: {
     const MCBinaryExpr *BE = cast<MCBinaryExpr>(E);
     PPCMCExpr::VariantKind LHSVariant, RHSVariant;
-    const MCExpr *LHS = ExtractModifierFromExpr(BE->getLHS(), LHSVariant);
-    const MCExpr *RHS = ExtractModifierFromExpr(BE->getRHS(), RHSVariant);
+    const MCExpr *LHS = extractModifierFromExpr(BE->getLHS(), LHSVariant);
+    const MCExpr *RHS = extractModifierFromExpr(BE->getRHS(), RHSVariant);
 
     if (!LHS && !RHS)
       return nullptr;
@@ -1464,8 +1464,7 @@ ExtractModifierFromExpr(const MCExpr *E,
 /// them by VK_PPC_TLSGD/VK_PPC_TLSLD.  This is necessary to avoid having
 /// _GLOBAL_OFFSET_TABLE_ created via ELFObjectWriter::RelocNeedsGOT.
 /// FIXME: This is a hack.
-const MCExpr *PPCAsmParser::
-FixupVariantKind(const MCExpr *E) {
+const MCExpr *PPCAsmParser::fixupVariantKind(const MCExpr *E) {
   MCContext &Context = getParser().getContext();
 
   switch (E->getKind()) {
@@ -1492,7 +1491,7 @@ FixupVariantKind(const MCExpr *E) {
 
   case MCExpr::Unary: {
     const MCUnaryExpr *UE = cast<MCUnaryExpr>(E);
-    const MCExpr *Sub = FixupVariantKind(UE->getSubExpr());
+    const MCExpr *Sub = fixupVariantKind(UE->getSubExpr());
     if (Sub == UE->getSubExpr())
       return E;
     return MCUnaryExpr::create(UE->getOpcode(), Sub, Context);
@@ -1500,8 +1499,8 @@ FixupVariantKind(const MCExpr *E) {
 
   case MCExpr::Binary: {
     const MCBinaryExpr *BE = cast<MCBinaryExpr>(E);
-    const MCExpr *LHS = FixupVariantKind(BE->getLHS());
-    const MCExpr *RHS = FixupVariantKind(BE->getRHS());
+    const MCExpr *LHS = fixupVariantKind(BE->getLHS());
+    const MCExpr *RHS = fixupVariantKind(BE->getRHS());
     if (LHS == BE->getLHS() && RHS == BE->getRHS())
       return E;
     return MCBinaryExpr::create(BE->getOpcode(), LHS, RHS, Context);
@@ -1511,29 +1510,27 @@ FixupVariantKind(const MCExpr *E) {
   llvm_unreachable("Invalid expression kind!");
 }
 
-/// ParseExpression.  This differs from the default "parseExpression" in that
-/// it handles modifiers.
-bool PPCAsmParser::
-ParseExpression(const MCExpr *&EVal) {
+/// This differs from the default "parseExpression" in that it handles
+/// modifiers.
+bool PPCAsmParser::parseExpression(const MCExpr *&EVal) {
   // (ELF Platforms)
   // Handle \code @l/@ha \endcode
   if (getParser().parseExpression(EVal))
     return true;
 
-  EVal = FixupVariantKind(EVal);
+  EVal = fixupVariantKind(EVal);
 
   PPCMCExpr::VariantKind Variant;
-  const MCExpr *E = ExtractModifierFromExpr(EVal, Variant);
+  const MCExpr *E = extractModifierFromExpr(EVal, Variant);
   if (E)
     EVal = PPCMCExpr::create(Variant, E, getParser().getContext());
 
   return false;
 }
 
-/// ParseOperand
 /// This handles registers in the form 'NN', '%rNN' for ELF platforms and
 /// rNN for MachO.
-bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
+bool PPCAsmParser::parseOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
   SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
@@ -1546,7 +1543,7 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
   case AsmToken::Percent: {
     MCRegister RegNo;
     int64_t IntVal;
-    if (MatchRegisterName(RegNo, IntVal))
+    if (matchRegisterName(RegNo, IntVal))
       return Error(S, "invalid register name");
 
     Operands.push_back(PPCOperand::CreateImm(IntVal, S, E, isPPC64()));
@@ -1561,7 +1558,7 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
   case AsmToken::Dollar:
   case AsmToken::Exclaim:
   case AsmToken::Tilde:
-    if (!ParseExpression(EVal))
+    if (!parseExpression(EVal))
       break;
     // Fall-through
     [[fallthrough]];
@@ -1589,7 +1586,7 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
   if (TlsCall && parseOptionalToken(AsmToken::LParen)) {
     const MCExpr *TLSSym;
     const SMLoc S2 = Parser.getTok().getLoc();
-    if (ParseExpression(TLSSym))
+    if (parseExpression(TLSSym))
       return Error(S2, "invalid TLS call expression");
     E = Parser.getTok().getLoc();
     if (parseToken(AsmToken::RParen, "expected ')'"))
@@ -1631,7 +1628,7 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
     switch (getLexer().getKind()) {
     case AsmToken::Percent: {
       MCRegister RegNo;
-      if (MatchRegisterName(RegNo, IntVal))
+      if (matchRegisterName(RegNo, IntVal))
         return Error(S, "invalid register name");
       break;
     }
@@ -1655,7 +1652,7 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
 }
 
 /// Parse an instruction mnemonic followed by its operands.
-bool PPCAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+bool PPCAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                     SMLoc NameLoc, OperandVector &Operands) {
   // The first operand is the token for the instruction name.
   // If the next character is a '+' or '-', we need to add it to the
@@ -1695,11 +1692,11 @@ bool PPCAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     return false;
 
   // Parse the first operand
-  if (ParseOperand(Operands))
+  if (parseOperand(Operands))
     return true;
 
   while (!parseOptionalToken(AsmToken::EndOfStatement)) {
-    if (parseToken(AsmToken::Comma) || ParseOperand(Operands))
+    if (parseToken(AsmToken::Comma) || parseOperand(Operands))
       return true;
   }
 
@@ -1731,31 +1728,30 @@ bool PPCAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   return false;
 }
 
-/// ParseDirective parses the PPC specific directives
+/// Parses the PPC specific directives
 bool PPCAsmParser::ParseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getIdentifier();
   if (IDVal == ".word")
-    ParseDirectiveWord(2, DirectiveID);
+    parseDirectiveWord(2, DirectiveID);
   else if (IDVal == ".llong")
-    ParseDirectiveWord(8, DirectiveID);
+    parseDirectiveWord(8, DirectiveID);
   else if (IDVal == ".tc")
-    ParseDirectiveTC(isPPC64() ? 8 : 4, DirectiveID);
+    parseDirectiveTC(isPPC64() ? 8 : 4, DirectiveID);
   else if (IDVal == ".machine")
-    ParseDirectiveMachine(DirectiveID.getLoc());
+    parseDirectiveMachine(DirectiveID.getLoc());
   else if (IDVal == ".abiversion")
-    ParseDirectiveAbiVersion(DirectiveID.getLoc());
+    parseDirectiveAbiVersion(DirectiveID.getLoc());
   else if (IDVal == ".localentry")
-    ParseDirectiveLocalEntry(DirectiveID.getLoc());
+    parseDirectiveLocalEntry(DirectiveID.getLoc());
   else if (IDVal.starts_with(".gnu_attribute"))
-    ParseGNUAttribute(DirectiveID.getLoc());
+    parseGNUAttribute(DirectiveID.getLoc());
   else
     return true;
   return false;
 }
 
-/// ParseDirectiveWord
 ///  ::= .word [ expression (, expression)* ]
-bool PPCAsmParser::ParseDirectiveWord(unsigned Size, AsmToken ID) {
+bool PPCAsmParser::parseDirectiveWord(unsigned Size, AsmToken ID) {
   auto parseOp = [&]() -> bool {
     const MCExpr *Value;
     SMLoc ExprLoc = getParser().getTok().getLoc();
@@ -1778,9 +1774,8 @@ bool PPCAsmParser::ParseDirectiveWord(unsigned Size, AsmToken ID) {
   return false;
 }
 
-/// ParseDirectiveTC
 ///  ::= .tc [ symbol (, expression)* ]
-bool PPCAsmParser::ParseDirectiveTC(unsigned Size, AsmToken ID) {
+bool PPCAsmParser::parseDirectiveTC(unsigned Size, AsmToken ID) {
   MCAsmParser &Parser = getParser();
   // Skip TC symbol, which is only used with XCOFF.
   while (getLexer().isNot(AsmToken::EndOfStatement)
@@ -1793,12 +1788,12 @@ bool PPCAsmParser::ParseDirectiveTC(unsigned Size, AsmToken ID) {
   getParser().getStreamer().emitValueToAlignment(Align(Size));
 
   // Emit expressions.
-  return ParseDirectiveWord(Size, ID);
+  return parseDirectiveWord(Size, ID);
 }
 
-/// ParseDirectiveMachine (ELF platforms)
+/// ELF platforms.
 ///  ::= .machine [ cpu | "push" | "pop" ]
-bool PPCAsmParser::ParseDirectiveMachine(SMLoc L) {
+bool PPCAsmParser::parseDirectiveMachine(SMLoc L) {
   MCAsmParser &Parser = getParser();
   if (Parser.getTok().isNot(AsmToken::Identifier) &&
       Parser.getTok().isNot(AsmToken::String))
@@ -1823,9 +1818,8 @@ bool PPCAsmParser::ParseDirectiveMachine(SMLoc L) {
   return false;
 }
 
-/// ParseDirectiveAbiVersion
 ///  ::= .abiversion constant-expression
-bool PPCAsmParser::ParseDirectiveAbiVersion(SMLoc L) {
+bool PPCAsmParser::parseDirectiveAbiVersion(SMLoc L) {
   int64_t AbiVersion;
   if (check(getParser().parseAbsoluteExpression(AbiVersion), L,
             "expected constant expression") ||
@@ -1840,9 +1834,8 @@ bool PPCAsmParser::ParseDirectiveAbiVersion(SMLoc L) {
   return false;
 }
 
-/// ParseDirectiveLocalEntry
 ///  ::= .localentry symbol, expression
-bool PPCAsmParser::ParseDirectiveLocalEntry(SMLoc L) {
+bool PPCAsmParser::parseDirectiveLocalEntry(SMLoc L) {
   StringRef Name;
   if (getParser().parseIdentifier(Name))
     return Error(L, "expected identifier in '.localentry' directive");
@@ -1863,7 +1856,7 @@ bool PPCAsmParser::ParseDirectiveLocalEntry(SMLoc L) {
   return false;
 }
 
-bool PPCAsmParser::ParseGNUAttribute(SMLoc L) {
+bool PPCAsmParser::parseGNUAttribute(SMLoc L) {
   int64_t Tag;
   int64_t IntegerValue;
   if (!getParser().parseGNUAttribute(L, Tag, IntegerValue))

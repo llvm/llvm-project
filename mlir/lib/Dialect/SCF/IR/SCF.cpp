@@ -4084,10 +4084,8 @@ static std::optional<SmallVector<unsigned>> getArgsMapping(ValueRange args1,
 static bool hasDuplicates(ValueRange args) {
   llvm::SmallDenseSet<Value> set;
   for (Value arg : args) {
-    if (set.contains(arg))
+    if (!set.insert(arg).second)
       return true;
-
-    set.insert(arg);
   }
   return false;
 }

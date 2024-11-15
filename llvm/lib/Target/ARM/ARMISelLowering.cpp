@@ -8017,7 +8017,6 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     if (!isa<ConstantFPSDNode>(V) && !isa<ConstantSDNode>(V))
       isConstant = false;
 
-    ValueCounts.insert(std::make_pair(V, 0));
     unsigned &Count = ValueCounts[V];
 
     // Is this value dominant? (takes up more than half of the lanes)
@@ -15132,9 +15131,9 @@ static SDValue PerformVMOVRRDCombine(SDNode *N,
     SDValue Op0, Op1;
     while (BV.getOpcode() == ISD::INSERT_VECTOR_ELT) {
       if (isa<ConstantSDNode>(BV.getOperand(2))) {
-        if (BV.getConstantOperandVal(2) == Offset)
+        if (BV.getConstantOperandVal(2) == Offset && !Op0)
           Op0 = BV.getOperand(1);
-        if (BV.getConstantOperandVal(2) == Offset + 1)
+        if (BV.getConstantOperandVal(2) == Offset + 1 && !Op1)
           Op1 = BV.getOperand(1);
       }
       BV = BV.getOperand(0);

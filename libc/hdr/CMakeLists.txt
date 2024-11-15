@@ -161,4 +161,17 @@ add_proxy_header_library(
     libc.include.sys_auxv
 )
 
+add_header_library(wchar_overlay HDRS wchar_overlay.h)
+
+add_proxy_header_library(
+  wchar_macros
+  HDRS
+    wchar_macros.h
+  DEPENDS
+    .wchar_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.wchar_macros
+    libc.include.wchar
+)
+
 add_subdirectory(types)

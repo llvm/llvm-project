@@ -25,6 +25,7 @@
 #include <chrono>
 #include <stdexcept>
 #include <type_traits>
+#include <utility>
 
 // Basic properties
 static_assert(std::is_base_of_v<std::runtime_error, std::chrono::nonexistent_local_time>);

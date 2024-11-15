@@ -26,7 +26,7 @@ entry:
   ret i64 %elt.bitreverse
 }
 
-define noundef <4 x i32> @round_int324(<4 x i32> noundef %a) #0 {
+define noundef <4 x i32> @bitreverse_int324(<4 x i32> noundef %a) #0 {
 entry:
   ; CHECK: [[ee0:%.*]] = extractelement <4 x i32> %a, i64 0
   ; CHECK: [[ie0:%.*]] = call i32 @dx.op.unary.i32(i32 30, i32 [[ee0]])

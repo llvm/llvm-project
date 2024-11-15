@@ -39,8 +39,8 @@ LLVM_DUMP_METHOD
 void HwMode::dump() const { dbgs() << Name << ": " << Features << '\n'; }
 
 HwModeSelect::HwModeSelect(const Record *R, CodeGenHwModes &CGH) {
-  std::vector<Record *> Modes = R->getValueAsListOfDefs("Modes");
-  std::vector<Record *> Objects = R->getValueAsListOfDefs("Objects");
+  std::vector<const Record *> Modes = R->getValueAsListOfConstDefs("Modes");
+  std::vector<const Record *> Objects = R->getValueAsListOfConstDefs("Objects");
   if (Modes.size() != Objects.size()) {
     PrintError(
         R->getLoc(),
@@ -49,9 +49,9 @@ HwModeSelect::HwModeSelect(const Record *R, CodeGenHwModes &CGH) {
             "have the same size");
     report_fatal_error("error in target description.");
   }
-  for (unsigned i = 0, e = Modes.size(); i != e; ++i) {
-    unsigned ModeId = CGH.getHwModeId(Modes[i]);
-    Items.push_back(std::pair(ModeId, Objects[i]));
+  for (auto [Mode, Object] : zip_equal(Modes, Objects)) {
+    unsigned ModeId = CGH.getHwModeId(Mode);
+    Items.push_back(std::pair(ModeId, Object));
   }
 }
 
