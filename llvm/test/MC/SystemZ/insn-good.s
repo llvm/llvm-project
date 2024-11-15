@@ -8918,6 +8918,8 @@
 #CHECK: l	%r0, 0(%r15,0)          # encoding: [0x58,0x0f,0x00,0x00]
 #CHECK: l	%r0, 0(%r1,0)           # encoding: [0x58,0x01,0x00,0x00]
 #CHECK: l	%r0, 0(%r15,0)          # encoding: [0x58,0x0f,0x00,0x00]
+#CHECK: l	%r0, 0(%r1,0)           # encoding: [0x58,0x01,0x00,0x00]
+#CHECK: l	%r0, 0(%r15,0)          # encoding: [0x58,0x0f,0x00,0x00]
 #CHECK: l	%r0, 4095(%r15)         # encoding: [0x58,0x00,0xff,0xff]
 #CHECK: l	%r0, 4095(%r1,%r15)     # encoding: [0x58,0x01,0xff,0xff]
 #CHECK: l	%r0, 4095(%r15,0)       # encoding: [0x58,0x0f,0x0f,0xff]
@@ -8937,6 +8939,8 @@
 	l	%r0, 0(%r0,%r15)
 	l	%r0, 0(0,%r1)
 	l	%r0, 0(0,%r15)
+	l	%r0, 0(%r1,)
+	l	%r0, 0(%r15,)
 	l	%r0, 0(%r1,0)
 	l	%r0, 0(%r15,0)
 	l	%r0, 0(%r1,%r0)
