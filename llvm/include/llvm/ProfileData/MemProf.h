@@ -1,6 +1,7 @@
 #ifndef LLVM_PROFILEDATA_MEMPROF_H_
 #define LLVM_PROFILEDATA_MEMPROF_H_
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
@@ -971,11 +972,16 @@ struct CallerCalleePairExtractor {
   // A map from caller GUIDs to lists of call sites in respective callers.
   DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> CallerCalleePairs;
 
+  // The set of linear call stack IDs that we've visited.
+  BitVector Visited;
+
   CallerCalleePairExtractor() = delete;
   CallerCalleePairExtractor(
       const unsigned char *CallStackBase,
-      llvm::function_ref<Frame(LinearFrameId)> FrameIdToFrame)
-      : CallStackBase(CallStackBase), FrameIdToFrame(FrameIdToFrame) {}
+      llvm::function_ref<Frame(LinearFrameId)> FrameIdToFrame,
+      unsigned RadixTreeSize)
+      : CallStackBase(CallStackBase), FrameIdToFrame(FrameIdToFrame),
+        Visited(RadixTreeSize) {}
 
   void operator()(LinearCallStackId LinearCSId) {
     const unsigned char *Ptr =
@@ -1003,6 +1009,15 @@ struct CallerCalleePairExtractor {
       uint64_t CallerGUID = F.Function;
       LineLocation Loc(F.LineOffset, F.Column);
       CallerCalleePairs[CallerGUID].emplace_back(Loc, CalleeGUID);
+
+      // Keep track of the indices we've visited.  If we've already visited the
+      // current one, terminate the traversal.  We will not discover any new
+      // caller-callee pair by continuing the traversal.
+      unsigned Offset =
+          std::distance(CallStackBase, Ptr) / sizeof(LinearFrameId);
+      if (Visited.test(Offset))
+        break;
+      Visited.set(Offset);
 
       Ptr += sizeof(LinearFrameId);
       CalleeGUID = CallerGUID;
