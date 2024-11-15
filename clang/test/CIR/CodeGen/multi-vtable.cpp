@@ -55,11 +55,8 @@ int main() {
 // CIR:   %{{[0-9]+}} = cir.cast(bitcast, %{{[0-9]+}} : !cir.ptr<!ty_Child>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
 // CIR:   cir.store %{{[0-9]+}}, %{{[0-9]+}} : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
 // CIR:   %{{[0-9]+}} = cir.vtable.address_point(@_ZTV5Child, vtable_index = 1, address_point_index = 2) : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>
-// CIR:   %{{[0-9]+}} = cir.const #cir.int<8> : !s64i
-// CIR:   %{{[0-9]+}} = cir.cast(bitcast, %{{[0-9]+}} : !cir.ptr<!ty_Child>), !cir.ptr<!u8i>
-// CIR:   %{{[0-9]+}} = cir.ptr_stride(%{{[0-9]+}} : !cir.ptr<!u8i>, %{{[0-9]+}} : !s64i), !cir.ptr<!u8i>
-// CIR:   %{{[0-9]+}} = cir.cast(bitcast, %{{[0-9]+}} : !cir.ptr<!u8i>), !cir.ptr<!ty_Child>
-// CIR:   %{{[0-9]+}} = cir.cast(bitcast, %{{[0-9]+}} : !cir.ptr<!ty_Child>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
+// CIR:   %7 = cir.base_class_addr(%1 : !cir.ptr<!ty_Child> nonnull) [8] -> !cir.ptr<!ty_Father>
+// CIR:   %8 = cir.cast(bitcast, %7 : !cir.ptr<!ty_Father>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>> loc(#loc8)
 // CIR:   cir.store %{{[0-9]+}}, %{{[0-9]+}} : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
 // CIR:   cir.return
 // CIR: }
@@ -70,7 +67,7 @@ int main() {
 
 // LLVM-DAG: define linkonce_odr void @_ZN5ChildC2Ev(ptr %0)
 // LLVM-DAG:  store ptr getelementptr inbounds ({ [4 x ptr], [3 x ptr] }, ptr @_ZTV5Child, i32 0, i32 0, i32 2), ptr %{{[0-9]+}}, align 8
-// LLVM-DAG:  %{{[0-9]+}} = getelementptr i8, ptr %3, i64 8
+// LLVM-DAG:  %{{[0-9]+}} = getelementptr i8, ptr {{.*}}, i32 8
 // LLVM-DAG:  store ptr getelementptr inbounds ({ [4 x ptr], [3 x ptr] }, ptr @_ZTV5Child, i32 0, i32 1, i32 2), ptr %{{[0-9]+}}, align 8
 // LLVM-DAG:  ret void
 // }

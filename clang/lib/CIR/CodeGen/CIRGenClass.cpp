@@ -662,21 +662,19 @@ static Address ApplyNonVirtualAndVirtualOffset(
   // Compute the offset from the static and dynamic components.
   mlir::Value baseOffset;
   if (!nonVirtualOffset.isZero()) {
-    mlir::Type OffsetType =
-        (CGF.CGM.getTarget().getCXXABI().isItaniumFamily() &&
-         CGF.CGM.getItaniumVTableContext().isRelativeLayout())
-            ? CGF.SInt32Ty
-            : CGF.PtrDiffTy;
-    baseOffset = CGF.getBuilder().getConstInt(loc, OffsetType,
-                                              nonVirtualOffset.getQuantity());
     if (virtualOffset) {
+      mlir::Type OffsetType =
+          (CGF.CGM.getTarget().getCXXABI().isItaniumFamily() &&
+           CGF.CGM.getItaniumVTableContext().isRelativeLayout())
+              ? CGF.SInt32Ty
+              : CGF.PtrDiffTy;
+      baseOffset = CGF.getBuilder().getConstInt(loc, OffsetType,
+                                                nonVirtualOffset.getQuantity());
       baseOffset = CGF.getBuilder().createBinop(
           virtualOffset, cir::BinOpKind::Add, baseOffset);
-    } else if (baseValueTy) {
-      // TODO(cir): this should be used as a firt class in this function for the
-      // nonVirtualOffset cases, but all users of this function need to be
-      // updated first.
-      baseOffset.getDefiningOp()->erase();
+    } else {
+      assert(baseValueTy && "expected base type");
+      // If no virtualOffset is present this is the final stop.
       return CGF.getBuilder().createBaseClassAddr(
           loc, addr, baseValueTy, nonVirtualOffset.getQuantity(),
           assumeNotNull);
@@ -725,6 +723,7 @@ void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
   mlir::Value VirtualOffset{};
   CharUnits NonVirtualOffset = CharUnits::Zero();
 
+  mlir::Type BaseValueTy;
   if (CGM.getCXXABI().isVirtualOffsetNeededForVTableField(*this, Vptr)) {
     // We need to use the virtual base offset offset because the virtual base
     // might have a different offset in the most derived class.
@@ -734,6 +733,7 @@ void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
   } else {
     // We can just use the base offset in the complete class.
     NonVirtualOffset = Vptr.Base.getBaseOffset();
+    BaseValueTy = convertType(getContext().getTagDeclType(Vptr.Base.getBase()));
   }
 
   // Apply the offsets.
@@ -741,7 +741,7 @@ void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
   if (!NonVirtualOffset.isZero() || VirtualOffset) {
     VTableField = ApplyNonVirtualAndVirtualOffset(
         loc, *this, VTableField, NonVirtualOffset, VirtualOffset,
-        Vptr.VTableClass, Vptr.NearestVBase);
+        Vptr.VTableClass, Vptr.NearestVBase, BaseValueTy);
   }
 
   // Finally, store the address point. Use the same CIR types as the field.

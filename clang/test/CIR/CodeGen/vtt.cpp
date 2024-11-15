@@ -120,19 +120,13 @@ int f() {
 // CIR:   cir.store %{{[0-9]+}}, %{{[0-9]+}} : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
 // CIR:   %{{[0-9]+}} = cir.vtable.address_point(@_ZTV1D, vtable_index = 2, address_point_index = 3) : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>
 
-// CIR:   %{{[0-9]+}} = cir.const #cir.int<40> : !s64i
-// CIR:   %{{[0-9]+}} = cir.cast(bitcast, %{{[0-9]+}} : !cir.ptr<!ty_D>), !cir.ptr<!u8i>
-// CIR:   %{{[0-9]+}} = cir.ptr_stride(%{{[0-9]+}} : !cir.ptr<!u8i>, %{{[0-9]+}} : !s64i), !cir.ptr<!u8i>
-// CIR:   %{{[0-9]+}} = cir.cast(bitcast, %{{[0-9]+}} : !cir.ptr<!u8i>), !cir.ptr<!ty_D>
-// CIR:   %{{[0-9]+}} = cir.cast(bitcast, %{{[0-9]+}} : !cir.ptr<!ty_D>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
+// CIR:   %{{[0-9]+}} = cir.base_class_addr(%{{[0-9]+}} : !cir.ptr<!ty_D> nonnull) [40] -> !cir.ptr<!ty_A>
+// CIR:   %{{[0-9]+}} = cir.cast(bitcast, %{{[0-9]+}} : !cir.ptr<!ty_A>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
 // CIR:   cir.store %{{[0-9]+}}, %{{[0-9]+}} : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
 // CIR:   %{{[0-9]+}} = cir.vtable.address_point(@_ZTV1D, vtable_index = 1, address_point_index = 3) : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>
 
-// CIR:   %{{[0-9]+}} = cir.const #cir.int<16> : !s64i
-// CIR:   %{{[0-9]+}} = cir.cast(bitcast, %{{[0-9]+}} : !cir.ptr<!ty_D>), !cir.ptr<!u8i>
-// CIR:   %{{[0-9]+}} = cir.ptr_stride(%{{[0-9]+}} : !cir.ptr<!u8i>, %{{[0-9]+}} : !s64i), !cir.ptr<!u8i>
-// CIR:   %{{[0-9]+}} = cir.cast(bitcast, %{{[0-9]+}} : !cir.ptr<!u8i>), !cir.ptr<!ty_D>
-// CIR:   %{{[0-9]+}} = cir.cast(bitcast, %{{[0-9]+}} : !cir.ptr<!ty_D>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
+// CIR:   cir.base_class_addr(%{{[0-9]+}} : !cir.ptr<!ty_D> nonnull) [16] -> !cir.ptr<!ty_C>
+// CIR:   cir.cast(bitcast, %{{[0-9]+}} : !cir.ptr<!ty_C>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
 // CIR:   cir.store %{{[0-9]+}}, %{{[0-9]+}} : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
 // CIR:   cir.return
 // CIR: }
