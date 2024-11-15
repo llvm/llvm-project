@@ -28,6 +28,17 @@ def AArch64_restore_zt : SDNode<"AArch64ISD::RESTORE_ZT", SDTypeProfile<0, 2,
 def AArch64_save_zt : SDNode<"AArch64ISD::SAVE_ZT", SDTypeProfile<0, 2,
                              [SDTCisInt<0>, SDTCisPtrTy<1>]>,
                              [SDNPHasChain, SDNPSideEffect, SDNPMayStore]>;
+
+def SDT_FORM_STRIDED_TUPLE_X2 : SDTypeProfile<4, 4,
+                             [SDTCisVec<0>, SDTCisSameAs<0, 1>,
+                              SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>]>;
+
+def SDT_FORM_STRIDED_TUPLE_X4 : SDTypeProfile<4, 4,
+                             [SDTCisVec<0>, SDTCisSameAs<0, 1>,
+                              SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>,
+                              SDTCisSameAs<0, 4>, SDTCisSameAs<0, 5>,
+                              SDTCisSameAs<0, 6>, SDTCisSameAs<0, 7>]>;
+
 def AArch64CoalescerBarrier
     : SDNode<"AArch64ISD::COALESCER_BARRIER", SDTypeProfile<1, 1, []>, [SDNPOptInGlue, SDNPOutGlue]>;
 

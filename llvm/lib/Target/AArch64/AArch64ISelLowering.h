@@ -478,6 +478,9 @@ enum NodeType : unsigned {
   SME_ZA_LDR,
   SME_ZA_STR,
 
+  FORM_STRIDED_TUPLE_X2,
+  FORM_STRIDED_TUPLE_X4,
+
   // NEON Load/Store with post-increment base updates
   LD2post = ISD::FIRST_TARGET_MEMORY_OPCODE,
   LD3post,

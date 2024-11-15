@@ -504,6 +504,8 @@ private:
 
   bool SelectAllActivePredicate(SDValue N);
   bool SelectAnyPredicate(SDValue N);
+
+  void SelectFormTuplePseudo(SDNode *N, unsigned Size);
 };
 
 class AArch64DAGToDAGISelLegacy : public SelectionDAGISelLegacy {
@@ -7181,6 +7183,14 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     }
     break;
   }
+  case AArch64ISD::FORM_STRIDED_TUPLE_X2: {
+    SelectFormTuplePseudo(Node, 2);
+    return;
+  }
+  case AArch64ISD::FORM_STRIDED_TUPLE_X4: {
+    SelectFormTuplePseudo(Node, 4);
+    return;
+  }
   }
 
   // Select the default instruction
@@ -7437,4 +7447,21 @@ bool AArch64DAGToDAGISel::SelectSMETileSlice(SDValue N, unsigned MaxSize,
   Base = N;
   Offset = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i64);
   return true;
+}
+
+void AArch64DAGToDAGISel::SelectFormTuplePseudo(SDNode *Node, unsigned Size) {
+  assert((Size == 2 || Size == 4) && "Invalid Tuple size");
+  EVT VT = Node->getValueType(0);
+  SmallVector<SDValue> Ops;
+  for (unsigned I = 0; I < Size; I++)
+    Ops.push_back(Node->getOperand(I));
+  SDLoc DL(Node);
+  unsigned Opc = Size == 2 ? AArch64::FORM_STRIDED_TUPLE_X2_PSEUDO
+                           : AArch64::FORM_STRIDED_TUPLE_X4_PSEUDO;
+  SDNode *Tuple = CurDAG->getMachineNode(Opc, DL, MVT::Untyped, Ops);
+  SDValue SuperReg = SDValue(Tuple, 0);
+  for (unsigned I = 0; I < Size; ++I)
+    ReplaceUses(SDValue(Node, I), CurDAG->getTargetExtractSubreg(
+                                      AArch64::zsub0 + I, DL, VT, SuperReg));
+  CurDAG->RemoveDeadNode(Node);
 }

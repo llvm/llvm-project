@@ -2808,6 +2808,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::FMUL_PRED)
     MAKE_CASE(AArch64ISD::FSUB_PRED)
     MAKE_CASE(AArch64ISD::RDSVL)
+    MAKE_CASE(AArch64ISD::FORM_STRIDED_TUPLE_X2)
+    MAKE_CASE(AArch64ISD::FORM_STRIDED_TUPLE_X4)
     MAKE_CASE(AArch64ISD::BIC)
     MAKE_CASE(AArch64ISD::CBZ)
     MAKE_CASE(AArch64ISD::CBNZ)
@@ -5709,6 +5711,46 @@ SDValue AArch64TargetLowering::getRuntimePStateSM(SelectionDAG &DAG,
                      Mask);
 }
 
+static unsigned getIntrinsicID(const SDNode *N);
+
+SDValue TryLowerMultiVecSMEDotIntrinsic(SDValue Op, SelectionDAG &DAG,
+                                        unsigned Size) {
+  assert((Size == 2 || Size == 4) && "Invalid Tuple Size");
+  auto IsStridedLoad = [Size](SDValue Op) -> bool {
+    unsigned Intrinsic = getIntrinsicID(Op.getNode());
+    if (Size == 2)
+      return Intrinsic == Intrinsic::aarch64_sve_ld1_pn_x2;
+    else
+      return Intrinsic == Intrinsic::aarch64_sve_ld1_pn_x4;
+  };
+
+  SmallVector<SDValue> Ops;
+  unsigned LastLoadIdx = Size == 2 ? 5 : 7;
+  unsigned LoadResNo = Op.getOperand(3).getResNo();
+  for (unsigned I = 3; I < LastLoadIdx; I++) {
+    if (!IsStridedLoad(Op->getOperand(I)) ||
+        Op.getOperand(I).getResNo() != LoadResNo)
+      return SDValue();
+    Ops.push_back(Op->getOperand(I));
+  }
+
+  EVT VT = Op->getOperand(3).getValueType();
+  SDVTList VTList =
+      Size == 2 ? DAG.getVTList(VT, VT) : DAG.getVTList(VT, VT, VT, VT);
+  unsigned Opc = Size == 2 ? AArch64ISD::FORM_STRIDED_TUPLE_X2
+                           : AArch64ISD::FORM_STRIDED_TUPLE_X4;
+  SDLoc DL(Op);
+  SDValue Pseudo = DAG.getNode(Opc, DL, VTList, Ops);
+
+  SmallVector<SDValue> DotOps = {Op.getOperand(0), Op->getOperand(1),
+                                 Op->getOperand(2)};
+  for (unsigned I = 0; I < Size; I++)
+    DotOps.push_back(Pseudo.getValue(I));
+  DotOps.push_back(Op->getOperand(DotOps.size()));
+  DotOps.push_back(Op->getOperand(DotOps.size()));
+  return DAG.getNode(Op->getOpcode(), DL, MVT::Other, DotOps);
+}
+
 // Lower an SME LDR/STR ZA intrinsic
 // Case 1: If the vector number (vecnum) is an immediate in range, it gets
 // folded into the instruction
@@ -5898,6 +5940,22 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         Op->getOperand(0), // Chain
         DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
         DAG.getConstant(AArch64SME::Always, DL, MVT::i64));
+  case Intrinsic::aarch64_sme_uvdot_lane_za32_vg1x4:
+  case Intrinsic::aarch64_sme_suvdot_lane_za32_vg1x4:
+  case Intrinsic::aarch64_sme_usvdot_lane_za32_vg1x4:
+  case Intrinsic::aarch64_sme_svdot_lane_za32_vg1x4:
+  case Intrinsic::aarch64_sme_usdot_lane_za32_vg1x4:
+  case Intrinsic::aarch64_sme_udot_lane_za32_vg1x4:
+  case Intrinsic::aarch64_sme_sudot_lane_za32_vg1x4:
+  case Intrinsic::aarch64_sme_sdot_lane_za32_vg1x4:
+    return TryLowerMultiVecSMEDotIntrinsic(Op, DAG, 4);
+  case Intrinsic::aarch64_sme_uvdot_lane_za32_vg1x2:
+  case Intrinsic::aarch64_sme_sdot_lane_za32_vg1x2:
+  case Intrinsic::aarch64_sme_svdot_lane_za32_vg1x2:
+  case Intrinsic::aarch64_sme_usdot_lane_za32_vg1x2:
+  case Intrinsic::aarch64_sme_sudot_lane_za32_vg1x2:
+  case Intrinsic::aarch64_sme_udot_lane_za32_vg1x2:
+    return TryLowerMultiVecSMEDotIntrinsic(Op, DAG, 2);
   }
 }
 
@@ -7638,6 +7696,11 @@ static unsigned getIntrinsicID(const SDNode *N) {
     if (IID < Intrinsic::num_intrinsics)
       return IID;
     return Intrinsic::not_intrinsic;
+  }
+  case ISD::INTRINSIC_W_CHAIN: {
+    unsigned IID = N->getConstantOperandVal(1);
+    if (IID < Intrinsic::num_intrinsics)
+      return IID;
   }
   }
 }
