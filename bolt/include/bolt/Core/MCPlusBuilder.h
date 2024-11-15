@@ -1495,6 +1495,13 @@ public:
     return 0;
   }
 
+  /// Analyze preamble instrucions in PLT section and try to determine
+  /// the size of the header.
+  virtual uint32_t analyzePLTHeader(std::vector<MCInst *> &Insns) const {
+    llvm_unreachable("not implemented");
+    return 0;
+  }
+
   virtual bool analyzeVirtualMethodCall(InstructionIterator Begin,
                                         InstructionIterator End,
                                         std::vector<MCInst *> &MethodFetchInsns,

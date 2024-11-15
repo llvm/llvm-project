@@ -1708,19 +1708,7 @@ void RewriteInstance::disassemblePLTSectionX86(BinarySection &Section,
   const uint64_t SectionSize = Section.getSize();
 
   // Parse the PLT header
-  uint64_t HeaderSize = 0;
-  if (Section.getName() == ".plt") {
-    MCInst FirstInstr;
-    uint64_t FirstInstrSize;
-    disassemblePLTInstruction(Section, 0, FirstInstr, FirstInstrSize);
-    if (BC->MIB->isTerminateBranch(FirstInstr)) {
-      // The mold linker (https://github.com/rui314/mold/blob/v2.34.1/src/arch-x86-64.cc#L50)
-      // generates a unique format for the PLT. The header entry is 32 bytes long, while the 
-      // remaining entries are 16 bytes long.
-      BC->outs() << "BOLT-INFO: parsing PLT header for mold\n";
-      HeaderSize = 32;
-    }
-  }  
+  uint64_t HeaderSize = disassemblePLTHeaderX86(Section, EntrySize);
 
   // Parse the PLT entries
   for (uint64_t EntryOffset = HeaderSize; EntryOffset + EntrySize <= SectionSize;
@@ -1755,6 +1743,21 @@ void RewriteInstance::disassemblePLTSectionX86(BinarySection &Section,
     createPLTBinaryFunction(TargetAddress, SectionAddress + EntryOffset,
                             EntrySize);
   }
+}
+
+uint32_t RewriteInstance::disassemblePLTHeaderX86(BinarySection &Section,
+                                               uint64_t EntrySize) {
+  uint64_t InstrSize, InstrOffset = 0;
+  std::vector<MCInst *> Insns;
+  MCInst Instructions[32]; // 32 insns (bytes) at most
+  uint32_t Index = 0;
+  while (InstrOffset < EntrySize) {
+    disassemblePLTInstruction(Section, InstrOffset, Instructions[Index], InstrSize);
+    Insns.push_back(&Instructions[Index]);
+    InstrOffset += InstrSize;
+    Index++;
+  }
+  return BC->MIB->analyzePLTHeader(Insns);
 }
 
 void RewriteInstance::disassemblePLT() {
