@@ -594,7 +594,7 @@ define amdgpu_kernel void @usage_multi_stage_recurse_noattrs(i32 %n) #0 {
 ; GCN-LABEL: {{^}}multi_call_with_multi_stage_recurse:
 ; GCN:  .set multi_call_with_multi_stage_recurse.num_vgpr, max(41, use_stack0.num_vgpr, use_stack1.num_vgpr, multi_stage_recurse1.num_vgpr)
 ; GCN:  .set multi_call_with_multi_stage_recurse.num_agpr, max(0, use_stack0.num_agpr, use_stack1.num_agpr, multi_stage_recurse1.num_agpr)
-; GCN:  .set multi_call_with_multi_stage_recurse.numbered_sgpr, max(43, use_stack0.numbered_sgpr, use_stack1.numbered_sgpr, multi_stage_recurse1.numbered_sgpr)
+; GCN:  .set multi_call_with_multi_stage_recurse.numbered_sgpr, max(45, use_stack0.numbered_sgpr, use_stack1.numbered_sgpr, multi_stage_recurse1.numbered_sgpr)
 ; GCN:  .set multi_call_with_multi_stage_recurse.private_seg_size, 0+(max(use_stack0.private_seg_size, use_stack1.private_seg_size, multi_stage_recurse1.private_seg_size))
 ; GCN:  .set multi_call_with_multi_stage_recurse.uses_vcc, or(1, use_stack0.uses_vcc, use_stack1.uses_vcc, multi_stage_recurse1.uses_vcc)
 ; GCN:  .set multi_call_with_multi_stage_recurse.uses_flat_scratch, or(1, use_stack0.uses_flat_scratch, use_stack1.uses_flat_scratch, multi_stage_recurse1.uses_flat_scratch)
