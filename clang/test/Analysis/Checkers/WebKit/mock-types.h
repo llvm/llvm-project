@@ -197,6 +197,27 @@ public:
   int trivial() { return 0; }
 };
 
+template <typename T>
+class UniqueRef {
+private:
+  T *t;
+
+public:
+  UniqueRef(T &t) : t(&t) { }
+  ~UniqueRef() {
+    if (t)
+      delete t;
+  }
+  template <typename U> UniqueRef(UniqueRef<U>&& u)
+    : t(u.t)
+  {
+    u.t = nullptr;
+  }
+  T &get() const { return *t; }
+  T *operator->() const { return t; }
+  UniqueRef &operator=(T &) { return *this; }
+};
+
 namespace std {
 
 template <typename T>

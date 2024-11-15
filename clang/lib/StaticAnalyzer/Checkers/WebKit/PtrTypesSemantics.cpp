@@ -153,12 +153,13 @@ static bool isPtrOfType(const clang::QualType T, Predicate Pred) {
       type = elaboratedT->desugar();
       continue;
     }
-    if (auto *specialT = type->getAs<TemplateSpecializationType>()) {
-      if (auto *decl = specialT->getTemplateName().getAsTemplateDecl())
-        return Pred(decl->getNameAsString());
+    auto *SpecialT = type->getAs<TemplateSpecializationType>();
+    if (!SpecialT)
       return false;
-    }
-    return false;
+    auto *Decl = SpecialT->getTemplateName().getAsTemplateDecl();
+    if (!Decl)
+      return false;
+    return Pred(Decl->getNameAsString());
   }
   return false;
 }
