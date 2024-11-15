@@ -24,7 +24,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attr.h"
-#include "clang/AST/Attrs.inc"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
@@ -2093,7 +2092,6 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
     break;
   }
 
-  // [jderezende] TODO: Emit branch metadata marking it as flatten/branch, if exists.
   Builder.CreateCondBr(CondV, TrueBlock, FalseBlock, Weights, Unpredictable,
                        ControlFlowHint);
 }

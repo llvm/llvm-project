@@ -16,7 +16,6 @@
 #include "CodeGenModule.h"
 #include "TargetInfo.h"
 #include "clang/AST/Attr.h"
-#include "clang/AST/Attrs.inc"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"

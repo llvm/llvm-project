@@ -32,7 +32,6 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
-#include "llvm/IR/Metadata.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "spirv-isel"
