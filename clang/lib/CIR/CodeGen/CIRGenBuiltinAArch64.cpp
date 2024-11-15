@@ -2186,6 +2186,14 @@ static int64_t getIntValueFromConstOp(mlir::Value val) {
       .getSExtValue();
 }
 
+static mlir::Value emitNeonSplat(CIRGenBuilderTy &builder, mlir::Location loc,
+                                 mlir::Value splatVec, mlir::Value splatLane,
+                                 unsigned int splatCnt) {
+  int64_t splatValInt = getIntValueFromConstOp(splatLane);
+  llvm::SmallVector<int64_t, 4> splatMask(splatCnt, splatValInt);
+  return builder.createVecShuffle(loc, splatVec, splatMask);
+}
+
 /// Build a constant shift amount vector of `vecTy` to shift a vector
 /// Here `shitfVal` is a constant integer that will be splated into a
 /// a const vector of `vecTy` which is the return of this function
@@ -2339,6 +2347,19 @@ mlir::Value CIRGenFunction::emitCommonNeonBuiltinExpr(
   switch (builtinID) {
   default:
     break;
+  case NEON::BI__builtin_neon_splat_lane_v:
+  case NEON::BI__builtin_neon_splat_laneq_v:
+  case NEON::BI__builtin_neon_splatq_lane_v:
+  case NEON::BI__builtin_neon_splatq_laneq_v: {
+    uint64_t numElements = vTy.getSize();
+    if (builtinID == NEON::BI__builtin_neon_splatq_lane_v)
+      numElements = numElements << 1;
+    if (builtinID == NEON::BI__builtin_neon_splat_laneq_v)
+      numElements = numElements >> 1;
+    ops[0] = builder.createBitcast(ops[0], vTy);
+    return emitNeonSplat(builder, getLoc(e->getExprLoc()), ops[0], ops[1],
+                         numElements);
+  }
   case NEON::BI__builtin_neon_vmovl_v: {
     cir::VectorType dTy = builder.getExtendedOrTruncatedElementVectorType(
         vTy, false /* truncate */,
