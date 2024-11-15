@@ -355,7 +355,7 @@ struct SkipBodyInfo {
 
 /// Implementation of SemaProxy interface that enables constant evaluator
 /// to call Sema and modify AST, e.g. to instantiate templates.
-struct SemaProxyImpl : SemaProxy {
+struct SemaProxyImpl final : SemaProxy {
   Sema &SemaRef;
   explicit SemaProxyImpl(Sema &SemaRef);
   void InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
