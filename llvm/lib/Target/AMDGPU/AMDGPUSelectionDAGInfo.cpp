@@ -7,13 +7,38 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUSelectionDAGInfo.h"
-#include "AMDGPUISelLowering.h"
+
+#define GET_SDNODE_DESC
+#include "AMDGPUGenSDNodeInfo.inc"
 
 using namespace llvm;
 
+AMDGPUSelectionDAGInfo::AMDGPUSelectionDAGInfo()
+    : SelectionDAGGenTargetInfo(AMDGPUGenSDNodeInfo) {}
+
 AMDGPUSelectionDAGInfo::~AMDGPUSelectionDAGInfo() = default;
 
-bool AMDGPUSelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
-  return Opcode >= AMDGPUISD::FIRST_MEMORY_OPCODE &&
-         Opcode <= AMDGPUISD::LAST_MEMORY_OPCODE;
+const char *AMDGPUSelectionDAGInfo::getTargetNodeName(unsigned Opcode) const {
+#define NODE_NAME_CASE(node)                                                   \
+  case AMDGPUISD::node:                                                        \
+    return "AMDGPUISD::" #node;
+
+  switch (static_cast<AMDGPUISD::NodeType>(Opcode)) {
+    // These nodes don't have corresponding entries in *.td files yet.
+    NODE_NAME_CASE(WAVE_ADDRESS)
+    NODE_NAME_CASE(MAD_I64_I32)
+    NODE_NAME_CASE(MAD_U64_U32)
+    NODE_NAME_CASE(BUILD_VERTICAL_VECTOR)
+    // These do, but only when compiling R600.td,
+    // and the enum is generated from AMDGPU.td.
+    NODE_NAME_CASE(DOT4)
+    NODE_NAME_CASE(TEXTURE_FETCH)
+    NODE_NAME_CASE(R600_EXPORT)
+    NODE_NAME_CASE(CONST_ADDRESS)
+    NODE_NAME_CASE(DUMMY_CHAIN)
+  }
+
+#undef NODE_NAME_CASE
+
+  return SelectionDAGGenTargetInfo::getTargetNodeName(Opcode);
 }
