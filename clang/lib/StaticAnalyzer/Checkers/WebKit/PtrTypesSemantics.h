@@ -34,14 +34,22 @@ class Type;
 /// \returns CXXRecordDecl of the base if the type has ref as a public method,
 /// nullptr if not, std::nullopt if inconclusive.
 std::optional<const clang::CXXRecordDecl *>
-hasPublicMethodInBase(const CXXBaseSpecifier *Base, const char *NameToMatch);
+hasPublicMethodInBase(const CXXBaseSpecifier *Base,
+                      llvm::StringRef NameToMatch);
 
 /// \returns true if \p Class is ref-countable, false if not, std::nullopt if
 /// inconclusive.
-std::optional<bool> isRefCountable(const clang::CXXRecordDecl* Class);
+std::optional<bool> isRefCountable(const clang::CXXRecordDecl *Class);
+
+/// \returns true if \p Class is checked-pointer compatible, false if not,
+/// std::nullopt if inconclusive.
+std::optional<bool> isCheckedPtrCapable(const clang::CXXRecordDecl *Class);
 
 /// \returns true if \p Class is ref-counted, false if not.
 bool isRefCounted(const clang::CXXRecordDecl *Class);
+
+/// \returns true if \p Class is a CheckedPtr / CheckedRef, false if not.
+bool isCheckedPtr(const clang::CXXRecordDecl *Class);
 
 /// \returns true if \p Class is ref-countable AND not ref-counted, false if
 /// not, std::nullopt if inconclusive.

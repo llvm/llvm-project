@@ -287,7 +287,7 @@ struct __optional_destruct_base<_Tp, false> {
   static_assert(is_object_v<value_type>, "instantiation of optional with a non-object type is undefined behavior");
   union {
     char __null_state_;
-    value_type __val_;
+    remove_cv_t<value_type> __val_;
   };
   bool __engaged_;
 
@@ -323,7 +323,7 @@ struct __optional_destruct_base<_Tp, true> {
   static_assert(is_object_v<value_type>, "instantiation of optional with a non-object type is undefined behavior");
   union {
     char __null_state_;
-    value_type __val_;
+    remove_cv_t<value_type> __val_;
   };
   bool __engaged_;
 
@@ -377,7 +377,7 @@ struct __optional_storage_base : __optional_destruct_base<_Tp> {
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __assign_from(_That&& __opt) {
     if (this->__engaged_ == __opt.has_value()) {
       if (this->__engaged_)
-        this->__val_ = std::forward<_That>(__opt).__get();
+        static_cast<_Tp&>(this->__val_) = std::forward<_That>(__opt).__get();
     } else {
       if (this->__engaged_)
         this->reset();

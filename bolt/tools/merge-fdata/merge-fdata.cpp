@@ -145,6 +145,10 @@ void mergeProfileHeaders(BinaryProfileHeader &MergedHeader,
     errs() << "WARNING: merging profiles with different sampling events\n";
     MergedHeader.EventNames += "," + Header.EventNames;
   }
+
+  if (MergedHeader.HashFunction != Header.HashFunction)
+    report_error("merge conflict",
+                 "cannot merge profiles with different hash functions");
 }
 
 void mergeBasicBlockProfile(BinaryBasicBlockProfile &MergedBB,
@@ -386,6 +390,7 @@ int main(int argc, char **argv) {
   // Merged information for all functions.
   StringMap<BinaryFunctionProfile> MergedBFs;
 
+  bool FirstHeader = true;
   for (std::string &InputDataFilename : Inputs) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
         MemoryBuffer::getFileOrSTDIN(InputDataFilename);
@@ -409,7 +414,12 @@ int main(int argc, char **argv) {
     }
 
     // Merge the header.
-    mergeProfileHeaders(MergedHeader, BP.Header);
+    if (FirstHeader) {
+      MergedHeader = BP.Header;
+      FirstHeader = false;
+    } else {
+      mergeProfileHeaders(MergedHeader, BP.Header);
+    }
 
     // Do the function merge.
     for (BinaryFunctionProfile &BF : BP.Functions) {

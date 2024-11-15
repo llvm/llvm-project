@@ -133,17 +133,16 @@ public:
   /// RuntimeAliases function, in which case the client is responsible for
   /// setting up all aliases (including the required ones).
   static Expected<std::unique_ptr<MachOPlatform>>
-  Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-         JITDylib &PlatformJD, std::unique_ptr<DefinitionGenerator> OrcRuntime,
+  Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
+         std::unique_ptr<DefinitionGenerator> OrcRuntime,
          HeaderOptions PlatformJDOpts = {},
          MachOHeaderMUBuilder BuildMachOHeaderMU = buildSimpleMachOHeaderMU,
          std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
 
   /// Construct using a path to the ORC runtime.
   static Expected<std::unique_ptr<MachOPlatform>>
-  Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-         JITDylib &PlatformJD, const char *OrcRuntimePath,
-         HeaderOptions PlatformJDOpts = {},
+  Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
+         const char *OrcRuntimePath, HeaderOptions PlatformJDOpts = {},
          MachOHeaderMUBuilder BuildMachOHeaderMU = buildSimpleMachOHeaderMU,
          std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
 
@@ -293,8 +292,7 @@ private:
 
   static MachOExecutorSymbolFlags flagsForSymbol(jitlink::Symbol &Sym);
 
-  MachOPlatform(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-                JITDylib &PlatformJD,
+  MachOPlatform(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
                 std::unique_ptr<DefinitionGenerator> OrcRuntimeGenerator,
                 HeaderOptions PlatformJDOpts,
                 MachOHeaderMUBuilder BuildMachOHeaderMU, Error &Err);

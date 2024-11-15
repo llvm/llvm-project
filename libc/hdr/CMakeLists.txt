@@ -78,10 +78,14 @@ add_proxy_header_library(
     libc.include.signal
 )
 
+add_header_library(stdio_overlay HDRS stdio_overlay.h)
+
 add_proxy_header_library(
   stdio_macros
   HDRS
     stdio_macros.h
+  DEPENDS
+    .stdio_overlay
   FULL_BUILD_DEPENDS
     libc.include.stdio
     libc.include.llvm-libc-macros.stdio_macros

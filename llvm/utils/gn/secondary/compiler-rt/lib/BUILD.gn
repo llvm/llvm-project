@@ -4,7 +4,7 @@ group("lib") {
     "//compiler-rt/lib/builtins",
     "//compiler-rt/lib/cfi:ignorelist($host_toolchain)",
   ]
-  if (current_os == "linux") {
+  if (current_os == "linux" && current_cpu == "x64") {
     deps += [ "//compiler-rt/lib/msan" ]
   }
   if (current_os == "linux" || current_os == "android") {

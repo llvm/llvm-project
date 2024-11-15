@@ -30,6 +30,7 @@ private:
 public:
   /// Zero-initializes a boolean.
   Boolean() : V(false) {}
+  Boolean(const llvm::APSInt &I) : V(!I.isZero()) {}
   explicit Boolean(bool V) : V(V) {}
 
   bool operator<(Boolean RHS) const { return V < RHS.V; }

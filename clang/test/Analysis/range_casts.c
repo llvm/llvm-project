@@ -154,3 +154,12 @@ void f15(long foo)
   else
     clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
 }
+
+int *getIntPtr(void) {
+  extern int *intPtr;
+  return intPtr;
+}
+char call_malformed_fptr() {
+  int (*fptr)(void) = (int (*)(void))getIntPtr;
+  return fptr(); // no-crash
+}

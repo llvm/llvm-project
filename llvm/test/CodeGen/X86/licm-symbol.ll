@@ -6,7 +6,7 @@
 ; CHECK: pushl
 ; CHECK: movl  $176, %esi
 ; CHECK: addl  L___sF$non_lazy_ptr, %esi
-; CHECK: .p2align  4, 0x90
+; CHECK: .p2align  4
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128-n8:16:32"
 target triple = "i386-apple-darwin8"

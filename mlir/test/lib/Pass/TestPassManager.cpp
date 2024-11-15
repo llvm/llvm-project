@@ -151,11 +151,21 @@ struct TestCrashRecoveryPass
 struct TestFailurePass : public PassWrapper<TestFailurePass, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestFailurePass)
 
-  void runOnOperation() final { signalPassFailure(); }
+  TestFailurePass() = default;
+  TestFailurePass(const TestFailurePass &other) : PassWrapper(other) {}
+
+  void runOnOperation() final {
+    signalPassFailure();
+    if (genDiagnostics)
+      mlir::emitError(getOperation()->getLoc(), "illegal operation");
+  }
   StringRef getArgument() const final { return "test-pass-failure"; }
   StringRef getDescription() const final {
     return "Test a pass in the pass manager that always fails";
   }
+
+  Option<bool> genDiagnostics{*this, "gen-diagnostics",
+                              llvm::cl::desc("Generate a diagnostic message")};
 };
 
 /// A test pass that creates an invalid operation in a function body.

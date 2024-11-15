@@ -109,7 +109,7 @@ static AttributeMap collectAttributeMacros(const SpecMap &Spec,
 static void emitAttributeMacroDecls(const AttributeMap &MacroAttr,
                                     llvm::raw_ostream &OS) {
   for (auto &[Macro, Attr] : MacroAttr) {
-    std::vector<llvm::Record *> Instances =
+    std::vector<const llvm::Record *> Instances =
         Attr->getValueAsListOfDefs("Instances");
     llvm::SmallVector<std::pair<AttributeStyle, const llvm::Record *>> Styles;
     std::transform(Instances.begin(), Instances.end(),
@@ -190,7 +190,7 @@ static void emitAttributeMacroDecls(const AttributeMap &MacroAttr,
 
 static void emitAttributeMacroForFunction(const llvm::Record *FunctionSpec,
                                           llvm::raw_ostream &OS) {
-  std::vector<llvm::Record *> Attributes =
+  std::vector<const llvm::Record *> Attributes =
       FunctionSpec->getValueAsListOfDefs("Attributes");
   llvm::interleave(
       Attributes.begin(), Attributes.end(),

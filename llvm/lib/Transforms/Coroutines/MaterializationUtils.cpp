@@ -9,12 +9,13 @@
 // This file contains classes used to materialize insts after suspends points.
 //===----------------------------------------------------------------------===//
 
-#include "MaterializationUtils.h"
-#include "SpillUtils.h"
+#include "llvm/Transforms/Coroutines/MaterializationUtils.h"
+#include "CoroInternal.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/Transforms/Coroutines/SpillUtils.h"
 #include <deque>
 
 using namespace llvm;

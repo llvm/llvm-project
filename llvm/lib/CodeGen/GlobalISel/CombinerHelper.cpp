@@ -2036,6 +2036,8 @@ void CombinerHelper::applyCombineMulToShl(MachineInstr &MI,
   Observer.changingInstr(MI);
   MI.setDesc(MIB.getTII().get(TargetOpcode::G_SHL));
   MI.getOperand(2).setReg(ShiftCst.getReg(0));
+  if (ShiftVal == ShiftTy.getScalarSizeInBits() - 1)
+    MI.clearFlag(MachineInstr::MIFlag::NoSWrap);
   Observer.changedInstr(MI);
 }
 

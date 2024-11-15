@@ -5,8 +5,8 @@
 // RUN: %clang_cc1 -triple=x86_64 -S %s -falign-loops=32 -O -o - | FileCheck %s --check-prefixes=CHECK,CHECK_32
 
 // CHECK-LABEL: foo:
-// CHECK_8:       .p2align 3, 0x90
-// CHECK_32:      .p2align 5, 0x90
+// CHECK_8:       .p2align 3
+// CHECK_32:      .p2align 5
 
 void bar(void);
 void foo(void) {

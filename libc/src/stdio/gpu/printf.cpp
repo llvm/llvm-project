@@ -13,7 +13,7 @@
 #include "src/errno/libc_errno.h"
 #include "src/stdio/gpu/vfprintf_utils.h"
 
-#include <stdio.h>
+#include <stdarg.h>
 
 namespace LIBC_NAMESPACE {
 

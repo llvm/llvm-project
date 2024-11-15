@@ -152,7 +152,7 @@ private:
 
   std::optional<unsigned> createGlobal(const DeclTy &D, QualType Ty,
                                        bool IsStatic, bool IsExtern,
-                                       const Expr *Init = nullptr);
+                                       bool IsWeak, const Expr *Init = nullptr);
 
   /// Reference to the VM context.
   Context &Ctx;

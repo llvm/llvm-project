@@ -143,11 +143,10 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (LDSBankCount == 0)
     LDSBankCount = 32;
 
-  if (TT.getArch() == Triple::amdgcn && LocalMemorySize == 0)
-    LocalMemorySize = 32768;
+  if (TT.getArch() == Triple::amdgcn && AddressableLocalMemorySize == 0)
+    AddressableLocalMemorySize = 32768;
 
-  AddressableLocalMemorySize = LocalMemorySize;
-
+  LocalMemorySize = AddressableLocalMemorySize;
   if (AMDGPU::isGFX10Plus(*this) &&
       !getFeatureBits().test(AMDGPU::FeatureCuMode))
     LocalMemorySize *= 2;

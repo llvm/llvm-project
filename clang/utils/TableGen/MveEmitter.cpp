@@ -994,9 +994,10 @@ public:
   const VectorType *getVectorType(const ScalarType *ST, unsigned Lanes) {
     std::tuple<ScalarTypeKind, unsigned, unsigned> key(ST->kind(),
                                                        ST->sizeInBits(), Lanes);
-    if (VectorTypes.find(key) == VectorTypes.end())
-      VectorTypes[key] = std::make_unique<VectorType>(ST, Lanes);
-    return VectorTypes[key].get();
+    auto [It, Inserted] = VectorTypes.try_emplace(key);
+    if (Inserted)
+      It->second = std::make_unique<VectorType>(ST, Lanes);
+    return It->second.get();
   }
   const VectorType *getVectorType(const ScalarType *ST) {
     return getVectorType(ST, 128 / ST->sizeInBits());
@@ -1004,22 +1005,25 @@ public:
   const MultiVectorType *getMultiVectorType(unsigned Registers,
                                             const VectorType *VT) {
     std::pair<std::string, unsigned> key(VT->cNameBase(), Registers);
-    if (MultiVectorTypes.find(key) == MultiVectorTypes.end())
-      MultiVectorTypes[key] = std::make_unique<MultiVectorType>(Registers, VT);
-    return MultiVectorTypes[key].get();
+    auto [It, Inserted] = MultiVectorTypes.try_emplace(key);
+    if (Inserted)
+      It->second = std::make_unique<MultiVectorType>(Registers, VT);
+    return It->second.get();
   }
   const PredicateType *getPredicateType(unsigned Lanes) {
     unsigned key = Lanes;
-    if (PredicateTypes.find(key) == PredicateTypes.end())
-      PredicateTypes[key] = std::make_unique<PredicateType>(Lanes);
-    return PredicateTypes[key].get();
+    auto [It, Inserted] = PredicateTypes.try_emplace(key);
+    if (Inserted)
+      It->second = std::make_unique<PredicateType>(Lanes);
+    return It->second.get();
   }
   const PointerType *getPointerType(const Type *T, bool Const) {
     PointerType PT(T, Const);
     std::string key = PT.cName();
-    if (PointerTypes.find(key) == PointerTypes.end())
-      PointerTypes[key] = std::make_unique<PointerType>(PT);
-    return PointerTypes[key].get();
+    auto [It, Inserted] = PointerTypes.try_emplace(key);
+    if (Inserted)
+      It->second = std::make_unique<PointerType>(PT);
+    return It->second.get();
   }
 
   // Methods to construct a type from various pieces of Tablegen. These are

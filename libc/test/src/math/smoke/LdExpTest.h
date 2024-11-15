@@ -18,6 +18,8 @@
 
 #include <stdint.h>
 
+using LIBC_NAMESPACE::Sign;
+
 template <typename T, typename U = int>
 class LdExpTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;

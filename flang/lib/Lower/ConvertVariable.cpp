@@ -46,10 +46,10 @@
 #include "llvm/Support/Debug.h"
 #include <optional>
 
-static llvm::cl::opt<bool> allowAssumedRank(
-    "allow-assumed-rank",
-    llvm::cl::desc("Enable assumed rank lowering - experimental"),
-    llvm::cl::init(false));
+static llvm::cl::opt<bool>
+    allowAssumedRank("allow-assumed-rank",
+                     llvm::cl::desc("Enable assumed rank lowering"),
+                     llvm::cl::init(true));
 
 #define DEBUG_TYPE "flang-lower-variable"
 
@@ -519,7 +519,7 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
   if (mlir::isa<fir::SequenceType>(symTy) &&
       !Fortran::semantics::IsAllocatableOrPointer(sym)) {
     mlir::Type eleTy = mlir::cast<fir::SequenceType>(symTy).getEleTy();
-    if (mlir::isa<mlir::IntegerType, mlir::FloatType, fir::ComplexType,
+    if (mlir::isa<mlir::IntegerType, mlir::FloatType, mlir::ComplexType,
                   fir::LogicalType>(eleTy)) {
       const auto *details =
           sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();

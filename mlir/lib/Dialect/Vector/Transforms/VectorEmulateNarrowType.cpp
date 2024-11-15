@@ -1234,7 +1234,7 @@ struct RewriteVectorTranspose : OpRewritePattern<vector::TransposeOp> {
 //===----------------------------------------------------------------------===//
 
 void vector::populateVectorNarrowTypeEmulationPatterns(
-    arith::NarrowTypeEmulationConverter &typeConverter,
+    const arith::NarrowTypeEmulationConverter &typeConverter,
     RewritePatternSet &patterns) {
 
   // Populate `vector.*` conversion patterns.

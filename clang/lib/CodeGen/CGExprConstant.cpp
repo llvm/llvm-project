@@ -42,16 +42,6 @@ using namespace CodeGen;
 namespace {
 class ConstExprEmitter;
 
-llvm::Constant *getPadding(const CodeGenModule &CGM, CharUnits PadSize) {
-  llvm::Type *Ty = CGM.CharTy;
-  if (PadSize > CharUnits::One())
-    Ty = llvm::ArrayType::get(Ty, PadSize.getQuantity());
-  if (CGM.shouldZeroInitPadding()) {
-    return llvm::Constant::getNullValue(Ty);
-  }
-  return llvm::UndefValue::get(Ty);
-}
-
 struct ConstantAggregateBuilderUtils {
   CodeGenModule &CGM;
 
@@ -71,7 +61,10 @@ struct ConstantAggregateBuilderUtils {
   }
 
   llvm::Constant *getPadding(CharUnits PadSize) const {
-    return ::getPadding(CGM, PadSize);
+    llvm::Type *Ty = CGM.CharTy;
+    if (PadSize > CharUnits::One())
+      Ty = llvm::ArrayType::get(Ty, PadSize.getQuantity());
+    return llvm::UndefValue::get(Ty);
   }
 
   llvm::Constant *getZeroes(CharUnits ZeroSize) const {
@@ -598,11 +591,6 @@ private:
   bool Build(const InitListExpr *ILE, bool AllowOverwrite);
   bool Build(const APValue &Val, const RecordDecl *RD, bool IsPrimaryBase,
              const CXXRecordDecl *VTableClass, CharUnits BaseOffset);
-  bool DoZeroInitPadding(const ASTRecordLayout &Layout, unsigned FieldNo,
-                         const FieldDecl &Field, bool AllowOverwrite,
-                         CharUnits &FieldSize, CharUnits &SizeSoFar);
-  bool DoZeroInitPadding(const ASTRecordLayout &Layout, bool AllowOverwrite,
-                         CharUnits &SizeSoFar);
   llvm::Constant *Finalize(QualType Ty);
 };
 
@@ -727,10 +715,6 @@ bool ConstStructBuilder::Build(const InitListExpr *ILE, bool AllowOverwrite) {
     if (CXXRD->getNumBases())
       return false;
 
-  const bool ZeroInitPadding = CGM.shouldZeroInitPadding();
-  CharUnits FieldSize = CharUnits::Zero();
-  CharUnits SizeSoFar = CharUnits::Zero();
-
   for (FieldDecl *Field : RD->fields()) {
     ++FieldNo;
 
@@ -748,13 +732,8 @@ bool ConstStructBuilder::Build(const InitListExpr *ILE, bool AllowOverwrite) {
     const Expr *Init = nullptr;
     if (ElementNo < ILE->getNumInits())
       Init = ILE->getInit(ElementNo++);
-    if (isa_and_nonnull<NoInitExpr>(Init)) {
-      if (ZeroInitPadding &&
-          !DoZeroInitPadding(Layout, FieldNo, *Field, AllowOverwrite, FieldSize,
-                             SizeSoFar))
-        return false;
+    if (isa_and_nonnull<NoInitExpr>(Init))
       continue;
-    }
 
     // Zero-sized fields are not emitted, but their initializers may still
     // prevent emission of this struct as a constant.
@@ -763,11 +742,6 @@ bool ConstStructBuilder::Build(const InitListExpr *ILE, bool AllowOverwrite) {
         return false;
       continue;
     }
-
-    if (ZeroInitPadding &&
-        !DoZeroInitPadding(Layout, FieldNo, *Field, AllowOverwrite, FieldSize,
-                           SizeSoFar))
-      return false;
 
     // When emitting a DesignatedInitUpdateExpr, a nested InitListExpr
     // represents additional overwriting of our current constant value, and not
@@ -794,10 +768,6 @@ bool ConstStructBuilder::Build(const InitListExpr *ILE, bool AllowOverwrite) {
     if (!EltInit)
       return false;
 
-    if (ZeroInitPadding && FieldSize.isZero())
-      SizeSoFar += CharUnits::fromQuantity(
-          CGM.getDataLayout().getTypeAllocSize(EltInit->getType()));
-
     if (!Field->isBitField()) {
       // Handle non-bitfield members.
       if (!AppendField(Field, Layout.getFieldOffset(FieldNo), EltInit,
@@ -814,9 +784,6 @@ bool ConstStructBuilder::Build(const InitListExpr *ILE, bool AllowOverwrite) {
         return false;
     }
   }
-
-  if (ZeroInitPadding && !DoZeroInitPadding(Layout, AllowOverwrite, SizeSoFar))
-    return false;
 
   return true;
 }
@@ -882,9 +849,6 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
 
   unsigned FieldNo = 0;
   uint64_t OffsetBits = CGM.getContext().toBits(Offset);
-  const bool ZeroInitPadding = CGM.shouldZeroInitPadding();
-  CharUnits FieldSize = CharUnits::Zero();
-  CharUnits SizeSoFar = CharUnits::Zero();
 
   bool AllowOverwrite = false;
   for (RecordDecl::field_iterator Field = RD->field_begin(),
@@ -906,15 +870,6 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
     if (!EltInit)
       return false;
 
-    if (ZeroInitPadding) {
-      if (!DoZeroInitPadding(Layout, FieldNo, **Field, AllowOverwrite,
-                             FieldSize, SizeSoFar))
-        return false;
-      if (FieldSize.isZero())
-        SizeSoFar += CharUnits::fromQuantity(
-            CGM.getDataLayout().getTypeAllocSize(EltInit->getType()));
-    }
-
     if (!Field->isBitField()) {
       // Handle non-bitfield members.
       if (!AppendField(*Field, Layout.getFieldOffset(FieldNo) + OffsetBits,
@@ -931,35 +886,7 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
         return false;
     }
   }
-  if (ZeroInitPadding && !DoZeroInitPadding(Layout, AllowOverwrite, SizeSoFar))
-    return false;
 
-  return true;
-}
-
-bool ConstStructBuilder::DoZeroInitPadding(
-    const ASTRecordLayout &Layout, unsigned FieldNo, const FieldDecl &Field,
-    bool AllowOverwrite, CharUnits &FieldSize, CharUnits &SizeSoFar) {
-  CharUnits Offset =
-      CGM.getContext().toCharUnitsFromBits(Layout.getFieldOffset(FieldNo));
-  if (SizeSoFar < Offset)
-    if (!AppendBytes(SizeSoFar, getPadding(CGM, Offset - SizeSoFar),
-                     AllowOverwrite))
-      return false;
-  FieldSize = CGM.getContext().getTypeSizeInChars(Field.getType());
-  SizeSoFar = Offset + FieldSize;
-  return true;
-}
-
-bool ConstStructBuilder::DoZeroInitPadding(const ASTRecordLayout &Layout,
-                                           bool AllowOverwrite,
-                                           CharUnits &SizeSoFar) {
-  CharUnits TotalSize = Layout.getSize();
-  if (SizeSoFar < TotalSize)
-    if (!AppendBytes(SizeSoFar, getPadding(CGM, TotalSize - SizeSoFar),
-                     AllowOverwrite))
-      return false;
-  SizeSoFar = TotalSize;
   return true;
 }
 
@@ -1200,10 +1127,12 @@ public:
 
       assert(CurSize <= TotalSize && "Union size mismatch!");
       if (unsigned NumPadBytes = TotalSize - CurSize) {
-        llvm::Constant *Padding =
-            getPadding(CGM, CharUnits::fromQuantity(NumPadBytes));
-        Elts.push_back(Padding);
-        Types.push_back(Padding->getType());
+        llvm::Type *Ty = CGM.CharTy;
+        if (NumPadBytes > 1)
+          Ty = llvm::ArrayType::get(Ty, NumPadBytes);
+
+        Elts.push_back(llvm::UndefValue::get(Ty));
+        Types.push_back(Ty);
       }
 
       llvm::StructType *STy = llvm::StructType::get(VMContext, Types, false);

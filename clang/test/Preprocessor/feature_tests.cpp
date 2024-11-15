@@ -31,7 +31,11 @@
     !__has_builtin(__underlying_type) || \
     !__has_builtin(__is_trivial) || \
     !__has_builtin(__is_same_as) || \
-    !__has_builtin(__has_unique_object_representations)
+    !__has_builtin(__has_unique_object_representations) || \
+    !__has_builtin(__is_trivially_equality_comparable) || \
+    !__has_builtin(__reference_constructs_from_temporary) || \
+    !__has_builtin(__reference_binds_to_temporary) || \
+    !__has_builtin(__reference_converts_from_temporary)
 #error Clang should have these
 #endif
 

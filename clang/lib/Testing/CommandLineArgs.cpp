@@ -11,99 +11,79 @@
 #include "llvm/Support/ErrorHandling.h"
 
 namespace clang {
+std::vector<TestLanguage> getCOrLater(const int MinimumStd) {
+  std::vector<TestLanguage> Result{};
+
+#define TESTLANGUAGE_C(lang, version, std_flag, version_index)                 \
+  if (version >= MinimumStd)                                                   \
+    Result.push_back(Lang_##lang##version);
+#include "clang/Testing/TestLanguage.def"
+
+  return Result;
+}
+std::vector<TestLanguage> getCXXOrLater(const int MinimumStd) {
+  std::vector<TestLanguage> Result{};
+
+#define TESTLANGUAGE_CXX(lang, version, std_flag, version_index)               \
+  if (version >= MinimumStd)                                                   \
+    Result.push_back(Lang_##lang##version);
+#include "clang/Testing/TestLanguage.def"
+
+  return Result;
+}
 
 std::vector<std::string> getCommandLineArgsForTesting(TestLanguage Lang) {
-  std::vector<std::string> Args;
   // Test with basic arguments.
   switch (Lang) {
-  case Lang_C89:
-    Args = {"-x", "c", "-std=c89"};
-    break;
-  case Lang_C99:
-    Args = {"-x", "c", "-std=c99"};
-    break;
-  case Lang_CXX03:
-    Args = {"-std=c++03", "-frtti"};
-    break;
-  case Lang_CXX11:
-    Args = {"-std=c++11", "-frtti"};
-    break;
-  case Lang_CXX14:
-    Args = {"-std=c++14", "-frtti"};
-    break;
-  case Lang_CXX17:
-    Args = {"-std=c++17", "-frtti"};
-    break;
-  case Lang_CXX20:
-    Args = {"-std=c++20", "-frtti"};
-    break;
-  case Lang_CXX23:
-    Args = {"-std=c++23", "-frtti"};
-    break;
+#define TESTLANGUAGE_C(lang, version, std_flag, version_index)                 \
+  case Lang_##lang##version:                                                   \
+    return { "-x", "c", "-std=" #std_flag };
+#define TESTLANGUAGE_CXX(lang, version, std_flag, version_index)               \
+  case Lang_##lang##version:                                                   \
+    return { "-std=" #std_flag, "-frtti" };
+#include "clang/Testing/TestLanguage.def"
+
   case Lang_OBJC:
-    Args = {"-x", "objective-c", "-frtti", "-fobjc-nonfragile-abi"};
-    break;
+    return {"-x", "objective-c", "-frtti", "-fobjc-nonfragile-abi"};
   case Lang_OBJCXX:
-    Args = {"-x", "objective-c++", "-frtti"};
-    break;
+    return {"-x", "objective-c++", "-frtti"};
   case Lang_OpenCL:
-    llvm_unreachable("Not implemented yet!");
+    llvm_unreachable("Unhandled TestLanguage enum");
   }
-  return Args;
+  llvm_unreachable("Unhandled TestLanguage enum");
 }
 
 std::vector<std::string> getCC1ArgsForTesting(TestLanguage Lang) {
-  std::vector<std::string> Args;
   switch (Lang) {
-  case Lang_C89:
-    Args = {"-xc", "-std=c89"};
-    break;
-  case Lang_C99:
-    Args = {"-xc", "-std=c99"};
-    break;
-  case Lang_CXX03:
-    Args = {"-std=c++03"};
-    break;
-  case Lang_CXX11:
-    Args = {"-std=c++11"};
-    break;
-  case Lang_CXX14:
-    Args = {"-std=c++14"};
-    break;
-  case Lang_CXX17:
-    Args = {"-std=c++17"};
-    break;
-  case Lang_CXX20:
-    Args = {"-std=c++20"};
-    break;
-  case Lang_CXX23:
-    Args = {"-std=c++23"};
-    break;
+#define TESTLANGUAGE_C(lang, version, std_flag, version_index)                 \
+  case Lang_##lang##version:                                                   \
+    return { "-xc", "-std=" #std_flag };
+#define TESTLANGUAGE_CXX(lang, version, std_flag, version_index)               \
+  case Lang_##lang##version:                                                   \
+    return { "-std=" #std_flag };
+#include "clang/Testing/TestLanguage.def"
+
   case Lang_OBJC:
-    Args = {"-xobjective-c"};
+    return {"-xobjective-c"};
     break;
   case Lang_OBJCXX:
-    Args = {"-xobjective-c++"};
+    return {"-xobjective-c++"};
     break;
   case Lang_OpenCL:
-    llvm_unreachable("Not implemented yet!");
+    llvm_unreachable("Unhandled TestLanguage enum");
   }
-  return Args;
+  llvm_unreachable("Unhandled TestLanguage enum");
 }
 
 StringRef getFilenameForTesting(TestLanguage Lang) {
   switch (Lang) {
-  case Lang_C89:
-  case Lang_C99:
+#define TESTLANGUAGE_C(lang, version, std_flag, version_index)                 \
+  case Lang_##lang##version:                                                   \
     return "input.c";
-
-  case Lang_CXX03:
-  case Lang_CXX11:
-  case Lang_CXX14:
-  case Lang_CXX17:
-  case Lang_CXX20:
-  case Lang_CXX23:
+#define TESTLANGUAGE_CXX(lang, version, std_flag, version_index)               \
+  case Lang_##lang##version:                                                   \
     return "input.cc";
+#include "clang/Testing/TestLanguage.def"
 
   case Lang_OpenCL:
     return "input.cl";

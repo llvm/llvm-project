@@ -792,10 +792,6 @@ Attribute ModuleImport::getConstantAsAttr(llvm::Constant *constant) {
   if (Attribute scalarAttr = getScalarConstantAsAttr(builder, constant))
     return scalarAttr;
 
-  // Convert function references.
-  if (auto *func = dyn_cast<llvm::Function>(constant))
-    return SymbolRefAttr::get(builder.getContext(), func->getName());
-
   // Returns the static shape of the provided type if possible.
   auto getConstantShape = [&](llvm::Type *type) {
     return llvm::dyn_cast_if_present<ShapedType>(
@@ -1019,6 +1015,14 @@ ModuleImport::getConstantsToConvert(llvm::Constant *constant) {
   workList.insert(constant);
   while (!workList.empty()) {
     llvm::Constant *current = workList.back();
+    // References of global objects are just pointers to the object. Avoid
+    // walking the elements of these here.
+    if (isa<llvm::GlobalObject>(current)) {
+      orderedSet.insert(current);
+      workList.pop_back();
+      continue;
+    }
+
     // Collect all dependencies of the current constant and add them to the
     // adjacency list if none has been computed before.
     auto [adjacencyIt, inserted] = adjacencyLists.try_emplace(current);
@@ -1096,12 +1100,13 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
   }
 
   // Convert global variable accesses.
-  if (auto *globalVar = dyn_cast<llvm::GlobalVariable>(constant)) {
+  if (auto *globalVar = dyn_cast<llvm::GlobalObject>(constant)) {
     Type type = convertType(globalVar->getType());
     StringRef globalName = globalVar->getName();
     FlatSymbolRefAttr symbolRef;
+    // Empty names are only allowed for global variables.
     if (globalName.empty())
-      symbolRef = namelessGlobals[globalVar];
+      symbolRef = namelessGlobals[cast<llvm::GlobalVariable>(globalVar)];
     else
       symbolRef = FlatSymbolRefAttr::get(context, globalName);
     return builder.create<AddressOfOp>(loc, type, symbolRef).getResult();

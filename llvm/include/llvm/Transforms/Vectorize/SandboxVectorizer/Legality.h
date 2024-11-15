@@ -12,11 +12,12 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_LEGALITY_H
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_LEGALITY_H
 
-#include "llvm/SandboxIR/SandboxIR.h"
+#include "llvm/ADT/ArrayRef.h"
 
 namespace llvm::sandboxir {
 
 class LegalityAnalysis;
+class Value;
 
 enum class LegalityResultID {
   Widen, ///> Vectorize by combining scalars to a vector.

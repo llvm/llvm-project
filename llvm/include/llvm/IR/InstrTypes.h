@@ -1461,6 +1461,22 @@ public:
   ///
   void setAttributes(AttributeList A) { Attrs = A; }
 
+  /// Try to intersect the attributes from 'this' CallBase and the
+  /// 'Other' CallBase. Sets the intersected attributes to 'this' and
+  /// return true if successful. Doesn't modify 'this' and returns
+  /// false if unsuccessful.
+  bool tryIntersectAttributes(const CallBase *Other) {
+    if (this == Other)
+      return true;
+    AttributeList AL = getAttributes();
+    AttributeList ALOther = Other->getAttributes();
+    auto Intersected = AL.intersectWith(getContext(), ALOther);
+    if (!Intersected)
+      return false;
+    setAttributes(*Intersected);
+    return true;
+  }
+
   /// Determine whether this call has the given attribute. If it does not
   /// then determine if the called function has the attribute, but only if
   /// the attribute is allowed for the call.

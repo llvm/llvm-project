@@ -761,8 +761,7 @@ void JumpScopeChecker::VerifyIndirectJumps() {
       if (CHECK_PERMISSIVE(!LabelAndGotoScopes.count(IG)))
         continue;
       unsigned IGScope = LabelAndGotoScopes[IG];
-      if (!JumpScopesMap.contains(IGScope))
-        JumpScopesMap[IGScope] = IG;
+      JumpScopesMap.try_emplace(IGScope, IG);
     }
     JumpScopes.reserve(JumpScopesMap.size());
     for (auto &Pair : JumpScopesMap)

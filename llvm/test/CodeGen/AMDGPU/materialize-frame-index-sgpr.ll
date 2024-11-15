@@ -1520,9 +1520,9 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_xor_saveexec_b64 s[4:5], -1
-; GFX7-NEXT:    s_add_i32 s6, s32, 0x201000
+; GFX7-NEXT:    s_add_i32 s6, s32, 0x202000
 ; GFX7-NEXT:    buffer_store_dword v23, off, s[0:3], s6 ; 4-byte Folded Spill
-; GFX7-NEXT:    s_add_i32 s6, s32, 0x201200
+; GFX7-NEXT:    s_add_i32 s6, s32, 0x202100
 ; GFX7-NEXT:    buffer_store_dword v22, off, s[0:3], s6 ; 4-byte Folded Spill
 ; GFX7-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX7-NEXT:    v_writelane_b32 v23, s28, 28
@@ -1562,36 +1562,57 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX7-NEXT:    ;;#ASMSTART
 ; GFX7-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc
 ; GFX7-NEXT:    ;;#ASMEND
-; GFX7-NEXT:    ; implicit-def: $vgpr22
-; GFX7-NEXT:    v_writelane_b32 v23, s59, 27
+; GFX7-NEXT:    buffer_store_dword v16, off, s[0:3], s32
+; GFX7-NEXT:    v_mov_b32_e32 v16, 0x8040
+; GFX7-NEXT:    buffer_store_dword v0, v16, s[0:3], s32 offen ; 4-byte Folded Spill
+; GFX7-NEXT:    buffer_store_dword v1, v16, s[0:3], s32 offen offset:4 ; 4-byte Folded Spill
+; GFX7-NEXT:    buffer_store_dword v2, v16, s[0:3], s32 offen offset:8 ; 4-byte Folded Spill
+; GFX7-NEXT:    buffer_store_dword v3, v16, s[0:3], s32 offen offset:12 ; 4-byte Folded Spill
+; GFX7-NEXT:    buffer_store_dword v4, v16, s[0:3], s32 offen offset:16 ; 4-byte Folded Spill
+; GFX7-NEXT:    buffer_store_dword v5, v16, s[0:3], s32 offen offset:20 ; 4-byte Folded Spill
+; GFX7-NEXT:    buffer_store_dword v6, v16, s[0:3], s32 offen offset:24 ; 4-byte Folded Spill
+; GFX7-NEXT:    buffer_store_dword v7, v16, s[0:3], s32 offen offset:28 ; 4-byte Folded Spill
+; GFX7-NEXT:    buffer_store_dword v8, v16, s[0:3], s32 offen offset:32 ; 4-byte Folded Spill
+; GFX7-NEXT:    buffer_store_dword v9, v16, s[0:3], s32 offen offset:36 ; 4-byte Folded Spill
+; GFX7-NEXT:    buffer_store_dword v10, v16, s[0:3], s32 offen offset:40 ; 4-byte Folded Spill
+; GFX7-NEXT:    buffer_store_dword v11, v16, s[0:3], s32 offen offset:44 ; 4-byte Folded Spill
+; GFX7-NEXT:    buffer_store_dword v12, v16, s[0:3], s32 offen offset:48 ; 4-byte Folded Spill
+; GFX7-NEXT:    buffer_store_dword v13, v16, s[0:3], s32 offen offset:52 ; 4-byte Folded Spill
+; GFX7-NEXT:    buffer_store_dword v14, v16, s[0:3], s32 offen offset:56 ; 4-byte Folded Spill
+; GFX7-NEXT:    buffer_store_dword v15, v16, s[0:3], s32 offen offset:60 ; 4-byte Folded Spill
+; GFX7-NEXT:    buffer_load_dword v16, off, s[0:3], s32
+; GFX7-NEXT:    ; implicit-def: $vgpr22 : SGPR spill to VGPR lane
+; GFX7-NEXT:    v_lshr_b32_e64 v0, s32, 6
 ; GFX7-NEXT:    v_writelane_b32 v22, vcc_lo, 0
 ; GFX7-NEXT:    v_writelane_b32 v22, vcc_hi, 1
-; GFX7-NEXT:    s_or_saveexec_b64 s[28:29], -1
-; GFX7-NEXT:    buffer_store_dword v0, off, s[0:3], s32
-; GFX7-NEXT:    v_mov_b32_e32 v0, 0x8044
-; GFX7-NEXT:    buffer_store_dword v22, v0, s[0:3], s32 offen ; 4-byte Folded Spill
-; GFX7-NEXT:    s_mov_b64 exec, s[28:29]
-; GFX7-NEXT:    buffer_load_dword v0, off, s[0:3], s32
-; GFX7-NEXT:    v_lshr_b32_e64 v22, s32, 6
 ; GFX7-NEXT:    s_movk_i32 vcc_lo, 0x4040
-; GFX7-NEXT:    v_add_i32_e32 v22, vcc, vcc_lo, v22
-; GFX7-NEXT:    v_add_i32_e32 v22, vcc, 0x200, v22
-; GFX7-NEXT:    v_readfirstlane_b32 s59, v22
+; GFX7-NEXT:    v_add_i32_e32 v0, vcc, vcc_lo, v0
+; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 0x200, v0
+; GFX7-NEXT:    v_writelane_b32 v23, s59, 27
+; GFX7-NEXT:    v_readfirstlane_b32 s59, v0
 ; GFX7-NEXT:    s_and_b64 vcc, 0, exec
-; GFX7-NEXT:    s_mov_b64 s[28:29], exec
-; GFX7-NEXT:    s_mov_b64 exec, -1
-; GFX7-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-NEXT:    buffer_store_dword v0, off, s[0:3], s32
-; GFX7-NEXT:    v_mov_b32_e32 v0, 0x8044
-; GFX7-NEXT:    buffer_load_dword v22, v0, s[0:3], s32 offen ; 4-byte Folded Reload
-; GFX7-NEXT:    s_mov_b64 exec, s[28:29]
-; GFX7-NEXT:    buffer_load_dword v0, off, s[0:3], s32
-; GFX7-NEXT:    s_waitcnt vmcnt(1)
 ; GFX7-NEXT:    v_readlane_b32 vcc_lo, v22, 0
 ; GFX7-NEXT:    v_readlane_b32 vcc_hi, v22, 1
-; GFX7-NEXT:    s_mov_b64 s[28:29], exec
-; GFX7-NEXT:    s_mov_b64 exec, -1
-; GFX7-NEXT:    s_mov_b64 exec, s[28:29]
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    buffer_store_dword v16, off, s[0:3], s32
+; GFX7-NEXT:    v_mov_b32_e32 v16, 0x8040
+; GFX7-NEXT:    buffer_load_dword v0, v16, s[0:3], s32 offen ; 4-byte Folded Reload
+; GFX7-NEXT:    buffer_load_dword v1, v16, s[0:3], s32 offen offset:4 ; 4-byte Folded Reload
+; GFX7-NEXT:    buffer_load_dword v2, v16, s[0:3], s32 offen offset:8 ; 4-byte Folded Reload
+; GFX7-NEXT:    buffer_load_dword v3, v16, s[0:3], s32 offen offset:12 ; 4-byte Folded Reload
+; GFX7-NEXT:    buffer_load_dword v4, v16, s[0:3], s32 offen offset:16 ; 4-byte Folded Reload
+; GFX7-NEXT:    buffer_load_dword v5, v16, s[0:3], s32 offen offset:20 ; 4-byte Folded Reload
+; GFX7-NEXT:    buffer_load_dword v6, v16, s[0:3], s32 offen offset:24 ; 4-byte Folded Reload
+; GFX7-NEXT:    buffer_load_dword v7, v16, s[0:3], s32 offen offset:28 ; 4-byte Folded Reload
+; GFX7-NEXT:    buffer_load_dword v8, v16, s[0:3], s32 offen offset:32 ; 4-byte Folded Reload
+; GFX7-NEXT:    buffer_load_dword v9, v16, s[0:3], s32 offen offset:36 ; 4-byte Folded Reload
+; GFX7-NEXT:    buffer_load_dword v10, v16, s[0:3], s32 offen offset:40 ; 4-byte Folded Reload
+; GFX7-NEXT:    buffer_load_dword v11, v16, s[0:3], s32 offen offset:44 ; 4-byte Folded Reload
+; GFX7-NEXT:    buffer_load_dword v12, v16, s[0:3], s32 offen offset:48 ; 4-byte Folded Reload
+; GFX7-NEXT:    buffer_load_dword v13, v16, s[0:3], s32 offen offset:52 ; 4-byte Folded Reload
+; GFX7-NEXT:    buffer_load_dword v14, v16, s[0:3], s32 offen offset:56 ; 4-byte Folded Reload
+; GFX7-NEXT:    buffer_load_dword v15, v16, s[0:3], s32 offen offset:60 ; 4-byte Folded Reload
+; GFX7-NEXT:    buffer_load_dword v16, off, s[0:3], s32
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ;;#ASMSTART
 ; GFX7-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc, s59, scc
@@ -1624,13 +1645,12 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX7-NEXT:    v_readlane_b32 s33, v23, 2
 ; GFX7-NEXT:    v_readlane_b32 s31, v23, 1
 ; GFX7-NEXT:    v_readlane_b32 s30, v23, 0
-; GFX7-NEXT:    ; kill: killed $vgpr22
 ; GFX7-NEXT:    v_readlane_b32 s28, v23, 28
 ; GFX7-NEXT:    v_readlane_b32 s29, v23, 29
 ; GFX7-NEXT:    s_xor_saveexec_b64 s[4:5], -1
-; GFX7-NEXT:    s_add_i32 s6, s32, 0x201000
+; GFX7-NEXT:    s_add_i32 s6, s32, 0x202000
 ; GFX7-NEXT:    buffer_load_dword v23, off, s[0:3], s6 ; 4-byte Folded Reload
-; GFX7-NEXT:    s_add_i32 s6, s32, 0x201200
+; GFX7-NEXT:    s_add_i32 s6, s32, 0x202100
 ; GFX7-NEXT:    buffer_load_dword v22, off, s[0:3], s6 ; 4-byte Folded Reload
 ; GFX7-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
@@ -1640,9 +1660,9 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_xor_saveexec_b64 s[4:5], -1
-; GFX8-NEXT:    s_add_i32 s6, s32, 0x201000
+; GFX8-NEXT:    s_add_i32 s6, s32, 0x202000
 ; GFX8-NEXT:    buffer_store_dword v23, off, s[0:3], s6 ; 4-byte Folded Spill
-; GFX8-NEXT:    s_add_i32 s6, s32, 0x201200
+; GFX8-NEXT:    s_add_i32 s6, s32, 0x202100
 ; GFX8-NEXT:    buffer_store_dword v22, off, s[0:3], s6 ; 4-byte Folded Spill
 ; GFX8-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX8-NEXT:    v_writelane_b32 v23, s58, 28
@@ -1682,36 +1702,60 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX8-NEXT:    ;;#ASMSTART
 ; GFX8-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc
 ; GFX8-NEXT:    ;;#ASMEND
-; GFX8-NEXT:    ; implicit-def: $vgpr22
-; GFX8-NEXT:    v_writelane_b32 v23, s59, 27
+; GFX8-NEXT:    buffer_store_dword v16, off, s[0:3], s32
+; GFX8-NEXT:    v_mov_b32_e32 v16, 0x8040
+; GFX8-NEXT:    buffer_store_dword v0, v16, s[0:3], s32 offen ; 4-byte Folded Spill
+; GFX8-NEXT:    s_nop 0
+; GFX8-NEXT:    buffer_store_dword v1, v16, s[0:3], s32 offen offset:4 ; 4-byte Folded Spill
+; GFX8-NEXT:    buffer_store_dword v2, v16, s[0:3], s32 offen offset:8 ; 4-byte Folded Spill
+; GFX8-NEXT:    buffer_store_dword v3, v16, s[0:3], s32 offen offset:12 ; 4-byte Folded Spill
+; GFX8-NEXT:    buffer_store_dword v4, v16, s[0:3], s32 offen offset:16 ; 4-byte Folded Spill
+; GFX8-NEXT:    buffer_store_dword v5, v16, s[0:3], s32 offen offset:20 ; 4-byte Folded Spill
+; GFX8-NEXT:    buffer_store_dword v6, v16, s[0:3], s32 offen offset:24 ; 4-byte Folded Spill
+; GFX8-NEXT:    buffer_store_dword v7, v16, s[0:3], s32 offen offset:28 ; 4-byte Folded Spill
+; GFX8-NEXT:    buffer_store_dword v8, v16, s[0:3], s32 offen offset:32 ; 4-byte Folded Spill
+; GFX8-NEXT:    buffer_store_dword v9, v16, s[0:3], s32 offen offset:36 ; 4-byte Folded Spill
+; GFX8-NEXT:    buffer_store_dword v10, v16, s[0:3], s32 offen offset:40 ; 4-byte Folded Spill
+; GFX8-NEXT:    buffer_store_dword v11, v16, s[0:3], s32 offen offset:44 ; 4-byte Folded Spill
+; GFX8-NEXT:    buffer_store_dword v12, v16, s[0:3], s32 offen offset:48 ; 4-byte Folded Spill
+; GFX8-NEXT:    buffer_store_dword v13, v16, s[0:3], s32 offen offset:52 ; 4-byte Folded Spill
+; GFX8-NEXT:    buffer_store_dword v14, v16, s[0:3], s32 offen offset:56 ; 4-byte Folded Spill
+; GFX8-NEXT:    buffer_store_dword v15, v16, s[0:3], s32 offen offset:60 ; 4-byte Folded Spill
+; GFX8-NEXT:    buffer_load_dword v16, off, s[0:3], s32
+; GFX8-NEXT:    ; implicit-def: $vgpr22 : SGPR spill to VGPR lane
+; GFX8-NEXT:    v_lshrrev_b32_e64 v0, 6, s32
 ; GFX8-NEXT:    v_writelane_b32 v22, vcc_lo, 0
 ; GFX8-NEXT:    v_writelane_b32 v22, vcc_hi, 1
-; GFX8-NEXT:    s_or_saveexec_b64 s[58:59], -1
-; GFX8-NEXT:    buffer_store_dword v0, off, s[0:3], s32
-; GFX8-NEXT:    v_mov_b32_e32 v0, 0x8044
-; GFX8-NEXT:    buffer_store_dword v22, v0, s[0:3], s32 offen ; 4-byte Folded Spill
-; GFX8-NEXT:    s_mov_b64 exec, s[58:59]
-; GFX8-NEXT:    buffer_load_dword v0, off, s[0:3], s32
-; GFX8-NEXT:    v_lshrrev_b32_e64 v22, 6, s32
 ; GFX8-NEXT:    s_movk_i32 vcc_lo, 0x4040
-; GFX8-NEXT:    v_add_u32_e32 v22, vcc, vcc_lo, v22
-; GFX8-NEXT:    v_add_u32_e32 v22, vcc, 0x200, v22
-; GFX8-NEXT:    v_readfirstlane_b32 s59, v22
+; GFX8-NEXT:    v_add_u32_e32 v0, vcc, vcc_lo, v0
+; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 0x200, v0
+; GFX8-NEXT:    v_writelane_b32 v23, s59, 27
+; GFX8-NEXT:    v_readfirstlane_b32 s59, v0
 ; GFX8-NEXT:    s_and_b64 vcc, 0, exec
-; GFX8-NEXT:    s_mov_b64 s[58:59], exec
-; GFX8-NEXT:    s_mov_b64 exec, -1
-; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    buffer_store_dword v0, off, s[0:3], s32
-; GFX8-NEXT:    v_mov_b32_e32 v0, 0x8044
-; GFX8-NEXT:    buffer_load_dword v22, v0, s[0:3], s32 offen ; 4-byte Folded Reload
-; GFX8-NEXT:    s_mov_b64 exec, s[58:59]
-; GFX8-NEXT:    buffer_load_dword v0, off, s[0:3], s32
-; GFX8-NEXT:    s_waitcnt vmcnt(1)
 ; GFX8-NEXT:    v_readlane_b32 vcc_lo, v22, 0
 ; GFX8-NEXT:    v_readlane_b32 vcc_hi, v22, 1
-; GFX8-NEXT:    s_mov_b64 s[58:59], exec
-; GFX8-NEXT:    s_mov_b64 exec, -1
-; GFX8-NEXT:    s_mov_b64 exec, s[58:59]
+; GFX8-NEXT:    v_readlane_b32 s58, v23, 28
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    buffer_store_dword v16, off, s[0:3], s32
+; GFX8-NEXT:    v_mov_b32_e32 v16, 0x8040
+; GFX8-NEXT:    buffer_load_dword v0, v16, s[0:3], s32 offen ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v1, v16, s[0:3], s32 offen offset:4 ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v2, v16, s[0:3], s32 offen offset:8 ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v3, v16, s[0:3], s32 offen offset:12 ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v4, v16, s[0:3], s32 offen offset:16 ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v5, v16, s[0:3], s32 offen offset:20 ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v6, v16, s[0:3], s32 offen offset:24 ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v7, v16, s[0:3], s32 offen offset:28 ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v8, v16, s[0:3], s32 offen offset:32 ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v9, v16, s[0:3], s32 offen offset:36 ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v10, v16, s[0:3], s32 offen offset:40 ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v11, v16, s[0:3], s32 offen offset:44 ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v12, v16, s[0:3], s32 offen offset:48 ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v13, v16, s[0:3], s32 offen offset:52 ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v14, v16, s[0:3], s32 offen offset:56 ; 4-byte Folded Reload
+; GFX8-NEXT:    buffer_load_dword v15, v16, s[0:3], s32 offen offset:60 ; 4-byte Folded Reload
+; GFX8-NEXT:    s_nop 0
+; GFX8-NEXT:    buffer_load_dword v16, off, s[0:3], s32
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    ;;#ASMSTART
 ; GFX8-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc, s59, scc
@@ -1744,13 +1788,11 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX8-NEXT:    v_readlane_b32 s33, v23, 2
 ; GFX8-NEXT:    v_readlane_b32 s31, v23, 1
 ; GFX8-NEXT:    v_readlane_b32 s30, v23, 0
-; GFX8-NEXT:    ; kill: killed $vgpr22
-; GFX8-NEXT:    v_readlane_b32 s58, v23, 28
 ; GFX8-NEXT:    v_readlane_b32 s59, v23, 29
 ; GFX8-NEXT:    s_xor_saveexec_b64 s[4:5], -1
-; GFX8-NEXT:    s_add_i32 s6, s32, 0x201000
+; GFX8-NEXT:    s_add_i32 s6, s32, 0x202000
 ; GFX8-NEXT:    buffer_load_dword v23, off, s[0:3], s6 ; 4-byte Folded Reload
-; GFX8-NEXT:    s_add_i32 s6, s32, 0x201200
+; GFX8-NEXT:    s_add_i32 s6, s32, 0x202100
 ; GFX8-NEXT:    buffer_load_dword v22, off, s[0:3], s6 ; 4-byte Folded Reload
 ; GFX8-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)

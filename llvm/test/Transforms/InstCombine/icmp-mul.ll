@@ -1223,3 +1223,244 @@ define <2 x i1> @mul_mixed_nsw_nuw_xy_z_setnonzero_vec_ule(<2 x i8> %x, <2 x i8>
   %cmp = icmp ule <2 x i8> %muly, %mulx
   ret <2 x i1> %cmp
 }
+
+define i1 @icmp_eq_mul_nsw_nonequal(i8 %a, i8 %c) {
+; CHECK-LABEL: @icmp_eq_mul_nsw_nonequal(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[C:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %b = add i8 %a, 1
+  %mul1 = mul nsw i8 %a, %c
+  %mul2 = mul nsw i8 %b, %c
+  %cmp = icmp eq i8 %mul1, %mul2
+  ret i1 %cmp
+}
+
+define i1 @icmp_eq_mul_nuw_nonequal(i8 %a, i8 %c) {
+; CHECK-LABEL: @icmp_eq_mul_nuw_nonequal(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[C:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %b = add i8 %a, 1
+  %mul1 = mul nuw i8 %a, %c
+  %mul2 = mul nuw i8 %b, %c
+  %cmp = icmp eq i8 %mul1, %mul2
+  ret i1 %cmp
+}
+
+define i1 @icmp_eq_mul_nsw_nonequal_commuted(i8 %a, i8 %c) {
+; CHECK-LABEL: @icmp_eq_mul_nsw_nonequal_commuted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[C:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %b = add i8 %a, 1
+  %mul1 = mul nsw i8 %a, %c
+  %mul2 = mul nsw i8 %c, %b
+  %cmp = icmp eq i8 %mul1, %mul2
+  ret i1 %cmp
+}
+
+define i1 @icmp_ne_mul_nsw_nonequal(i8 %a, i8 %c) {
+; CHECK-LABEL: @icmp_ne_mul_nsw_nonequal(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[C:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %b = add i8 %a, 1
+  %mul1 = mul nsw i8 %a, %c
+  %mul2 = mul nsw i8 %b, %c
+  %cmp = icmp ne i8 %mul1, %mul2
+  ret i1 %cmp
+}
+
+; Negative tests
+
+define i1 @icmp_eq_mul_nsw_mayequal(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: @icmp_eq_mul_nsw_mayequal(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL1:%.*]] = mul nsw i8 [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul nsw i8 [[B:%.*]], [[C]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[MUL1]], [[MUL2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %mul1 = mul nsw i8 %a, %c
+  %mul2 = mul nsw i8 %b, %c
+  %cmp = icmp eq i8 %mul1, %mul2
+  ret i1 %cmp
+}
+
+define i1 @icmp_eq_mul_nsw_nuw_nonequal(i8 %a, i8 %c) {
+; CHECK-LABEL: @icmp_eq_mul_nsw_nuw_nonequal(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B:%.*]] = add i8 [[A:%.*]], 1
+; CHECK-NEXT:    [[MUL1:%.*]] = mul nsw i8 [[A]], [[C:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul nuw i8 [[B]], [[C]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[MUL1]], [[MUL2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %b = add i8 %a, 1
+  %mul1 = mul nsw i8 %a, %c
+  %mul2 = mul nuw i8 %b, %c
+  %cmp = icmp eq i8 %mul1, %mul2
+  ret i1 %cmp
+}
+
+define i1 @icmp_ult_mul_nsw_nonequal(i8 %a, i8 %c) {
+; CHECK-LABEL: @icmp_ult_mul_nsw_nonequal(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B:%.*]] = add i8 [[A:%.*]], 1
+; CHECK-NEXT:    [[MUL1:%.*]] = mul nsw i8 [[A]], [[C:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul nsw i8 [[B]], [[C]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[MUL1]], [[MUL2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %b = add i8 %a, 1
+  %mul1 = mul nsw i8 %a, %c
+  %mul2 = mul nsw i8 %b, %c
+  %cmp = icmp ult i8 %mul1, %mul2
+  ret i1 %cmp
+}
+
+define i1 @icmp_mul_nsw_slt(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_mul_nsw_slt(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %mul1 = mul nsw i8 %x, 7
+  %mul2 = mul nsw i8 %y, 7
+  %cmp = icmp slt i8 %mul1, %mul2
+  ret i1 %cmp
+}
+
+define i1 @icmp_mul_nsw_sle(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_mul_nsw_sle(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %mul1 = mul nsw i8 %x, 7
+  %mul2 = mul nsw i8 %y, 7
+  %cmp = icmp sle i8 %mul1, %mul2
+  ret i1 %cmp
+}
+
+define i1 @icmp_mul_nsw_sgt(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_mul_nsw_sgt(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %mul1 = mul nsw i8 %x, 7
+  %mul2 = mul nsw i8 %y, 7
+  %cmp = icmp sgt i8 %mul1, %mul2
+  ret i1 %cmp
+}
+
+define i1 @icmp_mul_nsw_sge(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_mul_nsw_sge(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %mul1 = mul nsw i8 %x, 7
+  %mul2 = mul nsw i8 %y, 7
+  %cmp = icmp sge i8 %mul1, %mul2
+  ret i1 %cmp
+}
+
+define i1 @icmp_mul_nsw_slt_neg(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_mul_nsw_slt_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %mul1 = mul nsw i8 %x, -7
+  %mul2 = mul nsw i8 %y, -7
+  %cmp = icmp slt i8 %mul1, %mul2
+  ret i1 %cmp
+}
+
+define i1 @icmp_mul_nsw_slt_neg_var(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @icmp_mul_nsw_slt_neg_var(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND:%.*]] = icmp slt i8 [[Z:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %cond = icmp slt i8 %z, 0
+  call void @llvm.assume(i1 %cond)
+  %mul1 = mul nsw i8 %x, %z
+  %mul2 = mul nsw i8 %y, %z
+  %cmp = icmp slt i8 %mul1, %mul2
+  ret i1 %cmp
+}
+
+; Negative tests
+
+define i1 @icmp_mul_nonsw_slt(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_mul_nonsw_slt(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL1:%.*]] = mul i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[MUL2:%.*]] = mul nsw i8 [[Y:%.*]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[MUL1]], [[MUL2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %mul1 = mul i8 %x, 7
+  %mul2 = mul nsw i8 %y, 7
+  %cmp = icmp slt i8 %mul1, %mul2
+  ret i1 %cmp
+}
+
+define i1 @icmp_mul_nsw_slt_unknown_sign(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @icmp_mul_nsw_slt_unknown_sign(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL1:%.*]] = mul nsw i8 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul nsw i8 [[Y:%.*]], [[Z]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[MUL1]], [[MUL2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %mul1 = mul nsw i8 %x, %z
+  %mul2 = mul nsw i8 %y, %z
+  %cmp = icmp slt i8 %mul1, %mul2
+  ret i1 %cmp
+}
+
+define i1 @icmp_mul_nsw_slt_may_be_zero(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @icmp_mul_nsw_slt_may_be_zero(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i8 [[Z:%.*]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[MUL1:%.*]] = mul nsw i8 [[X:%.*]], [[Z]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul nsw i8 [[Y:%.*]], [[Z]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[MUL1]], [[MUL2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %cond = icmp sgt i8 %z, -1
+  call void @llvm.assume(i1 %cond)
+
+  %mul1 = mul nsw i8 %x, %z
+  %mul2 = mul nsw i8 %y, %z
+  %cmp = icmp slt i8 %mul1, %mul2
+  ret i1 %cmp
+}
