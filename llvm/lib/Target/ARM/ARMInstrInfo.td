@@ -40,7 +40,7 @@ def SDT_ARMCMov : SDTypeProfile<1, 4, [
   SDTCisVT<4, FlagsVT>,    // in flags
 ]>;
 
-def SDT_ARMBrcond : SDTypeProfile<0, 2, [
+def SDT_ARMBrcond : SDTypeProfile<0, 3, [
   SDTCisVT<0, OtherVT>,    // target basic block
   SDTCisVT<1, CondCodeVT>, // condition code
   SDTCisVT<2, FlagsVT>,    // in flags
