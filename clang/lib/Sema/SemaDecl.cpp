@@ -14690,6 +14690,17 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
     }
   }
 
+  // The result of __builtin_counted_by_ref cannot be assigned to a variable.
+  // It allows leaking and modification of bounds safety information.
+  if (const auto *CE = dyn_cast_if_present<CallExpr>(VD->getInit())) {
+    const Expr *E = CE->getCallee()->IgnoreParenImpCasts();
+    if (const BuiltinType *PTy = E->getType()->getAsPlaceholderType();
+        PTy && PTy->getKind() == BuiltinType::BuiltinCountedByRef)
+      Diag(E->getExprLoc(),
+           diag::err_builtin_counted_by_ref_cannot_leak_reference)
+          << E->getSourceRange();
+  }
+
   checkAttributesAfterMerging(*this, *VD);
 
   if (VD->isStaticLocal())

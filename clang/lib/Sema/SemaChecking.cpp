@@ -755,6 +755,7 @@ static ExprResult BuiltinDumpStruct(Sema &S, CallExpr *TheCall) {
     case BuiltinType::PseudoObject:
     case BuiltinType::UnknownAny:
     case BuiltinType::BuiltinFn:
+    case BuiltinType::BuiltinCountedByRef:
       // This might be a callable.
       break;
 

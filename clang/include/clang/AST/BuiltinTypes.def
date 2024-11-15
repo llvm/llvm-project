@@ -314,6 +314,9 @@ PLACEHOLDER_TYPE(UnknownAny, UnknownAnyTy)
 
 PLACEHOLDER_TYPE(BuiltinFn, BuiltinFnTy)
 
+// A placeholder type for __builtin_counted_by_ref.
+PLACEHOLDER_TYPE(BuiltinCountedByRef, BuiltinCountedByRefTy)
+
 // The type of a cast which, in ARC, would normally require a
 // __bridge, but which might be okay depending on the immediate
 // context.

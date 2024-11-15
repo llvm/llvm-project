@@ -3765,6 +3765,16 @@ Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
         << FSI->getFirstCoroutineStmtKeyword();
   }
 
+  if (const auto *CE = dyn_cast_if_present<CallExpr>(RetVal.get())) {
+    const Expr *E = CE->getCallee()->IgnoreParenImpCasts();
+    if (const BuiltinType *PTy = E->getType()->getAsPlaceholderType();
+        PTy && PTy->getKind() == BuiltinType::BuiltinCountedByRef) {
+      Diag(E->getExprLoc(),
+           diag::err_builtin_counted_by_ref_cannot_leak_reference)
+          << E->getSourceRange();
+    }
+  }
+
   StmtResult R =
       BuildReturnStmt(ReturnLoc, RetVal.get(), /*AllowRecovery=*/true);
   if (R.isInvalid() || ExprEvalContexts.back().isDiscardedStatementContext())

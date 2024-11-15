@@ -3444,6 +3444,8 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
     return "<ARC unbridged cast type>";
   case BuiltinFn:
     return "<builtin fn type>";
+  case BuiltinCountedByRef:
+    return "<builtin counted by ref type>";
   case ObjCId:
     return "id";
   case ObjCClass:
@@ -4861,6 +4863,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
     case BuiltinType::BuiltinFn:
+    case BuiltinType::BuiltinCountedByRef:
     case BuiltinType::NullPtr:
     case BuiltinType::IncompleteMatrixIdx:
     case BuiltinType::ArraySection:

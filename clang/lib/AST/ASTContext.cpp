@@ -1390,6 +1390,10 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   if (LangOpts.MatrixTypes)
     InitBuiltinType(IncompleteMatrixIdxTy, BuiltinType::IncompleteMatrixIdx);
 
+  // Placeholder for __builtin_counted_by_ref().
+  if (!LangOpts.CPlusPlus)
+    InitBuiltinType(BuiltinCountedByRefTy, BuiltinType::BuiltinCountedByRef);
+
   // Builtin types for 'id', 'Class', and 'SEL'.
   InitBuiltinType(ObjCBuiltinIdTy, BuiltinType::ObjCId);
   InitBuiltinType(ObjCBuiltinClassTy, BuiltinType::ObjCClass);

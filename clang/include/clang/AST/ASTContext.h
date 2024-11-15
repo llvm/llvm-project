@@ -1184,6 +1184,7 @@ public:
   CanQualType DependentTy, OverloadTy, BoundMemberTy, UnresolvedTemplateTy,
       UnknownAnyTy;
   CanQualType BuiltinFnTy;
+  CanQualType BuiltinCountedByRefTy;
   CanQualType PseudoObjectTy, ARCUnbridgedCastTy;
   CanQualType ObjCBuiltinIdTy, ObjCBuiltinClassTy, ObjCBuiltinSelTy;
   CanQualType ObjCBuiltinBoolTy;

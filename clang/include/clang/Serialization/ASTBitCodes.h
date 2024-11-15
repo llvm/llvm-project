@@ -1111,6 +1111,9 @@ enum PredefinedTypeIDs {
   /// \brief The '__ibm128' type
   PREDEF_TYPE_IBM128_ID = 74,
 
+  /// \brief The placeholder type for __builtin_counted_by_ref.
+  PREDEF_TYPE_BUILTIN_COUNTED_BY_REF = 75,
+
 /// OpenCL image types with auto numeration
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \
   PREDEF_TYPE_##Id##_ID,
@@ -1148,7 +1151,7 @@ enum PredefinedTypeIDs {
 ///
 /// Type IDs for non-predefined types will start at
 /// NUM_PREDEF_TYPE_IDs.
-const unsigned NUM_PREDEF_TYPE_IDS = 513;
+const unsigned NUM_PREDEF_TYPE_IDS = 514;
 
 // Ensure we do not overrun the predefined types we reserved
 // in the enum PredefinedTypeIDs above.
