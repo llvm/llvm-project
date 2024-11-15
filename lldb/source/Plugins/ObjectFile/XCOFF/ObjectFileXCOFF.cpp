@@ -81,7 +81,42 @@ ObjectFile *ObjectFileXCOFF::CreateInstance(const lldb::ModuleSP &module_sp,
   if (!objfile_up)
     return nullptr;
 
+  // Cache xcoff binary.
+  if (!objfile_up->CreateBinary())
+    return nullptr;
+
+  if (!objfile_up->ParseHeader())
+    return nullptr;
+
   return objfile_up.release();
+}
+
+bool ObjectFileXCOFF::CreateBinary() {
+  if (m_binary)
+    return true;
+
+  Log *log = GetLog(LLDBLog::Object);
+
+  auto binary = llvm::object::XCOFFObjectFile::createObjectFile(
+      llvm::MemoryBufferRef(toStringRef(m_data.GetData()),
+                            m_file.GetFilename().GetStringRef()),
+      file_magic::xcoff_object_64);
+  if (!binary) {
+    LLDB_LOG_ERROR(log, binary.takeError(),
+                   "Failed to create binary for file ({1}): {0}", m_file);
+    return false;
+  }
+
+  // Make sure we only handle XCOFF format.
+  m_binary =
+      llvm::unique_dyn_cast<llvm::object::XCOFFObjectFile>(std::move(*binary));
+  if (!m_binary)
+    return false;
+
+  LLDB_LOG(log, "this = {0}, module = {1} ({2}), file = {3}, binary = {4}",
+           this, GetModule().get(), GetModule()->GetSpecificationDescription(),
+           m_file.GetPath(), m_binary.get());
+  return true;
 }
 
 ObjectFile *ObjectFileXCOFF::CreateMemoryInstance(
@@ -136,13 +171,92 @@ bool ObjectFileXCOFF::MagicBytesMatch(DataBufferSP &data_sp,
   return XCOFFHeaderSizeFromMagic(magic) != 0;
 }
 
-bool ObjectFileXCOFF::ParseHeader() { return false; }
+bool ObjectFileXCOFF::ParseHeader() {
+  ModuleSP module_sp(GetModule());
+  if (module_sp) {
+    std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+    lldb::offset_t offset = 0;
+
+    if (ParseXCOFFHeader(m_data, &offset, m_xcoff_header)) {
+      m_data.SetAddressByteSize(GetAddressByteSize());
+      if (m_xcoff_header.auxhdrsize > 0)
+        ParseXCOFFOptionalHeader(m_data, &offset);
+    }
+    return true;
+  }
+
+  return false;
+}
+
+bool ObjectFileXCOFF::ParseXCOFFHeader(lldb_private::DataExtractor &data,
+                                       lldb::offset_t *offset_ptr,
+                                       xcoff_header_t &xcoff_header) {
+  // FIXME: data.ValidOffsetForDataOfSize
+  xcoff_header.magic = data.GetU16(offset_ptr);
+  xcoff_header.nsects = data.GetU16(offset_ptr);
+  xcoff_header.modtime = data.GetU32(offset_ptr);
+  xcoff_header.symoff = data.GetU64(offset_ptr);
+  xcoff_header.auxhdrsize = data.GetU16(offset_ptr);
+  xcoff_header.flags = data.GetU16(offset_ptr);
+  xcoff_header.nsyms = data.GetU32(offset_ptr);
+  return true;
+}
+
+bool ObjectFileXCOFF::ParseXCOFFOptionalHeader(
+    lldb_private::DataExtractor &data, lldb::offset_t *offset_ptr) {
+  lldb::offset_t init_offset = *offset_ptr;
+  // FIXME: data.ValidOffsetForDataOfSize
+  m_xcoff_aux_header.AuxMagic = data.GetU16(offset_ptr);
+  m_xcoff_aux_header.Version = data.GetU16(offset_ptr);
+  m_xcoff_aux_header.ReservedForDebugger = data.GetU32(offset_ptr);
+  m_xcoff_aux_header.TextStartAddr = data.GetU64(offset_ptr);
+  m_xcoff_aux_header.DataStartAddr = data.GetU64(offset_ptr);
+  m_xcoff_aux_header.TOCAnchorAddr = data.GetU64(offset_ptr);
+  m_xcoff_aux_header.SecNumOfEntryPoint = data.GetU16(offset_ptr);
+  m_xcoff_aux_header.SecNumOfText = data.GetU16(offset_ptr);
+  m_xcoff_aux_header.SecNumOfData = data.GetU16(offset_ptr);
+  m_xcoff_aux_header.SecNumOfTOC = data.GetU16(offset_ptr);
+  m_xcoff_aux_header.SecNumOfLoader = data.GetU16(offset_ptr);
+  m_xcoff_aux_header.SecNumOfBSS = data.GetU16(offset_ptr);
+  m_xcoff_aux_header.MaxAlignOfText = data.GetU16(offset_ptr);
+  m_xcoff_aux_header.MaxAlignOfData = data.GetU16(offset_ptr);
+  m_xcoff_aux_header.ModuleType = data.GetU16(offset_ptr);
+  m_xcoff_aux_header.CpuFlag = data.GetU8(offset_ptr);
+  m_xcoff_aux_header.CpuType = data.GetU8(offset_ptr);
+  m_xcoff_aux_header.TextPageSize = data.GetU8(offset_ptr);
+  m_xcoff_aux_header.DataPageSize = data.GetU8(offset_ptr);
+  m_xcoff_aux_header.StackPageSize = data.GetU8(offset_ptr);
+  m_xcoff_aux_header.FlagAndTDataAlignment = data.GetU8(offset_ptr);
+  m_xcoff_aux_header.TextSize = data.GetU64(offset_ptr);
+  m_xcoff_aux_header.InitDataSize = data.GetU64(offset_ptr);
+  m_xcoff_aux_header.BssDataSize = data.GetU64(offset_ptr);
+  m_xcoff_aux_header.EntryPointAddr = data.GetU64(offset_ptr);
+  m_xcoff_aux_header.MaxStackSize = data.GetU64(offset_ptr);
+  m_xcoff_aux_header.MaxDataSize = data.GetU64(offset_ptr);
+  m_xcoff_aux_header.SecNumOfTData = data.GetU16(offset_ptr);
+  m_xcoff_aux_header.SecNumOfTBSS = data.GetU16(offset_ptr);
+  m_xcoff_aux_header.XCOFF64Flag = data.GetU16(offset_ptr);
+  lldb::offset_t last_offset = *offset_ptr;
+  if ((last_offset - init_offset) < m_xcoff_header.auxhdrsize)
+    *offset_ptr += (m_xcoff_header.auxhdrsize - (last_offset - init_offset));
+  return true;
+}
 
 ByteOrder ObjectFileXCOFF::GetByteOrder() const { return eByteOrderBig; }
 
 bool ObjectFileXCOFF::IsExecutable() const { return true; }
 
-uint32_t ObjectFileXCOFF::GetAddressByteSize() const { return 8; }
+uint32_t ObjectFileXCOFF::GetAddressByteSize() const {
+  if (m_xcoff_header.magic == XCOFF::XCOFF64)
+    return 8;
+  else if (m_xcoff_header.magic == XCOFF::XCOFF32)
+    return 4;
+  return 4;
+}
+
+AddressClass ObjectFileXCOFF::GetAddressClass(addr_t file_addr) {
+  return AddressClass::eUnknown;
+}
 
 void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {}
 
@@ -162,7 +276,13 @@ UUID ObjectFileXCOFF::GetUUID() { return UUID(); }
 
 uint32_t ObjectFileXCOFF::GetDependentModules(FileSpecList &files) { return 0; }
 
-ObjectFile::Type ObjectFileXCOFF::CalculateType() { return eTypeExecutable; }
+ObjectFile::Type ObjectFileXCOFF::CalculateType() {
+  if (m_xcoff_header.flags & XCOFF::F_EXEC)
+    return eTypeExecutable;
+  else if (m_xcoff_header.flags & XCOFF::F_SHROBJ)
+    return eTypeSharedLibrary;
+  return eTypeUnknown;
+}
 
 ObjectFile::Strata ObjectFileXCOFF::CalculateStrata() { return eStrataUnknown; }
 
