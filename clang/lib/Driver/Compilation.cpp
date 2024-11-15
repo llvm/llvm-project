@@ -77,7 +77,7 @@ Compilation::getArgsForToolChain(const ToolChain *TC, StringRef BoundArch,
       NewDAL.reset(TC->TranslateXarchArgs(*OpenMPArgs, BoundArch,
                                           DeviceOffloadKind, &AllocatedArgs));
       if (!NewDAL)
-        NewDAL = OpenMPArgs;
+        NewDAL = std::move(OpenMPArgs);
     }
 
     if (!NewDAL) {
@@ -88,7 +88,7 @@ Compilation::getArgsForToolChain(const ToolChain *TC, StringRef BoundArch,
     } else {
       Entry.reset(TC->TranslateArgs(*NewDAL, BoundArch, DeviceOffloadKind));
       if (!Entry)
-        Entry = std::shared_ptr<DerivedArgList>(NewDAL);
+        Entry = std::move(NewDAL);
     }
 
     // Add allocated arguments to the final DAL.
