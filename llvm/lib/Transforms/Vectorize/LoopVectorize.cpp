@@ -9145,7 +9145,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   // ---------------------------------------------------------------------------
 
   // Adjust the recipes for any inloop reductions.
-  adjustRecipesForReductions(Plan, RecipeBuilder, Range.Start);
+  adjustRecipesForReductions(Plan, RecipeBuilder, Range);
 
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
@@ -9258,15 +9258,39 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
 /// This function try to match following pattern which will generate
 /// extended-reduction instruction.
 ///    reduce(ext(...)).
-static VPExtendedReductionRecipe *
-tryToMatchExtendedReduction(const RecurrenceDescriptor &RdxDesc,
-                            Instruction *CurrentLinkI, VPValue *PreviousLink,
-                            VPValue *VecOp, VPValue *CondOp,
-                            LoopVectorizationCostModel &CM) {
+static VPExtendedReductionRecipe *tryToMatchAndCreateExtendedReduction(
+    const RecurrenceDescriptor &RdxDesc, Instruction *CurrentLinkI,
+    VPValue *PreviousLink, VPValue *VecOp, VPValue *CondOp,
+    LoopVectorizationCostModel &CM, VPCostContext &Ctx, VFRange &Range) {
   using namespace VPlanPatternMatch;
+
   VPValue *A;
+  Type *RedTy = RdxDesc.getRecurrenceType();
+
+  // Test if the cost of extended-reduction is valid and clamp the range.
+  // Note that reduction-extended is not always valid for all VF and types.
+  auto IsExtendedRedValidAndClampRange = [&](unsigned Opcode, bool isZExt,
+                                             Type *SrcTy) -> bool {
+    return LoopVectorizationPlanner::getDecisionAndClampRange(
+        [&](ElementCount VF) {
+          VectorType *SrcVecTy = cast<VectorType>(ToVectorTy(SrcTy, VF));
+          return Ctx.TTI
+              .getExtendedReductionCost(Opcode, isZExt, RedTy, SrcVecTy,
+                                        RdxDesc.getFastMathFlags(),
+                                        TTI::TCK_RecipThroughput)
+              .isValid();
+        },
+        Range);
+  };
+
   // Matched reduce(ext)).
   if (match(VecOp, m_ZExtOrSExt(m_VPValue(A)))) {
+    if (!IsExtendedRedValidAndClampRange(
+            RdxDesc.getOpcode(),
+            cast<VPWidenCastRecipe>(VecOp)->getOpcode() ==
+                Instruction::CastOps::ZExt,
+            Ctx.Types.inferScalarType(A)))
+      return nullptr;
     return new VPExtendedReductionRecipe(RdxDesc, CurrentLinkI, PreviousLink,
                                          cast<VPWidenCastRecipe>(VecOp), CondOp,
                                          CM.useOrderedReductions(RdxDesc));
@@ -9281,31 +9305,59 @@ tryToMatchExtendedReduction(const RecurrenceDescriptor &RdxDesc,
 ///    reduce.add(mul(...)),
 ///    reduce.add(mul(ext(A), ext(B))),
 ///    reduce.add(ext(mul(ext(A), ext(B)))).
-static VPMulAccRecipe *tryToMatchMulAcc(const RecurrenceDescriptor &RdxDesc,
-                                        Instruction *CurrentLinkI,
-                                        VPValue *PreviousLink, VPValue *VecOp,
-                                        VPValue *CondOp,
-                                        LoopVectorizationCostModel &CM) {
+static VPMulAccRecipe *tryToMatchAndCreateMulAcc(
+    const RecurrenceDescriptor &RdxDesc, Instruction *CurrentLinkI,
+    VPValue *PreviousLink, VPValue *VecOp, VPValue *CondOp,
+    LoopVectorizationCostModel &CM, VPCostContext &Ctx, VFRange &Range) {
   using namespace VPlanPatternMatch;
+
   VPValue *A, *B;
+  Type *RedTy = RdxDesc.getRecurrenceType();
+
+  // Test if the cost of MulAcc is valid and clamp the range.
+  // Note that mul-acc is not always valid for all VF and types.
+  auto IsMulAccValidAndClampRange = [&](bool isZExt, Type *SrcTy) -> bool {
+    return LoopVectorizationPlanner::getDecisionAndClampRange(
+        [&](ElementCount VF) {
+          VectorType *SrcVecTy = cast<VectorType>(ToVectorTy(SrcTy, VF));
+          return Ctx.TTI
+              .getMulAccReductionCost(isZExt, RedTy, SrcVecTy,
+                                      TTI::TCK_RecipThroughput)
+              .isValid();
+        },
+        Range);
+  };
+
   if (RdxDesc.getOpcode() != Instruction::Add)
     return nullptr;
+
   // Try to match reduce.add(mul(...))
   if (match(VecOp, m_Mul(m_VPValue(A), m_VPValue(B)))) {
     VPWidenCastRecipe *RecipeA =
         dyn_cast_if_present<VPWidenCastRecipe>(A->getDefiningRecipe());
     VPWidenCastRecipe *RecipeB =
         dyn_cast_if_present<VPWidenCastRecipe>(B->getDefiningRecipe());
+
     // Matched reduce.add(mul(ext, ext))
     if (RecipeA && RecipeB && match(RecipeA, m_ZExtOrSExt(m_VPValue())) &&
         match(RecipeB, m_ZExtOrSExt(m_VPValue())) &&
         (RecipeA->getOpcode() == RecipeB->getOpcode() || A == B)) {
+
+      // Only create MulAccRecipe if the cost is valid.
+      if (!IsMulAccValidAndClampRange(RecipeA->getOpcode() ==
+                                          Instruction::CastOps::ZExt,
+                                      Ctx.Types.inferScalarType(RecipeA)))
+        return nullptr;
+
       return new VPMulAccRecipe(RdxDesc, CurrentLinkI, PreviousLink, CondOp,
                                 CM.useOrderedReductions(RdxDesc),
                                 cast<VPWidenRecipe>(VecOp->getDefiningRecipe()),
                                 RecipeA, RecipeB);
     } else {
       // Matched reduce.add(mul)
+      if (!IsMulAccValidAndClampRange(true, RedTy))
+        return nullptr;
+
       return new VPMulAccRecipe(
           RdxDesc, CurrentLinkI, PreviousLink, CondOp,
           CM.useOrderedReductions(RdxDesc),
@@ -9326,6 +9378,12 @@ static VPMulAccRecipe *tryToMatchMulAcc(const RecurrenceDescriptor &RdxDesc,
         cast<VPWidenCastRecipe>(Mul->getOperand(1)->getDefiningRecipe());
     if ((Ext->getOpcode() == Ext0->getOpcode() || Ext0 == Ext1) &&
         Ext0->getOpcode() == Ext1->getOpcode()) {
+      // Only create MulAcc recipe if the cost if valid.
+      if (!IsMulAccValidAndClampRange(Ext0->getOpcode() ==
+                                          Instruction::CastOps::ZExt,
+                                      Ctx.Types.inferScalarType(Ext0)))
+        return nullptr;
+
       return new VPMulAccRecipe(RdxDesc, CurrentLinkI, PreviousLink, CondOp,
                                 CM.useOrderedReductions(RdxDesc), Mul, Ext0,
                                 Ext1);
@@ -9348,8 +9406,9 @@ static VPMulAccRecipe *tryToMatchMulAcc(const RecurrenceDescriptor &RdxDesc,
 // with a boolean reduction phi node to check if the condition is true in any
 // iteration. The final value is selected by the final ComputeReductionResult.
 void LoopVectorizationPlanner::adjustRecipesForReductions(
-    VPlanPtr &Plan, VPRecipeBuilder &RecipeBuilder, ElementCount MinVF) {
+    VPlanPtr &Plan, VPRecipeBuilder &RecipeBuilder, VFRange &Range) {
   using namespace VPlanPatternMatch;
+  ElementCount MinVF = Range.Start;
   VPRegionBlock *VectorLoopRegion = Plan->getVectorLoopRegion();
   VPBasicBlock *Header = VectorLoopRegion->getEntryBasicBlock();
   VPBasicBlock *MiddleVPBB = Plan->getMiddleBlock();
@@ -9466,12 +9525,16 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
         CondOp = RecipeBuilder.getBlockInMask(BB);
 
       VPReductionRecipe *RedRecipe;
-      if (auto *MulAcc = tryToMatchMulAcc(RdxDesc, CurrentLinkI, PreviousLink,
-                                          VecOp, CondOp, CM))
+      VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(),
+                            CM);
+      if (auto *MulAcc =
+              tryToMatchAndCreateMulAcc(RdxDesc, CurrentLinkI, PreviousLink,
+                                        VecOp, CondOp, CM, CostCtx, Range))
         RedRecipe = MulAcc;
-      else if (auto *ExtendedRed = tryToMatchExtendedReduction(
-                   RdxDesc, CurrentLinkI, PreviousLink, VecOp, CondOp, CM))
-        RedRecipe = ExtendedRed;
+      else if (auto *ExtRed = tryToMatchAndCreateExtendedReduction(
+                   RdxDesc, CurrentLinkI, PreviousLink, VecOp, CondOp, CM,
+                   CostCtx, Range))
+        RedRecipe = ExtRed;
       else
         RedRecipe =
             new VPReductionRecipe(RdxDesc, CurrentLinkI, PreviousLink, VecOp,

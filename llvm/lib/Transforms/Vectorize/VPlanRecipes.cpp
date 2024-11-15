@@ -2225,8 +2225,18 @@ VPExtendedReductionRecipe::computeCost(ElementCount VF,
   RecurKind RdxKind = RdxDesc.getRecurrenceKind();
   Type *ElementTy = getResultType();
   auto *VectorTy = cast<VectorType>(ToVectorTy(ElementTy, VF));
+  auto *SrcVecTy =
+      cast<VectorType>(ToVectorTy(Ctx.Types.inferScalarType(getVecOp()), VF));
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   unsigned Opcode = RdxDesc.getOpcode();
+
+  // ExtendedReduction Cost
+  InstructionCost ExtendedRedCost =
+      Ctx.TTI.getExtendedReductionCost(Opcode, isZExt(), ElementTy, SrcVecTy,
+                                       RdxDesc.getFastMathFlags(), CostKind);
+
+  assert(ExtendedRedCost.isValid() && "VPExtendedReductionRecipe should not be "
+                                      "created if the cost is invalid.");
 
   // BaseCost = Reduction cost + BinOp cost
   InstructionCost ReductionCost =
@@ -2241,23 +2251,18 @@ VPExtendedReductionRecipe::computeCost(ElementCount VF,
   }
 
   // Extended cost
-  auto *SrcTy =
-      cast<VectorType>(ToVectorTy(Ctx.Types.inferScalarType(getVecOp()), VF));
-  auto *DestTy = cast<VectorType>(ToVectorTy(getResultType(), VF));
   TTI::CastContextHint CCH = computeCCH(getVecOp()->getDefiningRecipe(), VF);
   // Arm TTI will use the underlying instruction to determine the cost.
   InstructionCost ExtendedCost = Ctx.TTI.getCastInstrCost(
-      Opcode, DestTy, SrcTy, CCH, TTI::TCK_RecipThroughput,
+      Opcode, VectorTy, SrcVecTy, CCH, TTI::TCK_RecipThroughput,
       dyn_cast_if_present<Instruction>(getUnderlyingValue()));
 
-  // ExtendedReduction Cost
-  InstructionCost ExtendedRedCost = Ctx.TTI.getExtendedReductionCost(
-      Opcode, isZExt(), ElementTy, SrcTy, RdxDesc.getFastMathFlags(), CostKind);
   // Check if folding ext into ExtendedReduction is profitable.
   if (ExtendedRedCost.isValid() &&
       ExtendedRedCost < ExtendedCost + ReductionCost) {
     return ExtendedRedCost;
   }
+
   return ExtendedCost + ReductionCost;
 }
 
@@ -2272,6 +2277,14 @@ InstructionCost VPMulAccRecipe::computeCost(ElementCount VF,
 
   assert(Opcode == Instruction::Add &&
          "Reduction opcode must be add in the VPMulAccRecipe.");
+  // MulAccReduction Cost
+  VectorType *SrcVecTy =
+      cast<VectorType>(ToVectorTy(Ctx.Types.inferScalarType(getVecOp0()), VF));
+  InstructionCost MulAccCost =
+      Ctx.TTI.getMulAccReductionCost(isZExt(), ElementTy, SrcVecTy, CostKind);
+
+  assert(MulAccCost.isValid() && "VPMulAccRecipe should not be "
+                                 "created if the cost is invalid.");
 
   // BaseCost = Reduction cost + BinOp cost
   InstructionCost ReductionCost =
@@ -2282,17 +2295,17 @@ InstructionCost VPMulAccRecipe::computeCost(ElementCount VF,
   // Extended cost
   InstructionCost ExtendedCost = 0;
   if (isExtended()) {
-    auto *SrcTy = cast<VectorType>(
-        ToVectorTy(Ctx.Types.inferScalarType(getVecOp0()), VF));
     TTI::CastContextHint CCH0 =
         computeCCH(getVecOp0()->getDefiningRecipe(), VF);
     ExtendedCost = Ctx.TTI.getCastInstrCost(
-        Ext0Instr->getOpcode(), VectorTy, SrcTy, CCH0, TTI::TCK_RecipThroughput,
+        Ext0Instr->getOpcode(), VectorTy, SrcVecTy, CCH0,
+        TTI::TCK_RecipThroughput,
         dyn_cast_if_present<Instruction>(getExt0Instr()));
     TTI::CastContextHint CCH1 =
         computeCCH(getVecOp0()->getDefiningRecipe(), VF);
     ExtendedCost += Ctx.TTI.getCastInstrCost(
-        Ext1Instr->getOpcode(), VectorTy, SrcTy, CCH1, TTI::TCK_RecipThroughput,
+        Ext1Instr->getOpcode(), VectorTy, SrcVecTy, CCH1,
+        TTI::TCK_RecipThroughput,
         dyn_cast_if_present<Instruction>(getExt1Instr()));
   }
 
@@ -2324,17 +2337,12 @@ InstructionCost VPMulAccRecipe::computeCost(ElementCount VF,
         RHSInfo, Operands, MulInstr, &Ctx.TLI);
   }
 
-  // MulAccReduction Cost
-  VectorType *SrcVecTy =
-      cast<VectorType>(ToVectorTy(Ctx.Types.inferScalarType(getVecOp0()), VF));
-  InstructionCost MulAccCost =
-      Ctx.TTI.getMulAccReductionCost(isZExt(), ElementTy, SrcVecTy, CostKind);
-
   // Check if folding ext into ExtendedReduction is profitable.
   if (MulAccCost.isValid() &&
       MulAccCost < ExtendedCost + ReductionCost + MulCost) {
     return MulAccCost;
   }
+
   return ExtendedCost + ReductionCost + MulCost;
 }
 

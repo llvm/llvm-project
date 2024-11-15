@@ -509,7 +509,7 @@ private:
   // between the phi and users outside the vector region when folding the tail.
   void adjustRecipesForReductions(VPlanPtr &Plan,
                                   VPRecipeBuilder &RecipeBuilder,
-                                  ElementCount MinVF);
+                                  VFRange &Range);
 
 #ifndef NDEBUG
   /// \return The most profitable vectorization factor for the available VPlans
