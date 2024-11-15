@@ -6019,26 +6019,23 @@ const SCEV *ScalarEvolution::createNodeFromSelectLikePHI(PHINode *PN) {
   return nullptr;
 }
 
-// Returns SCEV for the first operand of a phi if all phi operands have
-// identical opcodes and operands
-// eg.
-// a: %add = %a + %b
-//    br %c
-// b: %add1 = %a + %b
-//    br %c
-// c: %phi = phi [%add, a], [%add1, b]
-// scev(%phi) => scev(%add)
+/// Returns SCEV for the first operand of a phi if all phi operands have
+/// identical opcodes and operands
+/// eg.
+/// a: %add = %a + %b
+///    br %c
+/// b: %add1 = %a + %b
+///    br %c
+/// c: %phi = phi [%add, a], [%add1, b]
+/// scev(%phi) => scev(%add)
 const SCEV *
 ScalarEvolution::createNodeForPHIWithIdenticalOperands(PHINode *PN) {
   BinaryOperator *CommonInst = nullptr;
   for (Value *Incoming : PN->incoming_values()) {
     BinaryOperator *IncomingInst = dyn_cast<BinaryOperator>(Incoming);
     if (CommonInst) {
-      if (!(IncomingInst && CommonInst->isIdenticalTo(IncomingInst))) {
-        // Not identical, give up
-        CommonInst = nullptr;
-        break;
-      }
+      if (!(IncomingInst && CommonInst->isIdenticalTo(IncomingInst)))
+        return nullptr; // Not identical, give up
     } else if (IncomingInst) {
       // Remember binary operator
       CommonInst = IncomingInst;
