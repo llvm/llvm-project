@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}qux
-; CHECK: .set qux.num_vgpr, 0
+; CHECK: .set qux.num_vgpr, 13
 ; CHECK: .set qux.num_agpr, 0
 ; CHECK: .set qux.numbered_sgpr, 32
 ; CHECK: .set qux.private_seg_size, 0
@@ -12,11 +12,12 @@
 ; CHECK: .set qux.has_indirect_call, 0
 define void @qux() {
 entry:
+  call void asm sideeffect "", "~{v12}"()
   ret void
 }
 
 ; CHECK-LABEL: {{^}}baz
-; CHECK: .set baz.num_vgpr, max(32, qux.num_vgpr)
+; CHECK: .set baz.num_vgpr, max(49, qux.num_vgpr)
 ; CHECK: .set baz.num_agpr, max(0, qux.num_agpr)
 ; CHECK: .set baz.numbered_sgpr, max(34, qux.numbered_sgpr)
 ; CHECK: .set baz.private_seg_size, 16+(max(qux.private_seg_size))
@@ -28,11 +29,12 @@ entry:
 define void @baz() {
 entry:
   call void @qux()
+  call void asm sideeffect "", "~{v48}"()
   ret void
 }
 
 ; CHECK-LABEL: {{^}}bar
-; CHECK: .set bar.num_vgpr, max(32, baz.num_vgpr, qux.num_vgpr)
+; CHECK: .set bar.num_vgpr, max(65, baz.num_vgpr, qux.num_vgpr)
 ; CHECK: .set bar.num_agpr, max(0, baz.num_agpr, qux.num_agpr)
 ; CHECK: .set bar.numbered_sgpr, max(34, baz.numbered_sgpr, qux.numbered_sgpr)
 ; CHECK: .set bar.private_seg_size, 16+(max(baz.private_seg_size, qux.private_seg_size))
@@ -46,11 +48,12 @@ entry:
   call void @baz()
   call void @qux()
   call void @baz()
+  call void asm sideeffect "", "~{v64}"()
   ret void
 }
 
 ; CHECK-LABEL: {{^}}foo
-; CHECK: .set foo.num_vgpr, max(32, bar.num_vgpr)
+; CHECK: .set foo.num_vgpr, max(38, bar.num_vgpr)
 ; CHECK: .set foo.num_agpr, max(0, bar.num_agpr)
 ; CHECK: .set foo.numbered_sgpr, max(34, bar.numbered_sgpr)
 ; CHECK: .set foo.private_seg_size, 16+(max(bar.private_seg_size))
@@ -62,6 +65,7 @@ entry:
 define void @foo() {
 entry:
   call void @bar()
+  call void asm sideeffect "", "~{v37}"()
   ret void
 }
 
