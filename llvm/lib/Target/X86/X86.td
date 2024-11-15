@@ -1139,7 +1139,7 @@ def ProcessorFeatures {
   list<SubtargetFeature> GNRDFeatures =
     !listconcat(GNRFeatures, GNRDAdditionalFeatures);
 
-  // Diamondrapids
+  // Diamond Rapids
   list<SubtargetFeature> DMRAdditionalFeatures = [FeatureAVX10_2_512,
                                                   FeatureAMXCOMPLEX,
                                                   FeatureSM4,

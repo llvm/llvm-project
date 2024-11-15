@@ -387,7 +387,7 @@ constexpr ProcInfo Processors[] = {
   { {"emeraldrapids"}, CK_Emeraldrapids, FEATURE_AVX512FP16, FeaturesSapphireRapids, 'n', false },
   // Clearwaterforest microarchitecture based processors.
   { {"clearwaterforest"}, CK_Lunarlake, FEATURE_AVX2, FeaturesClearwaterforest, 'p', false },
-  // Diamondrapids microarchitecture based processors.
+  // Diamond Rapids microarchitecture based processors.
   { {"diamondrapids"}, CK_DiamondRapids, FEATURE_AVX10_2_512, FeaturesDiamondRapids, 'z', false },
   // Knights Landing processor.
   { {"knl"}, CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', false },

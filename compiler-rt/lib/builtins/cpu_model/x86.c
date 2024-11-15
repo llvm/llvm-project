@@ -603,14 +603,14 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
     break;
   case 19:
     switch (Model) {
-    // Diamondrapids:
+    // Diamond Rapids:
     case 0x01:
       CPU = "diamondrapids";
       *Type = INTEL_COREI7;
       *Subtype = INTEL_COREI7_DIAMONDRAPIDS;
       break;
 
-    default: // Unknown family 0x13 CPU.
+    default: // Unknown family 19 CPU.
       break;
     }
     break;
