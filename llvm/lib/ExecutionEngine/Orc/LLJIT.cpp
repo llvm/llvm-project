@@ -1198,8 +1198,8 @@ Expected<JITDylibSP> ExecutorNativePlatform::operator()(LLJIT &J) {
     if (!G)
       return G.takeError();
 
-    if (auto P = MachOPlatform::Create(ES, *ObjLinkingLayer, PlatformJD,
-                                       std::move(*G)))
+    if (auto P =
+            MachOPlatform::Create(*ObjLinkingLayer, PlatformJD, std::move(*G)))
       ES.setPlatform(std::move(*P));
     else
       return P.takeError();

@@ -303,9 +303,14 @@ MlirAttribute mlirLLVMDISubprogramAttrGet(
     MlirAttribute compileUnit, MlirAttribute scope, MlirAttribute name,
     MlirAttribute linkageName, MlirAttribute file, unsigned int line,
     unsigned int scopeLine, uint64_t subprogramFlags, MlirAttribute type,
-    intptr_t nRetainedNodes, MlirAttribute const *retainedNodes) {
+    intptr_t nRetainedNodes, MlirAttribute const *retainedNodes,
+    intptr_t nAnnotations, MlirAttribute const *annotations) {
   SmallVector<Attribute> nodesStorage;
   nodesStorage.reserve(nRetainedNodes);
+
+  SmallVector<Attribute> annotationsStorage;
+  annotationsStorage.reserve(nAnnotations);
+
   return wrap(DISubprogramAttr::get(
       unwrap(ctx), cast<DistinctAttr>(unwrap(recId)), isRecSelf,
       cast<DistinctAttr>(unwrap(id)),
@@ -316,6 +321,9 @@ MlirAttribute mlirLLVMDISubprogramAttrGet(
       cast<DISubroutineTypeAttr>(unwrap(type)),
       llvm::map_to_vector(
           unwrapList(nRetainedNodes, retainedNodes, nodesStorage),
+          [](Attribute a) { return cast<DINodeAttr>(a); }),
+      llvm::map_to_vector(
+          unwrapList(nAnnotations, annotations, annotationsStorage),
           [](Attribute a) { return cast<DINodeAttr>(a); })));
 }
 
@@ -374,4 +382,10 @@ MlirAttribute mlirLLVMDIImportedEntityAttrGet(
       cast<StringAttr>(unwrap(name)),
       llvm::map_to_vector(unwrapList(nElements, elements, elementsStorage),
                           [](Attribute a) { return cast<DINodeAttr>(a); })));
+}
+
+MlirAttribute mlirLLVMDIAnnotationAttrGet(MlirContext ctx, MlirAttribute name,
+                                          MlirAttribute value) {
+  return wrap(DIAnnotationAttr::get(unwrap(ctx), cast<StringAttr>(unwrap(name)),
+                                    cast<StringAttr>(unwrap(value))));
 }

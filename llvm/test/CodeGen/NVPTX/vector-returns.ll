@@ -325,10 +325,17 @@ define <3 x i8> @byte3() {
   ret <3 x i8> zeroinitializer
 }
 
-; FIXME: This test causes a crash. 
-; define <2 x i8> @byte2() {
-;   ret <2 x i8> zeroinitializer
-; }
+define <2 x i8> @byte2() {
+; CHECK-LABEL: byte2(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    mov.b32 %r1, 0;
+; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r1;
+; CHECK-NEXT:    ret;
+  ret <2 x i8> zeroinitializer
+}
 
 define <1 x i8> @byte1() {
 ; CHECK-LABEL: byte1(

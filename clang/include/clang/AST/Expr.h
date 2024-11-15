@@ -2072,6 +2072,41 @@ public:
   }
 };
 
+/// This expression type represents an asterisk in an OpenACC Size-Expr, used in
+/// the 'tile' and 'gang' clauses. It is of 'int' type, but should not be
+/// evaluated.
+class OpenACCAsteriskSizeExpr final : public Expr {
+  friend class ASTStmtReader;
+  SourceLocation AsteriskLoc;
+
+  OpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc, QualType IntTy)
+      : Expr(OpenACCAsteriskSizeExprClass, IntTy, VK_PRValue, OK_Ordinary),
+        AsteriskLoc(AsteriskLoc) {}
+
+  void setAsteriskLocation(SourceLocation Loc) { AsteriskLoc = Loc; }
+
+public:
+  static OpenACCAsteriskSizeExpr *Create(const ASTContext &C,
+                                         SourceLocation Loc);
+  static OpenACCAsteriskSizeExpr *CreateEmpty(const ASTContext &C);
+
+  SourceLocation getBeginLoc() const { return AsteriskLoc; }
+  SourceLocation getEndLoc() const { return AsteriskLoc; }
+  SourceLocation getLocation() const { return AsteriskLoc; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OpenACCAsteriskSizeExprClass;
+  }
+  // Iterators
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+};
+
 // This represents a use of the __builtin_sycl_unique_stable_name, which takes a
 // type-id, and at CodeGen time emits a unique string representation of the
 // type in a way that permits us to properly encode information about the SYCL
@@ -2135,11 +2170,13 @@ public:
 class ParenExpr : public Expr {
   SourceLocation L, R;
   Stmt *Val;
+
 public:
   ParenExpr(SourceLocation l, SourceLocation r, Expr *val)
       : Expr(ParenExprClass, val->getType(), val->getValueKind(),
              val->getObjectKind()),
         L(l), R(r), Val(val) {
+    ParenExprBits.ProducedByFoldExpansion = false;
     setDependence(computeDependence(this));
   }
 
@@ -2170,6 +2207,13 @@ public:
   child_range children() { return child_range(&Val, &Val+1); }
   const_child_range children() const {
     return const_child_range(&Val, &Val + 1);
+  }
+
+  bool isProducedByFoldExpansion() const {
+    return ParenExprBits.ProducedByFoldExpansion != 0;
+  }
+  void setIsProducedByFoldExpansion(bool ProducedByFoldExpansion = true) {
+    ParenExprBits.ProducedByFoldExpansion = ProducedByFoldExpansion;
   }
 };
 

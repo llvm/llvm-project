@@ -41,6 +41,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -75,18 +76,62 @@ bool isPrivateProtoDecl(const NamedDecl &ND) {
   if (ND.getIdentifier() == nullptr)
     return false;
   auto Name = ND.getIdentifier()->getName();
-  if (!Name.contains('_'))
-    return false;
-  // Nested proto entities (e.g. Message::Nested) have top-level decls
-  // that shouldn't be used (Message_Nested). Ignore them completely.
-  // The nested entities are dangling type aliases, we may want to reconsider
-  // including them in the future.
-  // For enum constants, SOME_ENUM_CONSTANT is not private and should be
-  // indexed. Outer_INNER is private. This heuristic relies on naming style, it
-  // will include OUTER_INNER and exclude some_enum_constant.
-  // FIXME: the heuristic relies on naming style (i.e. no underscore in
-  // user-defined names) and can be improved.
-  return (ND.getKind() != Decl::EnumConstant) || llvm::any_of(Name, islower);
+  // There are some internal helpers like _internal_set_foo();
+  if (Name.contains("_internal_"))
+    return true;
+
+  // https://protobuf.dev/reference/cpp/cpp-generated/#nested-types
+  // Nested entities (messages/enums) has two names, one at the top-level scope,
+  // with a mangled name created by prepending all the outer types. These names
+  // are almost never preferred by the developers, so exclude them from index.
+  // e.g.
+  //   message Foo {
+  //    message Bar {}
+  //    enum E { A }
+  //   }
+  //
+  // yields:
+  //   class Foo_Bar {};
+  //   enum Foo_E { Foo_E_A };
+  //   class Foo {
+  //    using Bar = Foo_Bar;
+  //    static constexpr Foo_E A = Foo_E_A;
+  //   };
+
+  // We get rid of Foo_Bar and Foo_E by discarding any top-level entries with
+  // `_` in the name. This relies on original message/enum not having `_` in the
+  // name. Hence might go wrong in certain cases.
+  if (ND.getDeclContext()->isNamespace()) {
+    // Strip off some known public suffix helpers for enums, rest of the helpers
+    // are generated inside record decls so we don't care.
+    // https://protobuf.dev/reference/cpp/cpp-generated/#enum
+    Name.consume_back("_descriptor");
+    Name.consume_back("_IsValid");
+    Name.consume_back("_Name");
+    Name.consume_back("_Parse");
+    Name.consume_back("_MIN");
+    Name.consume_back("_MAX");
+    Name.consume_back("_ARRAYSIZE");
+    return Name.contains('_');
+  }
+
+  // EnumConstantDecls need some special attention, despite being nested in a
+  // TagDecl, they might still have mangled names. We filter those by checking
+  // if it has parent's name as a prefix.
+  // This might go wrong if a nested entity has a name that starts with parent's
+  // name, e.g: enum Foo { Foo_X }.
+  if (llvm::isa<EnumConstantDecl>(&ND)) {
+    auto *DC = llvm::cast<EnumDecl>(ND.getDeclContext());
+    if (!DC || !DC->getIdentifier())
+      return false;
+    auto CtxName = DC->getIdentifier()->getName();
+    return !CtxName.empty() && Name.consume_front(CtxName) &&
+           Name.consume_front("_");
+  }
+
+  // Now we're only left with fields/methods without an `_internal_` in the
+  // name, they're intended for public use.
+  return false;
 }
 
 // We only collect #include paths for symbols that are suitable for global code

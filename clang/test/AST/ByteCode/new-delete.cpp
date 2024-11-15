@@ -552,8 +552,6 @@ namespace DeleteThis {
                                                // both-note {{in call to 'super_secret_double_delete()'}}
 }
 
-/// FIXME: This is currently diagnosed, but should work.
-/// If the destructor for S is _not_ virtual however, it should fail.
 namespace CastedDelete {
   struct S {
     constexpr S(int *p) : p(p) {}
@@ -567,11 +565,10 @@ namespace CastedDelete {
 
   constexpr int vdtor_1() {
     int a;
-    delete (S*)new T(&a); // expected-note {{delete of pointer to subobject}}
+    delete (S*)new T(&a);
     return a;
   }
-  static_assert(vdtor_1() == 1); // expected-error {{not an integral constant expression}} \
-                                 // expected-note {{in call to}}
+  static_assert(vdtor_1() == 1);
 }
 
 constexpr void use_after_free_2() { // both-error {{never produces a constant expression}}
@@ -777,6 +774,28 @@ namespace Placement {
   }
   static_assert(ok2()== 0);
 }
+
+constexpr bool virt_delete(bool global) {
+  struct A {
+    virtual constexpr ~A() {}
+  };
+  struct B : A {
+    void operator delete(void *);
+    constexpr ~B() {}
+  };
+
+  A *p = new B;
+  if (global)
+    ::delete p;
+  else
+    delete p; // both-note {{call to class-specific 'operator delete'}}
+  return true;
+}
+static_assert(virt_delete(true));
+static_assert(virt_delete(false)); // both-error {{not an integral constant expression}} \
+                                   // both-note {{in call to}}
+
+
 
 #else
 /// Make sure we reject this prior to C++20

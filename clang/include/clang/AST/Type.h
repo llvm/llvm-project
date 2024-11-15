@@ -49,6 +49,7 @@
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include "llvm/Support/TrailingObjects.h"
 #include "llvm/Support/type_traits.h"
+#include <bitset>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -119,6 +120,8 @@ class EnumDecl;
 class Expr;
 class ExtQualsTypeCommonBase;
 class FunctionDecl;
+class FunctionEffectsRef;
+class FunctionEffectKindSet;
 class FunctionEffectSet;
 class IdentifierInfo;
 class NamedDecl;
@@ -3050,7 +3053,7 @@ public:
 #define WASM_TYPE(Name, Id, SingletonId) Id,
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
 // AMDGPU types
-#define AMDGPU_TYPE(Name, Id, SingletonId) Id,
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) Id,
 #include "clang/Basic/AMDGPUTypes.def"
 // HLSL intangible Types
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) Id,
@@ -4712,12 +4715,13 @@ class FunctionEffect {
 public:
   /// Identifies the particular effect.
   enum class Kind : uint8_t {
-    None = 0,
-    NonBlocking = 1,
-    NonAllocating = 2,
-    Blocking = 3,
-    Allocating = 4
+    NonBlocking,
+    NonAllocating,
+    Blocking,
+    Allocating,
+    Last = Allocating
   };
+  constexpr static size_t KindCount = static_cast<size_t>(Kind::Last) + 1;
 
   /// Flags describing some behaviors of the effect.
   using Flags = unsigned;
@@ -4743,8 +4747,6 @@ private:
   // be considered for uniqueness.
 
 public:
-  FunctionEffect() : FKind(Kind::None) {}
-
   explicit FunctionEffect(Kind K) : FKind(K) {}
 
   /// The kind of the effect.
@@ -4773,8 +4775,6 @@ public:
     case Kind::Blocking:
     case Kind::Allocating:
       return 0;
-    case Kind::None:
-      break;
     }
     llvm_unreachable("unknown effect kind");
   }
@@ -4782,26 +4782,36 @@ public:
   /// The description printed in diagnostics, e.g. 'nonblocking'.
   StringRef name() const;
 
-  /// Return true if the effect is allowed to be inferred on the callee,
-  /// which is either a FunctionDecl or BlockDecl.
+  friend raw_ostream &operator<<(raw_ostream &OS,
+                                 const FunctionEffect &Effect) {
+    OS << Effect.name();
+    return OS;
+  }
+
+  /// Determine whether the effect is allowed to be inferred on the callee,
+  /// which is either a FunctionDecl or BlockDecl. If the returned optional
+  /// is empty, inference is permitted; otherwise it holds the effect which
+  /// blocked inference.
   /// Example: This allows nonblocking(false) to prevent inference for the
   /// function.
-  bool canInferOnFunction(const Decl &Callee) const;
+  std::optional<FunctionEffect>
+  effectProhibitingInference(const Decl &Callee,
+                             FunctionEffectKindSet CalleeFX) const;
 
   // Return false for success. When true is returned for a direct call, then the
   // FE_InferrableOnCallees flag may trigger inference rather than an immediate
   // diagnostic. Caller should be assumed to have the effect (it may not have it
   // explicitly when inferring).
   bool shouldDiagnoseFunctionCall(bool Direct,
-                                  ArrayRef<FunctionEffect> CalleeFX) const;
+                                  FunctionEffectKindSet CalleeFX) const;
 
-  friend bool operator==(const FunctionEffect &LHS, const FunctionEffect &RHS) {
+  friend bool operator==(FunctionEffect LHS, FunctionEffect RHS) {
     return LHS.FKind == RHS.FKind;
   }
-  friend bool operator!=(const FunctionEffect &LHS, const FunctionEffect &RHS) {
+  friend bool operator!=(FunctionEffect LHS, FunctionEffect RHS) {
     return !(LHS == RHS);
   }
-  friend bool operator<(const FunctionEffect &LHS, const FunctionEffect &RHS) {
+  friend bool operator<(FunctionEffect LHS, FunctionEffect RHS) {
     return LHS.FKind < RHS.FKind;
   }
 };
@@ -4829,13 +4839,14 @@ struct FunctionEffectWithCondition {
   FunctionEffect Effect;
   EffectConditionExpr Cond;
 
-  FunctionEffectWithCondition() = default;
-  FunctionEffectWithCondition(const FunctionEffect &E,
-                              const EffectConditionExpr &C)
+  FunctionEffectWithCondition(FunctionEffect E, const EffectConditionExpr &C)
       : Effect(E), Cond(C) {}
 
   /// Return a textual description of the effect, and its condition, if any.
   std::string description() const;
+
+  friend raw_ostream &operator<<(raw_ostream &OS,
+                                 const FunctionEffectWithCondition &CFE);
 };
 
 /// Support iteration in parallel through a pair of FunctionEffect and
@@ -4938,6 +4949,85 @@ public:
   }
 
   void dump(llvm::raw_ostream &OS) const;
+};
+
+/// A mutable set of FunctionEffect::Kind.
+class FunctionEffectKindSet {
+  // For now this only needs to be a bitmap.
+  constexpr static size_t EndBitPos = FunctionEffect::KindCount;
+  using KindBitsT = std::bitset<EndBitPos>;
+
+  KindBitsT KindBits{};
+
+  explicit FunctionEffectKindSet(KindBitsT KB) : KindBits(KB) {}
+
+  // Functions to translate between an effect kind, starting at 1, and a
+  // position in the bitset.
+
+  constexpr static size_t kindToPos(FunctionEffect::Kind K) {
+    return static_cast<size_t>(K);
+  }
+
+  constexpr static FunctionEffect::Kind posToKind(size_t Pos) {
+    return static_cast<FunctionEffect::Kind>(Pos);
+  }
+
+  // Iterates through the bits which are set.
+  class iterator {
+    const FunctionEffectKindSet *Outer = nullptr;
+    size_t Idx = 0;
+
+    // If Idx does not reference a set bit, advance it until it does,
+    // or until it reaches EndBitPos.
+    void advanceToNextSetBit() {
+      while (Idx < EndBitPos && !Outer->KindBits.test(Idx))
+        ++Idx;
+    }
+
+  public:
+    iterator();
+    iterator(const FunctionEffectKindSet &O, size_t I) : Outer(&O), Idx(I) {
+      advanceToNextSetBit();
+    }
+    bool operator==(const iterator &Other) const { return Idx == Other.Idx; }
+    bool operator!=(const iterator &Other) const { return Idx != Other.Idx; }
+
+    iterator operator++() {
+      ++Idx;
+      advanceToNextSetBit();
+      return *this;
+    }
+
+    FunctionEffect operator*() const {
+      assert(Idx < EndBitPos && "Dereference of end iterator");
+      return FunctionEffect(posToKind(Idx));
+    }
+  };
+
+public:
+  FunctionEffectKindSet() = default;
+  explicit FunctionEffectKindSet(FunctionEffectsRef FX) { insert(FX); }
+
+  iterator begin() const { return iterator(*this, 0); }
+  iterator end() const { return iterator(*this, EndBitPos); }
+
+  void insert(FunctionEffect Effect) { KindBits.set(kindToPos(Effect.kind())); }
+  void insert(FunctionEffectsRef FX) {
+    for (FunctionEffect Item : FX.effects())
+      insert(Item);
+  }
+  void insert(FunctionEffectKindSet Set) { KindBits |= Set.KindBits; }
+
+  bool empty() const { return KindBits.none(); }
+  bool contains(const FunctionEffect::Kind EK) const {
+    return KindBits.test(kindToPos(EK));
+  }
+  void dump(llvm::raw_ostream &OS) const;
+
+  static FunctionEffectKindSet difference(FunctionEffectKindSet LHS,
+                                          FunctionEffectKindSet RHS) {
+    return FunctionEffectKindSet(LHS.KindBits & ~RHS.KindBits);
+  }
 };
 
 /// A mutable set of FunctionEffects and possibly conditions attached to them.
@@ -6191,7 +6281,9 @@ private:
 
   HLSLAttributedResourceType(QualType Canon, QualType Wrapped,
                              QualType Contained, const Attributes &Attrs)
-      : Type(HLSLAttributedResource, Canon, Wrapped->getDependence()),
+      : Type(HLSLAttributedResource, Canon,
+             Contained.isNull() ? TypeDependence::None
+                                : Contained->getDependence()),
         WrappedType(Wrapped), ContainedType(Contained), Attrs(Attrs) {}
 
 public:

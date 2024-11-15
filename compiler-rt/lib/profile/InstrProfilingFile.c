@@ -196,7 +196,7 @@ static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
   }
   return 0;
 }
-#elif defined(__ELF__) || defined(_WIN32)
+#elif defined(__ELF__) || defined(_WIN32) || defined(_AIX)
 
 #define INSTR_PROF_PROFILE_COUNTER_BIAS_DEFAULT_VAR                            \
   INSTR_PROF_CONCAT(INSTR_PROF_PROFILE_COUNTER_BIAS_VAR, _default)
@@ -862,7 +862,7 @@ static int parseFilenamePattern(const char *FilenamePat,
           __llvm_profile_disable_continuous_mode();
           return -1;
         }
-#if defined(__APPLE__) || defined(__ELF__) || defined(_WIN32)
+#if defined(__APPLE__) || defined(__ELF__) || defined(_WIN32) || defined(_AIX)
         __llvm_profile_set_page_size(getpagesize());
         __llvm_profile_enable_continuous_mode();
 #else

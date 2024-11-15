@@ -301,7 +301,8 @@ using Entry = llvm::DWARFDebugNames::Entry;
 /// If any parent does not have an `IDX_parent`, or the Entry data is corrupted,
 /// nullopt is returned.
 std::optional<llvm::SmallVector<Entry, 4>>
-getParentChain(Entry entry, uint32_t max_parents) {
+getParentChain(Entry entry,
+               uint32_t max_parents = std::numeric_limits<uint32_t>::max()) {
   llvm::SmallVector<Entry, 4> parent_entries;
 
   do {
@@ -374,6 +375,21 @@ void DebugNamesDWARFIndex::GetFullyQualifiedType(
   m_fallback.GetFullyQualifiedType(context, callback);
 }
 
+bool DebugNamesDWARFIndex::SameAsEntryContext(
+    const CompilerContext &query_context,
+    const DebugNames::Entry &entry) const {
+  // TODO: check dwarf tag matches.
+  // Peek at the AT_name of `entry` and test equality to `name`.
+  auto maybe_dieoffset = entry.getDIEUnitOffset();
+  if (!maybe_dieoffset)
+    return false;
+  DWARFUnit *unit = GetNonSkeletonUnit(entry);
+  if (!unit)
+    return false;
+  return query_context.name ==
+         unit->PeekDIEName(unit->GetOffset() + *maybe_dieoffset);
+}
+
 bool DebugNamesDWARFIndex::SameParentChain(
     llvm::ArrayRef<llvm::StringRef> parent_names,
     llvm::ArrayRef<DebugNames::Entry> parent_entries) const {
@@ -400,6 +416,45 @@ bool DebugNamesDWARFIndex::SameParentChain(
     if (!SameAsEntryATName(parent_name, parent_entry))
       return false;
   return true;
+}
+
+bool DebugNamesDWARFIndex::SameParentChain(
+    llvm::ArrayRef<CompilerContext> parent_contexts,
+    llvm::ArrayRef<DebugNames::Entry> parent_entries) const {
+  if (parent_entries.size() != parent_contexts.size())
+    return false;
+
+  // If the AT_name of any parent fails to match the expected name, we don't
+  // have a match.
+  for (auto [parent_context, parent_entry] :
+       llvm::zip_equal(parent_contexts, parent_entries))
+    if (!SameAsEntryContext(parent_context, parent_entry))
+      return false;
+  return true;
+}
+
+bool DebugNamesDWARFIndex::WithinParentChain(
+    llvm::ArrayRef<CompilerContext> query_contexts,
+    llvm::ArrayRef<DebugNames::Entry> parent_chain) const {
+  if (query_contexts.size() == parent_chain.size())
+    return SameParentChain(query_contexts, parent_chain);
+
+  // If parent chain does not have enough entries, we can't possibly have a
+  // match.
+  while (!query_contexts.empty() &&
+         query_contexts.size() <= parent_chain.size()) {
+    if (SameAsEntryContext(query_contexts.front(), parent_chain.front())) {
+      query_contexts = query_contexts.drop_front();
+      parent_chain = parent_chain.drop_front();
+    } else {
+      // Name does not match, try next parent_chain entry if the current entry
+      // is namespace because the current one can be an inline namespace.
+      if (parent_chain.front().tag() != DW_TAG_namespace)
+        return false;
+      parent_chain = parent_chain.drop_front();
+    }
+  }
+  return query_contexts.empty();
 }
 
 void DebugNamesDWARFIndex::GetTypes(
@@ -442,6 +497,72 @@ void DebugNamesDWARFIndex::GetNamespaces(
   }
 
   m_fallback.GetNamespaces(name, callback);
+}
+
+llvm::SmallVector<CompilerContext>
+DebugNamesDWARFIndex::GetTypeQueryParentContexts(TypeQuery &query) {
+  std::vector<lldb_private::CompilerContext> &query_decl_context =
+      query.GetContextRef();
+  llvm::SmallVector<CompilerContext> parent_contexts;
+  if (!query_decl_context.empty()) {
+    // Skip the last entry as it's the type we're matching parents for.
+    // Reverse the query decl context to match parent chain order.
+    llvm::ArrayRef<CompilerContext> parent_contexts_ref(
+        query_decl_context.data(), query_decl_context.size() - 1);
+    for (const CompilerContext &ctx : llvm::reverse(parent_contexts_ref)) {
+      // Skip any context without name because .debug_names might not encode
+      // them. (e.g. annonymous namespace)
+      if ((ctx.kind & CompilerContextKind::AnyType) !=
+              CompilerContextKind::Invalid &&
+          !ctx.name.IsEmpty())
+        parent_contexts.push_back(ctx);
+    }
+  }
+  return parent_contexts;
+}
+
+void DebugNamesDWARFIndex::GetTypesWithQuery(
+    TypeQuery &query, llvm::function_ref<bool(DWARFDIE die)> callback) {
+  ConstString name = query.GetTypeBasename();
+  std::vector<lldb_private::CompilerContext> query_context =
+      query.GetContextRef();
+  if (query_context.size() <= 1)
+    return GetTypes(name, callback);
+
+  llvm::SmallVector<CompilerContext> parent_contexts =
+      GetTypeQueryParentContexts(query);
+  // For each entry, grab its parent chain and check if we have a match.
+  for (const DebugNames::Entry &entry : m_debug_names_up->equal_range(name)) {
+    if (!isType(entry.tag()))
+      continue;
+
+    // If we get a NULL foreign_tu back, the entry doesn't match the type unit
+    // in the .dwp file, or we were not able to load the .dwo file or the DWO ID
+    // didn't match.
+    std::optional<DWARFTypeUnit *> foreign_tu = GetForeignTypeUnit(entry);
+    if (foreign_tu && foreign_tu.value() == nullptr)
+      continue;
+
+    std::optional<llvm::SmallVector<Entry, 4>> parent_chain =
+        getParentChain(entry);
+    if (!parent_chain) {
+      // Fallback: use the base class implementation.
+      if (!ProcessEntry(entry, [&](DWARFDIE die) {
+            return ProcessTypeDIEMatchQuery(query, die, callback);
+          }))
+        return;
+      continue;
+    }
+
+    if (WithinParentChain(parent_contexts, *parent_chain) &&
+        !ProcessEntry(entry, [&](DWARFDIE die) {
+          // After .debug_names filtering still sending to base class for
+          // further filtering before calling the callback.
+          return ProcessTypeDIEMatchQuery(query, die, callback);
+        }))
+      return;
+  }
+  m_fallback.GetTypesWithQuery(query, callback);
 }
 
 void DebugNamesDWARFIndex::GetFunctions(

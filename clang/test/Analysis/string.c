@@ -25,7 +25,7 @@
 // RUN: %clang_analyze_cc1 -verify %s -Wno-null-dereference \
 // RUN:   -DUSE_BUILTINS -DVARIANT \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-checker=optin.taint \
 // RUN:   -analyzer-checker=unix.cstring \
 // RUN:   -analyzer-checker=unix.Malloc \
 // RUN:   -analyzer-checker=alpha.unix.cstring \

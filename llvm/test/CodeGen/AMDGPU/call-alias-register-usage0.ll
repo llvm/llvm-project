@@ -7,14 +7,18 @@
 @alias0 = hidden alias void (), ptr @aliasee_default_vgpr64_sgpr102
 
 ; CHECK-LABEL: {{^}}kernel0:
-; CHECK: .amdhsa_next_free_vgpr 53
-; CHECK-NEXT: .amdhsa_next_free_sgpr 33
+; CHECK:      .set kernel0.num_vgpr, max(32, aliasee_default_vgpr64_sgpr102.num_vgpr)
+; CHECK-NEXT: .set kernel0.num_agpr, max(0, aliasee_default_vgpr64_sgpr102.num_agpr)
+; CHECK-NEXT: .set kernel0.numbered_sgpr, max(33, aliasee_default_vgpr64_sgpr102.numbered_sgpr)
 define amdgpu_kernel void @kernel0() #0 {
 bb:
   call void @alias0() #2
   ret void
 }
 
+; CHECK:      .set aliasee_default_vgpr64_sgpr102.num_vgpr, 53
+; CHECK-NEXT: .set aliasee_default_vgpr64_sgpr102.num_agpr, 0
+; CHECK-NEXT: .set aliasee_default_vgpr64_sgpr102.numbered_sgpr, 32
 define internal void @aliasee_default_vgpr64_sgpr102() #1 {
 bb:
   call void asm sideeffect "; clobber v52 ", "~{v52}"()

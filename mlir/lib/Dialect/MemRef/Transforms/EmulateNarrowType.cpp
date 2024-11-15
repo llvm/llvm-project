@@ -583,7 +583,7 @@ struct ConvertMemRefExpandShape final
 //===----------------------------------------------------------------------===//
 
 void memref::populateMemRefNarrowTypeEmulationPatterns(
-    arith::NarrowTypeEmulationConverter &typeConverter,
+    const arith::NarrowTypeEmulationConverter &typeConverter,
     RewritePatternSet &patterns) {
 
   // Populate `memref.*` conversion patterns.

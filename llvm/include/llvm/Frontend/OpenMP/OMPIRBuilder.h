@@ -15,6 +15,7 @@
 #define LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 
 #include "llvm/Analysis/MemorySSAUpdater.h"
+#include "llvm/Frontend/Atomic/Atomic.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/IR/DebugLoc.h"
@@ -479,6 +480,27 @@ public:
         T(Triple(M.getTargetTriple())) {}
   ~OpenMPIRBuilder();
 
+  class AtomicInfo : public llvm::AtomicInfo<IRBuilder<>> {
+    llvm::Value *AtomicVar;
+
+  public:
+    AtomicInfo(IRBuilder<> *Builder, llvm::Type *Ty, uint64_t AtomicSizeInBits,
+               uint64_t ValueSizeInBits, llvm::Align AtomicAlign,
+               llvm::Align ValueAlign, bool UseLibcall, llvm::Value *AtomicVar)
+        : llvm::AtomicInfo<IRBuilder<>>(Builder, Ty, AtomicSizeInBits,
+                                        ValueSizeInBits, AtomicAlign,
+                                        ValueAlign, UseLibcall),
+          AtomicVar(AtomicVar) {}
+
+    llvm::Value *getAtomicPointer() const override { return AtomicVar; }
+    void decorateWithTBAA(llvm::Instruction *I) override {}
+    llvm::AllocaInst *CreateAlloca(llvm::Type *Ty,
+                                   const llvm::Twine &Name) const override {
+      llvm::AllocaInst *allocaInst = Builder->CreateAlloca(Ty);
+      allocaInst->setName(Name);
+      return allocaInst;
+    }
+  };
   /// Initialize the internal state, this will put structures types and
   /// potentially other helpers into the underlying module. Must be called
   /// before any other method and only once! This internal state includes types
@@ -3038,6 +3060,15 @@ private:
                    AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
                    AtomicUpdateCallbackTy &UpdateOp, bool VolatileX,
                    bool IsXBinopExpr);
+
+  std::pair<llvm::LoadInst *, llvm::AllocaInst *>
+  EmitAtomicLoadLibcall(Value *X, Type *XElemTy, llvm::AtomicOrdering AO,
+                        uint64_t AtomicSizeInBits);
+
+  std::pair<llvm::Value *, llvm::Value *> EmitAtomicCompareExchangeLibcall(
+      Value *X, Type *XElemTy, uint64_t AtomicSizeInBits,
+      llvm::Value *ExpectedVal, llvm::Value *DesiredVal,
+      llvm::AtomicOrdering Success, llvm::AtomicOrdering Failure);
 
   /// Emit the binary op. described by \p RMWOp, using \p Src1 and \p Src2 .
   ///

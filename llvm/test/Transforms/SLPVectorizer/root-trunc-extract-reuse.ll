@@ -10,9 +10,9 @@ define i1 @test() {
 ; CHECK-NEXT:    br label [[ELSE]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ zeroinitializer, [[THEN]] ], [ zeroinitializer, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[TMP0]], i32 1
 ; CHECK-NEXT:    [[BF_CAST162:%.*]] = and i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> zeroinitializer, <2 x i32> [[TMP0]], <2 x i32> <i32 3, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> zeroinitializer, <2 x i32> [[TMP0]], <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    [[T13:%.*]] = and <2 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    br label [[ELSE1:%.*]]
 ; CHECK:       else1:

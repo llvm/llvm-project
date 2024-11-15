@@ -198,6 +198,16 @@ if(NEED_LIBC_HDRGEN)
     list(APPEND LLVM_ENABLE_PROJECTS "libc")
   endif()
 endif()
+
+foreach(proj IN LISTS LLVM_ENABLE_RUNTIMES)
+  if("${proj}" IN_LIST LLVM_ENABLE_PROJECTS)
+    # The 'libc' project bootstraps a few executables via the project build and
+    # should not emit an error currently.
+    if(NOT (NEED_LIBC_HDRGEN AND "${proj}" STREQUAL "libc"))
+      message(FATAL_ERROR "Runtime project \"${proj}\" found in LLVM_ENABLE_PROJECTS and LLVM_ENABLE_RUNTIMES. It must only appear in one of them and that one should almost always be LLVM_ENABLE_RUNTIMES.")
+    endif()
+  endif()
+endforeach()
 unset(NEED_LIBC_HDRGEN)
 
 # LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the
@@ -525,6 +535,10 @@ if(LLVM_ENABLE_CRASH_OVERRIDES)
 endif()
 
 option(LLVM_ENABLE_CRASH_DUMPS "Turn on memory dumps on crashes. Currently only implemented on Windows." OFF)
+
+set(LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING "DISABLED" CACHE STRING
+  "Enhance Debugify's line number coverage tracking; enabling this is ABI-breaking. Can be DISABLED, or COVERAGE.")
+set_property(CACHE LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING PROPERTY STRINGS DISABLED COVERAGE)
 
 set(WINDOWS_PREFER_FORWARD_SLASH_DEFAULT OFF)
 if (MINGW)

@@ -140,6 +140,8 @@ add_proxy_header_library(
   FILE
   HDRS
     FILE.h
+  DEPENDS
+    libc.hdr.stdio_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.FILE
     libc.include.stdio
@@ -149,6 +151,8 @@ add_proxy_header_library(
   off_t
   HDRS
     off_t.h
+  DEPENDS
+    libc.hdr.stdio_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.off_t
     libc.include.stdio
@@ -158,6 +162,8 @@ add_proxy_header_library(
   cookie_io_functions_t
   HDRS
     cookie_io_functions_t.h
+  DEPENDS
+    libc.hdr.stdio_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.cookie_io_functions_t
     libc.include.stdio

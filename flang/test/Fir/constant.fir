@@ -7,15 +7,6 @@ func.func @x() -> !fir.char<1,3> {
   return %1 : !fir.char<1,3>
 }
 
-// CHECK-LABEL: define x86_fp80 @y()
-func.func @y() -> !fir.real<10> {
- %c1 = arith.constant 42.4 :f32
- %0 = fir.convert %c1 : (f32) -> !fir.real<10>
-  // CHECK: ret x86_fp80 0xK4004A9999A0000000000
-  // TODO: What's that number?
-  return %0 : !fir.real<10>
-}
-
 // CHECK-LABEL: define i16 @z()
 func.func @z() -> !fir.logical<2> {
   %1 = arith.constant true

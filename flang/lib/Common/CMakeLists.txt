@@ -12,7 +12,7 @@ endif()
 if(flang_vc AND LLVM_APPEND_VC_REV)
   set(flang_source_dir ${FLANG_SOURCE_DIR})
 endif()
- 
+
 # Create custom target to generate the VC revision include.
 add_custom_command(OUTPUT "${version_inc}"
   DEPENDS "${llvm_vc}" "${flang_vc}" "${generate_vcs_version_script}"
@@ -34,12 +34,12 @@ if(FLANG_VENDOR)
     PROPERTIES COMPILE_DEFINITIONS "FLANG_VENDOR=\"${FLANG_VENDOR} \"")
 endif()
 
-
 add_flang_library(FortranCommon PARTIAL_SOURCES_INTENDED
   ../Support/Fortran.cpp
   ../Support/Fortran-features.cpp
   ../Support/default-kinds.cpp
   ../Support/idioms.cpp
+  ../Support/LangOptions.cpp
   ../Support/Version.cpp
   ${version_inc}
 

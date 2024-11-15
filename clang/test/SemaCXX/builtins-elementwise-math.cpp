@@ -76,6 +76,22 @@ void test_builtin_elementwise_min_fp() {
   static_assert(!is_const<decltype(__builtin_elementwise_min(a, a))>::value);
 }
 
+void test_builtin_elementwise_maximum() {
+  const float a = 2.0f;
+  float b = 1.0f;
+  static_assert(!is_const<decltype(__builtin_elementwise_maximum(a, b))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_maximum(b, a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_maximum(a, a))>::value);
+}
+
+void test_builtin_elementwise_minimum() {
+  const float a = 2.0f;
+  float b = 1.0f;
+  static_assert(!is_const<decltype(__builtin_elementwise_minimum(a, b))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_minimum(b, a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_minimum(a, a))>::value);
+}
+
 void test_builtin_elementwise_ceil() {
   const float a = 42.0;
   float b = 42.3;
@@ -144,6 +160,13 @@ void test_builtin_elementwise_atan() {
   float b = 42.3;
   static_assert(!is_const<decltype(__builtin_elementwise_atan(a))>::value);
   static_assert(!is_const<decltype(__builtin_elementwise_atan(b))>::value);
+}
+
+void test_builtin_elementwise_atan2() {
+  const float a = 42.0;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_atan2(a, a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_atan2(b, b))>::value);
 }
 
 void test_builtin_elementwise_tan() {
@@ -253,6 +276,14 @@ void test_builtin_elementwise_fma() {
   static_assert(!is_const<decltype(__builtin_elementwise_fma(a, b, c))>::value);
   static_assert(!is_const<decltype(__builtin_elementwise_fma(b, a, c))>::value);
   static_assert(!is_const<decltype(__builtin_elementwise_fma(c, c, c))>::value);
+}
+
+void test_builtin_elementwise_fmod() {
+  const double a = 2;
+  double b = 1;
+  static_assert(!is_const<decltype(__builtin_elementwise_fmod(a, b))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_fmod(b, a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_fmod(a, a))>::value);
 }
 
 void test_builtin_elementwise_pow() {

@@ -222,32 +222,32 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; RV64IFD-NEXT:    .cfi_offset s1, -24
 ; RV64IFD-NEXT:    .cfi_offset s2, -32
 ; RV64IFD-NEXT:    .cfi_offset fs0, -40
-; RV64IFD-NEXT:    lhu s1, 16(a1)
-; RV64IFD-NEXT:    lhu s2, 0(a1)
-; RV64IFD-NEXT:    lhu a1, 8(a1)
+; RV64IFD-NEXT:    lhu s1, 0(a1)
+; RV64IFD-NEXT:    lhu a2, 8(a1)
+; RV64IFD-NEXT:    lhu s2, 16(a1)
 ; RV64IFD-NEXT:    mv s0, a0
-; RV64IFD-NEXT:    fmv.w.x fa0, a1
+; RV64IFD-NEXT:    fmv.w.x fa0, a2
 ; RV64IFD-NEXT:    call __extendhfsf2
 ; RV64IFD-NEXT:    call exp10f
 ; RV64IFD-NEXT:    call __truncsfhf2
 ; RV64IFD-NEXT:    fmv.s fs0, fa0
-; RV64IFD-NEXT:    fmv.w.x fa0, s2
+; RV64IFD-NEXT:    fmv.w.x fa0, s1
 ; RV64IFD-NEXT:    call __extendhfsf2
 ; RV64IFD-NEXT:    call exp10f
 ; RV64IFD-NEXT:    fmv.x.w a0, fs0
-; RV64IFD-NEXT:    slli s2, a0, 16
+; RV64IFD-NEXT:    slli s1, a0, 16
 ; RV64IFD-NEXT:    call __truncsfhf2
 ; RV64IFD-NEXT:    fmv.x.w a0, fa0
 ; RV64IFD-NEXT:    slli a0, a0, 48
 ; RV64IFD-NEXT:    srli a0, a0, 48
-; RV64IFD-NEXT:    or s2, a0, s2
-; RV64IFD-NEXT:    fmv.w.x fa0, s1
+; RV64IFD-NEXT:    or s1, a0, s1
+; RV64IFD-NEXT:    fmv.w.x fa0, s2
 ; RV64IFD-NEXT:    call __extendhfsf2
 ; RV64IFD-NEXT:    call exp10f
 ; RV64IFD-NEXT:    call __truncsfhf2
 ; RV64IFD-NEXT:    fmv.x.w a0, fa0
 ; RV64IFD-NEXT:    sh a0, 4(s0)
-; RV64IFD-NEXT:    sw s2, 0(s0)
+; RV64IFD-NEXT:    sw s1, 0(s0)
 ; RV64IFD-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
@@ -349,27 +349,27 @@ define <4 x half> @exp10_v4f16(<4 x half> %x) {
 ; RV64IFD-NEXT:    .cfi_offset fs0, -48
 ; RV64IFD-NEXT:    .cfi_offset fs1, -56
 ; RV64IFD-NEXT:    .cfi_offset fs2, -64
-; RV64IFD-NEXT:    lhu s1, 24(a1)
-; RV64IFD-NEXT:    lhu s2, 0(a1)
-; RV64IFD-NEXT:    lhu s3, 8(a1)
-; RV64IFD-NEXT:    lhu a1, 16(a1)
+; RV64IFD-NEXT:    lhu s1, 0(a1)
+; RV64IFD-NEXT:    lhu s2, 8(a1)
+; RV64IFD-NEXT:    lhu a2, 16(a1)
+; RV64IFD-NEXT:    lhu s3, 24(a1)
 ; RV64IFD-NEXT:    mv s0, a0
-; RV64IFD-NEXT:    fmv.w.x fa0, a1
+; RV64IFD-NEXT:    fmv.w.x fa0, a2
 ; RV64IFD-NEXT:    call __extendhfsf2
 ; RV64IFD-NEXT:    call exp10f
 ; RV64IFD-NEXT:    call __truncsfhf2
 ; RV64IFD-NEXT:    fmv.s fs0, fa0
-; RV64IFD-NEXT:    fmv.w.x fa0, s3
-; RV64IFD-NEXT:    call __extendhfsf2
-; RV64IFD-NEXT:    call exp10f
-; RV64IFD-NEXT:    call __truncsfhf2
-; RV64IFD-NEXT:    fmv.s fs1, fa0
 ; RV64IFD-NEXT:    fmv.w.x fa0, s2
 ; RV64IFD-NEXT:    call __extendhfsf2
 ; RV64IFD-NEXT:    call exp10f
 ; RV64IFD-NEXT:    call __truncsfhf2
-; RV64IFD-NEXT:    fmv.s fs2, fa0
+; RV64IFD-NEXT:    fmv.s fs1, fa0
 ; RV64IFD-NEXT:    fmv.w.x fa0, s1
+; RV64IFD-NEXT:    call __extendhfsf2
+; RV64IFD-NEXT:    call exp10f
+; RV64IFD-NEXT:    call __truncsfhf2
+; RV64IFD-NEXT:    fmv.s fs2, fa0
+; RV64IFD-NEXT:    fmv.w.x fa0, s3
 ; RV64IFD-NEXT:    call __extendhfsf2
 ; RV64IFD-NEXT:    call exp10f
 ; RV64IFD-NEXT:    fmv.x.w s1, fs2

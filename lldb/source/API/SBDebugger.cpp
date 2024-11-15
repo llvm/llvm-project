@@ -1483,6 +1483,12 @@ bool SBDebugger::GetUseColor() const {
   return (m_opaque_sp ? m_opaque_sp->GetUseColor() : false);
 }
 
+bool SBDebugger::SetShowInlineDiagnostics(bool value) {
+  LLDB_INSTRUMENT_VA(this, value);
+
+  return (m_opaque_sp ? m_opaque_sp->SetShowInlineDiagnostics(value) : false);
+}
+
 bool SBDebugger::SetUseSourceCache(bool value) {
   LLDB_INSTRUMENT_VA(this, value);
 

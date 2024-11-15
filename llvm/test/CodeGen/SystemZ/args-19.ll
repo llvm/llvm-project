@@ -11,4 +11,6 @@ define void @caller() {
 
 declare void @bar_Struct(i16 %Arg)
 
-; CHECK: Narrow integer argument must have a valid extension type
+; CHECK: ERROR: Missing extension attribute of passed value in call to function:
+; CHECK: Callee:  void @bar_Struct(i16)
+; CHECK: Caller:  void @caller()

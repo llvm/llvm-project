@@ -264,24 +264,6 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     return;
 
   if (auto *VPI = dyn_cast<VPInstruction>(&R)) {
-    VPValue *Op0, *Op1;
-    if (match(VPI, m_VPInstruction<VPInstruction::ExtractFromEnd>(
-                       m_VPValue(Op0), m_VPValue(Op1)))) {
-      VPI->setOperand(1, getValueForPart(Op1, UF - 1));
-      addUniformForAllParts(VPI);
-      if (Plan.hasScalarVFOnly()) {
-        // Extracting from end with VF = 1 implies retrieving the scalar part UF
-        // - Op1.
-        unsigned Offset =
-            cast<ConstantInt>(Op1->getLiveInIRValue())->getZExtValue();
-        VPI->replaceAllUsesWith(getValueForPart(Op0, UF - Offset));
-      } else {
-        // Otherwise we extract from the last part.
-        remapOperands(VPI, UF - 1);
-      }
-      return;
-    }
-
     if (vputils::onlyFirstPartUsed(VPI)) {
       addUniformForAllParts(VPI);
       return;

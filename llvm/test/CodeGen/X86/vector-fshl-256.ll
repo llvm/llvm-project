@@ -1279,7 +1279,7 @@ define void @fancierRotate2(ptr %arr, ptr %control, i32 %rot0, i32 %rot1) {
 ; AVX1-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [31,0]
 ; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    .p2align 4, 0x90
+; AVX1-NEXT:    .p2align 4
 ; AVX1-NEXT:  .LBB8_1: # %loop
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX1-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
@@ -1325,7 +1325,7 @@ define void @fancierRotate2(ptr %arr, ptr %control, i32 %rot0, i32 %rot1) {
 ; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [31,31,31,31,31,31,31,31]
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm4 = [32,32,32,32,32,32,32,32]
-; AVX2-NEXT:    .p2align 4, 0x90
+; AVX2-NEXT:    .p2align 4
 ; AVX2-NEXT:  .LBB8_1: # %loop
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm5 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
@@ -1352,7 +1352,7 @@ define void @fancierRotate2(ptr %arr, ptr %control, i32 %rot0, i32 %rot1) {
 ; AVX512F-NEXT:    vpbroadcastd %xmm1, %ymm1
 ; AVX512F-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    .p2align 4, 0x90
+; AVX512F-NEXT:    .p2align 4
 ; AVX512F-NEXT:  .LBB8_1: # %loop
 ; AVX512F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512F-NEXT:    vpmovzxbd {{.*#+}} ymm3 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
@@ -1372,7 +1372,7 @@ define void @fancierRotate2(ptr %arr, ptr %control, i32 %rot0, i32 %rot1) {
 ; AVX512VL-NEXT:    vpbroadcastd %edx, %ymm0
 ; AVX512VL-NEXT:    vpbroadcastd %ecx, %ymm1
 ; AVX512VL-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; AVX512VL-NEXT:    .p2align 4, 0x90
+; AVX512VL-NEXT:    .p2align 4
 ; AVX512VL-NEXT:  .LBB8_1: # %loop
 ; AVX512VL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512VL-NEXT:    vpmovzxbd {{.*#+}} ymm2 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
@@ -1395,7 +1395,7 @@ define void @fancierRotate2(ptr %arr, ptr %control, i32 %rot0, i32 %rot1) {
 ; AVX512BW-NEXT:    vpbroadcastd %xmm1, %ymm1
 ; AVX512BW-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; AVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512BW-NEXT:    .p2align 4, 0x90
+; AVX512BW-NEXT:    .p2align 4
 ; AVX512BW-NEXT:  .LBB8_1: # %loop
 ; AVX512BW-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512BW-NEXT:    vpmovzxbd {{.*#+}} ymm3 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
@@ -1418,7 +1418,7 @@ define void @fancierRotate2(ptr %arr, ptr %control, i32 %rot0, i32 %rot1) {
 ; AVX512VBMI2-NEXT:    vpbroadcastd %xmm1, %ymm1
 ; AVX512VBMI2-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; AVX512VBMI2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512VBMI2-NEXT:    .p2align 4, 0x90
+; AVX512VBMI2-NEXT:    .p2align 4
 ; AVX512VBMI2-NEXT:  .LBB8_1: # %loop
 ; AVX512VBMI2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512VBMI2-NEXT:    vpmovzxbd {{.*#+}} ymm3 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
@@ -1438,7 +1438,7 @@ define void @fancierRotate2(ptr %arr, ptr %control, i32 %rot0, i32 %rot1) {
 ; AVX512VLBW-NEXT:    vpbroadcastd %edx, %ymm0
 ; AVX512VLBW-NEXT:    vpbroadcastd %ecx, %ymm1
 ; AVX512VLBW-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; AVX512VLBW-NEXT:    .p2align 4, 0x90
+; AVX512VLBW-NEXT:    .p2align 4
 ; AVX512VLBW-NEXT:  .LBB8_1: # %loop
 ; AVX512VLBW-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512VLBW-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
@@ -1458,7 +1458,7 @@ define void @fancierRotate2(ptr %arr, ptr %control, i32 %rot0, i32 %rot1) {
 ; AVX10-NEXT:    vpbroadcastd %edx, %ymm0
 ; AVX10-NEXT:    vpbroadcastd %ecx, %ymm1
 ; AVX10-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; AVX10-NEXT:    .p2align 4, 0x90
+; AVX10-NEXT:    .p2align 4
 ; AVX10-NEXT:  .LBB8_1: # %loop
 ; AVX10-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX10-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
@@ -1485,7 +1485,7 @@ define void @fancierRotate2(ptr %arr, ptr %control, i32 %rot0, i32 %rot1) {
 ; XOPAVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
-; XOPAVX1-NEXT:    .p2align 4, 0x90
+; XOPAVX1-NEXT:    .p2align 4
 ; XOPAVX1-NEXT:  .LBB8_1: # %loop
 ; XOPAVX1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XOPAVX1-NEXT:    vmovq {{.*#+}} xmm5 = mem[0],zero
@@ -1513,7 +1513,7 @@ define void @fancierRotate2(ptr %arr, ptr %control, i32 %rot0, i32 %rot1) {
 ; XOPAVX2-NEXT:    vpbroadcastd %xmm1, %ymm1
 ; XOPAVX2-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; XOPAVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; XOPAVX2-NEXT:    .p2align 4, 0x90
+; XOPAVX2-NEXT:    .p2align 4
 ; XOPAVX2-NEXT:  .LBB8_1: # %loop
 ; XOPAVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XOPAVX2-NEXT:    vpmovzxbd {{.*#+}} ymm3 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero

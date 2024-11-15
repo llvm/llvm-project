@@ -734,6 +734,7 @@ struct MachineFunction {
   std::optional<bool> NoPHIs;
   std::optional<bool> IsSSA;
   std::optional<bool> NoVRegs;
+  std::optional<bool> HasFakeUses;
 
   bool CallsEHReturn = false;
   bool CallsUnwindInit = false;
@@ -780,6 +781,7 @@ template <> struct MappingTraits<MachineFunction> {
     YamlIO.mapOptional("noPhis", MF.NoPHIs, std::optional<bool>());
     YamlIO.mapOptional("isSSA", MF.IsSSA, std::optional<bool>());
     YamlIO.mapOptional("noVRegs", MF.NoVRegs, std::optional<bool>());
+    YamlIO.mapOptional("hasFakeUses", MF.HasFakeUses, std::optional<bool>());
 
     YamlIO.mapOptional("callsEHReturn", MF.CallsEHReturn, false);
     YamlIO.mapOptional("callsUnwindInit", MF.CallsUnwindInit, false);

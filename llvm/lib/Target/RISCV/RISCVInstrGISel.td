@@ -57,3 +57,13 @@ def G_SPLAT_VECTOR_SPLIT_I64_VL : RISCVGenericInstruction {
   let InOperandList = (ins type0:$passthru, type1:$hi, type1:$lo, type2:$vl);
   let hasSideEffects = false;
 }
+
+// Pseudo equivalent to a RISCVISD::VSLIDEDOWN_VL
+def G_VSLIDEDOWN_VL : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$merge, type0:$vec, type1:$idx, type2:$mask,
+                       type1:$vl, type1:$policy);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_VSLIDEDOWN_VL, riscv_slidedown_vl>;
+

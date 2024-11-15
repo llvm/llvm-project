@@ -1122,7 +1122,8 @@ arith::WideIntEmulationConverter::WideIntEmulationConverter(
 }
 
 void arith::populateArithWideIntEmulationPatterns(
-    WideIntEmulationConverter &typeConverter, RewritePatternSet &patterns) {
+    const WideIntEmulationConverter &typeConverter,
+    RewritePatternSet &patterns) {
   // Populate `func.*` conversion patterns.
   populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,
                                                                  typeConverter);

@@ -181,7 +181,7 @@ const unsigned UnlimitedArgs = unsigned(-1);
 
 // Get the number of arguments expected for an option, or -1 if any number of
 // arguments are accepted.
-unsigned getNumArgsForKind(Record *OptionKind, const Record *Option) {
+unsigned getNumArgsForKind(const Record *OptionKind, const Record *Option) {
   return StringSwitch<unsigned>(OptionKind->getName())
     .Cases("KIND_JOINED", "KIND_JOINED_OR_SEPARATE", "KIND_SEPARATE", 1)
     .Cases("KIND_REMAINING_ARGS", "KIND_REMAINING_ARGS_JOINED",
@@ -282,11 +282,12 @@ void emitOptionName(StringRef Prefix, const Record *Option, raw_ostream &OS) {
     }
   }
 
-  emitOptionWithArgs(Prefix, Option, std::vector<StringRef>(Args.begin(), Args.end()), OS);
+  emitOptionWithArgs(Prefix, Option,
+                     std::vector<StringRef>(Args.begin(), Args.end()), OS);
 
   auto AliasArgs = Option->getValueAsListOfStrings("AliasArgs");
   if (!AliasArgs.empty()) {
-    Record *Alias = Option->getValueAsDef("Alias");
+    const Record *Alias = Option->getValueAsDef("Alias");
     OS << " (equivalent to ";
     emitOptionWithArgs(
         Alias->getValueAsListOfStrings("Prefixes").front(), Alias,
@@ -363,9 +364,8 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
 
   // Prefer a program specific help string.
   // This is a list of (visibilities, string) pairs.
-  std::vector<Record *> VisibilitiesHelp =
-      R->getValueAsListOfDefs("HelpTextsForVariants");
-  for (Record *VisibilityHelp : VisibilitiesHelp) {
+  for (const Record *VisibilityHelp :
+       R->getValueAsListOfDefs("HelpTextsForVariants")) {
     // This is a list of visibilities.
     ArrayRef<Init *> Visibilities =
         VisibilityHelp->getValueAsListInit("Visibilities")->getValues();

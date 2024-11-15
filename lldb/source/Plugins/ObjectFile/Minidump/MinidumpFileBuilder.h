@@ -172,7 +172,6 @@ private:
   // to duplicate it in the exception data.
   std::unordered_map<lldb::tid_t, llvm::minidump::LocationDescriptor>
       m_tid_to_reg_ctx;
-  std::unordered_set<lldb::addr_t> m_saved_stack_ranges;
   lldb::FileUP m_core_file;
   lldb_private::SaveCoreOptions m_save_core_options;
 };

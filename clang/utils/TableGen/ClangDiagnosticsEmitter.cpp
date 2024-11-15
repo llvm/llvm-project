@@ -47,8 +47,8 @@ public:
     ArrayRef<const Record *> DiagGroups =
         Records.getAllDerivedDefinitions("DiagGroup");
     for (unsigned i = 0, e = DiagGroups.size(); i != e; ++i) {
-      std::vector<Record*> SubGroups =
-        DiagGroups[i]->getValueAsListOfDefs("SubGroups");
+      std::vector<const Record *> SubGroups =
+          DiagGroups[i]->getValueAsListOfDefs("SubGroups");
       for (unsigned j = 0, e = SubGroups.size(); j != e; ++j)
         Mapping[SubGroups[j]].push_back(DiagGroups[i]);
     }
@@ -180,10 +180,8 @@ static void groupDiagnostics(ArrayRef<const Record *> Diags,
     GI.GroupName = Group->getName();
     GI.Defs.push_back(Group);
 
-    std::vector<Record*> SubGroups = Group->getValueAsListOfDefs("SubGroups");
-    for (unsigned j = 0, e = SubGroups.size(); j != e; ++j)
-      GI.SubGroups.push_back(
-          std::string(SubGroups[j]->getValueAsString("GroupName")));
+    for (const Record *SubGroup : Group->getValueAsListOfDefs("SubGroups"))
+      GI.SubGroups.push_back(SubGroup->getValueAsString("GroupName").str());
   }
 
   // Assign unique ID numbers to the groups.
