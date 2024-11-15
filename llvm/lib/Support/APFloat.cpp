@@ -375,6 +375,10 @@ bool APFloatBase::semanticsHasSignedRepr(const fltSemantics &semantics) {
   return semantics.hasSignedRepr;
 }
 
+bool APFloatBase::semanticsHasNanOrInf(const fltSemantics &semantics) {
+  return semantics.nonFiniteBehavior != fltNonfiniteBehavior::FiniteOnly;
+}
+
 bool APFloatBase::isRepresentableAsNormalIn(const fltSemantics &Src,
                                             const fltSemantics &Dst) {
   // Exponent range must be larger.
