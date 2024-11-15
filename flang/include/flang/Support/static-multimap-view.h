@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_COMMON_STATIC_MULTIMAP_VIEW_H_
-#define FORTRAN_COMMON_STATIC_MULTIMAP_VIEW_H_
+#ifndef FORTRAN_SUPPORT_STATIC_MULTIMAP_VIEW_H_
+#define FORTRAN_SUPPORT_STATIC_MULTIMAP_VIEW_H_
 #include <algorithm>
 #include <utility>
 
@@ -59,4 +59,4 @@ private:
   const_iterator end_{nullptr};
 };
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_STATIC_MULTIMAP_VIEW_H_
+#endif /* FORTRAN_SUPPORT_STATIC_MULTIMAP_VIEW_H_ */

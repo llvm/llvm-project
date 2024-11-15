@@ -1,4 +1,4 @@
-//===------ LangOptions.h ---------------------------------------*- C++ -*-===//
+//===-- include/flang/Support/LangOptions.h ---------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_COMMON_LANGOPTIONS_H
-#define FORTRAN_COMMON_LANGOPTIONS_H
+#ifndef FORTRAN_SUPPORT_LANGOPTIONS_H_
+#define FORTRAN_SUPPORT_LANGOPTIONS_H_
 
 #include <string>
 #include <vector>
@@ -69,4 +69,4 @@ public:
 
 } // end namespace Fortran::common
 
-#endif // FORTRAN_COMMON_LANGOPTIONS_H
+#endif /* FORTRAN_SUPPORT_LANGOPTIONS_H_ */

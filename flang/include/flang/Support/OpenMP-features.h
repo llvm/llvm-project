@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_COMMON_OPENMP_FEATURES_H_
-#define FORTRAN_COMMON_OPENMP_FEATURES_H_
+#ifndef FORTRAN_SUPPORT_OPENMP_FEATURES_H_
+#define FORTRAN_SUPPORT_OPENMP_FEATURES_H_
 
 namespace Fortran::common {
 
@@ -49,4 +49,4 @@ void setOpenMPMacro(int version, FortranPredefinitions &predefinitions) {
   }
 }
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_OPENMP_FEATURES_H_
+#endif /* FORTRAN_SUPPORT_OPENMP_FEATURES_H_ */
