@@ -518,7 +518,6 @@ void StructType::computeSizeAndAlignment(
     auto ty = members[i];
 
     // Found a nested union: recurse into it to fetch its largest member.
-    auto structMember = mlir::dyn_cast<StructType>(ty);
     if (!largestMember ||
         dataLayout.getTypeABIAlignment(ty) >
             dataLayout.getTypeABIAlignment(largestMember) ||
