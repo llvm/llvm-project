@@ -113,7 +113,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeRABasicPass(Registry);
   initializeRAGreedyPass(Registry);
   initializeRegAllocFastPass(Registry);
-  initializeRegUsageInfoCollectorPass(Registry);
+  initializeRegUsageInfoCollectorLegacyPass(Registry);
   initializeRegUsageInfoPropagationPass(Registry);
   initializeRegisterCoalescerPass(Registry);
   initializeRemoveLoadsIntoFakeUsesPass(Registry);
