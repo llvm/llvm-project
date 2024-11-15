@@ -568,6 +568,25 @@ func.func @minmaxf(%arg0 : f32, %arg1 : f32) -> f32 {
 
 // -----
 
+// CHECK-LABEL: @ceilops
+func.func @ceilops(%arg0 : index, %arg1 : i32) -> index {
+  // CHECK-NOT: = arith.
+  %0 = arith.ceildivsi %arg0, %arg0 : index
+  %1 = arith.ceildivui %arg1, %arg1 : i32
+  return %0 : index
+}
+
+// -----
+
+// CHECK-LABEL: @floordivsi
+func.func @floordivsi(%arg0 : i32, %arg1 : i32) -> i32 {
+  // CHECK-NOT: = arith.
+  %0 = arith.floordivsi %arg0, %arg1 : i32
+  return %0 : i32
+}
+
+// -----
+
 // CHECK-LABEL: @fastmath
 func.func @fastmath(%arg0: f32, %arg1: f32, %arg2: i32) {
 // CHECK: llvm.fadd %arg0, %arg1  {fastmathFlags = #llvm.fastmath<fast>} : f32
