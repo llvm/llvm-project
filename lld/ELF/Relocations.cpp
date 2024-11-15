@@ -2293,6 +2293,30 @@ bool ThunkCreator::normalizeExistingThunk(Relocation &rel, uint64_t src) {
   return false;
 }
 
+// When indirect branches are restricted, such as AArch64 BTI Thunks may need
+// to target a linker generated landing pad instead of the target. This needs
+// to be done once per pass as the need for a BTI thunk is dependent whether
+// a thunk is short or long. We iterate over all the thunks to make sure we
+// catch thunks that have been created but are no longer live. Non-live thunks
+// are not reachable via normalizeExistingThunk() but are still written.
+bool ThunkCreator::addSyntheticLandingPads() {
+  bool addressesChanged = false;
+  for (Thunk *t : allThunks) {
+    if (!t->needsSyntheticLandingPad())
+      continue;
+    Thunk *lpt;
+    bool isNew;
+    auto &dr = cast<Defined>(t->destination);
+    std::tie(lpt, isNew) = getSyntheticLandingPad(dr, t->addend);
+    if (isNew) {
+      addressesChanged = true;
+      getISThunkSec(cast<InputSection>(dr.section))->addThunk(lpt);
+    }
+    t->landingPad = lpt->getThunkTargetSym();
+  }
+  return addressesChanged;
+}
+
 // Process all relocations from the InputSections that have been assigned
 // to InputSectionDescriptions and redirect through Thunks if needed. The
 // function should be called iteratively until it returns false.
@@ -2325,6 +2349,9 @@ bool ThunkCreator::createThunks(uint32_t pass,
 
   if (pass == 0 && ctx.target->getThunkSectionSpacing())
     createInitialThunkSections(outputSections);
+
+  if (ctx.arg.emachine == EM_AARCH64)
+    addressesChanged = addSyntheticLandingPads();
 
   // Create all the Thunks and insert them into synthetic ThunkSections. The
   // ThunkSections are later inserted back into InputSectionDescriptions.
@@ -2360,20 +2387,7 @@ bool ThunkCreator::createThunks(uint32_t pass,
                 ts = getISDThunkSec(os, isec, isd, rel, src);
               ts->addThunk(t);
               thunks[t->getThunkTargetSym()] = t;
-
-              // When indirect branches are restricted, such as AArch64 BTI
-              // Thunks may need to target a linker generated landing pad
-              // instead of the target.
-              if (t->needsSyntheticLandingPad()) {
-                Thunk *lpt;
-                auto &dr = cast<Defined>(t->destination);
-                std::tie(lpt, isNew) = getSyntheticLandingPad(dr, t->addend);
-                if (isNew) {
-                  ts = getISThunkSec(cast<InputSection>(dr.section));
-                  ts->addThunk(lpt);
-                }
-                t->landingPad = lpt->getThunkTargetSym();
-              }
+              allThunks.push_back(t);
             }
 
             // Redirect relocation to Thunk, we never go via the PLT to a Thunk
