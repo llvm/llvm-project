@@ -247,7 +247,7 @@ static bool hasTextBehind(size_t Idx, const ArrayRef<Token> &Tokens) {
   int PrevIdx = Idx - 1;
   if (Tokens[PrevIdx].getType() != Token::Type::Text)
     return true;
-  
+
   const Token &PrevToken = Tokens[Idx - 1];
   StringRef TokenBody = PrevToken.getRawBody().rtrim(" \t\v");
   return !TokenBody.ends_with("\n") && !(TokenBody.empty() && Idx == 1);
@@ -303,7 +303,7 @@ static void stripTokenAhead(SmallVector<Token> &Tokens, size_t Idx) {
 // The exception for this is partial tag which requires us to
 // keep track of the indentation once it's rendered.
 static void stripTokenBefore(SmallVector<Token> &Tokens, size_t Idx,
-                      Token &CurrentToken, Token::Type CurrentType) {
+                             Token &CurrentToken, Token::Type CurrentType) {
   Token &PrevToken = Tokens[Idx - 1];
   StringRef PrevTokenBody = PrevToken.getTokenBody();
   StringRef Unindented = PrevTokenBody.rtrim(" \t\v");
@@ -387,7 +387,7 @@ SmallVector<Token> tokenize(StringRef Template) {
 
     if ((!HasTextAhead && !HasTextBehind) || (!HasTextAhead && Idx == 0))
       stripTokenAhead(Tokens, Idx);
-    
+
     if ((!HasTextBehind && !HasTextAhead) || (!HasTextBehind && Idx == LastIdx))
       stripTokenBefore(Tokens, Idx, CurrentToken, CurrentType);
   }
@@ -516,7 +516,7 @@ Template::Template(StringRef TemplateStr) {
   Tree->setUpNode(LocalAllocator, Partials, Lambdas, SectionLambdas, Escapes);
 }
 
-static void toMustacheString (const Value &Data, raw_ostream &OS) {
+static void toMustacheString(const Value &Data, raw_ostream &OS) {
   switch (Data.kind()) {
   case Value::Null:
     return;
