@@ -1303,6 +1303,12 @@ Error IndexedMemProfReader::deserializeV3(const unsigned char *Start,
   FrameBase = Ptr;
   CallStackBase = Start + CallStackPayloadOffset;
 
+  // Compute the number of elements in the radix tree array.  Since we use this
+  // to reserve enough bits in a BitVector, it's totally OK if we overestimate
+  // this number a little bit because of padding just before the next section.
+  RadixTreeSize = (RecordPayloadOffset - CallStackPayloadOffset) /
+                  sizeof(memprof::LinearFrameId);
+
   // Now initialize the table reader with a pointer into data buffer.
   MemProfRecordTable.reset(MemProfRecordHashTable::Create(
       /*Buckets=*/Start + RecordTableOffset,
@@ -1664,6 +1670,43 @@ IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
               "requires version between {} and {}, inclusive",
               Version, memprof::MinimumSupportedVersion,
               memprof::MaximumSupportedVersion));
+}
+
+DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>>
+IndexedMemProfReader::getMemProfCallerCalleePairs() const {
+  assert(MemProfRecordTable);
+  assert(Version == memprof::Version3);
+
+  memprof::LinearFrameIdConverter FrameIdConv(FrameBase);
+  memprof::CallerCalleePairExtractor Extractor(CallStackBase, FrameIdConv);
+
+  // The set of linear call stack IDs that we need to traverse from.  We expect
+  // the set to be dense, so we use a BitVector.
+  BitVector Worklist(RadixTreeSize);
+
+  // Collect the set of linear call stack IDs.  Since we expect a lot of
+  // duplicates, we first collect them in the form of a bit vector before
+  // processing them.
+  for (const memprof::IndexedMemProfRecord &IndexedRecord :
+       MemProfRecordTable->data())
+    for (const memprof::IndexedAllocationInfo &IndexedAI :
+         IndexedRecord.AllocSites)
+      Worklist.set(IndexedAI.CSId);
+
+  // Collect caller-callee pairs for each linear call stack ID in Worklist.
+  for (unsigned CS : Worklist.set_bits())
+    Extractor(CS);
+
+  DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>> Pairs =
+      std::move(Extractor.CallerCalleePairs);
+
+  // Sort each call list by the source location.
+  for (auto &[CallerGUID, CallList] : Pairs) {
+    llvm::sort(CallList);
+    CallList.erase(llvm::unique(CallList), CallList.end());
+  }
+
+  return Pairs;
 }
 
 Error IndexedInstrProfReader::getFunctionCounts(StringRef FuncName,

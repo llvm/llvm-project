@@ -72,7 +72,6 @@
 #include <cstdint>
 #include <iterator>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -161,7 +160,7 @@ static inline Align getFnStackAlignment(const TargetSubtargetInfo *STI,
   return STI->getFrameLowering()->getStackAlign();
 }
 
-MachineFunction::MachineFunction(Function &F, const LLVMTargetMachine &Target,
+MachineFunction::MachineFunction(Function &F, const TargetMachine &Target,
                                  const TargetSubtargetInfo &STI, MCContext &Ctx,
                                  unsigned FunctionNum)
     : F(F), Target(Target), STI(&STI), Ctx(Ctx) {
@@ -376,6 +375,37 @@ void MachineFunction::RenumberBlocks(MachineBasicBlock *MBB) {
   assert(BlockNo <= MBBNumbering.size() && "Mismatch!");
   MBBNumbering.resize(BlockNo);
   MBBNumberingEpoch++;
+}
+
+int64_t MachineFunction::estimateFunctionSizeInBytes() {
+  const TargetInstrInfo &TII = *getSubtarget().getInstrInfo();
+  const Align FunctionAlignment = getAlignment();
+  MachineFunction::iterator MBBI = begin(), E = end();
+  /// Offset - Distance from the beginning of the function to the end
+  /// of the basic block.
+  int64_t Offset = 0;
+
+  for (; MBBI != E; ++MBBI) {
+    const Align Alignment = MBBI->getAlignment();
+    int64_t BlockSize = 0;
+
+    for (auto &MI : *MBBI) {
+      BlockSize += TII.getInstSizeInBytes(MI);
+    }
+
+    int64_t OffsetBB;
+    if (Alignment <= FunctionAlignment) {
+      OffsetBB = alignTo(Offset, Alignment);
+    } else {
+      // The alignment of this MBB is larger than the function's alignment, so
+      // we can't tell whether or not it will insert nops. Assume that it will.
+      OffsetBB = alignTo(Offset, Alignment) + Alignment.value() -
+                 FunctionAlignment.value();
+    }
+    Offset = OffsetBB + BlockSize;
+  }
+
+  return Offset;
 }
 
 /// This method iterates over the basic blocks and assigns their IsBeginSection

@@ -68,7 +68,6 @@
 #include "llvm/CodeGen/CFIFixup.h"
 
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"

@@ -54,7 +54,7 @@ ScriptLexer::Buffer::Buffer(Ctx &ctx, MemoryBufferRef mb)
 }
 
 ScriptLexer::ScriptLexer(Ctx &ctx, MemoryBufferRef mb)
-    : curBuf(ctx, mb), mbs(1, mb) {
+    : ctx(ctx), curBuf(ctx, mb), mbs(1, mb) {
   activeFilenames.insert(mb.getBufferIdentifier());
 }
 
@@ -80,7 +80,7 @@ std::string ScriptLexer::getCurrentLocation() {
 
 // We don't want to record cascading errors. Keep only the first one.
 void ScriptLexer::setError(const Twine &msg) {
-  if (errorCount())
+  if (errCount(ctx))
     return;
 
   std::string s = (getCurrentLocation() + ": " + msg).str();
@@ -196,7 +196,7 @@ StringRef ScriptLexer::skipSpace(StringRef s) {
 }
 
 // Used to determine whether to stop parsing. Treat errors like EOF.
-bool ScriptLexer::atEOF() { return eof || errorCount(); }
+bool ScriptLexer::atEOF() { return eof || errCount(ctx); }
 
 StringRef ScriptLexer::next() {
   prevTok = peek();
@@ -228,7 +228,7 @@ bool ScriptLexer::consume(StringRef tok) {
 void ScriptLexer::skip() { (void)next(); }
 
 void ScriptLexer::expect(StringRef expect) {
-  if (errorCount())
+  if (errCount(ctx))
     return;
   StringRef tok = next();
   if (tok != expect) {
