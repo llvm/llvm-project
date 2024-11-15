@@ -518,6 +518,9 @@ def SDT_AArch64TBL : SDTypeProfile<1, 2, [
   SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisInt<2>
 ]>;
 
+def SDT_AArch64cbrr : SDTypeProfile<0, 4, [SDTCisVT<0, i32>, SDTCisInt<1>, SDTCisSameAs<1, 2>, SDTCisVT<3, OtherVT>]>;
+def SDT_AArch64cbri : SDTypeProfile<0, 4, [SDTCisVT<0, i32>, SDTCisInt<1>, SDTCisInt<2>, SDTCisVT<3, OtherVT>]>;
+
 // non-extending masked load fragment.
 def nonext_masked_load :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
@@ -694,6 +697,8 @@ def topbitsallzero64: PatLeaf<(i64 GPR64:$src), [{
   }]>;
 
 // Node definitions.
+def AArch64CBrr : SDNode<"AArch64ISD::CBRR", SDT_AArch64cbrr, [SDNPHasChain]>;
+def AArch64CBri : SDNode<"AArch64ISD::CBRI", SDT_AArch64cbri, [SDNPHasChain]>;
 def AArch64adrp          : SDNode<"AArch64ISD::ADRP", SDTIntUnaryOp, []>;
 def AArch64adr           : SDNode<"AArch64ISD::ADR", SDTIntUnaryOp, []>;
 def AArch64addlow        : SDNode<"AArch64ISD::ADDlow", SDTIntBinOp, []>;
@@ -10488,6 +10493,10 @@ defm : PromoteBinaryv8f16Tov4f32<any_fdiv, FDIVv4f32>;
 defm : PromoteBinaryv8f16Tov4f32<any_fmul, FMULv4f32>;
 defm : PromoteBinaryv8f16Tov4f32<any_fsub, FSUBv4f32>;
 
+//===----------------------------------------------------------------------===//
+// Compare and Branch (FEAT_CMPBR)
+//===----------------------------------------------------------------------===//
+
 let Predicates = [HasCMPBR] in {
  defm CBGT : CmpBranchRegister<0b000, "cbgt">;
  defm CBGE : CmpBranchRegister<0b001, "cbge">;
@@ -10536,6 +10545,22 @@ let Predicates = [HasCMPBR] in {
  defm : CmpBranchWRegisterAlias<"cbhlo", "CBHHI">;
  defm : CmpBranchWRegisterAlias<"cbhls", "CBHHS">;
  defm : CmpBranchWRegisterAlias<"cbhlt", "CBHGT">;
+
+  // Pseudos for codegen
+  def CBWPrr : CmpBranchRegisterPseudo<GPR32>;
+  def CBXPrr : CmpBranchRegisterPseudo<GPR64>;
+  def CBWPri : CmpBranchImmediatePseudo<GPR32, uimm6_32b>;
+  def CBXPri : CmpBranchImmediatePseudo<GPR64, uimm6_64b>;
+
+def : Pat<(AArch64CBrr i32:$Cond, GPR32:$Rn, GPR32:$Rt, bb:$Target),
+          (CBWPrr ccode:$Cond, GPR32:$Rn, GPR32:$Rt, am_brcmpcond:$Target)>;
+def : Pat<(AArch64CBrr i32:$Cond, GPR64:$Rn, GPR64:$Rt, bb:$Target),
+          (CBXPrr ccode:$Cond, GPR64:$Rn, GPR64:$Rt, am_brcmpcond:$Target)>;
+def : Pat<(AArch64CBri i32:$Cond, GPR32:$Rn, i32:$Imm, bb:$Target),
+          (CBWPri ccode:$Cond, GPR32:$Rn, uimm6_32b:$Imm, am_brcmpcond:$Target)>;
+def : Pat<(AArch64CBri i32:$Cond, GPR64:$Rn, i64:$Imm, bb:$Target),
+          (CBXPri ccode:$Cond, GPR64:$Rn, uimm6_64b:$Imm, am_brcmpcond:$Target)>;
+
 } // HasCMPBR
 
 

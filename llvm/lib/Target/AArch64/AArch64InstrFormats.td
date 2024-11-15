@@ -13232,6 +13232,21 @@ multiclass CmpBranchRegisterAlias<string mnemonic, string insn> {
   def : InstAlias<mnemonic # "\t$Rt, $Rm, $target",
                  (!cast<Instruction>(insn # "Xrr") GPR64:$Rm, GPR64:$Rt, am_brcmpcond:$target), 0>;
 }
+
+class CmpBranchRegisterPseudo<RegisterClass regtype>
+  : Pseudo<(outs), (ins ccode:$Cond, regtype:$Rt, regtype:$Rm, am_brcmpcond:$Target), []>,
+    Sched<[WriteBr]> {
+  let isBranch = 1;
+  let isTerminator = 1;
+}
+
+class CmpBranchImmediatePseudo<RegisterClass regtype, ImmLeaf imtype>
+  : Pseudo<(outs), (ins ccode:$Cond, regtype:$Rt, imtype:$Imm, am_brcmpcond:$Target), []>,
+    Sched<[WriteBr]> {
+  let isBranch = 1;
+  let isTerminator = 1;
+}
+
 //----------------------------------------------------------------------------
 // Allow the size specifier tokens to be upper case, not just lower.
 def : TokenAlias<".4B", ".4b">;  // Add dot product

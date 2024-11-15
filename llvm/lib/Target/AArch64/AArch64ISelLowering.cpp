@@ -2983,6 +2983,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::CTTZ_ELTS)
     MAKE_CASE(AArch64ISD::CALL_ARM64EC_TO_X64)
     MAKE_CASE(AArch64ISD::URSHR_I_PRED)
+    MAKE_CASE(AArch64ISD::CBRR)
+    MAKE_CASE(AArch64ISD::CBRI)
   }
 #undef MAKE_CASE
   return nullptr;
@@ -10591,6 +10593,56 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
       std::tie(LHS, SignBitPos) = lookThroughSignExtension(LHS);
       return DAG.getNode(AArch64ISD::TBZ, dl, MVT::Other, Chain, LHS,
                          DAG.getConstant(SignBitPos, dl, MVT::i64), Dest);
+    }
+
+    // Try to emit Armv9.6 CB instructions. We prefer tb{n}z/cb{n}z due to their
+    // larger branch displacement but do prefer CB over cmp + br.
+    if (Subtarget->hasCMPBR() &&
+        AArch64CC::isValidCBCond(changeIntCCToAArch64CC(CC)) &&
+        ProduceNonFlagSettingCondBr) {
+      AArch64CC::CondCode ACC = changeIntCCToAArch64CC(CC);
+      unsigned Opc = AArch64ISD::CBRR;
+      if (auto *Imm = dyn_cast<ConstantSDNode>(RHS)) {
+        // Check conservatively if the immediate fits the valid range [0, 64).
+        // Immediate variants for GE and HS definitely need to be decremented
+        // when lowering the pseudos later, so an immediate of 1 would become 0.
+        // For the inverse conditions LT and LO we don't know for sure if they
+        // will need a decrement but should the decision be made to reverse the
+        // branch condition, we again end up with the need to decrement.
+        // The same argument holds for LE, LS, GT and HI and possibly
+        // incremented immediates. This can lead to slightly less optimal
+        // codegen, e.g. we never codegen the legal case
+        //    cblt w0, #63, A
+        // because we could end up with the illegal case
+        //    cbge w0, #64, B
+        // should the decision to reverse the branch direction be made. For the
+        // lower bound cases this is no problem since we can express comparisons
+        // against 0 with either tbz/tnbz or using wzr/xzr.
+        uint64_t LowerBound = 0, UpperBound = 64;
+        switch (ACC) {
+        case AArch64CC::GE:
+        case AArch64CC::HS:
+        case AArch64CC::LT:
+        case AArch64CC::LO:
+          LowerBound = 1;
+          break;
+        case AArch64CC::LE:
+        case AArch64CC::LS:
+        case AArch64CC::GT:
+        case AArch64CC::HI:
+          UpperBound = 63;
+          break;
+        default:
+          break;
+        }
+
+        if (Imm->getAPIntValue().uge(LowerBound) &&
+            Imm->getAPIntValue().ult(UpperBound))
+          Opc = AArch64ISD::CBRI;
+      }
+
+      SDValue Cond = DAG.getTargetConstant(ACC, dl, MVT::i32);
+      return DAG.getNode(Opc, dl, MVT::Other, Chain, Cond, LHS, RHS, Dest);
     }
 
     SDValue CCVal;
