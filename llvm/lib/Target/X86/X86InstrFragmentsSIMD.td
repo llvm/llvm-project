@@ -46,10 +46,12 @@ def X86fminc    : SDNode<"X86ISD::FMINC", SDTFPBinOp,
 def X86fmaxc    : SDNode<"X86ISD::FMAXC", SDTFPBinOp,
     [SDNPCommutative, SDNPAssociative]>;
 
-def X86strict_fmin : SDNode<"X86ISD::STRICT_FMIN", SDTFPBinOp,
-                            [SDNPHasChain]>;
-def X86strict_fmax : SDNode<"X86ISD::STRICT_FMAX", SDTFPBinOp,
-                            [SDNPHasChain]>;
+let IsStrictFP = true in {
+  def X86strict_fmin : SDNode<"X86ISD::STRICT_FMIN", SDTFPBinOp,
+                              [SDNPHasChain]>;
+  def X86strict_fmax : SDNode<"X86ISD::STRICT_FMAX", SDTFPBinOp,
+                              [SDNPHasChain]>;
+}
 
 def X86any_fmin : PatFrags<(ops node:$src1, node:$src2),
                            [(X86strict_fmin node:$src1, node:$src2),
@@ -146,6 +148,7 @@ def X86vfpext  : SDNode<"X86ISD::VFPEXT",
                         SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVec<0>,
                                              SDTCisFP<1>, SDTCisVec<1>]>>;
 
+let IsStrictFP = true in
 def X86strict_vfpext  : SDNode<"X86ISD::STRICT_VFPEXT",
                                SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVec<0>,
                                                     SDTCisFP<1>, SDTCisVec<1>]>,
@@ -165,6 +168,7 @@ def X86vfpround2 : SDNode<"X86ISD::VFPROUND2",
                                                SDTCisSameAs<1, 2>,
                                                SDTCisOpSmallerThanOp<0, 1>]>>;
 
+let IsStrictFP = true in
 def X86strict_vfpround: SDNode<"X86ISD::STRICT_VFPROUND",
                         SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVec<0>,
                                              SDTCisFP<1>, SDTCisVec<1>,
@@ -215,7 +219,10 @@ def X86pcmpeq  : SDNode<"X86ISD::PCMPEQ", SDTIntBinOp, [SDNPCommutative]>;
 def X86pcmpgt  : SDNode<"X86ISD::PCMPGT", SDTIntBinOp>;
 
 def X86cmpp    : SDNode<"X86ISD::CMPP",      SDTX86VFCMP>;
+
+let IsStrictFP = true in
 def X86strict_cmpp : SDNode<"X86ISD::STRICT_CMPP", SDTX86VFCMP, [SDNPHasChain]>;
+
 def X86any_cmpp    : PatFrags<(ops node:$src1, node:$src2, node:$src3),
                                [(X86strict_cmpp node:$src1, node:$src2, node:$src3),
                                 (X86cmpp node:$src1, node:$src2, node:$src3)]>;
@@ -235,7 +242,10 @@ def X86CmpMaskCCScalar :
 
 def X86cmpm     : SDNode<"X86ISD::CMPM",     X86CmpMaskCC>;
 def X86cmpmm    : SDNode<"X86ISD::CMPMM",    X86MaskCmpMaskCC>;
+
+let IsStrictFP = true in
 def X86strict_cmpm : SDNode<"X86ISD::STRICT_CMPM", X86CmpMaskCC, [SDNPHasChain]>;
+
 def X86any_cmpm    : PatFrags<(ops node:$src1, node:$src2, node:$src3),
                                [(X86strict_cmpm node:$src1, node:$src2, node:$src3),
                                 (X86cmpm node:$src1, node:$src2, node:$src3)]>;
@@ -494,8 +504,11 @@ def X86VRangeSAE   : SDNode<"X86ISD::VRANGE_SAE",    SDTFPBinOpImm>;
 def X86VReduce     : SDNode<"X86ISD::VREDUCE",       SDTFPUnaryOpImm>;
 def X86VReduceSAE  : SDNode<"X86ISD::VREDUCE_SAE",   SDTFPUnaryOpImm>;
 def X86VRndScale   : SDNode<"X86ISD::VRNDSCALE",     SDTFPUnaryOpImm>;
+
+let IsStrictFP = true in
 def X86strict_VRndScale : SDNode<"X86ISD::STRICT_VRNDSCALE", SDTFPUnaryOpImm,
                                   [SDNPHasChain]>;
+
 def X86any_VRndScale    : PatFrags<(ops node:$src1, node:$src2),
                                     [(X86strict_VRndScale node:$src1, node:$src2),
                                     (X86VRndScale node:$src1, node:$src2)]>;
@@ -554,17 +567,26 @@ def X86fgetexps     : SDNode<"X86ISD::FGETEXPS", SDTFPBinOp>;
 def X86fgetexpSAEs  : SDNode<"X86ISD::FGETEXPS_SAE", SDTFPBinOp>;
 
 def X86Fnmadd    : SDNode<"X86ISD::FNMADD",    SDTFPTernaryOp, [SDNPCommutative]>;
+
+let IsStrictFP = true in
 def X86strict_Fnmadd : SDNode<"X86ISD::STRICT_FNMADD", SDTFPTernaryOp, [SDNPCommutative, SDNPHasChain]>;
+
 def X86any_Fnmadd : PatFrags<(ops node:$src1, node:$src2, node:$src3),
                              [(X86strict_Fnmadd node:$src1, node:$src2, node:$src3),
                               (X86Fnmadd node:$src1, node:$src2, node:$src3)]>;
 def X86Fmsub     : SDNode<"X86ISD::FMSUB",     SDTFPTernaryOp, [SDNPCommutative]>;
+
+let IsStrictFP = true in
 def X86strict_Fmsub : SDNode<"X86ISD::STRICT_FMSUB",     SDTFPTernaryOp, [SDNPCommutative, SDNPHasChain]>;
+
 def X86any_Fmsub : PatFrags<(ops node:$src1, node:$src2, node:$src3),
                             [(X86strict_Fmsub node:$src1, node:$src2, node:$src3),
                              (X86Fmsub node:$src1, node:$src2, node:$src3)]>;
 def X86Fnmsub    : SDNode<"X86ISD::FNMSUB",    SDTFPTernaryOp, [SDNPCommutative]>;
+
+let IsStrictFP = true in
 def X86strict_Fnmsub : SDNode<"X86ISD::STRICT_FNMSUB",    SDTFPTernaryOp, [SDNPCommutative, SDNPHasChain]>;
+
 def X86any_Fnmsub : PatFrags<(ops node:$src1, node:$src2, node:$src3),
                              [(X86strict_Fnmsub node:$src1, node:$src2, node:$src3),
                               (X86Fnmsub node:$src1, node:$src2, node:$src3)]>;
@@ -709,8 +731,12 @@ def X86cvtp2UIntRnd     : SDNode<"X86ISD::CVTP2UI_RND",  SDTFloatToIntRnd>;
 // cvtt fp-to-int staff
 def X86cvttp2si      : SDNode<"X86ISD::CVTTP2SI",  SDTFloatToInt>;
 def X86cvttp2ui      : SDNode<"X86ISD::CVTTP2UI",  SDTFloatToInt>;
-def X86strict_cvttp2si : SDNode<"X86ISD::STRICT_CVTTP2SI",  SDTFloatToInt, [SDNPHasChain]>;
-def X86strict_cvttp2ui : SDNode<"X86ISD::STRICT_CVTTP2UI",  SDTFloatToInt, [SDNPHasChain]>;
+
+let IsStrictFP = true in {
+  def X86strict_cvttp2si : SDNode<"X86ISD::STRICT_CVTTP2SI",  SDTFloatToInt, [SDNPHasChain]>;
+  def X86strict_cvttp2ui : SDNode<"X86ISD::STRICT_CVTTP2UI",  SDTFloatToInt, [SDNPHasChain]>;
+}
+
 def X86any_cvttp2si : PatFrags<(ops node:$src),
                                [(X86strict_cvttp2si node:$src),
                                 (X86cvttp2si node:$src)]>;
@@ -720,8 +746,12 @@ def X86any_cvttp2ui : PatFrags<(ops node:$src),
 
 def X86VSintToFP      : SDNode<"X86ISD::CVTSI2P",  SDTVintToFP>;
 def X86VUintToFP      : SDNode<"X86ISD::CVTUI2P",  SDTVintToFP>;
-def X86strict_VSintToFP : SDNode<"X86ISD::STRICT_CVTSI2P",  SDTVintToFP, [SDNPHasChain]>;
-def X86strict_VUintToFP : SDNode<"X86ISD::STRICT_CVTUI2P",  SDTVintToFP, [SDNPHasChain]>;
+
+let IsStrictFP = true in {
+  def X86strict_VSintToFP : SDNode<"X86ISD::STRICT_CVTSI2P", SDTVintToFP, [SDNPHasChain]>;
+  def X86strict_VUintToFP : SDNode<"X86ISD::STRICT_CVTUI2P", SDTVintToFP, [SDNPHasChain]>;
+}
+
 def X86any_VSintToFP : PatFrags<(ops node:$src),
                                 [(X86strict_VSintToFP node:$src),
                                  (X86VSintToFP node:$src)]>;
@@ -761,8 +791,11 @@ def X86mcvttp2uis     : SDNode<"X86ISD::MCVTTP2UIS", SDTMFloatToInt>;
 def SDTcvtph2ps : SDTypeProfile<1, 1, [SDTCVecEltisVT<0, f32>,
                                        SDTCVecEltisVT<1, i16>]>;
 def X86cvtph2ps        : SDNode<"X86ISD::CVTPH2PS", SDTcvtph2ps>;
+
+let IsStrictFP = true in
 def X86strict_cvtph2ps : SDNode<"X86ISD::STRICT_CVTPH2PS", SDTcvtph2ps,
                                 [SDNPHasChain]>;
+
 def X86any_cvtph2ps : PatFrags<(ops node:$src),
                                [(X86strict_cvtph2ps node:$src),
                                 (X86cvtph2ps node:$src)]>;
@@ -773,8 +806,11 @@ def SDTcvtps2ph : SDTypeProfile<1, 2, [SDTCVecEltisVT<0, i16>,
                                        SDTCVecEltisVT<1, f32>,
                                        SDTCisVT<2, i32>]>;
 def X86cvtps2ph        : SDNode<"X86ISD::CVTPS2PH", SDTcvtps2ph>;
+
+let IsStrictFP = true in
 def X86strict_cvtps2ph : SDNode<"X86ISD::STRICT_CVTPS2PH", SDTcvtps2ph,
                                 [SDNPHasChain]>;
+
 def X86any_cvtps2ph : PatFrags<(ops node:$src1, node:$src2),
                                [(X86strict_cvtps2ph node:$src1, node:$src2),
                                 (X86cvtps2ph node:$src1, node:$src2)]>;
