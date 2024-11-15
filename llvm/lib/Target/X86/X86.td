@@ -1157,7 +1157,6 @@ def ProcessorFeatures {
 
   // Diamond Rapids
   list<SubtargetFeature> DMRAdditionalFeatures = [FeatureAVX10_2_512,
-                                                  FeatureAMXCOMPLEX,
                                                   FeatureSM4,
                                                   FeatureCMPCCXADD,
                                                   FeatureAVXIFMA,

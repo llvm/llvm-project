@@ -139,7 +139,7 @@ constexpr FeatureBitset FeaturesSapphireRapids =
 constexpr FeatureBitset FeaturesGraniteRapids =
     FeaturesSapphireRapids | FeatureAMX_FP16 | FeaturePREFETCHI;
 constexpr FeatureBitset FeaturesDiamondRapids =
-    FeaturesGraniteRapids | FeatureAMX_COMPLEX | FeatureAVX10_2_512 |
+    FeaturesGraniteRapids | FeatureAVX10_2_512 |
     FeatureCMPCCXADD | FeatureAVXIFMA | FeatureAVXNECONVERT |
     FeatureAVXVNNIINT8 | FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 |
     FeatureSM4 | FeatureEGPR | FeatureZU | FeatureCCMP | FeaturePush2Pop2 |
@@ -390,7 +390,7 @@ constexpr ProcInfo Processors[] = {
   // Clearwaterforest microarchitecture based processors.
   { {"clearwaterforest"}, CK_Lunarlake, FEATURE_AVX2, FeaturesClearwaterforest, 'p', false },
   // Diamond Rapids microarchitecture based processors.
-  { {"diamondrapids"}, CK_DiamondRapids, FEATURE_AVX10_2_512, FeaturesDiamondRapids, 'z', false },
+  { {"diamondrapids"}, CK_Diamondrapids, FEATURE_AVX10_2_512, FeaturesDiamondRapids, 'z', false },
   // Knights Landing processor.
   { {"knl"}, CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', false },
   { {"mic_avx512"}, CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', true },
