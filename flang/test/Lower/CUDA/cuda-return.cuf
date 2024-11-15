@@ -1,6 +1,6 @@
 ! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
 
-! Check if the the finalizer works
+! Check if finalization works with a return statement
 
 program main
   integer, device :: a(10)
