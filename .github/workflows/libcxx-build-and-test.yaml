@@ -202,13 +202,13 @@ jobs:
       matrix:
         include:
         - config: generic-cxx03
-          os: macos-latest
+          os: macos-15
         - config: generic-cxx23
-          os: macos-latest
+          os: macos-15
         - config: generic-modules
-          os: macos-latest
+          os: macos-15
         - config: apple-configuration
-          os: macos-latest
+          os: macos-15
         - config: apple-system
           os: macos-13
         - config: apple-system-hardened
