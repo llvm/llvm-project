@@ -1751,17 +1751,16 @@ ConstString TypeSystemSwiftTypeRef::GetSwiftModuleFor(const SymbolContext &sc) {
   return {};
 }
 
-SwiftASTContext *TypeSystemSwiftTypeRef::GetSwiftASTContextFromExecutionScope(
+SymbolContext TypeSystemSwiftTypeRef::GetSymbolContext(
     ExecutionContextScope *exe_scope) const {
-  if (exe_scope) {
-    ExecutionContext exe_ctx;
-    exe_scope->CalculateExecutionContext(exe_ctx);
-    return GetSwiftASTContextFromExecutionContext(&exe_ctx);
-  }
-  return GetSwiftASTContextFromExecutionContext(nullptr);
+  if (!exe_scope)
+    return {};
+  ExecutionContext exe_ctx;
+  exe_scope->CalculateExecutionContext(exe_ctx);
+  return GetSymbolContext(&exe_ctx);
 }
 
-SwiftASTContext *TypeSystemSwiftTypeRef::GetSwiftASTContextFromExecutionContext(
+SymbolContext TypeSystemSwiftTypeRef::GetSymbolContext(
     const ExecutionContext *exe_ctx) const {
   SymbolContext sc;
   if (exe_ctx) {
@@ -1775,16 +1774,17 @@ SwiftASTContext *TypeSystemSwiftTypeRef::GetSwiftASTContextFromExecutionContext(
     if (auto target_sp = GetTargetWP().lock())
       sc = SymbolContext(target_sp, target_sp->GetExecutableModule());
 
-  if (!sc.module_sp) {
-    LLDB_LOGF(GetLog(LLDBLog::Types),
-              "Cannot create a SwiftASTContext without an execution context");
-    return nullptr;
-  }
-  return GetSwiftASTContext(sc);
+  return sc;
 }
 
 SwiftASTContext *
 TypeSystemSwiftTypeRef::GetSwiftASTContext(const SymbolContext &sc) const {
+  if (!sc.module_sp) {
+    LLDB_LOGV(GetLog(LLDBLog::Types),
+              "Cannot create a SwiftASTContext without an execution context");
+    return nullptr;
+  }
+
   std::lock_guard<std::mutex> guard(m_swift_ast_context_lock);
   // There is only one per-module context.
   const char *key = nullptr;
@@ -1809,6 +1809,12 @@ TypeSystemSwiftTypeRef::GetSwiftASTContext(const SymbolContext &sc) const {
 
 SwiftASTContext *TypeSystemSwiftTypeRefForExpressions::GetSwiftASTContext(
     const SymbolContext &sc) const {
+  if (!sc.module_sp) {
+    LLDB_LOGV(GetLog(LLDBLog::Types),
+              "Cannot create a SwiftASTContext without an execution context");
+    return nullptr;
+  }
+
   // Compute the cache key.
   const char *key = nullptr;
   ConstString module = GetSwiftModuleFor(sc);
@@ -1950,7 +1956,7 @@ TypeSystemSwiftTypeRef::GetMangledTypeName(opaque_compiler_type_t type) {
 
 void *TypeSystemSwiftTypeRef::ReconstructType(opaque_compiler_type_t type,
                                               const ExecutionContext *exe_ctx) {
-  if (auto *swift_ast_context = GetSwiftASTContextFromExecutionContext(exe_ctx))
+  if (auto *swift_ast_context = GetSwiftASTContext(GetSymbolContext(exe_ctx)))
     return llvm::expectedToStdOptional(
                swift_ast_context->ReconstructType(GetMangledTypeName(type)))
         .value_or(nullptr);
@@ -1969,7 +1975,7 @@ CompilerType
 TypeSystemSwiftTypeRef::ReconstructType(CompilerType type,
                                         const ExecutionContext *exe_ctx) {
   assert(type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>());
-  if (auto *swift_ast_context = GetSwiftASTContextFromExecutionContext(exe_ctx))
+  if (auto *swift_ast_context = GetSwiftASTContext(GetSymbolContext(exe_ctx)))
     return {swift_ast_context->weak_from_this(),
             ReconstructType(type.GetOpaqueQualType(), exe_ctx)};
   return {};
@@ -2361,7 +2367,7 @@ constexpr ExecutionContextScope *g_no_exe_ctx = nullptr;
              .GetSwiftValidateTypeSystem())                                    \
       return result;                                                           \
     ExecutionContext _exe_ctx(EXE_CTX);                                        \
-    if (!GetSwiftASTContextFromExecutionContext(&_exe_ctx))                    \
+    if (!GetSwiftASTContext(GetSymbolContext(&_exe_ctx)))                      \
       return result;                                                           \
     if (ShouldSkipValidation(TYPE))                                            \
       return result;                                                           \
@@ -2376,8 +2382,9 @@ constexpr ExecutionContextScope *g_no_exe_ctx = nullptr;
         _exe_ctx == ExecutionContext() ? nullptr : &_exe_ctx);                 \
     bool equivalent =                                                          \
         !ReconstructType(TYPE) /* missing .swiftmodule */ ||                   \
-        (Equivalent(result, GetSwiftASTContextFromExecutionContext(&_exe_ctx)  \
-                                ->REFERENCE ARGS));                            \
+        (Equivalent(                                                           \
+            result,                                                            \
+            GetSwiftASTContext(GetSymbolContext(&_exe_ctx))->REFERENCE ARGS)); \
     if (!equivalent)                                                           \
       llvm::dbgs() << "failing type was " << (const char *)TYPE << "\n";       \
     assert(equivalent &&                                                       \
@@ -2392,7 +2399,7 @@ constexpr ExecutionContextScope *g_no_exe_ctx = nullptr;
              .GetSwiftValidateTypeSystem())                                    \
       return result;                                                           \
     ExecutionContext _exe_ctx(EXE_CTX);                                        \
-    if (!GetSwiftASTContextFromExecutionContext(&_exe_ctx))                    \
+    if (!GetSwiftASTContext(GetSymbolContext(&_exe_ctx)))                      \
       return result;                                                           \
     if (ShouldSkipValidation(TYPE))                                            \
       return result;                                                           \
@@ -2410,7 +2417,7 @@ constexpr ExecutionContextScope *g_no_exe_ctx = nullptr;
       equivalent =                                                             \
           (Equivalent(llvm::expectedToStdOptional(std::move(result)),          \
                       llvm::expectedToStdOptional(                             \
-                          GetSwiftASTContextFromExecutionContext(&_exe_ctx)    \
+                          GetSwiftASTContext(GetSymbolContext(&_exe_ctx))      \
                               ->REFERENCE ARGS)));                             \
     } else { /* missing .swiftmodule */                                        \
       if (!result)                                                             \
@@ -3110,7 +3117,7 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
                 AsMangledName(type));
 
       if (auto *swift_ast_context =
-              GetSwiftASTContextFromExecutionScope(exe_scope))
+              GetSwiftASTContext(GetSymbolContext(exe_scope)))
         return swift_ast_context->GetBitSize(ReconstructType(type, exe_scope),
                                              exe_scope);
     }
@@ -3157,7 +3164,7 @@ TypeSystemSwiftTypeRef::GetByteStride(opaque_compiler_type_t type,
               "Couldn't compute stride of type %s using SwiftLanguageRuntime.",
               AsMangledName(type));
     if (auto *swift_ast_context =
-            GetSwiftASTContextFromExecutionScope(exe_scope))
+            GetSwiftASTContext(GetSymbolContext(exe_scope)))
       return swift_ast_context->GetByteStride(ReconstructType(type), exe_scope);
     return {};
   };
@@ -3278,7 +3285,7 @@ TypeSystemSwiftTypeRef::GetNumChildren(opaque_compiler_type_t type,
             AsMangledName(type));
 
   // Try SwiftASTContext.
-  if (auto *swift_ast_context = GetSwiftASTContextFromExecutionContext(exe_ctx))
+  if (auto *swift_ast_context = GetSwiftASTContext(GetSymbolContext(exe_ctx)))
     if (auto n = llvm::expectedToStdOptional(swift_ast_context->GetNumChildren(
             ReconstructType(type, exe_ctx), omit_empty_base_classes,
             exe_ctx))) {
@@ -3339,7 +3346,7 @@ uint32_t TypeSystemSwiftTypeRef::GetNumFields(opaque_compiler_type_t type,
             "Using SwiftASTContext::GetNumFields fallback for type %s",
             AsMangledName(type));
 
-  if (auto *swift_ast_context = GetSwiftASTContextFromExecutionContext(exe_ctx))
+  if (auto *swift_ast_context = GetSwiftASTContext(GetSymbolContext(exe_ctx)))
     return swift_ast_context->GetNumFields(ReconstructType(type, exe_ctx), exe_ctx);
   return {};
 }
@@ -3414,7 +3421,7 @@ TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
              "Had to engage SwiftASTContext fallback for type {0}, field #{1}.",
              AsMangledName(type), idx);
     if (auto *swift_ast_context =
-            GetSwiftASTContextFromExecutionContext(exe_ctx))
+            GetSwiftASTContext(GetSymbolContext(exe_ctx)))
       return swift_ast_context->GetChildCompilerTypeAtIndex(
           ReconstructType(type, exe_ctx), exe_ctx, idx, transparent_pointers,
           omit_empty_base_classes, ignore_array_bounds, child_name,
@@ -3429,7 +3436,7 @@ TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
     if (ast_num_children)
       return *ast_num_children;
     if (auto *swift_ast_context =
-            GetSwiftASTContextFromExecutionContext(exe_ctx))
+            GetSwiftASTContext(GetSymbolContext(exe_ctx)))
       ast_num_children = llvm::expectedToStdOptional(
           swift_ast_context->GetNumChildren(ReconstructType(type, exe_ctx),
                                             omit_empty_base_classes, exe_ctx));
@@ -3692,7 +3699,7 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
         if (!ModuleList::GetGlobalModuleListProperties()
                  .GetSwiftValidateTypeSystem())
           return index_size;
-        if (!GetSwiftASTContextFromExecutionContext(exe_ctx))
+        if (!GetSwiftASTContext(GetSymbolContext(exe_ctx)))
           return index_size;
         auto swift_scratch_ctx_lock = SwiftScratchContextLock(exe_ctx);
         auto ast_type = ReconstructType(type, exe_ctx);
@@ -3700,7 +3707,7 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
           return index_size;
         std::vector<uint32_t> ast_child_indexes;
         auto ast_index_size =
-            GetSwiftASTContextFromExecutionContext(exe_ctx)
+            GetSwiftASTContext(GetSymbolContext(exe_ctx))
                 ->GetIndexOfChildMemberWithName(ast_type, name, exe_ctx,
                                                 omit_empty_base_classes,
                                                 ast_child_indexes);
@@ -3740,7 +3747,7 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
             "type %s",
             AsMangledName(type));
 
-  if (auto *swift_ast_context = GetSwiftASTContextFromExecutionContext(exe_ctx))
+  if (auto *swift_ast_context = GetSwiftASTContext(GetSymbolContext(exe_ctx)))
     return swift_ast_context->GetIndexOfChildMemberWithName(
         ReconstructType(type, exe_ctx), name, exe_ctx, omit_empty_base_classes,
         child_indexes);
@@ -4038,7 +4045,7 @@ TypeSystemSwiftTypeRef::GetInstanceType(opaque_compiler_type_t type,
       // type alias in the REPL. In these cases, fallback to asking the AST
       // for the canonical type.
       if (auto *swift_ast_context =
-              GetSwiftASTContextFromExecutionScope(exe_scope))
+              GetSwiftASTContext(GetSymbolContext(exe_scope)))
         return swift_ast_context->GetInstanceType(
             ReconstructType(type, exe_scope), exe_scope);
       return {};
@@ -4282,7 +4289,7 @@ void TypeSystemSwiftTypeRef::DumpTypeDescription(
   // Also dump the swift ast context info, as this functions should not be in
   // any critical path.
   if (auto *swift_ast_context =
-          GetSwiftASTContextFromExecutionScope(exe_scope)) {
+          GetSwiftASTContext(GetSymbolContext(exe_scope))) {
     s->PutCString("Source code info:\n");
     swift_ast_context->DumpTypeDescription(
         ReconstructType(type, exe_scope), s, print_help_if_available,
@@ -4418,7 +4425,7 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
       // No result available from the runtime, fallback to the AST. This occurs
       // for some Clang imported enums.
       if (auto *swift_ast_context =
-              GetSwiftASTContextFromExecutionScope(exe_scope)) {
+              GetSwiftASTContext(GetSymbolContext(exe_scope))) {
         ExecutionContext exe_ctx;
         exe_scope->CalculateExecutionContext(exe_ctx);
         if (swift_ast_context->DumpTypeValue(
@@ -4437,7 +4444,7 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
       // typedefs such as CFString in the REPL. More investigation is
       // needed.
       if (auto *swift_ast_context =
-              GetSwiftASTContextFromExecutionScope(exe_scope))
+              GetSwiftASTContext(GetSymbolContext(exe_scope)))
         return swift_ast_context->DumpTypeValue(
             ReconstructType(type, exe_scope), s, format, data, data_offset,
             data_byte_size, bitfield_bit_size, bitfield_bit_offset, exe_scope,
@@ -4462,7 +4469,7 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
     bool unresolved_typealias = false;
     CollectTypeInfo(dem, node, unresolved_typealias);
     if (!node || unresolved_typealias) {
-      if (auto swift_ast_ctx = GetSwiftASTContextFromExecutionScope(exe_scope))
+      if (auto swift_ast_ctx = GetSwiftASTContext(GetSymbolContext(exe_scope)))
         return swift_ast_ctx->DumpTypeValue(
             ReconstructType(type, exe_scope), s, format, data, data_offset,
             data_byte_size, bitfield_bit_size, bitfield_bit_offset, exe_scope,
@@ -4540,7 +4547,7 @@ TypeSystemSwiftTypeRef::GetTypeBitAlign(opaque_compiler_type_t type,
     // defined in the expression. In that case we don't have debug
     // info for it, so defer to SwiftASTContext.
     if (llvm::isa_and_nonnull<SwiftASTContextForExpressions>(
-            GetSwiftASTContextFromExecutionScope(exe_scope))) {
+            GetSwiftASTContext(GetSymbolContext(exe_scope)))) {
       ExecutionContext exe_ctx;
       if (exe_scope)exe_scope->CalculateExecutionContext(exe_ctx);
       return ReconstructType({weak_from_this(), type}, &exe_ctx)

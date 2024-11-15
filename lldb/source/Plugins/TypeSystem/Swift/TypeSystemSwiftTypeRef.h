@@ -70,10 +70,8 @@ public:
   /// Get the corresponding SwiftASTContext, and create one if necessary.
   SwiftASTContext *GetSwiftASTContext(const SymbolContext &sc) const override;
   /// Convenience helpers.
-  SwiftASTContext *
-  GetSwiftASTContextFromExecutionScope(ExecutionContextScope *exe_scope) const;
-  SwiftASTContext *
-  GetSwiftASTContextFromExecutionContext(const ExecutionContext *exe_ctx) const;
+  SymbolContext GetSymbolContext(ExecutionContextScope *exe_scope) const;
+  SymbolContext GetSymbolContext(const ExecutionContext *exe_ctx) const;
   /// Return SwiftASTContext, iff one has already been created.
   virtual SwiftASTContext *
   GetSwiftASTContextOrNull(const SymbolContext &sc) const;
