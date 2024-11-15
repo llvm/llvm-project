@@ -1,6 +1,6 @@
-; RUN: llc -march=hexagon --combiner-store-merging=false < %s | FileCheck %s
-; CHECK-NOT: memh
-; Check that store widening does not merge the two stores.
+; RUN: llc -march=hexagon --combiner-store-merging=false -verify-machineinstrs < %s | FileCheck %s
+; CHECK: memh
+; Check that store widening merges the two adjacent stores.
 
 target datalayout = "e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-i1:32:32-f64:64:64-f32:32:32-v64:64:64-v32:32:32-a0:0-n16:32"
 target triple = "hexagon"

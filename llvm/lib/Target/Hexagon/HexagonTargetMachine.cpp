@@ -67,6 +67,9 @@ static cl::opt<bool> DisableStoreWidening("disable-store-widen", cl::Hidden,
                                           cl::init(false),
                                           cl::desc("Disable store widening"));
 
+static cl::opt<bool> DisableLoadWidening("disable-load-widen", cl::Hidden,
+                                         cl::desc("Disable load widening"));
+
 static cl::opt<bool> EnableExpandCondsets("hexagon-expand-condsets",
                                           cl::init(true), cl::Hidden,
                                           cl::desc("Early expansion of MUX"));
@@ -230,6 +233,7 @@ FunctionPass *createHexagonRDFOpt();
 FunctionPass *createHexagonSplitConst32AndConst64();
 FunctionPass *createHexagonSplitDoubleRegs();
 FunctionPass *createHexagonStoreWidening();
+FunctionPass *createHexagonLoadWidening();
 FunctionPass *createHexagonTfrCleanup();
 FunctionPass *createHexagonVectorCombineLegacyPass();
 FunctionPass *createHexagonVectorPrint();
@@ -461,6 +465,8 @@ void HexagonPassConfig::addPreRegAlloc() {
       insertPass(&VirtRegRewriterID, &HexagonTfrCleanupID);
     if (!DisableStoreWidening)
       addPass(createHexagonStoreWidening());
+    if (!DisableLoadWidening)
+      addPass(createHexagonLoadWidening());
     if (EnableGenMemAbs)
       addPass(createHexagonGenMemAbsolute());
     if (!DisableHardwareLoops)
