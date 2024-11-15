@@ -729,3 +729,15 @@ static_assert(__builtin_reduce_add((vector4char){1, 2, 3, 4}) == 10);
 static_assert(__builtin_reduce_add((vector4short){10, 20, 30, 40}) == 100);
 static_assert(__builtin_reduce_add((vector4int){100, 200, 300, 400}) == 1000);
 static_assert(__builtin_reduce_add((vector4long){1000, 2000, 3000, 4000}) == 10000);
+constexpr int reduceAddInt1 = __builtin_reduce_add((vector4int){~(1 << 31), 0, 0, 1});
+// expected-error@-1 {{must be initialized by a constant expression}} \
+// expected-note@-1 {{outside the range of representable values of type 'int'}}
+constexpr long long reduceAddLong1 = __builtin_reduce_add((vector4long){~(1LL << 63), 0, 0, 1});
+// expected-error@-1 {{must be initialized by a constant expression}} \
+// expected-note@-1 {{outside the range of representable values of type 'long long'}}
+constexpr int reduceAddInt2 = __builtin_reduce_add((vector4int){(1 << 31), 0, 0, -1});
+// expected-error@-1 {{must be initialized by a constant expression}} \
+// expected-note@-1 {{outside the range of representable values of type 'int'}}
+constexpr long long reduceAddLong2 = __builtin_reduce_add((vector4long){(1LL << 63), 0, 0, -1});
+// expected-error@-1 {{must be initialized by a constant expression}} \
+// expected-note@-1 {{outside the range of representable values of type 'long long'}}
