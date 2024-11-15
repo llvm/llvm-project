@@ -227,6 +227,16 @@ define i32 @abs_of_neg(i32 %x) {
   ret i32 %b
 }
 
+define i32 @abs_of_neg_range(i32 %x) {
+; CHECK-LABEL: @abs_of_neg_range(
+; CHECK-NEXT:    [[B:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    ret i32 [[B]]
+;
+  %a = sub i32 0, %x
+  %b = call i32 @llvm.abs.i32(i32 range(i32 -10, 0) %a, i1 false)
+  ret i32 %b
+}
+
 define <4 x i32> @abs_of_neg_vec(<4 x i32> %x) {
 ; CHECK-LABEL: @abs_of_neg_vec(
 ; CHECK-NEXT:    [[B:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[X:%.*]], i1 false)
