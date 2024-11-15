@@ -4434,7 +4434,7 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     StackIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
     unsigned StackIdAbbvId = Stream.EmitAbbrev(std::move(StackIdAbbv));
     SmallVector<uint32_t> Vals;
-    Vals.reserve(Index->stackIds().size()*2);
+    Vals.reserve(Index->stackIds().size() * 2);
     for (auto Id : Index->stackIds()) {
       Vals.push_back(static_cast<uint32_t>(Id >> 32));
       Vals.push_back(static_cast<uint32_t>(Id));
@@ -4634,7 +4634,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     StackIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
     unsigned StackIdAbbvId = Stream.EmitAbbrev(std::move(StackIdAbbv));
     SmallVector<uint32_t> Vals;
-    Vals.reserve(StackIds.size()*2);
+    Vals.reserve(StackIds.size() * 2);
     for (auto Id : StackIds) {
       Vals.push_back(static_cast<uint32_t>(Id >> 32));
       Vals.push_back(static_cast<uint32_t>(Id));
