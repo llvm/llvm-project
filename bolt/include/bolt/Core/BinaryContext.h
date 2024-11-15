@@ -278,9 +278,8 @@ class BinaryContext {
 public:
   enum class ICFLevel {
     None,
-    Safe, // Safe ICF for all sections.
-    All,  // Aggressive ICF for code, but safe ICF for data, similar to MSVC's
-          // behavior.
+    Safe,
+    All,
   };
   static Expected<std::unique_ptr<BinaryContext>>
   createBinaryContext(Triple TheTriple, StringRef InputFileName,
@@ -673,7 +672,7 @@ public:
   std::unique_ptr<MCAsmBackend> MAB;
 
   /// ICF level to use for this binary.
-  ICFLevel ICFLevelVar{ICFLevel::None};
+  ICFLevel CurrICFLevel{ICFLevel::None};
 
   /// Allows BOLT to print to log whenever it is necessary (with or without
   /// const references)
@@ -1494,7 +1493,7 @@ public:
     return *IOAddressMap;
   }
 
-  ICFLevel getICFLevel() const { return ICFLevelVar; }
+  ICFLevel getICFLevel() const { return CurrICFLevel; }
 
   raw_ostream &outs() const { return Logger.Out; }
 

@@ -205,7 +205,7 @@ BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
       Logger(Logger), InitialDynoStats(isAArch64()) {
   RegularPageSize = isAArch64() ? RegularPageSizeAArch64 : RegularPageSizeX86;
   PageAlign = opts::NoHugePages ? RegularPageSize : HugePageSize;
-  ICFLevelVar = parseICFLevel();
+  CurrICFLevel = parseICFLevel();
 }
 
 BinaryContext::~BinaryContext() {
@@ -2024,16 +2024,16 @@ static bool skipInstruction(const MCInst &Inst, const BinaryContext &BC) {
           BC.MIB->isCall(Inst) || BC.MIB->isBranch(Inst));
 }
 void BinaryContext::processInstructionForFuncReferences(const MCInst &Inst) {
-  if (ICFLevelVar != ICFLevel::Safe || skipInstruction(Inst, *this))
+  if (CurrICFLevel != ICFLevel::Safe || skipInstruction(Inst, *this))
     return;
   for (const MCOperand &Op : MCPlus::primeOperands(Inst)) {
-    if (Op.isExpr()) {
-      const MCExpr &Expr = *Op.getExpr();
-      if (Expr.getKind() == MCExpr::SymbolRef) {
-        const MCSymbol &Symbol = cast<MCSymbolRefExpr>(Expr).getSymbol();
-        if (BinaryFunction *BF = getFunctionForSymbol(&Symbol))
-          BF->setUnsetToICF();
-      }
+    if (!Op.isExpr())
+      continue;
+    const MCExpr &Expr = *Op.getExpr();
+    if (Expr.getKind() == MCExpr::SymbolRef) {
+      const MCSymbol &Symbol = cast<MCSymbolRefExpr>(Expr).getSymbol();
+      if (BinaryFunction *BF = getFunctionForSymbol(&Symbol))
+        BF->setUnsafeICF();
     }
   }
 }

@@ -824,7 +824,7 @@ public:
   bool isSafeToICF() const { return IsSafeToICF; }
 
   /// Sets the function is not safe to fold.
-  void setUnsetToICF() { IsSafeToICF = false; }
+  void setUnsafeICF() { IsSafeToICF = false; }
 
   /// Returns the raw binary encoding of this function.
   ErrorOr<ArrayRef<uint8_t>> getData() const;

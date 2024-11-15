@@ -355,16 +355,16 @@ void IdenticalCodeFolding::processDataRelocations(
     const uint64_t SymbolAddress = cantFail(Symbol.getAddress());
     const ELFObjectFileBase *ELFObj = dyn_cast<ELFObjectFileBase>(OwningObj);
     if (!ELFObj)
-      assert(false && "Only ELFObjectFileBase is supported");
+      llvm_unreachable("Only ELFObjectFileBase is supported");
     const int64_t Addend = BinaryContext::getRelocationAddend(ELFObj, Rel);
     BinaryFunction *BF = BC.getBinaryFunctionAtAddress(SymbolAddress + Addend);
     if (!BF)
       continue;
-    BF->setUnsetToICF();
+    BF->setUnsafeICF();
   }
 }
 
-Error IdenticalCodeFolding::createFoldSkipList(BinaryContext &BC) {
+Error IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
   Error ErrorStatus = Error::success();
   ErrorOr<BinarySection &> SecRelData = BC.getUniqueSectionByName(".rela.data");
   if (!BC.HasRelocations)
@@ -551,7 +551,7 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
     LLVM_DEBUG(SinglePass.stopTimer());
   };
   if (BC.getICFLevel() == BinaryContext::ICFLevel::Safe) {
-    if (Error Err = createFoldSkipList(BC)) {
+    if (Error Err = markFunctionsUnsafeToFold(BC)) {
       return Err;
     }
   }

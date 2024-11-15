@@ -38,8 +38,9 @@ public:
   Error runOnFunctions(BinaryContext &BC) override;
 
 private:
-  /// Create a skip list of functions that should not be folded.
-  Error createFoldSkipList(BinaryContext &BC);
+  /// Analyses .text section and relocations and marks functions that are not
+  /// safe to fold.
+  Error markFunctionsUnsafeToFold(BinaryContext &BC);
   /// Processes relocations in the .data section to identify function
   /// references.
   void processDataRelocations(BinaryContext &BC,
