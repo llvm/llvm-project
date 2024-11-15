@@ -637,7 +637,6 @@ bool GlobalMergeFuncPassWrapper::runOnModule(Module &M) {
 
 PreservedAnalyses GlobalMergeFuncPass::run(Module &M,
                                            AnalysisManager<Module> &AM) {
-  ModuleSummaryIndex *Index = &(AM.getResult<ModuleSummaryIndexAnalysis>(M));
-  bool Changed = GlobalMergeFunc(Index).run(M);
+  bool Changed = GlobalMergeFunc(ImportSummary).run(M);
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
