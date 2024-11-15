@@ -281,6 +281,9 @@ public:
                 if (isa<IntegerLiteral>(InitArgOrigin))
                   return true;
 
+                if (isConstOwnerPtrMemberExpr(InitArgOrigin))
+                  return true;
+
                 if (auto *Ref = llvm::dyn_cast<DeclRefExpr>(InitArgOrigin)) {
                   if (auto *MaybeGuardian =
                           dyn_cast_or_null<VarDecl>(Ref->getFoundDecl())) {
