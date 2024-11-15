@@ -14,6 +14,9 @@ from lldbsuite.test import lldbtest
 class ScriptedProcessEmptyMemoryRegion(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    # imports examples/python/templates/scripted_process.py
+    # which only has register definitions for x86_64 and arm64.
+    @skipIf(archs=no_match(["arm64", "x86_64"]))
     def test_scripted_process_empty_memory_region(self):
         """Test that lldb handles an empty SBMemoryRegionInfo object from
         a scripted process plugin."""
