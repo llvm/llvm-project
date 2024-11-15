@@ -15480,7 +15480,7 @@ Semantics:
 
 The '``llvm.experimental.memset.pattern*``' intrinsic fills memory starting at
 the destination location with the given pattern ``<count>`` times,
-incrementing by the allocation size of the type each time. The stores follows
+incrementing by the allocation size of the type each time. The stores follow
 the usual semantics of store instructions, including regarding endianness and
 padding. If the argument is known to be aligned to some boundary, this can be
 specified as an attribute on the argument.

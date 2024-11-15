@@ -1263,7 +1263,7 @@ public:
   }
 };
 
-/// This is the base class for llm.experimental.memset.pattern
+/// This is the base class for llvm.experimental.memset.pattern
 class MemSetPatternIntrinsic : public MemIntrinsicBase<MemIntrinsic> {
 private:
   enum { ARG_VOLATILE = 3 };
