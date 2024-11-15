@@ -201,8 +201,7 @@ def uimmlog2xlen : RISCVOp, ImmLeaf<XLenVT, [{
   return isUInt<5>(Imm);
 }]> {
   let ParserMatchClass = UImmLog2XLenAsmOperand;
-  // TODO: should ensure invalid shamt is rejected when decoding.
-  let DecoderMethod = "decodeUImmOperand<6>";
+  let DecoderMethod = "decodeUImmLog2XLenOperand";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
@@ -386,6 +385,11 @@ def csr_sysreg : RISCVOp, TImmLeaf<XLenVT, "return isUInt<12>(Imm);"> {
 
 // A parameterized register class alternative to i32imm/i64imm from Target.td.
 def ixlenimm : Operand<XLenVT>;
+
+// Condition code used by select and short forward branch pseudos.
+def cond_code : RISCVOp {
+  let OperandType = "OPERAND_COND_CODE";
+}
 
 def ixlenimm_li : Operand<XLenVT> {
   let ParserMatchClass = ImmXLenAsmOperand<"", "LI">;
@@ -1450,7 +1454,7 @@ def riscv_selectcc_frag : PatFrag<(ops node:$lhs, node:$rhs, node:$cc,
 multiclass SelectCC_GPR_rrirr<DAGOperand valty, ValueType vt> {
   let usesCustomInserter = 1 in
   def _Using_CC_GPR : Pseudo<(outs valty:$dst),
-                             (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                               valty:$truev, valty:$falsev),
                              [(set valty:$dst,
                                (riscv_selectcc_frag:$cc (XLenVT GPR:$lhs), GPR:$rhs, cond,

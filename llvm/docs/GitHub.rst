@@ -138,10 +138,16 @@ you won't encounter merge conflicts when landing the PR.
   collaborating with others on a single branch, be careful how and when you push
   changes. ``--force-with-lease`` may be useful in this situation.
 
+Approvals
+---------
+
+Before merging a PR you must have the required approvals. See
+:ref:`lgtm_how_a_patch_is_accepted` for more details.
+
 Landing your change
 -------------------
 
-When your PR has been accepted you can merge your changes.
+When your PR has been approved you can merge your changes.
 
 If you do not have write permissions for the repository, the merge button in
 GitHub's web interface will be disabled. If this is the case, continue following

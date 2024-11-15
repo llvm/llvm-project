@@ -20,7 +20,6 @@
 #include "X86.h"
 #include "X86InstrBuilder.h"
 #include "X86MachineFunctionInfo.h"
-#include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -76,6 +75,63 @@ INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
 INITIALIZE_PASS_END(X86TileConfig, DEBUG_TYPE, "Tile Register Configure", false,
                     false)
 
+unsigned getAMXRegNum(MachineRegisterInfo *MRI, Register Reg) {
+  if (Reg.isVirtual()) {
+    unsigned RegClassID = MRI->getRegClass(Reg)->getID();
+    if (RegClassID == X86::TILERegClassID)
+      return 1;
+    if (RegClassID == X86::TILEPAIRRegClassID)
+      return 2;
+  } else {
+    if (Reg >= X86::TMM0 && Reg <= X86::TMM7)
+      return 1;
+    if (Reg >= X86::TMM0_TMM1 && Reg <= X86::TMM6_TMM7)
+      return 2;
+  }
+  return 0;
+}
+
+static void collectVirtRegShapes(MachineRegisterInfo *MRI, VirtRegMap &VRM,
+                                 Register VirtReg,
+                                 SmallVector<ShapeT, 8> &Phys2Shapes) {
+  unsigned Num = getAMXRegNum(MRI, VirtReg);
+  MCRegister PhysReg = VRM.getPhys(VirtReg);
+  if (!PhysReg)
+    return;
+
+  if (Num == 1) {
+    unsigned Index = PhysReg - X86::TMM0;
+    if (!Phys2Shapes[Index].isValid()) {
+      ShapeT Shape = VRM.getShape(VirtReg);
+      Phys2Shapes[Index] = Shape;
+      return;
+    }
+  }
+  // Split tile pair shape info to 2 single tile shape info. e.g:
+  // Put TMM0_TMM1's Shape to TMM0's shape + TMM1's Shape in Phys2Shapes.
+  if (Num == 2) {
+    unsigned Index0 = (PhysReg - X86::TMM0_TMM1) * 2;
+    unsigned Index1 = (PhysReg - X86::TMM0_TMM1) * 2 + 1;
+
+    ShapeT Shape = VRM.getShape(VirtReg);
+    assert(Shape.getShapeNum() == 2 && "Unexpected shape number!");
+
+    if (!Phys2Shapes[Index0].isValid()) {
+      ShapeT Shape0(Shape.getRow(0), Shape.getCol(0), MRI);
+      Phys2Shapes[Index0] = Shape0;
+    }
+
+    if (!Phys2Shapes[Index1].isValid()) {
+      ShapeT Shape1(Shape.getRow(1), Shape.getCol(1), MRI);
+      Phys2Shapes[Index1] = Shape1;
+    }
+  }
+}
+
+static bool isAMXRegClass(MachineRegisterInfo *MRI, Register Reg) {
+  return getAMXRegNum(MRI, Reg) > 0;
+}
+
 bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
   X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   // Early exit in the common case of non-AMX code.
@@ -121,29 +177,24 @@ bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
   assert(ConstMI && "Cannot find an insertion point");
 
   unsigned AMXRegNum = TRI->getRegClass(X86::TILERegClassID)->getNumRegs();
-  SmallVector<Register, 8> Phys2Virt(AMXRegNum, 0);
+  SmallVector<ShapeT, 8> Phys2Shapes(AMXRegNum, ShapeT());
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
     Register VirtReg = Register::index2VirtReg(I);
     if (MRI.reg_nodbg_empty(VirtReg))
       continue;
-    if (MRI.getRegClass(VirtReg)->getID() != X86::TILERegClassID)
+    if (!isAMXRegClass(&MRI, VirtReg))
       continue;
-    MCRegister PhysReg = VRM.getPhys(VirtReg);
-    if (!PhysReg)
-      continue;
-    unsigned Index = PhysReg - X86::TMM0;
-    if (!Phys2Virt[Index])
-      Phys2Virt[Index] = VirtReg;
+    collectVirtRegShapes(&MRI, VRM, VirtReg, Phys2Shapes);
   }
 
   // Fill in the shape of each tile physical register.
   for (unsigned I = 0; I < AMXRegNum; ++I) {
-    if (!Phys2Virt[I])
+    ShapeT Shape = Phys2Shapes[I];
+    if (!Shape.isValid())
       continue;
     DebugLoc DL;
     bool IsRow = true;
     MachineInstr *NewMI = nullptr;
-    ShapeT Shape = VRM.getShape(Phys2Virt[I]);
     for (auto &R : {Shape.getRow()->getReg(), Shape.getCol()->getReg()}) {
       // Here is the data format for the tile config.
       // 0      palette
@@ -172,7 +223,15 @@ bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
                    "Cannot initialize with different shapes");
             continue;
           }
-          Imm = DefMI.getOperand(1).getImm();
+          if (DefMI.getOperand(1).isImm()) {
+            Imm = DefMI.getOperand(1).getImm();
+          } else {
+            assert(DefMI.getOpcode() == X86::MOV32r0 &&
+                   "The opcode is assumed to be MOV32r0 if the operand is not "
+                   "immediate.");
+            Imm = 0;
+          }
+
           NewMI = addFrameReference(
                       BuildMI(MF.front(), ++ConstMI->getIterator(), DL,
                               TII->get(IsRow ? X86::MOV8mi : X86::MOV16mi)),

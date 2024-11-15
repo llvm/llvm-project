@@ -18,7 +18,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/IR/ReplaceConstant.h"
 
 #define DEBUG_TYPE "amdgpu-memory-utils"
@@ -30,6 +29,28 @@ namespace llvm::AMDGPU {
 Align getAlign(const DataLayout &DL, const GlobalVariable *GV) {
   return DL.getValueOrABITypeAlignment(GV->getPointerAlignment(DL),
                                        GV->getValueType());
+}
+
+TargetExtType *isNamedBarrier(const GlobalVariable &GV) {
+  // TODO: Allow arrays and structs, if all members are barriers
+  // in the same scope.
+  // TODO: Disallow other uses of target("amdgcn.named.barrier") including:
+  // - Structs containing barriers in different scope.
+  // - Structs containing a mixture of barriers and other data.
+  // - Globals in other address spaces.
+  // - Allocas.
+  Type *Ty = GV.getValueType();
+  while (true) {
+    if (auto *TTy = dyn_cast<TargetExtType>(Ty))
+      return TTy->getName() == "amdgcn.named.barrier" ? TTy : nullptr;
+    if (auto *STy = dyn_cast<StructType>(Ty)) {
+      if (STy->getNumElements() == 0)
+        return nullptr;
+      Ty = STy->getElementType(0);
+      continue;
+    }
+    return nullptr;
+  }
 }
 
 bool isDynamicLDS(const GlobalVariable &GV) {
@@ -211,6 +232,7 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
   //      so we don't have anything to do.
   //    - No variables are absolute.
   std::optional<bool> HasAbsoluteGVs;
+  bool HasSpecialGVs = false;
   for (auto &Map : {DirectMapKernel, IndirectMapKernel}) {
     for (auto &[Fn, GVs] : Map) {
       for (auto *GV : GVs) {
@@ -219,6 +241,10 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
             AMDGPU::isDynamicLDS(*GV) && DirectMapKernel.contains(Fn);
         if (IsDirectMapDynLDSGV)
           continue;
+        if (isNamedBarrier(*GV)) {
+          HasSpecialGVs = true;
+          continue;
+        }
         if (HasAbsoluteGVs.has_value()) {
           if (*HasAbsoluteGVs != IsAbsolute) {
             report_fatal_error(
@@ -233,9 +259,10 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
   // If we only had absolute GVs, we have nothing to do, return an empty
   // result.
   if (HasAbsoluteGVs && *HasAbsoluteGVs)
-    return {FunctionVariableMap(), FunctionVariableMap()};
+    return {FunctionVariableMap(), FunctionVariableMap(), false};
 
-  return {std::move(DirectMapKernel), std::move(IndirectMapKernel)};
+  return {std::move(DirectMapKernel), std::move(IndirectMapKernel),
+          HasSpecialGVs};
 }
 
 void removeFnAttrFromReachable(CallGraph &CG, Function *KernelRoot,
@@ -294,7 +321,6 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
     case Intrinsic::amdgcn_s_barrier_signal:
     case Intrinsic::amdgcn_s_barrier_signal_var:
     case Intrinsic::amdgcn_s_barrier_signal_isfirst:
-    case Intrinsic::amdgcn_s_barrier_signal_isfirst_var:
     case Intrinsic::amdgcn_s_barrier_init:
     case Intrinsic::amdgcn_s_barrier_join:
     case Intrinsic::amdgcn_s_barrier_wait:

@@ -237,3 +237,21 @@ cbhi x5, x5, #1020
 // CHECK: [[@LINE-1]]:1: error: instruction requires: cmpbr
 // CHECK-NEXT: cbhi x5, x5, #1020
 
+
+.arch_extension fprcvt
+.arch_extension nofprcvt
+fcvtmu s0, d1
+// CHECK: [[@LINE-1]]:1: error: instruction requires: fprcvt
+// CHECK-NEXT: fcvtmu s0, d1
+
+.arch_extension f8f16mm
+.arch_extension nof8f16mm
+fmmla v2.8h, v1.16b, v0.16b
+// CHECK: [[@LINE-1]]:1: error: instruction requires: f8f16mm
+// CHECK-NEXT: fmmla v2.8h, v1.16b, v0.16b
+
+.arch_extension f8f32mm
+.arch_extension nof8f32mm
+fmmla v2.4s, v1.16b, v0.16b
+// CHECK: [[@LINE-1]]:1: error: instruction requires: f8f32mm
+// CHECK-NEXT: fmmla v2.4s, v1.16b, v0.16b

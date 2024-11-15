@@ -1,4 +1,5 @@
 # RUN: llc -run-pass=tailduplication -tail-dup-size=4 %s -o - | FileCheck %s
+# RUN: llc -passes=tailduplication -tail-dup-size=4 %s -o - | FileCheck %s
 
 # JumpTableDest32 uses an `adr` to a temporary label (itself). If duplicated we
 # cannot guarantee reachability for any uses after the first.

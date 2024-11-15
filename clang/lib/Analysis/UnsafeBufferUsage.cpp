@@ -360,6 +360,7 @@ isInUnspecifiedUntypedContext(internal::Matcher<Stmt> InnerMatcher) {
 //   4. `std::span<T>{a, n}`, where `a` is of an array-of-T with constant size
 //   `n`
 //   5. `std::span<T>{any, 0}`
+//   6. `std::span<T>{std::addressof(...), 1}`
 AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
   assert(Node.getNumArgs() == 2 &&
          "expecting a two-parameter std::span constructor");
@@ -404,6 +405,15 @@ AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
       // Check form 3:
       return Arg1CV && Arg1CV->isOne();
     break;
+  case Stmt::CallExprClass:
+    if (const auto *CE = dyn_cast<CallExpr>(Arg0)) {
+      const auto FnDecl = CE->getDirectCallee();
+      if (FnDecl && FnDecl->getNameAsString() == "addressof" &&
+          FnDecl->isInStdNamespace()) {
+        return Arg1CV && Arg1CV->isOne();
+      }
+    }
+    break;
   default:
     break;
   }
@@ -430,21 +440,31 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
 
   const auto *BaseDRE =
       dyn_cast<DeclRefExpr>(Node.getBase()->IgnoreParenImpCasts());
-  if (!BaseDRE)
+  const auto *SLiteral =
+      dyn_cast<StringLiteral>(Node.getBase()->IgnoreParenImpCasts());
+  uint64_t size;
+
+  if (!BaseDRE && !SLiteral)
     return false;
-  if (!BaseDRE->getDecl())
-    return false;
-  const auto *CATy = Finder->getASTContext().getAsConstantArrayType(
-      BaseDRE->getDecl()->getType());
-  if (!CATy)
-    return false;
+
+  if (BaseDRE) {
+    if (!BaseDRE->getDecl())
+      return false;
+    const auto *CATy = Finder->getASTContext().getAsConstantArrayType(
+        BaseDRE->getDecl()->getType());
+    if (!CATy) {
+      return false;
+    }
+    size = CATy->getLimitedSize();
+  } else if (SLiteral) {
+    size = SLiteral->getLength() + 1;
+  }
 
   if (const auto *IdxLit = dyn_cast<IntegerLiteral>(Node.getIdx())) {
     const APInt ArrIdx = IdxLit->getValue();
     // FIXME: ArrIdx.isNegative() we could immediately emit an error as that's a
     // bug
-    if (ArrIdx.isNonNegative() &&
-        ArrIdx.getLimitedValue() < CATy->getLimitedSize())
+    if (ArrIdx.isNonNegative() && ArrIdx.getLimitedValue() < size)
       return true;
   }
 

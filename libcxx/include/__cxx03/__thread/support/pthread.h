@@ -10,16 +10,16 @@
 #ifndef _LIBCPP___THREAD_SUPPORT_PTHREAD_H
 #define _LIBCPP___THREAD_SUPPORT_PTHREAD_H
 
-#include <__chrono/convert_to_timespec.h>
-#include <__chrono/duration.h>
-#include <__config>
-#include <ctime>
-#include <errno.h>
-#include <pthread.h>
-#include <sched.h>
+#include <__cxx03/__chrono/convert_to_timespec.h>
+#include <__cxx03/__chrono/duration.h>
+#include <__cxx03/__config>
+#include <__cxx03/ctime>
+#include <__cxx03/errno.h>
+#include <__cxx03/pthread.h>
+#include <__cxx03/sched.h>
 
 #ifdef __MVS__
-#  include <__support/ibm/nanosleep.h>
+#  include <__cxx03/__support/ibm/nanosleep.h>
 #endif
 
 // Some platforms require <bits/atomic_wide_counter.h> in order for
@@ -30,7 +30,7 @@
 // Include <math.h> here to work around that.
 // This checks wheter a Clang module is built
 #if __building_module(std)
-#  include <math.h>
+#  include <__cxx03/math.h>
 #endif
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER

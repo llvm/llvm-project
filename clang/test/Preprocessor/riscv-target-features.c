@@ -30,6 +30,7 @@
 // CHECK-NOT: __riscv_smaia {{.*$}}
 // CHECK-NOT: __riscv_smcdeleg {{.*$}}
 // CHECK-NOT: __riscv_smcsrind {{.*$}}
+// CHECK-NOT: __riscv_smdbltrp {{.*$}}
 // CHECK-NOT: __riscv_smepmp {{.*$}}
 // CHECK-NOT: __riscv_smrnmi {{.*$}}
 // CHECK-NOT: __riscv_smstateen {{.*$}}
@@ -39,6 +40,7 @@
 // CHECK-NOT: __riscv_sscofpmf {{.*$}}
 // CHECK-NOT: __riscv_sscounterenw {{.*$}}
 // CHECK-NOT: __riscv_sscsrind {{.*$}}
+// CHECK-NOT: __riscv_ssdbltrp {{.*$}}
 // CHECK-NOT: __riscv_ssqosid{{.*$}}
 // CHECK-NOT: __riscv_ssstateen {{.*$}}
 // CHECK-NOT: __riscv_ssstrict {{.*$}}
@@ -52,6 +54,7 @@
 // CHECK-NOT: __riscv_svinval {{.*$}}
 // CHECK-NOT: __riscv_svnapot {{.*$}}
 // CHECK-NOT: __riscv_svpbmt {{.*$}}
+// CHECK-NOT: __riscv_svvptc {{.*$}}
 // CHECK-NOT: __riscv_v {{.*$}}
 // CHECK-NOT: __riscv_v_elen {{.*$}}
 // CHECK-NOT: __riscv_v_elen_fp {{.*$}}
@@ -515,6 +518,14 @@
 // RUN:   -march=rv64isvpbmt -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SVPBMT-EXT %s
 // CHECK-SVPBMT-EXT: __riscv_svpbmt 1000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32isvvptc -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SVVPTC-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64isvvptc -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SVVPTC-EXT %s
+// CHECK-SVVPTC-EXT: __riscv_svvptc 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32iv1p0 -E -dM %s \
@@ -1434,6 +1445,22 @@
 // RUN:   -march=rv64isscsrind1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SSCSRIND-EXT %s
 // CHECK-SSCSRIND-EXT: __riscv_sscsrind  1000000{{$}}
+
+// RUN: %clang --target=riscv32 \
+// RUN:   -march=rv32ismdbltrp1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SMDBLTRP-EXT %s
+// RUN: %clang --target=riscv64 \
+// RUN:   -march=rv64ismdbltrp1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SMDBLTRP-EXT %s
+// CHECK-SMDBLTRP-EXT: __riscv_smdbltrp  1000000{{$}}
+
+// RUN: %clang --target=riscv32 \
+// RUN:   -march=rv32issdbltrp1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSDBLTRP-EXT %s
+// RUN: %clang --target=riscv64 \
+// RUN:   -march=rv64issdbltrp1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSDBLTRP-EXT %s
+// CHECK-SSDBLTRP-EXT: __riscv_ssdbltrp  1000000{{$}}
 
 // RUN: %clang --target=riscv32 \
 // RUN:   -march=rv32i_ssqosid1p0 -E -dM %s \

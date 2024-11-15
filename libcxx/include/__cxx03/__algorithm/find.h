@@ -10,25 +10,25 @@
 #ifndef _LIBCPP___ALGORITHM_FIND_H
 #define _LIBCPP___ALGORITHM_FIND_H
 
-#include <__algorithm/find_segment_if.h>
-#include <__algorithm/min.h>
-#include <__algorithm/unwrap_iter.h>
-#include <__bit/countr.h>
-#include <__bit/invert_if.h>
-#include <__config>
-#include <__functional/identity.h>
-#include <__functional/invoke.h>
-#include <__fwd/bit_reference.h>
-#include <__iterator/segmented_iterator.h>
-#include <__string/constexpr_c_functions.h>
-#include <__type_traits/is_integral.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/is_signed.h>
-#include <__utility/move.h>
-#include <limits>
+#include <__cxx03/__algorithm/find_segment_if.h>
+#include <__cxx03/__algorithm/min.h>
+#include <__cxx03/__algorithm/unwrap_iter.h>
+#include <__cxx03/__bit/countr.h>
+#include <__cxx03/__bit/invert_if.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/identity.h>
+#include <__cxx03/__functional/invoke.h>
+#include <__cxx03/__fwd/bit_reference.h>
+#include <__cxx03/__iterator/segmented_iterator.h>
+#include <__cxx03/__string/constexpr_c_functions.h>
+#include <__cxx03/__type_traits/is_integral.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/is_signed.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/limits>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-#  include <cwchar>
+#  include <__cxx03/cwchar>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -36,7 +36,7 @@
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

@@ -42,6 +42,11 @@ point (e.g. maybe you would like to give an example of the
 functionality, or simply have a lot to talk about), see the comment below
 for adding a new subsection. -->
 
+* Added a new IRNormalizer pass which aims to transform LLVM modules into
+  a normal form by reordering and renaming instructions while preserving the
+  same semantics. The normalizer makes it easier to spot semantic differences
+  when diffing two modules which have undergone different passes.
+
 * ...
 
 <!-- If you would like to document a larger change, then you can add a
@@ -55,6 +60,8 @@ Makes programs 10x faster by doing Special New Thing.
 
 Changes to the LLVM IR
 ----------------------
+
+* Types are no longer allowed to be recursive.
 
 * The `x86_mmx` IR type has been removed. It will be translated to
   the standard vector type `<1 x i64>` in bitcode upgrade.
@@ -164,6 +171,9 @@ Changes to the MIPS Backend
 Changes to the PowerPC Backend
 ------------------------------
 
+* The Linux `ppc64` LLC default cpu is updated from `ppc` to `ppc64`.
+* The AIX LLC default cpu is updated from `generic` to `pwr7`.
+
 Changes to the RISC-V Backend
 -----------------------------
 
@@ -178,12 +188,15 @@ Changes to the RISC-V Backend
   means Zve32x and Zve32f will also require Zvl64b. The prior support was
   largely untested.
 * The `Zvbc32e` and `Zvkgs` extensions are now supported experimentally.
-* Added `Smctr` and `Ssctr` extensions.
+* Added `Smctr`, `Ssctr` and `Svvptc` extensions.
 * `-mcpu=syntacore-scr7` was added.
 * The `Zacas` extension is no longer marked as experimental.
+* Added Smdbltrp, Ssdbltrp extensions to -march.
 * The `Smmpm`, `Smnpm`, `Ssnpm`, `Supm`, and `Sspm` pointer masking extensions
   are no longer marked as experimental.
 * The `Sha` extension is now supported.
+* The RVA23U64, RVA23S64, RVB23U64, and RVB23S64 profiles are no longer marked
+  as experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -301,6 +314,10 @@ Changes to LLDB
 * LLDB can now read the `fpmr` register from AArch64 Linux processes and core
   files.
 
+* Program stdout/stderr redirection will now open the file with O_TRUNC flag, make sure to truncate the file if path already exists.
+  * eg. `settings set target.output-path/target.error-path <path/to/file>`
+
+* A new setting `target.launch-working-dir` can be used to set a persistent cwd that is used by default by `process launch` and `run`.
 
 Changes to BOLT
 ---------------------------------

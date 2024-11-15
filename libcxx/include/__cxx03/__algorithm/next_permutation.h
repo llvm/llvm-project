@@ -9,21 +9,21 @@
 #ifndef _LIBCPP___ALGORITHM_NEXT_PERMUTATION_H
 #define _LIBCPP___ALGORITHM_NEXT_PERMUTATION_H
 
-#include <__algorithm/comp.h>
-#include <__algorithm/comp_ref_type.h>
-#include <__algorithm/iterator_operations.h>
-#include <__algorithm/reverse.h>
-#include <__config>
-#include <__iterator/iterator_traits.h>
-#include <__utility/move.h>
-#include <__utility/pair.h>
+#include <__cxx03/__algorithm/comp.h>
+#include <__cxx03/__algorithm/comp_ref_type.h>
+#include <__cxx03/__algorithm/iterator_operations.h>
+#include <__cxx03/__algorithm/reverse.h>
+#include <__cxx03/__config>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

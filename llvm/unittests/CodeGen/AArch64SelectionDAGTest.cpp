@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../lib/Target/AArch64/AArch64ISelLowering.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/AsmParser/Parser.h"
@@ -43,9 +44,9 @@ protected:
       GTEST_SKIP();
 
     TargetOptions Options;
-    TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+    TM = std::unique_ptr<TargetMachine>(
         T->createTargetMachine("AArch64", "", "+sve", Options, std::nullopt,
-                               std::nullopt, CodeGenOptLevel::Aggressive)));
+                               std::nullopt, CodeGenOptLevel::Aggressive));
     if (!TM)
       GTEST_SKIP();
 
@@ -81,7 +82,7 @@ protected:
   }
 
   LLVMContext Context;
-  std::unique_ptr<LLVMTargetMachine> TM;
+  std::unique_ptr<TargetMachine> TM;
   std::unique_ptr<Module> M;
   Function *F;
   std::unique_ptr<MachineFunction> MF;
@@ -165,6 +166,18 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_EXTRACT_SUBVECTOR) {
   auto Op = DAG->getNode(ISD::EXTRACT_SUBVECTOR, Loc, VecVT, Vec, ZeroIdx);
   auto DemandedElts = APInt(3, 7);
   EXPECT_EQ(DAG->ComputeNumSignBits(Op, DemandedElts), 7u);
+}
+
+TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_VASHR) {
+  SDLoc Loc;
+  auto VecVT = MVT::v8i8;
+  auto Shift = DAG->getConstant(4, Loc, MVT::i32);
+  auto Vec0 = DAG->getConstant(1, Loc, VecVT);
+  auto Op1 = DAG->getNode(AArch64ISD::VASHR, Loc, VecVT, Vec0, Shift);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Op1), 8u);
+  auto VecA = DAG->getConstant(0xaa, Loc, VecVT);
+  auto Op2 = DAG->getNode(AArch64ISD::VASHR, Loc, VecVT, VecA, Shift);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Op2), 5u);
 }
 
 TEST_F(AArch64SelectionDAGTest, SimplifyDemandedVectorElts_EXTRACT_SUBVECTOR) {

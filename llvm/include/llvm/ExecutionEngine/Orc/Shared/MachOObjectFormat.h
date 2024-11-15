@@ -49,6 +49,7 @@ extern StringRef MachOSwift5TypesSectionName;
 extern StringRef MachOSwift5TypeRefSectionName;
 extern StringRef MachOSwift5FieldMetadataSectionName;
 extern StringRef MachOSwift5EntrySectionName;
+extern StringRef MachOTextTextSectionName;
 extern StringRef MachOThreadBSSSectionName;
 extern StringRef MachOThreadDataSectionName;
 extern StringRef MachOThreadVarsSectionName;

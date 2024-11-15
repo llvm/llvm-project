@@ -3560,4 +3560,16 @@ entry:
   ret <4 x i16> %vrshrn_n1
 }
 
+define <8 x i16> @signbits_vashr(<8 x i16> %a)  {
+; CHECK-LABEL: signbits_vashr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshr.8h v0, v0, #8
+; CHECK-NEXT:    sshr.8h v0, v0, #9
+; CHECK-NEXT:    ret
+  %b = call <8 x i16> @llvm.aarch64.neon.sshl.v8i16(<8 x i16> %a, <8 x i16> <i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8>)
+  %c = call <8 x i16> @llvm.aarch64.neon.sshl.v8i16(<8 x i16> %b, <8 x i16> <i16 -9, i16 -9, i16 -9, i16 -9, i16 -9, i16 -9, i16 -9, i16 -9>)
+  %d = ashr <8 x i16> %c, <i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7>
+  ret <8 x i16> %d
+}
+
 declare <2 x i64> @llvm.aarch64.neon.addp.v2i64(<2 x i64>, <2 x i64>)

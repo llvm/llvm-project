@@ -567,8 +567,7 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
           def _V1_gfx12 : VSAMPLE_Sampler_gfx12<op, asm, dst_rc, 1>;
       }
       else {
-        def _V1_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 1,
-                                               !if(enableDisasm, "GFX12", "")>;
+        def _V1_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 1>;
       }
     }
   }
@@ -789,8 +788,7 @@ multiclass MIMG_Store_Addr_Helper <mimgopc op, string asm,
         }
       }
       if op.HAS_GFX12 then {
-        def _V1_gfx12 : VIMAGE_Store_gfx12 <op, asm, data_rc, 1,
-                                            !if(enableDisasm, "GFX12", "")>;
+        def _V1_gfx12 : VIMAGE_Store_gfx12 <op, asm, data_rc, 1>;
       }
     }
     let VAddrDwords = 2 in {
@@ -1017,9 +1015,9 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
       }
       if op.HAS_GFX12 then {
         if !empty(renamed) then
-          def _V1_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 1, enableDasm>;
+          def _V1_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 1>;
         else
-          def _V1_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, renamed, data_rc, 1, enableDasm>;
+          def _V1_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, renamed, data_rc, 1>;
       }
     }
     let VAddrDwords = 2 in {
@@ -1516,9 +1514,9 @@ multiclass MIMG_Gather <mimgopc op, AMDGPUSampleVariant sample, bit wqm = 0,
   let BaseOpcode = !cast<MIMGBaseOpcode>(NAME), WQM = wqm,
       Gather4 = 1 in {
     let VDataDwords = 2 in
-    defm _V2 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_64>; /* for packed D16 only */
+    defm _V2 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_64, /*enableDisasm*/ true>; /* for packed D16 only */
     let VDataDwords = 4 in
-    defm _V4 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_128, 1>;
+    defm _V4 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_128>;
     let VDataDwords = 5 in
     defm _V5 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_160>;
   }
