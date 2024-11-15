@@ -54,7 +54,7 @@ ScriptLexer::Buffer::Buffer(Ctx &ctx, MemoryBufferRef mb)
 }
 
 ScriptLexer::ScriptLexer(Ctx &ctx, MemoryBufferRef mb)
-    : curBuf(ctx, mb), mbs(1, mb) {
+    : ctx(ctx), curBuf(ctx, mb), mbs(1, mb) {
   activeFilenames.insert(mb.getBufferIdentifier());
 }
 

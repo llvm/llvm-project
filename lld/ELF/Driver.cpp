@@ -600,7 +600,7 @@ static uint8_t getZStartStopVisibility(opt::InputArgList &args) {
   return ret;
 }
 
-static GcsPolicy getZGcs(opt::InputArgList &args) {
+static GcsPolicy getZGcs(Ctx &ctx, opt::InputArgList &args) {
   GcsPolicy ret = GcsPolicy::Implicit;
   for (auto *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
@@ -620,7 +620,7 @@ static GcsPolicy getZGcs(opt::InputArgList &args) {
 }
 
 // Report a warning for an unknown -z option.
-static void checkZOptions(opt::InputArgList &args) {
+static void checkZOptions(Ctx &ctx, opt::InputArgList &args) {
   // This function is called before getTarget(), when certain options are not
   // initialized yet. Claim them here.
   args::getZOptionValue(args, OPT_z, "max-page-size", 0);
@@ -639,7 +639,7 @@ LinkerDriver::LinkerDriver(Ctx &ctx) : ctx(ctx) {}
 
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ELFOptTable parser;
-  opt::InputArgList args = parser.parse(argsArr.slice(1));
+  opt::InputArgList args = parser.parse(ctx, argsArr.slice(1));
 
   // Interpret these flags early because error()/warn() depend on them.
   errorHandler().errorLimit = args::getInteger(args, OPT_error_limit, 20);
@@ -689,7 +689,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   }
 
   readConfigs(ctx, args);
-  checkZOptions(args);
+  checkZOptions(ctx, args);
 
   // The behavior of -v or --version is a bit strange, but this is
   // needed for compatibility with GNU linkers.
@@ -790,7 +790,7 @@ static void setUnresolvedSymbolPolicy(Ctx &ctx, opt::InputArgList &args) {
       diagShlib ? errorOrWarn : UnresolvedPolicy::Ignore;
 }
 
-static Target2Policy getTarget2(opt::InputArgList &args) {
+static Target2Policy getTarget2(Ctx &ctx, opt::InputArgList &args) {
   StringRef s = args.getLastArgValue(OPT_target2, "got-rel");
   if (s == "rel")
     return Target2Policy::Rel;
@@ -802,7 +802,7 @@ static Target2Policy getTarget2(opt::InputArgList &args) {
   return Target2Policy::GotRel;
 }
 
-static bool isOutputFormatBinary(opt::InputArgList &args) {
+static bool isOutputFormatBinary(Ctx &ctx, opt::InputArgList &args) {
   StringRef s = args.getLastArgValue(OPT_oformat, "elf");
   if (s == "binary")
     return true;
@@ -882,7 +882,8 @@ static StripPolicy getStrip(Ctx &ctx, opt::InputArgList &args) {
   return StripPolicy::Debug;
 }
 
-static uint64_t parseSectionAddress(StringRef s, opt::InputArgList &args,
+static uint64_t parseSectionAddress(Ctx &ctx, StringRef s,
+                                    opt::InputArgList &args,
                                     const opt::Arg &arg) {
   uint64_t va = 0;
   s.consume_front("0x");
@@ -891,25 +892,26 @@ static uint64_t parseSectionAddress(StringRef s, opt::InputArgList &args,
   return va;
 }
 
-static StringMap<uint64_t> getSectionStartMap(opt::InputArgList &args) {
+static StringMap<uint64_t> getSectionStartMap(Ctx &ctx,
+                                              opt::InputArgList &args) {
   StringMap<uint64_t> ret;
   for (auto *arg : args.filtered(OPT_section_start)) {
     StringRef name;
     StringRef addr;
     std::tie(name, addr) = StringRef(arg->getValue()).split('=');
-    ret[name] = parseSectionAddress(addr, args, *arg);
+    ret[name] = parseSectionAddress(ctx, addr, args, *arg);
   }
 
   if (auto *arg = args.getLastArg(OPT_Ttext))
-    ret[".text"] = parseSectionAddress(arg->getValue(), args, *arg);
+    ret[".text"] = parseSectionAddress(ctx, arg->getValue(), args, *arg);
   if (auto *arg = args.getLastArg(OPT_Tdata))
-    ret[".data"] = parseSectionAddress(arg->getValue(), args, *arg);
+    ret[".data"] = parseSectionAddress(ctx, arg->getValue(), args, *arg);
   if (auto *arg = args.getLastArg(OPT_Tbss))
-    ret[".bss"] = parseSectionAddress(arg->getValue(), args, *arg);
+    ret[".bss"] = parseSectionAddress(ctx, arg->getValue(), args, *arg);
   return ret;
 }
 
-static SortSectionPolicy getSortSection(opt::InputArgList &args) {
+static SortSectionPolicy getSortSection(Ctx &ctx, opt::InputArgList &args) {
   StringRef s = args.getLastArgValue(OPT_sort_section);
   if (s == "alignment")
     return SortSectionPolicy::Alignment;
@@ -920,7 +922,8 @@ static SortSectionPolicy getSortSection(opt::InputArgList &args) {
   return SortSectionPolicy::Default;
 }
 
-static OrphanHandlingPolicy getOrphanHandling(opt::InputArgList &args) {
+static OrphanHandlingPolicy getOrphanHandling(Ctx &ctx,
+                                              opt::InputArgList &args) {
   StringRef s = args.getLastArgValue(OPT_orphan_handling, "place");
   if (s == "warn")
     return OrphanHandlingPolicy::Warn;
@@ -935,7 +938,7 @@ static OrphanHandlingPolicy getOrphanHandling(opt::InputArgList &args) {
 // synonym for "sha1" because all our hash functions including
 // --build-id=sha1 are actually tree hashes for performance reasons.
 static std::pair<BuildIdKind, SmallVector<uint8_t, 0>>
-getBuildId(opt::InputArgList &args) {
+getBuildId(Ctx &ctx, opt::InputArgList &args) {
   auto *arg = args.getLastArg(OPT_build_id);
   if (!arg)
     return {BuildIdKind::None, {}};
@@ -957,7 +960,8 @@ getBuildId(opt::InputArgList &args) {
   return {BuildIdKind::None, {}};
 }
 
-static std::pair<bool, bool> getPackDynRelocs(opt::InputArgList &args) {
+static std::pair<bool, bool> getPackDynRelocs(Ctx &ctx,
+                                              opt::InputArgList &args) {
   StringRef s = args.getLastArgValue(OPT_pack_dyn_relocs, "none");
   if (s == "android")
     return {true, false};
@@ -1152,7 +1156,8 @@ static void ltoValidateAllVtablesHaveTypeInfos(Ctx &ctx,
   }
 }
 
-static CGProfileSortKind getCGProfileSortKind(opt::InputArgList &args) {
+static CGProfileSortKind getCGProfileSortKind(Ctx &ctx,
+                                              opt::InputArgList &args) {
   StringRef s = args.getLastArgValue(OPT_call_graph_profile_sort, "cdsort");
   if (s == "hfsort")
     return CGProfileSortKind::Hfsort;
@@ -1163,7 +1168,8 @@ static CGProfileSortKind getCGProfileSortKind(opt::InputArgList &args) {
   return CGProfileSortKind::None;
 }
 
-static DebugCompressionType getCompressionType(StringRef s, StringRef option) {
+static DebugCompressionType getCompressionType(Ctx &ctx, StringRef s,
+                                               StringRef option) {
   DebugCompressionType type = StringSwitch<DebugCompressionType>(s)
                                   .Case("zlib", DebugCompressionType::Zlib)
                                   .Case("zstd", DebugCompressionType::Zstd)
@@ -1184,8 +1190,8 @@ static StringRef getAliasSpelling(opt::Arg *arg) {
   return arg->getSpelling();
 }
 
-static std::pair<StringRef, StringRef> getOldNewOptions(opt::InputArgList &args,
-                                                        unsigned id) {
+static std::pair<StringRef, StringRef>
+getOldNewOptions(Ctx &ctx, opt::InputArgList &args, unsigned id) {
   auto *arg = args.getLastArg(id);
   if (!arg)
     return {"", ""};
@@ -1200,8 +1206,8 @@ static std::pair<StringRef, StringRef> getOldNewOptions(opt::InputArgList &args,
 
 // Parse options of the form "old;new[;extra]".
 static std::tuple<StringRef, StringRef, StringRef>
-getOldNewOptionsExtra(opt::InputArgList &args, unsigned id) {
-  auto [oldDir, second] = getOldNewOptions(args, id);
+getOldNewOptionsExtra(Ctx &ctx, opt::InputArgList &args, unsigned id) {
+  auto [oldDir, second] = getOldNewOptions(ctx, args, id);
   auto [newDir, extraDir] = second.split(';');
   return {oldDir, newDir, extraDir};
 }
@@ -1303,13 +1309,13 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     else if (arg->getOption().matches(OPT_Bsymbolic))
       ctx.arg.bsymbolic = BsymbolicKind::All;
   }
-  ctx.arg.callGraphProfileSort = getCGProfileSortKind(args);
+  ctx.arg.callGraphProfileSort = getCGProfileSortKind(ctx, args);
   ctx.arg.checkSections =
       args.hasFlag(OPT_check_sections, OPT_no_check_sections, true);
   ctx.arg.chroot = args.getLastArgValue(OPT_chroot);
   if (auto *arg = args.getLastArg(OPT_compress_debug_sections)) {
     ctx.arg.compressDebugSections =
-        getCompressionType(arg->getValue(), "--compress-debug-sections");
+        getCompressionType(ctx, arg->getValue(), "--compress-debug-sections");
   }
   ctx.arg.cref = args.hasArg(OPT_cref);
   ctx.arg.optimizeBBJumps =
@@ -1406,7 +1412,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.nmagic = args.hasFlag(OPT_nmagic, OPT_no_nmagic, false);
   ctx.arg.noinhibitExec = args.hasArg(OPT_noinhibit_exec);
   ctx.arg.nostdlib = args.hasArg(OPT_nostdlib);
-  ctx.arg.oFormatBinary = isOutputFormatBinary(args);
+  ctx.arg.oFormatBinary = isOutputFormatBinary(ctx, args);
   ctx.arg.omagic = args.hasFlag(OPT_omagic, OPT_no_omagic, false);
   ctx.arg.optRemarksFilename = args.getLastArgValue(OPT_opt_remarks_filename);
   ctx.arg.optStatsFilename = args.getLastArgValue(OPT_plugin_opt_stats_file);
@@ -1426,7 +1432,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.optRemarksWithHotness = args.hasArg(OPT_opt_remarks_with_hotness);
   ctx.arg.optRemarksFormat = args.getLastArgValue(OPT_opt_remarks_format);
   ctx.arg.optimize = args::getInteger(args, OPT_O, 1);
-  ctx.arg.orphanHandling = getOrphanHandling(args);
+  ctx.arg.orphanHandling = getOrphanHandling(ctx, args);
   ctx.arg.outputFile = args.getLastArgValue(OPT_o);
   ctx.arg.packageMetadata = args.getLastArgValue(OPT_package_metadata);
   ctx.arg.pie = args.hasFlag(OPT_pie, OPT_no_pie, false);
@@ -1460,11 +1466,11 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   }
 
   ctx.arg.searchPaths = args::getStrings(args, OPT_library_path);
-  ctx.arg.sectionStartMap = getSectionStartMap(args);
+  ctx.arg.sectionStartMap = getSectionStartMap(ctx, args);
   ctx.arg.shared = args.hasArg(OPT_shared);
   ctx.arg.singleRoRx = !args.hasFlag(OPT_rosegment, OPT_no_rosegment, true);
   ctx.arg.soName = args.getLastArgValue(OPT_soname);
-  ctx.arg.sortSection = getSortSection(args);
+  ctx.arg.sortSection = getSortSection(ctx, args);
   ctx.arg.splitStackAdjustSize =
       args::getInteger(args, OPT_split_stack_adjust_size, 16384);
   ctx.arg.zSectionHeader =
@@ -1472,7 +1478,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.strip = getStrip(ctx, args); // needs zSectionHeader
   ctx.arg.sysroot = args.getLastArgValue(OPT_sysroot);
   ctx.arg.target1Rel = args.hasFlag(OPT_target1_rel, OPT_target1_abs, false);
-  ctx.arg.target2 = getTarget2(args);
+  ctx.arg.target2 = getTarget2(ctx, args);
   ctx.arg.thinLTOCacheDir = args.getLastArgValue(OPT_thinlto_cache_dir);
   ctx.arg.thinLTOCachePolicy = CHECK(
       parseCachePruningPolicy(args.getLastArgValue(OPT_thinlto_cache_policy)),
@@ -1485,10 +1491,10 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
                              args.hasArg(OPT_thinlto_index_only_eq);
   ctx.arg.thinLTOIndexOnlyArg = args.getLastArgValue(OPT_thinlto_index_only_eq);
   ctx.arg.thinLTOObjectSuffixReplace =
-      getOldNewOptions(args, OPT_thinlto_object_suffix_replace_eq);
+      getOldNewOptions(ctx, args, OPT_thinlto_object_suffix_replace_eq);
   std::tie(ctx.arg.thinLTOPrefixReplaceOld, ctx.arg.thinLTOPrefixReplaceNew,
            ctx.arg.thinLTOPrefixReplaceNativeObject) =
-      getOldNewOptionsExtra(args, OPT_thinlto_prefix_replace_eq);
+      getOldNewOptionsExtra(ctx, args, OPT_thinlto_prefix_replace_eq);
   if (ctx.arg.thinLTOEmitIndexFiles && !ctx.arg.thinLTOIndexOnly) {
     if (args.hasArg(OPT_thinlto_object_suffix_replace_eq))
       ErrAlways(ctx) << "--thinlto-object-suffix-replace is not supported with "
@@ -1525,7 +1531,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zCopyreloc = getZFlag(args, "copyreloc", "nocopyreloc", true);
   ctx.arg.zForceBti = hasZOption(args, "force-bti");
   ctx.arg.zForceIbt = hasZOption(args, "force-ibt");
-  ctx.arg.zGcs = getZGcs(args);
+  ctx.arg.zGcs = getZGcs(ctx, args);
   ctx.arg.zGlobal = hasZOption(args, "global");
   ctx.arg.zGnustack = getZGnuStack(args);
   ctx.arg.zHazardplt = hasZOption(args, "hazardplt");
@@ -1627,7 +1633,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       continue;
     }
     auto [typeStr, levelStr] = fields[1].split(':');
-    auto type = getCompressionType(typeStr, arg->getSpelling());
+    auto type = getCompressionType(ctx, typeStr, arg->getSpelling());
     unsigned level = 0;
     if (fields[1].size() != typeStr.size() &&
         !llvm::to_integer(levelStr, level)) {
@@ -1781,14 +1787,14 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   if (ctx.arg.nmagic || ctx.arg.omagic || ctx.arg.relocatable)
     ctx.arg.zRelro = false;
 
-  std::tie(ctx.arg.buildId, ctx.arg.buildIdVector) = getBuildId(args);
+  std::tie(ctx.arg.buildId, ctx.arg.buildIdVector) = getBuildId(ctx, args);
 
   if (getZFlag(args, "pack-relative-relocs", "nopack-relative-relocs", false)) {
     ctx.arg.relrGlibc = true;
     ctx.arg.relrPackDynRelocs = true;
   } else {
     std::tie(ctx.arg.androidPackDynRelocs, ctx.arg.relrPackDynRelocs) =
-        getPackDynRelocs(args);
+        getPackDynRelocs(ctx, args);
   }
 
   if (auto *arg = args.getLastArg(OPT_symbol_ordering_file)){
@@ -1949,7 +1955,7 @@ static void setConfigs(Ctx &ctx, opt::InputArgList &args) {
   }
 }
 
-static bool isFormatBinary(StringRef s) {
+static bool isFormatBinary(Ctx &ctx, StringRef s) {
   if (s == "binary")
     return true;
   if (s == "elf" || s == "default")
@@ -2006,7 +2012,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       ctx.arg.asNeeded = true;
       break;
     case OPT_format:
-      ctx.arg.formatBinary = isFormatBinary(arg->getValue());
+      ctx.arg.formatBinary = isFormatBinary(ctx, arg->getValue());
       break;
     case OPT_no_as_needed:
       ctx.arg.asNeeded = false;
