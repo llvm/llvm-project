@@ -443,7 +443,8 @@ protected:
   Error addFastRegAlloc(AddMachinePass &) const;
 
   /// addOptimizedRegAlloc - Add passes related to register allocation.
-  /// CodeGenCommonTMImpl provides standard regalloc passes for most targets.
+  /// CodeGenTargetMachineImpl provides standard regalloc passes for most
+  /// targets.
   void addOptimizedRegAlloc(AddMachinePass &) const;
 
   /// Add passes that optimize machine instructions after register allocation.

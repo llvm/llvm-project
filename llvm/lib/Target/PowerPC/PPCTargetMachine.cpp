@@ -345,8 +345,8 @@ static ScheduleDAGInstrs *createPPCPostMachineScheduler(
 
 // The FeatureString here is a little subtle. We are modifying the feature
 // string with what are (currently) non-function specific overrides as it goes
-// into the CodeGenCommonTMImpl constructor and then using the stored value in
-// the Subtarget constructor below it.
+// into the CodeGenTargetMachineImpl constructor and then using the stored value
+// in the Subtarget constructor below it.
 PPCTargetMachine::PPCTargetMachine(const Target &T, const Triple &TT,
                                    StringRef CPU, StringRef FS,
                                    const TargetOptions &Options,
