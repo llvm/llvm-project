@@ -1246,7 +1246,8 @@ enum class OverloadCompare { BothViable, Dominates, Dominated };
 static OverloadCompare compareOverloads(const CXXMethodDecl &Candidate,
                                         const CXXMethodDecl &Incumbent,
                                         const Qualifiers &ObjectQuals,
-                                        ExprValueKind ObjectKind) {
+                                        ExprValueKind ObjectKind,
+                                        const ASTContext &Ctx) {
   // Base/derived shadowing is handled elsewhere.
   if (Candidate.getDeclContext() != Incumbent.getDeclContext())
     return OverloadCompare::BothViable;
@@ -1280,8 +1281,8 @@ static OverloadCompare compareOverloads(const CXXMethodDecl &Candidate,
   // So make some decision based on the qualifiers.
   Qualifiers CandidateQual = Candidate.getMethodQualifiers();
   Qualifiers IncumbentQual = Incumbent.getMethodQualifiers();
-  bool CandidateSuperset = CandidateQual.compatiblyIncludes(IncumbentQual);
-  bool IncumbentSuperset = IncumbentQual.compatiblyIncludes(CandidateQual);
+  bool CandidateSuperset = CandidateQual.compatiblyIncludes(IncumbentQual, Ctx);
+  bool IncumbentSuperset = IncumbentQual.compatiblyIncludes(CandidateQual, Ctx);
   if (CandidateSuperset == IncumbentSuperset)
     return OverloadCompare::BothViable;
   return IncumbentSuperset ? OverloadCompare::Dominates
@@ -1452,7 +1453,8 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
           Result &Incumbent = Results[Entry.second];
           switch (compareOverloads(*Method,
                                    *cast<CXXMethodDecl>(Incumbent.Declaration),
-                                   ObjectTypeQualifiers, ObjectKind)) {
+                                   ObjectTypeQualifiers, ObjectKind,
+                                   CurContext->getParentASTContext())) {
           case OverloadCompare::Dominates:
             // Replace the dominated overload with this one.
             // FIXME: if the overload dominates multiple incumbents then we
