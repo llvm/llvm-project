@@ -516,7 +516,7 @@ Template::Template(StringRef TemplateStr) {
   Tree->setUpNode(LocalAllocator, Partials, Lambdas, SectionLambdas, Escapes);
 }
 
-void toJsonString(const Value &Data, raw_ostream &OS) {
+static void toMustacheString (const Value &Data, raw_ostream &OS) {
   switch (Data.kind()) {
   case Value::Null:
     return;
@@ -577,7 +577,7 @@ void ASTNode::render(const Value &Data, raw_ostream &OS) {
       renderLambdas(Data, OS, Lambda->getValue());
     else {
       EscapeStringStream ES(OS, *Escapes);
-      toJsonString(Context, ES);
+      toMustacheString(Context, ES);
     }
     return;
   }
@@ -586,7 +586,7 @@ void ASTNode::render(const Value &Data, raw_ostream &OS) {
     if (Lambda != Lambdas->end())
       renderLambdas(Data, OS, Lambda->getValue());
     else
-      toJsonString(Context, OS);
+      toMustacheString(Context, OS);
     return;
   }
   case Section: {
@@ -675,7 +675,7 @@ void ASTNode::renderLambdas(const Value &Contexts, llvm::raw_ostream &OS,
   Value LambdaResult = L();
   std::string LambdaStr;
   raw_string_ostream Output(LambdaStr);
-  toJsonString(LambdaResult, Output);
+  toMustacheString(LambdaResult, Output);
   Parser P = Parser(LambdaStr, *Allocator);
   ASTNode *LambdaNode = P.parse();
   LambdaNode->setUpNode(*Allocator, *Partials, *Lambdas, *SectionLambdas,
@@ -697,7 +697,7 @@ void ASTNode::renderSectionLambdas(const Value &Contexts, llvm::raw_ostream &OS,
     return;
   std::string LambdaStr;
   raw_string_ostream Output(LambdaStr);
-  toJsonString(Return, Output);
+  toMustacheString(Return, Output);
   Parser P = Parser(LambdaStr, *Allocator);
   ASTNode *LambdaNode = P.parse();
   LambdaNode->setUpNode(*Allocator, *Partials, *Lambdas, *SectionLambdas,
