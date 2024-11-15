@@ -203,8 +203,8 @@ defm : VInterpF16Pat<int_amdgcn_interp_p2_rtz_f16,
 // VINTERP Real Instructions
 //===----------------------------------------------------------------------===//
 
-multiclass VINTERP_Real_gfx11 <bits<7> op, string asmName> {
-  defvar ps = !cast<VOP3_Pseudo>(NAME);
+multiclass VINTERP_Real_gfx11 <bits<7> op, string asmName, string opName = NAME> {
+  defvar ps = !cast<VOP3_Pseudo>(opName);
   let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" #
                            !if(ps.Pfl.IsRealTrue16, "", "_FAKE16") in {
     def _gfx11 :
@@ -213,8 +213,8 @@ multiclass VINTERP_Real_gfx11 <bits<7> op, string asmName> {
   }
 }
 
-multiclass VINTERP_Real_gfx12 <bits<7> op, string asmName> {
-  defvar ps = !cast<VOP3_Pseudo>(NAME);
+multiclass VINTERP_Real_gfx12 <bits<7> op, string asmName, string opName = NAME> {
+  defvar ps = !cast<VOP3_Pseudo>(opName);
   let AssemblerPredicate = isGFX12Only, DecoderNamespace = "GFX12" #
                            !if(ps.Pfl.IsRealTrue16, "", "_FAKE16") in {
     def _gfx12 :
@@ -224,7 +224,7 @@ multiclass VINTERP_Real_gfx12 <bits<7> op, string asmName> {
 }
 
 multiclass VINTERP_Real_gfx11_gfx12 <bits<7> op, string asmName = !cast<VOP3_Pseudo>(NAME).Mnemonic, string opName = NAME> :
-  VINTERP_Real_gfx11<op, asmName>, VINTERP_Real_gfx12<op, asmName>;
+  VINTERP_Real_gfx11<op, asmName, opName>, VINTERP_Real_gfx12<op, asmName, opName>;
 
 multiclass VINTERP_Real_t16_and_fake16_gfx11_gfx12 <bits<7> op, string asmName = !cast<VOP3_Pseudo>(NAME).Mnemonic, string opName = NAME> {
   defm _t16:    VINTERP_Real_gfx11_gfx12<op, asmName, opName#"_t16">;
