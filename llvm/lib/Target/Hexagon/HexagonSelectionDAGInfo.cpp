@@ -10,11 +10,70 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "HexagonSelectionDAGInfo.h"
 #include "HexagonTargetMachine.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+
+#define GET_SDNODE_DESC
+#include "HexagonGenSDNodeInfo.inc"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "hexagon-selectiondag-info"
+
+HexagonSelectionDAGInfo::HexagonSelectionDAGInfo()
+    : SelectionDAGGenTargetInfo(HexagonGenSDNodeInfo) {}
+
+const char *HexagonSelectionDAGInfo::getTargetNodeName(unsigned Opcode) const {
+  // These nodes don't have corresponding entries in *.td files yet.
+  switch (static_cast<HexagonISD::NodeType>(Opcode)) {
+  case HexagonISD::ADDC:
+    return "HexagonISD::ADDC";
+  case HexagonISD::SUBC:
+    return "HexagonISD::SUBC";
+  case HexagonISD::CALLR:
+    return "HexagonISD::CALLR";
+  case HexagonISD::SMUL_LOHI:
+    return "HexagonISD::SMUL_LOHI";
+  case HexagonISD::UMUL_LOHI:
+    return "HexagonISD::UMUL_LOHI";
+  case HexagonISD::USMUL_LOHI:
+    return "HexagonISD::USMUL_LOHI";
+  case HexagonISD::VROR:
+    return "HexagonISD::VROR";
+  case HexagonISD::D2P:
+    return "HexagonISD::D2P";
+  case HexagonISD::P2D:
+    return "HexagonISD::P2D";
+  case HexagonISD::V2Q:
+    return "HexagonISD::V2Q";
+  case HexagonISD::Q2V:
+    return "HexagonISD::Q2V";
+  case HexagonISD::TL_EXTEND:
+    return "HexagonISD::TL_EXTEND";
+  case HexagonISD::TL_TRUNCATE:
+    return "HexagonISD::TL_TRUNCATE";
+  case HexagonISD::TYPECAST:
+    return "HexagonISD::TYPECAST";
+  case HexagonISD::ISEL:
+    return "HexagonISD::ISEL";
+  }
+
+  return SelectionDAGGenTargetInfo::getTargetNodeName(Opcode);
+}
+
+void HexagonSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
+                                               const SDNode *N) const {
+  switch (N->getOpcode()) {
+  default:
+    break;
+  case HexagonISD::VALIGNADDR:
+    // invalid number of operands; expected 1, got 2
+    return;
+  }
+
+  SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
+}
 
 SDValue HexagonSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
