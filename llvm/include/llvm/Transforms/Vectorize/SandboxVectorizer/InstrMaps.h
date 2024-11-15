@@ -13,9 +13,12 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/SandboxIR/Context.h"
+#include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 
 namespace llvm::sandboxir {
 
@@ -30,8 +33,37 @@ class InstrMaps {
   /// with the same lane, as they may be coming from vectorizing different
   /// original values.
   DenseMap<Value *, DenseMap<Value *, unsigned>> VectorToOrigLaneMap;
+  Context &Ctx;
+  std::optional<Context::CallbackID> EraseInstrCB;
+
+private:
+  void notifyEraseInstr(Value *V) {
+    // We don't know if V is an original or a vector value.
+    auto It = OrigToVectorMap.find(V);
+    if (It != OrigToVectorMap.end()) {
+      // V is an original value.
+      // Remove it from VectorToOrigLaneMap.
+      Value *Vec = It->second;
+      VectorToOrigLaneMap[Vec].erase(V);
+      // Now erase V from OrigToVectorMap.
+      OrigToVectorMap.erase(It);
+    } else {
+      // V is a vector value.
+      // Go over the original values it came from and remove them from
+      // OrigToVectorMap.
+      for (auto [Orig, Lane] : VectorToOrigLaneMap[V])
+        OrigToVectorMap.erase(Orig);
+      // Now erase V from VectorToOrigLaneMap.
+      VectorToOrigLaneMap.erase(V);
+    }
+  }
 
 public:
+  InstrMaps(Context &Ctx) : Ctx(Ctx) {
+    EraseInstrCB = Ctx.registerEraseInstrCallback(
+        [this](Instruction *I) { notifyEraseInstr(I); });
+  }
+  ~InstrMaps() { Ctx.unregisterEraseInstrCallback(*EraseInstrCB); }
   /// \Returns the vector value that we got from vectorizing \p Orig, or
   /// nullptr if not found.
   Value *getVectorForOrig(Value *Orig) const {
