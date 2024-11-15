@@ -184,14 +184,29 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
   const SourceManager &SM = PP.getSourceManager();
   const ModuleMap &MM = HS.getModuleMap();
 
-  llvm::DenseSet<FileID> ModuleMaps;
-
-  llvm::DenseSet<const Module *> ProcessedModules;
-  auto CollectModuleMapsForHierarchy = [&](const Module *M) {
+  // Module maps used only by textual headers are special. Their FileID is
+  // non-affecting, but their FileEntry is (i.e. must be written as InputFile).
+  enum AffectedReason : bool {
+    ARTextualHeader = 0,
+    ARImportOrTextualHeader = 1,
+  };
+  auto AssignMostImportant = [](AffectedReason &L, AffectedReason R) {
+    L = std::max(L, R);
+  };
+  llvm::DenseMap<FileID, AffectedReason> ModuleMaps;
+  llvm::DenseMap<const Module *, AffectedReason> ProcessedModules;
+  auto CollectModuleMapsForHierarchy = [&](const Module *M, AffectedReason Reason) {
     M = M->getTopLevelModule();
 
-    if (!ProcessedModules.insert(M).second)
+    // We need to process the header either when it was not present of when we
+    // previously flagged module map as textual headers and now we found a
+    // proper import.
+    if (auto [It, Inserted] = ProcessedModules.insert({M, Reason});
+        !Inserted && Reason <= It->second) {
       return;
+    } else {
+      It->second = Reason;
+    }
 
     std::queue<const Module *> Q;
     Q.push(M);
@@ -202,12 +217,12 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
       // The containing module map is affecting, because it's being pointed
       // into by Module::DefinitionLoc.
       if (auto F = MM.getContainingModuleMapFileID(Mod); F.isValid())
-        ModuleMaps.insert(F);
+        AssignMostImportant(ModuleMaps[F], Reason);
       // For inferred modules, the module map that allowed inferring is not
       // related to the virtual containing module map file. It did affect the
       // compilation, though.
       if (auto UniqF = MM.getModuleMapFileIDForUniquing(Mod); UniqF.isValid())
-        ModuleMaps.insert(UniqF);
+        AssignMostImportant(ModuleMaps[UniqF], Reason);
 
       for (auto *SubM : Mod->submodules())
         Q.push(SubM);
@@ -216,7 +231,7 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
 
   // Handle all the affecting modules referenced from the root module.
 
-  CollectModuleMapsForHierarchy(RootModule);
+  CollectModuleMapsForHierarchy(RootModule, ARImportOrTextualHeader);
 
   std::queue<const Module *> Q;
   Q.push(RootModule);
@@ -225,9 +240,9 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
     Q.pop();
 
     for (const Module *ImportedModule : CurrentModule->Imports)
-      CollectModuleMapsForHierarchy(ImportedModule);
+      CollectModuleMapsForHierarchy(ImportedModule, ARImportOrTextualHeader);
     for (const Module *UndeclaredModule : CurrentModule->UndeclaredUses)
-      CollectModuleMapsForHierarchy(UndeclaredModule);
+      CollectModuleMapsForHierarchy(UndeclaredModule, ARImportOrTextualHeader);
 
     for (auto *M : CurrentModule->submodules())
       Q.push(M);
@@ -256,7 +271,7 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
 
     for (const auto &KH : HS.findResolvedModulesForHeader(*File))
       if (const Module *M = KH.getModule())
-        CollectModuleMapsForHierarchy(M);
+        CollectModuleMapsForHierarchy(M, ARTextualHeader);
   }
 
   // FIXME: This algorithm is not correct for module map hierarchies where
@@ -278,13 +293,16 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
   // includes a module map defining a module that's not a submodule of X.
 
   llvm::DenseSet<const FileEntry *> ModuleFileEntries;
-  for (FileID MM : ModuleMaps) {
-    if (auto *FE = SM.getFileEntryForID(MM))
+  llvm::DenseSet<FileID> ModuleFileIDs;
+  for (auto [FID, Reason] : ModuleMaps) {
+    if (Reason == ARImportOrTextualHeader)
+      ModuleFileIDs.insert(FID);
+    if (auto *FE = SM.getFileEntryForID(FID))
       ModuleFileEntries.insert(FE);
   }
 
   AffectingModuleMaps R;
-  R.DefinitionFileIDs = std::move(ModuleMaps);
+  R.DefinitionFileIDs = std::move(ModuleFileIDs);
   R.DefinitionFiles = std::move(ModuleFileEntries);
   return std::move(R);
 }
