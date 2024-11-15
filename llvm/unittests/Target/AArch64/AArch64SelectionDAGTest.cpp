@@ -1,4 +1,4 @@
-//===- llvm/unittest/CodeGen/AArch64SelectionDAGTest.cpp -------------------------===//
+//===- llvm/unittest/CodeGen/AArch64SelectionDAGTest.cpp ------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../lib/Target/AArch64/AArch64ISelLowering.h"
+#include "AArch64SelectionDAGInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/AsmParser/Parser.h"
@@ -27,8 +27,9 @@ namespace llvm {
 class AArch64SelectionDAGTest : public testing::Test {
 protected:
   static void SetUpTestCase() {
-    InitializeAllTargets();
-    InitializeAllTargetMCs();
+    LLVMInitializeAArch64TargetInfo();
+    LLVMInitializeAArch64Target();
+    LLVMInitializeAArch64TargetMC();
   }
 
   void SetUp() override {
@@ -37,18 +38,11 @@ protected:
     Triple TargetTriple("aarch64--");
     std::string Error;
     const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
-    // FIXME: These tests do not depend on AArch64 specifically, but we have to
-    // initialize a target. A skeleton Target for unittests would allow us to
-    // always run these tests.
-    if (!T)
-      GTEST_SKIP();
 
     TargetOptions Options;
     TM = std::unique_ptr<TargetMachine>(
         T->createTargetMachine(TargetTriple, "", "+sve", Options, std::nullopt,
                                std::nullopt, CodeGenOptLevel::Aggressive));
-    if (!TM)
-      GTEST_SKIP();
 
     SMDiagnostic SMError;
     M = parseAssemblyString(Assembly, SMError, Context);
@@ -144,7 +138,8 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_SIGN_EXTEND_VECTOR_INREG) {
   EXPECT_EQ(DAG->ComputeNumSignBits(Op, DemandedElts), 15u);
 }
 
-TEST_F(AArch64SelectionDAGTest, ComputeNumSignBitsSVE_SIGN_EXTEND_VECTOR_INREG) {
+TEST_F(AArch64SelectionDAGTest,
+       ComputeNumSignBitsSVE_SIGN_EXTEND_VECTOR_INREG) {
   SDLoc Loc;
   auto Int8VT = EVT::getIntegerVT(Context, 8);
   auto Int16VT = EVT::getIntegerVT(Context, 16);
@@ -453,7 +448,7 @@ TEST_F(AArch64SelectionDAGTest, isSplatValue_Scalable_SPLAT_VECTOR) {
   EXPECT_TRUE(DAG->isSplatValue(Op, /*AllowUndefs=*/false));
 
   APInt UndefElts;
-  APInt DemandedElts(1,1);
+  APInt DemandedElts(1, 1);
   EXPECT_TRUE(DAG->isSplatValue(Op, DemandedElts, UndefElts));
 }
 
@@ -492,7 +487,8 @@ TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Fixed_BUILD_VECTOR) {
   EXPECT_EQ(SplatIdx, 0);
 }
 
-TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Fixed_ADD_of_BUILD_VECTOR) {
+TEST_F(AArch64SelectionDAGTest,
+       getSplatSourceVector_Fixed_ADD_of_BUILD_VECTOR) {
   TargetLowering TL(*TM);
 
   SDLoc Loc;
@@ -525,7 +521,8 @@ TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Scalable_SPLAT_VECTOR) {
   EXPECT_EQ(SplatIdx, 0);
 }
 
-TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Scalable_ADD_of_SPLAT_VECTOR) {
+TEST_F(AArch64SelectionDAGTest,
+       getSplatSourceVector_Scalable_ADD_of_SPLAT_VECTOR) {
   TargetLowering TL(*TM);
 
   SDLoc Loc;
@@ -560,7 +557,7 @@ TEST_F(AArch64SelectionDAGTest, getRepeatedSequence_Patterns) {
 
   // Build some repeating sequences.
   SmallVector<SDValue, 16> Pattern1111, Pattern1133, Pattern0123;
-  for(int I = 0; I != 4; ++I) {
+  for (int I = 0; I != 4; ++I) {
     Pattern1111.append(4, Val1);
     Pattern1133.append(2, Val1);
     Pattern1133.append(2, Val3);
@@ -597,7 +594,7 @@ TEST_F(AArch64SelectionDAGTest, getRepeatedSequence_Patterns) {
       cast<BuildVectorSDNode>(DAG->getBuildVector(VecVT, Loc, Pattern1111));
   auto *BV1133 =
       cast<BuildVectorSDNode>(DAG->getBuildVector(VecVT, Loc, Pattern1133));
-  auto *BV0123=
+  auto *BV0123 =
       cast<BuildVectorSDNode>(DAG->getBuildVector(VecVT, Loc, Pattern0123));
   auto *BV022 =
       cast<BuildVectorSDNode>(DAG->getBuildVector(VecVT, Loc, Pattern022));
