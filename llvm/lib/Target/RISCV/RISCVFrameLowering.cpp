@@ -30,20 +30,20 @@ using namespace llvm;
 namespace {
 
 class CFISaveRegisterEmitter {
-  MachineFunction &m_MF;
-  MachineFrameInfo &m_MFI;
+  MachineFunction &MF;
+  MachineFrameInfo &MFI;
 
 public:
   CFISaveRegisterEmitter(MachineFunction &MF)
-      : m_MF{MF}, m_MFI{MF.getFrameInfo()} {};
+      : MF{MF}, MFI{MF.getFrameInfo()} {};
 
   void emit(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
             const RISCVRegisterInfo &RI, const RISCVInstrInfo &TII,
             const DebugLoc &DL, const CalleeSavedInfo &CS) const {
     int FrameIdx = CS.getFrameIdx();
-    int64_t Offset = m_MFI.getObjectOffset(FrameIdx);
+    int64_t Offset = MFI.getObjectOffset(FrameIdx);
     Register Reg = CS.getReg();
-    unsigned CFIIndex = m_MF.addFrameInst(MCCFIInstruction::createOffset(
+    unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
         nullptr, RI.getDwarfRegNum(Reg, true), Offset));
     BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex)
@@ -52,16 +52,16 @@ public:
 };
 
 class CFIRestoreRegisterEmitter {
-  MachineFunction &m_MF;
+  MachineFunction &MF;
 
 public:
-  CFIRestoreRegisterEmitter(MachineFunction &MF) : m_MF{MF} {};
+  CFIRestoreRegisterEmitter(MachineFunction &MF) : MF{MF} {};
 
   void emit(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
             const RISCVRegisterInfo &RI, const RISCVInstrInfo &TII,
             const DebugLoc &DL, const CalleeSavedInfo &CS) const {
     Register Reg = CS.getReg();
-    unsigned CFIIndex = m_MF.addFrameInst(
+    unsigned CFIIndex = MF.addFrameInst(
         MCCFIInstruction::createRestore(nullptr, RI.getDwarfRegNum(Reg, true)));
     BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex)
