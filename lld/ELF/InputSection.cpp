@@ -77,7 +77,7 @@ InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
   // longer supported.
   if (flags & SHF_COMPRESSED) {
     Ctx &ctx = file->ctx;
-    invokeELFT(parseCompressedHeader,);
+    invokeELFT(parseCompressedHeader, ctx);
   }
 }
 
@@ -251,7 +251,8 @@ OutputSection *SectionBase::getOutputSection() {
 // When a section is compressed, `rawData` consists with a header followed
 // by zlib-compressed data. This function parses a header to initialize
 // `uncompressedSize` member and remove the header from `rawData`.
-template <typename ELFT> void InputSectionBase::parseCompressedHeader() {
+template <typename ELFT>
+void InputSectionBase::parseCompressedHeader(Ctx &ctx) {
   flags &= ~(uint64_t)SHF_COMPRESSED;
 
   // New-style header
@@ -639,7 +640,7 @@ static uint64_t getARMStaticBase(const Symbol &sym) {
 //
 // This function returns the R_RISCV_PCREL_HI20 relocation from the
 // R_RISCV_PCREL_LO12 relocation.
-static Relocation *getRISCVPCRelHi20(const InputSectionBase *loSec,
+static Relocation *getRISCVPCRelHi20(Ctx &ctx, const InputSectionBase *loSec,
                                      const Relocation &loReloc) {
   uint64_t addend = loReloc.addend;
   Symbol *sym = loReloc.sym;
@@ -850,7 +851,7 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     return getAArch64Page(val) - getAArch64Page(p);
   }
   case R_RISCV_PC_INDIRECT: {
-    if (const Relocation *hiRel = getRISCVPCRelHi20(this, r))
+    if (const Relocation *hiRel = getRISCVPCRelHi20(ctx, this, r))
       return getRelocTargetVA(ctx, *hiRel, r.sym->getVA(ctx));
     return 0;
   }
@@ -1369,8 +1370,9 @@ void EhInputSection::split(ArrayRef<RelTy> rels) {
     d = d.slice(size);
   }
   if (msg)
-    Err(ctx) << "corrupted .eh_frame: " << Twine(msg) << "\n>>> defined in "
-             << getObjMsg(d.data() - content().data());
+    Err(file->ctx) << "corrupted .eh_frame: " << Twine(msg)
+                   << "\n>>> defined in "
+                   << getObjMsg(d.data() - content().data());
 }
 
 // Return the offset in an output section for a given input offset.
