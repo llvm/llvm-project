@@ -22,6 +22,8 @@ define  dso_local void @f0() local_unnamed_addr {
 ; RV32IZCMP-NEXT: 	.cfi_offset ra, -4
 ; RV32IZCMP-NEXT: 	call	f1
 ; RV32IZCMP-NEXT: 	cm.pop	{ra}, 16
+; RV32IZCMP-NEXT:     .cfi_restore ra
+; RV32IZCMP-NEXT:     .cfi_def_cfa_offset 0
 ; RV32IZCMP-NEXT: .LBB0_2:                                # %if.F
 ; RV32IZCMP-NEXT: 	tail	f2
 ; RV32IZCMP-NEXT: .Lfunc_end0:
@@ -36,6 +38,8 @@ define  dso_local void @f0() local_unnamed_addr {
 ; RV64IZCMP-NEXT: 	.cfi_offset ra, -8
 ; RV64IZCMP-NEXT: 	call	f1
 ; RV64IZCMP-NEXT: 	cm.pop	{ra}, 16
+; RV64IZCMP-NEXT:     .cfi_restore ra
+; RV64IZCMP-NEXT:     .cfi_def_cfa_offset 0
 ; RV64IZCMP-NEXT: .LBB0_2:                                # %if.F
 ; RV64IZCMP-NEXT: 	tail	f2
 ; RV64IZCMP-NEXT: .Lfunc_end0:

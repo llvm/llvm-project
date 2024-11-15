@@ -435,9 +435,9 @@ public:
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
   /// according to the best selected \p VF and  \p UF.
   ///
-  /// TODO: \p IsEpilogueVectorization is needed to avoid issues due to epilogue
-  /// vectorization re-using plans for both the main and epilogue vector loops.
-  /// It should be removed once the re-use issue has been fixed.
+  /// TODO: \p VectorizingEpilogue indicates if the executed VPlan is for the
+  /// epilogue vector loop. It should be removed once the re-use issue has been
+  /// fixed.
   /// \p ExpandedSCEVs is passed during execution of the plan for epilogue loop
   /// to re-use expansion results generated during main plan execution.
   ///
@@ -447,7 +447,7 @@ public:
   DenseMap<const SCEV *, Value *>
   executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
               InnerLoopVectorizer &LB, DominatorTree *DT,
-              bool IsEpilogueVectorization,
+              bool VectorizingEpilogue,
               const DenseMap<const SCEV *, Value *> *ExpandedSCEVs = nullptr);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -506,7 +506,7 @@ private:
   // instructions leading from the loop exit instr to the phi need to be
   // converted to reductions, with one operand being vector and the other being
   // the scalar reduction chain. For other reductions, a select is introduced
-  // between the phi and live-out recipes when folding the tail.
+  // between the phi and users outside the vector region when folding the tail.
   void adjustRecipesForReductions(VPlanPtr &Plan,
                                   VPRecipeBuilder &RecipeBuilder,
                                   ElementCount MinVF);

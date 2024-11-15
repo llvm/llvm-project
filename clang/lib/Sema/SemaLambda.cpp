@@ -909,8 +909,8 @@ getDummyLambdaType(Sema &S, SourceLocation Loc = SourceLocation()) {
   QualType DefaultTypeForNoTrailingReturn = S.getLangOpts().CPlusPlus14
                                                 ? S.Context.getAutoDeductType()
                                                 : S.Context.DependentTy;
-  QualType MethodTy = S.Context.getFunctionType(DefaultTypeForNoTrailingReturn,
-                                                std::nullopt, EPI);
+  QualType MethodTy =
+      S.Context.getFunctionType(DefaultTypeForNoTrailingReturn, {}, EPI);
   return S.Context.getTrivialTypeSourceInfo(MethodTy, Loc);
 }
 
@@ -1681,8 +1681,7 @@ static void addFunctionPointerConversion(Sema &S, SourceRange IntroducerRange,
   ConvExtInfo.TypeQuals = Qualifiers();
   ConvExtInfo.TypeQuals.addConst();
   ConvExtInfo.ExceptionSpec.Type = EST_BasicNoexcept;
-  QualType ConvTy =
-      S.Context.getFunctionType(PtrToFunctionTy, std::nullopt, ConvExtInfo);
+  QualType ConvTy = S.Context.getFunctionType(PtrToFunctionTy, {}, ConvExtInfo);
 
   SourceLocation Loc = IntroducerRange.getBegin();
   DeclarationName ConversionName
@@ -1864,8 +1863,7 @@ static void addBlockPointerConversion(Sema &S,
           /*IsVariadic=*/false, /*IsCXXMethod=*/true));
   ConversionEPI.TypeQuals = Qualifiers();
   ConversionEPI.TypeQuals.addConst();
-  QualType ConvTy =
-      S.Context.getFunctionType(BlockPtrTy, std::nullopt, ConversionEPI);
+  QualType ConvTy = S.Context.getFunctionType(BlockPtrTy, {}, ConversionEPI);
 
   SourceLocation Loc = IntroducerRange.getBegin();
   DeclarationName Name
@@ -2353,7 +2351,10 @@ ExprResult Sema::BuildBlockForLambdaConversion(SourceLocation CurrentLocation,
   Block->setBody(new (Context) CompoundStmt(ConvLocation));
 
   // Create the block literal expression.
-  Expr *BuildBlock = new (Context) BlockExpr(Block, Conv->getConversionType());
+  // TODO: Do we ever get here if we have unexpanded packs in the lambda???
+  Expr *BuildBlock =
+      new (Context) BlockExpr(Block, Conv->getConversionType(),
+                              /*ContainsUnexpandedParameterPack=*/false);
   ExprCleanupObjects.push_back(Block);
   Cleanup.setExprNeedsCleanups(true);
 

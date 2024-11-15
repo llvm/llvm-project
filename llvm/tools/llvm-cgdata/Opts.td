@@ -24,6 +24,7 @@ def : F<"m", "Alias for --merge">, Alias<merge>, Group<action_group>;
 
 // Additional options
 def cgdata_version : FF<"cgdata-version", "Display the cgdata version">;
+def skip_trim : FF<"skip-trim", "Skip trimming content when merging the cgdata">;
 def output : Option<["--"], "output", KIND_SEPARATE>,
              HelpText<"Specify the name for the output file to be created">, MetaVarName<"<file>">;
 def : JoinedOrSeparate<["-"], "o">, Alias<output>, MetaVarName<"<file>">, HelpText<"Alias for --output">;

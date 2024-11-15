@@ -349,6 +349,12 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (auto *a = args.getLastArg(clang::driver::options::OPT_save_temps_EQ))
     opts.SaveTempsDir = a->getValue();
 
+  // -record-command-line option.
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_record_command_line)) {
+    opts.RecordCommandLine = a->getValue();
+  }
+
   // -mlink-builtin-bitcode
   for (auto *a :
        args.filtered(clang::driver::options::OPT_mlink_builtin_bitcode))
@@ -451,6 +457,16 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
 
   if (args.hasArg(clang::driver::options::OPT_fdisable_integer_16))
     opts.disabledIntegerKinds.push_back(16);
+
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_mabi_EQ)) {
+    llvm::StringRef V = a->getValue();
+    if (V == "vec-extabi") {
+      opts.EnableAIXExtendedAltivecABI = true;
+    } else if (V == "vec-default") {
+      opts.EnableAIXExtendedAltivecABI = false;
+    }
+  }
 }
 // Tweak the frontend configuration based on the frontend action
 static void setUpFrontendBasedOnAction(FrontendOptions &opts) {
@@ -1109,6 +1125,24 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   return diags.getNumErrors() == numErrorsBefore;
 }
 
+/// Parses signed integer overflow options and populates the
+/// CompilerInvocation accordingly.
+/// Returns false if new errors are generated.
+///
+/// \param [out] invoc Stores the processed arguments
+/// \param [in] args The compiler invocation arguments to parse
+/// \param [out] diags DiagnosticsEngine to report erros with
+static bool parseIntegerOverflowArgs(CompilerInvocation &invoc,
+                                     llvm::opt::ArgList &args,
+                                     clang::DiagnosticsEngine &diags) {
+  Fortran::common::LangOptions &opts = invoc.getLangOpts();
+
+  if (args.getLastArg(clang::driver::options::OPT_fwrapv))
+    opts.setSignedOverflowBehavior(Fortran::common::LangOptions::SOB_Defined);
+
+  return true;
+}
+
 /// Parses all floating point related arguments and populates the
 /// CompilerInvocation accordingly.
 /// Returns false if new errors are generated.
@@ -1249,6 +1283,18 @@ static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
   return true;
 }
 
+static bool parseLangOptionsArgs(CompilerInvocation &invoc,
+                                 llvm::opt::ArgList &args,
+                                 clang::DiagnosticsEngine &diags) {
+  bool success = true;
+
+  success &= parseIntegerOverflowArgs(invoc, args, diags);
+  success &= parseFloatingPointArgs(invoc, args, diags);
+  success &= parseVScaleArgs(invoc, args, diags);
+
+  return success;
+}
+
 bool CompilerInvocation::createFromArgs(
     CompilerInvocation &invoc, llvm::ArrayRef<const char *> commandLineArgs,
     clang::DiagnosticsEngine &diags, const char *argv0) {
@@ -1357,9 +1403,7 @@ bool CompilerInvocation::createFromArgs(
   invoc.frontendOpts.mlirArgs =
       args.getAllArgValues(clang::driver::options::OPT_mmlir);
 
-  success &= parseFloatingPointArgs(invoc, args, diags);
-
-  success &= parseVScaleArgs(invoc, args, diags);
+  success &= parseLangOptionsArgs(invoc, args, diags);
 
   success &= parseLinkerOptionsArgs(invoc, args, diags);
 
@@ -1571,6 +1615,8 @@ void CompilerInvocation::setLoweringOptions() {
   loweringOpts.setUnderscoring(codegenOpts.Underscoring);
 
   const Fortran::common::LangOptions &langOptions = getLangOpts();
+  loweringOpts.setIntegerWrapAround(langOptions.getSignedOverflowBehavior() ==
+                                    Fortran::common::LangOptions::SOB_Defined);
   Fortran::common::MathOptionsBase &mathOpts = loweringOpts.getMathOptions();
   // TODO: when LangOptions are finalized, we can represent
   //       the math related options using Fortran::commmon::MathOptionsBase,

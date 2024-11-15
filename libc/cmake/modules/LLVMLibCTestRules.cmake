@@ -402,7 +402,7 @@ function(add_integration_test test_name)
   if(NOT INTEGRATION_TEST_SRCS)
     message(FATAL_ERROR "The SRCS list for add_integration_test is missing.")
   endif()
-  if(NOT TARGET libc.startup.${LIBC_TARGET_OS}.crt1)
+  if(NOT LLVM_LIBC_FULL_BUILD AND NOT TARGET libc.startup.${LIBC_TARGET_OS}.crt1)
     message(FATAL_ERROR "The 'crt1' target for the integration test is missing.")
   endif()
 

@@ -16,6 +16,13 @@ New entries should be added directly below the "Version" header.
 Version 20.0
 ------------
 
+* [libcxx][libc] Implements from_chars floating-point
+
+  All platforms
+  -------------
+  Symbol added: _ZNSt3__127__from_chars_floating_pointIdEENS_19__from_chars_resultIT_EEPKcS5_NS_12chars_formatE
+  Symbol added: _ZNSt3__127__from_chars_floating_pointIfEENS_19__from_chars_resultIT_EEPKcS5_NS_12chars_formatE
+
 * [libc++] Stop trying to avoid exporting some typeinfo names
 
   This patch removes the explicit list of symbols to avoid exporting

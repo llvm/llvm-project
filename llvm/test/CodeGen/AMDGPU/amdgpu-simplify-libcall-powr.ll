@@ -517,7 +517,7 @@ define float @test_powr_afn_f32_neg0.0(float %x) {
 define <2 x float> @test_powr_afn_v2f32_0.0(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_powr_afn_v2f32_0.0
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    ret <2 x float> <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    ret <2 x float> splat (float 1.000000e+00)
 ;
   %powr = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> %x, <2 x float> <float 0.0, float 0.0>)
   ret <2 x float> %powr
@@ -526,7 +526,7 @@ define <2 x float> @test_powr_afn_v2f32_0.0(<2 x float> %x) {
 define <2 x float> @test_powr_afn_v2f32_neg0.0(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_powr_afn_v2f32_neg0.0
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    ret <2 x float> <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    ret <2 x float> splat (float 1.000000e+00)
 ;
   %powr = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> %x, <2 x float> <float -0.0, float -0.0>)
   ret <2 x float> %powr
@@ -545,7 +545,7 @@ define <2 x float> @test_powr_afn_v2f32_plus_minus_0.0(<2 x float> %x) {
 define <3 x float> @test_powr_afn_v3f32_0.0_splat_undef(<3 x float> %x, <3 x float> %y) {
 ; CHECK-LABEL: define <3 x float> @test_powr_afn_v3f32_0.0_splat_undef
 ; CHECK-SAME: (<3 x float> [[X:%.*]], <3 x float> [[Y:%.*]]) {
-; CHECK-NEXT:    ret <3 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    ret <3 x float> splat (float 1.000000e+00)
 ;
   %powr = tail call afn <3 x float> @_Z4powrDv3_fS_(<3 x float> %x, <3 x float> <float 0.0, float poison, float 0.0>)
   ret <3 x float> %powr
@@ -554,7 +554,7 @@ define <3 x float> @test_powr_afn_v3f32_0.0_splat_undef(<3 x float> %x, <3 x flo
 define <3 x float> @test_powr_afn_v3f32_neg0.0_splat_undef(<3 x float> %x, <3 x float> %y) {
 ; CHECK-LABEL: define <3 x float> @test_powr_afn_v3f32_neg0.0_splat_undef
 ; CHECK-SAME: (<3 x float> [[X:%.*]], <3 x float> [[Y:%.*]]) {
-; CHECK-NEXT:    ret <3 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    ret <3 x float> splat (float 1.000000e+00)
 ;
   %powr = tail call afn <3 x float> @_Z4powrDv3_fS_(<3 x float> %x, <3 x float> <float -0.0, float poison, float -0.0>)
   ret <3 x float> %powr
@@ -661,7 +661,7 @@ define <2 x float> @test_powr_afn_v2f32_1.0(<2 x float> %x) {
 define <2 x float> @test_powr_afn_v2f32_neg1.0(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_powr_afn_v2f32_neg1.0
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[__POWRECIP:%.*]] = fdiv afn <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[X]]
+; CHECK-NEXT:    [[__POWRECIP:%.*]] = fdiv afn <2 x float> splat (float 1.000000e+00), [[X]]
 ; CHECK-NEXT:    ret <2 x float> [[__POWRECIP]]
 ;
   %powr = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> %x, <2 x float> <float -1.0, float -1.0>)
@@ -690,7 +690,7 @@ define <3 x float> @test_powr_afn_v3f32_1.0_splat_undef(<3 x float> %x, <3 x flo
 define <3 x float> @test_powr_afn_v3f32_neg1.0_splat_undef(<3 x float> %x, <3 x float> %y) {
 ; CHECK-LABEL: define <3 x float> @test_powr_afn_v3f32_neg1.0_splat_undef
 ; CHECK-SAME: (<3 x float> [[X:%.*]], <3 x float> [[Y:%.*]]) {
-; CHECK-NEXT:    [[__POWRECIP:%.*]] = fdiv afn <3 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, [[X]]
+; CHECK-NEXT:    [[__POWRECIP:%.*]] = fdiv afn <3 x float> splat (float 1.000000e+00), [[X]]
 ; CHECK-NEXT:    ret <3 x float> [[__POWRECIP]]
 ;
   %powr = tail call afn <3 x float> @_Z4powrDv3_fS_(<3 x float> %x, <3 x float> <float -1.0, float poison, float -1.0>)
@@ -730,7 +730,7 @@ define <2 x float> @test_powr_afn_v2f32_2.0(<2 x float> %x) {
 define <2 x float> @test_powr_afn_v2f32_neg2.0(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_powr_afn_v2f32_neg2.0
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[POWR:%.*]] = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> [[X]], <2 x float> <float -2.000000e+00, float -2.000000e+00>)
+; CHECK-NEXT:    [[POWR:%.*]] = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> [[X]], <2 x float> splat (float -2.000000e+00))
 ; CHECK-NEXT:    ret <2 x float> [[POWR]]
 ;
   %powr = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> %x, <2 x float> <float -2.0, float -2.0>)
@@ -770,7 +770,7 @@ define float @test_powr_afn_f32_neg3.0(float %x) {
 define <2 x float> @test_powr_afn_v2f32_3.0(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_powr_afn_v2f32_3.0
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[POWR:%.*]] = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> [[X]], <2 x float> <float 3.000000e+00, float 3.000000e+00>)
+; CHECK-NEXT:    [[POWR:%.*]] = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> [[X]], <2 x float> splat (float 3.000000e+00))
 ; CHECK-NEXT:    ret <2 x float> [[POWR]]
 ;
   %powr = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> %x, <2 x float> <float 3.0, float 3.0>)
@@ -780,7 +780,7 @@ define <2 x float> @test_powr_afn_v2f32_3.0(<2 x float> %x) {
 define <2 x float> @test_powr_afn_v2f32_neg3.0(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_powr_afn_v2f32_neg3.0
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[POWR:%.*]] = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> [[X]], <2 x float> <float -3.000000e+00, float -3.000000e+00>)
+; CHECK-NEXT:    [[POWR:%.*]] = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> [[X]], <2 x float> splat (float -3.000000e+00))
 ; CHECK-NEXT:    ret <2 x float> [[POWR]]
 ;
   %powr = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> %x, <2 x float> <float -3.0, float -3.0>)
@@ -820,7 +820,7 @@ define float @test_powr_afn_f32_neg3.99(float %x) {
 define <2 x float> @test_powr_afn_v2f32_3.99(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_powr_afn_v2f32_3.99
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[POWR:%.*]] = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> [[X]], <2 x float> <float 0x400FEB8520000000, float 0x400FEB8520000000>)
+; CHECK-NEXT:    [[POWR:%.*]] = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> [[X]], <2 x float> splat (float 0x400FEB8520000000))
 ; CHECK-NEXT:    ret <2 x float> [[POWR]]
 ;
   %powr = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> %x, <2 x float> <float 0x400FEB8520000000, float 0x400FEB8520000000>)
@@ -830,7 +830,7 @@ define <2 x float> @test_powr_afn_v2f32_3.99(<2 x float> %x) {
 define <2 x float> @test_powr_afn_v2f32_neg3.99(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_powr_afn_v2f32_neg3.99
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[POWR:%.*]] = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> [[X]], <2 x float> <float 0xC00FEB8520000000, float 0xC00FEB8520000000>)
+; CHECK-NEXT:    [[POWR:%.*]] = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> [[X]], <2 x float> splat (float 0xC00FEB8520000000))
 ; CHECK-NEXT:    ret <2 x float> [[POWR]]
 ;
   %powr = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> %x, <2 x float> <float 0xC00FEB8520000000, float 0xC00FEB8520000000>)
@@ -870,7 +870,7 @@ define float @test_powr_afn_f32_neg8.0(float %x) {
 define <2 x float> @test_powr_afn_v2f32_8.0(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_powr_afn_v2f32_8.0
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[POWR:%.*]] = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> [[X]], <2 x float> <float 8.000000e+00, float 8.000000e+00>)
+; CHECK-NEXT:    [[POWR:%.*]] = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> [[X]], <2 x float> splat (float 8.000000e+00))
 ; CHECK-NEXT:    ret <2 x float> [[POWR]]
 ;
   %powr = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> %x, <2 x float> <float 8.0, float 8.0>)
@@ -880,7 +880,7 @@ define <2 x float> @test_powr_afn_v2f32_8.0(<2 x float> %x) {
 define <2 x float> @test_powr_afn_v2f32_neg8.0(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_powr_afn_v2f32_neg8.0
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[POWR:%.*]] = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> [[X]], <2 x float> <float -8.000000e+00, float -8.000000e+00>)
+; CHECK-NEXT:    [[POWR:%.*]] = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> [[X]], <2 x float> splat (float -8.000000e+00))
 ; CHECK-NEXT:    ret <2 x float> [[POWR]]
 ;
   %powr = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> %x, <2 x float> <float -8.0, float -8.0>)
@@ -920,7 +920,7 @@ define float @test_powr_afn_f32_neg12.0(float %x) {
 define <2 x float> @test_powr_afn_v2f32_12.0(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_powr_afn_v2f32_12.0
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[POWR:%.*]] = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> [[X]], <2 x float> <float 1.200000e+01, float 1.200000e+01>)
+; CHECK-NEXT:    [[POWR:%.*]] = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> [[X]], <2 x float> splat (float 1.200000e+01))
 ; CHECK-NEXT:    ret <2 x float> [[POWR]]
 ;
   %powr = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> %x, <2 x float> <float 12.0, float 12.0>)
@@ -930,7 +930,7 @@ define <2 x float> @test_powr_afn_v2f32_12.0(<2 x float> %x) {
 define <2 x float> @test_powr_afn_v2f32_neg12.0(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_powr_afn_v2f32_neg12.0
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[POWR:%.*]] = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> [[X]], <2 x float> <float -1.200000e+01, float -1.200000e+01>)
+; CHECK-NEXT:    [[POWR:%.*]] = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> [[X]], <2 x float> splat (float -1.200000e+01))
 ; CHECK-NEXT:    ret <2 x float> [[POWR]]
 ;
   %powr = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> %x, <2 x float> <float -12.0, float -12.0>)
@@ -970,7 +970,7 @@ define float @test_powr_afn_f32_neg13.0(float %x) {
 define <2 x float> @test_powr_afn_v2f32_13.0(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_powr_afn_v2f32_13.0
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[POWR:%.*]] = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> [[X]], <2 x float> <float 1.300000e+01, float 1.300000e+01>)
+; CHECK-NEXT:    [[POWR:%.*]] = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> [[X]], <2 x float> splat (float 1.300000e+01))
 ; CHECK-NEXT:    ret <2 x float> [[POWR]]
 ;
   %powr = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> %x, <2 x float> <float 13.0, float 13.0>)
@@ -980,7 +980,7 @@ define <2 x float> @test_powr_afn_v2f32_13.0(<2 x float> %x) {
 define <2 x float> @test_powr_afn_v2f32_neg13.0(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_powr_afn_v2f32_neg13.0
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[POWR:%.*]] = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> [[X]], <2 x float> <float -1.300000e+01, float -1.300000e+01>)
+; CHECK-NEXT:    [[POWR:%.*]] = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> [[X]], <2 x float> splat (float -1.300000e+01))
 ; CHECK-NEXT:    ret <2 x float> [[POWR]]
 ;
   %powr = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> %x, <2 x float> <float -13.0, float -13.0>)

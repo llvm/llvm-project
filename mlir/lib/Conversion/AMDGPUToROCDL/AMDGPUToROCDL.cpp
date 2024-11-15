@@ -98,15 +98,8 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     // bits, use a scalar load and bitcast it. Similarly, if bitsize(T) < 32
     // and the total load size is >= 32, use a vector load of N / (bitsize(T) /
     // 32) x i32 and bitcast. Also, the CAS intrinsic requires integer operands,
-    // so bitcast any floats to integers. On top of all this, cast bfloat
-    // (vectors) to i16 since the backend doesn't currently support bfloat on
-    // these operations.
+    // so bitcast any floats to integers.
     Type llvmBufferValType = llvmWantedDataType;
-    if (wantedDataType.isBF16())
-      llvmBufferValType = rewriter.getI16Type();
-    if (auto wantedVecType = dyn_cast<VectorType>(wantedDataType))
-      if (wantedVecType.getElementType().isBF16())
-        llvmBufferValType = wantedVecType.clone(rewriter.getI16Type());
     if (atomicCmpData) {
       if (auto floatType = dyn_cast<FloatType>(wantedDataType))
         llvmBufferValType = this->getTypeConverter()->convertType(

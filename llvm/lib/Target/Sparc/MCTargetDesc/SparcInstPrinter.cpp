@@ -38,7 +38,7 @@ bool SparcInstPrinter::isV9(const MCSubtargetInfo &STI) const {
   return (STI.hasFeature(Sparc::FeatureV9)) != 0;
 }
 
-void SparcInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void SparcInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   OS << '%' << getRegisterName(Reg);
 }
 

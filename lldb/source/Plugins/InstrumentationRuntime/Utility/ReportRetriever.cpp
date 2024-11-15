@@ -11,9 +11,9 @@
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Target/InstrumentationRuntimeStopInfo.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 using namespace lldb;
 using namespace lldb_private;

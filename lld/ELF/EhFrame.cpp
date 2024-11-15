@@ -17,6 +17,7 @@
 
 #include "EhFrame.h"
 #include "Config.h"
+#include "InputFiles.h"
 #include "InputSection.h"
 #include "Relocations.h"
 #include "Target.h"
@@ -41,8 +42,10 @@ public:
 
 private:
   template <class P> void failOn(const P *loc, const Twine &msg) {
-    fatal("corrupted .eh_frame: " + msg + "\n>>> defined in " +
-          isec->getObjMsg((const uint8_t *)loc - isec->content().data()));
+    Ctx &ctx = isec->file->ctx;
+    Fatal(ctx) << "corrupted .eh_frame: " << msg << "\n>>> defined in "
+               << isec->getObjMsg((const uint8_t *)loc -
+                                  isec->content().data());
   }
 
   uint8_t readByte();
@@ -119,7 +122,7 @@ void EhReader::skipAugP() {
   uint8_t enc = readByte();
   if ((enc & 0xf0) == DW_EH_PE_aligned)
     failOn(d.data() - 1, "DW_EH_PE_aligned encoding is not supported");
-  size_t size = getAugPSize(ctx, enc);
+  size_t size = getAugPSize(isec->getCtx(), enc);
   if (size == 0)
     failOn(d.data() - 1, "unknown FDE encoding");
   if (size >= d.size())

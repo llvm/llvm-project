@@ -3797,9 +3797,15 @@ private:
   bool ParseOpenACCSizeExprList(OpenACCClauseKind CK,
                                 llvm::SmallVectorImpl<Expr *> &SizeExprs);
   /// Parses a 'gang-arg-list', used for the 'gang' clause.
-  bool ParseOpenACCGangArgList(SourceLocation GangLoc);
-  /// Parses a 'gang-arg', used for the 'gang' clause.
-  bool ParseOpenACCGangArg(SourceLocation GangLoc);
+  bool ParseOpenACCGangArgList(SourceLocation GangLoc,
+                               llvm::SmallVectorImpl<OpenACCGangKind> &GKs,
+                               llvm::SmallVectorImpl<Expr *> &IntExprs);
+
+  using OpenACCGangArgRes = std::pair<OpenACCGangKind, ExprResult>;
+  /// Parses a 'gang-arg', used for the 'gang' clause. Returns a pair of the
+  /// ExprResult (which contains the validity of the expression), plus the gang
+  /// kind for the current argument.
+  OpenACCGangArgRes ParseOpenACCGangArg(SourceLocation GangLoc);
   /// Parses a 'condition' expr, ensuring it results in a
   ExprResult ParseOpenACCConditionExpr();
 

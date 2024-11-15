@@ -486,8 +486,8 @@ define void @predicated_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 4
 ; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
 ; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
-; FIXED-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i64> <i64 1, i64 1, i64 1, i64 1>
-; FIXED-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i64> <i64 1, i64 1, i64 1, i64 1>
+; FIXED-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i64> splat (i64 1)
+; FIXED-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i64> splat (i64 1)
 ; FIXED-NEXT:    [[TMP7:%.*]] = udiv <4 x i64> [[WIDE_LOAD]], [[TMP5]]
 ; FIXED-NEXT:    [[TMP8:%.*]] = udiv <4 x i64> [[WIDE_LOAD1]], [[TMP6]]
 ; FIXED-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[TMP7]], <4 x i64> [[WIDE_LOAD]]
@@ -614,8 +614,8 @@ define void @predicated_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 4
 ; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
 ; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
-; FIXED-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i64> <i64 1, i64 1, i64 1, i64 1>
-; FIXED-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i64> <i64 1, i64 1, i64 1, i64 1>
+; FIXED-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i64> splat (i64 1)
+; FIXED-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i64> splat (i64 1)
 ; FIXED-NEXT:    [[TMP7:%.*]] = sdiv <4 x i64> [[WIDE_LOAD]], [[TMP5]]
 ; FIXED-NEXT:    [[TMP8:%.*]] = sdiv <4 x i64> [[WIDE_LOAD1]], [[TMP6]]
 ; FIXED-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[TMP7]], <4 x i64> [[WIDE_LOAD]]
@@ -736,10 +736,10 @@ define void @predicated_udiv_by_constant(ptr noalias nocapture %a, i64 %n) {
 ; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 4
 ; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
 ; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
-; FIXED-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i64> [[WIDE_LOAD]], <i64 42, i64 42, i64 42, i64 42>
-; FIXED-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i64> [[WIDE_LOAD1]], <i64 42, i64 42, i64 42, i64 42>
-; FIXED-NEXT:    [[TMP6:%.*]] = udiv <4 x i64> [[WIDE_LOAD]], <i64 27, i64 27, i64 27, i64 27>
-; FIXED-NEXT:    [[TMP7:%.*]] = udiv <4 x i64> [[WIDE_LOAD1]], <i64 27, i64 27, i64 27, i64 27>
+; FIXED-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i64> [[WIDE_LOAD]], splat (i64 42)
+; FIXED-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i64> [[WIDE_LOAD1]], splat (i64 42)
+; FIXED-NEXT:    [[TMP6:%.*]] = udiv <4 x i64> [[WIDE_LOAD]], splat (i64 27)
+; FIXED-NEXT:    [[TMP7:%.*]] = udiv <4 x i64> [[WIDE_LOAD1]], splat (i64 27)
 ; FIXED-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP4]], <4 x i64> [[TMP6]], <4 x i64> [[WIDE_LOAD]]
 ; FIXED-NEXT:    [[PREDPHI2:%.*]] = select <4 x i1> [[TMP5]], <4 x i64> [[TMP7]], <4 x i64> [[WIDE_LOAD1]]
 ; FIXED-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP2]], align 8
@@ -858,10 +858,10 @@ define void @predicated_sdiv_by_constant(ptr noalias nocapture %a, i64 %n) {
 ; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 4
 ; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
 ; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
-; FIXED-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i64> [[WIDE_LOAD]], <i64 42, i64 42, i64 42, i64 42>
-; FIXED-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i64> [[WIDE_LOAD1]], <i64 42, i64 42, i64 42, i64 42>
-; FIXED-NEXT:    [[TMP6:%.*]] = sdiv <4 x i64> [[WIDE_LOAD]], <i64 27, i64 27, i64 27, i64 27>
-; FIXED-NEXT:    [[TMP7:%.*]] = sdiv <4 x i64> [[WIDE_LOAD1]], <i64 27, i64 27, i64 27, i64 27>
+; FIXED-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i64> [[WIDE_LOAD]], splat (i64 42)
+; FIXED-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i64> [[WIDE_LOAD1]], splat (i64 42)
+; FIXED-NEXT:    [[TMP6:%.*]] = sdiv <4 x i64> [[WIDE_LOAD]], splat (i64 27)
+; FIXED-NEXT:    [[TMP7:%.*]] = sdiv <4 x i64> [[WIDE_LOAD1]], splat (i64 27)
 ; FIXED-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP4]], <4 x i64> [[TMP6]], <4 x i64> [[WIDE_LOAD]]
 ; FIXED-NEXT:    [[PREDPHI2:%.*]] = select <4 x i1> [[TMP5]], <4 x i64> [[TMP7]], <4 x i64> [[WIDE_LOAD1]]
 ; FIXED-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP2]], align 8
@@ -981,10 +981,10 @@ define void @predicated_sdiv_by_minus_one(ptr noalias nocapture %a, i64 %n) {
 ; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 32
 ; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[TMP2]], align 1
 ; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <32 x i8>, ptr [[TMP3]], align 1
-; FIXED-NEXT:    [[TMP4:%.*]] = icmp ne <32 x i8> [[WIDE_LOAD]], <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>
-; FIXED-NEXT:    [[TMP5:%.*]] = icmp ne <32 x i8> [[WIDE_LOAD1]], <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>
-; FIXED-NEXT:    [[TMP6:%.*]] = select <32 x i1> [[TMP4]], <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <32 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
-; FIXED-NEXT:    [[TMP7:%.*]] = select <32 x i1> [[TMP5]], <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <32 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+; FIXED-NEXT:    [[TMP4:%.*]] = icmp ne <32 x i8> [[WIDE_LOAD]], splat (i8 -128)
+; FIXED-NEXT:    [[TMP5:%.*]] = icmp ne <32 x i8> [[WIDE_LOAD1]], splat (i8 -128)
+; FIXED-NEXT:    [[TMP6:%.*]] = select <32 x i1> [[TMP4]], <32 x i8> splat (i8 -1), <32 x i8> splat (i8 1)
+; FIXED-NEXT:    [[TMP7:%.*]] = select <32 x i1> [[TMP5]], <32 x i8> splat (i8 -1), <32 x i8> splat (i8 1)
 ; FIXED-NEXT:    [[TMP8:%.*]] = sdiv <32 x i8> [[WIDE_LOAD]], [[TMP6]]
 ; FIXED-NEXT:    [[TMP9:%.*]] = sdiv <32 x i8> [[WIDE_LOAD1]], [[TMP7]]
 ; FIXED-NEXT:    [[PREDPHI:%.*]] = select <32 x i1> [[TMP4]], <32 x i8> [[TMP8]], <32 x i8> [[WIDE_LOAD]]

@@ -24,13 +24,15 @@ getPreviousTokenAndStart(SourceLocation Location, const SourceManager &SM,
   if (Location.isInvalid())
     return {Token, Location};
 
-  auto StartOfFile = SM.getLocForStartOfFile(SM.getFileID(Location));
+  const auto StartOfFile = SM.getLocForStartOfFile(SM.getFileID(Location));
   while (Location != StartOfFile) {
     Location = Lexer::GetBeginningOfToken(Location, SM, LangOpts);
     if (!Lexer::getRawToken(Location, Token, SM, LangOpts) &&
         (!SkipComments || !Token.is(tok::comment))) {
       break;
     }
+    if (Location == StartOfFile)
+      return {Token, Location};
     Location = Location.getLocWithOffset(-1);
   }
   return {Token, Location};

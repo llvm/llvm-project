@@ -6,8 +6,9 @@
 
 define void @test() {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x double> @llvm.experimental.vp.strided.load.v4f64.p0.i64(ptr align 8 @src, i64 16, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, i32 4)
-; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x double> @llvm.experimental.vp.strided.load.v4f64.p0.i64(ptr align 8 getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 1), i64 16, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, i32 4)
+; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x double>, ptr @src, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x double> [[TMP4]], <8 x double> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x double> [[TMP4]], <8 x double> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; CHECK-NEXT:    [[TMP3:%.*]] = fsub fast <4 x double> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    store <4 x double> [[TMP3]], ptr @dst, align 8
 ; CHECK-NEXT:    ret void

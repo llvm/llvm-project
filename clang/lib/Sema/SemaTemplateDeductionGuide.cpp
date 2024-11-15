@@ -21,10 +21,10 @@
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/OperationKinds.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -70,8 +70,8 @@ public:
   ExtractTypeForDeductionGuide(
       Sema &SemaRef,
       llvm::SmallVectorImpl<TypedefNameDecl *> &MaterializedTypedefs,
-      ClassTemplateDecl *NestedPattern,
-      const MultiLevelTemplateArgumentList *OuterInstantiationArgs)
+      ClassTemplateDecl *NestedPattern = nullptr,
+      const MultiLevelTemplateArgumentList *OuterInstantiationArgs = nullptr)
       : Base(SemaRef), MaterializedTypedefs(MaterializedTypedefs),
         NestedPattern(NestedPattern),
         OuterInstantiationArgs(OuterInstantiationArgs) {
@@ -637,8 +637,7 @@ private:
 SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
     const TemplateParameterList *TemplateParamsList,
     ArrayRef<TemplateArgument> DeducedArgs) {
-  struct TemplateParamsReferencedFinder
-      : public RecursiveASTVisitor<TemplateParamsReferencedFinder> {
+  struct TemplateParamsReferencedFinder : DynamicRecursiveASTVisitor {
     const TemplateParameterList *TemplateParamList;
     llvm::BitVector ReferencedTemplateParams;
 
@@ -647,22 +646,22 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
         : TemplateParamList(TemplateParamList),
           ReferencedTemplateParams(TemplateParamList->size()) {}
 
-    bool VisitTemplateTypeParmType(TemplateTypeParmType *TTP) {
+    bool VisitTemplateTypeParmType(TemplateTypeParmType *TTP) override {
       // We use the index and depth to retrieve the corresponding template
       // parameter from the parameter list, which is more robost.
       Mark(TTP->getDepth(), TTP->getIndex());
       return true;
     }
 
-    bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+    bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
       MarkAppeared(DRE->getFoundDecl());
       return true;
     }
 
-    bool TraverseTemplateName(TemplateName Template) {
+    bool TraverseTemplateName(TemplateName Template) override {
       if (auto *TD = Template.getAsTemplateDecl())
         MarkAppeared(TD);
-      return RecursiveASTVisitor::TraverseTemplateName(Template);
+      return DynamicRecursiveASTVisitor::TraverseTemplateName(Template);
     }
 
     void MarkAppeared(NamedDecl *ND) {
@@ -1228,10 +1227,25 @@ FunctionTemplateDecl *DeclareAggregateDeductionGuideForTypeAlias(
       getRHSTemplateDeclAndArgs(SemaRef, AliasTemplate).first;
   if (!RHSTemplate)
     return nullptr;
+
+  llvm::SmallVector<TypedefNameDecl *> TypedefDecls;
+  llvm::SmallVector<QualType> NewParamTypes;
+  ExtractTypeForDeductionGuide TypeAliasTransformer(SemaRef, TypedefDecls);
+  for (QualType P : ParamTypes) {
+    QualType Type = TypeAliasTransformer.TransformType(P);
+    if (Type.isNull())
+      return nullptr;
+    NewParamTypes.push_back(Type);
+  }
+
   auto *RHSDeductionGuide = SemaRef.DeclareAggregateDeductionGuideFromInitList(
-      RHSTemplate, ParamTypes, Loc);
+      RHSTemplate, NewParamTypes, Loc);
   if (!RHSDeductionGuide)
     return nullptr;
+
+  for (TypedefNameDecl *TD : TypedefDecls)
+    TD->setDeclContext(RHSDeductionGuide->getTemplatedDecl());
+
   return BuildDeductionGuideForTypeAlias(SemaRef, AliasTemplate,
                                          RHSDeductionGuide, Loc);
 }
@@ -1386,7 +1400,7 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
   //    additional function template derived as above from a hypothetical
   //    constructor C().
   if (!AddedAny)
-    Transform.buildSimpleDeductionGuide(std::nullopt);
+    Transform.buildSimpleDeductionGuide({});
 
   //    -- An additional function template derived as above from a hypothetical
   //    constructor C(C), called the copy deduction candidate.

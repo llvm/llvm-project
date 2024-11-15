@@ -547,8 +547,13 @@ cc_library(
         ":TestDialect",
         "//llvm:Support",
         "//mlir:FuncDialect",
+        "//mlir:GPUToSPIRV",
+        "//mlir:GPUTransforms",
         "//mlir:IR",
         "//mlir:Pass",
+        "//mlir:SPIRVDialect",
+        "//mlir:SPIRVToLLVM",
+        "//mlir:SPIRVTransforms",
         "//mlir:Support",
     ],
 )

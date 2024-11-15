@@ -29,7 +29,7 @@ static bool AEABI(const ARMSubtarget &ST) {
   return ST.isTargetAEABI() || ST.isTargetGNUAEABI() || ST.isTargetMuslAEABI();
 }
 
-ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
+ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
   using namespace TargetOpcode;
 
   const LLT p0 = LLT::pointer(0, 32);
@@ -99,8 +99,10 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
       .minScalar(0, s32);
 
   getActionDefinitionsBuilder(G_CONSTANT)
-      .legalFor({s32, p0})
+      .customFor({s32, p0})
       .clampScalar(0, s32, s32);
+
+  getActionDefinitionsBuilder(G_CONSTANT_POOL).legalFor({p0});
 
   getActionDefinitionsBuilder(G_ICMP)
       .legalForCartesianProduct({s1}, {s32, p0})
@@ -434,6 +436,13 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
       MIRBuilder.buildOr(OriginalResult, Results[0], Results[1]);
     }
     break;
+  }
+  case G_CONSTANT: {
+    const ConstantInt *ConstVal = MI.getOperand(1).getCImm();
+    uint64_t ImmVal = ConstVal->getZExtValue();
+    if (ConstantMaterializationCost(ImmVal, &ST) > 2 && !ST.genExecuteOnly())
+      return Helper.lowerConstant(MI) == LegalizerHelper::Legalized;
+    return true;
   }
   case G_FCONSTANT: {
     // Convert to integer constants, while preserving the binary representation.

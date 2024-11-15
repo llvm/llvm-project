@@ -74,6 +74,11 @@ public:
   unsigned getInliningCostBenefitAnalysisProfitableMultiplier() const {
     return 8;
   }
+  int getInliningLastCallToStaticBonus() const {
+    // This is the value of InlineConstants::LastCallToStaticBonus before it was
+    // removed along with the introduction of this function.
+    return 15000;
+  }
   unsigned adjustInliningThreshold(const CallBase *CB) const { return 0; }
   unsigned getCallerAllocaCost(const CallBase *CB, const AllocaInst *AI) const {
     return 0;
@@ -169,10 +174,12 @@ public:
         Name == "asin"  || Name == "asinf"  || Name == "asinl" ||
         Name == "acos"  || Name == "acosf"  || Name == "acosl" ||
         Name == "atan"  || Name == "atanf"  || Name == "atanl" ||
+        Name == "atan2" || Name == "atan2f" || Name == "atan2l"||
         Name == "sinh"  || Name == "sinhf"  || Name == "sinhl" ||
         Name == "cosh"  || Name == "coshf"  || Name == "coshl" ||
         Name == "tanh"  || Name == "tanhf"  || Name == "tanhl" ||
-        Name == "sqrt" || Name == "sqrtf" || Name == "sqrtl")
+        Name == "sqrt"  || Name == "sqrtf"  || Name == "sqrtl" ||
+        Name == "exp10"  || Name == "exp10l"  || Name == "exp10f")
       return false;
     // clang-format on
     // These are all likely to be optimized into something smaller.
@@ -324,6 +331,11 @@ public:
   }
 
   bool isLegalStridedLoadStore(Type *DataType, Align Alignment) const {
+    return false;
+  }
+
+  bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
+                                    Align Alignment, unsigned AddrSpace) {
     return false;
   }
 
@@ -688,6 +700,17 @@ public:
     return 1;
   }
 
+  /// \param ScalarUserAndIdx encodes the information about extracts from a
+  /// vector with 'Scalar' being the value being extracted,'User' being the user
+  /// of the extract(nullptr if user is not known before vectorization) and
+  /// 'Idx' being the extract lane.
+  InstructionCost getVectorInstrCost(
+      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      Value *Scalar,
+      ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const {
+    return 1;
+  }
+
   InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
                                      TTI::TargetCostKind CostKind,
                                      unsigned Index) const {
@@ -778,6 +801,7 @@ public:
     case Intrinsic::experimental_gc_relocate:
     case Intrinsic::coro_alloc:
     case Intrinsic::coro_begin:
+    case Intrinsic::coro_begin_custom_abi:
     case Intrinsic::coro_free:
     case Intrinsic::coro_end:
     case Intrinsic::coro_frame:
@@ -994,6 +1018,10 @@ public:
   bool hasArmWideBranch(bool) const { return false; }
 
   unsigned getMaxNumArgs() const { return UINT_MAX; }
+
+  unsigned getNumBytesToPadGlobalArray(unsigned Size, Type *ArrayType) const {
+    return 0;
+  }
 
 protected:
   // Obtain the minimum required size to hold the value (without the sign)

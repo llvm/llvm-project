@@ -74,66 +74,72 @@ public:
 };
 
 template <typename T> class Interval {
-  T *From;
-  T *To;
+  T *Top;
+  T *Bottom;
 
 public:
-  Interval() : From(nullptr), To(nullptr) {}
-  Interval(T *From, T *To) : From(From), To(To) {
-    assert((From == To || From->comesBefore(To)) &&
-           "From should come before From!");
+  Interval() : Top(nullptr), Bottom(nullptr) {}
+  Interval(T *Top, T *Bottom) : Top(Top), Bottom(Bottom) {
+    assert((Top == Bottom || Top->comesBefore(Bottom)) &&
+           "Top should come before Bottom!");
   }
   Interval(ArrayRef<T *> Elems) {
     assert(!Elems.empty() && "Expected non-empty Elems!");
-    From = Elems[0];
-    To = Elems[0];
+    Top = Elems[0];
+    Bottom = Elems[0];
     for (auto *I : drop_begin(Elems)) {
-      if (I->comesBefore(From))
-        From = I;
-      else if (To->comesBefore(I))
-        To = I;
+      if (I->comesBefore(Top))
+        Top = I;
+      else if (Bottom->comesBefore(I))
+        Bottom = I;
     }
   }
   bool empty() const {
-    assert(((From == nullptr && To == nullptr) ||
-            (From != nullptr && To != nullptr)) &&
+    assert(((Top == nullptr && Bottom == nullptr) ||
+            (Top != nullptr && Bottom != nullptr)) &&
            "Either none or both should be null");
-    return From == nullptr;
+    return Top == nullptr;
   }
   bool contains(T *I) const {
     if (empty())
       return false;
-    return (From == I || From->comesBefore(I)) &&
-           (I == To || I->comesBefore(To));
+    return (Top == I || Top->comesBefore(I)) &&
+           (I == Bottom || I->comesBefore(Bottom));
   }
-  T *top() const { return From; }
-  T *bottom() const { return To; }
+  T *top() const { return Top; }
+  T *bottom() const { return Bottom; }
 
   using iterator = IntervalIterator<T, Interval>;
-  iterator begin() { return iterator(From, *this); }
+  iterator begin() { return iterator(Top, *this); }
   iterator end() {
-    return iterator(To != nullptr ? To->getNextNode() : nullptr, *this);
+    return iterator(Bottom != nullptr ? Bottom->getNextNode() : nullptr, *this);
   }
   iterator begin() const {
-    return iterator(From, const_cast<Interval &>(*this));
+    return iterator(Top, const_cast<Interval &>(*this));
   }
   iterator end() const {
-    return iterator(To != nullptr ? To->getNextNode() : nullptr,
+    return iterator(Bottom != nullptr ? Bottom->getNextNode() : nullptr,
                     const_cast<Interval &>(*this));
   }
   /// Equality.
   bool operator==(const Interval &Other) const {
-    return From == Other.From && To == Other.To;
+    return Top == Other.Top && Bottom == Other.Bottom;
   }
   /// Inequality.
   bool operator!=(const Interval &Other) const { return !(*this == Other); }
+  /// \Returns true if this interval comes before \p Other in program order.
+  /// This expects disjoint intervals.
+  bool comesBefore(const Interval &Other) const {
+    assert(disjoint(Other) && "Expect disjoint intervals!");
+    return bottom()->comesBefore(Other.top());
+  }
   /// \Returns true if this and \p Other have nothing in common.
   bool disjoint(const Interval &Other) const {
     if (Other.empty())
       return true;
     if (empty())
       return true;
-    return Other.To->comesBefore(From) || To->comesBefore(Other.From);
+    return Other.Bottom->comesBefore(Top) || Bottom->comesBefore(Other.Top);
   }
   /// \Returns the intersection between this and \p Other.
   // Example:
@@ -148,14 +154,14 @@ public:
     // 1. No overlap
     // A---B      this
     //       C--D Other
-    if (To->comesBefore(Other.From) || Other.To->comesBefore(From))
+    if (Bottom->comesBefore(Other.Top) || Other.Bottom->comesBefore(Top))
       return Interval();
     // 2. Overlap.
     // A---B   this
     //   C--D  Other
-    auto NewFromI = From->comesBefore(Other.From) ? Other.From : From;
-    auto NewToI = To->comesBefore(Other.To) ? To : Other.To;
-    return Interval(NewFromI, NewToI);
+    auto NewTopI = Top->comesBefore(Other.Top) ? Other.Top : Top;
+    auto NewBottomI = Bottom->comesBefore(Other.Bottom) ? Bottom : Other.Bottom;
+    return Interval(NewTopI, NewBottomI);
   }
   /// Difference operation. This returns up to two intervals.
   // Example:
@@ -172,11 +178,11 @@ public:
     Interval Intersection = intersection(Other);
     SmallVector<Interval, 2> Result;
     // Part 1, skip if empty.
-    if (From != Intersection.From)
-      Result.emplace_back(From, Intersection.From->getPrevNode());
+    if (Top != Intersection.Top)
+      Result.emplace_back(Top, Intersection.Top->getPrevNode());
     // Part 2, skip if empty.
-    if (Intersection.To != To)
-      Result.emplace_back(Intersection.To->getNextNode(), To);
+    if (Intersection.Bottom != Bottom)
+      Result.emplace_back(Intersection.Bottom->getNextNode(), Bottom);
     return Result;
   }
   /// \Returns the interval difference `this - Other`. This will crash in Debug
@@ -196,9 +202,9 @@ public:
       return Other;
     if (Other.empty())
       return *this;
-    auto *NewFrom = From->comesBefore(Other.From) ? From : Other.From;
-    auto *NewTo = To->comesBefore(Other.To) ? Other.To : To;
-    return {NewFrom, NewTo};
+    auto *NewTop = Top->comesBefore(Other.Top) ? Top : Other.Top;
+    auto *NewBottom = Bottom->comesBefore(Other.Bottom) ? Other.Bottom : Bottom;
+    return {NewTop, NewBottom};
   }
 
 #ifndef NDEBUG
