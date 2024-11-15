@@ -546,6 +546,12 @@ public:
     }
     const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
     ResolveOmpObjectList(objList, Symbol::Flag::OmpReduction);
+    using ReductionModifier = parser::OmpReductionClause::ReductionModifier;
+    const auto &maybeModifier{
+        std::get<std::optional<ReductionModifier>>(x.v.t)};
+    if (maybeModifier && *maybeModifier == ReductionModifier::Inscan) {
+      ResolveOmpObjectList(objList, Symbol::Flag::OmpInScanReduction);
+    }
     return false;
   }
 
@@ -702,7 +708,7 @@ private:
 
   Symbol::Flags ompFlagsRequireMark{Symbol::Flag::OmpThreadprivate,
       Symbol::Flag::OmpDeclareTarget, Symbol::Flag::OmpExclusiveScan,
-      Symbol::Flag::OmpInclusiveScan};
+      Symbol::Flag::OmpInclusiveScan, Symbol::Flag::OmpInScanReduction};
 
   Symbol::Flags dataCopyingAttributeFlags{
       Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpCopyPrivate};
@@ -2436,6 +2442,16 @@ void OmpAttributeVisitor::ResolveOmpObject(
                   if (ultimateSymbol.test(Symbol::Flag::InNamelist)) {
                     context_.Say(name->source,
                         "Variable '%s' in NAMELIST cannot be in a REDUCTION clause"_err_en_US,
+                        name->ToString());
+                  }
+                }
+                if (ompFlag == Symbol::Flag::OmpInclusiveScan ||
+                    ompFlag == Symbol::Flag::OmpExclusiveScan) {
+                  if (!symbol->test(Symbol::Flag::OmpInScanReduction)) {
+                    context_.Say(name->source,
+                        "List item %s must appear in REDUCTION clause "
+                        "with the INSCAN modifier of the parent "
+                        "directive"_err_en_US,
                         name->ToString());
                   }
                 }

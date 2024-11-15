@@ -990,9 +990,9 @@ void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
         const auto &objectList{
             std::get<parser::OmpObjectList>(reductionClause->v.t)};
         auto checkReductionSymbolInScan = [&](const parser::Name *name) {
-          if (name->symbol) {
-            if (!scanReductionInfoStack.top().findSymbolInScanConstruct(
-                    name->symbol)) {
+          if (auto &symbol = name->symbol) {
+            if (!symbol->test(Symbol::Flag::OmpInclusiveScan) &&
+                !symbol->test(Symbol::Flag::OmpExclusiveScan)) {
               context_.Say(name->source,
                   "List item %s must appear in EXCLUSIVE or "
                   "INCLUSIVE clause of an "
@@ -1014,7 +1014,6 @@ void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
               },
               ompObj.u);
         }
-        scanReductionInfoStack.pop();
       }
     }
   }
@@ -2740,12 +2739,14 @@ CHECK_SIMPLE_CLAUSE(Depobj, OMPC_depobj)
 CHECK_SIMPLE_CLAUSE(Detach, OMPC_detach)
 CHECK_SIMPLE_CLAUSE(DeviceType, OMPC_device_type)
 CHECK_SIMPLE_CLAUSE(DistSchedule, OMPC_dist_schedule)
+CHECK_SIMPLE_CLAUSE(Exclusive, OMPC_exclusive)
 CHECK_SIMPLE_CLAUSE(Final, OMPC_final)
 CHECK_SIMPLE_CLAUSE(Flush, OMPC_flush)
 CHECK_SIMPLE_CLAUSE(Full, OMPC_full)
 CHECK_SIMPLE_CLAUSE(Grainsize, OMPC_grainsize)
 CHECK_SIMPLE_CLAUSE(Hint, OMPC_hint)
 CHECK_SIMPLE_CLAUSE(Holds, OMPC_holds)
+CHECK_SIMPLE_CLAUSE(Inclusive, OMPC_inclusive)
 CHECK_SIMPLE_CLAUSE(InReduction, OMPC_in_reduction)
 CHECK_SIMPLE_CLAUSE(Match, OMPC_match)
 CHECK_SIMPLE_CLAUSE(Nontemporal, OMPC_nontemporal)
@@ -2842,24 +2843,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Reduction &x) {
   if (const auto &maybeModifier{
           std::get<std::optional<ReductionModifier>>(x.v.t)}) {
     const ReductionModifier modifier{*maybeModifier};
-    if (modifier == ReductionModifier::Inscan) {
-      scanReductionInfoStack.emplace();
-      const auto &ompObjectList{std::get<parser::OmpObjectList>(x.v.t)};
-      scanReductionInfoStack.top().mapSymbolsToReductionModifiers(
-          ompObjectList, modifier);
-    }
     CheckReductionModifier(modifier);
   }
-}
-
-void OmpStructureChecker::Enter(const parser::OmpClause::Inclusive &x) {
-  CheckAllowed(llvm::omp::Clause::OMPC_inclusive);
-  CheckAndMarkSymbolsUsedInScan(x.v);
-}
-
-void OmpStructureChecker::Enter(const parser::OmpClause::Exclusive &x) {
-  CheckAllowed(llvm::omp::Clause::OMPC_exclusive);
-  CheckAndMarkSymbolsUsedInScan(x.v);
 }
 
 bool OmpStructureChecker::CheckReductionOperators(
@@ -2901,41 +2886,6 @@ bool OmpStructureChecker::CheckReductionOperators(
       definedOp.u);
 
   return ok;
-}
-
-void OmpStructureChecker::CheckAndMarkSymbolsUsedInScan(
-    const parser::OmpObjectList &x) {
-  for (const auto &ompObj : x.v) {
-    auto checkAndMark = [&](const parser::Name *name) {
-      if (name->symbol) {
-        if (CurrentDirectiveIsNested()) {
-          ScanReductionInfo &scanReductionInfo = scanReductionInfoStack.top();
-          std::optional<ReductionModifier> reductionMod =
-              scanReductionInfo.findReductionModifier(name->symbol);
-          if (!reductionMod.has_value() ||
-              reductionMod.value() != ReductionModifier::Inscan) {
-            context_.Say(name->source,
-                "List item %s must appear in REDUCTION clause "
-                "with the INSCAN modifier of the parent "
-                "directive"_err_en_US,
-                name->ToString());
-          }
-          scanReductionInfo.markSymbolAsUsedInScanConstruct(name->symbol);
-        }
-      }
-    };
-    common::visit(
-        common::visitors{
-            [&](const parser::Designator &designator) {
-              if (const auto *name{
-                      semantics::getDesignatorNameIfDataRef(designator)}) {
-                checkAndMark(name);
-              }
-            },
-            [&](const auto &name) { checkAndMark(&name); },
-        },
-        ompObj.u);
-  }
 }
 
 bool OmpStructureChecker::CheckIntrinsicOperator(

@@ -4,6 +4,7 @@ subroutine test_scan()
  integer x, y, k, z
  
  !ERROR: Orphaned SCAN directives are prohibited; perhaps you forgot to enclose the directive in to a WORKSHARING LOOP, a WORKSHARING LOOP SIMD or a SIMD directive.
+ !ERROR: List item x must appear in REDUCTION clause with the INSCAN modifier of the parent directive
  !$omp scan inclusive(x)
  !$omp parallel do simd
  do k = 1, n
