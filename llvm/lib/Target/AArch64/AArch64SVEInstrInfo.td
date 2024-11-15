@@ -2419,6 +2419,10 @@ let Predicates = [HasSVEorSME] in {
                        (nxv2i64 (splat_vector (i64 0xFFFFFFFF)))), nxv2f64:$Zd)),
             (UCVTF_ZPmZ_StoD_UNDEF ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
 
+  let Predicates = [HasSVEorSME, UseUnaryUndefPseudos] in {
+    defm FCVT_ZPmZ : sve_fp_2op_p_zd_pat<"int_aarch64_sve_fcvt">;
+  }
+
   defm FRINTN_ZPmZ : sve_fp_2op_p_zd_HSD<0b00000, "frintn", AArch64frintn_mt>;
   defm FRINTP_ZPmZ : sve_fp_2op_p_zd_HSD<0b00001, "frintp", AArch64frintp_mt>;
   defm FRINTM_ZPmZ : sve_fp_2op_p_zd_HSD<0b00010, "frintm", AArch64frintm_mt>;
@@ -4254,7 +4258,7 @@ defm TBLQ_ZZZ  : sve2p1_tblq<"tblq", int_aarch64_sve_tblq>;
 //===----------------------------------------------------------------------===//
 let Predicates = [HasSVE2p2orSME2p2] in {
   // SVE Floating-point convert precision, zeroing predicate
-  defm FCVT_ZPzZ : sve_fp_z2op_p_zd_b_0<"fcvt">;
+  defm FCVT_ZPzZ : sve_fp_z2op_p_zd_b_0<"fcvt", "int_aarch64_sve_fcvt">;
 
   // SVE2p2 floating-point convert precision down (placing odd), zeroing predicate
   defm FCVTNT_ZPzZ      : sve_fp_fcvtntz<"fcvtnt">;
@@ -4268,7 +4272,7 @@ let Predicates = [HasSVE2p2orSME2p2] in {
   // SVE2p2 floating-point convert single-to-bf (placing odd), zeroing predicate
   def BFCVTNT_ZPzZ      : sve_fp_fcvt2z<0b1010, "bfcvtnt", ZPR16, ZPR32>;
   // Placing corresponding
-  def BFCVT_ZPzZ_StoH   : sve_fp_z2op_p_zd<0b1001010, "bfcvt", ZPR32, ZPR16>;
+  defm BFCVT_ZPzZ_StoH  : sve_fp_z2op_p_zd_bfcvt<0b1001010, "bfcvt", int_aarch64_sve_fcvt_bf16f32_v2>;
 
   // Floating-point convert to integer, zeroing predicate
   defm FCVTZS_ZPzZ : sve_fp_z2op_p_zd_d<0b0, "fcvtzs">;
