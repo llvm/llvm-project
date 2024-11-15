@@ -240,7 +240,7 @@ Token::Type Token::getTokenType(char Identifier) {
 // We make an exception for when previous token is empty
 // and the current token is the second token
 // For example: "{{#Section}}"
-bool hasTextBehind(size_t Idx, const ArrayRef<Token> &Tokens) {
+static bool hasTextBehind(size_t Idx, const ArrayRef<Token> &Tokens) {
   if (Idx == 0)
     return true;
 
@@ -258,7 +258,7 @@ bool hasTextBehind(size_t Idx, const ArrayRef<Token> &Tokens) {
 // if the left of previous token is empty spaces or tabs followed
 // by a newline
 // For example: "{{#Section}}  \n"
-bool hasTextAhead(size_t Idx, const ArrayRef<Token> &Tokens) {
+static bool hasTextAhead(size_t Idx, const ArrayRef<Token> &Tokens) {
   if (Idx >= Tokens.size() - 1)
     return true;
 
@@ -271,7 +271,7 @@ bool hasTextAhead(size_t Idx, const ArrayRef<Token> &Tokens) {
   return !TokenBody.starts_with("\r\n") && !TokenBody.starts_with("\n");
 }
 
-bool requiresCleanUp(Token::Type T) {
+static bool requiresCleanUp(Token::Type T) {
   // We must clean up all the tokens that could contain child nodes
   return T == Token::Type::SectionOpen || T == Token::Type::InvertSectionOpen ||
          T == Token::Type::SectionClose || T == Token::Type::Comment ||
@@ -284,7 +284,7 @@ bool requiresCleanUp(Token::Type T) {
 //  "{{! Comment }} \nLine 2"
 // would be considered as no text ahead and should be render as
 //  " Line 2"
-void stripTokenAhead(SmallVector<Token> &Tokens, size_t Idx) {
+static void stripTokenAhead(SmallVector<Token> &Tokens, size_t Idx) {
   Token &NextToken = Tokens[Idx + 1];
   StringRef NextTokenBody = NextToken.getTokenBody();
   // cut off the leading newline which could be \n or \r\n
@@ -302,7 +302,7 @@ void stripTokenAhead(SmallVector<Token> &Tokens, size_t Idx) {
 //  "A"
 // The exception for this is partial tag which requires us to
 // keep track of the indentation once it's rendered.
-void stripTokenBefore(SmallVector<Token> &Tokens, size_t Idx,
+static void stripTokenBefore(SmallVector<Token> &Tokens, size_t Idx,
                       Token &CurrentToken, Token::Type CurrentType) {
   Token &PrevToken = Tokens[Idx - 1];
   StringRef PrevTokenBody = PrevToken.getTokenBody();
@@ -546,7 +546,7 @@ void toJsonString(const Value &Data, raw_ostream &OS) {
   }
 }
 
-bool isFalsey(const Value &V) {
+static bool isFalsey(const Value &V) {
   return V.getAsNull() || (V.getAsBoolean() && !V.getAsBoolean().value()) ||
          (V.getAsArray() && V.getAsArray()->empty()) ||
          (V.getAsObject() && V.getAsObject()->empty());
