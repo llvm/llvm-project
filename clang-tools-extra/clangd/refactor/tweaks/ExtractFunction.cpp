@@ -95,8 +95,8 @@ enum FunctionDeclKind {
   OutOfLineDefinition
 };
 
-// A RootStmt is a statement that's fully selected including all it's children
-// and it's parent is unselected.
+// A RootStmt is a statement that's fully selected including all its children
+// and its parent is unselected.
 // Check if a node is a root statement.
 bool isRootStmt(const Node *N) {
   if (!N->ASTNode.get<Stmt>())
@@ -106,7 +106,7 @@ bool isRootStmt(const Node *N) {
     return false;
   // A DeclStmt can be an unselected RootStmt since VarDecls claim the entire
   // selection range in selectionTree. Additionally, a CXXOperatorCallExpr of a
-  // binary operation can be unselected because it's children claim the entire
+  // binary operation can be unselected because its children claim the entire
   // selection range in the selection tree (e.g. <<).
   if (N->Selected == SelectionTree::Unselected && !N->ASTNode.get<DeclStmt>() &&
       !N->ASTNode.get<CXXOperatorCallExpr>())
