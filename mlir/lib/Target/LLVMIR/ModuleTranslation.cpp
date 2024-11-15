@@ -1900,6 +1900,7 @@ void ModuleTranslation::setLoopMetadata(Operation *op,
 
 void ModuleTranslation::setDisjointFlag(Operation *op, llvm::Value *value) {
   auto iface = cast<DisjointFlagInterface>(op);
+  // We do a dyn_cast here in case the value got folded into a constant.
   if (auto disjointInst = dyn_cast<llvm::PossiblyDisjointInst>(value))
     disjointInst->setIsDisjoint(iface.getIsDisjoint());
 }
