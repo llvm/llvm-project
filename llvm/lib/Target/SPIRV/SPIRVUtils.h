@@ -164,8 +164,12 @@ storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
     return 5;
   case SPIRV::StorageClass::HostOnlyINTEL:
     return 6;
-  case SPIRV::StorageClass::Input:
+  case SPIRV::StorageClass::Private:
     return 7;
+  case SPIRV::StorageClass::Input:
+    return 8;
+  case SPIRV::StorageClass::Output:
+    return 9;
   default:
     report_fatal_error("Unable to get address space id");
   }

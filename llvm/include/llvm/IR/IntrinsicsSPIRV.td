@@ -57,6 +57,9 @@ let TargetPrefix = "spv" in {
                                 NoCapture<ArgIndex<1>>,
                                 ImmArg<ArgIndex<0>>]>;
 
+  def int_spv_load_builtin : Intrinsic<[llvm_any_ty], [llvm_i32_ty], [IntrReadMem, IntrWillReturn]>;
+  def int_spv_store_builtin : Intrinsic<[], [llvm_i32_ty, llvm_any_ty], [IntrWriteMem, IntrWillReturn]>;
+
   // The following intrinsic(s) are mirrored from IntrinsicsDirectX.td for HLSL support.
   def int_spv_thread_id : Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
   def int_spv_all : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty], [IntrNoMem]>;

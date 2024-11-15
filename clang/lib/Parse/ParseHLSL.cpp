@@ -281,6 +281,7 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
     Diag(Loc, diag::err_unknown_hlsl_semantic) << II;
     return;
   case ParsedAttr::AT_HLSLSV_GroupIndex:
+  case ParsedAttr::AT_HLSLSV_GroupID:
   case ParsedAttr::AT_HLSLSV_DispatchThreadID:
     break;
   default:

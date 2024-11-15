@@ -5047,6 +5047,10 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
     if (LangOpts.OpenMP && !LangOpts.OpenMPSimd)
       getOpenMPRuntime().registerTargetGlobalVariable(D, GV);
 
+    // HLSL related end of code gen work items.
+    if (LangOpts.HLSL)
+      getHLSLRuntime().handleGlobalVarDefinition(D, GV);
+
     // FIXME: This code is overly simple and should be merged with other global
     // handling.
     GV->setConstant(D->getType().isConstantStorage(getContext(), false, false));
@@ -5628,8 +5632,12 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
     getCUDARuntime().handleVarRegistration(D, *GV);
   }
 
-  if (LangOpts.HLSL)
-    getHLSLRuntime().handleGlobalVarDefinition(D, GV);
+  if (LangOpts.HLSL) {
+    if (D->hasAttr<HLSLVkExtBuiltinInputAttr>())
+      NeedsGlobalCtor = true;
+    if (D->hasAttr<HLSLVkExtBuiltinOutputAttr>())
+      NeedsGlobalDtor = true;
+  }
 
   GV->setInitializer(Init);
   if (emitter)

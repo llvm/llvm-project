@@ -263,6 +263,12 @@ private:
   bool selectWaveReadLaneAt(Register ResVReg, const SPIRVType *ResType,
                             MachineInstr &I) const;
 
+  bool selectLoadBuiltin(Register ResVReg, const SPIRVType *ResType,
+                         MachineInstr &I) const;
+
+  bool selectStoreBuiltin(Register ResVReg, const SPIRVType *ResType,
+                          MachineInstr &I) const;
+
   bool selectUnmergeValues(MachineInstr &I) const;
 
   bool selectHandleFromBinding(Register &ResVReg, const SPIRVType *ResType,
@@ -2000,6 +2006,72 @@ bool SPIRVInstructionSelector::selectWaveReadLaneAt(Register ResVReg,
       .addUse(I.getOperand(3).getReg());
 }
 
+/// Helper function for building a load instruction for loading a builtin global
+/// variable of \p BuiltinValue value.
+static Register
+getOrCreateBuiltinVariable(MachineIRBuilder &MIRBuilder,
+                           SPIRVType *VariableType, SPIRVGlobalRegistry *GR,
+                           SPIRV::BuiltIn::BuiltIn BuiltinValue,
+                           SPIRV::StorageClass::StorageClass StorageClass) {
+
+  Register NewRegister =
+      MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::iIDRegClass);
+  MIRBuilder.getMRI()->setType(NewRegister,
+                               LLT::pointer(0, GR->getPointerSize()));
+  SPIRVType *PtrType = GR->getOrCreateSPIRVPointerType(
+      VariableType, MIRBuilder, SPIRV::StorageClass::Input);
+  GR->assignSPIRVTypeToVReg(PtrType, NewRegister, MIRBuilder.getMF());
+
+  // Set up the global OpVariable with the necessary builtin decorations.
+  return GR->buildGlobalVariable(
+      NewRegister, PtrType, getLinkStringForBuiltIn(BuiltinValue), nullptr,
+      StorageClass, nullptr, /* isConst= */ false,
+      /* HasLinkageTy= */ false, SPIRV::LinkageType::Import, MIRBuilder, false);
+}
+
+bool SPIRVInstructionSelector::selectLoadBuiltin(Register ResVReg,
+                                                 const SPIRVType *ResType,
+                                                 MachineInstr &I) const {
+  assert(I.getNumOperands() == 3);
+  assert(I.getOperand(0).isReg());
+  assert(I.getOperand(2).isReg());
+
+  MachineInstr *ImmInst = getVRegDef(*MRI, I.getOperand(2).getReg());
+  assert(ImmInst->getOpcode() == TargetOpcode::G_CONSTANT);
+  uint32_t BuiltInID = ImmInst->getOperand(1).getCImm()->getZExtValue();
+
+  MachineIRBuilder MIRBuilder(I);
+  Register VarReg = getOrCreateBuiltinVariable(
+      MIRBuilder, ResType, &GR, (SPIRV::BuiltIn::BuiltIn)BuiltInID,
+      SPIRV::StorageClass::Input);
+  return BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(VarReg);
+}
+
+bool SPIRVInstructionSelector::selectStoreBuiltin(Register ResVReg,
+                                                  const SPIRVType *ResType,
+                                                  MachineInstr &I) const {
+  assert(I.getNumOperands() == 3);
+  assert(I.getOperand(1).isReg());
+  assert(I.getOperand(2).isReg());
+
+  MachineInstr *ImmInst = getVRegDef(*MRI, I.getOperand(1).getReg());
+  assert(ImmInst->getOpcode() == TargetOpcode::G_CONSTANT);
+  uint32_t BuiltInID = ImmInst->getOperand(1).getCImm()->getZExtValue();
+
+  const SPIRVType *ValueType = GR.getSPIRVTypeForVReg(I.getOperand(2).getReg());
+
+  MachineIRBuilder MIRBuilder(I);
+  Register VarReg = getOrCreateBuiltinVariable(
+      MIRBuilder, ValueType, &GR, (SPIRV::BuiltIn::BuiltIn)BuiltInID,
+      SPIRV::StorageClass::Output);
+  return BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpStore))
+      .addUse(VarReg)
+      .addUse(I.getOperand(2).getReg());
+}
+
 bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
                                                 const SPIRVType *ResType,
                                                 MachineInstr &I) const {
@@ -2840,6 +2912,10 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::step, GL::Step);
   case Intrinsic::spv_radians:
     return selectExtInst(ResVReg, ResType, I, CL::radians, GL::Radians);
+  case Intrinsic::spv_load_builtin:
+    return selectLoadBuiltin(ResVReg, ResType, I);
+  case Intrinsic::spv_store_builtin:
+    return selectStoreBuiltin(ResVReg, ResType, I);
   // Discard intrinsics which we do not expect to actually represent code after
   // lowering or intrinsics which are not implemented but should not crash when
   // found in a customer's LLVM IR input.
@@ -3340,8 +3416,10 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   unsigned AddrSpace = GV->getAddressSpace();
   SPIRV::StorageClass::StorageClass Storage =
       addressSpaceToStorageClass(AddrSpace, STI);
+  bool isIOVariable = Storage == SPIRV::StorageClass::Input ||
+                      Storage == SPIRV::StorageClass::Output;
   bool HasLnkTy = GV->getLinkage() != GlobalValue::InternalLinkage &&
-                  Storage != SPIRV::StorageClass::Function;
+                  Storage != SPIRV::StorageClass::Function && !isIOVariable;
   SPIRV::LinkageType::LinkageType LnkType =
       (GV->isDeclaration() || GV->hasAvailableExternallyLinkage())
           ? SPIRV::LinkageType::Import

@@ -15,11 +15,14 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CGHLSLRUNTIME_H
 #define LLVM_CLANG_LIB_CODEGEN_CGHLSLRUNTIME_H
 
+#include "CodeGenFunction.h"
+
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 
+#include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/HLSLRuntime.h"
 
@@ -152,6 +155,10 @@ public:
   bool needsResourceBindingInitFn();
   llvm::Function *createResourceBindingInitFn();
   llvm::Instruction *getConvergenceToken(llvm::BasicBlock &BB);
+
+  void EmitBuiltinConstructor(CodeGenFunction &CGF, const VarDecl &VD,
+                              Address dst);
+  llvm::Function *EmitBuiltinDestructor(const VarDecl &VD, Address dst);
 
 private:
   void addBufferResourceAnnotation(llvm::GlobalVariable *GV,

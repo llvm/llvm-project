@@ -2830,6 +2830,10 @@ VarDecl::needsDestruction(const ASTContext &Ctx) const {
     if (Eval->HasConstantDestruction)
       return QualType::DK_none;
 
+  if (hasAttr<HLSLVkExtBuiltinOutputAttr>()) {
+    return QualType::DK_cxx_destructor;
+  }
+
   if (isNoDestroy(Ctx))
     return QualType::DK_none;
 
