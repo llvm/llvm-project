@@ -3156,11 +3156,15 @@ void MallocChecker::checkPreCall(const CallEvent &Call,
     return;
   }
 
+  bool hasDef = false;
+
   // We will check for double free in the post visit.
   if (const AnyFunctionCall *FC = dyn_cast<AnyFunctionCall>(&Call)) {
     const FunctionDecl *FD = FC->getDecl();
     if (!FD)
       return;
+
+    hasDef = FD->getDefinition() != nullptr;
 
     if (ChecksEnabled[CK_MallocChecker] && isFreeingCall(Call))
       return;
@@ -3172,6 +3176,9 @@ void MallocChecker::checkPreCall(const CallEvent &Call,
     if (!Sym || checkUseAfterFree(Sym, C, CC->getCXXThisExpr()))
       return;
   }
+
+  if (ChecksEnabled[CK_MallocChecker] && !Call.isInSystemHeader() && hasDef)
+      return;
 
   // Check arguments for being used after free.
   for (unsigned I = 0, E = Call.getNumArgs(); I != E; ++I) {

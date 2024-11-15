@@ -26,7 +26,7 @@ static void *my_malloc2(int elevel, size_t size) {
 }
 
 static void my_free1(void *p) {
-  free(p);
+  free(p); // expected-warning {{Attempt to free released memory}}
 }
 
 static void test1(void) {
@@ -65,7 +65,7 @@ int test4(void) {
 void test6(void) {
   int *data = (int *)my_malloc2(1, 4);
   my_free1((int*)data);
-  my_free1((int*)data); // expected-warning{{Use of memory after it is freed}}
+  my_free1((int*)data);
 }
 
 // TODO: We should warn here.
@@ -97,4 +97,38 @@ int uafAndCallsFooWithEmptyReturn(void) {
   free(x);
   fooWithEmptyReturn(12);
   return *x; // expected-warning {{Use of memory after it is freed}}
+}
+
+static void test_empty(int *p) { return; }
+
+void test7() {
+  int *p = malloc(sizeof(int));
+  free(p);
+
+  test_empty(p); // no-warning
+}
+
+static void test_realloc(int *p) {
+  p = (int *)malloc(12);
+  free(p);
+  return;
+}
+
+void test8() {
+  int *p = malloc(sizeof(int));
+  free(p);
+
+  test_realloc(p); // no-warning
+}
+
+static void test_interproc_ptr_use(int *p) {
+  *p = 1; // expected-warning {{Use of memory after it is freed}}
+  return;
+}
+
+void test9() {
+  int *p = malloc(sizeof(int));
+  free(p);
+
+  test_interproc_ptr_use(p);
 }
