@@ -199,12 +199,11 @@ public:
   MergeFunctions() : FnTree(FunctionNodeCmp(&GlobalNumbers)) {
   }
 
-  template <typename FuncContainer>
-  bool run(FuncContainer &Functions);
+  template <typename FuncContainer> bool run(FuncContainer &Functions);
   std::pair<bool, DenseMap<Function *, Function *>>
   runOnFunctions(std::set<Function *> &F);
 
-  SmallPtrSet<GlobalValue *, 4>& getUsed();
+  SmallPtrSet<GlobalValue *, 4> &getUsed();
 
 private:
   // The function comparison operator is provided here so that FunctionNodes do
@@ -318,9 +317,7 @@ PreservedAnalyses MergeFunctionsPass::run(Module &M,
   return PreservedAnalyses::none();
 }
 
-SmallPtrSet<GlobalValue *, 4>& MergeFunctions::getUsed() {
-  return Used;
-}
+SmallPtrSet<GlobalValue *, 4> &MergeFunctions::getUsed() { return Used; }
 
 bool MergeFunctionsPass::runOnModule(Module &M) {
   MergeFunctions MF;
@@ -441,8 +438,7 @@ static bool isEligibleForMerging(Function &F) {
 inline Function *asPtr(Function *Fn) { return Fn; }
 inline Function *asPtr(Function &Fn) { return &Fn; }
 
-template <typename FuncContainer>
-bool MergeFunctions::run(FuncContainer &M) {
+template <typename FuncContainer> bool MergeFunctions::run(FuncContainer &M) {
   bool Changed = false;
 
   // All functions in the module, ordered by hash. Functions with a unique
