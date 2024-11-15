@@ -1,4 +1,3 @@
-// XFAIL: !rdar131321616 && asserts
 #include "print-unit.h"
 #include "syshead.h"
 

@@ -12,7 +12,6 @@
 #include "clang/Basic/PathRemapper.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/Support/Allocator.h"
@@ -20,6 +19,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/xxhash.h"
 
 using namespace clang;
 using namespace clang::index;
@@ -136,8 +136,12 @@ IndexUnitWriter::IndexUnitWriter(FileManager &FileMgr,
   this->ProviderIdentifier = std::string(ProviderIdentifier);
   this->ProviderVersion = std::string(ProviderVersion);
   SmallString<256> AbsOutputFile(OutputFile);
-  if (OutputFile != "-")  // Can't make stdout absolute, should stay as "-".
+  if (OutputFile != "-")  {
+    // Can't make stdout absolute, should stay as "-".
     FileMgr.makeAbsolutePath(AbsOutputFile);
+    llvm::sys::path::native(AbsOutputFile);
+  }
+
   this->OutputFile = std::string(AbsOutputFile.str());
   this->ModuleName = std::string(ModuleName);
   this->MainFile = MainFile;
@@ -227,13 +231,14 @@ void IndexUnitWriter::getUnitNameForOutputFile(StringRef FilePath,
                                                SmallVectorImpl<char> &Str) {
   SmallString<256> AbsPath(FilePath);
   FileMgr.makeAbsolutePath(AbsPath);
+  llvm::sys::path::native(AbsPath);
   return getUnitNameForAbsoluteOutputFile(AbsPath, Str, Remapper);
 }
 
 void IndexUnitWriter::getUnitPathForOutputFile(StringRef FilePath,
                                                SmallVectorImpl<char> &Str) {
   Str.append(UnitsPath.begin(), UnitsPath.end());
-  Str.push_back('/');
+  Str.push_back(llvm::sys::path::get_separator().front());
   return getUnitNameForOutputFile(FilePath, Str);
 }
 
@@ -281,8 +286,8 @@ void IndexUnitWriter::getUnitNameForAbsoluteOutputFile(StringRef FilePath,
   Str.push_back('-');
   // Need to be sure we use the remapped path to keep things hermetic.
   std::string RemappedPath = Remapper.remapPath(FilePath);
-  llvm::hash_code PathHashVal = llvm::hash_value(RemappedPath);
-  llvm::APInt(64, PathHashVal).toString(Str, 36, /*Signed=*/false);
+  auto PathHashVal = llvm::xxh3_64bits(RemappedPath);
+  llvm::APInt(64, PathHashVal).toStringUnsigned(Str, /*Radix*/ 36);
 }
 
 static void writeBlockInfo(BitstreamWriter &Stream) {

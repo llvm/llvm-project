@@ -33,7 +33,6 @@ class ClangIndexRecordWriter {
   std::unique_ptr<ASTNameGenerator> ASTNameGen;
   llvm::BumpPtrAllocator Allocator;
   llvm::DenseMap<const void *, StringRef> USRByDecl;
-  IndexRecordHasher Hasher;
 
 public:
   ClangIndexRecordWriter(ASTContext &Ctx, RecordingOptions Opts);

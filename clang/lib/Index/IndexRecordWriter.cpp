@@ -240,7 +240,7 @@ IndexRecordWriter::IndexRecordWriter(StringRef IndexPath)
 }
 
 IndexRecordWriter::Result
-IndexRecordWriter::beginRecord(StringRef Filename, hash_code RecordHash,
+IndexRecordWriter::beginRecord(StringRef Filename, uint64_t RecordHash,
                                std::string &Error, std::string *OutRecordFile) {
   using namespace llvm::sys;
   assert(!Record && "called beginRecord before calling endRecord on previous");

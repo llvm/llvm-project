@@ -1,4 +1,3 @@
-// XFAIL: !rdar131321616 && asserts
 // Needs 'find'.
 // REQUIRES: shell
 
