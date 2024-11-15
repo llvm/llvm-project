@@ -258,7 +258,7 @@ void initializeRegAllocPriorityAdvisorAnalysisPass(PassRegistry &);
 void initializeRegAllocScoringPass(PassRegistry &);
 void initializeRegBankSelectPass(PassRegistry &);
 void initializeRegToMemWrapperPassPass(PassRegistry &);
-void initializeRegUsageInfoCollectorPass(PassRegistry &);
+void initializeRegUsageInfoCollectorLegacyPass(PassRegistry &);
 void initializeRegUsageInfoPropagationPass(PassRegistry &);
 void initializeRegionInfoPassPass(PassRegistry &);
 void initializeRegionOnlyPrinterPass(PassRegistry &);
