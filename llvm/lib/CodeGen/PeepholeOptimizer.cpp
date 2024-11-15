@@ -1667,6 +1667,7 @@ PeepholeOptimizerPass::run(MachineFunction &MF,
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserve<MachineDominatorTreeAnalysis>();
   PA.preserve<MachineLoopAnalysis>();
+  PA.preserveSet<CFGAnalyses>();
   return PA;
 }
 
