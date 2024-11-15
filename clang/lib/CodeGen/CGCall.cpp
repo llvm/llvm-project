@@ -5168,7 +5168,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       // alloca was AS casted to the default as, so we ensure the cast is
       // stripped before binding to the sret arg, which is in the allocaAS.
       IRCallArgs[IRFunctionArgs.getSRetArgNo()] =
-          getAsNaturalPointerTo(SRetPtr, RetTy)->stripPointerCasts();
+          getAsNaturalPointerTo(SRetPtr, RetTy);
     } else if (RetAI.isInAlloca()) {
       Address Addr =
           Builder.CreateStructGEP(ArgMemory, RetAI.getInAllocaFieldIndex());
@@ -5390,18 +5390,20 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
             V->getType()->isIntegerTy())
           V = Builder.CreateZExt(V, ArgInfo.getCoerceToType());
 
-        // If the argument doesn't match, we are either trying to pass an
-        // alloca-ed sret argument directly, and the alloca AS does not match
-        // the default AS, case in which we AS cast it, or we have a trivial
-        // type mismatch, and thus perform a bitcast to coerce it.
+        // The only plausible mismatch here would be for pointer address spaces,
+        // which can happen e.g. when passing a sret arg that is in the AllocaAS
+        // to a function that takes a pointer to and argument in the DefaultAS.
+        // We assume that the target has a reasonable mapping for the DefaultAS
+        // (it can be casted to from incoming specific ASes), and insert an AS
+        // cast to address the mismatch.
         if (FirstIRArg < IRFuncTy->getNumParams() &&
             V->getType() != IRFuncTy->getParamType(FirstIRArg)) {
-          auto IRTy = IRFuncTy->getParamType(FirstIRArg);
-          auto MaybeSRetArg = dyn_cast_or_null<llvm::Argument>(V);
-          if (MaybeSRetArg && MaybeSRetArg->hasStructRetAttr())
-            V = Builder.CreateAddrSpaceCast(V, IRTy);
-          else
-            V = Builder.CreateBitCast(V, IRTy);
+          assert(V->getType()->isPointerTy() && "Only pointers can mismatch!");
+          auto FormalAS =
+            CallInfo.arguments()[ArgNo].type.getQualifiers().getAddressSpace();
+          auto ActualAS = I->Ty.getAddressSpace();
+          V = getTargetHooks().performAddrSpaceCast(
+              *this, V, ActualAS, FormalAS, IRFuncTy->getParamType(FirstIRArg));
         }
 
         if (ArgHasMaybeUndefAttr)
