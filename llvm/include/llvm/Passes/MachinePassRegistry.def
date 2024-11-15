@@ -28,6 +28,7 @@ MODULE_PASS("global-merge", GlobalMergePass(TM, GlobalMergeOptions()))
 MODULE_PASS("jmc-instrumenter", JMCInstrumenterPass())
 MODULE_PASS("lower-emutls", LowerEmuTLSPass())
 MODULE_PASS("pre-isel-intrinsic-lowering", PreISelIntrinsicLoweringPass())
+MODULE_PASS("print<regusage>", PhysicalRegisterUsageInfoPrinterPass(dbgs()))
 MODULE_PASS("shadow-stack-gc-lowering", ShadowStackGCLoweringPass())
 MODULE_PASS("global-merge-func", GlobalMergeFuncPass())
 #undef MODULE_PASS

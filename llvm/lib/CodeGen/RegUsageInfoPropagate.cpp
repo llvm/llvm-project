@@ -50,7 +50,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<PhysicalRegisterUsageInfo>();
+    AU.addRequired<PhysicalRegisterUsageInfoWrapperLegacy>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -75,7 +75,7 @@ private:
 
 INITIALIZE_PASS_BEGIN(RegUsageInfoPropagation, "reg-usage-propagation",
                       RUIP_NAME, false, false)
-INITIALIZE_PASS_DEPENDENCY(PhysicalRegisterUsageInfo)
+INITIALIZE_PASS_DEPENDENCY(PhysicalRegisterUsageInfoWrapperLegacy)
 INITIALIZE_PASS_END(RegUsageInfoPropagation, "reg-usage-propagation",
                     RUIP_NAME, false, false)
 
@@ -97,7 +97,8 @@ static const Function *findCalledFunction(const Module &M,
 
 bool RegUsageInfoPropagation::runOnMachineFunction(MachineFunction &MF) {
   const Module &M = *MF.getFunction().getParent();
-  PhysicalRegisterUsageInfo *PRUI = &getAnalysis<PhysicalRegisterUsageInfo>();
+  PhysicalRegisterUsageInfo *PRUI =
+      &getAnalysis<PhysicalRegisterUsageInfoWrapperLegacy>().getPRUI();
 
   LLVM_DEBUG(dbgs() << " ++++++++++++++++++++ " << getPassName()
                     << " ++++++++++++++++++++  \n");

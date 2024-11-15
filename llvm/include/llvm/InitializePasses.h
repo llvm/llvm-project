@@ -229,7 +229,7 @@ void initializePartiallyInlineLibCallsLegacyPassPass(PassRegistry &);
 void initializePatchableFunctionPass(PassRegistry &);
 void initializePeepholeOptimizerPass(PassRegistry &);
 void initializePhiValuesWrapperPassPass(PassRegistry &);
-void initializePhysicalRegisterUsageInfoPass(PassRegistry &);
+void initializePhysicalRegisterUsageInfoWrapperLegacyPass(PassRegistry &);
 void initializePlaceBackedgeSafepointsLegacyPassPass(PassRegistry &);
 void initializePostDomOnlyPrinterWrapperPassPass(PassRegistry &);
 void initializePostDomOnlyViewerWrapperPassPass(PassRegistry &);
