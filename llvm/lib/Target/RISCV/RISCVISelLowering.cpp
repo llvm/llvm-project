@@ -1623,10 +1623,17 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       MemTy = MemTy->getScalarType();
 
     Info.memVT = getValueType(DL, MemTy);
-    if (MemTy->isTargetExtTy())
+    if (MemTy->isTargetExtTy()) {
+      // RISC-V vector tuple type's alignment type should be its element type.
+      if (cast<TargetExtType>(MemTy)->getName() == "riscv.vector.tuple")
+        MemTy = Type::getIntNTy(
+            MemTy->getContext(),
+            1 << cast<ConstantInt>(I.getArgOperand(I.arg_size() - 1))
+                     ->getZExtValue());
       Info.align = DL.getABITypeAlign(MemTy);
-    else
+    } else {
       Info.align = Align(DL.getTypeSizeInBits(MemTy->getScalarType()) / 8);
+    }
     Info.size = MemoryLocation::UnknownSize;
     Info.flags |=
         IsStore ? MachineMemOperand::MOStore : MachineMemOperand::MOLoad;
