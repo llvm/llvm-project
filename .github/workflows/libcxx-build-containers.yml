@@ -33,11 +33,13 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Build the Linux builder image and the Android builder image
+    - name: Build the Linux builder image
       working-directory: libcxx/utils/ci
-      run:
-        - docker compose build actions-builder
-        - docker compose build android-buildkite-builder
+      run: docker compose build actions-builder
+
+    # - name: Build the Android builder image
+    #   working-directory: libcxx/utils/ci
+    #   run: docker compose build android-buildkite-builder
 
     - name: Log in to GitHub Container Registry
       uses: docker/login-action@v3
@@ -49,15 +51,15 @@ jobs:
     - name: Push the Linux builder image
       if: github.event_name == 'push'
       working-directory: libcxx/utils/ci
-      run:
-        - docker compose push actions-builder
+      run: |
+        docker compose push actions-builder
       env:
         TAG: libcxx-linux-builder:${{ github.sha }}
 
-    - name: Push the Android builder image
-      if: github.event_name == 'push'
-      working-directory: libcxx/utils/ci
-      run:
-        - docker compose push android-buildkite-builder
-      env:
-        TAG: libcxx-android-builder:${{ github.sha }}
+    # - name: Push the Android builder image
+    #   if: github.event_name == 'push'
+    #   working-directory: libcxx/utils/ci
+    #   run: |
+    #     docker compose push android-buildkite-builder
+    #   env:
+    #     TAG: libcxx-android-builder:${{ github.sha }}
