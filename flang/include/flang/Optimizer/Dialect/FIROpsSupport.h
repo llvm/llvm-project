@@ -160,6 +160,10 @@ static constexpr llvm::StringRef getFuncRecursiveAttrName() {
   return "fir.func_recursive";
 }
 
+static constexpr llvm::StringRef getFortranProcedureFlagsAttrName() {
+  return "fir.proc_attrs";
+}
+
 // Attribute for an alloca that is a trivial adaptor for converting a value to
 // pass-by-ref semantics for a VALUE parameter. The optimizer may be able to
 // eliminate these.

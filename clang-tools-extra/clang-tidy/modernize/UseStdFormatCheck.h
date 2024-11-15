@@ -44,6 +44,7 @@ private:
   StringRef ReplacementFormatFunction;
   utils::IncludeInserter IncludeInserter;
   std::optional<StringRef> MaybeHeaderToInclude;
+  Preprocessor *PP = nullptr;
 };
 
 } // namespace clang::tidy::modernize

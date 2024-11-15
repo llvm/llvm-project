@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=51
 ! Check OpenMP clause validity for the following directives:
 !     2.10 Device constructs
 program main

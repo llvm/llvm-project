@@ -1740,11 +1740,11 @@ func.func @print_string() {
 
 // -----
 
-func.func @extract_strided_slice_f32(%arg0: vector<4xf32>) -> vector<2xf32> {
+func.func @extract_strided_slice_f32_1d_from_1d(%arg0: vector<4xf32>) -> vector<2xf32> {
   %0 = vector.extract_strided_slice %arg0 {offsets = [2], sizes = [2], strides = [1]} : vector<4xf32> to vector<2xf32>
   return %0 : vector<2xf32>
 }
-// CHECK-LABEL: @extract_strided_slice_f32(
+// CHECK-LABEL: @extract_strided_slice_f32_1d_from_1d
 //  CHECK-SAME:    %[[A:.*]]: vector<4xf32>)
 //       CHECK:    %[[T0:.*]] = llvm.shufflevector %[[A]], %[[A]] [2, 3] : vector<4xf32>
 //       CHECK:    return %[[T0]] : vector<2xf32>
@@ -1753,11 +1753,11 @@ func.func @extract_strided_slice_f32(%arg0: vector<4xf32>) -> vector<2xf32> {
 
 // -----
 
-func.func @extract_strided_slice_index(%arg0: vector<4xindex>) -> vector<2xindex> {
+func.func @extract_strided_slice_index_1d_from_1d(%arg0: vector<4xindex>) -> vector<2xindex> {
   %0 = vector.extract_strided_slice %arg0 {offsets = [2], sizes = [2], strides = [1]} : vector<4xindex> to vector<2xindex>
   return %0 : vector<2xindex>
 }
-// CHECK-LABEL: @extract_strided_slice_index(
+// CHECK-LABEL: @extract_strided_slice_index_1d_from_1d
 //  CHECK-SAME:    %[[A:.*]]: vector<4xindex>)
 //       CHECK:    %[[T0:.*]] = builtin.unrealized_conversion_cast %[[A]] : vector<4xindex> to vector<4xi64>
 //       CHECK:    %[[T2:.*]] = llvm.shufflevector %[[T0]], %[[T0]] [2, 3] : vector<4xi64>
@@ -1840,32 +1840,48 @@ func.func @extract_strided_slice_f32_2d_from_2d_scalable(%arg0: vector<4x[8]xf32
 
 // -----
 
-func.func @insert_strided_slice1(%b: vector<4x4xf32>, %c: vector<4x4x4xf32>) -> vector<4x4x4xf32> {
+func.func @insert_strided_slice_f32_2d_into_3d(%b: vector<4x4xf32>, %c: vector<4x4x4xf32>) -> vector<4x4x4xf32> {
   %0 = vector.insert_strided_slice %b, %c {offsets = [2, 0, 0], strides = [1, 1]} : vector<4x4xf32> into vector<4x4x4xf32>
   return %0 : vector<4x4x4xf32>
 }
-// CHECK-LABEL: @insert_strided_slice1
+// CHECK-LABEL: @insert_strided_slice_f32_2d_into_3d
 //       CHECK:    llvm.extractvalue {{.*}}[2] : !llvm.array<4 x array<4 x vector<4xf32>>>
 //       CHECK:    llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm.array<4 x array<4 x vector<4xf32>>>
 
+func.func @insert_strided_slice_f32_2d_into_3d_scalable(%b: vector<4x[4]xf32>, %c: vector<4x4x[4]xf32>) -> vector<4x4x[4]xf32> {
+  %0 = vector.insert_strided_slice %b, %c {offsets = [2, 0, 0], strides = [1, 1]} : vector<4x[4]xf32> into vector<4x4x[4]xf32>
+  return %0 : vector<4x4x[4]xf32>
+}
+// CHECK-LABEL: @insert_strided_slice_f32_2d_into_3d_scalable
+//       CHECK:    llvm.extractvalue {{.*}}[2] : !llvm.array<4 x array<4 x vector<[4]xf32>>>
+//       CHECK:    llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm.array<4 x array<4 x vector<[4]xf32>>>
+
 // -----
 
-func.func @insert_strided_index_slice1(%b: vector<4x4xindex>, %c: vector<4x4x4xindex>) -> vector<4x4x4xindex> {
+func.func @insert_strided_index_slice_index_2d_into_3d(%b: vector<4x4xindex>, %c: vector<4x4x4xindex>) -> vector<4x4x4xindex> {
   %0 = vector.insert_strided_slice %b, %c {offsets = [2, 0, 0], strides = [1, 1]} : vector<4x4xindex> into vector<4x4x4xindex>
   return %0 : vector<4x4x4xindex>
 }
-// CHECK-LABEL: @insert_strided_index_slice1(
+// CHECK-LABEL: @insert_strided_index_slice_index_2d_into_3d
 //       CHECK:    llvm.extractvalue {{.*}}[2] : !llvm.array<4 x array<4 x vector<4xi64>>>
 //       CHECK:    llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm.array<4 x array<4 x vector<4xi64>>>
 
+func.func @insert_strided_index_slice_index_2d_into_3d_scalable(%b: vector<4x[4]xindex>, %c: vector<4x4x[4]xindex>) -> vector<4x4x[4]xindex> {
+  %0 = vector.insert_strided_slice %b, %c {offsets = [2, 0, 0], strides = [1, 1]} : vector<4x[4]xindex> into vector<4x4x[4]xindex>
+  return %0 : vector<4x4x[4]xindex>
+}
+// CHECK-LABEL: @insert_strided_index_slice_index_2d_into_3d_scalable
+//       CHECK:    llvm.extractvalue {{.*}}[2] : !llvm.array<4 x array<4 x vector<[4]xi64>>>
+//       CHECK:    llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm.array<4 x array<4 x vector<[4]xi64>>>
+
 // -----
 
-func.func @insert_strided_slice2(%a: vector<2x2xf32>, %b: vector<4x4xf32>) -> vector<4x4xf32> {
+func.func @insert_strided_slice_f32_2d_into_2d(%a: vector<2x2xf32>, %b: vector<4x4xf32>) -> vector<4x4xf32> {
   %0 = vector.insert_strided_slice %a, %b {offsets = [2, 2], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
   return %0 : vector<4x4xf32>
 }
 
-// CHECK-LABEL: @insert_strided_slice2
+// CHECK-LABEL: @insert_strided_slice_f32_2d_into_2d
 //
 // Subvector vector<2xf32> @0 into vector<4xf32> @2
 //       CHECK:    %[[V2_0:.*]] = llvm.extractvalue {{.*}}[0] : !llvm.array<2 x vector<2xf32>>
@@ -1883,14 +1899,33 @@ func.func @insert_strided_slice2(%a: vector<2x2xf32>, %b: vector<4x4xf32>) -> ve
 //       CHECK:    %[[R4_3:.*]] = llvm.shufflevector %[[R4_2]], %[[V4_3]] [4, 5, 0, 1] : vector<4xf32>
 //       CHECK:    llvm.insertvalue %[[R4_3]], {{.*}}[3] : !llvm.array<4 x vector<4xf32>>
 
+// NOTE: For scalable dimensions, the corresponding "base" size must match
+// (i.e. we can only insert "full" scalable dimensions, e.g. [2] into [2], but
+// not [2] from [4]).
+
+func.func @insert_strided_slice_f32_2d_into_2d_scalable(%a: vector<2x[2]xf32>, %b: vector<4x[2]xf32>) -> vector<4x[2]xf32> {
+  %0 = vector.insert_strided_slice %a, %b {offsets = [2, 0], strides = [1, 1]} : vector<2x[2]xf32> into vector<4x[2]xf32>
+  return %0 : vector<4x[2]xf32>
+}
+
+// CHECK-LABEL:   func.func @insert_strided_slice_f32_2d_into_2d_scalable
+// Subvector vector<[2]xf32> @0 into vector<[4]xf32> @2
+// CHECK:           %[[A_0:.*]] = llvm.extractvalue {{.*}}[0] : !llvm.array<2 x vector<[2]xf32>>
+// Element @0 -> element @2
+// CHECK:           %[[B_UPDATED:.*]] = llvm.insertvalue %[[A_0]], {{.*}}[2] : !llvm.array<4 x vector<[2]xf32>>
+// Subvector vector<[2]xf32> @1 into vector<[4]xf32> @3
+// CHECK:           %[[A_1:.*]] = llvm.extractvalue {{.*}}[1] : !llvm.array<2 x vector<[2]xf32>>
+// Element @0 -> element @2
+// CHECK:           llvm.insertvalue %[[A_1]], %[[B_UPDATED]][3] : !llvm.array<4 x vector<[2]xf32>>
+
 // -----
 
-func.func @insert_strided_slice3(%arg0: vector<2x4xf32>, %arg1: vector<16x4x8xf32>) -> vector<16x4x8xf32> {
+func.func @insert_strided_slice_f32_2d_into_3d(%arg0: vector<2x4xf32>, %arg1: vector<16x4x8xf32>) -> vector<16x4x8xf32> {
   %0 = vector.insert_strided_slice %arg0, %arg1 {offsets = [0, 0, 2], strides = [1, 1]}:
         vector<2x4xf32> into vector<16x4x8xf32>
   return %0 : vector<16x4x8xf32>
 }
-// CHECK-LABEL: func @insert_strided_slice3
+// CHECK-LABEL: func @insert_strided_slice_f32_2d_into_3d
 //       CHECK:    %[[V4_0:.*]] = llvm.extractvalue {{.*}}[0] : !llvm.array<2 x vector<4xf32>>
 //       CHECK:    %[[V4_0_0:.*]] = llvm.extractvalue {{.*}}[0, 0] : !llvm.array<16 x array<4 x vector<8xf32>>>
 //       CHECK:    %[[R8_0:.*]] = llvm.shufflevector %[[V4_0]], %[[V4_0]] [0, 1, 2, 3, 0, 0, 0, 0] : vector<4xf32>
@@ -1903,26 +1938,31 @@ func.func @insert_strided_slice3(%arg0: vector<2x4xf32>, %arg1: vector<16x4x8xf3
 //       CHECK:    %[[R8_3:.*]] = llvm.shufflevector %[[R8_2]], %[[V4_0_1]] [8, 9, 0, 1, 2, 3, 14, 15] : vector<8xf32>
 //       CHECK:    llvm.insertvalue %[[R8_3]], {{.*}}[1] : !llvm.array<4 x vector<8xf32>>
 
-// -----
+// NOTE: For scalable dimensions, the corresponding "base" size must match
+// (i.e. we can only insert "full" scalable dimensions, e.g. [4] into [4], but
+// not [4] from [8]).
 
-func.func @insert_strided_slice_scalable(%arg0 : vector<1x1x[4]xi32>, %arg1: vector<1x4x[4]xi32>) -> vector<1x4x[4]xi32> {
-  %0 = vector.insert_strided_slice %arg0, %arg1 {offsets = [0, 3, 0], strides = [1, 1, 1]} : vector<1x1x[4]xi32> into vector<1x4x[4]xi32>
-  return %0 : vector<1x4x[4]xi32>
+func.func @insert_strided_slice_f32_2d_into_3d_scalable(%arg0: vector<2x[4]xf32>, %arg1: vector<16x4x[4]xf32>) -> vector<16x4x[4]xf32> {
+  %0 = vector.insert_strided_slice %arg0, %arg1 {offsets = [3, 2, 0], strides = [1, 1]}:
+        vector<2x[4]xf32> into vector<16x4x[4]xf32>
+  return %0 : vector<16x4x[4]xf32>
 }
-// CHECK-LABEL:   func.func @insert_strided_slice_scalable(
-// CHECK-SAME:      %[[ARG_0:.*]]: vector<1x1x[4]xi32>,
-// CHECK-SAME:      %[[ARG_1:.*]]: vector<1x4x[4]xi32>) -> vector<1x4x[4]xi32> {
 
-//  CHECK-DAG:      %[[CAST_1:.*]] = builtin.unrealized_conversion_cast %[[ARG_0]] : vector<1x1x[4]xi32> to !llvm.array<1 x array<1 x vector<[4]xi32>>>
-//  CHECK-DAG:      %[[CAST_2:.*]] = builtin.unrealized_conversion_cast %[[ARG_1]] : vector<1x4x[4]xi32> to !llvm.array<1 x array<4 x vector<[4]xi32>>>
+// CHECK-LABEL:   func.func @insert_strided_slice_f32_2d_into_3d_scalable(
 
-//      CHECK:      %[[EXT_1:.*]] = llvm.extractvalue %[[CAST_2]][0] : !llvm.array<1 x array<4 x vector<[4]xi32>>>
-//      CHECK:      %[[EXT_2:.*]] = llvm.extractvalue %[[CAST_1]][0, 0] : !llvm.array<1 x array<1 x vector<[4]xi32>>>
+// Subvector vector<4x[4]xf32> from vector<16x4x[4]xf32> @3
+// CHECK:           %[[ARG_1_0:.*]] = llvm.extractvalue {{.*}}[3] : !llvm.array<16 x array<4 x vector<[4]xf32>>>
 
-//      CHECK:      %[[INS_1:.*]] = llvm.insertvalue %[[EXT_2]], %[[EXT_1]][3] : !llvm.array<4 x vector<[4]xi32>>
-//      CHECK:      %[[INS_2:.*]] = llvm.insertvalue %[[INS_1]], %[[CAST_2]][0] : !llvm.array<1 x array<4 x vector<[4]xi32>>>
+// Subvector vector<[4]xf32> @0 into vector<4x[4]xf32> @2
+// CHECK:           %[[ARG_0_0:.*]] = llvm.extractvalue {{.*}}[0] : !llvm.array<2 x vector<[4]xf32>>
+// CHECK:           %[[B_UPDATED_0:.*]] = llvm.insertvalue %[[ARG_0_0]], %[[ARG_1_0]][2] : !llvm.array<4 x vector<[4]xf32>>
 
-//      CHECK:       builtin.unrealized_conversion_cast %[[INS_2]] : !llvm.array<1 x array<4 x vector<[4]xi32>>> to vector<1x4x[4]xi32>
+// Subvector vector<[4]xf32> @1 into vector<4x[4]xf32> @3
+// CHECK:           %[[ARG_0_1:.*]] = llvm.extractvalue {{.*}}[1] : !llvm.array<2 x vector<[4]xf32>>
+// CHECK:           %[[B_UPDATED_1:.*]] = llvm.insertvalue %[[ARG_0_1]], %[[B_UPDATED_0]][3] : !llvm.array<4 x vector<[4]xf32>>
+
+// Subvector vector<4x[4]xf32> into vector<16x4x[4]xf32> @3
+// CHECK:           llvm.insertvalue %[[B_UPDATED_1]], {{.*}}[3] : !llvm.array<16 x array<4 x vector<[4]xf32>>>
 
 // -----
 

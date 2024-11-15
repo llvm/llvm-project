@@ -56,6 +56,77 @@ ScatterTensorDescAttr::get(mlir::MLIRContext *context,
 }
 
 //===----------------------------------------------------------------------===//
+// XeGPU_SGMapAttr
+//===----------------------------------------------------------------------===//
+namespace {
+template <typename T, unsigned N>
+LogicalResult parseIntArrayField(::mlir::AsmParser &parser,
+                                 llvm::SmallVector<T, N> &result,
+                                 llvm::StringRef fieldName) {
+  if (failed(parser.parseKeyword(fieldName))) {
+    parser.emitError(parser.getCurrentLocation(),
+                     "unexpected field name. Expected " + fieldName + ".");
+    return failure();
+  }
+
+  if (failed(parser.parseEqual())) {
+    parser.emitError(parser.getCurrentLocation(), "expected '=' sign.");
+    return failure();
+  }
+
+  auto elemParser = [&]() -> llvm::ParseResult {
+    uint32_t elem = 0;
+    auto res = parser.parseInteger(elem);
+    result.push_back(elem);
+    return res;
+  };
+
+  return parser.parseCommaSeparatedList(AsmParser::Delimiter::Square,
+                                        elemParser, fieldName);
+}
+} // namespace
+
+mlir::Attribute SGMapAttr::parse(::mlir::AsmParser &parser,
+                                 ::mlir::Type attrType) {
+  if (failed(parser.parseLess()))
+    return {};
+
+  llvm::SmallVector<uint32_t, 2> wi_layout, wi_data;
+  if (failed(parseIntArrayField(parser, wi_layout, "wi_layout")))
+    return {};
+
+  if (failed(parser.parseComma()))
+    return {};
+
+  if (failed(parseIntArrayField(parser, wi_data, "wi_data")))
+    return {};
+
+  return SGMapAttr::getChecked(
+      [&]() { return parser.emitError(parser.getNameLoc()); },
+      parser.getContext(), wi_layout, wi_data);
+}
+
+void SGMapAttr::print(::mlir::AsmPrinter &printer) const {
+  printer << "<";
+  printer.printKeywordOrString("wi_layout");
+  printer << " = [" << getWiLayout() << "], ";
+  printer.printKeywordOrString("wi_data");
+  printer << " = [" << getWiData() << "]";
+  printer << ">";
+}
+
+LogicalResult
+SGMapAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+                  llvm::ArrayRef<uint32_t> wi_layout,
+                  llvm::ArrayRef<uint32_t> wi_data) {
+  if (wi_layout.size() != 2)
+    return emitError() << "expected wi_layout of size 2";
+  if (wi_data.size() != 2)
+    return emitError() << "expected wi_data of size 2";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // XeGPU_TensorDescType
 //===----------------------------------------------------------------------===//
 
@@ -63,6 +134,7 @@ mlir::Type TensorDescType::parse(::mlir::AsmParser &parser) {
   llvm::SmallVector<int64_t> shape;
   mlir::Type elementType;
   mlir::FailureOr<mlir::Attribute> encoding;
+  mlir::FailureOr<mlir::Attribute> sg_map;
 
   // Parse literal '<'
   if (parser.parseLess())
@@ -81,14 +153,22 @@ mlir::Type TensorDescType::parse(::mlir::AsmParser &parser) {
   }
 
   // parse optional attributes
-  if (mlir::succeeded(parser.parseOptionalComma())) {
-    encoding = mlir::FieldParser<mlir::Attribute>::parse(parser);
-    if (mlir::failed(encoding)) {
-      parser.emitError(
-          parser.getCurrentLocation(),
-          "Failed to parse the attribute field for TensorDescType.\n");
-      return {};
+  while (mlir::succeeded(parser.parseOptionalComma())) {
+    mlir::Attribute attr;
+    ParseResult res = parser.parseAttribute(attr);
+    if (mlir::succeeded(res)) {
+      if (mlir::isa<SGMapAttr>(attr)) {
+        sg_map = attr;
+        continue;
+      }
+      if (mlir::isa<BlockTensorDescAttr, ScatterTensorDescAttr>(attr)) {
+        encoding = attr;
+        continue;
+      }
     }
+    parser.emitError(parser.getCurrentLocation(),
+                     "Failed to parse the attribute.\n");
+    return {};
   }
 
   // Parse literal '>'
@@ -96,7 +176,8 @@ mlir::Type TensorDescType::parse(::mlir::AsmParser &parser) {
     return {};
 
   return TensorDescType::get(parser.getContext(), shape, elementType,
-                             encoding.value_or(mlir::Attribute()));
+                             encoding.value_or(mlir::Attribute()),
+                             sg_map.value_or(mlir::Attribute()));
 }
 
 void TensorDescType::print(::mlir::AsmPrinter &printer) const {
@@ -116,25 +197,30 @@ void TensorDescType::print(::mlir::AsmPrinter &printer) const {
   if (auto encoding = getEncoding())
     printer << ", " << encoding;
 
+  if (auto sg_map = getSgMap())
+    printer << ", " << sg_map;
+
   printer << ">";
 }
 
 TensorDescType TensorDescType::get(llvm::ArrayRef<int64_t> shape,
                                    mlir::Type elementType, int array_length,
                                    bool boundary_check,
-                                   MemorySpace memory_space) {
+                                   MemorySpace memory_space,
+                                   mlir::Attribute sg_map) {
   auto context = elementType.getContext();
   auto attr = BlockTensorDescAttr::get(context, memory_space, array_length,
                                        boundary_check);
-  return Base::get(context, shape, elementType, attr);
+  return Base::get(context, shape, elementType, attr, sg_map);
 }
 
 TensorDescType TensorDescType::get(llvm::ArrayRef<int64_t> shape,
                                    mlir::Type elementType, int chunk_size,
-                                   MemorySpace memory_space) {
+                                   MemorySpace memory_space,
+                                   mlir::Attribute sg_map) {
   auto context = elementType.getContext();
   auto attr = ScatterTensorDescAttr::get(context, memory_space, chunk_size);
-  return Base::get(context, shape, elementType, attr);
+  return Base::get(context, shape, elementType, attr, sg_map);
 }
 
 } // namespace xegpu

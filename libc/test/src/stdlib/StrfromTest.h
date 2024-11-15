@@ -156,6 +156,9 @@ public:
     written = func(buff, 99, "%f", 1.5);
     ASSERT_STREQ_LEN(written, buff, "1.500000");
 
+// Dyadic float is only accurate to ~50 digits, so skip this 300 digit test.
+// TODO: Create way to test just the first ~50 digits of a number.
+#ifndef LIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION
     written = func(buff, 499, "%f", 1e300);
     ASSERT_STREQ_LEN(written, buff,
                      "100000000000000005250476025520442024870446858110815915491"
@@ -167,6 +170,7 @@ public:
                      "111903896764088007465274278014249457925878882005684283811"
                      "566947219638686"
                      "5459400540160.000000");
+#endif // DLIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION
 
     written = func(buff, 99, "%f", 0.1);
     ASSERT_STREQ_LEN(written, buff, "0.100000");

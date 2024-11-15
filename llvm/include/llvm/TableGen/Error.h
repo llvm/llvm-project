@@ -48,7 +48,8 @@ void PrintError(const RecordVal *RecVal, const Twine &Msg);
 [[noreturn]] void PrintFatalError(const RecordVal *RecVal, const Twine &Msg);
 [[noreturn]] void PrintFatalError(function_ref<void(raw_ostream &OS)> PrintMsg);
 
-void CheckAssert(SMLoc Loc, Init *Condition, Init *Message);
+// Returns true if the assert failed.
+bool CheckAssert(SMLoc Loc, Init *Condition, Init *Message);
 void dumpMessage(SMLoc Loc, Init *Message);
 
 extern SourceMgr SrcMgr;

@@ -55,7 +55,7 @@ enum {
   GISF_IgnoreCopies = 0x1,
 };
 
-using GISelFlags = std::uint16_t;
+using GISelFlags = std::uint32_t;
 
 //===- Helper functions ---------------------------------------------------===//
 
@@ -494,7 +494,7 @@ protected:
 
   /// A map of anonymous physical register operands defined by the matchers that
   /// may be referenced by the renderers.
-  DenseMap<Record *, OperandMatcher *> PhysRegOperands;
+  DenseMap<const Record *, OperandMatcher *> PhysRegOperands;
 
   /// ID for the next instruction variable defined with
   /// implicitlyDefineInsnVar()
@@ -651,7 +651,7 @@ public:
 
   void defineOperand(StringRef SymbolicName, OperandMatcher &OM);
 
-  void definePhysRegOperand(Record *Reg, OperandMatcher &OM);
+  void definePhysRegOperand(const Record *Reg, OperandMatcher &OM);
 
   Error defineComplexSubOperand(StringRef SymbolicName,
                                 const Record *ComplexPattern,
@@ -669,7 +669,7 @@ public:
   InstructionMatcher &getInstructionMatcher(StringRef SymbolicName) const;
   OperandMatcher &getOperandMatcher(StringRef Name);
   const OperandMatcher &getOperandMatcher(StringRef Name) const;
-  const OperandMatcher &getPhysRegOperandMatcher(Record *) const;
+  const OperandMatcher &getPhysRegOperandMatcher(const Record *) const;
 
   void optimize() override;
   void emit(MatchTable &Table) override;
@@ -1759,7 +1759,7 @@ protected:
   /// PhysRegInputs - List list has an entry for each explicitly specified
   /// physreg input to the pattern.  The first elt is the Register node, the
   /// second is the recorded slot number the input pattern match saved it in.
-  SmallVector<std::pair<Record *, unsigned>, 2> PhysRegInputs;
+  SmallVector<std::pair<const Record *, unsigned>, 2> PhysRegInputs;
 
   bool canAddNumOperandsCheck() const {
     // Add if it's allowed, and:
@@ -1799,10 +1799,10 @@ public:
                              unsigned AllocatedTemporariesBaseID,
                              bool IsVariadic = false);
   OperandMatcher &getOperand(unsigned OpIdx);
-  OperandMatcher &addPhysRegInput(Record *Reg, unsigned OpIdx,
+  OperandMatcher &addPhysRegInput(const Record *Reg, unsigned OpIdx,
                                   unsigned TempOpIdx);
 
-  ArrayRef<std::pair<Record *, unsigned>> getPhysRegInputs() const {
+  ArrayRef<std::pair<const Record *, unsigned>> getPhysRegInputs() const {
     return PhysRegInputs;
   }
 
@@ -1969,10 +1969,10 @@ public:
 class CopyPhysRegRenderer : public OperandRenderer {
 protected:
   unsigned NewInsnID;
-  Record *PhysReg;
+  const Record *PhysReg;
 
 public:
-  CopyPhysRegRenderer(unsigned NewInsnID, Record *Reg)
+  CopyPhysRegRenderer(unsigned NewInsnID, const Record *Reg)
       : OperandRenderer(OR_CopyPhysReg), NewInsnID(NewInsnID), PhysReg(Reg) {
     assert(PhysReg);
   }
@@ -1981,7 +1981,7 @@ public:
     return R->getKind() == OR_CopyPhysReg;
   }
 
-  Record *getPhysReg() const { return PhysReg; }
+  const Record *getPhysReg() const { return PhysReg; }
 
   void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
 };
@@ -1998,7 +1998,7 @@ protected:
 
 public:
   CopyOrAddZeroRegRenderer(unsigned NewInsnID, StringRef SymbolicName,
-                           Record *ZeroRegisterDef)
+                           const Record *ZeroRegisterDef)
       : OperandRenderer(OR_CopyOrAddZeroReg), NewInsnID(NewInsnID),
         SymbolicName(SymbolicName), ZeroRegisterDef(ZeroRegisterDef) {
     assert(!SymbolicName.empty() && "Cannot copy from an unspecified source");

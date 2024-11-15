@@ -49,7 +49,7 @@ functions:
     return_type: ssize_t
     arguments:
       - type: int
-      - type: const void *
+      - type: void *
       - type: size_t
       - type: int
   - name: recvfrom
@@ -58,18 +58,18 @@ functions:
     return_type: ssize_t
     arguments:
       - type: int
-      - type: const void*
+      - type: void *
       - type: size_t
       - type: int
-      - type: const struct sockaddr *
-      - type: socklen_t
+      - type: struct sockaddr *__restrict
+      - type: socklen_t *__restrict
   - name: recvmsg
     standards:
       - POSIX
     return_type: ssize_t
     arguments:
       - type: int
-      - type: const struct msghdr *
+      - type: struct msghdr *
       - type: int
   - name: send
     standards:

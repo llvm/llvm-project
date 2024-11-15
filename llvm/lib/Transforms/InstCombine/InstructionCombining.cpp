@@ -2349,12 +2349,7 @@ Instruction *InstCombinerImpl::narrowMathIfNoOverflow(BinaryOperator &BO) {
 /// transform.
 static GEPNoWrapFlags getMergedGEPNoWrapFlags(GEPOperator &GEP1,
                                               GEPOperator &GEP2) {
-  GEPNoWrapFlags NW = GEP1.getNoWrapFlags() & GEP2.getNoWrapFlags();
-  // Without inbounds, we could only preserve nusw if we know that x + y does
-  // not wrap.
-  if (!NW.isInBounds())
-    NW = NW.withoutNoUnsignedSignedWrap();
-  return NW;
+  return GEP1.getNoWrapFlags().intersectForOffsetAdd(GEP2.getNoWrapFlags());
 }
 
 /// Thread a GEP operation with constant indices through the constant true/false
@@ -2736,6 +2731,36 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
   return nullptr;
 }
 
+/// Return true if we should canonicalize the gep to an i8 ptradd.
+static bool shouldCanonicalizeGEPToPtrAdd(GetElementPtrInst &GEP) {
+  Value *PtrOp = GEP.getOperand(0);
+  Type *GEPEltType = GEP.getSourceElementType();
+  if (GEPEltType->isIntegerTy(8))
+    return false;
+
+  // Canonicalize scalable GEPs to an explicit offset using the llvm.vscale
+  // intrinsic. This has better support in BasicAA.
+  if (GEPEltType->isScalableTy())
+    return true;
+
+  // gep i32 p, mul(O, C) -> gep i8, p, mul(O, C*4) to fold the two multiplies
+  // together.
+  if (GEP.getNumIndices() == 1 &&
+      match(GEP.getOperand(1),
+            m_OneUse(m_CombineOr(m_Mul(m_Value(), m_ConstantInt()),
+                                 m_Shl(m_Value(), m_ConstantInt())))))
+    return true;
+
+  // gep (gep %p, C1), %x, C2 is expanded so the two constants can
+  // possibly be merged together.
+  auto PtrOpGep = dyn_cast<GEPOperator>(PtrOp);
+  return PtrOpGep && PtrOpGep->hasAllConstantIndices() &&
+         any_of(GEP.indices(), [](Value *V) {
+           const APInt *C;
+           return match(V, m_APInt(C)) && !C->isZero();
+         });
+}
+
 Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   Value *PtrOp = GEP.getOperand(0);
   SmallVector<Value *, 8> Indices(GEP.indices());
@@ -2817,19 +2842,11 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                                     GEP.getNoWrapFlags()));
   }
 
-  // Canonicalize
-  //  - scalable GEPs to an explicit offset using the llvm.vscale intrinsic.
-  //    This has better support in BasicAA.
-  //  - gep i32 p, mul(O, C) -> gep i8, p, mul(O, C*4) to fold the two
-  //    multiplies together.
-  if (GEPEltType->isScalableTy() ||
-      (!GEPEltType->isIntegerTy(8) && GEP.getNumIndices() == 1 &&
-       match(GEP.getOperand(1),
-             m_OneUse(m_CombineOr(m_Mul(m_Value(), m_ConstantInt()),
-                                  m_Shl(m_Value(), m_ConstantInt())))))) {
+  if (shouldCanonicalizeGEPToPtrAdd(GEP)) {
     Value *Offset = EmitGEPOffset(cast<GEPOperator>(&GEP));
-    return replaceInstUsesWith(
-        GEP, Builder.CreatePtrAdd(PtrOp, Offset, "", GEP.getNoWrapFlags()));
+    Value *NewGEP =
+        Builder.CreatePtrAdd(PtrOp, Offset, "", GEP.getNoWrapFlags());
+    return replaceInstUsesWith(GEP, NewGEP);
   }
 
   // Check to see if the inputs to the PHI node are getelementptr instructions.
@@ -5175,8 +5192,13 @@ bool InstCombinerImpl::run() {
         LLVM_DEBUG(dbgs() << "IC: Old = " << *I << '\n'
                           << "    New = " << *Result << '\n');
 
-        Result->copyMetadata(*I,
-                             {LLVMContext::MD_dbg, LLVMContext::MD_annotation});
+        // We copy the old instruction's DebugLoc to the new instruction, unless
+        // InstCombine already assigned a DebugLoc to it, in which case we
+        // should trust the more specifically selected DebugLoc.
+        if (!Result->getDebugLoc())
+          Result->setDebugLoc(I->getDebugLoc());
+        // We also copy annotation metadata to the new instruction.
+        Result->copyMetadata(*I, LLVMContext::MD_annotation);
         // Everything uses the new instruction now.
         I->replaceAllUsesWith(Result);
 

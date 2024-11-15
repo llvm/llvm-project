@@ -44,7 +44,7 @@ using namespace lld::elf;
 namespace {
 template <class ELFT> class MarkLive {
 public:
-  MarkLive(unsigned partition) : partition(partition) {}
+  MarkLive(Ctx &ctx, unsigned partition) : ctx(ctx), partition(partition) {}
 
   void run();
   void moveToMain();
@@ -60,6 +60,7 @@ private:
   template <class RelTy>
   void scanEhFrameSection(EhInputSection &eh, ArrayRef<RelTy> rels);
 
+  Ctx &ctx;
   // The index of the partition that we are currently processing.
   unsigned partition;
 
@@ -73,21 +74,21 @@ private:
 } // namespace
 
 template <class ELFT>
-static uint64_t getAddend(InputSectionBase &sec,
+static uint64_t getAddend(Ctx &ctx, InputSectionBase &sec,
                           const typename ELFT::Rel &rel) {
   return ctx.target->getImplicitAddend(sec.content().begin() + rel.r_offset,
                                        rel.getType(ctx.arg.isMips64EL));
 }
 
 template <class ELFT>
-static uint64_t getAddend(InputSectionBase &sec,
+static uint64_t getAddend(Ctx &, InputSectionBase &sec,
                           const typename ELFT::Rela &rel) {
   return rel.r_addend;
 }
 
 // Currently, we assume all input CREL relocations have an explicit addend.
 template <class ELFT>
-static uint64_t getAddend(InputSectionBase &sec,
+static uint64_t getAddend(Ctx &, InputSectionBase &sec,
                           const typename ELFT::Crel &rel) {
   return rel.r_addend;
 }
@@ -107,7 +108,7 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
 
     uint64_t offset = d->value;
     if (d->isSection())
-      offset += getAddend<ELFT>(sec, rel);
+      offset += getAddend<ELFT>(ctx, sec, rel);
 
     // fromFDE being true means this is referenced by a FDE in a .eh_frame
     // piece. The relocation points to the described function or to a LSDA. We
@@ -361,7 +362,7 @@ template <class ELFT> void MarkLive<ELFT>::moveToMain() {
 // Before calling this function, Live bits are off for all
 // input sections. This function make some or all of them on
 // so that they are emitted to the output file.
-template <class ELFT> void elf::markLive() {
+template <class ELFT> void elf::markLive(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("markLive");
   // If --gc-sections is not given, retain all input sections.
   if (!ctx.arg.gcSections) {
@@ -378,13 +379,13 @@ template <class ELFT> void elf::markLive() {
 
   // Follow the graph to mark all live sections.
   for (unsigned i = 1, e = ctx.partitions.size(); i <= e; ++i)
-    MarkLive<ELFT>(i).run();
+    MarkLive<ELFT>(ctx, i).run();
 
   // If we have multiple partitions, some sections need to live in the main
   // partition even if they were allocated to a loadable partition. Move them
   // there now.
   if (ctx.partitions.size() != 1)
-    MarkLive<ELFT>(1).moveToMain();
+    MarkLive<ELFT>(ctx, 1).moveToMain();
 
   // Report garbage-collected sections.
   if (ctx.arg.printGcSections)
@@ -393,7 +394,7 @@ template <class ELFT> void elf::markLive() {
         message("removing unused section " + toString(sec));
 }
 
-template void elf::markLive<ELF32LE>();
-template void elf::markLive<ELF32BE>();
-template void elf::markLive<ELF64LE>();
-template void elf::markLive<ELF64BE>();
+template void elf::markLive<ELF32LE>(Ctx &);
+template void elf::markLive<ELF32BE>(Ctx &);
+template void elf::markLive<ELF64LE>(Ctx &);
+template void elf::markLive<ELF64BE>(Ctx &);

@@ -184,15 +184,6 @@ func.func @vector_transfers(%arg0: index, %arg1: index) {
   return
 }
 
-// CHECK-LABEL: func @cancelling_shape_cast_ops
-//  CHECK-SAME: %[[A0:.*0]]: vector<2x4xf32>
-//       CHECK: return %[[A0]] : vector<2x4xf32>
-func.func @cancelling_shape_cast_ops(%arg0 : vector<2x4xf32>) -> vector<2x4xf32> {
-  %0 = vector.shape_cast %arg0 : vector<2x4xf32> to vector<8xf32>
-  %1 = vector.shape_cast %0 : vector<8xf32> to vector<2x4xf32>
-  return %1 : vector<2x4xf32>
-}
-
 // CHECK-LABEL: func @elementwise_unroll
 //  CHECK-SAME: (%[[ARG0:.*]]: memref<4x4xf32>, %[[ARG1:.*]]: memref<4x4xf32>)
 //       CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index

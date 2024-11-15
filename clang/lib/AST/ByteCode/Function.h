@@ -222,6 +222,10 @@ public:
     return ParamOffsets[ParamIndex];
   }
 
+  PrimType getParamType(unsigned ParamIndex) const {
+    return ParamTypes[ParamIndex];
+  }
+
 private:
   /// Construct a function representing an actual function.
   Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,

@@ -41,6 +41,25 @@
 
 ; // -----
 
+; Verifies that converting a reference to a global does not convert the global
+; a second time.
+
+; CHECK-LABEL: llvm.mlir.global external constant @reference
+; CHECK-NEXT: %[[ADDR:.*]] = llvm.mlir.addressof @simple
+; CHECK-NEXT: llvm.return %[[ADDR]]
+@reference = constant ptr @simple
+
+@simple = global { ptr } { ptr null }
+
+; // -----
+
+; CHECK-LABEL: llvm.mlir.global external @recursive
+; CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @recursive
+; CHECK: llvm.return %[[ADDR]]
+@recursive = global ptr @recursive
+
+; // -----
+
 ; alignment attribute.
 
 ; CHECK:  llvm.mlir.global private @global_int_align_32

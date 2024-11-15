@@ -563,6 +563,13 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
   def int_aarch64_neon_vcmla_rot90  : AdvSIMD_3VectorArg_Intrinsic;
   def int_aarch64_neon_vcmla_rot180 : AdvSIMD_3VectorArg_Intrinsic;
   def int_aarch64_neon_vcmla_rot270 : AdvSIMD_3VectorArg_Intrinsic;
+  
+  // FP8 fscale
+  def int_aarch64_neon_fp8_fscale : DefaultAttrsIntrinsic<
+                                    [llvm_anyvector_ty],
+                                    [LLVMMatchType<0>,
+                                    LLVMVectorOfBitcastsToInt<0>],
+                                    [IntrNoMem]>;
 }
 
 let TargetPrefix = "aarch64" in {
@@ -2177,8 +2184,8 @@ def int_aarch64_sve_fcvtzs_i32f64   : Builtin_SVCVT<llvm_nxv4i32_ty, llvm_nxv2i1
 def int_aarch64_sve_fcvtzs_i64f16   : Builtin_SVCVT<llvm_nxv2i64_ty, llvm_nxv2i1_ty, llvm_nxv8f16_ty>;
 def int_aarch64_sve_fcvtzs_i64f32   : Builtin_SVCVT<llvm_nxv2i64_ty, llvm_nxv2i1_ty, llvm_nxv4f32_ty>;
 
-def int_aarch64_sve_fcvt_bf16f32    : Builtin_SVCVT<llvm_nxv8bf16_ty, llvm_nxv8i1_ty, llvm_nxv4f32_ty>;
-def int_aarch64_sve_fcvtnt_bf16f32  : Builtin_SVCVT<llvm_nxv8bf16_ty, llvm_nxv8i1_ty, llvm_nxv4f32_ty>;
+def int_aarch64_sve_fcvt_bf16f32_v2   : Builtin_SVCVT<llvm_nxv8bf16_ty, llvm_nxv4i1_ty, llvm_nxv4f32_ty>;
+def int_aarch64_sve_fcvtnt_bf16f32_v2 : Builtin_SVCVT<llvm_nxv8bf16_ty, llvm_nxv4i1_ty, llvm_nxv4f32_ty>;
 
 def int_aarch64_sve_fcvtzu_i32f16   : Builtin_SVCVT<llvm_nxv4i32_ty, llvm_nxv4i1_ty, llvm_nxv8f16_ty>;
 def int_aarch64_sve_fcvtzu_i32f64   : Builtin_SVCVT<llvm_nxv4i32_ty, llvm_nxv2i1_ty, llvm_nxv2f64_ty>;
@@ -2953,6 +2960,15 @@ let TargetPrefix = "aarch64" in {
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
           [llvm_i32_ty],
           [IntrNoMem, IntrHasSideEffects]>;
+
+  def int_aarch64_sme_write_lane_zt
+       :  DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_anyvector_ty, llvm_i32_ty],
+            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrNoMem, IntrHasSideEffects]>;
+
+  def int_aarch64_sme_write_zt
+       :  DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_anyvector_ty],
+            [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]>;
+
 
   def int_aarch64_sme_zero : DefaultAttrsIntrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
 
@@ -3762,6 +3778,38 @@ let TargetPrefix = "aarch64" in {
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
                             [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
                             [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrReadMem]>;
+
+  def int_aarch64_sme_luti4_zt_x4
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
+                            [llvm_i32_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty],
+                            [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]>;
+
+  
+  //
+  // Register scaling
+  //
+  def int_aarch64_sme_fp8_scale_single_x2
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
+                            [LLVMMatchType<0>, LLVMMatchType<0>, LLVMVectorOfBitcastsToInt<0>],
+                            [IntrNoMem]>;
+
+  def int_aarch64_sme_fp8_scale_single_x4
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
+                            [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, LLVMVectorOfBitcastsToInt<0>],
+                            [IntrNoMem]>;
+
+  def int_aarch64_sme_fp8_scale_x2
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
+                            [LLVMMatchType<0>, LLVMMatchType<0>,
+                             LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>],
+                            [IntrNoMem]>;
+
+  def int_aarch64_sme_fp8_scale_x4
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
+                            [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>,
+                             LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>],
+                            [IntrNoMem]>;
+
 }
 
 // SVE2.1 - ZIPQ1, ZIPQ2, UZPQ1, UZPQ2

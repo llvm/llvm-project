@@ -105,7 +105,6 @@ define amdgpu_kernel void @local_atomic_fadd_v2f16_noret(ptr addrspace(3) %ptr, 
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX12-NEXT:    global_wb scope:SCOPE_SE
 ; GFX12-NEXT:    ds_pk_add_f16 v0, v1
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
@@ -129,7 +128,6 @@ define <2 x half> @local_atomic_fadd_v2f16_rtn(ptr addrspace(3) %ptr, <2 x half>
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    global_wb scope:SCOPE_SE
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    ds_pk_add_rtn_f16 v0, v0, v1
 ; GFX12-NEXT:    s_wait_dscnt 0x0
@@ -155,7 +153,6 @@ define amdgpu_kernel void @local_atomic_fadd_v2bf16_noret(ptr addrspace(3) %ptr,
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX12-NEXT:    global_wb scope:SCOPE_SE
 ; GFX12-NEXT:    ds_pk_add_bf16 v0, v1
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
@@ -179,7 +176,6 @@ define <2 x i16> @local_atomic_fadd_v2bf16_rtn(ptr addrspace(3) %ptr, <2 x i16> 
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    global_wb scope:SCOPE_SE
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    ds_pk_add_rtn_bf16 v0, v0, v1
 ; GFX12-NEXT:    s_wait_dscnt 0x0

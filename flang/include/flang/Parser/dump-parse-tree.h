@@ -522,6 +522,8 @@ public:
   NODE(parser, OmpEndSectionsDirective)
   NODE(parser, OmpIfClause)
   NODE_ENUM(OmpIfClause, DirectiveNameModifier)
+  NODE_ENUM(OmpLastprivateClause, LastprivateModifier)
+  NODE(parser, OmpLastprivateClause)
   NODE(parser, OmpLinearClause)
   NODE(OmpLinearClause, WithModifier)
   NODE(OmpLinearClause, WithoutModifier)

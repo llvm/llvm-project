@@ -32,7 +32,10 @@ class LocationAttr : public Attribute {
 public:
   using Attribute::Attribute;
 
-  /// Walk all of the locations nested under, and including, the current.
+  /// Walk all of the locations nested directly under, and including, the
+  /// current. This means that if a location is nested under a non-location
+  /// attribute, it will *not* be walked by this method. This walk is performed
+  /// in pre-order to get this behavior.
   WalkResult walk(function_ref<WalkResult(Location)> walkFn);
 
   /// Return an instance of the given location type if one is nested under the

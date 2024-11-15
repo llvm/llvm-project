@@ -355,6 +355,21 @@ void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI,
     support::endian::write(CB, Bits, llvm::endianness::little);
     break;
   }
+  case 6: {
+    uint64_t Bits = getBinaryCodeForInstr(MI, Fixups, STI) & 0xffff'ffff'ffffu;
+    SmallVector<char, 8> Encoding;
+    support::endian::write(Encoding, Bits, llvm::endianness::little);
+    assert(Encoding[6] == 0 && Encoding[7] == 0 &&
+           "Unexpected encoding for 48-bit instruction");
+    Encoding.truncate(6);
+    CB.append(Encoding);
+    break;
+  }
+  case 8: {
+    uint64_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
+    support::endian::write(CB, Bits, llvm::endianness::little);
+    break;
+  }
   }
 
   ++MCNumEmitted; // Keep track of the # of mi's emitted.

@@ -234,6 +234,11 @@ struct __packed_format_arg_store {
   uint64_t __types_ = 0;
 };
 
+template <class _Context>
+struct __packed_format_arg_store<_Context, 0> {
+  uint64_t __types_ = 0;
+};
+
 template <class _Context, size_t _Np>
 struct __unpacked_format_arg_store {
   basic_format_arg<_Context> __args_[_Np];

@@ -29,6 +29,7 @@
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/ThreadLocalCache.h"
 #include "llvm/ADT/PointerEmbeddedInt.h"
 #include "llvm/IR/DerivedTypes.h"

@@ -475,7 +475,7 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   StringRef RegInstName = RegRec->getName();
   unsigned DropLen =
       RegInstName.ends_with("rkz") ? 2 : (RegInstName.ends_with("rk") ? 1 : 0);
-  Record *BaseDef =
+  const Record *BaseDef =
       DropLen ? Records.getDef(RegInstName.drop_back(DropLen)) : nullptr;
   bool IsMoveReg =
       BaseDef ? Target.getInstruction(BaseDef).isMoveReg : RegInst->isMoveReg;

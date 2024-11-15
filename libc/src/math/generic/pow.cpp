@@ -231,9 +231,16 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
     switch (y_a) {
     case 0: // y = +-0.0
       return 1.0;
-    case 0x3fe0'0000'0000'0000: // y = +-0.5
+    case 0x3fe0'0000'0000'0000: { // y = +-0.5
       // TODO: speed up x^(-1/2) with rsqrt(x) when available.
+      if (LIBC_UNLIKELY(!y_sign && (x_u == FPBits::zero(Sign::NEG).uintval() ||
+                                    x_u == FPBits::inf(Sign::NEG).uintval()))) {
+        // pow(-0, 1/2) = +0
+        // pow(-inf, 1/2) = +inf
+        return FPBits(x_abs).get_val();
+      }
       return y_sign ? (1.0 / fputil::sqrt<double>(x)) : fputil::sqrt<double>(x);
+    }
     case 0x3ff0'0000'0000'0000: // y = +-1.0
       return y_sign ? (1.0 / x) : x;
     case 0x4000'0000'0000'0000: // y = +-2.0;

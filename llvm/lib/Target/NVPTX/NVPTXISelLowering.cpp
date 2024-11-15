@@ -236,6 +236,10 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
         // v*i8 are formally lowered as v4i8
         EltVT = MVT::v4i8;
         NumElts = (NumElts + 3) / 4;
+      } else if (EltVT.getSimpleVT() == MVT::i8 && NumElts == 2) {
+        // v2i8 is promoted to v2i16
+        NumElts = 1;
+        EltVT = MVT::v2i16;
       }
       for (unsigned j = 0; j != NumElts; ++j) {
         ValueVTs.push_back(EltVT);
@@ -951,8 +955,8 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::LDUV4)
     MAKE_CASE(NVPTXISD::StoreV2)
     MAKE_CASE(NVPTXISD::StoreV4)
-    MAKE_CASE(NVPTXISD::FUN_SHFL_CLAMP)
-    MAKE_CASE(NVPTXISD::FUN_SHFR_CLAMP)
+    MAKE_CASE(NVPTXISD::FSHL_CLAMP)
+    MAKE_CASE(NVPTXISD::FSHR_CLAMP)
     MAKE_CASE(NVPTXISD::IMAD)
     MAKE_CASE(NVPTXISD::BFE)
     MAKE_CASE(NVPTXISD::BFI)
@@ -2483,8 +2487,8 @@ SDValue NVPTXTargetLowering::LowerShiftRightParts(SDValue Op,
     //   dLo = shf.r.clamp aLo, aHi, Amt
 
     SDValue Hi = DAG.getNode(Opc, dl, VT, ShOpHi, ShAmt);
-    SDValue Lo = DAG.getNode(NVPTXISD::FUN_SHFR_CLAMP, dl, VT, ShOpLo, ShOpHi,
-                             ShAmt);
+    SDValue Lo =
+        DAG.getNode(NVPTXISD::FSHR_CLAMP, dl, VT, ShOpHi, ShOpLo, ShAmt);
 
     SDValue Ops[2] = { Lo, Hi };
     return DAG.getMergeValues(Ops, dl);
@@ -2542,8 +2546,8 @@ SDValue NVPTXTargetLowering::LowerShiftLeftParts(SDValue Op,
     //   dHi = shf.l.clamp aLo, aHi, Amt
     //   dLo = aLo << Amt
 
-    SDValue Hi = DAG.getNode(NVPTXISD::FUN_SHFL_CLAMP, dl, VT, ShOpLo, ShOpHi,
-                             ShAmt);
+    SDValue Hi =
+        DAG.getNode(NVPTXISD::FSHL_CLAMP, dl, VT, ShOpHi, ShOpLo, ShAmt);
     SDValue Lo = DAG.getNode(ISD::SHL, dl, VT, ShOpLo, ShAmt);
 
     SDValue Ops[2] = { Lo, Hi };

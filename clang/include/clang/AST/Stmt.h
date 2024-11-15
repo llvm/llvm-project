@@ -719,6 +719,18 @@ protected:
     unsigned Kind : 3;
   };
 
+  class ParenExprBitfields {
+    friend class ASTStmtReader;
+    friend class ASTStmtWriter;
+    friend class ParenExpr;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ProducedByFoldExpansion : 1;
+  };
+
   class StmtExprBitfields {
     friend class ASTStmtReader;
     friend class StmtExpr;
@@ -1241,6 +1253,7 @@ protected:
     GenericSelectionExprBitfields GenericSelectionExprBits;
     PseudoObjectExprBitfields PseudoObjectExprBits;
     SourceLocExprBitfields SourceLocExprBits;
+    ParenExprBitfields ParenExprBits;
 
     // GNU Extensions.
     StmtExprBitfields StmtExprBits;

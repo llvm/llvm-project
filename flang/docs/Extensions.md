@@ -780,6 +780,12 @@ character j
 print *, [(j,j=1,10)]
 ```
 
+* The Fortran standard doesn't mention integer overflow explicitly. In many cases,
+  however, integer overflow makes programs non-conforming.
+  F18 follows other widely-used Fortran compilers. Specifically, f18 assumes
+  integer overflow never occurs in address calculations and increment of
+  do-variable unless the option `-fwrapv` is enabled.
+
 ## De Facto Standard Features
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the

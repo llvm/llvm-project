@@ -1653,3 +1653,11 @@ namespace ExprWithCleanups {
   constexpr auto F = true ? 1i : 2i;
   static_assert(F == 1i, "");
 }
+
+namespace NullptrUpcast {
+  struct A {};
+  struct B : A { int n; };
+  constexpr B *nb = nullptr;
+  constexpr A &ra = *nb; // both-error {{constant expression}} \
+                         // both-note {{cannot access base class of null pointer}}
+}

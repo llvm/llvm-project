@@ -28,13 +28,13 @@
 // HIP-DAG: define weak_odr {{.*}}void @[[KTX:_Z2ktIN12_GLOBAL__N_11XEEvT_\.intern\.b04fd23c98500190]](
 // HIP-DAG: define weak_odr {{.*}}void @[[KTL:_Z2ktIN12_GLOBAL__N_1UlvE_EEvT_\.intern\.b04fd23c98500190]](
 // HIP-DAG: @[[VM:_ZN12_GLOBAL__N_12vmE\.static\.b04fd23c98500190]] = addrspace(1) externally_initialized global
-// HIP-DAG: @[[VC:_ZN12_GLOBAL__N_12vcE\.static\.b04fd23c98500190]] = addrspace(4) externally_initialized global
+// HIP-DAG: @[[VC:_ZN12_GLOBAL__N_12vcE\.static\.b04fd23c98500190]] = addrspace(4) externally_initialized constant
 // HIP-DAG: @[[VT:_Z2vtIN12_GLOBAL__N_11XEE\.static\.b04fd23c98500190]] = addrspace(1) externally_initialized global
 
 // CUDA-DAG: define weak_odr {{.*}}void @[[KERN:_ZN12_GLOBAL__N_16kernelEv__intern__b04fd23c98500190]](
 // CUDA-DAG: define weak_odr {{.*}}void @[[KTX:_Z2ktIN12_GLOBAL__N_11XEEvT___intern__b04fd23c98500190]](
 // CUDA-DAG: define weak_odr {{.*}}void @[[KTL:_Z2ktIN12_GLOBAL__N_1UlvE_EEvT___intern__b04fd23c98500190]](
-// CUDA-DAG: @[[VC:_ZN12_GLOBAL__N_12vcE__static__b04fd23c98500190]] = addrspace(4) externally_initialized global
+// CUDA-DAG: @[[VC:_ZN12_GLOBAL__N_12vcE__static__b04fd23c98500190]] = addrspace(4) externally_initialized constant
 // CUDA-DAG: @[[VT:_Z2vtIN12_GLOBAL__N_11XEE__static__b04fd23c98500190]] = addrspace(1) externally_initialized global
 
 // COMMON-DAG: @_ZN12_GLOBAL__N_12vdE = internal addrspace(1) global

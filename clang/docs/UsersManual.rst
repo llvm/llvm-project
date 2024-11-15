@@ -2369,14 +2369,16 @@ are listed below.
      $ cd $P/bar && clang -c -funique-internal-linkage-names name_conflict.c
      $ cd $P && clang foo/name_conflict.o && bar/name_conflict.o
 
-.. option:: -fbasic-block-sections=[labels, all, list=<arg>, none]
+.. option:: -f[no]-basic-block-address-map:
+  Emits a ``SHT_LLVM_BB_ADDR_MAP`` section which includes address offsets for each
+  basic block in the program, relative to the parent function address.
+
+
+.. option:: -fbasic-block-sections=[all, list=<arg>, none]
 
   Controls how Clang emits text sections for basic blocks. With values ``all``
   and ``list=<arg>``, each basic block or a subset of basic blocks can be placed
-  in its own unique section. With the "labels" value, normal text sections are
-  emitted, but a ``.bb_addr_map`` section is emitted which includes address
-  offsets for each basic block in the program, relative to the parent function
-  address.
+  in its own unique section.
 
   With the ``list=<arg>`` option, a file containing the subset of basic blocks
   that need to placed in unique sections can be specified.  The format of the

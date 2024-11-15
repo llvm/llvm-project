@@ -271,6 +271,49 @@ static bool isInStlNamespace(const Decl *D) {
   return DC->isStdNamespace();
 }
 
+static bool isPointerLikeType(QualType Type) {
+  return isRecordWithAttr<PointerAttr>(Type) || Type->isPointerType() ||
+         Type->isNullPtrType();
+}
+
+// Returns true if the given Record decl is a form of `GSLOwner<Pointer>`
+// type, e.g. std::vector<string_view>, std::optional<string_view>.
+static bool isContainerOfPointer(const RecordDecl *Container) {
+  if (const auto *CTSD =
+          dyn_cast_if_present<ClassTemplateSpecializationDecl>(Container)) {
+    if (!CTSD->hasAttr<OwnerAttr>()) // Container must be a GSL owner type.
+      return false;
+    const auto &TAs = CTSD->getTemplateArgs();
+    return TAs.size() > 0 && TAs[0].getKind() == TemplateArgument::Type &&
+           isPointerLikeType(TAs[0].getAsType());
+  }
+  return false;
+}
+static bool isContainerOfOwner(const RecordDecl *Container) {
+  const auto *CTSD =
+      dyn_cast_if_present<ClassTemplateSpecializationDecl>(Container);
+  if (!CTSD)
+    return false;
+  if (!CTSD->hasAttr<OwnerAttr>()) // Container must be a GSL owner type.
+    return false;
+  const auto &TAs = CTSD->getTemplateArgs();
+  return TAs.size() > 0 && TAs[0].getKind() == TemplateArgument::Type &&
+         isRecordWithAttr<OwnerAttr>(TAs[0].getAsType());
+}
+
+// Returns true if the given Record is `std::initializer_list<pointer>`.
+static bool isStdInitializerListOfPointer(const RecordDecl *RD) {
+  if (const auto *CTSD =
+          dyn_cast_if_present<ClassTemplateSpecializationDecl>(RD)) {
+    const auto &TAs = CTSD->getTemplateArgs();
+    return isInStlNamespace(RD) && RD->getIdentifier() &&
+           RD->getName() == "initializer_list" && TAs.size() > 0 &&
+           TAs[0].getKind() == TemplateArgument::Type &&
+           isPointerLikeType(TAs[0].getAsType());
+  }
+  return false;
+}
+
 static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
   if (auto *Conv = dyn_cast_or_null<CXXConversionDecl>(Callee))
     if (isRecordWithAttr<PointerAttr>(Conv->getConversionType()) &&
@@ -282,8 +325,7 @@ static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
           Callee->getFunctionObjectParameterType()) &&
       !isRecordWithAttr<OwnerAttr>(Callee->getFunctionObjectParameterType()))
     return false;
-  if (Callee->getReturnType()->isPointerType() ||
-      isRecordWithAttr<PointerAttr>(Callee->getReturnType())) {
+  if (isPointerLikeType(Callee->getReturnType())) {
     if (!Callee->getIdentifier())
       return false;
     return llvm::StringSwitch<bool>(Callee->getName())
@@ -329,6 +371,103 @@ static bool shouldTrackFirstArgument(const FunctionDecl *FD) {
         .Default(false);
   }
   return false;
+}
+
+// Returns true if the given constructor is a copy-like constructor, such as
+// `Ctor(Owner<U>&&)` or `Ctor(const Owner<U>&)`.
+static bool isCopyLikeConstructor(const CXXConstructorDecl *Ctor) {
+  if (!Ctor || Ctor->param_size() != 1)
+    return false;
+  const auto *ParamRefType =
+      Ctor->getParamDecl(0)->getType()->getAs<ReferenceType>();
+  if (!ParamRefType)
+    return false;
+
+  // Check if the first parameter type is "Owner<U>".
+  if (const auto *TST =
+          ParamRefType->getPointeeType()->getAs<TemplateSpecializationType>())
+    return TST->getTemplateName()
+        .getAsTemplateDecl()
+        ->getTemplatedDecl()
+        ->hasAttr<OwnerAttr>();
+  return false;
+}
+
+// Returns true if we should perform the GSL analysis on the first argument for
+// the given constructor.
+static bool
+shouldTrackFirstArgumentForConstructor(const CXXConstructExpr *Ctor) {
+  const auto *LHSRecordDecl = Ctor->getConstructor()->getParent();
+
+  // Case 1, construct a GSL pointer, e.g. std::string_view
+  // Always inspect when LHS is a pointer.
+  if (LHSRecordDecl->hasAttr<PointerAttr>())
+    return true;
+
+  if (Ctor->getConstructor()->getNumParams() != 1 ||
+      !isContainerOfPointer(LHSRecordDecl))
+    return false;
+
+  // Now, the LHS is an Owner<Pointer> type, e.g., std::vector<string_view>.
+  //
+  // At a high level, we cannot precisely determine what the nested pointer
+  // owns. However, by analyzing the RHS owner type, we can use heuristics to
+  // infer ownership information. These heuristics are designed to be
+  // conservative, minimizing false positives while still providing meaningful
+  // diagnostics.
+  //
+  // While this inference isn't perfect, it helps catch common use-after-free
+  // patterns.
+  auto RHSArgType = Ctor->getArg(0)->getType();
+  const auto *RHSRD = RHSArgType->getAsRecordDecl();
+  // LHS is constructed from an intializer_list.
+  //
+  // std::initializer_list is a proxy object that provides access to the backing
+  // array. We perform analysis on it to determine if there are any dangling
+  // temporaries in the backing array.
+  // E.g. std::vector<string_view> abc = {string()};
+  if (isStdInitializerListOfPointer(RHSRD))
+    return true;
+
+  // RHS must be an owner.
+  if (!isRecordWithAttr<OwnerAttr>(RHSArgType))
+    return false;
+
+  // Bail out if the RHS is Owner<Pointer>.
+  //
+  // We cannot reliably determine what the LHS nested pointer owns -- it could
+  // be the entire RHS or the nested pointer in RHS. To avoid false positives,
+  // we skip this case, such as:
+  //   std::stack<std::string_view> s(std::deque<std::string_view>{});
+  //
+  // TODO: this also has a false negative, it doesn't catch the case like:
+  //   std::optional<span<int*>> os = std::vector<int*>{}
+  if (isContainerOfPointer(RHSRD))
+    return false;
+
+  // Assume that the nested Pointer is constructed from the nested Owner.
+  // E.g. std::optional<string_view> sv = std::optional<string>(s);
+  if (isContainerOfOwner(RHSRD))
+    return true;
+
+  // Now, the LHS is an Owner<Pointer> and the RHS is an Owner<X>,  where X is
+  // neither an `Owner` nor a `Pointer`.
+  //
+  // Use the constructor's signature as a hint. If it is a copy-like constructor
+  // `Owner1<Pointer>(Owner2<X>&&)`, we assume that the nested pointer is
+  // constructed from X. In such cases, we do not diagnose, as `X` is not an
+  // owner, e.g.
+  //   std::optional<string_view> sv = std::optional<Foo>();
+  if (const auto *PrimaryCtorTemplate =
+          Ctor->getConstructor()->getPrimaryTemplate();
+      PrimaryCtorTemplate &&
+      isCopyLikeConstructor(dyn_cast_if_present<CXXConstructorDecl>(
+          PrimaryCtorTemplate->getTemplatedDecl()))) {
+    return false;
+  }
+  // Assume that the nested pointer is constructed from the whole RHS.
+  // E.g. optional<string_view> s = std::string();
+  return true;
 }
 
 // Return true if this is an "normal" assignment operator.
@@ -473,12 +612,12 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
     if (CheckCoroCall || Callee->getParamDecl(I)->hasAttr<LifetimeBoundAttr>())
       VisitLifetimeBoundArg(Callee->getParamDecl(I), Args[I]);
     else if (EnableGSLAnalysis && I == 0) {
+      // Perform GSL analysis for the first argument
       if (shouldTrackFirstArgument(Callee)) {
         VisitGSLPointerArg(Callee, Args[0]);
-      } else if (auto *CCE = dyn_cast<CXXConstructExpr>(Call);
-                 CCE &&
-                 CCE->getConstructor()->getParent()->hasAttr<PointerAttr>()) {
-        VisitGSLPointerArg(CCE->getConstructor(), Args[0]);
+      } else if (auto *Ctor = dyn_cast<CXXConstructExpr>(Call);
+                 Ctor && shouldTrackFirstArgumentForConstructor(Ctor)) {
+        VisitGSLPointerArg(Ctor->getConstructor(), Args[0]);
       }
     }
   }

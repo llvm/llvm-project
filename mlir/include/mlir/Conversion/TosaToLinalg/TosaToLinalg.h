@@ -47,7 +47,7 @@ void addTosaToLinalgPasses(
 void registerTosaToLinalgPipelines();
 
 /// Populates conversion passes from TOSA dialect to Linalg dialect.
-void populateTosaToLinalgConversionPatterns(TypeConverter &converter,
+void populateTosaToLinalgConversionPatterns(const TypeConverter &converter,
                                             RewritePatternSet *patterns);
 
 /// Populates conversion passes from TOSA dialect to Linalg named operations.

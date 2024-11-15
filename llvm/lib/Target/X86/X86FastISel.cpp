@@ -902,6 +902,8 @@ redo_gep:
     uint64_t Disp = (int32_t)AM.Disp;
     unsigned IndexReg = AM.IndexReg;
     unsigned Scale = AM.Scale;
+    MVT PtrVT = TLI.getValueType(DL, U->getType()).getSimpleVT();
+
     gep_type_iterator GTI = gep_type_begin(U);
     // Iterate through the indices, folding what we can. Constants can be
     // folded, and one dynamic index can be handled, if the scale is supported.
@@ -937,7 +939,7 @@ redo_gep:
             (S == 1 || S == 2 || S == 4 || S == 8)) {
           // Scaled-index addressing.
           Scale = S;
-          IndexReg = getRegForGEPIndex(Op);
+          IndexReg = getRegForGEPIndex(PtrVT, Op);
           if (IndexReg == 0)
             return false;
           break;

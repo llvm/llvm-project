@@ -316,10 +316,80 @@ out:
   ret void
 }
 
+define void @hoist_noalias_addrspace_both(i1 %c, ptr %p, i64 %val) {
+; CHECK-LABEL: @hoist_noalias_addrspace_both(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    [[T:%.*]] = atomicrmw add ptr [[P:%.*]], i64 [[VAL:%.*]] seq_cst, align 8
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  %t = atomicrmw add ptr %p, i64 %val seq_cst, !noalias.addrspace !4
+  br label %out
+
+else:
+  %e = atomicrmw add ptr %p, i64 %val seq_cst, !noalias.addrspace !4
+  br label %out
+
+out:
+  ret void
+}
+
+define void @hoist_noalias_addrspace_one(i1 %c, ptr %p, i64 %val) {
+; CHECK-LABEL: @hoist_noalias_addrspace_one(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    [[T:%.*]] = atomicrmw add ptr [[P:%.*]], i64 [[VAL:%.*]] seq_cst, align 8
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  %t = atomicrmw add ptr %p, i64 %val seq_cst, !noalias.addrspace !4
+  br label %out
+
+else:
+  %e = atomicrmw add ptr %p, i64 %val seq_cst
+  br label %out
+
+out:
+  ret void
+}
+
+define void @hoist_noalias_addrspace_switch(i64 %i, ptr %p, i64 %val) {
+; CHECK-LABEL: @hoist_noalias_addrspace_switch(
+; CHECK-NEXT:  out:
+; CHECK-NEXT:    [[T:%.*]] = atomicrmw add ptr [[P:%.*]], i64 [[VAL:%.*]] seq_cst, align 8
+; CHECK-NEXT:    ret void
+;
+  switch i64 %i, label %bb0 [
+  i64 1, label %bb1
+  i64 2, label %bb2
+  ]
+bb0:
+  %t = atomicrmw add ptr %p, i64 %val seq_cst, !noalias.addrspace !4
+  br label %out
+bb1:
+  %e = atomicrmw add ptr %p, i64 %val seq_cst, !noalias.addrspace !5
+  br label %out
+bb2:
+  %f = atomicrmw add ptr %p, i64 %val seq_cst, !noalias.addrspace !6
+  br label %out
+out:
+  ret void
+}
+
+
 !0 = !{ i8 0, i8 1 }
 !1 = !{ i8 3, i8 5 }
 !2 = !{}
 !3 = !{ i8 7, i8 9 }
+!4 = !{i32 5, i32 6}
+!5 = !{i32 5, i32 7}
+!6 = !{i32 4, i32 8}
+
 ;.
 ; CHECK: [[RNG0]] = !{i8 0, i8 1, i8 3, i8 5}
 ; CHECK: [[RNG1]] = !{i8 0, i8 1, i8 3, i8 5, i8 7, i8 9}

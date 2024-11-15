@@ -450,7 +450,7 @@ define <8 x i64> @ext_i8_8i64(i8 %a0) {
 ; AVX512-LABEL: ext_i8_8i64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovd %edi, %k1
-; AVX512-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512-NEXT:    retq
   %1 = bitcast i8 %a0 to <8 x i1>
   %2 = sext <8 x i1> %1 to <8 x i64>
@@ -507,7 +507,7 @@ define <16 x i32> @ext_i16_16i32(i16 %a0) {
 ; AVX512-LABEL: ext_i16_16i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovd %edi, %k1
-; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512-NEXT:    retq
   %1 = bitcast i16 %a0 to <16 x i1>
   %2 = sext <16 x i1> %1 to <16 x i32>

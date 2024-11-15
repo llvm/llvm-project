@@ -8,7 +8,7 @@ namespace N0 {
   concept D = I < 8;
 
   template<int I>
-  struct A {
+  struct A { // #defined-here
     constexpr static int f() { return 0; }
     constexpr static int f() requires C<I> && D<I> { return 1; }
     constexpr static int f() requires C<I> { return 2; }
@@ -56,6 +56,7 @@ namespace N0 {
 
   template<>
   constexpr int A<0>::h() { return 2; } // expected-error {{out-of-line definition of 'h' does not match any declaration in 'N0::A<0>'}}
+                                        // expected-note@#defined-here {{defined here}}
 
   static_assert(A<5>::h() == 0);
   static_assert(A<4>::h() == 1);

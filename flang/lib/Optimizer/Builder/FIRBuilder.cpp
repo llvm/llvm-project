@@ -150,8 +150,6 @@ mlir::Value
 fir::FirOpBuilder::createRealConstant(mlir::Location loc, mlir::Type fltTy,
                                       llvm::APFloat::integerPart val) {
   auto apf = [&]() -> llvm::APFloat {
-    if (auto ty = mlir::dyn_cast<fir::RealType>(fltTy))
-      return llvm::APFloat(kindMap.getFloatSemantics(ty.getFKind()), val);
     if (fltTy.isF16())
       return llvm::APFloat(llvm::APFloat::IEEEhalf(), val);
     if (fltTy.isBF16())
@@ -417,10 +415,7 @@ mlir::Value fir::FirOpBuilder::convertWithSemantics(
     // imaginary part is zero
     auto eleTy = helper.getComplexPartType(toTy);
     auto cast = createConvert(loc, eleTy, val);
-    llvm::APFloat zero{kindMap.getFloatSemantics(
-                           mlir::cast<fir::ComplexType>(toTy).getFKind()),
-                       0};
-    auto imag = createRealConstant(loc, eleTy, zero);
+    auto imag = createRealZeroConstant(loc, eleTy);
     return helper.createComplex(toTy, cast, imag);
   }
   if (fir::isa_complex(fromTy) &&
@@ -484,7 +479,10 @@ mlir::Value fir::factory::createConvert(mlir::OpBuilder &builder,
                                         mlir::Location loc, mlir::Type toTy,
                                         mlir::Value val) {
   if (val.getType() != toTy) {
-    assert(!fir::isa_derived(toTy));
+    assert((!fir::isa_derived(toTy) ||
+            mlir::cast<fir::RecordType>(val.getType()).getTypeList() ==
+                mlir::cast<fir::RecordType>(toTy).getTypeList()) &&
+           "incompatible record types");
     return builder.create<fir::ConvertOp>(loc, toTy, val);
   }
   return val;
@@ -768,14 +766,23 @@ mlir::Value fir::FirOpBuilder::genAbsentOp(mlir::Location loc,
 
 void fir::FirOpBuilder::setCommonAttributes(mlir::Operation *op) const {
   auto fmi = mlir::dyn_cast<mlir::arith::ArithFastMathInterface>(*op);
-  if (!fmi)
-    return;
-  // TODO: use fmi.setFastMathFlagsAttr() after D137114 is merged.
-  //       For now set the attribute by the name.
-  llvm::StringRef arithFMFAttrName = fmi.getFastMathAttrName();
-  if (fastMathFlags != mlir::arith::FastMathFlags::none)
-    op->setAttr(arithFMFAttrName, mlir::arith::FastMathFlagsAttr::get(
-                                      op->getContext(), fastMathFlags));
+  if (fmi) {
+    // TODO: use fmi.setFastMathFlagsAttr() after D137114 is merged.
+    //       For now set the attribute by the name.
+    llvm::StringRef arithFMFAttrName = fmi.getFastMathAttrName();
+    if (fastMathFlags != mlir::arith::FastMathFlags::none)
+      op->setAttr(arithFMFAttrName, mlir::arith::FastMathFlagsAttr::get(
+                                        op->getContext(), fastMathFlags));
+  }
+  auto iofi =
+      mlir::dyn_cast<mlir::arith::ArithIntegerOverflowFlagsInterface>(*op);
+  if (iofi) {
+    llvm::StringRef arithIOFAttrName = iofi.getIntegerOverflowAttrName();
+    if (integerOverflowFlags != mlir::arith::IntegerOverflowFlags::none)
+      op->setAttr(arithIOFAttrName,
+                  mlir::arith::IntegerOverflowFlagsAttr::get(
+                      op->getContext(), integerOverflowFlags));
+  }
 }
 
 void fir::FirOpBuilder::setFastMathFlags(

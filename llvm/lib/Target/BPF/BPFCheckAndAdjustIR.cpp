@@ -440,7 +440,7 @@ static Value *aspaceWrapValue(DenseMap<Value *, Value *> &Cache, Function *F,
     auto *GEPTy = cast<PointerType>(GEP->getType());
     auto *NewGEP = GEP->clone();
     NewGEP->insertAfter(GEP);
-    NewGEP->mutateType(GEPTy->getPointerTo(0));
+    NewGEP->mutateType(PointerType::getUnqual(GEPTy->getContext()));
     NewGEP->setOperand(GEP->getPointerOperandIndex(), WrappedPtr);
     NewGEP->setName(GEP->getName());
     Cache[ToWrap] = NewGEP;
@@ -452,8 +452,7 @@ static Value *aspaceWrapValue(DenseMap<Value *, Value *> &Cache, Function *F,
     IB.SetInsertPoint(*InsnPtr->getInsertionPointAfterDef());
   else
     IB.SetInsertPoint(F->getEntryBlock().getFirstInsertionPt());
-  auto *PtrTy = cast<PointerType>(ToWrap->getType());
-  auto *ASZeroPtrTy = PtrTy->getPointerTo(0);
+  auto *ASZeroPtrTy = IB.getPtrTy(0);
   auto *ACast = IB.CreateAddrSpaceCast(ToWrap, ASZeroPtrTy, ToWrap->getName());
   Cache[ToWrap] = ACast;
   return ACast;
