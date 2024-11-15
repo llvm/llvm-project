@@ -904,7 +904,7 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
                                         LangOpts.XRayAttrListFiles, SM)),
       ProfList(new ProfileList(LangOpts.ProfileListFiles, SM)),
       PrintingPolicy(LOpts),
-      SemaProxyPtr(std::make_unique<UnimplementedSemaProxy>(*this)),
+      SemaProxyPtr(std::make_unique<UnimplementedSemaProxy>()),
       Idents(idents), Selectors(sels), BuiltinInfo(builtins), TUKind(TUKind),
       DeclarationNames(*this), Comments(SM),
       CommentCommandTraits(BumpAlloc, LOpts.CommentOpts),
@@ -14501,8 +14501,6 @@ bool SemaProxy::getIgnoreSideEffectsOnAST() { return IgnoreSideEffectsOnAST; }
 void SemaProxy::setIgnoreSideEffectsOnAST(bool Ignore) {
   IgnoreSideEffectsOnAST = Ignore;
 }
-
-UnimplementedSemaProxy::UnimplementedSemaProxy(ASTContext &Ctx) : Ctx(Ctx) {}
 
 void UnimplementedSemaProxy::InstantiateFunctionDefinition(
     SourceLocation PointOfInstantiation, FunctionDecl *Function) {

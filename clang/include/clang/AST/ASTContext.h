@@ -3612,8 +3612,6 @@ inline Selector GetUnarySelector(StringRef name, ASTContext &Ctx) {
 
 /// Placeholder implementation that issues a diagnostic on any usage.
 struct UnimplementedSemaProxy final : SemaProxy {
-  ASTContext &Ctx;
-  explicit UnimplementedSemaProxy(ASTContext &);
   virtual ~UnimplementedSemaProxy() = default;
 
   void InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
