@@ -247,6 +247,10 @@ public:
     // recursion.
     bool Recursive = false;
 
+    // This will be formed by ORing together the AllocationType enum values
+    // for contexts including this node.
+    uint8_t AllocTypes = 0;
+
     // The corresponding allocation or interior call. This is the primary call
     // for which we have created this node.
     CallInfo Call;
@@ -255,7 +259,7 @@ public:
     // through cloning. I.e. located in the same function and have the same
     // (possibly pruned) stack ids. They will be updated the same way as the
     // primary call when assigning to function clones.
-    std::vector<CallInfo> MatchingCalls;
+    SmallVector<CallInfo, 0> MatchingCalls;
 
     // For alloc nodes this is a unique id assigned when constructed, and for
     // callsite stack nodes it is the original stack id when the node is
@@ -265,10 +269,6 @@ public:
     // nodes in the dot graph. Therefore we don't bother to assign a value for
     // clones.
     uint64_t OrigStackOrAllocId = 0;
-
-    // This will be formed by ORing together the AllocationType enum values
-    // for contexts including this node.
-    uint8_t AllocTypes = 0;
 
     // Edges to all callees in the profiled call stacks.
     // TODO: Should this be a map (from Callee node) for more efficient lookup?
