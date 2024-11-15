@@ -102,9 +102,8 @@ public:
                       JITDylibLookupFlags JDLookupFlags,
                       const SymbolLookupSet &Symbols) override;
 
-  Error
-  tryToResolve(SymbolNameSet CandidateSyms,
-               DylibManager::ResolveSymbolsCompleteFn OnCompleteFn);
+  Error tryToResolve(SymbolNameSet CandidateSyms,
+                     DylibManager::ResolveSymbolsCompleteFn OnCompleteFn);
 
 private:
   ExecutorProcessControl &EPC;
