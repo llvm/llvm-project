@@ -338,7 +338,7 @@ void OmpStructureChecker::CheckMultListItems() {
   semantics::UnorderedSymbolSet listVars;
 
   // Aligned clause
-  for (auto [_, clause] : GetClauses(llvm::omp::Clause::OMPC_aligned)) {
+  for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_aligned)) {
     const auto &alignedClause{std::get<parser::OmpClause::Aligned>(clause->u)};
     const auto &alignedList{std::get<0>(alignedClause.v.t)};
     std::list<parser::Name> alignedNameList;
@@ -371,7 +371,7 @@ void OmpStructureChecker::CheckMultListItems() {
   }
 
   // Nontemporal clause
-  for (auto [_, clause] : GetClauses(llvm::omp::Clause::OMPC_nontemporal)) {
+  for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_nontemporal)) {
     const auto &nontempClause{
         std::get<parser::OmpClause::Nontemporal>(clause->u)};
     const auto &nontempNameList{nontempClause.v};
@@ -1762,7 +1762,7 @@ void OmpStructureChecker::ChecksOnOrderedAsStandalone() {
   }};
 
   // Visit the DEPEND and DOACROSS clauses.
-  for (auto [_, clause] : GetClauses(llvm::omp::Clause::OMPC_depend)) {
+  for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_depend)) {
     const auto &dependClause{std::get<parser::OmpClause::Depend>(clause->u)};
     if (auto *doAcross{std::get_if<parser::OmpDoacross>(&dependClause.v.u)}) {
       visitDoacross(*doAcross, clause->source);
@@ -1771,7 +1771,7 @@ void OmpStructureChecker::ChecksOnOrderedAsStandalone() {
           "Only SINK or SOURCE dependence types are allowed when ORDERED construct is a standalone construct with no ORDERED region"_err_en_US);
     }
   }
-  for (auto [_, clause] : GetClauses(llvm::omp::Clause::OMPC_doacross)) {
+  for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_doacross)) {
     auto &doaClause{std::get<parser::OmpClause::Doacross>(clause->u)};
     visitDoacross(doaClause.v.v, clause->source);
   }
@@ -1812,13 +1812,13 @@ void OmpStructureChecker::CheckOrderedDependClause(
       }
     }
   }};
-  for (auto [_, clause] : GetClauses(llvm::omp::Clause::OMPC_depend)) {
+  for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_depend)) {
     auto &dependClause{std::get<parser::OmpClause::Depend>(clause->u)};
     if (auto *doAcross{std::get_if<parser::OmpDoacross>(&dependClause.v.u)}) {
       visitDoacross(*doAcross, clause->source);
     }
   }
-  for (auto [_, clause] : GetClauses(llvm::omp::Clause::OMPC_doacross)) {
+  for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_doacross)) {
     auto &doaClause{std::get<parser::OmpClause::Doacross>(clause->u)};
     visitDoacross(doaClause.v.v, clause->source);
   }
@@ -3904,7 +3904,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UseDevicePtr &x) {
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(x.v, currSymbols);
   semantics::UnorderedSymbolSet listVars;
-  for (auto [_, clause] : GetClauses(llvm::omp::Clause::OMPC_use_device_ptr)) {
+  for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_use_device_ptr)) {
     const auto &useDevicePtrClause{
         std::get<parser::OmpClause::UseDevicePtr>(clause->u)};
     const auto &useDevicePtrList{useDevicePtrClause.v};
@@ -3933,7 +3933,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UseDeviceAddr &x) {
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(x.v, currSymbols);
   semantics::UnorderedSymbolSet listVars;
-  for (auto [_, clause] : GetClauses(llvm::omp::Clause::OMPC_use_device_addr)) {
+  for (auto [_, clause] :
+      FindClauses(llvm::omp::Clause::OMPC_use_device_addr)) {
     const auto &useDeviceAddrClause{
         std::get<parser::OmpClause::UseDeviceAddr>(clause->u)};
     const auto &useDeviceAddrList{useDeviceAddrClause.v};
@@ -3955,7 +3956,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::IsDevicePtr &x) {
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(x.v, currSymbols);
   semantics::UnorderedSymbolSet listVars;
-  for (auto [_, clause] : GetClauses(llvm::omp::Clause::OMPC_is_device_ptr)) {
+  for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_is_device_ptr)) {
     const auto &isDevicePtrClause{
         std::get<parser::OmpClause::IsDevicePtr>(clause->u)};
     const auto &isDevicePtrList{isDevicePtrClause.v};
@@ -3987,7 +3988,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::HasDeviceAddr &x) {
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(x.v, currSymbols);
   semantics::UnorderedSymbolSet listVars;
-  for (auto [_, clause] : GetClauses(llvm::omp::Clause::OMPC_has_device_addr)) {
+  for (auto [_, clause] :
+      FindClauses(llvm::omp::Clause::OMPC_has_device_addr)) {
     const auto &hasDeviceAddrClause{
         std::get<parser::OmpClause::HasDeviceAddr>(clause->u)};
     const auto &hasDeviceAddrList{hasDeviceAddrClause.v};
