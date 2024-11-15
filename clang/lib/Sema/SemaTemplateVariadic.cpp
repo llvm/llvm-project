@@ -8,14 +8,15 @@
 //  This file implements semantic analysis for C++0x variadic templates.
 //===----------------------------------------------------------------------===/
 
-#include "clang/Sema/Sema.h"
 #include "TypeLocBuilder.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/ExprObjC.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -29,16 +30,12 @@ using namespace clang;
 
 namespace {
   /// A class that collects unexpanded parameter packs.
-  class CollectUnexpandedParameterPacksVisitor :
-    public RecursiveASTVisitor<CollectUnexpandedParameterPacksVisitor>
-  {
-    typedef RecursiveASTVisitor<CollectUnexpandedParameterPacksVisitor>
-      inherited;
+class CollectUnexpandedParameterPacksVisitor
+    : public DynamicRecursiveASTVisitor {
+  SmallVectorImpl<UnexpandedParameterPack> &Unexpanded;
 
-    SmallVectorImpl<UnexpandedParameterPack> &Unexpanded;
-
-    bool InLambdaOrBlock = false;
-    unsigned DepthLimit = (unsigned)-1;
+  bool InLambdaOrBlock = false;
+  unsigned DepthLimit = (unsigned)-1;
 
 #ifndef NDEBUG
     bool ContainsIntermediatePacks = false;
@@ -67,19 +64,19 @@ namespace {
   public:
     explicit CollectUnexpandedParameterPacksVisitor(
         SmallVectorImpl<UnexpandedParameterPack> &Unexpanded)
-        : Unexpanded(Unexpanded) {}
+        : Unexpanded(Unexpanded) {
+      ShouldWalkTypesOfTypeLocs = false;
 
-    bool shouldWalkTypesOfTypeLocs() const { return false; }
-
-    // We need this so we can find e.g. attributes on lambdas.
-    bool shouldVisitImplicitCode() const { return true; }
+      // We need this so we can find e.g. attributes on lambdas.
+      ShouldVisitImplicitCode = true;
+    }
 
     //------------------------------------------------------------------------
     // Recording occurrences of (unexpanded) parameter packs.
     //------------------------------------------------------------------------
 
     /// Record occurrences of template type parameter packs.
-    bool VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
+    bool VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) override {
       if (TL.getTypePtr()->isParameterPack())
         addUnexpanded(TL.getTypePtr(), TL.getNameLoc());
       return true;
@@ -90,7 +87,7 @@ namespace {
     /// them.
     ///
     /// Ideally, this routine would never be used.
-    bool VisitTemplateTypeParmType(TemplateTypeParmType *T) {
+    bool VisitTemplateTypeParmType(TemplateTypeParmType *T) override {
       if (T->isParameterPack())
         addUnexpanded(T);
 
@@ -99,7 +96,7 @@ namespace {
 
     /// Record occurrences of function and non-type template
     /// parameter packs in an expression.
-    bool VisitDeclRefExpr(DeclRefExpr *E) {
+    bool VisitDeclRefExpr(DeclRefExpr *E) override {
       if (E->getDecl()->isParameterPack())
         addUnexpanded(E->getDecl(), E->getLocation());
 
@@ -107,7 +104,7 @@ namespace {
     }
 
     /// Record occurrences of template template parameter packs.
-    bool TraverseTemplateName(TemplateName Template) {
+    bool TraverseTemplateName(TemplateName Template) override {
       if (auto *TTP = dyn_cast_or_null<TemplateTemplateParmDecl>(
               Template.getAsTemplateDecl())) {
         if (TTP->isParameterPack())
@@ -119,12 +116,12 @@ namespace {
           (bool)Template.getAsSubstTemplateTemplateParmPack();
 #endif
 
-      return inherited::TraverseTemplateName(Template);
+      return DynamicRecursiveASTVisitor::TraverseTemplateName(Template);
     }
 
     /// Suppress traversal into Objective-C container literal
     /// elements that are pack expansions.
-    bool TraverseObjCDictionaryLiteral(ObjCDictionaryLiteral *E) {
+    bool TraverseObjCDictionaryLiteral(ObjCDictionaryLiteral *E) override {
       if (!E->containsUnexpandedParameterPack())
         return true;
 
@@ -144,118 +141,127 @@ namespace {
 
     /// Suppress traversal into statements and expressions that
     /// do not contain unexpanded parameter packs.
-    bool TraverseStmt(Stmt *S) {
+    bool TraverseStmt(Stmt *S) override {
       Expr *E = dyn_cast_or_null<Expr>(S);
       if ((E && E->containsUnexpandedParameterPack()) || InLambdaOrBlock)
-        return inherited::TraverseStmt(S);
+        return DynamicRecursiveASTVisitor::TraverseStmt(S);
 
       return true;
     }
 
     /// Suppress traversal into types that do not contain
     /// unexpanded parameter packs.
-    bool TraverseType(QualType T) {
+    bool TraverseType(QualType T) override {
       if ((!T.isNull() && T->containsUnexpandedParameterPack()) ||
           InLambdaOrBlock)
-        return inherited::TraverseType(T);
+        return DynamicRecursiveASTVisitor::TraverseType(T);
 
       return true;
     }
 
     /// Suppress traversal into types with location information
     /// that do not contain unexpanded parameter packs.
-    bool TraverseTypeLoc(TypeLoc TL) {
+    bool TraverseTypeLoc(TypeLoc TL) override {
       if ((!TL.getType().isNull() &&
            TL.getType()->containsUnexpandedParameterPack()) ||
           InLambdaOrBlock)
-        return inherited::TraverseTypeLoc(TL);
+        return DynamicRecursiveASTVisitor::TraverseTypeLoc(TL);
 
       return true;
     }
 
     /// Suppress traversal of parameter packs.
-    bool TraverseDecl(Decl *D) {
+    bool TraverseDecl(Decl *D) override {
       // A function parameter pack is a pack expansion, so cannot contain
       // an unexpanded parameter pack. Likewise for a template parameter
       // pack that contains any references to other packs.
       if (D && D->isParameterPack())
         return true;
 
-      return inherited::TraverseDecl(D);
+      return DynamicRecursiveASTVisitor::TraverseDecl(D);
     }
 
     /// Suppress traversal of pack-expanded attributes.
-    bool TraverseAttr(Attr *A) {
+    bool TraverseAttr(Attr *A) override {
       if (A->isPackExpansion())
         return true;
 
-      return inherited::TraverseAttr(A);
+      return DynamicRecursiveASTVisitor::TraverseAttr(A);
     }
 
     /// Suppress traversal of pack expansion expressions and types.
     ///@{
-    bool TraversePackExpansionType(PackExpansionType *T) { return true; }
-    bool TraversePackExpansionTypeLoc(PackExpansionTypeLoc TL) { return true; }
-    bool TraversePackExpansionExpr(PackExpansionExpr *E) { return true; }
-    bool TraverseCXXFoldExpr(CXXFoldExpr *E) { return true; }
-    bool TraversePackIndexingExpr(PackIndexingExpr *E) {
-      return inherited::TraverseStmt(E->getIndexExpr());
+    bool TraversePackExpansionType(PackExpansionType *T) override {
+      return true;
     }
-    bool TraversePackIndexingType(PackIndexingType *E) {
-      return inherited::TraverseStmt(E->getIndexExpr());
+    bool TraversePackExpansionTypeLoc(PackExpansionTypeLoc TL) override {
+      return true;
     }
-    bool TraversePackIndexingTypeLoc(PackIndexingTypeLoc TL) {
-      return inherited::TraverseStmt(TL.getIndexExpr());
+    bool TraversePackExpansionExpr(PackExpansionExpr *E) override {
+      return true;
+    }
+    bool TraverseCXXFoldExpr(CXXFoldExpr *E) override { return true; }
+    bool TraversePackIndexingExpr(PackIndexingExpr *E) override {
+      return DynamicRecursiveASTVisitor::TraverseStmt(E->getIndexExpr());
+    }
+    bool TraversePackIndexingType(PackIndexingType *E) override {
+      return DynamicRecursiveASTVisitor::TraverseStmt(E->getIndexExpr());
+    }
+    bool TraversePackIndexingTypeLoc(PackIndexingTypeLoc TL) override {
+      return DynamicRecursiveASTVisitor::TraverseStmt(TL.getIndexExpr());
     }
 
     ///@}
 
     /// Suppress traversal of using-declaration pack expansion.
-    bool TraverseUnresolvedUsingValueDecl(UnresolvedUsingValueDecl *D) {
+    bool
+    TraverseUnresolvedUsingValueDecl(UnresolvedUsingValueDecl *D) override {
       if (D->isPackExpansion())
         return true;
 
-      return inherited::TraverseUnresolvedUsingValueDecl(D);
+      return DynamicRecursiveASTVisitor::TraverseUnresolvedUsingValueDecl(D);
     }
 
     /// Suppress traversal of using-declaration pack expansion.
-    bool TraverseUnresolvedUsingTypenameDecl(UnresolvedUsingTypenameDecl *D) {
+    bool TraverseUnresolvedUsingTypenameDecl(
+        UnresolvedUsingTypenameDecl *D) override {
       if (D->isPackExpansion())
         return true;
 
-      return inherited::TraverseUnresolvedUsingTypenameDecl(D);
+      return DynamicRecursiveASTVisitor::TraverseUnresolvedUsingTypenameDecl(D);
     }
 
     /// Suppress traversal of template argument pack expansions.
-    bool TraverseTemplateArgument(const TemplateArgument &Arg) {
+    bool TraverseTemplateArgument(const TemplateArgument &Arg) override {
       if (Arg.isPackExpansion())
         return true;
 
-      return inherited::TraverseTemplateArgument(Arg);
+      return DynamicRecursiveASTVisitor::TraverseTemplateArgument(Arg);
     }
 
     /// Suppress traversal of template argument pack expansions.
-    bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &ArgLoc) {
+    bool
+    TraverseTemplateArgumentLoc(const TemplateArgumentLoc &ArgLoc) override {
       if (ArgLoc.getArgument().isPackExpansion())
         return true;
 
-      return inherited::TraverseTemplateArgumentLoc(ArgLoc);
+      return DynamicRecursiveASTVisitor::TraverseTemplateArgumentLoc(ArgLoc);
     }
 
     /// Suppress traversal of base specifier pack expansions.
-    bool TraverseCXXBaseSpecifier(const CXXBaseSpecifier &Base) {
+    bool TraverseCXXBaseSpecifier(const CXXBaseSpecifier &Base) override {
       if (Base.isPackExpansion())
         return true;
 
-      return inherited::TraverseCXXBaseSpecifier(Base);
+      return DynamicRecursiveASTVisitor::TraverseCXXBaseSpecifier(Base);
     }
 
     /// Suppress traversal of mem-initializer pack expansions.
-    bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
+    bool TraverseConstructorInitializer(CXXCtorInitializer *Init) override {
       if (Init->isPackExpansion())
         return true;
 
-      return inherited::TraverseConstructorInitializer(Init);
+      return DynamicRecursiveASTVisitor::TraverseConstructorInitializer(Init);
     }
 
     /// Note whether we're traversing a lambda containing an unexpanded
@@ -263,7 +269,7 @@ namespace {
     /// including all the places where we normally wouldn't look. Within a
     /// lambda, we don't propagate the 'contains unexpanded parameter pack' bit
     /// outside an expression.
-    bool TraverseLambdaExpr(LambdaExpr *Lambda) {
+    bool TraverseLambdaExpr(LambdaExpr *Lambda) override {
       // The ContainsUnexpandedParameterPack bit on a lambda is always correct,
       // even if it's contained within another lambda.
       if (!Lambda->containsUnexpandedParameterPack())
@@ -275,57 +281,58 @@ namespace {
       if (auto *TPL = Lambda->getTemplateParameterList())
         DepthLimit = TPL->getDepth();
 
-      inherited::TraverseLambdaExpr(Lambda);
+      DynamicRecursiveASTVisitor::TraverseLambdaExpr(Lambda);
 
       DepthLimit = OldDepthLimit;
       return true;
     }
 
     /// Analogously for blocks.
-    bool TraverseBlockExpr(BlockExpr *Block) {
+    bool TraverseBlockExpr(BlockExpr *Block) override {
       if (!Block->containsUnexpandedParameterPack())
         return true;
 
       SaveAndRestore _(InLambdaOrBlock, true);
-      inherited::TraverseBlockExpr(Block);
+      DynamicRecursiveASTVisitor::TraverseBlockExpr(Block);
       return true;
     }
 
     /// Suppress traversal within pack expansions in lambda captures.
     bool TraverseLambdaCapture(LambdaExpr *Lambda, const LambdaCapture *C,
-                               Expr *Init) {
+                               Expr *Init) override {
       if (C->isPackExpansion())
         return true;
 
-      return inherited::TraverseLambdaCapture(Lambda, C, Init);
+      return DynamicRecursiveASTVisitor::TraverseLambdaCapture(Lambda, C, Init);
     }
 
 #ifndef NDEBUG
-    bool TraverseFunctionParmPackExpr(FunctionParmPackExpr *) {
+    bool TraverseFunctionParmPackExpr(FunctionParmPackExpr *) override {
       ContainsIntermediatePacks = true;
       return true;
     }
 
     bool TraverseSubstNonTypeTemplateParmPackExpr(
-        SubstNonTypeTemplateParmPackExpr *) {
+        SubstNonTypeTemplateParmPackExpr *) override {
       ContainsIntermediatePacks = true;
       return true;
     }
 
-    bool VisitSubstTemplateTypeParmPackType(SubstTemplateTypeParmPackType *) {
+    bool VisitSubstTemplateTypeParmPackType(
+        SubstTemplateTypeParmPackType *) override {
       ContainsIntermediatePacks = true;
       return true;
     }
 
-    bool
-    VisitSubstTemplateTypeParmPackTypeLoc(SubstTemplateTypeParmPackTypeLoc) {
+    bool VisitSubstTemplateTypeParmPackTypeLoc(
+        SubstTemplateTypeParmPackTypeLoc) override {
       ContainsIntermediatePacks = true;
       return true;
     }
 
     bool containsIntermediatePacks() const { return ContainsIntermediatePacks; }
 #endif
-  };
+};
 }
 
 /// Determine whether it's possible for an unexpanded parameter pack to
