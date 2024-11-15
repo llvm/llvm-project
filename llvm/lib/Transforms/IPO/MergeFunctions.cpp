@@ -200,9 +200,11 @@ public:
   }
 
   template <typename FuncContainer>
-  bool runOnModule(FuncContainer &Functions);
+  bool run(FuncContainer &Functions);
   std::pair<bool, DenseMap<Function *, Function *>>
   runOnFunctions(std::set<Function *> &F);
+
+  SmallPtrSet<GlobalValue *, 4>& getUsed();
 
 private:
   // The function comparison operator is provided here so that FunctionNodes do
@@ -316,9 +318,17 @@ PreservedAnalyses MergeFunctionsPass::run(Module &M,
   return PreservedAnalyses::none();
 }
 
+SmallPtrSet<GlobalValue *, 4>& MergeFunctions::getUsed() {
+  return Used;
+}
+
 bool MergeFunctionsPass::runOnModule(Module &M) {
   MergeFunctions MF;
-  return MF.runOnModule(M);
+  SmallVector<GlobalValue *, 4> UsedV;
+  collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/false);
+  collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/true);
+  MF.getUsed().insert(UsedV.begin(), UsedV.end());
+  return MF.run(M);
 }
 
 std::pair<bool, DenseMap<Function *, Function *>>
@@ -428,36 +438,24 @@ static bool isEligibleForMerging(Function &F) {
          !hasDistinctMetadataIntrinsic(F);
 }
 
-template <typename FuncContainer>
-bool MergeFunctions::runOnModule(FuncContainer &M) {
-  bool Changed = false;
+inline Function *asPtr(Function *Fn) { return Fn; }
+inline Function *asPtr(Function &Fn) { return &Fn; }
 
-  if constexpr (std::is_same<FuncContainer, Module>::value) {
-    SmallVector<GlobalValue *, 4> UsedV;
-    collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/false);
-    collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/true);
-    Used.insert(UsedV.begin(), UsedV.end());
-  }
+template <typename FuncContainer>
+bool MergeFunctions::run(FuncContainer &M) {
+  bool Changed = false;
 
   // All functions in the module, ordered by hash. Functions with a unique
   // hash value are easily eliminated.
   std::vector<std::pair<stable_hash, Function *>> HashedFuncs;
-  if constexpr (std::is_same<FuncContainer, std::set<Function *>>::value) {
-    for (Function *Func : M) {
-      if (isEligibleForMerging(*Func)) {
-        HashedFuncs.push_back({StructuralHash(*Func), Func});
-      }
-    }
-  }
-  if constexpr (std::is_same<FuncContainer, Module>::value) {
-    for (Function &Func : M) {
-      if (isEligibleForMerging(Func)) {
-        HashedFuncs.push_back({StructuralHash(Func), &Func});
-      }
+  for (auto &Func : M) {
+    Function *FuncPtr = asPtr(Func);
+    if (isEligibleForMerging(*FuncPtr)) {
+      HashedFuncs.push_back({StructuralHash(*FuncPtr), FuncPtr});
     }
   }
 
-  stable_sort(HashedFuncs, less_first());
+  llvm::stable_sort(HashedFuncs, less_first());
 
   auto S = HashedFuncs.begin();
   for (auto I = HashedFuncs.begin(), IE = HashedFuncs.end(); I != IE; ++I) {
@@ -501,7 +499,7 @@ bool MergeFunctions::runOnModule(FuncContainer &M) {
 std::pair<bool, DenseMap<Function *, Function *>>
 MergeFunctions::runOnFunctions(std::set<Function *> &F) {
   bool MergeResult = false;
-  MergeResult = this->runOnModule(F);
+  MergeResult = this->run(F);
   return {MergeResult, this->DelToNewMap};
 }
 

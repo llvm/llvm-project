@@ -1,5 +1,4 @@
-//===- MergeFunctionsTest.cpp - Unit tests for
-// MergeFunctionsPass-----------===//
+//===- MergeFunctionsTest.cpp - Unit tests for MergeFunctionsPass-----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,16 +25,16 @@ TEST(MergeFunctions, TrueOutputModuleTest) {
         @.str = private unnamed_addr constant [10 x i8] c"On f: %d\0A\00", align 1
         @.str.1 = private unnamed_addr constant [13 x i8] c"On main: %d\0A\00", align 1
 
-        define dso_local i32 @f(i32 noundef %arg) #0 {
+        define dso_local i32 @f(i32 noundef %arg) {
             entry:
                 %add109 = call i32 @_slice_add10(i32 %arg)
                 %call = call i32 (ptr, ...) @printf(ptr noundef @.str, i32 noundef %add109)
                 ret i32 %add109
         }
 
-        declare i32 @printf(ptr noundef, ...) #1
+        declare i32 @printf(ptr noundef, ...)
 
-        define dso_local i32 @main(i32 noundef %argc, ptr noundef %argv) #0 {
+        define dso_local i32 @main(i32 noundef %argc, ptr noundef %argv) {
             entry:
                 %add99 = call i32 @_slice_add10(i32 %argc)
                 %call = call i32 @f(i32 noundef 2)
@@ -44,7 +43,7 @@ TEST(MergeFunctions, TrueOutputModuleTest) {
                 ret i32 %add99
         }
 
-        define internal i32 @_slice_add10(i32 %arg) #2 {
+        define internal i32 @_slice_add10(i32 %arg) {
             sliceclone_entry:
                 %0 = mul nsw i32 %arg, %arg
                 %1 = mul nsw i32 %0, 2
@@ -54,7 +53,7 @@ TEST(MergeFunctions, TrueOutputModuleTest) {
                 ret i32 %4
         }
 
-        define internal i32 @_slice_add10_alt(i32 %arg) #2 {
+        define internal i32 @_slice_add10_alt(i32 %arg) {
             sliceclone_entry:
                 %0 = mul nsw i32 %arg, %arg
                 %1 = mul nsw i32 %0, 2
@@ -63,10 +62,6 @@ TEST(MergeFunctions, TrueOutputModuleTest) {
                 %4 = add nsw i32 %3, 2
                 ret i32 %4
         }
-
-        attributes #0 = { noinline nounwind uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-        attributes #1 = { "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-        attributes #2 = { nounwind willreturn }
     )invalid",
                                                 Err, Ctx));
 
@@ -81,16 +76,16 @@ TEST(MergeFunctions, TrueOutputFunctionsTest) {
         @.str = private unnamed_addr constant [10 x i8] c"On f: %d\0A\00", align 1
         @.str.1 = private unnamed_addr constant [13 x i8] c"On main: %d\0A\00", align 1
 
-        define dso_local i32 @f(i32 noundef %arg) #0 {
+        define dso_local i32 @f(i32 noundef %arg) {
             entry:
                 %add109 = call i32 @_slice_add10(i32 %arg)
                 %call = call i32 (ptr, ...) @printf(ptr noundef @.str, i32 noundef %add109)
                 ret i32 %add109
         }
 
-        declare i32 @printf(ptr noundef, ...) #1
+        declare i32 @printf(ptr noundef, ...)
 
-        define dso_local i32 @main(i32 noundef %argc, ptr noundef %argv) #0 {
+        define dso_local i32 @main(i32 noundef %argc, ptr noundef %argv) {
             entry:
                 %add99 = call i32 @_slice_add10(i32 %argc)
                 %call = call i32 @f(i32 noundef 2)
@@ -99,7 +94,7 @@ TEST(MergeFunctions, TrueOutputFunctionsTest) {
                 ret i32 %add99
         }
 
-        define internal i32 @_slice_add10(i32 %arg) #2 {
+        define internal i32 @_slice_add10(i32 %arg) {
             sliceclone_entry:
                 %0 = mul nsw i32 %arg, %arg
                 %1 = mul nsw i32 %0, 2
@@ -109,7 +104,7 @@ TEST(MergeFunctions, TrueOutputFunctionsTest) {
                 ret i32 %4
         }
 
-        define internal i32 @_slice_add10_alt(i32 %arg) #2 {
+        define internal i32 @_slice_add10_alt(i32 %arg) {
             sliceclone_entry:
                 %0 = mul nsw i32 %arg, %arg
                 %1 = mul nsw i32 %0, 2
@@ -118,10 +113,6 @@ TEST(MergeFunctions, TrueOutputFunctionsTest) {
                 %4 = add nsw i32 %3, 2
                 ret i32 %4
         }
-
-        attributes #0 = { noinline nounwind uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-        attributes #1 = { "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-        attributes #2 = { nounwind willreturn }
     )invalid",
                                                 Err, Ctx));
 
@@ -152,16 +143,16 @@ TEST(MergeFunctions, FalseOutputModuleTest) {
         @.str = private unnamed_addr constant [10 x i8] c"On f: %d\0A\00", align 1
         @.str.1 = private unnamed_addr constant [13 x i8] c"On main: %d\0A\00", align 1
 
-        define dso_local i32 @f(i32 noundef %arg) #0 {
+        define dso_local i32 @f(i32 noundef %arg) {
             entry:
                 %add109 = call i32 @_slice_add10(i32 %arg)
                 %call = call i32 (ptr, ...) @printf(ptr noundef @.str, i32 noundef %add109)
                 ret i32 %add109
         }
 
-        declare i32 @printf(ptr noundef, ...) #1
+        declare i32 @printf(ptr noundef, ...)
 
-        define dso_local i32 @main(i32 noundef %argc, ptr noundef %argv) #0 {
+        define dso_local i32 @main(i32 noundef %argc, ptr noundef %argv) {
             entry:
                 %add99 = call i32 @_slice_add10(i32 %argc)
                 %call = call i32 @f(i32 noundef 2)
@@ -170,7 +161,7 @@ TEST(MergeFunctions, FalseOutputModuleTest) {
                 ret i32 %add99
         }
 
-        define internal i32 @_slice_add10(i32 %arg) #2 {
+        define internal i32 @_slice_add10(i32 %arg) {
             sliceclone_entry:
                 %0 = mul nsw i32 %arg, %arg
                 %1 = mul nsw i32 %0, 2
@@ -180,7 +171,7 @@ TEST(MergeFunctions, FalseOutputModuleTest) {
                 ret i32 %4
         }
 
-        define internal i32 @_slice_add10_alt(i32 %arg) #2 {
+        define internal i32 @_slice_add10_alt(i32 %arg) {
             sliceclone_entry:
                 %0 = mul nsw i32 %arg, %arg
                 %1 = mul nsw i32 %0, 2
@@ -189,10 +180,6 @@ TEST(MergeFunctions, FalseOutputModuleTest) {
                 %4 = add nsw i32 %3, 2
                 ret i32 %0
         }
-
-        attributes #0 = { noinline nounwind uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-        attributes #1 = { "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-        attributes #2 = { nounwind willreturn }
     )invalid",
                                                 Err, Ctx));
 
@@ -207,16 +194,16 @@ TEST(MergeFunctions, FalseOutputFunctionsTest) {
         @.str = private unnamed_addr constant [10 x i8] c"On f: %d\0A\00", align 1
         @.str.1 = private unnamed_addr constant [13 x i8] c"On main: %d\0A\00", align 1
 
-        define dso_local i32 @f(i32 noundef %arg) #0 {
+        define dso_local i32 @f(i32 noundef %arg) {
             entry:
                 %add109 = call i32 @_slice_add10(i32 %arg)
                 %call = call i32 (ptr, ...) @printf(ptr noundef @.str, i32 noundef %add109)
                 ret i32 %add109
         }
 
-        declare i32 @printf(ptr noundef, ...) #1
+        declare i32 @printf(ptr noundef, ...)
 
-        define dso_local i32 @main(i32 noundef %argc, ptr noundef %argv) #0 {
+        define dso_local i32 @main(i32 noundef %argc, ptr noundef %argv) {
             entry:
                 %add99 = call i32 @_slice_add10(i32 %argc)
                 %call = call i32 @f(i32 noundef 2)
@@ -225,7 +212,7 @@ TEST(MergeFunctions, FalseOutputFunctionsTest) {
                 ret i32 %add99
         }
 
-        define internal i32 @_slice_add10(i32 %arg) #2 {
+        define internal i32 @_slice_add10(i32 %arg) {
             sliceclone_entry:
                 %0 = mul nsw i32 %arg, %arg
                 %1 = mul nsw i32 %0, 2
@@ -235,7 +222,7 @@ TEST(MergeFunctions, FalseOutputFunctionsTest) {
                 ret i32 %4
         }
 
-        define internal i32 @_slice_add10_alt(i32 %arg) #2 {
+        define internal i32 @_slice_add10_alt(i32 %arg) {
             sliceclone_entry:
                 %0 = mul nsw i32 %arg, %arg
                 %1 = mul nsw i32 %0, 2
@@ -244,10 +231,6 @@ TEST(MergeFunctions, FalseOutputFunctionsTest) {
                 %4 = add nsw i32 %3, 2
                 ret i32 %0
         }
-
-        attributes #0 = { noinline nounwind uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-        attributes #1 = { "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-        attributes #2 = { nounwind willreturn }
     )invalid",
                                                 Err, Ctx));
 
