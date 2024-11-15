@@ -54,10 +54,10 @@ private:
   size_t Indentation;
   Type TokenType;
   // RawBody is the original string that was tokenized
-  SmallString<0> RawBody;
+  std::string RawBody;
   Accessor Accessor;
   // TokenBody is the original string with the identifier removed
-  SmallString<0> TokenBody;
+  std::string TokenBody;
 };
 
 class ASTNode {
@@ -118,8 +118,8 @@ private:
   DenseMap<char, StringRef> *Escapes;
   Type T;
   size_t Indentation = 0;
-  SmallString<0> RawBody;
-  SmallString<0> Body;
+  std::string RawBody;
+  std::string Body;
   ASTNode *Parent;
   std::vector<ASTNode *> Children;
   const Accessor Accessor;
@@ -239,7 +239,7 @@ Token::Type Token::getTokenType(char Identifier) {
 // We make an exception for when previous token is empty
 // and the current token is the second token
 // eg. " {{#Section}}"
-bool noTextBehind(size_t Idx, const SmallVector<Token, 0> &Tokens) {
+bool noTextBehind(size_t Idx, const ArrayRef<Token> &Tokens) {
   if (Idx == 0)
     return false;
 
@@ -257,7 +257,7 @@ bool noTextBehind(size_t Idx, const SmallVector<Token, 0> &Tokens) {
 // if the left of previous token is empty spaces or tabs followed
 // by a newline
 // eg. "{{#Section}}  \n"
-bool noTextAhead(size_t Idx, const SmallVector<Token, 0> &Tokens) {
+bool noTextAhead(size_t Idx, const ArrayRef<Token> &Tokens) {
   if (Idx >= Tokens.size() - 1)
     return false;
 
@@ -283,7 +283,7 @@ bool requiresCleanUp(Token::Type T) {
 //  "{{! Comment }} \nLine 2"
 // would be considered as no text ahead and should be render as
 //  " Line 2"
-void stripTokenAhead(SmallVector<Token, 0> &Tokens, size_t Idx) {
+void stripTokenAhead(SmallVector<Token> &Tokens, size_t Idx) {
   Token &NextToken = Tokens[Idx + 1];
   StringRef NextTokenBody = NextToken.getTokenBody();
   // cut off the leading newline which could be \n or \r\n
@@ -301,7 +301,7 @@ void stripTokenAhead(SmallVector<Token, 0> &Tokens, size_t Idx) {
 //  "A"
 // The exception for this is partial tag which requires us to
 // keep track of the indentation once it's rendered
-void stripTokenBefore(SmallVector<Token, 0> &Tokens, size_t Idx,
+void stripTokenBefore(SmallVector<Token> &Tokens, size_t Idx,
                       Token &CurrentToken, Token::Type CurrentType) {
   Token &PrevToken = Tokens[Idx - 1];
   StringRef PrevTokenBody = PrevToken.getTokenBody();
@@ -316,10 +316,10 @@ void stripTokenBefore(SmallVector<Token, 0> &Tokens, size_t Idx,
 // The mustache spec allows {{{ }}} to unescape variables
 // but we don't support that here. An unescape variable
 // is represented only by {{& variable}}.
-SmallVector<Token, 0> tokenize(StringRef Template) {
-  SmallVector<Token, 0> Tokens;
-  StringRef Open("{{");
-  StringRef Close("}}");
+SmallVector<Token> tokenize(StringRef Template) {
+  SmallVector<Token> Tokens;
+  std::string Open("{{");
+  std::string Close("}}");
   size_t Start = 0;
   size_t DelimiterStart = Template.find(Open);
   if (DelimiterStart == StringRef::npos) {
@@ -339,9 +339,9 @@ SmallVector<Token, 0> tokenize(StringRef Template) {
     // Extract the Interpolated variable without delimiters {{ and }}
     size_t InterpolatedStart = DelimiterStart + Open.size();
     size_t InterpolatedEnd = DelimiterEnd - DelimiterStart - Close.size();
-    SmallString<0> Interpolated =
-        Template.substr(InterpolatedStart, InterpolatedEnd);
-    SmallString<0> RawBody({Open, Interpolated, Close});
+    std::string Interpolated =
+        Template.substr(InterpolatedStart, InterpolatedEnd).str();
+    std::string RawBody = Open + Interpolated + Close;
     Tokens.emplace_back(RawBody, Interpolated, Interpolated[0]);
     Start = DelimiterEnd + Close.size();
     DelimiterStart = Template.find(Open, Start);
@@ -405,7 +405,7 @@ private:
   void parseMustache(ASTNode *Parent);
 
   BumpPtrAllocator &Allocator;
-  SmallVector<Token, 0> Tokens;
+  SmallVector<Token> Tokens;
   size_t CurrentPtr;
   StringRef TemplateStr;
 };
@@ -455,7 +455,7 @@ void Parser::parseMustache(ASTNode *Parent) {
       size_t Start = CurrentPtr;
       parseMustache(CurrentNode);
       size_t End = CurrentPtr;
-      SmallString<0> RawBody;
+      std::string RawBody;
       for (std::size_t I = Start; I < End - 1; I++)
         RawBody += Tokens[I].getRawBody();
       CurrentNode->setRawBody(RawBody);
@@ -467,7 +467,7 @@ void Parser::parseMustache(ASTNode *Parent) {
       size_t Start = CurrentPtr;
       parseMustache(CurrentNode);
       size_t End = CurrentPtr;
-      SmallString<0> RawBody;
+      std::string RawBody;
       for (size_t Idx = Start; Idx < End - 1; Idx++)
         RawBody += Tokens[Idx].getRawBody();
       CurrentNode->setRawBody(RawBody);
@@ -517,22 +517,31 @@ Template::Template(StringRef TemplateStr) {
 }
 
 void toJsonString(const Value &Data, raw_ostream &OS) {
-  if (Data.getAsNull())
+  switch (Data.kind()) {
+  case Value::Null:
     return;
-  if (auto *Arr = Data.getAsArray())
-    if (Arr->empty())
-      return;
-  if (Data.getAsString()) {
-    OS << Data.getAsString()->str();
-    return;
-  }
-  if (auto Num = Data.getAsNumber()) {
+  case Value::Number: {
+    auto Num = *Data.getAsNumber();
     std::ostringstream Oss;
-    Oss << *Num;
+    Oss << Num;
     OS << Oss.str();
     return;
   }
-  OS << formatv("{0:2}", Data);
+  case Value::String: {
+    auto Str = *Data.getAsString();
+    OS << Str.str();
+    return;
+  }
+  case Value::Array: {
+    auto Arr = *Data.getAsArray();
+    if (Arr.empty())
+      return;
+  }
+  case Value::Object:
+  case Value::Boolean:  
+    OS << formatv("{0:2}", Data);
+    break;
+  }
 }
 
 bool isFalsey(const Value &V) {
