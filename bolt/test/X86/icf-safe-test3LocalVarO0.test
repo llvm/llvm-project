@@ -5,7 +5,7 @@
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %p/Inputs/helperSafeICF.s    -o %t2.o
 # RUN: %clang %cflags %t1.o %t2.o -o %t.exe -Wl,-q
 # RUN: llvm-bolt --no-threads %t.exe --icf -debug -debug-only=bolt-icf -o %t.bolt 2>&1 | FileCheck --check-prefix=ICFCHECK %s
-# RUN: llvm-bolt --no-threads %t.exe --safe-icf -debug -debug-only=bolt-icf -o %t.bolt 2>&1 | FileCheck --check-prefix=SAFEICFCHECK %s
+# RUN: llvm-bolt --no-threads %t.exe --icf=safe -debug -debug-only=bolt-icf -o %t.bolt 2>&1 | FileCheck --check-prefix=SAFEICFCHECK %s
 
 ## Check that BOLT successfully folded a function with jump table:
 # ICFCHECK:      ICF iteration 1

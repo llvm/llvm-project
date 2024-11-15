@@ -76,12 +76,8 @@ cl::opt<std::string> CompDirOverride(
              "to *.dwo files."),
     cl::Hidden, cl::init(""), cl::cat(BoltCategory));
 
-cl::opt<bool> ICF("icf", cl::desc("fold functions with identical code"),
-                  cl::cat(BoltOptCategory));
-
-cl::opt<bool> SafeICF("safe-icf",
-                      cl::desc("Enable safe identical code folding"),
-                      cl::cat(BoltOptCategory));
+cl::opt<std::string> ICF("icf", cl::desc("fold functions with identical code"),
+                         cl::ValueOptional, cl::cat(BoltOptCategory));
 } // namespace opts
 
 namespace {
@@ -175,6 +171,16 @@ void BinaryContext::logBOLTErrorsAndQuitOnFatal(Error E) {
   });
 }
 
+static BinaryContext::ICFLevel parseICFLevel() {
+  if (!opts::ICF.getNumOccurrences())
+    return BinaryContext::ICFLevel::None;
+  std::string Str = StringRef(opts::ICF).lower();
+  return StringSwitch<BinaryContext::ICFLevel>(Str)
+      .Case("all", BinaryContext::ICFLevel::All)
+      .Case("safe", BinaryContext::ICFLevel::Safe)
+      .Default(BinaryContext::ICFLevel::All);
+}
+
 BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
                              std::unique_ptr<DWARFContext> DwCtx,
                              std::unique_ptr<Triple> TheTriple,
@@ -199,6 +205,7 @@ BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
       Logger(Logger), InitialDynoStats(isAArch64()) {
   RegularPageSize = isAArch64() ? RegularPageSizeAArch64 : RegularPageSizeX86;
   PageAlign = opts::NoHugePages ? RegularPageSize : HugePageSize;
+  ICFLevelVar = parseICFLevel();
 }
 
 BinaryContext::~BinaryContext() {
@@ -2017,7 +2024,7 @@ static bool skipInstruction(const MCInst &Inst, const BinaryContext &BC) {
           BC.MIB->isCall(Inst) || BC.MIB->isBranch(Inst));
 }
 void BinaryContext::processInstructionForFuncReferences(const MCInst &Inst) {
-  if (!opts::SafeICF || skipInstruction(Inst, *this))
+  if (ICFLevelVar != ICFLevel::Safe || skipInstruction(Inst, *this))
     return;
   for (const MCOperand &Op : MCPlus::primeOperands(Inst)) {
     if (Op.isExpr()) {

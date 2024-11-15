@@ -54,8 +54,6 @@ extern cl::opt<bool> PrintDynoStats;
 extern cl::opt<bool> DumpDotAll;
 extern cl::opt<std::string> AsmDump;
 extern cl::opt<bolt::PLTCall::OptType> PLT;
-extern cl::opt<bool> ICF;
-extern cl::opt<bool> SafeICF;
 
 static cl::opt<bool>
 DynoStatsAll("dyno-stats-all",
@@ -396,9 +394,8 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
     Manager.registerPass(std::make_unique<StripRepRet>(NeverPrint),
                          opts::StripRepRet);
 
-  Manager.registerPass(
-      std::make_unique<IdenticalCodeFolding>(PrintICF, opts::SafeICF),
-      opts::ICF || opts::SafeICF);
+  Manager.registerPass(std::make_unique<IdenticalCodeFolding>(PrintICF),
+                       BC.getICFLevel() != BinaryContext::ICFLevel::None);
 
   Manager.registerPass(
       std::make_unique<SpecializeMemcpy1>(NeverPrint, opts::SpecializeMemcpy1),
@@ -422,9 +419,8 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   Manager.registerPass(std::make_unique<Inliner>(PrintInline));
 
-  Manager.registerPass(
-      std::make_unique<IdenticalCodeFolding>(PrintICF, opts::SafeICF),
-      opts::ICF || opts::SafeICF);
+  Manager.registerPass(std::make_unique<IdenticalCodeFolding>(PrintICF),
+                       BC.getICFLevel() != BinaryContext::ICFLevel::None);
 
   Manager.registerPass(std::make_unique<PLTCall>(PrintPLT));
 

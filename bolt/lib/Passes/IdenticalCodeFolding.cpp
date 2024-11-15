@@ -550,7 +550,7 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
 
     LLVM_DEBUG(SinglePass.stopTimer());
   };
-  if (IsSafeICF) {
+  if (BC.getICFLevel() == BinaryContext::ICFLevel::Safe) {
     if (Error Err = createFoldSkipList(BC)) {
       return Err;
     }

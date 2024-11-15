@@ -276,6 +276,12 @@ class BinaryContext {
   void deregisterSectionName(const BinarySection &Section);
 
 public:
+  enum class ICFLevel {
+    None,
+    Safe, // Safe ICF for all sections.
+    All,  // Aggressive ICF for code, but safe ICF for data, similar to MSVC's
+          // behavior.
+  };
   static Expected<std::unique_ptr<BinaryContext>>
   createBinaryContext(Triple TheTriple, StringRef InputFileName,
                       SubtargetFeatures *Features, bool IsPIC,
@@ -665,6 +671,9 @@ public:
   std::unique_ptr<MCDisassembler> SymbolicDisAsm;
 
   std::unique_ptr<MCAsmBackend> MAB;
+
+  /// ICF level to use for this binary.
+  ICFLevel ICFLevelVar{ICFLevel::None};
 
   /// Allows BOLT to print to log whenever it is necessary (with or without
   /// const references)
@@ -1484,6 +1493,8 @@ public:
     assert(IOAddressMap && "Address map not set yet");
     return *IOAddressMap;
   }
+
+  ICFLevel getICFLevel() const { return ICFLevelVar; }
 
   raw_ostream &outs() const { return Logger.Out; }
 

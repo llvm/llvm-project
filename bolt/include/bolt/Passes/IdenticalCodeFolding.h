@@ -31,8 +31,8 @@ protected:
   }
 
 public:
-  explicit IdenticalCodeFolding(const cl::opt<bool> &PrintPass, bool IsSafeICF)
-      : BinaryFunctionPass(PrintPass), IsSafeICF(IsSafeICF) {}
+  explicit IdenticalCodeFolding(const cl::opt<bool> &PrintPass)
+      : BinaryFunctionPass(PrintPass) {}
 
   const char *getName() const override { return "identical-code-folding"; }
   Error runOnFunctions(BinaryContext &BC) override;
@@ -44,8 +44,6 @@ private:
   /// references.
   void processDataRelocations(BinaryContext &BC,
                               const SectionRef &SecRefRelData);
-
-  bool IsSafeICF;
 };
 
 } // namespace bolt
