@@ -119,9 +119,8 @@ public:
   replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
                         ArrayRef<IntrinArgSelect> ArgSelects) {
     bool IsVectorArgExpansion = isVectorArgExpansion(F);
-    assert(!IsVectorArgExpansion ||
-           ArgSelects.empty() &&
-               "Cann't do vector arg expansion when using arg selects.");
+    assert(!(IsVectorArgExpansion && ArgSelects.size()) &&
+           "Cann't do vector arg expansion when using arg selects.");
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       OpBuilder.getIRB().SetInsertPoint(CI);
       SmallVector<Value *> Args;
