@@ -18,10 +18,10 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/AlignedAllocation.h"
@@ -4783,7 +4783,8 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
         ToType->castAs<BlockPointerType>()->getPointeeType().getAddressSpace();
     LangAS AddrSpaceR =
         FromType->castAs<BlockPointerType>()->getPointeeType().getAddressSpace();
-    assert(Qualifiers::isAddressSpaceSupersetOf(AddrSpaceL, AddrSpaceR) &&
+    assert(Qualifiers::isAddressSpaceSupersetOf(AddrSpaceL, AddrSpaceR,
+                                                getASTContext()) &&
            "Invalid cast");
     CastKind Kind =
         AddrSpaceL != AddrSpaceR ? CK_AddressSpaceConversion : CK_BitCast;
@@ -6641,7 +6642,7 @@ static bool TryClassUnification(Sema &Self, Expr *From, Expr *To,
     //         same type as, or a base class of, the class of T1, and
     //         [cv2 > cv1].
     if (FRec == TRec || FDerivedFromT) {
-      if (TTy.isAtLeastAsQualifiedAs(FTy)) {
+      if (TTy.isAtLeastAsQualifiedAs(FTy, Self.getASTContext())) {
         InitializedEntity Entity = InitializedEntity::InitializeTemporary(TTy);
         InitializationSequence InitSeq(Self, Entity, Kind, From);
         if (InitSeq) {
@@ -7363,8 +7364,8 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
       if (Q1.getAddressSpace() == Q2.getAddressSpace()) {
         Quals.setAddressSpace(Q1.getAddressSpace());
       } else if (Steps.size() == 1) {
-        bool MaybeQ1 = Q1.isAddressSpaceSupersetOf(Q2);
-        bool MaybeQ2 = Q2.isAddressSpaceSupersetOf(Q1);
+        bool MaybeQ1 = Q1.isAddressSpaceSupersetOf(Q2, getASTContext());
+        bool MaybeQ2 = Q2.isAddressSpaceSupersetOf(Q1, getASTContext());
         if (MaybeQ1 == MaybeQ2) {
           // Exception for ptr size address spaces. Should be able to choose
           // either address space during comparison.
@@ -8821,13 +8822,13 @@ static ExprResult attemptRecovery(Sema &SemaRef,
 }
 
 namespace {
-class FindTypoExprs : public RecursiveASTVisitor<FindTypoExprs> {
+class FindTypoExprs : public DynamicRecursiveASTVisitor {
   llvm::SmallSetVector<TypoExpr *, 2> &TypoExprs;
 
 public:
   explicit FindTypoExprs(llvm::SmallSetVector<TypoExpr *, 2> &TypoExprs)
       : TypoExprs(TypoExprs) {}
-  bool VisitTypoExpr(TypoExpr *TE) {
+  bool VisitTypoExpr(TypoExpr *TE) override {
     TypoExprs.insert(TE);
     return true;
   }

@@ -1059,7 +1059,7 @@ public:
 };
 } // namespace
 
-static void mergeArch(RISCVISAUtils::OrderedExtensionMap &mergedExts,
+static void mergeArch(Ctx &ctx, RISCVISAUtils::OrderedExtensionMap &mergedExts,
                       unsigned &mergedXlen, const InputSectionBase *sec,
                       StringRef s) {
   auto maybeInfo = RISCVISAInfo::parseNormalizedArchString(s);
@@ -1086,7 +1086,7 @@ static void mergeArch(RISCVISAUtils::OrderedExtensionMap &mergedExts,
   }
 }
 
-static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
+static void mergeAtomic(Ctx &ctx, DenseMap<unsigned, unsigned>::iterator it,
                         const InputSectionBase *oldSection,
                         const InputSectionBase *newSection,
                         RISCVAttrs::RISCVAtomicAbiTag oldTag,
@@ -1104,8 +1104,8 @@ static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
              << ": atomic_abi=" << Twine(static_cast<unsigned>(newTag));
   };
 
-  auto reportUnknownAbiError = [](const InputSectionBase *section,
-                                  RISCVAtomicAbiTag tag) {
+  auto reportUnknownAbiError = [&](const InputSectionBase *section,
+                                   RISCVAtomicAbiTag tag) {
     switch (tag) {
     case RISCVAtomicAbiTag::UNKNOWN:
     case RISCVAtomicAbiTag::A6C:
@@ -1214,7 +1214,7 @@ mergeAttributesSection(Ctx &ctx,
       case RISCVAttrs::ARCH:
         if (auto s = parser.getAttributeString(tag.attr)) {
           hasArch = true;
-          mergeArch(exts, xlen, sec, *s);
+          mergeArch(ctx, exts, xlen, sec, *s);
         }
         continue;
 
@@ -1230,7 +1230,7 @@ mergeAttributesSection(Ctx &ctx,
           if (r.second)
             firstAtomicAbi = sec;
           else
-            mergeAtomic(r.first, firstAtomicAbi, sec,
+            mergeAtomic(ctx, r.first, firstAtomicAbi, sec,
                         static_cast<RISCVAtomicAbiTag>(r.first->getSecond()),
                         static_cast<RISCVAtomicAbiTag>(*i));
         }
