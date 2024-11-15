@@ -279,7 +279,14 @@ struct AllocaOpConversion : public fir::FIROpConversion<fir::AllocaOp> {
       mlir::Region *parentRegion = rewriter.getInsertionBlock()->getParent();
       mlir::Block *insertBlock =
           getBlockForAllocaInsert(parentOp, parentRegion);
-      size.getDefiningOp()->moveBefore(&insertBlock->front());
+
+      // The old size might have had multiple users, some at a broader scope
+      // than we can safely outline the alloca to. As it is only an
+      // llvm.constant operation, it is faster to clone it than to calculate the
+      // dominance to see if it really should be moved.
+      mlir::Operation *clonedSize = rewriter.clone(*size.getDefiningOp());
+      size = clonedSize->getResult(0);
+      clonedSize->moveBefore(&insertBlock->front());
       rewriter.setInsertionPointAfter(size.getDefiningOp());
     }
 

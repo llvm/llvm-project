@@ -598,9 +598,9 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %arg1:_(<4 x s32>) = COPY $q0
-    ; CHECK-NEXT: %arg2:_(<4 x s32>) = COPY $q1
     ; CHECK-NEXT: %idx:_(s64) = COPY $x1
-    ; CHECK-NEXT: %sv:_(<4 x s32>) = G_SHUFFLE_VECTOR %arg1(<4 x s32>), %arg2, shufflemask(undef, 0, 0, 0)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: %sv:_(<4 x s32>) = G_SHUFFLE_VECTOR %arg1(<4 x s32>), [[DEF]], shufflemask(undef, 0, 0, 0)
     ; CHECK-NEXT: %extract:_(s32) = G_EXTRACT_VECTOR_ELT %sv(<4 x s32>), %idx(s64)
     ; CHECK-NEXT: $w0 = COPY %extract(s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0

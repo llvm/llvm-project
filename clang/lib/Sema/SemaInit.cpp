@@ -4718,7 +4718,7 @@ static void TryReferenceListInitialization(Sema &S,
   if (T1Quals.hasAddressSpace()) {
     Qualifiers T2Quals;
     (void)S.Context.getUnqualifiedArrayType(InitList->getType(), T2Quals);
-    if (!T1Quals.isAddressSpaceSupersetOf(T2Quals)) {
+    if (!T1Quals.isAddressSpaceSupersetOf(T2Quals, S.getASTContext())) {
       Sequence.SetFailed(
           InitializationSequence::FK_ReferenceInitDropsQualifiers);
       return;
@@ -5324,8 +5324,9 @@ static void TryReferenceInitializationCore(Sema &S,
   //       shall be an rvalue reference.
   //       For address spaces, we interpret this to mean that an addr space
   //       of a reference "cv1 T1" is a superset of addr space of "cv2 T2".
-  if (isLValueRef && !(T1Quals.hasConst() && !T1Quals.hasVolatile() &&
-                       T1Quals.isAddressSpaceSupersetOf(T2Quals))) {
+  if (isLValueRef &&
+      !(T1Quals.hasConst() && !T1Quals.hasVolatile() &&
+        T1Quals.isAddressSpaceSupersetOf(T2Quals, S.getASTContext()))) {
     if (S.Context.getCanonicalType(T2) == S.Context.OverloadTy)
       Sequence.SetFailed(InitializationSequence::FK_AddressOfOverloadFailed);
     else if (ConvOvlResult && !Sequence.getFailedCandidateSet().empty())
@@ -5334,7 +5335,7 @@ static void TryReferenceInitializationCore(Sema &S,
                                   ConvOvlResult);
     else if (!InitCategory.isLValue())
       Sequence.SetFailed(
-          T1Quals.isAddressSpaceSupersetOf(T2Quals)
+          T1Quals.isAddressSpaceSupersetOf(T2Quals, S.getASTContext())
               ? InitializationSequence::
                     FK_NonConstLValueReferenceBindingToTemporary
               : InitializationSequence::FK_ReferenceInitDropsQualifiers);
@@ -5519,7 +5520,7 @@ static void TryReferenceInitializationCore(Sema &S,
   unsigned T2CVRQuals = T2Quals.getCVRQualifiers();
   if (RefRelationship == Sema::Ref_Related &&
       ((T1CVRQuals | T2CVRQuals) != T1CVRQuals ||
-       !T1Quals.isAddressSpaceSupersetOf(T2Quals))) {
+       !T1Quals.isAddressSpaceSupersetOf(T2Quals, S.getASTContext()))) {
     Sequence.SetFailed(InitializationSequence::FK_ReferenceInitDropsQualifiers);
     return;
   }
@@ -5536,8 +5537,8 @@ static void TryReferenceInitializationCore(Sema &S,
   Sequence.AddReferenceBindingStep(cv1T1IgnoreAS, /*BindingTemporary=*/true);
 
   if (T1Quals.hasAddressSpace()) {
-    if (!Qualifiers::isAddressSpaceSupersetOf(T1Quals.getAddressSpace(),
-                                              LangAS::Default)) {
+    if (!Qualifiers::isAddressSpaceSupersetOf(
+            T1Quals.getAddressSpace(), LangAS::Default, S.getASTContext())) {
       Sequence.SetFailed(
           InitializationSequence::FK_ReferenceAddrspaceMismatchTemporary);
       return;
@@ -8629,7 +8630,7 @@ static void emitBadConversionNotes(Sema &S, const InitializedEntity &entity,
       !fromDecl->isInvalidDecl() && !destDecl->isInvalidDecl() &&
       !fromDecl->hasDefinition() &&
       destPointeeType.getQualifiers().compatiblyIncludes(
-          fromPointeeType.getQualifiers()))
+          fromPointeeType.getQualifiers(), S.getASTContext()))
     S.Diag(fromDecl->getLocation(), diag::note_forward_class_conversion)
         << S.getASTContext().getTagDeclType(fromDecl)
         << S.getASTContext().getTagDeclType(destDecl);
@@ -8907,7 +8908,7 @@ bool InitializationSequence::Diagnose(Sema &S,
         SourceType.getQualifiers() - NonRefType.getQualifiers();
 
     if (!NonRefType.getQualifiers().isAddressSpaceSupersetOf(
-            SourceType.getQualifiers()))
+            SourceType.getQualifiers(), S.getASTContext()))
       S.Diag(Kind.getLocation(), diag::err_reference_bind_drops_quals)
           << NonRefType << SourceType << 1 /*addr space*/
           << Args[0]->getSourceRange();

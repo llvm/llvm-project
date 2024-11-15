@@ -140,8 +140,9 @@ mlir::Value getDeviceAddress(mlir::PatternRewriter &rewriter,
   llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
       builder, loc, fTy, inputArg, sourceFile, sourceLine)};
   auto call = rewriter.create<fir::CallOp>(loc, callee, args);
-
-  return call->getResult(0);
+  mlir::Value cast = createConvertOp(
+      rewriter, loc, declareOp.getMemref().getType(), call->getResult(0));
+  return cast;
 }
 
 template <typename OpTy>
@@ -282,7 +283,7 @@ static int computeWidth(mlir::Location loc, mlir::Type type,
         mlir::cast<mlir::FloatType>(t.getElementType()).getWidth() / 8;
     width = 2 * elemSize;
   } else {
-    llvm::report_fatal_error("unsupported type");
+    mlir::emitError(loc, "unsupported type");
   }
   return width;
 }
@@ -640,8 +641,14 @@ struct CUFDataTransferOpConversion
       mlir::Value dst = op.getDst();
       mlir::Value src = op.getSrc();
 
-      if (!mlir::isa<fir::BaseBoxType>(srcTy))
+      if (!mlir::isa<fir::BaseBoxType>(srcTy)) {
         src = emboxSrc(rewriter, op, symtab);
+      } else if (mlir::isa<fir::EmboxOp>(src.getDefiningOp())) {
+        // Materialize the box to memory to be able to call the runtime.
+        mlir::Value box = builder.createTemporary(loc, src.getType());
+        builder.create<fir::StoreOp>(loc, src, box);
+        src = box;
+      }
 
       auto fTy = func.getFunctionType();
       mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
