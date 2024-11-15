@@ -9,7 +9,7 @@
 define i1 @test_wave_any(i1 %p1) {
 entry:
 ; CHECK: %[[#param:]] = OpFunctionParameter %[[#bool]]
-; CHECK: %[[#ret:]] = OpGroupNonUniformAny %[[#bool]] %[[#scope]] %[[#param]]
+; CHECK: %{{.+}} = OpGroupNonUniformAny %[[#bool]] %[[#scope]] %[[#param]]
   %ret = call i1 @llvm.spv.wave.any(i1 %p1)
   ret i1 %ret
 }

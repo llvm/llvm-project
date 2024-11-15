@@ -2017,7 +2017,8 @@ bool SPIRVInstructionSelector::selectWaveReadLaneAt(Register ResVReg,
       .addUse(GR.getSPIRVTypeID(ResType))
       .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII))
       .addUse(I.getOperand(2).getReg())
-      .addUse(I.getOperand(3).getReg());
+      .addUse(I.getOperand(3).getReg())
+      .constrainAllUses(TII, TRI, RBI);
 }
 
 bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
