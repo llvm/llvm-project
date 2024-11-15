@@ -978,7 +978,7 @@ Map make(const parser::OmpClause::Map &inp,
   auto &t4 = std::get<parser::OmpMapperIdentifier>(inp.v.t);
 
   if (t4.v)
-    TODO_NOLOC("OmpMapClause(MAPPER(...))");
+    TODO_NOLOC("OmpMapClause(MAPPER(...)): user defined mapper not supported");
 
   // These should have been diagnosed already.
   assert((!t1 || t1->size() == 1) && "Only one iterator modifier is allowed");
