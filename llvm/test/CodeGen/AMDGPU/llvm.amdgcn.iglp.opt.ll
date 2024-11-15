@@ -14,7 +14,7 @@ entry:
 define amdgpu_kernel void @test_iglp_opt_mfma_gemm(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) #0 {
 ; GCN-LABEL: test_iglp_opt_mfma_gemm:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x1ff80, v0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 2.0
@@ -152,7 +152,7 @@ entry:
 define amdgpu_kernel void @test_iglp_opt_rev_mfma_gemm(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) #0 {
 ; GCN-LABEL: test_iglp_opt_rev_mfma_gemm:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x1ff80, v0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 1.0

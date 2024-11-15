@@ -610,6 +610,7 @@ __m128d test_mm_cvtsi64_sd(__m128d A, long long B) {
   // X64: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 0
   return _mm_cvtsi64_sd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cvtsi64_sd((__m128d){-42.0, +99.0}, 55), +55.0, +99.0));
 #endif
 
 __m128i test_mm_cvtsi64_si128(long long A) {
@@ -866,22 +867,19 @@ __m128d test_mm_min_sd(__m128d A, __m128d B) {
   return _mm_min_sd(A, B);
 }
 
-__m64 test_mm_movepi64_pi64(__m128i A)
-{
+__m64 test_mm_movepi64_pi64(__m128i A) {
   // CHECK-LABEL: test_mm_movepi64_pi64
   // CHECK: [[EXT:%.*]] = extractelement <2 x i64> %1, i32 0
   return _mm_movepi64_pi64(A);
 }
 TEST_CONSTEXPR(match_m64(_mm_movepi64_pi64((__m128i){8, -8}), 8ULL));
 
-__m128i test_mm_movpi64_epi64(__m64 A)
-{
+__m128i test_mm_movpi64_epi64(__m64 A) {
   // CHECK-LABEL: test_mm_movpi64_epi64
-  // CHECK: [[CAST:%.*]] = bitcast <1 x i64> %{{.*}} to i64
-  // CHECK: [[INS:%.*]] = insertelement <2 x i64> poison, i64 [[CAST]], i32 0
-  // CHECK: insertelement <2 x i64> [[INS]], i64 0, i32 1
+  // CHECK: shufflevector <1 x i64> %{{.*}}, <1 x i64> %{{.*}}, <2 x i32> <i32 0, i32 1>
   return _mm_movpi64_epi64(A);
 }
+TEST_CONSTEXPR(match_m128i(_mm_movpi64_epi64((__m64){5LL}), 5ULL, 0ULL));
 
 __m128i test_mm_move_epi64(__m128i A) {
   // CHECK-LABEL: test_mm_move_epi64
