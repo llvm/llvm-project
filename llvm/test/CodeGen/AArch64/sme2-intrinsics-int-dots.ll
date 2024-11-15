@@ -590,12 +590,8 @@ define void @udot_form_2x_tuple(ptr %ptr, i64 %stride) #0 {
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    ld1b { z16.b, z24.b }, pn8/z, [x0]
 ; CHECK-NEXT:    ld1b { z17.b, z25.b }, pn8/z, [x0, x1]
-; CHECK-NEXT:    mov z0.d, z16.d
-; CHECK-NEXT:    mov z1.d, z17.d
-; CHECK-NEXT:    udot za.s[w8, 0, vgx2], { z0.b, z1.b }, z0.b[0]
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    udot za.s[w8, 0, vgx2], { z0.b, z1.b }, z0.b[0]
+; CHECK-NEXT:    udot za.s[w8, 0, vgx2], { z16.b, z17.b }, z0.b[0]
+; CHECK-NEXT:    udot za.s[w8, 0, vgx2], { z24.b, z25.b }, z0.b[0]
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
@@ -622,26 +618,10 @@ define void @udot_form_4x_tuple(ptr %ptr, i64 %stride) #0 {
 ; CHECK-NEXT:    add x10, x9, x1
 ; CHECK-NEXT:    ld1b { z18.b, z22.b, z26.b, z30.b }, pn8/z, [x0, x9]
 ; CHECK-NEXT:    ld1b { z19.b, z23.b, z27.b, z31.b }, pn8/z, [x0, x10]
-; CHECK-NEXT:    mov z0.d, z16.d
-; CHECK-NEXT:    mov z1.d, z17.d
-; CHECK-NEXT:    mov z2.d, z18.d
-; CHECK-NEXT:    mov z3.d, z19.d
-; CHECK-NEXT:    udot za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b[0]
-; CHECK-NEXT:    mov z0.d, z20.d
-; CHECK-NEXT:    mov z1.d, z21.d
-; CHECK-NEXT:    mov z2.d, z22.d
-; CHECK-NEXT:    mov z3.d, z23.d
-; CHECK-NEXT:    udot za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b[0]
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    mov z2.d, z26.d
-; CHECK-NEXT:    mov z3.d, z27.d
-; CHECK-NEXT:    udot za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b[0]
-; CHECK-NEXT:    mov z0.d, z28.d
-; CHECK-NEXT:    mov z1.d, z29.d
-; CHECK-NEXT:    mov z2.d, z30.d
-; CHECK-NEXT:    mov z3.d, z31.d
-; CHECK-NEXT:    udot za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b[0]
+; CHECK-NEXT:    udot za.s[w8, 0, vgx4], { z16.b - z19.b }, z0.b[0]
+; CHECK-NEXT:    udot za.s[w8, 0, vgx4], { z20.b - z23.b }, z0.b[0]
+; CHECK-NEXT:    udot za.s[w8, 0, vgx4], { z24.b - z27.b }, z0.b[0]
+; CHECK-NEXT:    udot za.s[w8, 0, vgx4], { z28.b - z31.b }, z0.b[0]
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
@@ -752,12 +732,8 @@ define void @usdot_form_2x_tuple(ptr %ptr, i64 %stride) #0 {
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    ld1b { z16.b, z24.b }, pn8/z, [x0]
 ; CHECK-NEXT:    ld1b { z17.b, z25.b }, pn8/z, [x0, x1]
-; CHECK-NEXT:    mov z0.d, z16.d
-; CHECK-NEXT:    mov z1.d, z17.d
-; CHECK-NEXT:    usdot za.s[w8, 0, vgx2], { z0.b, z1.b }, z0.b[0]
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    usdot za.s[w8, 0, vgx2], { z0.b, z1.b }, z0.b[0]
+; CHECK-NEXT:    usdot za.s[w8, 0, vgx2], { z16.b, z17.b }, z0.b[0]
+; CHECK-NEXT:    usdot za.s[w8, 0, vgx2], { z24.b, z25.b }, z0.b[0]
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
@@ -784,26 +760,10 @@ define void @usdot_form_4x_tuple(ptr %ptr, i64 %stride) #0 {
 ; CHECK-NEXT:    add x10, x9, x1
 ; CHECK-NEXT:    ld1b { z18.b, z22.b, z26.b, z30.b }, pn8/z, [x0, x9]
 ; CHECK-NEXT:    ld1b { z19.b, z23.b, z27.b, z31.b }, pn8/z, [x0, x10]
-; CHECK-NEXT:    mov z0.d, z16.d
-; CHECK-NEXT:    mov z1.d, z17.d
-; CHECK-NEXT:    mov z2.d, z18.d
-; CHECK-NEXT:    mov z3.d, z19.d
-; CHECK-NEXT:    usdot za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b[0]
-; CHECK-NEXT:    mov z0.d, z20.d
-; CHECK-NEXT:    mov z1.d, z21.d
-; CHECK-NEXT:    mov z2.d, z22.d
-; CHECK-NEXT:    mov z3.d, z23.d
-; CHECK-NEXT:    usdot za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b[0]
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    mov z2.d, z26.d
-; CHECK-NEXT:    mov z3.d, z27.d
-; CHECK-NEXT:    usdot za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b[0]
-; CHECK-NEXT:    mov z0.d, z28.d
-; CHECK-NEXT:    mov z1.d, z29.d
-; CHECK-NEXT:    mov z2.d, z30.d
-; CHECK-NEXT:    mov z3.d, z31.d
-; CHECK-NEXT:    usdot za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b[0]
+; CHECK-NEXT:    usdot za.s[w8, 0, vgx4], { z16.b - z19.b }, z0.b[0]
+; CHECK-NEXT:    usdot za.s[w8, 0, vgx4], { z20.b - z23.b }, z0.b[0]
+; CHECK-NEXT:    usdot za.s[w8, 0, vgx4], { z24.b - z27.b }, z0.b[0]
+; CHECK-NEXT:    usdot za.s[w8, 0, vgx4], { z28.b - z31.b }, z0.b[0]
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
@@ -916,12 +876,8 @@ define void @sdot_form_2x_tuple(ptr %ptr, i64 %stride) #0 {
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    ld1b { z16.b, z24.b }, pn8/z, [x0]
 ; CHECK-NEXT:    ld1b { z17.b, z25.b }, pn8/z, [x0, x1]
-; CHECK-NEXT:    mov z0.d, z16.d
-; CHECK-NEXT:    mov z1.d, z17.d
-; CHECK-NEXT:    sdot za.s[w8, 0, vgx2], { z0.b, z1.b }, z0.b[0]
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    sdot za.s[w8, 0, vgx2], { z0.b, z1.b }, z0.b[0]
+; CHECK-NEXT:    sdot za.s[w8, 0, vgx2], { z16.b, z17.b }, z0.b[0]
+; CHECK-NEXT:    sdot za.s[w8, 0, vgx2], { z24.b, z25.b }, z0.b[0]
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
@@ -948,26 +904,10 @@ define void @sdot_form_4x_tuple(ptr %ptr, i64 %stride) #0 {
 ; CHECK-NEXT:    add x10, x9, x1
 ; CHECK-NEXT:    ld1b { z18.b, z22.b, z26.b, z30.b }, pn8/z, [x0, x9]
 ; CHECK-NEXT:    ld1b { z19.b, z23.b, z27.b, z31.b }, pn8/z, [x0, x10]
-; CHECK-NEXT:    mov z0.d, z16.d
-; CHECK-NEXT:    mov z1.d, z17.d
-; CHECK-NEXT:    mov z2.d, z18.d
-; CHECK-NEXT:    mov z3.d, z19.d
-; CHECK-NEXT:    sdot za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b[0]
-; CHECK-NEXT:    mov z0.d, z20.d
-; CHECK-NEXT:    mov z1.d, z21.d
-; CHECK-NEXT:    mov z2.d, z22.d
-; CHECK-NEXT:    mov z3.d, z23.d
-; CHECK-NEXT:    sdot za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b[0]
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    mov z2.d, z26.d
-; CHECK-NEXT:    mov z3.d, z27.d
-; CHECK-NEXT:    sdot za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b[0]
-; CHECK-NEXT:    mov z0.d, z28.d
-; CHECK-NEXT:    mov z1.d, z29.d
-; CHECK-NEXT:    mov z2.d, z30.d
-; CHECK-NEXT:    mov z3.d, z31.d
-; CHECK-NEXT:    sdot za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b[0]
+; CHECK-NEXT:    sdot za.s[w8, 0, vgx4], { z16.b - z19.b }, z0.b[0]
+; CHECK-NEXT:    sdot za.s[w8, 0, vgx4], { z20.b - z23.b }, z0.b[0]
+; CHECK-NEXT:    sdot za.s[w8, 0, vgx4], { z24.b - z27.b }, z0.b[0]
+; CHECK-NEXT:    sdot za.s[w8, 0, vgx4], { z28.b - z31.b }, z0.b[0]
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
@@ -1080,12 +1020,8 @@ define void @sudot_form_2x_tuple(ptr %ptr, i64 %stride) #0 {
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    ld1b { z16.b, z24.b }, pn8/z, [x0]
 ; CHECK-NEXT:    ld1b { z17.b, z25.b }, pn8/z, [x0, x1]
-; CHECK-NEXT:    mov z0.d, z16.d
-; CHECK-NEXT:    mov z1.d, z17.d
-; CHECK-NEXT:    sudot za.s[w8, 0, vgx2], { z0.b, z1.b }, z0.b[0]
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    sudot za.s[w8, 0, vgx2], { z0.b, z1.b }, z0.b[0]
+; CHECK-NEXT:    sudot za.s[w8, 0, vgx2], { z16.b, z17.b }, z0.b[0]
+; CHECK-NEXT:    sudot za.s[w8, 0, vgx2], { z24.b, z25.b }, z0.b[0]
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
@@ -1112,26 +1048,10 @@ define void @sudot_form_4x_tuple(ptr %ptr, i64 %stride) #0 {
 ; CHECK-NEXT:    add x10, x9, x1
 ; CHECK-NEXT:    ld1b { z18.b, z22.b, z26.b, z30.b }, pn8/z, [x0, x9]
 ; CHECK-NEXT:    ld1b { z19.b, z23.b, z27.b, z31.b }, pn8/z, [x0, x10]
-; CHECK-NEXT:    mov z0.d, z16.d
-; CHECK-NEXT:    mov z1.d, z17.d
-; CHECK-NEXT:    mov z2.d, z18.d
-; CHECK-NEXT:    mov z3.d, z19.d
-; CHECK-NEXT:    sudot za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b[0]
-; CHECK-NEXT:    mov z0.d, z20.d
-; CHECK-NEXT:    mov z1.d, z21.d
-; CHECK-NEXT:    mov z2.d, z22.d
-; CHECK-NEXT:    mov z3.d, z23.d
-; CHECK-NEXT:    sudot za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b[0]
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    mov z2.d, z26.d
-; CHECK-NEXT:    mov z3.d, z27.d
-; CHECK-NEXT:    sudot za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b[0]
-; CHECK-NEXT:    mov z0.d, z28.d
-; CHECK-NEXT:    mov z1.d, z29.d
-; CHECK-NEXT:    mov z2.d, z30.d
-; CHECK-NEXT:    mov z3.d, z31.d
-; CHECK-NEXT:    sudot za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b[0]
+; CHECK-NEXT:    sudot za.s[w8, 0, vgx4], { z16.b - z19.b }, z0.b[0]
+; CHECK-NEXT:    sudot za.s[w8, 0, vgx4], { z20.b - z23.b }, z0.b[0]
+; CHECK-NEXT:    sudot za.s[w8, 0, vgx4], { z24.b - z27.b }, z0.b[0]
+; CHECK-NEXT:    sudot za.s[w8, 0, vgx4], { z28.b - z31.b }, z0.b[0]
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
