@@ -35,14 +35,23 @@ clang-query
 
 clang-doc
 ---------
-| Julie Hockett
-| juliehockett@google.com (email)
+| Paul Kirth
+| paulkirth@google.com (email), ilovepi (GitHub), ilovepi (Discourse)
+
+| Peter Chou
+| peter.chou@mail.utoronto.ca (email), PeterChou1 (GitHub), PeterChou1 (Discourse), .peterchou (Discord)
 
 
 clangd
 ------
-| Sam McCall
-| sammccall@google.com (email), sam-mccall (GitHub), sam-mccall (Discourse), sam-mccall (Discord)
+| Nathan Ridge
+| zeratul976@hotmail.com (email), HighCommander4 (GitHub), HighCommander4 (Discourse), nridge (Discord)
+
+| Chris Bieneman
+| chris.bieneman@gmail.com (email), llvm-beanz (GitHub), beanz (Discord), beanz (Discourse)
+
+| Kadir Çetinkaya
+| kadircet@google.com (email), kadircet (GitHub) kadircet (Discourse), kadircet (Discord)
 
 
 Inactive Maintainers
@@ -54,3 +63,5 @@ help with the success of the project!
 Inactive component maintainers
 ------------------------------
 | Nathan James (n.james93@hotmail.co.uk) -- clang-tidy
+| Julie Hockett (juliehockett@google.com) -- clang-doc
+| Sam McCall (sammccall@google.com (email), sam-mccall (GitHub, Discourse, Discord)) -- clangd
