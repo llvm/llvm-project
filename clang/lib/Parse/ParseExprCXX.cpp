@@ -242,7 +242,25 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     SourceLocation Start = Tok.getLocation();
     DeclSpec DS(AttrFactory);
     SourceLocation CCLoc;
+    TentativeParsingAction MaybePackIndexing(*this, /*Unannotated=*/true);
     SourceLocation EndLoc = ParsePackIndexingType(DS);
+    // C++ [cpp23.dcl.dcl-2]:
+    //   Previously, T...[n] would declare a pack of function parameters.
+    //   T...[n] is now a pack-index-specifier. [...] Valid C++ 2023 code that
+    //   declares a pack of parameters without specifying a declarator-id
+    //   becomes ill-formed.
+    if (!Tok.is(tok::coloncolon) && !getLangOpts().CPlusPlus26 &&
+        getCurScope()->isFunctionDeclarationScope()) {
+      Diag(DS.getEllipsisLoc(),
+           diag::warn_pre_cxx26_ambiguous_pack_indexing_type);
+      Diag(DS.getEllipsisLoc(),
+           diag::note_add_a_name_to_pre_cxx26_parameter_packs);
+      MaybePackIndexing.Revert();
+      return false;
+    }
+
+    MaybePackIndexing.Commit();
+
     if (DS.getTypeSpecType() == DeclSpec::TST_error)
       return false;
 
