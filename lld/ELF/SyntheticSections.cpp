@@ -150,7 +150,8 @@ MipsAbiFlagsSection<ELFT>::create(Ctx &ctx) {
     flags.ases |= s->ases;
     flags.flags1 |= s->flags1;
     flags.flags2 |= s->flags2;
-    flags.fp_abi = elf::getMipsFpAbiFlag(flags.fp_abi, s->fp_abi, filename);
+    flags.fp_abi =
+        elf::getMipsFpAbiFlag(ctx, flags.fp_abi, s->fp_abi, filename);
   };
 
   if (create)
@@ -3408,7 +3409,7 @@ readAddressAreas(DWARFContext &dwarf, InputSection *sec) {
 
 template <class ELFT>
 static SmallVector<GdbIndexSection::NameAttrEntry, 0>
-readPubNamesAndTypes(const LLDDwarfObj<ELFT> &obj,
+readPubNamesAndTypes(Ctx &ctx, const LLDDwarfObj<ELFT> &obj,
                      const SmallVectorImpl<GdbIndexSection::CuEntry> &cus) {
   const LLDDWARFSection &pubNames = obj.getGnuPubnamesSection();
   const LLDDWARFSection &pubTypes = obj.getGnuPubtypesSection();
@@ -3564,7 +3565,8 @@ std::unique_ptr<GdbIndexSection> GdbIndexSection::create(Ctx &ctx) {
     chunks[i].sec = dobj.getInfoSection();
     chunks[i].compilationUnits = readCuList(dwarf);
     chunks[i].addressAreas = readAddressAreas(dwarf, chunks[i].sec);
-    nameAttrs[i] = readPubNamesAndTypes<ELFT>(dobj, chunks[i].compilationUnits);
+    nameAttrs[i] =
+        readPubNamesAndTypes<ELFT>(ctx, dobj, chunks[i].compilationUnits);
   });
 
   auto ret = std::make_unique<GdbIndexSection>(ctx);
