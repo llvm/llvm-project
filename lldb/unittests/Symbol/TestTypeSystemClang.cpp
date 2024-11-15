@@ -869,7 +869,11 @@ TEST_F(TestTypeSystemClang, TestFunctionTemplateConstruction) {
   CompilerType clang_type = m_ast->CreateFunctionType(int_type, {}, false, 0U);
   FunctionDecl *func = m_ast->CreateFunctionDeclaration(
       TU, OptionalClangModuleID(), "foo", clang_type, StorageClass::SC_None,
+<<<<<<< HEAD
       false, /*asm_label=*/{});
+=======
+      false, std::nullopt);
+>>>>>>> 382395408c4b ([lldb][Expression] Encode Module and DIE UIDs into function AsmLabels)
   TypeSystemClang::TemplateParameterInfos empty_params;
 
   // Create the actual function template.
@@ -900,7 +904,11 @@ TEST_F(TestTypeSystemClang, TestFunctionTemplateInRecordConstruction) {
   // 2. It is mirroring the behavior of DWARFASTParserClang::ParseSubroutine.
   FunctionDecl *func = m_ast->CreateFunctionDeclaration(
       TU, OptionalClangModuleID(), "foo", clang_type, StorageClass::SC_None,
+<<<<<<< HEAD
       false, /*asm_label=*/{});
+=======
+      false, std::nullopt);
+>>>>>>> 382395408c4b ([lldb][Expression] Encode Module and DIE UIDs into function AsmLabels)
   TypeSystemClang::TemplateParameterInfos empty_params;
 
   // Create the actual function template.
@@ -938,7 +946,11 @@ TEST_F(TestTypeSystemClang, TestDeletingImplicitCopyCstrDueToMoveCStr) {
   bool is_attr_used = false;
   bool is_artificial = false;
   m_ast->AddMethodToCXXRecordType(
+<<<<<<< HEAD
       t.GetOpaqueQualType(), class_name, /*asm_label=*/{}, function_type,
+=======
+      t.GetOpaqueQualType(), class_name, std::nullopt, function_type,
+>>>>>>> 382395408c4b ([lldb][Expression] Encode Module and DIE UIDs into function AsmLabels)
       lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
       is_explicit, is_attr_used, is_artificial);
 
@@ -975,7 +987,11 @@ TEST_F(TestTypeSystemClang, TestNotDeletingUserCopyCstrDueToMoveCStr) {
     CompilerType function_type = m_ast->CreateFunctionType(
         return_type, args, /*variadic=*/false, /*quals*/ 0U);
     m_ast->AddMethodToCXXRecordType(
+<<<<<<< HEAD
         t.GetOpaqueQualType(), class_name, /*asm_label=*/{}, function_type,
+=======
+        t.GetOpaqueQualType(), class_name, std::nullopt, function_type,
+>>>>>>> 382395408c4b ([lldb][Expression] Encode Module and DIE UIDs into function AsmLabels)
         lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
         is_explicit, is_attr_used, is_artificial);
   }
@@ -987,7 +1003,11 @@ TEST_F(TestTypeSystemClang, TestNotDeletingUserCopyCstrDueToMoveCStr) {
         m_ast->CreateFunctionType(return_type, args,
                                   /*variadic=*/false, /*quals*/ 0U);
     m_ast->AddMethodToCXXRecordType(
+<<<<<<< HEAD
         t.GetOpaqueQualType(), class_name, /*asm_label=*/{}, function_type,
+=======
+        t.GetOpaqueQualType(), class_name, std::nullopt, function_type,
+>>>>>>> 382395408c4b ([lldb][Expression] Encode Module and DIE UIDs into function AsmLabels)
         lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
         is_explicit, is_attr_used, is_artificial);
   }
@@ -1098,7 +1118,11 @@ TEST_F(TestTypeSystemClang, AddMethodToCXXRecordType_ParmVarDecls) {
       m_ast->CreateFunctionType(return_type, param_types,
                                 /*variadic=*/false, /*quals*/ 0U);
   m_ast->AddMethodToCXXRecordType(
+<<<<<<< HEAD
       t.GetOpaqueQualType(), "myFunc", /*asm_label=*/{}, function_type,
+=======
+      t.GetOpaqueQualType(), "myFunc", std::nullopt, function_type,
+>>>>>>> 382395408c4b ([lldb][Expression] Encode Module and DIE UIDs into function AsmLabels)
       lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
       is_explicit, is_attr_used, is_artificial);
 

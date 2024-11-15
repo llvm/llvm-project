@@ -13,6 +13,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -20,6 +21,7 @@
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Expression/Expression.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/ObjectFileJIT.h"
 #include "lldb/Host/HostInfo.h"
@@ -36,6 +38,7 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/lldb-defines.h"
 
 #include <optional>
 
@@ -771,6 +774,63 @@ private:
   lldb::addr_t m_best_internal_load_address = LLDB_INVALID_ADDRESS;
 };
 
+/// Returns address of the function referred to by the special function call
+/// label \c label.
+///
+/// \param[in] label Function call label encoding the unique location of the
+/// function to look up.
+///                  Assumes that the \c FunctionCallLabelPrefix has been
+///                  stripped from the front of the label.
+static llvm::Expected<lldb::addr_t>
+ResolveFunctionCallLabel(llvm::StringRef name,
+                         const lldb_private::SymbolContext &sc,
+                         bool &symbol_was_missing_weak) {
+  symbol_was_missing_weak = false;
+
+  if (!sc.target_sp)
+    return llvm::createStringError("target not available.");
+
+  auto ts_or_err = sc.target_sp->GetScratchTypeSystemForLanguage(
+      lldb::eLanguageTypeC_plus_plus);
+  if (!ts_or_err || !*ts_or_err)
+    return llvm::joinErrors(
+        llvm::createStringError(
+            "failed to find scratch C++ TypeSystem for current target."),
+        ts_or_err.takeError());
+
+  auto ts_sp = *ts_or_err;
+
+  auto label_or_err = ts_sp->makeFunctionCallLabel(name);
+  if (!label_or_err)
+    return llvm::joinErrors(
+        llvm::createStringError("failed to create FunctionCallLabel from: %s",
+                                name.data()),
+        label_or_err.takeError());
+
+  const auto &label = *label_or_err;
+
+  Module *module = Module::GetAllocatedModuleWithUID(label.m_module_id);
+
+  if (!module)
+    return llvm::createStringError(
+        llvm::formatv("failed to find module by UID {0}", label.m_module_id));
+
+  auto *symbol_file = module->GetSymbolFile();
+  if (!symbol_file)
+    return llvm::createStringError(
+        llvm::formatv("no SymbolFile found on module {0:x}.", module));
+
+  SymbolContextList sc_list;
+  if (auto err =
+          symbol_file->FindAndResolveFunction(sc_list, label.m_lookup_name))
+    return llvm::joinErrors(
+        llvm::createStringError("failed to resolve function by UID"),
+        std::move(err));
+
+  LoadAddressResolver resolver(*sc.target_sp, symbol_was_missing_weak);
+  return resolver.Resolve(sc_list).value_or(LLDB_INVALID_ADDRESS);
+}
+
 lldb::addr_t
 IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
                                const lldb_private::SymbolContext &sc,
@@ -906,6 +966,20 @@ lldb::addr_t IRExecutionUnit::FindInUserDefinedSymbols(
 
 lldb::addr_t IRExecutionUnit::FindSymbol(lldb_private::ConstString name,
                                          bool &missing_weak) {
+  if (hasFunctionCallLabelPrefix(name.GetStringRef())) {
+    if (auto addr_or_err = ResolveFunctionCallLabel(name.GetStringRef(),
+                                                    m_sym_ctx, missing_weak)) {
+      return *addr_or_err;
+    } else {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions), addr_or_err.takeError(),
+                     "Failed to resolve function call label {1}: {0}",
+                     name.GetStringRef());
+      return LLDB_INVALID_ADDRESS;
+    }
+  }
+
+  // TODO: do we still need the following lookups?
+
   std::vector<ConstString> candidate_C_names;
   std::vector<ConstString> candidate_CPlusPlus_names;
 

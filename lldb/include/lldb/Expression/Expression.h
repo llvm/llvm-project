@@ -96,6 +96,31 @@ protected:
                                  ///invalid.
 };
 
+/// Holds parsed information about a function call label that
+/// LLDB attaches as an AsmLabel to function AST nodes it parses
+/// from debug-info.
+///
+/// The format being:
+///
+///   <prefix>:<mangled name>:<module id>:<DIE id>
+///
+/// The label string needs to stay valid for the entire lifetime
+/// of this object.
+struct FunctionCallLabel {
+  llvm::StringRef m_lookup_name;
+  lldb::user_id_t m_module_id;
+
+  /// Mostly for debuggability.
+  lldb::user_id_t m_die_id;
+};
+
+/// LLDB attaches this prefix to mangled names of functions that it get called
+/// from JITted expressions.
+inline constexpr llvm::StringRef FunctionCallLabelPrefix = "$__lldb_func";
+
+bool consumeFunctionCallLabelPrefix(llvm::StringRef &name);
+bool hasFunctionCallLabelPrefix(llvm::StringRef name);
+
 } // namespace lldb_private
 
 #endif // LLDB_EXPRESSION_EXPRESSION_H

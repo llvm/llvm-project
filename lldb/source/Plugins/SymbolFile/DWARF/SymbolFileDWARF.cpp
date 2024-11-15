@@ -2475,6 +2475,47 @@ bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
   return false;
 }
 
+llvm::Error
+SymbolFileDWARF::FindAndResolveFunction(SymbolContextList &sc_list,
+                                        llvm::StringRef lookup_name) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+
+  DWARFDIE die;
+  Module::LookupInfo info(ConstString(lookup_name), lldb::eFunctionNameTypeFull,
+                          lldb::eLanguageTypeUnknown);
+
+  m_index->GetFunctions(info, *this, {}, [&](DWARFDIE entry) {
+    if (entry.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
+      return true;
+
+    // We don't check whether the specification DIE for this function
+    // corresponds to the declaration DIE because the declaration might be in
+    // a type-unit but the definition in the compile-unit (and it's
+    // specifcation would point to the declaration in the compile-unit). We
+    // rely on the mangled name within the module to be enough to find us the
+    // unique definition.
+    die = entry;
+    return false;
+  });
+
+  if (!die.IsValid())
+    return llvm::createStringError(
+        llvm::formatv("failed to find definition DIE for '{0}'", lookup_name));
+
+  if (!ResolveFunction(die, false, sc_list))
+    return llvm::createStringError("failed to resolve function DIE");
+
+  if (sc_list.IsEmpty())
+    return llvm::createStringError("no definition DIE found");
+
+  if (sc_list.GetSize() > 1)
+    return llvm::createStringError(
+        "found %d functions for %s but expected only 1", sc_list.GetSize(),
+        lookup_name.data());
+
+  return llvm::Error::success();
+}
+
 bool SymbolFileDWARF::DIEInDeclContext(const CompilerDeclContext &decl_ctx,
                                        const DWARFDIE &die,
                                        bool only_root_namespaces) {

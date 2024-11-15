@@ -1098,6 +1098,12 @@ public:
       lldb::opaque_compiler_type_t type, Stream &s,
       lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
 
+  llvm::Expected<llvm::SmallVector<llvm::StringRef, 3>>
+  splitFunctionCallLabel(llvm::StringRef label) const override;
+
+  llvm::Expected<FunctionCallLabel>
+  makeFunctionCallLabel(llvm::StringRef label) const override;
+
   static void DumpTypeName(const CompilerType &type);
 
   static clang::EnumDecl *GetAsEnumDecl(const CompilerType &type);

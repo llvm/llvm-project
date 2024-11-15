@@ -24,6 +24,7 @@
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Value.h"
+#include "lldb/Expression/Expression.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
@@ -249,12 +250,26 @@ static unsigned GetCXXMethodCVQuals(const DWARFDIE &subprogram,
   return cv_quals;
 }
 
-static std::string MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
+static std::optional<std::string> MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
   char const *name = die.GetMangledName(/*substitute_name_allowed*/ false);
   if (!name)
-    return {};
+    return std::nullopt;
 
-  return name;
+  auto module_sp = die.GetModule();
+  if (!module_sp)
+    return std::nullopt;
+
+  lldb::user_id_t module_id = module_sp->GetID();
+  if (module_id == LLDB_INVALID_UID)
+    return std::nullopt;
+
+  const auto die_id = die.GetID();
+  if (die_id == LLDB_INVALID_UID)
+    return std::nullopt;
+
+  return llvm::formatv("{0}:{1}:{2:x}:{3:x}", FunctionCallLabelPrefix, name,
+                       module_id, die_id)
+      .str();
 }
 
 TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,

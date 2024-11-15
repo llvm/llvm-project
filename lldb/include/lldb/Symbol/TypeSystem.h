@@ -548,6 +548,22 @@ public:
   bool GetHasForcefullyCompletedTypes() const {
     return m_has_forcefully_completed_types;
   }
+
+  /// Returns the components of the specified function call label.
+  ///
+  /// The format of \c label is described in \c FunctionCallLabel.
+  /// The label prefix is not one of the components.
+  virtual llvm::Expected<llvm::SmallVector<llvm::StringRef, 3>>
+  splitFunctionCallLabel(llvm::StringRef label) const {
+    return llvm::createStringError("Not implemented.");
+  }
+
+  // Decodes the function label into a \c FunctionCallLabel.
+  virtual llvm::Expected<FunctionCallLabel>
+  makeFunctionCallLabel(llvm::StringRef label) const {
+    return llvm::createStringError("Not implemented.");
+  }
+
 protected:
   SymbolFile *m_sym_file = nullptr;
   /// Used for reporting statistics.
