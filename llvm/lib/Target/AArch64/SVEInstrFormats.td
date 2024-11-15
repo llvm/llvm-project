@@ -5357,7 +5357,7 @@ multiclass sve_int_dup_imm_pred_merge_inst<
             (!cast<Instruction>(NAME) $Zd, $Pg, $imm, $shift)>;
 }
 
-multiclass sve_int_dup_imm_pred_merge<string asm> {
+multiclass sve_int_dup_imm_pred_merge<string asm, SDPatternOperator op> {
   defm _B : sve_int_dup_imm_pred_merge_inst<0b00, asm, ZPR8, cpy_imm8_opt_lsl_i8,
                                             nxv16i8, nxv16i1, i32, SVECpyDupImm8Pat>;
   defm _H : sve_int_dup_imm_pred_merge_inst<0b01, asm, ZPR16, cpy_imm8_opt_lsl_i16,
@@ -5386,6 +5386,15 @@ multiclass sve_int_dup_imm_pred_merge<string asm> {
             (!cast<Instruction>(NAME # _D) $Zd, $Pg, 0, 0)>;
   def : Pat<(vselect PPRAny:$Pg, (SVEDup0), (nxv2f64 ZPR:$Zd)),
             (!cast<Instruction>(NAME # _D) $Zd, $Pg, 0, 0)>;
+
+  def : Pat<(nxv16i8 (op nxv16i1:$pg, (i32 (SVECpyDupImm8Pat i32:$a, i32:$b)), nxv16i8:$zd)),
+            (!cast<Instruction>(NAME # _B) $zd, $pg, $a, $b)>;
+  def : Pat<(nxv8i16 (op nxv8i1:$pg, (i32 (SVECpyDupImm16Pat i32:$a, i32:$b)), nxv8i16:$zd)),
+            (!cast<Instruction>(NAME # _H) $zd, $pg, $a, $b)>;
+  def : Pat<(nxv4i32 (op nxv4i1:$pg, (i32 (SVECpyDupImm32Pat i32:$a, i32:$b)), nxv4i32:$zd)),
+            (!cast<Instruction>(NAME # _S) $zd, $pg, $a, $b)>;
+  def : Pat<(nxv2i64 (op nxv2i1:$pg, (i64 (SVECpyDupImm64Pat i32:$a, i32:$b)), nxv2i64:$zd)),
+            (!cast<Instruction>(NAME # _D) $zd, $pg, $a, $b)>;
 }
 
 multiclass sve_int_dup_imm_pred_zero_inst<
@@ -5407,7 +5416,7 @@ multiclass sve_int_dup_imm_pred_zero_inst<
             (!cast<Instruction>(NAME) $Pg, $imm, $shift)>;
 }
 
-multiclass sve_int_dup_imm_pred_zero<string asm> {
+multiclass sve_int_dup_imm_pred_zero<string asm, SDPatternOperator op> {
   defm _B : sve_int_dup_imm_pred_zero_inst<0b00, asm, ZPR8, cpy_imm8_opt_lsl_i8,
                                            nxv16i8, nxv16i1, i32, SVECpyDupImm8Pat>;
   defm _H : sve_int_dup_imm_pred_zero_inst<0b01, asm, ZPR16, cpy_imm8_opt_lsl_i16,
@@ -5416,6 +5425,15 @@ multiclass sve_int_dup_imm_pred_zero<string asm> {
                                            nxv4i32, nxv4i1, i32, SVECpyDupImm32Pat>;
   defm _D : sve_int_dup_imm_pred_zero_inst<0b11, asm, ZPR64, cpy_imm8_opt_lsl_i64,
                                            nxv2i64, nxv2i1, i64, SVECpyDupImm64Pat>;
+
+  def : Pat<(nxv16i8 (op nxv16i1:$pg, (i32 (SVECpyDupImm8Pat i32:$a, i32:$b)), (SVEDup0))),
+            (!cast<Instruction>(NAME # _B) $pg, $a, $b)>;
+  def : Pat<(nxv8i16 (op nxv8i1:$pg, (i32 (SVECpyDupImm16Pat i32:$a, i32:$b)), (SVEDup0))),
+            (!cast<Instruction>(NAME # _H) $pg, $a, $b)>;
+  def : Pat<(nxv4i32 (op nxv4i1:$pg, (i32 (SVECpyDupImm32Pat i32:$a, i32:$b)), (SVEDup0))),
+            (!cast<Instruction>(NAME # _S) $pg, $a, $b)>;
+  def : Pat<(nxv2i64 (op nxv2i1:$pg, (i64 (SVECpyDupImm64Pat i32:$a, i32:$b)), (SVEDup0))),
+            (!cast<Instruction>(NAME # _D) $pg, $a, $b)>;
 }
 
 //===----------------------------------------------------------------------===//
