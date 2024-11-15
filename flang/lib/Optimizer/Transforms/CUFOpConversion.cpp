@@ -641,8 +641,14 @@ struct CUFDataTransferOpConversion
       mlir::Value dst = op.getDst();
       mlir::Value src = op.getSrc();
 
-      if (!mlir::isa<fir::BaseBoxType>(srcTy))
+      if (!mlir::isa<fir::BaseBoxType>(srcTy)) {
         src = emboxSrc(rewriter, op, symtab);
+      } else if (mlir::isa<fir::EmboxOp>(src.getDefiningOp())) {
+        // Materialize the box to memory to be able to call the runtime.
+        mlir::Value box = builder.createTemporary(loc, src.getType());
+        builder.create<fir::StoreOp>(loc, src, box);
+        src = box;
+      }
 
       auto fTy = func.getFunctionType();
       mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
