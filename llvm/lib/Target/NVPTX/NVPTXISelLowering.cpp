@@ -14,6 +14,7 @@
 #include "NVPTXISelLowering.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
+#include "NVPTXSelectionDAGInfo.h"
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
 #include "NVPTXTargetObjectFile.h"
@@ -1035,92 +1036,6 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i128, Custom);
 }
 
-const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
-
-#define MAKE_CASE(V)                                                           \
-  case V:                                                                      \
-    return #V;
-
-  switch ((NVPTXISD::NodeType)Opcode) {
-  case NVPTXISD::FIRST_NUMBER:
-    break;
-
-    MAKE_CASE(NVPTXISD::CALL)
-    MAKE_CASE(NVPTXISD::RET_GLUE)
-    MAKE_CASE(NVPTXISD::LOAD_PARAM)
-    MAKE_CASE(NVPTXISD::Wrapper)
-    MAKE_CASE(NVPTXISD::DeclareParam)
-    MAKE_CASE(NVPTXISD::DeclareScalarParam)
-    MAKE_CASE(NVPTXISD::DeclareRet)
-    MAKE_CASE(NVPTXISD::DeclareScalarRet)
-    MAKE_CASE(NVPTXISD::DeclareRetParam)
-    MAKE_CASE(NVPTXISD::PrintCall)
-    MAKE_CASE(NVPTXISD::PrintConvergentCall)
-    MAKE_CASE(NVPTXISD::PrintCallUni)
-    MAKE_CASE(NVPTXISD::PrintConvergentCallUni)
-    MAKE_CASE(NVPTXISD::LoadParam)
-    MAKE_CASE(NVPTXISD::LoadParamV2)
-    MAKE_CASE(NVPTXISD::LoadParamV4)
-    MAKE_CASE(NVPTXISD::StoreParam)
-    MAKE_CASE(NVPTXISD::StoreParamV2)
-    MAKE_CASE(NVPTXISD::StoreParamV4)
-    MAKE_CASE(NVPTXISD::StoreParamS32)
-    MAKE_CASE(NVPTXISD::StoreParamU32)
-    MAKE_CASE(NVPTXISD::CallArgBegin)
-    MAKE_CASE(NVPTXISD::CallArg)
-    MAKE_CASE(NVPTXISD::LastCallArg)
-    MAKE_CASE(NVPTXISD::CallArgEnd)
-    MAKE_CASE(NVPTXISD::CallVoid)
-    MAKE_CASE(NVPTXISD::CallVal)
-    MAKE_CASE(NVPTXISD::CallSymbol)
-    MAKE_CASE(NVPTXISD::Prototype)
-    MAKE_CASE(NVPTXISD::MoveParam)
-    MAKE_CASE(NVPTXISD::StoreRetval)
-    MAKE_CASE(NVPTXISD::StoreRetvalV2)
-    MAKE_CASE(NVPTXISD::StoreRetvalV4)
-    MAKE_CASE(NVPTXISD::PseudoUseParam)
-    MAKE_CASE(NVPTXISD::UNPACK_VECTOR)
-    MAKE_CASE(NVPTXISD::BUILD_VECTOR)
-    MAKE_CASE(NVPTXISD::RETURN)
-    MAKE_CASE(NVPTXISD::CallSeqBegin)
-    MAKE_CASE(NVPTXISD::CallSeqEnd)
-    MAKE_CASE(NVPTXISD::CallPrototype)
-    MAKE_CASE(NVPTXISD::ProxyReg)
-    MAKE_CASE(NVPTXISD::LoadV2)
-    MAKE_CASE(NVPTXISD::LoadV4)
-    MAKE_CASE(NVPTXISD::LoadV8)
-    MAKE_CASE(NVPTXISD::LDUV2)
-    MAKE_CASE(NVPTXISD::LDUV4)
-    MAKE_CASE(NVPTXISD::StoreV2)
-    MAKE_CASE(NVPTXISD::StoreV4)
-    MAKE_CASE(NVPTXISD::StoreV8)
-    MAKE_CASE(NVPTXISD::FSHL_CLAMP)
-    MAKE_CASE(NVPTXISD::FSHR_CLAMP)
-    MAKE_CASE(NVPTXISD::BFE)
-    MAKE_CASE(NVPTXISD::BFI)
-    MAKE_CASE(NVPTXISD::PRMT)
-    MAKE_CASE(NVPTXISD::FCOPYSIGN)
-    MAKE_CASE(NVPTXISD::DYNAMIC_STACKALLOC)
-    MAKE_CASE(NVPTXISD::STACKRESTORE)
-    MAKE_CASE(NVPTXISD::STACKSAVE)
-    MAKE_CASE(NVPTXISD::SETP_F16X2)
-    MAKE_CASE(NVPTXISD::SETP_BF16X2)
-    MAKE_CASE(NVPTXISD::Dummy)
-    MAKE_CASE(NVPTXISD::MUL_WIDE_SIGNED)
-    MAKE_CASE(NVPTXISD::MUL_WIDE_UNSIGNED)
-    MAKE_CASE(NVPTXISD::BrxEnd)
-    MAKE_CASE(NVPTXISD::BrxItem)
-    MAKE_CASE(NVPTXISD::BrxStart)
-    MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_IS_CANCELED)
-    MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_X)
-    MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Y)
-    MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Z)
-  }
-  return nullptr;
-
-#undef MAKE_CASE
-}
-
 TargetLoweringBase::LegalizeTypeAction
 NVPTXTargetLowering::getPreferredVectorAction(MVT VT) const {
   if (!VT.isScalableVector() && VT.getVectorNumElements() != 1 &&
@@ -1677,7 +1592,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         StoreOperands.push_back(GetStoredValue(J + K, EltVT, PartAlign));
       StoreOperands.push_back(InGlue);
 
-      NVPTXISD::NodeType Op;
+      unsigned Op;
       switch (NumElts) {
       case 1:
         Op = NVPTXISD::StoreParam;
@@ -1914,7 +1829,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       SmallVector<EVT, 6> LoadVTs(VectorizedSize, EltType);
       LoadVTs.append({MVT::Other, MVT::Glue});
 
-      NVPTXISD::NodeType Op;
+      unsigned Op;
       switch (VectorizedSize) {
       case 1:
         Op = NVPTXISD::LoadParam;
@@ -3616,7 +3531,7 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     for (const unsigned J : llvm::seq(NumElts))
       StoreOperands.push_back(GetRetVal(I + J));
 
-    NVPTXISD::NodeType Op;
+    unsigned Op;
     switch (NumElts) {
     case 1:
       Op = NVPTXISD::StoreRetval;
