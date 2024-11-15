@@ -1,9 +1,9 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK: %[[#bool:]] = OpTypeBool
-; CHECK: %[[#uint:]] = OpTypeInt 32 0
-; CHECK: %[[#scope:]] = OpConstant %[[#uint]] 3
+; CHECK-DAG: %[[#bool:]] = OpTypeBool
+; CHECK-DAG: %[[#uint:]] = OpTypeInt 32 0
+; CHECK-DAG: %[[#scope:]] = OpConstant %[[#uint]] 3
 
 ; CHECK-LABEL: Begin function test_wave_any
 define i1 @test_wave_any(i1 %p1) {

@@ -1965,7 +1965,8 @@ bool SPIRVInstructionSelector::selectWaveActiveAnyTrue(Register ResVReg,
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
       .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII))
-      .addUse(I.getOperand(2).getReg());
+      .addUse(I.getOperand(2).getReg())
+      .constrainAllUses(TII, TRI, RBI);
 }
 
 bool SPIRVInstructionSelector::selectWaveActiveCountBits(

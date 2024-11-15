@@ -7,7 +7,7 @@
 
 // Test basic lowering to runtime function call for int values.
 
-// CHECK-LABEL: test
+// CHECK-LABEL: define {{.*}}test
 bool test(bool p1) {
   // CHECK-SPIRV: %[[#entry_tok0:]] = call token @llvm.experimental.convergence.entry()
   // CHECK-SPIRV:  %[[RET:.*]] = call spir_func i1 @llvm.spv.wave.any(i1 %{{[a-zA-Z0-9]+}}) [ "convergencectrl"(token %[[#entry_tok0]]) ]
