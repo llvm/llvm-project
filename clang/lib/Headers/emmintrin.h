@@ -3272,8 +3272,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmplt_epi32(__m128i __a,
 /// \returns A 128-bit vector of [2 x double] whose lower 64 bits contain the
 ///    converted value of the second operand. The upper 64 bits are copied from
 ///    the upper 64 bits of the first operand.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cvtsi64_sd(__m128d __a,
-                                                            long long __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvtsi64_sd(__m128d __a, long long __b) {
   __a[0] = __b;
   return __a;
 }
@@ -4626,8 +4626,9 @@ _mm_movepi64_pi64(__m128i __a) {
 ///    A 64-bit value.
 /// \returns A 128-bit integer vector. The lower 64 bits contain the value from
 ///    the operand. The upper 64 bits are assigned zeros.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_movpi64_epi64(__m64 __a) {
-  return __extension__(__m128i)(__v2di){(long long)__a, 0};
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_movpi64_epi64(__m64 __a) {
+  return __builtin_shufflevector((__v1di)__a, _mm_setzero_si64(), 0, 1);
 }
 
 /// Moves the lower 64 bits of a 128-bit integer vector to a 128-bit

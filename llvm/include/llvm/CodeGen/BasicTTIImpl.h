@@ -17,7 +17,6 @@
 #define LLVM_CODEGEN_BASICTTIIMPL_H
 
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -983,10 +982,27 @@ public:
       return Kind;
     int NumSrcElts = Ty->getElementCount().getKnownMinValue();
     switch (Kind) {
-    case TTI::SK_PermuteSingleSrc:
+    case TTI::SK_PermuteSingleSrc: {
       if (ShuffleVectorInst::isReverseMask(Mask, NumSrcElts))
         return TTI::SK_Reverse;
       if (ShuffleVectorInst::isZeroEltSplatMask(Mask, NumSrcElts))
+        return TTI::SK_Broadcast;
+      // Check that the broadcast index meets at least twice.
+      bool IsCompared = false;
+      if (int SplatIdx = PoisonMaskElem;
+          all_of(Mask,
+                 [&](int Idx) {
+                   if (Idx == PoisonMaskElem)
+                     return true;
+                   if (SplatIdx == PoisonMaskElem) {
+                     SplatIdx = Idx;
+                     return true;
+                   }
+                   IsCompared = true;
+                   ;
+                   return SplatIdx == Idx;
+                 }) &&
+          IsCompared && SplatIdx != PoisonMaskElem)
         return TTI::SK_Broadcast;
       if (ShuffleVectorInst::isExtractSubvectorMask(Mask, NumSrcElts, Index) &&
           (Index + Mask.size()) <= (size_t)NumSrcElts) {
@@ -994,6 +1010,7 @@ public:
         return TTI::SK_ExtractSubvector;
       }
       break;
+    }
     case TTI::SK_PermuteTwoSrc: {
       int NumSubElts;
       if (Mask.size() > 2 && ShuffleVectorInst::isInsertSubvectorMask(
@@ -1286,6 +1303,18 @@ public:
                                      TTI::TargetCostKind CostKind,
                                      unsigned Index, Value *Op0, Value *Op1) {
     return getRegUsageForType(Val->getScalarType());
+  }
+
+  /// \param ScalarUserAndIdx encodes the information about extracts from a
+  /// vector with 'Scalar' being the value being extracted,'User' being the user
+  /// of the extract(nullptr if user is not known before vectorization) and
+  /// 'Idx' being the extract lane.
+  InstructionCost getVectorInstrCost(
+      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      Value *Scalar,
+      ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) {
+    return thisT()->getVectorInstrCost(Opcode, Val, CostKind, Index, nullptr,
+                                       nullptr);
   }
 
   InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,

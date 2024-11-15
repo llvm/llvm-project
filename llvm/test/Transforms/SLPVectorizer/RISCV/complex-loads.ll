@@ -80,8 +80,8 @@ define i32 @test(ptr %pix1, ptr %pix2, i64 %idx.ext, i64 %idx.ext63, ptr %add.pt
 ; CHECK-NEXT:    [[TMP59:%.*]] = sub <2 x i32> [[TMP62]], [[TMP55]]
 ; CHECK-NEXT:    [[TMP41:%.*]] = call <2 x i8> @llvm.experimental.vp.strided.load.v2i8.p0.i64(ptr align 1 null, i64 4, <2 x i1> splat (i1 true), i32 2)
 ; CHECK-NEXT:    [[TMP58:%.*]] = zext <2 x i8> [[TMP41]] to <2 x i32>
-; CHECK-NEXT:    [[TMP83:%.*]] = shufflevector <2 x i8> [[TMP48]], <2 x i8> poison, <2 x i32> <i32 poison, i32 0>
-; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <2 x i8> [[TMP83]], i8 [[TMP33]], i32 0
+; CHECK-NEXT:    [[TMP83:%.*]] = insertelement <2 x i8> poison, i8 [[TMP33]], i32 0
+; CHECK-NEXT:    [[TMP63:%.*]] = shufflevector <2 x i8> [[TMP83]], <2 x i8> [[TMP48]], <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[TMP76:%.*]] = zext <2 x i8> [[TMP63]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP81:%.*]] = sub <2 x i32> [[TMP58]], [[TMP76]]
 ; CHECK-NEXT:    [[TMP167:%.*]] = shl <2 x i32> [[TMP81]], splat (i32 16)
@@ -91,8 +91,8 @@ define i32 @test(ptr %pix1, ptr %pix2, i64 %idx.ext, i64 %idx.ext63, ptr %add.pt
 ; CHECK-NEXT:    [[TMP82:%.*]] = insertelement <2 x i8> [[TMP53]], i8 [[TMP34]], i32 0
 ; CHECK-NEXT:    [[TMP91:%.*]] = zext <2 x i8> [[TMP82]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP65:%.*]] = sub <2 x i32> [[TMP79]], [[TMP91]]
-; CHECK-NEXT:    [[TMP169:%.*]] = shufflevector <2 x i8> [[TMP53]], <2 x i8> poison, <2 x i32> <i32 poison, i32 0>
-; CHECK-NEXT:    [[TMP170:%.*]] = insertelement <2 x i8> [[TMP169]], i8 [[TMP43]], i32 0
+; CHECK-NEXT:    [[TMP169:%.*]] = insertelement <2 x i8> poison, i8 [[TMP43]], i32 0
+; CHECK-NEXT:    [[TMP170:%.*]] = shufflevector <2 x i8> [[TMP169]], <2 x i8> [[TMP53]], <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[TMP171:%.*]] = zext <2 x i8> [[TMP170]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP172:%.*]] = insertelement <2 x i8> [[TMP48]], i8 [[TMP47]], i32 0
 ; CHECK-NEXT:    [[TMP173:%.*]] = zext <2 x i8> [[TMP172]] to <2 x i32>

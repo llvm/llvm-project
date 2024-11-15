@@ -1920,6 +1920,20 @@ def int_experimental_vector_histogram_add : DefaultAttrsIntrinsic<[],
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>], // Mask
                              [ IntrArgMemOnly ]>;
 
+// Experimental match
+def int_experimental_vector_match : DefaultAttrsIntrinsic<
+                             [ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty> ],
+                             [ llvm_anyvector_ty,
+                               llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty> ],  // Mask
+                             [ IntrNoMem, IntrNoSync, IntrWillReturn ]>;
+
+// Extract based on mask bits
+def int_experimental_vector_extract_last_active:
+    DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+              [llvm_anyvector_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+               LLVMVectorElementType<0>], [IntrNoMem]>;
+
 // Operators
 let IntrProperties = [IntrNoMem, IntrNoSync, IntrWillReturn] in {
   // Integer arithmetic

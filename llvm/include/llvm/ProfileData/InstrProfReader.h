@@ -683,6 +683,8 @@ private:
   const unsigned char *FrameBase = nullptr;
   /// The starting address of the call stack array.
   const unsigned char *CallStackBase = nullptr;
+  // The number of elements in the radix tree array.
+  unsigned RadixTreeSize = 0;
 
   Error deserializeV012(const unsigned char *Start, const unsigned char *Ptr,
                         uint64_t FirstWord);
@@ -695,6 +697,9 @@ public:
 
   Expected<memprof::MemProfRecord>
   getMemProfRecord(const uint64_t FuncNameHash) const;
+
+  DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>>
+  getMemProfCallerCalleePairs() const;
 };
 
 /// Reader for the indexed binary instrprof format.
@@ -791,6 +796,11 @@ public:
   /// llvm::md5(Name).
   Expected<memprof::MemProfRecord> getMemProfRecord(uint64_t FuncNameHash) {
     return MemProfReader.getMemProfRecord(FuncNameHash);
+  }
+
+  DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>>
+  getMemProfCallerCalleePairs() {
+    return MemProfReader.getMemProfCallerCalleePairs();
   }
 
   /// Fill Counts with the profile data for the given function name.
