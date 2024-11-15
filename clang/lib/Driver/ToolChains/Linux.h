@@ -41,6 +41,8 @@ public:
                             llvm::opt::ArgStringList &CmdArgs) const override;
   void AddIAMCUIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                            llvm::opt::ArgStringList &CC1Args) const override;
+  void AddSYCLIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                          llvm::opt::ArgStringList &CC1Args) const override;
   RuntimeLibType GetDefaultRuntimeLibType() const override;
   unsigned GetDefaultDwarfVersion() const override;
   CXXStdlibType GetDefaultCXXStdlibType() const override;
