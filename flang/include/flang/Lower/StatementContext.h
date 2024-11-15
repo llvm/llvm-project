@@ -79,14 +79,14 @@ public:
     }
   }
 
-  /// Make a cleanup call. Retain the stack top list for a repeat call.
+  /// Make cleanup calls. Retain the stack top list for a repeat call.
   void finalizeAndKeep() {
     assert(!cufs.empty() && "invalid finalize statement context");
     if (cufs.back())
       (*cufs.back())();
   }
 
-  /// Make a cleanup call. Clear the stack top list.
+  /// Make cleanup calls. Clear the stack top list.
   void finalizeAndReset() {
     finalizeAndKeep();
     cufs.back().reset();
@@ -95,7 +95,7 @@ public:
   /// Pop the stack top list.
   void pop() { cufs.pop_back(); }
 
-  /// Make a cleanup call. Pop the stack top list.
+  /// Make cleanup calls. Pop the stack top list.
   void finalizeAndPop() {
     finalizeAndKeep();
     pop();
