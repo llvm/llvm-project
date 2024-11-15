@@ -72,15 +72,15 @@ public:
     InvertSection,
   };
 
-  ASTNode() : T(Type::Root), ParentContext(nullptr){};
+  ASTNode() : T(Type::Root), ParentContext(nullptr) {};
 
   ASTNode(StringRef Body, ASTNode *Parent)
-      : T(Type::Text), Body(Body), Parent(Parent), ParentContext(nullptr){};
+      : T(Type::Text), Body(Body), Parent(Parent), ParentContext(nullptr) {};
 
   // Constructor for Section/InvertSection/Variable/UnescapeVariable
   ASTNode(Type T, Accessor Accessor, ASTNode *Parent)
       : T(T), Parent(Parent), Children({}), Accessor(Accessor),
-        ParentContext(nullptr){};
+        ParentContext(nullptr) {};
 
   void addChild(ASTNode *Child) { Children.emplace_back(Child); };
 
@@ -121,6 +121,7 @@ private:
   std::string RawBody;
   std::string Body;
   ASTNode *Parent;
+  // TODO: switch implementation to SmallVector<T>
   std::vector<ASTNode *> Children;
   const Accessor Accessor;
   const llvm::json::Value *ParentContext;
@@ -538,9 +539,11 @@ void toJsonString(const Value &Data, raw_ostream &OS) {
       return;
   }
   case Value::Object:
-  case Value::Boolean:
-    OS << formatv("{0:2}", Data);
+  case Value::Boolean: {
+    llvm::json::OStream JOS(OS, 2);
+    JOS.value(Data);
     break;
+  }
   }
 }
 
