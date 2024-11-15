@@ -3041,10 +3041,6 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
   enum SecondParam { None };
   enum ThirdParam { Target, TargetClones, TargetVersion };
 
-  if (!Context.getTargetInfo().getTriple().isRISCV() &&
-      !Context.getTargetInfo().getTriple().isAArch64())
-    return Diag(LiteralLoc, diag::err_target_version_unsupported);
-
   llvm::SmallVector<StringRef, 8> Features;
   if (Context.getTargetInfo().getTriple().isRISCV()) {
     llvm::SmallVector<StringRef, 8> AttrStrs;
