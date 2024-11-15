@@ -48,7 +48,6 @@ static void SignalHandler(int signo, siginfo_t *info, void *) {
   // Set the flag before writing to the pipe!
   g_signal_info[signo].flag = 1;
 
-  char c = '.';
   int fd = g_signal_info[signo].pipe_fd;
   if (fd < 0) {
     // This can happen with the following (unlikely) sequence of events:
@@ -60,9 +59,11 @@ static void SignalHandler(int signo, siginfo_t *info, void *) {
     return;
   }
 
+  // Write a(ny) character to the pipe to wake up from the poll syscall.
+  char c = '.';
   ssize_t bytes_written = llvm::sys::RetryAfterSignal(-1, ::write, fd, &c, 1);
-  // We're only using the pipe to wake up the reader, so we can safely ignore
-  // EAGAIN (pipe full)
+  // We can safely ignore EAGAIN (pipe full), as that means poll will definitely
+  // return.
   assert(bytes_written == 1 || (bytes_written == -1 && errno == EAGAIN));
 }
 
@@ -167,9 +168,14 @@ void MainLoopPosix::RunImpl::ProcessReadEvents() {
 MainLoopPosix::MainLoopPosix() : m_triggering(false) {
   Status error = m_trigger_pipe.CreateNew(/*child_process_inherit=*/false);
   assert(error.Success());
-  assert(fcntl(m_trigger_pipe.GetWriteFileDescriptor(), F_SETFL,
-               O_NONBLOCK | fcntl(m_trigger_pipe.GetWriteFileDescriptor(),
-                                  F_GETFL)) == 0);
+
+  // Make the write end of the pipe non-blocking.
+  int result = fcntl(m_trigger_pipe.GetWriteFileDescriptor(), F_SETFL,
+                     fcntl(m_trigger_pipe.GetWriteFileDescriptor(), F_GETFL) |
+                         O_NONBLOCK);
+  assert(result == 0);
+  UNUSED_IF_ASSERT_DISABLED(result);
+
   const int trigger_pipe_fd = m_trigger_pipe.GetReadFileDescriptor();
   m_read_fds.insert({trigger_pipe_fd, [trigger_pipe_fd](MainLoopBase &loop) {
                        char c;
