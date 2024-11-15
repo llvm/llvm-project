@@ -385,4 +385,43 @@ func.func @_QPdevice_addr_conv() {
 // CHECK: fir.embox %[[DEV_ADDR_CONV]](%{{.*}}) : (!fir.ref<!fir.array<4xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<4xf32>>
 // CHECK: fir.call @_FortranACUFDataTransferDescDescNoRealloc
 
+func.func @_QPdevmul(%arg0: !fir.ref<!fir.array<1x?xf32>> {fir.bindc_name = "b"}, %arg1: !fir.ref<i32> {fir.bindc_name = "wa"}, %arg2: !fir.ref<i32> {fir.bindc_name = "wb"}) {
+  %c0_i64 = arith.constant 0 : i64
+  %c1_i32 = arith.constant 1 : i32
+  %c0_i32 = arith.constant 0 : i32
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.declare %arg2 dummy_scope %0 {uniq_name = "_QFdevmulEwb"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %2 = cuf.alloc !fir.box<!fir.heap<!fir.array<?x?xf32>>> {bindc_name = "bdev", data_attr = #cuf.cuda<device>, uniq_name = "_QFdevmulEbdev"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+  %6 = fir.declare %2 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFdevmulEbdev"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+  %7 = fir.declare %arg1 dummy_scope %0 {uniq_name = "_QFdevmulEwa"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %8 = fir.load %1 : !fir.ref<i32>
+  %9 = fir.convert %8 : (i32) -> index
+  %12 = fir.shape %c1, %9 : (index, index) -> !fir.shape<2>
+  %13 = fir.declare %arg0(%12) dummy_scope %0 {uniq_name = "_QFdevmulEb"} : (!fir.ref<!fir.array<1x?xf32>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<1x?xf32>>
+
+  %24 = fir.load %7 : !fir.ref<i32>
+  %25 = fir.convert %24 : (i32) -> index
+  %26 = arith.cmpi sgt, %25, %c0 : index
+  %27 = arith.select %26, %25, %c0 : index
+  %28 = fir.load %1 : !fir.ref<i32>
+  %29 = fir.convert %28 : (i32) -> index
+  %30 = arith.cmpi sgt, %29, %c0 : index
+  %31 = arith.select %30, %29, %c0 : index
+  %32 = fir.shape %27, %31 : (index, index) -> !fir.shape<2>
+  %33 = fir.undefined index
+  %34 = fir.slice %c1, %25, %c1, %c1, %29, %c1 : (index, index, index, index, index, index) -> !fir.slice<2>
+  %35 = fir.embox %13(%12) [%34] : (!fir.ref<!fir.array<1x?xf32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<?x?xf32>>
+  cuf.data_transfer %35 to %6 {transfer_kind = #cuf.cuda_transfer<host_device>} : !fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+  return
+}
+
+// CHECK-LABEL: func.func @_QPdevmul(%arg0: !fir.ref<!fir.array<1x?xf32>> {fir.bindc_name = "b"}, %arg1: !fir.ref<i32> {fir.bindc_name = "wa"}, %arg2: !fir.ref<i32> {fir.bindc_name = "wb"}) {
+// CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.array<?x?xf32>>
+// CHECK: %[[EMBOX:.*]] = fir.embox %{{.*}}(%{{.*}}) [%{{.*}}] : (!fir.ref<!fir.array<1x?xf32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<?x?xf32>>
+// CHECK: fir.store %[[EMBOX]] to %[[ALLOCA]] : !fir.ref<!fir.box<!fir.array<?x?xf32>>>
+// CHECK: %[[SRC:.*]] = fir.convert %[[ALLOCA]] : (!fir.ref<!fir.box<!fir.array<?x?xf32>>>) -> !fir.ref<!fir.box<none>>
+// CHECK: fir.call @_FortranACUFDataTransferDescDesc(%{{.*}}, %[[SRC]], %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> none
+
 } // end of module
