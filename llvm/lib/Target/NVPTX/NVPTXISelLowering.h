@@ -20,88 +20,6 @@
 #include "llvm/Support/AtomicOrdering.h"
 
 namespace llvm {
-namespace NVPTXISD {
-enum NodeType : unsigned {
-  // Start the numbering from where ISD NodeType finishes.
-  FIRST_NUMBER = ISD::BUILTIN_OP_END,
-  Wrapper,
-  CALL,
-  RET_GLUE,
-  LOAD_PARAM,
-  DeclareParam,
-  DeclareScalarParam,
-  DeclareRetParam,
-  DeclareRet,
-  DeclareScalarRet,
-  PrintCall,
-  PrintConvergentCall,
-  PrintCallUni,
-  PrintConvergentCallUni,
-  CallArgBegin,
-  CallArg,
-  LastCallArg,
-  CallArgEnd,
-  CallVoid,
-  CallVal,
-  CallSymbol,
-  Prototype,
-  MoveParam,
-  PseudoUseParam,
-  RETURN,
-  CallSeqBegin,
-  CallSeqEnd,
-  CallPrototype,
-  ProxyReg,
-  FSHL_CLAMP,
-  FSHR_CLAMP,
-  MUL_WIDE_SIGNED,
-  MUL_WIDE_UNSIGNED,
-  SETP_F16X2,
-  SETP_BF16X2,
-  BFE,
-  BFI,
-  PRMT,
-
-  /// This node is similar to ISD::BUILD_VECTOR except that the output may be
-  /// implicitly bitcast to a scalar. This allows for the representation of
-  /// packing move instructions for vector types which are not legal i.e. v2i32
-  BUILD_VECTOR,
-
-  /// This node is the inverse of NVPTX::BUILD_VECTOR. It takes a single value
-  /// which may be a scalar and unpacks it into multiple values by implicitly
-  /// converting it to a vector.
-  UNPACK_VECTOR,
-
-  FCOPYSIGN,
-  DYNAMIC_STACKALLOC,
-  STACKRESTORE,
-  STACKSAVE,
-  BrxStart,
-  BrxItem,
-  BrxEnd,
-  Dummy,
-
-  FIRST_MEMORY_OPCODE,
-  LoadV2 = FIRST_MEMORY_OPCODE,
-  LoadV4,
-  LDUV2, // LDU.v2
-  LDUV4, // LDU.v4
-  StoreV2,
-  StoreV4,
-  LoadParam,
-  LoadParamV2,
-  LoadParamV4,
-  StoreParam,
-  StoreParamV2,
-  StoreParamV4,
-  StoreParamS32, // to sext and store a <32bit value, not used currently
-  StoreParamU32, // to zext and store a <32bit value, not used currently
-  StoreRetval,
-  StoreRetvalV2,
-  StoreRetvalV4,
-  LAST_MEMORY_OPCODE = StoreRetvalV4,
-};
-}
 
 class NVPTXSubtarget;
 
@@ -115,8 +33,6 @@ public:
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
-
-  const char *getTargetNodeName(unsigned Opcode) const override;
 
   bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
                           MachineFunction &MF,
