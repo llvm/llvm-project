@@ -1754,7 +1754,7 @@ def : Pat<(declare_scalar_param externalsym:$a, imm:$size),
 def SDTCallPrototype : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
 def CallPrototype :
   SDNode<"NVPTXISD::CallPrototype", SDTCallPrototype,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
+         [SDNPHasChain, SDNPSideEffect]>;
 def ProtoIdent : Operand<i32> { let PrintMethod = "printProtoIdent"; }
 def CALL_PROTOTYPE :
   NVPTXInst<(outs), (ins ProtoIdent:$ident),
