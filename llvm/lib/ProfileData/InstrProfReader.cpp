@@ -1226,14 +1226,11 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
   }
 }
 
-Error IndexedMemProfReader::deserializeV012(const unsigned char *Start,
-                                            const unsigned char *Ptr,
-                                            uint64_t FirstWord) {
+Error IndexedMemProfReader::deserializeV12(const unsigned char *Start,
+                                           const unsigned char *Ptr) {
   // The value returned from RecordTableGenerator.Emit.
   const uint64_t RecordTableOffset =
-      Version == memprof::Version0
-          ? FirstWord
-          : support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
   // The offset in the stream right before invoking
   // FrameTableGenerator.Emit.
   const uint64_t FramePayloadOffset =
@@ -1322,9 +1319,7 @@ Error IndexedMemProfReader::deserialize(const unsigned char *Start,
                                         uint64_t MemProfOffset) {
   const unsigned char *Ptr = Start + MemProfOffset;
 
-  // Read the first 64-bit word, which may be RecordTableOffset in
-  // memprof::MemProfVersion0 or the MemProf version number in
-  // memprof::MemProfVersion1 and above.
+  // Read the MemProf version number.
   const uint64_t FirstWord =
       support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
 
@@ -1332,12 +1327,6 @@ Error IndexedMemProfReader::deserialize(const unsigned char *Start,
       FirstWord == memprof::Version3) {
     // Everything is good.  We can proceed to deserialize the rest.
     Version = static_cast<memprof::IndexedVersion>(FirstWord);
-  } else if (FirstWord >= 24) {
-    // This is a heuristic/hack to detect memprof::MemProfVersion0,
-    // which does not have a version field in the header.
-    // In memprof::MemProfVersion0, FirstWord will be RecordTableOffset,
-    // which should be at least 24 because of the MemProf header size.
-    Version = memprof::Version0;
   } else {
     return make_error<InstrProfError>(
         instrprof_error::unsupported_version,
@@ -1348,10 +1337,9 @@ Error IndexedMemProfReader::deserialize(const unsigned char *Start,
   }
 
   switch (Version) {
-  case memprof::Version0:
   case memprof::Version1:
   case memprof::Version2:
-    if (Error E = deserializeV012(Start, Ptr, FirstWord))
+    if (Error E = deserializeV12(Start, Ptr))
       return E;
     break;
   case memprof::Version3:
@@ -1644,7 +1632,6 @@ IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
 
   const memprof::IndexedMemProfRecord &IndexedRecord = *Iter;
   switch (Version) {
-  case memprof::Version0:
   case memprof::Version1:
     assert(MemProfFrameTable && "MemProfFrameTable must be available");
     assert(!MemProfCallStackTable &&

@@ -25,8 +25,6 @@ struct MemProfRecord;
 
 // The versions of the indexed MemProf format
 enum IndexedVersion : uint64_t {
-  // Version 0: This version didn't have a version field.
-  Version0 = 0,
   // Version 1: Added a version field to the header.
   Version1 = 1,
   // Version 2: Added a call stack table.
@@ -36,7 +34,7 @@ enum IndexedVersion : uint64_t {
   Version3 = 3,
 };
 
-constexpr uint64_t MinimumSupportedVersion = Version0;
+constexpr uint64_t MinimumSupportedVersion = Version1;
 constexpr uint64_t MaximumSupportedVersion = Version3;
 
 // Verify that the minimum and maximum satisfy the obvious constraint.
