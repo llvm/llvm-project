@@ -350,7 +350,8 @@ public:
     if (!saw_dot)
       this->decimal_point = total_digits;
 
-    if (num_cur < num_len && ((num_string[num_cur] | 32) == 'e')) {
+    if (num_cur < num_len &&
+        (num_string[num_cur] == 'e' || num_string[num_cur] == 'E')) {
       ++num_cur;
       if (isdigit(num_string[num_cur]) || num_string[num_cur] == '+' ||
           num_string[num_cur] == '-') {

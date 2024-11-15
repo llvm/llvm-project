@@ -4385,6 +4385,27 @@ bool TargetProperties::GetInjectLocalVariables(
       .value_or(true);
 }
 
+bool TargetProperties::GetUseDIL(ExecutionContext *exe_ctx) const {
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental, exe_ctx);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    return exp_values->GetPropertyAtIndexAs<bool>(ePropertyUseDIL, exe_ctx)
+        .value_or(false);
+  else
+    return true;
+}
+
+void TargetProperties::SetUseDIL(ExecutionContext *exe_ctx, bool b) {
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental, exe_ctx);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    exp_values->SetPropertyAtIndex(ePropertyUseDIL, true, exe_ctx);
+}
+
 ArchSpec TargetProperties::GetDefaultArchitecture() const {
   const uint32_t idx = ePropertyDefaultArch;
   return GetPropertyAtIndexAs<ArchSpec>(idx, {});

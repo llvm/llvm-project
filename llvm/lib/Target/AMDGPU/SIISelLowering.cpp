@@ -24,7 +24,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
-#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/ByteProvider.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
@@ -14012,8 +14011,6 @@ static void placeSources(ByteProvider<SDValue> &Src0,
       {*Src1.Src,
        ((Src1.SrcOffset % 4) << (8 * (3 - Step)) | (ZeroMask & ~FMask)),
        Src1.SrcOffset / 4});
-
-  return;
 }
 
 static SDValue resolveSources(SelectionDAG &DAG, SDLoc SL,

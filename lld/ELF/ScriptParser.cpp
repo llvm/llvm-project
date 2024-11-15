@@ -972,8 +972,8 @@ void ScriptParser::readSectionAddressType(OutputSection *cmd) {
   }
 }
 
-static Expr checkAlignment(Expr e, std::string &loc) {
-  return [=] {
+static Expr checkAlignment(Ctx &ctx, Expr e, std::string &loc) {
+  return [=, &ctx] {
     uint64_t alignment = std::max((uint64_t)1, e().getValue());
     if (!isPowerOf2_64(alignment)) {
       ErrAlways(ctx) << loc << ": alignment must be power of 2";
@@ -1023,9 +1023,9 @@ OutputDesc *ScriptParser::readOutputSectionDescription(StringRef outSec) {
   if (consume("AT"))
     osec->lmaExpr = readParenExpr();
   if (consume("ALIGN"))
-    osec->alignExpr = checkAlignment(readParenExpr(), location);
+    osec->alignExpr = checkAlignment(ctx, readParenExpr(), location);
   if (consume("SUBALIGN"))
-    osec->subalignExpr = checkAlignment(readParenExpr(), location);
+    osec->subalignExpr = checkAlignment(ctx, readParenExpr(), location);
 
   // Parse constraints.
   if (consume("ONLY_IF_RO"))
@@ -1516,13 +1516,13 @@ Expr ScriptParser::readPrimary() {
     expect("(");
     Expr e = readExpr();
     if (consume(")")) {
-      e = checkAlignment(e, location);
+      e = checkAlignment(ctx, e, location);
       return [=, s = ctx.script] {
         return alignToPowerOf2(s->getDot(), e().getValue());
       };
     }
     expect(",");
-    Expr e2 = checkAlignment(readExpr(), location);
+    Expr e2 = checkAlignment(ctx, readExpr(), location);
     expect(")");
     return [=] {
       ExprValue v = e();

@@ -839,8 +839,8 @@ let Predicates = [HasSVEorSME] in {
   defm DUPM_ZI : sve_int_dup_mask_imm<"dupm">;
 
   // Splat immediate (predicated)
-  defm CPY_ZPmI  : sve_int_dup_imm_pred_merge<"cpy">;
-  defm CPY_ZPzI  : sve_int_dup_imm_pred_zero<"cpy">;
+  defm CPY_ZPmI  : sve_int_dup_imm_pred_merge<"cpy", AArch64dup_mt>;
+  defm CPY_ZPzI  : sve_int_dup_imm_pred_zero<"cpy", AArch64dup_mt>;
   defm FCPY_ZPmI : sve_int_dup_fpimm_pred<"fcpy">;
 
   // Splat scalar register (unpredicated, GPR or vector + element index)
@@ -3906,7 +3906,7 @@ let Predicates = [HasSVE2orSME] in {
   defm WHILERW_PXX : sve2_int_while_rr<0b1, "whilerw", "int_aarch64_sve_whilerw">;
 } // End HasSVE2orSME
 
-let Predicates = [HasSVE2AES] in {
+let Predicates = [HasSVEAES, HasNonStreamingSVE2orSSVE_AES] in {
   // SVE2 crypto destructive binary operations
   defm AESE_ZZZ_B : sve2_crypto_des_bin_op<0b00, "aese", ZPR8, int_aarch64_sve_aese, nxv16i8>;
   defm AESD_ZZZ_B : sve2_crypto_des_bin_op<0b01, "aesd", ZPR8, int_aarch64_sve_aesd, nxv16i8>;
@@ -3920,7 +3920,7 @@ let Predicates = [HasSVE2AES] in {
   // to NEON PMULL2 instruction.
   defm PMULLB_ZZZ_Q : sve2_wide_int_arith_pmul<0b00, 0b11010, "pmullb", int_aarch64_sve_pmullb_pair>;
   defm PMULLT_ZZZ_Q : sve2_wide_int_arith_pmul<0b00, 0b11011, "pmullt", int_aarch64_sve_pmullt_pair>;
-} // End HasSVE2AES
+}
 
 let Predicates = [HasSVE2SM4] in {
   // SVE2 crypto constructive binary operations
@@ -3941,7 +3941,7 @@ let Predicates = [HasSVE2BitPerm] in {
   defm BGRP_ZZZ : sve2_misc_bitwise<0b1110, "bgrp", int_aarch64_sve_bgrp_x>;
 } // End HasSVE2BitPerm
 
-let Predicates = [HasSVEAES2, HasSVE2p1orSSVE_AES] in {
+let Predicates = [HasSVEAES2, HasNonStreamingSVE2p1orSSVE_AES] in {
   // SVE_AES2 multi-vector instructions (x2)
   def AESE_2ZZI_B    : sve_crypto_binary_multi2<0b000, "aese">;
   def AESD_2ZZI_B    : sve_crypto_binary_multi2<0b010, "aesd">;
@@ -3956,7 +3956,7 @@ let Predicates = [HasSVEAES2, HasSVE2p1orSSVE_AES] in {
   // SVE_AES2 multi-vector polynomial multiply
   def PMLAL_2ZZZ_Q : sve_crypto_pmlal_multi<"pmlal">;
   def PMULL_2ZZZ_Q : sve_crypto_pmull_multi<"pmull">;
-} // End HasSVEAES2, HasSVE2p1orSSVE_AES
+}
 
 //===----------------------------------------------------------------------===//
 // SME or SVE2.1 instructions

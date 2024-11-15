@@ -64,20 +64,20 @@ InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
   // sections are smaller than 4 GiB, which is not an unreasonable
   // assumption as of 2017.
   if (sectionKind == SectionBase::Merge && content().size() > UINT32_MAX)
-    ErrAlways(ctx) << this << ": section too large";
+    ErrAlways(getCtx()) << this << ": section too large";
 
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraints.
   uint32_t v = std::max<uint32_t>(addralign, 1);
   if (!isPowerOf2_64(v))
-    Fatal(ctx) << this << ": sh_addralign is not a power of 2";
+    Fatal(getCtx()) << this << ": sh_addralign is not a power of 2";
   this->addralign = v;
 
   // If SHF_COMPRESSED is set, parse the header. The legacy .zdebug format is no
   // longer supported.
   if (flags & SHF_COMPRESSED) {
     Ctx &ctx = file->ctx;
-    invokeELFT(parseCompressedHeader,);
+    invokeELFT(parseCompressedHeader, ctx);
   }
 }
 
@@ -103,7 +103,7 @@ InputSectionBase::InputSectionBase(ObjFile<ELFT> &file,
   // they are allowed by the spec. I think 4GB is a reasonable limitation.
   // We might want to relax this in the future.
   if (hdr.sh_addralign > UINT32_MAX)
-    Fatal(ctx) << &file << ": section sh_addralign is too large";
+    Fatal(getCtx()) << &file << ": section sh_addralign is too large";
 }
 
 size_t InputSectionBase::getSize() const {
@@ -113,7 +113,7 @@ size_t InputSectionBase::getSize() const {
 }
 
 template <class ELFT>
-static void decompressAux(const InputSectionBase &sec, uint8_t *out,
+static void decompressAux(Ctx &ctx, const InputSectionBase &sec, uint8_t *out,
                           size_t size) {
   auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(sec.content_);
   auto compressed = ArrayRef<uint8_t>(sec.content_, sec.compressedSize)
@@ -134,7 +134,7 @@ void InputSectionBase::decompress() const {
     uncompressedBuf = bAlloc().Allocate<uint8_t>(size);
   }
 
-  invokeELFT(decompressAux, *this, uncompressedBuf, size);
+  invokeELFT(decompressAux, ctx, *this, uncompressedBuf, size);
   content_ = uncompressedBuf;
   compressed = false;
 }
@@ -251,7 +251,8 @@ OutputSection *SectionBase::getOutputSection() {
 // When a section is compressed, `rawData` consists with a header followed
 // by zlib-compressed data. This function parses a header to initialize
 // `uncompressedSize` member and remove the header from `rawData`.
-template <typename ELFT> void InputSectionBase::parseCompressedHeader() {
+template <typename ELFT>
+void InputSectionBase::parseCompressedHeader(Ctx &ctx) {
   flags &= ~(uint64_t)SHF_COMPRESSED;
 
   // New-style header
@@ -628,8 +629,8 @@ static uint64_t getRISCVUndefinedRelativeWeakVA(uint64_t type, uint64_t p) {
 static uint64_t getARMStaticBase(const Symbol &sym) {
   OutputSection *os = sym.getOutputSection();
   if (!os || !os->ptLoad || !os->ptLoad->firstSec)
-    Fatal(ctx) << "SBREL relocation to " << sym.getName()
-               << " without static base";
+    Fatal(os->ctx) << "SBREL relocation to " << sym.getName()
+                   << " without static base";
   return os->ptLoad->firstSec->addr;
 }
 
@@ -639,7 +640,7 @@ static uint64_t getARMStaticBase(const Symbol &sym) {
 //
 // This function returns the R_RISCV_PCREL_HI20 relocation from the
 // R_RISCV_PCREL_LO12 relocation.
-static Relocation *getRISCVPCRelHi20(const InputSectionBase *loSec,
+static Relocation *getRISCVPCRelHi20(Ctx &ctx, const InputSectionBase *loSec,
                                      const Relocation &loReloc) {
   uint64_t addend = loReloc.addend;
   Symbol *sym = loReloc.sym;
@@ -850,7 +851,7 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     return getAArch64Page(val) - getAArch64Page(p);
   }
   case R_RISCV_PC_INDIRECT: {
-    if (const Relocation *hiRel = getRISCVPCRelHi20(this, r))
+    if (const Relocation *hiRel = getRISCVPCRelHi20(ctx, this, r))
       return getRelocTargetVA(ctx, *hiRel, r.sym->getVA(ctx));
     return 0;
   }
@@ -914,7 +915,8 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     // the callee. For local calls the caller and callee share the same
     // TOC base and so the TOC pointer initialization code should be skipped by
     // branching to the local entry point.
-    return symVA - p + getPPC64GlobalEntryToLocalEntryOffset(r.sym->stOther);
+    return symVA - p +
+           getPPC64GlobalEntryToLocalEntryOffset(ctx, r.sym->stOther);
   }
   case R_PPC64_TOCBASE:
     return getPPC64TocBase(ctx) + a;
@@ -1368,8 +1370,9 @@ void EhInputSection::split(ArrayRef<RelTy> rels) {
     d = d.slice(size);
   }
   if (msg)
-    Err(ctx) << "corrupted .eh_frame: " << Twine(msg) << "\n>>> defined in "
-             << getObjMsg(d.data() - content().data());
+    Err(file->ctx) << "corrupted .eh_frame: " << Twine(msg)
+                   << "\n>>> defined in "
+                   << getObjMsg(d.data() - content().data());
 }
 
 // Return the offset in an output section for a given input offset.
@@ -1402,7 +1405,7 @@ void MergeInputSection::splitStrings(StringRef s, size_t entSize) {
   const bool live = !(flags & SHF_ALLOC) || !getCtx().arg.gcSections;
   const char *p = s.data(), *end = s.data() + s.size();
   if (!std::all_of(end - entSize, end, [](char c) { return c == 0; }))
-    Fatal(ctx) << this << ": string is not null terminated";
+    Fatal(getCtx()) << this << ": string is not null terminated";
   if (entSize == 1) {
     // Optimize the common case.
     do {
@@ -1462,7 +1465,7 @@ void MergeInputSection::splitIntoPieces() {
 
 SectionPiece &MergeInputSection::getSectionPiece(uint64_t offset) {
   if (content().size() <= offset)
-    Fatal(ctx) << this << ": offset is outside the section";
+    Fatal(getCtx()) << this << ": offset is outside the section";
   return partition_point(
       pieces, [=](SectionPiece p) { return p.inputOff <= offset; })[-1];
 }

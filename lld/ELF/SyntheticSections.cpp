@@ -150,7 +150,8 @@ MipsAbiFlagsSection<ELFT>::create(Ctx &ctx) {
     flags.ases |= s->ases;
     flags.flags1 |= s->flags1;
     flags.flags2 |= s->flags2;
-    flags.fp_abi = elf::getMipsFpAbiFlag(flags.fp_abi, s->fp_abi, filename);
+    flags.fp_abi =
+        elf::getMipsFpAbiFlag(ctx, flags.fp_abi, s->fp_abi, filename);
   };
 
   if (create)
@@ -2855,13 +2856,12 @@ readEntry(uint64_t &offset, const DWARFDebugNames::NameIndex &ni,
 }
 
 void DebugNamesBaseSection::parseDebugNames(
-    InputChunk &inputChunk, OutputChunk &chunk,
+    Ctx &ctx, InputChunk &inputChunk, OutputChunk &chunk,
     DWARFDataExtractor &namesExtractor, DataExtractor &strExtractor,
     function_ref<SmallVector<uint32_t, 0>(
         uint32_t numCus, const DWARFDebugNames::Header &,
         const DWARFDebugNames::DWARFDebugNamesOffsets &)>
         readOffsets) {
-  Ctx &ctx = elf::ctx;
   const LLDDWARFSection &namesSec = inputChunk.section;
   DenseMap<uint32_t, IndexEntry *> offsetMap;
   // Number of CUs seen in previous NameIndex sections within current chunk.
@@ -3215,7 +3215,7 @@ DebugNamesSection<ELFT>::DebugNamesSection(Ctx &ctx)
       Err(ctx) << dobj.getNamesSection().sec << Twine(": ") << std::move(e);
     }
     parseDebugNames(
-        inputChunk, chunk, namesExtractor, strExtractor,
+        ctx, inputChunk, chunk, namesExtractor, strExtractor,
         [&chunk, namesData = dobj.getNamesSection().Data.data()](
             uint32_t numCus, const DWARFDebugNames::Header &hdr,
             const DWARFDebugNames::DWARFDebugNamesOffsets &locs) {
@@ -3375,7 +3375,7 @@ readCuList(DWARFContext &dwarf) {
 }
 
 static SmallVector<GdbIndexSection::AddressEntry, 0>
-readAddressAreas(DWARFContext &dwarf, InputSection *sec) {
+readAddressAreas(Ctx &ctx, DWARFContext &dwarf, InputSection *sec) {
   SmallVector<GdbIndexSection::AddressEntry, 0> ret;
 
   uint32_t cuIdx = 0;
@@ -3408,7 +3408,7 @@ readAddressAreas(DWARFContext &dwarf, InputSection *sec) {
 
 template <class ELFT>
 static SmallVector<GdbIndexSection::NameAttrEntry, 0>
-readPubNamesAndTypes(const LLDDwarfObj<ELFT> &obj,
+readPubNamesAndTypes(Ctx &ctx, const LLDDwarfObj<ELFT> &obj,
                      const SmallVectorImpl<GdbIndexSection::CuEntry> &cus) {
   const LLDDWARFSection &pubNames = obj.getGnuPubnamesSection();
   const LLDDWARFSection &pubTypes = obj.getGnuPubtypesSection();
@@ -3563,8 +3563,9 @@ std::unique_ptr<GdbIndexSection> GdbIndexSection::create(Ctx &ctx) {
     // this only picks the last one. Other address ranges are lost.
     chunks[i].sec = dobj.getInfoSection();
     chunks[i].compilationUnits = readCuList(dwarf);
-    chunks[i].addressAreas = readAddressAreas(dwarf, chunks[i].sec);
-    nameAttrs[i] = readPubNamesAndTypes<ELFT>(dobj, chunks[i].compilationUnits);
+    chunks[i].addressAreas = readAddressAreas(ctx, dwarf, chunks[i].sec);
+    nameAttrs[i] =
+        readPubNamesAndTypes<ELFT>(ctx, dobj, chunks[i].compilationUnits);
   });
 
   auto ret = std::make_unique<GdbIndexSection>(ctx);
@@ -4364,7 +4365,7 @@ void PPC64LongBranchTargetSection::writeTo(uint8_t *buf) {
     // must be a local-call.
     write64(ctx, buf,
             sym->getVA(ctx, addend) +
-                getPPC64GlobalEntryToLocalEntryOffset(sym->stOther));
+                getPPC64GlobalEntryToLocalEntryOffset(ctx, sym->stOther));
     buf += 8;
   }
 }
