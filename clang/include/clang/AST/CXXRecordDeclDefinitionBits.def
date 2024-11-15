@@ -81,6 +81,9 @@ FIELD(IsStandardLayout, 1, NO_MERGE)
 ///   member.
 FIELD(IsCXX11StandardLayout, 1, NO_MERGE)
 
+/// True when the class has a virtual base class.
+FIELD(HasVBases, 1, NO_MERGE)
+
 /// True when any base class has any declared non-static data
 /// members or bit-fields.
 /// This is a helper bit of state used to implement IsStandardLayout more

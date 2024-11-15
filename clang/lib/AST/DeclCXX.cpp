@@ -77,10 +77,11 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
     : UserDeclaredConstructor(false), UserDeclaredSpecialMembers(0),
       Aggregate(true), PlainOldData(true), Empty(true), Polymorphic(false),
       Abstract(false), IsStandardLayout(true), IsCXX11StandardLayout(true),
-      HasBasesWithFields(false), HasBasesWithNonStaticDataMembers(false),
-      HasPrivateFields(false), HasProtectedFields(false),
-      HasPublicFields(false), HasMutableFields(false), HasVariantMembers(false),
-      HasOnlyCMembers(true), HasInitMethod(false), HasInClassInitializer(false),
+      HasVBases(false), HasBasesWithFields(false),
+      HasBasesWithNonStaticDataMembers(false), HasPrivateFields(false),
+      HasProtectedFields(false), HasPublicFields(false),
+      HasMutableFields(false), HasVariantMembers(false), HasOnlyCMembers(true),
+      HasInitMethod(false), HasInClassInitializer(false),
       HasUninitializedReferenceMember(false), HasUninitializedFields(false),
       HasInheritedConstructor(false), HasInheritedDefaultConstructor(false),
       HasInheritedAssignment(false),
@@ -316,6 +317,8 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
     }
 
     if (Base->isVirtual()) {
+      data().HasVBases = true;
+
       // Add this base if it's not already in the list.
       if (SeenVBaseTypes.insert(C.getCanonicalType(BaseType)).second)
         VBases.push_back(Base);
@@ -547,9 +550,9 @@ void CXXRecordDecl::addedClassSubobject(CXXRecordDecl *Subobj) {
     data().NeedOverloadResolutionForDestructor = true;
   }
 
-  // C++2a [dcl.constexpr]p4:
-  //   The definition of a constexpr destructor [shall] satisfy the
-  //   following requirement:
+  // C++20 [dcl.constexpr]p5:
+  //  The definition of a constexpr destructor whose function-body is not
+  //  = delete [shall] additionally satisfy the following requirement:
   //   -- for every subobject of class type or (possibly multi-dimensional)
   //      array thereof, that class type shall have a constexpr destructor
   if (!Subobj->hasConstexprDestructor())
@@ -1214,8 +1217,13 @@ void CXXRecordDecl::addedMember(Decl *D) {
             data().DefaultedCopyAssignmentIsDeleted = true;
           if (FieldRec->hasNonTrivialMoveAssignment())
             data().DefaultedMoveAssignmentIsDeleted = true;
-          if (FieldRec->hasNonTrivialDestructor())
+          if (FieldRec->hasNonTrivialDestructor()) {
             data().DefaultedDestructorIsDeleted = true;
+            // C++20 [dcl.constexpr]p5:
+            //   The definition of a constexpr destructor whose function-body is
+            //   [not = delete] shall additionally satisfy...
+            data().DefaultedDestructorIsConstexpr = true;
+          }
         }
 
         // For an anonymous union member, our overload resolution will perform
