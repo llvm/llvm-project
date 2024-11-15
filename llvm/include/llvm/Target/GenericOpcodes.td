@@ -1048,6 +1048,13 @@ def G_FATAN : GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Floating point arctangent of a value.
+def G_FATAN2 : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+}
+
 // Floating point hyperbolic cosine of a value.
 def G_FCOSH : GenericInstruction {
   let OutOperandList = (outs type0:$dst);

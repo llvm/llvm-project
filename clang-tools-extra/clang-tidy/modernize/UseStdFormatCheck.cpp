@@ -44,6 +44,7 @@ void UseStdFormatCheck::registerPPCallbacks(const SourceManager &SM,
                                             Preprocessor *PP,
                                             Preprocessor *ModuleExpanderPP) {
   IncludeInserter.registerPreprocessor(PP);
+  this->PP = PP;
 }
 
 void UseStdFormatCheck::registerMatchers(MatchFinder *Finder) {
@@ -75,9 +76,9 @@ void UseStdFormatCheck::check(const MatchFinder::MatchResult &Result) {
 
   utils::FormatStringConverter::Configuration ConverterConfig;
   ConverterConfig.StrictMode = StrictMode;
-  utils::FormatStringConverter Converter(Result.Context, StrFormat,
-                                         FormatArgOffset, ConverterConfig,
-                                         getLangOpts());
+  utils::FormatStringConverter Converter(
+      Result.Context, StrFormat, FormatArgOffset, ConverterConfig,
+      getLangOpts(), *Result.SourceManager, *PP);
   const Expr *StrFormatCall = StrFormat->getCallee();
   if (!Converter.canApply()) {
     diag(StrFormat->getBeginLoc(),

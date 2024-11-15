@@ -298,41 +298,20 @@ TEST_F(ConfigCompileTests, DiagnosticSuppression) {
                                    "unreachable-code", "unused-variable",
                                    "typecheck_bool_condition",
                                    "unexpected_friend", "warn_alloca"));
-  clang::DiagnosticsEngine DiagEngine(new DiagnosticIDs, nullptr,
-                                      new clang::IgnoringDiagConsumer);
-
-  using Diag = clang::Diagnostic;
-  {
-    auto D = DiagEngine.Report(diag::warn_unreachable);
-    EXPECT_TRUE(isDiagnosticSuppressed(
-        Diag{&DiagEngine, D}, Conf.Diagnostics.Suppress, LangOptions()));
-  }
+  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(
+      diag::warn_unreachable, Conf.Diagnostics.Suppress, LangOptions()));
   // Subcategory not respected/suppressed.
-  {
-    auto D = DiagEngine.Report(diag::warn_unreachable_break);
-    EXPECT_FALSE(isDiagnosticSuppressed(
-        Diag{&DiagEngine, D}, Conf.Diagnostics.Suppress, LangOptions()));
-  }
-  {
-    auto D = DiagEngine.Report(diag::warn_unused_variable);
-    EXPECT_TRUE(isDiagnosticSuppressed(
-        Diag{&DiagEngine, D}, Conf.Diagnostics.Suppress, LangOptions()));
-  }
-  {
-    auto D = DiagEngine.Report(diag::err_typecheck_bool_condition);
-    EXPECT_TRUE(isDiagnosticSuppressed(
-        Diag{&DiagEngine, D}, Conf.Diagnostics.Suppress, LangOptions()));
-  }
-  {
-    auto D = DiagEngine.Report(diag::err_unexpected_friend);
-    EXPECT_TRUE(isDiagnosticSuppressed(
-        Diag{&DiagEngine, D}, Conf.Diagnostics.Suppress, LangOptions()));
-  }
-  {
-    auto D = DiagEngine.Report(diag::warn_alloca);
-    EXPECT_TRUE(isDiagnosticSuppressed(
-        Diag{&DiagEngine, D}, Conf.Diagnostics.Suppress, LangOptions()));
-  }
+  EXPECT_FALSE(isBuiltinDiagnosticSuppressed(
+      diag::warn_unreachable_break, Conf.Diagnostics.Suppress, LangOptions()));
+  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(
+      diag::warn_unused_variable, Conf.Diagnostics.Suppress, LangOptions()));
+  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(diag::err_typecheck_bool_condition,
+                                            Conf.Diagnostics.Suppress,
+                                            LangOptions()));
+  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(
+      diag::err_unexpected_friend, Conf.Diagnostics.Suppress, LangOptions()));
+  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(
+      diag::warn_alloca, Conf.Diagnostics.Suppress, LangOptions()));
 
   Frag.Diagnostics.Suppress.emplace_back("*");
   EXPECT_TRUE(compileAndApply());

@@ -94,12 +94,6 @@ enum class PacketStatus {
 
 enum class ReplMode { Variable = 0, Command, Auto };
 
-/// The detected context of an expression based off the current repl mode.
-enum class ExpressionContext {
-  Variable = 0,
-  Command,
-};
-
 struct Variables {
   /// Variable_reference start index of permanent expandable variable.
   static constexpr int64_t PermanentVariableStartIndex = (1ll << 32);
@@ -245,12 +239,24 @@ struct DAP {
 
   void PopulateExceptionBreakpoints();
 
-  /// \return
-  ///   Attempt to determine if an expression is a variable expression or
-  ///   lldb command using a hueristic based on the first term of the
-  ///   expression.
-  ExpressionContext DetectExpressionContext(lldb::SBFrame frame,
-                                            std::string &expression);
+  /// Attempt to determine if an expression is a variable expression or
+  /// lldb command using a heuristic based on the first term of the
+  /// expression.
+  ///
+  /// \param[in] frame
+  ///     The frame, used as context to detect local variable names
+  /// \param[inout] expression
+  ///     The expression string. Might be modified by this function to
+  ///     remove the leading escape character.
+  /// \param[in] partial_expression
+  ///     Whether the provided `expression` is only a prefix of the
+  ///     final expression. If `true`, this function might return
+  ///     `ReplMode::Auto` to indicate that the expression could be
+  ///     either an expression or a statement, depending on the rest of
+  ///     the expression.
+  /// \return the expression mode
+  ReplMode DetectReplMode(lldb::SBFrame frame, std::string &expression,
+                          bool partial_expression);
 
   /// \return
   ///   \b false if a fatal error was found while executing these commands,

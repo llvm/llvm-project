@@ -434,7 +434,7 @@ mlir::SparseIterationTypeConverter::SparseIterationTypeConverter() {
 }
 
 void mlir::populateLowerSparseIterationToSCFPatterns(
-    TypeConverter &converter, RewritePatternSet &patterns) {
+    const TypeConverter &converter, RewritePatternSet &patterns) {
 
   IterateOp::getCanonicalizationPatterns(patterns, patterns.getContext());
   patterns.add<ExtractIterSpaceConverter, ExtractValOpConverter,

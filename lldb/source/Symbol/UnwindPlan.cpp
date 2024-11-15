@@ -187,6 +187,8 @@ operator==(const UnwindPlan::Row::FAValue &rhs) const {
         return !memcmp(m_value.expr.opcodes, rhs.m_value.expr.opcodes,
                        m_value.expr.length);
       break;
+    case isConstant:
+      return m_value.constant == rhs.m_value.constant;
     }
   }
   return false;
@@ -214,6 +216,8 @@ void UnwindPlan::Row::FAValue::Dump(Stream &s, const UnwindPlan *unwind_plan,
   case isRaSearch:
     s.Printf("RaSearch@SP%+d", m_value.ra_search_offset);
     break;
+  case isConstant:
+    s.Printf("0x%" PRIx64, m_value.constant);
   }
 }
 

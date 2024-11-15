@@ -2375,7 +2375,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     assert(Deleted);
     (void)Deleted;
   };
-  CtxProf.update(Updater, &Caller);
+  CtxProf.update(Updater, Caller);
   return Ret;
 }
 

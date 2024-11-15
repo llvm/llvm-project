@@ -2797,3 +2797,71 @@ if.then:
 if.else:
   ret i32 0
 }
+
+define i32 @fold_sub_and_into_andn(i32 %x) {
+; CHECK-LABEL: @fold_sub_and_into_andn(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[X:%.*]], 63
+; CHECK-NEXT:    [[AND:%.*]] = xor i32 [[TMP0]], 63
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+entry:
+  %sub = sub i32 63, %x
+  %and = and i32 %sub, 63
+  ret i32 %and
+}
+
+define i1 @fold_sub_and_into_andn_icmp(i32 %x) {
+; CHECK-LABEL: @fold_sub_and_into_andn_icmp(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[X:%.*]], 63
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP0]], 63
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %sub = sub i32 63, %x
+  %and = and i32 %sub, 63
+  %cmp = icmp eq i32 %and, 0
+  ret i1 %cmp
+}
+
+define i32 @fold_sub_and_into_andn_subset(i32 %x) {
+; CHECK-LABEL: @fold_sub_and_into_andn_subset(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[X:%.*]], 31
+; CHECK-NEXT:    [[AND:%.*]] = xor i32 [[TMP0]], 31
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+entry:
+  %sub = sub i32 63, %x
+  %and = and i32 %sub, 31
+  ret i32 %and
+}
+
+; Negative tests
+
+define i32 @fold_sub_and_into_andn_nonmask(i32 %x, i32 %y) {
+; CHECK-LABEL: @fold_sub_and_into_andn_nonmask(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], 63
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+entry:
+  %sub = sub i32 %y, %x
+  %and = and i32 %sub, 63
+  ret i32 %and
+}
+
+define i32 @fold_sub_and_into_andn_superset(i32 %x) {
+; CHECK-LABEL: @fold_sub_and_into_andn_superset(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 63, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], 127
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+entry:
+  %sub = sub i32 63, %x
+  %and = and i32 %sub, 127
+  ret i32 %and
+}

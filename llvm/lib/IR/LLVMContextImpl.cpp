@@ -244,6 +244,16 @@ void LLVMContextImpl::getSyncScopeNames(
     SSNs[SSE.second] = SSE.first();
 }
 
+std::optional<StringRef>
+LLVMContextImpl::getSyncScopeName(SyncScope::ID Id) const {
+  for (const auto &SSE : SSC) {
+    if (SSE.second != Id)
+      continue;
+    return SSE.first();
+  }
+  return std::nullopt;
+}
+
 /// Gets the OptPassGate for this LLVMContextImpl, which defaults to the
 /// singleton OptBisect if not explicitly set.
 OptPassGate &LLVMContextImpl::getOptPassGate() const {

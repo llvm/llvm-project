@@ -2465,12 +2465,17 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     ctx.symtab.addAbsolute("__arm64x_extra_rfe_table_size", 0);
     ctx.symtab.addAbsolute("__arm64x_redirection_metadata", 0);
     ctx.symtab.addAbsolute("__arm64x_redirection_metadata_count", 0);
+    ctx.symtab.addAbsolute("__hybrid_auxiliary_delayload_iat_copy", 0);
+    ctx.symtab.addAbsolute("__hybrid_auxiliary_delayload_iat", 0);
     ctx.symtab.addAbsolute("__hybrid_auxiliary_iat", 0);
     ctx.symtab.addAbsolute("__hybrid_auxiliary_iat_copy", 0);
     ctx.symtab.addAbsolute("__hybrid_code_map", 0);
     ctx.symtab.addAbsolute("__hybrid_code_map_count", 0);
+    ctx.symtab.addAbsolute("__hybrid_image_info_bitfield", 0);
     ctx.symtab.addAbsolute("__x64_code_ranges_to_entry_points", 0);
     ctx.symtab.addAbsolute("__x64_code_ranges_to_entry_points_count", 0);
+    ctx.symtab.addSynthetic("__guard_check_icall_a64n_fptr", nullptr);
+    ctx.symtab.addSynthetic("__arm64x_native_entrypoint", nullptr);
   }
 
   if (config->pseudoRelocs) {
@@ -2623,7 +2628,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     createECExportThunks();
 
   // Resolve remaining undefined symbols and warn about imported locals.
-  ctx.symtab.resolveRemainingUndefines();
+  while (ctx.symtab.resolveRemainingUndefines())
+    run();
+
   if (errorCount())
     return;
 

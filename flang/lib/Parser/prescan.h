@@ -48,6 +48,10 @@ public:
   Preprocessor &preprocessor() { return preprocessor_; }
   common::LanguageFeatureControl &features() { return features_; }
 
+  Prescanner &set_expandIncludeLines(bool yes) {
+    expandIncludeLines_ = yes;
+    return *this;
+  }
   Prescanner &set_fixedForm(bool yes) {
     inFixedForm_ = yes;
     return *this;
@@ -209,6 +213,7 @@ private:
   Preprocessor &preprocessor_;
   AllSources &allSources_;
   common::LanguageFeatureControl features_;
+  bool expandIncludeLines_{true};
   bool isNestedInIncludeDirective_{false};
   bool backslashFreeFormContinuation_{false};
   bool inFixedForm_{false};

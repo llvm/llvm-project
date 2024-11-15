@@ -1,4 +1,11 @@
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=CHECK-SPIRV
+
+// XFAIL: *
+// This expectedly fails because create.handle is no longer invoked
+// from StructuredBuffer constructor and the replacement has not been
+// implemented yet. This test should be updated to expect
+// dx.create.handleFromBinding as part of issue #105076.
 
 StructuredBuffer<float> Buf;
 

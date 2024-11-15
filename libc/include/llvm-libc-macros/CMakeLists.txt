@@ -110,6 +110,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  malloc_macros
+  HDR
+    malloc-macros.h
+)
+
+add_macro_header(
   math_macros
   HDR
     math-macros.h

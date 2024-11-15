@@ -41,8 +41,6 @@ llvm::StringRef Attributes::getIntExtensionAttrName() const {
 static const llvm::fltSemantics &floatToSemantics(const KindMapping &kindMap,
                                                   mlir::Type type) {
   assert(isa_real(type));
-  if (auto ty = mlir::dyn_cast<fir::RealType>(type))
-    return kindMap.getFloatSemantics(ty.getFKind());
   return mlir::cast<mlir::FloatType>(type).getFloatSemantics();
 }
 
@@ -356,7 +354,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
           else
             current = ArgClass::Integer;
         })
-        .template Case<mlir::FloatType, fir::RealType>([&](mlir::Type floatTy) {
+        .template Case<mlir::FloatType>([&](mlir::Type floatTy) {
           const auto *sem = &floatToSemantics(kindMap, floatTy);
           if (sem == &llvm::APFloat::x87DoubleExtended()) {
             Lo = ArgClass::X87;
@@ -368,7 +366,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
             current = ArgClass::SSE;
           }
         })
-        .template Case<fir::ComplexType>([&](fir::ComplexType cmplx) {
+        .template Case<mlir::ComplexType>([&](mlir::ComplexType cmplx) {
           const auto *sem = &floatToSemantics(kindMap, cmplx.getElementType());
           if (sem == &llvm::APFloat::x87DoubleExtended()) {
             current = ArgClass::ComplexX87;
@@ -540,9 +538,16 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
     if (typeList.size() != 1)
       return {};
     mlir::Type fieldType = typeList[0].second;
-    if (mlir::isa<mlir::FloatType, mlir::IntegerType, fir::RealType,
-                  fir::CharacterType, fir::LogicalType>(fieldType))
+    if (mlir::isa<mlir::FloatType, mlir::IntegerType, fir::LogicalType>(
+            fieldType))
       return fieldType;
+    if (mlir::isa<fir::CharacterType>(fieldType)) {
+      // Only CHARACTER(1) are expected in BIND(C) contexts, which is the only
+      // contexts where derived type may be passed in registers.
+      assert(mlir::cast<fir::CharacterType>(fieldType).getLen() == 1 &&
+             "fir.type value arg character components must have length 1");
+      return fieldType;
+    }
     // Complex field that needs to be split, or array.
     return {};
   }

@@ -114,7 +114,9 @@ struct VPlanTransforms {
   // widening its memory instructions with a single VPInterleaveRecipe at its
   // insertion point.
   static void createInterleaveGroups(
-      const SmallPtrSetImpl<const InterleaveGroup<Instruction> *> &InterleaveGroups,
+      VPlan &Plan,
+      const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
+          &InterleaveGroups,
       VPRecipeBuilder &RecipeBuilder, bool ScalarEpilogueAllowed);
 
   /// Remove dead recipes from \p Plan.

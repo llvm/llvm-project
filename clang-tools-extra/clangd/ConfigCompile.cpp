@@ -622,6 +622,21 @@ struct FragmentCompiler {
             C.Completion.AllScopes = AllScopes;
           });
     }
+    if (F.ArgumentLists) {
+      if (auto Val =
+              compileEnum<Config::ArgumentListsPolicy>("ArgumentLists",
+                                                       *F.ArgumentLists)
+                  .map("None", Config::ArgumentListsPolicy::None)
+                  .map("OpenDelimiter",
+                       Config::ArgumentListsPolicy::OpenDelimiter)
+                  .map("Delimiters", Config::ArgumentListsPolicy::Delimiters)
+                  .map("FullPlaceholders",
+                       Config::ArgumentListsPolicy::FullPlaceholders)
+                  .value())
+        Out.Apply.push_back([Val](const Params &, Config &C) {
+          C.Completion.ArgumentLists = *Val;
+        });
+    }
   }
 
   void compile(Fragment::HoverBlock &&F) {

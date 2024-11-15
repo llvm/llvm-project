@@ -501,7 +501,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(
       return nullptr;
     }
     CombOldVGPR = getRegSubRegPair(*Src1);
-    auto MovDst = TII->getNamedOperand(MovMI, AMDGPU::OpName::vdst);
+    auto *MovDst = TII->getNamedOperand(MovMI, AMDGPU::OpName::vdst);
     const TargetRegisterClass *RC = MRI->getRegClass(MovDst->getReg());
     if (!isOfRegClass(CombOldVGPR, *RC, *MRI)) {
       LLVM_DEBUG(dbgs() << "  failed: src1 has wrong register class\n");

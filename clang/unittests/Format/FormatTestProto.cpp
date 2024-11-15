@@ -190,6 +190,7 @@ TEST_F(FormatTestProto, MessageFieldAttributes) {
                "    aaaaaaaaaaaaaaaa: true\n"
                "  }\n"
                "];");
+  verifyFormat("repeated A a = 1 [(annotation).int32.repeated.test = true];");
 }
 
 TEST_F(FormatTestProto, DoesntWrapFileOptions) {

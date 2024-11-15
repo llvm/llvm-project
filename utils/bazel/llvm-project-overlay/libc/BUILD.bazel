@@ -148,11 +148,19 @@ libc_support_library(
 libc_support_library(
     name = "hdr_stdio_macros",
     hdrs = ["hdr/stdio_macros.h"],
+    deps = [
+        ":hdr_stdio_overlay",
+    ],
 )
 
 libc_support_library(
     name = "hdr_limits_macros",
     hdrs = ["hdr/limits_macros.h"],
+)
+
+libc_support_library(
+    name = "hdr_stdio_overlay",
+    hdrs = ["hdr/stdio_overlay.h"],
 )
 
 ############################ Type Proxy Header Files ###########################
@@ -210,11 +218,17 @@ libc_support_library(
 libc_support_library(
     name = "types_off_t",
     hdrs = ["hdr/types/off_t.h"],
+    deps = [
+        ":hdr_stdio_overlay",
+    ],
 )
 
 libc_support_library(
     name = "types_FILE",
     hdrs = ["hdr/types/FILE.h"],
+    deps = [
+        ":hdr_stdio_overlay",
+    ],
 )
 
 libc_support_library(
@@ -749,6 +763,7 @@ libc_support_library(
         ":__support_threads_mutex",
         ":errno",
         ":hdr_stdio_macros",
+        ":hdr_stdio_overlay",
         ":types_off_t",
     ],
 )
@@ -761,6 +776,7 @@ libc_support_library(
         ":__support_error_or",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_stdio_overlay",
         ":types_off_t",
     ],
 )
@@ -3893,9 +3909,9 @@ libc_support_library(
         ":__support_ctype_utils",
         ":__support_fputil_fp_bits",
         ":__support_str_to_integer",
+        ":errno",
         ":printf_config",
         ":printf_core_structs",
-        ":errno"
     ],
 )
 
@@ -4104,6 +4120,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_stdio_overlay",
         ":types_FILE",
     ],
 )

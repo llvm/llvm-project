@@ -386,6 +386,7 @@ public:
     PointerWidth = PointerAlign = 64;
     SizeType = TargetInfo::UnsignedLong;
     PtrDiffType = IntPtrType = TargetInfo::SignedLong;
+    AddrSpaceMap = &SPIRDefIsGenMap;
 
     resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-"
                     "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1-P4-A0");
@@ -417,6 +418,10 @@ public:
                         MacroBuilder &Builder) const override;
 
   void setAuxTarget(const TargetInfo *Aux) override;
+
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override {
+    TargetInfo::adjust(Diags, Opts);
+  }
 
   bool hasInt128Type() const override { return TargetInfo::hasInt128Type(); }
 };
