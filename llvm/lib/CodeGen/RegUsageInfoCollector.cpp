@@ -48,7 +48,7 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<PhysicalRegisterUsageInfo>();
+    AU.addRequired<PhysicalRegisterUsageInfoWrapperLegacy>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -68,7 +68,7 @@ char RegUsageInfoCollector::ID = 0;
 
 INITIALIZE_PASS_BEGIN(RegUsageInfoCollector, "RegUsageInfoCollector",
                       "Register Usage Information Collector", false, false)
-INITIALIZE_PASS_DEPENDENCY(PhysicalRegisterUsageInfo)
+INITIALIZE_PASS_DEPENDENCY(PhysicalRegisterUsageInfoWrapperLegacy)
 INITIALIZE_PASS_END(RegUsageInfoCollector, "RegUsageInfoCollector",
                     "Register Usage Information Collector", false, false)
 
@@ -129,7 +129,8 @@ bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
 
   const Function &F = MF.getFunction();
 
-  PhysicalRegisterUsageInfo &PRUI = getAnalysis<PhysicalRegisterUsageInfo>();
+  PhysicalRegisterUsageInfo &PRUI =
+      getAnalysis<PhysicalRegisterUsageInfoWrapperLegacy>().getPRUI();
   PRUI.setTargetMachine(TM);
 
   LLVM_DEBUG(dbgs() << "Clobbered Registers: ");
