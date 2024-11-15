@@ -847,6 +847,9 @@ AST Matchers
 - Ensure ``hasName`` matches template specializations across inline namespaces,
   making `matchesNodeFullSlow` and `matchesNodeFullFast` consistent.
 
+- The examples in the AST matcher reference are now tested and additional
+  examples and descriptions were added.
+
 clang-format
 ------------
 

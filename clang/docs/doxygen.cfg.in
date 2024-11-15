@@ -220,7 +220,14 @@ TAB_SIZE               = 2
 # "Side Effects:". You can put \n's in the value part of an alias to insert
 # newlines.
 
-ALIASES                =
+ALIASES                += compile_args{1}="Compiled with <tt>\1</tt>.\n"
+ALIASES                += matcher{1}="<tt>\1</tt>"
+ALIASES                += matcher{2$}="<tt>\2</tt>"
+ALIASES                += match{1}="<tt>\1</tt>"
+ALIASES                += match{2$}="<tt>\2</tt>"
+ALIASES                += nomatch{1}="<tt>\1</tt>"
+ALIASES                += header{1}="\code"
+ALIASES                += endheader="\endcode"
 
 # This tag can be used to specify a number of word-keyword mappings (TCL only).
 # A mapping has the form "name=value". For example adding "class=itcl::class"
