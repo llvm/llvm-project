@@ -2,14 +2,13 @@
 
 ; RUN: llc -march=hexagon -verify-machineinstrs < %s | FileCheck %s
 
-target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
 target triple = "hexagon"
 
 ; CHECK-LABEL: volatile_loads:
 ; CHECK: r{{[0-9]+}} = memw(r{{[0-9]+}}+#0)
 ; CHECK: r{{[0-9]+}} = memw(r{{[0-9]+}}+#4)
 ; CHECK-NOT: r{{[0-9]+}} = memd(r{{[0-9]+}}+#0)
-define dso_local void @volatile_loads(ptr noundef %dst, ptr noundef %src0) local_unnamed_addr #0 {
+define dso_local void @volatile_loads(ptr noundef %dst, ptr noundef %src0) local_unnamed_addr {
 entry:
   %0 = load volatile i32, ptr %src0, align 8
   %src1 = getelementptr i8, ptr %src0, i32 4
@@ -26,12 +25,10 @@ entry:
 ; CHECK: memw(r{{[0-9]+}}+#0) = r{{[0-9]+}}
 ; CHECK: memw(r{{[0-9]+}}+#4) = r{{[0-9]+}}
 ; CHECK-NOT: memd(r{{[0-9]+}}+#0) = r{{[0-9]+}}
-define dso_local void @volatile_stores(ptr noundef %dst0, i32 %a, i32 %b) local_unnamed_addr #0 {
+define dso_local void @volatile_stores(ptr noundef %dst0, i32 %a, i32 %b) local_unnamed_addr {
 entry:
   store volatile i32 %a, ptr %dst0, align 8
   %dst1 = getelementptr i8, ptr %dst0, i32 4
   store volatile i32 %b, ptr %dst1, align 4
   ret void
 }
-
-attributes #0 = { nounwind optsize "frame-pointer"="all" "no-jump-tables"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv73" "target-features"="+v73,-long-calls" }
