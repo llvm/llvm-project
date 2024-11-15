@@ -183,10 +183,6 @@ static void emitRISCVProcs(const RecordKeeper &RK, raw_ostream &OS) {
       return Feature->getValueAsString("Name") == "unaligned-vector-mem";
     });
 
-    bool IsRV64 = any_of(Features, [&](auto &Feature) {
-      return Feature->getValueAsString("Name") == "64bit";
-    });
-
     OS << "PROC(" << Rec->getName() << ", {\"" << Rec->getValueAsString("Name")
        << "\"}, {\"";
 
@@ -205,8 +201,8 @@ static void emitRISCVProcs(const RecordKeeper &RK, raw_ostream &OS) {
     OS << "\"}, " << FastScalarUnalignedAccess << ", "
        << FastVectorUnalignedAccess;
     OS << ", " << format_hex(MVendorID, 10);
-    OS << ", " << format_hex(MArchID, IsRV64 ? 18 : 10);
-    OS << ", " << format_hex(MImpID, IsRV64 ? 18 : 10);
+    OS << ", " << format_hex(MArchID, 18);
+    OS << ", " << format_hex(MImpID, 18);
     OS << ")\n";
   }
   OS << "\n#undef PROC\n";
