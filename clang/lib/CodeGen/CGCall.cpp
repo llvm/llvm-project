@@ -5399,8 +5399,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         if (FirstIRArg < IRFuncTy->getNumParams() &&
             V->getType() != IRFuncTy->getParamType(FirstIRArg)) {
           assert(V->getType()->isPointerTy() && "Only pointers can mismatch!");
-          auto FormalAS =
-            CallInfo.arguments()[ArgNo].type.getQualifiers().getAddressSpace();
+          auto FormalAS = CallInfo.arguments()[ArgNo]
+                              .type.getQualifiers()
+                              .getAddressSpace();
           auto ActualAS = I->Ty.getAddressSpace();
           V = getTargetHooks().performAddrSpaceCast(
               *this, V, ActualAS, FormalAS, IRFuncTy->getParamType(FirstIRArg));
