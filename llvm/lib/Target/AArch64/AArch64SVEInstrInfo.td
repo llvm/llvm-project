@@ -3906,7 +3906,7 @@ let Predicates = [HasSVE2orSME] in {
   defm WHILERW_PXX : sve2_int_while_rr<0b1, "whilerw", "int_aarch64_sve_whilerw">;
 } // End HasSVE2orSME
 
-let Predicates = [HasSVE2, HasSVEAES] in {
+let Predicates = [HasSVEAES, HasNonStreamingSVE2orSSVE_AES] in {
   // SVE2 crypto destructive binary operations
   defm AESE_ZZZ_B : sve2_crypto_des_bin_op<0b00, "aese", ZPR8, int_aarch64_sve_aese, nxv16i8>;
   defm AESD_ZZZ_B : sve2_crypto_des_bin_op<0b01, "aesd", ZPR8, int_aarch64_sve_aesd, nxv16i8>;
@@ -3941,7 +3941,7 @@ let Predicates = [HasSVE2BitPerm] in {
   defm BGRP_ZZZ : sve2_misc_bitwise<0b1110, "bgrp", int_aarch64_sve_bgrp_x>;
 } // End HasSVE2BitPerm
 
-let Predicates = [HasSVEAES2, HasSVE2p1orSSVE_AES] in {
+let Predicates = [HasSVEAES2, HasNonStreamingSVE2p1orSSVE_AES] in {
   // SVE_AES2 multi-vector instructions (x2)
   def AESE_2ZZI_B    : sve_crypto_binary_multi2<0b000, "aese">;
   def AESD_2ZZI_B    : sve_crypto_binary_multi2<0b010, "aesd">;
@@ -3956,7 +3956,7 @@ let Predicates = [HasSVEAES2, HasSVE2p1orSSVE_AES] in {
   // SVE_AES2 multi-vector polynomial multiply
   def PMLAL_2ZZZ_Q : sve_crypto_pmlal_multi<"pmlal">;
   def PMULL_2ZZZ_Q : sve_crypto_pmull_multi<"pmull">;
-} // End HasSVEAES2, HasSVE2p1orSSVE_AES
+}
 
 //===----------------------------------------------------------------------===//
 // SME or SVE2.1 instructions
