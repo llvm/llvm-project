@@ -1606,8 +1606,7 @@ CIRGenFunction::getAddressOfBaseClass(Address Value,
       VBase, BaseValueTy, not NullCheckValue);
 
   // Cast to the destination type.
-  if (VBase)
-    Value = Value.withElementType(BaseValueTy);
+  Value = Value.withElementType(BaseValueTy);
 
   return Value;
 }
