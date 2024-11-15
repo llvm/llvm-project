@@ -41,7 +41,6 @@ all_categories = {
     "std-module": "Tests related to importing the std module",
     "stresstest": "Tests related to stressing lldb limits",
     "watchpoint": "Watchpoint-related tests",
-    "windows": "Windows-related tests",
 }
 
 
