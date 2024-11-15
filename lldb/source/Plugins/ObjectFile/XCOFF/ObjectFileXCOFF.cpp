@@ -191,6 +191,7 @@ bool ObjectFileXCOFF::ParseHeader() {
 bool ObjectFileXCOFF::ParseXCOFFHeader(lldb_private::DataExtractor &data,
                                        lldb::offset_t *offset_ptr,
                                        xcoff_header_t &xcoff_header) {
+
   // FIXME: data.ValidOffsetForDataOfSize
   xcoff_header.magic = data.GetU16(offset_ptr);
   xcoff_header.nsects = data.GetU16(offset_ptr);
@@ -199,12 +200,14 @@ bool ObjectFileXCOFF::ParseXCOFFHeader(lldb_private::DataExtractor &data,
   xcoff_header.auxhdrsize = data.GetU16(offset_ptr);
   xcoff_header.flags = data.GetU16(offset_ptr);
   xcoff_header.nsyms = data.GetU32(offset_ptr);
+  
   return true;
 }
 
 bool ObjectFileXCOFF::ParseXCOFFOptionalHeader(
     lldb_private::DataExtractor &data, lldb::offset_t *offset_ptr) {
   lldb::offset_t init_offset = *offset_ptr;
+
   // FIXME: data.ValidOffsetForDataOfSize
   m_xcoff_aux_header.AuxMagic = data.GetU16(offset_ptr);
   m_xcoff_aux_header.Version = data.GetU16(offset_ptr);
@@ -236,9 +239,11 @@ bool ObjectFileXCOFF::ParseXCOFFOptionalHeader(
   m_xcoff_aux_header.SecNumOfTData = data.GetU16(offset_ptr);
   m_xcoff_aux_header.SecNumOfTBSS = data.GetU16(offset_ptr);
   m_xcoff_aux_header.XCOFF64Flag = data.GetU16(offset_ptr);
+  
   lldb::offset_t last_offset = *offset_ptr;
   if ((last_offset - init_offset) < m_xcoff_header.auxhdrsize)
     *offset_ptr += (m_xcoff_header.auxhdrsize - (last_offset - init_offset));
+  
   return true;
 }
 
