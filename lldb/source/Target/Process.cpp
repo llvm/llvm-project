@@ -6185,11 +6185,9 @@ Status Process::GetMemoryRegionInfo(lldb::addr_t load_addr,
   if (const lldb::ABISP &abi = GetABI())
     load_addr = abi->FixAnyAddress(load_addr);
   Status error = DoGetMemoryRegionInfo(load_addr, range_info);
-  // Reject a region of {0,0} or {0,UINT64_MAX}, neither are
-  // meaningful responses.
-  if (error.Success() && range_info.GetRange().GetRangeBase() == 0 &&
-      (range_info.GetRange().GetByteSize() == 0 ||
-       range_info.GetRange().GetByteSize() == UINT64_MAX))
+  // Reject a region that does not contain the requested address.
+  if (error.Success() && (range_info.GetRange().GetRangeBase() < load_addr ||
+                          range_info.GetRange().GetRangeEnd() <= load_addr))
     error =
         Status::FromErrorString("Invalid memory region");
 
