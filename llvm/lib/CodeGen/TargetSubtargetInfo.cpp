@@ -45,6 +45,8 @@ bool TargetSubtargetInfo::enableRALocalReassignment(
   return true;
 }
 
+bool TargetSubtargetInfo::doCSRSavesInRA() const { return false; }
+
 bool TargetSubtargetInfo::enablePostRAScheduler() const {
   return getSchedModel().PostRAScheduler;
 }

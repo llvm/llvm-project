@@ -1614,6 +1614,10 @@ let isBarrier = 1, isReturn = 1, isTerminator = 1 in
 def PseudoRET : Pseudo<(outs), (ins), [(riscv_ret_glue)]>,
                 PseudoInstExpansion<(JALR X0, X1, 0)>;
 
+let isBarrier = 1, isReturn = 1, isTerminator = 1, isMeta = 1, hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
+def UnreachableRET : Pseudo<(outs), (ins), []>;
+
+
 // PseudoTAIL is a pseudo instruction similar to PseudoCALL and will eventually
 // expand to auipc and jalr while encoding.
 // Define AsmString to print "tail" when compile with -S flag.

@@ -754,6 +754,14 @@ RISCVRegisterInfo::getCallPreservedMask(const MachineFunction & MF,
 const TargetRegisterClass *
 RISCVRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
                                              const MachineFunction &) const {
+  if (RC == &RISCV::GPRX1RegClass)
+    return &RISCV::GPRRegClass;
+  if (RC == &RISCV::GPRCRegClass)
+    return &RISCV::GPRRegClass;
+  if (RC == &RISCV::SR07RegClass)
+    return &RISCV::GPRRegClass;
+  if (RC == &RISCV::GPRJALRRegClass)
+    return &RISCV::GPRRegClass;
   if (RC == &RISCV::VMV0RegClass)
     return &RISCV::VRRegClass;
   if (RC == &RISCV::VRNoV0RegClass)

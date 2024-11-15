@@ -292,6 +292,8 @@ public:
 
   bool useConstantPoolForLargeInts() const;
 
+  bool doCSRSavesInRA() const override;
+
   // Maximum cost used for building integers, integers will be put into constant
   // pool if exceeded.
   unsigned getMaxBuildIntsCost() const;

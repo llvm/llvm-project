@@ -261,15 +261,21 @@ namespace {
     void HoistOutOfLoop(MachineDomTreeNode *HeaderN, MachineLoop *CurLoop,
                         MachineBasicBlock *CurPreheader);
 
-    void InitRegPressure(MachineBasicBlock *BB);
+    void InitRegPressure(MachineBasicBlock *BB, const MachineLoop *Loop);
 
     SmallDenseMap<unsigned, int> calcRegisterCost(const MachineInstr *MI,
                                                   bool ConsiderSeen,
-                                                  bool ConsiderUnseenAsDef);
+                                                  bool ConsiderUnseenAsDef,
+                                                  bool IgnoreDefs = false);
 
+    bool allDefsAreOnlyUsedOutsideOfTheLoop(const MachineInstr &MI,
+                                            const MachineLoop *Loop);
     void UpdateRegPressure(const MachineInstr *MI,
-                           bool ConsiderUnseenAsDef = false);
+                           bool ConsiderUnseenAsDef = false,
+                           bool IgnoreDefs = false);
 
+    void UpdateRegPressureForUsesOnly(const MachineInstr *MI,
+                                      bool ConsiderUnseenAsDef = false);
     MachineInstr *ExtractHoistableLoad(MachineInstr *MI, MachineLoop *CurLoop);
 
     MachineInstr *LookForDuplicate(const MachineInstr *MI,
@@ -883,7 +889,7 @@ void MachineLICMImpl::HoistOutOfLoop(MachineDomTreeNode *HeaderN,
   // Compute registers which are livein into the loop headers.
   RegSeen.clear();
   BackTrace.clear();
-  InitRegPressure(Preheader);
+  InitRegPressure(Preheader, CurLoop);
 
   // Now perform LICM.
   for (MachineDomTreeNode *Node : Scopes) {
@@ -933,7 +939,8 @@ static bool isOperandKill(const MachineOperand &MO, MachineRegisterInfo *MRI) {
 /// Find all virtual register references that are liveout of the preheader to
 /// initialize the starting "register pressure". Note this does not count live
 /// through (livein but not used) registers.
-void MachineLICMImpl::InitRegPressure(MachineBasicBlock *BB) {
+void MachineLICMImpl::InitRegPressure(MachineBasicBlock *BB,
+                                      const MachineLoop *Loop) {
   std::fill(RegPressure.begin(), RegPressure.end(), 0);
 
   // If the preheader has only a single predecessor and it ends with a
@@ -944,17 +951,34 @@ void MachineLICMImpl::InitRegPressure(MachineBasicBlock *BB) {
     MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
     SmallVector<MachineOperand, 4> Cond;
     if (!TII->analyzeBranch(*BB, TBB, FBB, Cond, false) && Cond.empty())
-      InitRegPressure(*BB->pred_begin());
+      InitRegPressure(*BB->pred_begin(), Loop);
   }
 
-  for (const MachineInstr &MI : *BB)
-    UpdateRegPressure(&MI, /*ConsiderUnseenAsDef=*/true);
+  for (const MachineInstr &MI : *BB) {
+    bool IgnoreDefs = allDefsAreOnlyUsedOutsideOfTheLoop(MI, Loop);
+    UpdateRegPressure(&MI, /*ConsiderUnseenAsDef=*/true, IgnoreDefs);
+  }
+}
+
+bool MachineLICMImpl::allDefsAreOnlyUsedOutsideOfTheLoop(
+    const MachineInstr &MI, const MachineLoop *Loop) {
+  for (const MachineOperand DefMO : MI.all_defs()) {
+    if (!DefMO.isReg())
+      continue;
+    for (const MachineInstr &UseMI : MRI->use_instructions(DefMO.getReg())) {
+      if (Loop->contains(UseMI.getParent()))
+        return false;
+    }
+  }
+  return true;
 }
 
 /// Update estimate of register pressure after the specified instruction.
 void MachineLICMImpl::UpdateRegPressure(const MachineInstr *MI,
-                                        bool ConsiderUnseenAsDef) {
-  auto Cost = calcRegisterCost(MI, /*ConsiderSeen=*/true, ConsiderUnseenAsDef);
+                                        bool ConsiderUnseenAsDef,
+                                        bool IgnoreDefs) {
+  auto Cost = calcRegisterCost(MI, /*ConsiderSeen=*/true, ConsiderUnseenAsDef,
+                               IgnoreDefs);
   for (const auto &RPIdAndCost : Cost) {
     unsigned Class = RPIdAndCost.first;
     if (static_cast<int>(RegPressure[Class]) < -RPIdAndCost.second)
@@ -972,7 +996,7 @@ void MachineLICMImpl::UpdateRegPressure(const MachineInstr *MI,
 /// FIXME: Figure out a way to consider 'RegSeen' from all code paths.
 SmallDenseMap<unsigned, int>
 MachineLICMImpl::calcRegisterCost(const MachineInstr *MI, bool ConsiderSeen,
-                                  bool ConsiderUnseenAsDef) {
+                                  bool ConsiderUnseenAsDef, bool IgnoreDefs) {
   SmallDenseMap<unsigned, int> Cost;
   if (MI->isImplicitDef())
     return Cost;
@@ -990,7 +1014,7 @@ MachineLICMImpl::calcRegisterCost(const MachineInstr *MI, bool ConsiderSeen,
 
     RegClassWeight W = TRI->getRegClassWeight(RC);
     int RCCost = 0;
-    if (MO.isDef())
+    if (MO.isDef() && !IgnoreDefs)
       RCCost = W.RegWeight;
     else {
       bool isKill = isOperandKill(MO, MRI);

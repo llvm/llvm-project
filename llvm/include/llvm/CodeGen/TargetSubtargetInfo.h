@@ -327,6 +327,8 @@ public:
     return false;
   }
 
+  virtual bool doCSRSavesInRA() const;
+
   /// Classify a global function reference. This mainly used to fetch target
   /// special flags for lowering a function address. For example mark a function
   /// call should be plt or pc-related addressing.

@@ -43,3 +43,23 @@ void RISCVMachineFunctionInfo::addSExt32Register(Register Reg) {
 bool RISCVMachineFunctionInfo::isSExt32Register(Register Reg) const {
   return is_contained(SExt32Registers, Reg);
 }
+
+void RISCVMachineFunctionInfo::recordCFIInfo(MachineInstr *MI, int Reg,
+                                             int FrameReg, int64_t Offset) {
+  assert(Reg >= 0 && "Negative dwarf reg number!");
+  CFIInfoMap[MI] = std::make_tuple(Reg, FrameReg, Offset);
+}
+
+bool RISCVMachineFunctionInfo::getCFIInfo(MachineInstr *MI, int &Reg,
+                                          int &FrameReg, int64_t &Offset) {
+  auto Found = CFIInfoMap.find(MI);
+  if (Found == CFIInfoMap.end()) {
+    return false;
+  }
+  Reg = get<0>(Found->second);
+  FrameReg = get<1>(Found->second);
+  assert(Reg >= 0 && "Negative dwarf reg number!");
+  assert(FrameReg >= 0 && "Negative dwarf reg number!");
+  Offset = get<2>(Found->second);
+  return true;
+}
