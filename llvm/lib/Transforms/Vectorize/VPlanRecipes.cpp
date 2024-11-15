@@ -2284,16 +2284,15 @@ InstructionCost VPMulAccRecipe::computeCost(ElementCount VF,
   if (isExtended()) {
     auto *SrcTy = cast<VectorType>(
         ToVectorTy(Ctx.Types.inferScalarType(getVecOp0()), VF));
-    auto *DestTy = cast<VectorType>(ToVectorTy(getResultType(), VF));
     TTI::CastContextHint CCH0 =
         computeCCH(getVecOp0()->getDefiningRecipe(), VF);
     ExtendedCost = Ctx.TTI.getCastInstrCost(
-        Ext0Instr->getOpcode(), DestTy, SrcTy, CCH0, TTI::TCK_RecipThroughput,
+        Ext0Instr->getOpcode(), VectorTy, SrcTy, CCH0, TTI::TCK_RecipThroughput,
         dyn_cast_if_present<Instruction>(getExt0Instr()));
     TTI::CastContextHint CCH1 =
         computeCCH(getVecOp0()->getDefiningRecipe(), VF);
     ExtendedCost += Ctx.TTI.getCastInstrCost(
-        Ext1Instr->getOpcode(), DestTy, SrcTy, CCH1, TTI::TCK_RecipThroughput,
+        Ext1Instr->getOpcode(), VectorTy, SrcTy, CCH1, TTI::TCK_RecipThroughput,
         dyn_cast_if_present<Instruction>(getExt1Instr()));
   }
 
@@ -2411,6 +2410,8 @@ void VPExtendedReductionRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPMulAccRecipe::print(raw_ostream &O, const Twine &Indent,
                            VPSlotTracker &SlotTracker) const {
   const RecurrenceDescriptor &RdxDesc = getRecurrenceDescriptor();
+  Type *RedTy = RdxDesc.getRecurrenceType();
+
   O << Indent << "MULACC-REDUCE ";
   printAsOperand(O, SlotTracker);
   O << " = ";
@@ -2418,27 +2419,23 @@ void VPMulAccRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " + ";
   if (isa<FPMathOperator>(getUnderlyingInstr()))
     O << getUnderlyingInstr()->getFastMathFlags();
-  if (isOuterExtended())
-    O << " (";
   O << "reduce." << Instruction::getOpcodeName(RdxDesc.getOpcode()) << " (";
   O << "mul ";
   if (isExtended())
     O << "(";
   getVecOp0()->printAsOperand(O, SlotTracker);
   if (isExtended())
-    O << " extended to " << *getResultType() << "), (";
+    O << " extended to " << *RedTy << "), (";
   else
     O << ", ";
   getVecOp1()->printAsOperand(O, SlotTracker);
   if (isExtended())
-    O << " extended to " << *getResultType() << ")";
+    O << " extended to " << *RedTy << ")";
   if (isConditional()) {
     O << ", ";
     getCondOp()->printAsOperand(O, SlotTracker);
   }
   O << ")";
-  if (isOuterExtended())
-    O << " extended to " << *RdxDesc.getRecurrenceType() << ")";
   if (RdxDesc.IntermediateStore)
     O << " (with final reduction value stored in invariant address sank "
          "outside of loop)";
