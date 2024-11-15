@@ -683,6 +683,8 @@ private:
   const unsigned char *FrameBase = nullptr;
   /// The starting address of the call stack array.
   const unsigned char *CallStackBase = nullptr;
+  // The number of elements in the radix tree array.
+  unsigned RadixTreeSize = 0;
 
   Error deserializeV012(const unsigned char *Start, const unsigned char *Ptr,
                         uint64_t FirstWord);
