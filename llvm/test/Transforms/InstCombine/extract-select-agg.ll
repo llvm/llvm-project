@@ -83,10 +83,8 @@ define i64 @test_extract_select_insert_left(ptr %p1, i64 %v) {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { ptr, i64 } @foo()
 ; CHECK-NEXT:    [[ELM1:%.*]] = extractvalue { ptr, i64 } [[CALL]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[ELM1]], [[V]]
-; CHECK-NEXT:    [[FCA0:%.*]] = insertvalue { ptr, i64 } poison, ptr [[P1]], 0
-; CHECK-NEXT:    [[FCA1:%.*]] = insertvalue { ptr, i64 } [[FCA0]], i64 4294967294, 1
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], { ptr, i64 } [[FCA1]], { ptr, i64 } [[CALL]]
-; CHECK-NEXT:    [[RES:%.*]] = extractvalue { ptr, i64 } [[SELECT]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { ptr, i64 } [[CALL]], 1
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i64 4294967294, i64 [[TMP1]]
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %call = call { ptr, i64 } @foo()
@@ -105,10 +103,8 @@ define i64 @test_extract_select_insert_right(ptr %p1, i64 %v) {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { ptr, i64 } @foo()
 ; CHECK-NEXT:    [[ELM1:%.*]] = extractvalue { ptr, i64 } [[CALL]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[ELM1]], [[V]]
-; CHECK-NEXT:    [[FCA0:%.*]] = insertvalue { ptr, i64 } poison, ptr [[P1]], 0
-; CHECK-NEXT:    [[FCA1:%.*]] = insertvalue { ptr, i64 } [[FCA0]], i64 4294967294, 1
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], { ptr, i64 } [[CALL]], { ptr, i64 } [[FCA1]]
-; CHECK-NEXT:    [[RES:%.*]] = extractvalue { ptr, i64 } [[SELECT]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { ptr, i64 } [[CALL]], 1
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i64 [[TMP1]], i64 4294967294
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %call = call { ptr, i64 } @foo()
