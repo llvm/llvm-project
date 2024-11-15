@@ -10203,7 +10203,7 @@ TEST_P(ASTImporterOptionSpecificTestBase,
         template <class A>
         struct X {
           template <class A1, A1>
-          friend struct foo1;
+          friend struct foo;
         };
 
         X<int> x;
