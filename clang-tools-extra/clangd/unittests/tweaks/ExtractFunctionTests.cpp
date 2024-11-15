@@ -197,7 +197,7 @@ F (extracted();)
                 void call() { [[1+1]]; }
             )cpp"),
             "unavailable");
-  // FIXME: Expression are currently not extracted
+  // FIXME: Single expression statements are currently not extracted
   EXPECT_EQ(apply(R"cpp(
                 void call() { [[1+1;]] }
             )cpp"),
