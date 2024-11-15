@@ -8035,7 +8035,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     case bitc::FS_ALLOC_CONTEXT_IDS: {
       // This is an array of 32-bit fixed-width values, holding each 64-bit
       // context id as a pair of adjacent (most significant first) 32-bit words.
-      assert(!(Record.size() % 2));
+      assert(Record.size() % 2 == 0);
       PendingContextIds.reserve(Record.size() / 2);
       for (auto R = Record.begin(); R != Record.end(); R += 2)
         PendingContextIds.push_back(*R << 32 | *(R + 1));
