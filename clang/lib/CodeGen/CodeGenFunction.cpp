@@ -2975,8 +2975,8 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
 
     llvm::BasicBlock *RetBlock = createBasicBlock("resolver_return", Resolver);
     CGBuilderTy RetBuilder(*this, RetBlock);
-    CreateMultiVersionResolverReturn(
-        CGM, Resolver, RetBuilder, Options[Index].Function, SupportsIFunc);
+    CreateMultiVersionResolverReturn(CGM, Resolver, RetBuilder,
+                                     Options[Index].Function, SupportsIFunc);
     llvm::BasicBlock *ElseBlock = createBasicBlock("resolver_else", Resolver);
 
     Builder.SetInsertPoint(CurBlock);
@@ -2988,9 +2988,8 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
   // Finally, emit the default one.
   if (HasDefault) {
     Builder.SetInsertPoint(CurBlock);
-    CreateMultiVersionResolverReturn(CGM, Resolver, Builder,
-                                     Options[DefaultIndex].Function,
-                                     SupportsIFunc);
+    CreateMultiVersionResolverReturn(
+        CGM, Resolver, Builder, Options[DefaultIndex].Function, SupportsIFunc);
     return;
   }
 
