@@ -168,8 +168,6 @@ static constexpr TypePattern SameCharNoLen{CharType, KindCode::sameKind};
 static constexpr TypePattern SameLogical{LogicalType, KindCode::same};
 static constexpr TypePattern SameRelatable{RelatableType, KindCode::same};
 static constexpr TypePattern SameIntrinsic{IntrinsicType, KindCode::same};
-static constexpr TypePattern SameDerivedType{
-    CategorySet{TypeCategory::Derived}, KindCode::same};
 static constexpr TypePattern SameType{AnyType, KindCode::same};
 
 // Match some kind of some INTEGER or REAL type(s); when argument types
@@ -439,20 +437,18 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         SameInt},
     {"dshiftr", {{"i", BOZ}, {"j", SameInt}, {"shift", AnyInt}}, SameInt},
     {"eoshift",
+        {{"array", SameType, Rank::array},
+            {"shift", AnyInt, Rank::dimRemovedOrScalar},
+            // BOUNDARY= is not optional for non-intrinsic types
+            {"boundary", SameType, Rank::dimRemovedOrScalar}, OptionalDIM},
+        SameType, Rank::conformable, IntrinsicClass::transformationalFunction},
+    {"eoshift",
         {{"array", SameIntrinsic, Rank::array},
             {"shift", AnyInt, Rank::dimRemovedOrScalar},
             {"boundary", SameIntrinsic, Rank::dimRemovedOrScalar,
                 Optionality::optional},
             OptionalDIM},
         SameIntrinsic, Rank::conformable,
-        IntrinsicClass::transformationalFunction},
-    {"eoshift",
-        {{"array", SameDerivedType, Rank::array},
-            {"shift", AnyInt, Rank::dimRemovedOrScalar},
-            // BOUNDARY= is not optional for derived types
-            {"boundary", SameDerivedType, Rank::dimRemovedOrScalar},
-            OptionalDIM},
-        SameDerivedType, Rank::conformable,
         IntrinsicClass::transformationalFunction},
     {"epsilon",
         {{"x", SameReal, Rank::anyOrAssumedRank, Optionality::required,
@@ -572,6 +568,10 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             DefaultingKIND},
         KINDInt},
     {"int", {{"a", AnyNumeric, Rank::elementalOrBOZ}, DefaultingKIND}, KINDInt},
+    {"int2", {{"a", AnyNumeric, Rank::elementalOrBOZ}},
+        TypePattern{IntType, KindCode::exactKind, 2}},
+    {"int8", {{"a", AnyNumeric, Rank::elementalOrBOZ}},
+        TypePattern{IntType, KindCode::exactKind, 8}},
     {"int_ptr_kind", {}, DefaultInt, Rank::scalar},
     {"ior", {{"i", OperandInt}, {"j", OperandInt, Rank::elementalOrBOZ}},
         OperandInt},
@@ -1176,12 +1176,6 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
     // procedure pointer target.
     {{"index", {{"string", DefaultChar}, {"substring", DefaultChar}},
         DefaultInt}},
-    {{"int2", {{"a", AnyNumeric, Rank::elementalOrBOZ}},
-         TypePattern{IntType, KindCode::exactKind, 2}},
-        "int"},
-    {{"int8", {{"a", AnyNumeric, Rank::elementalOrBOZ}},
-         TypePattern{IntType, KindCode::exactKind, 8}},
-        "int"},
     {{"isign", {{"a", DefaultInt}, {"b", DefaultInt}}, DefaultInt}, "sign"},
     {{"jiabs", {{"a", TypePattern{IntType, KindCode::exactKind, 4}}},
          TypePattern{IntType, KindCode::exactKind, 4}},
@@ -1939,12 +1933,16 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       dimArg = j;
       argOk = true;
       break;
-    case KindCode::same:
+    case KindCode::same: {
       if (!sameArg) {
         sameArg = arg;
       }
-      argOk = type->IsTkLenCompatibleWith(sameArg->GetType().value());
-      break;
+      // Check both ways so that a CLASS(*) actuals to
+      // MOVE_ALLOC and EOSHIFT both work.
+      auto sameType{sameArg->GetType().value()};
+      argOk = sameType.IsTkLenCompatibleWith(*type) ||
+          type->IsTkLenCompatibleWith(sameType);
+    } break;
     case KindCode::sameKind:
       if (!sameArg) {
         sameArg = arg;
@@ -2849,15 +2847,16 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
               "FPTR= argument to C_F_POINTER() may not have a deferred type parameter"_err_en_US);
         } else if (type->category() == TypeCategory::Derived) {
           if (context.languageFeatures().ShouldWarn(
-                  common::UsageWarning::Interoperability)) {
-            if (type->IsUnlimitedPolymorphic()) {
-              context.messages().Say(common::UsageWarning::Interoperability, at,
-                  "FPTR= argument to C_F_POINTER() should not be unlimited polymorphic"_warn_en_US);
-            } else if (!type->GetDerivedTypeSpec().typeSymbol().attrs().test(
-                           semantics::Attr::BIND_C)) {
-              context.messages().Say(common::UsageWarning::Interoperability, at,
-                  "FPTR= argument to C_F_POINTER() should not have a derived type that is not BIND(C)"_warn_en_US);
-            }
+                  common::UsageWarning::Interoperability) &&
+              type->IsUnlimitedPolymorphic()) {
+            context.messages().Say(common::UsageWarning::Interoperability, at,
+                "FPTR= argument to C_F_POINTER() should not be unlimited polymorphic"_warn_en_US);
+          } else if (!type->GetDerivedTypeSpec().typeSymbol().attrs().test(
+                         semantics::Attr::BIND_C) &&
+              context.languageFeatures().ShouldWarn(
+                  common::UsageWarning::Portability)) {
+            context.messages().Say(common::UsageWarning::Portability, at,
+                "FPTR= argument to C_F_POINTER() should not have a derived type that is not BIND(C)"_port_en_US);
           }
         } else if (!IsInteroperableIntrinsicType(
                        *type, &context.languageFeatures())

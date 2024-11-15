@@ -1542,6 +1542,7 @@ module std [system] {
       export std.algorithm.in_out_result
     }
     module raw_storage_iterator               { header "__memory/raw_storage_iterator.h" }
+    module shared_count                       { header "__memory/shared_count.h" }
     module shared_ptr                         { header "__memory/shared_ptr.h" }
     module swap_allocator                     { header "__memory/swap_allocator.h" }
     module temp_value                         { header "__memory/temp_value.h" }
