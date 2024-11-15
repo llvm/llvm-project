@@ -654,7 +654,8 @@ void CIRGenFunction::emitCtorPrologue(const CXXConstructorDecl *CD,
 static Address ApplyNonVirtualAndVirtualOffset(
     mlir::Location loc, CIRGenFunction &CGF, Address addr,
     CharUnits nonVirtualOffset, mlir::Value virtualOffset,
-    const CXXRecordDecl *derivedClass, const CXXRecordDecl *nearestVBase) {
+    const CXXRecordDecl *derivedClass, const CXXRecordDecl *nearestVBase,
+    mlir::Type baseValueTy = {}, bool assumeNotNull = true) {
   // Assert that we have something to do.
   assert(!nonVirtualOffset.isZero() || virtualOffset != nullptr);
 
@@ -671,6 +672,14 @@ static Address ApplyNonVirtualAndVirtualOffset(
     if (virtualOffset) {
       baseOffset = CGF.getBuilder().createBinop(
           virtualOffset, cir::BinOpKind::Add, baseOffset);
+    } else if (baseValueTy) {
+      // TODO(cir): this should be used as a firt class in this function for the
+      // nonVirtualOffset cases, but all users of this function need to be
+      // updated first.
+      baseOffset.getDefiningOp()->erase();
+      return CGF.getBuilder().createBaseClassAddr(
+          loc, addr, baseValueTy, nonVirtualOffset.getQuantity(),
+          assumeNotNull);
     }
   } else {
     baseOffset = virtualOffset;
@@ -1589,22 +1598,17 @@ CIRGenFunction::getAddressOfBaseClass(Address Value,
   if (VBase) {
     VirtualOffset = CGM.getCXXABI().getVirtualBaseClassOffset(
         getLoc(Loc), *this, Value, Derived, VBase);
-  } else {
-    Value = builder.createBaseClassAddr(getLoc(Loc), Value, BaseValueTy,
-                                        NonVirtualOffset.getQuantity(),
-                                        /*assumeNotNull=*/not NullCheckValue);
   }
 
   // Apply both offsets.
-  // FIXME: remove condition.
-  if (VBase)
-    Value = ApplyNonVirtualAndVirtualOffset(getLoc(Loc), *this, Value,
-                                            NonVirtualOffset, VirtualOffset,
-                                            Derived, VBase);
+  Value = ApplyNonVirtualAndVirtualOffset(
+      getLoc(Loc), *this, Value, NonVirtualOffset, VirtualOffset, Derived,
+      VBase, BaseValueTy, not NullCheckValue);
 
   // Cast to the destination type.
   if (VBase)
     Value = Value.withElementType(BaseValueTy);
+
   return Value;
 }
 
