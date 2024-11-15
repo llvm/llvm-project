@@ -51,12 +51,10 @@ define <8 x i32> @concat_8xv1i32(<1 x i32> %a, <1 x i32> %b, <1 x i32> %c, <1 x 
 ; VLA-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; VLA-NEXT:    vslideup.vi v14, v15, 1
 ; VLA-NEXT:    vslideup.vi v12, v13, 1
-; VLA-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; VLA-NEXT:    vslideup.vi v12, v14, 2
-; VLA-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; VLA-NEXT:    vslideup.vi v10, v11, 1
 ; VLA-NEXT:    vslideup.vi v8, v9, 1
 ; VLA-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; VLA-NEXT:    vslideup.vi v12, v14, 2
 ; VLA-NEXT:    vslideup.vi v8, v10, 2
 ; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; VLA-NEXT:    vslideup.vi v8, v12, 4
@@ -65,9 +63,9 @@ define <8 x i32> @concat_8xv1i32(<1 x i32> %a, <1 x i32> %b, <1 x i32> %c, <1 x 
 ; VLS-LABEL: concat_8xv1i32:
 ; VLS:       # %bb.0:
 ; VLS-NEXT:    vmv1r.v v17, v12
+; VLS-NEXT:    vmv1r.v v16, v8
 ; VLS-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; VLS-NEXT:    vslideup.vi v14, v15, 1
-; VLS-NEXT:    vmv1r.v v16, v8
 ; VLS-NEXT:    vslideup.vi v17, v13, 1
 ; VLS-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; VLS-NEXT:    vslideup.vi v17, v14, 2
@@ -131,12 +129,10 @@ define <16 x i32> @concat_8xv2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x
 ; VLA-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; VLA-NEXT:    vslideup.vi v14, v15, 2
 ; VLA-NEXT:    vslideup.vi v12, v13, 2
-; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; VLA-NEXT:    vslideup.vi v12, v14, 4
-; VLA-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; VLA-NEXT:    vslideup.vi v10, v11, 2
 ; VLA-NEXT:    vslideup.vi v8, v9, 2
 ; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; VLA-NEXT:    vslideup.vi v12, v14, 4
 ; VLA-NEXT:    vslideup.vi v8, v10, 4
 ; VLA-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; VLA-NEXT:    vslideup.vi v8, v12, 8
@@ -187,10 +183,10 @@ define <32 x i32> @concat_4xv8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x
 ; VLA-NEXT:    vmv2r.v v20, v14
 ; VLA-NEXT:    vmv2r.v v16, v12
 ; VLA-NEXT:    vmv2r.v v12, v10
+; VLA-NEXT:    li a0, 32
 ; VLA-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; VLA-NEXT:    vslideup.vi v16, v20, 8
 ; VLA-NEXT:    vslideup.vi v8, v12, 8
-; VLA-NEXT:    li a0, 32
 ; VLA-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; VLA-NEXT:    vslideup.vi v8, v16, 16
 ; VLA-NEXT:    ret
@@ -209,22 +205,20 @@ define <32 x i32> @concat_8xv4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x
 ; VLA:       # %bb.0:
 ; VLA-NEXT:    vmv1r.v v18, v15
 ; VLA-NEXT:    vmv1r.v v20, v14
-; VLA-NEXT:    vmv1r.v v22, v13
+; VLA-NEXT:    vmv1r.v v14, v13
 ; VLA-NEXT:    vmv1r.v v16, v12
-; VLA-NEXT:    vmv1r.v v14, v11
+; VLA-NEXT:    vmv1r.v v22, v11
 ; VLA-NEXT:    vmv1r.v v12, v10
 ; VLA-NEXT:    vmv1r.v v10, v9
+; VLA-NEXT:    li a0, 32
 ; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; VLA-NEXT:    vslideup.vi v20, v18, 4
-; VLA-NEXT:    vslideup.vi v16, v22, 4
-; VLA-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; VLA-NEXT:    vslideup.vi v16, v20, 8
-; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; VLA-NEXT:    vslideup.vi v12, v14, 4
+; VLA-NEXT:    vslideup.vi v16, v14, 4
+; VLA-NEXT:    vslideup.vi v12, v22, 4
 ; VLA-NEXT:    vslideup.vi v8, v10, 4
 ; VLA-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; VLA-NEXT:    vslideup.vi v16, v20, 8
 ; VLA-NEXT:    vslideup.vi v8, v12, 8
-; VLA-NEXT:    li a0, 32
 ; VLA-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; VLA-NEXT:    vslideup.vi v8, v16, 16
 ; VLA-NEXT:    ret
