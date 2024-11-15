@@ -10,11 +10,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "BPFSelectionDAGInfo.h"
 #include "BPFTargetMachine.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+
+#define GET_SDNODE_DESC
+#include "BPFGenSDNodeInfo.inc"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "bpf-selectiondag-info"
+
+BPFSelectionDAGInfo::BPFSelectionDAGInfo()
+    : SelectionDAGGenTargetInfo(BPFGenSDNodeInfo) {}
 
 SDValue BPFSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
