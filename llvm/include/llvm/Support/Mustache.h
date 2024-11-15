@@ -97,7 +97,7 @@ public:
   void registerEscape(DenseMap<char, StringRef> Escapes);
 
 private:
-  SmallString<0> Output;
+  std::string Output;
   StringMap<ASTNode *> Partials;
   StringMap<Lambda> Lambdas;
   StringMap<SectionLambda> SectionLambdas;

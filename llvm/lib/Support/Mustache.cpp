@@ -232,43 +232,43 @@ Token::Type Token::getTokenType(char Identifier) {
   }
 }
 
-// Function to check if there's no meaningful text behind.
-// We determine if a token has no meaningful text behind
-// if the right of previous token is empty spaces or tabs followed
-// by a newline
-// eg. "Other Stuff\n {{#Section}}"
+// Function to check if there is meaningful text behind.
+// We determine if a token has meaningful text behind
+// if the right of previous token contains anything that is
+// not a newline
+// For example: "Stuff {{#Section}}"
 // We make an exception for when previous token is empty
 // and the current token is the second token
-// eg. " {{#Section}}"
-bool noTextBehind(size_t Idx, const ArrayRef<Token> &Tokens) {
+// For example: "{{#Section}}"
+bool hasTextBehind(size_t Idx, const ArrayRef<Token> &Tokens) {
   if (Idx == 0)
-    return false;
+    return true;
 
   int PrevIdx = Idx - 1;
   if (Tokens[PrevIdx].getType() != Token::Type::Text)
-    return false;
-
+    return true;
+  
   const Token &PrevToken = Tokens[Idx - 1];
   StringRef TokenBody = PrevToken.getRawBody().rtrim(" \t\v");
-  return TokenBody.ends_with("\n") || (TokenBody.empty() && Idx == 1);
+  return !TokenBody.ends_with("\n") && !(TokenBody.empty() && Idx == 1);
 }
 
 // Function to check if there's no meaningful text ahead
 // We determine if a token has no meaningful text behind
 // if the left of previous token is empty spaces or tabs followed
 // by a newline
-// eg. "{{#Section}}  \n"
-bool noTextAhead(size_t Idx, const ArrayRef<Token> &Tokens) {
+// For example: "{{#Section}}  \n"
+bool hasTextAhead(size_t Idx, const ArrayRef<Token> &Tokens) {
   if (Idx >= Tokens.size() - 1)
-    return false;
+    return true;
 
   int NextIdx = Idx + 1;
   if (Tokens[NextIdx].getType() != Token::Type::Text)
-    return false;
+    return true;
 
   const Token &NextToken = Tokens[Idx + 1];
   StringRef TokenBody = NextToken.getRawBody().ltrim(" ");
-  return TokenBody.starts_with("\r\n") || TokenBody.starts_with("\n");
+  return !TokenBody.starts_with("\r\n") && !TokenBody.starts_with("\n");
 }
 
 bool requiresCleanUp(Token::Type T) {
@@ -279,7 +279,7 @@ bool requiresCleanUp(Token::Type T) {
 }
 
 // Adjust next token body if there is no text ahead
-// eg.
+// For example:
 //  The template string
 //  "{{! Comment }} \nLine 2"
 // would be considered as no text ahead and should be render as
@@ -295,13 +295,13 @@ void stripTokenAhead(SmallVector<Token> &Tokens, size_t Idx) {
 }
 
 // Adjust previous token body if there no text behind
-// eg.
+// For example:
 //  The template string
 //  " \t{{#section}}A{{/section}}"
 // would be considered as having no text ahead and would be render as
 //  "A"
 // The exception for this is partial tag which requires us to
-// keep track of the indentation once it's rendered
+// keep track of the indentation once it's rendered.
 void stripTokenBefore(SmallVector<Token> &Tokens, size_t Idx,
                       Token &CurrentToken, Token::Type CurrentType) {
   Token &PrevToken = Tokens[Idx - 1];
@@ -363,8 +363,7 @@ SmallVector<Token> tokenize(StringRef Template) {
   // if you have the template string
   //  {{#section}} \n Example \n{{/section}}
   // The output should would be
-  //  Example
-  // Not:
+  // For example
   //  \n Example \n
   size_t LastIdx = Tokens.size() - 1;
   for (size_t Idx = 0, End = Tokens.size(); Idx < End; ++Idx) {
@@ -383,13 +382,13 @@ SmallVector<Token> tokenize(StringRef Template) {
     // token is spaces followed by a newline.
     // eg.
     //  "Line 1\n {{#section}} \n Line 2 \n {{/section}} \n Line 3"
-    bool NoTextBehind = noTextBehind(Idx, Tokens);
-    bool NoTextAhead = noTextAhead(Idx, Tokens);
+    bool HasTextBehind = hasTextBehind(Idx, Tokens);
+    bool HasTextAhead = hasTextAhead(Idx, Tokens);
 
-    if ((NoTextBehind && NoTextAhead) || (NoTextAhead && Idx == 0))
+    if ((!HasTextAhead && !HasTextBehind) || (!HasTextAhead && Idx == 0))
       stripTokenAhead(Tokens, Idx);
-
-    if (((NoTextBehind && NoTextAhead) || (NoTextBehind && Idx == LastIdx)))
+    
+    if ((!HasTextBehind && !HasTextAhead) || (!HasTextBehind && Idx == LastIdx))
       stripTokenBefore(Tokens, Idx, CurrentToken, CurrentType);
   }
   return Tokens;
