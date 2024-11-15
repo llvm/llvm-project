@@ -19,6 +19,8 @@ namespace driver {
 
 namespace toolchains {
 
+bool isARMBareMetal(const llvm::Triple &Triple);
+
 class LLVM_LIBRARY_VISIBILITY BareMetal : public ToolChain {
 public:
   BareMetal(const Driver &D, const llvm::Triple &Triple,

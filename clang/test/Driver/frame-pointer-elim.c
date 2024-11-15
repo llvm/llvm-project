@@ -162,5 +162,34 @@
 // RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
 // RUN: not %clang -### --target=riscv64-linux-android -mbig-endian -O1 -S %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+
+// On ARM backend bare metal targets, frame pointer is omitted
+// RUN: %clang -### --target=arm-arm-none-eabi -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NONE %s
+// RUN: %clang -### --target=arm-arm-none-eabihf -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NONE %s
+// RUN: %clang -### --target=arm-arm-none-eabi -S -fno-omit-frame-pointer %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+// RUN: %clang -### --target=arm-arm-none-eabihf -S -fno-omit-frame-pointer %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+// RUN: %clang -### --target=arm-arm-none-eabi -S -O1 %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NONE %s
+// RUN: %clang -### --target=arm-arm-none-eabihf -S -O1 %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NONE %s
+// RUN: %clang -### --target=arm-arm-none-eabi -S -O1 -fno-omit-frame-pointer %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+// RUN: %clang -### --target=arm-arm-none-eabihf -S -O1 -fno-omit-frame-pointer %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+
+// AArch64 bare metal targets behave like hosted targets
+// RUN: %clang -### --target=aarch64-none-elf -S %s 2>&1 |  \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+// RUN: %clang -### --target=aarch64-none-elf -S -O1 %s 2>&1 |  \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+// RUN: %clang -### --target=aarch64-none-elf -S -fno-omit-frame-pointer %s 2>&1 |  \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+// RUN: %clang -### --target=aarch64-none-elf -S -O1 -fno-omit-frame-pointer %s 2>&1 |  \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+
 void f0() {}
 void f1() { f0(); }

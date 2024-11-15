@@ -128,8 +128,11 @@ BareMetal::BareMetal(const Driver &D, const llvm::Triple &Triple,
   }
 }
 
+namespace clang {
+namespace driver {
+namespace toolchains {
 /// Is the triple {arm,armeb,thumb,thumbeb}-none-none-{eabi,eabihf} ?
-static bool isARMBareMetal(const llvm::Triple &Triple) {
+bool isARMBareMetal(const llvm::Triple &Triple) {
   if (Triple.getArch() != llvm::Triple::arm &&
       Triple.getArch() != llvm::Triple::thumb &&
       Triple.getArch() != llvm::Triple::armeb &&
@@ -148,6 +151,9 @@ static bool isARMBareMetal(const llvm::Triple &Triple) {
 
   return true;
 }
+} // namespace clang
+} // namespace driver
+} // namespace clang
 
 /// Is the triple {aarch64.aarch64_be}-none-elf?
 static bool isAArch64BareMetal(const llvm::Triple &Triple) {

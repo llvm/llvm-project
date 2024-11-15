@@ -19,6 +19,7 @@
 #include "Arch/SystemZ.h"
 #include "Arch/VE.h"
 #include "Arch/X86.h"
+#include "BareMetal.h"
 #include "HIPAMD.h"
 #include "Hexagon.h"
 #include "MSP430.h"
@@ -149,6 +150,10 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
       // pointers are not generally useful.
       return false;
     }
+  }
+
+  if (toolchains::isARMBareMetal(Triple)) {
+    return false;
   }
 
   return true;
