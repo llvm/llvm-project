@@ -54,7 +54,7 @@ jobs:
       run: |
         docker compose push actions-builder
       env:
-        TAG: libcxx-linux-builder:${{ github.sha }}
+        TAG: ${{ github.sha }}
 
     # - name: Push the Android builder image
     #   if: github.event_name == 'push'
@@ -62,4 +62,4 @@ jobs:
     #   run: |
     #     docker compose push android-buildkite-builder
     #   env:
-    #     TAG: libcxx-android-builder:${{ github.sha }}
+    #     TAG: ${{ github.sha }}
