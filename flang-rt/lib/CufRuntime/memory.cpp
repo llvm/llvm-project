@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/CUDA/memory.h"
-#include "../terminator.h"
+#include "../flang_rt/terminator.h"
 
 #include "cuda_runtime.h"
 

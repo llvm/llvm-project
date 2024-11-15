@@ -7,6 +7,7 @@
 #===------------------------------------------------------------------------===#
 
 add_flangrt_unittest(FlangCufRuntimeTests
+  Allocatable.cpp
   AllocatorCUF.cpp
 )
 
