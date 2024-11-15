@@ -182,7 +182,8 @@ def opencl_Group : OptionGroup<"<opencl group>">, Group<f_Group>,
                    DocName<"OpenCL options">;
 
 def sycl_Group : OptionGroup<"<SYCL group>">, Group<f_Group>,
-                 DocName<"SYCL options">;
+                 DocName<"SYCL options">,
+                 Visibility<[ClangOption, CLOption]>;
 
 def cuda_Group : OptionGroup<"<CUDA group>">, Group<f_Group>,
                    DocName<"CUDA options">,
@@ -6780,16 +6781,20 @@ defm : FlangIgnoredDiagOpt<"frontend-loop-interchange">;
 defm : FlangIgnoredDiagOpt<"target-lifetime">;
 
 // C++ SYCL options
+let Group = sycl_Group in {
 def fsycl : Flag<["-"], "fsycl">,
-  Visibility<[ClangOption, CLOption]>,
-  Group<sycl_Group>, HelpText<"Enables SYCL kernels compilation for device">;
+  HelpText<"Enables SYCL kernels compilation for device">;
 def fno_sycl : Flag<["-"], "fno-sycl">,
-  Visibility<[ClangOption, CLOption]>,
-  Group<sycl_Group>, HelpText<"Disables SYCL kernels compilation for device">;
+  HelpText<"Disables SYCL kernels compilation for device">;
+def fsycl_device_only : Flag<["-"], "fsycl-device-only">,
+  Alias<offload_device_only>, HelpText<"Compile SYCL kernels for device only">;
+def fsycl_host_only : Flag<["-"], "fsycl-host-only">,
+  Alias<offload_host_only>, HelpText<"Compile SYCL kernels for host only">;
 def sycl_link : Flag<["--"], "sycl-link">, Flags<[HelpHidden]>,
-  Visibility<[ClangOption, CLOption]>,
-  Group<sycl_Group>, HelpText<"Perform link through clang-sycl-linker via the target "
+  HelpText<"Perform link through clang-sycl-linker via the target "
   "offloading toolchain.">;
+} // let Group = sycl_Group
+
 // OS-specific options
 let Flags = [TargetSpecific] in {
 defm android_pad_segment : BooleanFFlag<"android-pad-segment">, Group<f_Group>;
