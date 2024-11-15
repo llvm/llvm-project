@@ -39,7 +39,7 @@ public:
 };
 } // namespace
 
-const char *GetErrorTypeStr(const DiagnosticsInfo &info) {
+static const char *GetErrorTypeStr(const DiagnosticsInfo &info) {
   switch (info.type) {
   case DiagnosticsInfoType::InterceptedCall:
     return "unsafe-library-call";
