@@ -45,7 +45,7 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
                                     const CallEvent &Call) {
   SVal ThisVal;
   bool AlwaysReturnsLValue;
-  const CXXRecordDecl *ThisRD = nullptr;
+  [[maybe_unused]] const CXXRecordDecl *ThisRD = nullptr;
   if (const CXXConstructorCall *Ctor = dyn_cast<CXXConstructorCall>(&Call)) {
     assert(Ctor->getDecl()->isTrivial());
     assert(Ctor->getDecl()->isCopyOrMoveConstructor());
