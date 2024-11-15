@@ -114,8 +114,8 @@ void ThreeVersionsSameAttr(void){}
 // CHECK: define {{.*}}void @ThreeVersionsSameAttr.Z() #[[K]]
 
 ATTR(cpu_specific(knl))
-void CpuSpecificNoDispatch(void (*f)(void)) {}
-// CHECK: define {{.*}}void @CpuSpecificNoDispatch.Z(ptr noundef %f) #[[K:[0-9]+]]
+void CpuSpecificNoDispatch(void) {}
+// CHECK: define {{.*}}void @CpuSpecificNoDispatch.Z() #[[K:[0-9]+]]
 
 ATTR(cpu_dispatch(knl))
 void OrderDispatchUsageSpecific(void);
@@ -151,9 +151,15 @@ void usages(void) {
   ThreeVersionsSameAttr();
   // LINUX: @ThreeVersionsSameAttr.ifunc()
   // WINDOWS: @ThreeVersionsSameAttr()
-  CpuSpecificNoDispatch((void (*)(void))CpuSpecificNoDispatch);
-  // LINUX: @CpuSpecificNoDispatch.ifunc(ptr noundef @CpuSpecificNoDispatch.ifunc)
-  // WINDOWS: @CpuSpecificNoDispatch(ptr noundef @CpuSpecificNoDispatch)
+  CpuSpecificNoDispatch();
+  // LINUX: @CpuSpecificNoDispatch.ifunc()
+  // WINDOWS: @CpuSpecificNoDispatch()
+  //
+  // Adding another use of CpuSpecificNoDispatch reproduces the
+  // crash in https://github.com/llvm/llvm-project/issues/115299
+  CpuSpecificNoDispatch();
+  // LINUX: @CpuSpecificNoDispatch.ifunc()
+  // WINDOWS: @CpuSpecificNoDispatch()
   OrderDispatchUsageSpecific();
   // LINUX: @OrderDispatchUsageSpecific.ifunc()
   // WINDOWS: @OrderDispatchUsageSpecific()
@@ -162,7 +168,7 @@ void usages(void) {
   // WINDOWS: @OrderSpecificUsageDispatch()
 }
 
-// LINUX: declare void @CpuSpecificNoDispatch.ifunc(ptr)
+// LINUX: declare void @CpuSpecificNoDispatch.ifunc()
 
 // has an extra config to emit!
 ATTR(cpu_dispatch(ivybridge, knl, atom))
