@@ -183,6 +183,8 @@ private:
 
   bool normalizeExistingThunk(Relocation &rel, uint64_t src);
 
+  bool addSyntheticLandingPads();
+
   Ctx &ctx;
 
   // Record all the available Thunks for a (Symbol, addend) pair, where Symbol
@@ -215,6 +217,9 @@ private:
   llvm::DenseMap<std::pair<std::pair<SectionBase *, uint64_t>, int64_t>,
                  Thunk *>
       landingPadsBySectionAndAddend;
+
+  // All the nonLandingPad thunks that have been created, in order of creation.
+  std::vector<Thunk *> allThunks;
 
   // The number of completed passes of createThunks this permits us
   // to do one time initialization on Pass 0 and put a limit on the
