@@ -12,6 +12,7 @@
 using namespace llvm;
 
 namespace {
+std::string ClassDeclaration;
 std::string ClassDefinitions;
 std::string ClassList;
 
@@ -19,7 +20,8 @@ void GenerateLowering(const Record *Operation) {
   using namespace std::string_literals;
   std::string Name = Operation->getName().str();
   std::string LLVMOp = Operation->getValueAsString("llvmOp").str();
-  ClassDefinitions +=
+
+  ClassDeclaration +=
       "class CIR" + Name +
       "Lowering : public mlir::OpConversionPattern<cir::" + Name +
       R"C++(> {
@@ -32,15 +34,24 @@ void GenerateLowering(const Record *Operation) {
       Name +
       " op, OpAdaptor adaptor, mlir::ConversionPatternRewriter &rewriter) "
       "const "
-      "override {";
+      "override;" +
+      R"C++(
+};
+)C++";
+
+  ClassDefinitions +=
+      R"C++(mlir::LogicalResult
+CIR)C++" +
+      Name + "Lowering::matchAndRewrite(cir::" + Name +
+      R"C++( op, OpAdaptor adaptor, mlir::ConversionPatternRewriter &rewriter) const {)C++";
 
   auto ResultCount = Operation->getValueAsDag("results")->getNumArgs();
   if (ResultCount > 0)
     ClassDefinitions += R"C++(
-    auto resTy = this->getTypeConverter()->convertType(op.getType());)C++";
+  auto resTy = this->getTypeConverter()->convertType(op.getType());)C++";
 
   ClassDefinitions += R"C++(
-    rewriter.replaceOpWithNewOp<mlir::LLVM::)C++" +
+  rewriter.replaceOpWithNewOp<mlir::LLVM::)C++" +
                       LLVMOp + ">(op";
 
   if (ResultCount > 0)
@@ -51,9 +62,8 @@ void GenerateLowering(const Record *Operation) {
     ClassDefinitions += ", adaptor.getOperands()[" + std::to_string(i) + ']';
 
   ClassDefinitions += R"C++();
-    return mlir::success();
-  }
-};
+  return mlir::success();
+}
 )C++";
 
   ClassList += ", CIR" + Name + "Lowering\n";
@@ -69,8 +79,9 @@ void clang::EmitCIRBuiltinsLowering(const RecordKeeper &Records,
       GenerateLowering(Builtin);
   }
 
-  OS << "#ifdef GET_BUILTIN_LOWERING_CLASSES\n"
-     << ClassDefinitions << "\n#undef GET_BUILTIN_LOWERING_CLASSES\n#endif\n";
-  OS << "#ifdef GET_BUILTIN_LOWERING_LIST\n"
-     << ClassList << "\n#undef GET_BUILTIN_LOWERING_LIST\n#endif\n";
+  OS << "#ifdef GET_BUILTIN_LOWERING_CLASSES_DECLARE\n"
+     << ClassDeclaration << "\n#endif\n";
+  OS << "#ifdef GET_BUILTIN_LOWERING_CLASSES_DEF\n"
+     << ClassDefinitions << "\n#endif\n";
+  OS << "#ifdef GET_BUILTIN_LOWERING_LIST\n" << ClassList << "\n#endif\n";
 }
