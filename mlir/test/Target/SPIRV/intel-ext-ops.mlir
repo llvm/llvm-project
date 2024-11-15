@@ -40,10 +40,10 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Bfloat16ConversionINTEL]
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [SplitBarrierINTEL], [SPV_INTEL_split_barrier]> {
   // CHECK-LABEL: @split_barrier
   spirv.func @split_barrier() "None" {
-    // CHECK: spirv.INTEL.ControlBarrierArrive <Workgroup>, <Device>, <Acquire|UniformMemory>
-    spirv.INTEL.ControlBarrierArrive <Workgroup>, <Device>, <Acquire|UniformMemory>
-    // CHECK: spirv.INTEL.ControlBarrierWait <Workgroup>, <Device>, <Acquire|UniformMemory>
-    spirv.INTEL.ControlBarrierWait <Workgroup>, <Device>, <Acquire|UniformMemory>
+    // CHECK: spirv.INTEL.ControlBarrierArrive <Workgroup> <Device> <Acquire|UniformMemory>
+    spirv.INTEL.ControlBarrierArrive <Workgroup> <Device> <Acquire|UniformMemory>
+    // CHECK: spirv.INTEL.ControlBarrierWait <Workgroup> <Device> <Acquire|UniformMemory>
+    spirv.INTEL.ControlBarrierWait <Workgroup> <Device> <Acquire|UniformMemory>
     spirv.Return
   }
 }
