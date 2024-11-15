@@ -17,6 +17,13 @@ on:
       - main
     paths:
       - 'libcxx/utils/ci/**'
+      - '.github/workflows/libcxx-build-containers.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'libcxx/utils/ci/**'
+      - '.github/workflows/libcxx-build-containers.yml'
 
 jobs:
   build-and-push:
@@ -40,6 +47,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Push the Linux builder image
+      if: github.event_name == 'push'
       working-directory: libcxx/utils/ci
       run:
         - docker compose push actions-builder
@@ -47,6 +55,7 @@ jobs:
         TAG: libcxx-linux-builder:${{ github.sha }}
 
     - name: Push the Android builder image
+      if: github.event_name == 'push'
       working-directory: libcxx/utils/ci
       run:
         - docker compose push android-buildkite-builder
