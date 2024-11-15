@@ -11,7 +11,6 @@
 
 #include "scope.h"
 #include "symbol.h"
-#include "flang/Common/Fortran-features.h"
 #include "flang/Common/LangOptions.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/intrinsics.h"

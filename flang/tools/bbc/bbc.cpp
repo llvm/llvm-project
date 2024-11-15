@@ -14,11 +14,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "flang/Common/Fortran-features.h"
 #include "flang/Common/LangOptions.h"
-#include "flang/Common/OpenMP-features.h"
-#include "flang/Common/Version.h"
-#include "flang/Common/default-kinds.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/PFTBuilder.h"
