@@ -82,11 +82,14 @@ BENCHMARK(bm_grow<std::deque<int>>);
 BENCHMARK_CAPTURE(BM_AssignInputIterIter, vector_int, std::vector<int>{}, getRandomIntegerInputs<int>)
     ->Args({TestNumInputs, TestNumInputs});
 
-BENCHMARK_CAPTURE(BM_AssignInputIterIter, vector_string, std::vector<std::string>{}, getRandomStringInputsWithLength)
+BENCHMARK_CAPTURE(
+    BM_AssignInputIterIter<32>, vector_string, std::vector<std::string>{}, getRandomStringInputsWithLength)
     ->Args({TestNumInputs, TestNumInputs});
 
-BENCHMARK_CAPTURE(
-    BM_AssignInputIterIter, vector_vector_int, std::vector<std::vector<int>>{}, getRandomIntegerInputsWithLength<int>)
+BENCHMARK_CAPTURE(BM_AssignInputIterIter<100>,
+                  vector_vector_int,
+                  std::vector<std::vector<int>>{},
+                  getRandomIntegerInputsWithLength<int>)
     ->Args({TestNumInputs, TestNumInputs});
 
 BENCHMARK_MAIN();
