@@ -1546,7 +1546,7 @@ define <2 x i32> @test_umax_smax_vec_neg(<2 x i32> %x) {
 
 define i32 @umax_commute_operand_drop_attrs(i32 %x) {
 ; CHECK-LABEL: @umax_commute_operand_drop_attrs(
-; CHECK-NEXT:    [[RET:%.*]] = call range(i32 -10, 0) i32 @llvm.umax.i32(i32 [[X:%.*]], i32 -10)
+; CHECK-NEXT:    [[RET:%.*]] = call i32 @llvm.umax.i32(i32 [[X:%.*]], i32 noundef range(i32 -10, -8) -10)
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %ret = call range(i32 -10, 0) i32 @llvm.umax.i32(i32 noundef range(i32 -10, -8) -10, i32 %x)

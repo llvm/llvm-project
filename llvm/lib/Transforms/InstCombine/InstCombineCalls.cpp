@@ -814,8 +814,15 @@ static CallInst *canonicalizeConstantArg0ToArg1(CallInst &Call) {
   if (isa<Constant>(Arg0) && !isa<Constant>(Arg1)) {
     Call.setArgOperand(0, Arg1);
     Call.setArgOperand(1, Arg0);
-    Call.dropPoisonGeneratingAndUBImplyingParamAttrs(0);
-    Call.dropPoisonGeneratingAndUBImplyingParamAttrs(1);
+    auto CallAttr = Call.getAttributes();
+    auto LHSAttr = CallAttr.getParamAttrs(0);
+    auto RHSAttr = CallAttr.getParamAttrs(1);
+    LLVMContext &Ctx = Call.getContext();
+    Call.setAttributes(
+        CallAttr.removeAttributesAtIndex(Ctx, 0)
+            .removeAttributesAtIndex(Ctx, 1)
+            .addParamAttributes(Ctx, 0, AttrBuilder(Ctx, RHSAttr))
+            .addParamAttributes(Ctx, 1, AttrBuilder(Ctx, LHSAttr)));
     return &Call;
   }
   return nullptr;
