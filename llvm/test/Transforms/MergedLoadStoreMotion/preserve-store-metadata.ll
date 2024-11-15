@@ -3,7 +3,6 @@
 
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
 
-; FIXME: Can preserve common metadata on the sunk store.
 define void @perserve_common_metadata(i1 %c, ptr %dst, ptr %min) {
 ; CHECK-LABEL: define void @perserve_common_metadata(
 ; CHECK-SAME: i1 [[C:%.*]], ptr [[DST:%.*]], ptr [[MIN:%.*]]) {
