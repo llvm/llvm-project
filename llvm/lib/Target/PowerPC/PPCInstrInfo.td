@@ -163,14 +163,16 @@ def PPCfctiwuz: SDNode<"PPCISD::FCTIWUZ",SDTFPUnaryOp, []>;
 
 def PPCvsrq: SDNode<"PPCISD::VSRQ", SDT_PPCVecShiftQuad, []>;
 
-def PPCstrict_fcfid : SDNode<"PPCISD::STRICT_FCFID",
-                             SDTFPUnaryOp, [SDNPHasChain]>;
-def PPCstrict_fcfidu : SDNode<"PPCISD::STRICT_FCFIDU",
-                              SDTFPUnaryOp, [SDNPHasChain]>;
-def PPCstrict_fcfids : SDNode<"PPCISD::STRICT_FCFIDS",
-                             SDTFPRoundOp, [SDNPHasChain]>;
-def PPCstrict_fcfidus : SDNode<"PPCISD::STRICT_FCFIDUS",
-                              SDTFPRoundOp, [SDNPHasChain]>;
+let IsStrictFP = true in {
+  def PPCstrict_fcfid  : SDNode<"PPCISD::STRICT_FCFID",
+                                SDTFPUnaryOp, [SDNPHasChain]>;
+  def PPCstrict_fcfidu : SDNode<"PPCISD::STRICT_FCFIDU",
+                                SDTFPUnaryOp, [SDNPHasChain]>;
+  def PPCstrict_fcfids : SDNode<"PPCISD::STRICT_FCFIDS",
+                                SDTFPRoundOp, [SDNPHasChain]>;
+  def PPCstrict_fcfidus : SDNode<"PPCISD::STRICT_FCFIDUS",
+                                 SDTFPRoundOp, [SDNPHasChain]>;
+}
 
 def PPCany_fcfid : PatFrags<(ops node:$op),
                              [(PPCfcfid node:$op),
@@ -207,6 +209,8 @@ def PPCmffs   : SDNode<"PPCISD::MFFS",
 
 // Perform FADD in round-to-zero mode.
 def PPCfaddrtz: SDNode<"PPCISD::FADDRTZ", SDTFPBinOp, []>;
+
+let IsStrictFP = true in
 def PPCstrict_faddrtz: SDNode<"PPCISD::STRICT_FADDRTZ", SDTFPBinOp,
                               [SDNPHasChain]>;
 
@@ -272,14 +276,16 @@ def PPCfnmsub     : SDNode<"PPCISD::FNMSUB"    , SDTFPTernaryOp>;
 
 def PPCextswsli : SDNode<"PPCISD::EXTSWSLI" , SDT_PPCextswsli>;
 
-def PPCstrict_fctidz : SDNode<"PPCISD::STRICT_FCTIDZ",
-                              SDTFPUnaryOp, [SDNPHasChain]>;
-def PPCstrict_fctiwz : SDNode<"PPCISD::STRICT_FCTIWZ",
-                              SDTFPUnaryOp, [SDNPHasChain]>;
-def PPCstrict_fctiduz : SDNode<"PPCISD::STRICT_FCTIDUZ",
-                               SDTFPUnaryOp, [SDNPHasChain]>;
-def PPCstrict_fctiwuz : SDNode<"PPCISD::STRICT_FCTIWUZ",
+let IsStrictFP = true in {
+  def PPCstrict_fctidz : SDNode<"PPCISD::STRICT_FCTIDZ",
                                 SDTFPUnaryOp, [SDNPHasChain]>;
+  def PPCstrict_fctiwz : SDNode<"PPCISD::STRICT_FCTIWZ",
+                                SDTFPUnaryOp, [SDNPHasChain]>;
+  def PPCstrict_fctiduz : SDNode<"PPCISD::STRICT_FCTIDUZ",
+                                 SDTFPUnaryOp, [SDNPHasChain]>;
+  def PPCstrict_fctiwuz : SDNode<"PPCISD::STRICT_FCTIWUZ",
+                                 SDTFPUnaryOp, [SDNPHasChain]>;
+}
 
 def PPCany_fctidz : PatFrags<(ops node:$op),
                              [(PPCstrict_fctidz node:$op),
