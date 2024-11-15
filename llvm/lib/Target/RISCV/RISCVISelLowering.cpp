@@ -16547,13 +16547,36 @@ static SDValue performINSERT_VECTOR_ELTCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ConcatOps);
 }
 
+/// Combine a concat_vectors of single element scalar_to_vectors to a
+/// build_vector.
+static SDValue
+performCONCAT_VECTORSOfSCALAR_TO_VECTORCombine(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  if (VT.isScalableVector())
+    return SDValue();
+  SmallVector<SDValue> Elts;
+  Elts.reserve(VT.getVectorNumElements());
+  for (SDValue Op : N->ops()) {
+    if (Op.getValueType().getVectorNumElements() != 1)
+      return SDValue();
+    if (Op.isUndef())
+      Elts.push_back(Op);
+    else if (Op.getOpcode() == ISD::SCALAR_TO_VECTOR)
+      Elts.push_back(Op.getOperand(0));
+    else
+      return SDValue();
+  }
+  return DAG.getBuildVector(VT, SDLoc(N), Elts);
+}
+
 // If we're concatenating a series of vector loads like
 // concat_vectors (load v4i8, p+0), (load v4i8, p+n), (load v4i8, p+n*2) ...
 // Then we can turn this into a strided load by widening the vector elements
 // vlse32 p, stride=n
-static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
-                                            const RISCVSubtarget &Subtarget,
-                                            const RISCVTargetLowering &TLI) {
+static SDValue
+performCONCAT_VECTORSOfLoadCombine(SDNode *N, SelectionDAG &DAG,
+                                   const RISCVSubtarget &Subtarget,
+                                   const RISCVTargetLowering &TLI) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
 
@@ -17857,7 +17880,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return V;
     break;
   case ISD::CONCAT_VECTORS:
-    if (SDValue V = performCONCAT_VECTORSCombine(N, DAG, Subtarget, *this))
+    if (SDValue V = performCONCAT_VECTORSOfSCALAR_TO_VECTORCombine(N, DAG))
+      return V;
+    if (SDValue V =
+            performCONCAT_VECTORSOfLoadCombine(N, DAG, Subtarget, *this))
       return V;
     break;
   case ISD::INSERT_VECTOR_ELT:
