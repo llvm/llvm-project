@@ -2302,18 +2302,17 @@ bool ThunkCreator::normalizeExistingThunk(Relocation &rel, uint64_t src) {
 bool ThunkCreator::addSyntheticLandingPads() {
   bool addressesChanged = false;
   for (Thunk *t : allThunks) {
-    if (t->needsSyntheticLandingPad()) {
-      Thunk *lpt;
-      bool isNew;
-      auto &dr = cast<Defined>(t->destination);
-      std::tie(lpt, isNew) = getSyntheticLandingPad(dr, t->addend);
-      if (isNew) {
-        addressesChanged = true;
-        ThunkSection *ts = getISThunkSec(cast<InputSection>(dr.section));
-        ts->addThunk(lpt);
-      }
-      t->landingPad = lpt->getThunkTargetSym();
+    if (!t->needsSyntheticLandingPad())
+      continue;
+    Thunk *lpt;
+    bool isNew;
+    auto &dr = cast<Defined>(t->destination);
+    std::tie(lpt, isNew) = getSyntheticLandingPad(dr, t->addend);
+    if (isNew) {
+      addressesChanged = true;
+      getISThunkSec(cast<InputSection>(dr.section))->addThunk(lpt);
     }
+    t->landingPad = lpt->getThunkTargetSym();
   }
   return addressesChanged;
 }
