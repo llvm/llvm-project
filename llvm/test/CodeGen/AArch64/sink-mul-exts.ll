@@ -119,18 +119,16 @@ l2:
 define <8 x i16> @mul_sext_splat_v8i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: mul_sext_splat_v8i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    dup v1.8b, v0.b[3]
+; CHECK-NEXT:    ldr d1, [x0]
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    sshll v1.8h, v1.8b, #0
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    dup v1.8b, v1.b[3]
 ; CHECK-NEXT:  .LBB3_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr d2, [x1, x8]
 ; CHECK-NEXT:    add x8, x8, #4
 ; CHECK-NEXT:    cmp w8, #4
-; CHECK-NEXT:    sshll v2.8h, v2.8b, #0
-; CHECK-NEXT:    mla v0.8h, v2.8h, v1.8h
+; CHECK-NEXT:    smlal v0.8h, v2.8b, v1.8b
 ; CHECK-NEXT:    b.eq .LBB3_1
 ; CHECK-NEXT:  // %bb.2: // %l2
 ; CHECK-NEXT:    ret
@@ -160,18 +158,15 @@ l2:
 define <4 x i32> @mul_sext_splat_v4i32(ptr %x, ptr %y) {
 ; CHECK-LABEL: mul_sext_splat_v4i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    dup v1.4h, v0.h[3]
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  .LBB4_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr d2, [x1, x8]
 ; CHECK-NEXT:    add x8, x8, #8
 ; CHECK-NEXT:    cmp w8, #8
-; CHECK-NEXT:    sshll v2.4s, v2.4h, #0
-; CHECK-NEXT:    mla v0.4s, v2.4s, v1.4s
+; CHECK-NEXT:    smlal v0.4s, v2.4h, v1.h[3]
 ; CHECK-NEXT:    b.eq .LBB4_1
 ; CHECK-NEXT:  // %bb.2: // %l2
 ; CHECK-NEXT:    ret
@@ -201,26 +196,15 @@ l2:
 define <2 x i64> @mul_sext_splat_v2i64(ptr %x, ptr %y) {
 ; CHECK-LABEL: mul_sext_splat_v2i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    dup v0.2s, v0.s[1]
-; CHECK-NEXT:    sshll v1.2d, v0.2s, #0
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov x9, v1.d[1]
-; CHECK-NEXT:    fmov x10, d1
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  .LBB5_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr d1, [x1, x8]
+; CHECK-NEXT:    ldr d2, [x1, x8]
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp w8, #16
-; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
-; CHECK-NEXT:    fmov x12, d1
-; CHECK-NEXT:    mov x11, v1.d[1]
-; CHECK-NEXT:    smull x12, w12, w10
-; CHECK-NEXT:    smull x11, w11, w9
-; CHECK-NEXT:    fmov d1, x12
-; CHECK-NEXT:    mov v1.d[1], x11
-; CHECK-NEXT:    add v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    smlal v0.2d, v2.2s, v1.s[1]
 ; CHECK-NEXT:    b.eq .LBB5_1
 ; CHECK-NEXT:  // %bb.2: // %l2
 ; CHECK-NEXT:    ret
