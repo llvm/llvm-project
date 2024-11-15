@@ -942,8 +942,7 @@ bool DynamicLoader::ContainsSymbol(const LibraryPath *Lib,
   LLVM_DEBUG(dbgs() << "Dyld::ContainsSymbol: Iterate all for <"
                     << mangledName.str() << ">");
 
-  auto ForeachSymbol =
-      [&library_filename](iterator_range<object::symbol_iterator> range,
+  auto ForeachSymbol = [](iterator_range<object::symbol_iterator> range,
                           unsigned IgnoreSymbolFlags,
                           StringRef mangledName) -> bool {
     for (const object::SymbolRef &S : range) {
