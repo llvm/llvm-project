@@ -223,6 +223,7 @@ multiclass VINTERP_Real_gfx12 <bits<7> op, string asmName, string opName = NAME>
   }
 }
 
+
 multiclass VINTERP_Real_gfx11_gfx12 <bits<7> op, string asmName = !cast<VOP3_Pseudo>(NAME).Mnemonic, string opName = NAME> :
   VINTERP_Real_gfx11<op, asmName, opName>, VINTERP_Real_gfx12<op, asmName, opName>;
 

@@ -187,12 +187,12 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; RV32IFD-NEXT:    .cfi_offset fs0, -24
 ; RV32IFD-NEXT:    .cfi_offset fs1, -32
 ; RV32IFD-NEXT:    .cfi_offset fs2, -40
-; RV32IFD-NEXT:    lhu a2, 8(a1)
-; RV32IFD-NEXT:    lhu a3, 0(a1)
-; RV32IFD-NEXT:    lhu a1, 4(a1)
 ; RV32IFD-NEXT:    mv s0, a0
-; RV32IFD-NEXT:    fmv.w.x fs0, a2
-; RV32IFD-NEXT:    fmv.w.x fs1, a3
+; RV32IFD-NEXT:    lhu a0, 8(a1)
+; RV32IFD-NEXT:    lhu a2, 0(a1)
+; RV32IFD-NEXT:    lhu a1, 4(a1)
+; RV32IFD-NEXT:    fmv.w.x fs0, a0
+; RV32IFD-NEXT:    fmv.w.x fs1, a2
 ; RV32IFD-NEXT:    fmv.w.x fa0, a1
 ; RV32IFD-NEXT:    call __extendhfsf2
 ; RV32IFD-NEXT:    call exp10f
