@@ -3638,7 +3638,7 @@ void llvm::copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI,
   unsigned BitWidth = DL.getPointerTypeSizeInBits(NewTy);
   if (BitWidth == OldLI.getType()->getScalarSizeInBits() &&
       !getConstantRangeFromMetadata(*N).contains(APInt(BitWidth, 0))) {
-    MDNode *NN = MDNode::get(OldLI.getContext(), std::nullopt);
+    MDNode *NN = MDNode::get(OldLI.getContext(), {});
     NewLI.setMetadata(LLVMContext::MD_nonnull, NN);
   }
 }

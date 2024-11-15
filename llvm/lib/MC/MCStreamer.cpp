@@ -267,6 +267,12 @@ void MCStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                   Discriminator);
 }
 
+void MCStreamer::emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) {
+  getContext()
+      .getMCDwarfLineTable(getContext().getDwarfCompileUnitID())
+      .endCurrentSeqAndEmitLineStreamLabel(this, Loc, Name);
+}
+
 MCSymbol *MCStreamer::getDwarfLineTableSymbol(unsigned CUID) {
   MCDwarfLineTable &Table = getContext().getMCDwarfLineTable(CUID);
   if (!Table.getLabel()) {

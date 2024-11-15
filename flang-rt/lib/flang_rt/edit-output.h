@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_FLANG_RT_EDIT_OUTPUT_H_
-#define FORTRAN_FLANG_RT_EDIT_OUTPUT_H_
+#ifndef FLANG_RT_EDIT_OUTPUT_H_
+#define FLANG_RT_EDIT_OUTPUT_H_
 
 // Output data editing templates implementing the FORMAT data editing
 // descriptors E, EN, ES, EX, D, F, and G for REAL data (and COMPLEX
@@ -138,4 +138,4 @@ extern template class RealOutputEditing<10>;
 extern template class RealOutputEditing<16>;
 
 } // namespace Fortran::runtime::io
-#endif /* FORTRAN_FLANG_RT_EDIT_OUTPUT_H_ */
+#endif /* FLANG_RT_EDIT_OUTPUT_H_ */

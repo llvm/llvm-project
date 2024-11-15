@@ -108,6 +108,13 @@ if (f128_sources)
     APPEND PROPERTY COMPILE_DEFINITIONS
     ${f128_defs}
     )
+  get_target_property(f128_include_dirs
+    FortranFloat128MathILib INTERFACE_INCLUDE_DIRECTORIES
+    )
+  set_property(SOURCE ${f128_sources}
+    APPEND PROPERTY INCLUDE_DIRECTORIES
+    ${f128_include_dirs}
+    )
 else ()
   set(f128_sources "")
 endif ()

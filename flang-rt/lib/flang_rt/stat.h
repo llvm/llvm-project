@@ -9,8 +9,8 @@
 // Defines the values returned by the runtime for STAT= specifiers
 // on executable statements.
 
-#ifndef FORTRAN_FLANG_RT_STAT_H_
-#define FORTRAN_FLANG_RT_STAT_H_
+#ifndef FLANG_RT_STAT_H_
+#define FLANG_RT_STAT_H_
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Common/api-attrs.h"
 #include "flang/Runtime/magic-numbers.h"
@@ -60,4 +60,4 @@ RT_API_ATTRS int ToErrmsg(const Descriptor *errmsg, int stat); // returns stat
 RT_API_ATTRS int ReturnError(Terminator &, int stat,
     const Descriptor *errmsg = nullptr, bool hasStat = false);
 } // namespace Fortran::runtime
-#endif /* FORTRAN_FLANG_RT_STAT_H_ */
+#endif /* FLANG_RT_STAT_H_ */

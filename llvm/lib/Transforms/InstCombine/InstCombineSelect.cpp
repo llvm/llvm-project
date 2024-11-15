@@ -3551,9 +3551,7 @@ Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
     Pred = ICmpInst::getSwappedPredicate(Pred);
     std::swap(LHS, RHS);
   }
-
-  Intrinsic::ID IID =
-      ICmpInst::isSigned(Pred) ? Intrinsic::scmp : Intrinsic::ucmp;
+  bool IsSigned = ICmpInst::isSigned(Pred);
 
   bool Replace = false;
   ICmpInst::Predicate ExtendedCmpPredicate;
@@ -3575,6 +3573,32 @@ Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
        ICmpInst::getSwappedPredicate(ExtendedCmpPredicate) == Pred))
     Replace = true;
 
+  // (x == y) ? 0 : (x > y ? 1 : -1)
+  ICmpInst::Predicate FalseBranchSelectPredicate;
+  const APInt *InnerTV, *InnerFV;
+  if (Pred == ICmpInst::ICMP_EQ && match(TV, m_Zero()) &&
+      match(FV, m_Select(m_c_ICmp(FalseBranchSelectPredicate, m_Specific(LHS),
+                                  m_Specific(RHS)),
+                         m_APInt(InnerTV), m_APInt(InnerFV)))) {
+    if (!ICmpInst::isGT(FalseBranchSelectPredicate)) {
+      FalseBranchSelectPredicate =
+          ICmpInst::getSwappedPredicate(FalseBranchSelectPredicate);
+      std::swap(LHS, RHS);
+    }
+
+    if (!InnerTV->isOne()) {
+      std::swap(InnerTV, InnerFV);
+      std::swap(LHS, RHS);
+    }
+
+    if (ICmpInst::isGT(FalseBranchSelectPredicate) && InnerTV->isOne() &&
+        InnerFV->isAllOnes()) {
+      IsSigned = ICmpInst::isSigned(FalseBranchSelectPredicate);
+      Replace = true;
+    }
+  }
+
+  Intrinsic::ID IID = IsSigned ? Intrinsic::scmp : Intrinsic::ucmp;
   if (Replace)
     return replaceInstUsesWith(
         SI, Builder.CreateIntrinsic(SI.getType(), IID, {LHS, RHS}));

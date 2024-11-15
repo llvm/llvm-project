@@ -583,6 +583,26 @@ def LLVM_LandingpadOp : LLVM_Op<"landingpad"> {
 }
 
 //===----------------------------------------------------------------------===//
+// VAArgOp
+//===----------------------------------------------------------------------===//
+
+def LLVM_VaArgOp : LLVM_Op<"va_arg"> {
+  let arguments = (ins LLVM_AnyPointer:$arg);
+  let results = (outs LLVM_Type:$res);
+
+  let builders = [LLVM_OneResultOpBuilder];
+
+  let llvmBuilder = " $res = builder.CreateVAArg($arg, $_resultType); ";
+  let assemblyFormat = "$arg attr-dict `:` functional-type($arg, $res)";
+
+  string llvmInstName = "VAArg";
+  string mlirBuilder = [{
+    $res = $_builder.create<mlir::LLVM::VaArgOp>(
+      $_location, $_resultType, $arg);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // CallOp
 //===----------------------------------------------------------------------===//
 

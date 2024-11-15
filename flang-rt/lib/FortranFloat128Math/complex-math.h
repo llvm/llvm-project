@@ -6,8 +6,8 @@
  *
  *===----------------------------------------------------------------------===*/
 
-#ifndef FORTRAN_FORTRANFLOAT128MATH_COMPLEX_MATH_H_
-#define FORTRAN_FORTRANFLOAT128MATH_COMPLEX_MATH_H_
+#ifndef FLANG_RT_FORTRANFLOAT128MATH_COMPLEX_MATH_H_
+#define FLANG_RT_FORTRANFLOAT128MATH_COMPLEX_MATH_H_
 
 #include "flang/Common/float128.h"
 #include "flang/Runtime/entry-names.h"
@@ -31,7 +31,7 @@
 #define CSqrt(x) csqrtq(x)
 #define CTan(x) ctanq(x)
 #define CTanh(x) ctanhq(x)
-#elif LDBL_MANT_DIG == 113
+#elif HAS_LDBL128
 /* Use 'long double' versions of libm functions. */
 #include <complex.h>
 
@@ -59,4 +59,4 @@
 #error "Float128Math build with glibc>=2.26 is unsupported yet"
 #endif
 
-#endif /* FORTRAN_FORTRANFLOAT128MATH_COMPLEX_MATH_H_ */
+#endif /* FLANG_RT_FORTRANFLOAT128MATH_COMPLEX_MATH_H_ */

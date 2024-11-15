@@ -739,7 +739,7 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
 
       Error = SMDiagnostic(*PFS.SM, SMLoc(), Buffer.getBufferIdentifier(), 1, 1,
                            SourceMgr::DK_Error, toString(FIOrErr.takeError()),
-                           "", std::nullopt, std::nullopt);
+                           "", {}, {});
       SourceRange = YamlMFI.ScavengeFI->SourceRange;
       return true;
     }

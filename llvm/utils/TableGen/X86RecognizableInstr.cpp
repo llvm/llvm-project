@@ -154,14 +154,13 @@ RecognizableInstr::RecognizableInstr(DisassemblerTables &tables,
       UID(uid), Spec(&tables.specForUID(uid)) {
   // Check for 64-bit inst which does not require REX
   // FIXME: Is there some better way to check for In64BitMode?
-  std::vector<Record *> Predicates = Rec->getValueAsListOfDefs("Predicates");
-  for (unsigned i = 0, e = Predicates.size(); i != e; ++i) {
-    if (Predicates[i]->getName().contains("Not64Bit") ||
-        Predicates[i]->getName().contains("In32Bit")) {
+  for (const Record *Predicate : Rec->getValueAsListOfConstDefs("Predicates")) {
+    if (Predicate->getName().contains("Not64Bit") ||
+        Predicate->getName().contains("In32Bit")) {
       Is32Bit = true;
       break;
     }
-    if (Predicates[i]->getName().contains("In64Bit")) {
+    if (Predicate->getName().contains("In64Bit")) {
       Is64Bit = true;
       break;
     }

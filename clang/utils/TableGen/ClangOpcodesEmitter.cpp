@@ -57,7 +57,7 @@ private:
 
 void Enumerate(const Record *R, StringRef N,
                std::function<void(ArrayRef<const Record *>, Twine)> &&F) {
-  llvm::SmallVector<const Record *, 2> TypePath;
+  SmallVector<const Record *, 2> TypePath;
   const auto *Types = R->getValueAsListInit("Types");
 
   std::function<void(size_t, const Twine &)> Rec;
@@ -304,7 +304,7 @@ void ClangOpcodesEmitter::EmitGroup(raw_ostream &OS, StringRef N,
   OS << "const SourceInfo &I) {\n";
 
   std::function<void(size_t, const Twine &)> Rec;
-  llvm::SmallVector<const Record *, 2> TS;
+  SmallVector<const Record *, 2> TS;
   Rec = [this, &Rec, &OS, Types, &Args, R, &TS, N,
          EmitFuncName](size_t I, const Twine &ID) {
     if (I >= Types->size()) {

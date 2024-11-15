@@ -38,8 +38,8 @@
 // standard maximum.  However, we support extended forms up to 32 bits so that
 // CHARACTER(KIND=4) can be abused to hold arbitrary 32-bit data.
 
-#ifndef FORTRAN_FLANG_RT_UTF_H_
-#define FORTRAN_FLANG_RT_UTF_H_
+#ifndef FLANG_RT_UTF_H_
+#define FLANG_RT_UTF_H_
 
 #include "flang/Common/optional.h"
 #include <cstddef>
@@ -70,4 +70,4 @@ RT_API_ATTRS Fortran::common::optional<char32_t> DecodeUTF8(const char *);
 RT_API_ATTRS std::size_t EncodeUTF8(char *, char32_t);
 
 } // namespace Fortran::runtime
-#endif /* FORTRAN_FLANG_RT_UTF_H_ */
+#endif /* FLANG_RT_UTF_H_ */

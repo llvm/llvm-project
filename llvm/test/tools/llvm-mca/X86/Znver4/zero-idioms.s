@@ -161,13 +161,13 @@ vpxorq  %zmm19, %zmm19, %zmm21
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      139
-# CHECK-NEXT: Total Cycles:      40
+# CHECK-NEXT: Total Cycles:      25
 # CHECK-NEXT: Total uOps:        139
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    3.48
-# CHECK-NEXT: IPC:               3.48
-# CHECK-NEXT: Block RThroughput: 24.8
+# CHECK-NEXT: uOps Per Cycle:    5.56
+# CHECK-NEXT: IPC:               5.56
+# CHECK-NEXT: Block RThroughput: 23.2
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -229,103 +229,103 @@ vpxorq  %zmm19, %zmm19, %zmm21
 # CHECK-NEXT:  1      0     0.17                        vpsubd	%ymm3, %ymm3, %ymm5
 # CHECK-NEXT:  1      0     0.17                        vpsubq	%ymm3, %ymm3, %ymm5
 # CHECK-NEXT:  1      0     0.17                        vpsubw	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT:  1      1     0.25                        vpsubb	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT:  1      1     0.25                        vpsubd	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT:  1      1     0.25                        vpsubq	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT:  1      1     0.25                        vpsubw	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT:  1      1     0.25                        vpsubb	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT:  1      1     0.25                        vpsubd	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT:  1      1     0.25                        vpsubq	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT:  1      1     0.25                        vpsubw	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT:  1      1     0.50                        vpsubb	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT:  1      1     0.50                        vpsubd	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT:  1      1     0.50                        vpsubq	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT:  1      1     0.50                        vpsubw	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT:  1      1     0.25                        vpsubb	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT:  1      1     0.25                        vpsubd	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT:  1      1     0.25                        vpsubq	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT:  1      1     0.25                        vpsubw	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT:  1      1     0.25                        vpsubb	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT:  1      1     0.25                        vpsubd	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT:  1      1     0.25                        vpsubq	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT:  1      1     0.25                        vpsubw	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT:  1      1     0.50                        vpsubb	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT:  1      1     0.50                        vpsubd	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT:  1      1     0.50                        vpsubq	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT:  1      1     0.50                        vpsubw	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT:  1      0     0.17                        vpsubb	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT:  1      0     0.17                        vpsubd	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT:  1      0     0.17                        vpsubq	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT:  1      0     0.17                        vpsubw	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT:  1      0     0.17                        vpsubb	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT:  1      0     0.17                        vpsubd	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT:  1      0     0.17                        vpsubq	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT:  1      0     0.17                        vpsubw	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT:  1      0     0.17                        vpsubb	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT:  1      0     0.17                        vpsubd	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT:  1      0     0.17                        vpsubq	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT:  1      0     0.17                        vpsubw	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT:  1      0     0.17                        vpsubb	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT:  1      0     0.17                        vpsubd	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT:  1      0     0.17                        vpsubq	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT:  1      0     0.17                        vpsubw	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT:  1      0     0.17                        vpsubb	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT:  1      0     0.17                        vpsubd	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT:  1      0     0.17                        vpsubq	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT:  1      0     0.17                        vpsubw	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT:  1      0     0.17                        vpsubb	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT:  1      0     0.17                        vpsubd	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT:  1      0     0.17                        vpsubq	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT:  1      0     0.17                        vpsubw	%zmm19, %zmm19, %zmm21
 # CHECK-NEXT:  1      1     0.25                        andnps	%xmm0, %xmm0
 # CHECK-NEXT:  1      1     0.25                        andnpd	%xmm1, %xmm1
 # CHECK-NEXT:  1      0     0.17                        vandnps	%xmm2, %xmm2, %xmm2
 # CHECK-NEXT:  1      0     0.17                        vandnpd	%xmm1, %xmm1, %xmm1
 # CHECK-NEXT:  1      0     0.17                        vandnps	%ymm2, %ymm2, %ymm2
 # CHECK-NEXT:  1      0     0.17                        vandnpd	%ymm1, %ymm1, %ymm1
-# CHECK-NEXT:  1      1     0.50                        vandnps	%zmm2, %zmm2, %zmm2
-# CHECK-NEXT:  1      1     0.50                        vandnpd	%zmm1, %zmm1, %zmm1
+# CHECK-NEXT:  1      0     0.17                        vandnps	%zmm2, %zmm2, %zmm2
+# CHECK-NEXT:  1      0     0.17                        vandnpd	%zmm1, %zmm1, %zmm1
 # CHECK-NEXT:  1      1     0.25                        pandn	%mm2, %mm2
 # CHECK-NEXT:  1      1     0.25                        pandn	%xmm2, %xmm2
 # CHECK-NEXT:  1      0     0.17                        vpandn	%xmm3, %xmm3, %xmm3
 # CHECK-NEXT:  1      0     0.17                        vpandn	%ymm3, %ymm3, %ymm3
-# CHECK-NEXT:  1      1     0.25                        vpandnd	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT:  1      1     0.25                        vpandnq	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT:  1      1     0.25                        vpandnd	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT:  1      1     0.25                        vpandnq	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT:  1      1     0.50                        vpandnd	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT:  1      1     0.50                        vpandnq	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT:  1      0     0.17                        vpandnd	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT:  1      0     0.17                        vpandnq	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT:  1      0     0.17                        vpandnd	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT:  1      0     0.17                        vpandnq	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT:  1      0     0.17                        vpandnd	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT:  1      0     0.17                        vpandnq	%zmm19, %zmm19, %zmm19
 # CHECK-NEXT:  1      0     0.17                        vandnps	%xmm2, %xmm2, %xmm5
 # CHECK-NEXT:  1      0     0.17                        vandnpd	%xmm1, %xmm1, %xmm5
 # CHECK-NEXT:  1      0     0.17                        vpandn	%xmm3, %xmm3, %xmm5
 # CHECK-NEXT:  1      0     0.17                        vandnps	%ymm2, %ymm2, %ymm5
 # CHECK-NEXT:  1      0     0.17                        vandnpd	%ymm1, %ymm1, %ymm5
 # CHECK-NEXT:  1      0     0.17                        vpandn	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT:  1      1     0.50                        vandnps	%zmm2, %zmm2, %zmm5
-# CHECK-NEXT:  1      1     0.50                        vandnpd	%zmm1, %zmm1, %zmm5
-# CHECK-NEXT:  1      1     0.25                        vpandnd	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT:  1      1     0.25                        vpandnq	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT:  1      1     0.25                        vpandnd	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT:  1      1     0.25                        vpandnq	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT:  1      1     0.50                        vpandnd	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT:  1      1     0.50                        vpandnq	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT:  1      0     0.17                        vandnps	%zmm2, %zmm2, %zmm5
+# CHECK-NEXT:  1      0     0.17                        vandnpd	%zmm1, %zmm1, %zmm5
+# CHECK-NEXT:  1      0     0.17                        vpandnd	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT:  1      0     0.17                        vpandnq	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT:  1      0     0.17                        vpandnd	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT:  1      0     0.17                        vpandnq	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT:  1      0     0.17                        vpandnd	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT:  1      0     0.17                        vpandnq	%zmm19, %zmm19, %zmm21
 # CHECK-NEXT:  1      1     0.25                        xorps	%xmm0, %xmm0
 # CHECK-NEXT:  1      1     0.25                        xorpd	%xmm1, %xmm1
 # CHECK-NEXT:  1      0     0.17                        vxorps	%xmm2, %xmm2, %xmm2
 # CHECK-NEXT:  1      0     0.17                        vxorpd	%xmm1, %xmm1, %xmm1
 # CHECK-NEXT:  1      0     0.17                        vxorps	%ymm2, %ymm2, %ymm2
 # CHECK-NEXT:  1      0     0.17                        vxorpd	%ymm1, %ymm1, %ymm1
-# CHECK-NEXT:  1      1     0.50                        vxorps	%zmm2, %zmm2, %zmm2
-# CHECK-NEXT:  1      1     0.50                        vxorpd	%zmm1, %zmm1, %zmm1
+# CHECK-NEXT:  1      0     0.17                        vxorps	%zmm2, %zmm2, %zmm2
+# CHECK-NEXT:  1      0     0.17                        vxorpd	%zmm1, %zmm1, %zmm1
 # CHECK-NEXT:  1      1     0.25                        pxor	%mm2, %mm2
 # CHECK-NEXT:  1      1     0.25                        pxor	%xmm2, %xmm2
 # CHECK-NEXT:  1      0     0.17                        vpxor	%xmm3, %xmm3, %xmm3
 # CHECK-NEXT:  1      0     0.17                        vpxor	%ymm3, %ymm3, %ymm3
-# CHECK-NEXT:  1      1     0.25                        vpxord	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT:  1      1     0.25                        vpxorq	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT:  1      1     0.25                        vpxord	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT:  1      1     0.25                        vpxorq	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT:  1      0     0.17                        vpxord	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT:  1      0     0.17                        vpxorq	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT:  1      0     0.17                        vpxord	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT:  1      0     0.17                        vpxorq	%ymm19, %ymm19, %ymm19
 # CHECK-NEXT:  1      0     0.17                        vpxord	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT:  1      1     0.50                        vpxorq	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT:  1      0     0.17                        vpxorq	%zmm19, %zmm19, %zmm19
 # CHECK-NEXT:  1      0     0.17                        vxorps	%xmm4, %xmm4, %xmm5
 # CHECK-NEXT:  1      0     0.17                        vxorpd	%xmm1, %xmm1, %xmm3
 # CHECK-NEXT:  1      0     0.17                        vxorps	%ymm4, %ymm4, %ymm5
 # CHECK-NEXT:  1      0     0.17                        vxorpd	%ymm1, %ymm1, %ymm3
-# CHECK-NEXT:  1      1     0.50                        vxorps	%zmm4, %zmm4, %zmm5
-# CHECK-NEXT:  1      1     0.50                        vxorpd	%zmm1, %zmm1, %zmm3
+# CHECK-NEXT:  1      0     0.17                        vxorps	%zmm4, %zmm4, %zmm5
+# CHECK-NEXT:  1      0     0.17                        vxorpd	%zmm1, %zmm1, %zmm3
 # CHECK-NEXT:  1      0     0.17                        vpxor	%xmm3, %xmm3, %xmm5
 # CHECK-NEXT:  1      0     0.17                        vpxor	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT:  1      1     0.25                        vpxord	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT:  1      1     0.25                        vpxorq	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT:  1      1     0.25                        vpxord	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT:  1      1     0.25                        vpxorq	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT:  1      0     0.17                        vpxord	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT:  1      0     0.17                        vpxorq	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT:  1      0     0.17                        vpxord	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT:  1      0     0.17                        vpxorq	%ymm19, %ymm19, %ymm21
 # CHECK-NEXT:  1      0     0.17                        vpxord	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT:  1      1     0.50                        vpxorq	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT:  1      0     0.17                        vpxorq	%zmm19, %zmm19, %zmm21
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    63
-# CHECK-NEXT: Max number of mappings used:         43
+# CHECK-NEXT: Total number of mappings created:    9
+# CHECK-NEXT: Max number of mappings used:         4
 
 # CHECK:      *  Register File #1 -- Zn4FpPRF:
 # CHECK-NEXT:    Number of physical registers:     192
-# CHECK-NEXT:    Total number of mappings created: 63
-# CHECK-NEXT:    Max number of mappings used:      43
+# CHECK-NEXT:    Total number of mappings created: 9
+# CHECK-NEXT:    Max number of mappings used:      4
 
 # CHECK:      *  Register File #2 -- Zn4IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     224
@@ -359,7 +359,7 @@ vpxorq  %zmm19, %zmm19, %zmm21
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     24.00  25.00  25.00  25.00   -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00   6.00   6.00   6.00    -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
@@ -414,238 +414,238 @@ vpxorq  %zmm19, %zmm19, %zmm21
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubd	%ymm3, %ymm3, %ymm5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubq	%ymm3, %ymm3, %ymm5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubw	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubb	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vpsubd	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsubq	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubw	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubb	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubd	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubq	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubw	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubb	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubd	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubq	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubw	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubb	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vpsubd	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsubq	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubw	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubb	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vpsubd	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsubq	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubw	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubb	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -     vpsubd	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsubq	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubw	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     andnps	%xmm0, %xmm0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     andnpd	%xmm1, %xmm1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubb	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubd	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubq	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubw	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubb	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubd	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubq	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubw	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubb	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubd	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubq	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubw	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubb	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubd	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubq	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubw	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubb	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubd	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubq	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubw	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubb	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubd	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubq	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubw	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     andnps	%xmm0, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     andnpd	%xmm1, %xmm1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vandnps	%xmm2, %xmm2, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vandnpd	%xmm1, %xmm1, %xmm1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vandnps	%ymm2, %ymm2, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vandnpd	%ymm1, %ymm1, %ymm1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vandnps	%zmm2, %zmm2, %zmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -     vandnpd	%zmm1, %zmm1, %zmm1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vandnps	%zmm2, %zmm2, %zmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vandnpd	%zmm1, %zmm1, %zmm1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     pandn	%mm2, %mm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     pandn	%xmm2, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     pandn	%xmm2, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpandn	%xmm3, %xmm3, %xmm3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpandn	%ymm3, %ymm3, %ymm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpandnd	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vpandnq	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vpandnd	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vpandnq	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -     vpandnd	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpandnq	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpandnd	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpandnq	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpandnd	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpandnq	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpandnd	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpandnq	%zmm19, %zmm19, %zmm19
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vandnps	%xmm2, %xmm2, %xmm5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vandnpd	%xmm1, %xmm1, %xmm5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpandn	%xmm3, %xmm3, %xmm5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vandnps	%ymm2, %ymm2, %ymm5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vandnpd	%ymm1, %ymm1, %ymm5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpandn	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -     vandnps	%zmm2, %zmm2, %zmm5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -     vandnpd	%zmm1, %zmm1, %zmm5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpandnd	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     vpandnq	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpandnd	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vpandnq	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -     vpandnd	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -     vpandnq	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     xorps	%xmm0, %xmm0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     xorpd	%xmm1, %xmm1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vandnps	%zmm2, %zmm2, %zmm5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vandnpd	%zmm1, %zmm1, %zmm5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpandnd	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpandnq	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpandnd	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpandnq	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpandnd	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpandnq	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     xorps	%xmm0, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     xorpd	%xmm1, %xmm1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vxorps	%xmm2, %xmm2, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vxorpd	%xmm1, %xmm1, %xmm1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vxorps	%ymm2, %ymm2, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vxorpd	%ymm1, %ymm1, %ymm1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -     vxorps	%zmm2, %zmm2, %zmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -     vxorpd	%zmm1, %zmm1, %zmm1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     pxor	%mm2, %mm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     pxor	%xmm2, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vxorps	%zmm2, %zmm2, %zmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vxorpd	%zmm1, %zmm1, %zmm1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     pxor	%mm2, %mm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     pxor	%xmm2, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpxor	%xmm3, %xmm3, %xmm3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpxor	%ymm3, %ymm3, %ymm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpxord	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vpxorq	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpxord	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     vpxorq	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpxord	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpxorq	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpxord	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpxorq	%ymm19, %ymm19, %ymm19
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpxord	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -     vpxorq	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpxorq	%zmm19, %zmm19, %zmm19
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vxorps	%xmm4, %xmm4, %xmm5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vxorpd	%xmm1, %xmm1, %xmm3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vxorps	%ymm4, %ymm4, %ymm5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vxorpd	%ymm1, %ymm1, %ymm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -     vxorps	%zmm4, %zmm4, %zmm5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vxorpd	%zmm1, %zmm1, %zmm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vxorps	%zmm4, %zmm4, %zmm5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vxorpd	%zmm1, %zmm1, %zmm3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpxor	%xmm3, %xmm3, %xmm5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpxor	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpxord	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpxorq	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vpxord	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpxorq	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpxord	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpxorq	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpxord	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpxorq	%ymm19, %ymm19, %ymm21
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpxord	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -     vpxorq	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpxorq	%zmm19, %zmm19, %zmm21
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: Index     0123456789          01234
 
-# CHECK:      [0,0]     DR   .    .    .    .    .    .    .   .   subl	%eax, %eax
-# CHECK-NEXT: [0,1]     DR   .    .    .    .    .    .    .   .   subq	%rax, %rax
-# CHECK-NEXT: [0,2]     DR   .    .    .    .    .    .    .   .   xorl	%eax, %eax
-# CHECK-NEXT: [0,3]     DR   .    .    .    .    .    .    .   .   xorq	%rax, %rax
-# CHECK-NEXT: [0,4]     DeER .    .    .    .    .    .    .   .   pcmpgtb	%mm2, %mm2
-# CHECK-NEXT: [0,5]     D=eER.    .    .    .    .    .    .   .   pcmpgtd	%mm2, %mm2
-# CHECK-NEXT: [0,6]     .D=eER    .    .    .    .    .    .   .   pcmpgtw	%mm2, %mm2
-# CHECK-NEXT: [0,7]     .DeE-R    .    .    .    .    .    .   .   pcmpgtb	%xmm2, %xmm2
-# CHECK-NEXT: [0,8]     .DeE-R    .    .    .    .    .    .   .   pcmpgtd	%xmm2, %xmm2
-# CHECK-NEXT: [0,9]     .DeE-R    .    .    .    .    .    .   .   pcmpgtq	%xmm2, %xmm2
-# CHECK-NEXT: [0,10]    .D=eER    .    .    .    .    .    .   .   pcmpgtw	%xmm2, %xmm2
-# CHECK-NEXT: [0,11]    .D---R    .    .    .    .    .    .   .   vpcmpgtb	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT: [0,12]    . D--R    .    .    .    .    .    .   .   vpcmpgtd	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT: [0,13]    . D--R    .    .    .    .    .    .   .   vpcmpgtq	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT: [0,14]    . D--R    .    .    .    .    .    .   .   vpcmpgtw	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT: [0,15]    . D---R   .    .    .    .    .    .   .   vpcmpgtb	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT: [0,16]    . D---R   .    .    .    .    .    .   .   vpcmpgtd	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT: [0,17]    . D---R   .    .    .    .    .    .   .   vpcmpgtq	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT: [0,18]    .  D--R   .    .    .    .    .    .   .   vpcmpgtw	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT: [0,19]    .  D--R   .    .    .    .    .    .   .   vpcmpgtb	%ymm3, %ymm3, %ymm3
-# CHECK-NEXT: [0,20]    .  D--R   .    .    .    .    .    .   .   vpcmpgtd	%ymm3, %ymm3, %ymm3
-# CHECK-NEXT: [0,21]    .  D--R   .    .    .    .    .    .   .   vpcmpgtq	%ymm3, %ymm3, %ymm3
-# CHECK-NEXT: [0,22]    .  D--R   .    .    .    .    .    .   .   vpcmpgtw	%ymm3, %ymm3, %ymm3
-# CHECK-NEXT: [0,23]    .  D--R   .    .    .    .    .    .   .   vpcmpgtb	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT: [0,24]    .   D--R  .    .    .    .    .    .   .   vpcmpgtd	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT: [0,25]    .   D--R  .    .    .    .    .    .   .   vpcmpgtq	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT: [0,26]    .   D--R  .    .    .    .    .    .   .   vpcmpgtw	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT: [0,27]    .   DeER  .    .    .    .    .    .   .   psubb	%mm2, %mm2
-# CHECK-NEXT: [0,28]    .   D=eER .    .    .    .    .    .   .   psubd	%mm2, %mm2
-# CHECK-NEXT: [0,29]    .   D==eER.    .    .    .    .    .   .   psubq	%mm2, %mm2
-# CHECK-NEXT: [0,30]    .    D==eER    .    .    .    .    .   .   psubw	%mm2, %mm2
-# CHECK-NEXT: [0,31]    .    DeE--R    .    .    .    .    .   .   psubb	%xmm2, %xmm2
-# CHECK-NEXT: [0,32]    .    DeE--R    .    .    .    .    .   .   psubd	%xmm2, %xmm2
-# CHECK-NEXT: [0,33]    .    DeE--R    .    .    .    .    .   .   psubq	%xmm2, %xmm2
-# CHECK-NEXT: [0,34]    .    D=eE-R    .    .    .    .    .   .   psubw	%xmm2, %xmm2
-# CHECK-NEXT: [0,35]    .    D----R    .    .    .    .    .   .   vpsubb	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT: [0,36]    .    .D---R    .    .    .    .    .   .   vpsubd	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT: [0,37]    .    .D---R    .    .    .    .    .   .   vpsubq	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT: [0,38]    .    .D---R    .    .    .    .    .   .   vpsubw	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT: [0,39]    .    .D----R   .    .    .    .    .   .   vpsubb	%ymm3, %ymm3, %ymm3
-# CHECK-NEXT: [0,40]    .    .D----R   .    .    .    .    .   .   vpsubd	%ymm3, %ymm3, %ymm3
-# CHECK-NEXT: [0,41]    .    .D----R   .    .    .    .    .   .   vpsubq	%ymm3, %ymm3, %ymm3
-# CHECK-NEXT: [0,42]    .    . D---R   .    .    .    .    .   .   vpsubw	%ymm3, %ymm3, %ymm3
-# CHECK-NEXT: [0,43]    .    . D---R   .    .    .    .    .   .   vpsubb	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT: [0,44]    .    . D---R   .    .    .    .    .   .   vpsubd	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT: [0,45]    .    . D---R   .    .    .    .    .   .   vpsubq	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT: [0,46]    .    . D---R   .    .    .    .    .   .   vpsubw	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT: [0,47]    .    . D---R   .    .    .    .    .   .   vpsubb	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT: [0,48]    .    .  D---R  .    .    .    .    .   .   vpsubd	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT: [0,49]    .    .  D---R  .    .    .    .    .   .   vpsubq	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT: [0,50]    .    .  D---R  .    .    .    .    .   .   vpsubw	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT: [0,51]    .    .  DeE-R  .    .    .    .    .   .   vpsubb	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT: [0,52]    .    .  D=eER  .    .    .    .    .   .   vpsubd	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT: [0,53]    .    .  D==eER .    .    .    .    .   .   vpsubq	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT: [0,54]    .    .   D==eER.    .    .    .    .   .   vpsubw	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT: [0,55]    .    .   D===eER    .    .    .    .   .   vpsubb	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT: [0,56]    .    .   D====eER   .    .    .    .   .   vpsubd	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT: [0,57]    .    .   D=====eER  .    .    .    .   .   vpsubq	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT: [0,58]    .    .   D======eER .    .    .    .   .   vpsubw	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT: [0,59]    .    .   D=======eER.    .    .    .   .   vpsubb	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT: [0,60]    .    .    D=======eER    .    .    .   .   vpsubd	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT: [0,61]    .    .    D========eER   .    .    .   .   vpsubq	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT: [0,62]    .    .    D=========eER  .    .    .   .   vpsubw	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT: [0,63]    .    .    D==========eER .    .    .   .   vpsubb	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT: [0,64]    .    .    D===========eER.    .    .   .   vpsubd	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT: [0,65]    .    .    D===========eER.    .    .   .   vpsubq	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT: [0,66]    .    .    .D==========eER.    .    .   .   vpsubw	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT: [0,67]    .    .    .D==========eER.    .    .   .   vpsubb	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT: [0,68]    .    .    .D===========eER    .    .   .   vpsubd	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT: [0,69]    .    .    .D===========eER    .    .   .   vpsubq	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT: [0,70]    .    .    .D===========eER    .    .   .   vpsubw	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT: [0,71]    .    .    .D===========eER    .    .   .   vpsubb	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT: [0,72]    .    .    . D===========eER   .    .   .   vpsubd	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT: [0,73]    .    .    . D===========eER   .    .   .   vpsubq	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT: [0,74]    .    .    . D===========eER   .    .   .   vpsubw	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT: [0,75]    .    .    . DeE-----------R   .    .   .   andnps	%xmm0, %xmm0
-# CHECK-NEXT: [0,76]    .    .    . DeE-----------R   .    .   .   andnpd	%xmm1, %xmm1
-# CHECK-NEXT: [0,77]    .    .    . D-------------R   .    .   .   vandnps	%xmm2, %xmm2, %xmm2
-# CHECK-NEXT: [0,78]    .    .    .  D------------R   .    .   .   vandnpd	%xmm1, %xmm1, %xmm1
-# CHECK-NEXT: [0,79]    .    .    .  D------------R   .    .   .   vandnps	%ymm2, %ymm2, %ymm2
-# CHECK-NEXT: [0,80]    .    .    .  D------------R   .    .   .   vandnpd	%ymm1, %ymm1, %ymm1
-# CHECK-NEXT: [0,81]    .    .    .  DeE-----------R  .    .   .   vandnps	%zmm2, %zmm2, %zmm2
-# CHECK-NEXT: [0,82]    .    .    .  DeE-----------R  .    .   .   vandnpd	%zmm1, %zmm1, %zmm1
-# CHECK-NEXT: [0,83]    .    .    .  DeE-----------R  .    .   .   pandn	%mm2, %mm2
-# CHECK-NEXT: [0,84]    .    .    .   DeE----------R  .    .   .   pandn	%xmm2, %xmm2
-# CHECK-NEXT: [0,85]    .    .    .   D------------R  .    .   .   vpandn	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT: [0,86]    .    .    .   D------------R  .    .   .   vpandn	%ymm3, %ymm3, %ymm3
-# CHECK-NEXT: [0,87]    .    .    .   D==========eER  .    .   .   vpandnd	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT: [0,88]    .    .    .   D===========eER .    .   .   vpandnq	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT: [0,89]    .    .    .   D============eER.    .   .   vpandnd	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT: [0,90]    .    .    .    D============eER    .   .   vpandnq	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT: [0,91]    .    .    .    D=============eER   .   .   vpandnd	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT: [0,92]    .    .    .    D==============eER  .   .   vpandnq	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT: [0,93]    .    .    .    D----------------R  .   .   vandnps	%xmm2, %xmm2, %xmm5
-# CHECK-NEXT: [0,94]    .    .    .    D----------------R  .   .   vandnpd	%xmm1, %xmm1, %xmm5
-# CHECK-NEXT: [0,95]    .    .    .    D----------------R  .   .   vpandn	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT: [0,96]    .    .    .    .D---------------R  .   .   vandnps	%ymm2, %ymm2, %ymm5
-# CHECK-NEXT: [0,97]    .    .    .    .D---------------R  .   .   vandnpd	%ymm1, %ymm1, %ymm5
-# CHECK-NEXT: [0,98]    .    .    .    .D---------------R  .   .   vpandn	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT: [0,99]    .    .    .    .DeE-------------R  .   .   vandnps	%zmm2, %zmm2, %zmm5
-# CHECK-NEXT: [0,100]   .    .    .    .DeE-------------R  .   .   vandnpd	%zmm1, %zmm1, %zmm5
-# CHECK-NEXT: [0,101]   .    .    .    .D==============eER .   .   vpandnd	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT: [0,102]   .    .    .    . D=============eER .   .   vpandnq	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT: [0,103]   .    .    .    . D==============eER.   .   vpandnd	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT: [0,104]   .    .    .    . D==============eER.   .   vpandnq	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT: [0,105]   .    .    .    . D==============eER.   .   vpandnd	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT: [0,106]   .    .    .    . D==============eER.   .   vpandnq	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT: [0,107]   .    .    .    . D=eE-------------R.   .   xorps	%xmm0, %xmm0
-# CHECK-NEXT: [0,108]   .    .    .    .  DeE-------------R.   .   xorpd	%xmm1, %xmm1
-# CHECK-NEXT: [0,109]   .    .    .    .  D---------------R.   .   vxorps	%xmm2, %xmm2, %xmm2
-# CHECK-NEXT: [0,110]   .    .    .    .  D---------------R.   .   vxorpd	%xmm1, %xmm1, %xmm1
-# CHECK-NEXT: [0,111]   .    .    .    .  D---------------R.   .   vxorps	%ymm2, %ymm2, %ymm2
-# CHECK-NEXT: [0,112]   .    .    .    .  D----------------R   .   vxorpd	%ymm1, %ymm1, %ymm1
-# CHECK-NEXT: [0,113]   .    .    .    .  D=eE-------------R   .   vxorps	%zmm2, %zmm2, %zmm2
-# CHECK-NEXT: [0,114]   .    .    .    .   DeE-------------R   .   vxorpd	%zmm1, %zmm1, %zmm1
-# CHECK-NEXT: [0,115]   .    .    .    .   D======eE-------R   .   pxor	%mm2, %mm2
-# CHECK-NEXT: [0,116]   .    .    .    .   D======eE-------R   .   pxor	%xmm2, %xmm2
-# CHECK-NEXT: [0,117]   .    .    .    .   D---------------R   .   vpxor	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT: [0,118]   .    .    .    .   D---------------R   .   vpxor	%ymm3, %ymm3, %ymm3
-# CHECK-NEXT: [0,119]   .    .    .    .   D=============eER   .   vpxord	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT: [0,120]   .    .    .    .    D=============eER  .   vpxorq	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT: [0,121]   .    .    .    .    D==============eER .   vpxord	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT: [0,122]   .    .    .    .    D===============eER.   vpxorq	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT: [0,123]   .    .    .    .    D-----------------R.   vpxord	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT: [0,124]   .    .    .    .    D=====eE----------R.   vpxorq	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT: [0,125]   .    .    .    .    D-----------------R.   vxorps	%xmm4, %xmm4, %xmm5
-# CHECK-NEXT: [0,126]   .    .    .    .    .D----------------R.   vxorpd	%xmm1, %xmm1, %xmm3
-# CHECK-NEXT: [0,127]   .    .    .    .    .D----------------R.   vxorps	%ymm4, %ymm4, %ymm5
-# CHECK-NEXT: [0,128]   .    .    .    .    .D----------------R.   vxorpd	%ymm1, %ymm1, %ymm3
-# CHECK-NEXT: [0,129]   .    .    .    .    .D=====eE---------R.   vxorps	%zmm4, %zmm4, %zmm5
-# CHECK-NEXT: [0,130]   .    .    .    .    .D=====eE---------R.   vxorpd	%zmm1, %zmm1, %zmm3
-# CHECK-NEXT: [0,131]   .    .    .    .    .D-----------------R   vpxor	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT: [0,132]   .    .    .    .    . D----------------R   vpxor	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT: [0,133]   .    .    .    .    . D=====eE---------R   vpxord	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT: [0,134]   .    .    .    .    . D======eE--------R   vpxorq	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT: [0,135]   .    .    .    .    . D======eE--------R   vpxord	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT: [0,136]   .    .    .    .    . D======eE--------R   vpxorq	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT: [0,137]   .    .    .    .    . D----------------R   vpxord	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT: [0,138]   .    .    .    .    .  D======eE-------R   vpxorq	%zmm19, %zmm19, %zmm21
+# CHECK:      [0,0]     DR   .    .    .    .   .   subl	%eax, %eax
+# CHECK-NEXT: [0,1]     DR   .    .    .    .   .   subq	%rax, %rax
+# CHECK-NEXT: [0,2]     DR   .    .    .    .   .   xorl	%eax, %eax
+# CHECK-NEXT: [0,3]     DR   .    .    .    .   .   xorq	%rax, %rax
+# CHECK-NEXT: [0,4]     DeER .    .    .    .   .   pcmpgtb	%mm2, %mm2
+# CHECK-NEXT: [0,5]     D=eER.    .    .    .   .   pcmpgtd	%mm2, %mm2
+# CHECK-NEXT: [0,6]     .D=eER    .    .    .   .   pcmpgtw	%mm2, %mm2
+# CHECK-NEXT: [0,7]     .DeE-R    .    .    .   .   pcmpgtb	%xmm2, %xmm2
+# CHECK-NEXT: [0,8]     .DeE-R    .    .    .   .   pcmpgtd	%xmm2, %xmm2
+# CHECK-NEXT: [0,9]     .DeE-R    .    .    .   .   pcmpgtq	%xmm2, %xmm2
+# CHECK-NEXT: [0,10]    .D=eER    .    .    .   .   pcmpgtw	%xmm2, %xmm2
+# CHECK-NEXT: [0,11]    .D---R    .    .    .   .   vpcmpgtb	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT: [0,12]    . D--R    .    .    .   .   vpcmpgtd	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT: [0,13]    . D--R    .    .    .   .   vpcmpgtq	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT: [0,14]    . D--R    .    .    .   .   vpcmpgtw	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT: [0,15]    . D---R   .    .    .   .   vpcmpgtb	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT: [0,16]    . D---R   .    .    .   .   vpcmpgtd	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT: [0,17]    . D---R   .    .    .   .   vpcmpgtq	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT: [0,18]    .  D--R   .    .    .   .   vpcmpgtw	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT: [0,19]    .  D--R   .    .    .   .   vpcmpgtb	%ymm3, %ymm3, %ymm3
+# CHECK-NEXT: [0,20]    .  D--R   .    .    .   .   vpcmpgtd	%ymm3, %ymm3, %ymm3
+# CHECK-NEXT: [0,21]    .  D--R   .    .    .   .   vpcmpgtq	%ymm3, %ymm3, %ymm3
+# CHECK-NEXT: [0,22]    .  D--R   .    .    .   .   vpcmpgtw	%ymm3, %ymm3, %ymm3
+# CHECK-NEXT: [0,23]    .  D--R   .    .    .   .   vpcmpgtb	%ymm3, %ymm3, %ymm5
+# CHECK-NEXT: [0,24]    .   D--R  .    .    .   .   vpcmpgtd	%ymm3, %ymm3, %ymm5
+# CHECK-NEXT: [0,25]    .   D--R  .    .    .   .   vpcmpgtq	%ymm3, %ymm3, %ymm5
+# CHECK-NEXT: [0,26]    .   D--R  .    .    .   .   vpcmpgtw	%ymm3, %ymm3, %ymm5
+# CHECK-NEXT: [0,27]    .   DeER  .    .    .   .   psubb	%mm2, %mm2
+# CHECK-NEXT: [0,28]    .   D=eER .    .    .   .   psubd	%mm2, %mm2
+# CHECK-NEXT: [0,29]    .   D==eER.    .    .   .   psubq	%mm2, %mm2
+# CHECK-NEXT: [0,30]    .    D==eER    .    .   .   psubw	%mm2, %mm2
+# CHECK-NEXT: [0,31]    .    DeE--R    .    .   .   psubb	%xmm2, %xmm2
+# CHECK-NEXT: [0,32]    .    DeE--R    .    .   .   psubd	%xmm2, %xmm2
+# CHECK-NEXT: [0,33]    .    DeE--R    .    .   .   psubq	%xmm2, %xmm2
+# CHECK-NEXT: [0,34]    .    D=eE-R    .    .   .   psubw	%xmm2, %xmm2
+# CHECK-NEXT: [0,35]    .    D----R    .    .   .   vpsubb	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT: [0,36]    .    .D---R    .    .   .   vpsubd	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT: [0,37]    .    .D---R    .    .   .   vpsubq	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT: [0,38]    .    .D---R    .    .   .   vpsubw	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT: [0,39]    .    .D----R   .    .   .   vpsubb	%ymm3, %ymm3, %ymm3
+# CHECK-NEXT: [0,40]    .    .D----R   .    .   .   vpsubd	%ymm3, %ymm3, %ymm3
+# CHECK-NEXT: [0,41]    .    .D----R   .    .   .   vpsubq	%ymm3, %ymm3, %ymm3
+# CHECK-NEXT: [0,42]    .    . D---R   .    .   .   vpsubw	%ymm3, %ymm3, %ymm3
+# CHECK-NEXT: [0,43]    .    . D---R   .    .   .   vpsubb	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT: [0,44]    .    . D---R   .    .   .   vpsubd	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT: [0,45]    .    . D---R   .    .   .   vpsubq	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT: [0,46]    .    . D---R   .    .   .   vpsubw	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT: [0,47]    .    . D---R   .    .   .   vpsubb	%ymm3, %ymm3, %ymm5
+# CHECK-NEXT: [0,48]    .    .  D---R  .    .   .   vpsubd	%ymm3, %ymm3, %ymm5
+# CHECK-NEXT: [0,49]    .    .  D---R  .    .   .   vpsubq	%ymm3, %ymm3, %ymm5
+# CHECK-NEXT: [0,50]    .    .  D---R  .    .   .   vpsubw	%ymm3, %ymm3, %ymm5
+# CHECK-NEXT: [0,51]    .    .  D---R  .    .   .   vpsubb	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT: [0,52]    .    .  D---R  .    .   .   vpsubd	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT: [0,53]    .    .  D---R  .    .   .   vpsubq	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT: [0,54]    .    .   D--R  .    .   .   vpsubw	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT: [0,55]    .    .   D--R  .    .   .   vpsubb	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT: [0,56]    .    .   D--R  .    .   .   vpsubd	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT: [0,57]    .    .   D---R .    .   .   vpsubq	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT: [0,58]    .    .   D---R .    .   .   vpsubw	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT: [0,59]    .    .   D---R .    .   .   vpsubb	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT: [0,60]    .    .    D--R .    .   .   vpsubd	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT: [0,61]    .    .    D--R .    .   .   vpsubq	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT: [0,62]    .    .    D--R .    .   .   vpsubw	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT: [0,63]    .    .    D--R .    .   .   vpsubb	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT: [0,64]    .    .    D--R .    .   .   vpsubd	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT: [0,65]    .    .    D--R .    .   .   vpsubq	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT: [0,66]    .    .    .D--R.    .   .   vpsubw	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT: [0,67]    .    .    .D--R.    .   .   vpsubb	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT: [0,68]    .    .    .D--R.    .   .   vpsubd	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT: [0,69]    .    .    .D--R.    .   .   vpsubq	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT: [0,70]    .    .    .D--R.    .   .   vpsubw	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT: [0,71]    .    .    .D--R.    .   .   vpsubb	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT: [0,72]    .    .    . D-R.    .   .   vpsubd	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT: [0,73]    .    .    . D-R.    .   .   vpsubq	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT: [0,74]    .    .    . D-R.    .   .   vpsubw	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT: [0,75]    .    .    . DeER    .   .   andnps	%xmm0, %xmm0
+# CHECK-NEXT: [0,76]    .    .    . DeER    .   .   andnpd	%xmm1, %xmm1
+# CHECK-NEXT: [0,77]    .    .    . D--R    .   .   vandnps	%xmm2, %xmm2, %xmm2
+# CHECK-NEXT: [0,78]    .    .    .  D-R    .   .   vandnpd	%xmm1, %xmm1, %xmm1
+# CHECK-NEXT: [0,79]    .    .    .  D-R    .   .   vandnps	%ymm2, %ymm2, %ymm2
+# CHECK-NEXT: [0,80]    .    .    .  D-R    .   .   vandnpd	%ymm1, %ymm1, %ymm1
+# CHECK-NEXT: [0,81]    .    .    .  D-R    .   .   vandnps	%zmm2, %zmm2, %zmm2
+# CHECK-NEXT: [0,82]    .    .    .  D-R    .   .   vandnpd	%zmm1, %zmm1, %zmm1
+# CHECK-NEXT: [0,83]    .    .    .  DeER   .   .   pandn	%mm2, %mm2
+# CHECK-NEXT: [0,84]    .    .    .   DeER  .   .   pandn	%xmm2, %xmm2
+# CHECK-NEXT: [0,85]    .    .    .   D--R  .   .   vpandn	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT: [0,86]    .    .    .   D--R  .   .   vpandn	%ymm3, %ymm3, %ymm3
+# CHECK-NEXT: [0,87]    .    .    .   D--R  .   .   vpandnd	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT: [0,88]    .    .    .   D--R  .   .   vpandnq	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT: [0,89]    .    .    .   D--R  .   .   vpandnd	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT: [0,90]    .    .    .    D-R  .   .   vpandnq	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT: [0,91]    .    .    .    D-R  .   .   vpandnd	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT: [0,92]    .    .    .    D-R  .   .   vpandnq	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT: [0,93]    .    .    .    D--R .   .   vandnps	%xmm2, %xmm2, %xmm5
+# CHECK-NEXT: [0,94]    .    .    .    D--R .   .   vandnpd	%xmm1, %xmm1, %xmm5
+# CHECK-NEXT: [0,95]    .    .    .    D--R .   .   vpandn	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT: [0,96]    .    .    .    .D-R .   .   vandnps	%ymm2, %ymm2, %ymm5
+# CHECK-NEXT: [0,97]    .    .    .    .D-R .   .   vandnpd	%ymm1, %ymm1, %ymm5
+# CHECK-NEXT: [0,98]    .    .    .    .D-R .   .   vpandn	%ymm3, %ymm3, %ymm5
+# CHECK-NEXT: [0,99]    .    .    .    .D-R .   .   vandnps	%zmm2, %zmm2, %zmm5
+# CHECK-NEXT: [0,100]   .    .    .    .D-R .   .   vandnpd	%zmm1, %zmm1, %zmm5
+# CHECK-NEXT: [0,101]   .    .    .    .D-R .   .   vpandnd	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT: [0,102]   .    .    .    . D-R.   .   vpandnq	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT: [0,103]   .    .    .    . D-R.   .   vpandnd	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT: [0,104]   .    .    .    . D-R.   .   vpandnq	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT: [0,105]   .    .    .    . D-R.   .   vpandnd	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT: [0,106]   .    .    .    . D-R.   .   vpandnq	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT: [0,107]   .    .    .    . DeER   .   xorps	%xmm0, %xmm0
+# CHECK-NEXT: [0,108]   .    .    .    .  DeER  .   xorpd	%xmm1, %xmm1
+# CHECK-NEXT: [0,109]   .    .    .    .  D--R  .   vxorps	%xmm2, %xmm2, %xmm2
+# CHECK-NEXT: [0,110]   .    .    .    .  D--R  .   vxorpd	%xmm1, %xmm1, %xmm1
+# CHECK-NEXT: [0,111]   .    .    .    .  D--R  .   vxorps	%ymm2, %ymm2, %ymm2
+# CHECK-NEXT: [0,112]   .    .    .    .  D--R  .   vxorpd	%ymm1, %ymm1, %ymm1
+# CHECK-NEXT: [0,113]   .    .    .    .  D--R  .   vxorps	%zmm2, %zmm2, %zmm2
+# CHECK-NEXT: [0,114]   .    .    .    .   D-R  .   vxorpd	%zmm1, %zmm1, %zmm1
+# CHECK-NEXT: [0,115]   .    .    .    .   DeER .   pxor	%mm2, %mm2
+# CHECK-NEXT: [0,116]   .    .    .    .   DeER .   pxor	%xmm2, %xmm2
+# CHECK-NEXT: [0,117]   .    .    .    .   D--R .   vpxor	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT: [0,118]   .    .    .    .   D--R .   vpxor	%ymm3, %ymm3, %ymm3
+# CHECK-NEXT: [0,119]   .    .    .    .   D--R .   vpxord	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT: [0,120]   .    .    .    .    D-R .   vpxorq	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT: [0,121]   .    .    .    .    D-R .   vpxord	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT: [0,122]   .    .    .    .    D-R .   vpxorq	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT: [0,123]   .    .    .    .    D-R .   vpxord	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT: [0,124]   .    .    .    .    D--R.   vpxorq	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT: [0,125]   .    .    .    .    D--R.   vxorps	%xmm4, %xmm4, %xmm5
+# CHECK-NEXT: [0,126]   .    .    .    .    .D-R.   vxorpd	%xmm1, %xmm1, %xmm3
+# CHECK-NEXT: [0,127]   .    .    .    .    .D-R.   vxorps	%ymm4, %ymm4, %ymm5
+# CHECK-NEXT: [0,128]   .    .    .    .    .D-R.   vxorpd	%ymm1, %ymm1, %ymm3
+# CHECK-NEXT: [0,129]   .    .    .    .    .D-R.   vxorps	%zmm4, %zmm4, %zmm5
+# CHECK-NEXT: [0,130]   .    .    .    .    .D-R.   vxorpd	%zmm1, %zmm1, %zmm3
+# CHECK-NEXT: [0,131]   .    .    .    .    .D-R.   vpxor	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT: [0,132]   .    .    .    .    . DR.   vpxor	%ymm3, %ymm3, %ymm5
+# CHECK-NEXT: [0,133]   .    .    .    .    . D-R   vpxord	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT: [0,134]   .    .    .    .    . D-R   vpxorq	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT: [0,135]   .    .    .    .    . D-R   vpxord	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT: [0,136]   .    .    .    .    . D-R   vpxorq	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT: [0,137]   .    .    .    .    . D-R   vpxord	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT: [0,138]   .    .    .    .    .  DR   vpxorq	%zmm19, %zmm19, %zmm21
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -705,92 +705,92 @@ vpxorq  %zmm19, %zmm19, %zmm21
 # CHECK-NEXT: 48.    1     0.0    0.0    3.0       vpsubd	%ymm3, %ymm3, %ymm5
 # CHECK-NEXT: 49.    1     0.0    0.0    3.0       vpsubq	%ymm3, %ymm3, %ymm5
 # CHECK-NEXT: 50.    1     0.0    0.0    3.0       vpsubw	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT: 51.    1     1.0    1.0    1.0       vpsubb	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT: 52.    1     2.0    0.0    0.0       vpsubd	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT: 53.    1     3.0    0.0    0.0       vpsubq	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT: 54.    1     3.0    0.0    0.0       vpsubw	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT: 55.    1     4.0    0.0    0.0       vpsubb	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT: 56.    1     5.0    0.0    0.0       vpsubd	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT: 57.    1     6.0    0.0    0.0       vpsubq	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT: 58.    1     7.0    0.0    0.0       vpsubw	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT: 59.    1     8.0    0.0    0.0       vpsubb	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT: 60.    1     8.0    0.0    0.0       vpsubd	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT: 61.    1     9.0    0.0    0.0       vpsubq	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT: 62.    1     10.0   0.0    0.0       vpsubw	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT: 63.    1     11.0   0.0    0.0       vpsubb	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT: 64.    1     12.0   1.0    0.0       vpsubd	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT: 65.    1     12.0   1.0    0.0       vpsubq	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT: 66.    1     11.0   1.0    0.0       vpsubw	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT: 67.    1     11.0   1.0    0.0       vpsubb	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT: 68.    1     12.0   2.0    0.0       vpsubd	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT: 69.    1     12.0   2.0    0.0       vpsubq	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT: 70.    1     12.0   2.0    0.0       vpsubw	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT: 71.    1     12.0   2.0    0.0       vpsubb	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT: 72.    1     12.0   3.0    0.0       vpsubd	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT: 73.    1     12.0   3.0    0.0       vpsubq	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT: 74.    1     12.0   3.0    0.0       vpsubw	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT: 75.    1     1.0    1.0    11.0      andnps	%xmm0, %xmm0
-# CHECK-NEXT: 76.    1     1.0    1.0    11.0      andnpd	%xmm1, %xmm1
-# CHECK-NEXT: 77.    1     0.0    0.0    13.0      vandnps	%xmm2, %xmm2, %xmm2
-# CHECK-NEXT: 78.    1     0.0    0.0    12.0      vandnpd	%xmm1, %xmm1, %xmm1
-# CHECK-NEXT: 79.    1     0.0    0.0    12.0      vandnps	%ymm2, %ymm2, %ymm2
-# CHECK-NEXT: 80.    1     0.0    0.0    12.0      vandnpd	%ymm1, %ymm1, %ymm1
-# CHECK-NEXT: 81.    1     1.0    1.0    11.0      vandnps	%zmm2, %zmm2, %zmm2
-# CHECK-NEXT: 82.    1     1.0    1.0    11.0      vandnpd	%zmm1, %zmm1, %zmm1
-# CHECK-NEXT: 83.    1     1.0    1.0    11.0      pandn	%mm2, %mm2
-# CHECK-NEXT: 84.    1     1.0    1.0    10.0      pandn	%xmm2, %xmm2
-# CHECK-NEXT: 85.    1     0.0    0.0    12.0      vpandn	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT: 86.    1     0.0    0.0    12.0      vpandn	%ymm3, %ymm3, %ymm3
-# CHECK-NEXT: 87.    1     11.0   4.0    0.0       vpandnd	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT: 88.    1     12.0   0.0    0.0       vpandnq	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT: 89.    1     13.0   0.0    0.0       vpandnd	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT: 90.    1     13.0   0.0    0.0       vpandnq	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT: 91.    1     14.0   0.0    0.0       vpandnd	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT: 92.    1     15.0   0.0    0.0       vpandnq	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT: 93.    1     0.0    0.0    16.0      vandnps	%xmm2, %xmm2, %xmm5
-# CHECK-NEXT: 94.    1     0.0    0.0    16.0      vandnpd	%xmm1, %xmm1, %xmm5
-# CHECK-NEXT: 95.    1     0.0    0.0    16.0      vpandn	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT: 96.    1     0.0    0.0    15.0      vandnps	%ymm2, %ymm2, %ymm5
-# CHECK-NEXT: 97.    1     0.0    0.0    15.0      vandnpd	%ymm1, %ymm1, %ymm5
-# CHECK-NEXT: 98.    1     0.0    0.0    15.0      vpandn	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT: 99.    1     1.0    1.0    13.0      vandnps	%zmm2, %zmm2, %zmm5
-# CHECK-NEXT: 100.   1     1.0    1.0    13.0      vandnpd	%zmm1, %zmm1, %zmm5
-# CHECK-NEXT: 101.   1     15.0   0.0    0.0       vpandnd	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT: 102.   1     14.0   0.0    0.0       vpandnq	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT: 103.   1     15.0   1.0    0.0       vpandnd	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT: 104.   1     15.0   1.0    0.0       vpandnq	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT: 105.   1     15.0   1.0    0.0       vpandnd	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT: 106.   1     15.0   1.0    0.0       vpandnq	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT: 107.   1     2.0    2.0    13.0      xorps	%xmm0, %xmm0
-# CHECK-NEXT: 108.   1     1.0    1.0    13.0      xorpd	%xmm1, %xmm1
-# CHECK-NEXT: 109.   1     0.0    0.0    15.0      vxorps	%xmm2, %xmm2, %xmm2
-# CHECK-NEXT: 110.   1     0.0    0.0    15.0      vxorpd	%xmm1, %xmm1, %xmm1
-# CHECK-NEXT: 111.   1     0.0    0.0    15.0      vxorps	%ymm2, %ymm2, %ymm2
-# CHECK-NEXT: 112.   1     0.0    0.0    16.0      vxorpd	%ymm1, %ymm1, %ymm1
-# CHECK-NEXT: 113.   1     2.0    2.0    13.0      vxorps	%zmm2, %zmm2, %zmm2
-# CHECK-NEXT: 114.   1     1.0    1.0    13.0      vxorpd	%zmm1, %zmm1, %zmm1
-# CHECK-NEXT: 115.   1     7.0    7.0    7.0       pxor	%mm2, %mm2
-# CHECK-NEXT: 116.   1     7.0    7.0    7.0       pxor	%xmm2, %xmm2
-# CHECK-NEXT: 117.   1     0.0    0.0    15.0      vpxor	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT: 118.   1     0.0    0.0    15.0      vpxor	%ymm3, %ymm3, %ymm3
-# CHECK-NEXT: 119.   1     14.0   2.0    0.0       vpxord	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT: 120.   1     14.0   0.0    0.0       vpxorq	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT: 121.   1     15.0   0.0    0.0       vpxord	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT: 122.   1     16.0   0.0    0.0       vpxorq	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT: 123.   1     0.0    0.0    17.0      vpxord	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT: 124.   1     6.0    6.0    10.0      vpxorq	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT: 125.   1     0.0    0.0    17.0      vxorps	%xmm4, %xmm4, %xmm5
-# CHECK-NEXT: 126.   1     0.0    0.0    16.0      vxorpd	%xmm1, %xmm1, %xmm3
-# CHECK-NEXT: 127.   1     0.0    0.0    16.0      vxorps	%ymm4, %ymm4, %ymm5
-# CHECK-NEXT: 128.   1     0.0    0.0    16.0      vxorpd	%ymm1, %ymm1, %ymm3
-# CHECK-NEXT: 129.   1     6.0    6.0    9.0       vxorps	%zmm4, %zmm4, %zmm5
-# CHECK-NEXT: 130.   1     6.0    6.0    9.0       vxorpd	%zmm1, %zmm1, %zmm3
-# CHECK-NEXT: 131.   1     0.0    0.0    17.0      vpxor	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT: 132.   1     0.0    0.0    16.0      vpxor	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT: 133.   1     6.0    1.0    9.0       vpxord	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT: 134.   1     7.0    2.0    8.0       vpxorq	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT: 135.   1     7.0    2.0    8.0       vpxord	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT: 136.   1     7.0    2.0    8.0       vpxorq	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT: 137.   1     0.0    0.0    16.0      vpxord	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT: 138.   1     7.0    3.0    7.0       vpxorq	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT:        1     3.9    0.7    5.1       <total>
+# CHECK-NEXT: 51.    1     0.0    0.0    3.0       vpsubb	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT: 52.    1     0.0    0.0    3.0       vpsubd	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT: 53.    1     0.0    0.0    3.0       vpsubq	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT: 54.    1     0.0    0.0    2.0       vpsubw	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT: 55.    1     0.0    0.0    2.0       vpsubb	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT: 56.    1     0.0    0.0    2.0       vpsubd	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT: 57.    1     0.0    0.0    3.0       vpsubq	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT: 58.    1     0.0    0.0    3.0       vpsubw	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT: 59.    1     0.0    0.0    3.0       vpsubb	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT: 60.    1     0.0    0.0    2.0       vpsubd	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT: 61.    1     0.0    0.0    2.0       vpsubq	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT: 62.    1     0.0    0.0    2.0       vpsubw	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT: 63.    1     0.0    0.0    2.0       vpsubb	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT: 64.    1     0.0    0.0    2.0       vpsubd	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT: 65.    1     0.0    0.0    2.0       vpsubq	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT: 66.    1     0.0    0.0    2.0       vpsubw	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT: 67.    1     0.0    0.0    2.0       vpsubb	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT: 68.    1     0.0    0.0    2.0       vpsubd	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT: 69.    1     0.0    0.0    2.0       vpsubq	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT: 70.    1     0.0    0.0    2.0       vpsubw	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT: 71.    1     0.0    0.0    2.0       vpsubb	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT: 72.    1     0.0    0.0    1.0       vpsubd	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT: 73.    1     0.0    0.0    1.0       vpsubq	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT: 74.    1     0.0    0.0    1.0       vpsubw	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT: 75.    1     1.0    1.0    0.0       andnps	%xmm0, %xmm0
+# CHECK-NEXT: 76.    1     1.0    1.0    0.0       andnpd	%xmm1, %xmm1
+# CHECK-NEXT: 77.    1     0.0    0.0    2.0       vandnps	%xmm2, %xmm2, %xmm2
+# CHECK-NEXT: 78.    1     0.0    0.0    1.0       vandnpd	%xmm1, %xmm1, %xmm1
+# CHECK-NEXT: 79.    1     0.0    0.0    1.0       vandnps	%ymm2, %ymm2, %ymm2
+# CHECK-NEXT: 80.    1     0.0    0.0    1.0       vandnpd	%ymm1, %ymm1, %ymm1
+# CHECK-NEXT: 81.    1     0.0    0.0    1.0       vandnps	%zmm2, %zmm2, %zmm2
+# CHECK-NEXT: 82.    1     0.0    0.0    1.0       vandnpd	%zmm1, %zmm1, %zmm1
+# CHECK-NEXT: 83.    1     1.0    1.0    0.0       pandn	%mm2, %mm2
+# CHECK-NEXT: 84.    1     1.0    1.0    0.0       pandn	%xmm2, %xmm2
+# CHECK-NEXT: 85.    1     0.0    0.0    2.0       vpandn	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT: 86.    1     0.0    0.0    2.0       vpandn	%ymm3, %ymm3, %ymm3
+# CHECK-NEXT: 87.    1     0.0    0.0    2.0       vpandnd	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT: 88.    1     0.0    0.0    2.0       vpandnq	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT: 89.    1     0.0    0.0    2.0       vpandnd	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT: 90.    1     0.0    0.0    1.0       vpandnq	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT: 91.    1     0.0    0.0    1.0       vpandnd	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT: 92.    1     0.0    0.0    1.0       vpandnq	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT: 93.    1     0.0    0.0    2.0       vandnps	%xmm2, %xmm2, %xmm5
+# CHECK-NEXT: 94.    1     0.0    0.0    2.0       vandnpd	%xmm1, %xmm1, %xmm5
+# CHECK-NEXT: 95.    1     0.0    0.0    2.0       vpandn	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT: 96.    1     0.0    0.0    1.0       vandnps	%ymm2, %ymm2, %ymm5
+# CHECK-NEXT: 97.    1     0.0    0.0    1.0       vandnpd	%ymm1, %ymm1, %ymm5
+# CHECK-NEXT: 98.    1     0.0    0.0    1.0       vpandn	%ymm3, %ymm3, %ymm5
+# CHECK-NEXT: 99.    1     0.0    0.0    1.0       vandnps	%zmm2, %zmm2, %zmm5
+# CHECK-NEXT: 100.   1     0.0    0.0    1.0       vandnpd	%zmm1, %zmm1, %zmm5
+# CHECK-NEXT: 101.   1     0.0    0.0    1.0       vpandnd	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT: 102.   1     0.0    0.0    1.0       vpandnq	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT: 103.   1     0.0    0.0    1.0       vpandnd	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT: 104.   1     0.0    0.0    1.0       vpandnq	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT: 105.   1     0.0    0.0    1.0       vpandnd	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT: 106.   1     0.0    0.0    1.0       vpandnq	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT: 107.   1     1.0    1.0    0.0       xorps	%xmm0, %xmm0
+# CHECK-NEXT: 108.   1     1.0    1.0    0.0       xorpd	%xmm1, %xmm1
+# CHECK-NEXT: 109.   1     0.0    0.0    2.0       vxorps	%xmm2, %xmm2, %xmm2
+# CHECK-NEXT: 110.   1     0.0    0.0    2.0       vxorpd	%xmm1, %xmm1, %xmm1
+# CHECK-NEXT: 111.   1     0.0    0.0    2.0       vxorps	%ymm2, %ymm2, %ymm2
+# CHECK-NEXT: 112.   1     0.0    0.0    2.0       vxorpd	%ymm1, %ymm1, %ymm1
+# CHECK-NEXT: 113.   1     0.0    0.0    2.0       vxorps	%zmm2, %zmm2, %zmm2
+# CHECK-NEXT: 114.   1     0.0    0.0    1.0       vxorpd	%zmm1, %zmm1, %zmm1
+# CHECK-NEXT: 115.   1     1.0    1.0    0.0       pxor	%mm2, %mm2
+# CHECK-NEXT: 116.   1     1.0    1.0    0.0       pxor	%xmm2, %xmm2
+# CHECK-NEXT: 117.   1     0.0    0.0    2.0       vpxor	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT: 118.   1     0.0    0.0    2.0       vpxor	%ymm3, %ymm3, %ymm3
+# CHECK-NEXT: 119.   1     0.0    0.0    2.0       vpxord	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT: 120.   1     0.0    0.0    1.0       vpxorq	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT: 121.   1     0.0    0.0    1.0       vpxord	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT: 122.   1     0.0    0.0    1.0       vpxorq	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT: 123.   1     0.0    0.0    1.0       vpxord	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT: 124.   1     0.0    0.0    2.0       vpxorq	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT: 125.   1     0.0    0.0    2.0       vxorps	%xmm4, %xmm4, %xmm5
+# CHECK-NEXT: 126.   1     0.0    0.0    1.0       vxorpd	%xmm1, %xmm1, %xmm3
+# CHECK-NEXT: 127.   1     0.0    0.0    1.0       vxorps	%ymm4, %ymm4, %ymm5
+# CHECK-NEXT: 128.   1     0.0    0.0    1.0       vxorpd	%ymm1, %ymm1, %ymm3
+# CHECK-NEXT: 129.   1     0.0    0.0    1.0       vxorps	%zmm4, %zmm4, %zmm5
+# CHECK-NEXT: 130.   1     0.0    0.0    1.0       vxorpd	%zmm1, %zmm1, %zmm3
+# CHECK-NEXT: 131.   1     0.0    0.0    1.0       vpxor	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT: 132.   1     0.0    0.0    0.0       vpxor	%ymm3, %ymm3, %ymm5
+# CHECK-NEXT: 133.   1     0.0    0.0    1.0       vpxord	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT: 134.   1     0.0    0.0    1.0       vpxorq	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT: 135.   1     0.0    0.0    1.0       vpxord	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT: 136.   1     0.0    0.0    1.0       vpxorq	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT: 137.   1     0.0    0.0    1.0       vpxord	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT: 138.   1     0.0    0.0    0.0       vpxorq	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT:        1     0.2    0.1    1.6       <total>

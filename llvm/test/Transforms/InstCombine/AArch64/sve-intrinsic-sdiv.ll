@@ -68,6 +68,29 @@ define <vscale x 4 x i32> @sdiv_i32_not_zero(<vscale x 4 x i32> %a, <vscale x 4 
   ret <vscale x 4 x i32> %out
 }
 
+; Vec/1 is a no-op
+define <vscale x 2 x i64> @divide_by_1(<vscale x 16 x i1> %p, <vscale x 2 x i64> %a) #0 {
+; CHECK-LABEL: @divide_by_1(
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[A:%.*]]
+;
+  %1 = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 1)
+  %2 = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %p)
+  %3 = call <vscale x 2 x i64> @llvm.aarch64.sve.sdiv.nxv2i64(<vscale x 2 x i1> %2, <vscale x 2 x i64> %a, <vscale x 2 x i64> %1)
+  ret <vscale x 2 x i64> %3
+}
+
+; Don't instcombine to SRAD when the divisor is -1
+define <vscale x 2 x i64> @divide_by_m1(<vscale x 16 x i1> %p, <vscale x 2 x i64> %a) #0 {
+; CHECK-LABEL: @divide_by_m1(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[P:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.sdiv.nxv2i64(<vscale x 2 x i1> [[TMP1]], <vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 -1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer))
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
+;
+  %1 = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 -1)
+  %2 = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %p)
+  %3 = call <vscale x 2 x i64> @llvm.aarch64.sve.sdiv.nxv2i64(<vscale x 2 x i1> %2, <vscale x 2 x i64> %a, <vscale x 2 x i64> %1)
+  ret <vscale x 2 x i64> %3
+}
 
 declare <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.sdiv.nxv2i64(<vscale x 2 x i1>, <vscale x 2 x i64>, <vscale x 2 x i64>)

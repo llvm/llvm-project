@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_FLANG_RT_EDIT_INPUT_H_
-#define FORTRAN_FLANG_RT_EDIT_INPUT_H_
+#ifndef FLANG_RT_EDIT_INPUT_H_
+#define FLANG_RT_EDIT_INPUT_H_
 
 #include "format.h"
 #include "io-stmt.h"
@@ -50,4 +50,4 @@ extern template RT_API_ATTRS bool EditCharacterInput(
     IoStatementState &, const DataEdit &, char32_t *, std::size_t);
 
 } // namespace Fortran::runtime::io
-#endif /* FORTRAN_FLANG_RT_EDIT_INPUT_H_ */
+#endif /* FLANG_RT_EDIT_INPUT_H_ */

@@ -423,7 +423,7 @@ void WinEHStatePass::linkExceptionRegistration(IRBuilder<> &Builder,
   // Handler = Handler
   Builder.CreateStore(Handler, Builder.CreateStructGEP(LinkTy, Link, 1));
   // Next = [fs:00]
-  Constant *FSZero = Constant::getNullValue(PointerType::get(C, 257));
+  Constant *FSZero = Constant::getNullValue(PointerType::get(C, X86AS::FS));
   Value *Next = Builder.CreateLoad(PointerType::getUnqual(C), FSZero);
   Builder.CreateStore(Next, Builder.CreateStructGEP(LinkTy, Link, 0));
   // [fs:00] = Link
@@ -443,7 +443,7 @@ void WinEHStatePass::unlinkExceptionRegistration(IRBuilder<> &Builder) {
   // [fs:00] = Link->Next
   Value *Next = Builder.CreateLoad(PointerType::getUnqual(C),
                                    Builder.CreateStructGEP(LinkTy, Link, 0));
-  Constant *FSZero = Constant::getNullValue(PointerType::get(C, 257));
+  Constant *FSZero = Constant::getNullValue(PointerType::get(C, X86AS::FS));
   Builder.CreateStore(Next, FSZero);
 }
 

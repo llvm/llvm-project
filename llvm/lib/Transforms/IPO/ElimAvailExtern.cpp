@@ -14,6 +14,7 @@
 #include "llvm/Transforms/IPO/ElimAvailExtern.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
@@ -88,7 +89,7 @@ static void convertToLocalCopy(Module &M, Function &F) {
   ++NumConversions;
 }
 
-static bool eliminateAvailableExternally(Module &M) {
+static bool eliminateAvailableExternally(Module &M, bool Convert) {
   bool Changed = false;
 
   // Drop initializers of available externally global variables.
@@ -112,7 +113,7 @@ static bool eliminateAvailableExternally(Module &M) {
     if (F.isDeclaration() || !F.hasAvailableExternallyLinkage())
       continue;
 
-    if (ConvertToLocal)
+    if (Convert || ConvertToLocal)
       convertToLocalCopy(M, F);
     else
       deleteFunction(F);
@@ -125,8 +126,16 @@ static bool eliminateAvailableExternally(Module &M) {
 }
 
 PreservedAnalyses
-EliminateAvailableExternallyPass::run(Module &M, ModuleAnalysisManager &) {
-  if (!eliminateAvailableExternally(M))
-    return PreservedAnalyses::all();
+EliminateAvailableExternallyPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  auto *CtxProf = MAM.getCachedResult<CtxProfAnalysis>(M);
+  // Convert to local instead of eliding if we use contextual profiling in this
+  // module. This is because the IPO decisions performed with contextual
+  // information will likely differ from decisions made without. For a function
+  // that's imported, its optimizations will, thus, differ, and be specialized
+  // for this contextual information. Eliding it in favor of the original would
+  // undo these optimizations.
+  if (!eliminateAvailableExternally(M, /*Convert=*/(CtxProf && !!(*CtxProf))))
+    ;
+  return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }

@@ -62,7 +62,7 @@ BuildIDRef llvm::object::getBuildID(const ObjectFile *Obj) {
     return ::getBuildID(O->getELFFile());
   if (auto *O = dyn_cast<ELFObjectFile<ELF64BE>>(Obj))
     return ::getBuildID(O->getELFFile());
-  return std::nullopt;
+  return {};
 }
 
 std::optional<std::string> BuildIDFetcher::fetch(BuildIDRef BuildID) const {

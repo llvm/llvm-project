@@ -54,6 +54,8 @@ namespace std {
 
 #include <__config>
 #include <__memory/addressof.h>
+#include <__ostream/basic_ostream.h>
+#include <__string/char_traits.h>
 #include <__type_traits/decay.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>

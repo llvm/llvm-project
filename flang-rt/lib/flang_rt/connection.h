@@ -8,8 +8,8 @@
 
 // Fortran I/O connection state (abstracted over internal & external units)
 
-#ifndef FORTRAN_FLANG_RT_CONNECTION_H_
-#define FORTRAN_FLANG_RT_CONNECTION_H_
+#ifndef FLANG_RT_CONNECTION_H_
+#define FLANG_RT_CONNECTION_H_
 
 #include "format.h"
 #include "flang/Common/optional.h"
@@ -124,4 +124,4 @@ private:
 };
 
 } // namespace Fortran::runtime::io
-#endif /* FORTRAN_FLANG_RT_CONNECTION_H_ */
+#endif /* FLANG_RT_CONNECTION_H_ */

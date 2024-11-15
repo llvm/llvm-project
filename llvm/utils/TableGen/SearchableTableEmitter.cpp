@@ -31,17 +31,19 @@ using namespace llvm;
 
 #define DEBUG_TYPE "searchable-table-emitter"
 
-namespace {
-
-int64_t getAsInt(Init *B) {
-  return cast<IntInit>(
-             B->convertInitializerTo(IntRecTy::get(B->getRecordKeeper())))
-      ->getValue();
+static int64_t getAsInt(const Init *B) {
+  if (const BitsInit *BI = dyn_cast<BitsInit>(B))
+    return *BI->convertInitializerToInt();
+  if (const IntInit *II = dyn_cast<IntInit>(B))
+    return II->getValue();
+  llvm_unreachable("Unexpected initializer");
 }
-int64_t getInt(Record *R, StringRef Field) {
+
+static int64_t getInt(const Record *R, StringRef Field) {
   return getAsInt(R->getValueInit(Field));
 }
 
+namespace {
 struct GenericEnum {
   using Entry = std::pair<StringRef, int64_t>;
 

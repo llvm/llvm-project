@@ -526,11 +526,9 @@ Error RewriteInstance::discoverStorage() {
       NextAvailableOffset = std::max(NextAvailableOffset,
                                      Phdr.p_offset + Phdr.p_filesz);
 
-      BC->SegmentMapInfo[Phdr.p_vaddr] = SegmentInfo{Phdr.p_vaddr,
-                                                     Phdr.p_memsz,
-                                                     Phdr.p_offset,
-                                                     Phdr.p_filesz,
-                                                     Phdr.p_align};
+      BC->SegmentMapInfo[Phdr.p_vaddr] = SegmentInfo{
+          Phdr.p_vaddr,  Phdr.p_memsz, Phdr.p_offset,
+          Phdr.p_filesz, Phdr.p_align, ((Phdr.p_flags & ELF::PF_X) != 0)};
       if (BC->TheTriple->getArch() == llvm::Triple::x86_64 &&
           Phdr.p_vaddr >= BinaryContext::KernelStartX86_64)
         BC->IsLinuxKernel = true;
@@ -1533,7 +1531,7 @@ void RewriteInstance::createPLTBinaryFunction(uint64_t TargetAddress,
 
   MCSymbol *Symbol = Rel->Symbol;
   if (!Symbol) {
-    if (!BC->isAArch64() || !Rel->Addend || !Rel->isIRelative())
+    if (BC->isRISCV() || !Rel->Addend || !Rel->isIRelative())
       return;
 
     // IFUNC trampoline without symbol
@@ -4247,7 +4245,6 @@ void RewriteInstance::addBoltInfoSection() {
          << "command line:";
   for (int I = 0; I < Argc; ++I)
     DescOS << " " << Argv[I];
-  DescOS.flush();
 
   // Encode as GNU GOLD VERSION so it is easily printable by 'readelf -n'
   const std::string BoltInfo =
@@ -4270,7 +4267,6 @@ void RewriteInstance::encodeBATSection() {
   raw_string_ostream DescOS(DescStr);
 
   BAT->write(*BC, DescOS);
-  DescOS.flush();
 
   const std::string BoltInfo =
       BinarySection::encodeELFNote("BOLT", DescStr, BinarySection::NT_BOLT_BAT);

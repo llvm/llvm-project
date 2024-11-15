@@ -273,6 +273,8 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   SDValue FPToSI = DAG->getNode(ISD::FP_TO_SINT, DL, FloatVT, Op2);
   SDValue FPToUI = DAG->getNode(ISD::FP_TO_UINT, DL, FloatVT, Op2);
 
+  SDValue Ctlz = DAG->getNode(ISD::CTLZ, DL, Int32VT, Op0);
+
   using namespace SDPatternMatch;
   EXPECT_TRUE(sd_match(ZExt, m_UnaryOp(ISD::ZERO_EXTEND, m_Value())));
   EXPECT_TRUE(sd_match(SExt, m_SExt(m_Value())));
@@ -296,6 +298,8 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   EXPECT_TRUE(sd_match(FPToSI, m_FPToSI(m_Value())));
   EXPECT_FALSE(sd_match(FPToUI, m_FPToSI(m_Value())));
   EXPECT_FALSE(sd_match(FPToSI, m_FPToUI(m_Value())));
+
+  EXPECT_TRUE(sd_match(Ctlz, m_Ctlz(m_Value())));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchConstants) {

@@ -8,8 +8,8 @@
 
 // Implements out-of-line member functions of template class FormatControl
 
-#ifndef FORTRAN_FLANG_RT_FORMAT_IMPLEMENTATION_H_
-#define FORTRAN_FLANG_RT_FORMAT_IMPLEMENTATION_H_
+#ifndef FLANG_RT_FORMAT_IMPLEMENTATION_H_
+#define FLANG_RT_FORMAT_IMPLEMENTATION_H_
 
 #include "emit-encoded.h"
 #include "format.h"
@@ -601,4 +601,4 @@ RT_API_ATTRS void FormatControl<CONTEXT>::Finish(Context &context) {
   }
 }
 } // namespace Fortran::runtime::io
-#endif /* FORTRAN_FLANG_RT_FORMAT_IMPLEMENTATION_H_ */
+#endif /* FLANG_RT_FORMAT_IMPLEMENTATION_H_ */

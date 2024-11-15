@@ -357,12 +357,12 @@ for.cond.cleanup:
 define i1 @add_trunc_i32_i1(ptr nocapture %src, i64 %N) {
 ; CHECK-LABEL: @add_trunc_i32_i1
 ; CHECK: vector.body:
-; CHECK: %[[PHI1:.*]] = phi <vscale x 8 x i1> [ zeroinitializer, %{{.*}} ], [ %20, %vector.body ]
-; CHECK: %[[PHI2:.*]] = phi <vscale x 8 x i1> [ zeroinitializer, %{{.*}} ], [ %21, %vector.body ]
+; CHECK: %[[PHI1:.*]] = phi <vscale x 8 x i1> [ zeroinitializer, %{{.*}} ], [ [[XOR1:%.+]], %vector.body ]
+; CHECK: %[[PHI2:.*]] = phi <vscale x 8 x i1> [ zeroinitializer, %{{.*}} ], [ [[XOR2:%.+]], %vector.body ]
 ; CHECK: %[[TRUNC1:.*]] = trunc <vscale x 8 x i32> %{{.*}} to <vscale x 8 x i1>
 ; CHECK: %[[TRUNC2:.*]] = trunc <vscale x 8 x i32> %{{.*}} to <vscale x 8 x i1>
-; CHECK: %{{.*}} = xor <vscale x 8 x i1> %[[PHI1]], %[[TRUNC1]]
-; CHECK: %{{.*}} = xor <vscale x 8 x i1> %[[PHI2]], %[[TRUNC2]]
+; CHECK: [[XOR1]] = xor <vscale x 8 x i1> %[[PHI1]], %[[TRUNC1]]
+; CHECK: [[XOR2]] = xor <vscale x 8 x i1> %[[PHI2]], %[[TRUNC2]]
 entry:
   br label %for.body
 

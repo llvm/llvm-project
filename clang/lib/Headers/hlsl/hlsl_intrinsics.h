@@ -362,6 +362,23 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(double4);
 
 //===----------------------------------------------------------------------===//
+// asfloat builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn float asfloat(T Val)
+/// \brief Interprets the bit pattern of x as float point number.
+/// \param Val The input value.
+
+template <typename T, int N>
+constexpr vector<float, N> asfloat(vector<T, N> V) {
+  return __detail::bit_cast<float, T, N>(V);
+}
+
+template <typename T> constexpr float asfloat(T F) {
+  return __detail::bit_cast<float, T>(F);
+}
+
+//===----------------------------------------------------------------------===//
 // asin builtins
 //===----------------------------------------------------------------------===//
 
@@ -397,12 +414,11 @@ float4 asin(float4);
 /// \brief Interprets the bit pattern of x as an unsigned integer.
 /// \param Val The input value.
 
-template <typename T, int N>
-_HLSL_INLINE vector<uint, N> asuint(vector<T, N> V) {
+template <typename T, int N> constexpr vector<uint, N> asuint(vector<T, N> V) {
   return __detail::bit_cast<uint, T, N>(V);
 }
 
-template <typename T> _HLSL_INLINE uint asuint(T F) {
+template <typename T> constexpr uint asuint(T F) {
   return __detail::bit_cast<uint, T>(F);
 }
 
@@ -632,6 +648,77 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_cosh)
 float3 cosh(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_cosh)
 float4 cosh(float4);
+
+//===----------------------------------------------------------------------===//
+// count bits builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T countbits(T Val)
+/// \brief Return the number of bits (per component) set in the input integer.
+/// \param Val The input value.
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+int16_t countbits(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+int16_t2 countbits(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+int16_t3 countbits(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+int16_t4 countbits(int16_t4);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+uint16_t countbits(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+uint16_t2 countbits(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+uint16_t3 countbits(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+uint16_t4 countbits(uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+int countbits(int);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+int2 countbits(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+int3 countbits(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+int4 countbits(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+uint countbits(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+uint2 countbits(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+uint3 countbits(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+uint4 countbits(uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+int64_t countbits(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+int64_t2 countbits(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+int64_t3 countbits(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+int64_t4 countbits(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+uint64_t countbits(uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+uint64_t2 countbits(uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+uint64_t3 countbits(uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+uint64_t4 countbits(uint64_t4);
 
 //===----------------------------------------------------------------------===//
 // dot product builtins

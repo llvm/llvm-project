@@ -11,8 +11,8 @@
  * with C++ build compilers that don't support C's _Complex.
  */
 
-#ifndef FORTRAN_FLANG_RT_COMPLEX_REDUCTION_H_
-#define FORTRAN_FLANG_RT_COMPLEX_REDUCTION_H_
+#ifndef FLANG_RT_COMPLEX_REDUCTION_H_
+#define FLANG_RT_COMPLEX_REDUCTION_H_
 
 #include "flang/Common/float128.h"
 #include "flang/Runtime/entry-names.h"
@@ -40,7 +40,7 @@ float_Complex_t RTNAME(SumComplex3)(REDUCTION_ARGS);
 float_Complex_t RTNAME(SumComplex4)(REDUCTION_ARGS);
 double_Complex_t RTNAME(SumComplex8)(REDUCTION_ARGS);
 long_double_Complex_t RTNAME(SumComplex10)(REDUCTION_ARGS);
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CFloat128ComplexType RTNAME(SumComplex16)(REDUCTION_ARGS);
 #endif
 
@@ -49,7 +49,7 @@ float_Complex_t RTNAME(ProductComplex3)(REDUCTION_ARGS);
 float_Complex_t RTNAME(ProductComplex4)(REDUCTION_ARGS);
 double_Complex_t RTNAME(ProductComplex8)(REDUCTION_ARGS);
 long_double_Complex_t RTNAME(ProductComplex10)(REDUCTION_ARGS);
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CFloat128ComplexType RTNAME(ProductComplex16)(REDUCTION_ARGS);
 #endif
 
@@ -64,7 +64,7 @@ float_Complex_t RTNAME(DotProductComplex3)(DOT_PRODUCT_ARGS);
 float_Complex_t RTNAME(DotProductComplex4)(DOT_PRODUCT_ARGS);
 double_Complex_t RTNAME(DotProductComplex8)(DOT_PRODUCT_ARGS);
 long_double_Complex_t RTNAME(DotProductComplex10)(DOT_PRODUCT_ARGS);
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CFloat128ComplexType RTNAME(DotProductComplex16)(DOT_PRODUCT_ARGS);
 #endif
 
@@ -109,7 +109,7 @@ long_double_Complex_t RTNAME(ReduceComplex10Ref)(
     REDUCE_ARGS(long_double_Complex_t, long_double_Complex_t_ref_op));
 long_double_Complex_t RTNAME(ReduceComplex10Value)(
     REDUCE_ARGS(long_double_Complex_t, long_double_Complex_t_value_op));
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 typedef CFloat128ComplexType (*CFloat128ComplexType_ref_op)(
     const CFloat128ComplexType *, const CFloat128ComplexType *);
 typedef CFloat128ComplexType (*CFloat128ComplexType_value_op)(
@@ -148,11 +148,11 @@ void RTNAME(ReduceComplex10DimRef)(
     REDUCE_DIM_ARGS(long_double_Complex_t, long_double_Complex_t_ref_op));
 void RTNAME(ReduceComplex10DimValue)(
     REDUCE_DIM_ARGS(long_double_Complex_t, long_double_Complex_t_value_op));
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 void RTNAME(ReduceComplex16DimRef)(
     REDUCE_DIM_ARGS(CFloat128ComplexType, CFloat128ComplexType_ref_op));
 void RTNAME(ReduceComplex16DimValue)(
     REDUCE_DIM_ARGS(CFloat128ComplexType, CFloat128ComplexType_value_op));
 #endif
 
-#endif /* FORTRAN_FLANG_RT_COMPLEX_REDUCTION_H_ */
+#endif /* FLANG_RT_COMPLEX_REDUCTION_H_ */

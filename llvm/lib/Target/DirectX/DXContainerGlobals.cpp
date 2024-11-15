@@ -204,9 +204,9 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
   dxil::ModuleMetadataInfo &MMI =
       getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
   assert(MMI.EntryPropertyVec.size() == 1 ||
-         MMI.ShaderStage == Triple::Library);
+         MMI.ShaderProfile == Triple::Library);
   PSV.BaseData.ShaderStage =
-      static_cast<uint8_t>(MMI.ShaderStage - Triple::Pixel);
+      static_cast<uint8_t>(MMI.ShaderProfile - Triple::Pixel);
 
   addResourcesForPSV(M, PSV);
 
@@ -215,7 +215,7 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
   // TODO: Lots more stuff to do here!
   //
   // See issue https://github.com/llvm/llvm-project/issues/96674.
-  switch (MMI.ShaderStage) {
+  switch (MMI.ShaderProfile) {
   case Triple::Compute:
     PSV.BaseData.NumThreadsX = MMI.EntryPropertyVec[0].NumThreadsX;
     PSV.BaseData.NumThreadsY = MMI.EntryPropertyVec[0].NumThreadsY;
@@ -225,10 +225,10 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
     break;
   }
 
-  if (MMI.ShaderStage != Triple::Library)
+  if (MMI.ShaderProfile != Triple::Library)
     PSV.EntryName = MMI.EntryPropertyVec[0].Entry->getName();
 
-  PSV.finalize(MMI.ShaderStage);
+  PSV.finalize(MMI.ShaderProfile);
   PSV.write(OS);
   Constant *Constant =
       ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);

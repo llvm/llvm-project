@@ -8,8 +8,8 @@
 
 // Termination of the image
 
-#ifndef FORTRAN_FLANG_RT_TERMINATOR_H_
-#define FORTRAN_FLANG_RT_TERMINATOR_H_
+#ifndef FLANG_RT_TERMINATOR_H_
+#define FLANG_RT_TERMINATOR_H_
 
 #include "flang/Common/api-attrs.h"
 #include <cstdarg>
@@ -121,4 +121,4 @@ namespace Fortran::runtime::io {
 RT_API_ATTRS void FlushOutputOnCrash(const Terminator &);
 }
 
-#endif /* FORTRAN_FLANG_RT_TERMINATOR_H_ */
+#endif /* FLANG_RT_TERMINATOR_H_ */

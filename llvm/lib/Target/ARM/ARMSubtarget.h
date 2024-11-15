@@ -209,13 +209,6 @@ public:
     return &InstrInfo->getRegisterInfo();
   }
 
-  /// The correct instructions have been implemented to initialize undef
-  /// registers, therefore the ARM Architecture is supported by the Init Undef
-  /// Pass. This will return true as the pass needs to be supported for all
-  /// types of instructions. The pass will then perform more checks to ensure it
-  /// should be applying the Pseudo Instructions.
-  bool supportsInitUndef() const override { return true; }
-
   const CallLowering *getCallLowering() const override;
   InstructionSelector *getInstructionSelector() const override;
   const LegalizerInfo *getLegalizerInfo() const override;

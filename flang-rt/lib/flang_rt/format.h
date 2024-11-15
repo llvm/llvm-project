@@ -8,8 +8,8 @@
 
 // FORMAT string processing
 
-#ifndef FORTRAN_FLANG_RT_FORMAT_H_
-#define FORTRAN_FLANG_RT_FORMAT_H_
+#ifndef FLANG_RT_FORMAT_H_
+#define FLANG_RT_FORMAT_H_
 
 #include "environment.h"
 #include "io-error.h"
@@ -201,4 +201,4 @@ private:
   Iteration stack_[maxMaxHeight];
 };
 } // namespace Fortran::runtime::io
-#endif /* FORTRAN_FLANG_RT_FORMAT_H_ */
+#endif /* FLANG_RT_FORMAT_H_ */

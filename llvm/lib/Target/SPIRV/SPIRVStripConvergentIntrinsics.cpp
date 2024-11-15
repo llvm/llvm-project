@@ -62,7 +62,7 @@ public:
         return;
 
       auto *NewCall = CallBase::removeOperandBundle(
-          CI, LLVMContext::OB_convergencectrl, CI);
+          CI, LLVMContext::OB_convergencectrl, CI->getIterator());
       NewCall->copyMetadata(*CI);
       CI->replaceAllUsesWith(NewCall);
       ToRemove.insert(CI);

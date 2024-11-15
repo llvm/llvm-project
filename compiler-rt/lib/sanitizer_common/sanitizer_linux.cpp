@@ -107,7 +107,9 @@ extern struct ps_strings *__ps_strings;
 #  endif  // SANITIZER_NETBSD
 
 #  if SANITIZER_SOLARIS
+#    include <stddef.h>
 #    include <stdlib.h>
+#    include <sys/frame.h>
 #    include <thread.h>
 #    define environ _environ
 #  endif
@@ -725,6 +727,11 @@ static void GetArgsAndEnv(char ***argv, char ***envp) {
 #    if !SANITIZER_GO
   if (&__libc_stack_end) {
     uptr *stack_end = (uptr *)__libc_stack_end;
+    // Linux/sparc64 needs an adjustment, cf. glibc
+    // sysdeps/sparc/sparc{32,64}/dl-machine.h (DL_STACK_END).
+#      if SANITIZER_LINUX && defined(__sparc__)
+    stack_end = &stack_end[16];
+#      endif
     // Normally argc can be obtained from *stack_end, however, on ARM glibc's
     // _start clobbers it:
     // https://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/arm/start.S;hb=refs/heads/release/2.31/master#l75
@@ -2617,7 +2624,19 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 #    if SANITIZER_SOLARIS
   ucontext_t *ucontext = (ucontext_t *)context;
   *pc = ucontext->uc_mcontext.gregs[REG_PC];
-  *sp = ucontext->uc_mcontext.gregs[REG_O6] + STACK_BIAS;
+  *sp = ucontext->uc_mcontext.gregs[REG_SP] + STACK_BIAS;
+  // Avoid SEGV when dereferencing sp on stack overflow with non-faulting load.
+  // This requires a SPARC V9 CPU.  Cannot use #ASI_PNF here: only supported
+  // since clang-19.
+#      if defined(__sparcv9)
+  asm("ldxa [%[fp]] 0x82, %[bp]"
+#      else
+  asm("lduwa [%[fp]] 0x82, %[bp]"
+#      endif
+      : [bp] "=r"(*bp)
+      : [fp] "r"(&((struct frame *)*sp)->fr_savfp));
+  if (*bp)
+    *bp += STACK_BIAS;
 #    else
   // Historical BSDism here.
   struct sigcontext *scontext = (struct sigcontext *)context;
@@ -2628,8 +2647,8 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
   *pc = scontext->si_regs.pc;
   *sp = scontext->si_regs.u_regs[14];
 #      endif
-#    endif
   *bp = (uptr)((uhwptr *)*sp)[14] + STACK_BIAS;
+#    endif
 #  elif defined(__mips__)
   ucontext_t *ucontext = (ucontext_t *)context;
   *pc = ucontext->uc_mcontext.pc;
@@ -2672,9 +2691,7 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 
 void SignalContext::InitPcSpBp() { GetPcSpBp(context, &pc, &sp, &bp); }
 
-void InitializePlatformEarly() {
-  // Do nothing.
-}
+void InitializePlatformEarly() { InitTlsSize(); }
 
 void CheckASLR() {
 #  if SANITIZER_NETBSD

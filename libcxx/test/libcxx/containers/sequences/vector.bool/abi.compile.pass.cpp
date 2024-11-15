@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: libcpp-abi-no-compressed-pair-padding
+
 #include <vector>
+#include <cstdint>
 
 #include "min_allocator.h"
 #include "test_allocator.h"

@@ -276,8 +276,8 @@ TEST(MachineInstrExtraInfo, AddExtraInfo) {
   MMOs.push_back(MMO);
   MCSymbol *Sym1 = MC->createTempSymbol("pre_label", false);
   MCSymbol *Sym2 = MC->createTempSymbol("post_label", false);
-  MDNode *HAM = MDNode::getDistinct(Ctx, std::nullopt);
-  MDNode *PCS = MDNode::getDistinct(Ctx, std::nullopt);
+  MDNode *HAM = MDNode::getDistinct(Ctx, {});
+  MDNode *PCS = MDNode::getDistinct(Ctx, {});
   MDNode *MMRA = MMRAMetadata::getTagMD(Ctx, "foo", "bar");
 
   ASSERT_TRUE(MI->memoperands_empty());
@@ -357,8 +357,8 @@ TEST(MachineInstrExtraInfo, ChangeExtraInfo) {
   MMOs.push_back(MMO);
   MCSymbol *Sym1 = MC->createTempSymbol("pre_label", false);
   MCSymbol *Sym2 = MC->createTempSymbol("post_label", false);
-  MDNode *HAM = MDNode::getDistinct(Ctx, std::nullopt);
-  MDNode *PCS = MDNode::getDistinct(Ctx, std::nullopt);
+  MDNode *HAM = MDNode::getDistinct(Ctx, {});
+  MDNode *PCS = MDNode::getDistinct(Ctx, {});
 
   MDNode *MMRA1 = MMRAMetadata::getTagMD(Ctx, "foo", "bar");
   MDNode *MMRA2 = MMRAMetadata::getTagMD(Ctx, "bar", "bux");
@@ -413,8 +413,8 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   MMOs.push_back(MMO);
   MCSymbol *Sym1 = MC->createTempSymbol("pre_label", false);
   MCSymbol *Sym2 = MC->createTempSymbol("post_label", false);
-  MDNode *HAM = MDNode::getDistinct(Ctx, std::nullopt);
-  MDNode *PCS = MDNode::getDistinct(Ctx, std::nullopt);
+  MDNode *HAM = MDNode::getDistinct(Ctx, {});
+  MDNode *PCS = MDNode::getDistinct(Ctx, {});
 
   MDNode *MMRA = MDTuple::get(Ctx, {});
 
@@ -506,8 +506,8 @@ MATCHER_P(HasMIMetadata, MIMD, "") {
 
 TEST(MachineInstrBuilder, BuildMI) {
   LLVMContext Ctx;
-  MDNode *PCS = MDNode::getDistinct(Ctx, std::nullopt);
-  MDNode *DI = MDNode::getDistinct(Ctx, std::nullopt);
+  MDNode *PCS = MDNode::getDistinct(Ctx, {});
+  MDNode *DI = MDNode::getDistinct(Ctx, {});
   DebugLoc DL(DI);
   MIMetadata MIMD(DL, PCS);
   EXPECT_EQ(MIMD.getDL(), DL);

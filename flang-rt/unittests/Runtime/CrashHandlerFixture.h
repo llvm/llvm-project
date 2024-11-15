@@ -10,12 +10,12 @@
 /// with expected message.
 //
 //===----------------------------------------------------------------------===//
-#ifndef FORTRAN_UNITTESTS_RUNTIME_CRASHHANDLERFIXTURE_H_
-#define FORTRAN_UNITTESTS_RUNTIME_CRASHHANDLERFIXTURE_H_
+#ifndef FLANG_RT_UNITTESTS_RUNTIME_CRASHHANDLERFIXTURE_H_
+#define FLANG_RT_UNITTESTS_RUNTIME_CRASHHANDLERFIXTURE_H_
 #include <gtest/gtest.h>
 
 struct CrashHandlerFixture : testing::Test {
   void SetUp();
 };
 
-#endif /* FORTRAN_UNITTESTS_RUNTIME_CRASHHANDLERFIXTURE_H_ */
+#endif /* FLANG_RT_UNITTESTS_RUNTIME_CRASHHANDLERFIXTURE_H_ */

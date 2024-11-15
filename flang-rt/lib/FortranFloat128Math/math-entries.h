@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_FORTRANFLOAT128MATH_MATH_ENTRIES_H_
-#define FORTRAN_FORTRANFLOAT128MATH_MATH_ENTRIES_H_
+#ifndef FLANG_RT_FORTRANFLOAT128MATH_MATH_ENTRIES_H_
+#define FLANG_RT_FORTRANFLOAT128MATH_MATH_ENTRIES_H_
 #include "terminator.h"
 #include "tools.h"
 #include "flang/Common/float128.h"
@@ -157,7 +157,7 @@ DEFINE_SIMPLE_ALIAS(Yn, ynq)
 // Use cmath INFINITY/NAN definition. Rely on C implicit conversions.
 #define F128_RT_INFINITY (INFINITY)
 #define F128_RT_QNAN (NAN)
-#elif LDBL_MANT_DIG == 113
+#elif HAS_LDBL128
 // Define wrapper callers for libm.
 #include <limits>
 
@@ -222,4 +222,4 @@ DEFINE_SIMPLE_ALIAS(Yn, ynl)
 
 } // namespace Fortran::runtime
 
-#endif /* FORTRAN_FORTRANFLOAT128MATH_MATH_ENTRIES_H_ */
+#endif /* FLANG_RT_FORTRANFLOAT128MATH_MATH_ENTRIES_H_ */

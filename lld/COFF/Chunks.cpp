@@ -385,7 +385,7 @@ static void maybeReportRelocationToDiscarded(const SectionChunk *fromChunk,
   os << "relocation against symbol in discarded section: " + name;
   for (const std::string &s : symbolLocations)
     os << s;
-  error(os.str());
+  error(out);
 }
 
 void SectionChunk::writeTo(uint8_t *buf) const {

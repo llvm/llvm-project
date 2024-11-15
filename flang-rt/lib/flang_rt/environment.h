@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_FLANG_RT_ENVIRONMENT_H_
-#define FORTRAN_FLANG_RT_ENVIRONMENT_H_
+#ifndef FLANG_RT_ENVIRONMENT_H_
+#define FLANG_RT_ENVIRONMENT_H_
 
 #include "flang/Common/decimal.h"
 #include "flang/Common/optional.h"
@@ -64,4 +64,4 @@ RT_OFFLOAD_VAR_GROUP_END
 
 } // namespace Fortran::runtime
 
-#endif /* FORTRAN_FLANG_RT_ENVIRONMENT_H_ */
+#endif /* FLANG_RT_ENVIRONMENT_H_ */

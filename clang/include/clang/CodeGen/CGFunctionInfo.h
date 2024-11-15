@@ -116,6 +116,7 @@ private:
   bool InReg : 1;           // isDirect() || isExtend() || isIndirect()
   bool CanBeFlattened: 1;   // isDirect()
   bool SignExt : 1;         // isExtend()
+  bool ZeroExt : 1;         // isExtend()
 
   bool canHavePaddingType() const {
     return isDirect() || isExtend() || isIndirect() || isIndirectAliased() ||
@@ -137,7 +138,7 @@ public:
         PaddingInReg(false), InAllocaSRet(false),
         InAllocaIndirect(false), IndirectByVal(false), IndirectRealign(false),
         SRetAfterThis(false), InReg(false), CanBeFlattened(false),
-        SignExt(false) {}
+        SignExt(false), ZeroExt(false) {}
 
   static ABIArgInfo getDirect(llvm::Type *T = nullptr, unsigned Offset = 0,
                               llvm::Type *Padding = nullptr,
@@ -174,17 +175,27 @@ public:
     AI.setPaddingType(nullptr);
     AI.setDirectOffset(0);
     AI.setDirectAlign(0);
-    AI.setSignExt(false);
+    AI.setZeroExt(true);
     return AI;
   }
 
   // ABIArgInfo will record the argument as being extended based on the sign
-  // of its type.
+  // of its type. Produces a sign or zero extension.
   static ABIArgInfo getExtend(QualType Ty, llvm::Type *T = nullptr) {
     assert(Ty->isIntegralOrEnumerationType() && "Unexpected QualType");
     if (Ty->hasSignedIntegerRepresentation())
       return getSignExtend(Ty, T);
     return getZeroExtend(Ty, T);
+  }
+
+  // Struct in register marked explicitly as not needing extension.
+  static ABIArgInfo getNoExtend(llvm::IntegerType *T) {
+    auto AI = ABIArgInfo(Extend);
+    AI.setCoerceToType(T);
+    AI.setPaddingType(nullptr);
+    AI.setDirectOffset(0);
+    AI.setDirectAlign(0);
+    return AI;
   }
 
   static ABIArgInfo getExtendInReg(QualType Ty, llvm::Type *T = nullptr) {
@@ -326,12 +337,26 @@ public:
   }
 
   bool isSignExt() const {
-    assert(isExtend() && "Invalid kind!");
+    assert(isExtend() && (SignExt + ZeroExt <= 1) && "Invalid kind / flags!");
     return SignExt;
   }
   void setSignExt(bool SExt) {
     assert(isExtend() && "Invalid kind!");
     SignExt = SExt;
+  }
+
+  bool isZeroExt() const {
+    assert(isExtend() && (SignExt + ZeroExt <= 1) && "Invalid kind / flags!");
+    return ZeroExt;
+  }
+  void setZeroExt(bool ZExt) {
+    assert(isExtend() && "Invalid kind!");
+    ZeroExt = ZExt;
+  }
+
+  bool isNoExt() const {
+    assert(isExtend() && (SignExt + ZeroExt <= 1) && "Invalid kind / flags!");
+    return !SignExt && !ZeroExt;
   }
 
   llvm::Type *getPaddingType() const {

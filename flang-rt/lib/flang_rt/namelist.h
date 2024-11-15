@@ -8,8 +8,8 @@
 
 // Defines the data structure used for NAMELIST I/O
 
-#ifndef FORTRAN_FLANG_RT_NAMELIST_H_
-#define FORTRAN_FLANG_RT_NAMELIST_H_
+#ifndef FLANG_RT_NAMELIST_H_
+#define FLANG_RT_NAMELIST_H_
 
 #include "non-tbp-dio.h"
 #include "flang/Common/api-attrs.h"
@@ -51,4 +51,4 @@ public:
 RT_API_ATTRS bool IsNamelistNameOrSlash(IoStatementState &);
 
 } // namespace Fortran::runtime::io
-#endif /* FORTRAN_FLANG_RT_NAMELIST_H_ */
+#endif /* FLANG_RT_NAMELIST_H_ */

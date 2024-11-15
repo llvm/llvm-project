@@ -117,7 +117,7 @@ LangStandard::Kind clang::getDefaultLanguageStandard(clang::Language Lang,
   case Language::RenderScript:
     return LangStandard::lang_c99;
   case Language::HLSL:
-    return LangStandard::lang_hlsl2021;
+    return LangStandard::lang_hlsl202x;
   }
   llvm_unreachable("unhandled Language kind!");
 }

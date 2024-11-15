@@ -763,7 +763,7 @@ Error COFFObjectFile::initLoadConfigPtr() {
       if (Error E =
               getRvaPtr(ChpeOff - getImageBase(), IntPtr, "CHPE metadata"))
         return E;
-      if (Error E = checkOffset(Data, IntPtr, sizeof(CHPEMetadata)))
+      if (Error E = checkOffset(Data, IntPtr, sizeof(*CHPEMetadata)))
         return E;
 
       CHPEMetadata = reinterpret_cast<const chpe_metadata *>(IntPtr);
