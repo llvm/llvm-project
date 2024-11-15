@@ -79,8 +79,8 @@ void SymbolTable::addFile(InputFile *file) {
   // The ARM64EC target must be explicitly specified and cannot be inferred.
   if (mt == ARM64EC &&
       (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN ||
-       (ctx.config.machineInferred && (COFF::isAnyArm64(ctx.config.machine) ||
-                                       ctx.config.machine == AMD64)))) {
+       (ctx.config.machineInferred &&
+        (ctx.config.machine == ARM64 || ctx.config.machine == AMD64)))) {
     error(toString(file) + ": machine type arm64ec is ambiguous and cannot be "
                            "inferred, use /machine:arm64ec or /machine:arm64x");
     return;
@@ -93,7 +93,7 @@ void SymbolTable::addFile(InputFile *file) {
   if (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN &&
       mt != IMAGE_FILE_MACHINE_UNKNOWN) {
     ctx.config.machineInferred = true;
-    ctx.config.machine = mt == ARM64X ? ARM64 : mt;
+    ctx.config.machine = mt;
     ctx.driver.addWinSysRootLibSearchPaths();
   }
 

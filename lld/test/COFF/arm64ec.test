@@ -37,7 +37,7 @@ ARM64X-DATA: 03030303 01010101 02020202
 
 RUN: not lld-link -out:test.dll -machine:arm64 arm64-data-sym.obj arm64ec-data-sym.obj \
 RUN:              -dll -noentry 2>&1 | FileCheck -check-prefix=INCOMPAT1 %s
-INCOMPAT1: arm64ec-data-sym.obj: machine type arm64ec conflicts with arm64
+INCOMPAT1: lld-link: error: arm64ec-data-sym.obj: machine type arm64ec conflicts with arm64
 
 RUN: not lld-link -out:test.dll -machine:arm64ec arm64ec-data-sym.obj arm64-data-sym.obj \
 RUN:              -dll -noentry 2>&1 | FileCheck -check-prefix=INCOMPAT2 %s
@@ -55,17 +55,17 @@ INCOMPAT4: lld-link: error: arm64ec-data-sym.obj: machine type arm64ec is ambigu
 RUN: not lld-link -out:test.dll x86_64-data-sym.obj arm64ec-data-sym.obj \
 RUN:              -dll -noentry 2>&1 | FileCheck -check-prefix=INCOMPAT4 %s
 
-RUN: not lld-link -out:test.dll aarch64-data-sym.obj arm64ec-data-sym.obj \
+RUN: not lld-link -out:test.dll arm64-data-sym.obj arm64ec-data-sym.obj \
 RUN:              -dll -noentry 2>&1 | FileCheck -check-prefix=INCOMPAT4 %s
 
 RUN: not lld-link -out:test.dll i686-data-sym.obj arm64ec-data-sym.obj \
 RUN:              -dll -noentry 2>&1 | FileCheck -check-prefix=INCOMPAT5 %s
-INCOMPAT5: arm64ec-data-sym.obj: machine type arm64ec conflicts with x86
+INCOMPAT5: lld-link: error: arm64ec-data-sym.obj: machine type arm64ec conflicts with x86
 
-arm64x input implies arm64 target
-RUN: lld-link -out:test.dll -machine:arm64 arm64x-resource.obj -dll -noentry
-RUN: llvm-readobj --file-headers test.dll | FileCheck -check-prefix=ARM64-HEADER %s
-ARM64-HEADER:      Machine: IMAGE_FILE_MACHINE_ARM64 (0xAA64)
+arm64x can be inferred and when mixed with ARM64, the first one wins
+RUN: lld-link -out:test.dll -dll -noentry arm64x-resource.obj arm64-data-sym.obj x86_64-data-sym.obj arm64ec-data-sym.obj
+RUN: not lld-link -out:test.dll -dll -noentry arm64-data-sym.obj arm64x-resource.obj x86_64-data-sym.obj 2>&1 | FileCheck -check-prefix=INCOMPAT3 %s
+RUN: not lld-link -out:test.dll -dll -noentry arm64-data-sym.obj arm64x-resource.obj arm64ec-data-sym.obj 2>&1 | FileCheck -check-prefix=INCOMPAT4 %s
 
 #--- arm64ec-data-sym.s
     .data
