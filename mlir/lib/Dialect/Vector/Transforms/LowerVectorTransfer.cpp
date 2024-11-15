@@ -636,10 +636,10 @@ struct TransferWriteToVectorStoreLowering
 void mlir::vector::populateVectorTransferLoweringPatterns(
     RewritePatternSet &patterns, std::optional<unsigned> maxTransferRank,
     PatternBenefit benefit) {
-  patterns.add<TransferReadToVectorLoadLowering,
-               TransferWriteToVectorStoreLowering>(patterns.getContext(),
-                                                   maxTransferRank, benefit);
-  patterns
-      .add<VectorLoadToMemrefLoadLowering, VectorStoreToMemrefStoreLowering>(
-          patterns.getContext(), benefit);
+  // patterns.add<TransferReadToVectorLoadLowering,
+  //              TransferWriteToVectorStoreLowering>(patterns.getContext(),
+  //                                                  maxTransferRank, benefit);
+  // patterns
+  //     .add<VectorLoadToMemrefLoadLowering, VectorStoreToMemrefStoreLowering>(
+  //         patterns.getContext(), benefit);
 }
