@@ -15430,63 +15430,6 @@ The behavior of '``llvm.memset.inline.*``' is equivalent to the behavior of
 '``llvm.memset.*``', but the generated code is guaranteed not to call any
 external functions.
 
-.. _int_experimental_memset_pattern:
-
-'``llvm.experimental.memset.pattern``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-This is an overloaded intrinsic. You can use
-``llvm.experimental.memset.pattern`` on any integer bit width and for
-different address spaces. Not all targets support all bit widths however.
-
-::
-
-      declare void @llvm.experimental.memset.pattern.p0.i128.i64(ptr <dest>, i128 <val>,
-                                                                 i64 <count>, i1 <isvolatile>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.memset.pattern.*``' intrinsics fill a block of memory
-with a particular value. This may be expanded to an inline loop, a sequence of
-stores, or a libcall depending on what is available for the target and the
-expected performance and code size impact.
-
-Arguments:
-""""""""""
-
-The first argument is a pointer to the destination to fill, the second
-is the value with which to fill it, the third argument is an integer
-argument specifying the number of times to fill the value, and the fourth is a
-boolean indicating a volatile access.
-
-The :ref:`align <attr_align>` parameter attribute can be provided
-for the first argument.
-
-If the ``isvolatile`` parameter is ``true``, the
-``llvm.experimental.memset.pattern`` call is a :ref:`volatile operation
-<volatile>`. The detailed access behavior is not very cleanly specified and it
-is unwise to depend on it.
-
-Semantics:
-""""""""""
-
-The '``llvm.experimental.memset.pattern*``' intrinsic fills memory starting at
-the destination location with the given pattern ``<count>`` times,
-incrementing by the allocation size of the type each time. The stores follow
-the usual semantics of store instructions, including regarding endianness and
-padding. If the argument is known to be aligned to some boundary, this can be
-specified as an attribute on the argument.
-
-If ``<count>`` is 0, it is no-op modulo the behavior of attributes attached to
-the arguments.
-If ``<count>`` is not a well-defined value, the behavior is undefined.
-If ``<count>`` is not zero, ``<dest>`` should be well-defined, otherwise the
-behavior is undefined.
-
 .. _int_sqrt:
 
 '``llvm.sqrt.*``' Intrinsic
