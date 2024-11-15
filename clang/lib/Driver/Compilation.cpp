@@ -33,7 +33,8 @@ using namespace driver;
 using namespace llvm::opt;
 
 Compilation::Compilation(const Driver &D, const ToolChain &_DefaultToolChain,
-                         InputArgList *_Args, DerivedArgList *_TranslatedArgs,
+                         std::shared_ptr<InputArgList> _Args,
+                         std::shared_ptr<DerivedArgList> _TranslatedArgs,
                          bool ContainsError)
     : TheDriver(D), DefaultToolChain(_DefaultToolChain), Args(_Args),
       TranslatedArgs(_TranslatedArgs), ContainsError(ContainsError) {
@@ -47,14 +48,6 @@ Compilation::~Compilation() {
   // the file names might be derived from the input arguments.
   if (!TheDriver.isSaveTempsEnabled() && !ForceKeepTempFiles)
     CleanupFileList(TempFiles);
-
-  delete TranslatedArgs;
-  delete Args;
-
-  // Free any derived arg lists.
-  for (auto Arg : TCArgs)
-    if (Arg.second != TranslatedArgs)
-      delete Arg.second;
 }
 
 const DerivedArgList &
@@ -63,41 +56,39 @@ Compilation::getArgsForToolChain(const ToolChain *TC, StringRef BoundArch,
   if (!TC)
     TC = &DefaultToolChain;
 
-  DerivedArgList *&Entry = TCArgs[{TC, BoundArch, DeviceOffloadKind}];
+  std::shared_ptr<DerivedArgList> &Entry =
+      TCArgs[{TC, BoundArch, DeviceOffloadKind}];
   if (!Entry) {
     SmallVector<Arg *, 4> AllocatedArgs;
-    DerivedArgList *OpenMPArgs = nullptr;
+    std::shared_ptr<DerivedArgList> OpenMPArgs;
     // Translate OpenMP toolchain arguments provided via the -Xopenmp-target flags.
     if (DeviceOffloadKind == Action::OFK_OpenMP) {
       const ToolChain *HostTC = getSingleOffloadToolChain<Action::OFK_Host>();
       bool SameTripleAsHost = (TC->getTriple() == HostTC->getTriple());
-      OpenMPArgs = TC->TranslateOpenMPTargetArgs(
-          *TranslatedArgs, SameTripleAsHost, AllocatedArgs);
+      OpenMPArgs.reset(TC->TranslateOpenMPTargetArgs(
+          *TranslatedArgs, SameTripleAsHost, AllocatedArgs));
     }
 
-    DerivedArgList *NewDAL = nullptr;
+    std::shared_ptr<DerivedArgList> NewDAL;
     if (!OpenMPArgs) {
-      NewDAL = TC->TranslateXarchArgs(*TranslatedArgs, BoundArch,
-                                      DeviceOffloadKind, &AllocatedArgs);
+      NewDAL.reset(TC->TranslateXarchArgs(*TranslatedArgs, BoundArch,
+                                          DeviceOffloadKind, &AllocatedArgs));
     } else {
-      NewDAL = TC->TranslateXarchArgs(*OpenMPArgs, BoundArch, DeviceOffloadKind,
-                                      &AllocatedArgs);
+      NewDAL.reset(TC->TranslateXarchArgs(*OpenMPArgs, BoundArch,
+                                          DeviceOffloadKind, &AllocatedArgs));
       if (!NewDAL)
         NewDAL = OpenMPArgs;
-      else
-        delete OpenMPArgs;
     }
 
     if (!NewDAL) {
-      Entry = TC->TranslateArgs(*TranslatedArgs, BoundArch, DeviceOffloadKind);
+      Entry.reset(
+          TC->TranslateArgs(*TranslatedArgs, BoundArch, DeviceOffloadKind));
       if (!Entry)
         Entry = TranslatedArgs;
     } else {
-      Entry = TC->TranslateArgs(*NewDAL, BoundArch, DeviceOffloadKind);
+      Entry.reset(TC->TranslateArgs(*NewDAL, BoundArch, DeviceOffloadKind));
       if (!Entry)
-        Entry = NewDAL;
-      else
-        delete NewDAL;
+        Entry = std::shared_ptr<DerivedArgList>(NewDAL);
     }
 
     // Add allocated arguments to the final DAL.
@@ -290,9 +281,6 @@ void Compilation::initCompilationForDiagnostics() {
 
   // Force re-creation of the toolchain Args, otherwise our modifications just
   // above will have no effect.
-  for (auto Arg : TCArgs)
-    if (Arg.second != TranslatedArgs)
-      delete Arg.second;
   TCArgs.clear();
 
   // Redirect stdout/stderr to /dev/null.

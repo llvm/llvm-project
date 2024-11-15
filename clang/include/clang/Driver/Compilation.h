@@ -61,11 +61,11 @@ class Compilation {
       OrderedOffloadingToolchains;
 
   /// The original (untranslated) input argument list.
-  llvm::opt::InputArgList *Args;
+  std::shared_ptr<llvm::opt::InputArgList> Args;
 
   /// The driver translated arguments. Note that toolchains may perform their
   /// own argument translation.
-  llvm::opt::DerivedArgList *TranslatedArgs;
+  std::shared_ptr<llvm::opt::DerivedArgList> TranslatedArgs;
 
   /// The list of actions we've created via MakeAction.  This is not accessible
   /// to consumers; it's here just to manage ownership.
@@ -100,7 +100,7 @@ class Compilation {
       return false;
     }
   };
-  std::map<TCArgsKey, llvm::opt::DerivedArgList *> TCArgs;
+  std::map<TCArgsKey, std::shared_ptr<llvm::opt::DerivedArgList>> TCArgs;
 
   /// Temporary files which should be removed on exit.
   llvm::opt::ArgStringList TempFiles;
@@ -134,8 +134,9 @@ class Compilation {
 
 public:
   Compilation(const Driver &D, const ToolChain &DefaultToolChain,
-              llvm::opt::InputArgList *Args,
-              llvm::opt::DerivedArgList *TranslatedArgs, bool ContainsError);
+              std::shared_ptr<llvm::opt::InputArgList> Args,
+              std::shared_ptr<llvm::opt::DerivedArgList> TranslatedArgs,
+              bool ContainsError);
   ~Compilation();
 
   const Driver &getDriver() const { return TheDriver; }

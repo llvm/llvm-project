@@ -1485,7 +1485,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
       std::make_unique<InputArgList>(std::move(Args));
 
   // Perform the default argument translations.
-  DerivedArgList *TranslatedArgs = TranslateInputArgs(*UArgs);
+  std::unique_ptr<DerivedArgList> TranslatedArgs(TranslateInputArgs(*UArgs));
 
   // Owned by the host.
   const ToolChain &TC = getToolChain(
@@ -1544,8 +1544,8 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   }
 
   // The compilation takes ownership of Args.
-  Compilation *C = new Compilation(*this, TC, UArgs.release(), TranslatedArgs,
-                                   ContainsError);
+  Compilation *C = new Compilation(*this, TC, std::move(UArgs),
+                                   std::move(TranslatedArgs), ContainsError);
 
   if (!HandleImmediateArgs(*C))
     return C;
