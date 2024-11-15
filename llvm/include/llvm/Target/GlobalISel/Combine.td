@@ -857,6 +857,14 @@ def unmerge_zext_to_zext : GICombineRule<
   (apply [{ Helper.applyCombineUnmergeZExtToZExt(*${d}); }])
 >;
 
+/// Transform merge_x_undef -> anyext.
+def merge_of_x_and_undef : GICombineRule <
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (G_IMPLICIT_DEF $undef),
+         (G_MERGE_VALUES $root, $x, $undef):$MI,
+         [{ return Helper.matchMergeXAndUndef(*${MI}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${MI}, ${matchinfo}); }])>;
+
 def merge_combines: GICombineGroup<[
   unmerge_anyext_build_vector,
   unmerge_merge,
@@ -864,7 +872,8 @@ def merge_combines: GICombineGroup<[
   unmerge_cst,
   unmerge_undef,
   unmerge_dead_to_trunc,
-  unmerge_zext_to_zext
+  unmerge_zext_to_zext,
+  merge_of_x_and_undef
 ]>;
 
 // Under certain conditions, transform:
@@ -1585,6 +1594,13 @@ def combine_shuffle_undef_rhs : GICombineRule<
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])
 >;
 
+def combine_shuffle_disjoint_mask : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
+        [{ return Helper.matchShuffleDisjointMask(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])
+>;
+
 // match_extract_of_element and insert_vector_elt_oob must be the first!
 def vector_ops_combines: GICombineGroup<[
 match_extract_of_element_undef_vector,
@@ -1936,7 +1952,8 @@ def constant_fold_binops : GICombineGroup<[constant_fold_binop,
 def prefer_sign_combines : GICombineGroup<[nneg_zext]>;
 
 def shuffle_combines : GICombineGroup<[combine_shuffle_concat,
-                                       combine_shuffle_undef_rhs]>;
+                                       combine_shuffle_undef_rhs,
+                                       combine_shuffle_disjoint_mask]>;
 
 def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     vector_ops_combines, freeze_combines, cast_combines,

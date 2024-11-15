@@ -17,10 +17,10 @@
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeVisitor.h"
@@ -153,9 +153,9 @@ getEnclosingTypeAliasTemplateDecl(Sema &SemaRef) {
 bool isLambdaEnclosedByTypeAliasDecl(
     const FunctionDecl *LambdaCallOperator,
     const TypeAliasTemplateDecl *PrimaryTypeAliasDecl) {
-  struct Visitor : RecursiveASTVisitor<Visitor> {
+  struct Visitor : DynamicRecursiveASTVisitor {
     Visitor(const FunctionDecl *CallOperator) : CallOperator(CallOperator) {}
-    bool VisitLambdaExpr(const LambdaExpr *LE) {
+    bool VisitLambdaExpr(LambdaExpr *LE) override {
       // Return true to bail out of the traversal, implying the Decl contains
       // the lambda.
       return getPrimaryTemplateOfGenericLambda(LE->getCallOperator()) !=
@@ -2196,10 +2196,17 @@ TemplateInstantiator::TransformCXXAssumeAttr(const CXXAssumeAttr *AA) {
   if (!Res.isUsable())
     return AA;
 
-  Res = getSema().BuildCXXAssumeExpr(Res.get(), AA->getAttrName(),
-                                     AA->getRange());
+  Res = getSema().ActOnFinishFullExpr(Res.get(),
+                                      /*DiscardedValue=*/false);
   if (!Res.isUsable())
     return AA;
+
+  if (!(Res.get()->getDependence() & ExprDependence::TypeValueInstantiation)) {
+    Res = getSema().BuildCXXAssumeExpr(Res.get(), AA->getAttrName(),
+                                       AA->getRange());
+    if (!Res.isUsable())
+      return AA;
+  }
 
   return CXXAssumeAttr::CreateImplicit(getSema().Context, Res.get(),
                                        AA->getRange());

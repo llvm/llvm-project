@@ -99,6 +99,47 @@ static void initializeAlloca(CodeGenFunction &CGF, AllocaInst *AI, Value *Size,
   I->addAnnotationMetadata("auto-init");
 }
 
+static Value *handleHlslClip(const CallExpr *E, CodeGenFunction *CGF) {
+  Value *Op0 = CGF->EmitScalarExpr(E->getArg(0));
+
+  Constant *FZeroConst = ConstantFP::getZero(CGF->FloatTy);
+  Value *CMP;
+  Value *LastInstr;
+
+  if (const auto *VecTy = E->getArg(0)->getType()->getAs<clang::VectorType>()) {
+    FZeroConst = ConstantVector::getSplat(
+        ElementCount::getFixed(VecTy->getNumElements()), FZeroConst);
+    auto *FCompInst = CGF->Builder.CreateFCmpOLT(Op0, FZeroConst);
+    CMP = CGF->Builder.CreateIntrinsic(
+        CGF->Builder.getInt1Ty(), CGF->CGM.getHLSLRuntime().getAnyIntrinsic(),
+        {FCompInst}, nullptr);
+  } else
+    CMP = CGF->Builder.CreateFCmpOLT(Op0, FZeroConst);
+
+  if (CGF->CGM.getTarget().getTriple().isDXIL())
+    LastInstr = CGF->Builder.CreateIntrinsic(
+        CGF->VoidTy, llvm::Intrinsic::dx_discard, {CMP}, nullptr);
+  else if (CGF->CGM.getTarget().getTriple().isSPIRV()) {
+    BasicBlock *LT0 = CGF->createBasicBlock("lt0", CGF->CurFn);
+    BasicBlock *End = CGF->createBasicBlock("end", CGF->CurFn);
+
+    CGF->Builder.CreateCondBr(CMP, LT0, End);
+
+    CGF->Builder.SetInsertPoint(LT0);
+
+    CGF->Builder.CreateIntrinsic(CGF->VoidTy, llvm::Intrinsic::spv_discard, {},
+                                 nullptr);
+
+    LastInstr = CGF->Builder.CreateBr(End);
+
+    CGF->Builder.SetInsertPoint(End);
+  } else {
+    llvm_unreachable("Backend Codegen not supported.");
+  }
+
+  return LastInstr;
+}
+
 static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
   Value *Op0 = CGF->EmitScalarExpr(E->getArg(0));
   const auto *OutArg1 = dyn_cast<HLSLOutArgExpr>(E->getArg(1));
@@ -2797,6 +2838,18 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_atanf128:
       return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(
           *this, E, Intrinsic::atan, Intrinsic::experimental_constrained_atan));
+
+    case Builtin::BIatan2:
+    case Builtin::BIatan2f:
+    case Builtin::BIatan2l:
+    case Builtin::BI__builtin_atan2:
+    case Builtin::BI__builtin_atan2f:
+    case Builtin::BI__builtin_atan2f16:
+    case Builtin::BI__builtin_atan2l:
+    case Builtin::BI__builtin_atan2f128:
+      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(
+          *this, E, Intrinsic::atan2,
+          Intrinsic::experimental_constrained_atan2));
 
     case Builtin::BIceil:
     case Builtin::BIceilf:
@@ -17025,9 +17078,13 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   }
   // Corresponding to intrisics which will return 2 tiles (tile0_tile1).
   case X86::BI__builtin_ia32_t2rpntlvwz0_internal:
+  case X86::BI__builtin_ia32_t2rpntlvwz0rs_internal:
   case X86::BI__builtin_ia32_t2rpntlvwz0t1_internal:
+  case X86::BI__builtin_ia32_t2rpntlvwz0rst1_internal:
   case X86::BI__builtin_ia32_t2rpntlvwz1_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz1t1_internal: {
+  case X86::BI__builtin_ia32_t2rpntlvwz1rs_internal:
+  case X86::BI__builtin_ia32_t2rpntlvwz1t1_internal:
+  case X86::BI__builtin_ia32_t2rpntlvwz1rst1_internal: {
     Intrinsic::ID IID;
     switch (BuiltinID) {
     default:
@@ -17035,14 +17092,26 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     case X86::BI__builtin_ia32_t2rpntlvwz0_internal:
       IID = Intrinsic::x86_t2rpntlvwz0_internal;
       break;
+    case X86::BI__builtin_ia32_t2rpntlvwz0rs_internal:
+      IID = Intrinsic::x86_t2rpntlvwz0rs_internal;
+      break;
     case X86::BI__builtin_ia32_t2rpntlvwz0t1_internal:
       IID = Intrinsic::x86_t2rpntlvwz0t1_internal;
+      break;
+    case X86::BI__builtin_ia32_t2rpntlvwz0rst1_internal:
+      IID = Intrinsic::x86_t2rpntlvwz0rst1_internal;
       break;
     case X86::BI__builtin_ia32_t2rpntlvwz1_internal:
       IID = Intrinsic::x86_t2rpntlvwz1_internal;
       break;
+    case X86::BI__builtin_ia32_t2rpntlvwz1rs_internal:
+      IID = Intrinsic::x86_t2rpntlvwz1rs_internal;
+      break;
     case X86::BI__builtin_ia32_t2rpntlvwz1t1_internal:
       IID = Intrinsic::x86_t2rpntlvwz1t1_internal;
+      break;
+    case X86::BI__builtin_ia32_t2rpntlvwz1rst1_internal:
+      IID = Intrinsic::x86_t2rpntlvwz1rst1_internal;
       break;
     }
 
@@ -19180,6 +19249,10 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
            "asuint operands types mismatch");
     return handleHlslSplitdouble(E, this);
   }
+  case Builtin::BI__builtin_hlsl_elementwise_clip:
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           "clip operands types mismatch");
+    return handleHlslClip(E, this);
   }
   return nullptr;
 }
