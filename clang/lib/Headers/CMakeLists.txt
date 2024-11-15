@@ -233,7 +233,6 @@ set(x86_files
   movdirintrin.h
   movrs_avx10_2_512intrin.h
   movrs_avx10_2intrin.h
-  movrsintrin.h
   mwaitxintrin.h
   nmmintrin.h
   pconfigintrin.h

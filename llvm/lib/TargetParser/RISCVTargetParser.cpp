@@ -28,17 +28,6 @@ enum CPUKind : unsigned {
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
 };
 
-struct CPUInfo {
-  StringLiteral Name;
-  StringLiteral DefaultMarch;
-  bool FastScalarUnalignedAccess;
-  bool FastVectorUnalignedAccess;
-  uint32_t MVendorID;
-  uint64_t MArchID;
-  uint64_t MImpID;
-  bool is64Bit() const { return DefaultMarch.starts_with("rv64"); }
-};
-
 constexpr CPUInfo RISCVCPUInfo[] = {
 #define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_SCALAR_UNALIGN,                   \
              FAST_VECTOR_UNALIGN, MVENDORID, MARCHID, MIMPID)                  \
@@ -47,9 +36,7 @@ constexpr CPUInfo RISCVCPUInfo[] = {
       DEFAULT_MARCH,                                                           \
       FAST_SCALAR_UNALIGN,                                                     \
       FAST_VECTOR_UNALIGN,                                                     \
-      MVENDORID,                                                               \
-      MARCHID,                                                                 \
-      MIMPID,                                                                  \
+      {MVENDORID, MARCHID, MIMPID},                                            \
   },
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
 };
