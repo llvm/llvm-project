@@ -6186,10 +6186,8 @@ Status Process::GetMemoryRegionInfo(lldb::addr_t load_addr,
     load_addr = abi->FixAnyAddress(load_addr);
   Status error = DoGetMemoryRegionInfo(load_addr, range_info);
   // Reject a region that does not contain the requested address.
-  if (error.Success() && (range_info.GetRange().GetRangeBase() < load_addr ||
-                          range_info.GetRange().GetRangeEnd() <= load_addr))
-    error =
-        Status::FromErrorString("Invalid memory region");
+  if (error.Success() && !range_info.GetRange().Contains(load_addr))
+    error = Status::FromErrorString("Invalid memory region");
 
   return error;
 }
