@@ -545,7 +545,7 @@ void VPlanTransforms::prepareExecute(VPlan &Plan) {
         Type *RedTy = MulAcc->getRecurrenceDescriptor().getRecurrenceType();
 
         // Generate inner VPWidenCastRecipes if necessary.
-        // Note that we will drop the extend after of mul which transform
+        // Note that we will drop the extend after mul which transform
         // reduce.add(ext(mul(ext, ext))) to reduce.add(mul(ext, ext)).
         VPValue *Op0, *Op1;
         if (MulAcc->isExtended()) {

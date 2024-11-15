@@ -2702,8 +2702,6 @@ public:
 /// VPReductionRecipe and VPWidenCastRecipe before execution. The Operands are
 /// {ChainOp, VecOp, [Condition]}.
 class VPExtendedReductionRecipe : public VPReductionRecipe {
-  /// Type after extend.
-  Type *ResultTy;
   CastInst *ExtInstr;
 
 protected:
@@ -2711,10 +2709,10 @@ protected:
                             const RecurrenceDescriptor &R, Instruction *RedI,
                             Instruction::CastOps ExtOp, CastInst *ExtInstr,
                             VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
-                            bool IsOrdered, Type *ResultTy)
+                            bool IsOrdered)
       : VPReductionRecipe(SC, R, RedI, ArrayRef<VPValue *>({ChainOp, VecOp}),
                           CondOp, IsOrdered),
-        ResultTy(ResultTy), ExtInstr(ExtInstr) {}
+        ExtInstr(ExtInstr) {}
 
 public:
   VPExtendedReductionRecipe(const RecurrenceDescriptor &R, Instruction *RedI,
@@ -2723,7 +2721,7 @@ public:
       : VPExtendedReductionRecipe(
             VPDef::VPExtendedReductionSC, R, RedI, Ext->getOpcode(),
             cast<CastInst>(Ext->getUnderlyingInstr()), ChainOp,
-            Ext->getOperand(0), CondOp, IsOrdered, Ext->getResultType()) {}
+            Ext->getOperand(0), CondOp, IsOrdered) {}
 
   ~VPExtendedReductionRecipe() override = default;
 
@@ -2731,14 +2729,7 @@ public:
     llvm_unreachable("Not implement yet");
   }
 
-  static inline bool classof(const VPRecipeBase *R) {
-    return R->getVPDefID() == VPDef::VPExtendedReductionSC;
-  }
-
-  static inline bool classof(const VPUser *U) {
-    auto *R = dyn_cast<VPRecipeBase>(U);
-    return R && classof(R);
-  }
+  VP_CLASSOF_IMPL(VPDef::VPExtendedReductionSC);
 
   void execute(VPTransformState &State) override {
     llvm_unreachable("VPExtendedReductionRecipe should be transform to "
@@ -2755,11 +2746,16 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
-  /// The Type after extended.
-  Type *getResultType() const { return ResultTy; }
+  /// The scalar type after extended.
+  Type *getResultType() const {
+    return getRecurrenceDescriptor().getRecurrenceType();
+  }
+
   bool isZExt() const { return getExtOpcode() == Instruction::ZExt; }
+
   /// The Opcode of extend instruction.
   Instruction::CastOps getExtOpcode() const { return ExtInstr->getOpcode(); }
+
   /// The CastInst of the extend instruction.
   CastInst *getExtInstr() const { return ExtInstr; }
 };
@@ -2771,7 +2767,7 @@ public:
 /// execution. The Operands are {ChainOp, VecOp1, VecOp2, [Condition]}.
 class VPMulAccRecipe : public VPReductionRecipe {
 
-  /// reduce.add(ext(mul(ext0(), ext1())))
+  // reduce.add(mul(ext0, ext1)).
   Instruction *MulInstr;
   CastInst *Ext0Instr = nullptr;
   CastInst *Ext1Instr = nullptr;
@@ -2821,27 +2817,11 @@ public:
                        ChainOp, Mul->getOperand(0), Mul->getOperand(1), CondOp,
                        IsOrdered) {}
 
-  VPMulAccRecipe(const RecurrenceDescriptor &R, Instruction *RedI,
-                 VPValue *ChainOp, VPValue *CondOp, bool IsOrdered,
-                 VPWidenCastRecipe *Ext, VPWidenRecipe *Mul,
-                 VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1)
-      : VPMulAccRecipe(VPDef::VPMulAccSC, R, RedI, Mul->getUnderlyingInstr(),
-                       Ext0->getUnderlyingInstr(), Ext1->getUnderlyingInstr(),
-                       ChainOp, Ext0->getOperand(0), Ext1->getOperand(0),
-                       CondOp, IsOrdered) {}
-
   ~VPMulAccRecipe() override = default;
 
   VPMulAccRecipe *clone() override { llvm_unreachable("Not implement yet"); }
 
-  static inline bool classof(const VPRecipeBase *R) {
-    return R->getVPDefID() == VPRecipeBase::VPMulAccSC;
-  }
-
-  static inline bool classof(const VPUser *U) {
-    auto *R = dyn_cast<VPRecipeBase>(U);
-    return R && classof(R);
-  }
+  VP_CLASSOF_IMPL(VPDef::VPMulAccSC);
 
   void execute(VPTransformState &State) override {
     llvm_unreachable("VPMulAccRecipe should transform to VPWidenCastRecipe + "
@@ -2876,6 +2856,7 @@ public:
 
   /// Return if the operands of mul instruction come from same extend.
   bool isSameExtend() const { return getVecOp0() == getVecOp1(); }
+
   Instruction::CastOps getExtOpcode() const { return Ext0Instr->getOpcode(); }
 
   /// Return if the extend opcode is ZExt.

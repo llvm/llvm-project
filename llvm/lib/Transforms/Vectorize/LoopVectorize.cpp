@@ -9253,6 +9253,87 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
   return Plan;
 }
 
+/// Try to match the extended-reduction and create VPExtendedReductionRecipe.
+///
+/// This function try to match following pattern which will generate
+/// extended-reduction instruction.
+///    reduce(ext(...)).
+static VPExtendedReductionRecipe *
+tryToMatchExtendedReduction(const RecurrenceDescriptor &RdxDesc,
+                            Instruction *CurrentLinkI, VPValue *PreviousLink,
+                            VPValue *VecOp, VPValue *CondOp,
+                            LoopVectorizationCostModel &CM) {
+  using namespace VPlanPatternMatch;
+  VPValue *A;
+  // Matched reduce(ext)).
+  if (match(VecOp, m_ZExtOrSExt(m_VPValue(A)))) {
+    return new VPExtendedReductionRecipe(RdxDesc, CurrentLinkI, PreviousLink,
+                                         cast<VPWidenCastRecipe>(VecOp), CondOp,
+                                         CM.useOrderedReductions(RdxDesc));
+  }
+  return nullptr;
+}
+
+/// Try to match the mul-acc-reduction and create VPMulAccRecipe.
+///
+/// This function try to match following patterns which will generate mul-acc
+/// instructions.
+///    reduce.add(mul(...)),
+///    reduce.add(mul(ext(A), ext(B))),
+///    reduce.add(ext(mul(ext(A), ext(B)))).
+static VPMulAccRecipe *tryToMatchMulAcc(const RecurrenceDescriptor &RdxDesc,
+                                        Instruction *CurrentLinkI,
+                                        VPValue *PreviousLink, VPValue *VecOp,
+                                        VPValue *CondOp,
+                                        LoopVectorizationCostModel &CM) {
+  using namespace VPlanPatternMatch;
+  VPValue *A, *B;
+  if (RdxDesc.getOpcode() != Instruction::Add)
+    return nullptr;
+  // Try to match reduce.add(mul(...))
+  if (match(VecOp, m_Mul(m_VPValue(A), m_VPValue(B)))) {
+    VPWidenCastRecipe *RecipeA =
+        dyn_cast_if_present<VPWidenCastRecipe>(A->getDefiningRecipe());
+    VPWidenCastRecipe *RecipeB =
+        dyn_cast_if_present<VPWidenCastRecipe>(B->getDefiningRecipe());
+    // Matched reduce.add(mul(ext, ext))
+    if (RecipeA && RecipeB && match(RecipeA, m_ZExtOrSExt(m_VPValue())) &&
+        match(RecipeB, m_ZExtOrSExt(m_VPValue())) &&
+        (RecipeA->getOpcode() == RecipeB->getOpcode() || A == B)) {
+      return new VPMulAccRecipe(RdxDesc, CurrentLinkI, PreviousLink, CondOp,
+                                CM.useOrderedReductions(RdxDesc),
+                                cast<VPWidenRecipe>(VecOp->getDefiningRecipe()),
+                                RecipeA, RecipeB);
+    } else {
+      // Matched reduce.add(mul)
+      return new VPMulAccRecipe(
+          RdxDesc, CurrentLinkI, PreviousLink, CondOp,
+          CM.useOrderedReductions(RdxDesc),
+          cast<VPWidenRecipe>(VecOp->getDefiningRecipe()));
+    }
+    // Matched reduce.add(ext(mul(ext(A), ext(B))))
+    // All extend instructions must have same opcode or A == B
+    // which can be transform to reduce.add(zext(mul(sext(A), sext(B)))).
+  } else if (match(VecOp, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
+                                             m_ZExtOrSExt(m_VPValue()))))) {
+    VPWidenCastRecipe *Ext =
+        cast<VPWidenCastRecipe>(VecOp->getDefiningRecipe());
+    VPWidenRecipe *Mul =
+        cast<VPWidenRecipe>(Ext->getOperand(0)->getDefiningRecipe());
+    VPWidenCastRecipe *Ext0 =
+        cast<VPWidenCastRecipe>(Mul->getOperand(0)->getDefiningRecipe());
+    VPWidenCastRecipe *Ext1 =
+        cast<VPWidenCastRecipe>(Mul->getOperand(1)->getDefiningRecipe());
+    if ((Ext->getOpcode() == Ext0->getOpcode() || Ext0 == Ext1) &&
+        Ext0->getOpcode() == Ext1->getOpcode()) {
+      return new VPMulAccRecipe(RdxDesc, CurrentLinkI, PreviousLink, CondOp,
+                                CM.useOrderedReductions(RdxDesc), Mul, Ext0,
+                                Ext1);
+    }
+  }
+  return nullptr;
+}
+
 // Adjust the recipes for reductions. For in-loop reductions the chain of
 // instructions leading from the loop exit instr to the phi need to be converted
 // to reductions, with one operand being vector and the other being the scalar
@@ -9384,76 +9465,12 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (CM.blockNeedsPredicationForAnyReason(BB))
         CondOp = RecipeBuilder.getBlockInMask(BB);
 
-      auto TryToMatchMulAcc = [&]() -> VPReductionRecipe * {
-        VPValue *A, *B;
-        if (RdxDesc.getOpcode() != Instruction::Add)
-          return nullptr;
-        // Try to match reduce.add(mul(...))
-        if (match(VecOp, m_Mul(m_VPValue(A), m_VPValue(B))) &&
-            !VecOp->hasMoreThanOneUniqueUser()) {
-          VPWidenCastRecipe *RecipeA =
-              dyn_cast_if_present<VPWidenCastRecipe>(A->getDefiningRecipe());
-          VPWidenCastRecipe *RecipeB =
-              dyn_cast_if_present<VPWidenCastRecipe>(B->getDefiningRecipe());
-          // Matched reduce.add(mul(ext, ext))
-          if (RecipeA && RecipeB && match(RecipeA, m_ZExtOrSExt(m_VPValue())) &&
-              match(RecipeB, m_ZExtOrSExt(m_VPValue())) &&
-              (RecipeA->getOpcode() == RecipeB->getOpcode() || A == B)) {
-            return new VPMulAccRecipe(
-                RdxDesc, CurrentLinkI, PreviousLink, CondOp,
-                CM.useOrderedReductions(RdxDesc),
-                cast<VPWidenRecipe>(VecOp->getDefiningRecipe()), RecipeA,
-                RecipeB);
-          } else {
-            // Matched reduce.add(mul)
-            return new VPMulAccRecipe(
-                RdxDesc, CurrentLinkI, PreviousLink, CondOp,
-                CM.useOrderedReductions(RdxDesc),
-                cast<VPWidenRecipe>(VecOp->getDefiningRecipe()));
-          }
-          // Matched reduce.add(ext(mul(ext(A), ext(B))))
-          // Note that all extend instructions must have same opcode or A == B
-          // which can be transform to reduce.add(zext(mul(sext(A), sext(B)))).
-        } else if (match(VecOp,
-                         m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
-                                            m_ZExtOrSExt(m_VPValue())))) &&
-                   !VecOp->hasMoreThanOneUniqueUser()) {
-          VPWidenCastRecipe *Ext =
-              cast<VPWidenCastRecipe>(VecOp->getDefiningRecipe());
-          VPWidenRecipe *Mul =
-              cast<VPWidenRecipe>(Ext->getOperand(0)->getDefiningRecipe());
-          VPWidenCastRecipe *Ext0 =
-              cast<VPWidenCastRecipe>(Mul->getOperand(0)->getDefiningRecipe());
-          VPWidenCastRecipe *Ext1 =
-              cast<VPWidenCastRecipe>(Mul->getOperand(1)->getDefiningRecipe());
-          if ((Ext->getOpcode() == Ext0->getOpcode() || Ext0 == Ext1) &&
-              Ext0->getOpcode() == Ext1->getOpcode()) {
-            return new VPMulAccRecipe(
-                RdxDesc, CurrentLinkI, PreviousLink, CondOp,
-                CM.useOrderedReductions(RdxDesc),
-                cast<VPWidenCastRecipe>(VecOp->getDefiningRecipe()), Mul,
-                cast<VPWidenCastRecipe>(Ext0), cast<VPWidenCastRecipe>(Ext1));
-          }
-        }
-        return nullptr;
-      };
-
-      auto TryToMatchExtendedReduction = [&]() -> VPReductionRecipe * {
-        VPValue *A;
-        // Matched reduce(ext)).
-        if (match(VecOp, m_ZExtOrSExt(m_VPValue(A)))) {
-          return new VPExtendedReductionRecipe(
-              RdxDesc, CurrentLinkI, PreviousLink,
-              cast<VPWidenCastRecipe>(VecOp), CondOp,
-              CM.useOrderedReductions(RdxDesc));
-        }
-        return nullptr;
-      };
-
       VPReductionRecipe *RedRecipe;
-      if (auto *MulAcc = TryToMatchMulAcc())
+      if (auto *MulAcc = tryToMatchMulAcc(RdxDesc, CurrentLinkI, PreviousLink,
+                                          VecOp, CondOp, CM))
         RedRecipe = MulAcc;
-      else if (auto *ExtendedRed = TryToMatchExtendedReduction())
+      else if (auto *ExtendedRed = tryToMatchExtendedReduction(
+                   RdxDesc, CurrentLinkI, PreviousLink, VecOp, CondOp, CM))
         RedRecipe = ExtendedRed;
       else
         RedRecipe =
