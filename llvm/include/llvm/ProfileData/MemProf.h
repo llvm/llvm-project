@@ -895,11 +895,12 @@ struct LinearFrameIdConverter {
 // call stack array in the profile.
 struct LinearCallStackIdConverter {
   const unsigned char *CallStackBase;
-  std::function<Frame(LinearFrameId)> FrameIdToFrame;
+  llvm::function_ref<Frame(LinearFrameId)> FrameIdToFrame;
 
   LinearCallStackIdConverter() = delete;
-  LinearCallStackIdConverter(const unsigned char *CallStackBase,
-                             std::function<Frame(LinearFrameId)> FrameIdToFrame)
+  LinearCallStackIdConverter(
+      const unsigned char *CallStackBase,
+      llvm::function_ref<Frame(LinearFrameId)> FrameIdToFrame)
       : CallStackBase(CallStackBase), FrameIdToFrame(FrameIdToFrame) {}
 
   std::vector<Frame> operator()(LinearCallStackId LinearCSId) {
@@ -966,13 +967,14 @@ struct CallerCalleePairExtractor {
   // The base address of the radix tree array.
   const unsigned char *CallStackBase;
   // A functor to convert a linear FrameId to a Frame.
-  std::function<Frame(LinearFrameId)> FrameIdToFrame;
+  llvm::function_ref<Frame(LinearFrameId)> FrameIdToFrame;
   // A map from caller GUIDs to lists of call sites in respective callers.
   DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> CallerCalleePairs;
 
   CallerCalleePairExtractor() = delete;
-  CallerCalleePairExtractor(const unsigned char *CallStackBase,
-                            std::function<Frame(LinearFrameId)> FrameIdToFrame)
+  CallerCalleePairExtractor(
+      const unsigned char *CallStackBase,
+      llvm::function_ref<Frame(LinearFrameId)> FrameIdToFrame)
       : CallStackBase(CallStackBase), FrameIdToFrame(FrameIdToFrame) {}
 
   void operator()(LinearCallStackId LinearCSId) {
