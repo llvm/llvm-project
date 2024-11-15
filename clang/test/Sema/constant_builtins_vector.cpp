@@ -19,6 +19,8 @@ typedef double vector4double __attribute__((__vector_size__(32)));
 typedef float vector4float __attribute__((__vector_size__(16)));
 typedef long long vector4long __attribute__((__vector_size__(32)));
 typedef int vector4int __attribute__((__vector_size__(16)));
+typedef unsigned long long vector4ulong __attribute__((__vector_size__(32)));
+typedef unsigned int vector4uint __attribute__((__vector_size__(16)));
 typedef short vector4short __attribute__((__vector_size__(8)));
 typedef char vector4char __attribute__((__vector_size__(4)));
 typedef BitInt8 vector4BitInt8 __attribute__((__vector_size__(4)));
@@ -741,3 +743,5 @@ constexpr int reduceAddInt2 = __builtin_reduce_add((vector4int){(1 << 31), 0, 0,
 constexpr long long reduceAddLong2 = __builtin_reduce_add((vector4long){(1LL << 63), 0, 0, -1});
 // expected-error@-1 {{must be initialized by a constant expression}} \
 // expected-note@-1 {{outside the range of representable values of type 'long long'}}
+static_assert(__builtin_reduce_add((vector4uint){~0U, 0, 0, 1}) == 0);
+static_assert(__builtin_reduce_add((vector4ulong){~0ULL, 0, 0, 1}) == 0);
