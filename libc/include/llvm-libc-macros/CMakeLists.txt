@@ -121,6 +121,8 @@ add_macro_header(
   math_function_macros
   HDR
     math-function-macros.h
+  DEPENDS
+    .math_macros
 )
 
 add_macro_header(

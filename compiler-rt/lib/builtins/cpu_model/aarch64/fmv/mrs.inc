@@ -110,12 +110,6 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     /* ID_AA64ISAR1_EL1.SPECRES >= 0b0001  */
     if (extractBits(ftr, 40, 4) >= 0x1)
       setCPUFeature(FEAT_PREDRES);
-    /* ID_AA64ISAR1_EL1.LS64 >= 0b0001  */
-    if (extractBits(ftr, 60, 4) >= 0x1)
-      setCPUFeature(FEAT_LS64);
-    /* ID_AA64ISAR1_EL1.LS64 >= 0b0010  */
-    if (extractBits(ftr, 60, 4) >= 0x2)
-      setCPUFeature(FEAT_LS64_V);
     /* ID_AA64ISAR1_EL1.LS64 >= 0b0011  */
     if (extractBits(ftr, 60, 4) >= 0x3)
       setCPUFeature(FEAT_LS64_ACCDATA);

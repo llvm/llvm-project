@@ -748,6 +748,10 @@ TEST(DiagnosticTest, ClangTidyEnablesClangWarning) {
   TU.ExtraArgs = {"-Wunused"};
   TU.ClangTidyProvider = addClangArgs({"-Wno-unused"}, {});
   EXPECT_THAT(TU.build().getDiagnostics(), IsEmpty());
+
+  TU.ExtraArgs = {"-Wno-unused"};
+  TU.ClangTidyProvider = addClangArgs({"-Wunused"}, {"-*, clang-diagnostic-*"});
+  EXPECT_THAT(TU.build().getDiagnostics(), SizeIs(1));
 }
 
 TEST(DiagnosticTest, LongFixMessages) {

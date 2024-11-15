@@ -1236,25 +1236,18 @@ private:
 
   inline void clearMembers() { setMembers(nullptr, nullptr, nullptr); }
 
-  uint64_t getAllocaAddressSpace() const {
-    if (dataLayout)
-      if (mlir::Attribute addrSpace = dataLayout->getAllocaMemorySpace())
-        return llvm::cast<mlir::IntegerAttr>(addrSpace).getUInt();
-    return 0;
-  }
-
   // Inserts a call to llvm.stacksave at the current insertion
   // point and the given location. Returns the call's result Value.
   inline mlir::Value genStackSave(mlir::Location loc) {
-    mlir::Type voidPtr = mlir::LLVM::LLVMPointerType::get(
-        rewriter->getContext(), getAllocaAddressSpace());
-    return rewriter->create<mlir::LLVM::StackSaveOp>(loc, voidPtr);
+    fir::FirOpBuilder builder(*rewriter, getModule());
+    return builder.genStackSave(loc);
   }
 
   // Inserts a call to llvm.stackrestore at the current insertion
   // point and the given location and argument.
   inline void genStackRestore(mlir::Location loc, mlir::Value sp) {
-    rewriter->create<mlir::LLVM::StackRestoreOp>(loc, sp);
+    fir::FirOpBuilder builder(*rewriter, getModule());
+    return builder.genStackRestore(loc, sp);
   }
 
   fir::CodeGenSpecifics *specifics = nullptr;

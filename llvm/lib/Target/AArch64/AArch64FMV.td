@@ -58,9 +58,7 @@ def : FMVExtension<"fp16fml", "FEAT_FP16FML", "+fp16fml,+fullfp16,+fp-armv8,+neo
 def : FMVExtension<"frintts", "FEAT_FRINTTS", "+fptoint", 250>;
 def : FMVExtension<"i8mm", "FEAT_I8MM", "+i8mm", 270>;
 def : FMVExtension<"jscvt", "FEAT_JSCVT", "+fp-armv8,+neon,+jsconv", 210>;
-def : FMVExtension<"ls64", "FEAT_LS64", "", 520>;
-def : FMVExtension<"ls64_accdata", "FEAT_LS64_ACCDATA", "+ls64", 540>;
-def : FMVExtension<"ls64_v", "FEAT_LS64_V", "", 530>;
+def : FMVExtension<"ls64", "FEAT_LS64_ACCDATA", "+ls64", 520>;
 def : FMVExtension<"lse", "FEAT_LSE", "+lse", 80>;
 def : FMVExtension<"memtag", "FEAT_MEMTAG", "", 440>;
 def : FMVExtension<"memtag2", "FEAT_MEMTAG2", "+mte", 450>;

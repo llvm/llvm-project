@@ -46,24 +46,24 @@ private:
     VecIterTy VecIter;
   };
 
-  bool isSmall;
+  bool IsSmall;
 
 public:
-  SmallSetIterator(SetIterTy SetIter) : SetIter(SetIter), isSmall(false) {}
+  SmallSetIterator(SetIterTy SetIter) : SetIter(SetIter), IsSmall(false) {}
 
-  SmallSetIterator(VecIterTy VecIter) : VecIter(VecIter), isSmall(true) {}
+  SmallSetIterator(VecIterTy VecIter) : VecIter(VecIter), IsSmall(true) {}
 
   // Spell out destructor, copy/move constructor and assignment operators for
   // MSVC STL, where set<T>::const_iterator is not trivially copy constructible.
   ~SmallSetIterator() {
-    if (isSmall)
+    if (IsSmall)
       VecIter.~VecIterTy();
     else
       SetIter.~SetIterTy();
   }
 
-  SmallSetIterator(const SmallSetIterator &Other) : isSmall(Other.isSmall) {
-    if (isSmall)
+  SmallSetIterator(const SmallSetIterator &Other) : IsSmall(Other.IsSmall) {
+    if (IsSmall)
       VecIter = Other.VecIter;
     else
       // Use placement new, to make sure SetIter is properly constructed, even
@@ -71,8 +71,8 @@ public:
       new (&SetIter) SetIterTy(Other.SetIter);
   }
 
-  SmallSetIterator(SmallSetIterator &&Other) : isSmall(Other.isSmall) {
-    if (isSmall)
+  SmallSetIterator(SmallSetIterator &&Other) : IsSmall(Other.IsSmall) {
+    if (IsSmall)
       VecIter = std::move(Other.VecIter);
     else
       // Use placement new, to make sure SetIter is properly constructed, even
@@ -83,11 +83,11 @@ public:
   SmallSetIterator& operator=(const SmallSetIterator& Other) {
     // Call destructor for SetIter, so it gets properly destroyed if it is
     // not trivially destructible in case we are setting VecIter.
-    if (!isSmall)
+    if (!IsSmall)
       SetIter.~SetIterTy();
 
-    isSmall = Other.isSmall;
-    if (isSmall)
+    IsSmall = Other.IsSmall;
+    if (IsSmall)
       VecIter = Other.VecIter;
     else
       new (&SetIter) SetIterTy(Other.SetIter);
@@ -97,11 +97,11 @@ public:
   SmallSetIterator& operator=(SmallSetIterator&& Other) {
     // Call destructor for SetIter, so it gets properly destroyed if it is
     // not trivially destructible in case we are setting VecIter.
-    if (!isSmall)
+    if (!IsSmall)
       SetIter.~SetIterTy();
 
-    isSmall = Other.isSmall;
-    if (isSmall)
+    IsSmall = Other.IsSmall;
+    if (IsSmall)
       VecIter = std::move(Other.VecIter);
     else
       new (&SetIter) SetIterTy(std::move(Other.SetIter));
@@ -109,22 +109,22 @@ public:
   }
 
   bool operator==(const SmallSetIterator &RHS) const {
-    if (isSmall != RHS.isSmall)
+    if (IsSmall != RHS.IsSmall)
       return false;
-    if (isSmall)
+    if (IsSmall)
       return VecIter == RHS.VecIter;
     return SetIter == RHS.SetIter;
   }
 
   SmallSetIterator &operator++() { // Preincrement
-    if (isSmall)
-      VecIter++;
+    if (IsSmall)
+      ++VecIter;
     else
-      SetIter++;
+      ++SetIter;
     return *this;
   }
 
-  const T &operator*() const { return isSmall ? *VecIter : *SetIter; }
+  const T &operator*() const { return IsSmall ? *VecIter : *SetIter; }
 };
 
 /// SmallSet - This maintains a set of unique values, optimizing for the case
@@ -167,9 +167,8 @@ public:
     if (isSmall()) {
       // Since the collection is small, just do a linear search.
       return vfind(V) == Vector.end() ? 0 : 1;
-    } else {
-      return Set.count(V);
     }
+    return Set.count(V);
   }
 
   /// insert - Insert an element into the set if it isn't already there.

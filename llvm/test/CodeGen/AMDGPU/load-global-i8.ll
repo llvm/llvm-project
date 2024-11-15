@@ -1,6 +1,6 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GCN-NOHSA,SI,FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GCN-HSA,SI,FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GCN-NOHSA,VI,FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GCN-NOHSA,FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GCN-HSA,FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GCN-NOHSA,FUNC %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=redwood -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=EG -check-prefix=FUNC %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=cayman -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=EG -check-prefix=FUNC %s
 
@@ -163,8 +163,7 @@ define amdgpu_kernel void @global_sextload_v2i8_to_v2i32(ptr addrspace(1) %out, 
 ; GCN-NOHSA: buffer_load_dword v
 ; GCN-HSA: flat_load_dword v
 
-; SI-DAG: v_bfe_u32 v{{[0-9]+}}, v{{[0-9]+}}, 8, 8
-; VI-DAG: v_lshrrev_b16_e32 v{{[0-9]+}}, 8, v{{[0-9]+}}
+; GCN-DAG: v_bfe_u32 v{{[0-9]+}}, v{{[0-9]+}}, 8, 8
 ; GCN-DAG: v_bfe_u32 v{{[0-9]+}}, v{{[0-9]+}}, 16, 8
 ; GCN-DAG: v_and_b32_e32 v{{[0-9]+}}, 0xff,
 
@@ -186,16 +185,12 @@ entry:
 ; GCN-NOHSA: buffer_load_dword v
 ; GCN-HSA: flat_load_dword v
 
-;FIXME: Need to optimize this sequence to avoid extra shift on VI.
-
 ; t23: i16 = truncate t18
 ; t49: i16 = srl t23, Constant:i32<8>
 ; t57: i32 = any_extend t49
 ; t58: i32 = sign_extend_inreg t57, ValueType:ch:i8
 
-; SI-DAG: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 8, 8
-; VI-DAG: v_lshrrev_b16_e32 [[SHIFT:v[0-9]+]], 8, v{{[0-9]+}}
-; VI-DAG: v_bfe_i32 v{{[0-9]+}}, [[SHIFT]], 0, 8
+; GCN-DAG: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 8, 8
 ; GCN-DAG: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 8
 ; GCN-DAG: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 16, 8
 

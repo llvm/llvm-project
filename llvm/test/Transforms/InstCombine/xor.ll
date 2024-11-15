@@ -1485,3 +1485,182 @@ define i4 @PR96857_xor_without_noundef(i4  %val0, i4  %val1, i4 %val2) {
   %val7 = xor i4 %val4, %val6
   ret i4 %val7
 }
+
+define i32 @or_disjoint_with_xor(i32 %a, i32 %b) {
+; CHECK-LABEL: @or_disjoint_with_xor(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 [[B:%.*]]
+;
+entry:
+  %or = or disjoint i32 %a, %b
+  %xor = xor i32 %or, %a
+  ret i32 %xor
+}
+
+define i32 @xor_with_or_disjoint_ab(i32 %a, i32 %b) {
+; CHECK-LABEL: @xor_with_or_disjoint_ab(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 [[B:%.*]]
+;
+entry:
+  %or = or disjoint i32 %a, %b
+  %xor = xor i32 %a, %or
+  ret i32 %xor
+}
+
+define i32 @xor_with_or_disjoint_ba(i32 %a, i32 %b) {
+; CHECK-LABEL: @xor_with_or_disjoint_ba(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 [[B:%.*]]
+;
+entry:
+  %or = or disjoint i32 %b, %a
+  %xor = xor i32 %b, %or
+  ret i32 %xor
+}
+
+define <2 x i32> @or_disjoint_with_xor_vec(<2 x i32> %a, < 2 x i32> %b) {
+; CHECK-LABEL: @or_disjoint_with_xor_vec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <2 x i32> [[B:%.*]]
+;
+entry:
+  %or = or disjoint <2 x i32> %a, %b
+  %xor = xor <2 x i32> %or, %a
+  ret <2 x i32> %xor
+}
+
+define <2 x i32> @xor_with_or_disjoint_vec(<2 x i32> %a, < 2 x i32> %b) {
+; CHECK-LABEL: @xor_with_or_disjoint_vec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <2 x i32> [[B:%.*]]
+;
+entry:
+  %or = or disjoint <2 x i32> %a, %b
+  %xor = xor <2 x i32> %a, %or
+  ret <2 x i32> %xor
+}
+
+define i32 @select_or_disjoint_xor(i32 %a, i1 %c) {
+; CHECK-LABEL: @select_or_disjoint_xor(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i32 0, i32 4
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], 4
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[S]], [[SHL]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[OR]], 4
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+entry:
+  %s = select i1 %c, i32 0, i32 4
+  %shl = shl i32 %a, 4
+  %or = or disjoint i32 %s, %shl
+  %xor = xor i32 %or, 4
+  ret i32 %xor
+}
+
+define <2 x i32> @select_or_disjoint_xor_vec(<2 x i32> %a, i1 %c) {
+; CHECK-LABEL: @select_or_disjoint_xor_vec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], <2 x i32> zeroinitializer, <2 x i32> <i32 4, i32 4>
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[A:%.*]], <i32 4, i32 4>
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint <2 x i32> [[S]], [[SHL]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[OR]], <i32 4, i32 4>
+; CHECK-NEXT:    ret <2 x i32> [[XOR]]
+;
+entry:
+  %s = select i1 %c, <2 x i32> <i32 0, i32 0>, <2 x i32> <i32 4, i32 4>
+  %shl = shl <2 x i32> %a, <i32 4, i32 4>
+  %or = or <2 x i32> %s, %shl
+  %xor = xor <2 x i32> %or, <i32 4, i32 4>
+  ret <2 x i32> %xor
+}
+
+define i32 @select_or_disjoint_or(i32 %a, i1 %c) {
+; CHECK-LABEL: @select_or_disjoint_or(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i32 0, i32 4
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], 4
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[S]], [[SHL]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[OR]], 4
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+entry:
+  %s = select i1 %c, i32 0, i32 4
+  %shl = shl i32 %a, 4
+  %or = or disjoint i32 %s, %shl
+  %add = add i32 %or, 4
+  ret i32 %add
+}
+
+define <2 x i32> @select_or_disjoint_or_vec(<2 x i32> %a, i1 %c) {
+; CHECK-LABEL: @select_or_disjoint_or_vec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], <2 x i32> zeroinitializer, <2 x i32> <i32 4, i32 4>
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[A:%.*]], <i32 4, i32 4>
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint <2 x i32> [[S]], [[SHL]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <2 x i32> [[OR]], <i32 4, i32 4>
+; CHECK-NEXT:    ret <2 x i32> [[ADD]]
+;
+entry:
+  %s = select i1 %c, <2 x i32> <i32 0, i32 0>, <2 x i32> <i32 4, i32 4>
+  %shl = shl <2 x i32> %a, <i32 4, i32 4>
+  %or = or <2 x i32> %s, %shl
+  %add = add <2 x i32> %or, <i32 4, i32 4>
+  ret <2 x i32> %add
+}
+
+define i32 @or_multi_use_disjoint_with_xor(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @or_multi_use_disjoint_with_xor(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[OR]], [[C:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[OR]], [[XOR]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+entry:
+  %or = or disjoint i32 %a, %b
+  %xor = xor i32 %or, %c
+  %add = add i32 %or, %xor
+  ret i32 %add
+}
+
+define <2 x i32> @or_multi_use_disjoint_with_xor_vec(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) {
+; CHECK-LABEL: @or_multi_use_disjoint_with_xor_vec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[OR]], [[C:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[OR]], [[XOR]]
+; CHECK-NEXT:    ret <2 x i32> [[ADD]]
+;
+entry:
+  %or = or disjoint <2 x i32> %a, %b
+  %xor = xor <2 x i32> %or, %c
+  %add = add <2 x i32> %or, %xor
+  ret <2 x i32> %add
+}
+
+define i32 @add_with_or(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @add_with_or(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[ADD]], [[C:%.*]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+entry:
+  %add = add i32 %a, %b
+  %or = or i32 %add, %c
+  ret i32 %or
+}
+
+define <2 x i32> @add_with_or_vec(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) {
+; CHECK-LABEL: @add_with_or_vec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[ADD]], [[C:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[OR]]
+;
+entry:
+  %add = add <2 x i32> %a, %b
+  %or = or <2 x i32> %add, %c
+  ret <2 x i32> %or
+}

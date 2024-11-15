@@ -154,11 +154,6 @@ def _typename_with_n_generic_arguments(gdb_type, n):
     result = (template[:-2] + ">") % tuple(arg_list)
     return result
 
-
-def _typename_with_first_generic_argument(gdb_type):
-    return _typename_with_n_generic_arguments(gdb_type, 1)
-
-
 class StdTuplePrinter(object):
     """Print a std::tuple."""
 
@@ -196,33 +191,6 @@ class StdTuplePrinter(object):
             return iter(())
         return self._Children(self.val)
 
-
-def _get_base_subobject(child_class_value, index=0):
-    """Returns the object's value in the form of the parent class at index.
-
-    This function effectively casts the child_class_value to the base_class's
-    type, but the type-to-cast to is stored in the field at index, and once
-    we know the field, we can just return the data.
-
-    Args:
-      child_class_value: the value to cast
-      index: the parent class index
-
-    Raises:
-      Exception: field at index was not a base-class field.
-    """
-
-    field = child_class_value.type.fields()[index]
-    if not field.is_base_class:
-        raise Exception("Not a base-class field.")
-    return child_class_value[field]
-
-
-def _value_of_pair_first(value):
-    """Convenience for _get_base_subobject, for the common case."""
-    return _get_base_subobject(value, 0)["__value_"]
-
-
 class StdStringPrinter(object):
     """Print a std::string."""
 
@@ -231,7 +199,7 @@ class StdStringPrinter(object):
 
     def to_string(self):
         """Build a python string from the data whether stored inline or separately."""
-        value_field = _value_of_pair_first(self.val["__r_"])
+        value_field = self.val["__rep_"]
         short_field = value_field["__s"]
         short_size = short_field["__size_"]
         if short_field["__is_long_"]:
@@ -270,7 +238,7 @@ class StdUniquePtrPrinter(object):
 
     def __init__(self, val):
         self.val = val
-        self.addr = _value_of_pair_first(self.val["__ptr_"])
+        self.addr = self.val["__ptr_"]
         self.pointee_type = self.val.type.template_argument(0)
 
     def to_string(self):
@@ -397,16 +365,12 @@ class StdVectorPrinter(object):
             self.typename += "<bool>"
             self.length = self.val["__size_"]
             bits_per_word = self.val["__bits_per_word"]
-            self.capacity = (
-                _value_of_pair_first(self.val["__cap_alloc_"]) * bits_per_word
-            )
+            self.capacity = self.val["__cap_"] * bits_per_word
             self.iterator = self._VectorBoolIterator(begin, self.length, bits_per_word)
         else:
             end = self.val["__end_"]
             self.length = end - begin
-            self.capacity = (
-                _get_base_subobject(self.val["__end_cap_"])["__value_"] - begin
-            )
+            self.capacity = self.val["__cap_"] - begin
             self.iterator = self._VectorIterator(begin, end)
 
     def to_string(self):
@@ -461,7 +425,7 @@ class StdDequePrinter(object):
 
     def __init__(self, val):
         self.val = val
-        self.size = int(_value_of_pair_first(val["__size_"]))
+        self.size = int(val["__size_"])
         self.start_ptr = self.val["__map_"]["__begin_"]
         self.first_block_start_index = int(self.val["__start_"])
         self.node_type = self.start_ptr.type
@@ -513,8 +477,7 @@ class StdListPrinter(object):
 
     def __init__(self, val):
         self.val = val
-        size_alloc_field = self.val["__size_alloc_"]
-        self.size = int(_value_of_pair_first(size_alloc_field))
+        self.size = int(self.val["__size_"])
         dummy_node = self.val["__end_"]
         self.nodetype = gdb.lookup_type(
             re.sub(
@@ -646,9 +609,8 @@ class AbstractRBTreePrinter(object):
     def __init__(self, val):
         self.val = val
         tree = self.val["__tree_"]
-        self.size = int(_value_of_pair_first(tree["__pair3_"]))
-        dummy_root = tree["__pair1_"]
-        root = _value_of_pair_first(dummy_root)["__left_"]
+        self.size = int(tree["__size_"])
+        root = tree["__end_node_"]["__left_"]
         cast_type = self._init_cast_type(val.type)
         self.util = RBTreeUtils(cast_type, root)
 
@@ -815,13 +777,13 @@ class AbstractUnorderedCollectionPrinter(object):
     def __init__(self, val):
         self.val = val
         self.table = val["__table_"]
-        self.sentinel = self.table["__p1_"]
-        self.size = int(_value_of_pair_first(self.table["__p2_"]))
-        node_base_type = self.sentinel.type.template_argument(0)
+        self.sentinel = self.table["__first_node_"]
+        self.size = int(self.table["__size_"])
+        node_base_type = self.sentinel.type
         self.cast_type = node_base_type.template_argument(0)
 
     def _list_it(self, sentinel_ptr):
-        next_ptr = _value_of_pair_first(sentinel_ptr)["__next_"]
+        next_ptr = sentinel_ptr["__next_"]
         while str(next_ptr.cast(_void_pointer_type)) != "0x0":
             next_val = next_ptr.cast(self.cast_type).dereference()
             for key_value in self._get_key_value(next_val):

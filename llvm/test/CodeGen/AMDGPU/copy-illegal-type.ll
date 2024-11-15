@@ -539,7 +539,7 @@ define amdgpu_kernel void @test_copy_v3i8_align1(ptr addrspace(1) %out, ptr addr
 ; VI-NEXT:    buffer_store_byte v0, off, s[4:7], 0
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    buffer_store_byte v1, off, s[4:7], 0 offset:2
-; VI-NEXT:    v_lshrrev_b16_e32 v0, 8, v0
+; VI-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
 ; VI-NEXT:    buffer_store_byte v0, off, s[4:7], 0 offset:1
 ; VI-NEXT:    s_endpgm
   %val = load <3 x i8>, ptr addrspace(1) %in, align 1

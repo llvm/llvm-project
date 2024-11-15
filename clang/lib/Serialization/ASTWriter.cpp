@@ -3219,7 +3219,7 @@ void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
         // Skip default mappings. We have a mapping for every diagnostic ever
         // emitted, regardless of whether it was customized.
         if (!I.second.isPragma() &&
-            I.second == DiagnosticIDs::getDefaultMapping(I.first))
+            I.second == Diag.getDiagnosticIDs()->getDefaultMapping(I.first))
           continue;
         Mappings.push_back(I);
       }
@@ -5051,6 +5051,7 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
                      PREDEF_DECL_CF_CONSTANT_STRING_TAG_ID);
   RegisterPredefDecl(Context.TypePackElementDecl,
                      PREDEF_DECL_TYPE_PACK_ELEMENT_ID);
+  RegisterPredefDecl(Context.BuiltinCommonTypeDecl, PREDEF_DECL_COMMON_TYPE_ID);
 
   const TranslationUnitDecl *TU = Context.getTranslationUnitDecl();
 

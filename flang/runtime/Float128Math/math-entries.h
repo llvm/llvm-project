@@ -157,7 +157,7 @@ DEFINE_SIMPLE_ALIAS(Yn, ynq)
 // Use cmath INFINITY/NAN definition. Rely on C implicit conversions.
 #define F128_RT_INFINITY (INFINITY)
 #define F128_RT_QNAN (NAN)
-#elif LDBL_MANT_DIG == 113
+#elif HAS_LDBL128
 // Define wrapper callers for libm.
 #include <limits>
 

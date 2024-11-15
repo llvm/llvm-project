@@ -259,6 +259,7 @@ define void @uniform_gep(i64 %k, ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT: Live-in ir<11> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
+; CHECK-NEXT:   CLONE ir<%gep.A.uniform> = getelementptr inbounds ir<%A>, ir<0>
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
@@ -268,7 +269,6 @@ define void @uniform_gep(i64 %k, ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:   vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<21> + vp<[[CAN_IV]]> * ir<1>
 ; CHECK-NEXT:   EMIT vp<[[WIDE_CAN_IV:%.+]]> = WIDEN-CANONICAL-INDUCTION vp<[[CAN_IV]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule vp<[[WIDE_CAN_IV]]>, vp<[[BTC]]>
-; CHECK-NEXT:   CLONE ir<%gep.A.uniform> = getelementptr inbounds ir<%A>, ir<0>
 ; CHECK-NEXT:   CLONE ir<%lv> = load ir<%gep.A.uniform>
 ; CHECK-NEXT:   WIDEN ir<%cmp> = icmp ult ir<%iv>, ir<%k>
 ; CHECK-NEXT:   EMIT vp<[[NOT2:%.+]]> = not ir<%cmp>

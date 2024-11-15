@@ -3,7 +3,7 @@
 ; Make sure LV does not crash when generating remarks for loops with non-unique
 ; exit blocks.
 define i32 @test_non_unique_exit_blocks(ptr nocapture readonly align 4 dereferenceable(1024) %data, i32 %x) {
-; CHECK: loop not vectorized: could not determine number of loop iterations
+; CHECK: loop not vectorized: Cannot vectorize early exit loop
 ;
 entry:
   br label %for.header

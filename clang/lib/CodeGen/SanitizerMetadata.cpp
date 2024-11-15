@@ -27,7 +27,7 @@ static bool isAsanHwasanOrMemTag(const SanitizerSet &SS) {
                      SanitizerKind::HWAddress | SanitizerKind::MemTag);
 }
 
-SanitizerMask expandKernelSanitizerMasks(SanitizerMask Mask) {
+static SanitizerMask expandKernelSanitizerMasks(SanitizerMask Mask) {
   if (Mask & (SanitizerKind::Address | SanitizerKind::KernelAddress))
     Mask |= SanitizerKind::Address | SanitizerKind::KernelAddress;
   // Note: KHWASan doesn't support globals.

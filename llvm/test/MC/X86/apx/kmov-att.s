@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple x86_64 -show-encoding %s | FileCheck %s
 # RUN: not llvm-mc -triple i386 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=ERROR
 
-# ERROR-COUNT-20: error:
+# ERROR-COUNT-24: error:
 # ERROR-NOT: error:
 # CHECK: {evex}	kmovb	%k1, %k2
 # CHECK: encoding: [0x62,0xf1,0x7d,0x08,0x90,0xd1]
@@ -15,6 +15,18 @@
 # CHECK: {evex}	kmovq	%k1, %k2
 # CHECK: encoding: [0x62,0xf1,0xfc,0x08,0x90,0xd1]
          {evex}	kmovq	%k1, %k2
+# CHECK: {evex} kmovb   -16(%rax), %k0
+# CHECK: encoding: [0x62,0xf1,0x7d,0x08,0x90,0x40,0xf0]
+         {evex} kmovb   -0x10(%rax), %k0
+# CHECK: {evex} kmovw   -16(%rax), %k0
+# CHECK: encoding: [0x62,0xf1,0x7c,0x08,0x90,0x40,0xf0]
+         {evex} kmovw   -0x10(%rax), %k0
+# CHECK: {evex} kmovd   -16(%rax), %k0
+# CHECK: encoding: [0x62,0xf1,0xfd,0x08,0x90,0x40,0xf0]
+         {evex} kmovd   -0x10(%rax), %k0
+# CHECK: {evex} kmovq   -16(%rax), %k0
+# CHECK: encoding: [0x62,0xf1,0xfc,0x08,0x90,0x40,0xf0]
+         {evex} kmovq   -0x10(%rax), %k0
 
 # CHECK-NOT: {evex}
 

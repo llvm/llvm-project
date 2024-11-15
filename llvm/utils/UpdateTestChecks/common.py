@@ -573,7 +573,7 @@ LOOP_PASS_DEBUG_RE = re.compile(
 
 IR_FUNCTION_RE = re.compile(r'^\s*define\s+(?:internal\s+)?[^@]*@"?([\w.$-]+)"?\s*\(')
 TRIPLE_IR_RE = re.compile(r'^\s*target\s+triple\s*=\s*"([^"]+)"$')
-TRIPLE_ARG_RE = re.compile(r"-mtriple[= ]([^ ]+)")
+TRIPLE_ARG_RE = re.compile(r"-m?triple[= ]([^ ]+)")
 MARCH_ARG_RE = re.compile(r"-march[= ]([^ ]+)")
 DEBUG_ONLY_ARG_RE = re.compile(r"-debug-only[= ]([^ ]+)")
 

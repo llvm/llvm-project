@@ -56,19 +56,18 @@ std::string getQualifiedName(const Record *R);
 /// CodeGenTarget - This class corresponds to the Target class in the .td files.
 ///
 class CodeGenTarget {
-  RecordKeeper &Records;
-  Record *TargetRec;
+  const RecordKeeper &Records;
+  const Record *TargetRec;
 
   mutable DenseMap<const Record *, std::unique_ptr<CodeGenInstruction>>
       Instructions;
   mutable std::unique_ptr<CodeGenRegBank> RegBank;
-  mutable std::vector<Record *> RegAltNameIndices;
+  mutable ArrayRef<const Record *> RegAltNameIndices;
   mutable SmallVector<ValueTypeByHwMode, 8> LegalValueTypes;
   CodeGenHwModes CGH;
-  std::vector<Record *> MacroFusions;
+  ArrayRef<const Record *> MacroFusions;
   mutable bool HasVariableLengthEncodings = false;
 
-  void ReadRegAltNameIndices() const;
   void ReadInstructions() const;
   void ReadLegalValueTypes() const;
 
@@ -81,10 +80,10 @@ class CodeGenTarget {
   mutable unsigned NumPseudoInstructions = 0;
 
 public:
-  CodeGenTarget(RecordKeeper &Records);
+  CodeGenTarget(const RecordKeeper &Records);
   ~CodeGenTarget();
 
-  Record *getTargetRecord() const { return TargetRec; }
+  const Record *getTargetRecord() const { return TargetRec; }
   StringRef getName() const;
 
   /// getInstNamespace - Return the target-specific instruction namespace.
@@ -96,7 +95,7 @@ public:
 
   /// getInstructionSet - Return the InstructionSet object.
   ///
-  Record *getInstructionSet() const;
+  const Record *getInstructionSet() const;
 
   /// getAllowRegisterRenaming - Return the AllowRegisterRenaming flag value for
   /// this target.
@@ -105,12 +104,12 @@ public:
 
   /// getAsmParser - Return the AssemblyParser definition for this target.
   ///
-  Record *getAsmParser() const;
+  const Record *getAsmParser() const;
 
   /// getAsmParserVariant - Return the AssemblyParserVariant definition for
   /// this target.
   ///
-  Record *getAsmParserVariant(unsigned i) const;
+  const Record *getAsmParserVariant(unsigned i) const;
 
   /// getAsmParserVariantCount - Return the AssemblyParserVariant definition
   /// available for this target.
@@ -119,7 +118,7 @@ public:
 
   /// getAsmWriter - Return the AssemblyWriter definition for this target.
   ///
-  Record *getAsmWriter() const;
+  const Record *getAsmWriter() const;
 
   /// getRegBank - Return the register bank description.
   CodeGenRegBank &getRegBank() const;
@@ -135,9 +134,9 @@ public:
   /// return it.
   const CodeGenRegister *getRegisterByName(StringRef Name) const;
 
-  const std::vector<Record *> &getRegAltNameIndices() const {
+  ArrayRef<const Record *> getRegAltNameIndices() const {
     if (RegAltNameIndices.empty())
-      ReadRegAltNameIndices();
+      RegAltNameIndices = Records.getAllDerivedDefinitions("RegAltNameIndex");
     return RegAltNameIndices;
   }
 
@@ -145,7 +144,7 @@ public:
 
   /// getRegisterVTs - Find the union of all possible SimpleValueTypes for the
   /// specified physical register.
-  std::vector<ValueTypeByHwMode> getRegisterVTs(Record *R) const;
+  std::vector<ValueTypeByHwMode> getRegisterVTs(const Record *R) const;
 
   ArrayRef<ValueTypeByHwMode> getLegalValueTypes() const {
     if (LegalValueTypes.empty())
@@ -159,7 +158,7 @@ public:
 
   bool hasMacroFusion() const { return !MacroFusions.empty(); }
 
-  const std::vector<Record *> getMacroFusions() const { return MacroFusions; }
+  ArrayRef<const Record *> getMacroFusions() const { return MacroFusions; }
 
 private:
   DenseMap<const Record *, std::unique_ptr<CodeGenInstruction>> &
@@ -239,20 +238,20 @@ private:
 /// ComplexPattern - ComplexPattern info, corresponding to the ComplexPattern
 /// tablegen class in TargetSelectionDAG.td
 class ComplexPattern {
-  Record *Ty;
+  const Record *Ty;
   unsigned NumOperands;
   std::string SelectFunc;
-  std::vector<Record *> RootNodes;
+  std::vector<const Record *> RootNodes;
   unsigned Properties; // Node properties
   unsigned Complexity;
 
 public:
-  ComplexPattern(Record *R);
+  ComplexPattern(const Record *R);
 
-  Record *getValueType() const { return Ty; }
+  const Record *getValueType() const { return Ty; }
   unsigned getNumOperands() const { return NumOperands; }
   const std::string &getSelectFunc() const { return SelectFunc; }
-  const std::vector<Record *> &getRootNodes() const { return RootNodes; }
+  const ArrayRef<const Record *> getRootNodes() const { return RootNodes; }
   bool hasProperty(enum SDNP Prop) const { return Properties & (1 << Prop); }
   unsigned getComplexity() const { return Complexity; }
 };

@@ -952,6 +952,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::SanitizeHWAddress:
       case Attribute::SanitizeMemTag:
       case Attribute::SanitizeRealtime:
+      case Attribute::SanitizeRealtimeUnsafe:
       case Attribute::SpeculativeLoadHardening:
       case Attribute::StackProtect:
       case Attribute::StackProtectReq:
@@ -996,6 +997,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::DeadOnUnwind:
       case Attribute::Range:
       case Attribute::Initializes:
+      case Attribute::NoExt:
       //  These are not really attributes.
       case Attribute::None:
       case Attribute::EndAttrKinds:
@@ -1553,8 +1555,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
   assert(OldSP->getUnit() && "Missing compile unit for subprogram");
   DIBuilder DIB(*OldFunc.getParent(), /*AllowUnresolved=*/false,
                 OldSP->getUnit());
-  auto SPType =
-      DIB.createSubroutineType(DIB.getOrCreateTypeArray(std::nullopt));
+  auto SPType = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
   DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagDefinition |
                                     DISubprogram::SPFlagOptimized |
                                     DISubprogram::SPFlagLocalToUnit;

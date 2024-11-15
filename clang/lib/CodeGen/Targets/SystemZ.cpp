@@ -445,16 +445,16 @@ ABIArgInfo SystemZABIInfo::classifyArgumentType(QualType Ty) const {
       return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
 
     // The structure is passed as an unextended integer, a float, or a double.
-    llvm::Type *PassTy;
     if (isFPArgumentType(SingleElementTy)) {
       assert(Size == 32 || Size == 64);
-      if (Size == 32)
-        PassTy = llvm::Type::getFloatTy(getVMContext());
-      else
-        PassTy = llvm::Type::getDoubleTy(getVMContext());
-    } else
-      PassTy = llvm::IntegerType::get(getVMContext(), Size);
-    return ABIArgInfo::getDirect(PassTy);
+      return ABIArgInfo::getDirect(
+          Size == 32 ? llvm::Type::getFloatTy(getVMContext())
+                     : llvm::Type::getDoubleTy(getVMContext()));
+    } else {
+      llvm::IntegerType *PassTy = llvm::IntegerType::get(getVMContext(), Size);
+      return Size <= 32 ? ABIArgInfo::getNoExtend(PassTy)
+                        : ABIArgInfo::getDirect(PassTy);
+    }
   }
 
   // Non-structure compounds are passed indirectly.

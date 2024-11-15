@@ -128,6 +128,7 @@ template <size_t N> struct hash<std::bitset<N>>;
 
 #include <__algorithm/count.h>
 #include <__algorithm/fill.h>
+#include <__algorithm/fill_n.h>
 #include <__algorithm/find.h>
 #include <__bit_reference>
 #include <__config>

@@ -52,8 +52,8 @@ class InsertPosition {
 
 public:
   InsertPosition(std::nullptr_t) : InsertAt() {}
-  // LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
-  // "BasicBlock::iterator")
+  LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
+                  "BasicBlock::iterator")
   InsertPosition(Instruction *InsertBefore);
   InsertPosition(BasicBlock *InsertAtEnd);
   InsertPosition(InstListType::iterator InsertAt) : InsertAt(InsertAt) {}
@@ -433,7 +433,7 @@ public:
   /// convenience method for passes to do so.
   /// dropUBImplyingAttrsAndUnknownMetadata should be used instead of
   /// this API if the Instruction being modified is a call.
-  void dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs = std::nullopt);
+  void dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs = {});
   /// @}
 
   /// Adds an !annotation metadata node with \p Annotation to this instruction.
