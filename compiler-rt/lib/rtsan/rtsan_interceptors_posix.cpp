@@ -60,8 +60,11 @@ struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
 // Filesystem
 
 INTERCEPTOR(int, open, const char *path, int oflag, ...) {
-  // TODO Establish whether we should intercept here if the flag contains
-  // O_NONBLOCK
+  // We do not early exit if O_NONBLOCK is set.
+  // O_NONBLOCK **does not prevent the syscall** it simply sets the FD to be in
+  // nonblocking mode, which is a different concept than our
+  // [[clang::nonblocking]], and is not rt-safe. This behavior was confirmed
+  // using Instruments on Darwin with a simple test program
   __rtsan_notify_intercepted_call("open");
 
   if (OpenReadsVaArgs(oflag)) {
@@ -77,8 +80,7 @@ INTERCEPTOR(int, open, const char *path, int oflag, ...) {
 
 #if SANITIZER_INTERCEPT_OPEN64
 INTERCEPTOR(int, open64, const char *path, int oflag, ...) {
-  // TODO Establish whether we should intercept here if the flag contains
-  // O_NONBLOCK
+  // See comment above about O_NONBLOCK
   __rtsan_notify_intercepted_call("open64");
 
   if (OpenReadsVaArgs(oflag)) {
@@ -97,8 +99,7 @@ INTERCEPTOR(int, open64, const char *path, int oflag, ...) {
 #endif // SANITIZER_INTERCEPT_OPEN64
 
 INTERCEPTOR(int, openat, int fd, const char *path, int oflag, ...) {
-  // TODO Establish whether we should intercept here if the flag contains
-  // O_NONBLOCK
+  // See comment above about O_NONBLOCK
   __rtsan_notify_intercepted_call("openat");
 
   if (OpenReadsVaArgs(oflag)) {
@@ -114,8 +115,7 @@ INTERCEPTOR(int, openat, int fd, const char *path, int oflag, ...) {
 
 #if SANITIZER_INTERCEPT_OPENAT64
 INTERCEPTOR(int, openat64, int fd, const char *path, int oflag, ...) {
-  // TODO Establish whether we should intercept here if the flag contains
-  // O_NONBLOCK
+  // See comment above about O_NONBLOCK
   __rtsan_notify_intercepted_call("openat64");
 
   if (OpenReadsVaArgs(oflag)) {
@@ -134,8 +134,7 @@ INTERCEPTOR(int, openat64, int fd, const char *path, int oflag, ...) {
 #endif // SANITIZER_INTERCEPT_OPENAT64
 
 INTERCEPTOR(int, creat, const char *path, mode_t mode) {
-  // TODO Establish whether we should intercept here if the flag contains
-  // O_NONBLOCK
+  // See comment above about O_NONBLOCK
   __rtsan_notify_intercepted_call("creat");
   const int result = REAL(creat)(path, mode);
   return result;
@@ -143,8 +142,7 @@ INTERCEPTOR(int, creat, const char *path, mode_t mode) {
 
 #if SANITIZER_INTERCEPT_CREAT64
 INTERCEPTOR(int, creat64, const char *path, mode_t mode) {
-  // TODO Establish whether we should intercept here if the flag contains
-  // O_NONBLOCK
+  // See comment above about O_NONBLOCK
   __rtsan_notify_intercepted_call("creat64");
   const int result = REAL(creat64)(path, mode);
   return result;
@@ -535,6 +533,42 @@ INTERCEPTOR(int, shm_unlink, const char *name) {
 }
 
 // Sockets
+INTERCEPTOR(int, getaddrinfo, const char *node, const char *service,
+            const struct addrinfo *hints, struct addrinfo **res) {
+  __rtsan_notify_intercepted_call("getaddrinfo");
+  return REAL(getaddrinfo)(node, service, hints, res);
+}
+
+INTERCEPTOR(int, getnameinfo, const struct sockaddr *sa, socklen_t salen,
+            char *host, socklen_t hostlen, char *serv, socklen_t servlen,
+            int flags) {
+  __rtsan_notify_intercepted_call("getnameinfo");
+  return REAL(getnameinfo)(sa, salen, host, hostlen, serv, servlen, flags);
+}
+
+INTERCEPTOR(int, bind, int socket, const struct sockaddr *address,
+            socklen_t address_len) {
+  __rtsan_notify_intercepted_call("bind");
+  return REAL(bind)(socket, address, address_len);
+}
+
+INTERCEPTOR(int, listen, int socket, int backlog) {
+  __rtsan_notify_intercepted_call("listen");
+  return REAL(listen)(socket, backlog);
+}
+
+INTERCEPTOR(int, accept, int socket, struct sockaddr *address,
+            socklen_t *address_len) {
+  __rtsan_notify_intercepted_call("accept");
+  return REAL(accept)(socket, address, address_len);
+}
+
+INTERCEPTOR(int, connect, int socket, const struct sockaddr *address,
+            socklen_t address_len) {
+  __rtsan_notify_intercepted_call("connect");
+  return REAL(connect)(socket, address, address_len);
+}
+
 INTERCEPTOR(int, socket, int domain, int type, int protocol) {
   __rtsan_notify_intercepted_call("socket");
   return REAL(socket)(domain, type, protocol);
@@ -648,14 +682,20 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(usleep);
   INTERCEPT_FUNCTION(nanosleep);
 
-  INTERCEPT_FUNCTION(socket);
+  INTERCEPT_FUNCTION(accept);
+  INTERCEPT_FUNCTION(bind);
+  INTERCEPT_FUNCTION(connect);
+  INTERCEPT_FUNCTION(getaddrinfo);
+  INTERCEPT_FUNCTION(getnameinfo);
+  INTERCEPT_FUNCTION(listen);
+  INTERCEPT_FUNCTION(recv);
+  INTERCEPT_FUNCTION(recvfrom);
+  INTERCEPT_FUNCTION(recvmsg);
   INTERCEPT_FUNCTION(send);
   INTERCEPT_FUNCTION(sendmsg);
   INTERCEPT_FUNCTION(sendto);
-  INTERCEPT_FUNCTION(recv);
-  INTERCEPT_FUNCTION(recvmsg);
-  INTERCEPT_FUNCTION(recvfrom);
   INTERCEPT_FUNCTION(shutdown);
+  INTERCEPT_FUNCTION(socket);
 }
 
 #endif // SANITIZER_POSIX

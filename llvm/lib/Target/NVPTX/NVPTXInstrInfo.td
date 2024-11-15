@@ -739,6 +739,20 @@ let hasSideEffects = false in {
   def CVT_f16x2_e5m2x2 : CVT_f16x2_fp8<"e5m2">;
 }
 
+def fpround_oneuse : PatFrag<(ops node:$a), (fpround node:$a), [{
+  return N->hasOneUse();
+}]>;
+
+def : Pat<(v2bf16 (build_vector (bf16 (fpround_oneuse Float32Regs:$a)),
+                                (bf16 (fpround_oneuse Float32Regs:$b)))),
+          (CVT_bf16x2_f32 Float32Regs:$a, Float32Regs:$b, CvtRN)>,
+      Requires<[hasPTX<70>, hasSM<80>, hasBF16Math]>;
+
+def : Pat<(v2f16 (build_vector (f16 (fpround_oneuse Float32Regs:$a)),
+                               (f16 (fpround_oneuse Float32Regs:$b)))),
+          (CVT_f16x2_f32 Float32Regs:$a, Float32Regs:$b, CvtRN)>,
+      Requires<[hasPTX<70>, hasSM<80>, useFP16Math]>;
+
 //-----------------------------------
 // Selection instructions (selp)
 //-----------------------------------
@@ -1740,6 +1754,10 @@ multiclass BFI<string Instr, ValueType T, RegisterClass RC, Operand ImmCls> {
                 [(set (T RC:$f), (bfi (T imm:$a), (T RC:$b), (i32 imm:$c), (i32 imm:$d)))]>;
 }
 
+def Hexu32imm : Operand<i32> {
+  let PrintMethod = "printHexu32imm";
+}
+
 multiclass PRMT<ValueType T, RegisterClass RC> {
   def rrr
     : NVPTXInst<(outs RC:$d),
@@ -1748,12 +1766,12 @@ multiclass PRMT<ValueType T, RegisterClass RC> {
                 [(set (T RC:$d), (prmt (T RC:$a), (T RC:$b), (i32 Int32Regs:$c), imm:$mode))]>;
   def rri
     : NVPTXInst<(outs RC:$d),
-                (ins RC:$a, Int32Regs:$b, i32imm:$c, PrmtMode:$mode),
+                (ins RC:$a, Int32Regs:$b, Hexu32imm:$c, PrmtMode:$mode),
                 !strconcat("prmt.b32${mode}", " \t$d, $a, $b, $c;"),
                 [(set (T RC:$d), (prmt (T RC:$a), (T RC:$b), (i32 imm:$c), imm:$mode))]>;
   def rii
     : NVPTXInst<(outs RC:$d),
-                (ins RC:$a, i32imm:$b, i32imm:$c, PrmtMode:$mode),
+                (ins RC:$a, i32imm:$b, Hexu32imm:$c, PrmtMode:$mode),
                 !strconcat("prmt.b32${mode}", " \t$d, $a, $b, $c;"),
                 [(set (T RC:$d), (prmt (T RC:$a), (T imm:$b), (i32 imm:$c), imm:$mode))]>;
 }
