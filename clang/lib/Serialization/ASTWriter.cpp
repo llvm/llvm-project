@@ -195,7 +195,8 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
   };
   llvm::DenseMap<FileID, AffectedReason> ModuleMaps;
   llvm::DenseMap<const Module *, AffectedReason> ProcessedModules;
-  auto CollectModuleMapsForHierarchy = [&](const Module *M, AffectedReason Reason) {
+  auto CollectModuleMapsForHierarchy = [&](const Module *M,
+                                           AffectedReason Reason) {
     M = M->getTopLevelModule();
 
     // We need to process the header either when it was not present of when we
