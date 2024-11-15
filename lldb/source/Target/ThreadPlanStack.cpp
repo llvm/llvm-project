@@ -41,18 +41,19 @@ void ThreadPlanStack::DumpThreadPlans(Stream &s,
                                       bool include_internal) const {
   llvm::sys::ScopedReader guard(m_stack_mutex);
   s.IndentMore();
-  PrintOneStackNoLock(s, "Active plan stack", m_plans, desc_level, include_internal);
+  PrintOneStackNoLock(s, "Active plan stack", m_plans, desc_level,
+                      include_internal);
   PrintOneStackNoLock(s, "Completed plan stack", m_completed_plans, desc_level,
-                include_internal);
+                      include_internal);
   PrintOneStackNoLock(s, "Discarded plan stack", m_discarded_plans, desc_level,
-                include_internal);
+                      include_internal);
   s.IndentLess();
 }
 
 void ThreadPlanStack::PrintOneStackNoLock(Stream &s, llvm::StringRef stack_name,
-                                    const PlanStack &stack,
-                                    lldb::DescriptionLevel desc_level,
-                                    bool include_internal) const {
+                                          const PlanStack &stack,
+                                          lldb::DescriptionLevel desc_level,
+                                          bool include_internal) const {
   // If the stack is empty, just exit:
   if (stack.empty())
     return;

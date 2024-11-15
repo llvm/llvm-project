@@ -98,12 +98,12 @@ public:
   void ClearThreadCache();
 
 private:
-
   lldb::ThreadPlanSP DiscardPlanNoLock();
   lldb::ThreadPlanSP GetCurrentPlanNoLock() const;
   void PrintOneStackNoLock(Stream &s, llvm::StringRef stack_name,
-                     const PlanStack &stack, lldb::DescriptionLevel desc_level,
-                     bool include_internal) const;
+                           const PlanStack &stack,
+                           lldb::DescriptionLevel desc_level,
+                           bool include_internal) const;
 
   PlanStack m_plans;           ///< The stack of plans this thread is executing.
   PlanStack m_completed_plans; ///< Plans that have been completed by this
