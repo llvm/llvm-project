@@ -73,8 +73,8 @@ if (LLVM_LIBRARY_OUTPUT_INTDIR AND LLVM_RUNTIME_OUTPUT_INTDIR AND PACKAGE_VERSIO
 endif()
 
 if (LLVM_TREE_AVAILABLE)
-  # Despite Clang in the name, get_clang_resource_dir does not depend on Clang being added to the build
-  # flang-new uses the same resource dir as clang.
+  # Despite Clang in the name, get_clang_resource_dir does not depend on Clang
+  # being added to the build. Flang uses the same resource dir as clang.
   include(GetClangResourceDir)
   get_clang_resource_dir(FLANG_RT_BUILD_LIB_DIR PREFIX "${LLVM_LIBRARY_OUTPUT_INTDIR}/.." SUBDIR "lib${LLVM_LIBDIR_SUFFIX}")
   get_clang_resource_dir(FLANG_RT_INSTALL_LIB_DIR SUBDIR "lib${LLVM_LIBDIR_SUFFIX}") # No prefix, CMake's install command finds the install prefix itself

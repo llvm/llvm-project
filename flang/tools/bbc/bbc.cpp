@@ -14,7 +14,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "flang/Common/LangOptions.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/PFTBuilder.h"
@@ -38,6 +37,7 @@
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/unparse-with-symbols.h"
 #include "flang/Support/Fortran-features.h"
+#include "flang/Support/LangOptions.h"
 #include "flang/Support/OpenMP-features.h"
 #include "flang/Support/Version.h"
 #include "flang/Support/default-kinds.h"

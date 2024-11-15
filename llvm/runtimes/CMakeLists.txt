@@ -472,7 +472,7 @@ if(build_runtimes)
     foreach(dep FileCheck
                 clang
                 clang-offload-packager
-                flang-new
+                flang
                 count
                 lld
                 lli

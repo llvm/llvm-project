@@ -65,7 +65,7 @@ cmake -S <path-to-llvm-project>/llvm                  \
 
 By default, the enabled runtimes will only be built for the host platform
 (`-DLLVM_RUNTIME_TARGETS=default`). To add additional targets to support
-cross-compilation via `flang-new --target=<target-triple>`, add more triples to
+cross-compilation via `flang --target=<target-triple>`, add more triples to
 `LLVM_RUNTIME_TARGETS`, such as
 `-DLLVM_RUNTIME_TARGETS="default;aarch64-linux-gnu"`.
 
@@ -84,7 +84,7 @@ Instead of building Clang and Flang from scratch, the Runtime-only build uses
 CMake's environment introspection to find a C, C++, and Fortran compiler. The
 compiler to be used can be controlled using CMake's standard mechanisms such as
 `CMAKE_CXX_COMPILER`, `CMAKE_CXX_COMPILER`, and `CMAKE_Fortran_COMPILER`.
-`CMAKE_Fortran_COMPILER` must be `flang-new` built from the same Git commit as
+`CMAKE_Fortran_COMPILER` must be `flang` built from the same Git commit as
 flang-rt to ensure they are using the same ABI. The C and C++ compiler
 can be any compiler supporting the same ABI.
 
@@ -94,12 +94,12 @@ Use `CMAKE_BINARY_DIR` to point to directory where LLVM has been built.
 A simple build configuration might look like the following:
 
 ```bash
-cmake -S <path-to-llvm-project>/runtimes                         \
-  -GNinja                                                        \
-  -DLLVM_BINARY_DIR=<path-to-llvm-builddir>                      \
-  -DCMAKE_Fortran_COMPILER=<path-to-llvm-builddir>/bin/flang-new \
-  -DCMAKE_Fortran_COMPILER_WORKS=yes                             \
-  -DLLVM_ENABLE_RUNTIMES=flang-rt                                \
+cmake -S <path-to-llvm-project>/runtimes                     \
+  -GNinja                                                    \
+  -DLLVM_BINARY_DIR=<path-to-llvm-builddir>                  \
+  -DCMAKE_Fortran_COMPILER=<path-to-llvm-builddir>/bin/flang \
+  -DCMAKE_Fortran_COMPILER_WORKS=yes                         \
+  -DLLVM_ENABLE_RUNTIMES=flang-rt                            \
   ...
 ```
 
@@ -116,19 +116,19 @@ driver using the `-L` option.
 A more complete build configuration could be the following:
 
 ```bash
-cmake -S <path-to-llvm-project>/runtimes                                          \
-  -GNinja                                                                         \
-  -DCMAKE_BUILD_TYPE=Release                                                      \
-  -DCMAKE_INSTALL_PREFIX="${HOME}/local"                                          \
-  -DLLVM_ENABLE_RUNTIMES="compiler-rt;flang-rt"                                   \
-  -DCMAKE_C_COMPILER=gcc                                                          \
-  -DCMAKE_CXX_COMPILER=g++                                                        \
-  -DLLVM_BINARY_DIR=<path-to-llvm-builddir>                                       \
-  -DLLVM_DIR=<path-to-llvm-builddir>/lib/cmake/llvm                               \
-  -DClang_DIR=<path-to-llvm-builddir>/lib/cmake/clang                             \
-  -DCMAKE_Fortran_COMPILER=<path-to-llvm-builddir-or-installprefix>/bin/flang-new \
-  -DLLVM_DEFAULT_TARGET_TRIPLE=x86_64-linux-gnu                                   \
-  -DLLVM_RUNTIMES_TARGET=x86_64-linux-gnu                                         \
+cmake -S <path-to-llvm-project>/runtimes                                      \
+  -GNinja                                                                     \
+  -DCMAKE_BUILD_TYPE=Release                                                  \
+  -DCMAKE_INSTALL_PREFIX="${HOME}/local"                                      \
+  -DLLVM_ENABLE_RUNTIMES="compiler-rt;flang-rt"                               \
+  -DCMAKE_C_COMPILER=gcc                                                      \
+  -DCMAKE_CXX_COMPILER=g++                                                    \
+  -DLLVM_BINARY_DIR=<path-to-llvm-builddir>                                   \
+  -DLLVM_DIR=<path-to-llvm-builddir>/lib/cmake/llvm                           \
+  -DClang_DIR=<path-to-llvm-builddir>/lib/cmake/clang                         \
+  -DCMAKE_Fortran_COMPILER=<path-to-llvm-builddir-or-installprefix>/bin/flang \
+  -DLLVM_DEFAULT_TARGET_TRIPLE=x86_64-linux-gnu                               \
+  -DLLVM_RUNTIMES_TARGET=x86_64-linux-gnu                                     \
   ...
 ```
 
