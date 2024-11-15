@@ -1145,15 +1145,7 @@ static bool getGEPIndicesToField(CodeGenFunction &CGF, const RecordDecl *RD,
   return false;
 }
 
-/// This method is typically called in contexts where we can't generate
-/// side-effects, like in __builtin_dynamic_object_size. When finding
-/// expressions, only choose those that have either already been emitted or can
-/// be loaded without side-effects.
-///
-/// - \p FAMDecl: the \p Decl for the flexible array member. It may not be
-///   within the top-level struct.
-/// - \p CountDecl: must be within the same non-anonymous struct as \p FAMDecl.
-llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
+llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
     const Expr *Base, const FieldDecl *FAMDecl, const FieldDecl *CountDecl) {
   const RecordDecl *RD = CountDecl->getParent()->getOuterLexicalRecordContext();
 
@@ -1182,12 +1174,25 @@ llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
     return nullptr;
 
   Indices.push_back(Builder.getInt32(0));
-  Res = Builder.CreateInBoundsGEP(
+  return Builder.CreateInBoundsGEP(
       ConvertType(QualType(RD->getTypeForDecl(), 0)), Res,
       RecIndicesTy(llvm::reverse(Indices)), "..counted_by.gep");
+}
 
-  return Builder.CreateAlignedLoad(ConvertType(CountDecl->getType()), Res,
-                                   getIntAlign(), "..counted_by.load");
+/// This method is typically called in contexts where we can't generate
+/// side-effects, like in __builtin_dynamic_object_size. When finding
+/// expressions, only choose those that have either already been emitted or can
+/// be loaded without side-effects.
+///
+/// - \p FAMDecl: the \p Decl for the flexible array member. It may not be
+///   within the top-level struct.
+/// - \p CountDecl: must be within the same non-anonymous struct as \p FAMDecl.
+llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
+    const Expr *Base, const FieldDecl *FAMDecl, const FieldDecl *CountDecl) {
+  if (llvm::Value *GEP = GetCountedByFieldExprGEP(Base, FAMDecl, CountDecl))
+    return Builder.CreateAlignedLoad(ConvertType(CountDecl->getType()), GEP,
+                                     getIntAlign(), "..counted_by.load");
+  return nullptr;
 }
 
 void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
@@ -1528,7 +1533,12 @@ LValue CodeGenFunction::EmitCheckedLValue(const Expr *E, TypeCheckKind TCK) {
 ///
 LValue CodeGenFunction::EmitLValue(const Expr *E,
                                    KnownNonNull_t IsKnownNonNull) {
-  LValue LV = EmitLValueHelper(E, IsKnownNonNull);
+  // Running with sufficient stack space to avoid deeply nested expressions
+  // cause a stack overflow.
+  LValue LV;
+  CGM.runWithSufficientStackSpace(
+      E->getExprLoc(), [&] { LV = EmitLValueHelper(E, IsKnownNonNull); });
+
   if (IsKnownNonNull && !LV.isKnownNonNull())
     LV.setKnownNonNull();
   return LV;
@@ -1936,6 +1946,10 @@ bool CodeGenFunction::EmitScalarRangeCheck(llvm::Value *Value, QualType Ty,
       cast<llvm::IntegerType>(Value->getType())->getBitWidth() == 1)
     return false;
 
+  if (NeedsEnumCheck &&
+      getContext().isTypeIgnoredBySanitizer(SanitizerKind::Enum, Ty))
+    return false;
+
   llvm::APInt Min, End;
   if (!getRangeForType(*this, Ty, Min, End, /*StrictEnums=*/true, IsBool))
     return true;
@@ -2037,7 +2051,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
     if (llvm::MDNode *RangeInfo = getRangeForLoadFromType(Ty)) {
       Load->setMetadata(llvm::LLVMContext::MD_range, RangeInfo);
       Load->setMetadata(llvm::LLVMContext::MD_noundef,
-                        llvm::MDNode::get(getLLVMContext(), std::nullopt));
+                        llvm::MDNode::get(getLLVMContext(), {}));
     }
 
   return EmitFromMemory(Load, Ty);
@@ -3370,9 +3384,9 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
   // Format the type name as if for a diagnostic, including quotes and
   // optionally an 'aka'.
   SmallString<32> Buffer;
-  CGM.getDiags().ConvertArgToString(
-      DiagnosticsEngine::ak_qualtype, (intptr_t)T.getAsOpaquePtr(), StringRef(),
-      StringRef(), std::nullopt, Buffer, std::nullopt);
+  CGM.getDiags().ConvertArgToString(DiagnosticsEngine::ak_qualtype,
+                                    (intptr_t)T.getAsOpaquePtr(), StringRef(),
+                                    StringRef(), {}, Buffer, {});
 
   if (IsBitInt) {
     // The Structure is: 0 to end the string, 32 bit unsigned integer in target
@@ -3879,7 +3893,7 @@ void CodeGenFunction::EmitUnreachable(SourceLocation Loc) {
     EmitCheck(std::make_pair(static_cast<llvm::Value *>(Builder.getFalse()),
                              SanitizerKind::Unreachable),
               SanitizerHandler::BuiltinUnreachable,
-              EmitCheckSourceLocation(Loc), std::nullopt);
+              EmitCheckSourceLocation(Loc), {});
   }
   Builder.CreateUnreachable();
 }
@@ -5455,9 +5469,8 @@ LValue CodeGenFunction::EmitOpaqueValueLValue(const OpaqueValueExpr *e) {
   return getOrCreateOpaqueLValueMapping(e);
 }
 
-void CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
-                                         CallArgList &Args, QualType Ty) {
-
+std::pair<LValue, LValue>
+CodeGenFunction::EmitHLSLOutArgLValues(const HLSLOutArgExpr *E, QualType Ty) {
   // Emitting the casted temporary through an opaque value.
   LValue BaseLV = EmitLValue(E->getArgLValue());
   OpaqueValueMappingData::bind(*this, E->getOpaqueArgLValue(), BaseLV);
@@ -5471,6 +5484,13 @@ void CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
                                TempLV);
 
   OpaqueValueMappingData::bind(*this, E->getCastedTemporary(), TempLV);
+  return std::make_pair(BaseLV, TempLV);
+}
+
+LValue CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
+                                           CallArgList &Args, QualType Ty) {
+
+  auto [BaseLV, TempLV] = EmitHLSLOutArgLValues(E, Ty);
 
   llvm::Value *Addr = TempLV.getAddress().getBasePointer();
   llvm::Type *ElTy = ConvertTypeForMem(TempLV.getType());
@@ -5483,6 +5503,7 @@ void CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
   Args.addWriteback(BaseLV, TmpAddr, nullptr, E->getWritebackCast(),
                     LifetimeSize);
   Args.add(RValue::get(TmpAddr, *this), Ty);
+  return TempLV;
 }
 
 LValue

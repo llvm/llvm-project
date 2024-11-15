@@ -14,6 +14,7 @@
 #include <__atomic/cxx_atomic_impl.h>
 #include <__atomic/memory_order.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__functional/operations.h>
 #include <__memory/addressof.h>
 #include <__type_traits/enable_if.h>
@@ -25,7 +26,6 @@
 #include <__type_traits/remove_pointer.h>
 #include <__type_traits/remove_volatile.h>
 #include <__utility/forward.h>
-#include <cstddef>
 #include <cstring>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

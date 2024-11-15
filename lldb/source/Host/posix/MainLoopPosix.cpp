@@ -365,10 +365,7 @@ Status MainLoopPosix::Run() {
   Status error;
   RunImpl impl(*this);
 
-  // run until termination or until we run out of things to listen to
-  // (m_read_fds will always contain m_trigger_pipe fd, so check for > 1)
-  while (!m_terminate_request &&
-         (m_read_fds.size() > 1 || !m_signals.empty())) {
+  while (!m_terminate_request) {
     error = impl.Poll();
     if (error.Fail())
       return error;

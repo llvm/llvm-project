@@ -200,7 +200,12 @@ struct ValueInfo {
     return getRef()->second.SummaryList;
   }
 
+  // Even if the index is built with GVs available, we may not have one for
+  // summary entries synthesized for profiled indirect call targets.
+  bool hasName() const { return !haveGVs() || getValue(); }
+
   StringRef name() const {
+    assert(!haveGVs() || getRef()->second.U.GV);
     return haveGVs() ? getRef()->second.U.GV->getName()
                      : getRef()->second.U.Name;
   }
@@ -1394,8 +1399,8 @@ private:
   /// True if some of the FunctionSummary contains a ParamAccess.
   bool HasParamAccess = false;
 
-  std::set<std::string> CfiFunctionDefs;
-  std::set<std::string> CfiFunctionDecls;
+  std::set<std::string, std::less<>> CfiFunctionDefs;
+  std::set<std::string, std::less<>> CfiFunctionDecls;
 
   // Used in cases where we want to record the name of a global, but
   // don't have the string owned elsewhere (e.g. the Strtab on a module).
@@ -1642,11 +1647,19 @@ public:
     return I == OidGuidMap.end() ? 0 : I->second;
   }
 
-  std::set<std::string> &cfiFunctionDefs() { return CfiFunctionDefs; }
-  const std::set<std::string> &cfiFunctionDefs() const { return CfiFunctionDefs; }
+  std::set<std::string, std::less<>> &cfiFunctionDefs() {
+    return CfiFunctionDefs;
+  }
+  const std::set<std::string, std::less<>> &cfiFunctionDefs() const {
+    return CfiFunctionDefs;
+  }
 
-  std::set<std::string> &cfiFunctionDecls() { return CfiFunctionDecls; }
-  const std::set<std::string> &cfiFunctionDecls() const { return CfiFunctionDecls; }
+  std::set<std::string, std::less<>> &cfiFunctionDecls() {
+    return CfiFunctionDecls;
+  }
+  const std::set<std::string, std::less<>> &cfiFunctionDecls() const {
+    return CfiFunctionDecls;
+  }
 
   /// Add a global value summary for a value.
   void addGlobalValueSummary(const GlobalValue &GV,

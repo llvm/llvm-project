@@ -36,7 +36,7 @@ public:
 _LIBCPP_DIAGNOSTIC_POP
 
 [[noreturn]] inline _LIBCPP_HIDE_FROM_ABI void __throw_format_error(const char* __s) {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
   throw format_error(__s);
 #  else
   _LIBCPP_VERBOSE_ABORT("format_error was thrown in -fno-exceptions mode with message \"%s\"", __s);

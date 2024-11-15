@@ -146,7 +146,7 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
   let summary = "Peels the first or last iteration of the loop";
   let description = [{
      Rewrite the given loop with a main loop and a partial (first or last) loop.
-     When the `peelFront` option is set as true, the first iteration is peeled off.
+     When the `peelFront` option is set to true, the first iteration is peeled off.
      Otherwise, updates the given loop so that its step evenly divides its range and puts
      the remaining iteration into a separate loop or a conditional.
 
@@ -156,18 +156,20 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
      #### Return modes
 
      This operation ignores non-scf::ForOp ops and drops them in the return.
+     The op returns two loops, the peeled loop which has trip count divisible
+     by the step, and the remainder loop.
 
-     When `peelFront` is true, this operation returns two scf::ForOp Ops, the
-     first scf::ForOp corresponds to the first iteration of the loop which can
-     be canonicalized away in the following optimization. The second loop Op
-     contains the remaining iteration, and the new lower bound is the original
-     lower bound plus the number of steps.
+     When `peelFront` is true, the first result (remainder loop) executes all
+     but the first iteration of the target loop. The second result (peeled
+     loop) corresponds to the first iteration of the loop which can be
+     canonicalized away in the following optimizations.
 
-     When `peelFront` is not true, this operation returns two scf::ForOp Ops, with the first
-     scf::ForOp satisfying: "the loop trip count is divisible by the step".
-     The second loop Op contains the remaining iteration. Note that even though the
-     Payload IR modification may be performed in-place, this operation consumes
-     the operand handle and produces a new one.
+     When `peelFront` is false, the first result (peeled loop) is the portion
+     of the target loop with the highest upper bound that is divisible by the
+     step. The second result (remainder loop) contains the remaining iterations. 
+     
+     Note that even though the Payload IR modification may be performed
+     in-place, this operation consumes the operand handle and produces a new one.
 
      #### Return Modes
 

@@ -1135,6 +1135,9 @@ StyleKind IdentifierNamingCheck::findStyleKind(
   if (isa<TypeAliasDecl>(D) && NamingStyles[SK_TypeAlias])
     return SK_TypeAlias;
 
+  if (isa<NamespaceAliasDecl>(D) && NamingStyles[SK_Namespace])
+    return SK_Namespace;
+
   if (const auto *Decl = dyn_cast<NamespaceDecl>(D)) {
     if (Decl->isAnonymousNamespace())
       return SK_Invalid;

@@ -12,7 +12,7 @@ endif()
 if(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS)
   message(STATUS "Enforcing strict test requirements for LLDB")
   # Lit uses psutil to do per-test timeouts.
-  set(useful_python_modules psutil)
+  set(useful_python_modules psutil packaging)
 
   if(NOT WIN32)
     # We no longer vendor pexpect and it is not used on Windows.

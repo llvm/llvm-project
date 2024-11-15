@@ -179,6 +179,11 @@ alexei.starovoitov@gmail.com (email), [4ast](https://github.com/4ast) (GitHub)
 Zi Xuan Wu (Zeson) \
 zixuan.wu@linux.alibaba.com (email), [zixuan-wu](https://github.com/zixuan-wu) (GitHub)
 
+#### DirectX backend
+
+Justin Bogner \
+mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
+
 #### Hexagon backend
 
 Sundeep Kushwaha \
@@ -208,6 +213,12 @@ anton@korobeynikov.info (email), [asl](https://github.com/asl) (GitHub)
 
 Justin Holewinski \
 jholewinski@nvidia.com (email), [jholewinski](https://github.com/jholewinski) (GitHub)
+Artem Belevich \
+tra@google.com (email), [Artem-B](https://github.com/Artem-B) (GitHub)
+Alex MacLean \
+amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub)
+Justin Fargnoli \
+jfargnoli@nvidia.com (email), [justinfargnoli](https://github.com/justinfargnoli) (GitHub)
 
 #### PowerPC backend
 
@@ -354,10 +365,10 @@ martin@martin.st (email), [mstrorsjo](https://github.com/mstrorsjo) (GitHub)
 Michael Spencer \
 bigcheesegs@gmail.com (email), [Bigcheese](https://github.com/Bigcheese) (GitHub)
 
-#### Sony PlayStation®4 support
+#### Sony PlayStation support
 
-Paul Robinson \
-paul.robinson@sony.com (email), [pogo59](https://github.com/pogo59) (GitHub)
+Jeremy Morse \
+jeremy.morse@sony.com (email), [jmorse](https://github.com/jmorse) (GitHub)
 
 #### Inline assembly
 

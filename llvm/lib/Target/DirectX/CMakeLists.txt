@@ -22,6 +22,7 @@ add_llvm_target(DirectXCodeGen
   DXContainerGlobals.cpp
   DXILDataScalarization.cpp
   DXILFinalizeLinkage.cpp
+  DXILFlattenArrays.cpp
   DXILIntrinsicExpansion.cpp
   DXILOpBuilder.cpp
   DXILOpLowering.cpp
@@ -44,6 +45,7 @@ add_llvm_target(DirectXCodeGen
   DirectXPointerTypeAnalysis
   FrontendHLSL
   MC
+  ScalarOpts
   SelectionDAG
   Support
   Target

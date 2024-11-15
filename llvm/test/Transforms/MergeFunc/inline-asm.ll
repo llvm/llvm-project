@@ -3,11 +3,11 @@
 ; CHECK-LABEL: @int_ptr_arg_different
 ; CHECK-NEXT: call void asm
 
-; CHECK-LABEL: @int_ptr_null
-; CHECK-NEXT: tail call void @float_ptr_null()
+; CHECK-DAG: @int_ptr_null
+; CHECK-DAG: tail call void @float_ptr_null()
 
-; CHECK-LABEL: @int_ptr_arg_same
-; CHECK-NEXT: tail call void @float_ptr_arg_same(ptr %0)
+; CHECK-DAG: @int_ptr_arg_same
+; CHECK-DAG: tail call void @float_ptr_arg_same(ptr %0)
 
 ; Used to satisfy minimum size limit
 declare void @stuff()

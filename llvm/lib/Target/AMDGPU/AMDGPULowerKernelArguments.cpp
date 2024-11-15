@@ -13,7 +13,6 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
@@ -171,8 +170,8 @@ public:
   // Try to allocate SGPRs to preload implicit kernel arguments.
   void tryAllocImplicitArgPreloadSGPRs(uint64_t ImplicitArgsBaseOffset,
                                        IRBuilder<> &Builder) {
-    StringRef Name = Intrinsic::getName(Intrinsic::amdgcn_implicitarg_ptr);
-    Function *ImplicitArgPtr = F.getParent()->getFunction(Name);
+    Function *ImplicitArgPtr = Intrinsic::getDeclarationIfExists(
+        F.getParent(), Intrinsic::amdgcn_implicitarg_ptr);
     if (!ImplicitArgPtr)
       return;
 

@@ -30,7 +30,6 @@
 #include "llvm/Transforms/Utils/MisExpect.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -38,7 +37,6 @@
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
 #include <cstdint>

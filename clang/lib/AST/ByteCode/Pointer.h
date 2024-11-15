@@ -653,15 +653,6 @@ public:
     return *reinterpret_cast<T *>(asBlockPointer().Pointee->rawData() + Offset);
   }
 
-  /// Dereferences a primitive element.
-  template <typename T> T &elem(unsigned I) const {
-    assert(I < getNumElems());
-    assert(isBlockPointer());
-    assert(asBlockPointer().Pointee);
-    return reinterpret_cast<T *>(asBlockPointer().Pointee->data() +
-                                 sizeof(InitMapPtr))[I];
-  }
-
   /// Whether this block can be read from at all. This is only true for
   /// block pointers that point to a valid location inside that block.
   bool isDereferencable() const {

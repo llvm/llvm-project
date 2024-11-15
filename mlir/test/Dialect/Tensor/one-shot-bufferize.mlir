@@ -213,6 +213,21 @@ func.func @rank_reducing_parallel_insert_slice(%in: tensor<100xf32>, %out: tenso
 
 // -----
 
+// CHECK-LABEL: func.func @parallel_insert_full_slice_in_place
+// CHECK-NOT:     memref.alloc()
+func.func @parallel_insert_full_slice_in_place(%2: tensor<2xf32>) -> tensor<2xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %3 = scf.forall (%arg0) in (1) shared_outs(%arg2 = %2) -> (tensor<2xf32>) {
+    %fill = linalg.fill ins(%cst : f32) outs(%arg2 : tensor<2xf32>) -> tensor<2xf32>
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %fill into %arg2[0] [2] [1] : tensor<2xf32> into tensor<2xf32>
+    }
+  } {mapping = [#gpu.thread<linear_dim_0>]}
+  return %3 : tensor<2xf32>
+}
+
+// -----
+
 // This test case could bufferize in-place with a better analysis. However, it
 // is simpler to let the canonicalizer fold away the tensor.insert_slice.
 

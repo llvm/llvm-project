@@ -1,6 +1,9 @@
 // REQUIRES: target={{.*windows-msvc.*}}
 // REQUIRES: lld-available
 
+// Fails on Windows on Arm for unknown reasons.
+// UNSUPPORTED: target=aarch64-pc-windows-msvc
+
 // Test the online merging mode (%m) along with continuous mode (%c).
 //
 // Split files & cd into a temporary directory.

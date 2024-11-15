@@ -205,6 +205,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::GFX909:
       case OffloadArch::GFX90a:
       case OffloadArch::GFX90c:
+      case OffloadArch::GFX9_4_GENERIC:
       case OffloadArch::GFX940:
       case OffloadArch::GFX941:
       case OffloadArch::GFX942:
@@ -229,6 +230,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::GFX1150:
       case OffloadArch::GFX1151:
       case OffloadArch::GFX1152:
+      case OffloadArch::GFX1153:
       case OffloadArch::GFX12_GENERIC:
       case OffloadArch::GFX1200:
       case OffloadArch::GFX1201:
@@ -281,6 +283,8 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::SM_90:
       case OffloadArch::SM_90a:
         return "900";
+      case OffloadArch::SM_100:
+        return "1000";
       }
       llvm_unreachable("unhandled OffloadArch");
     }();

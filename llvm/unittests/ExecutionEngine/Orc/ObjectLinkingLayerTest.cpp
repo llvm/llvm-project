@@ -65,6 +65,36 @@ TEST_F(ObjectLinkingLayerTest, AddLinkGraph) {
   EXPECT_THAT_EXPECTED(ES.lookup(&JD, "_X"), Succeeded());
 }
 
+TEST_F(ObjectLinkingLayerTest, ResourceTracker) {
+  // This test transfers allocations to previously unknown ResourceTrackers,
+  // while increasing the number of trackers in the ObjectLinkingLayer, which
+  // may invalidate some iterators internally.
+  std::vector<ResourceTrackerSP> Trackers;
+  for (unsigned I = 0; I < 64; I++) {
+    auto G = std::make_unique<LinkGraph>("foo", Triple("x86_64-apple-darwin"),
+                                         8, llvm::endianness::little,
+                                         x86_64::getEdgeKindName);
+
+    auto &Sec1 = G->createSection("__data", MemProt::Read | MemProt::Write);
+    auto &B1 = G->createContentBlock(Sec1, BlockContent,
+                                     orc::ExecutorAddr(0x1000), 8, 0);
+    llvm::SmallString<0> SymbolName;
+    SymbolName += "_X";
+    SymbolName += std::to_string(I);
+    G->addDefinedSymbol(B1, 4, SymbolName, 4, Linkage::Strong, Scope::Default,
+                        false, false);
+
+    auto RT1 = JD.createResourceTracker();
+    EXPECT_THAT_ERROR(ObjLinkingLayer.add(RT1, std::move(G)), Succeeded());
+    EXPECT_THAT_EXPECTED(ES.lookup(&JD, SymbolName), Succeeded());
+
+    auto RT2 = JD.createResourceTracker();
+    RT1->transferTo(*RT2);
+
+    Trackers.push_back(RT2);
+  }
+}
+
 TEST_F(ObjectLinkingLayerTest, ClaimLateDefinedWeakSymbols) {
   // Check that claiming weak symbols works as expected.
   //
@@ -255,11 +285,14 @@ TEST_F(ObjectLinkingLayerTest, AddAndRemovePlugins) {
 }
 
 TEST(ObjectLinkingLayerSearchGeneratorTest, AbsoluteSymbolsObjectLayer) {
-  class TestEPC : public UnsupportedExecutorProcessControl {
+  class TestEPC : public UnsupportedExecutorProcessControl,
+                  public DylibManager {
   public:
     TestEPC()
         : UnsupportedExecutorProcessControl(nullptr, nullptr,
-                                            "x86_64-apple-darwin") {}
+                                            "x86_64-apple-darwin") {
+      this->DylibMgr = this;
+    }
 
     Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override {
       return ExecutorAddr::fromPtr((void *)nullptr);

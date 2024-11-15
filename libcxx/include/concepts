@@ -158,11 +158,8 @@ namespace std {
 
 #include <version>
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <cstddef>
-#endif
-
-#if _LIBCPP_STD_VER <= 20 && !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
 #  include <type_traits>
 #endif
 

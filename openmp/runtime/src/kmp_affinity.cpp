@@ -1589,15 +1589,13 @@ kmp_str_buf_t *__kmp_affinity_str_buf_mask(kmp_str_buf_t *buf,
   return buf;
 }
 
-// Return (possibly empty) affinity mask representing the offline CPUs
-// Caller must free the mask
-kmp_affin_mask_t *__kmp_affinity_get_offline_cpus() {
-  kmp_affin_mask_t *offline;
-  KMP_CPU_ALLOC(offline);
-  KMP_CPU_ZERO(offline);
+static kmp_affin_mask_t *__kmp_parse_cpu_list(const char *path) {
+  kmp_affin_mask_t *mask;
+  KMP_CPU_ALLOC(mask);
+  KMP_CPU_ZERO(mask);
 #if KMP_OS_LINUX
   int n, begin_cpu, end_cpu;
-  kmp_safe_raii_file_t offline_file;
+  kmp_safe_raii_file_t file;
   auto skip_ws = [](FILE *f) {
     int c;
     do {
@@ -1606,29 +1604,29 @@ kmp_affin_mask_t *__kmp_affinity_get_offline_cpus() {
     if (c != EOF)
       ungetc(c, f);
   };
-  // File contains CSV of integer ranges representing the offline CPUs
+  // File contains CSV of integer ranges representing the CPUs
   // e.g., 1,2,4-7,9,11-15
-  int status = offline_file.try_open("/sys/devices/system/cpu/offline", "r");
+  int status = file.try_open(path, "r");
   if (status != 0)
-    return offline;
-  while (!feof(offline_file)) {
-    skip_ws(offline_file);
-    n = fscanf(offline_file, "%d", &begin_cpu);
+    return mask;
+  while (!feof(file)) {
+    skip_ws(file);
+    n = fscanf(file, "%d", &begin_cpu);
     if (n != 1)
       break;
-    skip_ws(offline_file);
-    int c = fgetc(offline_file);
+    skip_ws(file);
+    int c = fgetc(file);
     if (c == EOF || c == ',') {
       // Just single CPU
       end_cpu = begin_cpu;
     } else if (c == '-') {
       // Range of CPUs
-      skip_ws(offline_file);
-      n = fscanf(offline_file, "%d", &end_cpu);
+      skip_ws(file);
+      n = fscanf(file, "%d", &end_cpu);
       if (n != 1)
         break;
-      skip_ws(offline_file);
-      c = fgetc(offline_file); // skip ','
+      skip_ws(file);
+      c = fgetc(file); // skip ','
     } else {
       // Syntax problem
       break;
@@ -1638,13 +1636,19 @@ kmp_affin_mask_t *__kmp_affinity_get_offline_cpus() {
         end_cpu >= __kmp_xproc || begin_cpu > end_cpu) {
       continue;
     }
-    // Insert [begin_cpu, end_cpu] into offline mask
+    // Insert [begin_cpu, end_cpu] into mask
     for (int cpu = begin_cpu; cpu <= end_cpu; ++cpu) {
-      KMP_CPU_SET(cpu, offline);
+      KMP_CPU_SET(cpu, mask);
     }
   }
 #endif
-  return offline;
+  return mask;
+}
+
+// Return (possibly empty) affinity mask representing the offline CPUs
+// Caller must free the mask
+kmp_affin_mask_t *__kmp_affinity_get_offline_cpus() {
+  return __kmp_parse_cpu_list("/sys/devices/system/cpu/offline");
 }
 
 // Return the number of available procs
@@ -3175,6 +3179,37 @@ static inline const char *__kmp_cpuinfo_get_envvar() {
   return envvar;
 }
 
+static bool __kmp_package_id_from_core_siblings_list(unsigned **threadInfo,
+                                                     unsigned num_avail,
+                                                     unsigned idx) {
+  if (!KMP_AFFINITY_CAPABLE())
+    return false;
+
+  char path[256];
+  KMP_SNPRINTF(path, sizeof(path),
+               "/sys/devices/system/cpu/cpu%u/topology/core_siblings_list",
+               threadInfo[idx][osIdIndex]);
+  kmp_affin_mask_t *siblings = __kmp_parse_cpu_list(path);
+  for (unsigned i = 0; i < num_avail; ++i) {
+    unsigned cpu_id = threadInfo[i][osIdIndex];
+    KMP_ASSERT(cpu_id < __kmp_affin_mask_size * CHAR_BIT);
+    if (!KMP_CPU_ISSET(cpu_id, siblings))
+      continue;
+    if (threadInfo[i][pkgIdIndex] == UINT_MAX) {
+      // Arbitrarily pick the first index we encounter, it only matters that
+      // the value is the same for all siblings.
+      threadInfo[i][pkgIdIndex] = idx;
+    } else if (threadInfo[i][pkgIdIndex] != idx) {
+      // Contradictory sibling lists.
+      KMP_CPU_FREE(siblings);
+      return false;
+    }
+  }
+  KMP_ASSERT(threadInfo[idx][pkgIdIndex] != UINT_MAX);
+  KMP_CPU_FREE(siblings);
+  return true;
+}
+
 // Parse /proc/cpuinfo (or an alternate file in the same format) to obtain the
 // affinity map. On AIX, the map is obtained through system SRAD (Scheduler
 // Resource Allocation Domain).
@@ -3550,16 +3585,11 @@ static bool __kmp_affinity_create_cpuinfo_map(int *line,
         return false;
       }
 
-      // Check for missing fields.  The osId field must be there, and we
-      // currently require that the physical id field is specified, also.
+      // Check for missing fields.  The osId field must be there. The physical
+      // id field will be checked later.
       if (threadInfo[num_avail][osIdIndex] == UINT_MAX) {
         CLEANUP_THREAD_INFO;
         *msg_id = kmp_i18n_str_MissingProcField;
-        return false;
-      }
-      if (threadInfo[0][pkgIdIndex] == UINT_MAX) {
-        CLEANUP_THREAD_INFO;
-        *msg_id = kmp_i18n_str_MissingPhysicalIDField;
         return false;
       }
 
@@ -3590,6 +3620,18 @@ static bool __kmp_affinity_create_cpuinfo_map(int *line,
     return false;
   }
   *line = 0;
+
+  // At least on powerpc, Linux may return -1 for physical_package_id. Try
+  // to reconstruct topology from core_siblings_list in that case.
+  for (i = 0; i < num_avail; ++i) {
+    if (threadInfo[i][pkgIdIndex] == UINT_MAX) {
+      if (!__kmp_package_id_from_core_siblings_list(threadInfo, num_avail, i)) {
+        CLEANUP_THREAD_INFO;
+        *msg_id = kmp_i18n_str_MissingPhysicalIDField;
+        return false;
+      }
+    }
+  }
 
 #if KMP_MIC && REDUCE_TEAM_SIZE
   unsigned teamSize = 0;

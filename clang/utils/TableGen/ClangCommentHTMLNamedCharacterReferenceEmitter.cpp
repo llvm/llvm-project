@@ -51,7 +51,7 @@ void clang::EmitClangCommentHTMLNamedCharacterReferences(
   std::vector<StringMatcher::StringPair> NameToUTF8;
   SmallString<32> CLiteral;
   for (const Record *Tag : Records.getAllDerivedDefinitions("NCR")) {
-    std::string Spelling = std::string(Tag->getValueAsString("Spelling"));
+    std::string Spelling = Tag->getValueAsString("Spelling").str();
     uint64_t CodePoint = Tag->getValueAsInt("CodePoint");
     CLiteral.clear();
     CLiteral.append("return ");

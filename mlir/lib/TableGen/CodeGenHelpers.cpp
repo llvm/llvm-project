@@ -24,32 +24,32 @@ using namespace mlir::tblgen;
 
 /// Generate a unique label based on the current file name to prevent name
 /// collisions if multiple generated files are included at once.
-static std::string getUniqueOutputLabel(const llvm::RecordKeeper &records,
+static std::string getUniqueOutputLabel(const RecordKeeper &records,
                                         StringRef tag) {
   // Use the input file name when generating a unique name.
   std::string inputFilename = records.getInputFilename();
 
   // Drop all but the base filename.
-  StringRef nameRef = llvm::sys::path::filename(inputFilename);
+  StringRef nameRef = sys::path::filename(inputFilename);
   nameRef.consume_back(".td");
 
   // Sanitize any invalid characters.
   std::string uniqueName(tag);
   for (char c : nameRef) {
-    if (llvm::isAlnum(c) || c == '_')
+    if (isAlnum(c) || c == '_')
       uniqueName.push_back(c);
     else
-      uniqueName.append(llvm::utohexstr((unsigned char)c));
+      uniqueName.append(utohexstr((unsigned char)c));
   }
   return uniqueName;
 }
 
 StaticVerifierFunctionEmitter::StaticVerifierFunctionEmitter(
-    raw_ostream &os, const llvm::RecordKeeper &records, StringRef tag)
+    raw_ostream &os, const RecordKeeper &records, StringRef tag)
     : os(os), uniqueOutputLabel(getUniqueOutputLabel(records, tag)) {}
 
 void StaticVerifierFunctionEmitter::emitOpConstraints(
-    ArrayRef<const llvm::Record *> opDefs) {
+    ArrayRef<const Record *> opDefs) {
   NamespaceEmitter namespaceEmitter(os, Operator(*opDefs[0]).getCppNamespace());
   emitTypeConstraints();
   emitAttrConstraints();
@@ -58,7 +58,7 @@ void StaticVerifierFunctionEmitter::emitOpConstraints(
 }
 
 void StaticVerifierFunctionEmitter::emitPatternConstraints(
-    const llvm::ArrayRef<DagLeaf> constraints) {
+    const ArrayRef<DagLeaf> constraints) {
   collectPatternConstraints(constraints);
   emitPatternConstraints();
 }
@@ -298,7 +298,7 @@ void StaticVerifierFunctionEmitter::collectOpConstraints(
 }
 
 void StaticVerifierFunctionEmitter::collectPatternConstraints(
-    const llvm::ArrayRef<DagLeaf> constraints) {
+    const ArrayRef<DagLeaf> constraints) {
   for (auto &leaf : constraints) {
     assert(leaf.isOperandMatcher() || leaf.isAttrMatcher());
     collectConstraint(
@@ -313,7 +313,7 @@ void StaticVerifierFunctionEmitter::collectPatternConstraints(
 
 std::string mlir::tblgen::escapeString(StringRef value) {
   std::string ret;
-  llvm::raw_string_ostream os(ret);
+  raw_string_ostream os(ret);
   os.write_escaped(value);
   return ret;
 }

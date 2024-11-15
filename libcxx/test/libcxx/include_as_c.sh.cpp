@@ -29,11 +29,12 @@
 #include <float.h>
 #include <inttypes.h>
 #include <limits.h>
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
-#   include <locale.h>
+#if _LIBCPP_HAS_LOCALIZATION
+#  include <locale.h>
 #endif
 #include <math.h>
 #include <setjmp.h>
+#include <stdalign.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -44,14 +45,14 @@
 // The clang-shipped tgmath.h header doesn't work with MSVC/UCRT's complex
 // headers in C mode, see PR46207.
 #ifndef _MSC_VER
-#    include <tgmath.h>
+#  include <tgmath.h>
 #endif
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-#   include <wchar.h>
-#   include <wctype.h>
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+#  include <wchar.h>
+#  include <wctype.h>
 #endif
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   (void)argc;
   (void)argv;
   return 0;

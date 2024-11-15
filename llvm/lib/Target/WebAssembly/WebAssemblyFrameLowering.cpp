@@ -98,7 +98,7 @@ bool WebAssemblyFrameLowering::hasBP(const MachineFunction &MF) const {
 
 /// Return true if the specified function should have a dedicated frame pointer
 /// register.
-bool WebAssemblyFrameLowering::hasFP(const MachineFunction &MF) const {
+bool WebAssemblyFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // When we have var-sized objects, we move the stack pointer by an unknown

@@ -11,6 +11,7 @@
 #define _LIBCPP___MEMORY_COMPRESSED_PAIR_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__type_traits/datasizeof.h>
 #include <__type_traits/is_empty.h>
 #include <__type_traits/is_final.h>

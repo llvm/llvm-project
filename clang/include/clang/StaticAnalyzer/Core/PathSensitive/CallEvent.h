@@ -690,6 +690,11 @@ protected:
       ValueList &Values,
       RegionAndSymbolInvalidationTraits *ETraits) const override;
 
+  /// Returns the decl refered to by the "dynamic type" of the current object
+  /// and if the class can be a sub-class or not.
+  /// If the Pointer is null, the flag has no meaning.
+  std::pair<const CXXRecordDecl *, bool> getDeclForDynamicType() const;
+
 public:
   /// Returns the expression representing the implicit 'this' object.
   virtual const Expr *getCXXThisExpr() const { return nullptr; }

@@ -18,7 +18,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include <optional>
@@ -228,6 +227,10 @@ TargetTransformInfo::getInliningCostBenefitAnalysisProfitableMultiplier()
   return TTIImpl->getInliningCostBenefitAnalysisProfitableMultiplier();
 }
 
+int TargetTransformInfo::getInliningLastCallToStaticBonus() const {
+  return TTIImpl->getInliningLastCallToStaticBonus();
+}
+
 unsigned
 TargetTransformInfo::adjustInliningThreshold(const CallBase *CB) const {
   return TTIImpl->adjustInliningThreshold(CB);
@@ -288,6 +291,10 @@ bool TargetTransformInfo::hasBranchDivergence(const Function *F) const {
 }
 
 bool TargetTransformInfo::isSourceOfDivergence(const Value *V) const {
+  if (const auto *Call = dyn_cast<CallBase>(V)) {
+    if (Call->hasFnAttr(Attribute::NoDivergenceSource))
+      return false;
+  }
   return TTIImpl->isSourceOfDivergence(V);
 }
 
@@ -515,6 +522,13 @@ bool TargetTransformInfo::isLegalMaskedExpandLoad(Type *DataType,
 bool TargetTransformInfo::isLegalStridedLoadStore(Type *DataType,
                                                   Align Alignment) const {
   return TTIImpl->isLegalStridedLoadStore(DataType, Alignment);
+}
+
+bool TargetTransformInfo::isLegalInterleavedAccessType(
+    VectorType *VTy, unsigned Factor, Align Alignment,
+    unsigned AddrSpace) const {
+  return TTIImpl->isLegalInterleavedAccessType(VTy, Factor, Alignment,
+                                               AddrSpace);
 }
 
 bool TargetTransformInfo::isLegalMaskedVectorHistogram(Type *AddrType,
@@ -1033,11 +1047,24 @@ InstructionCost TargetTransformInfo::getCmpSelInstrCost(
 InstructionCost TargetTransformInfo::getVectorInstrCost(
     unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
     Value *Op0, Value *Op1) const {
-  // FIXME: Assert that Opcode is either InsertElement or ExtractElement.
-  // This is mentioned in the interface description and respected by all
-  // callers, but never asserted upon.
+  assert((Opcode == Instruction::InsertElement ||
+          Opcode == Instruction::ExtractElement) &&
+         "Expecting Opcode to be insertelement/extractelement.");
   InstructionCost Cost =
       TTIImpl->getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
+InstructionCost TargetTransformInfo::getVectorInstrCost(
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    Value *Scalar,
+    ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const {
+  assert((Opcode == Instruction::InsertElement ||
+          Opcode == Instruction::ExtractElement) &&
+         "Expecting Opcode to be insertelement/extractelement.");
+  InstructionCost Cost = TTIImpl->getVectorInstrCost(
+      Opcode, Val, CostKind, Index, Scalar, ScalarUserAndIdx);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -1366,6 +1393,12 @@ bool TargetTransformInfo::isProfitableToSinkOperands(
 
 bool TargetTransformInfo::isVectorShiftByScalarCheap(Type *Ty) const {
   return TTIImpl->isVectorShiftByScalarCheap(Ty);
+}
+
+unsigned
+TargetTransformInfo::getNumBytesToPadGlobalArray(unsigned Size,
+                                                 Type *ArrayType) const {
+  return TTIImpl->getNumBytesToPadGlobalArray(Size, ArrayType);
 }
 
 TargetTransformInfo::Concept::~Concept() = default;

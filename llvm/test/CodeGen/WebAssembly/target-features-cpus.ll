@@ -13,13 +13,19 @@ target triple = "wasm32-unknown-unknown"
 
 ; generic: +multivalue, +mutable-globals, +reference-types, +sign-ext
 ; GENERIC-LABEL: .custom_section.target_features,"",@
-; GENERIC-NEXT: .int8  4
+; GENERIC-NEXT: .int8  6
+; GENERIC-NEXT: .int8  43
+; GENERIC-NEXT: .int8  11
+; GENERIC-NEXT: .ascii  "bulk-memory"
 ; GENERIC-NEXT: .int8  43
 ; GENERIC-NEXT: .int8  10
 ; GENERIC-NEXT: .ascii  "multivalue"
 ; GENERIC-NEXT: .int8  43
 ; GENERIC-NEXT: .int8  15
 ; GENERIC-NEXT: .ascii  "mutable-globals"
+; GENERIC-NEXT: .int8  43
+; GENERIC-NEXT: .int8  19
+; GENERIC-NEXT: .ascii  "nontrapping-fptoint"
 ; GENERIC-NEXT: .int8  43
 ; GENERIC-NEXT: .int8  15
 ; GENERIC-NEXT: .ascii  "reference-types"

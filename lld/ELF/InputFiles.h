@@ -48,8 +48,10 @@ void parseFiles(Ctx &, const std::vector<InputFile *> &files);
 
 // The root class of input files.
 class InputFile {
-protected:
+public:
   Ctx &ctx;
+
+protected:
   std::unique_ptr<Symbol *[]> symbols;
   uint32_t numSymbols = 0;
   SmallVector<InputSectionBase *, 0> sections;
@@ -383,6 +385,8 @@ ELFFileBase *createObjFile(Ctx &, MemoryBufferRef mb,
                            StringRef archiveName = "", bool lazy = false);
 
 std::string replaceThinLTOSuffix(Ctx &, StringRef path);
+
+const ELFSyncStream &operator<<(const ELFSyncStream &, const InputFile *);
 
 } // namespace elf
 } // namespace lld

@@ -31,14 +31,14 @@ define void @memset_1(ptr %a, i8 %value) nounwind {
 define void @memset_2(ptr %a, i8 %value) nounwind {
 ; RV32-LABEL: memset_2:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    sb a1, 1(a0)
 ; RV32-NEXT:    sb a1, 0(a0)
+; RV32-NEXT:    sb a1, 1(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: memset_2:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sb a1, 1(a0)
 ; RV64-NEXT:    sb a1, 0(a0)
+; RV64-NEXT:    sb a1, 1(a0)
 ; RV64-NEXT:    ret
 ;
 ; RV32-FAST-LABEL: memset_2:
@@ -63,18 +63,18 @@ define void @memset_2(ptr %a, i8 %value) nounwind {
 define void @memset_4(ptr %a, i8 %value) nounwind {
 ; RV32-LABEL: memset_4:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    sb a1, 3(a0)
-; RV32-NEXT:    sb a1, 2(a0)
-; RV32-NEXT:    sb a1, 1(a0)
 ; RV32-NEXT:    sb a1, 0(a0)
+; RV32-NEXT:    sb a1, 1(a0)
+; RV32-NEXT:    sb a1, 2(a0)
+; RV32-NEXT:    sb a1, 3(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: memset_4:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sb a1, 3(a0)
-; RV64-NEXT:    sb a1, 2(a0)
-; RV64-NEXT:    sb a1, 1(a0)
 ; RV64-NEXT:    sb a1, 0(a0)
+; RV64-NEXT:    sb a1, 1(a0)
+; RV64-NEXT:    sb a1, 2(a0)
+; RV64-NEXT:    sb a1, 3(a0)
 ; RV64-NEXT:    ret
 ;
 ; RV32-FAST-LABEL: memset_4:
@@ -102,26 +102,26 @@ define void @memset_4(ptr %a, i8 %value) nounwind {
 define void @memset_8(ptr %a, i8 %value) nounwind {
 ; RV32-LABEL: memset_8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    sb a1, 7(a0)
-; RV32-NEXT:    sb a1, 6(a0)
-; RV32-NEXT:    sb a1, 5(a0)
 ; RV32-NEXT:    sb a1, 4(a0)
-; RV32-NEXT:    sb a1, 3(a0)
-; RV32-NEXT:    sb a1, 2(a0)
-; RV32-NEXT:    sb a1, 1(a0)
+; RV32-NEXT:    sb a1, 5(a0)
+; RV32-NEXT:    sb a1, 6(a0)
+; RV32-NEXT:    sb a1, 7(a0)
 ; RV32-NEXT:    sb a1, 0(a0)
+; RV32-NEXT:    sb a1, 1(a0)
+; RV32-NEXT:    sb a1, 2(a0)
+; RV32-NEXT:    sb a1, 3(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: memset_8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sb a1, 7(a0)
-; RV64-NEXT:    sb a1, 6(a0)
-; RV64-NEXT:    sb a1, 5(a0)
 ; RV64-NEXT:    sb a1, 4(a0)
-; RV64-NEXT:    sb a1, 3(a0)
-; RV64-NEXT:    sb a1, 2(a0)
-; RV64-NEXT:    sb a1, 1(a0)
+; RV64-NEXT:    sb a1, 5(a0)
+; RV64-NEXT:    sb a1, 6(a0)
+; RV64-NEXT:    sb a1, 7(a0)
 ; RV64-NEXT:    sb a1, 0(a0)
+; RV64-NEXT:    sb a1, 1(a0)
+; RV64-NEXT:    sb a1, 2(a0)
+; RV64-NEXT:    sb a1, 3(a0)
 ; RV64-NEXT:    ret
 ;
 ; RV32-FAST-LABEL: memset_8:
@@ -130,8 +130,8 @@ define void @memset_8(ptr %a, i8 %value) nounwind {
 ; RV32-FAST-NEXT:    lui a2, 4112
 ; RV32-FAST-NEXT:    addi a2, a2, 257
 ; RV32-FAST-NEXT:    mul a1, a1, a2
-; RV32-FAST-NEXT:    sw a1, 4(a0)
 ; RV32-FAST-NEXT:    sw a1, 0(a0)
+; RV32-FAST-NEXT:    sw a1, 4(a0)
 ; RV32-FAST-NEXT:    ret
 ;
 ; RV64-FAST-LABEL: memset_8:
@@ -270,8 +270,8 @@ define void @aligned_memset_8(ptr align 8 %a, i8 %value) nounwind {
 ; RV32-BOTH-NEXT:    lui a2, 4112
 ; RV32-BOTH-NEXT:    addi a2, a2, 257
 ; RV32-BOTH-NEXT:    mul a1, a1, a2
-; RV32-BOTH-NEXT:    sw a1, 4(a0)
 ; RV32-BOTH-NEXT:    sw a1, 0(a0)
+; RV32-BOTH-NEXT:    sw a1, 4(a0)
 ; RV32-BOTH-NEXT:    ret
 ;
 ; RV64-BOTH-LABEL: aligned_memset_8:
@@ -377,14 +377,14 @@ define void @bzero_1(ptr %a) nounwind {
 define void @bzero_2(ptr %a) nounwind {
 ; RV32-LABEL: bzero_2:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    sb zero, 1(a0)
 ; RV32-NEXT:    sb zero, 0(a0)
+; RV32-NEXT:    sb zero, 1(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: bzero_2:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sb zero, 1(a0)
 ; RV64-NEXT:    sb zero, 0(a0)
+; RV64-NEXT:    sb zero, 1(a0)
 ; RV64-NEXT:    ret
 ;
 ; RV32-FAST-LABEL: bzero_2:
@@ -403,18 +403,18 @@ define void @bzero_2(ptr %a) nounwind {
 define void @bzero_4(ptr %a) nounwind {
 ; RV32-LABEL: bzero_4:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    sb zero, 3(a0)
-; RV32-NEXT:    sb zero, 2(a0)
-; RV32-NEXT:    sb zero, 1(a0)
 ; RV32-NEXT:    sb zero, 0(a0)
+; RV32-NEXT:    sb zero, 1(a0)
+; RV32-NEXT:    sb zero, 2(a0)
+; RV32-NEXT:    sb zero, 3(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: bzero_4:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sb zero, 3(a0)
-; RV64-NEXT:    sb zero, 2(a0)
-; RV64-NEXT:    sb zero, 1(a0)
 ; RV64-NEXT:    sb zero, 0(a0)
+; RV64-NEXT:    sb zero, 1(a0)
+; RV64-NEXT:    sb zero, 2(a0)
+; RV64-NEXT:    sb zero, 3(a0)
 ; RV64-NEXT:    ret
 ;
 ; RV32-FAST-LABEL: bzero_4:
@@ -433,32 +433,32 @@ define void @bzero_4(ptr %a) nounwind {
 define void @bzero_8(ptr %a) nounwind {
 ; RV32-LABEL: bzero_8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    sb zero, 7(a0)
-; RV32-NEXT:    sb zero, 6(a0)
-; RV32-NEXT:    sb zero, 5(a0)
 ; RV32-NEXT:    sb zero, 4(a0)
-; RV32-NEXT:    sb zero, 3(a0)
-; RV32-NEXT:    sb zero, 2(a0)
-; RV32-NEXT:    sb zero, 1(a0)
+; RV32-NEXT:    sb zero, 5(a0)
+; RV32-NEXT:    sb zero, 6(a0)
+; RV32-NEXT:    sb zero, 7(a0)
 ; RV32-NEXT:    sb zero, 0(a0)
+; RV32-NEXT:    sb zero, 1(a0)
+; RV32-NEXT:    sb zero, 2(a0)
+; RV32-NEXT:    sb zero, 3(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: bzero_8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sb zero, 7(a0)
-; RV64-NEXT:    sb zero, 6(a0)
-; RV64-NEXT:    sb zero, 5(a0)
 ; RV64-NEXT:    sb zero, 4(a0)
-; RV64-NEXT:    sb zero, 3(a0)
-; RV64-NEXT:    sb zero, 2(a0)
-; RV64-NEXT:    sb zero, 1(a0)
+; RV64-NEXT:    sb zero, 5(a0)
+; RV64-NEXT:    sb zero, 6(a0)
+; RV64-NEXT:    sb zero, 7(a0)
 ; RV64-NEXT:    sb zero, 0(a0)
+; RV64-NEXT:    sb zero, 1(a0)
+; RV64-NEXT:    sb zero, 2(a0)
+; RV64-NEXT:    sb zero, 3(a0)
 ; RV64-NEXT:    ret
 ;
 ; RV32-FAST-LABEL: bzero_8:
 ; RV32-FAST:       # %bb.0:
-; RV32-FAST-NEXT:    sw zero, 4(a0)
 ; RV32-FAST-NEXT:    sw zero, 0(a0)
+; RV32-FAST-NEXT:    sw zero, 4(a0)
 ; RV32-FAST-NEXT:    ret
 ;
 ; RV64-FAST-LABEL: bzero_8:
@@ -608,8 +608,8 @@ define void @aligned_bzero_4(ptr %a) nounwind {
 define void @aligned_bzero_8(ptr %a) nounwind {
 ; RV32-BOTH-LABEL: aligned_bzero_8:
 ; RV32-BOTH:       # %bb.0:
-; RV32-BOTH-NEXT:    sw zero, 4(a0)
 ; RV32-BOTH-NEXT:    sw zero, 0(a0)
+; RV32-BOTH-NEXT:    sw zero, 4(a0)
 ; RV32-BOTH-NEXT:    ret
 ;
 ; RV64-BOTH-LABEL: aligned_bzero_8:
