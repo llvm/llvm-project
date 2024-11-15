@@ -209,8 +209,8 @@ public:
 } // end namespace clang
 
 void clang::injectSemaProxyIntoASTContext(ASTContext &Context,
-                                           SemaProxy *ASTMutator) {
-  Context.ASTMutator = ASTMutator;
+                                          std::unique_ptr<SemaProxy> ProxyPtr) {
+  Context.SemaProxyPtr = std::move(ProxyPtr);
 }
 
 SemaProxyImpl::SemaProxyImpl(Sema &SemaRef) : SemaRef(SemaRef) {}
@@ -228,7 +228,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       LateTemplateParser(nullptr), LateTemplateParserCleanup(nullptr),
       OpaqueParser(nullptr), CurContext(nullptr), ExternalSource(nullptr),
       StackHandler(Diags), CurScope(nullptr), Ident_super(nullptr),
-      SemaProxy(*this), AMDGPUPtr(std::make_unique<SemaAMDGPU>(*this)),
+      AMDGPUPtr(std::make_unique<SemaAMDGPU>(*this)),
       ARMPtr(std::make_unique<SemaARM>(*this)),
       AVRPtr(std::make_unique<SemaAVR>(*this)),
       BPFPtr(std::make_unique<SemaBPF>(*this)),
@@ -306,10 +306,11 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
 
   CurFPFeatures.setFPEvalMethod(PP.getCurrentFPEvalMethod());
 
-  /// Initialize ASTMutator within ASTContext.
+  /// Initialize SemaProxyPtr within ASTContext.
   /// This is very intentionally not a part of public interface
   /// of ASTContext.
-  injectSemaProxyIntoASTContext(Context, getSemaProxy());
+  injectSemaProxyIntoASTContext(Context,
+                                std::make_unique<SemaProxyImpl>(*this));
 }
 
 // Anchor Sema's type info to this TU.
@@ -2812,8 +2813,8 @@ Attr *Sema::CreateAnnotationAttr(const ParsedAttr &AL) {
 }
 
 void SemaProxyImpl::InstantiateFunctionDefinition(
-    SourceLocation PointOfInstantiation, FunctionDecl *Function, bool Recursive,
-    bool DefinitionRequired, bool AtEndOfTU) {
+    SourceLocation PointOfInstantiation, FunctionDecl *Function) {
   SemaRef.InstantiateFunctionDefinition(
-      PointOfInstantiation, Function, Recursive, DefinitionRequired, AtEndOfTU);
+      PointOfInstantiation, Function, /*Recursive=*/true,
+      /*DefinitionRequired=*/true, /*AtEndOfTU=*/false);
 }

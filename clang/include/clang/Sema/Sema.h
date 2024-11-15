@@ -357,10 +357,9 @@ struct SkipBodyInfo {
 /// to call Sema and modify AST, e.g. to instantiate templates.
 struct SemaProxyImpl : SemaProxy {
   Sema &SemaRef;
-  SemaProxyImpl(Sema &SemaRef);
-  void InstantiateFunctionDefinition(
-      SourceLocation PointOfInstantiation, FunctionDecl *Function,
-      bool Recursive, bool DefinitionRequired, bool AtEndOfTU) override;
+  explicit SemaProxyImpl(Sema &SemaRef);
+  void InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
+                                     FunctionDecl *Function) override;
 };
 
 /// Describes the result of template argument deduction.
@@ -1053,9 +1052,6 @@ public:
   /// CurContext - This is the current declaration context of parsing.
   DeclContext *CurContext;
 
-  /// Get a Sema implementation of SemaProxy interface.
-  SemaProxyImpl *getSemaProxy() { return &SemaProxy; }
-
   SemaAMDGPU &AMDGPU() {
     assert(AMDGPUPtr);
     return *AMDGPUPtr;
@@ -1212,10 +1208,6 @@ private:
   Scope *CurScope;
 
   mutable IdentifierInfo *Ident_super;
-
-  /// SemaProxy implementation that can be passed to constant evaluator
-  /// to enable it to do AST mutations, e.g. template instantiation.
-  SemaProxyImpl SemaProxy;
 
   std::unique_ptr<SemaAMDGPU> AMDGPUPtr;
   std::unique_ptr<SemaARM> ARMPtr;

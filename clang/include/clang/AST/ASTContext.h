@@ -182,15 +182,14 @@ struct TypeInfoChars {
   }
 };
 
-// Interface that allows constant evaluator to call Sema
-// and mutate the AST.
+/// Interface that allows constant evaluator to call Sema
+/// and mutate the AST.
 struct SemaProxy {
   virtual ~SemaProxy() = default;
 
   virtual void
   InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
-                                FunctionDecl *Function, bool Recursive,
-                                bool DefinitionRequired, bool AtEndOfTU) = 0;
+                                FunctionDecl *Function) = 0;
 };
 
 /// Holds long-lived AST nodes (such as types and decls) that can be
@@ -684,13 +683,16 @@ private:
 
   /// Implementation of the interface that Sema provides during its
   /// construction.
-  SemaProxy *ASTMutator = nullptr;
+  std::unique_ptr<SemaProxy> SemaProxyPtr;
 
 public:
   /// Returns an object that is capable of modifying AST,
   /// or nullptr if it's not available. The latter happens when
   /// Sema is not available.
-  SemaProxy *getSemaProxy() const { return ASTMutator; }
+  SemaProxy &getSemaProxy() const {
+    assert(SemaProxyPtr);
+    return *SemaProxyPtr;
+  }
 
   IdentifierTable &Idents;
   SelectorTable &Selectors;
@@ -3532,7 +3534,8 @@ private:
   /// This is a function that is implemented in the Sema layer,
   /// that needs friendship to initialize SemaProxy without this capability
   /// being exposed in the public interface of ASTContext.
-  friend void injectSemaProxyIntoASTContext(ASTContext &, SemaProxy *);
+  friend void injectSemaProxyIntoASTContext(ASTContext &,
+                                            std::unique_ptr<SemaProxy>);
 
 public:
   enum PragmaSectionFlag : unsigned {
@@ -3600,6 +3603,16 @@ inline Selector GetUnarySelector(StringRef name, ASTContext &Ctx) {
   const IdentifierInfo *II = &Ctx.Idents.get(name);
   return Ctx.Selectors.getSelector(1, &II);
 }
+
+/// Placeholder implementation that issues a diagnostic on any usage.
+struct UnimplementedSemaProxy : SemaProxy {
+  ASTContext &Ctx;
+  explicit UnimplementedSemaProxy(ASTContext &);
+  virtual ~UnimplementedSemaProxy() = default;
+
+  void InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
+                                     FunctionDecl *Function) override;
+};
 
 } // namespace clang
 

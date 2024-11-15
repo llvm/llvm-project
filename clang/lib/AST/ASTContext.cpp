@@ -51,6 +51,7 @@
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CommentOptions.h"
+#include "clang/Basic/DiagnosticAST.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
@@ -902,9 +903,11 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
                                         LangOpts.XRayNeverInstrumentFiles,
                                         LangOpts.XRayAttrListFiles, SM)),
       ProfList(new ProfileList(LangOpts.ProfileListFiles, SM)),
-      PrintingPolicy(LOpts), Idents(idents), Selectors(sels),
-      BuiltinInfo(builtins), TUKind(TUKind), DeclarationNames(*this),
-      Comments(SM), CommentCommandTraits(BumpAlloc, LOpts.CommentOpts),
+      PrintingPolicy(LOpts),
+      SemaProxyPtr(std::make_unique<UnimplementedSemaProxy>(*this)),
+      Idents(idents), Selectors(sels), BuiltinInfo(builtins), TUKind(TUKind),
+      DeclarationNames(*this), Comments(SM),
+      CommentCommandTraits(BumpAlloc, LOpts.CommentOpts),
       CompCategories(this_()), LastSDM(nullptr, 0) {
   addTranslationUnitDecl();
 }
@@ -14491,4 +14494,13 @@ bool ASTContext::useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
   bool Result = SimplifiedThunkNames.contains(MangledName);
   ThunksToBeAbbreviated[VirtualMethodDecl] = std::move(SimplifiedThunkNames);
   return Result;
+}
+
+UnimplementedSemaProxy::UnimplementedSemaProxy(ASTContext &Ctx) : Ctx(Ctx) {}
+
+void UnimplementedSemaProxy::InstantiateFunctionDefinition(
+    SourceLocation PointOfInstantiation, FunctionDecl *Function) {
+  Ctx.getDiagnostics().Report(PointOfInstantiation,
+                              diag::warn_side_effects_on_ast_unavailable)
+      << 0;
 }
