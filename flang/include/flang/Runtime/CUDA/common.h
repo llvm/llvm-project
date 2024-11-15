@@ -12,6 +12,13 @@
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/entry-names.h"
 
+/// Type of memory for allocation/deallocation
+static constexpr unsigned kMemTypeDevice = 0;
+static constexpr unsigned kMemTypeManaged = 1;
+static constexpr unsigned kMemTypeUnified = 2;
+static constexpr unsigned kMemTypePinned = 3;
+
+/// Data transfer kinds.
 static constexpr unsigned kHostToDevice = 0;
 static constexpr unsigned kDeviceToHost = 1;
 static constexpr unsigned kDeviceToDevice = 2;
