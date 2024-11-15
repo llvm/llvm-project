@@ -378,9 +378,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __invariants() const;
 
 private:
-  [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI void __throw_length_error() const { std::__throw_length_error("vector"); }
+  [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI static void __throw_length_error() { std::__throw_length_error("vector"); }
 
-  [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI void __throw_out_of_range() const { std::__throw_out_of_range("vector"); }
+  [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI static void __throw_out_of_range() { std::__throw_out_of_range("vector"); }
 
   template <class _InputIterator, class _Sentinel>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
@@ -574,7 +574,7 @@ vector<bool, _Allocator>::__construct_at_end(_InputIterator __first, _Sentinel _
     else
       this->__begin_[(this->__size_ - 1) / __bits_per_word] = __storage_type(0);
   }
-  std::__copy<_ClassicAlgPolicy>(__first, __last, __make_iter(__old_size));
+  std::__copy(__first, __last, __make_iter(__old_size));
 }
 
 template <class _Allocator>
@@ -1002,7 +1002,7 @@ vector<bool, _Allocator>::__insert_with_size(
     std::copy_backward(__position, cend(), __v.end());
     swap(__v);
   }
-  std::__copy<_ClassicAlgPolicy>(__first, __last, __r);
+  std::__copy(__first, __last, __r);
   return __r;
 }
 
