@@ -1871,12 +1871,17 @@
 // RUN:     --target=i386 \
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_GNR_M32,CHECK_GNRD_M32,CHECK_DMR_M32
 // CHECK_GNR_M32: #define __AES__ 1
+// CHECK_DMR_M32: #define __AMX_AVX512__ 1
 // CHECK_GNR_M32: #define __AMX_BF16__ 1
 // CHECK_GNR_M32-NOT: #define __AMX_COMPLEX__ 1
 // CHECK_GNRD_M32: #define __AMX_COMPLEX__ 1
 // CHECK_GNR_M32: #define __AMX_FP16__ 1
+// CHECK_DMR_M32: #define __AMX_FP8__ 1
 // CHECK_GNR_M32: #define __AMX_INT8__ 1
+// CHECK_DMR_M32: #define __AMX_MOVRS__ 1
+// CHECK_DMR_M32: #define __AMX_TF32__ 1
 // CHECK_GNR_M32: #define __AMX_TILE__ 1
+// CHECK_DMR_M32: #define __AMX_TRANSPOSE__ 1
 // CHECK_DMR_M32: #define __AVX10_2_512__ 1
 // CHECK_DMR_M32: #define __AVX10_2__ 1
 // CHECK_GNR_M32: #define __AVX2__ 1
@@ -1918,6 +1923,7 @@
 // CHECK_GNR_M32: #define __LZCNT__ 1
 // CHECK_GNR_M32: #define __MMX__ 1
 // CHECK_GNR_M32: #define __MOVBE__ 1
+// CHECK_DMR_M32: #define __MOVRS__ 1
 // CHECK_DMR_M32: #define __NDD__ 1
 // CHECK_DMR_M32: #define __NF__ 1
 // CHECK_GNR_M32: #define __PCLMUL__ 1
@@ -1973,12 +1979,17 @@
 // RUN:     --target=x86_64 \
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_GNR_M64,CHECK_GNRD_M64,CHECK_DMR_M64
 // CHECK_GNR_M64: #define __AES__ 1
+// CHECK_DMR_M64: #define __AMX_AVX512__ 1
 // CHECK_GNR_M64: #define __AMX_BF16__ 1
 // CHECK_GNR_M64-NOT: #define __AMX_COMPLEX__ 1
 // CHECK_GNRD_M64: #define __AMX_COMPLEX__ 1
 // CHECK_GNR_M64: #define __AMX_FP16__ 1
+// CHECK_DMR_M64: #define __AMX_FP8__ 1
 // CHECK_GNR_M64: #define __AMX_INT8__ 1
+// CHECK_DMR_M64: #define __AMX_MOVRS__ 1
+// CHECK_DMR_M64: #define __AMX_TF32__ 1
 // CHECK_GNR_M64: #define __AMX_TILE__ 1
+// CHECK_DMR_M64: #define __AMX_TRANSPOSE__ 1
 // CHECK_DMR_M64: #define __AVX10_2_512__ 1
 // CHECK_DMR_M64: #define __AVX10_2__ 1
 // CHECK_GNR_M64: #define __AVX2__ 1
@@ -2020,6 +2031,7 @@
 // CHECK_GNR_M64: #define __LZCNT__ 1
 // CHECK_GNR_M64: #define __MMX__ 1
 // CHECK_GNR_M64: #define __MOVBE__ 1
+// CHECK_DMR_M64: #define __MOVRS__ 1
 // CHECK_DMR_M64: #define __NDD__ 1
 // CHECK_DMR_M64: #define __NF__ 1
 // CHECK_GNR_M64: #define __PCLMUL__ 1

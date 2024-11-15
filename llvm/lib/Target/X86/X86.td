@@ -1173,7 +1173,13 @@ def ProcessorFeatures {
                                                   FeaturePPX,
                                                   FeatureNDD,
                                                   FeatureNF,
-                                                  FeatureCF];
+                                                  FeatureCF,
+                                                  FeatureMOVRS,
+                                                  FeatureAMXMOVRS,
+                                                  FeatureAMXAVX512,
+                                                  FeatureAMXFP8,
+                                                  FeatureAMXTF32,
+                                                  FeatureAMXTRANSPOSE];
   list<SubtargetFeature> DMRFeatures =
     !listconcat(GNRDFeatures, DMRAdditionalFeatures);
 
