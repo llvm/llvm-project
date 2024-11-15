@@ -3925,13 +3925,20 @@ def LifetimeCaptureByDocs : Documentation {
 parameter or implicit object parameter indicates that that objects that are referred to
 by that parameter may also be referred to by the capturing entity ``X``.
 
-By default, a reference is considered to refer to its referenced object, a
-pointer is considered to refer to its pointee, a ``std::initializer_list<T>``
-is considered to refer to its underlying array, and aggregates (arrays and
-simple ``struct``\s) are considered to refer to all objects that their
-transitive subobjects refer to.
+By default:
+
+- A reference is considered to refer to its referenced object.
+- A pointer is considered to refer to its pointee.
+- A ``std::initializer_list<T>`` is considered to refer to its underlying array.
+- Aggregates (arrays and simple ``struct``\s) are considered to refer to all
+  objects that their transitive subobjects refer to.
+- View types (types annotated with [[``gsl::Pointer()``]]) are considered to refer
+  to its pointee. This holds true even if the view type appears as a reference.
+  For example, both ``std::string_view`` and ``const std::string_view &`` are
+  considered to refer to a ``std::string``.
 
 The capturing entity ``X`` can be one of the following:
+
 - Another (named) function parameter. 
   
   .. code-block:: c++
@@ -3951,7 +3958,7 @@ The capturing entity ``X`` can be one of the following:
       std::set<std::string_view> s;
     };
 
-- 'global', 'unknown' (without quotes).
+- `global`, `unknown`.
   
   .. code-block:: c++
 
@@ -3981,6 +3988,21 @@ The attribute supports specifying more than one capturing entities:
                  std::set<std::string_view>& s2) {
     s1.insert(a);
     s2.insert(a);
+  }
+
+Currently clang would diagnose when a temporary is used as an argument to a
+parameter whose reference is captured.
+
+.. code-block:: c++
+  
+  void addToSet(std::string_view a [[clang::lifetime_capture_by(s)]], std::set<std::string_view>& s) {
+    s.insert(a);
+  }
+  void use() {
+    std::set<std::string_view> s;
+    addToSet(std::string(), s); // Warning: object whose reference is captured by 's' will be destroyed at the end of the full-expression.
+    std::string local;
+    addToSet(local, s); // Ok.
   }
 
 .. _`lifetimebound`: https://clang.llvm.org/docs/AttributeReference.html#lifetimebound
