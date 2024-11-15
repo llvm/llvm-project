@@ -419,7 +419,6 @@ func.func @_QPdevmul(%arg0: !fir.ref<!fir.array<1x?xf32>> {fir.bindc_name = "b"}
   %9 = fir.convert %8 : (i32) -> index
   %12 = fir.shape %c1, %9 : (index, index) -> !fir.shape<2>
   %13 = fir.declare %arg0(%12) dummy_scope %0 {uniq_name = "_QFdevmulEb"} : (!fir.ref<!fir.array<1x?xf32>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<1x?xf32>>
-
   %24 = fir.load %7 : !fir.ref<i32>
   %25 = fir.convert %24 : (i32) -> index
   %26 = arith.cmpi sgt, %25, %c0 : index
@@ -433,15 +432,20 @@ func.func @_QPdevmul(%arg0: !fir.ref<!fir.array<1x?xf32>> {fir.bindc_name = "b"}
   %34 = fir.slice %c1, %25, %c1, %c1, %29, %c1 : (index, index, index, index, index, index) -> !fir.slice<2>
   %35 = fir.embox %13(%12) [%34] : (!fir.ref<!fir.array<1x?xf32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<?x?xf32>>
   cuf.data_transfer %35 to %6 {transfer_kind = #cuf.cuda_transfer<host_device>} : !fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+  cuf.data_transfer %6 to %35 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>, !fir.box<!fir.array<?x?xf32>>
   return
 }
 
 // CHECK-LABEL: func.func @_QPdevmul(%arg0: !fir.ref<!fir.array<1x?xf32>> {fir.bindc_name = "b"}, %arg1: !fir.ref<i32> {fir.bindc_name = "wa"}, %arg2: !fir.ref<i32> {fir.bindc_name = "wb"}) {
-// CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.array<?x?xf32>>
+// CHECK: %[[ALLOCA0:.*]] = fir.alloca !fir.box<!fir.array<?x?xf32>>
+// CHECK: %[[ALLOCA1:.*]] = fir.alloca !fir.box<!fir.array<?x?xf32>>
 // CHECK: %[[EMBOX:.*]] = fir.embox %{{.*}}(%{{.*}}) [%{{.*}}] : (!fir.ref<!fir.array<1x?xf32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<?x?xf32>>
-// CHECK: fir.store %[[EMBOX]] to %[[ALLOCA]] : !fir.ref<!fir.box<!fir.array<?x?xf32>>>
-// CHECK: %[[SRC:.*]] = fir.convert %[[ALLOCA]] : (!fir.ref<!fir.box<!fir.array<?x?xf32>>>) -> !fir.ref<!fir.box<none>>
+// CHECK: fir.store %[[EMBOX]] to %[[ALLOCA1]] : !fir.ref<!fir.box<!fir.array<?x?xf32>>>
+// CHECK: %[[SRC:.*]] = fir.convert %[[ALLOCA1]] : (!fir.ref<!fir.box<!fir.array<?x?xf32>>>) -> !fir.ref<!fir.box<none>>
 // CHECK: fir.call @_FortranACUFDataTransferDescDesc(%{{.*}}, %[[SRC]], %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.store %[[EMBOX]] to %[[ALLOCA0]] : !fir.ref<!fir.box<!fir.array<?x?xf32>>>
+// CHECK: %[[DST:.*]] = fir.convert %[[ALLOCA0]] : (!fir.ref<!fir.box<!fir.array<?x?xf32>>>) -> !fir.ref<!fir.box<none>>
+// CHECK: fir.call @_FortranACUFDataTransferDescDesc(%[[DST]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> none
 
 
 } // end of module
