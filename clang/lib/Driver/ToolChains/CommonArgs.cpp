@@ -1250,7 +1250,15 @@ void tools::addOpenMPRuntimeSpecificRPath(const ToolChain &TC,
         CmdArgs.push_back(Args.MakeArgString(rocmPath_lib.c_str()));
       }
     }
-    if (llvm::find_if(CmdArgs, [](StringRef str) {
+
+    // Add Default lib path to ensure llvm dynamic library is picked up for
+    // lib-debug/lib-perf
+    if (LibSuffix != "lib" && llvm::sys::fs::exists(DefaultLibPath)){
+      CmdArgs.push_back("-rpath");
+      CmdArgs.push_back(Args.MakeArgString(DefaultLibPath.c_str()));
+    }
+
+     if (llvm::find_if(CmdArgs, [](StringRef str) {
           return !str.compare("--enable-new-dtags");
         }) == CmdArgs.end())
       CmdArgs.push_back("--disable-new-dtags");
