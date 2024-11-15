@@ -46,18 +46,16 @@ def vfp_f16imm : Operand<f16>,
                  PatLeaf<(f16 fpimm), [{
       return ARM_AM::getFP16Imm(N->getValueAPF()) != -1;
     }], SDNodeXForm<fpimm, [{
-      APFloat InVal = N->getValueAPF();
-      uint32_t enc = ARM_AM::getFP16Imm(InVal);
-      return CurDAG->getTargetConstant(enc, SDLoc(N), MVT::i32);
+      uint32_t Enc = ARM_AM::getFP16Imm(N->getValueAPF());
+      return CurDAG->getTargetConstant(Enc, SDLoc(N), MVT::i32);
     }]>> {
   let PrintMethod = "printFPImmOperand";
   let ParserMatchClass = FPImmOperand;
 }
 
 def vfp_f32f16imm_xform : SDNodeXForm<fpimm, [{
-      APFloat InVal = N->getValueAPF();
-      uint32_t enc = ARM_AM::getFP32FP16Imm(InVal);
-      return CurDAG->getTargetConstant(enc, SDLoc(N), MVT::i32);
+      uint32_t Enc = ARM_AM::getFP32FP16Imm(N->getValueAPF());
+      return CurDAG->getTargetConstant(Enc, SDLoc(N), MVT::i32);
     }]>;
 
 def vfp_f32f16imm : PatLeaf<(f32 fpimm), [{
@@ -65,9 +63,8 @@ def vfp_f32f16imm : PatLeaf<(f32 fpimm), [{
     }], vfp_f32f16imm_xform>;
 
 def vfp_f32imm_xform : SDNodeXForm<fpimm, [{
-      APFloat InVal = N->getValueAPF();
-      uint32_t enc = ARM_AM::getFP32Imm(InVal);
-      return CurDAG->getTargetConstant(enc, SDLoc(N), MVT::i32);
+      uint32_t Enc = ARM_AM::getFP32Imm(N->getValueAPF());
+      return CurDAG->getTargetConstant(Enc, SDLoc(N), MVT::i32);
     }]>;
 
 def gi_vfp_f32imm : GICustomOperandRenderer<"renderVFPF32Imm">,
@@ -88,9 +85,8 @@ def vfp_f32imm : Operand<f32>,
 }
 
 def vfp_f64imm_xform : SDNodeXForm<fpimm, [{
-      APFloat InVal = N->getValueAPF();
-      uint32_t enc = ARM_AM::getFP64Imm(InVal);
-      return CurDAG->getTargetConstant(enc, SDLoc(N), MVT::i32);
+      uint32_t Enc = ARM_AM::getFP64Imm(N->getValueAPF());
+      return CurDAG->getTargetConstant(Enc, SDLoc(N), MVT::i32);
     }]>;
 
 def gi_vfp_f64imm : GICustomOperandRenderer<"renderVFPF64Imm">,
@@ -2898,9 +2894,8 @@ multiclass vfp_vstrldr_sysreg<bit opc, bits<4> SysReg, string sysreg,
  }
 }
 
-let Defs = [FPSCR] in {
+let Uses = [FPSCR] in {
   defm VSTR_FPSCR          : vfp_vstrldr_sysreg<0b0,0b0001, "fpscr">;
-  defm VSTR_FPSCR_NZCVQC   : vfp_vstrldr_sysreg<0b0,0b0010, "fpscr_nzcvqc">;
 
   let Predicates = [HasV8_1MMainline, Has8MSecExt] in {
     defm VSTR_FPCXTNS      : vfp_vstrldr_sysreg<0b0,0b1110, "fpcxtns">;
@@ -2922,12 +2917,18 @@ let Predicates = [HasV8_1MMainline, HasMVEInt] in {
                                                 (outs VCCR:$P0), (ins)>;
 }
 
-let Uses = [FPSCR] in {
+let Defs = [FPSCR] in {
   defm VLDR_FPSCR          : vfp_vstrldr_sysreg<0b1,0b0001, "fpscr">;
-  defm VLDR_FPSCR_NZCVQC   : vfp_vstrldr_sysreg<0b1,0b0010, "fpscr_nzcvqc">;
 
   let Predicates = [HasV8_1MMainline, Has8MSecExt] in {
     defm VLDR_FPCXTNS      : vfp_vstrldr_sysreg<0b1,0b1110, "fpcxtns">;
     defm VLDR_FPCXTS       : vfp_vstrldr_sysreg<0b1,0b1111, "fpcxts">;
   }
+}
+
+defm VSTR_FPSCR_NZCVQC   : vfp_vstrldr_sysreg<0b0,0b0010, "fpscr_nzcvqc",
+                                              (outs), (ins cl_FPSCR_NZCV:$fpscr)>;
+let canFoldAsLoad = 1, isReMaterializable = 1 in {
+defm VLDR_FPSCR_NZCVQC   : vfp_vstrldr_sysreg<0b1,0b0010, "fpscr_nzcvqc",
+                                              (outs cl_FPSCR_NZCV:$fpscr), (ins)>;
 }

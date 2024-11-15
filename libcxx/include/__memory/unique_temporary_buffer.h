@@ -13,10 +13,10 @@
 #include <__assert>
 #include <__config>
 
+#include <__cstddef/ptrdiff_t.h>
 #include <__memory/allocator.h>
 #include <__memory/unique_ptr.h>
 #include <__type_traits/is_constant_evaluated.h>
-#include <cstddef>
 #include <new>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -62,7 +62,7 @@ __allocate_unique_temporary_buffer(ptrdiff_t __count) {
   if (__count > __max_count)
     __count = __max_count;
   while (__count > 0) {
-#if !defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION)
+#if _LIBCPP_HAS_ALIGNED_ALLOCATION
     if (__is_overaligned_for_new(_LIBCPP_ALIGNOF(_Tp))) {
       align_val_t __al = align_val_t(_LIBCPP_ALIGNOF(_Tp));
       __ptr            = static_cast<_Tp*>(::operator new(__count * sizeof(_Tp), __al, nothrow));

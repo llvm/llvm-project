@@ -272,7 +272,6 @@ subroutine simple_loop_1
     print*, i
   end do
   ! FIRDialect:      omp.yield
-  ! FIRDialect:      omp.terminator
   !$OMP END DO
   ! FIRDialect:  omp.terminator
   !$OMP END PARALLEL
@@ -306,7 +305,6 @@ subroutine simple_loop_2
     print*, i
   end do
   ! FIRDialect:     omp.yield
-  ! FIRDialect:     omp.terminator
   ! FIRDialect:     {{%.*}} = fir.load %[[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
   ! FIRDialect:     fir.if {{%.*}} {
   ! FIRDialect:     [[LD:%.*]] = fir.load %[[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
@@ -346,7 +344,6 @@ subroutine simple_loop_3
     print*, i
   end do
   ! FIRDialect:      omp.yield
-  ! FIRDialect:      omp.terminator
   ! FIRDialect:      {{%.*}} = fir.load [[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
   ! FIRDialect:      fir.if {{%.*}} {
   ! FIRDialect:      [[LD:%.*]] = fir.load [[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>

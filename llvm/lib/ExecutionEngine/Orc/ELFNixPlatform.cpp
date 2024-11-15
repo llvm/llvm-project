@@ -14,6 +14,7 @@
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/ppc64.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
@@ -233,10 +234,13 @@ private:
 namespace llvm {
 namespace orc {
 
-Expected<std::unique_ptr<ELFNixPlatform>> ELFNixPlatform::Create(
-    ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-    JITDylib &PlatformJD, std::unique_ptr<DefinitionGenerator> OrcRuntime,
-    std::optional<SymbolAliasMap> RuntimeAliases) {
+Expected<std::unique_ptr<ELFNixPlatform>>
+ELFNixPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer,
+                       JITDylib &PlatformJD,
+                       std::unique_ptr<DefinitionGenerator> OrcRuntime,
+                       std::optional<SymbolAliasMap> RuntimeAliases) {
+
+  auto &ES = ObjLinkingLayer.getExecutionSession();
 
   // If the target is not supported then bail out immediately.
   if (!supportedTarget(ES.getTargetTriple()))
@@ -271,15 +275,14 @@ Expected<std::unique_ptr<ELFNixPlatform>> ELFNixPlatform::Create(
   // Create the instance.
   Error Err = Error::success();
   auto P = std::unique_ptr<ELFNixPlatform>(new ELFNixPlatform(
-      ES, ObjLinkingLayer, PlatformJD, std::move(OrcRuntime), Err));
+      ObjLinkingLayer, PlatformJD, std::move(OrcRuntime), Err));
   if (Err)
     return std::move(Err);
   return std::move(P);
 }
 
 Expected<std::unique_ptr<ELFNixPlatform>>
-ELFNixPlatform::Create(ExecutionSession &ES,
-                       ObjectLinkingLayer &ObjLinkingLayer,
+ELFNixPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer,
                        JITDylib &PlatformJD, const char *OrcRuntimePath,
                        std::optional<SymbolAliasMap> RuntimeAliases) {
 
@@ -289,7 +292,7 @@ ELFNixPlatform::Create(ExecutionSession &ES,
   if (!OrcRuntimeArchiveGenerator)
     return OrcRuntimeArchiveGenerator.takeError();
 
-  return Create(ES, ObjLinkingLayer, PlatformJD,
+  return Create(ObjLinkingLayer, PlatformJD,
                 std::move(*OrcRuntimeArchiveGenerator),
                 std::move(RuntimeAliases));
 }
@@ -370,6 +373,7 @@ ELFNixPlatform::standardRuntimeUtilityAliases() {
           {"__orc_rt_run_program", "__orc_rt_elfnix_run_program"},
           {"__orc_rt_jit_dlerror", "__orc_rt_elfnix_jit_dlerror"},
           {"__orc_rt_jit_dlopen", "__orc_rt_elfnix_jit_dlopen"},
+          {"__orc_rt_jit_dlupdate", "__orc_rt_elfnix_jit_dlupdate"},
           {"__orc_rt_jit_dlclose", "__orc_rt_elfnix_jit_dlclose"},
           {"__orc_rt_jit_dlsym", "__orc_rt_elfnix_jit_dlsym"},
           {"__orc_rt_log_error", "__orc_rt_log_error_to_stderr"}};
@@ -392,10 +396,10 @@ bool ELFNixPlatform::supportedTarget(const Triple &TT) {
 }
 
 ELFNixPlatform::ELFNixPlatform(
-    ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-    JITDylib &PlatformJD,
+    ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
     std::unique_ptr<DefinitionGenerator> OrcRuntimeGenerator, Error &Err)
-    : ES(ES), PlatformJD(PlatformJD), ObjLinkingLayer(ObjLinkingLayer),
+    : ES(ObjLinkingLayer.getExecutionSession()), PlatformJD(PlatformJD),
+      ObjLinkingLayer(ObjLinkingLayer),
       DSOHandleSymbol(ES.intern("__dso_handle")) {
   ErrorAsOutParameter _(&Err);
   ObjLinkingLayer.addPlugin(std::make_unique<ELFNixPlatformPlugin>(*this));
@@ -919,12 +923,42 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::registerInitSections(
   SmallVector<ExecutorAddrRange> ELFNixPlatformSecs;
   LLVM_DEBUG(dbgs() << "ELFNixPlatform::registerInitSections\n");
 
-  for (auto &Sec : G.sections()) {
-    if (isELFInitializerSection(Sec.getName())) {
-      jitlink::SectionRange R(Sec);
-      ELFNixPlatformSecs.push_back(R.getRange());
+  SmallVector<jitlink::Section *> OrderedInitSections;
+  for (auto &Sec : G.sections())
+    if (isELFInitializerSection(Sec.getName()))
+      OrderedInitSections.push_back(&Sec);
+
+  // FIXME: This handles priority order within the current graph, but we'll need
+  //        to include priority information in the initializer allocation
+  //        actions in order to respect the ordering across multiple graphs.
+  llvm::sort(OrderedInitSections, [](const jitlink::Section *LHS,
+                                     const jitlink::Section *RHS) {
+    if (LHS->getName().starts_with(".init_array")) {
+      if (RHS->getName().starts_with(".init_array")) {
+        StringRef LHSPrioStr(LHS->getName());
+        StringRef RHSPrioStr(RHS->getName());
+        uint64_t LHSPriority;
+        bool LHSHasPriority = LHSPrioStr.consume_front(".init_array.") &&
+                              !LHSPrioStr.getAsInteger(10, LHSPriority);
+        uint64_t RHSPriority;
+        bool RHSHasPriority = RHSPrioStr.consume_front(".init_array.") &&
+                              !RHSPrioStr.getAsInteger(10, RHSPriority);
+        if (LHSHasPriority)
+          return RHSHasPriority ? LHSPriority < RHSPriority : true;
+        else if (RHSHasPriority)
+          return false;
+        // If we get here we'll fall through to the
+        // LHS->getName() < RHS->getName() test below.
+      } else {
+        // .init_array[.N] comes before any non-.init_array[.N] section.
+        return true;
+      }
     }
-  }
+    return LHS->getName() < RHS->getName();
+  });
+
+  for (auto &Sec : OrderedInitSections)
+    ELFNixPlatformSecs.push_back(jitlink::SectionRange(*Sec).getRange());
 
   // Dump the scraped inits.
   LLVM_DEBUG({

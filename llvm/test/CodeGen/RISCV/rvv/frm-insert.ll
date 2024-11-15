@@ -559,7 +559,7 @@ define <vscale x 1 x float> @after_fsrm3(<vscale x 1 x float> %0, <vscale x 1 x 
 ; CHECK-LABEL: after_fsrm3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fsrmi 4
-; CHECK-NEXT:    fsrmi a1, 5
+; CHECK-NEXT:    fsrmi a1, 3
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
 ; CHECK-NEXT:    fsrm a1
@@ -568,7 +568,7 @@ define <vscale x 1 x float> @after_fsrm3(<vscale x 1 x float> %0, <vscale x 1 x 
 ; UNOPT-LABEL: after_fsrm3:
 ; UNOPT:       # %bb.0: # %entry
 ; UNOPT-NEXT:    fsrmi 4
-; UNOPT-NEXT:    fsrmi a1, 5
+; UNOPT-NEXT:    fsrmi a1, 3
 ; UNOPT-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; UNOPT-NEXT:    vfadd.vv v8, v8, v9
 ; UNOPT-NEXT:    fsrm a1
@@ -579,7 +579,7 @@ entry:
     <vscale x 1 x float> undef,
     <vscale x 1 x float> %0,
     <vscale x 1 x float> %1,
-    i64 5, i64 %2)
+    i64 3, i64 %2)
   ret <vscale x 1 x float> %a
 }
 

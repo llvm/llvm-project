@@ -964,6 +964,7 @@ TEST_F(FormatTestVerilog, Instantiation) {
                "        .qbar(out1),\n"
                "        .clear(in1),\n"
                "        .preset(in2));");
+  verifyNoCrash(", ff1();");
   // With breaking between instance ports disabled.
   auto Style = getDefaultStyle();
   Style.VerilogBreakBetweenInstancePorts = false;

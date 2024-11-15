@@ -9,6 +9,8 @@
 #ifndef FORTRAN_SEMANTICS_SEMANTICS_H_
 #define FORTRAN_SEMANTICS_SEMANTICS_H_
 
+#include "module-dependences.h"
+#include "program-tree.h"
 #include "scope.h"
 #include "symbol.h"
 #include "flang/Evaluate/common.h"
@@ -280,6 +282,9 @@ public:
 
   void DumpSymbols(llvm::raw_ostream &);
 
+  // Top-level ProgramTrees are owned by the SemanticsContext for persistence.
+  ProgramTree &SaveProgramTree(ProgramTree &&);
+
 private:
   struct ScopeIndexComparator {
     bool operator()(parser::CharBlock, parser::CharBlock) const;
@@ -331,6 +336,7 @@ private:
   ModuleDependences moduleDependences_;
   std::map<const Symbol *, SourceName> moduleFileOutputRenamings_;
   UnorderedSymbolSet isDefined_;
+  std::list<ProgramTree> programTrees_;
 };
 
 class Semantics {

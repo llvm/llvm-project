@@ -190,8 +190,14 @@ std::string lookupBuiltinNameHelper(StringRef DemangledCall) {
   // Check if the extracted name contains type information between angle
   // brackets. If so, the builtin is an instantiated template - needs to have
   // the information after angle brackets and return type removed.
-  if (BuiltinName.find('<') && BuiltinName.back() == '>') {
-    BuiltinName = BuiltinName.substr(0, BuiltinName.find('<'));
+  std::size_t Pos1 = BuiltinName.rfind('<');
+  if (Pos1 != std::string::npos && BuiltinName.back() == '>') {
+    std::size_t Pos2 = BuiltinName.rfind(' ', Pos1);
+    if (Pos2 == std::string::npos)
+      Pos2 = 0;
+    else
+      ++Pos2;
+    BuiltinName = BuiltinName.substr(Pos2, Pos1 - Pos2);
     BuiltinName = BuiltinName.substr(BuiltinName.find_last_of(' ') + 1);
   }
 
@@ -461,9 +467,11 @@ static Register buildBuiltinVariableLoad(
     SPIRVGlobalRegistry *GR, SPIRV::BuiltIn::BuiltIn BuiltinValue, LLT LLType,
     Register Reg = Register(0), bool isConst = true, bool hasLinkageTy = true) {
   Register NewRegister =
-      MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::iIDRegClass);
-  MIRBuilder.getMRI()->setType(NewRegister,
-                               LLT::pointer(0, GR->getPointerSize()));
+      MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::pIDRegClass);
+  MIRBuilder.getMRI()->setType(
+      NewRegister,
+      LLT::pointer(storageClassToAddressSpace(SPIRV::StorageClass::Function),
+                   GR->getPointerSize()));
   SPIRVType *PtrType = GR->getOrCreateSPIRVPointerType(
       VariableType, MIRBuilder, SPIRV::StorageClass::Input);
   GR->assignSPIRVTypeToVReg(PtrType, NewRegister, MIRBuilder.getMF());
@@ -880,6 +888,18 @@ static bool buildAtomicFlagInst(const SPIRV::IncomingCall *Call,
 static bool buildBarrierInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
                              MachineIRBuilder &MIRBuilder,
                              SPIRVGlobalRegistry *GR) {
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  const auto *ST =
+      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
+  if ((Opcode == SPIRV::OpControlBarrierArriveINTEL ||
+       Opcode == SPIRV::OpControlBarrierWaitINTEL) &&
+      !ST->canUseExtension(SPIRV::Extension::SPV_INTEL_split_barrier)) {
+    std::string DiagMsg = std::string(Builtin->Name) +
+                          ": the builtin requires the following SPIR-V "
+                          "extension: SPV_INTEL_split_barrier";
+    report_fatal_error(DiagMsg.c_str(), false);
+  }
+
   if (Call->isSpirvOp())
     return buildOpFromWrapper(MIRBuilder, Opcode, Call, Register(0));
 
@@ -896,13 +916,16 @@ static bool buildBarrierInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
   if (MemFlags & SPIRV::CLK_IMAGE_MEM_FENCE)
     MemSemantics |= SPIRV::MemorySemantics::ImageMemory;
 
-  if (Opcode == SPIRV::OpMemoryBarrier) {
-    std::memory_order MemOrder =
-        static_cast<std::memory_order>(getIConstVal(Call->Arguments[1], MRI));
-    MemSemantics = getSPIRVMemSemantics(MemOrder) | MemSemantics;
-  } else {
+  if (Opcode == SPIRV::OpMemoryBarrier)
+    MemSemantics = getSPIRVMemSemantics(static_cast<std::memory_order>(
+                       getIConstVal(Call->Arguments[1], MRI))) |
+                   MemSemantics;
+  else if (Opcode == SPIRV::OpControlBarrierArriveINTEL)
+    MemSemantics |= SPIRV::MemorySemantics::Release;
+  else if (Opcode == SPIRV::OpControlBarrierWaitINTEL)
+    MemSemantics |= SPIRV::MemorySemantics::Acquire;
+  else
     MemSemantics |= SPIRV::MemorySemantics::SequentiallyConsistent;
-  }
 
   Register MemSemanticsReg =
       MemFlags == MemSemantics
@@ -1539,6 +1562,55 @@ static bool generateWaveInst(const SPIRV::IncomingCall *Call,
   return buildBuiltinVariableLoad(
       MIRBuilder, Call->ReturnType, GR, Value, LLType, Call->ReturnRegister,
       /* isConst= */ false, /* hasLinkageTy= */ false);
+}
+
+// We expect a builtin
+//     Name(ptr sret([RetType]) %result, Type %operand1, Type %operand1)
+// where %result is a pointer to where the result of the builtin execution
+// is to be stored, and generate the following instructions:
+//     Res = Opcode RetType Operand1 Operand1
+//     OpStore RetVariable Res
+static bool generateICarryBorrowInst(const SPIRV::IncomingCall *Call,
+                                     MachineIRBuilder &MIRBuilder,
+                                     SPIRVGlobalRegistry *GR) {
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+
+  Register SRetReg = Call->Arguments[0];
+  SPIRVType *PtrRetType = GR->getSPIRVTypeForVReg(SRetReg);
+  SPIRVType *RetType = GR->getPointeeType(PtrRetType);
+  if (!RetType)
+    report_fatal_error("The first parameter must be a pointer");
+  if (RetType->getOpcode() != SPIRV::OpTypeStruct)
+    report_fatal_error("Expected struct type result for the arithmetic with "
+                       "overflow builtins");
+
+  SPIRVType *OpType1 = GR->getSPIRVTypeForVReg(Call->Arguments[1]);
+  SPIRVType *OpType2 = GR->getSPIRVTypeForVReg(Call->Arguments[2]);
+  if (!OpType1 || !OpType2 || OpType1 != OpType2)
+    report_fatal_error("Operands must have the same type");
+  if (OpType1->getOpcode() == SPIRV::OpTypeVector)
+    switch (Opcode) {
+    case SPIRV::OpIAddCarryS:
+      Opcode = SPIRV::OpIAddCarryV;
+      break;
+    case SPIRV::OpISubBorrowS:
+      Opcode = SPIRV::OpISubBorrowV;
+      break;
+    }
+
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  Register ResReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+  MRI->setRegClass(ResReg, &SPIRV::iIDRegClass);
+  GR->assignSPIRVTypeToVReg(RetType, ResReg, MIRBuilder.getMF());
+  MIRBuilder.buildInstr(Opcode)
+      .addDef(ResReg)
+      .addUse(GR->getSPIRVTypeID(RetType))
+      .addUse(Call->Arguments[1])
+      .addUse(Call->Arguments[2]);
+  MIRBuilder.buildInstr(SPIRV::OpStore).addUse(SRetReg).addUse(ResReg);
+  return true;
 }
 
 static bool generateGetQueryInst(const SPIRV::IncomingCall *Call,
@@ -2496,6 +2568,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateDotOrFMulInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Wave:
     return generateWaveInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::ICarryBorrow:
+    return generateICarryBorrowInst(Call.get(), MIRBuilder, GR);
   case SPIRV::GetQuery:
     return generateGetQueryInst(Call.get(), MIRBuilder, GR);
   case SPIRV::ImageSizeQuery:

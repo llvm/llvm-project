@@ -204,6 +204,12 @@ double f_output_constraint(void) {
   return result;
 }
 
+double f_output_constraint_2(void) {
+  double result;
+  __asm("foo1": "+f" (result)); // expected-error {{invalid output constraint '+f' in asm}}
+  return result;
+}
+
 void fn1(void) {
   int l;
   __asm__(""

@@ -52,7 +52,7 @@ ELFOptTable::ELFOptTable() : GenericOptTable(optInfo) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.
-static void handleColorDiagnostics(opt::InputArgList &args) {
+static void handleColorDiagnostics(Ctx &ctx, opt::InputArgList &args) {
   auto *arg = args.getLastArg(OPT_color_diagnostics);
   if (!arg)
     return;
@@ -62,14 +62,15 @@ static void handleColorDiagnostics(opt::InputArgList &args) {
   else if (s == "never")
     lld::errs().enable_colors(false);
   else if (s != "auto")
-    error("unknown option: --color-diagnostics=" + s);
+    ErrAlways(ctx) << "unknown option: --color-diagnostics=" << s;
 }
 
-static cl::TokenizerCallback getQuotingStyle(opt::InputArgList &args) {
+static cl::TokenizerCallback getQuotingStyle(Ctx &ctx,
+                                             opt::InputArgList &args) {
   if (auto *arg = args.getLastArg(OPT_rsp_quoting)) {
     StringRef s = arg->getValue();
     if (s != "windows" && s != "posix")
-      error("invalid response file quoting: " + s);
+      ErrAlways(ctx) << "invalid response file quoting: " << s;
     if (s == "windows")
       return cl::TokenizeWindowsCommandLine;
     return cl::TokenizeGNUCommandLine;
@@ -103,7 +104,7 @@ static void concatLTOPluginOptions(SmallVectorImpl<const char *> &args) {
 }
 
 // Parses a given list of options.
-opt::InputArgList ELFOptTable::parse(ArrayRef<const char *> argv) {
+opt::InputArgList ELFOptTable::parse(Ctx &ctx, ArrayRef<const char *> argv) {
   // Make InputArgList from string vectors.
   unsigned missingIndex;
   unsigned missingCount;
@@ -116,21 +117,22 @@ opt::InputArgList ELFOptTable::parse(ArrayRef<const char *> argv) {
 
   // Expand response files (arguments in the form of @<filename>)
   // and then parse the argument again.
-  cl::ExpandResponseFiles(saver(), getQuotingStyle(args), vec);
+  cl::ExpandResponseFiles(saver(), getQuotingStyle(ctx, args), vec);
   concatLTOPluginOptions(vec);
   args = this->ParseArgs(vec, missingIndex, missingCount);
 
-  handleColorDiagnostics(args);
+  handleColorDiagnostics(ctx, args);
   if (missingCount)
-    error(Twine(args.getArgString(missingIndex)) + ": missing argument");
+    ErrAlways(ctx) << Twine(args.getArgString(missingIndex))
+                   << ": missing argument";
 
   for (opt::Arg *arg : args.filtered(OPT_UNKNOWN)) {
     std::string nearest;
     if (findNearest(arg->getAsString(args), nearest) > 1)
-      error("unknown argument '" + arg->getAsString(args) + "'");
+      ErrAlways(ctx) << "unknown argument '" << arg->getAsString(args) << "'";
     else
-      error("unknown argument '" + arg->getAsString(args) +
-            "', did you mean '" + nearest + "'");
+      ErrAlways(ctx) << "unknown argument '" << arg->getAsString(args)
+                     << "', did you mean '" << nearest << "'";
   }
   return args;
 }
@@ -210,7 +212,7 @@ std::string elf::createResponseFile(const opt::InputArgList &args) {
 
 // Find a file by concatenating given paths. If a resulting path
 // starts with "=", the character is replaced with a --sysroot value.
-static std::optional<std::string> findFile(StringRef path1,
+static std::optional<std::string> findFile(Ctx &ctx, StringRef path1,
                                            const Twine &path2) {
   SmallString<128> s;
   if (path1.starts_with("="))
@@ -225,7 +227,7 @@ static std::optional<std::string> findFile(StringRef path1,
 
 std::optional<std::string> elf::findFromSearchPaths(Ctx &ctx, StringRef path) {
   for (StringRef dir : ctx.arg.searchPaths)
-    if (std::optional<std::string> s = findFile(dir, path))
+    if (std::optional<std::string> s = findFile(ctx, dir, path))
       return s;
   return std::nullopt;
 }
@@ -236,9 +238,10 @@ std::optional<std::string> elf::searchLibraryBaseName(Ctx &ctx,
                                                       StringRef name) {
   for (StringRef dir : ctx.arg.searchPaths) {
     if (!ctx.arg.isStatic)
-      if (std::optional<std::string> s = findFile(dir, "lib" + name + ".so"))
+      if (std::optional<std::string> s =
+              findFile(ctx, dir, "lib" + name + ".so"))
         return s;
-    if (std::optional<std::string> s = findFile(dir, "lib" + name + ".a"))
+    if (std::optional<std::string> s = findFile(ctx, dir, "lib" + name + ".a"))
       return s;
   }
   return std::nullopt;

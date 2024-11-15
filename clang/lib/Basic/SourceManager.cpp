@@ -2296,7 +2296,8 @@ void SourceManager::noteSLocAddressSpaceUsage(
   int UsagePercent = static_cast<int>(100.0 * double(LocalUsage + LoadedUsage) /
                                       MaxLoadedOffset);
   Diag.Report(SourceLocation(), diag::note_total_sloc_usage)
-    << LocalUsage << LoadedUsage << (LocalUsage + LoadedUsage) << UsagePercent;
+      << LocalUsage << LoadedUsage << (LocalUsage + LoadedUsage)
+      << UsagePercent;
 
   // Produce notes on sloc address space usage for each file with a high usage.
   uint64_t ReportedSize = 0;

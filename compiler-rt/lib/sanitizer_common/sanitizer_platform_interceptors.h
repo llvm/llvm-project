@@ -84,6 +84,25 @@
 #define SI_NOT_MAC 1
 #endif
 
+#if SANITIZER_APPLE
+#  include <Availability.h>
+
+// aligned_alloc was introduced in OSX 10.15
+// Linking will fail when using an older SDK
+#  if defined(__MAC_10_15)
+// macOS 10.15 is greater than our minimal deployment target.  To ensure we
+// generate a weak reference so the dylib continues to work on older
+// systems, we need to forward declare the intercepted function as "weak
+// imports".
+SANITIZER_WEAK_IMPORT void *aligned_alloc(__sanitizer::usize __alignment,
+                                          __sanitizer::usize __size);
+#    define SI_MAC_SDK_10_15_AVAILABLE 1
+#  else
+#    define SI_MAC_SDK_10_15_AVAILABLE 0
+#  endif  // defined(__MAC_10_15)
+
+#endif  // SANITIZER_APPLE
+
 #if SANITIZER_IOS
 #define SI_IOS 1
 #else
@@ -500,7 +519,8 @@
 #define SANITIZER_INTERCEPT_PVALLOC (SI_GLIBC || SI_ANDROID)
 #define SANITIZER_INTERCEPT_CFREE (SI_GLIBC && !SANITIZER_RISCV64)
 #define SANITIZER_INTERCEPT_REALLOCARRAY SI_POSIX
-#define SANITIZER_INTERCEPT_ALIGNED_ALLOC (!SI_MAC)
+#define SANITIZER_INTERCEPT_ALIGNED_ALLOC \
+  (!SI_MAC || SI_MAC_SDK_10_15_AVAILABLE)
 #define SANITIZER_INTERCEPT_MALLOC_USABLE_SIZE (!SI_MAC && !SI_NETBSD)
 #define SANITIZER_INTERCEPT_MCHECK_MPROBE SI_LINUX_NOT_ANDROID
 #define SANITIZER_INTERCEPT_WCSLEN 1

@@ -18,13 +18,12 @@
 //                                           BinaryOperation binary_op,
 //                                           UnaryOperation unary_op);
 
-
-#include <numeric>
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <functional>
-#include <iterator>
+#include <numeric>
 
 #include "test_macros.h"
 #include "test_iterators.h"

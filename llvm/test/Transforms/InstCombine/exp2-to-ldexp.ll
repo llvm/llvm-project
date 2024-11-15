@@ -30,7 +30,7 @@ define <2 x float> @exp2_v2f32_sitofp_v2i8(<2 x i8> %x) {
 ; CHECK-LABEL: define <2 x float> @exp2_v2f32_sitofp_v2i8(
 ; CHECK-SAME: <2 x i8> [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext <2 x i8> [[X]] to <2 x i32>
-; CHECK-NEXT:    [[EXP2:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x i32> [[TMP1]])
+; CHECK-NEXT:    [[EXP2:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> splat (float 1.000000e+00), <2 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret <2 x float> [[EXP2]]
 ;
   %itofp = sitofp <2 x i8> %x to <2 x float>

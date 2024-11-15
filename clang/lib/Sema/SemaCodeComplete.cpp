@@ -15,6 +15,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprConcepts.h"
@@ -22,7 +23,6 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/QualTypeNames.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/CharInfo.h"
@@ -4567,8 +4567,7 @@ void SemaCodeCompletion::CodeCompleteDeclSpec(Scope *S, DeclSpec &DS,
           0) {
     ParsedType T = DS.getRepAsType();
     if (!T.get().isNull() && T.get()->isObjCObjectOrInterfaceType())
-      AddClassMessageCompletions(SemaRef, S, T, std::nullopt, false, false,
-                                 Results);
+      AddClassMessageCompletions(SemaRef, S, T, {}, false, false, Results);
   }
 
   // Note that we intentionally suppress macro results here, since we do not
@@ -4931,7 +4930,7 @@ void SemaCodeCompletion::CodeCompletePostfixExpression(Scope *S, ExprResult E,
   if (E.isInvalid())
     CodeCompleteExpression(S, PreferredType);
   else if (getLangOpts().ObjC)
-    CodeCompleteObjCInstanceMessage(S, E.get(), std::nullopt, false);
+    CodeCompleteObjCInstanceMessage(S, E.get(), {}, false);
 }
 
 /// The set of properties that have already been added, referenced by
@@ -5423,7 +5422,7 @@ private:
 
   // This visitor infers members of T based on traversing expressions/types
   // that involve T. It is invoked with code known to be valid for T.
-  class ValidVisitor : public RecursiveASTVisitor<ValidVisitor> {
+  class ValidVisitor : public DynamicRecursiveASTVisitor {
     ConceptInfo *Outer;
     const TemplateTypeParmType *T;
 
@@ -5441,7 +5440,8 @@ private:
     }
 
     // In T.foo or T->foo, `foo` is a member function/variable.
-    bool VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *E) {
+    bool
+    VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *E) override {
       const Type *Base = E->getBaseType().getTypePtr();
       bool IsArrow = E->isArrow();
       if (Base->isPointerType() && IsArrow) {
@@ -5454,14 +5454,14 @@ private:
     }
 
     // In T::foo, `foo` is a static member function/variable.
-    bool VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *E) {
+    bool VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *E) override {
       if (E->getQualifier() && isApprox(E->getQualifier()->getAsType(), T))
         addValue(E, E->getDeclName(), Member::Colons);
       return true;
     }
 
     // In T::typename foo, `foo` is a type.
-    bool VisitDependentNameType(DependentNameType *DNT) {
+    bool VisitDependentNameType(DependentNameType *DNT) override {
       const auto *Q = DNT->getQualifier();
       if (Q && isApprox(Q->getAsType(), T))
         addType(DNT->getIdentifier());
@@ -5470,7 +5470,7 @@ private:
 
     // In T::foo::bar, `foo` must be a type.
     // VisitNNS() doesn't exist, and TraverseNNS isn't always called :-(
-    bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSL) {
+    bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSL) override {
       if (NNSL) {
         NestedNameSpecifier *NNS = NNSL.getNestedNameSpecifier();
         const auto *Q = NNS->getPrefix();
@@ -5478,14 +5478,14 @@ private:
           addType(NNS->getAsIdentifier());
       }
       // FIXME: also handle T::foo<X>::bar
-      return RecursiveASTVisitor::TraverseNestedNameSpecifierLoc(NNSL);
+      return DynamicRecursiveASTVisitor::TraverseNestedNameSpecifierLoc(NNSL);
     }
 
     // FIXME also handle T::foo<X>
 
     // Track the innermost caller/callee relationship so we can tell if a
     // nested expr is being called as a function.
-    bool VisitCallExpr(CallExpr *CE) {
+    bool VisitCallExpr(CallExpr *CE) override {
       Caller = CE;
       Callee = CE->getCallee();
       return true;
@@ -7747,8 +7747,8 @@ void SemaCodeCompletion::CodeCompleteObjCPropertyGetter(Scope *S) {
   Results.EnterNewScope();
 
   VisitedSelectorSet Selectors;
-  AddObjCMethods(Class, true, MK_ZeroArgSelector, std::nullopt,
-                 SemaRef.CurContext, Selectors,
+  AddObjCMethods(Class, true, MK_ZeroArgSelector, {}, SemaRef.CurContext,
+                 Selectors,
                  /*AllowSameLength=*/true, Results);
   Results.ExitScope();
   HandleCodeCompleteResults(&SemaRef, CodeCompleter,
@@ -7776,8 +7776,8 @@ void SemaCodeCompletion::CodeCompleteObjCPropertySetter(Scope *S) {
   Results.EnterNewScope();
 
   VisitedSelectorSet Selectors;
-  AddObjCMethods(Class, true, MK_OneArgSelector, std::nullopt,
-                 SemaRef.CurContext, Selectors,
+  AddObjCMethods(Class, true, MK_OneArgSelector, {}, SemaRef.CurContext,
+                 Selectors,
                  /*AllowSameLength=*/true, Results);
 
   Results.ExitScope();
@@ -8075,8 +8075,7 @@ void SemaCodeCompletion::CodeCompleteObjCMessageReceiver(Scope *S) {
       if (Iface->getSuperClass()) {
         Results.AddResult(Result("super"));
 
-        AddSuperSendCompletion(SemaRef, /*NeedSuperKeyword=*/true, std::nullopt,
-                               Results);
+        AddSuperSendCompletion(SemaRef, /*NeedSuperKeyword=*/true, {}, Results);
       }
 
   if (getLangOpts().CPlusPlus11)

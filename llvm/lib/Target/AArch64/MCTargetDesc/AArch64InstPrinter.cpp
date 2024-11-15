@@ -13,7 +13,6 @@
 #include "AArch64InstPrinter.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -59,12 +58,12 @@ bool AArch64InstPrinter::applyTargetSpecificCLOption(StringRef Opt) {
   return false;
 }
 
-void AArch64InstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void AArch64InstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   markup(OS, Markup::Register) << getRegisterName(Reg);
 }
 
 void AArch64InstPrinter::printRegName(raw_ostream &OS, MCRegister Reg,
-                                      unsigned AltIdx) const {
+                                      unsigned AltIdx) {
   markup(OS, Markup::Register) << getRegisterName(Reg, AltIdx);
 }
 
@@ -988,6 +987,22 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
       Name = std::string(AT->Name);
     }
     break;
+    // Overlaps with AT and DC
+    case 15: {
+      const AArch64AT::AT *AT = AArch64AT::lookupATByEncoding(Encoding);
+      const AArch64DC::DC *DC = AArch64DC::lookupDCByEncoding(Encoding);
+      if (AT && AT->haveFeatures(STI.getFeatureBits())) {
+        NeedsReg = true;
+        Ins = "at\t";
+        Name = std::string(AT->Name);
+      } else if (DC && DC->haveFeatures(STI.getFeatureBits())) {
+        NeedsReg = true;
+        Ins = "dc\t";
+        Name = std::string(DC->Name);
+      } else {
+        return false;
+      }
+    } break;
     }
   } else if (CnVal == 8 || CnVal == 9) {
     // TLBI aliases
@@ -2124,4 +2139,15 @@ void AArch64InstPrinter::printSyspXzrPair(const MCInst *MI, unsigned OpNum,
   assert(Reg == AArch64::XZR &&
          "MC representation of SyspXzrPair should be XZR");
   O << getRegisterName(Reg) << ", " << getRegisterName(Reg);
+}
+
+void AArch64InstPrinter::printPHintOp(const MCInst *MI, unsigned OpNum,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
+  unsigned Op = MI->getOperand(OpNum).getImm();
+  auto PH = AArch64PHint::lookupPHintByEncoding(Op);
+  if (PH)
+    O << PH->Name;
+  else
+    markup(O, Markup::Immediate) << '#' << formatImm(Op);
 }

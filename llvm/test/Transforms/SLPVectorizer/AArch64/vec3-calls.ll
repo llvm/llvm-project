@@ -7,8 +7,7 @@ define void @vec3_vectorize_call(ptr %Colour, float %0) {
 ; NON-POWER-OF-2-NEXT:  entry:
 ; NON-POWER-OF-2-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[COLOUR:%.*]], align 4
 ; NON-POWER-OF-2-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> poison, float [[TMP0:%.*]], i32 2
-; NON-POWER-OF-2-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <3 x i32> <i32 0, i32 1, i32 poison>
-; NON-POWER-OF-2-NEXT:    [[TMP4:%.*]] = shufflevector <3 x float> [[TMP2]], <3 x float> [[TMP3]], <3 x i32> <i32 3, i32 4, i32 2>
+; NON-POWER-OF-2-NEXT:    [[TMP4:%.*]] = call <3 x float> @llvm.vector.insert.v3f32.v2f32(<3 x float> [[TMP2]], <2 x float> [[TMP1]], i64 0)
 ; NON-POWER-OF-2-NEXT:    [[TMP5:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP4]], <3 x float> zeroinitializer, <3 x float> zeroinitializer)
 ; NON-POWER-OF-2-NEXT:    store <3 x float> [[TMP5]], ptr [[COLOUR]], align 4
 ; NON-POWER-OF-2-NEXT:    ret void

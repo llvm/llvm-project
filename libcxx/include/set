@@ -531,6 +531,7 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/from_range.h>
 #include <__tree>
+#include <__type_traits/container_traits.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_nothrow_assignable.h>
@@ -1022,6 +1023,14 @@ erase_if(set<_Key, _Compare, _Allocator>& __c, _Predicate __pred) {
 }
 #endif
 
+template <class _Key, class _Compare, class _Allocator>
+struct __container_traits<set<_Key, _Compare, _Allocator> > {
+  // http://eel.is/c++draft/associative.reqmts.except#2
+  // For associative containers, if an exception is thrown by any operation from within
+  // an insert or emplace function inserting a single element, the insertion has no effect.
+  static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee = true;
+};
+
 template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
 class _LIBCPP_TEMPLATE_VIS multiset {
 public:
@@ -1480,6 +1489,14 @@ erase_if(multiset<_Key, _Compare, _Allocator>& __c, _Predicate __pred) {
   return std::__libcpp_erase_if_container(__c, __pred);
 }
 #endif
+
+template <class _Key, class _Compare, class _Allocator>
+struct __container_traits<multiset<_Key, _Compare, _Allocator> > {
+  // http://eel.is/c++draft/associative.reqmts.except#2
+  // For associative containers, if an exception is thrown by any operation from within
+  // an insert or emplace function inserting a single element, the insertion has no effect.
+  static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee = true;
+};
 
 _LIBCPP_END_NAMESPACE_STD
 

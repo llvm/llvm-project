@@ -55,7 +55,7 @@ static MCInstrInfo *createLoongArchMCInstrInfo() {
 static MCSubtargetInfo *
 createLoongArchMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   if (CPU.empty() || CPU == "generic")
-    CPU = TT.isArch64Bit() ? "la464" : "generic-la32";
+    CPU = TT.isArch64Bit() ? "generic-la64" : "generic-la32";
   return createLoongArchMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 }
 
@@ -85,6 +85,12 @@ createLoongArchObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
   return STI.getTargetTriple().isOSBinFormatELF()
              ? new LoongArchTargetELFStreamer(S, STI)
              : nullptr;
+}
+
+static MCTargetStreamer *
+createLoongArchAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
+                                 MCInstPrinter *InstPrint) {
+  return new LoongArchTargetAsmStreamer(S, OS);
 }
 
 namespace {
@@ -212,5 +218,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchTargetMC() {
     TargetRegistry::RegisterELFStreamer(*T, createLoongArchELFStreamer);
     TargetRegistry::RegisterObjectTargetStreamer(
         *T, createLoongArchObjectTargetStreamer);
+    TargetRegistry::RegisterAsmTargetStreamer(*T,
+                                              createLoongArchAsmTargetStreamer);
   }
 }

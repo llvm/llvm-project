@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@rules_python//python:defs.bzl", "py_binary")
 load(
     "//:vars.bzl",
     "LLVM_VERSION_MAJOR",
@@ -21,14 +22,6 @@ package(
 )
 
 licenses(["notice"])
-
-exports_files([
-    "tools/clang-format/clang-format.el",
-    "tools/clang-format/clang-format-test.el",
-    "tools/clang-format/clang-format.py",
-    "tools/extra/clang-include-fixer/tool/clang-include-fixer.el",
-    "tools/extra/clang-include-fixer/tool/clang-include-fixer-test.el",
-])
 
 cc_binary(
     name = "clang-tblgen",
@@ -359,6 +352,20 @@ gentbl(
     td_srcs = [
         "include/clang/Basic/BuiltinsRISCV.td",
         "include/clang/Basic/BuiltinsRISCVXCV.td",
+        "include/clang/Basic/BuiltinsBase.td",
+    ],
+)
+
+gentbl(
+    name="basic_builtins_x86_gen",
+    tbl_outs = [(
+        "-gen-clang-builtins",
+        "include/clang/Basic/BuiltinsX86.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsX86.td",
+    td_srcs = [
+        "include/clang/Basic/BuiltinsX86.td",
         "include/clang/Basic/BuiltinsBase.td",
     ],
 )
@@ -700,6 +707,7 @@ cc_library(
         ":basic_builtins_bpf_gen",
         ":basic_builtins_gen",
         ":basic_builtins_riscv_gen",
+        ":basic_builtins_x86_gen",
         ":basic_internal_headers",
         ":basic_riscv_sifive_vector_builtins_gen",
         ":basic_riscv_vector_builtin_cg_gen",
@@ -707,6 +715,7 @@ cc_library(
         ":config",
         ":diagnostic_defs_gen",
         ":sema_attr_gen",
+        ":support",
         "//llvm:Core",
         "//llvm:FrontendDebug",
         "//llvm:FrontendDriver",
@@ -733,6 +742,7 @@ cc_library(
     deps = [
         ":basic",
         ":config",
+        ":support",
         "//llvm:Support",
         "//llvm:TargetParser",
     ],
@@ -1010,6 +1020,7 @@ cc_library(
         ":basic",
         ":basic_builtins_gen",
         ":lex",
+        ":support",
         ":type_nodes_gen",
         "//llvm:BinaryFormat",
         "//llvm:Core",
@@ -1080,6 +1091,7 @@ cc_library(
         ":ast_matchers",
         ":basic",
         ":lex",
+        ":support",
         "//llvm:Support",
     ],
 )
@@ -1232,6 +1244,7 @@ cc_library(
         ":ast",
         ":basic",
         ":lex",
+        ":support",
         "//llvm:Support",
     ],
 )
@@ -1328,6 +1341,7 @@ cc_library(
         ":frontend",
         ":lex",
         ":rewrite",
+        ":support",
         ":tooling_core",
         "//llvm:Option",
         "//llvm:Support",
@@ -1865,6 +1879,7 @@ cc_library(
         ":sema",
         ":serialization",
         ":static_analyzer_core_options",
+        ":support",
         "//llvm:BinaryFormat",
         "//llvm:BitReader",
         "//llvm:BitstreamReader",

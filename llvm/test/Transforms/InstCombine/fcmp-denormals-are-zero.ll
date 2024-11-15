@@ -350,5 +350,5 @@ declare <2 x double> @llvm.fabs.v2f64(<2 x double>)
 
 attributes #0 = { "denormal-fp-math"="ieee,preserve-sign" }
 attributes #1 = { "denormal-fp-math"="ieee,positive-zero" }
-attributes #2 = { "denormal-fp-math"="ieee,iee" }
+attributes #2 = { "denormal-fp-math"="ieee,ieee" }
 attributes #3 = { "denormal-fp-math-f32"="ieee,preserve-sign" }

@@ -163,7 +163,7 @@ static CallInst *makeIntrinsicCall(Module *M,
                                    ArrayRef<Type *> Types,
                                    ArrayRef<Value *> Args) {
 
-  Function *Fn = Intrinsic::getDeclaration(M, Intrinsic, Types);
+  Function *Fn = Intrinsic::getOrInsertDeclaration(M, Intrinsic, Types);
   return CallInst::Create(Fn, Args);
 }
 

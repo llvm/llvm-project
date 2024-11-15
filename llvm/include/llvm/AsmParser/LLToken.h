@@ -114,6 +114,7 @@ enum Kind {
   kw_disjoint,
   kw_inbounds,
   kw_nneg,
+  kw_samesign,
   kw_inrange,
   kw_addrspace,
   kw_section,
