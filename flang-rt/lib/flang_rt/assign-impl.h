@@ -1,4 +1,4 @@
-//===-- lib/Runtime/assign-impl.h -------------------------------*- C++ -*-===//
+//===-- lib/flang_rt/assign-impl.h ------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_RUNTIME_ASSIGN_IMPL_H_
-#define FORTRAN_RUNTIME_ASSIGN_IMPL_H_
+#ifndef FLANG_RT_ASSIGN_IMPL_H_
+#define FLANG_RT_ASSIGN_IMPL_H_
 
 namespace Fortran::runtime {
 class Descriptor;
@@ -21,4 +21,4 @@ RT_API_ATTRS void DoFromSourceAssign(
     Descriptor &, const Descriptor &, Terminator &);
 
 } // namespace Fortran::runtime
-#endif /* FORTRAN_RUNTIME_ASSIGN_IMPL_H_ */
+#endif /* FLANG_RT_ASSIGN_IMPL_H_ */

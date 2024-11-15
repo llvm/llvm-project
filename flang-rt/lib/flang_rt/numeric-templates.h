@@ -15,8 +15,8 @@
 // for the data type corresponding to CppTypeFor<TypeCategory::Real, 16>
 // on the target.
 
-#ifndef FORTRAN_FLANG_RT_NUMERIC_TEMPLATES_H_
-#define FORTRAN_FLANG_RT_NUMERIC_TEMPLATES_H_
+#ifndef FLANG_RT_NUMERIC_TEMPLATES_H_
+#define FLANG_RT_NUMERIC_TEMPLATES_H_
 
 #include "terminator.h"
 #include "tools.h"
@@ -466,4 +466,4 @@ template <typename T> inline RT_API_ATTRS T ErfcScaled(T arg) {
 
 } // namespace Fortran::runtime
 
-#endif /* FORTRAN_FLANG_RT_NUMERIC_TEMPLATES_H_ */
+#endif /* FLANG_RT_NUMERIC_TEMPLATES_H_ */

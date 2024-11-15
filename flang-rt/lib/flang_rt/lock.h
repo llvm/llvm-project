@@ -8,8 +8,8 @@
 
 // Wraps a mutex
 
-#ifndef FORTRAN_FLANG_RT_LOCK_H_
-#define FORTRAN_FLANG_RT_LOCK_H_
+#ifndef FLANG_RT_LOCK_H_
+#define FLANG_RT_LOCK_H_
 
 #include "terminator.h"
 #include "tools.h"
@@ -113,4 +113,4 @@ private:
 };
 } // namespace Fortran::runtime
 
-#endif /* FORTRAN_FLANG_RT_LOCK_H_ */
+#endif /* FLANG_RT_LOCK_H_ */

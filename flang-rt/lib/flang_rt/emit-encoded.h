@@ -8,8 +8,8 @@
 
 // Templates for emitting CHARACTER values with conversion
 
-#ifndef FORTRAN_FLANG_RT_EMIT_ENCODED_H_
-#define FORTRAN_FLANG_RT_EMIT_ENCODED_H_
+#ifndef FLANG_RT_EMIT_ENCODED_H_
+#define FLANG_RT_EMIT_ENCODED_H_
 
 #include "connection.h"
 #include "environment.h"
@@ -114,4 +114,4 @@ RT_API_ATTRS bool EmitRepeated(CONTEXT &to, char ch, std::size_t n) {
 }
 
 } // namespace Fortran::runtime::io
-#endif /* FORTRAN_FLANG_RT_EMIT_ENCODED_H_ */
+#endif /* FLANG_RT_EMIT_ENCODED_H_ */

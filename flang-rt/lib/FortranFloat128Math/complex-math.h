@@ -6,8 +6,8 @@
  *
  *===----------------------------------------------------------------------===*/
 
-#ifndef FORTRAN_FORTRANFLOAT128MATH_COMPLEX_MATH_H_
-#define FORTRAN_FORTRANFLOAT128MATH_COMPLEX_MATH_H_
+#ifndef FLANG_RT_FORTRANFLOAT128MATH_COMPLEX_MATH_H_
+#define FLANG_RT_FORTRANFLOAT128MATH_COMPLEX_MATH_H_
 
 #include "flang/Common/float128.h"
 #include "flang/Runtime/entry-names.h"
@@ -59,4 +59,4 @@
 #error "Float128Math build with glibc>=2.26 is unsupported yet"
 #endif
 
-#endif /* FORTRAN_FORTRANFLOAT128MATH_COMPLEX_MATH_H_ */
+#endif /* FLANG_RT_FORTRANFLOAT128MATH_COMPLEX_MATH_H_ */

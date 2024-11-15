@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_FORTRANFLOAT128MATH_NUMERIC_TEMPLATE_SPECS_H_
-#define FORTRAN_FORTRANFLOAT128MATH_NUMERIC_TEMPLATE_SPECS_H_
+#ifndef FLANG_RT_FORTRANFLOAT128MATH_NUMERIC_TEMPLATE_SPECS_H_
+#define FLANG_RT_FORTRANFLOAT128MATH_NUMERIC_TEMPLATE_SPECS_H_
 
 #include "math-entries.h"
 #include "numeric-templates.h"
@@ -52,4 +52,4 @@ template <> struct SQRTTy<F128Type> {
 };
 
 } // namespace Fortran::runtime
-#endif /* FORTRAN_FORTRANFLOAT128MATH_NUMERIC_TEMPLATE_SPECS_H_ */
+#endif /* FLANG_RT_FORTRANFLOAT128MATH_NUMERIC_TEMPLATE_SPECS_H_ */

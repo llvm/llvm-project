@@ -19,8 +19,8 @@
 // a containing scope has become inaccessible in a nested scope due
 // to the use of "IMPORT, NONE" or "IMPORT, ONLY:".
 
-#ifndef FORTRAN_FLANG_RT_NON_TBP_DIO_H_
-#define FORTRAN_FLANG_RT_NON_TBP_DIO_H_
+#ifndef FLANG_RT_NON_TBP_DIO_H_
+#define FLANG_RT_NON_TBP_DIO_H_
 
 #include "flang/Common/Fortran-consts.h"
 #include "flang/Common/api-attrs.h"
@@ -53,4 +53,4 @@ struct NonTbpDefinedIoTable {
 };
 
 } // namespace Fortran::runtime::io
-#endif /* FORTRAN_FLANG_RT_NON_TBP_DIO_H_ */
+#endif /* FLANG_RT_NON_TBP_DIO_H_ */

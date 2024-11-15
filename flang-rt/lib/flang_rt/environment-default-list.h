@@ -1,4 +1,4 @@
-/*===-- lib/Runtime/environment-default-list.h ----------------------*- C -*-===
+/*===-- lib/flang_rt/environment-default-list.h ---------------------*- C -*-===
  *
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
  *
  *===----------------------------------------------------------------------===*/
 
-#ifndef FORTRAN_RUNTIME_ENVIRONMENT_DEFAULT_LIST_H_
-#define FORTRAN_RUNTIME_ENVIRONMENT_DEFAULT_LIST_H_
+#ifndef FLANG_RT_ENVIRONMENT_DEFAULT_LIST_H_
+#define FLANG_RT_ENVIRONMENT_DEFAULT_LIST_H_
 
 /* Try to maintain C compatibility to make it easier to both define environment
  * defaults in non-Fortran main programs as well as pass through the environment
@@ -27,4 +27,4 @@ struct EnvironmentDefaultList {
   const struct EnvironmentDefaultItem *item;
 };
 
-#endif /* FORTRAN_RUNTIME_ENVIRONMENT_DEFAULT_LIST_H_ */
+#endif /* FLANG_RT_ENVIRONMENT_DEFAULT_LIST_H_ */

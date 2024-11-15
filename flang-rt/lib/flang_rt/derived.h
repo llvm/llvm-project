@@ -8,8 +8,8 @@
 
 // Internal runtime utilities for derived type operations.
 
-#ifndef FORTRAN_FLANG_RT_DERIVED_H_
-#define FORTRAN_FLANG_RT_DERIVED_H_
+#ifndef FLANG_RT_DERIVED_H_
+#define FLANG_RT_DERIVED_H_
 
 #include "flang/Common/api-attrs.h"
 
@@ -40,4 +40,4 @@ RT_API_ATTRS void Destroy(const Descriptor &, bool finalize,
 RT_API_ATTRS bool HasDynamicComponent(const Descriptor &);
 
 } // namespace Fortran::runtime
-#endif /* FORTRAN_FLANG_RT_DERIVED_H_ */
+#endif /* FLANG_RT_DERIVED_H_ */
