@@ -25,9 +25,10 @@ mlir::Value fir::runtime::genInitArrayConstructorVector(
     mlir::Location loc, fir::FirOpBuilder &builder, mlir::Value toBox,
     mlir::Value useValueLengthParameters) {
   // Allocate storage for the runtime cookie for the array constructor vector.
-  // Use the "host" size and alignment, but double them to be safe regardless of
-  // the target. The "cookieSize" argument is used to validate this wild
-  // assumption until runtime interfaces are improved.
+  // Use pessimistic values for size and alignment that are valid for all
+  // supported targets. Whether the actual ArrayConstructorVector object fits
+  // into the available MaxArrayConstructorVectorSizeInBytes is verified when
+  // building clang-rt.
   std::size_t arrayVectorStructBitSize =
       MaxArrayConstructorVectorSizeInBytes * 8;
   std::size_t alignLike = MaxArrayConstructorVectorAlignInBytes * 8;
@@ -43,14 +44,12 @@ mlir::Value fir::runtime::genInitArrayConstructorVector(
           loc, builder);
   mlir::FunctionType funcType = func.getFunctionType();
   cookie = builder.createConvert(loc, funcType.getInput(0), cookie);
-  mlir::Value cookieSize = builder.createIntegerConstant(
-      loc, funcType.getInput(3), numElem * alignLike / 8);
   mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
   mlir::Value sourceLine =
-      fir::factory::locationToLineNo(builder, loc, funcType.getInput(5));
+      fir::factory::locationToLineNo(builder, loc, funcType.getInput(4));
   auto args = fir::runtime::createArguments(builder, loc, funcType, cookie,
                                             toBox, useValueLengthParameters,
-                                            cookieSize, sourceFile, sourceLine);
+                                            sourceFile, sourceLine);
   builder.create<fir::CallOp>(loc, func, args);
   return cookie;
 }

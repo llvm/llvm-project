@@ -750,7 +750,7 @@ prettyPrintIntrinsicName(fir::FirOpBuilder &builder, mlir::Location loc,
 
 // Generate a call to the Fortran runtime library providing
 // support for 128-bit float math.
-// On 'LDBL_MANT_DIG == 113' targets the implementation
+// On 'HAS_LDBL128' targets the implementation
 // is provided by FortranRuntime, otherwise, it is done via
 // FortranFloat128Math library. In the latter case the compiler
 // has to be built with FLANG_RUNTIME_F128_MATH_LIB to guarantee

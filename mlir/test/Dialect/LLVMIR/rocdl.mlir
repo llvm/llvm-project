@@ -352,6 +352,28 @@ llvm.func @rocdl.s.barrier() {
   rocdl.s.barrier
   llvm.return
 }
+
+llvm.func @rocdl.s.barrier.signal() {
+  // CHECK-LABEL: rocdl.s.barrier.signal
+  // CHECK: rocdl.s.barrier.signal -1
+  rocdl.s.barrier.signal -1
+  llvm.return
+}
+
+llvm.func @rocdl.s.barrier.wait() {
+  // CHECK-LABEL: rocdl.s.barrier.wait
+  // CHECK: rocdl.s.barrier.wait -1
+  rocdl.s.barrier.wait -1
+  llvm.return
+}
+
+llvm.func @rocdl.s.wait.dscnt() {
+  // CHECK-LABEL: rocdl.s.wait.dscnt
+  // CHECK: rocdl.s.wait.dscnt 0
+  rocdl.s.wait.dscnt 0
+  llvm.return
+}
+
 // -----
 
 // expected-error@below {{attribute attached to unexpected op}}

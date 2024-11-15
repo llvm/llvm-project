@@ -3,8 +3,8 @@ include_directories(..)
 set(RTSAN_CXX_SOURCES
   rtsan.cpp
   rtsan_context.cpp
+  rtsan_diagnostics.cpp
   rtsan_flags.cpp
-  rtsan_stack.cpp
   rtsan_interceptors.cpp)
 
 set(RTSAN_PREINIT_SOURCES
@@ -12,11 +12,11 @@ set(RTSAN_PREINIT_SOURCES
 
 set(RTSAN_HEADERS
   rtsan.h
+  rtsan_assertions.h
   rtsan_context.h
+  rtsan_diagnostics.h
   rtsan_flags.h
-  rtsan_flags.inc
-  rtsan_stack.h
-  )
+  rtsan_flags.inc)
 
 set(RTSAN_DEPS)
 
@@ -28,6 +28,8 @@ set(RTSAN_LINK_FLAGS ${COMPILER_RT_COMMON_LINK_FLAGS})
 set(RTSAN_LINK_LIBS
   ${COMPILER_RT_UNWINDER_LINK_LIBS}
   ${COMPILER_RT_CXX_LINK_LIBS})
+
+append_rtti_flag(OFF RTSAN_CFLAGS)
 
 if(APPLE)
   add_compiler_rt_object_libraries(RTRtsan

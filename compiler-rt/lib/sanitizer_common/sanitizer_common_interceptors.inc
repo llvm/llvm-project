@@ -127,6 +127,39 @@ extern const short *_toupper_tab_;
 extern const short *_tolower_tab_;
 #endif
 
+#if SANITIZER_LINUX && SANITIZER_SPARC32
+// On 32-bit Linux/sparc64, double and long double are identical and glibc
+// uses a __nldbl_ (no long double) prefix for various stdio functions.
+#  define __isoc23_fscanf __nldbl___isoc23_fscanf
+#  define __isoc23_scanf __nldbl___isoc23_scanf
+#  define __isoc23_sscanf __nldbl___isoc23_sscanf
+#  define __isoc23_vfscanf __nldbl___isoc23_vfscanf
+#  define __isoc23_vscanf __nldbl___isoc23_vscanf
+#  define __isoc23_vsscanf __nldbl___isoc23_vsscanf
+#  define __isoc99_fscanf __nldbl___isoc99_fscanf
+#  define __isoc99_scanf __nldbl___isoc99_scanf
+#  define __isoc99_sscanf __nldbl___isoc99_sscanf
+#  define __isoc99_vfscanf __nldbl___isoc99_vfscanf
+#  define __isoc99_vscanf __nldbl___isoc99_vscanf
+#  define __isoc99_vsscanf __nldbl___isoc99_vsscanf
+#  define asprintf __nldbl_asprintf
+#  define fprintf __nldbl_fprintf
+#  define fscanf __nldbl_fscanf
+#  define printf __nldbl_printf
+#  define scanf __nldbl_scanf
+#  define snprintf __nldbl_snprintf
+#  define sprintf __nldbl_sprintf
+#  define sscanf __nldbl_sscanf
+#  define vasprintf __nldbl_vasprintf
+#  define vfprintf __nldbl_vfprintf
+#  define vfscanf __nldbl_vfscanf
+#  define vprintf __nldbl_vprintf
+#  define vscanf __nldbl_vscanf
+#  define vsnprintf __nldbl_vsnprintf
+#  define vsprintf __nldbl_vsprintf
+#  define vsscanf __nldbl_vsscanf
+#endif
+
 #if SANITIZER_MUSL && \
   (defined(__i386__) || defined(__arm__) || SANITIZER_MIPS32 || SANITIZER_PPC32)
 // musl 1.2.0 on existing 32-bit architectures uses new symbol names for the
@@ -1256,6 +1289,11 @@ INTERCEPTOR(int, prctl, int option, unsigned long arg2, unsigned long arg3,
   static const int PR_SCHED_CORE = 62;
   static const int PR_SCHED_CORE_GET = 0;
   static const int PR_GET_PDEATHSIG = 2;
+
+#  if !SANITIZER_ANDROID
+  static const int PR_SET_SECCOMP = 22;
+  static const int SECCOMP_MODE_FILTER = 2;
+#  endif
   if (option == PR_SET_VMA && arg2 == 0UL) {
     char *name = (char *)arg5;
     COMMON_INTERCEPTOR_READ_RANGE(ctx, name, internal_strlen(name) + 1);
@@ -1274,6 +1312,11 @@ INTERCEPTOR(int, prctl, int option, unsigned long arg2, unsigned long arg3,
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (u64 *)(arg5), sizeof(u64));
   } else if (res != -1 && option == PR_GET_PDEATHSIG) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (u64 *)(arg2), sizeof(int));
+#  if !SANITIZER_ANDROID
+  } else if (res != -1 && option == PR_SET_SECCOMP &&
+             arg2 == SECCOMP_MODE_FILTER) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (u64 *)(arg3), struct_sock_fprog_sz);
+#  endif
   }
   return res;
 }

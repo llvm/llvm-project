@@ -167,9 +167,9 @@ source_set("sources") {
     "sanitizer_vector.h",
     "sanitizer_win.cpp",
     "sanitizer_win.h",
+    "sanitizer_win_defs.h",
     "sanitizer_win_interception.cpp",
     "sanitizer_win_interception.h",
-    "sanitizer_win_defs.h",
     "sanitizer_win_thunk_interception.h",
   ]
 }

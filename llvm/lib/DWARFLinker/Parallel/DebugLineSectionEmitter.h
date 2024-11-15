@@ -215,7 +215,7 @@ private:
       encodeULEB128(FileNameForm, Section.OS);
 
       encodeULEB128(dwarf::DW_LNCT_directory_index, Section.OS);
-      encodeULEB128(dwarf::DW_FORM_data1, Section.OS);
+      encodeULEB128(dwarf::DW_FORM_udata, Section.OS);
 
       if (HasChecksums) {
         encodeULEB128(dwarf::DW_LNCT_MD5, Section.OS);
@@ -242,7 +242,7 @@ private:
       // A null-terminated string containing the full or relative path name of a
       // source file.
       Section.emitString(FileNameForm, *FileNameStr);
-      Section.emitIntVal(File.DirIdx, 1);
+      encodeULEB128(File.DirIdx, Section.OS);
 
       if (HasChecksums) {
         assert((File.Checksum.size() == 16) &&

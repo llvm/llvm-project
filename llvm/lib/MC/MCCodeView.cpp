@@ -338,9 +338,9 @@ CodeViewContext::getLineExtentIncludingInlinees(unsigned FuncId) {
 
 ArrayRef<MCCVLoc> CodeViewContext::getLinesForExtent(size_t L, size_t R) {
   if (R <= L)
-    return std::nullopt;
+    return {};
   if (L >= MCCVLines.size())
-    return std::nullopt;
+    return {};
   return ArrayRef(&MCCVLines[L], R - L);
 }
 

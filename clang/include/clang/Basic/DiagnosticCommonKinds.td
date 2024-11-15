@@ -45,11 +45,6 @@ def note_using : Note<"using">;
 def note_possibility : Note<"one possibility">;
 def note_also_found : Note<"also found">;
 
-def warn_next_larger_fp_type_same_size_than_fp : Warning<
-  "higher precision floating-point type size has the same size than "
-  "floating-point type size">,
-  InGroup<DiagGroup<"higher-precision-fp">>;
-
 // Parse && Lex
 
 let CategoryName = "Lexical or Preprocessor Issue" in {

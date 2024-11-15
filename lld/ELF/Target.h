@@ -132,7 +132,7 @@ public:
   RelType tlsGotRel;
   RelType tlsModuleIndexRel;
   RelType tlsOffsetRel;
-  unsigned gotEntrySize = config->wordsize;
+  unsigned gotEntrySize = ctx.arg.wordsize;
   unsigned pltEntrySize;
   unsigned pltHeaderSize;
   unsigned ipltEntrySize;
@@ -282,27 +282,27 @@ inline void checkAlignment(uint8_t *loc, uint64_t v, int n,
 
 // Endianness-aware read/write.
 inline uint16_t read16(const void *p) {
-  return llvm::support::endian::read16(p, config->endianness);
+  return llvm::support::endian::read16(p, ctx.arg.endianness);
 }
 
 inline uint32_t read32(const void *p) {
-  return llvm::support::endian::read32(p, config->endianness);
+  return llvm::support::endian::read32(p, ctx.arg.endianness);
 }
 
 inline uint64_t read64(const void *p) {
-  return llvm::support::endian::read64(p, config->endianness);
+  return llvm::support::endian::read64(p, ctx.arg.endianness);
 }
 
 inline void write16(void *p, uint16_t v) {
-  llvm::support::endian::write16(p, v, config->endianness);
+  llvm::support::endian::write16(p, v, ctx.arg.endianness);
 }
 
 inline void write32(void *p, uint32_t v) {
-  llvm::support::endian::write32(p, v, config->endianness);
+  llvm::support::endian::write32(p, v, ctx.arg.endianness);
 }
 
 inline void write64(void *p, uint64_t v) {
-  llvm::support::endian::write64(p, v, config->endianness);
+  llvm::support::endian::write64(p, v, ctx.arg.endianness);
 }
 
 // Overwrite a ULEB128 value and keep the original length.
@@ -321,7 +321,7 @@ inline uint64_t overwriteULEB128(uint8_t *bufLoc, uint64_t val) {
 #pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 #endif
 #define invokeELFT(f, ...)                                                     \
-  switch (config->ekind) {                                                     \
+  switch (ctx.arg.ekind) {                                                     \
   case lld::elf::ELF32LEKind:                                                  \
     f<llvm::object::ELF32LE>(__VA_ARGS__);                                     \
     break;                                                                     \
@@ -335,7 +335,7 @@ inline uint64_t overwriteULEB128(uint8_t *bufLoc, uint64_t val) {
     f<llvm::object::ELF64BE>(__VA_ARGS__);                                     \
     break;                                                                     \
   default:                                                                     \
-    llvm_unreachable("unknown config->ekind");                                 \
+    llvm_unreachable("unknown ctx.arg.ekind");                                 \
   }
 
 #endif

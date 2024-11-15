@@ -101,7 +101,7 @@ static size_t getAugPSize(unsigned enc) {
   switch (enc & 0x0f) {
   case DW_EH_PE_absptr:
   case DW_EH_PE_signed:
-    return config->wordsize;
+    return ctx.arg.wordsize;
   case DW_EH_PE_udata2:
   case DW_EH_PE_sdata2:
     return 2;

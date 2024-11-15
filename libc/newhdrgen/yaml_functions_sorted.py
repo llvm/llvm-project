@@ -6,7 +6,7 @@ import os
 
 def sort_yaml_functions(yaml_file):
     with open(yaml_file, "r") as f:
-        yaml_data = yaml.load(f, Loader=yaml.FullLoader)
+        yaml_data = yaml.safe_load(f)
 
     if "functions" in yaml_data:
         yaml_data["functions"].sort(key=lambda x: x["name"])

@@ -1,4 +1,4 @@
-#===-- lib/CufRuntime/CMakeLists.txt ---------------------------------------===#
+#===-- runtime/CUDA/CMakeLists.txt -----------------------------------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
@@ -15,7 +15,9 @@ set(CUFRT_LIBNAME CufRuntime_cuda_${CUDAToolkit_VERSION_MAJOR})
 
 add_flang_library(${CUFRT_LIBNAME}
   allocator.cpp
+  allocatable.cpp
   descriptor.cpp
+  memory.cpp
 )
 
 if (BUILD_SHARED_LIBS)

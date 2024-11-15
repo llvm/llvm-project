@@ -54,7 +54,7 @@ class UnwindPlan {
 public:
   class Row {
   public:
-    class RegisterLocation {
+    class AbstractRegisterLocation {
     public:
       enum RestoreType {
         unspecified,       // not specified, we may be able to assume this
@@ -72,11 +72,11 @@ public:
         isConstant         // reg = constant
       };
 
-      RegisterLocation() : m_location() {}
+      AbstractRegisterLocation() : m_location() {}
 
-      bool operator==(const RegisterLocation &rhs) const;
+      bool operator==(const AbstractRegisterLocation &rhs) const;
 
-      bool operator!=(const RegisterLocation &rhs) const {
+      bool operator!=(const AbstractRegisterLocation &rhs) const {
         return !(*this == rhs);
       }
 
@@ -337,10 +337,10 @@ public:
     bool operator==(const Row &rhs) const;
 
     bool GetRegisterInfo(uint32_t reg_num,
-                         RegisterLocation &register_location) const;
+                         AbstractRegisterLocation &register_location) const;
 
     void SetRegisterInfo(uint32_t reg_num,
-                         const RegisterLocation register_location);
+                         const AbstractRegisterLocation register_location);
 
     void RemoveRegisterInfo(uint32_t reg_num);
 
@@ -370,6 +370,13 @@ public:
 
     bool SetRegisterLocationToSame(uint32_t reg_num, bool must_replace);
 
+    /// This method does not make a copy of the \a opcodes memory, it is
+    /// assumed to have the same lifetime as the Module this UnwindPlan will
+    /// be registered in.
+    bool SetRegisterLocationToIsDWARFExpression(uint32_t reg_num,
+                                                const uint8_t *opcodes,
+                                                uint32_t len, bool can_replace);
+
     bool SetRegisterLocationToIsConstant(uint32_t reg_num, uint64_t constant,
                                          bool can_replace);
 
@@ -398,7 +405,7 @@ public:
               lldb::addr_t base_addr) const;
 
   protected:
-    typedef std::map<uint32_t, RegisterLocation> collection;
+    typedef std::map<uint32_t, AbstractRegisterLocation> collection;
     lldb::addr_t m_offset = 0; // Offset into the function for this row
 
     FAValue m_cfa_value;

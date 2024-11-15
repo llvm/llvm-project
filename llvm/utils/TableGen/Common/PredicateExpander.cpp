@@ -116,8 +116,10 @@ void PredicateExpander::expandCheckRegOperandSimple(raw_ostream &OS,
 
 void PredicateExpander::expandCheckInvalidRegOperand(raw_ostream &OS,
                                                      int OpIndex) {
+  if (!shouldNegate())
+    OS << "!";
   OS << "MI" << (isByRef() ? "." : "->") << "getOperand(" << OpIndex
-     << ").getReg() " << (shouldNegate() ? "!= " : "== ") << "0";
+     << ").getReg().isValid()";
 }
 
 void PredicateExpander::expandCheckSameRegOperand(raw_ostream &OS, int First,
@@ -139,7 +141,7 @@ void PredicateExpander::expandCheckOpcode(raw_ostream &OS, const Record *Inst) {
 }
 
 void PredicateExpander::expandCheckOpcode(raw_ostream &OS,
-                                          const RecVec &Opcodes) {
+                                          ArrayRef<const Record *> Opcodes) {
   assert(!Opcodes.empty() && "Expected at least one opcode to check!");
   bool First = true;
 
@@ -169,16 +171,15 @@ void PredicateExpander::expandCheckOpcode(raw_ostream &OS,
 }
 
 void PredicateExpander::expandCheckPseudo(raw_ostream &OS,
-                                          const RecVec &Opcodes) {
+                                          ArrayRef<const Record *> Opcodes) {
   if (shouldExpandForMC())
     expandFalse(OS);
   else
     expandCheckOpcode(OS, Opcodes);
 }
 
-void PredicateExpander::expandPredicateSequence(raw_ostream &OS,
-                                                const RecVec &Sequence,
-                                                bool IsCheckAll) {
+void PredicateExpander::expandPredicateSequence(
+    raw_ostream &OS, ArrayRef<const Record *> Sequence, bool IsCheckAll) {
   assert(!Sequence.empty() && "Found an invalid empty predicate set!");
   if (Sequence.size() == 1)
     return expandPredicate(OS, Sequence[0]);
@@ -267,8 +268,7 @@ void PredicateExpander::expandReturnStatement(raw_ostream &OS,
 
 void PredicateExpander::expandOpcodeSwitchCase(raw_ostream &OS,
                                                const Record *Rec) {
-  const RecVec &Opcodes = Rec->getValueAsListOfDefs("Opcodes");
-  for (const Record *Opcode : Opcodes) {
+  for (const Record *Opcode : Rec->getValueAsListOfDefs("Opcodes")) {
     OS.indent(getIndentLevel() * 2);
     OS << "case " << Opcode->getValueAsString("Namespace")
        << "::" << Opcode->getName() << ":\n";
@@ -280,9 +280,8 @@ void PredicateExpander::expandOpcodeSwitchCase(raw_ostream &OS,
   decreaseIndentLevel();
 }
 
-void PredicateExpander::expandOpcodeSwitchStatement(raw_ostream &OS,
-                                                    const RecVec &Cases,
-                                                    const Record *Default) {
+void PredicateExpander::expandOpcodeSwitchStatement(
+    raw_ostream &OS, ArrayRef<const Record *> Cases, const Record *Default) {
   std::string Buffer;
   raw_string_ostream SS(Buffer);
 
@@ -310,7 +309,7 @@ void PredicateExpander::expandOpcodeSwitchStatement(raw_ostream &OS,
 void PredicateExpander::expandStatement(raw_ostream &OS, const Record *Rec) {
   // Assume that padding has been added by the caller.
   if (Rec->isSubClassOf("MCOpcodeSwitchStatement")) {
-    expandOpcodeSwitchStatement(OS, Rec->getValueAsListOfDefs("Cases"),
+    expandOpcodeSwitchStatement(OS, Rec->getValueAsListOfConstDefs("Cases"),
                                 Rec->getValueAsDef("DefaultCase"));
     return;
   }
@@ -461,13 +460,13 @@ void STIPredicateExpander::expandHeader(raw_ostream &OS,
 
 void STIPredicateExpander::expandPrologue(raw_ostream &OS,
                                           const STIPredicateFunction &Fn) {
-  RecVec Delegates = Fn.getDeclaration()->getValueAsListOfDefs("Delegates");
   bool UpdatesOpcodeMask =
       Fn.getDeclaration()->getValueAsBit("UpdatesOpcodeMask");
 
   increaseIndentLevel();
   unsigned IndentLevel = getIndentLevel();
-  for (const Record *Delegate : Delegates) {
+  for (const Record *Delegate :
+       Fn.getDeclaration()->getValueAsListOfDefs("Delegates")) {
     OS.indent(IndentLevel * 2);
     OS << "if (" << Delegate->getValueAsString("Name") << "(MI";
     if (UpdatesOpcodeMask)

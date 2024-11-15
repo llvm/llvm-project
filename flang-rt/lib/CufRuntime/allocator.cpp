@@ -1,4 +1,4 @@
-//===-- lib/CufRuntime/allocator.cpp ----------------------------*- C++ -*-===//
+//===-- runtime/CUDA/allocator.cpp ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang-rt/CUDA/allocator.h"
-#include "flang-rt/allocator-registry.h"
-#include "../flang_rt/derived.h"
-#include "../flang_rt/stat.h"
-#include "../flang_rt/terminator.h"
-#include "../flang_rt/type-info.h"
-#include "flang/Common/Fortran-consts.h"
-#include "flang/Common/ISO_Fortran_binding_wrapper.h"
+#include "flang/Runtime/CUDA/allocator.h"
+#include "../derived.h"
+#include "../stat.h"
+#include "../terminator.h"
+#include "../type-info.h"
+#include "flang/Common/Fortran.h"
+#include "flang/ISO_Fortran_binding_wrapper.h"
+#include "flang/Runtime/CUDA/common.h"
+#include "flang/Runtime/allocator-registry.h"
 
 #include "cuda_runtime.h"
 

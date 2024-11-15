@@ -25,6 +25,10 @@
     "LIBC_CONF_PRINTF_DISABLE_FIXED_POINT": {
       "value": false,
       "doc": "Disable printing fixed point values in printf and friends."
+    },
+    "LIBC_CONF_PRINTF_DISABLE_STRERROR": {
+      "value": false,
+      "doc": "Disable handling of %m to print strerror in printf and friends."
     }
   },
   "scanf": {
