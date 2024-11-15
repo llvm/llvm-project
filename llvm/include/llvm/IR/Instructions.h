@@ -1384,7 +1384,6 @@ public:
   /// Determine if this is an equality predicate.
   bool isEquality() const { return isEquality(getPredicate()); }
 
-
   /// @returns true if the predicate is commutative.
   /// Determine if this is a commutative predicate.
   static bool isCommutative(Predicate Pred) {
