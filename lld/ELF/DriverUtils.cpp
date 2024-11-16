@@ -89,7 +89,8 @@ static cl::TokenizerCallback getQuotingStyle(Ctx &ctx,
 // `--plugin-opt <foo>` is converted to `--plugin-opt=<foo>`. This is a
 // bit hacky, but looks like it is still better than handling --plugin-opt
 // options by hand.
-static void concatLTOPluginOptions(SmallVectorImpl<const char *> &args) {
+static void concatLTOPluginOptions(Ctx &ctx,
+                                   SmallVectorImpl<const char *> &args) {
   SmallVector<const char *, 256> v;
   for (size_t i = 0, e = args.size(); i != e; ++i) {
     StringRef s = args[i];
@@ -118,7 +119,7 @@ opt::InputArgList ELFOptTable::parse(Ctx &ctx, ArrayRef<const char *> argv) {
   // Expand response files (arguments in the form of @<filename>)
   // and then parse the argument again.
   cl::ExpandResponseFiles(saver(ctx), getQuotingStyle(ctx, args), vec);
-  concatLTOPluginOptions(vec);
+  concatLTOPluginOptions(ctx, vec);
   args = this->ParseArgs(vec, missingIndex, missingCount);
 
   handleColorDiagnostics(ctx, args);
