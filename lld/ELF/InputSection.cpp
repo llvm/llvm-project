@@ -1033,8 +1033,7 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
         }
         if (overwriteULEB128(bufLoc, val) >= 0x80)
           Err(ctx) << getLocation(offset) << ": ULEB128 value " << Twine(val)
-                   << " exceeds available space; references '"
-                   << lld::toString(sym) << "'";
+                   << " exceeds available space; references '" << &sym << "'";
         continue;
       }
       Err(ctx) << getLocation(offset)
@@ -1238,9 +1237,9 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(Ctx &ctx, uint8_t *buf,
                                                        f->stOther))
         continue;
       if (!getFile<ELFT>()->someNoSplitStack)
-        ErrAlways(ctx)
-            << lld::toString(this) << ": " << f->getName()
-            << " (with -fsplit-stack) calls " << rel.sym->getName()
+        Err(ctx)
+            << this << ": " << f->getName() << " (with -fsplit-stack) calls "
+            << rel.sym->getName()
             << " (without -fsplit-stack), but couldn't adjust its prologue";
     }
   }
