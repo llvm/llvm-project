@@ -674,10 +674,6 @@ static inline ArrayRef<VersionDefinition> namedVersionDefs(Ctx &ctx) {
   return llvm::ArrayRef(ctx.arg.versionDefinitions).slice(2);
 }
 
-void errorOrWarn(const Twine &msg);
-
-void internalLinkerError(StringRef loc, const Twine &msg);
-
 struct ELFSyncStream : SyncStream {
   Ctx &ctx;
   ELFSyncStream(Ctx &ctx, DiagLevel level)
@@ -720,6 +716,8 @@ ELFSyncStream ErrAlways(Ctx &ctx);
 ELFSyncStream Fatal(Ctx &ctx);
 
 uint64_t errCount(Ctx &ctx);
+
+ELFSyncStream InternalErr(Ctx &ctx, const uint8_t *buf);
 
 #define CHECK2(E, S) lld::check2((E), [&] { return toStr(ctx, S); })
 

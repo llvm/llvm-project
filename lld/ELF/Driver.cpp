@@ -93,9 +93,10 @@ ELFSyncStream elf::ErrAlways(Ctx &ctx) { return {ctx, DiagLevel::Err}; }
 ELFSyncStream elf::Fatal(Ctx &ctx) { return {ctx, DiagLevel::Fatal}; }
 uint64_t elf::errCount(Ctx &ctx) { return ctx.errHandler->errorCount; }
 
-void elf::internalLinkerError(StringRef loc, const Twine &msg) {
-  ELFSyncStream(ctx, DiagLevel::Err) << "internal linker error: " << msg << '\n'
-                                     << llvm::getBugReportMsg();
+ELFSyncStream elf::InternalErr(Ctx &ctx, const uint8_t *buf) {
+  ELFSyncStream s(ctx, DiagLevel::Err);
+  s << "internal linker error: ";
+  return s;
 }
 
 Ctx::Ctx() : driver(*this) {}
