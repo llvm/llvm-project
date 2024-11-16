@@ -810,8 +810,6 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         S->getSymbol(), getPointerTy(DAG.getDataLayout()), OpFlags);
   }
 
-  // Returns a chain & a flag for retval copy to use.
-  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
   SmallVector<SDValue, 8> Ops;
 
   if (!IsSibcall && IsTailCall) {
@@ -842,10 +840,11 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
-    return DAG.getNode(M68kISD::TC_RETURN, DL, NodeTys, Ops);
+    return DAG.getNode(M68kISD::TC_RETURN, DL, MVT::Other, Ops);
   }
 
-  Chain = DAG.getNode(M68kISD::CALL, DL, NodeTys, Ops);
+  // Returns a chain & a flag for retval copy to use.
+  Chain = DAG.getNode(M68kISD::CALL, DL, {MVT::Other, MVT::Glue}, Ops);
   InGlue = Chain.getValue(1);
 
   // Create the CALLSEQ_END node.
