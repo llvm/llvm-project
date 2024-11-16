@@ -206,6 +206,28 @@ func.func @extract_dynamic(%arg0 : vector<4xf32>, %id : index) -> f32 {
   return %0: f32
 }
 
+// -----
+
+// CHECK-LABEL: @extract_i32_index
+//  CHECK-SAME: %[[V:.*]]: vector<4xf32>, %[[ID:.*]]: i32
+//       CHECK:   spirv.VectorExtractDynamic %[[V]][%[[ID]]] : vector<4xf32>, i32
+func.func @extract_i32_index(%arg0 : vector<4xf32>, %id : i32) -> f32 {
+  %0 = vector.extract %arg0[%id : i32] : f32 from vector<4xf32>
+  return %0: f32
+}
+
+// -----
+
+// CHECK-LABEL: @extract_i8_index
+//  CHECK-SAME: %[[V:.*]]: vector<4xf32>, %[[ID:.*]]: i8
+//       CHECK:   spirv.VectorExtractDynamic %[[V]][%[[ID]]] : vector<4xf32>, i8
+func.func @extract_i8_index(%arg0 : vector<4xf32>, %id : i8) -> f32 {
+  %0 = vector.extract %arg0[%id : i8] : f32 from vector<4xf32>
+  return %0: f32
+}
+
+// -----
+
 // CHECK-LABEL: @extract_dynamic_cst
 //  CHECK-SAME: %[[V:.*]]: vector<4xf32>
 //       CHECK:   spirv.CompositeExtract %[[V]][1 : i32] : vector<4xf32>
@@ -264,6 +286,28 @@ func.func @insert_size1_vector_dynamic(%arg0 : vector<1xf32>, %arg1: f32, %id : 
 //       CHECK:   spirv.VectorInsertDynamic %[[VAL]], %[[V]][%[[ID]]] : vector<4xf32>, i32
 func.func @insert_dynamic(%val: f32, %arg0 : vector<4xf32>, %id : index) -> vector<4xf32> {
   %0 = vector.insert %val, %arg0[%id : index] : f32 into vector<4xf32>
+  return %0: vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @insert_i32_index
+//  CHECK-SAME: %[[VAL:.*]]: f32, %[[V:.*]]: vector<4xf32>, %[[ARG2:.*]]: i32
+//       CHECK: %[[ID:.+]] = builtin.unrealized_conversion_cast %[[ARG2]] : index to i32
+//       CHECK:   spirv.VectorInsertDynamic %[[VAL]], %[[V]][%[[ID]]] : vector<4xf32>, i32
+func.func @insert_dynamic(%val: f32, %arg0 : vector<4xf32>, %id : i32) -> vector<4xf32> {
+  %0 = vector.insert %val, %arg0[%id : i32] : f32 into vector<4xf32>
+  return %0: vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @insert_i8_index
+//  CHECK-SAME: %[[VAL:.*]]: f32, %[[V:.*]]: vector<4xf32>, %[[ARG2:.*]]: i8
+//       CHECK: %[[ID:.+]] = builtin.unrealized_conversion_cast %[[ARG2]] : index to i8
+//       CHECK:   spirv.VectorInsertDynamic %[[VAL]], %[[V]][%[[ID]]] : vector<4xf32>, i8
+func.func @insert_dynamic(%val: f32, %arg0 : vector<4xf32>, %id : i8) -> vector<4xf32> {
+  %0 = vector.insert %val, %arg0[%id : i8] : f32 into vector<4xf32>
   return %0: vector<4xf32>
 }
 

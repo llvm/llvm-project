@@ -149,7 +149,7 @@ func.func @extract_vector_type(%arg0: index) {
 }
 
 // -----
-func.func @extract_vector_mixed_index_types(%arg0 : vector<8x16xf32>,
+func.func @extract_mixed_index_types(%arg0 : vector<8x16xf32>,
                                             %i32_idx: i32, %i8_idx: i8) {
   // expected-error@+2 {{use of value '%i32_idx' expects different type than prior uses: 'i8' vs 'i32'}}
   // expected-note@-2 {{prior use here}}
@@ -157,7 +157,7 @@ func.func @extract_vector_mixed_index_types(%arg0 : vector<8x16xf32>,
 }
 
 // -----
-func.func @extract_vector_index_vals_no_type(%arg0 : vector<8xf32>,
+func.func @extract_index_vals_no_type(%arg0 : vector<8xf32>,
                                              %i32_idx: i32) {
   // expected-error@+2 {{expected a type for dynamic indices}}
   // expected-error@+1 {{expected a valid list of SSA values or integers}}
@@ -165,7 +165,7 @@ func.func @extract_vector_index_vals_no_type(%arg0 : vector<8xf32>,
 }
 
 // -----
-func.func @extract_vector_index_vals_multiple_types(%arg0 : vector<8xf32>,
+func.func @extract_index_vals_multiple_types(%arg0 : vector<8xf32>,
                                                     %i8_idx : i8,
                                                     %i32_idx : i32) {
   // expected-error@+2 {{expected single type}}
@@ -174,7 +174,7 @@ func.func @extract_vector_index_vals_multiple_types(%arg0 : vector<8xf32>,
 }
 
 // -----
-func.func @extract_vector_index_consts_type(%arg0 : vector<8x16xf32>,
+func.func @extract_index_consts_type(%arg0 : vector<8x16xf32>,
                                             %i32_idx: i32, %i8_idx: i8) {
   // expected-error@+2 {{'vector.extract' expected no type for constant indices}}
   // expected-error@+1 {{expected a valid list of SSA values or integers}}
@@ -305,32 +305,32 @@ func.func @insert_0d(%a: f32, %b: vector<f32>) {
 }
 
 // -----
-func.func @extract_vector_mixed_index_types(%arg0 : f32, %arg1 : vector<8x16xf32>,
-                                            %i32_idx: i32, %i8_idx: i8) {
+func.func @insert_mixed_index_types(%arg0 : f32, %arg1 : vector<8x16xf32>,
+                                    %i32_idx: i32, %i8_idx: i8) {
   // expected-error@+2 {{use of value '%i32_idx' expects different type than prior uses: 'i8' vs 'i32'}}
   // expected-note@-2 {{prior use here}}
   %1 = vector.insert %arg0, %arg1[%i32_idx, %i8_idx : i8] : f32 into vector<8x16xf32>
 }
 
 // -----
-func.func @extract_vector_index_vals_no_type(%arg0 : f32, %arg1 : vector<8xf32>,
-                                             %i32_idx: i32) {
+func.func @insert_index_vals_no_type(%arg0 : f32, %arg1 : vector<8xf32>,
+                                     %i32_idx: i32) {
   // expected-error@+2 {{expected a type for dynamic indices}}
   // expected-error@+1 {{expected a valid list of SSA values or integers}}
   %1 = vector.insert %arg0, %arg1[%i32_idx] : f32 into vector<8x16xf32>
 }
 
 // -----
-func.func @extract_vector_index_vals_multiple_types(%arg0 : f32, %arg1 : vector<8xf32>,
-                                                    %i8_idx : i8, %i32_idx : i32) {
+func.func @insert_index_vals_multiple_types(%arg0 : f32, %arg1 : vector<8xf32>,
+                                            %i8_idx : i8, %i32_idx : i32) {
   // expected-error@+2 {{expected single type}}
   // expected-error@+1 {{expected a valid list of SSA values or integers}}
   %1 = vector.insert %arg0, %arg1[%i8_idx, %i32_idx : i8, i32] : f32 into vector<8x16xf32>
 }
 
 // -----
-func.func @extract_vector_index_consts_type(%arg0 : f32, %arg1 : vector<8x16xf32>,
-                                            %i32_idx: i32, %i8_idx: i8) {
+func.func @insert_index_consts_type(%arg0 : f32, %arg1 : vector<8x16xf32>,
+                                    %i32_idx: i32, %i8_idx: i8) {
   // expected-error@+2 {{'vector.insert' expected no type for constant indices}}
   // expected-error@+1 {{expected a valid list of SSA values or integers}}
   %1 = vector.insert %arg0, %arg1[5, 3 : index] : f32 into vector<8x16xf32>
