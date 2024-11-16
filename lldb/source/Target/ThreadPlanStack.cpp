@@ -134,15 +134,17 @@ void ThreadPlanStack::PushPlan(lldb::ThreadPlanSP new_plan_sp) {
   // If the thread plan doesn't already have a tracer, give it its parent's
   // tracer:
   // The first plan has to be a base plan:
-  llvm::sys::ScopedWriter guard(m_stack_mutex);
-  assert((m_plans.size() > 0 || new_plan_sp->IsBasePlan()) &&
-         "Zeroth plan must be a base plan");
+  { // Scope for Lock - DidPush often adds plans to the stack:
+    llvm::sys::ScopedWriter guard(m_stack_mutex);
+    assert((m_plans.size() > 0 || new_plan_sp->IsBasePlan()) &&
+           "Zeroth plan must be a base plan");
 
-  if (!new_plan_sp->GetThreadPlanTracer()) {
-    assert(!m_plans.empty());
-    new_plan_sp->SetThreadPlanTracer(m_plans.back()->GetThreadPlanTracer());
+    if (!new_plan_sp->GetThreadPlanTracer()) {
+      assert(!m_plans.empty());
+      new_plan_sp->SetThreadPlanTracer(m_plans.back()->GetThreadPlanTracer());
+    }
+    m_plans.push_back(new_plan_sp);
   }
-  m_plans.push_back(new_plan_sp);
   new_plan_sp->DidPush();
 }
 
