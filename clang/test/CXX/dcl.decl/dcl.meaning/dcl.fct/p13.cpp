@@ -57,10 +57,11 @@ template<typename T>
 void b(T[] ...);
 
 template<typename T>
-void c(T ... []); // expected-error {{expected expression}} \
-                  // expected-error {{type 'T[]' of function parameter pack does not contain any unexpanded parameter packs}} \
-                  // expected-warning {{would become a pack indexing declaration in C++2c onwards}} \
-                  // expected-note {{add a name to disambiguate}}
+void c(T ... []); // expected-error {{type 'T[]' of function parameter pack does not contain any unexpanded parameter packs}}
+
+// A function that takes pointers to each type T as arguments, after any decay.
+template <typename ...T>
+void g(T...[]);
 
 template<typename T>
 void d(T ... x[]); // expected-error{{type 'T[]' of function parameter pack does not contain any unexpanded parameter packs}}

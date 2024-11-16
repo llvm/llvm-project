@@ -238,7 +238,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
 
   else if (!HasScopeSpecifier && Tok.is(tok::identifier) &&
            GetLookAheadToken(1).is(tok::ellipsis) &&
-           GetLookAheadToken(2).is(tok::l_square)) {
+           GetLookAheadToken(2).is(tok::l_square) &&
+           !GetLookAheadToken(3).is(tok::r_square)) {
     SourceLocation Start = Tok.getLocation();
     DeclSpec DS(AttrFactory);
     SourceLocation CCLoc;
