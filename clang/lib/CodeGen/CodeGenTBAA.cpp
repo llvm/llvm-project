@@ -25,8 +25,6 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/ADT/SmallSet.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
