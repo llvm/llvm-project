@@ -45,7 +45,6 @@
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/IR/Module.h"
 #include "llvm/SandboxIR/Use.h"
 #include "llvm/Support/Debug.h"
 #include <memory>
@@ -64,12 +63,11 @@ class SwitchInst;
 class ConstantInt;
 class ShuffleVectorInst;
 class CmpInst;
-class Module;
 class GlobalVariable;
 
 #ifndef NDEBUG
 
-/// A class that saves hashes and textual IR snapshots of modules in a
+/// A class that saves hashes and textual IR snapshots of functions in a
 /// SandboxIR Context, and does hash comparison when `expectNoDiff` is called.
 /// If hashes differ, it prints textual IR for both old and new versions to
 /// aid debugging.
@@ -79,26 +77,22 @@ class GlobalVariable;
 class IRSnapshotChecker {
   Context &Ctx;
 
-  // A snapshot of textual IR for a module, with a hash for quick comparison.
-  struct ModuleSnapshot {
+  // A snapshot of textual IR for a function, with a hash for quick comparison.
+  struct FunctionSnapshot {
     llvm::stable_hash Hash;
     std::string TextualIR;
   };
 
-  // A snapshot for each llvm::Module found in the SandboxIR Context. In
-  // practice there will always be one module, but sandbox IR save/restore ops
-  // work at the Context level, so we must take the full state into account.
-  using ContextSnapshot = DenseMap<llvm::Module *, ModuleSnapshot>;
+  // A snapshot for each llvm::Function found in every module in the SandboxIR
+  // Context. In practice there will always be one module, but sandbox IR
+  // save/restore ops work at the Context level, so we must take the full state
+  // into account.
+  using ContextSnapshot = DenseMap<const llvm::Function *, FunctionSnapshot>;
 
   ContextSnapshot OrigContextSnapshot;
 
-  // True if save() was previously called. This helps us distinguish between
-  // "expectNoDiff was called without calling save" and "save was called but
-  // the saved snapshot is empty".
-  bool HasSavedState = false;
-
-  // Dumps to a string the textual IR for a single Module.
-  std::string dumpIR(llvm::Module *F) const;
+  // Dumps to a string the textual IR for a single Function.
+  std::string dumpIR(const llvm::Function &F) const;
 
   // Returns a snapshot of all the modules in the sandbox IR context.
   ContextSnapshot takeSnapshot() const;
@@ -109,14 +103,12 @@ class IRSnapshotChecker {
 public:
   IRSnapshotChecker(Context &Ctx) : Ctx(Ctx) {}
 
-  /// Saves the current state.
+  /// Saves a snapshot of the current state. If there was any previous snapshot,
+  /// it will be replaced with the new one.
   void save();
 
   /// Checks current state against saved state, crashes if different.
   void expectNoDiff();
-
-  /// Empties saved state.
-  void reset();
 };
 
 #endif // NDEBUG

@@ -10,6 +10,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/StructuralHash.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include <sstream>
@@ -18,71 +19,66 @@ using namespace llvm::sandboxir;
 
 #ifndef NDEBUG
 
-std::string IRSnapshotChecker::dumpIR(llvm::Module *M) const {
+std::string IRSnapshotChecker::dumpIR(const llvm::Function &F) const {
   std::string Result;
   raw_string_ostream SS(Result);
-  M->print(SS, /*AssemblyAnnotationWriter=*/nullptr);
+  F.print(SS, /*AssemblyAnnotationWriter=*/nullptr);
   return Result;
 }
 
 IRSnapshotChecker::ContextSnapshot IRSnapshotChecker::takeSnapshot() const {
   ContextSnapshot Result;
-  for (const auto &Entry : Ctx.LLVMModuleToModuleMap) {
-    llvm::Module *M = Entry.first;
-    ModuleSnapshot MS;
-    MS.Hash = StructuralHash(*M, /*DetailedHash=*/true);
-    MS.TextualIR = dumpIR(M);
-    Result[M] = MS;
-  }
+  for (const auto &Entry : Ctx.LLVMModuleToModuleMap)
+    for (const auto &F : *Entry.first) {
+      FunctionSnapshot Snapshot;
+      Snapshot.Hash = StructuralHash(F, /*DetailedHash=*/true);
+      Snapshot.TextualIR = dumpIR(F);
+      Result[&F] = Snapshot;
+    }
   return Result;
 }
 
 bool IRSnapshotChecker::diff(const ContextSnapshot &Orig,
                              const ContextSnapshot &Curr) const {
   bool DifferenceFound = false;
-  for (const auto &[M, OrigMS] : Orig) {
-    auto CurrMSIt = Curr.find(M);
-    if (CurrMSIt == Curr.end()) {
+  for (const auto &[F, OrigFS] : Orig) {
+    auto CurrFSIt = Curr.find(F);
+    if (CurrFSIt == Curr.end()) {
       DifferenceFound = true;
-      dbgs() << "Module " << M->getName() << " not found in current IR.\n";
+      dbgs() << "Function " << F->getName() << " not found in current IR.\n";
+      dbgs() << OrigFS.TextualIR << "\n";
       continue;
     }
-    const ModuleSnapshot &CurrMS = CurrMSIt->second;
-    if (OrigMS.Hash != CurrMS.Hash) {
+    const FunctionSnapshot &CurrFS = CurrFSIt->second;
+    if (OrigFS.Hash != CurrFS.Hash) {
       DifferenceFound = true;
-      dbgs() << "Found IR difference in module " << M->getName() << ".\n";
-      dbgs() << "Original:\n" << OrigMS.TextualIR << "\n";
-      dbgs() << "Current:\n" << CurrMS.TextualIR << "\n";
+      dbgs() << "Found IR difference in Function " << F->getName() << "\n";
+      dbgs() << "Original:\n" << OrigFS.TextualIR << "\n";
+      dbgs() << "Current:\n" << CurrFS.TextualIR << "\n";
     }
   }
   // Check that Curr doesn't somehow contain any new modules.
-  for (const auto &[M, CurrMS] : Curr) {
-    if (!Orig.contains(M)) {
+  for (const auto &[F, CurrFS] : Curr) {
+    if (!Orig.contains(F)) {
       DifferenceFound = true;
-      dbgs() << "Module " << M->getName()
+      dbgs() << "Function " << F->getName()
              << " found in current IR but not in original snapshot.\n";
+      dbgs() << CurrFS.TextualIR << "\n";
     }
   }
   return DifferenceFound;
 }
 
 void IRSnapshotChecker::save() {
-  HasSavedState = true;
   OrigContextSnapshot = takeSnapshot();
 }
 
 void IRSnapshotChecker::expectNoDiff() {
-  assert(HasSavedState && "expectNoDiff called with no saved state");
   ContextSnapshot CurrContextSnapshot = takeSnapshot();
   if (diff(OrigContextSnapshot, CurrContextSnapshot)) {
     llvm_unreachable(
         "Original and current IR differ! Probably a checkpointing bug.");
   }
-}
-
-void IRSnapshotChecker::reset() {
-  OrigContextSnapshot.clear();
-  HasSavedState = false;
 }
 
 void UseSet::dump() const {
