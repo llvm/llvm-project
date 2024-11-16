@@ -394,9 +394,13 @@ Expected<DWARFAddressRangesVector> DWARFDie::getAddressRanges() const {
 
   std::optional<DWARFFormValue> Value = find(DW_AT_ranges);
   if (Value) {
+    std::optional<uint64_t> SecOff = Value->getAsSectionOffset();
+    if (!SecOff) {
+      return DWARFAddressRangesVector();
+    }
     if (Value->getForm() == DW_FORM_rnglistx)
-      return U->findRnglistFromIndex(*Value->getAsSectionOffset());
-    return U->findRnglistFromOffset(*Value->getAsSectionOffset());
+      return U->findRnglistFromIndex(*SecOff);
+    return U->findRnglistFromOffset(*SecOff);
   }
   return DWARFAddressRangesVector();
 }
