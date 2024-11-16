@@ -161,13 +161,8 @@ entry:
 define <2 x i32> @dupzext_v2i32_v2i64_trunc(i32 %src, <2 x i32> %b) {
 ; CHECK-SD-LABEL: dupzext_v2i32_v2i64_trunc:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-SD-NEXT:    fmov x9, d0
-; CHECK-SD-NEXT:    mov x8, v0.d[1]
-; CHECK-SD-NEXT:    mul w9, w0, w9
-; CHECK-SD-NEXT:    mul w8, w0, w8
-; CHECK-SD-NEXT:    fmov d0, x9
-; CHECK-SD-NEXT:    mov v0.d[1], x8
+; CHECK-SD-NEXT:    dup v1.2s, w0
+; CHECK-SD-NEXT:    smull v0.2d, v1.2s, v0.2s
 ; CHECK-SD-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-SD-NEXT:    ret
 ;
