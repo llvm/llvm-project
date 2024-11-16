@@ -1065,9 +1065,11 @@ void request_breakpointLocations(DAP &dap, const llvm::json::Object &request) {
       // Make sure we are in the right file.
       // We might have a match on line & column range and still
       // be in the wrong file, e.g. for included files.
-      if (std::string_view(line_entry.GetFileSpec().GetFilename()) !=
+      // Given that the involved pointers point into LLDB's string pool,
+      // we can directly compare the `const char*` pointers.
+      if (line_entry.GetFileSpec().GetFilename() !=
               primary_file_spec.GetFilename() ||
-          std::string_view(line_entry.GetFileSpec().GetDirectory()) !=
+          line_entry.GetFileSpec().GetDirectory() !=
               primary_file_spec.GetDirectory())
         continue;
 
