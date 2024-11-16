@@ -37,6 +37,7 @@ class Symbol;
 
 // Returns "<internal>", "foo.a(bar.o)" or "baz.o".
 std::string toStr(Ctx &, const InputFile *f);
+const ELFSyncStream &operator<<(const ELFSyncStream &, const InputFile *);
 
 // Opens a given file.
 std::optional<MemoryBufferRef> readFile(Ctx &, StringRef path);
@@ -101,7 +102,7 @@ public:
   Symbol &getSymbol(uint32_t symbolIndex) const {
     assert(fileKind == ObjKind);
     if (symbolIndex >= numSymbols)
-      fatal(toStr(ctx, this) + ": invalid symbol index");
+      Fatal(ctx) << this << ": invalid symbol index";
     return *this->symbols[symbolIndex];
   }
 
@@ -385,8 +386,6 @@ ELFFileBase *createObjFile(Ctx &, MemoryBufferRef mb,
                            StringRef archiveName = "", bool lazy = false);
 
 std::string replaceThinLTOSuffix(Ctx &, StringRef path);
-
-const ELFSyncStream &operator<<(const ELFSyncStream &, const InputFile *);
 
 } // namespace elf
 } // namespace lld
