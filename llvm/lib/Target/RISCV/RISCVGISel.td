@@ -169,6 +169,11 @@ def : LdPat<load, LD, PtrVT>;
 def : StPat<store, SD, GPR, PtrVT>;
 }
 
+// Load and store patterns for i16, needed because Zfh makes s16 load/store
+// legal and regbank select may not constrain registers to FP.
+def : LdPat<load, LH, i16>;
+def : StPat<store, SH, GPR, i16>;
+
 //===----------------------------------------------------------------------===//
 // RV64 i32 patterns not used by SelectionDAG
 //===----------------------------------------------------------------------===//
@@ -187,16 +192,16 @@ def : LdPat<extloadi16, LH, i32>;
 def : StPat<truncstorei8, SB, GPR, i32>;
 def : StPat<truncstorei16, SH, GPR, i32>;
 
-def : Pat<(anyext GPR:$src), (COPY GPR:$src)>;
-def : Pat<(sext GPR:$src), (ADDIW GPR:$src, 0)>;
-def : Pat<(trunc GPR:$src), (COPY GPR:$src)>;
+def : Pat<(anyext (i32 GPR:$src)), (COPY GPR:$src)>;
+def : Pat<(sext (i32 GPR:$src)), (ADDIW GPR:$src, 0)>;
+def : Pat<(i32 (trunc GPR:$src)), (COPY GPR:$src)>;
 
 // Use sext if the sign bit of the input is 0.
-def : Pat<(zext_is_sext GPR:$src), (ADDIW GPR:$src, 0)>;
+def : Pat<(zext_is_sext (i32 GPR:$src)), (ADDIW GPR:$src, 0)>;
 }
 
 let Predicates = [IsRV64, NotHasStdExtZba] in {
-def : Pat<(zext GPR:$src), (SRLI (i64 (SLLI GPR:$src, 32)), 32)>;
+def : Pat<(zext (i32 GPR:$src)), (SRLI (i64 (SLLI GPR:$src, 32)), 32)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -204,5 +209,5 @@ def : Pat<(zext GPR:$src), (SRLI (i64 (SLLI GPR:$src, 32)), 32)>;
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZba, IsRV64] in {
-def : Pat<(zext GPR:$src), (ADD_UW GPR:$src, (XLenVT X0))>;
+def : Pat<(zext (i32 GPR:$src)), (ADD_UW GPR:$src, (XLenVT X0))>;
 }
