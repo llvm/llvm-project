@@ -3724,6 +3724,11 @@ bool TargetLowering::SimplifyDemandedVectorElts(
                                    KnownZero, TLO, Depth + 1))
       return true;
 
+    if (!DemandedElts.isAllOnes())
+      if (SDValue NewOp = SimplifyMultipleUseDemandedVectorElts(
+              Op.getOperand(0), DemandedElts, TLO.DAG, Depth + 1))
+        return TLO.CombineTo(Op, TLO.DAG.getNode(Opcode, SDLoc(Op), VT, NewOp));
+
     if (Op.getOpcode() == ISD::ZERO_EXTEND) {
       // zext(undef) upper bits are guaranteed to be zero.
       if (DemandedElts.isSubsetOf(KnownUndef))
