@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - 'release/**'
+      - 'main'
     paths:
       - 'clang/**'
       - '.github/workflows/clang-tests.yml'
@@ -16,6 +17,7 @@ on:
   pull_request:
     branches:
       - 'release/**'
+      - 'main'
     paths:
       - 'clang/**'
       - '.github/workflows/clang-tests.yml'
@@ -30,7 +32,7 @@ concurrency:
 
 jobs:
   check_clang:
-    if: github.repository_owner == 'llvm'
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
     name: Test clang,lldb,libclc
     uses: ./.github/workflows/llvm-project-tests.yml
     with:
