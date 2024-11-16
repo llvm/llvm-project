@@ -91,7 +91,7 @@ TYPED_TEST(LlvmLibcBitTest, FirstTrailingZero, UnsignedTypesNoBigInt) {
 }
 
 TYPED_TEST(LlvmLibcBitTest, FirstTrailingOne, UnsignedTypesNoBigInt) {
-  EXPECT_EQ(first_trailing_one<T>(cpp::numeric_limits<T>::max()), 0);
+  EXPECT_EQ(first_trailing_one<T>(T(0)), 0);
   for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i)
     EXPECT_EQ(first_trailing_one<T>(T(1) << i), i + 1);
 }
