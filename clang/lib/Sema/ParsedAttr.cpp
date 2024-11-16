@@ -16,9 +16,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/SemaInternal.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include <cassert>
 #include <cstddef>
 #include <utility>
