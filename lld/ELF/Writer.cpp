@@ -49,7 +49,7 @@ template <class ELFT> class Writer {
 public:
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
-  Writer(Ctx &ctx) : ctx(ctx), buffer(errorHandler().outputBuffer) {}
+  Writer(Ctx &ctx) : ctx(ctx), buffer(ctx.errHandler->outputBuffer) {}
 
   void run();
 

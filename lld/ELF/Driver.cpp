@@ -388,7 +388,8 @@ void LinkerDriver::addLibrary(StringRef name) {
   if (std::optional<std::string> path = searchLibrary(ctx, name))
     addFile(saver().save(*path), /*withLOption=*/true);
   else
-    error("unable to find library -l" + name, ErrorTag::LibNotFound, {name});
+    ctx.errHandler->error("unable to find library -l" + name,
+                          ErrorTag::LibNotFound, {name});
 }
 
 // This function is called on startup. We need this for LTO since
@@ -642,11 +643,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   opt::InputArgList args = parser.parse(ctx, argsArr.slice(1));
 
   // Interpret these flags early because Err/Warn depend on them.
-  errorHandler().errorLimit = args::getInteger(args, OPT_error_limit, 20);
-  errorHandler().fatalWarnings =
+  ctx.errHandler->errorLimit = args::getInteger(args, OPT_error_limit, 20);
+  ctx.errHandler->fatalWarnings =
       args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false) &&
       !args.hasArg(OPT_no_warnings);
-  errorHandler().suppressWarnings = args.hasArg(OPT_no_warnings);
+  ctx.errHandler->suppressWarnings = args.hasArg(OPT_no_warnings);
 
   // Handle -help
   if (args.hasArg(OPT_help)) {
@@ -1278,8 +1279,8 @@ static bool remapInputs(Ctx &ctx, StringRef line, const Twine &location) {
 
 // Initializes Config members by the command line options.
 static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
-  errorHandler().verbose = args.hasArg(OPT_verbose);
-  errorHandler().vsDiagnostics =
+  ctx.errHandler->verbose = args.hasArg(OPT_verbose);
+  ctx.errHandler->vsDiagnostics =
       args.hasArg(OPT_visual_studio_diagnostics_format, false);
 
   ctx.arg.allowMultipleDefinition =
@@ -1337,7 +1338,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       args.hasArg(OPT_enable_non_contiguous_regions);
   ctx.arg.entry = args.getLastArgValue(OPT_entry);
 
-  errorHandler().errorHandlingScript =
+  ctx.errHandler->errorHandlingScript =
       args.getLastArgValue(OPT_error_handling_script);
 
   ctx.arg.executeOnly =
