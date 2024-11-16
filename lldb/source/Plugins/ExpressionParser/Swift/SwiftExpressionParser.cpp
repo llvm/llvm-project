@@ -1296,19 +1296,21 @@ SwiftExpressionParser::ParseAndImport(
       return make_error<SwiftASTContextError>();
 
     auto module_id = ast_context->getIdentifier(expr_name_buf);
-    module = swift::ModuleDecl::create(module_id, **ast_context, importInfo);
+    module = swift::ModuleDecl::create(
+        module_id, **ast_context, importInfo,
+        [&](swift::ModuleDecl *module, auto addFile) {
+      swift::SourceFileKind source_file_kind = swift::SourceFileKind::Library;
+      if (playground || repl) {
+        source_file_kind = swift::SourceFileKind::Main;
+      }
 
-    swift::SourceFileKind source_file_kind = swift::SourceFileKind::Library;
-    if (playground || repl) {
-      source_file_kind = swift::SourceFileKind::Main;
-    }
-
-    // Create the source file. Note, we disable delayed parsing for the
-    // swift expression parser.
-    source_file = new (**ast_context) swift::SourceFile(
-        *module, source_file_kind, buffer_id,
-        swift::SourceFile::ParsingFlags::DisableDelayedBodies);
-    module->addFile(*source_file);
+      // Create the source file. Note, we disable delayed parsing for the
+      // swift expression parser.
+      source_file = new (**ast_context) swift::SourceFile(
+          *module, source_file_kind, buffer_id,
+          swift::SourceFile::ParsingFlags::DisableDelayedBodies);
+      addFile(source_file);
+    });
   }
   // Swift Modules that rely on shared libraries (not frameworks)
   // don't record the link information in the swiftmodule file, so we

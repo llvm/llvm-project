@@ -614,18 +614,22 @@ void SwiftREPL::CompleteCode(const std::string &current_code,
   if (!repl_module) {
     swift::ImplicitImportInfo importInfo;
     importInfo.StdlibKind = swift::ImplicitStdlibKind::Stdlib;
+
     auto repl_module_or_err = swift_ast->CreateModule(
-        completion_module_info.path.back().GetString(), importInfo);
+        completion_module_info.path.back().GetString(), importInfo,
+        [&](swift::ModuleDecl *repl_module, auto addFile) {
+      auto bufferID = (*ast)->SourceMgr.addMemBufferCopy("// swift repl\n");
+      swift::SourceFile *repl_source_file = new (**ast) swift::SourceFile(
+          *repl_module, swift::SourceFileKind::Main, bufferID);
+      addFile(repl_source_file);
+    });
     if (!repl_module_or_err) {
       llvm::consumeError(repl_module_or_err.takeError());
       return;
     }
     repl_module = &*repl_module_or_err;
-    auto bufferID = (*ast)->SourceMgr.addMemBufferCopy("// swift repl\n");
-    swift::SourceFile *repl_source_file = new (**ast)
-        swift::SourceFile(*repl_module, swift::SourceFileKind::Main, bufferID);
-    repl_module->addFile(*repl_source_file);
-    swift::performImportResolution(*repl_source_file);
+
+    swift::performImportResolution(repl_module);
     m_completion_module_initialized = true;
   }
   if (repl_module) {
