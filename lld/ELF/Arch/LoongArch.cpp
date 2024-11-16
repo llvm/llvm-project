@@ -851,7 +851,7 @@ void LoongArch::finalizeRelax(int passes) const {
       MutableArrayRef<Relocation> rels = sec->relocs();
       ArrayRef<uint8_t> old = sec->content();
       size_t newSize = old.size() - aux.relocDeltas[rels.size() - 1];
-      uint8_t *p = context().bAlloc.Allocate<uint8_t>(newSize);
+      uint8_t *p = bAlloc(ctx).Allocate<uint8_t>(newSize);
       uint64_t offset = 0;
       int64_t delta = 0;
       sec->content_ = p;
