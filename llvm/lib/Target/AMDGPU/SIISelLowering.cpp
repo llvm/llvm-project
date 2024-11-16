@@ -17029,18 +17029,12 @@ bool SITargetLowering::hasBitTest(SDValue X, SDValue Y) const {
   if (X->isDivergent() || Y->isDivergent())
     return false;
 
-  EVT VT = X.getValueType();
-
-  if (VT != MVT::i32)
+  EVT ScalarType = X.getValueType().getScalarType();
+  
+  if (ScalarType != MVT::i32)
     return false;
 
-  if (VT.isVector()) {
-    EVT ScalarType = VT.getScalarType();
-    if (ScalarType != MVT::i32 && ScalarType != MVT::i64)
-      return false;
-  }
-
-  if (!dyn_cast<ConstantSDNode>(Y))
+  if (!isConstOrConstSplat(Y))
     return false;
 
   return true;
