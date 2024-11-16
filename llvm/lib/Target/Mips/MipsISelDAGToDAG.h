@@ -120,6 +120,9 @@ private:
   /// starting at bit zero.
   virtual bool selectVSplatMaskR(SDValue N, SDValue &Imm) const;
 
+  /// Select constant vector splats whose value is 1.
+  virtual bool selectVSplatImmEq1(SDValue N) const;
+
   /// Convert vector addition with vector subtraction if that allows to encode
   /// constant as an immediate and thus avoid extra 'ldi' instruction.
   /// add X, <-1, -1...> --> sub X, <1, 1...>
