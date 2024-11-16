@@ -330,7 +330,8 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &static_valobj) {
 
     // Get the type of the array elements.
     CompilerType argument_type;
-    auto ts = valobj.GetSwiftScratchContext();
+    auto ts = TypeSystemSwiftTypeRefForExpressions::GetForTarget(
+        *valobj.GetTargetSP());
     if (!ts)
       return nullptr;
     auto *swift_runtime = SwiftLanguageRuntime::Get(process_sp);

@@ -1264,19 +1264,13 @@ public:
 
   llvm::Expected<lldb::TypeSystemSP>
   GetScratchTypeSystemForLanguage(lldb::LanguageType language,
-                                  bool create_on_demand = true,
-                                  const char *compiler_options = nullptr);
+                                  bool create_on_demand = true);
 
   std::vector<lldb::TypeSystemSP>
   GetScratchTypeSystems(bool create_on_demand = true);
 
   PersistentExpressionState *
   GetPersistentExpressionStateForLanguage(lldb::LanguageType language);
-
-#ifdef LLDB_ENABLE_SWIFT
-  SwiftPersistentExpressionState *
-  GetSwiftPersistentExpressionState(ExecutionContextScope &exe_scope);
-#endif // LLDB_ENABLE_SWIFT
 
   const TypeSystemMap &GetTypeSystemMap();
 
@@ -1310,18 +1304,7 @@ public:
   CreateUtilityFunction(std::string expression, std::string name,
                         lldb::LanguageType language, ExecutionContext &exe_ctx);
 
-
 #ifdef LLDB_ENABLE_SWIFT
-  /// Get the lock guarding the scratch typesystem from being re-initialized.
-  std::shared_mutex &GetSwiftScratchContextLock() {
-    return m_scratch_typesystem_lock;
-  }
-
-  TypeSystemSwiftTypeRefForExpressionsSP
-  GetSwiftScratchContext(Status &error, ExecutionContextScope &exe_scope,
-                         bool create_on_demand = true,
-                         bool for_playground = false);
-
   /// Return whether this is the Swift REPL.
   bool IsSwiftREPL();
 
@@ -1738,9 +1721,6 @@ protected:
   llvm::StringMap<DummySignalValues> m_dummy_signals;
 
   bool m_did_display_scratch_fallback_warning = false;
-
-  /// Guards the scratch typesystem from being re-initialized.
-  std::shared_mutex m_scratch_typesystem_lock;
 
   static void ImageSearchPathsChanged(const PathMappingList &path_list,
                                       void *baton);

@@ -280,15 +280,13 @@ public:
   LLDBTypeInfoProvider(SwiftLanguageRuntimeImpl &runtime,
                        ExecutionContextScope *exe_scope)
       : m_runtime(runtime),
-        m_ts(m_runtime.GetProcess().GetTarget().GetSwiftScratchContext(
-            m_error,
-            exe_scope ? *exe_scope : m_runtime.GetProcess().GetTarget())) {}
+        m_ts(TypeSystemSwiftTypeRefForExpressions::GetForTarget(
+            m_runtime.GetProcess().GetTarget())) {}
   LLDBTypeInfoProvider(SwiftLanguageRuntimeImpl &runtime,
                        ExecutionContext *exe_ctx)
       : m_runtime(runtime),
-        m_ts(m_runtime.GetProcess().GetTarget().GetSwiftScratchContext(
-            m_error, exe_ctx ? *exe_ctx->GetBestExecutionContextScope()
-                             : m_runtime.GetProcess().GetTarget())) {}
+        m_ts(TypeSystemSwiftTypeRefForExpressions::GetForTarget(
+            m_runtime.GetProcess().GetTarget())) {}
 
   swift::remote::TypeInfoProvider::IdType getId() override {
     if (m_ts)
@@ -2293,7 +2291,7 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
   // canonicalization in GetCanonicalDemangleTree() must be performed in
   // the original context as to resolve type aliases correctly.
   auto &target = m_process.GetTarget();
-  auto scratch_ctx = target.GetSwiftScratchContext(error, stack_frame);
+  auto scratch_ctx = TypeSystemSwiftTypeRefForExpressions::GetForTarget(target);
   if (!scratch_ctx) {
     LLDB_LOG(GetLog(LLDBLog::Expressions | LLDBLog::Types),
              "No scratch context available.");
@@ -2659,7 +2657,8 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ClangType(
   }
 
   // Import the remangled dynamic name into the scratch context.
-  auto scratch_ctx = in_value.GetSwiftScratchContext();
+  auto scratch_ctx = TypeSystemSwiftTypeRefForExpressions::GetForTarget(
+      in_value.GetTargetSP());
   if (!scratch_ctx)
     return false;
   CompilerType swift_type =

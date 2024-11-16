@@ -360,32 +360,6 @@ TypeSystemMap::GetTypeSystemForLanguage(lldb::LanguageType language,
   return GetTypeSystemForLanguage(language);
 }
 
-// BEGIN SWIFT
-llvm::Expected<TypeSystemSP>
-TypeSystemMap::GetTypeSystemForLanguage(lldb::LanguageType language,
-                                        Target *target, bool can_create,
-                                        const char *compiler_options) {
-  if (can_create) {
-    return GetTypeSystemForLanguage(
-        language,
-        std::optional<CreateCallback>([language, target, compiler_options]() {
-          return TypeSystem::CreateInstance(language, target, compiler_options);
-        }));
-  }
-  return GetTypeSystemForLanguage(language);
-}
-
-void TypeSystemMap::RemoveTypeSystemsForLanguage(lldb::LanguageType language) {
-  std::lock_guard<std::mutex> guard(m_mutex);
-  collection::iterator pos = m_map.find(language);
-  // If we are clearing the map, we don't need to remove this individual item.
-  // It will go away soon enough.
-  if (!m_clear_in_progress) {
-    if (pos != m_map.end())
-      m_map.erase(pos);
-  }
-}
-// END SWIFT
 bool TypeSystem::SupportsLanguageStatic(lldb::LanguageType language) {
   if (language == eLanguageTypeUnknown || language >= eNumLanguageTypes)
     return false;

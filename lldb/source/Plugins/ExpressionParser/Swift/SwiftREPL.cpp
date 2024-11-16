@@ -87,8 +87,8 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromTarget(Status &err, Target &target,
   }
 
   // Check that we can get a type system, or we aren't going anywhere:
-  auto type_system_or_err = target.GetScratchTypeSystemForLanguage(
-      eLanguageTypeSwift, true, repl_options ? repl_options : "");
+  auto type_system_or_err =
+      target.GetScratchTypeSystemForLanguage(eLanguageTypeSwift, true);
   if (!type_system_or_err) {
     llvm::consumeError(type_system_or_err.takeError());
     err = Status::FromErrorString("Could not construct an expression "
@@ -260,8 +260,8 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
   // Check that we can get a type system, or we aren't
   // going anywhere.  Remember to pass in the repl_options
   // in case they set up framework paths we need, etc.
-  auto type_system_or_err = target_sp->GetScratchTypeSystemForLanguage(
-      eLanguageTypeSwift, true, repl_options ? repl_options : "");
+  auto type_system_or_err =
+      target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeSwift, true);
   if (!type_system_or_err) {
     llvm::consumeError(type_system_or_err.takeError());
     err = Status::FromErrorString("Could not construct an expression "
@@ -301,14 +301,13 @@ SwiftREPL::SwiftREPL(Target &target) : REPL(target), m_swift_ast(nullptr) {}
 SwiftREPL::~SwiftREPL() {}
 
 Status SwiftREPL::DoInitialization() {
-  if (m_compiler_options.empty())
-    return Status();
-
   auto type_system_or_err =
-      m_target.GetScratchTypeSystemForLanguage(eLanguageTypeSwift, true,
-                                               m_compiler_options.c_str());
+      m_target.GetScratchTypeSystemForLanguage(eLanguageTypeSwift, true);
   if (!type_system_or_err)
     return Status::FromError(type_system_or_err.takeError());
+  std::static_pointer_cast<TypeSystemSwiftTypeRefForExpressions>(
+      *type_system_or_err)
+      ->SetCompilerOptions(m_compiler_options.c_str());
   return Status();
 }
 
@@ -567,22 +566,29 @@ SwiftASTContextForExpressions *SwiftREPL::getSwiftASTContext() {
   // to fix this issue currently, so we need to work around it by making
   // our own copy of the AST and using this separate AST for completion.
   //----------------------------------------------------------------------
-  if (!m_swift_ast) {
-    auto type_system_or_err =
-        m_target.GetScratchTypeSystemForLanguage(eLanguageTypeSwift);
-    if (!type_system_or_err) {
-      llvm::consumeError(type_system_or_err.takeError());
-      return nullptr;
-    }
-    auto *swift_ts =
-        llvm::dyn_cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
-            type_system_or_err->get());
-    auto *target_swift_ast =
-        llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
-            swift_ts->GetSwiftASTContext(SymbolContext(
-                m_target.shared_from_this(), m_target.GetExecutableModule())));
-    m_swift_ast = target_swift_ast;
+  if (m_swift_ast)
+    return m_swift_ast;
+
+  auto type_system_or_err =
+      m_target.GetScratchTypeSystemForLanguage(eLanguageTypeSwift, false);
+  if (!type_system_or_err) {
+    llvm::consumeError(type_system_or_err.takeError());
+    return nullptr;
   }
+  auto *swift_ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
+      type_system_or_err->get());
+
+  // Use the stdlib as symbol context to get a different one than the main REPL.
+  SymbolContextList sc_list;
+  m_target.GetImages().FindSymbolsWithNameAndType(ConstString("_swift_release"),
+                                                  eSymbolTypeAny, sc_list);
+  if (!sc_list.GetSize())
+    return nullptr;
+
+  auto *target_swift_ast =
+      llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
+          swift_ts->GetSwiftASTContext(sc_list[0]));
+  m_swift_ast = target_swift_ast;
   return m_swift_ast;
 }
 

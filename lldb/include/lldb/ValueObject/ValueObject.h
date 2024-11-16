@@ -613,10 +613,6 @@ public:
 
   virtual bool HasSyntheticValue();
 
-#ifdef LLDB_ENABLE_SWIFT
-  TypeSystemSwiftTypeRefForExpressionsSP GetSwiftScratchContext();
-#endif // LLDB_ENABLE_SWIFT
-
   virtual bool IsSynthetic() { return false; }
 
   lldb::ValueObjectSP

@@ -612,14 +612,6 @@ public:
   GetTypeSystemForLanguage(lldb::LanguageType language, Target *target,
                            bool can_create);
 
-  // BEGIN SWIFT
-  llvm::Expected<lldb::TypeSystemSP>
-  GetTypeSystemForLanguage(lldb::LanguageType language, Target *target,
-                           bool can_create, const char *compiler_options);
-
-  void RemoveTypeSystemsForLanguage(lldb::LanguageType language);
-  // END SWIFT
-
   /// Check all type systems in the map to see if any have forcefully completed
   /// types;
   bool GetHasForcefullyCompletedTypes() const;

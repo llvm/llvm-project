@@ -1207,106 +1207,101 @@ void SwiftLanguageRuntime::FindFunctionPointersInCall(
   // arguments we find.
 
   SymbolContext sc = frame.GetSymbolContext(eSymbolContextSymbol);
-  if (sc.symbol) {
-    Mangled mangled_name = sc.symbol->GetMangled();
-    if (mangled_name.GuessLanguage() == lldb::eLanguageTypeSwift) {
-      Status error;
-      Target &target = frame.GetThread()->GetProcess()->GetTarget();
-      ExecutionContext exe_ctx(frame);
-      auto scratch_ctx = target.GetSwiftScratchContext(error, frame);
-      if (scratch_ctx) {
-        if (SwiftASTContext *swift_ast = scratch_ctx->GetSwiftASTContext(sc)) {
-        CompilerType function_type = swift_ast->GetTypeFromMangledTypename(
-            mangled_name.GetMangledName());
-        if (error.Success()) {
-          if (function_type.IsFunctionType()) {
-            // FIXME: For now we only check the first argument since
-            // we don't know how to find the values of arguments
-            // further in the argument list.
-            //
-            // int num_arguments = function_type.GetFunctionArgumentCount();
-            // for (int i = 0; i < num_arguments; i++)
+  if (!sc.symbol)
+    return;
+  Mangled mangled_name = sc.symbol->GetMangled();
+  if (mangled_name.GuessLanguage() != lldb::eLanguageTypeSwift)
+    return;
+  Target &target = frame.GetThread()->GetProcess()->GetTarget();
+  ExecutionContext exe_ctx(frame);
+  auto scratch_ctx = TypeSystemSwiftTypeRefForExpressions::GetForTarget(target);
+  if (!scratch_ctx)
+    return;
+  SwiftASTContext *swift_ast = scratch_ctx->GetSwiftASTContext(sc);
+  if (!swift_ast)
+    return;
 
-            for (int i = 0; i < 1; i++) {
-              CompilerType argument_type =
-                  function_type.GetFunctionArgumentTypeAtIndex(i);
-              if (argument_type.IsFunctionPointerType()) {
-                // We found a function pointer argument.  Try to track
-                // down its value.  This is a hack for now, we really
-                // should ask swift/llvm how to find the argument(s)
-                // given the Swift decl for this function, and then
-                // look those up in the frame.
+  CompilerType function_type =
+      swift_ast->GetTypeFromMangledTypename(mangled_name.GetMangledName());
+  if (!function_type.IsFunctionType())
+    return;
+  // FIXME: For now we only check the first argument since
+  // we don't know how to find the values of arguments
+  // further in the argument list.
+  //
+  // int num_arguments = function_type.GetFunctionArgumentCount();
+  // for (int i = 0; i < num_arguments; i++)
 
-                ABISP abi_sp(frame.GetThread()->GetProcess()->GetABI());
-                ValueList argument_values;
-                Value input_value;
-                auto clang_ctx = ScratchTypeSystemClang::GetForTarget(target);
-                if (!clang_ctx)
-                  continue;
+  for (int i = 0; i < 1; i++) {
+    CompilerType argument_type =
+        function_type.GetFunctionArgumentTypeAtIndex(i);
+    if (!argument_type.IsFunctionPointerType())
+      continue;
 
-                CompilerType clang_void_ptr_type =
-                    clang_ctx->GetBasicType(eBasicTypeVoid).GetPointerType();
+    // We found a function pointer argument.  Try to track
+    // down its value.  This is a hack for now, we really
+    // should ask swift/llvm how to find the argument(s)
+    // given the Swift decl for this function, and then
+    // look those up in the frame.
 
-                input_value.SetValueType(Value::ValueType::Scalar);
-                input_value.SetCompilerType(clang_void_ptr_type);
-                argument_values.PushValue(input_value);
+    ABISP abi_sp(frame.GetThread()->GetProcess()->GetABI());
+    ValueList argument_values;
+    Value input_value;
+    auto clang_ctx = ScratchTypeSystemClang::GetForTarget(target);
+    if (!clang_ctx)
+      continue;
 
-                bool success = abi_sp->GetArgumentValues(
-                    *(frame.GetThread().get()), argument_values);
-                if (success) {
-                  // Now get a pointer value from the zeroth argument.
-                  Status error;
-                  DataExtractor data;
-                  ExecutionContext exe_ctx;
-                  frame.CalculateExecutionContext(exe_ctx);
-                  error = argument_values.GetValueAtIndex(0)->GetValueAsData(
-                      &exe_ctx, data, NULL);
-                  lldb::offset_t offset = 0;
-                  lldb::addr_t fn_ptr_addr = data.GetAddress(&offset);
-                  Address fn_ptr_address;
-                  fn_ptr_address.SetLoadAddress(fn_ptr_addr, &target);
-                  // Now check to see if this has debug info:
-                  bool add_it = true;
+    CompilerType clang_void_ptr_type =
+        clang_ctx->GetBasicType(eBasicTypeVoid).GetPointerType();
 
-                  if (resolve_thunks) {
-                    SymbolContext sc;
-                    fn_ptr_address.CalculateSymbolContext(
-                        &sc, eSymbolContextEverything);
-                    if (sc.comp_unit && sc.symbol) {
-                      ConstString symbol_name =
-                          sc.symbol->GetMangled().GetMangledName();
-                      if (symbol_name) {
-                        SymbolContext target_context;
-                        if (GetTargetOfPartialApply(sc, symbol_name,
-                                                    target_context)) {
-                          if (target_context.symbol)
-                            fn_ptr_address =
-                                target_context.symbol->GetAddress();
-                          else if (target_context.function)
-                            fn_ptr_address =
-                                target_context.function->GetAddressRange()
-                                    .GetBaseAddress();
-                        }
-                      }
-                    }
-                  }
+    input_value.SetValueType(Value::ValueType::Scalar);
+    input_value.SetCompilerType(clang_void_ptr_type);
+    argument_values.PushValue(input_value);
 
-                  if (debug_only) {
-                    LineEntry line_entry;
-                    fn_ptr_address.CalculateSymbolContextLineEntry(line_entry);
-                    if (!line_entry.IsValid())
-                      add_it = false;
-                  }
-                  if (add_it)
-                    addresses.push_back(fn_ptr_address);
-                }
-              }
-            }
+    bool success =
+        abi_sp->GetArgumentValues(*(frame.GetThread().get()), argument_values);
+    if (!success)
+      continue;
+    // Now get a pointer value from the zeroth argument.
+    Status error;
+    DataExtractor data;
+    ExecutionContext exe_ctx;
+    frame.CalculateExecutionContext(exe_ctx);
+    error = argument_values.GetValueAtIndex(0)->GetValueAsData(&exe_ctx, data,
+                                                               NULL);
+    lldb::offset_t offset = 0;
+    lldb::addr_t fn_ptr_addr = data.GetAddress(&offset);
+    Address fn_ptr_address;
+    fn_ptr_address.SetLoadAddress(fn_ptr_addr, &target);
+    // Now check to see if this has debug info:
+    bool add_it = true;
+
+    if (resolve_thunks) {
+      SymbolContext sc;
+      fn_ptr_address.CalculateSymbolContext(&sc, eSymbolContextEverything);
+      if (sc.comp_unit && sc.symbol) {
+        ConstString symbol_name = sc.symbol->GetMangled().GetMangledName();
+        if (symbol_name) {
+          SymbolContext target_context;
+          if (GetTargetOfPartialApply(sc, symbol_name, target_context)) {
+            if (target_context.symbol)
+              fn_ptr_address = target_context.symbol->GetAddress();
+            else if (target_context.function)
+              fn_ptr_address =
+                  target_context.function->GetAddressRange().GetBaseAddress();
           }
         }
       }
-      }
     }
+
+    if (debug_only) {
+      LineEntry line_entry;
+      fn_ptr_address.CalculateSymbolContextLineEntry(line_entry);
+      if (!line_entry.IsValid())
+        add_it = false;
+    }
+    if (add_it)
+      addresses.push_back(fn_ptr_address);
   }
 }
 
@@ -1366,7 +1361,7 @@ ValueObjectSP SwiftLanguageRuntime::CalculateErrorValueObjectFromValue(
       return error_valobj_sp;
     Target &target = m_process->GetTarget();
     auto *persistent_state =
-        target.GetSwiftPersistentExpressionState(*exe_scope);
+        target.GetPersistentExpressionStateForLanguage(eLanguageTypeSwift);
 
     ConstString persistent_variable_name(
         persistent_state->GetNextPersistentVariableName(/*is_error*/ true));
@@ -1401,7 +1396,7 @@ SwiftLanguageRuntime::CalculateErrorValue(StackFrameSP frame_sp,
                                           ConstString variable_name) {
   ProcessSP process_sp(frame_sp->GetThread()->GetProcess());
   Status error;
-  Target *target = frame_sp->CalculateTarget().get();
+  TargetSP target = frame_sp->CalculateTarget();
   ValueObjectSP error_valobj_sp;
 
   auto *runtime = Get(process_sp);
@@ -1420,7 +1415,7 @@ SwiftLanguageRuntime::CalculateErrorValue(StackFrameSP frame_sp,
   if (!exe_scope)
     return error_valobj_sp;
 
-  auto scratch_ctx = target->GetSwiftScratchContext(error, *frame_sp);
+  auto scratch_ctx = TypeSystemSwiftTypeRefForExpressions::GetForTarget(target);
   if (!scratch_ctx)
     return error_valobj_sp;
 
@@ -1768,7 +1763,8 @@ SwiftLanguageRuntimeImpl::GetBridgedSyntheticChildProvider(
   ProjectionSyntheticChildren::TypeProjectionUP type_projection(
       new ProjectionSyntheticChildren::TypeProjectionUP::element_type());
 
-  if (auto swift_ast_ctx = valobj.GetSwiftScratchContext()) {
+  if (auto swift_ast_ctx = TypeSystemSwiftTypeRefForExpressions::GetForTarget(
+          valobj.GetTargetSP())) {
     CompilerType swift_type =
         swift_ast_ctx->GetTypeFromMangledTypename(type_name);
 

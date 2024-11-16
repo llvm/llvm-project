@@ -189,7 +189,7 @@ private:
     void DidDematerialize(lldb::ExpressionVariableSP &variable) override;
   };
 
-  TypeSystemSwiftSP m_swift_scratch_ctx;
+  TypeSystemSwiftTypeRefForExpressionsSP m_swift_scratch_ctx;
   SwiftASTContextForExpressions *m_swift_ast_ctx;
   PersistentVariableDelegate m_persistent_variable_delegate;
   std::unique_ptr<SwiftExpressionParser> m_parser;
