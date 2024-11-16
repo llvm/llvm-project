@@ -151,107 +151,112 @@ func.func @extract_vector_type(%arg0: index) {
 // -----
 
 func.func @extract_position_rank_overflow(%arg0: vector<4x8x16xf32>) {
-  // expected-error@+1 {{expected a number of indices no greater than the indexed vector rank}}
+  // expected-error@+1 {{'vector.extract' op expected a number of indices no greater than the source vector rank}}
   %1 = vector.extract %arg0[0, 0, 0, 0] : f32 from vector<4x8x16xf32>
 }
 
 // -----
 
 func.func @extract_position_rank_overflow_generic(%arg0: vector<4x8x16xf32>) {
-  // expected-error@+1 {{expected a number of indices no greater than the indexed vector rank}}
+  // expected-error@+1 {{'vector.extract' op expected a number of indices no greater than the source vector rank}}
   %1 = "vector.extract" (%arg0) <{static_position = array<i64: 0, 0, 0, 0>}> : (vector<4x8x16xf32>) -> (vector<16xf32>)
 }
 
 // -----
 
 func.func @extract_position_overflow(%arg0: vector<4x8x16xf32>) {
-  // expected-error@+1 {{expected position attribute #2 to be a non-negative integer smaller than the corresponding vector dimension}}
+  // expected-error@+1 {{'vector.extract' op expected position attribute #2 to be a non-negative integer smaller than the corresponding vector dimension}}
   %1 = vector.extract %arg0[0, 43, 0] : f32 from vector<4x8x16xf32>
 }
 
 // -----
 
 func.func @extract_precise_position_overflow(%arg0: vector<4x8x16xf32>) {
-  // expected-error@+1 {{expected position attribute #3 to be a non-negative integer smaller than the corresponding vector dimension}}
+  // expected-error@+1 {{'vector.extract' op expected position attribute #3 to be a non-negative integer smaller than the corresponding vector dimension}}
   %1 = vector.extract %arg0[3, 7, 16] : f32 from vector<4x8x16xf32>
 }
 
 // -----
 
-func.func @extract_from_0d_to_scalar_wrong_index(%arg0: vector<f32>) {
-  // expected-error@+1 {{expected a number of indices no greater than the indexed vector rank}}
+func.func @extract_scalar_from_0d_wrong_index(%arg0: vector<f32>) {
+  // expected-error@+1 {{'vector.extract' op expected a number of indices no greater than the source vector rank}}
   %1 = vector.extract %arg0[0] : f32 from vector<f32>
 }
 
 // -----
 
-func.func @extract_from_0d_to_0d_wrong_index(%arg0: vector<f32>) {
-  // expected-error@+1 {{expected a number of indices no greater than the indexed vector rank}}
+func.func @extract_0d_from_0d_wrong_index(%arg0: vector<f32>) {
+  // expected-error@+1 {{'vector.extract' op expected a number of indices no greater than the source vector rank}}
   %2 = vector.extract %arg0[0] : vector<f32> from vector<f32>
 }
 
 // -----
 
-func.func @extract_from_0d_to_1d_wrong_index(%arg0: vector<f32>) {
-  // expected-error@+1 {{expected a number of indices no greater than the indexed vector rank}}
+func.func @extract_1d_from_0d_wrong_index(%arg0: vector<f32>) {
+  // expected-error@+1 {{'vector.extract' op expected a number of indices no greater than the source vector rank}}
   %3 = vector.extract %arg0[0] : vector<1xf32> from vector<f32>
 }
 
 // -----
 
-func.func @extract_from_1d_to_scalar_wrong_index(%arg0: vector<1xf32>) {
-  // expected-error@+1 {{expected indexed vector rank to match the number of indices for scalar cases}}
+func.func @extract_scalar_from_1d_wrong_index(%arg0: vector<1xf32>) {
+  // expected-error@+1 {{'vector.extract' op expected source vector rank to match the number of indices for scalar cases}}
   %1 = vector.extract %arg0[] : f32 from vector<1xf32>
 }
 
 // -----
 
-func.func @extract_from_1d_to_0d_wrong_index(%arg0: vector<1xf32>) {
-  // expected-error@+1 {{'vector.extract' op expected indexed vector rank minus number of indices to match the rank of the non-indexed vector rank}}
+func.func @extract_0d_from_1d_wrong_index(%arg0: vector<1xf32>) {
+  // expected-error@+1 {{'vector.extract' op expected source and destination vectors with different number of elements}}
   %2 = vector.extract %arg0[] : vector<f32> from vector<1xf32>
 }
 
 // -----
 
-func.func @extract_from_1d_to_0d(%arg0: vector<1xf32>) {
-  // expected-error@+2 {{'vector.extract' op inferred type(s) 'f32' are incompatible with return type(s) of operation 'vector<f32>'}}
-  // expected-error@+1 {{failed to infer returned types}}
+func.func @extract_0d_from_1d(%arg0: vector<1xf32>) {
+  // expected-error@+1 {{'vector.extract' op expected source and destination vectors with different number of elements}}
   %4 = vector.extract %arg0[0] : vector<f32> from vector<1xf32>
 }
 
 // -----
 
-func.func @extract_from_2d_to_scalar(%arg0: vector<4x1xf32>) {
-  // expected-error@+1 {{'vector.extract' op expected indexed vector rank to match the number of indices for scalar cases}}
+func.func @extract_1d_from_0d(%arg0: vector<f32>) {
+  // expected-error@+1 {{'vector.extract' op expected source and destination vectors with different number of elements}}
+  %4 = vector.extract %arg0[] : vector<1xf32> from vector<f32>
+}
+
+// -----
+
+func.func @extract_scalar_from_2d(%arg0: vector<4x1xf32>) {
+  // expected-error@+1 {{'vector.extract' op expected source vector rank to match the number of indices for scalar cases}}
   %6 = vector.extract %arg0[2] : f32 from vector<4x1xf32>
 }
 
 // -----
 
-func.func @extract_from_2d_to_0d(%arg0: vector<4x1xf32>) {
-  // expected-error@+1 {{'vector.extract' op expected indexed vector rank minus number of indices to match the rank of the non-indexed vector rank}}
+func.func @extract_0d_from_2d(%arg0: vector<4x1xf32>) {
+  // expected-error@+1 {{'vector.extract' op expected source vector rank minus number of indices to match the rank of the extracted vector}}
   %7 = vector.extract %arg0[2] : vector<f32> from vector<4x1xf32>
 }
 
 // -----
 
-func.func @extract_from_2d_to_scalar_wrong_index(%arg0: vector<4x8xf32>) {
-  // expected-error@+1 {{'vector.extract' op expected indexed vector rank to match the number of indices for scalar cases}}
+func.func @extract_scalar_from_2d_wrong_index(%arg0: vector<4x8xf32>) {
+  // expected-error@+1 {{'vector.extract' op expected source vector rank to match the number of indices for scalar cases}}
   %8 = vector.extract %arg0[3] : f32 from vector<4x8xf32>
 }
 
 // -----
 
-func.func @extract_from_2d_to_0d(%arg0: vector<4x8xf32>) {
-  // expected-error@+1 {{'vector.extract' op expected indexed vector rank minus number of indices to match the rank of the non-indexed vector rank}}
+func.func @extract_0d_from_2d(%arg0: vector<4x8xf32>) {
+  // expected-error@+1 {{'vector.extract' op expected source vector rank minus number of indices to match the rank of the extracted vector}}
   %9 = vector.extract %arg0[3] : vector<f32> from vector<4x8xf32>
 }
 
 // -----
 
-func.func @extract_from_2d_to_1d(%arg0: vector<4x8xf32>) {
-  // expected-error@+2 {{'vector.extract' op inferred type(s) 'vector<8xf32>' are incompatible with return type(s) of operation 'vector<1xf32>'}}
-  // expected-error@+1 {{failed to infer returned types}}
+func.func @extract_1d_from_2d(%arg0: vector<4x8xf32>) {
+  // expected-error@+1 {{'vector.extract' op expected extracted vector shape to match the sub-vector shape of the source vector}}
   %10 = vector.extract %arg0[3] : vector<1xf32> from vector<4x8xf32>
 }
 
@@ -265,7 +270,7 @@ func.func @extract_position_overflow(%arg0: vector<4x8x16xf32>) {
 // -----
 
 func.func @extract_scalar_missing_indices(%arg0: vector<4x8x1xf32>) {
-  // expected-error@+1 {{'vector.extract' op expected indexed vector rank to match the number of indices for scalar cases}}
+  // expected-error@+1 {{'vector.extract' op expected source vector rank to match the number of indices for scalar cases}}
   %1 = vector.extract %arg0[0, 0] : f32 from vector<4x8x1xf32>
 }
 
@@ -304,21 +309,21 @@ func.func @insert_element_wrong_type(%arg0: i32, %arg1: vector<4xf32>) {
 // -----
 
 func.func @insert_vector_type(%a: f32, %b: vector<4x8x16xf32>) {
-  // expected-error@+1 {{'vector.insert' op expected a number of indices no greater than the indexed vector rank}}
+  // expected-error@+1 {{'vector.insert' op expected a number of indices no greater than the destination vector rank}}
   %1 = vector.insert %a, %b[3, 3, 3, 3, 3, 3] : f32 into vector<4x8x16xf32>
 }
 
 // -----
 
 func.func @insert_vector_type(%a: vector<4xf32>, %b: vector<4x8x16xf32>) {
-  // expected-error@+1 {{'vector.insert' op expected indexed vector rank minus number of indices to match the rank of the non-indexed vector rank}}
+  // expected-error@+1 {{'vector.insert' op expected destination vector rank minus number of indices to match the rank of the inserted vector}}
   %1 = vector.insert %a, %b[3] : vector<4xf32> into vector<4x8x16xf32>
 }
 
 // -----
 
 func.func @insert_vector_type(%a: f32, %b: vector<4x8x16xf32>) {
-  // expected-error@+1 {{'vector.insert' op expected indexed vector rank to match the number of indices for scalar cases}}
+  // expected-error@+1 {{'vector.insert' op expected destination vector rank to match the number of indices for scalar cases}}
   %1 = vector.insert %a, %b[3, 3] : f32 into vector<4x8x16xf32>
 }
 
@@ -338,16 +343,86 @@ func.func @insert_precise_position_overflow(%a: f32, %b: vector<4x8x16xf32>) {
 
 // -----
 
-func.func @insert_0d(%a: vector<f32>, %b: vector<4x8x16xf32>) {
-  // expected-error@+1 {{'vector.insert' op expected indexed vector rank minus number of indices to match the rank of the non-indexed vector rank}}
-  %1 = vector.insert %a, %b[2, 6] : vector<f32> into vector<4x8x16xf32>
+func.func @insert_scalar_into_0d_wrong_index(%arg0: f32, %arg1: vector<f32>) {
+  // expected-error@+1 {{'vector.insert' op expected a number of indices no greater than the destination vector rank}}
+  %1 = vector.insert %arg0, %arg1[0] : f32 into vector<f32>
 }
 
 // -----
 
-func.func @insert_0d(%a: f32, %b: vector<f32>) {
-  // expected-error@+1 {{'vector.insert' op expected a number of indices no greater than the indexed vector rank}}
-  %1 = vector.insert %a, %b[0] : f32 into vector<f32>
+func.func @insert_0d_into_0d_wrong_index(%arg0: vector<f32>, %arg1: vector<f32>) {
+  // expected-error@+1 {{'vector.insert' op expected a number of indices no greater than the destination vector rank}}
+  %2 = vector.insert %arg0, %arg1[0] : vector<f32> into vector<f32>
+}
+
+// -----
+
+func.func @insert_1d_into_0d_wrong_index(%arg0: vector<1xf32>, %arg1: vector<f32>) {
+  // expected-error@+1 {{'vector.insert' op expected a number of indices no greater than the destination vector rank}}
+  %3 = vector.insert %arg0, %arg1[0] : vector<1xf32> into vector<f32>
+}
+
+// -----
+
+func.func @insert_scalar_into_1d_wrong_index(%arg0: f32, %arg1: vector<1xf32>) {
+  // expected-error@+1 {{'vector.insert' op expected destination vector rank to match the number of indices for scalar cases}}
+  %1 = vector.insert %arg0, %arg1[] : f32 into vector<1xf32>
+}
+
+// -----
+
+func.func @insert_0d_into_1d_wrong_index(%arg0: vector<f32>, %arg1: vector<1xf32>) {
+  // expected-error@+1 {{'vector.insert' op expected source and destination vectors with different number of elements}}
+  %2 = vector.insert %arg0, %arg1[] : vector<f32> into vector<1xf32>
+}
+
+// -----
+
+func.func @insert_0d_into_1d(%arg0: vector<f32>, %arg1: vector<1xf32>) {
+  // expected-error@+1 {{'vector.insert' op expected source and destination vectors with different number of elements}}
+  %4 = vector.insert %arg0, %arg1[0] : vector<f32> into vector<1xf32>
+}
+
+// -----
+
+func.func @insert_1d_into_0d(%arg0: vector<1xf32>, %arg1: vector<f32>) {
+  // expected-error@+1 {{'vector.insert' op expected source and destination vectors with different number of elements}}
+  %4 = vector.insert %arg0, %arg1[] : vector<1xf32> into vector<f32>
+}
+
+// -----
+
+func.func @insert_scalar_into_2d(%arg0: f32, %arg1: vector<4x1xf32>) {
+  // expected-error@+1 {{'vector.insert' op expected destination vector rank to match the number of indices for scalar cases}}
+  %6 = vector.insert %arg0, %arg1[2] : f32 into vector<4x1xf32>
+}
+
+// -----
+
+func.func @insert_0d_into_2d(%arg0: vector<f32>, %arg1: vector<4x1xf32>) {
+  // expected-error@+1 {{'vector.insert' op expected destination vector rank minus number of indices to match the rank of the inserted vector}}
+  %7 = vector.insert %arg0, %arg1[2] : vector<f32> into vector<4x1xf32>
+}
+
+// -----
+
+func.func @insert_scalar_into_2d_wrong_index(%arg0: f32, %arg1: vector<4x8xf32>) {
+  // expected-error@+1 {{'vector.insert' op expected destination vector rank to match the number of indices for scalar cases}}
+  %8 = vector.insert %arg0, %arg1[3] : f32 into vector<4x8xf32>
+}
+
+// -----
+
+func.func @insert_0d_into_2d(%arg0: vector<f32>, %arg1: vector<4x8xf32>) {
+  // expected-error@+1 {{'vector.insert' op expected destination vector rank minus number of indices to match the rank of the inserted vector}}
+  %9 = vector.insert %arg0, %arg1[3] : vector<f32> into vector<4x8xf32>
+}
+
+// -----
+
+func.func @insert_1d_into_2d(%arg0: vector<1xf32>, %arg1: vector<4x8xf32>) {
+  // expected-error@+1 {{'vector.insert' op expected inserted vector shape to match the sub-vector shape of the destination vector}}
+  %10 = vector.insert %arg0, %arg1[3] : vector<1xf32> into vector<4x8xf32>
 }
 
 // -----
