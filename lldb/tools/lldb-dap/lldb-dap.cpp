@@ -1019,7 +1019,7 @@ void request_attach(DAP &dap, const llvm::json::Object &request) {
 //   },
 //   "required": [ "line" ]
 // },
-void request_breakpointLocations(const llvm::json::Object &request) {
+void request_breakpointLocations(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
   auto *arguments = request.getObject("arguments");
@@ -1033,7 +1033,7 @@ void request_breakpointLocations(const llvm::json::Object &request) {
 
   lldb::SBFileSpec file_spec(path.c_str(), true);
   lldb::SBSymbolContextList compile_units =
-      g_dap.target.FindCompileUnits(file_spec);
+      dap.target.FindCompileUnits(file_spec);
 
   // Find all relevant lines & columns
   llvm::SmallVector<std::pair<uint32_t, uint32_t>, 8> locations;
@@ -1092,7 +1092,7 @@ void request_breakpointLocations(const llvm::json::Object &request) {
   llvm::json::Object body;
   body.try_emplace("breakpoints", std::move(locations_json));
   response.try_emplace("body", std::move(body));
-  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "ContinueRequest": {
