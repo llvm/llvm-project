@@ -473,9 +473,16 @@ static mlir::Value emboxSrc(mlir::PatternRewriter &rewriter,
   mlir::Type srcTy = fir::unwrapRefType(op.getSrc().getType());
   if (fir::isa_trivial(srcTy) &&
       mlir::matchPattern(op.getSrc().getDefiningOp(), mlir::m_Constant())) {
+    mlir::Value src = op.getSrc();
+    if (srcTy.isInteger(1)) {
+      // i1 is not a supported type in the descriptor and it is actually coming
+      // from a LOGICAL constant. Store it as a fir.logical.
+      srcTy = fir::LogicalType::get(rewriter.getContext(), 4);
+      src = createConvertOp(rewriter, loc, srcTy, src);
+    }
     // Put constant in memory if it is not.
     mlir::Value alloc = builder.createTemporary(loc, srcTy);
-    builder.create<fir::StoreOp>(loc, op.getSrc(), alloc);
+    builder.create<fir::StoreOp>(loc, src, alloc);
     addr = alloc;
   } else {
     addr = getDeviceAddress(rewriter, op.getSrcMutable(), symtab);
