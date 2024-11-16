@@ -1868,7 +1868,9 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Instruction *Res = foldBinOpOfSelectAndCastOfSelectCondition(I))
     return Res;
 
-  if (Changed) {
+  // Re-enqueue add instruction with PHI operands if we infer new nuw/nsw flags.
+  if (Changed &&
+      (isa<PHINode>(I.getOperand(0)) || isa<PHINode>(I.getOperand(1)))) {
     for (User *U : I.users()) {
       if (auto *PHI = dyn_cast<PHINode>(U))
         Worklist.pushUsersToWorkList(*PHI);
