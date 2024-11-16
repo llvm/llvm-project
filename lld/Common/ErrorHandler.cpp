@@ -342,6 +342,9 @@ SyncStream::~SyncStream() {
   case DiagLevel::Log:
     e.log(buf);
     break;
+  case DiagLevel::Msg:
+    e.message(buf, llvm::outs());
+    break;
   case DiagLevel::Warn:
     e.warn(buf);
     break;

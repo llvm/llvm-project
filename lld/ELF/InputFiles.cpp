@@ -316,7 +316,7 @@ template <class ELFT> static void doParseFile(Ctx &ctx, InputFile *file) {
   }
 
   if (ctx.arg.trace)
-    message(toStr(ctx, file));
+    Msg(ctx) << file;
 
   if (file->kind() == InputFile::ObjKind) {
     ctx.objectFiles.push_back(cast<ELFFileBase>(file));
