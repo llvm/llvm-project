@@ -676,10 +676,7 @@ static inline ArrayRef<VersionDefinition> namedVersionDefs(Ctx &ctx) {
 
 void errorOrWarn(const Twine &msg);
 
-static inline void internalLinkerError(StringRef loc, const Twine &msg) {
-  errorOrWarn(loc + "internal linker error: " + msg + "\n" +
-              llvm::getBugReportMsg());
-}
+void internalLinkerError(StringRef loc, const Twine &msg);
 
 struct ELFSyncStream : SyncStream {
   Ctx &ctx;

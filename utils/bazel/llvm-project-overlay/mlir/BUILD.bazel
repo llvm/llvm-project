@@ -3236,6 +3236,7 @@ td_library(
     includes = ["include"],
     deps = [
         ":BuiltinDialectTdFiles",
+        ":DestinationStyleOpInterfaceTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
@@ -3370,6 +3371,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":BytecodeOpInterface",
+        ":DestinationStyleOpInterface",
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
@@ -7681,6 +7683,7 @@ cc_library(
         ":TensorDialect",
         ":TensorUtils",
         ":TilingInterface",
+        ":InferTypeOpInterface",
         ":ValueBoundsOpInterface",
     ],
 )

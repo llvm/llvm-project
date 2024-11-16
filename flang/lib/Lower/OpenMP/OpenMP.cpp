@@ -1028,7 +1028,7 @@ static void genBodyOfTargetOp(
             firOpBuilder, copyVal.getLoc(), copyVal,
             /*varPtrPtr=*/mlir::Value{}, name.str(), bounds,
             /*members=*/llvm::SmallVector<mlir::Value>{},
-            /*membersIndex=*/mlir::DenseIntElementsAttr{},
+            /*membersIndex=*/mlir::ArrayAttr{},
             static_cast<
                 std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
                 llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT),
@@ -1818,7 +1818,7 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       mlir::Value mapOp = createMapInfoOp(
           firOpBuilder, location, baseOp, /*varPtrPtr=*/mlir::Value{},
           name.str(), bounds, /*members=*/{},
-          /*membersIndex=*/mlir::DenseIntElementsAttr{},
+          /*membersIndex=*/mlir::ArrayAttr{},
           static_cast<
               std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
               mapFlag),
@@ -1916,10 +1916,36 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   mlir::omp::TaskOperands clauseOps;
   genTaskClauses(converter, semaCtx, stmtCtx, item->clauses, loc, clauseOps);
 
+  if (!enableDelayedPrivatization)
+    return genOpWithBody<mlir::omp::TaskOp>(
+        OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
+                          llvm::omp::Directive::OMPD_task)
+            .setClauses(&item->clauses),
+        queue, item, clauseOps);
+
+  DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
+                           lower::omp::isLastItemInQueue(item, queue),
+                           /*useDelayedPrivatization=*/true, &symTable);
+  dsp.processStep1(&clauseOps);
+
+  EntryBlockArgs taskArgs;
+  taskArgs.priv.syms = dsp.getDelayedPrivSymbols();
+  taskArgs.priv.vars = clauseOps.privateVars;
+
+  auto genRegionEntryCB = [&](mlir::Operation *op) {
+    genEntryBlock(converter, taskArgs, op->getRegion(0));
+    bindEntryBlockArgs(converter,
+                       llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(op),
+                       taskArgs);
+    return llvm::to_vector(taskArgs.priv.syms);
+  };
+
   return genOpWithBody<mlir::omp::TaskOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_task)
-          .setClauses(&item->clauses),
+          .setClauses(&item->clauses)
+          .setDataSharingProcessor(&dsp)
+          .setGenRegionEntryCb(genRegionEntryCB),
       queue, item, clauseOps);
 }
 
@@ -2494,6 +2520,9 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
   case llvm::omp::Directive::OMPD_parallel:
     genStandaloneParallel(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
+  case llvm::omp::Directive::OMPD_scan:
+    TODO(loc, "Unhandled directive " + llvm::omp::getOpenMPDirectiveName(dir));
+    break;
   case llvm::omp::Directive::OMPD_section:
     llvm_unreachable("genOMPDispatch: OMPD_section");
     // Lowered in the enclosing genSectionsOp.
@@ -2595,6 +2624,13 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OpenMPDeclareSimdConstruct &declareSimdConstruct) {
   TODO(converter.getCurrentLocation(), "OpenMPDeclareSimdConstruct");
+}
+
+static void
+genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+       semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
+       const parser::OpenMPDeclareMapperConstruct &declareMapperConstruct) {
+  TODO(converter.getCurrentLocation(), "OpenMPDeclareMapperConstruct");
 }
 
 static void

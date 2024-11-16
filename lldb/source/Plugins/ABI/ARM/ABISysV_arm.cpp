@@ -38,13 +38,6 @@ using namespace lldb_private;
 LLDB_PLUGIN_DEFINE(ABISysV_arm)
 
 static const RegisterInfo g_register_infos[] = {
-    //  NAME       ALT       SZ OFF ENCODING         FORMAT          EH_FRAME
-    //  DWARF               GENERIC                     PROCESS PLUGIN
-    //  LLDB NATIVE            VALUE REGS    INVALIDATE REGS
-    //  ========== =======   == === =============    ============
-    //  ======================= =================== ===========================
-    //  ======================= ====================== ==========
-    //  ===============
     {"r0",
      nullptr,
      4,
