@@ -172,6 +172,7 @@ public:
 
 void diagnosticHandler(const llvm::DiagnosticInfo &di);
 void checkError(Error e);
+void checkError(ErrorHandler &eh, Error e);
 
 // check functions are convenient functions to strip errors
 // from error-or-value objects.

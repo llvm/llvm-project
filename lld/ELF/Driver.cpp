@@ -724,8 +724,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   }
 
   if (ctx.arg.timeTraceEnabled) {
-    checkError(timeTraceProfilerWrite(
-        args.getLastArgValue(OPT_time_trace_eq).str(), ctx.arg.outputFile));
+    checkError(
+        *ctx.errHandler,
+        timeTraceProfilerWrite(args.getLastArgValue(OPT_time_trace_eq).str(),
+                               ctx.arg.outputFile));
     timeTraceProfilerCleanup();
   }
 }
