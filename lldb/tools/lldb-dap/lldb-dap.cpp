@@ -1043,7 +1043,7 @@ void request_breakpointLocations(const llvm::json::Object &request) {
        ++c_idx) {
     const lldb::SBCompileUnit &compile_unit =
         compile_units.GetContextAtIndex(c_idx).GetCompileUnit();
-    if (!compile_units.IsValid())
+    if (!compile_unit.IsValid())
       continue;
     lldb::SBFileSpec primary_file_spec = compile_unit.GetFileSpec();
 
