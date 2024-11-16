@@ -36,7 +36,7 @@ void test(std::string s, std::string_view sv, sub_string ss, sub_sub_string sss,
           string_like sl, string_like_camel slc, prefer_underscore_version puv,
           prefer_underscore_version_flip puvf) {
   s.find("a") == 0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of find() == 0
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of find [modernize-use-starts-ends-with]
   // CHECK-FIXES: s.starts_with("a");
 
   (((((s)).find("a")))) == ((0));
@@ -68,7 +68,7 @@ void test(std::string s, std::string_view sv, sub_string ss, sub_sub_string sss,
   // CHECK-FIXES: !s.starts_with("a");
 
   s.rfind("a", 0) == 0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of rfind() == 0
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of rfind [modernize-use-starts-ends-with]
   // CHECK-FIXES: s.starts_with("a");
 
   s.rfind(s, 0) == 0;
@@ -149,11 +149,11 @@ void test(std::string s, std::string_view sv, sub_string ss, sub_sub_string sss,
   // CHECK-FIXES: puvf.starts_with("a");
 
   s.compare(0, 1, "a") == 0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of compare() == 0
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of compare [modernize-use-starts-ends-with]
   // CHECK-FIXES: s.starts_with("a");
 
   s.compare(0, 1, "a") != 0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of compare() != 0
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
   // CHECK-FIXES: !s.starts_with("a");
 
   s.compare(0, strlen("a"), "a") == 0;
@@ -211,7 +211,7 @@ void test(std::string s, std::string_view sv, sub_string ss, sub_sub_string sss,
   // CHECK-FIXES: s.ends_with(suffix);
 
   s.rfind("suffix") == s.size() - 6;
-  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with instead of rfind [modernize-use-starts-ends-with]
   // CHECK-FIXES: s.ends_with("suffix");
 
   s.rfind("suffix") == s.size() - strlen("suffix");

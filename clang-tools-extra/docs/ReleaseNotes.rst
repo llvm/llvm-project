@@ -244,7 +244,8 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-starts-ends-with
   <clang-tidy/checks/modernize/use-starts-ends-with>` check to handle two cases
-  that can be replaced with ``ends_with``
+  that can be replaced with ``ends_with``, and a small adjustment to the
+  diagnostic message.
 
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing

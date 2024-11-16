@@ -189,11 +189,8 @@ void UseStartsEndsWithCheck::check(const MatchFinder::MatchResult &Result) {
   if (ComparisonExpr->getBeginLoc().isMacroID())
     return;
 
-  const bool Neg = ComparisonExpr->getOpcode() == BO_NE;
-
-  auto Diagnostic =
-      diag(FindExpr->getExprLoc(), "use %0 instead of %1() %select{==|!=}2 0")
-      << ReplacementFunction->getName() << FindFun->getName() << Neg;
+  auto Diagnostic = diag(FindExpr->getExprLoc(), "use %0 instead of %1")
+                    << ReplacementFunction->getName() << FindFun->getName();
 
   // Remove possible arguments after search expression and ' [!=]= .+' suffix.
   Diagnostic << FixItHint::CreateReplacement(
@@ -215,7 +212,7 @@ void UseStartsEndsWithCheck::check(const MatchFinder::MatchResult &Result) {
       (ReplacementFunction->getName() + "(").str());
 
   // Add possible negation '!'.
-  if (Neg)
+  if (ComparisonExpr->getOpcode() == BO_NE)
     Diagnostic << FixItHint::CreateInsertion(FindExpr->getBeginLoc(), "!");
 }
 
