@@ -51045,6 +51045,31 @@ static SDValue combineBMILogicOp(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+/// Fold AND(Y, XOR(X, NEG(X))) -> ANDN(Y, BLSMSK(X)) if BMI is available.
+static SDValue combineAndXorSubWithBMI(SDNode *And, const SDLoc &DL,
+                                       SelectionDAG &DAG,
+                                       const X86Subtarget &Subtarget) {
+  using namespace llvm::SDPatternMatch;
+
+  EVT VT = And->getValueType(0);
+  // Make sure this node is a candidate for BMI instructions.
+  if (!Subtarget.hasBMI() || (VT != MVT::i32 && VT != MVT::i64))
+    return SDValue();
+
+  SDValue X;
+  SDValue Y;
+  if (!sd_match(And, m_And(m_OneUse(m_Xor(m_Value(X),
+                                          m_OneUse(m_Neg(m_Deferred(X))))),
+                           m_Value(Y))))
+    return SDValue();
+
+  SDValue BLSMSK =
+      DAG.getNode(ISD::XOR, DL, VT, X,
+                  DAG.getNode(ISD::SUB, DL, VT, X, DAG.getConstant(1, DL, VT)));
+  SDValue AndN = DAG.getNode(ISD::AND, DL, VT, Y, DAG.getNOT(DL, BLSMSK, VT));
+  return AndN;
+}
+
 static SDValue combineX86SubCmpForFlags(SDNode *N, SDValue Flag,
                                         SelectionDAG &DAG,
                                         TargetLowering::DAGCombinerInfo &DCI,
@@ -51451,6 +51476,9 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
   }
 
   if (SDValue R = combineBMILogicOp(N, DAG, Subtarget))
+    return R;
+
+  if (SDValue R = combineAndXorSubWithBMI(N, dl, DAG, Subtarget))
     return R;
 
   return SDValue();

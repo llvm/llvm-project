@@ -7,22 +7,34 @@
 declare void @use(i32)
 
 define i32 @fold_and_xor_neg_v1_32(i32 %x, i32 %y) nounwind {
-; X86-LABEL: fold_and_xor_neg_v1_32:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    negl %eax
-; X86-NEXT:    xorl %ecx, %eax
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    retl
+; X86-NOBMI-LABEL: fold_and_xor_neg_v1_32:
+; X86-NOBMI:       # %bb.0:
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOBMI-NEXT:    movl %ecx, %eax
+; X86-NOBMI-NEXT:    negl %eax
+; X86-NOBMI-NEXT:    xorl %ecx, %eax
+; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI-NEXT:    retl
 ;
-; X64-LABEL: fold_and_xor_neg_v1_32:
-; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    negl %eax
-; X64-NEXT:    xorl %edi, %eax
-; X64-NEXT:    andl %esi, %eax
-; X64-NEXT:    retq
+; X86-BMI-LABEL: fold_and_xor_neg_v1_32:
+; X86-BMI:       # %bb.0:
+; X86-BMI-NEXT:    blsmskl {{[0-9]+}}(%esp), %eax
+; X86-BMI-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %eax
+; X86-BMI-NEXT:    retl
+;
+; X64-NOBMI-LABEL: fold_and_xor_neg_v1_32:
+; X64-NOBMI:       # %bb.0:
+; X64-NOBMI-NEXT:    movl %edi, %eax
+; X64-NOBMI-NEXT:    negl %eax
+; X64-NOBMI-NEXT:    xorl %edi, %eax
+; X64-NOBMI-NEXT:    andl %esi, %eax
+; X64-NOBMI-NEXT:    retq
+;
+; X64-BMI-LABEL: fold_and_xor_neg_v1_32:
+; X64-BMI:       # %bb.0:
+; X64-BMI-NEXT:    blsmskl %edi, %eax
+; X64-BMI-NEXT:    andnl %esi, %eax, %eax
+; X64-BMI-NEXT:    retq
   %neg = sub i32 0, %x
   %xor = xor i32 %x, %neg
   %and = and i32 %xor, %y
@@ -30,22 +42,34 @@ define i32 @fold_and_xor_neg_v1_32(i32 %x, i32 %y) nounwind {
 }
 
 define i32 @fold_and_xor_neg_v2_32(i32 %x, i32 %y) nounwind {
-; X86-LABEL: fold_and_xor_neg_v2_32:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    negl %eax
-; X86-NEXT:    xorl %ecx, %eax
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    retl
+; X86-NOBMI-LABEL: fold_and_xor_neg_v2_32:
+; X86-NOBMI:       # %bb.0:
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOBMI-NEXT:    movl %ecx, %eax
+; X86-NOBMI-NEXT:    negl %eax
+; X86-NOBMI-NEXT:    xorl %ecx, %eax
+; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI-NEXT:    retl
 ;
-; X64-LABEL: fold_and_xor_neg_v2_32:
-; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    negl %eax
-; X64-NEXT:    xorl %edi, %eax
-; X64-NEXT:    andl %esi, %eax
-; X64-NEXT:    retq
+; X86-BMI-LABEL: fold_and_xor_neg_v2_32:
+; X86-BMI:       # %bb.0:
+; X86-BMI-NEXT:    blsmskl {{[0-9]+}}(%esp), %eax
+; X86-BMI-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %eax
+; X86-BMI-NEXT:    retl
+;
+; X64-NOBMI-LABEL: fold_and_xor_neg_v2_32:
+; X64-NOBMI:       # %bb.0:
+; X64-NOBMI-NEXT:    movl %edi, %eax
+; X64-NOBMI-NEXT:    negl %eax
+; X64-NOBMI-NEXT:    xorl %edi, %eax
+; X64-NOBMI-NEXT:    andl %esi, %eax
+; X64-NOBMI-NEXT:    retq
+;
+; X64-BMI-LABEL: fold_and_xor_neg_v2_32:
+; X64-BMI:       # %bb.0:
+; X64-BMI-NEXT:    blsmskl %edi, %eax
+; X64-BMI-NEXT:    andnl %esi, %eax, %eax
+; X64-BMI-NEXT:    retq
   %neg = sub i32 0, %x
   %xor = xor i32 %x, %neg
   %and = and i32 %y, %xor
@@ -53,22 +77,34 @@ define i32 @fold_and_xor_neg_v2_32(i32 %x, i32 %y) nounwind {
 }
 
 define i32 @fold_and_xor_neg_v3_32(i32 %x, i32 %y) nounwind {
-; X86-LABEL: fold_and_xor_neg_v3_32:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    negl %eax
-; X86-NEXT:    xorl %ecx, %eax
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    retl
+; X86-NOBMI-LABEL: fold_and_xor_neg_v3_32:
+; X86-NOBMI:       # %bb.0:
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOBMI-NEXT:    movl %ecx, %eax
+; X86-NOBMI-NEXT:    negl %eax
+; X86-NOBMI-NEXT:    xorl %ecx, %eax
+; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI-NEXT:    retl
 ;
-; X64-LABEL: fold_and_xor_neg_v3_32:
-; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    negl %eax
-; X64-NEXT:    xorl %edi, %eax
-; X64-NEXT:    andl %esi, %eax
-; X64-NEXT:    retq
+; X86-BMI-LABEL: fold_and_xor_neg_v3_32:
+; X86-BMI:       # %bb.0:
+; X86-BMI-NEXT:    blsmskl {{[0-9]+}}(%esp), %eax
+; X86-BMI-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %eax
+; X86-BMI-NEXT:    retl
+;
+; X64-NOBMI-LABEL: fold_and_xor_neg_v3_32:
+; X64-NOBMI:       # %bb.0:
+; X64-NOBMI-NEXT:    movl %edi, %eax
+; X64-NOBMI-NEXT:    negl %eax
+; X64-NOBMI-NEXT:    xorl %edi, %eax
+; X64-NOBMI-NEXT:    andl %esi, %eax
+; X64-NOBMI-NEXT:    retq
+;
+; X64-BMI-LABEL: fold_and_xor_neg_v3_32:
+; X64-BMI:       # %bb.0:
+; X64-BMI-NEXT:    blsmskl %edi, %eax
+; X64-BMI-NEXT:    andnl %esi, %eax, %eax
+; X64-BMI-NEXT:    retq
   %neg = sub i32 0, %x
   %xor = xor i32 %neg, %x
   %and = and i32 %xor, %y
@@ -76,22 +112,34 @@ define i32 @fold_and_xor_neg_v3_32(i32 %x, i32 %y) nounwind {
 }
 
 define i32 @fold_and_xor_neg_v4_32(i32 %x, i32 %y) nounwind {
-; X86-LABEL: fold_and_xor_neg_v4_32:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    negl %eax
-; X86-NEXT:    xorl %ecx, %eax
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    retl
+; X86-NOBMI-LABEL: fold_and_xor_neg_v4_32:
+; X86-NOBMI:       # %bb.0:
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOBMI-NEXT:    movl %ecx, %eax
+; X86-NOBMI-NEXT:    negl %eax
+; X86-NOBMI-NEXT:    xorl %ecx, %eax
+; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI-NEXT:    retl
 ;
-; X64-LABEL: fold_and_xor_neg_v4_32:
-; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    negl %eax
-; X64-NEXT:    xorl %edi, %eax
-; X64-NEXT:    andl %esi, %eax
-; X64-NEXT:    retq
+; X86-BMI-LABEL: fold_and_xor_neg_v4_32:
+; X86-BMI:       # %bb.0:
+; X86-BMI-NEXT:    blsmskl {{[0-9]+}}(%esp), %eax
+; X86-BMI-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %eax
+; X86-BMI-NEXT:    retl
+;
+; X64-NOBMI-LABEL: fold_and_xor_neg_v4_32:
+; X64-NOBMI:       # %bb.0:
+; X64-NOBMI-NEXT:    movl %edi, %eax
+; X64-NOBMI-NEXT:    negl %eax
+; X64-NOBMI-NEXT:    xorl %edi, %eax
+; X64-NOBMI-NEXT:    andl %esi, %eax
+; X64-NOBMI-NEXT:    retq
+;
+; X64-BMI-LABEL: fold_and_xor_neg_v4_32:
+; X64-BMI:       # %bb.0:
+; X64-BMI-NEXT:    blsmskl %edi, %eax
+; X64-BMI-NEXT:    andnl %esi, %eax, %eax
+; X64-BMI-NEXT:    retq
   %neg = sub i32 0, %x
   %xor = xor i32 %neg, %x
   %and = and i32 %y, %xor
@@ -115,13 +163,19 @@ define i64 @fold_and_xor_neg_v1_64(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: fold_and_xor_neg_v1_64:
-; X64:       # %bb.0:
-; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    negq %rax
-; X64-NEXT:    xorq %rdi, %rax
-; X64-NEXT:    andq %rsi, %rax
-; X64-NEXT:    retq
+; X64-NOBMI-LABEL: fold_and_xor_neg_v1_64:
+; X64-NOBMI:       # %bb.0:
+; X64-NOBMI-NEXT:    movq %rdi, %rax
+; X64-NOBMI-NEXT:    negq %rax
+; X64-NOBMI-NEXT:    xorq %rdi, %rax
+; X64-NOBMI-NEXT:    andq %rsi, %rax
+; X64-NOBMI-NEXT:    retq
+;
+; X64-BMI-LABEL: fold_and_xor_neg_v1_64:
+; X64-BMI:       # %bb.0:
+; X64-BMI-NEXT:    blsmskq %rdi, %rax
+; X64-BMI-NEXT:    andnq %rsi, %rax, %rax
+; X64-BMI-NEXT:    retq
   %neg = sub i64 0, %x
   %xor = xor i64 %x, %neg
   %and = and i64 %xor, %y
@@ -271,8 +325,3 @@ define i32 @fold_and_xor_neg_v1_32_no_blsmsk_negative(i32 %x, i32 %y, i32 %z) no
   %and = and i32 %xor, %y
   ret i32 %and
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; X64-BMI: {{.*}}
-; X64-NOBMI: {{.*}}
-; X86-BMI: {{.*}}
-; X86-NOBMI: {{.*}}
