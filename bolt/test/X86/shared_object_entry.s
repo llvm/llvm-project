@@ -2,7 +2,7 @@
 # RUN: ld.lld %t.o -o %t.so --shared --entry=func1.cold.1 --emit-relocs
 # RUN: llvm-bolt -relocs %t.so -o %t -reorder-functions=hfsort+ \
 # RUN:    -split-functions -reorder-blocks=ext-tsp -split-all-cold \
-# RUN:    -dyno-stats -icf=1 -use-gnu-stack
+# RUN:    -dyno-stats -icf -use-gnu-stack
 
 ## Check that an entry point is a cold symbol
 # RUN: llvm-readelf -h %t.so > %t.log

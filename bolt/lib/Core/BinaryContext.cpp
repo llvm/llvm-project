@@ -76,8 +76,16 @@ cl::opt<std::string> CompDirOverride(
              "to *.dwo files."),
     cl::Hidden, cl::init(""), cl::cat(BoltCategory));
 
-cl::opt<std::string> ICF("icf", cl::desc("fold functions with identical code"),
-                         cl::ValueOptional, cl::cat(BoltOptCategory));
+cl::opt<bolt::BinaryContext::ICFLevel> ICF(
+    "icf", cl::desc("fold functions with identical code"),
+    cl::init(bolt::BinaryContext::ICFLevel::None),
+    cl::values(
+        clEnumValN(bolt::BinaryContext::ICFLevel::All, "all", "enable ICF"),
+        clEnumValN(bolt::BinaryContext::ICFLevel::All, "", "enable ICF"),
+        clEnumValN(bolt::BinaryContext::ICFLevel::None, "none", "disable ICF"),
+        clEnumValN(bolt::BinaryContext::ICFLevel::Safe, "safe",
+                   "enable safe ICF")),
+    cl::ZeroOrMore, cl::ValueOptional, cl::cat(BoltOptCategory));
 } // namespace opts
 
 namespace {
@@ -171,16 +179,6 @@ void BinaryContext::logBOLTErrorsAndQuitOnFatal(Error E) {
   });
 }
 
-static BinaryContext::ICFLevel parseICFLevel() {
-  if (!opts::ICF.getNumOccurrences())
-    return BinaryContext::ICFLevel::None;
-  std::string Str = StringRef(opts::ICF).lower();
-  return StringSwitch<BinaryContext::ICFLevel>(Str)
-      .Case("all", BinaryContext::ICFLevel::All)
-      .Case("safe", BinaryContext::ICFLevel::Safe)
-      .Default(BinaryContext::ICFLevel::All);
-}
-
 BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
                              std::unique_ptr<DWARFContext> DwCtx,
                              std::unique_ptr<Triple> TheTriple,
@@ -205,7 +203,7 @@ BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
       Logger(Logger), InitialDynoStats(isAArch64()) {
   RegularPageSize = isAArch64() ? RegularPageSizeAArch64 : RegularPageSizeX86;
   PageAlign = opts::NoHugePages ? RegularPageSize : HugePageSize;
-  CurrICFLevel = parseICFLevel();
+  CurrICFLevel = opts::ICF;
 }
 
 BinaryContext::~BinaryContext() {
