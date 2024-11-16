@@ -255,6 +255,8 @@ void setTarget(Ctx &);
 
 template <class ELFT> bool isMipsPIC(const Defined *sym);
 
+const ELFSyncStream &operator<<(const ELFSyncStream &, RelType);
+
 void reportRangeError(Ctx &, uint8_t *loc, const Relocation &rel,
                       const Twine &v, int64_t min, uint64_t max);
 void reportRangeError(Ctx &ctx, uint8_t *loc, int64_t v, int n,
@@ -288,9 +290,9 @@ inline void checkIntUInt(Ctx &ctx, uint8_t *loc, uint64_t v, int n,
 inline void checkAlignment(Ctx &ctx, uint8_t *loc, uint64_t v, int n,
                            const Relocation &rel) {
   if ((v & (n - 1)) != 0)
-    error(getErrorLoc(ctx, loc) + "improper alignment for relocation " +
-          lld::toString(rel.type) + ": 0x" + llvm::utohexstr(v) +
-          " is not aligned to " + Twine(n) + " bytes");
+    Err(ctx) << getErrorLoc(ctx, loc) << "improper alignment for relocation "
+             << rel.type << ": 0x" << llvm::utohexstr(v)
+             << " is not aligned to " << Twine(n) << " bytes";
 }
 
 // Endianness-aware read/write.
@@ -327,8 +329,6 @@ inline uint64_t overwriteULEB128(uint8_t *bufLoc, uint64_t val) {
   *bufLoc = val;
   return val;
 }
-
-const ELFSyncStream &operator<<(const ELFSyncStream &, RelType);
 } // namespace elf
 } // namespace lld
 
