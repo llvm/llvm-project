@@ -616,8 +616,7 @@ selectVSplatSimm5(SDValue N, SDValue &Imm) const {
 }
 
 // Select const vector splat of 1.
-bool MipsSEDAGToDAGISel::
-selectVSplatImmEq1(SDValue N) const {
+bool MipsSEDAGToDAGISel::selectVSplatImmEq1(SDValue N) const {
   EVT EltTy = N->getValueType(0).getVectorElementType();
 
   if (N->getOpcode() == ISD::BITCAST)
