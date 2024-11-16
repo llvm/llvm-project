@@ -331,7 +331,6 @@ experimental/utility initializer_list
 experimental/utility limits
 experimental/utility utility
 experimental/utility version
-filesystem bitset
 filesystem cctype
 filesystem cerrno
 filesystem climits
@@ -349,7 +348,6 @@ filesystem initializer_list
 filesystem iomanip
 filesystem ios
 filesystem iosfwd
-filesystem istream
 filesystem limits
 filesystem locale
 filesystem new
@@ -492,7 +490,6 @@ future tuple
 future typeinfo
 future version
 initializer_list version
-iomanip bitset
 iomanip cctype
 iomanip cerrno
 iomanip climits
@@ -509,7 +506,6 @@ iomanip cwctype
 iomanip initializer_list
 iomanip ios
 iomanip iosfwd
-iomanip istream
 iomanip limits
 iomanip locale
 iomanip new

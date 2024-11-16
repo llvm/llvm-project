@@ -1460,7 +1460,9 @@ module std [system] {
 
   module locale {
     header "locale"
-    header "__locale_dir/locale_guard.h"
+
+    module locale_guard   { header "__locale_dir/locale_guard.h" }
+    module pad_and_output { header "__locale_dir/pad_and_output.h" }
 
     module support {
       header "__locale_dir/locale_base_api.h"
@@ -1641,6 +1643,7 @@ module std [system] {
       header "__ostream/print.h"
       export *
     }
+    module put_character_sequence { header "__ostream/put_character_sequence.h" }
 
     header "ostream"
     export *

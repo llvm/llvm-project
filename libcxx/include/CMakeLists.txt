@@ -503,6 +503,7 @@ set(files
   __locale_dir/locale_base_api/openbsd.h
   __locale_dir/locale_base_api/win32.h
   __locale_dir/locale_guard.h
+  __locale_dir/pad_and_output.h
   __locale_dir/support/apple.h
   __locale_dir/support/bsd_like.h
   __locale_dir/support/freebsd.h
@@ -596,6 +597,7 @@ set(files
   __numeric/transform_reduce.h
   __ostream/basic_ostream.h
   __ostream/print.h
+  __ostream/put_character_sequence.h
   __pstl/backend.h
   __pstl/backend_fwd.h
   __pstl/backends/default.h
