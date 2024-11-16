@@ -110,14 +110,14 @@ template <bool Invert> struct Process {
 
   /// Retrieve the inbox state from memory shared between processes.
   LIBC_INLINE uint32_t load_inbox(uint64_t lane_mask, uint32_t index) const {
-    return gpu::broadcast_value(
+    return rpc::broadcast_value(
         lane_mask, __scoped_atomic_load_n(&inbox[index], __ATOMIC_RELAXED,
                                           __MEMORY_SCOPE_SYSTEM));
   }
 
   /// Retrieve the outbox state from memory shared between processes.
   LIBC_INLINE uint32_t load_outbox(uint64_t lane_mask, uint32_t index) const {
-    return gpu::broadcast_value(
+    return rpc::broadcast_value(
         lane_mask, __scoped_atomic_load_n(&outbox[index], __ATOMIC_RELAXED,
                                           __MEMORY_SCOPE_SYSTEM));
   }
@@ -162,7 +162,7 @@ template <bool Invert> struct Process {
 
   /// Attempt to claim the lock at index. Return true on lock taken.
   /// lane_mask is a bitmap of the threads in the warp that would hold the
-  /// single lock on success, e.g. the result of gpu::get_lane_mask()
+  /// single lock on success, e.g. the result of rpc::get_lane_mask()
   /// The lock is held when the n-th bit of the lock bitfield is set.
   LIBC_INLINE bool try_lock(uint64_t lane_mask, uint32_t index) {
     // On amdgpu, test and set to the nth lock bit and a sync_lane would suffice
@@ -173,12 +173,12 @@ template <bool Invert> struct Process {
     // There may be threads active which are not in lane mask which must not
     // succeed in taking the lock, as otherwise it will leak. This is handled
     // by making threads which are not in lane_mask or with 0, a no-op.
-    uint32_t id = gpu::get_lane_id();
+    uint32_t id = rpc::get_lane_id();
     bool id_in_lane_mask = lane_mask & (1ul << id);
 
     // All threads in the warp call fetch_or. Possibly at the same time.
     bool before = set_nth(lock, index, id_in_lane_mask);
-    uint64_t packed = gpu::ballot(lane_mask, before);
+    uint64_t packed = rpc::ballot(lane_mask, before);
 
     // If every bit set in lane_mask is also set in packed, every single thread
     // in the warp failed to get the lock. Ballot returns unset for threads not
@@ -212,8 +212,8 @@ template <bool Invert> struct Process {
     // restrict to a single thread to avoid one thread dropping the lock, then
     // an unrelated warp claiming the lock, then a second thread in this warp
     // dropping the lock again.
-    clear_nth(lock, index, gpu::is_first_lane(lane_mask));
-    gpu::sync_lane(lane_mask);
+    clear_nth(lock, index, rpc::is_first_lane(lane_mask));
+    rpc::sync_lane(lane_mask);
   }
 
   /// Number of bytes to allocate for an inbox or outbox.
@@ -276,9 +276,9 @@ template <typename F>
 LIBC_INLINE static void invoke_rpc(F &&fn, uint32_t lane_size,
                                    uint64_t lane_mask, Buffer *slot) {
   if constexpr (is_process_gpu()) {
-    fn(&slot[gpu::get_lane_id()], gpu::get_lane_id());
+    fn(&slot[rpc::get_lane_id()], rpc::get_lane_id());
   } else {
-    for (uint32_t i = 0; i < lane_size; i += gpu::get_lane_size())
+    for (uint32_t i = 0; i < lane_size; i += rpc::get_num_lanes())
       if (lane_mask & (1ul << i))
         fn(&slot[i], i);
   }
@@ -323,7 +323,7 @@ public:
 
   LIBC_INLINE void close() {
     // Wait for all lanes to finish using the port.
-    gpu::sync_lane(lane_mask);
+    rpc::sync_lane(lane_mask);
 
     // The server is passive, if it own the buffer when it closes we need to
     // give ownership back to the client.
@@ -466,7 +466,7 @@ LIBC_INLINE void Port<T>::send_n(const void *const *src, uint64_t *size) {
   });
   uint64_t idx = sizeof(Buffer::data) - sizeof(uint64_t);
   uint64_t mask = process.header[index].mask;
-  while (gpu::ballot(mask, idx < num_sends)) {
+  while (rpc::ballot(mask, idx < num_sends)) {
     send([=](Buffer *buffer, uint32_t id) {
       uint64_t len = lane_value(size, id) - idx > sizeof(Buffer::data)
                          ? sizeof(Buffer::data)
@@ -499,7 +499,7 @@ LIBC_INLINE void Port<T>::recv_n(void **dst, uint64_t *size, A &&alloc) {
   });
   uint64_t idx = sizeof(Buffer::data) - sizeof(uint64_t);
   uint64_t mask = process.header[index].mask;
-  while (gpu::ballot(mask, idx < num_recvs)) {
+  while (rpc::ballot(mask, idx < num_recvs)) {
     recv([=](Buffer *buffer, uint32_t id) {
       uint64_t len = lane_value(size, id) - idx > sizeof(Buffer::data)
                          ? sizeof(Buffer::data)
@@ -520,13 +520,13 @@ LIBC_INLINE void Port<T>::recv_n(void **dst, uint64_t *size, A &&alloc) {
 template <uint16_t opcode> LIBC_INLINE Client::Port Client::open() {
   // Repeatedly perform a naive linear scan for a port that can be opened to
   // send data.
-  for (uint32_t index = gpu::get_cluster_id();; ++index) {
+  for (uint32_t index = 0;; ++index) {
     // Start from the beginning if we run out of ports to check.
     if (index >= process.port_count)
       index = 0;
 
     // Attempt to acquire the lock on this index.
-    uint64_t lane_mask = gpu::get_lane_mask();
+    uint64_t lane_mask = rpc::get_lane_mask();
     if (!process.try_lock(lane_mask, index))
       continue;
 
@@ -540,12 +540,12 @@ template <uint16_t opcode> LIBC_INLINE Client::Port Client::open() {
       continue;
     }
 
-    if (gpu::is_first_lane(lane_mask)) {
+    if (rpc::is_first_lane(lane_mask)) {
       process.header[index].opcode = opcode;
       process.header[index].mask = lane_mask;
     }
-    gpu::sync_lane(lane_mask);
-    return Port(process, lane_mask, gpu::get_lane_size(), index, out);
+    rpc::sync_lane(lane_mask);
+    return Port(process, lane_mask, rpc::get_num_lanes(), index, out);
   }
 }
 
@@ -555,7 +555,7 @@ LIBC_INLINE cpp::optional<typename Server::Port>
 Server::try_open(uint32_t lane_size, uint32_t start) {
   // Perform a naive linear scan for a port that has a pending request.
   for (uint32_t index = start; index < process.port_count; ++index) {
-    uint64_t lane_mask = gpu::get_lane_mask();
+    uint64_t lane_mask = rpc::get_lane_mask();
     uint32_t in = process.load_inbox(lane_mask, index);
     uint32_t out = process.load_outbox(lane_mask, index);
 
