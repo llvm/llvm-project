@@ -927,12 +927,92 @@ unsigned char Editline::BufferEndCommand(int ch) {
 static void
 PrintCompletion(FILE *output_file,
                 llvm::ArrayRef<CompletionResult::Completion> results,
-                size_t max_len) {
+                size_t max_completion_length, size_t max_lenght) {
+
+  constexpr size_t ellipsis_length = 3;
+  constexpr size_t tab_legnth = 8;
+  constexpr size_t separator_length = 4;
+  const size_t description_col =
+      std::min(max_completion_length + tab_legnth, max_lenght);
+
   for (const CompletionResult::Completion &c : results) {
-    fprintf(output_file, "\t%-*s", (int)max_len, c.GetCompletion().c_str());
-    if (!c.GetDescription().empty())
-      fprintf(output_file, " -- %s", c.GetDescription().c_str());
-    fprintf(output_file, "\n");
+    // Print the leading tab-sized padding.
+    fprintf(output_file, "        ");
+    size_t cursor = tab_legnth;
+
+    if (!c.GetCompletion().empty()) {
+      const size_t completion_length = c.GetCompletion().size();
+      if (cursor + completion_length < max_lenght) {
+        fprintf(output_file, "%s", c.GetCompletion().c_str());
+        cursor = cursor + completion_length;
+      } else {
+        // If the completion doesn't fit on the screen, print ellipsis and don't
+        // bother with the description.
+        fprintf(output_file, "%s...\n",
+                c.GetCompletion()
+                    .substr(0, max_lenght - cursor - ellipsis_length)
+                    .c_str());
+        continue;
+      }
+    }
+
+    if (!c.GetDescription().empty()) {
+      // If we have a description, we need at least 4 columns for the separator.
+      if (cursor + separator_length < max_lenght) {
+        // Add padding before the separator.
+        if (cursor < description_col) {
+          std::string padding(description_col - cursor, ' ');
+          fprintf(output_file, "%s", padding.c_str());
+          cursor = description_col;
+        }
+
+        // Print the separator.
+        fprintf(output_file, " -- ");
+        cursor = cursor + separator_length;
+
+        // Descriptions can contain newlines. We want to print them below each
+        // other, aligned after the separator. For example, foo has a
+        // two-line description:
+        //
+        // foo   -- Something that fits on the line.
+        //          More information below.
+        //
+        // However, as soon as a line exceed the available screen width and
+        // print ellipsis, we don't print the next line. For example, foo has a
+        // three-line description:
+        //
+        // foo   -- Something that fits on the line.
+        //          Something much longer  that doesn't fit...
+        //
+        // Because we had to print ellipsis on line two, we don't print the
+        // third line.
+        llvm::StringRef tail = c.GetDescription();
+        while (!tail.empty()) {
+          llvm::StringRef head;
+          std::tie(head, tail) = tail.split('\n');
+
+          const size_t description_lenth = head.size();
+          if (cursor + description_lenth < max_lenght) {
+            fprintf(output_file, "%s\n", head.str().c_str());
+            cursor = cursor + description_lenth;
+          } else {
+            fprintf(output_file, "%s...\n",
+                    head.substr(0, max_lenght - cursor - ellipsis_length)
+                        .str()
+                        .c_str());
+            continue;
+          }
+
+          if (!tail.empty()) {
+            std::string padding(description_col + 4, ' ');
+            fprintf(output_file, "%s", padding.c_str());
+            cursor = description_col + 4;
+          }
+        }
+      }
+    } else {
+      fprintf(output_file, "\n");
+    }
   }
 }
 
@@ -953,7 +1033,8 @@ void Editline::DisplayCompletions(
   const size_t max_len = longest->GetCompletion().size();
 
   if (results.size() < page_size) {
-    PrintCompletion(editline.m_output_file, results, max_len);
+    PrintCompletion(editline.m_output_file, results, max_len,
+                    editline.GetTerminalWidth());
     return;
   }
 
@@ -963,7 +1044,7 @@ void Editline::DisplayCompletions(
     size_t next_size = all ? remaining : std::min(page_size, remaining);
 
     PrintCompletion(editline.m_output_file, results.slice(cur_pos, next_size),
-                    max_len);
+                    max_len, editline.GetTerminalWidth());
 
     cur_pos += next_size;
 
