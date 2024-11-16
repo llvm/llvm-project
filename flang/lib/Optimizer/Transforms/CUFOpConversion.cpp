@@ -563,9 +563,8 @@ struct CUFDataTransferOpConversion
         // until we have more infrastructure.
         mlir::Value src = emboxSrc(rewriter, op, symtab);
         mlir::Value dst = emboxDst(rewriter, op, symtab);
-        mlir::func::FuncOp func =
-            fir::runtime::getRuntimeFunc<mkRTKey(CUFDataTransferCstDesc)>(
-                loc, builder);
+        mlir::func::FuncOp func = fir::runtime::getRuntimeFunc<mkRTKey(
+            CUFDataTransferDescDescNoRealloc)>(loc, builder);
         auto fTy = func.getFunctionType();
         mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
         mlir::Value sourceLine =
@@ -649,9 +648,6 @@ struct CUFDataTransferOpConversion
       mlir::Value src = op.getSrc();
       if (!mlir::isa<fir::BaseBoxType>(srcTy)) {
         src = emboxSrc(rewriter, op, symtab);
-        if (fir::isa_trivial(srcTy))
-          func = fir::runtime::getRuntimeFunc<mkRTKey(CUFDataTransferCstDesc)>(
-              loc, builder);
       }
       auto materializeBoxIfNeeded = [&](mlir::Value val) -> mlir::Value {
         if (mlir::isa<fir::EmboxOp>(val.getDefiningOp())) {
