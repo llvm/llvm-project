@@ -486,6 +486,23 @@ public:
   }
 };
 
+/// Represents overflowing sub operations.
+/// G_USUBO, G_SSUBO
+class GSubCarryOut : public GBinOpCarryOut {
+public:
+  bool isSigned() const { return getOpcode() == TargetOpcode::G_SSUBO; }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_USUBO:
+    case TargetOpcode::G_SSUBO:
+      return true;
+    default:
+      return false;
+    }
+  }
+};
+
 /// Represents overflowing add/sub operations that also consume a carry-in.
 /// G_UADDE, G_SADDE, G_USUBE, G_SSUBE
 class GAddSubCarryInOut : public GAddSubCarryOut {
