@@ -17030,7 +17030,7 @@ bool SITargetLowering::hasBitTest(SDValue X, SDValue Y) const {
     return false;
 
   EVT ScalarType = X.getValueType().getScalarType();
-  
+
   if (ScalarType != MVT::i32)
     return false;
 
