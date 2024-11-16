@@ -710,6 +710,9 @@ inline const ELFSyncStream &operator<<(const ELFSyncStream &s, Error v) {
 // Report a log if --verbose is specified.
 ELFSyncStream Log(Ctx &ctx);
 
+// Print a message to stdout.
+ELFSyncStream Msg(Ctx &ctx);
+
 // Report a warning. Upgraded to an error if --fatal-warnings is specified.
 ELFSyncStream Warn(Ctx &ctx);
 
