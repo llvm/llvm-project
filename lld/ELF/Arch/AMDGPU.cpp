@@ -213,9 +213,7 @@ int64_t AMDGPU::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_AMDGPU_RELATIVE64:
     return read64(ctx, buf);
   default:
-    internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " +
-                            toStr(ctx, type));
+    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   }
 }

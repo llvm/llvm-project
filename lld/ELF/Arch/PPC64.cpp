@@ -1130,9 +1130,7 @@ int64_t PPC64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_PPC64_TPREL64:
     return read64(ctx, buf);
   default:
-    internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " +
-                            toStr(ctx, type));
+    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   }
 }

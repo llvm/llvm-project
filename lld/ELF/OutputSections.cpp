@@ -908,13 +908,12 @@ void OutputSection::checkDynRelAddends(Ctx &ctx) {
               ? 0
               : ctx.target->getImplicitAddend(relocTarget, rel.type);
       if (addend != writtenAddend)
-        internalLinkerError(
-            getErrorLoc(ctx, relocTarget),
-            "wrote incorrect addend value 0x" + utohexstr(writtenAddend) +
-                " instead of 0x" + utohexstr(addend) +
-                " for dynamic relocation " + toStr(ctx, rel.type) +
-                " at offset 0x" + utohexstr(rel.getOffset()) +
-                (rel.sym ? " against symbol " + toStr(ctx, *rel.sym) : ""));
+        InternalErr(ctx, relocTarget)
+            << "wrote incorrect addend value 0x" << utohexstr(writtenAddend)
+            << " instead of 0x" << utohexstr(addend)
+            << " for dynamic relocation " << rel.type << " at offset 0x"
+            << utohexstr(rel.getOffset())
+            << (rel.sym ? " against symbol " + rel.sym->getName() : "");
     }
   });
 }

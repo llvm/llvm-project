@@ -875,9 +875,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   default:
-    internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " +
-                            toStr(ctx, type));
+    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   case R_ARM_ABS32:
   case R_ARM_BASE_PREL:
