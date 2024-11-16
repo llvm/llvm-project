@@ -98,12 +98,12 @@ struct AnalysisInfoMixin : PassInfoMixin<DerivedT> {
   static AnalysisKey *ID() {
     static_assert(std::is_base_of<AnalysisInfoMixin, DerivedT>::value,
                   "Must pass the derived type as the template argument!");
-    return &DerivedT::Key;
+    return &Key;
   }
 
 private:
   /// Opaque, unique ID for this analysis type.
-  static constexpr AnalysisKey Key = {};
+  static inline AnalysisKey Key = {};
 };
 
 namespace detail {
