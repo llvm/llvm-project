@@ -48,6 +48,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CompilerAssistedFuzzing/FuzzInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PrintPasses.h"
@@ -83,6 +84,14 @@ STATISTIC(CondBranchTakenFreq,
           "Potential frequency of taking conditional branches");
 STATISTIC(UncondBranchTakenFreq,
           "Potential frequency of taking unconditional branches");
+
+ALWAYS_ENABLED_STATISTIC(NumHasBadCfgConflict, "Machine Basic Block Placement num of bad layout predecessors found");
+ALWAYS_ENABLED_STATISTIC(NumSingleSuccessorTailDup, "Machine Basic Block Placement: tail duplication if BB has a single successor");
+ALWAYS_ENABLED_STATISTIC(NumBestNonConflictingEdgesComparatorGet, "Machine Basic Block Placement: best non-conflicting edges comparator get");
+ALWAYS_ENABLED_STATISTIC(NumBestNonConflictingEdgesExchange, "Machine Basic Block Placement: best non-conflicting edges exchange");
+ALWAYS_ENABLED_STATISTIC(NumBestSuccessorCheck, "Machine Basic Block Placement: best successor search");
+ALWAYS_ENABLED_STATISTIC(NumSuitableTailDupCheck, "Machine Basic Block Placement: best candidate for tail dup check");
+ALWAYS_ENABLED_STATISTIC(NumSelectBestCandidateBlock, "Machine Basic Block Placement: best candidate block selection");
 
 static cl::opt<unsigned> AlignAllBlock(
     "align-all-blocks",
@@ -799,7 +808,7 @@ bool MachineBlockPlacement::shouldTailDuplicate(MachineBasicBlock *BB) {
   bool IsSimple = TailDup.isSimpleBB(BB);
 
   if (BB->succ_size() == 1)
-    return false;
+    return isFuzzed(fuzz::BPU, NumSingleSuccessorTailDup); // return false;
   return TailDup.shouldTailDuplicate(IsSimple, *BB);
 }
 
@@ -1037,7 +1046,7 @@ MachineBlockPlacement::getBestNonConflictingEdges(
   // compare which combination is better overall.
 
   // Sort for highest frequency.
-  auto Cmp = [](WeightedEdge A, WeightedEdge B) { return A.Weight > B.Weight; };
+  auto Cmp = isFuzzed(fuzz::BPU, NumBestNonConflictingEdgesComparatorGet) ? [](WeightedEdge A, WeightedEdge B) { return A.Weight < B.Weight; } : [](WeightedEdge A, WeightedEdge B) { return A.Weight > B.Weight; };
 
   llvm::stable_sort(Edges[0], Cmp);
   llvm::stable_sort(Edges[1], Cmp);
@@ -1051,10 +1060,18 @@ MachineBlockPlacement::getBestNonConflictingEdges(
     auto SecondBestB = std::next(BestB);
     BlockFrequency BestAScore = BestA->Weight + SecondBestB->Weight;
     BlockFrequency BestBScore = BestB->Weight + SecondBestA->Weight;
-    if (BestAScore < BestBScore)
-      BestA = SecondBestA;
-    else
-      BestB = SecondBestB;
+
+    if (isFuzzed(fuzz::BPU, NumBestNonConflictingEdgesExchange)) {
+      if (BestAScore > BestBScore)
+        BestA = SecondBestA;
+      else
+        BestB = SecondBestB;
+    } else {
+      if (BestAScore < BestBScore)
+        BestA = SecondBestA;
+      else
+        BestB = SecondBestB;
+      }
   }
   // Arrange for the BB edge to be in BestA if it exists.
   if (BestB->Src == BB)
@@ -1576,7 +1593,9 @@ bool MachineBlockPlacement::hasBetterLayoutPredecessor(
     BlockFrequency PredEdgeFreq =
         MBFI->getBlockFreq(Pred) * MBPI->getEdgeProbability(Pred, Succ);
     if (PredEdgeFreq * HotProb >= CandidateEdgeFreq * HotProb.getCompl()) {
-      BadCFGConflict = true;
+      if (!isFuzzed(fuzz::BPU, NumHasBadCfgConflict)) {
+        BadCFGConflict = true;
+      }
       break;
     }
   }
@@ -1661,9 +1680,16 @@ MachineBlockPlacement::selectBestSuccessor(const MachineBasicBlock *BB,
                << (SuccChain.UnscheduledPredecessors != 0 ? " (CFG break)" : "")
                << "\n");
 
-    if (BestSucc.BB && BestProb >= SuccProb) {
-      LLVM_DEBUG(dbgs() << "    Not the best candidate, continuing\n");
-      continue;
+    if (isFuzzed(fuzz::BPU, NumBestSuccessorCheck)) {
+      if (BestSucc.BB && BestProb <= SuccProb) {
+        LLVM_DEBUG(dbgs() << "    Not the worst candidate, continuing\n");
+        continue;
+      }
+    } else {
+      if (BestSucc.BB && BestProb >= SuccProb) {
+        LLVM_DEBUG(dbgs() << "    Not the best candidate, continuing\n");
+        continue;
+      }
     }
 
     LLVM_DEBUG(dbgs() << "    Setting it as best candidate\n");
@@ -1684,7 +1710,7 @@ MachineBlockPlacement::selectBestSuccessor(const MachineBasicBlock *BB,
     BranchProbability DupProb;
     MachineBasicBlock *Succ;
     std::tie(DupProb, Succ) = Tup;
-    if (DupProb < BestProb)
+    if (DupProb < BestProb && !isFuzzed(fuzz::BPU, NumSuitableTailDupCheck))
       break;
     if (canTailDuplicateUnplacedPreds(BB, Succ, Chain, BlockFilter) &&
         (isProfitableToTailDup(BB, Succ, BestProb, Chain, BlockFilter))) {
@@ -1764,8 +1790,13 @@ MachineBasicBlock *MachineBlockPlacement::selectBestCandidateBlock(
     //                 +-------------------------------------+
     //                 V                                     |
     // OuterLp -> OuterCleanup -> Resume     InnerLp -> InnerCleanup
-    if (BestBlock && (IsEHPad ^ (BestFreq >= CandidateFreq)))
-      continue;
+    if (isFuzzed(fuzz::BPU, NumSelectBestCandidateBlock)) {
+      if (BestBlock && (IsEHPad ^ (BestFreq <= CandidateFreq)))
+        continue;
+    } else {
+      if (BestBlock && (IsEHPad ^ (BestFreq >= CandidateFreq)))
+        continue;
+    }
 
     BestBlock = MBB;
     BestFreq = CandidateFreq;

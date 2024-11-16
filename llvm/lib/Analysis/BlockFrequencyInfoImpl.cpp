@@ -15,6 +15,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/BlockFrequency.h"
@@ -61,6 +62,13 @@ cl::opt<double> IterativeBFIPrecision(
     cl::desc("Iterative inference: delta convergence precision; smaller values "
              "typically lead to better results at the cost of worsen runtime"));
 } // namespace llvm
+
+static cl::opt<bool> BFIInverse("bfi-invert",
+                       cl::desc("Force inverting of BFI values during computation."),
+                       cl::init(false), cl::Hidden);
+
+ALWAYS_ENABLED_STATISTIC(NumInvertedBFI, "BFI: inverted frequences amount");
+
 
 ScaledNumber<uint64_t> BlockMass::toScaled() const {
   if (isFull())
@@ -553,6 +561,14 @@ void BlockFrequencyInfoImplBase::finalizeMetrics() {
     Min = std::min(Min, Freqs[Index].Scaled);
     Max = std::max(Max, Freqs[Index].Scaled);
   }
+
+  if (BFIInverse) {
+    for (size_t Index = 0; Index < Working.size(); ++Index) {
+      Freqs[Index].Scaled = Max + Min - Freqs[Index].Scaled;
+      NumInvertedBFI++;
+    }
+  }
+  
 
   // Convert to integers.
   convertFloatingToInteger(*this, Min, Max);
