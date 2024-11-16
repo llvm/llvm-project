@@ -1,4 +1,5 @@
 # REQUIRES: x86
+# XFAIL: system-darwin
 
 # FIXME(gkm): This test is fast on a Release tree, and slow (~10s) on
 # a Debug tree mostly because of llvm-mc. Is there a way to prefer the

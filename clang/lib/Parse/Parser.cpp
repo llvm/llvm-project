@@ -1161,6 +1161,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
       assert(DeclSpec::isDeclRep(TKind));
       switch(TKind) {
       case DeclSpec::TST_class:
+      case DeclSpec::TST_coroutine:
         return 5;
       case DeclSpec::TST_struct:
         return 6;

@@ -29,7 +29,9 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
 
 using namespace clang;
@@ -1724,6 +1726,10 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
     TagType = DeclSpec::TST_interface;
   else if (TagTokKind == tok::kw_class)
     TagType = DeclSpec::TST_class;
+  else if (TagTokKind == tok::kw__Coroutine) {
+    TagType = DeclSpec::TST_coroutine;
+  }
+    
   else {
     assert(TagTokKind == tok::kw_union && "Not a class specifier");
     TagType = DeclSpec::TST_union;
@@ -3755,7 +3761,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
                                          unsigned TagType, Decl *TagDecl) {
   assert((TagType == DeclSpec::TST_struct ||
           TagType == DeclSpec::TST_interface ||
-          TagType == DeclSpec::TST_union || TagType == DeclSpec::TST_class) &&
+          TagType == DeclSpec::TST_union || TagType == DeclSpec::TST_class || TagType == DeclSpec::TST_coroutine) &&
          "Invalid TagType!");
 
   llvm::TimeTraceScope TimeScope("ParseClass", [&]() {
@@ -3932,7 +3938,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   // are public by default.
   // HLSL: In HLSL members of a class are public by default.
   AccessSpecifier CurAS;
-  if (TagType == DeclSpec::TST_class && !getLangOpts().HLSL)
+  if ((TagType == DeclSpec::TST_class || TagType == DeclSpec::TST_coroutine) && !getLangOpts().HLSL)
     CurAS = AS_private;
   else
     CurAS = AS_public;

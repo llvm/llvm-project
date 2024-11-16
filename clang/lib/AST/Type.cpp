@@ -3159,6 +3159,8 @@ TypeWithKeyword::getKeywordForTypeSpec(unsigned TypeSpec) {
     return ElaboratedTypeKeyword::None;
   case TST_typename:
     return ElaboratedTypeKeyword::Typename;
+  case TST_coroutine:
+    return ElaboratedTypeKeyword::Coroutine;
   case TST_class:
     return ElaboratedTypeKeyword::Class;
   case TST_struct:
@@ -3175,6 +3177,8 @@ TypeWithKeyword::getKeywordForTypeSpec(unsigned TypeSpec) {
 TagTypeKind
 TypeWithKeyword::getTagTypeKindForTypeSpec(unsigned TypeSpec) {
   switch(TypeSpec) {
+  case TST_coroutine: 
+    return TagTypeKind::Coroutine;
   case TST_class:
     return TagTypeKind::Class;
   case TST_struct:
@@ -3195,6 +3199,8 @@ TypeWithKeyword::getKeywordForTagTypeKind(TagTypeKind Kind) {
   switch (Kind) {
   case TagTypeKind::Class:
     return ElaboratedTypeKeyword::Class;
+  case TagTypeKind::Coroutine:
+    return ElaboratedTypeKeyword::Coroutine;
   case TagTypeKind::Struct:
     return ElaboratedTypeKeyword::Struct;
   case TagTypeKind::Interface:
@@ -3212,6 +3218,8 @@ TypeWithKeyword::getTagTypeKindForKeyword(ElaboratedTypeKeyword Keyword) {
   switch (Keyword) {
   case ElaboratedTypeKeyword::Class:
     return TagTypeKind::Class;
+  case ElaboratedTypeKeyword::Coroutine:
+    return TagTypeKind::Coroutine;
   case ElaboratedTypeKeyword::Struct:
     return TagTypeKind::Struct;
   case ElaboratedTypeKeyword::Interface:
@@ -3234,6 +3242,7 @@ TypeWithKeyword::KeywordIsTagTypeKind(ElaboratedTypeKeyword Keyword) {
   case ElaboratedTypeKeyword::Typename:
     return false;
   case ElaboratedTypeKeyword::Class:
+  case ElaboratedTypeKeyword::Coroutine:
   case ElaboratedTypeKeyword::Struct:
   case ElaboratedTypeKeyword::Interface:
   case ElaboratedTypeKeyword::Union:
@@ -3259,6 +3268,8 @@ StringRef TypeWithKeyword::getKeywordName(ElaboratedTypeKeyword Keyword) {
     return "union";
   case ElaboratedTypeKeyword::Enum:
     return "enum";
+  case ElaboratedTypeKeyword::Coroutine:
+    return "_Coroutine";
   }
 
   llvm_unreachable("Unknown elaborated type keyword.");

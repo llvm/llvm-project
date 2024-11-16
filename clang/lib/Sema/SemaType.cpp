@@ -1195,6 +1195,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     declarator.setInvalidType(true);
     break;
   case DeclSpec::TST_class:
+  case DeclSpec::TST_coroutine:
   case DeclSpec::TST_enum:
   case DeclSpec::TST_union:
   case DeclSpec::TST_struct:

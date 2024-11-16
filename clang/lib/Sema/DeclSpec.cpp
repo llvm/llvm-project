@@ -350,6 +350,7 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_char16:
     case TST_char32:
     case TST_class:
+    case TST_coroutine:
     case TST_decimal128:
     case TST_decimal32:
     case TST_decimal64:
@@ -585,6 +586,7 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_decimal128:  return "_Decimal128";
   case DeclSpec::TST_enum:        return "enum";
   case DeclSpec::TST_class:       return "class";
+  case DeclSpec::TST_coroutine:   return "coroutine";
   case DeclSpec::TST_union:       return "union";
   case DeclSpec::TST_struct:      return "struct";
   case DeclSpec::TST_interface:   return "__interface";
