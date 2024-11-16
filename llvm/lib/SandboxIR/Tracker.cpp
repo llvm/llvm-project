@@ -69,9 +69,7 @@ bool IRSnapshotChecker::diff(const ContextSnapshot &Orig,
   return DifferenceFound;
 }
 
-void IRSnapshotChecker::save() {
-  OrigContextSnapshot = takeSnapshot();
-}
+void IRSnapshotChecker::save() { OrigContextSnapshot = takeSnapshot(); }
 
 void IRSnapshotChecker::expectNoDiff() {
   ContextSnapshot CurrContextSnapshot = takeSnapshot();
