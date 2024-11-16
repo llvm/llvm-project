@@ -721,6 +721,8 @@ ELFSyncStream Fatal(Ctx &ctx);
 
 uint64_t errCount(Ctx &ctx);
 
+#define CHECK2(E, S) lld::check2((E), [&] { return toStr(ctx, S); })
+
 } // namespace lld::elf
 
 #endif
