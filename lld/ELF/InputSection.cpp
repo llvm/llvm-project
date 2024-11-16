@@ -122,7 +122,7 @@ static void decompressAux(Ctx &ctx, const InputSectionBase &sec, uint8_t *out,
                     ? compression::zlib::decompress(compressed, out, size)
                     : compression::zstd::decompress(compressed, out, size))
     Fatal(ctx) << &sec
-               << ": decompress failed: " << llvm::toString(std::move(e));
+               << ": decompress failed: " << std::move(e);
 }
 
 void InputSectionBase::decompress() const {

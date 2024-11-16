@@ -1508,7 +1508,7 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
       FileOutputBuffer::create(ctx.arg.cmseOutputLib, fileSize, flags);
   if (!bufferOrErr) {
     ErrAlways(ctx) << "failed to open " << ctx.arg.cmseOutputLib << ": "
-                   << llvm::toString(bufferOrErr.takeError());
+                   << bufferOrErr.takeError();
     return;
   }
 

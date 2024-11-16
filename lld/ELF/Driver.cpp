@@ -684,7 +684,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       if (!ltoSampleProfile.empty())
         readFile(ctx, ltoSampleProfile);
     } else {
-      ErrAlways(ctx) << "--reproduce: " << toString(errOrWriter.takeError());
+      ErrAlways(ctx) << "--reproduce: " << errOrWriter.takeError();
     }
   }
 
@@ -1141,7 +1141,7 @@ static void ltoValidateAllVtablesHaveTypeInfos(Ctx &ctx,
     Expected<GlobPattern> pat = GlobPattern::create(knownSafeName);
     if (!pat)
       ErrAlways(ctx) << "--lto-known-safe-vtables=: "
-                     << toString(pat.takeError());
+                     << pat.takeError();
     vtableSymbolsWithNoRTTI.remove_if(
         [&](StringRef s) { return pat->match(s); });
   }
@@ -1271,7 +1271,7 @@ static bool remapInputs(Ctx &ctx, StringRef line, const Twine &location) {
   else if (Expected<GlobPattern> pat = GlobPattern::create(fields[0]))
     ctx.arg.remapInputsWildcards.emplace_back(std::move(*pat), fields[1]);
   else {
-    ErrAlways(ctx) << location << ": " << toString(pat.takeError()) << ": "
+    ErrAlways(ctx) << location << ": " << pat.takeError() << ": "
                    << fields[0];
     return true;
   }
@@ -1600,7 +1600,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     else if (Expected<GlobPattern> pat = GlobPattern::create(kv.first))
       ctx.arg.shuffleSections.emplace_back(std::move(*pat), uint32_t(v));
     else
-      ErrAlways(ctx) << errPrefix << toString(pat.takeError()) << ": "
+      ErrAlways(ctx) << errPrefix << pat.takeError() << ": "
                      << kv.first;
   }
 
@@ -1645,7 +1645,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     if (Expected<GlobPattern> pat = GlobPattern::create(fields[0])) {
       ctx.arg.compressSections.emplace_back(std::move(*pat), type, level);
     } else {
-      ErrAlways(ctx) << arg->getSpelling() << ": " << toString(pat.takeError());
+      ErrAlways(ctx) << arg->getSpelling() << ": " << pat.takeError();
       continue;
     }
   }

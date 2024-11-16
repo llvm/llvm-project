@@ -480,7 +480,7 @@ template <class ELFT> DWARFCache *ObjFile<ELFT>::getDwarf() {
   llvm::call_once(initDwarf, [this]() {
     dwarf = std::make_unique<DWARFCache>(std::make_unique<DWARFContext>(
         std::make_unique<LLDDwarfObj<ELFT>>(this), "",
-        [&](Error err) { warn(getName() + ": " + toString(std::move(err))); },
+        [&](Error err) { Warn(ctx) << getName() + ": " << std::move(err); },
         [&](Error warning) {
           Warn(ctx) << getName() << ": " << std::move(warning);
         }));
@@ -634,7 +634,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
                                                    ? llvm::endianness::little
                                                    : llvm::endianness::big)) {
         InputSection isec(*this, sec, name);
-        Warn(ctx) << &isec << ": " << llvm::toString(std::move(e));
+        Warn(ctx) << &isec << ": " << std::move(e);
       } else {
         updateSupportedARMFeatures(ctx, attributes);
         updateARMVFPArgs(ctx, attributes, this);
