@@ -7401,9 +7401,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     if (PtrTy.getFixedSizeInBits() < ResTy.getFixedSizeInBits())
       report_fatal_error("Wrong result type for @llvm.get.dynamic.area.offset"
                          " intrinsic!");
-    Res = DAG.getNode(ISD::GET_DYNAMIC_AREA_OFFSET, sdl, DAG.getVTList(ResTy),
-                      Op);
-    DAG.setRoot(Op);
+    Res =
+        DAG.getNode(ISD::GET_DYNAMIC_AREA_OFFSET, sdl, {ResTy, MVT::Other}, Op);
+    DAG.setRoot(Res.getValue(1));
     setValue(&I, Res);
     return;
   }

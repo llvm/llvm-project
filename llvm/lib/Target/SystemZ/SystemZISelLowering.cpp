@@ -4127,7 +4127,10 @@ SDValue SystemZTargetLowering::lowerGET_DYNAMIC_AREA_OFFSET(
     SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
 
-  return DAG.getNode(SystemZISD::ADJDYNALLOC, DL, MVT::i64);
+  // FIXME: SystemZISD::ADJDYNALLOC should be chained.
+  SDValue Result = DAG.getNode(SystemZISD::ADJDYNALLOC, DL, MVT::i64);
+  SDValue Chain = Op->getOperand(0);
+  return DAG.getMergeValues({Result, Chain}, DL);
 }
 
 SDValue SystemZTargetLowering::lowerSMUL_LOHI(SDValue Op,

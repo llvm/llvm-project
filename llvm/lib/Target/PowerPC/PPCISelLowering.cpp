@@ -7916,16 +7916,12 @@ PPCTargetLowering::LowerGET_DYNAMIC_AREA_OFFSET(SDValue Op,
                                                 SelectionDAG &DAG) const {
   SDLoc dl(Op);
 
-  // Get the correct type for integers.
-  EVT IntVT = Op.getValueType();
-
   // Get the inputs.
   SDValue Chain = Op.getOperand(0);
   SDValue FPSIdx = getFramePointerFrameIndex(DAG);
   // Build a DYNAREAOFFSET node.
   SDValue Ops[2] = {Chain, FPSIdx};
-  SDVTList VTs = DAG.getVTList(IntVT);
-  return DAG.getNode(PPCISD::DYNAREAOFFSET, dl, VTs, Ops);
+  return DAG.getNode(PPCISD::DYNAREAOFFSET, dl, Op->getVTList(), Ops);
 }
 
 SDValue PPCTargetLowering::LowerSTACKRESTORE(SDValue Op,
