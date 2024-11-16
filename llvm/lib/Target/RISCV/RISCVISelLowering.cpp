@@ -22012,6 +22012,8 @@ std::pair<const TargetRegisterClass *, uint8_t>
 RISCVTargetLowering::findRepresentativeClass(const TargetRegisterInfo *TRI,
                                              MVT VT) const {
   switch (VT.SimpleTy) {
+  default:
+    break;
   case MVT::i8:
   case MVT::i16:
   case MVT::i32:
