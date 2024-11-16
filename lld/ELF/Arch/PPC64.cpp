@@ -219,7 +219,7 @@ uint64_t elf::getPPC64TocBase(Ctx &ctx) {
   return tocVA + ppc64TocOffset;
 }
 
-unsigned elf::getPPC64GlobalEntryToLocalEntryOffset(uint8_t stOther) {
+unsigned elf::getPPC64GlobalEntryToLocalEntryOffset(Ctx &ctx, uint8_t stOther) {
   // The offset is encoded into the 3 most significant bits of the st_other
   // field, with some special values described in section 3.4.1 of the ABI:
   // 0   --> Zero offset between the GEP and LEP, and the function does NOT use
@@ -1131,7 +1131,8 @@ int64_t PPC64::getImplicitAddend(const uint8_t *buf, RelType type) const {
     return read64(ctx, buf);
   default:
     internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " + toString(type));
+                        "cannot read addend for relocation " +
+                            toStr(ctx, type));
     return 0;
   }
 }
@@ -1455,9 +1456,9 @@ bool PPC64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   // If the offset exceeds the range of the branch type then it will need
   // a range-extending thunk.
   // See the comment in getRelocTargetVA() about R_PPC64_CALL.
-  return !inBranchRange(type, branchAddr,
-                        s.getVA(ctx, a) +
-                            getPPC64GlobalEntryToLocalEntryOffset(s.stOther));
+  return !inBranchRange(
+      type, branchAddr,
+      s.getVA(ctx, a) + getPPC64GlobalEntryToLocalEntryOffset(ctx, s.stOther));
 }
 
 uint32_t PPC64::getThunkSectionSpacing() const {
@@ -1618,7 +1619,7 @@ void PPC64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
             rel.sym->file != sec.file) {
           // Use substr(6) to remove the "__plt_" prefix.
           Err(ctx) << getErrorLoc(ctx, loc) << "call to "
-                   << lld::toString(*rel.sym).substr(6)
+                   << toStr(ctx, *rel.sym).substr(6)
                    << " lacks nop, can't restore toc";
           break;
         }
@@ -1678,7 +1679,7 @@ bool PPC64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
                                              uint8_t stOther) const {
   // If the caller has a global entry point adjust the buffer past it. The start
   // of the split-stack prologue will be at the local entry point.
-  loc += getPPC64GlobalEntryToLocalEntryOffset(stOther);
+  loc += getPPC64GlobalEntryToLocalEntryOffset(ctx, stOther);
 
   // At the very least we expect to see a load of some split-stack data from the
   // tcb, and 2 instructions that calculate the ending stack address this

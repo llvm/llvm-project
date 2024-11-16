@@ -9,7 +9,7 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -53,7 +53,7 @@ public:
   }
 
 private:
-  class Visitor : public ASTConsumer, public RecursiveASTVisitor<Visitor> {
+  class Visitor : public ASTConsumer, public DynamicRecursiveASTVisitor {
   public:
     Visitor(CompilerInstance &CI, bool ActOnEndOfTranslationUnit,
             std::vector<std::string> &decl_names) :
@@ -67,7 +67,7 @@ private:
       TraverseDecl(context.getTranslationUnitDecl());
     }
 
-    virtual bool VisitNamedDecl(NamedDecl *Decl) {
+    bool VisitNamedDecl(NamedDecl *Decl) override {
       decl_names_.push_back(Decl->getQualifiedNameAsString());
       return true;
     }

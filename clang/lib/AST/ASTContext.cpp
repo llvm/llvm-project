@@ -11405,7 +11405,7 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
       Qualifiers RHSPteeQual = RHSPointee.getQualifiers();
       // Blocks can't be an expression in a ternary operator (OpenCL v2.0
       // 6.12.5) thus the following check is asymmetric.
-      if (!LHSPteeQual.isAddressSpaceSupersetOf(RHSPteeQual))
+      if (!LHSPteeQual.isAddressSpaceSupersetOf(RHSPteeQual, *this))
         return {};
       LHSPteeQual.removeAddressSpace();
       RHSPteeQual.removeAddressSpace();
@@ -14299,11 +14299,13 @@ QualType ASTContext::getCorrespondingSignedFixedPointType(QualType Ty) const {
 // corresponding backend features (which may contain duplicates).
 static std::vector<std::string> getFMVBackendFeaturesFor(
     const llvm::SmallVectorImpl<StringRef> &FMVFeatStrings) {
-  std::vector<std::string> BackendFeats;
+  std::vector<std::string> BackendFeats{{"+fmv"}};
+  llvm::AArch64::ExtensionSet FeatureBits;
   for (StringRef F : FMVFeatStrings)
     if (auto FMVExt = llvm::AArch64::parseFMVExtension(F))
-      for (StringRef F : FMVExt->getImpliedFeatures())
-        BackendFeats.push_back(F.str());
+      if (FMVExt->ID)
+        FeatureBits.enable(*FMVExt->ID);
+  FeatureBits.toLLVMFeatureList(BackendFeats);
   return BackendFeats;
 }
 

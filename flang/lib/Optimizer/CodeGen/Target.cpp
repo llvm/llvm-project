@@ -1091,6 +1091,13 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
       // Two distinct element type arguments (re, im)
       marshal.emplace_back(eleTy, AT{});
       marshal.emplace_back(eleTy, AT{});
+    } else if (sem == &llvm::APFloat::IEEEquad()) {
+      // Use a type that will be translated into LLVM as:
+      // { fp128, fp128 }   struct of 2 fp128, byval
+      marshal.emplace_back(
+          fir::ReferenceType::get(mlir::TupleType::get(
+              eleTy.getContext(), mlir::TypeRange{eleTy, eleTy})),
+          AT{/*align=*/16, /*byval=*/true});
     } else {
       typeTodo(sem, loc, "argument");
     }
@@ -1108,6 +1115,13 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
       marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(),
                                                 mlir::TypeRange{eleTy, eleTy}),
                            AT{/*alignment=*/0, /*byval=*/true});
+    } else if (sem == &llvm::APFloat::IEEEquad()) {
+      // Use a type that will be translated into LLVM as:
+      // { fp128, fp128 }   struct of 2 fp128, sret, align 16
+      marshal.emplace_back(
+          fir::ReferenceType::get(mlir::TupleType::get(
+              eleTy.getContext(), mlir::TypeRange{eleTy, eleTy})),
+          AT{/*align=*/16, /*byval=*/false, /*sret=*/true});
     } else {
       typeTodo(sem, loc, "return");
     }

@@ -615,6 +615,54 @@ LogicalResult ConcatOp::verify() {
   return success();
 }
 
+FailureOr<SmallVector<Value>> ConcatOp::decomposeOperation(OpBuilder &builder) {
+  size_t numInputs = getInputs().size();
+  uint64_t concatDim = getDim();
+
+  SmallVector<SmallVector<OpFoldResult>> inputShapes;
+  inputShapes.reserve(numInputs);
+  SmallVector<OpFoldResult> concatOffsets;
+  concatOffsets.reserve(numInputs);
+  SmallVector<OpFoldResult> outputShape;
+
+  AffineExpr addExpr =
+      builder.getAffineSymbolExpr(0) + builder.getAffineSymbolExpr(1);
+  OpFoldResult zero = builder.getIndexAttr(0);
+  Location loc = getLoc();
+  for (auto [index, input] : llvm::enumerate(getInputs())) {
+    SmallVector<OpFoldResult> inputShape =
+        tensor::getMixedSizes(builder, input.getLoc(), input);
+    if (index == 0) {
+      outputShape = inputShape;
+      concatOffsets.push_back(zero);
+    } else {
+      concatOffsets.push_back(outputShape[concatDim]);
+      outputShape[concatDim] = affine::makeComposedFoldedAffineApply(
+          builder, loc, addExpr,
+          {outputShape[concatDim], inputShape[concatDim]});
+    }
+    inputShapes.emplace_back(std::move(inputShape));
+  }
+
+  Value replacement = builder.create<tensor::EmptyOp>(
+      loc, outputShape, getType().getElementType());
+
+  int64_t rank = getType().getRank();
+  OpFoldResult one = builder.getIndexAttr(1);
+  SmallVector<OpFoldResult> strides(rank, one);
+  SmallVector<OpFoldResult> offsets(rank, zero);
+  for (auto [index, input] : llvm::enumerate(getInputs())) {
+    offsets[concatDim] = concatOffsets[index];
+    auto insertSlice = builder.create<tensor::InsertSliceOp>(
+        loc, input, replacement, offsets, inputShapes[index], strides);
+    replacement = insertSlice.getResult();
+  }
+  if (replacement.getType() != getType()) {
+    replacement = builder.create<tensor::CastOp>(loc, getType(), replacement);
+  }
+  return SmallVector<Value>{replacement};
+}
+
 LogicalResult
 ConcatOp::reifyResultShapes(OpBuilder &builder,
                             ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
@@ -4798,6 +4846,7 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
     PackOp newOp = rewriter.create<PackOp>(
         op.getLoc(), newOperands[0], newOperands[1], op.getInnerDimsPos(),
         newMixedTileSizes, op.getPaddingValue(), op.getOuterDimsPerm());
+    newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
 
     // Replace op.
     Value oldResult = op.getResult();

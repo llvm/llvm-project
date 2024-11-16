@@ -173,7 +173,8 @@ int64_t RISCV::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   default:
     internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " + toString(type));
+                        "cannot read addend for relocation " +
+                            toStr(ctx, type));
     return 0;
   case R_RISCV_32:
   case R_RISCV_TLS_DTPMOD32:
@@ -662,7 +663,7 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
           if (overwriteULEB128(loc, val) >= 0x80)
             Err(ctx) << sec.getLocation(rel.offset) << ": ULEB128 value "
                      << Twine(val) << " exceeds available space; references '"
-                     << lld::toString(*rel.sym) << "'";
+                     << rel.sym << "'";
           ++i;
           continue;
         }
@@ -833,8 +834,8 @@ static bool relax(Ctx &ctx, InputSection &sec) {
       // If we can't satisfy this alignment, we've found a bad input.
       if (LLVM_UNLIKELY(static_cast<int32_t>(remove) < 0)) {
         Err(ctx) << getErrorLoc(ctx, (const uint8_t *)loc)
-                 << "insufficient padding bytes for " << lld::toString(r.type)
-                 << ": " << Twine(r.addend)
+                 << "insufficient padding bytes for " << r.type << ": "
+                 << Twine(r.addend)
                  << " bytes available "
                     "for requested alignment of "
                  << Twine(align) << " bytes";
@@ -1059,7 +1060,7 @@ public:
 };
 } // namespace
 
-static void mergeArch(RISCVISAUtils::OrderedExtensionMap &mergedExts,
+static void mergeArch(Ctx &ctx, RISCVISAUtils::OrderedExtensionMap &mergedExts,
                       unsigned &mergedXlen, const InputSectionBase *sec,
                       StringRef s) {
   auto maybeInfo = RISCVISAInfo::parseNormalizedArchString(s);
@@ -1086,7 +1087,7 @@ static void mergeArch(RISCVISAUtils::OrderedExtensionMap &mergedExts,
   }
 }
 
-static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
+static void mergeAtomic(Ctx &ctx, DenseMap<unsigned, unsigned>::iterator it,
                         const InputSectionBase *oldSection,
                         const InputSectionBase *newSection,
                         RISCVAttrs::RISCVAtomicAbiTag oldTag,
@@ -1104,8 +1105,8 @@ static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
              << ": atomic_abi=" << Twine(static_cast<unsigned>(newTag));
   };
 
-  auto reportUnknownAbiError = [](const InputSectionBase *section,
-                                  RISCVAtomicAbiTag tag) {
+  auto reportUnknownAbiError = [&](const InputSectionBase *section,
+                                   RISCVAtomicAbiTag tag) {
     switch (tag) {
     case RISCVAtomicAbiTag::UNKNOWN:
     case RISCVAtomicAbiTag::A6C:
@@ -1214,7 +1215,7 @@ mergeAttributesSection(Ctx &ctx,
       case RISCVAttrs::ARCH:
         if (auto s = parser.getAttributeString(tag.attr)) {
           hasArch = true;
-          mergeArch(exts, xlen, sec, *s);
+          mergeArch(ctx, exts, xlen, sec, *s);
         }
         continue;
 
@@ -1230,7 +1231,7 @@ mergeAttributesSection(Ctx &ctx,
           if (r.second)
             firstAtomicAbi = sec;
           else
-            mergeAtomic(r.first, firstAtomicAbi, sec,
+            mergeAtomic(ctx, r.first, firstAtomicAbi, sec,
                         static_cast<RISCVAtomicAbiTag>(r.first->getSecond()),
                         static_cast<RISCVAtomicAbiTag>(*i));
         }

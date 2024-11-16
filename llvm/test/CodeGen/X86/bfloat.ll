@@ -1975,3 +1975,25 @@ define bfloat @PR108936(x86_fp80 %0) nounwind {
   %2 = fptrunc x86_fp80 %0 to bfloat
   ret bfloat %2
 }
+
+define bfloat @PR115710(fp128 %0) nounwind {
+; X86-LABEL: PR115710:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $28, %esp
+; X86-NEXT:    vmovaps {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    vmovups %xmm0, (%esp)
+; X86-NEXT:    calll __trunctfbf2
+; X86-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-NEXT:    vmovw %eax, %xmm0
+; X86-NEXT:    addl $28, %esp
+; X86-NEXT:    retl
+;
+; CHECK-LABEL: PR115710:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    callq __trunctfbf2@PLT
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    retq
+  %2 = fptrunc fp128 %0 to bfloat
+  ret bfloat %2
+}

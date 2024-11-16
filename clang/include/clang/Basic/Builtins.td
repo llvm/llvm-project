@@ -227,10 +227,10 @@ def FminimumNumF16F128 : Builtin, F16F128MathTemplate {
   let Prototype = "T(T, T)";
 }
 
-def Atan2F128 : Builtin {
-  let Spellings = ["__builtin_atan2f128"];
+def Atan2F16F128 : Builtin, F16F128MathTemplate {
+  let Spellings = ["__builtin_atan2"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions];
-  let Prototype = "__float128(__float128, __float128)";
+  let Prototype = "T(T, T)";
 }
 
 def CopysignF16 : Builtin {
@@ -4891,6 +4891,12 @@ def HLSLRadians : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLSplitDouble: LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_splitdouble"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLClip: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_clip"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

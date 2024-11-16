@@ -280,7 +280,8 @@ int64_t LoongArch::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   default:
     internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " + toString(type));
+                        "cannot read addend for relocation " +
+                            toStr(ctx, type));
     return 0;
   case R_LARCH_32:
   case R_LARCH_TLS_DTPMOD32:
@@ -775,8 +776,8 @@ static bool relax(Ctx &ctx, InputSection &sec) {
       // If we can't satisfy this alignment, we've found a bad input.
       if (LLVM_UNLIKELY(static_cast<int32_t>(remove) < 0)) {
         Err(ctx) << getErrorLoc(ctx, (const uint8_t *)loc)
-                 << "insufficient padding bytes for " << lld::toString(r.type)
-                 << ": " << Twine(allBytes) << " bytes available for "
+                 << "insufficient padding bytes for " << r.type << ": "
+                 << Twine(allBytes) << " bytes available for "
                  << "requested alignment of " << Twine(align) << " bytes";
         remove = 0;
       }

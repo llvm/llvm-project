@@ -239,7 +239,7 @@ static bool isValidElementType(Type *Ty) {
 /// returns the type of its value operand, for Cmp - the types of the compare
 /// operands and for insertelement - the type os the inserted operand.
 /// Otherwise, just the type of the value is returned.
-template <typename T> static Type *getValueType(T *V) {
+static Type *getValueType(Value *V) {
   if (auto *SI = dyn_cast<StoreInst>(V))
     return SI->getValueOperand()->getType();
   if (auto *CI = dyn_cast<CmpInst>(V))
@@ -2386,6 +2386,9 @@ public:
     /// the whole vector (it is mixed with constants or loop invariant values).
     /// Note: This modifies the 'IsUsed' flag, so a cleanUsed() must follow.
     bool shouldBroadcast(Value *Op, unsigned OpIdx, unsigned Lane) {
+      // Small number of loads - try load matching.
+      if (isa<LoadInst>(Op) && getNumLanes() == 2 && getNumOperands() == 2)
+        return false;
       bool OpAPO = getData(OpIdx, Lane).APO;
       bool IsInvariant = L && L->isLoopInvariant(Op);
       unsigned Cnt = 0;
@@ -2511,23 +2514,23 @@ public:
         Value *OpLane0 = getValue(OpIdx, FirstLane);
         // Keep track if we have instructions with all the same opcode on one
         // side.
-        if (isa<LoadInst>(OpLane0))
-          ReorderingModes[OpIdx] = ReorderingMode::Load;
-        else if (auto *OpILane0 = dyn_cast<Instruction>(OpLane0)) {
+        if (auto *OpILane0 = dyn_cast<Instruction>(OpLane0)) {
           // Check if OpLane0 should be broadcast.
           if (shouldBroadcast(OpLane0, OpIdx, FirstLane) ||
               !canBeVectorized(OpILane0, OpIdx, FirstLane))
             ReorderingModes[OpIdx] = ReorderingMode::Splat;
+          else if (isa<LoadInst>(OpILane0))
+            ReorderingModes[OpIdx] = ReorderingMode::Load;
           else
             ReorderingModes[OpIdx] = ReorderingMode::Opcode;
-        } else if (isa<Constant>(OpLane0))
+        } else if (isa<Constant>(OpLane0)) {
           ReorderingModes[OpIdx] = ReorderingMode::Constant;
-        else if (isa<Argument>(OpLane0))
+        } else if (isa<Argument>(OpLane0)) {
           // Our best hope is a Splat. It may save some cost in some cases.
           ReorderingModes[OpIdx] = ReorderingMode::Splat;
-        else
-          // NOTE: This should be unreachable.
-          ReorderingModes[OpIdx] = ReorderingMode::Failed;
+        } else {
+          llvm_unreachable("Unexpected value kind.");
+        }
       }
 
       // Check that we don't have same operands. No need to reorder if operands
@@ -3045,7 +3048,9 @@ private:
 
   /// \returns a vector from a collection of scalars in \p VL. if \p Root is not
   /// specified, the starting vector value is poison.
-  Value *gather(ArrayRef<Value *> VL, Value *Root, Type *ScalarTy);
+  Value *
+  gather(ArrayRef<Value *> VL, Value *Root, Type *ScalarTy,
+         function_ref<Value *(Value *, Value *, ArrayRef<int>)> CreateShuffle);
 
   /// \returns whether the VectorizableTree is fully vectorizable and will
   /// be beneficial even the tree height is tiny.
@@ -9167,8 +9172,9 @@ protected:
     int VF = Mask.size();
     if (auto *FTy = dyn_cast<FixedVectorType>(V1->getType()))
       VF = FTy->getNumElements();
-    if (V2 &&
-        !isUndefVector(V2, buildUseMask(VF, Mask, UseMask::SecondArg)).all()) {
+    if (V2 && !isUndefVector</*IsPoisonOnly=*/true>(
+                   V2, buildUseMask(VF, Mask, UseMask::SecondArg))
+                   .all()) {
       // Peek through shuffles.
       Value *Op1 = V1;
       Value *Op2 = V2;
@@ -9765,6 +9771,28 @@ void BoUpSLP::transformNodes() {
           // Strided store is more profitable than reverse + consecutive store -
           // transform the node to strided store.
           E.State = TreeEntry::StridedVectorize;
+      } else if (!E.ReorderIndices.empty()) {
+        // Check for interleaved stores.
+        auto IsInterleaveMask = [&, &TTI = *TTI](ArrayRef<int> Mask) {
+          auto *BaseSI = cast<StoreInst>(E.Scalars.front());
+          assert(Mask.size() > 1 && "Expected mask greater than 1 element.");
+          if (Mask.size() < 4)
+            return 0u;
+          for (unsigned Factor : seq<unsigned>(2, Mask.size() / 2 + 1)) {
+            if (ShuffleVectorInst::isInterleaveMask(
+                    Mask, Factor, VecTy->getElementCount().getFixedValue()) &&
+                TTI.isLegalInterleavedAccessType(
+                    VecTy, Factor, BaseSI->getAlign(),
+                    BaseSI->getPointerAddressSpace()))
+              return Factor;
+          }
+
+          return 0u;
+        };
+        SmallVector<int> Mask(E.ReorderIndices.begin(), E.ReorderIndices.end());
+        unsigned InterleaveFactor = IsInterleaveMask(Mask);
+        if (InterleaveFactor != 0)
+          E.setInterleave(InterleaveFactor);
       }
       break;
     }
@@ -11435,10 +11463,19 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       } else {
         assert(E->State == TreeEntry::Vectorize &&
                "Expected either strided or consecutive stores.");
-        TTI::OperandValueInfo OpInfo = getOperandInfo(E->getOperand(0));
-        VecStCost = TTI->getMemoryOpCost(
-            Instruction::Store, VecTy, BaseSI->getAlign(),
-            BaseSI->getPointerAddressSpace(), CostKind, OpInfo);
+        if (unsigned Factor = E->getInterleaveFactor()) {
+          assert(E->ReuseShuffleIndices.empty() && !E->ReorderIndices.empty() &&
+                 "No reused shuffles expected");
+          CommonCost = 0;
+          VecStCost = TTI->getInterleavedMemoryOpCost(
+              Instruction::Store, VecTy, Factor, std::nullopt,
+              BaseSI->getAlign(), BaseSI->getPointerAddressSpace(), CostKind);
+        } else {
+          TTI::OperandValueInfo OpInfo = getOperandInfo(E->getOperand(0));
+          VecStCost = TTI->getMemoryOpCost(
+              Instruction::Store, VecTy, BaseSI->getAlign(),
+              BaseSI->getPointerAddressSpace(), CostKind, OpInfo);
+        }
       }
       return VecStCost + CommonCost;
     };
@@ -12189,6 +12226,13 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
   std::optional<DenseMap<Value *, unsigned>> ValueToExtUses;
   DenseMap<const TreeEntry *, DenseSet<Value *>> ExtractsCount;
   SmallPtrSet<Value *, 4> ScalarOpsFromCasts;
+  // Keep track {Scalar, Index, User} tuple.
+  // On AArch64, this helps in fusing a mov instruction, associated with
+  // extractelement, with fmul in the backend so that extractelement is free.
+  SmallVector<std::tuple<Value *, User *, int>, 4> ScalarUserAndIdx;
+  for (ExternalUser &EU : ExternalUses) {
+    ScalarUserAndIdx.emplace_back(EU.Scalar, EU.User, EU.Lane);
+  }
   for (ExternalUser &EU : ExternalUses) {
     // Uses by ephemeral values are free (because the ephemeral value will be
     // removed prior to code generation, and so the extraction will be
@@ -12301,8 +12345,9 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
       ExtraCost = TTI->getExtractWithExtendCost(Extend, EU.Scalar->getType(),
                                                 VecTy, EU.Lane);
     } else {
-      ExtraCost = TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy,
-                                          CostKind, EU.Lane);
+      ExtraCost =
+          TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy, CostKind,
+                                  EU.Lane, EU.Scalar, ScalarUserAndIdx);
     }
     // Leave the scalar instructions as is if they are cheaper than extracts.
     if (Entry->Idx != 0 || Entry->getOpcode() == Instruction::GetElementPtr ||
@@ -13454,7 +13499,9 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
   Builder.SetCurrentDebugLocation(Front->getDebugLoc());
 }
 
-Value *BoUpSLP::gather(ArrayRef<Value *> VL, Value *Root, Type *ScalarTy) {
+Value *BoUpSLP::gather(
+    ArrayRef<Value *> VL, Value *Root, Type *ScalarTy,
+    function_ref<Value *(Value *, Value *, ArrayRef<int>)> CreateShuffle) {
   // List of instructions/lanes from current block and/or the blocks which are
   // part of the current loop. These instructions will be inserted at the end to
   // make it possible to optimize loops and hoist invariant instructions out of
@@ -13560,7 +13607,7 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL, Value *Root, Type *ScalarTy) {
     if (isa<PoisonValue>(Vec)) {
       Vec = OriginalRoot;
     } else {
-      Vec = Builder.CreateShuffleVector(Root, Vec, Mask);
+      Vec = CreateShuffle(Root, Vec, Mask);
       if (auto *OI = dyn_cast<Instruction>(OriginalRoot);
           OI && OI->hasNUses(0))
         eraseInstruction(OI);
@@ -14022,7 +14069,10 @@ public:
   }
   Value *gather(ArrayRef<Value *> VL, unsigned MaskVF = 0,
                 Value *Root = nullptr) {
-    return R.gather(VL, Root, ScalarTy);
+    return R.gather(VL, Root, ScalarTy,
+                    [&](Value *V1, Value *V2, ArrayRef<int> Mask) {
+                      return createShuffle(V1, V2, Mask);
+                    });
   }
   Value *createFreeze(Value *V) { return Builder.CreateFreeze(V); }
   /// Finalize emission of the shuffles.
