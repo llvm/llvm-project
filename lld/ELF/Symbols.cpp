@@ -48,7 +48,7 @@ static std::string maybeDemangleSymbol(Ctx &ctx, StringRef symName) {
   return ctx.arg.demangle ? demangle(symName.str()) : symName.str();
 }
 
-std::string lld::toString(const elf::Symbol &sym) {
+std::string elf::toStr(Ctx &ctx, const elf::Symbol &sym) {
   StringRef name = sym.getName();
   std::string ret = maybeDemangleSymbol(ctx, name);
 
@@ -60,7 +60,7 @@ std::string lld::toString(const elf::Symbol &sym) {
 
 const ELFSyncStream &elf::operator<<(const ELFSyncStream &s,
                                      const Symbol *sym) {
-  return s << toString(*sym);
+  return s << toStr(s.ctx, *sym);
 }
 
 static uint64_t getSymVA(Ctx &ctx, const Symbol &sym, int64_t addend) {
@@ -295,12 +295,12 @@ void elf::printTraceSymbol(const Symbol &sym, StringRef name) {
   else
     s = ": definition of ";
 
-  message(toString(sym.file) + s + name);
+  message(toStr(ctx, sym.file) + s + name);
 }
 
 static void recordWhyExtract(Ctx &ctx, const InputFile *reference,
                              const InputFile &extracted, const Symbol &sym) {
-  ctx.whyExtractRecords.emplace_back(toString(reference), &extracted, sym);
+  ctx.whyExtractRecords.emplace_back(toStr(ctx, reference), &extracted, sym);
 }
 
 void elf::maybeWarnUnorderableSymbol(Ctx &ctx, const Symbol *sym) {
@@ -320,7 +320,9 @@ void elf::maybeWarnUnorderableSymbol(Ctx &ctx, const Symbol *sym) {
   const InputFile *file = sym->file;
   auto *d = dyn_cast<Defined>(sym);
 
-  auto report = [&](StringRef s) { warn(toString(file) + s + sym->getName()); };
+  auto report = [&](StringRef s) {
+    warn(toStr(ctx, file) + s + sym->getName());
+  };
 
   if (sym->isUndefined()) {
     if (cast<Undefined>(sym)->discardedSecIdx)
@@ -548,7 +550,8 @@ void elf::reportDuplicate(Ctx &ctx, const Symbol &sym, const InputFile *newFile,
   std::string src2 = errSec->getSrcMsg(sym, errOffset);
   std::string obj2 = errSec->getObjMsg(errOffset);
 
-  std::string msg = "duplicate symbol: " + toString(sym) + "\n>>> defined at ";
+  std::string msg =
+      "duplicate symbol: " + toStr(ctx, sym) + "\n>>> defined at ";
   if (!src1.empty())
     msg += src1 + "\n>>>            ";
   msg += obj1 + "\n>>> defined at ";

@@ -297,7 +297,8 @@ int64_t PPC::getImplicitAddend(const uint8_t *buf, RelType type) const {
     return SignExtend64<32>(read32(ctx, buf));
   default:
     internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " + toString(type));
+                        "cannot read addend for relocation " +
+                            toStr(ctx, type));
     return 0;
   }
 }

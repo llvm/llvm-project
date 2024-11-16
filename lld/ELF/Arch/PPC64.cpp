@@ -1131,7 +1131,8 @@ int64_t PPC64::getImplicitAddend(const uint8_t *buf, RelType type) const {
     return read64(ctx, buf);
   default:
     internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " + toString(type));
+                        "cannot read addend for relocation " +
+                            toStr(ctx, type));
     return 0;
   }
 }
@@ -1618,7 +1619,7 @@ void PPC64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
             rel.sym->file != sec.file) {
           // Use substr(6) to remove the "__plt_" prefix.
           Err(ctx) << getErrorLoc(ctx, loc) << "call to "
-                   << lld::toString(*rel.sym).substr(6)
+                   << toStr(ctx, *rel.sym).substr(6)
                    << " lacks nop, can't restore toc";
           break;
         }

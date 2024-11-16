@@ -876,7 +876,8 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   default:
     internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " + toString(type));
+                        "cannot read addend for relocation " +
+                            toStr(ctx, type));
     return 0;
   case R_ARM_ABS32:
   case R_ARM_BASE_PREL:
@@ -1199,7 +1200,7 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
   ArrayRef<Elf_Sym> eSyms = getELFSyms<ELFT>();
   // Error for local symbols. The symbol at index 0 is LOCAL. So skip it.
   for (size_t i = 1, end = firstGlobal; i != end; ++i) {
-    Err(ctx) << "CMSE symbol '" << CHECK(eSyms[i].getName(stringTable), this)
+    Err(ctx) << "CMSE symbol '" << CHECK2(eSyms[i].getName(stringTable), this)
              << "' in import library '" << this << "' is not global";
   }
 
@@ -1209,7 +1210,7 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
 
     // Initialize symbol fields.
     memset(static_cast<void *>(sym), 0, sizeof(Symbol));
-    sym->setName(CHECK(eSyms[i].getName(stringTable), this));
+    sym->setName(CHECK2(eSyms[i].getName(stringTable), this));
     sym->value = eSym.st_value;
     sym->size = eSym.st_size;
     sym->type = eSym.getType();
@@ -1248,15 +1249,16 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
 
 // Check symbol attributes of the acleSeSym, sym pair.
 // Both symbols should be global/weak Thumb code symbol definitions.
-static std::string checkCmseSymAttributes(Symbol *acleSeSym, Symbol *sym) {
-  auto check = [](Symbol *s, StringRef type) -> std::optional<std::string> {
+static std::string checkCmseSymAttributes(Ctx &ctx, Symbol *acleSeSym,
+                                          Symbol *sym) {
+  auto check = [&](Symbol *s, StringRef type) -> std::optional<std::string> {
     auto d = dyn_cast_or_null<Defined>(s);
     if (!(d && d->isFunc() && (d->value & 1)))
-      return (Twine(toString(s->file)) + ": cmse " + type + " symbol '" +
+      return (Twine(toStr(ctx, s->file)) + ": cmse " + type + " symbol '" +
               s->getName() + "' is not a Thumb function definition")
           .str();
     if (!d->section)
-      return (Twine(toString(s->file)) + ": cmse " + type + " symbol '" +
+      return (Twine(toStr(ctx, s->file)) + ": cmse " + type + " symbol '" +
               s->getName() + "' cannot be an absolute symbol")
           .str();
     return std::nullopt;
@@ -1305,7 +1307,7 @@ void elf::processArmCmseSymbols(Ctx &ctx) {
       continue;
     }
 
-    std::string errMsg = checkCmseSymAttributes(acleSeSym, sym);
+    std::string errMsg = checkCmseSymAttributes(ctx, acleSeSym, sym);
     if (!errMsg.empty()) {
       ErrAlways(ctx) << errMsg;
       continue;

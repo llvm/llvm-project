@@ -912,9 +912,9 @@ void OutputSection::checkDynRelAddends(Ctx &ctx) {
             getErrorLoc(ctx, relocTarget),
             "wrote incorrect addend value 0x" + utohexstr(writtenAddend) +
                 " instead of 0x" + utohexstr(addend) +
-                " for dynamic relocation " + toString(rel.type) +
+                " for dynamic relocation " + toStr(ctx, rel.type) +
                 " at offset 0x" + utohexstr(rel.getOffset()) +
-                (rel.sym ? " against symbol " + toString(*rel.sym) : ""));
+                (rel.sym ? " against symbol " + toStr(ctx, *rel.sym) : ""));
     }
   });
 }
