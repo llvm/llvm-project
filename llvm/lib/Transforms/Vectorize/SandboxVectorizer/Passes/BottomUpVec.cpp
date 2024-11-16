@@ -181,12 +181,32 @@ Value *BottomUpVec::createPack(ArrayRef<Value *> ToPack) {
     // An element can be either scalar or vector. We need to generate different
     // IR for each case.
     if (Elm->getType()->isVectorTy()) {
-      llvm_unreachable("Unimplemented");
+      unsigned NumElms =
+          cast<FixedVectorType>(Elm->getType())->getNumElements();
+      for (auto ExtrLane : seq<int>(0, NumElms)) {
+        // We generate extract-insert pairs, for each lane in `Elm`.
+        Constant *ExtrLaneC =
+            ConstantInt::getSigned(Type::getInt32Ty(Ctx), ExtrLane);
+        // This may return a Constant if Elm is a Constant.
+        auto *ExtrI =
+            ExtractElementInst::create(Elm, ExtrLaneC, WhereIt, Ctx, "VPack");
+        if (!isa<Constant>(ExtrI))
+          WhereIt = std::next(cast<Instruction>(ExtrI)->getIterator());
+        Constant *InsertLaneC =
+            ConstantInt::getSigned(Type::getInt32Ty(Ctx), InsertIdx++);
+        // This may also return a Constant if ExtrI is a Constant.
+        auto *InsertI = InsertElementInst::create(
+            LastInsert, ExtrI, InsertLaneC, WhereIt, Ctx, "VPack");
+        if (!isa<Constant>(InsertI)) {
+          LastInsert = InsertI;
+          WhereIt = std::next(cast<Instruction>(LastInsert)->getIterator());
+        }
+      }
     } else {
       Constant *InsertLaneC =
           ConstantInt::getSigned(Type::getInt32Ty(Ctx), InsertIdx++);
-      // This may be folded into a Constant if LastInsert is a Constant. In that
-      // case we only collect the last constant.
+      // This may be folded into a Constant if LastInsert is a Constant. In
+      // that case we only collect the last constant.
       LastInsert = InsertElementInst::create(LastInsert, Elm, InsertLaneC,
                                              WhereIt, Ctx, "Pack");
       if (auto *NewI = dyn_cast<Instruction>(LastInsert))
