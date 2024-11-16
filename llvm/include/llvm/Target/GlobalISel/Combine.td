@@ -1385,7 +1385,7 @@ def match_addos : GICombineRule<
         [{ return Helper.matchAddOverflow(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
-def match_subos : GICombineRule<
+def match_subo_no_overflow : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match (wip_match_opcode G_SSUBO, G_USUBO):$root,
         [{ return Helper.matchSuboCarryOut(*${root}, ${matchinfo}); }]),
@@ -1911,7 +1911,7 @@ def cmp_combines: GICombineGroup<[
 def artifact_combines: GICombineGroup<[
   merge_combines,
   match_addos,
-  match_subos
+  match_subo_no_overflow
 ]>;
 
 // FIXME: These should use the custom predicate feature once it lands.

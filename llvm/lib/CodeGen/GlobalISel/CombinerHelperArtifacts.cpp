@@ -101,12 +101,15 @@ bool CombinerHelper::matchSuboCarryOut(const MachineInstr &MI,
       !isConstantLegalOrBeforeLegalizer(CarryTy))
     return false;
 
+  ConstantRange KBLHS =
+      ConstantRange::fromKnownBits(KB->getKnownBits(LHS),
+                                   /* IsSigned=*/Subo->isSigned());
+  ConstantRange KBRHS =
+      ConstantRange::fromKnownBits(KB->getKnownBits(RHS),
+                                   /* IsSigned=*/Subo->isSigned());
+
   if (Subo->isSigned()) {
     // G_SSUBO
-    ConstantRange KBLHS = ConstantRange::fromKnownBits(KB->getKnownBits(LHS),
-                                                       /* IsSigned= */ true);
-    ConstantRange KBRHS = ConstantRange::fromKnownBits(KB->getKnownBits(RHS),
-                                                       /* IsSigned= */ true);
     switch (KBLHS.signedSubMayOverflow(KBRHS)) {
     case ConstantRange::OverflowResult::MayOverflow:
       return false;
@@ -121,7 +124,9 @@ bool CombinerHelper::matchSuboCarryOut(const MachineInstr &MI,
     case ConstantRange::OverflowResult::AlwaysOverflowsHigh: {
       MatchInfo = [=](MachineIRBuilder &B) {
         B.buildSub(Dst, LHS, RHS);
-        B.buildConstant(Carry, 1);
+        B.buildConstant(Carry, getICmpTrueVal(getTargetLowering(),
+                                              /*isVector=*/CarryTy.isVector(),
+                                              /*isFP=*/false));
       };
       return true;
     }
@@ -130,10 +135,6 @@ bool CombinerHelper::matchSuboCarryOut(const MachineInstr &MI,
   }
 
   // G_USUBO
-  ConstantRange KBLHS = ConstantRange::fromKnownBits(KB->getKnownBits(LHS),
-                                                     /* IsSigned= */ false);
-  ConstantRange KBRHS = ConstantRange::fromKnownBits(KB->getKnownBits(RHS),
-                                                     /* IsSigned= */ false);
   switch (KBLHS.unsignedSubMayOverflow(KBRHS)) {
   case ConstantRange::OverflowResult::MayOverflow:
     return false;
@@ -148,7 +149,9 @@ bool CombinerHelper::matchSuboCarryOut(const MachineInstr &MI,
   case ConstantRange::OverflowResult::AlwaysOverflowsHigh: {
     MatchInfo = [=](MachineIRBuilder &B) {
       B.buildSub(Dst, LHS, RHS);
-      B.buildConstant(Carry, 1);
+      B.buildConstant(Carry, getICmpTrueVal(getTargetLowering(),
+                                            /*isVector=*/CarryTy.isVector(),
+                                            /*isFP=*/false));
     };
     return true;
   }
