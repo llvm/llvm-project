@@ -10,6 +10,7 @@
 #include "ConcatOutputSection.h"
 #include "Config.h"
 #include "ExportTrie.h"
+#include "ICF.h"
 #include "InputFiles.h"
 #include "MachOStructs.h"
 #include "ObjC.h"
@@ -1204,6 +1205,14 @@ void SymtabSection::emitEndFunStab(Defined *defined) {
   stabs.emplace_back(std::move(stab));
 }
 
+Defined *SymtabSection::getFuncBodySym(Defined *originalSym) {
+  // If the Defined is not a thunk, we can use it directly
+  if (originalSym->identicalCodeFoldingKind != Symbol::ICFFoldKind::Thunk)
+    return originalSym;
+
+  return macho::getBodyForThunkFoldedSym(originalSym);
+}
+
 void SymtabSection::emitStabs() {
   if (config->omitDebugInfo)
     return;
@@ -1214,9 +1223,14 @@ void SymtabSection::emitStabs() {
     stabs.emplace_back(std::move(astStab));
   }
 
-  // Cache the file ID for each symbol in an std::pair for faster sorting.
-  using SortingPair = std::pair<Defined *, int>;
-  std::vector<SortingPair> symbolsNeedingStabs;
+  struct SymbolStabInfo {
+    Defined *originalSym; // Original Defined symbol - this may be an ICF thunk
+    int fileId;           // File ID associated with the STABS symbol
+    Defined *mainBodySym; // Symbol that consists of the full function body -
+                          // use this for the STABS entry
+  };
+
+  std::vector<SymbolStabInfo> symbolsNeedingStabs;
   for (const SymtabEntry &entry :
        concat<SymtabEntry>(localSymbols, externalSymbols)) {
     Symbol *sym = entry.sym;
@@ -1229,20 +1243,10 @@ void SymtabSection::emitStabs() {
       if (defined->isAbsolute())
         continue;
 
-      // Never generate a STABS entry for a symbol that has been ICF'ed using a
-      // thunk, just as we do for fully ICF'ed functions. Otherwise, we end up
-      // generating invalid DWARF as dsymutil will assume the entire function
-      // body is at that location, when, in reality, only the thunk is
-      // present. This will end up causing overlapping DWARF entries.
-      // TODO: Find an implementation that works in combination with
-      // `--keep-icf-stabs`.
-      if (defined->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk)
-        continue;
-
       // Constant-folded symbols go in the executable's symbol table, but don't
-      // get a stabs entry unless --keep-icf-stabs flag is specified
+      // get a stabs entry unless --keep-icf-stabs flag is specified.
       if (!config->keepICFStabs &&
-          defined->identicalCodeFoldingKind == Symbol::ICFFoldKind::Body)
+          defined->identicalCodeFoldingKind != Symbol::ICFFoldKind::None)
         continue;
 
       ObjFile *file = defined->getObjectFile();
@@ -1251,26 +1255,26 @@ void SymtabSection::emitStabs() {
 
       // We use 'originalIsec' to get the file id of the symbol since 'isec()'
       // might point to the merged ICF symbol's file
-      symbolsNeedingStabs.emplace_back(defined,
-                                       defined->originalIsec->getFile()->id);
+      Defined *funcBodySym = getFuncBodySym(defined);
+      symbolsNeedingStabs.emplace_back(SymbolStabInfo{
+          defined, funcBodySym->originalIsec->getFile()->id, funcBodySym});
     }
   }
 
   llvm::stable_sort(symbolsNeedingStabs,
-                    [&](const SortingPair &a, const SortingPair &b) {
-                      return a.second < b.second;
+                    [&](const SymbolStabInfo &a, const SymbolStabInfo &b) {
+                      return a.fileId < b.fileId;
                     });
 
   // Emit STABS symbols so that dsymutil and/or the debugger can map address
   // regions in the final binary to the source and object files from which they
   // originated.
   InputFile *lastFile = nullptr;
-  for (SortingPair &pair : symbolsNeedingStabs) {
-    Defined *defined = pair.first;
+  for (const SymbolStabInfo &info : symbolsNeedingStabs) {
     // We use 'originalIsec' of the symbol since we care about the actual origin
     // of the symbol, not the canonical location returned by `isec()`.
-    InputSection *isec = defined->originalIsec;
-    ObjFile *file = cast<ObjFile>(isec->getFile());
+    InputSection *bodyIsec = info.mainBodySym->originalIsec;
+    ObjFile *file = cast<ObjFile>(bodyIsec->getFile());
 
     if (lastFile == nullptr || lastFile != file) {
       if (lastFile != nullptr)
@@ -1282,16 +1286,16 @@ void SymtabSection::emitStabs() {
     }
 
     StabsEntry symStab;
-    symStab.sect = isec->parent->index;
-    symStab.strx = stringTableSection.addString(defined->getName());
-    symStab.value = defined->getVA();
+    symStab.sect = bodyIsec->parent->index;
+    symStab.strx = stringTableSection.addString(info.originalSym->getName());
+    symStab.value = info.mainBodySym->getVA();
 
-    if (isCodeSection(isec)) {
+    if (isCodeSection(bodyIsec)) {
       symStab.type = N_FUN;
       stabs.emplace_back(std::move(symStab));
-      emitEndFunStab(defined);
+      emitEndFunStab(info.mainBodySym);
     } else {
-      symStab.type = defined->isExternal() ? N_GSYM : N_STSYM;
+      symStab.type = info.originalSym->isExternal() ? N_GSYM : N_STSYM;
       stabs.emplace_back(std::move(symStab));
     }
   }
