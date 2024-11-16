@@ -947,7 +947,7 @@ void RISCV::finalizeRelax(int passes) const {
       ArrayRef<uint8_t> old = sec->content();
       size_t newSize = old.size() - aux.relocDeltas[rels.size() - 1];
       size_t writesIdx = 0;
-      uint8_t *p = context().bAlloc.Allocate<uint8_t>(newSize);
+      uint8_t *p = bAlloc(ctx).Allocate<uint8_t>(newSize);
       uint64_t offset = 0;
       int64_t delta = 0;
       sec->content_ = p;
@@ -1257,7 +1257,7 @@ mergeAttributesSection(Ctx &ctx,
   if (hasArch && xlen != 0) {
     if (auto result = RISCVISAInfo::createFromExtMap(xlen, exts)) {
       merged.strAttr.try_emplace(RISCVAttrs::ARCH,
-                                 saver().save((*result)->toString()));
+                                 saver(ctx).save((*result)->toString()));
     } else {
       Err(ctx) << result.takeError();
     }
