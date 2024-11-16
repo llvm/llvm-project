@@ -140,8 +140,9 @@ mlir::Value getDeviceAddress(mlir::PatternRewriter &rewriter,
   llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
       builder, loc, fTy, inputArg, sourceFile, sourceLine)};
   auto call = rewriter.create<fir::CallOp>(loc, callee, args);
-
-  return call->getResult(0);
+  mlir::Value cast = createConvertOp(
+      rewriter, loc, declareOp.getMemref().getType(), call->getResult(0));
+  return cast;
 }
 
 template <typename OpTy>
@@ -251,6 +252,8 @@ struct CUFDeallocateOpConversion
 static bool inDeviceContext(mlir::Operation *op) {
   if (op->getParentOfType<cuf::KernelOp>())
     return true;
+  if (auto funcOp = op->getParentOfType<mlir::gpu::GPUFuncOp>())
+    return true;
   if (auto funcOp = op->getParentOfType<mlir::func::FuncOp>()) {
     if (auto cudaProcAttr =
             funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
@@ -265,24 +268,23 @@ static bool inDeviceContext(mlir::Operation *op) {
 static int computeWidth(mlir::Location loc, mlir::Type type,
                         fir::KindMapping &kindMap) {
   auto eleTy = fir::unwrapSequenceType(type);
-  int width = 0;
-  if (auto t{mlir::dyn_cast<mlir::IntegerType>(eleTy)}) {
-    width = t.getWidth() / 8;
-  } else if (auto t{mlir::dyn_cast<mlir::FloatType>(eleTy)}) {
-    width = t.getWidth() / 8;
-  } else if (eleTy.isInteger(1)) {
-    width = 1;
-  } else if (auto t{mlir::dyn_cast<fir::LogicalType>(eleTy)}) {
-    int kind = t.getFKind();
-    width = kindMap.getLogicalBitsize(kind) / 8;
-  } else if (auto t{mlir::dyn_cast<mlir::ComplexType>(eleTy)}) {
+  if (auto t{mlir::dyn_cast<mlir::IntegerType>(eleTy)})
+    return t.getWidth() / 8;
+  if (auto t{mlir::dyn_cast<mlir::FloatType>(eleTy)})
+    return t.getWidth() / 8;
+  if (eleTy.isInteger(1))
+    return 1;
+  if (auto t{mlir::dyn_cast<fir::LogicalType>(eleTy)})
+    return kindMap.getLogicalBitsize(t.getFKind()) / 8;
+  if (auto t{mlir::dyn_cast<mlir::ComplexType>(eleTy)}) {
     int elemSize =
         mlir::cast<mlir::FloatType>(t.getElementType()).getWidth() / 8;
-    width = 2 * elemSize;
-  } else {
-    llvm::report_fatal_error("unsupported type");
+    return 2 * elemSize;
   }
-  return width;
+  if (auto t{mlir::dyn_cast_or_null<fir::CharacterType>(eleTy)})
+    return kindMap.getCharacterBitsize(t.getFKind()) / 8;
+  mlir::emitError(loc, "unsupported type");
+  return 0;
 }
 
 struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
@@ -471,9 +473,16 @@ static mlir::Value emboxSrc(mlir::PatternRewriter &rewriter,
   mlir::Type srcTy = fir::unwrapRefType(op.getSrc().getType());
   if (fir::isa_trivial(srcTy) &&
       mlir::matchPattern(op.getSrc().getDefiningOp(), mlir::m_Constant())) {
+    mlir::Value src = op.getSrc();
+    if (srcTy.isInteger(1)) {
+      // i1 is not a supported type in the descriptor and it is actually coming
+      // from a LOGICAL constant. Store it as a fir.logical.
+      srcTy = fir::LogicalType::get(rewriter.getContext(), 4);
+      src = createConvertOp(rewriter, loc, srcTy, src);
+    }
     // Put constant in memory if it is not.
     mlir::Value alloc = builder.createTemporary(loc, srcTy);
-    builder.create<fir::StoreOp>(loc, op.getSrc(), alloc);
+    builder.create<fir::StoreOp>(loc, src, alloc);
     addr = alloc;
   } else {
     addr = getDeviceAddress(rewriter, op.getSrcMutable(), symtab);
@@ -570,13 +579,21 @@ struct CUFDataTransferOpConversion
       mlir::Type i64Ty = builder.getI64Type();
       mlir::Value nbElement;
       if (op.getShape()) {
-        auto shapeOp =
-            mlir::dyn_cast<fir::ShapeOp>(op.getShape().getDefiningOp());
-        nbElement = rewriter.create<fir::ConvertOp>(loc, i64Ty,
-                                                    shapeOp.getExtents()[0]);
-        for (unsigned i = 1; i < shapeOp.getExtents().size(); ++i) {
-          auto operand = rewriter.create<fir::ConvertOp>(
-              loc, i64Ty, shapeOp.getExtents()[i]);
+        llvm::SmallVector<mlir::Value> extents;
+        if (auto shapeOp =
+                mlir::dyn_cast<fir::ShapeOp>(op.getShape().getDefiningOp())) {
+          extents = shapeOp.getExtents();
+        } else if (auto shapeShiftOp = mlir::dyn_cast<fir::ShapeShiftOp>(
+                       op.getShape().getDefiningOp())) {
+          for (auto i : llvm::enumerate(shapeShiftOp.getPairs()))
+            if (i.index() & 1)
+              extents.push_back(i.value());
+        }
+
+        nbElement = rewriter.create<fir::ConvertOp>(loc, i64Ty, extents[0]);
+        for (unsigned i = 1; i < extents.size(); ++i) {
+          auto operand =
+              rewriter.create<fir::ConvertOp>(loc, i64Ty, extents[i]);
           nbElement =
               rewriter.create<mlir::arith::MulIOp>(loc, nbElement, operand);
         }
@@ -629,9 +646,20 @@ struct CUFDataTransferOpConversion
                     loc, builder);
       mlir::Value dst = op.getDst();
       mlir::Value src = op.getSrc();
-
-      if (!mlir::isa<fir::BaseBoxType>(srcTy))
+      if (!mlir::isa<fir::BaseBoxType>(srcTy)) {
         src = emboxSrc(rewriter, op, symtab);
+      }
+      auto materializeBoxIfNeeded = [&](mlir::Value val) -> mlir::Value {
+        if (mlir::isa<fir::EmboxOp>(val.getDefiningOp())) {
+          // Materialize the box to memory to be able to call the runtime.
+          mlir::Value box = builder.createTemporary(loc, val.getType());
+          builder.create<fir::StoreOp>(loc, val, box);
+          return box;
+        }
+        return val;
+      };
+      src = materializeBoxIfNeeded(src);
+      dst = materializeBoxIfNeeded(dst);
 
       auto fTy = func.getFunctionType();
       mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);

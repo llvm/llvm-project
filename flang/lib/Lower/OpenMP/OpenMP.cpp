@@ -2520,6 +2520,9 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
   case llvm::omp::Directive::OMPD_parallel:
     genStandaloneParallel(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
+  case llvm::omp::Directive::OMPD_scan:
+    TODO(loc, "Unhandled directive " + llvm::omp::getOpenMPDirectiveName(dir));
+    break;
   case llvm::omp::Directive::OMPD_section:
     llvm_unreachable("genOMPDispatch: OMPD_section");
     // Lowered in the enclosing genSectionsOp.
@@ -2621,6 +2624,13 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OpenMPDeclareSimdConstruct &declareSimdConstruct) {
   TODO(converter.getCurrentLocation(), "OpenMPDeclareSimdConstruct");
+}
+
+static void
+genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+       semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
+       const parser::OpenMPDeclareMapperConstruct &declareMapperConstruct) {
+  TODO(converter.getCurrentLocation(), "OpenMPDeclareMapperConstruct");
 }
 
 static void

@@ -345,7 +345,7 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
                     ),
                 )
             steps = [
-                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{link_flags} %{benchmark_flags} -o %t.exe",
+                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{benchmark_flags} %{link_flags} -o %t.exe",
             ]
             if "enable-benchmarks=run" in test.config.available_features:
                 steps += ["%dbg(EXECUTED AS) %{exec} %t.exe"]

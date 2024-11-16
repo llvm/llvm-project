@@ -874,6 +874,10 @@ public:
   /// Remove references to rhs if it is undef
   bool matchShuffleUndefRHS(MachineInstr &MI, BuildFnTy &MatchInfo);
 
+  /// Turn shuffle a, b, mask -> shuffle undef, b, mask iff mask does not
+  /// reference a.
+  bool matchShuffleDisjointMask(MachineInstr &MI, BuildFnTy &MatchInfo);
+
   /// Use a function which takes in a MachineIRBuilder to perform a combine.
   /// By default, it erases the instruction def'd on \p MO from the function.
   void applyBuildFnMO(const MachineOperand &MO, BuildFnTy &MatchInfo);

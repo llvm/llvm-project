@@ -169,11 +169,10 @@ def : LdPat<load, LD, PtrVT>;
 def : StPat<store, SD, GPR, PtrVT>;
 }
 
-let Predicates = [IsRV64] in {
-// FIXME: Temporary until i32->i64 zext is no longer legal.
-def : Pat <(srl (zext GPR:$rs1), uimm5:$shamt),
-           (SRLIW GPR:$rs1, uimm5:$shamt)>;
-}
+// Load and store patterns for i16, needed because Zfh makes s16 load/store
+// legal and regbank select may not constrain registers to FP.
+def : LdPat<load, LH, i16>;
+def : StPat<store, SH, GPR, i16>;
 
 //===----------------------------------------------------------------------===//
 // RV64 i32 patterns not used by SelectionDAG
@@ -187,31 +186,22 @@ def zext_is_sext : PatFrag<(ops node:$src), (zext node:$src), [{
 }]>;
 
 let Predicates = [IsRV64] in {
-def : LdPat<sextloadi8, LB, i32>;
 def : LdPat<extloadi8, LBU, i32>; // Prefer unsigned due to no c.lb in Zcb.
-def : LdPat<sextloadi16, LH, i32>;
 def : LdPat<extloadi16, LH, i32>;
-def : LdPat<zextloadi8, LBU, i32>;
-def : LdPat<zextloadi16, LHU, i32>;
 
 def : StPat<truncstorei8, SB, GPR, i32>;
 def : StPat<truncstorei16, SH, GPR, i32>;
 
-def : Pat<(anyext GPR:$src), (COPY GPR:$src)>;
-def : Pat<(sext GPR:$src), (ADDIW GPR:$src, 0)>;
-def : Pat<(trunc GPR:$src), (COPY GPR:$src)>;
+def : Pat<(anyext (i32 GPR:$src)), (COPY GPR:$src)>;
+def : Pat<(sext (i32 GPR:$src)), (ADDIW GPR:$src, 0)>;
+def : Pat<(i32 (trunc GPR:$src)), (COPY GPR:$src)>;
 
 // Use sext if the sign bit of the input is 0.
-def : Pat<(zext_is_sext GPR:$src), (ADDIW GPR:$src, 0)>;
+def : Pat<(zext_is_sext (i32 GPR:$src)), (ADDIW GPR:$src, 0)>;
 }
 
 let Predicates = [IsRV64, NotHasStdExtZba] in {
-def : Pat<(zext GPR:$src), (SRLI (i64 (SLLI GPR:$src, 32)), 32)>;
-
-// If we're shifting a 32-bit zero extended value left by 0-31 bits, use 2
-// shifts instead of 3. This can occur when unsigned is used to index an array.
-def : Pat<(shl (zext GPR:$rs), uimm5:$shamt),
-          (SRLI (i64 (SLLI GPR:$rs, 32)), (ImmSubFrom32 uimm5:$shamt))>;
+def : Pat<(zext (i32 GPR:$src)), (SRLI (i64 (SLLI GPR:$src, 32)), 32)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -219,10 +209,5 @@ def : Pat<(shl (zext GPR:$rs), uimm5:$shamt),
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZba, IsRV64] in {
-def : Pat<(shl (i64 (zext GPR:$rs1)), uimm5:$shamt),
-          (SLLI_UW GPR:$rs1, uimm5:$shamt)>;
-
-def : Pat<(i64 (add_like_non_imm12 (zext GPR:$rs1), GPR:$rs2)),
-          (ADD_UW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(zext GPR:$src), (ADD_UW GPR:$src, (XLenVT X0))>;
+def : Pat<(zext (i32 GPR:$src)), (ADD_UW GPR:$src, (XLenVT X0))>;
 }
