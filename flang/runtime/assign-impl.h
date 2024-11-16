@@ -9,29 +9,16 @@
 #ifndef FORTRAN_RUNTIME_ASSIGN_IMPL_H_
 #define FORTRAN_RUNTIME_ASSIGN_IMPL_H_
 
-#include "flang/Runtime/freestanding-tools.h"
-
 namespace Fortran::runtime {
 class Descriptor;
 class Terminator;
-
-using MemmoveFct = void *(*)(void *, const void *, std::size_t);
 
 // Assign one object to another via allocate statement from source specifier.
 // Note that if allocate object and source expression have the same rank, the
 // value of the allocate object becomes the value provided; otherwise the value
 // of each element of allocate object becomes the value provided (9.7.1.2(7)).
-#ifdef RT_DEVICE_COMPILATION
-static RT_API_ATTRS void *MemmoveWrapper(
-    void *dest, const void *src, std::size_t count) {
-  return Fortran::runtime::memmove(dest, src, count);
-}
-RT_API_ATTRS void DoFromSourceAssign(Descriptor &, const Descriptor &,
-    Terminator &, MemmoveFct memmoveFct = &MemmoveWrapper);
-#else
-RT_API_ATTRS void DoFromSourceAssign(Descriptor &, const Descriptor &,
-    Terminator &, MemmoveFct memmoveFct = &Fortran::runtime::memmove);
-#endif
+RT_API_ATTRS void DoFromSourceAssign(
+    Descriptor &, const Descriptor &, Terminator &);
 
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_ASSIGN_IMPL_H_
