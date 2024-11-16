@@ -312,11 +312,17 @@ static void RegisterHandlers() { // Not signal-safe.
     switch (Kind) {
     case SignalKind::IsKill:
       NewHandler.sa_handler = SignalHandler;
+#if defined(HAVE_SIGALTSTACK)
       NewHandler.sa_flags = SA_NODEFER | SA_RESETHAND | SA_ONSTACK;
+#else
+      NewHandler.sa_flags = SA_NODEFER | SA_RESETHAND;
+#endif
       break;
     case SignalKind::IsInfo:
       NewHandler.sa_handler = InfoSignalHandler;
+#if defined(HAVE_SIGALTSTACK)
       NewHandler.sa_flags = SA_ONSTACK;
+#endif
       break;
     }
     sigemptyset(&NewHandler.sa_mask);

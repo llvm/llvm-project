@@ -133,6 +133,13 @@ else()
       openbsd/Host.cpp
       openbsd/HostInfoOpenBSD.cpp
       )
+
+  elseif (CMAKE_SYSTEM_NAME MATCHES "QNX")
+    add_host_subdirectory(qnx
+      qnx/Host.cpp
+      qnx/HostInfoQNX.cpp
+      qnx/Support.cpp
+      )
   endif()
 endif()
 

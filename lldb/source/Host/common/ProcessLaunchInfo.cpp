@@ -213,7 +213,10 @@ llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
   // We really shouldn't be specifying platform specific flags that are
   // intended for a system call in generic code.  But this will have to
   // do for now.
+#if !defined(__QNX__)
+  // O_CLOEXEC is NOT a valid flag for posix_openpt on QNX.
   open_flags |= O_CLOEXEC;
+#endif
 #endif
   if (llvm::Error Err = m_pty->OpenFirstAvailablePrimary(open_flags))
     return Err;
