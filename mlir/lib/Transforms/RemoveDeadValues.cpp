@@ -579,7 +579,6 @@ void RemoveDeadValues::runOnOperation() {
     if (op == module)
       return WalkResult::advance();
     if (isa<BranchOpInterface>(op) ||
-        (isa<SymbolOpInterface>(op) && !isa<FunctionOpInterface>(op)) ||
         (isa<SymbolUserOpInterface>(op) && !isa<CallOpInterface>(op))) {
       op->emitError() << "cannot optimize an IR with non-function symbol ops, "
                          "non-call symbol user ops or branch ops\n";

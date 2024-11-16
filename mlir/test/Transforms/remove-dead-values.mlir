@@ -1,12 +1,12 @@
 // RUN: mlir-opt %s -remove-dead-values -split-input-file -verify-diagnostics | FileCheck %s
 
-// The IR remains untouched because of the presence of a non-function-like
-// symbol op inside the module (const @__dont_touch_unacceptable_ir).
+// The IR is updated regardless of memref.global private constant
 //
 module {
-// expected-error @+1 {{cannot optimize an IR with non-function symbol ops, non-call symbol user ops or branch ops}}
   memref.global "private" constant @__dont_touch_unacceptable_ir : memref<i32> = dense<0>
   func.func @main(%arg0: i32) -> i32 {
+    %0 = tensor.empty() : tensor<10xbf16>
+    // CHECK-NOT: tensor.empty
     return %arg0 : i32
   }
 }
