@@ -57,7 +57,7 @@ bool IRSnapshotChecker::diff(const ContextSnapshot &Orig,
       dbgs() << "Current:\n" << CurrFS.TextualIR << "\n";
     }
   }
-  // Check that Curr doesn't somehow contain any new modules.
+  // Check that Curr doesn't contain any new functions.
   for (const auto &[F, CurrFS] : Curr) {
     if (!Orig.contains(F)) {
       DifferenceFound = true;
