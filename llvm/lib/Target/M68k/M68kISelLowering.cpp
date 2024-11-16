@@ -810,7 +810,6 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         S->getSymbol(), getPointerTy(DAG.getDataLayout()), OpFlags);
   }
 
-  // Returns a chain & a flag for retval copy to use.
   SmallVector<SDValue, 8> Ops;
 
   if (!IsSibcall && IsTailCall) {
@@ -844,6 +843,7 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     return DAG.getNode(M68kISD::TC_RETURN, DL, MVT::Other, Ops);
   }
 
+  // Returns a chain & a flag for retval copy to use.
   Chain = DAG.getNode(M68kISD::CALL, DL, {MVT::Other, MVT::Glue}, Ops);
   InGlue = Chain.getValue(1);
 
