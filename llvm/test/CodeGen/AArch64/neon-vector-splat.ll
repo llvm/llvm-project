@@ -126,24 +126,15 @@ define <2 x ptr> @shuffle8(ptr %P) {
 }
 
 define <4 x i32> @multiblock_aliasing(ptr %P, i1 %c) {
-; CHECK-SD-LABEL: multiblock_aliasing:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldr q0, [x0]
-; CHECK-SD-NEXT:    tbz w1, #0, .LBB9_2
-; CHECK-SD-NEXT:  // %bb.1: // %then
-; CHECK-SD-NEXT:    stp xzr, xzr, [x0]
-; CHECK-SD-NEXT:  .LBB9_2: // %else
-; CHECK-SD-NEXT:    dup v0.4s, v0.s[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: multiblock_aliasing:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    tbz w1, #0, .LBB9_2
-; CHECK-GI-NEXT:  // %bb.1: // %then
-; CHECK-GI-NEXT:    stp xzr, xzr, [x0]
-; CHECK-GI-NEXT:  .LBB9_2: // %else
-; CHECK-GI-NEXT:    ld1r { v0.4s }, [x0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: multiblock_aliasing:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    tbz w1, #0, .LBB9_2
+; CHECK-NEXT:  // %bb.1: // %then
+; CHECK-NEXT:    stp xzr, xzr, [x0]
+; CHECK-NEXT:  .LBB9_2: // %else
+; CHECK-NEXT:    dup v0.4s, v0.s[0]
+; CHECK-NEXT:    ret
 entry:
   %lv2ptr = load <4 x i32>, ptr %P
   br i1 %c, label %then, label %else
