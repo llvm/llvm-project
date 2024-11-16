@@ -535,6 +535,8 @@ Improvements to Clang's diagnostics
 
 - Improved diagnostic message for ``__builtin_bit_cast`` size mismatch (#GH115870).
 
+- Clang now diagnoses missing return value in functions containing ``if consteval`` (#GH116485).
+
 Improvements to Clang's time-trace
 ----------------------------------
 

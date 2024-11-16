@@ -5,3 +5,9 @@ static_assert(__is_same(decltype([] constexpr -> int { }( )), int)); // expected
 
 consteval int g() { } // expected-warning {{non-void function does not return a value}}
 static_assert(__is_same(decltype([] consteval -> int { }( )), int)); // expected-warning {{non-void lambda does not return a value}}
+
+namespace GH116485 {
+int h() {
+    if consteval { }
+} // expected-warning {{non-void function does not return a value}}
+}
