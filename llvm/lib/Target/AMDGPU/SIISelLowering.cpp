@@ -17031,7 +17031,7 @@ bool SITargetLowering::hasBitTest(SDValue X, SDValue Y) const {
 
   EVT VT = X.getValueType();
 
-  if (VT != MVT::i32 && VT != MVT::i64)
+  if (VT != MVT::i32)
     return false;
 
   if (VT.isVector()) {
@@ -17040,11 +17040,7 @@ bool SITargetLowering::hasBitTest(SDValue X, SDValue Y) const {
       return false;
   }
 
-  auto *IsConstOrIsConstSplat = dyn_cast<ConstantSDNode>(Y);
   if (!dyn_cast<ConstantSDNode>(Y))
-    return false;
-
-  if (!IsConstOrIsConstSplat->getAPIntValue().isPowerOf2())
     return false;
 
   return true;
