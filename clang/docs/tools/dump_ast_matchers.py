@@ -100,71 +100,14 @@ def extract_result_types(comment):
         comment = m.group(1)
 
 
-def find_next_closing_rbrace(
-    data: str, start_pos: int, braces_to_be_matched: int
-) -> int:
-    """Finds the location of the closing rbrace '}' inside of data."""
-    """'start_pos' should be one past the opening lbrace and braces_to_be_matched is initialized with 0"""
-    next_lbrace = data.find("{", start_pos)
-    next_rbrace = data.find("}", start_pos)
-    if next_lbrace != -1:
-        if next_lbrace < next_rbrace:
-            return find_next_closing_rbrace(
-                data, next_lbrace + 1, braces_to_be_matched + 1
-            )
-        if braces_to_be_matched == 0:
-            return next_rbrace
-        return find_next_closing_rbrace(data, next_rbrace + 1, braces_to_be_matched - 1)
-
-    if braces_to_be_matched > 0:
-        return find_next_closing_rbrace(data, next_rbrace + 1, braces_to_be_matched - 1)
-
-    return next_rbrace
-
-
 def strip_doxygen(comment):
     """Returns the given comment without \-escaped words."""
+    # If there is only a doxygen keyword in the line, delete the whole line.
+    comment = re.sub(r"^\\[^\s]+\n", r"", comment, flags=re.M)
+
     # If there is a doxygen \see command, change the \see prefix into "See also:".
     # FIXME: it would be better to turn this into a link to the target instead.
     comment = re.sub(r"\\see", r"See also:", comment)
-
-    commands: list[str] = [
-        "\\compile_args{",
-        "\\matcher{",
-        "\\match{",
-        "\\nomatch{",
-    ]
-
-    for command in commands:
-        delete_command = command == "\\compile_args{"
-        command_begin_loc = comment.find(command)
-        while command_begin_loc != -1:
-            command_end_loc = command_begin_loc + len(command)
-            end_brace_loc = find_next_closing_rbrace(comment, command_end_loc + 1, 0)
-            if end_brace_loc == -1:
-                print("found unmatched {")
-                command_begin_loc = comment.find(command, command_end_loc)
-                continue
-
-            if delete_command:
-                comment = comment[0:command_begin_loc] + comment[end_brace_loc + 1 :]
-                command_begin_loc = comment.find(command, command_begin_loc)
-                continue
-
-            tag_seperator_loc = comment.find("$", command_end_loc)
-            if tag_seperator_loc != -1 and tag_seperator_loc < end_brace_loc:
-                command_end_loc = tag_seperator_loc + 1
-
-            comment = (
-                comment[0:command_begin_loc]
-                + comment[command_end_loc:end_brace_loc]
-                + comment[end_brace_loc + 1 :]
-            )
-
-            command_begin_loc = comment.find(command, command_begin_loc)
-
-    # If there is only a doxygen keyword in the line, delete the whole line.
-    comment = re.sub(r"^\\[^\s]+\n", r"", comment, flags=re.M)
 
     # Delete the doxygen command and the following whitespace.
     comment = re.sub(r"\\[^\s]+\s+", r"", comment)
@@ -248,9 +191,8 @@ def act_on_decl(declaration, comment, allowed_types):
     definition.
     """
     if declaration.strip():
-        if re.match(
-            r"^\s?(#|namespace|using|template <typename NodeType> using|})", declaration
-        ):
+
+        if re.match(r"^\s?(#|namespace|using|template <typename NodeType> using|})", declaration):
             return
 
         # Node matchers are defined by writing:
