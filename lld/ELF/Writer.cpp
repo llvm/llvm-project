@@ -2805,7 +2805,7 @@ template <class ELFT> void Writer<ELFT>::openFile() {
 
   if (!bufferOrErr) {
     ErrAlways(ctx) << "failed to open " << ctx.arg.outputFile << ": "
-                   << llvm::toString(bufferOrErr.takeError());
+                   << bufferOrErr.takeError();
     return;
   }
   buffer = std::move(*bufferOrErr);
