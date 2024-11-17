@@ -5,6 +5,7 @@ typedef struct t TYPEDEF;
 void foo() {
   int y = 17;
   // RUN: %clang_cc1 -fsyntax-only -fcxx-exceptions -code-completion-patterns -code-completion-at=%s:6:14 -std=gnu++98 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
+  // CHECK-CC1: COMPLETION: Pattern : _Coroutine [#A Coroutine, as defined by concurrency course.#]typename <#name#>
   // CHECK-CC1: COMPLETION: bool
   // CHECK-CC1-NEXT: COMPLETION: char
   // CHECK-CC1-NEXT: COMPLETION: class
@@ -54,7 +55,6 @@ void foo() {
   // CHECK-CC1: COMPLETION: TYPEDEF : TYPEDEF
   // CHECK-CC1-NEXT: COMPLETION: Pattern : typedef <#type#> <#name#>;
   // CHECK-CC1-NEXT: COMPLETION: Pattern : [#std::type_info#]typeid(<#expression-or-type#>)
-  // CHECK-CC1-NEXT: COMPLETION: Pattern : typename <#name#>
   // CHECK-CC1-NEXT: COMPLETION: Pattern : typeof <#expression#>
   // CHECK-CC1-NEXT: COMPLETION: Pattern : typeof(<#type#>)
   // CHECK-CC1-NEXT: COMPLETION: union
