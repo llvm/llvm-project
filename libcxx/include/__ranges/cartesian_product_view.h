@@ -306,7 +306,7 @@ public:
     return __tuple_transform(ranges::iter_move, i.current_);
   }
 
-  friend constexpr void iter_swap(const iterator& l, const iterator& r) /*fixme: noexcept(...) */
+  friend constexpr void iter_swap(const iterator& l, const iterator& r) noexcept(iter_swap_noexcept_impl(l, r))
     requires(indirectly_swappable<iterator_t<__maybe_const<Const, First>>> && ... &&
              indirectly_swappable<iterator_t<__maybe_const<Const, Vs>>>)
   {
@@ -426,6 +426,15 @@ private:
                std::ranges::range_rvalue_reference_t<__maybe_const<Const, First>>>() and
            (std::is_nothrow_move_constructible_v<std::ranges::range_rvalue_reference_t<__maybe_const<Const, Vs>>>() and
             ...);
+  }
+
+  template <auto i = sizeof...(Vs)>
+  static constexpr bool iter_swap_noexcept_impl(const iterator& l, const iterator& r) {
+    if (not noexcept(std::ranges::iter_swap(std::get<i>(l.current_), std::get<i>(r.current_))))
+      return false;
+    if constexpr (i > 0)
+      return iter_move_noexcept_impl<i - 1>(i);
+    return true;
   }
 
   template <auto N = sizeof...(Vs)>
