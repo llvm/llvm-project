@@ -348,8 +348,7 @@ def vbclr_h : PatFrag<(ops node:$ws, node:$wt),
 def vbclr_w : PatFrag<(ops node:$ws, node:$wt),
                       (and node:$ws, (vnot (shl (vsplat_imm_eq_1), node:$wt)))>;
 def vbclr_d : PatFrag<(ops node:$ws, node:$wt),
-                      (and node:$ws, (vnot (shl (v2i64 (vsplat_imm_eq_1)),
-                                               node:$wt)))>;
+                      (and node:$ws, (vnot (shl (vsplat_imm_eq_1), node:$wt)))>;
 
 def vbneg_b : PatFrag<(ops node:$ws, node:$wt),
                       (xor node:$ws, (shl (vsplat_imm_eq_1), node:$wt))>;
@@ -358,8 +357,7 @@ def vbneg_h : PatFrag<(ops node:$ws, node:$wt),
 def vbneg_w : PatFrag<(ops node:$ws, node:$wt),
                       (xor node:$ws, (shl (vsplat_imm_eq_1), node:$wt))>;
 def vbneg_d : PatFrag<(ops node:$ws, node:$wt),
-                      (xor node:$ws, (shl (v2i64 (vsplat_imm_eq_1)),
-                                          node:$wt))>;
+                      (xor node:$ws, (shl (vsplat_imm_eq_1), node:$wt))>;
 
 def vbset_b : PatFrag<(ops node:$ws, node:$wt),
                       (or node:$ws, (shl (vsplat_imm_eq_1), node:$wt))>;
@@ -368,8 +366,7 @@ def vbset_h : PatFrag<(ops node:$ws, node:$wt),
 def vbset_w : PatFrag<(ops node:$ws, node:$wt),
                       (or node:$ws, (shl (vsplat_imm_eq_1), node:$wt))>;
 def vbset_d : PatFrag<(ops node:$ws, node:$wt),
-                      (or node:$ws, (shl (v2i64 (vsplat_imm_eq_1)),
-                                         node:$wt))>;
+                      (or node:$ws, (shl (vsplat_imm_eq_1), node:$wt))>;
 
 def muladd : PatFrag<(ops node:$wd, node:$ws, node:$wt),
                      (add node:$wd, (mul node:$ws, node:$wt))>;
@@ -3838,7 +3835,7 @@ multiclass MSABitPats<SDNode Node, string Insn> {
   def : MSABitPat<Node, v16i8, !cast<MSAInst>(Insn#_B), vsplati8imm7>;
   def : MSABitPat<Node, v8i16, !cast<MSAInst>(Insn#_H), vsplati16imm15>;
   def : MSABitPat<Node, v4i32, !cast<MSAInst>(Insn#_W), vsplati32imm31>;
-  def : MSAPat<(Node v2i64:$ws, (shl (v2i64 (vsplat_imm_eq_1)),
+  def : MSAPat<(Node v2i64:$ws, (shl (vsplat_imm_eq_1),
                                      (vsplati64imm63 v2i64:$wt))),
                (v2i64 (!cast<MSAInst>(Insn#_D) v2i64:$ws, v2i64:$wt))>;
 }
@@ -3858,7 +3855,7 @@ def : MSAPat<(and v8i16:$ws, (vnot (shl (vsplat_imm_eq_1),
 def : MSAPat<(and v4i32:$ws, (vnot (shl (vsplat_imm_eq_1),
                                         (vsplati32imm31 v4i32:$wt)))),
              (v4i32 (BCLR_W v4i32:$ws, v4i32:$wt))>;
-def : MSAPat<(and v2i64:$ws, (vnot (shl (v2i64 (vsplat_imm_eq_1)),
+def : MSAPat<(and v2i64:$ws, (vnot (shl (vsplat_imm_eq_1),
                                         (vsplati64imm63 v2i64:$wt)))),
              (v2i64 (BCLR_D v2i64:$ws, v2i64:$wt))>;
 
