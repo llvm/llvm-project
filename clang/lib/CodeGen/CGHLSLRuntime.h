@@ -20,6 +20,7 @@
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 
+#include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/HLSLRuntime.h"
 
@@ -128,6 +129,9 @@ public:
 protected:
   CodeGenModule &CGM;
 
+  llvm::Value *emitInputBuiltin(llvm::IRBuilder<> &B, const ParmVarDecl &D,
+                                llvm::Type *Ty, unsigned BuiltInID,
+                                LangAS AddressSpace);
   llvm::Value *emitInputSemantic(llvm::IRBuilder<> &B, const ParmVarDecl &D,
                                  llvm::Type *Ty);
 

@@ -3368,8 +3368,10 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   unsigned AddrSpace = GV->getAddressSpace();
   SPIRV::StorageClass::StorageClass Storage =
       addressSpaceToStorageClass(AddrSpace, STI);
+  bool isIOVariable = Storage == SPIRV::StorageClass::Input ||
+                      Storage == SPIRV::StorageClass::Output;
   bool HasLnkTy = GV->getLinkage() != GlobalValue::InternalLinkage &&
-                  Storage != SPIRV::StorageClass::Function;
+                  Storage != SPIRV::StorageClass::Function && !isIOVariable;
   SPIRV::LinkageType::LinkageType LnkType =
       (GV->isDeclaration() || GV->hasAvailableExternallyLinkage())
           ? SPIRV::LinkageType::Import

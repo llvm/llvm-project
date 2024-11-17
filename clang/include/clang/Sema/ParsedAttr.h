@@ -624,6 +624,17 @@ public:
     }
   }
 
+  LangAS asVulkanLangAS() const {
+    switch (getParsedKind()) {
+    case ParsedAttr::AT_HLSLVkExtBuiltinInput:
+      return LangAS::vulkan_input;
+    case ParsedAttr::AT_HLSLVkExtBuiltinOutput:
+      return LangAS::vulkan_output;
+    default:
+      return LangAS::Default;
+    }
+  }
+
   AttributeCommonInfo::Kind getKind() const {
     return AttributeCommonInfo::Kind(Info.AttrKind);
   }

@@ -434,6 +434,7 @@ void SemaHLSL::CheckSemanticAnnotation(
   switch (AnnotationAttr->getKind()) {
   case attr::HLSLSV_DispatchThreadID:
   case attr::HLSLSV_GroupIndex:
+  case attr::HLSLSV_GroupID:
     if (ST == llvm::Triple::Compute)
       return;
     DiagnoseAttrStageMismatch(AnnotationAttr, ST, {llvm::Triple::Compute});
@@ -643,6 +644,69 @@ void SemaHLSL::emitLogicalOperatorFixIt(Expr *LHS, Expr *RHS,
   SourceRange FullRange = SourceRange(LHS->getBeginLoc(), RHS->getEndLoc());
   SemaRef.Diag(LHS->getBeginLoc(), diag::note_function_suggestion)
       << NewFnName << FixItHint::CreateReplacement(FullRange, OS.str());
+}
+
+namespace {
+
+std::optional<uint32_t> validateVkExtBuiltin(Decl *D, const ParsedAttr &AL,
+                                             ASTContext &Ctx, Sema &SemaRef) {
+  llvm::Triple::OSType OSType = Ctx.getTargetInfo().getTriple().getOS();
+  if (!isa<VarDecl>(D)) {
+    // FIXME
+    SemaRef.Diag(AL.getLoc(), diag::err_hlsl_missing_resource_class);
+    return std::nullopt;
+  }
+
+  if (OSType != llvm::Triple::OSType::Vulkan) {
+    // FIXME
+    SemaRef.Diag(AL.getLoc(), diag::err_hlsl_missing_resource_class);
+    return std::nullopt;
+  }
+
+  uint32_t ID;
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), ID)) {
+    // FIXME
+    SemaRef.Diag(AL.getLoc(), diag::err_hlsl_missing_resource_class);
+    return std::nullopt;
+  }
+
+  return ID;
+}
+
+} // anonymous namespace
+
+void SemaHLSL::handleVkExtBuiltinInput(Decl *D, const ParsedAttr &AL) {
+  std::optional<uint32_t> ID =
+      validateVkExtBuiltin(D, AL, getASTContext(), SemaRef);
+  if (!ID)
+    return;
+
+  VarDecl *VD = cast<VarDecl>(D);
+  QualType NewType =
+      SemaRef.Context.getAddrSpaceQualType(VD->getType(), LangAS::vulkan_input);
+  VD->setType(NewType);
+
+  HLSLVkExtBuiltinInputAttr *NewAttr = ::new (getASTContext())
+      HLSLVkExtBuiltinInputAttr(getASTContext(), AL, *ID);
+  assert(NewAttr);
+  VD->addAttr(NewAttr);
+}
+
+void SemaHLSL::handleVkExtBuiltinOutput(Decl *D, const ParsedAttr &AL) {
+  std::optional<uint32_t> ID =
+      validateVkExtBuiltin(D, AL, getASTContext(), SemaRef);
+  if (!ID)
+    return;
+
+  VarDecl *VD = cast<VarDecl>(D);
+  QualType NewType = SemaRef.Context.getAddrSpaceQualType(
+      VD->getType(), LangAS::vulkan_output);
+  VD->setType(NewType);
+
+  HLSLVkExtBuiltinOutputAttr *NewAttr = ::new (getASTContext())
+      HLSLVkExtBuiltinOutputAttr(getASTContext(), AL, *ID);
+  assert(NewAttr);
+  VD->addAttr(NewAttr);
 }
 
 void SemaHLSL::handleNumThreadsAttr(Decl *D, const ParsedAttr &AL) {

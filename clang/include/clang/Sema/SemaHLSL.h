@@ -117,6 +117,8 @@ public:
   void emitLogicalOperatorFixIt(Expr *LHS, Expr *RHS, BinaryOperatorKind Opc);
 
   void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
+  void handleVkExtBuiltinInput(Decl *D, const ParsedAttr &AL);
+  void handleVkExtBuiltinOutput(Decl *D, const ParsedAttr &AL);
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL);
   void handlePackOffsetAttr(Decl *D, const ParsedAttr &AL);
