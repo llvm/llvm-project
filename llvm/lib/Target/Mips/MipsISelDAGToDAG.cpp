@@ -163,7 +163,6 @@ bool MipsDAGToDAGISel::selectVSplat(SDNode *N, APInt &Imm,
 bool MipsDAGToDAGISel::selectVSplatCommon(SDValue N, SDValue &Imm, bool Signed,
                                           unsigned ImmBitSize) const {
   llvm_unreachable("Unimplemented function.");
-  return false;
 }
 
 bool MipsDAGToDAGISel::selectVSplatUimmPow2(SDValue N, SDValue &Imm) const {
