@@ -89,7 +89,7 @@ template <typename DerivedT> struct PassInfoMixin {
 /// This provides some boilerplate for types that are analysis passes. It
 /// automatically mixes in \c PassInfoMixin.
 template <typename DerivedT>
-struct AnalysisInfoMixin : PassInfoMixin<DerivedT> {
+LLVM_ABI_EXPORT struct AnalysisInfoMixin : PassInfoMixin<DerivedT> {
   /// Returns an opaque, unique ID for this analysis type.
   ///
   /// This ID is a pointer type that is guaranteed to be 8-byte aligned and thus

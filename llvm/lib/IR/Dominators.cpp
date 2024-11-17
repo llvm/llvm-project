@@ -375,8 +375,6 @@ DominatorTree DominatorTreeAnalysis::run(Function &F,
   return DT;
 }
 
-AnalysisKey DominatorTreeAnalysis::Key;
-
 DominatorTreePrinterPass::DominatorTreePrinterPass(raw_ostream &OS) : OS(OS) {}
 
 PreservedAnalyses DominatorTreePrinterPass::run(Function &F,

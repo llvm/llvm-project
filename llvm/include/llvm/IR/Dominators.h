@@ -277,9 +277,6 @@ template <> struct GraphTraits<DominatorTree*>
 
 /// Analysis pass which computes a \c DominatorTree.
 class DominatorTreeAnalysis : public AnalysisInfoMixin<DominatorTreeAnalysis> {
-  friend AnalysisInfoMixin<DominatorTreeAnalysis>;
-  static AnalysisKey Key;
-
 public:
   /// Provide the result typedef for this analysis pass.
   using Result = DominatorTree;
