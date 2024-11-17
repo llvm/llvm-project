@@ -78,9 +78,25 @@ public:
   bool frameIndexMayFold(const MachineInstr &UseMI, int OpNo,
                          const MachineOperand &OpToFold) const;
 
-  /// Fold %vgpr = COPY (S_ADD_I32 x, frameindex)
-  ///
-  ///   => %vgpr = V_ADD_U32 x, frameindex
+  // TODO: Just use TII::getVALUOp
+  unsigned convertToVALUOp(unsigned Opc, bool UseVOP3 = false) const {
+    switch (Opc) {
+    case AMDGPU::S_ADD_I32: {
+      if (ST->hasAddNoCarry())
+        return UseVOP3 ? AMDGPU::V_ADD_U32_e64 : AMDGPU::V_ADD_U32_e32;
+      return UseVOP3 ? AMDGPU::V_ADD_CO_U32_e64 : AMDGPU::V_ADD_CO_U32_e32;
+    }
+    case AMDGPU::S_OR_B32:
+      return UseVOP3 ? AMDGPU::V_OR_B32_e64 : AMDGPU::V_OR_B32_e32;
+    case AMDGPU::S_AND_B32:
+      return UseVOP3 ? AMDGPU::V_AND_B32_e64 : AMDGPU::V_AND_B32_e32;
+    case AMDGPU::S_MUL_I32:
+      return AMDGPU::V_MUL_LO_U32_e64;
+    default:
+      return AMDGPU::INSTRUCTION_LIST_END;
+    }
+  }
+
   bool foldCopyToVGPROfScalarAddOfFrameIndex(Register DstReg, Register SrcReg,
                                              MachineInstr &MI) const;
 
@@ -202,6 +218,8 @@ bool SIFoldOperandsImpl::frameIndexMayFold(
   const unsigned Opc = UseMI.getOpcode();
   switch (Opc) {
   case AMDGPU::S_ADD_I32:
+  case AMDGPU::S_OR_B32:
+  case AMDGPU::S_AND_B32:
   case AMDGPU::V_ADD_U32_e32:
   case AMDGPU::V_ADD_CO_U32_e32:
     // TODO: Possibly relax hasOneUse. It matters more for mubuf, since we have
@@ -238,53 +256,62 @@ bool SIFoldOperandsImpl::foldCopyToVGPROfScalarAddOfFrameIndex(
   if (TRI->isVGPR(*MRI, DstReg) && TRI->isSGPRReg(*MRI, SrcReg) &&
       MRI->hasOneNonDBGUse(SrcReg)) {
     MachineInstr *Def = MRI->getVRegDef(SrcReg);
-    if (Def && Def->getOpcode() == AMDGPU::S_ADD_I32 &&
-        Def->getOperand(3).isDead()) {
-      MachineOperand *Src0 = &Def->getOperand(1);
-      MachineOperand *Src1 = &Def->getOperand(2);
+    if (!Def || Def->getNumOperands() != 4)
+      return false;
 
-      // TODO: This is profitable with more operand types, and for more
-      // opcodes. But ultimately this is working around poor / nonexistent
-      // regbankselect.
-      if (!Src0->isFI() && !Src1->isFI())
-        return false;
+    MachineOperand *Src0 = &Def->getOperand(1);
+    MachineOperand *Src1 = &Def->getOperand(2);
 
-      if (Src0->isFI())
-        std::swap(Src0, Src1);
+    // TODO: This is profitable with more operand types, and for more
+    // opcodes. But ultimately this is working around poor / nonexistent
+    // regbankselect.
+    if (!Src0->isFI() && !Src1->isFI())
+      return false;
 
-      MachineBasicBlock *MBB = Def->getParent();
-      const DebugLoc &DL = Def->getDebugLoc();
-      if (ST->hasAddNoCarry()) {
-        bool UseVOP3 = !Src0->isImm() || TII->isInlineConstant(*Src0);
-        MachineInstrBuilder Add =
-            BuildMI(*MBB, *Def, DL,
-                    TII->get(UseVOP3 ? AMDGPU::V_ADD_U32_e64
-                                     : AMDGPU::V_ADD_U32_e32),
-                    DstReg)
-                .add(*Src0)
-                .add(*Src1)
-                .setMIFlags(Def->getFlags());
-        if (UseVOP3)
-          Add.addImm(0);
+    if (Src0->isFI())
+      std::swap(Src0, Src1);
 
-        Def->eraseFromParent();
-        MI.eraseFromParent();
-        return true;
+    const bool UseVOP3 = !Src0->isImm() || TII->isInlineConstant(*Src0);
+    unsigned NewOp = convertToVALUOp(Def->getOpcode(), UseVOP3);
+    if (NewOp == AMDGPU::INSTRUCTION_LIST_END ||
+        !Def->getOperand(3).isDead()) // Check if scc is dead
+      return false;
+
+    MachineBasicBlock *MBB = Def->getParent();
+    const DebugLoc &DL = Def->getDebugLoc();
+    if (NewOp != AMDGPU::V_ADD_CO_U32_e32) {
+      MachineInstrBuilder Add =
+          BuildMI(*MBB, *Def, DL, TII->get(NewOp), DstReg);
+
+      if (Add->getDesc().getNumDefs() == 2) {
+        Register CarryOutReg = MRI->createVirtualRegister(TRI->getBoolRC());
+        Add.addDef(CarryOutReg, RegState::Dead);
+        MRI->setRegAllocationHint(CarryOutReg, 0, TRI->getVCC());
       }
 
-      MachineBasicBlock::LivenessQueryResult Liveness =
-          MBB->computeRegisterLiveness(TRI, AMDGPU::VCC, *Def, 16);
-      if (Liveness == MachineBasicBlock::LQR_Dead) {
-        // TODO: If src1 satisfies operand constraints, use vop3 version.
-        BuildMI(*MBB, *Def, DL, TII->get(AMDGPU::V_ADD_CO_U32_e32), DstReg)
-            .add(*Src0)
-            .add(*Src1)
-            .setOperandDead(3) // implicit-def $vcc
-            .setMIFlags(Def->getFlags());
-        Def->eraseFromParent();
-        MI.eraseFromParent();
-        return true;
-      }
+      Add.add(*Src0).add(*Src1).setMIFlags(Def->getFlags());
+      if (AMDGPU::hasNamedOperand(NewOp, AMDGPU::OpName::clamp))
+        Add.addImm(0);
+
+      Def->eraseFromParent();
+      MI.eraseFromParent();
+      return true;
+    }
+
+    assert(NewOp == AMDGPU::V_ADD_CO_U32_e32);
+
+    MachineBasicBlock::LivenessQueryResult Liveness =
+        MBB->computeRegisterLiveness(TRI, AMDGPU::VCC, *Def, 16);
+    if (Liveness == MachineBasicBlock::LQR_Dead) {
+      // TODO: If src1 satisfies operand constraints, use vop3 version.
+      BuildMI(*MBB, *Def, DL, TII->get(NewOp), DstReg)
+          .add(*Src0)
+          .add(*Src1)
+          .setOperandDead(3) // implicit-def $vcc
+          .setMIFlags(Def->getFlags());
+      Def->eraseFromParent();
+      MI.eraseFromParent();
+      return true;
     }
   }
 
@@ -1572,10 +1599,6 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
   if (OpToFold.isReg() && !OpToFold.getReg().isVirtual())
     return false;
 
-  if (OpToFold.isReg() &&
-      foldCopyToVGPROfScalarAddOfFrameIndex(DstReg, OpToFold.getReg(), MI))
-    return true;
-
   // Prevent folding operands backwards in the function. For example,
   // the COPY opcode must not be replaced by 1 in this example:
   //
@@ -1584,6 +1607,10 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
   //    %vgpr0 = V_MOV_B32_e32 1, implicit %exec
   if (!DstReg.isVirtual())
     return false;
+
+  if (OpToFold.isReg() &&
+      foldCopyToVGPROfScalarAddOfFrameIndex(DstReg, OpToFold.getReg(), MI))
+    return true;
 
   bool Changed = foldInstOperand(MI, OpToFold);
 

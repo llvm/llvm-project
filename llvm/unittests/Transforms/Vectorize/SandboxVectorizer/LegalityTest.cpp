@@ -110,7 +110,7 @@ define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg, float 
   auto *CmpSLT = cast<sandboxir::CmpInst>(&*It++);
   auto *CmpSGT = cast<sandboxir::CmpInst>(&*It++);
 
-  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL);
+  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx);
   const auto &Result =
       Legality.canVectorize({St0, St1}, /*SkipScheduling=*/true);
   EXPECT_TRUE(isa<sandboxir::Widen>(Result));
@@ -228,7 +228,7 @@ define void @foo(ptr %ptr) {
   auto *St0 = cast<sandboxir::StoreInst>(&*It++);
   auto *St1 = cast<sandboxir::StoreInst>(&*It++);
 
-  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL);
+  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx);
   {
     // Can vectorize St0,St1.
     const auto &Result = Legality.canVectorize({St0, St1});
@@ -262,7 +262,8 @@ define void @foo() {
     return Buff == ExpectedStr;
   };
 
-  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL);
+  sandboxir::Context Ctx(C);
+  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx);
   EXPECT_TRUE(
       Matches(Legality.createLegalityResult<sandboxir::Widen>(), "Widen"));
   EXPECT_TRUE(Matches(Legality.createLegalityResult<sandboxir::Pack>(

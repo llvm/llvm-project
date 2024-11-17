@@ -572,6 +572,8 @@ private:
   SDValue SoftenFloatRes_FMAXNUM(SDNode *N);
   SDValue SoftenFloatRes_FMINIMUMNUM(SDNode *N);
   SDValue SoftenFloatRes_FMAXIMUMNUM(SDNode *N);
+  SDValue SoftenFloatRes_FMINIMUM(SDNode *N);
+  SDValue SoftenFloatRes_FMAXIMUM(SDNode *N);
   SDValue SoftenFloatRes_FADD(SDNode *N);
   SDValue SoftenFloatRes_FCBRT(SDNode *N);
   SDValue SoftenFloatRes_FCEIL(SDNode *N);

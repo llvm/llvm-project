@@ -6,11 +6,7 @@ define void @store_load(ptr %ptr) {
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
 ; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
-; CHECK-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4
-; CHECK-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4
 ; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
-; CHECK-NEXT:    store float [[LD0]], ptr [[PTR0]], align 4
-; CHECK-NEXT:    store float [[LD1]], ptr [[PTR1]], align 4
 ; CHECK-NEXT:    store <2 x float> [[VECL]], ptr [[PTR0]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -31,14 +27,8 @@ define void @store_fpext_load(ptr %ptr) {
 ; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
 ; CHECK-NEXT:    [[PTRD0:%.*]] = getelementptr double, ptr [[PTR]], i32 0
 ; CHECK-NEXT:    [[PTRD1:%.*]] = getelementptr double, ptr [[PTR]], i32 1
-; CHECK-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4
-; CHECK-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4
 ; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
-; CHECK-NEXT:    [[FPEXT0:%.*]] = fpext float [[LD0]] to double
-; CHECK-NEXT:    [[FPEXT1:%.*]] = fpext float [[LD1]] to double
 ; CHECK-NEXT:    [[VCAST:%.*]] = fpext <2 x float> [[VECL]] to <2 x double>
-; CHECK-NEXT:    store double [[FPEXT0]], ptr [[PTRD0]], align 8
-; CHECK-NEXT:    store double [[FPEXT1]], ptr [[PTRD1]], align 8
 ; CHECK-NEXT:    store <2 x double> [[VCAST]], ptr [[PTRD0]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -55,23 +45,68 @@ define void @store_fpext_load(ptr %ptr) {
   ret void
 }
 
-; TODO: Test store_zext_fcmp_load once we implement scheduler callbacks and legality diamond check
+define void @store_fcmp_zext_load(ptr %ptr) {
+; CHECK-LABEL: define void @store_fcmp_zext_load(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
+; CHECK-NEXT:    [[PTRB0:%.*]] = getelementptr i32, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[PTRB1:%.*]] = getelementptr i32, ptr [[PTR]], i32 1
+; CHECK-NEXT:    [[VECL1:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[VCMP:%.*]] = fcmp ogt <2 x float> [[VECL]], [[VECL1]]
+; CHECK-NEXT:    [[VCAST:%.*]] = zext <2 x i1> [[VCMP]] to <2 x i32>
+; CHECK-NEXT:    store <2 x i32> [[VCAST]], ptr [[PTRB0]], align 4
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr float, ptr %ptr, i32 0
+  %ptr1 = getelementptr float, ptr %ptr, i32 1
+  %ptrb0 = getelementptr i32, ptr %ptr, i32 0
+  %ptrb1 = getelementptr i32, ptr %ptr, i32 1
+  %ldB0 = load float, ptr %ptr0
+  %ldB1 = load float, ptr %ptr1
+  %ldA0 = load float, ptr %ptr0
+  %ldA1 = load float, ptr %ptr1
+  %fcmp0 = fcmp ogt float %ldA0, %ldB0
+  %fcmp1 = fcmp ogt float %ldA1, %ldB1
+  %zext0 = zext i1 %fcmp0 to i32
+  %zext1 = zext i1 %fcmp1 to i32
+  store i32 %zext0, ptr %ptrb0
+  store i32 %zext1, ptr %ptrb1
+  ret void
+}
 
-; TODO: Test store_fadd_load once we implement scheduler callbacks and legality diamond check
+define void @store_fadd_load(ptr %ptr) {
+; CHECK-LABEL: define void @store_fadd_load(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
+; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[VECL1:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[VEC:%.*]] = fadd <2 x float> [[VECL]], [[VECL1]]
+; CHECK-NEXT:    store <2 x float> [[VEC]], ptr [[PTR0]], align 4
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr float, ptr %ptr, i32 0
+  %ptr1 = getelementptr float, ptr %ptr, i32 1
+  %ldA0 = load float, ptr %ptr0
+  %ldA1 = load float, ptr %ptr1
+  %ldB0 = load float, ptr %ptr0
+  %ldB1 = load float, ptr %ptr1
+  %fadd0 = fadd float %ldA0, %ldB0
+  %fadd1 = fadd float %ldA1, %ldB1
+  store float %fadd0, ptr %ptr0
+  store float %fadd1, ptr %ptr1
+  ret void
+}
 
 define void @store_fneg_load(ptr %ptr) {
 ; CHECK-LABEL: define void @store_fneg_load(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
 ; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
-; CHECK-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4
-; CHECK-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4
 ; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
-; CHECK-NEXT:    [[FNEG0:%.*]] = fneg float [[LD0]]
-; CHECK-NEXT:    [[FNEG1:%.*]] = fneg float [[LD1]]
 ; CHECK-NEXT:    [[VEC:%.*]] = fneg <2 x float> [[VECL]]
-; CHECK-NEXT:    store float [[FNEG0]], ptr [[PTR0]], align 4
-; CHECK-NEXT:    store float [[FNEG1]], ptr [[PTR1]], align 4
 ; CHECK-NEXT:    store <2 x float> [[VEC]], ptr [[PTR0]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -86,3 +121,92 @@ define void @store_fneg_load(ptr %ptr) {
   ret void
 }
 
+define float @scalars_with_external_uses_not_dead(ptr %ptr) {
+; CHECK-LABEL: define float @scalars_with_external_uses_not_dead(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
+; CHECK-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4
+; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
+; CHECK-NEXT:    store <2 x float> [[VECL]], ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[USER:%.*]] = fneg float [[LD1]]
+; CHECK-NEXT:    ret float [[LD0]]
+;
+  %ptr0 = getelementptr float, ptr %ptr, i32 0
+  %ptr1 = getelementptr float, ptr %ptr, i32 1
+  %ld0 = load float, ptr %ptr0
+  %ld1 = load float, ptr %ptr1
+  store float %ld0, ptr %ptr0
+  store float %ld1, ptr %ptr1
+  %user = fneg float %ld1
+  ret float %ld0
+}
+
+define void @pack_scalars(ptr %ptr, ptr %ptr2) {
+; CHECK-LABEL: define void @pack_scalars(
+; CHECK-SAME: ptr [[PTR:%.*]], ptr [[PTR2:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
+; CHECK-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR2]], align 4
+; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x float> poison, float [[LD0]], i32 0
+; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <2 x float> [[PACK]], float [[LD1]], i32 1
+; CHECK-NEXT:    store <2 x float> [[PACK1]], ptr [[PTR0]], align 4
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr float, ptr %ptr, i32 0
+  %ptr1 = getelementptr float, ptr %ptr, i32 1
+  %ld0 = load float, ptr %ptr0
+  %ld1 = load float, ptr %ptr2
+  store float %ld0, ptr %ptr0
+  store float %ld1, ptr %ptr1
+  ret void
+}
+
+declare void @foo()
+define void @cant_vectorize_seeds(ptr %ptr) {
+; CHECK-LABEL: define void @cant_vectorize_seeds(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
+; CHECK-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4
+; CHECK-NEXT:    store float [[LD1]], ptr [[PTR1]], align 4
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    store float [[LD1]], ptr [[PTR1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr float, ptr %ptr, i32 0
+  %ptr1 = getelementptr float, ptr %ptr, i32 1
+  %ld0 = load float, ptr %ptr0
+  %ld1 = load float, ptr %ptr1
+  store float %ld1, ptr %ptr1
+  call void @foo() ; This call blocks scheduling of the store seeds.
+  store float %ld1, ptr %ptr1
+  ret void
+}
+
+define void @pack_vectors(ptr %ptr, ptr %ptr2) {
+; CHECK-LABEL: define void @pack_vectors(
+; CHECK-SAME: ptr [[PTR:%.*]], ptr [[PTR2:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr <2 x float>, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 2
+; CHECK-NEXT:    [[LD0:%.*]] = load <2 x float>, ptr [[PTR0]], align 8
+; CHECK-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR2]], align 4
+; CHECK-NEXT:    [[VPACK:%.*]] = extractelement <2 x float> [[LD0]], i32 0
+; CHECK-NEXT:    [[VPACK1:%.*]] = insertelement <3 x float> poison, float [[VPACK]], i32 0
+; CHECK-NEXT:    [[VPACK2:%.*]] = extractelement <2 x float> [[LD0]], i32 1
+; CHECK-NEXT:    [[VPACK3:%.*]] = insertelement <3 x float> [[VPACK1]], float [[VPACK2]], i32 1
+; CHECK-NEXT:    [[PACK:%.*]] = insertelement <3 x float> [[VPACK3]], float [[LD1]], i32 2
+; CHECK-NEXT:    store <3 x float> [[PACK]], ptr [[PTR0]], align 8
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr <2 x float>, ptr %ptr, i32 0
+  %ptr1 = getelementptr float, ptr %ptr, i32 2
+  %ld0 = load <2 x float>, ptr %ptr0
+  %ld1 = load float, ptr %ptr2
+  store <2 x float> %ld0, ptr %ptr0
+  store float %ld1, ptr %ptr1
+  ret void
+}

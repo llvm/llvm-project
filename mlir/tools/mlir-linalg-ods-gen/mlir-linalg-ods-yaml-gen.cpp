@@ -678,7 +678,10 @@ ParseResult {0}::parse(OpAsmParser &parser, OperationState &result) {{
     {0}::getNumRegionArgs(), {0}::getRegionBuilder());
 }
 void {0}::print(OpAsmPrinter &p) {{
-  ::printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs());
+  SmallVector<StringRef, 3> elidedAttrs = {{"operandSegmentSizes",
+                                           "linalg.memoized_indexing_maps"};
+  ::printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
+                           elidedAttrs);
 }
 )FMT";
 

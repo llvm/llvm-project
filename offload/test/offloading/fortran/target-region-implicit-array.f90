@@ -1,5 +1,5 @@
-! Basic offloading test of a regular array explicitly
-! passed within a target region
+! Basic offloading test of a regular array explicitly passed within a target 
+! region
 ! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic

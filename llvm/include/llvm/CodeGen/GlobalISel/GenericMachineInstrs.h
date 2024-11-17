@@ -906,6 +906,18 @@ public:
   };
 };
 
+/// Represents a step vector.
+class GStepVector : public GenericMachineInstr {
+public:
+  uint64_t getStep() const {
+    return getOperand(1).getCImm()->getValue().getZExtValue();
+  }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_STEP_VECTOR;
+  };
+};
+
 /// Represents an integer subtraction.
 class GSub : public GIntBinOp {
 public:
