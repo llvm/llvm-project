@@ -204,9 +204,9 @@ std::vector<Block *> LinkGraph::splitBlockImpl(std::vector<Block *> Blocks,
 
     auto TransferSymbol = [](Symbol &Sym, Block &B) {
       Sym.setOffset(Sym.getAddress() - B.getAddress());
+      Sym.setBlock(B);
       if (Sym.getSize() > B.getSize())
         Sym.setSize(B.getSize() - Sym.getOffset());
-      Sym.setBlock(B);
     };
 
     // Transfer symbols to all blocks except the last one.
