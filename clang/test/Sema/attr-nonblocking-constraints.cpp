@@ -161,6 +161,24 @@ void nb9a()
 	HasTemplatedLambda bad(42);
 }
 
+// Templated function and lambda.
+template <typename T>
+void TemplatedFunc(T x) [[clang::nonblocking]] {
+	auto* ptr = new T; // expected-warning {{function with 'nonblocking' attribute must not allocate or deallocate memory}}
+}
+
+void nb9b() [[clang::nonblocking]] {
+	TemplatedFunc(42); // expected-note {{in template expansion here}}
+
+	auto foo = [](auto x) [[clang::nonblocking]] {
+		auto* ptr = new int; // expected-warning {{lambda with 'nonblocking' attribute must not allocate or deallocate memory}}
+		return x;
+	};
+
+	// Note that foo() won't be validated unless instantiated.
+	foo(42);
+}
+
 void nb10(
 	void (*fp1)(), // expected-note {{function pointer cannot be inferred 'nonblocking'}}
 	void (*fp2)() [[clang::nonblocking]]
