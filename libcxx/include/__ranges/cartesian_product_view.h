@@ -302,7 +302,7 @@ public:
     return -(i - s);
   }
 
-  friend constexpr auto iter_move(const iterator& i) /*fixme: noexcept(...) */ {
+  friend constexpr auto iter_move(const iterator& i) noexcept(iter_move_noexcept_impl(i)) {
     return __tuple_transform(ranges::iter_move, i.current_);
   }
 
@@ -414,6 +414,19 @@ private:
 
   constexpr iterator(Parent& parent, MultiIterator current)
       : parent_(std::addressof(parent)), current_(std::move(current)) {}
+
+  template <auto N = sizeof...(Vs)>
+  static constexpr bool iter_move_noexcept_impl(const iterator& i) {
+    if (not noexcept(std::ranges::iter_move(std::get<N>(i.current_))))
+      return false;
+    if constexpr (N > 0)
+      return iter_move_noexcept_impl<N - 1>(i);
+
+    return std::is_nothrow_move_constructible_v<
+               std::ranges::range_rvalue_reference_t<__maybe_const<Const, First>>>() and
+           (std::is_nothrow_move_constructible_v<std::ranges::range_rvalue_reference_t<__maybe_const<Const, Vs>>>() and
+            ...);
+  }
 
   template <auto N = sizeof...(Vs)>
   static constexpr void iter_swap_impl(const iterator& l, const iterator& r) {
