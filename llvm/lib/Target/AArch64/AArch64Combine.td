@@ -320,7 +320,7 @@ def AArch64PostLegalizerCombiner
                         hoist_logic_op_with_same_opcode_hands,
                         redundant_and, xor_of_and_with_same_reg,
                         extractvecelt_pairwise_add, redundant_or,
-                        mul_const, redundant_sext_inreg, artifact_combines,
+                        mul_const, redundant_sext_inreg, post_legalizer_combines,
                         form_bitfield_extract, rotate_out_of_range,
                         icmp_to_true_false_known_bits,
                         select_combines, fold_merge_to_zext,

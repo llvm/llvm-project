@@ -1908,7 +1908,7 @@ def cmp_combines: GICombineGroup<[
 ]>;
 
 
-def artifact_combines: GICombineGroup<[
+def post_legalizer_combines: GICombineGroup<[
   merge_combines,
   match_addos,
   match_subo_no_overflow
@@ -1999,7 +1999,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
-    combine_use_vector_truncate, artifact_combines]>;
+    combine_use_vector_truncate, post_legalizer_combines]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and
