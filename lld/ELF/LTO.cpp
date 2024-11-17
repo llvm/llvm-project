@@ -310,7 +310,7 @@ static void thinLTOCreateEmptyIndexFiles(Ctx &ctx) {
 
 // Merge all the bitcode files we have seen, codegen the result
 // and return the resulting ObjectFile(s).
-std::vector<InputFile *> BitcodeCompiler::compile() {
+SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
   unsigned maxTasks = ltoObj->getMaxTasks();
   buf.resize(maxTasks);
   files.resize(maxTasks);
@@ -373,7 +373,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   }
 
   bool savePrelink = ctx.arg.saveTempsArgs.contains("prelink");
-  std::vector<InputFile *> ret;
+  SmallVector<std::unique_ptr<InputFile>, 0> ret;
   const char *ext = ctx.arg.ltoEmitAsm ? ".s" : ".o";
   for (unsigned i = 0; i != maxTasks; ++i) {
     StringRef bitcodeFilePath;

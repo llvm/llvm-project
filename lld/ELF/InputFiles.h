@@ -44,7 +44,7 @@ std::optional<MemoryBufferRef> readFile(Ctx &, StringRef path);
 
 // Add symbols in File to the symbol table.
 void parseFile(Ctx &, InputFile *file);
-void parseFiles(Ctx &, const std::vector<InputFile *> &files);
+void parseFiles(Ctx &, const SmallVector<std::unique_ptr<InputFile>, 0> &);
 
 // The root class of input files.
 class InputFile {
@@ -66,6 +66,7 @@ public:
   };
 
   InputFile(Ctx &, Kind k, MemoryBufferRef m);
+  virtual ~InputFile();
   Kind kind() const { return fileKind; }
 
   bool isElf() const {
@@ -380,8 +381,9 @@ public:
 };
 
 InputFile *createInternalFile(Ctx &, StringRef name);
-ELFFileBase *createObjFile(Ctx &, MemoryBufferRef mb,
-                           StringRef archiveName = "", bool lazy = false);
+std::unique_ptr<ELFFileBase> createObjFile(Ctx &, MemoryBufferRef mb,
+                                           StringRef archiveName = "",
+                                           bool lazy = false);
 
 std::string replaceThinLTOSuffix(Ctx &, StringRef path);
 

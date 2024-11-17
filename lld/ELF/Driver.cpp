@@ -231,8 +231,8 @@ bool LinkerDriver::tryAddFatLTOFile(MemoryBufferRef mb, StringRef archiveName,
       IRObjectFile::findBitcodeInMemBuffer(mb);
   if (errorToBool(fatLTOData.takeError()))
     return false;
-  files.push_back(
-      make<BitcodeFile>(ctx, *fatLTOData, archiveName, offsetInArchive, lazy));
+  files.push_back(std::make_unique<BitcodeFile>(ctx, *fatLTOData, archiveName,
+                                                offsetInArchive, lazy));
   return true;
 }
 
@@ -246,7 +246,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
   MemoryBufferRef mbref = *buffer;
 
   if (ctx.arg.formatBinary) {
-    files.push_back(make<BinaryFile>(ctx, mbref));
+    files.push_back(std::make_unique<BinaryFile>(ctx, mbref));
     return;
   }
 
@@ -259,8 +259,8 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     if (inWholeArchive) {
       for (const std::pair<MemoryBufferRef, uint64_t> &p : members) {
         if (isBitcode(p.first))
-          files.push_back(
-              make<BitcodeFile>(ctx, p.first, path, p.second, false));
+          files.push_back(std::make_unique<BitcodeFile>(ctx, p.first, path,
+                                                        p.second, false));
         else if (!tryAddFatLTOFile(p.first, path, p.second, false))
           files.push_back(createObjFile(ctx, p.first, path));
       }
@@ -288,7 +288,8 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
         if (!tryAddFatLTOFile(p.first, path, p.second, true))
           files.push_back(createObjFile(ctx, p.first, path, true));
       } else if (magic == file_magic::bitcode)
-        files.push_back(make<BitcodeFile>(ctx, p.first, path, p.second, true));
+        files.push_back(
+            std::make_unique<BitcodeFile>(ctx, p.first, path, p.second, true));
       else
         Warn(ctx) << path << ": archive member '"
                   << p.first.getBufferIdentifier()
@@ -309,14 +310,14 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     // the directory part is ignored. Note that path may be a temporary and
     // cannot be stored into SharedFile::soName.
     path = mbref.getBufferIdentifier();
-    auto *f =
-        make<SharedFile>(ctx, mbref, withLOption ? path::filename(path) : path);
+    auto f = std::make_unique<SharedFile>(
+        ctx, mbref, withLOption ? path::filename(path) : path);
     f->init();
-    files.push_back(f);
+    files.push_back(std::move(f));
     return;
   }
   case file_magic::bitcode:
-    files.push_back(make<BitcodeFile>(ctx, mbref, "", 0, inLib));
+    files.push_back(std::make_unique<BitcodeFile>(ctx, mbref, "", 0, inLib));
     break;
   case file_magic::elf_relocatable:
     if (!tryAddFatLTOFile(mbref, "", 0, inLib))
@@ -2040,7 +2041,7 @@ void LinkerDriver::inferMachineType() {
     return;
 
   bool inferred = false;
-  for (InputFile *f : files) {
+  for (auto &f : files) {
     if (f->ekind == ELFNoneKind)
       continue;
     if (!inferred) {
@@ -2530,8 +2531,9 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
   if (!ctx.bitcodeFiles.empty())
     markBuffersAsDontNeed(ctx, skipLinkedOutput);
 
-  for (InputFile *file : lto->compile()) {
-    auto *obj = cast<ObjFile<ELFT>>(file);
+  ltoObjectFiles = lto->compile();
+  for (auto &file : ltoObjectFiles) {
+    auto *obj = cast<ObjFile<ELFT>>(file.get());
     obj->parse(/*ignoreComdats=*/true);
 
     // Parse '@' in symbol names for non-relocatable output.
@@ -3039,10 +3041,9 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   auto newInputFiles = ArrayRef(ctx.driver.files).slice(numInputFilesBeforeLTO);
   if (!newInputFiles.empty()) {
     DenseSet<StringRef> oldFilenames;
-    for (InputFile *f :
-         ArrayRef(ctx.driver.files).slice(0, numInputFilesBeforeLTO))
+    for (auto &f : ArrayRef(ctx.driver.files).slice(0, numInputFilesBeforeLTO))
       oldFilenames.insert(f->getName());
-    for (InputFile *newFile : newInputFiles)
+    for (auto &newFile : newInputFiles)
       if (!oldFilenames.contains(newFile->getName()))
         Err(ctx) << "input file '" << newFile->getName() << "' added after LTO";
   }

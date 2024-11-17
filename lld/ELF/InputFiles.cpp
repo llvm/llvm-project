@@ -216,6 +216,8 @@ InputFile::InputFile(Ctx &ctx, Kind k, MemoryBufferRef m)
     ++ctx.driver.nextGroupId;
 }
 
+InputFile::~InputFile() {}
+
 std::optional<MemoryBufferRef> elf::readFile(Ctx &ctx, StringRef path) {
   llvm::TimeTraceScope timeScope("Load input files", path);
 
@@ -345,19 +347,22 @@ extern template void ObjFile<ELF64LE>::importCmseSymbols();
 extern template void ObjFile<ELF64BE>::importCmseSymbols();
 
 template <class ELFT>
-static void doParseFiles(Ctx &ctx, const std::vector<InputFile *> &files) {
+static void
+doParseFiles(Ctx &ctx,
+             const SmallVector<std::unique_ptr<InputFile>, 0> &files) {
   // Add all files to the symbol table. This will add almost all symbols that we
   // need to the symbol table. This process might add files to the link due to
   // addDependentLibrary.
   for (size_t i = 0; i < files.size(); ++i) {
     llvm::TimeTraceScope timeScope("Parse input files", files[i]->getName());
-    doParseFile<ELFT>(ctx, files[i]);
+    doParseFile<ELFT>(ctx, files[i].get());
   }
   if (ctx.driver.armCmseImpLib)
     cast<ObjFile<ELFT>>(*ctx.driver.armCmseImpLib).importCmseSymbols();
 }
 
-void elf::parseFiles(Ctx &ctx, const std::vector<InputFile *> &files) {
+void elf::parseFiles(Ctx &ctx,
+                     const SmallVector<std::unique_ptr<InputFile>, 0> &files) {
   llvm::TimeTraceScope timeScope("Parse input files");
   invokeELFT(doParseFiles, ctx, files);
 }
@@ -1878,21 +1883,22 @@ InputFile *elf::createInternalFile(Ctx &ctx, StringRef name) {
   return file;
 }
 
-ELFFileBase *elf::createObjFile(Ctx &ctx, MemoryBufferRef mb,
-                                StringRef archiveName, bool lazy) {
-  ELFFileBase *f;
+std::unique_ptr<ELFFileBase> elf::createObjFile(Ctx &ctx, MemoryBufferRef mb,
+                                                StringRef archiveName,
+                                                bool lazy) {
+  std::unique_ptr<ELFFileBase> f;
   switch (getELFKind(ctx, mb, archiveName)) {
   case ELF32LEKind:
-    f = make<ObjFile<ELF32LE>>(ctx, ELF32LEKind, mb, archiveName);
+    f = std::make_unique<ObjFile<ELF32LE>>(ctx, ELF32LEKind, mb, archiveName);
     break;
   case ELF32BEKind:
-    f = make<ObjFile<ELF32BE>>(ctx, ELF32BEKind, mb, archiveName);
+    f = std::make_unique<ObjFile<ELF32BE>>(ctx, ELF32BEKind, mb, archiveName);
     break;
   case ELF64LEKind:
-    f = make<ObjFile<ELF64LE>>(ctx, ELF64LEKind, mb, archiveName);
+    f = std::make_unique<ObjFile<ELF64LE>>(ctx, ELF64LEKind, mb, archiveName);
     break;
   case ELF64BEKind:
-    f = make<ObjFile<ELF64BE>>(ctx, ELF64BEKind, mb, archiveName);
+    f = std::make_unique<ObjFile<ELF64BE>>(ctx, ELF64BEKind, mb, archiveName);
     break;
   default:
     llvm_unreachable("getELFKind");
