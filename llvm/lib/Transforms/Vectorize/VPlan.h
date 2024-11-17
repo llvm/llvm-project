@@ -3837,8 +3837,10 @@ public:
     return cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
   }
 
-  /// Return the exit blocks of the VPlan, that is leaf nodes except the scalar
-  /// header.
+  /// Return an iterator range over the VPIRBasicBlock wrapping the exit blocks
+  /// of the VPlan, that is leaf nodes except the scalar header. Defined in
+  /// VPlanHCFG, as the definition of the type needs access to the definitions
+  /// of VPBlockShallowTraversalWrapper.
   auto getExitBlocks();
 
   /// The trip count of the original loop.
