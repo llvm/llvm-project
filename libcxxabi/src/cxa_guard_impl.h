@@ -68,6 +68,9 @@
 #  if defined(__ELF__) && defined(_LIBCXXABI_LINK_PTHREAD_LIB)
 #    pragma comment(lib, "pthread")
 #  endif
+#  if _LIBCPP_HAS_THREAD_API_MCF
+#    include <mcfgthread/cxa.h>
+#  endif
 #endif
 
 #if defined(__clang__)
@@ -609,6 +612,38 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
+//                          GuardObject for MCF
+//===----------------------------------------------------------------------===//
+
+/// Forwards everything to libmcfgthread
+struct GuardObject_MCF;
+#if _LIBCPP_HAS_THREAD_API_MCF
+struct GuardObject_MCF {
+  GuardObject_MCF() = delete;
+  GuardObject_MCF(GuardObject_MCF const&) = delete;
+  GuardObject_MCF& operator=(GuardObject_MCF const&) = delete;
+
+private:
+  int64_t* guard_ptr;
+
+public:
+  explicit GuardObject_MCF(uint64_t* raw_guard_object)
+      : guard_ptr(reinterpret_cast<int64_t*>(raw_guard_object)) { }
+
+  /// Implements __cxa_guard_acquire.
+  AcquireResult cxa_guard_acquire() {
+    return static_cast<AcquireResult>(__MCF_cxa_guard_acquire(guard_ptr));
+  }
+
+  /// Implements __cxa_guard_release.
+  void cxa_guard_release() { __MCF_cxa_guard_release(guard_ptr); }
+
+  /// Implements __cxa_guard_abort.
+  void cxa_guard_abort() { __MCF_cxa_guard_abort(guard_ptr); }
+};
+#endif
+
+//===----------------------------------------------------------------------===//
 //                          Convenience Classes
 //===----------------------------------------------------------------------===//
 
@@ -628,6 +663,9 @@ template <void (*Wait)(int*, int) = PlatformFutexWait, void (*Wake)(int*) = Plat
           uint32_t (*GetThreadIDArg)() = PlatformThreadID>
 using FutexGuard = GuardObject<InitByteFutex<Wait, Wake, GetThreadIDArg>>;
 
+/// MCFGuard - Forwards everything to libmcfgthread
+using MCFGuard = GuardObject_MCF;
+
 //===----------------------------------------------------------------------===//
 //
 //===----------------------------------------------------------------------===//
@@ -639,7 +677,7 @@ struct GlobalStatic {
 template <class T>
 _LIBCPP_CONSTINIT T GlobalStatic<T>::instance = {};
 
-enum class Implementation { NoThreads, GlobalMutex, Futex };
+enum class Implementation { NoThreads, GlobalMutex, Futex, MCF };
 
 template <Implementation Impl>
 struct SelectImplementation;
@@ -660,6 +698,11 @@ struct SelectImplementation<Implementation::Futex> {
   using type = FutexGuard<PlatformFutexWait, PlatformFutexWake, PlatformThreadID>;
 };
 
+template <>
+struct SelectImplementation<Implementation::MCF> {
+  using type = MCFGuard;
+};
+
 // TODO(EricWF): We should prefer the futex implementation when available. But
 // it should be done in a separate step from adding the implementation.
 constexpr Implementation CurrentImplementation =
@@ -667,6 +710,8 @@ constexpr Implementation CurrentImplementation =
     Implementation::NoThreads;
 #elif defined(_LIBCXXABI_USE_FUTEX)
     Implementation::Futex;
+#elif _LIBCPP_HAS_THREAD_API_MCF
+    Implementation::MCF;
 #else
     Implementation::GlobalMutex;
 #endif

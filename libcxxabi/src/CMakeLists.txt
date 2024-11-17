@@ -90,6 +90,10 @@ if (ANDROID AND ANDROID_PLATFORM_LEVEL LESS 21)
   list(APPEND LIBCXXABI_LIBRARIES android_support)
 endif()
 
+if (LIBCXXABI_HAS_MCF_THREAD_API)
+  list(APPEND LIBCXXABI_LIBRARIES mcfgthread ntdll)
+endif()
+
 # Setup flags.
 if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
   add_link_flags_if_supported(-nostdlib++)

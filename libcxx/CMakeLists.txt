@@ -295,6 +295,7 @@ endif()
 option(LIBCXX_HAS_MUSL_LIBC "Build libc++ with support for the Musl C library" OFF)
 option(LIBCXX_HAS_PTHREAD_API "Ignore auto-detection and force use of pthread API" OFF)
 option(LIBCXX_HAS_WIN32_THREAD_API "Ignore auto-detection and force use of win32 thread API" OFF)
+option(LIBCXX_HAS_MCF_THREAD_API "Ignore auto-detection and force use of mcfgthread API" OFF)
 option(LIBCXX_HAS_EXTERNAL_THREAD_API
   "Build libc++ with an externalized threading API.
    This option may only be set to ON when LIBCXX_ENABLE_THREADS=ON." OFF)
@@ -342,7 +343,10 @@ if(NOT LIBCXX_ENABLE_THREADS)
     message(FATAL_ERROR "LIBCXX_HAS_WIN32_THREAD_API can only be set to ON"
                         " when LIBCXX_ENABLE_THREADS is also set to ON.")
   endif()
-
+  if (LIBCXX_HAS_MCF_THREAD_API)
+    message(FATAL_ERROR "LIBCXX_HAS_MCF_THREAD_API can only be set to ON"
+                        " when LIBCXX_ENABLE_THREADS is also set to ON.")
+  endif()
 endif()
 
 if (LIBCXX_HAS_EXTERNAL_THREAD_API)
@@ -356,12 +360,30 @@ if (LIBCXX_HAS_EXTERNAL_THREAD_API)
                         " and LIBCXX_HAS_WIN32_THREAD_API cannot be both"
                         " set to ON at the same time.")
   endif()
+  if (LIBCXX_HAS_MCF_THREAD_API)
+    message(FATAL_ERROR "The options LIBCXX_HAS_EXTERNAL_THREAD_API"
+                        " and LIBCXX_HAS_MCF_THREAD_API cannot be both"
+                        " set to ON at the same time.")
+  endif()
 endif()
 
 if (LIBCXX_HAS_PTHREAD_API)
   if (LIBCXX_HAS_WIN32_THREAD_API)
     message(FATAL_ERROR "The options LIBCXX_HAS_PTHREAD_API"
                         " and LIBCXX_HAS_WIN32_THREAD_API cannot be both"
+                        " set to ON at the same time.")
+  endif()
+  if (LIBCXX_HAS_MCF_THREAD_API)
+    message(FATAL_ERROR "The options LIBCXX_HAS_PTHREAD_API"
+                        " and LIBCXX_HAS_MCF_THREAD_API cannot be both"
+                        " set to ON at the same time.")
+  endif()
+endif()
+
+if (LIBCXX_HAS_WIN32_THREAD_API)
+  if (LIBCXX_HAS_MCF_THREAD_API)
+    message(FATAL_ERROR "The options LIBCXX_HAS_WIN32_THREAD_API"
+                        " and LIBCXX_HAS_MCF_THREAD_API cannot be both"
                         " set to ON at the same time.")
   endif()
 endif()
@@ -754,6 +776,7 @@ endif()
 config_define(${LIBCXX_HAS_PTHREAD_API} _LIBCPP_HAS_THREAD_API_PTHREAD)
 config_define(${LIBCXX_HAS_EXTERNAL_THREAD_API} _LIBCPP_HAS_THREAD_API_EXTERNAL)
 config_define(${LIBCXX_HAS_WIN32_THREAD_API} _LIBCPP_HAS_THREAD_API_WIN32)
+config_define(${LIBCXX_HAS_MCF_THREAD_API} _LIBCPP_HAS_THREAD_API_MCF)
 config_define(${LIBCXX_HAS_MUSL_LIBC} _LIBCPP_HAS_MUSL_LIBC)
 config_define_if(LIBCXX_NO_VCRUNTIME _LIBCPP_NO_VCRUNTIME)
 config_define(${LIBCXX_ENABLE_FILESYSTEM} _LIBCPP_HAS_FILESYSTEM)

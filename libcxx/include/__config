@@ -809,6 +809,7 @@ typedef __char32_t char32_t;
 #  if _LIBCPP_HAS_THREADS &&                                                                                           \
       !_LIBCPP_HAS_THREAD_API_PTHREAD &&                                                                               \
       !_LIBCPP_HAS_THREAD_API_WIN32 &&                                                                                 \
+      !_LIBCPP_HAS_THREAD_API_MCF &&                                                                                   \
       !_LIBCPP_HAS_THREAD_API_EXTERNAL
 
 #    if defined(__FreeBSD__) ||                                                                                        \
@@ -882,7 +883,7 @@ typedef __char32_t char32_t;
 // clang-format off
 #  if (_LIBCPP_HAS_THREAD_API_PTHREAD && defined(__GLIBC__)) ||                                                        \
       (_LIBCPP_HAS_THREAD_API_C11 && defined(__Fuchsia__)) ||                                                          \
-       _LIBCPP_HAS_THREAD_API_WIN32
+      _LIBCPP_HAS_THREAD_API_WIN32 || _LIBCPP_HAS_THREAD_API_MCF
 // clang-format on
 #    define _LIBCPP_HAS_TRIVIAL_MUTEX_DESTRUCTION 1
 #  else
@@ -897,7 +898,8 @@ typedef __char32_t char32_t;
 //
 // TODO(EricWF): This is potentially true for some pthread implementations
 // as well.
-#  if (_LIBCPP_HAS_THREAD_API_C11 && defined(__Fuchsia__)) || _LIBCPP_HAS_THREAD_API_WIN32
+#  if (_LIBCPP_HAS_THREAD_API_C11 && defined(__Fuchsia__)) ||                                                          \
+      _LIBCPP_HAS_THREAD_API_WIN32 || _LIBCPP_HAS_THREAD_API_MCF
 #    define _LIBCPP_HAS_TRIVIAL_CONDVAR_DESTRUCTION 1
 #  else
 #    define _LIBCPP_HAS_TRIVIAL_CONDVAR_DESTRUCTION 0

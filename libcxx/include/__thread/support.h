@@ -114,6 +114,8 @@ _LIBCPP_END_NAMESPACE_STD
 #    include <__thread/support/c11.h>
 #  elif _LIBCPP_HAS_THREAD_API_WIN32
 #    include <__thread/support/windows.h>
+#  elif defined(_LIBCPP_HAS_THREAD_API_MCF)
+#    include <mcfgthread/libcxx.h>
 #  else
 #    error "No threading API was selected"
 #  endif

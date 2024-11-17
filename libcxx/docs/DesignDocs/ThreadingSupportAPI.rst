@@ -65,3 +65,7 @@ Threading Configuration Macros
 **_LIBCPP_HAS_THREAD_API_WIN32**
   This macro is defined when libc++ should use Win32 threads to implement the
   internal threading API.
+
+**_LIBCPP_HAS_THREAD_API_MCF**
+  This macro is defined when libc++ should use the mcfgthread library to
+  implement the internal threading API.
