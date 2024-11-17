@@ -1733,14 +1733,14 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(ARMISD::ASRL)
     MAKE_CASE(ARMISD::LSRL)
     MAKE_CASE(ARMISD::LSLL)
-    MAKE_CASE(ARMISD::SRL_GLUE)
-    MAKE_CASE(ARMISD::SRA_GLUE)
+    MAKE_CASE(ARMISD::LSLS)
+    MAKE_CASE(ARMISD::LSRS1)
+    MAKE_CASE(ARMISD::ASRS1)
     MAKE_CASE(ARMISD::RRX)
     MAKE_CASE(ARMISD::ADDC)
     MAKE_CASE(ARMISD::ADDE)
     MAKE_CASE(ARMISD::SUBC)
     MAKE_CASE(ARMISD::SUBE)
-    MAKE_CASE(ARMISD::LSLS)
     MAKE_CASE(ARMISD::VMOVRRD)
     MAKE_CASE(ARMISD::VMOVDRR)
     MAKE_CASE(ARMISD::VMOVhr)
@@ -6850,9 +6850,9 @@ static SDValue Expand64BitShift(SDNode *N, SelectionDAG &DAG,
   SDValue Lo, Hi;
   std::tie(Lo, Hi) = DAG.SplitScalar(N->getOperand(0), dl, MVT::i32, MVT::i32);
 
-  // First, build a SRA_GLUE/SRL_GLUE op, which shifts the top part by one and
-  // captures the result into a carry flag.
-  unsigned Opc = N->getOpcode() == ISD::SRL ? ARMISD::SRL_GLUE:ARMISD::SRA_GLUE;
+  // First, build a LSRS1/ASRS1 op, which shifts the top part by one and
+  // captures the shifted out bit into a carry flag.
+  unsigned Opc = N->getOpcode() == ISD::SRL ? ARMISD::LSRS1 : ARMISD::ASRS1;
   Hi = DAG.getNode(Opc, dl, DAG.getVTList(MVT::i32, FlagsVT), Hi);
 
   // The low part is an ARMISD::RRX operand, which shifts the carry in.

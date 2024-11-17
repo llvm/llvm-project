@@ -2801,11 +2801,12 @@ def t2RRX : T2sTwoReg<(outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
 }
 }
 
+// These differ from t2LSRri / t2ASRri in that they are flag-setting
+// and have a hardcoded shift amount = 1.
 let isCodeGenOnly = 1, Defs = [CPSR] in {
-def t2MOVsrl_glue
-    : T2TwoRegShiftImm<(outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
-                       "lsrs", ".w\t$Rd, $Rm, #1",
-                       [(set rGPR:$Rd, CPSR, (ARMsrl_glue rGPR:$Rm))]>,
+def t2LSRs1 : T2TwoRegShiftImm<(outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
+                               "lsrs", ".w\t$Rd, $Rm, #1",
+                               [(set rGPR:$Rd, CPSR, (ARMlsrs1 rGPR:$Rm))]>,
       Sched<[WriteALU]> {
   let Inst{31-27} = 0b11101;
   let Inst{26-25} = 0b01;
@@ -2817,10 +2818,9 @@ def t2MOVsrl_glue
   let Inst{14-12} = 0b000;
   let Inst{7-6} = 0b01;
 }
-def t2MOVsra_glue
-    : T2TwoRegShiftImm<(outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
-                       "asrs", ".w\t$Rd, $Rm, #1",
-                       [(set rGPR:$Rd, CPSR, (ARMsra_glue rGPR:$Rm))]>,
+def t2ASRs1 : T2TwoRegShiftImm<(outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
+                               "asrs", ".w\t$Rd, $Rm, #1",
+                               [(set rGPR:$Rd, CPSR, (ARMasrs1 rGPR:$Rm))]>,
       Sched<[WriteALU]> {
   let Inst{31-27} = 0b11101;
   let Inst{26-25} = 0b01;

@@ -206,9 +206,9 @@ def ARMasrl          : SDNode<"ARMISD::ASRL", SDT_ARMIntShiftParts, []>;
 def ARMlsrl          : SDNode<"ARMISD::LSRL", SDT_ARMIntShiftParts, []>;
 def ARMlsll          : SDNode<"ARMISD::LSLL", SDT_ARMIntShiftParts, []>;
 
-def ARMsrl_glue : SDNode<"ARMISD::SRL_GLUE", SDTIntUnaryOpWithFlagsOut>;
-def ARMsra_glue : SDNode<"ARMISD::SRA_GLUE", SDTIntUnaryOpWithFlagsOut>;
-def ARMrrx      : SDNode<"ARMISD::RRX"     , SDTIntUnaryOpWithFlagsIn>;
+def ARMlsrs1 : SDNode<"ARMISD::LSRS1", SDTIntUnaryOpWithFlagsOut>;
+def ARMasrs1 : SDNode<"ARMISD::ASRS1", SDTIntUnaryOpWithFlagsOut>;
+def ARMrrx   : SDNode<"ARMISD::RRX"  , SDTIntUnaryOpWithFlagsIn>;
 
 def ARMaddc          : SDNode<"ARMISD::ADDC",  SDTBinaryArithWithFlags,
                               [SDNPCommutative]>;
@@ -3745,20 +3745,17 @@ def : ARMPat<(or GPR:$src, 0xffff0000), (MOVTi16 GPR:$src, 0xffff)>,
       Requires<[IsARM, HasV6T2]>;
 
 let Uses = [CPSR] in
-def RRX: PseudoInst<(outs GPR:$Rd), (ins GPR:$Rm), IIC_iMOVsi,
-                    [(set GPR:$Rd, (ARMrrx GPR:$Rm, CPSR))]>,
-         UnaryDP, Requires<[IsARM]>, Sched<[WriteALU]>;
-
-// These aren't really mov instructions, but we have to define them this way
-// due to glue operands.
+def RRX : PseudoInst<(outs GPR:$Rd), (ins GPR:$Rm), IIC_iMOVsi,
+                     [(set GPR:$Rd, (ARMrrx GPR:$Rm, CPSR))]>,
+          UnaryDP, Requires<[IsARM]>, Sched<[WriteALU]>;
 
 let Defs = [CPSR] in {
-  def MOVsrl_glue : PseudoInst<(outs GPR:$dst), (ins GPR:$src), IIC_iMOVsi,
-                               [(set GPR:$dst, CPSR, (ARMsrl_glue GPR:$src))]>,
-                    UnaryDP, Sched<[WriteALU]>, Requires<[IsARM]>;
-  def MOVsra_glue : PseudoInst<(outs GPR:$dst), (ins GPR:$src), IIC_iMOVsi,
-                               [(set GPR:$dst, CPSR, (ARMsra_glue GPR:$src))]>,
-                    UnaryDP, Sched<[WriteALU]>, Requires<[IsARM]>;
+  def LSRs1 : PseudoInst<(outs GPR:$dst), (ins GPR:$src), IIC_iMOVsi,
+                         [(set GPR:$dst, CPSR, (ARMlsrs1 GPR:$src))]>,
+              UnaryDP, Sched<[WriteALU]>, Requires<[IsARM]>;
+  def ASRs1 : PseudoInst<(outs GPR:$dst), (ins GPR:$src), IIC_iMOVsi,
+                         [(set GPR:$dst, CPSR, (ARMasrs1 GPR:$src))]>,
+              UnaryDP, Sched<[WriteALU]>, Requires<[IsARM]>;
 }
 
 //===----------------------------------------------------------------------===//
