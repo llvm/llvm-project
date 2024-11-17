@@ -8876,7 +8876,7 @@ static SetVector<VPIRInstruction *> collectUsersInExitBlocks(
 // ExitUsersToFix if needed and their operands are updated.
 static void
 addUsersInExitBlocks(VPlan &Plan,
-                    const SetVector<VPIRInstruction *> &ExitUsersToFix) {
+                     const SetVector<VPIRInstruction *> &ExitUsersToFix) {
   if (ExitUsersToFix.empty())
     return;
 
