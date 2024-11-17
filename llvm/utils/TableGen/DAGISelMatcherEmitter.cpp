@@ -871,8 +871,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
   }
 
   case Matcher::EmitConvertToTarget: {
-    const EmitConvertToTargetMatcher *CTTM =
-        cast<EmitConvertToTargetMatcher>(N);
+    const auto *CTTM = cast<EmitConvertToTargetMatcher>(N);
     unsigned Slot = CTTM->getSlot();
     OS << "OPC_EmitConvertToTarget";
     if (Slot >= 8)
