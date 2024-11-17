@@ -210,14 +210,14 @@ bool NVPTXInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   // which must stick together (in initially set order) to
   // comprise a valid PTX function call sequence.
   switch (MI.getOpcode()) {
-    case NVPTX::CallUniPrintCallRetInst1:
-    case NVPTX::CallArgBeginInst:
-    case NVPTX::CallArgI32imm:
-    case NVPTX::CallArgParam:
-    case NVPTX::LastCallArgI32imm:
-    case NVPTX::LastCallArgParam:
-    case NVPTX::CallArgEndInst1:
-      return true;
+  case NVPTX::CallUniPrintCallRetInst1:
+  case NVPTX::CallArgBeginInst:
+  case NVPTX::CallArgI32imm:
+  case NVPTX::CallArgParam:
+  case NVPTX::LastCallArgI32imm:
+  case NVPTX::LastCallArgParam:
+  case NVPTX::CallArgEndInst1:
+    return true;
   }
 
   return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF);
