@@ -71,13 +71,13 @@ static void writeUint(Ctx &ctx, uint8_t *buf, uint64_t val) {
 }
 
 // Returns an LLD version string.
-static ArrayRef<uint8_t> getVersion() {
+static ArrayRef<uint8_t> getVersion(Ctx &ctx) {
   // Check LLD_VERSION first for ease of testing.
   // You can get consistent output by using the environment variable.
   // This is only for testing.
   StringRef s = getenv("LLD_VERSION");
   if (s.empty())
-    s = saver().save(Twine("Linker: ") + getLLDVersion());
+    s = saver(ctx).save(Twine("Linker: ") + getLLDVersion());
 
   // +1 to include the terminating '\0'.
   return {(const uint8_t *)s.data(), s.size() + 1};
@@ -88,8 +88,9 @@ static ArrayRef<uint8_t> getVersion() {
 // by "readelf --string-dump .comment <file>".
 // The returned object is a mergeable string section.
 MergeInputSection *elf::createCommentSection(Ctx &ctx) {
-  auto *sec = make<MergeInputSection>(
-      ctx, SHF_MERGE | SHF_STRINGS, SHT_PROGBITS, 1, getVersion(), ".comment");
+  auto *sec =
+      make<MergeInputSection>(ctx, SHF_MERGE | SHF_STRINGS, SHT_PROGBITS, 1,
+                              getVersion(ctx), ".comment");
   sec->splitIntoPieces();
   return sec;
 }
@@ -119,7 +120,7 @@ MipsAbiFlagsSection<ELFT>::create(Ctx &ctx) {
     sec->markDead();
     create = true;
 
-    std::string filename = toString(sec->file);
+    std::string filename = toStr(ctx, sec->file);
     const size_t size = sec->content().size();
     // Older version of BFD (such as the default FreeBSD linker) concatenate
     // .MIPS.abiflags instead of merging. To allow for this case (or potential
@@ -150,7 +151,8 @@ MipsAbiFlagsSection<ELFT>::create(Ctx &ctx) {
     flags.ases |= s->ases;
     flags.flags1 |= s->flags1;
     flags.flags2 |= s->flags2;
-    flags.fp_abi = elf::getMipsFpAbiFlag(flags.fp_abi, s->fp_abi, filename);
+    flags.fp_abi =
+        elf::getMipsFpAbiFlag(ctx, flags.fp_abi, s->fp_abi, filename);
   };
 
   if (create)
@@ -195,7 +197,7 @@ MipsOptionsSection<ELFT>::create(Ctx &ctx) {
   for (InputSectionBase *sec : sections) {
     sec->markDead();
 
-    std::string filename = toString(sec->file);
+    std::string filename = toStr(ctx, sec->file);
     ArrayRef<uint8_t> d = sec->content();
 
     while (!d.empty()) {
@@ -268,7 +270,7 @@ MipsReginfoSection<ELFT>::create(Ctx &ctx) {
 
 InputSection *elf::createInterpSection(Ctx &ctx) {
   // StringSaver guarantees that the returned string ends with '\0'.
-  StringRef s = saver().save(ctx.arg.dynamicLinker);
+  StringRef s = saver(ctx).save(ctx.arg.dynamicLinker);
   ArrayRef<uint8_t> contents = {(const uint8_t *)s.data(), s.size() + 1};
 
   return make<InputSection>(ctx.internalFile, SHF_ALLOC, SHT_PROGBITS, 1,
@@ -2792,7 +2794,7 @@ readEntry(uint64_t &offset, const DWARFDebugNames::NameIndex &ni,
   if (err)
     return createStringError(inconvertibleErrorCode(),
                              "invalid abbrev code: %s",
-                             toString(std::move(err)).c_str());
+                             llvm::toString(std::move(err)).c_str());
   if (!isUInt<32>(ulebVal))
     return createStringError(inconvertibleErrorCode(),
                              "abbrev code too large for DWARF32: %" PRIu64,
@@ -2843,7 +2845,7 @@ readEntry(uint64_t &offset, const DWARFDebugNames::NameIndex &ni,
     if (err)
       return createStringError(inconvertibleErrorCode(),
                                "error while reading attributes: %s",
-                               toString(std::move(err)).c_str());
+                               llvm::toString(std::move(err)).c_str());
     if (a.Index == DW_IDX_compile_unit)
       cuAttr = attr;
     else if (a.Form != DW_FORM_flag_present)
@@ -2855,13 +2857,12 @@ readEntry(uint64_t &offset, const DWARFDebugNames::NameIndex &ni,
 }
 
 void DebugNamesBaseSection::parseDebugNames(
-    InputChunk &inputChunk, OutputChunk &chunk,
+    Ctx &ctx, InputChunk &inputChunk, OutputChunk &chunk,
     DWARFDataExtractor &namesExtractor, DataExtractor &strExtractor,
     function_ref<SmallVector<uint32_t, 0>(
         uint32_t numCus, const DWARFDebugNames::Header &,
         const DWARFDebugNames::DWARFDebugNamesOffsets &)>
         readOffsets) {
-  Ctx &ctx = elf::ctx;
   const LLDDWARFSection &namesSec = inputChunk.section;
   DenseMap<uint32_t, IndexEntry *> offsetMap;
   // Number of CUs seen in previous NameIndex sections within current chunk.
@@ -3215,7 +3216,7 @@ DebugNamesSection<ELFT>::DebugNamesSection(Ctx &ctx)
       Err(ctx) << dobj.getNamesSection().sec << Twine(": ") << std::move(e);
     }
     parseDebugNames(
-        inputChunk, chunk, namesExtractor, strExtractor,
+        ctx, inputChunk, chunk, namesExtractor, strExtractor,
         [&chunk, namesData = dobj.getNamesSection().Data.data()](
             uint32_t numCus, const DWARFDebugNames::Header &hdr,
             const DWARFDebugNames::DWARFDebugNamesOffsets &locs) {
@@ -3375,7 +3376,7 @@ readCuList(DWARFContext &dwarf) {
 }
 
 static SmallVector<GdbIndexSection::AddressEntry, 0>
-readAddressAreas(DWARFContext &dwarf, InputSection *sec) {
+readAddressAreas(Ctx &ctx, DWARFContext &dwarf, InputSection *sec) {
   SmallVector<GdbIndexSection::AddressEntry, 0> ret;
 
   uint32_t cuIdx = 0;
@@ -3408,7 +3409,7 @@ readAddressAreas(DWARFContext &dwarf, InputSection *sec) {
 
 template <class ELFT>
 static SmallVector<GdbIndexSection::NameAttrEntry, 0>
-readPubNamesAndTypes(const LLDDwarfObj<ELFT> &obj,
+readPubNamesAndTypes(Ctx &ctx, const LLDDwarfObj<ELFT> &obj,
                      const SmallVectorImpl<GdbIndexSection::CuEntry> &cus) {
   const LLDDWARFSection &pubNames = obj.getGnuPubnamesSection();
   const LLDDWARFSection &pubTypes = obj.getGnuPubtypesSection();
@@ -3563,8 +3564,9 @@ std::unique_ptr<GdbIndexSection> GdbIndexSection::create(Ctx &ctx) {
     // this only picks the last one. Other address ranges are lost.
     chunks[i].sec = dobj.getInfoSection();
     chunks[i].compilationUnits = readCuList(dwarf);
-    chunks[i].addressAreas = readAddressAreas(dwarf, chunks[i].sec);
-    nameAttrs[i] = readPubNamesAndTypes<ELFT>(dobj, chunks[i].compilationUnits);
+    chunks[i].addressAreas = readAddressAreas(ctx, dwarf, chunks[i].sec);
+    nameAttrs[i] =
+        readPubNamesAndTypes<ELFT>(ctx, dobj, chunks[i].compilationUnits);
   });
 
   auto ret = std::make_unique<GdbIndexSection>(ctx);
@@ -4364,7 +4366,7 @@ void PPC64LongBranchTargetSection::writeTo(uint8_t *buf) {
     // must be a local-call.
     write64(ctx, buf,
             sym->getVA(ctx, addend) +
-                getPPC64GlobalEntryToLocalEntryOffset(sym->stOther));
+                getPPC64GlobalEntryToLocalEntryOffset(ctx, sym->stOther));
     buf += 8;
   }
 }

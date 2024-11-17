@@ -146,6 +146,11 @@ void lld::checkError(Error e) {
                   [&](ErrorInfoBase &eib) { error(eib.message()); });
 }
 
+void lld::checkError(ErrorHandler &eh, Error e) {
+  handleAllErrors(std::move(e),
+                  [&](ErrorInfoBase &eib) { eh.error(eib.message()); });
+}
+
 // This is for --vs-diagnostics.
 //
 // Normally, lld's error message starts with argv[0]. Therefore, it usually
@@ -341,6 +346,9 @@ SyncStream::~SyncStream() {
   switch (level) {
   case DiagLevel::Log:
     e.log(buf);
+    break;
+  case DiagLevel::Msg:
+    e.message(buf, llvm::outs());
     break;
   case DiagLevel::Warn:
     e.warn(buf);

@@ -78,6 +78,9 @@ Code actions
 
 - Added `Swap operands` tweak for certain binary operators.
 
+- Improved the extract-to-function code action to allow extracting statements
+  with overloaded operators like ``<<`` of ``std::ostream``.
+
 Signature help
 ^^^^^^^^^^^^^^
 
@@ -175,7 +178,8 @@ Changes in existing checks
 - Improved :doc:`bugprone-sizeof-expression
   <clang-tidy/checks/bugprone/sizeof-expression>` check to find suspicious
   usages of ``sizeof()``, ``alignof()``, and ``offsetof()`` when adding or
-  subtracting from a pointer directly or when used to scale a numeric value.
+  subtracting from a pointer directly or when used to scale a numeric value and
+  fix false positive when sizeof expression with template types.
 
 - Improved :doc:`bugprone-throw-keyword-missing
   <clang-tidy/checks/bugprone/throw-keyword-missing>` by fixing a false positive
@@ -189,6 +193,11 @@ Changes in existing checks
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
   additional functions to match.
+
+- Improved :doc:`bugprone-use-after-move
+  <clang-tidy/checks/bugprone/use-after-move>` to avoid triggering on
+  ``reset()`` calls on moved-from ``std::optional`` and ``std::any`` objects,
+  similarly to smart pointers.
 
 - Improved :doc:`cert-flp30-c <clang-tidy/checks/cert/flp30-c>` check to
   fix false positive that floating point variable is only used in increment

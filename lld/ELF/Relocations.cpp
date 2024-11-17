@@ -77,7 +77,7 @@ static std::optional<std::string> getLinkerScriptLocation(Ctx &ctx,
 static std::string getDefinedLocation(Ctx &ctx, const Symbol &sym) {
   const char msg[] = "\n>>> defined in ";
   if (sym.file)
-    return msg + toString(sym.file);
+    return msg + toStr(ctx, sym.file);
   if (std::optional<std::string> loc = getLinkerScriptLocation(ctx, sym))
     return msg + *loc;
   return "";
@@ -103,7 +103,7 @@ void elf::reportRangeError(Ctx &ctx, uint8_t *loc, const Relocation &rel,
   std::string hint;
   if (rel.sym) {
     if (!rel.sym->isSection())
-      hint = "; references '" + lld::toString(*rel.sym) + '\'';
+      hint = "; references '" + toStr(ctx, *rel.sym) + '\'';
     else if (auto *d = dyn_cast<Defined>(rel.sym))
       hint = ("; references section '" + d->section->name + "'").str();
 
@@ -123,7 +123,7 @@ void elf::reportRangeError(Ctx &ctx, uint8_t *loc, const Relocation &rel,
     hint += "; consider recompiling with -fdebug-types-section to reduce size "
             "of debug sections";
 
-  Err(ctx) << errPlace.loc << "relocation " << lld::toString(rel.type)
+  Err(ctx) << errPlace.loc << "relocation " << rel.type
            << " out of range: " << v.str() << " is not in [" << Twine(min).str()
            << ", " << Twine(max).str() << "]" << hint;
 }
@@ -133,7 +133,7 @@ void elf::reportRangeError(Ctx &ctx, uint8_t *loc, int64_t v, int n,
   ErrorPlace errPlace = getErrorPlace(ctx, loc);
   std::string hint;
   if (!sym.getName().empty())
-    hint = "; references '" + lld::toString(sym) + '\'' +
+    hint = "; references '" + toStr(ctx, sym) + '\'' +
            getDefinedLocation(ctx, sym);
   Err(ctx) << errPlace.loc << msg << " is out of range: " << Twine(v)
            << " is not in [" << Twine(llvm::minIntN(n)) << ", "
@@ -430,7 +430,7 @@ public:
   // Translates offsets in input sections to offsets in output sections.
   // Given offset must increase monotonically. We assume that Piece is
   // sorted by inputOff.
-  uint64_t get(uint64_t off) {
+  uint64_t get(Ctx &ctx, uint64_t off) {
     if (cies.empty())
       return off;
 
@@ -535,13 +535,13 @@ static std::string maybeReportDiscarded(Ctx &ctx, Undefined &sym) {
   std::string msg;
   if (sym.type == ELF::STT_SECTION) {
     msg = "relocation refers to a discarded section: ";
-    msg += CHECK(
+    msg += CHECK2(
         file->getObj().getSectionName(objSections[sym.discardedSecIdx]), file);
   } else {
     msg = "relocation refers to a symbol in a discarded section: " +
-          toString(sym);
+          toStr(ctx, sym);
   }
-  msg += "\n>>> defined in " + toString(file);
+  msg += "\n>>> defined in " + toStr(ctx, file);
 
   Elf_Shdr_Impl<ELFT> elfSec = objSections[sym.discardedSecIdx - 1];
   if (elfSec.sh_type != SHT_GROUP)
@@ -552,7 +552,7 @@ static std::string maybeReportDiscarded(Ctx &ctx, Undefined &sym) {
   if (const InputFile *prevailing =
           ctx.symtab->comdatGroups.lookup(CachedHashStringRef(signature))) {
     msg += "\n>>> section group signature: " + signature.str() +
-           "\n>>> prevailing definition is in " + toString(prevailing);
+           "\n>>> prevailing definition is in " + toStr(ctx, prevailing);
     if (sym.nonPrevailing) {
       msg += "\n>>> or the symbol in the prevailing group had STB_WEAK "
              "binding and the symbol in a non-prevailing group had STB_GLOBAL "
@@ -748,7 +748,7 @@ static void reportUndefinedSymbol(Ctx &ctx, const UndefinedDiag &undef,
     llvm_unreachable("");
   }
   if (msg.empty())
-    msg = "undefined " + visibility() + "symbol: " + toString(sym);
+    msg = "undefined " + visibility() + "symbol: " + toStr(ctx, sym);
 
   const size_t maxUndefReferences = 3;
   size_t i = 0;
@@ -777,9 +777,10 @@ static void reportUndefinedSymbol(Ctx &ctx, const UndefinedDiag &undef,
     std::string pre_hint = ": ", post_hint;
     if (const Symbol *corrected =
             getAlternativeSpelling(ctx, sym, pre_hint, post_hint)) {
-      msg += "\n>>> did you mean" + pre_hint + toString(*corrected) + post_hint;
+      msg +=
+          "\n>>> did you mean" + pre_hint + toStr(ctx, *corrected) + post_hint;
       if (corrected->file)
-        msg += "\n>>> defined in: " + toString(corrected->file);
+        msg += "\n>>> defined in: " + toStr(ctx, corrected->file);
     }
   }
 
@@ -797,7 +798,7 @@ static void reportUndefinedSymbol(Ctx &ctx, const UndefinedDiag &undef,
   if (undef.isWarning)
     Warn(ctx) << msg;
   else
-    error(msg, ErrorTag::SymbolNotFound, {sym.getName()});
+    ctx.errHandler->error(msg, ErrorTag::SymbolNotFound, {sym.getName()});
 }
 
 void elf::reportUndefinedSymbols(Ctx &ctx) {
@@ -1267,7 +1268,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
 
   Err(ctx) << "relocation " << type << " cannot be used against "
            << (sym.getName().empty() ? "local symbol"
-                                     : ("symbol '" + toString(sym) + "'"))
+                                     : ("symbol '" + toStr(ctx, sym) + "'"))
            << "; recompile with -fPIC" << getLocation(ctx, *sec, sym, offset);
 }
 
@@ -1466,7 +1467,7 @@ void RelocationScanner::scanOne(typename Relocs<RelTy>::const_iterator &i) {
     }
   }
   // Get an offset in an output section this relocation is applied to.
-  uint64_t offset = getter.get(rel.r_offset);
+  uint64_t offset = getter.get(ctx, rel.r_offset);
   if (offset == uint64_t(-1))
     return;
 
@@ -1587,10 +1588,11 @@ static void checkPPC64TLSRelax(InputSectionBase &sec, Relocs<RelTy> rels) {
   }
   if (hasGDLD) {
     sec.file->ppc64DisableTLSRelax = true;
-    Warn(ctx) << sec.file
-              << ": disable TLS relaxation due to R_PPC64_GOT_TLS* relocations "
-                 "without "
-                 "R_PPC64_TLSGD/R_PPC64_TLSLD relocations";
+    Warn(sec.file->ctx)
+        << sec.file
+        << ": disable TLS relaxation due to R_PPC64_GOT_TLS* relocations "
+           "without "
+           "R_PPC64_TLSGD/R_PPC64_TLSLD relocations";
   }
 }
 
@@ -2292,6 +2294,30 @@ bool ThunkCreator::normalizeExistingThunk(Relocation &rel, uint64_t src) {
   return false;
 }
 
+// When indirect branches are restricted, such as AArch64 BTI Thunks may need
+// to target a linker generated landing pad instead of the target. This needs
+// to be done once per pass as the need for a BTI thunk is dependent whether
+// a thunk is short or long. We iterate over all the thunks to make sure we
+// catch thunks that have been created but are no longer live. Non-live thunks
+// are not reachable via normalizeExistingThunk() but are still written.
+bool ThunkCreator::addSyntheticLandingPads() {
+  bool addressesChanged = false;
+  for (Thunk *t : allThunks) {
+    if (!t->needsSyntheticLandingPad())
+      continue;
+    Thunk *lpt;
+    bool isNew;
+    auto &dr = cast<Defined>(t->destination);
+    std::tie(lpt, isNew) = getSyntheticLandingPad(dr, t->addend);
+    if (isNew) {
+      addressesChanged = true;
+      getISThunkSec(cast<InputSection>(dr.section))->addThunk(lpt);
+    }
+    t->landingPad = lpt->getThunkTargetSym();
+  }
+  return addressesChanged;
+}
+
 // Process all relocations from the InputSections that have been assigned
 // to InputSectionDescriptions and redirect through Thunks if needed. The
 // function should be called iteratively until it returns false.
@@ -2324,6 +2350,9 @@ bool ThunkCreator::createThunks(uint32_t pass,
 
   if (pass == 0 && ctx.target->getThunkSectionSpacing())
     createInitialThunkSections(outputSections);
+
+  if (ctx.arg.emachine == EM_AARCH64)
+    addressesChanged = addSyntheticLandingPads();
 
   // Create all the Thunks and insert them into synthetic ThunkSections. The
   // ThunkSections are later inserted back into InputSectionDescriptions.
@@ -2359,20 +2388,7 @@ bool ThunkCreator::createThunks(uint32_t pass,
                 ts = getISDThunkSec(os, isec, isd, rel, src);
               ts->addThunk(t);
               thunks[t->getThunkTargetSym()] = t;
-
-              // When indirect branches are restricted, such as AArch64 BTI
-              // Thunks may need to target a linker generated landing pad
-              // instead of the target.
-              if (t->needsSyntheticLandingPad()) {
-                Thunk *lpt;
-                auto &dr = cast<Defined>(t->destination);
-                std::tie(lpt, isNew) = getSyntheticLandingPad(dr, t->addend);
-                if (isNew) {
-                  ts = getISThunkSec(cast<InputSection>(dr.section));
-                  ts->addThunk(lpt);
-                }
-                t->landingPad = lpt->getThunkTargetSym();
-              }
+              allThunks.push_back(t);
             }
 
             // Redirect relocation to Thunk, we never go via the PLT to a Thunk
@@ -2457,7 +2473,7 @@ static void scanCrossRefs(Ctx &ctx, const NoCrossRefCommand &cmd,
 
     std::string toSymName;
     if (!sym.isSection())
-      toSymName = toString(sym);
+      toSymName = toStr(ctx, sym);
     else if (auto *d = dyn_cast<Defined>(&sym))
       toSymName = d->section->name;
     Err(ctx) << sec->getLocation(r.r_offset)

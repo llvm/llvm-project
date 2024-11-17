@@ -227,7 +227,13 @@ std::pair<Value *, Value *> ShapeCalculator::getShape(IntrinsicInst *II,
   case Intrinsic::x86_t2rpntlvwz1t1_internal:
   case Intrinsic::x86_tileloadd64_internal:
   case Intrinsic::x86_tileloaddt164_internal:
-  case Intrinsic::x86_tilestored64_internal: {
+  case Intrinsic::x86_tilestored64_internal:
+  case Intrinsic::x86_t2rpntlvwz0rs_internal:
+  case Intrinsic::x86_t2rpntlvwz0rst1_internal:
+  case Intrinsic::x86_t2rpntlvwz1rs_internal:
+  case Intrinsic::x86_t2rpntlvwz1rst1_internal:
+  case Intrinsic::x86_tileloaddrs64_internal:
+  case Intrinsic::x86_tileloaddrst164_internal: {
     Row = II->getArgOperand(0);
     Col = II->getArgOperand(1);
     break;
@@ -259,7 +265,8 @@ std::pair<Value *, Value *> ShapeCalculator::getShape(IntrinsicInst *II,
     }
     break;
   }
-  case Intrinsic::x86_ttransposed_internal: {
+  case Intrinsic::x86_ttransposed_internal:
+  case Intrinsic::x86_tconjtfp16_internal: {
     assert((OpNo == 2) && "Illegal Operand Number.");
     Row = getRowFromCol(II, II->getArgOperand(1), 4);
     Col = getColFromRow(II, II->getArgOperand(0), 4);
@@ -276,6 +283,11 @@ std::pair<Value *, Value *> ShapeCalculator::getShape(IntrinsicInst *II,
     Col = II->getArgOperand(1);
     break;
   }
+  case Intrinsic::x86_ttdpbf16ps_internal:
+  case Intrinsic::x86_ttdpfp16ps_internal:
+  case Intrinsic::x86_ttcmmimfp16ps_internal:
+  case Intrinsic::x86_ttcmmrlfp16ps_internal:
+  case Intrinsic::x86_tconjtcmmimfp16ps_internal:
   case Intrinsic::x86_ttmmultf32ps_internal: {
     switch (OpNo) {
     case 3:

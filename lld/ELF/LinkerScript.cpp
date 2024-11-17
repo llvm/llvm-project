@@ -59,11 +59,12 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
         assert(ctx.arg.relocatable && (rel->flags & SHF_LINK_ORDER));
         return s->name;
       }
+      StringSaver &ss = saver(ctx);
       if (s->type == SHT_CREL)
-        return saver().save(".crel" + out->name);
+        return ss.save(".crel" + out->name);
       if (s->type == SHT_RELA)
-        return saver().save(".rela" + out->name);
-      return saver().save(".rel" + out->name);
+        return ss.save(".rela" + out->name);
+      return ss.save(".rel" + out->name);
     }
   }
 
@@ -1766,7 +1767,7 @@ void LinkerScript::recordError(const Twine &msg) {
   msg.toVector(str);
 }
 
-static void checkMemoryRegion(const MemoryRegion *region,
+static void checkMemoryRegion(Ctx &ctx, const MemoryRegion *region,
                               const OutputSection *osec, uint64_t addr) {
   uint64_t osecEnd = addr + osec->size;
   uint64_t regionEnd = region->getOrigin() + region->getLength();
@@ -1782,9 +1783,9 @@ void LinkerScript::checkFinalScriptConditions() const {
     Err(ctx) << err;
   for (const OutputSection *sec : ctx.outputSections) {
     if (const MemoryRegion *memoryRegion = sec->memRegion)
-      checkMemoryRegion(memoryRegion, sec, sec->addr);
+      checkMemoryRegion(ctx, memoryRegion, sec, sec->addr);
     if (const MemoryRegion *lmaRegion = sec->lmaRegion)
-      checkMemoryRegion(lmaRegion, sec, sec->getLMA());
+      checkMemoryRegion(ctx, lmaRegion, sec, sec->getLMA());
   }
 }
 

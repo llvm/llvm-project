@@ -52,7 +52,7 @@ ELFOptTable::ELFOptTable() : GenericOptTable(optInfo) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.
-static void handleColorDiagnostics(opt::InputArgList &args) {
+static void handleColorDiagnostics(Ctx &ctx, opt::InputArgList &args) {
   auto *arg = args.getLastArg(OPT_color_diagnostics);
   if (!arg)
     return;
@@ -65,7 +65,8 @@ static void handleColorDiagnostics(opt::InputArgList &args) {
     ErrAlways(ctx) << "unknown option: --color-diagnostics=" << s;
 }
 
-static cl::TokenizerCallback getQuotingStyle(opt::InputArgList &args) {
+static cl::TokenizerCallback getQuotingStyle(Ctx &ctx,
+                                             opt::InputArgList &args) {
   if (auto *arg = args.getLastArg(OPT_rsp_quoting)) {
     StringRef s = arg->getValue();
     if (s != "windows" && s != "posix")
@@ -88,12 +89,13 @@ static cl::TokenizerCallback getQuotingStyle(opt::InputArgList &args) {
 // `--plugin-opt <foo>` is converted to `--plugin-opt=<foo>`. This is a
 // bit hacky, but looks like it is still better than handling --plugin-opt
 // options by hand.
-static void concatLTOPluginOptions(SmallVectorImpl<const char *> &args) {
+static void concatLTOPluginOptions(Ctx &ctx,
+                                   SmallVectorImpl<const char *> &args) {
   SmallVector<const char *, 256> v;
   for (size_t i = 0, e = args.size(); i != e; ++i) {
     StringRef s = args[i];
     if ((s == "-plugin-opt" || s == "--plugin-opt") && i + 1 != e) {
-      v.push_back(saver().save(s + "=" + args[i + 1]).data());
+      v.push_back(saver(ctx).save(s + "=" + args[i + 1]).data());
       ++i;
     } else {
       v.push_back(args[i]);
@@ -103,7 +105,7 @@ static void concatLTOPluginOptions(SmallVectorImpl<const char *> &args) {
 }
 
 // Parses a given list of options.
-opt::InputArgList ELFOptTable::parse(ArrayRef<const char *> argv) {
+opt::InputArgList ELFOptTable::parse(Ctx &ctx, ArrayRef<const char *> argv) {
   // Make InputArgList from string vectors.
   unsigned missingIndex;
   unsigned missingCount;
@@ -116,11 +118,11 @@ opt::InputArgList ELFOptTable::parse(ArrayRef<const char *> argv) {
 
   // Expand response files (arguments in the form of @<filename>)
   // and then parse the argument again.
-  cl::ExpandResponseFiles(saver(), getQuotingStyle(args), vec);
-  concatLTOPluginOptions(vec);
+  cl::ExpandResponseFiles(saver(ctx), getQuotingStyle(ctx, args), vec);
+  concatLTOPluginOptions(ctx, vec);
   args = this->ParseArgs(vec, missingIndex, missingCount);
 
-  handleColorDiagnostics(args);
+  handleColorDiagnostics(ctx, args);
   if (missingCount)
     ErrAlways(ctx) << Twine(args.getArgString(missingIndex))
                    << ": missing argument";

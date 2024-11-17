@@ -9,6 +9,7 @@
 #ifndef LLD_ELF_CONFIG_H
 #define LLD_ELF_CONFIG_H
 
+#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
@@ -26,7 +27,6 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
-#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/TarWriter.h"
 #include <atomic>
 #include <memory>
@@ -547,13 +547,14 @@ struct Ctx {
   LinkerScript *script;
   std::unique_ptr<TargetInfo> target;
 
+  CommonLinkerContext *commonCtx;
   ErrorHandler *errHandler;
 
   // These variables are initialized by Writer and should not be used before
   // Writer is initialized.
-  uint8_t *bufferStart;
-  Partition *mainPart;
-  PhdrEntry *tlsPhdr;
+  uint8_t *bufferStart = nullptr;
+  Partition *mainPart = nullptr;
+  PhdrEntry *tlsPhdr = nullptr;
   struct OutSections {
     OutputSection *elfHeader;
     OutputSection *programHeaders;
@@ -561,7 +562,7 @@ struct Ctx {
     OutputSection *initArray;
     OutputSection *finiArray;
   };
-  OutSections out;
+  OutSections out{};
   SmallVector<OutputSection *, 0> outputSections;
   std::vector<Partition> partitions;
 
@@ -605,7 +606,7 @@ struct Ctx {
     // _TLS_MODULE_BASE_ on targets that support TLSDESC.
     Defined *tlsModuleBase;
   };
-  ElfSym sym;
+  ElfSym sym{};
   std::unique_ptr<SymbolTable> symtab;
 
   SmallVector<std::unique_ptr<MemoryBuffer>> memoryBuffers;
@@ -636,7 +637,7 @@ struct Ctx {
   // archive.
   std::unique_ptr<llvm::TarWriter> tar;
   // InputFile for linker created symbols with no source location.
-  InputFile *internalFile;
+  InputFile *internalFile = nullptr;
   // True if SHT_LLVM_SYMPART is used.
   std::atomic<bool> hasSympart{false};
   // True if there are TLS IE relocations. Set DF_STATIC_TLS if -shared.
@@ -645,7 +646,7 @@ struct Ctx {
   std::atomic<bool> needsTlsLd{false};
   // True if all native vtable symbols have corresponding type info symbols
   // during LTO.
-  bool ltoAllVtablesHaveTypeInfos;
+  bool ltoAllVtablesHaveTypeInfos = false;
 
   // Each symbol assignment and DEFINED(sym) reference is assigned an increasing
   // order. Each DEFINED(sym) evaluation checks whether the reference happens
@@ -674,11 +675,12 @@ static inline ArrayRef<VersionDefinition> namedVersionDefs(Ctx &ctx) {
   return llvm::ArrayRef(ctx.arg.versionDefinitions).slice(2);
 }
 
-void errorOrWarn(const Twine &msg);
-
-static inline void internalLinkerError(StringRef loc, const Twine &msg) {
-  errorOrWarn(loc + "internal linker error: " + msg + "\n" +
-              llvm::getBugReportMsg());
+inline llvm::BumpPtrAllocator &bAlloc(Ctx &ctx) {
+  return ctx.commonCtx->bAlloc;
+}
+inline llvm::StringSaver &saver(Ctx &ctx) { return ctx.commonCtx->saver; }
+inline llvm::UniqueStringSaver &uniqueSaver(Ctx &ctx) {
+  return ctx.commonCtx->uniqueSaver;
 }
 
 struct ELFSyncStream : SyncStream {
@@ -708,6 +710,9 @@ inline const ELFSyncStream &operator<<(const ELFSyncStream &s, Error v) {
 // Report a log if --verbose is specified.
 ELFSyncStream Log(Ctx &ctx);
 
+// Print a message to stdout.
+ELFSyncStream Msg(Ctx &ctx);
+
 // Report a warning. Upgraded to an error if --fatal-warnings is specified.
 ELFSyncStream Warn(Ctx &ctx);
 
@@ -723,6 +728,10 @@ ELFSyncStream ErrAlways(Ctx &ctx);
 ELFSyncStream Fatal(Ctx &ctx);
 
 uint64_t errCount(Ctx &ctx);
+
+ELFSyncStream InternalErr(Ctx &ctx, const uint8_t *buf);
+
+#define CHECK2(E, S) lld::check2((E), [&] { return toStr(ctx, S); })
 
 } // namespace lld::elf
 

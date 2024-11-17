@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PPCRegisterInfo.h"
 #include "PPCCallingConv.h"
 #include "PPCSubtarget.h"
 #include "PPCCCState.h"

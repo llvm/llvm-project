@@ -49,7 +49,7 @@ template <class ELFT> class Writer {
 public:
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
-  Writer(Ctx &ctx) : ctx(ctx), buffer(errorHandler().outputBuffer) {}
+  Writer(Ctx &ctx) : ctx(ctx), buffer(ctx.errHandler->outputBuffer) {}
 
   void run();
 
@@ -1822,10 +1822,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       ctx.in.iplt->addSymbols();
 
     if (ctx.arg.unresolvedSymbolsInShlib != UnresolvedPolicy::Ignore) {
-      auto diagnose =
-          ctx.arg.unresolvedSymbolsInShlib == UnresolvedPolicy::ReportError
-              ? errorOrWarn
-              : warn;
+      auto diag =
+          ctx.arg.unresolvedSymbolsInShlib == UnresolvedPolicy::ReportError &&
+                  !ctx.arg.noinhibitExec
+              ? DiagLevel::Err
+              : DiagLevel::Warn;
       // Error on undefined symbols in a shared object, if all of its DT_NEEDED
       // entries are seen. These cases would otherwise lead to runtime errors
       // reported by the dynamic linker.
@@ -1850,14 +1851,14 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
           if (sym->dsoDefined)
             continue;
           if (sym->isUndefined() && !sym->isWeak()) {
-            diagnose("undefined reference: " + toString(*sym) +
-                     "\n>>> referenced by " + toString(file) +
-                     " (disallowed by --no-allow-shlib-undefined)");
+            ELFSyncStream(ctx, diag)
+                << "undefined reference: " << sym << "\n>>> referenced by "
+                << file << " (disallowed by --no-allow-shlib-undefined)";
           } else if (sym->isDefined() &&
                      sym->computeBinding(ctx) == STB_LOCAL) {
-            diagnose("non-exported symbol '" + toString(*sym) + "' in '" +
-                     toString(sym->file) + "' is referenced by DSO '" +
-                     toString(file) + "'");
+            ELFSyncStream(ctx, diag)
+                << "non-exported symbol '" << sym << "' in '" << sym->file
+                << "' is referenced by DSO '" << file << "'";
           }
         }
       }
@@ -2152,11 +2153,11 @@ void Writer<ELFT>::addStartStopSymbols(OutputSection &osec) {
   StringRef s = osec.name;
   if (!isValidCIdentifier(s))
     return;
-  Defined *startSym =
-      addOptionalRegular(ctx, saver().save("__start_" + s), &osec, 0,
-                         ctx.arg.zStartStopVisibility);
-  Defined *stopSym = addOptionalRegular(ctx, saver().save("__stop_" + s), &osec,
-                                        -1, ctx.arg.zStartStopVisibility);
+  StringSaver &ss = saver(ctx);
+  Defined *startSym = addOptionalRegular(ctx, ss.save("__start_" + s), &osec, 0,
+                                         ctx.arg.zStartStopVisibility);
+  Defined *stopSym = addOptionalRegular(ctx, ss.save("__stop_" + s), &osec, -1,
+                                        ctx.arg.zStartStopVisibility);
   if (startSym || stopSym)
     osec.usedInExpression = true;
 }
@@ -2625,7 +2626,8 @@ struct SectionOffset {
 
 // Check whether sections overlap for a specific address range (file offsets,
 // load and virtual addresses).
-static void checkOverlap(StringRef name, std::vector<SectionOffset> &sections,
+static void checkOverlap(Ctx &ctx, StringRef name,
+                         std::vector<SectionOffset> &sections,
                          bool isVirtualAddr) {
   llvm::sort(sections, [=](const SectionOffset &a, const SectionOffset &b) {
     return a.offset < b.offset;
@@ -2676,7 +2678,7 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
     if (sec->size > 0 && sec->type != SHT_NOBITS &&
         (!ctx.arg.oFormatBinary || (sec->flags & SHF_ALLOC)))
       fileOffs.push_back({sec, sec->offset});
-  checkOverlap("file", fileOffs, false);
+  checkOverlap(ctx, "file", fileOffs, false);
 
   // When linking with -r there is no need to check for overlapping virtual/load
   // addresses since those addresses will only be assigned when the final
@@ -2693,7 +2695,7 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
   for (OutputSection *sec : ctx.outputSections)
     if (sec->size > 0 && (sec->flags & SHF_ALLOC) && !(sec->flags & SHF_TLS))
       vmas.push_back({sec, sec->addr});
-  checkOverlap("virtual address", vmas, true);
+  checkOverlap(ctx, "virtual address", vmas, true);
 
   // Finally, check that the load addresses don't overlap. This will usually be
   // the same as the virtual addresses but can be different when using a linker
@@ -2702,7 +2704,7 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
   for (OutputSection *sec : ctx.outputSections)
     if (sec->size > 0 && (sec->flags & SHF_ALLOC) && !(sec->flags & SHF_TLS))
       lmas.push_back({sec, sec->getLMA()});
-  checkOverlap("load address", lmas, false);
+  checkOverlap(ctx, "load address", lmas, false);
 }
 
 // The entry point address is chosen in the following ways.
@@ -2803,7 +2805,7 @@ template <class ELFT> void Writer<ELFT>::openFile() {
 
   if (!bufferOrErr) {
     ErrAlways(ctx) << "failed to open " << ctx.arg.outputFile << ": "
-                   << llvm::toString(bufferOrErr.takeError());
+                   << bufferOrErr.takeError();
     return;
   }
   buffer = std::move(*bufferOrErr);

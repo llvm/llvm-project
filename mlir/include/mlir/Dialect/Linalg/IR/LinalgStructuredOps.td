@@ -561,7 +561,7 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
 def MatmulOp : LinalgStructuredBase_Op<"matmul", [
                AttrSizedOperandSegments,
                LinalgContractionOpInterface]> {
-    
+
   let summary = [{
     Performs a matrix multiplication of two 2D inputs without broadcast or transpose.
     }];
@@ -593,16 +593,17 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
                   ]
                   ins(%arg0, %arg1 : memref<3xf32>, memref<5x7xf32>)
                   outs(%arg2: memref<3x7xf32>)
-     ```
+    ```
 
-     Example Broadcast and transpose:
-     ```
-     linalg.matmul indexing_maps = [
-                       affine_map<(d0, d1, d2) -> (d2, d0)>, // transpose
-                       affine_map<(d0, d1, d2) -> (d2)>,     // broadcast
-                       affine_map<(d0, d1, d2) -> (d0, d1)>
-                     ]
-                     ins(%arg0, %arg1 : memref<5x3xf32>, memref<7xf32>) outs(%arg2: memref<3x7xf32>)
+    Example Broadcast and transpose:
+    ```
+    linalg.matmul indexing_maps = [
+                      affine_map<(d0, d1, d2) -> (d2, d0)>, // transpose
+                      affine_map<(d0, d1, d2) -> (d2)>,     // broadcast
+                      affine_map<(d0, d1, d2) -> (d0, d1)>
+                    ]
+                    ins(%arg0, %arg1 : memref<5x3xf32>, memref<7xf32>) outs(%arg2: memref<3x7xf32>)
+    ```
     }];
 
     let arguments = (ins
@@ -620,7 +621,7 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
       (ins "ValueRange":$inputs, "ValueRange":$outputs,
             CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
-        buildStructuredOp($_builder, $_state, std::nullopt, inputs, outputs,
+        buildMatmulOp($_builder, $_state, std::nullopt, inputs, outputs,
           attributes, MatmulOp::getRegionBuilder());
       }]>,
       OpBuilder<
@@ -628,7 +629,7 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
             "ValueRange":$outputs,
             CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
-        buildStructuredOp($_builder, $_state, resultTensorTypes,
+        buildMatmulOp($_builder, $_state, resultTensorTypes,
           inputs, outputs, attributes, MatmulOp::getRegionBuilder());
       }]>,
       OpBuilder<
@@ -646,7 +647,7 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
        "Attribute":$cast, CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
         $_state.addAttribute("cast", cast);
-        buildStructuredOp($_builder, $_state, resultTensorTypes, inputs, outputs,
+        buildMatmulOp($_builder, $_state, resultTensorTypes, inputs, outputs,
           attributes, MatmulOp::getRegionBuilder());
       }]>
 
