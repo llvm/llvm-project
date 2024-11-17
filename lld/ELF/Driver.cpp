@@ -330,7 +330,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
 // Add a given library by searching it from input search paths.
 void LinkerDriver::addLibrary(StringRef name) {
   if (std::optional<std::string> path = searchLibrary(ctx, name))
-    addFile(saver(ctx).save(*path), /*withLOption=*/true);
+    addFile(ctx.saver.save(*path), /*withLOption=*/true);
   else
     ctx.e.error("unable to find library -l" + name, ErrorTag::LibNotFound,
                 {name});
@@ -1619,8 +1619,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
 
   // Parse LTO options.
   if (auto *arg = args.getLastArg(OPT_plugin_opt_mcpu_eq))
-    parseClangOption(ctx,
-                     saver(ctx).save("-mcpu=" + StringRef(arg->getValue())),
+    parseClangOption(ctx, ctx.saver.save("-mcpu=" + StringRef(arg->getValue())),
                      arg->getSpelling());
 
   for (opt::Arg *arg : args.filtered(OPT_plugin_opt_eq_minus))
@@ -2567,7 +2566,7 @@ static std::vector<WrappedSymbol> addWrappedSymbols(Ctx &ctx,
                                                     opt::InputArgList &args) {
   std::vector<WrappedSymbol> v;
   DenseSet<StringRef> seen;
-  auto &ss = saver(ctx);
+  auto &ss = ctx.saver;
   for (auto *arg : args.filtered(OPT_wrap)) {
     StringRef name = arg->getValue();
     if (!seen.insert(name).second)
@@ -2582,7 +2581,7 @@ static std::vector<WrappedSymbol> addWrappedSymbols(Ctx &ctx,
 
     // If __real_ is referenced, pull in the symbol if it is lazy. Do this after
     // processing __wrap_ as that may have referenced __real_.
-    StringRef realName = saver(ctx).save("__real_" + name);
+    StringRef realName = ctx.saver.save("__real_" + name);
     if (Symbol *real = ctx.symtab->find(realName)) {
       ctx.symtab->addUnusedUndefined(name, sym->binding);
       // Update sym's binding, which will replace real's later in

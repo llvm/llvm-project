@@ -130,7 +130,7 @@ void InputSectionBase::decompress() const {
   {
     static std::mutex mu;
     std::lock_guard<std::mutex> lock(mu);
-    uncompressedBuf = bAlloc(ctx).Allocate<uint8_t>(size);
+    uncompressedBuf = ctx.bAlloc.Allocate<uint8_t>(size);
   }
 
   invokeELFT(decompressAux, ctx, *this, uncompressedBuf, size);
