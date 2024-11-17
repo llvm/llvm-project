@@ -30,6 +30,7 @@
 #include "llvm/Support/TarWriter.h"
 #include <atomic>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <vector>
 
@@ -43,6 +44,7 @@ class SharedFile;
 class InputSectionBase;
 class EhInputSection;
 class Defined;
+class Undefined;
 class Symbol;
 class SymbolTable;
 class BitcodeCompiler;
@@ -505,6 +507,16 @@ struct DuplicateSymbol {
   uint64_t value;
 };
 
+struct UndefinedDiag {
+  Undefined *sym;
+  struct Loc {
+    InputSectionBase *sec;
+    uint64_t offset;
+  };
+  SmallVector<Loc, 0> locs;
+  bool isWarning;
+};
+
 // Linker generated sections which can be used as inputs and are not specific to
 // a partition.
 struct InStruct {
@@ -619,6 +631,11 @@ struct Ctx {
   SmallVector<SymbolAux, 0> symAux;
   // Duplicate symbol candidates.
   SmallVector<DuplicateSymbol, 0> duplicates;
+  // Undefined diagnostics are collected in a vector and emitted once all of
+  // them are known, so that some postprocessing on the list of undefined
+  // symbols can happen before lld emits diagnostics.
+  std::mutex relocMutex;
+  SmallVector<UndefinedDiag, 0> undefErrs;
   // Symbols in a non-prevailing COMDAT group which should be changed to an
   // Undefined.
   SmallVector<std::pair<Symbol *, unsigned>, 0> nonPrevailingSyms;
