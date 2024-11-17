@@ -397,8 +397,8 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
     StringRef ltoObjName;
     if (bitcodeFilePath == "ld-temp.o") {
       ltoObjName =
-          saver(ctx).save(Twine(ctx.arg.outputFile) + ".lto" +
-                          (i == 0 ? Twine("") : Twine('.') + Twine(i)) + ext);
+          ctx.saver.save(Twine(ctx.arg.outputFile) + ".lto" +
+                         (i == 0 ? Twine("") : Twine('.') + Twine(i)) + ext);
     } else {
       StringRef directory = sys::path::parent_path(bitcodeFilePath);
       // For an archive member, which has an identifier like "d/a.a(coll.o at
@@ -412,7 +412,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
       sys::path::append(path, directory,
                         outputFileBaseName + ".lto." + baseName + ext);
       sys::path::remove_dots(path, true);
-      ltoObjName = saver(ctx).save(path.str());
+      ltoObjName = ctx.saver.save(path.str());
     }
     if (savePrelink || ctx.arg.ltoEmitAsm)
       saveBuffer(buf[i].second, ltoObjName);
