@@ -1868,13 +1868,13 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Instruction *Res = foldBinOpOfSelectAndCastOfSelectCondition(I))
     return Res;
 
-  // Re-enqueue add instruction with PHI operands if we infer new nuw/nsw flags.
-  if (Changed &&
-      (isa<PHINode>(I.getOperand(0)) || isa<PHINode>(I.getOperand(1)))) {
-    for (User *U : I.users()) {
-      if (auto *PHI = dyn_cast<PHINode>(U))
-        Worklist.pushUsersToWorkList(*PHI);
-    }
+  // Re-enqueue the induction variable of add recurrence if we infer new
+  // nuw/nsw flags.
+  if (Changed) {
+    PHINode *PHI;
+    Value *Start, *Step;
+    if (matchSimpleRecurrence(&I, PHI, Start, Step))
+      Worklist.pushUsersToWorkList(*PHI);
   }
 
   return Changed ? &I : nullptr;
