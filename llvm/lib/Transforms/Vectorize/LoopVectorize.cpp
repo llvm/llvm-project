@@ -8892,6 +8892,8 @@ addUsersInExitBlocks(VPlan &Plan,
     if (V->isLiveIn())
       continue;
 
+    assert(ExitIRI->getParent()->getSinglePredecessor() == MiddleVPBB &&
+           "Exit value not handled yet for this edge.");
     LLVMContext &Ctx = ExitIRI->getInstruction().getContext();
     VPValue *Ext = B.createNaryOp(VPInstruction::ExtractFromEnd,
                                   {V, Plan.getOrAddLiveIn(ConstantInt::get(
