@@ -564,52 +564,6 @@ selectVSplatCommon(SDValue N, SDValue &Imm, bool Signed,
   return false;
 }
 
-// Select constant vector splats.
-bool MipsSEDAGToDAGISel::
-selectVSplatUimm1(SDValue N, SDValue &Imm) const {
-  return selectVSplatCommon(N, Imm, false, 1);
-}
-
-bool MipsSEDAGToDAGISel::
-selectVSplatUimm2(SDValue N, SDValue &Imm) const {
-  return selectVSplatCommon(N, Imm, false, 2);
-}
-
-bool MipsSEDAGToDAGISel::
-selectVSplatUimm3(SDValue N, SDValue &Imm) const {
-  return selectVSplatCommon(N, Imm, false, 3);
-}
-
-// Select constant vector splats.
-bool MipsSEDAGToDAGISel::
-selectVSplatUimm4(SDValue N, SDValue &Imm) const {
-  return selectVSplatCommon(N, Imm, false, 4);
-}
-
-// Select constant vector splats.
-bool MipsSEDAGToDAGISel::
-selectVSplatUimm5(SDValue N, SDValue &Imm) const {
-  return selectVSplatCommon(N, Imm, false, 5);
-}
-
-// Select constant vector splats.
-bool MipsSEDAGToDAGISel::
-selectVSplatUimm6(SDValue N, SDValue &Imm) const {
-  return selectVSplatCommon(N, Imm, false, 6);
-}
-
-// Select constant vector splats.
-bool MipsSEDAGToDAGISel::
-selectVSplatUimm8(SDValue N, SDValue &Imm) const {
-  return selectVSplatCommon(N, Imm, false, 8);
-}
-
-// Select constant vector splats.
-bool MipsSEDAGToDAGISel::
-selectVSplatSimm5(SDValue N, SDValue &Imm) const {
-  return selectVSplatCommon(N, Imm, true, 5);
-}
-
 // Select constant vector splats whose value is a power of 2.
 //
 // In addition to the requirements of selectVSplat(), this function returns
