@@ -1567,7 +1567,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   ctx->e.logName = args::getFilenameWithoutExe(argsArr[0]);
 
   MachOOptTable parser;
-  InputArgList args = parser.parse(argsArr.slice(1));
+  InputArgList args = parser.parse(*ctx, argsArr.slice(1));
 
   ctx->e.errorLimitExceededMsg = "too many errors emitted, stopping now "
                                  "(use --error-limit=0 to see all errors)";
@@ -1575,11 +1575,11 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   ctx->e.verbose = args.hasArg(OPT_verbose);
 
   if (args.hasArg(OPT_help_hidden)) {
-    parser.printHelp(argsArr[0], /*showHidden=*/true);
+    parser.printHelp(*ctx, argsArr[0], /*showHidden=*/true);
     return true;
   }
   if (args.hasArg(OPT_help)) {
-    parser.printHelp(argsArr[0], /*showHidden=*/false);
+    parser.printHelp(*ctx, argsArr[0], /*showHidden=*/false);
     return true;
   }
   if (args.hasArg(OPT_version)) {
@@ -2040,17 +2040,17 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       shouldAdhocSignByDefault(config->arch(), config->platform()));
 
   if (args.hasArg(OPT_v)) {
-    message(getLLDVersion(), lld::errs());
+    message(getLLDVersion(), ctx->e.errs());
     message(StringRef("Library search paths:") +
                 (config->librarySearchPaths.empty()
                      ? ""
                      : "\n\t" + join(config->librarySearchPaths, "\n\t")),
-            lld::errs());
+            ctx->e.errs());
     message(StringRef("Framework search paths:") +
                 (config->frameworkSearchPaths.empty()
                      ? ""
                      : "\n\t" + join(config->frameworkSearchPaths, "\n\t")),
-            lld::errs());
+            ctx->e.errs());
   }
 
   config->progName = argsArr[0];

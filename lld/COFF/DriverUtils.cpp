@@ -1020,7 +1020,7 @@ std::vector<const char *> ArgParser::tokenize(StringRef s) {
 }
 
 void LinkerDriver::printHelp(const char *argv0) {
-  ctx.optTable.printHelp(lld::outs(),
+  ctx.optTable.printHelp(ctx.e.outs(),
                          (std::string(argv0) + " [options] file...").c_str(),
                          "LLVM Linker", false);
 }
