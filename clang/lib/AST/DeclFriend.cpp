@@ -12,13 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/DeclFriend.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/LLVM.h"
-#include "llvm/Support/Casting.h"
 #include <cassert>
 #include <cstddef>
 
