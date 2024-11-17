@@ -249,6 +249,15 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
       if (!Ty->isRecordType())
         return AnyPtr;
 
+      // For unnamed structs or unions C's compatible types rule applies. Two
+      // compatible types in different compilation units can have different
+      // mangled names, meaning the metadata emitted below would incorrectly
+      // mark them as no-alias. Use AnyPtr for such types in both C and C++, as
+      // C and C++ types may be visible when doing LTO.
+      const auto *RT = Ty->getAs<RecordType>();
+      if (RT && !RT->getDecl()->getDeclName())
+        return AnyPtr;
+
       // For non-builtin types use the mangled name of the canonical type.
       llvm::raw_svector_ostream TyOut(TyName);
       MangleCtx->mangleCanonicalTypeName(QualType(Ty, 0), TyOut);
