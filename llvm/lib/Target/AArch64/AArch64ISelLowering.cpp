@@ -3547,11 +3547,10 @@ static SDValue emitStrictFPComparison(SDValue LHS, SDValue RHS, const SDLoc &dl,
     RHS = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {MVT::f32, MVT::Other},
                       {LHS.getValue(1), RHS});
     Chain = RHS.getValue(1);
-    VT = MVT::f32;
   }
   unsigned Opcode =
       IsSignaling ? AArch64ISD::STRICT_FCMPE : AArch64ISD::STRICT_FCMP;
-  return DAG.getNode(Opcode, dl, {VT, MVT::Other}, {Chain, LHS, RHS});
+  return DAG.getNode(Opcode, dl, {MVT::i32, MVT::Other}, {Chain, LHS, RHS});
 }
 
 static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
@@ -3564,9 +3563,8 @@ static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     if ((VT == MVT::f16 && !FullFP16) || VT == MVT::bf16) {
       LHS = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f32, LHS);
       RHS = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f32, RHS);
-      VT = MVT::f32;
     }
-    return DAG.getNode(AArch64ISD::FCMP, dl, VT, LHS, RHS);
+    return DAG.getNode(AArch64ISD::FCMP, dl, MVT::i32, LHS, RHS);
   }
 
   // The CMP instruction is just an alias for SUBS, and representing it as
@@ -21630,7 +21628,7 @@ static SDValue getPTest(SelectionDAG &DAG, EVT VT, SDValue Pg, SDValue Op,
   // Set condition code (CC) flags.
   SDValue Test = DAG.getNode(
       Cond == AArch64CC::ANY_ACTIVE ? AArch64ISD::PTEST_ANY : AArch64ISD::PTEST,
-      DL, MVT::Other, Pg, Op);
+      DL, MVT::i32, Pg, Op);
 
   // Convert CC to integer based on requested condition.
   // NOTE: Cond is inverted to promote CSEL's removal when it feeds a compare.
@@ -26436,8 +26434,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                   : AArch64SysReg::RNDRRS);
       SDLoc DL(N);
       SDValue A = DAG.getNode(
-          AArch64ISD::MRS, DL, DAG.getVTList(MVT::i64, MVT::Glue, MVT::Other),
-          N->getOperand(0), DAG.getConstant(Register, DL, MVT::i64));
+          AArch64ISD::MRS, DL, DAG.getVTList(MVT::i64, MVT::i32, MVT::Other),
+          N->getOperand(0), DAG.getConstant(Register, DL, MVT::i32));
       SDValue B = DAG.getNode(
           AArch64ISD::CSINC, DL, MVT::i32, DAG.getConstant(0, DL, MVT::i32),
           DAG.getConstant(0, DL, MVT::i32),
