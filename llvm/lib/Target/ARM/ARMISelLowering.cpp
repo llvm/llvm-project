@@ -149,6 +149,9 @@ MVEMaxSupportedInterleaveFactor("mve-max-interleave-factor", cl::Hidden,
   cl::desc("Maximum interleave factor for MVE VLDn to generate."),
   cl::init(2));
 
+/// Value type used for "flags" operands / results (either CPSR or FPSCR_NZCV).
+constexpr MVT FlagsVT = MVT::i32;
+
 // The APCS parameter registers.
 static const MCPhysReg GPRArgRegs[] = {
   ARM::R0, ARM::R1, ARM::R2, ARM::R3
@@ -6850,7 +6853,7 @@ static SDValue Expand64BitShift(SDNode *N, SelectionDAG &DAG,
   // First, build a SRA_GLUE/SRL_GLUE op, which shifts the top part by one and
   // captures the result into a carry flag.
   unsigned Opc = N->getOpcode() == ISD::SRL ? ARMISD::SRL_GLUE:ARMISD::SRA_GLUE;
-  Hi = DAG.getNode(Opc, dl, DAG.getVTList(MVT::i32, MVT::Glue), Hi);
+  Hi = DAG.getNode(Opc, dl, DAG.getVTList(MVT::i32, FlagsVT), Hi);
 
   // The low part is an ARMISD::RRX operand, which shifts the carry in.
   Lo = DAG.getNode(ARMISD::RRX, dl, MVT::i32, Lo, Hi.getValue(1));

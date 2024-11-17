@@ -2787,8 +2787,9 @@ def : T2Pat<(rotr rGPR:$lhs, (and rGPR:$rhs, lo5AllOne)),
 
 let Uses = [CPSR] in {
 def t2RRX : T2sTwoReg<(outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
-                   "rrx", "\t$Rd, $Rm",
-                   [(set rGPR:$Rd, (ARMrrx rGPR:$Rm))]>, Sched<[WriteALU]> {
+                      "rrx", "\t$Rd, $Rm",
+                      [(set rGPR:$Rd, (ARMrrx rGPR:$Rm, CPSR))]>,
+            Sched<[WriteALU]> {
   let Inst{31-27} = 0b11101;
   let Inst{26-25} = 0b01;
   let Inst{24-21} = 0b0010;
@@ -2801,11 +2802,11 @@ def t2RRX : T2sTwoReg<(outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
 }
 
 let isCodeGenOnly = 1, Defs = [CPSR] in {
-def t2MOVsrl_glue : T2TwoRegShiftImm<
-                        (outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
-                        "lsrs", ".w\t$Rd, $Rm, #1",
-                        [(set rGPR:$Rd, (ARMsrl_glue rGPR:$Rm))]>,
-                        Sched<[WriteALU]> {
+def t2MOVsrl_glue
+    : T2TwoRegShiftImm<(outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
+                       "lsrs", ".w\t$Rd, $Rm, #1",
+                       [(set rGPR:$Rd, CPSR, (ARMsrl_glue rGPR:$Rm))]>,
+      Sched<[WriteALU]> {
   let Inst{31-27} = 0b11101;
   let Inst{26-25} = 0b01;
   let Inst{24-21} = 0b0010;
@@ -2816,11 +2817,11 @@ def t2MOVsrl_glue : T2TwoRegShiftImm<
   let Inst{14-12} = 0b000;
   let Inst{7-6} = 0b01;
 }
-def t2MOVsra_glue : T2TwoRegShiftImm<
-                        (outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
-                        "asrs", ".w\t$Rd, $Rm, #1",
-                        [(set rGPR:$Rd, (ARMsra_glue rGPR:$Rm))]>,
-                        Sched<[WriteALU]> {
+def t2MOVsra_glue
+    : T2TwoRegShiftImm<(outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
+                       "asrs", ".w\t$Rd, $Rm, #1",
+                       [(set rGPR:$Rd, CPSR, (ARMsra_glue rGPR:$Rm))]>,
+      Sched<[WriteALU]> {
   let Inst{31-27} = 0b11101;
   let Inst{26-25} = 0b01;
   let Inst{24-21} = 0b0010;
