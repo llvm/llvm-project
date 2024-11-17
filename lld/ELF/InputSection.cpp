@@ -35,13 +35,13 @@ using namespace lld;
 using namespace lld::elf;
 
 // Returns a string to construct an error message.
-std::string lld::toString(const InputSectionBase *sec) {
-  return (toString(sec->file) + ":(" + sec->name + ")").str();
+std::string elf::toStr(Ctx &ctx, const InputSectionBase *sec) {
+  return (toStr(ctx, sec->file) + ":(" + sec->name + ")").str();
 }
 
 const ELFSyncStream &elf::operator<<(const ELFSyncStream &s,
                                      const InputSectionBase *sec) {
-  return s << toString(sec);
+  return s << toStr(s.ctx, sec);
 }
 
 template <class ELFT>
@@ -121,8 +121,7 @@ static void decompressAux(Ctx &ctx, const InputSectionBase &sec, uint8_t *out,
   if (Error e = hdr->ch_type == ELFCOMPRESS_ZLIB
                     ? compression::zlib::decompress(compressed, out, size)
                     : compression::zstd::decompress(compressed, out, size))
-    Fatal(ctx) << &sec
-               << ": decompress failed: " << llvm::toString(std::move(e));
+    Fatal(ctx) << &sec << ": decompress failed: " << std::move(e);
 }
 
 void InputSectionBase::decompress() const {
@@ -131,7 +130,7 @@ void InputSectionBase::decompress() const {
   {
     static std::mutex mu;
     std::lock_guard<std::mutex> lock(mu);
-    uncompressedBuf = bAlloc().Allocate<uint8_t>(size);
+    uncompressedBuf = bAlloc(ctx).Allocate<uint8_t>(size);
   }
 
   invokeELFT(decompressAux, ctx, *this, uncompressedBuf, size);
@@ -309,9 +308,9 @@ std::string InputSectionBase::getLocation(uint64_t offset) const {
   std::string secAndOffset =
       (name + "+0x" + Twine::utohexstr(offset) + ")").str();
 
-  std::string filename = toString(file);
+  std::string filename = toStr(getCtx(), file);
   if (Defined *d = getEnclosingFunction(offset))
-    return filename + ":(function " + toString(*d) + ": " + secAndOffset;
+    return filename + ":(function " + toStr(getCtx(), *d) + ": " + secAndOffset;
 
   return filename + ":(" + secAndOffset;
 }
@@ -347,7 +346,7 @@ std::string InputSectionBase::getObjMsg(uint64_t off) const {
   // before ObjFile::initSectionsAndLocalSyms where local symbols are
   // initialized.
   if (Defined *d = getEnclosingSymbol(off))
-    return filename + ":(" + toString(*d) + ")" + archive;
+    return filename + ":(" + toStr(getCtx(), *d) + ")" + archive;
 
   // If there's no symbol, print out the offset in the section.
   return (filename + ":(" + name + "+0x" + utohexstr(off) + ")" + archive)
@@ -487,7 +486,7 @@ void InputSection::copyRelocations(Ctx &ctx, uint8_t *buf,
           uint32_t secIdx = cast<Undefined>(sym).discardedSecIdx;
           Elf_Shdr_Impl<ELFT> sec = file->template getELFShdrs<ELFT>()[secIdx];
           Warn(ctx) << "relocation refers to a discarded section: "
-                    << CHECK(file->getObj().getSectionName(sec), file)
+                    << CHECK2(file->getObj().getSectionName(sec), file)
                     << "\n>>> referenced by " << getObjMsg(p->r_offset);
         }
         p->setSymbolAndType(0, 0, false);
@@ -1032,9 +1031,8 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
                 (f->getRelocTargetSym(*it).getVA(ctx) + getAddend<ELFT>(*it));
         }
         if (overwriteULEB128(bufLoc, val) >= 0x80)
-          Err(ctx) << getLocation(offset) << ": ULEB128 value " << Twine(val)
-                   << " exceeds available space; references '"
-                   << lld::toString(sym) << "'";
+          Err(ctx) << getLocation(offset) << ": ULEB128 value " << val
+                   << " exceeds available space; references '" << &sym << "'";
         continue;
       }
       Err(ctx) << getLocation(offset)
@@ -1107,7 +1105,7 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
     }
 
     std::string msg = getLocation(offset) + ": has non-ABS relocation " +
-                      toString(type) + " against symbol '" + toString(sym) +
+                      toStr(ctx, type) + " against symbol '" + toStr(ctx, sym) +
                       "'";
     if (expr != R_PC && !(emachine == EM_386 && type == R_386_GOTPC)) {
       Err(ctx) << msg;
@@ -1238,9 +1236,9 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(Ctx &ctx, uint8_t *buf,
                                                        f->stOther))
         continue;
       if (!getFile<ELFT>()->someNoSplitStack)
-        ErrAlways(ctx)
-            << lld::toString(this) << ": " << f->getName()
-            << " (with -fsplit-stack) calls " << rel.sym->getName()
+        Err(ctx)
+            << this << ": " << f->getName() << " (with -fsplit-stack) calls "
+            << rel.sym->getName()
             << " (without -fsplit-stack), but couldn't adjust its prologue";
     }
   }
@@ -1279,8 +1277,7 @@ template <class ELFT> void InputSection::writeTo(Ctx &ctx, uint8_t *buf) {
     if (Error e = hdr->ch_type == ELFCOMPRESS_ZLIB
                       ? compression::zlib::decompress(compressed, buf, size)
                       : compression::zstd::decompress(compressed, buf, size))
-      Fatal(ctx) << this
-                 << ": decompress failed: " << llvm::toString(std::move(e));
+      Fatal(ctx) << this << ": decompress failed: " << std::move(e);
     uint8_t *bufEnd = buf + size;
     relocate<ELFT>(ctx, buf, bufEnd);
     return;
@@ -1370,8 +1367,7 @@ void EhInputSection::split(ArrayRef<RelTy> rels) {
     d = d.slice(size);
   }
   if (msg)
-    Err(file->ctx) << "corrupted .eh_frame: " << Twine(msg)
-                   << "\n>>> defined in "
+    Err(file->ctx) << "corrupted .eh_frame: " << msg << "\n>>> defined in "
                    << getObjMsg(d.data() - content().data());
 }
 

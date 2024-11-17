@@ -71,13 +71,13 @@ static void writeUint(Ctx &ctx, uint8_t *buf, uint64_t val) {
 }
 
 // Returns an LLD version string.
-static ArrayRef<uint8_t> getVersion() {
+static ArrayRef<uint8_t> getVersion(Ctx &ctx) {
   // Check LLD_VERSION first for ease of testing.
   // You can get consistent output by using the environment variable.
   // This is only for testing.
   StringRef s = getenv("LLD_VERSION");
   if (s.empty())
-    s = saver().save(Twine("Linker: ") + getLLDVersion());
+    s = saver(ctx).save(Twine("Linker: ") + getLLDVersion());
 
   // +1 to include the terminating '\0'.
   return {(const uint8_t *)s.data(), s.size() + 1};
@@ -88,8 +88,9 @@ static ArrayRef<uint8_t> getVersion() {
 // by "readelf --string-dump .comment <file>".
 // The returned object is a mergeable string section.
 MergeInputSection *elf::createCommentSection(Ctx &ctx) {
-  auto *sec = make<MergeInputSection>(
-      ctx, SHF_MERGE | SHF_STRINGS, SHT_PROGBITS, 1, getVersion(), ".comment");
+  auto *sec =
+      make<MergeInputSection>(ctx, SHF_MERGE | SHF_STRINGS, SHT_PROGBITS, 1,
+                              getVersion(ctx), ".comment");
   sec->splitIntoPieces();
   return sec;
 }
@@ -119,7 +120,7 @@ MipsAbiFlagsSection<ELFT>::create(Ctx &ctx) {
     sec->markDead();
     create = true;
 
-    std::string filename = toString(sec->file);
+    std::string filename = toStr(ctx, sec->file);
     const size_t size = sec->content().size();
     // Older version of BFD (such as the default FreeBSD linker) concatenate
     // .MIPS.abiflags instead of merging. To allow for this case (or potential
@@ -196,7 +197,7 @@ MipsOptionsSection<ELFT>::create(Ctx &ctx) {
   for (InputSectionBase *sec : sections) {
     sec->markDead();
 
-    std::string filename = toString(sec->file);
+    std::string filename = toStr(ctx, sec->file);
     ArrayRef<uint8_t> d = sec->content();
 
     while (!d.empty()) {
@@ -269,7 +270,7 @@ MipsReginfoSection<ELFT>::create(Ctx &ctx) {
 
 InputSection *elf::createInterpSection(Ctx &ctx) {
   // StringSaver guarantees that the returned string ends with '\0'.
-  StringRef s = saver().save(ctx.arg.dynamicLinker);
+  StringRef s = saver(ctx).save(ctx.arg.dynamicLinker);
   ArrayRef<uint8_t> contents = {(const uint8_t *)s.data(), s.size() + 1};
 
   return make<InputSection>(ctx.internalFile, SHF_ALLOC, SHT_PROGBITS, 1,
@@ -2793,7 +2794,7 @@ readEntry(uint64_t &offset, const DWARFDebugNames::NameIndex &ni,
   if (err)
     return createStringError(inconvertibleErrorCode(),
                              "invalid abbrev code: %s",
-                             toString(std::move(err)).c_str());
+                             llvm::toString(std::move(err)).c_str());
   if (!isUInt<32>(ulebVal))
     return createStringError(inconvertibleErrorCode(),
                              "abbrev code too large for DWARF32: %" PRIu64,
@@ -2844,7 +2845,7 @@ readEntry(uint64_t &offset, const DWARFDebugNames::NameIndex &ni,
     if (err)
       return createStringError(inconvertibleErrorCode(),
                                "error while reading attributes: %s",
-                               toString(std::move(err)).c_str());
+                               llvm::toString(std::move(err)).c_str());
     if (a.Index == DW_IDX_compile_unit)
       cuAttr = attr;
     else if (a.Form != DW_FORM_flag_present)
@@ -2875,8 +2876,7 @@ void DebugNamesBaseSection::parseDebugNames(
       return;
     }
     if (nd.hdr.Version != 5) {
-      Err(ctx) << namesSec.sec << Twine(": unsupported version: ")
-               << Twine(nd.hdr.Version);
+      Err(ctx) << namesSec.sec << ": unsupported version: " << nd.hdr.Version;
       return;
     }
     uint32_t dwarfSize = dwarf::getDwarfOffsetByteSize(DwarfFormat::DWARF32);
@@ -2914,7 +2914,7 @@ void DebugNamesBaseSection::parseDebugNames(
         ne.indexEntries.push_back(std::move(*ieOrErr));
       }
       if (offset >= namesSec.Data.size())
-        Err(ctx) << namesSec.sec << Twine(": index entry is out of bounds");
+        Err(ctx) << namesSec.sec << ": index entry is out of bounds";
 
       for (IndexEntry &ie : ne.entries())
         offsetMap[ie.poolOffset] = &ie;
@@ -3212,7 +3212,7 @@ DebugNamesSection<ELFT>::DebugNamesSection(Ctx &ctx)
 
     inputChunk.llvmDebugNames.emplace(namesExtractor, strExtractor);
     if (Error e = inputChunk.llvmDebugNames->extract()) {
-      Err(ctx) << dobj.getNamesSection().sec << Twine(": ") << std::move(e);
+      Err(ctx) << dobj.getNamesSection().sec << ": " << std::move(e);
     }
     parseDebugNames(
         ctx, inputChunk, chunk, namesExtractor, strExtractor,
@@ -3513,7 +3513,7 @@ createSymbols(
   }
   // If off overflows, the last symbol's nameOff likely overflows.
   if (!isUInt<32>(off))
-    Err(ctx) << "--gdb-index: constant pool size (" << Twine(off)
+    Err(ctx) << "--gdb-index: constant pool size (" << off
              << ") exceeds UINT32_MAX";
 
   return {ret, off};
@@ -3805,7 +3805,7 @@ void elf::addVerneed(Ctx &ctx, Symbol &ss) {
   // [1..getVerDefNum(ctx)]; this causes the vernaux identifiers to start from
   // getVerDefNum(ctx)+1.
   if (file.vernauxs[ss.versionId] == 0)
-    file.vernauxs[ss.versionId] = ++SharedFile::vernauxNum + getVerDefNum(ctx);
+    file.vernauxs[ss.versionId] = ++ctx.vernauxNum + getVerDefNum(ctx);
 
   ss.versionId = file.vernauxs[ss.versionId];
 }
@@ -3838,7 +3838,7 @@ template <class ELFT> void VersionNeedSection<ELFT>::finalizeContents() {
     if (isGlibc2) {
       const char *ver = "GLIBC_ABI_DT_RELR";
       vn.vernauxs.push_back({hashSysV(ver),
-                             ++SharedFile::vernauxNum + getVerDefNum(ctx),
+                             ++ctx.vernauxNum + getVerDefNum(ctx),
                              getPartition(ctx).dynStrTab->addString(ver)});
     }
   }
@@ -3880,11 +3880,11 @@ template <class ELFT> void VersionNeedSection<ELFT>::writeTo(uint8_t *buf) {
 
 template <class ELFT> size_t VersionNeedSection<ELFT>::getSize() const {
   return verneeds.size() * sizeof(Elf_Verneed) +
-         SharedFile::vernauxNum * sizeof(Elf_Vernaux);
+         ctx.vernauxNum * sizeof(Elf_Vernaux);
 }
 
 template <class ELFT> bool VersionNeedSection<ELFT>::isNeeded() const {
-  return isLive() && SharedFile::vernauxNum != 0;
+  return isLive() && ctx.vernauxNum != 0;
 }
 
 void MergeSyntheticSection::addSection(MergeInputSection *ms) {
@@ -4501,37 +4501,6 @@ void PartitionIndexSection::writeTo(uint8_t *buf) {
     va += 12;
     buf += 12;
   }
-}
-
-void InStruct::reset() {
-  attributes.reset();
-  riscvAttributes.reset();
-  bss.reset();
-  bssRelRo.reset();
-  got.reset();
-  gotPlt.reset();
-  igotPlt.reset();
-  relroPadding.reset();
-  armCmseSGSection.reset();
-  ppc64LongBranchTarget.reset();
-  mipsAbiFlags.reset();
-  mipsGot.reset();
-  mipsOptions.reset();
-  mipsReginfo.reset();
-  mipsRldMap.reset();
-  partEnd.reset();
-  partIndex.reset();
-  plt.reset();
-  iplt.reset();
-  ppc32Got2.reset();
-  ibtPlt.reset();
-  relaPlt.reset();
-  debugNames.reset();
-  gdbIndex.reset();
-  shStrTab.reset();
-  strTab.reset();
-  symTab.reset();
-  symTabShndx.reset();
 }
 
 static bool needsInterpSection(Ctx &ctx) {

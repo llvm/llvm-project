@@ -165,9 +165,9 @@ static lto::Config createConfig(Ctx &ctx) {
   }
 
   if (!ctx.arg.saveTempsArgs.empty())
-    checkError(c.addSaveTemps(ctx.arg.outputFile.str() + ".",
-                              /*UseInputModulePath*/ true,
-                              ctx.arg.saveTempsArgs));
+    checkError(*ctx.errHandler, c.addSaveTemps(ctx.arg.outputFile.str() + ".",
+                                               /*UseInputModulePath*/ true,
+                                               ctx.arg.saveTempsArgs));
   return c;
 }
 
@@ -278,7 +278,7 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     // their values are still not final.
     r.LinkerRedefined = sym->scriptDefined;
   }
-  checkError(ltoObj->add(std::move(f.obj), resols));
+  checkError(*ctx.errHandler, ltoObj->add(std::move(f.obj), resols));
 }
 
 // If LazyObjFile has not been added to link, emit empty index files.
@@ -329,13 +329,14 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
                              }));
 
   if (!ctx.bitcodeFiles.empty())
-    checkError(ltoObj->run(
-        [&](size_t task, const Twine &moduleName) {
-          buf[task].first = moduleName.str();
-          return std::make_unique<CachedFileStream>(
-              std::make_unique<raw_svector_ostream>(buf[task].second));
-        },
-        cache));
+    checkError(*ctx.errHandler, ltoObj->run(
+                                    [&](size_t task, const Twine &moduleName) {
+                                      buf[task].first = moduleName.str();
+                                      return std::make_unique<CachedFileStream>(
+                                          std::make_unique<raw_svector_ostream>(
+                                              buf[task].second));
+                                    },
+                                    cache));
 
   // Emit empty index files for non-indexed files but not in single-module mode.
   if (ctx.arg.thinLTOModulesToCompile.empty()) {
@@ -396,8 +397,8 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
     StringRef ltoObjName;
     if (bitcodeFilePath == "ld-temp.o") {
       ltoObjName =
-          saver().save(Twine(ctx.arg.outputFile) + ".lto" +
-                       (i == 0 ? Twine("") : Twine('.') + Twine(i)) + ext);
+          saver(ctx).save(Twine(ctx.arg.outputFile) + ".lto" +
+                          (i == 0 ? Twine("") : Twine('.') + Twine(i)) + ext);
     } else {
       StringRef directory = sys::path::parent_path(bitcodeFilePath);
       // For an archive member, which has an identifier like "d/a.a(coll.o at
@@ -411,7 +412,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
       sys::path::append(path, directory,
                         outputFileBaseName + ".lto." + baseName + ext);
       sys::path::remove_dots(path, true);
-      ltoObjName = saver().save(path.str());
+      ltoObjName = saver(ctx).save(path.str());
     }
     if (savePrelink || ctx.arg.ltoEmitAsm)
       saveBuffer(buf[i].second, ltoObjName);
