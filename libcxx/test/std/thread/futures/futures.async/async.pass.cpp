@@ -27,6 +27,7 @@
 #include <chrono>
 #include <future>
 #include <memory>
+#include <thread>
 
 #include "test_macros.h"
 
