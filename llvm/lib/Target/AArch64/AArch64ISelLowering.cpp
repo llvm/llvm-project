@@ -2768,6 +2768,10 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::UADDV)
     MAKE_CASE(AArch64ISD::UADDLV)
     MAKE_CASE(AArch64ISD::SADDLV)
+    MAKE_CASE(AArch64ISD::SADDWT)
+    MAKE_CASE(AArch64ISD::SADDWB)
+    MAKE_CASE(AArch64ISD::UADDWT)
+    MAKE_CASE(AArch64ISD::UADDWB)
     MAKE_CASE(AArch64ISD::SDOT)
     MAKE_CASE(AArch64ISD::UDOT)
     MAKE_CASE(AArch64ISD::USDOT)
@@ -2943,10 +2947,6 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::UADDLP)
     MAKE_CASE(AArch64ISD::CALL_RVMARKER)
     MAKE_CASE(AArch64ISD::ASSERT_ZEXT_BOOL)
-    MAKE_CASE(AArch64ISD::MOPS_MEMSET)
-    MAKE_CASE(AArch64ISD::MOPS_MEMSET_TAGGING)
-    MAKE_CASE(AArch64ISD::MOPS_MEMCOPY)
-    MAKE_CASE(AArch64ISD::MOPS_MEMMOVE)
     MAKE_CASE(AArch64ISD::CALL_BTI)
     MAKE_CASE(AArch64ISD::MRRS)
     MAKE_CASE(AArch64ISD::MSRR)
@@ -5921,9 +5921,9 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
 
     const auto &SDI =
         static_cast<const AArch64SelectionDAGInfo &>(DAG.getSelectionDAGInfo());
-    SDValue MS =
-        SDI.EmitMOPS(AArch64ISD::MOPS_MEMSET_TAGGING, DAG, DL, Chain, Dst, Val,
-                     Size, Alignment, IsVol, DstPtrInfo, MachinePointerInfo{});
+    SDValue MS = SDI.EmitMOPS(AArch64::MOPSMemorySetTaggingPseudo, DAG, DL,
+                              Chain, Dst, Val, Size, Alignment, IsVol,
+                              DstPtrInfo, MachinePointerInfo{});
 
     // MOPS_MEMSET_TAGGING has 3 results (DstWb, SizeWb, Chain) whereas the
     // intrinsic has 2. So hide SizeWb using MERGE_VALUES. Otherwise
@@ -9353,13 +9353,11 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (InGlue.getNode())
     Ops.push_back(InGlue);
 
-  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
-
   // If we're doing a tall call, use a TC_RETURN here rather than an
   // actual call instruction.
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
-    SDValue Ret = DAG.getNode(Opc, DL, NodeTys, Ops);
+    SDValue Ret = DAG.getNode(Opc, DL, MVT::Other, Ops);
     if (IsCFICall)
       Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
 
@@ -9369,7 +9367,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   // Returns a chain and a flag for retval copy to use.
-  Chain = DAG.getNode(Opc, DL, NodeTys, Ops);
+  Chain = DAG.getNode(Opc, DL, {MVT::Other, MVT::Glue}, Ops);
   if (IsCFICall)
     Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
 
@@ -21907,17 +21905,10 @@ SDValue tryLowerPartialReductionToWideAdd(SDNode *N,
     return SDValue();
 
   bool InputIsSigned = ExtInputOpcode == ISD::SIGN_EXTEND;
-  auto BottomIntrinsic = InputIsSigned ? Intrinsic::aarch64_sve_saddwb
-                                       : Intrinsic::aarch64_sve_uaddwb;
-  auto TopIntrinsic = InputIsSigned ? Intrinsic::aarch64_sve_saddwt
-                                    : Intrinsic::aarch64_sve_uaddwt;
-
-  auto BottomID = DAG.getTargetConstant(BottomIntrinsic, DL, AccElemVT);
-  auto BottomNode =
-      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, AccVT, BottomID, Acc, Input);
-  auto TopID = DAG.getTargetConstant(TopIntrinsic, DL, AccElemVT);
-  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, AccVT, TopID, BottomNode,
-                     Input);
+  auto BottomOpcode = InputIsSigned ? AArch64ISD::SADDWB : AArch64ISD::UADDWB;
+  auto TopOpcode = InputIsSigned ? AArch64ISD::SADDWT : AArch64ISD::UADDWT;
+  auto BottomNode = DAG.getNode(BottomOpcode, DL, AccVT, Acc, Input);
+  return DAG.getNode(TopOpcode, DL, AccVT, BottomNode, Input);
 }
 
 static SDValue performIntrinsicCombine(SDNode *N,
@@ -22097,6 +22088,18 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_sve_bic_u:
     return DAG.getNode(AArch64ISD::BIC, SDLoc(N), N->getValueType(0),
                        N->getOperand(2), N->getOperand(3));
+  case Intrinsic::aarch64_sve_saddwb:
+    return DAG.getNode(AArch64ISD::SADDWB, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2));
+  case Intrinsic::aarch64_sve_saddwt:
+    return DAG.getNode(AArch64ISD::SADDWT, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2));
+  case Intrinsic::aarch64_sve_uaddwb:
+    return DAG.getNode(AArch64ISD::UADDWB, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2));
+  case Intrinsic::aarch64_sve_uaddwt:
+    return DAG.getNode(AArch64ISD::UADDWT, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2));
   case Intrinsic::aarch64_sve_eor_u:
     return DAG.getNode(ISD::XOR, SDLoc(N), N->getValueType(0), N->getOperand(2),
                        N->getOperand(3));
@@ -29702,6 +29705,27 @@ void AArch64TargetLowering::verifyTargetSDNode(const SDNode *N) const {
   switch (N->getOpcode()) {
   default:
     break;
+  case AArch64ISD::SADDWT:
+  case AArch64ISD::SADDWB:
+  case AArch64ISD::UADDWT:
+  case AArch64ISD::UADDWB: {
+    assert(N->getNumValues() == 1 && "Expected one result!");
+    assert(N->getNumOperands() == 2 && "Expected two operands!");
+    EVT VT = N->getValueType(0);
+    EVT Op0VT = N->getOperand(0).getValueType();
+    EVT Op1VT = N->getOperand(1).getValueType();
+    assert(VT.isVector() && Op0VT.isVector() && Op1VT.isVector() &&
+           VT.isInteger() && Op0VT.isInteger() && Op1VT.isInteger() &&
+           "Expected integer vectors!");
+    assert(VT == Op0VT &&
+           "Expected result and first input to have the same type!");
+    assert(Op0VT.getSizeInBits() == Op1VT.getSizeInBits() &&
+           "Expected vectors of equal size!");
+    assert(Op0VT.getVectorElementCount() * 2 == Op1VT.getVectorElementCount() &&
+           "Expected result vector and first input vector to have half the "
+           "lanes of the second input vector!");
+    break;
+  }
   case AArch64ISD::SUNPKLO:
   case AArch64ISD::SUNPKHI:
   case AArch64ISD::UUNPKLO:

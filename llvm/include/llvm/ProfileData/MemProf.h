@@ -1,6 +1,7 @@
 #ifndef LLVM_PROFILEDATA_MEMPROF_H_
 #define LLVM_PROFILEDATA_MEMPROF_H_
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
@@ -24,8 +25,6 @@ struct MemProfRecord;
 
 // The versions of the indexed MemProf format
 enum IndexedVersion : uint64_t {
-  // Version 0: This version didn't have a version field.
-  Version0 = 0,
   // Version 1: Added a version field to the header.
   Version1 = 1,
   // Version 2: Added a call stack table.
@@ -35,7 +34,7 @@ enum IndexedVersion : uint64_t {
   Version3 = 3,
 };
 
-constexpr uint64_t MinimumSupportedVersion = Version0;
+constexpr uint64_t MinimumSupportedVersion = Version1;
 constexpr uint64_t MaximumSupportedVersion = Version3;
 
 // Verify that the minimum and maximum satisfy the obvious constraint.
@@ -895,11 +894,12 @@ struct LinearFrameIdConverter {
 // call stack array in the profile.
 struct LinearCallStackIdConverter {
   const unsigned char *CallStackBase;
-  std::function<Frame(LinearFrameId)> FrameIdToFrame;
+  llvm::function_ref<Frame(LinearFrameId)> FrameIdToFrame;
 
   LinearCallStackIdConverter() = delete;
-  LinearCallStackIdConverter(const unsigned char *CallStackBase,
-                             std::function<Frame(LinearFrameId)> FrameIdToFrame)
+  LinearCallStackIdConverter(
+      const unsigned char *CallStackBase,
+      llvm::function_ref<Frame(LinearFrameId)> FrameIdToFrame)
       : CallStackBase(CallStackBase), FrameIdToFrame(FrameIdToFrame) {}
 
   std::vector<Frame> operator()(LinearCallStackId LinearCSId) {
@@ -966,14 +966,20 @@ struct CallerCalleePairExtractor {
   // The base address of the radix tree array.
   const unsigned char *CallStackBase;
   // A functor to convert a linear FrameId to a Frame.
-  std::function<Frame(LinearFrameId)> FrameIdToFrame;
+  llvm::function_ref<Frame(LinearFrameId)> FrameIdToFrame;
   // A map from caller GUIDs to lists of call sites in respective callers.
   DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> CallerCalleePairs;
 
+  // The set of linear call stack IDs that we've visited.
+  BitVector Visited;
+
   CallerCalleePairExtractor() = delete;
-  CallerCalleePairExtractor(const unsigned char *CallStackBase,
-                            std::function<Frame(LinearFrameId)> FrameIdToFrame)
-      : CallStackBase(CallStackBase), FrameIdToFrame(FrameIdToFrame) {}
+  CallerCalleePairExtractor(
+      const unsigned char *CallStackBase,
+      llvm::function_ref<Frame(LinearFrameId)> FrameIdToFrame,
+      unsigned RadixTreeSize)
+      : CallStackBase(CallStackBase), FrameIdToFrame(FrameIdToFrame),
+        Visited(RadixTreeSize) {}
 
   void operator()(LinearCallStackId LinearCSId) {
     const unsigned char *Ptr =
@@ -1001,6 +1007,15 @@ struct CallerCalleePairExtractor {
       uint64_t CallerGUID = F.Function;
       LineLocation Loc(F.LineOffset, F.Column);
       CallerCalleePairs[CallerGUID].emplace_back(Loc, CalleeGUID);
+
+      // Keep track of the indices we've visited.  If we've already visited the
+      // current one, terminate the traversal.  We will not discover any new
+      // caller-callee pair by continuing the traversal.
+      unsigned Offset =
+          std::distance(CallStackBase, Ptr) / sizeof(LinearFrameId);
+      if (Visited.test(Offset))
+        break;
+      Visited.set(Offset);
 
       Ptr += sizeof(LinearFrameId);
       CalleeGUID = CallerGUID;
