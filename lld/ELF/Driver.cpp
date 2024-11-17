@@ -1562,7 +1562,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
         continue;
       arg->claim();
       if (!isValidReportString(option.second)) {
-        ErrAlways(ctx) << Twine("-z ") << reportArg.first << "= parameter "
+        ErrAlways(ctx) << "-z " << reportArg.first << "= parameter "
                        << option.second << " is not recognized";
         continue;
       }
@@ -1808,7 +1808,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       if (std::optional<MemoryBufferRef> buffer = readFile(ctx, *path))
         readVersionScript(ctx, *buffer);
     } else {
-      ErrAlways(ctx) << Twine("cannot find version script ") << arg->getValue();
+      ErrAlways(ctx) << "cannot find version script " << arg->getValue();
     }
 }
 
@@ -1953,7 +1953,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
         }
         break;
       }
-      ErrAlways(ctx) << Twine("cannot find linker script ") << arg->getValue();
+      ErrAlways(ctx) << "cannot find linker script " << arg->getValue();
       break;
     case OPT_as_needed:
       ctx.arg.asNeeded = true;
