@@ -132,24 +132,27 @@ private:
   constexpr iterator<is_const> end_impl() const {
     bool is_empty                  = end_is_empty();
     const auto ranges_to_iterators = [is_empty, &b = bases_]<std::size_t... I>(std::index_sequence<I...>) {
-      const auto begin_or_first_end = [is_empty]<bool is_first>(const auto& rng) {
-        if constexpr (is_first)
+      const auto begin_or_first_end = [is_empty]<class is_first>(is_first, const auto& rng) {
+        if constexpr (is_first::value)
           return is_empty ? ranges::begin(rng) : cartesian_common_arg_end(rng);
         return ranges::begin(rng);
       };
-      return std::make_tuple(begin_or_first_end<I == 0>(std::get<I>(b))...);
+
+      return std::make_tuple(begin_or_first_end(std::bool_constant<I == 0>{}, std::get<I>(b))...);
     };
     iterator<is_const> it(*this, ranges_to_iterators(std::make_index_sequence<1 + sizeof...(Vs)>{}));
     return it;
   }
 
-  template <auto N = 1>
+  template <std::size_t N = 1>
   constexpr bool end_is_empty() const {
     if constexpr (N == 1 + sizeof...(Vs))
       return false;
-    if (const auto& v = std::get<N>(bases_); ranges::empty(v))
-      return true;
-    return end_is_empty<N + 1>();
+    else {
+      if (const auto& v = std::get<N>(bases_); ranges::empty(v))
+        return true;
+      return end_is_empty<N + 1>();
+    }
   }
 
   constexpr auto size_impl() const {
@@ -179,6 +182,8 @@ class cartesian_product_view<First, Vs...>::iterator {
     else
       return input_iterator_tag{};
   }
+
+  friend cartesian_product_view;
 
 public:
   using iterator_category = input_iterator_tag;
