@@ -475,6 +475,21 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
   assert((ND || DC) && "Can't find arguments for a decl if one isn't provided");
   // Accumulate the set of template argument lists in this structure.
   MultiLevelTemplateArgumentList Result;
+  getTemplateInstantiationArgs(
+      Result, ND, DC, Final, Innermost, RelativeToPrimary, Pattern,
+      ForConstraintInstantiation, SkipForSpecialization,
+      ForDefaultArgumentSubstitution);
+  return Result;
+}
+
+void Sema::getTemplateInstantiationArgs(
+    MultiLevelTemplateArgumentList &Result, const NamedDecl *ND,
+    const DeclContext *DC, bool Final,
+    std::optional<ArrayRef<TemplateArgument>> Innermost, bool RelativeToPrimary,
+    const FunctionDecl *Pattern, bool ForConstraintInstantiation,
+    bool SkipForSpecialization, bool ForDefaultArgumentSubstitution) {
+  assert((ND || DC) && "Can't find arguments for a decl if one isn't provided");
+  // Accumulate the set of template argument lists in this structure.
 
   using namespace TemplateInstArgsHelpers;
   const Decl *CurDecl = ND;
@@ -535,14 +550,12 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
     }
 
     if (R.IsDone)
-      return Result;
+      return;
     if (R.ClearRelativeToPrimary)
       RelativeToPrimary = false;
     assert(R.NextDecl);
     CurDecl = R.NextDecl;
   }
-
-  return Result;
 }
 
 bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
