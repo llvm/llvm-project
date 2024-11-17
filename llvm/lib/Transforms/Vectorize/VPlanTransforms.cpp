@@ -1518,7 +1518,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                     Ops.push_back(Mask);
                     Ops.push_back(&EVL);
                     return new VPWidenIntrinsicRecipe(
-                        *CI, VPID, Ops, TypeInfo.inferScalarType(CInst),
+                        VPID, Ops, TypeInfo.inferScalarType(CInst),
                         CInst->getDebugLoc());
                   })
               .Case<VPWidenSelectRecipe>([&](VPWidenSelectRecipe *Sel) {

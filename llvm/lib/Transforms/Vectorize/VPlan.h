@@ -1650,14 +1650,14 @@ class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags {
   bool MayHaveSideEffects;
 
 public:
-  VPWidenIntrinsicRecipe(Instruction &I, Intrinsic::ID VectorIntrinsicID,
+  VPWidenIntrinsicRecipe(CallInst &CI, Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
                          DebugLoc DL = {})
-      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, I),
+      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, CI),
         VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty),
-        MayReadFromMemory(I.mayReadFromMemory()),
-        MayWriteToMemory(I.mayWriteToMemory()),
-        MayHaveSideEffects(I.mayHaveSideEffects()) {}
+        MayReadFromMemory(CI.mayReadFromMemory()),
+        MayWriteToMemory(CI.mayWriteToMemory()),
+        MayHaveSideEffects(CI.mayHaveSideEffects()) {}
 
   VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
