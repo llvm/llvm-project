@@ -1104,14 +1104,6 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
       continue;
     }
 
-    std::string msg = getLocation(offset) + ": has non-ABS relocation " +
-                      toStr(ctx, type) + " against symbol '" + toStr(ctx, sym) +
-                      "'";
-    if (expr != R_PC && !(emachine == EM_386 && type == R_386_GOTPC)) {
-      Err(ctx) << msg;
-      return;
-    }
-
     // If the control reaches here, we found a PC-relative relocation in a
     // non-ALLOC section. Since non-ALLOC section is not loaded into memory
     // at runtime, the notion of PC-relative doesn't make sense here. So,
@@ -1124,10 +1116,14 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
     // against _GLOBAL_OFFSET_TABLE_ for .debug_info. The bug has been fixed in
     // 2017 (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82630), but we need to
     // keep this bug-compatible code for a while.
-    Warn(ctx) << msg;
-    target.relocateNoSym(
-        bufLoc, type,
-        SignExtend64<bits>(sym.getVA(ctx, addend - offset - outSecOff)));
+    bool isErr = expr != R_PC && !(emachine == EM_386 && type == R_386_GOTPC);
+    auto diag = isErr ? Err(ctx) : Warn(ctx);
+    diag << getLocation(offset) << ": has non-ABS relocation " << type
+         << " against symbol '" << &sym << "'";
+    if (!isErr)
+      target.relocateNoSym(
+          bufLoc, type,
+          SignExtend64<bits>(sym.getVA(ctx, addend - offset - outSecOff)));
   }
 }
 
