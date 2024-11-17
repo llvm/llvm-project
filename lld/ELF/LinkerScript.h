@@ -332,12 +332,15 @@ class LinkerScript final {
   // LinkerScript.
   AddressState *state = nullptr;
 
-  OutputSection *aether;
+  std::unique_ptr<OutputSection> aether;
 
   uint64_t dot = 0;
 
 public:
-  LinkerScript(Ctx &ctx) : ctx(ctx) {}
+  // OutputSection may be incomplete. Avoid inline ctor/dtor.
+  LinkerScript(Ctx &ctx);
+  ~LinkerScript();
+
   OutputDesc *createOutputSection(StringRef name, StringRef location);
   OutputDesc *getOrCreateOutputSection(StringRef name);
 
