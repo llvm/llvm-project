@@ -124,8 +124,7 @@ opt::InputArgList ELFOptTable::parse(Ctx &ctx, ArrayRef<const char *> argv) {
 
   handleColorDiagnostics(ctx, args);
   if (missingCount)
-    ErrAlways(ctx) << Twine(args.getArgString(missingIndex))
-                   << ": missing argument";
+    ErrAlways(ctx) << args.getArgString(missingIndex) << ": missing argument";
 
   for (opt::Arg *arg : args.filtered(OPT_UNKNOWN)) {
     std::string nearest;

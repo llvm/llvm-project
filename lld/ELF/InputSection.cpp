@@ -1031,7 +1031,7 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
                 (f->getRelocTargetSym(*it).getVA(ctx) + getAddend<ELFT>(*it));
         }
         if (overwriteULEB128(bufLoc, val) >= 0x80)
-          Err(ctx) << getLocation(offset) << ": ULEB128 value " << Twine(val)
+          Err(ctx) << getLocation(offset) << ": ULEB128 value " << val
                    << " exceeds available space; references '" << &sym << "'";
         continue;
       }
@@ -1367,8 +1367,7 @@ void EhInputSection::split(ArrayRef<RelTy> rels) {
     d = d.slice(size);
   }
   if (msg)
-    Err(file->ctx) << "corrupted .eh_frame: " << Twine(msg)
-                   << "\n>>> defined in "
+    Err(file->ctx) << "corrupted .eh_frame: " << msg << "\n>>> defined in "
                    << getObjMsg(d.data() - content().data());
 }
 

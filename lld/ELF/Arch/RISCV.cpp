@@ -1197,9 +1197,9 @@ mergeAttributesSection(Ctx &ctx,
             firstStackAlign = sec;
             firstStackAlignValue = *i;
           } else if (r.first->second != *i) {
-            Err(ctx) << sec << " has stack_align=" << Twine(*i) << " but "
+            Err(ctx) << sec << " has stack_align=" << *i << " but "
                      << firstStackAlign
-                     << " has stack_align=" << Twine(firstStackAlignValue);
+                     << " has stack_align=" << firstStackAlignValue;
           }
         }
         continue;

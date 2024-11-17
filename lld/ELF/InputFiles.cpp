@@ -1042,8 +1042,8 @@ InputSectionBase *ObjFile<ELFT>::getRelocTarget(uint32_t idx, uint32_t info) {
       return target;
   }
 
-  ErrAlways(ctx) << this << Twine(": relocation section (index ") << idx
-                 << ") has invalid sh_info (" << info << ')';
+  Err(ctx) << this << ": relocation section (index " << idx
+           << ") has invalid sh_info (" << info << ')';
   return nullptr;
 }
 
