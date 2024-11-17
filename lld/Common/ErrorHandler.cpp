@@ -70,11 +70,6 @@ raw_ostream &lld::outs() {
   return e.outs();
 }
 
-raw_ostream &lld::errs() {
-  ErrorHandler &e = errorHandler();
-  return e.errs();
-}
-
 raw_ostream &ErrorHandler::outs() {
   if (disableOutput)
     return llvm::nulls();
