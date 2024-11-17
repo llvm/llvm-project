@@ -537,8 +537,6 @@ struct InStruct {
   std::unique_ptr<StringTableSection> strTab;
   std::unique_ptr<SymbolTableBaseSection> symTab;
   std::unique_ptr<SymtabShndxSection> symTabShndx;
-
-  void reset();
 };
 
 struct Ctx {
@@ -662,14 +660,11 @@ struct Ctx {
   llvm::DenseSet<std::pair<const Symbol *, uint64_t>> ppc64noTocRelax;
 
   Ctx();
-  void reset();
 
   llvm::raw_fd_ostream openAuxiliaryFile(llvm::StringRef, std::error_code &);
 
   ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
 };
-
-LLVM_LIBRARY_VISIBILITY extern Ctx ctx;
 
 // The first two elements of versionDefinitions represent VER_NDX_LOCAL and
 // VER_NDX_GLOBAL. This helper returns other elements.
