@@ -141,9 +141,9 @@ Patch657417Section::Patch657417Section(Ctx &ctx, InputSection *p, uint64_t off,
       patchee(p), patcheeOffset(off), instr(instr), isARM(isARM) {
   parent = p->getParent();
   patchSym = addSyntheticLocal(
-      ctx, saver().save("__CortexA8657417_" + utohexstr(getBranchAddr())),
+      ctx, ctx.saver.save("__CortexA8657417_" + utohexstr(getBranchAddr())),
       STT_FUNC, isARM ? 0 : 1, getSize(), *this);
-  addSyntheticLocal(ctx, saver().save(isARM ? "$a" : "$t"), STT_NOTYPE, 0, 0,
+  addSyntheticLocal(ctx, ctx.saver.save(isARM ? "$a" : "$t"), STT_NOTYPE, 0, 0,
                     *this);
 }
 
