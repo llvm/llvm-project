@@ -14,7 +14,6 @@
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/PrettyPrinter.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 
 using namespace clang;
