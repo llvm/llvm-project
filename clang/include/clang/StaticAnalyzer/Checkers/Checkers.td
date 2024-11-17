@@ -606,6 +606,10 @@ def ChrootChecker : Checker<"Chroot">,
   HelpText<"Check improper use of chroot">,
   Documentation<HasDocumentation>;
 
+def PthreadCreateChecker : Checker<"PthreadCreate">,
+   HelpText<"Check for creation of pthread">,
+   Documentation<HasDocumentation>;
+
 def PthreadLockChecker : Checker<"PthreadLock">,
   HelpText<"Simple lock -> unlock checker">,
   Dependencies<[PthreadLockBase]>,
