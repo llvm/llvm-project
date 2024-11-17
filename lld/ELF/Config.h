@@ -552,9 +552,9 @@ struct Ctx {
 
   // These variables are initialized by Writer and should not be used before
   // Writer is initialized.
-  uint8_t *bufferStart;
-  Partition *mainPart;
-  PhdrEntry *tlsPhdr;
+  uint8_t *bufferStart = nullptr;
+  Partition *mainPart = nullptr;
+  PhdrEntry *tlsPhdr = nullptr;
   struct OutSections {
     OutputSection *elfHeader;
     OutputSection *programHeaders;
@@ -562,7 +562,7 @@ struct Ctx {
     OutputSection *initArray;
     OutputSection *finiArray;
   };
-  OutSections out;
+  OutSections out{};
   SmallVector<OutputSection *, 0> outputSections;
   std::vector<Partition> partitions;
 
@@ -606,7 +606,7 @@ struct Ctx {
     // _TLS_MODULE_BASE_ on targets that support TLSDESC.
     Defined *tlsModuleBase;
   };
-  ElfSym sym;
+  ElfSym sym{};
   std::unique_ptr<SymbolTable> symtab;
 
   SmallVector<std::unique_ptr<MemoryBuffer>> memoryBuffers;
@@ -637,7 +637,7 @@ struct Ctx {
   // archive.
   std::unique_ptr<llvm::TarWriter> tar;
   // InputFile for linker created symbols with no source location.
-  InputFile *internalFile;
+  InputFile *internalFile = nullptr;
   // True if SHT_LLVM_SYMPART is used.
   std::atomic<bool> hasSympart{false};
   // True if there are TLS IE relocations. Set DF_STATIC_TLS if -shared.
@@ -646,7 +646,7 @@ struct Ctx {
   std::atomic<bool> needsTlsLd{false};
   // True if all native vtable symbols have corresponding type info symbols
   // during LTO.
-  bool ltoAllVtablesHaveTypeInfos;
+  bool ltoAllVtablesHaveTypeInfos = false;
 
   // Each symbol assignment and DEFINED(sym) reference is assigned an increasing
   // order. Each DEFINED(sym) evaluation checks whether the reference happens
