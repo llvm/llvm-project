@@ -644,7 +644,7 @@ uint32_t PPC64::calcEFlags() const {
     if (flag == 1)
       ErrAlways(ctx) << f << ": ABI version 1 is not supported";
     else if (flag > 2)
-      ErrAlways(ctx) << f << ": unrecognized e_flags: " << Twine(flag);
+      ErrAlways(ctx) << f << ": unrecognized e_flags: " << flag;
   }
   return 2;
 }
@@ -1100,7 +1100,7 @@ RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
   case R_PPC64_TLS:
     return R_TLSIE_HINT;
   default:
-    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
     return R_NONE;
   }

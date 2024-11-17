@@ -170,7 +170,7 @@ RelExpr SystemZ::getRelExpr(RelType type, const Symbol &s,
     return R_GOT_PC;
 
   default:
-    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
     return R_NONE;
   }

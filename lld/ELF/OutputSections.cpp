@@ -315,7 +315,7 @@ static SmallVector<uint8_t, 0> deflateShard(Ctx &ctx, ArrayRef<uint8_t> in,
   z_stream s = {};
   auto res = deflateInit2(&s, level, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
   if (res != 0) {
-    Err(ctx) << "--compress-sections: deflateInit2 returned " << Twine(res);
+    Err(ctx) << "--compress-sections: deflateInit2 returned " << res;
     return {};
   }
   s.next_in = const_cast<uint8_t *>(in.data());
