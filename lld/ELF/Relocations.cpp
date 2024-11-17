@@ -777,7 +777,7 @@ static void reportUndefinedSymbol(Ctx &ctx, const UndefinedDiag &undef,
   if (undef.isWarning)
     Warn(ctx) << msg;
   else
-    ctx.errHandler->error(msg, ErrorTag::SymbolNotFound, {sym.getName()});
+    ctx.e.error(msg, ErrorTag::SymbolNotFound, {sym.getName()});
 }
 
 void elf::reportUndefinedSymbols(Ctx &ctx) {

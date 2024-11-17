@@ -165,9 +165,9 @@ static lto::Config createConfig(Ctx &ctx) {
   }
 
   if (!ctx.arg.saveTempsArgs.empty())
-    checkError(*ctx.errHandler, c.addSaveTemps(ctx.arg.outputFile.str() + ".",
-                                               /*UseInputModulePath*/ true,
-                                               ctx.arg.saveTempsArgs));
+    checkError(ctx.e, c.addSaveTemps(ctx.arg.outputFile.str() + ".",
+                                     /*UseInputModulePath*/ true,
+                                     ctx.arg.saveTempsArgs));
   return c;
 }
 
@@ -278,7 +278,7 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     // their values are still not final.
     r.LinkerRedefined = sym->scriptDefined;
   }
-  checkError(*ctx.errHandler, ltoObj->add(std::move(f.obj), resols));
+  checkError(ctx.e, ltoObj->add(std::move(f.obj), resols));
 }
 
 // If LazyObjFile has not been added to link, emit empty index files.
@@ -329,14 +329,14 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
                              }));
 
   if (!ctx.bitcodeFiles.empty())
-    checkError(*ctx.errHandler, ltoObj->run(
-                                    [&](size_t task, const Twine &moduleName) {
-                                      buf[task].first = moduleName.str();
-                                      return std::make_unique<CachedFileStream>(
-                                          std::make_unique<raw_svector_ostream>(
-                                              buf[task].second));
-                                    },
-                                    cache));
+    checkError(ctx.e, ltoObj->run(
+                          [&](size_t task, const Twine &moduleName) {
+                            buf[task].first = moduleName.str();
+                            return std::make_unique<CachedFileStream>(
+                                std::make_unique<raw_svector_ostream>(
+                                    buf[task].second));
+                          },
+                          cache));
 
   // Emit empty index files for non-indexed files but not in single-module mode.
   if (ctx.arg.thinLTOModulesToCompile.empty()) {

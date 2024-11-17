@@ -49,7 +49,7 @@ template <class ELFT> class Writer {
 public:
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
-  Writer(Ctx &ctx) : ctx(ctx), buffer(ctx.errHandler->outputBuffer) {}
+  Writer(Ctx &ctx) : ctx(ctx), buffer(ctx.e.outputBuffer) {}
 
   void run();
 
@@ -342,7 +342,7 @@ template <class ELFT> void Writer<ELFT>::run() {
 
   // Handle --print-memory-usage option.
   if (ctx.arg.printMemoryUsage)
-    ctx.script->printMemoryUsage(ctx.errHandler->outs());
+    ctx.script->printMemoryUsage(ctx.e.outs());
 
   if (ctx.arg.checkSections)
     checkSections();
