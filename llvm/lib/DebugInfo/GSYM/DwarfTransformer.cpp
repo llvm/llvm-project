@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <thread>
-#include <unordered_set>
-
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
