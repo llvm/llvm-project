@@ -124,6 +124,9 @@ private:
   /// starting at bit zero.
   bool selectVSplatMaskR(SDValue N, SDValue &Imm) const override;
 
+  /// Select constant vector splats whose value is 1.
+  bool selectVSplatImmEq1(SDValue N) const override;
+
   bool trySelect(SDNode *Node) override;
 
   // Emits proper ABI for _mcount profiling calls.

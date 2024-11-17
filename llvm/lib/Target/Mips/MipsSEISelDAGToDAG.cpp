@@ -730,6 +730,18 @@ bool MipsSEDAGToDAGISel::selectVSplatUimmInvPow2(SDValue N,
   return false;
 }
 
+// Select const vector splat of 1.
+bool MipsSEDAGToDAGISel::selectVSplatImmEq1(SDValue N) const {
+  APInt ImmValue;
+  EVT EltTy = N->getValueType(0).getVectorElementType();
+
+  if (N->getOpcode() == ISD::BITCAST)
+    N = N->getOperand(0);
+
+  return selectVSplat(N.getNode(), ImmValue, EltTy.getSizeInBits()) &&
+         ImmValue.getBitWidth() == EltTy.getSizeInBits() && ImmValue == 1;
+}
+
 bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
   unsigned Opcode = Node->getOpcode();
   SDLoc DL(Node);

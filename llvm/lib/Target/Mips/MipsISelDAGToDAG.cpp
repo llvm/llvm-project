@@ -220,6 +220,10 @@ bool MipsDAGToDAGISel::selectVSplatMaskR(SDValue N, SDValue &Imm) const {
   return false;
 }
 
+bool MipsDAGToDAGISel::selectVSplatImmEq1(SDValue N) const {
+  llvm_unreachable("Unimplemented function.");
+}
+
 /// Convert vector addition with vector subtraction if that allows to encode
 /// constant as an immediate and thus avoid extra 'ldi' instruction.
 /// add X, <-1, -1...> --> sub X, <1, 1...>
