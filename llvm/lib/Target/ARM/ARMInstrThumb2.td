@@ -2807,7 +2807,7 @@ let isCodeGenOnly = 1, Defs = [CPSR] in {
 def t2LSRs1 : T2TwoRegShiftImm<(outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
                                "lsrs", ".w\t$Rd, $Rm, #1",
                                [(set rGPR:$Rd, CPSR, (ARMlsrs1 rGPR:$Rm))]>,
-      Sched<[WriteALU]> {
+              Sched<[WriteALU]> {
   let Inst{31-27} = 0b11101;
   let Inst{26-25} = 0b01;
   let Inst{24-21} = 0b0010;
@@ -2821,7 +2821,7 @@ def t2LSRs1 : T2TwoRegShiftImm<(outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
 def t2ASRs1 : T2TwoRegShiftImm<(outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
                                "asrs", ".w\t$Rd, $Rm, #1",
                                [(set rGPR:$Rd, CPSR, (ARMasrs1 rGPR:$Rm))]>,
-      Sched<[WriteALU]> {
+              Sched<[WriteALU]> {
   let Inst{31-27} = 0b11101;
   let Inst{26-25} = 0b01;
   let Inst{24-21} = 0b0010;

@@ -104,7 +104,7 @@ class VectorType;
     LSLS,  // Flag-setting shift left.
     LSRS1, // Flag-setting logical shift right by one bit.
     ASRS1, // Flag-setting arithmetic shift right by one bit.
-    RRX,   // Flag-setting shift right one bit with carry in.
+    RRX,   // Shift right one bit with carry in.
 
     ADDC, // Add with carry
     ADDE, // Add using carry
