@@ -100,44 +100,41 @@ static std::string getLocation(Ctx &ctx, InputSectionBase &s, const Symbol &sym,
 void elf::reportRangeError(Ctx &ctx, uint8_t *loc, const Relocation &rel,
                            const Twine &v, int64_t min, uint64_t max) {
   ErrorPlace errPlace = getErrorPlace(ctx, loc);
-  std::string hint;
+  auto diag = Err(ctx);
+  diag << errPlace.loc << "relocation " << rel.type
+       << " out of range: " << v.str() << " is not in [" << min << ", " << max
+       << ']';
+
   if (rel.sym) {
     if (!rel.sym->isSection())
-      hint = "; references '" + toStr(ctx, *rel.sym) + '\'';
+      diag << "; references '" << rel.sym << '\'';
     else if (auto *d = dyn_cast<Defined>(rel.sym))
-      hint = ("; references section '" + d->section->name + "'").str();
+      diag << "; references section '" << d->section->name << "'";
 
     if (ctx.arg.emachine == EM_X86_64 && rel.type == R_X86_64_PC32 &&
         rel.sym->getOutputSection() &&
         (rel.sym->getOutputSection()->flags & SHF_X86_64_LARGE)) {
-      hint += "; R_X86_64_PC32 should not reference a section marked "
+      diag << "; R_X86_64_PC32 should not reference a section marked "
               "SHF_X86_64_LARGE";
     }
   }
   if (!errPlace.srcLoc.empty())
-    hint += "\n>>> referenced by " + errPlace.srcLoc;
+    diag << "\n>>> referenced by " << errPlace.srcLoc;
   if (rel.sym && !rel.sym->isSection())
-    hint += getDefinedLocation(ctx, *rel.sym);
+    diag << getDefinedLocation(ctx, *rel.sym);
 
   if (errPlace.isec && errPlace.isec->name.starts_with(".debug"))
-    hint += "; consider recompiling with -fdebug-types-section to reduce size "
+    diag << "; consider recompiling with -fdebug-types-section to reduce size "
             "of debug sections";
-
-  Err(ctx) << errPlace.loc << "relocation " << rel.type
-           << " out of range: " << v.str() << " is not in [" << Twine(min).str()
-           << ", " << Twine(max).str() << "]" << hint;
 }
 
 void elf::reportRangeError(Ctx &ctx, uint8_t *loc, int64_t v, int n,
                            const Symbol &sym, const Twine &msg) {
-  ErrorPlace errPlace = getErrorPlace(ctx, loc);
-  std::string hint;
+  auto diag = Err(ctx);
+  diag << getErrorPlace(ctx, loc).loc << msg << " is out of range: " << v
+       << " is not in [" << llvm::minIntN(n) << ", " << llvm::maxIntN(n) << "]";
   if (!sym.getName().empty())
-    hint = "; references '" + toStr(ctx, sym) + '\'' +
-           getDefinedLocation(ctx, sym);
-  Err(ctx) << errPlace.loc << msg << " is out of range: " << Twine(v)
-           << " is not in [" << Twine(llvm::minIntN(n)) << ", "
-           << Twine(llvm::maxIntN(n)) << "]" << hint;
+    diag << "; references '" << &sym << '\'' << getDefinedLocation(ctx, sym);
 }
 
 // Build a bitmask with one bit set for each 64 subset of RelExpr.
