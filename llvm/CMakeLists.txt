@@ -27,7 +27,7 @@ if (NOT PACKAGE_VERSION)
 endif()
 
 if(NOT DEFINED LLVM_SHLIB_SYMBOL_VERSION)
-  # "Symbol version prefix for libLLVM.so"
+  # "Symbol version prefix for libLLVM.so and libclang-cpp.so"
   set(LLVM_SHLIB_SYMBOL_VERSION "LLVM_${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
 endif()
 
