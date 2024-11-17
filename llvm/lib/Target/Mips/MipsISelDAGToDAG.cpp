@@ -177,7 +177,6 @@ bool MipsDAGToDAGISel::selectVSplatMaskR(SDValue N, SDValue &Imm) const {
 
 bool MipsDAGToDAGISel::selectVSplatImmEq1(SDValue N) const {
   llvm_unreachable("Unimplemented function.");
-  return false;
 }
 
 /// Convert vector addition with vector subtraction if that allows to encode

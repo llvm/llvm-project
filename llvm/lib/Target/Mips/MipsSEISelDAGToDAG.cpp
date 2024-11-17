@@ -564,18 +564,6 @@ selectVSplatCommon(SDValue N, SDValue &Imm, bool Signed,
   return false;
 }
 
-// Select const vector splat of 1.
-bool MipsSEDAGToDAGISel::selectVSplatImmEq1(SDValue N) const {
-  EVT EltTy = N->getValueType(0).getVectorElementType();
-
-  if (N->getOpcode() == ISD::BITCAST)
-    N = N->getOperand(0);
-
-  APInt Imm;
-  return selectVSplat(N.getNode(), Imm, EltTy.getSizeInBits()) &&
-         Imm.getBitWidth() == EltTy.getSizeInBits() && Imm == 1;
-}
-
 // Select constant vector splats whose value is a power of 2.
 //
 // In addition to the requirements of selectVSplat(), this function returns
@@ -689,6 +677,18 @@ bool MipsSEDAGToDAGISel::selectVSplatUimmInvPow2(SDValue N,
   }
 
   return false;
+}
+
+// Select const vector splat of 1.
+bool MipsSEDAGToDAGISel::selectVSplatImmEq1(SDValue N) const {
+  APInt ImmValue;
+  EVT EltTy = N->getValueType(0).getVectorElementType();
+
+  if (N->getOpcode() == ISD::BITCAST)
+    N = N->getOperand(0);
+
+  return selectVSplat(N.getNode(), ImmValue, EltTy.getSizeInBits()) &&
+         ImmValue.getBitWidth() == EltTy.getSizeInBits() && ImmValue == 1;
 }
 
 bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
