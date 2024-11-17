@@ -118,9 +118,9 @@ void OutputSection::commitSection(InputSection *isec) {
       type = SHT_CREL;
       if (type == SHT_REL) {
         if (name.consume_front(".rel"))
-          name = saver(ctx).save(".crel" + name);
+          name = ctx.saver.save(".crel" + name);
       } else if (name.consume_front(".rela")) {
-        name = saver(ctx).save(".crel" + name);
+        name = ctx.saver.save(".crel" + name);
       }
     } else {
       if (typeIsSet || !canMergeToProgbits(ctx, type) ||

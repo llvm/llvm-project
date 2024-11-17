@@ -301,8 +301,8 @@ template <class ELFT> void MarkLive<ELFT>::run() {
       // As a workaround for glibc libc.a before 2.34
       // (https://sourceware.org/PR27492), retain __libc_atexit and similar
       // sections regardless of zStartStopGC.
-      cNamedSections[saver(ctx).save("__start_" + sec->name)].push_back(sec);
-      cNamedSections[saver(ctx).save("__stop_" + sec->name)].push_back(sec);
+      cNamedSections[ctx.saver.save("__start_" + sec->name)].push_back(sec);
+      cNamedSections[ctx.saver.save("__stop_" + sec->name)].push_back(sec);
     }
   }
 

@@ -2153,7 +2153,7 @@ void Writer<ELFT>::addStartStopSymbols(OutputSection &osec) {
   StringRef s = osec.name;
   if (!isValidCIdentifier(s))
     return;
-  StringSaver &ss = saver(ctx);
+  StringSaver &ss = ctx.saver;
   Defined *startSym = addOptionalRegular(ctx, ss.save("__start_" + s), &osec, 0,
                                          ctx.arg.zStartStopVisibility);
   Defined *stopSym = addOptionalRegular(ctx, ss.save("__stop_" + s), &osec, -1,

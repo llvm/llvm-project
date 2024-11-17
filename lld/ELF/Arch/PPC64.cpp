@@ -271,7 +271,7 @@ static void writeSequence(Ctx &ctx, const char *prefix, int from,
   char name[16];
   int first;
   const size_t size = 32 - from + tail.size();
-  MutableArrayRef<uint32_t> buf(bAlloc(ctx).Allocate<uint32_t>(size), size);
+  MutableArrayRef<uint32_t> buf(ctx.bAlloc.Allocate<uint32_t>(size), size);
   uint32_t *ptr = buf.data();
   for (int r = from; r < 32; ++r) {
     format("%s%d", prefix, r).snprint(name, sizeof(name));

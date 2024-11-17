@@ -95,7 +95,7 @@ static void concatLTOPluginOptions(Ctx &ctx,
   for (size_t i = 0, e = args.size(); i != e; ++i) {
     StringRef s = args[i];
     if ((s == "-plugin-opt" || s == "--plugin-opt") && i + 1 != e) {
-      v.push_back(saver(ctx).save(s + "=" + args[i + 1]).data());
+      v.push_back(ctx.saver.save(s + "=" + args[i + 1]).data());
       ++i;
     } else {
       v.push_back(args[i]);
@@ -118,7 +118,7 @@ opt::InputArgList ELFOptTable::parse(Ctx &ctx, ArrayRef<const char *> argv) {
 
   // Expand response files (arguments in the form of @<filename>)
   // and then parse the argument again.
-  cl::ExpandResponseFiles(saver(ctx), getQuotingStyle(ctx, args), vec);
+  cl::ExpandResponseFiles(ctx.saver, getQuotingStyle(ctx, args), vec);
   concatLTOPluginOptions(ctx, vec);
   args = this->ParseArgs(vec, missingIndex, missingCount);
 
