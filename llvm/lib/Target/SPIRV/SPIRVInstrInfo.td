@@ -524,6 +524,9 @@ defm OpISubBorrow: BinOpTypedGen<"OpISubBorrow", 150, subc, 0, 1>;
 def OpUMulExtended: BinOp<"OpUMulExtended", 151>;
 def OpSMulExtended: BinOp<"OpSMulExtended", 152>;
 
+def OpSDot: BinOp<"OpSDot", 4450>;
+def OpUDot: BinOp<"OpUDot", 4451>;
+
 // 3.42.14 Bit Instructions
 
 defm OpShiftRightLogical: BinOpTypedGen<"OpShiftRightLogical", 194, srl, 0, 1>;
@@ -636,6 +639,7 @@ let isReturn = 1, hasDelaySlot = 0, isBarrier = 0, isTerminator = 1, isNotDuplic
 }
 def OpLifetimeStart: Op<256, (outs), (ins ID:$ptr, i32imm:$sz), "OpLifetimeStart $ptr, $sz">;
 def OpLifetimeStop: Op<257, (outs), (ins ID:$ptr, i32imm:$sz), "OpLifetimeStop $ptr, $sz">;
+def OpDemoteToHelperInvocation: SimpleOp<"OpDemoteToHelperInvocation", 5380>;
 
 // 3.42.18 Atomic Instructions
 

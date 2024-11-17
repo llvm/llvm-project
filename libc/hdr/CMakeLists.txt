@@ -81,6 +81,8 @@ add_proxy_header_library(
     libc.include.signal
 )
 
+add_header_library(stdlib_overlay HDRS stdlib_overlay.h)
+
 add_proxy_header_library(
   stdlib_macros
   HDRS
@@ -193,3 +195,4 @@ add_proxy_header_library(
 )
 
 add_subdirectory(types)
+add_subdirectory(func)

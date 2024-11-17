@@ -14,7 +14,6 @@
 #include "clang/Sema/Attr.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
-#include "clang/Sema/SemaDiagnostic.h"
 
 using namespace clang;
 
@@ -197,4 +196,13 @@ void SemaSYCL::handleKernelAttr(Decl *D, const ParsedAttr &AL) {
   }
 
   handleSimpleAttribute<SYCLKernelAttr>(*this, D, AL);
+}
+
+void SemaSYCL::handleKernelEntryPointAttr(Decl *D, const ParsedAttr &AL) {
+  ParsedType PT = AL.getTypeArg();
+  TypeSourceInfo *TSI = nullptr;
+  (void)SemaRef.GetTypeFromParser(PT, &TSI);
+  assert(TSI && "no type source info for attribute argument");
+  D->addAttr(::new (SemaRef.Context)
+                 SYCLKernelEntryPointAttr(SemaRef.Context, AL, TSI));
 }

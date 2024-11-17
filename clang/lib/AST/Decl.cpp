@@ -1738,13 +1738,12 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
 
     // Suppress inline namespace if it doesn't make the result ambiguous.
     if (Ctx->isInlineNamespace() && NameInScope) {
-      bool isRedundant =
-          cast<NamespaceDecl>(Ctx)->isRedundantInlineQualifierFor(NameInScope);
       if (P.SuppressInlineNamespace ==
               PrintingPolicy::SuppressInlineNamespaceMode::All ||
           (P.SuppressInlineNamespace ==
                PrintingPolicy::SuppressInlineNamespaceMode::Redundant &&
-           isRedundant)) {
+           cast<NamespaceDecl>(Ctx)->isRedundantInlineQualifierFor(
+               NameInScope))) {
         continue;
       }
     }
@@ -2709,20 +2708,20 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
       auto From = VDTemplSpec->getInstantiatedFrom();
       if (auto *VTD = From.dyn_cast<VarTemplateDecl *>()) {
         while (!VTD->isMemberSpecialization()) {
-          if (auto *NewVTD = VTD->getInstantiatedFromMemberTemplate())
-            VTD = NewVTD;
-          else
+          auto *NewVTD = VTD->getInstantiatedFromMemberTemplate();
+          if (!NewVTD)
             break;
+          VTD = NewVTD;
         }
         return getDefinitionOrSelf(VTD->getTemplatedDecl());
       }
       if (auto *VTPSD =
               From.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
         while (!VTPSD->isMemberSpecialization()) {
-          if (auto *NewVTPSD = VTPSD->getInstantiatedFromMember())
-            VTPSD = NewVTPSD;
-          else
+          auto *NewVTPSD = VTPSD->getInstantiatedFromMember();
+          if (!NewVTPSD)
             break;
+          VTPSD = NewVTPSD;
         }
         return getDefinitionOrSelf<VarDecl>(VTPSD);
       }
@@ -2731,14 +2730,15 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
 
   // If this is the pattern of a variable template, find where it was
   // instantiated from. FIXME: Is this necessary?
-  if (VarTemplateDecl *VTD = VD->getDescribedVarTemplate()) {
-    while (!VTD->isMemberSpecialization()) {
-      if (auto *NewVTD = VTD->getInstantiatedFromMemberTemplate())
-        VTD = NewVTD;
-      else
+  if (VarTemplateDecl *VarTemplate = VD->getDescribedVarTemplate()) {
+    while (!VarTemplate->isMemberSpecialization()) {
+      auto *NewVT = VarTemplate->getInstantiatedFromMemberTemplate();
+      if (!NewVT)
         break;
+      VarTemplate = NewVT;
     }
-    return getDefinitionOrSelf(VTD->getTemplatedDecl());
+
+    return getDefinitionOrSelf(VarTemplate->getTemplatedDecl());
   }
 
   if (VD == this)
@@ -3656,6 +3656,10 @@ unsigned FunctionDecl::getBuiltinID(bool ConsiderWrapperFunctions) const {
       (!hasAttr<ArmBuiltinAliasAttr>() && !hasAttr<BuiltinAliasAttr>()))
     return 0;
 
+  if (getASTContext().getLangOpts().CPlusPlus &&
+      BuiltinID == Builtin::BI__builtin_counted_by_ref)
+    return 0;
+
   const ASTContext &Context = getASTContext();
   if (!Context.BuiltinInfo.isPredefinedLibFunction(BuiltinID))
     return BuiltinID;
@@ -4154,10 +4158,10 @@ FunctionDecl::getTemplateInstantiationPattern(bool ForDefinition) const {
     // If we hit a point where the user provided a specialization of this
     // template, we're done looking.
     while (!ForDefinition || !Primary->isMemberSpecialization()) {
-      if (auto *NewPrimary = Primary->getInstantiatedFromMemberTemplate())
-        Primary = NewPrimary;
-      else
+      auto *NewPrimary = Primary->getInstantiatedFromMemberTemplate();
+      if (!NewPrimary)
         break;
+      Primary = NewPrimary;
     }
 
     return getDefinitionOrSelf(Primary->getTemplatedDecl());
@@ -4170,7 +4174,7 @@ FunctionTemplateDecl *FunctionDecl::getPrimaryTemplate() const {
   if (FunctionTemplateSpecializationInfo *Info
         = TemplateOrSpecialization
             .dyn_cast<FunctionTemplateSpecializationInfo*>()) {
-    return Info->getTemplate()->getMostRecentDecl();
+    return Info->getTemplate();
   }
   return nullptr;
 }

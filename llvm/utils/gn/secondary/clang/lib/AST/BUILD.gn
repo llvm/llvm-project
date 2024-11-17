@@ -109,6 +109,7 @@ static_library("AST") {
     "DeclPrinter.cpp",
     "DeclTemplate.cpp",
     "DeclarationName.cpp",
+    "DynamicRecursiveASTVisitor.cpp",
     "Expr.cpp",
     "ExprCXX.cpp",
     "ExprClassification.cpp",

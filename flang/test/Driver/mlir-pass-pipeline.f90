@@ -120,8 +120,8 @@ end program
 
 ! ALL-NEXT: CodeGenRewrite
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations eliminated
+! ALL-NEXT: ExternalNameConversion
 ! ALL-NEXT: TargetRewrite
 ! ALL-NEXT: CompilerGeneratedNamesConversion
-! ALL-NEXT: ExternalNameConversion
 ! ALL-NEXT: FIRToLLVMLowering
 ! ALL-NOT: LLVMIRLoweringPass

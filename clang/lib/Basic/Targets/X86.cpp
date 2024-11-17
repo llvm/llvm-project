@@ -430,8 +430,14 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAMXCOMPLEX = true;
     } else if (Feature == "+amx-fp8") {
       HasAMXFP8 = true;
+    } else if (Feature == "+amx-movrs") {
+      HasAMXMOVRS = true;
     } else if (Feature == "+amx-transpose") {
       HasAMXTRANSPOSE = true;
+    } else if (Feature == "+amx-avx512") {
+      HasAMXAVX512 = true;
+    } else if (Feature == "+amx-tf32") {
+      HasAMXTF32 = true;
     } else if (Feature == "+cmpccxadd") {
       HasCMPCCXADD = true;
     } else if (Feature == "+raoint") {
@@ -953,8 +959,14 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AMX_COMPLEX__");
   if (HasAMXFP8)
     Builder.defineMacro("__AMX_FP8__");
+  if (HasAMXMOVRS)
+    Builder.defineMacro("__AMX_MOVRS__");
   if (HasAMXTRANSPOSE)
     Builder.defineMacro("__AMX_TRANSPOSE__");
+  if (HasAMXAVX512)
+    Builder.defineMacro("__AMX_AVX512__");
+  if (HasAMXTF32)
+    Builder.defineMacro("__AMX_TF32__");
   if (HasCMPCCXADD)
     Builder.defineMacro("__CMPCCXADD__");
   if (HasRAOINT)
@@ -1080,11 +1092,14 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
   return llvm::StringSwitch<bool>(Name)
       .Case("adx", true)
       .Case("aes", true)
+      .Case("amx-avx512", true)
       .Case("amx-bf16", true)
       .Case("amx-complex", true)
       .Case("amx-fp16", true)
       .Case("amx-fp8", true)
       .Case("amx-int8", true)
+      .Case("amx-movrs", true)
+      .Case("amx-tf32", true)
       .Case("amx-tile", true)
       .Case("amx-transpose", true)
       .Case("avx", true)
@@ -1200,11 +1215,14 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Case("adx", HasADX)
       .Case("aes", HasAES)
+      .Case("amx-avx512", HasAMXAVX512)
       .Case("amx-bf16", HasAMXBF16)
       .Case("amx-complex", HasAMXCOMPLEX)
       .Case("amx-fp16", HasAMXFP16)
       .Case("amx-fp8", HasAMXFP8)
       .Case("amx-int8", HasAMXINT8)
+      .Case("amx-movrs", HasAMXMOVRS)
+      .Case("amx-tf32", HasAMXTF32)
       .Case("amx-tile", HasAMXTILE)
       .Case("amx-transpose", HasAMXTRANSPOSE)
       .Case("avx", SSELevel >= AVX)
