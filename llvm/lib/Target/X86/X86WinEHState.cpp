@@ -608,8 +608,18 @@ static int getSuccState(DenseMap<BasicBlock *, int> &InitialStates, Function &F,
   return CommonState;
 }
 
+static bool isSehScopeBegin(const CallBase &Call) {
+  const Function *CF = Call.getCalledFunction();
+  return CF && CF->isIntrinsic() &&
+         CF->getIntrinsicID() == Intrinsic::seh_scope_begin;
+}
+
 bool WinEHStatePass::isStateStoreNeeded(EHPersonality Personality,
                                         CallBase &Call) {
+  if (isSehScopeBegin(Call)) {
+    return true;
+  }
+
   // If the function touches memory, it needs a state store.
   if (isAsynchronousEHPersonality(Personality))
     return !Call.doesNotAccessMemory();
