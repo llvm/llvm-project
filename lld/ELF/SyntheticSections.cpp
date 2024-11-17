@@ -3806,7 +3806,7 @@ void elf::addVerneed(Ctx &ctx, Symbol &ss) {
   // [1..getVerDefNum(ctx)]; this causes the vernaux identifiers to start from
   // getVerDefNum(ctx)+1.
   if (file.vernauxs[ss.versionId] == 0)
-    file.vernauxs[ss.versionId] = ++SharedFile::vernauxNum + getVerDefNum(ctx);
+    file.vernauxs[ss.versionId] = ++ctx.vernauxNum + getVerDefNum(ctx);
 
   ss.versionId = file.vernauxs[ss.versionId];
 }
@@ -3839,7 +3839,7 @@ template <class ELFT> void VersionNeedSection<ELFT>::finalizeContents() {
     if (isGlibc2) {
       const char *ver = "GLIBC_ABI_DT_RELR";
       vn.vernauxs.push_back({hashSysV(ver),
-                             ++SharedFile::vernauxNum + getVerDefNum(ctx),
+                             ++ctx.vernauxNum + getVerDefNum(ctx),
                              getPartition(ctx).dynStrTab->addString(ver)});
     }
   }
@@ -3881,11 +3881,11 @@ template <class ELFT> void VersionNeedSection<ELFT>::writeTo(uint8_t *buf) {
 
 template <class ELFT> size_t VersionNeedSection<ELFT>::getSize() const {
   return verneeds.size() * sizeof(Elf_Verneed) +
-         SharedFile::vernauxNum * sizeof(Elf_Vernaux);
+         ctx.vernauxNum * sizeof(Elf_Vernaux);
 }
 
 template <class ELFT> bool VersionNeedSection<ELFT>::isNeeded() const {
-  return isLive() && SharedFile::vernauxNum != 0;
+  return isLive() && ctx.vernauxNum != 0;
 }
 
 void MergeSyntheticSection::addSection(MergeInputSection *ms) {

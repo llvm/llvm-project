@@ -144,6 +144,7 @@ void Ctx::reset() {
   hasSympart.store(false, std::memory_order_relaxed);
   hasTlsIe.store(false, std::memory_order_relaxed);
   needsTlsLd.store(false, std::memory_order_relaxed);
+  vernauxNum = 0;
   scriptSymOrderCounter = 1;
   scriptSymOrder.clear();
   ppc64noTocRelax.clear();
@@ -170,8 +171,6 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
     Ctx &ctx = elf::ctx;
     ctx.reset();
     ctx.partitions.emplace_back(ctx);
-
-    SharedFile::vernauxNum = 0;
   };
   context->e.logName = args::getFilenameWithoutExe(args[0]);
   context->e.errorLimitExceededMsg =

@@ -647,6 +647,8 @@ struct Ctx {
   // True if all native vtable symbols have corresponding type info symbols
   // during LTO.
   bool ltoAllVtablesHaveTypeInfos = false;
+  // Number of Vernaux entries (needed shared object names).
+  uint32_t vernauxNum = 0;
 
   // Each symbol assignment and DEFINED(sym) reference is assigned an increasing
   // order. Each DEFINED(sym) evaluation checks whether the reference happens
