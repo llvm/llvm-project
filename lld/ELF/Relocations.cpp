@@ -502,7 +502,7 @@ int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
     return 0;
 
   RelType type = rel.getType(ctx.arg.isMips64EL);
-  uint32_t pairTy = getMipsPairType(type, isLocal);
+  RelType pairTy = getMipsPairType(type, isLocal);
   if (pairTy == R_MIPS_NONE)
     return 0;
 
@@ -843,7 +843,7 @@ static bool maybeReportUndefined(Ctx &ctx, Undefined &sym,
 // theirs types into the single bit-set.
 template <class RelTy>
 RelType RelocationScanner::getMipsN32RelType(RelTy *&rel) const {
-  RelType type = 0;
+  uint32_t type = 0;
   uint64_t offset = rel->r_offset;
 
   int n = 0;
