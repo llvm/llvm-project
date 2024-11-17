@@ -295,7 +295,7 @@ void elf::printTraceSymbol(const Symbol &sym, StringRef name) {
   else
     s = ": definition of ";
 
-  Msg(ctx) << toStr(sym.file->ctx, sym.file) << s << name;
+  Msg(sym.file->ctx) << sym.file << s << name;
 }
 
 static void recordWhyExtract(Ctx &ctx, const InputFile *reference,
@@ -320,9 +320,7 @@ void elf::maybeWarnUnorderableSymbol(Ctx &ctx, const Symbol *sym) {
   const InputFile *file = sym->file;
   auto *d = dyn_cast<Defined>(sym);
 
-  auto report = [&](StringRef s) {
-    Warn(ctx) << toStr(ctx, file) << s << sym->getName();
-  };
+  auto report = [&](StringRef s) { Warn(ctx) << file << s << sym->getName(); };
 
   if (sym->isUndefined()) {
     if (cast<Undefined>(sym)->discardedSecIdx)
