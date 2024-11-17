@@ -21,6 +21,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Frontend/ASTUnit.h"
+#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -185,7 +186,12 @@ public:
   virtual bool usesPreprocessorOnly() const = 0;
 
   /// For AST-based actions, the kind of translation unit we're handling.
-  virtual TranslationUnitKind getTranslationUnitKind() { return TU_Complete; }
+  virtual TranslationUnitKind getTranslationUnitKind() {
+    // The ASTContext, if exists, knows the exact TUKind of the frondend.
+    if (Instance && Instance->hasASTContext())
+      return Instance->getASTContext().TUKind;
+    return TU_Complete;
+  }
 
   /// Does this action support use with PCH?
   virtual bool hasPCHSupport() const { return true; }
