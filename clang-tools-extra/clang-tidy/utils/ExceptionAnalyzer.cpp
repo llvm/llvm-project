@@ -449,7 +449,8 @@ void ExceptionAnalyzer::ExceptionInfo::reevaluateBehaviour() {
 ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     const FunctionDecl *Func, const ExceptionInfo::Throwables &Caught,
     llvm::SmallSet<const FunctionDecl *, 32> &CallStack) {
-  if (!Func || CallStack.contains(Func) || (!CallStack.empty() && !canThrow(Func)))
+  if (!Func || CallStack.contains(Func) ||
+      (!CallStack.empty() && !canThrow(Func)))
     return ExceptionInfo::createNonThrowing();
 
   if (const Stmt *Body = Func->getBody()) {
