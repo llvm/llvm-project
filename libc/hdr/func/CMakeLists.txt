@@ -40,13 +40,3 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.stdlib
 )
-
-add_proxy_header_library(
-  _Exit
-  HDRS
-    _Exit.h
-  DEPENDS
-    libc.hdr.stdlib_overlay
-  FULL_BUILD_DEPENDS
-    libc.include.stdlib
-)

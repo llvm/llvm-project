@@ -42,7 +42,7 @@ vector double test_flags_recipdivd() {
 // CHECK-LABEL: @test_flags_rsqrtf(
 // CHECK:    [[TMP0:%.*]] = load <4 x float>, ptr @a, align 16
 // CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> [[TMP0]])
-// CHECK-NEXT:    [[RSQRT:%.*]] = fdiv fast <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, [[TMP1]]
+// CHECK-NEXT:    [[RSQRT:%.*]] = fdiv fast <4 x float> splat (float 1.000000e+00), [[TMP1]]
 // CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr @b, align 16
 // CHECK-NEXT:    [[ADD:%.*]] = fadd <4 x float> [[RSQRT]], [[TMP2]]
 // CHECK-NEXT:    ret <4 x float> [[ADD]]
@@ -54,7 +54,7 @@ vector float test_flags_rsqrtf() {
 // CHECK-LABEL: @test_flags_rsqrtd(
 // CHECK:    [[TMP0:%.*]] = load <2 x double>, ptr @d, align 16
 // CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP0]])
-// CHECK-NEXT:    [[RSQRT:%.*]] = fdiv fast <2 x double> <double 1.000000e+00, double 1.000000e+00>, [[TMP1]]
+// CHECK-NEXT:    [[RSQRT:%.*]] = fdiv fast <2 x double> splat (double 1.000000e+00), [[TMP1]]
 // CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr @e, align 16
 // CHECK-NEXT:    [[ADD:%.*]] = fadd <2 x double> [[RSQRT]], [[TMP2]]
 // CHECK-NEXT:    ret <2 x double> [[ADD]]

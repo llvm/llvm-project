@@ -6,8 +6,8 @@ define i8 @test_switch_with_sext_phi(i8 %code) {
 ; CHECK-SAME: i8 [[CODE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[CODE]], label [[SW_EPILOG:%.*]] [
-; CHECK-NEXT:      i8 76, label [[SW_BB3:%.*]]
 ; CHECK-NEXT:      i8 108, label [[SW_BB2:%.*]]
+; CHECK-NEXT:      i8 76, label [[SW_BB3:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb2:
 ; CHECK-NEXT:    br label [[SW_EPILOG]]

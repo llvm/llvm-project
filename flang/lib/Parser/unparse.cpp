@@ -1703,6 +1703,13 @@ public:
   void Unparse(const IntrinsicStmt &x) { // R1519
     Word("INTRINSIC :: "), Walk(x.v, ", ");
   }
+  void Unparse(const CallStmt::StarOrExpr &x) {
+    if (x.v) {
+      Walk(*x.v);
+    } else {
+      Word("*");
+    }
+  }
   void Unparse(const CallStmt::Chevrons &x) { // CUDA
     Walk(std::get<0>(x.t)); // grid
     Word(","), Walk(std::get<1>(x.t)); // block
@@ -2138,6 +2145,27 @@ public:
     Put(",");
     Walk(std::get<std::optional<ScalarIntConstantExpr>>(x.t));
   }
+  void Unparse(const OmpFromClause &x) {
+    auto &expect{
+        std::get<std::optional<std::list<OmpFromClause::Expectation>>>(x.t)};
+    auto &iter{std::get<std::optional<std::list<OmpIteratorModifier>>>(x.t)};
+    bool needComma{false};
+    if (expect) {
+      Walk(*expect);
+      needComma = true;
+    }
+    if (iter) {
+      if (needComma) {
+        Put(", ");
+      }
+      Walk(*iter);
+      needComma = true;
+    }
+    if (needComma) {
+      Put(": ");
+    }
+    Walk(std::get<OmpObjectList>(x.t));
+  }
   void Unparse(const OmpIfClause &x) {
     Walk(std::get<std::optional<OmpIfClause::DirectiveNameModifier>>(x.t), ":");
     Walk(std::get<ScalarLogicalExpr>(x.t));
@@ -2157,6 +2185,7 @@ public:
     Put(":");
     Walk(std::get<OmpObjectList>(x.t));
   }
+  void Unparse(const OmpDetachClause &x) { Walk(x.v); }
   void Unparse(const OmpInReductionClause &x) {
     Walk(std::get<OmpReductionOperator>(x.t));
     Put(":");
@@ -2206,40 +2235,41 @@ public:
         std::get<std::optional<OmpNumTasksClause::Prescriptiveness>>(x.t), ":");
     Walk(std::get<ScalarIntExpr>(x.t));
   }
-  void Unparse(const OmpDependSinkVecLength &x) {
-    Walk(std::get<DefinedOperator>(x.t));
-    Walk(std::get<ScalarIntConstantExpr>(x.t));
+  void Unparse(const OmpDoacross::Sink &x) {
+    Word("SINK: ");
+    Walk(x.v.v);
   }
-  void Unparse(const OmpDependSinkVec &x) {
-    Walk(std::get<Name>(x.t));
-    Walk(std::get<std::optional<OmpDependSinkVecLength>>(x.t));
-  }
-  void Unparse(const OmpDependClause::InOut &x) {
+  void Unparse(const OmpDoacross::Source &) { Word("SOURCE"); }
+  void Unparse(const OmpDependClause::TaskDep &x) {
     Walk(std::get<OmpTaskDependenceType>(x.t));
     Put(":");
     Walk(std::get<OmpObjectList>(x.t));
-  }
-  bool Pre(const OmpDependClause &x) {
-    return common::visit(
-        common::visitors{
-            [&](const OmpDependClause::Source &) {
-              Word("SOURCE");
-              return false;
-            },
-            [&](const OmpDependClause::Sink &y) {
-              Word("SINK:");
-              Walk(y.v);
-              Put(")");
-              return false;
-            },
-            [&](const OmpDependClause::InOut &) { return true; },
-        },
-        x.u);
   }
   void Unparse(const OmpDefaultmapClause &x) {
     Walk(std::get<OmpDefaultmapClause::ImplicitBehavior>(x.t));
     Walk(":",
         std::get<std::optional<OmpDefaultmapClause::VariableCategory>>(x.t));
+  }
+  void Unparse(const OmpToClause &x) {
+    auto &expect{
+        std::get<std::optional<std::list<OmpToClause::Expectation>>>(x.t)};
+    auto &iter{std::get<std::optional<std::list<OmpIteratorModifier>>>(x.t)};
+    bool needComma{false};
+    if (expect) {
+      Walk(*expect);
+      needComma = true;
+    }
+    if (iter) {
+      if (needComma) {
+        Put(", ");
+      }
+      Walk(*iter);
+      needComma = true;
+    }
+    if (needComma) {
+      Put(": ");
+    }
+    Walk(std::get<OmpObjectList>(x.t));
   }
 #define GEN_FLANG_CLAUSE_UNPARSE
 #include "llvm/Frontend/OpenMP/OMP.inc"
@@ -2362,6 +2392,9 @@ public:
     switch (x.v) {
     case llvm::omp::Directive::OMPD_barrier:
       Word("BARRIER ");
+      break;
+    case llvm::omp::Directive::OMPD_scan:
+      Word("SCAN ");
       break;
     case llvm::omp::Directive::OMPD_taskwait:
       Word("TASKWAIT ");
@@ -2622,6 +2655,22 @@ public:
               EndOpenMP();
               return false;
             },
+            [&](const OpenMPDeclareMapperConstruct &z) {
+              Word("DECLARE MAPPER (");
+              const auto &spec{std::get<OmpDeclareMapperSpecifier>(z.t)};
+              if (auto mapname{std::get<std::optional<Name>>(spec.t)}) {
+                Walk(mapname);
+                Put(":");
+              }
+              Walk(std::get<TypeSpec>(spec.t));
+              Put("::");
+              Walk(std::get<Name>(spec.t));
+              Put(")");
+
+              Walk(std::get<OmpClauseList>(z.t));
+              Put("\n");
+              return false;
+            },
             [&](const OpenMPDeclareReductionConstruct &) {
               Word("DECLARE REDUCTION ");
               return true;
@@ -2858,6 +2907,7 @@ public:
   WALK_NESTED_ENUM(OmpDeviceTypeClause, Type) // OMP DEVICE_TYPE
   WALK_NESTED_ENUM(
       OmpReductionClause, ReductionModifier) // OMP reduction-modifier
+  WALK_NESTED_ENUM(OmpFromClause, Expectation) // OMP motion-expectation
   WALK_NESTED_ENUM(OmpIfClause, DirectiveNameModifier) // OMP directive-modifier
   WALK_NESTED_ENUM(OmpCancelType, Type) // OMP cancel-type
   WALK_NESTED_ENUM(OmpOrderClause, Type) // OMP order-type
@@ -2901,11 +2951,9 @@ public:
       Word("*");
     }
   }
-  void Unparse(const CUFKernelDoConstruct::Directive &x) {
-    Word("!$CUF KERNEL DO");
-    Walk(" (", std::get<std::optional<ScalarIntConstantExpr>>(x.t), ")");
+  void Unparse(const CUFKernelDoConstruct::LaunchConfiguration &x) {
     Word(" <<<");
-    const auto &grid{std::get<1>(x.t)};
+    const auto &grid{std::get<0>(x.t)};
     if (grid.empty()) {
       Word("*");
     } else if (grid.size() == 1) {
@@ -2914,7 +2962,7 @@ public:
       Walk("(", grid, ",", ")");
     }
     Word(",");
-    const auto &block{std::get<2>(x.t)};
+    const auto &block{std::get<1>(x.t)};
     if (block.empty()) {
       Word("*");
     } else if (block.size() == 1) {
@@ -2922,10 +2970,16 @@ public:
     } else {
       Walk("(", block, ",", ")");
     }
-    if (const auto &stream{std::get<3>(x.t)}) {
+    if (const auto &stream{std::get<2>(x.t)}) {
       Word(",STREAM="), Walk(*stream);
     }
     Word(">>>");
+  }
+  void Unparse(const CUFKernelDoConstruct::Directive &x) {
+    Word("!$CUF KERNEL DO");
+    Walk(" (", std::get<std::optional<ScalarIntConstantExpr>>(x.t), ")");
+    Walk(std::get<std::optional<CUFKernelDoConstruct::LaunchConfiguration>>(
+        x.t));
     Walk(" ", std::get<std::list<CUFReduction>>(x.t), " ");
     Word("\n");
   }

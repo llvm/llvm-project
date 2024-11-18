@@ -1223,7 +1223,6 @@ void SelectionDAGBuilder::handleDebugDeclare(Value *Address,
                         << " (could not emit func-arg dbg_value)\n");
     }
   }
-  return;
 }
 
 void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
@@ -2151,8 +2150,10 @@ void SelectionDAGBuilder::visitCleanupRet(const CleanupReturnInst &I) {
   FuncInfo.MBB->normalizeSuccProbs();
 
   // Create the terminator node.
-  SDValue Ret =
-      DAG.getNode(ISD::CLEANUPRET, getCurSDLoc(), MVT::Other, getControlRoot());
+  MachineBasicBlock *CleanupPadMBB =
+      FuncInfo.getMBB(I.getCleanupPad()->getParent());
+  SDValue Ret = DAG.getNode(ISD::CLEANUPRET, getCurSDLoc(), MVT::Other,
+                            getControlRoot(), DAG.getBasicBlock(CleanupPadMBB));
   DAG.setRoot(Ret);
 }
 
@@ -3775,7 +3776,7 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
     }
 
     if (!IsUnaryAbs && Opc != ISD::DELETED_NODE &&
-        (TLI.isOperationLegalOrCustomOrPromote(Opc, VT) ||
+        (TLI.isOperationLegalOrCustom(Opc, VT) ||
          (UseScalarMinMax &&
           TLI.isOperationLegalOrCustom(Opc, VT.getScalarType()))) &&
         // If the underlying comparison instruction is used by any other
@@ -3824,7 +3825,13 @@ void SelectionDAGBuilder::visitTrunc(const User &I) {
   SDValue N = getValue(I.getOperand(0));
   EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
                                                         I.getType());
-  setValue(&I, DAG.getNode(ISD::TRUNCATE, getCurSDLoc(), DestVT, N));
+  SDNodeFlags Flags;
+  if (auto *Trunc = dyn_cast<TruncInst>(&I)) {
+    Flags.setNoSignedWrap(Trunc->hasNoSignedWrap());
+    Flags.setNoUnsignedWrap(Trunc->hasNoUnsignedWrap());
+  }
+
+  setValue(&I, DAG.getNode(ISD::TRUNCATE, getCurSDLoc(), DestVT, N, Flags));
 }
 
 void SelectionDAGBuilder::visitZExt(const User &I) {
@@ -6408,6 +6415,50 @@ void SelectionDAGBuilder::visitVectorHistogram(const CallInst &I,
   DAG.setRoot(Histogram);
 }
 
+void SelectionDAGBuilder::visitVectorExtractLastActive(const CallInst &I,
+                                                       unsigned Intrinsic) {
+  assert(Intrinsic == Intrinsic::experimental_vector_extract_last_active &&
+         "Tried lowering invalid vector extract last");
+  SDLoc sdl = getCurSDLoc();
+  SDValue Data = getValue(I.getOperand(0));
+  SDValue Mask = getValue(I.getOperand(1));
+  SDValue PassThru = getValue(I.getOperand(2));
+
+  EVT DataVT = Data.getValueType();
+  EVT ScalarVT = PassThru.getValueType();
+  EVT BoolVT = Mask.getValueType().getScalarType();
+
+  // Find a suitable type for a stepvector.
+  ConstantRange VScaleRange(1, /*isFullSet=*/true); // Dummy value.
+  if (DataVT.isScalableVector())
+    VScaleRange = getVScaleRange(I.getCaller(), 64);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  unsigned EltWidth = TLI.getBitWidthForCttzElements(
+      I.getType(), DataVT.getVectorElementCount(), /*ZeroIsPoison=*/true,
+      &VScaleRange);
+  MVT StepVT = MVT::getIntegerVT(EltWidth);
+  EVT StepVecVT = DataVT.changeVectorElementType(StepVT);
+
+  // Zero out lanes with inactive elements, then find the highest remaining
+  // value from the stepvector.
+  SDValue Zeroes = DAG.getConstant(0, sdl, StepVecVT);
+  SDValue StepVec = DAG.getStepVector(sdl, StepVecVT);
+  SDValue ActiveElts = DAG.getSelect(sdl, StepVecVT, Mask, StepVec, Zeroes);
+  SDValue HighestIdx =
+      DAG.getNode(ISD::VECREDUCE_UMAX, sdl, StepVT, ActiveElts);
+
+  // Extract the corresponding lane from the data vector
+  EVT ExtVT = TLI.getVectorIdxTy(DAG.getDataLayout());
+  SDValue Idx = DAG.getZExtOrTrunc(HighestIdx, sdl, ExtVT);
+  SDValue Extract =
+      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, sdl, ScalarVT, Data, Idx);
+
+  // If all mask lanes were inactive, choose the passthru value instead.
+  SDValue AnyActive = DAG.getNode(ISD::VECREDUCE_OR, sdl, BoolVT, Mask);
+  SDValue Result = DAG.getSelect(sdl, ScalarVT, AnyActive, Extract, PassThru);
+  setValue(&I, Result);
+}
+
 /// Lower the call to the specified intrinsic function.
 void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                                              unsigned Intrinsic) {
@@ -8168,6 +8219,36 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
              DAG.getNode(ISD::EXTRACT_SUBVECTOR, sdl, ResultVT, Vec, Index));
     return;
   }
+  case Intrinsic::experimental_vector_match: {
+    SDValue Op1 = getValue(I.getOperand(0));
+    SDValue Op2 = getValue(I.getOperand(1));
+    SDValue Mask = getValue(I.getOperand(2));
+    EVT Op1VT = Op1.getValueType();
+    EVT Op2VT = Op2.getValueType();
+    EVT ResVT = Mask.getValueType();
+    unsigned SearchSize = Op2VT.getVectorNumElements();
+
+    // If the target has native support for this vector match operation, lower
+    // the intrinsic untouched; otherwise, expand it below.
+    if (!TLI.shouldExpandVectorMatch(Op1VT, SearchSize)) {
+      visitTargetIntrinsic(I, Intrinsic);
+      return;
+    }
+
+    SDValue Ret = DAG.getConstant(0, sdl, ResVT);
+
+    for (unsigned i = 0; i < SearchSize; ++i) {
+      SDValue Op2Elem = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, sdl,
+                                    Op2VT.getVectorElementType(), Op2,
+                                    DAG.getVectorIdxConstant(i, sdl));
+      SDValue Splat = DAG.getNode(ISD::SPLAT_VECTOR, sdl, Op1VT, Op2Elem);
+      SDValue Cmp = DAG.getSetCC(sdl, ResVT, Op1, Splat, ISD::SETEQ);
+      Ret = DAG.getNode(ISD::OR, sdl, ResVT, Ret, Cmp);
+    }
+
+    setValue(&I, DAG.getNode(ISD::AND, sdl, ResVT, Ret, Mask));
+    return;
+  }
   case Intrinsic::vector_reverse:
     visitVectorReverse(I);
     return;
@@ -8197,6 +8278,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   case Intrinsic::experimental_vector_histogram_add: {
     visitVectorHistogram(I, Intrinsic);
+    return;
+  }
+  case Intrinsic::experimental_vector_extract_last_active: {
+    visitVectorExtractLastActive(I, Intrinsic);
     return;
   }
   }
