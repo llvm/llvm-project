@@ -165,6 +165,9 @@ private:
                  unsigned comparisonOpcode, MachineInstr &I) const;
   bool selectCross(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;
+  bool selectDiscard(Register ResVReg, const SPIRVType *ResType,
+                     MachineInstr &I) const;
+
   bool selectICmp(Register ResVReg, const SPIRVType *ResType,
                   MachineInstr &I) const;
   bool selectFCmp(Register ResVReg, const SPIRVType *ResType,
@@ -2183,6 +2186,28 @@ bool SPIRVInstructionSelector::selectSplatVector(Register ResVReg,
   return MIB.constrainAllUses(TII, TRI, RBI);
 }
 
+bool SPIRVInstructionSelector::selectDiscard(Register ResVReg,
+                                             const SPIRVType *ResType,
+                                             MachineInstr &I) const {
+
+  unsigned Opcode;
+
+  if (STI.canUseExtension(
+          SPIRV::Extension::SPV_EXT_demote_to_helper_invocation) ||
+      STI.isAtLeastSPIRVVer(llvm::VersionTuple(1, 6))) {
+    Opcode = SPIRV::OpDemoteToHelperInvocation;
+  } else {
+    Opcode = SPIRV::OpKill;
+    // OpKill must be the last operation of any basic block.
+    MachineInstr *NextI = I.getNextNode();
+    NextI->removeFromParent();
+  }
+
+  MachineBasicBlock &BB = *I.getParent();
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
+      .constrainAllUses(TII, TRI, RBI);
+}
+
 bool SPIRVInstructionSelector::selectCmp(Register ResVReg,
                                          const SPIRVType *ResType,
                                          unsigned CmpOpc,
@@ -2856,6 +2881,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_typedBufferLoad: {
     selectReadImageIntrinsic(ResVReg, ResType, I);
     return true;
+  }
+  case Intrinsic::spv_discard: {
+    return selectDiscard(ResVReg, ResType, I);
   }
   default: {
     std::string DiagMsg;

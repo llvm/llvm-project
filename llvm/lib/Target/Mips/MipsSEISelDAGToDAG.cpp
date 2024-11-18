@@ -11,27 +11,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsSEISelDAGToDAG.h"
-#include "MCTargetDesc/MipsBaseInfo.h"
 #include "Mips.h"
 #include "MipsAnalyzeImmediate.h"
 #include "MipsMachineFunction.h"
 #include "MipsRegisterInfo.h"
-#include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
-#include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsMips.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
@@ -569,52 +564,6 @@ selectVSplatCommon(SDValue N, SDValue &Imm, bool Signed,
   return false;
 }
 
-// Select constant vector splats.
-bool MipsSEDAGToDAGISel::
-selectVSplatUimm1(SDValue N, SDValue &Imm) const {
-  return selectVSplatCommon(N, Imm, false, 1);
-}
-
-bool MipsSEDAGToDAGISel::
-selectVSplatUimm2(SDValue N, SDValue &Imm) const {
-  return selectVSplatCommon(N, Imm, false, 2);
-}
-
-bool MipsSEDAGToDAGISel::
-selectVSplatUimm3(SDValue N, SDValue &Imm) const {
-  return selectVSplatCommon(N, Imm, false, 3);
-}
-
-// Select constant vector splats.
-bool MipsSEDAGToDAGISel::
-selectVSplatUimm4(SDValue N, SDValue &Imm) const {
-  return selectVSplatCommon(N, Imm, false, 4);
-}
-
-// Select constant vector splats.
-bool MipsSEDAGToDAGISel::
-selectVSplatUimm5(SDValue N, SDValue &Imm) const {
-  return selectVSplatCommon(N, Imm, false, 5);
-}
-
-// Select constant vector splats.
-bool MipsSEDAGToDAGISel::
-selectVSplatUimm6(SDValue N, SDValue &Imm) const {
-  return selectVSplatCommon(N, Imm, false, 6);
-}
-
-// Select constant vector splats.
-bool MipsSEDAGToDAGISel::
-selectVSplatUimm8(SDValue N, SDValue &Imm) const {
-  return selectVSplatCommon(N, Imm, false, 8);
-}
-
-// Select constant vector splats.
-bool MipsSEDAGToDAGISel::
-selectVSplatSimm5(SDValue N, SDValue &Imm) const {
-  return selectVSplatCommon(N, Imm, true, 5);
-}
-
 // Select constant vector splats whose value is a power of 2.
 //
 // In addition to the requirements of selectVSplat(), this function returns
@@ -728,6 +677,18 @@ bool MipsSEDAGToDAGISel::selectVSplatUimmInvPow2(SDValue N,
   }
 
   return false;
+}
+
+// Select const vector splat of 1.
+bool MipsSEDAGToDAGISel::selectVSplatImmEq1(SDValue N) const {
+  APInt ImmValue;
+  EVT EltTy = N->getValueType(0).getVectorElementType();
+
+  if (N->getOpcode() == ISD::BITCAST)
+    N = N->getOperand(0);
+
+  return selectVSplat(N.getNode(), ImmValue, EltTy.getSizeInBits()) &&
+         ImmValue.getBitWidth() == EltTy.getSizeInBits() && ImmValue == 1;
 }
 
 bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
