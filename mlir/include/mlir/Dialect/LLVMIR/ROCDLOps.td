@@ -621,6 +621,15 @@ def ROCDL_DPPUpdateOp : ROCDL_IntrOp<"update.dpp", [], [0],
   Arguments<(ins LLVM_Type:$old, LLVM_Type:$src, I32Attr:$dppCtrl, I32Attr:$rowMask,
       I32Attr:$bankMask, I1Attr:$boundCtrl)> {
   let results = (outs LLVM_Type:$res);
+  let summary = "Represent the DPP(Data-Parallel Primitives) functionality";
+  let description = [{
+    Represent the DPP(Data-Parallel Primitives) functionality,
+    which supports cross-lane data operations.
+
+    The behavior should be equivalent to:
+    v_mov_b32 `res` `old`
+    v_mov_b32 `res` `src` `dppCtrl` `rowMask` `bankMask` `boundCtrl`
+  }];
   let assemblyFormat = [{
     attr-dict $old `,` $src `with` $dppCtrl `,` $rowMask `,` $bankMask `,` $boundCtrl `:` type($src)
   }];

@@ -437,6 +437,11 @@ def AMDGPU_DPPOp : AMDGPU_Op<"dpp", [SameTypeOperands, AllTypesMatch<["result", 
   let summary = "AMDGPU DPP operation";
   let description = [{
     This operation represents DPP functionality in a GPU program.
+
+    The behavior should be equivalent to:
+    v_mov_b32 `result` `old`
+    v_mov_b32 `result` `src` `kind` `row_mask` `bank_mask` `bound_ctrl`
+
      DPP provides the following operations:
     - Full crossbar in a group of four (`quad_perm`)
     - Wavefront shift left by one lane (`wave_shl`)
