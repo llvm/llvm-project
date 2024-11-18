@@ -1104,6 +1104,14 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return Cost * LT.first;
     break;
   }
+  case Intrinsic::vp_smax:
+  case Intrinsic::vp_smin:
+  case Intrinsic::vp_umax:
+  case Intrinsic::vp_umin: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    return LT.first *
+           getRISCVInstructionCost(RISCV::VMAXU_VV, LT.second, CostKind);
+  }
   // vp integer arithmetic ops.
   case Intrinsic::vp_add:
   case Intrinsic::vp_and:
