@@ -56,6 +56,22 @@ const OmpClauses &OmpModifierDescriptor::clauses(unsigned version) const {
 // generated in the future.
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpChunkModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"chunk-modifier",
+      /*props=*/
+      {
+          {45, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {45, {Clause::OMPC_schedule}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDependenceType>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"dependence-type",
@@ -103,6 +119,38 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpLinearModifier>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_linear}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpOrderModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"order-modifier",
+      /*props=*/
+      {
+          {51, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {51, {Clause::OMPC_order}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpOrderingModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"ordering-modifier",
+      /*props=*/
+      {
+          {45, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {45, {Clause::OMPC_schedule}},
       },
   };
   return desc;

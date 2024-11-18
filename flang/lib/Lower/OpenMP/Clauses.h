@@ -153,6 +153,16 @@ std::optional<ResultTy> maybeApply(FuncTy &&func,
   return std::move(func(*arg));
 }
 
+template <
+    typename FuncTy, //
+    typename ArgTy,  //
+    typename ResultTy = std::invoke_result_t<FuncTy, typename ArgTy::Value>>
+std::optional<ResultTy> maybeApplyToV(FuncTy &&func, const ArgTy *arg) {
+  if (!arg)
+    return std::nullopt;
+  return std::move(func(arg->v));
+}
+
 std::optional<Object> getBaseObject(const Object &object,
                                     semantics::SemanticsContext &semaCtx);
 
