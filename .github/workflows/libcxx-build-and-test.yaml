@@ -45,12 +45,11 @@ env:
   LLVM_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer-19"
   CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
 
-
 jobs:
   stage1:
     if: github.repository_owner == 'llvm'
     runs-on: libcxx-self-hosted-linux
-    container: ghcr.io/libcxx/actions-builder:testing-2024-09-21
+    container: ghcr.io/llvm/libcxx-linux-builder:0fd6f684b9c84c32d6cbfd9742402e788b2879f1
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -87,7 +86,7 @@ jobs:
   stage2:
     if: github.repository_owner == 'llvm'
     runs-on: libcxx-self-hosted-linux
-    container: ghcr.io/libcxx/actions-builder:testing-2024-09-21
+    container: ghcr.io/llvm/libcxx-linux-builder:0fd6f684b9c84c32d6cbfd9742402e788b2879f1
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -175,7 +174,7 @@ jobs:
         - config: 'generic-msan'
           machine: libcxx-self-hosted-linux
     runs-on: ${{ matrix.machine }}
-    container: ghcr.io/libcxx/actions-builder:testing-2024-09-21
+    container: ghcr.io/llvm/libcxx-linux-builder:0fd6f684b9c84c32d6cbfd9742402e788b2879f1
     steps:
       - uses: actions/checkout@v4
       - name: ${{ matrix.config }}
