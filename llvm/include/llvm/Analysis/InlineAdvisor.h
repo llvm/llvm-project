@@ -287,7 +287,6 @@ class PluginInlineAdvisorAnalysis
     : public AnalysisInfoMixin<PluginInlineAdvisorAnalysis> {
 public:
   static AnalysisKey Key;
-  static bool HasBeenRegistered;
 
   typedef InlineAdvisor *(*AdvisorFactory)(Module &M,
                                            FunctionAnalysisManager &FAM,
@@ -295,7 +294,6 @@ public:
                                            InlineContext IC);
 
   PluginInlineAdvisorAnalysis(AdvisorFactory Factory) : Factory(Factory) {
-    HasBeenRegistered = true;
     assert(Factory != nullptr &&
            "The plugin advisor factory should not be a null pointer.");
   }
