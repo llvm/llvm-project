@@ -5837,6 +5837,30 @@ static void fillMatrixTypeLoc(MatrixTypeLoc MTL,
   llvm_unreachable("no matrix_type attribute found at the expected location!");
 }
 
+static void fillAtomicQualLoc(AtomicTypeLoc ATL, const DeclaratorChunk &Chunk) {
+  SourceLocation Loc;
+  switch (Chunk.Kind) {
+  case DeclaratorChunk::Function:
+  case DeclaratorChunk::Array:
+  case DeclaratorChunk::Paren:
+  case DeclaratorChunk::Pipe:
+    llvm_unreachable("cannot be _Atomic qualified");
+
+  case DeclaratorChunk::Pointer:
+    Loc = Chunk.Ptr.AtomicQualLoc;
+    break;
+
+  case DeclaratorChunk::BlockPointer:
+  case DeclaratorChunk::Reference:
+  case DeclaratorChunk::MemberPointer:
+    // FIXME: Provide a source location for the _Atomic keyword.
+    break;
+  }
+
+  ATL.setKWLoc(Loc);
+  ATL.setParensRange(SourceRange());
+}
+
 namespace {
   class TypeSpecLocFiller : public TypeLocVisitor<TypeSpecLocFiller> {
     Sema &SemaRef;
@@ -6223,6 +6247,9 @@ namespace {
     void VisitExtVectorTypeLoc(ExtVectorTypeLoc TL) {
       TL.setNameLoc(Chunk.Loc);
     }
+    void VisitAtomicTypeLoc(AtomicTypeLoc TL) {
+      fillAtomicQualLoc(TL, Chunk);
+    }
     void
     VisitDependentSizedExtVectorTypeLoc(DependentSizedExtVectorTypeLoc TL) {
       TL.setNameLoc(Chunk.Loc);
@@ -6236,30 +6263,6 @@ namespace {
     }
   };
 } // end anonymous namespace
-
-static void fillAtomicQualLoc(AtomicTypeLoc ATL, const DeclaratorChunk &Chunk) {
-  SourceLocation Loc;
-  switch (Chunk.Kind) {
-  case DeclaratorChunk::Function:
-  case DeclaratorChunk::Array:
-  case DeclaratorChunk::Paren:
-  case DeclaratorChunk::Pipe:
-    llvm_unreachable("cannot be _Atomic qualified");
-
-  case DeclaratorChunk::Pointer:
-    Loc = Chunk.Ptr.AtomicQualLoc;
-    break;
-
-  case DeclaratorChunk::BlockPointer:
-  case DeclaratorChunk::Reference:
-  case DeclaratorChunk::MemberPointer:
-    // FIXME: Provide a source location for the _Atomic keyword.
-    break;
-  }
-
-  ATL.setKWLoc(Loc);
-  ATL.setParensRange(SourceRange());
-}
 
 static void
 fillDependentAddressSpaceTypeLoc(DependentAddressSpaceTypeLoc DASTL,
