@@ -527,9 +527,17 @@ void VPlanTransforms::prepareExecute(VPlan &Plan) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       if (auto *ExtRed = dyn_cast<VPExtendedReductionRecipe>(&R)) {
         // Genearte VPWidenCastRecipe.
-        auto *Ext = new VPWidenCastRecipe(
-            ExtRed->getExtOpcode(), ExtRed->getVecOp(), ExtRed->getResultType(),
-            *ExtRed->getExtInstr());
+        VPWidenCastRecipe *Ext;
+        // Only ZExt contiains non-neg flags.
+        if (ExtRed->isZExt())
+          Ext = new VPWidenCastRecipe(
+              ExtRed->getExtOpcode(), ExtRed->getVecOp(),
+              ExtRed->getResultType(), ExtRed->getNonNegFlags(),
+              ExtRed->getExtDebugLoc());
+        else
+          Ext = new VPWidenCastRecipe(
+              ExtRed->getExtOpcode(), ExtRed->getVecOp(),
+              ExtRed->getResultType(), ExtRed->getExtDebugLoc());
 
         // Generate VPreductionRecipe.
         auto *Red = new VPReductionRecipe(
@@ -549,18 +557,28 @@ void VPlanTransforms::prepareExecute(VPlan &Plan) {
         // reduce.add(ext(mul(ext, ext))) to reduce.add(mul(ext, ext)).
         VPValue *Op0, *Op1;
         if (MulAcc->isExtended()) {
-          CastInst *Ext0 = MulAcc->getExt0Instr();
-          Op0 = new VPWidenCastRecipe(Ext0->getOpcode(), MulAcc->getVecOp0(),
-                                      RedTy, *Ext0);
+          if (MulAcc->isZExt())
+            Op0 = new VPWidenCastRecipe(
+                MulAcc->getExtOpcode(), MulAcc->getVecOp0(), RedTy,
+                MulAcc->getNonNegFlags(), MulAcc->getExt0DebugLoc());
+          else
+            Op0 = new VPWidenCastRecipe(MulAcc->getExtOpcode(),
+                                        MulAcc->getVecOp0(), RedTy,
+                                        MulAcc->getExt0DebugLoc());
           Op0->getDefiningRecipe()->insertBefore(MulAcc);
           // Prevent reduce.add(mul(ext(A), ext(A))) generate duplicate
           // VPWidenCastRecipe.
           if (MulAcc->getVecOp0() == MulAcc->getVecOp1()) {
             Op1 = Op0;
           } else {
-            CastInst *Ext1 = MulAcc->getExt1Instr();
-            Op1 = new VPWidenCastRecipe(Ext1->getOpcode(), MulAcc->getVecOp1(),
-                                        RedTy, *Ext1);
+            if (MulAcc->isZExt())
+              Op1 = new VPWidenCastRecipe(
+                  MulAcc->getExtOpcode(), MulAcc->getVecOp1(), RedTy,
+                  MulAcc->getNonNegFlags(), MulAcc->getExt1DebugLoc());
+            else
+              Op1 = new VPWidenCastRecipe(MulAcc->getExtOpcode(),
+                                          MulAcc->getVecOp1(), RedTy,
+                                          MulAcc->getExt1DebugLoc());
             Op1->getDefiningRecipe()->insertBefore(MulAcc);
           }
           // No extends in this MulAccRecipe.
@@ -571,8 +589,10 @@ void VPlanTransforms::prepareExecute(VPlan &Plan) {
 
         // Generate VPWidenRecipe.
         SmallVector<VPValue *, 2> MulOps = {Op0, Op1};
-        auto *Mul = new VPWidenRecipe(*MulAcc->getMulInstr(),
-                                      make_range(MulOps.begin(), MulOps.end()));
+        auto *Mul = new VPWidenRecipe(
+            Instruction::Mul, make_range(MulOps.begin(), MulOps.end()),
+            MulAcc->hasNoUnsignedWrap(), MulAcc->hasNoSignedWrap(),
+            MulAcc->getMulDebugLoc());
         Mul->insertBefore(MulAcc);
 
         // Generate VPReductionRecipe.

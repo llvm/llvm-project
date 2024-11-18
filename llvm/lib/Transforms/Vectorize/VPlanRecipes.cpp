@@ -2297,28 +2297,23 @@ InstructionCost VPMulAccRecipe::computeCost(ElementCount VF,
   if (isExtended()) {
     TTI::CastContextHint CCH0 =
         computeCCH(getVecOp0()->getDefiningRecipe(), VF);
-    ExtendedCost = Ctx.TTI.getCastInstrCost(
-        Ext0Instr->getOpcode(), VectorTy, SrcVecTy, CCH0,
-        TTI::TCK_RecipThroughput,
-        dyn_cast_if_present<Instruction>(getExt0Instr()));
+    ExtendedCost = Ctx.TTI.getCastInstrCost(ExtOp, VectorTy, SrcVecTy, CCH0,
+                                            TTI::TCK_RecipThroughput);
     TTI::CastContextHint CCH1 =
         computeCCH(getVecOp0()->getDefiningRecipe(), VF);
-    ExtendedCost += Ctx.TTI.getCastInstrCost(
-        Ext1Instr->getOpcode(), VectorTy, SrcVecTy, CCH1,
-        TTI::TCK_RecipThroughput,
-        dyn_cast_if_present<Instruction>(getExt1Instr()));
+    ExtendedCost += Ctx.TTI.getCastInstrCost(ExtOp, VectorTy, SrcVecTy, CCH1,
+                                             TTI::TCK_RecipThroughput);
   }
 
   // Mul cost
   InstructionCost MulCost;
   SmallVector<const Value *, 4> Operands;
-  Operands.append(MulInstr->value_op_begin(), MulInstr->value_op_end());
   if (isExtended())
     MulCost = Ctx.TTI.getArithmeticInstrCost(
         Instruction::Mul, VectorTy, CostKind,
         {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
         {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
-        Operands, MulInstr, &Ctx.TLI);
+        Operands, nullptr, &Ctx.TLI);
   else {
     VPValue *RHS = getVecOp1();
     // Certain instructions can be cheaper to vectorize if they have a constant
@@ -2331,10 +2326,12 @@ InstructionCost VPMulAccRecipe::computeCost(ElementCount VF,
     if (RHSInfo.Kind == TargetTransformInfo::OK_AnyValue &&
         RHS->isDefinedOutsideLoopRegions())
       RHSInfo.Kind = TargetTransformInfo::OK_UniformValue;
+    Operands.append(
+        {getVecOp0()->getUnderlyingValue(), RHS->getUnderlyingValue()});
     MulCost = Ctx.TTI.getArithmeticInstrCost(
         Instruction::Mul, VectorTy, CostKind,
         {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
-        RHSInfo, Operands, MulInstr, &Ctx.TLI);
+        RHSInfo, Operands, nullptr, &Ctx.TLI);
   }
 
   // Check if folding ext into ExtendedReduction is profitable.
