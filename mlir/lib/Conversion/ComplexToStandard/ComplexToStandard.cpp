@@ -526,7 +526,7 @@ Value evaluatePolynomial(ImplicitLocOpBuilder &b, Value arg,
   auto argType = mlir::cast<FloatType>(arg.getType());
   Value poly =
       b.create<arith::ConstantOp>(b.getFloatAttr(argType, coefficients[0]));
-  for (int i = 1; i < coefficients.size(); ++i) {
+  for (unsigned i = 1; i < coefficients.size(); ++i) {
     poly = b.create<math::FmaOp>(
         poly, arg,
         b.create<arith::ConstantOp>(b.getFloatAttr(argType, coefficients[i])),
