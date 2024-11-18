@@ -45,6 +45,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/Demangle/Demangle.h"
 
 #include <map>
@@ -2353,7 +2354,7 @@ DWARFASTParserClang::ConstructDemangledNameFromDWARF(const DWARFDIE &die) {
 
 Function *DWARFASTParserClang::ParseFunctionFromDWARF(
     CompileUnit &comp_unit, const DWARFDIE &die, AddressRanges func_ranges) {
-  DWARFRangeList unused_func_ranges;
+  llvm::DWARFAddressRangesVector unused_func_ranges;
   const char *name = nullptr;
   const char *mangled = nullptr;
   std::optional<int> decl_file;
