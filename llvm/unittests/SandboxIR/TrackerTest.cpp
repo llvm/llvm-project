@@ -1845,6 +1845,9 @@ define void @foo(i32 %arg, float %farg) {
   EXPECT_FALSE(FAdd->getFastMathFlags() != OrigFMF);
 }
 
+// IRSnapshotChecker is only defined in debug mode.
+#ifndef NDEBUG
+
 TEST_F(TrackerTest, IRSnapshotCheckerNoChanges) {
   parseIR(C, R"IR(
 define i32 @foo(i32 %arg) {
@@ -1907,3 +1910,5 @@ define i32 @foo(i32 %arg) {
   // The new snapshot should have replaced the old one, so this should succeed.
   Checker.expectNoDiff();
 }
+
+#endif // NDEBUG
