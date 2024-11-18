@@ -96,7 +96,6 @@ static void appendCodeTemplates(const LLVMState &State,
   case ExecutionMode::ALWAYS_SERIAL_TIED_REGS_ALIAS: {
     // Picking whatever value for the tied variable will make the instruction
     // serial.
-    State.getExegesisTarget().processInstructionReservedRegs(Variant);
     CodeTemplate CT;
     CT.Execution = ExecutionModeBit;
     CT.Info = std::string(ExecutionClassDescription);

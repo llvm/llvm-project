@@ -243,9 +243,6 @@ public:
         "targets with target-specific operands should implement this");
   }
 
-  // Process instructions that used reserved registers.
-  virtual void processInstructionReservedRegs(InstructionTemplate &IT) const {}
-
   // Returns true if this instruction is supported as a back-to-back
   // instructions.
   // FIXME: Eventually we should discover this dynamically.

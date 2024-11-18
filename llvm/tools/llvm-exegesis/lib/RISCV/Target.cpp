@@ -57,8 +57,6 @@ public:
                                  MCOperand &AssignedValue,
                                  const BitVector &ForbiddenRegs) const override;
 
-  void processInstructionReservedRegs(InstructionTemplate &IT) const override;
-
   std::vector<InstructionTemplate>
   generateInstructionVariants(const Instruction &Instr,
                               unsigned MaxConfigsPerOpcode) const override;
@@ -294,34 +292,6 @@ Error ExegesisRISCVTarget::randomizeTargetMCOperand(
       AssignedValue = MCOperand::createImm(0);
   }
   return Error::success();
-}
-
-// Process instructions that used ReservedRegisters.
-// We must not create instructions that used rd=x0. But for some of them in C
-// extension we use registers in which we are really not going to write to.
-// Registers were reserved in RISCVRegisterInfo.cpp using markSuperRegs function
-// and should not be redeclared. Thus we must set appropriate register
-// explicitly for each instruction according to RVC spec.
-void ExegesisRISCVTarget::processInstructionReservedRegs(
-    InstructionTemplate &IT) const {
-  MCOperand &AssignedValue = IT.getValueForOperandIdx(0);
-
-  switch (IT.getOpcode()) {
-  case RISCV::C_ADDI16SP:
-  case RISCV::C_ADDI4SPN:
-    AssignedValue = MCOperand::createReg(RISCV::X2);
-    break;
-  case RISCV::C_NOP:
-  case RISCV::C_LI_HINT:
-  case RISCV::C_LUI_HINT:
-  case RISCV::C_MV_HINT:
-  case RISCV::C_ADD_HINT:
-  case RISCV::C_SLLI_HINT:
-    AssignedValue = MCOperand::createReg(RISCV::X0);
-    break;
-  default:
-    break;
-  }
 }
 
 std::vector<InstructionTemplate>
