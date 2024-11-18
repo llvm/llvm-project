@@ -1355,12 +1355,9 @@ struct WarpOpExtractScalar : public OpRewritePattern<WarpExecuteOnLane0Op> {
     // All lanes extract the scalar.
     if (is0dOrVec1Extract) {
       Value newExtract;
-      if (extractSrcType.getRank() == 1) {
-        newExtract = rewriter.create<vector::ExtractOp>(loc, distributedVec, 0);
-      } else {
-        newExtract = rewriter.create<vector::ExtractOp>(loc, distributedVec,
-                                                        ArrayRef<int64_t>{});
-      }
+      SmallVector<int64_t> indices(extractSrcType.getRank(), 0);
+      newExtract =
+          rewriter.create<vector::ExtractOp>(loc, distributedVec, indices);
       rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber),
                                   newExtract);
       return success();
@@ -1408,14 +1405,13 @@ struct WarpOpExtractElement : public OpRewritePattern<WarpExecuteOnLane0Op> {
     if (!operand)
       return failure();
     auto extractOp = operand->get().getDefiningOp<vector::ExtractElementOp>();
-    rewriter.setInsertionPoint(extractOp);
+    SmallVector<OpFoldResult> indices;
     if (auto pos = extractOp.getPosition()) {
-      rewriter.replaceOpWithNewOp<vector::ExtractOp>(
-          extractOp, extractOp.getVector(), pos);
-    } else {
-      rewriter.replaceOpWithNewOp<vector::ExtractOp>(
-          extractOp, extractOp.getVector(), ArrayRef<int64_t>{});
+      indices.push_back(pos);
     }
+    rewriter.setInsertionPoint(extractOp);
+    rewriter.replaceOpWithNewOp<vector::ExtractOp>(
+        extractOp, extractOp.getVector(), indices);
     return success();
   }
 };
@@ -1472,13 +1468,12 @@ struct WarpOpInsertScalar : public OpRewritePattern<WarpExecuteOnLane0Op> {
     // This condition is always true for 0-d vectors.
     if (vecType == distrType) {
       Value newInsert;
+      SmallVector<OpFoldResult> indices;
       if (pos) {
-        newInsert = rewriter.create<vector::InsertOp>(loc, newSource,
-                                                      distributedVec, pos);
-      } else {
-        newInsert = rewriter.create<vector::InsertOp>(
-            loc, newSource, distributedVec, ArrayRef<int64_t>{});
+        indices.push_back(pos);
       }
+      newInsert = rewriter.create<vector::InsertOp>(loc, newSource,
+                                                    distributedVec, indices);
       // Broadcast: Simply move the vector.insert op out.
       rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber),
                                   newInsert);
@@ -1640,15 +1635,13 @@ struct WarpOpInsertElement : public OpRewritePattern<WarpExecuteOnLane0Op> {
     if (!operand)
       return failure();
     auto insertOp = operand->get().getDefiningOp<vector::InsertElementOp>();
-    rewriter.setInsertionPoint(insertOp);
+    SmallVector<OpFoldResult> indices;
     if (auto pos = insertOp.getPosition()) {
-      rewriter.replaceOpWithNewOp<vector::InsertOp>(
-          insertOp, insertOp.getSource(), insertOp.getDest(), pos);
-    } else {
-      rewriter.replaceOpWithNewOp<vector::InsertOp>(
-          insertOp, insertOp.getSource(), insertOp.getDest(),
-          ArrayRef<int64_t>{});
+      indices.push_back(pos);
     }
+    rewriter.setInsertionPoint(insertOp);
+    rewriter.replaceOpWithNewOp<vector::InsertOp>(
+        insertOp, insertOp.getSource(), insertOp.getDest(), indices);
     return success();
   }
 };
