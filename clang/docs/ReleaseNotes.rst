@@ -769,6 +769,8 @@ X86 Support
 - Support ISA of ``AMX-TF32``.
 - Support ISA of ``MOVRS``.
 
+- Supported ``-march/tune=diamondrapids``
+
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -857,9 +859,6 @@ AST Matchers
 
 - Ensure ``hasName`` matches template specializations across inline namespaces,
   making `matchesNodeFullSlow` and `matchesNodeFullFast` consistent.
-
-- The examples in the AST matcher reference are now tested and additional
-  examples and descriptions were added.
 
 clang-format
 ------------

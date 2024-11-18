@@ -15274,17 +15274,17 @@ void ScalarEvolution::LoopGuards::collectFromPHI(
     if (Inserted)
       collectFromBlock(SE, G->second, Phi.getParent(), InBlock, VisitedBlocks,
                        Depth + 1);
-    auto S = G->second.RewriteMap.find(
-        SE.getSCEV(Phi.getIncomingValue(IncomingIdx)));
-    if (S == G->second.RewriteMap.end())
+    auto &RewriteMap = G->second.RewriteMap;
+    if (RewriteMap.empty())
+      return {nullptr, scCouldNotCompute};
+    auto S = RewriteMap.find(SE.getSCEV(Phi.getIncomingValue(IncomingIdx)));
+    if (S == RewriteMap.end())
       return {nullptr, scCouldNotCompute};
     auto *SM = dyn_cast_if_present<SCEVMinMaxExpr>(S->second);
     if (!SM)
       return {nullptr, scCouldNotCompute};
     if (const SCEVConstant *C0 = dyn_cast<SCEVConstant>(SM->getOperand(0)))
       return {C0, SM->getSCEVType()};
-    if (const SCEVConstant *C1 = dyn_cast<SCEVConstant>(SM->getOperand(1)))
-      return {C1, SM->getSCEVType()};
     return {nullptr, scCouldNotCompute};
   };
   auto MergeMinMaxConst = [](MinMaxPattern P1,
