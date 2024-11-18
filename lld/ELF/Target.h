@@ -246,8 +246,8 @@ void riscvFinalizeRelax(int passes);
 void mergeRISCVAttributesSections(Ctx &);
 void addArmInputSectionMappingSymbols(Ctx &);
 void addArmSyntheticSectionMappingSymbol(Defined *);
-void sortArmMappingSymbols();
-void convertArmInstructionstoBE8(InputSection *sec, uint8_t *buf);
+void sortArmMappingSymbols(Ctx &);
+void convertArmInstructionstoBE8(Ctx &, InputSection *sec, uint8_t *buf);
 void createTaggedSymbols(Ctx &);
 void initSymbolAnchors(Ctx &);
 
