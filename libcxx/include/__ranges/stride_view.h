@@ -35,7 +35,6 @@
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/range_adaptor.h>
 #include <__ranges/view_interface.h>
-
 #include <__type_traits/make_unsigned.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -337,16 +336,12 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
   operator-(__iterator const& __x, __iterator const& __y)
-    requires sized_sentinel_for<iterator_t<_Base>, iterator_t<_Base>> && forward_range<_Base>
-  {
-    auto __n = __x.__current_ - __y.__current_;
-    return (__n + __x.__missing_ - __y.__missing_) / __x.__stride_;
-  }
-
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
-  operator-(__iterator const& __x, __iterator const& __y)
     requires sized_sentinel_for<iterator_t<_Base>, iterator_t<_Base>>
   {
+    if constexpr (forward_range<_Base>) {
+      auto __n = __x.__current_ - __y.__current_;
+      return (__n + __x.__missing_ - __y.__missing_) / __x.__stride_;
+    }
     auto __n = __x.__current_ - __y.__current_;
     if (__n < 0) {
       return -ranges::__div_ceil(-__n, __x.__stride_);
