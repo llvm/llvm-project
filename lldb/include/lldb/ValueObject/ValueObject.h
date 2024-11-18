@@ -9,7 +9,6 @@
 #ifndef LLDB_VALUEOBJECT_VALUEOBJECT_H
 #define LLDB_VALUEOBJECT_VALUEOBJECT_H
 
-#include "lldb/Core/SwiftScratchContextReader.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Type.h"
@@ -615,7 +614,7 @@ public:
   virtual bool HasSyntheticValue();
 
 #ifdef LLDB_ENABLE_SWIFT
-  std::optional<SwiftScratchContextReader> GetSwiftScratchContext();
+  TypeSystemSwiftTypeRefForExpressionsSP GetSwiftScratchContext();
 #endif // LLDB_ENABLE_SWIFT
 
   virtual bool IsSynthetic() { return false; }

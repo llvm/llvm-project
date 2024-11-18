@@ -148,10 +148,6 @@ bool ValueObjectDynamicValue::UpdateValue() {
     m_data.SetAddressByteSize(target->GetArchitecture().GetAddressByteSize());
   }
 
-#ifdef LLDB_ENABLE_SWIFT
-  auto swift_scratch_ctx_lock = SwiftScratchContextLock(&exe_ctx);
-#endif // LLDB_ENABLE_SWIFT
-
   // First make sure our Type and/or Address haven't changed:
   Process *process = exe_ctx.GetProcessPtr();
   if (!process)

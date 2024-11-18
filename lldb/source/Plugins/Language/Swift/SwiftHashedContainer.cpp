@@ -291,14 +291,11 @@ HashedCollectionConfig::StorageObjectAtAddress(
   // same address.
   Status error;
   ExecutionContextScope *exe_scope = exe_ctx.GetBestExecutionContextScope();
-  std::optional<SwiftScratchContextReader> reader =
-    process_sp->GetTarget().GetSwiftScratchContext(error, *exe_scope);
-  if (!reader)
+  auto scratch_ctx =
+      process_sp->GetTarget().GetSwiftScratchContext(error, *exe_scope);
+  if (!scratch_ctx)
     return nullptr;
   if (error.Fail())
-    return nullptr;
-  auto scratch_ctx = reader->get();
-  if (!scratch_ctx)
     return nullptr;
   CompilerType rawStorage_type =
       scratch_ctx->GetTypeFromMangledTypename(m_nativeStorageRoot_mangled);

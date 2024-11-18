@@ -447,13 +447,6 @@ private:
 
   /// Swift native NSError isa.
   std::optional<lldb::addr_t> m_SwiftNativeNSErrorISA;
-
-#ifndef NDEBUG
-  /// Assert helper to determine if the scratch SwiftASTContext is locked.
-  static bool IsScratchContextLocked(Target &target);
-  /// Assert helper to determine if the scratch SwiftASTContext is locked.
-  static bool IsScratchContextLocked(lldb::TargetSP target);
-#endif
 };
 
 } // namespace lldb_private

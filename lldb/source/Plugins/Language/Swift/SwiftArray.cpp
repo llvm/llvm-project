@@ -330,10 +330,7 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &static_valobj) {
 
     // Get the type of the array elements.
     CompilerType argument_type;
-    auto scratch_ctx_reader = valobj.GetSwiftScratchContext();
-    if (!scratch_ctx_reader)
-      return nullptr;
-    auto *ts = scratch_ctx_reader->get();
+    auto ts = valobj.GetSwiftScratchContext();
     if (!ts)
       return nullptr;
     auto *swift_runtime = SwiftLanguageRuntime::Get(process_sp);
