@@ -2,12 +2,12 @@
 
 # RUN: rm -rf %t && split-file %s %t && cd %t
 
-# RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux %p/Inputs/shared.s -o a.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64 %p/Inputs/shared.s -o a.o
 # RUN: ld.lld -shared a.o -o a.so
 
 #--- ok.s
 
-# RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux ok.s -o ok.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64 ok.s -o ok.o
 
 # RUN: ld.lld ok.o a.so -pie -o external
 # RUN: llvm-readelf -r -S -x .got external | FileCheck %s --check-prefix=EXTERNAL
@@ -80,7 +80,7 @@ _start:
 
 #--- err.s
 
-# RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux err.s -o err.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64 err.s -o err.o
 
 # RUN: not ld.lld err.o a.so -pie -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
 
