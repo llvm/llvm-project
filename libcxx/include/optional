@@ -207,6 +207,7 @@ namespace std {
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_object.h>
 #include <__type_traits/is_reference.h>
+#include <__type_traits/is_replaceable.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_scalar.h>
 #include <__type_traits/is_swappable.h>
@@ -587,6 +588,7 @@ public:
   using value_type = _Tp;
 
   using __trivially_relocatable = conditional_t<__libcpp_is_trivially_relocatable<_Tp>::value, optional, void>;
+  using __replaceable           = conditional_t<__is_replaceable<_Tp>::value, optional, void>;
 
 private:
   // Disable the reference extension using this static assert.

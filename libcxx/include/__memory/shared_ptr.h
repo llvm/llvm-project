@@ -315,7 +315,11 @@ public:
 
   // A shared_ptr contains only two raw pointers which point to the heap and move constructing already doesn't require
   // any bookkeeping, so it's always trivially relocatable.
+  //
+  // However, it's not replaceable because of self-assignment, which must prevent the refcount from
+  // hitting 0.
   using __trivially_relocatable = shared_ptr;
+  using __replaceable           = void;
 
 private:
   element_type* __ptr_;
@@ -1210,7 +1214,10 @@ public:
 
   // A weak_ptr contains only two raw pointers which point to the heap and move constructing already doesn't require
   // any bookkeeping, so it's always trivially relocatable.
+  //
+  // However, it's not replaceable because we must preserve a non-zero refcount through self-assignment.
   using __trivially_relocatable = weak_ptr;
+  using __replaceable           = void;
 
 private:
   element_type* __ptr_;
