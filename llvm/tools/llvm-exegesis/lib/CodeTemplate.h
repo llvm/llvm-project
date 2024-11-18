@@ -35,8 +35,6 @@ struct InstructionTemplate {
   const MCOperand &getValueFor(const Variable &Var) const;
   MCOperand &getValueFor(const Operand &Op);
   const MCOperand &getValueFor(const Operand &Op) const;
-  MCOperand &getValueForOperandIdx(unsigned OpIdx);
-  const MCOperand &getValueForOperandIdx(unsigned OpIdx) const;
   bool hasImmediateVariables() const;
   const Instruction &getInstr() const { return *Instr; }
   ArrayRef<MCOperand> getVariableValues() const { return VariableValues; }
