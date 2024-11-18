@@ -3868,13 +3868,11 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
       uint64_t SizeSoFar = 0;
       for (unsigned int i = 0, n = structType->getNumElements(); i < n - 1;
            ++i) {
-        emitGlobalAliasInline(AP, Offset + SizeSoFar, AliasList);
         uint64_t GapToNext = Layout->getElementOffset(i + 1) - SizeSoFar;
         AP.OutStreamer->emitZeros(GapToNext);
         SizeSoFar += GapToNext;
+        emitGlobalAliasInline(AP, Offset + SizeSoFar, AliasList);
       }
-      emitGlobalAliasInline(AP, Offset + SizeSoFar, AliasList);
-      uint64_t Size = DL.getTypeAllocSize(structType);
       AP.OutStreamer->emitZeros(Size - SizeSoFar);
       return;
     } else {
