@@ -101,7 +101,7 @@ public:
     /// Recalculate the 'Behaviour' for example after filtering.
     void reevaluateBehaviour();
 
-    /// Keep track if the entity related to this 'ExceptionInfo' can in princple
+    /// Keep track if the entity related to this 'ExceptionInfo' can in principle
     /// throw, if it's unknown or if it won't throw.
     State Behaviour;
 
