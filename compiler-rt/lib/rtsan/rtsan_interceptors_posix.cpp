@@ -711,7 +711,7 @@ INTERCEPTOR(int, kevent64, int kq, const struct kevent64_s *changelist,
 #define RTSAN_MAYBE_INTERCEPT_KQUEUE
 #define RTSAN_MAYBE_INTERCEPT_KEVENT
 #define RTSAN_MAYBE_INTERCEPT_KEVENT64
-#endif
+#endif // SANITIZER_INTERCEPT_KQUEUE
 
 // Preinit
 void __rtsan::InitializeInterceptors() {
