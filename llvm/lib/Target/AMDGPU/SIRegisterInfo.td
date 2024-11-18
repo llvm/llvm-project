@@ -1244,6 +1244,14 @@ def VRegSrc_128: SrcReg9<VReg_128, "OPW128">;
 def VRegSrc_256: SrcReg9<VReg_256, "OPW256">;
 def VRegOrLdsSrc_32 : SrcReg9<VRegOrLds_32, "OPW32">;
 
+// True 16 Operands
+def VRegSrc_16 : RegisterOperand<VGPR_16> {
+  let DecoderMethod = "decodeOperand_VGPR_16";
+  let EncoderMethod = "getMachineOpValueT16";
+}
+def VRegSrc_fake16: SrcReg9<VGPR_32, "OPW16"> {
+  let EncoderMethod = "getMachineOpValueT16";
+}
 //===----------------------------------------------------------------------===//
 // VGPRSrc_*
 //===----------------------------------------------------------------------===//
