@@ -183,6 +183,7 @@ void tools::PS4cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-lto-debug-options=") + LTOArgs));
 
+  // Sanitizer runtimes must be supplied before all other objects and libs.
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
     TC.addSanitizerArgs(Args, CmdArgs, "-l", "");
 
@@ -303,10 +304,12 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // with the SDK. The scripts are inside <sdkroot>/target/lib, which is
     // added as a search path elsewhere.
     // "PRX" has long stood for "PlayStation Relocatable eXecutable".
-    CmdArgs.push_back("--default-script");
-    CmdArgs.push_back(Static   ? "static.script"
-                      : Shared ? "prx.script"
-                               : "main.script");
+    if (!Args.hasArgNoClaim(options::OPT_T)) {
+      CmdArgs.push_back("--default-script");
+      CmdArgs.push_back(Static   ? "static.script"
+                        : Shared ? "prx.script"
+                                 : "main.script");
+    }
   }
 
   if (Static)
@@ -358,9 +361,6 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (StringRef Jobs = getLTOParallelism(Args, D); !Jobs.empty())
     AddLTOFlag(Twine("jobs=") + Jobs);
 
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
-    TC.addSanitizerArgs(Args, CmdArgs, "-l", "");
-
   TC.AddFilePathLibArgs(Args, CmdArgs);
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
                             options::OPT_s, options::OPT_t});
@@ -368,17 +368,63 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");
 
-  AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
+  // Sanitizer runtimes must be supplied before all other objects and libs.
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
+    TC.addSanitizerArgs(Args, CmdArgs, "-l", "");
 
-  if (Args.hasArg(options::OPT_pthread)) {
-    CmdArgs.push_back("-lpthread");
+  const bool AddStartFiles =
+      !Relocatable &&
+      !Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib);
+
+  auto AddCRTObject = [&](const char *Name) {
+    CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(Name)));
+  };
+
+  if (AddStartFiles) {
+    if (!Shared)
+      AddCRTObject("crt1.o");
+    AddCRTObject("crti.o");
+    AddCRTObject(Shared   ? "crtbeginS.o"
+                 : Static ? "crtbeginT.o"
+                          : "crtbegin.o");
   }
 
-  if (UseJMC) {
-    CmdArgs.push_back("--push-state");
-    CmdArgs.push_back("--whole-archive");
-    CmdArgs.push_back("-lSceJmc_nosubmission");
-    CmdArgs.push_back("--pop-state");
+  AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
+
+  if (!Relocatable &&
+      !Args.hasArg(options::OPT_nodefaultlibs, options::OPT_nostdlib)) {
+
+    if (UseJMC) {
+      CmdArgs.push_back("--push-state");
+      CmdArgs.push_back("--whole-archive");
+      CmdArgs.push_back("-lSceJmc_nosubmission");
+      CmdArgs.push_back("--pop-state");
+    }
+
+    if (Args.hasArg(options::OPT_pthread))
+      CmdArgs.push_back("-lpthread");
+
+    if (Static) {
+      if (!Args.hasArg(options::OPT_nostdlibxx))
+        CmdArgs.push_back("-lstdc++");
+      if (!Args.hasArg(options::OPT_nolibc)) {
+        CmdArgs.push_back("-lm");
+        CmdArgs.push_back("-lc");
+      }
+
+      CmdArgs.push_back("-lcompiler_rt");
+      CmdArgs.push_back("-lkernel");
+    } else {
+      // The C and C++ libraries are combined.
+      if (!Args.hasArg(options::OPT_nolibc, options::OPT_nostdlibxx))
+        CmdArgs.push_back("-lc_stub_weak");
+
+      CmdArgs.push_back("-lkernel_stub_weak");
+    }
+  }
+  if (AddStartFiles) {
+    AddCRTObject(Shared ? "crtendS.o" : "crtend.o");
+    AddCRTObject("crtn.o");
   }
 
   if (Args.hasArg(options::OPT_fuse_ld_EQ)) {

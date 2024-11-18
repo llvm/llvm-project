@@ -198,7 +198,7 @@ __attribute__((target_version("jscvt"))) int default_def_with_version_decls(void
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@implicit_default.default
-// CHECK-SAME: () #[[ATTR0]] {
+// CHECK-SAME: () #[[ATTR6:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
 //

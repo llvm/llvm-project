@@ -660,6 +660,9 @@ TARGET_BUILTIN(__builtin_ia32_vpdpbuud256, "V8iV8iV8iV8i", "ncV:256:", "avxvnnii
 TARGET_BUILTIN(__builtin_ia32_vpdpbuuds128, "V4iV4iV4iV4i", "ncV:128:", "avxvnniint8|avx10.2-256")
 TARGET_BUILTIN(__builtin_ia32_vpdpbuuds256, "V8iV8iV8iV8i", "ncV:256:", "avxvnniint8|avx10.2-256")
 
+// MOVRS
+TARGET_BUILTIN(__builtin_ia32_prefetchrs, "vvC*", "nc", "movrs")
+
 TARGET_BUILTIN(__builtin_ia32_gather3div2df, "V2dV2dvC*V2OiUcIi", "nV:128:", "avx512vl")
 TARGET_BUILTIN(__builtin_ia32_gather3div2di, "V2OiV2OivC*V2OiUcIi", "nV:128:", "avx512vl")
 TARGET_BUILTIN(__builtin_ia32_gather3div4df, "V4dV4dvC*V4OiUcIi", "nV:256:", "avx512vl")
