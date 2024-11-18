@@ -22,19 +22,6 @@ using namespace lld;
 using namespace lld::elf;
 
 namespace {
-#define LARCH_GET_RD(insn) (insn & 0x1f)
-#define LARCH_GET_RJ(insn) (insn >> 5 & 0x1f)
-#define LARCH_MK_ADDI_W 0xffc00000
-#define LARCH_OP_ADDI_W 0x02800000
-#define LARCH_MK_ADDI_D 0xffc00000
-#define LARCH_OP_ADDI_D 0x02c00000
-#define LARCH_MK_PCADDI 0xfe000000
-#define LARCH_OP_PCADDI 0x18000000
-#define LARCH_INSN_OPS(insn, op) ((insn & LARCH_MK_##op) == LARCH_OP_##op)
-#define LARCH_INSN_ADDI_W(insn) LARCH_INSN_OPS((insn), ADDI_W)
-#define LARCH_INSN_ADDI_D(insn) LARCH_INSN_OPS((insn), ADDI_D)
-#define LARCH_INSN_PCADDI(insn) LARCH_INSN_OPS((insn), PCADDI)
-
 class LoongArch final : public TargetInfo {
 public:
   LoongArch(Ctx &);
@@ -67,6 +54,7 @@ enum Op {
   ADDI_D = 0x02c00000,
   ANDI = 0x03400000,
   PCADDU12I = 0x1c000000,
+  PCADDI = 0x18000000,
   LD_W = 0x28800000,
   LD_D = 0x28c00000,
   JIRL = 0x4c000000,
@@ -76,7 +64,6 @@ enum Reg {
   R_ZERO = 0,
   R_RA = 1,
   R_TP = 2,
-  R_A0 = 4,
   R_T0 = 12,
   R_T1 = 13,
   R_T2 = 14,
@@ -172,6 +159,17 @@ static uint32_t setK16(uint32_t insn, uint32_t imm) {
 static bool isJirl(uint32_t insn) {
   return (insn & 0xfc000000) == JIRL;
 }
+
+static bool isAddi_w(uint32_t insn) { return (insn & 0xffc00000) == ADDI_W; }
+
+static bool isAddi_d(uint32_t insn) { return (insn & 0xffc00000) == ADDI_D; }
+
+// LoongArch instructions could be divided into a number of kinds based on
+// the width of imm and the number of registers. get_rd/get_rj only applies
+// to those kinds of instructions that could do relocation.
+static uint8_t get_rd(uint32_t insn) { return insn & 0x1f; }
+
+static uint8_t get_rj(uint32_t insn) { return insn >> 5 & 0x1f; }
 
 static void handleUleb128(Ctx &ctx, uint8_t *loc, uint64_t val) {
   const uint32_t maxcount = 1 + 64 / 7;
@@ -805,17 +803,16 @@ static void relaxPcalaAddi(const InputSection &sec, size_t i, uint64_t loc,
   const int64_t dist = symval - loc;
   uint32_t pca = read32le(sec.content().data() + r_hi.offset);
   uint32_t add = read32le(sec.content().data() + r_hi.offset + 4);
-  uint32_t rd = LARCH_GET_RD(pca);
+  uint8_t rd = get_rd(pca);
 
-  if ((!LARCH_INSN_ADDI_W(add) && !LARCH_INSN_ADDI_D(add)) ||
-      LARCH_GET_RJ(add) != rd || symval & 0x3 /* 4 bytes align */ ||
-      !isInt<22>(dist))
+  if ((!isAddi_w(add) && !isAddi_d(add)) || get_rj(add) != rd ||
+      symval & 0x3 /* not 4 bytes align */ || !isInt<22>(dist))
     return;
 
   // remove the first insn
   sec.relaxAux->relocTypes[i] = R_LARCH_RELAX;
   sec.relaxAux->relocTypes[i + 2] = R_LARCH_PCREL20_S2;
-  sec.relaxAux->writes.push_back(LARCH_OP_PCADDI | rd); // pcaddi
+  sec.relaxAux->writes.push_back(PCADDI | rd); // pcaddi rd, 0
   remove = 4;
 }
 
