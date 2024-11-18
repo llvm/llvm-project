@@ -1,15 +1,47 @@
-// RUN: mlir-cpu-runner %s -argext-abi-check=false | FileCheck %s
-// RUN: mlir-cpu-runner %s -e foo  -argext-abi-check=false | FileCheck -check-prefix=NOMAIN %s
-// RUN: mlir-cpu-runner %s --entry-point-result=i32 -e int32_main -argext-abi-check=false | FileCheck -check-prefix=INT32MAIN %s
-// RUN: mlir-cpu-runner %s --entry-point-result=i64 -e int64_main -argext-abi-check=false | FileCheck -check-prefix=INT64MAIN %s
-// RUN: mlir-cpu-runner %s -O3  -argext-abi-check=false | FileCheck %s
+// RUN: %if target={{s390x-.*}} %{                                  \
+// RUN:   mlir-cpu-runner %s -argext-abi-check=false | FileCheck %s \
+// RUN: %} %else %{                                                 \
+// RUN:   mlir-cpu-runner %s  | FileCheck %s                        \
+// RUN: %}
+
+// RUN: %if target={{s390x-.*}} %{                                                              \
+// RUN:   mlir-cpu-runner %s -e foo -argext-abi-check=false | FileCheck -check-prefix=NOMAIN %s \
+// RUN: %} %else %{                                                                             \
+// RUN:   mlir-cpu-runner %s -e foo | FileCheck -check-prefix=NOMAIN %s                         \
+// RUN: %}
+
+// RUN: %if target={{s390x-.*}} %{                                                                                                  \
+// RUN:   mlir-cpu-runner %s --entry-point-result=i32 -e int32_main  -argext-abi-check=false | FileCheck -check-prefix=INT32MAIN %s \
+// RUN: %} %else %{                                                                                                                 \
+// RUN:   mlir-cpu-runner %s --entry-point-result=i32 -e int32_main | FileCheck -check-prefix=INT32MAIN %s                          \
+// RUN: %}
+
+// RUN: %if target={{s390x-.*}} %{                                                                                                 \
+// RUN:   mlir-cpu-runner %s --entry-point-result=i64 -e int64_main -argext-abi-check=false | FileCheck -check-prefix=INT64MAIN %s \
+// RUN: %} %else %{                                                                                                                \
+// RUN:   mlir-cpu-runner %s --entry-point-result=i64 -e int64_main | FileCheck -check-prefix=INT64MAIN %s                         \
+// RUN: %}
+
+// RUN: %if target={{s390x-.*}} %{                                      \
+// RUN:   mlir-cpu-runner %s -O3 -argext-abi-check=false | FileCheck %s \
+// RUN: %} %else %{                                                     \
+// RUN:   mlir-cpu-runner %s -O3 | FileCheck %s                         \
+// RUN: %}
 
 // RUN: cp %s %t
-// RUN: mlir-cpu-runner %t -dump-object-file -argext-abi-check=false | FileCheck %t
+// RUN: %if target={{s390x-.*}} %{                                                    \
+// RUN:   mlir-cpu-runner %t -dump-object-file -argext-abi-check=false | FileCheck %t \
+// RUN: %} %else %{                                                                   \
+// RUN:   mlir-cpu-runner %t -dump-object-file | FileCheck %t                         \
+// RUN: %}
+
 // RUN: ls %t.o
 // RUN: rm %t.o
-
-// RUN: mlir-cpu-runner %s -dump-object-file -object-filename=%T/test.o -argext-abi-check=false | FileCheck %s
+// RUN: %if target={{s390x-.*}} %{                                                                               \
+// RUN:   mlir-cpu-runner %s -dump-object-file -object-filename=%T/test.o -argext-abi-check=false | FileCheck %s \
+// RUN: %} %else %{                                                                                              \
+// RUN:   mlir-cpu-runner %s -dump-object-file -object-filename=%T/test.o | FileCheck %s                         \
+// RUN: %}
 // RUN: ls %T/test.o
 // RUN: rm %T/test.o
 
