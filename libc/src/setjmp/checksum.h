@@ -17,8 +17,15 @@ namespace jmpbuf {
 extern __UINTPTR_TYPE__ value_mask;
 extern __UINTPTR_TYPE__ checksum_cookie;
 
-// abitrary prime number
-LIBC_INLINE constexpr __UINTPTR_TYPE__ ROTATION = 13;
+// single register update derived from aHash
+// https://github.com/tkaitchuck/aHash/blob/master/src/fallback_hash.rs#L95
+//
+// checksum = folded_multiple(data ^ checksum, MULTIPLE)
+// folded_multiple(x, m) = HIGH(x * m) ^ LOW(x * m)
+
+// From Knuth's PRNG
+LIBC_INLINE constexpr __UINTPTR_TYPE__ MULTIPLE =
+    static_cast<__UINTPTR_TYPE__>(6364136223846793005ull);
 void initialize();
 extern "C" [[gnu::cold, noreturn]] void __libc_jmpbuf_corruption();
 } // namespace jmpbuf

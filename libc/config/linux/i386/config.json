@@ -1,8 +1,0 @@
-{
-    "setjmp": {
-        "LIBC_CONF_SETJMP_FORTIFICATION": {
-            "value": true,
-            "doc": "Protect jmp_buf by masking its contents and storing a simple checksum, to make it harder for an attacker to read meaningful information from a jmp_buf or to modify it. This is only supported on x86-64 Linux."
-        }
-    }
-}
