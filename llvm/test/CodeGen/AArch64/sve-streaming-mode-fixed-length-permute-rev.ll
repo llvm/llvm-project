@@ -643,11 +643,12 @@ define void @test_revhv32i16(ptr %a) {
 define void @test_rev_elts_fail(ptr %a) {
 ; CHECK-LABEL: test_rev_elts_fail:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    index z0.d, #1, #-1
-; CHECK-NEXT:    ldp q1, q2, [x0]
-; CHECK-NEXT:    tbl z1.d, { z1.d }, z0.d
-; CHECK-NEXT:    tbl z0.d, { z2.d }, z0.d
-; CHECK-NEXT:    stp q1, q0, [x0]
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    mov z2.d, z0.d[1]
+; CHECK-NEXT:    mov z3.d, z1.d[1]
+; CHECK-NEXT:    zip1 z0.d, z2.d, z0.d
+; CHECK-NEXT:    zip1 z1.d, z3.d, z1.d
+; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: test_rev_elts_fail:
