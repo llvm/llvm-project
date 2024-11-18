@@ -41,7 +41,7 @@ int printGPUsByKFD() {
     if (sys::path::stem(Begin->path()).consumeInteger(10, Node))
       return 1;
 
-    SmallVector<char> Path(Begin->path().begin(), Begin->path().end());
+    SmallString<0> Path(Begin->path());
     sys::path::append(Path, "properties");
 
     ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
