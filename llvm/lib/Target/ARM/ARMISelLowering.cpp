@@ -83,13 +83,11 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrItineraries.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/BranchProbability.h"
@@ -3004,17 +3002,16 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (InGlue.getNode())
     Ops.push_back(InGlue);
 
-  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
   if (isTailCall) {
     MF.getFrameInfo().setHasTailCall();
-    SDValue Ret = DAG.getNode(ARMISD::TC_RETURN, dl, NodeTys, Ops);
+    SDValue Ret = DAG.getNode(ARMISD::TC_RETURN, dl, MVT::Other, Ops);
     DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
     DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
     return Ret;
   }
 
   // Returns a chain and a flag for retval copy to use.
-  Chain = DAG.getNode(CallOpc, dl, NodeTys, Ops);
+  Chain = DAG.getNode(CallOpc, dl, {MVT::Other, MVT::Glue}, Ops);
   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
   InGlue = Chain.getValue(1);
   DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
@@ -20138,8 +20135,8 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     else if (Op.getOpcode() == ARMISD::CSINV)
       std::swap(KnownOp1.Zero, KnownOp1.One);
     else if (Op.getOpcode() == ARMISD::CSNEG)
-      KnownOp1 = KnownBits::mul(
-          KnownOp1, KnownBits::makeConstant(APInt(32, -1)));
+      KnownOp1 = KnownBits::mul(KnownOp1,
+                                KnownBits::makeConstant(APInt::getAllOnes(32)));
 
     Known = KnownOp0.intersectWith(KnownOp1);
     break;

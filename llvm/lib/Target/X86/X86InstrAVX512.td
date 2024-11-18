@@ -5690,13 +5690,13 @@ defm VDIV : avx512_fp_binop_p<0x5E, "vdiv", any_fdiv, fdiv, HasAVX512,
                               SchedWriteFDivSizes>,
             avx512_fp_binop_ph<0x5E, "vdiv", any_fdiv, fdiv, SchedWriteFDivSizes>,
             avx512_fp_binop_p_round<0x5E, "vdiv", X86fdivRnd, SchedWriteFDivSizes>;
-defm VMIN : avx512_fp_binop_p<0x5D, "vmin", X86fmin, X86fmin, HasAVX512,
+defm VMIN : avx512_fp_binop_p<0x5D, "vmin", X86any_fmin, X86fmin, HasAVX512,
                               SchedWriteFCmpSizes, 0>,
-            avx512_fp_binop_ph<0x5D, "vmin", X86fmin, X86fmin, SchedWriteFCmpSizes, 0>,
+            avx512_fp_binop_ph<0x5D, "vmin", X86any_fmin, X86fmin, SchedWriteFCmpSizes, 0>,
             avx512_fp_binop_p_sae<0x5D, "vmin", X86fminSAE, SchedWriteFCmpSizes>;
-defm VMAX : avx512_fp_binop_p<0x5F, "vmax", X86fmax, X86fmax, HasAVX512,
+defm VMAX : avx512_fp_binop_p<0x5F, "vmax", X86any_fmax, X86fmax, HasAVX512,
                               SchedWriteFCmpSizes, 0>,
-            avx512_fp_binop_ph<0x5F, "vmax", X86fmax, X86fmax, SchedWriteFCmpSizes, 0>,
+            avx512_fp_binop_ph<0x5F, "vmax", X86any_fmax, X86fmax, SchedWriteFCmpSizes, 0>,
             avx512_fp_binop_p_sae<0x5F, "vmax", X86fmaxSAE, SchedWriteFCmpSizes>;
 let isCodeGenOnly = 1 in {
   defm VMINC : avx512_fp_binop_p<0x5D, "vmin", X86fminc, X86fminc, HasAVX512,

@@ -276,6 +276,7 @@ class SimplifyCFGOpt {
   bool simplifyCleanupReturn(CleanupReturnInst *RI);
   bool simplifyUnreachable(UnreachableInst *UI);
   bool simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder);
+  bool simplifyDuplicateSwitchArms(SwitchInst *SI, DomTreeUpdater *DTU);
   bool simplifyIndirectBr(IndirectBrInst *IBI);
   bool simplifyBranch(BranchInst *Branch, IRBuilder<> &Builder);
   bool simplifyUncondBranch(BranchInst *BI, IRBuilder<> &Builder);
@@ -2917,7 +2918,10 @@ static void mergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
     // to the block with the merged `invoke`.
     for (BasicBlock *OrigSuccBB : successors(II->getParent()))
       OrigSuccBB->removePredecessor(II->getParent());
-    BranchInst::Create(MergedInvoke->getParent(), II->getParent());
+    auto *BI = BranchInst::Create(MergedInvoke->getParent(), II->getParent());
+    // The unconditional branch is part of the replacement for the original
+    // invoke, so should use its DebugLoc.
+    BI->setDebugLoc(II->getDebugLoc());
     bool Success = MergedInvoke->tryIntersectAttributes(II);
     assert(Success && "Merged invokes with incompatible attributes");
     // For NDEBUG Compile
@@ -7436,6 +7440,179 @@ static bool simplifySwitchOfCmpIntrinsic(SwitchInst *SI, IRBuilderBase &Builder,
   return true;
 }
 
+/// Checking whether two cases of SI are equal depends on the contents of the
+/// BasicBlock and the incoming values of their successor PHINodes.
+/// PHINode::getIncomingValueForBlock is O(|Preds|), so we'd like to avoid
+/// calling this function on each BasicBlock every time isEqual is called,
+/// especially since the same BasicBlock may be passed as an argument multiple
+/// times. To do this, we can precompute a map of PHINode -> Pred BasicBlock ->
+/// IncomingValue and add it in the Wrapper so isEqual can do O(1) checking
+/// of the incoming values.
+struct SwitchSuccWrapper {
+  // Keep so we can use SwitchInst::setSuccessor to do the replacement. It won't
+  // be important to equality though.
+  unsigned SuccNum;
+  BasicBlock *Dest;
+  DenseMap<PHINode *, SmallDenseMap<BasicBlock *, Value *, 8>> *PhiPredIVs;
+};
+
+namespace llvm {
+template <> struct DenseMapInfo<const SwitchSuccWrapper *> {
+  static const SwitchSuccWrapper *getEmptyKey() {
+    return static_cast<SwitchSuccWrapper *>(
+        DenseMapInfo<void *>::getEmptyKey());
+  }
+  static const SwitchSuccWrapper *getTombstoneKey() {
+    return static_cast<SwitchSuccWrapper *>(
+        DenseMapInfo<void *>::getTombstoneKey());
+  }
+  static unsigned getHashValue(const SwitchSuccWrapper *SSW) {
+    BasicBlock *Succ = SSW->Dest;
+    BranchInst *BI = cast<BranchInst>(Succ->getTerminator());
+    assert(BI->isUnconditional() &&
+           "Only supporting unconditional branches for now");
+    assert(BI->getNumSuccessors() == 1 &&
+           "Expected unconditional branches to have one successor");
+    assert(Succ->size() == 1 && "Expected just a single branch in the BB");
+
+    // Since we assume the BB is just a single BranchInst with a single
+    // successor, we hash as the BB and the incoming Values of its successor
+    // PHIs. Initially, we tried to just use the successor BB as the hash, but
+    // including the incoming PHI values leads to better performance.
+    // We also tried to build a map from BB -> Succs.IncomingValues ahead of
+    // time and passing it in SwitchSuccWrapper, but this slowed down the
+    // average compile time without having any impact on the worst case compile
+    // time.
+    BasicBlock *BB = BI->getSuccessor(0);
+    SmallVector<Value *> PhiValsForBB;
+    for (PHINode &Phi : BB->phis())
+      PhiValsForBB.emplace_back((*SSW->PhiPredIVs)[&Phi][BB]);
+
+    return hash_combine(
+        BB, hash_combine_range(PhiValsForBB.begin(), PhiValsForBB.end()));
+  }
+  static bool isEqual(const SwitchSuccWrapper *LHS,
+                      const SwitchSuccWrapper *RHS) {
+    auto EKey = DenseMapInfo<SwitchSuccWrapper *>::getEmptyKey();
+    auto TKey = DenseMapInfo<SwitchSuccWrapper *>::getTombstoneKey();
+    if (LHS == EKey || RHS == EKey || LHS == TKey || RHS == TKey)
+      return LHS == RHS;
+
+    BasicBlock *A = LHS->Dest;
+    BasicBlock *B = RHS->Dest;
+
+    // FIXME: we checked that the size of A and B are both 1 in
+    // simplifyDuplicateSwitchArms to make the Case list smaller to
+    // improve performance. If we decide to support BasicBlocks with more
+    // than just a single instruction, we need to check that A.size() ==
+    // B.size() here, and we need to check more than just the BranchInsts
+    // for equality.
+
+    BranchInst *ABI = cast<BranchInst>(A->getTerminator());
+    BranchInst *BBI = cast<BranchInst>(B->getTerminator());
+    assert(ABI->isUnconditional() && BBI->isUnconditional() &&
+           "Only supporting unconditional branches for now");
+    if (ABI->getSuccessor(0) != BBI->getSuccessor(0))
+      return false;
+
+    // Need to check that PHIs in successor have matching values
+    BasicBlock *Succ = ABI->getSuccessor(0);
+    for (PHINode &Phi : Succ->phis()) {
+      auto &PredIVs = (*LHS->PhiPredIVs)[&Phi];
+      if (PredIVs[A] != PredIVs[B])
+        return false;
+    }
+
+    return true;
+  }
+};
+} // namespace llvm
+
+bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
+                                                 DomTreeUpdater *DTU) {
+  // Build Cases. Skip BBs that are not candidates for simplification. Mark
+  // PHINodes which need to be processed into PhiPredIVs. We decide to process
+  // an entire PHI at once after the loop, opposed to calling
+  // getIncomingValueForBlock inside this loop, since each call to
+  // getIncomingValueForBlock is O(|Preds|).
+  SmallPtrSet<PHINode *, 8> Phis;
+  SmallPtrSet<BasicBlock *, 8> Seen;
+  DenseMap<PHINode *, SmallDenseMap<BasicBlock *, Value *, 8>> PhiPredIVs;
+  SmallVector<SwitchSuccWrapper> Cases;
+  Cases.reserve(SI->getNumSuccessors());
+
+  for (unsigned I = 0; I < SI->getNumSuccessors(); ++I) {
+    BasicBlock *BB = SI->getSuccessor(I);
+
+    // FIXME: Support more than just a single BranchInst. One way we could do
+    // this is by taking a hashing approach of all insts in BB.
+    if (BB->size() != 1)
+      continue;
+
+    // FIXME: This case needs some extra care because the terminators other than
+    // SI need to be updated.
+    if (BB->hasNPredecessorsOrMore(2))
+      continue;
+
+    // FIXME: Relax that the terminator is a BranchInst by checking for equality
+    // on other kinds of terminators. We decide to only support unconditional
+    // branches for now for compile time reasons.
+    auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
+    if (!BI || BI->isConditional())
+      continue;
+
+    if (Seen.insert(BB).second) {
+      // Keep track of which PHIs we need as keys in PhiPredIVs below.
+      for (BasicBlock *Succ : BI->successors())
+        for (PHINode &Phi : Succ->phis())
+          Phis.insert(&Phi);
+    }
+    Cases.emplace_back(SwitchSuccWrapper{I, BB, &PhiPredIVs});
+  }
+
+  // Precompute a data structure to improve performance of isEqual for
+  // SwitchSuccWrapper.
+  PhiPredIVs.reserve(Phis.size());
+  for (PHINode *Phi : Phis) {
+    PhiPredIVs[Phi] =
+        SmallDenseMap<BasicBlock *, Value *, 8>(Phi->getNumIncomingValues());
+    for (auto &IV : Phi->incoming_values())
+      PhiPredIVs[Phi].insert({Phi->getIncomingBlock(IV), IV.get()});
+  }
+
+  // Build a set such that if the SwitchSuccWrapper exists in the set and
+  // another SwitchSuccWrapper isEqual, then the equivalent SwitchSuccWrapper
+  // which is not in the set should be replaced with the one in the set. If the
+  // SwitchSuccWrapper is not in the set, then it should be added to the set so
+  // other SwitchSuccWrappers can check against it in the same manner. We use
+  // SwitchSuccWrapper instead of just BasicBlock because we'd like to pass
+  // around information to isEquality, getHashValue, and when doing the
+  // replacement with better performance.
+  DenseSet<const SwitchSuccWrapper *> ReplaceWith;
+  ReplaceWith.reserve(Cases.size());
+
+  SmallVector<DominatorTree::UpdateType> Updates;
+  Updates.reserve(ReplaceWith.size());
+  bool MadeChange = false;
+  for (auto &SSW : Cases) {
+    // SSW is a candidate for simplification. If we find a duplicate BB,
+    // replace it.
+    const auto [It, Inserted] = ReplaceWith.insert(&SSW);
+    if (!Inserted) {
+      // We know that SI's parent BB no longer dominates the old case successor
+      // since we are making it dead.
+      Updates.push_back({DominatorTree::Delete, SI->getParent(), SSW.Dest});
+      SI->setSuccessor(SSW.SuccNum, (*It)->Dest);
+      MadeChange = true;
+    }
+  }
+
+  if (DTU)
+    DTU->applyUpdates(Updates);
+
+  return MadeChange;
+}
+
 bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   BasicBlock *BB = SI->getParent();
 
@@ -7494,6 +7671,9 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
 
   if (HoistCommon &&
       hoistCommonCodeFromSuccessors(SI, !Options.HoistCommonInsts))
+    return requestResimplify();
+
+  if (simplifyDuplicateSwitchArms(SI, DTU))
     return requestResimplify();
 
   return false;

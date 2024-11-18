@@ -1229,8 +1229,8 @@ private:
       clear();
       shrink_to_fit();
     }
-    __alloc()        = __c.__alloc();
-    __map_.__alloc() = __c.__map_.__alloc();
+    __alloc()       = __c.__alloc();
+    __map_.__alloc_ = __c.__map_.__alloc_;
   }
 
   _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const deque&, false_type) {}
@@ -1309,7 +1309,7 @@ deque<_Tp, _Allocator>::deque(const deque& __c)
     : __map_(__pointer_allocator(__alloc_traits::select_on_container_copy_construction(__c.__alloc()))),
       __start_(0),
       __size_(0),
-      __alloc_(__map_.__alloc()) {
+      __alloc_(__map_.__alloc_) {
   __annotate_new(0);
   __append(__c.begin(), __c.end());
 }
@@ -2041,39 +2041,39 @@ void deque<_Tp, _Allocator>::__add_front_capacity() {
     __start_ += __block_size;
     pointer __pt = __map_.back();
     __map_.pop_back();
-    __map_.push_front(__pt);
+    __map_.emplace_front(__pt);
   }
   // Else if __map_.size() < __map_.capacity() then we need to allocate 1 buffer
   else if (__map_.size() < __map_.capacity()) { // we can put the new buffer into the map, but don't shift things around
     // until all buffers are allocated.  If we throw, we don't need to fix
     // anything up (any added buffers are undetectible)
     if (__map_.__front_spare() > 0)
-      __map_.push_front(__alloc_traits::allocate(__a, __block_size));
+      __map_.emplace_front(__alloc_traits::allocate(__a, __block_size));
     else {
-      __map_.push_back(__alloc_traits::allocate(__a, __block_size));
+      __map_.emplace_back(__alloc_traits::allocate(__a, __block_size));
       // Done allocating, reorder capacity
       pointer __pt = __map_.back();
       __map_.pop_back();
-      __map_.push_front(__pt);
+      __map_.emplace_front(__pt);
     }
     __start_ = __map_.size() == 1 ? __block_size / 2 : __start_ + __block_size;
   }
   // Else need to allocate 1 buffer, *and* we need to reallocate __map_.
   else {
     __split_buffer<pointer, __pointer_allocator&> __buf(
-        std::max<size_type>(2 * __map_.capacity(), 1), 0, __map_.__alloc());
+        std::max<size_type>(2 * __map_.capacity(), 1), 0, __map_.__alloc_);
 
     typedef __allocator_destructor<_Allocator> _Dp;
     unique_ptr<pointer, _Dp> __hold(__alloc_traits::allocate(__a, __block_size), _Dp(__a, __block_size));
-    __buf.push_back(__hold.get());
+    __buf.emplace_back(__hold.get());
     __hold.release();
 
     for (__map_pointer __i = __map_.begin(); __i != __map_.end(); ++__i)
-      __buf.push_back(*__i);
+      __buf.emplace_back(*__i);
     std::swap(__map_.__first_, __buf.__first_);
     std::swap(__map_.__begin_, __buf.__begin_);
     std::swap(__map_.__end_, __buf.__end_);
-    std::swap(__map_.__end_cap(), __buf.__end_cap());
+    std::swap(__map_.__cap_, __buf.__cap_);
     __start_ = __map_.size() == 1 ? __block_size / 2 : __start_ + __block_size;
   }
   __annotate_whole_block(0, __asan_poison);
@@ -2095,7 +2095,7 @@ void deque<_Tp, _Allocator>::__add_front_capacity(size_type __n) {
     for (; __back_capacity > 0; --__back_capacity) {
       pointer __pt = __map_.back();
       __map_.pop_back();
-      __map_.push_front(__pt);
+      __map_.emplace_front(__pt);
     }
   }
   // Else if __nb <= __map_.capacity() - __map_.size() then we need to allocate __nb buffers
@@ -2106,17 +2106,17 @@ void deque<_Tp, _Allocator>::__add_front_capacity(size_type __n) {
     for (; __nb > 0; --__nb, __start_ += __block_size - (__map_.size() == 1)) {
       if (__map_.__front_spare() == 0)
         break;
-      __map_.push_front(__alloc_traits::allocate(__a, __block_size));
+      __map_.emplace_front(__alloc_traits::allocate(__a, __block_size));
       __annotate_whole_block(0, __asan_poison);
     }
     for (; __nb > 0; --__nb, ++__back_capacity)
-      __map_.push_back(__alloc_traits::allocate(__a, __block_size));
+      __map_.emplace_back(__alloc_traits::allocate(__a, __block_size));
     // Done allocating, reorder capacity
     __start_ += __back_capacity * __block_size;
     for (; __back_capacity > 0; --__back_capacity) {
       pointer __pt = __map_.back();
       __map_.pop_back();
-      __map_.push_front(__pt);
+      __map_.emplace_front(__pt);
       __annotate_whole_block(0, __asan_poison);
     }
   }
@@ -2124,12 +2124,12 @@ void deque<_Tp, _Allocator>::__add_front_capacity(size_type __n) {
   else {
     size_type __ds = (__nb + __back_capacity) * __block_size - __map_.empty();
     __split_buffer<pointer, __pointer_allocator&> __buf(
-        std::max<size_type>(2 * __map_.capacity(), __nb + __map_.size()), 0, __map_.__alloc());
+        std::max<size_type>(2 * __map_.capacity(), __nb + __map_.size()), 0, __map_.__alloc_);
 #if _LIBCPP_HAS_EXCEPTIONS
     try {
 #endif // _LIBCPP_HAS_EXCEPTIONS
       for (; __nb > 0; --__nb) {
-        __buf.push_back(__alloc_traits::allocate(__a, __block_size));
+        __buf.emplace_back(__alloc_traits::allocate(__a, __block_size));
         // ASan: this is empty container, we have to poison whole block
         __annotate_poison_block(std::__to_address(__buf.back()), std::__to_address(__buf.back() + __block_size));
       }
@@ -2142,15 +2142,15 @@ void deque<_Tp, _Allocator>::__add_front_capacity(size_type __n) {
     }
 #endif // _LIBCPP_HAS_EXCEPTIONS
     for (; __back_capacity > 0; --__back_capacity) {
-      __buf.push_back(__map_.back());
+      __buf.emplace_back(__map_.back());
       __map_.pop_back();
     }
     for (__map_pointer __i = __map_.begin(); __i != __map_.end(); ++__i)
-      __buf.push_back(*__i);
+      __buf.emplace_back(*__i);
     std::swap(__map_.__first_, __buf.__first_);
     std::swap(__map_.__begin_, __buf.__begin_);
     std::swap(__map_.__end_, __buf.__end_);
-    std::swap(__map_.__end_cap(), __buf.__end_cap());
+    std::swap(__map_.__cap_, __buf.__cap_);
     __start_ += __ds;
   }
 }
@@ -2164,39 +2164,39 @@ void deque<_Tp, _Allocator>::__add_back_capacity() {
     __start_ -= __block_size;
     pointer __pt = __map_.front();
     __map_.pop_front();
-    __map_.push_back(__pt);
+    __map_.emplace_back(__pt);
   }
   // Else if __nb <= __map_.capacity() - __map_.size() then we need to allocate __nb buffers
   else if (__map_.size() < __map_.capacity()) { // we can put the new buffer into the map, but don't shift things around
     // until it is allocated.  If we throw, we don't need to fix
     // anything up (any added buffers are undetectible)
     if (__map_.__back_spare() != 0)
-      __map_.push_back(__alloc_traits::allocate(__a, __block_size));
+      __map_.emplace_back(__alloc_traits::allocate(__a, __block_size));
     else {
-      __map_.push_front(__alloc_traits::allocate(__a, __block_size));
+      __map_.emplace_front(__alloc_traits::allocate(__a, __block_size));
       // Done allocating, reorder capacity
       pointer __pt = __map_.front();
       __map_.pop_front();
-      __map_.push_back(__pt);
+      __map_.emplace_back(__pt);
     }
     __annotate_whole_block(__map_.size() - 1, __asan_poison);
   }
   // Else need to allocate 1 buffer, *and* we need to reallocate __map_.
   else {
     __split_buffer<pointer, __pointer_allocator&> __buf(
-        std::max<size_type>(2 * __map_.capacity(), 1), __map_.size(), __map_.__alloc());
+        std::max<size_type>(2 * __map_.capacity(), 1), __map_.size(), __map_.__alloc_);
 
     typedef __allocator_destructor<_Allocator> _Dp;
     unique_ptr<pointer, _Dp> __hold(__alloc_traits::allocate(__a, __block_size), _Dp(__a, __block_size));
-    __buf.push_back(__hold.get());
+    __buf.emplace_back(__hold.get());
     __hold.release();
 
     for (__map_pointer __i = __map_.end(); __i != __map_.begin();)
-      __buf.push_front(*--__i);
+      __buf.emplace_front(*--__i);
     std::swap(__map_.__first_, __buf.__first_);
     std::swap(__map_.__begin_, __buf.__begin_);
     std::swap(__map_.__end_, __buf.__end_);
-    std::swap(__map_.__end_cap(), __buf.__end_cap());
+    std::swap(__map_.__cap_, __buf.__cap_);
     __annotate_whole_block(__map_.size() - 1, __asan_poison);
   }
 }
@@ -2217,7 +2217,7 @@ void deque<_Tp, _Allocator>::__add_back_capacity(size_type __n) {
     for (; __front_capacity > 0; --__front_capacity) {
       pointer __pt = __map_.front();
       __map_.pop_front();
-      __map_.push_back(__pt);
+      __map_.emplace_back(__pt);
     }
   }
   // Else if __nb <= __map_.capacity() - __map_.size() then we need to allocate __nb buffers
@@ -2228,11 +2228,11 @@ void deque<_Tp, _Allocator>::__add_back_capacity(size_type __n) {
     for (; __nb > 0; --__nb) {
       if (__map_.__back_spare() == 0)
         break;
-      __map_.push_back(__alloc_traits::allocate(__a, __block_size));
+      __map_.emplace_back(__alloc_traits::allocate(__a, __block_size));
       __annotate_whole_block(__map_.size() - 1, __asan_poison);
     }
     for (; __nb > 0; --__nb, ++__front_capacity, __start_ += __block_size - (__map_.size() == 1)) {
-      __map_.push_front(__alloc_traits::allocate(__a, __block_size));
+      __map_.emplace_front(__alloc_traits::allocate(__a, __block_size));
       __annotate_whole_block(0, __asan_poison);
     }
     // Done allocating, reorder capacity
@@ -2240,7 +2240,7 @@ void deque<_Tp, _Allocator>::__add_back_capacity(size_type __n) {
     for (; __front_capacity > 0; --__front_capacity) {
       pointer __pt = __map_.front();
       __map_.pop_front();
-      __map_.push_back(__pt);
+      __map_.emplace_back(__pt);
     }
   }
   // Else need to allocate __nb buffers, *and* we need to reallocate __map_.
@@ -2249,12 +2249,12 @@ void deque<_Tp, _Allocator>::__add_back_capacity(size_type __n) {
     __split_buffer<pointer, __pointer_allocator&> __buf(
         std::max<size_type>(2 * __map_.capacity(), __nb + __map_.size()),
         __map_.size() - __front_capacity,
-        __map_.__alloc());
+        __map_.__alloc_);
 #if _LIBCPP_HAS_EXCEPTIONS
     try {
 #endif // _LIBCPP_HAS_EXCEPTIONS
       for (; __nb > 0; --__nb) {
-        __buf.push_back(__alloc_traits::allocate(__a, __block_size));
+        __buf.emplace_back(__alloc_traits::allocate(__a, __block_size));
         // ASan: this is an empty container, we have to poison the whole block
         __annotate_poison_block(std::__to_address(__buf.back()), std::__to_address(__buf.back() + __block_size));
       }
@@ -2267,15 +2267,15 @@ void deque<_Tp, _Allocator>::__add_back_capacity(size_type __n) {
     }
 #endif // _LIBCPP_HAS_EXCEPTIONS
     for (; __front_capacity > 0; --__front_capacity) {
-      __buf.push_back(__map_.front());
+      __buf.emplace_back(__map_.front());
       __map_.pop_front();
     }
     for (__map_pointer __i = __map_.end(); __i != __map_.begin();)
-      __buf.push_front(*--__i);
+      __buf.emplace_front(*--__i);
     std::swap(__map_.__first_, __buf.__first_);
     std::swap(__map_.__begin_, __buf.__begin_);
     std::swap(__map_.__end_, __buf.__end_);
-    std::swap(__map_.__end_cap(), __buf.__end_cap());
+    std::swap(__map_.__cap_, __buf.__cap_);
     __start_ -= __ds;
   }
 }
@@ -2604,7 +2604,7 @@ erase_if(deque<_Tp, _Allocator>& __c, _Predicate __pred) {
 
 template <>
 inline constexpr bool __format::__enable_insertable<std::deque<char>> = true;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 inline constexpr bool __format::__enable_insertable<std::deque<wchar_t>> = true;
 #  endif

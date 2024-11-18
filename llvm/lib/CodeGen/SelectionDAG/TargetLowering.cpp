@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
-#include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -605,10 +604,15 @@ bool TargetLowering::ShrinkDemandedOp(SDValue Op, unsigned BitWidth,
     EVT SmallVT = EVT::getIntegerVT(*DAG.getContext(), SmallVTBits);
     if (isTruncateFree(VT, SmallVT) && isZExtFree(SmallVT, VT)) {
       // We found a type with free casts.
+
+      // If the operation has the 'disjoint' flag, then the
+      // operands on the new node are also disjoint.
+      SDNodeFlags Flags(Op->getFlags().hasDisjoint() ? SDNodeFlags::Disjoint
+                                                     : SDNodeFlags::None);
       SDValue X = DAG.getNode(
           Op.getOpcode(), dl, SmallVT,
           DAG.getNode(ISD::TRUNCATE, dl, SmallVT, Op.getOperand(0)),
-          DAG.getNode(ISD::TRUNCATE, dl, SmallVT, Op.getOperand(1)));
+          DAG.getNode(ISD::TRUNCATE, dl, SmallVT, Op.getOperand(1)), Flags);
       assert(DemandedSize <= SmallVTBits && "Narrowed below demanded bits?");
       SDValue Z = DAG.getNode(ISD::ANY_EXTEND, dl, VT, X);
       return TLO.CombineTo(Op, Z);
@@ -790,6 +794,16 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     if (DemandedBits.isSubsetOf(RHSKnown.Zero))
       return Op.getOperand(0);
     if (DemandedBits.isSubsetOf(LHSKnown.Zero))
+      return Op.getOperand(1);
+    break;
+  }
+  case ISD::ADD: {
+    RHSKnown = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    if (RHSKnown.isZero())
+      return Op.getOperand(0);
+
+    LHSKnown = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    if (LHSKnown.isZero())
       return Op.getOperand(1);
     break;
   }
@@ -2026,6 +2040,21 @@ bool TargetLowering::SimplifyDemandedBits(
       Known = TLO.DAG.computeKnownBits(Op, DemandedElts, Depth);
     }
 
+    // If we are only demanding sign bits then we can use the shift source
+    // directly.
+    if (std::optional<uint64_t> MaxSA =
+            TLO.DAG.getValidMaximumShiftAmount(Op, DemandedElts, Depth + 1)) {
+      unsigned ShAmt = *MaxSA;
+      // Must already be signbits in DemandedBits bounds, and can't demand any
+      // shifted in zeroes.
+      if (DemandedBits.countl_zero() >= ShAmt) {
+        unsigned NumSignBits =
+            TLO.DAG.ComputeNumSignBits(Op0, DemandedElts, Depth + 1);
+        if (DemandedBits.countr_zero() >= (BitWidth - NumSignBits))
+          return TLO.CombineTo(Op, Op0);
+      }
+    }
+
     // Try to match AVG patterns (after shift simplification).
     if (SDValue AVG = combineShiftToAVG(Op, TLO, *this, DemandedBits,
                                         DemandedElts, Depth + 1))
@@ -2575,8 +2604,12 @@ bool TargetLowering::SimplifyDemandedBits(
     unsigned OperandBitWidth = Src.getScalarValueSizeInBits();
     APInt TruncMask = DemandedBits.zext(OperandBitWidth);
     if (SimplifyDemandedBits(Src, TruncMask, DemandedElts, Known, TLO,
-                             Depth + 1))
+                             Depth + 1)) {
+      // Disable the nsw and nuw flags. We can no longer guarantee that we
+      // won't wrap after simplification.
+      Op->dropFlags(SDNodeFlags::NoWrap);
       return true;
+    }
     Known = Known.trunc(BitWidth);
 
     // Attempt to avoid multi-use ops if we don't need anything from them.
@@ -3690,6 +3723,11 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts, KnownUndef,
                                    KnownZero, TLO, Depth + 1))
       return true;
+
+    if (!DemandedElts.isAllOnes())
+      if (SDValue NewOp = SimplifyMultipleUseDemandedVectorElts(
+              Op.getOperand(0), DemandedElts, TLO.DAG, Depth + 1))
+        return TLO.CombineTo(Op, TLO.DAG.getNode(Opcode, SDLoc(Op), VT, NewOp));
 
     if (Op.getOpcode() == ISD::ZERO_EXTEND) {
       // zext(undef) upper bits are guaranteed to be zero.
@@ -4942,7 +4980,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         APInt C = C1 - 1;
         ISD::CondCode NewCC = (Cond == ISD::SETGE) ? ISD::SETGT : ISD::SETUGT;
         if ((DCI.isBeforeLegalizeOps() ||
-             isCondCodeLegal(NewCC, VT.getSimpleVT())) &&
+             isCondCodeLegal(NewCC, OpVT.getSimpleVT())) &&
             (!N1C->isOpaque() || (C.getBitWidth() <= 64 &&
                                   isLegalICmpImmediate(C.getSExtValue())))) {
           return DAG.getSetCC(dl, VT, N0,
@@ -4962,7 +5000,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         APInt C = C1 + 1;
         ISD::CondCode NewCC = (Cond == ISD::SETLE) ? ISD::SETLT : ISD::SETULT;
         if ((DCI.isBeforeLegalizeOps() ||
-             isCondCodeLegal(NewCC, VT.getSimpleVT())) &&
+             isCondCodeLegal(NewCC, OpVT.getSimpleVT())) &&
             (!N1C->isOpaque() || (C.getBitWidth() <= 64 &&
                                   isLegalICmpImmediate(C.getSExtValue())))) {
           return DAG.getSetCC(dl, VT, N0,
@@ -5720,7 +5758,8 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
       assert(!Call.getType()->isVoidTy() && "Bad inline asm!");
       if (auto *STy = dyn_cast<StructType>(Call.getType())) {
         OpInfo.ConstraintVT =
-            getSimpleValueType(DL, STy->getElementType(ResNo));
+            getAsmOperandValueType(DL, STy->getElementType(ResNo))
+                .getSimpleVT();
       } else {
         assert(ResNo == 0 && "Asm only has one result!");
         OpInfo.ConstraintVT =

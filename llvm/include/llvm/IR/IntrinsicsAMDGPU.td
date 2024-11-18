@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 def global_ptr_ty : LLVMQualPointerType<1>;
+def local_ptr_ty : LLVMQualPointerType<3>;
 
 // The amdgpu-no-* attributes (ex amdgpu-no-workitem-id-z) typically inferred
 // by the backend cause whole-program undefined behavior when violated, such as
@@ -247,46 +248,68 @@ def int_amdgcn_s_sendmsghalt : ClangBuiltin<"__builtin_amdgcn_s_sendmsghalt">,
 def int_amdgcn_s_sendmsg_rtn : Intrinsic <[llvm_anyint_ty], [llvm_i32_ty],
   [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]>;
 
+// Vanilla workgroup sync-barrier
 def int_amdgcn_s_barrier : ClangBuiltin<"__builtin_amdgcn_s_barrier">,
   Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
+// Lower-level split-barrier intrinsics
+
+// void @llvm.amdgcn.s.barrier.signal(i32 %barrierType)
+// only for non-named barrier
 def int_amdgcn_s_barrier_signal : ClangBuiltin<"__builtin_amdgcn_s_barrier_signal">,
   Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
                                 IntrNoCallback, IntrNoFree]>;
 
+// void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) %barrier, i32 %memberCnt)
+// The %barrier and %memberCnt argument must be uniform, otherwise behavior is undefined.
 def int_amdgcn_s_barrier_signal_var : ClangBuiltin<"__builtin_amdgcn_s_barrier_signal_var">,
-  Intrinsic<[], [llvm_i32_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
+  Intrinsic<[], [local_ptr_ty, llvm_i32_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
                                 IntrNoCallback, IntrNoFree]>;
 
+// bool @llvm.amdgcn.s.barrier.signal.isfirst(i32 %barrierType)
+// only for non-named barrier
 def int_amdgcn_s_barrier_signal_isfirst : ClangBuiltin<"__builtin_amdgcn_s_barrier_signal_isfirst">,
   Intrinsic<[llvm_i1_ty], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrConvergent,
                                 IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
-def int_amdgcn_s_barrier_signal_isfirst_var : ClangBuiltin<"__builtin_amdgcn_s_barrier_signal_isfirst_var">,
-  Intrinsic<[llvm_i1_ty], [llvm_i32_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
-                                IntrNoCallback, IntrNoFree]>;
-
+// void @llvm.amdgcn.s.barrier.init(ptr addrspace(3) %barrier, i32 %memberCnt)
+// The %barrier and %memberCnt argument must be uniform, otherwise behavior is undefined.
 def int_amdgcn_s_barrier_init : ClangBuiltin<"__builtin_amdgcn_s_barrier_init">,
-  Intrinsic<[], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent,
+  Intrinsic<[], [local_ptr_ty, llvm_i32_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent,
                                 IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
+// void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) %barrier)
+// The %barrier argument must be uniform, otherwise behavior is undefined.
 def int_amdgcn_s_barrier_join : ClangBuiltin<"__builtin_amdgcn_s_barrier_join">,
-  Intrinsic<[], [llvm_i32_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
+  Intrinsic<[], [local_ptr_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
                                 IntrNoCallback, IntrNoFree]>;
 
+// void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(3) %barrier)
+// The %barrier argument must be uniform, otherwise behavior is undefined.
 def int_amdgcn_s_wakeup_barrier : ClangBuiltin<"__builtin_amdgcn_s_wakeup_barrier">,
-  Intrinsic<[], [llvm_i32_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
+  Intrinsic<[], [local_ptr_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
                                 IntrNoCallback, IntrNoFree]>;
 
+// void @llvm.amdgcn.s.barrier.wait(i16 %barrierType)
 def int_amdgcn_s_barrier_wait : ClangBuiltin<"__builtin_amdgcn_s_barrier_wait">,
   Intrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrConvergent,
                                 IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
+// void @llvm.amdgcn.s.barrier.leave(i16 %barrierType)
 def int_amdgcn_s_barrier_leave : ClangBuiltin<"__builtin_amdgcn_s_barrier_leave">,
-  Intrinsic<[llvm_i1_ty], [], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+  Intrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrConvergent,
+                                IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
+// uint32_t @llvm.amdgcn.s.get.barrier.state(i32 %barrierId)
+// The %barrierType argument must be uniform, otherwise behavior is undefined.
 def int_amdgcn_s_get_barrier_state : ClangBuiltin<"__builtin_amdgcn_s_get_barrier_state">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
+                                IntrNoCallback, IntrNoFree]>;
+
+// uint32_t @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3) %barrier)
+// The %barrier argument must be uniform, otherwise behavior is undefined.
+def int_amdgcn_s_get_named_barrier_state : ClangBuiltin<"__builtin_amdgcn_s_get_named_barrier_state">,
+  Intrinsic<[llvm_i32_ty], [local_ptr_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
                                 IntrNoCallback, IntrNoFree]>;
 
 def int_amdgcn_wave_barrier : ClangBuiltin<"__builtin_amdgcn_wave_barrier">,
@@ -1125,8 +1148,8 @@ def int_amdgcn_s_buffer_load : DefaultAttrsIntrinsic <
 // Note that in the cachepolicy for all these intrinsics, bit 31 is not preserved
 // through to final assembly selection and is used to signal that the buffer
 // operation is volatile.
-class AMDGPURawBufferLoad<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntrinsic <
-  [data_ty],
+class AMDGPURawBufferLoad : DefaultAttrsIntrinsic <
+  [llvm_any_ty],
   [llvm_v4i32_ty,    // rsrc(SGPR)
    llvm_i32_ty,      // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,      // soffset(SGPR/imm, excluded from bounds checking and swizzling)
@@ -1139,7 +1162,7 @@ class AMDGPURawBufferLoad<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntrinsi
                      //           all: volatile op (bit 31, stripped at lowering)
   [IntrReadMem, ImmArg<ArgIndex<3>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<0>;
-def int_amdgcn_raw_buffer_load_format : AMDGPURawBufferLoad<llvm_anyfloat_ty>;
+def int_amdgcn_raw_buffer_load_format : AMDGPURawBufferLoad;
 def int_amdgcn_raw_buffer_load : AMDGPURawBufferLoad;
 
 class AMDGPURawAtomicBufferLoad<LLVMType data_ty = llvm_any_ty> : Intrinsic <

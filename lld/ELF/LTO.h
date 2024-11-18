@@ -42,7 +42,7 @@ public:
   ~BitcodeCompiler();
 
   void add(BitcodeFile &f);
-  std::vector<InputFile *> compile();
+  SmallVector<std::unique_ptr<InputFile>, 0> compile();
 
 private:
   Ctx &ctx;

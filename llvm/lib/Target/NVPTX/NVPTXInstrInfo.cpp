@@ -12,12 +12,9 @@
 
 #include "NVPTXInstrInfo.h"
 #include "NVPTX.h"
-#include "NVPTXTargetMachine.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/Function.h"
 
 using namespace llvm;
 

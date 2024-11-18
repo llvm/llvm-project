@@ -2238,7 +2238,10 @@ prepareCallHierarchy(ParsedAST &AST, Position Pos, PathRef TUPath) {
   for (const NamedDecl *Decl : getDeclAtPosition(AST, *Loc, {})) {
     if (!(isa<DeclContext>(Decl) &&
           cast<DeclContext>(Decl)->isFunctionOrMethod()) &&
-        Decl->getKind() != Decl::Kind::FunctionTemplate)
+        Decl->getKind() != Decl::Kind::FunctionTemplate &&
+        !(Decl->getKind() == Decl::Kind::Var &&
+          !cast<VarDecl>(Decl)->isLocalVarDecl()) &&
+        Decl->getKind() != Decl::Kind::Field)
       continue;
     if (auto CHI = declToCallHierarchyItem(*Decl, AST.tuPath()))
       Result.emplace_back(std::move(*CHI));

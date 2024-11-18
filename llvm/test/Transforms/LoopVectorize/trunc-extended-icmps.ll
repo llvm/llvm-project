@@ -17,7 +17,7 @@ define i32 @test_icmp_constant_op_zext(ptr %dst) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[DST]], i16 [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    store <4 x i8> <i8 109, i8 109, i8 109, i8 109>, ptr [[TMP2]], align 1
+; CHECK-NEXT:    store <4 x i8> splat (i8 109), ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 996
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

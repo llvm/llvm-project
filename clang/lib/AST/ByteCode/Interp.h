@@ -3063,11 +3063,30 @@ inline bool BitCast(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
 
   if constexpr (std::is_same_v<T, Floating>) {
     assert(Sem);
-    S.Stk.push<Floating>(T::bitcastFromMemory(Buff.data(), *Sem));
+    ptrdiff_t Offset = 0;
+
+    if (llvm::sys::IsBigEndianHost) {
+      unsigned NumBits = llvm::APFloatBase::getSizeInBits(*Sem);
+      assert(NumBits % 8 == 0);
+      assert(NumBits <= ResultBitWidth);
+      Offset = (ResultBitWidth - NumBits) / 8;
+    }
+
+    S.Stk.push<Floating>(T::bitcastFromMemory(Buff.data() + Offset, *Sem));
   } else {
     assert(!Sem);
     S.Stk.push<T>(T::bitcastFromMemory(Buff.data(), ResultBitWidth));
   }
+  return true;
+}
+
+inline bool BitCastPtr(InterpState &S, CodePtr OpPC) {
+  const Pointer &FromPtr = S.Stk.pop<Pointer>();
+  Pointer &ToPtr = S.Stk.peek<Pointer>();
+
+  if (!DoBitCastPtr(S, OpPC, FromPtr, ToPtr))
+    return false;
+
   return true;
 }
 

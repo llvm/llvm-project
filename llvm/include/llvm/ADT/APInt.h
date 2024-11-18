@@ -512,7 +512,7 @@ public:
       return isShiftedMask_64(U.VAL);
     unsigned Ones = countPopulationSlowCase();
     unsigned LeadZ = countLeadingZerosSlowCase();
-    return (Ones + LeadZ + countr_zero()) == BitWidth;
+    return (Ones + LeadZ + countTrailingZerosSlowCase()) == BitWidth;
   }
 
   /// Return true if this APInt value contains a non-empty sequence of ones with

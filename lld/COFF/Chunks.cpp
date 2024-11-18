@@ -1083,7 +1083,8 @@ void CHPECodeRangesChunk::writeTo(uint8_t *buf) const {
 }
 
 size_t CHPERedirectionChunk::getSize() const {
-  return exportThunks.size() * sizeof(chpe_redirection_entry);
+  // Add an extra +1 for a terminator entry.
+  return (exportThunks.size() + 1) * sizeof(chpe_redirection_entry);
 }
 
 void CHPERedirectionChunk::writeTo(uint8_t *buf) const {

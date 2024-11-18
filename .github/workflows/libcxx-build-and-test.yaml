@@ -45,11 +45,11 @@ env:
   LLVM_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer-19"
   CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
 
-
 jobs:
   stage1:
     if: github.repository_owner == 'llvm'
-    runs-on: libcxx-runners-8-set
+    runs-on: libcxx-self-hosted-linux
+    container: ghcr.io/llvm/libcxx-linux-builder:0fd6f684b9c84c32d6cbfd9742402e788b2879f1
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -85,7 +85,8 @@ jobs:
             **/crash_diagnostics/*
   stage2:
     if: github.repository_owner == 'llvm'
-    runs-on: libcxx-runners-8-set
+    runs-on: libcxx-self-hosted-linux
+    container: ghcr.io/llvm/libcxx-linux-builder:0fd6f684b9c84c32d6cbfd9742402e788b2879f1
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -157,25 +158,23 @@ jobs:
           'generic-no-rtti',
           'generic-optimized-speed',
           'generic-static',
-          # TODO Find a better place for the benchmark and bootstrapping builds to live. They're either very expensive
-          # or don't provide much value since the benchmark run results are too noise on the bots.
-          'benchmarks',
           'bootstrapping-build'
         ]
-        machine: [ 'libcxx-runners-8-set' ]
+        machine: [ 'libcxx-self-hosted-linux' ]
         include:
         - config: 'generic-cxx26'
-          machine: libcxx-runners-8-set
+          machine: libcxx-self-hosted-linux
         - config: 'generic-asan'
-          machine: libcxx-runners-8-set
+          machine: libcxx-self-hosted-linux
         - config: 'generic-tsan'
-          machine: libcxx-runners-8-set
+          machine: libcxx-self-hosted-linux
         - config: 'generic-ubsan'
-          machine: libcxx-runners-8-set
+          machine: libcxx-self-hosted-linux
         # Use a larger machine for MSAN to avoid timeout and memory allocation issues.
         - config: 'generic-msan'
-          machine: libcxx-runners-8-set
+          machine: libcxx-self-hosted-linux
     runs-on: ${{ matrix.machine }}
+    container: ghcr.io/llvm/libcxx-linux-builder:0fd6f684b9c84c32d6cbfd9742402e788b2879f1
     steps:
       - uses: actions/checkout@v4
       - name: ${{ matrix.config }}
@@ -202,13 +201,13 @@ jobs:
       matrix:
         include:
         - config: generic-cxx03
-          os: macos-latest
+          os: macos-15
         - config: generic-cxx23
-          os: macos-latest
+          os: macos-15
         - config: generic-modules
-          os: macos-latest
+          os: macos-15
         - config: apple-configuration
-          os: macos-latest
+          os: macos-15
         - config: apple-system
           os: macos-13
         - config: apple-system-hardened

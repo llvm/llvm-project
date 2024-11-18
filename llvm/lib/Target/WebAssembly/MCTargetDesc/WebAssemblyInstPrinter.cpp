@@ -14,7 +14,6 @@
 #include "MCTargetDesc/WebAssemblyInstPrinter.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
-#include "WebAssembly.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
@@ -26,7 +25,6 @@
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FormattedStream.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
@@ -57,7 +55,7 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     // operand isn't a symbol, then we have an MVP compilation unit, and the
     // table shouldn't appear in the output.
     OS << "\t";
-    OS << getMnemonic(MI).first;
+    OS << getMnemonic(*MI).first;
     OS << " ";
 
     assert(MI->getNumOperands() == 2);

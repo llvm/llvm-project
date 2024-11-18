@@ -38,7 +38,6 @@
 #include "ExprConstShared.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/CXXInheritance.h"
@@ -13526,6 +13525,23 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!handleAssignment(Info, E, ResultLValue, ResultType, APV))
       return false;
     return Success(DidOverflow, E);
+  }
+
+  case Builtin::BI__builtin_reduce_add: {
+    APValue Source;
+    if (!EvaluateAsRValue(Info, E->getArg(0), Source))
+      return false;
+
+    unsigned SourceLen = Source.getVectorLength();
+    APSInt Reduced = Source.getVectorElt(0).getInt();
+    for (unsigned EltNum = 1; EltNum < SourceLen; ++EltNum) {
+      if (!CheckedIntArithmetic(
+              Info, E, Reduced, Source.getVectorElt(EltNum).getInt(),
+              Reduced.getBitWidth() + 1, std::plus<APSInt>(), Reduced))
+        return false;
+    }
+
+    return Success(Reduced, E);
   }
 
   case clang::X86::BI__builtin_ia32_addcarryx_u32:

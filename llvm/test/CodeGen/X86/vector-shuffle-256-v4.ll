@@ -1808,6 +1808,21 @@ define <4 x double> @broadcast_v4f64_0000_from_v2i64(<2 x i64> %a0) {
   ret <4 x double> %3
 }
 
+; PR114959
+define <4 x double> @concat_v4f64_0213_broadcasts(ptr %src) {
+; ALL-LABEL: concat_v4f64_0213_broadcasts:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; ALL-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; ALL-NEXT:    vshufpd {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[3],ymm0[3]
+; ALL-NEXT:    retq
+  %src.hi = getelementptr inbounds i8, ptr %src, i64 32
+  %lo = load <2 x double>, ptr %src, align 1
+  %hi = load <2 x double>, ptr %src.hi, align 1
+  %shuffle = shufflevector <2 x double> %lo, <2 x double> %hi, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  ret <4 x double> %shuffle
+}
+
 define <4 x double> @bitcast_v4f64_0426(<4 x double> %a, <4 x double> %b) {
 ; ALL-LABEL: bitcast_v4f64_0426:
 ; ALL:       # %bb.0:
