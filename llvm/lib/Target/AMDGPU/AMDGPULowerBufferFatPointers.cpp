@@ -637,33 +637,33 @@ class LegalizeBufferContentTypesVisitor
   Value *makeIllegalNonAggregate(Value *V, Type *OrigType, const Twine &Name);
 
   struct VecSlice {
-    uint64_t Index;
-    uint64_t Length;
-    VecSlice(uint64_t Index, uint64_t Length) : Index(Index), Length(Length) {}
+    uint64_t Index = 0;
+    uint64_t Length = 0;
+    VecSlice() = delete;
   };
-  // Return the [index, length] pairs into which `T` needs to be cut to form
-  // legal buffer load or store operations. Clears `Slices`. Creates an empty
-  // `Slices` for non-vector inputs and creates one slice if no slicing will be
-  // needed.
+  /// Return the [index, length] pairs into which `T` needs to be cut to form
+  /// legal buffer load or store operations. Clears `Slices`. Creates an empty
+  /// `Slices` for non-vector inputs and creates one slice if no slicing will be
+  /// needed.
   void getVecSlices(Type *T, SmallVectorImpl<VecSlice> &Slices);
 
   Value *extractSlice(Value *Vec, VecSlice S, const Twine &Name);
   Value *insertSlice(Value *Whole, Value *Part, VecSlice S, const Twine &Name);
 
-  // In most cases, return `LegalType`. However, when given an input that would
-  // normally be a legal type for the buffer intrinsics to return but that isn't
-  // hooked up through SelectionDAG, return a type of the same width that can be
-  // used with the relevant intrinsics. Specifically, handle the cases:
-  // - <1 x T> => T for all T
-  // - <N x i8> <=> i16, i32, 2xi32, 4xi32 (as needed)
-  // - <N x T> where T is under 32 bits and the total size is 96 bits <=> <3 x
-  // i32>
+  /// In most cases, return `LegalType`. However, when given an input that would
+  /// normally be a legal type for the buffer intrinsics to return but that
+  /// isn't hooked up through SelectionDAG, return a type of the same width that
+  /// can be used with the relevant intrinsics. Specifically, handle the cases:
+  /// - <1 x T> => T for all T
+  /// - <N x i8> <=> i16, i32, 2xi32, 4xi32 (as needed)
+  /// - <N x T> where T is under 32 bits and the total size is 96 bits <=> <3 x
+  /// i32>
   Type *intrinsicTypeFor(Type *LegalType);
 
   bool visitLoadImpl(LoadInst &OrigLI, Type *PartType,
                      SmallVectorImpl<uint32_t> &AggIdxs, uint64_t AggByteOffset,
                      Value *&Result, const Twine &Name);
-  // Return value is (Changed, ModifiedInPlace)
+  /// Return value is (Changed, ModifiedInPlace)
   std::pair<bool, bool> visitStoreImpl(StoreInst &OrigSI, Type *PartType,
                                        SmallVectorImpl<uint32_t> &AggIdxs,
                                        uint64_t AggByteOffset,
@@ -838,7 +838,8 @@ void LegalizeBufferContentTypesVisitor::getVecSlices(
   uint64_t Index = 0;
   auto TrySlice = [&](unsigned MaybeLen) {
     if (MaybeLen > 0 && Index + MaybeLen <= TotalElems) {
-      Slices.emplace_back(/*Index=*/Index, /*Length=*/MaybeLen);
+      VecSlice Slice{/*Index=*/Index, /*Length=*/MaybeLen};
+      Slices.push_back(Slice);
       Index += MaybeLen;
       return true;
     }
@@ -966,7 +967,7 @@ bool LegalizeBufferContentTypesVisitor::visitLoadImpl(
     unsigned ElemBytes = DL.getTypeStoreSize(ElemType);
     AAMDNodes AANodes = OrigLI.getAAMetadata();
     if (IsAggPart && Slices.empty())
-      Slices.emplace_back(/*Index=*/0, /*Length=*/1);
+      Slices.push_back(VecSlice{/*Index=*/0, /*Length=*/1});
     for (VecSlice S : Slices) {
       Type *SliceType =
           S.Length != 1 ? FixedVectorType::get(ElemType, S.Length) : ElemType;
@@ -1084,7 +1085,7 @@ std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
   Value *OrigPtr = OrigSI.getPointerOperand();
   Type *ElemType = LegalType->getScalarType();
   if (IsAggPart && Slices.empty())
-    Slices.emplace_back(/*Index=*/0, /*Length=*/1);
+    Slices.push_back(VecSlice{/*Index=*/0, /*Length=*/1});
   unsigned ElemBytes = DL.getTypeStoreSize(ElemType);
   AAMDNodes AANodes = OrigSI.getAAMetadata();
   for (VecSlice S : Slices) {
