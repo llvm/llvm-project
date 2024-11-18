@@ -1,8 +1,7 @@
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-endif()
-
 if (LIBC_CONF_SETJMP_FORTIFICATION)
+  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  endif()
   if (TARGET libc.src.setjmp.${LIBC_TARGET_OS}.checksum
       AND LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
     add_object_library(
