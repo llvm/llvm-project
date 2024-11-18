@@ -30,17 +30,6 @@ struct NotLengthExprForStringNode {
                IntegerLiteralSizeNode->getValue().getZExtValue();
       }
 
-      if (const auto *DeclRefNode = Node.get<DeclRefExpr>()) {
-        if (const auto *VD = dyn_cast<VarDecl>(DeclRefNode->getDecl())) {
-          if (VD->hasInit() && VD->getType().isConstQualified()) {
-            if (const auto *Init = dyn_cast<IntegerLiteral>(VD->getInit())) {
-              return StringLiteralNode->getLength() !=
-                     Init->getValue().getZExtValue();
-            }
-          }
-        }
-      }
-
       if (const auto *StrlenNode = Node.get<CallExpr>()) {
         if (StrlenNode->getDirectCallee()->getName() != "strlen" ||
             StrlenNode->getNumArgs() != 1) {
@@ -81,6 +70,18 @@ private:
   DynTypedNode Node;
   ASTContext *Context;
 };
+
+static bool isNegativeComparison(const Expr *ComparisonExpr) {
+  // Handle direct != operator
+  if (const auto *BO = llvm::dyn_cast<BinaryOperator>(ComparisonExpr)) {
+    return BO->getOpcode() == BO_NE;
+  }
+
+  if (const auto *Op = llvm::dyn_cast<CXXOperatorCallExpr>(ComparisonExpr)) {
+    return Op->getOperator() == OO_ExclaimEqual;
+  }
+  return false;
+}
 
 AST_MATCHER_P(Expr, lengthExprForStringNode, std::string, ID) {
   return Builder->removeBindings(NotLengthExprForStringNode(
@@ -186,56 +187,17 @@ void UseStartsEndsWithCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxOperatorCallExpr(
           hasAnyOperatorName("==", "!="),
-          anyOf(
-              hasOperands(
-                  cxxMemberCallExpr(
-                      argumentCountIs(2), hasArgument(0, ZeroLiteral),
-                      hasArgument(1, lengthExprForStringNode("needle")),
-                      callee(
-                          cxxMethodDecl(hasName("substr"),
-                                        ofClass(OnClassWithStartsWithFunction))
-                              .bind("find_fun")))
-                      .bind("find_expr"),
-                  expr().bind("needle")),
-              hasOperands(expr().bind("needle"),
-                          cxxMemberCallExpr(
-                              argumentCountIs(2), hasArgument(0, ZeroLiteral),
-                              hasArgument(1, lengthExprForStringNode("needle")),
-                              callee(cxxMethodDecl(
-                                         hasName("substr"),
-                                         ofClass(OnClassWithStartsWithFunction))
-                                         .bind("find_fun")))
-                              .bind("find_expr"))))
+          hasOperands(
+              expr().bind("needle"),
+              cxxMemberCallExpr(
+                  argumentCountIs(2), hasArgument(0, ZeroLiteral),
+                  hasArgument(1, lengthExprForStringNode("needle")),
+                  callee(cxxMethodDecl(hasName("substr"),
+                                       ofClass(OnClassWithStartsWithFunction))
+                             .bind("find_fun")))
+                  .bind("find_expr")))
           .bind("expr"),
       this);
-}
-
-bool UseStartsEndsWithCheck::isNegativeComparison(const Expr* ComparisonExpr) {
-  // Handle direct != operator
-  if (const auto *BO = llvm::dyn_cast<BinaryOperator>(ComparisonExpr)) {
-    return BO->getOpcode() == BO_NE;
-  }
-  
-  // Handle operator!= call
-  if (const auto *Op = llvm::dyn_cast<CXXOperatorCallExpr>(ComparisonExpr)) {
-    return Op->getOperator() == OO_ExclaimEqual;
-  }
-  
-  // Handle rewritten !(expr == expr)
-  if (const auto *UO = llvm::dyn_cast<UnaryOperator>(ComparisonExpr)) {
-    if (UO->getOpcode() == UO_LNot) {
-      if (const auto *InnerBO = 
-          llvm::dyn_cast<BinaryOperator>(UO->getSubExpr()->IgnoreParens())) {
-        return InnerBO->getOpcode() == BO_EQ;
-      }
-      if (const auto *InnerOp = 
-          llvm::dyn_cast<CXXOperatorCallExpr>(UO->getSubExpr()->IgnoreParens())) {
-        return InnerOp->getOperator() == OO_EqualEqual;
-      }
-    }
-  }
-  
-  return false;
 }
 
 void UseStartsEndsWithCheck::check(const MatchFinder::MatchResult &Result) {
@@ -262,10 +224,11 @@ void UseStartsEndsWithCheck::check(const MatchFinder::MatchResult &Result) {
       CharSourceRange::getTokenRange(SearchExpr->getSourceRange()),
       *Result.SourceManager, Result.Context->getLangOpts());
 
-  auto Diag = diag(ComparisonExpr->getBeginLoc(),
-                   "use %0 instead of %1 %select{==|!=}2 ")
-              << ReplacementFunction->getName() << FindFun->getNameAsString()
-              << Neg;
+  auto Diag = diag(FindExpr->getExprLoc(),
+                   FindFun->getName() == "substr"
+                       ? "use %0 instead of %1() %select{==|!=}2"
+                       : "use %0 instead of %1() %select{==|!=}2 0")
+              << ReplacementFunction->getName() << FindFun->getName() << Neg;
 
   // Remove everything before the function call.
   Diag << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
