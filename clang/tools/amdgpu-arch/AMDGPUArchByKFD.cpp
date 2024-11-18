@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements a tool for detecting name of AMD GPUs installed in
-// system using the Linux sysfs interface for the AMD KFD driver.
+// system using the Linux sysfs interface for the AMD KFD driver. This file does
+// not respect ROCR_VISIBLE_DEVICES like the ROCm environment would.
 //
 //===----------------------------------------------------------------------===//
 
