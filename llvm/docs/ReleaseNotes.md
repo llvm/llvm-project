@@ -246,6 +246,8 @@ Changes to the X86 Backend
 
 * Supported ISA of `MSR_IMM`.
 
+* Supported ``-mcpu=diamondrapids``
+
 Changes to the OCaml bindings
 -----------------------------
 
