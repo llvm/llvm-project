@@ -523,6 +523,8 @@ def FeatureStdExtZbkb
 def HasStdExtZbkb : Predicate<"Subtarget->hasStdExtZbkb()">,
                     AssemblerPredicate<(all_of FeatureStdExtZbkb),
                         "'Zbkb' (Bitmanip instructions for Cryptography)">;
+def NoStdExtZbkb : Predicate<"!Subtarget->hasStdExtZbkb()">,
+                   AssemblerPredicate<(all_of (not FeatureStdExtZbkb))>;
 
 def FeatureStdExtZbkx
     : RISCVExtension<"zbkx", 1, 0,

@@ -64,16 +64,18 @@ body:             |
     ; CHECK: liveins: $x10, $x11
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
-    ; CHECK-NEXT: G_STORE [[COPY]](s32), [[COPY1]](p0) :: (store (s16))
+    ; CHECK-NEXT: G_STORE [[TRUNC]](s16), [[COPY1]](p0) :: (store (s16))
     ; CHECK-NEXT: PseudoRET
     ;
     ; UNALIGNED-LABEL: name: store_i16
     ; UNALIGNED: liveins: $x10, $x11
     ; UNALIGNED-NEXT: {{  $}}
     ; UNALIGNED-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; UNALIGNED-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; UNALIGNED-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
-    ; UNALIGNED-NEXT: G_STORE [[COPY]](s32), [[COPY1]](p0) :: (store (s16))
+    ; UNALIGNED-NEXT: G_STORE [[TRUNC]](s16), [[COPY1]](p0) :: (store (s16))
     ; UNALIGNED-NEXT: PseudoRET
     %2:_(s32) = COPY $x10
     %0:_(s16) = G_TRUNC %2(s32)
@@ -241,8 +243,9 @@ body:             |
     ; UNALIGNED: liveins: $x10, $x11
     ; UNALIGNED-NEXT: {{  $}}
     ; UNALIGNED-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; UNALIGNED-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; UNALIGNED-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
-    ; UNALIGNED-NEXT: G_STORE [[COPY]](s32), [[COPY1]](p0) :: (store (s16), align 1)
+    ; UNALIGNED-NEXT: G_STORE [[TRUNC]](s16), [[COPY1]](p0) :: (store (s16), align 1)
     ; UNALIGNED-NEXT: PseudoRET
     %2:_(s32) = COPY $x10
     %0:_(s16) = G_TRUNC %2(s32)

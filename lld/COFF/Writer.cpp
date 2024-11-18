@@ -205,7 +205,7 @@ struct ChunkRange {
 class Writer {
 public:
   Writer(COFFLinkerContext &c)
-      : buffer(errorHandler().outputBuffer), delayIdata(c), edata(c), ctx(c) {}
+      : buffer(c.e.outputBuffer), delayIdata(c), edata(c), ctx(c) {}
   void run();
 
 private:
@@ -2461,7 +2461,7 @@ void Writer::sortExceptionTables() {
     break;
   default:
     if (pdata.first)
-      lld::errs() << "warning: don't know how to handle .pdata.\n";
+      ctx.e.errs() << "warning: don't know how to handle .pdata\n";
     break;
   }
 }

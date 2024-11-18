@@ -3241,8 +3241,8 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_neg_high_split0(p
 ; GFX12-SDAG-LABEL: global_inst_salu_offset_64bit_11bit_neg_high_split0:
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_movk_i32 s2, 0x7ff
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_brev_b32 s3, 1
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
@@ -3309,8 +3309,8 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_neg_high_split1(p
 ; GFX12-SDAG-LABEL: global_inst_salu_offset_64bit_11bit_neg_high_split1:
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_movk_i32 s2, 0x800
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_brev_b32 s3, 1
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
@@ -3377,8 +3377,8 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_neg_high_split0(p
 ; GFX12-SDAG-LABEL: global_inst_salu_offset_64bit_12bit_neg_high_split0:
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_movk_i32 s2, 0xfff
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_brev_b32 s3, 1
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
@@ -3445,8 +3445,8 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_neg_high_split1(p
 ; GFX12-SDAG-LABEL: global_inst_salu_offset_64bit_12bit_neg_high_split1:
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_movk_i32 s2, 0x1000
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_brev_b32 s3, 1
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
@@ -3513,8 +3513,8 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_neg_high_split0(p
 ; GFX12-SDAG-LABEL: global_inst_salu_offset_64bit_13bit_neg_high_split0:
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_movk_i32 s2, 0x1fff
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_brev_b32 s3, 1
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
@@ -3581,8 +3581,8 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_neg_high_split1(p
 ; GFX12-SDAG-LABEL: global_inst_salu_offset_64bit_13bit_neg_high_split1:
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_movk_i32 s2, 0x2000
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_brev_b32 s3, 1
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]

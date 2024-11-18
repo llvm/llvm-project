@@ -219,7 +219,7 @@ uint64_t elf::getPPC64TocBase(Ctx &ctx) {
   return tocVA + ppc64TocOffset;
 }
 
-unsigned elf::getPPC64GlobalEntryToLocalEntryOffset(uint8_t stOther) {
+unsigned elf::getPPC64GlobalEntryToLocalEntryOffset(Ctx &ctx, uint8_t stOther) {
   // The offset is encoded into the 3 most significant bits of the st_other
   // field, with some special values described in section 3.4.1 of the ABI:
   // 0   --> Zero offset between the GEP and LEP, and the function does NOT use
@@ -265,12 +265,13 @@ static bool addOptional(Ctx &ctx, StringRef name, uint64_t value,
 // If from is 14, write ${prefix}14: firstInsn; ${prefix}15:
 // firstInsn+0x200008; ...; ${prefix}31: firstInsn+(31-14)*0x200008; $tail
 // The labels are defined only if they exist in the symbol table.
-static void writeSequence(Ctx &ctx, MutableArrayRef<uint32_t> buf,
-                          const char *prefix, int from, uint32_t firstInsn,
-                          ArrayRef<uint32_t> tail) {
+static void writeSequence(Ctx &ctx, const char *prefix, int from,
+                          uint32_t firstInsn, ArrayRef<uint32_t> tail) {
   std::vector<Defined *> defined;
   char name[16];
   int first;
+  const size_t size = 32 - from + tail.size();
+  MutableArrayRef<uint32_t> buf(ctx.bAlloc.Allocate<uint32_t>(size), size);
   uint32_t *ptr = buf.data();
   for (int r = from; r < 32; ++r) {
     format("%s%d", prefix, r).snprint(name, sizeof(name));
@@ -310,22 +311,20 @@ static void writeSequence(Ctx &ctx, MutableArrayRef<uint32_t> buf,
 // significant enough to complicate our trunk implementation, so we take the
 // simple approach and synthesize .text sections providing the implementation.
 void elf::addPPC64SaveRestore(Ctx &ctx) {
-  static uint32_t savegpr0[20], restgpr0[21], savegpr1[19], restgpr1[19];
   constexpr uint32_t blr = 0x4e800020, mtlr_0 = 0x7c0803a6;
 
   // _restgpr0_14: ld 14, -144(1); _restgpr0_15: ld 15, -136(1); ...
   // Tail: ld 0, 16(1); mtlr 0; blr
-  writeSequence(ctx, restgpr0, "_restgpr0_", 14, 0xe9c1ff70,
-                {0xe8010010, mtlr_0, blr});
+  writeSequence(ctx, "_restgpr0_", 14, 0xe9c1ff70, {0xe8010010, mtlr_0, blr});
   // _restgpr1_14: ld 14, -144(12); _restgpr1_15: ld 15, -136(12); ...
   // Tail: blr
-  writeSequence(ctx, restgpr1, "_restgpr1_", 14, 0xe9ccff70, {blr});
+  writeSequence(ctx, "_restgpr1_", 14, 0xe9ccff70, {blr});
   // _savegpr0_14: std 14, -144(1); _savegpr0_15: std 15, -136(1); ...
   // Tail: std 0, 16(1); blr
-  writeSequence(ctx, savegpr0, "_savegpr0_", 14, 0xf9c1ff70, {0xf8010010, blr});
+  writeSequence(ctx, "_savegpr0_", 14, 0xf9c1ff70, {0xf8010010, blr});
   // _savegpr1_14: std 14, -144(12); _savegpr1_15: std 15, -136(12); ...
   // Tail: blr
-  writeSequence(ctx, savegpr1, "_savegpr1_", 14, 0xf9ccff70, {blr});
+  writeSequence(ctx, "_savegpr1_", 14, 0xf9ccff70, {blr});
 }
 
 // Find the R_PPC64_ADDR64 in .rela.toc with matching offset.
@@ -645,7 +644,7 @@ uint32_t PPC64::calcEFlags() const {
     if (flag == 1)
       ErrAlways(ctx) << f << ": ABI version 1 is not supported";
     else if (flag > 2)
-      ErrAlways(ctx) << f << ": unrecognized e_flags: " << Twine(flag);
+      ErrAlways(ctx) << f << ": unrecognized e_flags: " << flag;
   }
   return 2;
 }
@@ -1101,7 +1100,7 @@ RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
   case R_PPC64_TLS:
     return R_TLSIE_HINT;
   default:
-    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
     return R_NONE;
   }
@@ -1130,8 +1129,7 @@ int64_t PPC64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_PPC64_TPREL64:
     return read64(ctx, buf);
   default:
-    internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " + toString(type));
+    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   }
 }
@@ -1455,9 +1453,9 @@ bool PPC64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   // If the offset exceeds the range of the branch type then it will need
   // a range-extending thunk.
   // See the comment in getRelocTargetVA() about R_PPC64_CALL.
-  return !inBranchRange(type, branchAddr,
-                        s.getVA(ctx, a) +
-                            getPPC64GlobalEntryToLocalEntryOffset(s.stOther));
+  return !inBranchRange(
+      type, branchAddr,
+      s.getVA(ctx, a) + getPPC64GlobalEntryToLocalEntryOffset(ctx, s.stOther));
 }
 
 uint32_t PPC64::getThunkSectionSpacing() const {
@@ -1618,7 +1616,7 @@ void PPC64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
             rel.sym->file != sec.file) {
           // Use substr(6) to remove the "__plt_" prefix.
           Err(ctx) << getErrorLoc(ctx, loc) << "call to "
-                   << lld::toString(*rel.sym).substr(6)
+                   << toStr(ctx, *rel.sym).substr(6)
                    << " lacks nop, can't restore toc";
           break;
         }
@@ -1678,7 +1676,7 @@ bool PPC64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
                                              uint8_t stOther) const {
   // If the caller has a global entry point adjust the buffer past it. The start
   // of the split-stack prologue will be at the local entry point.
-  loc += getPPC64GlobalEntryToLocalEntryOffset(stOther);
+  loc += getPPC64GlobalEntryToLocalEntryOffset(ctx, stOther);
 
   // At the very least we expect to see a load of some split-stack data from the
   // tcb, and 2 instructions that calculate the ending stack address this
