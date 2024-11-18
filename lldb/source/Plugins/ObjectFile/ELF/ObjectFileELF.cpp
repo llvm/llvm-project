@@ -3008,10 +3008,9 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
   // section, nomatter if .symtab was already parsed or not. This is because
   // minidebuginfo normally removes the .symtab symbols which have their
   // matching .dynsym counterparts.
-  Section *dynsym = nullptr;
   if (!symtab ||
       GetSectionList()->FindSectionByName(ConstString(".gnu_debugdata"))) {
-    dynsym =
+    Section *dynsym =
         section_list->FindSectionByType(eSectionTypeELFDynamicSymbols, true)
             .get();
     if (dynsym) {
@@ -3019,20 +3018,20 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
           ParseSymbolTable(&lldb_symtab, symbol_id, dynsym);
       symbol_id += num_symbols;
       m_address_class_map.merge(address_class_map);
-    }
-  }
-  if (!dynsym) {
-    // Try and read the dynamic symbol table from the .dynamic section.
-    uint32_t num_symbols = 0;
-    std::optional<DataExtractor> symtab_data =
-        GetDynsymDataFromDynamic(num_symbols);
-    std::optional<DataExtractor> strtab_data = GetDynstrData();
-    if (symtab_data && strtab_data) {
-      auto [num_symbols_parsed, address_class_map] =
-          ParseSymbols(&lldb_symtab, symbol_id, section_list, num_symbols,
-                        symtab_data.value(), strtab_data.value());
-      symbol_id += num_symbols_parsed;
-      m_address_class_map.merge(address_class_map);
+    } else {
+      // Try and read the dynamic symbol table from the .dynamic section.
+      uint32_t dynamic_num_symbols = 0;
+      std::optional<DataExtractor> symtab_data =
+          GetDynsymDataFromDynamic(dynamic_num_symbols);
+      std::optional<DataExtractor> strtab_data = GetDynstrData();
+      if (symtab_data && strtab_data) {
+        auto [num_symbols_parsed, address_class_map] =
+            ParseSymbols(&lldb_symtab, symbol_id, section_list,
+                         dynamic_num_symbols, symtab_data.value(),
+                         strtab_data.value());
+        symbol_id += num_symbols_parsed;
+        m_address_class_map.merge(address_class_map);
+      }
     }
   }
 
