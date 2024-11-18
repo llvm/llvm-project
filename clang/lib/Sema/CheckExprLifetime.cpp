@@ -1475,7 +1475,7 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
         /*RevisitSubinits=*/!InitEntity);
 }
 
-void checkExprLifetime(Sema &SemaRef, const InitializedEntity &Entity,
+void checkInitLifetime(Sema &SemaRef, const InitializedEntity &Entity,
                        Expr *Init) {
   auto LTResult = getEntityLifetime(&Entity);
   LifetimeKind LK = LTResult.getInt();
@@ -1490,8 +1490,8 @@ void checkExprLifetimeMustTailArg(Sema &SemaRef,
                         /*AEntity=*/nullptr, /*CapEntity=*/nullptr, Init);
 }
 
-void checkExprLifetime(Sema &SemaRef, const AssignedEntity &Entity,
-                       Expr *Init) {
+void checkAssignmentLifetime(Sema &SemaRef, const AssignedEntity &Entity,
+                             Expr *Init) {
   bool EnableDanglingPointerAssignment = !SemaRef.getDiagnostics().isIgnored(
       diag::warn_dangling_pointer_assignment, SourceLocation());
   bool RunAnalysis = (EnableDanglingPointerAssignment &&
@@ -1506,8 +1506,8 @@ void checkExprLifetime(Sema &SemaRef, const AssignedEntity &Entity,
                         /*CapEntity=*/nullptr, Init);
 }
 
-void checkExprLifetime(Sema &SemaRef, const CapturingEntity &Entity,
-                       Expr *Init) {
+void checkCaptureByLifetime(Sema &SemaRef, const CapturingEntity &Entity,
+                            Expr *Init) {
   return checkExprLifetimeImpl(SemaRef, /*InitEntity=*/nullptr,
                                /*ExtendingEntity=*/nullptr, LK_LifetimeCapture,
                                /*AEntity=*/nullptr,

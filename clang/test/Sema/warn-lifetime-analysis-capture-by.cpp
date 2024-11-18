@@ -23,6 +23,7 @@ void noCaptureStringView(std::string_view sv, X &x);
 void captureString(const std::string &s [[clang::lifetime_capture_by(x)]], X &x);
 void captureRValString(std::string &&s [[clang::lifetime_capture_by(x)]], X &x);
 
+// Return reference to the argument through lifetimebound.
 const std::string& getLB(const std::string &s [[clang::lifetimebound]]);
 const std::string& getLB(std::string_view sv [[clang::lifetimebound]]);
 const std::string* getPointerLB(const std::string &s [[clang::lifetimebound]]);
@@ -167,45 +168,45 @@ MyStringViewNotPointer getMySVNotP();
 
 void container_of_pointers() {
   std::string local;
-  MyVector<std::string> vs;
-  vs.push_back(std::string()); // Ok.
+  MyVector<std::string> vector_of_string;
+  vector_of_string.push_back(std::string()); // Ok.
   
-  MyVector<std::string_view> vsv;
-  vsv.push_back(std::string()); // expected-warning {{object whose reference is captured by 'vsv'}}
-  vsv.push_back(substr(std::string())); // expected-warning {{object whose reference is captured by 'vsv'}}
+  MyVector<std::string_view> vector_of_view;
+  vector_of_view.push_back(std::string()); // expected-warning {{object whose reference is captured by 'vector_of_view'}}
+  vector_of_view.push_back(substr(std::string())); // expected-warning {{captured}}
   
-  MyVector<const std::string*> vp;
-  vp.push_back(getPointerLB(std::string())); // expected-warning {{object whose reference is captured by 'vp'}}
-  vp.push_back(getPointerLB(*getPointerLB(std::string()))); // expected-warning {{object whose reference is captured by 'vp'}}
-  vp.push_back(getPointerLB(local));
-  vp.push_back(getPointerNoLB(std::string()));
+  MyVector<const std::string*> vector_of_pointer;
+  vector_of_pointer.push_back(getPointerLB(std::string())); // expected-warning {{captured}}
+  vector_of_pointer.push_back(getPointerLB(*getPointerLB(std::string()))); // expected-warning {{captured}}
+  vector_of_pointer.push_back(getPointerLB(local));
+  vector_of_pointer.push_back(getPointerNoLB(std::string()));
   
   // User-defined [[gsl::Pointer]]
-  vsv.push_back(getMySV());
-  vsv.push_back(getMySVNotP());
+  vector_of_view.push_back(getMySV());
+  vector_of_view.push_back(getMySVNotP());
 
   // Vector of user defined gsl::Pointer.
-  MyVector<MyStringView> vmysv;
-  vmysv.push_back(getMySV());
-  vmysv.push_back(MyStringView{});
-  vmysv.push_back(std::string_view{});
-  vmysv.push_back(std::string{}); // expected-warning {{object whose reference is captured by 'vmysv'}}
-  vmysv.push_back(substr(std::string{})); // expected-warning {{object whose reference is captured by 'vmysv'}}
-  vmysv.push_back(getLB(substr(std::string{}))); // expected-warning {{object whose reference is captured by 'vmysv'}}
-  vmysv.push_back(strcopy(getLB(substr(std::string{}))));
+  MyVector<MyStringView> vector_of_my_view;
+  vector_of_my_view.push_back(getMySV());
+  vector_of_my_view.push_back(MyStringView{});
+  vector_of_my_view.push_back(std::string_view{});
+  vector_of_my_view.push_back(std::string{}); // expected-warning {{object whose reference is captured by 'vector_of_my_view'}}
+  vector_of_my_view.push_back(substr(std::string{})); // expected-warning {{captured}}
+  vector_of_my_view.push_back(getLB(substr(std::string{}))); // expected-warning {{captured}}
+  vector_of_my_view.push_back(strcopy(getLB(substr(std::string{}))));
 
   // With std::optional container.
-  std::optional<std::string_view> optionalSV;
-  vsv.push_back(optionalSV.value());
-  vsv.push_back(getOptionalS().value()); // expected-warning {{object whose reference is captured by 'vsv'}}
+  std::optional<std::string_view> optional_of_view;
+  vector_of_view.push_back(optional_of_view.value());
+  vector_of_view.push_back(getOptionalS().value()); // expected-warning {{captured}}
   
   // FIXME: Following 2 cases are false positives:
-  vsv.push_back(getOptionalSV().value()); // expected-warning {{object whose reference}}
-  vsv.push_back(getOptionalMySV().value());  // expected-warning {{object whose reference}}
+  vector_of_view.push_back(getOptionalSV().value()); // expected-warning {{captured}}
+  vector_of_view.push_back(getOptionalMySV().value());  // expected-warning {{captured}}
 
   // (maybe) FIXME: We may choose to diagnose the following case.
   // This happens because 'MyStringViewNotPointer' is not marked as a [[gsl::Pointer]] but is derived from one.
-  vsv.push_back(getOptionalMySVNotP().value()); // expected-warning {{object whose reference is captured by 'vsv'}}
+  vector_of_view.push_back(getOptionalMySVNotP().value()); // expected-warning {{captured}}
 }
 
 namespace temporary_views {
