@@ -64,11 +64,13 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Yk.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
+#include "llvm/Transforms/Yk/ControlPoint.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -963,6 +965,19 @@ static bool hasAddressTakenAndUsed(BasicBlock *BB) {
 /// processBlock - If there are any predecessors whose control can be threaded
 /// through to a successor, transform them now.
 bool JumpThreadingPass::processBlock(BasicBlock *BB) {
+  // We mustn't duplicate yk JIT control points.
+  if (YkPatchCtrlPoint) {
+    for (Instruction &I: *BB) {
+      if (CallInst *CI = dyn_cast<CallInst>(&I)) {
+        Function *CF = CI->getCalledFunction();
+        // The control point hasn't been patched yet, so we look for the
+        // pre-patched name.
+        if ((CF != nullptr) && (CF->getName() == YK_DUMMY_CONTROL_POINT)) {
+          return false;
+        }
+      }
+    }
+  }
   // If the block is trivially dead, just return and let the caller nuke it.
   // This simplifies other transformations.
   if (DTU->isBBPendingDeletion(BB) ||
