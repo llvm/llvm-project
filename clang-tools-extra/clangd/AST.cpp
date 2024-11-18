@@ -203,6 +203,8 @@ bool isConst(const Decl *D) {
     if (CMD->isConst())
       return true;
   }
+  if (const auto *FD = llvm::dyn_cast<FunctionDecl>(D))
+    return isConst(FD->getReturnType());
   return false;
 }
 
@@ -215,6 +217,8 @@ bool isStatic(const Decl *D) {
     return OPD->isClassProperty();
   if (const auto *OMD = llvm::dyn_cast<ObjCMethodDecl>(D))
     return OMD->isClassMethod();
+  if (const auto *FD = llvm::dyn_cast<FunctionDecl>(D))
+    return FD->isStatic();
   return false;
 }
 
