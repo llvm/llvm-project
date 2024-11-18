@@ -161,3 +161,22 @@ int main(int, char**) {
 #endif
   return 0;
 }
+
+// TODO:
+// Add emplace test like
+//
+//     std::vector<int> v = {1, 2, 3, 4};
+//     v.reserve(10000);
+//     v.emplace(v.begin() + 1, 999);
+
+// TODO:
+// Add tests for emplacing and inserting from an element in the vector itself
+
+// TODO:
+// There is a bug in emplace, we should be using __uninitialized_allocator_relocate_backward. Also why is this not caught by the tests?
+
+// TODO:
+// Merge this test with emplace_extra.pass.cpp?
+
+// TODO:
+// Add a test for iterator invalidation when the vector grows, to catch an incorrect implementation that would construct the new element on the stack and then move it (which fails if the new value throws upon move construction, since we invalidated our iterators and shouldnt).
