@@ -188,7 +188,7 @@ void using_builtin(int x) {
 }
 
 void using_assume_attr(int ax) {
-    [[assume(ax > 100)]]; // NullStmt with an attribute
+    [[assume(ax > 100)]]; // NullStmt with an "assume" attribute.
     arr[ax] = 405; // expected-warning{{Out of bound access to memory}}
 }
 
