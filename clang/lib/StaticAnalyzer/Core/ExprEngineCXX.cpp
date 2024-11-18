@@ -1203,25 +1203,15 @@ void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
 
 void ExprEngine::VisitAttributedStmt(const AttributedStmt *A,
                                      ExplodedNode *Pred, ExplodedNodeSet &Dst) {
-
   ExplodedNodeSet CheckerPreStmt;
   getCheckerManager().runCheckersForPreStmt(CheckerPreStmt, Pred, A, *this);
 
   ExplodedNodeSet EvalSet;
   StmtNodeBuilder Bldr(CheckerPreStmt, EvalSet, *currBldrCtx);
 
-  {
-    for (const auto *attr : A->getAttrs()) {
-
-      CXXAssumeAttr const *assumeAttr = llvm::dyn_cast<CXXAssumeAttr>(attr);
-      if (!assumeAttr) {
-        continue;
-      }
-      Expr *AssumeExpr = assumeAttr->getAssumption();
-
-      for (auto *node : CheckerPreStmt) {
-        Visit(AssumeExpr, node, EvalSet);
-      }
+  if (const auto *AssumeAttr = getSpecificAttr<CXXAssumeAttr>(A->getAttrs())) {
+    for (ExplodedNode *N : CheckerPreStmt) {
+      Visit(AssumeAttr->getAssumption(), N, EvalSet);
     }
   }
 
