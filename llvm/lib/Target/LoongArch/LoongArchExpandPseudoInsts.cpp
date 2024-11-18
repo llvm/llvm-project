@@ -14,7 +14,6 @@
 #include "LoongArch.h"
 #include "LoongArchInstrInfo.h"
 #include "LoongArchMachineFunctionInfo.h"
-#include "LoongArchTargetMachine.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
