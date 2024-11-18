@@ -273,6 +273,93 @@ raw_ostream &operator<<(raw_ostream &OS, MemoryEffects RMRB);
 // Legacy alias.
 using FunctionModRefBehavior = MemoryEffects;
 
+/// Components of the pointer that may be captured.
+enum class CaptureComponents : uint8_t {
+  None = 0,
+  Address = (1 << 0),
+  ReadProvenance = (1 << 1),
+  Provenance = (1 << 2) | ReadProvenance,
+  All = Address | Provenance,
+  LLVM_MARK_AS_BITMASK_ENUM(Provenance),
+};
+
+inline bool capturesNothing(CaptureComponents CC) {
+  return CC == CaptureComponents::None;
+}
+
+inline bool capturesAnything(CaptureComponents CC) {
+  return CC != CaptureComponents::None;
+}
+
+inline bool capturesAddress(CaptureComponents CC) {
+  return (CC & CaptureComponents::Address) != CaptureComponents::None;
+}
+
+inline bool capturesReadProvenanceOnly(CaptureComponents CC) {
+  return (CC & CaptureComponents::Provenance) ==
+         CaptureComponents::ReadProvenance;
+}
+
+inline bool capturesFullProvenance(CaptureComponents CC) {
+  return (CC & CaptureComponents::Provenance) == CaptureComponents::Provenance;
+}
+
+raw_ostream &operator<<(raw_ostream &OS, CaptureComponents CC);
+
+/// Represents which components of the pointer may be captured and whether
+/// the capture is via the return value only. This represents the captures(...)
+/// attribute in IR.
+///
+/// For more information on the precise semantics see LangRef.
+class CaptureInfo {
+  CaptureComponents Components;
+  bool ReturnOnly;
+
+public:
+  CaptureInfo(CaptureComponents Components, bool ReturnOnly = false)
+      : Components(Components),
+        ReturnOnly(capturesAnything(Components) && ReturnOnly) {}
+
+  /// Create CaptureInfo that may capture all components of the pointer.
+  static CaptureInfo all() { return CaptureInfo(CaptureComponents::All); }
+
+  /// Get the potentially captured components of the pointer.
+  operator CaptureComponents() const { return Components; }
+
+  /// Whether the pointer is captured through the return value only.
+  bool isReturnOnly() const { return ReturnOnly; }
+
+  bool operator==(CaptureInfo Other) const {
+    return Components == Other.Components && ReturnOnly == Other.ReturnOnly;
+  }
+
+  bool operator!=(CaptureInfo Other) const { return !(*this == Other); }
+
+  /// Compute union of CaptureInfos.
+  CaptureInfo operator|(CaptureInfo Other) const {
+    return CaptureInfo(Components | Other.Components,
+                       ReturnOnly && Other.ReturnOnly);
+  }
+
+  /// Compute intersection of CaptureInfos.
+  CaptureInfo operator&(CaptureInfo Other) const {
+    return CaptureInfo(Components & Other.Components,
+                       ReturnOnly || Other.ReturnOnly);
+  }
+
+  static CaptureInfo createFromIntValue(uint32_t Data) {
+    return CaptureInfo(CaptureComponents(Data >> 1), Data & 1);
+  }
+
+  /// Convert CaptureInfo into an encoded integer value (used by captures
+  /// attribute).
+  uint32_t toIntValue() const {
+    return (uint32_t(Components) << 1) | ReturnOnly;
+  }
+};
+
+raw_ostream &operator<<(raw_ostream &OS, CaptureInfo Info);
+
 } // namespace llvm
 
 #endif

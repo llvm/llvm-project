@@ -437,6 +437,12 @@ TEST(Attributes, SetIntersect) {
         break;
       case Attribute::Range:
         break;
+      case Attribute::Captures:
+        V0 = CaptureInfo(CaptureComponents::Address, /*ReturnOnly=*/false)
+                 .toIntValue();
+        V1 = CaptureInfo(CaptureComponents::ReadProvenance, /*ReturnOnly=*/true)
+                 .toIntValue();
+        break;
       default:
         ASSERT_FALSE(true);
       }
@@ -515,6 +521,12 @@ TEST(Attributes, SetIntersect) {
       case Attribute::Range:
         ASSERT_EQ(Res->getAttribute(Kind).getRange(),
                   ConstantRange(APInt(32, 0), APInt(32, 20)));
+        break;
+      case Attribute::Captures:
+        ASSERT_EQ(Res->getCaptureInfo(),
+                  CaptureInfo(CaptureComponents::Address |
+                                  CaptureComponents::ReadProvenance,
+                              /*ReturnOnly=*/false));
         break;
       default:
         ASSERT_FALSE(true);

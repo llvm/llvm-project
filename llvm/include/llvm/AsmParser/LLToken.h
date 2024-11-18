@@ -207,6 +207,11 @@ enum Kind {
   kw_inaccessiblememonly,
   kw_inaccessiblemem_or_argmemonly,
 
+  // Captures attribute:
+  kw_address,
+  kw_provenance,
+  kw_read_provenance,
+
   // nofpclass attribute:
   kw_all,
   kw_nan,
