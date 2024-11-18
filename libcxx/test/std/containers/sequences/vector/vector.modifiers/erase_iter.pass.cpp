@@ -26,7 +26,6 @@ TEST_CONSTEXPR_CXX20 void tests() {
     T arr[]             = {T(1), T(2), T(3), T(4), T(5)};
     using Vector        = std::vector<T, Allocator<T> >;
     using Iterator      = typename Vector::iterator;
-    using ConstIterator = typename Vector::const_iterator;
 
     {
       Vector v(arr, arr + 5);
