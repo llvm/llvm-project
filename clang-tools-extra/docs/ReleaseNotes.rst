@@ -78,6 +78,9 @@ Code actions
 
 - Added `Swap operands` tweak for certain binary operators.
 
+- Improved the extract-to-function code action to allow extracting statements
+  with overloaded operators like ``<<`` of ``std::ostream``.
+
 Signature help
 ^^^^^^^^^^^^^^
 
