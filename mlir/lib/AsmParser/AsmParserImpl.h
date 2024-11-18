@@ -287,9 +287,8 @@ public:
                          APFloat &result) override {
     bool isNegative = parser.consumeIf(Token::minus);
     Token curTok = parser.getToken();
-    auto emitErrorAtTok = [&]() { return emitError(curTok.getLoc(), ""); };
     FailureOr<APFloat> apResult =
-        parseFloatFromLiteral(emitErrorAtTok, curTok, isNegative, semantics);
+        parser.parseFloatFromLiteral(curTok, isNegative, semantics);
     if (failed(apResult))
       return failure();
     parser.consumeToken();

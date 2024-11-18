@@ -422,9 +422,8 @@ Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
   }
 
   if (auto floatType = dyn_cast<FloatType>(type)) {
-    auto emitErrorAtTok = [&]() { return emitError(tok.getLoc()); };
     FailureOr<APFloat> result = parseFloatFromIntegerLiteral(
-        emitErrorAtTok, tok, isNegative, floatType.getFloatSemantics());
+        tok, isNegative, floatType.getFloatSemantics());
     if (failed(result))
       return Attribute();
     return FloatAttr::get(floatType, *result);
@@ -658,9 +657,8 @@ TensorLiteralParser::getFloatAttrElements(SMLoc loc, FloatType eltTy,
   for (const auto &signAndToken : storage) {
     bool isNegative = signAndToken.first;
     const Token &token = signAndToken.second;
-    auto emitErrorAtTok = [&]() { return p.emitError(token.getLoc()); };
-    FailureOr<APFloat> result = parseFloatFromLiteral(
-        emitErrorAtTok, token, isNegative, eltTy.getFloatSemantics());
+    FailureOr<APFloat> result =
+        p.parseFloatFromLiteral(token, isNegative, eltTy.getFloatSemantics());
     if (failed(result))
       return failure();
     floatValues.push_back(*result);
@@ -882,10 +880,8 @@ ParseResult DenseArrayElementParser::parseIntegerElement(Parser &p) {
 ParseResult DenseArrayElementParser::parseFloatElement(Parser &p) {
   bool isNegative = p.consumeIf(Token::minus);
   Token token = p.getToken();
-  auto emitErrorAtTok = [&]() { return p.emitError(token.getLoc()); };
-  FailureOr<APFloat> fromIntLit =
-      parseFloatFromLiteral(emitErrorAtTok, token, isNegative,
-                            cast<FloatType>(type).getFloatSemantics());
+  FailureOr<APFloat> fromIntLit = p.parseFloatFromLiteral(
+      token, isNegative, cast<FloatType>(type).getFloatSemantics());
   if (failed(fromIntLit))
     return failure();
   p.consumeToken();
