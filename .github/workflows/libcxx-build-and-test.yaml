@@ -43,7 +43,6 @@ env:
   LLVM_OLDEST_VERSION: "17"
   GCC_STABLE_VERSION: "13"
   LLVM_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer-19"
-  CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
 
 jobs:
   stage1:
@@ -82,7 +81,6 @@ jobs:
             **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
-            **/crash_diagnostics/*
   stage2:
     if: github.repository_owner == 'llvm'
     runs-on: libcxx-self-hosted-linux
@@ -128,7 +126,6 @@ jobs:
             **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
-            **/crash_diagnostics/*
   stage3:
     if: github.repository_owner == 'llvm'
     needs: [ stage1, stage2 ]
@@ -192,7 +189,6 @@ jobs:
             **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
-            **/crash_diagnostics/*
 
   macos:
     needs: [ stage1 ]
@@ -235,7 +231,6 @@ jobs:
             **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
-            **/crash_diagnostics/*
 
   windows:
     runs-on: windows-2022
