@@ -564,17 +564,19 @@ foreach dim = [1, 2, 3, 4, 5] in {
 }
 
 // From Shared to Global memory (S2G)
-class S2G_STRINGS<int dim, string mode, bit ch, bit is_shared32 = 0> {
-  string prefix = "cp.async.bulk.tensor";
+class S2G_STRINGS<int dim, string mode, bit ch,
+                  bit is_shared32 = 0, bit is_reduce = 0> {
   string dir = "global.shared::cta";
   string completion = "bulk_group";
-  string inst_name = prefix
+  string inst_name = !if(is_reduce, "cp.reduce", "cp")
+                     # ".async.bulk.tensor"
                      # "." # dim # "d"
                      # "." # dir
                      # "." # mode
                      # "." # completion
                      # !if(ch, ".L2::cache_hint", "");
-  string intr_name = "CP_ASYNC_BULK_TENSOR_S2G_"
+  string intr_name = "CP_ASYNC_BULK_TENSOR_"
+                     # !if(is_reduce, "RED_", "S2G_")
                      # dim # "D"
                      # !if(is_shared32, "_SHARED32", "")
                      # !if(!eq(mode, "tile"), "_TILE", "_IM2COL");
@@ -596,11 +598,37 @@ multiclass CP_ASYNC_BULK_TENSOR_S2G_INTR<int dim, bit shared32, string mode> {
            Requires<[hasPTX<80>, hasSM<90>]>;
 }
 
+def TMAReductionFlags : Operand<i32> {
+  let PrintMethod = "printTmaReductionMode";
+}
+
+// TMA Copy from Shared to Global memory with Reduction
+multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, bit shared32, string mode> {
+  defvar dims_dag = !dag(ins, !listsplat(Int32Regs, dim), !foreach(i, !range(dim), "d" # i));
+  defvar dims_str = !interleave(!foreach(i, !range(dim), "$d" # i), ", ");
+  defvar asm_str = " [$tmap, {{" # dims_str # "}}], [$src]";
+  defvar rc = !if(shared32, Int32Regs, Int64Regs);
+
+  defvar prefix = "cp.reduce.async.bulk.tensor" # "." # dim # "d" # ".global.shared::cta";
+  defvar suffix = "." # mode # ".bulk_group";
+
+  def NAME: NVPTXInst<(outs),
+            !con((ins rc:$src, Int64Regs:$tmap), dims_dag, (ins TMAReductionFlags:$red_op)),
+            !strconcat(prefix, "${red_op}", suffix, asm_str, ";"), []>,
+            Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME # _CH: NVPTXInst<(outs),
+                  !con((ins rc:$src, Int64Regs:$tmap), dims_dag, (ins Int64Regs:$ch, TMAReductionFlags:$red_op)),
+                  !strconcat(prefix, "${red_op}", suffix, ".L2::cache_hint", asm_str, ", $ch;"), []>,
+                  Requires<[hasPTX<80>, hasSM<90>]>;
+}
+
 foreach dim = [1, 2, 3, 4, 5] in {
   foreach shared32 = [true, false] in {
     foreach mode = !if(!ge(dim, 3), ["tile", "im2col_no_offs"], ["tile"]) in {
       defm S2G_STRINGS<dim, mode, 0, shared32>.intr_name :
         CP_ASYNC_BULK_TENSOR_S2G_INTR<dim, shared32, mode>;
+      defm S2G_STRINGS<dim, mode, 0, shared32, 1>.intr_name :
+        CP_ASYNC_BULK_TENSOR_REDUCE_INTR<dim, shared32, mode>;
     }
   }
 }
