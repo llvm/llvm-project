@@ -113,10 +113,19 @@ struct BaseClass1 {
   template <typename T> void operator delete(std::type_identity<T>, void*) = delete; // #45
   virtual ~BaseClass1();
 };
+BaseClass1::~BaseClass1() {
+  // expected-error@-1 {{attempt to use a deleted function}}
+  // expected-note@#45 {{'operator delete<BaseClass1>' has been explicitly marked deleted here}}
+}
 
 struct SubClass1 : BaseClass1 { 
   virtual ~SubClass1();
 };
+
+SubClass1::~SubClass1() {
+  // expected-error@-1 {{attempt to use a deleted function}}
+  // expected-note@#45 {{'operator delete<SubClass1>' has been explicitly marked deleted here}}
+}
 
 struct BaseClass2 {
   template <typename T> void *operator new(std::type_identity<T>, size_t); // #46
@@ -124,11 +133,15 @@ struct BaseClass2 {
   void operator delete(BaseClass2 *, std::destroying_delete_t);  // #48
   virtual ~BaseClass2();
 };
+BaseClass2::~BaseClass2(){
+};
 
 struct SubClass2 : BaseClass2 {
   SubClass2(); // Force exception cleanup which should invoke type aware delete
   virtual ~SubClass2();
 };
+SubClass2::~SubClass2(){
+}
 
 struct BaseClass3 {
   template <typename T> void *operator new(std::type_identity<T>, size_t); // #49
@@ -136,9 +149,18 @@ struct BaseClass3 {
   void operator delete(BaseClass3 *, std::destroying_delete_t) = delete; // #51
   virtual ~BaseClass3();
 };
+BaseClass3::~BaseClass3(){
+  // expected-error@-1 {{attempt to use a deleted function}}
+  // expected-note@#51 {{'operator delete' has been explicitly marked deleted here}}
+}
+
 struct SubClass3 : BaseClass3 {
   virtual ~SubClass3();
 };
+SubClass3::~SubClass3(){
+  // expected-error@-1 {{attempt to use a deleted function}}
+  // expected-note@#51 {{'operator delete' has been explicitly marked deleted here}}
+}
 
 template <typename A, typename B> concept Derived = requires (A * a, B *b) { a = b; };
 template <typename A, typename B> concept Same = requires (std::type_identity<A> * a, std::type_identity<B> *b) { a = b; };
@@ -152,10 +174,17 @@ struct BaseClass4 {
 
   virtual ~BaseClass4();
 };
+BaseClass4::~BaseClass4() {
+}
 
 struct SubClass4 : BaseClass4 {
   virtual ~SubClass4();
 };
+SubClass4::~SubClass4(){
+  // expected-error@-1 {{attempt to use a deleted function}}
+  // expected-note@#53 {{'operator delete<SubClass4>' has been explicitly marked deleted here}}
+}
+
 struct SubClass4_1 : SubClass4 {
   SubClass4_1();
 };
@@ -182,6 +211,8 @@ struct BaseClass6 {
   BaseClass6();
   virtual ~BaseClass6();
 };
+BaseClass6::~BaseClass6(){
+}
 
 struct SubClass6_1 : BaseClass6 {
   template <typename T> void *operator new(std::type_identity<T>, size_t); // #62

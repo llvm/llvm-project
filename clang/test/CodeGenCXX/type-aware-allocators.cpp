@@ -107,15 +107,23 @@ struct S6 {
   template <typename T> void operator delete(std::type_identity<T>, void*, std::align_val_t);
 };
 
+S6::~S6(){
+}
+// CHECK-LABEL: _ZN2S6D0Ev
+// CHECK: _ZN2S6dlIS_EEvSt13type_identityIT_EPv(
+
 struct __attribute__((aligned(128))) S7 : S6 {
 
 };
+
 
 struct S8 : S6 {
   S8();
   void *operator new(size_t);
   void operator delete(void*);
 };
+
+S8::S8(){}
 
 extern "C" void test_ensure_type_aware_overrides() {
   S6 *s6 = new S6;
@@ -125,7 +133,6 @@ extern "C" void test_ensure_type_aware_overrides() {
   S8 *s8 = new S8;
   delete s8;
 }
-
 // CHECK-LABEL: test_ensure_type_aware_overrides
 // CHECK: [[S6_ALLOC:%.*]] = call {{.*}} @_ZN2S6nwIS_EEPvSt13type_identityIT_Em(
 // CHECK: @_ZN2S6C1Ev({{.*}}[[S6_ALLOC]])
@@ -155,7 +162,6 @@ extern "C" void test_ensure_type_aware_overrides() {
 // CHECK: [[S8LPAD]]:
 // CHECK: @_ZN2S8dlEPv({{.*}} [[S8_ALLOC]])
 
-
 struct S9 {
   S9();
   template <typename T> void *operator new(std::type_identity<T>, size_t);
@@ -168,14 +174,12 @@ struct S10 {
   template <typename T> void operator delete(std::type_identity<T>, void*);
 };
 
-
 extern "C" void test_mismatched_operators() {
   S9* s9 = new S9;
   delete s9;
   S10 *s10 = new S10;
   delete s10;
 }
-
 // CHECK-LABEL: test_mismatched_operators
 // CHECK: [[S9_ALLOC:%.*]] = call {{.*}} @_ZN2S9nwIS_EEPvSt13type_identityIT_Em({{.*}}, {{.*}})
 // CHECK: @_ZN2S9C1Ev({{.*}} [[S9_ALLOC]])
@@ -197,7 +201,8 @@ struct __attribute__((aligned(128))) S11 {
   void operator delete(S11*, std::destroying_delete_t, std::align_val_t);
 };
 
-// void test_unaligned_cleanup() {
-//   S11 *s11 = new S11;
-//   delete s11;
-// }
+// CHECK-LABEL: @_ZN2S8D0Ev
+// CHECK: @_ZN2S8dlEPv(
+
+// CHECK-LABEL: _ZN2S7D0Ev
+// CHECK: _ZN2S6dlI2S7EEvSt13type_identityIT_EPvSt11align_val_t(
