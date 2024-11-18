@@ -345,15 +345,6 @@ extern char &AMDGPUPrintfRuntimeBindingID;
 void initializeAMDGPUResourceUsageAnalysisPass(PassRegistry &);
 extern char &AMDGPUResourceUsageAnalysisID;
 
-struct AMDGPUExpandPseudoIntrinsicsPass
-    : PassInfoMixin<AMDGPUExpandPseudoIntrinsicsPass> {
-  const AMDGPUTargetMachine &TM;
-  AMDGPUExpandPseudoIntrinsicsPass(const AMDGPUTargetMachine &ATM) : TM(ATM) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
-};
-
 struct AMDGPUPrintfRuntimeBindingPass
     : PassInfoMixin<AMDGPUPrintfRuntimeBindingPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
