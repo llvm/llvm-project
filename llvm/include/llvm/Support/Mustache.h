@@ -71,41 +71,43 @@
 namespace llvm {
 namespace mustache {
 
-using Accessor = SmallVector<SmallString<0>>;
+using Accessor = SmallVector<std::string>;
 using Lambda = std::function<llvm::json::Value()>;
-using SectionLambda = std::function<llvm::json::Value(StringRef)>;
+using SectionLambda = std::function<llvm::json::Value(std::string)>;
 
+namespace {
 class ASTNode;
+} // namespace
 
 // A Template represents the container for the AST and the partials
 // and Lambdas that are registered with it.
 class Template {
 public:
-  Template(StringRef TemplateStr);
+  Template(std::string TemplateStr);
 
   void render(llvm::json::Value &Data, llvm::raw_ostream &OS);
 
-  void registerPartial(StringRef Name, StringRef Partial);
+  void registerPartial(std::string Name, std::string Partial);
 
-  void registerLambda(StringRef Name, Lambda Lambda);
+  void registerLambda(std::string Name, Lambda Lambda);
 
-  void registerLambda(StringRef Name, SectionLambda Lambda);
+  void registerLambda(std::string Name, SectionLambda Lambda);
 
   // By default the Mustache Spec Specifies that HTML special characters
   // should be escaped. This function allows the user to specify which
   // characters should be escaped.
-  void registerEscape(DenseMap<char, StringRef> Escapes);
+  void registerEscape(DenseMap<char, std::string> Escapes);
 
 private:
   std::string Output;
   StringMap<ASTNode *> Partials;
   StringMap<Lambda> Lambdas;
   StringMap<SectionLambda> SectionLambdas;
-  DenseMap<char, StringRef> Escapes;
+  DenseMap<char, std::string> Escapes;
   // The allocator for the ASTNode Tree
-  llvm::BumpPtrAllocator Allocator;
+  llvm::BumpPtrAllocator AstAllocator;
   // Allocator for each render call resets after each render
-  llvm::BumpPtrAllocator LocalAllocator;
+  llvm::BumpPtrAllocator RenderAllocator;
   ASTNode *Tree;
 };
 } // namespace mustache

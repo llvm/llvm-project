@@ -16,6 +16,7 @@ using namespace llvm::json;
 
 namespace llvm {
 namespace mustache {
+namespace {
 
 class Token {
 public:
@@ -30,15 +31,15 @@ public:
     Comment,
   };
 
-  Token(StringRef Str);
+  Token(std::string Str);
 
-  Token(StringRef RawBody, StringRef Str, char Identifier);
+  Token(std::string RawBody, std::string TokenBody, char Identifier);
 
   StringRef getTokenBody() const { return TokenBody; };
 
   StringRef getRawBody() const { return RawBody; };
 
-  void setTokenBody(StringRef NewBody) { TokenBody = NewBody.str(); };
+  void setTokenBody(std::string NewBody) { TokenBody = std::move(NewBody); };
 
   Accessor getAccessor() const { return Accessor; };
 
@@ -51,13 +52,13 @@ public:
   static Type getTokenType(char Identifier);
 
 private:
-  size_t Indentation;
   Type TokenType;
   // RawBody is the original string that was tokenized
   std::string RawBody;
-  Accessor Accessor;
   // TokenBody is the original string with the identifier removed
   std::string TokenBody;
+  Accessor Accessor;
+  size_t Indentation;
 };
 
 class ASTNode {
@@ -84,9 +85,7 @@ public:
 
   void addChild(ASTNode *Child) { Children.emplace_back(Child); };
 
-  void setBody(StringRef NewBody) { Body = NewBody; };
-
-  void setRawBody(StringRef NewBody) { RawBody = NewBody; };
+  void setRawBody(std::string NewBody) { RawBody = std::move(NewBody); };
 
   void setIndentation(size_t NewIndentation) { Indentation = NewIndentation; };
 
@@ -95,7 +94,7 @@ public:
   void setUpNode(llvm::BumpPtrAllocator &Alloc, StringMap<ASTNode *> &Partials,
                  StringMap<Lambda> &Lambdas,
                  StringMap<SectionLambda> &SectionLambdas,
-                 DenseMap<char, StringRef> &Escapes);
+                 DenseMap<char, std::string> &Escapes);
 
 private:
   void renderLambdas(const llvm::json::Value &Contexts, llvm::raw_ostream &OS,
@@ -115,7 +114,7 @@ private:
   StringMap<ASTNode *> *Partials;
   StringMap<Lambda> *Lambdas;
   StringMap<SectionLambda> *SectionLambdas;
-  DenseMap<char, StringRef> *Escapes;
+  DenseMap<char, std::string> *Escapes;
   Type T;
   size_t Indentation = 0;
   std::string RawBody;
@@ -131,7 +130,7 @@ private:
 class EscapeStringStream : public raw_ostream {
 public:
   explicit EscapeStringStream(llvm::raw_ostream &WrappedStream,
-                              DenseMap<char, StringRef> &Escape)
+                              DenseMap<char, std::string> &Escape)
       : Escape(Escape), WrappedStream(WrappedStream) {
     SetUnbuffered();
   }
@@ -151,7 +150,7 @@ protected:
   uint64_t current_pos() const override { return WrappedStream.tell(); }
 
 private:
-  DenseMap<char, StringRef> &Escape;
+  DenseMap<char, std::string> &Escape;
   llvm::raw_ostream &WrappedStream;
 };
 
@@ -182,7 +181,11 @@ private:
   llvm::raw_ostream &WrappedStream;
 };
 
-Accessor split(StringRef Str, char Delimiter) {
+Accessor splitMustacheString(StringRef Str) {
+  // We split the mustache string into an accessor
+  // For example: "a.b.c" would be split into {"a", "b", "c"}
+  // We make an exception for a single dot which
+  // refers to the current context
   Accessor Tokens;
   if (Str == ".") {
     Tokens.emplace_back(Str);
@@ -191,27 +194,28 @@ Accessor split(StringRef Str, char Delimiter) {
   StringRef Ref(Str);
   while (!Ref.empty()) {
     StringRef Part;
-    std::tie(Part, Ref) = Ref.split(Delimiter);
+    std::tie(Part, Ref) = Ref.split(".");
     Tokens.emplace_back(Part.trim());
   }
   return Tokens;
 }
 
-Token::Token(StringRef RawBody, StringRef InnerBody, char Identifier)
-    : RawBody(RawBody), TokenBody(InnerBody), Indentation(0) {
+Token::Token(std::string RawBody, std::string TokenBody, char Identifier)
+    : RawBody(std::move(RawBody)), TokenBody(std::move(TokenBody)),
+      Indentation(0) {
   TokenType = getTokenType(Identifier);
   if (TokenType == Type::Comment)
     return;
 
-  StringRef AccessorStr =
-      TokenType == Type::Variable ? InnerBody : InnerBody.substr(1);
+  std::string AccessorStr =
+      TokenType == Type::Variable ? this->TokenBody : this->TokenBody.substr(1);
 
-  Accessor = split(AccessorStr.trim(), '.');
+  Accessor = splitMustacheString(StringRef(AccessorStr).trim());
 }
 
-Token::Token(StringRef Str)
-    : TokenType(Type::Text), RawBody(Str), Accessor({}), TokenBody(Str),
-      Indentation(0) {}
+Token::Token(std::string Str)
+    : TokenType(Type::Text), RawBody(std::move(Str)), Accessor({}),
+      TokenBody(RawBody), Indentation(0) {}
 
 Token::Type Token::getTokenType(char Identifier) {
   switch (Identifier) {
@@ -240,7 +244,7 @@ Token::Type Token::getTokenType(char Identifier) {
 // We make an exception for when previous token is empty
 // and the current token is the second token
 // For example: "{{#Section}}"
-static bool hasTextBehind(size_t Idx, const ArrayRef<Token> &Tokens) {
+bool hasTextBehind(size_t Idx, const ArrayRef<Token> &Tokens) {
   if (Idx == 0)
     return true;
 
@@ -248,7 +252,7 @@ static bool hasTextBehind(size_t Idx, const ArrayRef<Token> &Tokens) {
   if (Tokens[PrevIdx].getType() != Token::Type::Text)
     return true;
 
-  const Token &PrevToken = Tokens[Idx - 1];
+  const Token &PrevToken = Tokens[PrevIdx];
   StringRef TokenBody = PrevToken.getRawBody().rtrim(" \t\v");
   return !TokenBody.ends_with("\n") && !(TokenBody.empty() && Idx == 1);
 }
@@ -258,7 +262,7 @@ static bool hasTextBehind(size_t Idx, const ArrayRef<Token> &Tokens) {
 // if the left of previous token is empty spaces or tabs followed
 // by a newline
 // For example: "{{#Section}}  \n"
-static bool hasTextAhead(size_t Idx, const ArrayRef<Token> &Tokens) {
+bool hasTextAhead(size_t Idx, const ArrayRef<Token> &Tokens) {
   if (Idx >= Tokens.size() - 1)
     return true;
 
@@ -266,12 +270,12 @@ static bool hasTextAhead(size_t Idx, const ArrayRef<Token> &Tokens) {
   if (Tokens[NextIdx].getType() != Token::Type::Text)
     return true;
 
-  const Token &NextToken = Tokens[Idx + 1];
+  const Token &NextToken = Tokens[NextIdx];
   StringRef TokenBody = NextToken.getRawBody().ltrim(" ");
   return !TokenBody.starts_with("\r\n") && !TokenBody.starts_with("\n");
 }
 
-static bool requiresCleanUp(Token::Type T) {
+bool requiresCleanUp(Token::Type T) {
   // We must clean up all the tokens that could contain child nodes
   return T == Token::Type::SectionOpen || T == Token::Type::InvertSectionOpen ||
          T == Token::Type::SectionClose || T == Token::Type::Comment ||
@@ -284,14 +288,14 @@ static bool requiresCleanUp(Token::Type T) {
 //  "{{! Comment }} \nLine 2"
 // would be considered as no text ahead and should be render as
 //  " Line 2"
-static void stripTokenAhead(SmallVector<Token> &Tokens, size_t Idx) {
+void stripTokenAhead(SmallVector<Token> &Tokens, size_t Idx) {
   Token &NextToken = Tokens[Idx + 1];
   StringRef NextTokenBody = NextToken.getTokenBody();
   // cut off the leading newline which could be \n or \r\n
   if (NextTokenBody.starts_with("\r\n"))
-    NextToken.setTokenBody(NextTokenBody.substr(2));
+    NextToken.setTokenBody(NextTokenBody.substr(2).str());
   else if (NextTokenBody.starts_with("\n"))
-    NextToken.setTokenBody(NextTokenBody.substr(1));
+    NextToken.setTokenBody(NextTokenBody.substr(1).str());
 }
 
 // Adjust previous token body if there no text behind
@@ -302,14 +306,14 @@ static void stripTokenAhead(SmallVector<Token> &Tokens, size_t Idx) {
 //  "A"
 // The exception for this is partial tag which requires us to
 // keep track of the indentation once it's rendered.
-static void stripTokenBefore(SmallVector<Token> &Tokens, size_t Idx,
-                             Token &CurrentToken, Token::Type CurrentType) {
+void stripTokenBefore(SmallVector<Token> &Tokens, size_t Idx,
+                      Token &CurrentToken, Token::Type CurrentType) {
   Token &PrevToken = Tokens[Idx - 1];
   StringRef PrevTokenBody = PrevToken.getTokenBody();
   StringRef Unindented = PrevTokenBody.rtrim(" \t\v");
   size_t Indentation = PrevTokenBody.size() - Unindented.size();
   if (CurrentType != Token::Type::Partial)
-    PrevToken.setTokenBody(Unindented);
+    PrevToken.setTokenBody(Unindented.str());
   CurrentToken.setIndentation(Indentation);
 }
 
@@ -324,12 +328,12 @@ SmallVector<Token> tokenize(StringRef Template) {
   size_t Start = 0;
   size_t DelimiterStart = Template.find(Open);
   if (DelimiterStart == StringRef::npos) {
-    Tokens.emplace_back(Template);
+    Tokens.emplace_back(Template.str());
     return Tokens;
   }
   while (DelimiterStart != StringRef::npos) {
     if (DelimiterStart != Start) {
-      Tokens.emplace_back(Template.substr(Start, DelimiterStart - Start));
+      Tokens.emplace_back(Template.substr(Start, DelimiterStart - Start).str());
     }
 
     size_t DelimiterEnd = Template.find(Close, DelimiterStart);
@@ -349,7 +353,7 @@ SmallVector<Token> tokenize(StringRef Template) {
   }
 
   if (Start < Template.size())
-    Tokens.emplace_back(Template.substr(Start));
+    Tokens.emplace_back(Template.substr(Start).str());
 
   // Fix up white spaces for:
   //   - open sections
@@ -454,11 +458,11 @@ void Parser::parseMustache(ASTNode *Parent) {
       CurrentNode = new (Node) ASTNode(ASTNode::Section, A, Parent);
       size_t Start = CurrentPtr;
       parseMustache(CurrentNode);
-      size_t End = CurrentPtr;
+      const size_t End = CurrentPtr - 1;
       std::string RawBody;
-      for (std::size_t I = Start; I < End - 1; I++)
+      for (std::size_t I = Start; I < End; I++)
         RawBody += Tokens[I].getRawBody();
-      CurrentNode->setRawBody(RawBody);
+      CurrentNode->setRawBody(std::move(RawBody));
       Parent->addChild(CurrentNode);
       break;
     }
@@ -466,11 +470,11 @@ void Parser::parseMustache(ASTNode *Parent) {
       CurrentNode = new (Node) ASTNode(ASTNode::InvertSection, A, Parent);
       size_t Start = CurrentPtr;
       parseMustache(CurrentNode);
-      size_t End = CurrentPtr;
+      const size_t End = CurrentPtr - 1;
       std::string RawBody;
-      for (size_t Idx = Start; Idx < End - 1; Idx++)
+      for (size_t Idx = Start; Idx < End; Idx++)
         RawBody += Tokens[Idx].getRawBody();
-      CurrentNode->setRawBody(RawBody);
+      CurrentNode->setRawBody(std::move(RawBody));
       Parent->addChild(CurrentNode);
       break;
     }
@@ -481,42 +485,7 @@ void Parser::parseMustache(ASTNode *Parent) {
     }
   }
 }
-
-void Template::render(Value &Data, llvm::raw_ostream &OS) {
-  Tree->render(Data, OS);
-  LocalAllocator.Reset();
-}
-
-void Template::registerPartial(StringRef Name, StringRef Partial) {
-  Parser P = Parser(Partial, Allocator);
-  ASTNode *PartialTree = P.parse();
-  PartialTree->setUpNode(LocalAllocator, Partials, Lambdas, SectionLambdas,
-                         Escapes);
-  Partials.insert(std::make_pair(Name, PartialTree));
-}
-
-void Template::registerLambda(StringRef Name, Lambda L) { Lambdas[Name] = L; }
-
-void Template::registerLambda(StringRef Name, SectionLambda L) {
-  SectionLambdas[Name] = L;
-}
-
-void Template::registerEscape(DenseMap<char, StringRef> E) { Escapes = E; }
-
-Template::Template(StringRef TemplateStr) {
-  Parser P = Parser(TemplateStr, Allocator);
-  Tree = P.parse();
-  // the default behaviour is to escape html entities
-  DenseMap<char, StringRef> HtmlEntities = {{'&', "&amp;"},
-                                            {'<', "&lt;"},
-                                            {'>', "&gt;"},
-                                            {'"', "&quot;"},
-                                            {'\'', "&#39;"}};
-  registerEscape(HtmlEntities);
-  Tree->setUpNode(LocalAllocator, Partials, Lambdas, SectionLambdas, Escapes);
-}
-
-static void toMustacheString(const Value &Data, raw_ostream &OS) {
+void toMustacheString(const Value &Data, raw_ostream &OS) {
   switch (Data.kind()) {
   case Value::Null:
     return;
@@ -532,10 +501,12 @@ static void toMustacheString(const Value &Data, raw_ostream &OS) {
     OS << Str.str();
     return;
   }
+
   case Value::Array: {
     auto Arr = *Data.getAsArray();
     if (Arr.empty())
       return;
+    [[fallthrough]];
   }
   case Value::Object:
   case Value::Boolean: {
@@ -546,7 +517,7 @@ static void toMustacheString(const Value &Data, raw_ostream &OS) {
   }
 }
 
-static bool isFalsey(const Value &V) {
+bool isFalsey(const Value &V) {
   return V.getAsNull() || (V.getAsBoolean() && !V.getAsBoolean().value()) ||
          (V.getAsArray() && V.getAsArray()->empty()) ||
          (V.getAsObject() && V.getAsObject()->empty());
@@ -709,7 +680,7 @@ void ASTNode::renderSectionLambdas(const Value &Contexts, llvm::raw_ostream &OS,
 void ASTNode::setUpNode(llvm::BumpPtrAllocator &Alloc,
                         StringMap<ASTNode *> &Par, StringMap<Lambda> &L,
                         StringMap<SectionLambda> &SC,
-                        DenseMap<char, StringRef> &E) {
+                        DenseMap<char, std::string> &E) {
   // Passed down datastructures needed for rendering to
   // the children nodes. This must be called before rendering
   Allocator = &Alloc;
@@ -719,6 +690,41 @@ void ASTNode::setUpNode(llvm::BumpPtrAllocator &Alloc,
   Escapes = &E;
   for (ASTNode *Child : Children)
     Child->setUpNode(Alloc, Par, L, SC, E);
+}
+} // namespace
+
+void Template::render(Value &Data, llvm::raw_ostream &OS) {
+  Tree->render(Data, OS);
+  RenderAllocator.Reset();
+}
+
+void Template::registerPartial(std::string Name, std::string Partial) {
+  Parser P = Parser(Partial, AstAllocator);
+  ASTNode *PartialTree = P.parse();
+  PartialTree->setUpNode(RenderAllocator, Partials, Lambdas, SectionLambdas,
+                         Escapes);
+  Partials.insert(std::make_pair(Name, PartialTree));
+}
+
+void Template::registerLambda(std::string Name, Lambda L) { Lambdas[Name] = L; }
+
+void Template::registerLambda(std::string Name, SectionLambda L) {
+  SectionLambdas[Name] = L;
+}
+
+void Template::registerEscape(DenseMap<char, std::string> E) { Escapes = E; }
+
+Template::Template(std::string TemplateStr) {
+  Parser P = Parser(TemplateStr, AstAllocator);
+  Tree = P.parse();
+  // the default behaviour is to escape html entities
+  DenseMap<char, std::string> HtmlEntities = {{'&', "&amp;"},
+                                              {'<', "&lt;"},
+                                              {'>', "&gt;"},
+                                              {'"', "&quot;"},
+                                              {'\'', "&#39;"}};
+  registerEscape(HtmlEntities);
+  Tree->setUpNode(RenderAllocator, Partials, Lambdas, SectionLambdas, Escapes);
 }
 } // namespace mustache
 } // namespace llvm
