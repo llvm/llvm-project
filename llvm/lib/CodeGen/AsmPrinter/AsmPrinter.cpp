@@ -3861,8 +3861,8 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
     BaseCV = dyn_cast<Constant>(CV->user_back());
 
   if (isa<ConstantAggregateZero>(CV)) {
-    StructType *structType = llvm::dyn_cast<llvm::StructType>(CV->getType());
-    if (structType && AliasList) {
+    StructType *structType;
+    if (AliasList && (structType = llvm::dyn_cast<StructType>(CV->getType()))) {
       // Handle cases of aliases to direct struct elements
       const StructLayout *Layout = DL.getStructLayout(structType);
       uint64_t SizeSoFar = 0;
