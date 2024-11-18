@@ -44,7 +44,7 @@ static cl::opt<double> GlobalMergingInstOverhead(
     "global-merging-inst-overhead",
     cl::desc("The overhead cost associated with each instruction when lowering "
              "to machine instruction."),
-    cl::init(1.0), cl::Hidden);
+    cl::init(1.2), cl::Hidden);
 static cl::opt<double> GlobalMergingParamOverhead(
     "global-merging-param-overhead",
     cl::desc("The overhead cost associated with each parameter when merging "
