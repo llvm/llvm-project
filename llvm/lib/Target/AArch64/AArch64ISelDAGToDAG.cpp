@@ -32,7 +32,7 @@ using namespace llvm;
 #define PASS_NAME "AArch64 Instruction Selection"
 
 // https://github.com/llvm/llvm-project/issues/114425
-#if defined(_WIN32) && !defined(__clang__) && !defined(NDEBUG)
+#if defined(_MSC_VER) && !defined(__clang__) && !defined(NDEBUG)
 #pragma inline_depth(0)
 #endif
 
