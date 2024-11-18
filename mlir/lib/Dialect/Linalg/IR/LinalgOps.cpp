@@ -155,19 +155,6 @@ static void fillStructuredOpRegion(OpBuilder &opBuilder, Region &region,
   // iterator_types is an auto-generated method.
 }
 
-/// Helper to create a typical indexing map for MatmulOp. Returns a list of
-/// AffineMap.
-static SmallVector<AffineMap, 3>
-getDefaultIndexingMapsForMatmul(MLIRContext *context) {
-  AffineExpr d0, d1, d2;
-  SmallVector<AffineMap, 3> indexingMaps;
-  bindDims(context, d0, d1, d2);
-  indexingMaps.push_back(AffineMap::get(3, 0, {d0, d2}, context));
-  indexingMaps.push_back(AffineMap::get(3, 0, {d2, d1}, context));
-  indexingMaps.push_back(AffineMap::get(3, 0, {d0, d1}, context));
-  return indexingMaps;
-}
-
 /// Creates a structured operation given `inputs`, `outputs`, and `attributes`.
 /// The result types are derived automatically if `resultTensorTypes` is none.
 /// The body of the operation is filled using `regionBuilder`. All ods-gen
@@ -200,21 +187,18 @@ static void buildStructuredOp(OpBuilder &b, OperationState &state,
                          state.attributes.getAttrs(), regionBuilder);
 }
 
-static void
-buildMatmulOp(OpBuilder &b, OperationState &state,
-              std::optional<TypeRange> resultTensorTypes, ValueRange inputs,
-              ValueRange outputs, ArrayRef<NamedAttribute> attributes,
-              RegionBuilderFn regionBuilder,
-              std::optional<ArrayRef<AffineMap>> indexingMaps = std::nullopt) {
-  // Initialize indexingMaps, for MatmulOp.
+static void buildMatmulOp(OpBuilder &b, OperationState &state,
+                          std::optional<TypeRange> resultTensorTypes,
+                          ValueRange inputs, ValueRange outputs,
+                          ArrayRef<NamedAttribute> attributes,
+                          RegionBuilderFn regionBuilder,
+                          ArrayRef<AffineMap> indexingMaps) {
+  // Initialize indexingMaps attribute, for MatmulOp.
   SmallVector<Attribute, 3> indexingMapsAttrVal;
-  if (indexingMaps.has_value()) {
-    for (mlir::AffineMap map : *indexingMaps) {
-      // Convert each AffineMap to an AffineMapAttr
-      indexingMapsAttrVal.push_back(AffineMapAttr::get(map));
-    }
-    state.addAttribute("indexing_maps", b.getArrayAttr(indexingMapsAttrVal));
-  }
+  indexingMapsAttrVal = llvm::map_to_vector(
+      MatmulOp::getDefaultIndexingMaps(b.getContext()),
+      [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
+  state.addAttribute("indexing_maps", b.getArrayAttr(indexingMapsAttrVal));
   return buildStructuredOp(b, state, resultTensorTypes, inputs, outputs,
                            attributes, regionBuilder);
 }

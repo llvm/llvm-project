@@ -635,15 +635,6 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
           MatmulOp::getDefaultIndexingMaps($_builder.getContext()));
       }]>,
       OpBuilder<
-      (ins "TypeRange":$resultTensorTypes, "ValueRange":$operands,
-            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
-      [{
-        $_state.addOperands(operands);
-        $_state.addAttributes(attributes);
-        $_state.addTypes(resultTensorTypes);
-        (void)$_state.addRegion();
-      }]>,
-      OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
        "ValueRange":$outputs,
        "Attribute":$cast, CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
