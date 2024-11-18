@@ -457,7 +457,8 @@ public:
   ///
   /// \param[out] line_no
   ///     The line number.
-  void GetStartLineSourceInfo(FileSpec &source_file, uint32_t &line_no);
+  void GetStartLineSourceInfo(lldb::SupportFileSP &source_file_sp,
+                              uint32_t &line_no);
 
   /// Find the file and line number of the source location of the end of the
   /// function.

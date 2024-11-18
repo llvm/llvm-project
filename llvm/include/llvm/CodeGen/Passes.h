@@ -363,7 +363,7 @@ namespace llvm {
 
   /// PeepholeOptimizer - This pass performs peephole optimizations -
   /// like extension and comparison eliminations.
-  extern char &PeepholeOptimizerID;
+  extern char &PeepholeOptimizerLegacyID;
 
   /// OptimizePHIs - This pass optimizes machine instruction PHIs
   /// to take advantage of opportunities created during DAG legalization.
@@ -506,6 +506,9 @@ namespace llvm {
 
   /// This pass frees the memory occupied by the MachineFunction.
   FunctionPass *createFreeMachineFunctionPass();
+
+  /// This pass performs merging similar functions globally.
+  ModulePass *createGlobalMergeFuncPass();
 
   /// This pass performs outlining on machine instructions directly before
   /// printing assembly.

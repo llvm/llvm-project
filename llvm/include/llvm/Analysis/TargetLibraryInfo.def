@@ -2077,6 +2077,11 @@ TLI_DEFINE_ENUM_INTERNAL(reallocf)
 TLI_DEFINE_STRING_INTERNAL("reallocf")
 TLI_DEFINE_SIG_INTERNAL(Ptr, Ptr, SizeT)
 
+/// void *reallocarray(void *ptr, size_t nmemb, size_t size);
+TLI_DEFINE_ENUM_INTERNAL(reallocarray)
+TLI_DEFINE_STRING_INTERNAL("reallocarray")
+TLI_DEFINE_SIG_INTERNAL(Ptr, Ptr, SizeT, SizeT)
+
 /// char *realpath(const char *file_name, char *resolved_name);
 TLI_DEFINE_ENUM_INTERNAL(realpath)
 TLI_DEFINE_STRING_INTERNAL("realpath")

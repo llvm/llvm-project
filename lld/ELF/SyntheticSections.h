@@ -871,7 +871,7 @@ public:
 protected:
   void init(llvm::function_ref<void(InputFile *, InputChunk &, OutputChunk &)>);
   static void
-  parseDebugNames(InputChunk &inputChunk, OutputChunk &chunk,
+  parseDebugNames(Ctx &, InputChunk &inputChunk, OutputChunk &chunk,
                   llvm::DWARFDataExtractor &namesExtractor,
                   llvm::DataExtractor &strExtractor,
                   llvm::function_ref<SmallVector<uint32_t, 0>(
