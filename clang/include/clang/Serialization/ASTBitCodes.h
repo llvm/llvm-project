@@ -350,7 +350,7 @@ enum ControlRecordTypes {
   /// and information about the compiler used to build this AST file.
   METADATA = 1,
 
-  /// Record code for other AST file imported by this AST file.
+  /// Record code for another AST file imported by this AST file.
   IMPORT,
 
   /// Record code for the original file that was used to
