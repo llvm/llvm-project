@@ -96,4 +96,13 @@ void foo() {
 // CHECK-NEXT: ;
 #pragma acc serial loop default(present)
   for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc parallel loop private(i, array[1], array, array[1:2])
+#pragma acc parallel loop private(i, array[1], array, array[1:2])
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc serial loop firstprivate(i, array[1], array, array[1:2])
+#pragma acc serial loop firstprivate(i, array[1], array, array[1:2])
+  for(int i = 0;i<5;++i);
+
 }
