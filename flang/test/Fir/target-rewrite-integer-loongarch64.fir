@@ -1,6 +1,6 @@
-// Test i32 passing and returning on LoongArch64
-// LoongArch64 LP64D ABI requires unsigned 32 bit integers to be sign extended.
-//
+/// Test i32 passing and returning on LoongArch64
+/// LoongArch64 LP64D ABI requires unsigned 32 bit integers to be sign extended.
+
 // REQUIRES: loongarch-registered-target
 // RUN: fir-opt --target-rewrite="target=loongarch64-unknown-linux-gnu" %s | FileCheck %s --check-prefix=LOONGARCH64
 // RUN: tco -target="loongarch64-unknown-linux-gnu" %s | FileCheck %s --check-prefix=LOONGARCH64_LLVM
