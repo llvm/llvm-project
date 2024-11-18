@@ -5035,6 +5035,7 @@ void TargetProperties::SetUseDIL(ExecutionContext *exe_ctx, bool b) {
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
     exp_values->SetPropertyAtIndex(ePropertyUseDIL, true, exe_ctx);
+}
 
 ArchSpec TargetProperties::GetDefaultArchitecture() const {
   const uint32_t idx = ePropertyDefaultArch;
