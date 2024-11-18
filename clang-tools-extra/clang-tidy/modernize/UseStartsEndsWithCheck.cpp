@@ -214,7 +214,8 @@ void UseStartsEndsWithCheck::check(const MatchFinder::MatchResult &Result) {
   const CXXMethodDecl *ReplacementFunction =
       StartsWithFunction ? StartsWithFunction : EndsWithFunction;
 
-  if (ComparisonExpr->getBeginLoc().isMacroID())
+  if (ComparisonExpr->getBeginLoc().isMacroID() ||
+      FindExpr->getBeginLoc().isMacroID())
     return;
 
   const bool Neg = isNegativeComparison(ComparisonExpr);

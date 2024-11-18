@@ -91,16 +91,6 @@ void test(std::string s, std::string_view sv, sub_string ss, sub_sub_string sss,
   // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
   // CHECK-FIXES: !s.starts_with("a");
 
-  #define STR(x) std::string(x)
-  0 == STR(s).find("a");
-  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
-  // CHECK-FIXES: STR(s).starts_with("a");
-
-  #define STRING s
-  if (0 == STRING.find("ala")) { /* do something */}
-  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
-  // CHECK-FIXES: if (STRING.starts_with("ala"))
-
   #define FIND find
   s.FIND("a") == 0;
   // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
@@ -265,6 +255,12 @@ void test(std::string s, std::string_view sv, sub_string ss, sub_sub_string sss,
 
   s.compare(0, 1, "ab") == 0;
   s.rfind(suffix, 1) == s.size() - suffix.size();
+
+  #define STR(x) std::string(x)
+  0 == STR(s).find("a");
+
+  #define STRING s
+  if (0 == STRING.find("ala")) { /* do something */}
 }
 
 void test_substr() {
@@ -311,8 +307,5 @@ void test_substr() {
 
     #define STR() str
     SUBSTR(STR(), 0, 6) == "prefix";
-
     "prefix" == SUBSTR(STR(), 0, 6);
-    // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of substr() == [modernize-use-starts-ends-with]
-
 }
