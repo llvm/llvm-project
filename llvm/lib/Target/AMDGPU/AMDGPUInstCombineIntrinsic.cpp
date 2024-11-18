@@ -1027,7 +1027,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::amdgcn_wavefrontsize: {
     // TODO: this is a workaround for the pseudo-generic target one gets with no
     // specified mcpu, which spoofs its wave size to 64; it should be removed.
-    if ((ST->getCPU().empty() || ST->getCPU() == "generic") &&
+    if ((ST->getCPU().empty() || ST->getCPU().starts_with("generic")) &&
         !ST->getFeatureString().contains("+wavefrontsize"))
       break;
     return IC.replaceInstUsesWith(
