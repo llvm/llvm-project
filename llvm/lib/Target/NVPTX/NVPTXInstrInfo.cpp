@@ -199,3 +199,23 @@ unsigned NVPTXInstrInfo::insertBranch(MachineBasicBlock &MBB,
   BuildMI(&MBB, DL, get(NVPTX::GOTO)).addMBB(FBB);
   return 2;
 }
+
+bool NVPTXInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
+                                          const MachineBasicBlock *MBB,
+                                          const MachineFunction &MF) const {
+  // Prevent the scheduler from reordering & splitting up MachineInstrs
+  // which must stick together (in initially set order) to
+  // comprise a valid PTX function call sequence.
+  switch (MI.getOpcode()) {
+  case NVPTX::CallUniPrintCallRetInst1:
+  case NVPTX::CallArgBeginInst:
+  case NVPTX::CallArgI32imm:
+  case NVPTX::CallArgParam:
+  case NVPTX::LastCallArgI32imm:
+  case NVPTX::LastCallArgParam:
+  case NVPTX::CallArgEndInst1:
+    return true;
+  }
+
+  return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF);
+}
