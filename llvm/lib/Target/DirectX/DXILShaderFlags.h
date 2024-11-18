@@ -70,13 +70,13 @@ struct ComputedShaderFlags {
     return ModuleFlags;
   }
 
-  ComputedShaderFlags &operator|=(const uint64_t IVal) {
+  void merge(const uint64_t IVal) {
 #define SHADER_FEATURE_FLAG(FeatureBit, DxilModuleBit, FlagName, Str)          \
   FlagName |= (IVal & getMask(DxilModuleBit));
 #define DXIL_MODULE_FLAG(DxilModuleBit, FlagName, Str)                         \
   FlagName |= (IVal & getMask(DxilModuleBit));
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-    return *this;
+    return;
   }
 
   void print(raw_ostream &OS = dbgs()) const;

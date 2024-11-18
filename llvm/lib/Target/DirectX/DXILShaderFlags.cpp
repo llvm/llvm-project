@@ -83,7 +83,7 @@ DXILModuleShaderFlagsInfo::DXILModuleShaderFlagsInfo(const Module &M) {
     // Insert shader flag mask for function F
     FunctionFlags.push_back({&F, CSF});
     // Update combined shader flags mask
-    CombinedSFMask |= CSF;
+    CombinedSFMask.merge(CSF);
   }
   llvm::sort(FunctionFlags);
 }
