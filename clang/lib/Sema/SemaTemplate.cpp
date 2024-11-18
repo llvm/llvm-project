@@ -1235,6 +1235,10 @@ bool Sema::AttachTypeConstraint(AutoTypeLoc TL,
         << NewConstrainedParm->getTypeSourceInfo()
                ->getTypeLoc()
                .getSourceRange();
+    NewConstrainedParm->setPlaceholderTypeConstraint(
+        RecoveryExpr::Create(Context, OrigConstrainedParm->getType(),
+                             OrigConstrainedParm->getBeginLoc(),
+                             OrigConstrainedParm->getEndLoc(), {}));
     return true;
   }
   // FIXME: Concepts: This should be the type of the placeholder, but this is
@@ -1242,8 +1246,13 @@ bool Sema::AttachTypeConstraint(AutoTypeLoc TL,
   DeclRefExpr *Ref =
       BuildDeclRefExpr(OrigConstrainedParm, OrigConstrainedParm->getType(),
                        VK_PRValue, OrigConstrainedParm->getLocation());
-  if (!Ref)
+  if (!Ref) {
+    NewConstrainedParm->setPlaceholderTypeConstraint(
+        RecoveryExpr::Create(Context, OrigConstrainedParm->getType(),
+                             OrigConstrainedParm->getBeginLoc(),
+                             OrigConstrainedParm->getEndLoc(), {}));
     return true;
+  }
   ExprResult ImmediatelyDeclaredConstraint = formImmediatelyDeclaredConstraint(
       *this, TL.getNestedNameSpecifierLoc(), TL.getConceptNameInfo(),
       TL.getNamedConcept(), /*FoundDecl=*/TL.getFoundDecl(), TL.getLAngleLoc(),
@@ -1255,8 +1264,13 @@ bool Sema::AttachTypeConstraint(AutoTypeLoc TL,
       },
       EllipsisLoc);
   if (ImmediatelyDeclaredConstraint.isInvalid() ||
-      !ImmediatelyDeclaredConstraint.isUsable())
+      !ImmediatelyDeclaredConstraint.isUsable()) {
+    NewConstrainedParm->setPlaceholderTypeConstraint(
+        RecoveryExpr::Create(Context, OrigConstrainedParm->getType(),
+                             OrigConstrainedParm->getBeginLoc(),
+                             OrigConstrainedParm->getEndLoc(), {}));
     return true;
+  }
 
   NewConstrainedParm->setPlaceholderTypeConstraint(
       ImmediatelyDeclaredConstraint.get());
