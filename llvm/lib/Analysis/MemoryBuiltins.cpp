@@ -564,8 +564,13 @@ Value *llvm::getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI) {
 static APInt getSizeWithOverflow(const SizeOffsetAPInt &Data) {
   APInt Size = Data.Size;
   APInt Offset = Data.Offset;
-  if (Offset.isNegative() || Size.ult(Offset))
-    return APInt(Size.getBitWidth(), 0);
+
+  assert(!Offset.isNegative() &&
+         "size for a pointer before the allocated object is ambiguous");
+
+  if (Size.ult(Offset))
+    return APInt::getZero(Size.getBitWidth());
+
   return Size - Offset;
 }
 
@@ -668,10 +673,14 @@ STATISTIC(ObjectVisitorArgument,
 STATISTIC(ObjectVisitorLoad,
           "Number of load instructions with unsolved size and offset");
 
+/// Align \p Size according to \p Alignment. If \p Size is greater than
+/// getSignedMaxValue(), set it as unknown as we can only represent signed value
+/// in OffsetSpan.
 APInt ObjectSizeOffsetVisitor::align(APInt Size, MaybeAlign Alignment) {
   if (Options.RoundToAlign && Alignment)
-    return APInt(IntTyBits, alignTo(Size.getZExtValue(), *Alignment));
-  return Size;
+    Size = APInt(IntTyBits, alignTo(Size.getZExtValue(), *Alignment));
+
+  return Size.isNegative() ? APInt() : Size;
 }
 
 ObjectSizeOffsetVisitor::ObjectSizeOffsetVisitor(const DataLayout &DL,
@@ -733,8 +742,26 @@ OffsetSpan ObjectSizeOffsetVisitor::computeImpl(Value *V) {
       ORT.After = APInt();
   }
   // If the computed bound is "unknown" we cannot add the stripped offset.
-  return {(ORT.knownBefore() ? ORT.Before + Offset : ORT.Before),
-          (ORT.knownAfter() ? ORT.After - Offset : ORT.After)};
+  if (ORT.knownBefore()) {
+    bool Overflow;
+    ORT.Before = ORT.Before.sadd_ov(Offset, Overflow);
+    if (Overflow)
+      ORT.Before = APInt();
+  }
+  if (ORT.knownAfter()) {
+    bool Overflow;
+    ORT.After = ORT.After.ssub_ov(Offset, Overflow);
+    if (Overflow)
+      ORT.After = APInt();
+  }
+
+  // We end up pointing on a location that's outside of the original object.
+  // This is UB, and we'd rather return an empty location then.
+  if (ORT.knownBefore() && ORT.Before.isNegative()) {
+    ORT.Before = APInt::getZero(ORT.Before.getBitWidth());
+    ORT.After = APInt::getZero(ORT.Before.getBitWidth());
+  }
+  return ORT;
 }
 
 OffsetSpan ObjectSizeOffsetVisitor::computeValue(Value *V) {
@@ -780,6 +807,7 @@ OffsetSpan ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
   if (!isUIntN(IntTyBits, ElemSize.getKnownMinValue()))
     return ObjectSizeOffsetVisitor::unknown();
   APInt Size(IntTyBits, ElemSize.getKnownMinValue());
+
   if (!I.isArrayAllocation())
     return OffsetSpan(Zero, align(Size, I.getAlign()));
 
@@ -791,6 +819,7 @@ OffsetSpan ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
 
     bool Overflow;
     Size = Size.umul_ov(NumElems, Overflow);
+
     return Overflow ? ObjectSizeOffsetVisitor::unknown()
                     : OffsetSpan(Zero, align(Size, I.getAlign()));
   }
@@ -810,8 +839,12 @@ OffsetSpan ObjectSizeOffsetVisitor::visitArgument(Argument &A) {
 }
 
 OffsetSpan ObjectSizeOffsetVisitor::visitCallBase(CallBase &CB) {
-  if (std::optional<APInt> Size = getAllocSize(&CB, TLI))
+  if (std::optional<APInt> Size = getAllocSize(&CB, TLI)) {
+    // Very large unsigned value cannot be represented as OffsetSpan.
+    if (Size->isNegative())
+      return ObjectSizeOffsetVisitor::unknown();
     return OffsetSpan(Zero, *Size);
+  }
   return ObjectSizeOffsetVisitor::unknown();
 }
 
@@ -944,7 +977,11 @@ OffsetSpan ObjectSizeOffsetVisitor::findLoadOffsetRange(
       if (!C)
         return Unknown();
 
-      return Known({APInt(C->getValue().getBitWidth(), 0), C->getValue()});
+      APInt CSize = C->getValue();
+      if (CSize.isNegative())
+        return Unknown();
+
+      return Known({APInt(CSize.getBitWidth(), 0), CSize});
     }
 
     return Unknown();
