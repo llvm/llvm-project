@@ -3,8 +3,6 @@
 ; RUN: llc -mtriple=aarch64-unknown-linux-gnu -global-isel -global-isel-abort=2 2>&1 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 ; CHECK-GI:       warning: Instruction selection used fallback path for freeze_v2i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for freeze_v3p0
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for freeze_v4p0
 
 %struct.T = type { i32, i32 }
 
@@ -294,29 +292,47 @@ define <2 x ptr> @freeze_v2p0() {
 }
 
 define <3 x ptr> @freeze_v3p0() {
-; CHECK-LABEL: freeze_v3p0:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #4 // =0x4
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add d2, d0, d2
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_v3p0:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w8, #4 // =0x4
+; CHECK-SD-NEXT:    dup v2.2d, x8
+; CHECK-SD-NEXT:    add v0.2d, v0.2d, v2.2d
+; CHECK-SD-NEXT:    add d2, d0, d2
+; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_v3p0:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adrp x8, .LCPI22_0
+; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI22_0]
+; CHECK-GI-NEXT:    add x8, x8, #4
+; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    add v0.2d, v0.2d, v0.2d
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    ret
   %y1 = freeze <3 x ptr> undef
   %t1 = getelementptr i32, <3 x ptr> %y1, i32 1
   ret <3 x ptr> %t1
 }
 
 define <4 x ptr> @freeze_v4p0() {
-; CHECK-LABEL: freeze_v4p0:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #4 // =0x4
-; CHECK-NEXT:    dup v0.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v0.2d
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_v4p0:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w8, #4 // =0x4
+; CHECK-SD-NEXT:    dup v0.2d, x8
+; CHECK-SD-NEXT:    add v0.2d, v0.2d, v0.2d
+; CHECK-SD-NEXT:    mov v1.16b, v0.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_v4p0:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adrp x8, .LCPI23_0
+; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI23_0]
+; CHECK-GI-NEXT:    add v0.2d, v0.2d, v0.2d
+; CHECK-GI-NEXT:    mov v1.16b, v0.16b
+; CHECK-GI-NEXT:    ret
   %y1 = freeze <4 x ptr> undef
   %t1 = getelementptr i32, <4 x ptr> %y1, i32 1
   ret <4 x ptr> %t1
