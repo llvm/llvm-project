@@ -3,10 +3,10 @@
 #include <processthreadsapi.h>
 
 #ifndef PF_ARM_V81_ATOMIC_INSTRUCTIONS_AVAILABLE
-#define PF_ARM_V81_ATOMIC_INSTRUCTIONS_AVAILABLE    34
+#define PF_ARM_V81_ATOMIC_INSTRUCTIONS_AVAILABLE 34
 #endif
 
 static void CONSTRUCTOR_ATTRIBUTE init_have_lse_atomics(void) {
-  if(IsProcessorFeaturePresent(PF_ARM_V81_ATOMIC_INSTRUCTIONS_AVAILABLE))
+  if (IsProcessorFeaturePresent(PF_ARM_V81_ATOMIC_INSTRUCTIONS_AVAILABLE))
     __aarch64_have_lse_atomics = true;
 }
