@@ -11,7 +11,15 @@
 // instantiated specialization.
 
 // EMPTY: ClassTemplateDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> implicit RWBuffer
-// EMPTY-NEXT: TemplateTypeParmDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> class depth 0 index 0 element_type
+// EMPTY-NEXT: TemplateTypeParmDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> typename depth 0 index 0 element_type
+// EMPTY-NEXT: ConceptSpecializationExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> 'bool' Concept 0x{{[0-9A-Fa-f]+}} '__is_typed_resource_element_compatible'
+// EMPTY-NEXT: ImplicitConceptSpecializationDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc>
+// EMPTY-NEXT: TemplateArgument type 'type-parameter-0-0'
+// EMPTY-NEXT: TemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'type-parameter-0-0' dependent depth 0 index 0
+// EMPTY-NEXT: TemplateTypeParm 0x{{[0-9A-Fa-f]+}} ''
+// EMPTY-NEXT: TemplateArgument type 'element_type':'type-parameter-0-0'
+// EMPTY-NEXT: TemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'element_type' dependent depth 0 index 0
+// EMPTY-NEXT: TemplateTypeParm 0x{{[0-9A-Fa-f]+}} 'element_type'
 // EMPTY-NEXT: CXXRecordDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> implicit <undeserialized declarations> class RWBuffer
 // EMPTY-NEXT: FinalAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit final
 
@@ -25,7 +33,15 @@ RWBuffer<float> Buffer;
 #endif
 
 // CHECK: ClassTemplateDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> implicit RWBuffer
-// CHECK-NEXT: TemplateTypeParmDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> class depth 0 index 0 element_type
+// CHECK-NEXT: TemplateTypeParmDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> typename depth 0 index 0 element_type
+// CHECK-NEXT: ConceptSpecializationExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> 'bool' Concept 0x{{[0-9A-Fa-f]+}} '__is_typed_resource_element_compatible'
+// CHECK-NEXT: ImplicitConceptSpecializationDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc>
+// CHECK-NEXT: TemplateArgument type 'type-parameter-0-0'
+// CHECK-NEXT: TemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'type-parameter-0-0' dependent depth 0 index 0
+// CHECK-NEXT: TemplateTypeParm 0x{{[0-9A-Fa-f]+}} ''
+// CHECK-NEXT: TemplateArgument type 'element_type':'type-parameter-0-0'
+// CHECK-NEXT: TemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'element_type' dependent depth 0 index 0
+// CHECK-NEXT: TemplateTypeParm 0x{{[0-9A-Fa-f]+}} 'element_type'
 // CHECK-NEXT: CXXRecordDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> implicit class RWBuffer definition
 
 // CHECK: FinalAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit final
