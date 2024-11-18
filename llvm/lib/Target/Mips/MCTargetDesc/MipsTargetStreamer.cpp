@@ -37,6 +37,10 @@ static cl::opt<bool> RoundSectionSizes(
     cl::desc("Round section sizes up to the section alignment"), cl::Hidden);
 } // end anonymous namespace
 
+static bool isMips16(const MCSubtargetInfo *STI) {
+  return STI->hasFeature(Mips::FeatureMips16);
+}
+
 static bool isMicroMips(const MCSubtargetInfo *STI) {
   return STI->hasFeature(Mips::FeatureMicroMips);
 }
@@ -286,6 +290,13 @@ void MipsTargetStreamer::emitEmptyDelaySlot(bool hasShortDelaySlot, SMLoc IDLoc,
                                             const MCSubtargetInfo *STI) {
   // The default case of `nop` is `sll $zero, $zero, 0`.
   unsigned Opc = Mips::SLL;
+
+  if (isMips16(STI)) {
+    assert(hasShortDelaySlot && "Expected short delay slot with MIPS16");
+    emitRR(Mips::Move32R16, Mips::ZERO, Mips::S0, IDLoc, STI);
+    return;
+  }
+
   if (isMicroMips(STI) && hasShortDelaySlot) {
     Opc = isMips32r6(STI) ? Mips::MOVE16_MMR6 : Mips::MOVE16_MM;
     emitRR(Opc, Mips::ZERO, Mips::ZERO, IDLoc, STI);
@@ -299,7 +310,9 @@ void MipsTargetStreamer::emitEmptyDelaySlot(bool hasShortDelaySlot, SMLoc IDLoc,
 }
 
 void MipsTargetStreamer::emitNop(SMLoc IDLoc, const MCSubtargetInfo *STI) {
-  if (isMicroMips(STI))
+  if (isMips16(STI))
+    emitRR(Mips::Move32R16, Mips::ZERO, Mips::S0, IDLoc, STI);
+  else if (isMicroMips(STI))
     emitRR(Mips::MOVE16_MM, Mips::ZERO, Mips::ZERO, IDLoc, STI);
   else
     emitRRI(Mips::SLL, Mips::ZERO, Mips::ZERO, 0, IDLoc, STI);
@@ -887,6 +900,7 @@ void MipsTargetELFStreamer::emitLabel(MCSymbol *S) {
 
   if (isMicroMipsEnabled())
     Symbol->setOther(ELF::STO_MIPS_MICROMIPS);
+  // FIXME: Does this need to do something similar for MIPS16?
 }
 
 void MipsTargetELFStreamer::finish() {
@@ -997,6 +1011,8 @@ void MipsTargetELFStreamer::setUsesMicroMips() {
   W.setELFHeaderEFlags(Flags);
 }
 
+// FIXME: Should this be split into emitDirectiveSet(No)MipS16() and
+//        setUsesMips16() like with microMIPS above?
 void MipsTargetELFStreamer::emitDirectiveSetMips16() {
   ELFObjectWriter &W = getStreamer().getWriter();
   unsigned Flags = W.getELFHeaderEFlags();

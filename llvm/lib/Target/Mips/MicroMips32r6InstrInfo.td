@@ -1652,8 +1652,9 @@ def BLTZALC_MMR6 : R6MMR6Rel, BLTZALC_MMR6_ENC, BLTZALC_MMR6_DESC,
 def : MipsInstAlias<"ei", (EI_MMR6 ZERO), 1>, ISA_MICROMIPS32R6;
 def : MipsInstAlias<"di", (DI_MMR6 ZERO), 1>, ISA_MICROMIPS32R6;
 def : MipsInstAlias<"nop", (SLL_MMR6 ZERO, ZERO, 0), 1>, ISA_MICROMIPS32R6;
-def B_MMR6_Pseudo : MipsAsmPseudoInst<(outs), (ins brtarget_mm:$offset),
-                                      !strconcat("b", "\t$offset")> {
+def B_MMR6_Pseudo : 
+  MipsAsmPseudoInst<(outs), (ins brtarget_mm:$offset),
+                    !strconcat("b", "\t$offset")>, ISA_MICROMIPS32R6 {
   string DecoderNamespace = "MicroMipsR6";
 }
 def : MipsInstAlias<"sync", (SYNC_MMR6 0), 1>, ISA_MICROMIPS32R6;

@@ -12,7 +12,7 @@ entry:
   %cmp = icmp ne i32 %0, %1
   %cond = select i1 %cmp, i32 1, i32 3
   store i32 %cond, ptr @k, align 4
-; cond-b-short:	btnez	$BB0_{{[0-9]+}}  # 16 bit inst
+; cond-b-short:	btnez	$BB0_[[#]]
   ret void
 }
 

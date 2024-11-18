@@ -25,7 +25,7 @@ if.end:                                           ; preds = %if.else, %if.then
   ret void
 }
 
-; CHECK-STATIC16:	b	$BB{{[0-9]+}}_{{[0-9]+}} # 16 bit inst
+; CHECK-STATIC16:	b	$BB[[#]]_[[#]]
 
 declare void @goo(...) #1
 

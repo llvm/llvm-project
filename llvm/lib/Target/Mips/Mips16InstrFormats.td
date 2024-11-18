@@ -37,6 +37,7 @@ class MipsInst16_Base<dag outs, dag ins, string asmstr, list<dag> pattern,
 {
 
   let Namespace = "Mips";
+  let DecoderNamespace = "Mips16";
 
   let OutOperandList = outs;
   let InOperandList  = ins;
@@ -336,16 +337,14 @@ class FI8_MOVR3216<dag outs, dag ins, string asmstr,
                    list<dag> pattern, InstrItinClass itin>:
   MipsInst16<outs, ins, asmstr, pattern, itin>
 {
-  // FIXME: this seems wrong? 'ry' should be 3 bits, and 'r32' 5?
-  bits<4> ry;
-  bits<4> r32;
+  bits<5> r32;
+  bits<3> ry;
 
   let Opcode = 0b01100;
 
   let Inst{10-8} = 0b111;
-  let Inst{7-4} = ry;
-  let Inst{3-0} = r32;
-
+  let Inst{7-5} = ry;
+  let Inst{4-0} = r32;
 }
 
 
@@ -358,11 +357,9 @@ class FI8_MOV32R16<dag outs, dag ins, string asmstr,
                    list<dag> pattern, InstrItinClass itin>:
   MipsInst16<outs, ins, asmstr, pattern, itin>
 {
-
   bits<3>  func;
   bits<5> r32;
   bits<3> rz;
-
 
   let Opcode = 0b01100;
 
@@ -370,7 +367,6 @@ class FI8_MOV32R16<dag outs, dag ins, string asmstr,
   let Inst{7-5} = r32{2-0};
   let Inst{4-3} = r32{4-3};
   let Inst{2-0} = rz;
-
 }
 
 //===----------------------------------------------------------------------===//
@@ -382,11 +378,16 @@ class FI8_SVRS16<bits<1> _s, dag outs, dag ins, string asmstr,
                  list<dag> pattern, InstrItinClass itin>:
   MipsInst16<outs, ins, asmstr, pattern, itin>
 {
+  // This is produced by getSaveRestoreEncoding().
+  // This instruction uses 4 bits of the framesize and the ra, s0, and s1 bits.
+  // This instruction interprets a framesize value of 0 as 128 (16 * 8).
+  bits<32> svrs_ops;
+
   bits<1> s;
-  bits<1> ra = 0;
-  bits<1> s0 = 0;
-  bits<1> s1 = 0;
-  bits<4> framesize = 0;
+  bits<1> ra = svrs_ops{10};
+  bits<1> s0 = svrs_ops{9};
+  bits<1> s1 = svrs_ops{8};
+  bits<4> framesize = svrs_ops{3-0};
 
   let s =_s;
   let Opcode = 0b01100;
@@ -402,7 +403,7 @@ class FI8_SVRS16<bits<1> _s, dag outs, dag ins, string asmstr,
 
 //===----------------------------------------------------------------------===//
 // Format JAL instruction class in Mips16 :
-//    <|opcode|svrs|s|ra|s0|s1|framesize>
+//    <|opcode|X|target20:16|target25:21|target15:10>
 //===----------------------------------------------------------------------===//
 
 class FJAL16<bits<1> _X, dag outs, dag ins, string asmstr,
@@ -455,21 +456,21 @@ class FASMACRO16<dag outs, dag ins, string asmstr,
   MipsInst16_EXTEND<outs, ins, asmstr, pattern, itin>
 {
   bits<3> select;
-  bits<3> p4;
-  bits<5> p3;
+  bits<3> _p4;
+  bits<5> _p3;
   bits<5> RRR = 0b11100;
-  bits<3> p2;
-  bits<3> p1;
-  bits<5> p0;
+  bits<3> _p2;
+  bits<3> _p1;
+  bits<5> _p0;
 
 
   let Inst{26-24} = select;
-  let Inst{23-21} = p4;
-  let Inst{20-16} = p3;
+  let Inst{23-21} = _p4;
+  let Inst{20-16} = _p3;
   let Inst{15-11} = RRR;
-  let Inst{10-8} = p2;
-  let Inst{7-5} = p1;
-  let Inst{4-0} = p0;
+  let Inst{10-8} = _p2;
+  let Inst{7-5} = _p1;
+  let Inst{4-0} = _p0;
 
 }
 
@@ -551,23 +552,22 @@ class FEXT_RRI_A16<bits<1> _f, dag outs, dag ins, string asmstr,
 
 //===----------------------------------------------------------------------===//
 // Format EXT-SHIFT instruction class in Mips16 :
-//    <|EXTEND|sa 4:0|s5|0|SHIFT|rx|ry|0|f>
+//    <|EXTEND|sa 4:0|0|SHIFT|rx|ry|0|f>
 //===----------------------------------------------------------------------===//
 
 class FEXT_SHIFT16<bits<2> _f, dag outs, dag ins, string asmstr,
                    list<dag> pattern, InstrItinClass itin>:
   MipsInst16_EXTEND<outs, ins, asmstr, pattern, itin>
 {
-  bits<6> sa6;
+  bits<6> sa;
   bits<3> rx;
   bits<3> ry;
   bits<2> f;
 
   let f = _f;
 
-  let Inst{26-22} = sa6{4-0};
-  let Inst{21} = sa6{5};
-  let Inst{20-16} = 0;
+  let Inst{26-22} = sa{4-0};
+  let Inst{21-16} = 0;
   let Inst{15-11} = 0b00110;
   let Inst{10-8} = rx;
   let Inst{7-5} = ry;
@@ -590,7 +590,7 @@ class FEXT_I816<bits<3> _funct, dag outs, dag ins, string asmstr,
   bits<3> funct;
 
   let funct = _funct;
-  let I8 = 0b00110;
+  let I8 = 0b01100;
 
   let Inst{26-21} = imm16{10-5};
   let Inst{20-16} = imm16{15-11};
@@ -610,22 +610,24 @@ class FEXT_I8_SVRS16<bits<1> s_, dag outs, dag ins, string asmstr,
                      list<dag> pattern, InstrItinClass itin>:
   MipsInst16_EXTEND<outs, ins, asmstr, pattern, itin>
 {
-  bits<3> xsregs =0;
-  bits<8> framesize =0;
-  bits<3> aregs =0;
+  // This is produced by getSaveRestoreEncoding().
+  bits<32> svrs_ops;
+
+  bits<3> xsregs = svrs_ops{17-15};
+  bits<8> framesize = svrs_ops{7-0};
+  bits<4> aregs = svrs_ops{14-11};
   bits<5> I8 = 0b01100;
   bits<3> SVRS = 0b100;
   bits<1> s;
-  bits<1> ra = 0;
-  bits<1> s0 = 0;
-  bits<1> s1 = 0;
+  bits<1> ra = svrs_ops{10};
+  bits<1> s0 = svrs_ops{9};
+  bits<1> s1 = svrs_ops{8};
 
   let s= s_;
 
   let Inst{26-24} = xsregs;
   let Inst{23-20} = framesize{7-4};
-  let Inst{19} = 0;
-  let Inst{18-16} = aregs;
+  let Inst{19-16} = aregs;
   let Inst{15-11} = I8;
   let Inst{10-8} = SVRS;
   let Inst{7} = s;

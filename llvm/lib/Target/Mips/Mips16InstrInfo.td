@@ -16,101 +16,373 @@
 def addr16 : ComplexPattern<iPTR, 2, "selectAddr16", [frameindex]>;
 def addr16sp : ComplexPattern<iPTR, 2, "selectAddr16SP", [frameindex]>;
 
-//
-// Address operand
-def mem16 : Operand<i32> {
-  let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops CPU16Regs, simm16);
-  let EncoderMethod = "getMemEncoding";
+// The number matches the value in MipsRegisterInfo::MipsPtrClass.
+def ptr_cpu16_rc : PointerLikeRegClass<4>;
+
+def pcrel16 : Operand<i32>;
+
+// Some MIPS16 instructions, such as "addiu", have operands that look like
+// registers but are not encoded as normal operands. Instead, they determine
+// the opcode to use and so could be considered part of the mnemonic. These
+// define "pseudo register" operands to handle such instructions.
+def Mips16PCPseudoRegOperand : AsmOperandClass {
+  let Name = "Mips16PCPseudoReg";
+  let PredicateMethod = "isPCPseudoReg";
+  let RenderMethod = "addPCPseudoRegOperands";
+}
+def pc_pseudo_reg : Operand<i32> {
+  let PrintMethod = "printPCPseudoReg";
+  let ParserMatchClass = Mips16PCPseudoRegOperand;
 }
 
-def mem16sp : Operand<i32> {
-  let PrintMethod = "printMemOperand";
-  // This should be CPUSPReg but the MIPS16 subtarget isn't good enough at
-  // keeping the sp-relative load and the other varieties separate at the
-  // moment. This lie fixes the problem sufficiently well to fix the errors
-  // emitted by -verify-machineinstrs and the output ends up correct as long
-  // as we use an external assembler (which is already a requirement for MIPS16
-  // for several other reasons).
-  let MIOperandInfo = (ops CPU16RegsPlusSP, simm16);
-  let EncoderMethod = "getMemEncoding";
+def Mips16SPPseudoRegOperand : AsmOperandClass {
+  let Name = "Mips16SPPseudoReg";
+  let PredicateMethod = "isSPPseudoReg";
+  let RenderMethod = "addSPPseudoRegOperands";
 }
+def sp_pseudo_reg : Operand<i32> {
+  let PrintMethod = "printSPPseudoReg";
+  let ParserMatchClass = Mips16SPPseudoRegOperand;
+}
+
+def Mips16RAPseudoRegOperand : AsmOperandClass {
+  let Name = "Mips16RAPseudoReg";
+  let PredicateMethod = "isRAPseudoReg";
+  let RenderMethod = "addRAPseudoRegOperands";
+}
+def ra_pseudo_reg : Operand<i32> {
+  let PrintMethod = "printRAPseudoReg";
+  let ParserMatchClass = Mips16RAPseudoRegOperand;
+}
+
+
+// MIPS16 memory operands.
+// The "Ext" operands are for the 32-bit extended instructions. The non-"Ext"
+// operands are for the 16-bit instructions. They subclass the "Ext" versions
+// so that TableGen picks the 16-bit instructions that use these operands 
+// before the extended instructions that use the superclass operands.
+class Mips16ExtMemAsmOperandBase : AsmOperandClass {
+  let Name = "Mips16ExtMemBase";
+  let ParserMethod = "parseMemOperand";
+  let RenderMethod = "addMips16MemOperands";
+}
+class Mips16MemAsmOperandBase : Mips16ExtMemAsmOperandBase {
+  let Name = "Mips16MemBase";
+}
+
+def Mips16ExtMemAsmOperand : Mips16ExtMemAsmOperandBase {
+  let Name = "Mips16ExtMem";
+  let PredicateMethod = "isMemWithExtCPU16Base";
+}
+// mem_generic is found in MipsInstrInfo.td.
+def mem16ext : mem_generic {
+  let ParserMatchClass = Mips16ExtMemAsmOperand;
+  let MIOperandInfo = (ops ptr_cpu16_rc, simm16);
+  let DecoderMethod = "DecodeMemMips16<0>";
+}
+
+def Mips16MemAsmOperandLsl0 : Mips16MemAsmOperandBase {
+  let SuperClasses = [Mips16ExtMemAsmOperand];
+  let Name = "Mips16MemLsl0";
+  let PredicateMethod = "isMemWithCPU16Base<0>";
+}
+def mem16_lsl0 : mem_generic {
+  let ParserMatchClass = Mips16MemAsmOperandLsl0;
+  let MIOperandInfo = (ops ptr_cpu16_rc, uimm5);
+  let DecoderMethod = "DecodeMemMips16<0>";
+}
+
+def Mips16MemAsmOperandLsl1 : Mips16MemAsmOperandBase {
+  let SuperClasses = [Mips16ExtMemAsmOperand];
+  let Name = "Mips16MemLsl1";
+  let PredicateMethod = "isMemWithCPU16Base<1>";
+}
+def mem16_lsl1 : mem_generic {
+  let ParserMatchClass = Mips16MemAsmOperandLsl1;
+  let MIOperandInfo = (ops ptr_cpu16_rc, uimm5);
+  let EncoderMethod = "getMemEncoding<1>";
+  let DecoderMethod = "DecodeMemMips16<1>";
+}
+
+def Mips16MemAsmOperandLsl2 : Mips16MemAsmOperandBase {
+  let SuperClasses = [Mips16ExtMemAsmOperand];
+  let Name = "Mips16MemLsl2";
+  let PredicateMethod = "isMemWithCPU16Base<2>";
+}
+def mem16_lsl2 : mem_generic {
+  let ParserMatchClass = Mips16MemAsmOperandLsl2;
+  let MIOperandInfo = (ops ptr_cpu16_rc, uimm5);
+  let EncoderMethod = "getMemEncoding<2>";
+  let DecoderMethod = "DecodeMemMips16<2>";
+}
+
+// These use the $pc pseudo-register as the implicit base register.
+def Mips16ExtPcRelMemAsmOperand : Mips16ExtMemAsmOperandBase {
+  let Name = "Mips16ExtPcRelMem";
+  let PredicateMethod = "isMemWithExtCPU16PCBase";
+}
+def mem16ext_pc : mem_generic {
+  let ParserMatchClass = Mips16ExtPcRelMemAsmOperand;
+  let MIOperandInfo = (ops pc_pseudo_reg, simm16);
+  let DecoderMethod = "DecodeMemPcrelMips16<0>";
+}
+
+def Mips16PcRelMemAsmOperand : Mips16MemAsmOperandBase {
+  let SuperClasses = [Mips16ExtPcRelMemAsmOperand];
+  let Name = "Mips16PcRelMem";
+  let PredicateMethod = "isMemWithCPU16PCBase";
+}
+def mem16_pc : mem_generic {
+  let ParserMatchClass = Mips16PcRelMemAsmOperand;
+  let MIOperandInfo = (ops pc_pseudo_reg, uimm8);
+  let EncoderMethod = "getMemEncoding<2>";
+  let DecoderMethod = "DecodeMemPcrelMips16<2>";
+}
+
+// These use the $sp pseudo-register as the implicit base register.
+def Mips16ExtSpRelMemAsmOperand : Mips16ExtMemAsmOperandBase {
+  let Name = "Mips16ExtSpRelMem";
+  let PredicateMethod = "isMemWithExtCPU16SPBase";
+}
+def mem16ext_sp : mem_generic {
+  let ParserMatchClass = Mips16ExtSpRelMemAsmOperand;
+  let MIOperandInfo = (ops sp_pseudo_reg, simm16);
+  let DecoderMethod = "DecodeMemSprelMips16<0>";
+}
+
+def Mips16SpRelMemAsmOperand : Mips16MemAsmOperandBase {
+  let SuperClasses = [Mips16ExtSpRelMemAsmOperand];
+  let Name = "Mips16SpRelMem";
+  let PredicateMethod = "isMemWithCPU16SPBase";
+}
+def mem16_sp : mem_generic {
+  let ParserMatchClass = Mips16SpRelMemAsmOperand;
+  let MIOperandInfo = (ops sp_pseudo_reg, uimm8);
+  let EncoderMethod = "getMemEncoding<2>";
+  let DecoderMethod = "DecodeMemSprelMips16<2>";
+}
+
+
+// Operands for the MIPS16 "save" and "restore" instructions.
+class SaveRestoreOperandsBase : AsmOperandClass {
+  let Name = "SaveRestoreBase";
+  let ParserMethod = "parseSaveRestoreOperands";
+  let RenderMethod = "addSaveRestoreOperands";
+}
+class svrsBase : Operand<i32> {
+  let PrintMethod = "printSaveRestore";
+  let EncoderMethod = "getSaveRestoreEncoding";
+  let DecoderMethod = "DecodeSaveRestore";
+}
+
+def SaveRestoreOperands : SaveRestoreOperandsBase {
+  let Name = "SaveRestore";
+  let PredicateMethod = "isSaveRestore";
+}
+def svrsExt : svrsBase {
+  let ParserMatchClass = SaveRestoreOperands;
+}
+
+def SaveRestore16Operands : SaveRestoreOperandsBase {
+  let SuperClasses = [SaveRestoreOperands];
+  let Name = "SaveRestore16";
+  let PredicateMethod = "isSaveRestore16";
+}
+def svrs16 : svrsBase {
+  let ParserMatchClass = SaveRestore16Operands;
+}
+
 
 def mem16_ea : Operand<i32> {
   let PrintMethod = "printMemOperandEA";
-  let MIOperandInfo = (ops CPU16RegsPlusSP, simm16);
+  let MIOperandInfo = (ops CPU16OpndPlusSP, simm15);
   let EncoderMethod = "getMemEncoding";
 }
 
-def pcrel16 : Operand<i32>;
+// Used for extended branches.
+def brtarget16_mips16 : Operand<OtherVT> {
+  let EncoderMethod = "getBranchTarget16OpValueMips16";
+  let OperandType   = "OPERAND_PCREL";
+  let DecoderMethod = "DecodeBranchTarget16Mips16";
+  let ParserMatchClass = MipsJumpTargetAsmOperand;
+  let PrintMethod = "printBranchOperand";
+}
+
+// Used for JAL and JALX
+def calltarget_mips16 : Operand<iPTR> {
+  let EncoderMethod = "getJumpTargetOpValueMips16";
+  let DecoderMethod = "DecodeJumpTargetMips16";
+  let ParserMatchClass = MipsJumpTargetAsmOperand;
+  let PrintMethod = "printJumpOperand";
+}
+
+// These ensure that the compressed branch is tried first by being a subclass
+// of MipsJumpTargetAsmOperand. They also require a constant immediate because
+// there is no fixup available for the compressed branches.
+def Mips16JumpTarget11AsmOperand : AsmOperandClass {
+  let SuperClasses = [MipsJumpTargetAsmOperand];
+  let Name = "JumpTarget11Mips16";
+  let ParserMethod = "parseJumpTarget";
+  let PredicateMethod = "isConstantScaledSImm<11, 1>";
+  let RenderMethod = "addImmOperands";
+}
+def brtarget11_mips16 : Operand<OtherVT> {
+  let EncoderMethod = "getBranchTargetOpValueMips16";
+  let OperandType   = "OPERAND_PCREL";
+  let DecoderMethod = "DecodeBranchTarget11Mips16";
+  let ParserMatchClass = Mips16JumpTarget11AsmOperand;
+  let PrintMethod = "printBranchOperand";
+}
+
+def Mips16JumpTarget8AsmOperand : AsmOperandClass {
+  let SuperClasses = [MipsJumpTargetAsmOperand];
+  let Name = "JumpTarget8Mips16";
+  let ParserMethod = "parseJumpTarget";
+  let PredicateMethod = "isConstantScaledSImm<8, 1>";
+  let RenderMethod = "addImmOperands";
+}
+def brtarget8_mips16 : Operand<OtherVT> {
+  let EncoderMethod = "getBranchTargetOpValueMips16";
+  let OperandType   = "OPERAND_PCREL";
+  let DecoderMethod = "DecodeBranchTarget8Mips16";
+  let ParserMatchClass = Mips16JumpTarget8AsmOperand;
+  let PrintMethod = "printBranchOperand";
+}
 
 //
 // I-type instruction format
 //
-// this is only used by bimm. the actual assembly value is a 12 bit signed
+// This is used only by Bimm16. The actual assembly value is a 12-bit signed
 // number
 //
-class FI16_ins<bits<5> op, string asmstr, InstrItinClass itin>:
-  FI16<op, (outs), (ins brtarget:$imm11),
-            !strconcat(asmstr, "\t$imm11 # 16 bit inst"), [], itin>;
+class FI16_B_ins<bits<5> op, string asmstr, InstrItinClass itin>:
+  FI16<op, (outs), (ins brtarget11_mips16:$imm11),
+            !strconcat(asmstr, "\t$imm11"), [], itin>;
 
 //
 //
 // I8 instruction format
 //
 
-class FI816_ins_base<bits<3> _func, string asmstr,
-                     string asmstr2, InstrItinClass itin>:
-  FI816<_func, (outs), (ins simm16:$imm8), !strconcat(asmstr, asmstr2),
+class FI816_ins<bits<3> _func, string asmstr, InstrItinClass itin>:
+  FI816<_func, (outs), (ins simm16:$imm), !strconcat(asmstr, "\t$imm"),
         [], itin>;
 
-class FI816_ins<bits<3> _func, string asmstr,
-                InstrItinClass itin>:
-  FI816_ins_base<_func, asmstr, "\t$imm8  # 16 bit inst", itin>;
+class FI816_B_ins<bits<3> _func, string asmstr, InstrItinClass itin>:
+  FI816<_func, (outs), (ins brtarget8_mips16:$imm8), 
+        !strconcat(asmstr, "\t$imm8"), [], itin>;
 
-class FI816_SP_ins<bits<3> _func, string asmstr,
+class FI816_SP_ins<bits<3> _func, string asmstr, InstrItinClass itin>:
+  FI816<_func, (outs), (ins sp_pseudo_reg:$pseudo, simm8_lsl3:$imm8),
+        !strconcat(asmstr, "\t$pseudo, $imm8"), [], itin>;
+
+class FI816_RA_mem_ins<bits<3> _func, string asmstr, Operand MemOpnd, 
                    InstrItinClass itin>:
-  FI816_ins_base<_func, asmstr, "\t$$sp, $imm8 # 16 bit inst", itin>;
+  FI816<_func, (outs), (ins ra_pseudo_reg:$pseudo, MemOpnd:$addr),
+        !strconcat(asmstr, "\t$pseudo, $addr"), [], itin> {
+  // 'addr' is produced by getMemEncoding(), which outputs (reg << 16 | offset).
+  // This instruction type uses only 8 bits of the offset.
+  bits<8> addr;
+  let imm8 = addr{7-0};
+}
 
 //
 // RI instruction format
 //
 
-
-class FRI16_ins_base<bits<5> op, string asmstr, string asmstr2,
-                     InstrItinClass itin>:
-  FRI16<op, (outs CPU16Regs:$rx), (ins simm16:$imm8),
-        !strconcat(asmstr, asmstr2), [], itin>;
-
-class FRI16_ins<bits<5> op, string asmstr,
-                InstrItinClass itin>:
-  FRI16_ins_base<op, asmstr, "\t$rx, $imm8 \t# 16 bit inst", itin>;
+class FRI16_ins<bits<5> op, string asmstr, Operand ImmOpnd, InstrItinClass itin>:
+  FRI16<op, (outs CPU16Opnd:$rx), (ins ImmOpnd:$imm8),
+        !strconcat(asmstr, "\t$rx, $imm8"), [], itin>;
 
 class FRI16_TCP_ins<bits<5> _op, string asmstr,
                     InstrItinClass itin>:
-  FRI16<_op, (outs CPU16Regs:$rx), (ins pcrel16:$imm8, i32imm:$size),
-            !strconcat(asmstr, "\t$rx, $imm8\t# 16 bit inst"), [], itin>;
+  FRI16<_op, (outs CPU16Opnd:$rx), (ins pcrel16:$imm8, i32imm:$size),
+            !strconcat(asmstr, "\t$rx, $imm8"), [], itin>;
 
-class FRI16R_ins_base<bits<5> op, string asmstr, string asmstr2,
-                     InstrItinClass itin>:
-  FRI16<op, (outs), (ins CPU16Regs:$rx, simm16:$imm8),
-        !strconcat(asmstr, asmstr2), [], itin>;
+class FRI16R_ins<bits<5> op, string asmstr, InstrItinClass itin>:
+  FRI16<op, (outs), (ins CPU16Opnd:$rx, uimm8:$imm8),
+        !strconcat(asmstr, "\t$rx, $imm8"), [], itin>;
 
-class FRI16R_ins<bits<5> op, string asmstr,
-                InstrItinClass itin>:
-  FRI16R_ins_base<op, asmstr, "\t$rx, $imm8 \t# 16 bit inst", itin>;
+class F2RI16_ins<bits<5> _op, string asmstr, InstrItinClass itin>:
+  FRI16<_op, (outs CPU16Opnd:$rx), (ins CPU16Opnd:$rx_, simm16:$imm),
+        !strconcat(asmstr, "\t$rx, $imm"), [], itin> {
+  bits<16> imm;
+  let imm8 = imm{7-0};
 
-class F2RI16_ins<bits<5> _op, string asmstr,
-                     InstrItinClass itin>:
-  FRI16<_op, (outs CPU16Regs:$rx), (ins CPU16Regs:$rx_, simm16:$imm8),
-        !strconcat(asmstr, "\t$rx, $imm8\t# 16 bit inst"), [], itin> {
   let Constraints = "$rx_ = $rx";
 }
 
-class FRI16_B_ins<bits<5> _op, string asmstr,
-                  InstrItinClass itin>:
-  FRI16<_op, (outs), (ins  CPU16Regs:$rx, brtarget:$imm8),
-        !strconcat(asmstr, "\t$rx, $imm8  # 16 bit inst"), [], itin>;
+class FRI16_Pseudo_ins<bits<5> _op, string asmstr, Operand PseudoRegOpnd, 
+                        Operand ImmOpnd, InstrItinClass itin>:
+  FRI16<_op, (outs CPU16Opnd:$rx), (ins PseudoRegOpnd:$pseudo, ImmOpnd:$imm8),
+              !strconcat(asmstr, "\t$rx, $pseudo, $imm8"), [], itin>;
+
+class FRI16_B_ins<bits<5> _op, string asmstr, InstrItinClass itin>:
+  FRI16<_op, (outs), (ins  CPU16Opnd:$rx, brtarget8_mips16:$imm8),
+        !strconcat(asmstr, "\t$rx, $imm8"), [], itin>;
+
+class FRI16_memload_ins<bits<5> op, string asmstr, Operand MemOpnd,
+                         InstrItinClass itin>:
+  FRI16<op, (outs CPU16Opnd:$rx), (ins  MemOpnd:$addr),
+             !strconcat(asmstr, "\t$rx, $addr"), [], itin> {
+  // 'addr' is produced by getMemEncoding(), which outputs (reg << 16 | offset).
+  // This instruction type uses only 8 bits of the offset.
+  bits<8> addr;
+  let imm8 = addr{7-0};
+}
+
+class FRI16_memstore_ins<bits<5> op, string asmstr, Operand MemOpnd,
+                          InstrItinClass itin>:
+  FRI16<op, (outs ), (ins  CPU16Opnd:$rx, MemOpnd:$addr),
+             !strconcat(asmstr, "\t$rx, $addr"), [], itin> {
+  // 'addr' is produced by getMemEncoding(), which outputs (reg << 16 | offset).
+  // This instruction type uses only 8 bits of the offset.
+  bits<8> addr;
+  let imm8 = addr{7-0};
+}
+
+//
+// RRI-A instruction format
+//
+
+class FRRI_A16_ins<bits<1> _f, string asmstr, InstrItinClass itin>:
+  FRRI_A16<_f, (outs CPU16Opnd:$ry), (ins CPU16Opnd:$rx, simm4: $imm4),
+           !strconcat(asmstr, "\t$ry, $rx, $imm4"), [], itin>;
+
+//
+// SHIFT instruction format
+//
+class FSHIFT16_ins<bits<2> _f, string asmstr, InstrItinClass itin>:
+  FSHIFT16<_f, (outs CPU16Opnd:$rx), (ins CPU16Opnd:$ry, uimm3_shift:$sa),
+               !strconcat(asmstr, "\t$rx, $ry, $sa"), [], itin>;
+
+//
+// RRI memory instruction formats
+//
+
+class FRRI16_memload_ins<bits<5> op, string asmstr, Operand MemOpnd,
+                         InstrItinClass itin>:
+  FRRI16<op, (outs CPU16Opnd:$ry), (ins  MemOpnd:$addr),
+             !strconcat(asmstr, "\t$ry, $addr"), [], itin> {
+  // 'addr' is produced by getMemEncoding(), which outputs (reg << 16 | offset).
+  // This instruction type uses 3 bits of the reg and 5 bits of the offset.
+  bits<19> addr;
+  let rx = addr{18-16};
+  let imm5 = addr{4-0};
+}
+
+class FRRI16_memstore_ins<bits<5> op, string asmstr, Operand MemOpnd,
+                          InstrItinClass itin>:
+  FRRI16<op, (outs ), (ins  CPU16Opnd:$ry, MemOpnd:$addr),
+             !strconcat(asmstr, "\t$ry, $addr"), [], itin> {
+  // 'addr' is produced by getMemEncoding(), which outputs (reg << 16 | offset).
+  // This instruction type uses 3 bits of the reg and 5 bits of the offset.
+  bits<19> addr;
+  let rx = addr{18-16};
+  let imm5 = addr{4-0};
+}
+
+
 //
 // Compare a register and immediate and place result in CC
 // Implicit use of T8
@@ -118,7 +390,7 @@ class FRI16_B_ins<bits<5> _op, string asmstr,
 // EXT-CCRR Instruction format
 //
 class FEXT_CCRXI16_ins<string asmstr>:
-  MipsPseudo16<(outs CPU16Regs:$cc), (ins CPU16Regs:$rx, simm16:$imm),
+  MipsPseudo16<(outs CPU16Opnd:$cc), (ins CPU16Opnd:$rx, simm16:$imm),
                !strconcat(asmstr, "\t$rx, $imm\n\tmove\t$cc, $$t8"), []> {
   let isCodeGenOnly=1;
   let usesCustomInserter = 1;
@@ -128,45 +400,38 @@ class FEXT_CCRXI16_ins<string asmstr>:
 //
 class FJAL16_ins<bits<1> _X, string asmstr,
                  InstrItinClass itin>:
-  FJAL16<_X, (outs), (ins uimm26:$imm26),
-         !strconcat(asmstr, "\t$imm26\n\tnop"),[],
-         itin>  {
-  let isCodeGenOnly=1;
-  let Size=6;
-}
-
-class FJALB16_ins<bits<1> _X, string asmstr,
-                 InstrItinClass itin>:
-  FJAL16<_X, (outs), (ins uimm26:$imm26),
-         !strconcat(asmstr, "\t$imm26\t# branch\n\tnop"),[],
-         itin>  {
-  let isCodeGenOnly=1;
-  let Size=6;
-}
+  FJAL16<_X, (outs), (ins calltarget_mips16:$imm26),
+         !strconcat(asmstr, "\t$imm26"),[], itin>;
 
 //
 // EXT-I instruction format
 //
 class FEXT_I16_ins<bits<5> eop, string asmstr, InstrItinClass itin> :
-  FEXT_I16<eop, (outs), (ins brtarget:$imm16),
+  FEXT_I16<eop, (outs), (ins brtarget16_mips16:$imm16),
            !strconcat(asmstr, "\t$imm16"),[], itin>;
 
 //
 // EXT-I8 instruction format
 //
 
-class FEXT_I816_ins_base<bits<3> _func, string asmstr,
-                         string asmstr2, InstrItinClass itin>:
-  FEXT_I816<_func, (outs), (ins simm16:$imm16), !strconcat(asmstr, asmstr2),
-            [], itin>;
-
-class FEXT_I816_ins<bits<3> _func, string asmstr,
-                    InstrItinClass itin>:
-  FEXT_I816_ins_base<_func, asmstr, "\t$imm16", itin>;
+class FEXT_I816_B_ins<bits<3> _func, string asmstr, InstrItinClass itin>:
+  FEXT_I816<_func, (outs), (ins brtarget16_mips16:$imm16),
+            !strconcat(asmstr, "\t$imm16"), [], itin>;
 
 class FEXT_I816_SP_ins<bits<3> _func, string asmstr,
                        InstrItinClass itin>:
-      FEXT_I816_ins_base<_func, asmstr, "\t$$sp, $imm16", itin>;
+  FEXT_I816<_func, (outs), (ins sp_pseudo_reg:$pseudo, simm16:$imm16),
+            !strconcat(asmstr, "\t$pseudo, $imm16"), [], itin>;
+
+class FEXT_I816_RA_mem_ins<bits<3> _func, string asmstr, Operand MemOpnd,
+                       InstrItinClass itin>:
+  FEXT_I816<_func, (outs), (ins ra_pseudo_reg:$pseudo, MemOpnd:$addr),
+            !strconcat(asmstr, "\t$pseudo, $addr"), [], itin> {
+  // 'addr' is produced by getMemEncoding(), which outputs (reg << 16 | offset).
+  // This instruction type uses only the 16-bit offset.
+  bits<16> addr;
+  let imm16 = addr{15-0};
+}
 
 //
 // Assembler formats in alphabetical order.
@@ -178,7 +443,7 @@ class FEXT_I816_SP_ins<bits<3> _func, string asmstr,
 // CC-RR Instruction format
 //
 class FCCRR16_ins<string asmstr> :
-  MipsPseudo16<(outs CPU16Regs:$cc), (ins CPU16Regs:$rx, CPU16Regs:$ry),
+  MipsPseudo16<(outs CPU16Opnd:$cc), (ins CPU16Opnd:$rx, CPU16Opnd:$ry),
                !strconcat(asmstr, "\t$rx, $ry\n\tmove\t$cc, $$t8"), []> {
   let isCodeGenOnly=1;
   let usesCustomInserter = 1;
@@ -188,30 +453,31 @@ class FCCRR16_ins<string asmstr> :
 // EXT-RI instruction format
 //
 
-class FEXT_RI16_ins_base<bits<5> _op, string asmstr, string asmstr2,
-                         InstrItinClass itin>:
-  FEXT_RI16<_op, (outs CPU16Regs:$rx), (ins simm16:$imm16),
+class FEXT_RI16_ins_base<bits<5> _op, string asmstr, string asmstr2, 
+                         Operand ImmOpnd, InstrItinClass itin>:
+  FEXT_RI16<_op, (outs CPU16Opnd:$rx), (ins ImmOpnd:$imm16),
                   !strconcat(asmstr, asmstr2), [], itin>;
 
-class FEXT_RI16_ins<bits<5> _op, string asmstr,
+class FEXT_RI16_ins<bits<5> _op, string asmstr, Operand ImmOpnd,
                     InstrItinClass itin>:
-  FEXT_RI16_ins_base<_op, asmstr, "\t$rx, $imm16", itin>;
+  FEXT_RI16_ins_base<_op, asmstr, "\t$rx, $imm16", ImmOpnd, itin>;
 
-class FEXT_RI16R_ins_base<bits<5> _op, string asmstr, string asmstr2,
-                         InstrItinClass itin>:
-  FEXT_RI16<_op, (outs ), (ins CPU16Regs:$rx, simm16:$imm16),
-                  !strconcat(asmstr, asmstr2), [], itin>;
-
-class FEXT_RI16R_ins<bits<5> _op, string asmstr,
+class FEXT_RI16R_ins<bits<5> _op, string asmstr, Operand ImmOpnd,
                     InstrItinClass itin>:
-  FEXT_RI16R_ins_base<_op, asmstr, "\t$rx, $imm16", itin>;
+  FEXT_RI16<_op, (outs ), (ins CPU16Opnd:$rx, ImmOpnd:$imm16),
+                  !strconcat(asmstr, "\t$rx, $imm16"), [], itin>;
 
 class FEXT_RI16_PC_ins<bits<5> _op, string asmstr, InstrItinClass itin>:
-  FEXT_RI16_ins_base<_op, asmstr, "\t$rx, $$pc, $imm16", itin>;
+  FEXT_RI16<_op, (outs CPU16Opnd:$rx), (ins pc_pseudo_reg:$pseudo, simm16:$imm16),
+                  !strconcat(asmstr, "\t$rx, $pseudo, $imm16"), [], itin>;
+
+class FEXT_RI16_SP_ins<bits<5> _op, string asmstr, InstrItinClass itin>:
+  FEXT_RI16<_op, (outs CPU16Opnd:$rx), (ins sp_pseudo_reg:$pseudo, simm16:$imm16),
+                  !strconcat(asmstr, "\t$rx, $pseudo, $imm16"), [], itin>;
 
 class FEXT_RI16_B_ins<bits<5> _op, string asmstr,
                       InstrItinClass itin>:
-  FEXT_RI16<_op, (outs), (ins  CPU16Regs:$rx, brtarget:$imm16),
+  FEXT_RI16<_op, (outs), (ins  CPU16Opnd:$rx, brtarget16_mips16:$imm16),
             !strconcat(asmstr, "\t$rx, $imm16"), [], itin>;
 
 class FEXT_RI16_TCP_ins<bits<5> _op, string asmstr,
@@ -221,48 +487,93 @@ class FEXT_RI16_TCP_ins<bits<5> _op, string asmstr,
 
 class FEXT_2RI16_ins<bits<5> _op, string asmstr,
                      InstrItinClass itin>:
-  FEXT_RI16<_op, (outs CPU16Regs:$rx), (ins CPU16Regs:$rx_, simm16:$imm16),
+  FEXT_RI16<_op, (outs CPU16Opnd:$rx), (ins CPU16Opnd:$rx_, simm16:$imm16),
             !strconcat(asmstr, "\t$rx, $imm16"), [], itin> {
   let Constraints = "$rx_ = $rx";
 }
 
 //
-// EXT-RRI instruction format
+// EXT-RI memory instruction formats
 //
 
-class FEXT_RRI16_mem_ins<bits<5> op, string asmstr, Operand MemOpnd,
+class FEXT_RI16_memload_ins<bits<5> op, string asmstr, Operand MemOpnd,
                          InstrItinClass itin>:
-  FEXT_RRI16<op, (outs CPU16Regs:$ry), (ins  (MemOpnd $rx, $imm16):$addr),
-             !strconcat(asmstr, "\t$ry, $addr"), [], itin>;
+  FEXT_RI16<op, (outs CPU16Opnd:$rx), (ins  MemOpnd:$addr),
+             !strconcat(asmstr, "\t$rx, $addr"), [], itin> {
+  // 'addr' is produced by getMemEncoding(), which outputs (reg << 16 | offset).
+  // This instruction type uses only the offset.
+  bits<16> addr;
+  let imm16 = addr;
+}
 
-class FEXT_RRI16_mem2_ins<bits<5> op, string asmstr, Operand MemOpnd,
+class FEXT_RI16_memstore_ins<bits<5> op, string asmstr, Operand MemOpnd,
                           InstrItinClass itin>:
-  FEXT_RRI16<op, (outs ), (ins  CPU16Regs:$ry, (MemOpnd $rx, $imm16):$addr),
-             !strconcat(asmstr, "\t$ry, $addr"), [], itin>;
+  FEXT_RI16<op, (outs ), (ins  CPU16Opnd:$rx, MemOpnd:$addr),
+             !strconcat(asmstr, "\t$rx, $addr"), [], itin> {
+  // 'addr' is produced by getMemEncoding(), which outputs (reg << 16 | offset).
+  // This instruction type uses only the offset.
+  bits<16> addr;
+  let imm16 = addr;
+}
+
+//
+// EXT-RRI memory instruction formats
+//
+
+class FEXT_RRI16_memload_ins<bits<5> op, string asmstr, Operand MemOpnd,
+                         InstrItinClass itin>:
+  FEXT_RRI16<op, (outs CPU16Opnd:$ry), (ins  MemOpnd:$addr),
+             !strconcat(asmstr, "\t$ry, $addr"), [], itin>{
+  // 'addr' is produced by getMemEncoding(), which outputs (reg << 16 | offset).
+  // This instruction type uses 3 bits of reg and the whole offset.
+  bits<19> addr;
+  let rx = addr{18-16};
+  let imm16 = addr{15-0};
+}
+
+class FEXT_RRI16_memstore_ins<bits<5> op, string asmstr, Operand MemOpnd,
+                          InstrItinClass itin>:
+  FEXT_RRI16<op, (outs ), (ins  CPU16Opnd:$ry, MemOpnd:$addr),
+             !strconcat(asmstr, "\t$ry, $addr"), [], itin> {
+  // 'addr' is produced by getMemEncoding(), which outputs (reg << 16 | offset).
+  // This instruction type uses 3 bits of reg and the whole offset.
+  bits<19> addr;
+  let rx = addr{18-16};
+  let imm16 = addr{15-0};
+}
 
 //
 //
 // EXT-RRI-A instruction format
 //
 
+class FEXT_RRI_A16_ins<bits<1> op, string asmstr, InstrItinClass itin>:
+  FEXT_RRI_A16<op, (outs CPU16Opnd:$ry), (ins CPU16Opnd: $rx, simm15: $imm15),
+               !strconcat(asmstr, "\t$ry, $rx, $imm15"), [], itin>;
+
 class FEXT_RRI_A16_mem_ins<bits<1> op, string asmstr, Operand MemOpnd,
                            InstrItinClass itin>:
-  FEXT_RRI_A16<op, (outs CPU16Regs:$ry), (ins  (MemOpnd $rx, $imm15):$addr),
-               !strconcat(asmstr, "\t$ry, $addr"), [], itin>;
+  FEXT_RRI_A16<op, (outs CPU16Opnd:$ry), (ins  MemOpnd:$addr),
+               !strconcat(asmstr, "\t$ry, $addr"), [], itin> {
+  // 'addr' is produced by getMemEncoding(), which outputs (reg << 16 | offset).
+  bits<19> addr;
+  let imm15 = addr{14-0};
+  let rx = addr{18-16};
+}
 
 //
 // EXT-SHIFT instruction format
 //
 class FEXT_SHIFT16_ins<bits<2> _f, string asmstr, InstrItinClass itin>:
-  FEXT_SHIFT16<_f, (outs CPU16Regs:$rx), (ins CPU16Regs:$ry, uimm5:$sa6),
-               !strconcat(asmstr, "\t$rx, $ry, $sa6"), [], itin>;
+  FEXT_SHIFT16<_f, (outs CPU16Opnd:$rx), (ins CPU16Opnd:$ry, uimm5:$sa),
+               !strconcat(asmstr, "\t$rx, $ry, $sa"), [], itin>;
 
 //
 // EXT-T8I8
 //
 class FEXT_T8I816_ins<string asmstr, string asmstr2>:
   MipsPseudo16<(outs),
-               (ins CPU16Regs:$rx, CPU16Regs:$ry, brtarget:$imm),
+               (ins CPU16Opnd:$rx, CPU16Opnd:$ry, brtarget:$imm),
                !strconcat(asmstr2, !strconcat("\t$rx, $ry\n\t",
                !strconcat(asmstr, "\t$imm"))),[]> {
   let isCodeGenOnly=1;
@@ -274,7 +585,7 @@ class FEXT_T8I816_ins<string asmstr, string asmstr2>:
 //
 class FEXT_T8I8I16_ins<string asmstr, string asmstr2>:
   MipsPseudo16<(outs),
-               (ins CPU16Regs:$rx, simm16:$imm, brtarget:$targ),
+               (ins CPU16Opnd:$rx, simm16:$imm, brtarget:$targ),
                !strconcat(asmstr2, !strconcat("\t$rx, $imm\n\t",
                !strconcat(asmstr, "\t$targ"))), []> {
   let isCodeGenOnly=1;
@@ -287,110 +598,108 @@ class FEXT_T8I8I16_ins<string asmstr, string asmstr2>:
 // I8_MOVR32 instruction format (used only by the MOVR32 instructio
 //
 class FI8_MOVR3216_ins<string asmstr, InstrItinClass itin>:
-       FI8_MOVR3216<(outs CPU16Regs:$ry), (ins GPR32:$r32),
-       !strconcat(asmstr,  "\t$ry, $r32"), [], itin>;
+       FI8_MOVR3216<(outs CPU16Opnd:$ry), (ins GPR32Opnd:$r32),
+       !strconcat(asmstr, "\t$ry, $r32"), [], itin>;
 
 //
 // I8_MOV32R instruction format (used only by MOV32R instruction)
 //
 
 class FI8_MOV32R16_ins<string asmstr, InstrItinClass itin>:
-  FI8_MOV32R16<(outs GPR32:$r32), (ins CPU16Regs:$rz),
-               !strconcat(asmstr,  "\t$r32, $rz"), [], itin>;
+  FI8_MOV32R16<(outs GPR32Opnd:$r32), (ins CPU16Opnd:$rz),
+               !strconcat(asmstr, "\t$r32, $rz"), [], itin>;
 
-//
-// This are pseudo formats for multiply
-// This first one can be changed to non-pseudo now.
 //
 // MULT
 //
-class FMULT16_ins<string asmstr> :
-  MipsPseudo16<(outs), (ins CPU16Regs:$rx, CPU16Regs:$ry),
-               !strconcat(asmstr, "\t$rx, $ry"), []>;
+class FMULT16_ins<bits<5> _funct, string asmstr, InstrItinClass itin> :
+  FRR16<_funct, (outs), (ins CPU16Opnd: $rx, CPU16Opnd: $ry),
+        !strconcat(asmstr, "\t$rx, $ry"), [], itin>;
 
-//
+// Pseudo format for multiply
 // MULT-LO
 //
 class FMULT16_LO_ins<string asmstr> :
-  MipsPseudo16<(outs CPU16Regs:$rz), (ins CPU16Regs:$rx, CPU16Regs:$ry),
+  MipsPseudo16<(outs CPU16Opnd:$rz), (ins CPU16Opnd:$rx, CPU16Opnd:$ry),
                !strconcat(asmstr, "\t$rx, $ry\n\tmflo\t$rz"), []> {
   let isCodeGenOnly=1;
 }
 
 //
+// Used for breakpoint instructions (break and sdbbp)
+//
+class FC16_ins<bits<5> _funct, string asmstr, InstrItinClass itin> :
+  FC16<_funct, (outs), (ins uimm6:$_code), !strconcat(asmstr, "\t$_code"),
+              [], itin>;
+
+//
 // RR-type instruction format
 //
-
-class FRR16_ins<bits<5> f, string asmstr, InstrItinClass itin> :
-  FRR16<f, (outs CPU16Regs:$rx), (ins CPU16Regs:$ry),
-        !strconcat(asmstr, "\t$rx, $ry"), [], itin> {
-}
-
-class FRRBreakNull16_ins<string asmstr, InstrItinClass itin> :
-  FRRBreak16<(outs), (ins), asmstr, [], itin> {
-  let Code=0;
-}
-
 class FRR16R_ins<bits<5> f, string asmstr, InstrItinClass itin> :
-  FRR16<f, (outs), (ins  CPU16Regs:$rx, CPU16Regs:$ry),
+  FRR16<f, (outs), (ins  CPU16Opnd:$rx, CPU16Opnd:$ry),
         !strconcat(asmstr, "\t$rx, $ry"), [], itin> {
 }
 
 class FRRTR16_ins<string asmstr> :
-  MipsPseudo16<(outs CPU16Regs:$rz), (ins CPU16Regs:$rx, CPU16Regs:$ry),
+  MipsPseudo16<(outs CPU16Opnd:$rz), (ins CPU16Opnd:$rx, CPU16Opnd:$ry),
                !strconcat(asmstr, "\t$rx, $ry\n\tmove\t$rz, $$t8"), []> ;
 
 //
 // maybe refactor but need a $zero as a dummy first parameter
 //
 class FRR16_div_ins<bits<5> f, string asmstr, InstrItinClass itin> :
-  FRR16<f, (outs ), (ins CPU16Regs:$rx, CPU16Regs:$ry),
+  FRR16<f, (outs ), (ins CPU16Opnd:$rx, CPU16Opnd:$ry),
         !strconcat(asmstr, "\t$$zero, $rx, $ry"), [], itin> ;
 
 class FUnaryRR16_ins<bits<5> f, string asmstr, InstrItinClass itin> :
-  FRR16<f, (outs CPU16Regs:$rx), (ins CPU16Regs:$ry),
+  FRR16<f, (outs CPU16Opnd:$rx), (ins CPU16Opnd:$ry),
         !strconcat(asmstr, "\t$rx, $ry"), [], itin> ;
 
 
 class FRR16_M_ins<bits<5> f, string asmstr,
                   InstrItinClass itin> :
-  FRR16<f, (outs CPU16Regs:$rx), (ins),
-        !strconcat(asmstr, "\t$rx"), [], itin>;
+  FRR16<f, (outs CPU16Opnd:$rx), (ins),
+        !strconcat(asmstr, "\t$rx"), [], itin> {
+  let ry = 0;
+}
 
 class FRxRxRy16_ins<bits<5> f, string asmstr,
                     InstrItinClass itin> :
-  FRR16<f, (outs CPU16Regs:$rz), (ins CPU16Regs:$rx, CPU16Regs:$ry),
+  FRR16<f, (outs CPU16Opnd:$rz), (ins CPU16Opnd:$rx, CPU16Opnd:$ry),
             !strconcat(asmstr, "\t$rz, $ry"),
             [], itin> {
   let Constraints = "$rx = $rz";
 }
 
+class FRR16_JALRC_RaRx_ins<bits<1> nd_, string asmstr, InstrItinClass itin>:
+  FRR16_JALRC<nd_, 1, 0, (outs ra_pseudo_reg:$pseudo), (ins CPU16Opnd:$rx),
+              !strconcat(asmstr, "\t$pseudo, $rx"), [], itin> ;
+
 let rx=0 in
-class FRR16_JALRC_RA_only_ins<bits<1> nd_, bits<1> l_,
-                              string asmstr, InstrItinClass itin>:
-  FRR16_JALRC<nd_, l_, 1, (outs), (ins), !strconcat(asmstr, "\t$$ra"),
-              [], itin> ;
+class FRR16_JALRC_RA_only_ins<bits<1> nd_, string asmstr, InstrItinClass itin>:
+  FRR16_JALRC<nd_, 0, 1, (outs), (ins ra_pseudo_reg:$pseudo),
+              !strconcat(asmstr, "\t$pseudo"), [], itin> ;
 
-
-class FRR16_JALRC_ins<bits<1> nd, bits<1> l, bits<1> ra,
-                      string asmstr, InstrItinClass itin>:
-  FRR16_JALRC<nd, l, ra, (outs), (ins CPU16Regs:$rs),
-              !strconcat(asmstr, "\t$rs"), [], itin> ;
+class FRR16_JALRC_RX_only_ins<bits<1> nd_, string asmstr,
+                      InstrItinClass itin>:
+  FRR16_JALRC<nd_, 0, 0, (outs), (ins CPU16Opnd:$rx), 
+              !strconcat(asmstr, "\t$rx"), [], itin> ;
 
 class FRR_SF16_ins
   <bits<5> _funct, bits<3> _subfunc,
     string asmstr, InstrItinClass itin>:
-  FRR_SF16<_funct, _subfunc, (outs CPU16Regs:$rx), (ins CPU16Regs:$rx_),
+  FRR_SF16<_funct, _subfunc, (outs CPU16Opnd:$rx), (ins CPU16Opnd:$rx_),
            !strconcat(asmstr, "\t $rx"),
            [], itin> {
   let Constraints = "$rx_ = $rx";
   }
+
 //
 // RRR-type instruction format
 //
 
 class FRRR16_ins<bits<2> _f, string asmstr,  InstrItinClass itin> :
-  FRRR16<_f, (outs CPU16Regs:$rz), (ins CPU16Regs:$rx, CPU16Regs:$ry),
+  FRRR16<_f, (outs CPU16Opnd:$rz), (ins CPU16Opnd:$rx, CPU16Opnd:$ry),
          !strconcat(asmstr, "\t$rz, $rx, $ry"), [], itin>;
 
 //
@@ -422,8 +731,8 @@ class FRRR16_ins<bits<2> _f, string asmstr,  InstrItinClass itin> :
 // So this pseudo class only has one operand, i.e. op
 //
 class Sel<string op>:
-  MipsPseudo16<(outs CPU16Regs:$rd_), (ins CPU16Regs:$rd, CPU16Regs:$rs,
-               CPU16Regs:$rt),
+  MipsPseudo16<(outs CPU16Opnd:$rd_), (ins CPU16Opnd:$rd, CPU16Opnd:$rs,
+               CPU16Opnd:$rt),
                !strconcat(op, "\t$rt, .+4\n\t\n\tmove $rd, $rs"), []> {
   //let isCodeGenOnly=1;
   let Constraints = "$rd = $rd_";
@@ -446,8 +755,8 @@ class Sel<string op>:
 //
 //
 class SeliT<string op1, string op2>:
-  MipsPseudo16<(outs CPU16Regs:$rd_), (ins CPU16Regs:$rd, CPU16Regs:$rs,
-                                       CPU16Regs:$rl, simm16:$imm),
+  MipsPseudo16<(outs CPU16Opnd:$rd_), (ins CPU16Opnd:$rd, CPU16Opnd:$rs,
+                                       CPU16Opnd:$rl, simm16:$imm),
                !strconcat(op2,
                !strconcat("\t$rl, $imm\n\t",
                !strconcat(op1, "\t.+4\n\tmove $rd, $rs"))), []> {
@@ -469,9 +778,9 @@ class SeliT<string op1, string op2>:
 //
 //
 class SelT<string op1, string op2>:
-  MipsPseudo16<(outs CPU16Regs:$rd_),
-               (ins CPU16Regs:$rd, CPU16Regs:$rs,
-                CPU16Regs:$rl, CPU16Regs:$rr),
+  MipsPseudo16<(outs CPU16Opnd:$rd_),
+               (ins CPU16Opnd:$rd, CPU16Opnd:$rs,
+                CPU16Opnd:$rl, CPU16Opnd:$rr),
                !strconcat(op2,
                !strconcat("\t$rl, $rr\n\t",
                !strconcat(op1, "\t.+4\n\tmove $rd, $rs"))), []> {
@@ -486,7 +795,7 @@ class SelT<string op1, string op2>:
 def Constant32 : MipsPseudo16<(outs), (ins simm32:$imm), "\t.word $imm", []>;
 
 def LwConstant32 :
-  MipsPseudo16<(outs CPU16Regs:$rx), (ins simm32:$imm, simm32:$constid),
+  MipsPseudo16<(outs CPU16Opnd:$rx), (ins simm32:$imm, simm32:$constid),
                "lw\t$rx, 1f\n\tb\t2f\n\t.align\t2\n1: \t.word\t$imm\n2:", []>;
 
 //
@@ -521,50 +830,93 @@ class MayStore {
 }
 //
 
-
 // Format: ADDIU rx, immediate MIPS16e
-// Purpose: Add Immediate Unsigned Word (2-Operand, Extended)
+// Purpose: Add Immediate Unsigned Word (2-Operand)
 // To add a constant to a 32-bit integer.
 //
-def AddiuRxImmX16: FEXT_RI16_ins<0b01001, "addiu", IIM16Alu>;
+def AddiuRxImm16: 
+  FRI16_ins<0b01001, "addiu", simm8, IIM16Alu>, ArithLogic16Defs<0>;
 
+def AddiuRxImmX16:
+  FEXT_RI16_ins<0b01001, "addiu", simm16, IIM16Alu>, ArithLogic16Defs<0>;
+
+// These next two are used only in patterns.
 def AddiuRxRxImm16: F2RI16_ins<0b01001, "addiu", IIM16Alu>,
   ArithLogic16Defs<0> {
   let AddedComplexity = 5;
+  let isCodeGenOnly = 1;
 }
+
 def AddiuRxRxImmX16: FEXT_2RI16_ins<0b01001, "addiu", IIM16Alu>,
   ArithLogic16Defs<0> {
   let isCodeGenOnly = 1;
 }
 
-let DecoderMethod = "DecodeFIXMEInstruction" in
-def AddiuRxRyOffMemX16:
-  FEXT_RRI_A16_mem_ins<0, "addiu", mem16_ea, IIM16Alu>;
 
+// Format: ADDIU ry, rx immediate MIPS16e
+// Purpose: Add Immediate Unsigned Word (3-Operand)
+// To add a constant to a 32-bit integer.
 //
+def AddiuRyRxImm16: 
+  FRRI_A16_ins<0, "addiu", IIM16Alu>, ArithLogic16Defs<0>;
+
+def AddiuRyRxImmX16:
+  FEXT_RRI_A16_ins<0, "addiu", IIM16Alu>, ArithLogic16Defs<0>;
+
+def AddiuRxRyOffMemX16:
+  FEXT_RRI_A16_mem_ins<0, "addiu", mem16_ea, IIM16Alu>, ArithLogic16Defs<0> {
+    let isCodeGenOnly = 1;
+}
+
 
 // Format: ADDIU rx, pc, immediate MIPS16e
-// Purpose: Add Immediate Unsigned Word (3-Operand, PC-Relative, Extended)
+// Purpose: Add Immediate Unsigned Word (3-Operand, PC-Relative)
 // To add a constant to the program counter.
 //
-def AddiuRxPcImmX16: FEXT_RI16_PC_ins<0b00001, "addiu", IIM16Alu>;
+def AddiuRxPcImm16: FRI16_Pseudo_ins<0b00001, "addiu", pc_pseudo_reg,
+                                     uimm8_lsl2, IIM16Alu> {
+  let DecoderMethod = "DecodeAddiuRxPcMips16";
+}
+
+def AddiuRxPcImmX16: FEXT_RI16_PC_ins<0b00001, "addiu", IIM16Alu> {
+  let DecoderMethod = "DecodeAddiuRxPcMips16";
+}
+
+
+// Format: ADDIU rx, sp, immediate MIPS16e
+// Purpose: Add Immediate Unsigned Word (3-Operand, SP-Relative)
+// To add a constant to the stack pointer.
+//
+def AddiuRxSpImm16: FRI16_Pseudo_ins<0b00000, "addiu", sp_pseudo_reg, 
+                                      uimm8_lsl2, IIM16Alu> {
+  let Defs = [SP];
+  let Uses = [SP];
+  let DecoderMethod = "DecodeAddiuRxSpMips16";
+}
+
+def AddiuRxSpImmX16: FEXT_RI16_SP_ins<0b00000, "addiu", IIM16Alu> {
+  let Defs = [SP];
+  let Uses = [SP];
+  let DecoderMethod = "DecodeAddiuRxSpMips16";
+}
+
 
 //
 // Format: ADDIU sp, immediate MIPS16e
 // Purpose: Add Immediate Unsigned Word (2-Operand, SP-Relative, Extended)
 // To add a constant to the stack pointer.
 //
-def AddiuSpImm16
-  : FI816_SP_ins<0b011, "addiu", IIM16Alu> {
+def AddiuSpImm16 : FI816_SP_ins<0b011, "addiu", IIM16Alu> {
   let Defs = [SP];
   let Uses = [SP];
   let AddedComplexity = 5;
+  let DecoderMethod = "DecodeAddiuSpMips16";
 }
 
-def AddiuSpImmX16
-  : FEXT_I816_SP_ins<0b011, "addiu", IIM16Alu> {
+def AddiuSpImmX16 : FEXT_I816_SP_ins<0b011, "addiu", IIM16Alu> {
   let Defs = [SP];
   let Uses = [SP];
+  let DecoderMethod = "DecodeAddiuSpMips16";
 }
 
 //
@@ -584,12 +936,36 @@ def AndRxRxRy16: FRxRxRy16_ins<0b01100, "and", IIM16Alu>, ArithLogic16Defs<1>;
 
 
 //
+// Format: ASMACRO select, p0, p1, p2, p3, p4
+// Purpose: Application-Specific Macro Instruction
+// To execute an implementation-definable macro instruction
+//
+def Asmacro16: FASMACRO16<(outs), 
+                          (ins uimm3:$select, uimm5:$_p0, uimm3:$_p1, uimm3:$_p2,
+                           uimm5:$_p3, uimm3:$_p4),
+                           "asmacro\t$select, $_p0, $_p1, $_p2, $_p3, $_p4", 
+                           [], IIM16Alu>;
+
+
+//
+// Format: B offset MIPS16e
+// Purpose: Unconditional Branch
+// To do an unconditional PC-relative branch.
+//
+def Bimm16: FI16_B_ins<0b00010, "b", IIM16Alu>, branch16;
+
+// Format: B offset MIPS16e
+// Purpose: Unconditional Branch (Extended)
+// To do an unconditional PC-relative branch.
+//
+def BimmX16: FEXT_I16_ins<0b00010, "b", IIM16Alu>, branch16;
+
+//
 // Format: BEQZ rx, offset MIPS16e
 // Purpose: Branch on Equal to Zero
 // To test a GPR then do a PC-relative conditional branch.
 //
 def BeqzRxImm16: FRI16_B_ins<0b00100, "beqz", IIM16Alu>, cbranch16;
-
 
 //
 // Format: BEQZ rx, offset MIPS16e
@@ -597,20 +973,6 @@ def BeqzRxImm16: FRI16_B_ins<0b00100, "beqz", IIM16Alu>, cbranch16;
 // To test a GPR then do a PC-relative conditional branch.
 //
 def BeqzRxImmX16: FEXT_RI16_B_ins<0b00100, "beqz", IIM16Alu>, cbranch16;
-
-//
-// Format: B offset MIPS16e
-// Purpose: Unconditional Branch (Extended)
-// To do an unconditional PC-relative branch.
-//
-
-def Bimm16: FI16_ins<0b00010, "b", IIM16Alu>, branch16;
-
-// Format: B offset MIPS16e
-// Purpose: Unconditional Branch
-// To do an unconditional PC-relative branch.
-//
-def BimmX16: FEXT_I16_ins<0b00010, "b", IIM16Alu>, branch16;
 
 //
 // Format: BNEZ rx, offset MIPS16e
@@ -632,24 +994,24 @@ def BnezRxImmX16: FEXT_RI16_B_ins<0b00101, "bnez", IIM16Alu>, cbranch16;
 // Purpose: Breakpoint
 // To cause a Breakpoint exception.
 
-def Break16: FRRBreakNull16_ins<"break 0", IIM16Alu>;
+def Break16: FC16_ins<0b00101, "break", IIM16Alu>;
+
 //
 // Format: BTEQZ offset MIPS16e
 // Purpose: Branch on T Equal to Zero (Extended)
 // To test special register T then do a PC-relative conditional branch.
 //
-def Bteqz16: FI816_ins<0b000, "bteqz", IIM16Alu>, cbranch16 {
+def Bteqz16: FI816_B_ins<0b000, "bteqz", IIM16Alu>, cbranch16 {
   let Uses = [T8];
 }
 
-def BteqzX16: FEXT_I816_ins<0b000, "bteqz", IIM16Alu>, cbranch16 {
+def BteqzX16: FEXT_I816_B_ins<0b000, "bteqz", IIM16Alu>, cbranch16 {
   let Uses = [T8];
 }
 
 def BteqzT8CmpX16: FEXT_T8I816_ins<"bteqz", "cmp">, cbranch16;
 
-def BteqzT8CmpiX16: FEXT_T8I8I16_ins<"bteqz", "cmpi">,
-  cbranch16;
+def BteqzT8CmpiX16: FEXT_T8I8I16_ins<"bteqz", "cmpi">, cbranch16;
 
 def BteqzT8SltX16: FEXT_T8I816_ins<"bteqz", "slt">, cbranch16;
 
@@ -657,8 +1019,7 @@ def BteqzT8SltuX16: FEXT_T8I816_ins<"bteqz", "sltu">, cbranch16;
 
 def BteqzT8SltiX16: FEXT_T8I8I16_ins<"bteqz", "slti">, cbranch16;
 
-def BteqzT8SltiuX16: FEXT_T8I8I16_ins<"bteqz", "sltiu">,
-  cbranch16;
+def BteqzT8SltiuX16: FEXT_T8I8I16_ins<"bteqz", "sltiu">, cbranch16;
 
 //
 // Format: BTNEZ offset MIPS16e
@@ -666,11 +1027,11 @@ def BteqzT8SltiuX16: FEXT_T8I8I16_ins<"bteqz", "sltiu">,
 // To test special register T then do a PC-relative conditional branch.
 //
 
-def Btnez16: FI816_ins<0b001, "btnez", IIM16Alu>, cbranch16 {
+def Btnez16: FI816_B_ins<0b001, "btnez", IIM16Alu>, cbranch16 {
   let Uses = [T8];
 }
 
-def BtnezX16: FEXT_I816_ins<0b001, "btnez", IIM16Alu> ,cbranch16 {
+def BtnezX16: FEXT_I816_B_ins<0b001, "btnez", IIM16Alu> ,cbranch16 {
   let Uses = [T8];
 }
 
@@ -684,8 +1045,7 @@ def BtnezT8SltuX16: FEXT_T8I816_ins<"btnez", "sltu">, cbranch16;
 
 def BtnezT8SltiX16: FEXT_T8I8I16_ins<"btnez", "slti">, cbranch16;
 
-def BtnezT8SltiuX16: FEXT_T8I8I16_ins<"btnez", "sltiu">,
-  cbranch16;
+def BtnezT8SltiuX16: FEXT_T8I8I16_ins<"btnez", "sltiu">, cbranch16;
 
 //
 // Format: CMP rx, ry MIPS16e
@@ -710,7 +1070,7 @@ def CmpiRxImm16: FRI16R_ins<0b01110, "cmpi", IIM16Alu> {
 // Purpose: Compare Immediate (Extended)
 // To compare a constant with the contents of a GPR.
 //
-def CmpiRxImmX16: FEXT_RI16R_ins<0b01110, "cmpi", IIM16Alu> {
+def CmpiRxImmX16: FEXT_RI16R_ins<0b01110, "cmpi", uimm16, IIM16Alu> {
   let Defs = [T8];
 }
 
@@ -732,64 +1092,136 @@ def DivRxRy16: FRR16_div_ins<0b11010, "div", IIM16Alu> {
 def DivuRxRy16: FRR16_div_ins<0b11011, "divu", IIM16Alu> {
   let Defs = [HI0, LO0];
 }
+
 //
 // Format: JAL target MIPS16e
 // Purpose: Jump and Link
 // To execute a procedure call within the current 256 MB-aligned
 // region and preserve the current ISA.
 //
-
-def Jal16 : FJAL16_ins<0b0, "jal", IIM16Alu> {
-  let hasDelaySlot = 0;  // not true, but we add the nop for now
-  let isCall=1;
+def Jal16 : FJAL16_ins<0, "jal", IIM16Alu> {
+  let hasDelaySlot = 1;
+  let isCall = 1;
   let Defs = [RA];
 }
 
-def JalB16 : FJALB16_ins<0b0, "jal", IIM16Alu>, branch16 {
-  let hasDelaySlot = 0;  // not true, but we add the nop for now
-  let isBranch=1;
+// This is used only in MipsConstantIslandPass.cpp for MIPS16 to generate a
+// branch that can reach further than the "b" instructions. The code assumes
+// RA is always saved and so it does not matter this this overwrites it.
+def JalB16 : FJAL16_ins<0, "jal", IIM16Alu>, branch16 {
+  let hasDelaySlot = 1;
+  let isBranch = 1;
+  let isCodeGenOnly = 1;
   let Defs = [RA];
 }
 
 //
-// Format: JR ra MIPS16e
+// Format: JALX target MIPS16e
+// Purpose: Jump and Link Exchange
+// To execute a procedure call within the current 256 MB-aligned
+// region and change the ISA Mode from MIPS16e to 32-bit MIPS.
+//
+def Jalx16 : FJAL16_ins<1, "jalx", IIM16Alu> {
+  let hasDelaySlot = 1;
+  let isCall = 1;
+  let Defs = [RA];
+}
+
+//
+// Format: JALR(C) ra, rx MIPS16e
+// Purpose: Jump and Link Register
+// To execute a procedure call to an instruction address in
+// a register.
+//
+def JalrRaRx16: FRR16_JALRC_RaRx_ins<0, "jalr", IIM16Alu> {
+  let isBranch = 0;
+  let isIndirectBranch = 0;
+  let hasDelaySlot = 1;
+  let isCall = 1;
+  let isTerminator = 0;
+  let isBarrier = 1;
+  let DecoderMethod = "DecodeJalrRaRxMips16";
+}
+
+def JalrcRaRx16: FRR16_JALRC_RaRx_ins<1, "jalrc", IIM16Alu> {
+  let isBranch = 0;
+  let isIndirectBranch = 0;
+  let hasDelaySlot = 0;
+  let isCall = 1;
+  let isTerminator = 0;
+  let isBarrier = 1;
+  let DecoderMethod = "DecodeJalrRaRxMips16";
+}
+
+//
+// Format: JR(C) ra MIPS16e
 // Purpose: Jump Register Through Register ra
 // To execute a branch to the instruction address in the return
 // address register.
 //
+def JrRa16: FRR16_JALRC_RA_only_ins<0, "jr", IIM16Alu> {
+  let isBranch = 0;
+  let isIndirectBranch = 0;
+  let hasDelaySlot = 1;
+  let isTerminator = 1;
+  let isBarrier = 1;
+  let isReturn = 1;
+  let DecoderMethod = "DecodeJrRaMips16";
+}
 
-def JrRa16: FRR16_JALRC_RA_only_ins<0, 0, "jr", IIM16Alu> {
+def JrcRa16: FRR16_JALRC_RA_only_ins<1, "jrc", IIM16Alu> {
+  let isBranch = 0;
+  let isIndirectBranch = 0;
+  let hasDelaySlot = 0;
+  let isTerminator = 1;
+  let isBarrier=1;
+  let isReturn=1;
+  let DecoderMethod = "DecodeJrRaMips16";
+}
+
+//
+// Format: JR(C) rx MIPS16e
+// Purpose: Jump Register Through MIPS16e GPR
+// To execute a branch to an instruction address in a register.
+def JrRx16: FRR16_JALRC_RX_only_ins<0, "jr", IIM16Alu> {
   let isBranch = 1;
   let isIndirectBranch = 1;
   let hasDelaySlot = 1;
-  let isTerminator=1;
-  let isBarrier=1;
-  let isReturn=1;
+  let isTerminator = 1;
+  let isBarrier = 1;
 }
 
-def JrcRa16: FRR16_JALRC_RA_only_ins<1, 1, "jrc", IIM16Alu> {
+def JrcRx16: FRR16_JALRC_RX_only_ins<1, "jrc", IIM16Alu> {
   let isBranch = 1;
   let isIndirectBranch = 1;
-  let isTerminator=1;
-  let isBarrier=1;
-  let isReturn=1;
+  let hasDelaySlot = 0;
+  let isTerminator = 1;
+  let isBarrier = 1;
 }
 
-def JrcRx16: FRR16_JALRC_ins<1, 1, 0, "jrc", IIM16Alu> {
-  let rx = 0b000;
-  let isBranch = 1;
-  let isIndirectBranch = 1;
-  let isTerminator=1;
-  let isBarrier=1;
-}
+//
+// Format: LB ry, offset(rx) MIPS16e
+// Purpose: Load Byte
+// To load a byte from memory as a signed value.
+//
+def LbRxRyOffMem16: 
+  FRRI16_memload_ins<0b10000, "lb", mem16_lsl0, II_LB>, MayLoad;
+
 //
 // Format: LB ry, offset(rx) MIPS16e
 // Purpose: Load Byte (Extended)
 // To load a byte from memory as a signed value.
 //
-def LbRxRyOffMemX16: FEXT_RRI16_mem_ins<0b10011, "lb", mem16, II_LB>, MayLoad{
-  let isCodeGenOnly = 1;
-}
+def LbRxRyOffMemX16:
+  FEXT_RRI16_memload_ins<0b10000, "lb", mem16ext, II_LB>, MayLoad;
+
+//
+// Format: LBU ry, offset(rx) MIPS16e
+// Purpose: Load Byte Unsigned
+// To load a byte from memory as a unsigned value.
+//
+def LbuRxRyOffMem16:
+  FRRI16_memload_ins<0b10100, "lbu", mem16_lsl0, II_LBU>, MayLoad;
 
 //
 // Format: LBU ry, offset(rx) MIPS16e
@@ -797,18 +1229,31 @@ def LbRxRyOffMemX16: FEXT_RRI16_mem_ins<0b10011, "lb", mem16, II_LB>, MayLoad{
 // To load a byte from memory as a unsigned value.
 //
 def LbuRxRyOffMemX16:
-  FEXT_RRI16_mem_ins<0b10100, "lbu", mem16, II_LBU>, MayLoad {
-  let isCodeGenOnly = 1;
-}
+  FEXT_RRI16_memload_ins<0b10100, "lbu", mem16ext, II_LBU>, MayLoad;
+
+//
+// Format: LH ry, offset(rx) MIPS16e
+// Purpose: Load Halfword signed
+// To load a halfword from memory as a signed value.
+//
+def LhRxRyOffMem16:
+  FRRI16_memload_ins<0b10001, "lh", mem16_lsl1, II_LH>, MayLoad;
 
 //
 // Format: LH ry, offset(rx) MIPS16e
 // Purpose: Load Halfword signed (Extended)
 // To load a halfword from memory as a signed value.
 //
-def LhRxRyOffMemX16: FEXT_RRI16_mem_ins<0b10100, "lh", mem16, II_LH>, MayLoad{
-  let isCodeGenOnly = 1;
-}
+def LhRxRyOffMemX16:
+  FEXT_RRI16_memload_ins<0b10001, "lh", mem16ext, II_LH>, MayLoad;
+
+//
+// Format: LHU ry, offset(rx) MIPS16e
+// Purpose: Load Halfword unsigned
+// To load a halfword from memory as an unsigned value.
+//
+def LhuRxRyOffMem16:
+  FRRI16_memload_ins<0b10101, "lhu", mem16_lsl1, II_LHU>, MayLoad;
 
 //
 // Format: LHU ry, offset(rx) MIPS16e
@@ -816,57 +1261,100 @@ def LhRxRyOffMemX16: FEXT_RRI16_mem_ins<0b10100, "lh", mem16, II_LH>, MayLoad{
 // To load a halfword from memory as an unsigned value.
 //
 def LhuRxRyOffMemX16:
-  FEXT_RRI16_mem_ins<0b10100, "lhu", mem16, II_LHU>, MayLoad {
-  let isCodeGenOnly = 1;
-}
+  FEXT_RRI16_memload_ins<0b10101, "lhu", mem16ext, II_LHU>, MayLoad;
 
 //
 // Format: LI rx, immediate MIPS16e
 // Purpose: Load Immediate
 // To load a constant into a GPR.
 //
-def LiRxImm16: FRI16_ins<0b01101, "li", IIM16Alu>;
+def LiRxImm16: FRI16_ins<0b01101, "li", uimm8, IIM16Alu>;
 
 //
 // Format: LI rx, immediate MIPS16e
 // Purpose: Load Immediate (Extended)
 // To load a constant into a GPR.
 //
-def LiRxImmX16: FEXT_RI16_ins<0b01101, "li", IIM16Alu>;
+def LiRxImmX16: FEXT_RI16_ins<0b01101, "li", uimm16, IIM16Alu>;
 
-def LiRxImmAlignX16: FEXT_RI16_ins<0b01101, ".align 2\n\tli", IIM16Alu> {
+def LiRxImmAlignX16: FEXT_RI16_ins<0b01101, ".align 2\n\tli", uimm16, IIM16Alu> {
   let isCodeGenOnly = 1;
 }
+
+//
+// Format: LW ry, offset(rx) MIPS16e
+// Purpose: Load Word
+// To load a word from memory as a signed value.
+//
+def LwRxRyOffMem16:
+  FRRI16_memload_ins<0b10011, "lw", mem16_lsl2, II_LW>, MayLoad;
 
 //
 // Format: LW ry, offset(rx) MIPS16e
 // Purpose: Load Word (Extended)
 // To load a word from memory as a signed value.
 //
-def LwRxRyOffMemX16: FEXT_RRI16_mem_ins<0b10011, "lw", mem16, II_LW>, MayLoad{
-  let isCodeGenOnly = 1;
+def LwRxRyOffMemX16:
+  FEXT_RRI16_memload_ins<0b10011, "lw", mem16ext, II_LW>, MayLoad;
+
+//
+// Format: LW rx, offset(sp) MIPS16e
+// Purpose: Load Word (SP-Relative)
+// To load an SP-relative word from memory as a signed value.
+//
+def LwRxSpImm16: FRI16_memload_ins<0b10010, "lw", mem16_sp, II_LW>, MayLoad {
+  let Uses = [SP];
 }
 
+//
 // Format: LW rx, offset(sp) MIPS16e
 // Purpose: Load Word (SP-Relative, Extended)
 // To load an SP-relative word from memory as a signed value.
 //
-let DecoderMethod = "DecodeFIXMEInstruction" in
-def LwRxSpImmX16: FEXT_RRI16_mem_ins<0b10010, "lw", mem16sp, II_LW>, MayLoad;
+def LwRxSpImmX16:
+  FEXT_RI16_memload_ins<0b10010, "lw", mem16ext_sp, II_LW>, MayLoad {
+    let Uses = [SP];
+}
 
-def LwRxPcTcp16: FRI16_TCP_ins<0b10110, "lw", II_LW>, MayLoad;
+//
+// Format: LW rx, offset(pc) MIPS16e
+// Purpose: Load Word (PC-Relative)
+// To load a PC-relative word from memory as a signed value.
+//
+def LwRxPcImm16: FRI16_memload_ins<0b10110, "lw", mem16_pc, II_LW>, MayLoad;
 
-def LwRxPcTcpX16: FEXT_RI16_TCP_ins<0b10110, "lw", II_LW>, MayLoad;
+//
+// Format: LW rx, offset(pc) MIPS16e
+// Purpose: Load Word (PC-Relative, Extended)
+// To load a PC-relative word from memory as a signed value.
+//
+def LwRxPcImmX16:
+  FEXT_RI16_memload_ins<0b10110, "lw", mem16ext_pc, II_LW>, MayLoad;
+
+
+// These are used in MipsConstantIslandPass.cpp to create a PC-relative load
+// from a nearby constant island.
+// FIXME: Could these go away when support for MIPS16 relocations is added?
+//        Would that let the above LwRxPcImm(X)16 versions handle this?
+def LwRxPcTcp16: FRI16_TCP_ins<0b10110, "lw", II_LW>, MayLoad {
+  let isCodeGenOnly = 1;
+}
+def LwRxPcTcpX16: FEXT_RI16_TCP_ins<0b10110, "lw", II_LW>, MayLoad {
+  let isCodeGenOnly = 1;
+}
+
 //
 // Format: MOVE r32, rz MIPS16e
 // Purpose: Move
 // To move the contents of a GPR to a GPR.
 //
-def Move32R16: FI8_MOV32R16_ins<"move", IIM16Alu>;
+def Move32R16: FI8_MOV32R16_ins<"move", IIM16Alu> {
+  let isMoveReg = 1;
+}
 
 //
 // Format: MOVE ry, r32 MIPS16e
-//Purpose: Move
+// Purpose: Move
 // To move the contents of a GPR to a GPR.
 //
 def MoveR3216: FI8_MOVR3216_ins<"move", IIM16Alu> {
@@ -879,7 +1367,6 @@ def MoveR3216: FI8_MOVR3216_ins<"move", IIM16Alu> {
 // To copy the special purpose HI register to a GPR.
 //
 def Mfhi16: FRR16_M_ins<0b10000, "mfhi", IIM16Alu> {
-  let ry = 0b000; // no 'ry' field
   let Uses = [HI0];
   let hasSideEffects = 0;
   let isMoveReg = 1;
@@ -891,25 +1378,9 @@ def Mfhi16: FRR16_M_ins<0b10000, "mfhi", IIM16Alu> {
 // To copy the special purpose LO register to a GPR.
 //
 def Mflo16: FRR16_M_ins<0b10010, "mflo", IIM16Alu> {
-  let ry = 0b000; // no 'ry' field
   let Uses = [LO0];
   let hasSideEffects = 0;
   let isMoveReg = 0;
-}
-
-//
-// Pseudo Instruction for mult
-//
-def MultRxRy16:  FMULT16_ins<"mult"> {
-  let isCommutable = 1;
-  let hasSideEffects = 0;
-  let Defs = [HI0, LO0];
-}
-
-def MultuRxRy16: FMULT16_ins<"multu"> {
-  let isCommutable = 1;
-  let hasSideEffects = 0;
-  let Defs = [HI0, LO0];
 }
 
 //
@@ -917,7 +1388,7 @@ def MultuRxRy16: FMULT16_ins<"multu"> {
 // Purpose: Multiply Word
 // To multiply 32-bit signed integers.
 //
-def MultRxRyRz16: FMULT16_LO_ins<"mult"> {
+def MultRxRy16:  FMULT16_ins<0b11000, "mult", IIM16Alu> {
   let isCommutable = 1;
   let hasSideEffects = 0;
   let Defs = [HI0, LO0];
@@ -927,6 +1398,24 @@ def MultRxRyRz16: FMULT16_LO_ins<"mult"> {
 // Format: MULTU rx, ry MIPS16e
 // Purpose: Multiply Unsigned Word
 // To multiply 32-bit unsigned integers.
+//
+def MultuRxRy16: FMULT16_ins<0b11001, "multu", IIM16Alu> {
+  let isCommutable = 1;
+  let hasSideEffects = 0;
+  let Defs = [HI0, LO0];
+}
+
+//
+// Pseudo Instruction for mult
+//
+def MultRxRyRz16: FMULT16_LO_ins<"mult"> {
+  let isCommutable = 1;
+  let hasSideEffects = 0;
+  let Defs = [HI0, LO0];
+}
+
+//
+// Pseudo Instruction for multu
 //
 def MultuRxRyRz16: FMULT16_LO_ins<"multu"> {
   let isCommutable = 1;
@@ -939,7 +1428,7 @@ def MultuRxRyRz16: FMULT16_LO_ins<"multu"> {
 // Purpose: Negate
 // To negate an integer value.
 //
-def NegRxRy16: FUnaryRR16_ins<0b11101, "neg", IIM16Alu>;
+def NegRxRy16: FUnaryRR16_ins<0b01011, "neg", IIM16Alu>;
 
 //
 // Format: NOT rx, ry MIPS16e
@@ -965,18 +1454,16 @@ def OrRxRxRy16: FRxRxRy16_ins<0b01101, "or", IIM16Alu>, ArithLogic16Defs<1>;
 //
 
 def Restore16:
-  FI8_SVRS16<0b1, (outs), (ins variable_ops),
-             "", [], II_RESTORE >, MayLoad {
-  let isCodeGenOnly = 1;
+  FI8_SVRS16<0b0, (outs), (ins svrs16:$svrs_ops, variable_ops),
+             "restore\t$svrs_ops", [], II_RESTORE >, MayLoad {
   let Defs = [SP];
   let Uses = [SP];
 }
 
 
 def RestoreX16:
-  FI8_SVRS16<0b1, (outs), (ins variable_ops),
-             "", [], II_RESTORE >, MayLoad {
-  let isCodeGenOnly = 1;
+  FEXT_I8_SVRS16<0b0, (outs), (ins svrsExt:$svrs_ops, variable_ops),
+                 "restore\t$svrs_ops", [], II_RESTORE >, MayLoad {
   let Defs = [SP];
   let Uses = [SP];
 }
@@ -989,28 +1476,40 @@ def RestoreX16:
 // saving return address and static registers, and adjusting stack
 //
 def Save16:
-  FI8_SVRS16<0b1, (outs), (ins variable_ops),
-             "", [], II_SAVE >, MayStore {
-  let isCodeGenOnly = 1;
+  FI8_SVRS16<0b1, (outs), (ins svrs16:$svrs_ops, variable_ops),
+             "save\t$svrs_ops", [], II_SAVE >, MayStore {
   let Uses = [SP];
   let Defs = [SP];
 }
 
 def SaveX16:
-  FI8_SVRS16<0b1, (outs), (ins variable_ops),
-             "", [], II_SAVE >, MayStore {
-  let isCodeGenOnly = 1;
+  FEXT_I8_SVRS16<0b1, (outs), (ins svrsExt:$svrs_ops, variable_ops),
+                 "save\t$svrs_ops", [], II_SAVE >, MayStore {
   let Uses = [SP];
   let Defs = [SP];
 }
+
+//
+// Format: SB ry, offset(rx) MIPS16e
+// Purpose: Store Byte
+// To store a byte to memory.
+//
+def SbRxRyOffMem16:
+  FRRI16_memstore_ins<0b11000, "sb", mem16_lsl0, II_SB>, MayStore;
+
 //
 // Format: SB ry, offset(rx) MIPS16e
 // Purpose: Store Byte (Extended)
 // To store a byte to memory.
 //
-let DecoderMethod = "DecodeFIXMEInstruction" in
 def SbRxRyOffMemX16:
-  FEXT_RRI16_mem2_ins<0b11000, "sb", mem16, II_SB>, MayStore;
+  FEXT_RRI16_memstore_ins<0b11000, "sb", mem16ext, II_SB>, MayStore;
+
+//
+// Format: SDBBP immediate
+// Purpose: Software Debug Breakpoint
+// To cause a debug breakpoint exception.
+def Sdbbp16: FC16_ins<0b00001, "sdbbp", IIM16Alu>;
 
 //
 // Format: SEB rx MIPS16e
@@ -1141,15 +1640,29 @@ def SelTBtneZSltu: SelT<"btnez", "sltu">;
 //          if b==0 then rd = rs
 //
 def SelTBtneZSltiu: SeliT<"btnez", "sltiu">;
+
 //
+// Format: SH ry, offset(rx) MIPS16e
+// Purpose: Store Halfword
+// To store a halfword to memory.
+//
+def ShRxRyOffMem16:
+  FRRI16_memstore_ins<0b11001, "sh", mem16_lsl1, II_SH>, MayStore;
+
 //
 // Format: SH ry, offset(rx) MIPS16e
 // Purpose: Store Halfword (Extended)
 // To store a halfword to memory.
 //
-let DecoderMethod = "DecodeFIXMEInstruction" in
 def ShRxRyOffMemX16:
-  FEXT_RRI16_mem2_ins<0b11001, "sh", mem16, II_SH>, MayStore;
+  FEXT_RRI16_memstore_ins<0b11001, "sh", mem16ext, II_SH>, MayStore;
+
+//
+// Format: SLL rx, ry, sa MIPS16e
+// Purpose: Shift Word Left Logical
+// To execute a left-shift of a word by a fixed number of bits-1 to 8 bits.
+//
+def Sll16: FSHIFT16_ins<0b00, "sll", IIM16Alu>;
 
 //
 // Format: SLL rx, ry, sa MIPS16e
@@ -1180,7 +1693,7 @@ def SltiRxImm16: FRI16R_ins<0b01010, "slti", IIM16Alu> {
 // To record the result of a less-than comparison with a constant.
 //
 //
-def SltiRxImmX16: FEXT_RI16R_ins<0b01010, "slti", IIM16Alu> {
+def SltiRxImmX16: FEXT_RI16R_ins<0b01010, "slti", simm16, IIM16Alu> {
   let Defs = [T8];
 }
 
@@ -1200,8 +1713,10 @@ def SltiuRxImm16: FRI16R_ins<0b01011, "sltiu", IIM16Alu> {
 // Purpose: Set on Less Than Immediate Unsigned (Extended)
 // To record the result of a less-than comparison with a constant.
 //
-//
-def SltiuRxImmX16: FEXT_RI16R_ins<0b01011, "sltiu", IIM16Alu> {
+// This sign-extends the immediate operand, but treats both operands
+// as unsigned for the comparison. Allow a "relaxed" operand since,
+// for example, -1 and 65535 would yield the same result. 
+def SltiuRxImmX16: FEXT_RI16R_ins<0b01011, "sltiu", simm16_relaxed, IIM16Alu> {
   let Defs = [T8];
 }
 //
@@ -1245,15 +1760,37 @@ def SltuCCRxRy16: FCCRR16_ins<"sltu">;
 //
 def SravRxRy16: FRxRxRy16_ins<0b00111, "srav", IIM16Alu>;
 
+//
+// Format: SRA rx, ry, sa MIPS16e
+// Purpose: Shift Word Right Arithmetic
+// To execute an arithmetic right-shift of a word by a fixed
+// number of bits-1 to 8 bits.
+//
+def Sra16: FSHIFT16_ins<0b11, "sra", IIM16Alu>;
 
 //
 // Format: SRA rx, ry, sa MIPS16e
 // Purpose: Shift Word Right Arithmetic (Extended)
 // To execute an arithmetic right-shift of a word by a fixed
-// number of bits-1 to 8 bits.
+// number of bits-0 to 31 bits.
 //
 def SraX16: FEXT_SHIFT16_ins<0b11, "sra", IIM16Alu>;
 
+//
+// Format: SRL rx, ry, sa MIPS16e
+// Purpose: Shift Word Right Logical
+// To execute a logical right-shift of a word by a fixed
+// number of bits-1 to 8 bits.
+//
+def Srl16: FSHIFT16_ins<0b10, "srl", IIM16Alu>;
+
+//
+// Format: SRL rx, ry, sa MIPS16e
+// Purpose: Shift Word Right Logical (Extended)
+// To execute a logical right-shift of a word by a fixed
+// number of bits-0 to 31 bits.
+//
+def SrlX16: FEXT_SHIFT16_ins<0b10, "srl", IIM16Alu>;
 
 //
 // Format: SRLV ry, rx MIPS16e
@@ -1262,15 +1799,6 @@ def SraX16: FEXT_SHIFT16_ins<0b11, "sra", IIM16Alu>;
 // number of bits.
 //
 def SrlvRxRy16: FRxRxRy16_ins<0b00110, "srlv", IIM16Alu>;
-
-
-//
-// Format: SRL rx, ry, sa MIPS16e
-// Purpose: Shift Word Right Logical (Extended)
-// To execute a logical right-shift of a word by a fixed
-// number of bits-1 to 31 bits.
-//
-def SrlX16: FEXT_SHIFT16_ins<0b10, "srl", IIM16Alu>;
 
 //
 // Format: SUBU rz, rx, ry MIPS16e
@@ -1281,19 +1809,59 @@ def SubuRxRyRz16: FRRR16_ins<0b11, "subu", IIM16Alu>, ArithLogic16Defs<0>;
 
 //
 // Format: SW ry, offset(rx) MIPS16e
+// Purpose: Store Word
+// To store a word to memory.
+//
+def SwRxRyOffMem16:
+  FRRI16_memstore_ins<0b11011, "sw", mem16_lsl2, II_SW>, MayStore;
+
+//
+// Format: SW ry, offset(rx) MIPS16e
 // Purpose: Store Word (Extended)
 // To store a word to memory.
 //
-let DecoderMethod = "DecodeFIXMEInstruction" in
-def SwRxRyOffMemX16: FEXT_RRI16_mem2_ins<0b11011, "sw", mem16, II_SW>, MayStore;
+def SwRxRyOffMemX16:
+  FEXT_RRI16_memstore_ins<0b11011, "sw", mem16ext, II_SW>, MayStore;
 
 //
 // Format: SW rx, offset(sp) MIPS16e
 // Purpose: Store Word rx (SP-Relative)
 // To store an SP-relative word to memory.
 //
-let DecoderMethod = "DecodeFIXMEInstruction" in
-def SwRxSpImmX16: FEXT_RRI16_mem2_ins<0b11010, "sw", mem16sp, II_SW>, MayStore;
+def SwRxSpImm16: FRI16_memstore_ins<0b11010, "sw", mem16_sp, II_SW>, MayStore {
+  let Uses = [SP];
+}
+
+//
+// Format: SW rx, offset(sp) MIPS16e
+// Purpose: Store Word rx (SP-Relative, Extended)
+// To store an SP-relative word to memory.
+//
+def SwRxSpImmX16:
+  FEXT_RI16_memstore_ins<0b11010, "sw", mem16ext_sp, II_SW>, MayStore {
+    let Uses = [SP];
+}
+
+//
+// Format: SW ra, offset(sp) MIPS16e
+// Purpose: Store Word ra (SP-Relative)
+// To store register ra SP-relative to memory.
+//
+def SwRaSpImm16: FI816_RA_mem_ins<0b010, "sw", mem16_sp, II_SW>, MayStore {
+  let Uses = [RA, SP];
+  let DecoderMethod = "DecodeSwRaSpMips16";
+}
+
+//
+// Format: SW ra, offset(sp) MIPS16e
+// Purpose: Store Word ra (SP-Relative, Extended)
+// To store register ra SP-relative to memory.
+//
+def SwRaSpImmX16:
+  FEXT_I816_RA_mem_ins<0b010, "sw", mem16ext_sp, II_SW>, MayStore {
+    let Uses = [RA, SP];
+    let DecoderMethod = "DecodeSwRaSpMips16";
+}
 
 //
 //
@@ -1302,6 +1870,23 @@ def SwRxSpImmX16: FEXT_RRI16_mem2_ins<0b11010, "sw", mem16sp, II_SW>, MayStore;
 // To do a bitwise logical XOR.
 //
 def XorRxRxRy16: FRxRxRy16_ins<0b01110, "xor", IIM16Alu>, ArithLogic16Defs<1>;
+
+//
+// Format: ZEB rx MIPS16e
+// Purpose: Zero-Extend Byte
+// Zero-extend least significant byte in register rx.
+//
+def ZebRx16
+  : FRR_SF16_ins<0b10001, 0b000, "zeb", IIM16Alu>;
+
+//
+// Format: ZEH rx MIPS16e
+// Purpose: Zero-Extend Halfword
+// Zero-extend least significant word in register rx.
+//
+def ZehRx16
+  : FRR_SF16_ins<0b10001, 0b001, "zeh", IIM16Alu>;
+
 
 class Mips16Pat<dag pattern, dag result> : Pat<pattern, result> {
   let Predicates = [InMips16Mode];
@@ -1383,12 +1968,15 @@ def: Mips16Pat<(brind CPU16Regs:$rs), (JrcRx16 CPU16Regs:$rs)> {
 }
 
 // Jump and Link (Call)
-let isCall=1, hasDelaySlot=0 in
-def JumpLinkReg16:
-  FRR16_JALRC<0, 0, 0, (outs), (ins CPU16Regs:$rx),
-              "jalrc\t$rx", [(MipsJmpLink CPU16Regs:$rx)], II_JALRC> {
+def JumpLinkReg16 :
+  MipsPseudo16<(outs), (ins CPU16Opnd:$rx), "", [(MipsJmpLink CPU16Opnd:$rx)]>,
+  PseudoInstExpansion<(JalrcRaRx16 RA, CPU16Opnd:$rx)> {
+  let isCall = 1;
+  let hasDelaySlot = 0;
+  let isBarrier = 1;
   let Defs = [RA];
 }
+
 
 // Mips16 pseudos
 let isReturn=1, isTerminator=1, hasDelaySlot=1, isBarrier=1, hasCtrlDep=1,
@@ -1544,6 +2132,8 @@ def: Mips16Pat
 //   (BtnezT8SltuX16 CPU16Regs:$rx, CPU16Regs:$ry,  bb:$imm16)
 //  >;
 
+// This is the 16-bit unconditional branch. It is expanded to BimmX16
+// if needed in MipsConstantIslandPass::fixupUnconditionalBr().
 def: UncondBranch16_pat<br, Bimm16>;
 
 // Small immediates
@@ -1884,7 +2474,7 @@ def : Mips16Pat<(i32 (extloadi8   addr16:$src)),
 def : Mips16Pat<(i32 (extloadi16  addr16:$src)),
                 (LhuRxRyOffMemX16  addr16:$src)>;
 
-def: Mips16Pat<(trap), (Break16)>;
+def: Mips16Pat<(trap), (Break16 0)>;
 
 def : Mips16Pat<(sext_inreg CPU16Regs:$val, i8),
                 (SebRx16 CPU16Regs:$val)>;
@@ -1915,5 +2505,12 @@ MipsPseudo16<(outs), (ins cpinst_operand:$instid, cpinst_operand:$cpidx,
 
 // Instruction Aliases
 
-let EncodingPredicates = [InMips16Mode] in
-def : MipsInstAlias<"nop", (Move32R16 ZERO, S0)>;
+let EncodingPredicates = [InMips16Mode] in {
+  def : MipsInstAlias<"break", (Break16 0)>;
+  def : MipsInstAlias<"sdbbp", (Sdbbp16 0)>;
+  def : MipsInstAlias<"nop", (Move32R16 ZERO, S0)>;
+  def : MipsInstAlias<"div $rs, $rt",
+                      (DivRxRy16 CPU16Opnd:$rs, CPU16Opnd:$rt)>;
+  def : MipsInstAlias<"divu $rs, $rt",
+                      (DivuRxRy16 CPU16Opnd:$rs, CPU16Opnd:$rt)>;
+}

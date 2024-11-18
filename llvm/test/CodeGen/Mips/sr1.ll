@@ -1,6 +1,6 @@
-; RUN: llc  -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -relocation-model=static  < %s | FileCheck %s 
-
-; RUN: llc  -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -relocation-model=static  < %s | FileCheck %s -check-prefix=NEG
+; RUN: llc  -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -relocation-model=static  < %s | \
+; RUN:       llvm-mc -arch=mipsel -mattr=+mips16 -show-inst | \
+; RUN:       FileCheck %s 
 
 @f = common global float 0.000000e+00, align 4
 
@@ -12,8 +12,8 @@ entry:
   call void @x(ptr %c)
   ret void
 ; CHECK: 	.ent	foo1
-; CHECK: 	save	$16, $17, $ra, [[FS:[0-9]+]]  # 16 bit inst
-; CHECK: 	restore	$16, $17, $ra, [[FS]] # 16 bit inst
+; CHECK: 	save	$16, $17, $ra, [[FS:[0-9]+]]  # <MCInst #[[#]] Save16
+; CHECK: 	restore	$16, $17, $ra, [[FS]]   # <MCInst #[[#]] Restore16
 ; CHECK: 	.end	foo1
 }
 
@@ -27,8 +27,8 @@ entry:
   call void @x(ptr %c)
   ret void
 ; CHECK: 	.ent	foo2
-; CHECK: 	save	$16, $17, $ra, [[FS:[0-9]+]] 
-; CHECK: 	restore	$16, $17, $ra, [[FS]] 
+; CHECK: 	save	$16, $17, $ra, [[FS:[0-9]+]]  # <MCInst #[[#]] SaveX16
+; CHECK: 	restore	$16, $17, $ra, [[FS]]   # <MCInst #[[#]] RestoreX16
 ; CHECK: 	.end	foo2
 }
 
@@ -39,13 +39,9 @@ entry:
   store float %call, ptr @f, align 4
   ret void
 ; CHECK: 	.ent	foo3
-; CHECK: 	save	$16, $17, $ra, $18, [[FS:[0-9]+]]
-; CHECK: 	restore	$16, $17, $ra, $18, [[FS]]
+; CHECK: 	save	$16, $17, $18, $ra, [[FS:[0-9]+]]   # <MCInst #[[#]] SaveX16
+; CHECK: 	restore	$16, $17, $18, $ra, [[FS]]    # <MCInst #[[#]] RestoreX16
 ; CHECK: 	.end	foo3
-; NEG: 	.ent	foo3
-; NEG-NOT: 	save	$16, $17, $ra, $18, {{[0-9]+}} # 16 bit inst
-; NEG-NOT: 	restore	$16, $17, $ra, $18, {{[0-9]+}} # 16 bit inst
-; NEG: 	.end	foo3
 }
 
 declare float @xf() #1

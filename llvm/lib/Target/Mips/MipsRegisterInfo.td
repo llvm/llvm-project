@@ -366,21 +366,23 @@ def GPR64 : RegisterClass<"Mips", [i64], 64, (add
   K0_64, K1_64, GP_64, SP_64, FP_64, RA_64)>;
 
 def CPU16Regs : RegisterClass<"Mips", [i32], 32, (add
-  // Return Values and Arguments
-  V0, V1, A0, A1, A2, A3,
-  // Callee save
-  S0, S1)>;
-
-def CPU16RegsPlusSP : RegisterClass<"Mips", [i32], 32, (add
-  // Return Values and Arguments
-  V0, V1, A0, A1, A2, A3,
   // Callee save
   S0, S1,
+  // Return Values and Arguments
+  V0, V1, A0, A1, A2, A3)>;
+
+def CPU16RegsPlusSP : RegisterClass<"Mips", [i32], 32, (add
+  // Callee save
+  S0, S1,
+  // Return Values and Arguments
+  V0, V1, A0, A1, A2, A3,
   SP)>;
 
 def CPURAReg : RegisterClass<"Mips", [i32], 32, (add RA)>, Unallocatable;
 
 def CPUSPReg : RegisterClass<"Mips", [i32], 32, (add SP)>, Unallocatable;
+
+def CPUPCReg : RegisterClass<"Mips", [i32], 32, (add PC)>, Unallocatable;
 
 // 64bit fp:
 // * FGR64  - 32 64-bit registers
@@ -551,6 +553,16 @@ def GPRMM16AsmOperandMovePPairSecond : MipsAsmRegOperand {
   let PredicateMethod = "isMM16AsmRegMovePPairSecond";
 }
 
+def CPU16AsmOperand : MipsAsmRegOperand {
+  let Name = "CPU16AsmReg";
+  let PredicateMethod = "isCPU16AsmReg";
+}
+
+def CPU16AsmOperandPlusSP : MipsAsmRegOperand {
+  let Name = "CPU16AsmRegPlusSP";
+  let PredicateMethod = "isCPU16AsmRegPlusSP";
+}
+
 def ACC64DSPAsmOperand : MipsAsmRegOperand {
   let Name = "ACC64DSPAsmReg";
   let PredicateMethod = "isACCAsmReg";
@@ -643,6 +655,14 @@ def GPRMM16OpndMovePPairFirst : RegisterOperand<GPRMM16MovePPairFirst> {
 
 def GPRMM16OpndMovePPairSecond : RegisterOperand<GPRMM16MovePPairSecond> {
   let ParserMatchClass = GPRMM16AsmOperandMovePPairSecond;
+}
+
+def CPU16Opnd : RegisterOperand<CPU16Regs> {
+  let ParserMatchClass = CPU16AsmOperand;
+}
+
+def CPU16OpndPlusSP : RegisterOperand<CPU16RegsPlusSP> {
+  let ParserMatchClass = CPU16AsmOperandPlusSP;
 }
 
 def GPR64Opnd : RegisterOperand<GPR64> {

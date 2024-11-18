@@ -13,7 +13,7 @@ entry:
   %cond = select i1 %cmp, i32 1, i32 3
   store i32 %cond, ptr @k, align 4
   ret void
-; cond-b-short:	bteqz	$BB0_{{[0-9]+}}  # 16 bit inst
+; cond-b-short:	bteqz	$BB0_[[#]]
 }
 
 attributes #0 = { nounwind optsize "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="true" }

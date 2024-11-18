@@ -32,6 +32,7 @@ class MipsMCCodeEmitter : public MCCodeEmitter {
   MCContext &Ctx;
   bool IsLittleEndian;
 
+  bool isMips16(const MCSubtargetInfo &STI) const;
   bool isMicroMips(const MCSubtargetInfo &STI) const;
   bool isMips32r6(const MCSubtargetInfo &STI) const;
 
@@ -61,12 +62,19 @@ public:
                                 SmallVectorImpl<MCFixup> &Fixups,
                                 const MCSubtargetInfo &STI) const;
 
-  // getBranchJumpOpValueMM - Return binary encoding of the microMIPS jump
+  // getJumpTargetOpValueMM - Return binary encoding of the microMIPS jump
   // target operand. If the machine operand requires relocation,
   // record the relocation and return zero.
   unsigned getJumpTargetOpValueMM(const MCInst &MI, unsigned OpNo,
                                   SmallVectorImpl<MCFixup> &Fixups,
                                   const MCSubtargetInfo &STI) const;
+
+  // getJumpTargetOpValueMips16 - Return binary encoding of the MIPS16 jump
+  // target operand. If the machine operand requires relocation,
+  // record the relocation and return zero.
+  unsigned getJumpTargetOpValueMips16(const MCInst &MI, unsigned OpNo,
+                                      SmallVectorImpl<MCFixup> &Fixups,
+                                      const MCSubtargetInfo &STI) const;
 
   // getUImm5Lsl2Encoding - Return binary encoding of the microMIPS jump
   // target operand.
@@ -81,6 +89,22 @@ public:
   unsigned getUImm6Lsl2Encoding(const MCInst &MI, unsigned OpNo,
                                 SmallVectorImpl<MCFixup> &Fixups,
                                 const MCSubtargetInfo &STI) const;
+
+  unsigned getUImm8Lsl2Encoding(const MCInst &MI, unsigned OpNo,
+                                SmallVectorImpl<MCFixup> &Fixups,
+                                const MCSubtargetInfo &STI) const;
+
+  unsigned getSImm8Lsl3Encoding(const MCInst &MI, unsigned OpNo,
+                                SmallVectorImpl<MCFixup> &Fixups,
+                                const MCSubtargetInfo &STI) const;
+
+  unsigned getSImm11Lsl1Encoding(const MCInst &MI, unsigned OpNo,
+                                 SmallVectorImpl<MCFixup> &Fixups,
+                                 const MCSubtargetInfo &STI) const;
+
+  unsigned getSImm16Lsl1Encoding(const MCInst &MI, unsigned OpNo,
+                                 SmallVectorImpl<MCFixup> &Fixups,
+                                 const MCSubtargetInfo &STI) const;
 
   // getSImm9AddiuspValue - Return binary encoding of the microMIPS addiusp
   // instruction immediate operand.
@@ -137,6 +161,20 @@ public:
                                     SmallVectorImpl<MCFixup> &Fixups,
                                     const MCSubtargetInfo &STI) const;
 
+  // getBranchTargetOpValueMips16 - Return binary encoding of the MIPS16
+  // branch target operand. The 16-bit instruction does not support
+  // relocations.
+  unsigned getBranchTargetOpValueMips16(const MCInst &MI, unsigned OpNo,
+                                        SmallVectorImpl<MCFixup> &Fixups,
+                                        const MCSubtargetInfo &STI) const;
+
+  // getBranchTarget16OpValueMips16 - Return binary encoding of the MIPS16
+  // branch target operand. If the machine operand requires relocation,
+  // record the relocation and return zero.
+  unsigned getBranchTarget16OpValueMips16(const MCInst &MI, unsigned OpNo,
+                                          SmallVectorImpl<MCFixup> &Fixups,
+                                          const MCSubtargetInfo &STI) const;
+
   // getBranchTarget21OpValue - Return binary encoding of the branch
   // offset operand. If the machine operand requires relocation,
   // record the relocation and return zero.
@@ -181,6 +219,10 @@ public:
   unsigned getMSAMemEncoding(const MCInst &MI, unsigned OpNo,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
+
+  unsigned getSaveRestoreEncoding(const MCInst &MI, unsigned OpNo,
+                                  SmallVectorImpl<MCFixup> &Fixups,
+                                  const MCSubtargetInfo &STI) const;
 
   template <unsigned ShiftAmount = 0>
   unsigned getMemEncoding(const MCInst &MI, unsigned OpNo,

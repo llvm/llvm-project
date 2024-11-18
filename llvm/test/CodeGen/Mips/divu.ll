@@ -9,8 +9,8 @@ entry:
   %0 = load i32, ptr @iiii, align 4
   %1 = load i32, ptr @jjjj, align 4
   %div = udiv i32 %0, %1
-; 16:	divu	$zero, ${{[0-9]+}}, ${{[0-9]+}}
-; 16: 	mflo	${{[0-9]+}}
+; 16:	divu	$[[#]], $[[#]]
+; 16: 	mflo	$[[#]]
   store i32 %div, ptr @kkkk, align 4
   ret void
 }

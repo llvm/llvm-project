@@ -116,6 +116,10 @@ void MipsMCCodeEmitter::LowerCompactBranch(MCInst& Inst) const {
   Inst.getOperand(1).setReg(RegOp0);
 }
 
+bool MipsMCCodeEmitter::isMips16(const MCSubtargetInfo &STI) const {
+  return STI.hasFeature(Mips::FeatureMips16);
+}
+
 bool MipsMCCodeEmitter::isMicroMips(const MCSubtargetInfo &STI) const {
   return STI.hasFeature(Mips::FeatureMicroMips);
 }
@@ -210,7 +214,7 @@ void MipsMCCodeEmitter::encodeInstruction(const MCInst &MI,
       IsLittleEndian ? llvm::endianness::little : llvm::endianness::big;
   if (Size == 2) {
     support::endian::write<uint16_t>(CB, Binary, Endian);
-  } else if (IsLittleEndian && isMicroMips(STI)) {
+  } else if (IsLittleEndian && (isMips16(STI) || isMicroMips(STI))) {
     support::endian::write<uint16_t>(CB, Binary >> 16, Endian);
     support::endian::write<uint16_t>(CB, Binary & 0xffff, Endian);
   } else {
@@ -372,6 +376,42 @@ getBranchTargetOpValueMM(const MCInst &MI, unsigned OpNo,
   return 0;
 }
 
+/// getBranchTargetOpValueMips16 - Return binary encoding of the MIPS16
+/// branch target operand. This is for the 16-bit instructions, which
+/// do not support relocations.
+unsigned MipsMCCodeEmitter::getBranchTargetOpValueMips16(
+    const MCInst &MI, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups,
+    const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+
+  // If the destination is an immediate, divide by 2.
+  if (MO.isImm())
+    return MO.getImm() >> 1;
+
+  assert(false &&
+         "getBranchTargetOpValueMips16 expects only constant immediates");
+
+  return 0;
+}
+
+/// getBranchTarget16OpValueMips16 - Return binary encoding of the MIPS16
+/// branch target operand. If the machine operand requires relocation,
+/// record the relocation and return zero.
+unsigned MipsMCCodeEmitter::getBranchTarget16OpValueMips16(
+    const MCInst &MI, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups,
+    const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+
+  // If the destination is an immediate, divide by 2.
+  if (MO.isImm())
+    return MO.getImm() >> 1;
+  // FIXME: This should output a fixup, but MIPS16 fixups are not yet supported.
+  assert(false &&
+         "getBranchTarget16OpValueMips16 expects only constant immediates");
+
+  return 0;
+}
+
 /// getBranchTarget21OpValue - Return binary encoding of the branch
 /// target operand. If the machine operand requires relocation,
 /// record the relocation and return zero.
@@ -518,6 +558,21 @@ getJumpTargetOpValueMM(const MCInst &MI, unsigned OpNo,
   return 0;
 }
 
+unsigned MipsMCCodeEmitter::getJumpTargetOpValueMips16(
+    const MCInst &MI, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups,
+    const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  // If the destination is an immediate, divide by 4.
+  if (MO.isImm())
+    return MO.getImm() >> 2;
+
+  // FIXME: This should output a fixup, but MIPS16 fixups are not yet supported.
+  assert(false &&
+         "getJumpTargetOpValueMips16 expects only constant immediates");
+
+  return 0;
+}
+
 unsigned MipsMCCodeEmitter::
 getUImm5Lsl2Encoding(const MCInst &MI, unsigned OpNo,
                      SmallVectorImpl<MCFixup> &Fixups,
@@ -562,6 +617,58 @@ getUImm6Lsl2Encoding(const MCInst &MI, unsigned OpNo,
   return 0;
 }
 
+unsigned
+MipsMCCodeEmitter::getUImm8Lsl2Encoding(const MCInst &MI, unsigned OpNo,
+                                        SmallVectorImpl<MCFixup> &Fixups,
+                                        const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  if (MO.isImm()) {
+    unsigned Value = MO.getImm();
+    return Value >> 2;
+  }
+
+  return 0;
+}
+
+unsigned
+MipsMCCodeEmitter::getSImm8Lsl3Encoding(const MCInst &MI, unsigned OpNo,
+                                        SmallVectorImpl<MCFixup> &Fixups,
+                                        const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  if (MO.isImm()) {
+    unsigned Value = MO.getImm();
+    return Value >> 3;
+  }
+
+  return 0;
+}
+
+unsigned
+MipsMCCodeEmitter::getSImm11Lsl1Encoding(const MCInst &MI, unsigned OpNo,
+                                         SmallVectorImpl<MCFixup> &Fixups,
+                                         const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  if (MO.isImm()) {
+    unsigned Value = MO.getImm();
+    return Value >> 1;
+  }
+
+  return 0;
+}
+
+unsigned
+MipsMCCodeEmitter::getSImm16Lsl1Encoding(const MCInst &MI, unsigned OpNo,
+                                         SmallVectorImpl<MCFixup> &Fixups,
+                                         const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  if (MO.isImm()) {
+    unsigned Value = MO.getImm();
+    return Value >> 1;
+  }
+
+  return 0;
+}
+
 unsigned MipsMCCodeEmitter::
 getSImm9AddiuspValue(const MCInst &MI, unsigned OpNo,
                      SmallVectorImpl<MCFixup> &Fixups,
@@ -598,6 +705,7 @@ getExprOpValue(const MCExpr *Expr, SmallVectorImpl<MCFixup> &Fixups,
   if (Kind == MCExpr::Target) {
     const MipsMCExpr *MipsExpr = cast<MipsMCExpr>(Expr);
 
+    // FIXME: Need to add MIPS16 fixups to these cases once support is added.
     Mips::Fixups FixupKind = Mips::Fixups(0);
     switch (MipsExpr->getKind()) {
     case MipsMCExpr::MEK_None:
@@ -735,6 +843,114 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
   // MO must be an Expr.
   assert(MO.isExpr());
   return getExprOpValue(MO.getExpr(),Fixups, STI);
+}
+
+/// Return binary encoding of MIPS16 save and restore operands.
+unsigned
+MipsMCCodeEmitter::getSaveRestoreEncoding(const MCInst &MI, unsigned OpNo,
+                                          SmallVectorImpl<MCFixup> &Fixups,
+                                          const MCSubtargetInfo &STI) const {
+  union {
+    struct {
+      unsigned framesize : 8;
+      unsigned s1 : 1;
+      unsigned s0 : 1;
+      unsigned ra : 1;
+      unsigned aregs : 4;
+      unsigned xsregs : 3;
+    } bits;
+    unsigned val;
+  } Encoding;
+
+  Encoding.val = 0;
+
+  // The number of caller-saved regs for 'aregs' and saved 'xsregs' is
+  // determined by the largest register number in the list. That is [$4-7] for
+  // 'aregs' and [$18-23, $30] for 'xsregs'. All other regs below those are
+  // implicitly handled. For example, reg $6 would also handle regs $4 and $5
+  // even if they were not called out in the assembly code.
+  // This is similar for the static registers in 'aregs', but the count is
+  // determined by the smallest register number. For example, if only reg $4
+  // were specified, then the other three argument regs would be handled.
+  unsigned NumAregArgs = 0;
+  unsigned NumAregStatics = 0;
+  unsigned NumXsRegs = 0;
+
+  // Get saved "$s_" regs (xsregs) and caller-saved argument regs.
+  while (OpNo < MI.getNumOperands() && MI.getOperand(OpNo).isReg()) {
+    switch (MI.getOperand(OpNo).getReg()) {
+    default: {
+      unsigned RegIdx = getMachineOpValue(MI, MI.getOperand(OpNo), Fixups, STI);
+      if (NumXsRegs < (RegIdx - 17))
+        NumXsRegs = RegIdx - 17;
+      break;
+    }
+    case Mips::A0:
+    case Mips::A0_64:
+      if (NumAregArgs < 1)
+        NumAregArgs = 1;
+      break;
+    case Mips::A1:
+    case Mips::A1_64:
+      if (NumAregArgs < 2)
+        NumAregArgs = 2;
+      break;
+    case Mips::A2:
+    case Mips::A2_64:
+      if (NumAregArgs < 3)
+        NumAregArgs = 3;
+      break;
+    case Mips::A3:
+    case Mips::A3_64:
+      NumAregArgs = 4;
+      break;
+    case Mips::S0:
+    case Mips::S0_64:
+      Encoding.bits.s0 = 1;
+      break;
+    case Mips::S1:
+    case Mips::S1_64:
+      Encoding.bits.s1 = 1;
+      break;
+    case Mips::FP:
+    case Mips::FP_64:
+      NumXsRegs = 7;
+      break;
+    case Mips::RA:
+    case Mips::RA_64:
+      Encoding.bits.ra = 1;
+      break;
+    }
+
+    ++OpNo;
+  }
+
+  // Instruction multiplies framesize value by 8.
+  Encoding.bits.framesize = MI.getOperand(OpNo).getImm() >> 3;
+  ++OpNo;
+
+  // Get static argument regs (ones saved at the end of the callee stack).
+  while (OpNo < MI.getNumOperands() && MI.getOperand(OpNo).isReg()) {
+    unsigned RegIdx = getMachineOpValue(MI, MI.getOperand(OpNo), Fixups, STI);
+    if (NumAregStatics < (8 - RegIdx))
+      NumAregStatics = 8 - RegIdx;
+
+    ++OpNo;
+  }
+
+  // Determine 'aregs' encoding. There are two special cases for when all
+  // four argument regs are used.
+  if (NumAregStatics == 4) {
+    Encoding.bits.aregs = 0b1011;
+  } else if (NumAregArgs == 4) {
+    Encoding.bits.aregs = 0b1110;
+  } else {
+    Encoding.bits.aregs = (NumAregArgs << 2) | NumAregStatics;
+  }
+
+  Encoding.bits.xsregs = NumXsRegs;
+
+  return Encoding.val;
 }
 
 /// Return binary encoding of memory related operand.

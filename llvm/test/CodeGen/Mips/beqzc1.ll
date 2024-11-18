@@ -10,7 +10,7 @@ entry:
   %cmp = icmp eq i32 %0, 0
   br i1 %cmp, label %if.then, label %if.end
 
-; cond-b-short: 	bnez	${{[0-9]+}}, $BB{{[0-9]+}}_{{[0-9]+}}  # 16 bit inst
+; cond-b-short: 	bnez	$[[#]], $BB[[#]]_[[#]]
 if.then:                                          ; preds = %entry
   store i32 10, ptr @j, align 4
   br label %if.end

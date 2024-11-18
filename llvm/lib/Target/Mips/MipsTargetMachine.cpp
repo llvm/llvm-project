@@ -333,6 +333,9 @@ void MipsPassConfig::addPreEmitPass() {
   // Any new pass should go before this pass.
   addPass(createMipsBranchExpansion());
 
+  // FIXME:
+  // This pass is for MIPS16 only and may replace branches with jumps that need
+  // their delay slots filled, so can this go before the delay slot filler?
   addPass(createMipsConstantIslandPass());
 }
 

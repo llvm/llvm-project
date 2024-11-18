@@ -7,7 +7,7 @@ define i32 @main()  {
 entry:
   call void @llvm.trap()
   unreachable
-; pic: break 0
+; pic: break
   ret i32 0
 }
 
