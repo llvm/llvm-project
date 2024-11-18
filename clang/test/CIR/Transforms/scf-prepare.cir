@@ -14,7 +14,7 @@ module {
     // CHECK: %[[BOUND:.*]] = cir.load %[[BOUND_ADDR:.*]] : !cir.ptr<!s32i>, !s32i
     // CHECK: cir.for : cond {
     // CHECK:   %[[IV:.*]] = cir.load %[[IV_ADDR:.*]] : !cir.ptr<!s32i>, !s32i
-    // CHECK:   %[[COND:.*]] = cir.cmp(lt, %[[IV]], %4) : !s32i, !s32i
+    // CHECK:   %[[COND:.*]] = cir.cmp(lt, %[[IV]], %4) : !s32i, !cir.bool
 
     %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["l", init] {alignment = 4 : i64}
     %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["u", init] {alignment = 4 : i64}
@@ -27,9 +27,8 @@ module {
       cir.for : cond {
         %4 = cir.load %1 : !cir.ptr<!s32i>, !s32i
         %5 = cir.load %2 : !cir.ptr<!s32i>, !s32i
-        %6 = cir.cmp(gt, %4, %5) : !s32i, !s32i
-        %7 = cir.cast(int_to_bool, %6 : !s32i), !cir.bool
-        cir.condition(%7)
+        %6 = cir.cmp(gt, %4, %5) : !s32i, !cir.bool
+        cir.condition(%6)
       } body {
         %4 = cir.const #cir.int<3> : !s32i
         %5 = cir.get_global @a : !cir.ptr<!cir.array<!s32i x 100>>
@@ -57,8 +56,8 @@ module {
     // CHECK: %[[BOUND:.*]] = cir.const #cir.int<50> : !s32i
     // CHECK: cir.for : cond {
     // CHECK:   %[[IV:.*]] = cir.load %[[IV_ADDR:.*]] : !cir.ptr<!s32i>, !s32i
-    // CHECK:   %[[COND:.*]] = cir.cmp(le, %[[IV]], %[[BOUND]]) : !s32i, !s32i
- 
+    // CHECK:   %[[COND:.*]] = cir.cmp(le, %[[IV]], %[[BOUND]]) : !s32i, !cir.bool
+
     cir.scope {
       %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
       %1 = cir.const #cir.int<0> : !s32i
@@ -66,9 +65,8 @@ module {
       cir.for : cond {
         %2 = cir.const #cir.int<50> : !s32i
         %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
-        %4 = cir.cmp(ge, %2, %3) : !s32i, !s32i
-        %5 = cir.cast(int_to_bool, %4 : !s32i), !cir.bool
-        cir.condition(%5)
+        %4 = cir.cmp(ge, %2, %3) : !s32i, !cir.bool
+        cir.condition(%4)
       } body {
         %2 = cir.const #cir.int<3> : !s32i
         %3 = cir.get_global @a : !cir.ptr<!cir.array<!s32i x 100>>
@@ -99,7 +97,7 @@ module {
     // CHECK: cir.for : cond {
     // CHECK:   %[[BOUND:.*]] = cir.load %[[BOUND_ADDR:.*]] : !cir.ptr<!s32i>, !s32i
     // CHECK:   %[[IV:.*]] = cir.load %[[IV_ADDR:.*]] : !cir.ptr<!s32i>, !s32i
-    // CHECK:   %[[COND:.*]] = cir.cmp(lt, %[[IV]], %[[BOUND]]) : !s32i, !s32i
+    // CHECK:   %[[COND:.*]] = cir.cmp(lt, %[[IV]], %[[BOUND]]) : !s32i, !cir.bool
 
     %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["l", init] {alignment = 4 : i64}
     %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["u", init] {alignment = 4 : i64}
@@ -112,9 +110,8 @@ module {
       cir.for : cond {
         %4 = cir.load %1 : !cir.ptr<!s32i>, !s32i
         %5 = cir.load %2 : !cir.ptr<!s32i>, !s32i
-        %6 = cir.cmp(gt, %4, %5) : !s32i, !s32i
-        %7 = cir.cast(int_to_bool, %6 : !s32i), !cir.bool
-        cir.condition(%7)
+        %6 = cir.cmp(gt, %4, %5) : !s32i, !cir.bool
+        cir.condition(%6)
       } body {
         cir.scope {
           %4 = cir.load %1 : !cir.ptr<!s32i>, !s32i
@@ -157,9 +154,8 @@ module {
         %3 = cir.const #cir.int<100> : !s32i
         %4 = cir.const #cir.int<1> : !s32i
         %5 = cir.binop(sub, %3, %4) nsw : !s32i
-        %6 = cir.cmp(lt, %2, %5) : !s32i, !s32i
-        %7 = cir.cast(int_to_bool, %6 : !s32i), !cir.bool
-        cir.condition(%7)
+        %6 = cir.cmp(lt, %2, %5) : !s32i, !cir.bool
+        cir.condition(%6)
       } body {
         cir.scope {
         }
@@ -192,9 +188,8 @@ module {
         %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
         %3 = cir.const #cir.int<100> : !s32i
         %5 = cir.binop(sub, %3, %arg0) nsw : !s32i
-        %6 = cir.cmp(lt, %2, %5) : !s32i, !s32i
-        %7 = cir.cast(int_to_bool, %6 : !s32i), !cir.bool
-        cir.condition(%7)
+        %6 = cir.cmp(lt, %2, %5) : !s32i, !cir.bool
+        cir.condition(%6)
       } body {
         cir.scope {
         }

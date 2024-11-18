@@ -3,7 +3,7 @@
 !s32i = !cir.int<s, 32>
 
 module {
-  
+
   cir.func @gotoFromIf(%arg0: !s32i) -> !s32i {
     %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
     %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
@@ -11,9 +11,8 @@ module {
     cir.scope {
       %6 = cir.load %0 : !cir.ptr<!s32i>, !s32i
       %7 = cir.const #cir.int<5> : !s32i
-      %8 = cir.cmp(gt, %6, %7) : !s32i, !s32i
-      %9 = cir.cast(int_to_bool, %8 : !s32i), !cir.bool
-      cir.if %9 {
+      %8 = cir.cmp(gt, %6, %7) : !s32i, !cir.bool
+      cir.if %8 {
         cir.goto "err"
       }
     }

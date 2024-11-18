@@ -1268,8 +1268,7 @@ def CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
     ```
   }];
 
-  // TODO: get more accurate than CIR_AnyType
-  let results = (outs CIR_AnyType:$result);
+  let results = (outs CIR_BoolType:$result);
   let arguments = (ins Arg<CmpOpKind, "cmp kind">:$kind,
                        CIR_AnyType:$lhs, CIR_AnyType:$rhs);
 

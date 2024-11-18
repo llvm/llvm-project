@@ -18,8 +18,9 @@ int foo(int* ptr) {
 // BEFORE:  cir.func {{.*@foo}}
 // BEFORE:  [[X0:%.*]] = cir.load {{.*}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // BEFORE:  [[X1:%.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>
-// BEFORE:  [[X2:%.*]] = cir.cmp(eq, [[X0]], [[X1]]) : !cir.ptr<!s32i>, !s32i
-// BEFORE:  [[X3:%.*]] = cir.cast(int_to_bool, [[X2]] : !s32i), !cir.bool
+// BEFORE:  [[X2:%.*]] = cir.cmp(eq, [[X0]], [[X1]]) : !cir.ptr<!s32i>, !cir.bool
+// BEFORE:  [[BOOL_TO_INT:%.*]] = cir.cast(bool_to_int, [[X2]] : !cir.bool), !s32i
+// BEFORE:  [[X3:%.*]] = cir.cast(int_to_bool, [[BOOL_TO_INT]] : !s32i), !cir.bool
 // BEFORE:  [[X4:%.*]] = cir.unary(not, [[X3]]) : !cir.bool, !cir.bool
 // BEFORE:  [[X5:%.*]] = cir.cast(bool_to_int, [[X4]] : !cir.bool), !s32i
 // BEFORE:  [[X6:%.*]] = cir.cast(int_to_bool, [[X5]] : !s32i), !cir.bool
@@ -33,6 +34,5 @@ int foo(int* ptr) {
 
 // AFTER:   [[X0:%.*]] = cir.load {{.*}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // AFTER:   [[X1:%.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>
-// AFTER:   [[X2:%.*]] = cir.cmp(eq, [[X0]], [[X1]]) : !cir.ptr<!s32i>, !s32i
-// AFTER:   [[X3:%.*]] = cir.cast(int_to_bool, [[X2]] : !s32i), !cir.bool
-// AFTER:   cir.if [[X3]]
+// AFTER:   [[X2:%.*]] = cir.cmp(eq, [[X0]], [[X1]]) : !cir.ptr<!s32i>, !cir.bool
+// AFTER:   cir.if [[X2]]

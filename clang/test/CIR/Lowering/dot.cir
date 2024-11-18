@@ -21,9 +21,8 @@ module {
       cir.for : cond {
         %10 = cir.load %8 : !cir.ptr<!s32i>, !s32i
         %11 = cir.load %2 : !cir.ptr<!s32i>, !s32i
-        %12 = cir.cmp(lt, %10, %11) : !s32i, !s32i
-        %13 = cir.cast(int_to_bool, %12 : !s32i), !cir.bool
-        cir.condition(%13)
+        %12 = cir.cmp(lt, %10, %11) : !s32i, !cir.bool
+        cir.condition(%12)
       } body {
         %10 = cir.load %0 : !cir.ptr<!cir.ptr<!cir.double>>, !cir.ptr<!cir.double>
         %11 = cir.load %8 : !cir.ptr<!s32i>, !s32i
@@ -79,10 +78,7 @@ module {
 // MLIR:           %[[VAL_17:.*]] = llvm.load %[[VAL_2]] {alignment = 4 : i64} : !llvm.ptr -> i32
 // MLIR:           %[[VAL_18:.*]] = llvm.load %[[VAL_8]] {alignment = 4 : i64} : !llvm.ptr -> i32
 // MLIR:           %[[VAL_19:.*]] = llvm.icmp "slt" %[[VAL_17]], %[[VAL_18]] : i32
-// MLIR:           %[[VAL_20:.*]] = llvm.zext %[[VAL_19]] : i1 to i32
-// MLIR:           %[[VAL_21:.*]] = llvm.mlir.constant(0 : i32) : i32
-// MLIR:           %[[VAL_22:.*]] = llvm.icmp "ne" %[[VAL_20]], %[[VAL_21]] : i32
-// MLIR:           llvm.cond_br %[[VAL_22]], ^bb3, ^bb5
+// MLIR:           llvm.cond_br %[[VAL_19]], ^bb3, ^bb5
 // MLIR:         ^bb3:
 // MLIR:           %[[VAL_23:.*]] = llvm.load %[[VAL_4]] {alignment = 8 : i64} : !llvm.ptr -> !llvm.ptr
 // MLIR:           %[[VAL_24:.*]] = llvm.load %[[VAL_2]] {alignment = 4 : i64} : !llvm.ptr -> i32

@@ -41,9 +41,8 @@ void alloca_in_loop(int* ar, int n) {
 // BEFORE:      cir.for : cond {
 // BEFORE:        %4 = cir.load %2 : !cir.ptr<!s32i>, !s32i
 // BEFORE:        %5 = cir.load %1 : !cir.ptr<!s32i>, !s32i
-// BEFORE:        %6 = cir.cmp(lt, %4, %5) : !s32i, !s32i
-// BEFORE:        %7 = cir.cast(int_to_bool, %6 : !s32i), !cir.bool
-// BEFORE:        cir.condition(%7)
+// BEFORE:        %6 = cir.cmp(lt, %4, %5) : !s32i, !cir.bool
+// BEFORE:        cir.condition(%6)
 // BEFORE:      } body {
 // BEFORE:        cir.scope {
 // BEFORE:          %4 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
@@ -71,21 +70,20 @@ void alloca_in_loop(int* ar, int n) {
 // MEM2REG:    %0 = cir.const #cir.int<0> : !s32i
 // MEM2REG:    cir.br ^bb2(%0 : !s32i)
 // MEM2REG:  ^bb2(%1: !s32i{{.*}}):  // 2 preds: ^bb1, ^bb6
-// MEM2REG:    %2 = cir.cmp(lt, %1, %arg1) : !s32i, !s32i
-// MEM2REG:    %3 = cir.cast(int_to_bool, %2 : !s32i), !cir.bool
-// MEM2REG:    cir.brcond %3 ^bb3, ^bb7
+// MEM2REG:    %2 = cir.cmp(lt, %1, %arg1) : !s32i, !cir.bool
+// MEM2REG:    cir.brcond %2 ^bb3, ^bb7
 // MEM2REG:  ^bb3:  // pred: ^bb2
 // MEM2REG:    cir.br ^bb4
 // MEM2REG:  ^bb4:  // pred: ^bb3
-// MEM2REG:    %4 = cir.const #cir.int<4> : !s32i
-// MEM2REG:    %5 = cir.ptr_stride(%arg0 : !cir.ptr<!s32i>, %1 : !s32i), !cir.ptr<!s32i>
-// MEM2REG:    cir.store %4, %5 : !s32i, !cir.ptr<!s32i>
+// MEM2REG:    %3 = cir.const #cir.int<4> : !s32i
+// MEM2REG:    %4 = cir.ptr_stride(%arg0 : !cir.ptr<!s32i>, %1 : !s32i), !cir.ptr<!s32i>
+// MEM2REG:    cir.store %3, %4 : !s32i, !cir.ptr<!s32i>
 // MEM2REG:    cir.br ^bb5
 // MEM2REG:  ^bb5:  // pred: ^bb4
 // MEM2REG:    cir.br ^bb6
 // MEM2REG:  ^bb6:  // pred: ^bb5
-// MEM2REG:    %6 = cir.unary(inc, %1) : !s32i, !s32i
-// MEM2REG:    cir.br ^bb2(%6 : !s32i)
+// MEM2REG:    %5 = cir.unary(inc, %1) : !s32i, !s32i
+// MEM2REG:    cir.br ^bb2(%5 : !s32i)
 // MEM2REG:  ^bb7:  // pred: ^bb2
 // MEM2REG:    cir.br ^bb8
 // MEM2REG:  ^bb8:  // pred: ^bb7
@@ -116,24 +114,23 @@ int alloca_in_ifelse(int x) {
 // BEFORE:    cir.scope {
 // BEFORE:      %9 = cir.load %0 : !cir.ptr<!s32i>, !s32i
 // BEFORE:      %10 = cir.const #cir.int<42> : !s32i
-// BEFORE:      %11 = cir.cmp(gt, %9, %10) : !s32i, !s32i
-// BEFORE:      %12 = cir.cast(int_to_bool, %11 : !s32i), !cir.bool
-// BEFORE:      cir.if %12 {
-// BEFORE:        %13 = cir.alloca !s32i, !cir.ptr<!s32i>, ["z", init] {alignment = 4 : i64}
-// BEFORE:        %14 = cir.const #cir.int<2> : !s32i
-// BEFORE:        cir.store %14, %13 : !s32i, !cir.ptr<!s32i>
-// BEFORE:        %15 = cir.load %0 : !cir.ptr<!s32i>, !s32i
-// BEFORE:        %16 = cir.load %13 : !cir.ptr<!s32i>, !s32i
-// BEFORE:        %17 = cir.binop(mul, %15, %16) nsw : !s32i
-// BEFORE:        cir.store %17, %2 : !s32i, !cir.ptr<!s32i>
+// BEFORE:      %11 = cir.cmp(gt, %9, %10) : !s32i, !cir.bool
+// BEFORE:      cir.if %11 {
+// BEFORE:        %12 = cir.alloca !s32i, !cir.ptr<!s32i>, ["z", init] {alignment = 4 : i64}
+// BEFORE:        %13 = cir.const #cir.int<2> : !s32i
+// BEFORE:        cir.store %13, %12 : !s32i, !cir.ptr<!s32i>
+// BEFORE:        %14 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+// BEFORE:        %15 = cir.load %12 : !cir.ptr<!s32i>, !s32i
+// BEFORE:        %16 = cir.binop(mul, %14, %15) nsw : !s32i
+// BEFORE:        cir.store %16, %2 : !s32i, !cir.ptr<!s32i>
 // BEFORE:      } else {
-// BEFORE:        %13 = cir.alloca !s32i, !cir.ptr<!s32i>, ["z", init] {alignment = 4 : i64}
-// BEFORE:        %14 = cir.const #cir.int<3> : !s32i
-// BEFORE:        cir.store %14, %13 : !s32i, !cir.ptr<!s32i>
-// BEFORE:        %15 = cir.load %0 : !cir.ptr<!s32i>, !s32i
-// BEFORE:        %16 = cir.load %13 : !cir.ptr<!s32i>, !s32i
-// BEFORE:        %17 = cir.binop(mul, %15, %16) nsw : !s32i
-// BEFORE:        cir.store %17, %2 : !s32i, !cir.ptr<!s32i>
+// BEFORE:        %12 = cir.alloca !s32i, !cir.ptr<!s32i>, ["z", init] {alignment = 4 : i64}
+// BEFORE:        %13 = cir.const #cir.int<3> : !s32i
+// BEFORE:        cir.store %13, %12 : !s32i, !cir.ptr<!s32i>
+// BEFORE:        %14 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+// BEFORE:        %15 = cir.load %12 : !cir.ptr<!s32i>, !s32i
+// BEFORE:        %16 = cir.binop(mul, %14, %15) nsw : !s32i
+// BEFORE:        cir.store %16, %2 : !s32i, !cir.ptr<!s32i>
 // BEFORE:     }
 // BEFORE:    }
 // BEFORE:    %4 = cir.load %2 : !cir.ptr<!s32i>, !s32i
@@ -150,23 +147,22 @@ int alloca_in_ifelse(int x) {
 // MEM2REG:    cir.br ^bb1
 // MEM2REG:  ^bb1:  // pred: ^bb0
 // MEM2REG:    %1 = cir.const #cir.int<42> : !s32i
-// MEM2REG:    %2 = cir.cmp(gt, %arg0, %1) : !s32i, !s32i
-// MEM2REG:    %3 = cir.cast(int_to_bool, %2 : !s32i), !cir.bool
-// MEM2REG:    cir.brcond %3 ^bb2, ^bb3
+// MEM2REG:    %2 = cir.cmp(gt, %arg0, %1) : !s32i, !cir.bool
+// MEM2REG:    cir.brcond %2 ^bb2, ^bb3
 // MEM2REG:  ^bb2:  // pred: ^bb1
-// MEM2REG:    %4 = cir.const #cir.int<2> : !s32i
-// MEM2REG:    %5 = cir.binop(mul, %arg0, %4) nsw : !s32i
-// MEM2REG:    cir.br ^bb4(%5 : !s32i)
+// MEM2REG:    %3 = cir.const #cir.int<2> : !s32i
+// MEM2REG:    %4 = cir.binop(mul, %arg0, %3) nsw : !s32i
+// MEM2REG:    cir.br ^bb4(%4 : !s32i)
 // MEM2REG:  ^bb3:  // pred: ^bb1
-// MEM2REG:    %6 = cir.const #cir.int<3> : !s32i
-// MEM2REG:    %7 = cir.binop(mul, %arg0, %6) nsw : !s32i
-// MEM2REG:    cir.br ^bb4(%7 : !s32i)
-// MEM2REG:  ^bb4(%8: !s32i{{.*}}):  // 2 preds: ^bb2, ^bb3
+// MEM2REG:    %5 = cir.const #cir.int<3> : !s32i
+// MEM2REG:    %6 = cir.binop(mul, %arg0, %5) nsw : !s32i
+// MEM2REG:    cir.br ^bb4(%6 : !s32i)
+// MEM2REG:  ^bb4(%7: !s32i{{.*}}):  // 2 preds: ^bb2, ^bb3
 // MEM2REG:    cir.br ^bb5
 // MEM2REG:  ^bb5:  // pred: ^bb4
-// MEM2REG:    %9 = cir.const #cir.int<1> : !s32i
-// MEM2REG:    %10 = cir.binop(add, %8, %9) nsw : !s32i
-// MEM2REG:    cir.return %10 : !s32i
+// MEM2REG:    %8 = cir.const #cir.int<1> : !s32i
+// MEM2REG:    %9 = cir.binop(add, %7, %8) nsw : !s32i
+// MEM2REG:    cir.return %9 : !s32i
 // MEM2REG:  }
 
 

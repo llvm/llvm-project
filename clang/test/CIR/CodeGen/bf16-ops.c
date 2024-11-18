@@ -481,11 +481,11 @@ void foo(void) {
   // NATIVE-LLVM-NEXT: %{{.+}} = fsub bfloat %{{.+}}, %[[#A]]
 
   test = (h2 < h0);
-  //      NONATIVE: %[[#A:]] = cir.cmp(lt, %{{.+}}, %{{.+}}) : !cir.bf16, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#A]] : !s32i), !u32i
+  //      NONATIVE: %[[#A:]] = cir.cmp(lt, %{{.+}}, %{{.+}}) : !cir.bf16, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#A]] : !cir.bool), !s32i
 
-  //      NATIVE: %[[#A:]] = cir.cmp(lt, %{{.+}}, %{{.+}}) : !cir.bf16, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#A]] : !s32i), !u32i
+  //      NATIVE: %[[#A:]] = cir.cmp(lt, %{{.+}}, %{{.+}}) : !cir.bf16, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#A]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %{{.+}} = fcmp olt bfloat %{{.+}}, %{{.+}}
 
@@ -494,13 +494,13 @@ void foo(void) {
   test = (h2 < (__bf16)42.0);
   //      NONATIVE: %[[#A:]] = cir.const #cir.fp<4.200000e+01> : !cir.double
   // NONATIVE-NEXT: %[[#B:]] = cir.cast(floating, %[[#A]] : !cir.double), !cir.bf16
-  // NONATIVE-NEXT: %[[#C:]] = cir.cmp(lt, %{{.+}}, %[[#B]]) : !cir.bf16, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#C]] : !s32i), !u32i
+  // NONATIVE-NEXT: %[[#C:]] = cir.cmp(lt, %{{.+}}, %[[#B]]) : !cir.bf16, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#C]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.const #cir.fp<4.200000e+01> : !cir.double
   // NATIVE-NEXT: %[[#B:]] = cir.cast(floating, %[[#A]] : !cir.double), !cir.bf16
-  // NATIVE-NEXT: %[[#C:]] = cir.cmp(lt, %{{.+}}, %[[#B]]) : !cir.bf16, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#C]] : !s32i), !u32i
+  // NATIVE-NEXT: %[[#C:]] = cir.cmp(lt, %{{.+}}, %[[#B]]) : !cir.bf16, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#C]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %{{.+}} = fcmp olt bfloat %{{.+}}, 0xR4228
 
@@ -508,12 +508,12 @@ void foo(void) {
 
   test = (h2 < f0);
   //      NONATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  //      NONATIVE: %[[#B:]] = cir.cmp(lt, %[[#A]], %{{.+}}) : !cir.float, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NONATIVE: %[[#B:]] = cir.cmp(lt, %[[#A]], %{{.+}}) : !cir.float, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  //      NATIVE: %[[#B:]] = cir.cmp(lt, %[[#A]], %{{.+}}) : !cir.float, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NATIVE: %[[#B:]] = cir.cmp(lt, %[[#A]], %{{.+}}) : !cir.float, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %[[#LHS:]] = fpext bfloat %{{.+}} to float
   // NONATIVE-LLVM: %{{.+}} = fcmp olt float %[[#LHS]], %{{.+}}
@@ -523,12 +523,12 @@ void foo(void) {
 
   test = (f2 < h0);
   //      NONATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  // NONATIVE-NEXT: %[[#B:]] = cir.cmp(lt, %{{.+}}, %[[#A]]) : !cir.float, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  // NONATIVE-NEXT: %[[#B:]] = cir.cmp(lt, %{{.+}}, %[[#A]]) : !cir.float, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  // NATIVE-NEXT: %[[#B:]] = cir.cmp(lt, %{{.+}}, %[[#A]]) : !cir.float, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  // NATIVE-NEXT: %[[#B:]] = cir.cmp(lt, %{{.+}}, %[[#A]]) : !cir.float, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NONATIVE-LLVM: %[[#RHS:]] = fpext bfloat %{{.+}} to float
   // NONATIVE-LLVM-NEXT: %{{.+}} = fcmp olt float %{{.+}}, %[[#RHS]]
@@ -538,12 +538,12 @@ void foo(void) {
 
   test = (i0 < h0);
   //      NONATIVE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.bf16
-  //      NONATIVE: %[[#B:]] = cir.cmp(lt, %[[#A]], %{{.+}}) : !cir.bf16, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NONATIVE: %[[#B:]] = cir.cmp(lt, %[[#A]], %{{.+}}) : !cir.bf16, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.bf16
-  //      NATIVE: %[[#B:]] = cir.cmp(lt, %[[#A]], %{{.+}}) : !cir.bf16, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NATIVE: %[[#B:]] = cir.cmp(lt, %[[#A]], %{{.+}}) : !cir.bf16, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %[[#LHS:]] = sitofp i32 %{{.+}} to bfloat
   // NONATIVE-LLVM: %{{.+}} = fcmp olt bfloat %[[#LHS]], %{{.+}}
@@ -553,12 +553,12 @@ void foo(void) {
 
   test = (h0 < i0);
   //      NONATIVE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.bf16
-  // NONATIVE-NEXT: %[[#B:]] = cir.cmp(lt, %{{.+}}, %[[#A]]) : !cir.bf16, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  // NONATIVE-NEXT: %[[#B:]] = cir.cmp(lt, %{{.+}}, %[[#A]]) : !cir.bf16, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.bf16
-  // NATIVE-NEXT: %[[#B:]] = cir.cmp(lt, %{{.+}}, %[[#A]]) : !cir.bf16, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  // NATIVE-NEXT: %[[#B:]] = cir.cmp(lt, %{{.+}}, %[[#A]]) : !cir.bf16, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NONATIVE-LLVM: %[[#RHS:]] = sitofp i32 %{{.+}} to bfloat
   // NONATIVE-LLVM-NEXT: %{{.+}} = fcmp olt bfloat %{{.+}}, %[[#RHS]]
@@ -567,11 +567,11 @@ void foo(void) {
   // NATIVE-LLVM-NEXT: %{{.+}} = fcmp olt bfloat %{{.+}}, %[[#RHS]]
 
   test = (h0 > h2);
-  //      NONATIVE: %[[#A:]] = cir.cmp(gt, %{{.+}}, %{{.+}}) : !cir.bf16, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#A]] : !s32i), !u32i
+  //      NONATIVE: %[[#A:]] = cir.cmp(gt, %{{.+}}, %{{.+}}) : !cir.bf16, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#A]] : !cir.bool), !s32i
 
-  //      NATIVE: %[[#A:]] = cir.cmp(gt, %{{.+}}, %{{.+}}) : !cir.bf16, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#A]] : !s32i), !u32i
+  //      NATIVE: %[[#A:]] = cir.cmp(gt, %{{.+}}, %{{.+}}) : !cir.bf16, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#A]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %{{.+}} = fcmp ogt bfloat %{{.+}}, %{{.+}}
 
@@ -580,13 +580,13 @@ void foo(void) {
   test = ((__bf16)42.0 > h2);
   //      NONATIVE: %[[#A:]] = cir.const #cir.fp<4.200000e+01> : !cir.double
   // NONATIVE-NEXT: %[[#B:]] = cir.cast(floating, %[[#A]] : !cir.double), !cir.bf16
-  //      NONATIVE: %[[#C:]] = cir.cmp(gt, %[[#B]], %{{.+}}) : !cir.bf16, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#C]] : !s32i), !u32i
+  //      NONATIVE: %[[#C:]] = cir.cmp(gt, %[[#B]], %{{.+}}) : !cir.bf16, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#C]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.const #cir.fp<4.200000e+01> : !cir.double
   // NATIVE-NEXT: %[[#B:]] = cir.cast(floating, %[[#A]] : !cir.double), !cir.bf16
-  //      NATIVE: %[[#C:]] = cir.cmp(gt, %[[#B]], %{{.+}}) : !cir.bf16, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#C]] : !s32i), !u32i
+  //      NATIVE: %[[#C:]] = cir.cmp(gt, %[[#B]], %{{.+}}) : !cir.bf16, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#C]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %{{.+}} = fcmp ogt bfloat 0xR4228, %{{.+}}
 
@@ -594,12 +594,12 @@ void foo(void) {
 
   test = (h0 > f2);
   //      NONATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  //      NONATIVE: %[[#B:]] = cir.cmp(gt, %[[#A]], %{{.+}}) : !cir.float, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NONATIVE: %[[#B:]] = cir.cmp(gt, %[[#A]], %{{.+}}) : !cir.float, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  //      NATIVE: %[[#B:]] = cir.cmp(gt, %[[#A]], %{{.+}}) : !cir.float, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NATIVE: %[[#B:]] = cir.cmp(gt, %[[#A]], %{{.+}}) : !cir.float, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %[[#LHS:]] = fpext bfloat %{{.+}} to float
   // NONATIVE-LLVM: %{{.+}} = fcmp ogt float %[[#LHS]], %{{.+}}
@@ -609,12 +609,12 @@ void foo(void) {
 
   test = (f0 > h2);
   //      NONATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  // NONATIVE-NEXT: %[[#B:]] = cir.cmp(gt, %{{.+}}, %[[#A]]) : !cir.float, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  // NONATIVE-NEXT: %[[#B:]] = cir.cmp(gt, %{{.+}}, %[[#A]]) : !cir.float, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  // NATIVE-NEXT: %[[#B:]] = cir.cmp(gt, %{{.+}}, %[[#A]]) : !cir.float, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  // NATIVE-NEXT: %[[#B:]] = cir.cmp(gt, %{{.+}}, %[[#A]]) : !cir.float, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %[[#RHS:]] = fpext bfloat %{{.+}} to float
   // NONATIVE-LLVM: %{{.+}} = fcmp ogt float %{{.+}}, %[[#RHS]]
@@ -624,12 +624,12 @@ void foo(void) {
 
   test = (i0 > h0);
   //      NONATIVE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.bf16
-  //      NONATIVE: %[[#B:]] = cir.cmp(gt, %[[#A]], %{{.+}}) : !cir.bf16, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NONATIVE: %[[#B:]] = cir.cmp(gt, %[[#A]], %{{.+}}) : !cir.bf16, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.bf16
-  //      NATIVE: %[[#B:]] = cir.cmp(gt, %[[#A]], %{{.+}}) : !cir.bf16, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NATIVE: %[[#B:]] = cir.cmp(gt, %[[#A]], %{{.+}}) : !cir.bf16, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %[[#LHS:]] = sitofp i32 %{{.+}} to bfloat
   // NONATIVE-LLVM: %{{.+}} = fcmp ogt bfloat %[[#LHS]], %{{.+}}
@@ -639,12 +639,12 @@ void foo(void) {
 
   test = (h0 > i0);
   //      NONATIVE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.bf16
-  //      NONATIVE: %[[#B:]] = cir.cmp(gt, %{{.+}}, %[[#A]]) : !cir.bf16, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NONATIVE: %[[#B:]] = cir.cmp(gt, %{{.+}}, %[[#A]]) : !cir.bf16, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.bf16
-  // NATIVE-NEXT: %[[#B:]] = cir.cmp(gt, %{{.+}}, %[[#A]]) : !cir.bf16, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  // NATIVE-NEXT: %[[#B:]] = cir.cmp(gt, %{{.+}}, %[[#A]]) : !cir.bf16, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NONATIVE-LLVM: %[[#RHS:]] = sitofp i32 %{{.+}} to bfloat
   // NONATIVE-LLVM-NEXT: %{{.+}} = fcmp ogt bfloat %{{.+}}, %[[#RHS]]
@@ -653,11 +653,11 @@ void foo(void) {
   // NATIVE-LLVM-NEXT: %{{.+}} = fcmp ogt bfloat %{{.+}}, %[[#RHS]]
 
   test = (h2 <= h0);
-  //      NONATIVE: %[[#A:]] = cir.cmp(le, %{{.+}}, %{{.+}}) : !cir.bf16, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#A]] : !s32i), !u32i
+  //      NONATIVE: %[[#A:]] = cir.cmp(le, %{{.+}}, %{{.+}}) : !cir.bf16, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#A]] : !cir.bool), !s32i
 
-  //      NATIVE: %[[#A:]] = cir.cmp(le, %{{.+}}, %{{.+}}) : !cir.bf16, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#A]] : !s32i), !u32i
+  //      NATIVE: %[[#A:]] = cir.cmp(le, %{{.+}}, %{{.+}}) : !cir.bf16, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#A]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %{{.+}} = fcmp ole bfloat %{{.+}}, %{{.+}}
 
@@ -666,13 +666,13 @@ void foo(void) {
   test = (h2 <= (__bf16)42.0);
   //      NONATIVE: %[[#A:]] = cir.const #cir.fp<4.200000e+01> : !cir.double
   // NONATIVE-NEXT: %[[#B:]] = cir.cast(floating, %[[#A]] : !cir.double), !cir.bf16
-  // NONATIVE-NEXT: %[[#C:]] = cir.cmp(le, %{{.+}}, %[[#B]]) : !cir.bf16, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#C]] : !s32i), !u32i
+  // NONATIVE-NEXT: %[[#C:]] = cir.cmp(le, %{{.+}}, %[[#B]]) : !cir.bf16, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#C]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.const #cir.fp<4.200000e+01> : !cir.double
   // NATIVE-NEXT: %[[#B:]] = cir.cast(floating, %[[#A]] : !cir.double), !cir.bf16
-  // NATIVE-NEXT: %[[#C:]] = cir.cmp(le, %{{.+}}, %[[#B]]) : !cir.bf16, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#C]] : !s32i), !u32i
+  // NATIVE-NEXT: %[[#C:]] = cir.cmp(le, %{{.+}}, %[[#B]]) : !cir.bf16, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#C]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %{{.+}} = fcmp ole bfloat %{{.+}}, 0xR4228
 
@@ -680,12 +680,12 @@ void foo(void) {
 
   test = (h2 <= f0);
   //      NONATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  //      NONATIVE: %[[#B:]] = cir.cmp(le, %[[#A]], %{{.+}}) : !cir.float, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NONATIVE: %[[#B:]] = cir.cmp(le, %[[#A]], %{{.+}}) : !cir.float, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  //      NATIVE: %[[#B:]] = cir.cmp(le, %[[#A]], %{{.+}}) : !cir.float, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NATIVE: %[[#B:]] = cir.cmp(le, %[[#A]], %{{.+}}) : !cir.float, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %[[#LHS:]] = fpext bfloat %{{.+}} to float
   // NONATIVE-LLVM: %{{.+}} = fcmp ole float %[[#LHS]], %{{.+}}
@@ -695,12 +695,12 @@ void foo(void) {
 
   test = (f2 <= h0);
   //      NONATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  // NONATIVE-NEXT: %[[#B:]] = cir.cmp(le, %{{.+}}, %[[#A]]) : !cir.float, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  // NONATIVE-NEXT: %[[#B:]] = cir.cmp(le, %{{.+}}, %[[#A]]) : !cir.float, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  // NATIVE-NEXT: %[[#B:]] = cir.cmp(le, %{{.+}}, %[[#A]]) : !cir.float, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  // NATIVE-NEXT: %[[#B:]] = cir.cmp(le, %{{.+}}, %[[#A]]) : !cir.float, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NONATIVE-LLVM: %[[#RHS:]] = fpext bfloat %{{.+}} to float
   // NONATIVE-LLVM-NEXT: %{{.+}} = fcmp ole float %{{.+}}, %[[#RHS]]
@@ -710,12 +710,12 @@ void foo(void) {
 
   test = (i0 <= h0);
   //      NONATIVE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.bf16
-  //      NONATIVE: %[[#B:]] = cir.cmp(le, %[[#A]], %{{.+}}) : !cir.bf16, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NONATIVE: %[[#B:]] = cir.cmp(le, %[[#A]], %{{.+}}) : !cir.bf16, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.bf16
-  //      NATIVE: %[[#B:]] = cir.cmp(le, %[[#A]], %{{.+}}) : !cir.bf16, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NATIVE: %[[#B:]] = cir.cmp(le, %[[#A]], %{{.+}}) : !cir.bf16, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %[[#LHS:]] = sitofp i32 %{{.+}} to bfloat
   // NONATIVE-LLVM: %{{.+}} = fcmp ole bfloat %[[#LHS]], %{{.+}}
@@ -725,12 +725,12 @@ void foo(void) {
 
   test = (h0 <= i0);
   //      NONATIVE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.bf16
-  // NONATIVE-NEXT: %[[#B:]] = cir.cmp(le, %{{.+}}, %[[#A]]) : !cir.bf16, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  // NONATIVE-NEXT: %[[#B:]] = cir.cmp(le, %{{.+}}, %[[#A]]) : !cir.bf16, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.bf16
-  // NATIVE-NEXT: %[[#B:]] = cir.cmp(le, %{{.+}}, %[[#A]]) : !cir.bf16, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  // NATIVE-NEXT: %[[#B:]] = cir.cmp(le, %{{.+}}, %[[#A]]) : !cir.bf16, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NONATIVE-LLVM: %[[#RHS:]] = sitofp i32 %{{.+}} to bfloat
   // NONATIVE-LLVM-NEXT: %{{.+}} = fcmp ole bfloat %{{.+}}, %[[#RHS]]
@@ -739,12 +739,13 @@ void foo(void) {
   // NATIVE-LLVM-NEXT: %{{.+}} = fcmp ole bfloat %{{.+}}, %[[#RHS]]
 
   test = (h0 >= h2);
-  //      NONATIVE: %[[#A:]] = cir.cmp(ge, %{{.+}}, %{{.+}}) : !cir.bf16, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#A]] : !s32i), !u32i
+  //      NONATIVE: %[[#A:]] = cir.cmp(ge, %{{.+}}, %{{.+}}) : !cir.bf16, !cir.bool
+  // NONATIVE-NEXT: %[[#B:]] = cir.cast(bool_to_int, %[[#A]] : !cir.bool), !s32i
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
   // NONATIVE-NEXT: %{{.+}} = cir.get_global @test : !cir.ptr<!u32i>
 
-  //      NATIVE: %[[#A:]] = cir.cmp(ge, %{{.+}}, %{{.+}}) : !cir.bf16, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#A]] : !s32i), !u32i
+  //      NATIVE: %[[#A:]] = cir.cmp(ge, %{{.+}}, %{{.+}}) : !cir.bf16, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#A]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %{{.+}} = fcmp oge bfloat %{{.+}}, %{{.+}}
 
@@ -754,14 +755,14 @@ void foo(void) {
   //      NONATIVE: %[[#A:]] = cir.const #cir.fp<2.000000e+00> : !cir.double
   // NONATIVE-NEXT: %[[#B:]] = cir.unary(minus, %[[#A]]) : !cir.double, !cir.double
   // NONATIVE-NEXT: %[[#C:]] = cir.cast(floating, %[[#B]] : !cir.double), !cir.bf16
-  // NONATIVE-NEXT: %[[#D:]] = cir.cmp(ge, %{{.+}}, %[[#C]]) : !cir.bf16, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#D]] : !s32i), !u32i
+  // NONATIVE-NEXT: %[[#D:]] = cir.cmp(ge, %{{.+}}, %[[#C]]) : !cir.bf16, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#D]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.const #cir.fp<2.000000e+00> : !cir.double
   // NATIVE-NEXT: %[[#B:]] = cir.unary(minus, %[[#A]]) : !cir.double, !cir.double
   // NATIVE-NEXT: %[[#C:]] = cir.cast(floating, %[[#B]] : !cir.double), !cir.bf16
-  // NATIVE-NEXT: %[[#D:]] = cir.cmp(ge, %{{.+}}, %[[#C]]) : !cir.bf16, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#D]] : !s32i), !u32i
+  // NATIVE-NEXT: %[[#D:]] = cir.cmp(ge, %{{.+}}, %[[#C]]) : !cir.bf16, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#D]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %{{.+}} = fcmp oge bfloat %{{.+}}, 0xRC000
 
@@ -769,12 +770,12 @@ void foo(void) {
 
   test = (h0 >= f2);
   //      NONATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  //      NONATIVE: %[[#B:]] = cir.cmp(ge, %[[#A]], %{{.+}}) : !cir.float, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NONATIVE: %[[#B:]] = cir.cmp(ge, %[[#A]], %{{.+}}) : !cir.float, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  //      NATIVE: %[[#B:]] = cir.cmp(ge, %[[#A]], %{{.+}}) : !cir.float, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NATIVE: %[[#B:]] = cir.cmp(ge, %[[#A]], %{{.+}}) : !cir.float, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %[[#LHS:]] = fpext bfloat %{{.+}} to float
   // NONATIVE-LLVM: %{{.+}} = fcmp oge float %[[#LHS]], %{{.+}}
@@ -784,12 +785,12 @@ void foo(void) {
 
   test = (f0 >= h2);
   //      NONATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  // NONATIVE-NEXT: %[[#B:]] = cir.cmp(ge, %{{.+}}, %[[#A]]) : !cir.float, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  // NONATIVE-NEXT: %[[#B:]] = cir.cmp(ge, %{{.+}}, %[[#A]]) : !cir.float, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  // NATIVE-NEXT: %[[#B:]] = cir.cmp(ge, %{{.+}}, %[[#A]]) : !cir.float, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  // NATIVE-NEXT: %[[#B:]] = cir.cmp(ge, %{{.+}}, %[[#A]]) : !cir.float, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %[[#RHS:]] = fpext bfloat %{{.+}} to float
   // NONATIVE-LLVM: %{{.+}} = fcmp oge float %{{.+}}, %[[#RHS]]
@@ -799,12 +800,12 @@ void foo(void) {
 
   test = (i0 >= h0);
   //      NONATIVE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.bf16
-  //      NONATIVE: %[[#B:]] = cir.cmp(ge, %[[#A]], %{{.+}}) : !cir.bf16, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NONATIVE: %[[#B:]] = cir.cmp(ge, %[[#A]], %{{.+}}) : !cir.bf16, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.bf16
-  //      NATIVE: %[[#B:]] = cir.cmp(ge, %[[#A]], %{{.+}}) : !cir.bf16, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NATIVE: %[[#B:]] = cir.cmp(ge, %[[#A]], %{{.+}}) : !cir.bf16, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %[[#LHS:]] = sitofp i32 %{{.+}} to bfloat
   // NONATIVE-LLVM: %{{.+}} = fcmp oge bfloat %[[#LHS]], %{{.+}}
@@ -814,12 +815,12 @@ void foo(void) {
 
   test = (h0 >= i0);
   //      NONATIVE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.bf16
-  // NONATIVE-NEXT: %[[#B:]] = cir.cmp(ge, %{{.+}}, %[[#A]]) : !cir.bf16, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  // NONATIVE-NEXT: %[[#B:]] = cir.cmp(ge, %{{.+}}, %[[#A]]) : !cir.bf16, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.bf16
-  // NATIVE-NEXT: %[[#B:]] = cir.cmp(ge, %{{.+}}, %[[#A]]) : !cir.bf16, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  // NATIVE-NEXT: %[[#B:]] = cir.cmp(ge, %{{.+}}, %[[#A]]) : !cir.bf16, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NONATIVE-LLVM: %[[#RHS:]] = sitofp i32 %{{.+}} to bfloat
   // NONATIVE-LLVM-NEXT: %{{.+}} = fcmp oge bfloat %{{.+}}, %[[#RHS]]
@@ -828,11 +829,11 @@ void foo(void) {
   // NATIVE-LLVM-NEXT: %{{.+}} = fcmp oge bfloat %{{.+}}, %[[#RHS]]
 
   test = (h1 == h2);
-  //      NONATIVE: %[[#A:]] = cir.cmp(eq, %{{.+}}, %{{.+}}) : !cir.bf16, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#A]] : !s32i), !u32i
+  //      NONATIVE: %[[#A:]] = cir.cmp(eq, %{{.+}}, %{{.+}}) : !cir.bf16, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#A]] : !cir.bool), !s32i
 
-  //      NATIVE: %[[#A:]] = cir.cmp(eq, %{{.+}}, %{{.+}}) : !cir.bf16, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#A]] : !s32i), !u32i
+  //      NATIVE: %[[#A:]] = cir.cmp(eq, %{{.+}}, %{{.+}}) : !cir.bf16, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#A]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %{{.+}} = fcmp oeq bfloat %{{.+}}, %{{.+}}
 
@@ -841,13 +842,13 @@ void foo(void) {
   test = (h1 == (__bf16)1.0);
   //      NONATIVE: %[[#A:]] = cir.const #cir.fp<1.000000e+00> : !cir.double
   // NONATIVE-NEXT: %[[#B:]] = cir.cast(floating, %[[#A]] : !cir.double), !cir.bf16
-  // NONATIVE-NEXT: %[[#C:]] = cir.cmp(eq, %{{.+}}, %[[#B]]) : !cir.bf16, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#C]] : !s32i), !u32i
+  // NONATIVE-NEXT: %[[#C:]] = cir.cmp(eq, %{{.+}}, %[[#B]]) : !cir.bf16, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#C]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.const #cir.fp<1.000000e+00> : !cir.double
   // NATIVE-NEXT: %[[#B:]] = cir.cast(floating, %[[#A]] : !cir.double), !cir.bf16
-  // NATIVE-NEXT: %[[#C:]] = cir.cmp(eq, %{{.+}}, %[[#B]]) : !cir.bf16, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#C]] : !s32i), !u32i
+  // NATIVE-NEXT: %[[#C:]] = cir.cmp(eq, %{{.+}}, %[[#B]]) : !cir.bf16, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#C]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %{{.+}} = fcmp oeq bfloat %{{.+}}, 0xR3F80
 
@@ -855,12 +856,12 @@ void foo(void) {
 
   test = (h1 == f1);
   //      NONATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  //      NONATIVE: %[[#B:]] = cir.cmp(eq, %[[#A]], %{{.+}}) : !cir.float, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NONATIVE: %[[#B:]] = cir.cmp(eq, %[[#A]], %{{.+}}) : !cir.float, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  //      NATIVE: %[[#B:]] = cir.cmp(eq, %[[#A]], %{{.+}}) : !cir.float, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NATIVE: %[[#B:]] = cir.cmp(eq, %[[#A]], %{{.+}}) : !cir.float, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %[[#A:]] = fpext bfloat %{{.+}} to float
   // NONATIVE-LLVM: %{{.+}} = fcmp oeq float %[[#A]], %{{.+}}
@@ -870,12 +871,12 @@ void foo(void) {
 
   test = (f1 == h1);
   //      NONATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  // NONATIVE-NEXT: %[[#B:]] = cir.cmp(eq, %{{.+}}, %[[#A]]) : !cir.float, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  // NONATIVE-NEXT: %[[#B:]] = cir.cmp(eq, %{{.+}}, %[[#A]]) : !cir.float, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  // NATIVE-NEXT: %[[#B:]] = cir.cmp(eq, %{{.+}}, %[[#A]]) : !cir.float, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  // NATIVE-NEXT: %[[#B:]] = cir.cmp(eq, %{{.+}}, %[[#A]]) : !cir.float, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NONATIVE-LLVM: %[[#RHS:]] = fpext bfloat %{{.+}} to float
   // NONATIVE-LLVM-NEXT: %{{.+}} = fcmp oeq float %{{.+}}, %[[#RHS]]
@@ -885,12 +886,12 @@ void foo(void) {
 
   test = (i0 == h0);
   //      NONATIVE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.bf16
-  //      NONATIVE: %[[#B:]] = cir.cmp(eq, %[[#A]], %{{.+}}) : !cir.bf16, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NONATIVE: %[[#B:]] = cir.cmp(eq, %[[#A]], %{{.+}}) : !cir.bf16, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.bf16
-  //      NATIVE: %[[#B:]] = cir.cmp(eq, %[[#A]], %{{.+}}) : !cir.bf16, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NATIVE: %[[#B:]] = cir.cmp(eq, %[[#A]], %{{.+}}) : !cir.bf16, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %[[#LHS:]] = sitofp i32 %{{.+}} to bfloat
   // NONATIVE-LLVM: %{{.+}} = fcmp oeq bfloat %[[#LHS]], %{{.+}}
@@ -900,12 +901,12 @@ void foo(void) {
 
   test = (h0 == i0);
   //      NONATIVE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.bf16
-  // NONATIVE-NEXT: %[[#B:]] = cir.cmp(eq, %{{.+}}, %[[#A]]) : !cir.bf16, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  // NONATIVE-NEXT: %[[#B:]] = cir.cmp(eq, %{{.+}}, %[[#A]]) : !cir.bf16, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.bf16
-  // NATIVE-NEXT: %[[#B:]] = cir.cmp(eq, %{{.+}}, %[[#A]]) : !cir.bf16, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  // NATIVE-NEXT: %[[#B:]] = cir.cmp(eq, %{{.+}}, %[[#A]]) : !cir.bf16, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NONATIVE-LLVM: %[[#RHS:]] = sitofp i32 %{{.+}} to bfloat
   // NONATIVE-LLVM-NEXT: %{{.+}} = fcmp oeq bfloat %{{.+}}, %[[#RHS]]
@@ -914,11 +915,11 @@ void foo(void) {
   // NATIVE-LLVM-NEXT: %{{.+}} = fcmp oeq bfloat %{{.+}}, %[[#RHS]]
 
   test = (h1 != h2);
-  //      NONATIVE: %[[#A:]] = cir.cmp(ne, %{{.+}}, %{{.+}}) : !cir.bf16, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#A]] : !s32i), !u32i
+  //      NONATIVE: %[[#A:]] = cir.cmp(ne, %{{.+}}, %{{.+}}) : !cir.bf16, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#A]] : !cir.bool), !s32i
 
-  //      NATIVE: %[[#A:]] = cir.cmp(ne, %{{.+}}, %{{.+}}) : !cir.bf16, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#A]] : !s32i), !u32i
+  //      NATIVE: %[[#A:]] = cir.cmp(ne, %{{.+}}, %{{.+}}) : !cir.bf16, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#A]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %{{.+}} = fcmp une bfloat %{{.+}}, %{{.+}}
 
@@ -926,13 +927,13 @@ void foo(void) {
 
   test = (h1 != (__bf16)1.0);
   //      NONATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.double), !cir.bf16
-  // NONATIVE-NEXT: %[[#B:]] = cir.cmp(ne, %{{.+}}, %[[#A]]) : !cir.bf16, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  // NONATIVE-NEXT: %[[#B:]] = cir.cmp(ne, %{{.+}}, %[[#A]]) : !cir.bf16, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.const #cir.fp<1.000000e+00> : !cir.double
   // NATIVE-NEXT: %[[#B:]] = cir.cast(floating, %[[#A]] : !cir.double), !cir.bf16
-  // NATIVE-NEXT: %[[#C:]] = cir.cmp(ne, %{{.+}}, %[[#B]]) : !cir.bf16, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#C]] : !s32i), !u32i
+  // NATIVE-NEXT: %[[#C:]] = cir.cmp(ne, %{{.+}}, %[[#B]]) : !cir.bf16, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#C]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %{{.+}} = fcmp une bfloat %{{.+}}, 0xR3F80
 
@@ -940,12 +941,12 @@ void foo(void) {
 
   test = (h1 != f1);
   //      NONATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  //      NONATIVE: %[[#B:]] = cir.cmp(ne, %[[#A]], %{{.+}}) : !cir.float, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NONATIVE: %[[#B:]] = cir.cmp(ne, %[[#A]], %{{.+}}) : !cir.float, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  //      NATIVE: %[[#B:]] = cir.cmp(ne, %[[#A]], %{{.+}}) : !cir.float, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NATIVE: %[[#B:]] = cir.cmp(ne, %[[#A]], %{{.+}}) : !cir.float, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %[[#LHS:]] = fpext bfloat %{{.+}} to float
   // NONATIVE-LLVM: %{{.+}} = fcmp une float %[[#LHS]], %{{.+}}
@@ -955,12 +956,12 @@ void foo(void) {
 
   test = (f1 != h1);
   //      NONATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  // NONATIVE-NEXT: %[[#B:]] = cir.cmp(ne, %{{.+}}, %[[#A]]) : !cir.float, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  // NONATIVE-NEXT: %[[#B:]] = cir.cmp(ne, %{{.+}}, %[[#A]]) : !cir.float, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  // NATIVE-NEXT: %[[#B:]] = cir.cmp(ne, %{{.+}}, %[[#A]]) : !cir.float, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  // NATIVE-NEXT: %[[#B:]] = cir.cmp(ne, %{{.+}}, %[[#A]]) : !cir.float, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NONATIVE-LLVM: %[[#RHS:]] = fpext bfloat %{{.+}} to float
   // NONATIVE-LLVM-NEXT: %{{.+}} = fcmp une float %{{.+}}, %[[#RHS]]
@@ -970,12 +971,12 @@ void foo(void) {
 
   test = (i0 != h0);
   //      NONATIVE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.bf16
-  //      NONATIVE: %[[#B:]] = cir.cmp(ne, %[[#A]], %{{.+}}) : !cir.bf16, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NONATIVE: %[[#B:]] = cir.cmp(ne, %[[#A]], %{{.+}}) : !cir.bf16, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.bf16
-  //      NATIVE: %[[#B:]] = cir.cmp(ne, %[[#A]], %{{.+}}) : !cir.bf16, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  //      NATIVE: %[[#B:]] = cir.cmp(ne, %[[#A]], %{{.+}}) : !cir.bf16, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   // NONATIVE-LLVM: %[[#LHS:]] = sitofp i32 %{{.+}} to bfloat
   // NONATIVE-LLVM: %{{.+}} = fcmp une bfloat %[[#LHS]], %{{.+}}
@@ -985,12 +986,12 @@ void foo(void) {
 
   test = (h0 != i0);
   //      NONATIVE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.bf16
-  // NONATIVE-NEXT: %[[#B:]] = cir.cmp(ne, %{{.+}}, %[[#A]]) : !cir.bf16, !s32i
-  // NONATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  // NONATIVE-NEXT: %[[#B:]] = cir.cmp(ne, %{{.+}}, %[[#A]]) : !cir.bf16, !cir.bool
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NATIVE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.bf16
-  // NATIVE-NEXT: %[[#B:]] = cir.cmp(ne, %{{.+}}, %[[#A]]) : !cir.bf16, !s32i
-  // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
+  // NATIVE-NEXT: %[[#B:]] = cir.cmp(ne, %{{.+}}, %[[#A]]) : !cir.bf16, !cir.bool
+  // NATIVE-NEXT: %{{.+}} = cir.cast(bool_to_int, %[[#B]] : !cir.bool), !s32i
 
   //      NONATIVE-LLVM: %[[#RHS:]] = sitofp i32 %{{.+}} to bfloat
   // NONATIVE-LLVM-NEXT: %{{.+}} = fcmp une bfloat %{{.+}}, %[[#RHS]]

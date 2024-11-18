@@ -154,9 +154,8 @@ module {
         cir.scope {
           %6 = cir.load %1 : !cir.ptr<!s32i>, !s32i
           %7 = cir.const #cir.int<0> : !s32i
-          %8 = cir.cmp(ge, %6, %7) : !s32i, !s32i
-          %9 = cir.cast(int_to_bool, %8 : !s32i), !cir.bool
-          cir.if %9 {
+          %8 = cir.cmp(ge, %6, %7) : !s32i, !cir.bool
+          cir.if %8 {
             cir.break
           }
         }

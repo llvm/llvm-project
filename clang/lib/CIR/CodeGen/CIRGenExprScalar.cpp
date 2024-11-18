@@ -947,12 +947,11 @@ public:
           // Other kinds of vectors.  Element-wise comparison returning
           // a vector.
           cir::CmpOpKind Kind = ClangCmpToCIRCmp(E->getOpcode());
-          return Builder.create<cir::VecCmpOp>(CGF.getLoc(BOInfo.Loc),
-                                               CGF.getCIRType(BOInfo.FullType),
-                                               Kind, BOInfo.LHS, BOInfo.RHS);
+          Result = Builder.create<cir::VecCmpOp>(
+              CGF.getLoc(BOInfo.Loc), CGF.getCIRType(BOInfo.FullType), Kind,
+              BOInfo.LHS, BOInfo.RHS);
         }
-      }
-      if (BOInfo.isFixedPointOp()) {
+      } else if (BOInfo.isFixedPointOp()) {
         assert(0 && "not implemented");
       } else {
         // FIXME(cir): handle another if above for CIR equivalent on
@@ -966,9 +965,7 @@ public:
         }
 
         cir::CmpOpKind Kind = ClangCmpToCIRCmp(E->getOpcode());
-        return Builder.create<cir::CmpOp>(CGF.getLoc(BOInfo.Loc),
-                                          CGF.getCIRType(BOInfo.FullType), Kind,
-                                          BOInfo.LHS, BOInfo.RHS);
+        Result = Builder.createCompare(CGF.getLoc(BOInfo.Loc), Kind, LHS, RHS);
       }
     } else { // Complex Comparison: can only be an equality comparison.
       assert(0 && "not implemented");

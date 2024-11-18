@@ -228,7 +228,7 @@ void foo(void) {
   // CHECK-LLVM-NEXT: %{{.+}} = fsub half %{{.+}}, %[[#A]]
 
   test = (h2 < h0);
-  //      CHECK: %[[#A:]] = cir.cmp(lt, %{{.+}}, %{{.+}}) : !cir.f16, !s32i
+  //      CHECK: %[[#A:]] = cir.cmp(lt, %{{.+}}, %{{.+}}) : !cir.f16, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#A]] : !s32i), !u32i
 
   // CHECK-LLVM: %{{.+}} = fcmp olt half %{{.+}}, %{{.+}}
@@ -236,14 +236,14 @@ void foo(void) {
   test = (h2 < (__fp16)42.0);
   //      CHECK: %[[#A:]] = cir.const #cir.fp<4.200000e+01> : !cir.double
   // CHECK-NEXT: %[[#B:]] = cir.cast(floating, %[[#A]] : !cir.double), !cir.f16
-  // CHECK-NEXT: %[[#C:]] = cir.cmp(lt, %{{.+}}, %[[#B]]) : !cir.f16, !s32i
+  // CHECK-NEXT: %[[#C:]] = cir.cmp(lt, %{{.+}}, %[[#B]]) : !cir.f16, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#C]] : !s32i), !u32i
 
   // CHECK-LLVM: %{{.+}} = fcmp olt half %{{.+}}, 0xH5140
 
   test = (h2 < f0);
   //      CHECK: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.f16), !cir.float
-  //      CHECK: %[[#B:]] = cir.cmp(lt, %[[#A]], %{{.+}}) : !cir.float, !s32i
+  //      CHECK: %[[#B:]] = cir.cmp(lt, %[[#A]], %{{.+}}) : !cir.float, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
 
   // CHECK-LLVM: %[[#A:]] = fpext half %{{.+}} to float
@@ -251,7 +251,7 @@ void foo(void) {
 
   test = (f2 < h0);
   //      CHECK: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.f16), !cir.float
-  // CHECK-NEXT: %[[#B:]] = cir.cmp(lt, %{{.+}}, %[[#A]]) : !cir.float, !s32i
+  // CHECK-NEXT: %[[#B:]] = cir.cmp(lt, %{{.+}}, %[[#A]]) : !cir.float, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
 
   //      CHECK-LLVM: %[[#A:]] = fpext half %{{.=}} to float
@@ -259,7 +259,7 @@ void foo(void) {
 
   test = (i0 < h0);
   //      CHECK: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.f16
-  //      CHECK: %[[#B:]] = cir.cmp(lt, %[[#A]], %{{.+}}) : !cir.f16, !s32i
+  //      CHECK: %[[#B:]] = cir.cmp(lt, %[[#A]], %{{.+}}) : !cir.f16, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
 
   // CHECK-LLVM: %[[#A:]] = sitofp i32 %{{.+}} to half
@@ -267,14 +267,14 @@ void foo(void) {
 
   test = (h0 < i0);
   //      CHECK: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.f16
-  // CHECK-NEXT: %[[#B:]] = cir.cmp(lt, %{{.+}}, %[[#A]]) : !cir.f16, !s32i
+  // CHECK-NEXT: %[[#B:]] = cir.cmp(lt, %{{.+}}, %[[#A]]) : !cir.f16, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
 
   //      CHECK-LLVM: %[[#A:]] = sitofp i32 %{{.+}} to half
   // CHECK-LLVM-NEXT: %{{.+}} = fcmp olt half %{{.+}}, %[[#A]]
 
   test = (h0 > h2);
-  //      CHECK: %[[#A:]] = cir.cmp(gt, %{{.+}}, %{{.+}}) : !cir.f16, !s32i
+  //      CHECK: %[[#A:]] = cir.cmp(gt, %{{.+}}, %{{.+}}) : !cir.f16, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#A]] : !s32i), !u32i
 
   // CHECK-LLVM: %{{.+}} = fcmp ogt half %{{.+}}, %{{.+}}
@@ -282,14 +282,14 @@ void foo(void) {
   test = ((__fp16)42.0 > h2);
   //      CHECK: %[[#A:]] = cir.const #cir.fp<4.200000e+01> : !cir.double
   // CHECK-NEXT: %[[#B:]] = cir.cast(floating, %[[#A]] : !cir.double), !cir.f16
-  //      CHECK: %[[#C:]] = cir.cmp(gt, %[[#B]], %{{.+}}) : !cir.f16, !s32i
+  //      CHECK: %[[#C:]] = cir.cmp(gt, %[[#B]], %{{.+}}) : !cir.f16, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#C]] : !s32i), !u32i
 
   // CHECK-LLVM: %{{.+}} = fcmp ogt half 0xH5140, %{{.+}}
 
   test = (h0 > f2);
   //      CHECK: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.f16), !cir.float
-  //      CHECK: %[[#B:]] = cir.cmp(gt, %[[#A]], %{{.+}}) : !cir.float, !s32i
+  //      CHECK: %[[#B:]] = cir.cmp(gt, %[[#A]], %{{.+}}) : !cir.float, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
 
   // CHECK-LLVM: %[[#LHS:]] = fpext half %{{.=}} to float
@@ -297,7 +297,7 @@ void foo(void) {
 
   test = (f0 > h2);
   //      CHECK: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.f16), !cir.float
-  // CHECK-NEXT: %[[#B:]] = cir.cmp(gt, %{{.+}}, %[[#A]]) : !cir.float, !s32i
+  // CHECK-NEXT: %[[#B:]] = cir.cmp(gt, %{{.+}}, %[[#A]]) : !cir.float, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
 
   //      CHECK-LLVM: %[[#RHS:]] = fpext half %{{.+}} to float
@@ -305,7 +305,7 @@ void foo(void) {
 
   test = (i0 > h0);
   //      CHECK: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.f16
-  //      CHECK: %[[#B:]] = cir.cmp(gt, %[[#A]], %{{.+}}) : !cir.f16, !s32i
+  //      CHECK: %[[#B:]] = cir.cmp(gt, %[[#A]], %{{.+}}) : !cir.f16, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
 
   // CHECK-LLVM: %[[#LHS:]] = sitofp i32 %{{.+}} to half
@@ -313,14 +313,14 @@ void foo(void) {
 
   test = (h0 > i0);
   //      CHECK: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.f16
-  // CHECK-NEXT: %[[#B:]] = cir.cmp(gt, %{{.+}}, %[[#A]]) : !cir.f16, !s32i
+  // CHECK-NEXT: %[[#B:]] = cir.cmp(gt, %{{.+}}, %[[#A]]) : !cir.f16, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
 
   //      CHECK-LLVM: %[[#RHS:]] = sitofp i32 %{{.+}} to half
   // CHECK-LLVM-NEXT: %{{.+}} = fcmp ogt half %{{.+}}, %[[#RHS]]
 
   test = (h2 <= h0);
-  //      CHECK: %[[#A:]] = cir.cmp(le, %{{.+}}, %{{.+}}) : !cir.f16, !s32i
+  //      CHECK: %[[#A:]] = cir.cmp(le, %{{.+}}, %{{.+}}) : !cir.f16, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#A]] : !s32i), !u32i
 
   // CHECK-LLVM: %{{.+}} = fcmp ole half %{{.+}}, %{{.+}}
@@ -328,14 +328,14 @@ void foo(void) {
   test = (h2 <= (__fp16)42.0);
   //      CHECK: %[[#A:]] = cir.const #cir.fp<4.200000e+01> : !cir.double
   // CHECK-NEXT: %[[#B:]] = cir.cast(floating, %[[#A]] : !cir.double), !cir.f16
-  // CHECK-NEXT: %[[#C:]] = cir.cmp(le, %{{.+}}, %[[#B]]) : !cir.f16, !s32i
+  // CHECK-NEXT: %[[#C:]] = cir.cmp(le, %{{.+}}, %[[#B]]) : !cir.f16, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#C]] : !s32i), !u32i
 
   // CHECK-LLVM: %{{.+}} = fcmp ole half %{{.+}}, 0xH5140
 
   test = (h2 <= f0);
   //      CHECK: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.f16), !cir.float
-  //      CHECK: %[[#B:]] = cir.cmp(le, %[[#A]], %{{.+}}) : !cir.float, !s32i
+  //      CHECK: %[[#B:]] = cir.cmp(le, %[[#A]], %{{.+}}) : !cir.float, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
 
   // CHECK-LLVM: %[[#LHS:]] = fpext half %{{.+}} to float
@@ -343,7 +343,7 @@ void foo(void) {
 
   test = (f2 <= h0);
   //      CHECK: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.f16), !cir.float
-  // CHECK-NEXT: %[[#B:]] = cir.cmp(le, %{{.+}}, %[[#A]]) : !cir.float, !s32i
+  // CHECK-NEXT: %[[#B:]] = cir.cmp(le, %{{.+}}, %[[#A]]) : !cir.float, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
 
   //      CHECK-LLVM: %[[#RHS:]] = fpext half %{{.+}} to float
@@ -351,7 +351,7 @@ void foo(void) {
 
   test = (i0 <= h0);
   //      CHECK: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.f16
-  //      CHECK: %[[#B:]] = cir.cmp(le, %[[#A]], %{{.+}}) : !cir.f16, !s32i
+  //      CHECK: %[[#B:]] = cir.cmp(le, %[[#A]], %{{.+}}) : !cir.f16, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
 
   // CHECK-LLVM: %[[#LHS:]] = sitofp i32 %{{.+}} to half
@@ -359,14 +359,14 @@ void foo(void) {
 
   test = (h0 <= i0);
   //      CHECK: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.f16
-  // CHECK-NEXT: %[[#B:]] = cir.cmp(le, %{{.+}}, %[[#A]]) : !cir.f16, !s32i
+  // CHECK-NEXT: %[[#B:]] = cir.cmp(le, %{{.+}}, %[[#A]]) : !cir.f16, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
 
   //      CHECK-LLVM: %[[#RHS:]] = sitofp i32 %{{.+}} to half
   // CHECK-LLVM-NEXT: %{{.+}} = fcmp ole half %{{.+}}, %[[#RHS]]
 
   test = (h0 >= h2);
-  //      CHECK: %[[#A:]] = cir.cmp(ge, %{{.+}}, %{{.+}}) : !cir.f16, !s32i
+  //      CHECK: %[[#A:]] = cir.cmp(ge, %{{.+}}, %{{.+}}) : !cir.f16, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#A]] : !s32i), !u32i
 
   // CHECK-LLVM: %{{.+}} = fcmp oge half %{{.+}}, %{{.+}}
@@ -375,14 +375,14 @@ void foo(void) {
   //      CHECK: %[[#A:]] = cir.const #cir.fp<2.000000e+00> : !cir.double
   // CHECK-NEXT: %[[#B:]] = cir.unary(minus, %[[#A]]) : !cir.double, !cir.double
   // CHECK-NEXT: %[[#C:]] = cir.cast(floating, %[[#B]] : !cir.double), !cir.f16
-  // CHECK-NEXT: %[[#D:]] = cir.cmp(ge, %{{.+}}, %[[#C]]) : !cir.f16, !s32i
+  // CHECK-NEXT: %[[#D:]] = cir.cmp(ge, %{{.+}}, %[[#C]]) : !cir.f16, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#D]] : !s32i), !u32i
 
   // CHECK-LLVM: %{{.+}} = fcmp oge half %{{.+}}, 0xHC000
 
   test = (h0 >= f2);
   //      CHECK: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.f16), !cir.float
-  //      CHECK: %[[#B:]] = cir.cmp(ge, %[[#A]], %{{.+}}) : !cir.float, !s32i
+  //      CHECK: %[[#B:]] = cir.cmp(ge, %[[#A]], %{{.+}}) : !cir.float, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
 
   // CHECK-LLVM: %[[#LHS:]] = fpext half %{{.+}} to float
@@ -390,7 +390,7 @@ void foo(void) {
 
   test = (f0 >= h2);
   //      CHECK: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.f16), !cir.float
-  // CHECK-NEXT: %[[#B:]] = cir.cmp(ge, %{{.+}}, %[[#A]]) : !cir.float, !s32i
+  // CHECK-NEXT: %[[#B:]] = cir.cmp(ge, %{{.+}}, %[[#A]]) : !cir.float, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
 
   //      CHECK-LLVM: %[[#RHS:]] = fpext half %{{.+}} to float
@@ -398,7 +398,7 @@ void foo(void) {
 
   test = (i0 >= h0);
   //      CHECK: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.f16
-  //      CHECK: %[[#B:]] = cir.cmp(ge, %[[#A]], %{{.+}}) : !cir.f16, !s32i
+  //      CHECK: %[[#B:]] = cir.cmp(ge, %[[#A]], %{{.+}}) : !cir.f16, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
 
   // CHECK-LLVM: %[[#LHS:]] = sitofp i32 %{{.+}} to half
@@ -406,14 +406,14 @@ void foo(void) {
 
   test = (h0 >= i0);
   //      CHECK: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.f16
-  // CHECK-NEXT: %[[#B:]] = cir.cmp(ge, %{{.+}}, %[[#A]]) : !cir.f16, !s32i
+  // CHECK-NEXT: %[[#B:]] = cir.cmp(ge, %{{.+}}, %[[#A]]) : !cir.f16, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
 
   //      CHECK-LLVM: %[[#RHS:]] = sitofp i32 %{{.+}} to half
   // CHECK-LLVM-NEXT: %{{.+}} = fcmp oge half %{{.+}}, %[[#RHS]]
 
   test = (h1 == h2);
-  //      CHECK: %[[#A:]] = cir.cmp(eq, %{{.+}}, %{{.+}}) : !cir.f16, !s32i
+  //      CHECK: %[[#A:]] = cir.cmp(eq, %{{.+}}, %{{.+}}) : !cir.f16, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#A]] : !s32i), !u32i
 
   // CHECK-LLVM: %{{.+}} = fcmp oeq half %{{.+}}, %{{.+}}
@@ -421,14 +421,14 @@ void foo(void) {
   test = (h1 == (__fp16)1.0);
   //      CHECK: %[[#A:]] = cir.const #cir.fp<1.000000e+00> : !cir.double
   // CHECK-NEXT: %[[#B:]] = cir.cast(floating, %[[#A]] : !cir.double), !cir.f16
-  // CHECK-NEXT: %[[#C:]] = cir.cmp(eq, %{{.+}}, %[[#B]]) : !cir.f16, !s32i
+  // CHECK-NEXT: %[[#C:]] = cir.cmp(eq, %{{.+}}, %[[#B]]) : !cir.f16, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#C]] : !s32i), !u32i
 
   // CHECK-LLVM: %{{.+}} = fcmp oeq half %{{.+}}, 0xH3C00
 
   test = (h1 == f1);
   //      CHECK: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.f16), !cir.float
-  //      CHECK: %[[#B:]] = cir.cmp(eq, %[[#A]], %{{.+}}) : !cir.float, !s32i
+  //      CHECK: %[[#B:]] = cir.cmp(eq, %[[#A]], %{{.+}}) : !cir.float, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
 
   // CHECK-LLVM: %[[#LHS:]] = fpext half %{{.+}} to float
@@ -436,7 +436,7 @@ void foo(void) {
 
   test = (f1 == h1);
   //      CHECK: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.f16), !cir.float
-  // CHECK-NEXT: %[[#B:]] = cir.cmp(eq, %{{.+}}, %[[#A]]) : !cir.float, !s32i
+  // CHECK-NEXT: %[[#B:]] = cir.cmp(eq, %{{.+}}, %[[#A]]) : !cir.float, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
 
   //      CHECK-LLVM: %[[#RHS:]] = fpext half %{{.+}} to float
@@ -444,7 +444,7 @@ void foo(void) {
 
   test = (i0 == h0);
   //      CHECK: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.f16
-  //      CHECK: %[[#B:]] = cir.cmp(eq, %[[#A]], %{{.+}}) : !cir.f16, !s32i
+  //      CHECK: %[[#B:]] = cir.cmp(eq, %[[#A]], %{{.+}}) : !cir.f16, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
 
   // CHECK-LLVM: %[[#LHS:]] = sitofp i32 %{{.+}} to half
@@ -452,14 +452,14 @@ void foo(void) {
 
   test = (h0 == i0);
   //      CHECK: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.f16
-  // CHECK-NEXT: %[[#B:]] = cir.cmp(eq, %{{.+}}, %[[#A]]) : !cir.f16, !s32i
+  // CHECK-NEXT: %[[#B:]] = cir.cmp(eq, %{{.+}}, %[[#A]]) : !cir.f16, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
 
   //      CHECK-LLVM: %[[#RHS:]] = sitofp i32 %{{.+}} to half
   // CHECK-LLVM-NEXT: %{{.=}} = fcmp oeq half %{{.+}}, %[[#RHS]]
 
   test = (h1 != h2);
-  //      CHECK: %[[#A:]] = cir.cmp(ne, %{{.+}}, %{{.+}}) : !cir.f16, !s32i
+  //      CHECK: %[[#A:]] = cir.cmp(ne, %{{.+}}, %{{.+}}) : !cir.f16, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#A]] : !s32i), !u32i
 
   // CHECK-LLVM: %{{.+}} = fcmp une half %{{.+}}, %{{.+}}
@@ -467,14 +467,14 @@ void foo(void) {
   test = (h1 != (__fp16)1.0);
   //      CHECK: %[[#A:]] = cir.const #cir.fp<1.000000e+00> : !cir.double
   // CHECK-NEXT: %[[#B:]] = cir.cast(floating, %[[#A]] : !cir.double), !cir.f16
-  // CHECK-NEXT: %[[#C:]] = cir.cmp(ne, %{{.+}}, %[[#B]]) : !cir.f16, !s32i
+  // CHECK-NEXT: %[[#C:]] = cir.cmp(ne, %{{.+}}, %[[#B]]) : !cir.f16, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#C]] : !s32i), !u32i
 
   // CHECK-LLVM: %{{.+}} = fcmp une half %{{.+}}, 0xH3C00
 
   test = (h1 != f1);
   //      CHECK: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.f16), !cir.float
-  //      CHECK: %[[#B:]] = cir.cmp(ne, %[[#A]], %{{.+}}) : !cir.float, !s32i
+  //      CHECK: %[[#B:]] = cir.cmp(ne, %[[#A]], %{{.+}}) : !cir.float, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
 
   // CHECK-LLVM: %[[#LHS:]] = fpext half %{{.=}} to float
@@ -482,7 +482,7 @@ void foo(void) {
 
   test = (f1 != h1);
   //      CHECK: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.f16), !cir.float
-  // CHECK-NEXT: %[[#B:]] = cir.cmp(ne, %{{.+}}, %[[#A]]) : !cir.float, !s32i
+  // CHECK-NEXT: %[[#B:]] = cir.cmp(ne, %{{.+}}, %[[#A]]) : !cir.float, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
 
   //      CHECK-LLVM: %[[#A:]] = fpext half %{{.+}} to float
@@ -490,7 +490,7 @@ void foo(void) {
 
   test = (i0 != h0);
   //      CHECK: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.f16
-  //      CHECK: %[[#B:]] = cir.cmp(ne, %[[#A]], %{{.+}}) : !cir.f16, !s32i
+  //      CHECK: %[[#B:]] = cir.cmp(ne, %[[#A]], %{{.+}}) : !cir.f16, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
 
   // CHECK-LLVM: %[[#LHS:]] = sitofp i32 %{{.+}} to half
@@ -498,7 +498,7 @@ void foo(void) {
 
   test = (h0 != i0);
   //      CHECK: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.f16
-  // CHECK-NEXT: %[[#B:]] = cir.cmp(ne, %{{.+}}, %[[#A]]) : !cir.f16, !s32i
+  // CHECK-NEXT: %[[#B:]] = cir.cmp(ne, %{{.+}}, %[[#A]]) : !cir.f16, !cir.bool
   // CHECK-NEXT: %{{.+}} = cir.cast(integral, %[[#B]] : !s32i), !u32i
 
   //      CHECK-LLVM: %[[#RHS:]] = sitofp i32 %{{.+}} to half

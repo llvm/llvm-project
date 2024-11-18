@@ -1437,3 +1437,13 @@ cir.global external @f = #cir.fp<0x7FC00000 : !cir.float> : !cir.float
 // expected-error @below {{unexpected decimal integer literal for a floating point value}}
 // expected-note @below {{add a trailing dot to make the literal a float}}
 cir.global external @f = #cir.fp<42> : !cir.float
+
+// -----
+
+// Verify
+!s32i = !cir.int<s, 32>
+cir.func @cast0(%arg0: !s32i, %arg1: !s32i) {
+  // expected-error @below {{custom op 'cir.cmp' invalid kind of Type specified}}
+  %1 = cir.cmp(eq, %arg0, %arg1): !s32i, !s32i
+  cir.return
+}
