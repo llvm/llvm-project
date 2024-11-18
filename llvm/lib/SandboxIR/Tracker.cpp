@@ -10,12 +10,75 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/StructuralHash.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include <sstream>
 
 using namespace llvm::sandboxir;
 
 #ifndef NDEBUG
+
+std::string IRSnapshotChecker::dumpIR(const llvm::Function &F) const {
+  std::string Result;
+  raw_string_ostream SS(Result);
+  F.print(SS, /*AssemblyAnnotationWriter=*/nullptr);
+  return Result;
+}
+
+IRSnapshotChecker::ContextSnapshot IRSnapshotChecker::takeSnapshot() const {
+  ContextSnapshot Result;
+  for (const auto &Entry : Ctx.LLVMModuleToModuleMap)
+    for (const auto &F : *Entry.first) {
+      FunctionSnapshot Snapshot;
+      Snapshot.Hash = StructuralHash(F, /*DetailedHash=*/true);
+      Snapshot.TextualIR = dumpIR(F);
+      Result[&F] = Snapshot;
+    }
+  return Result;
+}
+
+bool IRSnapshotChecker::diff(const ContextSnapshot &Orig,
+                             const ContextSnapshot &Curr) const {
+  bool DifferenceFound = false;
+  for (const auto &[F, OrigFS] : Orig) {
+    auto CurrFSIt = Curr.find(F);
+    if (CurrFSIt == Curr.end()) {
+      DifferenceFound = true;
+      dbgs() << "Function " << F->getName() << " not found in current IR.\n";
+      dbgs() << OrigFS.TextualIR << "\n";
+      continue;
+    }
+    const FunctionSnapshot &CurrFS = CurrFSIt->second;
+    if (OrigFS.Hash != CurrFS.Hash) {
+      DifferenceFound = true;
+      dbgs() << "Found IR difference in Function " << F->getName() << "\n";
+      dbgs() << "Original:\n" << OrigFS.TextualIR << "\n";
+      dbgs() << "Current:\n" << CurrFS.TextualIR << "\n";
+    }
+  }
+  // Check that Curr doesn't contain any new functions.
+  for (const auto &[F, CurrFS] : Curr) {
+    if (!Orig.contains(F)) {
+      DifferenceFound = true;
+      dbgs() << "Function " << F->getName()
+             << " found in current IR but not in original snapshot.\n";
+      dbgs() << CurrFS.TextualIR << "\n";
+    }
+  }
+  return DifferenceFound;
+}
+
+void IRSnapshotChecker::save() { OrigContextSnapshot = takeSnapshot(); }
+
+void IRSnapshotChecker::expectNoDiff() {
+  ContextSnapshot CurrContextSnapshot = takeSnapshot();
+  if (diff(OrigContextSnapshot, CurrContextSnapshot)) {
+    llvm_unreachable(
+        "Original and current IR differ! Probably a checkpointing bug.");
+  }
+}
+
 void UseSet::dump() const {
   dump(dbgs());
   dbgs() << "\n";
@@ -275,7 +338,12 @@ void CmpSwapOperands::dump() const {
 }
 #endif
 
-void Tracker::save() { State = TrackerState::Record; }
+void Tracker::save() {
+  State = TrackerState::Record;
+#if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
+  SnapshotChecker.save();
+#endif
+}
 
 void Tracker::revert() {
   assert(State == TrackerState::Record && "Forgot to save()!");
@@ -283,6 +351,9 @@ void Tracker::revert() {
   for (auto &Change : reverse(Changes))
     Change->revert(*this);
   Changes.clear();
+#if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
+  SnapshotChecker.expectNoDiff();
+#endif
 }
 
 void Tracker::accept() {
