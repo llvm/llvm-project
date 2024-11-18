@@ -39,6 +39,11 @@ constexpr float SIN_K_PI_OVER_32[64] = {
     -0x1.6a09e6p-1, -0x1.44cf32p-1, -0x1.1c73b4p-1, -0x1.e2b5d4p-2,
     -0x1.87de2ap-2, -0x1.294062p-2, -0x1.8f8b84p-3, -0x1.917a6cp-4};
 
+static constexpr float THIRTYTWO_OVER_PI[4] = {
+//0x1.45fp3, 0x1.837p-12, -0x1.b1b8p-28, -0x1.f568p-43
+  0x1.46p3, -0x1.9f4p-10, 0x1.b94p-22, -0x1.bcp-36
+};
+
 LIBC_INLINE int32_t range_reduction_sincospif16(float x, float &y) {
   float kf = fputil::nearest_integer(x * 32);
   y = fputil::multiply_add<float>(x, 32.0, -kf);
@@ -46,11 +51,18 @@ LIBC_INLINE int32_t range_reduction_sincospif16(float x, float &y) {
   return static_cast<int32_t>(kf);
 }
 
-LIBC_INLINE void sincospif16_eval(float xf, float &sin_k, float &cos_k,
-                                  float &sin_y, float &cosm1_y) {
-  float y;
-  int32_t k = range_reduction_sincospif16(xf, y);
+LIBC_INLINE int32_t range_reduction_sincosf16(float x, float &y) {
+  double xd = x;
+  double prod = xd * 0x1.45f306dc9c883p3;
+  double kf = fputil::nearest_integer(prod);
+  double yd = prod - kf;
 
+  y = static_cast<float>(yd);
+  return static_cast<int32_t>(kf);
+}
+
+static LIBC_INLINE void sincosf16_poly_eval(int32_t k, float y, float &sin_k, float &cos_k, float &sin_y, float &cosm1_y) {
+  
   sin_k = SIN_K_PI_OVER_32[k & 63];
   cos_k = SIN_K_PI_OVER_32[(k + 16) & 63];
 
@@ -70,6 +82,21 @@ LIBC_INLINE void sincospif16_eval(float xf, float &sin_k, float &cos_k,
   // > P = fpminimax(cos(y * pi/32), [|0, 2, 4, 6|],[|1, SG...|], [0, 0.5]);
   cosm1_y = ysq * fputil::polyeval(ysq, -0x1.3bd3ccp-8f, 0x1.03a61ap-18f,
                                    0x1.a6f7a2p-29f);
+}
+
+LIBC_INLINE void sincosf16_eval(float xf, float &sin_k, float &cos_k, float &sin_y, float &cosm1_y) {
+  float y;
+  int32_t k = range_reduction_sincosf16(xf, y);
+
+  sincosf16_poly_eval(k, y, sin_k, cos_k, sin_y, cosm1_y);
+}
+
+LIBC_INLINE void sincospif16_eval(float xf, float &sin_k, float &cos_k,
+                                  float &sin_y, float &cosm1_y) {
+  float y;
+  int32_t k = range_reduction_sincospif16(xf, y);
+  
+  sincosf16_poly_eval(k, y, sin_k, cos_k, sin_y, cosm1_y);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
