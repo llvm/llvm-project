@@ -227,7 +227,7 @@ void initializePEIPass(PassRegistry &);
 void initializePHIEliminationPass(PassRegistry &);
 void initializePartiallyInlineLibCallsLegacyPassPass(PassRegistry &);
 void initializePatchableFunctionPass(PassRegistry &);
-void initializePeepholeOptimizerPass(PassRegistry &);
+void initializePeepholeOptimizerLegacyPass(PassRegistry &);
 void initializePhiValuesWrapperPassPass(PassRegistry &);
 void initializePhysicalRegisterUsageInfoWrapperLegacyPass(PassRegistry &);
 void initializePlaceBackedgeSafepointsLegacyPassPass(PassRegistry &);

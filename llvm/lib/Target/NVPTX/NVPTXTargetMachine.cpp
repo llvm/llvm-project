@@ -498,6 +498,6 @@ void NVPTXPassConfig::addMachineSSAOptimization() {
   addPass(&MachineSinkingID);
   printAndVerify("After Machine LICM, CSE and Sinking passes");
 
-  addPass(&PeepholeOptimizerID);
+  addPass(&PeepholeOptimizerLegacyID);
   printAndVerify("After codegen peephole optimization pass");
 }
