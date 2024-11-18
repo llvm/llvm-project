@@ -240,7 +240,10 @@ Token::Type Token::getTokenType(char Identifier) {
 // We determine if a token has meaningful text behind
 // if the right of previous token contains anything that is
 // not a newline
-// For example: "Stuff {{#Section}}"
+// For example: 
+//  "Stuff {{#Section}}" (returns true) 
+//   vs 
+//  "{{#Section}} \n" (returns false)
 // We make an exception for when previous token is empty
 // and the current token is the second token
 // For example: "{{#Section}}"
@@ -258,10 +261,8 @@ bool hasTextBehind(size_t Idx, const ArrayRef<Token> &Tokens) {
 }
 
 // Function to check if there's no meaningful text ahead
-// We determine if a token has no meaningful text behind
-// if the left of previous token is empty spaces or tabs followed
-// by a newline
-// For example: "{{#Section}}  \n"
+// We determine if a token has text ahead if the left of previous 
+// token does not start with a newline
 bool hasTextAhead(size_t Idx, const ArrayRef<Token> &Tokens) {
   if (Idx >= Tokens.size() - 1)
     return true;
@@ -288,7 +289,7 @@ bool requiresCleanUp(Token::Type T) {
 //  "{{! Comment }} \nLine 2"
 // would be considered as no text ahead and should be render as
 //  " Line 2"
-void stripTokenAhead(SmallVector<Token> &Tokens, size_t Idx) {
+void stripTokenAhead(SmallVectorImpl<Token> &Tokens, size_t Idx) {
   Token &NextToken = Tokens[Idx + 1];
   StringRef NextTokenBody = NextToken.getTokenBody();
   // cut off the leading newline which could be \n or \r\n
@@ -306,7 +307,7 @@ void stripTokenAhead(SmallVector<Token> &Tokens, size_t Idx) {
 //  "A"
 // The exception for this is partial tag which requires us to
 // keep track of the indentation once it's rendered.
-void stripTokenBefore(SmallVector<Token> &Tokens, size_t Idx,
+void stripTokenBefore(SmallVectorImpl<Token> &Tokens, size_t Idx,
                       Token &CurrentToken, Token::Type CurrentType) {
   Token &PrevToken = Tokens[Idx - 1];
   StringRef PrevTokenBody = PrevToken.getTokenBody();
@@ -524,7 +525,6 @@ bool isFalsey(const Value &V) {
 }
 
 void ASTNode::render(const Value &Data, raw_ostream &OS) {
-
   ParentContext = &Data;
   const Value *ContextPtr = T == Root ? ParentContext : findContext();
   const Value &Context = ContextPtr ? *ContextPtr : nullptr;
