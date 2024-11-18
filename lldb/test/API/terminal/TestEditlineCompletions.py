@@ -6,7 +6,6 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 
 
 class EditlineCompletionsTest(PExpectTest):
-
     @skipIfAsan
     @skipIfEditlineSupportMissing
     @skipIfEditlineWideCharSupportMissing
