@@ -6,7 +6,8 @@
 // RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj \
 // RUN:   -o - - <<<".globl defined, undefined; defined:" | \
 // RUN:   ld.lld /dev/stdin -o - --hash-style=gnu -export-dynamic -shared \
-// RUN:   -z nosectionheader -o %t.gnu
+// RUN:   -o %t.gnu
+// RUN: llvm-strip --strip-sections %t.gnu
 // RUN: %lldb %t.gnu -b \
 // RUN:   -o "image dump objfile" \
 // RUN:   | FileCheck %s --dump-input=always --check-prefix=GNU
@@ -25,7 +26,8 @@
 // RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj \
 // RUN:   -o - - <<<".globl defined, undefined; defined:" | \
 // RUN:   ld.lld /dev/stdin -o - --hash-style=sysv -export-dynamic -shared \
-// RUN:   -z nosectionheader -o %t.sysv
+// RUN:   -o %t.sysv
+// RUN: llvm-strip --strip-sections %t.sysv
 // RUN: %lldb %t.sysv -b \
 // RUN:   -o "image dump objfile" \
 // RUN:   | FileCheck %s --dump-input=always --check-prefix=HASH
