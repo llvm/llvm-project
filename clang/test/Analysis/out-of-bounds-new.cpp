@@ -183,16 +183,16 @@ int test_reference_that_might_be_after_the_end(int idx) {
 // From: https://github.com/llvm/llvm-project/issues/100762
 extern int arr[10];
 void using_builtin(int x) {
-    __builtin_assume(x > 101); // CallExpr
-    arr[x] = 404; // expected-warning{{Out of bound access to memory}}
+  __builtin_assume(x > 101); // CallExpr
+  arr[x] = 404; // expected-warning{{Out of bound access to memory}}
 }
 
 void using_assume_attr(int ax) {
-    [[assume(ax > 100)]]; // NullStmt with an "assume" attribute.
-    arr[ax] = 405; // expected-warning{{Out of bound access to memory}}
+  [[assume(ax > 100)]]; // NullStmt with an "assume" attribute.
+  arr[ax] = 405; // expected-warning{{Out of bound access to memory}}
 }
 
 void using_many_assume_attr(int yx) {
-    [[assume(yx > 104), assume(yx > 200), assume(yx < 300)]]; // NullStmt with an attribute
-    arr[yx] = 406; // expected-warning{{Out of bound access to memory}}
+  [[assume(yx > 104), assume(yx > 200), assume(yx < 300)]]; // NullStmt with an attribute
+  arr[yx] = 406; // expected-warning{{Out of bound access to memory}}
 }
