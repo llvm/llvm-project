@@ -26,7 +26,6 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeLocVisitor.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
@@ -39,18 +38,14 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLForwardCompat.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <bitset>
 #include <optional>
@@ -5837,6 +5832,30 @@ static void fillMatrixTypeLoc(MatrixTypeLoc MTL,
   llvm_unreachable("no matrix_type attribute found at the expected location!");
 }
 
+static void fillAtomicQualLoc(AtomicTypeLoc ATL, const DeclaratorChunk &Chunk) {
+  SourceLocation Loc;
+  switch (Chunk.Kind) {
+  case DeclaratorChunk::Function:
+  case DeclaratorChunk::Array:
+  case DeclaratorChunk::Paren:
+  case DeclaratorChunk::Pipe:
+    llvm_unreachable("cannot be _Atomic qualified");
+
+  case DeclaratorChunk::Pointer:
+    Loc = Chunk.Ptr.AtomicQualLoc;
+    break;
+
+  case DeclaratorChunk::BlockPointer:
+  case DeclaratorChunk::Reference:
+  case DeclaratorChunk::MemberPointer:
+    // FIXME: Provide a source location for the _Atomic keyword.
+    break;
+  }
+
+  ATL.setKWLoc(Loc);
+  ATL.setParensRange(SourceRange());
+}
+
 namespace {
   class TypeSpecLocFiller : public TypeLocVisitor<TypeSpecLocFiller> {
     Sema &SemaRef;
@@ -6223,6 +6242,9 @@ namespace {
     void VisitExtVectorTypeLoc(ExtVectorTypeLoc TL) {
       TL.setNameLoc(Chunk.Loc);
     }
+    void VisitAtomicTypeLoc(AtomicTypeLoc TL) {
+      fillAtomicQualLoc(TL, Chunk);
+    }
     void
     VisitDependentSizedExtVectorTypeLoc(DependentSizedExtVectorTypeLoc TL) {
       TL.setNameLoc(Chunk.Loc);
@@ -6236,30 +6258,6 @@ namespace {
     }
   };
 } // end anonymous namespace
-
-static void fillAtomicQualLoc(AtomicTypeLoc ATL, const DeclaratorChunk &Chunk) {
-  SourceLocation Loc;
-  switch (Chunk.Kind) {
-  case DeclaratorChunk::Function:
-  case DeclaratorChunk::Array:
-  case DeclaratorChunk::Paren:
-  case DeclaratorChunk::Pipe:
-    llvm_unreachable("cannot be _Atomic qualified");
-
-  case DeclaratorChunk::Pointer:
-    Loc = Chunk.Ptr.AtomicQualLoc;
-    break;
-
-  case DeclaratorChunk::BlockPointer:
-  case DeclaratorChunk::Reference:
-  case DeclaratorChunk::MemberPointer:
-    // FIXME: Provide a source location for the _Atomic keyword.
-    break;
-  }
-
-  ATL.setKWLoc(Loc);
-  ATL.setParensRange(SourceRange());
-}
 
 static void
 fillDependentAddressSpaceTypeLoc(DependentAddressSpaceTypeLoc DASTL,

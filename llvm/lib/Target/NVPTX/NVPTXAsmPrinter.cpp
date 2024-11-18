@@ -209,8 +209,8 @@ bool NVPTXAsmPrinter::lowerImageHandleOperand(const MachineInstr *MI,
 
 void NVPTXAsmPrinter::lowerImageHandleSymbol(unsigned Index, MCOperand &MCOp) {
   // Ewwww
-  LLVMTargetMachine &TM = const_cast<LLVMTargetMachine&>(MF->getTarget());
-  NVPTXTargetMachine &nvTM = static_cast<NVPTXTargetMachine&>(TM);
+  TargetMachine &TM = const_cast<TargetMachine &>(MF->getTarget());
+  NVPTXTargetMachine &nvTM = static_cast<NVPTXTargetMachine &>(TM);
   const NVPTXMachineFunctionInfo *MFI = MF->getInfo<NVPTXMachineFunctionInfo>();
   const char *Sym = MFI->getImageHandleSymbol(Index);
   StringRef SymName = nvTM.getStrPool().save(Sym);
@@ -1600,30 +1600,27 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
       if (isKernelFunc) {
         if (PTy) {
-          // Special handling for pointer arguments to kernel
-          O << "\t.param .u" << PTySizeInBits << " ";
+          O << "\t.param .u" << PTySizeInBits << " .ptr";
 
-          if (static_cast<NVPTXTargetMachine &>(TM).getDrvInterface() !=
-              NVPTX::CUDA) {
-            int addrSpace = PTy->getAddressSpace();
-            switch (addrSpace) {
-            default:
-              O << ".ptr ";
-              break;
-            case ADDRESS_SPACE_CONST:
-              O << ".ptr .const ";
-              break;
-            case ADDRESS_SPACE_SHARED:
-              O << ".ptr .shared ";
-              break;
-            case ADDRESS_SPACE_GLOBAL:
-              O << ".ptr .global ";
-              break;
-            }
-            Align ParamAlign = I->getParamAlign().valueOrOne();
-            O << ".align " << ParamAlign.value() << " ";
+          switch (PTy->getAddressSpace()) {
+          default:
+            break;
+          case ADDRESS_SPACE_GLOBAL:
+            O << " .global";
+            break;
+          case ADDRESS_SPACE_SHARED:
+            O << " .shared";
+            break;
+          case ADDRESS_SPACE_CONST:
+            O << " .const";
+            break;
+          case ADDRESS_SPACE_LOCAL:
+            O << " .local";
+            break;
           }
-          O << TLI->getParamName(F, paramIndex);
+
+          O << " .align " << I->getParamAlign().valueOrOne().value();
+          O << " " << TLI->getParamName(F, paramIndex);
           continue;
         }
 

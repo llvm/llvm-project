@@ -1868,6 +1868,15 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Instruction *Res = foldBinOpOfSelectAndCastOfSelectCondition(I))
     return Res;
 
+  // Re-enqueue users of the induction variable of add recurrence if we infer
+  // new nuw/nsw flags.
+  if (Changed) {
+    PHINode *PHI;
+    Value *Start, *Step;
+    if (matchSimpleRecurrence(&I, PHI, Start, Step))
+      Worklist.pushUsersToWorkList(*PHI);
+  }
+
   return Changed ? &I : nullptr;
 }
 
@@ -2630,6 +2639,23 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     if (Value *Res = OptimizePointerDifference(LHSOp, RHSOp, I.getType(),
                                                /* IsNUW */ false))
       return replaceInstUsesWith(I, Res);
+
+  if (match(Op0, m_ZExt(m_PtrToIntSameSize(DL, m_Value(LHSOp)))) &&
+      match(Op1, m_ZExtOrSelf(m_PtrToInt(m_Value(RHSOp))))) {
+    if (auto *GEP = dyn_cast<GEPOperator>(LHSOp)) {
+      if (GEP->getPointerOperand() == RHSOp) {
+        if (GEP->hasNoUnsignedWrap() || GEP->hasNoUnsignedSignedWrap()) {
+          Value *Offset = EmitGEPOffset(GEP);
+          Value *Res = GEP->hasNoUnsignedWrap()
+                           ? Builder.CreateZExt(
+                                 Offset, I.getType(), "",
+                                 /*IsNonNeg=*/GEP->hasNoUnsignedSignedWrap())
+                           : Builder.CreateSExt(Offset, I.getType());
+          return replaceInstUsesWith(I, Res);
+        }
+      }
+    }
+  }
 
   // Canonicalize a shifty way to code absolute value to the common pattern.
   // There are 2 potential commuted variants.
