@@ -194,26 +194,21 @@ which can be passed directly to ‘clang-format’."
         ;; Find and collect all diff lines.
         ;; We are matching something like:
         ;; "@@ -80 +80 @@" or "@@ -80,2 +80,2 @@"
-        (let ((diff-lines-re
-               "^@@\s-[0-9,]+\s\\+\\([0-9]+\\)\\(,\\([0-9]+\\)\\)?\s@@$")
-              (index 0)
-              (all-lines
-               (buffer-substring-no-properties (point-min) (point-max))))
-          ;; We are essentially doing (while (re-search-forward ...) ...)
-          ;; here. We are doing it by hand with (string-match ...) as it
-          ;; is notably faster (about 50%).
-          (setq index (string-match diff-lines-re all-lines))
-          (while index
-            (let ((match1 (string-to-number (match-string 1 all-lines)))
-                  (match3 (if (match-string 3 all-lines)
-                              (string-to-number (match-string 3 all-lines))
-                            nil)))
-              (push (format
-                     "--lines=%d:%d"
-                     match1
-                     (if match3 (+ match1 match3) match1))
-                    diff-lines))
-            (setq index (string-match diff-lines-re all-lines (+ index 1)))))
+        (goto-char (point-min))
+        (while (re-search-forward
+                "^@@\s-[0-9,]+\s\\+\\([0-9]+\\)\\(,\\([0-9]+\\)\\)?\s@@$"
+                nil
+                t
+                1)
+          (let ((match1 (string-to-number (match-string 1)))
+                (match3 (if (match-string 3)
+                            (string-to-number (match-string 3))
+                          nil)))
+            (push (format
+                   "--lines=%d:%d"
+                   match1
+                   (if match3 (+ match1 match3) match1))
+                  diff-lines)))
         (nreverse diff-lines))
        ;; Any return != 0 && != 1 indicates some level of error.
        (t
