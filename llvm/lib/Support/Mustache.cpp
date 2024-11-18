@@ -241,8 +241,8 @@ Token::Type Token::getTokenType(char Identifier) {
 // if the right of previous token contains anything that is
 // not a newline
 // For example: 
-//  "Stuff {{#Section}}" (returns true) 
-//   vs 
+//  "Stuff {{#Section}}" (returns true)
+//   vs
 //  "{{#Section}} \n" (returns false)
 // We make an exception for when previous token is empty
 // and the current token is the second token
