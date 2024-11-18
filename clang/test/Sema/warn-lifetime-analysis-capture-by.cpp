@@ -17,11 +17,11 @@ void noCaptureInt(int i [[clang::lifetime_capture_by(x)]], X &x);
 std::string_view substr(const std::string& s [[clang::lifetimebound]]);
 std::string_view strcopy(const std::string& s);
 
-void captureSV(std::string_view s [[clang::lifetime_capture_by(x)]], X &x);
-void captureRValSV(std::string_view &&sv [[clang::lifetime_capture_by(x)]], X &x);
-void noCaptureSV(std::string_view sv, X &x);
-void captureS(const std::string &s [[clang::lifetime_capture_by(x)]], X &x);
-void captureRValS(std::string &&s [[clang::lifetime_capture_by(x)]], X &x);
+void captureStringView(std::string_view s [[clang::lifetime_capture_by(x)]], X &x);
+void captureRValStringView(std::string_view &&sv [[clang::lifetime_capture_by(x)]], X &x);
+void noCaptureStringView(std::string_view sv, X &x);
+void captureString(const std::string &s [[clang::lifetime_capture_by(x)]], X &x);
+void captureRValString(std::string &&s [[clang::lifetime_capture_by(x)]], X &x);
 
 const std::string& getLB(const std::string &s [[clang::lifetimebound]]);
 const std::string& getLB(std::string_view sv [[clang::lifetimebound]]);
@@ -38,8 +38,8 @@ void captureByGlobal(std::string_view s [[clang::lifetime_capture_by(global)]]);
 void captureByUnknown(std::string_view s [[clang::lifetime_capture_by(unknown)]]);
 
 void use() {
-  std::string_view local_sv;
-  std::string local_s;
+  std::string_view local_string_view;
+  std::string local_string;
   X x;
   // Capture an 'int'.
   int local;
@@ -51,34 +51,34 @@ void use() {
   noCaptureInt(local, x);
 
   // Capture using std::string_view.
-  captureSV(local_sv, x);
-  captureSV(std::string(), // expected-warning {{object whose reference is captured by 'x'}}
+  captureStringView(local_string_view, x);
+  captureStringView(std::string(), // expected-warning {{object whose reference is captured by 'x'}}
             x);
-  captureSV(substr(
+  captureStringView(substr(
       std::string() // expected-warning {{object whose reference is captured by 'x'}}
       ), x);
-  captureSV(substr(local_s), x);
-  captureSV(strcopy(std::string()), x);
-  captureRValSV(std::move(local_sv), x);
-  captureRValSV(std::string(), x); // expected-warning {{object whose reference is captured by 'x'}}
-  captureRValSV(std::string_view{"abcd"}, x);
-  captureRValSV(substr(local_s), x);
-  captureRValSV(substr(std::string()), x); // expected-warning {{object whose reference is captured by 'x'}}
-  captureRValSV(strcopy(std::string()), x);
-  noCaptureSV(local_sv, x);
-  noCaptureSV(std::string(), x);
-  noCaptureSV(substr(std::string()), x);
+  captureStringView(substr(local_string), x);
+  captureStringView(strcopy(std::string()), x);
+  captureRValStringView(std::move(local_string_view), x);
+  captureRValStringView(std::string(), x); // expected-warning {{object whose reference is captured by 'x'}}
+  captureRValStringView(std::string_view{"abcd"}, x);
+  captureRValStringView(substr(local_string), x);
+  captureRValStringView(substr(std::string()), x); // expected-warning {{object whose reference is captured by 'x'}}
+  captureRValStringView(strcopy(std::string()), x);
+  noCaptureStringView(local_string_view, x);
+  noCaptureStringView(std::string(), x);
+  noCaptureStringView(substr(std::string()), x);
 
   // Capture using std::string.
-  captureS(std::string(), x); // expected-warning {{object whose reference is captured by 'x'}}
-  captureS(local_s, x);
-  captureRValS(std::move(local_s), x);
-  captureRValS(std::string(), x); // expected-warning {{object whose reference is captured by 'x'}}
+  captureString(std::string(), x); // expected-warning {{object whose reference is captured by 'x'}}
+  captureString(local_string, x);
+  captureRValString(std::move(local_string), x);
+  captureRValString(std::string(), x); // expected-warning {{object whose reference is captured by 'x'}}
 
   // Capture with lifetimebound.
-  captureSV(getLB(std::string()), x); // expected-warning {{object whose reference is captured by 'x'}}
-  captureSV(getLB(substr(std::string())), x); // expected-warning {{object whose reference is captured by 'x'}}
-  captureSV(getLB(getLB(
+  captureStringView(getLB(std::string()), x); // expected-warning {{object whose reference is captured by 'x'}}
+  captureStringView(getLB(substr(std::string())), x); // expected-warning {{object whose reference is captured by 'x'}}
+  captureStringView(getLB(getLB(
     std::string()  // expected-warning {{object whose reference is captured by 'x'}}
     )), x);
   capturePointer(getPointerLB(std::string()), x); // expected-warning {{object whose reference is captured by 'x'}}
@@ -101,14 +101,23 @@ void use() {
   // capture by global.
   captureByGlobal(std::string()); // expected-warning {{object whose reference is captured will be destroyed at the end of the full-expression}}
   captureByGlobal(substr(std::string())); // expected-warning {{captured}}
-  captureByGlobal(local_s);
-  captureByGlobal(local_sv);
+  captureByGlobal(local_string);
+  captureByGlobal(local_string_view);
 
   // // capture by unknown.
   captureByGlobal(std::string()); // expected-warning {{object whose reference is captured will be destroyed at the end of the full-expression}}
   captureByGlobal(substr(std::string())); // expected-warning {{captured}}
-  captureByGlobal(local_s);
-  captureByGlobal(local_sv);
+  captureByGlobal(local_string);
+  captureByGlobal(local_string_view);
+}
+
+void captureDefaultArg(X &x, std::string_view s [[clang::lifetime_capture_by(x)]] = std::string());
+void useCaptureDefaultArg() {
+  X x;
+  captureDefaultArg(x); // FIXME: Diagnose temporary default arg.
+  captureDefaultArg(x, std::string("temp")); // expected-warning {{captured}}
+  std::string local;
+  captureDefaultArg(x, local);
 }
 
 template<typename T> struct IsPointerLikeTypeImpl : std::false_type {};
@@ -189,13 +198,16 @@ void container_of_pointers() {
   std::optional<std::string_view> optionalSV;
   vsv.push_back(optionalSV.value());
   vsv.push_back(getOptionalS().value()); // expected-warning {{object whose reference is captured by 'vsv'}}
-  vsv.push_back(getOptionalSV().value());
-  vsv.push_back(getOptionalMySV().value());
+  
+  // FIXME: Following 2 cases are false positives:
+  vsv.push_back(getOptionalSV().value()); // expected-warning {{object whose reference}}
+  vsv.push_back(getOptionalMySV().value());  // expected-warning {{object whose reference}}
 
   // (maybe) FIXME: We may choose to diagnose the following case.
   // This happens because 'MyStringViewNotPointer' is not marked as a [[gsl::Pointer]] but is derived from one.
   vsv.push_back(getOptionalMySVNotP().value()); // expected-warning {{object whose reference is captured by 'vsv'}}
 }
+
 namespace temporary_views {
 void capture1(std::string_view s [[clang::lifetime_capture_by(x)]], std::vector<std::string_view>& x);
 

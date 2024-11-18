@@ -254,7 +254,7 @@ static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
                                                   LocalVisitor Visit);
 
 template <typename T> static bool isRecordWithAttr(QualType Type) {
-  if (auto *RD = Type.getNonReferenceType()->getAsCXXRecordDecl())
+  if (auto *RD = Type->getAsCXXRecordDecl())
     return RD->hasAttr<T>();
   return false;
 }
@@ -1437,6 +1437,7 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
     // warnings or errors on inner temporaries within this one's initializer.
     return false;
   };
+
   bool HasReferenceBinding = Init->isGLValue();
   llvm::SmallVector<IndirectLocalPathEntry, 8> Path;
   switch (LK) {

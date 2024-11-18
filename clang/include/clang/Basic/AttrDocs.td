@@ -3922,8 +3922,8 @@ def LifetimeCaptureByDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
     Similar to `lifetimebound`_, the ``lifetime_capture_by(X)`` attribute on a function
-parameter or implicit object parameter indicates that that objects that are referred to
-by that parameter may also be referred to by the capturing entity ``X``.
+parameter or implicit object parameter indicates that objects that are referred to by
+that parameter may also be referred to by the capturing entity ``X``.
 
 By default:
 
@@ -3932,7 +3932,7 @@ By default:
 - A ``std::initializer_list<T>`` is considered to refer to its underlying array.
 - Aggregates (arrays and simple ``struct``\s) are considered to refer to all
   objects that their transitive subobjects refer to.
-- View types (types annotated with [[``gsl::Pointer()``]]) are considered to refer
+- View types (types annotated with ``[[gsl::Pointer()]]``) are considered to refer
   to its pointee. This holds true even if the view type appears as a reference.
   For example, both ``std::string_view`` and ``const std::string_view &`` are
   considered to refer to a ``std::string``.
@@ -3990,7 +3990,7 @@ The attribute supports specifying more than one capturing entities:
     s2.insert(a);
   }
 
-Currently clang would diagnose when a temporary is used as an argument to a
+Currently Clang would diagnose when a temporary is used as an argument to a
 parameter whose reference is captured.
 
 .. code-block:: c++

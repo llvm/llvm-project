@@ -3233,28 +3233,32 @@ void Sema::CheckArgAlignment(SourceLocation Loc, NamedDecl *FDecl,
 void Sema::checkLifetimeCaptureBy(FunctionDecl *FD, bool IsMemberFunction,
                                   const Expr *ThisArg,
                                   ArrayRef<const Expr *> Args) {
-  auto GetArgAt = [&](int Idx) -> Expr * {
+  if (!FD || Args.empty())
+    return;
+  auto GetArgAt = [&](int Idx) -> const Expr * {
     if (Idx == LifetimeCaptureByAttr::GLOBAL ||
         Idx == LifetimeCaptureByAttr::UNKNOWN)
       return nullptr;
     if (IsMemberFunction && Idx == 0)
-      return const_cast<Expr *>(ThisArg);
-    return const_cast<Expr *>(Args[Idx - int(IsMemberFunction)]);
+      return ThisArg;
+    return Args[Idx - IsMemberFunction];
   };
-  for (unsigned I = 0; I < FD->getNumParams(); ++I) {
-    auto *CapturedByAttr =
-        FD->getParamDecl(I)->getAttr<LifetimeCaptureByAttr>();
-    if (!CapturedByAttr)
-      continue;
-    for (int CapturingParamIdx : CapturedByAttr->params()) {
-      Expr *Capturing = GetArgAt(CapturingParamIdx);
-      Expr *Captured = GetArgAt(I + IsMemberFunction);
+  auto HandleCaptureByAttr = [&](const LifetimeCaptureByAttr *Attr,
+                                 unsigned ArgIdx) {
+    if (!Attr)
+      return;
+    Expr *Captured = const_cast<Expr *>(GetArgAt(ArgIdx));
+    for (int CapturingParamIdx : Attr->params()) {
+      Expr *Capturing = const_cast<Expr *>(GetArgAt(CapturingParamIdx));
       CapturingEntity CE{Capturing};
       // Ensure that 'Captured' outlives the 'Capturing' entity.
       checkExprLifetime(*this, CE, Captured);
     }
-  }
-  // Check when the 'this' object is captured.
+  };
+  for (unsigned I = 0; I < FD->getNumParams(); ++I)
+    HandleCaptureByAttr(FD->getParamDecl(I)->getAttr<LifetimeCaptureByAttr>(),
+                        I + IsMemberFunction);
+  // Check when the implicit object param is captured.
   if (IsMemberFunction) {
     TypeSourceInfo *TSI = FD->getTypeSourceInfo();
     if (!TSI)
@@ -3262,17 +3266,8 @@ void Sema::checkLifetimeCaptureBy(FunctionDecl *FD, bool IsMemberFunction,
     AttributedTypeLoc ATL;
     for (TypeLoc TL = TSI->getTypeLoc();
          (ATL = TL.getAsAdjusted<AttributedTypeLoc>());
-         TL = ATL.getModifiedLoc()) {
-      auto *CapturedByAttr = ATL.getAttrAs<LifetimeCaptureByAttr>();
-      if (!CapturedByAttr)
-        continue;
-      Expr *Captured = GetArgAt(0);
-      for (int CapturingParamIdx : CapturedByAttr->params()) {
-        Expr *Capturing = GetArgAt(CapturingParamIdx);
-        CapturingEntity CE{Capturing};
-        checkExprLifetime(*this, CE, Captured);
-      }
-    }
+         TL = ATL.getModifiedLoc())
+      HandleCaptureByAttr(ATL.getAttrAs<LifetimeCaptureByAttr>(), 0);
   }
 }
 
