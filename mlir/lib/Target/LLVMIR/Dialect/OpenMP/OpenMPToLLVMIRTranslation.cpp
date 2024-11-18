@@ -1597,24 +1597,21 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
           splitBB(builder, /*CreateBranch=*/true, "omp.private.copy");
       builder.SetInsertPoint(copyBlock->getFirstNonPHIOrDbgOrAlloca());
     }
-    for (unsigned i = 0; i < privateBlockArgs.size(); ++i) {
-      if (privateDecls[i].getDataSharingType() !=
-          omp::DataSharingClauseType::FirstPrivate)
+    for (auto [decl, mlirVar, llvmVar] :
+         llvm::zip_equal(privateDecls, mlirPrivateVars, llvmPrivateVars)) {
+      if (decl.getDataSharingType() != omp::DataSharingClauseType::FirstPrivate)
         continue;
 
       // copyRegion implements `lhs = rhs`
-      Region &copyRegion = privateDecls[i].getCopyRegion();
+      Region &copyRegion = decl.getCopyRegion();
 
       // map copyRegion rhs arg
-      llvm::Value *nonPrivateVar =
-          moduleTranslation.lookupValue(taskOp.getPrivateVars()[i]);
+      llvm::Value *nonPrivateVar = moduleTranslation.lookupValue(mlirVar);
       assert(nonPrivateVar);
-      moduleTranslation.mapValue(privateDecls[i].getCopyMoldArg(),
-                                 nonPrivateVar);
+      moduleTranslation.mapValue(decl.getCopyMoldArg(), nonPrivateVar);
 
       // map copyRegion lhs arg
-      moduleTranslation.mapValue(privateDecls[i].getCopyPrivateArg(),
-                                 llvmPrivateVars[i]);
+      moduleTranslation.mapValue(decl.getCopyPrivateArg(), llvmVar);
 
       // in-place convert copy region
       builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
@@ -1936,24 +1933,21 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
           splitBB(builder, /*CreateBranch=*/true, "omp.private.copy");
       builder.SetInsertPoint(copyBlock->getFirstNonPHIOrDbgOrAlloca());
     }
-    for (unsigned i = 0; i < privateBlockArgs.size(); ++i) {
-      if (privateDecls[i].getDataSharingType() !=
-          omp::DataSharingClauseType::FirstPrivate)
+    for (auto [decl, mlirVar, llvmVar] :
+         llvm::zip_equal(privateDecls, mlirPrivateVars, llvmPrivateVars)) {
+      if (decl.getDataSharingType() != omp::DataSharingClauseType::FirstPrivate)
         continue;
 
       // copyRegion implements `lhs = rhs`
-      Region &copyRegion = privateDecls[i].getCopyRegion();
+      Region &copyRegion = decl.getCopyRegion();
 
       // map copyRegion rhs arg
-      llvm::Value *nonPrivateVar =
-          moduleTranslation.lookupValue(opInst.getPrivateVars()[i]);
+      llvm::Value *nonPrivateVar = moduleTranslation.lookupValue(mlirVar);
       assert(nonPrivateVar);
-      moduleTranslation.mapValue(privateDecls[i].getCopyMoldArg(),
-                                 nonPrivateVar);
+      moduleTranslation.mapValue(decl.getCopyMoldArg(), nonPrivateVar);
 
       // map copyRegion lhs arg
-      moduleTranslation.mapValue(privateDecls[i].getCopyPrivateArg(),
-                                 llvmPrivateVars[i]);
+      moduleTranslation.mapValue(decl.getCopyPrivateArg(), llvmVar);
 
       // in-place convert copy region
       builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
