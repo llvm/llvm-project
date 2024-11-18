@@ -229,6 +229,9 @@ TEST_SPECIALIZATION(unsigned int);
 TEST_SPECIALIZATION(unsigned long);
 TEST_SPECIALIZATION(unsigned long long);
 
+// `char`, `signed char` and `unsigned char` are all distinct types
+TEST_SPECIALIZATION(signed char);
+
 TEST_SPECIALIZATION(bool);
 
 // We cannot just use a single UInt128 specialization as that resolves to only
