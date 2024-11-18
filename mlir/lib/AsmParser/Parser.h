@@ -153,13 +153,14 @@ public:
   OptionalParseResult parseOptionalDecimalInteger(APInt &result);
 
   /// Parse a floating point value from a literal.
-  FailureOr<APFloat> parseFloatFromLiteral(const Token &tok, bool isNegative,
-                                           const llvm::fltSemantics &semantics);
+  ParseResult parseFloatFromLiteral(std::optional<APFloat> &result,
+                                    const Token &tok, bool isNegative,
+                                    const llvm::fltSemantics &semantics);
 
   /// Parse a floating point value from an integer literal token.
-  FailureOr<APFloat>
-  parseFloatFromIntegerLiteral(const Token &tok, bool isNegative,
-                               const llvm::fltSemantics &semantics);
+  ParseResult parseFloatFromIntegerLiteral(std::optional<APFloat> &result,
+                                           const Token &tok, bool isNegative,
+                                           const llvm::fltSemantics &semantics);
 
   /// Returns true if the current token corresponds to a keyword.
   bool isCurrentTokenAKeyword() const {

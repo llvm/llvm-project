@@ -287,9 +287,9 @@ public:
                          APFloat &result) override {
     bool isNegative = parser.consumeIf(Token::minus);
     Token curTok = parser.getToken();
-    FailureOr<APFloat> apResult =
-        parser.parseFloatFromLiteral(curTok, isNegative, semantics);
-    if (failed(apResult))
+    std::optional<APFloat> apResult;
+    if (failed(parser.parseFloatFromLiteral(apResult, curTok, isNegative,
+                                            semantics)))
       return failure();
     parser.consumeToken();
     result = *apResult;
