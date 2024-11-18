@@ -29,6 +29,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseSet.h"
+#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/Support/BlockFrequency.h"
 
@@ -38,13 +39,21 @@ class BitVector;
 class EdgeBundles;
 class MachineBlockFrequencyInfo;
 class MachineFunction;
+class SpillPlacementWrapperLegacy;
+class SpillPlacementAnalysis;
 
-class SpillPlacement : public MachineFunctionPass {
+class SpillPlacement {
+  friend class SpillPlacementWrapperLegacy;
+  friend class SpillPlacementAnalysis;
+
   struct Node;
+
   const MachineFunction *MF = nullptr;
   const EdgeBundles *bundles = nullptr;
   const MachineBlockFrequencyInfo *MBFI = nullptr;
-  Node *nodes = nullptr;
+
+  static void arrayDeleter(Node *N);
+  std::unique_ptr<Node, decltype(&arrayDeleter)> nodes;
 
   // Nodes that are active in the current computation. Owned by the prepare()
   // caller.
@@ -68,11 +77,6 @@ class SpillPlacement : public MachineFunctionPass {
   SparseSet<unsigned> TodoList;
 
 public:
-  static char ID; // Pass identification, replacement for typeid.
-
-  SpillPlacement() : MachineFunctionPass(ID) {}
-  ~SpillPlacement() override { releaseMemory(); }
-
   /// BorderConstraint - A basic block has separate constraints for entry and
   /// exit.
   enum BorderConstraint {
@@ -154,15 +158,43 @@ public:
     return BlockFrequencies[Number];
   }
 
-private:
-  bool runOnMachineFunction(MachineFunction &mf) override;
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  void releaseMemory() override;
+  bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
+                  MachineFunctionAnalysisManager::Invalidator &Inv);
 
+private:
+  SpillPlacement(EdgeBundles *Bundles, MachineBlockFrequencyInfo *MBFI)
+      : bundles(Bundles), MBFI(MBFI), nodes(nullptr, &arrayDeleter) {}
+
+  void run(MachineFunction &MF);
   void activate(unsigned n);
   void setThreshold(BlockFrequency Entry);
 
   bool update(unsigned n);
+};
+
+class SpillPlacementWrapperLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+  SpillPlacementWrapperLegacy() : MachineFunctionPass(ID) {}
+
+  SpillPlacement &getResult() { return *Impl; }
+  const SpillPlacement &getResult() const { return *Impl; }
+
+private:
+  std::unique_ptr<SpillPlacement> Impl;
+  bool runOnMachineFunction(MachineFunction &MF) override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  void releaseMemory() override { Impl.reset(); }
+};
+
+class SpillPlacementAnalysis
+    : public AnalysisInfoMixin<SpillPlacementAnalysis> {
+  friend AnalysisInfoMixin<SpillPlacementAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = SpillPlacement;
+  SpillPlacement run(MachineFunction &, MachineFunctionAnalysisManager &);
 };
 
 } // end namespace llvm

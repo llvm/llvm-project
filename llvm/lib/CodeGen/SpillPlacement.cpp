@@ -44,17 +44,17 @@ using namespace llvm;
 
 #define DEBUG_TYPE "spill-code-placement"
 
-char SpillPlacement::ID = 0;
+char SpillPlacementWrapperLegacy::ID = 0;
 
-char &llvm::SpillPlacementID = SpillPlacement::ID;
+char &llvm::SpillPlacementID = SpillPlacementWrapperLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(SpillPlacement, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(SpillPlacementWrapperLegacy, DEBUG_TYPE,
                       "Spill Code Placement Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(EdgeBundlesWrapperLegacy)
-INITIALIZE_PASS_END(SpillPlacement, DEBUG_TYPE,
+INITIALIZE_PASS_END(SpillPlacementWrapperLegacy, DEBUG_TYPE,
                     "Spill Code Placement Analysis", true, true)
 
-void SpillPlacement::getAnalysisUsage(AnalysisUsage &AU) const {
+void SpillPlacementWrapperLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
   AU.addRequiredTransitive<EdgeBundlesWrapperLegacy>();
@@ -189,32 +189,57 @@ struct SpillPlacement::Node {
   }
 };
 
-bool SpillPlacement::runOnMachineFunction(MachineFunction &mf) {
+bool SpillPlacementWrapperLegacy::runOnMachineFunction(MachineFunction &MF) {
+  auto *Bundles = &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
+  auto *MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
+
+  Impl.reset(new SpillPlacement(Bundles, MBFI));
+  Impl->run(MF);
+  return false;
+}
+
+AnalysisKey SpillPlacementAnalysis::Key;
+
+SpillPlacement
+SpillPlacementAnalysis::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  auto *Bundles = &MFAM.getResult<EdgeBundlesAnalysis>(MF);
+  auto *MBFI = &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+  SpillPlacement Impl(Bundles, MBFI);
+  Impl.run(MF);
+  return Impl;
+}
+
+bool SpillPlacementAnalysis::Result::invalidate(
+    MachineFunction &MF, const PreservedAnalyses &PA,
+    MachineFunctionAnalysisManager::Invalidator &Inv) {
+  auto PAC = PA.getChecker<SpillPlacementAnalysis>();
+  return !(PAC.preserved() ||
+           PAC.preservedSet<AllAnalysesOn<MachineFunction>>()) ||
+         Inv.invalidate<EdgeBundlesAnalysis>(MF, PA) ||
+         Inv.invalidate<MachineBlockFrequencyAnalysis>(MF, PA);
+}
+
+void SpillPlacement::arrayDeleter(Node *N) {
+  if (N)
+    delete[] N;
+}
+
+void SpillPlacement::run(MachineFunction &mf) {
   MF = &mf;
-  bundles = &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
 
   assert(!nodes && "Leaking node array");
-  nodes = new Node[bundles->getNumBundles()];
+  nodes.reset(new Node[bundles->getNumBundles()]);
   TodoList.clear();
   TodoList.setUniverse(bundles->getNumBundles());
 
   // Compute total ingoing and outgoing block frequencies for all bundles.
   BlockFrequencies.resize(mf.getNumBlockIDs());
-  MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
   setThreshold(MBFI->getEntryFreq());
   for (auto &I : mf) {
     unsigned Num = I.getNumber();
     BlockFrequencies[Num] = MBFI->getBlockFreq(&I);
   }
-
-  // We never change the function.
-  return false;
-}
-
-void SpillPlacement::releaseMemory() {
-  delete[] nodes;
-  nodes = nullptr;
-  TodoList.clear();
 }
 
 /// activate - mark node n as active if it wasn't already.
@@ -223,7 +248,7 @@ void SpillPlacement::activate(unsigned n) {
   if (ActiveNodes->test(n))
     return;
   ActiveNodes->set(n);
-  nodes[n].clear(Threshold);
+  nodes.get()[n].clear(Threshold);
 
   // Very large bundles usually come from big switches, indirect branches,
   // landing pads, or loops with many 'continue' statements. It is difficult to
@@ -235,10 +260,10 @@ void SpillPlacement::activate(unsigned n) {
   // limiting the number of blocks visited and the number of links in the
   // Hopfield network.
   if (bundles->getBlocks(n).size() > 100) {
-    nodes[n].BiasP = BlockFrequency(0);
+    nodes.get()[n].BiasP = BlockFrequency(0);
     BlockFrequency BiasN = MBFI->getEntryFreq();
     BiasN >>= 4;
-    nodes[n].BiasN = BiasN;
+    nodes.get()[n].BiasN = BiasN;
   }
 }
 
@@ -265,14 +290,14 @@ void SpillPlacement::addConstraints(ArrayRef<BlockConstraint> LiveBlocks) {
     if (LB.Entry != DontCare) {
       unsigned ib = bundles->getBundle(LB.Number, false);
       activate(ib);
-      nodes[ib].addBias(Freq, LB.Entry);
+      nodes.get()[ib].addBias(Freq, LB.Entry);
     }
 
     // Live-out from block?
     if (LB.Exit != DontCare) {
       unsigned ob = bundles->getBundle(LB.Number, true);
       activate(ob);
-      nodes[ob].addBias(Freq, LB.Exit);
+      nodes.get()[ob].addBias(Freq, LB.Exit);
     }
   }
 }
@@ -287,8 +312,8 @@ void SpillPlacement::addPrefSpill(ArrayRef<unsigned> Blocks, bool Strong) {
     unsigned ob = bundles->getBundle(B, true);
     activate(ib);
     activate(ob);
-    nodes[ib].addBias(Freq, PrefSpill);
-    nodes[ob].addBias(Freq, PrefSpill);
+    nodes.get()[ib].addBias(Freq, PrefSpill);
+    nodes.get()[ob].addBias(Freq, PrefSpill);
   }
 }
 
@@ -303,8 +328,8 @@ void SpillPlacement::addLinks(ArrayRef<unsigned> Links) {
     activate(ib);
     activate(ob);
     BlockFrequency Freq = BlockFrequencies[Number];
-    nodes[ib].addLink(ob, Freq);
-    nodes[ob].addLink(ib, Freq);
+    nodes.get()[ib].addLink(ob, Freq);
+    nodes.get()[ob].addLink(ib, Freq);
   }
 }
 
@@ -314,18 +339,18 @@ bool SpillPlacement::scanActiveBundles() {
     update(n);
     // A node that must spill, or a node without any links is not going to
     // change its value ever again, so exclude it from iterations.
-    if (nodes[n].mustSpill())
+    if (nodes.get()[n].mustSpill())
       continue;
-    if (nodes[n].preferReg())
+    if (nodes.get()[n].preferReg())
       RecentPositive.push_back(n);
   }
   return !RecentPositive.empty();
 }
 
 bool SpillPlacement::update(unsigned n) {
-  if (!nodes[n].update(nodes, Threshold))
+  if (!nodes.get()[n].update(nodes.get(), Threshold))
     return false;
-  nodes[n].getDissentingNeighbors(TodoList, nodes);
+  nodes.get()[n].getDissentingNeighbors(TodoList, nodes.get());
   return true;
 }
 
@@ -345,7 +370,7 @@ void SpillPlacement::iterate() {
     unsigned n = TodoList.pop_back_val();
     if (!update(n))
       continue;
-    if (nodes[n].preferReg())
+    if (nodes.get()[n].preferReg())
       RecentPositive.push_back(n);
   }
 }
@@ -366,7 +391,7 @@ SpillPlacement::finish() {
   // Write preferences back to ActiveNodes.
   bool Perfect = true;
   for (unsigned n : ActiveNodes->set_bits())
-    if (!nodes[n].preferReg()) {
+    if (!nodes.get()[n].preferReg()) {
       ActiveNodes->reset(n);
       Perfect = false;
     }
