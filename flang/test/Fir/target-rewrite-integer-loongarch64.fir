@@ -22,6 +22,6 @@ func.func private @cfunc32(i32) -> i32 attributes {fir.bindc_name = "cfunc32"}
 // LOONGARCH64_LLVM: ret i32 %[[VAL_1]]
 // LOONGARCH64_LLVM: }
 func.func @foo(%0: i32) -> i32 attributes {fir.bindc_name = "foo"} {
-    %1 = fir.call @cfunc32(%0) fastmath<contract> : (i32) -> i32
-    return %1 : i32
+  %1 = fir.call @cfunc32(%0) fastmath<contract> : (i32) -> i32
+  return %1 : i32
 }
