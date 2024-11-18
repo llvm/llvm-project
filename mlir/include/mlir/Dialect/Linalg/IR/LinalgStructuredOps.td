@@ -622,7 +622,8 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
             CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
         buildMatmulOp($_builder, $_state, std::nullopt, inputs, outputs,
-          attributes, MatmulOp::getRegionBuilder());
+          attributes, MatmulOp::getRegionBuilder(),
+          MatmulOp::getDefaultIndexingMaps($_builder.getContext()));
       }]>,
       OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
@@ -630,7 +631,8 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
             CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
         buildMatmulOp($_builder, $_state, resultTensorTypes,
-          inputs, outputs, attributes, MatmulOp::getRegionBuilder());
+          inputs, outputs, attributes, MatmulOp::getRegionBuilder(),
+          MatmulOp::getDefaultIndexingMaps($_builder.getContext()));
       }]>,
       OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "ValueRange":$operands,
@@ -648,7 +650,8 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
       [{
         $_state.addAttribute("cast", cast);
         buildMatmulOp($_builder, $_state, resultTensorTypes, inputs, outputs,
-          attributes, MatmulOp::getRegionBuilder());
+          attributes, MatmulOp::getRegionBuilder(),
+          MatmulOp::getDefaultIndexingMaps($_builder.getContext()));
       }]>
 
     ];
@@ -664,7 +667,15 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
                                 Block &block, ArrayRef<NamedAttribute> attrs);
 
       /// Returns a list of AffineMap with the typical matmul indexing charactristic.
-      SmallVector<AffineMap> getDefaultIndexingMaps();
+      static SmallVector<AffineMap> getDefaultIndexingMaps(MLIRContext *context){
+        AffineExpr d0, d1, d2;
+        SmallVector<AffineMap, 3> indexingMaps;
+        bindDims(context, d0, d1, d2);
+        indexingMaps.push_back(AffineMap::get(3, 0, {d0, d2}, context));
+        indexingMaps.push_back(AffineMap::get(3, 0, {d2, d1}, context));
+        indexingMaps.push_back(AffineMap::get(3, 0, {d0, d1}, context));
+        return indexingMaps;
+      }
 
       /// Returns true if the given broadcast map \p bcastMap is valid for this op.
       bool isValidLhsRhsBroadcastMap(AffineMap bcastMap);

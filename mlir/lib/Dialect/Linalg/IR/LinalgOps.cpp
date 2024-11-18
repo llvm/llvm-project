@@ -168,14 +168,6 @@ getDefaultIndexingMapsForMatmul(MLIRContext *context) {
   return indexingMaps;
 }
 
-/// Wrapper to return the typical indexing map array attribute for MatmulOp.
-static SmallVector<Attribute>
-getDefaultMatmulIndexingMapAttr(MLIRContext *context) {
-  return llvm::map_to_vector(
-      getDefaultIndexingMapsForMatmul(context),
-      [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
-}
-
 /// Creates a structured operation given `inputs`, `outputs`, and `attributes`.
 /// The result types are derived automatically if `resultTensorTypes` is none.
 /// The body of the operation is filled using `regionBuilder`. All ods-gen
@@ -221,9 +213,6 @@ buildMatmulOp(OpBuilder &b, OperationState &state,
       // Convert each AffineMap to an AffineMapAttr
       indexingMapsAttrVal.push_back(AffineMapAttr::get(map));
     }
-    state.addAttribute("indexing_maps", b.getArrayAttr(indexingMapsAttrVal));
-  } else {
-    indexingMapsAttrVal = getDefaultMatmulIndexingMapAttr(b.getContext());
     state.addAttribute("indexing_maps", b.getArrayAttr(indexingMapsAttrVal));
   }
   return buildStructuredOp(b, state, resultTensorTypes, inputs, outputs,
@@ -3457,7 +3446,7 @@ static LogicalResult verifyExtendedMatmulSemantic(MatmulOp matmulOp,
                                                   unsigned opIndex) {
   SmallVector<AffineMap, 3> opIndexingMaps = matmulOp.getIndexingMapsArray();
   SmallVector<AffineMap, 3> defaultIndexingMaps =
-      matmulOp.getDefaultIndexingMaps();
+      matmulOp.getDefaultIndexingMaps(matmulOp->getContext());
 
   auto opIndexingMap = opIndexingMaps[opIndex];
   auto defaultIndexingMap = defaultIndexingMaps[opIndex];
@@ -3501,7 +3490,8 @@ bool MatmulOp::hasDynamicIndexingMaps() { return true; }
 /// Check if the op has broadcast and/or transpose semantic. Returns true if
 /// the user defined indexing maps are not equal to default map.
 bool MatmulOp::hasUserDefinedMaps() {
-  SmallVector<AffineMap, 3> defaultMaps = getDefaultIndexingMaps();
+  SmallVector<AffineMap, 3> defaultMaps =
+      getDefaultIndexingMaps(this->getContext());
   SmallVector<AffineMap, 3> explicitMaps = getIndexingMapsArray();
   return defaultMaps != explicitMaps;
 }
@@ -3533,13 +3523,6 @@ void MatmulOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
       helper.buildBinaryFn(BinaryFn::add, block.getArgument(2), value3);
   yields.push_back(value4);
   helper.yieldOutputs(yields);
-}
-
-/// Returns a list of AffineMap with the typical matmul indexing
-/// charactristic.
-SmallVector<AffineMap> MatmulOp::getDefaultIndexingMaps() {
-  MLIRContext *context = this->getContext();
-  return getDefaultIndexingMapsForMatmul(context);
 }
 
 /// Returns true if the given broadcast map \p bcastMap is valid for this op.
@@ -3578,7 +3561,9 @@ ParseResult MatmulOp::parse(OpAsmParser &parser, OperationState &result) {
   }
   // Initialize indexingMaps, if not supplied explicitly.
   if (indexingMapsAttr.empty()) {
-    indexingMapsAttr = getDefaultMatmulIndexingMapAttr(result.getContext());
+    indexingMapsAttr = llvm::map_to_vector(
+        MatmulOp::getDefaultIndexingMaps(parser.getContext()),
+        [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
   }
   result.addAttribute("indexing_maps",
                       parser.getBuilder().getArrayAttr(indexingMapsAttr));
@@ -3592,8 +3577,9 @@ void MatmulOp::print(OpAsmPrinter &p) {
   printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
                          elidedAttrs);
 
-  SmallVector<Attribute, 3> indexingMaps =
-      getDefaultMatmulIndexingMapAttr(getContext());
+  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector(
+      MatmulOp::getDefaultIndexingMaps(getContext()),
+      [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
   if (!llvm::equal(getIndexingMaps(), indexingMaps)) {
     p << " indexing_maps = [";
     llvm::interleaveComma(getIndexingMaps(), p,
