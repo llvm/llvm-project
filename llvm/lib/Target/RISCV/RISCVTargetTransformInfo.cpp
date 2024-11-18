@@ -1123,7 +1123,8 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::vp_fsub:
   case Intrinsic::vp_fmul:
   case Intrinsic::vp_fdiv:
-  case Intrinsic::vp_frem: {
+  case Intrinsic::vp_frem:
+  case Intrinsic::vp_fneg: {
     std::optional<unsigned> FOp =
         VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
     assert(FOp.has_value());

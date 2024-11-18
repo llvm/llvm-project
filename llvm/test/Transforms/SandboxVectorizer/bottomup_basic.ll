@@ -143,3 +143,70 @@ define float @scalars_with_external_uses_not_dead(ptr %ptr) {
   ret float %ld0
 }
 
+define void @pack_scalars(ptr %ptr, ptr %ptr2) {
+; CHECK-LABEL: define void @pack_scalars(
+; CHECK-SAME: ptr [[PTR:%.*]], ptr [[PTR2:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
+; CHECK-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR2]], align 4
+; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x float> poison, float [[LD0]], i32 0
+; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <2 x float> [[PACK]], float [[LD1]], i32 1
+; CHECK-NEXT:    store <2 x float> [[PACK1]], ptr [[PTR0]], align 4
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr float, ptr %ptr, i32 0
+  %ptr1 = getelementptr float, ptr %ptr, i32 1
+  %ld0 = load float, ptr %ptr0
+  %ld1 = load float, ptr %ptr2
+  store float %ld0, ptr %ptr0
+  store float %ld1, ptr %ptr1
+  ret void
+}
+
+declare void @foo()
+define void @cant_vectorize_seeds(ptr %ptr) {
+; CHECK-LABEL: define void @cant_vectorize_seeds(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
+; CHECK-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4
+; CHECK-NEXT:    store float [[LD1]], ptr [[PTR1]], align 4
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    store float [[LD1]], ptr [[PTR1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr float, ptr %ptr, i32 0
+  %ptr1 = getelementptr float, ptr %ptr, i32 1
+  %ld0 = load float, ptr %ptr0
+  %ld1 = load float, ptr %ptr1
+  store float %ld1, ptr %ptr1
+  call void @foo() ; This call blocks scheduling of the store seeds.
+  store float %ld1, ptr %ptr1
+  ret void
+}
+
+define void @pack_vectors(ptr %ptr, ptr %ptr2) {
+; CHECK-LABEL: define void @pack_vectors(
+; CHECK-SAME: ptr [[PTR:%.*]], ptr [[PTR2:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr <2 x float>, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 2
+; CHECK-NEXT:    [[LD0:%.*]] = load <2 x float>, ptr [[PTR0]], align 8
+; CHECK-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR2]], align 4
+; CHECK-NEXT:    [[VPACK:%.*]] = extractelement <2 x float> [[LD0]], i32 0
+; CHECK-NEXT:    [[VPACK1:%.*]] = insertelement <3 x float> poison, float [[VPACK]], i32 0
+; CHECK-NEXT:    [[VPACK2:%.*]] = extractelement <2 x float> [[LD0]], i32 1
+; CHECK-NEXT:    [[VPACK3:%.*]] = insertelement <3 x float> [[VPACK1]], float [[VPACK2]], i32 1
+; CHECK-NEXT:    [[PACK:%.*]] = insertelement <3 x float> [[VPACK3]], float [[LD1]], i32 2
+; CHECK-NEXT:    store <3 x float> [[PACK]], ptr [[PTR0]], align 8
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr <2 x float>, ptr %ptr, i32 0
+  %ptr1 = getelementptr float, ptr %ptr, i32 2
+  %ld0 = load <2 x float>, ptr %ptr0
+  %ld1 = load float, ptr %ptr2
+  store <2 x float> %ld0, ptr %ptr0
+  store float %ld1, ptr %ptr1
+  ret void
+}

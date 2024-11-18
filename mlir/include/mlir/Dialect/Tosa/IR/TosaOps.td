@@ -63,7 +63,7 @@ def Tosa_AccType : AnyTypeOf<[I<32>, SI<32>, F16, F32]>;
 // Operator: avg_pool2d
 //===----------------------------------------------------------------------===//
 def Tosa_AvgPool2dOp : Tosa_InferShapedTypeOp<"avg_pool2d"> {
-  let summary = "Performs max pooling on the input.";
+  let summary = "Performs average pooling on the input.";
 
   let description = [{
     This performs an average pooling over the given input tensor. A sliding

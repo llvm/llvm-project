@@ -1621,13 +1621,19 @@ private:
   // Termination of symbolically referenced execution units
   //===--------------------------------------------------------------------===//
 
-  /// END of program
+  /// Exit of a routine
   ///
-  /// Generate the cleanup block before the program exits
-  void genExitRoutine() {
-
-    if (blockIsUnterminated())
-      builder->create<mlir::func::ReturnOp>(toLocation());
+  /// Generate the cleanup block before the routine exits
+  void genExitRoutine(bool earlyReturn, mlir::ValueRange retval = {}) {
+    if (blockIsUnterminated()) {
+      bridge.openAccCtx().finalizeAndKeep();
+      bridge.fctCtx().finalizeAndKeep();
+      builder->create<mlir::func::ReturnOp>(toLocation(), retval);
+    }
+    if (!earlyReturn) {
+      bridge.openAccCtx().pop();
+      bridge.fctCtx().pop();
+    }
   }
 
   /// END of procedure-like constructs
@@ -1684,9 +1690,7 @@ private:
             resultRef = builder->createConvert(loc, resultRefType, resultRef);
           return builder->create<fir::LoadOp>(loc, resultRef);
         });
-    bridge.openAccCtx().finalizeAndPop();
-    bridge.fctCtx().finalizeAndPop();
-    builder->create<mlir::func::ReturnOp>(loc, resultVal);
+    genExitRoutine(false, resultVal);
   }
 
   /// Get the return value of a call to \p symbol, which is a subroutine entry
@@ -1712,13 +1716,9 @@ private:
     } else if (Fortran::semantics::HasAlternateReturns(symbol)) {
       mlir::Value retval = builder->create<fir::LoadOp>(
           toLocation(), getAltReturnResult(symbol));
-      bridge.openAccCtx().finalizeAndPop();
-      bridge.fctCtx().finalizeAndPop();
-      builder->create<mlir::func::ReturnOp>(toLocation(), retval);
+      genExitRoutine(false, retval);
     } else {
-      bridge.openAccCtx().finalizeAndPop();
-      bridge.fctCtx().finalizeAndPop();
-      genExitRoutine();
+      genExitRoutine(false);
     }
   }
 
@@ -2862,14 +2862,11 @@ private:
     if (nestedLoops > 1)
       n = builder->getIntegerAttr(builder->getI64Type(), nestedLoops);
 
-    const std::list<Fortran::parser::CUFKernelDoConstruct::StarOrExpr> &grid =
-        std::get<1>(dir.t);
-    const std::list<Fortran::parser::CUFKernelDoConstruct::StarOrExpr> &block =
-        std::get<2>(dir.t);
-    const std::optional<Fortran::parser::ScalarIntExpr> &stream =
-        std::get<3>(dir.t);
+    const auto &launchConfig = std::get<std::optional<
+        Fortran::parser::CUFKernelDoConstruct::LaunchConfiguration>>(dir.t);
+
     const std::list<Fortran::parser::CUFReduction> &cufreds =
-        std::get<4>(dir.t);
+        std::get<2>(dir.t);
 
     llvm::SmallVector<mlir::Value> reduceOperands;
     llvm::SmallVector<mlir::Attribute> reduceAttrs;
@@ -2913,35 +2910,45 @@ private:
         builder->createIntegerConstant(loc, builder->getI32Type(), 0);
 
     llvm::SmallVector<mlir::Value> gridValues;
-    if (!isOnlyStars(grid)) {
-      for (const Fortran::parser::CUFKernelDoConstruct::StarOrExpr &expr :
-           grid) {
-        if (expr.v) {
-          gridValues.push_back(fir::getBase(
-              genExprValue(*Fortran::semantics::GetExpr(*expr.v), stmtCtx)));
-        } else {
-          gridValues.push_back(zero);
-        }
-      }
-    }
     llvm::SmallVector<mlir::Value> blockValues;
-    if (!isOnlyStars(block)) {
-      for (const Fortran::parser::CUFKernelDoConstruct::StarOrExpr &expr :
-           block) {
-        if (expr.v) {
-          blockValues.push_back(fir::getBase(
-              genExprValue(*Fortran::semantics::GetExpr(*expr.v), stmtCtx)));
-        } else {
-          blockValues.push_back(zero);
+    mlir::Value streamValue;
+
+    if (launchConfig) {
+      const std::list<Fortran::parser::CUFKernelDoConstruct::StarOrExpr> &grid =
+          std::get<0>(launchConfig->t);
+      const std::list<Fortran::parser::CUFKernelDoConstruct::StarOrExpr>
+          &block = std::get<1>(launchConfig->t);
+      const std::optional<Fortran::parser::ScalarIntExpr> &stream =
+          std::get<2>(launchConfig->t);
+      if (!isOnlyStars(grid)) {
+        for (const Fortran::parser::CUFKernelDoConstruct::StarOrExpr &expr :
+             grid) {
+          if (expr.v) {
+            gridValues.push_back(fir::getBase(
+                genExprValue(*Fortran::semantics::GetExpr(*expr.v), stmtCtx)));
+          } else {
+            gridValues.push_back(zero);
+          }
         }
       }
+      if (!isOnlyStars(block)) {
+        for (const Fortran::parser::CUFKernelDoConstruct::StarOrExpr &expr :
+             block) {
+          if (expr.v) {
+            blockValues.push_back(fir::getBase(
+                genExprValue(*Fortran::semantics::GetExpr(*expr.v), stmtCtx)));
+          } else {
+            blockValues.push_back(zero);
+          }
+        }
+      }
+
+      if (stream)
+        streamValue = builder->createConvert(
+            loc, builder->getI32Type(),
+            fir::getBase(
+                genExprValue(*Fortran::semantics::GetExpr(*stream), stmtCtx)));
     }
-    mlir::Value streamValue;
-    if (stream)
-      streamValue = builder->createConvert(
-          loc, builder->getI32Type(),
-          fir::getBase(
-              genExprValue(*Fortran::semantics::GetExpr(*stream), stmtCtx)));
 
     const auto &outerDoConstruct =
         std::get<std::optional<Fortran::parser::DoConstruct>>(kernel.t);
@@ -5011,8 +5018,7 @@ private:
       it->stmtCtx.finalizeAndKeep();
     }
     if (funit->isMainProgram()) {
-      bridge.fctCtx().finalizeAndKeep();
-      genExitRoutine();
+      genExitRoutine(true);
       return;
     }
     mlir::Location loc = toLocation();
@@ -5471,9 +5477,7 @@ private:
   void endNewFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
     setCurrentPosition(Fortran::lower::pft::stmtSourceLoc(funit.endStmt));
     if (funit.isMainProgram()) {
-      bridge.openAccCtx().finalizeAndPop();
-      bridge.fctCtx().finalizeAndPop();
-      genExitRoutine();
+      genExitRoutine(false);
     } else {
       genFIRProcedureExit(funit, funit.getSubprogramSymbol());
     }

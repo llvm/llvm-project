@@ -7683,6 +7683,7 @@ cc_library(
         ":TensorDialect",
         ":TensorUtils",
         ":TilingInterface",
+        ":InferTypeOpInterface",
         ":ValueBoundsOpInterface",
     ],
 )

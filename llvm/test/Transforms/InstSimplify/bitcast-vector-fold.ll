@@ -81,8 +81,7 @@ define <1 x i1> @test10() {
 ; CONSTVEC-NEXT:    ret <1 x i1> [[RET]]
 ;
 ; CONSTSPLAT-LABEL: @test10(
-; CONSTSPLAT-NEXT:    [[RET:%.*]] = icmp eq <1 x i64> splat (i64 -1), zeroinitializer
-; CONSTSPLAT-NEXT:    ret <1 x i1> [[RET]]
+; CONSTSPLAT-NEXT:    ret <1 x i1> zeroinitializer
 ;
   %ret = icmp eq <1 x i64> <i64 bitcast (<1 x double> <double 0xFFFFFFFFFFFFFFFF> to i64)>, zeroinitializer
   ret <1 x i1> %ret
