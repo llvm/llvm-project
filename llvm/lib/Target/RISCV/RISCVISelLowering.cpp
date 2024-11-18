@@ -22051,6 +22051,36 @@ SDValue RISCVTargetLowering::expandIndirectJTBranch(const SDLoc &dl,
   return TargetLowering::expandIndirectJTBranch(dl, Value, Addr, JTI, DAG);
 }
 
+// If an output pattern produces multiple instructions tablegen may pick an
+// arbitrary type from an instructions destination register class to use for the
+// VT of that MachineSDNode. This VT may be used to look up the representative
+// register class. If the type isn't legal, the default implementation will
+// not find a register class.
+//
+// Some integer types smaller than XLen are listed in the GPR register class to
+// support isel patterns for GISel, but are not legal in SelectionDAG. The
+// arbitrary type tablegen picks may be one of these smaller types.
+//
+// f16 and bf16 are both valid for the FPR16 or GPRF16 register class. It's
+// possible for tablegen to pick bf16 as the arbitrary type for an f16 pattern.
+std::pair<const TargetRegisterClass *, uint8_t>
+RISCVTargetLowering::findRepresentativeClass(const TargetRegisterInfo *TRI,
+                                             MVT VT) const {
+  switch (VT.SimpleTy) {
+  default:
+    break;
+  case MVT::i8:
+  case MVT::i16:
+  case MVT::i32:
+    return TargetLowering::findRepresentativeClass(TRI, Subtarget.getXLenVT());
+  case MVT::bf16:
+  case MVT::f16:
+    return TargetLowering::findRepresentativeClass(TRI, MVT::f32);
+  }
+
+  return TargetLowering::findRepresentativeClass(TRI, VT);
+}
+
 namespace llvm::RISCVVIntrinsicsTable {
 
 #define GET_RISCVVIntrinsicsTable_IMPL
