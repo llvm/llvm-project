@@ -393,8 +393,14 @@ void NarrowingConversionsCheck::handleIntegralCast(const ASTContext &Context,
                                                    const Expr &Lhs,
                                                    const Expr &Rhs) {
   if (WarnOnIntegerNarrowingConversion) {
+    // From [conv.integral] since C++20
+    // The result is the unique value of the destination type that is congruent
+    // to the source integer modulo 2^N, where N is the width of the destination
+    // type.
+    if (getLangOpts().CPlusPlus20)
+      return;
     const BuiltinType *ToType = getBuiltinType(Lhs);
-    // From [conv.integral]p7.3.8:
+    // From [conv.integral] before C++20:
     // Conversions to unsigned integer is well defined so no warning is issued.
     // "The resulting value is the smallest unsigned value equal to the source
     // value modulo 2^n where n is the number of bits used to represent the

@@ -1,8 +1,8 @@
-// RUN: %check_clang_tidy -check-suffix=DEFAULT %s \
+// RUN: %check_clang_tidy -check-suffix=DEFAULT %s -std=c++17 \
 // RUN: cppcoreguidelines-narrowing-conversions %t -- \
 // RUN: -config='{CheckOptions: {cppcoreguidelines-narrowing-conversions.WarnOnIntegerNarrowingConversion: true}}'
 
-// RUN: %check_clang_tidy -check-suffix=DISABLED %s \
+// RUN: %check_clang_tidy -check-suffix=DISABLED %s -std=c++17 \
 // RUN: cppcoreguidelines-narrowing-conversions %t -- \
 // RUN: -config='{CheckOptions: {cppcoreguidelines-narrowing-conversions.WarnOnIntegerNarrowingConversion: false}}'
 

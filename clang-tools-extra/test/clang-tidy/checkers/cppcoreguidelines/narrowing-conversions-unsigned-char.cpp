@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-narrowing-conversions %t \
-// RUN: -- -- -target x86_64-unknown-linux -funsigned-char
+// RUN: %check_clang_tidy %s cppcoreguidelines-narrowing-conversions %t -std=c++17 \
+// RUN: -- -target x86_64-unknown-linux -funsigned-char
 
 void narrow_integer_to_unsigned_integer_is_ok() {
   signed char sc;

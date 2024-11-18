@@ -1,7 +1,7 @@
-// RUN: %check_clang_tidy -check-suffix=DEFAULT %s \
+// RUN: %check_clang_tidy -check-suffix=DEFAULT %s -std=c++17 \
 // RUN: cppcoreguidelines-narrowing-conversions %t --
 
-// RUN: %check_clang_tidy -check-suffix=IGNORED %s \
+// RUN: %check_clang_tidy -check-suffix=IGNORED %s -std=c++17 \
 // RUN: cppcoreguidelines-narrowing-conversions %t -- \
 // RUN: -config='{CheckOptions: { \
 // RUN:   cppcoreguidelines-narrowing-conversions.IgnoreConversionFromTypes: "global_size_t;nested_size_type;long" \

@@ -207,6 +207,10 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by fixing the
   insertion location for function pointers.
 
+- Fixed :doc:`cppcoreguidelines-narrowing-conversions
+  <clang-tidy/checks/cppcoreguidelines/narrowing-conversions>` check to avoid
+  false positives when narrowing integer to signed integer in C++20.
+
 - Improved :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check to
   avoid false positive when member initialization depends on a structured

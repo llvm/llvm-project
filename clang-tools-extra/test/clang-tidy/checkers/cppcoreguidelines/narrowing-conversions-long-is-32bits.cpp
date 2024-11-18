@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-narrowing-conversions %t \
-// RUN: -- -- -target x86_64-unknown-linux -m32
+// RUN: %check_clang_tidy %s cppcoreguidelines-narrowing-conversions %t -std=c++17 \
+// RUN: -- -target x86_64-unknown-linux -m32
 
 static_assert(sizeof(int) * 8 == 32, "int is 32-bits");
 static_assert(sizeof(long) * 8 == 32, "long is 32-bits");

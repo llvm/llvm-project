@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-narrowing-conversions %t \
+// RUN: %check_clang_tidy %s cppcoreguidelines-narrowing-conversions %t -std=c++17 \
 // RUN: -config="{CheckOptions: { \
 // RUN:   cppcoreguidelines-narrowing-conversions.WarnOnFloatingPointNarrowingConversion: false}}" \
 // RUN: -- -target x86_64-unknown-linux -fsigned-char
