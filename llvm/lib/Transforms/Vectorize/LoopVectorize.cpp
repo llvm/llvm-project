@@ -2495,7 +2495,8 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
     // trip count <= minimum profitable trip count.
     Value *MinProfTC =
         Builder.CreateElementCount(CountTy, MinProfitableTripCount);
-    CheckMinIters = Builder.CreateICmp(ICmpInst::ICMP_ULE, Count, MinProfTC);
+    CheckMinIters = Builder.CreateICmp(ICmpInst::ICMP_ULT, Count, MinProfTC,
+                                       "min.prof.check");
   }
 
   // Create new preheader for vector loop.
