@@ -363,7 +363,7 @@ namespace llvm {
 
   /// PeepholeOptimizer - This pass performs peephole optimizations -
   /// like extension and comparison eliminations.
-  extern char &PeepholeOptimizerID;
+  extern char &PeepholeOptimizerLegacyID;
 
   /// OptimizePHIs - This pass optimizes machine instruction PHIs
   /// to take advantage of opportunities created during DAG legalization.
