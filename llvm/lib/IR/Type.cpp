@@ -947,7 +947,7 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
 
   // DirectX resources
   if (Name.starts_with("dx."))
-    return TargetTypeInfo(PointerType::get(C, 0));
+    return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::CanBeGlobal);
 
   // Opaque types in the AMDGPU name space.
   if (Name == "amdgcn.named.barrier") {
