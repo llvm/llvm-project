@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx908 -DMFMA_GFX908_TESTS -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-GFX908
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx90a -DMFMA_GFX90A_TESTS -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-GFX90A
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx940 -DMFMA_GFX940_TESTS -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-GFX940
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx950 -DMFMA_GFX950_TESTS -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-GFX950
 
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 
@@ -222,7 +223,7 @@ void test_mfma_f64_4x4x4f64(global double* out, double a, double b, double c)
 
 #endif // MFMA_GFX90A_TESTS
 
-#ifdef MFMA_GFX940_TESTS
+#if defined(MFMA_GFX940_TESTS) || defined(MFMA_GFX950_TESTS)
 // CHECK-GFX940-LABEL: @test_mfma_i32_16x16x32_i8
 // CHECK-GFX940: call <4 x i32> @llvm.amdgcn.mfma.i32.16x16x32.i8(i64 %a, i64 %b, <4 x i32> %c, i32 0, i32 0, i32 0)
 void test_mfma_i32_16x16x32_i8(global v4i* out, long a, long b, v4i c)
@@ -404,4 +405,24 @@ void test_smfmac_f32_32x32x32_fp8_fp8(global v16f* out, v2i a, v4i b, v16f c, in
 {
   *out = __builtin_amdgcn_smfmac_f32_32x32x32_fp8_fp8(a, b, c, idx, 0, 0);
 }
-#endif // MFMA_GFX940_TESTS
+#endif // defined(MFMA_GFX940_TESTS) || defined(MFMA_GFX950_TESTS)
+
+#ifdef MFMA_GFX950_TESTS
+
+// CHECK-GFX950-LABEL: @test_mfma_f32_16x16x32_f16(
+// CHECK-GFX950: tail call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.f16(<8 x half> %a, <8 x half> %b, <4 x float> %c, i32 1, i32 2, i32 3)
+
+v4f test_mfma_f32_16x16x32_f16(v8h a, v8h b, v4f c)
+{
+  return __builtin_amdgcn_mfma_f32_16x16x32_f16(a, b, c, 1, 2, 3);
+}
+
+// CHECK-GFX950-LABEL: @test_mfma_f32_32x32x16_f16
+// CHECK-GFX950: tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x16.f16(<8 x half> %a, <8 x half> %b, <16 x float> %c, i32 1, i32 2, i32 3)
+v16f test_mfma_f32_32x32x16_f16(v8h a, v8h b, v16f c)
+{
+  return __builtin_amdgcn_mfma_f32_32x32x16_f16(a, b, c, 1, 2, 3);
+}
+
+
+#endif
