@@ -18,6 +18,17 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
+
+static bool isNegativeComparison(const Expr *ComparisonExpr) {
+  if (const auto *BO = llvm::dyn_cast<BinaryOperator>(ComparisonExpr))
+    return BO->getOpcode() == BO_NE;
+
+  if (const auto *Op = llvm::dyn_cast<CXXOperatorCallExpr>(ComparisonExpr))
+    return Op->getOperator() == OO_ExclaimEqual;
+
+  return false;
+}
+
 struct NotLengthExprForStringNode {
   NotLengthExprForStringNode(std::string ID, DynTypedNode Node,
                              ASTContext *Context)
@@ -70,17 +81,6 @@ private:
   DynTypedNode Node;
   ASTContext *Context;
 };
-
-static bool isNegativeComparison(const Expr *ComparisonExpr) {
-  if (const auto *BO = llvm::dyn_cast<BinaryOperator>(ComparisonExpr)) {
-    return BO->getOpcode() == BO_NE;
-  }
-
-  if (const auto *Op = llvm::dyn_cast<CXXOperatorCallExpr>(ComparisonExpr)) {
-    return Op->getOperator() == OO_ExclaimEqual;
-  }
-  return false;
-}
 
 AST_MATCHER_P(Expr, lengthExprForStringNode, std::string, ID) {
   return Builder->removeBindings(NotLengthExprForStringNode(
@@ -183,6 +183,7 @@ void UseStartsEndsWithCheck::registerMatchers(MatchFinder *Finder) {
           .bind("expr"),
       this);
 
+  // Case 6: X.substr(0, LEN(Y)) [!=]= Y -> ends_with.
   Finder->addMatcher(
       cxxOperatorCallExpr(
           hasAnyOperatorName("==", "!="),
@@ -216,7 +217,7 @@ void UseStartsEndsWithCheck::check(const MatchFinder::MatchResult &Result) {
   if (ComparisonExpr->getBeginLoc().isMacroID())
     return;
 
-  bool Neg = isNegativeComparison(ComparisonExpr);
+  const bool Neg = isNegativeComparison(ComparisonExpr);
 
   // Retrieve the source text of the search expression.
   const auto SearchExprText = Lexer::getSourceText(
@@ -244,9 +245,9 @@ void UseStartsEndsWithCheck::check(const MatchFinder::MatchResult &Result) {
       (SearchExprText + ")").str());
 
   // Add negation if necessary.
-  if (Neg) {
+  if (Neg)
     Diag << FixItHint::CreateInsertion(FindExpr->getBeginLoc(), "!");
-  }
+
 }
 
 } // namespace clang::tidy::modernize
