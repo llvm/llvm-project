@@ -197,6 +197,26 @@ def ROCDL_BallotOp :
   let assemblyFormat = "$pred attr-dict `:` type($res)";
 }
 
+def ROCDL_ReadlaneOp : ROCDL_Op<"readlane">,
+  Results<(outs LLVM_Type:$res)>,
+  Arguments<(ins LLVM_Type:$src0,
+                 I32:$src1)> {
+  let summary = "Get the value in the specific lane";
+
+  let description = [{
+    Get the value in lane `src1` from input `src0`.
+  }];
+
+  string llvmBuilder = [{
+    $res = createIntrinsicCall(builder,
+           llvm::Intrinsic::amdgcn_readlane, {$src0, $src1}, {$_resultType});
+  }];
+
+  let assemblyFormat = [{
+    $src0 `,` $src1  attr-dict `:` `(` type($src0) `,` type($src1) `)` `->` type($res)
+   }];
+}
+
 //===----------------------------------------------------------------------===//
 // Thread index and Block index
 
