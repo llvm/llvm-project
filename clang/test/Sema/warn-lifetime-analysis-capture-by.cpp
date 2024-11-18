@@ -31,6 +31,9 @@ const std::string* getPointerNoLB(const std::string &s);
 
 void capturePointer(const std::string* sp [[clang::lifetime_capture_by(x)]], X &x);
 
+// Vector
+void captureVector(const std::vector<int> &a [[clang::lifetime_capture_by(x)]], X &x);
+
 struct ThisIsCaptured {
   void capture(X &x) [[clang::lifetime_capture_by(x)]];
 };
@@ -105,11 +108,17 @@ void use() {
   captureByGlobal(local_string);
   captureByGlobal(local_string_view);
 
-  // // capture by unknown.
-  captureByGlobal(std::string()); // expected-warning {{object whose reference is captured will be destroyed at the end of the full-expression}}
-  captureByGlobal(substr(std::string())); // expected-warning {{captured}}
-  captureByGlobal(local_string);
-  captureByGlobal(local_string_view);
+  // capture by unknown.
+  captureByUnknown(std::string()); // expected-warning {{object whose reference is captured will be destroyed at the end of the full-expression}}
+  captureByUnknown(substr(std::string())); // expected-warning {{captured}}
+  captureByUnknown(local_string);
+  captureByUnknown(local_string_view);
+
+  // capture arrays.
+  captureVector({1, 2, 3}, x); // expected-warning {{capture}}
+  captureVector(std::vector<int>{}, x); // expected-warning {{capture}}
+  std::vector<int> local_vector;
+  captureVector(local_vector, x);
 }
 
 void captureDefaultArg(X &x, std::string_view s [[clang::lifetime_capture_by(x)]] = std::string());
@@ -136,6 +145,7 @@ void user_defined_containers() {
   set_of_int.insert(1); // expected-warning {{object whose reference is captured by 'set_of_int' will be destroyed}}
   MySet<std::string_view> set_of_sv;
   set_of_sv.insert(std::string());  // expected-warning {{object whose reference is captured by 'set_of_sv' will be destroyed}}
+  set_of_sv.insert(std::string_view());
 }
 
 // Templated containers having **which distinguishes** between pointer-like and other element type.
@@ -223,7 +233,9 @@ void test1() {
   capture1(std::string_view(), x1);
 
   std::vector<std::string_view*> x2;
-  capture2(std::string_view(), x2); // FIXME: Warn when the temporary view itself is captured.
+  // Clang considers 'const std::string_view&' to refer to the owner
+  // 'std::string' and not 'std::string_view'. Therefore no diagnostic here.
+  capture2(std::string_view(), x2);
   capture2(std::string(), x2); // expected-warning {{captured by 'x2'}}
   
   std::vector<std::string_view> x3;

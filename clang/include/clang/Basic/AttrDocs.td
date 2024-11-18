@@ -3927,15 +3927,15 @@ that parameter may also be referred to by a capturing entity ``X``.
 
 Below is a list of types of the parameters and what they're considered to refer to:
 
-- A reference param is considered to refer to its referenced object.
-- A pointer param is considered to refer to its pointee.
+- A reference param (of non-view type) is considered to refer to its referenced object.
+- A pointer param (of non-view type) is considered to refer to its pointee.
+- View type param (type annotated with ``[[gsl::Pointer()]]``) is considered to refer
+  to its pointee (gsl owner). This holds true even if the view type appears as a reference
+  in the parameter. For example, both ``std::string_view`` and
+  ``const std::string_view &`` are considered to refer to a ``std::string``.
 - A ``std::initializer_list<T>`` is considered to refer to its underlying array.
 - Aggregates (arrays and simple ``struct``\s) are considered to refer to all
   objects that their transitive subobjects refer to.
-- View type param (type annotated with ``[[gsl::Pointer()]]``) is considered to refer
-  to its pointee. This holds true even if the view type appears as a reference
-  in the parameter. For example, both ``std::string_view`` and
-  ``const std::string_view &`` are considered to refer to a ``std::string``.
 
 Clang would diagnose when a temporary object is used as an argument to such an
 annotated parameter.
