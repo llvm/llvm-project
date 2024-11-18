@@ -227,7 +227,7 @@ def FeatureAM : Extension<"am", "AM", "FEAT_AMUv1",
 def FeatureSEL2 : Extension<"sel2", "SEL2", "FEAT_SEL2",
   "Enable Armv8.4-A Secure Exception Level 2 extension">;
 
-def FeatureTLB_RMI : Extension<"tlb-rmi", "TLB_RMI",
+def FeatureTLB_RMI : ExtensionWithMArch<"tlb-rmi", "TLB_RMI",
   "FEAT_TLBIOS, FEAT_TLBIRANGE",
   "Enable Armv8.4-A TLB Range and Maintenance instructions">;
 
@@ -296,7 +296,7 @@ def FeatureEnhancedCounterVirtualization :
 //  Armv8.7 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
-def FeatureXS : Extension<"xs", "XS", "FEAT_XS",
+def FeatureXS : ExtensionWithMArch<"xs", "XS", "FEAT_XS",
   "Enable Armv8.7-A limited-TLB-maintenance instruction">;
 
 def FeatureWFxT : ExtensionWithMArch<"wfxt", "WFxT", "FEAT_WFxT",
@@ -836,7 +836,7 @@ def HasV8_4aOps : Architecture64<8, 4, "a", "v8.4a",
   [HasV8_3aOps, FeatureDotProd, FeatureNV, FeatureMPAM, FeatureDIT,
     FeatureTRACEV8_4, FeatureAM, FeatureSEL2, FeatureTLB_RMI, FeatureFlagM,
     FeatureRCPC_IMMO, FeatureLSE2],
-  !listconcat(HasV8_3aOps.DefaultExts, [FeatureDotProd, FeatureDIT, FeatureFlagM])>;
+  !listconcat(HasV8_3aOps.DefaultExts, [FeatureDotProd, FeatureDIT, FeatureTLB_RMI, FeatureFlagM])>;
 def HasV8_5aOps : Architecture64<8, 5, "a", "v8.5a",
   [HasV8_4aOps, FeatureAltFPCmp, FeatureFRInt3264, FeatureSpecRestrict,
     FeatureSB, FeaturePredRes, FeatureCacheDeepPersist,
@@ -848,7 +848,7 @@ def HasV8_6aOps : Architecture64<8, 6, "a", "v8.6a",
   !listconcat(HasV8_5aOps.DefaultExts, [FeatureBF16, FeatureMatMulInt8])>;
 def HasV8_7aOps : Architecture64<8, 7, "a", "v8.7a",
   [HasV8_6aOps, FeatureXS, FeatureWFxT, FeatureHCX, FeatureSPE_EEF],
-  !listconcat(HasV8_6aOps.DefaultExts, [FeatureWFxT])>;
+  !listconcat(HasV8_6aOps.DefaultExts, [FeatureXS, FeatureWFxT])>;
 def HasV8_8aOps : Architecture64<8, 8, "a", "v8.8a",
   [HasV8_7aOps, FeatureHBC, FeatureMOPS, FeatureNMI],
   !listconcat(HasV8_7aOps.DefaultExts, [FeatureMOPS, FeatureHBC])>;
@@ -866,7 +866,7 @@ def HasV9_1aOps : Architecture64<9, 1, "a", "v9.1a",
   !listconcat(HasV9_0aOps.DefaultExts, [FeatureBF16, FeatureMatMulInt8, FeatureRME])>;
 def HasV9_2aOps : Architecture64<9, 2, "a", "v9.2a",
   [HasV8_7aOps, HasV9_1aOps],
-  !listconcat(HasV9_1aOps.DefaultExts, [FeatureMEC, FeatureWFxT])>;
+  !listconcat(HasV9_1aOps.DefaultExts, [FeatureMEC, FeatureXS, FeatureWFxT])>;
 def HasV9_3aOps : Architecture64<9, 3, "a", "v9.3a",
   [HasV8_8aOps, HasV9_2aOps],
   !listconcat(HasV9_2aOps.DefaultExts, [FeatureMOPS, FeatureHBC])>;
