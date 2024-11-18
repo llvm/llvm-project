@@ -13538,9 +13538,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     for (unsigned EltNum = 1; EltNum < SourceLen; ++EltNum) {
       if (!CheckedIntArithmetic(
               Info, E, Reduced, Source.getVectorElt(EltNum).getInt(),
-              Reduced.getBitWidth() + 1, std::plus<APSInt>(), Reduced)) {
+              Reduced.getBitWidth() + 1, std::plus<APSInt>(), Reduced))
         return false;
-      }
     }
 
     return Success(Reduced, E);
