@@ -30,6 +30,14 @@ int main(void) {
   if (_aligned_msize(p, 128, 0) != 2048 * sizeof(int))
     return __LINE__;
   _aligned_free(p);
+
+  char *y = (char *)malloc(1024);
+  char *u = (char *)realloc(y, 2048);
+  u[0] = 'a';
+  _aligned_free(u);
+  u = (char *)_aligned_offset_malloc(1024, 8, 0);
+  _aligned_free(u);
+
   char *t = (char *)_aligned_malloc(128, 8);
   t[-1] = 'a';
   // CHECK: AddressSanitizer: heap-buffer-overflow on address [[ADDR:0x[0-9a-f]+]]
