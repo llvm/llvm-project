@@ -22,17 +22,11 @@ __UINTPTR_TYPE__ checksum_cookie =
 
 // initialize the checksum state
 void initialize() {
-  union {
-    struct {
-      __UINTPTR_TYPE__ entropy0;
-      __UINTPTR_TYPE__ entropy1;
-    };
-    char buffer[sizeof(__UINTPTR_TYPE__) * 2];
-  };
-  syscall_impl<long>(SYS_getrandom, buffer, sizeof(buffer), 0);
+  __UINTPTR_TYPE__ entropy[2];
+  syscall_impl<long>(SYS_getrandom, entropy, sizeof(entropy), 0);
   // add in additional entropy
-  jmpbuf::value_mask ^= entropy0;
-  jmpbuf::checksum_cookie ^= entropy1;
+  jmpbuf::value_mask ^= entropy[0];
+  jmpbuf::checksum_cookie ^= entropy[0];
 }
 
 extern "C" [[gnu::cold, noreturn]] void __libc_jmpbuf_corruption() {
