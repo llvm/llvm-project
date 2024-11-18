@@ -927,91 +927,87 @@ unsigned char Editline::BufferEndCommand(int ch) {
 static void
 PrintCompletion(FILE *output_file,
                 llvm::ArrayRef<CompletionResult::Completion> results,
-                size_t max_completion_length, size_t max_lenght) {
-
+                size_t max_completion_length, size_t max_length) {
   constexpr size_t ellipsis_length = 3;
-  constexpr size_t tab_legnth = 8;
+  constexpr size_t padding_length = 8;
   constexpr size_t separator_length = 4;
+
   const size_t description_col =
-      std::min(max_completion_length + tab_legnth, max_lenght);
+      std::min(max_completion_length + padding_length, max_length);
 
   for (const CompletionResult::Completion &c : results) {
-    // Print the leading tab-sized padding.
-    fprintf(output_file, "        ");
-    size_t cursor = tab_legnth;
+    if (c.GetCompletion().empty())
+      continue;
+    ;
 
-    if (!c.GetCompletion().empty()) {
-      const size_t completion_length = c.GetCompletion().size();
-      if (cursor + completion_length < max_lenght) {
-        fprintf(output_file, "%s", c.GetCompletion().c_str());
-        cursor = cursor + completion_length;
+    // Print the leading padding.
+    fprintf(output_file, "        ");
+
+    // Print the completion with trailing padding to the description column if
+    // that fits on the screen. Otherwise print whatever fits on the screen
+    // followed by ellipsis.
+    const size_t completion_length = c.GetCompletion().size();
+    if (padding_length + completion_length < max_length) {
+      fprintf(output_file, "%-*s",
+              static_cast<int>(description_col - padding_length),
+              c.GetCompletion().c_str());
+    } else {
+      // If the completion doesn't fit on the screen, print ellipsis and don't
+      // bother with the description.
+      fprintf(output_file, "%s...\n",
+              c.GetCompletion()
+                  .substr(0, max_length - padding_length - ellipsis_length)
+                  .c_str());
+      continue;
+    }
+
+    // If we don't have a description, or we don't have enough space left to
+    // print the separator followed by the ellipsis, we're done.
+    if (c.GetDescription().empty() ||
+        description_col + separator_length + ellipsis_length >= max_length) {
+      fprintf(output_file, "\n");
+      continue;
+    }
+
+    // Print the separator.
+    fprintf(output_file, " -- ");
+
+    // Descriptions can contain newlines. We want to print them below each
+    // other, aligned after the separator. For example, foo has a
+    // two-line description:
+    //
+    // foo   -- Something that fits on the line.
+    //          More information below.
+    //
+    // However, as soon as a line exceed the available screen width and
+    // print ellipsis, we don't print the next line. For example, foo has a
+    // three-line description:
+    //
+    // foo   -- Something that fits on the line.
+    //          Something much longer  that doesn't fit...
+    //
+    // Because we had to print ellipsis on line two, we don't print the
+    // third line.
+    bool first = true;
+    for (llvm::StringRef line : llvm::split(c.GetDescription(), '\n')) {
+      if (line.empty())
+        break;
+      if (!first)
+        fprintf(output_file, "%*s",
+                static_cast<int>(description_col + separator_length), "");
+
+      first = false;
+      const size_t position = description_col + separator_length;
+      const size_t description_lenth = line.size();
+      if (position + description_lenth < max_length) {
+        fprintf(output_file, "%s\n", line.str().c_str());
       } else {
-        // If the completion doesn't fit on the screen, print ellipsis and don't
-        // bother with the description.
         fprintf(output_file, "%s...\n",
-                c.GetCompletion()
-                    .substr(0, max_lenght - cursor - ellipsis_length)
+                line.substr(0, max_length - position - ellipsis_length)
+                    .str()
                     .c_str());
         continue;
       }
-    }
-
-    if (!c.GetDescription().empty()) {
-      // If we have a description, we need at least 4 columns for the separator.
-      if (cursor + separator_length < max_lenght) {
-        // Add padding before the separator.
-        if (cursor < description_col) {
-          std::string padding(description_col - cursor, ' ');
-          fprintf(output_file, "%s", padding.c_str());
-          cursor = description_col;
-        }
-
-        // Print the separator.
-        fprintf(output_file, " -- ");
-        cursor = cursor + separator_length;
-
-        // Descriptions can contain newlines. We want to print them below each
-        // other, aligned after the separator. For example, foo has a
-        // two-line description:
-        //
-        // foo   -- Something that fits on the line.
-        //          More information below.
-        //
-        // However, as soon as a line exceed the available screen width and
-        // print ellipsis, we don't print the next line. For example, foo has a
-        // three-line description:
-        //
-        // foo   -- Something that fits on the line.
-        //          Something much longer  that doesn't fit...
-        //
-        // Because we had to print ellipsis on line two, we don't print the
-        // third line.
-        llvm::StringRef tail = c.GetDescription();
-        while (!tail.empty()) {
-          llvm::StringRef head;
-          std::tie(head, tail) = tail.split('\n');
-
-          const size_t description_lenth = head.size();
-          if (cursor + description_lenth < max_lenght) {
-            fprintf(output_file, "%s\n", head.str().c_str());
-            cursor = cursor + description_lenth;
-          } else {
-            fprintf(output_file, "%s...\n",
-                    head.substr(0, max_lenght - cursor - ellipsis_length)
-                        .str()
-                        .c_str());
-            continue;
-          }
-
-          if (!tail.empty()) {
-            std::string padding(description_col + 4, ' ');
-            fprintf(output_file, "%s", padding.c_str());
-            cursor = description_col + 4;
-          }
-        }
-      }
-    } else {
-      fprintf(output_file, "\n");
     }
   }
 }
