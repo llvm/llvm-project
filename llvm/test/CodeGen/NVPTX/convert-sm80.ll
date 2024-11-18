@@ -224,7 +224,7 @@ define i32 @cvt_rna_tf32_f32(float %f1) {
 declare i32 @llvm.nvvm.f2tf32.rna(float)
 
 
-define <2 x bfloat> @fold_ff2bf16x2(float %a, float %b) {
+define <2 x bfloat> @fold_ff2bf16x2(float %lo, float %hi) {
 ; CHECK-LABEL: fold_ff2bf16x2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
@@ -236,14 +236,14 @@ define <2 x bfloat> @fold_ff2bf16x2(float %a, float %b) {
 ; CHECK-NEXT:    cvt.rn.bf16x2.f32 %r1, %f2, %f1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
-  %ah = fptrunc float %a to bfloat
-  %bh = fptrunc float %b to bfloat
-  %v0 = insertelement <2 x bfloat> poison, bfloat %ah, i64 0
-  %v1 = insertelement <2 x bfloat> %v0, bfloat %bh, i64 1
+  %loh = fptrunc float %lo to bfloat
+  %hih = fptrunc float %hi to bfloat
+  %v0 = insertelement <2 x bfloat> poison, bfloat %loh, i64 0
+  %v1 = insertelement <2 x bfloat> %v0, bfloat %hih, i64 1
   ret <2 x bfloat> %v1
 }
 
-define <2 x half> @fold_ff2f16x2(float %a, float %b) {
+define <2 x half> @fold_ff2f16x2(float %lo, float %hi) {
 ; CHECK-LABEL: fold_ff2f16x2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
@@ -255,9 +255,9 @@ define <2 x half> @fold_ff2f16x2(float %a, float %b) {
 ; CHECK-NEXT:    cvt.rn.f16x2.f32 %r1, %f2, %f1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
-  %ah = fptrunc float %a to half
-  %bh = fptrunc float %b to half
-  %v0 = insertelement <2 x half> poison, half %ah, i64 0
-  %v1 = insertelement <2 x half> %v0, half %bh, i64 1
+  %loh = fptrunc float %lo to half
+  %hih = fptrunc float %hi to half
+  %v0 = insertelement <2 x half> poison, half %loh, i64 0
+  %v1 = insertelement <2 x half> %v0, half %hih, i64 1
   ret <2 x half> %v1
 }
