@@ -113,7 +113,7 @@ size_t InputSectionBase::getSize() const {
 }
 
 template <class ELFT>
-static void decompressAux(const InputSectionBase &sec, uint8_t *out,
+static void decompressAux(Ctx &ctx, const InputSectionBase &sec, uint8_t *out,
                           size_t size) {
   auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(sec.content_);
   auto compressed = ArrayRef<uint8_t>(sec.content_, sec.compressedSize)
@@ -134,7 +134,7 @@ void InputSectionBase::decompress() const {
     uncompressedBuf = bAlloc().Allocate<uint8_t>(size);
   }
 
-  invokeELFT(decompressAux, *this, uncompressedBuf, size);
+  invokeELFT(decompressAux, ctx, *this, uncompressedBuf, size);
   content_ = uncompressedBuf;
   compressed = false;
 }
@@ -914,7 +914,8 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     // the callee. For local calls the caller and callee share the same
     // TOC base and so the TOC pointer initialization code should be skipped by
     // branching to the local entry point.
-    return symVA - p + getPPC64GlobalEntryToLocalEntryOffset(r.sym->stOther);
+    return symVA - p +
+           getPPC64GlobalEntryToLocalEntryOffset(ctx, r.sym->stOther);
   }
   case R_PPC64_TOCBASE:
     return getPPC64TocBase(ctx) + a;
