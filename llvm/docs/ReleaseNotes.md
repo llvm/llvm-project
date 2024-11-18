@@ -197,6 +197,20 @@ Changes to the RISC-V Backend
 * The `Sha` extension is now supported.
 * The RVA23U64, RVA23S64, RVB23U64, and RVB23S64 profiles are no longer marked
   as experimental.
+* `.insn <length>, <raw encoding>` can be used to assemble 48- and 64-bit
+  instructions from raw integer values.
+* `.insn [<length>,] <raw encoding>` now accepts absolute expressions for both
+  expressions, so that they can be computed from constants and absolute symbols.
+* The following new inline assembly constraints and modifiers are accepted:
+  * `cr` constraint meaning an RVC-encoding compatible GPR (`x8`-`x15`)
+  * `cf` constraint meaning an RVC-encoding compatible FPR (`f8`-`f15`)
+  * `R` constraint meaning an even-odd GPR pair (prints as the even register,
+    but both registers in the pair are considered live).
+  * `N` modifer meaning print the register encoding (0-31) rather than the name.
+* `f` and `cf` inline assembly constraints, when using F-/D-/H-in-X extensions,
+  will use the relevant GPR rather than FPR. This makes inline assembly portable
+  between e.g. F and Zfinx code.
+
 
 Changes to the WebAssembly Backend
 ----------------------------------
