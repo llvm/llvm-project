@@ -72,7 +72,6 @@ private:
 };
 
 static bool isNegativeComparison(const Expr *ComparisonExpr) {
-  // Handle direct != operator
   if (const auto *BO = llvm::dyn_cast<BinaryOperator>(ComparisonExpr)) {
     return BO->getOpcode() == BO_NE;
   }
