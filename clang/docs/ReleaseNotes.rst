@@ -710,6 +710,17 @@ Target Specific Changes
 AMDGPU Support
 ^^^^^^^^^^^^^^
 
+- Added headers ``gpuintrin.h`` and ``amdgpuintrin.h`` that contains common
+  definitions for GPU builtin functions. This header can be included for OpenMP,
+  CUDA, HIP, OpenCL, and C/C++.
+
+NVPTX Support
+^^^^^^^^^^^^^^
+
+- Added headers ``gpuintrin.h`` and ``nvptxintrin.h`` that contains common
+  definitions for GPU builtin functions. This header can be included for OpenMP,
+  CUDA, HIP, OpenCL, and C/C++.
+
 X86 Support
 ^^^^^^^^^^^
 

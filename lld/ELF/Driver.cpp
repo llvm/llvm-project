@@ -84,13 +84,6 @@ Ctx elf::ctx;
 static void setConfigs(Ctx &ctx, opt::InputArgList &args);
 static void readConfigs(Ctx &ctx, opt::InputArgList &args);
 
-void elf::errorOrWarn(const Twine &msg) {
-  if (ctx.arg.noinhibitExec)
-    Warn(ctx) << msg;
-  else
-    ErrAlways(ctx) << msg;
-}
-
 ELFSyncStream elf::Log(Ctx &ctx) { return {ctx, DiagLevel::Log}; }
 ELFSyncStream elf::Warn(Ctx &ctx) { return {ctx, DiagLevel::Warn}; }
 ELFSyncStream elf::Err(Ctx &ctx) {
@@ -99,6 +92,11 @@ ELFSyncStream elf::Err(Ctx &ctx) {
 ELFSyncStream elf::ErrAlways(Ctx &ctx) { return {ctx, DiagLevel::Err}; }
 ELFSyncStream elf::Fatal(Ctx &ctx) { return {ctx, DiagLevel::Fatal}; }
 uint64_t elf::errCount(Ctx &ctx) { return ctx.errHandler->errorCount; }
+
+void elf::internalLinkerError(StringRef loc, const Twine &msg) {
+  ELFSyncStream(ctx, DiagLevel::Err) << "internal linker error: " << msg << '\n'
+                                     << llvm::getBugReportMsg();
+}
 
 Ctx::Ctx() : driver(*this) {}
 

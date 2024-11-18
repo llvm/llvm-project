@@ -1822,10 +1822,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       ctx.in.iplt->addSymbols();
 
     if (ctx.arg.unresolvedSymbolsInShlib != UnresolvedPolicy::Ignore) {
-      auto diagnose =
-          ctx.arg.unresolvedSymbolsInShlib == UnresolvedPolicy::ReportError
-              ? errorOrWarn
-              : warn;
+      auto diag =
+          ctx.arg.unresolvedSymbolsInShlib == UnresolvedPolicy::ReportError &&
+                  !ctx.arg.noinhibitExec
+              ? DiagLevel::Err
+              : DiagLevel::Warn;
       // Error on undefined symbols in a shared object, if all of its DT_NEEDED
       // entries are seen. These cases would otherwise lead to runtime errors
       // reported by the dynamic linker.
@@ -1850,14 +1851,14 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
           if (sym->dsoDefined)
             continue;
           if (sym->isUndefined() && !sym->isWeak()) {
-            diagnose("undefined reference: " + toString(*sym) +
-                     "\n>>> referenced by " + toString(file) +
-                     " (disallowed by --no-allow-shlib-undefined)");
+            ELFSyncStream(ctx, diag)
+                << "undefined reference: " << sym << "\n>>> referenced by "
+                << file << " (disallowed by --no-allow-shlib-undefined)";
           } else if (sym->isDefined() &&
                      sym->computeBinding(ctx) == STB_LOCAL) {
-            diagnose("non-exported symbol '" + toString(*sym) + "' in '" +
-                     toString(sym->file) + "' is referenced by DSO '" +
-                     toString(file) + "'");
+            ELFSyncStream(ctx, diag)
+                << "non-exported symbol '" << sym << "' in '" << sym->file
+                << "' is referenced by DSO '" << file << "'";
           }
         }
       }
