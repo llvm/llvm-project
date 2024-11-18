@@ -22515,31 +22515,32 @@ Value *CodeGenFunction::EmitRISCVCpuIs(const CallExpr *E) {
 Value *CodeGenFunction::EmitRISCVCpuIs(StringRef CPUStr) {
   llvm::Type *Int32Ty = Builder.getInt32Ty();
   llvm::Type *Int64Ty = Builder.getInt64Ty();
-  llvm::Type *StructTy = llvm::StructType::get(Int32Ty, Int64Ty, Int64Ty);
+  llvm::StructType *StructTy = llvm::StructType::get(Int32Ty, Int64Ty, Int64Ty);
   llvm::Constant *RISCVCPUModel =
       CGM.CreateRuntimeVariable(StructTy, "__riscv_cpu_model");
   cast<llvm::GlobalValue>(RISCVCPUModel)->setDSOLocal(true);
 
-  auto loadRISCVCPUID = [&](unsigned Index, llvm::Type *ValueTy) {
+  auto loadRISCVCPUID = [&](unsigned Index) {
     Value *Ptr = Builder.CreateStructGEP(StructTy, RISCVCPUModel, Index);
-    Value *CPUID = Builder.CreateAlignedLoad(ValueTy, Ptr, llvm::MaybeAlign());
+    Value *CPUID = Builder.CreateAlignedLoad(StructTy->getTypeAtIndex(Index),
+                                             Ptr, llvm::MaybeAlign());
     return CPUID;
   };
 
   const llvm::RISCV::CPUModel CPUModel = llvm::RISCV::getCPUModel(CPUStr);
 
   // Compare mvendorid.
-  Value *VendorID = loadRISCVCPUID(0, Int32Ty);
+  Value *VendorID = loadRISCVCPUID(0);
   Value *Result =
       Builder.CreateICmpEQ(VendorID, Builder.getInt32(CPUModel.MVendorID));
 
   // Compare marchid.
-  Value *ArchID = loadRISCVCPUID(1, Int64Ty);
+  Value *ArchID = loadRISCVCPUID(1);
   Result = Builder.CreateAnd(
       Result, Builder.CreateICmpEQ(ArchID, Builder.getInt64(CPUModel.MArchID)));
 
   // Compare mimplid.
-  Value *ImplID = loadRISCVCPUID(2, Int64Ty);
+  Value *ImplID = loadRISCVCPUID(2);
   Result = Builder.CreateAnd(
       Result, Builder.CreateICmpEQ(ImplID, Builder.getInt64(CPUModel.MImpID)));
 
