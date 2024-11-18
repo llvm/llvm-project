@@ -71,7 +71,7 @@ class stride_view : public view_interface<stride_view<_View>> {
 public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit stride_view(_View __base, range_difference_t<_View> __stride)
       : __base_(std::move(__base)), __stride_(__stride) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__stride > 0, "The value of stride must be greater than 0");
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__stride > 0, "The value of stride must be greater than 0");
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
@@ -210,19 +210,19 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__current_ != __end_, "Cannot increment an iterator already at the end.");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__current_ != __end_, "Cannot increment an iterator already at the end.");
     __missing_ = ranges::advance(__current_, __stride_, __end_);
     return *this;
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr void operator++(int) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__current_ != __end_, "Cannot increment an iterator already at the end.");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__current_ != __end_, "Cannot increment an iterator already at the end.");
     ++*this;
   }
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator++(int)
     requires forward_range<_Base>
   {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__current_ != __end_, "Cannot increment an iterator already at the end.");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__current_ != __end_, "Cannot increment an iterator already at the end.");
     auto __tmp = *this;
     ++*this;
     return __tmp;
@@ -247,7 +247,7 @@ public:
     requires random_access_range<_Base>
   {
     if (__n > 0) {
-      _LIBCPP_ASSERT_UNCATEGORIZED(ranges::distance(__current_, __end_) > __stride_ * (__n - 1),
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(ranges::distance(__current_, __end_) > __stride_ * (__n - 1),
                                    "Advancing the iterator beyond the end is not allowed.");
       ranges::advance(__current_, __stride_ * (__n - 1));
       __missing_ = ranges::advance(__current_, __stride_, __end_);
