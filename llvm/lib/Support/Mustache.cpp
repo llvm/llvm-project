@@ -240,7 +240,7 @@ Token::Type Token::getTokenType(char Identifier) {
 // We determine if a token has meaningful text behind
 // if the right of previous token contains anything that is
 // not a newline
-// For example: 
+// For example:
 //  "Stuff {{#Section}}" (returns true)
 //   vs
 //  "{{#Section}} \n" (returns false)
@@ -368,7 +368,7 @@ SmallVector<Token> tokenize(StringRef Template) {
   // if you have the template string
   //  {{#section}} \n Example \n{{/section}}
   // The output should would be
-  // For example
+  // For example:
   //  \n Example \n
   size_t LastIdx = Tokens.size() - 1;
   for (size_t Idx = 0, End = Tokens.size(); Idx < End; ++Idx) {
