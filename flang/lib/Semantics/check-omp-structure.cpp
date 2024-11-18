@@ -3333,14 +3333,17 @@ void OmpStructureChecker::Leave(const parser::OmpAtomicRead &) {
   CheckNotAllowedIfClause(llvm::omp::Clause::OMPC_read,
       {llvm::omp::Clause::OMPC_release, llvm::omp::Clause::OMPC_acq_rel});
 }
+
 void OmpStructureChecker::Leave(const parser::OmpAtomicWrite &) {
   CheckNotAllowedIfClause(llvm::omp::Clause::OMPC_write,
       {llvm::omp::Clause::OMPC_acquire, llvm::omp::Clause::OMPC_acq_rel});
 }
+
 void OmpStructureChecker::Leave(const parser::OmpAtomicUpdate &) {
   CheckNotAllowedIfClause(llvm::omp::Clause::OMPC_update,
       {llvm::omp::Clause::OMPC_acquire, llvm::omp::Clause::OMPC_acq_rel});
 }
+
 // OmpAtomic node represents atomic directive without atomic-clause.
 // atomic-clause - READ,WRITE,UPDATE,CAPTURE.
 void OmpStructureChecker::Leave(const parser::OmpAtomic &) {
@@ -3353,6 +3356,7 @@ void OmpStructureChecker::Leave(const parser::OmpAtomic &) {
         "Clause ACQ_REL is not allowed on the ATOMIC directive"_err_en_US);
   }
 }
+
 // Restrictions specific to each clause are implemented apart from the
 // generalized restrictions.
 void OmpStructureChecker::Enter(const parser::OmpClause::Aligned &x) {
@@ -3364,15 +3368,48 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Aligned &x) {
   }
   // 2.8.1 TODO: list-item attribute check
 }
+
 void OmpStructureChecker::Enter(const parser::OmpClause::Defaultmap &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_defaultmap);
+  unsigned version{context_.langOptions().OpenMPVersion};
+  using ImplicitBehavior = parser::OmpDefaultmapClause::ImplicitBehavior;
+  auto behavior{std::get<ImplicitBehavior>(x.v.t)};
+  if (version <= 45) {
+    if (behavior != ImplicitBehavior::Tofrom) {
+      context_.Say(GetContext().clauseSource,
+          "%s is not allowed in %s, %s"_warn_en_US,
+          parser::ToUpperCaseLetters(
+              parser::OmpDefaultmapClause::EnumToString(behavior)),
+          ThisVersion(version), TryVersion(50));
+    }
+  }
   using VariableCategory = parser::OmpDefaultmapClause::VariableCategory;
-  if (!std::get<std::optional<VariableCategory>>(x.v.t)) {
-    context_.Say(GetContext().clauseSource,
-        "The argument TOFROM:SCALAR must be specified on the DEFAULTMAP "
-        "clause"_err_en_US);
+  auto maybeCategory{std::get<std::optional<VariableCategory>>(x.v.t)};
+  if (!maybeCategory) {
+    if (version <= 45) {
+      context_.Say(GetContext().clauseSource,
+          "The DEFAULTMAP clause requires a variable-category SCALAR in %s, %s"_warn_en_US,
+          ThisVersion(version), TryVersion(50));
+    }
+  } else {
+    VariableCategory category{*maybeCategory};
+    unsigned tryVersion{0};
+    if (version <= 45 && category != VariableCategory::Scalar) {
+      tryVersion = 50;
+    }
+    if (version < 52 && category == VariableCategory::All) {
+      tryVersion = 52;
+    }
+    if (tryVersion) {
+      context_.Say(GetContext().clauseSource,
+          "%s is not allowed in %s, %s"_warn_en_US,
+          parser::ToUpperCaseLetters(
+              parser::OmpDefaultmapClause::EnumToString(category)),
+          ThisVersion(version), TryVersion(tryVersion));
+    }
   }
 }
+
 void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_if);
   using dirNameModifier = parser::OmpIfClause::DirectiveNameModifier;
