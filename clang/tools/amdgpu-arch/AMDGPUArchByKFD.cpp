@@ -54,6 +54,7 @@ int printGPUsByKFD() {
          ++Lines) {
       StringRef Line(*Lines);
       if (Line.consume_front("gfx_target_version")) {
+        Line.drop_while([](char C) { return std::isspace(C); });
         if (Line.consumeInteger(10, GFXVersion))
           return 1;
         break;
