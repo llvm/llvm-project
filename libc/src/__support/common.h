@@ -18,7 +18,7 @@
 #include "src/__support/macros/properties/architectures.h"
 
 #ifndef LLVM_LIBC_FUNCTION_ATTR
-#define LLVM_LIBC_FUNCTION_ATTR
+#define LLVM_LIBC_FUNCTION_ATTR [[gnu::visibility("default")]]
 #endif
 
 // MacOS needs to be excluded because it does not support aliasing.
