@@ -195,15 +195,13 @@ public:
 
   Register handleD16VData(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                           Register Reg, bool ImageStore = false) const;
-  Register fixStoreSourceType(MachineIRBuilder &B, Register VData,
+  Register fixStoreSourceType(MachineIRBuilder &B, Register VData, LLT MemTy,
                               bool IsFormat) const;
 
-  bool legalizeBufferStore(MachineInstr &MI, MachineRegisterInfo &MRI,
-                           MachineIRBuilder &B, bool IsTyped,
-                           bool IsFormat) const;
-  bool legalizeBufferLoad(MachineInstr &MI, MachineRegisterInfo &MRI,
-                          MachineIRBuilder &B, bool IsFormat,
-                          bool IsTyped) const;
+  bool legalizeBufferStore(MachineInstr &MI, LegalizerHelper &Helper,
+                           bool IsTyped, bool IsFormat) const;
+  bool legalizeBufferLoad(MachineInstr &MI, LegalizerHelper &Helper,
+                          bool IsFormat, bool IsTyped) const;
   bool legalizeBufferAtomic(MachineInstr &MI, MachineIRBuilder &B,
                             Intrinsic::ID IID) const;
 

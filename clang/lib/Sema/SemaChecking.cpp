@@ -25,7 +25,6 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/FormatString.h"
 #include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/NSAPI.h"
@@ -38,7 +37,6 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/AddressSpaces.h"
-#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
@@ -50,8 +48,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/SyncScope.h"
-#include "clang/Basic/TargetBuiltins.h"
-#include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Lexer.h" // TODO: Extract static functions to fix layering.
@@ -66,7 +62,6 @@
 #include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaHexagon.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaLoongArch.h"
 #include "clang/Sema/SemaMIPS.h"
 #include "clang/Sema/SemaNVPTX.h"
@@ -93,7 +88,6 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/AtomicOrdering.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -105,7 +99,6 @@
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
-#include <bitset>
 #include <cassert>
 #include <cctype>
 #include <cstddef>
@@ -2212,7 +2205,9 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (CheckBuiltinTargetInSupported(
             *this, TheCall,
             {llvm::Triple::x86, llvm::Triple::x86_64, llvm::Triple::arm,
-             llvm::Triple::thumb, llvm::Triple::aarch64, llvm::Triple::amdgcn}))
+             llvm::Triple::thumb, llvm::Triple::aarch64, llvm::Triple::amdgcn,
+             llvm::Triple::ppc, llvm::Triple::ppc64, llvm::Triple::ppcle,
+             llvm::Triple::ppc64le}))
       return ExprError();
     break;
 
@@ -2971,6 +2966,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     }
     break;
   }
+  case Builtin::BI__builtin_counted_by_ref:
+    if (BuiltinCountedByRef(TheCall))
+      return ExprError();
+    break;
   }
 
   if (getLangOpts().HLSL && HLSL().CheckBuiltinFunctionCall(BuiltinID, TheCall))
@@ -5570,6 +5569,55 @@ bool Sema::BuiltinSetjmp(CallExpr *TheCall) {
   if (!Context.getTargetInfo().hasSjLjLowering())
     return Diag(TheCall->getBeginLoc(), diag::err_builtin_setjmp_unsupported)
            << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
+  return false;
+}
+
+bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
+  if (checkArgCount(TheCall, 1))
+    return true;
+
+  ExprResult ArgRes = UsualUnaryConversions(TheCall->getArg(0));
+  if (ArgRes.isInvalid())
+    return true;
+
+  // For simplicity, we support only limited expressions for the argument.
+  // Specifically a pointer to a flexible array member:'ptr->array'. This
+  // allows us to reject arguments with complex casting, which really shouldn't
+  // be a huge problem.
+  const Expr *Arg = ArgRes.get()->IgnoreParenImpCasts();
+  if (!isa<PointerType>(Arg->getType()) && !Arg->getType()->isArrayType())
+    return Diag(Arg->getBeginLoc(),
+                diag::err_builtin_counted_by_ref_must_be_flex_array_member)
+           << Arg->getSourceRange();
+
+  if (Arg->HasSideEffects(Context))
+    return Diag(Arg->getBeginLoc(),
+                diag::err_builtin_counted_by_ref_has_side_effects)
+           << Arg->getSourceRange();
+
+  if (const auto *ME = dyn_cast<MemberExpr>(Arg)) {
+    if (!ME->isFlexibleArrayMemberLike(
+            Context, getLangOpts().getStrictFlexArraysLevel()))
+      return Diag(Arg->getBeginLoc(),
+                  diag::err_builtin_counted_by_ref_must_be_flex_array_member)
+             << Arg->getSourceRange();
+
+    if (auto *CATy =
+            ME->getMemberDecl()->getType()->getAs<CountAttributedType>();
+        CATy && CATy->getKind() == CountAttributedType::CountedBy) {
+      const auto *FAMDecl = cast<FieldDecl>(ME->getMemberDecl());
+      if (const FieldDecl *CountFD = FAMDecl->findCountedByField()) {
+        TheCall->setType(Context.getPointerType(CountFD->getType()));
+        return false;
+      }
+    }
+  } else {
+    return Diag(Arg->getBeginLoc(),
+                diag::err_builtin_counted_by_ref_must_be_flex_array_member)
+           << Arg->getSourceRange();
+  }
+
+  TheCall->setType(Context.getPointerType(Context.VoidTy));
   return false;
 }
 

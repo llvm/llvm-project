@@ -193,6 +193,8 @@ typedef basic_fstream<wchar_t> wfstream;
 #include <__fwd/fstream.h>
 #include <__locale>
 #include <__memory/addressof.h>
+#include <__memory/unique_ptr.h>
+#include <__ostream/basic_ostream.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_same.h>
 #include <__utility/move.h>
@@ -200,7 +202,7 @@ typedef basic_fstream<wchar_t> wfstream;
 #include <__utility/unreachable.h>
 #include <cstdio>
 #include <istream>
-#include <ostream>
+#include <streambuf>
 #include <typeinfo>
 #include <version>
 
@@ -217,7 +219,7 @@ _LIBCPP_PUSH_MACROS
 #  define _LIBCPP_HAS_OFF_T_FUNCTIONS 0
 #endif
 
-#if !defined(_LIBCPP_HAS_NO_FILESYSTEM) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -1562,7 +1564,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_filebuf<char>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // !defined(_LIBCPP_HAS_NO_FILESYSTEM) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#endif // _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
 
 _LIBCPP_POP_MACROS
 

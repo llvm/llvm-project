@@ -33,7 +33,6 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -9241,12 +9240,12 @@ struct AAValueConstantRangeReturned
     : AAReturnedFromReturnedValues<AAValueConstantRange,
                                    AAValueConstantRangeImpl,
                                    AAValueConstantRangeImpl::StateType,
-                                   /* PropogateCallBaseContext */ true> {
+                                   /* PropagateCallBaseContext */ true> {
   using Base =
       AAReturnedFromReturnedValues<AAValueConstantRange,
                                    AAValueConstantRangeImpl,
                                    AAValueConstantRangeImpl::StateType,
-                                   /* PropogateCallBaseContext */ true>;
+                                   /* PropagateCallBaseContext */ true>;
   AAValueConstantRangeReturned(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
 

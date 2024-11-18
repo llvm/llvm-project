@@ -215,6 +215,9 @@ defm error_limit:
 def build_id: J<"build-id=">, HelpText<"Generate build ID note (pass none to disable)">, 
   MetaVarName<"<arg>">;
 def : F<"build-id">, Alias<build_id>, HelpText<"Alias for --build-id=">;
+def functionpadmin: J<"functionpadmin=">, HelpText<"Prepares an image for hotpatching">,
+  MetaVarName<"<arg>">;
+def : F<"functionpadmin">, Alias<functionpadmin>, HelpText<"Alias for --functionpadmin=">;
 
 // Alias
 def alias_Bdynamic_call_shared: Flag<["-"], "call_shared">, Alias<Bdynamic>;

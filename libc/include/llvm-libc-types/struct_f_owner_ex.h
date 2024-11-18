@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_STRUCT_F_OWNER_EX_H
 #define LLVM_LIBC_TYPES_STRUCT_F_OWNER_EX_H
 
-#include "llvm-libc-types/pid_t.h"
+#include "pid_t.h"
 
 enum pid_type {
   F_OWNER_TID = 0,

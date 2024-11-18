@@ -1,6 +1,7 @@
 #include "llvm/ExecutionEngine/Orc/ReOptimizeLayer.h"
 #include "OrcTestCommon.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
@@ -128,7 +129,7 @@ TEST_F(ReOptimizeLayerTest, BasicReOptimization) {
                           {ExecutorAddr(), JITSymbolFlags::Exported}}})),
                     Succeeded());
 
-  auto RM = JITLinkRedirectableSymbolManager::Create(*ObjLinkingLayer, *JD);
+  auto RM = JITLinkRedirectableSymbolManager::Create(*ObjLinkingLayer);
   EXPECT_THAT_ERROR(RM.takeError(), Succeeded());
 
   ROLayer = std::make_unique<ReOptimizeLayer>(*ES, *DL, *CompileLayer, **RM);

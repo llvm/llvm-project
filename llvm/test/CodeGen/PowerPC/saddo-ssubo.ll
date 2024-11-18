@@ -129,11 +129,12 @@ entry:
 define i1 @test_ssubo_i32(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: test_ssubo_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sub 3, 3, 4
-; CHECK-NEXT:    extsw 4, 3
-; CHECK-NEXT:    xor 3, 4, 3
-; CHECK-NEXT:    addic 4, 3, -1
-; CHECK-NEXT:    subfe 3, 4, 3
+; CHECK-NEXT:    sub 5, 3, 4
+; CHECK-NEXT:    cmpwi 1, 4, 0
+; CHECK-NEXT:    cmpw 5, 3
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    creqv 20, 5, 0
+; CHECK-NEXT:    isel 3, 0, 3, 20
 ; CHECK-NEXT:    blr
 entry:
   %res = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 %a, i32 %b) nounwind

@@ -15,8 +15,8 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
@@ -1304,9 +1304,7 @@ namespace {
 /// and of all exported functions, and any functions that are referenced
 /// from this AST. In other words, any functions that are reachable from
 /// the entry points.
-class DiagnoseHLSLAvailability
-    : public RecursiveASTVisitor<DiagnoseHLSLAvailability> {
-
+class DiagnoseHLSLAvailability : public DynamicRecursiveASTVisitor {
   Sema &SemaRef;
 
   // Stack of functions to be scaned
@@ -1409,14 +1407,14 @@ public:
   void RunOnTranslationUnit(const TranslationUnitDecl *TU);
   void RunOnFunction(const FunctionDecl *FD);
 
-  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
     FunctionDecl *FD = llvm::dyn_cast<FunctionDecl>(DRE->getDecl());
     if (FD)
       HandleFunctionOrMethodRef(FD, DRE);
     return true;
   }
 
-  bool VisitMemberExpr(MemberExpr *ME) {
+  bool VisitMemberExpr(MemberExpr *ME) override {
     FunctionDecl *FD = llvm::dyn_cast<FunctionDecl>(ME->getMemberDecl());
     if (FD)
       HandleFunctionOrMethodRef(FD, ME);
@@ -1947,6 +1945,31 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  case Builtin::BI__builtin_hlsl_elementwise_firstbithigh: {
+    if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
+      return true;
+
+    const Expr *Arg = TheCall->getArg(0);
+    QualType ArgTy = Arg->getType();
+    QualType EltTy = ArgTy;
+
+    QualType ResTy = SemaRef.Context.UnsignedIntTy;
+
+    if (auto *VecTy = EltTy->getAs<VectorType>()) {
+      EltTy = VecTy->getElementType();
+      ResTy = SemaRef.Context.getVectorType(ResTy, VecTy->getNumElements(),
+                                            VecTy->getVectorKind());
+    }
+
+    if (!EltTy->isIntegerType()) {
+      Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+          << 1 << /* integer ty */ 6 << ArgTy;
+      return true;
+    }
+
+    TheCall->setType(ResTy);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_select: {
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;
@@ -2110,6 +2133,14 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  case Builtin::BI__builtin_hlsl_elementwise_clip: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    if (CheckScalarOrVector(&SemaRef, TheCall, SemaRef.Context.FloatTy, 0))
+      return true;
+    break;
+  }
   case Builtin::BI__builtin_elementwise_acos:
   case Builtin::BI__builtin_elementwise_asin:
   case Builtin::BI__builtin_elementwise_atan:
@@ -2197,6 +2228,43 @@ static void BuildFlattenedTypeList(QualType BaseTy,
     }
     List.push_back(T);
   }
+}
+
+bool SemaHLSL::IsTypedResourceElementCompatible(clang::QualType QT) {
+  // null and array types are not allowed.
+  if (QT.isNull() || QT->isArrayType())
+    return false;
+
+  // UDT types are not allowed
+  if (QT->isRecordType())
+    return false;
+
+  if (QT->isBooleanType() || QT->isEnumeralType())
+    return false;
+
+  // the only other valid builtin types are scalars or vectors
+  if (QT->isArithmeticType()) {
+    if (SemaRef.Context.getTypeSize(QT) / 8 > 16)
+      return false;
+    return true;
+  }
+
+  if (const VectorType *VT = QT->getAs<VectorType>()) {
+    int ArraySize = VT->getNumElements();
+
+    if (ArraySize > 4)
+      return false;
+
+    QualType ElTy = VT->getElementType();
+    if (ElTy->isBooleanType())
+      return false;
+
+    if (SemaRef.Context.getTypeSize(QT) / 8 > 16)
+      return false;
+    return true;
+  }
+
+  return false;
 }
 
 bool SemaHLSL::IsScalarizedLayoutCompatible(QualType T1, QualType T2) const {
