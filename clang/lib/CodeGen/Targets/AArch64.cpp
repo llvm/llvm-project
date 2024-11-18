@@ -484,6 +484,30 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
   return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
 }
 
+static std::pair<unsigned, unsigned> computePadding(QualType T,
+                                                    ASTContext &Ctx) {
+  unsigned Padding = 0;
+  unsigned TailPadding = 0;
+  if (auto *RD = T->getAs<RecordType>()) {
+    for (auto I = RD->getDecl()->field_begin(),
+              End = RD->getDecl()->field_end();
+         I != End; ++I) {
+      QualType FieldTy = I->getType();
+      if (auto *ET = FieldTy->getAs<ElaboratedType>())
+        FieldTy = ET->getNamedType();
+      if (auto *RD2 = FieldTy->getAs<RecordType>()) {
+        auto &Layout = Ctx.getASTRecordLayout(RD2->getDecl());
+        auto [SubPadding, SubTailPadding] = computePadding(I->getType(), Ctx);
+        TailPadding = Ctx.toBits(Layout.getSize() - Layout.getDataSize()) +
+                      SubTailPadding;
+        Padding +=
+            Ctx.toBits(Layout.getSize() - Layout.getDataSize()) + SubPadding;
+      }
+    }
+  }
+  return {Padding, TailPadding};
+}
+
 ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
                                               bool IsVariadicFn) const {
   if (RetTy->isVoidType())
@@ -543,6 +567,18 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
 
   // Aggregates <= 16 bytes are returned directly in registers or on the stack.
   if (Size <= 128) {
+    auto [Padding, TailPadding] = computePadding(RetTy, getContext());
+    // If the type contains any padding, be careful not to lower to wide types
+    // that may mix data and padding bits. E.g. using i64 for a type that has 32
+    // bits of data and 32 bits of padding means loading the uninitialized
+    // padding bits together with data bits poisons the resulting wide type.
+    if (Padding > 0) {
+      if (Padding == TailPadding && (Size - TailPadding) % 8 == 0) {
+        llvm::Type *BaseTy = llvm::Type::getInt8Ty(getVMContext());
+        return ABIArgInfo::getDirect(llvm::ArrayType::get(BaseTy, Size / 8));
+      }
+      return getNaturalAlignIndirect(RetTy);
+    }
     if (Size <= 64 && getDataLayout().isLittleEndian()) {
       // Composite types are returned in lower bits of a 64-bit register for LE,
       // and in higher bits for BE. However, integer types are always returned
