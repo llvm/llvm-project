@@ -2290,7 +2290,8 @@ void WsloopOp::build(OpBuilder &builder, OperationState &state,
         /*linear_vars=*/ValueRange(), /*linear_step_vars=*/ValueRange(),
         /*nowait=*/false, /*order=*/nullptr, /*order_mod=*/nullptr,
         /*ordered=*/nullptr, /*private_vars=*/{}, /*private_syms=*/nullptr,
-        nullptr, /*reduction_vars=*/ValueRange(), /*reduction_byref=*/nullptr,
+        /*reduction_mod=*/nullptr, /*reduction_vars=*/ValueRange(),
+        /*reduction_byref=*/nullptr,
         /*reduction_syms=*/nullptr, /*schedule_kind=*/nullptr,
         /*schedule_chunk=*/nullptr, /*schedule_mod=*/nullptr,
         /*schedule_simd=*/false);
@@ -3214,8 +3215,9 @@ LogicalResult ScanOp::verify() {
       return success();
     }
   }
-  return emitError("Scan Operation should be enclosed within a parent "
-                   "WORSKSHARING LOOP or SIMD with INSCAN reduction modifier");
+  return emitError("SCAN directive needs to be enclosed within a parent "
+                   "worksharing loop construct or SIMD construct with INSCAN "
+                   "reduction modifier");
 }
 
 #define GET_ATTRDEF_CLASSES

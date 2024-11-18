@@ -1894,7 +1894,7 @@ func.func @scan_test_2(%lb: i32, %ub: i32, %step: i32) {
   %test1f32 = "test.f32"() : () -> (!llvm.ptr)
   omp.taskloop reduction(Id:InScan, @add_f32 %test1f32 -> %arg1 : !llvm.ptr) {
     omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-  // expected-error @below {{Scan Operation should be enclosed within a parent WORSKSHARING LOOP or SIMD with INSCAN reduction modifier}}
+  // expected-error @below {{SCAN directive needs to be enclosed within a parent worksharing loop construct or SIMD construct with INSCAN reduction modifier}}
        omp.scan inclusive(%test1f32 : !llvm.ptr)
         omp.yield
     }

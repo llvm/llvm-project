@@ -1713,7 +1713,7 @@ def ScanOp : OpenMP_Op<"scan", [
   let summary = "scan directive";
   let description = [{
     The scan directive allows to specify scan reduction. Scan directive
-    should be enclosed with in a parent directive along with which , a
+    should be enclosed with in a parent directive along with which, a
     reduction clause with `InScan` modifier must be specified. Scan directive
     allows to separate code blocks to input phase and scan phase in the region
     enclosed by the parent.
