@@ -363,6 +363,8 @@ Non-comprehensive list of changes in this release
   The flexible array member (FAM) can now be accessed immediately without causing
   issues with the sanitizer because the counter is automatically set.
 
+- ``__builtin_reduce_add`` function can now be used in constant expressions.
+
 New Compiler Flags
 ------------------
 
@@ -742,6 +744,8 @@ Target Specific Changes
 AMDGPU Support
 ^^^^^^^^^^^^^^
 
+- Initial support for gfx950
+
 - Added headers ``gpuintrin.h`` and ``amdgpuintrin.h`` that contains common
   definitions for GPU builtin functions. This header can be included for OpenMP,
   CUDA, HIP, OpenCL, and C/C++.
@@ -800,6 +804,8 @@ X86 Support
 - Support ISA of ``AMX-AVX512``.
 - Support ISA of ``AMX-TF32``.
 - Support ISA of ``MOVRS``.
+
+- Supported ``-march/tune=diamondrapids``
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -889,9 +895,6 @@ AST Matchers
 
 - Ensure ``hasName`` matches template specializations across inline namespaces,
   making `matchesNodeFullSlow` and `matchesNodeFullFast` consistent.
-
-- The examples in the AST matcher reference are now tested and additional
-  examples and descriptions were added.
 
 clang-format
 ------------

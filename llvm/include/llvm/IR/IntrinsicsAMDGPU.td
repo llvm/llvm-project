@@ -594,6 +594,10 @@ def int_amdgcn_ds_ordered_swap : AMDGPUDSOrderedIntrinsic;
 def int_amdgcn_ds_append : AMDGPUDSAppendConsumedIntrinsic;
 def int_amdgcn_ds_consume : AMDGPUDSAppendConsumedIntrinsic;
 
+def int_amdgcn_prng_b32 : DefaultAttrsIntrinsic<
+  [llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]
+>, ClangBuiltin<"__builtin_amdgcn_prng_b32">;
+
 } // TargetPrefix = "amdgcn"
 
 // New-style image intrinsics

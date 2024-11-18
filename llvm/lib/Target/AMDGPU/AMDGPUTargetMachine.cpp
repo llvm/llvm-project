@@ -1470,7 +1470,7 @@ void GCNPassConfig::addOptimizedRegAlloc() {
     insertPass(&RenameIndependentSubregsID, &GCNRewritePartialRegUsesID);
 
   if (isPassEnabled(EnablePreRAOptimizations))
-    insertPass(&RenameIndependentSubregsID, &GCNPreRAOptimizationsID);
+    insertPass(&MachineSchedulerID, &GCNPreRAOptimizationsID);
 
   // Allow the scheduler to run before SIWholeQuadMode inserts exec manipulation
   // instructions that cause scheduling barriers.

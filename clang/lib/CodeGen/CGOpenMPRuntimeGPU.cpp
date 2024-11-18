@@ -24,7 +24,6 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -2546,6 +2545,7 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::GFX940:
       case OffloadArch::GFX941:
       case OffloadArch::GFX942:
+      case OffloadArch::GFX950:
       case OffloadArch::GFX10_1_GENERIC:
       case OffloadArch::GFX1010:
       case OffloadArch::GFX1011:

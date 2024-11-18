@@ -25,7 +25,12 @@ class OutputSection;
 class SectionBase;
 
 // Represents a relocation type, such as R_X86_64_PC32 or R_ARM_THM_CALL.
-using RelType = uint32_t;
+struct RelType {
+  uint32_t v = 0;
+  /*implicit*/ constexpr RelType(uint32_t v = 0) : v(v) {}
+  /*implicit*/ operator uint32_t() const { return v; }
+};
+
 using JumpModType = uint32_t;
 
 // List of target-independent relocation types. Relocations read

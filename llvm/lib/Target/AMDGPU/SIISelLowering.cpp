@@ -3942,8 +3942,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (InGlue)
     Ops.push_back(InGlue);
 
-  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
-
   // If we're doing a tall call, use a TC_RETURN here rather than an
   // actual call instruction.
   if (IsTailCall) {
@@ -3959,11 +3957,11 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       break;
     }
 
-    return DAG.getNode(OPC, DL, NodeTys, Ops);
+    return DAG.getNode(OPC, DL, MVT::Other, Ops);
   }
 
   // Returns a chain and a flag for retval copy to use.
-  SDValue Call = DAG.getNode(AMDGPUISD::CALL, DL, NodeTys, Ops);
+  SDValue Call = DAG.getNode(AMDGPUISD::CALL, DL, {MVT::Other, MVT::Glue}, Ops);
   Chain = Call.getValue(0);
   InGlue = Call.getValue(1);
 
