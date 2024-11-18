@@ -4731,7 +4731,7 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
 
   unsigned Multiplier = IC;
   if (MainLoopVF.isScalable())
-    Multiplier = getVScaleForTuning(OrigLoop, TTI).value_or(1);
+    Multiplier *= getVScaleForTuning(OrigLoop, TTI).value_or(1);
 
   if (!CM.isEpilogueVectorizationProfitable(MainLoopVF, Multiplier)) {
     LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization is not profitable for "

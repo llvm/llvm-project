@@ -302,10 +302,15 @@ exit:
 define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; DEFAULT-LABEL: define i16 @reduce_udiv(
 ; DEFAULT-SAME: ptr [[SRC:%.*]], i16 [[X:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; DEFAULT-NEXT:  entry:
+; DEFAULT-NEXT:  iter.check:
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 8
+; DEFAULT-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP1]], 2
+; DEFAULT-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP0]], [[TMP8]]
+; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[ENTRY:%.*]]
+; DEFAULT:       vector.main.loop.iter.check:
+; DEFAULT-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
+; DEFAULT-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP9]], 8
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; DEFAULT:       vector.ph:
@@ -336,28 +341,63 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[TMP22]] = or <vscale x 4 x i16> [[TMP20]], [[VEC_PHI1]]
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
 ; DEFAULT-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; DEFAULT-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; DEFAULT:       middle.block:
 ; DEFAULT-NEXT:    [[BIN_RDX:%.*]] = or <vscale x 4 x i16> [[TMP22]], [[TMP21]]
 ; DEFAULT-NEXT:    [[TMP24:%.*]] = call i16 @llvm.vector.reduce.or.nxv4i16(<vscale x 4 x i16> [[BIN_RDX]])
 ; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
-; DEFAULT-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
-; DEFAULT:       scalar.ph:
-; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; DEFAULT-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; DEFAULT:       vec.epilog.iter.check:
+; DEFAULT-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[TMP0]], [[N_VEC]]
+; DEFAULT-NEXT:    [[TMP35:%.*]] = call i64 @llvm.vscale.i64()
+; DEFAULT-NEXT:    [[TMP36:%.*]] = mul i64 [[TMP35]], 2
+; DEFAULT-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], [[TMP36]]
+; DEFAULT-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[SCALAR_PH]]
+; DEFAULT:       vec.epilog.ph:
 ; DEFAULT-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ [[TMP24]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; DEFAULT-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; DEFAULT-NEXT:    [[TMP37:%.*]] = call i64 @llvm.vscale.i64()
+; DEFAULT-NEXT:    [[TMP38:%.*]] = mul i64 [[TMP37]], 2
+; DEFAULT-NEXT:    [[N_MOD_VF4:%.*]] = urem i64 [[TMP0]], [[TMP38]]
+; DEFAULT-NEXT:    [[N_VEC5:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF4]]
+; DEFAULT-NEXT:    [[TMP25:%.*]] = call i64 @llvm.vscale.i64()
+; DEFAULT-NEXT:    [[TMP26:%.*]] = mul i64 [[TMP25]], 2
+; DEFAULT-NEXT:    [[TMP27:%.*]] = insertelement <vscale x 2 x i16> zeroinitializer, i16 [[BC_MERGE_RDX]], i32 0
+; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT9:%.*]] = insertelement <vscale x 2 x i16> poison, i16 [[X]], i64 0
+; DEFAULT-NEXT:    [[BROADCAST_SPLAT10:%.*]] = shufflevector <vscale x 2 x i16> [[BROADCAST_SPLATINSERT9]], <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
 ; DEFAULT-NEXT:    br label [[LOOP:%.*]]
+; DEFAULT:       vec.epilog.vector.body:
+; DEFAULT-NEXT:    [[INDEX6:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDEX_NEXT11:%.*]], [[LOOP]] ]
+; DEFAULT-NEXT:    [[VEC_PHI7:%.*]] = phi <vscale x 2 x i16> [ [[TMP27]], [[SCALAR_PH]] ], [ [[TMP32:%.*]], [[LOOP]] ]
+; DEFAULT-NEXT:    [[TMP28:%.*]] = add i64 [[INDEX6]], 0
+; DEFAULT-NEXT:    [[TMP29:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[TMP28]]
+; DEFAULT-NEXT:    [[TMP30:%.*]] = getelementptr i16, ptr [[TMP29]], i32 0
+; DEFAULT-NEXT:    [[WIDE_LOAD8:%.*]] = load <vscale x 2 x i16>, ptr [[TMP30]], align 2
+; DEFAULT-NEXT:    [[TMP31:%.*]] = udiv <vscale x 2 x i16> [[WIDE_LOAD8]], [[BROADCAST_SPLAT10]]
+; DEFAULT-NEXT:    [[TMP32]] = or <vscale x 2 x i16> [[TMP31]], [[VEC_PHI7]]
+; DEFAULT-NEXT:    [[INDEX_NEXT11]] = add nuw i64 [[INDEX6]], [[TMP26]]
+; DEFAULT-NEXT:    [[TMP33:%.*]] = icmp eq i64 [[INDEX_NEXT11]], [[N_VEC5]]
+; DEFAULT-NEXT:    br i1 [[TMP33]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; DEFAULT:       vec.epilog.middle.block:
+; DEFAULT-NEXT:    [[TMP34:%.*]] = call i16 @llvm.vector.reduce.or.nxv2i16(<vscale x 2 x i16> [[TMP32]])
+; DEFAULT-NEXT:    [[CMP_N12:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC5]]
+; DEFAULT-NEXT:    br i1 [[CMP_N12]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
+; DEFAULT:       vec.epilog.scalar.ph:
+; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC5]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ITER_CHECK:%.*]] ]
+; DEFAULT-NEXT:    [[BC_MERGE_RDX13:%.*]] = phi i16 [ [[TMP34]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[ITER_CHECK]] ], [ [[TMP24]], [[MIDDLE_BLOCK]] ]
+; DEFAULT-NEXT:    br label [[LOOP1:%.*]]
 ; DEFAULT:       loop:
-; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; DEFAULT-NEXT:    [[RED:%.*]] = phi i16 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], [[LOOP]] ]
+; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP1]] ]
+; DEFAULT-NEXT:    [[RED:%.*]] = phi i16 [ [[BC_MERGE_RDX13]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[RED_NEXT:%.*]], [[LOOP1]] ]
 ; DEFAULT-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[IV]]
 ; DEFAULT-NEXT:    [[L:%.*]] = load i16, ptr [[GEP]], align 2
 ; DEFAULT-NEXT:    [[DIV:%.*]] = udiv i16 [[L]], [[X]]
 ; DEFAULT-NEXT:    [[RED_NEXT]] = or i16 [[DIV]], [[RED]]
 ; DEFAULT-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; DEFAULT-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], [[N]]
-; DEFAULT-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP1]], !llvm.loop [[LOOP6:![0-9]+]]
 ; DEFAULT:       exit:
-; DEFAULT-NEXT:    [[RED_NEXT_LCSSA:%.*]] = phi i16 [ [[RED_NEXT]], [[LOOP]] ], [ [[TMP24]], [[MIDDLE_BLOCK]] ]
+; DEFAULT-NEXT:    [[RED_NEXT_LCSSA:%.*]] = phi i16 [ [[RED_NEXT]], [[LOOP1]] ], [ [[TMP24]], [[MIDDLE_BLOCK1]] ], [ [[TMP34]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; DEFAULT-NEXT:    ret i16 [[RED_NEXT_LCSSA]]
 ;
 ; PRED-LABEL: define i16 @reduce_udiv(
@@ -445,7 +485,8 @@ attributes #0 = { "target-features"="+sve" }
 ; DEFAULT: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; DEFAULT: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ; DEFAULT: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; DEFAULT: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
+; DEFAULT: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
+; DEFAULT: [[LOOP6]] = distinct !{[[LOOP6]], [[META2]], [[META1]]}
 ;.
 ; PRED: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; PRED: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
