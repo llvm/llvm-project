@@ -769,6 +769,8 @@ X86 Support
 - Support ISA of ``AMX-TF32``.
 - Support ISA of ``MOVRS``.
 
+- Supported ``-march/tune=diamondrapids``
+
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
