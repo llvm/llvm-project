@@ -429,11 +429,9 @@ define i1 @olt_implies_olt_fail(float %x, float %y) {
 
 define i1 @and_ord_olt_abs(float %x, float %y) {
 ; CHECK-LABEL: @and_ord_olt_abs(
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[ABSX:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[ABSX:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt float [[ABSX]], [[Y:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = fcmp ord float %x, 0.000000e+00
   %absx = call float @llvm.fabs.f32(float %x)
@@ -444,11 +442,9 @@ define i1 @and_ord_olt_abs(float %x, float %y) {
 
 define i1 @and_ord_olt_abs_commuted1(float %x, float %y) {
 ; CHECK-LABEL: @and_ord_olt_abs_commuted1(
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[ABSX:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[ABSX:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt float [[Y:%.*]], [[ABSX]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = fcmp ord float %x, 0.000000e+00
   %absx = call float @llvm.fabs.f32(float %x)
@@ -459,11 +455,9 @@ define i1 @and_ord_olt_abs_commuted1(float %x, float %y) {
 
 define i1 @and_ord_olt_abs_commuted2(float %x, float %y) {
 ; CHECK-LABEL: @and_ord_olt_abs_commuted2(
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[ABSX:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[ABSX:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt float [[ABSX]], [[Y:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP2]], [[CMP1]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = fcmp ord float %x, 0.000000e+00
   %absx = call float @llvm.fabs.f32(float %x)
@@ -474,11 +468,7 @@ define i1 @and_ord_olt_abs_commuted2(float %x, float %y) {
 
 define i1 @or_ord_ult_abs(float %x, float %y) {
 ; CHECK-LABEL: @or_ord_ult_abs(
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[ABSX:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ult float [[ABSX]], [[Y:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[OR]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp1 = fcmp ord float %x, 0.000000e+00
   %absx = call float @llvm.fabs.f32(float %x)
