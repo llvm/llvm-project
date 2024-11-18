@@ -2772,7 +2772,17 @@ static bool GetCompleteQualType(clang::ASTContext *ast,
         allow_completion);
 
   case clang::Type::MemberPointer:
-    return !qual_type.getTypePtr()->isIncompleteType();
+    // MS C++ ABI requires type of the class to be complete of which the pointee
+    // is a member.
+    if (ast->getTargetInfo().getCXXABI().isMicrosoft()) {
+      auto *MPT = qual_type.getTypePtr()->castAs<clang::MemberPointerType>();
+      if (MPT->getClass()->isRecordType())
+        GetCompleteRecordType(ast, clang::QualType(MPT->getClass(), 0),
+                              allow_completion);
+
+      return !qual_type.getTypePtr()->isIncompleteType();
+    }
+    break;
 
   default:
     break;
