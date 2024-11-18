@@ -585,6 +585,14 @@ TEST_F(X86Core2TargetTest, SetRegToFP1_4Bits) {
                           OpcodeIs(X86::LD_Fp80m), IsStackDeallocate(10)));
 }
 
+TEST_F(X86Core2TargetTest, SetRegToDf1) {
+  EXPECT_THAT(setRegTo(X86::DF, APInt(1, 1)), ElementsAre(OpcodeIs(X86::STD)));
+}
+
+TEST_F(X86Core2TargetTest, SetRegToDf0) {
+  EXPECT_THAT(setRegTo(X86::DF, APInt(1, 0)), ElementsAre(OpcodeIs(X86::CLD)));
+}
+
 TEST_F(X86Core2Avx512TargetTest, FillMemoryOperands_ADD64rm) {
   const Instruction &I = getInstr(X86::ADD64rm);
   InstructionTemplate IT(&I);
