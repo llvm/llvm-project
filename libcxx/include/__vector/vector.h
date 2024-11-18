@@ -763,9 +763,9 @@ private:
     __move_assign_alloc(__c, integral_constant<bool, __alloc_traits::propagate_on_container_move_assignment::value>());
   }
 
-  [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI void __throw_length_error() const { std::__throw_length_error("vector"); }
+  [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI static void __throw_length_error() { std::__throw_length_error("vector"); }
 
-  [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI void __throw_out_of_range() const { std::__throw_out_of_range("vector"); }
+  [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI static void __throw_out_of_range() { std::__throw_out_of_range("vector"); }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const vector& __c, true_type) {
     if (__alloc() != __c.__alloc()) {
@@ -822,7 +822,7 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
   __end_       = __begin_; // All the objects have been destroyed by relocating them.
   std::swap(this->__begin_, __v.__begin_);
   std::swap(this->__end_, __v.__end_);
-  std::swap(this->__end_cap(), __v.__end_cap_);
+  std::swap(this->__end_cap(), __v.__cap_);
   __v.__first_ = __v.__begin_;
   __annotate_new(size());
 }
@@ -852,7 +852,7 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
 
   std::swap(this->__begin_, __v.__begin_);
   std::swap(this->__end_, __v.__end_);
-  std::swap(this->__end_cap(), __v.__end_cap_);
+  std::swap(this->__end_cap(), __v.__cap_);
   __v.__first_ = __v.__begin_;
   __annotate_new(size());
   return __ret;

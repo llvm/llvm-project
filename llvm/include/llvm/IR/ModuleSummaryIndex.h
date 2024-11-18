@@ -302,6 +302,14 @@ template <> struct DenseMapInfo<ValueInfo> {
   static unsigned getHashValue(ValueInfo I) { return (uintptr_t)I.getRef(); }
 };
 
+// For optional hinted size reporting, holds a pair of the full stack id
+// (pre-trimming, from the full context in the profile), and the associated
+// total profiled size.
+struct ContextTotalSize {
+  uint64_t FullStackId;
+  uint64_t TotalSize;
+};
+
 /// Summary of memprof callsite metadata.
 struct CallsiteInfo {
   // Actual callee function.
@@ -408,9 +416,13 @@ struct AllocInfo {
   // Vector of MIBs in this memprof metadata.
   std::vector<MIBInfo> MIBs;
 
-  // If requested, keep track of total profiled sizes for each MIB. This will be
-  // a vector of the same length and order as the MIBs vector, if non-empty.
-  std::vector<uint64_t> TotalSizes;
+  // If requested, keep track of full stack contexts and total profiled sizes
+  // for each MIB. This will be a vector of the same length and order as the
+  // MIBs vector, if non-empty. Note that each MIB in the summary can have
+  // multiple of these as we trim the contexts when possible during matching.
+  // For hinted size reporting we, however, want the original pre-trimmed full
+  // stack context id for better correlation with the profile.
+  std::vector<std::vector<ContextTotalSize>> ContextSizeInfos;
 
   AllocInfo(std::vector<MIBInfo> MIBs) : MIBs(std::move(MIBs)) {
     Versions.push_back(0);
@@ -432,14 +444,18 @@ inline raw_ostream &operator<<(raw_ostream &OS, const AllocInfo &AE) {
   for (auto &M : AE.MIBs) {
     OS << "\t\t" << M << "\n";
   }
-  if (!AE.TotalSizes.empty()) {
-    OS << " TotalSizes per MIB:\n\t\t";
-    First = true;
-    for (uint64_t TS : AE.TotalSizes) {
-      if (!First)
-        OS << ", ";
-      First = false;
-      OS << TS << "\n";
+  if (!AE.ContextSizeInfos.empty()) {
+    OS << "\tContextSizeInfo per MIB:\n";
+    for (auto Infos : AE.ContextSizeInfos) {
+      OS << "\t\t";
+      bool FirstInfo = true;
+      for (auto [FullStackId, TotalSize] : Infos) {
+        if (!FirstInfo)
+          OS << ", ";
+        FirstInfo = false;
+        OS << "{ " << FullStackId << ", " << TotalSize << " }";
+      }
+      OS << "\n";
     }
   }
   return OS;
