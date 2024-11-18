@@ -2,6 +2,11 @@
 program p
   integer, parameter :: n = 256
   real(8) :: a(256)
+  !! TODO: Add declare mapper, when it works to lower this construct 
+  !!type t1
+  !!   integer :: x
+  !!end type t1
+  !!!$omp declare mapper(xx : t1 :: nn) map(nn, nn%x)
   !$omp target map(mapper(xx), from:a)
 !CHECK: not yet implemented: OmpMapClause(MAPPER(...))
   do i=1,n
