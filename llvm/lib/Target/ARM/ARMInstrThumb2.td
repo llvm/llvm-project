@@ -77,8 +77,8 @@ def t2_so_imm_not_XFORM : SDNodeXForm<imm, [{
 
 // t2_so_imm_neg_XFORM - Return the negation of a t2_so_imm value
 def t2_so_imm_neg_XFORM : SDNodeXForm<imm, [{
-  return CurDAG->getSignedConstant(-((int)N->getZExtValue()), SDLoc(N),
-                                   MVT::i32, /*isTarget=*/true);
+  return CurDAG->getSignedTargetConstant(-((int)N->getZExtValue()), SDLoc(N),
+                                         MVT::i32);
 }]>;
 
 // so_imm_notSext_XFORM - Return a so_imm value packed into the format
