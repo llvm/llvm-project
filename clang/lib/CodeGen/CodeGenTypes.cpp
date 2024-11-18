@@ -647,11 +647,6 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case Type::ExtVector:
   case Type::Vector: {
     const auto *VT = cast<VectorType>(Ty);
-    if (VT->getElementType()->isMFloat8Type()) {
-      ResultType = llvm::FixedVectorType::get(
-          llvm::Type::getInt8Ty(getLLVMContext()), VT->getNumElements());
-      break;
-    }
     // An ext_vector_type of Bool is really a vector of bits.
     llvm::Type *IRElemTy = VT->isExtVectorBoolType()
                                ? llvm::Type::getInt1Ty(getLLVMContext())

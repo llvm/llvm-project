@@ -102,7 +102,7 @@ enum EltType {
   Float32,
   Float64,
   BFloat16,
-  MFloat8
+  MFloat8 // Not used by Sema or CodeGen in Clang
 };
 
 } // end namespace NeonTypeFlags
@@ -2295,15 +2295,22 @@ static void emitNeonTypeDefs(const std::string& types, raw_ostream &OS) {
       InIfdef = true;
     }
 
-    if (T.isPoly())
+    if (T.isMFloat8())
+      OS << "typedef __MFloat8x";
+    else if (T.isPoly())
       OS << "typedef __attribute__((neon_polyvector_type(";
     else
       OS << "typedef __attribute__((neon_vector_type(";
 
     Type T2 = T;
     T2.makeScalar();
-    OS << T.getNumElements() << "))) ";
-    OS << T2.str();
+    OS << T.getNumElements();
+    if (T.isMFloat8())
+      OS << "_t ";
+    else {
+      OS << "))) ";
+      OS << T2.str();
+    }
     OS << " " << T.str() << ";\n";
   }
   if (InIfdef)
