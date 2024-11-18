@@ -197,7 +197,7 @@ Changes in existing checks
 
 - Improved :doc:`cppcoreguidelines-avoid-const-or-ref-data-members
   <clang-tidy/checks/cppcoreguidelines/avoid-const-or-ref-data-members>` check to
-  avoid false positive when detecting templated class with inheritance.
+  avoid false positives when detecting a templated class with inheritance.
 
 - Improved :doc:`cppcoreguidelines-init-variables
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by fixing the

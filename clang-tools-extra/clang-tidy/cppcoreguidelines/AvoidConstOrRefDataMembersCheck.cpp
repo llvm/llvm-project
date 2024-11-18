@@ -20,9 +20,8 @@ static bool hasCopyConstructor(CXXRecordDecl const &Node) {
     // unresolved
     for (CXXBaseSpecifier const &BS : Node.bases()) {
       CXXRecordDecl const *BRD = BS.getType()->getAsCXXRecordDecl();
-      if (BRD != nullptr)
-        if (!hasCopyConstructor(*BRD))
-          return false;
+      if (BRD != nullptr && !hasCopyConstructor(*BRD))
+        return false;
     }
   }
   if (Node.hasSimpleCopyConstructor())
@@ -39,9 +38,8 @@ static bool hasMoveConstructor(CXXRecordDecl const &Node) {
     // unresolved
     for (CXXBaseSpecifier const &BS : Node.bases()) {
       CXXRecordDecl const *BRD = BS.getType()->getAsCXXRecordDecl();
-      if (BRD != nullptr)
-        if (!hasMoveConstructor(*BRD))
-          return false;
+      if (BRD != nullptr && !hasMoveConstructor(*BRD))
+        return false;
     }
   }
   if (Node.hasSimpleMoveConstructor())
@@ -58,9 +56,8 @@ static bool hasCopyAssignment(CXXRecordDecl const &Node) {
     // unresolved
     for (CXXBaseSpecifier const &BS : Node.bases()) {
       CXXRecordDecl const *BRD = BS.getType()->getAsCXXRecordDecl();
-      if (BRD != nullptr)
-        if (!hasCopyAssignment(*BRD))
-          return false;
+      if (BRD != nullptr && !hasCopyAssignment(*BRD))
+        return false;
     }
   }
   if (Node.hasSimpleCopyAssignment())
@@ -77,9 +74,8 @@ static bool hasMoveAssignment(CXXRecordDecl const &Node) {
     // unresolved
     for (CXXBaseSpecifier const &BS : Node.bases()) {
       CXXRecordDecl const *BRD = BS.getType()->getAsCXXRecordDecl();
-      if (BRD != nullptr)
-        if (!hasMoveAssignment(*BRD))
-          return false;
+      if (BRD != nullptr && !hasMoveAssignment(*BRD))
+        return false;
     }
   }
   if (Node.hasSimpleMoveAssignment())
