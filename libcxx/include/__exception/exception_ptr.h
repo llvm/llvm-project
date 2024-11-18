@@ -65,8 +65,11 @@ class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
   friend _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep) _NOEXCEPT;
 
 public:
-  // exception_ptr is basically a COW string.
+  // exception_ptr is basically a COW string so it is trivially relocatable.
+  // However, it's not replaceable because destroying and move-constructing could cause
+  // the underlying refcount to hit 0 if we're self-assigning.
   using __trivially_relocatable _LIBCPP_NODEBUG = exception_ptr;
+  using __replaceable _LIBCPP_NODEBUG           = void;
 
   _LIBCPP_HIDE_FROM_ABI exception_ptr() _NOEXCEPT : __ptr_() {}
   _LIBCPP_HIDE_FROM_ABI exception_ptr(nullptr_t) _NOEXCEPT : __ptr_() {}

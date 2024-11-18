@@ -630,6 +630,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__type_traits/is_convertible.h>
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
+#  include <__type_traits/is_replaceable.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_standard_layout.h>
 #  include <__type_traits/is_trivial.h>
@@ -794,11 +795,17 @@ public:
   // the memory to avoid triggering false positives.
   // Therefore it's crucial to ensure the destructor is called.
   using __trivially_relocatable = void;
+  // TODO
 #  else
   using __trivially_relocatable _LIBCPP_NODEBUG = __conditional_t<
       __libcpp_is_trivially_relocatable<allocator_type>::value && __libcpp_is_trivially_relocatable<pointer>::value,
       basic_string,
       void>;
+  using __replaceable _LIBCPP_NODEBUG =
+      __conditional_t<__is_replaceable<pointer>::value && __container_allocator_is_replaceable<__alloc_traits>::value,
+                      basic_string,
+                      void>;
+
 #  endif
 
 #  if _LIBCPP_HAS_ASAN && _LIBCPP_INSTRUMENTED_WITH_ASAN
