@@ -2428,8 +2428,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   Ops.push_back(Callee);
 
   if (isTailCall)
-    Ops.push_back(
-        DAG.getSignedConstant(FPDiff, dl, MVT::i32, /*isTarget=*/true));
+    Ops.push_back(DAG.getSignedTargetConstant(FPDiff, dl, MVT::i32));
 
   // Add argument registers to the end of the list so that they are known live
   // into the call.
