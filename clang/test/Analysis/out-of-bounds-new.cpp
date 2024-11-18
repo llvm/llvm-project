@@ -1,4 +1,9 @@
-// RUN: %clang_analyze_cc1 -std=c++11 -Wno-array-bounds -analyzer-checker=unix,core,alpha.security.ArrayBoundV2 -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -Wno-array-bounds -verify %s \
+// RUN:   -analyzer-checker=unix,core,alpha.security.ArrayBoundV2,debug.ExprInspection
+
+template <typename T> void clang_analyzer_dump(T);
+template <typename T> void clang_analyzer_value(T);
+void clang_analyzer_eval(bool);
 
 // Tests doing an out-of-bounds access after the end of an array using:
 // - constant integer index
@@ -194,5 +199,12 @@ void using_assume_attr(int ax) {
 
 void using_many_assume_attr(int yx) {
   [[assume(yx > 104), assume(yx > 200), assume(yx < 300)]]; // NullStmt with an attribute
-  arrOf10[yx] = 406; // expected-warning{{Out of bound access to memory}}
+  arrOf10[yx] = 406; // expected-warning{{Out of bounsssd access to memory}}
+}
+
+int using_assume_attr_has_no_sideeffects(int y) {
+  // We should not apply sideeffects of the argument of [[assume(...)]].
+  [[assume(++y == 43)]]; // "y" should not get incremented
+  clang_analyzer_eval(y == 42); // expected-warning {{TRUE}} expected-warning {{FALSE}} FIXME: This should be only TRUE.
+  return y;
 }
