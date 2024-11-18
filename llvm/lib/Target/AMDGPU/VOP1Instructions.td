@@ -1564,7 +1564,6 @@ defm V_SCREEN_PARTITION_4SE_B32 : VOP1_Real_gfx9 <0x37>;
 let AssemblerPredicate = isGFX940Plus in
 defm V_MOV_B64 : VOP1_Real_gfx9 <0x38>;
 
-let AssemblerPredicate = HasGFX950Insts in
 defm V_CVT_F32_BF16          : VOP1_Real_gfx9 <0x5b>;
 
 defm V_CVT_F32_FP8       : VOP1_Real_NoDstSel_SDWA_gfx9<0x54>;
