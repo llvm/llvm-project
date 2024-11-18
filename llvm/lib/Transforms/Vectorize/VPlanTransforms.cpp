@@ -1490,13 +1490,13 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                       return nullptr;
 
                     SmallVector<VPValue *> Ops(CInst->operands());
-                    if (VPIntrinsic::getMaskParamPos(VPID)) {
-                      VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(
-                          IntegerType::getInt1Ty(CI->getContext())));
-                      Ops.push_back(Mask);
-                    }
-                    if (VPIntrinsic::getVectorLengthParamPos(VPID))
-                      Ops.push_back(&EVL);
+                    assert(VPIntrinsic::getMaskParamPos(VPID) &&
+                           VPIntrinsic::getVectorLengthParamPos(VPID) &&
+                           "Expected VP intrinsic");
+                    VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(
+                        IntegerType::getInt1Ty(CI->getContext())));
+                    Ops.push_back(Mask);
+                    Ops.push_back(&EVL);
                     return new VPWidenIntrinsicRecipe(
                         *CI, VPID, Ops, TypeInfo.inferScalarType(CInst),
                         CInst->getDebugLoc());

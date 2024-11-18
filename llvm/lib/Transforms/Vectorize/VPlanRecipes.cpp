@@ -993,6 +993,8 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
   for (const auto &[Idx, Op] : enumerate(operands())) {
     auto *V = Op->getUnderlyingValue();
     if (!V) {
+      // Push all the VP Intrinsic's ops into the Argments even if is nullptr.
+      // Some VP Intrinsic's cost will assert the number of parameters.
       if (VPIntrinsic::isVPIntrinsic(VectorIntrinsicID)) {
         Arguments.push_back(V);
         break;
