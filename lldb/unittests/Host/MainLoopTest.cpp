@@ -254,6 +254,17 @@ TEST_F(MainLoopTest, Signal) {
   ASSERT_EQ(1u, callback_count);
 }
 
+TEST_F(MainLoopTest, SignalOnOtherThread) {
+  MainLoop loop;
+  Status error;
+
+  auto handle = loop.RegisterSignal(SIGUSR1, make_callback(), error);
+  ASSERT_TRUE(error.Success());
+  std::thread([] { pthread_kill(pthread_self(), SIGUSR1); }).join();
+  ASSERT_TRUE(loop.Run().Success());
+  ASSERT_EQ(1u, callback_count);
+}
+
 // Test that a signal which is not monitored by the MainLoop does not
 // cause a premature exit.
 TEST_F(MainLoopTest, UnmonitoredSignal) {

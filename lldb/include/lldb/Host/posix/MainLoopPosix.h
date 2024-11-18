@@ -59,6 +59,7 @@ protected:
 private:
   void ProcessReadObject(IOObject::WaitableHandle handle);
   void ProcessSignal(int signo);
+  void ProcessSignals();
 
   class SignalHandle {
   public:
