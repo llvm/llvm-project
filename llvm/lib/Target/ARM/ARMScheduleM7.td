@@ -335,7 +335,7 @@ def : InstRW<[WriteALUsi, M7Read_ISS],
 // but the results prove to be better than trying to get them exact.
 
 def : InstRW<[M7WriteShift2, M7Read_ISS], (instregex "t2RRX$")>;
-def : InstRW<[WriteALUsi], (instregex "(t|t2)(LSL|LSR|ASR|ROR)r")>;
+def : InstRW<[WriteALUsi], (instregex "(t|t2)(LSL|LSR|ASR|ROR)r", "tROR")>;
 
 // Instructions that use the shifter, but have normal timing.
 
