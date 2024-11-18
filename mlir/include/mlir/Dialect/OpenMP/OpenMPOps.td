@@ -422,6 +422,10 @@ def LoopOp : OpenMP_Op<"loop", traits = [
         $reduction_syms) attr-dict
   }];
 
+  let builders = [
+    OpBuilder<(ins CArg<"const LoopOperands &">:$clauses)>
+  ];
+
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
 }
