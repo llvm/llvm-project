@@ -88,3 +88,15 @@ subroutine test_reduction()
   end do
   !$omp end loop
 end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_bind
+subroutine test_bind()
+  integer :: i, dummy = 1
+  ! CHECK: omp.loop bind(thread) private(@{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
+  ! CHECK: }
+  !$omp loop bind(thread)
+  do i=1,10
+   dummy = dummy + 1
+  end do
+  !$omp end loop
+end subroutine
