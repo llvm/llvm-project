@@ -156,81 +156,50 @@ void DynamicLoaderAIXDYLD::ResolveExecutableModule(
     return;
   }
 
-  char procinfo_path[64], exe_path[PATH_MAX], arg_buffer[8192];
-  struct procsinfo64 procs_info;
   int32long64_t pid = m_process->GetID();
+  char cwd[PATH_MAX], resolved_path[PATH_MAX];
+  std::string executable_name;
+  bool path_resolved = false;
+  psinfo_t psinfo;
+
   std::string proc_file = "/proc/" + std::to_string(pid) + "/psinfo";
   std::string cwd_link = "/proc/" + std::to_string(pid) + "/cwd";
-  psinfo_t psinfo;
   std::ifstream file(proc_file, std::ios::binary);
   if(!file.is_open())
-  {
-      LLDB_LOGF(log, "Error psinfo ");
-  }
+      LLDB_LOGF(log, "Error: Unable to access process info ");
+
   file.read(reinterpret_cast<char*>(&psinfo), sizeof(psinfo_t));
   if(!file)
-      LLDB_LOGF(log, "Error psinfo: Failed to read ");
+      LLDB_LOGF(log, "Process info error: Failed to read ");
 
   std::string relative_path(psinfo.pr_fname);
-  LLDB_LOGF(log, "relative path %s",relative_path.c_str());
+  LLDB_LOGF(log, "Relative path %s",relative_path.c_str());
 
-  char cwd[PATH_MAX];
-  char resolved_path[PATH_MAX];
-  std::string executable_name;
-  bool found = 0;
   if(readlink(cwd_link.c_str(), cwd, sizeof(cwd)) != -1){
       std::filesystem::path full_path = std::filesystem::path(cwd)/relative_path; 
   if(realpath(full_path.c_str(), resolved_path)) {
-      LLDB_LOGF(log, " RESOLVED PATH: %s", resolved_path);
-      found = 1;
+      LLDB_LOGF(log, "Resolved Path using process info : %s", resolved_path);
+      path_resolved = true;
   }
   else
-      perror("realpath error");}
+      LLDB_LOGF(log, "Realpath error: Unable to resolve. ");
+  }
   
   executable_name = resolved_path;
-  if(found == 0) {
+  if(path_resolved == false) {
       std::string command_line(psinfo.pr_psargs);
-      LLDB_LOGF(log, "command line %s",command_line.c_str());
+      LLDB_LOGF(log, "Command line: %s",command_line.c_str());
       if (!command_line.empty()) {
           size_t space1 = command_line.find(' ');
           executable_name = command_line.substr(0, space1);
-          LLDB_LOGF(log, "executable name %s",executable_name.c_str());
+          LLDB_LOGF(log, "Resolved path using command line arg %s",executable_name.c_str());
       } 
   }
 
-  LLDB_LOGF(log, "executable name %s",executable_name.c_str());
-  /*target.SetExecutableModule(target.GetOrCreateModule(lldb_private::FileSpec(resolved_path),
-              true),true);*/
+  LLDB_LOGF(log, "Executable Name %s",executable_name.c_str());
   process_info.SetExecutableFile(lldb_private::FileSpec(executable_name),
           true);
  
-/*  snprintf(procinfo_path, sizeof(procinfo_path), "/proc/%d/object/a.out", pid);
-  ssize_t len = readlink(procinfo_path, exe_path, sizeof(exe_path) - 1);
-  exe_path[len] = '\0';
-  int num_procs = getprocs64(&procs_info, sizeof(struct procsinfo64), NULL, 0, 
-          &pid,
-          1);
-  int result = getargs(pid, arg_buffer, sizeof(arg_buffer));
-  std::vector<std::string> args;
-  char *arg_start = arg_buffer;
-  while(*arg_start != '\0') {
-      args.emplace_back(arg_start);
-      arg_start += strlen(arg_start) + 1;
-  }
-
-  LLDB_LOGF(
-      log, "1. DynamicLoaderPOSIXDYLD::%s - got executable by pid %" PRIu64 ": %s"
-      ", pid: %d, current_path: %s",
-      __FUNCTION__, m_process->GetID(),
-       args[0], pid, current_path.c_str());
-  LLDB_LOGF(
-      log, "1. DynamicLoaderPOSIXDYLD::%s - got executable by pid %" PRIu64 ": %s"
-      "num_procs: %d, pid: %d",
-      __FUNCTION__, m_process->GetID(),
-      std::string(procs_info.pi_comm).c_str(), num_procs, pid);
-  if(num_procs <= 0)
-      perror("getprocs64 failed"); */
-  
   LLDB_LOGF(
       log, "DynamicLoaderPOSIXDYLD::%s - got executable by pid %" PRIu64 ": %s",
       __FUNCTION__, m_process->GetID(),
