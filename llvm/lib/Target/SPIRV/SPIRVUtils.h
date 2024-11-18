@@ -34,6 +34,7 @@ class Register;
 class StringRef;
 class SPIRVInstrInfo;
 class SPIRVSubtarget;
+class SPIRVGlobalRegistry;
 
 // This class implements a partial ordering visitor, which visits a cyclic graph
 // in natural topological-like ordering. Topological ordering is not defined for
@@ -359,6 +360,21 @@ MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg);
 
 #define SPIRV_BACKEND_SERVICE_FUN_NAME "__spirv_backend_service_fun"
 bool getVacantFunctionName(Module &M, std::string &Name);
+
+void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
+                     MachineIRBuilder &MIRBuilder, bool Force = false);
+void setRegClassType(Register Reg, const MachineInstr *SpvType,
+                     SPIRVGlobalRegistry *GR, MachineRegisterInfo *MRI,
+                     const MachineFunction &MF, bool Force = false);
+Register createVirtualRegister(const MachineInstr *SpvType,
+                               SPIRVGlobalRegistry *GR,
+                               MachineRegisterInfo *MRI,
+                               const MachineFunction &MF);
+Register createVirtualRegister(const MachineInstr *SpvType,
+                               SPIRVGlobalRegistry *GR,
+                               MachineIRBuilder &MIRBuilder);
+Register createVirtualRegister(const Type *Ty, SPIRVGlobalRegistry *GR,
+                               MachineIRBuilder &MIRBuilder);
 
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

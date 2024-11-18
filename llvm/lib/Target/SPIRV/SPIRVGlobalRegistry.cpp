@@ -69,7 +69,7 @@ SPIRVType *SPIRVGlobalRegistry::assignTypeToVReg(
 
 void SPIRVGlobalRegistry::assignSPIRVTypeToVReg(SPIRVType *SpirvType,
                                                 Register VReg,
-                                                MachineFunction &MF) {
+                                                const MachineFunction &MF) {
   VRegToTypeMap[&MF][VReg] = SpirvType;
 }
 
@@ -578,7 +578,7 @@ SPIRVGlobalRegistry::getOrCreateConstNullPtr(MachineIRBuilder &MIRBuilder,
   if (!Res.isValid()) {
     LLT LLTy = LLT::pointer(LLVMPtrTy->getAddressSpace(), PointerSize);
     Res = CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
-    CurMF->getRegInfo().setRegClass(Res, &SPIRV::iIDRegClass);
+    CurMF->getRegInfo().setRegClass(Res, &SPIRV::pIDRegClass);
     assignSPIRVTypeToVReg(SpvType, Res, *CurMF);
     MIRBuilder.buildInstr(SPIRV::OpConstantNull)
         .addDef(Res)

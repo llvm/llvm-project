@@ -13,6 +13,7 @@
 #include "SPIRVUtils.h"
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRV.h"
+#include "SPIRVGlobalRegistry.h"
 #include "SPIRVInstrInfo.h"
 #include "SPIRVSubtarget.h"
 #include "llvm/ADT/StringRef.h"
@@ -682,6 +683,54 @@ bool getVacantFunctionName(Module &M, std::string &Name) {
     }
   }
   return false;
+}
+
+// Assign SPIR-V type to the register. If the register has no valid assigned
+// class, set register LLT type and class according to the SPIR-V type.
+void setRegClassType(Register Reg, SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
+                     MachineRegisterInfo *MRI, const MachineFunction &MF,
+                     bool Force) {
+  GR->assignSPIRVTypeToVReg(SpvType, Reg, MF);
+  if (!MRI->getRegClassOrNull(Reg) || Force) {
+    MRI->setRegClass(Reg, GR->getRegClass(SpvType));
+    MRI->setType(Reg, GR->getRegType(SpvType));
+  }
+}
+
+// Create a SPIR-V type, assign SPIR-V type to the register. If the register has
+// no valid assigned class, set register LLT type and class according to the
+// SPIR-V type.
+void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
+                     MachineIRBuilder &MIRBuilder, bool Force) {
+  setRegClassType(Reg, GR->getOrCreateSPIRVType(Ty, MIRBuilder), GR,
+                  MIRBuilder.getMRI(), MIRBuilder.getMF(), Force);
+}
+
+// Create a virtual register and assign SPIR-V type to the register. Set
+// register LLT type and class according to the SPIR-V type.
+Register createVirtualRegister(SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
+                               MachineRegisterInfo *MRI,
+                               const MachineFunction &MF) {
+  Register Reg = MRI->createVirtualRegister(GR->getRegClass(SpvType));
+  MRI->setType(Reg, GR->getRegType(SpvType));
+  GR->assignSPIRVTypeToVReg(SpvType, Reg, MF);
+  return Reg;
+}
+
+// Create a virtual register and assign SPIR-V type to the register. Set
+// register LLT type and class according to the SPIR-V type.
+Register createVirtualRegister(SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
+                               MachineIRBuilder &MIRBuilder) {
+  return createVirtualRegister(SpvType, GR, MIRBuilder.getMRI(),
+                               MIRBuilder.getMF());
+}
+
+// Create a SPIR-V type, virtual register and assign SPIR-V type to the
+// register. Set register LLT type and class according to the SPIR-V type.
+Register createVirtualRegister(const Type *Ty, SPIRVGlobalRegistry *GR,
+                               MachineIRBuilder &MIRBuilder) {
+  return createVirtualRegister(GR->getOrCreateSPIRVType(Ty, MIRBuilder), GR,
+                               MIRBuilder);
 }
 
 } // namespace llvm

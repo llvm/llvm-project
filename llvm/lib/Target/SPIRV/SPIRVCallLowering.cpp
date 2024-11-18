@@ -551,18 +551,10 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
               RetTy =
                   TypedPointerType::get(ElemTy, PtrRetTy->getAddressSpace());
         }
-        SPIRVType *SpvType = GR->getOrCreateSPIRVType(RetTy, MIRBuilder);
-        GR->assignSPIRVTypeToVReg(SpvType, ResVReg, MF);
-        if (!MRI->getRegClassOrNull(ResVReg)) {
-          MRI->setRegClass(ResVReg, GR->getRegClass(SpvType));
-          MRI->setType(ResVReg, GR->getRegType(SpvType));
-        }
+        setRegClassType(ResVReg, RetTy, GR, MIRBuilder);
       }
     } else {
-      SPIRVType *SpvType = GR->getOrCreateSPIRVType(OrigRetTy, MIRBuilder);
-      ResVReg = MRI->createVirtualRegister(GR->getRegClass(SpvType));
-      MRI->setType(ResVReg, GR->getRegType(SpvType));
-      GR->assignSPIRVTypeToVReg(SpvType, ResVReg, MF);
+      ResVReg = createVirtualRegister(OrigRetTy, GR, MIRBuilder);
     }
     SmallVector<Register, 8> ArgVRegs;
     for (auto Arg : Info.OrigArgs) {
