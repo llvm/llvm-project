@@ -108,6 +108,10 @@ bool RISCVTargetInfo::validateAsmConstraint(
       return true;
     }
     return false;
+  case 'R':
+    // An even-odd GPR pair
+    Info.setAllowsRegister();
+    return true;
   case 'v':
     // A vector register.
     if (Name[1] == 'r' || Name[1] == 'd' || Name[1] == 'm') {
