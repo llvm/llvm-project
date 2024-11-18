@@ -494,11 +494,16 @@ class SubtargetFeature<string n, string f, string v, string d,
   //
   // A value of "true" or "false" implies the field is a bool. Otherwise,
   // it is assumed to be an integer. the integer value may be the name of an
-  // enum constant. If multiple features use the same integer field, the
-  // field will be set to the maximum value of all enabled features that
-  // share the field.
-  //
+  // enum constant.
   string Value = v;
+
+  // SetMaxValue - Should we set the maximum value to the integer field?
+  //
+  // If multiple features use the same integer field, the field will be set to
+  // the maximum value of all enabled features that share the field if `SetMaxValue`
+  // are set to true (by default), or we will set the field to the last specified
+  // value.
+  bit SetMaxValue = true;
 
   // Desc - Feature description.  Used by command line (-mattr=) to display help
   // information.

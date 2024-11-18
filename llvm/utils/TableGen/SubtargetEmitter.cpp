@@ -1902,8 +1902,9 @@ void SubtargetEmitter::parseFeaturesFunction(raw_ostream &OS) {
     StringRef Instance = R->getName();
     StringRef Value = R->getValueAsString("Value");
     StringRef FieldName = R->getValueAsString("FieldName");
+    bool SetMaxValue = R->getValueAsBit("SetMaxValue");
 
-    if (Value == "true" || Value == "false")
+    if (Value == "true" || Value == "false" || !SetMaxValue)
       OS << "  if (Bits[" << Target << "::" << Instance << "]) " << FieldName
          << " = " << Value << ";\n";
     else

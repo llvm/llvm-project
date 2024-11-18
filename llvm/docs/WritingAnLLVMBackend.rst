@@ -1772,7 +1772,8 @@ is assumed to be a bool and only one SubtargetFeature should refer to it.
 Otherwise, it is assumed to be an integer. The integer value may be the name
 of an enum constant. If multiple features use the same integer field, the
 field will be set to the maximum value of all enabled features that share
-the field.
+the field if `SetMaxValue` are set to true (by default), or we will set the
+field to the last specified value.
 
 .. code-block:: text
 
@@ -1783,6 +1784,7 @@ the field.
     string Value = v;
     string Desc = d;
     list<SubtargetFeature> Implies = i;
+    bit SetMaxValue = true;
   }
 
 In the ``Sparc.td`` file, the ``SubtargetFeature`` is used to define the
