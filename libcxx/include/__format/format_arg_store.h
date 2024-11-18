@@ -101,18 +101,12 @@ consteval __arg_t __determine_arg_t() {
   return __arg_t::__long_double;
 }
 
-// Char pointer
+// Char pointer or array
 template <class _Context, class _Tp>
-  requires(same_as<typename _Context::char_type*, _Tp> || same_as<const typename _Context::char_type*, _Tp>)
+  requires(same_as<typename _Context::char_type*, _Tp> || same_as<const typename _Context::char_type*, _Tp>) ||
+          (is_array_v<_Tp> && same_as<_Tp, typename _Context::char_type[extent_v<_Tp>]>)
 consteval __arg_t __determine_arg_t() {
   return __arg_t::__const_char_type_ptr;
-}
-
-// Char array
-template <class _Context, class _Tp>
-  requires(is_array_v<_Tp> && same_as<_Tp, typename _Context::char_type[extent_v<_Tp>]>)
-consteval __arg_t __determine_arg_t() {
-  return __arg_t::__string_view;
 }
 
 // String view
@@ -188,15 +182,8 @@ _LIBCPP_HIDE_FROM_ABI basic_format_arg<_Context> __create_format_arg(_Tp& __valu
   else if constexpr (__arg == __arg_t::__unsigned_long_long)
     return basic_format_arg<_Context>{__arg, static_cast<unsigned long long>(__value)};
   else if constexpr (__arg == __arg_t::__string_view)
-    // Using std::size on a character array will add the NUL-terminator to the size.
-    if constexpr (is_array_v<_Dp>)
-      return basic_format_arg<_Context>{
-          __arg, basic_string_view<typename _Context::char_type>{__value, extent_v<_Dp> - 1}};
-    else
-      // When the _Traits or _Allocator are different an implicit conversion will
-      // fail.
-      return basic_format_arg<_Context>{
-          __arg, basic_string_view<typename _Context::char_type>{__value.data(), __value.size()}};
+    return basic_format_arg<_Context>{
+        __arg, basic_string_view<typename _Context::char_type>{__value.data(), __value.size()}};
   else if constexpr (__arg == __arg_t::__ptr)
     return basic_format_arg<_Context>{__arg, static_cast<const void*>(__value)};
   else if constexpr (__arg == __arg_t::__handle)
