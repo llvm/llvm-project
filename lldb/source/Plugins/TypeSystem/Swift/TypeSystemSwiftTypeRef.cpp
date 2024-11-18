@@ -1659,21 +1659,6 @@ TypeSystemSwiftTypeRef::TypeSystemSwiftTypeRef(Module &module) {
 }
 
 TypeSystemSwiftTypeRefForExpressions::TypeSystemSwiftTypeRefForExpressions(
-    lldb::LanguageType language, Target &target, Module &module)
-    : TypeSystemSwiftTypeRef(module), m_target_wp(target.shared_from_this()),
-      m_persistent_state_up(new SwiftPersistentExpressionState) {
-  m_description = "TypeSystemSwiftTypeRefForExpressions(PerModuleFallback)";
-  LLDB_LOGF(GetLog(LLDBLog::Types),
-            "%s::TypeSystemSwiftTypeRefForExpressions()",
-            m_description.c_str());
-  m_swift_ast_context_map.insert(
-      {nullptr,
-       SwiftASTContext::CreateInstance(
-           LanguageType::eLanguageTypeSwift, module,
-           *const_cast<TypeSystemSwiftTypeRefForExpressions *>(this), true)});
-}
-
-TypeSystemSwiftTypeRefForExpressions::TypeSystemSwiftTypeRefForExpressions(
     lldb::LanguageType language, Target &target, const char *extra_options)
     : m_target_wp(target.shared_from_this()),
       m_persistent_state_up(new SwiftPersistentExpressionState) {

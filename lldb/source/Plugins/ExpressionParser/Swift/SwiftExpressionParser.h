@@ -50,7 +50,7 @@ class SwiftExpressionParser : public ExpressionParser {
 public:
   enum class ParseResult {
     success,
-    retry_fresh_context, 
+    retry_fresh_context,
     retry_no_bind_generic_params,
     unrecoverable_error
   };

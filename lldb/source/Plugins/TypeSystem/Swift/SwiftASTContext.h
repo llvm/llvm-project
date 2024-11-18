@@ -197,12 +197,10 @@ public:
   /// Create a SwiftASTContext from a Module.  This context is used
   /// for frame variable and uses ClangImporter options specific to
   /// this lldb::Module.  The optional target is necessary when
-  /// creating a module-specific scratch context.  If \p fallback is
-  /// true, then a SwiftASTContextForExpressions is created.
+  /// creating a module-specific scratch context.
   static lldb::TypeSystemSP
   CreateInstance(lldb::LanguageType language, Module &module,
-                 TypeSystemSwiftTypeRef &typeref_typesystem,
-                 bool fallback = false);
+                 TypeSystemSwiftTypeRef &typeref_typesystem);
   /// Create a SwiftASTContextForExpressions taylored to a specific symbol
   /// context.
   static lldb::TypeSystemSP
