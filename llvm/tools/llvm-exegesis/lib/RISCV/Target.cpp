@@ -139,7 +139,7 @@ static std::vector<MCInst> loadFPRegBits(const MCSubtargetInfo &STI,
 }
 
 // main idea is:
-// we support APInt only if (represented as double) it have zero fractional
+// we support APInt only if (represented as double) it has zero fractional
 // part: 1.0, 2.0, 3.0, etc... then we can do the trick: write int to tmp reg t5
 // and then do FCVT this is only reliable thing in 32-bit mode, otherwise we
 // need to use __floatsidf
@@ -198,8 +198,7 @@ std::vector<MCInst> ExegesisRISCVTarget::setRegTo(const MCSubtargetInfo &STI,
   if (RISCV::FPR64RegClass.contains(Reg)) {
     if (STI.hasFeature(RISCV::Feature64Bit))
       return loadFPRegBits(STI, Reg, Value, RISCV::FMV_D_X);
-    else
-      return loadFP64RegBits32(STI, Reg, Value);
+    return loadFP64RegBits32(STI, Reg, Value);
   }
   if (Reg == RISCV::FRM || Reg == RISCV::VL || Reg == RISCV::VLENB ||
       Reg == RISCV::VTYPE || RISCV::GPRPairRegClass.contains(Reg) ||
