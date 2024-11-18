@@ -20,9 +20,11 @@
 
 using namespace llvm;
 
-constexpr const char *KFD_SYSFS_NODE_PATH =
+constexpr static const char *KFD_SYSFS_NODE_PATH =
     "/sys/devices/virtual/kfd/kfd/topology/nodes";
 
+// See the ROCm implementation for how this is handled.
+// https://github.com/ROCm/ROCT-Thunk-Interface/blob/master/src/libhsakmt.h#L126
 constexpr static long getMajor(long Ver) { return (Ver / 10000) % 100; }
 constexpr static long getMinor(long Ver) { return (Ver / 100) % 100; }
 constexpr static long getStep(long Ver) { return Ver % 100; }
@@ -50,9 +52,9 @@ int printGPUsByKFD() {
     long GFXVersion = 0;
     for (line_iterator Lines(**BufferOrErr, false); !Lines.is_at_end();
          ++Lines) {
-      if (Lines->starts_with("gfx_target_version")) {
-        if (Lines->drop_front(sizeof("gfx_target_version"))
-                .consumeInteger(10, GFXVersion))
+      StringRef Line(*Lines);
+      if (Line.consume_front("gfx_target_version")) {
+        if (Line.consumeInteger(10, GFXVersion))
           return 1;
         break;
       }
