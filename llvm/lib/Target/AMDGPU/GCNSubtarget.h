@@ -106,6 +106,7 @@ protected:
   bool GFX9Insts = false;
   bool GFX90AInsts = false;
   bool GFX940Insts = false;
+  bool GFX950Insts = false;
   bool GFX10Insts = false;
   bool GFX11Insts = false;
   bool GFX12Insts = false;

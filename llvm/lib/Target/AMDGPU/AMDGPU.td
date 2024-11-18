@@ -360,6 +360,12 @@ def FeatureGFX940Insts : SubtargetFeature<"gfx940-insts",
   "Additional instructions for GFX940+"
 >;
 
+def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
+  "GFX950Insts",
+  "true",
+  "Additional instructions for GFX950+"
+>;
+
 def FeatureGFX10Insts : SubtargetFeature<"gfx10-insts",
   "GFX10Insts",
   "true",
@@ -1470,6 +1476,14 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureFlatBufferGlobalAtomicFaddF64Inst
    ]>;
 
+def FeatureISAVersion9_5_Common : FeatureSet<
+  !listconcat(FeatureISAVersion9_4_Common.Features,
+  [FeatureFP8Insts,
+   FeatureFP8ConversionInsts,
+   FeatureCvtFP8VOP1Bug,
+   FeatureGFX950Insts
+   ])>;
+
 def FeatureISAVersion9_4_0 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
     [
@@ -1502,6 +1516,8 @@ def FeatureISAVersion9_4_2 : FeatureSet<
 def FeatureISAVersion9_4_Generic : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
     [FeatureRequiresCOV6])>;
+
+def FeatureISAVersion9_5_0 : FeatureSet<FeatureISAVersion9_5_Common.Features>;
 
 def FeatureISAVersion10_Common : FeatureSet<
   [FeatureGFX10,
