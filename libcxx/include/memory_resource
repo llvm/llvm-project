@@ -66,15 +66,6 @@ namespace std::pmr {
 #  pragma GCC system_header
 #endif
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 14
-#  include <cstddef>
-#  include <cstdint>
-#  include <limits>
-#  include <mutex>
-#  include <new>
-#  include <tuple>
-#endif
-
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <stdexcept>
 #endif
