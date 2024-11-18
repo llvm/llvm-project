@@ -1466,10 +1466,10 @@ namespace {
                         const ImplicitAllocationParameters &IAP,
                         CharUnits AllocAlign)
         : NumPlacementArgs(NumPlacementArgs),
-          PassAlignmentToPlacementDelete(isAlignedAllocation(IAP.PassAlignment)),
+          PassAlignmentToPlacementDelete(
+              isAlignedAllocation(IAP.PassAlignment)),
           OperatorDelete(OperatorDelete), Ptr(Ptr), AllocSize(AllocSize),
-          AllocAlign(AllocAlign) {
-          }
+          AllocAlign(AllocAlign) {}
 
     void setPlacementArg(unsigned I, RValueTy Arg, QualType Type) {
       assert(I < NumPlacementArgs && "index out of range");
@@ -1480,17 +1480,19 @@ namespace {
       const auto *FPT = OperatorDelete->getType()->castAs<FunctionProtoType>();
       CallArgList DeleteArgs;
       unsigned FirstNonTypeArg = 0;
-      TypeAwareAllocationMode TypeAwareDeallocation = TypeAwareAllocationMode::No;
+      TypeAwareAllocationMode TypeAwareDeallocation =
+          TypeAwareAllocationMode::No;
       if (OperatorDelete->isTypeAwareOperatorNewOrDelete()) {
         TypeAwareDeallocation = TypeAwareAllocationMode::Yes;
         QualType SpecializedTypeIdentity = FPT->getParamType(0);
         ++FirstNonTypeArg;
-        CXXScalarValueInitExpr TypeIdentityParam(SpecializedTypeIdentity, nullptr, SourceLocation());
+        CXXScalarValueInitExpr TypeIdentityParam(SpecializedTypeIdentity,
+                                                 nullptr, SourceLocation());
         DeleteArgs.add(CGF.EmitAnyExprToTemp(&TypeIdentityParam),
-                          SpecializedTypeIdentity);
+                       SpecializedTypeIdentity);
       }
-      // The first non type tag argument is always a void* (or C* for a destroying
-      // operator  delete for class type C).
+      // The first non type tag argument is always a void* (or C* for a
+      // destroying operator  delete for class type C).
       DeleteArgs.add(Traits::get(CGF, Ptr), FPT->getParamType(FirstNonTypeArg));
 
       // Figure out what other parameters we should be implicitly passing.
@@ -1498,7 +1500,8 @@ namespace {
       if (NumPlacementArgs) {
         // A placement deallocation function is implicitly passed an alignment
         // if the placement allocation function was, but is never passed a size.
-        Params.Alignment = alignedAllocationModeFromBool(PassAlignmentToPlacementDelete);
+        Params.Alignment =
+            alignedAllocationModeFromBool(PassAlignmentToPlacementDelete);
         Params.TypeAwareDelete = TypeAwareDeallocation;
       } else {
         // For a non-placement new-expression, 'operator delete' can take a

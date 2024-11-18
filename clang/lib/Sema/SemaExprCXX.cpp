@@ -1942,7 +1942,7 @@ static bool CheckDeleteOperator(Sema &S, SourceLocation StartLoc,
 /// Select the correct "usual" deallocation function to use from a selection of
 /// deallocation functions (either global or class-scope).
 static UsualDeallocFnInfo resolveDeallocationOverload(
-    Sema &S, LookupResult &R, const ImplicitDeallocationParameters& IDP,
+    Sema &S, LookupResult &R, const ImplicitDeallocationParameters &IDP,
     QualType DeallocType,
     llvm::SmallVectorImpl<UsualDeallocFnInfo> *BestFns = nullptr) {
 
@@ -2924,8 +2924,8 @@ bool Sema::FindAllocationFunctions(
             instantiateSpecializedTypeIdentity(AllocElemType)) {
       TypeIdentity = *SpecializedTypeIdentity;
       if (RequireCompleteType(StartLoc, TypeIdentity,
-                                diag::err_incomplete_type))
-      return true;
+                              diag::err_incomplete_type))
+        return true;
     } else {
       IAP.PassTypeIdentity = TypeAwareAllocationMode::No;
     }
@@ -4098,7 +4098,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
     if (isTypeAwareOperatorNewOrDelete(OperatorDelete)) {
       QualType TypeIdentity = OperatorDelete->getParamDecl(0)->getType();
       if (RequireCompleteType(StartLoc, TypeIdentity,
-                                diag::err_incomplete_type))
+                              diag::err_incomplete_type))
         return ExprError();
       PointeeIndex = 1;
     }
