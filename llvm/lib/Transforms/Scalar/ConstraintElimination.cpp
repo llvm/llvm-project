@@ -1044,8 +1044,8 @@ void State::addInfoForInductions(BasicBlock &BB) {
   SmallVector<BasicBlock *> ExitBBs;
   L->getExitBlocks(ExitBBs);
   for (BasicBlock *EB : ExitBBs) {
-    // bail out non-dedicated exits.
-    if (DT.dominates(PN, EB)) {
+    // Bail out on non-dedicated exits.
+    if (DT.dominates(&BB, EB)) {
       WorkList.emplace_back(FactOrCheck::getConditionFact(
           DT.getNode(EB), CmpInst::ICMP_ULE, A, B, Precond));
     }
