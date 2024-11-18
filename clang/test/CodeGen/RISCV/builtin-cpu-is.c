@@ -7,10 +7,10 @@
 // CHECK-RV64-NEXT:  [[ENTRY:.*:]]
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = load i32, ptr @__riscv_cpu_model, align 4
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 1567
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr inbounds ({ i32, i64, i64 }, ptr @__riscv_cpu_model, i32 0, i32 1), align 8
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr inbounds nuw ({ i32, i64, i64 }, ptr @__riscv_cpu_model, i32 0, i32 1), align 8
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], -9223372036854710272
 // CHECK-RV64-NEXT:    [[TMP4:%.*]] = and i1 [[TMP1]], [[TMP3]]
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = load i64, ptr getelementptr inbounds ({ i32, i64, i64 }, ptr @__riscv_cpu_model, i32 0, i32 2), align 8
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = load i64, ptr getelementptr inbounds nuw ({ i32, i64, i64 }, ptr @__riscv_cpu_model, i32 0, i32 2), align 8
 // CHECK-RV64-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 273
 // CHECK-RV64-NEXT:    [[TMP7:%.*]] = and i1 [[TMP4]], [[TMP6]]
 // CHECK-RV64-NEXT:    [[CONV:%.*]] = zext i1 [[TMP7]] to i32
@@ -25,10 +25,10 @@ int test_cpu_is_veyron_v1() {
 // CHECK-RV64-NEXT:  [[ENTRY:.*:]]
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = load i32, ptr @__riscv_cpu_model, align 4
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 1808
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr inbounds ({ i32, i64, i64 }, ptr @__riscv_cpu_model, i32 0, i32 1), align 8
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr inbounds nuw ({ i32, i64, i64 }, ptr @__riscv_cpu_model, i32 0, i32 1), align 8
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], -9223372035378380799
 // CHECK-RV64-NEXT:    [[TMP4:%.*]] = and i1 [[TMP1]], [[TMP3]]
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = load i64, ptr getelementptr inbounds ({ i32, i64, i64 }, ptr @__riscv_cpu_model, i32 0, i32 2), align 8
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = load i64, ptr getelementptr inbounds nuw ({ i32, i64, i64 }, ptr @__riscv_cpu_model, i32 0, i32 2), align 8
 // CHECK-RV64-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 1152921505839391232
 // CHECK-RV64-NEXT:    [[TMP7:%.*]] = and i1 [[TMP4]], [[TMP6]]
 // CHECK-RV64-NEXT:    [[CONV:%.*]] = zext i1 [[TMP7]] to i32

@@ -22520,35 +22520,28 @@ Value *CodeGenFunction::EmitRISCVCpuIs(StringRef CPUStr) {
       CGM.CreateRuntimeVariable(StructTy, "__riscv_cpu_model");
   cast<llvm::GlobalValue>(RISCVCPUModel)->setDSOLocal(true);
 
-  auto loadRISCVCPUID = [&](unsigned Index, llvm::Type *ValueTy,
-                            CGBuilderTy &Builder, CodeGenModule &CGM) {
-    llvm::Value *GEPIndices[] = {Builder.getInt32(0),
-                                 llvm::ConstantInt::get(Int32Ty, Index)};
-    Value *Ptr = Builder.CreateInBoundsGEP(StructTy, RISCVCPUModel, GEPIndices);
-    Value *CPUID = Builder.CreateAlignedLoad(
-        ValueTy, Ptr,
-        CharUnits::fromQuantity(ValueTy->getScalarSizeInBits() / 8));
+  auto loadRISCVCPUID = [&](unsigned Index, llvm::Type *ValueTy) {
+    Value *Ptr = Builder.CreateStructGEP(StructTy, RISCVCPUModel, Index);
+    Value *CPUID = Builder.CreateAlignedLoad(ValueTy, Ptr, llvm::MaybeAlign());
     return CPUID;
   };
 
   const llvm::RISCV::CPUModel CPUModel = llvm::RISCV::getCPUModel(CPUStr);
 
   // Compare mvendorid.
-  Value *VendorID = loadRISCVCPUID(0, Int32Ty, Builder, CGM);
-  Value *Result = Builder.CreateICmpEQ(
-      VendorID, llvm::ConstantInt::get(Int32Ty, CPUModel.MVendorID));
+  Value *VendorID = loadRISCVCPUID(0, Int32Ty);
+  Value *Result =
+      Builder.CreateICmpEQ(VendorID, Builder.getInt32(CPUModel.MVendorID));
 
   // Compare marchid.
-  Value *ArchID = loadRISCVCPUID(1, Int64Ty, Builder, CGM);
+  Value *ArchID = loadRISCVCPUID(1, Int64Ty);
   Result = Builder.CreateAnd(
-      Result, Builder.CreateICmpEQ(
-                  ArchID, llvm::ConstantInt::get(Int64Ty, CPUModel.MArchID)));
+      Result, Builder.CreateICmpEQ(ArchID, Builder.getInt64(CPUModel.MArchID)));
 
   // Compare mimplid.
-  Value *ImplID = loadRISCVCPUID(2, Int64Ty, Builder, CGM);
+  Value *ImplID = loadRISCVCPUID(2, Int64Ty);
   Result = Builder.CreateAnd(
-      Result, Builder.CreateICmpEQ(
-                  ImplID, llvm::ConstantInt::get(Int64Ty, CPUModel.MImpID)));
+      Result, Builder.CreateICmpEQ(ImplID, Builder.getInt64(CPUModel.MImpID)));
 
   return Result;
 }
