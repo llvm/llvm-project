@@ -63,7 +63,6 @@
 #include "DWARFDebugAranges.h"
 #include "DWARFDebugInfo.h"
 #include "DWARFDebugMacro.h"
-#include "DWARFDebugRanges.h"
 #include "DWARFDeclContext.h"
 #include "DWARFFormValue.h"
 #include "DWARFTypeUnit.h"
@@ -735,19 +734,6 @@ DWARFCompileUnit *SymbolFileDWARF::GetDWARFCompileUnit(CompileUnit *comp_unit) {
 
   // It must be DWARFCompileUnit when it created a CompileUnit.
   return llvm::cast_or_null<DWARFCompileUnit>(dwarf_cu);
-}
-
-DWARFDebugRanges *SymbolFileDWARF::GetDebugRanges() {
-  if (!m_ranges) {
-    LLDB_SCOPED_TIMER();
-
-    if (m_context.getOrLoadRangesData().GetByteSize() > 0)
-      m_ranges = std::make_unique<DWARFDebugRanges>();
-
-    if (m_ranges)
-      m_ranges->Extract(m_context);
-  }
-  return m_ranges.get();
 }
 
 /// Make an absolute path out of \p file_spec and remap it using the
@@ -4465,6 +4451,12 @@ StatsDuration::Duration SymbolFileDWARF::GetDebugInfoIndexTime() {
   if (m_index)
     return m_index->GetIndexTime();
   return {};
+}
+
+void SymbolFileDWARF::ResetStatistics() {
+  m_parse_time.reset();
+  if (m_index)
+    return m_index->ResetStatistics();
 }
 
 Status SymbolFileDWARF::CalculateFrameVariableError(StackFrame &frame) {

@@ -55,7 +55,6 @@
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IntrinsicsS390.h"
-#include "llvm/IR/IntrinsicsVE.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/MDBuilder.h"
@@ -69,7 +68,6 @@
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/X86TargetParser.h"
 #include <optional>
-#include <sstream>
 #include <utility>
 
 using namespace clang;
@@ -5985,15 +5983,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       llvm::Value *Block =
           Builder.CreatePointerCast(Info.BlockArg, GenericVoidPtrTy);
 
-      AttrBuilder B(Builder.getContext());
-      B.addByValAttr(NDRangeL.getAddress().getElementType());
-      llvm::AttributeList ByValAttrSet =
-          llvm::AttributeList::get(CGM.getModule().getContext(), 3U, B);
-
-      auto RTCall =
-          EmitRuntimeCall(CGM.CreateRuntimeFunction(FTy, Name, ByValAttrSet),
-                          {Queue, Flags, Range, Kernel, Block});
-      RTCall->setAttributes(ByValAttrSet);
+      auto RTCall = EmitRuntimeCall(CGM.CreateRuntimeFunction(FTy, Name),
+                                    {Queue, Flags, Range, Kernel, Block});
       return RValue::get(RTCall);
     }
     assert(NumArgs >= 5 && "Invalid enqueue_kernel signature");

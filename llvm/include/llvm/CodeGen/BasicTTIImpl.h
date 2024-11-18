@@ -990,19 +990,16 @@ public:
       // Check that the broadcast index meets at least twice.
       bool IsCompared = false;
       if (int SplatIdx = PoisonMaskElem;
-          all_of(Mask,
-                 [&](int Idx) {
-                   if (Idx == PoisonMaskElem)
-                     return true;
-                   if (SplatIdx == PoisonMaskElem) {
-                     SplatIdx = Idx;
-                     return true;
-                   }
-                   IsCompared = true;
-                   ;
-                   return SplatIdx == Idx;
-                 }) &&
-          IsCompared && SplatIdx != PoisonMaskElem)
+          all_of(enumerate(Mask), [&](const auto &P) {
+            if (P.value() == PoisonMaskElem)
+              return P.index() != Mask.size() - 1 || IsCompared;
+            if (SplatIdx == PoisonMaskElem) {
+              SplatIdx = P.value();
+              return P.index() != Mask.size() - 1;
+            }
+            IsCompared = true;
+            return SplatIdx == P.value();
+          }))
         return TTI::SK_Broadcast;
       if (ShuffleVectorInst::isExtractSubvectorMask(Mask, NumSrcElts, Index) &&
           (Index + Mask.size()) <= (size_t)NumSrcElts) {

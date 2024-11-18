@@ -350,6 +350,35 @@ bool InstrProfWriter::addMemProfCallStack(
   return true;
 }
 
+bool InstrProfWriter::addMemProfData(memprof::IndexedMemProfData Incoming,
+                                     function_ref<void(Error)> Warn) {
+  // TODO: Once we remove support for MemProf format Version V1, assert that
+  // the three components (frames, call stacks, and records) are either all
+  // empty or populated.
+
+  if (MemProfData.Frames.empty())
+    MemProfData.Frames = std::move(Incoming.Frames);
+  else
+    for (const auto &[Id, F] : Incoming.Frames)
+      if (addMemProfFrame(Id, F, Warn))
+        return false;
+
+  if (MemProfData.CallStacks.empty())
+    MemProfData.CallStacks = std::move(Incoming.CallStacks);
+  else
+    for (const auto &[CSId, CS] : Incoming.CallStacks)
+      if (addMemProfCallStack(CSId, CS, Warn))
+        return false;
+
+  if (MemProfData.Records.empty())
+    MemProfData.Records = std::move(Incoming.Records);
+  else
+    for (const auto &[GUID, Record] : Incoming.Records)
+      addMemProfRecord(GUID, Record);
+
+  return true;
+}
+
 void InstrProfWriter::addBinaryIds(ArrayRef<llvm::object::BuildID> BIs) {
   llvm::append_range(BinaryIds, BIs);
 }
@@ -620,39 +649,6 @@ writeMemProfCallStackArray(
   return MemProfCallStackIndexes;
 }
 
-// Write out MemProf Version0 as follows:
-// uint64_t RecordTableOffset = RecordTableGenerator.Emit
-// uint64_t FramePayloadOffset = Offset for the frame payload
-// uint64_t FrameTableOffset = FrameTableGenerator.Emit
-// uint64_t Num schema entries
-// uint64_t Schema entry 0
-// uint64_t Schema entry 1
-// ....
-// uint64_t Schema entry N - 1
-// OnDiskChainedHashTable MemProfRecordData
-// OnDiskChainedHashTable MemProfFrameData
-static Error writeMemProfV0(ProfOStream &OS,
-                            memprof::IndexedMemProfData &MemProfData) {
-  uint64_t HeaderUpdatePos = OS.tell();
-  OS.write(0ULL); // Reserve space for the memprof record table offset.
-  OS.write(0ULL); // Reserve space for the memprof frame payload offset.
-  OS.write(0ULL); // Reserve space for the memprof frame table offset.
-
-  auto Schema = memprof::getFullSchema();
-  writeMemProfSchema(OS, Schema);
-
-  uint64_t RecordTableOffset =
-      writeMemProfRecords(OS, MemProfData.Records, &Schema, memprof::Version0);
-
-  uint64_t FramePayloadOffset = OS.tell();
-  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfData.Frames);
-
-  uint64_t Header[] = {RecordTableOffset, FramePayloadOffset, FrameTableOffset};
-  OS.patch({{HeaderUpdatePos, Header}});
-
-  return Error::success();
-}
-
 // Write out MemProf Version1 as follows:
 // uint64_t Version (NEW in V1)
 // uint64_t RecordTableOffset = RecordTableGenerator.Emit
@@ -809,8 +805,6 @@ static Error writeMemProf(ProfOStream &OS,
                           memprof::IndexedVersion MemProfVersionRequested,
                           bool MemProfFullSchema) {
   switch (MemProfVersionRequested) {
-  case memprof::Version0:
-    return writeMemProfV0(OS, MemProfData);
   case memprof::Version1:
     return writeMemProfV1(OS, MemProfData);
   case memprof::Version2:

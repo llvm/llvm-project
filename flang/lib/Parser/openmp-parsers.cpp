@@ -270,7 +270,7 @@ TYPE_PARSER(construct<OmpMapClause>(
 // 2.19.7.2 defaultmap(implicit-behavior[:variable-category])
 //  implicit-behavior -> ALLOC | TO | FROM | TOFROM | FIRSRTPRIVATE | NONE |
 //  DEFAULT
-//  variable-category -> SCALAR | AGGREGATE | ALLOCATABLE | POINTER
+//  variable-category -> ALL | SCALAR | AGGREGATE | ALLOCATABLE | POINTER
 TYPE_PARSER(construct<OmpDefaultmapClause>(
     construct<OmpDefaultmapClause::ImplicitBehavior>(
         "ALLOC" >> pure(OmpDefaultmapClause::ImplicitBehavior::Alloc) ||
@@ -283,6 +283,7 @@ TYPE_PARSER(construct<OmpDefaultmapClause>(
         "DEFAULT" >> pure(OmpDefaultmapClause::ImplicitBehavior::Default)),
     maybe(":" >>
         construct<OmpDefaultmapClause::VariableCategory>(
+            "ALL"_id >> pure(OmpDefaultmapClause::VariableCategory::All) ||
             "SCALAR" >> pure(OmpDefaultmapClause::VariableCategory::Scalar) ||
             "AGGREGATE" >>
                 pure(OmpDefaultmapClause::VariableCategory::Aggregate) ||
@@ -558,6 +559,8 @@ TYPE_PARSER(
         construct<OmpClause>(construct<OmpClause::DynamicAllocators>()) ||
     "ENTER" >> construct<OmpClause>(construct<OmpClause::Enter>(
                    parenthesized(Parser<OmpObjectList>{}))) ||
+    "EXCLUSIVE" >> construct<OmpClause>(construct<OmpClause::Exclusive>(
+                       parenthesized(Parser<OmpObjectList>{}))) ||
     "FILTER" >> construct<OmpClause>(construct<OmpClause::Filter>(
                     parenthesized(scalarIntExpr))) ||
     "FINAL" >> construct<OmpClause>(construct<OmpClause::Final>(
@@ -577,6 +580,8 @@ TYPE_PARSER(
     "IF" >> construct<OmpClause>(construct<OmpClause::If>(
                 parenthesized(Parser<OmpIfClause>{}))) ||
     "INBRANCH" >> construct<OmpClause>(construct<OmpClause::Inbranch>()) ||
+    "INCLUSIVE" >> construct<OmpClause>(construct<OmpClause::Inclusive>(
+                       parenthesized(Parser<OmpObjectList>{}))) ||
     "IS_DEVICE_PTR" >> construct<OmpClause>(construct<OmpClause::IsDevicePtr>(
                            parenthesized(Parser<OmpObjectList>{}))) ||
     "LASTPRIVATE" >> construct<OmpClause>(construct<OmpClause::Lastprivate>(
@@ -789,6 +794,7 @@ TYPE_PARSER(sourced(construct<OpenMPFlushConstruct>(verbatim("FLUSH"_tok),
 TYPE_PARSER(sourced(construct<OmpSimpleStandaloneDirective>(first(
     "BARRIER" >> pure(llvm::omp::Directive::OMPD_barrier),
     "ORDERED" >> pure(llvm::omp::Directive::OMPD_ordered),
+    "SCAN" >> pure(llvm::omp::Directive::OMPD_scan),
     "TARGET ENTER DATA" >> pure(llvm::omp::Directive::OMPD_target_enter_data),
     "TARGET EXIT DATA" >> pure(llvm::omp::Directive::OMPD_target_exit_data),
     "TARGET UPDATE" >> pure(llvm::omp::Directive::OMPD_target_update),

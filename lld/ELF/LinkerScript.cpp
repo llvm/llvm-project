@@ -59,11 +59,12 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
         assert(ctx.arg.relocatable && (rel->flags & SHF_LINK_ORDER));
         return s->name;
       }
+      StringSaver &ss = ctx.saver;
       if (s->type == SHT_CREL)
-        return saver().save(".crel" + out->name);
+        return ss.save(".crel" + out->name);
       if (s->type == SHT_RELA)
-        return saver().save(".rela" + out->name);
-      return saver().save(".rel" + out->name);
+        return ss.save(".rela" + out->name);
+      return ss.save(".rel" + out->name);
     }
   }
 
@@ -131,6 +132,10 @@ uint64_t ExprValue::getSecAddr() const {
 uint64_t ExprValue::getSectionOffset() const {
   return getValue() - getSecAddr();
 }
+
+// std::unique_ptr<OutputSection> may be incomplete type.
+LinkerScript::LinkerScript(Ctx &ctx) : ctx(ctx) {}
+LinkerScript::~LinkerScript() {}
 
 OutputDesc *LinkerScript::createOutputSection(StringRef name,
                                               StringRef location) {
@@ -831,7 +836,7 @@ void LinkerScript::processSymbolAssignments() {
   // sh_shndx should not be SHN_UNDEF or SHN_ABS. Create a dummy aether section
   // that fills the void outside a section. It has an index of one, which is
   // indistinguishable from any other regular section index.
-  aether = make<OutputSection>(ctx, "", 0, SHF_ALLOC);
+  aether = std::make_unique<OutputSection>(ctx, "", 0, SHF_ALLOC);
   aether->sectionIndex = 1;
 
   // `st` captures the local AddressState and makes it accessible deliberately.
@@ -839,7 +844,7 @@ void LinkerScript::processSymbolAssignments() {
   // current state through to a lambda function created by the script parser.
   AddressState st(*this);
   state = &st;
-  st.outSec = aether;
+  st.outSec = aether.get();
 
   for (SectionCommand *cmd : sectionCommands) {
     if (auto *assign = dyn_cast<SymbolAssignment>(cmd))
@@ -1508,7 +1513,7 @@ LinkerScript::assignAddresses() {
   AddressState st(*this);
   state = &st;
   errorOnMissingSection = true;
-  st.outSec = aether;
+  st.outSec = aether.get();
   recordedErrors.clear();
 
   SymbolAssignmentMap oldValues = getSymbolAssignmentValues(sectionCommands);
@@ -1647,9 +1652,9 @@ SmallVector<PhdrEntry *, 0> LinkerScript::createPhdrs() {
     PhdrEntry *phdr = make<PhdrEntry>(ctx, cmd.type, cmd.flags.value_or(PF_R));
 
     if (cmd.hasFilehdr)
-      phdr->add(ctx.out.elfHeader);
+      phdr->add(ctx.out.elfHeader.get());
     if (cmd.hasPhdrs)
-      phdr->add(ctx.out.programHeaders);
+      phdr->add(ctx.out.programHeaders.get());
 
     if (cmd.lmaExpr) {
       phdr->p_paddr = cmd.lmaExpr().getValue();
