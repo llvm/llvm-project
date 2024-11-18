@@ -198,6 +198,10 @@ int main(int, char**) {
 
   // Make sure we satisfy the complexity requirement in terms of the number of times the assignment
   // operator is called.
+  //
+  // There is currently ambiguity as to whether this is truly mandated by the Standard, so we only
+  // test it for libc++.
+#ifdef _LIBCPP_VERSION
   {
     Tracker tracker;
     std::vector<TrackedAssignment> v;
@@ -216,6 +220,7 @@ int main(int, char**) {
     assert(tracker.copy_assignments == 0);
     assert(tracker.move_assignments == 2);
   }
+#endif
 
   return 0;
 }
