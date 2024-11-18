@@ -5,11 +5,11 @@
 ; in jump-threading when it tries to update the predecessors'
 ; profile metadata from a phi node.
 
-define void @unreachable_single_bb_loop() {
+define void @unreachable_single_bb_loop(i1 %arg) {
 ;
 ; CHECK-LABEL: @unreachable_single_bb_loop(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = call i32 @a()
+; CHECK-NEXT:    [[TMP:%.*]] = call i32 @a(i1 %arg)
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[BB8:%.*]], label [[BB8]]
 ; CHECK:       bb2:
@@ -22,7 +22,7 @@ define void @unreachable_single_bb_loop() {
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %tmp = call i32 @a()
+  %tmp = call i32 @a(i1 %arg)
   %tmp1 = icmp eq i32 %tmp, 1
   br i1 %tmp1, label %bb5, label %bb8
 
@@ -45,11 +45,11 @@ bb8:                                              ; preds = %bb8, %bb7, %bb5, %b
   ret void
 }
 
-define void @unreachable_multi_bbs_loop() {
+define void @unreachable_multi_bbs_loop(i1 %arg) {
 ;
 ; CHECK-LABEL: @unreachable_multi_bbs_loop(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = call i32 @a()
+; CHECK-NEXT:    [[TMP:%.*]] = call i32 @a(i1 %arg)
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[BB8:%.*]], label [[BB8]]
 ; CHECK:       bb3:
@@ -64,7 +64,7 @@ define void @unreachable_multi_bbs_loop() {
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %tmp = call i32 @a()
+  %tmp = call i32 @a(i1 %arg)
   %tmp1 = icmp eq i32 %tmp, 1
   br i1 %tmp1, label %bb5, label %bb8
 
@@ -89,12 +89,12 @@ bb7:                                              ; preds = %bb5
 bb8:                                              ; preds = %bb8, %bb7, %bb5, %bb2
   ret void
 }
-declare i32 @a()
+declare i32 @a(i1 %arg)
 
 ; This gets into a state that could cause instruction simplify
 ; to hang - an insertelement instruction has itself as an operand.
 
-define void @PR48362() {
+define void @PR48362(i1 %arg) {
 ;
 ; CHECK-LABEL: @PR48362(
 ; CHECK-NEXT:  cleanup.cont1500:
@@ -142,7 +142,7 @@ for.body1911:                                     ; preds = %if.else1904
   br label %land.end2173
 
 land.end2173:                                     ; preds = %for.body1911
-  br i1 undef, label %if.end2178, label %cleanup2297
+  br i1 %arg, label %if.end2178, label %cleanup2297
 
 if.end2178:                                       ; preds = %land.end2173
   %l_580.sroa.0.2.vec.insert = insertelement <4 x i32> %l_580.sroa.0.0, i32 undef, i32 1
@@ -165,7 +165,7 @@ cleanup.cont2339:                                 ; preds = %cleanup2329
   br label %for.inc2340
 
 for.inc2340:                                      ; preds = %cleanup.cont2339
-  br i1 undef, label %for.body1509, label %crit_edge115
+  br i1 %arg, label %for.body1509, label %crit_edge115
 
 crit_edge114:                                     ; preds = %cleanup2329
   unreachable
