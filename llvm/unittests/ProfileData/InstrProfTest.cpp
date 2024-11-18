@@ -21,6 +21,7 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <cstdarg>
+#include <initializer_list>
 #include <optional>
 
 using namespace llvm;
@@ -348,10 +349,10 @@ TEST_F(InstrProfTest, test_merge_traces_sampled) {
 using ::llvm::memprof::IndexedMemProfRecord;
 using ::llvm::memprof::MemInfoBlock;
 using FrameIdMapTy =
-    llvm::DenseMap<::llvm::memprof::FrameId, ::llvm::memprof::Frame>;
+    llvm::MapVector<::llvm::memprof::FrameId, ::llvm::memprof::Frame>;
 using CallStackIdMapTy =
-    llvm::DenseMap<::llvm::memprof::CallStackId,
-                   ::llvm::SmallVector<::llvm::memprof::FrameId>>;
+    llvm::MapVector<::llvm::memprof::CallStackId,
+                    ::llvm::SmallVector<::llvm::memprof::FrameId>>;
 
 static FrameIdMapTy getFrameMapping() {
   FrameIdMapTy Mapping;
@@ -467,11 +468,11 @@ TEST_F(InstrProfTest, test_memprof_v0) {
       /*CallSiteFrames=*/{
           {4, 5},
       });
-  const FrameIdMapTy IdToFrameMap = getFrameMapping();
-  for (const auto &I : IdToFrameMap) {
-    Writer.addMemProfFrame(I.first, I.getSecond(), Err);
-  }
-  Writer.addMemProfRecord(/*Id=*/0x9999, IndexedMR);
+
+  memprof::IndexedMemProfData MemProfData;
+  MemProfData.Frames = getFrameMapping();
+  MemProfData.Records.try_emplace(0x9999, IndexedMR);
+  Writer.addMemProfData(MemProfData, Err);
 
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
@@ -482,8 +483,8 @@ TEST_F(InstrProfTest, test_memprof_v0) {
 
   std::optional<memprof::FrameId> LastUnmappedFrameId;
   auto IdToFrameCallback = [&](const memprof::FrameId Id) {
-    auto Iter = IdToFrameMap.find(Id);
-    if (Iter == IdToFrameMap.end()) {
+    auto Iter = MemProfData.Frames.find(Id);
+    if (Iter == MemProfData.Frames.end()) {
       LastUnmappedFrameId = Id;
       return memprof::Frame(0, 0, 0, false);
     }
@@ -508,15 +509,11 @@ TEST_F(InstrProfTest, test_memprof_v2_full_schema) {
   const IndexedMemProfRecord IndexedMR = makeRecordV2(
       /*AllocFrames=*/{0x111, 0x222},
       /*CallSiteFrames=*/{0x333}, MIB, memprof::getFullSchema());
-  const FrameIdMapTy IdToFrameMap = getFrameMapping();
-  const auto CSIdToCallStackMap = getCallStackMapping();
-  for (const auto &I : IdToFrameMap) {
-    Writer.addMemProfFrame(I.first, I.getSecond(), Err);
-  }
-  for (const auto &I : CSIdToCallStackMap) {
-    Writer.addMemProfCallStack(I.first, I.getSecond(), Err);
-  }
-  Writer.addMemProfRecord(/*Id=*/0x9999, IndexedMR);
+  memprof::IndexedMemProfData MemProfData;
+  MemProfData.Frames = getFrameMapping();
+  MemProfData.CallStacks = getCallStackMapping();
+  MemProfData.Records.try_emplace(0x9999, IndexedMR);
+  Writer.addMemProfData(MemProfData, Err);
 
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
@@ -525,9 +522,10 @@ TEST_F(InstrProfTest, test_memprof_v2_full_schema) {
   ASSERT_THAT_ERROR(RecordOr.takeError(), Succeeded());
   const memprof::MemProfRecord &Record = RecordOr.get();
 
-  memprof::FrameIdConverter<decltype(IdToFrameMap)> FrameIdConv(IdToFrameMap);
-  memprof::CallStackIdConverter<decltype(CSIdToCallStackMap)> CSIdConv(
-      CSIdToCallStackMap, FrameIdConv);
+  memprof::FrameIdConverter<decltype(MemProfData.Frames)> FrameIdConv(
+      MemProfData.Frames);
+  memprof::CallStackIdConverter<decltype(MemProfData.CallStacks)> CSIdConv(
+      MemProfData.CallStacks, FrameIdConv);
 
   const ::llvm::memprof::MemProfRecord WantRecord =
       IndexedMR.toMemProfRecord(CSIdConv);
@@ -550,15 +548,11 @@ TEST_F(InstrProfTest, test_memprof_v2_partial_schema) {
   const IndexedMemProfRecord IndexedMR = makeRecordV2(
       /*AllocFrames=*/{0x111, 0x222},
       /*CallSiteFrames=*/{0x333}, MIB, memprof::getHotColdSchema());
-  const FrameIdMapTy IdToFrameMap = getFrameMapping();
-  const auto CSIdToCallStackMap = getCallStackMapping();
-  for (const auto &I : IdToFrameMap) {
-    Writer.addMemProfFrame(I.first, I.getSecond(), Err);
-  }
-  for (const auto &I : CSIdToCallStackMap) {
-    Writer.addMemProfCallStack(I.first, I.getSecond(), Err);
-  }
-  Writer.addMemProfRecord(/*Id=*/0x9999, IndexedMR);
+  memprof::IndexedMemProfData MemProfData;
+  MemProfData.Frames = getFrameMapping();
+  MemProfData.CallStacks = getCallStackMapping();
+  MemProfData.Records.try_emplace(0x9999, IndexedMR);
+  Writer.addMemProfData(MemProfData, Err);
 
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
@@ -567,9 +561,10 @@ TEST_F(InstrProfTest, test_memprof_v2_partial_schema) {
   ASSERT_THAT_ERROR(RecordOr.takeError(), Succeeded());
   const memprof::MemProfRecord &Record = RecordOr.get();
 
-  memprof::FrameIdConverter<decltype(IdToFrameMap)> FrameIdConv(IdToFrameMap);
-  memprof::CallStackIdConverter<decltype(CSIdToCallStackMap)> CSIdConv(
-      CSIdToCallStackMap, FrameIdConv);
+  memprof::FrameIdConverter<decltype(MemProfData.Frames)> FrameIdConv(
+      MemProfData.Frames);
+  memprof::CallStackIdConverter<decltype(MemProfData.CallStacks)> CSIdConv(
+      MemProfData.CallStacks, FrameIdConv);
 
   const ::llvm::memprof::MemProfRecord WantRecord =
       IndexedMR.toMemProfRecord(CSIdConv);
@@ -601,23 +596,21 @@ TEST_F(InstrProfTest, test_caller_callee_pairs) {
   //       Line: 7, Column: 8
   //         new(...)
 
-  const std::pair<memprof::FrameId, memprof::Frame> Frames[] = {
-      {0, {0x123, 1, 2, false}},
-      {1, {0x234, 3, 4, true}},
-      {2, {0x123, 5, 6, false}},
-      {3, {0x345, 7, 8, true}}};
-  for (const auto &[FrameId, Frame] : Frames)
-    Writer.addMemProfFrame(FrameId, Frame, Err);
-
-  const std::pair<memprof::CallStackId, SmallVector<memprof::FrameId>>
-      CallStacks[] = {{0x111, {1, 0}}, {0x222, {3, 2}}};
-  for (const auto &[CSId, CallStack] : CallStacks)
-    Writer.addMemProfCallStack(CSId, CallStack, Err);
-
   const IndexedMemProfRecord IndexedMR = makeRecordV2(
       /*AllocFrames=*/{0x111, 0x222},
       /*CallSiteFrames=*/{}, MIB, memprof::getHotColdSchema());
-  Writer.addMemProfRecord(/*Id=*/0x9999, IndexedMR);
+
+  memprof::IndexedMemProfData MemProfData;
+  MemProfData.Frames.try_emplace(0, 0x123, 1, 2, false);
+  MemProfData.Frames.try_emplace(1, 0x234, 3, 4, true);
+  MemProfData.Frames.try_emplace(2, 0x123, 5, 6, false);
+  MemProfData.Frames.try_emplace(3, 0x345, 7, 8, true);
+  MemProfData.CallStacks.try_emplace(
+      0x111, std::initializer_list<memprof::FrameId>{1, 0});
+  MemProfData.CallStacks.try_emplace(
+      0x222, std::initializer_list<memprof::FrameId>{3, 2});
+  MemProfData.Records.try_emplace(0x9999, IndexedMR);
+  Writer.addMemProfData(MemProfData, Err);
 
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
@@ -681,19 +674,15 @@ TEST_F(InstrProfTest, test_memprof_merge) {
   ASSERT_THAT_ERROR(Writer2.mergeProfileKind(InstrProfKind::MemProf),
                     Succeeded());
 
-  const FrameIdMapTy IdToFrameMap = getFrameMapping();
-  for (const auto &I : IdToFrameMap) {
-    Writer2.addMemProfFrame(I.first, I.getSecond(), Err);
-  }
-
-  const auto CSIdToCallStackMap = getCallStackMapping();
-  for (const auto &[CSId, CallStack] : CSIdToCallStackMap)
-    Writer2.addMemProfCallStack(CSId, CallStack, Err);
-
   const IndexedMemProfRecord IndexedMR = makeRecordV2(
       /*AllocFrames=*/{0x111, 0x222},
       /*CallSiteFrames=*/{}, makePartialMIB(), memprof::getHotColdSchema());
-  Writer2.addMemProfRecord(/*Id=*/0x9999, IndexedMR);
+
+  memprof::IndexedMemProfData MemProfData;
+  MemProfData.Frames = getFrameMapping();
+  MemProfData.CallStacks = getCallStackMapping();
+  MemProfData.Records.try_emplace(0x9999, IndexedMR);
+  Writer2.addMemProfData(MemProfData, Err);
 
   ASSERT_THAT_ERROR(Writer.mergeProfileKind(Writer2.getProfileKind()),
                     Succeeded());
@@ -714,9 +703,10 @@ TEST_F(InstrProfTest, test_memprof_merge) {
 
   std::optional<memprof::FrameId> LastUnmappedFrameId;
 
-  memprof::FrameIdConverter<decltype(IdToFrameMap)> FrameIdConv(IdToFrameMap);
-  memprof::CallStackIdConverter<decltype(CSIdToCallStackMap)> CSIdConv(
-      CSIdToCallStackMap, FrameIdConv);
+  memprof::FrameIdConverter<decltype(MemProfData.Frames)> FrameIdConv(
+      MemProfData.Frames);
+  memprof::CallStackIdConverter<decltype(MemProfData.CallStacks)> CSIdConv(
+      MemProfData.CallStacks, FrameIdConv);
 
   const ::llvm::memprof::MemProfRecord WantRecord =
       IndexedMR.toMemProfRecord(CSIdConv);
