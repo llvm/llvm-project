@@ -31,6 +31,9 @@ let Definition = "target_experimental" in {
     DefaultEnumValue<"llvm::to_underlying(AutoBool::Auto)">,
     EnumValues<"OptionEnumValues(g_swift_pcm_validation_values)">,
     Desc<"Enable validation when loading Clang PCM files (-fvalidate-pch, -fmodules-check-relocated).">;
+  def UseDIL : Property<"use-DIL", "Boolean">,
+    Global, DefaultFalse,
+    Desc<"If true, use the alternative DIL implementation for frame variable evaluation.">;
 }
 
 let Definition = "target" in {
