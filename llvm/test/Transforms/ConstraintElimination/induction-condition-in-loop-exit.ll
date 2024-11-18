@@ -782,7 +782,8 @@ define i1 @test_non_dedicated_exit(i16 %n) {
 ; CHECK-NEXT:    [[INDVAR_INC]] = add nuw nsw i32 [[INDVAR]], 1
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i16 [[N]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
   %cond = icmp slt i16 %n, 1
