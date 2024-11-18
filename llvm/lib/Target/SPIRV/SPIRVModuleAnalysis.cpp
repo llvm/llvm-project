@@ -662,6 +662,7 @@ void RequirementHandler::initAvailableCapabilitiesForOpenCL(
   addAvailableCaps({Capability::Addresses, Capability::Float16Buffer,
                     Capability::Kernel, Capability::Vector16,
                     Capability::Groups, Capability::GenericPointer,
+                    Capability::StorageImageWriteWithoutFormat,
                     Capability::StorageImageReadWithoutFormat});
   if (ST.hasOpenCLFullProfile())
     addAvailableCaps({Capability::Int64, Capability::Int64Atomics});
@@ -724,7 +725,8 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
 
   // Became core in Vulkan 1.3
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 6)))
-    addAvailableCaps({Capability::StorageImageReadWithoutFormat});
+    addAvailableCaps({Capability::StorageImageWriteWithoutFormat,
+                      Capability::StorageImageReadWithoutFormat});
 }
 
 } // namespace SPIRV
@@ -1442,6 +1444,13 @@ void addInstrRequirements(const MachineInstr &MI,
     SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(ImageReg);
     if (isImageTypeWithUnknownFormat(TypeDef))
       Reqs.addCapability(SPIRV::Capability::StorageImageReadWithoutFormat);
+    break;
+  }
+  case SPIRV::OpImageWrite: {
+    Register ImageReg = MI.getOperand(0).getReg();
+    SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(ImageReg);
+    if (isImageTypeWithUnknownFormat(TypeDef))
+      Reqs.addCapability(SPIRV::Capability::StorageImageWriteWithoutFormat);
     break;
   }
 
