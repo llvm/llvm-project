@@ -42,6 +42,11 @@ point (e.g. maybe you would like to give an example of the
 functionality, or simply have a lot to talk about), see the comment below
 for adding a new subsection. -->
 
+* Added a new IRNormalizer pass which aims to transform LLVM modules into
+  a normal form by reordering and renaming instructions while preserving the
+  same semantics. The normalizer makes it easier to spot semantic differences
+  when diffing two modules which have undergone different passes.
+
 * ...
 
 <!-- If you would like to document a larger change, then you can add a
@@ -186,6 +191,7 @@ Changes to the RISC-V Backend
 * Added `Smctr`, `Ssctr` and `Svvptc` extensions.
 * `-mcpu=syntacore-scr7` was added.
 * The `Zacas` extension is no longer marked as experimental.
+* Added Smdbltrp, Ssdbltrp extensions to -march.
 * The `Smmpm`, `Smnpm`, `Ssnpm`, `Supm`, and `Sspm` pointer masking extensions
   are no longer marked as experimental.
 * The `Sha` extension is now supported.
@@ -230,6 +236,8 @@ Changes to the X86 Backend
 * Supported ISA of `SM4(EVEX)`.
 
 * Supported ISA of `MSR_IMM`.
+
+* Supported ``-mcpu=diamondrapids``
 
 Changes to the OCaml bindings
 -----------------------------

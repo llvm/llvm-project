@@ -3086,7 +3086,7 @@ define <16 x i16> @shuffle_v16i16_28_zz_zz_zz_29_zz_zz_zz_30_zz_zz_zz_31_zz_zz_z
 ;
 ; AVX2-LABEL: shuffle_v16i16_28_zz_zz_zz_29_zz_zz_zz_30_zz_zz_zz_31_zz_zz_zz:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,2,3]
+; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,3,3,3]
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[8,9],zero,zero,zero,zero,zero,zero,ymm0[10,11],zero,zero,zero,zero,zero,zero,ymm0[28,29],zero,zero,zero,zero,zero,zero,ymm0[30,31],zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    retq
 ;
@@ -3110,7 +3110,7 @@ define <16 x i16> @shuffle_v16i16_28_zz_zz_zz_29_zz_zz_zz_30_zz_zz_zz_31_zz_zz_z
 ;
 ; XOPAVX2-LABEL: shuffle_v16i16_28_zz_zz_zz_29_zz_zz_zz_30_zz_zz_zz_31_zz_zz_zz:
 ; XOPAVX2:       # %bb.0:
-; XOPAVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,2,3]
+; XOPAVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,3,3,3]
 ; XOPAVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[8,9],zero,zero,zero,zero,zero,zero,ymm0[10,11],zero,zero,zero,zero,zero,zero,ymm0[28,29],zero,zero,zero,zero,zero,zero,ymm0[30,31],zero,zero,zero,zero,zero,zero
 ; XOPAVX2-NEXT:    retq
   %shuffle = shufflevector <16 x i16> zeroinitializer, <16 x i16> %a, <16 x i32> <i32 28, i32 0, i32 0, i32 0, i32 29, i32 0, i32 0, i32 0, i32 30, i32 0, i32 0, i32 0, i32 31, i32 0, i32 0, i32 0>

@@ -8,10 +8,8 @@
 #include "InterpBuiltinBitCast.h"
 #include "Boolean.h"
 #include "Context.h"
-#include "FixedPoint.h"
 #include "Floating.h"
 #include "Integral.h"
-#include "IntegralAP.h"
 #include "InterpState.h"
 #include "MemberPointer.h"
 #include "Pointer.h"
@@ -19,8 +17,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/ADT/BitVector.h"
-#include <bitset>
 
 using namespace clang;
 using namespace clang::interp;

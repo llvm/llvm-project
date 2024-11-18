@@ -745,12 +745,10 @@ Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
 ======================================= ====================================================================== ==================================
          Name                            Operation                                                              Supported element types
 ======================================= ====================================================================== ==================================
- ET __builtin_reduce_max(VT a)           return x or y, whichever is larger; If exactly one argument is         integer and floating point types
-                                         a NaN, return the other argument. If both arguments are NaNs,
-                                         fmax() return a NaN.
- ET __builtin_reduce_min(VT a)           return x or y, whichever is smaller; If exactly one argument           integer and floating point types
-                                         is a NaN, return the other argument. If both arguments are
-                                         NaNs, fmax() return a NaN.
+ ET __builtin_reduce_max(VT a)           return the largest element of the vector. The floating point result    integer and floating point types
+                                         will always be a number unless all elements of the vector are NaN.
+ ET __builtin_reduce_min(VT a)           return the smallest element of the vector. The floating point result   integer and floating point types
+                                         will always be a number unless all elements of the vector are NaN.
  ET __builtin_reduce_add(VT a)           \+                                                                     integer types
  ET __builtin_reduce_mul(VT a)           \*                                                                     integer types
  ET __builtin_reduce_and(VT a)           &                                                                      integer types
@@ -5974,3 +5972,31 @@ Clang guarantees the following behaviors:
   padding bits are initialized to zero.
 
 Currently, the above extension only applies to C source code, not C++.
+
+
+Empty Objects in C
+==================
+The declaration of a structure or union type which has no named members is
+undefined behavior (C23 and earlier) or implementation-defined behavior (C2y).
+Clang allows the declaration of a structure or union type with no named members
+in all C language modes. `sizeof` for such a type returns `0`, which is
+different behavior than in C++ (where the size of such an object is typically
+`1`).
+
+
+Qualified function types in C
+=============================
+Declaring a function with a qualified type in C is undefined behavior (C23 and
+earlier) or implementation-defined behavior (C2y). Clang allows a function type
+to be specified with the ``const`` and ``volatile`` qualifiers, but ignores the
+qualifications.
+
+.. code-block:: c
+
+   typedef int f(void);
+   const volatile f func; // Qualifier on function type has no effect.
+
+
+Note, Clang does not allow an ``_Atomic`` function type because
+of explicit constraints against atomically qualified (arrays and) function
+types.

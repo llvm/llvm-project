@@ -85,7 +85,7 @@ namespace std {
 #include <__memory/allocator_destructor.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/unique_ptr.h>
-#include <__type_traits/add_const.h>
+#include <__type_traits/add_cv_quals.h>
 #include <__type_traits/add_pointer.h>
 #include <__type_traits/aligned_storage.h>
 #include <__type_traits/conditional.h>
@@ -166,8 +166,6 @@ template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS __unique_typeinfo {
   static constexpr int __id = 0;
 };
-template <class _Tp>
-constexpr int __unique_typeinfo<_Tp>::__id;
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI constexpr const void* __get_fallback_typeid() {

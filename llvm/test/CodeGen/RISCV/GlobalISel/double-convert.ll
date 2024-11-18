@@ -300,9 +300,7 @@ define signext i32 @fcvt_d_wu_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; RV64IFD-LABEL: fcvt_d_wu_demanded_bits:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addiw a0, a0, 1
-; RV64IFD-NEXT:    slli a2, a0, 32
-; RV64IFD-NEXT:    srli a2, a2, 32
-; RV64IFD-NEXT:    fcvt.d.wu fa5, a2
+; RV64IFD-NEXT:    fcvt.d.wu fa5, a0
 ; RV64IFD-NEXT:    fsd fa5, 0(a1)
 ; RV64IFD-NEXT:    ret
   %3 = add i32 %0, 1

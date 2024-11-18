@@ -716,19 +716,22 @@ computeFullStackId(const std::vector<memprof::Frame> &CallStack) {
 }
 
 static AllocationType addCallStack(CallStackTrie &AllocTrie,
-                                   const AllocationInfo *AllocInfo) {
+                                   const AllocationInfo *AllocInfo,
+                                   uint64_t FullStackId) {
   SmallVector<uint64_t> StackIds;
   for (const auto &StackFrame : AllocInfo->CallStack)
     StackIds.push_back(computeStackId(StackFrame));
   auto AllocType = getAllocType(AllocInfo->Info.getTotalLifetimeAccessDensity(),
                                 AllocInfo->Info.getAllocCount(),
                                 AllocInfo->Info.getTotalLifetime());
-  uint64_t TotalSize = 0;
+  std::vector<ContextTotalSize> ContextSizeInfo;
   if (MemProfReportHintedSizes) {
-    TotalSize = AllocInfo->Info.getTotalSize();
+    auto TotalSize = AllocInfo->Info.getTotalSize();
     assert(TotalSize);
+    assert(FullStackId != 0);
+    ContextSizeInfo.push_back({FullStackId, TotalSize});
   }
-  AllocTrie.addCallStack(AllocType, StackIds, TotalSize);
+  AllocTrie.addCallStack(AllocType, StackIds, std::move(ContextSizeInfo));
   return AllocType;
 }
 
@@ -796,7 +799,7 @@ struct AllocMatchInfo {
 };
 
 DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>>
-memprof::extractCallsFromIR(Module &M) {
+memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI) {
   DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> Calls;
 
   auto GetOffset = [](const DILocation *DIL) {
@@ -810,10 +813,6 @@ memprof::extractCallsFromIR(Module &M) {
 
     for (auto &BB : F) {
       for (auto &I : BB) {
-        const DILocation *DIL = I.getDebugLoc();
-        if (!DIL)
-          continue;
-
         if (!isa<CallBase>(&I) || isa<IntrinsicInst>(&I))
           continue;
 
@@ -824,11 +823,26 @@ memprof::extractCallsFromIR(Module &M) {
           continue;
 
         StringRef CalleeName = CalledFunction->getName();
-        uint64_t CallerGUID =
-            IndexedMemProfRecord::getGUID(DIL->getSubprogramLinkageName());
-        uint64_t CalleeGUID = IndexedMemProfRecord::getGUID(CalleeName);
-        LineLocation Loc = {GetOffset(DIL), DIL->getColumn()};
-        Calls[CallerGUID].emplace_back(Loc, CalleeGUID);
+        bool IsAlloc = isAllocationWithHotColdVariant(CalledFunction, TLI);
+        for (const DILocation *DIL = I.getDebugLoc(); DIL;
+             DIL = DIL->getInlinedAt()) {
+          StringRef CallerName = DIL->getSubprogramLinkageName();
+          assert(!CallerName.empty() &&
+                 "Be sure to enable -fdebug-info-for-profiling");
+          uint64_t CallerGUID = IndexedMemProfRecord::getGUID(CallerName);
+          uint64_t CalleeGUID = IndexedMemProfRecord::getGUID(CalleeName);
+          // Pretend that we are calling a function with GUID == 0 if we are
+          // calling a heap allocation function.
+          if (IsAlloc)
+            CalleeGUID = 0;
+          LineLocation Loc = {GetOffset(DIL), DIL->getColumn()};
+          Calls[CallerGUID].emplace_back(Loc, CalleeGUID);
+          CalleeName = CallerName;
+          // FIXME: Recognize other frames that are associated with heap
+          // allocation functions.  It may be too early to reset IsAlloc to
+          // false here.
+          IsAlloc = false;
+        }
       }
     }
   }
@@ -1011,11 +1025,14 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
           if (stackFrameIncludesInlinedCallStack(AllocInfo->CallStack,
                                                  InlinedCallStack)) {
             NumOfMemProfMatchedAllocContexts++;
-            auto AllocType = addCallStack(AllocTrie, AllocInfo);
+            uint64_t FullStackId = 0;
+            if (ClPrintMemProfMatchInfo || MemProfReportHintedSizes)
+              FullStackId = computeFullStackId(AllocInfo->CallStack);
+            auto AllocType = addCallStack(AllocTrie, AllocInfo, FullStackId);
             // Record information about the allocation if match info printing
             // was requested.
             if (ClPrintMemProfMatchInfo) {
-              auto FullStackId = computeFullStackId(AllocInfo->CallStack);
+              assert(FullStackId != 0);
               FullStackIdToAllocMatchInfo[FullStackId] = {
                   AllocInfo->Info.getTotalSize(), AllocType, /*Matched=*/true};
             }
