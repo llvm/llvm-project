@@ -1285,6 +1285,10 @@ public:
   // hasGFX90AInsts is also true.
   bool hasGFX940Insts() const { return GFX940Insts; }
 
+  // GFX950 is a derivation to GFX940. hasGFX950Insts() implies that
+  // hasGFX940Insts and hasGFX90AInsts are also true.
+  bool hasGFX950Insts() const { return GFX950Insts; }
+
   bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
 
   bool hasPseudoScalarTrans() const { return HasPseudoScalarTrans; }
