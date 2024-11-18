@@ -352,6 +352,10 @@ bool InstrProfWriter::addMemProfCallStack(
 
 bool InstrProfWriter::addMemProfData(memprof::IndexedMemProfData Incoming,
                                      function_ref<void(Error)> Warn) {
+  // TODO: Once we remove support for MemProf format Version V1, assert that
+  // the three components (frames, call stacks, and records) are either all
+  // empty or populated.
+
   if (MemProfData.Frames.empty())
     MemProfData.Frames = std::move(Incoming.Frames);
   else
