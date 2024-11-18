@@ -575,15 +575,16 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
         *GV->getParent(), Ty, false, GlobalVariable::InternalLinkage,
         Initializer, GV->getName() + "." + Twine(NameSuffix++), GV,
         GV->getThreadLocalMode(), GV->getAddressSpace());
+    // Start out by copying attributes from the original, including alignment.
     NGV->copyAttributesFrom(GV);
     NewGlobals.insert({OffsetForTy, NGV});
 
     // Calculate the known alignment of the field.  If the original aggregate
-    // had 256 byte alignment for example, something might depend on that:
+    // had 256 byte alignment for example, then the element at a given offset
+    // may also have a known alignment, and something might depend on that:
     // propagate info to each field.
     Align NewAlign = commonAlignment(StartAlignment, OffsetForTy);
-    if (NewAlign > DL.getABITypeAlign(Ty))
-      NGV->setAlignment(NewAlign);
+    NGV->setAlignment(NewAlign);
 
     // Copy over the debug info for the variable.
     transferSRADebugInfo(GV, NGV, OffsetForTy * 8,
