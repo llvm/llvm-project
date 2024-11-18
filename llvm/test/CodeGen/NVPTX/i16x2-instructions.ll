@@ -807,14 +807,11 @@ define <2 x i16> @test_select_cc_i16_i32(<2 x i16> %a, <2 x i16> %b,
 define <2 x i16> @test_trunc_2xi32(<2 x i32> %a) #0 {
 ; COMMON-LABEL: test_trunc_2xi32(
 ; COMMON:       {
-; COMMON-NEXT:    .reg .b16 %rs<3>;
-; COMMON-NEXT:    .reg .b32 %r<4>;
+; COMMON-NEXT:    .reg .b32 %r<5>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
 ; COMMON-NEXT:    ld.param.v2.u32 {%r1, %r2}, [test_trunc_2xi32_param_0];
-; COMMON-NEXT:    cvt.u16.u32 %rs1, %r2;
-; COMMON-NEXT:    cvt.u16.u32 %rs2, %r1;
-; COMMON-NEXT:    mov.b32 %r3, {%rs2, %rs1};
+; COMMON-NEXT:    prmt.b32 %r3, %r1, %r2, 0x5410U;
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r3;
 ; COMMON-NEXT:    ret;
   %r = trunc <2 x i32> %a to <2 x i16>
