@@ -255,8 +255,8 @@ TYPE_PARSER(construct<OmpVariableCategory>(
     "POINTER" >> pure(OmpVariableCategory::Value::Pointer) ||
     "SCALAR" >> pure(OmpVariableCategory::Value::Scalar)))
 
-TYPE_PARSER(sourced(construct<OmpDefaultmapClause::Modifier>(
-    Parser<OmpVariableCategory>{})))
+TYPE_PARSER(sourced(
+    construct<OmpDefaultmapClause::Modifier>(Parser<OmpVariableCategory>{})))
 
 // --- Parsers for clauses --------------------------------------------
 
