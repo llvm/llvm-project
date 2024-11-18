@@ -38,7 +38,7 @@ static cl::opt<unsigned> GlobalMergingMaxParams(
     cl::init(std::numeric_limits<unsigned>::max()), cl::Hidden);
 static cl::opt<bool> GlobalMergingSkipNoParams(
     "global-merging-skip-no-params",
-    cl::desc("Skip merging functions with no parameters."), cl::init(false),
+    cl::desc("Skip merging functions with no parameters."), cl::init(true),
     cl::Hidden);
 static cl::opt<double> GlobalMergingInstOverhead(
     "global-merging-inst-overhead",
@@ -181,6 +181,11 @@ static bool isProfitable(
     unsigned ParamCount = UniqueHashVals.size();
     if (ParamCount > GlobalMergingMaxParams)
       return false;
+    // Theoretically, if ParamCount is 0, it results in identical code folding
+    // (ICF), which we can skip merging here since the linker already handles
+    // ICF. This pass would otherwise introduce unnecessary thunks that are
+    // merely direct jumps. However, enabling this could be beneficial depending
+    // on downstream passes, so we provide an option for it.
     if (GlobalMergingSkipNoParams && ParamCount == 0)
       return false;
     Cost += ParamCount * GlobalMergingParamOverhead + GlobalMergingCallOverhead;

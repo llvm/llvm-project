@@ -7,13 +7,10 @@
 ; can be controlled by the -global-merging-skip-no-params option.
 
 ; RUN: llc -enable-global-merge-func=true -global-merging-skip-no-params=false < %s | FileCheck %s --check-prefix=MERGE
-; RUN: llc -enable-global-merge-func=true -global-merging-skip-no-params=true < %s | FileCheck %s --check-prefix=NOMERGE
+; RUN: llc -enable-global-merge-func=true -global-merging-skip-no-params=true < %s | FileCheck %s --implicit-check-not=".Tgm"
 
 ; MERGE: _f1.Tgm
 ; MERGE: _f2.Tgm
-
-; NOMERGE-NOT: _f1.Tgm
-; NOMERGE-NOT: _f2.Tgm
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-unknown-ios12.0.0"
