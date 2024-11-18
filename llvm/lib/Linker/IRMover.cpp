@@ -292,17 +292,9 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
     AnyChange |= ElementTypes[I] != Ty->getContainedType(I);
   }
 
-  // If we found our type while recursively processing stuff, just use it.
+  // Refresh Entry after recursively processing stuff.
   Entry = &MappedTypes[Ty];
-  if (*Entry) {
-    if (auto *DTy = dyn_cast<StructType>(*Entry)) {
-      if (DTy->isOpaque()) {
-        auto *STy = cast<StructType>(Ty);
-        finishType(DTy, STy, ElementTypes);
-      }
-    }
-    return *Entry;
-  }
+  assert(!*Entry && "Recursive type!");
 
   // If all of the element types mapped directly over and the type is not
   // a named struct, then the type is usable as-is.
