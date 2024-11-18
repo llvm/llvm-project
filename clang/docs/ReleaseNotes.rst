@@ -450,6 +450,8 @@ Attribute Changes in Clang
 - Fix a bug where clang doesn't automatically apply the ``[[gsl::Owner]]`` or
   ``[[gsl::Pointer]]`` to STL explicit template specialization decls. (#GH109442)
 
+- The ``target_version`` attribute is now only supported for AArch64 and RISC-V architectures.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
