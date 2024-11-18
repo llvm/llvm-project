@@ -322,7 +322,7 @@ define i32 @pr91691_keep_nsw(i32 %0) {
 
 define i32 @test_drop_range_attr(i32 %x) {
 ; CHECK-LABEL: @test_drop_range_attr(
-; CHECK-NEXT:    [[CTLZ:%.*]] = call range(i32 1, 33) i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[CTLZ:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 false)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i32 0, [[CTLZ]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 31
 ; CHECK-NEXT:    [[SEL:%.*]] = shl nuw i32 1, [[TMP2]]
