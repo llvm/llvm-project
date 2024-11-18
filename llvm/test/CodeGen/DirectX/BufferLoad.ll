@@ -16,7 +16,7 @@ define void @loadv4f32() {
   ; The temporary casts should all have been cleaned up
   ; CHECK-NOT: %dx.cast_handle
 
-  ; CHECK: [[DATA0:%.*]] = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle [[HANDLE]], i32 0, i32 undef)
+  ; CHECK: [[DATA0:%.*]] = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle [[HANDLE]], i32 0, i32 undef) #[[#ATTR:]]
   %data0 = call <4 x float> @llvm.dx.typedBufferLoad(
       target("dx.TypedBuffer", <4 x float>, 0, 0, 0) %buffer, i32 0)
 
@@ -33,7 +33,7 @@ define void @loadv4f32() {
   call void @scalar_user(float %data0_0)
   call void @scalar_user(float %data0_2)
 
-  ; CHECK: [[DATA4:%.*]] = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle [[HANDLE]], i32 4, i32 undef)
+  ; CHECK: [[DATA4:%.*]] = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle [[HANDLE]], i32 4, i32 undef) #[[#ATTR]]
   %data4 = call <4 x float> @llvm.dx.typedBufferLoad(
       target("dx.TypedBuffer", <4 x float>, 0, 0, 0) %buffer, i32 4)
 
@@ -47,7 +47,7 @@ define void @loadv4f32() {
   ; CHECK: insertelement <4 x float>
   call void @vector_user(<4 x float> %data4)
 
-  ; CHECK: [[DATA12:%.*]] = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle [[HANDLE]], i32 12, i32 undef)
+  ; CHECK: [[DATA12:%.*]] = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle [[HANDLE]], i32 12, i32 undef) #[[#ATTR]]
   %data12 = call <4 x float> @llvm.dx.typedBufferLoad(
       target("dx.TypedBuffer", <4 x float>, 0, 0, 0) %buffer, i32 12)
 
@@ -69,7 +69,7 @@ define void @index_dynamic(i32 %bufindex, i32 %elemindex) {
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4f32_0_0_0(
           i32 0, i32 0, i32 1, i32 0, i1 false)
 
-  ; CHECK: [[LOAD:%.*]] = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle [[HANDLE]], i32 %bufindex, i32 undef)
+  ; CHECK: [[LOAD:%.*]] = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle [[HANDLE]], i32 %bufindex, i32 undef) #[[#ATTR]]
   %load = call <4 x float> @llvm.dx.typedBufferLoad(
       target("dx.TypedBuffer", <4 x float>, 0, 0, 0) %buffer, i32 %bufindex)
 
@@ -104,7 +104,7 @@ define void @loadf32() {
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_f32_0_0_0(
           i32 0, i32 0, i32 1, i32 0, i1 false)
 
-  ; CHECK: [[DATA0:%.*]] = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle [[HANDLE]], i32 0, i32 undef)
+  ; CHECK: [[DATA0:%.*]] = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle [[HANDLE]], i32 0, i32 undef) #[[#ATTR]]
   %data0 = call float @llvm.dx.typedBufferLoad(
       target("dx.TypedBuffer", float, 0, 0, 0) %buffer, i32 0)
 
@@ -122,7 +122,7 @@ define void @loadv2f32() {
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v2f32_0_0_0(
           i32 0, i32 0, i32 1, i32 0, i1 false)
 
-  ; CHECK: [[DATA0:%.*]] = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle [[HANDLE]], i32 0, i32 undef)
+  ; CHECK: [[DATA0:%.*]] = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle [[HANDLE]], i32 0, i32 undef) #[[#ATTR]]
   %data0 = call <2 x float> @llvm.dx.typedBufferLoad(
       target("dx.TypedBuffer", <2 x float>, 0, 0, 0) %buffer, i32 0)
 
@@ -136,12 +136,12 @@ define void @loadv4f32_checkbit() {
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4f32_0_0_0(
           i32 0, i32 0, i32 1, i32 0, i1 false)
 
-  ; CHECK: [[DATA0:%.*]] = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle [[HANDLE]], i32 0, i32 undef)
+  ; CHECK: [[DATA0:%.*]] = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle [[HANDLE]], i32 0, i32 undef) #[[#ATTR]]
   %data0 = call {<4 x float>, i1} @llvm.dx.typedBufferLoad.checkbit.f32(
       target("dx.TypedBuffer", <4 x float>, 0, 0, 0) %buffer, i32 0)
 
   ; CHECK: [[STATUS:%.*]] = extractvalue %dx.types.ResRet.f32 [[DATA0]], 4
-  ; CHECK: [[MAPPED:%.*]] = call i1 @dx.op.checkAccessFullyMapped.i32(i32 71, i32 [[STATUS]]
+  ; CHECK: [[MAPPED:%.*]] = call i1 @dx.op.checkAccessFullyMapped.i32(i32 71, i32 [[STATUS]]) #[[#ATTR]]
   %check = extractvalue {<4 x float>, i1} %data0, 1
 
   ; CHECK: call void @check_user(i1 [[MAPPED]])
@@ -157,7 +157,7 @@ define void @loadv4i32() {
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4i32_0_0_0(
           i32 0, i32 0, i32 1, i32 0, i1 false)
 
-  ; CHECK: [[DATA0:%.*]] = call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle [[HANDLE]], i32 0, i32 undef)
+  ; CHECK: [[DATA0:%.*]] = call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle [[HANDLE]], i32 0, i32 undef) #[[#ATTR]]
   %data0 = call <4 x i32> @llvm.dx.typedBufferLoad(
       target("dx.TypedBuffer", <4 x i32>, 0, 0, 0) %buffer, i32 0)
 
@@ -171,7 +171,7 @@ define void @loadv4f16() {
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4f16_0_0_0(
           i32 0, i32 0, i32 1, i32 0, i1 false)
 
-  ; CHECK: [[DATA0:%.*]] = call %dx.types.ResRet.f16 @dx.op.bufferLoad.f16(i32 68, %dx.types.Handle [[HANDLE]], i32 0, i32 undef)
+  ; CHECK: [[DATA0:%.*]] = call %dx.types.ResRet.f16 @dx.op.bufferLoad.f16(i32 68, %dx.types.Handle [[HANDLE]], i32 0, i32 undef) #[[#ATTR]]
   %data0 = call <4 x half> @llvm.dx.typedBufferLoad(
       target("dx.TypedBuffer", <4 x half>, 0, 0, 0) %buffer, i32 0)
 
@@ -185,9 +185,11 @@ define void @loadv4i16() {
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4i16_0_0_0(
           i32 0, i32 0, i32 1, i32 0, i1 false)
 
-  ; CHECK: [[DATA0:%.*]] = call %dx.types.ResRet.i16 @dx.op.bufferLoad.i16(i32 68, %dx.types.Handle [[HANDLE]], i32 0, i32 undef)
+  ; CHECK: [[DATA0:%.*]] = call %dx.types.ResRet.i16 @dx.op.bufferLoad.i16(i32 68, %dx.types.Handle [[HANDLE]], i32 0, i32 undef) #[[#ATTR]]
   %data0 = call <4 x i16> @llvm.dx.typedBufferLoad(
       target("dx.TypedBuffer", <4 x i16>, 0, 0, 0) %buffer, i32 0)
 
   ret void
 }
+
+; CHECK: attributes #[[#ATTR]] = {{{.*}} memory(read) {{.*}}}
