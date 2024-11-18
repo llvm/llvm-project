@@ -193,29 +193,31 @@ std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND) {
   if (ND.isDeprecated())
     Tags.push_back(SymbolTag::Deprecated);
   if (isConst(&ND))
-    Tags.push_back(SymbolTag::Constant);
+    Tags.push_back(SymbolTag::ReadOnly);
   if (isStatic(&ND))
     Tags.push_back(SymbolTag::Static);
   if (isVirtual(&ND))
     Tags.push_back(SymbolTag::Virtual);
-  if (!isa<UnresolvedUsingValueDecl>(ND))
-    Tags.push_back(SymbolTag::Declaration);
+  if (isAbstract(&ND))
+    Tags.push_back(SymbolTag::Abstract);
+
   if (isUniqueDefinition(&ND))
     Tags.push_back(SymbolTag::Definition);
-  if (const FieldDecl *FD = dyn_cast<FieldDecl>(&ND)) {
-    switch (FD->getAccess()) {
-    case AS_public:
-      Tags.push_back(SymbolTag::Public);
-      break;
-    case AS_protected:
-      Tags.push_back(SymbolTag::Protected);
-      break;
-    case AS_private:
-      Tags.push_back(SymbolTag::Private);
-      break;
-    default:
-      break;
-    }
+  else if (!isa<UnresolvedUsingValueDecl>(ND))
+    Tags.push_back(SymbolTag::Declaration);
+
+  switch (ND.getAccess()) {
+  case AS_public:
+    Tags.push_back(SymbolTag::Public);
+    break;
+  case AS_protected:
+    Tags.push_back(SymbolTag::Protected);
+    break;
+  case AS_private:
+    Tags.push_back(SymbolTag::Private);
+    break;
+  default:
+    break;
   }
 
   return Tags;

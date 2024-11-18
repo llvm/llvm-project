@@ -1105,7 +1105,7 @@ struct CodeAction {
 llvm::json::Value toJSON(const CodeAction &);
 
 enum class SymbolTag { 
-  Deprecated = 1 ,
+  Deprecated = 1,
   Private = 2,
   Package = 3,
   Protected = 4,
@@ -1116,16 +1116,15 @@ enum class SymbolTag {
   Abstract = 9,
   Final = 10,
   Sealed = 11,
-  Constant = 12,
-  Transient = 13,
-  Volatile = 14,
-  Synchronized = 15,
-  Virtual = 16,
-  Nullable = 17,
-  NonNull = 18,
-  Declaration = 19,
-  Definition = 20,
-  ReadOnly = 21,
+  Transient = 12,
+  Volatile = 13,
+  Synchronized = 14,
+  Virtual = 15,
+  Nullable = 16,
+  NonNull = 17,
+  Declaration = 18,
+  Definition = 19,
+  ReadOnly = 20,
 };
 llvm::json::Value toJSON(SymbolTag);
 /// Represents programming constructs like variables, classes, interfaces etc.
