@@ -83,7 +83,6 @@ class DiagnosticInfo;
 namespace lld {
 
 llvm::raw_ostream &outs();
-llvm::raw_ostream &errs();
 
 enum class ErrorTag { LibNotFound, SymbolNotFound };
 
@@ -152,7 +151,7 @@ void message(const Twine &msg, llvm::raw_ostream &s = outs());
 void warn(const Twine &msg);
 uint64_t errorCount();
 
-enum class DiagLevel { Log, Warn, Err, Fatal };
+enum class DiagLevel { Log, Msg, Warn, Err, Fatal };
 
 // A class that synchronizes thread writing to the same stream similar
 // std::osyncstream.
@@ -164,6 +163,7 @@ class SyncStream {
 public:
   mutable llvm::raw_string_ostream os{buf};
   SyncStream(ErrorHandler &e, DiagLevel level) : e(e), level(level) {}
+  SyncStream(SyncStream &&o) : e(o.e), level(o.level), buf(std::move(o.buf)) {}
   ~SyncStream();
 };
 
@@ -171,6 +171,7 @@ public:
 
 void diagnosticHandler(const llvm::DiagnosticInfo &di);
 void checkError(Error e);
+void checkError(ErrorHandler &eh, Error e);
 
 // check functions are convenient functions to strip errors
 // from error-or-value objects.

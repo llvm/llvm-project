@@ -18,7 +18,6 @@
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVRegisterInfo.h"
 #include "RISCVSubtarget.h"
-#include "RISCVTargetMachine.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -1439,8 +1438,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       }
 
       // Custom-legalize bitcasts from fixed-length vectors to scalar types.
-      setOperationAction(ISD::BITCAST, {MVT::i8, MVT::i16, MVT::i32, MVT::i64},
-                         Custom);
+      setOperationAction(ISD::BITCAST, {MVT::i8, MVT::i16, MVT::i32}, Custom);
+      if (Subtarget.is64Bit())
+        setOperationAction(ISD::BITCAST, MVT::i64, Custom);
       if (Subtarget.hasStdExtZfhminOrZhinxmin())
         setOperationAction(ISD::BITCAST, MVT::f16, Custom);
       if (Subtarget.hasStdExtZfbfmin())
@@ -1623,10 +1623,17 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       MemTy = MemTy->getScalarType();
 
     Info.memVT = getValueType(DL, MemTy);
-    if (MemTy->isTargetExtTy())
+    if (MemTy->isTargetExtTy()) {
+      // RISC-V vector tuple type's alignment type should be its element type.
+      if (cast<TargetExtType>(MemTy)->getName() == "riscv.vector.tuple")
+        MemTy = Type::getIntNTy(
+            MemTy->getContext(),
+            1 << cast<ConstantInt>(I.getArgOperand(I.arg_size() - 1))
+                     ->getZExtValue());
       Info.align = DL.getABITypeAlign(MemTy);
-    else
+    } else {
       Info.align = Align(DL.getTypeSizeInBits(MemTy->getScalarType()) / 8);
+    }
     Info.size = MemoryLocation::UnknownSize;
     Info.flags |=
         IsStore ? MachineMemOperand::MOStore : MachineMemOperand::MOLoad;
@@ -2404,8 +2411,9 @@ unsigned RISCVTargetLowering::getSubregIndexByMVT(MVT VT, unsigned Index) {
 unsigned RISCVTargetLowering::getRegClassIDForVecVT(MVT VT) {
   if (VT.isRISCVVectorTuple()) {
     unsigned NF = VT.getRISCVVectorTupleNumFields();
-    unsigned RegsPerField = std::max(1U, (unsigned)VT.getSizeInBits() /
-                                             (NF * RISCV::RVVBitsPerBlock));
+    unsigned RegsPerField =
+        std::max(1U, (unsigned)VT.getSizeInBits().getKnownMinValue() /
+                         (NF * RISCV::RVVBitsPerBlock));
     switch (RegsPerField) {
     case 1:
       if (NF == 2)
@@ -6423,7 +6431,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op0);
       return DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, NewOp0);
     }
-    if (VT == MVT::f64 && Op0VT == MVT::i64 && XLenVT == MVT::i32) {
+    if (VT == MVT::f64 && Op0VT == MVT::i64 && !Subtarget.is64Bit() &&
+        Subtarget.hasStdExtDOrZdinx()) {
       SDValue Lo, Hi;
       std::tie(Lo, Hi) = DAG.SplitScalar(Op0, DL, MVT::i32, MVT::i32);
       return DAG.getNode(RISCVISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
@@ -7028,7 +7037,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       SDLoc DL(Op);
       MVT XLenVT = Subtarget.getXLenVT();
       unsigned NF = VecTy.getRISCVVectorTupleNumFields();
-      unsigned Sz = VecTy.getSizeInBits();
+      unsigned Sz = VecTy.getSizeInBits().getKnownMinValue();
       unsigned NumElts = Sz / (NF * 8);
       int Log2LMUL = Log2_64(NumElts) - 3;
 
@@ -7071,7 +7080,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       SDLoc DL(Op);
       MVT XLenVT = Subtarget.getXLenVT();
       unsigned NF = VecTy.getRISCVVectorTupleNumFields();
-      unsigned Sz = VecTy.getSizeInBits();
+      unsigned Sz = VecTy.getSizeInBits().getKnownMinValue();
       unsigned NumElts = Sz / (NF * 8);
       int Log2LMUL = Log2_64(NumElts) - 3;
 
@@ -9391,8 +9400,6 @@ static inline void promoteVCIXScalar(const SDValue &Op,
         isa<ConstantSDNode>(ScalarOp) ? ISD::SIGN_EXTEND : ISD::ANY_EXTEND;
     ScalarOp = DAG.getNode(ExtOpc, DL, XLenVT, ScalarOp);
   }
-
-  return;
 }
 
 static void processVCIXOperands(SDValue &OrigOp,
@@ -12943,7 +12950,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue FPConv =
           DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Op0);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, FPConv));
-    } else if (VT == MVT::i64 && Op0VT == MVT::f64 && XLenVT == MVT::i32) {
+    } else if (VT == MVT::i64 && Op0VT == MVT::f64 && !Subtarget.is64Bit() &&
+               Subtarget.hasStdExtDOrZdinx()) {
       SDValue NewReg = DAG.getNode(RISCVISD::SplitF64, DL,
                                    DAG.getVTList(MVT::i32, MVT::i32), Op0);
       SDValue RetReg = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64,
@@ -21365,6 +21373,27 @@ bool RISCVTargetLowering::splitValueIntoRegisterParts(
     return true;
   }
 
+  if (ValueVT.isRISCVVectorTuple() && PartVT.isRISCVVectorTuple()) {
+#ifndef NDEBUG
+    unsigned ValNF = ValueVT.getRISCVVectorTupleNumFields();
+    [[maybe_unused]] unsigned ValLMUL =
+        divideCeil(ValueVT.getSizeInBits().getKnownMinValue(),
+                   ValNF * RISCV::RVVBitsPerBlock);
+    unsigned PartNF = PartVT.getRISCVVectorTupleNumFields();
+    [[maybe_unused]] unsigned PartLMUL =
+        divideCeil(PartVT.getSizeInBits().getKnownMinValue(),
+                   PartNF * RISCV::RVVBitsPerBlock);
+    assert(ValNF == PartNF && ValLMUL == PartLMUL &&
+           "RISC-V vector tuple type only accepts same register class type "
+           "TUPLE_INSERT");
+#endif
+
+    Val = DAG.getNode(RISCVISD::TUPLE_INSERT, DL, PartVT, DAG.getUNDEF(PartVT),
+                      Val, DAG.getVectorIdxConstant(0, DL));
+    Parts[0] = Val;
+    return true;
+  }
+
   if (ValueVT.isScalableVector() && PartVT.isScalableVector()) {
     LLVMContext &Context = *DAG.getContext();
     EVT ValueEltVT = ValueVT.getVectorElementType();
@@ -21400,22 +21429,6 @@ bool RISCVTargetLowering::splitValueIntoRegisterParts(
     }
   }
 
-  if (ValueVT.isRISCVVectorTuple() && PartVT.isRISCVVectorTuple()) {
-    unsigned ValNF = ValueVT.getRISCVVectorTupleNumFields();
-    [[maybe_unused]] unsigned ValLMUL =
-        divideCeil(ValueVT.getSizeInBits(), ValNF * RISCV::RVVBitsPerBlock);
-    unsigned PartNF = PartVT.getRISCVVectorTupleNumFields();
-    [[maybe_unused]] unsigned PartLMUL =
-        divideCeil(PartVT.getSizeInBits(), PartNF * RISCV::RVVBitsPerBlock);
-    assert(ValNF == PartNF && ValLMUL == PartLMUL &&
-           "RISC-V vector tuple type only accepts same register class type "
-           "TUPLE_INSERT");
-
-    Val = DAG.getNode(RISCVISD::TUPLE_INSERT, DL, PartVT, DAG.getUNDEF(PartVT),
-                      Val, DAG.getVectorIdxConstant(0, DL));
-    Parts[0] = Val;
-    return true;
-  }
   return false;
 }
 

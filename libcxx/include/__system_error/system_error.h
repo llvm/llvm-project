@@ -39,7 +39,6 @@ public:
   _LIBCPP_HIDE_FROM_ABI const error_code& code() const _NOEXCEPT { return __ec_; }
 };
 
-[[__noreturn__]] _LIBCPP_EXPORTED_FROM_ABI void __throw_system_error(int __ev, const char* __what_arg);
 [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI inline void __throw_system_error(error_code __ec, const char* __what_arg) {
 #if _LIBCPP_HAS_EXCEPTIONS
   throw system_error(__ec, __what_arg);
