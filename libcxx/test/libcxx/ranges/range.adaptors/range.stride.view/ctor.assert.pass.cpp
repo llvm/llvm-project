@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: !libcpp-hardening-mode=debug
-// XFAIL: availability-verbose_abort-missing
+// REQUIRES: libcpp-hardening-mode={{extensive|debug}}
+// XFAIL:libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // constexpr explicit stride_view(_View, range_difference_t<_View>)
 
