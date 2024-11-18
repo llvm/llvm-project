@@ -783,6 +783,7 @@ def CreateHandle : DXILOp<57, createHandle> {
   let arguments = [Int8Ty, Int32Ty, Int32Ty, Int1Ty];
   let result = HandleTy;
   let stages = [Stages<DXIL1_0, [all_stages]>, Stages<DXIL1_6, [removed]>];
+  let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
 }
 
 def BufferLoad : DXILOp<68, bufferLoad> {
@@ -794,6 +795,7 @@ def BufferLoad : DXILOp<68, bufferLoad> {
       [Overloads<DXIL1_0,
                  [ResRetHalfTy, ResRetFloatTy, ResRetInt16Ty, ResRetInt32Ty]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
 }
 
 def BufferStore : DXILOp<69, bufferStore> {
@@ -822,6 +824,7 @@ def CheckAccessFullyMapped : DXILOp<71, checkAccessFullyMapped> {
   let result = Int1Ty;
   let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
 }
 
 def Discard : DXILOp<82, discard> {
@@ -896,8 +899,8 @@ def Dot4AddI8Packed : DXILOp<163, dot4AddPacked> {
   let intrinsics = [ IntrinSelect<int_dx_dot4add_i8packed> ];
   let arguments = [Int32Ty, Int32Ty, Int32Ty];
   let result = Int32Ty;
-  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
 def Dot4AddU8Packed : DXILOp<164, dot4AddPacked> {
@@ -906,8 +909,8 @@ def Dot4AddU8Packed : DXILOp<164, dot4AddPacked> {
   let intrinsics = [ IntrinSelect<int_dx_dot4add_u8packed> ];
   let arguments = [Int32Ty, Int32Ty, Int32Ty];
   let result = Int32Ty;
-  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
 def AnnotateHandle : DXILOp<216, annotateHandle> {
@@ -915,6 +918,7 @@ def AnnotateHandle : DXILOp<216, annotateHandle> {
   let arguments = [HandleTy, ResPropsTy];
   let result = HandleTy;
   let stages = [Stages<DXIL1_6, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
 def CreateHandleFromBinding : DXILOp<217, createHandleFromBinding> {
@@ -922,6 +926,7 @@ def CreateHandleFromBinding : DXILOp<217, createHandleFromBinding> {
   let arguments = [ResBindTy, Int32Ty, Int1Ty];
   let result = HandleTy;
   let stages = [Stages<DXIL1_6, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
 def WaveActiveAnyTrue : DXILOp<113, waveAnyTrue> {
@@ -938,7 +943,6 @@ def WaveIsFirstLane :  DXILOp<110, waveIsFirstLane> {
   let arguments = [];
   let result = Int1Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
-  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
 def WaveReadLaneAt:  DXILOp<117, waveReadLaneAt> {
@@ -948,7 +952,6 @@ def WaveReadLaneAt:  DXILOp<117, waveReadLaneAt> {
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int1Ty, Int16Ty, Int32Ty, Int64Ty]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
-  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
 def WaveGetLaneIndex : DXILOp<111, waveGetLaneIndex> {
@@ -957,7 +960,7 @@ def WaveGetLaneIndex : DXILOp<111, waveGetLaneIndex> {
   let arguments = [];
   let result = Int32Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
-  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
 }
 
 def WaveAllBitCount : DXILOp<135, waveAllOp> {
@@ -966,7 +969,6 @@ def WaveAllBitCount : DXILOp<135, waveAllOp> {
   let arguments = [Int1Ty];
   let result = Int32Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
-  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
 def Barrier : DXILOp<80, barrier> {
