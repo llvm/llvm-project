@@ -9268,6 +9268,7 @@ static std::optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
   // case, invert the predicate to make it so.
   CmpInst::Predicate LPred =
       LHSIsTrue ? LHS->getPredicate() : LHS->getInversePredicate();
+  bool LHasSameSign = LHS->hasSameSign();
 
   // We can have non-canonical operands, so try to normalize any common operand
   // to L0/R0.
@@ -9321,7 +9322,8 @@ static std::optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
   // must be positive if X >= Y and no overflow".
   // Take SGT as an example:  L0:x > L1:y and C >= 0
   //                      ==> R0:(x -nsw y) < R1:(-C) is false
-  if ((LPred == ICmpInst::ICMP_SGT || LPred == ICmpInst::ICMP_SGE) &&
+  if ((ICmpInst::isSigned(LPred) || LHasSameSign) &&
+      (ICmpInst::isGE(LPred) || ICmpInst::isGT(LPred)) &&
       match(R0, m_NSWSub(m_Specific(L0), m_Specific(L1)))) {
     if (match(R1, m_NonPositive()) &&
         isImpliedCondMatchingOperands(LPred, RPred) == false)
@@ -9330,7 +9332,8 @@ static std::optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
 
   // Take SLT as an example:  L0:x < L1:y and C <= 0
   //                      ==> R0:(x -nsw y) < R1:(-C) is true
-  if ((LPred == ICmpInst::ICMP_SLT || LPred == ICmpInst::ICMP_SLE) &&
+  if ((ICmpInst::isSigned(LPred) || LHasSameSign) &&
+      (ICmpInst::isLE(LPred) || ICmpInst::isLT(LPred)) &&
       match(R0, m_NSWSub(m_Specific(L0), m_Specific(L1)))) {
     if (match(R1, m_NonNegative()) &&
         isImpliedCondMatchingOperands(LPred, RPred) == true)
