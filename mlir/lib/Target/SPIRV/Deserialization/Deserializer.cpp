@@ -226,6 +226,28 @@ spirv::Deserializer::processMemoryModel(ArrayRef<uint32_t> operands) {
   return success();
 }
 
+template <typename AttrTy, typename EnumAttrTy, typename EnumTy>
+LogicalResult deserializeCacheControlDecoration(
+    Location loc, OpBuilder &opBuilder,
+    DenseMap<uint32_t, NamedAttrList> &decorations, ArrayRef<uint32_t> words,
+    StringAttr symbol, StringRef decorationName, StringRef cacheControlKind) {
+  if (words.size() != 4) {
+    return emitError(loc, "OpDecoration with ")
+           << decorationName << "needs a cache control integer literal and a "
+           << cacheControlKind << " cache control literal";
+  }
+  unsigned cacheLevel = words[2];
+  auto cacheControlAttr = static_cast<EnumTy>(words[3]);
+  auto value = opBuilder.getAttr<AttrTy>(cacheLevel, cacheControlAttr);
+  SmallVector<Attribute> attrs;
+  if (auto attrList =
+          llvm::dyn_cast_or_null<ArrayAttr>(decorations[words[0]].get(symbol)))
+    llvm::append_range(attrs, attrList);
+  attrs.push_back(value);
+  decorations[words[0]].set(symbol, opBuilder.getArrayAttr(attrs));
+  return success();
+}
+
 LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   // TODO: This function should also be auto-generated. For now, since only a
   // few decorations are processed/handled in a meaningful manner, going with a
@@ -339,6 +361,24 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
     decorations[words[0]].set(
         symbol, opBuilder.getI32IntegerAttr(static_cast<int32_t>(words[2])));
     break;
+  case spirv::Decoration::CacheControlLoadINTEL: {
+    LogicalResult res = deserializeCacheControlDecoration<
+        CacheControlLoadINTELAttr, LoadCacheControlAttr, LoadCacheControl>(
+        unknownLoc, opBuilder, decorations, words, symbol, decorationName,
+        "load");
+    if (failed(res))
+      return res;
+    break;
+  }
+  case spirv::Decoration::CacheControlStoreINTEL: {
+    LogicalResult res = deserializeCacheControlDecoration<
+        CacheControlStoreINTELAttr, StoreCacheControlAttr, StoreCacheControl>(
+        unknownLoc, opBuilder, decorations, words, symbol, decorationName,
+        "store");
+    if (failed(res))
+      return res;
+    break;
+  }
   default:
     return emitError(unknownLoc, "unhandled Decoration : '") << decorationName;
   }
