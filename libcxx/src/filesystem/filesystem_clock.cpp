@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <__config>
+#include <__system_error/throw_system_error.h>
 #include <chrono>
 #include <filesystem>
 #include <time.h>

@@ -16,6 +16,7 @@
 #  include <__exception/operations.h>
 #  include <__memory/shared_ptr.h>
 #  include <__memory/unique_ptr.h>
+#  include <__ostream/put_character_sequence.h>
 #  include <__system_error/error_code.h>
 #  include <__type_traits/conjunction.h>
 #  include <__type_traits/enable_if.h>
@@ -494,33 +495,6 @@ basic_ostream<_CharT, _Traits>& basic_ostream<_CharT, _Traits>::operator<<(const
   }
 #  endif // _LIBCPP_HAS_EXCEPTIONS
   return *this;
-}
-
-template <class _CharT, class _Traits>
-_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
-__put_character_sequence(basic_ostream<_CharT, _Traits>& __os, const _CharT* __str, size_t __len) {
-#  if _LIBCPP_HAS_EXCEPTIONS
-  try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
-    typename basic_ostream<_CharT, _Traits>::sentry __s(__os);
-    if (__s) {
-      typedef ostreambuf_iterator<_CharT, _Traits> _Ip;
-      if (std::__pad_and_output(
-              _Ip(__os),
-              __str,
-              (__os.flags() & ios_base::adjustfield) == ios_base::left ? __str + __len : __str,
-              __str + __len,
-              __os,
-              __os.fill())
-              .failed())
-        __os.setstate(ios_base::badbit | ios_base::failbit);
-    }
-#  if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
-    __os.__set_badbit_and_consider_rethrow();
-  }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
-  return __os;
 }
 
 template <class _CharT, class _Traits>

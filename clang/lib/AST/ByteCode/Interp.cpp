@@ -16,17 +16,13 @@
 #include "Program.h"
 #include "State.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/StringExtras.h"
-#include <limits>
-#include <vector>
 
 using namespace clang;
 using namespace clang::interp;
