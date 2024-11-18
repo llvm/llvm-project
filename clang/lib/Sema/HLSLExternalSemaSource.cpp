@@ -325,24 +325,24 @@ struct TemplateParameterListBuilder {
     return *this;
   }
 
-  /*
-The concept specialization expression (CSE) constructed in
-constructConceptSpecializationExpr is constructed so that it
-matches the CSE that is constructed when parsing the below C++ code:
-template<typename T>
-concept is_typed_resource_element_compatible = sizeof(T) <= 16;
-template<typename element_type> requires
-is_typed_resource_element_compatible<element_type>
-struct RWBuffer {
-    element_type Val;
-};
-int fn() {
-    RWBuffer<int> Buf;
-}
-When dumping the AST and filtering for "RWBuffer", the resulting AST
-structure is what we're trying to construct below, specifically the
-CSE portion.
-*/
+  // The concept specialization expression (CSE) constructed in
+  // constructConceptSpecializationExpr is constructed so that it
+  // matches the CSE that is constructed when parsing the below C++ code:
+  //
+  // template<typename T>
+  // concept is_typed_resource_element_compatible = sizeof(T) <= 16;
+  // template<typename element_type> requires
+  // is_typed_resource_element_compatible<element_type>
+  // struct RWBuffer {
+  //     element_type Val;
+  // };
+  // int fn() {
+  //     RWBuffer<int> Buf;
+  // }
+  //
+  // When dumping the AST and filtering for "RWBuffer", the resulting AST
+  // structure is what we're trying to construct below, specifically the
+  // CSE portion.
   ConceptSpecializationExpr *
   constructConceptSpecializationExpr(Sema &S, ConceptDecl *CD) {
     ASTContext &Context = S.getASTContext();
