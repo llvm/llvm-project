@@ -79,7 +79,7 @@ _start:
 
 #--- ok-tiny.s
 
-# RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux ok-tiny.s -o ok-tiny.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64 ok-tiny.s -o ok-tiny.o
 
 # RUN: ld.lld ok-tiny.o a.so -pie -o external-tiny
 # RUN: llvm-readelf -r -S -x .got external-tiny | FileCheck %s --check-prefix=EXTERNAL-TINY
@@ -88,16 +88,16 @@ _start:
 # RUN: llvm-readelf -r -S -x .got -s local-tiny | FileCheck %s --check-prefix=LOCAL-TINY
 
 # EXTERNAL-TINY:      Offset            Info             Type                    Symbol's Value   Symbol's Name + Addend
-# EXTERNAL-TINY-NEXT: 0000000000020380  000000010000e201 R_AARCH64_AUTH_GLOB_DAT 0000000000000000 bar + 0
-# EXTERNAL-TINY-NEXT: 0000000000020388  000000020000e201 R_AARCH64_AUTH_GLOB_DAT 0000000000000000 zed + 0
+# EXTERNAL-TINY-NEXT: 0000000000020368  000000010000e201 R_AARCH64_AUTH_GLOB_DAT 0000000000000000 bar + 0
+# EXTERNAL-TINY-NEXT: 0000000000020370  000000020000e201 R_AARCH64_AUTH_GLOB_DAT 0000000000000000 zed + 0
 
 ## Symbol's values for bar and zed are equal since they contain no content (see Inputs/shared.s)
 # LOCAL-TINY:         Offset            Info             Type                    Symbol's Value   Symbol's Name + Addend
-# LOCAL-TINY-NEXT:    0000000000020320  0000000000000411 R_AARCH64_AUTH_RELATIVE 10260
-# LOCAL-TINY-NEXT:    0000000000020328  0000000000000411 R_AARCH64_AUTH_RELATIVE 10260
+# LOCAL-TINY-NEXT:    0000000000020308  0000000000000411 R_AARCH64_AUTH_RELATIVE 10248
+# LOCAL-TINY-NEXT:    0000000000020310  0000000000000411 R_AARCH64_AUTH_RELATIVE 10248
 
 # EXTERNAL-TINY:      Hex dump of section '.got':
-# EXTERNAL-TINY-NEXT: 0x00020380 00000000 00000080 00000000 000000a0
+# EXTERNAL-TINY-NEXT: 0x00020368 00000000 00000080 00000000 000000a0
 ##                                              ^^
 ##                                              0b10000000 bit 63 address diversity = true, bits 61..60 key = IA
 ##                                                                ^^
@@ -105,11 +105,11 @@ _start:
 
 # LOCAL-TINY: Symbol table '.symtab' contains {{.*}} entries:
 # LOCAL-TINY:    Num:    Value          Size Type    Bind   Vis       Ndx Name
-# LOCAL-TINY:         0000000000010260     0 FUNC    GLOBAL DEFAULT     6 bar
-# LOCAL-TINY:         0000000000010260     0 NOTYPE  GLOBAL DEFAULT     6 zed
+# LOCAL-TINY:         0000000000010248     0 FUNC    GLOBAL DEFAULT     6 bar
+# LOCAL-TINY:         0000000000010248     0 NOTYPE  GLOBAL DEFAULT     6 zed
 
 # LOCAL-TINY:         Hex dump of section '.got':
-# LOCAL-TINY-NEXT:    0x00020320 00000000 00000080 00000000 000000a0
+# LOCAL-TINY-NEXT:    0x00020308 00000000 00000080 00000000 000000a0
 ##                                              ^^
 ##                                              0b10000000 bit 63 address diversity = true, bits 61..60 key = IA
 ##                                                                ^^
@@ -118,36 +118,18 @@ _start:
 # RUN: llvm-objdump -d external-tiny | FileCheck %s --check-prefix=EXTERNAL-TINY-ASM
 
 # EXTERNAL-TINY-ASM:      <_start>:
-# EXTERNAL-TINY-ASM-NEXT: adr x0, 0x20380
-# EXTERNAL-TINY-ASM-NEXT: ldr x1, [x0]
-# EXTERNAL-TINY-ASM-NEXT: adr x0, 0x20380
-# EXTERNAL-TINY-ASM-NEXT: ldr x1, 0x20380
-# EXTERNAL-TINY-ASM-NEXT: adr x0, 0x20388
-# EXTERNAL-TINY-ASM-NEXT: ldr x1, [x0]
-# EXTERNAL-TINY-ASM-NEXT: adr x0, 0x20388
-# EXTERNAL-TINY-ASM-NEXT: ldr x1, 0x20388
+# EXTERNAL-TINY-ASM-NEXT: adr x0, 0x20368
+# EXTERNAL-TINY-ASM-NEXT: ldr x1, 0x20370
 
 # RUN: llvm-objdump -d local-tiny | FileCheck %s --check-prefix=LOCAL-TINY-ASM
 
 # LOCAL-TINY-ASM:         <_start>:
-# LOCAL-TINY-ASM-NEXT:    adr x0, 0x20320
-# LOCAL-TINY-ASM-NEXT:    ldr x1, [x0]
-# LOCAL-TINY-ASM-NEXT:    adr x0, 0x20320
-# LOCAL-TINY-ASM-NEXT:    ldr x1, 0x20320
-# LOCAL-TINY-ASM-NEXT:    adr x0, 0x20328
-# LOCAL-TINY-ASM-NEXT:    ldr x1, [x0]
-# LOCAL-TINY-ASM-NEXT:    adr x0, 0x20328
-# LOCAL-TINY-ASM-NEXT:    ldr x1, 0x20328
+# LOCAL-TINY-ASM-NEXT:    adr x0, 0x20308
+# LOCAL-TINY-ASM-NEXT:    ldr x1, 0x20310
 
 .globl _start
 _start:
   adr  x0, :got_auth:bar
-  ldr  x1, [x0]
-  adr  x0, :got_auth:bar
-  ldr  x1, :got_auth:bar
-  adr  x0, :got_auth:zed
-  ldr  x1, [x0]
-  adr  x0, :got_auth:zed
   ldr  x1, :got_auth:zed
 
 #--- err.s
