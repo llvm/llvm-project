@@ -384,6 +384,7 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>; 
 #  include <__system_error/error_category.h>
 #  include <__system_error/error_code.h>
 #  include <__system_error/error_condition.h>
+#  include <__thread/thread.h>
 #  include <__type_traits/add_lvalue_reference.h>
 #  include <__type_traits/aligned_storage.h>
 #  include <__type_traits/conditional.h>
@@ -397,7 +398,6 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>; 
 #  include <mutex>
 #  include <new>
 #  include <stdexcept>
-#  include <thread>
 #  include <version>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -2071,6 +2071,7 @@ _LIBCPP_POP_MACROS
 #  include <exception>
 #  include <iosfwd>
 #  include <system_error>
+#  include <thread>
 #endif
 
 #endif // _LIBCPP_FUTURE
