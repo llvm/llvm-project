@@ -539,6 +539,31 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   if (isFunctionDecl && !DemangledName.empty() &&
       (canUseGLSL || canUseOpenCL)) {
+    if (ResVReg.isValid()) {
+      if (!GR->getSPIRVTypeForVReg(ResVReg)) {
+        const Type *RetTy = OrigRetTy;
+        if (auto *PtrRetTy = dyn_cast<PointerType>(OrigRetTy)) {
+          const Value *OrigValue = Info.OrigRet.OrigValue;
+          if (!OrigValue)
+            OrigValue = Info.CB;
+          if (OrigValue)
+            if (Type *ElemTy = GR->findDeducedElementType(OrigValue))
+              RetTy =
+                  TypedPointerType::get(ElemTy, PtrRetTy->getAddressSpace());
+        }
+        SPIRVType *SpvType = GR->getOrCreateSPIRVType(RetTy, MIRBuilder);
+        GR->assignSPIRVTypeToVReg(SpvType, ResVReg, MF);
+        if (!MRI->getRegClassOrNull(ResVReg)) {
+          MRI->setRegClass(ResVReg, GR->getRegClass(SpvType));
+          MRI->setType(ResVReg, GR->getRegType(SpvType));
+        }
+      }
+    } else {
+      SPIRVType *SpvType = GR->getOrCreateSPIRVType(OrigRetTy, MIRBuilder);
+      ResVReg = MRI->createVirtualRegister(GR->getRegClass(SpvType));
+      MRI->setType(ResVReg, GR->getRegType(SpvType));
+      GR->assignSPIRVTypeToVReg(SpvType, ResVReg, MF);
+    }
     SmallVector<Register, 8> ArgVRegs;
     for (auto Arg : Info.OrigArgs) {
       assert(Arg.Regs.size() == 1 && "Call arg has multiple VRegs");
