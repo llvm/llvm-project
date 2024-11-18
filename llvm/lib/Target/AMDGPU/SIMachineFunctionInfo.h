@@ -275,7 +275,6 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   // TODO: 10 may be a better default since it's the maximum.
   unsigned Occupancy = 0;
 
-  unsigned NumPhysicalVGPRSpillLanes = 0;
   SmallVector<StringValue, 2> SpillPhysVGPRS;
   SmallVector<StringValue> WWMReservedRegs;
 
@@ -338,8 +337,6 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("highBitsOf32BitAddress",
                        MFI.HighBitsOf32BitAddress, 0u);
     YamlIO.mapOptional("occupancy", MFI.Occupancy, 0);
-    YamlIO.mapOptional("numPhysicalVGPRSpillLanes",
-                       MFI.NumPhysicalVGPRSpillLanes);
     YamlIO.mapOptional("spillPhysVGPRs", MFI.SpillPhysVGPRS);
     YamlIO.mapOptional("wwmReservedRegs", MFI.WWMReservedRegs);
     YamlIO.mapOptional("scavengeFI", MFI.ScavengeFI);
@@ -599,6 +596,10 @@ public:
                                 SMDiagnostic &Error, SMRange &SourceRange);
 
   void reserveWWMRegister(Register Reg) { WWMReservedRegs.insert(Reg); }
+  bool isWWMReg(Register Reg) const {
+    return Reg.isVirtual() ? checkFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG)
+                           : WWMReservedRegs.contains(Reg);
+  }
 
   void updateNonWWMRegMask(BitVector &RegMask) { NonWWMRegMask = RegMask; }
   BitVector getNonWWMRegMask() const { return NonWWMRegMask; }
@@ -616,10 +617,6 @@ public:
 
   ArrayRef<Register> getSGPRSpillVGPRs() const { return SpillVGPRs; }
   ArrayRef<Register> getSGPRSpillPhysVGPRs() const { return SpillPhysVGPRs; }
-
-  unsigned getNumPhysicalVGPRSpillLanes() const {
-    return NumPhysicalVGPRSpillLanes;
-  }
 
   const WWMSpillsMap &getWWMSpills() const { return WWMSpills; }
   const ReservedRegSet &getWWMReservedRegs() const { return WWMReservedRegs; }

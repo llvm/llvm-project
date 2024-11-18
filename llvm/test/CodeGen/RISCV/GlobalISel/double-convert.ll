@@ -98,11 +98,17 @@ define double @fcvt_d_wu(i32 %a) nounwind {
 }
 
 define double @fcvt_d_wu_load(ptr %p) nounwind {
-; CHECKIFD-LABEL: fcvt_d_wu_load:
-; CHECKIFD:       # %bb.0:
-; CHECKIFD-NEXT:    lw a0, 0(a0)
-; CHECKIFD-NEXT:    fcvt.d.wu fa0, a0
-; CHECKIFD-NEXT:    ret
+; RV32IFD-LABEL: fcvt_d_wu_load:
+; RV32IFD:       # %bb.0:
+; RV32IFD-NEXT:    lw a0, 0(a0)
+; RV32IFD-NEXT:    fcvt.d.wu fa0, a0
+; RV32IFD-NEXT:    ret
+;
+; RV64IFD-LABEL: fcvt_d_wu_load:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    lwu a0, 0(a0)
+; RV64IFD-NEXT:    fcvt.d.wu fa0, a0
+; RV64IFD-NEXT:    ret
   %a = load i32, ptr %p
   %1 = uitofp i32 %a to double
   ret double %1

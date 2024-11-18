@@ -656,6 +656,23 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
 double4 clamp(double4, double4, double4);
 
 //===----------------------------------------------------------------------===//
+// clip builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn void clip(T Val)
+/// \brief Discards the current pixel if the specified value is less than zero.
+/// \param Val The input value.
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clip)
+void clip(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clip)
+void clip(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clip)
+void clip(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clip)
+void clip(float4);
+
+//===----------------------------------------------------------------------===//
 // cos builtins
 //===----------------------------------------------------------------------===//
 
@@ -942,7 +959,13 @@ uint64_t dot(uint64_t4, uint64_t4);
 
 _HLSL_AVAILABILITY(shadermodel, 6.4)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot4add_i8packed)
-int dot4add_i8packed(unsigned int, unsigned int, int);
+int dot4add_i8packed(uint, uint, int);
+
+/// \fn uint dot4add_u8packed(uint A, uint B, uint C)
+
+_HLSL_AVAILABILITY(shadermodel, 6.4)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot4add_u8packed)
+uint dot4add_u8packed(uint, uint, uint);
 
 //===----------------------------------------------------------------------===//
 // exp builtins

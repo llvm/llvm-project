@@ -14,6 +14,7 @@ set(LLVM_OPTIONAL_SOURCES
   RunnerUtils.cpp
   OptUtils.cpp
   JitRunner.cpp
+  SpirvCpuRuntimeWrappers.cpp
   SyclRuntimeWrappers.cpp
   )
 
@@ -400,5 +401,18 @@ if(LLVM_ENABLE_PIC)
     target_link_libraries(mlir_sycl_runtime PRIVATE LevelZero::LevelZero SyclRuntime::SyclRuntime)
 
     set_property(TARGET mlir_sycl_runtime APPEND PROPERTY BUILD_RPATH "${LevelZero_LIBRARIES_DIR}" "${SyclRuntime_LIBRARIES_DIR}")
+  endif()
+
+  if(MLIR_ENABLE_SPIRV_CPU_RUNNER)
+    add_mlir_library(mlir_spirv_cpu_runtime
+      SHARED
+      SpirvCpuRuntimeWrappers.cpp
+
+      EXCLUDE_FROM_LIBMLIR
+    )
+
+    target_compile_definitions(mlir_spirv_cpu_runtime
+      PRIVATE
+      mlir_spirv_cpu_runtime_EXPORTS)
   endif()
 endif()
