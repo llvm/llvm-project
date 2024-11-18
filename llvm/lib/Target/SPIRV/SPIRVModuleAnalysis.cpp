@@ -633,7 +633,8 @@ void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 6)))
     addAvailableCaps({Capability::DotProduct, Capability::DotProductInputAll,
                       Capability::DotProductInput4x8Bit,
-                      Capability::DotProductInput4x8BitPacked});
+                      Capability::DotProductInput4x8BitPacked,
+                      Capability::DemoteToHelperInvocation});
 
   // Add capabilities enabled by extensions.
   for (auto Extension : ST.getAllAvailableExtensions()) {
@@ -661,6 +662,7 @@ void RequirementHandler::initAvailableCapabilitiesForOpenCL(
   addAvailableCaps({Capability::Addresses, Capability::Float16Buffer,
                     Capability::Kernel, Capability::Vector16,
                     Capability::Groups, Capability::GenericPointer,
+                    Capability::StorageImageWriteWithoutFormat,
                     Capability::StorageImageReadWithoutFormat});
   if (ST.hasOpenCLFullProfile())
     addAvailableCaps({Capability::Int64, Capability::Int64Atomics});
@@ -723,7 +725,8 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
 
   // Became core in Vulkan 1.3
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 6)))
-    addAvailableCaps({Capability::StorageImageReadWithoutFormat});
+    addAvailableCaps({Capability::StorageImageWriteWithoutFormat,
+                      Capability::StorageImageReadWithoutFormat});
 }
 
 } // namespace SPIRV
@@ -1419,6 +1422,19 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::SplitBarrierINTEL);
     }
     break;
+  case SPIRV::OpKill: {
+    Reqs.addCapability(SPIRV::Capability::Shader);
+  } break;
+  case SPIRV::OpDemoteToHelperInvocation:
+    Reqs.addCapability(SPIRV::Capability::DemoteToHelperInvocation);
+
+    if (ST.canUseExtension(
+            SPIRV::Extension::SPV_EXT_demote_to_helper_invocation)) {
+      if (!ST.isAtLeastSPIRVVer(llvm::VersionTuple(1, 6)))
+        Reqs.addExtension(
+            SPIRV::Extension::SPV_EXT_demote_to_helper_invocation);
+    }
+    break;
   case SPIRV::OpSDot:
   case SPIRV::OpUDot:
     AddDotProductRequirements(MI, Reqs, ST);
@@ -1428,6 +1444,13 @@ void addInstrRequirements(const MachineInstr &MI,
     SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(ImageReg);
     if (isImageTypeWithUnknownFormat(TypeDef))
       Reqs.addCapability(SPIRV::Capability::StorageImageReadWithoutFormat);
+    break;
+  }
+  case SPIRV::OpImageWrite: {
+    Register ImageReg = MI.getOperand(0).getReg();
+    SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(ImageReg);
+    if (isImageTypeWithUnknownFormat(TypeDef))
+      Reqs.addCapability(SPIRV::Capability::StorageImageWriteWithoutFormat);
     break;
   }
 

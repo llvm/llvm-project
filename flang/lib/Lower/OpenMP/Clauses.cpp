@@ -489,8 +489,19 @@ AtomicDefaultMemOrder make(const parser::OmpClause::AtomicDefaultMemOrder &inp,
 
 Bind make(const parser::OmpClause::Bind &inp,
           semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: bind");
+  // inp.v -> parser::OmpBindClause
+  using wrapped = parser::OmpBindClause;
+
+  CLAUSET_ENUM_CONVERT( //
+      convert, wrapped::Type, Bind::Binding,
+      // clang-format off
+      MS(Teams, Teams)
+      MS(Parallel, Parallel)
+      MS(Thread, Thread)
+      // clang-format on
+  );
+
+  return Bind{/*Binding=*/convert(inp.v.v)};
 }
 
 // CancellationConstructType: empty
@@ -561,17 +572,20 @@ Defaultmap make(const parser::OmpClause::Defaultmap &inp,
   CLAUSET_ENUM_CONVERT( //
       convert2, wrapped::VariableCategory, Defaultmap::VariableCategory,
       // clang-format off
-      MS(Scalar,       Scalar)
       MS(Aggregate,    Aggregate)
-      MS(Pointer,      Pointer)
+      MS(All,          All)
       MS(Allocatable,  Allocatable)
+      MS(Pointer,      Pointer)
+      MS(Scalar,       Scalar)
       // clang-format on
   );
 
   auto &t0 = std::get<wrapped::ImplicitBehavior>(inp.v.t);
   auto &t1 = std::get<std::optional<wrapped::VariableCategory>>(inp.v.t);
+
+  auto category = t1 ? convert2(*t1) : Defaultmap::VariableCategory::All;
   return Defaultmap{{/*ImplicitBehavior=*/convert1(t0),
-                     /*VariableCategory=*/maybeApply(convert2, t1)}};
+                     /*VariableCategory=*/category}};
 }
 
 Doacross makeDoacross(const parser::OmpDoacross &doa,

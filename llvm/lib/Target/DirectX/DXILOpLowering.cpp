@@ -488,6 +488,7 @@ public:
 
   [[nodiscard]] bool lowerUpdateCounter(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
 
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
@@ -497,12 +498,13 @@ public:
 
       std::array<Value *, 2> Args{Handle, Op1};
 
-      Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(OpCode::UpdateCounter, Args, CI->getName());
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::UpdateCounter, Args, CI->getName(), Int32Ty);
 
       if (Error E = OpCall.takeError())
         return E;
 
+      CI->replaceAllUsesWith(*OpCall);
       CI->eraseFromParent();
       return Error::success();
     });

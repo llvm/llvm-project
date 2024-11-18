@@ -165,6 +165,9 @@ private:
                  unsigned comparisonOpcode, MachineInstr &I) const;
   bool selectCross(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;
+  bool selectDiscard(Register ResVReg, const SPIRVType *ResType,
+                     MachineInstr &I) const;
+
   bool selectICmp(Register ResVReg, const SPIRVType *ResType,
                   MachineInstr &I) const;
   bool selectFCmp(Register ResVReg, const SPIRVType *ResType,
@@ -270,6 +273,8 @@ private:
 
   void selectReadImageIntrinsic(Register &ResVReg, const SPIRVType *ResType,
                                 MachineInstr &I) const;
+
+  void selectImageWriteIntrinsic(MachineInstr &I) const;
 
   // Utilities
   std::pair<Register, bool>
@@ -1191,7 +1196,7 @@ bool SPIRVInstructionSelector::selectOverflowArith(Register ResVReg,
   // "Result Type must be from OpTypeStruct. The struct must have two members,
   // and the two members must be the same type."
   Type *ResElemTy = cast<StructType>(ResTy)->getElementType(0);
-  ResTy = StructType::create(SmallVector<Type *, 2>{ResElemTy, ResElemTy});
+  ResTy = StructType::get(ResElemTy, ResElemTy);
   // Build SPIR-V types and constant(s) if needed.
   MachineIRBuilder MIRBuilder(I);
   SPIRVType *StructType = GR.getOrCreateSPIRVType(
@@ -2183,6 +2188,28 @@ bool SPIRVInstructionSelector::selectSplatVector(Register ResVReg,
   return MIB.constrainAllUses(TII, TRI, RBI);
 }
 
+bool SPIRVInstructionSelector::selectDiscard(Register ResVReg,
+                                             const SPIRVType *ResType,
+                                             MachineInstr &I) const {
+
+  unsigned Opcode;
+
+  if (STI.canUseExtension(
+          SPIRV::Extension::SPV_EXT_demote_to_helper_invocation) ||
+      STI.isAtLeastSPIRVVer(llvm::VersionTuple(1, 6))) {
+    Opcode = SPIRV::OpDemoteToHelperInvocation;
+  } else {
+    Opcode = SPIRV::OpKill;
+    // OpKill must be the last operation of any basic block.
+    MachineInstr *NextI = I.getNextNode();
+    NextI->removeFromParent();
+  }
+
+  MachineBasicBlock &BB = *I.getParent();
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
+      .constrainAllUses(TII, TRI, RBI);
+}
+
 bool SPIRVInstructionSelector::selectCmp(Register ResVReg,
                                          const SPIRVType *ResType,
                                          unsigned CmpOpc,
@@ -2853,9 +2880,16 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_handle_fromBinding: {
     return selectHandleFromBinding(ResVReg, ResType, I);
   }
+  case Intrinsic::spv_typedBufferStore: {
+    selectImageWriteIntrinsic(I);
+    return true;
+  }
   case Intrinsic::spv_typedBufferLoad: {
     selectReadImageIntrinsic(ResVReg, ResType, I);
     return true;
+  }
+  case Intrinsic::spv_discard: {
+    return selectDiscard(ResVReg, ResType, I);
   }
   default: {
     std::string DiagMsg;
@@ -2941,7 +2975,8 @@ void SPIRVInstructionSelector::extractSubvector(
     Register &ResVReg, const SPIRVType *ResType, Register &ReadReg,
     MachineInstr &InsertionPoint) const {
   SPIRVType *InputType = GR.getResultType(ReadReg);
-  uint64_t InputSize = GR.getScalarOrVectorComponentCount(InputType);
+  [[maybe_unused]] uint64_t InputSize =
+      GR.getScalarOrVectorComponentCount(InputType);
   uint64_t ResultSize = GR.getScalarOrVectorComponentCount(ResType);
   assert(InputSize > 1 && "The input must be a vector.");
   assert(ResultSize > 1 && "The result must be a vector.");
@@ -2969,6 +3004,27 @@ void SPIRVInstructionSelector::extractSubvector(
 
   for (Register ComponentReg : ComponentRegisters)
     MIB.addUse(ComponentReg);
+}
+
+void SPIRVInstructionSelector::selectImageWriteIntrinsic(
+    MachineInstr &I) const {
+  // If the load of the image is in a different basic block, then
+  // this will generate invalid code. A proper solution is to move
+  // the OpLoad from selectHandleFromBinding here. However, to do
+  // that we will need to change the return type of the intrinsic.
+  // We will do that when we can, but for now trying to move forward with other
+  // issues.
+  Register ImageReg = I.getOperand(1).getReg();
+  assert(MRI->getVRegDef(ImageReg)->getParent() == I.getParent() &&
+         "The image must be loaded in the same basic block as its use.");
+  Register CoordinateReg = I.getOperand(2).getReg();
+  Register DataReg = I.getOperand(3).getReg();
+  assert(GR.getResultType(DataReg)->getOpcode() == SPIRV::OpTypeVector);
+  assert(GR.getScalarOrVectorComponentCount(GR.getResultType(DataReg)) == 4);
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpImageWrite))
+      .addUse(ImageReg)
+      .addUse(CoordinateReg)
+      .addUse(DataReg);
 }
 
 Register SPIRVInstructionSelector::buildPointerToResource(
@@ -3177,22 +3233,9 @@ bool SPIRVInstructionSelector::selectFrameIndex(Register ResVReg,
                                                 MachineInstr &I) const {
   // Change order of instructions if needed: all OpVariable instructions in a
   // function must be the first instructions in the first block
-  MachineFunction *MF = I.getParent()->getParent();
-  MachineBasicBlock *MBB = &MF->front();
-  auto It = MBB->SkipPHIsAndLabels(MBB->begin()), E = MBB->end();
-  bool IsHeader = false;
-  unsigned Opcode;
-  for (; It != E && It != I; ++It) {
-    Opcode = It->getOpcode();
-    if (Opcode == SPIRV::OpFunction || Opcode == SPIRV::OpFunctionParameter) {
-      IsHeader = true;
-    } else if (IsHeader &&
-               !(Opcode == SPIRV::ASSIGN_TYPE || Opcode == SPIRV::OpLabel)) {
-      ++It;
-      break;
-    }
-  }
-  return BuildMI(*MBB, It, It->getDebugLoc(), TII.get(SPIRV::OpVariable))
+  auto It = getOpVariableMBBIt(I);
+  return BuildMI(*It->getParent(), It, It->getDebugLoc(),
+                 TII.get(SPIRV::OpVariable))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
       .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function))

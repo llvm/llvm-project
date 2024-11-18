@@ -1504,7 +1504,7 @@ def ReduceAnd : Builtin {
 
 def ReduceAdd : Builtin {
   let Spellings = ["__builtin_reduce_add"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
@@ -4891,6 +4891,12 @@ def HLSLRadians : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLSplitDouble: LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_splitdouble"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLClip: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_clip"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

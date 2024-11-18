@@ -1,4 +1,4 @@
-//===- NeonEmitter.cpp - Generate arm_neon.h for use with clang -*- C++ -*-===//
+//===-- NeonEmitter.cpp - Generate arm_neon.h for use with clang ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -2588,7 +2588,7 @@ void NeonEmitter::runVectorTypes(raw_ostream &OS) {
   OS << "typedef __fp16 float16_t;\n";
 
   OS << "#if defined(__aarch64__) || defined(__arm64ec__)\n";
-  OS << "typedef __MFloat8_t __mfp8;\n";
+  OS << "typedef __mfp8 mfloat8_t;\n";
   OS << "typedef __MFloat8x8_t mfloat8x8_t;\n";
   OS << "typedef __MFloat8x16_t mfloat8x16_t;\n";
   OS << "typedef double float64_t;\n";

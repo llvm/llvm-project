@@ -58,7 +58,6 @@ static size_t serializedSizeV3(const IndexedAllocationInfo &IAI,
 size_t IndexedAllocationInfo::serializedSize(const MemProfSchema &Schema,
                                              IndexedVersion Version) const {
   switch (Version) {
-  case Version0:
   case Version1:
     return serializedSizeV0(*this, Schema);
   case Version2:
@@ -69,12 +68,12 @@ size_t IndexedAllocationInfo::serializedSize(const MemProfSchema &Schema,
   llvm_unreachable("unsupported MemProf version");
 }
 
-static size_t serializedSizeV0(const IndexedMemProfRecord &Record,
+static size_t serializedSizeV1(const IndexedMemProfRecord &Record,
                                const MemProfSchema &Schema) {
   // The number of alloc sites to serialize.
   size_t Result = sizeof(uint64_t);
   for (const IndexedAllocationInfo &N : Record.AllocSites)
-    Result += N.serializedSize(Schema, Version0);
+    Result += N.serializedSize(Schema, Version1);
 
   // The number of callsites we have information for.
   Result += sizeof(uint64_t);
@@ -117,9 +116,8 @@ static size_t serializedSizeV3(const IndexedMemProfRecord &Record,
 size_t IndexedMemProfRecord::serializedSize(const MemProfSchema &Schema,
                                             IndexedVersion Version) const {
   switch (Version) {
-  case Version0:
   case Version1:
-    return serializedSizeV0(*this, Schema);
+    return serializedSizeV1(*this, Schema);
   case Version2:
     return serializedSizeV2(*this, Schema);
   case Version3:
@@ -128,7 +126,7 @@ size_t IndexedMemProfRecord::serializedSize(const MemProfSchema &Schema,
   llvm_unreachable("unsupported MemProf version");
 }
 
-static void serializeV0(const IndexedMemProfRecord &Record,
+static void serializeV1(const IndexedMemProfRecord &Record,
                         const MemProfSchema &Schema, raw_ostream &OS) {
   using namespace support;
 
@@ -197,9 +195,8 @@ void IndexedMemProfRecord::serialize(
     llvm::DenseMap<CallStackId, LinearCallStackId> *MemProfCallStackIndexes)
     const {
   switch (Version) {
-  case Version0:
   case Version1:
-    serializeV0(*this, Schema, OS);
+    serializeV1(*this, Schema, OS);
     return;
   case Version2:
     serializeV2(*this, Schema, OS);
@@ -211,7 +208,7 @@ void IndexedMemProfRecord::serialize(
   llvm_unreachable("unsupported MemProf version");
 }
 
-static IndexedMemProfRecord deserializeV0(const MemProfSchema &Schema,
+static IndexedMemProfRecord deserializeV1(const MemProfSchema &Schema,
                                           const unsigned char *Ptr) {
   using namespace support;
 
@@ -327,9 +324,8 @@ IndexedMemProfRecord::deserialize(const MemProfSchema &Schema,
                                   const unsigned char *Ptr,
                                   IndexedVersion Version) {
   switch (Version) {
-  case Version0:
   case Version1:
-    return deserializeV0(Schema, Ptr);
+    return deserializeV1(Schema, Ptr);
   case Version2:
     return deserializeV2(Schema, Ptr);
   case Version3:

@@ -1783,8 +1783,8 @@ struct PartRef {
   BOILERPLATE(PartRef);
   PartRef(Name &&n, std::list<SectionSubscript> &&ss,
       std::optional<ImageSelector> &&is)
-      : name{std::move(n)},
-        subscripts(std::move(ss)), imageSelector{std::move(is)} {}
+      : name{std::move(n)}, subscripts(std::move(ss)),
+        imageSelector{std::move(is)} {}
   Name name;
   std::list<SectionSubscript> subscripts;
   std::optional<ImageSelector> imageSelector;
@@ -3544,7 +3544,7 @@ struct OmpDefaultmapClause {
   TUPLE_CLASS_BOILERPLATE(OmpDefaultmapClause);
   ENUM_CLASS(
       ImplicitBehavior, Alloc, To, From, Tofrom, Firstprivate, None, Default)
-  ENUM_CLASS(VariableCategory, Scalar, Aggregate, Allocatable, Pointer)
+  ENUM_CLASS(VariableCategory, All, Scalar, Aggregate, Allocatable, Pointer)
   std::tuple<ImplicitBehavior, std::optional<VariableCategory>> t;
 };
 
@@ -3916,6 +3916,19 @@ struct OpenMPDeclareTargetConstruct {
   std::tuple<Verbatim, OmpDeclareTargetSpecifier> t;
 };
 
+struct OmpDeclareMapperSpecifier {
+  TUPLE_CLASS_BOILERPLATE(OmpDeclareMapperSpecifier);
+  std::tuple<std::optional<Name>, TypeSpec, Name> t;
+};
+
+// OMP v5.2: 5.8.8
+//  declare-mapper -> DECLARE MAPPER ([mapper-name :] type :: var) map-clauses
+struct OpenMPDeclareMapperConstruct {
+  TUPLE_CLASS_BOILERPLATE(OpenMPDeclareMapperConstruct);
+  CharBlock source;
+  std::tuple<Verbatim, OmpDeclareMapperSpecifier, OmpClauseList> t;
+};
+
 // 2.16 declare-reduction -> DECLARE REDUCTION (reduction-identifier : type-list
 //                                              : combiner) [initializer-clause]
 struct OmpReductionCombiner {
@@ -3966,9 +3979,10 @@ struct OpenMPDeclarativeAllocate {
 struct OpenMPDeclarativeConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPDeclarativeConstruct);
   CharBlock source;
-  std::variant<OpenMPDeclarativeAllocate, OpenMPDeclareReductionConstruct,
-      OpenMPDeclareSimdConstruct, OpenMPDeclareTargetConstruct,
-      OpenMPThreadprivate, OpenMPRequiresConstruct>
+  std::variant<OpenMPDeclarativeAllocate, OpenMPDeclareMapperConstruct,
+      OpenMPDeclareReductionConstruct, OpenMPDeclareSimdConstruct,
+      OpenMPDeclareTargetConstruct, OpenMPThreadprivate,
+      OpenMPRequiresConstruct>
       u;
 };
 
