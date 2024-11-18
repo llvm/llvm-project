@@ -47,8 +47,8 @@ define void @foo(i32 signext %0, i32 signext %1) {
 ; FUSION-POSTRA-BIDIRECTIONAL-LABEL: foo:
 ; FUSION-POSTRA-BIDIRECTIONAL:       # %bb.0:
 ; FUSION-POSTRA-BIDIRECTIONAL-NEXT:    lui a0, %hi(.L.str)
-; FUSION-POSTRA-BIDIRECTIONAL-NEXT:    fcvt.s.w fa0, a1
 ; FUSION-POSTRA-BIDIRECTIONAL-NEXT:    addi a0, a0, %lo(.L.str)
+; FUSION-POSTRA-BIDIRECTIONAL-NEXT:    fcvt.s.w fa0, a1
 ; FUSION-POSTRA-BIDIRECTIONAL-NEXT:    tail bar
   %3 = sitofp i32 %1 to float
   tail call void @bar(ptr @.str, float %3)
