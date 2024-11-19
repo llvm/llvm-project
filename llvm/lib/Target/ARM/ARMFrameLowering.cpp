@@ -1509,6 +1509,7 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
     // Increment past our save areas.
     if (AFI->getGPRCalleeSavedArea3Size()) {
       assert(PushPopSplit == ARMSubtarget::SplitR11WindowsSEH);
+      (void)PushPopSplit;
       MBBI++;
     }
 
@@ -1528,6 +1529,7 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
 
     if (AFI->getGPRCalleeSavedArea2Size()) {
       assert(PushPopSplit != ARMSubtarget::SplitR11WindowsSEH);
+      (void)PushPopSplit;
       MBBI++;
     }
     if (AFI->getGPRCalleeSavedArea1Size()) MBBI++;
