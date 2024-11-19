@@ -1226,12 +1226,9 @@ void SymtabSection::emitStabs() {
     stabs.emplace_back(std::move(astStab));
   }
 
-  struct SymbolStabInfo {
-    Defined *originalSym; // Original Defined symbol - this may be an ICF thunk
-    int fileId;           // File ID associated with the STABS symbol
-  };
-
-  std::vector<SymbolStabInfo> symbolsNeedingStabs;
+  // Cache the file ID for each symbol in an std::pair for faster sorting.
+  using SortingPair = std::pair<Defined *, int>;
+  std::vector<SortingPair> symbolsNeedingStabs;
   for (const SymtabEntry &entry :
        concat<SymtabEntry>(localSymbols, externalSymbols)) {
     Symbol *sym = entry.sym;
@@ -1256,27 +1253,27 @@ void SymtabSection::emitStabs() {
 
       // We use 'originalIsec' to get the file id of the symbol since 'isec()'
       // might point to the merged ICF symbol's file
-      Defined *funcBodySym = getFuncBodySym(defined);
       symbolsNeedingStabs.emplace_back(
-          SymbolStabInfo{defined, funcBodySym->originalIsec->getFile()->id});
+          defined, getFuncBodySym(defined)->originalIsec->getFile()->id);
     }
   }
 
   llvm::stable_sort(symbolsNeedingStabs,
-                    [&](const SymbolStabInfo &a, const SymbolStabInfo &b) {
-                      return a.fileId < b.fileId;
+                    [&](const SortingPair &a, const SortingPair &b) {
+                      return a.second < b.second;
                     });
 
   // Emit STABS symbols so that dsymutil and/or the debugger can map address
   // regions in the final binary to the source and object files from which they
   // originated.
   InputFile *lastFile = nullptr;
-  for (const SymbolStabInfo &info : symbolsNeedingStabs) {
+  for (SortingPair &pair : symbolsNeedingStabs) {
+    Defined *defined = pair.first;
     // We use 'originalIsec' of the symbol since we care about the actual origin
     // of the symbol, not the canonical location returned by `isec()`.
-    Defined *funcBodySym = getFuncBodySym(info.originalSym);
-    InputSection *bodyIsec = funcBodySym->originalIsec;
-    ObjFile *file = cast<ObjFile>(bodyIsec->getFile());
+    Defined *funcBodySym = getFuncBodySym(defined);
+    InputSection *isec = funcBodySym->originalIsec;
+    ObjFile *file = cast<ObjFile>(isec->getFile());
 
     if (lastFile == nullptr || lastFile != file) {
       if (lastFile != nullptr)
@@ -1288,16 +1285,16 @@ void SymtabSection::emitStabs() {
     }
 
     StabsEntry symStab;
-    symStab.sect = bodyIsec->parent->index;
-    symStab.strx = stringTableSection.addString(info.originalSym->getName());
+    symStab.sect = isec->parent->index;
+    symStab.strx = stringTableSection.addString(defined->getName());
     symStab.value = funcBodySym->getVA();
 
-    if (isCodeSection(bodyIsec)) {
+    if (isCodeSection(isec)) {
       symStab.type = N_FUN;
       stabs.emplace_back(std::move(symStab));
       emitEndFunStab(funcBodySym);
     } else {
-      symStab.type = info.originalSym->isExternal() ? N_GSYM : N_STSYM;
+      symStab.type = defined->isExternal() ? N_GSYM : N_STSYM;
       stabs.emplace_back(std::move(symStab));
     }
   }
