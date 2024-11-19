@@ -143,8 +143,9 @@ LLDBNameLookup::LLDBNameLookup(
 
   if (!m_sc.target_sp)
     return;
-  m_persistent_vars =
-      m_sc.target_sp->GetSwiftPersistentExpressionState(exe_scope);
+  m_persistent_vars = llvm::cast<SwiftPersistentExpressionState>(
+      m_sc.target_sp->GetPersistentExpressionStateForLanguage(
+          lldb::eLanguageTypeSwift));
 }
 
 swift::SILValue LLDBNameLookup::emitLValueForVariable(
@@ -711,7 +712,8 @@ static void ResolveSpecialNames(
     return;
 
   auto *persistent_state =
-      sc.target_sp->GetSwiftPersistentExpressionState(exe_scope);
+      sc.target_sp->GetPersistentExpressionStateForLanguage(
+          lldb::eLanguageTypeSwift);
 
   std::set<ConstString> resolved_names;
 
@@ -1836,8 +1838,9 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   // Allow variables to be re-used from previous REPL statements.
   if (m_sc.target_sp && (repl || !playground)) {
     Status error;
-    auto *persistent_state =
-        m_sc.target_sp->GetSwiftPersistentExpressionState(*m_exe_scope);
+    auto *persistent_state = llvm::cast<SwiftPersistentExpressionState>(
+        m_sc.target_sp->GetPersistentExpressionStateForLanguage(
+            lldb::eLanguageTypeSwift));
 
     llvm::SmallVector<size_t, 1> declaration_indexes;
     parsed_expr->code_manipulator->FindVariableDeclarations(declaration_indexes,
@@ -2117,8 +2120,9 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     module_name = module->getName().get();
   m_swift_ast_ctx.CacheModule(module_name, module);
   if (m_sc.target_sp) {
-    auto *persistent_state =
-        m_sc.target_sp->GetSwiftPersistentExpressionState(*m_exe_scope);
+    auto *persistent_state = llvm::cast<SwiftPersistentExpressionState>(
+        m_sc.target_sp->GetPersistentExpressionStateForLanguage(
+            lldb::eLanguageTypeSwift));
     persistent_state->CopyInSwiftPersistentDecls(
         parsed_expr->external_lookup.GetStagedDecls());
   }

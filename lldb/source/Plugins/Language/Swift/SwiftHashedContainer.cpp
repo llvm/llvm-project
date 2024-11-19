@@ -291,8 +291,9 @@ HashedCollectionConfig::StorageObjectAtAddress(
   // same address.
   Status error;
   ExecutionContextScope *exe_scope = exe_ctx.GetBestExecutionContextScope();
-  auto scratch_ctx =
-      process_sp->GetTarget().GetSwiftScratchContext(error, *exe_scope);
+
+  auto scratch_ctx = TypeSystemSwiftTypeRefForExpressions::GetForTarget(
+      process_sp->GetTarget());
   if (!scratch_ctx)
     return nullptr;
   if (error.Fail())

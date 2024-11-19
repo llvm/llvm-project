@@ -189,7 +189,8 @@ ConstString SwiftLanguageRuntimeImpl::GetDynamicTypeName_ClassRemoteAST(
   if (!stack_frame_sp)
     return {};
   auto &sc = stack_frame_sp->GetSymbolContext(eSymbolContextFunction);
-  TypeSystemSwiftTypeRefForExpressionsSP ts = in_value.GetSwiftScratchContext();
+  auto ts = TypeSystemSwiftTypeRefForExpressions::GetForTarget(
+      in_value.GetTargetSP());
   if (!ts)
     return {};
   SwiftASTContext *swift_ast_ctx = ts->GetSwiftASTContext(sc);
@@ -222,7 +223,8 @@ SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ExistentialRemoteAST(
   // Dynamic type resolution in RemoteAST might pull in other Swift
   // modules, so use the scratch context where such operations are
   // legal and safe.
-  auto scratch_ctx = in_value.GetSwiftScratchContext();
+  auto scratch_ctx = TypeSystemSwiftTypeRefForExpressions::GetForTarget(
+      in_value.GetTargetSP());
   if (!scratch_ctx)
     return {};
 
@@ -279,7 +281,7 @@ CompilerType SwiftLanguageRuntimeImpl::BindGenericTypeParametersRemoteAST(
   // that module context.  Binding archetypes can trigger an import of
   // another module, so switch to a scratch context where such an
   // operation is safe.
-  auto scratch_ctx = target.GetSwiftScratchContext(error, stack_frame);
+  auto scratch_ctx = TypeSystemSwiftTypeRefForExpressions::GetForTarget(target);
   if (!scratch_ctx)
     return base_type;
 
@@ -451,7 +453,8 @@ CompilerType SwiftLanguageRuntimeImpl::MetadataPromise::FulfillTypePromise(
   if (m_compiler_type.has_value())
     return m_compiler_type.value();
 
-  auto scratch_ctx = m_for_object_sp->GetSwiftScratchContext();
+  auto scratch_ctx = TypeSystemSwiftTypeRefForExpressions::GetForTarget(
+      m_for_object_sp->GetTargetSP());
   if (!scratch_ctx) {
     if (error)
       *error = Status::FromErrorString("couldn't get Swift scratch context");
@@ -490,7 +493,8 @@ SwiftLanguageRuntimeImpl::MetadataPromiseSP
 SwiftLanguageRuntimeImpl::GetMetadataPromise(const SymbolContext &sc,
                                              lldb::addr_t addr,
                                              ValueObject &for_object) {
-  auto scratch_ctx = for_object.GetSwiftScratchContext();
+  auto scratch_ctx = TypeSystemSwiftTypeRefForExpressions::GetForTarget(
+      for_object.GetTargetSP());
   if (!scratch_ctx)
     return nullptr;
   SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext(sc);

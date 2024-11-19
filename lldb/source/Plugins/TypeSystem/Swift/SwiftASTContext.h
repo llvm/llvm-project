@@ -533,7 +533,7 @@ public:
   swift::TBDGenOptions &GetTBDGenOptions();
 
   void ClearModuleDependentCaches() override;
-  void LogConfiguration();
+  void LogConfiguration(bool is_repl = false);
   bool HasTarget();
   bool CheckProcessChanged();
 

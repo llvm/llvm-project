@@ -364,7 +364,7 @@ void Thread::FrameSelectedCallback(StackFrame *frame) {
     if (auto *exe_scope = exe_ctx.GetBestExecutionContextScope())
       if (auto target = frame->CalculateTarget())
         if (auto swift_ast_ctx =
-                target->GetSwiftScratchContext(error, *exe_scope, false))
+                TypeSystemSwiftTypeRefForExpressions::GetForTarget(*target))
           swift_ast_ctx->DiagnoseWarnings(*GetProcess(), msc);
   }
 #endif

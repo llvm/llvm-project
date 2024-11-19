@@ -1055,7 +1055,8 @@ SwiftLanguage::GetHardcodedSynthetics() {
         LLDB_LOGV(log, "[Matching CxxBridgedSyntheticChildProvider] - "
                        "Could not get the swift runtime.");
 
-      auto ts = valobj.GetSwiftScratchContext();
+      auto ts = TypeSystemSwiftTypeRefForExpressions::GetForTarget(
+          valobj.GetTargetSP());
       if (!ts) {
         LLDB_LOGV(log, "[Matching CxxBridgedSyntheticChildProvider] - "
                        "Could not get the Swift scratch context.");
@@ -1367,28 +1368,24 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
           size_t before = results.size();
 
           if (exe_scope) {
-            Target *target = exe_scope->CalculateTarget().get();
-            if (target) {
-              const bool create_on_demand = false;
-              Status error;
-              auto scratch_ctx = target->GetSwiftScratchContext(
-                  error, *exe_scope, create_on_demand);
-              if (auto frame_sp = exe_scope->CalculateStackFrame()) {
-                auto &sc =
-                    frame_sp->GetSymbolContext(lldb::eSymbolContextFunction);
-                if (scratch_ctx)
-                  if (SwiftASTContext *ast_ctx =
-                          scratch_ctx->GetSwiftASTContext(sc)) {
-                    ConstString cs_input{input};
-                    Mangled mangled(cs_input);
-                    if (mangled.GuessLanguage() == eLanguageTypeSwift) {
-                      auto candidate =
-                          ast_ctx->GetTypeFromMangledTypename(cs_input);
-                      if (candidate.IsValid())
-                        results.insert(candidate);
-                    }
+            TargetSP target = exe_scope->CalculateTarget();
+            auto scratch_ctx =
+                TypeSystemSwiftTypeRefForExpressions::GetForTarget(target);
+            if (auto frame_sp = exe_scope->CalculateStackFrame()) {
+              auto &sc =
+                  frame_sp->GetSymbolContext(lldb::eSymbolContextFunction);
+              if (scratch_ctx)
+                if (SwiftASTContext *ast_ctx =
+                        scratch_ctx->GetSwiftASTContext(sc)) {
+                  ConstString cs_input{input};
+                  Mangled mangled(cs_input);
+                  if (mangled.GuessLanguage() == eLanguageTypeSwift) {
+                    auto candidate =
+                        ast_ctx->GetTypeFromMangledTypename(cs_input);
+                    if (candidate.IsValid())
+                      results.insert(candidate);
                   }
-              }
+                }
             }
           }
 
@@ -1440,11 +1437,9 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
           size_t before = results.size();
 
           if (exe_scope) {
-            Target *target = exe_scope->CalculateTarget().get();
-            const bool create_on_demand = false;
-            Status error;
-            auto scratch_ctx = target->GetSwiftScratchContext(error, *exe_scope,
-                                                              create_on_demand);
+            TargetSP target = exe_scope->CalculateTarget();
+            auto scratch_ctx =
+                TypeSystemSwiftTypeRefForExpressions::GetForTarget(target);
             if (auto frame_sp = exe_scope->CalculateStackFrame()) {
               const SymbolContext &sc =
                   frame_sp->GetSymbolContext(lldb::eSymbolContextFunction);

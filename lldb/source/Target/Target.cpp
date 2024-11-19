@@ -2678,8 +2678,7 @@ void Target::ImageSearchPathsChanged(const PathMappingList &path_list,
 
 llvm::Expected<lldb::TypeSystemSP>
 Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
-                                        bool create_on_demand,
-                                        const char *compiler_options) {
+                                        bool create_on_demand) {
   if (!m_valid)
     return llvm::createStringError("Invalid Target");
 
@@ -2706,7 +2705,7 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
         llvm::inconvertibleErrorCode());
 
   auto type_system_or_err = m_scratch_type_system_map.GetTypeSystemForLanguage(
-      language, this, create_on_demand, compiler_options);
+      language, this, create_on_demand);
   if (!type_system_or_err)
     return type_system_or_err.takeError();
 
@@ -2781,27 +2780,13 @@ Target::GetPersistentExpressionStateForLanguage(lldb::LanguageType language) {
   return nullptr;
 }
 
-#ifdef LLDB_ENABLE_SWIFT
-SwiftPersistentExpressionState *
-Target::GetSwiftPersistentExpressionState(ExecutionContextScope &exe_scope) {
-  Status error;
-  auto maybe_swift_ast_context =
-      GetSwiftScratchContext(error, exe_scope, true);
-  if (!maybe_swift_ast_context)
-    return nullptr;
-  return (SwiftPersistentExpressionState *)
-      maybe_swift_ast_context->GetPersistentExpressionState();
-}
-#endif // LLDB_ENABLE_SWIFT
-
 UserExpression *Target::GetUserExpressionForLanguage(
     llvm::StringRef expr, llvm::StringRef prefix, SourceLanguage language,
     Expression::ResultType desired_type,
     const EvaluateExpressionOptions &options, ValueObject *ctx_obj,
     Status &error) {
-  auto type_system_or_err = GetScratchTypeSystemForLanguage(
-      language.AsLanguageType(), true,
-      options.GetPlaygroundTransformEnabled() ? "" : nullptr);
+  auto type_system_or_err =
+      GetScratchTypeSystemForLanguage(language.AsLanguageType(), true);
   if (auto err = type_system_or_err.takeError()) {
     error = Status::FromErrorStringWithFormat(
         "Could not find type system for language %s: %s",
@@ -2886,47 +2871,6 @@ Target::CreateUtilityFunction(std::string expression, std::string name,
 }
 
 #ifdef LLDB_ENABLE_SWIFT
-TypeSystemSwiftTypeRefForExpressionsSP
-Target::GetSwiftScratchContext(Status &error, ExecutionContextScope &exe_scope,
-                               bool create_on_demand, bool for_playground) {
-  LLDB_SCOPED_TIMER();
-
-  SymbolContext sc;
-  if (!for_playground)
-    if (lldb::StackFrameSP stack_frame = exe_scope.CalculateStackFrame())
-      sc = stack_frame->GetSymbolContext(lldb::eSymbolContextEverything);
-  if (!sc.module_sp)
-    sc = SymbolContext(GetExecutableModule());
-
-  TypeSystemSwiftTypeRefForExpressionsSP ts;
-  if (!ts) {
-    std::shared_lock<std::shared_mutex> lock(GetSwiftScratchContextLock());
-    auto type_system_or_err = GetScratchTypeSystemForLanguage(
-        eLanguageTypeSwift, create_on_demand, for_playground ? "" : nullptr);
-    if (type_system_or_err) {
-      if (auto *ts_ptr =
-              llvm::cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
-                  type_system_or_err->get())) {
-        ts = std::static_pointer_cast<TypeSystemSwiftTypeRefForExpressions>(
-            ts_ptr->shared_from_this());
-      }
-    } else
-      llvm::consumeError(type_system_or_err.takeError());
-  }
-
-  if (ts) {
-    // Perform compile unit imports.
-    StackFrameSP frame_sp = exe_scope.CalculateStackFrame();
-    if (frame_sp && frame_sp.get()) {
-      SymbolContext sc =
-          frame_sp->GetSymbolContext(lldb::eSymbolContextEverything);
-      Status status = ts->PerformCompileUnitImports(sc);
-      if (status.Fail())
-        Debugger::ReportError(status.AsCString(), GetDebugger().GetID());
-    }
-  }
-  return ts;
-}
 
 bool Target::IsSwiftREPL() {
   return m_debugger.REPLIsActive() &&

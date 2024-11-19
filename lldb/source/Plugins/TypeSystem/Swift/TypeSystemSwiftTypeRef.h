@@ -130,7 +130,10 @@ public:
 
   Module *GetModule() const { return m_module; }
 
-  /// Return the owning Swift module for a function.
+  /// Return a key for the SwiftASTContext map. If there is debug info it's the
+  /// name of the owning Swift module for a function.
+  static const char *DeriveKeyFor(const SymbolContext &sc);
+  /// Return the name of the owning Swift module for a function.
   static ConstString GetSwiftModuleFor(const SymbolContext &sc);
 
   // Tests
@@ -534,9 +537,18 @@ public:
                                        Target &target,
                                        const char *extra_options);
 
+  static TypeSystemSwiftTypeRefForExpressionsSP GetForTarget(Target &target);
+  static TypeSystemSwiftTypeRefForExpressionsSP
+  GetForTarget(lldb::TargetSP target);
+
   SwiftASTContext *GetSwiftASTContext(const SymbolContext &sc) const override;
   SwiftASTContext *
   GetSwiftASTContextOrNull(const SymbolContext &sc) const override;
+  /// This API needs to be called for a REPL or Playground before the first call
+  /// to GetSwiftASTContext is being made.
+  void SetCompilerOptions(const char *compiler_options) {
+    m_compiler_options = compiler_options;
+  }
   lldb::TargetWP GetTargetWP() const override { return m_target_wp; }
 
   void ModulesDidLoad(ModuleList &module_list);
@@ -566,6 +578,7 @@ public:
 protected:
   lldb::TargetWP m_target_wp;
   unsigned m_generation = 0;
+  const char *m_compiler_options = nullptr;
 
   /// This exists to implement the PerformCompileUnitImports
   /// mechanism.

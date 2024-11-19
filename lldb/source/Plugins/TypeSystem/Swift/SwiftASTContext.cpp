@@ -16,6 +16,7 @@
 #include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 
 #include "TypeSystemSwift.h"
+#include "TypeSystemSwiftTypeRef.h"
 #include "lldb/Utility/Log.h"
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/ASTDemangler.h"
@@ -2722,15 +2723,14 @@ SwiftASTContext::CreateInstance(const SymbolContext &sc,
     return lldb::TypeSystemSP();
 
   CompileUnit *cu = sc.comp_unit;
-  StringRef swift_module_name = TypeSystemSwiftTypeRef::GetSwiftModuleFor(sc);
+  const char *key = TypeSystemSwiftTypeRef::DeriveKeyFor(sc);
   std::string m_description;
   {
     StreamString ss;
     ss << "SwiftASTContext";
     if (for_expressions)
       ss << "ForExpressions";
-    ss << "(module: " << '"' << swift_module_name << "\", "
-       << "cu: " << '"';
+    ss << "(module: " << '"' << key << "\", " << "cu: " << '"';
     if (cu)
       ss << cu->GetPrimaryFile().GetFilename();
     else
@@ -2785,7 +2785,7 @@ SwiftASTContext::CreateInstance(const SymbolContext &sc,
       lang_opts.enableFeature(swift::Feature::Embedded);
   }
   auto defer_log = llvm::make_scope_exit(
-      [swift_ast_sp] { swift_ast_sp->LogConfiguration(); });
+      [swift_ast_sp, is_repl] { swift_ast_sp->LogConfiguration(is_repl); });
 
   LOG_PRINTF(GetLog(LLDBLog::Types), "(Target)");
   auto logError = [&](const char *message) {
@@ -2996,9 +2996,9 @@ SwiftASTContext::CreateInstance(const SymbolContext &sc,
   }
   if (module_sp) {
     std::string error;
-    StringRef module_filter = swift_module_name;
+    StringRef module_filter = TypeSystemSwiftTypeRef::GetSwiftModuleFor(sc);
     std::vector<std::string> extra_clang_args;
-    // In a per-module fallback context, the module the "main" module of tha
+    // In a per-module fallback context, the module the "main" module of that
     // context.
     bool is_main_executable =
         target_sp ? (target_sp->GetExecutableModulePointer() == module_sp.get())
@@ -5422,7 +5422,7 @@ void SwiftASTContext::ClearModuleDependentCaches() {
   m_negative_type_cache.Clear();
 }
 
-void SwiftASTContext::LogConfiguration() {
+void SwiftASTContext::LogConfiguration(bool is_repl) {
   // It makes no sense to call VALID_OR_RETURN here. We specifically
   // want the logs in the error case!
   HEALTH_LOG_PRINTF("(SwiftASTContext*)%p:", static_cast<void *>(this));
@@ -5431,6 +5431,8 @@ void SwiftASTContext::LogConfiguration() {
     HEALTH_LOG_PRINTF("  (no AST context)");
     return;
   }
+  if (is_repl)
+    HEALTH_LOG_PRINTF("  REPL                             : true");
   HEALTH_LOG_PRINTF("  Swift/C++ interop                : %s",
                     m_ast_context_ap->LangOpts.EnableCXXInterop ? "on" : "off");
   HEALTH_LOG_PRINTF("  Swift/Objective-C interop        : %s",

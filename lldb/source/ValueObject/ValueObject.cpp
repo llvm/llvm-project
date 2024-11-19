@@ -1812,19 +1812,6 @@ bool ValueObject::GetDeclaration(Declaration &decl) {
   return false;
 }
 
-#ifdef LLDB_ENABLE_SWIFT
-TypeSystemSwiftTypeRefForExpressionsSP ValueObject::GetSwiftScratchContext() {
-  lldb::TargetSP target_sp(GetTargetSP());
-  if (!target_sp)
-    return {};
-  Status error;
-  // FIXME: Not holding on to the lock isn't great fo determinism.
-  ExecutionContext ctx = GetExecutionContextRef().Lock(false);
-  auto *exe_scope = ctx.GetBestExecutionContextScope();
-  return target_sp->GetSwiftScratchContext(error, *exe_scope);
-}
-#endif // LLDB_ENABLE_SWIFT
-
 void ValueObject::AddSyntheticChild(ConstString key, ValueObject *valobj) {
   m_synthetic_children[key] = valobj;
 }
@@ -3864,17 +3851,8 @@ ValueObjectSP ValueObject::Persist() {
     return nullptr;
 
   PersistentExpressionState *persistent_state;
-#ifdef LLDB_ENABLE_SWIFT
-  if (GetPreferredDisplayLanguage() == eLanguageTypeSwift) {
-    ExecutionContext ctx = GetExecutionContextRef().Lock(false);
-    auto *exe_scope = ctx.GetBestExecutionContextScope();
-    if (!exe_scope)
-      return nullptr;
-    persistent_state = target_sp->GetSwiftPersistentExpressionState(*exe_scope);
-  } else
-#endif // LLDB_ENABLE_SWIFT
-    persistent_state = target_sp->GetPersistentExpressionStateForLanguage(
-        GetPreferredDisplayLanguage());
+  persistent_state = target_sp->GetPersistentExpressionStateForLanguage(
+      GetPreferredDisplayLanguage());
 
   if (!persistent_state)
     return nullptr;

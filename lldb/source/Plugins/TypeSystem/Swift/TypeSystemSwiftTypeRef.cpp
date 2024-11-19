@@ -1670,8 +1670,7 @@ TypeSystemSwiftTypeRefForExpressions::TypeSystemSwiftTypeRefForExpressions(
   if (extra_options) {
     SymbolContext global_sc(target.shared_from_this(),
                             target.GetExecutableModule());
-    ConstString module = GetSwiftModuleFor(global_sc);
-    const char *key = module.GetCString();
+    const char *key = DeriveKeyFor(global_sc);
     m_swift_ast_context_map.insert(
         {key,
          {SwiftASTContext::CreateInstance(
@@ -1680,6 +1679,23 @@ TypeSystemSwiftTypeRefForExpressions::TypeSystemSwiftTypeRefForExpressions(
               extra_options),
           0}});
   }
+}
+
+TypeSystemSwiftTypeRefForExpressionsSP
+TypeSystemSwiftTypeRefForExpressions::GetForTarget(Target &target) {
+  auto type_system_or_err =
+      target.GetScratchTypeSystemForLanguage(eLanguageTypeSwift);
+  if (!type_system_or_err || !type_system_or_err->get()) {
+    llvm::consumeError(type_system_or_err.takeError());
+    return {};
+  }
+  return std::static_pointer_cast<TypeSystemSwiftTypeRefForExpressions>(
+      *type_system_or_err);
+}
+
+TypeSystemSwiftTypeRefForExpressionsSP
+TypeSystemSwiftTypeRefForExpressions::GetForTarget(TargetSP target) {
+  return target ? GetForTarget(*target) : nullptr;
 }
 
 void TypeSystemSwiftTypeRef::NotifyAllTypeSystems(
@@ -1744,13 +1760,23 @@ TypeSystemSwiftTypeRefForExpressions::GetPersistentExpressionState() {
 }
 
 ConstString TypeSystemSwiftTypeRef::GetSwiftModuleFor(const SymbolContext &sc) {
-  if (!sc.function)
-    return {};
-  std::vector<CompilerContext> decl_ctx = sc.function->GetCompilerContext();
-  for (auto &ctx : decl_ctx)
-    if (ctx.kind == CompilerContextKind::Module)
-      return ctx.name;
+  if (sc.function) {
+    std::vector<CompilerContext> decl_ctx = sc.function->GetCompilerContext();
+    for (auto &ctx : decl_ctx)
+      if (ctx.kind == CompilerContextKind::Module)
+        return ctx.name;
+  }
   return {};
+}
+
+const char *TypeSystemSwiftTypeRef::DeriveKeyFor(const SymbolContext &sc) {
+  if (sc.function)
+    if (ConstString name = GetSwiftModuleFor(sc))
+      return name.GetCString();
+
+  if (sc.module_sp)
+    return sc.module_sp->GetFileSpec().GetFilename().GetCString();
+  return nullptr;
 }
 
 SymbolContext TypeSystemSwiftTypeRef::GetSymbolContext(
@@ -1818,9 +1844,7 @@ SwiftASTContext *TypeSystemSwiftTypeRefForExpressions::GetSwiftASTContext(
   }
 
   // Compute the cache key.
-  const char *key = nullptr;
-  ConstString module = GetSwiftModuleFor(sc);
-  key = module.GetCString();
+  const char *key = DeriveKeyFor(sc);
   unsigned char retry_count = 0;
 
   // Look up the SwiftASTContext in the cache.
@@ -1855,7 +1879,8 @@ SwiftASTContext *TypeSystemSwiftTypeRefForExpressions::GetSwiftASTContext(
 
     // Create a new SwiftASTContextForExpressions.
     ts = SwiftASTContext::CreateInstance(
-        sc, *const_cast<TypeSystemSwiftTypeRefForExpressions *>(this));
+        sc, *const_cast<TypeSystemSwiftTypeRefForExpressions *>(this),
+        m_compiler_options);
     m_swift_ast_context_map.insert({key, {ts, retry_count}});
   }
 
@@ -1898,10 +1923,7 @@ SwiftASTContext *TypeSystemSwiftTypeRefForExpressions::GetSwiftASTContextOrNull(
     const SymbolContext &sc) const {
   std::lock_guard<std::mutex> guard(m_swift_ast_context_lock);
 
-  const char *key = nullptr;
-  ConstString module = GetSwiftModuleFor(sc);
-  key = module.GetCString();
-
+  const char *key = DeriveKeyFor(sc);
   auto it = m_swift_ast_context_map.find(key);
   if (it != m_swift_ast_context_map.end())
     return llvm::cast_or_null<SwiftASTContext>(it->second.typesystem.get());
@@ -1969,7 +1991,7 @@ TypeSystemSwiftTypeRef::GetMangledTypeName(opaque_compiler_type_t type) {
 void *TypeSystemSwiftTypeRef::ReconstructType(opaque_compiler_type_t type,
                                               const ExecutionContext *exe_ctx) {
   std::pair<const char *, const char *> key = {
-      GetSwiftModuleFor(GetSymbolContext(exe_ctx)).GetCString(),
+      DeriveKeyFor(GetSymbolContext(exe_ctx)),
       reinterpret_cast<const char *>(type)};
 
   if (m_dangerous_types.count(key))
@@ -2010,7 +2032,8 @@ TypeSystemSwiftTypeRef::ReconstructType(CompilerType type,
 
 CompilerType TypeSystemSwiftTypeRef::GetTypeFromMangledTypename(
     ConstString mangled_typename) {
-  return {weak_from_this(), (opaque_compiler_type_t)mangled_typename.AsCString()};
+  return {weak_from_this(),
+          (opaque_compiler_type_t)mangled_typename.AsCString()};
 }
 
 TypeSP TypeSystemSwiftTypeRef::GetCachedType(ConstString mangled) {
