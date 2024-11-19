@@ -81,3 +81,71 @@ entry:
 }
 
 declare void @use(i64)
+
+define i64 @test_extract_select_insert_left(ptr %p1, i64 %v) {
+; CHECK-LABEL: define i64 @test_extract_select_insert_left(
+; CHECK-SAME: ptr [[P1:%.*]], i64 [[V:%.*]]) {
+; CHECK-NEXT:    [[CALL:%.*]] = call { ptr, i64 } @foo()
+; CHECK-NEXT:    [[ELM1:%.*]] = extractvalue { ptr, i64 } [[CALL]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[ELM1]], [[V]]
+; CHECK-NEXT:    [[FCA0:%.*]] = insertvalue { ptr, i64 } poison, ptr [[P1]], 0
+; CHECK-NEXT:    [[FCA1:%.*]] = insertvalue { ptr, i64 } [[FCA0]], i64 4294967294, 1
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], { ptr, i64 } [[FCA1]], { ptr, i64 } [[CALL]]
+; CHECK-NEXT:    [[RES:%.*]] = extractvalue { ptr, i64 } [[SELECT]], 1
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+  %call = call { ptr, i64 } @foo()
+  %elm1 = extractvalue { ptr, i64 } %call, 1
+  %cmp = icmp eq i64 %elm1, %v
+  %fca0 = insertvalue { ptr, i64 } poison, ptr %p1, 0
+  %fca1 = insertvalue { ptr, i64 } %fca0, i64 4294967294, 1
+  %select = select i1 %cmp, { ptr, i64 } %fca1, { ptr, i64 } %call
+  %res = extractvalue { ptr, i64 } %select, 1
+  ret i64 %res
+}
+
+define i64 @test_extract_select_insert_right(ptr %p1, i64 %v) {
+; CHECK-LABEL: define i64 @test_extract_select_insert_right(
+; CHECK-SAME: ptr [[P1:%.*]], i64 [[V:%.*]]) {
+; CHECK-NEXT:    [[CALL:%.*]] = call { ptr, i64 } @foo()
+; CHECK-NEXT:    [[ELM1:%.*]] = extractvalue { ptr, i64 } [[CALL]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[ELM1]], [[V]]
+; CHECK-NEXT:    [[FCA0:%.*]] = insertvalue { ptr, i64 } poison, ptr [[P1]], 0
+; CHECK-NEXT:    [[FCA1:%.*]] = insertvalue { ptr, i64 } [[FCA0]], i64 4294967294, 1
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], { ptr, i64 } [[CALL]], { ptr, i64 } [[FCA1]]
+; CHECK-NEXT:    [[RES:%.*]] = extractvalue { ptr, i64 } [[SELECT]], 1
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+  %call = call { ptr, i64 } @foo()
+  %elm1 = extractvalue { ptr, i64 } %call, 1
+  %cmp = icmp eq i64 %elm1, %v
+  %fca0 = insertvalue { ptr, i64 } poison, ptr %p1, 0
+  %fca1 = insertvalue { ptr, i64 } %fca0, i64 4294967294, 1
+  %select = select i1 %cmp, { ptr, i64 } %call, { ptr, i64 } %fca1
+  %res = extractvalue { ptr, i64 } %select, 1
+  ret i64 %res
+}
+
+define i64 @test_extract_select_insert_negative(ptr %p1, i64 %v) {
+; CHECK-LABEL: define i64 @test_extract_select_insert_negative(
+; CHECK-SAME: ptr [[P1:%.*]], i64 [[V:%.*]]) {
+; CHECK-NEXT:    [[CALL:%.*]] = call { ptr, i64 } @foo()
+; CHECK-NEXT:    [[CALL2:%.*]] = call { ptr, i64 } @foo()
+; CHECK-NEXT:    [[ELM1:%.*]] = extractvalue { ptr, i64 } [[CALL]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[ELM1]], [[V]]
+; CHECK-NEXT:    [[FCA1:%.*]] = insertvalue { ptr, i64 } [[CALL2]], ptr [[P1]], 0
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], { ptr, i64 } [[CALL]], { ptr, i64 } [[FCA1]]
+; CHECK-NEXT:    [[RES:%.*]] = extractvalue { ptr, i64 } [[SELECT]], 1
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+  %call = call { ptr, i64 } @foo()
+  %call2 = call { ptr, i64 } @foo()
+  %elm1 = extractvalue { ptr, i64 } %call, 1
+  %cmp = icmp eq i64 %elm1, %v
+  %fca1 = insertvalue { ptr, i64 } %call2, ptr %p1, 0
+  %select = select i1 %cmp, { ptr, i64 } %call, { ptr, i64 } %fca1
+  %res = extractvalue { ptr, i64 } %select, 1
+  ret i64 %res
+}
+
+declare { ptr, i64 } @foo()

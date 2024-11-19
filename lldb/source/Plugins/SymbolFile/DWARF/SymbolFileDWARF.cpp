@@ -4467,6 +4467,12 @@ StatsDuration::Duration SymbolFileDWARF::GetDebugInfoIndexTime() {
   return {};
 }
 
+void SymbolFileDWARF::ResetStatistics() {
+  m_parse_time.reset();
+  if (m_index)
+    return m_index->ResetStatistics();
+}
+
 Status SymbolFileDWARF::CalculateFrameVariableError(StackFrame &frame) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   CompileUnit *cu = frame.GetSymbolContext(eSymbolContextCompUnit).comp_unit;

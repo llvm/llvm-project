@@ -4821,10 +4821,13 @@ void DeclarationVisitor::Post(const parser::EntityDecl &x) {
   } else if (attrs.test(Attr::PARAMETER)) { // C882, C883
     Say(name, "Missing initialization for parameter '%s'"_err_en_US);
   }
-  if (auto *scopeSymbol{currScope().symbol()})
-    if (auto *details{scopeSymbol->detailsIf<DerivedTypeDetails>()})
-      if (details->isDECStructure())
+  if (auto *scopeSymbol{currScope().symbol()}) {
+    if (auto *details{scopeSymbol->detailsIf<DerivedTypeDetails>()}) {
+      if (details->isDECStructure()) {
         details->add_component(symbol);
+      }
+    }
+  }
 }
 
 void DeclarationVisitor::Post(const parser::PointerDecl &x) {
@@ -7694,8 +7697,52 @@ public:
     --blockDepth_;
     PopScope();
   }
+  // Note declarations of local names in BLOCK constructs.
+  // Don't have to worry about INTENT(), VALUE, or OPTIONAL
+  // (pertinent only to dummy arguments), ASYNCHRONOUS/VOLATILE,
+  // or accessibility attributes,
   bool Pre(const parser::EntityDecl &x) {
     Hide(std::get<parser::ObjectName>(x.t));
+    return true;
+  }
+  bool Pre(const parser::ObjectDecl &x) {
+    Hide(std::get<parser::ObjectName>(x.t));
+    return true;
+  }
+  bool Pre(const parser::PointerDecl &x) {
+    Hide(std::get<parser::Name>(x.t));
+    return true;
+  }
+  bool Pre(const parser::BindEntity &x) {
+    Hide(std::get<parser::Name>(x.t));
+    return true;
+  }
+  bool Pre(const parser::ContiguousStmt &x) {
+    for (const parser::Name &name : x.v) {
+      Hide(name);
+    }
+    return true;
+  }
+  bool Pre(const parser::DimensionStmt::Declaration &x) {
+    Hide(std::get<parser::Name>(x.t));
+    return true;
+  }
+  bool Pre(const parser::ExternalStmt &x) {
+    for (const parser::Name &name : x.v) {
+      Hide(name);
+    }
+    return true;
+  }
+  bool Pre(const parser::IntrinsicStmt &x) {
+    for (const parser::Name &name : x.v) {
+      Hide(name);
+    }
+    return true;
+  }
+  bool Pre(const parser::CodimensionStmt &x) {
+    for (const parser::CodimensionDecl &decl : x.v) {
+      Hide(std::get<parser::Name>(decl.t));
+    }
     return true;
   }
   void Post(const parser::ImportStmt &x) {

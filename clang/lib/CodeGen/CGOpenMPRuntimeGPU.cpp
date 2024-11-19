@@ -21,7 +21,6 @@
 #include "clang/Basic/Cuda.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
-#include "llvm/Support/MathExtras.h"
 
 using namespace clang;
 using namespace CodeGen;

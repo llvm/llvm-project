@@ -633,7 +633,8 @@ void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 6)))
     addAvailableCaps({Capability::DotProduct, Capability::DotProductInputAll,
                       Capability::DotProductInput4x8Bit,
-                      Capability::DotProductInput4x8BitPacked});
+                      Capability::DotProductInput4x8BitPacked,
+                      Capability::DemoteToHelperInvocation});
 
   // Add capabilities enabled by extensions.
   for (auto Extension : ST.getAllAvailableExtensions()) {
@@ -1417,6 +1418,19 @@ void addInstrRequirements(const MachineInstr &MI,
     if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_split_barrier)) {
       Reqs.addExtension(SPIRV::Extension::SPV_INTEL_split_barrier);
       Reqs.addCapability(SPIRV::Capability::SplitBarrierINTEL);
+    }
+    break;
+  case SPIRV::OpKill: {
+    Reqs.addCapability(SPIRV::Capability::Shader);
+  } break;
+  case SPIRV::OpDemoteToHelperInvocation:
+    Reqs.addCapability(SPIRV::Capability::DemoteToHelperInvocation);
+
+    if (ST.canUseExtension(
+            SPIRV::Extension::SPV_EXT_demote_to_helper_invocation)) {
+      if (!ST.isAtLeastSPIRVVer(llvm::VersionTuple(1, 6)))
+        Reqs.addExtension(
+            SPIRV::Extension::SPV_EXT_demote_to_helper_invocation);
     }
     break;
   case SPIRV::OpSDot:

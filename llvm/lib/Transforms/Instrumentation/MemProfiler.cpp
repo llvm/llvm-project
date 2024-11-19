@@ -716,19 +716,22 @@ computeFullStackId(const std::vector<memprof::Frame> &CallStack) {
 }
 
 static AllocationType addCallStack(CallStackTrie &AllocTrie,
-                                   const AllocationInfo *AllocInfo) {
+                                   const AllocationInfo *AllocInfo,
+                                   uint64_t FullStackId) {
   SmallVector<uint64_t> StackIds;
   for (const auto &StackFrame : AllocInfo->CallStack)
     StackIds.push_back(computeStackId(StackFrame));
   auto AllocType = getAllocType(AllocInfo->Info.getTotalLifetimeAccessDensity(),
                                 AllocInfo->Info.getAllocCount(),
                                 AllocInfo->Info.getTotalLifetime());
-  uint64_t TotalSize = 0;
+  std::vector<ContextTotalSize> ContextSizeInfo;
   if (MemProfReportHintedSizes) {
-    TotalSize = AllocInfo->Info.getTotalSize();
+    auto TotalSize = AllocInfo->Info.getTotalSize();
     assert(TotalSize);
+    assert(FullStackId != 0);
+    ContextSizeInfo.push_back({FullStackId, TotalSize});
   }
-  AllocTrie.addCallStack(AllocType, StackIds, TotalSize);
+  AllocTrie.addCallStack(AllocType, StackIds, std::move(ContextSizeInfo));
   return AllocType;
 }
 
@@ -1022,11 +1025,14 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
           if (stackFrameIncludesInlinedCallStack(AllocInfo->CallStack,
                                                  InlinedCallStack)) {
             NumOfMemProfMatchedAllocContexts++;
-            auto AllocType = addCallStack(AllocTrie, AllocInfo);
+            uint64_t FullStackId = 0;
+            if (ClPrintMemProfMatchInfo || MemProfReportHintedSizes)
+              FullStackId = computeFullStackId(AllocInfo->CallStack);
+            auto AllocType = addCallStack(AllocTrie, AllocInfo, FullStackId);
             // Record information about the allocation if match info printing
             // was requested.
             if (ClPrintMemProfMatchInfo) {
-              auto FullStackId = computeFullStackId(AllocInfo->CallStack);
+              assert(FullStackId != 0);
               FullStackIdToAllocMatchInfo[FullStackId] = {
                   AllocInfo->Info.getTotalSize(), AllocType, /*Matched=*/true};
             }

@@ -325,7 +325,7 @@ def : PatFprFpr<riscv_fsgnjx, FSGNJX_D_INX, FPR64INX, f64>;
 def : Pat<(fcopysign FPR64INX:$rs1, (fneg FPR64INX:$rs2)),
           (FSGNJN_D_INX $rs1, $rs2)>;
 def : Pat<(fcopysign FPR64INX:$rs1, FPR32INX:$rs2),
-          (FSGNJ_D_INX $rs1, (FCVT_D_S_INX $rs2, FRM_RNE))>;
+          (FSGNJ_D_INX $rs1, (f64 (FCVT_D_S_INX $rs2, FRM_RNE)))>;
 def : Pat<(fcopysign FPR32INX:$rs1, FPR64INX:$rs2),
           (FSGNJ_S_INX $rs1, (FCVT_S_D_INX $rs2, FRM_DYN))>;
 

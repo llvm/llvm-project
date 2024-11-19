@@ -601,7 +601,8 @@ writeMemProfCallStackArray(
         &MemProfCallStackData,
     llvm::DenseMap<memprof::FrameId, memprof::LinearFrameId>
         &MemProfFrameIndexes,
-    llvm::DenseMap<memprof::FrameId, memprof::FrameStat> &FrameHistogram) {
+    llvm::DenseMap<memprof::FrameId, memprof::FrameStat> &FrameHistogram,
+    unsigned &NumElements) {
   llvm::DenseMap<memprof::CallStackId, memprof::LinearCallStackId>
       MemProfCallStackIndexes;
 
@@ -610,45 +611,13 @@ writeMemProfCallStackArray(
                 FrameHistogram);
   for (auto I : Builder.getRadixArray())
     OS.write32(I);
+  NumElements = Builder.getRadixArray().size();
   MemProfCallStackIndexes = Builder.takeCallStackPos();
 
   // Release the memory of this vector as it is no longer needed.
   MemProfCallStackData.clear();
 
   return MemProfCallStackIndexes;
-}
-
-// Write out MemProf Version0 as follows:
-// uint64_t RecordTableOffset = RecordTableGenerator.Emit
-// uint64_t FramePayloadOffset = Offset for the frame payload
-// uint64_t FrameTableOffset = FrameTableGenerator.Emit
-// uint64_t Num schema entries
-// uint64_t Schema entry 0
-// uint64_t Schema entry 1
-// ....
-// uint64_t Schema entry N - 1
-// OnDiskChainedHashTable MemProfRecordData
-// OnDiskChainedHashTable MemProfFrameData
-static Error writeMemProfV0(ProfOStream &OS,
-                            memprof::IndexedMemProfData &MemProfData) {
-  uint64_t HeaderUpdatePos = OS.tell();
-  OS.write(0ULL); // Reserve space for the memprof record table offset.
-  OS.write(0ULL); // Reserve space for the memprof frame payload offset.
-  OS.write(0ULL); // Reserve space for the memprof frame table offset.
-
-  auto Schema = memprof::getFullSchema();
-  writeMemProfSchema(OS, Schema);
-
-  uint64_t RecordTableOffset =
-      writeMemProfRecords(OS, MemProfData.Records, &Schema, memprof::Version0);
-
-  uint64_t FramePayloadOffset = OS.tell();
-  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfData.Frames);
-
-  uint64_t Header[] = {RecordTableOffset, FramePayloadOffset, FrameTableOffset};
-  OS.patch({{HeaderUpdatePos, Header}});
-
-  return Error::success();
 }
 
 // Write out MemProf Version1 as follows:
@@ -771,14 +740,25 @@ static Error writeMemProfV3(ProfOStream &OS,
       writeMemProfFrameArray(OS, MemProfData.Frames, FrameHistogram);
 
   uint64_t CallStackPayloadOffset = OS.tell();
+  // The number of elements in the call stack array.
+  unsigned NumElements = 0;
   llvm::DenseMap<memprof::CallStackId, memprof::LinearCallStackId>
-      MemProfCallStackIndexes = writeMemProfCallStackArray(
-          OS, MemProfData.CallStacks, MemProfFrameIndexes, FrameHistogram);
+      MemProfCallStackIndexes =
+          writeMemProfCallStackArray(OS, MemProfData.CallStacks,
+                                     MemProfFrameIndexes, FrameHistogram,
+                                     NumElements);
 
   uint64_t RecordPayloadOffset = OS.tell();
   uint64_t RecordTableOffset =
       writeMemProfRecords(OS, MemProfData.Records, &Schema, memprof::Version3,
                           &MemProfCallStackIndexes);
+
+  // IndexedMemProfReader::deserializeV3 computes the number of elements in the
+  // call stack array from the difference between CallStackPayloadOffset and
+  // RecordPayloadOffset.  Verify that the computation works.
+  assert(CallStackPayloadOffset +
+             NumElements * sizeof(memprof::LinearFrameId) ==
+         RecordPayloadOffset);
 
   uint64_t Header[] = {
       CallStackPayloadOffset,
@@ -796,8 +776,6 @@ static Error writeMemProf(ProfOStream &OS,
                           memprof::IndexedVersion MemProfVersionRequested,
                           bool MemProfFullSchema) {
   switch (MemProfVersionRequested) {
-  case memprof::Version0:
-    return writeMemProfV0(OS, MemProfData);
   case memprof::Version1:
     return writeMemProfV1(OS, MemProfData);
   case memprof::Version2:

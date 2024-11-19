@@ -489,8 +489,19 @@ AtomicDefaultMemOrder make(const parser::OmpClause::AtomicDefaultMemOrder &inp,
 
 Bind make(const parser::OmpClause::Bind &inp,
           semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: bind");
+  // inp.v -> parser::OmpBindClause
+  using wrapped = parser::OmpBindClause;
+
+  CLAUSET_ENUM_CONVERT( //
+      convert, wrapped::Type, Bind::Binding,
+      // clang-format off
+      MS(Teams, Teams)
+      MS(Parallel, Parallel)
+      MS(Thread, Thread)
+      // clang-format on
+  );
+
+  return Bind{/*Binding=*/convert(inp.v.v)};
 }
 
 // CancellationConstructType: empty

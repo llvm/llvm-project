@@ -1450,7 +1450,7 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
 
 def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
   "gfx9",
-  [FeatureFP64, FeatureAddressableLocalMemorySize65536,
+  [FeatureFP64,
    FeatureWavefrontSize64, FeatureFlatAddressSpace,
    FeatureGCN3Encoding, FeatureCIInsts, Feature16BitInsts,
    FeatureSMemRealTime, FeatureScalarStores, FeatureInv2PiInlineImm,
@@ -1639,6 +1639,7 @@ def FeatureISAVersion8_1_0 : FeatureSet<
 
 def FeatureISAVersion9_0_Common : FeatureSet<
   [FeatureGFX9,
+   FeatureAddressableLocalMemorySize65536,
    FeatureLDSBankCount32,
    FeatureImageInsts,
    FeatureMadMacF32Insts]>;
@@ -1656,7 +1657,8 @@ def FeatureISAVersion9_Generic : FeatureSet<
 
 def FeatureISAVersion9_0_MI_Common : FeatureSet<
   !listconcat(FeatureISAVersion9_0_Common.Features,
-    [FeatureFmaMixInsts,
+    [FeatureAddressableLocalMemorySize65536,
+     FeatureFmaMixInsts,
      FeatureDLInsts,
      FeatureDot1Insts,
      FeatureDot2Insts,
@@ -1772,8 +1774,11 @@ def FeatureISAVersion9_4_Common : FeatureSet<
 
 def FeatureISAVersion9_5_Common : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
-  [FeatureGFX950Insts,
-   FeatureAddressableLocalMemorySize163840,
+  [FeatureAddressableLocalMemorySize163840,
+   FeatureFP8Insts,
+   FeatureFP8ConversionInsts,
+   FeatureCvtFP8VOP1Bug,
+   FeatureGFX950Insts,
    FeaturePrngInst,
    FeatureBF16ConversionInsts,
    FeatureBitOp3Insts,
@@ -1783,13 +1788,13 @@ def FeatureISAVersion9_5_Common : FeatureSet<
    FeatureFP6BF6ConversionScaleInsts,
    FeatureDot12Insts,
    FeatureDot13Insts,
-   FeatureAtomicBufferPkAddBF16Inst,
-   FeatureFP8Insts
+   FeatureAtomicBufferPkAddBF16Inst
    ])>;
 
 def FeatureISAVersion9_4_0 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
     [
+      FeatureAddressableLocalMemorySize65536,
       FeatureForceStoreSC0SC1,
       FeatureFP8Insts,
       FeatureFP8ConversionInsts,
@@ -1800,6 +1805,7 @@ def FeatureISAVersion9_4_0 : FeatureSet<
 def FeatureISAVersion9_4_1 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
     [
+      FeatureAddressableLocalMemorySize65536,
       FeatureForceStoreSC0SC1,
       FeatureFP8Insts,
       FeatureFP8ConversionInsts,
@@ -1810,6 +1816,7 @@ def FeatureISAVersion9_4_1 : FeatureSet<
 def FeatureISAVersion9_4_2 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
     [
+      FeatureAddressableLocalMemorySize65536,
       FeatureFP8Insts,
       FeatureFP8ConversionInsts,
       FeatureCvtFP8VOP1Bug,
@@ -1818,7 +1825,8 @@ def FeatureISAVersion9_4_2 : FeatureSet<
 
 def FeatureISAVersion9_4_Generic : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
-    [FeatureRequiresCOV6])>;
+    [FeatureAddressableLocalMemorySize65536,
+     FeatureRequiresCOV6])>;
 
 def FeatureISAVersion9_5_0 : FeatureSet<FeatureISAVersion9_5_Common.Features>;
 
