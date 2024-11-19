@@ -1210,7 +1210,8 @@ void SymtabSection::emitEndFunStab(Defined *defined) {
 // symbol itself, but if the symbol was folded using a thunk, we retrieve the
 // target function body from the thunk.
 Defined *SymtabSection::getFuncBodySym(Defined *originalSym) {
-  if (originalSym->identicalCodeFoldingKind != Symbol::ICFFoldKind::Thunk)
+  if (originalSym->identicalCodeFoldingKind == Symbol::ICFFoldKind::None ||
+      originalSym->identicalCodeFoldingKind == Symbol::ICFFoldKind::Body)
     return originalSym;
 
   return macho::getBodyForThunkFoldedSym(originalSym);
