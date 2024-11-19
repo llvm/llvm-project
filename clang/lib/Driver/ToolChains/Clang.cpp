@@ -7317,6 +7317,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                         (!IsWindowsMSVC || IsMSVC2015Compatible)))
     CmdArgs.push_back("-fno-threadsafe-statics");
 
+  if (!Args.hasFlag(options::OPT_fms_tls_guards, options::OPT_fno_ms_tls_guards,
+                    true))
+    CmdArgs.push_back("-fno-ms-tls-guards");
+
   // Add -fno-assumptions, if it was specified.
   if (!Args.hasFlag(options::OPT_fassumptions, options::OPT_fno_assumptions,
                     true))

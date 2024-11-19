@@ -143,7 +143,7 @@ uint32_t AMDGPU::calcEFlags() const {
   case ELFABIVERSION_AMDGPU_HSA_V6:
     return calcEFlagsV6();
   default:
-    ErrAlways(ctx) << "unknown abi version: " << Twine(abiVersion);
+    ErrAlways(ctx) << "unknown abi version: " << abiVersion;
     return 0;
   }
 }
@@ -193,7 +193,7 @@ RelExpr AMDGPU::getRelExpr(RelType type, const Symbol &s,
   case R_AMDGPU_GOTPCREL32_HI:
     return R_GOT_PC;
   default:
-    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
     return R_NONE;
   }
@@ -213,8 +213,7 @@ int64_t AMDGPU::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_AMDGPU_RELATIVE64:
     return read64(ctx, buf);
   default:
-    internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " + toString(type));
+    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   }
 }

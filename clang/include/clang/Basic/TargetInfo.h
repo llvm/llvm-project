@@ -486,6 +486,13 @@ public:
   /// \param AddrSpace address space of pointee in source language.
   virtual uint64_t getNullPointerValue(LangAS AddrSpace) const { return 0; }
 
+  /// Returns true if an address space can be safely converted to another.
+  /// \param A address space of target in source language.
+  /// \param B address space of source in source language.
+  virtual bool isAddressSpaceSupersetOf(LangAS A, LangAS B) const {
+    return A == B;
+  }
+
   /// Return the size of '_Bool' and C++ 'bool' for this target, in bits.
   unsigned getBoolWidth() const { return BoolWidth; }
 

@@ -710,6 +710,17 @@ Target Specific Changes
 AMDGPU Support
 ^^^^^^^^^^^^^^
 
+- Added headers ``gpuintrin.h`` and ``amdgpuintrin.h`` that contains common
+  definitions for GPU builtin functions. This header can be included for OpenMP,
+  CUDA, HIP, OpenCL, and C/C++.
+
+NVPTX Support
+^^^^^^^^^^^^^^
+
+- Added headers ``gpuintrin.h`` and ``nvptxintrin.h`` that contains common
+  definitions for GPU builtin functions. This header can be included for OpenMP,
+  CUDA, HIP, OpenCL, and C/C++.
+
 X86 Support
 ^^^^^^^^^^^
 
@@ -757,6 +768,8 @@ X86 Support
 - Support ISA of ``AMX-AVX512``.
 - Support ISA of ``AMX-TF32``.
 - Support ISA of ``MOVRS``.
+
+- Supported ``-march/tune=diamondrapids``
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^

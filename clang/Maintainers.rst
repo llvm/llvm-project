@@ -170,6 +170,12 @@ Constant Expressions
 | mariya.podchishchaeva\@intel.com (email), Fznamznon (GitHub), fznamznon (Discord), Fznamznon (Discourse)
 
 
+Thread Safety Analysis
+~~~~~~~~~~~~~~~~~~~~~~
+| Aaron Puchert
+| aaron.puchert\@sap.com (email), aaronpuchert (GitHub), aaronpuchert (Discourse)
+
+
 Tools
 -----
 These maintainers are responsible for user-facing tools under the Clang

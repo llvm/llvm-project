@@ -166,8 +166,7 @@ private:
       lower::StatementContext &stmtCtx, mlir::Location clauseLocation,
       const omp::ObjectList &objects,
       llvm::omp::OpenMPOffloadMappingFlags mapTypeBits,
-      std::map<const semantics::Symbol *,
-               llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
+      std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
       llvm::SmallVectorImpl<mlir::Value> &mapVars,
       llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms) const;
 

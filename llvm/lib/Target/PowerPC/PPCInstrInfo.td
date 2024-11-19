@@ -166,17 +166,17 @@ def PPCany_fcfidus : PatFrags<(ops node:$op),
 
 def PPCstore_scal_int_from_vsr:
    SDNode<"PPCISD::ST_VSR_SCAL_INT", SDT_PPCstore_scal_int_from_vsr,
-           [SDNPHasChain, SDNPMayStore]>;
+           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def PPCstfiwx : SDNode<"PPCISD::STFIWX", SDT_PPCstfiwx,
-                       [SDNPHasChain, SDNPMayStore]>;
+                       [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def PPClfiwax : SDNode<"PPCISD::LFIWAX", SDT_PPClfiwx,
                        [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def PPClfiwzx : SDNode<"PPCISD::LFIWZX", SDT_PPClfiwx,
                        [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def PPClxsizx : SDNode<"PPCISD::LXSIZX", SDT_PPCLxsizx,
-                       [SDNPHasChain, SDNPMayLoad]>;
+                       [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def PPCstxsix : SDNode<"PPCISD::STXSIX", SDT_PPCstxsix,
-                       [SDNPHasChain, SDNPMayStore]>;
+                       [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def PPCVexts  : SDNode<"PPCISD::VEXTS", SDT_PPCVexts, []>;
 
 // Extract FPSCR (not modeled at the DAG level).
@@ -376,7 +376,7 @@ def PPCatomicCmpSwap_16 :
 def PPClbrx       : SDNode<"PPCISD::LBRX", SDT_PPClbrx,
                            [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def PPCstbrx      : SDNode<"PPCISD::STBRX", SDT_PPCstbrx,
-                           [SDNPHasChain, SDNPMayStore]>;
+                           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def PPCStoreCond  : SDNode<"PPCISD::STORE_COND", SDT_StoreCond,
                            [SDNPHasChain, SDNPMayStore,
                             SDNPMemOperand, SDNPOutGlue]>;

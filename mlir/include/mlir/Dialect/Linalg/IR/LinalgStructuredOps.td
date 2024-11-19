@@ -621,7 +621,7 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
       (ins "ValueRange":$inputs, "ValueRange":$outputs,
             CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
-        buildStructuredOp($_builder, $_state, std::nullopt, inputs, outputs,
+        buildMatmulOp($_builder, $_state, std::nullopt, inputs, outputs,
           attributes, MatmulOp::getRegionBuilder());
       }]>,
       OpBuilder<
@@ -629,7 +629,7 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
             "ValueRange":$outputs,
             CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
-        buildStructuredOp($_builder, $_state, resultTensorTypes,
+        buildMatmulOp($_builder, $_state, resultTensorTypes,
           inputs, outputs, attributes, MatmulOp::getRegionBuilder());
       }]>,
       OpBuilder<
@@ -647,7 +647,7 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
        "Attribute":$cast, CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
         $_state.addAttribute("cast", cast);
-        buildStructuredOp($_builder, $_state, resultTensorTypes, inputs, outputs,
+        buildMatmulOp($_builder, $_state, resultTensorTypes, inputs, outputs,
           attributes, MatmulOp::getRegionBuilder());
       }]>
 

@@ -195,7 +195,7 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
     // not ARMv4 output, we can just ignore it.
     return R_NONE;
   default:
-    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
     return R_NONE;
   }
@@ -875,8 +875,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   default:
-    internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " + toString(type));
+    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   case R_ARM_ABS32:
   case R_ARM_BASE_PREL:
@@ -1199,7 +1198,7 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
   ArrayRef<Elf_Sym> eSyms = getELFSyms<ELFT>();
   // Error for local symbols. The symbol at index 0 is LOCAL. So skip it.
   for (size_t i = 1, end = firstGlobal; i != end; ++i) {
-    Err(ctx) << "CMSE symbol '" << CHECK(eSyms[i].getName(stringTable), this)
+    Err(ctx) << "CMSE symbol '" << CHECK2(eSyms[i].getName(stringTable), this)
              << "' in import library '" << this << "' is not global";
   }
 
@@ -1209,7 +1208,7 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
 
     // Initialize symbol fields.
     memset(static_cast<void *>(sym), 0, sizeof(Symbol));
-    sym->setName(CHECK(eSyms[i].getName(stringTable), this));
+    sym->setName(CHECK2(eSyms[i].getName(stringTable), this));
     sym->value = eSym.st_value;
     sym->size = eSym.st_size;
     sym->type = eSym.getType();
@@ -1248,15 +1247,16 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
 
 // Check symbol attributes of the acleSeSym, sym pair.
 // Both symbols should be global/weak Thumb code symbol definitions.
-static std::string checkCmseSymAttributes(Symbol *acleSeSym, Symbol *sym) {
-  auto check = [](Symbol *s, StringRef type) -> std::optional<std::string> {
+static std::string checkCmseSymAttributes(Ctx &ctx, Symbol *acleSeSym,
+                                          Symbol *sym) {
+  auto check = [&](Symbol *s, StringRef type) -> std::optional<std::string> {
     auto d = dyn_cast_or_null<Defined>(s);
     if (!(d && d->isFunc() && (d->value & 1)))
-      return (Twine(toString(s->file)) + ": cmse " + type + " symbol '" +
+      return (Twine(toStr(ctx, s->file)) + ": cmse " + type + " symbol '" +
               s->getName() + "' is not a Thumb function definition")
           .str();
     if (!d->section)
-      return (Twine(toString(s->file)) + ": cmse " + type + " symbol '" +
+      return (Twine(toStr(ctx, s->file)) + ": cmse " + type + " symbol '" +
               s->getName() + "' cannot be an absolute symbol")
           .str();
     return std::nullopt;
@@ -1305,7 +1305,7 @@ void elf::processArmCmseSymbols(Ctx &ctx) {
       continue;
     }
 
-    std::string errMsg = checkCmseSymAttributes(acleSeSym, sym);
+    std::string errMsg = checkCmseSymAttributes(ctx, acleSeSym, sym);
     if (!errMsg.empty()) {
       ErrAlways(ctx) << errMsg;
       continue;
@@ -1466,12 +1466,14 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   SymbolTableBaseSection *impSymTab =
       make<SymbolTableSection<ELFT>>(ctx, *strtab);
 
-  SmallVector<std::pair<OutputSection *, SyntheticSection *>, 0> osIsPairs;
-  osIsPairs.emplace_back(make<OutputSection>(ctx, strtab->name, 0, 0), strtab);
-  osIsPairs.emplace_back(make<OutputSection>(ctx, impSymTab->name, 0, 0),
-                         impSymTab);
-  osIsPairs.emplace_back(make<OutputSection>(ctx, shstrtab->name, 0, 0),
-                         shstrtab);
+  SmallVector<std::pair<std::unique_ptr<OutputSection>, SyntheticSection *>, 0>
+      osIsPairs;
+  osIsPairs.emplace_back(
+      std::make_unique<OutputSection>(ctx, strtab->name, 0, 0), strtab);
+  osIsPairs.emplace_back(
+      std::make_unique<OutputSection>(ctx, impSymTab->name, 0, 0), impSymTab);
+  osIsPairs.emplace_back(
+      std::make_unique<OutputSection>(ctx, shstrtab->name, 0, 0), shstrtab);
 
   llvm::sort(ctx.symtab->cmseSymMap, [&](const auto &a, const auto &b) {
     return a.second.sym->getVA(ctx) < b.second.sym->getVA(ctx);
@@ -1508,7 +1510,7 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
       FileOutputBuffer::create(ctx.arg.cmseOutputLib, fileSize, flags);
   if (!bufferOrErr) {
     ErrAlways(ctx) << "failed to open " << ctx.arg.cmseOutputLib << ": "
-                   << llvm::toString(bufferOrErr.takeError());
+                   << bufferOrErr.takeError();
     return;
   }
 
