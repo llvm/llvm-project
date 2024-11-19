@@ -52,7 +52,7 @@ define void @vscale_ult(ptr nocapture %A, i32 %n) mustprogress vscale_range(2,10
 ; CHECK-NEXT:    --> {vscale,+,vscale}<nuw><nsw><%for.body> U: [2,-2147483648) S: [2,-2147483648) Exits: (vscale * (1 + ((-1 + %n) /u vscale))<nuw>) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @vscale_ult
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((-1 + %n) /u vscale)
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 2147483646
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 1073741823
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((-1 + %n) /u vscale)
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
@@ -88,7 +88,7 @@ define void @vscale_ule(ptr nocapture %A, i32 %n) mustprogress vscale_range(2,10
 ; CHECK-NEXT:    --> {vscale,+,vscale}<nuw><nsw><%for.body> U: [2,-2147483648) S: [2,-2147483648) Exits: (vscale * (1 + (((-1 + vscale)<nsw> umax %n) /u vscale))<nuw>) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @vscale_ule
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (((-1 + vscale)<nsw> umax %n) /u vscale)
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 2147483647
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 1073741823
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (((-1 + vscale)<nsw> umax %n) /u vscale)
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
@@ -202,7 +202,7 @@ define void @vscalex4_ult(ptr nocapture %A, i32 %n) mustprogress vscale_range(2,
 ; CHECK-NEXT:    --> {(4 * vscale)<nuw><nsw>,+,(4 * vscale)<nuw><nsw>}<nuw><nsw><%for.body> U: [8,-2147483648) S: [8,2147483645) Exits: (vscale * (4 + (4 * ((-1 + %n) /u (4 * vscale)<nuw><nsw>))<nuw><nsw>)<nuw>) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @vscalex4_ult
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((-1 + %n) /u (4 * vscale)<nuw><nsw>)
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 536870910
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 268435455
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((-1 + %n) /u (4 * vscale)<nuw><nsw>)
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
@@ -418,7 +418,7 @@ define void @vscalex4_ult_noflags(ptr nocapture %A, i32 %n) mustprogress vscale_
 ; CHECK-NEXT:    --> {(4 * vscale)<nuw><nsw>,+,(4 * vscale)<nuw><nsw>}<nuw><%for.body> U: [8,-3) S: [-2147483648,2147483645) Exits: (vscale * (4 + (4 * ((-1 + %n) /u (4 * vscale)<nuw><nsw>))<nuw><nsw>)<nuw>) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @vscalex4_ult_noflags
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((-1 + %n) /u (4 * vscale)<nuw><nsw>)
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 536870910
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 268435455
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((-1 + %n) /u (4 * vscale)<nuw><nsw>)
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;

@@ -1025,12 +1025,12 @@ define void @slt_guarded_rhs(i16 %n) mustprogress {
 ; CHECK-NEXT:    [[IN_RANGE:%.*]] = icmp ult i16 [[N:%.*]], 256
 ; CHECK-NEXT:    br i1 [[IN_RANGE]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i16 [[N]] to i8
+; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[N]], i16 1)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[IV]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[IV_NEXT]], [[TMP0]]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i16 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i16 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 [[INDVARS_IV_NEXT]], [[SMAX]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]

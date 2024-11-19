@@ -253,12 +253,12 @@ attributes #2 = { nounwind }
 ; TUNIT: attributes #[[ATTR0]] = { nounwind uwtable }
 ; TUNIT: attributes #[[ATTR1]] = { alwaysinline nofree norecurse nounwind uwtable }
 ; TUNIT: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-; TUNIT: attributes #[[ATTR3]] = { memory(readwrite) }
+; TUNIT: attributes #[[ATTR3]] = { willreturn memory(readwrite) }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { nounwind uwtable }
 ; CGSCC: attributes #[[ATTR1]] = { alwaysinline nofree norecurse nounwind uwtable }
 ; CGSCC: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-; CGSCC: attributes #[[ATTR3]] = { memory(readwrite) }
+; CGSCC: attributes #[[ATTR3]] = { willreturn memory(readwrite) }
 ;.
 ; TUNIT: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; TUNIT: [[META1:![0-9]+]] = !{[[META2:![0-9]+]]}
