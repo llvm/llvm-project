@@ -19,7 +19,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_RPC_RPC_H
 
 #include "rpc_util.h"
-#include "src/__support/CPP/optional.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
 #include <stdint.h>
@@ -306,7 +306,7 @@ private:
 
   friend struct Client;
   friend struct Server;
-  friend class cpp::optional<Port<T>>;
+  friend class rpc::optional<Port<T>>;
 
 public:
   template <typename U> LIBC_INLINE void recv(U use);
@@ -362,9 +362,6 @@ struct Client {
 private:
   Process<false> process;
 };
-static_assert(cpp::is_trivially_copyable<Client>::value &&
-                  sizeof(Process<true>) == sizeof(Process<false>),
-              "The client is not trivially copyable from the server");
 
 /// The RPC server used to respond to the client.
 struct Server {
@@ -377,7 +374,7 @@ struct Server {
       : process(port_count, buffer) {}
 
   using Port = rpc::Port<true>;
-  LIBC_INLINE cpp::optional<Port> try_open(uint32_t lane_size,
+  LIBC_INLINE rpc::optional<Port> try_open(uint32_t lane_size,
                                            uint32_t start = 0);
   LIBC_INLINE Port open(uint32_t lane_size);
 
@@ -556,7 +553,7 @@ template <uint16_t opcode>
 
 /// Attempts to open a port to use as the server. The server can only open a
 /// port if it has a pending receive operation
-[[clang::convergent]] LIBC_INLINE cpp::optional<typename Server::Port>
+[[clang::convergent]] LIBC_INLINE rpc::optional<typename Server::Port>
 Server::try_open(uint32_t lane_size, uint32_t start) {
   // Perform a naive linear scan for a port that has a pending request.
   for (uint32_t index = start; index < process.port_count; ++index) {
@@ -583,13 +580,13 @@ Server::try_open(uint32_t lane_size, uint32_t start) {
 
     return Port(process, lane_mask, lane_size, index, out);
   }
-  return cpp::nullopt;
+  return rpc::nullopt;
 }
 
 LIBC_INLINE Server::Port Server::open(uint32_t lane_size) {
   for (;;) {
-    if (cpp::optional<Server::Port> p = try_open(lane_size))
-      return cpp::move(p.value());
+    if (rpc::optional<Server::Port> p = try_open(lane_size))
+      return rpc::move(p.value());
     sleep_briefly();
   }
 }
