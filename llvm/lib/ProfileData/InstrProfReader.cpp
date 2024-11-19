@@ -1678,7 +1678,8 @@ IndexedMemProfReader::getMemProfCallerCalleePairs() const {
   assert(Version == memprof::Version3);
 
   memprof::LinearFrameIdConverter FrameIdConv(FrameBase);
-  memprof::CallerCalleePairExtractor Extractor(CallStackBase, FrameIdConv);
+  memprof::CallerCalleePairExtractor Extractor(CallStackBase, FrameIdConv,
+                                               RadixTreeSize);
 
   // The set of linear call stack IDs that we need to traverse from.  We expect
   // the set to be dense, so we use a BitVector.
