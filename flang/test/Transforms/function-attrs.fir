@@ -16,7 +16,7 @@ func.func @_QParg_nocapture(%arg0: !fir.ref<i32> {fir.bindc_name = "tar", fir.ta
 // CHECK-SAME:                                 %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "tar", fir.target},
 // CHECK-SAME:                                 %[[ARG1:.*]]: !fir.ref<i32> {fir.asynchronous, fir.bindc_name = "asynch"},
 // CHECK-SAME:                                 %[[ARG2:.*]]: !fir.ref<i32> {fir.bindc_name = "vol", fir.volatile},
-// CHECK-SAME:                                 %[[ARG3:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = "ptr"},
+// CHECK-SAME:                                 %[[ARG3:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = "ptr", llvm.nocapture},
 // CHECK-SAME:                                 %[[ARG4:.*]]: !fir.ref<i32> {fir.bindc_name = "nocap", llvm.nocapture}) {
 // CHECK:    return
 // CHECK-NEXT: }
@@ -39,7 +39,7 @@ func.func private @_QMarg_modPcheck_args(!fir.ref<i32> {fir.target}, !fir.ref<i3
 // CHECK-SAME:                                 !fir.ref<i32> {fir.target},
 // CHECK-SAME:                                 !fir.ref<i32> {fir.asynchronous},
 // CHECK-SAME:                                 !fir.ref<i32> {fir.volatile},
-// CHECK-SAME:                                 !fir.ref<!fir.box<!fir.ptr<i32>>>,
+// CHECK-SAME:                                 !fir.ref<!fir.box<!fir.ptr<i32>>> {llvm.nocapture},
 // CHECK-SAME:                                 !fir.ref<i32> {llvm.nocapture},
 // CHECK-SAME:                                 !fir.boxchar<1>,
 // CHECK-SAME:                                 !fir.ref<complex<f32>> {llvm.nocapture})

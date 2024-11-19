@@ -58,7 +58,6 @@ void FunctionAttrPass::runOnOperation() {
 
     for (auto [index, argType] : llvm::enumerate(func.getArgumentTypes())) {
       if (mlir::isa<fir::ReferenceType>(argType) &&
-          !fir::isPointerType(argType) &&
           !func.getArgAttr(index, fir::getTargetAttrName()) &&
           !func.getArgAttr(index, fir::getAsynchronousAttrName()) &&
           !func.getArgAttr(index, fir::getVolatileAttrName()))
