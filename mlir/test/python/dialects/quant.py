@@ -108,9 +108,9 @@ def test_uniform_per_axis_type():
             ),
         )
 
-        # CHECK: scales: None
+        # CHECK: scales: [200.0, 0.99872]
         print(f"scales: {per_axis.scales}")
-        # CHECK: zero_points: None
+        # CHECK: zero_points: [0, 120]
         print(f"zero_points: {per_axis.zero_points}")
         # CHECK: quantized dim: 1
         print(f"quantized dim: {per_axis.quantized_dimension}")
