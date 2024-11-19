@@ -8,7 +8,7 @@
 //
 // Implementation of the Mustache templating language supports version 1.4.2
 // currently relies on llvm::json::Value for data input
-// see the Mustache spec for more information
+// See the Mustache spec for more information
 // (https://mustache.github.io/mustache.5.html).
 //
 // Current Features Supported:

@@ -184,7 +184,7 @@ private:
 
 Accessor splitMustacheString(StringRef Str) {
   // We split the mustache string into an accessor.
-  // For example: 
+  // For example:
   //    "a.b.c" would be split into {"a", "b", "c"}
   // We make an exception for a single dot which
   // refers to the current context.
@@ -247,7 +247,7 @@ Token::Type Token::getTokenType(char Identifier) {
 //  "{{#Section}} \n" (returns false)
 // We make an exception for when previous token is empty
 // and the current token is the second token.
-// For example: 
+// For example:
 //  "{{#Section}}"
 bool hasTextBehind(size_t Idx, const ArrayRef<Token> &Tokens) {
   if (Idx == 0)
