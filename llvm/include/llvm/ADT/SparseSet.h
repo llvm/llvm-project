@@ -133,7 +133,7 @@ class SparseSet {
   struct Deleter {
     void operator()(SparseT *S) { free(S); }
   };
-  std::unique_ptr<SparseT, Deleter> Sparse;
+  std::unique_ptr<SparseT[], Deleter> Sparse;
 
   unsigned Universe = 0;
   KeyFunctorT KeyIndexOf;
@@ -209,7 +209,7 @@ public:
     assert(Idx < Universe && "Key out of range");
     assert(Sparse != nullptr && "Invalid sparse type");
     const unsigned Stride = std::numeric_limits<SparseT>::max() + 1u;
-    for (unsigned i = Sparse.get()[Idx], e = size(); i < e; i += Stride) {
+    for (unsigned i = Sparse[Idx], e = size(); i < e; i += Stride) {
       const unsigned FoundIdx = ValIndexOf(Dense[i]);
       assert(FoundIdx < Universe && "Invalid key in set. Did object mutate?");
       if (Idx == FoundIdx)
@@ -259,7 +259,7 @@ public:
     iterator I = findIndex(Idx);
     if (I != end())
       return std::make_pair(I, false);
-    Sparse.get()[Idx] = size();
+    Sparse[Idx] = size();
     Dense.push_back(Val);
     return std::make_pair(end() - 1, true);
   }
@@ -296,7 +296,7 @@ public:
       *I = Dense.back();
       unsigned BackIdx = ValIndexOf(Dense.back());
       assert(BackIdx < Universe && "Invalid key in set. Did object mutate?");
-      Sparse.get()[BackIdx] = I - begin();
+      Sparse[BackIdx] = I - begin();
     }
     // This depends on SmallVector::pop_back() not invalidating iterators.
     // std::vector::pop_back() doesn't give that guarantee.
