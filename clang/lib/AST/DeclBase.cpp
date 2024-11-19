@@ -1464,6 +1464,8 @@ DeclContext *DeclContext::getPrimaryContext() {
         return Def;
     return this;
 
+  case Decl::CXXRecord:
+    return this;
   case Decl::ObjCCategory:
     return this;
 
