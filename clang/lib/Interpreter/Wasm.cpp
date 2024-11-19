@@ -108,7 +108,7 @@ llvm::Error WasmIncrementalExecutor::runCtors() const {
   return llvm::Error::success();
 }
 
-llvm::Error WasmIncrementalExecutor::cleanUp() const {
+llvm::Error WasmIncrementalExecutor::cleanUp() {
   // Can't call cleanUp through IncrementalExecutor as it
   // tries to deinitialize JIT which hasn't been initialized
   return llvm::Error::success();
