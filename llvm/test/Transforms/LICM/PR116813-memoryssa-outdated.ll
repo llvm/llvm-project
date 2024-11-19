@@ -1,4 +1,8 @@
 ; RUN: opt -passes='loop-mssa(simple-loop-unswitch<nontrivial>),print<memoryssa>' -verify-memoryssa -disable-output -S < %s 2>&1 | FileCheck %s
+; RUN: opt -passes='loop-mssa(simple-loop-unswitch<nontrivial>,licm)' -verify-memoryssa -disable-output -S
+
+; Check that SimpleLoopUnswitch preserves the MemoryDef of `call i32 @bar()`.
+; Also, check that running LICM after SimpleLoopUnswitch does not result in a crash.
 
 ; CHECK: preds = %bb2{{$}}
 ; CHECK-NEXT: MemoryDef
