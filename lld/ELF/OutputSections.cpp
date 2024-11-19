@@ -536,7 +536,7 @@ void OutputSection::writeTo(Ctx &ctx, uint8_t *buf, parallel::TaskGroup &tg) {
       // instructions to little-endian, leaving the data big-endian.
       if (ctx.arg.emachine == EM_ARM && !ctx.arg.isLE && ctx.arg.armBe8 &&
           (flags & SHF_EXECINSTR))
-        convertArmInstructionstoBE8(isec, buf + isec->outSecOff);
+        convertArmInstructionstoBE8(ctx, isec, buf + isec->outSecOff);
 
       // Fill gaps between sections.
       if (nonZeroFiller) {

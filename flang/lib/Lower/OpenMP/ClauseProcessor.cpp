@@ -158,9 +158,10 @@ genDependKindAttr(lower::AbstractConverter &converter,
     break;
   case omp::clause::DependenceType::Mutexinoutset:
   case omp::clause::DependenceType::Inoutset:
-    TODO(currentLocation, "INOUTSET and MUTEXINOUTSET are not supported yet");
-    break;
   case omp::clause::DependenceType::Depobj:
+    TODO(currentLocation,
+         "INOUTSET, MUTEXINOUTSET and DEPOBJ dependence-types");
+    break;
   case omp::clause::DependenceType::Sink:
   case omp::clause::DependenceType::Source:
     llvm_unreachable("unhandled parser task dependence type");

@@ -2,10 +2,9 @@
 !RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %s 2>&1 | FileCheck %s
 
 !CHECK: not yet implemented: INOUTSET, MUTEXINOUTSET and DEPOBJ dependence-types
+
 subroutine f00(x)
   integer :: x
-  !$omp task depend(inoutset: x)
-  x = x + 1
+  !$omp task depend(depobj: x)
   !$omp end task
 end
-

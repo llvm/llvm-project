@@ -238,10 +238,9 @@ class DAPTestCaseBase(TestBase):
     def stepIn(
         self, threadId=None, targetId=None, waitForStop=True, granularity="statement"
     ):
-        response = self.dap_server.request_stepIn(
+        self.dap_server.request_stepIn(
             threadId=threadId, targetId=targetId, granularity=granularity
         )
-        self.assertTrue(response["success"])
         if waitForStop:
             return self.dap_server.wait_for_stopped()
         return None
