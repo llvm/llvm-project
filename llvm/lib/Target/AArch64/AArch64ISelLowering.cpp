@@ -9299,8 +9299,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     // Each tail call may have to adjust the stack by a different amount, so
     // this information must travel along with the operation for eventual
     // consumption by emitEpilogue.
-    Ops.push_back(
-        DAG.getSignedConstant(FPDiff, DL, MVT::i32, /*isTarget=*/true));
+    Ops.push_back(DAG.getSignedTargetConstant(FPDiff, DL, MVT::i32));
   }
 
   if (CLI.PAI) {
