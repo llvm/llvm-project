@@ -26,6 +26,7 @@
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -793,7 +794,7 @@ struct ElementalOpConversion
     hlfir::LoopNest loopNest =
         hlfir::genLoopNest(loc, builder, extents, !elemental.isOrdered());
     auto insPt = builder.saveInsertionPoint();
-    builder.setInsertionPointToStart(loopNest.innerLoop.getBody());
+    builder.setInsertionPointToStart(loopNest.body);
     auto yield = hlfir::inlineElementalOp(loc, builder, elemental,
                                           loopNest.oneBasedIndices);
     hlfir::Entity elementValue(yield.getElementValue());
