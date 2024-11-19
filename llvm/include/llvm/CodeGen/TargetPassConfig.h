@@ -190,8 +190,7 @@ public:
 
   /// Returns pass name in `-stop-before` or `-stop-after`
   /// NOTE: New pass manager migration only
-  static Expected<StartStopInfo>
-  getStartStopInfo(PassInstrumentationCallbacks &PIC);
+  static Expected<StartStopInfo> getStartStopInfo();
 
   void setDisableVerify(bool Disable) { setOpt(DisableVerify, Disable); }
 
