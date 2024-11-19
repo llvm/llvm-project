@@ -98,6 +98,25 @@ genAllocateClause(lower::AbstractConverter &converter,
   genObjectList(objects, converter, allocateOperands);
 }
 
+static mlir::omp::ClauseBindKindAttr
+genBindKindAttr(fir::FirOpBuilder &firOpBuilder,
+                const omp::clause::Bind &clause) {
+  mlir::omp::ClauseBindKind bindKind;
+  switch (clause.v) {
+  case omp::clause::Bind::Binding::Teams:
+    bindKind = mlir::omp::ClauseBindKind::Teams;
+    break;
+  case omp::clause::Bind::Binding::Parallel:
+    bindKind = mlir::omp::ClauseBindKind::Parallel;
+    break;
+  case omp::clause::Bind::Binding::Thread:
+    bindKind = mlir::omp::ClauseBindKind::Thread;
+    break;
+  }
+  return mlir::omp::ClauseBindKindAttr::get(firOpBuilder.getContext(),
+                                            bindKind);
+}
+
 static mlir::omp::ClauseProcBindKindAttr
 genProcBindKindAttr(fir::FirOpBuilder &firOpBuilder,
                     const omp::clause::ProcBind &clause) {
@@ -139,9 +158,10 @@ genDependKindAttr(lower::AbstractConverter &converter,
     break;
   case omp::clause::DependenceType::Mutexinoutset:
   case omp::clause::DependenceType::Inoutset:
-    TODO(currentLocation, "INOUTSET and MUTEXINOUTSET are not supported yet");
-    break;
   case omp::clause::DependenceType::Depobj:
+    TODO(currentLocation,
+         "INOUTSET, MUTEXINOUTSET and DEPOBJ dependence-types");
+    break;
   case omp::clause::DependenceType::Sink:
   case omp::clause::DependenceType::Source:
     llvm_unreachable("unhandled parser task dependence type");
@@ -203,6 +223,15 @@ static void convertLoopBounds(lower::AbstractConverter &converter,
 //===----------------------------------------------------------------------===//
 // ClauseProcessor unique clauses
 //===----------------------------------------------------------------------===//
+
+bool ClauseProcessor::processBind(mlir::omp::BindClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Bind>()) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    result.bindKind = genBindKindAttr(firOpBuilder, *clause);
+    return true;
+  }
+  return false;
+}
 
 bool ClauseProcessor::processCollapse(
     mlir::Location currentLocation, lower::pft::Evaluation &eval,

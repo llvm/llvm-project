@@ -1898,6 +1898,27 @@ LogicalResult SingleOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// WorkshareOp
+//===----------------------------------------------------------------------===//
+
+void WorkshareOp::build(OpBuilder &builder, OperationState &state,
+                        const WorkshareOperands &clauses) {
+  WorkshareOp::build(builder, state, clauses.nowait);
+}
+
+//===----------------------------------------------------------------------===//
+// WorkshareLoopWrapperOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult WorkshareLoopWrapperOp::verify() {
+  if (!(*this)->getParentOfType<WorkshareOp>())
+    return emitError() << "must be nested in an omp.workshare";
+  if (getNestedWrapper())
+    return emitError() << "cannot be composite";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // LoopWrapperInterface
 //===----------------------------------------------------------------------===//
 
@@ -1927,6 +1948,17 @@ LogicalResult LoopWrapperInterface::verifyImpl() {
 //===----------------------------------------------------------------------===//
 // LoopOp
 //===----------------------------------------------------------------------===//
+
+void LoopOp::build(OpBuilder &builder, OperationState &state,
+                   const LoopOperands &clauses) {
+  MLIRContext *ctx = builder.getContext();
+
+  LoopOp::build(builder, state, clauses.bindKind, clauses.privateVars,
+                makeArrayAttr(ctx, clauses.privateSyms), clauses.order,
+                clauses.orderMod, clauses.reductionVars,
+                makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
+                makeArrayAttr(ctx, clauses.reductionSyms));
+}
 
 LogicalResult LoopOp::verify() {
   return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),

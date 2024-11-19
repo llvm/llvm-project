@@ -1582,7 +1582,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     StringRef s = arg->getValue();
     if (s.getAsInteger(10, n))
       error(arg->getSpelling() + " number expected, but got " + s);
-    errorHandler().errorLimit = n;
+    ctx.e.errorLimit = n;
   }
 
   config->vfs = getVFS(args);
@@ -1696,7 +1696,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle /verbose
   if (args.hasArg(OPT_verbose))
     config->verbose = true;
-  errorHandler().verbose = config->verbose;
+  ctx.e.verbose = config->verbose;
 
   // Handle /force or /force:unresolved
   if (args.hasArg(OPT_force, OPT_force_unresolved))

@@ -9299,8 +9299,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     // Each tail call may have to adjust the stack by a different amount, so
     // this information must travel along with the operation for eventual
     // consumption by emitEpilogue.
-    Ops.push_back(
-        DAG.getSignedConstant(FPDiff, DL, MVT::i32, /*isTarget=*/true));
+    Ops.push_back(DAG.getSignedTargetConstant(FPDiff, DL, MVT::i32));
   }
 
   if (CLI.PAI) {
@@ -9353,13 +9352,11 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (InGlue.getNode())
     Ops.push_back(InGlue);
 
-  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
-
   // If we're doing a tall call, use a TC_RETURN here rather than an
   // actual call instruction.
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
-    SDValue Ret = DAG.getNode(Opc, DL, NodeTys, Ops);
+    SDValue Ret = DAG.getNode(Opc, DL, MVT::Other, Ops);
     if (IsCFICall)
       Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
 
@@ -9369,7 +9366,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   // Returns a chain and a flag for retval copy to use.
-  Chain = DAG.getNode(Opc, DL, NodeTys, Ops);
+  Chain = DAG.getNode(Opc, DL, {MVT::Other, MVT::Glue}, Ops);
   if (IsCFICall)
     Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
 

@@ -4882,9 +4882,17 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                       cast<AutoType>(T)->getKeyword() !=
                           AutoTypeKeyword::Auto ||
                       cast<AutoType>(T)->isConstrained())) {
-            S.Diag(D.getDeclSpec().getTypeSpecTypeLoc(),
-                   diag::err_trailing_return_without_auto)
-                << T << D.getDeclSpec().getSourceRange();
+            // Attach a valid source location for diagnostics on functions with
+            // trailing return types missing 'auto'. Attempt to get the location
+            // from the declared type; if invalid, fall back to the trailing
+            // return type's location.
+            SourceLocation Loc = D.getDeclSpec().getTypeSpecTypeLoc();
+            SourceRange SR = D.getDeclSpec().getSourceRange();
+            if (Loc.isInvalid()) {
+              Loc = FTI.getTrailingReturnTypeLoc();
+              SR = D.getSourceRange();
+            }
+            S.Diag(Loc, diag::err_trailing_return_without_auto) << T << SR;
             D.setInvalidType(true);
             // FIXME: recover and fill decls in `TypeLoc`s.
             AreDeclaratorChunksValid = false;

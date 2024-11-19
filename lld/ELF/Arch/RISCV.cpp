@@ -324,7 +324,7 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_SUB_ULEB128:
     return R_RISCV_LEB128;
   default:
-    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
     return R_NONE;
   }
@@ -947,7 +947,7 @@ void RISCV::finalizeRelax(int passes) const {
       ArrayRef<uint8_t> old = sec->content();
       size_t newSize = old.size() - aux.relocDeltas[rels.size() - 1];
       size_t writesIdx = 0;
-      uint8_t *p = context().bAlloc.Allocate<uint8_t>(newSize);
+      uint8_t *p = ctx.bAlloc.Allocate<uint8_t>(newSize);
       uint64_t offset = 0;
       int64_t delta = 0;
       sec->content_ = p;
@@ -1197,9 +1197,9 @@ mergeAttributesSection(Ctx &ctx,
             firstStackAlign = sec;
             firstStackAlignValue = *i;
           } else if (r.first->second != *i) {
-            Err(ctx) << sec << " has stack_align=" << Twine(*i) << " but "
+            Err(ctx) << sec << " has stack_align=" << *i << " but "
                      << firstStackAlign
-                     << " has stack_align=" << Twine(firstStackAlignValue);
+                     << " has stack_align=" << firstStackAlignValue;
           }
         }
         continue;
@@ -1257,7 +1257,7 @@ mergeAttributesSection(Ctx &ctx,
   if (hasArch && xlen != 0) {
     if (auto result = RISCVISAInfo::createFromExtMap(xlen, exts)) {
       merged.strAttr.try_emplace(RISCVAttrs::ARCH,
-                                 saver().save((*result)->toString()));
+                                 ctx.saver.save((*result)->toString()));
     } else {
       Err(ctx) << result.takeError();
     }
