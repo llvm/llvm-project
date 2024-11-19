@@ -1061,7 +1061,8 @@ static void addPreloadKernArgHint(Function &F, TargetMachine &TM) {
   for (size_t I = 0; I < PreloadCount; ++I) {
     Argument &Arg = *F.getArg(I);
     // Check for incompatible attributes.
-    if (Arg.hasByRefAttr() || Arg.hasNestAttr())
+    if (Arg.getType()->isAggregateType() || Arg.hasByRefAttr() ||
+        Arg.hasNestAttr())
       break;
 
     Arg.addAttr(Attribute::InReg);

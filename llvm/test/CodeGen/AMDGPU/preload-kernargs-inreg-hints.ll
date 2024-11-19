@@ -257,6 +257,57 @@ define amdgpu_kernel void @test_preload_hint_kernel_incompatible_attributes(ptr 
   ret void
 }
 
+define amdgpu_kernel void @test_preload_hint_kernel_array(i32 %0, [2 x i32] %1, i32 %2) {
+; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_hint_kernel_array
+; NO-PRELOAD-SAME: (i32 [[TMP0:%.*]], [2 x i32] [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR4]] {
+; NO-PRELOAD-NEXT:    ret void
+;
+; PRELOAD-1-LABEL: define {{[^@]+}}@test_preload_hint_kernel_array
+; PRELOAD-1-SAME: (i32 inreg [[TMP0:%.*]], [2 x i32] [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR4]] {
+; PRELOAD-1-NEXT:    ret void
+;
+; PRELOAD-3-LABEL: define {{[^@]+}}@test_preload_hint_kernel_array
+; PRELOAD-3-SAME: (i32 inreg [[TMP0:%.*]], [2 x i32] [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR4]] {
+; PRELOAD-3-NEXT:    ret void
+;
+; PRELOAD-16-LABEL: define {{[^@]+}}@test_preload_hint_kernel_array
+; PRELOAD-16-SAME: (i32 inreg [[TMP0:%.*]], [2 x i32] [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR4]] {
+; PRELOAD-16-NEXT:    ret void
+;
+; PRELOAD-20-LABEL: define {{[^@]+}}@test_preload_hint_kernel_array
+; PRELOAD-20-SAME: (i32 inreg [[TMP0:%.*]], [2 x i32] [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR4]] {
+; PRELOAD-20-NEXT:    ret void
+;
+  ret void
+}
+
+%struct.A = type { [2 x i32] }
+%struct.B = type { i32, %struct.A*, i64 }
+
+define amdgpu_kernel void @test_preload_hint_kernel_struct(i32 %0, %struct.B %1, i32 %2) {
+; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_hint_kernel_struct
+; NO-PRELOAD-SAME: (i32 [[TMP0:%.*]], [[STRUCT_B:%.*]] [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR4]] {
+; NO-PRELOAD-NEXT:    ret void
+;
+; PRELOAD-1-LABEL: define {{[^@]+}}@test_preload_hint_kernel_struct
+; PRELOAD-1-SAME: (i32 inreg [[TMP0:%.*]], [[STRUCT_B:%.*]] [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR4]] {
+; PRELOAD-1-NEXT:    ret void
+;
+; PRELOAD-3-LABEL: define {{[^@]+}}@test_preload_hint_kernel_struct
+; PRELOAD-3-SAME: (i32 inreg [[TMP0:%.*]], [[STRUCT_B:%.*]] [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR4]] {
+; PRELOAD-3-NEXT:    ret void
+;
+; PRELOAD-16-LABEL: define {{[^@]+}}@test_preload_hint_kernel_struct
+; PRELOAD-16-SAME: (i32 inreg [[TMP0:%.*]], [[STRUCT_B:%.*]] [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR4]] {
+; PRELOAD-16-NEXT:    ret void
+;
+; PRELOAD-20-LABEL: define {{[^@]+}}@test_preload_hint_kernel_struct
+; PRELOAD-20-SAME: (i32 inreg [[TMP0:%.*]], [[STRUCT_B:%.*]] [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR4]] {
+; PRELOAD-20-NEXT:    ret void
+;
+  ret void
+}
+
 declare void @func(ptr) #0
 declare void @llvm.amdgcn.set.prio(i16)
 
