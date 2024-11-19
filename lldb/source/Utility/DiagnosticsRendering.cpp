@@ -121,10 +121,10 @@ void RenderDiagnosticDetails(Stream &stream,
         continue;
 
       stream << std::string(loc.column - x_pos, ' ') << cursor;
-      ++x_pos;
+      x_pos = loc.column + 1;
       for (unsigned i = 0; i + 1 < loc.length; ++i) {
         stream << underline;
-        ++x_pos;
+        x_pos += 1;
       }
     }
   }
