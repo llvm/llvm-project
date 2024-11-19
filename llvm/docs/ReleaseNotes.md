@@ -325,6 +325,28 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
+* LLDB now now supports inline diagnostics for the expression evaluator and command line parser.
+
+  Old:
+  ```
+  (lldb) p a+b
+  error: <user expression 0>:1:1: use of undeclared identifier 'a'
+      1 | a+b
+        | ^
+  error: <user expression 0>:1:3: use of undeclared identifier 'b'
+      1 | a+b
+        |   ^
+  ```
+
+  New:
+
+  ```
+  (lldb) p a+b
+           ˄ ˄
+           │ ╰─ error: use of undeclared identifier 'b'
+           ╰─ error: use of undeclared identifier 'a'
+  ```
+
 * LLDB can now read the `fpmr` register from AArch64 Linux processes and core
   files.
 
