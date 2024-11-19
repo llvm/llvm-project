@@ -21,7 +21,7 @@ from libomputils import ScriptError, error
 
 class TargetPlatform:
     """Convenience class for handling the target platform for configuration/compilation"""
-    
+
     system_override = None
     """
     Target system name override by the user.
@@ -30,14 +30,14 @@ class TargetPlatform:
 
     def set_system_override(override_system):
         """
-        Set a system override for the target. 
+        Set a system override for the target.
         Please follow the style from https://docs.python.org/3/library/platform.html#platform.system
         """
         TargetPlatform.system_override = override_system
 
     def system():
         """
-        Target System name. 
+        Target System name.
         It follows the conventions from https://docs.python.org/3/library/platform.html#platform.system
         """
         if TargetPlatform.system_override is None:
@@ -390,11 +390,11 @@ def main():
         "--message", metavar="FILE", help="Generate message file named FILE"
     )
     parser.add_argument(
-        "--target-system-override", 
-        metavar="TARGET_SYSTEM_NAME", 
+        "--target-system-override",
+        metavar="TARGET_SYSTEM_NAME",
         help="Target System override.\n"
         "By default the target system is the host system\n"
-        "See possible values at https://docs.python.org/3/library/platform.html#platform.system"
+        "See possible values at https://docs.python.org/3/library/platform.html#platform.system",
     )
     parser.add_argument("inputfile")
     commandArgs = parser.parse_args()
