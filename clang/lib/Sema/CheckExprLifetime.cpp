@@ -367,6 +367,8 @@ static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
   if (Callee->getReturnType()->isReferenceType()) {
     if (!Callee->getIdentifier()) {
       auto OO = Callee->getOverloadedOperator();
+      if (!Callee->getParent()->hasAttr<OwnerAttr>())
+        return false;
       return OO == OverloadedOperatorKind::OO_Subscript ||
              OO == OverloadedOperatorKind::OO_Star;
     }
