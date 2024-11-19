@@ -1,5 +1,4 @@
-//===- MapsForPrivatizedSymbols.cpp
-//-----------------------------------------===//
+//===- MapsForPrivatizedSymbols.cpp ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,6 +27,7 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
+
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -124,6 +124,8 @@ class MapsForPrivatizedSymbolsPass
       if (targetOp.getPrivateVars().empty())
         return;
       OperandRange privVars = targetOp.getPrivateVars();
+      llvm::SmallVector<int64_t> privVarMapIdx;
+
       std::optional<ArrayAttr> privSyms = targetOp.getPrivateSyms();
       SmallVector<omp::MapInfoOp, 4> mapInfoOps;
       for (auto [privVar, privSym] : llvm::zip_equal(privVars, *privSyms)) {
@@ -133,17 +135,25 @@ class MapsForPrivatizedSymbolsPass
             SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(
                 targetOp, privatizerName);
         if (!privatizerNeedsMap(privatizer)) {
+          privVarMapIdx.push_back(-1);
           continue;
         }
+
+        privVarMapIdx.push_back(targetOp.getMapVars().size() +
+                                mapInfoOps.size());
+
         builder.setInsertionPoint(targetOp);
         Location loc = targetOp.getLoc();
         omp::MapInfoOp mapInfoOp = createMapInfo(loc, privVar, builder);
         mapInfoOps.push_back(mapInfoOp);
+
         LLVM_DEBUG(llvm::dbgs() << "MapsForPrivatizedSymbolsPass created ->\n");
         LLVM_DEBUG(mapInfoOp.dump());
       }
       if (!mapInfoOps.empty()) {
         mapInfoOpsForTarget.insert({targetOp.getOperation(), mapInfoOps});
+        targetOp.setPrivateMapsAttr(
+            mlir::DenseI64ArrayAttr::get(targetOp.getContext(), privVarMapIdx));
       }
     });
     if (!mapInfoOpsForTarget.empty()) {
