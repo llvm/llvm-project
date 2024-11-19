@@ -1678,7 +1678,7 @@ deleteDeadClonedBlocks(Loop &L, ArrayRef<BasicBlock *> ExitBlocks,
       if (BasicBlock *ClonedBB = cast_or_null<BasicBlock>(VMap->lookup(BB)))
         if (!DT.isReachableFromEntry(ClonedBB)) {
           for (BasicBlock *SuccBB : successors(ClonedBB))
-            SuccBB->removePredecessor(ClonedBB);
+            SuccBB->removePredecessor(ClonedBB, /*KeepOneInputPHIs*/ true);
           DeadBlocks.push_back(ClonedBB);
         }
 
