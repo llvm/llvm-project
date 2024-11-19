@@ -1,4 +1,5 @@
-//===- unittests/IR/DroppedVariableStatsIRTest.cpp ------------------------===//
+//===- unittests/IR/DroppedVariableStatsTest.cpp - TimePassesHandler tests
+//----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -43,7 +44,7 @@ namespace {
 // This test ensures that if a #dbg_value and an instruction that exists in the
 // same scope as that #dbg_value are both deleted as a result of an optimization
 // pass, debug information is considered not dropped.
-TEST(DroppedVariableStatsIR, BothDeleted) {
+TEST(DroppedVariableStats, BothDeleted) {
   PassInstrumentationCallbacks PIC;
   PassInstrumentation PI(&PIC);
 
@@ -78,8 +79,9 @@ TEST(DroppedVariableStatsIR, BothDeleted) {
   std::unique_ptr<llvm::Module> M = parseIR(C, IR);
   ASSERT_TRUE(M);
 
-  DroppedVariableStatsIR Stats(true);
-  Stats.runBeforePass(llvm::Any(const_cast<const llvm::Module *>(M.get())));
+  DroppedVariableStats Stats(true);
+  Stats.runBeforePass("Test",
+                      llvm::Any(const_cast<const llvm::Module *>(M.get())));
 
   // This loop simulates an IR pass that drops debug information.
   for (auto &F : *M) {
@@ -90,15 +92,16 @@ TEST(DroppedVariableStatsIR, BothDeleted) {
     }
     break;
   }
+  PreservedAnalyses PA;
   Stats.runAfterPass("Test",
-                     llvm::Any(const_cast<const llvm::Module *>(M.get())));
+                     llvm::Any(const_cast<const llvm::Module *>(M.get())), PA);
   ASSERT_EQ(Stats.getPassDroppedVariables(), false);
 }
 
 // This test ensures that if a #dbg_value is dropped after an optimization pass,
 // but an instruction that shares the same scope as the #dbg_value still exists,
 // debug information is conisdered dropped.
-TEST(DroppedVariableStatsIR, DbgValLost) {
+TEST(DroppedVariableStats, DbgValLost) {
   PassInstrumentationCallbacks PIC;
   PassInstrumentation PI(&PIC);
 
@@ -133,8 +136,9 @@ TEST(DroppedVariableStatsIR, DbgValLost) {
   std::unique_ptr<llvm::Module> M = parseIR(C, IR);
   ASSERT_TRUE(M);
 
-  DroppedVariableStatsIR Stats(true);
-  Stats.runBeforePass(llvm::Any(const_cast<const llvm::Module *>(M.get())));
+  DroppedVariableStats Stats(true);
+  Stats.runBeforePass("Test",
+                      llvm::Any(const_cast<const llvm::Module *>(M.get())));
 
   // This loop simulates an IR pass that drops debug information.
   for (auto &F : *M) {
@@ -144,15 +148,16 @@ TEST(DroppedVariableStatsIR, DbgValLost) {
     }
     break;
   }
+  PreservedAnalyses PA;
   Stats.runAfterPass("Test",
-                     llvm::Any(const_cast<const llvm::Module *>(M.get())));
+                     llvm::Any(const_cast<const llvm::Module *>(M.get())), PA);
   ASSERT_EQ(Stats.getPassDroppedVariables(), true);
 }
 
 // This test ensures that if a #dbg_value is dropped after an optimization pass,
 // but an instruction that has an unrelated scope as the #dbg_value still
 // exists, debug information is conisdered not dropped.
-TEST(DroppedVariableStatsIR, UnrelatedScopes) {
+TEST(DroppedVariableStats, UnrelatedScopes) {
   PassInstrumentationCallbacks PIC;
   PassInstrumentation PI(&PIC);
 
@@ -188,8 +193,9 @@ TEST(DroppedVariableStatsIR, UnrelatedScopes) {
   std::unique_ptr<llvm::Module> M = parseIR(C, IR);
   ASSERT_TRUE(M);
 
-  DroppedVariableStatsIR Stats(true);
-  Stats.runBeforePass(llvm::Any(const_cast<const llvm::Module *>(M.get())));
+  DroppedVariableStats Stats(true);
+  Stats.runBeforePass("Test",
+                      llvm::Any(const_cast<const llvm::Module *>(M.get())));
 
   // This loop simulates an IR pass that drops debug information.
   for (auto &F : *M) {
@@ -199,15 +205,16 @@ TEST(DroppedVariableStatsIR, UnrelatedScopes) {
     }
     break;
   }
+  PreservedAnalyses PA;
   Stats.runAfterPass("Test",
-                     llvm::Any(const_cast<const llvm::Module *>(M.get())));
+                     llvm::Any(const_cast<const llvm::Module *>(M.get())), PA);
   ASSERT_EQ(Stats.getPassDroppedVariables(), false);
 }
 
 // This test ensures that if a #dbg_value is dropped after an optimization pass,
 // but an instruction that has a scope which is a child of the #dbg_value scope
 // still exists, debug information is conisdered dropped.
-TEST(DroppedVariableStatsIR, ChildScopes) {
+TEST(DroppedVariableStats, ChildScopes) {
   PassInstrumentationCallbacks PIC;
   PassInstrumentation PI(&PIC);
 
@@ -243,8 +250,9 @@ TEST(DroppedVariableStatsIR, ChildScopes) {
   std::unique_ptr<llvm::Module> M = parseIR(C, IR);
   ASSERT_TRUE(M);
 
-  DroppedVariableStatsIR Stats(true);
-  Stats.runBeforePass(llvm::Any(const_cast<const llvm::Module *>(M.get())));
+  DroppedVariableStats Stats(true);
+  Stats.runBeforePass("Test",
+                      llvm::Any(const_cast<const llvm::Module *>(M.get())));
 
   // This loop simulates an IR pass that drops debug information.
   for (auto &F : *M) {
@@ -254,8 +262,9 @@ TEST(DroppedVariableStatsIR, ChildScopes) {
     }
     break;
   }
+  PreservedAnalyses PA;
   Stats.runAfterPass("Test",
-                     llvm::Any(const_cast<const llvm::Module *>(M.get())));
+                     llvm::Any(const_cast<const llvm::Module *>(M.get())), PA);
   ASSERT_EQ(Stats.getPassDroppedVariables(), true);
 }
 
@@ -263,7 +272,7 @@ TEST(DroppedVariableStatsIR, ChildScopes) {
 // but an instruction that has a scope which is a child of the #dbg_value scope
 // still exists, and the #dbg_value is inlined at another location, debug
 // information is conisdered not dropped.
-TEST(DroppedVariableStatsIR, InlinedAt) {
+TEST(DroppedVariableStats, InlinedAt) {
   PassInstrumentationCallbacks PIC;
   PassInstrumentation PI(&PIC);
 
@@ -299,8 +308,9 @@ TEST(DroppedVariableStatsIR, InlinedAt) {
   std::unique_ptr<llvm::Module> M = parseIR(C, IR);
   ASSERT_TRUE(M);
 
-  DroppedVariableStatsIR Stats(true);
-  Stats.runBeforePass(llvm::Any(const_cast<const llvm::Module *>(M.get())));
+  DroppedVariableStats Stats(true);
+  Stats.runBeforePass("Test",
+                      llvm::Any(const_cast<const llvm::Module *>(M.get())));
 
   // This loop simulates an IR pass that drops debug information.
   for (auto &F : *M) {
@@ -310,8 +320,9 @@ TEST(DroppedVariableStatsIR, InlinedAt) {
     }
     break;
   }
+  PreservedAnalyses PA;
   Stats.runAfterPass("Test",
-                     llvm::Any(const_cast<const llvm::Module *>(M.get())));
+                     llvm::Any(const_cast<const llvm::Module *>(M.get())), PA);
   ASSERT_EQ(Stats.getPassDroppedVariables(), false);
 }
 
@@ -319,7 +330,7 @@ TEST(DroppedVariableStatsIR, InlinedAt) {
 // but an instruction that has a scope which is a child of the #dbg_value scope
 // still exists, and the #dbg_value and the instruction are inlined at another
 // location, debug information is conisdered dropped.
-TEST(DroppedVariableStatsIR, InlinedAtShared) {
+TEST(DroppedVariableStats, InlinedAtShared) {
   PassInstrumentationCallbacks PIC;
   PassInstrumentation PI(&PIC);
 
@@ -355,8 +366,9 @@ TEST(DroppedVariableStatsIR, InlinedAtShared) {
   std::unique_ptr<llvm::Module> M = parseIR(C, IR);
   ASSERT_TRUE(M);
 
-  DroppedVariableStatsIR Stats(true);
-  Stats.runBeforePass(llvm::Any(const_cast<const llvm::Module *>(M.get())));
+  DroppedVariableStats Stats(true);
+  Stats.runBeforePass("Test",
+                      llvm::Any(const_cast<const llvm::Module *>(M.get())));
 
   // This loop simulates an IR pass that drops debug information.
   for (auto &F : *M) {
@@ -366,8 +378,9 @@ TEST(DroppedVariableStatsIR, InlinedAtShared) {
     }
     break;
   }
+  PreservedAnalyses PA;
   Stats.runAfterPass("Test",
-                     llvm::Any(const_cast<const llvm::Module *>(M.get())));
+                     llvm::Any(const_cast<const llvm::Module *>(M.get())), PA);
   ASSERT_EQ(Stats.getPassDroppedVariables(), true);
 }
 
@@ -375,7 +388,7 @@ TEST(DroppedVariableStatsIR, InlinedAtShared) {
 // but an instruction that has a scope which is a child of the #dbg_value scope
 // still exists, and the instruction is inlined at a location that is the
 // #dbg_value's inlined at location, debug information is conisdered dropped.
-TEST(DroppedVariableStatsIR, InlinedAtChild) {
+TEST(DroppedVariableStats, InlinedAtChild) {
   PassInstrumentationCallbacks PIC;
   PassInstrumentation PI(&PIC);
 
@@ -412,8 +425,9 @@ TEST(DroppedVariableStatsIR, InlinedAtChild) {
   std::unique_ptr<llvm::Module> M = parseIR(C, IR);
   ASSERT_TRUE(M);
 
-  DroppedVariableStatsIR Stats(true);
-  Stats.runBeforePass(llvm::Any(const_cast<const llvm::Module *>(M.get())));
+  DroppedVariableStats Stats(true);
+  Stats.runBeforePass("Test",
+                      llvm::Any(const_cast<const llvm::Module *>(M.get())));
 
   // This loop simulates an IR pass that drops debug information.
   for (auto &F : *M) {
@@ -423,8 +437,9 @@ TEST(DroppedVariableStatsIR, InlinedAtChild) {
     }
     break;
   }
+  PreservedAnalyses PA;
   Stats.runAfterPass("Test",
-                     llvm::Any(const_cast<const llvm::Module *>(M.get())));
+                     llvm::Any(const_cast<const llvm::Module *>(M.get())), PA);
   ASSERT_EQ(Stats.getPassDroppedVariables(), true);
 }
 
