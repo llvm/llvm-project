@@ -248,7 +248,7 @@ public:
   {
     if (__n > 0) {
       _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(ranges::distance(__current_, __end_) > __stride_ * (__n - 1),
-                                   "Advancing the iterator beyond the end is not allowed.");
+                                          "Advancing the iterator beyond the end is not allowed.");
       ranges::advance(__current_, __stride_ * (__n - 1));
       __missing_ = ranges::advance(__current_, __stride_, __end_);
 
