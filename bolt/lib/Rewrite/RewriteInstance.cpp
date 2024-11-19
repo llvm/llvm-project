@@ -4377,6 +4377,7 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
     BinarySection *BinSec = BC->getSectionForSectionRef(SecRef);
     assert(BinSec && "Matching BinarySection should exist.");
 
+    // Exclude anonymous sections.
     if (BinSec->isAnonymous())
       continue;
 
