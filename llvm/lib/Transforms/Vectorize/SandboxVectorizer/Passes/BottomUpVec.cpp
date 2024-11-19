@@ -179,6 +179,12 @@ void BottomUpVec::tryEraseDeadInstrs() {
   DeadInstrCandidates.clear();
 }
 
+Value *BottomUpVec::createShuffle(Value *VecOp, const ShuffleMask &Mask) {
+  BasicBlock::iterator WhereIt = getInsertPointAfterInstrs({VecOp});
+  return ShuffleVectorInst::create(VecOp, VecOp, Mask, WhereIt,
+                                   VecOp->getContext(), "VShuf");
+}
+
 Value *BottomUpVec::createPack(ArrayRef<Value *> ToPack) {
   BasicBlock::iterator WhereIt = getInsertPointAfterInstrs(ToPack);
 
@@ -293,6 +299,13 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl, unsigned Depth) {
   }
   case LegalityResultID::DiamondReuse: {
     NewVec = cast<DiamondReuse>(LegalityRes).getVector();
+    break;
+  }
+  case LegalityResultID::DiamondReuseWithShuffle: {
+    auto *VecOp = cast<DiamondReuseWithShuffle>(LegalityRes).getVector();
+    const ShuffleMask &Mask =
+        cast<DiamondReuseWithShuffle>(LegalityRes).getMask();
+    NewVec = createShuffle(VecOp, Mask);
     break;
   }
   case LegalityResultID::Pack: {
