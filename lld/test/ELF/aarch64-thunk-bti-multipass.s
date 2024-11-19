@@ -1,8 +1,8 @@
 // REQUIRES: aarch64
 // RUN: rm -rf %t && split-file %s %t && cd %t
 // RUN: llvm-mc -filetype=obj -triple=aarch64 asm -o a.o
-// RUN: ld.lld --script=lds a.o -o out.exe
-// RUN: llvm-objdump -d --no-show-raw-insn out.exe | FileCheck %s
+// RUN: ld.lld --script=lds a.o -o out
+// RUN: llvm-objdump -d --no-show-raw-insn out | FileCheck %s
 
 /// Test that a thunk that at creation time does not need to use a BTI
 /// compatible landing pad, but due to other thunk insertion ends up
@@ -29,8 +29,9 @@
 _start:
 /// Call that requires a thunk.
  bl fn1
-/// padding so that we require thunks that can be placed after this section.
-/// The thunks are close enough to the target to be short.
+/// padding so that the thunk for fn1 is placed after this section is
+/// sufficiently close to the target to be within short range, but only
+/// just so that a small displacement will mean a long thunk is needed.
  .space 0x1000
 /// Thunk for call to fn1 will be placed here. Initially it is in short Thunk
 /// range of fn1, but due to a thunk added after a later section it won't be
