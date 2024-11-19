@@ -1911,7 +1911,6 @@ SwiftASTContext *TypeSystemSwiftTypeRefForExpressions::GetSwiftASTContext(
 SwiftASTContext *TypeSystemSwiftTypeRef::GetSwiftASTContextOrNull(
     const SymbolContext &sc) const {
   std::lock_guard<std::mutex> guard(m_swift_ast_context_lock);
-
   const char *key = nullptr;
   auto it = m_swift_ast_context_map.find(key);
   if (it != m_swift_ast_context_map.end())
@@ -1921,9 +1920,9 @@ SwiftASTContext *TypeSystemSwiftTypeRef::GetSwiftASTContextOrNull(
 
 SwiftASTContext *TypeSystemSwiftTypeRefForExpressions::GetSwiftASTContextOrNull(
     const SymbolContext &sc) const {
-  std::lock_guard<std::mutex> guard(m_swift_ast_context_lock);
-
   const char *key = DeriveKeyFor(sc);
+
+  std::lock_guard<std::mutex> guard(m_swift_ast_context_lock);
   auto it = m_swift_ast_context_map.find(key);
   if (it != m_swift_ast_context_map.end())
     return llvm::cast_or_null<SwiftASTContext>(it->second.typesystem.get());
