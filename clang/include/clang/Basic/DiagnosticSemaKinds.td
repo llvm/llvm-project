@@ -12366,7 +12366,7 @@ def err_preserve_enum_value_not_const: Error<
   "__builtin_preserve_enum_value argument %0 not a constant">;
 
 def err_bit_cast_non_trivially_copyable : Error<
-  "__builtin_bit_cast %select{source|destination}0 type must be trivially copyable">;
+  "'__builtin_bit_cast' %select{source|destination}0 type must be trivially copyable">;
 def err_bit_cast_type_size_mismatch : Error<
   "size of '__builtin_bit_cast' source type %0 does not match destination type %1 (%2 vs %3 bytes)">;
 
