@@ -49,7 +49,7 @@ template <class ELFT> class Writer {
 public:
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
-  Writer(Ctx &ctx) : ctx(ctx), buffer(errorHandler().outputBuffer) {}
+  Writer(Ctx &ctx) : ctx(ctx), buffer(ctx.e.outputBuffer) {}
 
   void run();
 
@@ -213,7 +213,7 @@ void elf::addReservedSymbols(Ctx &ctx) {
 
     s->resolve(ctx, Defined{ctx, ctx.internalFile, StringRef(), STB_GLOBAL,
                             STV_HIDDEN, STT_NOTYPE, gotOff, /*size=*/0,
-                            ctx.out.elfHeader});
+                            ctx.out.elfHeader.get()});
     ctx.sym.globalOffsetTable = cast<Defined>(s);
   }
 
@@ -221,24 +221,27 @@ void elf::addReservedSymbols(Ctx &ctx) {
   // this symbol unconditionally even when using a linker script, which
   // differs from the behavior implemented by GNU linker which only define
   // this symbol if ELF headers are in the memory mapped segment.
-  addOptionalRegular(ctx, "__ehdr_start", ctx.out.elfHeader, 0, STV_HIDDEN);
+  addOptionalRegular(ctx, "__ehdr_start", ctx.out.elfHeader.get(), 0,
+                     STV_HIDDEN);
 
   // __executable_start is not documented, but the expectation of at
   // least the Android libc is that it points to the ELF header.
-  addOptionalRegular(ctx, "__executable_start", ctx.out.elfHeader, 0,
+  addOptionalRegular(ctx, "__executable_start", ctx.out.elfHeader.get(), 0,
                      STV_HIDDEN);
 
   // __dso_handle symbol is passed to cxa_finalize as a marker to identify
   // each DSO. The address of the symbol doesn't matter as long as they are
   // different in different DSOs, so we chose the start address of the DSO.
-  addOptionalRegular(ctx, "__dso_handle", ctx.out.elfHeader, 0, STV_HIDDEN);
+  addOptionalRegular(ctx, "__dso_handle", ctx.out.elfHeader.get(), 0,
+                     STV_HIDDEN);
 
   // If linker script do layout we do not need to create any standard symbols.
   if (ctx.script->hasSectionsCommand)
     return;
 
   auto add = [&](StringRef s, int64_t pos) {
-    return addOptionalRegular(ctx, s, ctx.out.elfHeader, pos, STV_DEFAULT);
+    return addOptionalRegular(ctx, s, ctx.out.elfHeader.get(), pos,
+                              STV_DEFAULT);
   };
 
   ctx.sym.bss = add("__bss_start", 0);
@@ -342,7 +345,7 @@ template <class ELFT> void Writer<ELFT>::run() {
 
   // Handle --print-memory-usage option.
   if (ctx.arg.printMemoryUsage)
-    ctx.script->printMemoryUsage(lld::outs());
+    ctx.script->printMemoryUsage(ctx.e.outs());
 
   if (ctx.arg.checkSections)
     checkSections();
@@ -815,10 +818,10 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
   // .rela.dyn will be present in the output.
   std::string name = ctx.arg.isRela ? "__rela_iplt_start" : "__rel_iplt_start";
   ctx.sym.relaIpltStart =
-      addOptionalRegular(ctx, name, ctx.out.elfHeader, 0, STV_HIDDEN);
+      addOptionalRegular(ctx, name, ctx.out.elfHeader.get(), 0, STV_HIDDEN);
   name.replace(name.size() - 5, 5, "end");
   ctx.sym.relaIpltEnd =
-      addOptionalRegular(ctx, name, ctx.out.elfHeader, 0, STV_HIDDEN);
+      addOptionalRegular(ctx, name, ctx.out.elfHeader.get(), 0, STV_HIDDEN);
 }
 
 // This function generates assignments for predefined symbols (e.g. _end or
@@ -1751,7 +1754,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       if (!ctx.arg.shared) {
         OutputSection *sec = findSection(ctx, ".sdata");
         addOptionalRegular(ctx, "__global_pointer$",
-                           sec ? sec : ctx.out.elfHeader, 0x800, STV_DEFAULT);
+                           sec ? sec : ctx.out.elfHeader.get(), 0x800,
+                           STV_DEFAULT);
         // Set riscvGlobalPointer to be used by the optional global pointer
         // relaxation.
         if (ctx.arg.relaxGP) {
@@ -1822,10 +1826,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       ctx.in.iplt->addSymbols();
 
     if (ctx.arg.unresolvedSymbolsInShlib != UnresolvedPolicy::Ignore) {
-      auto diagnose =
-          ctx.arg.unresolvedSymbolsInShlib == UnresolvedPolicy::ReportError
-              ? errorOrWarn
-              : warn;
+      auto diag =
+          ctx.arg.unresolvedSymbolsInShlib == UnresolvedPolicy::ReportError &&
+                  !ctx.arg.noinhibitExec
+              ? DiagLevel::Err
+              : DiagLevel::Warn;
       // Error on undefined symbols in a shared object, if all of its DT_NEEDED
       // entries are seen. These cases would otherwise lead to runtime errors
       // reported by the dynamic linker.
@@ -1850,14 +1855,14 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
           if (sym->dsoDefined)
             continue;
           if (sym->isUndefined() && !sym->isWeak()) {
-            diagnose("undefined reference: " + toString(*sym) +
-                     "\n>>> referenced by " + toString(file) +
-                     " (disallowed by --no-allow-shlib-undefined)");
+            ELFSyncStream(ctx, diag)
+                << "undefined reference: " << sym << "\n>>> referenced by "
+                << file << " (disallowed by --no-allow-shlib-undefined)";
           } else if (sym->isDefined() &&
                      sym->computeBinding(ctx) == STB_LOCAL) {
-            diagnose("non-exported symbol '" + toString(*sym) + "' in '" +
-                     toString(sym->file) + "' is referenced by DSO '" +
-                     toString(file) + "'");
+            ELFSyncStream(ctx, diag)
+                << "non-exported symbol '" << sym << "' in '" << sym->file
+                << "' is referenced by DSO '" << file << "'";
           }
         }
       }
@@ -2090,7 +2095,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   if (ctx.arg.emachine == EM_ARM && !ctx.arg.isLE && ctx.arg.armBe8) {
     addArmInputSectionMappingSymbols(ctx);
-    sortArmMappingSymbols();
+    sortArmMappingSymbols(ctx);
   }
 }
 
@@ -2127,8 +2132,8 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
       if (startSym || stopSym)
         os->usedInExpression = true;
     } else {
-      addOptionalRegular(ctx, start, ctx.out.elfHeader, 0);
-      addOptionalRegular(ctx, end, ctx.out.elfHeader, 0);
+      addOptionalRegular(ctx, start, ctx.out.elfHeader.get(), 0);
+      addOptionalRegular(ctx, end, ctx.out.elfHeader.get(), 0);
     }
   };
 
@@ -2152,11 +2157,11 @@ void Writer<ELFT>::addStartStopSymbols(OutputSection &osec) {
   StringRef s = osec.name;
   if (!isValidCIdentifier(s))
     return;
-  Defined *startSym =
-      addOptionalRegular(ctx, saver().save("__start_" + s), &osec, 0,
-                         ctx.arg.zStartStopVisibility);
-  Defined *stopSym = addOptionalRegular(ctx, saver().save("__stop_" + s), &osec,
-                                        -1, ctx.arg.zStartStopVisibility);
+  StringSaver &ss = ctx.saver;
+  Defined *startSym = addOptionalRegular(ctx, ss.save("__start_" + s), &osec, 0,
+                                         ctx.arg.zStartStopVisibility);
+  Defined *stopSym = addOptionalRegular(ctx, ss.save("__stop_" + s), &osec, -1,
+                                        ctx.arg.zStartStopVisibility);
   if (startSym || stopSym)
     osec.usedInExpression = true;
 }
@@ -2205,7 +2210,7 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
     // The first phdr entry is PT_PHDR which describes the program header
     // itself.
     if (isMain)
-      addHdr(PT_PHDR, PF_R)->add(ctx.out.programHeaders);
+      addHdr(PT_PHDR, PF_R)->add(ctx.out.programHeaders.get());
     else
       addHdr(PT_PHDR, PF_R)->add(part.programHeaders->getParent());
 
@@ -2218,8 +2223,8 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
     // need to be added here.
     if (isMain) {
       load = addHdr(PT_LOAD, flags);
-      load->add(ctx.out.elfHeader);
-      load->add(ctx.out.programHeaders);
+      load->add(ctx.out.elfHeader.get());
+      load->add(ctx.out.programHeaders.get());
     }
   }
 
@@ -2291,7 +2296,7 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
         load && !sec->lmaExpr && sec->lmaRegion == load->firstSec->lmaRegion;
     if (load && sec != relroEnd &&
         sec->memRegion == load->firstSec->memRegion &&
-        (sameLMARegion || load->lastSec == ctx.out.programHeaders) &&
+        (sameLMARegion || load->lastSec == ctx.out.programHeaders.get()) &&
         (ctx.script->hasSectionsCommand || sec->type == SHT_NOBITS ||
          load->lastSec->type != SHT_NOBITS)) {
       load->p_flags |= newFlags;
@@ -2804,7 +2809,7 @@ template <class ELFT> void Writer<ELFT>::openFile() {
 
   if (!bufferOrErr) {
     ErrAlways(ctx) << "failed to open " << ctx.arg.outputFile << ": "
-                   << llvm::toString(bufferOrErr.takeError());
+                   << bufferOrErr.takeError();
     return;
   }
   buffer = std::move(*bufferOrErr);

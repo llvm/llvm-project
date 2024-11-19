@@ -32,7 +32,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ConvertEBCDIC.h"
-#include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;

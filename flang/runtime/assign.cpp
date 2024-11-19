@@ -509,8 +509,8 @@ RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
 
 RT_OFFLOAD_API_GROUP_BEGIN
 
-RT_API_ATTRS void DoFromSourceAssign(
-    Descriptor &alloc, const Descriptor &source, Terminator &terminator) {
+RT_API_ATTRS void DoFromSourceAssign(Descriptor &alloc,
+    const Descriptor &source, Terminator &terminator, MemmoveFct memmoveFct) {
   if (alloc.rank() > 0 && source.rank() == 0) {
     // The value of each element of allocate object becomes the value of source.
     DescriptorAddendum *allocAddendum{alloc.Addendum()};
@@ -523,17 +523,17 @@ RT_API_ATTRS void DoFromSourceAssign(
            alloc.IncrementSubscripts(allocAt)) {
         Descriptor allocElement{*Descriptor::Create(*allocDerived,
             reinterpret_cast<void *>(alloc.Element<char>(allocAt)), 0)};
-        Assign(allocElement, source, terminator, NoAssignFlags);
+        Assign(allocElement, source, terminator, NoAssignFlags, memmoveFct);
       }
     } else { // intrinsic type
       for (std::size_t n{alloc.Elements()}; n-- > 0;
            alloc.IncrementSubscripts(allocAt)) {
-        Fortran::runtime::memmove(alloc.Element<char>(allocAt),
-            source.raw().base_addr, alloc.ElementBytes());
+        memmoveFct(alloc.Element<char>(allocAt), source.raw().base_addr,
+            alloc.ElementBytes());
       }
     }
   } else {
-    Assign(alloc, source, terminator, NoAssignFlags);
+    Assign(alloc, source, terminator, NoAssignFlags, memmoveFct);
   }
 }
 

@@ -66,6 +66,13 @@ quentin.colombet@gmail.com (email), [qcolombet](https://github.com/qcolombet) (G
 Florian Hahn \
 flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub)
 
+#### SandboxVectorizer
+
+Vasileios Porpodas \
+vporpodas@google.com (email), [vporpo](https://github.com/vporpo) (GitHub)
+Jorge Gorbe Moya \
+jgorbe@google.com (email), [slackito](https://github.com/slackito) (GitHub)
+
 #### ScalarEvolution, IndVarSimplify
 
 Philip Reames \
@@ -92,6 +99,11 @@ kcc@google.com (email), [kcc](https://github.com/kcc) (GitHub)
 
 Evgeniy Stepanov \
 eugenis@google.com (email), [eugenis](https://github.com/eugenis) (GitHub)
+
+#### NumericalStabilitySanitizer
+
+Alexander Shaposhnikov \
+ashaposhnikov@google.com (email), [alexander-shaposhnikov](https://github.com/alexander-shaposhnikov) (GitHub)
 
 #### RealtimeSanitizer
 
@@ -313,6 +325,13 @@ peter@pcc.me.uk (email), [pcc](https://github.com/pcc) (GitHub)
 
 Lang Hames \
 lhames@gmail.com (email), [lhames](https://github.com/lhames) (GitHub)
+
+#### SandboxIR
+
+Vasileios Porpodas \
+vporpodas@google.com (email), [vporpo](https://github.com/vporpo) (GitHub)
+Jorge Gorbe Moya \
+jgorbe@google.com (email), [slackito](https://github.com/slackito) (GitHub)
 
 #### TableGen
 

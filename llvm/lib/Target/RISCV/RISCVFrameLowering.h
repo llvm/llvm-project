@@ -93,6 +93,9 @@ private:
                                    bool HasFP) const;
   void emitCalleeSavedRVVEpilogCFI(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MI) const;
+  template <typename Emitter>
+  void emitCFIForCSI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                     const SmallVector<CalleeSavedInfo, 8> &CSI) const;
   void deallocateStack(MachineFunction &MF, MachineBasicBlock &MBB,
                        MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                        uint64_t &StackSize, int64_t CFAOffset) const;
