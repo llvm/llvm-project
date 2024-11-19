@@ -2,9 +2,7 @@
 
 #include "Inputs/lifetime-analysis.h"
 
-struct X {
-  const int *x;
-};
+struct X {} x;
 X x;
 
 // ****************************************************************************

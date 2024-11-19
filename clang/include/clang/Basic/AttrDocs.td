@@ -4008,6 +4008,22 @@ The attribute supports specifying more than one capturing entities:
     s2.insert(a);
   }
 
+Limitation: The capturing entity ``X`` is not used by the analysis and is
+used for documentation purposes only. This is because the analysis is
+statement-local and only detects use of a temporary as an argument to the
+annotated parameter.
+
+.. code-block:: c++
+  
+  void addToSet(std::string_view a [[clang::lifetime_capture_by(s)]], std::set<std::string_view>& s);
+  void use() {
+    std::set<std::string_view> s;
+    if (foo()) {
+      std::string str;
+      addToSet(str, s); // Not detected.
+    }
+  }
+
 .. _`lifetimebound`: https://clang.llvm.org/docs/AttributeReference.html#lifetimebound
   }];
 }
