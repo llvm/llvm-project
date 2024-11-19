@@ -74,7 +74,7 @@ public:
   /// releaseFile - Take ownership of the file away from the FileRemover so it
   /// will not be removed when the object is destroyed.
   void releaseFile() { DeleteIt = false; }
-  };
+};
 
   /// FilePermssionsApplier helps to copy permissions from an input file to
   /// an output one. It memorizes the status of the input file and can apply

@@ -230,11 +230,11 @@ class LLVM_ABI file_status : public basic_file_status {
   dev_t fs_st_dev = 0;
   nlink_t fs_st_nlinks = 0;
   ino_t fs_st_ino = 0;
-#elif defined (_WIN32)
+#elif defined(_WIN32)
   uint32_t NumLinks = 0;
   uint32_t VolumeSerialNumber = 0;
   uint64_t PathHash = 0;
-  #endif
+#endif
 
 public:
   file_status() = default;
