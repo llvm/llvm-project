@@ -18,16 +18,12 @@
 .type tls0,@object
 .section .tbss,"awT",@nobits
 .globl tls0
-.align 4
 tls0:
 .long 0
-.size tls0, 4
 .type  tls1,@object
 .globl tls1
-.align 4
 tls1:
 .long 0
-.size tls1, 4
 .section .text
 .globl _start
 _start:
@@ -38,3 +34,4 @@ _start:
     addq tls0@GOTTPOFF(%rip), %r16
     addq tls0@GOTTPOFF(%rip), %r28
     addq tls1@GOTTPOFF(%rip), %r16
+
