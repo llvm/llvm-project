@@ -646,10 +646,11 @@ public:
   matchAndRewrite(LvlOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     std::optional<int64_t> lvl = op.getConstantLvlIndex();
-    if (!lvl || !getSparseTensorEncoding(adaptor.getSource().getType()))
+    RankedTensorType srcType = op.getSource().getType();
+    if (!lvl || !getSparseTensorEncoding(srcType))
       return failure();
 
-    auto desc = getDescriptorFromTensorTuple(adaptor.getSource());
+    auto desc = getDescriptorFromTensorTuple(adaptor.getSource(), srcType);
     auto sz = desc.getLvlSize(rewriter, op.getLoc(), *lvl);
 
     rewriter.replaceOp(op, sz);
@@ -675,8 +676,9 @@ struct SparseReorderCOOConverter : public OpConversionPattern<ReorderCOOOp> {
     assert(dstStt.hasSameDimToLvl(srcStt));
 
     // We don't need a mutable descriptor here as we perform sorting in-place.
-    auto nnz = genValMemSize(rewriter, op.getLoc(), adaptor.getInputCoo());
-    auto desc = getDescriptorFromTensorTuple(adaptor.getInputCoo());
+    auto desc = getDescriptorFromTensorTuple(adaptor.getInputCoo(),
+                                             op.getInputCoo().getType());
+    auto nnz = desc.getValMemSize(rewriter, op.getLoc());
     auto crd = desc.getAOSMemRef();
     auto val = desc.getValMemRef();
 
@@ -704,7 +706,8 @@ public:
   matchAndRewrite(Op op, typename Op::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Simply lowers to specifer.get <field> operation.
-    auto desc = getDescriptorFromTensorTuple(adaptor.getSlice());
+    auto desc = getDescriptorFromTensorTuple(adaptor.getSlice(),
+                                             op.getSlice().getType());
     auto v = desc.getSpecifierField(rewriter, op.getLoc(), kind,
                                     op.getDim().getZExtValue());
 
@@ -762,7 +765,8 @@ public:
     Location loc = op.getLoc();
     // Deal with copy.
     if (op.getCopy()) {
-      auto desc = getDescriptorFromTensorTuple(adaptor.getCopy());
+      auto desc = getDescriptorFromTensorTuple(
+          adaptor.getCopy(), cast<RankedTensorType>(op.getCopy().getType()));
       SmallVector<Value> fields;
       fields.reserve(desc.getNumFields());
       // Memcpy on memref fields.
@@ -868,7 +872,9 @@ public:
     if (createDeallocs) {
       // Replace the sparse tensor deallocation with field deallocations.
       Location loc = op.getLoc();
-      auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
+      auto desc = getDescriptorFromTensorTuple(
+          adaptor.getTensor(),
+          cast<RankedTensorType>(op.getTensor().getType()));
       for (auto input : desc.getMemRefFields())
         // Deallocate every buffer used to store the sparse tensor handler.
         rewriter.create<memref::DeallocOp>(loc, input);
@@ -889,7 +895,8 @@ public:
   matchAndRewrite(LoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Prepare descriptor.
-    auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
+    auto desc = getDescriptorFromTensorTuple(adaptor.getTensor(),
+                                             op.getTensor().getType());
     // Generate optional insertion finalization code.
     if (op.getHasInserts())
       genEndInsert(rewriter, op.getLoc(), desc);
@@ -909,7 +916,8 @@ public:
     if (!getSparseTensorEncoding(op.getTensor().getType()))
       return failure();
     Location loc = op->getLoc();
-    auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
+    auto desc = getDescriptorFromTensorTuple(adaptor.getTensor(),
+                                             op.getTensor().getType());
     const auto srcType = getSparseTensorType(op.getTensor());
     Type eltType = srcType.getElementType();
     Type boolType = rewriter.getIntegerType(1);
@@ -959,7 +967,8 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
     SmallVector<Value> fields;
-    auto desc = getMutDescriptorFromTensorTuple(adaptor.getTensor(), fields);
+    auto desc = getMutDescriptorFromTensorTuple(adaptor.getTensor(), fields,
+                                                op.getTensor().getType());
     Value values = adaptor.getValues();
     Value filled = adaptor.getFilled();
     Value added = adaptor.getAdded();
@@ -1032,7 +1041,8 @@ public:
     assert(stt.isIdentity() && "Run reinterpret-map before conversion.");
 
     Location loc = op.getLoc();
-    auto desc = getDescriptorFromTensorTuple(adaptor.getDest());
+    auto desc =
+        getDescriptorFromTensorTuple(adaptor.getDest(), op.getDest().getType());
     TypeRange flatSpTensorTps = desc.getFields().getTypes();
     SmallVector<Value> params = llvm::to_vector(desc.getFields());
     params.append(adaptor.getIndices().begin(), adaptor.getIndices().end());
@@ -1059,7 +1069,8 @@ public:
     // of this operation truly observe size, not capacity!
     Location loc = op.getLoc();
     Level lvl = op.getLevel();
-    auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
+    auto desc = getDescriptorFromTensorTuple(adaptor.getTensor(),
+                                             op.getTensor().getType());
     auto mem = desc.getPosMemRef(lvl);
     auto size = desc.getPosMemSize(rewriter, loc, lvl);
     rewriter.replaceOp(op, genSliceToSize(rewriter, loc, mem, size));
@@ -1081,7 +1092,8 @@ public:
     // of this operation truly observe size, not capacity!
     Location loc = op.getLoc();
     Level lvl = op.getLevel();
-    auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
+    auto desc = getDescriptorFromTensorTuple(adaptor.getTensor(),
+                                             op.getTensor().getType());
     auto mem = desc.getCrdMemRefOrView(rewriter, loc, lvl);
     if (lvl < getSparseTensorType(op.getTensor()).getAoSCOOStart()) {
       auto size = desc.getCrdMemSize(rewriter, loc, lvl);
@@ -1106,7 +1118,8 @@ public:
     // of this operation truly observe size, not capacity!
     Location loc = op.getLoc();
     Level lvl = getSparseTensorType(op.getTensor()).getAoSCOOStart();
-    auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
+    auto desc = getDescriptorFromTensorTuple(adaptor.getTensor(),
+                                             op.getTensor().getType());
     auto mem = desc.getAOSMemRef();
     auto size = desc.getCrdMemSize(rewriter, loc, lvl);
     rewriter.replaceOp(op, genSliceToSize(rewriter, loc, mem, size));
@@ -1126,7 +1139,8 @@ public:
     // The view is restricted to the actual size to ensure clients
     // of this operation truly observe size, not capacity!
     Location loc = op.getLoc();
-    auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
+    auto desc = getDescriptorFromTensorTuple(adaptor.getTensor(),
+                                             op.getTensor().getType());
     auto mem = desc.getValMemRef();
     auto size = desc.getValMemSize(rewriter, loc);
     rewriter.replaceOp(op, genSliceToSize(rewriter, loc, mem, size));
@@ -1172,7 +1186,8 @@ public:
     //   else:
     //     dst = memref.copy(src)
     Location loc = op.getLoc();
-    auto srcDesc = getDescriptorFromTensorTuple(adaptor.getSource());
+    auto srcDesc = getDescriptorFromTensorTuple(adaptor.getSource(),
+                                                op.getSource().getType());
     SmallVector<Value> fields;
     foreachFieldAndTypeInSparseTensor(
         SparseTensorType(cast<RankedTensorType>(op.getResult().getType())),
@@ -1236,7 +1251,8 @@ public:
     assert(srcEnc.withoutDimSlices() == dstEnc.withoutDimSlices());
 
     SmallVector<Value> fields;
-    auto desc = getMutDescriptorFromTensorTuple(adaptor.getSource(), fields);
+    auto desc = getMutDescriptorFromTensorTuple(adaptor.getSource(), fields,
+                                                op.getSource().getType());
 
     auto newSpec = rewriter.create<StorageSpecifierInitOp>(
         loc, StorageSpecifierType::get(ctx, dstEnc), desc.getSpecifier());
@@ -1285,8 +1301,9 @@ public:
     // Query memSizes for the actually stored values.
     // FIXME: the nse value computed in this way might be wrong when there is
     // any "loose_compressed" level.
-    rewriter.replaceOp(
-        op, genValMemSize(rewriter, op.getLoc(), adaptor.getTensor()));
+    auto desc = getDescriptorFromTensorTuple(adaptor.getTensor(),
+                                             op.getTensor().getType());
+    rewriter.replaceOp(op, desc.getValMemSize(rewriter, op.getLoc()));
     return success();
   }
 };
@@ -1415,7 +1432,8 @@ struct SparseDisassembleOpConverter
   LogicalResult
   matchAndRewrite(DisassembleOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
+    auto desc = getDescriptorFromTensorTuple(adaptor.getTensor(),
+                                             op.getTensor().getType());
     Location loc = op.getLoc();
     SmallVector<Value> retMem;
     SmallVector<Value> retLen;
