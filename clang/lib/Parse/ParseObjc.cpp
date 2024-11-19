@@ -1554,6 +1554,17 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
                                                     nullptr));
   }
 
+  // Turn ArgInfos into parameters. This must happen after parsing all
+  // parameters for bug compatibility with previous versions of Clang. (For
+  // instance, if a method declares a parameter called "id", that parameter must
+  // not shadow the "id" type.)
+  SmallVector<ParmVarDecl *, 12> ObjCParamInfo;
+  for (auto &ArgInfo : ArgInfos) {
+    ParmVarDecl *Param = Actions.ObjC().ActOnMethodParmDeclaration(
+        getCurScope(), ArgInfo, ObjCParamInfo.size(), MethodDefinition);
+    ObjCParamInfo.push_back(Param);
+  }
+
   // FIXME: Add support for optional parameter list...
   // If attributes exist after the method, parse them.
   MaybeParseAttributes(PAKM_CXX11 | (getLangOpts().ObjC ? PAKM_GNU : 0),
