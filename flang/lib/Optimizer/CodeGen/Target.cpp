@@ -1127,6 +1127,30 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
     }
     return marshal;
   }
+
+  CodeGenSpecifics::Marshalling
+  integerArgumentType(mlir::Location loc,
+                      mlir::IntegerType argTy) const override {
+    if (argTy.getWidth() == 32) {
+      // LA64 LP64D ABI requires unsigned 32 bit integers to be sign extended.
+      // Therefore, Flang also follows it if a function needs to be
+      // interoperable with C.
+      //
+      // Currently, it only adds `signext` attribute to the dummy arguments and
+      // return values in the function signatures, but it does not add the
+      // corresponding attribute to the actual arguments and return values in
+      // `fir.call` instruction. Thanks to LLVM's integration of all these
+      // attributes, the modification is still effective.
+      CodeGenSpecifics::Marshalling marshal;
+      AT::IntegerExtension intExt = AT::IntegerExtension::Sign;
+      marshal.emplace_back(argTy, AT{/*alignment=*/0, /*byval=*/false,
+                                     /*sret=*/false, /*append=*/false,
+                                     /*intExt=*/intExt});
+      return marshal;
+    }
+
+    return GenericTarget::integerArgumentType(loc, argTy);
+  }
 };
 } // namespace
 
