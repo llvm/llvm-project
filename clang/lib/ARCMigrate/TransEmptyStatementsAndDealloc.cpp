@@ -18,9 +18,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Transforms.h"
 #include "Internals.h"
+#include "Transforms.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/SourceManager.h"
 
@@ -143,14 +144,13 @@ public:
   }
 };
 
-class EmptyStatementsRemover :
-                            public RecursiveASTVisitor<EmptyStatementsRemover> {
+class EmptyStatementsRemover : public DynamicRecursiveASTVisitor {
   MigrationPass &Pass;
 
 public:
   EmptyStatementsRemover(MigrationPass &pass) : Pass(pass) { }
 
-  bool TraverseStmtExpr(StmtExpr *E) {
+  bool TraverseStmtExpr(StmtExpr *E) override {
     CompoundStmt *S = E->getSubStmt();
     for (CompoundStmt::body_iterator
            I = S->body_begin(), E = S->body_end(); I != E; ++I) {
@@ -161,7 +161,7 @@ public:
     return true;
   }
 
-  bool VisitCompoundStmt(CompoundStmt *S) {
+  bool VisitCompoundStmt(CompoundStmt *S) override {
     for (auto *I : S->body())
       check(I);
     return true;

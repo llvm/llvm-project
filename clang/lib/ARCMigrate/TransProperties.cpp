@@ -29,8 +29,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Transforms.h"
 #include "Internals.h"
+#include "Transforms.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/SemaDiagnostic.h"
@@ -281,12 +282,12 @@ private:
     return MigrateCtx.addPropertyAttribute(attr, atLoc);
   }
 
-  class PlusOneAssign : public RecursiveASTVisitor<PlusOneAssign> {
+  class PlusOneAssign : public DynamicRecursiveASTVisitor {
     ObjCIvarDecl *Ivar;
   public:
     PlusOneAssign(ObjCIvarDecl *D) : Ivar(D) {}
 
-    bool VisitBinaryOperator(BinaryOperator *E) {
+    bool VisitBinaryOperator(BinaryOperator *E) override {
       if (E->getOpcode() != BO_Assign)
         return true;
 

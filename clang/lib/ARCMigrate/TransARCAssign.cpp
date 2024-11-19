@@ -20,9 +20,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Transforms.h"
 #include "Internals.h"
+#include "Transforms.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Sema/SemaDiagnostic.h"
 
 using namespace clang;
@@ -31,14 +32,14 @@ using namespace trans;
 
 namespace {
 
-class ARCAssignChecker : public RecursiveASTVisitor<ARCAssignChecker> {
+class ARCAssignChecker : public DynamicRecursiveASTVisitor {
   MigrationPass &Pass;
   llvm::DenseSet<VarDecl *> ModifiedVars;
 
 public:
   ARCAssignChecker(MigrationPass &pass) : Pass(pass) { }
 
-  bool VisitBinaryOperator(BinaryOperator *Exp) {
+  bool VisitBinaryOperator(BinaryOperator *Exp) override {
     if (Exp->getType()->isDependentType())
       return true;
 

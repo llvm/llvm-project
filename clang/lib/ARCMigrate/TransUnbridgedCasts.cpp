@@ -39,10 +39,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Transforms.h"
 #include "Internals.h"
+#include "Transforms.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Basic/SourceManager.h"
@@ -56,7 +57,7 @@ using namespace trans;
 
 namespace {
 
-class UnbridgedCastRewriter : public RecursiveASTVisitor<UnbridgedCastRewriter>{
+class UnbridgedCastRewriter : public DynamicRecursiveASTVisitor {
   MigrationPass &Pass;
   IdentifierInfo *SelfII;
   std::unique_ptr<ParentMap> StmtMap;
@@ -77,14 +78,14 @@ public:
     TraverseStmt(body);
   }
 
-  bool TraverseBlockDecl(BlockDecl *D) {
+  bool TraverseBlockDecl(BlockDecl *D) override {
     // ParentMap does not enter into a BlockDecl to record its stmts, so use a
     // new UnbridgedCastRewriter to handle the block.
     UnbridgedCastRewriter(Pass).transformBody(D->getBody(), D);
     return true;
   }
 
-  bool VisitCastExpr(CastExpr *E) {
+  bool VisitCastExpr(CastExpr *E) override {
     if (E->getCastKind() != CK_CPointerToObjCPointerCast &&
         E->getCastKind() != CK_BitCast &&
         E->getCastKind() != CK_AnyPointerToBlockPointerCast)

@@ -10,6 +10,7 @@
 #include "Internals.h"
 #include "clang/ARCMigrate/ARCMT.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Basic/SourceManager.h"
@@ -211,14 +212,17 @@ StringRef trans::getNilString(MigrationPass &Pass) {
 
 namespace {
 
-class ReferenceClear : public RecursiveASTVisitor<ReferenceClear> {
+class ReferenceClear : public DynamicRecursiveASTVisitor {
   ExprSet &Refs;
 public:
   ReferenceClear(ExprSet &refs) : Refs(refs) { }
-  bool VisitDeclRefExpr(DeclRefExpr *E) { Refs.erase(E); return true; }
+  bool VisitDeclRefExpr(DeclRefExpr *E) override {
+    Refs.erase(E);
+    return true;
+  }
 };
 
-class ReferenceCollector : public RecursiveASTVisitor<ReferenceCollector> {
+class ReferenceCollector : public DynamicRecursiveASTVisitor {
   ValueDecl *Dcl;
   ExprSet &Refs;
 
@@ -226,23 +230,22 @@ public:
   ReferenceCollector(ValueDecl *D, ExprSet &refs)
     : Dcl(D), Refs(refs) { }
 
-  bool VisitDeclRefExpr(DeclRefExpr *E) {
+  bool VisitDeclRefExpr(DeclRefExpr *E) override {
     if (E->getDecl() == Dcl)
       Refs.insert(E);
     return true;
   }
 };
 
-class RemovablesCollector : public RecursiveASTVisitor<RemovablesCollector> {
+class RemovablesCollector : public DynamicRecursiveASTVisitor {
   ExprSet &Removables;
 
 public:
-  RemovablesCollector(ExprSet &removables)
-  : Removables(removables) { }
+  RemovablesCollector(ExprSet &removables) : Removables(removables) {
+    ShouldWalkTypesOfTypeLocs = false;
+  }
 
-  bool shouldWalkTypesOfTypeLocs() const { return false; }
-
-  bool TraverseStmtExpr(StmtExpr *E) {
+  bool TraverseStmtExpr(StmtExpr *E) override {
     CompoundStmt *S = E->getSubStmt();
     for (CompoundStmt::body_iterator
         I = S->body_begin(), E = S->body_end(); I != E; ++I) {
@@ -253,29 +256,29 @@ public:
     return true;
   }
 
-  bool VisitCompoundStmt(CompoundStmt *S) {
+  bool VisitCompoundStmt(CompoundStmt *S) override {
     for (auto *I : S->body())
       mark(I);
     return true;
   }
 
-  bool VisitIfStmt(IfStmt *S) {
+  bool VisitIfStmt(IfStmt *S) override {
     mark(S->getThen());
     mark(S->getElse());
     return true;
   }
 
-  bool VisitWhileStmt(WhileStmt *S) {
+  bool VisitWhileStmt(WhileStmt *S) override {
     mark(S->getBody());
     return true;
   }
 
-  bool VisitDoStmt(DoStmt *S) {
+  bool VisitDoStmt(DoStmt *S) override {
     mark(S->getBody());
     return true;
   }
 
-  bool VisitForStmt(ForStmt *S) {
+  bool VisitForStmt(ForStmt *S) override {
     mark(S->getInit());
     mark(S->getInc());
     mark(S->getBody());
@@ -315,26 +318,25 @@ void trans::collectRemovables(Stmt *S, ExprSet &exprs) {
 
 namespace {
 
-class ASTTransform : public RecursiveASTVisitor<ASTTransform> {
+class ASTTransform : public DynamicRecursiveASTVisitor {
   MigrationContext &MigrateCtx;
-  typedef RecursiveASTVisitor<ASTTransform> base;
 
 public:
-  ASTTransform(MigrationContext &MigrateCtx) : MigrateCtx(MigrateCtx) { }
+  ASTTransform(MigrationContext &MigrateCtx) : MigrateCtx(MigrateCtx) {
+    ShouldWalkTypesOfTypeLocs = false;
+  }
 
-  bool shouldWalkTypesOfTypeLocs() const { return false; }
-
-  bool TraverseObjCImplementationDecl(ObjCImplementationDecl *D) {
+  bool TraverseObjCImplementationDecl(ObjCImplementationDecl *D) override {
     ObjCImplementationContext ImplCtx(MigrateCtx, D);
     for (MigrationContext::traverser_iterator
            I = MigrateCtx.traversers_begin(),
            E = MigrateCtx.traversers_end(); I != E; ++I)
       (*I)->traverseObjCImplementation(ImplCtx);
 
-    return base::TraverseObjCImplementationDecl(D);
+    return DynamicRecursiveASTVisitor::TraverseObjCImplementationDecl(D);
   }
 
-  bool TraverseStmt(Stmt *rootS) {
+  bool TraverseStmt(Stmt *rootS) override {
     if (!rootS)
       return true;
 
@@ -347,7 +349,6 @@ public:
     return true;
   }
 };
-
 }
 
 MigrationContext::~MigrationContext() {

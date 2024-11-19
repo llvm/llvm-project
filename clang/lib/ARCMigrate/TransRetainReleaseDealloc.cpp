@@ -16,9 +16,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Transforms.h"
 #include "Internals.h"
+#include "Transforms.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
@@ -31,8 +32,7 @@ using namespace trans;
 
 namespace {
 
-class RetainReleaseDeallocRemover :
-                       public RecursiveASTVisitor<RetainReleaseDeallocRemover> {
+class RetainReleaseDeallocRemover : public DynamicRecursiveASTVisitor {
   Stmt *Body;
   MigrationPass &Pass;
 
@@ -57,7 +57,7 @@ public:
     TraverseStmt(body);
   }
 
-  bool VisitObjCMessageExpr(ObjCMessageExpr *E) {
+  bool VisitObjCMessageExpr(ObjCMessageExpr *E) override {
     switch (E->getMethodFamily()) {
     default:
       if (E->isInstanceMessage() && E->getSelector() == FinalizeSel)
@@ -448,7 +448,6 @@ private:
 
     return false;
   }
-
 };
 
 } // anonymous namespace

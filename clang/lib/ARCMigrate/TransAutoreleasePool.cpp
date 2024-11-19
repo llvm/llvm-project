@@ -26,9 +26,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Transforms.h"
 #include "Internals.h"
+#include "Transforms.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include <map>
@@ -39,7 +40,7 @@ using namespace trans;
 
 namespace {
 
-class ReleaseCollector : public RecursiveASTVisitor<ReleaseCollector> {
+class ReleaseCollector : public DynamicRecursiveASTVisitor {
   Decl *Dcl;
   SmallVectorImpl<ObjCMessageExpr *> &Releases;
 
@@ -47,7 +48,7 @@ public:
   ReleaseCollector(Decl *D, SmallVectorImpl<ObjCMessageExpr *> &releases)
     : Dcl(D), Releases(releases) { }
 
-  bool VisitObjCMessageExpr(ObjCMessageExpr *E) {
+  bool VisitObjCMessageExpr(ObjCMessageExpr *E) override {
     if (!E->isInstanceMessage())
       return true;
     if (E->getMethodFamily() != OMF_release)
@@ -60,13 +61,11 @@ public:
     return true;
   }
 };
-
 }
 
 namespace {
 
-class AutoreleasePoolRewriter
-                         : public RecursiveASTVisitor<AutoreleasePoolRewriter> {
+class AutoreleasePoolRewriter : public DynamicRecursiveASTVisitor {
 public:
   AutoreleasePoolRewriter(MigrationPass &pass)
     : Body(nullptr), Pass(pass) {
@@ -80,7 +79,7 @@ public:
     TraverseStmt(body);
   }
 
-  ~AutoreleasePoolRewriter() {
+  ~AutoreleasePoolRewriter() override {
     SmallVector<VarDecl *, 8> VarsToHandle;
 
     for (std::map<VarDecl *, PoolVarInfo>::iterator
@@ -160,7 +159,7 @@ public:
     }
   }
 
-  bool VisitCompoundStmt(CompoundStmt *S) {
+  bool VisitCompoundStmt(CompoundStmt *S) override {
     SmallVector<PoolScope, 4> Scopes;
 
     for (Stmt::child_iterator
@@ -245,7 +244,7 @@ private:
     }
   };
 
-  class NameReferenceChecker : public RecursiveASTVisitor<NameReferenceChecker>{
+  class NameReferenceChecker : public DynamicRecursiveASTVisitor {
     ASTContext &Ctx;
     SourceRange ScopeRange;
     SourceLocation &referenceLoc, &declarationLoc;
@@ -260,15 +259,15 @@ private:
                                (*scope.End)->getBeginLoc());
     }
 
-    bool VisitDeclRefExpr(DeclRefExpr *E) {
+    bool VisitDeclRefExpr(DeclRefExpr *E) override {
       return checkRef(E->getLocation(), E->getDecl()->getLocation());
     }
 
-    bool VisitTypedefTypeLoc(TypedefTypeLoc TL) {
+    bool VisitTypedefTypeLoc(TypedefTypeLoc TL) override {
       return checkRef(TL.getBeginLoc(), TL.getTypedefNameDecl()->getLocation());
     }
 
-    bool VisitTagTypeLoc(TagTypeLoc TL) {
+    bool VisitTagTypeLoc(TagTypeLoc TL) override {
       return checkRef(TL.getBeginLoc(), TL.getDecl()->getLocation());
     }
 

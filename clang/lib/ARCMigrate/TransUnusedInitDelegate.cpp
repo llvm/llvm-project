@@ -19,9 +19,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Transforms.h"
 #include "Internals.h"
+#include "Transforms.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Sema/SemaDiagnostic.h"
 
 using namespace clang;
@@ -30,7 +31,7 @@ using namespace trans;
 
 namespace {
 
-class UnusedInitRewriter : public RecursiveASTVisitor<UnusedInitRewriter> {
+class UnusedInitRewriter : public DynamicRecursiveASTVisitor {
   Stmt *Body;
   MigrationPass &Pass;
 
@@ -46,7 +47,7 @@ public:
     TraverseStmt(body);
   }
 
-  bool VisitObjCMessageExpr(ObjCMessageExpr *ME) {
+  bool VisitObjCMessageExpr(ObjCMessageExpr *ME) override {
     if (ME->isDelegateInitCall() &&
         isRemovable(ME) &&
         Pass.TA.hasDiagnostic(diag::err_arc_unused_init_message,

@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Transforms.h"
 #include "Internals.h"
+#include "Transforms.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/SemaDiagnostic.h"
@@ -23,26 +24,24 @@ using namespace trans;
 namespace {
 
 /// Collects all the places where GC attributes __strong/__weak occur.
-class GCAttrsCollector : public RecursiveASTVisitor<GCAttrsCollector> {
+class GCAttrsCollector : public DynamicRecursiveASTVisitor {
   MigrationContext &MigrateCtx;
   bool FullyMigratable;
   std::vector<ObjCPropertyDecl *> &AllProps;
 
-  typedef RecursiveASTVisitor<GCAttrsCollector> base;
 public:
   GCAttrsCollector(MigrationContext &ctx,
                    std::vector<ObjCPropertyDecl *> &AllProps)
-    : MigrateCtx(ctx), FullyMigratable(false),
-      AllProps(AllProps) { }
+      : MigrateCtx(ctx), FullyMigratable(false), AllProps(AllProps) {
+    ShouldWalkTypesOfTypeLocs = false;
+  }
 
-  bool shouldWalkTypesOfTypeLocs() const { return false; }
-
-  bool VisitAttributedTypeLoc(AttributedTypeLoc TL) {
+  bool VisitAttributedTypeLoc(AttributedTypeLoc TL) override {
     handleAttr(TL);
     return true;
   }
 
-  bool TraverseDecl(Decl *D) {
+  bool TraverseDecl(Decl *D) override {
     if (!D || D->isImplicit())
       return true;
 
@@ -54,7 +53,7 @@ public:
     } else if (DeclaratorDecl *DD = dyn_cast<DeclaratorDecl>(D)) {
       lookForAttribute(DD, DD->getTypeSourceInfo());
     }
-    return base::TraverseDecl(D);
+    return DynamicRecursiveASTVisitor::TraverseDecl(D);
   }
 
   void lookForAttribute(Decl *D, TypeSourceInfo *TInfo) {
