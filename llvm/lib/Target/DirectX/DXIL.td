@@ -627,7 +627,6 @@ def FirstbitLo : DXILOp<32, unaryBits> {
   let overloads =
       [Overloads<DXIL1_0, [Int16Ty, Int32Ty, Int64Ty]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
-  // TODO: check these
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 

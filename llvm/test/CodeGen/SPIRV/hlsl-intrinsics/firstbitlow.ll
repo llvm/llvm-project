@@ -6,13 +6,13 @@
 ; CHECK-DAG: [[u32_t:%.+]] = OpTypeInt 32 0
 ; CHECK-DAG: [[u32x2_t:%.+]] = OpTypeVector [[u32_t]] 2
 ; CHECK-DAG: [[u32x4_t:%.+]] = OpTypeVector [[u32_t]] 4
-; CHECK-DAG: [[const_zero:%.*]] = OpConstant [[u32_t]] 0
-; CHECK-DAG: [[const_zerox2:%.*]] = OpConstantComposite [[u32x2_t]] [[const_zero]] [[const_zero]]
-; CHECK-DAG: [[const_one:%.*]] = OpConstant [[u32_t]] 1
-; CHECK-DAG: [[const_thirty_two:%.*]] = OpConstant [[u32_t]] 32
-; CHECK-DAG: [[const_thirty_twox2:%.*]] = OpConstantComposite [[u32x2_t]] [[const_thirty_two]] [[const_thirty_two]]
-; CHECK-DAG: [[const_neg_one:%.*]] = OpConstant [[u32_t]] 4294967295
-; CHECK-DAG: [[const_neg_onex2:%.*]] = OpConstantComposite [[u32x2_t]] [[const_neg_one]] [[const_neg_one]]
+; CHECK-DAG: [[const_0:%.*]] = OpConstant [[u32_t]] 0
+; CHECK-DAG: [[const_0x2:%.*]] = OpConstantComposite [[u32x2_t]] [[const_0]] [[const_0]]
+; CHECK-DAG: [[const_1:%.*]] = OpConstant [[u32_t]] 1
+; CHECK-DAG: [[const_32:%.*]] = OpConstant [[u32_t]] 32
+; CHECK-DAG: [[const_32x2:%.*]] = OpConstantComposite [[u32x2_t]] [[const_32]] [[const_32]]
+; CHECK-DAG: [[const_neg1:%.*]] = OpConstant [[u32_t]] 4294967295
+; CHECK-DAG: [[const_neg1x2:%.*]] = OpConstantComposite [[u32x2_t]] [[const_neg1]] [[const_neg1]]
 ; CHECK-DAG: [[u16_t:%.+]] = OpTypeInt 16 0
 ; CHECK-DAG: [[u16x2_t:%.+]] = OpTypeVector [[u16_t]] 2
 ; CHECK-DAG: [[u64_t:%.+]] = OpTypeInt 64 0
@@ -68,11 +68,11 @@ entry:
 ; CHECK: [[a64:%.+]] = OpFunctionParameter [[u64_t]]
 ; CHECK: [[a32x2:%.+]] = OpBitcast [[u32x2_t]] [[a64]]
 ; CHECK: [[lsb_bits:%.+]] = OpExtInst [[u32x2_t]] [[glsl_450_ext]] FindILsb [[a32x2]]
-; CHECK: [[high_bits:%.+]] = OpVectorExtractDynamic [[u32_t]] [[lsb_bits]] [[const_zero]]
-; CHECK: [[low_bits:%.+]] = OpVectorExtractDynamic [[u32_t]] [[lsb_bits]] [[const_one]]
-; CHECK: [[should_use_high:%.+]] = OpIEqual [[bool_t]] [[low_bits]] [[const_neg_one]]
+; CHECK: [[high_bits:%.+]] = OpVectorExtractDynamic [[u32_t]] [[lsb_bits]] [[const_0]]
+; CHECK: [[low_bits:%.+]] = OpVectorExtractDynamic [[u32_t]] [[lsb_bits]] [[const_1]]
+; CHECK: [[should_use_high:%.+]] = OpIEqual [[bool_t]] [[low_bits]] [[const_neg1]]
 ; CHECK: [[ans_bits:%.+]] = OpSelect [[u32_t]] [[should_use_high]] [[high_bits]] [[low_bits]]
-; CHECK: [[ans_offset:%.+]] = OpSelect [[u32_t]] [[should_use_high]] [[const_thirty_two]] [[const_zero]]
+; CHECK: [[ans_offset:%.+]] = OpSelect [[u32_t]] [[should_use_high]] [[const_32]] [[const_0]]
 ; CHECK: [[ret:%.+]] = OpIAdd [[u32_t]] [[ans_offset]] [[ans_bits]]
 ; CHECK: OpReturnValue [[ret]]
   %elt.firstbitlow = call i32 @llvm.spv.firstbitlow.i64(i64 %a)
@@ -87,9 +87,9 @@ entry:
 ; CHECK: [[lsb_bits:%.+]] = OpExtInst [[u32x4_t]] [[glsl_450_ext]] FindILsb [[a32x4]]
 ; CHECK: [[high_bits:%.+]] = OpVectorShuffle [[u32x2_t]] [[lsb_bits]] [[lsb_bits]] 0 2
 ; CHECK: [[low_bits:%.+]] = OpVectorShuffle [[u32x2_t]] [[lsb_bits]] [[lsb_bits]] 1 3
-; CHECK: [[should_use_high:%.+]] = OpIEqual [[boolx2_t]] [[low_bits]] [[const_neg_onex2]]
+; CHECK: [[should_use_high:%.+]] = OpIEqual [[boolx2_t]] [[low_bits]] [[const_neg1x2]]
 ; CHECK: [[ans_bits:%.+]] = OpSelect [[u32x2_t]] [[should_use_high]] [[high_bits]] [[low_bits]]
-; CHECK: [[ans_offset:%.+]] = OpSelect [[u32x2_t]] [[should_use_high]] [[const_thirty_twox2]] [[const_zerox2]]
+; CHECK: [[ans_offset:%.+]] = OpSelect [[u32x2_t]] [[should_use_high]] [[const_32x2]] [[const_0x2]]
 ; CHECK: [[ret:%.+]] = OpIAdd [[u32x2_t]] [[ans_offset]] [[ans_bits]]
 ; CHECK: OpReturnValue [[ret]]
   %elt.firstbitlow = call <2 x i32> @llvm.spv.firstbitlow.v2i64(<2 x i64> %a)

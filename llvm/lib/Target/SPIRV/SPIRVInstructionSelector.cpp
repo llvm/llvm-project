@@ -2908,7 +2908,6 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_firstbitshigh: // There is no CL equivalent of FindSMsb
     return selectFirstBitHigh(ResVReg, ResType, I, /*IsSigned=*/true);
   case Intrinsic::spv_firstbitlow: // There is no CL equivlent of FindILsb
-                                   // (true?)
     return selectFirstBitLow(ResVReg, ResType, I);
   case Intrinsic::spv_group_memory_barrier_with_group_sync: {
     bool Result = true;
@@ -3382,7 +3381,7 @@ bool SPIRVInstructionSelector::selectFirstBitLow64(Register ResVReg,
                    // Per the spec, repeat the vector if only one vec is needed
                    .addUse(FBLReg);
 
-    // high bits are store in even indexes. Extract them from FBLReg
+    // high bits are stored in even indexes. Extract them from FBLReg
     for (unsigned j = 0; j < ComponentCount * 2; j += 2) {
       MIB.addImm(j);
     }
@@ -3396,14 +3395,14 @@ bool SPIRVInstructionSelector::selectFirstBitLow64(Register ResVReg,
               // Per the spec, repeat the vector if only one vec is needed
               .addUse(FBLReg);
 
-    // low bits are store in odd indexes. Extract them from FBLReg
+    // low bits are stored in odd indexes. Extract them from FBLReg
     for (unsigned j = 1; j < ComponentCount * 2; j += 2) {
       MIB.addImm(j);
     }
     Result = Result && MIB.constrainAllUses(TII, TRI, RBI);
   }
 
-  // 4. Check if result of each bottom 32 bits is == -1
+  // 4. Check the result. When low bits == -1 use high, otherwise use low
   SPIRVType *BoolType = GR.getOrCreateSPIRVBoolType(I, TII);
   Register NegOneReg;
   Register Reg0;
@@ -3429,7 +3428,7 @@ bool SPIRVInstructionSelector::selectFirstBitLow64(Register ResVReg,
     AddOp = SPIRV::OpIAddV;
   }
 
-  // Check if the low bits are == -1; true if -1
+  // Check if the low bits are == -1
   Register BReg = MRI->createVirtualRegister(GR.getRegClass(BoolType));
   Result = Result && selectNAryOpWithSrcs(BReg, BoolType, I,
                                           {LowReg, NegOneReg}, SPIRV::OpIEqual);
@@ -3439,7 +3438,7 @@ bool SPIRVInstructionSelector::selectFirstBitLow64(Register ResVReg,
   Result = Result && selectNAryOpWithSrcs(TmpReg, ResType, I,
                                           {BReg, HighReg, LowReg}, SelectOp);
 
-  // Add 32 for high bits, 0 for low bits
+  // 5. Add 32 when high bits are used, otherwise 0 for low bits
   Register ValReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
   Result = Result && selectNAryOpWithSrcs(ValReg, ResType, I,
                                           {BReg, Reg32, Reg0}, SelectOp);
