@@ -9061,16 +9061,26 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     return true;
   }
   // Aliases for imm syntax of STR instructions.
-  case ARM::t2STR_PRE_imm:
-  case ARM::t2STR_POST_imm: {
+  case ARM::t2STR_PRE_imm: {
     MCInst TmpInst;
-    TmpInst.setOpcode(Inst.getOpcode() == ARM::t2STR_PRE_imm ? ARM::t2STR_PRE
-                                                             : ARM::t2STR_POST);
+    TmpInst.setOpcode(ARM::t2STR_PRE);
     TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    Inst = TmpInst;
+    return true;
+  }
+  case ARM::t2STR_POST_imm: {
+    MCInst TmpInst;
+    TmpInst.setOpcode(ARM::t2STR_POST);
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn_wb
+    TmpInst.addOperand(Inst.getOperand(0)); // Rt
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn
+    TmpInst.addOperand(Inst.getOperand(2)); // imm
+    TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
   }
