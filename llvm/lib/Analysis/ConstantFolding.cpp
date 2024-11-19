@@ -881,7 +881,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   Type *IntIdxTy = DL.getIndexType(Ptr->getType());
 
   for (unsigned i = 1, e = Ops.size(); i != e; ++i)
-    if (!isa<ConstantInt>(Ops[i]))
+    if (!isa<ConstantInt>(Ops[i]) || !Ops[i]->getType()->isIntegerTy())
       return nullptr;
 
   unsigned BitWidth = DL.getTypeSizeInBits(IntIdxTy);
