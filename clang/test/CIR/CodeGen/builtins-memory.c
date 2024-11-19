@@ -210,3 +210,23 @@ void test_memcpy_inline_aligned_buffers(unsigned long long *dst, const unsigned 
   // COM: LLVM: call void @llvm.memcpy.inline.p0.p0.i64(ptr align 8 {{%.*}}, ptr align 8 {{%.*}}, i64 4, i1 false)
   __builtin_memcpy_inline(dst, src, 4);
 }
+
+void test_memset_inline(void *dst, int val) {
+
+  // CIR-LABEL: test_memset_inline
+  // CIR: cir.memset_inline 0 bytes from {{%.*}} set to {{%.*}} : !cir.ptr<!void>, !s32i
+
+  // LLVM-LABEL: test_memset_inline
+  // LLVM: call void @llvm.memset.inline.p0.i64(ptr {{%.*}}, i8 {{%.*}}, i64 0, i1 false)
+  __builtin_memset_inline(dst, val, 0);
+
+  // CIR: cir.memset_inline 1 bytes from {{%.*}} set to {{%.*}} : !cir.ptr<!void>, !s32i
+
+  // LLVM: call void @llvm.memset.inline.p0.i64(ptr {{%.*}}, i8 {{%.*}}, i64 1, i1 false)
+  __builtin_memset_inline(dst, val, 1);
+
+  // CIR: cir.memset_inline 4 bytes from {{%.*}} set to {{%.*}} : !cir.ptr<!void>, !s32i
+
+  // LLVM: call void @llvm.memset.inline.p0.i64(ptr {{%.*}}, i8 {{%.*}}, i64 4, i1 false)
+  __builtin_memset_inline(dst, val, 4);
+}

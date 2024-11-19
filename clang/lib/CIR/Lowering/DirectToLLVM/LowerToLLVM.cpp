@@ -777,6 +777,18 @@ mlir::LogicalResult CIRToLLVMMemSetOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMMemSetInlineOpLowering::matchAndRewrite(
+    cir::MemSetInlineOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto converted = rewriter.create<mlir::LLVM::TruncOp>(
+      op.getLoc(), mlir::IntegerType::get(op.getContext(), 8),
+      adaptor.getVal());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::MemsetInlineOp>(
+      op, adaptor.getDst(), converted, adaptor.getLenAttr(),
+      /*isVolatile=*/false);
+  return mlir::success();
+}
+
 static mlir::Value getLLVMIntCast(mlir::ConversionPatternRewriter &rewriter,
                                   mlir::Value llvmSrc, mlir::Type llvmDstIntTy,
                                   bool isUnsigned, uint64_t cirSrcWidth,
@@ -1851,8 +1863,8 @@ mlir::LogicalResult CIRToLLVMVAArgOpLowering::matchAndRewrite(
   return op.emitError("cir.vaarg lowering is NYI");
 }
 
-  /// Returns the name used for the linkage attribute. This *must* correspond
-  /// to the name of the attribute in ODS.
+/// Returns the name used for the linkage attribute. This *must* correspond
+/// to the name of the attribute in ODS.
 StringRef CIRToLLVMFuncOpLowering::getLinkageAttrNameString() {
   return "linkage";
 }
@@ -1886,8 +1898,8 @@ void CIRToLLVMFuncOpLowering::lowerFuncAttributes(
   }
 }
 
-  /// When do module translation, we can only translate LLVM-compatible types.
-  /// Here we lower possible OpenCLKernelMetadataAttr to use the converted type.
+/// When do module translation, we can only translate LLVM-compatible types.
+/// Here we lower possible OpenCLKernelMetadataAttr to use the converted type.
 void CIRToLLVMFuncOpLowering::lowerFuncOpenCLKernelMetadata(
     mlir::NamedAttribute &extraAttrsEntry) const {
   const auto attrKey = cir::OpenCLKernelMetadataAttr::getMnemonic();
@@ -2100,8 +2112,8 @@ mlir::LogicalResult CIRToLLVMSwitchFlatOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-  /// Replace CIR global with a region initialized LLVM global and update
-  /// insertion point to the end of the initializer block.
+/// Replace CIR global with a region initialized LLVM global and update
+/// insertion point to the end of the initializer block.
 void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
     cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const {
   const auto llvmType = getTypeConverter()->convertType(op.getSymType());
@@ -3890,8 +3902,9 @@ void populateCIRToLLVMConversionPatterns(
       CIRToLLVMBaseClassAddrOpLowering, CIRToLLVMDerivedClassAddrOpLowering,
       CIRToLLVMVTTAddrPointOpLowering, CIRToLLVMIsFPClassOpLowering,
       CIRToLLVMAbsOpLowering, CIRToLLVMMemMoveOpLowering,
-      CIRToLLVMMemSetOpLowering, CIRToLLVMMemCpyInlineOpLowering,
-      CIRToLLVMSignBitOpLowering, CIRToLLVMPtrMaskOpLowering
+      CIRToLLVMMemSetOpLowering, CIRToLLVMMemSetInlineOpLowering,
+      CIRToLLVMMemCpyInlineOpLowering, CIRToLLVMSignBitOpLowering,
+      CIRToLLVMPtrMaskOpLowering
 #define GET_BUILTIN_LOWERING_LIST
 #include "clang/CIR/Dialect/IR/CIRBuiltinsLowering.inc"
 #undef GET_BUILTIN_LOWERING_LIST

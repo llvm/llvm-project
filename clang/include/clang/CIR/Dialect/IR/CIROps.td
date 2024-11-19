@@ -4148,6 +4148,37 @@ def MemSetOp : CIR_Op<"libc.memset"> {
 }
 
 //===----------------------------------------------------------------------===//
+// MemSetInlineOp
+//===----------------------------------------------------------------------===//
+
+def MemSetInlineOp : CIR_Op<"memset_inline"> {
+  let arguments = (ins Arg<VoidPtr, "", [MemWrite]>:$dst,
+                       SInt32:$val,
+                       I64Attr:$len);
+  let summary = "Fill a block of memory with constant length without calling"
+                "any external function";
+  let description = [{
+    Given the CIR pointer, `dst`, `cir.memset_inline` will set the first `len`
+    bytes of the memory pointed by `dst` to the specified `val`.
+
+    The `len` argument must be a constant integer argument specifying the number
+    of bytes to fill.
+
+    Examples:
+
+    ```mlir
+      // Set 2 bytes from a struct to 0
+      cir.memset_inline 2 bytes from %struct set to %zero : !cir.ptr<!void>, !s32i
+    ```
+  }];
+
+  let assemblyFormat = [{
+    $len `bytes` `from` $dst `set` `to` $val attr-dict
+    `:` qualified(type($dst)) `,` type($val)
+  }];
+  let hasVerifier = 0;
+}
+//===----------------------------------------------------------------------===//
 // MemChrOp
 //===----------------------------------------------------------------------===//
 

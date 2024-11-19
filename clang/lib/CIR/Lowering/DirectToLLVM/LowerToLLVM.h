@@ -125,6 +125,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMMemSetInlineOpLowering
+    : public mlir::OpConversionPattern<cir::MemSetInlineOp> {
+public:
+  using mlir::OpConversionPattern<cir::MemSetInlineOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::MemSetInlineOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override;
+};
+
 class CIRToLLVMPtrStrideOpLowering
     : public mlir::OpConversionPattern<cir::PtrStrideOp> {
 public:

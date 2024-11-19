@@ -623,6 +623,13 @@ public:
     return create<cir::MemSetOp>(loc, dst, val, len);
   }
 
+  cir::MemSetInlineOp createMemSetInline(mlir::Location loc, mlir::Value dst,
+                                         mlir::Value val,
+                                         mlir::IntegerAttr len) {
+    val = createIntCast(val, cir::IntType::get(getContext(), 32, true));
+    return create<cir::MemSetInlineOp>(loc, dst, val, len);
+  }
+
   mlir::Value createNeg(mlir::Value value) {
 
     if (auto intTy = mlir::dyn_cast<cir::IntType>(value.getType())) {
