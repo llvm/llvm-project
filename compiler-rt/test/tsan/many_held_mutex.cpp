@@ -1,23 +1,22 @@
-// RUN: %clangxx_tsan %s -fsanitize=thread -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_tsan %s -fsanitize=thread -o %t
+// RUN: %run %t 128
+// RUN: not %run %t 129
 
 #include <mutex>
-#include <stdio.h>
+#include <string>
 
-int main() {
-  const unsigned short NUM_OF_MTX = 128;
-  std::mutex mutexes[NUM_OF_MTX];
+int main(int argc, char *argv[]) {
+  int num_of_mtx = std::stoi(argv[1]);
 
-  for (int i = 0; i < NUM_OF_MTX; i++) {
+  std::mutex* mutexes = new std::mutex[num_of_mtx];
+
+  for (int i = 0; i < num_of_mtx; i++) {
     mutexes[i].lock();
   }
-  for (int i = 0; i < NUM_OF_MTX; i++) {
+  for (int i = 0; i < num_of_mtx; i++) {
     mutexes[i].unlock();
   }
 
-  printf("Success\n");
-
+  delete[] mutexes;
   return 0;
 }
-
-// CHECK: Success
-// CHECK-NOT: ThreadSanitizer: CHECK failed
