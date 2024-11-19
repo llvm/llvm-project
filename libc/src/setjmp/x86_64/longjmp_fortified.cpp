@@ -22,62 +22,55 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(void, longjmp, (jmp_buf, int)) {
   asm(R"(
       mov %c[rbx](%%rdi), %%rbx
-      xor %%rbx, %%rdx
+      xor %%rbx, %%rax
       xor %[mask], %%rbx
-      mov $%c[multiple], %%rax
-      mul %%rdx
-      xor %%rax, %%rdx
+      mul %%rcx
+      xor %%rdx, %%rax
 
       mov %c[rbp](%%rdi), %%rbp
-      xor %%rbp, %%rdx
+      xor %%rbp, %%rax
       xor %[mask], %%rbp
-      mov $%c[multiple], %%rax
-      mul %%rdx
-      xor %%rax, %%rdx
+      mul %%rcx
+      xor %%rdx, %%rax
 
       mov %c[r12](%%rdi), %%r12
-      xor %%r12, %%rdx
+      xor %%r12, %%rax
       xor %[mask], %%r12
-      mov $%c[multiple], %%rax
-      mul %%rdx
-      xor %%rax, %%rdx
+      mul %%rcx
+      xor %%rdx, %%rax
 
       mov %c[r13](%%rdi), %%r13
-      xor %%r13, %%rdx
+      xor %%r13, %%rax
       xor %[mask], %%r13
-      mov $%c[multiple], %%rax
-      mul %%rdx
-      xor %%rax, %%rdx
+      mul %%rcx
+      xor %%rdx, %%rax
 
       mov %c[r14](%%rdi), %%r14
-      xor %%r14, %%rdx
+      xor %%r14, %%rax
       xor %[mask], %%r14
-      mov $%c[multiple], %%rax
-      mul %%rdx
-      xor %%rax, %%rdx
+      mul %%rcx
+      xor %%rdx, %%rax
 
       mov %c[r15](%%rdi), %%r15
-      xor %%r15, %%rdx
+      xor %%r15, %%rax
       xor %[mask], %%r15
-      mov $%c[multiple], %%rax
-      mul %%rdx
-      xor %%rax, %%rdx
+      mul %%rcx
+      xor %%rdx, %%rax
 
       mov %c[rsp](%%rdi), %%rsp
-      xor %%rsp, %%rdx
+      xor %%rsp, %%rax
       xor %[mask], %%rsp
-      mov $%c[multiple], %%rax
-      mul %%rdx
-      xor %%rax, %%rdx
+      mul %%rcx
+      xor %%rdx, %%rax
 
+      mov %%rcx, %%rdx
       mov %c[rip](%%rdi), %%rcx
-      xor %%rcx, %%rdx
+      xor %%rcx, %%rax
       xor %[mask], %%rcx
-      mov $%c[multiple], %%rax
       mul %%rdx
-      xor %%rax, %%rdx
+      xor %%rdx, %%rax
 
-      cmp %c[chksum](%%rdi), %%rdx
+      cmp %c[chksum](%%rdi), %%rax
       jne __libc_jmpbuf_corruption
 
       cmpl $0x1, %%esi
@@ -90,9 +83,8 @@ LLVM_LIBC_FUNCTION(void, longjmp, (jmp_buf, int)) {
       [r13] "i"(offsetof(__jmp_buf, r13)), [r14] "i"(offsetof(__jmp_buf, r14)),
       [r15] "i"(offsetof(__jmp_buf, r15)), [rsp] "i"(offsetof(__jmp_buf, rsp)),
       [rip] "i"(offsetof(__jmp_buf, rip)),
-      [chksum] "i"(offsetof(__jmp_buf, __chksum)),
-      [multiple] "i"(jmpbuf::MULTIPLE), [cookie] "d"(jmpbuf::checksum_cookie),
-      [mask] "m"(jmpbuf::value_mask)
+      [chksum] "i"(offsetof(__jmp_buf, __chksum)), "c"(jmpbuf::MULTIPLE),
+      [cookie] "a"(jmpbuf::checksum_cookie), [mask] "m"(jmpbuf::value_mask)
       :);
 }
 

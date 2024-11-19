@@ -22,80 +22,71 @@ namespace LIBC_NAMESPACE_DECL {
 [[gnu::naked]]
 LLVM_LIBC_FUNCTION(int, setjmp, (jmp_buf buf)) {
   asm(R"(
-      mov %%rbx, %%rax
-      xor %[mask], %%rax
-      mov %%rax, %c[rbx](%%rdi)
-      xor %%rax, %%rdx
-      mov $%c[multiple], %%rax
-      mul %%rdx
-      xor %%rax, %%rdx
+      mov %%rbx, %%rdx
+      xor %[mask], %%rdx
+      mov %%rdx, %c[rbx](%%rdi)
+      xor %%rdx, %%rax
+      mul %%rcx
+      xor %%rdx, %%rax
       
-      mov %%rbp, %%rax
-      xor %[mask], %%rax
-      mov %%rax, %c[rbp](%%rdi)
-      xor %%rax, %%rdx
-      mov $%c[multiple], %%rax
-      mul %%rdx
-      xor %%rax, %%rdx
+      mov %%rbp, %%rdx
+      xor %[mask], %%rdx
+      mov %%rdx, %c[rbp](%%rdi)
+      xor %%rdx, %%rax
+      mul %%rcx
+      xor %%rdx, %%rax
 
-      mov %%r12, %%rax
-      xor %[mask], %%rax
-      mov %%rax, %c[r12](%%rdi)
-      xor %%rax, %%rdx
-      mov $%c[multiple], %%rax
-      mul %%rdx
-      xor %%rax, %%rdx
+      mov %%r12, %%rdx
+      xor %[mask], %%rdx
+      mov %%rdx, %c[r12](%%rdi)
+      xor %%rdx, %%rax
+      mul %%rcx
+      xor %%rdx, %%rax
 
-      mov %%r13, %%rax
-      xor %[mask], %%rax
-      mov %%rax, %c[r13](%%rdi)
-      xor %%rax, %%rdx
-      mov $%c[multiple], %%rax
-      mul %%rdx
-      xor %%rax, %%rdx
+      mov %%r13, %%rdx
+      xor %[mask], %%rdx
+      mov %%rdx, %c[r13](%%rdi)
+      xor %%rdx, %%rax
+      mul %%rcx
+      xor %%rdx, %%rax
 
-      mov %%r14, %%rax
-      xor %[mask], %%rax
-      mov %%rax, %c[r14](%%rdi)
-      xor %%rax, %%rdx
-      mov $%c[multiple], %%rax
-      mul %%rdx
-      xor %%rax, %%rdx
+      mov %%r14, %%rdx
+      xor %[mask], %%rdx
+      mov %%rdx, %c[r14](%%rdi)
+      xor %%rdx, %%rax
+      mul %%rcx
+      xor %%rdx, %%rax
 
-      mov %%r15, %%rax
-      xor %[mask], %%rax
-      mov %%rax, %c[r15](%%rdi)
-      xor %%rax, %%rdx
-      mov $%c[multiple], %%rax
-      mul %%rdx
-      xor %%rax, %%rdx
+      mov %%r15, %%rdx
+      xor %[mask], %%rdx
+      mov %%rdx, %c[r15](%%rdi)
+      xor %%rdx, %%rax
+      mul %%rcx
+      xor %%rdx, %%rax
 
-      lea 8(%%rsp), %%rax
-      xor %[mask], %%rax
-      mov %%rax, %c[rsp](%%rdi)
-      xor %%rax, %%rdx
-      mov $%c[multiple], %%rax
-      mul %%rdx
-      xor %%rax, %%rdx
+      lea 8(%%rsp), %%rdx
+      xor %[mask], %%rdx
+      mov %%rdx, %c[rsp](%%rdi)
+      xor %%rdx, %%rax
+      mul %%rcx
+      xor %%rdx, %%rax
 
-      mov (%%rsp), %%rax
-      xor %[mask], %%rax
-      mov %%rax, %c[rip](%%rdi)
-      xor %%rax, %%rdx
-      mov $%c[multiple], %%rax
-      mul %%rdx
-      xor %%rax, %%rdx
+      mov (%%rsp), %%rdx
+      xor %[mask], %%rdx
+      mov %%rdx, %c[rip](%%rdi)
+      xor %%rdx, %%rax
+      mul %%rcx
+      xor %%rdx, %%rax
 
-      mov %%rdx, %c[chksum](%%rdi)
+      mov %%rax, %c[chksum](%%rdi)
       xor %%rax, %%rax
       ret)" ::[rbx] "i"(offsetof(__jmp_buf, rbx)),
       [rbp] "i"(offsetof(__jmp_buf, rbp)), [r12] "i"(offsetof(__jmp_buf, r12)),
       [r13] "i"(offsetof(__jmp_buf, r13)), [r14] "i"(offsetof(__jmp_buf, r14)),
       [r15] "i"(offsetof(__jmp_buf, r15)), [rsp] "i"(offsetof(__jmp_buf, rsp)),
       [rip] "i"(offsetof(__jmp_buf, rip)),
-      [chksum] "i"(offsetof(__jmp_buf, __chksum)),
-      [multiple] "i"(jmpbuf::MULTIPLE), [cookie] "d"(jmpbuf::checksum_cookie),
-      [mask] "m"(jmpbuf::value_mask)
+      [chksum] "i"(offsetof(__jmp_buf, __chksum)), "c"(jmpbuf::MULTIPLE),
+      [cookie] "a"(jmpbuf::checksum_cookie), [mask] "m"(jmpbuf::value_mask)
       :);
 }
 
