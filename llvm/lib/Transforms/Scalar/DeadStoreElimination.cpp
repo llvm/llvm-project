@@ -80,7 +80,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <iterator>
 #include <map>
 #include <optional>
 #include <utility>

@@ -261,11 +261,11 @@ define void @reverse_forward_induction_i64_i8() {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i8> [[VEC_IND]], <i8 4, i8 4, i8 4, i8 4>
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i8> [[VEC_IND]], <i8 1, i8 1, i8 1, i8 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i8> [[STEP_ADD]], <i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i8> [[VEC_IND]], splat (i8 1)
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i8> [[STEP_ADD]], splat (i8 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i8> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP3]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1024 x i32], ptr @a, i64 0, i64 [[TMP0]]
@@ -278,7 +278,7 @@ define void @reverse_forward_induction_i64_i8() {
 ; CHECK-NEXT:    [[REVERSE2:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    store <4 x i32> [[REVERSE2]], ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[STEP_ADD]], <i8 4, i8 4, i8 4, i8 4>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[STEP_ADD]], splat (i8 4)
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -330,11 +330,11 @@ define void @reverse_forward_induction_i64_i8_signed() {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 -127, i8 -126, i8 -125, i8 -124>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i8> [[VEC_IND]], <i8 4, i8 4, i8 4, i8 4>
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i8> [[VEC_IND]], <i8 1, i8 1, i8 1, i8 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i8> [[STEP_ADD]], <i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i8> [[VEC_IND]], splat (i8 1)
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i8> [[STEP_ADD]], splat (i8 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext <4 x i8> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext <4 x i8> [[TMP3]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1024 x i32], ptr @a, i64 0, i64 [[TMP0]]
@@ -347,7 +347,7 @@ define void @reverse_forward_induction_i64_i8_signed() {
 ; CHECK-NEXT:    [[REVERSE2:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    store <4 x i32> [[REVERSE2]], ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[STEP_ADD]], <i8 4, i8 4, i8 4, i8 4>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[STEP_ADD]], splat (i8 4)
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

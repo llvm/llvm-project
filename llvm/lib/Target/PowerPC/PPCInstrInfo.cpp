@@ -19,13 +19,11 @@
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -36,7 +34,6 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/Module.h"
-#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
@@ -5456,7 +5453,6 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
   BuildMI(*MBB, ++Iter, DL, TII->get(PPC::COPY), SrcReg)
       .addReg(NewDefinedReg, RegState::Kill, PPC::sub_32);
   LV->recomputeForSingleDefVirtReg(NewDefinedReg);
-  return;
 }
 
 // The isSignOrZeroExtended function is recursive. The parameter BinOpDepth

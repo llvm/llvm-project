@@ -1696,7 +1696,7 @@ static void insertDbgValueOrDbgVariableRecord(DIBuilder &Builder, Value *DV,
   if (!UseNewDbgInfoFormat) {
     auto DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
                                                   (Instruction *)nullptr);
-    DbgVal.get<Instruction *>()->insertBefore(Instr);
+    cast<Instruction *>(DbgVal)->insertBefore(Instr);
   } else {
     // RemoveDIs: if we're using the new debug-info format, allocate a
     // DbgVariableRecord directly instead of a dbg.value intrinsic.
@@ -1713,7 +1713,7 @@ static void insertDbgValueOrDbgVariableRecordAfter(
   if (!UseNewDbgInfoFormat) {
     auto DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
                                                   (Instruction *)nullptr);
-    DbgVal.get<Instruction *>()->insertAfter(&*Instr);
+    cast<Instruction *>(DbgVal)->insertAfter(&*Instr);
   } else {
     // RemoveDIs: if we're using the new debug-info format, allocate a
     // DbgVariableRecord directly instead of a dbg.value intrinsic.
@@ -2178,11 +2178,9 @@ void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
       auto V = DbgValueMap.find(VI);
       if (V != DbgValueMap.end()) {
         auto *DbgII = cast<DbgVariableIntrinsic>(V->second);
-        auto NewDI = NewDbgValueMap.find({Parent, DbgII});
-        if (NewDI == NewDbgValueMap.end()) {
-          auto *NewDbgII = cast<DbgVariableIntrinsic>(DbgII->clone());
-          NewDI = NewDbgValueMap.insert({{Parent, DbgII}, NewDbgII}).first;
-        }
+        auto [NewDI, Inserted] = NewDbgValueMap.try_emplace({Parent, DbgII});
+        if (Inserted)
+          NewDI->second = cast<DbgVariableIntrinsic>(DbgII->clone());
         DbgVariableIntrinsic *NewDbgII = NewDI->second;
         // If PHI contains VI as an operand more than once, we may
         // replaced it in NewDbgII; confirm that it is present.

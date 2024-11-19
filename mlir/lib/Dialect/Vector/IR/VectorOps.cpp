@@ -1705,6 +1705,47 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
   return extractOp.getResult();
 }
 
+/// Fold extractOp coming from ShuffleOp.
+///
+/// Example:
+///
+///   %shuffle = vector.shuffle %a, %b [0, 8, 7, 15]
+///     : vector<8xf32>, vector<8xf32>
+///   %extract = vector.extract %shuffle[3] : f32 from vector<4xf32>
+/// ->
+///   %extract = vector.extract %b[7] : f32 from vector<8xf32>
+///
+static Value foldExtractFromShuffle(ExtractOp extractOp) {
+  // Dynamic positions are not folded as the resulting code would be more
+  // complex than the input code.
+  if (extractOp.hasDynamicPosition())
+    return Value();
+
+  auto shuffleOp = extractOp.getVector().getDefiningOp<ShuffleOp>();
+  if (!shuffleOp)
+    return Value();
+
+  // TODO: 0-D or multi-dimensional vectors not supported yet.
+  if (shuffleOp.getResultVectorType().getRank() != 1)
+    return Value();
+
+  int64_t inputVecSize = shuffleOp.getV1().getType().getShape()[0];
+  auto shuffleMask = shuffleOp.getMask();
+  int64_t extractIdx = extractOp.getStaticPosition()[0];
+  int64_t shuffleIdx = shuffleMask[extractIdx];
+
+  // Find the shuffled vector to extract from based on the shuffle index.
+  if (shuffleIdx < inputVecSize) {
+    extractOp.setOperand(0, shuffleOp.getV1());
+    extractOp.setStaticPosition({shuffleIdx});
+  } else {
+    extractOp.setOperand(0, shuffleOp.getV2());
+    extractOp.setStaticPosition({shuffleIdx - inputVecSize});
+  }
+
+  return extractOp.getResult();
+}
+
 // Fold extractOp with source coming from ShapeCast op.
 static Value foldExtractFromShapeCast(ExtractOp extractOp) {
   // TODO: Canonicalization for dynamic position not implemented yet.
@@ -1952,6 +1993,8 @@ OpFoldResult ExtractOp::fold(FoldAdaptor) {
   if (auto res = ExtractFromInsertTransposeChainState(*this).fold())
     return res;
   if (auto res = foldExtractFromBroadcast(*this))
+    return res;
+  if (auto res = foldExtractFromShuffle(*this))
     return res;
   if (auto res = foldExtractFromShapeCast(*this))
     return res;

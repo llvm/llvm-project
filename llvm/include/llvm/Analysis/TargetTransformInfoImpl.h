@@ -174,6 +174,7 @@ public:
         Name == "asin"  || Name == "asinf"  || Name == "asinl" ||
         Name == "acos"  || Name == "acosf"  || Name == "acosl" ||
         Name == "atan"  || Name == "atanf"  || Name == "atanl" ||
+        Name == "atan2" || Name == "atan2f" || Name == "atan2l"||
         Name == "sinh"  || Name == "sinhf"  || Name == "sinhl" ||
         Name == "cosh"  || Name == "coshf"  || Name == "coshl" ||
         Name == "tanh"  || Name == "tanhf"  || Name == "tanhl" ||
@@ -696,6 +697,17 @@ public:
                                      TTI::TargetCostKind CostKind,
                                      unsigned Index, Value *Op0,
                                      Value *Op1) const {
+    return 1;
+  }
+
+  /// \param ScalarUserAndIdx encodes the information about extracts from a
+  /// vector with 'Scalar' being the value being extracted,'User' being the user
+  /// of the extract(nullptr if user is not known before vectorization) and
+  /// 'Idx' being the extract lane.
+  InstructionCost getVectorInstrCost(
+      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      Value *Scalar,
+      ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const {
     return 1;
   }
 

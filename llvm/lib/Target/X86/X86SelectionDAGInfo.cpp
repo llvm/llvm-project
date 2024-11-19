@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/IR/DerivedTypes.h"
 
 using namespace llvm;
 

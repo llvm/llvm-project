@@ -1259,7 +1259,7 @@ private:
 
   bool parseConditional() {
     while (CurrentToken) {
-      if (CurrentToken->is(tok::colon)) {
+      if (CurrentToken->is(tok::colon) && CurrentToken->is(TT_Unknown)) {
         CurrentToken->setType(TT_ConditionalExpr);
         next();
         return true;

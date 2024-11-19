@@ -1293,6 +1293,7 @@ void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
     }
     CmdArgs.push_back("-lFortranRuntime");
     CmdArgs.push_back("-lFortranDecimal");
+    addArchSpecificRPath(TC, Args, CmdArgs);
   }
 
   // libomp needs libatomic for atomic operations if using libgcc
@@ -2709,7 +2710,7 @@ void tools::checkAMDGPUCodeObjectVersion(const Driver &D,
 
 unsigned tools::getAMDGPUCodeObjectVersion(const Driver &D,
                                            const llvm::opt::ArgList &Args) {
-  unsigned CodeObjVer = 4; // default
+  unsigned CodeObjVer = 5; // default
   if (auto *CodeObjArg = getAMDGPUCodeObjectArgument(D, Args))
     StringRef(CodeObjArg->getValue()).getAsInteger(0, CodeObjVer);
   return CodeObjVer;

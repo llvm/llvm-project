@@ -68,7 +68,7 @@
 /mlir/lib/Dialect/Linalg/Transforms/ElementwiseOpFusion.cpp @MaheshRavishankar @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/DataLayoutPropagation.cpp @hanhanW @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/Transforms.cpp @dcaballe @hanhanW @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/Vectorization.cpp @banach-space @dcaballe @hanhanW @nicolasvasilache
+/mlir/lib/Dialect/Linalg/Transforms/Vectorization.cpp @banach-space @dcaballe @hanhanW @nicolasvasilache @Groverkss
 
 # MemRef Dialect in MLIR.
 /mlir/lib/Dialect/MemRef/Transforms/EmulateNarrowType.cpp @MaheshRavishankar @nicolasvasilache
@@ -82,9 +82,9 @@
 /mlir/**/*VectorToSCF* @banach-space @dcaballe @matthias-springer @nicolasvasilache
 /mlir/**/*VectorToLLVM* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*X86Vector* @aartbik @dcaballe @nicolasvasilache
-/mlir/include/mlir/Dialect/Vector @banach-space @dcaballe @nicolasvasilache
+/mlir/include/mlir/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
 /mlir/include/mlir/Dialect/Vector/IR @kuhar
-/mlir/lib/Dialect/Vector @banach-space @dcaballe @nicolasvasilache
+/mlir/lib/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
 /mlir/lib/Dialect/Vector/Transforms/* @banach-space @dcaballe @hanhanW @nicolasvasilache
 /mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @banach-space @dcaballe @MaheshRavishankar @nicolasvasilache
 /mlir/**/*EmulateNarrowType* @dcaballe @hanhanW
@@ -141,7 +141,7 @@
 /clang/tools/clang-installapi/ @cyndyishida
 
 # ExtractAPI
-/clang/**/ExtractAPI @daniel-grumberg
+/clang/**/ExtractAPI @daniel-grumberg @QuietMisdreavus
 
 # DWARFLinker, dwarfutil, dsymutil
 /llvm/**/DWARFLinker/ @JDevlieghere

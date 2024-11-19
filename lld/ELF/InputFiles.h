@@ -31,20 +31,20 @@ class InputFile;
 namespace lld {
 class DWARFCache;
 
-// Returns "<internal>", "foo.a(bar.o)" or "baz.o".
-std::string toString(const elf::InputFile *f);
-
 namespace elf {
-
 class InputSection;
 class Symbol;
+
+// Returns "<internal>", "foo.a(bar.o)" or "baz.o".
+std::string toStr(Ctx &, const InputFile *f);
+const ELFSyncStream &operator<<(const ELFSyncStream &, const InputFile *);
 
 // Opens a given file.
 std::optional<MemoryBufferRef> readFile(Ctx &, StringRef path);
 
 // Add symbols in File to the symbol table.
 void parseFile(Ctx &, InputFile *file);
-void parseFiles(Ctx &, const std::vector<InputFile *> &files);
+void parseFiles(Ctx &, const SmallVector<std::unique_ptr<InputFile>, 0> &);
 
 // The root class of input files.
 class InputFile {
@@ -66,6 +66,7 @@ public:
   };
 
   InputFile(Ctx &, Kind k, MemoryBufferRef m);
+  virtual ~InputFile();
   Kind kind() const { return fileKind; }
 
   bool isElf() const {
@@ -102,7 +103,7 @@ public:
   Symbol &getSymbol(uint32_t symbolIndex) const {
     assert(fileKind == ObjKind);
     if (symbolIndex >= numSymbols)
-      fatal(toString(this) + ": invalid symbol index");
+      Fatal(ctx) << this << ": invalid symbol index";
     return *this->symbols[symbolIndex];
   }
 
@@ -168,7 +169,8 @@ public:
   // If not empty, this stores the name of the archive containing this file.
   // We use this string for creating error messages.
   SmallString<0> archiveName;
-  // Cache for toString(). Only toString() should use this member.
+  // Cache for toStr(Ctx &, const InputFile *). Only toStr should use this
+  // member.
   mutable SmallString<0> toStringCache;
 
 private:
@@ -350,8 +352,6 @@ public:
   // Verdefs, otherwise it is empty.
   SmallVector<uint32_t, 0> vernauxs;
 
-  static unsigned vernauxNum;
-
   SmallVector<StringRef, 0> dtNeeded;
   StringRef soName;
 
@@ -381,8 +381,9 @@ public:
 };
 
 InputFile *createInternalFile(Ctx &, StringRef name);
-ELFFileBase *createObjFile(Ctx &, MemoryBufferRef mb,
-                           StringRef archiveName = "", bool lazy = false);
+std::unique_ptr<ELFFileBase> createObjFile(Ctx &, MemoryBufferRef mb,
+                                           StringRef archiveName = "",
+                                           bool lazy = false);
 
 std::string replaceThinLTOSuffix(Ctx &, StringRef path);
 

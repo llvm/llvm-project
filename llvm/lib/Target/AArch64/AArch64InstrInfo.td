@@ -149,8 +149,8 @@ def HasSVE2          : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasS
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2), "sve2">;
 def HasSVE2p1        : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2p1()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2p1), "sve2p1">;
-def HasSVE2AES       : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2AES()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureSVE2AES), "sve2-aes">;
+def HasSVEAES       : Predicate<"Subtarget->hasSVEAES()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSVEAES), "sve-aes">;
 def HasSVE2SM4       : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2SM4()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2SM4), "sve2-sm4">;
 def HasSVE2SHA3      : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2SHA3()">,
@@ -257,7 +257,7 @@ def HasSVE2orSME2
     : Predicate<"Subtarget->hasSVE2() || (Subtarget->isStreaming() && Subtarget->hasSME2())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSME2),
                 "sve2 or sme2">;
-def HasSVE2orSSVE_AES
+def HasNonStreamingSVE2orSSVE_AES
     : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE2()) ||"
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSSVE_AES())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSSVE_AES), "sve2 or ssve-aes">;
@@ -273,7 +273,7 @@ def HasSVE2p1_or_HasSME2p1
 def HasSVE2p2orSME2p2
     : Predicate<"Subtarget->isSVEorStreamingSVEAvailable() && (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2())">,
                  AssemblerPredicateWithAll<(any_of FeatureSME2p2, FeatureSVE2p2), "sme2p2 or sve2p2">;
-def HasSVE2p1orSSVE_AES
+def HasNonStreamingSVE2p1orSSVE_AES
     : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE2p1()) ||"
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSSVE_AES())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2p1, FeatureSSVE_AES), "sve2p1 or ssve-aes">;
@@ -1964,30 +1964,36 @@ let Predicates = [HasPAuth] in {
   }
 
   // Size 16: 4 fixed + 8 variable, to compute discriminator.
+  // The size returned by getInstSizeInBytes() is incremented according
+  // to the variant of LR check.
+  // As the check requires either x16 or x17 as a scratch register and
+  // authenticated tail call instructions have two register operands,
+  // make sure at least one register is usable as a scratch one - for that
+  // purpose, use tcGPRnotx16x17 register class for one of the operands.
   let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Size = 16,
       Uses = [SP] in {
     def AUTH_TCRETURN
-      : Pseudo<(outs), (ins tcGPR64:$dst, i32imm:$FPDiff, i32imm:$Key,
+      : Pseudo<(outs), (ins tcGPRnotx16x17:$dst, i32imm:$FPDiff, i32imm:$Key,
                             i64imm:$Disc, tcGPR64:$AddrDisc),
                []>, Sched<[WriteBrReg]>;
     def AUTH_TCRETURN_BTI
       : Pseudo<(outs), (ins tcGPRx16x17:$dst, i32imm:$FPDiff, i32imm:$Key,
-                            i64imm:$Disc, tcGPR64:$AddrDisc),
+                            i64imm:$Disc, tcGPRnotx16x17:$AddrDisc),
                []>, Sched<[WriteBrReg]>;
   }
 
   let Predicates = [TailCallAny] in
-    def : Pat<(AArch64authtcret tcGPR64:$dst, (i32 timm:$FPDiff), (i32 timm:$Key),
+    def : Pat<(AArch64authtcret tcGPRnotx16x17:$dst, (i32 timm:$FPDiff), (i32 timm:$Key),
                                 (i64 timm:$Disc), tcGPR64:$AddrDisc),
-              (AUTH_TCRETURN tcGPR64:$dst, imm:$FPDiff, imm:$Key, imm:$Disc,
+              (AUTH_TCRETURN tcGPRnotx16x17:$dst, imm:$FPDiff, imm:$Key, imm:$Disc,
                              tcGPR64:$AddrDisc)>;
 
   let Predicates = [TailCallX16X17] in
     def : Pat<(AArch64authtcret tcGPRx16x17:$dst, (i32 timm:$FPDiff),
                                 (i32 timm:$Key), (i64 timm:$Disc),
-                                tcGPR64:$AddrDisc),
+                                tcGPRnotx16x17:$AddrDisc),
               (AUTH_TCRETURN_BTI tcGPRx16x17:$dst, imm:$FPDiff, imm:$Key,
-                                 imm:$Disc, tcGPR64:$AddrDisc)>;
+                                 imm:$Disc, tcGPRnotx16x17:$AddrDisc)>;
 }
 
 // v9.5-A pointer authentication extensions
@@ -2155,6 +2161,12 @@ let Defs = [FPSR] in
 def MSR_FPSR : Pseudo<(outs), (ins GPR64:$val),
                       [(int_aarch64_set_fpsr i64:$val)]>,
                PseudoInstExpansion<(MSR 0xda21, GPR64:$val)>,
+               Sched<[WriteSys]>;
+
+let Defs = [FPMR] in
+def MSR_FPMR : Pseudo<(outs), (ins GPR64:$val),
+                      [(int_aarch64_set_fpmr i64:$val)]>,
+               PseudoInstExpansion<(MSR 0xda22, GPR64:$val)>,
                Sched<[WriteSys]>;
 
 // Generic system instructions
@@ -5372,7 +5384,7 @@ let isPseudo = 1 in {
 //===----------------------------------------------------------------------===//
 let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
     isCodeGenOnly = 1, isReturn = 1, isEHScopeReturn = 1, isPseudo = 1 in {
-   def CLEANUPRET : Pseudo<(outs), (ins), [(cleanupret)]>, Sched<[]>;
+   def CLEANUPRET : Pseudo<(outs), (ins), [(cleanupret bb)]>, Sched<[]>;
    let usesCustomInserter = 1 in
      def CATCHRET : Pseudo<(outs), (ins am_brcond:$dst, am_brcond:$src), [(catchret bb:$dst, bb:$src)]>,
                     Sched<[]>;
@@ -10064,14 +10076,6 @@ let Predicates = [HasMOPS, HasMTE] in {
     defm MOPSSETGE : MOPSMemorySetTaggingInsns<0b10, "setge">;
   }
 }
-
-// MOPS Node operands: 0: Dst, 1: Src or Value, 2: Size, 3: Chain
-// MOPS Node results: 0: Dst writeback, 1: Size writeback, 2: Chain
-def SDT_AArch64mops : SDTypeProfile<2, 3, [ SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2> ]>;
-def AArch64mops_memset : SDNode<"AArch64ISD::MOPS_MEMSET", SDT_AArch64mops>;
-def AArch64mops_memset_tagging : SDNode<"AArch64ISD::MOPS_MEMSET_TAGGING", SDT_AArch64mops>;
-def AArch64mops_memcopy : SDNode<"AArch64ISD::MOPS_MEMCOPY", SDT_AArch64mops>;
-def AArch64mops_memmove : SDNode<"AArch64ISD::MOPS_MEMMOVE", SDT_AArch64mops>;
 
 // MOPS operations always contain three 4-byte instructions
 let Predicates = [HasMOPS], Defs = [NZCV], Size = 12, mayStore = 1 in {

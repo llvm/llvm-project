@@ -63,7 +63,6 @@
 #include <cstdint>
 #include <iterator>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -863,16 +862,19 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(Op, MVT::bf16, Promote);
     AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
-  for (const auto &Op : {ISD::FABS}) {
-    setOperationAction(Op, MVT::f16, Promote);
-    setOperationAction(Op, MVT::f32, Legal);
-    setOperationAction(Op, MVT::f64, Legal);
-    setOperationAction(Op, MVT::v2f16, Expand);
-    setBF16OperationAction(Op, MVT::v2bf16, Legal, Expand);
-    setBF16OperationAction(Op, MVT::bf16, Legal, Promote);
-    if (getOperationAction(Op, MVT::bf16) == Promote)
-      AddPromotedToType(Op, MVT::bf16, MVT::f32);
+
+  setOperationAction(ISD::FABS, {MVT::f32, MVT::f64}, Legal);
+  if (STI.getPTXVersion() >= 65) {
+    setFP16OperationAction(ISD::FABS, MVT::f16, Legal, Promote);
+    setFP16OperationAction(ISD::FABS, MVT::v2f16, Legal, Expand);
+  } else {
+    setOperationAction(ISD::FABS, MVT::f16, Promote);
+    setOperationAction(ISD::FABS, MVT::v2f16, Expand);
   }
+  setBF16OperationAction(ISD::FABS, MVT::v2bf16, Legal, Expand);
+  setBF16OperationAction(ISD::FABS, MVT::bf16, Legal, Promote);
+  if (getOperationAction(ISD::FABS, MVT::bf16) == Promote)
+    AddPromotedToType(ISD::FABS, MVT::bf16, MVT::f32);
 
   for (const auto &Op : {ISD::FMINNUM, ISD::FMAXNUM}) {
     setOperationAction(Op, MVT::f32, Legal);
@@ -5691,10 +5693,6 @@ static SDValue PerformANDCombine(SDNode *N,
   // Generally, we will see zextload -> IMOV16rr -> ANY_EXTEND -> and
   if (Val.getOpcode() == ISD::ANY_EXTEND) {
     AExt = Val;
-    Val = Val->getOperand(0);
-  }
-
-  if (Val->isMachineOpcode() && Val->getMachineOpcode() == NVPTX::IMOV16rr) {
     Val = Val->getOperand(0);
   }
 

@@ -33,7 +33,6 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/OperatorKinds.h"
-#include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
@@ -2030,21 +2029,19 @@ const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
   if (auto *TD = dyn_cast<ClassTemplateSpecializationDecl>(this)) {
     auto From = TD->getInstantiatedFrom();
     if (auto *CTD = From.dyn_cast<ClassTemplateDecl *>()) {
-      while (!CTD->isMemberSpecialization()) {
-        if (auto *NewCTD = CTD->getInstantiatedFromMemberTemplate())
-          CTD = NewCTD;
-        else
+      while (auto *NewCTD = CTD->getInstantiatedFromMemberTemplate()) {
+        if (NewCTD->isMemberSpecialization())
           break;
+        CTD = NewCTD;
       }
       return GetDefinitionOrSelf(CTD->getTemplatedDecl());
     }
     if (auto *CTPSD =
             From.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
-      while (!CTPSD->isMemberSpecialization()) {
-        if (auto *NewCTPSD = CTPSD->getInstantiatedFromMemberTemplate())
-          CTPSD = NewCTPSD;
-        else
+      while (auto *NewCTPSD = CTPSD->getInstantiatedFromMember()) {
+        if (NewCTPSD->isMemberSpecialization())
           break;
+        CTPSD = NewCTPSD;
       }
       return GetDefinitionOrSelf(CTPSD);
     }

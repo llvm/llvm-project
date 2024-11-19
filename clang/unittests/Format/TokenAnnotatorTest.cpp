@@ -3571,6 +3571,13 @@ TEST_F(TokenAnnotatorTest, TemplateInstantiation) {
   EXPECT_TOKEN(Tokens[18], tok::greater, TT_TemplateCloser);
 }
 
+TEST_F(TokenAnnotatorTest, SwitchInMacroArgument) {
+  auto Tokens = annotate("FOOBAR(switch);\n"
+                         "void f() {}");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::l_brace, TT_FunctionLBrace);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03
+
 #include <memory>
 
 #include "benchmark/benchmark.h"

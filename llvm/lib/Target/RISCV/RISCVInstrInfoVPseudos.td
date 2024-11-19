@@ -104,8 +104,8 @@ def vec_rm : RISCVOp {
 def VLOp : ComplexPattern<XLenVT, 1, "selectVLOp">;
 
 def DecImm : SDNodeXForm<imm, [{
-  return CurDAG->getSignedConstant(N->getSExtValue() - 1, SDLoc(N),
-                                   N->getValueType(0), /*isTarget=*/true);
+  return CurDAG->getSignedTargetConstant(N->getSExtValue() - 1, SDLoc(N),
+                                         N->getValueType(0));
 }]>;
 
 defvar TAIL_AGNOSTIC = 1;
@@ -1983,6 +1983,7 @@ multiclass VPseudoVPOP_M {
       def "_M_" # mti.BX : VPseudoUnaryNoMaskGPROut,
           SchedBinary<"WriteVMPopV", "ReadVMPopV", "ReadVMPopV", mx>;
       def "_M_" # mti.BX # "_MASK" : VPseudoUnaryMaskGPROut,
+          RISCVMaskedPseudo<MaskIdx=1>,
           SchedBinary<"WriteVMPopV", "ReadVMPopV", "ReadVMPopV", mx>;
     }
   }
@@ -1995,6 +1996,7 @@ multiclass VPseudoV1ST_M {
       def "_M_" #mti.BX : VPseudoUnaryNoMaskGPROut,
           SchedBinary<"WriteVMFFSV", "ReadVMFFSV", "ReadVMFFSV", mx>;
       def "_M_" # mti.BX # "_MASK" : VPseudoUnaryMaskGPROut,
+          RISCVMaskedPseudo<MaskIdx=1>,
           SchedBinary<"WriteVMFFSV", "ReadVMFFSV", "ReadVMFFSV", mx>;
     }
   }

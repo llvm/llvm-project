@@ -13,6 +13,7 @@
 #include "llvm/IR/Type.h"
 #include "LLVMContextImpl.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -69,6 +70,22 @@ bool Type::isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const {
 bool Type::isScalableTy() const {
   SmallPtrSet<const Type *, 4> Visited;
   return isScalableTy(Visited);
+}
+
+bool Type::containsNonGlobalTargetExtType(
+    SmallPtrSetImpl<const Type *> &Visited) const {
+  if (const auto *ATy = dyn_cast<ArrayType>(this))
+    return ATy->getElementType()->containsNonGlobalTargetExtType(Visited);
+  if (const auto *STy = dyn_cast<StructType>(this))
+    return STy->containsNonGlobalTargetExtType(Visited);
+  if (auto *TT = dyn_cast<TargetExtType>(this))
+    return !TT->hasProperty(TargetExtType::CanBeGlobal);
+  return false;
+}
+
+bool Type::containsNonGlobalTargetExtType() const {
+  SmallPtrSet<const Type *, 4> Visited;
+  return containsNonGlobalTargetExtType(Visited);
 }
 
 const fltSemantics &Type::getFltSemantics() const {
@@ -424,6 +441,34 @@ bool StructType::isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const {
   return false;
 }
 
+bool StructType::containsNonGlobalTargetExtType(
+    SmallPtrSetImpl<const Type *> &Visited) const {
+  if ((getSubclassData() & SCDB_ContainsNonGlobalTargetExtType) != 0)
+    return true;
+
+  if ((getSubclassData() & SCDB_NotContainsNonGlobalTargetExtType) != 0)
+    return false;
+
+  if (!Visited.insert(this).second)
+    return false;
+
+  for (Type *Ty : elements()) {
+    if (Ty->containsNonGlobalTargetExtType(Visited)) {
+      const_cast<StructType *>(this)->setSubclassData(
+          getSubclassData() | SCDB_ContainsNonGlobalTargetExtType);
+      return true;
+    }
+  }
+
+  // For structures that are opaque, return false but do not set the
+  // SCDB_NotContainsNonGlobalTargetExtType flag since it may gain non-global
+  // target extension types when it becomes non-opaque.
+  if (!isOpaque())
+    const_cast<StructType *>(this)->setSubclassData(
+        getSubclassData() | SCDB_NotContainsNonGlobalTargetExtType);
+  return false;
+}
+
 bool StructType::containsHomogeneousScalableVectorTypes() const {
   if (getNumElements() <= 0 || !isa<ScalableVectorType>(elements().front()))
     return false;
@@ -436,20 +481,37 @@ bool StructType::containsHomogeneousTypes() const {
 }
 
 void StructType::setBody(ArrayRef<Type*> Elements, bool isPacked) {
+  cantFail(setBodyOrError(Elements, isPacked));
+}
+
+Error StructType::setBodyOrError(ArrayRef<Type *> Elements, bool isPacked) {
   assert(isOpaque() && "Struct body already set!");
+
+  if (auto E = checkBody(Elements))
+    return E;
 
   setSubclassData(getSubclassData() | SCDB_HasBody);
   if (isPacked)
     setSubclassData(getSubclassData() | SCDB_Packed);
 
   NumContainedTys = Elements.size();
+  ContainedTys = Elements.empty()
+                     ? nullptr
+                     : Elements.copy(getContext().pImpl->Alloc).data();
 
-  if (Elements.empty()) {
-    ContainedTys = nullptr;
-    return;
+  return Error::success();
+}
+
+Error StructType::checkBody(ArrayRef<Type *> Elements) {
+  SmallSetVector<Type *, 4> Worklist(Elements.begin(), Elements.end());
+  for (unsigned I = 0; I < Worklist.size(); ++I) {
+    Type *Ty = Worklist[I];
+    if (Ty == this)
+      return createStringError(Twine("identified structure type '") +
+                               getName() + "' is recursive");
+    Worklist.insert(Ty->subtype_begin(), Ty->subtype_end());
   }
-
-  ContainedTys = Elements.copy(getContext().pImpl->Alloc).data();
+  return Error::success();
 }
 
 void StructType::setName(StringRef Name) {
@@ -885,7 +947,7 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
 
   // DirectX resources
   if (Name.starts_with("dx."))
-    return TargetTypeInfo(PointerType::get(C, 0));
+    return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::CanBeGlobal);
 
   // Opaque types in the AMDGPU name space.
   if (Name == "amdgcn.named.barrier") {

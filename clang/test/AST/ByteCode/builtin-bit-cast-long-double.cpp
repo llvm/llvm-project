@@ -45,7 +45,7 @@ struct bytes {
   unsigned char d[16];
 };
 
-// static_assert(round_trip<bytes>(ld), "");
+static_assert(round_trip<bytes>(ld), "");
 
 static_assert(round_trip<long double>(10.0L));
 
@@ -77,10 +77,17 @@ constexpr bytes ld539 = {
   0x8, 0x40, 0x0,  0x0,
   0x0, 0x0,  0x0,  0x0,
 };
-
 constexpr long double fivehundredandthirtynine = 539.0;
-
 static_assert(bit_cast<long double>(ld539) == fivehundredandthirtynine, "");
+
+struct LD {
+  long double v;
+};
+
+constexpr LD ld2 = __builtin_bit_cast(LD, ld539.d);
+constexpr long double five39 = __builtin_bit_cast(long double, ld539.d);
+static_assert(ld2.v == five39);
+
 #else
 static_assert(round_trip<__int128_t>(34.0L));
 #endif

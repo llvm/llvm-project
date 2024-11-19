@@ -431,6 +431,9 @@ public:
   bool Pre(const parser::OpenMPDeclareTargetConstruct &);
   void Post(const parser::OpenMPDeclareTargetConstruct &) { PopContext(); }
 
+  bool Pre(const parser::OpenMPDeclareMapperConstruct &);
+  void Post(const parser::OpenMPDeclareMapperConstruct &) { PopContext(); }
+
   bool Pre(const parser::OpenMPThreadprivate &);
   void Post(const parser::OpenMPThreadprivate &) { PopContext(); }
 
@@ -458,6 +461,14 @@ public:
   }
 
   // 2.15.3 Data-Sharing Attribute Clauses
+  bool Pre(const parser::OmpClause::Inclusive &x) {
+    ResolveOmpObjectList(x.v, Symbol::Flag::OmpInclusiveScan);
+    return false;
+  }
+  bool Pre(const parser::OmpClause::Exclusive &x) {
+    ResolveOmpObjectList(x.v, Symbol::Flag::OmpExclusiveScan);
+    return false;
+  }
   void Post(const parser::OmpDefaultClause &);
   bool Pre(const parser::OmpClause::Shared &x) {
     ResolveOmpObjectList(x.v, Symbol::Flag::OmpShared);
@@ -538,6 +549,12 @@ public:
     }
     const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
     ResolveOmpObjectList(objList, Symbol::Flag::OmpReduction);
+    using ReductionModifier = parser::OmpReductionClause::ReductionModifier;
+    const auto &maybeModifier{
+        std::get<std::optional<ReductionModifier>>(x.v.t)};
+    if (maybeModifier && *maybeModifier == ReductionModifier::Inscan) {
+      ResolveOmpObjectList(objList, Symbol::Flag::OmpInScanReduction);
+    }
     return false;
   }
 
@@ -553,9 +570,17 @@ public:
     return false;
   }
 
-  void Post(const parser::OmpDependSinkVec &x) {
-    const auto &name{std::get<parser::Name>(x.t)};
-    ResolveName(&name);
+  void Post(const parser::OmpIteration &x) {
+    if (const auto &name{std::get<parser::Name>(x.t)}; !name.symbol) {
+      auto *symbol{currScope().FindSymbol(name.source)};
+      if (!symbol) {
+        // OmpIteration must use an existing object. If there isn't one,
+        // create a fake one and flag an error later.
+        symbol = &currScope().MakeSymbol(
+            name.source, Attrs{}, EntityDetails(/*isDummy=*/true));
+      }
+      Resolve(name, symbol);
+    }
   }
 
   bool Pre(const parser::OmpClause::UseDevicePtr &x) {
@@ -684,8 +709,9 @@ private:
       Symbol::Flag::OmpUseDevicePtr, Symbol::Flag::OmpUseDeviceAddr,
       Symbol::Flag::OmpIsDevicePtr, Symbol::Flag::OmpHasDeviceAddr};
 
-  Symbol::Flags ompFlagsRequireMark{
-      Symbol::Flag::OmpThreadprivate, Symbol::Flag::OmpDeclareTarget};
+  Symbol::Flags ompFlagsRequireMark{Symbol::Flag::OmpThreadprivate,
+      Symbol::Flag::OmpDeclareTarget, Symbol::Flag::OmpExclusiveScan,
+      Symbol::Flag::OmpInclusiveScan, Symbol::Flag::OmpInScanReduction};
 
   Symbol::Flags dataCopyingAttributeFlags{
       Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpCopyPrivate};
@@ -1618,6 +1644,7 @@ bool OmpAttributeVisitor::Pre(
   switch (standaloneDir.v) {
   case llvm::omp::Directive::OMPD_barrier:
   case llvm::omp::Directive::OMPD_ordered:
+  case llvm::omp::Directive::OMPD_scan:
   case llvm::omp::Directive::OMPD_target_enter_data:
   case llvm::omp::Directive::OMPD_target_exit_data:
   case llvm::omp::Directive::OMPD_target_update:
@@ -1671,6 +1698,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   case llvm::omp::Directive::OMPD_teams_distribute_parallel_do:
   case llvm::omp::Directive::OMPD_teams_distribute_parallel_do_simd:
   case llvm::omp::Directive::OMPD_teams_distribute_simd:
+  case llvm::omp::Directive::OMPD_teams_loop:
   case llvm::omp::Directive::OMPD_tile:
   case llvm::omp::Directive::OMPD_unroll:
     PushContext(beginDir.source, beginDir.v);
@@ -1930,7 +1958,8 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareTargetConstruct &x) {
                  parser::Unwrap<parser::OmpClauseList>(spec.u)}) {
     for (const auto &clause : clauseList->v) {
       if (const auto *toClause{std::get_if<parser::OmpClause::To>(&clause.u)}) {
-        ResolveOmpObjectList(toClause->v, Symbol::Flag::OmpDeclareTarget);
+        auto &objList{std::get<parser::OmpObjectList>(toClause->v.t)};
+        ResolveOmpObjectList(objList, Symbol::Flag::OmpDeclareTarget);
       } else if (const auto *linkClause{
                      std::get_if<parser::OmpClause::Link>(&clause.u)}) {
         ResolveOmpObjectList(linkClause->v, Symbol::Flag::OmpDeclareTarget);
@@ -1940,6 +1969,11 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareTargetConstruct &x) {
       }
     }
   }
+  return true;
+}
+
+bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareMapperConstruct &x) {
+  PushContext(x.source, llvm::omp::Directive::OMPD_declare_mapper);
   return true;
 }
 
@@ -2416,6 +2450,16 @@ void OmpAttributeVisitor::ResolveOmpObject(
                   if (ultimateSymbol.test(Symbol::Flag::InNamelist)) {
                     context_.Say(name->source,
                         "Variable '%s' in NAMELIST cannot be in a REDUCTION clause"_err_en_US,
+                        name->ToString());
+                  }
+                }
+                if (ompFlag == Symbol::Flag::OmpInclusiveScan ||
+                    ompFlag == Symbol::Flag::OmpExclusiveScan) {
+                  if (!symbol->test(Symbol::Flag::OmpInScanReduction)) {
+                    context_.Say(name->source,
+                        "List item %s must appear in REDUCTION clause "
+                        "with the INSCAN modifier of the parent "
+                        "directive"_err_en_US,
                         name->ToString());
                   }
                 }

@@ -424,7 +424,7 @@ def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
 def CUFOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
   let summary = "Convert some CUF operations to runtime calls";
   let dependentDialects = [
-    "fir::FIROpsDialect"
+    "fir::FIROpsDialect", "mlir::gpu::GPUDialect"
   ];
 }
 

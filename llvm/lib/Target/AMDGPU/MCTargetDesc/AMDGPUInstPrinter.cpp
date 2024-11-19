@@ -18,7 +18,6 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/TargetParser.h"
 
 using namespace llvm;
@@ -244,8 +243,6 @@ void AMDGPUInstPrinter::printScope(int64_t Scope, raw_ostream &O) {
     O << "SCOPE_SYS";
   else
     llvm_unreachable("unexpected scope policy value");
-
-  return;
 }
 
 void AMDGPUInstPrinter::printDim(const MCInst *MI, unsigned OpNo,

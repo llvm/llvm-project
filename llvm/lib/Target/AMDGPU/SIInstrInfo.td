@@ -1755,6 +1755,21 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
         1                 : VSrc_b32);
 }
 
+// Returns the vreg register class to use for sources of VOP3 instructions for the
+// given VT.
+class getVOP3VRegSrcForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 0> {
+   RegisterOperand ret =
+   !cond(!eq(VT.Size, 128) : RegisterOperand<VReg_128>,
+         !eq(VT.Size, 96)  : RegisterOperand<VReg_96>,
+         !eq(VT.Size, 64)  : RegisterOperand<VReg_64>,
+         !eq(VT.Size, 48)  : RegisterOperand<VReg_64>,
+         !eq(VT.Size, 16)  : !if(IsTrue16,
+                                 !if(IsFake16, RegisterOperand<VGPR_32>,
+                                               RegisterOperand<VGPR_16>),
+                                 RegisterOperand<VGPR_32>),
+         1                 : RegisterOperand<VGPR_32>);
+}
+
 // Src2 of VOP3 DPP instructions cannot be a literal
 class getVOP3DPPSrcForVT<ValueType VT, bit IsFake16 = 1> {
   RegisterOperand ret =
@@ -2759,6 +2774,7 @@ def VOP_I32_I32 : VOPProfile <[i32, i32, untyped, untyped]>;
 def VOP_F16_F32 : VOPProfile <[f16, f32, untyped, untyped]>;
 def VOP_F32_F16 : VOPProfile <[f32, f16, untyped, untyped]>;
 def VOP_I64_I64 : VOPProfile <[i64, i64, untyped, untyped]>;
+def VOP_F32_BF16 : VOPProfile <[f32, bf16, untyped, untyped]>;
 
 def VOP_F32_F32_F16 : VOPProfile <[f32, f32, f16, untyped]>;
 def VOP_F32_F32_F32 : VOPProfile <[f32, f32, f32, untyped]>;
@@ -2771,6 +2787,7 @@ def VOP_I32_I32_I32 : VOPProfile <[i32, i32, i32, untyped]>;
 def VOP_I32_I32_I32_ARITH : VOPProfile <[i32, i32, i32, untyped], /*EnableClamp=*/1>;
 def VOP_V2F16_F32_F32 : VOPProfile <[v2f16, f32, f32, untyped]>;
 def VOP_F32_F16_F16_F16 : VOPProfile <[f32, f16, f16, f16]>;
+def VOP_V2BF16_F32_F32 : VOPProfile <[v2bf16, f32, f32, untyped]>;
 
 def VOP_I64_I64_I32 : VOPProfile <[i64, i64, i32, untyped]>;
 def VOP_I64_I32_I64 : VOPProfile <[i64, i32, i64, untyped]>;
@@ -2828,6 +2845,11 @@ def VOP_V4I32_V2I32_V4I32_I32     : VOPProfile <[v4i32,  v2i32, v4i32, i32]>;
 def VOP_V16I32_V2I32_V4I32_I32    : VOPProfile <[v16i32, v2i32, v4i32, i32]>;
 def VOP_V4F32_V2I32_V4I32_I32     : VOPProfile <[v4f32,  v2i32, v4i32, i32]>;
 def VOP_V16F32_V2I32_V4I32_I32    : VOPProfile <[v16f32, v2i32, v4i32, i32]>;
+
+def VOP_V4F32_V8F16_V8F16_V4F32   : VOPProfile <[v4f32,  v8f16, v8f16, v4f32]>;
+def VOP_V16F32_V8F16_V8F16_V16F32 : VOPProfile <[v16f32, v8f16, v8f16, v16f32]>;
+def VOP_V16F32_V8BF16_V8BF16_V16F32 : VOPProfile <[v16f32, v8bf16, v8bf16, v16f32]>;
+
 
 class Commutable_REV <string revOp, bit isOrig> {
   string RevOp = revOp;

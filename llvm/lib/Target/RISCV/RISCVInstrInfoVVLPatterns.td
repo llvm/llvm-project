@@ -2305,7 +2305,8 @@ foreach vti = AllIntegerVectors in {
 
 // 11.16. Vector Integer Move Instructions
 foreach vti = AllVectors in {
-  let Predicates = GetVTypePredicates<vti>.Predicates in {
+  defvar ivti = GetIntVTypeInfo<vti>.Vti;
+  let Predicates = GetVTypePredicates<ivti>.Predicates in {
     def : Pat<(vti.Vector (riscv_vmv_v_v_vl vti.RegClass:$passthru,
                                             vti.RegClass:$rs2, VLOpFrag)),
               (!cast<Instruction>("PseudoVMV_V_V_"#vti.LMul.MX)

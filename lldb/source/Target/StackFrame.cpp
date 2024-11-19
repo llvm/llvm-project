@@ -508,6 +508,29 @@ StackFrame::GetInScopeVariableList(bool get_file_globals,
 ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
     VariableSP &var_sp, Status &error) {
+  ExecutionContext exe_ctx;
+  CalculateExecutionContext(exe_ctx);
+  bool use_DIL = exe_ctx.GetTargetRef().GetUseDIL(&exe_ctx);
+  if (use_DIL)
+    return DILGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
+                                                var_sp, error);
+
+  return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
+                                                 var_sp, error);
+}
+
+ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
+    llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
+    uint32_t options, lldb::VariableSP &var_sp, Status &error) {
+  // This is a place-holder for the calls into the DIL parser and
+  // evaluator.  For now, just call the "real" frame variable implementation.
+  return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
+                                                 var_sp, error);
+}
+
+ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
+    llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
+    VariableSP &var_sp, Status &error) {
   llvm::StringRef original_var_expr = var_expr;
   // We can't fetch variable information for a history stack frame.
   if (IsHistorical())
@@ -1207,6 +1230,59 @@ bool StackFrame::IsHidden() {
   return false;
 }
 
+const char *StackFrame::GetFunctionName() {
+  const char *name = nullptr;
+  SymbolContext sc = GetSymbolContext(
+      eSymbolContextFunction | eSymbolContextBlock | eSymbolContextSymbol);
+  if (sc.block) {
+    Block *inlined_block = sc.block->GetContainingInlinedBlock();
+    if (inlined_block) {
+      const InlineFunctionInfo *inlined_info =
+          inlined_block->GetInlinedFunctionInfo();
+      if (inlined_info)
+        name = inlined_info->GetName().AsCString();
+    }
+  }
+
+  if (name == nullptr) {
+    if (sc.function)
+      name = sc.function->GetName().GetCString();
+  }
+
+  if (name == nullptr) {
+    if (sc.symbol)
+      name = sc.symbol->GetName().GetCString();
+  }
+
+  return name;
+}
+
+const char *StackFrame::GetDisplayFunctionName() {
+  const char *name = nullptr;
+  SymbolContext sc = GetSymbolContext(
+      eSymbolContextFunction | eSymbolContextBlock | eSymbolContextSymbol);
+  if (sc.block) {
+    Block *inlined_block = sc.block->GetContainingInlinedBlock();
+    if (inlined_block) {
+      const InlineFunctionInfo *inlined_info =
+          inlined_block->GetInlinedFunctionInfo();
+      if (inlined_info)
+        name = inlined_info->GetDisplayName().AsCString();
+    }
+  }
+
+  if (name == nullptr) {
+    if (sc.function)
+      name = sc.function->GetDisplayName().GetCString();
+  }
+
+  if (name == nullptr) {
+    if (sc.symbol)
+      name = sc.symbol->GetDisplayName().GetCString();
+  }
+  return name;
+}
+
 SourceLanguage StackFrame::GetLanguage() {
   CompileUnit *cu = GetSymbolContext(eSymbolContextCompUnit).comp_unit;
   if (cu)
@@ -1316,11 +1392,13 @@ lldb::ValueObjectSP StackFrame::GuessValueForAddress(lldb::addr_t addr) {
 
   const char *plugin_name = nullptr;
   const char *flavor = nullptr;
+  const char *cpu = nullptr;
+  const char *features = nullptr;
   const bool force_live_memory = true;
 
-  DisassemblerSP disassembler_sp =
-      Disassembler::DisassembleRange(target_arch, plugin_name, flavor,
-                                     *target_sp, pc_range, force_live_memory);
+  DisassemblerSP disassembler_sp = Disassembler::DisassembleRange(
+      target_arch, plugin_name, flavor, cpu, features, *target_sp, pc_range,
+      force_live_memory);
 
   if (!disassembler_sp || !disassembler_sp->GetInstructionList().GetSize()) {
     return ValueObjectSP();
@@ -1697,10 +1775,12 @@ lldb::ValueObjectSP StackFrame::GuessValueForRegisterAndOffset(ConstString reg,
 
   const char *plugin_name = nullptr;
   const char *flavor = nullptr;
+  const char *cpu = nullptr;
+  const char *features = nullptr;
   const bool force_live_memory = true;
-  DisassemblerSP disassembler_sp =
-      Disassembler::DisassembleRange(target_arch, plugin_name, flavor,
-                                     *target_sp, pc_range, force_live_memory);
+  DisassemblerSP disassembler_sp = Disassembler::DisassembleRange(
+      target_arch, plugin_name, flavor, cpu, features, *target_sp, pc_range,
+      force_live_memory);
 
   if (!disassembler_sp || !disassembler_sp->GetInstructionList().GetSize()) {
     return ValueObjectSP();
@@ -1914,15 +1994,15 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
       if (m_sc.comp_unit && m_sc.line_entry.IsValid()) {
         have_debuginfo = true;
         if (source_lines_before > 0 || source_lines_after > 0) {
+          SupportFileSP source_file_sp = m_sc.line_entry.file_sp;
           uint32_t start_line = m_sc.line_entry.line;
           if (!start_line && m_sc.function) {
-            FileSpec source_file;
-            m_sc.function->GetStartLineSourceInfo(source_file, start_line);
+            m_sc.function->GetStartLineSourceInfo(source_file_sp, start_line);
           }
 
           size_t num_lines =
               target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
-                  m_sc.line_entry.file_sp, start_line, m_sc.line_entry.column,
+                  source_file_sp, start_line, m_sc.line_entry.column,
                   source_lines_before, source_lines_after, "->", &strm);
           if (num_lines != 0)
             have_source = true;
@@ -1966,6 +2046,7 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
             const bool mixed_source_and_assembly = false;
             Disassembler::Disassemble(
                 target->GetDebugger(), target_arch, plugin_name, flavor,
+                target->GetDisassemblyCPU(), target->GetDisassemblyFeatures(),
                 exe_ctx, GetFrameCodeAddress(),
                 {Disassembler::Limit::Instructions, disasm_lines},
                 mixed_source_and_assembly, 0,

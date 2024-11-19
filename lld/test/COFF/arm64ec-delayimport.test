@@ -12,9 +12,9 @@ RUN: lld-link -machine:arm64ec -dll -noentry -out:out.dll loadconfig-arm64ec.obj
 RUN:          helper-mangled.obj test-arm64ec.lib test2-arm64ec.lib -delayload:test.dll -map
 
 RUN: llvm-readobj --hex-dump=.test out.dll | FileCheck --check-prefix=TESTSEC %s
-TESTSEC:      0x180008000 00600000 88700000 00200000 10100000
-TESTSEC-NEXT: 0x180008010 08600000 90700000 10200000 30100000
-TESTSEC-NEXT: 0x180008020 1c100000 3c100000 00300000
+TESTSEC:      0x180009000 00600000 88700000 00200000 10100000
+TESTSEC-NEXT: 0x180009010 08600000 90700000 10200000 30100000
+TESTSEC-NEXT: 0x180009020 1c100000 3c100000 00300000
 
 RUN: llvm-objdump -d out.dll | FileCheck --check-prefix=DISASM %s
 DISASM:      0000000180001000 <.text>:

@@ -1257,7 +1257,7 @@ define dso_local i32 @full(ptr nocapture noundef readonly %p1, i32 noundef %st1,
 ; CHECK-NEXT:    [[TMP39:%.*]] = shufflevector <16 x i8> [[TMP37]], <16 x i8> [[TMP38]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19>
 ; CHECK-NEXT:    [[TMP40:%.*]] = zext <16 x i8> [[TMP39]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP41:%.*]] = sub nsw <16 x i32> [[TMP33]], [[TMP40]]
-; CHECK-NEXT:    [[TMP42:%.*]] = shl nsw <16 x i32> [[TMP41]], <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+; CHECK-NEXT:    [[TMP42:%.*]] = shl nsw <16 x i32> [[TMP41]], splat (i32 16)
 ; CHECK-NEXT:    [[TMP43:%.*]] = add nsw <16 x i32> [[TMP42]], [[TMP26]]
 ; CHECK-NEXT:    [[TMP44:%.*]] = shufflevector <16 x i32> [[TMP43]], <16 x i32> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
 ; CHECK-NEXT:    [[TMP45:%.*]] = add nsw <16 x i32> [[TMP43]], [[TMP44]]
@@ -1275,9 +1275,9 @@ define dso_local i32 @full(ptr nocapture noundef readonly %p1, i32 noundef %st1,
 ; CHECK-NEXT:    [[TMP57:%.*]] = add nsw <16 x i32> [[TMP55]], [[TMP56]]
 ; CHECK-NEXT:    [[TMP58:%.*]] = sub nsw <16 x i32> [[TMP55]], [[TMP56]]
 ; CHECK-NEXT:    [[TMP59:%.*]] = shufflevector <16 x i32> [[TMP57]], <16 x i32> [[TMP58]], <16 x i32> <i32 0, i32 1, i32 18, i32 19, i32 4, i32 5, i32 22, i32 23, i32 8, i32 9, i32 26, i32 27, i32 12, i32 13, i32 30, i32 31>
-; CHECK-NEXT:    [[TMP60:%.*]] = lshr <16 x i32> [[TMP59]], <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
-; CHECK-NEXT:    [[TMP61:%.*]] = and <16 x i32> [[TMP60]], <i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537>
-; CHECK-NEXT:    [[TMP62:%.*]] = mul nuw <16 x i32> [[TMP61]], <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
+; CHECK-NEXT:    [[TMP60:%.*]] = lshr <16 x i32> [[TMP59]], splat (i32 15)
+; CHECK-NEXT:    [[TMP61:%.*]] = and <16 x i32> [[TMP60]], splat (i32 65537)
+; CHECK-NEXT:    [[TMP62:%.*]] = mul nuw <16 x i32> [[TMP61]], splat (i32 65535)
 ; CHECK-NEXT:    [[TMP63:%.*]] = add <16 x i32> [[TMP62]], [[TMP59]]
 ; CHECK-NEXT:    [[TMP64:%.*]] = xor <16 x i32> [[TMP63]], [[TMP62]]
 ; CHECK-NEXT:    [[TMP65:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP64]])

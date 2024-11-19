@@ -24,7 +24,6 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/VectorBuilder.h"
@@ -290,18 +289,6 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
 InstructionCost VPRecipeBase::computeCost(ElementCount VF,
                                           VPCostContext &Ctx) const {
   llvm_unreachable("subclasses should implement computeCost");
-}
-
-InstructionCost VPSingleDefRecipe::computeCost(ElementCount VF,
-                                               VPCostContext &Ctx) const {
-  Instruction *UI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
-  if (isa<VPReplicateRecipe>(this)) {
-    assert(UI && "VPReplicateRecipe must have an underlying instruction");
-    // VPReplicateRecipe may be cloned as part of an existing VPlan-to-VPlan
-    // transform, avoid computing their cost multiple times for now.
-    Ctx.SkipCostComputation.insert(UI);
-  }
-  return UI ? Ctx.getLegacyCost(UI, VF) : 0;
 }
 
 FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
@@ -1497,6 +1484,8 @@ void VPWidenCastRecipe::execute(VPTransformState &State) {
   Value *Cast = Builder.CreateCast(Instruction::CastOps(Opcode), A, DestTy);
   State.set(this, Cast);
   State.addMetadata(Cast, cast_or_null<Instruction>(getUnderlyingValue()));
+  if (auto *CastOp = dyn_cast<Instruction>(Cast))
+    setFlags(CastOp);
 }
 
 InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
@@ -2281,6 +2270,15 @@ bool VPReplicateRecipe::shouldPack() const {
       });
     return false;
   });
+}
+
+InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
+                                               VPCostContext &Ctx) const {
+  Instruction *UI = cast<Instruction>(getUnderlyingValue());
+  // VPReplicateRecipe may be cloned as part of an existing VPlan-to-VPlan
+  // transform, avoid computing their cost multiple times for now.
+  Ctx.SkipCostComputation.insert(UI);
+  return Ctx.getLegacyCost(UI, VF);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

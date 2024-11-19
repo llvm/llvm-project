@@ -121,10 +121,10 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
       if (note_shown)
         return;
 
-      result.GetOutputStream()
-          << "note: object description requested, but type doesn't implement "
-             "a custom object description. Consider using \"p\" instead of "
-             "\"po\" (this note will only be shown once per debug session).\n";
+      result.AppendNote(
+          "object description requested, but type doesn't implement "
+          "a custom object description. Consider using \"p\" instead of "
+          "\"po\" (this note will only be shown once per debug session).\n");
       note_shown = true;
     }
   };
@@ -164,8 +164,8 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
         StringRef flags;
         if (args.HasArgs())
           flags = args.GetArgString();
-        result.AppendMessageWithFormatv("note: ran `frame variable {0}{1}`",
-                                        flags, expr);
+        result.AppendNoteWithFormatv("ran `frame variable {0}{1}`", flags,
+                                     expr);
       }
 
       dump_val_object(*valobj_sp);
@@ -224,8 +224,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
       StringRef flags;
       if (args.HasArgs())
         flags = args.GetArgStringWithDelimiter();
-      result.AppendMessageWithFormatv("note: ran `expression {0}{1}`", flags,
-                                      expr);
+      result.AppendNoteWithFormatv("ran `expression {0}{1}`", flags, expr);
     }
 
     if (valobj_sp->GetError().GetError() != UserExpression::kNoResult)
