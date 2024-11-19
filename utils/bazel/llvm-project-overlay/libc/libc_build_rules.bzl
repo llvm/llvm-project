@@ -59,7 +59,7 @@ def libc_function(
         srcs,
         weak = False,
         copts = None,
-        local_defines = None,
+        local_defines = [],
         **kwargs):
     """Add target for a libc function.
 
@@ -108,16 +108,17 @@ def libc_function(
         name = libc_internal_target(name),
         srcs = srcs,
         copts = copts,
+        local_defines = local_defines,
         **kwargs
     )
 
     # This second target is the llvm libc C function with either a default or hidden visibility.
     # All other functions are hidden.
     global_func_attrs = [
-        "[[gnu::visibility("default")]]",
+        "[[gnu::visibility(\"default\")]]",
     ]
     func_attrs = [
-        "LLVM_LIBC_FUNCTION_ATTR_" + name + "='LLVM_LIBC_EMPTY, [[gnu::weak]]'",
+        "LLVM_LIBC_FUNCTION_ATTR_" + name + "=\"LLVM_LIBC_EMPTY, [[gnu::weak]]\"",
     ] if weak else []
         
     local_defines = (local_defines
