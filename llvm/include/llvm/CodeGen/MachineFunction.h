@@ -493,7 +493,7 @@ public:
     /// Callee type id.
     ConstantInt *TypeId = nullptr;
 
-    CallSiteInfo() {}
+    CallSiteInfo() = default;
 
     /// Extracts the numeric type id from the CallBase's type operand bundle,
     /// and sets TypeId. This is used as type id for the indirect call in the
@@ -503,12 +503,11 @@ public:
       if (!CB.isIndirectCall())
         return;
 
-      auto Opt = CB.getOperandBundle(LLVMContext::OB_type);
-      if (!Opt.has_value()) {
-        errs() << "warning: cannot find indirect call type operand bundle for  "
-                  "call graph section\n";
+      std::optional<OperandBundleUse> Opt =
+          CB.getOperandBundle(LLVMContext::OB_type);
+      // Return if the operand bundle for call graph section cannot be found.
+      if (!Opt.has_value())
         return;
-      }
 
       // Get generalized type id string
       auto OB = Opt.value();
@@ -520,9 +519,9 @@ public:
              "invalid type identifier");
 
       // Compute numeric type id from generalized type id string
-      uint64_t TypeIdVal = llvm::MD5Hash(TypeIdStr->getString());
+      uint64_t TypeIdVal = MD5Hash(TypeIdStr->getString());
       IntegerType *Int64Ty = Type::getInt64Ty(CB.getContext());
-      TypeId = llvm::ConstantInt::get(Int64Ty, TypeIdVal, /*IsSigned=*/false);
+      TypeId = ConstantInt::get(Int64Ty, TypeIdVal, /*IsSigned=*/false);
     }
   };
 
