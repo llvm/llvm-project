@@ -8,6 +8,7 @@
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/LastRunTrackingAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Dominators.h"
@@ -835,6 +836,7 @@ TEST_F(PassManagerTest, FunctionPassCFGChecker) {
   FAM.registerPass([&] { return DominatorTreeAnalysis(); });
   FAM.registerPass([&] { return AssumptionAnalysis(); });
   FAM.registerPass([&] { return TargetIRAnalysis(); });
+  FAM.registerPass([&] { return LastRunTrackingAnalysis(); });
 
   FPM.addPass(SimplifyCFGPass());
   FPM.run(*F, FAM);
@@ -884,6 +886,7 @@ TEST_F(PassManagerTest, FunctionPassCFGCheckerInvalidateAnalysis) {
   FAM.registerPass([&] { return DominatorTreeAnalysis(); });
   FAM.registerPass([&] { return AssumptionAnalysis(); });
   FAM.registerPass([&] { return TargetIRAnalysis(); });
+  FAM.registerPass([&] { return LastRunTrackingAnalysis(); });
 
   FPM.addPass(TestSimplifyCFGInvalidatingAnalysisPass());
   FPM.run(*F, FAM);
@@ -952,6 +955,7 @@ TEST_F(PassManagerTest, FunctionPassCFGCheckerWrapped) {
   FAM.registerPass([&] { return DominatorTreeAnalysis(); });
   FAM.registerPass([&] { return AssumptionAnalysis(); });
   FAM.registerPass([&] { return TargetIRAnalysis(); });
+  FAM.registerPass([&] { return LastRunTrackingAnalysis(); });
 
   FunctionPassManager InnerFPM;
   InnerFPM.addPass(SimplifyCFGPass());
