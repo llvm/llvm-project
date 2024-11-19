@@ -37,10 +37,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
-#include <fstream>
-#include <memory>
-#include <stdlib.h>
-
 using namespace llvm;
 
 namespace COMGR {
@@ -277,6 +273,29 @@ StringRef getROCMPath() { return getDetector()->getROCmPath(); }
 StringRef getHIPPath() { return getDetector()->getHIPPath(); }
 
 StringRef getLLVMPath() { return getDetector()->getLLVMPath(); }
+
+StringRef getCachePolicy() {
+  static const char *EnvCachePolicy = std::getenv("AMD_COMGR_CACHE_POLICY");
+  return EnvCachePolicy;
+}
+
+StringRef getCacheDirectory() {
+  static const char *EnvCacheDirectory = std::getenv("AMD_COMGR_CACHE_DIR");
+  if (EnvCacheDirectory)
+    return EnvCacheDirectory;
+
+  // mark Result as static to keep it cached across calls
+  static SmallString<256> Result;
+  if (!Result.empty())
+    return Result;
+
+  if (sys::path::cache_directory(Result)) {
+    sys::path::append(Result, Twine("comgr_cache"));
+    return Result;
+  }
+
+  return "";
+}
 
 } // namespace env
 } // namespace COMGR

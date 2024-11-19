@@ -193,9 +193,12 @@ endif()
   add_dependencies(check-comgr ${name})
   # Windows binaries have no equivalent to RPATH, so we must set their PATH to
   # include the .lib/.dll directory.
-  if (NOT(UNIX))
+  if (UNIX)
     set_tests_properties(${test_name}
-      PROPERTIES ENVIRONMENT "PATH=$<TARGET_LINKER_FILE_DIR:amd_comgr>")
+      PROPERTIES ENVIRONMENT "AMD_COMGR_CACHE_DIR=;")
+  else()
+    set_tests_properties(${test_name}
+      PROPERTIES ENVIRONMENT "PATH=$<TARGET_LINKER_FILE_DIR:amd_comgr>;AMD_COMGR_CACHE_DIR=;")
   endif()
 endmacro()
 

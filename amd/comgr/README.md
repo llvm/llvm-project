@@ -125,6 +125,22 @@ These include:
   certain runtime headers. If this is not set, it has a default value of
   "${ROCM_PATH}/llvm".
 
+Comgr utilizes a cache to preserve the results of compilations between executions.
+The cache's status (enabled/disabled), storage location for its results,
+and eviction policy can be manipulated through specific environment variables.
+If an issue arises during cache initialization, the execution will proceed with
+the cache turned off.
+
+* `AMD_COMGR_CACHE_DIR`: When set to "", the cache is turned off. If assigned a
+  value, that value is used as the path for cache storage. By default, it is
+  directed to "$XDG_CACHE_HOME/comgr_cache" (which defaults to
+  "$USER/.cache/comgr_cache" on Linux, and "%LOCALAPPDATA%\cache\comgr_cache"
+  on Windows).
+* `AMD_COMGR_CACHE_POLICY`: If assigned a value, the string is interpreted and
+  applied to the cache pruning policy. The cache is pruned only upon program
+  termination. The string format aligns with [Clang's ThinLTO cache pruning policy](https://clang.llvm.org/docs/ThinLTO.html#cache-pruning).
+  The default policy is set as: "prune_interval=1h:prune_expiration=0h:cache_size=75%:cache_size_bytes=30g:cache_size_files=0".
+
 Comgr also supports some environment variables to aid in debugging. These
 include:
 
