@@ -21,8 +21,6 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void, longjmp, (jmp_buf, int)) {
   asm(R"(
-      mov %[cookie], %%rdx
-
       mov %c[rbx](%%rdi), %%rbx
       xor %%rbx, %%rdx
       xor %[mask], %%rbx
@@ -87,16 +85,15 @@ LLVM_LIBC_FUNCTION(void, longjmp, (jmp_buf, int)) {
       movq %%rsi, %%rax
 
       jmpq *%%rcx
-      )"
-      : [cookie] "=m"(jmpbuf::checksum_cookie), [mask] "=m"(jmpbuf::value_mask)
-      :
-      [rbx] "i"(offsetof(__jmp_buf, rbx)), [rbp] "i"(offsetof(__jmp_buf, rbp)),
-      [r12] "i"(offsetof(__jmp_buf, r12)), [r13] "i"(offsetof(__jmp_buf, r13)),
-      [r14] "i"(offsetof(__jmp_buf, r14)), [r15] "i"(offsetof(__jmp_buf, r15)),
-      [rsp] "i"(offsetof(__jmp_buf, rsp)), [rip] "i"(offsetof(__jmp_buf, rip)),
+      )" ::[rbx] "i"(offsetof(__jmp_buf, rbx)),
+      [rbp] "i"(offsetof(__jmp_buf, rbp)), [r12] "i"(offsetof(__jmp_buf, r12)),
+      [r13] "i"(offsetof(__jmp_buf, r13)), [r14] "i"(offsetof(__jmp_buf, r14)),
+      [r15] "i"(offsetof(__jmp_buf, r15)), [rsp] "i"(offsetof(__jmp_buf, rsp)),
+      [rip] "i"(offsetof(__jmp_buf, rip)),
       [chksum] "i"(offsetof(__jmp_buf, __chksum)),
-      [multiple] "i"(jmpbuf::MULTIPLE)
-      : "rax", "rcx", "rdx");
+      [multiple] "i"(jmpbuf::MULTIPLE), [cookie] "d"(jmpbuf::checksum_cookie),
+      [mask] "m"(jmpbuf::value_mask)
+      :);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
