@@ -537,6 +537,8 @@ Improvements to Clang's diagnostics
 
 - Improved diagnostic message for ``__builtin_bit_cast`` size mismatch (#GH115870).
 
+- Clang now omits shadow warnings for enum constants in separate class scopes (#GH62588).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
