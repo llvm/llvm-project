@@ -10488,7 +10488,14 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
     // The RHS is not constant.  If the RHS has an enum type, make sure the
     // bitfield is wide enough to hold all the values of the enum without
     // truncation.
-    if (const auto *EnumTy = OriginalInit->getType()->getAs<EnumType>()) {
+    const auto *EnumTy = OriginalInit->getType()->getAs<EnumType>();
+    const PreferredTypeAttr *PTAttr = nullptr;
+    if (!EnumTy) {
+      PTAttr = Bitfield->getAttr<PreferredTypeAttr>();
+      if (PTAttr)
+        EnumTy = PTAttr->getType()->getAs<EnumType>();
+    }
+    if (EnumTy) {
       EnumDecl *ED = EnumTy->getDecl();
       bool SignedBitfield = BitfieldType->isSignedIntegerType();
 
@@ -10509,14 +10516,21 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
                  ED->getNumPositiveBits() == FieldWidth) {
         DiagID = diag::warn_signed_bitfield_enum_conversion;
       }
-
+      unsigned PreferredTypeDiagIndex = PTAttr != nullptr;
       if (DiagID) {
-        S.Diag(InitLoc, DiagID) << Bitfield << ED;
+        S.Diag(InitLoc, DiagID) << Bitfield << PreferredTypeDiagIndex << ED;
         TypeSourceInfo *TSI = Bitfield->getTypeSourceInfo();
         SourceRange TypeRange =
             TSI ? TSI->getTypeLoc().getSourceRange() : SourceRange();
         S.Diag(Bitfield->getTypeSpecStartLoc(), diag::note_change_bitfield_sign)
             << SignedEnum << TypeRange;
+        if (PTAttr) {
+          assert(PreferredTypeDiagIndex == 1);
+          S.Diag(PTAttr->getLocation(), diag::note_bitfield_preferred_type)
+              << ED;
+        } else {
+          assert(PreferredTypeDiagIndex == 0);
+        }
       }
 
       // Compute the required bitwidth. If the enum has negative values, we need
@@ -10530,9 +10544,16 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
       if (BitsNeeded > FieldWidth) {
         Expr *WidthExpr = Bitfield->getBitWidth();
         S.Diag(InitLoc, diag::warn_bitfield_too_small_for_enum)
-            << Bitfield << ED;
+            << Bitfield << PreferredTypeDiagIndex << ED;
         S.Diag(WidthExpr->getExprLoc(), diag::note_widen_bitfield)
             << BitsNeeded << ED << WidthExpr->getSourceRange();
+        if (PTAttr) {
+          assert(PreferredTypeDiagIndex == 1);
+          S.Diag(PTAttr->getLocation(), diag::note_bitfield_preferred_type)
+              << ED;
+        } else {
+          assert(PreferredTypeDiagIndex == 0);
+        }
       }
     }
 
