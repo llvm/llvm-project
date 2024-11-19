@@ -212,11 +212,11 @@ struct BuiltinTypeDeclBuilder {
 
     // Subscript operators return references to elements, const makes the
     // reference and method const so that the underlying data is not mutable.
-    ReturnTy = AST.getLValueReferenceType(ReturnTy);
     if (IsConst) {
       ExtInfo.TypeQuals.addConst();
       ReturnTy.addConst();
     }
+    ReturnTy = AST.getLValueReferenceType(ReturnTy);
 
     QualType MethodTy =
         AST.getFunctionType(ReturnTy, {AST.UnsignedIntTy}, ExtInfo);
