@@ -938,7 +938,6 @@ PrintCompletion(FILE *output_file,
   for (const CompletionResult::Completion &c : results) {
     if (c.GetCompletion().empty())
       continue;
-    ;
 
     // Print the leading padding.
     fprintf(output_file, "        ");
@@ -997,9 +996,9 @@ PrintCompletion(FILE *output_file,
 
       first = false;
       const size_t position = description_col + separator_length;
-      const size_t description_lenth = line.size();
-      if (position + description_lenth < max_length) {
-        fprintf(output_file, "%.*s\n", static_cast<int>(description_lenth),
+      const size_t description_length = line.size();
+      if (position + description_length < max_length) {
+        fprintf(output_file, "%.*s\n", static_cast<int>(description_length),
                 line.data());
       } else {
         fprintf(output_file, "%.*s...\n",

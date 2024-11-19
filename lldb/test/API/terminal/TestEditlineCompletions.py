@@ -8,7 +8,6 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 class EditlineCompletionsTest(PExpectTest):
     @skipIfAsan
     @skipIfEditlineSupportMissing
-    @skipIfEditlineWideCharSupportMissing
     def test_completion_truncated(self):
         """Test that the completion is correctly truncated."""
         self.launch(dimensions=(10, 20))
@@ -18,7 +17,6 @@ class EditlineCompletionsTest(PExpectTest):
 
     @skipIfAsan
     @skipIfEditlineSupportMissing
-    @skipIfEditlineWideCharSupportMissing
     def test_description_truncated(self):
         """Test that the description is correctly truncated."""
         self.launch(dimensions=(10, 70))
@@ -32,30 +30,27 @@ class EditlineCompletionsTest(PExpectTest):
 
     @skipIfAsan
     @skipIfEditlineSupportMissing
-    @skipIfEditlineWideCharSupportMissing
     def test_separator_omitted(self):
         """Test that the separated is correctly omitted."""
-        self.launch(dimensions=(10, 32), timeout=1)
+        self.launch(dimensions=(10, 32))
         self.child.send("_regexp-\t")
         self.child.expect("        _regexp-attach   \r\n")
         self.child.expect("        _regexp-break    \r\n")
 
     @skipIfAsan
     @skipIfEditlineSupportMissing
-    @skipIfEditlineWideCharSupportMissing
     def test_separator(self):
         """Test that the separated is correctly printed."""
-        self.launch(dimensions=(10, 33), timeout=1)
+        self.launch(dimensions=(10, 33))
         self.child.send("_regexp-\t")
         self.child.expect("        _regexp-attach    -- A...")
         self.child.expect("        _regexp-break     -- S...")
 
     @skipIfAsan
     @skipIfEditlineSupportMissing
-    @skipIfEditlineWideCharSupportMissing
     def test_multiline_description(self):
         """Test that multi-line descriptions are correctly padded and truncated."""
-        self.launch(dimensions=(10, 72), timeout=1)
+        self.launch(dimensions=(10, 72))
         self.child.send("k\t")
         self.child.expect(
             "        kdp-remote -- Connect to a process via remote KDP server."
