@@ -939,6 +939,9 @@ public:
   // merge_values(_, zero) -> zext
   bool matchMergeXAndZero(const MachineInstr &MI, BuildFnTy &MatchInfo);
 
+  // overflow sub
+  bool matchSuboCarryOut(const MachineInstr &MI, BuildFnTy &MatchInfo);
+
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;
