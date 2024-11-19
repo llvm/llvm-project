@@ -9348,11 +9348,11 @@ def warn_unused_container_subscript_expr : Warning<
 def warn_unused_call : Warning<
   "ignoring return value of function declared with %0 attribute">,
   InGroup<UnusedValue>;
-def warn_unused_constructor : Warning<
-  "ignoring temporary created by a constructor declared with %0 attribute">,
+def warn_unused_return_type : Warning<
+  "ignoring %select{return value|temporary}0 of type %2 declared with %1 attribute%select{|: %4}3">,
   InGroup<UnusedValue>;
-def warn_unused_constructor_msg : Warning<
-  "ignoring temporary created by a constructor declared with %0 attribute: %1">,
+def warn_unused_constructor : Warning<
+  "ignoring temporary created by a constructor declared with %0 attribute%select{|: %2}1">,
   InGroup<UnusedValue>;
 def warn_side_effects_unevaluated_context : Warning<
   "expression with side effects has no effect in an unevaluated context">,
@@ -9361,10 +9361,7 @@ def warn_side_effects_typeid : Warning<
   "expression with side effects will be evaluated despite being used as an "
   "operand to 'typeid'">, InGroup<PotentiallyEvaluatedExpression>;
 def warn_unused_result : Warning<
-  "ignoring return value of function declared with %0 attribute">,
-  InGroup<UnusedResult>;
-def warn_unused_result_msg : Warning<
-  "ignoring return value of function declared with %0 attribute: %1">,
+  "ignoring return value of function declared with %0 attribute%select{|: %2}1">,
   InGroup<UnusedResult>;
 def warn_unused_result_typedef_unsupported_spelling : Warning<
   "'[[%select{nodiscard|gnu::warn_unused_result}0]]' attribute ignored when "
