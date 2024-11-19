@@ -36,7 +36,7 @@ func.func @delinearize_static_basis(%linear_index: index) -> (index, index, inde
 //   CHECK-DAG:  %[[P_NEG:.+]] = arith.cmpi slt, %[[P_REM]], %[[C0]]
 //   CHECK-DAG:  %[[P_SHIFTED:.+]] = arith.addi %[[P_REM]], %[[STRIDE1]]
 //   CHECK-DAG:  %[[P_MOD:.+]] = arith.select %[[P_NEG]], %[[P_SHIFTED]], %[[P_REM]]
-//       CHECK:  %[[P:.+]] = arith.divsi %[[P_MOD]], %[[D2]]
+//       CHECK:  %[[P:.+]] = arith.divsi %[[P_MOD]], %[[DIM2]]
 //   CHECK-DAG:  %[[Q_REM:.+]] = arith.remsi %[[IDX]], %[[DIM2]]
 //   CHECK-DAG:  %[[Q_NEG:.+]] = arith.cmpi slt, %[[Q_REM]], %[[C0]]
 //   CHECK-DAG:  %[[Q_SHIFTED:.+]] = arith.addi %[[Q_REM]], %[[DIM2]]
@@ -89,15 +89,15 @@ func.func @linearize_dynamic(%arg0: index, %arg1: index, %arg2: index, %arg3: in
 // CHECK-LABEL: @linearize_sort_adds
 // CHECK-SAME: (%[[arg0:.+]]: memref<?xi32>, %[[arg1:.+]]: index, %[[arg2:.+]]: index)
 // CHECK-DAG: %[[C4:.+]] = arith.constant 4 : index
-// CHECK: scf.for %[[ARG3:.+]] = %{{.*}} to %[[arg2]] step %{{.*}} {
-// CHECK: scf.for %[[ARG4:.+]] = %{{.*}} to %[[C4]] step %{{.*}} {
+// CHECK: scf.for %[[arg3:.+]] = %{{.*}} to %[[arg2]] step %{{.*}} {
+// CHECK: scf.for %[[arg4:.+]] = %{{.*}} to %[[C4]] step %{{.*}} {
 // CHECK: %[[stride_0:.+]] = arith.muli %[[arg2]], %[[C4]]
 // CHECK: %[[scaled_0:.+]] = arith.muli %[[arg1]], %[[stride_0]]
 // CHECK: %[[scaled_1:.+]] = arith.muli %[[arg4]], %[[arg2]]
 // Note: even though %arg3 has a lower stride, we add it first
 // CHECK: %[[val_0_2:.+]] = arith.addi %[[scaled_0]], %[[arg3]]
 // CHECK: %[[val_1:.+]] = arith.addi %[[val_0_2]], %[[scaled_1]]
-// CHECK: return %[[val_1]]
+// CHECK: memref.store %{{.*}}, %[[arg0]][%[[val_1]]]
 func.func @linearize_sort_adds(%arg0: memref<?xi32>, %arg1: index, %arg2: index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
