@@ -1471,6 +1471,11 @@ DeclContext *DeclContext::getPrimaryContext() {
   case Decl::ObjCCategoryImpl:
     return this;
 
+  case Decl::CXXRecord:
+    if (auto *OPD = dyn_cast<CXXRecordDecl>(this))
+      if (auto *Def = OPD->getDefinition())
+        return Def;
+    return this;
   default:
     if (getDeclKind() >= Decl::firstTag && getDeclKind() <= Decl::lastTag) {
       // If this is a tag type that has a definition or is currently
