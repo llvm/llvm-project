@@ -1452,13 +1452,8 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
   }
   case LK_LifetimeCapture: {
     Path.push_back({IndirectLocalPathEntry::LifetimeCapture, Init});
-    if (isRecordWithAttr<PointerAttr>(Init->getType()))
-      HasReferenceBinding = false;
-    // Skip the top MTE if it is a temporary object of the pointer-like type
-    // itself.
-    if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(Init);
-        MTE && isPointerLikeType(Init->getType()))
-      Init = MTE->getSubExpr();
+    if (isPointerLikeType(Init->getType()))
+      Path.push_back({IndirectLocalPathEntry::GslPointerInit, Init});
     break;
   }
   default:

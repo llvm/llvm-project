@@ -309,13 +309,9 @@ void use_with_optional_view() {
   vector_of_view.push_back(optional_of_view.value());
   vector_of_view.push_back(getOptionalS().value()); // expected-warning {{captured}}
   
-  // FIXME: Following 2 cases are false positives:
-  vector_of_view.push_back(getOptionalSV().value()); // expected-warning {{captured}}
-  vector_of_view.push_back(getOptionalMySV().value());  // expected-warning {{captured}}
-
-  // (maybe) FIXME: We may choose to diagnose the following case.
-  // This happens because 'MyStringViewNotPointer' is not marked as a [[gsl::Pointer]] but is derived from one.
-  vector_of_view.push_back(getOptionalMySVNotP().value()); // expected-warning {{captured}}
+  vector_of_view.push_back(getOptionalSV().value());
+  vector_of_view.push_back(getOptionalMySV().value());
+  vector_of_view.push_back(getOptionalMySVNotP().value());
 }
 } // namespace conatiners_with_different
 
