@@ -507,7 +507,6 @@ Defined *macho::getBodyForThunkFoldedSym(Defined *foldedSym) {
   }
 
   llvm_unreachable("could not find body symbol for ICF-generated thunk");
-  return nullptr;
 }
 void macho::foldIdenticalSections(bool onlyCfStrings) {
   TimeTraceScope timeScope("Fold Identical Code Sections");

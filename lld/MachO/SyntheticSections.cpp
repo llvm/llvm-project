@@ -1205,8 +1205,11 @@ void SymtabSection::emitEndFunStab(Defined *defined) {
   stabs.emplace_back(std::move(stab));
 }
 
+// Given a pointer to a function symbol, return the symbol that points to the
+// actual function body that will go in the final binary. Generally this is the
+// symbol itself, but if the symbol was folded using a thunk, we retrieve the
+// target function body from the thunk.
 Defined *SymtabSection::getFuncBodySym(Defined *originalSym) {
-  // If the Defined is not a thunk, we can use it directly
   if (originalSym->identicalCodeFoldingKind != Symbol::ICFFoldKind::Thunk)
     return originalSym;
 
@@ -1226,8 +1229,6 @@ void SymtabSection::emitStabs() {
   struct SymbolStabInfo {
     Defined *originalSym; // Original Defined symbol - this may be an ICF thunk
     int fileId;           // File ID associated with the STABS symbol
-    Defined *mainBodySym; // Symbol that consists of the full function body -
-                          // use this for the STABS entry
   };
 
   std::vector<SymbolStabInfo> symbolsNeedingStabs;
@@ -1256,8 +1257,8 @@ void SymtabSection::emitStabs() {
       // We use 'originalIsec' to get the file id of the symbol since 'isec()'
       // might point to the merged ICF symbol's file
       Defined *funcBodySym = getFuncBodySym(defined);
-      symbolsNeedingStabs.emplace_back(SymbolStabInfo{
-          defined, funcBodySym->originalIsec->getFile()->id, funcBodySym});
+      symbolsNeedingStabs.emplace_back(
+          SymbolStabInfo{defined, funcBodySym->originalIsec->getFile()->id});
     }
   }
 
@@ -1273,7 +1274,8 @@ void SymtabSection::emitStabs() {
   for (const SymbolStabInfo &info : symbolsNeedingStabs) {
     // We use 'originalIsec' of the symbol since we care about the actual origin
     // of the symbol, not the canonical location returned by `isec()`.
-    InputSection *bodyIsec = info.mainBodySym->originalIsec;
+    Defined *funcBodySym = getFuncBodySym(info.originalSym);
+    InputSection *bodyIsec = funcBodySym->originalIsec;
     ObjFile *file = cast<ObjFile>(bodyIsec->getFile());
 
     if (lastFile == nullptr || lastFile != file) {
@@ -1288,12 +1290,12 @@ void SymtabSection::emitStabs() {
     StabsEntry symStab;
     symStab.sect = bodyIsec->parent->index;
     symStab.strx = stringTableSection.addString(info.originalSym->getName());
-    symStab.value = info.mainBodySym->getVA();
+    symStab.value = funcBodySym->getVA();
 
     if (isCodeSection(bodyIsec)) {
       symStab.type = N_FUN;
       stabs.emplace_back(std::move(symStab));
-      emitEndFunStab(info.mainBodySym);
+      emitEndFunStab(funcBodySym);
     } else {
       symStab.type = info.originalSym->isExternal() ? N_GSYM : N_STSYM;
       stabs.emplace_back(std::move(symStab));
