@@ -3314,8 +3314,8 @@ bool SPIRVInstructionSelector::selectFirstBitLow16(Register ResVReg,
   // to an unsigned i32. As this leaves all the least significant bits unchanged
   // the first set bit from the LSB side doesn't change.
   Register ExtReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
-  bool Result = selectNAryOpWithSrcs(ExtReg, ResType, I, {I.getOperand(2).getReg()},
-                                  SPIRV::OpUConvert);
+  bool Result = selectNAryOpWithSrcs(
+      ExtReg, ResType, I, {I.getOperand(2).getReg()}, SPIRV::OpUConvert);
   return Result && selectFirstBitLow32(ResVReg, ResType, I, ExtReg);
 }
 
@@ -3343,7 +3343,8 @@ bool SPIRVInstructionSelector::selectFirstBitLow64(Register ResVReg,
   MachineIRBuilder MIRBuilder(I);
   SPIRVType *PostCastType =
       GR.getOrCreateSPIRVVectorType(BaseType, 2 * ComponentCount, MIRBuilder);
-  Register BitcastReg = MRI->createVirtualRegister(GR.getRegClass(PostCastType));
+  Register BitcastReg =
+      MRI->createVirtualRegister(GR.getRegClass(PostCastType));
   bool Result =
       selectUnOpWithSrc(BitcastReg, PostCastType, I, OpReg, SPIRV::OpBitcast);
 
@@ -3359,14 +3360,18 @@ bool SPIRVInstructionSelector::selectFirstBitLow64(Register ResVReg,
   bool IsScalarRes = ResType->getOpcode() != SPIRV::OpTypeVector;
   if (IsScalarRes) {
     // if scalar do a vector extract
-    Result = Result && selectNAryOpWithSrcs(
-        HighReg, ResType, I,
-        {FBLReg, GR.getOrCreateConstInt(0, I, ResType, TII, ZeroAsNull)},
-        SPIRV::OpVectorExtractDynamic);
-    Result = Result && selectNAryOpWithSrcs(
-        LowReg, ResType, I,
-        {FBLReg, GR.getOrCreateConstInt(1, I, ResType, TII, ZeroAsNull)},
-        SPIRV::OpVectorExtractDynamic);
+    Result =
+        Result &&
+        selectNAryOpWithSrcs(
+            HighReg, ResType, I,
+            {FBLReg, GR.getOrCreateConstInt(0, I, ResType, TII, ZeroAsNull)},
+            SPIRV::OpVectorExtractDynamic);
+    Result =
+        Result &&
+        selectNAryOpWithSrcs(
+            LowReg, ResType, I,
+            {FBLReg, GR.getOrCreateConstInt(1, I, ResType, TII, ZeroAsNull)},
+            SPIRV::OpVectorExtractDynamic);
   } else {
     // if vector do a shufflevector
     auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
@@ -3414,7 +3419,8 @@ bool SPIRVInstructionSelector::selectFirstBitLow64(Register ResVReg,
     SelectOp = SPIRV::OpSelectSISCond;
     AddOp = SPIRV::OpIAddS;
   } else {
-    BoolType = GR.getOrCreateSPIRVVectorType(BoolType, ComponentCount, MIRBuilder);
+    BoolType =
+        GR.getOrCreateSPIRVVectorType(BoolType, ComponentCount, MIRBuilder);
     NegOneReg =
         GR.getOrCreateConstVector((unsigned)-1, I, ResType, TII, ZeroAsNull);
     Reg0 = GR.getOrCreateConstVector(0, I, ResType, TII, ZeroAsNull);
@@ -3425,18 +3431,18 @@ bool SPIRVInstructionSelector::selectFirstBitLow64(Register ResVReg,
 
   // Check if the low bits are == -1; true if -1
   Register BReg = MRI->createVirtualRegister(GR.getRegClass(BoolType));
-  Result = Result && selectNAryOpWithSrcs(BReg, BoolType, I, {LowReg, NegOneReg},
-                                 SPIRV::OpIEqual);
+  Result = Result && selectNAryOpWithSrcs(BReg, BoolType, I,
+                                          {LowReg, NegOneReg}, SPIRV::OpIEqual);
 
   // Select high bits if true in BReg, otherwise low bits
   Register TmpReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
-  Result = Result && selectNAryOpWithSrcs(TmpReg, ResType, I, {BReg, HighReg, LowReg},
-                                 SelectOp);
+  Result = Result && selectNAryOpWithSrcs(TmpReg, ResType, I,
+                                          {BReg, HighReg, LowReg}, SelectOp);
 
   // Add 32 for high bits, 0 for low bits
   Register ValReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
-  Result = Result &&
-      selectNAryOpWithSrcs(ValReg, ResType, I, {BReg, Reg32, Reg0}, SelectOp);
+  Result = Result && selectNAryOpWithSrcs(ValReg, ResType, I,
+                                          {BReg, Reg32, Reg0}, SelectOp);
 
   return Result &&
          selectNAryOpWithSrcs(ResVReg, ResType, I, {ValReg, TmpReg}, AddOp);
