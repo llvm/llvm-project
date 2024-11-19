@@ -14,7 +14,6 @@
 #include "clang/Tooling/Refactoring/Rename/USRFinder.h"
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"
@@ -29,8 +28,7 @@ namespace tooling {
 namespace {
 
 /// Recursively visits each AST node to find the symbol underneath the cursor.
-class NamedDeclOccurrenceFindingVisitor
-    : public RecursiveSymbolVisitor<NamedDeclOccurrenceFindingVisitor> {
+class NamedDeclOccurrenceFindingVisitor : public RecursiveSymbolVisitor {
 public:
   // Finds the NamedDecl at a point in the source.
   // \param Point the location in the source to search for the NamedDecl.
@@ -41,7 +39,7 @@ public:
         Point(Point), Context(Context) {}
 
   bool visitSymbolOccurrence(const NamedDecl *ND,
-                             ArrayRef<SourceRange> NameRanges) {
+                             ArrayRef<SourceRange> NameRanges) override {
     if (!ND)
       return true;
     for (const auto &Range : NameRanges) {
@@ -98,14 +96,13 @@ namespace {
 
 /// Recursively visits each NamedDecl node to find the declaration with a
 /// specific name.
-class NamedDeclFindingVisitor
-    : public RecursiveASTVisitor<NamedDeclFindingVisitor> {
+class NamedDeclFindingVisitor : public DynamicRecursiveASTVisitor {
 public:
   explicit NamedDeclFindingVisitor(StringRef Name) : Name(Name) {}
 
   // We don't have to traverse the uses to find some declaration with a
   // specific name, so just visit the named declarations.
-  bool VisitNamedDecl(const NamedDecl *ND) {
+  bool VisitNamedDecl(NamedDecl *ND) override {
     if (!ND)
       return true;
     // Fully qualified name is used to find the declaration.

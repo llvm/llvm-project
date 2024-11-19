@@ -163,7 +163,7 @@ void InstallAPIVisitor::recordObjCInstanceVariables(
   }
 }
 
-bool InstallAPIVisitor::VisitObjCInterfaceDecl(const ObjCInterfaceDecl *D) {
+bool InstallAPIVisitor::VisitObjCInterfaceDecl(ObjCInterfaceDecl *D) {
   // Skip forward declaration for classes (@class)
   if (!D->isThisDeclarationADefinition())
     return true;
@@ -195,7 +195,7 @@ bool InstallAPIVisitor::VisitObjCInterfaceDecl(const ObjCInterfaceDecl *D) {
   return true;
 }
 
-bool InstallAPIVisitor::VisitObjCCategoryDecl(const ObjCCategoryDecl *D) {
+bool InstallAPIVisitor::VisitObjCCategoryDecl(ObjCCategoryDecl *D) {
   StringRef CategoryName = D->getName();
   // Skip over declarations that access could not be collected for.
   auto Access = getAccessForDecl(D);
@@ -213,7 +213,7 @@ bool InstallAPIVisitor::VisitObjCCategoryDecl(const ObjCCategoryDecl *D) {
   return true;
 }
 
-bool InstallAPIVisitor::VisitVarDecl(const VarDecl *D) {
+bool InstallAPIVisitor::VisitVarDecl(VarDecl *D) {
   // Skip function parameters.
   if (isa<ParmVarDecl>(D))
     return true;
@@ -248,7 +248,7 @@ bool InstallAPIVisitor::VisitVarDecl(const VarDecl *D) {
   return true;
 }
 
-bool InstallAPIVisitor::VisitFunctionDecl(const FunctionDecl *D) {
+bool InstallAPIVisitor::VisitFunctionDecl(FunctionDecl *D) {
   if (const CXXMethodDecl *M = dyn_cast<CXXMethodDecl>(D)) {
     // Skip member function in class templates.
     if (M->getParent()->getDescribedClassTemplate() != nullptr)
@@ -554,7 +554,7 @@ void InstallAPIVisitor::emitVTableSymbols(const CXXRecordDecl *D,
   }
 }
 
-bool InstallAPIVisitor::VisitCXXRecordDecl(const CXXRecordDecl *D) {
+bool InstallAPIVisitor::VisitCXXRecordDecl(CXXRecordDecl *D) {
   if (!D->isCompleteDefinition())
     return true;
 

@@ -14,9 +14,9 @@
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecordLayout.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/Support/Path.h"
@@ -28,133 +28,130 @@ using namespace clang;
 /// ASTPrinter - Pretty-printer and dumper of ASTs
 
 namespace {
-  class ASTPrinter : public ASTConsumer,
-                     public RecursiveASTVisitor<ASTPrinter> {
-    typedef RecursiveASTVisitor<ASTPrinter> base;
+class ASTPrinter : public ASTConsumer, public DynamicRecursiveASTVisitor {
+public:
+  enum Kind { DumpFull, Dump, Print, None };
+  ASTPrinter(std::unique_ptr<raw_ostream> Out, Kind K,
+             ASTDumpOutputFormat Format, StringRef FilterString,
+             bool DumpLookups = false, bool DumpDeclTypes = false)
+      : Out(Out ? *Out : llvm::outs()), OwnedOut(std::move(Out)), OutputKind(K),
+        OutputFormat(Format), FilterString(FilterString),
+        DumpLookups(DumpLookups), DumpDeclTypes(DumpDeclTypes) {
+    ShouldWalkTypesOfTypeLocs = false;
+  }
 
-  public:
-    enum Kind { DumpFull, Dump, Print, None };
-    ASTPrinter(std::unique_ptr<raw_ostream> Out, Kind K,
-               ASTDumpOutputFormat Format, StringRef FilterString,
-               bool DumpLookups = false, bool DumpDeclTypes = false)
-        : Out(Out ? *Out : llvm::outs()), OwnedOut(std::move(Out)),
-          OutputKind(K), OutputFormat(Format), FilterString(FilterString),
-          DumpLookups(DumpLookups), DumpDeclTypes(DumpDeclTypes) {}
+  void HandleTranslationUnit(ASTContext &Context) override {
+    TranslationUnitDecl *D = Context.getTranslationUnitDecl();
 
-    void HandleTranslationUnit(ASTContext &Context) override {
-      TranslationUnitDecl *D = Context.getTranslationUnitDecl();
+    if (FilterString.empty())
+      return print(D);
 
-      if (FilterString.empty())
-        return print(D);
+    TraverseDecl(D);
+  }
 
-      TraverseDecl(D);
-    }
+  bool TraverseDecl(Decl *D) override {
+    if (D && filterMatches(D)) {
+      bool ShowColors = Out.has_colors();
+      if (ShowColors)
+        Out.changeColor(raw_ostream::BLUE);
 
-    bool shouldWalkTypesOfTypeLocs() const { return false; }
+      if (OutputFormat == ADOF_Default)
+        Out << (OutputKind != Print ? "Dumping " : "Printing ") << getName(D)
+            << ":\n";
 
-    bool TraverseDecl(Decl *D) {
-      if (D && filterMatches(D)) {
-        bool ShowColors = Out.has_colors();
-        if (ShowColors)
-          Out.changeColor(raw_ostream::BLUE);
-
-        if (OutputFormat == ADOF_Default)
-          Out << (OutputKind != Print ? "Dumping " : "Printing ") << getName(D)
-              << ":\n";
-
-        if (ShowColors)
-          Out.resetColor();
-        print(D);
-        Out << "\n";
-        // Don't traverse child nodes to avoid output duplication.
-        return true;
-      }
-      return base::TraverseDecl(D);
-    }
-
-  private:
-    std::string getName(Decl *D) {
-      if (isa<NamedDecl>(D))
-        return cast<NamedDecl>(D)->getQualifiedNameAsString();
-      return "";
-    }
-    bool filterMatches(Decl *D) {
-      return getName(D).find(FilterString) != std::string::npos;
-    }
-    void print(Decl *D) {
-      if (DumpLookups) {
-        if (DeclContext *DC = dyn_cast<DeclContext>(D)) {
-          if (DC == DC->getPrimaryContext())
-            DC->dumpLookups(Out, OutputKind != None, OutputKind == DumpFull);
-          else
-            Out << "Lookup map is in primary DeclContext "
-                << DC->getPrimaryContext() << "\n";
-        } else
-          Out << "Not a DeclContext\n";
-      } else if (OutputKind == Print) {
-        PrintingPolicy Policy(D->getASTContext().getLangOpts());
-        D->print(Out, Policy, /*Indentation=*/0, /*PrintInstantiation=*/true);
-      } else if (OutputKind != None) {
-        D->dump(Out, OutputKind == DumpFull, OutputFormat);
-      }
-
-      if (DumpDeclTypes) {
-        Decl *InnerD = D;
-        if (auto *TD = dyn_cast<TemplateDecl>(D))
-          if (Decl *TempD = TD->getTemplatedDecl())
-            InnerD = TempD;
-
-        // FIXME: Support OutputFormat in type dumping.
-        // FIXME: Support combining -ast-dump-decl-types with -ast-dump-lookups.
-        if (auto *VD = dyn_cast<ValueDecl>(InnerD))
-          VD->getType().dump(Out, VD->getASTContext());
-        if (auto *TD = dyn_cast<TypeDecl>(InnerD))
-          TD->getTypeForDecl()->dump(Out, TD->getASTContext());
-      }
-    }
-
-    raw_ostream &Out;
-    std::unique_ptr<raw_ostream> OwnedOut;
-
-    /// How to output individual declarations.
-    Kind OutputKind;
-
-    /// What format should the output take?
-    ASTDumpOutputFormat OutputFormat;
-
-    /// Which declarations or DeclContexts to display.
-    std::string FilterString;
-
-    /// Whether the primary output is lookup results or declarations. Individual
-    /// results will be output with a format determined by OutputKind. This is
-    /// incompatible with OutputKind == Print.
-    bool DumpLookups;
-
-    /// Whether to dump the type for each declaration dumped.
-    bool DumpDeclTypes;
-  };
-
-  class ASTDeclNodeLister : public ASTConsumer,
-                     public RecursiveASTVisitor<ASTDeclNodeLister> {
-  public:
-    ASTDeclNodeLister(raw_ostream *Out = nullptr)
-        : Out(Out ? *Out : llvm::outs()) {}
-
-    void HandleTranslationUnit(ASTContext &Context) override {
-      TraverseDecl(Context.getTranslationUnitDecl());
-    }
-
-    bool shouldWalkTypesOfTypeLocs() const { return false; }
-
-    bool VisitNamedDecl(NamedDecl *D) {
-      D->printQualifiedName(Out);
-      Out << '\n';
+      if (ShowColors)
+        Out.resetColor();
+      print(D);
+      Out << "\n";
+      // Don't traverse child nodes to avoid output duplication.
       return true;
     }
+    return DynamicRecursiveASTVisitor::TraverseDecl(D);
+  }
 
-  private:
-    raw_ostream &Out;
-  };
+private:
+  std::string getName(Decl *D) {
+    if (isa<NamedDecl>(D))
+      return cast<NamedDecl>(D)->getQualifiedNameAsString();
+    return "";
+  }
+  bool filterMatches(Decl *D) {
+    return getName(D).find(FilterString) != std::string::npos;
+  }
+  void print(Decl *D) {
+    if (DumpLookups) {
+      if (DeclContext *DC = dyn_cast<DeclContext>(D)) {
+        if (DC == DC->getPrimaryContext())
+          DC->dumpLookups(Out, OutputKind != None, OutputKind == DumpFull);
+        else
+          Out << "Lookup map is in primary DeclContext "
+              << DC->getPrimaryContext() << "\n";
+      } else
+        Out << "Not a DeclContext\n";
+    } else if (OutputKind == Print) {
+      PrintingPolicy Policy(D->getASTContext().getLangOpts());
+      D->print(Out, Policy, /*Indentation=*/0, /*PrintInstantiation=*/true);
+    } else if (OutputKind != None) {
+      D->dump(Out, OutputKind == DumpFull, OutputFormat);
+    }
+
+    if (DumpDeclTypes) {
+      Decl *InnerD = D;
+      if (auto *TD = dyn_cast<TemplateDecl>(D))
+        if (Decl *TempD = TD->getTemplatedDecl())
+          InnerD = TempD;
+
+      // FIXME: Support OutputFormat in type dumping.
+      // FIXME: Support combining -ast-dump-decl-types with -ast-dump-lookups.
+      if (auto *VD = dyn_cast<ValueDecl>(InnerD))
+        VD->getType().dump(Out, VD->getASTContext());
+      if (auto *TD = dyn_cast<TypeDecl>(InnerD))
+        TD->getTypeForDecl()->dump(Out, TD->getASTContext());
+    }
+  }
+
+  raw_ostream &Out;
+  std::unique_ptr<raw_ostream> OwnedOut;
+
+  /// How to output individual declarations.
+  Kind OutputKind;
+
+  /// What format should the output take?
+  ASTDumpOutputFormat OutputFormat;
+
+  /// Which declarations or DeclContexts to display.
+  std::string FilterString;
+
+  /// Whether the primary output is lookup results or declarations. Individual
+  /// results will be output with a format determined by OutputKind. This is
+  /// incompatible with OutputKind == Print.
+  bool DumpLookups;
+
+  /// Whether to dump the type for each declaration dumped.
+  bool DumpDeclTypes;
+};
+
+class ASTDeclNodeLister : public ASTConsumer,
+                          public DynamicRecursiveASTVisitor {
+public:
+  ASTDeclNodeLister(raw_ostream *Out = nullptr)
+      : Out(Out ? *Out : llvm::outs()) {
+    ShouldWalkTypesOfTypeLocs = false;
+  }
+
+  void HandleTranslationUnit(ASTContext &Context) override {
+    TraverseDecl(Context.getTranslationUnitDecl());
+  }
+
+  bool VisitNamedDecl(NamedDecl *D) override {
+    D->printQualifiedName(Out);
+    Out << '\n';
+    return true;
+  }
+
+private:
+  raw_ostream &Out;
+};
 } // end anonymous namespace
 
 std::unique_ptr<ASTConsumer>

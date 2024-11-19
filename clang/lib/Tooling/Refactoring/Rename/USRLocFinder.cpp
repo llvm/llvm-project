@@ -52,8 +52,7 @@ bool IsValidEditLoc(const clang::SourceManager& SM, clang::SourceLocation Loc) {
 
 // This visitor recursively searches for all instances of a USR in a
 // translation unit and stores them for later usage.
-class USRLocFindingASTVisitor
-    : public RecursiveSymbolVisitor<USRLocFindingASTVisitor> {
+class USRLocFindingASTVisitor : public RecursiveSymbolVisitor {
 public:
   explicit USRLocFindingASTVisitor(const std::vector<std::string> &USRs,
                                    StringRef PrevName,
@@ -64,7 +63,7 @@ public:
   }
 
   bool visitSymbolOccurrence(const NamedDecl *ND,
-                             ArrayRef<SourceRange> NameRanges) {
+                             ArrayRef<SourceRange> NameRanges) override {
     if (USRSet.find(getUSRForDecl(ND)) != USRSet.end()) {
       assert(NameRanges.size() == 1 &&
              "Multiple name pieces are not supported yet!");
@@ -153,7 +152,7 @@ NestedNameSpecifier *GetNestedNameForType(TypeLoc TL) {
 //
 // This class will traverse the AST and find every AST node whose USR is in the
 // given USRs' set.
-class RenameLocFinder : public RecursiveASTVisitor<RenameLocFinder> {
+class RenameLocFinder : public DynamicRecursiveASTVisitor {
 public:
   RenameLocFinder(llvm::ArrayRef<std::string> USRs, ASTContext &Context)
       : USRSet(USRs.begin(), USRs.end()), Context(Context) {}
@@ -179,7 +178,7 @@ public:
     bool IgnorePrefixQualifers;
   };
 
-  bool VisitNamedDecl(const NamedDecl *Decl) {
+  bool VisitNamedDecl(NamedDecl *Decl) override {
     // UsingDecl has been handled in other place.
     if (llvm::isa<UsingDecl>(Decl))
       return true;
@@ -212,7 +211,7 @@ public:
     return true;
   }
 
-  bool VisitMemberExpr(const MemberExpr *Expr) {
+  bool VisitMemberExpr(MemberExpr *Expr) override {
     const NamedDecl *Decl = Expr->getFoundDecl();
     auto StartLoc = Expr->getMemberLoc();
     auto EndLoc = Expr->getMemberLoc();
@@ -226,7 +225,7 @@ public:
     return true;
   }
 
-  bool VisitDesignatedInitExpr(const DesignatedInitExpr *E) {
+  bool VisitDesignatedInitExpr(DesignatedInitExpr *E) override {
     for (const DesignatedInitExpr::Designator &D : E->designators()) {
       if (D.isFieldDesignator()) {
         if (const FieldDecl *Decl = D.getFieldDecl()) {
@@ -245,7 +244,7 @@ public:
     return true;
   }
 
-  bool VisitCXXConstructorDecl(const CXXConstructorDecl *CD) {
+  bool VisitCXXConstructorDecl(CXXConstructorDecl *CD) override {
     // Fix the constructor initializer when renaming class members.
     for (const auto *Initializer : CD->inits()) {
       // Ignore implicit initializers.
@@ -266,7 +265,7 @@ public:
     return true;
   }
 
-  bool VisitDeclRefExpr(const DeclRefExpr *Expr) {
+  bool VisitDeclRefExpr(DeclRefExpr *Expr) override {
     const NamedDecl *Decl = Expr->getFoundDecl();
     // Get the underlying declaration of the shadow declaration introduced by a
     // using declaration.
@@ -340,7 +339,7 @@ public:
     return true;
   }
 
-  bool VisitUsingDecl(const UsingDecl *Using) {
+  bool VisitUsingDecl(UsingDecl *Using) override {
     for (const auto *UsingShadow : Using->shadows()) {
       if (isInUSRSet(UsingShadow->getTargetDecl())) {
         UsingDecls.push_back(Using);
@@ -350,7 +349,7 @@ public:
     return true;
   }
 
-  bool VisitNestedNameSpecifierLocations(NestedNameSpecifierLoc NestedLoc) {
+  bool visitNestedNameSpecifierLocations(NestedNameSpecifierLoc NestedLoc) {
     if (!NestedLoc.getNestedNameSpecifier()->getAsType())
       return true;
 
@@ -369,7 +368,7 @@ public:
     return true;
   }
 
-  bool VisitTypeLoc(TypeLoc Loc) {
+  bool VisitTypeLoc(TypeLoc Loc) override {
     auto Parents = Context.getParents(Loc);
     TypeLoc ParentTypeLoc;
     if (!Parents.empty()) {
@@ -378,7 +377,7 @@ public:
       // The VisitNestedNameSpecifierLoc interface is not impelmented in
       // RecursiveASTVisitor, we have to handle it explicitly.
       if (const auto *NSL = Parents[0].get<NestedNameSpecifierLoc>()) {
-        VisitNestedNameSpecifierLocations(*NSL);
+        visitNestedNameSpecifierLocations(*NSL);
         return true;
       }
 
