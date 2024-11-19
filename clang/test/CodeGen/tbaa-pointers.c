@@ -194,12 +194,11 @@ typedef struct {
 // types in C.
 void unamed_struct_typedef(TypedefS *ptr) {
 // COMMON-LABEL: define void @unamed_struct_typedef(
-// COMMON-SAME: ptr noundef %ptr)
-// COMMON-NEXT: entry:
-// COMMON-NEXT:   [[PTR_ADDR:%.+]]  = alloca ptr, align 8
-// DEFAULT-NEXT:  store ptr %ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR]]
+// COMMON-SAME: ptr noundef [[PTRA:%.+]])
+// COMMON:   [[PTR_ADDR:%.+]]  = alloca ptr, align 8
+// DEFAULT-NEXT:  store ptr [[PTRA]], ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR]]
 // DEFAULT-NEXT:  [[L0:%.+]] = load ptr, ptr  [[PTR_ADDR]], align 8, !tbaa  [[ANYPTR]]
-// ENABLED-NEXT:  store ptr %ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[P1TYPEDEF:!.+]]
+// ENABLED-NEXT:  store ptr [[PTRA]], ptr [[PTR_ADDR]], align 8, !tbaa [[P1TYPEDEF:!.+]]
 // ENABLED-NEXT:  [[L0:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa  [[P1TYPEDEF]]
 // COMMON-NEXT:   [[GEP:%.+]]  = getelementptr inbounds nuw %struct.TypedefS, ptr [[L0]], i32 0, i32 0
 // COMMON-NEXT:   store i32 0, ptr [[GEP]], align 4

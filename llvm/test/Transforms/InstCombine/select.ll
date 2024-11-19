@@ -4732,10 +4732,9 @@ define i32 @pr99436(ptr align 4 dereferenceable(4) %ptr) {
 
 define i8 @sel_trunc_simplify(i1 %c, i8 %x, i16 %y) {
 ; CHECK-LABEL: @sel_trunc_simplify(
-; CHECK-NEXT:    [[X_EXT:%.*]] = zext i8 [[X:%.*]] to i16
-; CHECK-NEXT:    [[Y:%.*]] = select i1 [[C:%.*]], i16 [[X_EXT]], i16 [[Y1:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i16 [[Y]] to i8
-; CHECK-NEXT:    ret i8 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i16 [[Y:%.*]] to i8
+; CHECK-NEXT:    [[TRUNC:%.*]] = select i1 [[C:%.*]], i8 [[X:%.*]], i8 [[TMP1]]
+; CHECK-NEXT:    ret i8 [[TRUNC]]
 ;
   %x.ext = zext i8 %x to i16
   %sel = select i1 %c, i16 %x.ext, i16 %y
@@ -4745,10 +4744,10 @@ define i8 @sel_trunc_simplify(i1 %c, i8 %x, i16 %y) {
 
 define i32 @sel_umin_simplify(i1 %c, i32 %x, i16 %y) {
 ; CHECK-LABEL: @sel_umin_simplify(
-; CHECK-NEXT:    [[X:%.*]] = select i1 [[C:%.*]], i32 [[X1:%.*]], i32 0
 ; CHECK-NEXT:    [[ARG2_EXT:%.*]] = zext i16 [[ARG2:%.*]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 [[ARG2_EXT]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 [[ARG2_EXT]])
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C:%.*]], i32 [[TMP1]], i32 0
+; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %sel = select i1 %c, i32 %x, i32 0
   %y.ext = zext i16 %y to i32
@@ -4758,11 +4757,9 @@ define i32 @sel_umin_simplify(i1 %c, i32 %x, i16 %y) {
 
 define i32 @sel_extractvalue_simplify(i1 %c, { i32, i32 } %agg1, i32 %x, i32 %y) {
 ; CHECK-LABEL: @sel_extractvalue_simplify(
-; CHECK-NEXT:    [[AGG2_0:%.*]] = insertvalue { i32, i32 } poison, i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[AGG2_1:%.*]] = insertvalue { i32, i32 } [[AGG2_0]], i32 [[Y:%.*]], 1
-; CHECK-NEXT:    [[AGG1:%.*]] = select i1 [[C:%.*]], { i32, i32 } [[AGG2:%.*]], { i32, i32 } [[AGG2_1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i32 } [[AGG1]], 1
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i32 } [[AGG1:%.*]], 1
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C:%.*]], i32 [[TMP1]], i32 [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %agg2.0 = insertvalue { i32, i32 } poison, i32 %x, 0
   %agg2.1 = insertvalue { i32, i32 } %agg2.0, i32 %y, 1

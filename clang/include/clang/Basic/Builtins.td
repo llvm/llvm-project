@@ -1504,7 +1504,7 @@ def ReduceAnd : Builtin {
 
 def ReduceAdd : Builtin {
   let Spellings = ["__builtin_reduce_add"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 

@@ -1268,7 +1268,7 @@ multiclass VOP1_Real_vi <bits<10> op> {
 
   if !cast<VOP1_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA then
   def _sdwa_vi :
-    VOP_SDWA_Real <!cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa")>,
+    VOP_SDWA8_Real <!cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa")>,
     VOP1_SDWAe <op{7-0}, !cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
 
   if !cast<VOP1_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA9 then
@@ -1474,7 +1474,7 @@ def : GCNPat <
 // GFX9
 //===----------------------------------------------------------------------===//
 
-let AssemblerPredicate = isGFX9Only, DecoderNamespace = "GFX9" in {
+let DecoderNamespace = "GFX9" in {
   multiclass VOP1_Real_gfx9 <bits<10> op> {
     defm NAME : VOP1_Real_e32e64_vi <op>;
 

@@ -49,14 +49,14 @@ public:
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
 
+  DenseMap<InputSection *, SmallVector<const Defined *, 0>> sectionMap;
+
 private:
-void encodeAluGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
-                           int group, bool check) const;
+  void encodeAluGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
+                      int group, bool check) const;
 };
 enum class CodeState { Data = 0, Thumb = 2, Arm = 4 };
 } // namespace
-
-static DenseMap<InputSection *, SmallVector<const Defined *, 0>> sectionMap{};
 
 ARM::ARM(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_ARM_COPY;
@@ -1047,10 +1047,10 @@ static bool isDataMapSymbol(const Symbol *b) {
   return b->getName() == "$d" || b->getName().starts_with("$d.");
 }
 
-void elf::sortArmMappingSymbols() {
+void elf::sortArmMappingSymbols(Ctx &ctx) {
   // For each input section make sure the mapping symbols are sorted in
   // ascending order.
-  for (auto &kv : sectionMap) {
+  for (auto &kv : static_cast<ARM &>(*ctx.target).sectionMap) {
     SmallVector<const Defined *, 0> &mapSyms = kv.second;
     llvm::stable_sort(mapSyms, [](const Defined *a, const Defined *b) {
       return a->value < b->value;
@@ -1063,6 +1063,7 @@ void elf::addArmInputSectionMappingSymbols(Ctx &ctx) {
   // The linker generated mapping symbols for all the synthetic
   // sections are adding into the sectionmap through the function
   // addArmSyntheitcSectionMappingSymbol.
+  auto &sectionMap = static_cast<ARM &>(*ctx.target).sectionMap;
   for (ELFFileBase *file : ctx.objectFiles) {
     for (Symbol *sym : file->getLocalSymbols()) {
       auto *def = dyn_cast<Defined>(sym);
@@ -1088,7 +1089,7 @@ void elf::addArmSyntheticSectionMappingSymbol(Defined *sym) {
     return;
   if (auto *sec = cast_if_present<InputSection>(sym->section))
     if (sec->flags & SHF_EXECINSTR)
-      sectionMap[sec].push_back(sym);
+      static_cast<ARM &>(*sec->file->ctx.target).sectionMap[sec].push_back(sym);
 }
 
 static void toLittleEndianInstructions(uint8_t *buf, uint64_t start,
@@ -1109,7 +1110,9 @@ static void toLittleEndianInstructions(uint8_t *buf, uint64_t start,
 // identify half open intervals of Arm code [$a, non $a) and Thumb code
 // [$t, non $t) and convert these to little endian a word or half word at a
 // time respectively.
-void elf::convertArmInstructionstoBE8(InputSection *sec, uint8_t *buf) {
+void elf::convertArmInstructionstoBE8(Ctx &ctx, InputSection *sec,
+                                      uint8_t *buf) {
+  auto &sectionMap = static_cast<ARM &>(*ctx.target).sectionMap;
   auto it = sectionMap.find(sec);
   if (it == sectionMap.end())
     return;
