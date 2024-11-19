@@ -2323,8 +2323,9 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           if (Disassembled && DT->InstrAnalysis) {
             llvm::raw_ostream *TargetOS = &FOS;
             uint64_t Target;
+            int TargetArchBitWidth = DT->SubtargetInfo->getTargetTriple().getArchPointerBitWidth();
             bool PrintTarget = DT->InstrAnalysis->evaluateBranch(Inst, SectionAddr + Index, Size, Target) || 
-                               DT->InstrAnalysis->evaluateInstruction(Inst, SectionAddr + Index, Size, Target);
+                               DT->InstrAnalysis->evaluateInstruction(Inst, SectionAddr + Index, Size, Target, TargetArchBitWidth);
             if (!PrintTarget) {
               if (std::optional<uint64_t> MaybeTarget =
                       DT->InstrAnalysis->evaluateMemoryOperandAddress(
@@ -2353,27 +2354,37 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
               // N.B. Except for XCOFF, we don't walk the relocations in the
               // relocatable case yet.
               std::vector<const SectionSymbolsTy *> TargetSectionSymbols;
+              bool AbsoluteFirst = false;
               if (!Obj.isRelocatableObject()) {
                 auto It = llvm::partition_point(
                     SectionAddresses,
                     [=](const std::pair<uint64_t, SectionRef> &O) {
                       return O.first <= Target;
                     });
-                uint64_t TargetSecAddr = 0;
+                uint64_t TargetSecAddr = It == SectionAddresses.end() ? It->first : 0;
+                bool FoundSymbols = false;
+                // missing case where begin == end as in this case, we are to return 0
                 while (It != SectionAddresses.begin()) {
                   --It;
-                  if (TargetSecAddr == 0)
-                    TargetSecAddr = It->first;
-                  if (It->first != TargetSecAddr)
-                    break;
+                  if (It->first != TargetSecAddr) {
+                    if (FoundSymbols)
+                      break;
+                    else {
+                      TargetSecAddr = It->first;
+                      AbsoluteFirst = true;
+                    }
+                  }
                   TargetSectionSymbols.push_back(&AllSymbols[It->second]);
-                  if (AllSymbols[It->second].empty())
-                    TargetSecAddr = 0;
+                  if (!AllSymbols[It->second].empty())
+                    FoundSymbols = true;
                 }
               } else {
                 TargetSectionSymbols.push_back(&Symbols);
               }
-              TargetSectionSymbols.push_back(&AbsoluteSymbols);
+              if (AbsoluteFirst)
+                TargetSectionSymbols.insert(TargetSectionSymbols.begin(), &AbsoluteSymbols);
+              else
+                TargetSectionSymbols.push_back(&AbsoluteSymbols);
 
               // Find the last symbol in the first candidate section whose
               // offset is less than or equal to the target. If there are no

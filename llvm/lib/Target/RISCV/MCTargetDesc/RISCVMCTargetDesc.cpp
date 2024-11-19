@@ -247,15 +247,13 @@ public:
   }
 
   bool evaluateInstruction(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                           uint64_t &Target) const override {
+                           uint64_t &Target, int ArchRegWidth) const override {
     switch(Inst.getOpcode()) {
       default:
         return false;
       case RISCV::ADDI: {
         if (auto TargetRegState = getGPRState(Inst.getOperand(1).getReg())) {
-          // TODO: Figure out ways to find the actual value of XLEN during analysis
-          int XLEN = 32;
-          uint64_t Mask = ~((uint64_t)0) >> (64 - XLEN);
+          uint64_t Mask = ~((uint64_t)0) >> (64 - ArchRegWidth);
           Target = *TargetRegState + SignExtend64<12>(Inst.getOperand(2).getImm());
           Target &= Mask;
           return true;
