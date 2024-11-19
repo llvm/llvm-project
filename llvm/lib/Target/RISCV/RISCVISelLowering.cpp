@@ -20531,7 +20531,7 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       break;
     case 'R':
       if (VT == MVT::f64 && !Subtarget.is64Bit() && Subtarget.hasStdExtZdinx())
-        return std::make_pair(0U, &RISCV::GPRF64PairCRegClass);
+        return std::make_pair(0U, &RISCV::GPRF64PairNoX0RegClass);
       return std::make_pair(0U, &RISCV::GPRPairNoX0RegClass);
     default:
       break;
@@ -20784,8 +20784,8 @@ void RISCVTargetLowering::LowerAsmOperandForConstraint(
       if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
         uint64_t CVal = C->getSExtValue();
         if (isInt<12>(CVal))
-          Ops.push_back(DAG.getSignedConstant(
-              CVal, SDLoc(Op), Subtarget.getXLenVT(), /*isTarget=*/true));
+          Ops.push_back(DAG.getSignedTargetConstant(CVal, SDLoc(Op),
+                                                    Subtarget.getXLenVT()));
       }
       return;
     case 'J':

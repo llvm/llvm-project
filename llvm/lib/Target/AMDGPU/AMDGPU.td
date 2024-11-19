@@ -137,6 +137,18 @@ def FeatureFmaMixInsts : SubtargetFeature<"fma-mix-insts",
   "Has v_fma_mix_f32, v_fma_mixlo_f16, v_fma_mixhi_f16 instructions"
 >;
 
+def FeatureMinimum3Maximum3F32 : SubtargetFeature<"minimum3-maximum3-f32",
+  "HasMinimum3Maximum3F32",
+  "true",
+  "Has v_minimum3_f32 and v_maximum3_f32 instructions"
+>;
+
+def FeatureMinimum3Maximum3F16 : SubtargetFeature<"minimum3-maximum3-f16",
+  "HasMinimum3Maximum3F16",
+  "true",
+  "Has v_minimum3_f16 and v_maximum3_f16 instructions"
+>;
+
 def FeatureSupportsXNACK : SubtargetFeature<"xnack-support",
   "SupportsXNACK",
   "true",
@@ -430,6 +442,12 @@ def FeatureRealTrue16Insts : SubtargetFeature<"real-true16",
   "EnableRealTrue16Insts",
   "true",
   "Use true 16-bit registers"
+>;
+
+def FeatureBF16ConversionInsts : SubtargetFeature<"bf16-cvt-insts",
+  "HasBF16ConversionInsts",
+  "true",
+  "Has bf16 conversion instructions"
 >;
 
 def FeatureVOP3P : SubtargetFeature<"vop3p",
@@ -972,6 +990,12 @@ def FeatureVmemWriteVgprInOrder : SubtargetFeature<"vmem-write-vgpr-in-order",
   "VMEM instructions of the same type write VGPR results in order"
 >;
 
+def FeaturePrngInst : SubtargetFeature<"prng-inst",
+  "HasPrngInst",
+  "true",
+  "Has v_prng_b32 instruction"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1206,7 +1230,7 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
 
 def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
   "gfx9",
-  [FeatureFP64, FeatureAddressableLocalMemorySize65536,
+  [FeatureFP64,
    FeatureWavefrontSize64, FeatureFlatAddressSpace,
    FeatureGCN3Encoding, FeatureCIInsts, Feature16BitInsts,
    FeatureSMemRealTime, FeatureScalarStores, FeatureInv2PiInlineImm,
@@ -1289,6 +1313,7 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureUnalignedDSAccess, FeatureTrue16BitInsts,
    FeatureDefaultComponentBroadcast, FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
+   FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics
   ]
 >;
@@ -1371,6 +1396,7 @@ def FeatureISAVersion8_1_0 : FeatureSet<
 
 def FeatureISAVersion9_0_Common : FeatureSet<
   [FeatureGFX9,
+   FeatureAddressableLocalMemorySize65536,
    FeatureLDSBankCount32,
    FeatureImageInsts,
    FeatureMadMacF32Insts]>;
@@ -1388,7 +1414,8 @@ def FeatureISAVersion9_Generic : FeatureSet<
 
 def FeatureISAVersion9_0_MI_Common : FeatureSet<
   !listconcat(FeatureISAVersion9_0_Common.Features,
-    [FeatureFmaMixInsts,
+    [FeatureAddressableLocalMemorySize65536,
+     FeatureFmaMixInsts,
      FeatureDLInsts,
      FeatureDot1Insts,
      FeatureDot2Insts,
@@ -1504,15 +1531,19 @@ def FeatureISAVersion9_4_Common : FeatureSet<
 
 def FeatureISAVersion9_5_Common : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
-  [FeatureFP8Insts,
+  [FeatureAddressableLocalMemorySize163840,
+   FeatureFP8Insts,
    FeatureFP8ConversionInsts,
    FeatureCvtFP8VOP1Bug,
-   FeatureGFX950Insts
+   FeatureGFX950Insts,
+   FeaturePrngInst,
+   FeatureBF16ConversionInsts
    ])>;
 
 def FeatureISAVersion9_4_0 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
     [
+      FeatureAddressableLocalMemorySize65536,
       FeatureForceStoreSC0SC1,
       FeatureFP8Insts,
       FeatureFP8ConversionInsts,
@@ -1523,6 +1554,7 @@ def FeatureISAVersion9_4_0 : FeatureSet<
 def FeatureISAVersion9_4_1 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
     [
+      FeatureAddressableLocalMemorySize65536,
       FeatureForceStoreSC0SC1,
       FeatureFP8Insts,
       FeatureFP8ConversionInsts,
@@ -1533,6 +1565,7 @@ def FeatureISAVersion9_4_1 : FeatureSet<
 def FeatureISAVersion9_4_2 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
     [
+      FeatureAddressableLocalMemorySize65536,
       FeatureFP8Insts,
       FeatureFP8ConversionInsts,
       FeatureCvtFP8VOP1Bug,
@@ -1541,7 +1574,8 @@ def FeatureISAVersion9_4_2 : FeatureSet<
 
 def FeatureISAVersion9_4_Generic : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
-    [FeatureRequiresCOV6])>;
+    [FeatureAddressableLocalMemorySize65536,
+     FeatureRequiresCOV6])>;
 
 def FeatureISAVersion9_5_0 : FeatureSet<FeatureISAVersion9_5_Common.Features>;
 
@@ -1975,6 +2009,10 @@ def isNotGFX940Plus :
   Predicate<"!Subtarget->hasGFX940Insts()">,
   AssemblerPredicate<(all_of (not FeatureGFX940Insts))>;
 
+def HasGFX950Insts :
+  Predicate<"Subtarget->hasGFX950Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX950Insts)>;
+
 def isGFX8GFX9NotGFX940 :
   Predicate<"!Subtarget->hasGFX940Insts() &&"
             "(Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
@@ -2030,6 +2068,15 @@ def isGFX12Only :
 def isGFX12Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12">,
   AssemblerPredicate<(all_of FeatureGFX12Insts)>;
+
+def HasMinimum3Maximum3F32 :
+  Predicate<"Subtarget->hasMinimum3Maximum3F32()">,
+  AssemblerPredicate<(all_of FeatureMinimum3Maximum3F32)>;
+
+def HasMinimum3Maximum3F16 :
+  Predicate<"Subtarget->hasMinimum3Maximum3F16()">,
+  AssemblerPredicate<(all_of FeatureMinimum3Maximum3F16)>;
+
 
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
   AssemblerPredicate<(all_of FeatureFlatAddressSpace)>;
@@ -2133,6 +2180,9 @@ def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() &&
   AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
   // FIXME When we default to RealTrue16 instead of Fake, change the line as follows.
   // AssemblerPredicate<(all_of FeatureTrue16BitInsts, (not FeatureRealTrue16Insts))>;
+
+def HasBF16ConversionInsts : Predicate<"Subtarget->hasBF16ConversionInsts()">,
+  AssemblerPredicate<(all_of FeatureBF16ConversionInsts)>;
 
 def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
   AssemblerPredicate<(all_of FeatureVOP3P)>;
@@ -2346,6 +2396,9 @@ def HasSALUFloatInsts : Predicate<"Subtarget->hasSALUFloatInsts()">,
 
 def HasPseudoScalarTrans : Predicate<"Subtarget->hasPseudoScalarTrans()">,
   AssemblerPredicate<(all_of FeaturePseudoScalarTrans)>;
+
+def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
+  AssemblerPredicate<(all_of FeaturePrngInst)>;
 
 def HasGDS : Predicate<"Subtarget->hasGDS()">;
 

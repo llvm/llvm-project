@@ -22,6 +22,7 @@
 #include "lldb/Host/LZMA.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -44,7 +45,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/MipsABIFlags.h"
-#include "lldb/Target/Process.h"
 
 #define CASE_AND_STREAM(s, def, width)                                         \
   case def:                                                                    \
@@ -3008,10 +3008,9 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
   // section, nomatter if .symtab was already parsed or not. This is because
   // minidebuginfo normally removes the .symtab symbols which have their
   // matching .dynsym counterparts.
-  Section *dynsym = nullptr;
   if (!symtab ||
       GetSectionList()->FindSectionByName(ConstString(".gnu_debugdata"))) {
-    dynsym =
+    Section *dynsym =
         section_list->FindSectionByType(eSectionTypeELFDynamicSymbols, true)
             .get();
     if (dynsym) {
@@ -3019,20 +3018,19 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
           ParseSymbolTable(&lldb_symtab, symbol_id, dynsym);
       symbol_id += num_symbols;
       m_address_class_map.merge(address_class_map);
-    }
-  }
-  if (!dynsym) {
-    // Try and read the dynamic symbol table from the .dynamic section.
-    uint32_t num_symbols = 0;
-    std::optional<DataExtractor> symtab_data =
-        GetDynsymDataFromDynamic(num_symbols);
-    std::optional<DataExtractor> strtab_data = GetDynstrData();
-    if (symtab_data && strtab_data) {
-      auto [num_symbols_parsed, address_class_map] =
-          ParseSymbols(&lldb_symtab, symbol_id, section_list, num_symbols,
-                        symtab_data.value(), strtab_data.value());
-      symbol_id += num_symbols_parsed;
-      m_address_class_map.merge(address_class_map);
+    } else {
+      // Try and read the dynamic symbol table from the .dynamic section.
+      uint32_t dynamic_num_symbols = 0;
+      std::optional<DataExtractor> symtab_data =
+          GetDynsymDataFromDynamic(dynamic_num_symbols);
+      std::optional<DataExtractor> strtab_data = GetDynstrData();
+      if (symtab_data && strtab_data) {
+        auto [num_symbols_parsed, address_class_map] = ParseSymbols(
+            &lldb_symtab, symbol_id, section_list, dynamic_num_symbols,
+            symtab_data.value(), strtab_data.value());
+        symbol_id += num_symbols_parsed;
+        m_address_class_map.merge(address_class_map);
+      }
     }
   }
 
@@ -3864,8 +3862,7 @@ ObjectFileELF::ReadDataFromDynamic(const ELFDynamic *dyn, uint64_t length,
       return std::nullopt;
     DataExtractor data;
     addr.GetSection()->GetSectionData(data);
-    return DataExtractor(data,
-                         d_ptr_addr - addr.GetSection()->GetFileAddress(),
+    return DataExtractor(data, d_ptr_addr - addr.GetSection()->GetFileAddress(),
                          length);
   }
   return std::nullopt;
@@ -3986,7 +3983,8 @@ std::optional<uint32_t> ObjectFileELF::GetNumSymbolsFromDynamicGnuHash() {
     const addr_t buckets_offset =
         sizeof(DtGnuHashHeader) + addr_size * header.bloom_size;
     std::vector<uint32_t> buckets;
-    if (auto bucket_data = ReadDataFromDynamic(gnu_hash, header.nbuckets * 4, buckets_offset)) {
+    if (auto bucket_data = ReadDataFromDynamic(gnu_hash, header.nbuckets * 4,
+                                               buckets_offset)) {
       offset = 0;
       for (uint32_t i = 0; i < header.nbuckets; ++i)
         buckets.push_back(bucket_data->GetU32(&offset));
@@ -4000,7 +3998,9 @@ std::optional<uint32_t> ObjectFileELF::GetNumSymbolsFromDynamicGnuHash() {
         // Walk the bucket's chain to add the chain length to the total.
         const addr_t chains_base_offset = buckets_offset + header.nbuckets * 4;
         for (;;) {
-          if (auto chain_entry_data = ReadDataFromDynamic(gnu_hash, 4, chains_base_offset + (last_symbol - header.symoffset) * 4)) {
+          if (auto chain_entry_data = ReadDataFromDynamic(
+                  gnu_hash, 4,
+                  chains_base_offset + (last_symbol - header.symoffset) * 4)) {
             offset = 0;
             uint32_t chain_entry = chain_entry_data->GetU32(&offset);
             ++last_symbol;

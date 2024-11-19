@@ -595,6 +595,10 @@ def int_amdgcn_ds_ordered_swap : AMDGPUDSOrderedIntrinsic;
 def int_amdgcn_ds_append : AMDGPUDSAppendConsumedIntrinsic;
 def int_amdgcn_ds_consume : AMDGPUDSAppendConsumedIntrinsic;
 
+def int_amdgcn_prng_b32 : DefaultAttrsIntrinsic<
+  [llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]
+>, ClangBuiltin<"__builtin_amdgcn_prng_b32">;
+
 } // TargetPrefix = "amdgcn"
 
 // New-style image intrinsics
@@ -1671,7 +1675,7 @@ class AMDGPURawBufferLoadLDS : Intrinsic <
   [],
   [llvm_v4i32_ty,             // rsrc(SGPR)
    LLVMQualPointerType<3>,    // LDS base offset
-   llvm_i32_ty,               // Data byte size: 1/2/4
+   llvm_i32_ty,               // Data byte size: 1/2/4 (/12/16 for gfx950)
    llvm_i32_ty,               // voffset(VGPR, included in bounds checking and swizzling)
    llvm_i32_ty,               // soffset(SGPR/imm, excluded from bounds checking and swizzling)
    llvm_i32_ty,               // imm offset(imm, included in bounds checking and swizzling)
@@ -1690,7 +1694,7 @@ class AMDGPURawPtrBufferLoadLDS : Intrinsic <
   [],
   [AMDGPUBufferRsrcTy,        // rsrc(SGPR)
    LLVMQualPointerType<3>,    // LDS base offset
-   llvm_i32_ty,               // Data byte size: 1/2/4
+   llvm_i32_ty,               // Data byte size: 1/2/4 (/12/16 for gfx950)
    llvm_i32_ty,               // voffset(VGPR, included in bounds checking and swizzling)
    llvm_i32_ty,               // soffset(SGPR/imm, excluded from bounds checking and swizzling)
    llvm_i32_ty,               // imm offset(imm, included in bounds checking and swizzling)
@@ -1712,7 +1716,7 @@ class AMDGPUStructBufferLoadLDS : Intrinsic <
   [],
   [llvm_v4i32_ty,             // rsrc(SGPR)
    LLVMQualPointerType<3>,    // LDS base offset
-   llvm_i32_ty,               // Data byte size: 1/2/4
+   llvm_i32_ty,               // Data byte size: 1/2/4 (/12/16 for gfx950)
    llvm_i32_ty,               // vindex(VGPR)
    llvm_i32_ty,               // voffset(VGPR, included in bounds checking and swizzling)
    llvm_i32_ty,               // soffset(SGPR/imm, excluded from bounds checking and swizzling)
@@ -1732,7 +1736,7 @@ class AMDGPUStructPtrBufferLoadLDS : Intrinsic <
   [],
   [AMDGPUBufferRsrcTy,        // rsrc(SGPR)
    LLVMQualPointerType<3>,    // LDS base offset
-   llvm_i32_ty,               // Data byte size: 1/2/4
+   llvm_i32_ty,               // Data byte size: 1/2/4 (/12/16 for gfx950)
    llvm_i32_ty,               // vindex(VGPR)
    llvm_i32_ty,               // voffset(VGPR, included in bounds checking and swizzling)
    llvm_i32_ty,               // soffset(SGPR/imm, excluded from bounds checking and swizzling)
@@ -2483,7 +2487,7 @@ class AMDGPUGlobalLoadLDS :
     [],
     [LLVMQualPointerType<1>,            // Base global pointer to load from
      LLVMQualPointerType<3>,            // LDS base pointer to store to
-     llvm_i32_ty,                       // Data byte size: 1/2/4
+     llvm_i32_ty,                       // Data byte size: 1/2/4 (/12/16 for gfx950)
      llvm_i32_ty,                       // imm offset (applied to both global and LDS address)
      llvm_i32_ty],                      // auxiliary data (imm, cachepolicy (bit 0 = sc0,
                                         //                                   bit 1 = sc1,
@@ -3190,6 +3194,17 @@ def int_amdgcn_cvt_sr_fp8_f32 : ClangBuiltin<"__builtin_amdgcn_cvt_sr_fp8_f32">,
   DefaultAttrsIntrinsic<[llvm_i32_ty],
             [llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+
+//===----------------------------------------------------------------------===//
+// gfx950 intrinsics
+//===----------------------------------------------------------------------===//
+
+defset list<Intrinsic> AMDGPUMFMAIntrinsics950 = {
+def int_amdgcn_mfma_f32_16x16x32_f16 : AMDGPUMfmaIntrinsic<llvm_v4f32_ty, llvm_v8f16_ty>;
+def int_amdgcn_mfma_f32_32x32x16_f16 : AMDGPUMfmaIntrinsic<llvm_v16f32_ty, llvm_v8f16_ty>;
+
+def int_amdgcn_mfma_f32_32x32x16_bf16 : AMDGPUMfmaIntrinsic<llvm_v16f32_ty, llvm_v8bf16_ty>;
+}
 
 //===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend
