@@ -584,7 +584,7 @@ void X86_64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
       memcpy(inst, "\x48\xc7", 2);
       *regSlot = 0xc0 | reg;
     } else {
-      ErrAlways(ctx)
+      Err(ctx)
           << getErrorLoc(ctx, loc - 3)
           << "R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only";
     }
@@ -596,10 +596,18 @@ void X86_64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
     const uint8_t rex = loc[-3];
     loc[-3] = (rex & ~0x44) | (rex & 0x44) >> 2;
     *regSlot = 0xc0 | reg;
+
+    // "movq foo@gottpoff(%rip),%r[16-31]" -> "movq $foo,%r[16-31]"
     if (loc[-2] == 0x8b)
       loc[-2] = 0xc7;
-    else
+    else {
+      // "addq foo@gottpoff(%rip),%r[16-31]" -> "addq $foo,%r[16-31]"
+      if (loc[-2] != 0x03)
+        Err(ctx) << getErrorLoc(ctx, loc - 3)
+                 << "R_X86_64_CODE_4_GOTTPOFF must be used in MOVQ or ADDQ "
+                    "instructions only";
       loc[-2] = 0x81;
+    }
   }
 
   // The original code used a PC relative relocation.
