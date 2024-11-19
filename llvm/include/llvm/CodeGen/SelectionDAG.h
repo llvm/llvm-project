@@ -700,6 +700,10 @@ public:
                             bool isOpaque = false) {
     return getConstant(Val, DL, VT, true, isOpaque);
   }
+  SDValue getSignedTargetConstant(int64_t Val, const SDLoc &DL, EVT VT,
+                                  bool isOpaque = false) {
+    return getSignedConstant(Val, DL, VT, true, isOpaque);
+  }
 
   /// Create a true or false constant of type \p VT using the target's
   /// BooleanContent for type \p OpVT.

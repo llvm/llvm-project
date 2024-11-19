@@ -1504,7 +1504,7 @@ def ReduceAnd : Builtin {
 
 def ReduceAdd : Builtin {
   let Spellings = ["__builtin_reduce_add"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
@@ -1993,6 +1993,12 @@ def AtomicThreadFence : Builtin {
   let Spellings = ["__atomic_thread_fence"];
   let Attributes = [NoThrow];
   let Prototype = "void(int)";
+}
+
+def ScopedAtomicThreadFence : Builtin {
+  let Spellings = ["__scoped_atomic_thread_fence"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(int, int)";
 }
 
 def AtomicSignalFence : Builtin {
@@ -4891,6 +4897,12 @@ def HLSLRadians : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLSplitDouble: LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_splitdouble"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLClip: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_clip"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

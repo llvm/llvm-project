@@ -708,13 +708,13 @@ def : LdPat<load, LW_INX, f32>;
 def : StPat<store, SW_INX, GPRF32, f32>;
 } // Predicates = [HasStdExtZfinx]
 
-let Predicates = [HasStdExtF] in {
+let Predicates = [HasStdExtF, IsRV32] in {
 // Moves (no conversion)
 def : Pat<(bitconvert (i32 GPR:$rs1)), (FMV_W_X GPR:$rs1)>;
 def : Pat<(i32 (bitconvert FPR32:$rs1)), (FMV_X_W FPR32:$rs1)>;
 } // Predicates = [HasStdExtF]
 
-let Predicates = [HasStdExtZfinx] in {
+let Predicates = [HasStdExtZfinx, IsRV32] in {
 // Moves (no conversion)
 def : Pat<(f32 (bitconvert (i32 GPR:$rs1))), (EXTRACT_SUBREG GPR:$rs1, sub_32)>;
 def : Pat<(i32 (bitconvert FPR32INX:$rs1)), (INSERT_SUBREG (XLenVT (IMPLICIT_DEF)), FPR32INX:$rs1, sub_32)>;

@@ -1721,11 +1721,11 @@ bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
   Value *V0, *V1;
   UndefValue *U0, *U1;
   ArrayRef<int> OuterMask, InnerMask0, InnerMask1;
-  if (!match(&I, m_Shuffle(m_OneUse(m_Shuffle(m_Value(V0), m_UndefValue(U0),
-                                              m_Mask(InnerMask0))),
-                           m_OneUse(m_Shuffle(m_Value(V1), m_UndefValue(U1),
-                                              m_Mask(InnerMask1))),
-                           m_Mask(OuterMask))))
+  if (!match(&I,
+             m_Shuffle(
+                 m_Shuffle(m_Value(V0), m_UndefValue(U0), m_Mask(InnerMask0)),
+                 m_Shuffle(m_Value(V1), m_UndefValue(U1), m_Mask(InnerMask1)),
+                 m_Mask(OuterMask))))
     return false;
 
   auto *ShufI0 = dyn_cast<Instruction>(I.getOperand(0));
@@ -1769,17 +1769,24 @@ bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
   // Try to merge the shuffles if the new shuffle is not costly.
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
-  InstructionCost OldCost =
+  InstructionCost InnerCost0 =
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, ShuffleSrcTy,
-                         InnerMask0, CostKind, 0, nullptr, {V0, U0}, ShufI0) +
+                         InnerMask0, CostKind, 0, nullptr, {V0, U0}, ShufI0);
+  InstructionCost InnerCost1 =
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, ShuffleSrcTy,
-                         InnerMask1, CostKind, 0, nullptr, {V1, U1}, ShufI1) +
+                         InnerMask1, CostKind, 0, nullptr, {V1, U1}, ShufI1);
+  InstructionCost OuterCost =
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, ShuffleImmTy,
                          OuterMask, CostKind, 0, nullptr, {ShufI0, ShufI1}, &I);
+  InstructionCost OldCost = InnerCost0 + InnerCost1 + OuterCost;
 
   InstructionCost NewCost =
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, ShuffleSrcTy,
                          NewMask, CostKind, 0, nullptr, {V0, V1});
+  if (!ShufI0->hasOneUse())
+    NewCost += InnerCost0;
+  if (!ShufI1->hasOneUse())
+    NewCost += InnerCost1;
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two shuffles: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost

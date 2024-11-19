@@ -83,6 +83,10 @@ std::optional<bool> isUnsafePtr(const QualType T);
 /// variant, false if not.
 bool isSafePtrType(const clang::QualType T);
 
+/// \returns true if \p T is a RefPtr, Ref, CheckedPtr, CheckedRef, or
+/// unique_ptr, false if not.
+bool isOwnerPtrType(const clang::QualType T);
+
 /// \returns true if \p F creates ref-countable object from uncounted parameter,
 /// false if not.
 bool isCtorOfRefCounted(const clang::FunctionDecl *F);
