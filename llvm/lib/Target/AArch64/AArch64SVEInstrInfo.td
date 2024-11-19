@@ -4301,17 +4301,17 @@ let Predicates = [HasSVE2p2orSME2p2] in {
   defm FRINT64X_ZPzZ : sve_fp_z2op_p_zd_frint<0b11, "frint64x">;
 
   // Floating-point round to integral fp value, zeroing predicate
-  defm FRINTN_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00000, "frintn">;
-  defm FRINTP_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00001, "frintp">;
-  defm FRINTM_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00010, "frintm">;
-  defm FRINTZ_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00011, "frintz">;
-  defm FRINTA_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00100, "frinta">;
-  defm FRINTX_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00110, "frintx">;
-  defm FRINTI_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00111, "frinti">;
+  defm FRINTN_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00000, "frintn", AArch64frintn_mt>;
+  defm FRINTP_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00001, "frintp", AArch64frintp_mt>;
+  defm FRINTM_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00010, "frintm", AArch64frintm_mt>;
+  defm FRINTZ_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00011, "frintz", AArch64frintz_mt>;
+  defm FRINTA_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00100, "frinta", AArch64frinta_mt>;
+  defm FRINTX_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00110, "frintx", AArch64frintx_mt>;
+  defm FRINTI_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00111, "frinti", AArch64frinti_mt>;
   // Floating-point invert exponent, zeroing predicate
-  defm FRECPX_ZPzZ : sve_fp_z2op_p_zd_hsd<0b01100, "frecpx">;
+  defm FRECPX_ZPzZ : sve_fp_z2op_p_zd_hsd<0b01100, "frecpx", AArch64frecpx_mt>;
   // Floating-point square root, zeroing predicate
-  defm FSQRT_ZPZz  : sve_fp_z2op_p_zd_hsd<0b01101, "fsqrt">;
+  defm FSQRT_ZPZz  : sve_fp_z2op_p_zd_hsd<0b01101, "fsqrt", AArch64fsqrt_mt>;
 
   // SVE2p2 integer unary arithmetic (bitwise), zeroing predicate
   defm CLS_ZPzZ  : sve_int_un_pred_arit_bitwise_z<0b000, "cls">;
