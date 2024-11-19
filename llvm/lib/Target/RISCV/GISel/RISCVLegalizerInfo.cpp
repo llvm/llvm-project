@@ -282,14 +282,16 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   };
 
   LoadActions.legalForTypesWithMemDesc(
-      {{s16, p0, s16, getScalarMemAlign(16)},
+      {{s16, p0, s8, getScalarMemAlign(8)},
        {s32, p0, s8, getScalarMemAlign(8)},
+       {s16, p0, s16, getScalarMemAlign(16)},
        {s32, p0, s16, getScalarMemAlign(16)},
        {s32, p0, s32, getScalarMemAlign(32)},
        {p0, p0, sXLen, getScalarMemAlign(XLen)}});
   StoreActions.legalForTypesWithMemDesc(
-      {{s16, p0, s16, getScalarMemAlign(16)},
+      {{s16, p0, s8, getScalarMemAlign(8)},
        {s32, p0, s8, getScalarMemAlign(8)},
+       {s16, p0, s16, getScalarMemAlign(16)},
        {s32, p0, s16, getScalarMemAlign(16)},
        {s32, p0, s32, getScalarMemAlign(32)},
        {p0, p0, sXLen, getScalarMemAlign(XLen)}});
@@ -383,10 +385,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   LoadActions.widenScalarToNextPow2(0, /* MinSize = */ 8)
       .lowerIfMemSizeNotByteSizePow2()
-      .clampScalar(0, s32, sXLen)
+      .clampScalar(0, s16, sXLen)
       .lower();
   StoreActions
-      .clampScalar(0, s32, sXLen)
+      .clampScalar(0, s16, sXLen)
       .lowerIfMemSizeNotByteSizePow2()
       .lower();
 

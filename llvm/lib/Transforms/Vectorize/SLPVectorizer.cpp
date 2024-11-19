@@ -13614,7 +13614,10 @@ Value *BoUpSLP::gather(
     } else {
       Vec = CreateShuffle(Root, Vec, Mask);
       if (auto *OI = dyn_cast<Instruction>(OriginalRoot);
-          OI && OI->hasNUses(0))
+          OI && OI->hasNUses(0) &&
+          none_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+            return TE->VectorizedValue == OI;
+          }))
         eraseInstruction(OI);
     }
   }
