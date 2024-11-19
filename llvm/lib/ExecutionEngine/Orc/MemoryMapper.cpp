@@ -10,6 +10,7 @@
 
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/Support/WindowsError.h"
 
 #if defined(LLVM_ON_UNIX) && !defined(__ANDROID__)
 #include <fcntl.h>
