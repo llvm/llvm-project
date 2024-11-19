@@ -1104,26 +1104,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return Cost * LT.first;
     break;
   }
-  // vp integer arithmetic ops.
-  case Intrinsic::vp_add:
-  case Intrinsic::vp_and:
-  case Intrinsic::vp_ashr:
-  case Intrinsic::vp_lshr:
-  case Intrinsic::vp_mul:
-  case Intrinsic::vp_or:
-  case Intrinsic::vp_sdiv:
-  case Intrinsic::vp_shl:
-  case Intrinsic::vp_srem:
-  case Intrinsic::vp_sub:
-  case Intrinsic::vp_udiv:
-  case Intrinsic::vp_urem:
-  case Intrinsic::vp_xor:
-  // vp float arithmetic ops.
-  case Intrinsic::vp_fadd:
-  case Intrinsic::vp_fsub:
-  case Intrinsic::vp_fmul:
-  case Intrinsic::vp_fdiv:
-  case Intrinsic::vp_frem:
   case Intrinsic::vp_fneg: {
     std::optional<unsigned> FOp =
         VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
@@ -1163,23 +1143,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     auto *UI = cast<VPCmpIntrinsic>(ICA.getInst());
     return getCmpSelInstrCost(*FOp, ICA.getArgTypes()[0], ICA.getReturnType(),
                               UI->getPredicate(), CostKind);
-  }
-  // vp load/store
-  case Intrinsic::vp_load:
-  case Intrinsic::vp_store: {
-    if (!ICA.getInst())
-      break;
-    Intrinsic::ID IID = ICA.getID();
-    std::optional<unsigned> FOp = VPIntrinsic::getFunctionalOpcodeForVP(IID);
-    assert(FOp.has_value());
-    auto *UI = cast<VPIntrinsic>(ICA.getInst());
-    if (ICA.getID() == Intrinsic::vp_load)
-      return getMemoryOpCost(
-          *FOp, ICA.getReturnType(), UI->getPointerAlignment(),
-          UI->getOperand(0)->getType()->getPointerAddressSpace(), CostKind);
-    return getMemoryOpCost(
-        *FOp, ICA.getArgTypes()[0], UI->getPointerAlignment(),
-        UI->getOperand(1)->getType()->getPointerAddressSpace(), CostKind);
   }
   case Intrinsic::vp_select: {
     Intrinsic::ID IID = ICA.getID();
