@@ -50,4 +50,9 @@ def FunctionFilteringPass : Pass<"omp-function-filtering"> {
   ];
 }
 
+// Needs to be scheduled on Module as we create functions in it
+def LowerWorkshare : Pass<"lower-workshare", "::mlir::ModuleOp"> {
+  let summary = "Lower workshare construct";
+}
+
 #endif //FORTRAN_OPTIMIZER_OPENMP_PASSES
