@@ -14,7 +14,7 @@
 "`LWG2731 <https://wg21.link/LWG2731>`__","Existence of ``lock_guard<MutexTypes...>::mutex_type`` typedef unclear","2020-11 (Virtual)","|Complete|","5",""
 "`LWG2743 <https://wg21.link/LWG2743>`__","P0083R3 ``node_handle`` private members missing ""exposition only"" comment","2020-11 (Virtual)","|Nothing To Do|","",""
 "`LWG2820 <https://wg21.link/LWG2820>`__","Clarify ``<cstdint>`` macros","2020-11 (Virtual)","|Nothing To Do|","",""
-"`LWG3120 <https://wg21.link/LWG3120>`__","Unclear behavior of ``monotonic_buffer_resource::release()``","2020-11 (Virtual)","","",""
+"`LWG3120 <https://wg21.link/LWG3120>`__","Unclear behavior of ``monotonic_buffer_resource::release()``","2020-11 (Virtual)","|Complete|","16",""
 "`LWG3170 <https://wg21.link/LWG3170>`__","``is_always_equal`` added to ``std::allocator`` makes the standard library treat derived types as always equal","2020-11 (Virtual)","|Complete|","18",""
 "`LWG3036 <https://wg21.link/LWG3036>`__","``polymorphic_allocator::destroy`` is extraneous","2020-11 (Virtual)","|Nothing To Do|","","Reverted by P2875R4"
 "`LWG3171 <https://wg21.link/LWG3171>`__","LWG2989 breaks ``directory_entry`` stream insertion","2020-11 (Virtual)","|Complete|","14",""
