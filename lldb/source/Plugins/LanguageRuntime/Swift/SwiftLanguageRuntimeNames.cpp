@@ -406,7 +406,19 @@ CreateRunThroughTaskSwitchingTrampolines(Thread &thread,
   if (trampoline_name == "swift_task_switch")
     return CreateRunThroughTaskSwitchThreadPlan(thread,
                                                 LLDB_REGNUM_GENERIC_ARG1);
-
+  // The signature for `swift_asyncLet_get` and `swift_asyncLet_finish` are the
+  // same. Like `task_switch`, the async context (first argument) uses the async
+  // context register, and not the arg1 register; as such, the continuation
+  // funclet can be found in arg3.
+  //
+  // swift_asyncLet_get(SWIFT_ASYNC_CONTEXT AsyncContext *,
+  //                         AsyncLet *,
+  //                         void *,
+  //                         TaskContinuationFunction *,
+  if (trampoline_name == "swift_asyncLet_get" ||
+      trampoline_name == "swift_asyncLet_finish")
+    return CreateRunThroughTaskSwitchThreadPlan(thread,
+                                                LLDB_REGNUM_GENERIC_ARG3);
   return nullptr;
 }
 
