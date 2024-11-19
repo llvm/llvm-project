@@ -205,7 +205,6 @@ set(files
   __assert
   __atomic/aliases.h
   __atomic/atomic.h
-  __atomic/atomic_base.h
   __atomic/atomic_flag.h
   __atomic/atomic_init.h
   __atomic/atomic_lock_free.h
