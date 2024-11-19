@@ -264,7 +264,7 @@ public:
 
 /// The virtual file system interface.
 class LLVM_ABI FileSystem : public llvm::ThreadSafeRefCountedBase<FileSystem>,
-                   public RTTIExtends<FileSystem, RTTIRoot> {
+                            public RTTIExtends<FileSystem, RTTIRoot> {
 public:
   static const char ID;
   virtual ~FileSystem();
@@ -389,7 +389,8 @@ LLVM_ABI std::unique_ptr<FileSystem> createPhysicalFileSystem();
 /// top-most (most recently added) directory are used.  When there is a file
 /// that exists in more than one file system, the file in the top-most file
 /// system overrides the other(s).
-class LLVM_ABI OverlayFileSystem : public RTTIExtends<OverlayFileSystem, FileSystem> {
+class LLVM_ABI OverlayFileSystem
+    : public RTTIExtends<OverlayFileSystem, FileSystem> {
   using FileSystemList = SmallVector<IntrusiveRefCntPtr<FileSystem>, 1>;
 
   /// The stack of file systems, implemented as a list in order of
@@ -449,7 +450,8 @@ protected:
 /// By default, this delegates all calls to the underlying file system. This
 /// is useful when derived file systems want to override some calls and still
 /// proxy other calls.
-class LLVM_ABI ProxyFileSystem : public RTTIExtends<ProxyFileSystem, FileSystem> {
+class LLVM_ABI ProxyFileSystem
+    : public RTTIExtends<ProxyFileSystem, FileSystem> {
 public:
   static const char ID;
   explicit ProxyFileSystem(IntrusiveRefCntPtr<FileSystem> FS)
@@ -535,7 +537,8 @@ public:
 } // namespace detail
 
 /// An in-memory file system.
-class LLVM_ABI InMemoryFileSystem : public RTTIExtends<InMemoryFileSystem, FileSystem> {
+class LLVM_ABI InMemoryFileSystem
+    : public RTTIExtends<InMemoryFileSystem, FileSystem> {
   std::unique_ptr<detail::InMemoryDirectory> Root;
   std::string WorkingDirectory;
   bool UseNormalizedPaths = true;

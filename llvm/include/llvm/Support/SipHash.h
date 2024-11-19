@@ -27,11 +27,11 @@ class StringRef;
 
 /// Computes a SipHash-2-4 64-bit result.
 LLVM_ABI void getSipHash_2_4_64(ArrayRef<uint8_t> In, const uint8_t (&K)[16],
-                       uint8_t (&Out)[8]);
+                                uint8_t (&Out)[8]);
 
 /// Computes a SipHash-2-4 128-bit result.
 LLVM_ABI void getSipHash_2_4_128(ArrayRef<uint8_t> In, const uint8_t (&K)[16],
-                        uint8_t (&Out)[16]);
+                                 uint8_t (&Out)[16]);
 
 /// Compute a stable non-zero 16-bit hash of the given string.
 ///

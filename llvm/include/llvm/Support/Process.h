@@ -219,7 +219,6 @@ public:
 private:
   [[noreturn]] static void ExitNoCleanup(int RetCode);
 };
-
 }
 }
 

@@ -206,8 +206,8 @@ inline uint16_t StackAdjustment(const RuntimeFunction &RF) {
 
 /// SavedRegisterMask - Utility function to calculate the set of saved general
 /// purpose (r0-r15) and VFP (d0-d31) registers.
-LLVM_ABI std::pair<uint16_t, uint32_t> SavedRegisterMask(const RuntimeFunction &RF,
-                                                bool Prologue = true);
+LLVM_ABI std::pair<uint16_t, uint32_t>
+SavedRegisterMask(const RuntimeFunction &RF, bool Prologue = true);
 
 /// RuntimeFunctionARM64 - An entry in the table of procedure data (.pdata)
 ///

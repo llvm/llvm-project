@@ -647,7 +647,8 @@ inline bool Object::erase(StringRef K) {
   return M.erase(ObjectKey(K));
 }
 
-LLVM_ABI std::vector<const Object::value_type *> sortedElements(const Object &O);
+LLVM_ABI std::vector<const Object::value_type *>
+sortedElements(const Object &O);
 
 /// A "cursor" marking a position within a Value.
 /// The Value is a tree, and this is the path from the root to the current node.
@@ -977,7 +978,7 @@ Expected<T> parse(const llvm::StringRef &JSON, const char *RootName = "") {
 /// an array, and so on.
 /// With asserts disabled, this is undefined behavior.
 class LLVM_ABI OStream {
- public:
+public:
   using Block = llvm::function_ref<void()>;
   // If IndentSize is nonzero, output is pretty-printed.
   explicit OStream(llvm::raw_ostream &OS, unsigned IndentSize = 0)

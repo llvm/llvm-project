@@ -59,7 +59,7 @@ enum Name {
 } // end namespace GraphProgram
 
 LLVM_ABI bool DisplayGraph(StringRef Filename, bool wait = true,
-                  GraphProgram::Name program = GraphProgram::DOT);
+                           GraphProgram::Name program = GraphProgram::DOT);
 
 template<typename GraphType>
 class GraphWriter {

@@ -22,11 +22,11 @@ namespace llvm {
 // are identical ignoring case, they are ordered according to case sensitive
 // ordering if `FallbackCaseSensitive` is true.
 LLVM_ABI int StrCmpOptionName(StringRef A, StringRef B,
-                     bool FallbackCaseSensitive = true);
+                              bool FallbackCaseSensitive = true);
 
 // Comparison function for Option prefixes.
 LLVM_ABI int StrCmpOptionPrefixes(ArrayRef<StringRef> APrefixes,
-                         ArrayRef<StringRef> BPrefixes);
+                                  ArrayRef<StringRef> BPrefixes);
 
 } // namespace llvm
 

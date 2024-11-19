@@ -332,7 +332,8 @@ public:
 // Stores the size of a type. If the type is of fixed size, it will represent
 // the exact size. If the type is a scalable vector, it will represent the known
 // minimum size.
-class LLVM_ABI TypeSize : public details::FixedOrScalableQuantity<TypeSize, uint64_t> {
+class LLVM_ABI TypeSize
+    : public details::FixedOrScalableQuantity<TypeSize, uint64_t> {
   TypeSize(const FixedOrScalableQuantity<TypeSize, uint64_t> &V)
       : FixedOrScalableQuantity(V) {}
 

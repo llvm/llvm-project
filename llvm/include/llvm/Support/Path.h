@@ -153,7 +153,8 @@ LLVM_ABI reverse_iterator rend(StringRef path);
 /// @endcode
 ///
 /// @param path A path that is modified to not have a file component.
-LLVM_ABI void remove_filename(SmallVectorImpl<char> &path, Style style = Style::native);
+LLVM_ABI void remove_filename(SmallVectorImpl<char> &path,
+                              Style style = Style::native);
 
 /// Replace the file extension of \a path with \a extension.
 ///
@@ -167,8 +168,9 @@ LLVM_ABI void remove_filename(SmallVectorImpl<char> &path, Style style = Style::
 /// @param extension The extension to be added. It may be empty. It may also
 ///                  optionally start with a '.', if it does not, one will be
 ///                  prepended.
-LLVM_ABI void replace_extension(SmallVectorImpl<char> &path, const Twine &extension,
-                       Style style = Style::native);
+LLVM_ABI void replace_extension(SmallVectorImpl<char> &path,
+                                const Twine &extension,
+                                Style style = Style::native);
 
 /// Replace matching path prefix with another path.
 ///
@@ -192,15 +194,16 @@ LLVM_ABI void replace_extension(SmallVectorImpl<char> &path, const Twine &extens
 /// @param style The style used to match the prefix. Exact match using
 /// Posix style, case/separator insensitive match for Windows style.
 /// @result true if \a Path begins with OldPrefix
-LLVM_ABI bool replace_path_prefix(SmallVectorImpl<char> &Path, StringRef OldPrefix,
-                         StringRef NewPrefix,
-                         Style style = Style::native);
+LLVM_ABI bool replace_path_prefix(SmallVectorImpl<char> &Path,
+                                  StringRef OldPrefix, StringRef NewPrefix,
+                                  Style style = Style::native);
 
 /// Remove redundant leading "./" pieces and consecutive separators.
 ///
 /// @param path Input path.
 /// @result The cleaned-up \a path.
-LLVM_ABI StringRef remove_leading_dotslash(StringRef path, Style style = Style::native);
+LLVM_ABI StringRef remove_leading_dotslash(StringRef path,
+                                           Style style = Style::native);
 
 /// In-place remove any './' and optionally '../' components from a path.
 ///
@@ -208,8 +211,9 @@ LLVM_ABI StringRef remove_leading_dotslash(StringRef path, Style style = Style::
 /// @param remove_dot_dot specify if '../' (except for leading "../") should be
 /// removed
 /// @result True if path was changed
-LLVM_ABI bool remove_dots(SmallVectorImpl<char> &path, bool remove_dot_dot = false,
-                 Style style = Style::native);
+LLVM_ABI bool remove_dots(SmallVectorImpl<char> &path,
+                          bool remove_dot_dot = false,
+                          Style style = Style::native);
 
 /// Append to path.
 ///
@@ -222,12 +226,12 @@ LLVM_ABI bool remove_dots(SmallVectorImpl<char> &path, bool remove_dot_dot = fal
 /// @param path Set to \a path + \a component.
 /// @param a The component to be appended to \a path.
 LLVM_ABI void append(SmallVectorImpl<char> &path, const Twine &a,
-                                         const Twine &b = "",
-                                         const Twine &c = "",
-                                         const Twine &d = "");
+                     const Twine &b = "", const Twine &c = "",
+                     const Twine &d = "");
 
 LLVM_ABI void append(SmallVectorImpl<char> &path, Style style, const Twine &a,
-            const Twine &b = "", const Twine &c = "", const Twine &d = "");
+                     const Twine &b = "", const Twine &c = "",
+                     const Twine &d = "");
 
 /// Append to path.
 ///
@@ -241,7 +245,7 @@ LLVM_ABI void append(SmallVectorImpl<char> &path, Style style, const Twine &a,
 /// @param begin Start of components to append.
 /// @param end One past the end of components to append.
 LLVM_ABI void append(SmallVectorImpl<char> &path, const_iterator begin,
-            const_iterator end, Style style = Style::native);
+                     const_iterator end, Style style = Style::native);
 
 /// @}
 /// @name Transforms (or some other better name)
@@ -254,7 +258,7 @@ LLVM_ABI void append(SmallVectorImpl<char> &path, const_iterator begin,
 /// @param path A path that is transformed to native format.
 /// @param result Holds the result of the transformation.
 LLVM_ABI void native(const Twine &path, SmallVectorImpl<char> &result,
-            Style style = Style::native);
+                     Style style = Style::native);
 
 /// Convert path to the native form in place. This is used to give paths to
 /// users and operating system calls in the platform's normal way. For example,
@@ -280,7 +284,8 @@ inline void make_preferred(SmallVectorImpl<char> &path,
 /// @result The result of replacing backslashes with forward slashes if Windows.
 /// On Unix, this function is a no-op because backslashes are valid path
 /// chracters.
-LLVM_ABI std::string convert_to_slash(StringRef path, Style style = Style::native);
+LLVM_ABI std::string convert_to_slash(StringRef path,
+                                      Style style = Style::native);
 
 /// @}
 /// @name Lexical Observers
@@ -411,7 +416,8 @@ LLVM_ABI StringRef get_separator(Style style = Style::native);
 /// (e.g., TEMP on Windows, TMPDIR on *nix) to specify a temporary directory.
 ///
 /// @param result Holds the resulting path name.
-LLVM_ABI void system_temp_directory(bool erasedOnReboot, SmallVectorImpl<char> &result);
+LLVM_ABI void system_temp_directory(bool erasedOnReboot,
+                                    SmallVectorImpl<char> &result);
 
 /// Get the user's home directory.
 ///
@@ -447,7 +453,8 @@ LLVM_ABI bool has_root_name(const Twine &path, Style style = Style::native);
 ///
 /// @param path Input path.
 /// @result True if the path has a root directory, false otherwise.
-LLVM_ABI bool has_root_directory(const Twine &path, Style style = Style::native);
+LLVM_ABI bool has_root_directory(const Twine &path,
+                                 Style style = Style::native);
 
 /// Has root path?
 ///

@@ -235,13 +235,15 @@ namespace windows {
 // Returns command line arguments. Unlike arguments given to main(),
 // this function guarantees that the returned arguments are encoded in
 // UTF-8 regardless of the current code page setting.
-LLVM_ABI std::error_code GetCommandLineArguments(SmallVectorImpl<const char *> &Args,
-                                        BumpPtrAllocator &Alloc);
+LLVM_ABI std::error_code
+GetCommandLineArguments(SmallVectorImpl<const char *> &Args,
+                        BumpPtrAllocator &Alloc);
 
 /// Convert UTF-8 path to a suitable UTF-16 path for use with the Win32 Unicode
 /// File API.
-LLVM_ABI std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
-                          size_t MaxPathLen = MAX_PATH);
+LLVM_ABI std::error_code widenPath(const Twine &Path8,
+                                   SmallVectorImpl<wchar_t> &Path16,
+                                   size_t MaxPathLen = MAX_PATH);
 
 } // end namespace windows
 } // end namespace sys

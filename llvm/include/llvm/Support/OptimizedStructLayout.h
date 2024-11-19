@@ -137,7 +137,7 @@ struct OptimizedStructLayoutField {
 /// alignment.  Note that the total size is not rounded up to a multiple
 /// of the required alignment; clients which require this can do so easily.
 LLVM_ABI std::pair<uint64_t, Align> performOptimizedStructLayout(
-                        MutableArrayRef<OptimizedStructLayoutField> Fields);
+    MutableArrayRef<OptimizedStructLayoutField> Fields);
 
 } // namespace llvm
 

@@ -226,7 +226,8 @@ void parallelSort(RandomAccessIterator Start, RandomAccessIterator End,
   llvm::sort(Start, End, Comp);
 }
 
-LLVM_ABI void parallelFor(size_t Begin, size_t End, function_ref<void(size_t)> Fn);
+LLVM_ABI void parallelFor(size_t Begin, size_t End,
+                          function_ref<void(size_t)> Fn);
 
 template <class IterTy, class FuncTy>
 void parallelForEach(IterTy Begin, IterTy End, FuncTy Fn) {

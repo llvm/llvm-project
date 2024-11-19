@@ -67,7 +67,8 @@ struct CachePruningPolicy {
 /// For example: "prune_interval=30s:prune_after=24h:cache_size=50%"
 /// which means a pruning interval of 30 seconds, expiration time of 24 hours
 /// and maximum cache size of 50% of available disk space.
-LLVM_ABI Expected<CachePruningPolicy> parseCachePruningPolicy(StringRef PolicyStr);
+LLVM_ABI Expected<CachePruningPolicy>
+parseCachePruningPolicy(StringRef PolicyStr);
 
 /// Peform pruning using the supplied policy, returns true if pruning
 /// occurred, i.e. if Policy.Interval was expired.
@@ -80,8 +81,9 @@ LLVM_ABI Expected<CachePruningPolicy> parseCachePruningPolicy(StringRef PolicySt
 /// As a safeguard against data loss if the user specifies the wrong directory
 /// as their cache directory, this function will ignore files not matching the
 /// pattern "llvmcache-*".
-LLVM_ABI bool pruneCache(StringRef Path, CachePruningPolicy Policy,
-                const std::vector<std::unique_ptr<MemoryBuffer>> &Files = {});
+LLVM_ABI bool
+pruneCache(StringRef Path, CachePruningPolicy Policy,
+           const std::vector<std::unique_ptr<MemoryBuffer>> &Files = {});
 } // namespace llvm
 
 #endif

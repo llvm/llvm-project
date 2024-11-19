@@ -67,10 +67,10 @@ namespace cl {
 // that give precedence to earlier occurrences, you will need to extend this
 // function to support it correctly.
 LLVM_ABI bool ParseCommandLineOptions(int argc, const char *const *argv,
-                             StringRef Overview = "",
-                             raw_ostream *Errs = nullptr,
-                             const char *EnvVar = nullptr,
-                             bool LongOptionsUseDoubleDash = false);
+                                      StringRef Overview = "",
+                                      raw_ostream *Errs = nullptr,
+                                      const char *EnvVar = nullptr,
+                                      bool LongOptionsUseDoubleDash = false);
 
 // Function pointer type for printing version information.
 using VersionPrinterTy = std::function<void(raw_ostream &)>;
@@ -891,7 +891,8 @@ public:
 //--------------------------------------------------
 // Super class of parsers to provide boilerplate code
 //
-class LLVM_ABI basic_parser_impl { // non-template implementation of basic_parser<t>
+class LLVM_ABI
+    basic_parser_impl { // non-template implementation of basic_parser<t>
 public:
   basic_parser_impl(Option &) {}
 
@@ -969,7 +970,8 @@ public:
 
 extern template class LLVM_TEMPLATE_ABI basic_parser<boolOrDefault>;
 
-template <> class LLVM_ABI parser<boolOrDefault> : public basic_parser<boolOrDefault> {
+template <>
+class LLVM_ABI parser<boolOrDefault> : public basic_parser<boolOrDefault> {
 public:
   parser(Option &O) : basic_parser(O) {}
 
@@ -1079,7 +1081,8 @@ public:
 extern template class LLVM_TEMPLATE_ABI basic_parser<unsigned long>;
 
 template <>
-class LLVM_ABI parser<unsigned long> final : public basic_parser<unsigned long> {
+class LLVM_ABI parser<unsigned long> final
+    : public basic_parser<unsigned long> {
 public:
   parser(Option &O) : basic_parser(O) {}
 
@@ -1101,7 +1104,8 @@ public:
 extern template class LLVM_TEMPLATE_ABI basic_parser<unsigned long long>;
 
 template <>
-class LLVM_ABI parser<unsigned long long> : public basic_parser<unsigned long long> {
+class LLVM_ABI parser<unsigned long long>
+    : public basic_parser<unsigned long long> {
 public:
   parser(Option &O) : basic_parser(O) {}
 
@@ -1165,7 +1169,8 @@ public:
 
 extern template class LLVM_TEMPLATE_ABI basic_parser<std::string>;
 
-template <> class LLVM_ABI parser<std::string> : public basic_parser<std::string> {
+template <>
+class LLVM_ABI parser<std::string> : public basic_parser<std::string> {
 public:
   parser(Option &O) : basic_parser(O) {}
 
@@ -2079,8 +2084,8 @@ getRegisteredSubcommands();
 /// lines and end of the response file to be marked with a nullptr string.
 /// \param [out] NewArgv All parsed strings are appended to NewArgv.
 LLVM_ABI void TokenizeGNUCommandLine(StringRef Source, StringSaver &Saver,
-                            SmallVectorImpl<const char *> &NewArgv,
-                            bool MarkEOLs = false);
+                                     SmallVectorImpl<const char *> &NewArgv,
+                                     bool MarkEOLs = false);
 
 /// Tokenizes a string of Windows command line arguments, which may contain
 /// quotes and escaped quotes.
@@ -2097,15 +2102,16 @@ LLVM_ABI void TokenizeGNUCommandLine(StringRef Source, StringSaver &Saver,
 /// lines and end of the response file to be marked with a nullptr string.
 /// \param [out] NewArgv All parsed strings are appended to NewArgv.
 LLVM_ABI void TokenizeWindowsCommandLine(StringRef Source, StringSaver &Saver,
-                                SmallVectorImpl<const char *> &NewArgv,
-                                bool MarkEOLs = false);
+                                         SmallVectorImpl<const char *> &NewArgv,
+                                         bool MarkEOLs = false);
 
 /// Tokenizes a Windows command line while attempting to avoid copies. If no
 /// quoting or escaping was used, this produces substrings of the original
 /// string. If a token requires unquoting, it will be allocated with the
 /// StringSaver.
-LLVM_ABI void TokenizeWindowsCommandLineNoCopy(StringRef Source, StringSaver &Saver,
-                                      SmallVectorImpl<StringRef> &NewArgv);
+LLVM_ABI void
+TokenizeWindowsCommandLineNoCopy(StringRef Source, StringSaver &Saver,
+                                 SmallVectorImpl<StringRef> &NewArgv);
 
 /// Tokenizes a Windows full command line, including command name at the start.
 ///
@@ -2120,9 +2126,10 @@ LLVM_ABI void TokenizeWindowsCommandLineNoCopy(StringRef Source, StringSaver &Sa
 /// if you set MarkEOLs = true, then the first word of every line will be
 /// parsed using the special rules for command names, making this function
 /// suitable for parsing a file full of commands to execute.
-LLVM_ABI void TokenizeWindowsCommandLineFull(StringRef Source, StringSaver &Saver,
-                                    SmallVectorImpl<const char *> &NewArgv,
-                                    bool MarkEOLs = false);
+LLVM_ABI void
+TokenizeWindowsCommandLineFull(StringRef Source, StringSaver &Saver,
+                               SmallVectorImpl<const char *> &NewArgv,
+                               bool MarkEOLs = false);
 
 /// String tokenization function type.  Should be compatible with either
 /// Windows or Unix command line tokenizers.
@@ -2140,8 +2147,8 @@ using TokenizerCallback = void (*)(StringRef Source, StringSaver &Saver,
 /// It works like TokenizeGNUCommandLine with ability to skip comment lines.
 ///
 LLVM_ABI void tokenizeConfigFile(StringRef Source, StringSaver &Saver,
-                        SmallVectorImpl<const char *> &NewArgv,
-                        bool MarkEOLs = false);
+                                 SmallVectorImpl<const char *> &NewArgv,
+                                 bool MarkEOLs = false);
 
 /// Contains options that control response file expansion.
 class LLVM_ABI ExpansionContext {
@@ -2234,21 +2241,23 @@ public:
 /// environment variable EnvVar and command line options, then expands
 /// response files recursively.
 /// \return true if all @files were expanded successfully or there were none.
-LLVM_ABI bool expandResponseFiles(int Argc, const char *const *Argv, const char *EnvVar,
-                         SmallVectorImpl<const char *> &NewArgv);
+LLVM_ABI bool expandResponseFiles(int Argc, const char *const *Argv,
+                                  const char *EnvVar,
+                                  SmallVectorImpl<const char *> &NewArgv);
 
 /// A convenience helper which supports the typical use case of expansion
 /// function call.
-LLVM_ABI bool ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
-                         SmallVectorImpl<const char *> &Argv);
+LLVM_ABI bool ExpandResponseFiles(StringSaver &Saver,
+                                  TokenizerCallback Tokenizer,
+                                  SmallVectorImpl<const char *> &Argv);
 
 /// A convenience helper which concatenates the options specified by the
 /// environment variable EnvVar and command line options, then expands response
 /// files recursively. The tokenizer is a predefined GNU or Windows one.
 /// \return true if all @files were expanded successfully or there were none.
-LLVM_ABI bool expandResponseFiles(int Argc, const char *const *Argv, const char *EnvVar,
-                         StringSaver &Saver,
-                         SmallVectorImpl<const char *> &NewArgv);
+LLVM_ABI bool expandResponseFiles(int Argc, const char *const *Argv,
+                                  const char *EnvVar, StringSaver &Saver,
+                                  SmallVectorImpl<const char *> &NewArgv);
 
 /// Mark all options not part of this category as cl::ReallyHidden.
 ///
@@ -2258,7 +2267,7 @@ LLVM_ABI bool expandResponseFiles(int Argc, const char *const *Argv, const char 
 /// not specific to the tool. This function allows a tool to specify a single
 /// option category to display in the -help output.
 LLVM_ABI void HideUnrelatedOptions(cl::OptionCategory &Category,
-                          SubCommand &Sub = SubCommand::getTopLevel());
+                                   SubCommand &Sub = SubCommand::getTopLevel());
 
 /// Mark all options not part of the categories as cl::ReallyHidden.
 ///
@@ -2267,8 +2276,9 @@ LLVM_ABI void HideUnrelatedOptions(cl::OptionCategory &Category,
 /// Some tools (like clang-format) like to be able to hide all options that are
 /// not specific to the tool. This function allows a tool to specify a single
 /// option category to display in the -help output.
-LLVM_ABI void HideUnrelatedOptions(ArrayRef<const cl::OptionCategory *> Categories,
-                          SubCommand &Sub = SubCommand::getTopLevel());
+LLVM_ABI void
+HideUnrelatedOptions(ArrayRef<const cl::OptionCategory *> Categories,
+                     SubCommand &Sub = SubCommand::getTopLevel());
 
 /// Reset all command line options to a state that looks as if they have
 /// never appeared on the command line.  This is useful for being able to parse

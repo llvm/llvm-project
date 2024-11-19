@@ -35,7 +35,8 @@ namespace llvm {
   ///
   /// \see EnablePrettyStackTrace
   /// \see PrettyStackTraceEntry
-  LLVM_ABI void EnablePrettyStackTraceOnSigInfoForThisThread(bool ShouldEnable = true);
+  LLVM_ABI void
+  EnablePrettyStackTraceOnSigInfoForThisThread(bool ShouldEnable = true);
 
   /// Replaces the generic bug report message that is output upon
   /// a crash.
@@ -50,7 +51,8 @@ namespace llvm {
   /// constructed and destructed, they will add their symbolic frames to a
   /// virtual stack trace.  This gets dumped out if the program crashes.
   class LLVM_ABI PrettyStackTraceEntry {
-    friend LLVM_ABI PrettyStackTraceEntry *ReverseStackTrace(PrettyStackTraceEntry *);
+    friend LLVM_ABI PrettyStackTraceEntry *
+    ReverseStackTrace(PrettyStackTraceEntry *);
 
     PrettyStackTraceEntry *NextEntry;
     PrettyStackTraceEntry(const PrettyStackTraceEntry &) = delete;

@@ -88,13 +88,13 @@ LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, sys::UtcTime<> TP);
 ///   - %N is nanos: 000000000 - 999999999
 ///
 /// If no options are given, the default format is "%Y-%m-%d %H:%M:%S.%N".
-template <>
-struct LLVM_ABI format_provider<sys::TimePoint<>> {
+template <> struct LLVM_ABI format_provider<sys::TimePoint<>> {
   static void format(const sys::TimePoint<> &TP, llvm::raw_ostream &OS,
                      StringRef Style);
 };
 
-template <> struct LLVM_ABI format_provider<sys::UtcTime<std::chrono::seconds>> {
+template <>
+struct LLVM_ABI format_provider<sys::UtcTime<std::chrono::seconds>> {
   static void format(const sys::UtcTime<std::chrono::seconds> &TP,
                      llvm::raw_ostream &OS, StringRef Style);
 };
@@ -103,12 +103,24 @@ namespace detail {
 template <typename Period> struct unit { static const char value[]; };
 template <typename Period> const char unit<Period>::value[] = "";
 
-template <> struct LLVM_ABI unit<std::ratio<3600>> { static const char value[]; };
-template <> struct LLVM_ABI unit<std::ratio<60>> { static const char value[]; };
-template <> struct LLVM_ABI unit<std::ratio<1>> { static const char value[]; };
-template <> struct LLVM_ABI unit<std::milli> { static const char value[]; };
-template <> struct LLVM_ABI unit<std::micro> { static const char value[]; };
-template <> struct LLVM_ABI unit<std::nano> { static const char value[]; };
+template <> struct LLVM_ABI unit<std::ratio<3600>> {
+  static const char value[];
+};
+template <> struct LLVM_ABI unit<std::ratio<60>> {
+  static const char value[];
+};
+template <> struct LLVM_ABI unit<std::ratio<1>> {
+  static const char value[];
+};
+template <> struct LLVM_ABI unit<std::milli> {
+  static const char value[];
+};
+template <> struct LLVM_ABI unit<std::micro> {
+  static const char value[];
+};
+template <> struct LLVM_ABI unit<std::nano> {
+  static const char value[];
+};
 } // namespace detail
 
 /// Implementation of format_provider<T> for duration types.

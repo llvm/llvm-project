@@ -28,8 +28,9 @@ namespace ELFAttrs {
 enum AttrType : unsigned { File = 1, Section = 2, Symbol = 3 };
 
 LLVM_ABI StringRef attrTypeAsString(unsigned attr, TagNameMap tagNameMap,
-                           bool hasTagPrefix = true);
-LLVM_ABI std::optional<unsigned> attrTypeFromString(StringRef tag, TagNameMap tagNameMap);
+                                    bool hasTagPrefix = true);
+LLVM_ABI std::optional<unsigned> attrTypeFromString(StringRef tag,
+                                                    TagNameMap tagNameMap);
 
 // Magic numbers for ELF attributes.
 enum AttrMagic { Format_Version = 0x41 };

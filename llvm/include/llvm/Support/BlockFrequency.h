@@ -122,7 +122,7 @@ public:
 };
 
 LLVM_ABI void printRelativeBlockFreq(raw_ostream &OS, BlockFrequency EntryFreq,
-                            BlockFrequency Freq);
+                                     BlockFrequency Freq);
 
 } // namespace llvm
 

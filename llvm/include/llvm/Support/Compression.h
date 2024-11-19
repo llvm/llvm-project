@@ -42,14 +42,15 @@ constexpr int BestSizeCompression = 9;
 LLVM_ABI bool isAvailable();
 
 LLVM_ABI void compress(ArrayRef<uint8_t> Input,
-              SmallVectorImpl<uint8_t> &CompressedBuffer,
-              int Level = DefaultCompression);
+                       SmallVectorImpl<uint8_t> &CompressedBuffer,
+                       int Level = DefaultCompression);
 
 LLVM_ABI Error decompress(ArrayRef<uint8_t> Input, uint8_t *Output,
-                 size_t &UncompressedSize);
+                          size_t &UncompressedSize);
 
-LLVM_ABI Error decompress(ArrayRef<uint8_t> Input, SmallVectorImpl<uint8_t> &Output,
-                 size_t UncompressedSize);
+LLVM_ABI Error decompress(ArrayRef<uint8_t> Input,
+                          SmallVectorImpl<uint8_t> &Output,
+                          size_t UncompressedSize);
 
 } // End of namespace zlib
 
@@ -63,14 +64,15 @@ constexpr int BestSizeCompression = 12;
 LLVM_ABI bool isAvailable();
 
 LLVM_ABI void compress(ArrayRef<uint8_t> Input,
-              SmallVectorImpl<uint8_t> &CompressedBuffer,
-              int Level = DefaultCompression, bool EnableLdm = false);
+                       SmallVectorImpl<uint8_t> &CompressedBuffer,
+                       int Level = DefaultCompression, bool EnableLdm = false);
 
 LLVM_ABI Error decompress(ArrayRef<uint8_t> Input, uint8_t *Output,
-                 size_t &UncompressedSize);
+                          size_t &UncompressedSize);
 
-LLVM_ABI Error decompress(ArrayRef<uint8_t> Input, SmallVectorImpl<uint8_t> &Output,
-                 size_t UncompressedSize);
+LLVM_ABI Error decompress(ArrayRef<uint8_t> Input,
+                          SmallVectorImpl<uint8_t> &Output,
+                          size_t UncompressedSize);
 
 } // End of namespace zstd
 
@@ -115,15 +117,17 @@ LLVM_ABI const char *getReasonIfUnsupported(Format F);
 // Compress Input with the specified format P.Format. If Level is -1, use
 // *::DefaultCompression for the format.
 LLVM_ABI void compress(Params P, ArrayRef<uint8_t> Input,
-              SmallVectorImpl<uint8_t> &Output);
+                       SmallVectorImpl<uint8_t> &Output);
 
 // Decompress Input. The uncompressed size must be available.
 LLVM_ABI Error decompress(DebugCompressionType T, ArrayRef<uint8_t> Input,
-                 uint8_t *Output, size_t UncompressedSize);
+                          uint8_t *Output, size_t UncompressedSize);
 LLVM_ABI Error decompress(Format F, ArrayRef<uint8_t> Input,
-                 SmallVectorImpl<uint8_t> &Output, size_t UncompressedSize);
+                          SmallVectorImpl<uint8_t> &Output,
+                          size_t UncompressedSize);
 LLVM_ABI Error decompress(DebugCompressionType T, ArrayRef<uint8_t> Input,
-                 SmallVectorImpl<uint8_t> &Output, size_t UncompressedSize);
+                          SmallVectorImpl<uint8_t> &Output,
+                          size_t UncompressedSize);
 
 } // End of namespace compression
 

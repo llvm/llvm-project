@@ -161,12 +161,12 @@ namespace sys {
   /// Return true if the given arguments fit within system-specific
   /// argument length limits.
   LLVM_ABI bool commandLineFitsWithinSystemLimits(StringRef Program,
-                                         ArrayRef<StringRef> Args);
+                                                  ArrayRef<StringRef> Args);
 
   /// Return true if the given arguments fit within system-specific
   /// argument length limits.
   LLVM_ABI bool commandLineFitsWithinSystemLimits(StringRef Program,
-                                         ArrayRef<const char *> Args);
+                                                  ArrayRef<const char *> Args);
 
   /// File encoding options when writing contents that a non-UTF8 tool will
   /// read (on Windows systems). For UNIX, we always use UTF-8.
@@ -209,27 +209,27 @@ namespace sys {
   /// \li 0 if the child process has not changed state.
   /// \note Users of this function should always check the ReturnCode member of
   /// the \see ProcessInfo returned from this function.
-  LLVM_ABI ProcessInfo
-  Wait(const ProcessInfo &PI, ///< The child process that should be waited on.
-       std::optional<unsigned> SecondsToWait, ///< If std::nullopt, waits until
-       ///< child has terminated.
-       ///< If a value, this specifies the amount of time to wait for the child
-       ///< process. If the time expires, and \p Polling is false, the child is
-       ///< killed and this < function returns. If the time expires and \p
-       ///< Polling is true, the child is resumed.
-       ///<
-       ///< If zero, this function will perform a non-blocking
-       ///< wait on the child process.
-       std::string *ErrMsg = nullptr, ///< If non-zero, provides a pointer to a
-       ///< string instance in which error messages will be returned. If the
-       ///< string is non-empty upon return an error occurred while invoking the
-       ///< program.
-       std::optional<ProcessStatistics> *ProcStat =
-           nullptr, ///< If non-zero, provides
-       /// a pointer to a structure in which process execution statistics will
-       /// be stored.
+  LLVM_ABI ProcessInfo Wait(
+      const ProcessInfo &PI, ///< The child process that should be waited on.
+      std::optional<unsigned> SecondsToWait, ///< If std::nullopt, waits until
+      ///< child has terminated.
+      ///< If a value, this specifies the amount of time to wait for the child
+      ///< process. If the time expires, and \p Polling is false, the child is
+      ///< killed and this < function returns. If the time expires and \p
+      ///< Polling is true, the child is resumed.
+      ///<
+      ///< If zero, this function will perform a non-blocking
+      ///< wait on the child process.
+      std::string *ErrMsg = nullptr, ///< If non-zero, provides a pointer to a
+      ///< string instance in which error messages will be returned. If the
+      ///< string is non-empty upon return an error occurred while invoking the
+      ///< program.
+      std::optional<ProcessStatistics> *ProcStat =
+          nullptr, ///< If non-zero, provides
+      /// a pointer to a structure in which process execution statistics will
+      /// be stored.
 
-       bool Polling = false ///< If true, do not kill the process on timeout.
+      bool Polling = false ///< If true, do not kill the process on timeout.
   );
 
   /// Print a command argument, and optionally quote it.
@@ -240,7 +240,8 @@ namespace sys {
   /// to build a single flat command line appropriate for calling CreateProcess
   /// on
   /// Windows.
-  LLVM_ABI ErrorOr<std::wstring> flattenWindowsCommandLine(ArrayRef<StringRef> Args);
+  LLVM_ABI ErrorOr<std::wstring>
+  flattenWindowsCommandLine(ArrayRef<StringRef> Args);
 #endif
   }
 }

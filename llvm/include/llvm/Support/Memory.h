@@ -171,7 +171,8 @@ namespace sys {
 
 #ifndef NDEBUG
   /// Debugging output for Memory::ProtectionFlags.
-  LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const Memory::ProtectionFlags &PF);
+  LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                   const Memory::ProtectionFlags &PF);
 
   /// Debugging output for MemoryBlock.
   LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const MemoryBlock &MB);

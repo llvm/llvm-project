@@ -136,14 +136,16 @@ inline std::pair<uint64_t, int16_t> getProduct64(uint64_t LHS, uint64_t RHS) {
 /// Implemented with long division.
 ///
 /// \pre \c Dividend and \c Divisor are non-zero.
-LLVM_ABI std::pair<uint64_t, int16_t> divide64(uint64_t Dividend, uint64_t Divisor);
+LLVM_ABI std::pair<uint64_t, int16_t> divide64(uint64_t Dividend,
+                                               uint64_t Divisor);
 
 /// Divide two 32-bit integers to create a 32-bit scaled number.
 ///
 /// Implemented with one 64-bit integer divide/remainder pair.
 ///
 /// \pre \c Dividend and \c Divisor are non-zero.
-LLVM_ABI std::pair<uint32_t, int16_t> divide32(uint32_t Dividend, uint32_t Divisor);
+LLVM_ABI std::pair<uint32_t, int16_t> divide32(uint32_t Dividend,
+                                               uint32_t Divisor);
 
 /// Divide two 32-bit numbers to create a 32-bit scaled number.
 ///

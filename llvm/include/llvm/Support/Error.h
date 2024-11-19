@@ -738,7 +738,8 @@ private:
 
 /// Report a serious error, calling any installed error handler. See
 /// ErrorHandling.h.
-[[noreturn]] void LLVM_ABI report_fatal_error(Error Err, bool gen_crash_diag = true);
+[[noreturn]] void LLVM_ABI report_fatal_error(Error Err,
+                                              bool gen_crash_diag = true);
 
 /// Report a fatal error if Err is a failure value.
 ///
@@ -1049,7 +1050,8 @@ Expected<T> handleExpected(Expected<T> ValOrErr, RecoveryFtor &&RecoveryPath,
 /// This is useful in the base level of your program to allow clean termination
 /// (allowing clean deallocation of resources, etc.), while reporting error
 /// information to the user.
-LLVM_ABI void logAllUnhandledErrors(Error E, raw_ostream &OS, Twine ErrorBanner = {});
+LLVM_ABI void logAllUnhandledErrors(Error E, raw_ostream &OS,
+                                    Twine ErrorBanner = {});
 
 /// Write all error messages (if any) in E to a string. The newline character
 /// is used to separate error messages.

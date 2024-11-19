@@ -75,7 +75,8 @@ struct LooseMatchingResult {
   SmallString<64> Name;
 };
 
-LLVM_ABI std::optional<LooseMatchingResult> nameToCodepointLooseMatching(StringRef Name);
+LLVM_ABI std::optional<LooseMatchingResult>
+nameToCodepointLooseMatching(StringRef Name);
 
 struct MatchForCodepointName {
   std::string Name;

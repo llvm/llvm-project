@@ -117,8 +117,8 @@ struct TimeTraceProfilerEntry;
 /// This sets up the global \p TimeTraceProfilerInstance
 /// variable to be the profiler instance.
 LLVM_ABI void timeTraceProfilerInitialize(unsigned TimeTraceGranularity,
-                                 StringRef ProcName,
-                                 bool TimeTraceVerbose = false);
+                                          StringRef ProcName,
+                                          bool TimeTraceVerbose = false);
 
 /// Cleanup the time trace profiler, if it was initialized.
 LLVM_ABI void timeTraceProfilerCleanup();
@@ -142,14 +142,14 @@ LLVM_ABI void timeTraceProfilerWrite(raw_pwrite_stream &OS);
 /// Returns a StringError indicating a failure if the function is
 /// unable to open the file for writing.
 LLVM_ABI Error timeTraceProfilerWrite(StringRef PreferredFileName,
-                             StringRef FallbackFileName);
+                                      StringRef FallbackFileName);
 
 /// Manually begin a time section, with the given \p Name and \p Detail.
 /// Profiler copies the string data, so the pointers can be given into
 /// temporaries. Time sections can be hierarchical; every Begin must have a
 /// matching End pair but they can nest.
 LLVM_ABI TimeTraceProfilerEntry *timeTraceProfilerBegin(StringRef Name,
-                                               StringRef Detail);
+                                                        StringRef Detail);
 LLVM_ABI TimeTraceProfilerEntry *
 timeTraceProfilerBegin(StringRef Name,
                        llvm::function_ref<std::string()> Detail);
@@ -164,11 +164,12 @@ timeTraceProfilerBegin(StringRef Name,
 /// https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview#heading=h.jh64i9l3vwa1
 /// for more details.
 LLVM_ABI TimeTraceProfilerEntry *timeTraceAsyncProfilerBegin(StringRef Name,
-                                                    StringRef Detail);
+                                                             StringRef Detail);
 
 // Mark an instant event.
-LLVM_ABI void timeTraceAddInstantEvent(StringRef Name,
-                              llvm::function_ref<std::string()> Detail);
+LLVM_ABI void
+timeTraceAddInstantEvent(StringRef Name,
+                         llvm::function_ref<std::string()> Detail);
 
 /// Manually end the last time section.
 LLVM_ABI void timeTraceProfilerEnd();

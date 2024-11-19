@@ -226,11 +226,11 @@ public:
 class LLVM_ABI file_status : public basic_file_status {
   friend LLVM_ABI bool equivalent(file_status A, file_status B);
 
-  #if defined(LLVM_ON_UNIX)
+#if defined(LLVM_ON_UNIX)
   dev_t fs_st_dev = 0;
   nlink_t fs_st_nlinks = 0;
   ino_t fs_st_ino = 0;
-  #elif defined (_WIN32)
+#elif defined (_WIN32)
   uint32_t NumLinks = 0;
   uint32_t VolumeSerialNumber = 0;
   uint64_t PathHash = 0;
@@ -279,7 +279,8 @@ public:
 /// relative/../path => <current-directory>/relative/../path
 ///
 /// @param path A path that is modified to be an absolute path.
-LLVM_ABI void make_absolute(const Twine &current_directory, SmallVectorImpl<char> &path);
+LLVM_ABI void make_absolute(const Twine &current_directory,
+                            SmallVectorImpl<char> &path);
 
 /// Make \a path an absolute path.
 ///
@@ -300,9 +301,9 @@ LLVM_ABI std::error_code make_absolute(SmallVectorImpl<char> &path);
 /// @returns errc::success if is_directory(path), otherwise a platform
 ///          specific error_code. If IgnoreExisting is false, also returns
 ///          error if the directory already existed.
-LLVM_ABI std::error_code create_directories(const Twine &path,
-                                   bool IgnoreExisting = true,
-                                   perms Perms = owner_all | group_all);
+LLVM_ABI std::error_code
+create_directories(const Twine &path, bool IgnoreExisting = true,
+                   perms Perms = owner_all | group_all);
 
 /// Create the directory in path.
 ///
@@ -310,8 +311,9 @@ LLVM_ABI std::error_code create_directories(const Twine &path,
 /// @returns errc::success if is_directory(path), otherwise a platform
 ///          specific error_code. If IgnoreExisting is false, also returns
 ///          error if the directory already existed.
-LLVM_ABI std::error_code create_directory(const Twine &path, bool IgnoreExisting = true,
-                                 perms Perms = owner_all | group_all);
+LLVM_ABI std::error_code create_directory(const Twine &path,
+                                          bool IgnoreExisting = true,
+                                          perms Perms = owner_all | group_all);
 
 /// Create a link from \a from to \a to.
 ///
@@ -341,8 +343,9 @@ LLVM_ABI std::error_code create_hard_link(const Twine &to, const Twine &from);
 /// @param output The location to store the resolved path.
 /// @param expand_tilde If true, resolves ~ expressions to the user's home
 ///                     directory.
-LLVM_ABI std::error_code real_path(const Twine &path, SmallVectorImpl<char> &output,
-                          bool expand_tilde = false);
+LLVM_ABI std::error_code real_path(const Twine &path,
+                                   SmallVectorImpl<char> &output,
+                                   bool expand_tilde = false);
 
 /// Expands ~ expressions to the user's home directory. On Unix ~user
 /// directories are resolved as well.
@@ -370,14 +373,16 @@ LLVM_ABI std::error_code set_current_path(const Twine &path);
 /// @returns errc::success if path has been removed or didn't exist, otherwise a
 ///          platform-specific error code. If IgnoreNonExisting is false, also
 ///          returns error if the file didn't exist.
-LLVM_ABI std::error_code remove(const Twine &path, bool IgnoreNonExisting = true);
+LLVM_ABI std::error_code remove(const Twine &path,
+                                bool IgnoreNonExisting = true);
 
 /// Recursively delete a directory.
 ///
 /// @param path Input path.
 /// @returns errc::success if path has been removed or didn't exist, otherwise a
 ///          platform-specific error code.
-LLVM_ABI std::error_code remove_directories(const Twine &path, bool IgnoreErrors = true);
+LLVM_ABI std::error_code remove_directories(const Twine &path,
+                                            bool IgnoreErrors = true);
 
 /// Rename \a from to \a to.
 ///
@@ -497,7 +502,8 @@ LLVM_ABI bool equivalent(file_status A, file_status B);
 ///               inode (or equivalent).
 /// @returns errc::success if result has been successfully set, otherwise a
 ///          platform-specific error_code.
-LLVM_ABI std::error_code equivalent(const Twine &A, const Twine &B, bool &result);
+LLVM_ABI std::error_code equivalent(const Twine &A, const Twine &B,
+                                    bool &result);
 
 /// Simpler version of equivalent for clients that don't need to
 ///        differentiate between an error and false.
@@ -636,7 +642,7 @@ LLVM_ABI std::error_code is_other(const Twine &path, bool &result);
 /// @returns errc::success if result has been successfully set, otherwise a
 ///          platform-specific error_code.
 LLVM_ABI std::error_code status(const Twine &path, file_status &result,
-                       bool follow = true);
+                                bool follow = true);
 
 /// A version for when a file descriptor is already available.
 LLVM_ABI std::error_code status(int FD, file_status &Result);
@@ -700,8 +706,9 @@ inline std::error_code file_size(const Twine &Path, uint64_t &Result) {
 /// @returns errc::success if the file times were successfully set, otherwise a
 ///          platform-specific error_code or errc::function_not_supported on
 ///          platforms where the functionality isn't available.
-LLVM_ABI std::error_code setLastAccessAndModificationTime(int FD, TimePoint<> AccessTime,
-                                                 TimePoint<> ModificationTime);
+LLVM_ABI std::error_code
+setLastAccessAndModificationTime(int FD, TimePoint<> AccessTime,
+                                 TimePoint<> ModificationTime);
 
 /// Simpler version that sets both file modification and access time to the same
 /// time.
@@ -801,8 +808,9 @@ enum OpenFlags : unsigned {
 /// @param Model Name to base unique path off of.
 /// @param ResultPath Set to the file's path.
 /// @param MakeAbsolute Whether to use the system temp directory.
-LLVM_ABI void createUniquePath(const Twine &Model, SmallVectorImpl<char> &ResultPath,
-                      bool MakeAbsolute);
+LLVM_ABI void createUniquePath(const Twine &Model,
+                               SmallVectorImpl<char> &ResultPath,
+                               bool MakeAbsolute);
 
 /// Create a uniquely named file.
 ///
@@ -828,15 +836,15 @@ LLVM_ABI void createUniquePath(const Twine &Model, SmallVectorImpl<char> &Result
 /// @returns errc::success if Result{FD,Path} have been successfully set,
 ///          otherwise a platform-specific error_code.
 LLVM_ABI std::error_code createUniqueFile(const Twine &Model, int &ResultFD,
-                                 SmallVectorImpl<char> &ResultPath,
-                                 OpenFlags Flags = OF_None,
-                                 unsigned Mode = all_read | all_write);
+                                          SmallVectorImpl<char> &ResultPath,
+                                          OpenFlags Flags = OF_None,
+                                          unsigned Mode = all_read | all_write);
 
 /// Simpler version for clients that don't want an open file. An empty
 /// file will still be created.
 LLVM_ABI std::error_code createUniqueFile(const Twine &Model,
-                                 SmallVectorImpl<char> &ResultPath,
-                                 unsigned Mode = all_read | all_write);
+                                          SmallVectorImpl<char> &ResultPath,
+                                          unsigned Mode = all_read | all_write);
 
 /// Represents a temporary file.
 ///
@@ -890,19 +898,20 @@ public:
 ///
 /// This should be used for things like a temporary .s that is removed after
 /// running the assembler.
-LLVM_ABI std::error_code createTemporaryFile(const Twine &Prefix, StringRef Suffix,
-                                    int &ResultFD,
-                                    SmallVectorImpl<char> &ResultPath,
-                                    OpenFlags Flags = OF_None);
+LLVM_ABI std::error_code createTemporaryFile(const Twine &Prefix,
+                                             StringRef Suffix, int &ResultFD,
+                                             SmallVectorImpl<char> &ResultPath,
+                                             OpenFlags Flags = OF_None);
 
 /// Simpler version for clients that don't want an open file. An empty
 /// file will still be created.
-LLVM_ABI std::error_code createTemporaryFile(const Twine &Prefix, StringRef Suffix,
-                                    SmallVectorImpl<char> &ResultPath,
-                                    OpenFlags Flags = OF_None);
+LLVM_ABI std::error_code createTemporaryFile(const Twine &Prefix,
+                                             StringRef Suffix,
+                                             SmallVectorImpl<char> &ResultPath,
+                                             OpenFlags Flags = OF_None);
 
-LLVM_ABI std::error_code createUniqueDirectory(const Twine &Prefix,
-                                      SmallVectorImpl<char> &ResultPath);
+LLVM_ABI std::error_code
+createUniqueDirectory(const Twine &Prefix, SmallVectorImpl<char> &ResultPath);
 
 /// Get a unique name, not currently exisiting in the filesystem. Subject
 /// to race conditions, prefer to use createUniqueFile instead.
@@ -911,8 +920,9 @@ LLVM_ABI std::error_code createUniqueDirectory(const Twine &Prefix,
 /// checks if it exists. This function is subject to race conditions, if you
 /// want to use the returned name to actually create a file, use
 /// createUniqueFile instead.
-LLVM_ABI std::error_code getPotentiallyUniqueFileName(const Twine &Model,
-                                             SmallVectorImpl<char> &ResultPath);
+LLVM_ABI std::error_code
+getPotentiallyUniqueFileName(const Twine &Model,
+                             SmallVectorImpl<char> &ResultPath);
 
 /// Get a unique temporary file name, not currently exisiting in the
 /// filesystem. Subject to race conditions, prefer to use createTemporaryFile
@@ -961,8 +971,8 @@ inline FileAccess &operator|=(FileAccess &A, FileAccess B) {
 /// @returns errc::success if \a Name has been opened, otherwise a
 ///          platform-specific error_code.
 LLVM_ABI std::error_code openFile(const Twine &Name, int &ResultFD,
-                         CreationDisposition Disp, FileAccess Access,
-                         OpenFlags Flags, unsigned Mode = 0666);
+                                  CreationDisposition Disp, FileAccess Access,
+                                  OpenFlags Flags, unsigned Mode = 0666);
 
 /// @brief Opens a file with the specified creation disposition, access mode,
 /// and flags and returns a platform-specific file object.
@@ -978,9 +988,10 @@ LLVM_ABI std::error_code openFile(const Twine &Name, int &ResultFD,
 /// @param Mode The access permissions of the file, represented in octal.
 /// @returns errc::success if \a Name has been opened, otherwise a
 ///          platform-specific error_code.
-LLVM_ABI Expected<file_t> openNativeFile(const Twine &Name, CreationDisposition Disp,
-                                FileAccess Access, OpenFlags Flags,
-                                unsigned Mode = 0666);
+LLVM_ABI Expected<file_t> openNativeFile(const Twine &Name,
+                                         CreationDisposition Disp,
+                                         FileAccess Access, OpenFlags Flags,
+                                         unsigned Mode = 0666);
 
 /// Converts from a Posix file descriptor number to a native file handle.
 /// On Windows, this retreives the underlying handle. On non-Windows, this is a
@@ -1010,7 +1021,8 @@ LLVM_ABI file_t getStderrHandle();
 /// @param FileHandle File to read from.
 /// @param Buf Buffer to read into.
 /// @returns The number of bytes read, or error.
-LLVM_ABI Expected<size_t> readNativeFile(file_t FileHandle, MutableArrayRef<char> Buf);
+LLVM_ABI Expected<size_t> readNativeFile(file_t FileHandle,
+                                         MutableArrayRef<char> Buf);
 
 /// Default chunk size for \a readNativeFileToEOF().
 enum : size_t { DefaultReadChunkSize = 4 * 4096 };
@@ -1028,8 +1040,9 @@ enum : size_t { DefaultReadChunkSize = 4 * 4096 };
 /// \param Buffer Where to put the file content.
 /// \param ChunkSize Size of chunks.
 /// \returns The error if EOF was not found.
-LLVM_ABI Error readNativeFileToEOF(file_t FileHandle, SmallVectorImpl<char> &Buffer,
-                          ssize_t ChunkSize = DefaultReadChunkSize);
+LLVM_ABI Error readNativeFileToEOF(file_t FileHandle,
+                                   SmallVectorImpl<char> &Buffer,
+                                   ssize_t ChunkSize = DefaultReadChunkSize);
 
 /// Reads \p Buf.size() bytes from \p FileHandle at offset \p Offset into \p
 /// Buf. If 'pread' is available, this will use that, otherwise it will use
@@ -1041,8 +1054,8 @@ LLVM_ABI Error readNativeFileToEOF(file_t FileHandle, SmallVectorImpl<char> &Buf
 /// @param Offset Offset into the file at which the read should occur.
 /// @returns The number of bytes read, or error.
 LLVM_ABI Expected<size_t> readNativeFileSlice(file_t FileHandle,
-                                     MutableArrayRef<char> Buf,
-                                     uint64_t Offset);
+                                              MutableArrayRef<char> Buf,
+                                              uint64_t Offset);
 
 /// @brief Opens the file with the given name in a write-only or read-write
 /// mode, returning its open file descriptor. If the file does not exist, it
@@ -1142,9 +1155,9 @@ inline Expected<file_t> openNativeFileForReadWrite(const Twine &Name,
 ///                 location.
 /// @returns errc::success if \a Name has been opened, otherwise a
 ///          platform-specific error_code.
-LLVM_ABI std::error_code openFileForRead(const Twine &Name, int &ResultFD,
-                                OpenFlags Flags = OF_None,
-                                SmallVectorImpl<char> *RealPath = nullptr);
+LLVM_ABI std::error_code
+openFileForRead(const Twine &Name, int &ResultFD, OpenFlags Flags = OF_None,
+                SmallVectorImpl<char> *RealPath = nullptr);
 
 /// @brief Opens the file with the given name in a read-only mode, returning
 /// its open file descriptor.
@@ -1399,7 +1412,8 @@ namespace detail {
 
   struct DirIterState;
 
-  LLVM_ABI std::error_code directory_iterator_construct(DirIterState &, StringRef, bool);
+  LLVM_ABI std::error_code directory_iterator_construct(DirIterState &,
+                                                        StringRef, bool);
   LLVM_ABI std::error_code directory_iterator_increment(DirIterState &);
   LLVM_ABI std::error_code directory_iterator_destruct(DirIterState &);
 

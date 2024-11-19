@@ -837,7 +837,7 @@ class Error;
 /// a temporary file. The final output file is atomically replaced with the
 /// temporary file after the \p Write function is finished.
 LLVM_ABI Error writeToOutput(StringRef OutputFileName,
-                    std::function<Error(raw_ostream &)> Write);
+                             std::function<Error(raw_ostream &)> Write);
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, std::nullopt_t);
 
