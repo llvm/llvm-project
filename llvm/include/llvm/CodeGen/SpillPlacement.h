@@ -52,8 +52,7 @@ class SpillPlacement {
   const EdgeBundles *bundles = nullptr;
   const MachineBlockFrequencyInfo *MBFI = nullptr;
 
-  static void arrayDeleter(Node *N);
-  std::unique_ptr<Node[], decltype(&arrayDeleter)> nodes;
+  std::unique_ptr<Node[]> nodes;
 
   // Nodes that are active in the current computation. Owned by the prepare()
   // caller.
@@ -161,13 +160,15 @@ public:
   bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
                   MachineFunctionAnalysisManager::Invalidator &Inv);
 
-private:
-  SpillPlacement() : nodes(nullptr, &arrayDeleter) {};
+  // Move the default definitions to the implementation
+  // so the full definition of Node is available.
+  SpillPlacement(SpillPlacement &&);
+  ~SpillPlacement();
 
-  void releaseMemory() {
-    nodes.reset();
-    TodoList.clear();
-  }
+private:
+  SpillPlacement();
+
+  void releaseMemory();
 
   void run(MachineFunction &MF, EdgeBundles *Bundles,
            MachineBlockFrequencyInfo *MBFI);

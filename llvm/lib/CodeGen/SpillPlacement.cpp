@@ -219,9 +219,13 @@ bool SpillPlacementAnalysis::Result::invalidate(
          Inv.invalidate<MachineBlockFrequencyAnalysis>(MF, PA);
 }
 
-void SpillPlacement::arrayDeleter(Node *N) {
-  if (N)
-    delete[] N;
+SpillPlacement::SpillPlacement() = default;
+SpillPlacement::~SpillPlacement() = default;
+SpillPlacement::SpillPlacement(SpillPlacement &&) = default;
+
+void SpillPlacement::releaseMemory() {
+  nodes.reset();
+  TodoList.clear();
 }
 
 void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
