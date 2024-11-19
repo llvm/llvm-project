@@ -70,6 +70,7 @@ public:
         ) {
   }
   using llvmOmpClause = const llvm::omp::Clause;
+  using ReductionModifier = parser::OmpReductionClause::ReductionModifier;
 
   void Enter(const parser::OpenMPConstruct &);
   void Leave(const parser::OpenMPConstruct &);
@@ -93,6 +94,8 @@ public:
   void Leave(const parser::OpenMPDeclareSimdConstruct &);
   void Enter(const parser::OpenMPDeclarativeAllocate &);
   void Leave(const parser::OpenMPDeclarativeAllocate &);
+  void Enter(const parser::OpenMPDeclareMapperConstruct &);
+  void Leave(const parser::OpenMPDeclareMapperConstruct &);
   void Enter(const parser::OpenMPDeclareTargetConstruct &);
   void Leave(const parser::OpenMPDeclareTargetConstruct &);
   void Enter(const parser::OpenMPDepobjConstruct &);
@@ -141,9 +144,6 @@ public:
 #include "llvm/Frontend/OpenMP/OMP.inc"
 
 private:
-  inline llvm::iterator_range<typename ClauseMapTy::iterator> GetClauses(
-      llvm::omp::Clause clauseId);
-
   bool CheckAllowedClause(llvmOmpClause clause);
   bool IsVariableListItem(const Symbol &sym);
   bool IsExtendedListItem(const Symbol &sym);
@@ -227,10 +227,11 @@ private:
   bool CheckIntrinsicOperator(
       const parser::DefinedOperator::IntrinsicOperator &);
   void CheckReductionTypeList(const parser::OmpClause::Reduction &);
-  void CheckReductionModifier(const parser::OmpClause::Reduction &);
+  void CheckReductionModifier(const ReductionModifier &);
   void CheckMasterNesting(const parser::OpenMPBlockConstruct &x);
   void ChecksOnOrderedAsBlock();
   void CheckBarrierNesting(const parser::OpenMPSimpleStandaloneConstruct &x);
+  void CheckScan(const parser::OpenMPSimpleStandaloneConstruct &x);
   void ChecksOnOrderedAsStandalone();
   void CheckOrderedDependClause(std::optional<std::int64_t> orderedValue);
   void CheckReductionArraySection(const parser::OmpObjectList &ompObjectList);
@@ -292,11 +293,6 @@ const T *OmpStructureChecker::FindDuplicateEntry(const std::list<T> &list) {
     }
   }
   return nullptr;
-}
-
-llvm::iterator_range<typename OmpStructureChecker::ClauseMapTy::iterator>
-OmpStructureChecker::GetClauses(llvm::omp::Clause clauseId) {
-  return llvm::make_range(FindClauses(clauseId));
 }
 
 } // namespace Fortran::semantics

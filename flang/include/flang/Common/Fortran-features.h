@@ -53,7 +53,7 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     NonBindCInteroperability, CudaManaged, CudaUnified,
     PolymorphicActualAllocatableOrPointerToMonomorphicDummy, RelaxedPureDummy,
     UndefinableAsynchronousOrVolatileActual, AutomaticInMainProgram, PrintCptr,
-    SavedLocalInSpecExpr, PrintNamelist)
+    SavedLocalInSpecExpr, PrintNamelist, AssumedRankPassedToNonAssumedRank)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,

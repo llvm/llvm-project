@@ -16,7 +16,7 @@ define void @test_pr25490(i32 %n, ptr noalias nocapture %a, ptr noalias nocaptur
 ; CHECK-NEXT:    br i1 [[CMP_28]], label [[FOR_COND_CLEANUP:%.*]], label [[ITER_CHECK:%.*]]
 ; CHECK:       iter.check:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 8
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; CHECK:       vector.main.loop.iter.check:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i32 [[N]], 16
@@ -50,33 +50,33 @@ define void @test_pr25490(i32 %n, ptr noalias nocapture %a, ptr noalias nocaptur
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
-; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[TMP0]], 8
-; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK_NOT_NOT:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
-; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK_NOT_NOT]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
+; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[TMP0]], 12
+; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
+; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_VEC5:%.*]] = and i64 [[TMP0]], 4294967288
+; CHECK-NEXT:    [[N_VEC5:%.*]] = and i64 [[TMP0]], 4294967292
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX6:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT10:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 [[INDEX6]]
-; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <8 x i8>, ptr [[TMP14]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i8>, ptr [[TMP14]], align 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX6]]
-; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <8 x i8>, ptr [[TMP15]], align 1
-; CHECK-NEXT:    [[TMP16:%.*]] = zext <8 x i8> [[WIDE_LOAD8]] to <8 x i16>
-; CHECK-NEXT:    [[TMP17:%.*]] = zext <8 x i8> [[WIDE_LOAD7]] to <8 x i16>
-; CHECK-NEXT:    [[TMP18:%.*]] = mul nuw <8 x i16> [[TMP16]], [[TMP17]]
-; CHECK-NEXT:    [[TMP19:%.*]] = lshr <8 x i16> [[TMP18]], splat (i16 8)
-; CHECK-NEXT:    [[TMP20:%.*]] = trunc nuw <8 x i16> [[TMP19]] to <8 x i8>
-; CHECK-NEXT:    store <8 x i8> [[TMP20]], ptr [[TMP15]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x i8>, ptr [[TMP15]], align 1
+; CHECK-NEXT:    [[TMP16:%.*]] = zext <4 x i8> [[WIDE_LOAD8]] to <4 x i16>
+; CHECK-NEXT:    [[TMP17:%.*]] = zext <4 x i8> [[WIDE_LOAD7]] to <4 x i16>
+; CHECK-NEXT:    [[TMP18:%.*]] = mul nuw <4 x i16> [[TMP16]], [[TMP17]]
+; CHECK-NEXT:    [[TMP19:%.*]] = lshr <4 x i16> [[TMP18]], splat (i16 8)
+; CHECK-NEXT:    [[TMP20:%.*]] = trunc nuw <4 x i16> [[TMP19]] to <4 x i8>
+; CHECK-NEXT:    store <4 x i8> [[TMP20]], ptr [[TMP15]], align 1
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX6]]
-; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <8 x i8>, ptr [[TMP21]], align 1
-; CHECK-NEXT:    [[TMP22:%.*]] = zext <8 x i8> [[WIDE_LOAD9]] to <8 x i16>
-; CHECK-NEXT:    [[TMP23:%.*]] = mul nuw <8 x i16> [[TMP22]], [[TMP17]]
-; CHECK-NEXT:    [[TMP24:%.*]] = lshr <8 x i16> [[TMP23]], splat (i16 8)
-; CHECK-NEXT:    [[TMP25:%.*]] = trunc nuw <8 x i16> [[TMP24]] to <8 x i8>
-; CHECK-NEXT:    store <8 x i8> [[TMP25]], ptr [[TMP21]], align 1
-; CHECK-NEXT:    [[INDEX_NEXT10]] = add nuw i64 [[INDEX6]], 8
+; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x i8>, ptr [[TMP21]], align 1
+; CHECK-NEXT:    [[TMP22:%.*]] = zext <4 x i8> [[WIDE_LOAD9]] to <4 x i16>
+; CHECK-NEXT:    [[TMP23:%.*]] = mul nuw <4 x i16> [[TMP22]], [[TMP17]]
+; CHECK-NEXT:    [[TMP24:%.*]] = lshr <4 x i16> [[TMP23]], splat (i16 8)
+; CHECK-NEXT:    [[TMP25:%.*]] = trunc nuw <4 x i16> [[TMP24]] to <4 x i8>
+; CHECK-NEXT:    store <4 x i8> [[TMP25]], ptr [[TMP21]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT10]] = add nuw i64 [[INDEX6]], 4
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT10]], [[N_VEC5]]
 ; CHECK-NEXT:    br i1 [[TMP26]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
@@ -393,7 +393,6 @@ define void @replicate_operands_in_with_operands_in_minbws(ptr %dst, ptr noalias
 ; CHECK-LABEL: define void @replicate_operands_in_with_operands_in_minbws
 ; CHECK-SAME: (ptr [[DST:%.*]], ptr noalias [[SRC_1:%.*]], ptr noalias [[SRC_2:%.*]], i32 [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X]], 65526
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
@@ -405,10 +404,10 @@ define void @replicate_operands_in_with_operands_in_minbws(ptr %dst, ptr noalias
 ; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr inbounds i16, ptr [[SRC_2]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_2:%.*]] = load i16, ptr [[GEP_SRC_2]], align 2
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i16 [[L_2]], 100
-; CHECK-NEXT:    [[CONV:%.*]] = zext i16 [[L_2]] to i32
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C_2]], i32 [[SUB]], i32 [[CONV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[SEL]] to i16
-; CHECK-NEXT:    [[TRUNC:%.*]] = add i16 [[L_2]], [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[X]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[TMP0]], -10
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[C_2]], i16 [[TMP1]], i16 [[L_2]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = add i16 [[TMP2]], [[L_2]]
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[IV]]
 ; CHECK-NEXT:    store i16 [[TRUNC]], ptr [[GEP_DST]], align 2
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]

@@ -333,6 +333,8 @@ foreach intr = AMDGPUMFMAIntrinsics90A in
 def : SourceOfDivergence<intr>;
 foreach intr = AMDGPUMFMAIntrinsics940 in
 def : SourceOfDivergence<intr>;
+foreach intr = AMDGPUMFMAIntrinsics950 in
+def : SourceOfDivergence<intr>;
 foreach intr = AMDGPUWMMAIntrinsicsGFX11 in
 def : SourceOfDivergence<intr>;
 foreach intr = AMDGPUWMMAIntrinsicsGFX12 in

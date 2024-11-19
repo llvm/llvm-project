@@ -375,6 +375,15 @@ mlir::intrange::inferCeilDivS(ArrayRef<ConstantIntRanges> argRanges) {
           result.sadd_ov(APInt(result.getBitWidth(), 1), overflowed);
       return overflowed ? std::optional<APInt>() : corrected;
     }
+    // Special case where the usual implementation of ceilDiv causes
+    // INT_MIN / [positive number] to be positive. This doesn't match the
+    // definition of signed ceiling division mathematically, but it prevents
+    // inconsistent constant-folding results. This arises because (-int_min) is
+    // still negative, so -(-int_min / b) is -(int_min / b), which is
+    // positive See #115293.
+    if (lhs.isMinSignedValue() && rhs.sgt(1)) {
+      return -result;
+    }
     return result;
   };
   return inferDivSRange(lhs, rhs, ceilDivSIFix);

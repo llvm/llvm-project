@@ -483,6 +483,20 @@ void MCStreamer::emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) {
   Frame.End = (MCSymbol *)1;
 }
 
+MCSymbol *MCStreamer::emitLineTableLabel() {
+  // Create a label and insert it into the line table and return this label
+  const MCDwarfLoc &DwarfLoc = getContext().getCurrentDwarfLoc();
+
+  MCSymbol *LineStreamLabel = getContext().createTempSymbol();
+  MCDwarfLineEntry LabelLineEntry(nullptr, DwarfLoc, LineStreamLabel);
+  getContext()
+      .getMCDwarfLineTable(getContext().getDwarfCompileUnitID())
+      .getMCLineSections()
+      .addLineEntry(LabelLineEntry, getCurrentSectionOnly() /*Section*/);
+
+  return LineStreamLabel;
+}
+
 MCSymbol *MCStreamer::emitCFILabel() {
   // Return a dummy non-null value so that label fields appear filled in when
   // generating textual assembly.

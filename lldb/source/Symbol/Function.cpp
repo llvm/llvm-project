@@ -287,10 +287,10 @@ Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
 
 Function::~Function() = default;
 
-void Function::GetStartLineSourceInfo(FileSpec &source_file,
+void Function::GetStartLineSourceInfo(SupportFileSP &source_file_sp,
                                       uint32_t &line_no) {
   line_no = 0;
-  source_file.Clear();
+  source_file_sp.reset();
 
   if (m_comp_unit == nullptr)
     return;
@@ -299,7 +299,8 @@ void Function::GetStartLineSourceInfo(FileSpec &source_file,
   GetType();
 
   if (m_type != nullptr && m_type->GetDeclaration().GetLine() != 0) {
-    source_file = m_type->GetDeclaration().GetFile();
+    source_file_sp =
+        std::make_shared<SupportFile>(m_type->GetDeclaration().GetFile());
     line_no = m_type->GetDeclaration().GetLine();
   } else {
     LineTable *line_table = m_comp_unit->GetLineTable();
@@ -310,7 +311,7 @@ void Function::GetStartLineSourceInfo(FileSpec &source_file,
     if (line_table->FindLineEntryByAddress(GetAddressRange().GetBaseAddress(),
                                            line_entry, nullptr)) {
       line_no = line_entry.line;
-      source_file = line_entry.GetFile();
+      source_file_sp = line_entry.file_sp;
     }
   }
 }

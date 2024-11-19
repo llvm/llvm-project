@@ -1,5 +1,4 @@
-// RUN: mlir-opt -split-input-file --test-linalg-transform-patterns="test-generalize-tensor-pack"  %s | FileCheck %s
-
+// RUN: mlir-opt  --transform-preload-library='transform-library-paths=%p/td/generalize-pack.mlir' -split-input-file  --transform-interpreter %s | FileCheck %s
 
 func.func @simple_KCRS_to_KCRSsr(%arg0: tensor<?x?xi32>, %arg1: tensor<1x1x?x1xi32>) -> tensor<1x1x?x1xi32> {
   %c8 = arith.constant 8 : index
