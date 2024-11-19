@@ -829,8 +829,10 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
 }
 
 void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
+  Type *GVType = GV.getValueType();
+
   if (GV.hasInitializer()) {
-    Check(GV.getInitializer()->getType() == GV.getValueType(),
+    Check(GV.getInitializer()->getType() == GVType,
           "Global variable initializer type does not match global "
           "variable type!",
           &GV);
@@ -854,7 +856,7 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
 
     // Don't worry about emitting an error for it not being an array,
     // visitGlobalValue will complain on appending non-array.
-    if (ArrayType *ATy = dyn_cast<ArrayType>(GV.getValueType())) {
+    if (ArrayType *ATy = dyn_cast<ArrayType>(GVType)) {
       StructType *STy = dyn_cast<StructType>(ATy->getElementType());
       PointerType *FuncPtrTy =
           PointerType::get(Context, DL.getProgramAddressSpace());
@@ -878,7 +880,6 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
     Check(GV.materialized_use_empty(),
           "invalid uses of intrinsic global variable", &GV);
 
-    Type *GVType = GV.getValueType();
     if (ArrayType *ATy = dyn_cast<ArrayType>(GVType)) {
       PointerType *PTy = dyn_cast<PointerType>(ATy->getElementType());
       Check(PTy, "wrong type for intrinsic global variable", &GV);
@@ -912,15 +913,13 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
 
   // Scalable vectors cannot be global variables, since we don't know
   // the runtime size.
-  Check(!GV.getValueType()->isScalableTy(),
-        "Globals cannot contain scalable types", &GV);
+  Check(!GVType->isScalableTy(), "Globals cannot contain scalable types", &GV);
 
-  // Check if it's a target extension type that disallows being used as a
-  // global.
-  if (auto *TTy = dyn_cast<TargetExtType>(GV.getValueType()))
-    Check(TTy->hasProperty(TargetExtType::CanBeGlobal),
-          "Global @" + GV.getName() + " has illegal target extension type",
-          TTy);
+  // Check if it is or contains a target extension type that disallows being
+  // used as a global.
+  Check(!GVType->containsNonGlobalTargetExtType(),
+        "Global @" + GV.getName() + " has illegal target extension type",
+        GVType);
 
   if (!GV.hasInitializer()) {
     visitGlobalValue(GV);
