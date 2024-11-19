@@ -196,14 +196,15 @@ which can be passed directly to ‘clang-format’."
         ;; "@@ -80 +80 @@" or "@@ -80,2 +80,2 @@"
         (goto-char (point-min))
         (while (re-search-forward
-                "^@@\s-[0-9,]+\s\\+\\([0-9]+\\)\\(,\\([0-9]+\\)\\)?\s@@$"
+                "^@@[[:blank:]]-[[:digit:],]+[[:blank:]]\\+\\([[:digit:]]+\\)\\(,\\([[:digit:]]+\\)\\)?[[:blank:]]@@$"
                 nil
                 t
                 1)
           (let ((match1 (string-to-number (match-string 1)))
-                (match3 (if (match-string 3)
-                            (string-to-number (match-string 3))
-                          nil)))
+                (match3 (let ((match3_or_nil (match-string 3)))
+                          (if match3_or_nil
+                              (string-to-number match3_or_nil)
+                            nil))))
             (push (format
                    "--lines=%d:%d"
                    match1
