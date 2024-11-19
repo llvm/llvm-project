@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fsyntax-only -verify -std=c++23 -Wno-unused-value -Wno-unused-but-set-variable -Wbitfield-width -Wbitfield-enum-conversion
+// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -fsyntax-only -verify -std=c++23 -Wno-unused-value -Wno-unused-but-set-variable -Wbitfield-width -Wbitfield-enum-conversion
 
 // This is more complex than the C version because the user can specify the
 // storage type 
