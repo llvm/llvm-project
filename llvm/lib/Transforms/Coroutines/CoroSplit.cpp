@@ -20,6 +20,7 @@
 
 #include "llvm/Transforms/Coroutines/CoroSplit.h"
 #include "CoroInternal.h"
+#include "CoroCloner.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/STLExtras.h"
@@ -44,10 +45,8 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -61,17 +60,13 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Coroutines/ABI.h"
-#include "llvm/Transforms/Coroutines/CoroInstr.h"
 #include "llvm/Transforms/Coroutines/MaterializationUtils.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -81,122 +76,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "coro-split"
-
-namespace {
-
-/// A little helper class for building
-class CoroCloner {
-public:
-  enum class Kind {
-    /// The shared resume function for a switch lowering.
-    SwitchResume,
-
-    /// The shared unwind function for a switch lowering.
-    SwitchUnwind,
-
-    /// The shared cleanup function for a switch lowering.
-    SwitchCleanup,
-
-    /// An individual continuation function.
-    Continuation,
-
-    /// An async resume function.
-    Async,
-  };
-
-private:
-  Function &OrigF;
-  Function *NewF;
-  const Twine &Suffix;
-  coro::Shape &Shape;
-  Kind FKind;
-  ValueToValueMapTy VMap;
-  IRBuilder<> Builder;
-  Value *NewFramePtr = nullptr;
-
-  /// The active suspend instruction; meaningful only for continuation and async
-  /// ABIs.
-  AnyCoroSuspendInst *ActiveSuspend = nullptr;
-
-  TargetTransformInfo &TTI;
-
-  /// Create a cloner for a switch lowering.
-  CoroCloner(Function &OrigF, const Twine &Suffix, coro::Shape &Shape,
-             Kind FKind, TargetTransformInfo &TTI)
-      : OrigF(OrigF), NewF(nullptr), Suffix(Suffix), Shape(Shape), FKind(FKind),
-        Builder(OrigF.getContext()), TTI(TTI) {
-    assert(Shape.ABI == coro::ABI::Switch);
-  }
-
-  /// Create a cloner for a continuation lowering.
-  CoroCloner(Function &OrigF, const Twine &Suffix, coro::Shape &Shape,
-             Function *NewF, AnyCoroSuspendInst *ActiveSuspend,
-             TargetTransformInfo &TTI)
-      : OrigF(OrigF), NewF(NewF), Suffix(Suffix), Shape(Shape),
-        FKind(Shape.ABI == coro::ABI::Async ? Kind::Async : Kind::Continuation),
-        Builder(OrigF.getContext()), ActiveSuspend(ActiveSuspend), TTI(TTI) {
-    assert(Shape.ABI == coro::ABI::Retcon ||
-           Shape.ABI == coro::ABI::RetconOnce || Shape.ABI == coro::ABI::Async);
-    assert(NewF && "need existing function for continuation");
-    assert(ActiveSuspend && "need active suspend point for continuation");
-  }
-
-public:
-  /// Create a clone for a switch lowering.
-  static Function *createClone(Function &OrigF, const Twine &Suffix,
-                               coro::Shape &Shape, Kind FKind,
-                               TargetTransformInfo &TTI) {
-    TimeTraceScope FunctionScope("CoroCloner");
-
-    CoroCloner Cloner(OrigF, Suffix, Shape, FKind, TTI);
-    Cloner.create();
-    return Cloner.getFunction();
-  }
-
-  /// Create a clone for a continuation lowering.
-  static Function *createClone(Function &OrigF, const Twine &Suffix,
-                               coro::Shape &Shape, Function *NewF,
-                               AnyCoroSuspendInst *ActiveSuspend,
-                               TargetTransformInfo &TTI) {
-    TimeTraceScope FunctionScope("CoroCloner");
-
-    CoroCloner Cloner(OrigF, Suffix, Shape, NewF, ActiveSuspend, TTI);
-    Cloner.create();
-    return Cloner.getFunction();
-  }
-
-  Function *getFunction() const {
-    assert(NewF != nullptr && "declaration not yet set");
-    return NewF;
-  }
-
-  void create();
-
-private:
-  bool isSwitchDestroyFunction() {
-    switch (FKind) {
-    case Kind::Async:
-    case Kind::Continuation:
-    case Kind::SwitchResume:
-      return false;
-    case Kind::SwitchUnwind:
-    case Kind::SwitchCleanup:
-      return true;
-    }
-    llvm_unreachable("Unknown CoroCloner::Kind enum");
-  }
-
-  void replaceEntryBlock();
-  Value *deriveNewFramePointer();
-  void replaceRetconOrAsyncSuspendUses();
-  void replaceCoroSuspends();
-  void replaceCoroEnds();
-  void replaceSwiftErrorOps();
-  void salvageDebugInfo();
-  void handleFinalSuspend();
-};
-
-} // end anonymous namespace
 
 // FIXME:
 // Lower the intrinisc in CoroEarly phase if coroutine frame doesn't escape
@@ -985,11 +864,7 @@ static void addSwiftSelfAttrs(AttributeList &Attrs, LLVMContext &Context,
 /// Clone the body of the original function into a resume function of
 /// some sort.
 void CoroCloner::create() {
-  // Create the new function if we don't already have one.
-  if (!NewF) {
-    NewF = createCloneDeclaration(OrigF, Shape, Suffix,
-                                  OrigF.getParent()->end(), ActiveSuspend);
-  }
+  assert(NewF);
 
   // Replace all args with dummy instructions. If an argument is the old frame
   // pointer, the dummy will be replaced by the new frame pointer once it is
@@ -1213,12 +1088,20 @@ void CoroCloner::create() {
 
   // Salvage debug info that points into the coroutine frame.
   salvageDebugInfo();
+}
+
+void CoroSwitchCloner::create() {
+  // Create a new function matching the original type
+  NewF = createCloneDeclaration(OrigF, Shape, Suffix,
+      OrigF.getParent()->end(), ActiveSuspend);
+
+  // Clone the function
+  CoroCloner::create();
 
   // Eliminate coro.free from the clones, replacing it with 'null' in cleanup,
   // to suppress deallocation code.
-  if (Shape.ABI == coro::ABI::Switch)
-    coro::replaceCoroFree(cast<CoroIdInst>(VMap[Shape.CoroBegin->getId()]),
-                          /*Elide=*/FKind == CoroCloner::Kind::SwitchCleanup);
+  coro::replaceCoroFree(cast<CoroIdInst>(VMap[Shape.CoroBegin->getId()]),
+      /*Elide=*/FKind == CoroCloner::Kind::SwitchCleanup);
 }
 
 static void updateAsyncFuncPointerContextSize(coro::Shape &Shape) {
@@ -1495,11 +1378,11 @@ struct SwitchCoroutineSplitter {
     // setting new entry block and replacing coro.suspend an appropriate value
     // to force resume or cleanup pass for every suspend point.
     createResumeEntryBlock(F, Shape);
-    auto *ResumeClone = CoroCloner::createClone(
+    auto *ResumeClone = CoroSwitchCloner::createClone(
         F, ".resume", Shape, CoroCloner::Kind::SwitchResume, TTI);
-    auto *DestroyClone = CoroCloner::createClone(
+    auto *DestroyClone = CoroSwitchCloner::createClone(
         F, ".destroy", Shape, CoroCloner::Kind::SwitchUnwind, TTI);
-    auto *CleanupClone = CoroCloner::createClone(
+    auto *CleanupClone = CoroSwitchCloner::createClone(
         F, ".cleanup", Shape, CoroCloner::Kind::SwitchCleanup, TTI);
 
     postSplitCleanup(*ResumeClone);
