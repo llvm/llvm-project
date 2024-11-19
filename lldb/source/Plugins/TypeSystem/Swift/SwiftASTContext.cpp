@@ -3828,8 +3828,8 @@ SwiftASTContext::CreateModule(std::string module_name,
     return llvm::createStringError("invalid module name (empty)");
 
   if (swift::ModuleDecl *module_decl = GetCachedModule(module_name))
-    return llvm::createStringError("module already exists for \"{0}\"",
-                                   module_name.c_str());
+    return llvm::createStringError(
+        llvm::formatv("module already exists for \"{0}\"", module_name));
 
   ThreadSafeASTContext ast = GetASTContext();
   if (!ast)
@@ -3838,8 +3838,8 @@ SwiftASTContext::CreateModule(std::string module_name,
   swift::Identifier module_id(ast->getIdentifier(module_name));
   auto *module_decl = swift::ModuleDecl::create(module_id, **ast, importInfo);
   if (!module_decl)
-    return llvm::createStringError("failed to create module for \"{0}\"",
-                                   module_name.c_str());
+    return llvm::createStringError(
+        llvm::formatv("failed to create module for \"{0}\"", module_name));
   swift::ModuleDecl &decl_ref = *module_decl;
   m_swift_module_cache.insert(
       std::pair<llvm::StringRef, const swift::ModuleDecl &>(module_name,
@@ -3890,9 +3890,9 @@ SwiftASTContext::GetModule(const SourceModule &module, bool *cached) {
 
   if (HasFatalErrors()) {
     return llvm::createStringError(
-        "failed to get module \"{0}\" from AST context:\n"
-        "AST context is in a fatal error state",
-        module_name.c_str());
+        llvm::formatv("failed to get module \"{0}\" from AST context:\n"
+                      "AST context is in a fatal error state",
+                      module_name));
   }
 
   // Create a diagnostic consumer for the diagnostics produced by the import.
@@ -3938,14 +3938,14 @@ SwiftASTContext::GetModule(const SourceModule &module, bool *cached) {
     LOG_PRINTF(GetLog(LLDBLog::Types), "(\"%s\") -- %s",
                module.path.front().GetCString(), diagnostic.c_str());
     return llvm::createStringError(
-        "failed to get module \"{0}\" from AST context:\n{1}",
-        module_name.c_str(), diagnostic.c_str());
+        llvm::formatv("failed to get module \"{0}\" from AST context:\n{1}",
+                      module_name, diagnostic));
   }
 
   if (!module_decl) {
     LOG_PRINTF(GetLog(LLDBLog::Types), "failed with no error");
-    return llvm::createStringError(
-        "failed to get module \"{0}\" from AST context", module_name.c_str());
+    return llvm::createStringError(llvm::formatv(
+        "failed to get module \"{0}\" from AST context", module_name));
   }
   LOG_PRINTF(GetLog(LLDBLog::Types), "(\"%s\") -- found %s",
              module_name.c_str(), module_decl->getName().str().str().c_str());
@@ -3965,8 +3965,8 @@ SwiftASTContext::GetModule(const FileSpec &module_spec) {
   if (!module_basename) {
     LOG_PRINTF(GetLog(LLDBLog::Types), "((FileSpec)\"%s\") -- no basename",
                module_spec.GetPath().c_str());
-    return llvm::createStringError("no module basename in \"{0}\"",
-                                   module_spec.GetPath().c_str());
+    return llvm::createStringError(
+        llvm::formatv("no module basename in \"{0}\"", module_spec.GetPath()));
   }
 
   if (auto *cached = GetCachedModule(module_basename.GetString()))
@@ -3975,8 +3975,8 @@ SwiftASTContext::GetModule(const FileSpec &module_spec) {
   if (!FileSystem::Instance().Exists(module_spec)) {
     LOG_PRINTF(GetLog(LLDBLog::Types), "((FileSpec)\"%s\") -- doesn't exist",
                module_spec.GetPath().c_str());
-    return llvm::createStringError("module \"{0}\" doesn't exist",
-                                   module_spec.GetPath().c_str());
+    return llvm::createStringError(
+        llvm::formatv("module \"{0}\" doesn't exist", module_spec.GetPath()));
   }
   ThreadSafeASTContext ast = GetASTContext();
   if (!GetClangImporter()) {
@@ -4018,9 +4018,8 @@ SwiftASTContext::GetModule(const FileSpec &module_spec) {
              "((FileSpec)\"%s\") -- couldn't get from AST context",
              module_spec.GetPath().c_str());
 
-  return llvm::createStringError(
-      "failed to get module \"{0}\" from AST context",
-      module_spec.GetPath().c_str());
+  return llvm::createStringError(llvm::formatv(
+      "failed to get module \"{0}\" from AST context", module_spec.GetPath()));
 }
 
 template<typename ModuleT> swift::ModuleDecl *
