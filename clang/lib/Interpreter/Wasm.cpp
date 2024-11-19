@@ -77,7 +77,6 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
                                           "--no-entry",
                                           "--export-all",
                                           "--experimental-pic",
-                                          "--export-dynamic",
                                           "--stack-first",
                                           "--allow-undefined",
                                           OutputFileName.c_str(),
