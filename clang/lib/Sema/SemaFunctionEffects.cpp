@@ -807,7 +807,8 @@ private:
 
     auto MaybeAddTemplateNote = [&](const Decl *D) {
       if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
-        while (FD != nullptr && FD->isTemplateInstantiation()) {
+        while (FD != nullptr && FD->isTemplateInstantiation() &&
+               FD->getPointOfInstantiation().isValid()) {
           S.Diag(FD->getPointOfInstantiation(),
                  diag::note_func_effect_from_template);
           FD = FD->getTemplateInstantiationPattern();
