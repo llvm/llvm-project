@@ -7535,7 +7535,7 @@ void Sema::CheckExplicitlyDefaultedFunction(Scope *S, FunctionDecl *FD) {
     return;
   }
 
-  if (DefKind.isComparison())
+  if (DefKind.isComparison() && isa<CXXRecordDecl>(FD->getDeclContext()))
     UnusedPrivateFields.clear();
 
   if (DefKind.isSpecialMember()
