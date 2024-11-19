@@ -5938,6 +5938,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasFlag(options::OPT_fstruct_path_tbaa,
                     options::OPT_fno_struct_path_tbaa, true))
     CmdArgs.push_back("-no-struct-path-tbaa");
+  Args.addOptOutFlag(CmdArgs, options::OPT_fstrict_bool,
+                     options::OPT_fno_strict_bool);
   Args.addOptInFlag(CmdArgs, options::OPT_fstrict_enums,
                     options::OPT_fno_strict_enums);
   Args.addOptOutFlag(CmdArgs, options::OPT_fstrict_return,
@@ -6051,6 +6053,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // code, where aliases aren't supported.
   if (!RawTriple.isOSDarwin() && !RawTriple.isNVPTX())
     CmdArgs.push_back("-mconstructor-aliases");
+
+  // Assume -fno-strict-bool in the Darwin kernel.
+  if (KernelOrKext)
+    CmdArgs.push_back("-fno-strict-bool");
 
   // Darwin's kernel doesn't support guard variables; just die if we
   // try to use them.

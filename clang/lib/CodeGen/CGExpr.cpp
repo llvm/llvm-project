@@ -1896,9 +1896,9 @@ static bool hasBooleanRepresentation(QualType Ty) {
   return false;
 }
 
-static bool getRangeForType(CodeGenFunction &CGF, QualType Ty,
-                            llvm::APInt &Min, llvm::APInt &End,
-                            bool StrictEnums, bool IsBool) {
+static bool getRangeForType(CodeGenFunction &CGF, QualType Ty, llvm::APInt &Min,
+                            llvm::APInt &End, bool StrictEnums, bool StrictBool,
+                            bool IsBool) {
   const EnumType *ET = Ty->getAs<EnumType>();
   bool IsRegularCPlusPlusEnum = CGF.getLangOpts().CPlusPlus && StrictEnums &&
                                 ET && !ET->getDecl()->isFixed();
@@ -1906,6 +1906,8 @@ static bool getRangeForType(CodeGenFunction &CGF, QualType Ty,
     return false;
 
   if (IsBool) {
+    if (!StrictBool)
+      return false;
     Min = llvm::APInt(CGF.getContext().getTypeSize(Ty), 0);
     End = llvm::APInt(CGF.getContext().getTypeSize(Ty), 2);
   } else {
@@ -1918,6 +1920,7 @@ static bool getRangeForType(CodeGenFunction &CGF, QualType Ty,
 llvm::MDNode *CodeGenFunction::getRangeForLoadFromType(QualType Ty) {
   llvm::APInt Min, End;
   if (!getRangeForType(*this, Ty, Min, End, CGM.getCodeGenOpts().StrictEnums,
+                       CGM.getCodeGenOpts().StrictBool,
                        hasBooleanRepresentation(Ty)))
     return nullptr;
 
@@ -1951,7 +1954,8 @@ bool CodeGenFunction::EmitScalarRangeCheck(llvm::Value *Value, QualType Ty,
     return false;
 
   llvm::APInt Min, End;
-  if (!getRangeForType(*this, Ty, Min, End, /*StrictEnums=*/true, IsBool))
+  if (!getRangeForType(*this, Ty, Min, End, /*StrictEnums=*/true,
+                       /*StrctBool=*/true, IsBool))
     return true;
 
   auto &Ctx = getLLVMContext();

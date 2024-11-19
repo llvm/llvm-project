@@ -2179,6 +2179,11 @@ are listed below.
 
    This option is currently experimental.
 
+.. option:: -f[no-]strict-bool
+
+    Enable optimizations based on the assumption that all ``bool`` values have
+    a bit pattern of either 0 or 1. Enabled by default.
+
 .. option:: -fstrict-vtable-pointers
 
    Enable optimizations based on the strict rules for overwriting polymorphic

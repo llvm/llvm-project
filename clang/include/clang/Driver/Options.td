@@ -3970,6 +3970,12 @@ def fno_debug_macro : Flag<["-"], "fno-debug-macro">, Group<f_Group>,
 def fstrict_aliasing : Flag<["-"], "fstrict-aliasing">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, DXCOption]>,
   HelpText<"Enable optimizations based on strict aliasing rules">;
+defm strict_bool : BoolFOption<"strict-bool",
+  CodeGenOpts<"StrictBool">, DefaultTrue,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable ">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Disable ">,
+  BothFlags<[], [ClangOption], "optimizations based on bool bit patterns never "
+    "being anything other than 0 or 1">>;
 def fstrict_enums : Flag<["-"], "fstrict-enums">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Enable optimizations based on the strict definition of an enum's "
