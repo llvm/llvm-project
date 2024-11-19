@@ -169,8 +169,6 @@ static bool isProfitable(
   unsigned InstCount = SFS[0]->InstCount;
   if (InstCount < GlobalMergingMinInstrs)
     return false;
-  double Benefit =
-      InstCount * (StableFunctionCount - 1) * GlobalMergingInstOverhead;
 
   double Cost = 0.0;
   SmallSet<stable_hash, 8> UniqueHashVals;
@@ -192,6 +190,8 @@ static bool isProfitable(
   }
   Cost += GlobalMergingExtraThreshold;
 
+  double Benefit =
+      InstCount * (StableFunctionCount - 1) * GlobalMergingInstOverhead;
   bool Result = Benefit > Cost;
   LLVM_DEBUG(dbgs() << "isProfitable: Hash = " << SFS[0]->Hash << ", "
                     << "StableFunctionCount = " << StableFunctionCount
