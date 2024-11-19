@@ -3235,6 +3235,7 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
 
   case ISD::VP_SETCC:
   case ISD::STRICT_FSETCC:
+  case ISD::STRICT_FSETCCS:
   case ISD::SETCC:             Res = SplitVecOp_VSETCC(N); break;
   case ISD::BITCAST:           Res = SplitVecOp_BITCAST(N); break;
   case ISD::EXTRACT_SUBVECTOR: Res = SplitVecOp_EXTRACT_SUBVECTOR(N); break;
@@ -4236,7 +4237,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_TruncateHelper(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
-  bool isStrict = N->getOpcode() == ISD::STRICT_FSETCC;
+  bool isStrict = N->getOpcode() == ISD::STRICT_FSETCC ||
+                  N->getOpcode() == ISD::STRICT_FSETCCS;
   assert(N->getValueType(0).isVector() &&
          N->getOperand(isStrict ? 1 : 0).getValueType().isVector() &&
          "Operand types must be vectors");
@@ -4255,11 +4257,12 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
   if (N->getOpcode() == ISD::SETCC) {
     LoRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Lo0, Lo1, N->getOperand(2));
     HiRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Hi0, Hi1, N->getOperand(2));
-  } else if (N->getOpcode() == ISD::STRICT_FSETCC) {
-    LoRes = DAG.getNode(ISD::STRICT_FSETCC, DL,
+  } else if (N->getOpcode() == ISD::STRICT_FSETCC ||
+             N->getOpcode() == ISD::STRICT_FSETCCS) {
+    LoRes = DAG.getNode(N->getOpcode(), DL,
                         DAG.getVTList(PartResVT, N->getValueType(1)),
                         N->getOperand(0), Lo0, Lo1, N->getOperand(3));
-    HiRes = DAG.getNode(ISD::STRICT_FSETCC, DL,
+    HiRes = DAG.getNode(N->getOpcode(), DL,
                         DAG.getVTList(PartResVT, N->getValueType(1)),
                         N->getOperand(0), Hi0, Hi1, N->getOperand(3));
     SDValue NewChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
