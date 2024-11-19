@@ -645,9 +645,12 @@ void logArgv(raw_ostream &OS, StringRef ProgramName,
 }
 
 amd_comgr_status_t executeCommand(const Command &Job, raw_ostream &LogS,
-                                  TextDiagnosticPrinter *DiagClient,
-                                  DiagnosticsEngine &Diags,
+                                  DiagnosticOptions &DiagOpts,
                                   llvm::vfs::FileSystem &VFS) {
+  TextDiagnosticPrinter DiagClient(LogS, &DiagOpts);
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs);
+  DiagnosticsEngine Diags(DiagID, &DiagOpts, &DiagClient, false);
+
   auto Arguments = Job.getArguments();
   SmallVector<const char *, 128> Argv;
   initializeCommandLineArgs(Argv);
@@ -679,7 +682,7 @@ amd_comgr_status_t executeCommand(const Command &Job, raw_ostream &LogS,
     // Internally this call refers to the invocation created above, so at
     // this point the DiagnosticsEngine should accurately reflect all user
     // requested configuration from Argv.
-    Clang->createDiagnostics(VFS, DiagClient, /* ShouldOwnClient */ false);
+    Clang->createDiagnostics(VFS, &DiagClient, /* ShouldOwnClient */ false);
     if (!Clang->hasDiagnostics()) {
       return AMD_COMGR_STATUS_ERROR;
     }
@@ -769,7 +772,7 @@ AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
   }
 
   for (auto &Job : C->getJobs()) {
-    if (auto Status = executeCommand(Job, LogS, DiagClient, Diags, *VFS)) {
+    if (auto Status = executeCommand(Job, LogS, *DiagOpts, *VFS)) {
       return Status;
     }
   }
