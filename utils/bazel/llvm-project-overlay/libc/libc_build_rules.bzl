@@ -113,11 +113,17 @@ def libc_function(
 
     # This second target is the llvm libc C function with either a default or hidden visibility.
     # All other functions are hidden.
-    func_attrs = ["__attribute__((visibility(\"default\")))"]
-    if weak:
-        func_attrs = func_attrs + ["__attribute__((weak))"]
-    local_defines = local_defines or ["LIBC_COPT_PUBLIC_PACKAGING"]
-    local_defines = local_defines + ["LLVM_LIBC_FUNCTION_ATTR='%s'" % " ".join(func_attrs)]
+    global_func_attrs = [
+        "[[gnu::visibility("default")]]",
+    ]
+    func_attrs = [
+        "LLVM_LIBC_FUNCTION_ATTR_" + name + "='LLVM_LIBC_EMPTY, [[gnu::weak]]'",
+    ] if weak else []
+        
+    local_defines = (local_defines
+                    + ["LIBC_COPT_PUBLIC_PACKAGING"]
+                    + ["LLVM_LIBC_FUNCTION_ATTR='%s'" % " ".join(global_func_attrs)]
+                    + func_attrs)
     _libc_library(
         name = name,
         hidden = True,
