@@ -26,56 +26,56 @@ LLVM_LIBC_FUNCTION(int, setjmp, (jmp_buf buf)) {
       xor %[mask], %%rdx
       mov %%rdx, %c[rbx](%%rdi)
       xor %%rdx, %%rax
-      mul %%rcx
+      mulq %[multiple]
       xor %%rdx, %%rax
       
       mov %%rbp, %%rdx
       xor %[mask], %%rdx
       mov %%rdx, %c[rbp](%%rdi)
       xor %%rdx, %%rax
-      mul %%rcx
+      mulq %[multiple]
       xor %%rdx, %%rax
 
       mov %%r12, %%rdx
       xor %[mask], %%rdx
       mov %%rdx, %c[r12](%%rdi)
       xor %%rdx, %%rax
-      mul %%rcx
+      mulq %[multiple]
       xor %%rdx, %%rax
 
       mov %%r13, %%rdx
       xor %[mask], %%rdx
       mov %%rdx, %c[r13](%%rdi)
       xor %%rdx, %%rax
-      mul %%rcx
+      mulq %[multiple]
       xor %%rdx, %%rax
 
       mov %%r14, %%rdx
       xor %[mask], %%rdx
       mov %%rdx, %c[r14](%%rdi)
       xor %%rdx, %%rax
-      mul %%rcx
+      mulq %[multiple]
       xor %%rdx, %%rax
 
       mov %%r15, %%rdx
       xor %[mask], %%rdx
       mov %%rdx, %c[r15](%%rdi)
       xor %%rdx, %%rax
-      mul %%rcx
+      mulq %[multiple]
       xor %%rdx, %%rax
 
       lea 8(%%rsp), %%rdx
       xor %[mask], %%rdx
       mov %%rdx, %c[rsp](%%rdi)
       xor %%rdx, %%rax
-      mul %%rcx
+      mulq %[multiple]
       xor %%rdx, %%rax
 
       mov (%%rsp), %%rdx
       xor %[mask], %%rdx
       mov %%rdx, %c[rip](%%rdi)
       xor %%rdx, %%rax
-      mul %%rcx
+      mulq %[multiple]
       xor %%rdx, %%rax
 
       mov %%rax, %c[chksum](%%rdi)
@@ -85,8 +85,9 @@ LLVM_LIBC_FUNCTION(int, setjmp, (jmp_buf buf)) {
       [r13] "i"(offsetof(__jmp_buf, r13)), [r14] "i"(offsetof(__jmp_buf, r14)),
       [r15] "i"(offsetof(__jmp_buf, r15)), [rsp] "i"(offsetof(__jmp_buf, rsp)),
       [rip] "i"(offsetof(__jmp_buf, rip)),
-      [chksum] "i"(offsetof(__jmp_buf, __chksum)), "c"(jmpbuf::MULTIPLE),
-      [cookie] "a"(jmpbuf::checksum_cookie), [mask] "m"(jmpbuf::value_mask)
+      [chksum] "i"(offsetof(__jmp_buf, __chksum)),
+      [multiple] "m"(jmpbuf::MULTIPLE), [cookie] "a"(jmpbuf::checksum_cookie),
+      [mask] "m"(jmpbuf::value_mask)
       :);
 }
 
