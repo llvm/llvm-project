@@ -498,10 +498,9 @@ static Value *getTrueOrFalseValue(
 
   unsigned OtherIdx = 1 - CondIdx;
   if (auto *IV = dyn_cast<Instruction>(CBO->getOperand(OtherIdx))) {
-    if (OptSelects.count(IV)) {
+    if (OptSelects.count(IV))
       CBO->setOperand(OtherIdx,
                       isTrue ? OptSelects[IV].first : OptSelects[IV].second);
-    }
   }
   CBO->insertBefore(B->getTerminator());
   return CBO;
@@ -763,54 +762,58 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
 
   std::map<Value *, SelectLikeInfo> SelectInfo;
 
-  auto ProcessSelectInfo = [&SelectInfo](Instruction *I) -> void {
+  // Check if the instruction is SelectLike or might be part of SelectLike
+  // expression, put information into SelectInfo and return the iterator to the
+  // inserted position.
+  auto ProcessSelectInfo = [&SelectInfo](Instruction *I) {
     Value *Cond;
     if (match(I, m_OneUse(m_ZExt(m_Value(Cond)))) &&
         Cond->getType()->isIntegerTy(1)) {
       bool Inverted = match(Cond, m_Not(m_Value(Cond)));
-      SelectInfo[I] = {Cond, true, Inverted, 0};
-      return;
+      return SelectInfo.insert({I, {Cond, true, Inverted, 0}}).first;
     }
 
     if (match(I, m_Not(m_Value(Cond)))) {
-      SelectInfo[I] = {Cond, true, true, 0};
-      return;
+      return SelectInfo.insert({I, {Cond, true, true, 0}}).first;
     }
 
     // Select instruction are what we are usually looking for.
     if (match(I, m_Select(m_Value(Cond), m_Value(), m_Value()))) {
       bool Inverted = match(Cond, m_Not(m_Value(Cond)));
-      SelectInfo[I] = {Cond, false, Inverted, 0};
-      return;
+      return SelectInfo.insert({I, {Cond, false, Inverted, 0}}).first;
     }
 
     // An Or(zext(i1 X), Y) can also be treated like a select, with condition X
     // and values Y|1 and Y.
     if (auto *BO = dyn_cast<BinaryOperator>(I)) {
       if (BO->getType()->isIntegerTy(1) || BO->getOpcode() != Instruction::Or)
-        return;
+        return SelectInfo.end();
 
       for (unsigned Idx = 0; Idx < 2; Idx++) {
         auto *Op = BO->getOperand(Idx);
         auto It = SelectInfo.find(Op);
-        if (It != SelectInfo.end() && It->second.IsAuxiliary) {
-          SelectInfo[I] = {It->second.Cond, false, It->second.IsInverted, Idx};
-          break;
-        }
+        if (It != SelectInfo.end() && It->second.IsAuxiliary)
+          return SelectInfo
+              .insert({I, {It->second.Cond, false, It->second.IsInverted, Idx}})
+              .first;
       }
     }
+    return SelectInfo.end();
   };
 
   bool AlreadyProcessed = false;
   BasicBlock::iterator BBIt = BB.begin();
+  std::map<Value *, SelectLikeInfo>::iterator It;
   while (BBIt != BB.end()) {
     Instruction *I = &*BBIt++;
+    if (I->isDebugOrPseudoInst())
+      continue;
+
     if (!AlreadyProcessed)
-      ProcessSelectInfo(I);
+      It = ProcessSelectInfo(I);
     else
       AlreadyProcessed = false;
 
-    auto It = SelectInfo.find(I);
     if (It == SelectInfo.end() || It->second.IsAuxiliary)
       continue;
 
@@ -818,12 +821,13 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
       continue;
 
     Value *Cond = It->second.Cond;
+    // Vector conditions are not supported.
+    if (!Cond->getType()->isIntegerTy(1))
+      continue;
+
     SelectGroup SIGroup{Cond};
     SIGroup.Selects.emplace_back(I, It->second.IsInverted,
                                  It->second.ConditionIdx);
-
-    if (!Cond->getType()->isIntegerTy(1))
-      continue;
 
     // If the select type is not supported, no point optimizing it.
     // Instruction selection will take care of it.
@@ -832,7 +836,6 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
 
     while (BBIt != BB.end()) {
       Instruction *NI = &*BBIt;
-      ProcessSelectInfo(NI);
       // Debug/pseudo instructions should be skipped and not prevent the
       // formation of a select group.
       if (NI->isDebugOrPseudoInst()) {
@@ -840,7 +843,7 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
         continue;
       }
 
-      It = SelectInfo.find(NI);
+      It = ProcessSelectInfo(NI);
       if (It == SelectInfo.end()) {
         AlreadyProcessed = true;
         break;
