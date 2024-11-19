@@ -131,6 +131,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
@@ -537,8 +538,8 @@ protected:
 
   /// Set up the values of the IVs correctly when exiting the vector loop.
   virtual void fixupIVUsers(PHINode *OrigPhi, const InductionDescriptor &II,
-                            Value *VectorTripCount, Value *EndValue,
-                            BasicBlock *MiddleBlock, VPTransformState &State);
+                            Value *VectorTripCount, BasicBlock *MiddleBlock,
+                            VPTransformState &State);
 
   /// Iteratively sink the scalarized operands of a predicated instruction into
   /// the block that was created for it.
@@ -651,10 +652,6 @@ protected:
   // Record whether runtime checks are added.
   bool AddedSafetyChecks = false;
 
-  // Holds the end values for each induction variable. We save the end values
-  // so we can later fix-up the external users of the induction variables.
-  DenseMap<PHINode *, Value *> IVEndValues;
-
   /// BFI and PSI are used to check for profile guided size optimizations.
   BlockFrequencyInfo *BFI;
   ProfileSummaryInfo *PSI;
@@ -766,8 +763,7 @@ protected:
   void printDebugTracesAtEnd() override;
 
   void fixupIVUsers(PHINode *OrigPhi, const InductionDescriptor &II,
-                    Value *VectorTripCount, Value *EndValue,
-                    BasicBlock *MiddleBlock,
+                    Value *VectorTripCount, BasicBlock *MiddleBlock,
                     VPTransformState &State) override {};
 };
 
@@ -1521,7 +1517,10 @@ public:
   /// Returns true if epilogue vectorization is considered profitable, and
   /// false otherwise.
   /// \p VF is the vectorization factor chosen for the original loop.
-  bool isEpilogueVectorizationProfitable(const ElementCount VF) const;
+  /// \p Multiplier is an aditional scaling factor applied to VF before
+  /// comparing to EpilogueVectorizationMinVF.
+  bool isEpilogueVectorizationProfitable(const ElementCount VF,
+                                         const unsigned IC) const;
 
   /// Returns the execution time cost of an instruction for a given vector
   /// width. Vector width of one means scalar.
@@ -2490,18 +2489,8 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
         ConstantInt::get(CountTy, cast<IntegerType>(CountTy)->getMask());
     Value *LHS = Builder.CreateSub(MaxUIntTripCount, Count);
 
-    Value *Step = CreateStep();
-#ifndef NDEBUG
-    ScalarEvolution &SE = *PSE.getSE();
-    const SCEV *TC2OverflowSCEV = SE.applyLoopGuards(SE.getSCEV(LHS), OrigLoop);
-    assert(
-        !isIndvarOverflowCheckKnownFalse(Cost, VF * UF) &&
-        !SE.isKnownPredicate(CmpInst::getInversePredicate(ICmpInst::ICMP_ULT),
-                             TC2OverflowSCEV, SE.getSCEV(Step)) &&
-        "unexpectedly proved overflow check to be known");
-#endif
     // Don't execute the vector loop if (UMax - n) < (VF * UF).
-    CheckMinIters = Builder.CreateICmp(ICmpInst::ICMP_ULT, LHS, Step);
+    CheckMinIters = Builder.CreateICmp(ICmpInst::ICMP_ULT, LHS, CreateStep());
   }
 
   // Create new preheader for vector loop.
@@ -2599,7 +2588,7 @@ PHINode *InnerLoopVectorizer::createInductionResumeValue(
   assert(VectorTripCount && "Expected valid arguments");
 
   Instruction *OldInduction = Legal->getPrimaryInduction();
-  Value *&EndValue = IVEndValues[OrigPhi];
+  Value *EndValue = nullptr;
   Value *EndValueFromAdditionalBypass = AdditionalBypass.second;
   if (OrigPhi == OldInduction) {
     // We know what the end value is.
@@ -2756,7 +2745,7 @@ InnerLoopVectorizer::createVectorizedLoopSkeleton(
 // value for the IV when arriving directly from the middle block.
 void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
                                        const InductionDescriptor &II,
-                                       Value *VectorTripCount, Value *EndValue,
+                                       Value *VectorTripCount,
                                        BasicBlock *MiddleBlock,
                                        VPTransformState &State) {
   // There are two kinds of external IV usages - those that use the value
@@ -2767,6 +2756,10 @@ void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
   assert(OrigLoop->getUniqueExitBlock() && "Expected a single exit block");
 
   DenseMap<Value *, Value *> MissingVals;
+
+  Value *EndValue = cast<PHINode>(OrigPhi->getIncomingValueForBlock(
+                                      OrigLoop->getLoopPreheader()))
+                        ->getIncomingValueForBlock(MiddleBlock);
 
   // An external user of the last iteration's value should see the value that
   // the remainder loop uses to initialize its own IV.
@@ -2970,8 +2963,7 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
     // Fix-up external users of the induction variables.
     for (const auto &Entry : Legal->getInductionVars())
       fixupIVUsers(Entry.first, Entry.second,
-                   getOrCreateVectorTripCount(nullptr),
-                   IVEndValues[Entry.first], LoopMiddleBlock, State);
+                   getOrCreateVectorTripCount(nullptr), LoopMiddleBlock, State);
   }
 
   for (Instruction *PI : PredicatedInstructions)
@@ -4300,12 +4292,26 @@ getVScaleForTuning(const Loop *L, const TargetTransformInfo &TTI) {
   return TTI.getVScaleForTuning();
 }
 
+/// This function attempts to return a value that represents the vectorization
+/// factor at runtime. For fixed-width VFs we know this precisely at compile
+/// time, but for scalable VFs we calculate it based on an estimate of the
+/// vscale value.
+static unsigned getEstimatedRuntimeVF(const Loop *L,
+                                      const TargetTransformInfo &TTI,
+                                      ElementCount VF) {
+  unsigned EstimatedVF = VF.getKnownMinValue();
+  if (VF.isScalable())
+    if (std::optional<unsigned> VScale = getVScaleForTuning(L, TTI))
+      EstimatedVF *= *VScale;
+  assert(EstimatedVF >= 1 && "Estimated VF shouldn't be less than 1");
+  return EstimatedVF;
+}
+
 bool LoopVectorizationPlanner::isMoreProfitable(
-    const VectorizationFactor &A, const VectorizationFactor &B) const {
+    const VectorizationFactor &A, const VectorizationFactor &B,
+    const unsigned MaxTripCount) const {
   InstructionCost CostA = A.Cost;
   InstructionCost CostB = B.Cost;
-
-  unsigned MaxTripCount = PSE.getSmallConstantMaxTripCount();
 
   // Improve estimate for the vector width if it is scalable.
   unsigned EstimatedWidthA = A.Width.getKnownMinValue();
@@ -4355,6 +4361,12 @@ bool LoopVectorizationPlanner::isMoreProfitable(
   return CmpFn(RTCostA, RTCostB);
 }
 
+bool LoopVectorizationPlanner::isMoreProfitable(
+    const VectorizationFactor &A, const VectorizationFactor &B) const {
+  const unsigned MaxTripCount = PSE.getSmallConstantMaxTripCount();
+  return LoopVectorizationPlanner::isMoreProfitable(A, B, MaxTripCount);
+}
+
 void LoopVectorizationPlanner::emitInvalidCostRemarks(
     OptimizationRemarkEmitter *ORE) {
   using RecipeVFPair = std::pair<VPRecipeBase *, ElementCount>;
@@ -4363,6 +4375,7 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
     for (ElementCount VF : Plan->vectorFactors()) {
       VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(),
                             CM);
+      precomputeCosts(*Plan, VF, CostCtx);
       auto Iter = vp_depth_first_deep(Plan->getVectorLoopRegion()->getEntry());
       for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
         for (auto &R : *VPBB) {
@@ -4596,17 +4609,13 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
       InstructionCost C = CM.expectedCost(VF);
       VectorizationFactor Candidate(VF, C, ScalarCost.ScalarCost);
 
-      unsigned AssumedMinimumVscale =
-          getVScaleForTuning(OrigLoop, TTI).value_or(1);
-      unsigned Width =
-          Candidate.Width.isScalable()
-              ? Candidate.Width.getKnownMinValue() * AssumedMinimumVscale
-              : Candidate.Width.getFixedValue();
+      unsigned Width = getEstimatedRuntimeVF(OrigLoop, TTI, Candidate.Width);
       LLVM_DEBUG(dbgs() << "LV: Vector loop of width " << VF
                         << " costs: " << (Candidate.Cost / Width));
       if (VF.isScalable())
         LLVM_DEBUG(dbgs() << " (assuming a minimum vscale of "
-                          << AssumedMinimumVscale << ")");
+                          << getVScaleForTuning(OrigLoop, TTI).value_or(1)
+                          << ")");
       LLVM_DEBUG(dbgs() << ".\n");
 
       if (!ForceVectorization && !willGenerateVectors(*P, VF, TTI)) {
@@ -4672,7 +4681,7 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
 }
 
 bool LoopVectorizationCostModel::isEpilogueVectorizationProfitable(
-    const ElementCount VF) const {
+    const ElementCount VF, const unsigned IC) const {
   // FIXME: We need a much better cost-model to take different parameters such
   // as register pressure, code size increase and cost of extra branches into
   // account. For now we apply a very crude heuristic and only consider loops
@@ -4687,12 +4696,13 @@ bool LoopVectorizationCostModel::isEpilogueVectorizationProfitable(
   if (TTI.getMaxInterleaveFactor(VF) <= 1)
     return false;
 
-  unsigned Multiplier = 1;
-  if (VF.isScalable())
-    Multiplier = getVScaleForTuning(TheLoop, TTI).value_or(1);
-  if ((Multiplier * VF.getKnownMinValue()) >= EpilogueVectorizationMinVF)
-    return true;
-  return false;
+  // TODO: PR #108190 introduced a discrepancy between fixed-width and scalable
+  // VFs when deciding profitability.
+  // See related "TODO: extend to support scalable VFs." in
+  // selectEpilogueVectorizationFactor.
+  unsigned Multiplier = VF.isFixed() ? IC : 1;
+  return getEstimatedRuntimeVF(TheLoop, TTI, VF * Multiplier) >=
+         EpilogueVectorizationMinVF;
 }
 
 VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
@@ -4735,7 +4745,7 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
     return Result;
   }
 
-  if (!CM.isEpilogueVectorizationProfitable(MainLoopVF)) {
+  if (!CM.isEpilogueVectorizationProfitable(MainLoopVF, IC)) {
     LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization is not profitable for "
                          "this loop\n");
     return Result;
@@ -4744,26 +4754,26 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
   // If MainLoopVF = vscale x 2, and vscale is expected to be 4, then we know
   // the main loop handles 8 lanes per iteration. We could still benefit from
   // vectorizing the epilogue loop with VF=4.
-  ElementCount EstimatedRuntimeVF = MainLoopVF;
-  if (MainLoopVF.isScalable()) {
-    EstimatedRuntimeVF = ElementCount::getFixed(MainLoopVF.getKnownMinValue());
-    if (std::optional<unsigned> VScale = getVScaleForTuning(OrigLoop, TTI))
-      EstimatedRuntimeVF *= *VScale;
-  }
+  ElementCount EstimatedRuntimeVF =
+      ElementCount::getFixed(getEstimatedRuntimeVF(OrigLoop, TTI, MainLoopVF));
 
   ScalarEvolution &SE = *PSE.getSE();
   Type *TCType = Legal->getWidestInductionType();
   const SCEV *RemainingIterations = nullptr;
+  unsigned MaxTripCount = 0;
   for (auto &NextVF : ProfitableVFs) {
     // Skip candidate VFs without a corresponding VPlan.
     if (!hasPlanWithVF(NextVF.Width))
       continue;
 
-    // Skip candidate VFs with widths >= the estimate runtime VF (scalable
-    // vectors) or the VF of the main loop (fixed vectors).
+    // Skip candidate VFs with widths >= the (estimated) runtime VF (scalable
+    // vectors) or > the VF of the main loop (fixed vectors).
     if ((!NextVF.Width.isScalable() && MainLoopVF.isScalable() &&
          ElementCount::isKnownGE(NextVF.Width, EstimatedRuntimeVF)) ||
-        ElementCount::isKnownGE(NextVF.Width, MainLoopVF))
+        (NextVF.Width.isScalable() &&
+         ElementCount::isKnownGE(NextVF.Width, MainLoopVF)) ||
+        (!NextVF.Width.isScalable() && !MainLoopVF.isScalable() &&
+         ElementCount::isKnownGT(NextVF.Width, MainLoopVF)))
       continue;
 
     // If NextVF is greater than the number of remaining iterations, the
@@ -4777,6 +4787,14 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
                "Trip count SCEV must be computable");
         RemainingIterations = SE.getURemExpr(
             TC, SE.getConstant(TCType, MainLoopVF.getKnownMinValue() * IC));
+        MaxTripCount = MainLoopVF.getKnownMinValue() * IC - 1;
+        if (SE.isKnownPredicate(CmpInst::ICMP_ULT, RemainingIterations,
+                                SE.getConstant(TCType, MaxTripCount))) {
+          MaxTripCount =
+              SE.getUnsignedRangeMax(RemainingIterations).getZExtValue();
+        }
+        LLVM_DEBUG(dbgs() << "LEV: Maximum Trip Count for Epilogue: "
+                          << MaxTripCount << "\n");
       }
       if (SE.isKnownPredicate(
               CmpInst::ICMP_UGT,
@@ -4785,7 +4803,8 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
         continue;
     }
 
-    if (Result.Width.isScalar() || isMoreProfitable(NextVF, Result))
+    if (Result.Width.isScalar() ||
+        isMoreProfitable(NextVF, Result, MaxTripCount))
       Result = NextVF;
   }
 
@@ -4976,13 +4995,7 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
       MaxInterleaveCount = ForceTargetMaxVectorInterleaveFactor;
   }
 
-  unsigned EstimatedVF = VF.getKnownMinValue();
-  if (VF.isScalable()) {
-    if (std::optional<unsigned> VScale = getVScaleForTuning(TheLoop, TTI))
-      EstimatedVF *= *VScale;
-  }
-  assert(EstimatedVF >= 1 && "Estimated VF shouldn't be less than 1");
-
+  unsigned EstimatedVF = getEstimatedRuntimeVF(TheLoop, TTI, VF);
   unsigned KnownTC = PSE.getSE()->getSmallConstantTripCount(TheLoop);
   if (KnownTC > 0) {
     // At least one iteration must be scalar when this constraint holds. So the
@@ -6567,6 +6580,16 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
                  CmpInst::BAD_ICMP_PREDICATE, CostKind);
     }
 
+    // When tail folding with EVL, if the phi is part of an out of loop
+    // reduction then it will be transformed into a wide vp_merge.
+    if (VF.isVector() && foldTailWithEVL() &&
+        Legal->getReductionVars().contains(Phi) && !isInLoopReduction(Phi)) {
+      IntrinsicCostAttributes ICA(
+          Intrinsic::vp_merge, ToVectorTy(Phi->getType(), VF),
+          {ToVectorTy(Type::getInt1Ty(Phi->getContext()), VF)});
+      return TTI.getIntrinsicInstrCost(ICA, CostKind);
+    }
+
     return TTI.getCFInstrCost(Instruction::PHI, CostKind);
   }
   case Instruction::UDiv:
@@ -7403,7 +7426,17 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
 
   // Now compute and add the VPlan-based cost.
   Cost += Plan.cost(VF, CostCtx);
-  LLVM_DEBUG(dbgs() << "Cost for VF " << VF << ": " << Cost << "\n");
+#ifndef NDEBUG
+  unsigned EstimatedWidth = getEstimatedRuntimeVF(OrigLoop, CM.TTI, VF);
+  LLVM_DEBUG(dbgs() << "Cost for VF " << VF << ": " << Cost
+                    << " (Estimated cost per lane: ");
+  if (Cost.isValid()) {
+    double CostPerLane = double(*Cost.getValue()) / EstimatedWidth;
+    LLVM_DEBUG(dbgs() << format("%.1f", CostPerLane));
+  } else /* No point dividing an invalid cost - it will still be invalid */
+    LLVM_DEBUG(dbgs() << "Invalid");
+  LLVM_DEBUG(dbgs() << ")\n");
+#endif
   return Cost;
 }
 
@@ -9776,8 +9809,8 @@ static void checkMixedPrecision(Loop *L, OptimizationRemarkEmitter *ORE) {
 }
 
 static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
-                                       VectorizationFactor &VF,
-                                       std::optional<unsigned> VScale, Loop *L,
+                                       VectorizationFactor &VF, Loop *L,
+                                       const TargetTransformInfo &TTI,
                                        PredicatedScalarEvolution &PSE,
                                        ScalarEpilogueLowering SEL) {
   InstructionCost CheckCost = Checks.getCost();
@@ -9829,13 +9862,7 @@ static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
   // For now we assume the epilogue cost EpiC = 0 for simplicity. Note that
   // the computations are performed on doubles, not integers and the result
   // is rounded up, hence we get an upper estimate of the TC.
-  unsigned IntVF = VF.Width.getKnownMinValue();
-  if (VF.Width.isScalable()) {
-    unsigned AssumedMinimumVscale = 1;
-    if (VScale)
-      AssumedMinimumVscale = *VScale;
-    IntVF *= AssumedMinimumVscale;
-  }
+  unsigned IntVF = getEstimatedRuntimeVF(L, TTI, VF.Width);
   uint64_t RtC = *CheckCost.getValue();
   uint64_t Div = ScalarC * IntVF - *VF.Cost.getValue();
   uint64_t MinTC1 = Div == 0 ? 0 : divideCeil(RtC * IntVF, Div);
@@ -10084,8 +10111,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     bool ForceVectorization =
         Hints.getForce() == LoopVectorizeHints::FK_Enabled;
     if (!ForceVectorization &&
-        !areRuntimeChecksProfitable(Checks, VF, getVScaleForTuning(L, *TTI), L,
-                                    PSE, SEL)) {
+        !areRuntimeChecksProfitable(Checks, VF, L, *TTI, PSE, SEL)) {
       ORE->emit([&]() {
         return OptimizationRemarkAnalysisAliasing(
                    DEBUG_TYPE, "CantReorderMemOps", L->getStartLoc(),

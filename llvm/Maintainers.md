@@ -66,6 +66,13 @@ quentin.colombet@gmail.com (email), [qcolombet](https://github.com/qcolombet) (G
 Florian Hahn \
 flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub)
 
+#### SandboxVectorizer
+
+Vasileios Porpodas \
+vporpodas@google.com (email), [vporpo](https://github.com/vporpo) (GitHub)
+Jorge Gorbe Moya \
+jgorbe@google.com (email), [slackito](https://github.com/slackito) (GitHub)
+
 #### ScalarEvolution, IndVarSimplify
 
 Philip Reames \
@@ -92,6 +99,11 @@ kcc@google.com (email), [kcc](https://github.com/kcc) (GitHub)
 
 Evgeniy Stepanov \
 eugenis@google.com (email), [eugenis](https://github.com/eugenis) (GitHub)
+
+#### NumericalStabilitySanitizer
+
+Alexander Shaposhnikov \
+ashaposhnikov@google.com (email), [alexander-shaposhnikov](https://github.com/alexander-shaposhnikov) (GitHub)
 
 #### RealtimeSanitizer
 
@@ -179,6 +191,11 @@ alexei.starovoitov@gmail.com (email), [4ast](https://github.com/4ast) (GitHub)
 Zi Xuan Wu (Zeson) \
 zixuan.wu@linux.alibaba.com (email), [zixuan-wu](https://github.com/zixuan-wu) (GitHub)
 
+#### DirectX backend
+
+Justin Bogner \
+mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
+
 #### Hexagon backend
 
 Sundeep Kushwaha \
@@ -208,6 +225,12 @@ anton@korobeynikov.info (email), [asl](https://github.com/asl) (GitHub)
 
 Justin Holewinski \
 jholewinski@nvidia.com (email), [jholewinski](https://github.com/jholewinski) (GitHub)
+Artem Belevich \
+tra@google.com (email), [Artem-B](https://github.com/Artem-B) (GitHub)
+Alex MacLean \
+amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub)
+Justin Fargnoli \
+jfargnoli@nvidia.com (email), [justinfargnoli](https://github.com/justinfargnoli) (GitHub)
 
 #### PowerPC backend
 
@@ -302,6 +325,13 @@ peter@pcc.me.uk (email), [pcc](https://github.com/pcc) (GitHub)
 
 Lang Hames \
 lhames@gmail.com (email), [lhames](https://github.com/lhames) (GitHub)
+
+#### SandboxIR
+
+Vasileios Porpodas \
+vporpodas@google.com (email), [vporpo](https://github.com/vporpo) (GitHub)
+Jorge Gorbe Moya \
+jgorbe@google.com (email), [slackito](https://github.com/slackito) (GitHub)
 
 #### TableGen
 

@@ -170,10 +170,14 @@ public:
   /// 'worker' clauses.
   SourceLocation LoopVectorClauseLoc;
   /// If there is a current 'active' loop construct that does NOT have a 'seq'
-  /// clause on it, this has that source location. This permits us to implement
-  /// the 'loop' restrictions on the loop variable. This can be extended via
-  /// 'collapse', so we need to keep this around for a while.
-  SourceLocation LoopWithoutSeqLoc;
+  /// clause on it, this has that source location and loop Directive 'kind'.
+  /// This permits us to implement the 'loop' restrictions on the loop variable.
+  /// This can be extended via 'collapse', so we need to keep this around for a
+  /// while.
+  struct LoopWithoutSeqCheckingInfo {
+    OpenACCDirectiveKind Kind = OpenACCDirectiveKind::Invalid;
+    SourceLocation Loc;
+  } LoopWithoutSeqInfo;
 
   // Redeclaration of the version in OpenACCClause.h.
   using DeviceTypeArgument = std::pair<IdentifierInfo *, SourceLocation>;
@@ -762,7 +766,7 @@ public:
     SourceLocation OldLoopGangClauseOnKernelLoc;
     SourceLocation OldLoopWorkerClauseLoc;
     SourceLocation OldLoopVectorClauseLoc;
-    SourceLocation OldLoopWithoutSeqLoc;
+    LoopWithoutSeqCheckingInfo OldLoopWithoutSeqInfo;
     llvm::SmallVector<OpenACCReductionClause *> ActiveReductionClauses;
     LoopInConstructRAII LoopRAII;
 

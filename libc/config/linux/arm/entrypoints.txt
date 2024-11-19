@@ -20,9 +20,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     # errno.h entrypoints
     libc.src.errno.errno
 
-    # search.h entrypoints
-    libc.src.search.lfind  
-
     # string.h entrypoints
     libc.src.string.bcmp
     libc.src.string.bcopy
@@ -186,6 +183,9 @@ set(TARGET_LIBC_ENTRYPOINTS
 
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # search.h entrypoints
+    libc.src.search.lfind
+
     # setjmp.h entrypoints
     libc.src.setjmp.longjmp
     libc.src.setjmp.setjmp

@@ -503,6 +503,7 @@ set(files
   __locale_dir/locale_base_api/openbsd.h
   __locale_dir/locale_base_api/win32.h
   __locale_dir/locale_guard.h
+  __locale_dir/pad_and_output.h
   __locale_dir/support/apple.h
   __locale_dir/support/bsd_like.h
   __locale_dir/support/freebsd.h
@@ -557,6 +558,7 @@ set(files
   __memory/ranges_construct_at.h
   __memory/ranges_uninitialized_algorithms.h
   __memory/raw_storage_iterator.h
+  __memory/shared_count.h
   __memory/shared_ptr.h
   __memory/swap_allocator.h
   __memory/temp_value.h
@@ -595,6 +597,7 @@ set(files
   __numeric/transform_reduce.h
   __ostream/basic_ostream.h
   __ostream/print.h
+  __ostream/put_character_sequence.h
   __pstl/backend.h
   __pstl/backend_fwd.h
   __pstl/backends/default.h
@@ -715,6 +718,7 @@ set(files
   __system_error/error_code.h
   __system_error/error_condition.h
   __system_error/system_error.h
+  __system_error/throw_system_error.h
   __thread/formatter.h
   __thread/id.h
   __thread/jthread.h
@@ -880,6 +884,7 @@ set(files
   __utility/priority_tag.h
   __utility/private_constructor_tag.h
   __utility/rel_ops.h
+  __utility/scope_guard.h
   __utility/small_buffer.h
   __utility/swap.h
   __utility/to_underlying.h

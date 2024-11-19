@@ -18,20 +18,18 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Mangle.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/Basic/DarwinSDKInfo.h"
-#include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Attr.h"
@@ -48,7 +46,6 @@
 #include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaM68k.h"
 #include "clang/Sema/SemaMIPS.h"
 #include "clang/Sema/SemaMSP430.h"
@@ -64,7 +61,7 @@
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Demangle/Demangle.h"
-#include "llvm/IR/Assumptions.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
@@ -724,8 +721,7 @@ static void handleExcludeFromExplicitInstantiationAttr(Sema &S, Decl *D,
 namespace {
 /// Determines if a given Expr references any of the given function's
 /// ParmVarDecls, or the function's implicit `this` parameter (if applicable).
-class ArgumentDependenceChecker
-    : public RecursiveASTVisitor<ArgumentDependenceChecker> {
+class ArgumentDependenceChecker : public DynamicRecursiveASTVisitor {
 #ifndef NDEBUG
   const CXXRecordDecl *ClassType;
 #endif
@@ -749,14 +745,14 @@ public:
     return Result;
   }
 
-  bool VisitCXXThisExpr(CXXThisExpr *E) {
+  bool VisitCXXThisExpr(CXXThisExpr *E) override {
     assert(E->getType()->getPointeeCXXRecordDecl() == ClassType &&
            "`this` doesn't refer to the enclosing class?");
     Result = true;
     return false;
   }
 
-  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
     if (const auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl()))
       if (Parms.count(PVD)) {
         Result = true;
@@ -3876,33 +3872,40 @@ LifetimeCaptureByAttr *Sema::ParseLifetimeCaptureByAttr(const ParsedAttr &AL,
         << AL.getRange();
     return nullptr;
   }
-  SmallVector<IdentifierInfo *, 1> ParamIdents;
-  SmallVector<SourceLocation, 1> ParamLocs;
-  for (unsigned I = 0; I < AL.getNumArgs(); ++I) {
+  unsigned N = AL.getNumArgs();
+  auto ParamIdents =
+      MutableArrayRef<IdentifierInfo *>(new (Context) IdentifierInfo *[N], N);
+  auto ParamLocs =
+      MutableArrayRef<SourceLocation>(new (Context) SourceLocation[N], N);
+  bool IsValid = true;
+  for (unsigned I = 0; I < N; ++I) {
     if (AL.isArgExpr(I)) {
       Expr *E = AL.getArgAsExpr(I);
       Diag(E->getExprLoc(), diag::err_capture_by_attribute_argument_unknown)
           << E << E->getExprLoc();
+      IsValid = false;
       continue;
     }
     assert(AL.isArgIdent(I));
     IdentifierLoc *IdLoc = AL.getArgAsIdent(I);
     if (IdLoc->Ident->getName() == ParamName) {
       Diag(IdLoc->Loc, diag::err_capture_by_references_itself) << IdLoc->Loc;
+      IsValid = false;
       continue;
     }
-    ParamIdents.push_back(IdLoc->Ident);
-    ParamLocs.push_back(IdLoc->Loc);
+    ParamIdents[I] = IdLoc->Ident;
+    ParamLocs[I] = IdLoc->Loc;
   }
-  SmallVector<int, 1> FakeParamIndices(ParamIdents.size(),
-                                       LifetimeCaptureByAttr::INVALID);
-  LifetimeCaptureByAttr *CapturedBy = ::new (Context) LifetimeCaptureByAttr(
-      Context, AL, FakeParamIndices.data(), FakeParamIndices.size());
-  CapturedBy->setArgs(std::move(ParamIdents), std::move(ParamLocs));
+  if (!IsValid)
+    return nullptr;
+  SmallVector<int> FakeParamIndices(N, LifetimeCaptureByAttr::INVALID);
+  auto *CapturedBy =
+      LifetimeCaptureByAttr::Create(Context, FakeParamIndices.data(), N, AL);
+  CapturedBy->setArgs(ParamIdents, ParamLocs);
   return CapturedBy;
 }
 
-static void HandleLifetimeCaptureByAttr(Sema &S, Decl *D,
+static void handleLifetimeCaptureByAttr(Sema &S, Decl *D,
                                         const ParsedAttr &AL) {
   // Do not allow multiple attributes.
   if (D->hasAttr<LifetimeCaptureByAttr>()) {
@@ -3919,10 +3922,27 @@ static void HandleLifetimeCaptureByAttr(Sema &S, Decl *D,
 
 void Sema::LazyProcessLifetimeCaptureByParams(FunctionDecl *FD) {
   bool HasImplicitThisParam = isInstanceMethod(FD);
-
-  llvm::StringMap<int> NameIdxMapping;
-  NameIdxMapping["global"] = LifetimeCaptureByAttr::GLOBAL;
-  NameIdxMapping["unknown"] = LifetimeCaptureByAttr::UNKNOWN;
+  SmallVector<LifetimeCaptureByAttr *, 1> Attrs;
+  for (ParmVarDecl *PVD : FD->parameters())
+    if (auto *A = PVD->getAttr<LifetimeCaptureByAttr>())
+      Attrs.push_back(A);
+  if (HasImplicitThisParam) {
+    TypeSourceInfo *TSI = FD->getTypeSourceInfo();
+    if (!TSI)
+      return;
+    AttributedTypeLoc ATL;
+    for (TypeLoc TL = TSI->getTypeLoc();
+         (ATL = TL.getAsAdjusted<AttributedTypeLoc>());
+         TL = ATL.getModifiedLoc()) {
+      if (auto *A = ATL.getAttrAs<LifetimeCaptureByAttr>())
+        Attrs.push_back(const_cast<LifetimeCaptureByAttr *>(A));
+    }
+  }
+  if (Attrs.empty())
+    return;
+  llvm::StringMap<int> NameIdxMapping = {
+      {"global", LifetimeCaptureByAttr::GLOBAL},
+      {"unknown", LifetimeCaptureByAttr::UNKNOWN}};
   int Idx = 0;
   if (HasImplicitThisParam) {
     NameIdxMapping["this"] = 0;
@@ -3936,9 +3956,7 @@ void Sema::LazyProcessLifetimeCaptureByParams(FunctionDecl *FD) {
         Diag(PVD->getLocation(), diag::err_capture_by_param_uses_reserved_name)
             << (PVD->getName() == "unknown");
   };
-  auto HandleCaptureBy = [&](LifetimeCaptureByAttr *CapturedBy) {
-    if (!CapturedBy)
-      return;
+  for (auto *CapturedBy : Attrs) {
     const auto &Entities = CapturedBy->getArgIdents();
     for (size_t I = 0; I < Entities.size(); ++I) {
       StringRef Name = Entities[I]->getName();
@@ -3956,22 +3974,6 @@ void Sema::LazyProcessLifetimeCaptureByParams(FunctionDecl *FD) {
         DisallowReservedParams(Name);
       CapturedBy->setParamIdx(I, It->second);
     }
-  };
-  for (ParmVarDecl *PVD : FD->parameters())
-    HandleCaptureBy(PVD->getAttr<LifetimeCaptureByAttr>());
-  if (!HasImplicitThisParam)
-    return;
-  TypeSourceInfo *TSI = FD->getTypeSourceInfo();
-  if (!TSI)
-    return;
-  AttributedTypeLoc ATL;
-  for (TypeLoc TL = TSI->getTypeLoc();
-       (ATL = TL.getAsAdjusted<AttributedTypeLoc>());
-       TL = ATL.getModifiedLoc()) {
-    auto *A = ATL.getAttrAs<LifetimeCaptureByAttr>();
-    if (!A)
-      continue;
-    HandleCaptureBy(const_cast<LifetimeCaptureByAttr *>(A));
   }
 }
 
@@ -6753,7 +6755,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     handleCallbackAttr(S, D, AL);
     break;
   case ParsedAttr::AT_LifetimeCaptureBy:
-    HandleLifetimeCaptureByAttr(S, D, AL);
+    handleLifetimeCaptureByAttr(S, D, AL);
     break;
   case ParsedAttr::AT_CalledOnce:
     handleCalledOnceAttr(S, D, AL);

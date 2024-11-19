@@ -39,7 +39,6 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <iterator>
 #include <vector>
@@ -291,7 +290,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     AFI->setFrameRecordSavedAreaSize(FRSize);
   AFI->setGPRCalleeSavedArea1Offset(GPRCS1Offset);
   AFI->setGPRCalleeSavedArea2Offset(GPRCS2Offset);
-  AFI->setDPRCalleeSavedAreaOffset(DPRCSOffset);
+  AFI->setDPRCalleeSavedArea1Offset(DPRCSOffset);
   NumBytes = DPRCSOffset;
 
   int FramePtrOffsetInBlock = 0;
@@ -441,7 +440,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
 
   AFI->setGPRCalleeSavedArea1Size(GPRCS1Size);
   AFI->setGPRCalleeSavedArea2Size(GPRCS2Size);
-  AFI->setDPRCalleeSavedAreaSize(DPRCSSize);
+  AFI->setDPRCalleeSavedArea1Size(DPRCSSize);
 
   if (RegInfo->hasStackRealignment(MF)) {
     const unsigned NrBitsToZero = Log2(MFI.getMaxAlign());
@@ -527,11 +526,10 @@ void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
     }
 
     // Move SP to start of FP callee save spill area.
-    NumBytes -= (AFI->getFrameRecordSavedAreaSize() +
-                 AFI->getGPRCalleeSavedArea1Size() +
-                 AFI->getGPRCalleeSavedArea2Size() +
-                 AFI->getDPRCalleeSavedAreaSize() +
-                 ArgRegsSaveSize);
+    NumBytes -=
+        (AFI->getFrameRecordSavedAreaSize() +
+         AFI->getGPRCalleeSavedArea1Size() + AFI->getGPRCalleeSavedArea2Size() +
+         AFI->getDPRCalleeSavedArea1Size() + ArgRegsSaveSize);
 
     // We are likely to need a scratch register and we know all callee-save
     // registers are free at this point in the epilogue, so pick one.

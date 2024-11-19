@@ -172,8 +172,7 @@ uint32_t RISCV::calcEFlags() const {
 int64_t RISCV::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   default:
-    internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " + toString(type));
+    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   case R_RISCV_32:
   case R_RISCV_TLS_DTPMOD32:
@@ -325,7 +324,7 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_SUB_ULEB128:
     return R_RISCV_LEB128;
   default:
-    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
     return R_NONE;
   }
@@ -662,7 +661,7 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
           if (overwriteULEB128(loc, val) >= 0x80)
             Err(ctx) << sec.getLocation(rel.offset) << ": ULEB128 value "
                      << Twine(val) << " exceeds available space; references '"
-                     << lld::toString(*rel.sym) << "'";
+                     << rel.sym << "'";
           ++i;
           continue;
         }
@@ -833,8 +832,8 @@ static bool relax(Ctx &ctx, InputSection &sec) {
       // If we can't satisfy this alignment, we've found a bad input.
       if (LLVM_UNLIKELY(static_cast<int32_t>(remove) < 0)) {
         Err(ctx) << getErrorLoc(ctx, (const uint8_t *)loc)
-                 << "insufficient padding bytes for " << lld::toString(r.type)
-                 << ": " << Twine(r.addend)
+                 << "insufficient padding bytes for " << r.type << ": "
+                 << Twine(r.addend)
                  << " bytes available "
                     "for requested alignment of "
                  << Twine(align) << " bytes";
@@ -948,7 +947,7 @@ void RISCV::finalizeRelax(int passes) const {
       ArrayRef<uint8_t> old = sec->content();
       size_t newSize = old.size() - aux.relocDeltas[rels.size() - 1];
       size_t writesIdx = 0;
-      uint8_t *p = context().bAlloc.Allocate<uint8_t>(newSize);
+      uint8_t *p = ctx.bAlloc.Allocate<uint8_t>(newSize);
       uint64_t offset = 0;
       int64_t delta = 0;
       sec->content_ = p;
@@ -1059,13 +1058,12 @@ public:
 };
 } // namespace
 
-static void mergeArch(RISCVISAUtils::OrderedExtensionMap &mergedExts,
+static void mergeArch(Ctx &ctx, RISCVISAUtils::OrderedExtensionMap &mergedExts,
                       unsigned &mergedXlen, const InputSectionBase *sec,
                       StringRef s) {
   auto maybeInfo = RISCVISAInfo::parseNormalizedArchString(s);
   if (!maybeInfo) {
-    Err(ctx) << sec << ": " << s << ": "
-             << llvm::toString(maybeInfo.takeError());
+    Err(ctx) << sec << ": " << s << ": " << maybeInfo.takeError();
     return;
   }
 
@@ -1086,7 +1084,7 @@ static void mergeArch(RISCVISAUtils::OrderedExtensionMap &mergedExts,
   }
 }
 
-static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
+static void mergeAtomic(Ctx &ctx, DenseMap<unsigned, unsigned>::iterator it,
                         const InputSectionBase *oldSection,
                         const InputSectionBase *newSection,
                         RISCVAttrs::RISCVAtomicAbiTag oldTag,
@@ -1104,8 +1102,8 @@ static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
              << ": atomic_abi=" << Twine(static_cast<unsigned>(newTag));
   };
 
-  auto reportUnknownAbiError = [](const InputSectionBase *section,
-                                  RISCVAtomicAbiTag tag) {
+  auto reportUnknownAbiError = [&](const InputSectionBase *section,
+                                   RISCVAtomicAbiTag tag) {
     switch (tag) {
     case RISCVAtomicAbiTag::UNKNOWN:
     case RISCVAtomicAbiTag::A6C:
@@ -1188,7 +1186,7 @@ mergeAttributesSection(Ctx &ctx,
   for (const InputSectionBase *sec : sections) {
     RISCVAttributeParser parser;
     if (Error e = parser.parse(sec->content(), llvm::endianness::little))
-      Warn(ctx) << sec << ": " << llvm::toString(std::move(e));
+      Warn(ctx) << sec << ": " << std::move(e);
     for (const auto &tag : attributesTags) {
       switch (RISCVAttrs::AttrType(tag.attr)) {
         // Integer attributes.
@@ -1199,9 +1197,9 @@ mergeAttributesSection(Ctx &ctx,
             firstStackAlign = sec;
             firstStackAlignValue = *i;
           } else if (r.first->second != *i) {
-            Err(ctx) << sec << " has stack_align=" << Twine(*i) << " but "
+            Err(ctx) << sec << " has stack_align=" << *i << " but "
                      << firstStackAlign
-                     << " has stack_align=" << Twine(firstStackAlignValue);
+                     << " has stack_align=" << firstStackAlignValue;
           }
         }
         continue;
@@ -1214,7 +1212,7 @@ mergeAttributesSection(Ctx &ctx,
       case RISCVAttrs::ARCH:
         if (auto s = parser.getAttributeString(tag.attr)) {
           hasArch = true;
-          mergeArch(exts, xlen, sec, *s);
+          mergeArch(ctx, exts, xlen, sec, *s);
         }
         continue;
 
@@ -1230,7 +1228,7 @@ mergeAttributesSection(Ctx &ctx,
           if (r.second)
             firstAtomicAbi = sec;
           else
-            mergeAtomic(r.first, firstAtomicAbi, sec,
+            mergeAtomic(ctx, r.first, firstAtomicAbi, sec,
                         static_cast<RISCVAtomicAbiTag>(r.first->getSecond()),
                         static_cast<RISCVAtomicAbiTag>(*i));
         }
@@ -1259,9 +1257,9 @@ mergeAttributesSection(Ctx &ctx,
   if (hasArch && xlen != 0) {
     if (auto result = RISCVISAInfo::createFromExtMap(xlen, exts)) {
       merged.strAttr.try_emplace(RISCVAttrs::ARCH,
-                                 saver().save((*result)->toString()));
+                                 ctx.saver.save((*result)->toString()));
     } else {
-      Err(ctx) << llvm::toString(result.takeError());
+      Err(ctx) << result.takeError();
     }
   }
 

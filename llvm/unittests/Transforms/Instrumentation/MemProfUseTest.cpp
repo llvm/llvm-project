@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Instrumentation/MemProfiler.h"
@@ -80,7 +82,12 @@ declare !dbg !19 void @_Z2f3v()
   std::unique_ptr<Module> M = parseAssemblyString(IR, Err, Ctx);
   ASSERT_TRUE(M);
 
-  auto Calls = extractCallsFromIR(*M);
+  auto *F = M->getFunction("_Z3foov");
+  ASSERT_NE(F, nullptr);
+
+  TargetLibraryInfoWrapperPass WrapperPass;
+  auto &TLI = WrapperPass.getTLI(*F);
+  auto Calls = extractCallsFromIR(*M, TLI);
 
   // Expect exactly one caller.
   ASSERT_THAT(Calls, SizeIs(1));
@@ -177,7 +184,12 @@ declare !dbg !25 void @_Z2g2v() local_unnamed_addr
   std::unique_ptr<Module> M = parseAssemblyString(IR, Err, Ctx);
   ASSERT_TRUE(M);
 
-  auto Calls = extractCallsFromIR(*M);
+  auto *F = M->getFunction("_Z3foov");
+  ASSERT_NE(F, nullptr);
+
+  TargetLibraryInfoWrapperPass WrapperPass;
+  auto &TLI = WrapperPass.getTLI(*F);
+  auto Calls = extractCallsFromIR(*M, TLI);
 
   // Expect exactly 4 callers.
   ASSERT_THAT(Calls, SizeIs(4));
@@ -219,5 +231,71 @@ declare !dbg !25 void @_Z2g2v() local_unnamed_addr
               Pair(FieldsAre(1U, 8U), IndexedMemProfRecord::getGUID("_Z2g1v")));
   EXPECT_THAT(G3CallSites[1],
               Pair(FieldsAre(2U, 3U), IndexedMemProfRecord::getGUID("_Z2g2v")));
+}
+
+TEST(MemProf, ExtractDirectCallsFromIRCallingNew) {
+  // The following IR is generated from:
+  //
+  // int *foo() {
+  //   return ::new (int);
+  // }
+  StringRef IR = R"IR(
+define dso_local noundef ptr @_Z3foov() #0 !dbg !10 {
+entry:
+  %call = call noalias noundef nonnull ptr @_Znwm(i64 noundef 4) #2, !dbg !13
+  ret ptr %call, !dbg !14
+}
+
+; Function Attrs: nobuiltin allocsize(0)
+declare noundef nonnull ptr @_Znwm(i64 noundef) #1
+
+attributes #0 = { mustprogress uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+attributes #1 = { nobuiltin allocsize(0) "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+attributes #2 = { builtin allocsize(0) }
+
+!llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!2, !3, !4, !5, !6, !7, !8}
+!llvm.ident = !{!9}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, debugInfoForProfiling: true, nameTableKind: None)
+!1 = !DIFile(filename: "foobar.cc", directory: "/")
+!2 = !{i32 7, !"Dwarf Version", i32 5}
+!3 = !{i32 2, !"Debug Info Version", i32 3}
+!4 = !{i32 1, !"wchar_size", i32 4}
+!5 = !{i32 1, !"MemProfProfileFilename", !"memprof.profraw"}
+!6 = !{i32 8, !"PIC Level", i32 2}
+!7 = !{i32 7, !"PIE Level", i32 2}
+!8 = !{i32 7, !"uwtable", i32 2}
+!9 = !{!"clang"}
+!10 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov", scope: !1, file: !1, line: 1, type: !11, scopeLine: 1, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!11 = !DISubroutineType(types: !12)
+!12 = !{}
+!13 = !DILocation(line: 2, column: 10, scope: !10)
+!14 = !DILocation(line: 2, column: 3, scope: !10)
+)IR";
+
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(IR, Err, Ctx);
+  ASSERT_TRUE(M);
+
+  auto *F = M->getFunction("_Z3foov");
+  ASSERT_NE(F, nullptr);
+
+  TargetLibraryInfoWrapperPass WrapperPass;
+  auto &TLI = WrapperPass.getTLI(*F);
+  auto Calls = extractCallsFromIR(*M, TLI);
+
+  // Expect exactly one caller.
+  ASSERT_THAT(Calls, SizeIs(1));
+
+  // Verify each key-value pair.
+
+  auto FooIt = Calls.find(IndexedMemProfRecord::getGUID("_Z3foov"));
+  ASSERT_NE(FooIt, Calls.end());
+  const auto &[FooCallerGUID, FooCallSites] = *FooIt;
+  EXPECT_EQ(FooCallerGUID, IndexedMemProfRecord::getGUID("_Z3foov"));
+  ASSERT_THAT(FooCallSites, SizeIs(1));
+  EXPECT_THAT(FooCallSites[0], Pair(FieldsAre(1U, 10U), 0));
 }
 } // namespace

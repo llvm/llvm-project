@@ -920,8 +920,7 @@ bool AArch64DAGToDAGISel::SelectRDVLImm(SDValue N, SDValue &Imm) {
   if ((MulImm % std::abs(Scale)) == 0) {
     int64_t RDVLImm = MulImm / Scale;
     if ((RDVLImm >= Low) && (RDVLImm <= High)) {
-      Imm = CurDAG->getSignedConstant(RDVLImm, SDLoc(N), MVT::i32,
-                                      /*isTarget=*/true);
+      Imm = CurDAG->getSignedTargetConstant(RDVLImm, SDLoc(N), MVT::i32);
       return true;
     }
   }
@@ -1533,7 +1532,6 @@ void AArch64DAGToDAGISel::SelectPtrauthAuth(SDNode *N) {
 
   SDNode *AUT = CurDAG->getMachineNode(AArch64::AUT, DL, MVT::i64, Ops);
   ReplaceNode(N, AUT);
-  return;
 }
 
 void AArch64DAGToDAGISel::SelectPtrauthResign(SDNode *N) {
@@ -1567,7 +1565,6 @@ void AArch64DAGToDAGISel::SelectPtrauthResign(SDNode *N) {
 
   SDNode *AUTPAC = CurDAG->getMachineNode(AArch64::AUTPAC, DL, MVT::i64, Ops);
   ReplaceNode(N, AUTPAC);
-  return;
 }
 
 bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
@@ -4285,7 +4282,7 @@ bool AArch64DAGToDAGISel::SelectSVESignedArithImm(SDValue N, SDValue &Imm) {
     int64_t ImmVal = CNode->getSExtValue();
     SDLoc DL(N);
     if (ImmVal >= -128 && ImmVal < 128) {
-      Imm = CurDAG->getSignedConstant(ImmVal, DL, MVT::i32, /*isTarget=*/true);
+      Imm = CurDAG->getSignedTargetConstant(ImmVal, DL, MVT::i32);
       return true;
     }
   }

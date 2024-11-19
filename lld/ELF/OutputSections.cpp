@@ -118,9 +118,9 @@ void OutputSection::commitSection(InputSection *isec) {
       type = SHT_CREL;
       if (type == SHT_REL) {
         if (name.consume_front(".rel"))
-          name = saver().save(".crel" + name);
+          name = ctx.saver.save(".crel" + name);
       } else if (name.consume_front(".rela")) {
-        name = saver().save(".crel" + name);
+        name = ctx.saver.save(".crel" + name);
       }
     } else {
       if (typeIsSet || !canMergeToProgbits(ctx, type) ||
@@ -308,14 +308,14 @@ static void fill(uint8_t *buf, size_t size,
 }
 
 #if LLVM_ENABLE_ZLIB
-static SmallVector<uint8_t, 0> deflateShard(ArrayRef<uint8_t> in, int level,
-                                            int flush) {
+static SmallVector<uint8_t, 0> deflateShard(Ctx &ctx, ArrayRef<uint8_t> in,
+                                            int level, int flush) {
   // 15 and 8 are default. windowBits=-15 is negative to generate raw deflate
   // data with no zlib header or trailer.
   z_stream s = {};
   auto res = deflateInit2(&s, level, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
   if (res != 0) {
-    Err(ctx) << "--compress-sections: deflateInit2 returned " << Twine(res);
+    Err(ctx) << "--compress-sections: deflateInit2 returned " << res;
     return {};
   }
   s.next_in = const_cast<uint8_t *>(in.data());
@@ -432,7 +432,7 @@ template <class ELFT> void OutputSection::maybeCompress(Ctx &ctx) {
     // concatenated with the next shard.
     auto shardsAdler = std::make_unique<uint32_t[]>(numShards);
     parallelFor(0, numShards, [&](size_t i) {
-      shardsOut[i] = deflateShard(shardsIn[i], level,
+      shardsOut[i] = deflateShard(ctx, shardsIn[i], level,
                                   i != numShards - 1 ? Z_SYNC_FLUSH : Z_FINISH);
       shardsAdler[i] = adler32(1, shardsIn[i].data(), shardsIn[i].size());
     });
@@ -536,7 +536,7 @@ void OutputSection::writeTo(Ctx &ctx, uint8_t *buf, parallel::TaskGroup &tg) {
       // instructions to little-endian, leaving the data big-endian.
       if (ctx.arg.emachine == EM_ARM && !ctx.arg.isLE && ctx.arg.armBe8 &&
           (flags & SHF_EXECINSTR))
-        convertArmInstructionstoBE8(isec, buf + isec->outSecOff);
+        convertArmInstructionstoBE8(ctx, isec, buf + isec->outSecOff);
 
       // Fill gaps between sections.
       if (nonZeroFiller) {
@@ -908,13 +908,12 @@ void OutputSection::checkDynRelAddends(Ctx &ctx) {
               ? 0
               : ctx.target->getImplicitAddend(relocTarget, rel.type);
       if (addend != writtenAddend)
-        internalLinkerError(
-            getErrorLoc(ctx, relocTarget),
-            "wrote incorrect addend value 0x" + utohexstr(writtenAddend) +
-                " instead of 0x" + utohexstr(addend) +
-                " for dynamic relocation " + toString(rel.type) +
-                " at offset 0x" + utohexstr(rel.getOffset()) +
-                (rel.sym ? " against symbol " + toString(*rel.sym) : ""));
+        InternalErr(ctx, relocTarget)
+            << "wrote incorrect addend value 0x" << utohexstr(writtenAddend)
+            << " instead of 0x" << utohexstr(addend)
+            << " for dynamic relocation " << rel.type << " at offset 0x"
+            << utohexstr(rel.getOffset())
+            << (rel.sym ? " against symbol " + rel.sym->getName() : "");
     }
   });
 }

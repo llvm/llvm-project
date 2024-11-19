@@ -390,8 +390,6 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
   if (ReservedRegNames.count("X29") || ReservedRegNames.count("FP"))
     ReserveXRegisterForRA.set(29);
 
-  AddressCheckPSV.reset(new AddressCheckPseudoSourceValue(TM));
-
   EnableSubregLiveness = EnableSubregLivenessTracking.getValue();
 }
 

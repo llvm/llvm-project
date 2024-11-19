@@ -24,7 +24,6 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include <optional>
@@ -589,8 +588,10 @@ bool isCvt_F32_Fp8_Bf8_e64(unsigned Opc) {
          Opc == AMDGPU::V_CVT_F32_FP8_e64_dpp_gfx12 ||
          Opc == AMDGPU::V_CVT_F32_BF8_e64_dpp8_gfx12 ||
          Opc == AMDGPU::V_CVT_F32_FP8_e64_dpp8_gfx12 ||
-         Opc == AMDGPU::V_CVT_PK_F32_BF8_e64_gfx12 ||
-         Opc == AMDGPU::V_CVT_PK_F32_FP8_e64_gfx12;
+         Opc == AMDGPU::V_CVT_PK_F32_BF8_fake16_e64_gfx12 ||
+         Opc == AMDGPU::V_CVT_PK_F32_FP8_fake16_e64_gfx12 ||
+         Opc == AMDGPU::V_CVT_PK_F32_BF8_t16_e64_gfx12 ||
+         Opc == AMDGPU::V_CVT_PK_F32_FP8_t16_e64_gfx12;
 }
 
 bool isGenericAtomic(unsigned Opc) {
@@ -915,6 +916,8 @@ unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
     return 32768;
   if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
     return 65536;
+  if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize163840))
+    return 163840;
   return 0;
 }
 

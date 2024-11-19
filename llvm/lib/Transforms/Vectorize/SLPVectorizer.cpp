@@ -239,7 +239,7 @@ static bool isValidElementType(Type *Ty) {
 /// returns the type of its value operand, for Cmp - the types of the compare
 /// operands and for insertelement - the type os the inserted operand.
 /// Otherwise, just the type of the value is returned.
-template <typename T> static Type *getValueType(T *V) {
+static Type *getValueType(Value *V) {
   if (auto *SI = dyn_cast<StoreInst>(V))
     return SI->getValueOperand()->getType();
   if (auto *CI = dyn_cast<CmpInst>(V))
@@ -959,8 +959,9 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
       continue;
 
     // Cannot combine poison and divisions.
-    if (AnyPoison && (I->isIntDivRem() || I->getOpcode() == Instruction::FDiv ||
-                      I->getOpcode() == Instruction::FRem || isa<CallInst>(I)))
+    // TODO: do some smart analysis of the CallInsts to exclude divide-like
+    // intrinsics/functions only.
+    if (AnyPoison && (I->isIntDivRem() || I->isFPDivRem() || isa<CallInst>(I)))
       return InstructionsState::invalid();
     unsigned InstOpcode = I->getOpcode();
     if (IsBinOp && isa<BinaryOperator>(I)) {
@@ -2419,6 +2420,9 @@ public:
     /// the whole vector (it is mixed with constants or loop invariant values).
     /// Note: This modifies the 'IsUsed' flag, so a cleanUsed() must follow.
     bool shouldBroadcast(Value *Op, unsigned OpIdx, unsigned Lane) {
+      // Small number of loads - try load matching.
+      if (isa<LoadInst>(Op) && getNumLanes() == 2 && getNumOperands() == 2)
+        return false;
       bool OpAPO = getData(OpIdx, Lane).APO;
       bool IsInvariant = L && L->isLoopInvariant(Op);
       unsigned Cnt = 0;
@@ -2545,23 +2549,23 @@ public:
         Value *OpLane0 = getValue(OpIdx, FirstLane);
         // Keep track if we have instructions with all the same opcode on one
         // side.
-        if (isa<LoadInst>(OpLane0))
-          ReorderingModes[OpIdx] = ReorderingMode::Load;
-        else if (auto *OpILane0 = dyn_cast<Instruction>(OpLane0)) {
+        if (auto *OpILane0 = dyn_cast<Instruction>(OpLane0)) {
           // Check if OpLane0 should be broadcast.
           if (shouldBroadcast(OpLane0, OpIdx, FirstLane) ||
               !canBeVectorized(OpILane0, OpIdx, FirstLane))
             ReorderingModes[OpIdx] = ReorderingMode::Splat;
+          else if (isa<LoadInst>(OpILane0))
+            ReorderingModes[OpIdx] = ReorderingMode::Load;
           else
             ReorderingModes[OpIdx] = ReorderingMode::Opcode;
-        } else if (isa<Constant>(OpLane0))
+        } else if (isa<Constant>(OpLane0)) {
           ReorderingModes[OpIdx] = ReorderingMode::Constant;
-        else if (isa<Argument>(OpLane0))
+        } else if (isa<Argument>(OpLane0)) {
           // Our best hope is a Splat. It may save some cost in some cases.
           ReorderingModes[OpIdx] = ReorderingMode::Splat;
-        else
-          // NOTE: This should be unreachable.
-          ReorderingModes[OpIdx] = ReorderingMode::Failed;
+        } else {
+          llvm_unreachable("Unexpected value kind.");
+        }
       }
 
       // Check that we don't have same operands. No need to reorder if operands
@@ -6854,16 +6858,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
         // Check if it is profitable to try vectorizing gathered loads. It is
         // profitable if we have more than 3 consecutive loads or if we have
         // less but all users are vectorized or deleted.
-        bool AllowToVectorize =
-            NumElts >= 3 ||
-            any_of(ValueToGatherNodes.at(Slice.front()),
-                   [=](const TreeEntry *TE) {
-                     return TE->Scalars.size() == 2 &&
-                            ((TE->Scalars.front() == Slice.front() &&
-                              TE->Scalars.back() == Slice.back()) ||
-                             (TE->Scalars.front() == Slice.back() &&
-                              TE->Scalars.back() == Slice.front()));
-                   });
+        bool AllowToVectorize = false;
         // Check if it is profitable to vectorize 2-elements loads.
         if (NumElts == 2) {
           bool IsLegalBroadcastLoad = TTI->isLegalBroadcastLoad(
@@ -6900,6 +6895,19 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
             return true;
           };
           AllowToVectorize = CheckIfAllowed(Slice);
+        } else {
+          AllowToVectorize =
+              (NumElts >= 3 ||
+               any_of(ValueToGatherNodes.at(Slice.front()),
+                      [=](const TreeEntry *TE) {
+                        return TE->Scalars.size() == 2 &&
+                               ((TE->Scalars.front() == Slice.front() &&
+                                 TE->Scalars.back() == Slice.back()) ||
+                                (TE->Scalars.front() == Slice.back() &&
+                                 TE->Scalars.back() == Slice.front()));
+                      })) &&
+              hasFullVectorsOrPowerOf2(*TTI, Slice.front()->getType(),
+                                       Slice.size());
         }
         if (AllowToVectorize) {
           SmallVector<Value *> PointerOps;
@@ -6942,7 +6950,8 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
       }
       // Mark masked gathers candidates as vectorized, if any.
       for (unsigned Cnt : MaskedGatherVectorized) {
-        ArrayRef<LoadInst *> Slice = ArrayRef(Loads).slice(Cnt, NumElts);
+        ArrayRef<LoadInst *> Slice = ArrayRef(Loads).slice(
+            Cnt, std::min<unsigned>(NumElts, Loads.size() - Cnt));
         ArrayRef<Value *> Values(
             reinterpret_cast<Value *const *>(Slice.begin()), Slice.size());
         Results.emplace_back(Values, LoadsState::ScatterVectorize);
@@ -9851,6 +9860,28 @@ void BoUpSLP::transformNodes() {
           // Strided store is more profitable than reverse + consecutive store -
           // transform the node to strided store.
           E.State = TreeEntry::StridedVectorize;
+      } else if (!E.ReorderIndices.empty()) {
+        // Check for interleaved stores.
+        auto IsInterleaveMask = [&, &TTI = *TTI](ArrayRef<int> Mask) {
+          auto *BaseSI = cast<StoreInst>(E.Scalars.front());
+          assert(Mask.size() > 1 && "Expected mask greater than 1 element.");
+          if (Mask.size() < 4)
+            return 0u;
+          for (unsigned Factor : seq<unsigned>(2, Mask.size() / 2 + 1)) {
+            if (ShuffleVectorInst::isInterleaveMask(
+                    Mask, Factor, VecTy->getElementCount().getFixedValue()) &&
+                TTI.isLegalInterleavedAccessType(
+                    VecTy, Factor, BaseSI->getAlign(),
+                    BaseSI->getPointerAddressSpace()))
+              return Factor;
+          }
+
+          return 0u;
+        };
+        SmallVector<int> Mask(E.ReorderIndices.begin(), E.ReorderIndices.end());
+        unsigned InterleaveFactor = IsInterleaveMask(Mask);
+        if (InterleaveFactor != 0)
+          E.setInterleave(InterleaveFactor);
       }
       break;
     }
@@ -11530,10 +11561,19 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       } else {
         assert(E->State == TreeEntry::Vectorize &&
                "Expected either strided or consecutive stores.");
-        TTI::OperandValueInfo OpInfo = getOperandInfo(E->getOperand(0));
-        VecStCost = TTI->getMemoryOpCost(
-            Instruction::Store, VecTy, BaseSI->getAlign(),
-            BaseSI->getPointerAddressSpace(), CostKind, OpInfo);
+        if (unsigned Factor = E->getInterleaveFactor()) {
+          assert(E->ReuseShuffleIndices.empty() && !E->ReorderIndices.empty() &&
+                 "No reused shuffles expected");
+          CommonCost = 0;
+          VecStCost = TTI->getInterleavedMemoryOpCost(
+              Instruction::Store, VecTy, Factor, std::nullopt,
+              BaseSI->getAlign(), BaseSI->getPointerAddressSpace(), CostKind);
+        } else {
+          TTI::OperandValueInfo OpInfo = getOperandInfo(E->getOperand(0));
+          VecStCost = TTI->getMemoryOpCost(
+              Instruction::Store, VecTy, BaseSI->getAlign(),
+              BaseSI->getPointerAddressSpace(), CostKind, OpInfo);
+        }
       }
       return VecStCost + CommonCost;
     };
@@ -12287,6 +12327,13 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
   std::optional<DenseMap<Value *, unsigned>> ValueToExtUses;
   DenseMap<const TreeEntry *, DenseSet<Value *>> ExtractsCount;
   SmallPtrSet<Value *, 4> ScalarOpsFromCasts;
+  // Keep track {Scalar, Index, User} tuple.
+  // On AArch64, this helps in fusing a mov instruction, associated with
+  // extractelement, with fmul in the backend so that extractelement is free.
+  SmallVector<std::tuple<Value *, User *, int>, 4> ScalarUserAndIdx;
+  for (ExternalUser &EU : ExternalUses) {
+    ScalarUserAndIdx.emplace_back(EU.Scalar, EU.User, EU.Lane);
+  }
   for (ExternalUser &EU : ExternalUses) {
     // Uses by ephemeral values are free (because the ephemeral value will be
     // removed prior to code generation, and so the extraction will be
@@ -12399,8 +12446,9 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
       ExtraCost = TTI->getExtractWithExtendCost(Extend, EU.Scalar->getType(),
                                                 VecTy, EU.Lane);
     } else {
-      ExtraCost = TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy,
-                                          CostKind, EU.Lane);
+      ExtraCost =
+          TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy, CostKind,
+                                  EU.Lane, EU.Scalar, ScalarUserAndIdx);
     }
     // Leave the scalar instructions as is if they are cheaper than extracts.
     if (Entry->Idx != 0 || Entry->getOpcode() == Instruction::GetElementPtr ||
@@ -13663,7 +13711,10 @@ Value *BoUpSLP::gather(
     } else {
       Vec = CreateShuffle(Root, Vec, Mask);
       if (auto *OI = dyn_cast<Instruction>(OriginalRoot);
-          OI && OI->hasNUses(0))
+          OI && OI->hasNUses(0) &&
+          none_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+            return TE->VectorizedValue == OI;
+          }))
         eraseInstruction(OI);
     }
   }
