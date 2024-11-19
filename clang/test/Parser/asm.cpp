@@ -10,5 +10,5 @@ int foo6 asm ("" L"bar7"); // expected-error {{cannot use wide string literal in
 
 void f() {
   [[]] asm("");
-  [[gnu::deprecated]] asm(""); // expected-warning {{'deprecated' attribute ignored}}
+  [[gnu::deprecated]] asm(""); // expected-error {{'deprecated' attribute cannot be applied to a statement}}
 }
