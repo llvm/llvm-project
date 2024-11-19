@@ -10,19 +10,84 @@
 #define LLVM_LIBC_SRC___SUPPORT_RPC_RPC_UTIL_H
 
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/sleep.h"
+
+#if defined(__NVPTX__) || defined(__AMDGPU__)
+#include <gpuintrin.h>
+#define RPC_TARGET_IS_GPU
+#endif
 
 namespace LIBC_NAMESPACE_DECL {
 namespace rpc {
 
 /// Conditional to indicate if this process is running on the GPU.
 LIBC_INLINE constexpr bool is_process_gpu() {
-#if defined(__NVPTX__) || defined(__AMDGPU__)
+#ifdef RPC_TARGET_IS_GPU
   return true;
 #else
   return false;
+#endif
+}
+
+/// Wait for all lanes in the group to complete.
+LIBC_INLINE void sync_lane(uint64_t lane_mask) {
+#ifdef RPC_TARGET_IS_GPU
+  return __gpu_sync_lane(lane_mask);
+#endif
+}
+
+/// Copies the value from the first active thread to the rest.
+LIBC_INLINE uint32_t broadcast_value(uint64_t lane_mask, uint32_t x) {
+#ifdef RPC_TARGET_IS_GPU
+  return __gpu_read_first_lane_u32(lane_mask, x);
+#else
+  return x;
+#endif
+}
+
+/// Returns the number lanes that participate in the RPC interface.
+LIBC_INLINE uint32_t get_num_lanes() {
+#ifdef RPC_TARGET_IS_GPU
+  return __gpu_num_lanes();
+#else
+  return 1;
+#endif
+}
+
+/// Returns the id of the thread inside of an AMD wavefront executing together.
+LIBC_INLINE uint64_t get_lane_mask() {
+#ifdef RPC_TARGET_IS_GPU
+  return __gpu_lane_mask();
+#else
+  return 1;
+#endif
+}
+
+/// Returns the id of the thread inside of an AMD wavefront executing together.
+LIBC_INLINE uint32_t get_lane_id() {
+#ifdef RPC_TARGET_IS_GPU
+  return __gpu_lane_id();
+#else
+  return 0;
+#endif
+}
+
+/// Conditional that is only true for a single thread in a lane.
+LIBC_INLINE bool is_first_lane(uint64_t lane_mask) {
+#ifdef RPC_TARGET_IS_GPU
+  return __gpu_is_first_in_lane(lane_mask);
+#else
+  return true;
+#endif
+}
+
+/// Returns a bitmask of threads in the current lane for which \p x is true.
+LIBC_INLINE uint64_t ballot(uint64_t lane_mask, bool x) {
+#ifdef RPC_TARGET_IS_GPU
+  return __gpu_ballot(lane_mask, x);
+#else
+  return x;
 #endif
 }
 
