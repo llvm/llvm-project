@@ -4283,10 +4283,10 @@ let Predicates = [HasSVE2p2orSME2p2] in {
   defm FLOGB_ZPzZ : sve_fp_z2op_p_zd_d_flogb<"flogb">;
 
   // SVE2 integer unary operations, zeroing predicate
-  def URECPE_ZPzZ  : sve2_int_un_pred_arit_z<0b10, 0b00, "urecpe", ZPR32>;
-  def URSQRTE_ZPzZ : sve2_int_un_pred_arit_z<0b10, 0b01, "ursqrte", ZPR32>;
-  defm SQABS_ZPzZ  : sve2_int_un_pred_arit_z<0b10, "sqabs">;
-  defm SQNEG_ZPzZ  : sve2_int_un_pred_arit_z<0b11, "sqneg">;
+  defm URECPE_ZPzZ  : sve2_int_un_pred_arit_z_S<0b00, "urecpe",  int_aarch64_sve_urecpe>;
+  defm URSQRTE_ZPzZ : sve2_int_un_pred_arit_z_S<0b01, "ursqrte", int_aarch64_sve_ursqrte>;
+  defm SQABS_ZPzZ   : sve2_int_un_pred_arit_z<  0b10, "sqabs",   int_aarch64_sve_sqabs>;
+  defm SQNEG_ZPzZ   : sve2_int_un_pred_arit_z<  0b11, "sqneg",   int_aarch64_sve_sqneg>;
 
   // Floating point round to integral fp value in integer size range
   // Merging
