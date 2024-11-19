@@ -2040,9 +2040,9 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(LValue lvalue,
                           lvalue.getTBAAInfo(), lvalue.isNontemporal());
 }
 
-static bool getRangeForType(CodeGenFunction &CGF, QualType Ty,
-                            llvm::APInt &Min, llvm::APInt &End,
-                            bool StrictEnums, bool IsBool) {
+static bool getRangeForType(CodeGenFunction &CGF, QualType Ty, llvm::APInt &Min,
+                            llvm::APInt &End, bool StrictEnums, bool StrictBool,
+                            bool IsBool) {
   const auto *ED = Ty->getAsEnumDecl();
   bool IsRegularCPlusPlusEnum =
       CGF.getLangOpts().CPlusPlus && StrictEnums && ED && !ED->isFixed();
@@ -2050,6 +2050,8 @@ static bool getRangeForType(CodeGenFunction &CGF, QualType Ty,
     return false;
 
   if (IsBool) {
+    if (!StrictBool)
+      return false;
     Min = llvm::APInt(CGF.getContext().getTypeSize(Ty), 0);
     End = llvm::APInt(CGF.getContext().getTypeSize(Ty), 2);
   } else {
@@ -2060,7 +2062,10 @@ static bool getRangeForType(CodeGenFunction &CGF, QualType Ty,
 
 llvm::MDNode *CodeGenFunction::getRangeForLoadFromType(QualType Ty) {
   llvm::APInt Min, End;
+  bool IsStrictBool =
+      CGM.getCodeGenOpts().getLoadBoolFromMem() == CodeGenOptions::Strict;
   if (!getRangeForType(*this, Ty, Min, End, CGM.getCodeGenOpts().StrictEnums,
+                       IsStrictBool,
                        Ty->hasBooleanRepresentation() && !Ty->isVectorType()))
     return nullptr;
 
@@ -2108,7 +2113,8 @@ bool CodeGenFunction::EmitScalarRangeCheck(llvm::Value *Value, QualType Ty,
     return false;
 
   llvm::APInt Min, End;
-  if (!getRangeForType(*this, Ty, Min, End, /*StrictEnums=*/true, IsBool))
+  if (!getRangeForType(*this, Ty, Min, End, /*StrictEnums=*/true,
+                       /*StrictBool=*/true, IsBool))
     return true;
 
   SanitizerKind::SanitizerOrdinal Kind =
@@ -2258,8 +2264,14 @@ llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
 
   llvm::Type *ResTy = ConvertType(Ty);
   if (Ty->hasBooleanRepresentation() || Ty->isBitIntType() ||
-      Ty->isExtVectorBoolType())
-    return Builder.CreateTrunc(Value, ResTy, "loadedv");
+      Ty->isExtVectorBoolType()) {
+    if (CGM.getCodeGenOpts().getLoadBoolFromMem() == CodeGenOptions::NonZero) {
+      auto *NonZero = Builder.CreateICmpNE(
+          Value, llvm::Constant::getNullValue(Value->getType()), "loadedv.nz");
+      return Builder.CreateIntCast(NonZero, ResTy, false, "loadedv");
+    } else
+      return Builder.CreateTrunc(Value, ResTy, "loadedv");
+  }
 
   return Value;
 }

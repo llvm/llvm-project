@@ -4243,6 +4243,27 @@ def fno_debug_macro : Flag<["-"], "fno-debug-macro">, Group<f_Group>,
 def fstrict_aliasing : Flag<["-"], "fstrict-aliasing">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, DXCOption]>,
   HelpText<"Enable optimizations based on strict aliasing rules">;
+def fstrict_bool : Flag<["-"], "fstrict-bool">, Group<f_Group>,
+  Visibility<[ClangOption]>,
+  HelpText<"Enable optimizations based on bool bit patterns never being "
+    "anything other than 0 or 1">;
+def fno_strict_bool : Flag<["-"], "fno-strict-bool">, Group<f_Group>,
+  Visibility<[ClangOption]>,
+  HelpText<"Disable optimizations based on bool bit patterns never being "
+    "anything other than 0 or 1">;
+def fno_strict_bool_EQ : Joined<["-"], "fno-strict-bool=">, Group<f_Group>,
+  Visibility<[ClangOption]>,
+  HelpText<"Disable optimizations based on bool bit patterns never being "
+    "anything other than 0 or 1, specifying a conversion behavior.">,
+  Values<"truncate,nonzero">;
+def load_bool_from_mem : Joined<["-"], "load-bool-from-mem=">, Group<f_Group>,
+  Visibility<[CC1Option]>,
+  HelpText<"Specify how to convert a multi-bit bool loaded from memory to a "
+    "1-bit value">,
+  NormalizedValuesScope<"CodeGenOptions::BoolFromMem">,
+  Values<"strict,nonstrict,truncate,nonzero">,
+  NormalizedValues<["Strict", "NonStrictDefault", "Truncate", "NonZero"]>,
+  MarshallingInfoEnum<CodeGenOpts<"LoadBoolFromMem">, "Strict">;
 def fstrict_enums : Flag<["-"], "fstrict-enums">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Enable optimizations based on the strict definition of an enum's "
