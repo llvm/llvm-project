@@ -26,7 +26,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SpillPlacement.h"
+#include "llvm/CodeGen/SpillPlacement.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/EdgeBundles.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -193,8 +193,7 @@ bool SpillPlacementWrapperLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto *Bundles = &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
   auto *MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
 
-  Impl.reset(new SpillPlacement(Bundles, MBFI));
-  Impl->run(MF);
+  Impl.run(MF, Bundles, MBFI);
   return false;
 }
 
@@ -205,8 +204,8 @@ SpillPlacementAnalysis::run(MachineFunction &MF,
                             MachineFunctionAnalysisManager &MFAM) {
   auto *Bundles = &MFAM.getResult<EdgeBundlesAnalysis>(MF);
   auto *MBFI = &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
-  SpillPlacement Impl(Bundles, MBFI);
-  Impl.run(MF);
+  SpillPlacement Impl;
+  Impl.run(MF, Bundles, MBFI);
   return Impl;
 }
 
@@ -214,8 +213,8 @@ bool SpillPlacementAnalysis::Result::invalidate(
     MachineFunction &MF, const PreservedAnalyses &PA,
     MachineFunctionAnalysisManager::Invalidator &Inv) {
   auto PAC = PA.getChecker<SpillPlacementAnalysis>();
-  return !(PAC.preserved() ||
-           PAC.preservedSet<AllAnalysesOn<MachineFunction>>()) ||
+  return (!PAC.preserved() &&
+          !PAC.preservedSet<AllAnalysesOn<MachineFunction>>()) ||
          Inv.invalidate<EdgeBundlesAnalysis>(MF, PA) ||
          Inv.invalidate<MachineBlockFrequencyAnalysis>(MF, PA);
 }
@@ -225,8 +224,11 @@ void SpillPlacement::arrayDeleter(Node *N) {
     delete[] N;
 }
 
-void SpillPlacement::run(MachineFunction &mf) {
+void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
+                         MachineBlockFrequencyInfo *MBFI) {
   MF = &mf;
+  this->bundles = Bundles;
+  this->MBFI = MBFI;
 
   assert(!nodes && "Leaking node array");
   nodes.reset(new Node[bundles->getNumBundles()]);
@@ -248,7 +250,7 @@ void SpillPlacement::activate(unsigned n) {
   if (ActiveNodes->test(n))
     return;
   ActiveNodes->set(n);
-  nodes.get()[n].clear(Threshold);
+  nodes[n].clear(Threshold);
 
   // Very large bundles usually come from big switches, indirect branches,
   // landing pads, or loops with many 'continue' statements. It is difficult to
@@ -260,10 +262,10 @@ void SpillPlacement::activate(unsigned n) {
   // limiting the number of blocks visited and the number of links in the
   // Hopfield network.
   if (bundles->getBlocks(n).size() > 100) {
-    nodes.get()[n].BiasP = BlockFrequency(0);
+    nodes[n].BiasP = BlockFrequency(0);
     BlockFrequency BiasN = MBFI->getEntryFreq();
     BiasN >>= 4;
-    nodes.get()[n].BiasN = BiasN;
+    nodes[n].BiasN = BiasN;
   }
 }
 
@@ -290,14 +292,14 @@ void SpillPlacement::addConstraints(ArrayRef<BlockConstraint> LiveBlocks) {
     if (LB.Entry != DontCare) {
       unsigned ib = bundles->getBundle(LB.Number, false);
       activate(ib);
-      nodes.get()[ib].addBias(Freq, LB.Entry);
+      nodes[ib].addBias(Freq, LB.Entry);
     }
 
     // Live-out from block?
     if (LB.Exit != DontCare) {
       unsigned ob = bundles->getBundle(LB.Number, true);
       activate(ob);
-      nodes.get()[ob].addBias(Freq, LB.Exit);
+      nodes[ob].addBias(Freq, LB.Exit);
     }
   }
 }
@@ -312,8 +314,8 @@ void SpillPlacement::addPrefSpill(ArrayRef<unsigned> Blocks, bool Strong) {
     unsigned ob = bundles->getBundle(B, true);
     activate(ib);
     activate(ob);
-    nodes.get()[ib].addBias(Freq, PrefSpill);
-    nodes.get()[ob].addBias(Freq, PrefSpill);
+    nodes[ib].addBias(Freq, PrefSpill);
+    nodes[ob].addBias(Freq, PrefSpill);
   }
 }
 
@@ -328,8 +330,8 @@ void SpillPlacement::addLinks(ArrayRef<unsigned> Links) {
     activate(ib);
     activate(ob);
     BlockFrequency Freq = BlockFrequencies[Number];
-    nodes.get()[ib].addLink(ob, Freq);
-    nodes.get()[ob].addLink(ib, Freq);
+    nodes[ib].addLink(ob, Freq);
+    nodes[ob].addLink(ib, Freq);
   }
 }
 
@@ -339,18 +341,18 @@ bool SpillPlacement::scanActiveBundles() {
     update(n);
     // A node that must spill, or a node without any links is not going to
     // change its value ever again, so exclude it from iterations.
-    if (nodes.get()[n].mustSpill())
+    if (nodes[n].mustSpill())
       continue;
-    if (nodes.get()[n].preferReg())
+    if (nodes[n].preferReg())
       RecentPositive.push_back(n);
   }
   return !RecentPositive.empty();
 }
 
 bool SpillPlacement::update(unsigned n) {
-  if (!nodes.get()[n].update(nodes.get(), Threshold))
+  if (!nodes[n].update(nodes.get(), Threshold))
     return false;
-  nodes.get()[n].getDissentingNeighbors(TodoList, nodes.get());
+  nodes[n].getDissentingNeighbors(TodoList, nodes.get());
   return true;
 }
 
@@ -370,7 +372,7 @@ void SpillPlacement::iterate() {
     unsigned n = TodoList.pop_back_val();
     if (!update(n))
       continue;
-    if (nodes.get()[n].preferReg())
+    if (nodes[n].preferReg())
       RecentPositive.push_back(n);
   }
 }
@@ -391,7 +393,7 @@ SpillPlacement::finish() {
   // Write preferences back to ActiveNodes.
   bool Perfect = true;
   for (unsigned n : ActiveNodes->set_bits())
-    if (!nodes.get()[n].preferReg()) {
+    if (!nodes[n].preferReg()) {
       ActiveNodes->reset(n);
       Perfect = false;
     }

@@ -112,6 +112,7 @@ MACHINE_FUNCTION_ANALYSIS("machine-post-dom-tree",
                           MachinePostDominatorTreeAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-trace-metrics", MachineTraceMetricsAnalysis())
 MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
+MACHINE_FUNCTION_ANALYSIS("spill-code-placement", SpillPlacementAnalysis())
 MACHINE_FUNCTION_ANALYSIS("slot-indexes", SlotIndexesAnalysis())
 MACHINE_FUNCTION_ANALYSIS("virtregmap", VirtRegMapAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("live-stacks", LiveStacksPass())

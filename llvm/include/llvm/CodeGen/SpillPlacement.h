@@ -53,7 +53,7 @@ class SpillPlacement {
   const MachineBlockFrequencyInfo *MBFI = nullptr;
 
   static void arrayDeleter(Node *N);
-  std::unique_ptr<Node, decltype(&arrayDeleter)> nodes;
+  std::unique_ptr<Node[], decltype(&arrayDeleter)> nodes;
 
   // Nodes that are active in the current computation. Owned by the prepare()
   // caller.
@@ -162,10 +162,15 @@ public:
                   MachineFunctionAnalysisManager::Invalidator &Inv);
 
 private:
-  SpillPlacement(EdgeBundles *Bundles, MachineBlockFrequencyInfo *MBFI)
-      : bundles(Bundles), MBFI(MBFI), nodes(nullptr, &arrayDeleter) {}
+  SpillPlacement() : nodes(nullptr, &arrayDeleter) {};
 
-  void run(MachineFunction &MF);
+  void releaseMemory() {
+    nodes.reset();
+    TodoList.clear();
+  }
+
+  void run(MachineFunction &MF, EdgeBundles *Bundles,
+           MachineBlockFrequencyInfo *MBFI);
   void activate(unsigned n);
   void setThreshold(BlockFrequency Entry);
 
@@ -177,14 +182,14 @@ public:
   static char ID;
   SpillPlacementWrapperLegacy() : MachineFunctionPass(ID) {}
 
-  SpillPlacement &getResult() { return *Impl; }
-  const SpillPlacement &getResult() const { return *Impl; }
+  SpillPlacement &getResult() { return Impl; }
+  const SpillPlacement &getResult() const { return Impl; }
 
 private:
-  std::unique_ptr<SpillPlacement> Impl;
+  SpillPlacement Impl;
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
-  void releaseMemory() override { Impl.reset(); }
+  void releaseMemory() override { Impl.releaseMemory(); }
 };
 
 class SpillPlacementAnalysis
