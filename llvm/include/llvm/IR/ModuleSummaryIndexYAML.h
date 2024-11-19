@@ -275,7 +275,7 @@ template <> struct CustomMappingTraits<TypeIdSummaryMapTy> {
   }
   static void output(IO &io, TypeIdSummaryMapTy &V) {
     for (auto &TidIter : V)
-      io.mapRequired(TidIter.second.first.c_str(), TidIter.second.second);
+      io.mapRequired(TidIter.second.first.str().c_str(), TidIter.second.second);
   }
 };
 
