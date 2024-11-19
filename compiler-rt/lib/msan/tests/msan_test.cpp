@@ -4891,7 +4891,7 @@ TEST(MemorySanitizer, timer_create) {
   EXPECT_NOT_POISONED(timer);
 
   // Make sure the timer is usable.
-  struct itimerspec cur_value{};
+  struct itimerspec cur_value {};
   cur_value.it_value.tv_sec = 1;
   EXPECT_EQ(0, timer_settime(timer, 0, &cur_value, nullptr));
 
