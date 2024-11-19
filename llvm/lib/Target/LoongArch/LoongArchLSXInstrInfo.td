@@ -67,8 +67,7 @@ class VecCond<SDPatternOperator OpNode, ValueType TyNode,
   let usesCustomInserter = 1;
 }
 
-def vsplat_imm_eq_1 : PatFrags<(ops), [(build_vector),
-                                       (bitconvert (v4i32 (build_vector)))], [{
+def vsplat_imm_eq_1 : PatFrags<(ops), [(build_vector)], [{
   APInt Imm;
   EVT EltTy = N->getValueType(0).getVectorElementType();
 
@@ -109,8 +108,7 @@ def vsplati32_imm_eq_31 : PatFrags<(ops), [(build_vector)], [{
   return selectVSplat(N, Imm, EltTy.getSizeInBits()) &&
          Imm.getBitWidth() == EltTy.getSizeInBits() && Imm == 31;
 }]>;
-def vsplati64_imm_eq_63 : PatFrags<(ops), [(build_vector),
-                                           (bitconvert (v4i32 (build_vector)))], [{
+def vsplati64_imm_eq_63 : PatFrags<(ops), [(build_vector)], [{
   APInt Imm;
   EVT EltTy = N->getValueType(0).getVectorElementType();
 
