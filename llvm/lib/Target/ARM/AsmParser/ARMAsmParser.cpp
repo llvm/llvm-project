@@ -9053,10 +9053,11 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     TmpInst.setOpcode(Inst.getOpcode() == ARM::t2LDR_PRE_imm ? ARM::t2LDR_PRE
                                                              : ARM::t2LDR_POST);
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
-    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn_wb
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
   }
@@ -9093,10 +9094,11 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
                           ? ARM::t2LDRB_PRE
                           : ARM::t2LDRB_POST);
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
-    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn_wb
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
   }
@@ -9117,11 +9119,12 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     TmpInst.setOpcode(Inst.getOpcode() == ARM::t2STRB_PRE_imm
                           ? ARM::t2STRB_PRE
                           : ARM::t2STRB_POST);
-    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn_wb
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
   }
@@ -9143,10 +9146,11 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
                           ? ARM::t2LDRH_PRE
                           : ARM::t2LDRH_POST);
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
-    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn_wb
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
   }
@@ -9167,11 +9171,12 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     TmpInst.setOpcode(Inst.getOpcode() == ARM::t2STRH_PRE_imm
                           ? ARM::t2STRH_PRE
                           : ARM::t2STRH_POST);
-    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn_wb
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
   }
@@ -9193,10 +9198,11 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
                           ? ARM::t2LDRSB_PRE
                           : ARM::t2LDRSB_POST);
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
-    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn_wb
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
   }
@@ -9218,10 +9224,11 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
                           ? ARM::t2LDRSH_PRE
                           : ARM::t2LDRSH_POST);
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
-    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn_wb
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
   }
