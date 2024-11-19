@@ -893,6 +893,12 @@ public:
     }
     return false;
   }
+  bool isPAuth(MCInst &Inst) const override {
+    return Inst.getOpcode() == AArch64::AUTIASP;
+  }
+  bool isPSign(MCInst &Inst) const override {
+    return Inst.getOpcode() == AArch64::PACIASP;
+  }
 
   bool isRegToRegMove(const MCInst &Inst, MCPhysReg &From,
                       MCPhysReg &To) const override {
