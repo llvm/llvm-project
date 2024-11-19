@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cerrno>
+#include <chrono>
 #include <csignal>
 #include <ctime>
 #include <fcntl.h>
@@ -68,6 +69,30 @@ static void SignalHandler(int signo, siginfo_t *info, void *) {
   (void)bytes_written;
 }
 
+class ToTimeSpec {
+public:
+  explicit ToTimeSpec(std::optional<MainLoopPosix::TimePoint> point) {
+    using namespace std::chrono;
+
+    if (!point) {
+      m_ts_ptr = nullptr;
+      return;
+    }
+    nanoseconds dur = std::max(*point - steady_clock::now(), nanoseconds(0));
+    m_ts_ptr = &m_ts;
+    m_ts.tv_sec = duration_cast<seconds>(dur).count();
+    m_ts.tv_nsec = (dur % seconds(1)).count();
+  }
+  ToTimeSpec(const ToTimeSpec &) = delete;
+  ToTimeSpec &operator=(const ToTimeSpec &) = delete;
+
+  operator struct timespec *() { return m_ts_ptr; }
+
+private:
+  struct timespec m_ts;
+  struct timespec *m_ts_ptr;
+};
+
 class MainLoopPosix::RunImpl {
 public:
   RunImpl(MainLoopPosix &loop);
@@ -100,8 +125,9 @@ Status MainLoopPosix::RunImpl::Poll() {
   for (auto &fd : loop.m_read_fds)
     EV_SET(&in_events[i++], fd.first, EVFILT_READ, EV_ADD, 0, 0, 0);
 
-  num_events = kevent(loop.m_kqueue, in_events.data(), in_events.size(),
-                      out_events, std::size(out_events), nullptr);
+  num_events =
+      kevent(loop.m_kqueue, in_events.data(), in_events.size(), out_events,
+             std::size(out_events), ToTimeSpec(loop.GetNextWakeupTime()));
 
   if (num_events < 0) {
     if (errno == EINTR) {
@@ -145,7 +171,7 @@ Status MainLoopPosix::RunImpl::Poll() {
   }
 
   if (ppoll(read_fds.data(), read_fds.size(),
-            /*timeout=*/nullptr,
+            ToTimeSpec(loop.GetNextWakeupTime()),
             /*sigmask=*/nullptr) == -1 &&
       errno != EINTR)
     return Status(errno, eErrorTypePOSIX);
@@ -166,27 +192,28 @@ void MainLoopPosix::RunImpl::ProcessReadEvents() {
 }
 #endif
 
-MainLoopPosix::MainLoopPosix() : m_triggering(false) {
-  Status error = m_trigger_pipe.CreateNew(/*child_process_inherit=*/false);
+MainLoopPosix::MainLoopPosix() {
+  Status error = m_interrupt_pipe.CreateNew(/*child_process_inherit=*/false);
   assert(error.Success());
 
   // Make the write end of the pipe non-blocking.
-  int result = fcntl(m_trigger_pipe.GetWriteFileDescriptor(), F_SETFL,
-                     fcntl(m_trigger_pipe.GetWriteFileDescriptor(), F_GETFL) |
+  int result = fcntl(m_interrupt_pipe.GetWriteFileDescriptor(), F_SETFL,
+                     fcntl(m_interrupt_pipe.GetWriteFileDescriptor(), F_GETFL) |
                          O_NONBLOCK);
   assert(result == 0);
   UNUSED_IF_ASSERT_DISABLED(result);
 
-  const int trigger_pipe_fd = m_trigger_pipe.GetReadFileDescriptor();
-  m_read_fds.insert({trigger_pipe_fd, [trigger_pipe_fd](MainLoopBase &loop) {
-                       char c;
-                       ssize_t bytes_read = llvm::sys::RetryAfterSignal(
-                           -1, ::read, trigger_pipe_fd, &c, 1);
-                       assert(bytes_read == 1);
-                       UNUSED_IF_ASSERT_DISABLED(bytes_read);
-                       // NB: This implicitly causes another loop iteration
-                       // and therefore the execution of pending callbacks.
-                     }});
+  const int interrupt_pipe_fd = m_interrupt_pipe.GetReadFileDescriptor();
+  m_read_fds.insert(
+      {interrupt_pipe_fd, [interrupt_pipe_fd](MainLoopBase &loop) {
+         char c;
+         ssize_t bytes_read =
+             llvm::sys::RetryAfterSignal(-1, ::read, interrupt_pipe_fd, &c, 1);
+         assert(bytes_read == 1);
+         UNUSED_IF_ASSERT_DISABLED(bytes_read);
+         // NB: This implicitly causes another loop iteration
+         // and therefore the execution of pending callbacks.
+       }});
 #if HAVE_SYS_EVENT_H
   m_kqueue = kqueue();
   assert(m_kqueue >= 0);
@@ -197,8 +224,8 @@ MainLoopPosix::~MainLoopPosix() {
 #if HAVE_SYS_EVENT_H
   close(m_kqueue);
 #endif
-  m_read_fds.erase(m_trigger_pipe.GetReadFileDescriptor());
-  m_trigger_pipe.Close();
+  m_read_fds.erase(m_interrupt_pipe.GetReadFileDescriptor());
+  m_interrupt_pipe.Close();
   assert(m_read_fds.size() == 0); 
   assert(m_signals.size() == 0);
 }
@@ -245,11 +272,9 @@ MainLoopPosix::RegisterSignal(int signo, const Callback &callback,
   sigset_t old_set;
 
   // Set signal info before installing the signal handler!
-  g_signal_info[signo].pipe_fd = m_trigger_pipe.GetWriteFileDescriptor();
+  g_signal_info[signo].pipe_fd = m_interrupt_pipe.GetWriteFileDescriptor();
   g_signal_info[signo].flag = 0;
 
-  // Even if using kqueue, the signal handler will still be invoked, so it's
-  // important to replace it with our "benign" handler.
   int ret = sigaction(signo, &new_action, &info.old_action);
   UNUSED_IF_ASSERT_DISABLED(ret);
   assert(ret == 0 && "sigaction failed");
@@ -308,8 +333,8 @@ Status MainLoopPosix::Run() {
 
     ProcessSignals();
 
-    m_triggering = false;
-    ProcessPendingCallbacks();
+    m_interrupting = false;
+    ProcessCallbacks();
   }
   return Status();
 }
@@ -347,13 +372,13 @@ void MainLoopPosix::ProcessSignal(int signo) {
   }
 }
 
-void MainLoopPosix::TriggerPendingCallbacks() {
-  if (m_triggering.exchange(true))
+void MainLoopPosix::Interrupt() {
+  if (m_interrupting.exchange(true))
     return;
 
   char c = '.';
   size_t bytes_written;
-  Status error = m_trigger_pipe.Write(&c, 1, bytes_written);
+  Status error = m_interrupt_pipe.Write(&c, 1, bytes_written);
   assert(error.Success());
   UNUSED_IF_ASSERT_DISABLED(error);
   assert(bytes_written == 1);
