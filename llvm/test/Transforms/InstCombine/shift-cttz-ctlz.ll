@@ -21,7 +21,7 @@ define i32 @shl_cttz_false_noundef(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @shl_cttz_false_noundef(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CTTZ:%.*]] = call noundef range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[Y]], i1 true)
+; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[Y]], i1 true)
 ; CHECK-NEXT:    [[RES:%.*]] = shl i32 [[X]], [[CTTZ]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
