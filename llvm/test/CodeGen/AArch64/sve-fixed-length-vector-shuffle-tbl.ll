@@ -140,64 +140,52 @@ define <8 x i8> @shuffle_index_indices_from_both_ops(ptr %a, ptr %b) {
 ;
 ; SVE2_128_NOMAX-LABEL: shuffle_index_indices_from_both_ops:
 ; SVE2_128_NOMAX:       // %bb.0:
-; SVE2_128_NOMAX-NEXT:    ldr d0, [x1]
-; SVE2_128_NOMAX-NEXT:    ldr d1, [x0]
-; SVE2_128_NOMAX-NEXT:    mov z2.b, z0.b[3]
-; SVE2_128_NOMAX-NEXT:    mov z3.b, z0.b[2]
-; SVE2_128_NOMAX-NEXT:    mov z4.b, z0.b[1]
-; SVE2_128_NOMAX-NEXT:    mov z1.b, z1.b[1]
-; SVE2_128_NOMAX-NEXT:    mov z5.b, z0.b[7]
-; SVE2_128_NOMAX-NEXT:    mov z6.b, z0.b[6]
-; SVE2_128_NOMAX-NEXT:    mov z0.b, z0.b[4]
-; SVE2_128_NOMAX-NEXT:    zip1 z2.b, z3.b, z2.b
-; SVE2_128_NOMAX-NEXT:    zip1 z1.b, z1.b, z4.b
-; SVE2_128_NOMAX-NEXT:    zip1 z3.b, z6.b, z5.b
-; SVE2_128_NOMAX-NEXT:    zip1 z0.b, z0.b, z0.b
-; SVE2_128_NOMAX-NEXT:    zip1 z1.h, z1.h, z2.h
-; SVE2_128_NOMAX-NEXT:    zip1 z0.h, z0.h, z3.h
-; SVE2_128_NOMAX-NEXT:    zip1 z0.s, z1.s, z0.s
+; SVE2_128_NOMAX-NEXT:    ldr d0, [x0]
+; SVE2_128_NOMAX-NEXT:    ldr d1, [x1]
+; SVE2_128_NOMAX-NEXT:    mov z2.b, z1.b[4]
+; SVE2_128_NOMAX-NEXT:    mov z3.b, z1.b[1]
+; SVE2_128_NOMAX-NEXT:    mov z0.b, z0.b[1]
+; SVE2_128_NOMAX-NEXT:    mov z4.h, z1.h[3]
+; SVE2_128_NOMAX-NEXT:    mov z1.h, z1.h[1]
+; SVE2_128_NOMAX-NEXT:    zip1 z2.b, z2.b, z2.b
+; SVE2_128_NOMAX-NEXT:    zip1 z0.b, z0.b, z3.b
+; SVE2_128_NOMAX-NEXT:    zip1 z2.h, z2.h, z4.h
+; SVE2_128_NOMAX-NEXT:    zip1 z0.h, z0.h, z1.h
+; SVE2_128_NOMAX-NEXT:    zip1 z0.s, z0.s, z2.s
 ; SVE2_128_NOMAX-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_128_NOMAX-NEXT:    ret
 ;
 ; SVE2_NOMIN_NOMAX-LABEL: shuffle_index_indices_from_both_ops:
 ; SVE2_NOMIN_NOMAX:       // %bb.0:
-; SVE2_NOMIN_NOMAX-NEXT:    ldr d0, [x1]
-; SVE2_NOMIN_NOMAX-NEXT:    ldr d1, [x0]
-; SVE2_NOMIN_NOMAX-NEXT:    mov z2.b, z0.b[3]
-; SVE2_NOMIN_NOMAX-NEXT:    mov z3.b, z0.b[2]
-; SVE2_NOMIN_NOMAX-NEXT:    mov z4.b, z0.b[1]
-; SVE2_NOMIN_NOMAX-NEXT:    mov z1.b, z1.b[1]
-; SVE2_NOMIN_NOMAX-NEXT:    mov z5.b, z0.b[7]
-; SVE2_NOMIN_NOMAX-NEXT:    mov z6.b, z0.b[6]
-; SVE2_NOMIN_NOMAX-NEXT:    mov z0.b, z0.b[4]
-; SVE2_NOMIN_NOMAX-NEXT:    zip1 z2.b, z3.b, z2.b
-; SVE2_NOMIN_NOMAX-NEXT:    zip1 z1.b, z1.b, z4.b
-; SVE2_NOMIN_NOMAX-NEXT:    zip1 z3.b, z6.b, z5.b
-; SVE2_NOMIN_NOMAX-NEXT:    zip1 z0.b, z0.b, z0.b
-; SVE2_NOMIN_NOMAX-NEXT:    zip1 z1.h, z1.h, z2.h
-; SVE2_NOMIN_NOMAX-NEXT:    zip1 z0.h, z0.h, z3.h
-; SVE2_NOMIN_NOMAX-NEXT:    zip1 z0.s, z1.s, z0.s
+; SVE2_NOMIN_NOMAX-NEXT:    ldr d0, [x0]
+; SVE2_NOMIN_NOMAX-NEXT:    ldr d1, [x1]
+; SVE2_NOMIN_NOMAX-NEXT:    mov z2.b, z1.b[4]
+; SVE2_NOMIN_NOMAX-NEXT:    mov z3.b, z1.b[1]
+; SVE2_NOMIN_NOMAX-NEXT:    mov z0.b, z0.b[1]
+; SVE2_NOMIN_NOMAX-NEXT:    mov z4.h, z1.h[3]
+; SVE2_NOMIN_NOMAX-NEXT:    mov z1.h, z1.h[1]
+; SVE2_NOMIN_NOMAX-NEXT:    zip1 z2.b, z2.b, z2.b
+; SVE2_NOMIN_NOMAX-NEXT:    zip1 z0.b, z0.b, z3.b
+; SVE2_NOMIN_NOMAX-NEXT:    zip1 z2.h, z2.h, z4.h
+; SVE2_NOMIN_NOMAX-NEXT:    zip1 z0.h, z0.h, z1.h
+; SVE2_NOMIN_NOMAX-NEXT:    zip1 z0.s, z0.s, z2.s
 ; SVE2_NOMIN_NOMAX-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_NOMIN_NOMAX-NEXT:    ret
 ;
 ; SVE2_MIN_256_NOMAX-LABEL: shuffle_index_indices_from_both_ops:
 ; SVE2_MIN_256_NOMAX:       // %bb.0:
-; SVE2_MIN_256_NOMAX-NEXT:    ldr d0, [x1]
-; SVE2_MIN_256_NOMAX-NEXT:    ldr d1, [x0]
-; SVE2_MIN_256_NOMAX-NEXT:    mov z2.b, z0.b[3]
-; SVE2_MIN_256_NOMAX-NEXT:    mov z3.b, z0.b[2]
-; SVE2_MIN_256_NOMAX-NEXT:    mov z4.b, z0.b[1]
-; SVE2_MIN_256_NOMAX-NEXT:    mov z1.b, z1.b[1]
-; SVE2_MIN_256_NOMAX-NEXT:    mov z5.b, z0.b[7]
-; SVE2_MIN_256_NOMAX-NEXT:    mov z6.b, z0.b[6]
-; SVE2_MIN_256_NOMAX-NEXT:    mov z0.b, z0.b[4]
-; SVE2_MIN_256_NOMAX-NEXT:    zip1 z2.b, z3.b, z2.b
-; SVE2_MIN_256_NOMAX-NEXT:    zip1 z1.b, z1.b, z4.b
-; SVE2_MIN_256_NOMAX-NEXT:    zip1 z3.b, z6.b, z5.b
-; SVE2_MIN_256_NOMAX-NEXT:    zip1 z0.b, z0.b, z0.b
-; SVE2_MIN_256_NOMAX-NEXT:    zip1 z1.h, z1.h, z2.h
-; SVE2_MIN_256_NOMAX-NEXT:    zip1 z0.h, z0.h, z3.h
-; SVE2_MIN_256_NOMAX-NEXT:    zip1 z0.s, z1.s, z0.s
+; SVE2_MIN_256_NOMAX-NEXT:    ldr d0, [x0]
+; SVE2_MIN_256_NOMAX-NEXT:    ldr d1, [x1]
+; SVE2_MIN_256_NOMAX-NEXT:    mov z2.b, z1.b[4]
+; SVE2_MIN_256_NOMAX-NEXT:    mov z3.b, z1.b[1]
+; SVE2_MIN_256_NOMAX-NEXT:    mov z0.b, z0.b[1]
+; SVE2_MIN_256_NOMAX-NEXT:    mov z4.h, z1.h[3]
+; SVE2_MIN_256_NOMAX-NEXT:    mov z1.h, z1.h[1]
+; SVE2_MIN_256_NOMAX-NEXT:    zip1 z2.b, z2.b, z2.b
+; SVE2_MIN_256_NOMAX-NEXT:    zip1 z0.b, z0.b, z3.b
+; SVE2_MIN_256_NOMAX-NEXT:    zip1 z2.h, z2.h, z4.h
+; SVE2_MIN_256_NOMAX-NEXT:    zip1 z0.h, z0.h, z1.h
+; SVE2_MIN_256_NOMAX-NEXT:    zip1 z0.s, z0.s, z2.s
 ; SVE2_MIN_256_NOMAX-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_MIN_256_NOMAX-NEXT:    ret
   %op1 = load <8 x i8>, ptr %a
@@ -230,58 +218,52 @@ define <8 x i8> @shuffle_index_poison_value(ptr %a, ptr %b) {
 ;
 ; SVE2_128_NOMAX-LABEL: shuffle_index_poison_value:
 ; SVE2_128_NOMAX:       // %bb.0:
-; SVE2_128_NOMAX-NEXT:    ldr d0, [x1]
-; SVE2_128_NOMAX-NEXT:    ldr d1, [x0]
-; SVE2_128_NOMAX-NEXT:    mov z2.b, z0.b[3]
-; SVE2_128_NOMAX-NEXT:    mov z3.b, z0.b[2]
-; SVE2_128_NOMAX-NEXT:    mov z4.b, z0.b[1]
-; SVE2_128_NOMAX-NEXT:    mov z1.b, z1.b[1]
-; SVE2_128_NOMAX-NEXT:    mov z5.b, z0.b[4]
-; SVE2_128_NOMAX-NEXT:    mov z0.b, z0.b[6]
-; SVE2_128_NOMAX-NEXT:    zip1 z2.b, z3.b, z2.b
-; SVE2_128_NOMAX-NEXT:    zip1 z1.b, z1.b, z4.b
-; SVE2_128_NOMAX-NEXT:    zip1 z3.b, z5.b, z5.b
-; SVE2_128_NOMAX-NEXT:    zip1 z1.h, z1.h, z2.h
-; SVE2_128_NOMAX-NEXT:    zip1 z0.h, z3.h, z0.h
-; SVE2_128_NOMAX-NEXT:    zip1 z0.s, z1.s, z0.s
+; SVE2_128_NOMAX-NEXT:    ldr d0, [x0]
+; SVE2_128_NOMAX-NEXT:    ldr d1, [x1]
+; SVE2_128_NOMAX-NEXT:    mov z2.b, z1.b[4]
+; SVE2_128_NOMAX-NEXT:    mov z3.b, z1.b[1]
+; SVE2_128_NOMAX-NEXT:    mov z0.b, z0.b[1]
+; SVE2_128_NOMAX-NEXT:    mov z4.b, z1.b[6]
+; SVE2_128_NOMAX-NEXT:    mov z1.h, z1.h[1]
+; SVE2_128_NOMAX-NEXT:    zip1 z2.b, z2.b, z2.b
+; SVE2_128_NOMAX-NEXT:    zip1 z0.b, z0.b, z3.b
+; SVE2_128_NOMAX-NEXT:    zip1 z2.h, z2.h, z4.h
+; SVE2_128_NOMAX-NEXT:    zip1 z0.h, z0.h, z1.h
+; SVE2_128_NOMAX-NEXT:    zip1 z0.s, z0.s, z2.s
 ; SVE2_128_NOMAX-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_128_NOMAX-NEXT:    ret
 ;
 ; SVE2_NOMIN_NOMAX-LABEL: shuffle_index_poison_value:
 ; SVE2_NOMIN_NOMAX:       // %bb.0:
-; SVE2_NOMIN_NOMAX-NEXT:    ldr d0, [x1]
-; SVE2_NOMIN_NOMAX-NEXT:    ldr d1, [x0]
-; SVE2_NOMIN_NOMAX-NEXT:    mov z2.b, z0.b[3]
-; SVE2_NOMIN_NOMAX-NEXT:    mov z3.b, z0.b[2]
-; SVE2_NOMIN_NOMAX-NEXT:    mov z4.b, z0.b[1]
-; SVE2_NOMIN_NOMAX-NEXT:    mov z1.b, z1.b[1]
-; SVE2_NOMIN_NOMAX-NEXT:    mov z5.b, z0.b[4]
-; SVE2_NOMIN_NOMAX-NEXT:    mov z0.b, z0.b[6]
-; SVE2_NOMIN_NOMAX-NEXT:    zip1 z2.b, z3.b, z2.b
-; SVE2_NOMIN_NOMAX-NEXT:    zip1 z1.b, z1.b, z4.b
-; SVE2_NOMIN_NOMAX-NEXT:    zip1 z3.b, z5.b, z5.b
-; SVE2_NOMIN_NOMAX-NEXT:    zip1 z1.h, z1.h, z2.h
-; SVE2_NOMIN_NOMAX-NEXT:    zip1 z0.h, z3.h, z0.h
-; SVE2_NOMIN_NOMAX-NEXT:    zip1 z0.s, z1.s, z0.s
+; SVE2_NOMIN_NOMAX-NEXT:    ldr d0, [x0]
+; SVE2_NOMIN_NOMAX-NEXT:    ldr d1, [x1]
+; SVE2_NOMIN_NOMAX-NEXT:    mov z2.b, z1.b[4]
+; SVE2_NOMIN_NOMAX-NEXT:    mov z3.b, z1.b[1]
+; SVE2_NOMIN_NOMAX-NEXT:    mov z0.b, z0.b[1]
+; SVE2_NOMIN_NOMAX-NEXT:    mov z4.b, z1.b[6]
+; SVE2_NOMIN_NOMAX-NEXT:    mov z1.h, z1.h[1]
+; SVE2_NOMIN_NOMAX-NEXT:    zip1 z2.b, z2.b, z2.b
+; SVE2_NOMIN_NOMAX-NEXT:    zip1 z0.b, z0.b, z3.b
+; SVE2_NOMIN_NOMAX-NEXT:    zip1 z2.h, z2.h, z4.h
+; SVE2_NOMIN_NOMAX-NEXT:    zip1 z0.h, z0.h, z1.h
+; SVE2_NOMIN_NOMAX-NEXT:    zip1 z0.s, z0.s, z2.s
 ; SVE2_NOMIN_NOMAX-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_NOMIN_NOMAX-NEXT:    ret
 ;
 ; SVE2_MIN_256_NOMAX-LABEL: shuffle_index_poison_value:
 ; SVE2_MIN_256_NOMAX:       // %bb.0:
-; SVE2_MIN_256_NOMAX-NEXT:    ldr d0, [x1]
-; SVE2_MIN_256_NOMAX-NEXT:    ldr d1, [x0]
-; SVE2_MIN_256_NOMAX-NEXT:    mov z2.b, z0.b[3]
-; SVE2_MIN_256_NOMAX-NEXT:    mov z3.b, z0.b[2]
-; SVE2_MIN_256_NOMAX-NEXT:    mov z4.b, z0.b[1]
-; SVE2_MIN_256_NOMAX-NEXT:    mov z1.b, z1.b[1]
-; SVE2_MIN_256_NOMAX-NEXT:    mov z5.b, z0.b[4]
-; SVE2_MIN_256_NOMAX-NEXT:    mov z0.b, z0.b[6]
-; SVE2_MIN_256_NOMAX-NEXT:    zip1 z2.b, z3.b, z2.b
-; SVE2_MIN_256_NOMAX-NEXT:    zip1 z1.b, z1.b, z4.b
-; SVE2_MIN_256_NOMAX-NEXT:    zip1 z3.b, z5.b, z5.b
-; SVE2_MIN_256_NOMAX-NEXT:    zip1 z1.h, z1.h, z2.h
-; SVE2_MIN_256_NOMAX-NEXT:    zip1 z0.h, z3.h, z0.h
-; SVE2_MIN_256_NOMAX-NEXT:    zip1 z0.s, z1.s, z0.s
+; SVE2_MIN_256_NOMAX-NEXT:    ldr d0, [x0]
+; SVE2_MIN_256_NOMAX-NEXT:    ldr d1, [x1]
+; SVE2_MIN_256_NOMAX-NEXT:    mov z2.b, z1.b[4]
+; SVE2_MIN_256_NOMAX-NEXT:    mov z3.b, z1.b[1]
+; SVE2_MIN_256_NOMAX-NEXT:    mov z0.b, z0.b[1]
+; SVE2_MIN_256_NOMAX-NEXT:    mov z4.b, z1.b[6]
+; SVE2_MIN_256_NOMAX-NEXT:    mov z1.h, z1.h[1]
+; SVE2_MIN_256_NOMAX-NEXT:    zip1 z2.b, z2.b, z2.b
+; SVE2_MIN_256_NOMAX-NEXT:    zip1 z0.b, z0.b, z3.b
+; SVE2_MIN_256_NOMAX-NEXT:    zip1 z2.h, z2.h, z4.h
+; SVE2_MIN_256_NOMAX-NEXT:    zip1 z0.h, z0.h, z1.h
+; SVE2_MIN_256_NOMAX-NEXT:    zip1 z0.s, z0.s, z2.s
 ; SVE2_MIN_256_NOMAX-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_MIN_256_NOMAX-NEXT:    ret
   %op1 = load <8 x i8>, ptr %a
@@ -338,22 +320,18 @@ define <8 x i8> @shuffle_op1_poison(ptr %a, ptr %b) {
 define <8 x i8> @negative_test_shuffle_index_size_op_both_maxhw(ptr %a, ptr %b) "target-features"="+sve2" vscale_range(16,16) {
 ; CHECK-LABEL: negative_test_shuffle_index_size_op_both_maxhw:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x1]
-; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    mov z2.b, z0.b[3]
-; CHECK-NEXT:    mov z3.b, z0.b[2]
-; CHECK-NEXT:    mov z4.b, z0.b[1]
-; CHECK-NEXT:    mov z1.b, z1.b[1]
-; CHECK-NEXT:    mov z5.b, z0.b[7]
-; CHECK-NEXT:    mov z6.b, z0.b[6]
-; CHECK-NEXT:    mov z0.b, z0.b[4]
-; CHECK-NEXT:    zip1 z2.b, z3.b, z2.b
-; CHECK-NEXT:    zip1 z1.b, z1.b, z4.b
-; CHECK-NEXT:    zip1 z3.b, z6.b, z5.b
-; CHECK-NEXT:    zip1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    zip1 z1.h, z1.h, z2.h
-; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
-; CHECK-NEXT:    zip1 z0.s, z1.s, z0.s
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    mov z2.b, z1.b[4]
+; CHECK-NEXT:    mov z3.b, z1.b[1]
+; CHECK-NEXT:    mov z0.b, z0.b[1]
+; CHECK-NEXT:    mov z4.h, z1.h[3]
+; CHECK-NEXT:    mov z1.h, z1.h[1]
+; CHECK-NEXT:    zip1 z2.b, z2.b, z2.b
+; CHECK-NEXT:    zip1 z0.b, z0.b, z3.b
+; CHECK-NEXT:    zip1 z2.h, z2.h, z4.h
+; CHECK-NEXT:    zip1 z0.h, z0.h, z1.h
+; CHECK-NEXT:    zip1 z0.s, z0.s, z2.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i8>, ptr %a
