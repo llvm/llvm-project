@@ -78,7 +78,7 @@ public:
   ASTNode(StringRef Body, ASTNode *Parent)
       : T(Type::Text), Body(Body), Parent(Parent), ParentContext(nullptr) {};
 
-  // Constructor for Section/InvertSection/Variable/UnescapeVariable
+  // Constructor for Section/InvertSection/Variable/UnescapeVariable.
   ASTNode(Type T, Accessor Accessor, ASTNode *Parent)
       : T(T), Parent(Parent), Children({}), Accessor(Accessor),
         ParentContext(nullptr) {};
