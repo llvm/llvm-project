@@ -4257,7 +4257,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
   if (Opc == ISD::SETCC) {
     LoRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Lo0, Lo1, N->getOperand(2));
     HiRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Hi0, Hi1, N->getOperand(2));
-  } else if (Opc == ISD::STRICT_FSETCC || Opc == ISD::STRICT_FSETCCS) {
+  } else if (isStrict) {
     LoRes = DAG.getNode(Opc, DL, DAG.getVTList(PartResVT, N->getValueType(1)),
                         N->getOperand(0), Lo0, Lo1, N->getOperand(3));
     HiRes = DAG.getNode(Opc, DL, DAG.getVTList(PartResVT, N->getValueType(1)),
