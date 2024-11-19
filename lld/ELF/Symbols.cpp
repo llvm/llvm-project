@@ -295,7 +295,7 @@ void elf::printTraceSymbol(const Symbol &sym, StringRef name) {
   else
     s = ": definition of ";
 
-  message(toStr(sym.file->ctx, sym.file) + s + name);
+  Msg(sym.file->ctx) << sym.file << s << name;
 }
 
 static void recordWhyExtract(Ctx &ctx, const InputFile *reference,
@@ -320,9 +320,7 @@ void elf::maybeWarnUnorderableSymbol(Ctx &ctx, const Symbol *sym) {
   const InputFile *file = sym->file;
   auto *d = dyn_cast<Defined>(sym);
 
-  auto report = [&](StringRef s) {
-    Warn(ctx) << toStr(ctx, file) << s << sym->getName();
-  };
+  auto report = [&](StringRef s) { Warn(ctx) << file << s << sym->getName(); };
 
   if (sym->isUndefined()) {
     if (cast<Undefined>(sym)->discardedSecIdx)
@@ -550,15 +548,14 @@ void elf::reportDuplicate(Ctx &ctx, const Symbol &sym, const InputFile *newFile,
   std::string src2 = errSec->getSrcMsg(sym, errOffset);
   std::string obj2 = errSec->getObjMsg(errOffset);
 
-  std::string msg =
-      "duplicate symbol: " + toStr(ctx, sym) + "\n>>> defined at ";
+  auto diag = Err(ctx);
+  diag << "duplicate symbol: " << &sym << "\n>>> defined at ";
   if (!src1.empty())
-    msg += src1 + "\n>>>            ";
-  msg += obj1 + "\n>>> defined at ";
+    diag << src1 << "\n>>>            ";
+  diag << obj1 << "\n>>> defined at ";
   if (!src2.empty())
-    msg += src2 + "\n>>>            ";
-  msg += obj2;
-  Err(ctx) << msg;
+    diag << src2 << "\n>>>            ";
+  diag << obj2;
 }
 
 void Symbol::checkDuplicate(Ctx &ctx, const Defined &other) const {

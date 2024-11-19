@@ -1504,7 +1504,7 @@ def ReduceAnd : Builtin {
 
 def ReduceAdd : Builtin {
   let Spellings = ["__builtin_reduce_add"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
@@ -1993,6 +1993,12 @@ def AtomicThreadFence : Builtin {
   let Spellings = ["__atomic_thread_fence"];
   let Attributes = [NoThrow];
   let Prototype = "void(int)";
+}
+
+def ScopedAtomicThreadFence : Builtin {
+  let Spellings = ["__scoped_atomic_thread_fence"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(int, int)";
 }
 
 def AtomicSignalFence : Builtin {

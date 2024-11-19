@@ -12,12 +12,9 @@
 
 #include "NVPTXInstrInfo.h"
 #include "NVPTX.h"
-#include "NVPTXTargetMachine.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/Function.h"
 
 using namespace llvm;
 
@@ -201,4 +198,24 @@ unsigned NVPTXInstrInfo::insertBranch(MachineBasicBlock &MBB,
   BuildMI(&MBB, DL, get(NVPTX::CBranch)).add(Cond[0]).addMBB(TBB);
   BuildMI(&MBB, DL, get(NVPTX::GOTO)).addMBB(FBB);
   return 2;
+}
+
+bool NVPTXInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
+                                          const MachineBasicBlock *MBB,
+                                          const MachineFunction &MF) const {
+  // Prevent the scheduler from reordering & splitting up MachineInstrs
+  // which must stick together (in initially set order) to
+  // comprise a valid PTX function call sequence.
+  switch (MI.getOpcode()) {
+  case NVPTX::CallUniPrintCallRetInst1:
+  case NVPTX::CallArgBeginInst:
+  case NVPTX::CallArgI32imm:
+  case NVPTX::CallArgParam:
+  case NVPTX::LastCallArgI32imm:
+  case NVPTX::LastCallArgParam:
+  case NVPTX::CallArgEndInst1:
+    return true;
+  }
+
+  return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF);
 }
