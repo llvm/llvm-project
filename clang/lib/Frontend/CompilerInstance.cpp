@@ -365,7 +365,8 @@ IntrusiveRefCntPtr<DiagnosticsEngine> CompilerInstance::createDiagnostics(
     SetUpDiagnosticLog(Opts, CodeGenOpts, *Diags);
 
   if (!Opts->DiagnosticSerializationFile.empty())
-    SetupSerializedDiagnostics(Opts, *Diags, Opts->DiagnosticSerializationFile);
+    SetupSerializedDiagnostics(Opts, *Diags,
+                               Opts->DiagnosticSerializationFile);
 
   // Configure our handling of diagnostics.
   ProcessWarningOptions(*Diags, *Opts, VFS);
