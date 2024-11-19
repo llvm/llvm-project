@@ -13,18 +13,22 @@
 
 #include "clang/AST/ASTImporterLookupTable.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DeclFriend.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "llvm/Support/FormatVariadic.h"
 
 namespace clang {
 
 namespace {
 
-struct Builder : RecursiveASTVisitor<Builder> {
+struct Builder : DynamicRecursiveASTVisitor {
   ASTImporterLookupTable &LT;
-  Builder(ASTImporterLookupTable &LT) : LT(LT) {}
+  Builder(ASTImporterLookupTable &LT) : LT(LT) {
+    ShouldVisitTemplateInstantiations = true;
+    ShouldVisitImplicitCode = true;
+  }
 
-  bool VisitTypedefNameDecl(TypedefNameDecl *D) {
+  bool VisitTypedefNameDecl(TypedefNameDecl *D) override {
     QualType Ty = D->getUnderlyingType();
     Ty = Ty.getCanonicalType();
     if (const auto *RTy = dyn_cast<RecordType>(Ty)) {
@@ -37,7 +41,7 @@ struct Builder : RecursiveASTVisitor<Builder> {
     return true;
   }
 
-  bool VisitNamedDecl(NamedDecl *D) {
+  bool VisitNamedDecl(NamedDecl *D) override {
     LT.add(D);
     return true;
   }
@@ -46,7 +50,7 @@ struct Builder : RecursiveASTVisitor<Builder> {
   // visitation. However, there are cases when the befriended class is not a
   // child, thus it must be fetched explicitly from the FriendDecl, and only
   // then can we add it to the lookup table.
-  bool VisitFriendDecl(FriendDecl *D) {
+  bool VisitFriendDecl(FriendDecl *D) override {
     if (D->getFriendType()) {
       QualType Ty = D->getFriendType()->getType();
       if (isa<ElaboratedType>(Ty))
@@ -76,10 +80,6 @@ struct Builder : RecursiveASTVisitor<Builder> {
     }
     return true;
   }
-
-  // Override default settings of base.
-  bool shouldVisitTemplateInstantiations() const { return true; }
-  bool shouldVisitImplicitCode() const { return true; }
 };
 
 } // anonymous namespace

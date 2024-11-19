@@ -12,9 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ParentMapContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/TemplateBase.h"
 
 using namespace clang;
@@ -352,19 +353,14 @@ template <> DynTypedNode createDynTypedNode(const ObjCProtocolLoc &Node) {
 /// traversal - there are other relationships (for example declaration context)
 /// in the AST that are better modeled by special matchers.
 class ParentMapContext::ParentMap::ASTVisitor
-    : public RecursiveASTVisitor<ASTVisitor> {
+    : public DynamicRecursiveASTVisitor {
 public:
-  ASTVisitor(ParentMap &Map) : Map(Map) {}
+  ASTVisitor(ParentMap &Map) : Map(Map) {
+    ShouldVisitTemplateInstantiations = true;
+    ShouldVisitImplicitCode = true;
+  }
 
 private:
-  friend class RecursiveASTVisitor<ASTVisitor>;
-
-  using VisitorBase = RecursiveASTVisitor<ASTVisitor>;
-
-  bool shouldVisitTemplateInstantiations() const { return true; }
-
-  bool shouldVisitImplicitCode() const { return true; }
-
   /// Record the parent of the node we're visiting.
   /// MapNode is the child, the parent is on top of ParentStack.
   /// Parents is the parent storage (either PointerParents or OtherParents).
@@ -427,42 +423,53 @@ private:
     return Result;
   }
 
-  bool TraverseDecl(Decl *DeclNode) {
+  bool TraverseDecl(Decl *DeclNode) override {
     return TraverseNode(
-        DeclNode, DeclNode, [&] { return VisitorBase::TraverseDecl(DeclNode); },
+        DeclNode, DeclNode,
+        [&] { return DynamicRecursiveASTVisitor::TraverseDecl(DeclNode); },
         &Map.PointerParents);
   }
-  bool TraverseTypeLoc(TypeLoc TypeLocNode) {
+  bool TraverseTypeLoc(TypeLoc TypeLocNode) override {
     return TraverseNode(
         TypeLocNode, DynTypedNode::create(TypeLocNode),
-        [&] { return VisitorBase::TraverseTypeLoc(TypeLocNode); },
+        [&] {
+          return DynamicRecursiveASTVisitor::TraverseTypeLoc(TypeLocNode);
+        },
         &Map.OtherParents);
   }
-  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSLocNode) {
+  bool
+  TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSLocNode) override {
     return TraverseNode(
         NNSLocNode, DynTypedNode::create(NNSLocNode),
-        [&] { return VisitorBase::TraverseNestedNameSpecifierLoc(NNSLocNode); },
+        [&] {
+          return DynamicRecursiveASTVisitor::TraverseNestedNameSpecifierLoc(
+              NNSLocNode);
+        },
         &Map.OtherParents);
   }
-  bool TraverseAttr(Attr *AttrNode) {
+  bool TraverseAttr(Attr *AttrNode) override {
     return TraverseNode(
-        AttrNode, AttrNode, [&] { return VisitorBase::TraverseAttr(AttrNode); },
+        AttrNode, AttrNode,
+        [&] { return DynamicRecursiveASTVisitor::TraverseAttr(AttrNode); },
         &Map.PointerParents);
   }
-  bool TraverseObjCProtocolLoc(ObjCProtocolLoc ProtocolLocNode) {
+  bool TraverseObjCProtocolLoc(ObjCProtocolLoc ProtocolLocNode) override {
     return TraverseNode(
         ProtocolLocNode, DynTypedNode::create(ProtocolLocNode),
-        [&] { return VisitorBase::TraverseObjCProtocolLoc(ProtocolLocNode); },
+        [&] {
+          return DynamicRecursiveASTVisitor::TraverseObjCProtocolLoc(
+              ProtocolLocNode);
+        },
         &Map.OtherParents);
   }
 
   // Using generic TraverseNode for Stmt would prevent data-recursion.
-  bool dataTraverseStmtPre(Stmt *StmtNode) {
+  bool dataTraverseStmtPre(Stmt *StmtNode) override {
     addParent(StmtNode, &Map.PointerParents);
     ParentStack.push_back(DynTypedNode::create(*StmtNode));
     return true;
   }
-  bool dataTraverseStmtPost(Stmt *StmtNode) {
+  bool dataTraverseStmtPost(Stmt *StmtNode) override {
     ParentStack.pop_back();
     return true;
   }
