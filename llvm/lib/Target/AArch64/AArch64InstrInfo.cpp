@@ -7369,7 +7369,8 @@ genSubAdd2SubSub(MachineFunction &MF, MachineRegisterInfo &MRI,
   bool RegBIsKill = AddMI->getOperand(IdxOpd1).isKill();
   Register RegC = AddMI->getOperand(IdxOtherOpd).getReg();
   bool RegCIsKill = AddMI->getOperand(IdxOtherOpd).isKill();
-  Register NewVR = MRI.createVirtualRegister(MRI.getRegClass(RegA));
+  Register NewVR =
+      MRI.createVirtualRegister(MRI.getRegClass(Root.getOperand(2).getReg()));
 
   unsigned Opcode = Root.getOpcode();
   if (Opcode == AArch64::SUBSWrr)

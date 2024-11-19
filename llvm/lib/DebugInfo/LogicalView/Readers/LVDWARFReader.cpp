@@ -19,7 +19,6 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVSymbol.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVType.h"
-#include "llvm/Object/Error.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/FormatVariadic.h"
 

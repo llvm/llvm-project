@@ -4,9 +4,9 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-; DEBUG: Found an estimated cost of Invalid for VF vscale x 1 For instruction:   %indvars.iv1294 = phi i7 [ %indvars.iv.next1295, %for.body ], [ 0, %entry ]
-; DEBUG: Found an estimated cost of Invalid for VF vscale x 1 For instruction:   %addi7 = add i7 %indvars.iv1294, 0
-; DEBUG: Found an estimated cost of Invalid for VF vscale x 1 For instruction:   %indvars.iv.next1295 = add i7 %indvars.iv1294, 1
+; DEBUG: Cost of Invalid for VF vscale x 1: induction instruction   %indvars.iv.next1295 = add i7 %indvars.iv1294, 1
+; DEBUG: Cost of Invalid for VF vscale x 1: induction instruction   %indvars.iv1294 = phi i7 [ %indvars.iv.next1295, %for.body ], [ 0, %entry ]
+; DEBUG: Cost of Invalid for VF vscale x 1: WIDEN ir<%addi7> = add ir<%indvars.iv1294>, ir<0>
 
 define void @induction_i7(ptr %dst) #0 {
 ; CHECK-LABEL: define void @induction_i7(
@@ -71,9 +71,9 @@ for.end:                                          ; preds = %for.body
 }
 
 
-; DEBUG: Found an estimated cost of Invalid for VF vscale x 1 For instruction:   %indvars.iv1294 = phi i3 [ %indvars.iv.next1295, %for.body ], [ 0, %entry ]
-; DEBUG: Found an estimated cost of Invalid for VF vscale x 1 For instruction:   %zexti3 = zext i3 %indvars.iv1294 to i64
-; DEBUG: Found an estimated cost of Invalid for VF vscale x 1 For instruction:   %indvars.iv.next1295 = add i3 %indvars.iv1294, 1
+; DEBUG: Cost of Invalid for VF vscale x 1: induction instruction   %indvars.iv.next1295 = add i3 %indvars.iv1294, 1
+; DEBUG: Cost of Invalid for VF vscale x 1: induction instruction   %indvars.iv1294 = phi i3 [ %indvars.iv.next1295, %for.body ], [ 0, %entry ]
+; DEBUG: Cost of Invalid for VF vscale x 1: WIDEN-CAST ir<%zexti3> = zext  ir<%indvars.iv1294> to i64
 
 define void @induction_i3_zext(ptr %dst) #0 {
 ; CHECK-LABEL: define void @induction_i3_zext(

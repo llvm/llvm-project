@@ -192,6 +192,7 @@ It is possible to test a builder running against a local version of LLVM's
 buildmaster setup. This allows you to test changes to builder, worker, and
 buildmaster configuration. A buildmaster launched in this "local testing" mode
 will:
+
 * Bind only to local interfaces.
 * Use SQLite as the database.
 * Use a single fixed password for workers.
