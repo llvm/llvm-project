@@ -18,7 +18,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.toupper
 
     # search.h entrypoints
-    libc.src.search.lfind 
+    libc.src.search.lfind
+    libc.src.search.lsearch 
 
     # string.h entrypoints
     libc.src.string.bcmp

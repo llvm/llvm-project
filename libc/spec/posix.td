@@ -1632,6 +1632,17 @@ def POSIX : StandardSpec<"POSIX"> {
                 ArgSpec<SizeTType>,
                 ArgSpec<LSearchCompareT>
             ]
+        >,  
+        FunctionSpec<
+            "lsearch",
+            RetValSpec<VoidPtr>,
+            [
+                ArgSpec<ConstVoidPtr>,
+                ArgSpec<VoidPtr>,
+                ArgSpec<SizeTPtr>,
+                ArgSpec<SizeTType>,
+                ArgSpec<LSearchCompareT>
+            ]
         >
     ]
   >;
