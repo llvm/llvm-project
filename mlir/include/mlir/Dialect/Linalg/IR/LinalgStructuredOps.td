@@ -658,15 +658,7 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
                                 Block &block, ArrayRef<NamedAttribute> attrs);
 
       /// Returns a list of AffineMap with the typical matmul indexing charactristic.
-      static SmallVector<AffineMap> getDefaultIndexingMaps(MLIRContext *context){
-        AffineExpr d0, d1, d2;
-        SmallVector<AffineMap, 3> indexingMaps;
-        bindDims(context, d0, d1, d2);
-        indexingMaps.push_back(AffineMap::get(3, 0, {d0, d2}, context));
-        indexingMaps.push_back(AffineMap::get(3, 0, {d2, d1}, context));
-        indexingMaps.push_back(AffineMap::get(3, 0, {d0, d1}, context));
-        return indexingMaps;
-      }
+      static SmallVector<AffineMap> getDefaultIndexingMaps(MLIRContext *context);
 
       /// Returns true if the given broadcast map \p bcastMap is valid for this op.
       bool isValidLhsRhsBroadcastMap(AffineMap bcastMap);

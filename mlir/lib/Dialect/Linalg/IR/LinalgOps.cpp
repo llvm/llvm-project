@@ -3457,6 +3457,17 @@ namespace linalg {
 // MatMulOp
 //===----------------------------------------------------------------------===//
 
+/// Returns a list of AffineMap with the typical matmul indexing charactristic.
+SmallVector<AffineMap> MatmulOp::getDefaultIndexingMaps(MLIRContext *context) {
+  AffineExpr d0, d1, d2;
+  SmallVector<AffineMap, 3> indexingMaps;
+  bindDims(context, d0, d1, d2);
+  indexingMaps.push_back(AffineMap::get(3, 0, {d0, d2}, context));
+  indexingMaps.push_back(AffineMap::get(3, 0, {d2, d1}, context));
+  indexingMaps.push_back(AffineMap::get(3, 0, {d0, d1}, context));
+  return indexingMaps;
+}
+
 SmallVector<utils::IteratorType> MatmulOp::getIteratorTypesArray() {
   return SmallVector<utils::IteratorType>{utils::IteratorType::parallel,
                                           utils::IteratorType::parallel,
