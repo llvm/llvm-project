@@ -1516,8 +1516,8 @@ protected:
 };
 
 /// Rewrites a tensor::PackOp into a sequence of:
-///   * tensor::PadOp + linalg::TransposeOp +
-///     tensor::EmptyOp + tensor::InsertSliceOp ops.
+///   * tensor::PadOp + linalg::TransposeOp + tensor::EmptyOp +
+///     tensor::InsertSliceOp ops.
 ///
 /// Required that all the outer dims of the input tensor::PackOp are 1.
 ///
@@ -1682,6 +1682,11 @@ void populateLinalgGenericOpsSpecializationPatterns(
 /// can vectorize the low-D convolution ops.
 void populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
                                           PatternBenefit benefit = 1);
+
+/// Populates patterns to decompose tensor.pack and tensor.unpack Ops into e.g.
+/// tensor.pad, linalg.transpose, tensor.{insert|extract}_slice. Require all
+/// outer dims to be unit.
+void populateGeneralizePatterns(RewritePatternSet &patterns);
 
 /// Populates patterns to transform linalg.conv_2d_xxx operations into
 /// linalg.generic (for img2col packing) and linalg.matmul.
