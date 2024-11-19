@@ -44,6 +44,8 @@ enum NodeType : unsigned {
   ROTR_W,
 
   // unsigned 32-bit integer division
+  DIV_W,
+  MOD_W,
   DIV_WU,
   MOD_WU,
 
