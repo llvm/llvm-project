@@ -139,7 +139,7 @@ struct BuiltinTypeDeclBuilder {
     Attr *ResourceAttr = HLSLResourceAttr::CreateImplicit(Ctx, RK);
     if (CreateHLSLAttributedResourceType(S, Ctx.HLSLResourceTy, Attrs,
                                          AttributedResTy))
-      addMemberVariable("h", AttributedResTy, {ResourceAttr}, Access);
+      addMemberVariable("__handle", AttributedResTy, {ResourceAttr}, Access);
     return *this;
   }
 
