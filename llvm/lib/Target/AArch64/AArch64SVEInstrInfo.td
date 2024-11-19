@@ -4325,14 +4325,14 @@ let Predicates = [HasSVE2p2orSME2p2] in {
   defm FNEG_ZPzZ : sve_int_un_pred_arit_bitwise_fp_z<0b101, "fneg", AArch64fneg_mt>;
 
   // SVE2p2 integer unary arithmetic, zeroing predicate
-  defm SXTB_ZPzZ  : sve_int_un_pred_arit_h_z<0b000, "sxtb">;
-  defm UXTB_ZPzZ  : sve_int_un_pred_arit_h_z<0b001, "uxtb">;
-  defm SXTH_ZPzZ  : sve_int_un_pred_arit_w_z<0b010, "sxth">;
-  defm UXTH_ZPzZ  : sve_int_un_pred_arit_w_z<0b011, "uxth">;
+  defm SXTB_ZPzZ  : sve_int_un_pred_arit_h_z<0b000, "sxtb", AArch64sxt_mt>;
+  defm UXTB_ZPzZ  : sve_int_un_pred_arit_h_z<0b001, "uxtb", AArch64uxt_mt>;
+  defm SXTH_ZPzZ  : sve_int_un_pred_arit_w_z<0b010, "sxth", AArch64sxt_mt>;
+  defm UXTH_ZPzZ  : sve_int_un_pred_arit_w_z<0b011, "uxth", AArch64uxt_mt>;
   defm ABS_ZPzZ   : sve_int_un_pred_arit_z<  0b110, "abs", AArch64abs_mt>;
   defm NEG_ZPzZ   : sve_int_un_pred_arit_z<  0b111, "neg", AArch64neg_mt>;
-  def SXTW_ZPzZ_D : sve_int_un_pred_arit_z<0b11, 0b1000, "sxtw", ZPR64>;
-  def UXTW_ZPzZ_D : sve_int_un_pred_arit_z<0b11, 0b1010, "uxtw", ZPR64>;
+  defm SXTW_ZPzZ  : sve_int_un_pred_arit_d_z<0b100, "sxtw", AArch64sxt_mt>;
+  defm UXTW_ZPzZ  : sve_int_un_pred_arit_d_z<0b101, "uxtw", AArch64uxt_mt>;
 
   // SVE predicate count
   defm FIRSTP_XPP : sve_int_pcount_pred_tmp<0b001, "firstp">;
