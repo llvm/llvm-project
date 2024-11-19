@@ -253,6 +253,13 @@ void AArch64::ExtensionSet::disable(ArchExtKind E) {
     disable(AEK_SM4);
   }
 
+  // sve2-aes was historically associated with both FEAT_SVE2 and FEAT_SVE_AES,
+  // the latter is now associated with sve-aes and sve2-aes has become shorthand
+  // for +sve2+sve-aes. For backwards compatibility, when we disable sve2-aes we
+  // must also disable sve-aes.
+  if (E == AEK_SVE2AES)
+    disable(AEK_SVEAES);
+
   if (!Enabled.test(E))
     return;
 
