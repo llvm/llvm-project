@@ -78,6 +78,11 @@ class SPIRVEmitIntrinsics
   // a register of Instructions that don't have a complete type definition
   DenseMap<Value *, unsigned> UncompleteTypeInfo;
   SmallVector<Value *> PostprocessWorklist;
+  void addToUncompleteTypeInfo(Value *Op) {
+    auto It = UncompleteTypeInfo.try_emplace(Op, PostprocessWorklist.size());
+    if (It.second)
+      PostprocessWorklist.push_back(Op);
+  }
 
   // well known result types of builtins
   enum WellKnownTypes { Event };
@@ -105,8 +110,9 @@ class SPIRVEmitIntrinsics
                                bool UnknownElemTypeI8);
 
   // deduce Types of operands of the Instruction if possible
-  void deduceOperandElementType(Instruction *I, Instruction *AskOp = 0,
-                                Type *AskTy = 0, CallInst *AssignCI = 0);
+  void deduceOperandElementType(Instruction *I,
+                                const SmallPtrSet<Value *, 4> *AskOps = nullptr,
+                                SmallPtrSet<Value *, 16> *Completed = nullptr);
 
   void preprocessCompositeConstants(IRBuilder<> &B);
   void preprocessUndefs(IRBuilder<> &B);
@@ -145,12 +151,20 @@ class SPIRVEmitIntrinsics
   Type *deduceFunParamElementType(Function *F, unsigned OpIdx);
   Type *deduceFunParamElementType(Function *F, unsigned OpIdx,
                                   std::unordered_set<Function *> &FVisited);
+
+  bool deduceOperandElementTypeCalledFunction(
+      SPIRV::InstructionSet::InstructionSet InstrSet, CallInst *CI,
+      SmallVector<std::pair<Value *, unsigned>> &Ops, Type *&KnownElemTy);
+  void deduceOperandElementTypeFunctionPointer(
+      CallInst *CI, SmallVector<std::pair<Value *, unsigned>> &Ops,
+      Type *&KnownElemTy, SmallPtrSet<Value *, 16> *Completed);
+
   void replaceWithPtrcasted(Instruction *CI, Type *NewElemTy, Type *KnownElemTy,
                             CallInst *AssignCI);
   void replaceAllUsesWith(Value *Src, Value *Dest, bool DeleteOld = true);
 
   bool runOnFunction(Function &F);
-  bool postprocessTypes();
+  bool postprocessTypes(Module &M);
   bool processFunctionPointers(Module &M);
 
 public:
@@ -286,11 +300,11 @@ void SPIRVEmitIntrinsics::replaceAllUsesWith(Value *Src, Value *Dest,
   if (DeleteOld) {
     unsigned Pos = It->second;
     UncompleteTypeInfo.erase(Src);
-    UncompleteTypeInfo[Dest] = Pos;
-    PostprocessWorklist[Pos] = Dest;
+    auto It = UncompleteTypeInfo.try_emplace(Dest, Pos);
+    if (It.second)
+      PostprocessWorklist[Pos] = Dest;
   } else {
-    UncompleteTypeInfo[Dest] = PostprocessWorklist.size();
-    PostprocessWorklist.push_back(Dest);
+    addToUncompleteTypeInfo(Dest);
   }
 }
 
@@ -455,10 +469,7 @@ void SPIRVEmitIntrinsics::maybeAssignPtrType(Type *&Ty, Value *Op, Type *RefTy,
   if (isUntypedPointerTy(RefTy)) {
     if (!UnknownElemTypeI8)
       return;
-    if (auto *I = dyn_cast<Instruction>(Op)) {
-      UncompleteTypeInfo[I] = PostprocessWorklist.size();
-      PostprocessWorklist.push_back(I);
-    }
+    addToUncompleteTypeInfo(Op);
   }
   Ty = RefTy;
 }
@@ -661,10 +672,7 @@ Type *SPIRVEmitIntrinsics::deduceElementType(Value *I, bool UnknownElemTypeI8) {
     return Ty;
   if (!UnknownElemTypeI8)
     return nullptr;
-  if (auto *Instr = dyn_cast<Instruction>(I)) {
-    UncompleteTypeInfo[Instr] = PostprocessWorklist.size();
-    PostprocessWorklist.push_back(Instr);
-  }
+  addToUncompleteTypeInfo(I);
   return IntegerType::getInt8Ty(I->getContext());
 }
 
@@ -683,8 +691,7 @@ static inline Type *getAtomicElemTy(SPIRVGlobalRegistry *GR, Instruction *I,
 
 // Try to deduce element type for a call base. Returns false if this is an
 // indirect function invocation, and true otherwise.
-static bool deduceOperandElementTypeCalledFunction(
-    SPIRVGlobalRegistry *GR, Instruction *I,
+bool SPIRVEmitIntrinsics::deduceOperandElementTypeCalledFunction(
     SPIRV::InstructionSet::InstructionSet InstrSet, CallInst *CI,
     SmallVector<std::pair<Value *, unsigned>> &Ops, Type *&KnownElemTy) {
   Function *CalledF = CI->getCalledFunction();
@@ -726,7 +733,7 @@ static bool deduceOperandElementTypeCalledFunction(
       case SPIRV::OpAtomicUMax:
       case SPIRV::OpAtomicSMin:
       case SPIRV::OpAtomicSMax: {
-        KnownElemTy = getAtomicElemTy(GR, I, Op);
+        KnownElemTy = getAtomicElemTy(GR, CI, Op);
         if (!KnownElemTy)
           return true;
         Ops.push_back(std::make_pair(Op, 0));
@@ -738,32 +745,44 @@ static bool deduceOperandElementTypeCalledFunction(
 }
 
 // Try to deduce element type for a function pointer.
-static void deduceOperandElementTypeFunctionPointer(
-    SPIRVGlobalRegistry *GR, Instruction *I, CallInst *CI,
-    SmallVector<std::pair<Value *, unsigned>> &Ops, Type *&KnownElemTy) {
+void SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionPointer(
+    CallInst *CI, SmallVector<std::pair<Value *, unsigned>> &Ops,
+    Type *&KnownElemTy, SmallPtrSet<Value *, 16> *Completed) {
   Value *Op = CI->getCalledOperand();
   if (!Op || !isPointerTy(Op->getType()))
     return;
   Ops.push_back(std::make_pair(Op, std::numeric_limits<unsigned>::max()));
   FunctionType *FTy = CI->getFunctionType();
-  bool IsNewFTy = false;
+  bool IsNewFTy = false, IsUncomplete = false;
   SmallVector<Type *, 4> ArgTys;
   for (Value *Arg : CI->args()) {
     Type *ArgTy = Arg->getType();
-    if (ArgTy->isPointerTy())
+    if (ArgTy->isPointerTy()) {
       if (Type *ElemTy = GR->findDeducedElementType(Arg)) {
         IsNewFTy = true;
         ArgTy = TypedPointerType::get(ElemTy, getPointerAddressSpace(ArgTy));
+        if (UncompleteTypeInfo.contains(Arg))
+          IsUncomplete = true;
+      } else {
+        IsUncomplete = true;
       }
+    }
     ArgTys.push_back(ArgTy);
   }
   Type *RetTy = FTy->getReturnType();
-  if (I->getType()->isPointerTy())
-    if (Type *ElemTy = GR->findDeducedElementType(I)) {
+  if (CI->getType()->isPointerTy()) {
+    if (Type *ElemTy = GR->findDeducedElementType(CI)) {
       IsNewFTy = true;
       RetTy =
-          TypedPointerType::get(ElemTy, getPointerAddressSpace(I->getType()));
+          TypedPointerType::get(ElemTy, getPointerAddressSpace(CI->getType()));
+      if (UncompleteTypeInfo.contains(CI))
+        IsUncomplete = true;
+    } else {
+      IsUncomplete = true;
     }
+  }
+  if (!Completed && IsUncomplete)
+    addToUncompleteTypeInfo(Op);
   KnownElemTy =
       IsNewFTy ? FunctionType::get(RetTy, ArgTys, FTy->isVarArg()) : FTy;
 }
@@ -772,10 +791,9 @@ static void deduceOperandElementTypeFunctionPointer(
 // tries to deduce them. If the Instruction has Pointer operands with known
 // types which differ from expected, this function tries to insert a bitcast to
 // resolve the issue.
-void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I,
-                                                   Instruction *AskOp,
-                                                   Type *AskTy,
-                                                   CallInst *AskCI) {
+void SPIRVEmitIntrinsics::deduceOperandElementType(
+    Instruction *I, const SmallPtrSet<Value *, 4> *AskOps,
+    SmallPtrSet<Value *, 16> *Completed) {
   SmallVector<std::pair<Value *, unsigned>> Ops;
   Type *KnownElemTy = nullptr;
   // look for known basic patterns of type inference
@@ -875,10 +893,9 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I,
     }
   } else if (CallInst *CI = dyn_cast<CallInst>(I)) {
     if (!CI->isIndirectCall())
-      deduceOperandElementTypeCalledFunction(GR, I, InstrSet, CI, Ops,
-                                             KnownElemTy);
+      deduceOperandElementTypeCalledFunction(InstrSet, CI, Ops, KnownElemTy);
     else if (HaveFunPtrs)
-      deduceOperandElementTypeFunctionPointer(GR, I, CI, Ops, KnownElemTy);
+      deduceOperandElementTypeFunctionPointer(CI, Ops, KnownElemTy, Completed);
   }
 
   // There is no enough info to deduce types or all is valid.
@@ -889,9 +906,19 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I,
   IRBuilder<> B(Ctx);
   for (auto &OpIt : Ops) {
     Value *Op = OpIt.first;
-    if (Op->use_empty() || (AskOp && Op != AskOp))
+    if (Op->use_empty())
       continue;
-    Type *Ty = AskOp ? AskTy : GR->findDeducedElementType(Op);
+    Type *AskTy = nullptr;
+    CallInst *AskCI = nullptr;
+    if (AskOps) {
+      auto It = AskOps->find(Op);
+      if (It == AskOps->end())
+        continue;
+      AskTy = GR->findDeducedElementType(Op);
+      AskCI = GR->findAssignPtrTypeInstr(Op);
+      assert(AskTy && AskCI);
+    }
+    Type *Ty = AskTy ? AskTy : GR->findDeducedElementType(Op);
     if (Ty == KnownElemTy)
       continue;
     Value *OpTyVal = PoisonValue::get(KnownElemTy);
@@ -899,6 +926,9 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I,
     if (!Ty || AskTy || isUntypedPointerTy(Ty) ||
         UncompleteTypeInfo.contains(Op)) {
       GR->addDeducedElementType(Op, KnownElemTy);
+      // check if KnownElemTy is complete
+      if (!Completed && UncompleteTypeInfo.contains(I))
+        addToUncompleteTypeInfo(Op);
       // check if there is existing Intrinsic::spv_assign_ptr_type instruction
       CallInst *AssignCI = AskCI ? AskCI : GR->findAssignPtrTypeInstr(Op);
       if (AssignCI == nullptr) {
@@ -910,6 +940,8 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I,
         GR->addAssignPtrTypeInstr(Op, CI);
       } else {
         updateAssignType(AssignCI, Op, OpTyVal);
+        if (Completed)
+          Completed->insert(Op);
       }
     } else {
       if (auto *OpI = dyn_cast<Instruction>(Op)) {
@@ -1878,6 +1910,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   for (auto &I : instructions(Func))
     Worklist.push_back(&I);
 
+  // Pass forward: use operand to deduce instructions result.
   for (auto &I : Worklist) {
     // Don't emit intrinsincs for convergence intrinsics.
     if (isConvergenceIntrinsic(I))
@@ -1894,8 +1927,16 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
       insertAssignPtrTypeIntrs(I, B, true);
   }
 
-  for (auto &I : instructions(Func))
+  // Pass backward: use instructions results to specify/update/cast operands
+  // where needed.
+  for (auto &I : llvm::reverse(instructions(Func)))
     deduceOperandElementType(&I);
+
+  // Pass forward for PHIs only, their operands are not preceed the instruction
+  // in meaning of `instructions(Func)`.
+  for (BasicBlock &BB : Func)
+    for (PHINode &Phi : BB.phis())
+      deduceOperandElementType(&Phi);
 
   for (auto *I : Worklist) {
     TrackConstants = true;
@@ -1938,16 +1979,19 @@ void SPIRVEmitIntrinsics::replaceWithPtrcasted(Instruction *CI, Type *NewElemTy,
 }
 
 // Try to deduce a better type for pointers to untyped ptr.
-bool SPIRVEmitIntrinsics::postprocessTypes() {
-  bool Changed = false;
-  if (!GR)
-    return Changed;
+bool SPIRVEmitIntrinsics::postprocessTypes(Module &M) {
+  if (!GR || UncompleteTypeInfo.size() == 0)
+    return false;
+
+  DenseMap<Value *, SmallPtrSet<Value *, 4>> ToProcess;
+  SmallPtrSet<Value *, 16> Completed;
   for (auto IB = PostprocessWorklist.rbegin(), IE = PostprocessWorklist.rend();
        IB != IE; ++IB) {
     CallInst *AssignCI = GR->findAssignPtrTypeInstr(*IB);
     Type *KnownTy = GR->findDeducedElementType(*IB);
-    if (!KnownTy || !AssignCI || !isa<Instruction>(AssignCI->getArgOperand(0)))
+    if (!KnownTy || !AssignCI)
       continue;
+    assert(AssignCI->getArgOperand(0) == *IB);
     // Try to improve the type deduced after all Functions are processed.
     if (auto *CI = dyn_cast<CallInst>(*IB)) {
       if (Function *CalledF = CI->getCalledFunction()) {
@@ -1955,24 +1999,37 @@ bool SPIRVEmitIntrinsics::postprocessTypes() {
         // Fix inconsistency between known type and function's return type.
         if (RetElemTy && RetElemTy != KnownTy) {
           replaceWithPtrcasted(CI, RetElemTy, KnownTy, AssignCI);
-          Changed = true;
+          Completed.insert(CI);
           continue;
         }
       }
     }
-    Instruction *I = cast<Instruction>(AssignCI->getArgOperand(0));
-    for (User *U : I->users()) {
+    Value *Op = AssignCI->getArgOperand(0);
+    for (User *U : Op->users()) {
       Instruction *Inst = dyn_cast<Instruction>(U);
-      if (!Inst || isa<IntrinsicInst>(Inst))
-        continue;
-      deduceOperandElementType(Inst, I, KnownTy, AssignCI);
-      if (KnownTy != GR->findDeducedElementType(I)) {
-        Changed = true;
-        break;
-      }
+      if (Inst && !isa<IntrinsicInst>(Inst))
+        ToProcess[Inst].insert(Op);
     }
   }
-  return Changed;
+  if (Completed.size() >= UncompleteTypeInfo.size())
+    return true;
+
+  for (auto &F : M) {
+    for (auto &I : llvm::reverse(instructions(F))) {
+      auto It = ToProcess.find(&I);
+      if (It == ToProcess.end())
+        continue;
+      It->second.remove_if(
+          [&Completed](Value *V) { return Completed.contains(V); });
+      if (It->second.size() == 0)
+        continue;
+      deduceOperandElementType(&I, &It->second, &Completed);
+      if (Completed.size() >= UncompleteTypeInfo.size())
+        return true;
+    }
+  }
+
+  return Completed.size() > 0;
 }
 
 bool SPIRVEmitIntrinsics::runOnModule(Module &M) {
@@ -1983,17 +2040,16 @@ bool SPIRVEmitIntrinsics::runOnModule(Module &M) {
   for (auto &F : M)
     Changed |= runOnFunction(F);
 
+  // Specify function parameters after all functions were processed.
   for (auto &F : M) {
     // check if function parameter types are set
     if (!F.isDeclaration() && !F.isIntrinsic()) {
-      const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(F);
-      GR = ST.getSPIRVGlobalRegistry();
       IRBuilder<> B(F.getContext());
       processParamTypes(&F, B);
     }
   }
 
-  Changed |= postprocessTypes();
+  Changed |= postprocessTypes(M);
   if (HaveFunPtrs)
     Changed |= processFunctionPointers(M);
 
