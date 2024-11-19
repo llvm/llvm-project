@@ -3260,19 +3260,16 @@ def Target : InheritableAttr {
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [TargetDocs];
   let AdditionalMembers = [{
-    StringRef getArchitecture() const {
+    std::optional<StringRef> getArchitecture() const {
       StringRef Features = getFeaturesStr();
-      if (Features == "default") return {};
-
-      SmallVector<StringRef, 1> AttrFeatures;
+      SmallVector<StringRef, 4> AttrFeatures;
       Features.split(AttrFeatures, ",");
-
-      for (auto &Feature : AttrFeatures) {
+      for (StringRef Feature : AttrFeatures) {
         Feature = Feature.trim();
         if (Feature.starts_with("arch="))
           return Feature.drop_front(sizeof("arch=") - 1);
       }
-      return "";
+      return std::nullopt;
     }
 
     // Gets the list of features as simple string-refs with no +/- or 'no-'.
@@ -3304,17 +3301,17 @@ def TargetVersion : InheritableAttr {
   let Documentation = [TargetVersionDocs];
   let AdditionalMembers = [{
     StringRef getName() const { return getNamesStr().trim(); }
-    bool isDefaultVersion() const {
-      return getName() == "default";
-    }
-    void getFeatures(llvm::SmallVectorImpl<StringRef> &Out) const {
-      if (isDefaultVersion()) return;
+
+    bool isDefaultVersion() const { return getName() == "default"; }
+
+    void getFeatures(llvm::SmallVectorImpl<StringRef> &Out,
+                     char Delim = '+') const {
+      if (isDefaultVersion())
+        return;
       StringRef Features = getName();
-
-      SmallVector<StringRef, 8> AttrFeatures;
-      Features.split(AttrFeatures, "+");
-
-      for (auto &Feature : AttrFeatures) {
+      SmallVector<StringRef, 4> AttrFeatures;
+      Features.split(AttrFeatures, Delim);
+      for (StringRef Feature : AttrFeatures) {
         Feature = Feature.trim();
         Out.push_back(Feature);
       }
@@ -3331,20 +3328,52 @@ def TargetClones : InheritableAttr {
     StringRef getFeatureStr(unsigned Index) const {
       return *(featuresStrs_begin() + Index);
     }
+
     bool isDefaultVersion(unsigned Index) const {
       return getFeatureStr(Index) == "default";
     }
+
     void getFeatures(llvm::SmallVectorImpl<StringRef> &Out,
-                     unsigned Index) const {
-      if (isDefaultVersion(Index)) return;
+                     unsigned Index, char Delim = '+') const {
+      if (isDefaultVersion(Index))
+        return;
       StringRef Features = getFeatureStr(Index);
-      SmallVector<StringRef, 8> AttrFeatures;
-      Features.split(AttrFeatures, "+");
-      for (auto &Feature : AttrFeatures) {
+      SmallVector<StringRef, 4> AttrFeatures;
+      Features.split(AttrFeatures, Delim);
+      for (StringRef Feature : AttrFeatures) {
         Feature = Feature.trim();
         Out.push_back(Feature);
       }
     }
+
+    // x86 only.
+    std::optional<StringRef> getArchitecture(unsigned Index) const {
+      StringRef Features = getFeatureStr(Index);
+      SmallVector<StringRef, 4> AttrFeatures;
+      Features.split(AttrFeatures, ',');
+      for (StringRef Feature : AttrFeatures) {
+        Feature = Feature.trim();
+        if (Feature.starts_with("arch="))
+          return Feature.drop_front(sizeof("arch=") - 1);
+      }
+      return std::nullopt;
+    }
+
+    // x86 only.
+    void getAddedFeatures(llvm::SmallVectorImpl<StringRef> &Out,
+                          unsigned Index) const {
+      if (isDefaultVersion(Index))
+        return;
+      StringRef Features = getFeatureStr(Index);
+      SmallVector<StringRef, 4> AttrFeatures;
+      Features.split(AttrFeatures, ",");
+      for (StringRef Feature : AttrFeatures) {
+        Feature = Feature.trim();
+        if (!Feature.starts_with("arch="))
+          Out.push_back(Feature);
+      }
+    }
+
     // Given an index into the 'featuresStrs' sequence, compute a unique
     // ID to be used with function name mangling for the associated variant.
     // This mapping is necessary due to a requirement that the mangling ID

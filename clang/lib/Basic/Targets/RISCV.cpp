@@ -477,18 +477,23 @@ ParsedTargetAttr RISCVTargetInfo::parseTargetAttr(StringRef Features) const {
 }
 
 unsigned RISCVTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
-  SmallVector<StringRef, 8> Attrs;
-  Features[0].split(Attrs, ';');
-  // Default Priority is zero.
-  unsigned Priority = 0;
-  for (auto Attr : Attrs) {
-    if (Attr.consume_front("priority=")) {
-      unsigned Result;
-      if (!Attr.getAsInteger(0, Result))
-        Priority = Result;
-    }
+  // Priority is explicitly specified on RISC-V unlike on other targets, where
+  // it is derived by all the features of a specific version. Therefore if a
+  // feature contains the priority string, then return it immediately.
+  for (StringRef Feature : Features) {
+    auto [LHS, RHS] = Feature.rsplit(';');
+    if (LHS.consume_front("priority="))
+      Feature = LHS;
+    else if (RHS.consume_front("priority="))
+      Feature = RHS;
+    else
+      continue;
+    unsigned Priority;
+    if (!Feature.getAsInteger(0, Priority))
+      return Priority;
   }
-  return Priority;
+  // Default Priority is zero.
+  return 0;
 }
 
 TargetInfo::CallingConvCheckResult

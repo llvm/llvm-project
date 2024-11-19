@@ -2824,23 +2824,17 @@ void CodeGenFunction::EmitKCFIOperandBundle(
     Bundles.emplace_back("kcfi", CGM.CreateKCFITypeId(FP->desugar()));
 }
 
-llvm::Value *CodeGenFunction::FormAArch64ResolverCondition(
-    const MultiVersionResolverOption &RO) {
-  llvm::SmallVector<StringRef, 8> CondFeatures;
-  for (const StringRef &Feature : RO.Conditions.Features)
-    CondFeatures.push_back(Feature);
-  if (!CondFeatures.empty()) {
-    return EmitAArch64CpuSupports(CondFeatures);
-  }
-  return nullptr;
+llvm::Value *
+CodeGenFunction::FormAArch64ResolverCondition(const FMVResolverOption &RO) {
+  return RO.Features.empty() ? nullptr : EmitAArch64CpuSupports(RO.Features);
 }
 
-llvm::Value *CodeGenFunction::FormX86ResolverCondition(
-    const MultiVersionResolverOption &RO) {
+llvm::Value *
+CodeGenFunction::FormX86ResolverCondition(const FMVResolverOption &RO) {
   llvm::Value *Condition = nullptr;
 
-  if (!RO.Conditions.Architecture.empty()) {
-    StringRef Arch = RO.Conditions.Architecture;
+  if (RO.Architecture) {
+    StringRef Arch = *RO.Architecture;
     // If arch= specifies an x86-64 micro-architecture level, test the feature
     // with __builtin_cpu_supports, otherwise use __builtin_cpu_is.
     if (Arch.starts_with("x86-64"))
@@ -2849,8 +2843,8 @@ llvm::Value *CodeGenFunction::FormX86ResolverCondition(
       Condition = EmitX86CpuIs(Arch);
   }
 
-  if (!RO.Conditions.Features.empty()) {
-    llvm::Value *FeatureCond = EmitX86CpuSupports(RO.Conditions.Features);
+  if (!RO.Features.empty()) {
+    llvm::Value *FeatureCond = EmitX86CpuSupports(RO.Features);
     Condition =
         Condition ? Builder.CreateAnd(Condition, FeatureCond) : FeatureCond;
   }
@@ -2880,7 +2874,7 @@ static void CreateMultiVersionResolverReturn(CodeGenModule &CGM,
 }
 
 void CodeGenFunction::EmitMultiVersionResolver(
-    llvm::Function *Resolver, ArrayRef<MultiVersionResolverOption> Options) {
+    llvm::Function *Resolver, ArrayRef<FMVResolverOption> Options) {
 
   llvm::Triple::ArchType ArchType =
       getContext().getTargetInfo().getTriple().getArch();
@@ -2904,7 +2898,7 @@ void CodeGenFunction::EmitMultiVersionResolver(
 }
 
 void CodeGenFunction::EmitRISCVMultiVersionResolver(
-    llvm::Function *Resolver, ArrayRef<MultiVersionResolverOption> Options) {
+    llvm::Function *Resolver, ArrayRef<FMVResolverOption> Options) {
 
   if (getContext().getTargetInfo().getTriple().getOS() !=
       llvm::Triple::OSType::Linux) {
@@ -2923,22 +2917,13 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
   // Check the each candidate function.
   for (unsigned Index = 0; Index < Options.size(); Index++) {
 
-    if (Options[Index].Conditions.Features[0].starts_with("default")) {
+    if (Options[Index].Features.empty()) {
       HasDefault = true;
       DefaultIndex = Index;
       continue;
     }
 
     Builder.SetInsertPoint(CurBlock);
-
-    std::vector<std::string> TargetAttrFeats =
-        getContext()
-            .getTargetInfo()
-            .parseTargetAttr(Options[Index].Conditions.Features[0])
-            .Features;
-
-    if (TargetAttrFeats.empty())
-      continue;
 
     // FeaturesCondition: The bitmask of the required extension has been
     // enabled by the runtime object.
@@ -2963,11 +2948,18 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
     // address when using different versions.
     llvm::SmallVector<StringRef, 8> CurrTargetAttrFeats;
 
-    for (auto &Feat : TargetAttrFeats) {
-      StringRef CurrFeat = Feat;
-      if (CurrFeat.starts_with('+'))
-        CurrTargetAttrFeats.push_back(CurrFeat.substr(1));
+    for (StringRef Feat : Options[Index].Features) {
+      auto [LHS, RHS] = Feat.rsplit(';');
+      Feat = LHS.starts_with("priority=") ? RHS : LHS;
+      if (Feat.starts_with("arch="))
+        Feat = Feat.drop_front(sizeof("arch=") - 1);
+      if (Feat.starts_with('+'))
+        Feat = Feat.drop_front(1);
+      CurrTargetAttrFeats.push_back(Feat);
     }
+
+    if (CurrTargetAttrFeats.empty())
+      continue;
 
     Builder.SetInsertPoint(CurBlock);
     llvm::Value *FeatsCondition = EmitRISCVCpuSupports(CurrTargetAttrFeats);
@@ -3002,17 +2994,16 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
 }
 
 void CodeGenFunction::EmitAArch64MultiVersionResolver(
-    llvm::Function *Resolver, ArrayRef<MultiVersionResolverOption> Options) {
+    llvm::Function *Resolver, ArrayRef<FMVResolverOption> Options) {
   assert(!Options.empty() && "No multiversion resolver options found");
-  assert(Options.back().Conditions.Features.size() == 0 &&
-         "Default case must be last");
+  assert(Options.back().Features.size() == 0 && "Default case must be last");
   bool SupportsIFunc = getContext().getTargetInfo().supportsIFunc();
   assert(SupportsIFunc &&
          "Multiversion resolver requires target IFUNC support");
   bool AArch64CpuInitialized = false;
   llvm::BasicBlock *CurBlock = createBasicBlock("resolver_entry", Resolver);
 
-  for (const MultiVersionResolverOption &RO : Options) {
+  for (const FMVResolverOption &RO : Options) {
     Builder.SetInsertPoint(CurBlock);
     llvm::Value *Condition = FormAArch64ResolverCondition(RO);
 
@@ -3048,7 +3039,7 @@ void CodeGenFunction::EmitAArch64MultiVersionResolver(
 }
 
 void CodeGenFunction::EmitX86MultiVersionResolver(
-    llvm::Function *Resolver, ArrayRef<MultiVersionResolverOption> Options) {
+    llvm::Function *Resolver, ArrayRef<FMVResolverOption> Options) {
 
   bool SupportsIFunc = getContext().getTargetInfo().supportsIFunc();
 
@@ -3057,7 +3048,7 @@ void CodeGenFunction::EmitX86MultiVersionResolver(
   Builder.SetInsertPoint(CurBlock);
   EmitX86CpuInit();
 
-  for (const MultiVersionResolverOption &RO : Options) {
+  for (const FMVResolverOption &RO : Options) {
     Builder.SetInsertPoint(CurBlock);
     llvm::Value *Condition = FormX86ResolverCondition(RO);
 
