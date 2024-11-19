@@ -8,19 +8,19 @@ enum A {
 };
 
 struct S {
-  enum A a1 : 1; // #1
+  enum A a1 : 1; // #S_a1_decl
   enum A a2 : 2;
   enum A a3 : 8;
-  __attribute__((preferred_type(enum A))) // #preferred_a4
-  unsigned a4 : 1; // #2
+  __attribute__((preferred_type(enum A))) // #preferred_S_a4
+  unsigned a4 : 1; // #S_a4_decl
   __attribute__((preferred_type(enum A)))
   unsigned a5 : 2;
   __attribute__((preferred_type(enum A)))
   unsigned a6 : 8;
-  __attribute__((preferred_type(enum A)))  // #preferred_a7
-  int a7 : 1; // #3
-  __attribute__((preferred_type(enum A))) // #preferred_a8
-  int a8 : 2; // #4
+  __attribute__((preferred_type(enum A)))  // #preferred_S_a7
+  int a7 : 1; // #S_a7_decl
+  __attribute__((preferred_type(enum A))) // #preferred_S_a8
+  int a8 : 2; // #S_a8_decl
   __attribute__((preferred_type(enum A)))
   int a9 : 8;
 };
@@ -41,20 +41,20 @@ void read_enum(struct S *s) {
 void write_enum(struct S *s, enum A x) {
   s->a1 = x;
   // expected-warning@-1 {{bit-field 'a1' is not wide enough to store all enumerators of 'A'}}
-  // expected-note@#1 {{widen this field to 2 bits to store all values of 'A'}}
+  // expected-note@#S_a1_decl {{widen this field to 2 bits to store all values of 'A'}}
   s->a2 = x;
   s->a3 = x;
   s->a4 = x;
   // expected-warning@-1 {{bit-field 'a4' is not wide enough to store all enumerators of 'A'}}
-  // expected-note@#2 {{widen this field to 2 bits to store all values of 'A'}}
+  // expected-note@#S_a4_decl {{widen this field to 2 bits to store all values of 'A'}}
   s->a5 = x;
   s->a6 = x;
   s->a7 = x;
   // expected-warning@-1 {{bit-field 'a7' is not wide enough to store all enumerators of 'A'}}
-  // expected-note@#3 {{widen this field to 2 bits to store all values of 'A'}}
+  // expected-note@#S_a7_decl {{widen this field to 2 bits to store all values of 'A'}}
   s->a8 = x;
   // expected-warning@-1 {{signed bit-field 'a8' needs an extra bit to represent the largest positive enumerators of 'A'}}
-  // expected-note@#4 {{consider making the bitfield type unsigned}}
+  // expected-note@#S_a8_decl {{consider making the bitfield type unsigned}}
   s->a9 = x;
 }
 
@@ -64,18 +64,18 @@ void write_enum_int(struct S *s, int x) {
   s->a3 = x;
   s->a4 = x;
   // expected-warning@-1 {{bit-field 'a4' is not wide enough to store all enumerators of preferred type 'A'}}
-  // expected-note@#2 {{widen this field to 2 bits to store all values of 'A'}}
-  // expected-note@#preferred_a4 {{preferred type for bitfield 'A' specified here}}
+  // expected-note@#S_a4_decl {{widen this field to 2 bits to store all values of 'A'}}
+  // expected-note@#preferred_S_a4 {{preferred type for bitfield 'A' specified here}}
   s->a5 = x;
   s->a6 = x;
   s->a7 = x;
   // expected-warning@-1 {{bit-field 'a7' is not wide enough to store all enumerators of preferred type 'A'}}
-  // expected-note@#3 {{widen this field to 2 bits to store all values of 'A'}}
-  // expected-note@#preferred_a7 {{preferred type for bitfield 'A' specified here}}
+  // expected-note@#S_a7_decl {{widen this field to 2 bits to store all values of 'A'}}
+  // expected-note@#preferred_S_a7 {{preferred type for bitfield 'A' specified here}}
   s->a8 = x;
   // expected-warning@-1 {{signed bit-field 'a8' needs an extra bit to represent the largest positive enumerators of preferred type 'A'}}
-  // expected-note@#4 {{consider making the bitfield type unsigned}}
-  // expected-note@#preferred_a8 {{preferred type for bitfield 'A' specified here}}
+  // expected-note@#S_a8_decl {{consider making the bitfield type unsigned}}
+  // expected-note@#preferred_S_a8 {{preferred type for bitfield 'A' specified here}}
   s->a9 = x;
 }
 
