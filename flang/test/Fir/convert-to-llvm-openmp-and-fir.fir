@@ -1065,3 +1065,51 @@ func.func @omp_map_common_block_using_common_block_members() {
 }
 
 fir.global common @var_common_(dense<0> : vector<8xi8>) {alignment = 4 : i64} : !fir.array<8xi8>
+
+// -----
+
+
+func.func @use_string(%arg0 : !fir.ref<!fir.char<1,?>>) {
+  return
+}
+
+func.func @use_index(%arg0 : index) {
+  return
+}
+
+// CHECK-LABEL:   llvm.func @alloca_hoisting_openmp() {
+// CHECK:           %[[VAL_0:.*]] = llvm.mlir.constant(6 : index) : i64
+// CHECK:           %[[VAL_1:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(42 : i32) : i32
+// CHECK:           omp.parallel {
+// CHECK:             %[[VAL_3:.*]] = llvm.mlir.constant(6 : index) : i64
+// CHECK:             %[[VAL_4:.*]] = llvm.alloca %[[VAL_3]] x i8 : (i64) -> !llvm.ptr
+// CHECK:             omp.wsloop {
+// CHECK:               omp.loop_nest (%[[VAL_5:.*]]) : i32 = (%[[VAL_1]]) to (%[[VAL_2]]) inclusive step (%[[VAL_1]]) {
+// CHECK:                 %[[VAL_6:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:                 llvm.call @use_string(%[[VAL_4]]) : (!llvm.ptr) -> ()
+// CHECK:                 omp.yield
+// CHECK:               }
+// CHECK:             }
+// CHECK:             omp.terminator
+// CHECK:           }
+// CHECK:           llvm.call @use_index(%[[VAL_0]]) : (i64) -> ()
+// CHECK:           llvm.return
+// CHECK:         }
+func.func @alloca_hoisting_openmp() {
+  %c6 = arith.constant 6 : index
+  %c1_i32 = arith.constant 1 : i32
+  %c42_i32 = arith.constant 42 : i32
+  omp.parallel {
+    omp.wsloop {
+      omp.loop_nest (%arg0) : i32 = (%c1_i32) to (%c42_i32) inclusive step (%c1_i32) {
+        %0 = fir.alloca !fir.char<1,?>(%c6 : index)
+        fir.call @use_string(%0) : (!fir.ref<!fir.char<1,?>>) -> ()
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+  fir.call @use_index(%c6) : (index) -> ()
+  return
+}
