@@ -9894,6 +9894,16 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     case 4:
       Opc = AMDGPU::GLOBAL_LOAD_LDS_DWORD;
       break;
+    case 12:
+      if (!Subtarget->hasLDSLoadB96_B128())
+        return SDValue();
+      Opc = AMDGPU::GLOBAL_LOAD_LDS_DWORDX3;
+      break;
+    case 16:
+      if (!Subtarget->hasLDSLoadB96_B128())
+        return SDValue();
+      Opc = AMDGPU::GLOBAL_LOAD_LDS_DWORDX4;
+      break;
     }
 
     auto *M = cast<MemSDNode>(Op);
