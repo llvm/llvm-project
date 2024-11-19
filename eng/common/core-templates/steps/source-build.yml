@@ -76,6 +76,11 @@ steps:
       assetManifestFileName=SourceBuild_${{ parameters.platform.name }}.xml
     fi
 
+    portableBuildArgs=
+    if [ '${{ parameters.platform.portableBuild }}' != '' ]; then
+      portableBuildArgs='/p:PortabelBuild=${{ parameters.platform.portableBuild }}'
+    fi
+
     ${{ coalesce(parameters.platform.buildScript, './build.sh') }} --ci \
       --configuration $buildConfig \
       --restore --build --pack $publishArgs -bl \
@@ -85,7 +90,7 @@ steps:
       $targetRidArgs \
       $runtimeOsArgs \
       $baseOsArgs \
-      /p:SourceBuildNonPortable=${{ parameters.platform.nonPortable }} \
+      $portableBuildArgs \
       /p:DotNetBuildSourceOnly=true \
       /p:DotNetBuildRepo=true \
       /p:AssetManifestFileName=$assetManifestFileName

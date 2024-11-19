@@ -12,9 +12,10 @@ parameters:
   #   The name of the job. This is included in the job ID.
   # targetRID: ''
   #   The name of the target RID to use, instead of the one auto-detected by Arcade.
-  # nonPortable: false
+  # portableBuild: false
   #   Enables non-portable mode. This means a more specific RID (e.g. fedora.32-x64 rather than
-  #   linux-x64), and compiling against distro-provided packages rather than portable ones.
+  #   linux-x64), and compiling against distro-provided packages rather than portable ones. The
+  #   default is portable mode.
   # skipPublishValidation: false
   #   Disables publishing validation.  By default, a check is performed to ensure no packages are
   #   published by source-build.
