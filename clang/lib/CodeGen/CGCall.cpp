@@ -5793,8 +5793,14 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   }
 
   // Apply the attributes and calling convention.
-  CI->setAttributes(Attrs);
-  CI->setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));
+
+  // If this is a call to an intrinsic, ignore the attributes that would
+  // normally be deduced from the AST function declaration + the default
+  // attributes imposed by the language and/or target.
+  if (!isa<llvm::IntrinsicInst>(CI)) {
+    CI->setAttributes(Attrs);
+    CI->setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));
+  }
 
   // Apply various metadata.
 
