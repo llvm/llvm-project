@@ -1095,9 +1095,7 @@ static bool pathOnlyHandlesGslPointer(const IndirectLocalPath &Path) {
 }
 
 static bool isAssignmentOperatorLifetimeBound(CXXMethodDecl *CMD) {
-  if (!CMD)
-    return false;
-  return isNormalAssignmentOperator(CMD) && CMD->param_size() == 1 &&
+  return CMD && isNormalAssignmentOperator(CMD) && CMD->param_size() == 1 &&
          CMD->getParamDecl(0)->hasAttr<LifetimeBoundAttr>();
 }
 
