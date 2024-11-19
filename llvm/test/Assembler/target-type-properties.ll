@@ -29,11 +29,11 @@ define void @foo() {
 
 ;--- alloca.ll
 define void @foo() {
-  %val = alloca target("spirv.Image")
+  %val = alloca target("amdgcn.named.barrier", 0)
 ; CHECK-ALLOCA: Alloca has illegal target extension type
   ret void
 }
 
 ;--- byval.ll
-declare void @foo(ptr byval(target("spirv.Image")))
+declare void @foo(ptr byval(target("amdgcn.named.barrier", 0)))
 ; CHECK-BYVAL: 'byval' argument has illegal target extension type
