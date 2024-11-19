@@ -2183,7 +2183,8 @@ llvm::ConstantInt *CodeGenModule::CreateCrossDsoCfiTypeId(llvm::Metadata *MD) {
 }
 
 llvm::ConstantInt *CodeGenModule::CreateKCFITypeId(QualType T) {
-  if (auto *FnType = T->getAs<FunctionProtoType>())
+  auto *FnType = T->getAs<FunctionProtoType>();
+  if (FnType)
     T = getContext().getFunctionType(
         FnType->getReturnType(), FnType->getParamTypes(),
         FnType->getExtProtoInfo().withExceptionSpec(EST_None));
@@ -2196,8 +2197,32 @@ llvm::ConstantInt *CodeGenModule::CreateKCFITypeId(QualType T) {
   if (getCodeGenOpts().SanitizeCfiICallNormalizeIntegers)
     Out << ".normalized";
 
-  return llvm::ConstantInt::get(Int32Ty,
-                                static_cast<uint32_t>(llvm::xxHash64(OutName)));
+  uint32_t OutHash = static_cast<uint32_t>(llvm::xxHash64(OutName));
+  const auto &Triple = getTarget().getTriple();
+  if (FnType && Triple.isX86() && Triple.isArch64Bit() && Triple.isOSLinux()) {
+    // Estimate the function's arity (i.e., the number of arguments) at the ABI
+    // level by counting the number of parameters that are likely to be passed
+    // as registers, such as pointers and 64-bit (or smaller) integers. The
+    // Linux x86-64 ABI allows up to 6 parameters to be passed in GPRs.
+    // Additional parameters or parameters larger than 64 bits may be passed on
+    // the stack, in which case the arity is denoted as 7.
+    bool MayHaveStackArgs = FnType->getNumParams() > 6;
+
+    for (unsigned int i = 0; !MayHaveStackArgs && i < FnType->getNumParams();
+         ++i) {
+      const Type *PT = FnType->getParamType(i).getTypePtr();
+      if (!(PT->isPointerType() || (PT->isIntegralOrEnumerationType() &&
+                                    getContext().getTypeSize(PT) <= 64)))
+        MayHaveStackArgs = true;
+    }
+
+    // The 3-bit arity is concatenated with the lower 29 bits of the KCFI hash
+    // to form an enhanced KCFI type ID. This can prevent, for example, a
+    // 3-arity function's ID from ever colliding with a 2-arity function's ID.
+    OutHash = (OutHash << 3) | (MayHaveStackArgs ? 7 : FnType->getNumParams());
+  }
+
+  return llvm::ConstantInt::get(Int32Ty, OutHash);
 }
 
 void CodeGenModule::SetLLVMFunctionAttributes(GlobalDecl GD,

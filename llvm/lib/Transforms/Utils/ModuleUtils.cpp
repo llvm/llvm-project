@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -21,6 +21,7 @@
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
@@ -208,10 +209,34 @@ void llvm::setKCFIType(Module &M, Function &F, StringRef MangledType) {
   std::string Type = MangledType.str();
   if (M.getModuleFlag("cfi-normalize-integers"))
     Type += ".normalized";
+
+  uint32_t OutHash = static_cast<uint32_t>(llvm::xxHash64(Type));
+  Triple T(M.getTargetTriple());
+  if (T.isX86() && T.isArch64Bit() && T.isOSLinux()) {
+    // Estimate the function's arity (i.e., the number of arguments) at the ABI
+    // level by counting the number of parameters that are likely to be passed
+    // as registers, such as pointers and 64-bit (or smaller) integers. The
+    // Linux x86-64 ABI allows up to 6 parameters to be passed in GPRs.
+    // Additional parameters or parameters larger than 64 bits may be passed on
+    // the stack, in which case the arity is denoted as 7.
+    size_t NumParams = F.arg_size();
+    bool MayHaveStackArgs = NumParams > 6;
+
+    for (unsigned int i = 0; !MayHaveStackArgs && i < NumParams; ++i) {
+      const llvm::Type *PT = F.getArg(i)->getType();
+      if (!(PT->isPointerTy() || PT->getIntegerBitWidth() <= 64))
+        MayHaveStackArgs = true;
+    }
+
+    // The 3-bit arity is concatenated with the lower 29 bits of the KCFI hash
+    // to form an enhanced KCFI type ID. This can prevent, for example, a
+    // 3-arity function's ID from ever colliding with a 2-arity function's ID.
+    OutHash = (OutHash << 3) | (MayHaveStackArgs ? 7 : NumParams);
+  }
+
   F.setMetadata(LLVMContext::MD_kcfi_type,
                 MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
-                                     Type::getInt32Ty(Ctx),
-                                     static_cast<uint32_t>(xxHash64(Type))))));
+                                     Type::getInt32Ty(Ctx), OutHash))));
   // If the module was compiled with -fpatchable-function-entry, ensure
   // we use the same patchable-function-prefix.
   if (auto *MD = mdconst::extract_or_null<ConstantInt>(

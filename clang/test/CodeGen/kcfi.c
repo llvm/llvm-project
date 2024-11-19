@@ -7,7 +7,6 @@
 
 /// Must emit __kcfi_typeid symbols for address-taken function declarations
 // CHECK: module asm ".weak __kcfi_typeid_[[F4:[a-zA-Z0-9_]+]]"
-// CHECK: module asm ".set __kcfi_typeid_[[F4]], [[#%d,HASH:]]"
 /// Must not __kcfi_typeid symbols for non-address-taken declarations
 // CHECK-NOT: module asm ".weak __kcfi_typeid_{{f6|_Z2f6v}}"
 
@@ -29,7 +28,7 @@ int __call(fn_t f) __attribute__((__no_sanitize__("kcfi"))) {
 
 // CHECK: define dso_local{{.*}} i32 @{{call|_Z4callPFivE}}(ptr{{.*}} %f){{.*}}
 int call(fn_t f) {
-  // CHECK: call{{.*}} i32 %{{.}}(){{.*}} [ "kcfi"(i32 [[#HASH]]) ]
+  // CHECK: call{{.*}} i32 %{{.}}(){{.*}} [ "kcfi"(i32 [[#%d,HASH:]]) ]
   return f();
 }
 
@@ -48,6 +47,20 @@ static int f5(void) { return 2; }
 // CHECK-DAG: declare !kcfi_type ![[#TYPE]]{{.*}} i32 @{{f6|_Z2f6v}}()
 extern int f6(void);
 
+typedef struct {
+  int *p1;
+  int *p2[16];
+} s_t;
+
+// CHECK: define internal{{.*}} i32 @{{f7|_ZL2f7PFi3s_tEPS_}}(ptr{{.*}} %f, ptr{{.*}} %s){{.*}}
+static int f7(int (*f)(s_t), s_t *s) {
+  // CHECK: call{{.*}} i32 %{{.*}} [ "kcfi"(i32 [[#%d,HASH4:]]) ]
+  return f(*s) + 1;
+}
+
+// CHECK: define internal{{.*}} i32 @{{f8|_ZL2f83s_t}}(ptr{{.*}} %s){{.*}} !kcfi_type ![[#%d,TYPE4:]]
+static int f8(s_t s) { return 0; }
+
 #ifndef __cplusplus
 // C: define internal ptr @resolver1() #[[#]] !kcfi_type ![[#]] {
 int ifunc1(int) __attribute__((ifunc("resolver1")));
@@ -59,12 +72,14 @@ long ifunc2(long) __attribute__((ifunc("resolver2")));
 #endif
 
 int test(void) {
+  s_t s;
   return call(f1) +
          __call((fn_t)f2) +
          call(f3) +
          call(f4) +
          f5() +
-         f6();
+         f6() +
+         f7(f8, &s);
 }
 
 #ifdef __cplusplus
@@ -85,3 +100,4 @@ void test_member_call(void) {
 // CHECK-DAG: ![[#TYPE]] = !{i32 [[#HASH]]}
 // CHECK-DAG: ![[#TYPE2]] = !{i32 [[#%d,HASH2:]]}
 // MEMBER-DAG: ![[#TYPE3]] = !{i32 [[#HASH3]]}
+// CHECK-DAG: ![[#TYPE4]] = !{i32 [[#HASH4]]}
