@@ -404,9 +404,6 @@ struct MissingFeatures {
   // specs. We should make it always present.
   static bool makeTripleAlwaysPresent() { return false; }
 
-  // This Itanium bit is currently being skipped in cir.
-  static bool itaniumRecordLayoutBuilderFinishLayout() { return false; }
-
   static bool mustProgress() { return false; }
 
   static bool skipTempCopy() { return false; }

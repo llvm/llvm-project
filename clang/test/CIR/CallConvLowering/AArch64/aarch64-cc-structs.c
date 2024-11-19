@@ -205,3 +205,32 @@ GT_128 call_and_get_gt_128() {
 // LLVM:   store [2 x i64] %[[#ARG]], ptr %[[#V2]], align 8
 // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[#V1]], ptr %[[#V2]], i64 12, i1 false)
 void passS(S s) {}
+
+typedef struct {
+  uint8_t a;
+  uint16_t b;
+  uint8_t c;
+} S_PAD;
+
+// CHECK: cir.func {{.*@ret_s_pad}}()  -> !u48i
+// CHECK: %[[#V0:]] = cir.alloca !ty_S_PAD, !cir.ptr<!ty_S_PAD>, ["__retval"] {alignment = 2 : i64}
+// CHECK: %[[#V1:]] = cir.load %[[#V0]] : !cir.ptr<!ty_S_PAD>, !ty_S_PAD
+// CHECK: %[[#V2:]] = cir.alloca !u48i, !cir.ptr<!u48i>, [""] {alignment = 2 : i64}
+// CHECK: %[[#V3:]] = cir.cast(bitcast, %[[#V0]] : !cir.ptr<!ty_S_PAD>)
+// CHECK: %[[#V4:]] = cir.cast(bitcast, %[[#V2:]] : !cir.ptr<!u48i>), !cir.ptr<!void>
+// CHECK: %[[#V5:]] = cir.const #cir.int<6> : !u64i
+// CHECK: cir.libc.memcpy %[[#V5]] bytes from %[[#V3]] to %[[#V4]] : !u64i, !cir.ptr<!void>
+// CHECK: %[[#V6:]] = cir.load %[[#V2]] : !cir.ptr<!u48i>
+// CHECK: cir.return %[[#V6]]
+
+// LLVM: i48 @ret_s_pad()
+// LLVM: %[[#V1:]] = alloca %struct.S_PAD, i64 1, align 2
+// LLVM: %[[#V2:]] = load %struct.S_PAD, ptr %[[#V1]], align 2
+// LLVM: %[[#V3:]] = alloca i48, i64 1, align 2
+// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr %[[#V3]], ptr %[[#V1]], i64 6, i1 false)
+// LLVM: %[[#V4:]] = load i48, ptr %[[#V3]]
+// LLVM: ret i48 %[[#V4]]
+S_PAD ret_s_pad() {
+  S_PAD s;
+  return s;
+}

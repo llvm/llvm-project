@@ -223,6 +223,9 @@ public:
   /// Initialize record layout for the given record decl.
   void initializeLayout(const Type Ty);
 
+  /// Finalize record layout. Adjust record size based on the alignment.
+  void finishLayout(const StructType D);
+
   uint64_t getDataSizeInBits() const { return DataSize; }
 
   void setDataSize(clang::CharUnits NewSize) {
@@ -243,8 +246,7 @@ void ItaniumRecordLayoutBuilder::layout(const StructType RT) {
   // FIXME(cir): Handle virtual-related layouts.
   cir_cconv_assert(!cir::MissingFeatures::getCXXRecordBases());
 
-  cir_cconv_assert(
-      !cir::MissingFeatures::itaniumRecordLayoutBuilderFinishLayout());
+  finishLayout(RT);
 }
 
 void ItaniumRecordLayoutBuilder::initializeLayout(const mlir::Type Ty) {
@@ -478,6 +480,31 @@ void ItaniumRecordLayoutBuilder::layoutFields(const StructType D) {
   }
 }
 
+void ItaniumRecordLayoutBuilder::finishLayout(const StructType D) {
+  // If we have any remaining field tail padding, include that in the overall
+  // size.
+  setSize(std::max(getSizeInBits(), (uint64_t)Context.toBits(PaddedFieldSize)));
+
+  // Finally, round the size of the record up to the alignment of the
+  // record itself.
+  uint64_t unpaddedSize = getSizeInBits() - UnfilledBitsInLastUnit;
+  uint64_t unpackedSizeInBits =
+      llvm::alignTo(getSizeInBits(), Context.toBits(UnpackedAlignment));
+
+  uint64_t roundedSize = llvm::alignTo(
+      getSizeInBits(),
+      Context.toBits(!Context.getTargetInfo().defaultsToAIXPowerAlignment()
+                         ? Alignment
+                         : PreferredAlignment));
+
+  if (UseExternalLayout) {
+    cir_cconv_unreachable("NYI");
+  }
+
+  // Set the size to the final size.
+  setSize(roundedSize);
+}
+
 void ItaniumRecordLayoutBuilder::UpdateAlignment(
     clang::CharUnits NewAlignment, clang::CharUnits UnpackedNewAlignment,
     clang::CharUnits PreferredNewAlignment) {
@@ -521,13 +548,13 @@ void ItaniumRecordLayoutBuilder::checkFieldPadding(
 
   // Warn if padding was introduced to the struct/class.
   if (!IsUnion && Offset > UnpaddedOffset) {
-    unsigned PadSize = Offset - UnpaddedOffset;
-    // bool InBits = true;
-    if (PadSize % CharBitNum == 0) {
-      PadSize = PadSize / CharBitNum;
-      // InBits = false;
+    unsigned padSize = Offset - UnpaddedOffset;
+    bool inBits = true;
+    if (padSize % CharBitNum == 0) {
+      padSize = padSize / CharBitNum;
+      inBits = false;
     }
-    cir_cconv_assert(cir::MissingFeatures::bitFieldPaddingDiagnostics());
+    cir_cconv_assert(!cir::MissingFeatures::bitFieldPaddingDiagnostics());
   }
   if (isPacked && Offset != UnpackedOffset) {
     HasPackedField = true;

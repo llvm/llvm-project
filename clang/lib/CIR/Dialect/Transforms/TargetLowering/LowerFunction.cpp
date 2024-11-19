@@ -347,6 +347,31 @@ mlir::Value emitAddressAtOffset(LowerFunction &LF, mlir::Value addr,
   return addr;
 }
 
+/// Creates a coerced value from \param src having a type of \param ty which is
+/// a non primitive type
+mlir::Value createCoercedNonPrimitive(mlir::Value src, mlir::Type ty,
+                                      LowerFunction &LF) {
+  if (auto load = mlir::dyn_cast<LoadOp>(src.getDefiningOp())) {
+    auto &bld = LF.getRewriter();
+    auto addr = load.getAddr();
+
+    auto oldAlloca = mlir::dyn_cast<AllocaOp>(addr.getDefiningOp());
+    auto alloca = bld.create<AllocaOp>(
+        src.getLoc(), bld.getType<PointerType>(ty), ty,
+        /*name=*/llvm::StringRef(""), oldAlloca.getAlignmentAttr());
+
+    auto tySize = LF.LM.getDataLayout().getTypeStoreSize(ty);
+    createMemCpy(LF, alloca, addr, tySize.getFixedValue());
+
+    auto newLoad = bld.create<LoadOp>(src.getLoc(), alloca.getResult());
+    bld.replaceAllOpUsesWith(load, newLoad);
+
+    return newLoad;
+  }
+
+  cir_cconv_unreachable("NYI");
+}
+
 /// After the calling convention is lowered, an ABI-agnostic type might have to
 /// be loaded back to its ABI-aware couterpart so it may be returned. If they
 /// differ, we have to do a coerced load. A coerced load, which means to load a
@@ -370,7 +395,8 @@ mlir::Value castReturnValue(mlir::Value Src, mlir::Type Ty, LowerFunction &LF) {
 
   auto intTy = mlir::dyn_cast<IntType>(Ty);
   if (intTy && !intTy.isPrimitive())
-    cir_cconv_unreachable("non-primitive types NYI");
+    return createCoercedNonPrimitive(Src, Ty, LF);
+
   llvm::TypeSize DstSize = LF.LM.getDataLayout().getTypeAllocSize(Ty);
 
   // FIXME(cir): Do we need the EnterStructPointerForCoercedAccess routine here?
