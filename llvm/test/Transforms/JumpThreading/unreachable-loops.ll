@@ -5,11 +5,11 @@
 ; in jump-threading when it tries to update the predecessors'
 ; profile metadata from a phi node.
 
-define void @unreachable_single_bb_loop(i1 %arg) {
+define void @unreachable_single_bb_loop() {
 ;
 ; CHECK-LABEL: @unreachable_single_bb_loop(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = call i32 @a(i1 %arg)
+; CHECK-NEXT:    [[TMP:%.*]] = call i32 @a()
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[BB8:%.*]], label [[BB8]]
 ; CHECK:       bb2:
@@ -22,7 +22,7 @@ define void @unreachable_single_bb_loop(i1 %arg) {
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %tmp = call i32 @a(i1 %arg)
+  %tmp = call i32 @a()
   %tmp1 = icmp eq i32 %tmp, 1
   br i1 %tmp1, label %bb5, label %bb8
 
@@ -45,11 +45,11 @@ bb8:                                              ; preds = %bb8, %bb7, %bb5, %b
   ret void
 }
 
-define void @unreachable_multi_bbs_loop(i1 %arg) {
+define void @unreachable_multi_bbs_loop() {
 ;
 ; CHECK-LABEL: @unreachable_multi_bbs_loop(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = call i32 @a(i1 %arg)
+; CHECK-NEXT:    [[TMP:%.*]] = call i32 @a()
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[BB8:%.*]], label [[BB8]]
 ; CHECK:       bb3:
@@ -64,7 +64,7 @@ define void @unreachable_multi_bbs_loop(i1 %arg) {
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %tmp = call i32 @a(i1 %arg)
+  %tmp = call i32 @a()
   %tmp1 = icmp eq i32 %tmp, 1
   br i1 %tmp1, label %bb5, label %bb8
 
@@ -89,7 +89,7 @@ bb7:                                              ; preds = %bb5
 bb8:                                              ; preds = %bb8, %bb7, %bb5, %bb2
   ret void
 }
-declare i32 @a(i1 %arg)
+declare i32 @a()
 
 ; This gets into a state that could cause instruction simplify
 ; to hang - an insertelement instruction has itself as an operand.
