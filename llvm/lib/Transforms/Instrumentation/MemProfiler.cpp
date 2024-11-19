@@ -862,8 +862,10 @@ memprof::computeUndriftMap(Module &M, IndexedInstrProfReader *MemProfReader,
                            const TargetLibraryInfo &TLI) {
   DenseMap<uint64_t, LocToLocMap> UndriftMaps;
 
-  auto CallsFromProfile = MemProfReader->getMemProfCallerCalleePairs();
-  auto CallsFromIR = extractCallsFromIR(M, TLI);
+  DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>> CallsFromProfile =
+      MemProfReader->getMemProfCallerCalleePairs();
+  DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>> CallsFromIR =
+      extractCallsFromIR(M, TLI);
 
   // Compute an undrift map for each CallerGUID.
   for (const auto &[CallerGUID, IRAnchors] : CallsFromIR) {

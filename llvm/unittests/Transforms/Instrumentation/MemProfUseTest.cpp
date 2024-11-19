@@ -320,19 +320,19 @@ makeRecordV2(std::initializer_list<::llvm::memprof::CallStackId> AllocFrames,
              std::initializer_list<::llvm::memprof::CallStackId> CallSiteFrames,
              const MemInfoBlock &Block, const memprof::MemProfSchema &Schema) {
   llvm::memprof::IndexedMemProfRecord MR;
-  for (const auto &CSId : AllocFrames)
+  for (const auto &CSId : AllocFrames) {
     // We don't populate IndexedAllocationInfo::CallStack because we use it only
     // in Version1.
-    MR.AllocSites.emplace_back(::llvm::SmallVector<memprof::FrameId>(), CSId,
-                               Block, Schema);
+    MR.AllocSites.push_back({{}, CSId, Block, Schema});
+  }
   for (const auto &CSId : CallSiteFrames)
     MR.CallSiteIds.push_back(CSId);
   return MR;
 }
 
 static const auto Err = [](Error E) {
+  FAIL() << E;
   consumeError(std::move(E));
-  FAIL();
 };
 
 // Make sure that we can undrift direct calls.
