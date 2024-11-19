@@ -20,14 +20,13 @@ Writing an RFC
 The process begins with writing a proposal for the changes you'd like to see
 made. The proposal should include:
 
-* a high-level overview of what changes are being proposed,
-* information detailing the motivation for why the changes are being proposed,
-* detailed information the proposed changes and how they impact different parts
-  of the project, and
-* a list of any open questions the community should explicitly address.
+* a detailed overview of the proposed changes,
+* the motivation for why the changes are being proposed,
+* the impact on different parts of the project, and
+* any open questions the community should address.
 
-Once the contents of the proposal are ready, the proposal should be posted to
-the appropriate forum on `Discourse <https://discourse.llvm.org/>`_.
+The proposal should be posted to the appropriate forum on
+`Discourse <https://discourse.llvm.org/>`_.
 
 Feedback Period
 ---------------
@@ -49,11 +48,8 @@ Trivial Acceptance or Rejection
 If the proposal has obvious consensus (for or against), a maintainer for each
 of the impacted parts of the project will explicitly accept or reject the RFC
 by leaving a comment stating their decision and possibly detailing any
-provisions for their acceptance. Additionally, the original post should be
-edited to explicitly say what consensus was called and link to the comment
-stating that decision. Including that information in the post makes it more
-clear to everyone what state the proposal is in. Overall consensus is
-determined once all impacted parts of the project have accepted the proposal.
+provisions for their acceptance. Overall consensus is determined once a
+maintainer from each impacted part of the project has accepted the proposal.
 
 Low Engagement Level
 ~~~~~~~~~~~~~~~~~~~~
@@ -66,10 +62,11 @@ judgement on whether to accept or reject.
 After Acceptance
 ----------------
 Once an RFC has been accepted, the authors may begin merging pull requests
-related to the proposal. The review process may identify necessary changes to
-the proposal. Minor changes to the proposal do not require an additional RFC.
-However, if the proposal changes significantly in a material way, the authors
-may be asked to run another RFC.
+related to the proposal. While the RFC process typically makes reviewing the
+pull requests go more smoothly, the review process may identify additional
+necessary changes to the proposal. Minor changes to the proposal do not require
+an additional RFC. However, if the proposal changes significantly in a material
+way, the authors may be asked to run another RFC.
 
 After Rejection
 ---------------
