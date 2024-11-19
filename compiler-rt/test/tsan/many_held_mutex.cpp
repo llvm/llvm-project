@@ -8,7 +8,7 @@
 int main(int argc, char *argv[]) {
   int num_of_mtx = std::stoi(argv[1]);
 
-  std::mutex* mutexes = new std::mutex[num_of_mtx];
+  std::mutex *mutexes = new std::mutex[num_of_mtx];
 
   for (int i = 0; i < num_of_mtx; i++) {
     mutexes[i].lock();
