@@ -149,7 +149,7 @@ Status MainLoopPosix::RunImpl::Poll() {
   int timeout;
 
   timeout = -1;
-  pthread_sigmask(SIG_SETMASK, &sigmask, &origmask);
+  pthread_sigmask(SIG_SETMASK, nullptr, &origmask);
   int ready = poll(read_fds.data(), read_fds.size(), timeout);
   pthread_sigmask(SIG_SETMASK, &origmask, nullptr);
   if (ready == -1 && errno != EINTR)
