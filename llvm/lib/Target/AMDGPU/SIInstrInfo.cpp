@@ -9007,10 +9007,9 @@ SIInstrInfo::getBundledIndexingInst(const MachineInstr &MI,
     return nullptr;
   if (!Op.isReg())
     return nullptr;
-  // TODO-GFX13 should check if the operand is a staging-register
-  // auto *RC = MRI->getRegClass(Op.getReg());
-  // if (RC == &AMDGPU::STAGING_REGRegClass)
-  //   return nullptr;
+  // Data operand for v_load/store_idx has to be a staging register.
+  if (!AMDGPU::STAGING_REGRegClass.contains(Op.getReg()))
+    return nullptr;
   auto RegNo = Op.getReg();
   if (Op.isDef()) {
     auto I = MI.getIterator();
