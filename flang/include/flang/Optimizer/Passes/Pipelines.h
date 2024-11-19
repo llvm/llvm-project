@@ -123,7 +123,8 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 /// \param optLevel - optimization level used for creating FIR optimization
 ///   passes pipeline
 void createHLFIRToFIRPassPipeline(
-    mlir::PassManager &pm, llvm::OptimizationLevel optLevel = defaultOptLevel);
+    mlir::PassManager &pm, bool enableOpenMP,
+    llvm::OptimizationLevel optLevel = defaultOptLevel);
 
 /// Create a pass pipeline for handling certain OpenMP transformations needed
 /// prior to FIR lowering.

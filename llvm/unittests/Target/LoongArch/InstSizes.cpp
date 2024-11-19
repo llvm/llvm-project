@@ -13,7 +13,7 @@
 using namespace llvm;
 
 namespace {
-std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
+std::unique_ptr<TargetMachine> createTargetMachine() {
   auto TT(Triple::normalize("loongarch64--"));
   std::string CPU("generic-la64");
   std::string FS("+64bit");
@@ -25,9 +25,9 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
 
-  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+  return std::unique_ptr<TargetMachine>(
       TheTarget->createTargetMachine(TT, CPU, FS, TargetOptions(), std::nullopt,
-                                     std::nullopt, CodeGenOptLevel::Default)));
+                                     std::nullopt, CodeGenOptLevel::Default));
 }
 
 std::unique_ptr<LoongArchInstrInfo> createInstrInfo(TargetMachine *TM) {
@@ -42,8 +42,8 @@ std::unique_ptr<LoongArchInstrInfo> createInstrInfo(TargetMachine *TM) {
 /// the \p InputMIRSnippet (global variables etc)
 /// Inspired by AArch64
 void runChecks(
-    LLVMTargetMachine *TM, LoongArchInstrInfo *II,
-    const StringRef InputIRSnippet, const StringRef InputMIRSnippet,
+    TargetMachine *TM, LoongArchInstrInfo *II, const StringRef InputIRSnippet,
+    const StringRef InputMIRSnippet,
     std::function<void(LoongArchInstrInfo &, MachineFunction &)> Checks) {
   LLVMContext Context;
 
@@ -87,7 +87,7 @@ void runChecks(
 } // anonymous namespace
 
 TEST(InstSizes, INLINEASM_BR) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
   std::unique_ptr<LoongArchInstrInfo> II = createInstrInfo(TM.get());
 
   runChecks(TM.get(), II.get(), "",
@@ -101,7 +101,7 @@ TEST(InstSizes, INLINEASM_BR) {
 }
 
 TEST(InstSizes, SPACE) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
   std::unique_ptr<LoongArchInstrInfo> II = createInstrInfo(TM.get());
 
   runChecks(TM.get(), II.get(), "", "  INLINEASM &\".space 1024\", 1\n",
@@ -112,7 +112,7 @@ TEST(InstSizes, SPACE) {
 }
 
 TEST(InstSizes, AtomicPseudo) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
   std::unique_ptr<LoongArchInstrInfo> II = createInstrInfo(TM.get());
 
   runChecks(
@@ -142,7 +142,7 @@ TEST(InstSizes, AtomicPseudo) {
 }
 
 TEST(InstSizes, StatePoint) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
   std::unique_ptr<LoongArchInstrInfo> II = createInstrInfo(TM.get());
 
   runChecks(

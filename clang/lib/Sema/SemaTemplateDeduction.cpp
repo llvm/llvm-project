@@ -20,10 +20,10 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -1743,7 +1743,8 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       // C++ [temp.deduct.conv]p4:
       //   If the original A is a reference type, A can be more cv-qualified
       //   than the deduced A
-      if (!A.getQualifiers().compatiblyIncludes(P.getQualifiers()))
+      if (!A.getQualifiers().compatiblyIncludes(P.getQualifiers(),
+                                                S.getASTContext()))
         return TemplateDeductionResult::NonDeducedMismatch;
 
       // Strip out all extra qualifiers from the argument to figure out the
@@ -3772,7 +3773,7 @@ CheckOriginalCallArgDeduction(Sema &S, TemplateDeductionInfo &Info,
 
     if (AQuals == DeducedAQuals) {
       // Qualifiers match; there's nothing to do.
-    } else if (!DeducedAQuals.compatiblyIncludes(AQuals)) {
+    } else if (!DeducedAQuals.compatiblyIncludes(AQuals, S.getASTContext())) {
       return Failed();
     } else {
       // Qualifiers are compatible, so have the argument type adopt the
@@ -6478,8 +6479,7 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
 }
 
 namespace {
-struct MarkUsedTemplateParameterVisitor :
-    RecursiveASTVisitor<MarkUsedTemplateParameterVisitor> {
+struct MarkUsedTemplateParameterVisitor : DynamicRecursiveASTVisitor {
   llvm::SmallBitVector &Used;
   unsigned Depth;
 
@@ -6487,23 +6487,22 @@ struct MarkUsedTemplateParameterVisitor :
                                    unsigned Depth)
       : Used(Used), Depth(Depth) { }
 
-  bool VisitTemplateTypeParmType(TemplateTypeParmType *T) {
+  bool VisitTemplateTypeParmType(TemplateTypeParmType *T) override {
     if (T->getDepth() == Depth)
       Used[T->getIndex()] = true;
     return true;
   }
 
-  bool TraverseTemplateName(TemplateName Template) {
+  bool TraverseTemplateName(TemplateName Template) override {
     if (auto *TTP = llvm::dyn_cast_or_null<TemplateTemplateParmDecl>(
             Template.getAsTemplateDecl()))
       if (TTP->getDepth() == Depth)
         Used[TTP->getIndex()] = true;
-    RecursiveASTVisitor<MarkUsedTemplateParameterVisitor>::
-        TraverseTemplateName(Template);
+    DynamicRecursiveASTVisitor::TraverseTemplateName(Template);
     return true;
   }
 
-  bool VisitDeclRefExpr(DeclRefExpr *E) {
+  bool VisitDeclRefExpr(DeclRefExpr *E) override {
     if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(E->getDecl()))
       if (NTTP->getDepth() == Depth)
         Used[NTTP->getIndex()] = true;

@@ -4017,7 +4017,8 @@ purposes of calls. For example:
 
 If a type is trivial for the purposes of calls, has a non-trivial destructor,
 and is passed as an argument by value, the convention is that the callee will
-destroy the object before returning.
+destroy the object before returning. The lifetime of the copy of the parameter
+in the caller ends without a destructor call when the call begins.
 
 If a type is trivial for the purpose of calls, it is assumed to be trivially
 relocatable for the purpose of ``__is_trivially_relocatable``.
@@ -6050,12 +6051,19 @@ declared entity. The entity must not have weak linkage; for example, in C++,
 it cannot be applied to a declaration if a definition at that location would be
 considered inline.
 
-Not all targets support this attribute. ELF target support depends on both the
-linker and runtime linker, and is available in at least lld 4.0 and later,
-binutils 2.20.1 and later, glibc v2.11.1 and later, and FreeBSD 9.1 and later.
-Mach-O targets support it, but with slightly different semantics: the resolver
-is run at first call, instead of at load time by the runtime linker. Targets
-other than ELF and Mach-O currently do not support this attribute.
+Not all targets support this attribute:
+
+- ELF target support depends on both the linker and runtime linker, and is
+  available in at least lld 4.0 and later, binutils 2.20.1 and later, glibc
+  v2.11.1 and later, and FreeBSD 9.1 and later.
+- Mach-O targets support it, but with slightly different semantics: the resolver
+  is run at first call, instead of at load time by the runtime linker.
+- Windows target supports it on AArch64, but with different semantics: the
+  ``ifunc`` is replaced with a global function pointer, and the call is replaced
+  with an indirect call. The function pointer is initialized by a constructor
+  that calls the resolver.
+- Baremetal target supports it on AVR.
+- Other targets currently do not support this attribute.
   }];
 }
 

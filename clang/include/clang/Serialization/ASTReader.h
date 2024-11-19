@@ -2389,11 +2389,8 @@ public:
 
   // Read a string
   static std::string ReadString(const RecordDataImpl &Record, unsigned &Idx);
-
-  // Skip a string
-  static void SkipString(const RecordData &Record, unsigned &Idx) {
-    Idx += Record[Idx] + 1;
-  }
+  static StringRef ReadStringBlob(const RecordDataImpl &Record, unsigned &Idx,
+                                  StringRef &Blob);
 
   // Read a path
   std::string ReadPath(ModuleFile &F, const RecordData &Record, unsigned &Idx);
@@ -2401,11 +2398,8 @@ public:
   // Read a path
   std::string ReadPath(StringRef BaseDirectory, const RecordData &Record,
                        unsigned &Idx);
-
-  // Skip a path
-  static void SkipPath(const RecordData &Record, unsigned &Idx) {
-    SkipString(Record, Idx);
-  }
+  std::string ReadPathBlob(StringRef BaseDirectory, const RecordData &Record,
+                           unsigned &Idx, StringRef &Blob);
 
   /// Read a version tuple.
   static VersionTuple ReadVersionTuple(const RecordData &Record, unsigned &Idx);

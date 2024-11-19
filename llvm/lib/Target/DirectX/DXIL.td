@@ -757,7 +757,7 @@ def BufferStore : DXILOp<69, bufferStore> {
 def UpdateCounter : DXILOp<70, bufferUpdateCounter> {
   let Doc = "increments/decrements a buffer counter";
   let arguments = [HandleTy, Int8Ty];
-  let result = VoidTy;
+  let result = Int32Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
@@ -768,6 +768,14 @@ def CheckAccessFullyMapped : DXILOp<71, checkAccessFullyMapped> {
   let result = Int1Ty;
   let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
+def Discard : DXILOp<82, discard> {
+  let Doc = "discard the current pixel";
+  let LLVMIntrinsic = int_dx_discard;
+  let arguments = [Int1Ty];
+  let result = VoidTy;
+  let stages = [Stages<DXIL1_0, [pixel]>];
 }
 
 def ThreadId :  DXILOp<93, threadId> {

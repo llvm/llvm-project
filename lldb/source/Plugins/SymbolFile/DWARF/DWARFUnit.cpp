@@ -13,8 +13,10 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
+#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/Object/Error.h"
 
 #include "DWARFCompileUnit.h"
@@ -1029,43 +1031,49 @@ DWARFUnit::GetStringOffsetSectionItem(uint32_t index) const {
 
 llvm::Expected<DWARFRangeList>
 DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) {
+  llvm::DWARFAddressRangesVector llvm_ranges;
   if (GetVersion() <= 4) {
-    const DWARFDebugRanges *debug_ranges = m_dwarf.GetDebugRanges();
-    if (!debug_ranges)
-      return llvm::make_error<llvm::object::GenericBinaryError>(
-          "No debug_ranges section");
-    return debug_ranges->FindRanges(this, offset);
+    llvm::DWARFDataExtractor data =
+        m_dwarf.GetDWARFContext().getOrLoadRangesData().GetAsLLVMDWARF();
+    data.setAddressSize(m_header.getAddressByteSize());
+
+    llvm::DWARFDebugRangeList list;
+    if (llvm::Error e = list.extract(data, &offset))
+      return e;
+    llvm_ranges = list.getAbsoluteRanges(
+        llvm::object::SectionedAddress{GetBaseAddress()});
+  } else {
+    if (!GetRnglistTable())
+      return llvm::createStringError(std::errc::invalid_argument,
+                                     "missing or invalid range list table");
+
+    llvm::DWARFDataExtractor data = GetRnglistData().GetAsLLVMDWARF();
+
+    // As DW_AT_rnglists_base may be missing we need to call setAddressSize.
+    data.setAddressSize(m_header.getAddressByteSize());
+    auto range_list_or_error = GetRnglistTable()->findList(data, offset);
+    if (!range_list_or_error)
+      return range_list_or_error.takeError();
+
+    llvm::Expected<llvm::DWARFAddressRangesVector> expected_llvm_ranges =
+        range_list_or_error->getAbsoluteRanges(
+            llvm::object::SectionedAddress{GetBaseAddress()},
+            GetAddressByteSize(), [&](uint32_t index) {
+              uint32_t index_size = GetAddressByteSize();
+              dw_offset_t addr_base = GetAddrBase();
+              lldb::offset_t offset =
+                  addr_base + static_cast<lldb::offset_t>(index) * index_size;
+              return llvm::object::SectionedAddress{
+                  m_dwarf.GetDWARFContext().getOrLoadAddrData().GetMaxU64(
+                      &offset, index_size)};
+            });
+    if (!expected_llvm_ranges)
+      return expected_llvm_ranges.takeError();
+    llvm_ranges = std::move(*expected_llvm_ranges);
   }
 
-  if (!GetRnglistTable())
-    return llvm::createStringError(std::errc::invalid_argument,
-                                   "missing or invalid range list table");
-
-  llvm::DWARFDataExtractor data = GetRnglistData().GetAsLLVMDWARF();
-
-  // As DW_AT_rnglists_base may be missing we need to call setAddressSize.
-  data.setAddressSize(m_header.getAddressByteSize());
-  auto range_list_or_error = GetRnglistTable()->findList(data, offset);
-  if (!range_list_or_error)
-    return range_list_or_error.takeError();
-
-  llvm::Expected<llvm::DWARFAddressRangesVector> llvm_ranges =
-      range_list_or_error->getAbsoluteRanges(
-          llvm::object::SectionedAddress{GetBaseAddress()},
-          GetAddressByteSize(), [&](uint32_t index) {
-            uint32_t index_size = GetAddressByteSize();
-            dw_offset_t addr_base = GetAddrBase();
-            lldb::offset_t offset =
-                addr_base + static_cast<lldb::offset_t>(index) * index_size;
-            return llvm::object::SectionedAddress{
-                m_dwarf.GetDWARFContext().getOrLoadAddrData().GetMaxU64(
-                    &offset, index_size)};
-          });
-  if (!llvm_ranges)
-    return llvm_ranges.takeError();
-
   DWARFRangeList ranges;
-  for (const llvm::DWARFAddressRange &llvm_range : *llvm_ranges) {
+  for (const llvm::DWARFAddressRange &llvm_range : llvm_ranges) {
     ranges.Append(DWARFRangeList::Entry(llvm_range.LowPC,
                                         llvm_range.HighPC - llvm_range.LowPC));
   }

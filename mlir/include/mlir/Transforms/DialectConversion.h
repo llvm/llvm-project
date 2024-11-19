@@ -795,11 +795,31 @@ public:
   /// patterns even if a failure is encountered during the rewrite step.
   bool canRecoverFromRewriteFailure() const override { return true; }
 
-  /// PatternRewriter hook for replacing an operation.
+  /// Replace the given operation with the new values. The number of op results
+  /// and replacement values must match. The types may differ: the dialect
+  /// conversion driver will reconcile any surviving type mismatches at the end
+  /// of the conversion process with source materializations. The given
+  /// operation is erased.
   void replaceOp(Operation *op, ValueRange newValues) override;
 
-  /// PatternRewriter hook for replacing an operation.
+  /// Replace the given operation with the results of the new op. The number of
+  /// op results must match. The types may differ: the dialect conversion
+  /// driver will reconcile any surviving type mismatches at the end of the
+  /// conversion process with source materializations. The original operation
+  /// is erased.
   void replaceOp(Operation *op, Operation *newOp) override;
+
+  /// Replace the given operation with the new value ranges. The number of op
+  /// results and value ranges must match. If an original SSA value is replaced
+  /// by multiple SSA values (i.e., a value range has more than 1 element), the
+  /// conversion driver will insert an argument materialization to convert the
+  /// N SSA values back into 1 SSA value of the original type. The given
+  /// operation is erased.
+  ///
+  /// Note: The argument materialization is a workaround until we have full 1:N
+  /// support in the dialect conversion. (It is going to disappear from both
+  /// `replaceOpWithMultiple` and `applySignatureConversion`.)
+  void replaceOpWithMultiple(Operation *op, ArrayRef<ValueRange> newValues);
 
   /// PatternRewriter hook for erasing a dead operation. The uses of this
   /// operation *must* be made dead by the end of the conversion process,

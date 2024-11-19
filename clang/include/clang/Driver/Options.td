@@ -4072,6 +4072,11 @@ defm threadsafe_statics : BoolFOption<"threadsafe-statics",
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
           "Do not emit code to make initialization of local statics thread safe">,
   PosFlag<SetTrue>>;
+defm ms_tls_guards : BoolFOption<"ms-tls-guards",
+  CodeGenOpts<"TlsGuards">, DefaultTrue,
+  NegFlag<SetFalse, [], [CC1Option],
+          "Do not emit code to perform on-demand initialization of thread-local variables">,
+  PosFlag<SetTrue>>;
 def ftime_report : Flag<["-"], "ftime-report">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoFlag<CodeGenOpts<"TimePasses">>;
@@ -4351,6 +4356,7 @@ defm ptrauth_indirect_gotos : OptInCC1FFlag<"ptrauth-indirect-gotos",
 defm ptrauth_init_fini : OptInCC1FFlag<"ptrauth-init-fini", "Enable signing of function pointers in init/fini arrays">;
 defm ptrauth_init_fini_address_discrimination : OptInCC1FFlag<"ptrauth-init-fini-address-discrimination",
   "Enable address discrimination of function pointers in init/fini arrays">;
+defm ptrauth_elf_got : OptInCC1FFlag<"ptrauth-elf-got", "Enable authentication of pointers from GOT (ELF only)">;
 }
 
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
@@ -8635,6 +8641,12 @@ def _SLASH_Zc_threadSafeInit : CLFlag<"Zc:threadSafeInit">,
 def _SLASH_Zc_threadSafeInit_ : CLFlag<"Zc:threadSafeInit-">,
   HelpText<"Disable thread-safe initialization of static variables">,
   Alias<fno_threadsafe_statics>;
+def _SLASH_Zc_tlsGuards : CLFlag<"Zc:tlsGuards">,
+  HelpText<"Enable on-demand initialization of thread-local variables">,
+  Alias<fms_tls_guards>;
+def _SLASH_Zc_tlsGuards_ : CLFlag<"Zc:tlsGuards-">,
+  HelpText<"Disable on-demand initialization of thread-local variables">,
+  Alias<fno_ms_tls_guards>;
 def _SLASH_Zc_trigraphs : CLFlag<"Zc:trigraphs">,
   HelpText<"Enable trigraphs">, Alias<ftrigraphs>;
 def _SLASH_Zc_trigraphs_off : CLFlag<"Zc:trigraphs-">,
