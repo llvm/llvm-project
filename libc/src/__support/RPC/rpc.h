@@ -37,6 +37,9 @@ namespace rpc {
 #define __scoped_atomic_fetch_and(src, val, ord, scp)                          \
   __atomic_fetch_and(src, val, ord)
 #endif
+#if !__has_builtin(__scoped_atomic_thread_fence)
+#define __scoped_atomic_thread_fence(ord, scp) __atomic_thread_fence(ord)
+#endif
 
 /// A fixed size channel used to communicate between the RPC client and server.
 struct Buffer {
@@ -127,7 +130,7 @@ template <bool Invert> struct Process {
   /// cheaper than calling load_outbox to get the value to store.
   LIBC_INLINE uint32_t invert_outbox(uint32_t index, uint32_t current_outbox) {
     uint32_t inverted_outbox = !current_outbox;
-    __atomic_thread_fence(__ATOMIC_RELEASE);
+    __scoped_atomic_thread_fence(__ATOMIC_RELEASE, __MEMORY_SCOPE_SYSTEM);
     __scoped_atomic_store_n(&outbox[index], inverted_outbox, __ATOMIC_RELAXED,
                             __MEMORY_SCOPE_SYSTEM);
     return inverted_outbox;
@@ -141,7 +144,7 @@ template <bool Invert> struct Process {
       sleep_briefly();
       in = load_inbox(lane_mask, index);
     }
-    __atomic_thread_fence(__ATOMIC_ACQUIRE);
+    __scoped_atomic_thread_fence(__ATOMIC_ACQUIRE, __MEMORY_SCOPE_SYSTEM);
   }
 
   /// The packet is a linearly allocated array of buffers used to communicate
@@ -198,7 +201,7 @@ template <bool Invert> struct Process {
     // inlining the current function.
     bool holding_lock = lane_mask != packed;
     if (holding_lock)
-      __atomic_thread_fence(__ATOMIC_ACQUIRE);
+      __scoped_atomic_thread_fence(__ATOMIC_ACQUIRE, __MEMORY_SCOPE_DEVICE);
     return holding_lock;
   }
 
@@ -207,7 +210,7 @@ template <bool Invert> struct Process {
   [[clang::convergent]] LIBC_INLINE void unlock(uint64_t lane_mask,
                                                 uint32_t index) {
     // Do not move any writes past the unlock.
-    __atomic_thread_fence(__ATOMIC_RELEASE);
+    __scoped_atomic_thread_fence(__ATOMIC_RELEASE, __MEMORY_SCOPE_DEVICE);
 
     // Use exactly one thread to clear the nth bit in the lock array Must
     // restrict to a single thread to avoid one thread dropping the lock, then
@@ -596,6 +599,9 @@ LIBC_INLINE Server::Port Server::open(uint32_t lane_size) {
 #undef __scoped_atomic_store_n
 #undef __scoped_atomic_fetch_or
 #undef __scoped_atomic_fetch_and
+#endif
+#if !__has_builtin(__scoped_atomic_thread_fence)
+#undef __scoped_atomic_thread_fence
 #endif
 
 } // namespace rpc
