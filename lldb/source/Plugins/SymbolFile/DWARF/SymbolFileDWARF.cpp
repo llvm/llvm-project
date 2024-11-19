@@ -9,7 +9,6 @@
 #include "SymbolFileDWARF.h"
 
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
-#include "llvm/DebugInfo/DWARF/DWARFTypePrinter.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Format.h"
@@ -2811,14 +2810,33 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
             return true; // Keep iterating over index types, language mismatch.
         }
 
-        std::string qualified_name;
-        llvm::raw_string_ostream os(qualified_name);
-        llvm::DWARFTypePrinter<DWARFDIE> type_printer(os);
-        type_printer.appendQualifiedName(die);
-        TypeQuery die_query(qualified_name, e_exact_match);
-        if (query.ContextMatches(die_query.GetContextRef()))
-          if (Type *matching_type = ResolveType(die, true, true))
-            results.InsertUnique(matching_type->shared_from_this());
+        // Check the context matches
+        std::vector<lldb_private::CompilerContext> die_context;
+        if (query.GetModuleSearch())
+          die_context = die.GetDeclContext();
+        else
+          die_context = die.GetTypeLookupContext();
+        assert(!die_context.empty());
+        if (!query_simple.ContextMatches(die_context))
+          return true; // Keep iterating over index types, context mismatch.
+
+        // Try to resolve the type.
+        if (Type *matching_type = ResolveType(die, true, true)) {
+          ConstString name = matching_type->GetQualifiedName();
+          // We have found a type that still might not match due to template
+          // parameters. If we create a new TypeQuery that uses the new type's
+          // fully qualified name, we can find out if this type matches at all
+          // context levels. We can't use just the "match_simple" context
+          // because all template parameters were stripped off. The fully
+          // qualified name of the type will have the template parameters and
+          // will allow us to make sure it matches correctly.
+          TypeQuery die_query(name.GetStringRef(),
+                              TypeQueryOptions::e_exact_match);
+          if (!query.ContextMatches(die_query.GetContextRef()))
+            return true; // Keep iterating over index types, context mismatch.
+
+          results.InsertUnique(matching_type->shared_from_this());
+        }
         return !results.Done(query); // Keep iterating if we aren't done.
       });
       if (results.Done(query)) {
