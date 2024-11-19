@@ -75,7 +75,6 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
                                           "-shared",
                                           "--import-memory",
                                           "--no-entry",
-                                          "--export-all",
                                           "--experimental-pic",
                                           "--stack-first",
                                           "--allow-undefined",
