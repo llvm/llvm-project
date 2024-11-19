@@ -4882,7 +4882,7 @@ TEST(MemorySanitizer, throw_catch) {
   }
 }
 
-#if defined(__linux__)
+#if defined(__GLIBC__)
 TEST(MemorySanitizer, timer_create) {
   timer_t timer;
   EXPECT_POISONED(timer);
