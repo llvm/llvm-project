@@ -5711,46 +5711,6 @@ SDValue AArch64TargetLowering::getRuntimePStateSM(SelectionDAG &DAG,
                      Mask);
 }
 
-static unsigned getIntrinsicID(const SDNode *N);
-
-SDValue TryLowerMultiVecSMEDotIntrinsic(SDValue Op, SelectionDAG &DAG,
-                                        unsigned Size) {
-  assert((Size == 2 || Size == 4) && "Invalid Tuple Size");
-  auto IsStridedLoad = [Size](SDValue Op) -> bool {
-    unsigned Intrinsic = getIntrinsicID(Op.getNode());
-    if (Size == 2)
-      return Intrinsic == Intrinsic::aarch64_sve_ld1_pn_x2;
-    else
-      return Intrinsic == Intrinsic::aarch64_sve_ld1_pn_x4;
-  };
-
-  SmallVector<SDValue> Ops;
-  unsigned LastLoadIdx = Size == 2 ? 5 : 7;
-  unsigned LoadResNo = Op.getOperand(3).getResNo();
-  for (unsigned I = 3; I < LastLoadIdx; I++) {
-    if (!IsStridedLoad(Op->getOperand(I)) ||
-        Op.getOperand(I).getResNo() != LoadResNo)
-      return SDValue();
-    Ops.push_back(Op->getOperand(I));
-  }
-
-  EVT VT = Op->getOperand(3).getValueType();
-  SDVTList VTList =
-      Size == 2 ? DAG.getVTList(VT, VT) : DAG.getVTList(VT, VT, VT, VT);
-  unsigned Opc = Size == 2 ? AArch64ISD::FORM_STRIDED_TUPLE_X2
-                           : AArch64ISD::FORM_STRIDED_TUPLE_X4;
-  SDLoc DL(Op);
-  SDValue Pseudo = DAG.getNode(Opc, DL, VTList, Ops);
-
-  SmallVector<SDValue> DotOps = {Op.getOperand(0), Op->getOperand(1),
-                                 Op->getOperand(2)};
-  for (unsigned I = 0; I < Size; I++)
-    DotOps.push_back(Pseudo.getValue(I));
-  DotOps.push_back(Op->getOperand(DotOps.size()));
-  DotOps.push_back(Op->getOperand(DotOps.size()));
-  return DAG.getNode(Op->getOpcode(), DL, MVT::Other, DotOps);
-}
-
 // Lower an SME LDR/STR ZA intrinsic
 // Case 1: If the vector number (vecnum) is an immediate in range, it gets
 // folded into the instruction
@@ -5940,22 +5900,6 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         Op->getOperand(0), // Chain
         DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
         DAG.getConstant(AArch64SME::Always, DL, MVT::i64));
-  case Intrinsic::aarch64_sme_uvdot_lane_za32_vg1x4:
-  case Intrinsic::aarch64_sme_suvdot_lane_za32_vg1x4:
-  case Intrinsic::aarch64_sme_usvdot_lane_za32_vg1x4:
-  case Intrinsic::aarch64_sme_svdot_lane_za32_vg1x4:
-  case Intrinsic::aarch64_sme_usdot_lane_za32_vg1x4:
-  case Intrinsic::aarch64_sme_udot_lane_za32_vg1x4:
-  case Intrinsic::aarch64_sme_sudot_lane_za32_vg1x4:
-  case Intrinsic::aarch64_sme_sdot_lane_za32_vg1x4:
-    return TryLowerMultiVecSMEDotIntrinsic(Op, DAG, 4);
-  case Intrinsic::aarch64_sme_uvdot_lane_za32_vg1x2:
-  case Intrinsic::aarch64_sme_sdot_lane_za32_vg1x2:
-  case Intrinsic::aarch64_sme_svdot_lane_za32_vg1x2:
-  case Intrinsic::aarch64_sme_usdot_lane_za32_vg1x2:
-  case Intrinsic::aarch64_sme_sudot_lane_za32_vg1x2:
-  case Intrinsic::aarch64_sme_udot_lane_za32_vg1x2:
-    return TryLowerMultiVecSMEDotIntrinsic(Op, DAG, 2);
   }
 }
 
@@ -8727,6 +8671,77 @@ void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
       MI.addOperand(MachineOperand::CreateReg(AArch64::VG, /*IsDef=*/true,
                                               /*IsImplicit=*/true));
     }
+  }
+
+  if (MI.getOpcode() == AArch64::FORM_STRIDED_TUPLE_X2_PSEUDO ||
+      MI.getOpcode() == AArch64::FORM_STRIDED_TUPLE_X4_PSEUDO) {
+    MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    bool UseFormStrided = false;
+    unsigned Size =
+        MI.getOpcode() == AArch64::FORM_STRIDED_TUPLE_X2_PSEUDO ? 2 : 4;
+
+    // The FORM_STRIDED_TUPLE pseudo should only be used if the input operands
+    // are copy nodes where the source register is in a StridedOrContiguous
+    // class. For example:
+    //   %3:zpr2stridedorcontiguous = LD1B_2Z_IMM_PSEUDO ..
+    //   %4:zpr = COPY %3.zsub1:zpr2stridedorcontiguous
+    //   %5:zpr = COPY %3.zsub0:zpr2stridedorcontiguous
+    //   %6:zpr2stridedorcontiguous = LD1B_2Z_PSEUDO ..
+    //   %7:zpr = COPY %6.zsub1:zpr2stridedorcontiguous
+    //   %8:zpr = COPY %6.zsub0:zpr2stridedorcontiguous
+    //   %9:zpr2mul2 = FORM_STRIDED_TUPLE_X2_PSEUDO %5:zpr, %8:zpr
+
+    SmallVector<unsigned, 4> OpSubRegs;
+    for (unsigned I = 1; I < MI.getNumOperands(); ++I) {
+      MachineOperand &MO = MI.getOperand(I);
+      if (!MO.isReg())
+        continue;
+
+      MachineOperand *Def = MRI.getOneDef(MO.getReg());
+      if (!Def || !Def->isReg() || !Def->getParent()->isCopy())
+        continue;
+
+      MachineInstr *Cpy = Def->getParent();
+      MachineOperand CpyOp = Cpy->getOperand(1);
+      if (!CpyOp.isReg())
+        continue;
+
+      MachineOperand *Ld = MRI.getOneDef(CpyOp.getReg());
+      OpSubRegs.push_back(CpyOp.getSubReg());
+      if (!Ld || !Ld->isReg())
+        continue;
+
+      const TargetRegisterClass *RegClass =
+          Size == 2 ? &AArch64::ZPR2StridedOrContiguousRegClass
+                    : &AArch64::ZPR4StridedOrContiguousRegClass;
+
+      if (MRI.getRegClass(Ld->getReg()) == RegClass)
+        UseFormStrided = true;
+    }
+
+    // Ensure the operands all use the same subreg index.
+    if (!std::equal(OpSubRegs.begin(), OpSubRegs.end(), OpSubRegs.begin()))
+      UseFormStrided = false;
+
+    // If input values to the FORM_STRIDED_TUPLE pseudo aren't copies from a
+    // StridedOrContiguous class, fall back on REG_SEQUENCE node.
+    if (!UseFormStrided) {
+      static const unsigned SubRegs[] = {AArch64::zsub0, AArch64::zsub1,
+                                         AArch64::zsub2, AArch64::zsub3};
+
+      const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+      MachineInstrBuilder MIB = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                                        TII->get(TargetOpcode::REG_SEQUENCE),
+                                        MI.getOperand(0).getReg());
+
+      for (unsigned I = 1; I < MI.getNumOperands(); ++I) {
+        MIB.add(MI.getOperand(I));
+        MIB.addImm(SubRegs[I - 1]);
+      }
+
+      MI.eraseFromParent();
+    }
+    return;
   }
 
   // Add an implicit use of 'VG' for ADDXri/SUBXri, which are instructions that

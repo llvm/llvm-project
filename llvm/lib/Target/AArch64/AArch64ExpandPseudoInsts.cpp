@@ -1159,6 +1159,8 @@ bool AArch64ExpandPseudo::expandFormTuplePseudo(
     Register FormTupleOpReg = MI.getOperand(i + 1).getReg();
     Register ReturnTupleSubReg =
         TRI->getSubReg(ReturnTuple, AArch64::zsub0 + i);
+    // Add copies to ensure the subregisters remain in the correct order
+    // for any contigious operation they are used by.
     if (FormTupleOpReg != ReturnTupleSubReg)
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORR_ZZZ))
           .addReg(ReturnTupleSubReg, RegState::Define)

@@ -29,7 +29,7 @@ def AArch64_save_zt : SDNode<"AArch64ISD::SAVE_ZT", SDTypeProfile<0, 2,
                              [SDTCisInt<0>, SDTCisPtrTy<1>]>,
                              [SDNPHasChain, SDNPSideEffect, SDNPMayStore]>;
 
-def SDT_FORM_STRIDED_TUPLE_X2 : SDTypeProfile<4, 4,
+def SDT_FORM_STRIDED_TUPLE_X2 : SDTypeProfile<2, 2,
                              [SDTCisVec<0>, SDTCisSameAs<0, 1>,
                               SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>]>;
 
