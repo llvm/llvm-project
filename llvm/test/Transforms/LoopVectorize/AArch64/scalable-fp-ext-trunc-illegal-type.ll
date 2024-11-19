@@ -9,7 +9,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ;; registers required for a <vscale x 4 x fp128> when trying to maximize
 ;; vector bandwidth with SVE.
 
-; CHECK: LV: Found an estimated cost of Invalid for VF vscale x 2 For instruction: %load.ext = fpext double %load.in to fp128
+; CHECK: Cost of Invalid for VF vscale x 2: WIDEN-CAST ir<%load.ext> = fpext  ir<%load.in> to fp128
 
 define void @load_ext_trunc_store(ptr readonly %in, ptr noalias %out, i64 %N) {
 ; CHECK-LABEL: define void @load_ext_trunc_store(

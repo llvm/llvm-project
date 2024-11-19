@@ -131,7 +131,14 @@ public:
 // Contents of this chunk is always null bytes.
 class NullChunk : public NonSectionChunk {
 public:
-  explicit NullChunk(size_t n) : size(n) { hasData = false; }
+  explicit NullChunk(size_t n, uint32_t align) : size(n) {
+    hasData = false;
+    setAlignment(align);
+  }
+  explicit NullChunk(COFFLinkerContext &ctx)
+      : NullChunk(ctx.config.wordsize, ctx.config.wordsize) {}
+  explicit NullChunk(COFFLinkerContext &ctx, size_t n)
+      : NullChunk(n, ctx.config.wordsize) {}
   size_t getSize() const override { return size; }
 
   void writeTo(uint8_t *buf) const override {
@@ -737,11 +744,11 @@ void IdataContents::create(COFFLinkerContext &ctx) {
       }
     }
     // Terminate with null values.
-    lookups.push_back(make<NullChunk>(ctx.config.wordsize));
-    addresses.push_back(make<NullChunk>(ctx.config.wordsize));
+    lookups.push_back(make<NullChunk>(ctx));
+    addresses.push_back(make<NullChunk>(ctx));
     if (ctx.config.machine == ARM64EC) {
-      auxIat.push_back(make<NullChunk>(ctx.config.wordsize));
-      auxIatCopy.push_back(make<NullChunk>(ctx.config.wordsize));
+      auxIat.push_back(make<NullChunk>(ctx));
+      auxIatCopy.push_back(make<NullChunk>(ctx));
     }
 
     for (int i = 0, e = syms.size(); i < e; ++i)
@@ -755,7 +762,7 @@ void IdataContents::create(COFFLinkerContext &ctx) {
     dirs.push_back(dir);
   }
   // Add null terminator.
-  dirs.push_back(make<NullChunk>(sizeof(ImportDirectoryTableEntry)));
+  dirs.push_back(make<NullChunk>(sizeof(ImportDirectoryTableEntry), 4));
 }
 
 std::vector<Chunk *> DelayLoadContents::getChunks() {
@@ -830,17 +837,16 @@ void DelayLoadContents::create(Defined *h) {
         saver().save("__tailMerge_" + syms[0]->getDLLName().lower());
     ctx.symtab.addSynthetic(tmName, tm);
     // Terminate with null values.
-    addresses.push_back(make<NullChunk>(8));
-    names.push_back(make<NullChunk>(8));
+    addresses.push_back(make<NullChunk>(ctx, 8));
+    names.push_back(make<NullChunk>(ctx, 8));
     if (ctx.config.machine == ARM64EC) {
-      auxIat.push_back(make<NullChunk>(8));
-      auxIatCopy.push_back(make<NullChunk>(8));
+      auxIat.push_back(make<NullChunk>(ctx, 8));
+      auxIatCopy.push_back(make<NullChunk>(ctx, 8));
     }
 
     for (int i = 0, e = syms.size(); i < e; ++i)
       syms[i]->setLocation(addresses[base + i]);
-    auto *mh = make<NullChunk>(8);
-    mh->setAlignment(8);
+    auto *mh = make<NullChunk>(8, 8);
     moduleHandles.push_back(mh);
 
     // Fill the delay import table header fields.
@@ -853,7 +859,8 @@ void DelayLoadContents::create(Defined *h) {
   if (unwind)
     unwindinfo.push_back(unwind);
   // Add null terminator.
-  dirs.push_back(make<NullChunk>(sizeof(delay_import_directory_table_entry)));
+  dirs.push_back(
+      make<NullChunk>(sizeof(delay_import_directory_table_entry), 4));
 }
 
 Chunk *DelayLoadContents::newTailMergeChunk(Chunk *dir) {
