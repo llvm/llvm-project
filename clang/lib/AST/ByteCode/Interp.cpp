@@ -16,17 +16,13 @@
 #include "Program.h"
 #include "State.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/StringExtras.h"
-#include <limits>
-#include <vector>
 
 using namespace clang;
 using namespace clang::interp;
@@ -81,11 +77,17 @@ static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  if (!D->getType().isConstQualified())
+  if (!D->getType().isConstQualified()) {
     diagnoseNonConstVariable(S, OpPC, D);
-  else if (const auto *VD = dyn_cast<VarDecl>(D);
-           VD && !VD->getAnyInitializer())
-    diagnoseMissingInitializer(S, OpPC, VD);
+  } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    if (!VD->getAnyInitializer()) {
+      diagnoseMissingInitializer(S, OpPC, VD);
+    } else {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
+      S.Note(VD->getLocation(), diag::note_declared_at);
+    }
+  }
 
   return false;
 }
@@ -348,6 +350,13 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   if (D->isConstexpr())
     return true;
 
+  // If we're evaluating the initializer for a constexpr variable in C23, we may
+  // only read other contexpr variables. Abort here since this one isn't
+  // constexpr.
+  if (const auto *VD = dyn_cast_if_present<VarDecl>(S.EvaluatingDecl);
+      VD && VD->isConstexpr() && S.getLangOpts().C23)
+    return Invalid(S, OpPC);
+
   QualType T = D->getType();
   bool IsConstant = T.isConstant(S.getASTContext());
   if (T->isIntegralOrEnumerationType()) {
@@ -387,7 +396,7 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
 }
 
 static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  if (!Ptr.isBlockPointer())
+  if (!Ptr.isStatic() || !Ptr.isBlockPointer())
     return true;
   return CheckConstant(S, OpPC, Ptr.getDeclDesc());
 }
@@ -500,8 +509,8 @@ bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   return false;
 }
 
-bool CheckVolatile(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                   AccessKinds AK) {
+static bool CheckVolatile(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                          AccessKinds AK) {
   assert(Ptr.isLive());
 
   // FIXME: This check here might be kinda expensive. Maybe it would be better
@@ -989,6 +998,13 @@ static bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B) {
   return runRecordDestructor(S, OpPC, Pointer(const_cast<Block *>(B)), Desc);
 }
 
+static bool hasVirtualDestructor(QualType T) {
+  if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl())
+    if (const CXXDestructorDecl *DD = RD->getDestructor())
+      return DD->isVirtual();
+  return false;
+}
+
 bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
           bool IsGlobalDelete) {
   if (!CheckDynamicMemoryAllocation(S, OpPC))
@@ -1006,8 +1022,19 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
       return true;
 
     // Remove base casts.
+    QualType InitialType = Ptr.getType();
     while (Ptr.isBaseClass())
       Ptr = Ptr.getBase();
+
+    // For the non-array case, the types must match if the static type
+    // does not have a virtual destructor.
+    if (!DeleteIsArrayForm && Ptr.getType() != InitialType &&
+        !hasVirtualDestructor(InitialType)) {
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_delete_base_nonvirt_dtor)
+          << InitialType << Ptr.getType();
+      return false;
+    }
 
     if (!Ptr.isRoot() || Ptr.isOnePastEnd() || Ptr.isArrayElement()) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
@@ -1033,7 +1060,6 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
         return nullptr;
       };
 
-      AllocType->dump();
       if (const FunctionDecl *VirtualDelete =
               getVirtualOperatorDelete(AllocType);
           VirtualDelete &&
@@ -1439,6 +1465,11 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
         << StorageType << AllocType;
     return false;
   }
+
+  // Can't activate fields in a union, unless the direct base is the union.
+  if (Ptr.inUnion() && !Ptr.isActive() && !Ptr.getBase().getRecord()->isUnion())
+    return CheckActive(S, OpPC, Ptr, AK_Construct);
+
   return true;
 }
 
@@ -1537,6 +1568,23 @@ bool CastPointerIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
   S.Stk.push<IntegralAP<true>>(
       IntegralAP<true>::from(Ptr.getIntegerRepresentation(), BitWidth));
   return true;
+}
+
+bool CheckBitCast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,
+                  bool TargetIsUCharOrByte) {
+  // This is always fine.
+  if (!HasIndeterminateBits)
+    return true;
+
+  // Indeterminate bits can only be bitcast to unsigned char or std::byte.
+  if (TargetIsUCharOrByte)
+    return true;
+
+  const Expr *E = S.Current->getExpr(OpPC);
+  QualType ExprType = E->getType();
+  S.FFDiag(E, diag::note_constexpr_bit_cast_indet_dest)
+      << ExprType << S.getLangOpts().CharIsSigned << E->getSourceRange();
+  return false;
 }
 
 // https://github.com/llvm/llvm-project/issues/102513

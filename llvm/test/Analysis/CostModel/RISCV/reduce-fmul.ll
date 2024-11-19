@@ -6,13 +6,19 @@
 define void @reduce_fmul_bfloat() {
 ; FP-REDUCE-LABEL: 'reduce_fmul_bfloat'
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1 = call fast bfloat @llvm.vector.reduce.fmul.v1bf16(bfloat 0xR0000, <1 x bfloat> undef)
-; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2 = call fast bfloat @llvm.vector.reduce.fmul.v2bf16(bfloat 0xR0000, <2 x bfloat> undef)
-; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V4 = call fast bfloat @llvm.vector.reduce.fmul.v4bf16(bfloat 0xR0000, <4 x bfloat> undef)
-; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V8 = call fast bfloat @llvm.vector.reduce.fmul.v8bf16(bfloat 0xR0000, <8 x bfloat> undef)
-; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 49 for instruction: %V16 = call fast bfloat @llvm.vector.reduce.fmul.v16bf16(bfloat 0xR0000, <16 x bfloat> undef)
-; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 151 for instruction: %v32 = call fast bfloat @llvm.vector.reduce.fmul.v32bf16(bfloat 0xR0000, <32 x bfloat> undef)
+; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2 = call fast bfloat @llvm.vector.reduce.fmul.v2bf16(bfloat 0xR0000, <2 x bfloat> undef)
+; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V4 = call fast bfloat @llvm.vector.reduce.fmul.v4bf16(bfloat 0xR0000, <4 x bfloat> undef)
+; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8 = call fast bfloat @llvm.vector.reduce.fmul.v8bf16(bfloat 0xR0000, <8 x bfloat> undef)
+; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 73 for instruction: %V16 = call fast bfloat @llvm.vector.reduce.fmul.v16bf16(bfloat 0xR0000, <16 x bfloat> undef)
+; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 211 for instruction: %v32 = call fast bfloat @llvm.vector.reduce.fmul.v32bf16(bfloat 0xR0000, <32 x bfloat> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 541 for instruction: %V64 = call fast bfloat @llvm.vector.reduce.fmul.v64bf16(bfloat 0xR0000, <64 x bfloat> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 573 for instruction: %V128 = call fast bfloat @llvm.vector.reduce.fmul.v128bf16(bfloat 0xR0000, <128 x bfloat> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV1 = call fast bfloat @llvm.vector.reduce.fmul.nxv1bf16(bfloat 0xR0000, <vscale x 1 x bfloat> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV2 = call fast bfloat @llvm.vector.reduce.fmul.nxv2bf16(bfloat 0xR0000, <vscale x 2 x bfloat> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV4 = call fast bfloat @llvm.vector.reduce.fmul.nxv4bf16(bfloat 0xR0000, <vscale x 4 x bfloat> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV8 = call fast bfloat @llvm.vector.reduce.fmul.nxv8bf16(bfloat 0xR0000, <vscale x 8 x bfloat> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV16 = call fast bfloat @llvm.vector.reduce.fmul.nxv16bf16(bfloat 0xR0000, <vscale x 16 x bfloat> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV32 = call fast bfloat @llvm.vector.reduce.fmul.nxv32bf16(bfloat 0xR0000, <vscale x 32 x bfloat> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'reduce_fmul_bfloat'
@@ -24,6 +30,12 @@ define void @reduce_fmul_bfloat() {
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %v32 = call fast bfloat @llvm.vector.reduce.fmul.v32bf16(bfloat 0xR0000, <32 x bfloat> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %V64 = call fast bfloat @llvm.vector.reduce.fmul.v64bf16(bfloat 0xR0000, <64 x bfloat> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %V128 = call fast bfloat @llvm.vector.reduce.fmul.v128bf16(bfloat 0xR0000, <128 x bfloat> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV1 = call fast bfloat @llvm.vector.reduce.fmul.nxv1bf16(bfloat 0xR0000, <vscale x 1 x bfloat> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV2 = call fast bfloat @llvm.vector.reduce.fmul.nxv2bf16(bfloat 0xR0000, <vscale x 2 x bfloat> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV4 = call fast bfloat @llvm.vector.reduce.fmul.nxv4bf16(bfloat 0xR0000, <vscale x 4 x bfloat> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV8 = call fast bfloat @llvm.vector.reduce.fmul.nxv8bf16(bfloat 0xR0000, <vscale x 8 x bfloat> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV16 = call fast bfloat @llvm.vector.reduce.fmul.nxv16bf16(bfloat 0xR0000, <vscale x 16 x bfloat> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV32 = call fast bfloat @llvm.vector.reduce.fmul.nxv32bf16(bfloat 0xR0000, <vscale x 32 x bfloat> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %V1 = call fast bfloat @llvm.vector.reduce.fmul.v1bf16(bfloat 0.0, <1 x bfloat> undef)
@@ -34,6 +46,12 @@ define void @reduce_fmul_bfloat() {
   %v32 = call fast bfloat @llvm.vector.reduce.fmul.v32bf16(bfloat 0.0, <32 x bfloat> undef)
   %V64 = call fast bfloat @llvm.vector.reduce.fmul.v64bf16(bfloat 0.0, <64 x bfloat> undef)
   %V128 = call fast bfloat @llvm.vector.reduce.fmul.v128bf16(bfloat 0.0, <128 x bfloat> undef)
+  %NXV1 = call fast bfloat @llvm.vector.reduce.fmul.nxv1bf16(bfloat 0.0, <vscale x 1 x bfloat> undef)
+  %NXV2 = call fast bfloat @llvm.vector.reduce.fmul.nxv2bf16(bfloat 0.0, <vscale x 2 x bfloat> undef)
+  %NXV4 = call fast bfloat @llvm.vector.reduce.fmul.nxv4bf16(bfloat 0.0, <vscale x 4 x bfloat> undef)
+  %NXV8 = call fast bfloat @llvm.vector.reduce.fmul.nxv8bf16(bfloat 0.0, <vscale x 8 x bfloat> undef)
+  %NXV16 = call fast bfloat @llvm.vector.reduce.fmul.nxv16bf16(bfloat 0.0, <vscale x 16 x bfloat> undef)
+  %NXV32 = call fast bfloat @llvm.vector.reduce.fmul.nxv32bf16(bfloat 0.0, <vscale x 32 x bfloat> undef)
   ret void
 }
 
@@ -47,6 +65,12 @@ define void @reduce_fmul_half() {
 ; FP-REDUCE-ZVFH-NEXT:  Cost Model: Found an estimated cost of 151 for instruction: %v32 = call fast half @llvm.vector.reduce.fmul.v32f16(half 0xH0000, <32 x half> undef)
 ; FP-REDUCE-ZVFH-NEXT:  Cost Model: Found an estimated cost of 541 for instruction: %V64 = call fast half @llvm.vector.reduce.fmul.v64f16(half 0xH0000, <64 x half> undef)
 ; FP-REDUCE-ZVFH-NEXT:  Cost Model: Found an estimated cost of 573 for instruction: %V128 = call fast half @llvm.vector.reduce.fmul.v128f16(half 0xH0000, <128 x half> undef)
+; FP-REDUCE-ZVFH-NEXT:  Cost Model: Invalid cost for instruction: %NXV1 = call fast half @llvm.vector.reduce.fmul.nxv1f16(half 0xH0000, <vscale x 1 x half> undef)
+; FP-REDUCE-ZVFH-NEXT:  Cost Model: Invalid cost for instruction: %NXV2 = call fast half @llvm.vector.reduce.fmul.nxv2f16(half 0xH0000, <vscale x 2 x half> undef)
+; FP-REDUCE-ZVFH-NEXT:  Cost Model: Invalid cost for instruction: %NXV4 = call fast half @llvm.vector.reduce.fmul.nxv4f16(half 0xH0000, <vscale x 4 x half> undef)
+; FP-REDUCE-ZVFH-NEXT:  Cost Model: Invalid cost for instruction: %NXV8 = call fast half @llvm.vector.reduce.fmul.nxv8f16(half 0xH0000, <vscale x 8 x half> undef)
+; FP-REDUCE-ZVFH-NEXT:  Cost Model: Invalid cost for instruction: %NXV16 = call fast half @llvm.vector.reduce.fmul.nxv16f16(half 0xH0000, <vscale x 16 x half> undef)
+; FP-REDUCE-ZVFH-NEXT:  Cost Model: Invalid cost for instruction: %NXV32 = call fast half @llvm.vector.reduce.fmul.nxv32f16(half 0xH0000, <vscale x 32 x half> undef)
 ; FP-REDUCE-ZVFH-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; FP-REDUCE-ZVFHMIN-LABEL: 'reduce_fmul_half'
@@ -58,6 +82,12 @@ define void @reduce_fmul_half() {
 ; FP-REDUCE-ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 211 for instruction: %v32 = call fast half @llvm.vector.reduce.fmul.v32f16(half 0xH0000, <32 x half> undef)
 ; FP-REDUCE-ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 541 for instruction: %V64 = call fast half @llvm.vector.reduce.fmul.v64f16(half 0xH0000, <64 x half> undef)
 ; FP-REDUCE-ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 573 for instruction: %V128 = call fast half @llvm.vector.reduce.fmul.v128f16(half 0xH0000, <128 x half> undef)
+; FP-REDUCE-ZVFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV1 = call fast half @llvm.vector.reduce.fmul.nxv1f16(half 0xH0000, <vscale x 1 x half> undef)
+; FP-REDUCE-ZVFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV2 = call fast half @llvm.vector.reduce.fmul.nxv2f16(half 0xH0000, <vscale x 2 x half> undef)
+; FP-REDUCE-ZVFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV4 = call fast half @llvm.vector.reduce.fmul.nxv4f16(half 0xH0000, <vscale x 4 x half> undef)
+; FP-REDUCE-ZVFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV8 = call fast half @llvm.vector.reduce.fmul.nxv8f16(half 0xH0000, <vscale x 8 x half> undef)
+; FP-REDUCE-ZVFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV16 = call fast half @llvm.vector.reduce.fmul.nxv16f16(half 0xH0000, <vscale x 16 x half> undef)
+; FP-REDUCE-ZVFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV32 = call fast half @llvm.vector.reduce.fmul.nxv32f16(half 0xH0000, <vscale x 32 x half> undef)
 ; FP-REDUCE-ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'reduce_fmul_half'
@@ -69,6 +99,12 @@ define void @reduce_fmul_half() {
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %v32 = call fast half @llvm.vector.reduce.fmul.v32f16(half 0xH0000, <32 x half> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %V64 = call fast half @llvm.vector.reduce.fmul.v64f16(half 0xH0000, <64 x half> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %V128 = call fast half @llvm.vector.reduce.fmul.v128f16(half 0xH0000, <128 x half> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV1 = call fast half @llvm.vector.reduce.fmul.nxv1f16(half 0xH0000, <vscale x 1 x half> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV2 = call fast half @llvm.vector.reduce.fmul.nxv2f16(half 0xH0000, <vscale x 2 x half> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV4 = call fast half @llvm.vector.reduce.fmul.nxv4f16(half 0xH0000, <vscale x 4 x half> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV8 = call fast half @llvm.vector.reduce.fmul.nxv8f16(half 0xH0000, <vscale x 8 x half> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV16 = call fast half @llvm.vector.reduce.fmul.nxv16f16(half 0xH0000, <vscale x 16 x half> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV32 = call fast half @llvm.vector.reduce.fmul.nxv32f16(half 0xH0000, <vscale x 32 x half> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %V1 = call fast half @llvm.vector.reduce.fmul.v1f16(half 0.0, <1 x half> undef)
@@ -79,6 +115,12 @@ define void @reduce_fmul_half() {
   %v32 = call fast half @llvm.vector.reduce.fmul.v32f16(half 0.0, <32 x half> undef)
   %V64 = call fast half @llvm.vector.reduce.fmul.v64f16(half 0.0, <64 x half> undef)
   %V128 = call fast half @llvm.vector.reduce.fmul.v128f16(half 0.0, <128 x half> undef)
+  %NXV1 = call fast half @llvm.vector.reduce.fmul.nxv1f16(half 0.0, <vscale x 1 x half> undef)
+  %NXV2 = call fast half @llvm.vector.reduce.fmul.nxv2f16(half 0.0, <vscale x 2 x half> undef)
+  %NXV4 = call fast half @llvm.vector.reduce.fmul.nxv4f16(half 0.0, <vscale x 4 x half> undef)
+  %NXV8 = call fast half @llvm.vector.reduce.fmul.nxv8f16(half 0.0, <vscale x 8 x half> undef)
+  %NXV16 = call fast half @llvm.vector.reduce.fmul.nxv16f16(half 0.0, <vscale x 16 x half> undef)
+  %NXV32 = call fast half @llvm.vector.reduce.fmul.nxv32f16(half 0.0, <vscale x 32 x half> undef)
   ret void
 }
 
@@ -92,6 +134,11 @@ define void @reduce_fmul_float() {
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 451 for instruction: %v32 = call fast float @llvm.vector.reduce.fmul.v32f32(float 0.000000e+00, <32 x float> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 483 for instruction: %V64 = call fast float @llvm.vector.reduce.fmul.v64f32(float 0.000000e+00, <64 x float> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 547 for instruction: %V128 = call fast float @llvm.vector.reduce.fmul.v128f32(float 0.000000e+00, <128 x float> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV1 = call fast float @llvm.vector.reduce.fmul.nxv1f32(float 0.000000e+00, <vscale x 1 x float> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV2 = call fast float @llvm.vector.reduce.fmul.nxv2f32(float 0.000000e+00, <vscale x 2 x float> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV4 = call fast float @llvm.vector.reduce.fmul.nxv4f32(float 0.000000e+00, <vscale x 4 x float> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV8 = call fast float @llvm.vector.reduce.fmul.nxv8f32(float 0.000000e+00, <vscale x 8 x float> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV16 = call fast float @llvm.vector.reduce.fmul.nxv16f32(float 0.000000e+00, <vscale x 16 x float> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'reduce_fmul_float'
@@ -103,6 +150,11 @@ define void @reduce_fmul_float() {
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %v32 = call fast float @llvm.vector.reduce.fmul.v32f32(float 0.000000e+00, <32 x float> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 29 for instruction: %V64 = call fast float @llvm.vector.reduce.fmul.v64f32(float 0.000000e+00, <64 x float> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %V128 = call fast float @llvm.vector.reduce.fmul.v128f32(float 0.000000e+00, <128 x float> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV1 = call fast float @llvm.vector.reduce.fmul.nxv1f32(float 0.000000e+00, <vscale x 1 x float> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV2 = call fast float @llvm.vector.reduce.fmul.nxv2f32(float 0.000000e+00, <vscale x 2 x float> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV4 = call fast float @llvm.vector.reduce.fmul.nxv4f32(float 0.000000e+00, <vscale x 4 x float> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV8 = call fast float @llvm.vector.reduce.fmul.nxv8f32(float 0.000000e+00, <vscale x 8 x float> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV16 = call fast float @llvm.vector.reduce.fmul.nxv16f32(float 0.000000e+00, <vscale x 16 x float> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %V1 = call fast float @llvm.vector.reduce.fmul.v1f32(float 0.0, <1 x float> undef)
@@ -113,6 +165,11 @@ define void @reduce_fmul_float() {
   %v32 = call fast float @llvm.vector.reduce.fmul.v32f32(float 0.0, <32 x float> undef)
   %V64 = call fast float @llvm.vector.reduce.fmul.v64f32(float 0.0, <64 x float> undef)
   %V128 = call fast float @llvm.vector.reduce.fmul.v128f32(float 0.0, <128 x float> undef)
+  %NXV1 = call fast float @llvm.vector.reduce.fmul.nxv1f32(float 0.0, <vscale x 1 x float> undef)
+  %NXV2 = call fast float @llvm.vector.reduce.fmul.nxv2f32(float 0.0, <vscale x 2 x float> undef)
+  %NXV4 = call fast float @llvm.vector.reduce.fmul.nxv4f32(float 0.0, <vscale x 4 x float> undef)
+  %NXV8 = call fast float @llvm.vector.reduce.fmul.nxv8f32(float 0.0, <vscale x 8 x float> undef)
+  %NXV16 = call fast float @llvm.vector.reduce.fmul.nxv16f32(float 0.0, <vscale x 16 x float> undef)
   ret void
 }
 
@@ -126,6 +183,10 @@ define void @reduce_fmul_double() {
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 393 for instruction: %v32 = call fast double @llvm.vector.reduce.fmul.v32f64(double 0.000000e+00, <32 x double> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 457 for instruction: %V64 = call fast double @llvm.vector.reduce.fmul.v64f64(double 0.000000e+00, <64 x double> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 585 for instruction: %V128 = call fast double @llvm.vector.reduce.fmul.v128f64(double 0.000000e+00, <128 x double> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV1 = call fast double @llvm.vector.reduce.fmul.nxv1f64(double 0.000000e+00, <vscale x 1 x double> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV2 = call fast double @llvm.vector.reduce.fmul.nxv2f64(double 0.000000e+00, <vscale x 2 x double> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV4 = call fast double @llvm.vector.reduce.fmul.nxv4f64(double 0.000000e+00, <vscale x 4 x double> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV8 = call fast double @llvm.vector.reduce.fmul.nxv8f64(double 0.000000e+00, <vscale x 8 x double> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'reduce_fmul_double'
@@ -137,6 +198,10 @@ define void @reduce_fmul_double() {
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v32 = call fast double @llvm.vector.reduce.fmul.v32f64(double 0.000000e+00, <32 x double> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 29 for instruction: %V64 = call fast double @llvm.vector.reduce.fmul.v64f64(double 0.000000e+00, <64 x double> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %V128 = call fast double @llvm.vector.reduce.fmul.v128f64(double 0.000000e+00, <128 x double> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV1 = call fast double @llvm.vector.reduce.fmul.nxv1f64(double 0.000000e+00, <vscale x 1 x double> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV2 = call fast double @llvm.vector.reduce.fmul.nxv2f64(double 0.000000e+00, <vscale x 2 x double> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV4 = call fast double @llvm.vector.reduce.fmul.nxv4f64(double 0.000000e+00, <vscale x 4 x double> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV8 = call fast double @llvm.vector.reduce.fmul.nxv8f64(double 0.000000e+00, <vscale x 8 x double> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %V1 = call fast double @llvm.vector.reduce.fmul.v1f64(double 0.0, <1 x double> undef)
@@ -147,6 +212,10 @@ define void @reduce_fmul_double() {
   %v32 = call fast double @llvm.vector.reduce.fmul.v32f64(double 0.0, <32 x double> undef)
   %V64 = call fast double @llvm.vector.reduce.fmul.v64f64(double 0.0, <64 x double> undef)
   %V128 = call fast double @llvm.vector.reduce.fmul.v128f64(double 0.0, <128 x double> undef)
+  %NXV1 = call fast double @llvm.vector.reduce.fmul.nxv1f64(double 0.0, <vscale x 1 x double> undef)
+  %NXV2 = call fast double @llvm.vector.reduce.fmul.nxv2f64(double 0.0, <vscale x 2 x double> undef)
+  %NXV4 = call fast double @llvm.vector.reduce.fmul.nxv4f64(double 0.0, <vscale x 4 x double> undef)
+  %NXV8 = call fast double @llvm.vector.reduce.fmul.nxv8f64(double 0.0, <vscale x 8 x double> undef)
   ret void
 }
 
@@ -160,6 +229,12 @@ define void @reduce_ordered_fmul_bfloat() {
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 127 for instruction: %v32 = call bfloat @llvm.vector.reduce.fmul.v32bf16(bfloat 0xR0000, <32 x bfloat> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 255 for instruction: %V64 = call bfloat @llvm.vector.reduce.fmul.v64bf16(bfloat 0xR0000, <64 x bfloat> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 510 for instruction: %V128 = call bfloat @llvm.vector.reduce.fmul.v128bf16(bfloat 0xR0000, <128 x bfloat> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV1 = call bfloat @llvm.vector.reduce.fmul.nxv1bf16(bfloat 0xR0000, <vscale x 1 x bfloat> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV2 = call bfloat @llvm.vector.reduce.fmul.nxv2bf16(bfloat 0xR0000, <vscale x 2 x bfloat> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV4 = call bfloat @llvm.vector.reduce.fmul.nxv4bf16(bfloat 0xR0000, <vscale x 4 x bfloat> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV8 = call bfloat @llvm.vector.reduce.fmul.nxv8bf16(bfloat 0xR0000, <vscale x 8 x bfloat> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV16 = call bfloat @llvm.vector.reduce.fmul.nxv16bf16(bfloat 0xR0000, <vscale x 16 x bfloat> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV32 = call bfloat @llvm.vector.reduce.fmul.nxv32bf16(bfloat 0xR0000, <vscale x 32 x bfloat> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'reduce_ordered_fmul_bfloat'
@@ -171,6 +246,12 @@ define void @reduce_ordered_fmul_bfloat() {
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 95 for instruction: %v32 = call bfloat @llvm.vector.reduce.fmul.v32bf16(bfloat 0xR0000, <32 x bfloat> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 191 for instruction: %V64 = call bfloat @llvm.vector.reduce.fmul.v64bf16(bfloat 0xR0000, <64 x bfloat> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 382 for instruction: %V128 = call bfloat @llvm.vector.reduce.fmul.v128bf16(bfloat 0xR0000, <128 x bfloat> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV1 = call bfloat @llvm.vector.reduce.fmul.nxv1bf16(bfloat 0xR0000, <vscale x 1 x bfloat> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV2 = call bfloat @llvm.vector.reduce.fmul.nxv2bf16(bfloat 0xR0000, <vscale x 2 x bfloat> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV4 = call bfloat @llvm.vector.reduce.fmul.nxv4bf16(bfloat 0xR0000, <vscale x 4 x bfloat> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV8 = call bfloat @llvm.vector.reduce.fmul.nxv8bf16(bfloat 0xR0000, <vscale x 8 x bfloat> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV16 = call bfloat @llvm.vector.reduce.fmul.nxv16bf16(bfloat 0xR0000, <vscale x 16 x bfloat> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV32 = call bfloat @llvm.vector.reduce.fmul.nxv32bf16(bfloat 0xR0000, <vscale x 32 x bfloat> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %V1 = call bfloat @llvm.vector.reduce.fmul.v1bf16(bfloat 0.0, <1 x bfloat> undef)
@@ -181,6 +262,12 @@ define void @reduce_ordered_fmul_bfloat() {
   %v32 = call bfloat @llvm.vector.reduce.fmul.v32bf16(bfloat 0.0, <32 x bfloat> undef)
   %V64 = call bfloat @llvm.vector.reduce.fmul.v64bf16(bfloat 0.0, <64 x bfloat> undef)
   %V128 = call bfloat @llvm.vector.reduce.fmul.v128bf16(bfloat 0.0, <128 x bfloat> undef)
+  %NXV1 = call bfloat @llvm.vector.reduce.fmul.nxv1bf16(bfloat 0.0, <vscale x 1 x bfloat> undef)
+  %NXV2 = call bfloat @llvm.vector.reduce.fmul.nxv2bf16(bfloat 0.0, <vscale x 2 x bfloat> undef)
+  %NXV4 = call bfloat @llvm.vector.reduce.fmul.nxv4bf16(bfloat 0.0, <vscale x 4 x bfloat> undef)
+  %NXV8 = call bfloat @llvm.vector.reduce.fmul.nxv8bf16(bfloat 0.0, <vscale x 8 x bfloat> undef)
+  %NXV16 = call bfloat @llvm.vector.reduce.fmul.nxv16bf16(bfloat 0.0, <vscale x 16 x bfloat> undef)
+  %NXV32 = call bfloat @llvm.vector.reduce.fmul.nxv32bf16(bfloat 0.0, <vscale x 32 x bfloat> undef)
   ret void
 }
 
@@ -194,6 +281,12 @@ define void @reduce_ordered_fmul_half() {
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 127 for instruction: %v32 = call half @llvm.vector.reduce.fmul.v32f16(half 0xH0000, <32 x half> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 255 for instruction: %V64 = call half @llvm.vector.reduce.fmul.v64f16(half 0xH0000, <64 x half> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 510 for instruction: %V128 = call half @llvm.vector.reduce.fmul.v128f16(half 0xH0000, <128 x half> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV1 = call half @llvm.vector.reduce.fmul.nxv1f16(half 0xH0000, <vscale x 1 x half> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV2 = call half @llvm.vector.reduce.fmul.nxv2f16(half 0xH0000, <vscale x 2 x half> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV4 = call half @llvm.vector.reduce.fmul.nxv4f16(half 0xH0000, <vscale x 4 x half> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV8 = call half @llvm.vector.reduce.fmul.nxv8f16(half 0xH0000, <vscale x 8 x half> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV16 = call half @llvm.vector.reduce.fmul.nxv16f16(half 0xH0000, <vscale x 16 x half> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV32 = call half @llvm.vector.reduce.fmul.nxv32f16(half 0xH0000, <vscale x 32 x half> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'reduce_ordered_fmul_half'
@@ -205,6 +298,12 @@ define void @reduce_ordered_fmul_half() {
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 95 for instruction: %v32 = call half @llvm.vector.reduce.fmul.v32f16(half 0xH0000, <32 x half> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 191 for instruction: %V64 = call half @llvm.vector.reduce.fmul.v64f16(half 0xH0000, <64 x half> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 382 for instruction: %V128 = call half @llvm.vector.reduce.fmul.v128f16(half 0xH0000, <128 x half> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV1 = call half @llvm.vector.reduce.fmul.nxv1f16(half 0xH0000, <vscale x 1 x half> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV2 = call half @llvm.vector.reduce.fmul.nxv2f16(half 0xH0000, <vscale x 2 x half> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV4 = call half @llvm.vector.reduce.fmul.nxv4f16(half 0xH0000, <vscale x 4 x half> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV8 = call half @llvm.vector.reduce.fmul.nxv8f16(half 0xH0000, <vscale x 8 x half> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV16 = call half @llvm.vector.reduce.fmul.nxv16f16(half 0xH0000, <vscale x 16 x half> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV32 = call half @llvm.vector.reduce.fmul.nxv32f16(half 0xH0000, <vscale x 32 x half> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %V1 = call half @llvm.vector.reduce.fmul.v1f16(half 0.0, <1 x half> undef)
@@ -215,6 +314,12 @@ define void @reduce_ordered_fmul_half() {
   %v32 = call half @llvm.vector.reduce.fmul.v32f16(half 0.0, <32 x half> undef)
   %V64 = call half @llvm.vector.reduce.fmul.v64f16(half 0.0, <64 x half> undef)
   %V128 = call half @llvm.vector.reduce.fmul.v128f16(half 0.0, <128 x half> undef)
+  %NXV1 = call half @llvm.vector.reduce.fmul.nxv1f16(half 0.0, <vscale x 1 x half> undef)
+  %NXV2 = call half @llvm.vector.reduce.fmul.nxv2f16(half 0.0, <vscale x 2 x half> undef)
+  %NXV4 = call half @llvm.vector.reduce.fmul.nxv4f16(half 0.0, <vscale x 4 x half> undef)
+  %NXV8 = call half @llvm.vector.reduce.fmul.nxv8f16(half 0.0, <vscale x 8 x half> undef)
+  %NXV16 = call half @llvm.vector.reduce.fmul.nxv16f16(half 0.0, <vscale x 16 x half> undef)
+  %NXV32 = call half @llvm.vector.reduce.fmul.nxv32f16(half 0.0, <vscale x 32 x half> undef)
   ret void
 }
 
@@ -228,6 +333,11 @@ define void @reduce_ordered_fmul_float() {
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 127 for instruction: %v32 = call float @llvm.vector.reduce.fmul.v32f32(float 0.000000e+00, <32 x float> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 254 for instruction: %V64 = call float @llvm.vector.reduce.fmul.v64f32(float 0.000000e+00, <64 x float> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 508 for instruction: %V128 = call float @llvm.vector.reduce.fmul.v128f32(float 0.000000e+00, <128 x float> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV1 = call float @llvm.vector.reduce.fmul.nxv1f32(float 0.000000e+00, <vscale x 1 x float> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV2 = call float @llvm.vector.reduce.fmul.nxv2f32(float 0.000000e+00, <vscale x 2 x float> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV4 = call float @llvm.vector.reduce.fmul.nxv4f32(float 0.000000e+00, <vscale x 4 x float> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV8 = call float @llvm.vector.reduce.fmul.nxv8f32(float 0.000000e+00, <vscale x 8 x float> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV16 = call float @llvm.vector.reduce.fmul.nxv16f32(float 0.000000e+00, <vscale x 16 x float> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'reduce_ordered_fmul_float'
@@ -239,6 +349,11 @@ define void @reduce_ordered_fmul_float() {
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 95 for instruction: %v32 = call float @llvm.vector.reduce.fmul.v32f32(float 0.000000e+00, <32 x float> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 190 for instruction: %V64 = call float @llvm.vector.reduce.fmul.v64f32(float 0.000000e+00, <64 x float> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 380 for instruction: %V128 = call float @llvm.vector.reduce.fmul.v128f32(float 0.000000e+00, <128 x float> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV1 = call float @llvm.vector.reduce.fmul.nxv1f32(float 0.000000e+00, <vscale x 1 x float> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV2 = call float @llvm.vector.reduce.fmul.nxv2f32(float 0.000000e+00, <vscale x 2 x float> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV4 = call float @llvm.vector.reduce.fmul.nxv4f32(float 0.000000e+00, <vscale x 4 x float> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV8 = call float @llvm.vector.reduce.fmul.nxv8f32(float 0.000000e+00, <vscale x 8 x float> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV16 = call float @llvm.vector.reduce.fmul.nxv16f32(float 0.000000e+00, <vscale x 16 x float> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %V1 = call float @llvm.vector.reduce.fmul.v1f32(float 0.0, <1 x float> undef)
@@ -249,6 +364,11 @@ define void @reduce_ordered_fmul_float() {
   %v32 = call float @llvm.vector.reduce.fmul.v32f32(float 0.0, <32 x float> undef)
   %V64 = call float @llvm.vector.reduce.fmul.v64f32(float 0.0, <64 x float> undef)
   %V128 = call float @llvm.vector.reduce.fmul.v128f32(float 0.0, <128 x float> undef)
+  %NXV1 = call float @llvm.vector.reduce.fmul.nxv1f32(float 0.0, <vscale x 1 x float> undef)
+  %NXV2 = call float @llvm.vector.reduce.fmul.nxv2f32(float 0.0, <vscale x 2 x float> undef)
+  %NXV4 = call float @llvm.vector.reduce.fmul.nxv4f32(float 0.0, <vscale x 4 x float> undef)
+  %NXV8 = call float @llvm.vector.reduce.fmul.nxv8f32(float 0.0, <vscale x 8 x float> undef)
+  %NXV16 = call float @llvm.vector.reduce.fmul.nxv16f32(float 0.0, <vscale x 16 x float> undef)
   ret void
 }
 
@@ -262,6 +382,10 @@ define void @reduce_ordered_fmul_double() {
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 126 for instruction: %v32 = call double @llvm.vector.reduce.fmul.v32f64(double 0.000000e+00, <32 x double> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 252 for instruction: %V64 = call double @llvm.vector.reduce.fmul.v64f64(double 0.000000e+00, <64 x double> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 504 for instruction: %V128 = call double @llvm.vector.reduce.fmul.v128f64(double 0.000000e+00, <128 x double> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV1 = call double @llvm.vector.reduce.fmul.nxv1f64(double 0.000000e+00, <vscale x 1 x double> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV2 = call double @llvm.vector.reduce.fmul.nxv2f64(double 0.000000e+00, <vscale x 2 x double> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV4 = call double @llvm.vector.reduce.fmul.nxv4f64(double 0.000000e+00, <vscale x 4 x double> undef)
+; FP-REDUCE-NEXT:  Cost Model: Invalid cost for instruction: %NXV8 = call double @llvm.vector.reduce.fmul.nxv8f64(double 0.000000e+00, <vscale x 8 x double> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'reduce_ordered_fmul_double'
@@ -273,6 +397,10 @@ define void @reduce_ordered_fmul_double() {
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 94 for instruction: %v32 = call double @llvm.vector.reduce.fmul.v32f64(double 0.000000e+00, <32 x double> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 188 for instruction: %V64 = call double @llvm.vector.reduce.fmul.v64f64(double 0.000000e+00, <64 x double> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 376 for instruction: %V128 = call double @llvm.vector.reduce.fmul.v128f64(double 0.000000e+00, <128 x double> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV1 = call double @llvm.vector.reduce.fmul.nxv1f64(double 0.000000e+00, <vscale x 1 x double> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV2 = call double @llvm.vector.reduce.fmul.nxv2f64(double 0.000000e+00, <vscale x 2 x double> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV4 = call double @llvm.vector.reduce.fmul.nxv4f64(double 0.000000e+00, <vscale x 4 x double> undef)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %NXV8 = call double @llvm.vector.reduce.fmul.nxv8f64(double 0.000000e+00, <vscale x 8 x double> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %V1 = call double @llvm.vector.reduce.fmul.v1f64(double 0.0, <1 x double> undef)
@@ -283,5 +411,9 @@ define void @reduce_ordered_fmul_double() {
   %v32 = call double @llvm.vector.reduce.fmul.v32f64(double 0.0, <32 x double> undef)
   %V64 = call double @llvm.vector.reduce.fmul.v64f64(double 0.0, <64 x double> undef)
   %V128 = call double @llvm.vector.reduce.fmul.v128f64(double 0.0, <128 x double> undef)
+  %NXV1 = call double @llvm.vector.reduce.fmul.nxv1f64(double 0.0, <vscale x 1 x double> undef)
+  %NXV2 = call double @llvm.vector.reduce.fmul.nxv2f64(double 0.0, <vscale x 2 x double> undef)
+  %NXV4 = call double @llvm.vector.reduce.fmul.nxv4f64(double 0.0, <vscale x 4 x double> undef)
+  %NXV8 = call double @llvm.vector.reduce.fmul.nxv8f64(double 0.0, <vscale x 8 x double> undef)
   ret void
 }

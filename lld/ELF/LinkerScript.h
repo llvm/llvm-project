@@ -332,12 +332,15 @@ class LinkerScript final {
   // LinkerScript.
   AddressState *state = nullptr;
 
-  OutputSection *aether;
+  std::unique_ptr<OutputSection> aether;
 
   uint64_t dot = 0;
 
 public:
-  LinkerScript(Ctx &ctx) : ctx(ctx) {}
+  // OutputSection may be incomplete. Avoid inline ctor/dtor.
+  LinkerScript(Ctx &ctx);
+  ~LinkerScript();
+
   OutputDesc *createOutputSection(StringRef name, StringRef location);
   OutputDesc *getOrCreateOutputSection(StringRef name);
 
@@ -389,7 +392,7 @@ public:
   // Returns true if the PROVIDE symbol should be added to the link.
   // A PROVIDE symbol is added to the link only if it satisfies an
   // undefined reference.
-  static bool shouldAddProvideSym(StringRef symName);
+  bool shouldAddProvideSym(StringRef symName);
 
   // SECTIONS command list.
   SmallVector<SectionCommand *, 0> sectionCommands;
@@ -433,6 +436,8 @@ public:
   //
   // then provideMap should contain the mapping: 'v' -> ['a', 'b', 'c']
   llvm::MapVector<StringRef, SmallVector<StringRef, 0>> provideMap;
+  // Store defined symbols that should ignore PROVIDE commands.
+  llvm::DenseSet<Symbol *> unusedProvideSyms;
 
   // List of potential spill locations (PotentialSpillSection) for an input
   // section.

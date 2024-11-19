@@ -48,6 +48,7 @@ class APInt;
 class BasicBlock;
 class ConstantInt;
 class DataLayout;
+struct KnownBits;
 class StringRef;
 class Type;
 class Value;
@@ -1165,6 +1166,8 @@ class ICmpInst: public CmpInst {
            "Invalid operand types for ICmp instruction");
   }
 
+  enum { SameSign = (1 << 0) };
+
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
@@ -1224,6 +1227,15 @@ public:
   /// Return the unsigned version of the predicate.
   static Predicate getUnsignedPredicate(Predicate pred);
 
+  void setSameSign(bool B = true) {
+    SubclassOptionalData = (SubclassOptionalData & ~SameSign) | (B * SameSign);
+  }
+
+  /// An icmp instruction, which can be marked as "samesign", indicating that
+  /// the two operands have the same sign. This means that we can convert
+  /// "slt" to "ult" and vice versa, which enables more optimizations.
+  bool hasSameSign() const { return SubclassOptionalData & SameSign; }
+
   /// Return true if this predicate is either EQ or NE.  This also
   /// tests for commutativity.
   static bool isEquality(Predicate P) {
@@ -1236,9 +1248,13 @@ public:
     return isEquality(getPredicate());
   }
 
+  /// @returns true if the predicate is commutative
+  /// Determine if this relation is commutative.
+  static bool isCommutative(Predicate P) { return isEquality(P); }
+
   /// @returns true if the predicate of this ICmpInst is commutative
   /// Determine if this relation is commutative.
-  bool isCommutative() const { return isEquality(); }
+  bool isCommutative() const { return isCommutative(getPredicate()); }
 
   /// Return true if the predicate is relational (not EQ or NE).
   ///
@@ -1293,6 +1309,11 @@ public:
   /// Return result of `LHS Pred RHS` comparison.
   static bool compare(const APInt &LHS, const APInt &RHS,
                       ICmpInst::Predicate Pred);
+
+  /// Return result of `LHS Pred RHS`, if it can be determined from the
+  /// KnownBits. Otherwise return nullopt.
+  static std::optional<bool> compare(const KnownBits &LHS, const KnownBits &RHS,
+                                     ICmpInst::Predicate Pred);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
@@ -1352,7 +1373,7 @@ public:
     AssertOK();
   }
 
-  /// @returns true if the predicate of this instruction is EQ or NE.
+  /// @returns true if the predicate is EQ or NE.
   /// Determine if this is an equality predicate.
   static bool isEquality(Predicate Pred) {
     return Pred == FCMP_OEQ || Pred == FCMP_ONE || Pred == FCMP_UEQ ||
@@ -1363,15 +1384,16 @@ public:
   /// Determine if this is an equality predicate.
   bool isEquality() const { return isEquality(getPredicate()); }
 
+  /// @returns true if the predicate is commutative.
+  /// Determine if this is a commutative predicate.
+  static bool isCommutative(Predicate Pred) {
+    return isEquality(Pred) || Pred == FCMP_FALSE || Pred == FCMP_TRUE ||
+           Pred == FCMP_ORD || Pred == FCMP_UNO;
+  }
+
   /// @returns true if the predicate of this instruction is commutative.
   /// Determine if this is a commutative predicate.
-  bool isCommutative() const {
-    return isEquality() ||
-           getPredicate() == FCMP_FALSE ||
-           getPredicate() == FCMP_TRUE ||
-           getPredicate() == FCMP_ORD ||
-           getPredicate() == FCMP_UNO;
-  }
+  bool isCommutative() const { return isCommutative(getPredicate()); }
 
   /// @returns true if the predicate is relational (not EQ or NE).
   /// Determine if this a relational predicate.
@@ -4947,6 +4969,16 @@ inline Align getLoadStoreAlignment(const Value *I) {
   if (auto *LI = dyn_cast<LoadInst>(I))
     return LI->getAlign();
   return cast<StoreInst>(I)->getAlign();
+}
+
+/// A helper function that set the alignment of load or store instruction.
+inline void setLoadStoreAlignment(Value *I, Align NewAlign) {
+  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+         "Expected Load or Store instruction");
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    LI->setAlignment(NewAlign);
+  else
+    cast<StoreInst>(I)->setAlignment(NewAlign);
 }
 
 /// A helper function that returns the address space of the pointer operand of

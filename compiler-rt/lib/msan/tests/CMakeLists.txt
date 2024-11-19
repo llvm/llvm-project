@@ -69,7 +69,7 @@ macro(msan_compile obj_list source arch kind cflags)
   sanitizer_test_compile(
     ${obj_list} ${source} ${arch}
     KIND ${kind}
-    COMPILE_DEPS ${MSAN_UNITTEST_HEADERS} libcxx_msan_${arch}-build
+    COMPILE_DEPS ${MSAN_UNITTEST_HEADERS} libcxx_msan_${arch}-install-cmake326-workaround
     DEPS msan
     CFLAGS -isystem ${MSAN_LIBCXX_DIR}/../include/c++/v1
            ${MSAN_UNITTEST_INSTRUMENTED_CFLAGS} ${cflags}
@@ -117,10 +117,10 @@ macro(add_msan_tests_for_arch arch kind cflags)
                    DEPS ${MSAN_INST_LOADABLE_OBJECTS})
 
   set(MSAN_TEST_OBJECTS ${MSAN_INST_TEST_OBJECTS} ${MSAN_INST_GTEST})
-  set(MSAN_TEST_DEPS ${MSAN_TEST_OBJECTS} libcxx_msan_${arch}-build
+  set(MSAN_TEST_DEPS ${MSAN_TEST_OBJECTS} libcxx_msan_${arch}-install-cmake326-workaround
                      ${MSAN_LOADABLE_SO}
-		     "${MSAN_LIBCXX_DIR}/libc++.a" "${MSAN_LIBCXX_DIR}/libc++abi.a")
-  list(APPEND MSAN_TEST_DEPS msan libcxx_msan_${arch}-build)
+                     "${MSAN_LIBCXX_DIR}/libc++.a" "${MSAN_LIBCXX_DIR}/libc++abi.a")
+  list(APPEND MSAN_TEST_DEPS msan libcxx_msan_${arch}-install-cmake326-workaround)
   get_target_flags_for_arch(${arch} TARGET_LINK_FLAGS)
   add_compiler_rt_test(MsanUnitTests "Msan-${arch}${kind}-Test" ${arch}
     OBJECTS ${MSAN_TEST_OBJECTS} "${MSAN_LIBCXX_DIR}/libc++.a" "${MSAN_LIBCXX_DIR}/libc++abi.a"

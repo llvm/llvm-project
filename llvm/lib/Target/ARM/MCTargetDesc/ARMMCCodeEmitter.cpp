@@ -32,9 +32,7 @@
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
@@ -1743,15 +1741,28 @@ getRegisterListOpValue(const MCInst &MI, unsigned Op,
 
   unsigned Binary = 0;
 
-  if (SPRRegs || DPRRegs) {
+  if (SPRRegs || DPRRegs || Reg == ARM::VPR) {
     // VLDM/VSTM/VSCCLRM
     unsigned RegNo = CTX.getRegisterInfo()->getEncodingValue(Reg);
     unsigned NumRegs = (MI.getNumOperands() - Op) & 0xff;
     Binary |= (RegNo & 0x1f) << 8;
 
-    // Ignore VPR
-    if (MI.getOpcode() == ARM::VSCCLRMD || MI.getOpcode() == ARM::VSCCLRMS)
+    if (MI.getOpcode() == ARM::VSCCLRMD)
+      // Ignore VPR
       --NumRegs;
+    else if (MI.getOpcode() == ARM::VSCCLRMS) {
+      // The register list can contain both S registers and D registers, with D
+      // registers counting as two registers. VPR doesn't count towards the
+      // number of registers.
+      NumRegs = 0;
+      for (unsigned I = Op, E = MI.getNumOperands(); I < E; ++I) {
+        Reg = MI.getOperand(I).getReg();
+        if (ARMMCRegisterClasses[ARM::SPRRegClassID].contains(Reg))
+          NumRegs += 1;
+        else if (ARMMCRegisterClasses[ARM::DPRRegClassID].contains(Reg))
+          NumRegs += 2;
+      }
+    }
     if (SPRRegs)
       Binary |= NumRegs;
     else

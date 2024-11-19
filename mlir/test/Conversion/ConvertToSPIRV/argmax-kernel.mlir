@@ -68,7 +68,7 @@ module attributes {
         scf.yield %lane_res_next, %lane_max_next : i32, f32
       }
 
-      // CHECK: %[[SUBGROUP_MAX:.*]] = spirv.GroupNonUniformFMax "Subgroup" "Reduce" %[[LANE_MAX]] : f32
+      // CHECK: %[[SUBGROUP_MAX:.*]] = spirv.GroupNonUniformFMax <Subgroup> <Reduce> %[[LANE_MAX]] : f32 -> f32
       // CHECK: %[[OEQ:.*]] = spirv.FOrdEqual %[[LANE_MAX]], %[[SUBGROUP_MAX]] : f32
       // CHECK: %[[BALLOT:.*]] = spirv.GroupNonUniformBallot <Subgroup> %[[OEQ]] : vector<4xi32>
       // CHECK: %[[BALLOTLSB:.*]] = spirv.GroupNonUniformBallotFindLSB <Subgroup> %[[BALLOT]] : vector<4xi32>, i32

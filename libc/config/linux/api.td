@@ -268,7 +268,7 @@ def SetJmpAPI : PublicAPI<"setjmp.h"> {
 }
 
 def SearchAPI : PublicAPI<"search.h"> {
-  let Types = ["ACTION", "ENTRY", "struct hsearch_data"];
+  let Types = ["ACTION", "ENTRY", "struct hsearch_data", "__lsearchcompare_t"];
 }
 
 def SysStatvfsAPI : PublicAPI<"sys/statvfs.h"> {

@@ -488,7 +488,8 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
   // cttz(bitreverse(x)) -> ctlz(x)
   if (match(Op0, m_BitReverse(m_Value(X)))) {
     Intrinsic::ID ID = IsTZ ? Intrinsic::ctlz : Intrinsic::cttz;
-    Function *F = Intrinsic::getDeclaration(II.getModule(), ID, II.getType());
+    Function *F =
+        Intrinsic::getOrInsertDeclaration(II.getModule(), ID, II.getType());
     return CallInst::Create(F, {X, II.getArgOperand(1)});
   }
 
@@ -646,9 +647,8 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
   // ctpop(x | -x) -> bitwidth - cttz(x, false)
   if (Op0->hasOneUse() &&
       match(Op0, m_c_Or(m_Value(X), m_Neg(m_Deferred(X))))) {
-    Function *F =
-        Intrinsic::getDeclaration(II.getModule(), Intrinsic::cttz, Ty);
-    auto *Cttz = IC.Builder.CreateCall(F, {X, IC.Builder.getFalse()});
+    auto *Cttz = IC.Builder.CreateIntrinsic(Intrinsic::cttz, Ty,
+                                            {X, IC.Builder.getFalse()});
     auto *Bw = ConstantInt::get(Ty, APInt(BitWidth, BitWidth));
     return IC.replaceInstUsesWith(II, IC.Builder.CreateSub(Bw, Cttz));
   }
@@ -657,7 +657,7 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
   if (match(Op0,
             m_c_And(m_Not(m_Value(X)), m_Add(m_Deferred(X), m_AllOnes())))) {
     Function *F =
-        Intrinsic::getDeclaration(II.getModule(), Intrinsic::cttz, Ty);
+        Intrinsic::getOrInsertDeclaration(II.getModule(), Intrinsic::cttz, Ty);
     return CallInst::Create(F, {X, IC.Builder.getFalse()});
   }
 
@@ -1181,10 +1181,9 @@ Instruction *InstCombinerImpl::matchSAddSubSat(IntrinsicInst &MinMax1) {
     return nullptr;
 
   // Finally create and return the sat intrinsic, truncated to the new type
-  Function *F = Intrinsic::getDeclaration(MinMax1.getModule(), IntrinsicID, NewTy);
   Value *AT = Builder.CreateTrunc(AddSub->getOperand(0), NewTy);
   Value *BT = Builder.CreateTrunc(AddSub->getOperand(1), NewTy);
-  Value *Sat = Builder.CreateCall(F, {AT, BT});
+  Value *Sat = Builder.CreateIntrinsic(IntrinsicID, NewTy, {AT, BT});
   return CastInst::Create(Instruction::SExt, Sat, Ty);
 }
 
@@ -1286,8 +1285,8 @@ reassociateMinMaxWithConstantInOperand(IntrinsicInst *II,
     return nullptr;
 
   // max (max X, C), Y --> max (max X, Y), C
-  Function *MinMax =
-      Intrinsic::getDeclaration(II->getModule(), MinMaxID, II->getType());
+  Function *MinMax = Intrinsic::getOrInsertDeclaration(II->getModule(),
+                                                       MinMaxID, II->getType());
   Value *NewInner = Builder.CreateBinaryIntrinsic(MinMaxID, X, Y);
   NewInner->takeName(Inner);
   return CallInst::Create(MinMax, {NewInner, C});
@@ -1346,7 +1345,8 @@ static Instruction *factorizeMinMaxTree(IntrinsicInst *II) {
     return nullptr;
 
   Module *Mod = II->getModule();
-  Function *MinMax = Intrinsic::getDeclaration(Mod, MinMaxID, II->getType());
+  Function *MinMax =
+      Intrinsic::getOrInsertDeclaration(Mod, MinMaxID, II->getType());
   return CallInst::Create(MinMax, { MinMaxOp, ThirdOp });
 }
 
@@ -1503,6 +1503,76 @@ foldMinimumOverTrailingOrLeadingZeroCount(Value *I0, Value *I1,
       ConstantInt::getTrue(ZeroUndef->getType()));
 }
 
+/// Return whether "X LOp (Y ROp Z)" is always equal to
+/// "(X LOp Y) ROp (X LOp Z)".
+static bool leftDistributesOverRight(Instruction::BinaryOps LOp, bool HasNUW,
+                                     bool HasNSW, Intrinsic::ID ROp) {
+  switch (ROp) {
+  case Intrinsic::umax:
+  case Intrinsic::umin:
+    return HasNUW && LOp == Instruction::Add;
+  case Intrinsic::smax:
+  case Intrinsic::smin:
+    return HasNSW && LOp == Instruction::Add;
+  default:
+    return false;
+  }
+}
+
+// Attempts to factorise a common term
+// in an instruction that has the form "(A op' B) op (C op' D)
+// where op is an intrinsic and op' is a binop
+static Value *
+foldIntrinsicUsingDistributiveLaws(IntrinsicInst *II,
+                                   InstCombiner::BuilderTy &Builder) {
+  Value *LHS = II->getOperand(0), *RHS = II->getOperand(1);
+  Intrinsic::ID TopLevelOpcode = II->getIntrinsicID();
+
+  OverflowingBinaryOperator *Op0 = dyn_cast<OverflowingBinaryOperator>(LHS);
+  OverflowingBinaryOperator *Op1 = dyn_cast<OverflowingBinaryOperator>(RHS);
+
+  if (!Op0 || !Op1)
+    return nullptr;
+
+  if (Op0->getOpcode() != Op1->getOpcode())
+    return nullptr;
+
+  if (!Op0->hasOneUse() || !Op1->hasOneUse())
+    return nullptr;
+
+  Instruction::BinaryOps InnerOpcode =
+      static_cast<Instruction::BinaryOps>(Op0->getOpcode());
+  bool HasNUW = Op0->hasNoUnsignedWrap() && Op1->hasNoUnsignedWrap();
+  bool HasNSW = Op0->hasNoSignedWrap() && Op1->hasNoSignedWrap();
+
+  if (!leftDistributesOverRight(InnerOpcode, HasNUW, HasNSW, TopLevelOpcode))
+    return nullptr;
+
+  assert(II->isCommutative() && Op0->isCommutative() &&
+         "Only inner and outer commutative op codes are supported.");
+
+  Value *A = Op0->getOperand(0);
+  Value *B = Op0->getOperand(1);
+  Value *C = Op1->getOperand(0);
+  Value *D = Op1->getOperand(1);
+
+  // Attempts to swap variables such that A always equals C
+  if (A != C && A != D)
+    std::swap(A, B);
+  if (A == C || A == D) {
+    if (A != C)
+      std::swap(C, D);
+    Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, B, D);
+    BinaryOperator *NewBinop =
+        cast<BinaryOperator>(Builder.CreateBinOp(InnerOpcode, NewIntrinsic, A));
+    NewBinop->setHasNoSignedWrap(HasNSW);
+    NewBinop->setHasNoUnsignedWrap(HasNUW);
+    return NewBinop;
+  }
+
+  return nullptr;
+}
+
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallBase to do the heavy
 /// lifting.
@@ -1571,7 +1641,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           Type *Tys[3] = { CI.getArgOperand(0)->getType(),
                            CI.getArgOperand(1)->getType(),
                            CI.getArgOperand(2)->getType() };
-          CI.setCalledFunction(Intrinsic::getDeclaration(M, MemCpyID, Tys));
+          CI.setCalledFunction(
+              Intrinsic::getOrInsertDeclaration(M, MemCpyID, Tys));
           Changed = true;
         }
     }
@@ -1927,6 +1998,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
+    if (Value *V = foldIntrinsicUsingDistributiveLaws(II, Builder))
+      return replaceInstUsesWith(*II, V);
+
     break;
   }
   case Intrinsic::scmp: {
@@ -2095,7 +2169,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
         Constant *LeftShiftC = ConstantExpr::getSub(WidthC, ShAmtC);
         Module *Mod = II->getModule();
-        Function *Fshl = Intrinsic::getDeclaration(Mod, Intrinsic::fshl, Ty);
+        Function *Fshl =
+            Intrinsic::getOrInsertDeclaration(Mod, Intrinsic::fshl, Ty);
         return CallInst::Create(Fshl, { Op0, Op1, LeftShiftC });
       }
       assert(IID == Intrinsic::fshl &&
@@ -2115,7 +2190,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // fshl i16 X, X, 8 --> bswap i16 X (reduce to more-specific form)
       if (Op0 == Op1 && BitWidth == 16 && match(ShAmtC, m_SpecificInt(8))) {
         Module *Mod = II->getModule();
-        Function *Bswap = Intrinsic::getDeclaration(Mod, Intrinsic::bswap, Ty);
+        Function *Bswap =
+            Intrinsic::getOrInsertDeclaration(Mod, Intrinsic::bswap, Ty);
         return CallInst::Create(Bswap, { Op0 });
       }
       if (Instruction *BitOp =
@@ -2824,7 +2900,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       CallArgs.push_back(II->getArgOperand(4));
     }
 
-    Function *NewFn = Intrinsic::getDeclaration(II->getModule(), NewIntrin);
+    Function *NewFn =
+        Intrinsic::getOrInsertDeclaration(II->getModule(), NewIntrin);
     return CallInst::Create(NewFn, CallArgs);
   }
   case Intrinsic::arm_neon_vtbl1:
@@ -3629,26 +3706,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   //  * The intrinsic is speculatable.
   //  * The select condition is not a vector, or the intrinsic does not
   //    perform cross-lane operations.
-  switch (IID) {
-  case Intrinsic::ctlz:
-  case Intrinsic::cttz:
-  case Intrinsic::ctpop:
-  case Intrinsic::umin:
-  case Intrinsic::umax:
-  case Intrinsic::smin:
-  case Intrinsic::smax:
-  case Intrinsic::usub_sat:
-  case Intrinsic::uadd_sat:
-  case Intrinsic::ssub_sat:
-  case Intrinsic::sadd_sat:
+  if (isSafeToSpeculativelyExecuteWithVariableReplaced(&CI) &&
+      isNotCrossLaneOperation(II))
     for (Value *Op : II->args())
       if (auto *Sel = dyn_cast<SelectInst>(Op))
         if (Instruction *R = FoldOpIntoSelect(*II, Sel))
           return R;
-    [[fallthrough]];
-  default:
-    break;
-  }
 
   if (Instruction *Shuf = foldShuffledIntrinsicOperands(II, Builder))
     return Shuf;
@@ -4161,7 +4224,8 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
 
     if (!CallerPAL.isEmpty() && !Caller->use_empty()) {
       AttrBuilder RAttrs(FT->getContext(), CallerPAL.getRetAttrs());
-      if (RAttrs.overlaps(AttributeFuncs::typeIncompatible(NewRetTy)))
+      if (RAttrs.overlaps(AttributeFuncs::typeIncompatible(
+              NewRetTy, CallerPAL.getRetAttrs())))
         return false;   // Attribute not compatible with transformed value.
     }
 
@@ -4207,7 +4271,8 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     // Check if there are any incompatible attributes we cannot drop safely.
     if (AttrBuilder(FT->getContext(), CallerPAL.getParamAttrs(i))
             .overlaps(AttributeFuncs::typeIncompatible(
-                ParamTy, AttributeFuncs::ASK_UNSAFE_TO_DROP)))
+                ParamTy, CallerPAL.getParamAttrs(i),
+                AttributeFuncs::ASK_UNSAFE_TO_DROP)))
       return false;   // Attribute not compatible with transformed value.
 
     if (Call.isInAllocaArgument(i) ||
@@ -4245,7 +4310,8 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
 
   // If the return value is not being used, the type may not be compatible
   // with the existing attributes.  Wipe out any problematic attributes.
-  RAttrs.remove(AttributeFuncs::typeIncompatible(NewRetTy));
+  RAttrs.remove(
+      AttributeFuncs::typeIncompatible(NewRetTy, CallerPAL.getRetAttrs()));
 
   LLVMContext &Ctx = Call.getContext();
   AI = Call.arg_begin();
@@ -4260,7 +4326,7 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     // Add any parameter attributes except the ones incompatible with the new
     // type. Note that we made sure all incompatible ones are safe to drop.
     AttributeMask IncompatibleAttrs = AttributeFuncs::typeIncompatible(
-        ParamTy, AttributeFuncs::ASK_SAFE_TO_DROP);
+        ParamTy, CallerPAL.getParamAttrs(i), AttributeFuncs::ASK_SAFE_TO_DROP);
     ArgAttrs.push_back(
         CallerPAL.getParamAttrs(i).removeAttributes(Ctx, IncompatibleAttrs));
   }

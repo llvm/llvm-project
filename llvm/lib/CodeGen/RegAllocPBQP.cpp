@@ -64,7 +64,6 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -123,7 +122,7 @@ public:
     initializeSlotIndexesWrapperPassPass(*PassRegistry::getPassRegistry());
     initializeLiveIntervalsWrapperPassPass(*PassRegistry::getPassRegistry());
     initializeLiveStacksPass(*PassRegistry::getPassRegistry());
-    initializeVirtRegMapPass(*PassRegistry::getPassRegistry());
+    initializeVirtRegMapWrapperLegacyPass(*PassRegistry::getPassRegistry());
   }
 
   /// Return the pass name.
@@ -559,8 +558,8 @@ void RegAllocPBQP::getAnalysisUsage(AnalysisUsage &au) const {
   au.addPreserved<MachineLoopInfoWrapperPass>();
   au.addRequired<MachineDominatorTreeWrapperPass>();
   au.addPreserved<MachineDominatorTreeWrapperPass>();
-  au.addRequired<VirtRegMap>();
-  au.addPreserved<VirtRegMap>();
+  au.addRequired<VirtRegMapWrapperLegacy>();
+  au.addPreserved<VirtRegMapWrapperLegacy>();
   MachineFunctionPass::getAnalysisUsage(au);
 }
 
@@ -795,7 +794,7 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
   MachineBlockFrequencyInfo &MBFI =
       getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
 
-  VirtRegMap &VRM = getAnalysis<VirtRegMap>();
+  VirtRegMap &VRM = getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
 
   PBQPVirtRegAuxInfo VRAI(
       MF, LIS, VRM, getAnalysis<MachineLoopInfoWrapperPass>().getLI(), MBFI);

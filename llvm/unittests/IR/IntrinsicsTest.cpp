@@ -50,7 +50,7 @@ public:
   Instruction *makeIntrinsic(Intrinsic::ID ID) const {
     IRBuilder<> Builder(BB);
     SmallVector<Value *, 4> ProcessedArgs;
-    auto *Decl = Intrinsic::getDeclaration(M.get(), ID);
+    auto *Decl = Intrinsic::getOrInsertDeclaration(M.get(), ID);
     for (auto *Ty : Decl->getFunctionType()->params()) {
       auto *Val = Constant::getNullValue(Ty);
       ProcessedArgs.push_back(Val);
@@ -63,7 +63,7 @@ public:
 };
 
 TEST(IntrinsicNameLookup, Basic) {
-  static constexpr const char *const NameTable1[] = {
+  static constexpr const char *const NameTable[] = {
       "llvm.foo", "llvm.foo.a", "llvm.foo.b", "llvm.foo.b.a", "llvm.foo.c",
   };
 
@@ -74,11 +74,11 @@ TEST(IntrinsicNameLookup, Basic) {
   };
 
   for (const auto &[Name, ExpectedIdx] : Tests) {
-    int Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, Name);
+    int Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable, Name);
     EXPECT_EQ(ExpectedIdx, Idx);
     if (!StringRef(Name).starts_with("llvm.foo"))
       continue;
-    Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, Name, "foo");
+    Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable, Name, "foo");
     EXPECT_EQ(ExpectedIdx, Idx);
   }
 }

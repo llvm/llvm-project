@@ -550,7 +550,9 @@ template <class Value, class Hash, class Pred, class Alloc>
 #include <__ranges/concepts.h>
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/from_range.h>
+#include <__type_traits/container_traits.h>
 #include <__type_traits/enable_if.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_nothrow_assignable.h>
@@ -1183,6 +1185,16 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const unordered_set<_Value, _Hash, 
 
 #endif
 
+template <class _Value, class _Hash, class _Pred, class _Alloc>
+struct __container_traits<unordered_set<_Value, _Hash, _Pred, _Alloc> > {
+  // http://eel.is/c++draft/unord.req.except#2
+  //  For unordered associative containers, if an exception is thrown by any operation
+  //  other than the container's hash function from within an insert or emplace function
+  //  inserting a single element, the insertion has no effect.
+  static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee =
+      __nothrow_invokable<_Hash, const _Value&>::value;
+};
+
 template <class _Value, class _Hash = hash<_Value>, class _Pred = equal_to<_Value>, class _Alloc = allocator<_Value> >
 class _LIBCPP_TEMPLATE_VIS unordered_multiset {
 public:
@@ -1792,6 +1804,16 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const unordered_multiset<_Value, _H
 }
 
 #endif
+
+template <class _Value, class _Hash, class _Pred, class _Alloc>
+struct __container_traits<unordered_multiset<_Value, _Hash, _Pred, _Alloc> > {
+  // http://eel.is/c++draft/unord.req.except#2
+  //  For unordered associative containers, if an exception is thrown by any operation
+  //  other than the container's hash function from within an insert or emplace function
+  //  inserting a single element, the insertion has no effect.
+  static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee =
+      __nothrow_invokable<_Hash, const _Value&>::value;
+};
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -14,13 +14,11 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/AST/DeclVisitor.h"
 #include "clang/AST/DependentDiagnostic.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/AST/TypeLoc.h"
-#include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
@@ -30,7 +28,6 @@
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaSwift.h"
@@ -230,7 +227,10 @@ static void instantiateDependentAnnotationAttr(
     ActualArgs.insert(ActualArgs.begin(), Args.begin() + 1, Args.end());
     std::swap(Args, ActualArgs);
   }
-  S.AddAnnotationAttr(New, *Attr, Str, Args);
+  auto *AA = S.CreateAnnotationAttr(*Attr, Str, Args);
+  if (AA) {
+    New->addAttr(AA);
+  }
 }
 
 static Expr *instantiateDependentFunctionAttrCondition(
@@ -872,6 +872,12 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
       continue;
     }
 
+    if (auto *A = dyn_cast<CUDAGridConstantAttr>(TmplAttr)) {
+      if (!New->hasAttr<CUDAGridConstantAttr>())
+        New->addAttr(A->clone(Context));
+      continue;
+    }
+
     assert(!TmplAttr->isPackExpansion());
     if (TmplAttr->isLateParsed() && LateAttrs) {
       // Late parsed attributes must be instantiated and attached after the
@@ -981,6 +987,7 @@ Decl *
 TemplateDeclInstantiator::VisitLabelDecl(LabelDecl *D) {
   LabelDecl *Inst = LabelDecl::Create(SemaRef.Context, Owner, D->getLocation(),
                                       D->getIdentifier());
+  SemaRef.InstantiateAttrs(TemplateArgs, D, Inst, LateAttrs, StartingScope);
   Owner->addDecl(Inst);
   return Inst;
 }
@@ -1342,7 +1349,7 @@ Decl *TemplateDeclInstantiator::VisitFieldDecl(FieldDecl *D) {
   if (Invalid)
     Field->setInvalidDecl();
 
-  if (!Field->getDeclName()) {
+  if (!Field->getDeclName() || Field->isPlaceholderVar(SemaRef.getLangOpts())) {
     // Keep track of where this decl came from.
     SemaRef.Context.setInstantiatedFromUnnamedFieldDecl(Field, D);
   }

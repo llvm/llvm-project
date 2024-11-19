@@ -563,11 +563,15 @@ TYPE_PARSER(("REDUCTION"_tok || "REDUCE"_tok) >>
     parenthesized(construct<CUFReduction>(Parser<CUFReduction::Operator>{},
         ":" >> nonemptyList(scalar(variable)))))
 
+TYPE_PARSER("<<<" >>
+    construct<CUFKernelDoConstruct::LaunchConfiguration>(gridOrBlock,
+        "," >> gridOrBlock,
+        maybe((", 0 ,"_tok || ", STREAM ="_tok) >> scalarIntExpr) / ">>>"))
+
 TYPE_PARSER(sourced(beginDirective >> "$CUF KERNEL DO"_tok >>
     construct<CUFKernelDoConstruct::Directive>(
-        maybe(parenthesized(scalarIntConstantExpr)), "<<<" >> gridOrBlock,
-        "," >> gridOrBlock,
-        maybe((", 0 ,"_tok || ", STREAM ="_tok) >> scalarIntExpr) / ">>>",
+        maybe(parenthesized(scalarIntConstantExpr)),
+        maybe(Parser<CUFKernelDoConstruct::LaunchConfiguration>{}),
         many(Parser<CUFReduction>{}) / endDirective)))
 TYPE_CONTEXT_PARSER("!$CUF KERNEL DO construct"_en_US,
     extension<LanguageFeature::CUDA>(construct<CUFKernelDoConstruct>(

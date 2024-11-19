@@ -34,6 +34,8 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 
+#define DEBUG_TYPE "gpu-to-llvm-spv"
+
 using namespace mlir;
 
 namespace mlir {
@@ -316,6 +318,38 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   }
 };
 
+class MemorySpaceToOpenCLMemorySpaceConverter final : public TypeConverter {
+public:
+  MemorySpaceToOpenCLMemorySpaceConverter(MLIRContext *ctx) {
+    addConversion([](Type t) { return t; });
+    addConversion([ctx](BaseMemRefType memRefType) -> std::optional<Type> {
+      // Attach global addr space attribute to memrefs with no addr space attr
+      Attribute memSpaceAttr = memRefType.getMemorySpace();
+      if (memSpaceAttr)
+        return std::nullopt;
+
+      unsigned globalAddrspace = storageClassToAddressSpace(
+          spirv::ClientAPI::OpenCL, spirv::StorageClass::CrossWorkgroup);
+      Attribute addrSpaceAttr =
+          IntegerAttr::get(IntegerType::get(ctx, 64), globalAddrspace);
+      if (auto rankedType = dyn_cast<MemRefType>(memRefType)) {
+        return MemRefType::get(memRefType.getShape(),
+                               memRefType.getElementType(),
+                               rankedType.getLayout(), addrSpaceAttr);
+      }
+      return UnrankedMemRefType::get(memRefType.getElementType(),
+                                     addrSpaceAttr);
+    });
+    addConversion([this](FunctionType type) {
+      auto inputs = llvm::map_to_vector(
+          type.getInputs(), [this](Type ty) { return convertType(ty); });
+      auto results = llvm::map_to_vector(
+          type.getResults(), [this](Type ty) { return convertType(ty); });
+      return FunctionType::get(type.getContext(), inputs, results);
+    });
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // Subgroup query ops.
 //===----------------------------------------------------------------------===//
@@ -381,6 +415,21 @@ struct GPUToLLVMSPVConversionPass final
 
     LLVMTypeConverter converter(context, options);
     LLVMConversionTarget target(*context);
+
+    // Force OpenCL address spaces when they are not present
+    {
+      MemorySpaceToOpenCLMemorySpaceConverter converter(context);
+      AttrTypeReplacer replacer;
+      replacer.addReplacement([&converter](BaseMemRefType origType)
+                                  -> std::optional<BaseMemRefType> {
+        return converter.convertType<BaseMemRefType>(origType);
+      });
+
+      replacer.recursivelyReplaceElementsIn(getOperation(),
+                                            /*replaceAttrs=*/true,
+                                            /*replaceLocs=*/false,
+                                            /*replaceTypes=*/true);
+    }
 
     target.addIllegalOp<gpu::BarrierOp, gpu::BlockDimOp, gpu::BlockIdOp,
                         gpu::GPUFuncOp, gpu::GlobalIdOp, gpu::GridDimOp,

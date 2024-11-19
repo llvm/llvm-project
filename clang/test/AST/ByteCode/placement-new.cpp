@@ -14,7 +14,9 @@ namespace std {
   template<typename T, typename ...Args>
   constexpr void construct_at(void *p, Args &&...args) {
     new (p) T((Args&&)args...); // both-note {{in call to}} \
-                                // both-note {{placement new would change type of storage from 'int' to 'float'}}
+                                // both-note {{placement new would change type of storage from 'int' to 'float'}} \
+                                // both-note {{construction of subobject of member 'x' of union with active member 'a' is not allowed in a constant expression}}
+
   }
 }
 
@@ -51,6 +53,20 @@ consteval auto ok4() {
   return b;
 }
 static_assert(ok4() == 37);
+
+consteval int ok5() {
+  int i;
+  new (&i) int[1]{1};
+
+  struct S {
+    int a; int b;
+  } s;
+  new (&s) S[1]{{12, 13}};
+
+  return 25;
+  // return s.a + s.b; FIXME: Broken in the current interpreter.
+}
+static_assert(ok5() == 25);
 
 /// FIXME: Broken in both interpreters.
 #if 0
@@ -270,6 +286,18 @@ namespace ConstructAt {
   static_assert(bad_construct_at_type()); // both-error {{not an integral constant expression}} \
                                           // both-note {{in call}}
 
+  constexpr bool bad_construct_at_subobject() {
+    struct X { int a, b; };
+    union A {
+      int a;
+      X x;
+    };
+    A a = {1};
+    std::construct_at<int>(&a.x.a, 1); // both-note {{in call}}
+    return true;
+  }
+  static_assert(bad_construct_at_subobject()); // both-error{{not an integral constant expression}} \
+                                               // both-note {{in call}}
 }
 
 namespace UsedToCrash {
@@ -285,4 +313,28 @@ namespace UsedToCrash {
       delete s;
   }
   int alloc1 = (alloc(), 0);
+}
+
+constexpr bool change_union_member() {
+  union U {
+    int a;
+    int b;
+  };
+  U u = {.a = 1};
+  std::construct_at<int>(&u.b, 2);
+  return u.b == 2;
+}
+static_assert(change_union_member());
+
+namespace PR48606 {
+  struct A { mutable int n = 0; };
+
+  constexpr bool f() {
+    A a;
+    A *p = &a;
+    p->~A();
+    std::construct_at<A>(p);
+    return true;
+  }
+  static_assert(f());
 }

@@ -348,6 +348,18 @@ def load_glue : PatFrag <(ops node:$ptr), (unindexedload_glue node:$ptr)> {
   let IsNonExtLoad = 1;
 }
 
+def atomic_load_zext_glue :
+  PatFrag<(ops node:$ptr), (AMDGPUatomic_ld_glue node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let IsZeroExtLoad = true;
+}
+
+def atomic_load_sext_glue :
+  PatFrag<(ops node:$ptr), (AMDGPUatomic_ld_glue node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let IsSignExtLoad = true;
+}
+
 def atomic_load_8_glue : PatFrag<(ops node:$ptr),
   (AMDGPUatomic_ld_glue node:$ptr)> {
   let IsAtomic = 1;
@@ -370,6 +382,30 @@ def atomic_load_64_glue : PatFrag<(ops node:$ptr),
   (AMDGPUatomic_ld_glue node:$ptr)> {
   let IsAtomic = 1;
   let MemoryVT = i64;
+}
+
+def atomic_load_zext_8_glue : PatFrag<(ops node:$ptr),
+  (atomic_load_zext_glue node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i8;
+}
+
+def atomic_load_sext_8_glue : PatFrag<(ops node:$ptr),
+  (atomic_load_sext_glue node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i8;
+}
+
+def atomic_load_zext_16_glue : PatFrag<(ops node:$ptr),
+  (atomic_load_zext_glue node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i16;
+}
+
+def atomic_load_sext_16_glue : PatFrag<(ops node:$ptr),
+  (atomic_load_sext_glue node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i16;
 }
 
 def extload_glue : PatFrag<(ops node:$ptr), (unindexedload_glue node:$ptr)> {
@@ -453,6 +489,15 @@ def atomic_load_32_local_m0 : PatFrag<(ops node:$ptr),
                                       (atomic_load_32_glue node:$ptr)>;
 def atomic_load_64_local_m0 : PatFrag<(ops node:$ptr),
                                        (atomic_load_64_glue node:$ptr)>;
+
+def atomic_load_zext_8_local_m0 : PatFrag<(ops node:$ptr),
+                                      (atomic_load_zext_8_glue node:$ptr)>;
+def atomic_load_sext_8_local_m0 : PatFrag<(ops node:$ptr),
+                                      (atomic_load_sext_8_glue node:$ptr)>;
+def atomic_load_zext_16_local_m0 : PatFrag<(ops node:$ptr),
+                                      (atomic_load_zext_16_glue node:$ptr)>;
+def atomic_load_sext_16_local_m0 : PatFrag<(ops node:$ptr),
+                                      (atomic_load_sext_16_glue node:$ptr)>;
 } // End let AddressSpaces = LoadAddress_local.AddrSpaces
 
 
@@ -1710,6 +1755,21 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
         1                 : VSrc_b32);
 }
 
+// Returns the vreg register class to use for sources of VOP3 instructions for the
+// given VT.
+class getVOP3VRegSrcForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 0> {
+   RegisterOperand ret =
+   !cond(!eq(VT.Size, 128) : RegisterOperand<VReg_128>,
+         !eq(VT.Size, 96)  : RegisterOperand<VReg_96>,
+         !eq(VT.Size, 64)  : RegisterOperand<VReg_64>,
+         !eq(VT.Size, 48)  : RegisterOperand<VReg_64>,
+         !eq(VT.Size, 16)  : !if(IsTrue16,
+                                 !if(IsFake16, RegisterOperand<VGPR_32>,
+                                               RegisterOperand<VGPR_16>),
+                                 RegisterOperand<VGPR_32>),
+         1                 : RegisterOperand<VGPR_32>);
+}
+
 // Src2 of VOP3 DPP instructions cannot be a literal
 class getVOP3DPPSrcForVT<ValueType VT, bit IsFake16 = 1> {
   RegisterOperand ret =
@@ -2149,6 +2209,8 @@ class getAsmVOP3P <int NumSrcArgs, bit HasModifiers,
   string ret = dst#", "#src0#src1#src2#opsel#mods#clamp;
 }
 
+// FIXME-TRUE16 AsmVOP3OpSel will be deprecated after all
+// VOP3 16 bit instructions are replaced to true16 format
 class getAsmVOP3OpSel <int NumSrcArgs,
                        bit HasClamp,
                        bit HasOMod,
@@ -2237,8 +2299,9 @@ class getAsmVOP3Base <int NumSrcArgs, bit HasDst, bit HasClamp,
   string clamp = !if(HasClamp, "$clamp", "");
   string omod = !if(HasOMod, "$omod", "");
 
-  string ret = dst#!if(!gt(NumSrcArgs,0),", "#src0#src1#src2#opsel#bytesel#3PMods#clamp#omod, "");
-
+  string ret = dst#!if(!eq(NumSrcArgs,0),
+                       "",
+                       !if(HasDst,", ", "")#src0#src1#src2#opsel#bytesel#3PMods#clamp#omod);
 }
 
 class getAsmVOP3DPP<string base> {
@@ -2711,6 +2774,7 @@ def VOP_I32_I32 : VOPProfile <[i32, i32, untyped, untyped]>;
 def VOP_F16_F32 : VOPProfile <[f16, f32, untyped, untyped]>;
 def VOP_F32_F16 : VOPProfile <[f32, f16, untyped, untyped]>;
 def VOP_I64_I64 : VOPProfile <[i64, i64, untyped, untyped]>;
+def VOP_F32_BF16 : VOPProfile <[f32, bf16, untyped, untyped]>;
 
 def VOP_F32_F32_F16 : VOPProfile <[f32, f32, f16, untyped]>;
 def VOP_F32_F32_F32 : VOPProfile <[f32, f32, f32, untyped]>;
@@ -2723,6 +2787,7 @@ def VOP_I32_I32_I32 : VOPProfile <[i32, i32, i32, untyped]>;
 def VOP_I32_I32_I32_ARITH : VOPProfile <[i32, i32, i32, untyped], /*EnableClamp=*/1>;
 def VOP_V2F16_F32_F32 : VOPProfile <[v2f16, f32, f32, untyped]>;
 def VOP_F32_F16_F16_F16 : VOPProfile <[f32, f16, f16, f16]>;
+def VOP_V2BF16_F32_F32 : VOPProfile <[v2bf16, f32, f32, untyped]>;
 
 def VOP_I64_I64_I32 : VOPProfile <[i64, i64, i32, untyped]>;
 def VOP_I64_I32_I64 : VOPProfile <[i64, i32, i64, untyped]>;
@@ -2733,6 +2798,7 @@ def VOP_F32_F32_F16_F16 : VOPProfile <[f32, f32, f16, f16]>;
 def VOP_F32_F32_F32_F32 : VOPProfile <[f32, f32, f32, f32]>;
 def VOP_F64_F64_F64_F64 : VOPProfile <[f64, f64, f64, f64]>;
 def VOP_I32_I32_I32_I32 : VOPProfile <[i32, i32, i32, i32]>;
+def VOP_I32_I32_I32_I16 : VOPProfile <[i32, i32, i32, i16]>;
 def VOP_I64_I32_I32_I64 : VOPProfile <[i64, i32, i32, i64]>;
 def VOP_I32_F32_I32_I32 : VOPProfile <[i32, f32, i32, i32]>;
 def VOP_I64_I64_I32_I64 : VOPProfile <[i64, i64, i32, i64]>;
@@ -2779,6 +2845,11 @@ def VOP_V4I32_V2I32_V4I32_I32     : VOPProfile <[v4i32,  v2i32, v4i32, i32]>;
 def VOP_V16I32_V2I32_V4I32_I32    : VOPProfile <[v16i32, v2i32, v4i32, i32]>;
 def VOP_V4F32_V2I32_V4I32_I32     : VOPProfile <[v4f32,  v2i32, v4i32, i32]>;
 def VOP_V16F32_V2I32_V4I32_I32    : VOPProfile <[v16f32, v2i32, v4i32, i32]>;
+
+def VOP_V4F32_V8F16_V8F16_V4F32   : VOPProfile <[v4f32,  v8f16, v8f16, v4f32]>;
+def VOP_V16F32_V8F16_V8F16_V16F32 : VOPProfile <[v16f32, v8f16, v8f16, v16f32]>;
+def VOP_V16F32_V8BF16_V8BF16_V16F32 : VOPProfile <[v16f32, v8bf16, v8bf16, v16f32]>;
+
 
 class Commutable_REV <string revOp, bit isOrig> {
   string RevOp = revOp;

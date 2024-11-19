@@ -313,7 +313,9 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
     switch (Triple.getEnvironment()) {
     case llvm::Triple::Android:
     case llvm::Triple::GNUEABI:
+    case llvm::Triple::GNUEABIT64:
     case llvm::Triple::GNUEABIHF:
+    case llvm::Triple::GNUEABIHFT64:
     case llvm::Triple::MuslEABI:
     case llvm::Triple::MuslEABIHF:
     case llvm::Triple::OpenHOS:
@@ -1495,20 +1497,4 @@ void DarwinARMTargetInfo::getOSDefines(const LangOptions &Opts,
                                        const llvm::Triple &Triple,
                                        MacroBuilder &Builder) const {
   getDarwinDefines(Builder, Opts, Triple, PlatformName, PlatformMinVersion);
-}
-
-RenderScript32TargetInfo::RenderScript32TargetInfo(const llvm::Triple &Triple,
-                                                   const TargetOptions &Opts)
-    : ARMleTargetInfo(llvm::Triple("armv7", Triple.getVendorName(),
-                                   Triple.getOSName(),
-                                   Triple.getEnvironmentName()),
-                      Opts) {
-  IsRenderScriptTarget = true;
-  LongWidth = LongAlign = 64;
-}
-
-void RenderScript32TargetInfo::getTargetDefines(const LangOptions &Opts,
-                                                MacroBuilder &Builder) const {
-  Builder.defineMacro("__RENDERSCRIPT__");
-  ARMleTargetInfo::getTargetDefines(Opts, Builder);
 }

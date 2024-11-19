@@ -136,10 +136,12 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr pointer operator->() const
     requires is_pointer_v<_Iter> || requires(const _Iter __i) { __i.operator->(); }
   {
+    _Iter __tmp = current;
+    --__tmp;
     if constexpr (is_pointer_v<_Iter>) {
-      return std::prev(current);
+      return __tmp;
     } else {
-      return std::prev(current).operator->();
+      return __tmp.operator->();
     }
   }
 #else

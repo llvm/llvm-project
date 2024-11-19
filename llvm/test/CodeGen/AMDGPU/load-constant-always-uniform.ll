@@ -22,8 +22,6 @@ define amdgpu_cs void @test_uniform_load_b96(ptr addrspace(1) %ptr, i32 %arg) "a
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_or3_b32 v2, s2, v2, s0
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: test_uniform_load_b96:
@@ -43,8 +41,6 @@ define amdgpu_cs void @test_uniform_load_b96(ptr addrspace(1) %ptr, i32 %arg) "a
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_or3_b32 v2, v2, s1, s2
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
   %i = zext i32 %arg to i64

@@ -182,6 +182,8 @@ public:
 
   Attribute getAttribute(Attribute::AttrKind Kind) const;
 
+  AttributeSet getAttributes() const;
+
   /// Method for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Value *V) {
     return V->getValueID() == ArgumentVal;

@@ -88,15 +88,10 @@ class getSubRegs<int size> {
 
 // Generates list of sequential register tuple names.
 // E.g. RegSeq<3,2,2,"s">.ret -> [ "s[0:1]", "s[2:3]" ]
-class RegSeqNames<int last_reg, int stride, int size, string prefix,
-                  int start = 0> {
-  int next = !add(start, stride);
-  int end_reg = !add(start, size, -1);
-  list<string> ret =
-    !if(!le(end_reg, last_reg),
-        !listconcat([prefix # "[" # start # ":" # end_reg # "]"],
-                    RegSeqNames<last_reg, stride, size, prefix, next>.ret),
-                    []);
+class RegSeqNames<int last_reg, int stride, int size, string prefix> {
+  defvar numtuples = !div(!sub(!add(last_reg, stride, 1), size), stride);
+  defvar range = !range(0, !mul(numtuples, stride), stride);
+  list<string> ret = !foreach(n, range, prefix # "[" # n # ":" # !add(n, size, -1) # "]");
 }
 
 // Generates list of dags for register tuples.
@@ -1249,6 +1244,14 @@ def VRegSrc_128: SrcReg9<VReg_128, "OPW128">;
 def VRegSrc_256: SrcReg9<VReg_256, "OPW256">;
 def VRegOrLdsSrc_32 : SrcReg9<VRegOrLds_32, "OPW32">;
 
+// True 16 Operands
+def VRegSrc_16 : RegisterOperand<VGPR_16> {
+  let DecoderMethod = "decodeOperand_VGPR_16";
+  let EncoderMethod = "getMachineOpValueT16";
+}
+def VRegSrc_fake16: SrcReg9<VGPR_32, "OPW16"> {
+  let EncoderMethod = "getMachineOpValueT16";
+}
 //===----------------------------------------------------------------------===//
 // VGPRSrc_*
 //===----------------------------------------------------------------------===//

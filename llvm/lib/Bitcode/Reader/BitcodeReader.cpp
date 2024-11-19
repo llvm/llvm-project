@@ -792,6 +792,24 @@ private:
     return ResVal == nullptr;
   }
 
+  bool getValueOrMetadata(const SmallVectorImpl<uint64_t> &Record,
+                          unsigned &Slot, unsigned InstNum, Value *&ResVal,
+                          BasicBlock *ConstExprInsertBB) {
+    if (Slot == Record.size())
+      return true;
+    unsigned ValID = Record[Slot++];
+    if (ValID != static_cast<unsigned>(bitc::OB_METADATA)) {
+      unsigned TypeId;
+      return getValueTypePair(Record, --Slot, InstNum, ResVal, TypeId,
+                              ConstExprInsertBB);
+    }
+    if (Slot == Record.size())
+      return true;
+    unsigned ValNo = InstNum - (unsigned)Record[Slot++];
+    ResVal = MetadataAsValue::get(Context, getFnMetadataByID(ValNo));
+    return false;
+  }
+
   /// Read a value out of the specified record from slot 'Slot'. Increment Slot
   /// past the number of slots used by the value in the record. Return true if
   /// there is an error.
@@ -858,7 +876,8 @@ private:
     } else {
       int64_t Start = BitcodeReader::decodeSignRotatedValue(Record[OpNum++]);
       int64_t End = BitcodeReader::decodeSignRotatedValue(Record[OpNum++]);
-      return ConstantRange(APInt(BitWidth, Start), APInt(BitWidth, End));
+      return ConstantRange(APInt(BitWidth, Start, true),
+                           APInt(BitWidth, End, true));
     }
   }
 
@@ -2048,6 +2067,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoCallback;
   case bitc::ATTR_KIND_NO_CAPTURE:
     return Attribute::NoCapture;
+  case bitc::ATTR_KIND_NO_DIVERGENCE_SOURCE:
+    return Attribute::NoDivergenceSource;
   case bitc::ATTR_KIND_NO_DUPLICATE:
     return Attribute::NoDuplicate;
   case bitc::ATTR_KIND_NOFREE:
@@ -2144,8 +2165,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SanitizeNumericalStability;
   case bitc::ATTR_KIND_SANITIZE_REALTIME:
     return Attribute::SanitizeRealtime;
-  case bitc::ATTR_KIND_SANITIZE_REALTIME_UNSAFE:
-    return Attribute::SanitizeRealtimeUnsafe;
+  case bitc::ATTR_KIND_SANITIZE_REALTIME_BLOCKING:
+    return Attribute::SanitizeRealtimeBlocking;
   case bitc::ATTR_KIND_SPECULATIVE_LOAD_HARDENING:
     return Attribute::SpeculativeLoadHardening;
   case bitc::ATTR_KIND_SWIFT_ERROR:
@@ -2638,7 +2659,8 @@ Error BitcodeReader::parseTypeTableBody() {
       }
       if (EltTys.size() != Record.size()-1)
         return error("Invalid named struct record");
-      Res->setBody(EltTys, Record[0]);
+      if (auto E = Res->setBodyOrError(EltTys, Record[0]))
+        return E;
       ContainedIDs.append(Record.begin() + 1, Record.end());
       ResultTy = Res;
       break;
@@ -5451,9 +5473,6 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       if (IsFP && Record.size() > OpNum+1)
         FMF = getDecodedFastMathFlags(Record[++OpNum]);
 
-      if (OpNum+1 != Record.size())
-        return error("Invalid record");
-
       if (IsFP) {
         if (!CmpInst::isFPPredicate(PredVal))
           return error("Invalid fcmp predicate");
@@ -5462,7 +5481,13 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         if (!CmpInst::isIntPredicate(PredVal))
           return error("Invalid icmp predicate");
         I = new ICmpInst(PredVal, LHS, RHS);
+        if (Record.size() > OpNum + 1 &&
+            (Record[++OpNum] & (1 << bitc::ICMP_SAME_SIGN)))
+          cast<ICmpInst>(I)->setSameSign();
       }
+
+      if (OpNum + 1 != Record.size())
+        return error("Invalid record");
 
       ResTypeID = getVirtualTypeID(I->getType()->getScalarType());
       if (LHS->getType()->isVectorTy())
@@ -6767,8 +6792,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       unsigned OpNum = 1;
       while (OpNum != Record.size()) {
         Value *Op;
-        unsigned OpTypeID;
-        if (getValueTypePair(Record, OpNum, NextValueNo, Op, OpTypeID, CurBB))
+        if (getValueOrMetadata(Record, OpNum, NextValueNo, Op, CurBB))
           return error("Invalid record");
         Inputs.push_back(Op);
       }
@@ -7017,11 +7041,12 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
     // Remove incompatible attributes on function calls.
     if (auto *CI = dyn_cast<CallBase>(&I)) {
       CI->removeRetAttrs(AttributeFuncs::typeIncompatible(
-          CI->getFunctionType()->getReturnType()));
+          CI->getFunctionType()->getReturnType(), CI->getRetAttributes()));
 
       for (unsigned ArgNo = 0; ArgNo < CI->arg_size(); ++ArgNo)
         CI->removeParamAttrs(ArgNo, AttributeFuncs::typeIncompatible(
-                                        CI->getArgOperand(ArgNo)->getType()));
+                                        CI->getArgOperand(ArgNo)->getType(),
+                                        CI->getParamAttributes(ArgNo)));
     }
   }
 
@@ -7579,6 +7604,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
 
   std::vector<CallsiteInfo> PendingCallsites;
   std::vector<AllocInfo> PendingAllocs;
+  std::vector<uint64_t> PendingContextIds;
 
   while (true) {
     Expected<BitstreamEntry> MaybeEntry = Stream.advanceSkippingSubblocks();
@@ -7934,7 +7960,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       break;
 
     case bitc::FS_CFI_FUNCTION_DEFS: {
-      std::set<std::string> &CfiFunctionDefs = TheIndex.cfiFunctionDefs();
+      std::set<std::string, std::less<>> &CfiFunctionDefs =
+          TheIndex.cfiFunctionDefs();
       for (unsigned I = 0; I != Record.size(); I += 2)
         CfiFunctionDefs.insert(
             {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});
@@ -7942,7 +7969,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     }
 
     case bitc::FS_CFI_FUNCTION_DECLS: {
-      std::set<std::string> &CfiFunctionDecls = TheIndex.cfiFunctionDecls();
+      std::set<std::string, std::less<>> &CfiFunctionDecls =
+          TheIndex.cfiFunctionDecls();
       for (unsigned I = 0; I != Record.size(); I += 2)
         CfiFunctionDecls.insert(
             {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});
@@ -7969,7 +7997,16 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     case bitc::FS_STACK_IDS: { // [n x stackid]
       // Save stack ids in the reader to consult when adding stack ids from the
       // lists in the stack node and alloc node entries.
-      StackIds = ArrayRef<uint64_t>(Record);
+      if (Version <= 11) {
+        StackIds = ArrayRef<uint64_t>(Record);
+        break;
+      }
+      // This is an array of 32-bit fixed-width values, holding each 64-bit
+      // context id as a pair of adjacent (most significant first) 32-bit words.
+      assert(Record.size() % 2 == 0);
+      StackIds.reserve(Record.size() / 2);
+      for (auto R = Record.begin(); R != Record.end(); R += 2)
+        StackIds.push_back(*R << 32 | *(R + 1));
       break;
     }
 
@@ -8007,6 +8044,16 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       break;
     }
 
+    case bitc::FS_ALLOC_CONTEXT_IDS: {
+      // This is an array of 32-bit fixed-width values, holding each 64-bit
+      // context id as a pair of adjacent (most significant first) 32-bit words.
+      assert(Record.size() % 2 == 0);
+      PendingContextIds.reserve(Record.size() / 2);
+      for (auto R = Record.begin(); R != Record.end(); R += 2)
+        PendingContextIds.push_back(*R << 32 | *(R + 1));
+      break;
+    }
+
     case bitc::FS_PERMODULE_ALLOC_INFO: {
       unsigned I = 0;
       std::vector<MIBInfo> MIBs;
@@ -8028,18 +8075,41 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
         }
         MIBs.push_back(MIBInfo(AllocType, std::move(StackIdList)));
       }
-      std::vector<uint64_t> TotalSizes;
-      // We either have no sizes or NumMIBs of them.
-      assert(I == Record.size() || Record.size() - I == NumMIBs);
+      // We either have nothing left or at least NumMIBs context size info
+      // indices left (for the total sizes included when reporting of hinted
+      // bytes is enabled).
+      assert(I == Record.size() || Record.size() - I >= NumMIBs);
+      std::vector<std::vector<ContextTotalSize>> AllContextSizes;
       if (I < Record.size()) {
+        assert(!PendingContextIds.empty() &&
+               "Missing context ids for alloc sizes");
+        unsigned ContextIdIndex = 0;
         MIBsRead = 0;
-        while (MIBsRead++ < NumMIBs)
-          TotalSizes.push_back(Record[I++]);
+        // The sizes are a linearized array of sizes, where for each MIB there
+        // is 1 or more sizes (due to context trimming, each MIB in the metadata
+        // and summarized here can correspond to more than one original context
+        // from the profile).
+        while (MIBsRead++ < NumMIBs) {
+          // First read the number of contexts recorded for this MIB.
+          unsigned NumContextSizeInfoEntries = Record[I++];
+          assert(Record.size() - I >= NumContextSizeInfoEntries);
+          std::vector<ContextTotalSize> ContextSizes;
+          ContextSizes.reserve(NumContextSizeInfoEntries);
+          for (unsigned J = 0; J < NumContextSizeInfoEntries; J++) {
+            assert(ContextIdIndex < PendingContextIds.size());
+            // PendingContextIds read from the preceding FS_ALLOC_CONTEXT_IDS
+            // should be in the same order as the total sizes.
+            ContextSizes.push_back(
+                {PendingContextIds[ContextIdIndex++], Record[I++]});
+          }
+          AllContextSizes.push_back(std::move(ContextSizes));
+        }
+        PendingContextIds.clear();
       }
       PendingAllocs.push_back(AllocInfo(std::move(MIBs)));
-      if (!TotalSizes.empty()) {
-        assert(PendingAllocs.back().MIBs.size() == TotalSizes.size());
-        PendingAllocs.back().TotalSizes = std::move(TotalSizes);
+      if (!AllContextSizes.empty()) {
+        assert(PendingAllocs.back().MIBs.size() == AllContextSizes.size());
+        PendingAllocs.back().ContextSizeInfos = std::move(AllContextSizes);
       }
       break;
     }
@@ -8067,21 +8137,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       SmallVector<uint8_t> Versions;
       for (unsigned J = 0; J < NumVersions; J++)
         Versions.push_back(Record[I++]);
-      std::vector<uint64_t> TotalSizes;
-      // We either have no sizes or NumMIBs of them.
-      assert(I == Record.size() || Record.size() - I == NumMIBs);
-      if (I < Record.size()) {
-        MIBsRead = 0;
-        while (MIBsRead++ < NumMIBs) {
-          TotalSizes.push_back(Record[I++]);
-        }
-      }
-      PendingAllocs.push_back(
-          AllocInfo(std::move(Versions), std::move(MIBs)));
-      if (!TotalSizes.empty()) {
-        assert(PendingAllocs.back().MIBs.size() == TotalSizes.size());
-        PendingAllocs.back().TotalSizes = std::move(TotalSizes);
-      }
+      assert(I == Record.size());
+      PendingAllocs.push_back(AllocInfo(std::move(Versions), std::move(MIBs)));
       break;
     }
     }

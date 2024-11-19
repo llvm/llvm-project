@@ -29,9 +29,9 @@ define fastcc void @_ZN12_GLOBAL__N_127PolynomialMultiplyRecognize9recognizeEv()
 ; CHECK-NEXT:    [[TMP14:%.*]] = call <16 x i8> @llvm.vector.insert.v16i8.v4i8(<16 x i8> [[TMP12]], <4 x i8> [[TMP13]], i64 4)
 ; CHECK-NEXT:    [[TMP15:%.*]] = trunc <2 x i32> [[TMP2]] to <2 x i8>
 ; CHECK-NEXT:    [[TMP16:%.*]] = call <16 x i8> @llvm.vector.insert.v16i8.v2i8(<16 x i8> [[TMP14]], <2 x i8> [[TMP15]], i64 2)
-; CHECK-NEXT:    [[TMP17:%.*]] = and <16 x i8> [[TMP16]], <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[TMP17:%.*]] = and <16 x i8> [[TMP16]], splat (i8 1)
 ; CHECK-NEXT:    store <16 x i8> [[TMP17]], ptr undef, align 1
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    ret void
 ; CHECK:       if.end50.i:
 ; CHECK-NEXT:    ret void
 ;
@@ -119,7 +119,7 @@ if.then22.i:                                      ; preds = %entry
   %conv.15.i.i = and i8 %15, 1
   %arrayidx.i.i7.15.i.i = getelementptr inbounds %"struct.std::array", ptr undef, i64 0, i32 0, i64 15
   store i8 %conv.15.i.i, ptr %arrayidx.i.i7.15.i.i, align 1
-  unreachable
+  ret void
 
 if.end50.i:                                       ; preds = %entry
   ret void

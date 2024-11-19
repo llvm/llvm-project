@@ -99,6 +99,8 @@ struct BasicBlockBFIAdapter {
 bool llvm::shouldOptimizeForSize(const Function *F, ProfileSummaryInfo *PSI,
                                  BlockFrequencyInfo *BFI,
                                  PGSOQueryType QueryType) {
+  if (F->hasOptSize())
+    return true;
   return shouldFuncOptimizeForSizeImpl(F, PSI, BFI, QueryType);
 }
 
@@ -106,5 +108,7 @@ bool llvm::shouldOptimizeForSize(const BasicBlock *BB, ProfileSummaryInfo *PSI,
                                  BlockFrequencyInfo *BFI,
                                  PGSOQueryType QueryType) {
   assert(BB);
+  if (BB->getParent()->hasOptSize())
+    return true;
   return shouldOptimizeForSizeImpl(BB, PSI, BFI, QueryType);
 }

@@ -371,14 +371,14 @@ def ARMVCCElse : PatLeaf<(i32 2)>;
 
 // imm_neg_XFORM - Return the negation of an i32 immediate value.
 def imm_neg_XFORM : SDNodeXForm<imm, [{
-  return CurDAG->getSignedConstant(-(int)N->getZExtValue(), SDLoc(N), MVT::i32,
-                                   /*isTarget=*/true);
+  return CurDAG->getSignedTargetConstant(-(int)N->getZExtValue(), SDLoc(N),
+                                         MVT::i32);
 }]>;
 
 // imm_not_XFORM - Return the complement of a i32 immediate value.
 def imm_not_XFORM : SDNodeXForm<imm, [{
-  return CurDAG->getSignedConstant(~(int)N->getZExtValue(), SDLoc(N), MVT::i32,
-                                   /*isTarget=*/true);
+  return CurDAG->getSignedTargetConstant(~(int)N->getZExtValue(), SDLoc(N),
+                                         MVT::i32);
 }]>;
 def gi_imm_not_XFORM : GICustomOperandRenderer<"renderInvertedImm">,
   GISDNodeXFormEquiv<imm_not_XFORM>;
@@ -2378,13 +2378,13 @@ def UDF : AInoP<(outs), (ins imm0_65535:$imm16), MiscFrm, NoItinerary,
  *  - In ARM: UDF #60896;
  *  - In Thumb: UDF #254 followed by a branch-to-self.
  */
-let isBarrier = 1, isTerminator = 1 in
+let isTrap = 1 in
 def TRAPNaCl : AXI<(outs), (ins), MiscFrm, NoItinerary,
                "trap", [(trap)]>,
            Requires<[IsARM,UseNaClTrap]> {
   let Inst = 0xe7fedef0;
 }
-let isBarrier = 1, isTerminator = 1 in
+let isTrap = 1 in
 def TRAP : AXI<(outs), (ins), MiscFrm, NoItinerary,
                "trap", [(trap)]>,
            Requires<[IsARM,DontUseNaClTrap]> {

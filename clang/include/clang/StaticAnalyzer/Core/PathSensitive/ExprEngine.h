@@ -583,14 +583,13 @@ public:
                                 ExplodedNode *Pred,
                                 ExplodedNodeSet &Dst);
 
-  /// evalEagerlyAssumeBinOpBifurcation - Given the nodes in 'Src', eagerly assume symbolic
-  ///  expressions of the form 'x != 0' and generate new nodes (stored in Dst)
-  ///  with those assumptions.
-  void evalEagerlyAssumeBinOpBifurcation(ExplodedNodeSet &Dst, ExplodedNodeSet &Src,
-                         const Expr *Ex);
+  /// evalEagerlyAssumeBifurcation - Given the nodes in 'Src', eagerly assume
+  /// concrete boolean values for 'Ex', storing the resulting nodes in 'Dst'.
+  void evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst, ExplodedNodeSet &Src,
+                                    const Expr *Ex);
 
   static std::pair<const ProgramPointTag *, const ProgramPointTag *>
-    geteagerlyAssumeBinOpBifurcationTags();
+  getEagerlyAssumeBifurcationTags();
 
   ProgramStateRef handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
                                       const LocationContext *LCtx, QualType T,

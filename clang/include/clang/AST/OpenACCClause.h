@@ -119,84 +119,6 @@ public:
   }
 };
 
-// Not yet implemented, but the type name is necessary for 'seq' diagnostics, so
-// this provides a basic, do-nothing implementation. We still need to add this
-// type to the visitors/etc, as well as get it to take its proper arguments.
-class OpenACCGangClause : public OpenACCClause {
-protected:
-  OpenACCGangClause(SourceLocation BeginLoc, SourceLocation EndLoc)
-      : OpenACCClause(OpenACCClauseKind::Gang, BeginLoc, EndLoc) {
-    llvm_unreachable("Not yet implemented");
-  }
-
-public:
-  static bool classof(const OpenACCClause *C) {
-    return C->getClauseKind() == OpenACCClauseKind::Gang;
-  }
-
-  static OpenACCGangClause *
-  Create(const ASTContext &Ctx, SourceLocation BeginLoc, SourceLocation EndLoc);
-
-  child_range children() {
-    return child_range(child_iterator(), child_iterator());
-  }
-  const_child_range children() const {
-    return const_child_range(const_child_iterator(), const_child_iterator());
-  }
-};
-
-// Not yet implemented, but the type name is necessary for 'seq' diagnostics, so
-// this provides a basic, do-nothing implementation. We still need to add this
-// type to the visitors/etc, as well as get it to take its proper arguments.
-class OpenACCVectorClause : public OpenACCClause {
-protected:
-  OpenACCVectorClause(SourceLocation BeginLoc, SourceLocation EndLoc)
-      : OpenACCClause(OpenACCClauseKind::Vector, BeginLoc, EndLoc) {
-    llvm_unreachable("Not yet implemented");
-  }
-
-public:
-  static bool classof(const OpenACCClause *C) {
-    return C->getClauseKind() == OpenACCClauseKind::Gang;
-  }
-
-  static OpenACCVectorClause *
-  Create(const ASTContext &Ctx, SourceLocation BeginLoc, SourceLocation EndLoc);
-
-  child_range children() {
-    return child_range(child_iterator(), child_iterator());
-  }
-  const_child_range children() const {
-    return const_child_range(const_child_iterator(), const_child_iterator());
-  }
-};
-
-// Not yet implemented, but the type name is necessary for 'seq' diagnostics, so
-// this provides a basic, do-nothing implementation. We still need to add this
-// type to the visitors/etc, as well as get it to take its proper arguments.
-class OpenACCWorkerClause : public OpenACCClause {
-protected:
-  OpenACCWorkerClause(SourceLocation BeginLoc, SourceLocation EndLoc)
-      : OpenACCClause(OpenACCClauseKind::Gang, BeginLoc, EndLoc) {
-    llvm_unreachable("Not yet implemented");
-  }
-
-public:
-  static bool classof(const OpenACCClause *C) {
-    return C->getClauseKind() == OpenACCClauseKind::Gang;
-  }
-
-  static OpenACCWorkerClause *
-  Create(const ASTContext &Ctx, SourceLocation BeginLoc, SourceLocation EndLoc);
-
-  child_range children() {
-    return child_range(child_iterator(), child_iterator());
-  }
-  const_child_range children() const {
-    return const_child_range(const_child_iterator(), const_child_iterator());
-  }
-};
-
 /// Represents a clause that has a list of parameters.
 class OpenACCClauseWithParams : public OpenACCClause {
   /// Location of the '('.
@@ -533,6 +455,70 @@ public:
   }
 
   Expr *getIntExpr() { return hasIntExpr() ? getExprs()[0] : nullptr; };
+};
+
+class OpenACCGangClause final
+    : public OpenACCClauseWithExprs,
+      public llvm::TrailingObjects<OpenACCGangClause, Expr *, OpenACCGangKind> {
+protected:
+  OpenACCGangClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                    ArrayRef<OpenACCGangKind> GangKinds,
+                    ArrayRef<Expr *> IntExprs, SourceLocation EndLoc);
+
+  OpenACCGangKind getGangKind(unsigned I) const {
+    return getTrailingObjects<OpenACCGangKind>()[I];
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Gang;
+  }
+
+  size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return getNumExprs();
+  }
+
+  unsigned getNumExprs() const { return getExprs().size(); }
+  std::pair<OpenACCGangKind, const Expr *> getExpr(unsigned I) const {
+    return {getGangKind(I), getExprs()[I]};
+  }
+
+  static OpenACCGangClause *
+  Create(const ASTContext &Ctx, SourceLocation BeginLoc,
+         SourceLocation LParenLoc, ArrayRef<OpenACCGangKind> GangKinds,
+         ArrayRef<Expr *> IntExprs, SourceLocation EndLoc);
+};
+
+class OpenACCWorkerClause : public OpenACCClauseWithSingleIntExpr {
+protected:
+  OpenACCWorkerClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                      Expr *IntExpr, SourceLocation EndLoc);
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Worker;
+  }
+
+  static OpenACCWorkerClause *Create(const ASTContext &Ctx,
+                                     SourceLocation BeginLoc,
+                                     SourceLocation LParenLoc, Expr *IntExpr,
+                                     SourceLocation EndLoc);
+};
+
+class OpenACCVectorClause : public OpenACCClauseWithSingleIntExpr {
+protected:
+  OpenACCVectorClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                      Expr *IntExpr, SourceLocation EndLoc);
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Vector;
+  }
+
+  static OpenACCVectorClause *Create(const ASTContext &Ctx,
+                                     SourceLocation BeginLoc,
+                                     SourceLocation LParenLoc, Expr *IntExpr,
+                                     SourceLocation EndLoc);
 };
 
 class OpenACCNumWorkersClause : public OpenACCClauseWithSingleIntExpr {

@@ -1805,7 +1805,7 @@ static bool frameTriviallyRequiresSP(const MachineFrameInfo &MFI) {
 // The FP for kernels is always known 0, so we never really need to setup an
 // explicit register for it. However, DisableFramePointerElim will force us to
 // use a register for it.
-bool SIFrameLowering::hasFP(const MachineFunction &MF) const {
+bool SIFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // For entry & chain functions we can use an immediate offset in most cases,

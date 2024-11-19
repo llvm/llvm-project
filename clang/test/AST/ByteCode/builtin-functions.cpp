@@ -265,6 +265,20 @@ namespace fpclassify {
   char classify_subnorm [__builtin_fpclassify(-1, -1, -1, +1, -1, 1.0e-38f)];
 }
 
+namespace abs {
+  static_assert(__builtin_abs(14) == 14, "");
+  static_assert(__builtin_labs(14L) == 14L, "");
+  static_assert(__builtin_llabs(14LL) == 14LL, "");
+  static_assert(__builtin_abs(-14) == 14, "");
+  static_assert(__builtin_labs(-0x14L) == 0x14L, "");
+  static_assert(__builtin_llabs(-0x141414141414LL) == 0x141414141414LL, "");
+#define BITSIZE(x) (sizeof(x) * 8)
+  constexpr int abs4 = __builtin_abs(1 << (BITSIZE(int) - 1)); // both-error {{must be initialized by a constant expression}}
+  constexpr long abs6 = __builtin_labs(1L << (BITSIZE(long) - 1)); // both-error {{must be initialized by a constant expression}}
+  constexpr long long abs8 = __builtin_llabs(1LL << (BITSIZE(long long) - 1)); // both-error {{must be initialized by a constant expression}}
+#undef BITSIZE
+} // namespace abs
+
 namespace fabs {
   static_assert(__builtin_fabs(-14.0) == 14.0, "");
 }

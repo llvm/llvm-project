@@ -55,13 +55,13 @@ LIBC_INLINE uint64_t write_impl(::FILE *file, const void *data, size_t size) {
   rpc::Client::Port port = rpc::client.open<opcode>();
 
   if constexpr (opcode == RPC_WRITE_TO_STREAM) {
-    port.send([&](rpc::Buffer *buffer) {
+    port.send([&](rpc::Buffer *buffer, uint32_t) {
       buffer->data[0] = reinterpret_cast<uintptr_t>(file);
     });
   }
 
   port.send_n(data, size);
-  port.recv([&](rpc::Buffer *buffer) {
+  port.recv([&](rpc::Buffer *buffer, uint32_t) {
     ret = reinterpret_cast<uint64_t *>(buffer->data)[0];
   });
   port.close();
@@ -81,12 +81,12 @@ LIBC_INLINE uint64_t read_from_stream(::FILE *file, void *buf, size_t size) {
   uint64_t ret = 0;
   uint64_t recv_size;
   rpc::Client::Port port = rpc::client.open<RPC_READ_FROM_STREAM>();
-  port.send([=](rpc::Buffer *buffer) {
+  port.send([=](rpc::Buffer *buffer, uint32_t) {
     buffer->data[0] = size;
     buffer->data[1] = from_stream(file);
   });
   port.recv_n(&buf, &recv_size, [&](uint64_t) { return buf; });
-  port.recv([&](rpc::Buffer *buffer) { ret = buffer->data[0]; });
+  port.recv([&](rpc::Buffer *buffer, uint32_t) { ret = buffer->data[0]; });
   port.close();
   return ret;
 }

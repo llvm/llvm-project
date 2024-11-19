@@ -29,7 +29,13 @@ namespace coro {
 // This interface/API is to provide an object oriented way to implement ABI
 // functionality. This is intended to replace use of the ABI enum to perform
 // ABI operations. The ABIs (e.g. Switch, Async, Retcon{Once}) are the common
-// ABIs.
+// ABIs. However, specific users may need to modify the behavior of these. This
+// can be accomplished by inheriting one of the common ABIs and overriding one
+// or more of the methods to create a custom ABI. To use a custom ABI for a
+// given coroutine the coro.begin.custom.abi intrinsic is used in place of the
+// coro.begin intrinsic. This takes an additional i32 arg that specifies the
+// index of an ABI generator for the custom ABI object in a SmallVector passed
+// to CoroSplitPass ctor.
 
 class BaseABI {
 public:

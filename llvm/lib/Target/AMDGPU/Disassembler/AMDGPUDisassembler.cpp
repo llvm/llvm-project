@@ -363,6 +363,19 @@ static DecodeStatus decodeOperand_VSrcT16(MCInst &Inst, unsigned Imm,
                               (AMDGPU::OperandSemantics)OperandSemantics));
 }
 
+static DecodeStatus decodeOperand_VGPR_16(MCInst &Inst, unsigned Imm,
+                                          uint64_t /*Addr*/,
+                                          const MCDisassembler *Decoder) {
+  assert(isUInt<10>(Imm) && "10-bit encoding expected");
+  assert(Imm & AMDGPU::EncValues::IS_VGPR && "VGPR expected");
+
+  const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+
+  bool IsHi = Imm & (1 << 9);
+  unsigned RegIdx = Imm & 0xff;
+  return addOperand(Inst, DAsm->createVGPR16Operand(RegIdx, IsHi));
+}
+
 static DecodeStatus decodeOperand_KImmFP(MCInst &Inst, unsigned Imm,
                                          uint64_t Addr,
                                          const MCDisassembler *Decoder) {
@@ -763,14 +776,23 @@ void AMDGPUDisassembler::convertEXPInst(MCInst &MI) const {
 }
 
 void AMDGPUDisassembler::convertVINTERPInst(MCInst &MI) const {
-  if (MI.getOpcode() == AMDGPU::V_INTERP_P10_F16_F32_inreg_gfx11 ||
-      MI.getOpcode() == AMDGPU::V_INTERP_P10_F16_F32_inreg_gfx12 ||
-      MI.getOpcode() == AMDGPU::V_INTERP_P10_RTZ_F16_F32_inreg_gfx11 ||
-      MI.getOpcode() == AMDGPU::V_INTERP_P10_RTZ_F16_F32_inreg_gfx12 ||
-      MI.getOpcode() == AMDGPU::V_INTERP_P2_F16_F32_inreg_gfx11 ||
-      MI.getOpcode() == AMDGPU::V_INTERP_P2_F16_F32_inreg_gfx12 ||
-      MI.getOpcode() == AMDGPU::V_INTERP_P2_RTZ_F16_F32_inreg_gfx11 ||
-      MI.getOpcode() == AMDGPU::V_INTERP_P2_RTZ_F16_F32_inreg_gfx12) {
+  convertTrue16OpSel(MI);
+  if (MI.getOpcode() == AMDGPU::V_INTERP_P10_F16_F32_inreg_t16_gfx11 ||
+      MI.getOpcode() == AMDGPU::V_INTERP_P10_F16_F32_inreg_fake16_gfx11 ||
+      MI.getOpcode() == AMDGPU::V_INTERP_P10_F16_F32_inreg_t16_gfx12 ||
+      MI.getOpcode() == AMDGPU::V_INTERP_P10_F16_F32_inreg_fake16_gfx12 ||
+      MI.getOpcode() == AMDGPU::V_INTERP_P10_RTZ_F16_F32_inreg_t16_gfx11 ||
+      MI.getOpcode() == AMDGPU::V_INTERP_P10_RTZ_F16_F32_inreg_fake16_gfx11 ||
+      MI.getOpcode() == AMDGPU::V_INTERP_P10_RTZ_F16_F32_inreg_t16_gfx12 ||
+      MI.getOpcode() == AMDGPU::V_INTERP_P10_RTZ_F16_F32_inreg_fake16_gfx12 ||
+      MI.getOpcode() == AMDGPU::V_INTERP_P2_F16_F32_inreg_t16_gfx11 ||
+      MI.getOpcode() == AMDGPU::V_INTERP_P2_F16_F32_inreg_fake16_gfx11 ||
+      MI.getOpcode() == AMDGPU::V_INTERP_P2_F16_F32_inreg_t16_gfx12 ||
+      MI.getOpcode() == AMDGPU::V_INTERP_P2_F16_F32_inreg_fake16_gfx12 ||
+      MI.getOpcode() == AMDGPU::V_INTERP_P2_RTZ_F16_F32_inreg_t16_gfx11 ||
+      MI.getOpcode() == AMDGPU::V_INTERP_P2_RTZ_F16_F32_inreg_fake16_gfx11 ||
+      MI.getOpcode() == AMDGPU::V_INTERP_P2_RTZ_F16_F32_inreg_t16_gfx12 ||
+      MI.getOpcode() == AMDGPU::V_INTERP_P2_RTZ_F16_F32_inreg_fake16_gfx12) {
     // The MCInst has this field that is not directly encoded in the
     // instruction.
     insertNamedMCOperand(MI, MCOperand::createImm(0), AMDGPU::OpName::op_sel);
