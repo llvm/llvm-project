@@ -583,9 +583,7 @@ define i1 @gep_nusw(ptr %p, i64 %a, i64 %b, i64 %c, i64 %d) {
 
 define i1 @pointer_icmp_aligned_with_offset(ptr align 8 %a, ptr align 8 %a2) {
 ; CHECK-LABEL: @pointer_icmp_aligned_with_offset(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[GEP]], [[A2:%.*]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %gep = getelementptr i8, ptr %a, i64 4
   %cmp = icmp eq ptr %gep, %a2

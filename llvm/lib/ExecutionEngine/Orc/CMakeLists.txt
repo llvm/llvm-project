@@ -29,6 +29,7 @@ add_llvm_component_library(LLVMOrcJIT
   IRTransformLayer.cpp
   IRPartitionLayer.cpp
   JITTargetMachineBuilder.cpp
+  LazyObjectLinkingLayer.cpp
   LazyReexports.cpp
   Layer.cpp
   LoadLinkableFile.cpp

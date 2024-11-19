@@ -147,6 +147,15 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   unsigned Opcode = MI.getOpcode();
   LLT DstTy = MRI.getType(R);
 
+  // Handle the case where this is called on a register that does not have a
+  // type constraint (i.e. it has a register class constraint instead). This is
+  // unlikely to occur except by looking through copies but it is possible for
+  // the initial register being queried to be in this state.
+  if (!DstTy.isValid()) {
+    Known = KnownBits();
+    return;
+  }
+
 #ifndef NDEBUG
   if (DstTy.isFixedVector()) {
     assert(
@@ -157,15 +166,6 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
            "DemandedElt width should be 1 for scalars or scalable vectors");
   }
 #endif
-
-  // Handle the case where this is called on a register that does not have a
-  // type constraint (i.e. it has a register class constraint instead). This is
-  // unlikely to occur except by looking through copies but it is possible for
-  // the initial register being queried to be in this state.
-  if (!DstTy.isValid()) {
-    Known = KnownBits();
-    return;
-  }
 
   unsigned BitWidth = DstTy.getScalarSizeInBits();
   auto CacheEntry = ComputeKnownBitsCache.find(R);
@@ -789,6 +789,14 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
                                  MI.getOperand(3).getReg(), DemandedElts,
                                  Depth + 1);
   }
+  case TargetOpcode::G_SMIN:
+  case TargetOpcode::G_SMAX:
+  case TargetOpcode::G_UMIN:
+  case TargetOpcode::G_UMAX:
+    // TODO: Handle clamp pattern with number of sign bits for SMIN/SMAX.
+    return computeNumSignBitsMin(MI.getOperand(1).getReg(),
+                                 MI.getOperand(2).getReg(), DemandedElts,
+                                 Depth + 1);
   case TargetOpcode::G_SADDO:
   case TargetOpcode::G_SADDE:
   case TargetOpcode::G_UADDO:

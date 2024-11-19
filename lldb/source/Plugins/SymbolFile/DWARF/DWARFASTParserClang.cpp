@@ -43,6 +43,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Demangle/Demangle.h"
 
@@ -2137,6 +2138,16 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
       m_ast.GetAsCXXRecordDecl(clang_type.GetOpaqueQualType());
   if (record_decl)
     GetClangASTImporter().SetRecordLayout(record_decl, layout_info);
+
+  // DWARF doesn't have the attribute, but we can infer the value the same way
+  // as Clang Sema does. It's required to calculate the size of pointers to
+  // member functions of this type.
+  if (m_ast.getASTContext().getTargetInfo().getCXXABI().isMicrosoft()) {
+    auto IM = record_decl->calculateInheritanceModel();
+    record_decl->addAttr(clang::MSInheritanceAttr::CreateImplicit(
+        m_ast.getASTContext(), true, {},
+        clang::MSInheritanceAttr::Spelling(IM)));
+  }
 
   // Now parse all contained types inside of the class. We make forward
   // declarations to all classes, but we need the CXXRecordDecl to have decls
