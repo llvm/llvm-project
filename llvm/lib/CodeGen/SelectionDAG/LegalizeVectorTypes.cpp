@@ -4237,8 +4237,9 @@ SDValue DAGTypeLegalizer::SplitVecOp_TruncateHelper(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
-  bool isStrict = N->getOpcode() == ISD::STRICT_FSETCC ||
-                  N->getOpcode() == ISD::STRICT_FSETCCS;
+  auto Opc = N->getOpcode();
+  bool isStrict = Opc == ISD::STRICT_FSETCC ||
+                  Opc == ISD::STRICT_FSETCCS;
   assert(N->getValueType(0).isVector() &&
          N->getOperand(isStrict ? 1 : 0).getValueType().isVector() &&
          "Operand types must be vectors");
@@ -4254,22 +4255,22 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
   EVT PartResVT = EVT::getVectorVT(Context, MVT::i1, PartEltCnt);
   EVT WideResVT = EVT::getVectorVT(Context, MVT::i1, PartEltCnt*2);
 
-  if (N->getOpcode() == ISD::SETCC) {
+  if (Opc == ISD::SETCC) {
     LoRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Lo0, Lo1, N->getOperand(2));
     HiRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Hi0, Hi1, N->getOperand(2));
-  } else if (N->getOpcode() == ISD::STRICT_FSETCC ||
-             N->getOpcode() == ISD::STRICT_FSETCCS) {
-    LoRes = DAG.getNode(N->getOpcode(), DL,
+  } else if (Opc == ISD::STRICT_FSETCC ||
+             Opc == ISD::STRICT_FSETCCS) {
+    LoRes = DAG.getNode(Opc, DL,
                         DAG.getVTList(PartResVT, N->getValueType(1)),
                         N->getOperand(0), Lo0, Lo1, N->getOperand(3));
-    HiRes = DAG.getNode(N->getOpcode(), DL,
+    HiRes = DAG.getNode(Opc, DL,
                         DAG.getVTList(PartResVT, N->getValueType(1)),
                         N->getOperand(0), Hi0, Hi1, N->getOperand(3));
     SDValue NewChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
                                    LoRes.getValue(1), HiRes.getValue(1));
     ReplaceValueWith(SDValue(N, 1), NewChain);
   } else {
-    assert(N->getOpcode() == ISD::VP_SETCC && "Expected VP_SETCC opcode");
+    assert(Opc == ISD::VP_SETCC && "Expected VP_SETCC opcode");
     SDValue MaskLo, MaskHi, EVLLo, EVLHi;
     std::tie(MaskLo, MaskHi) = SplitMask(N->getOperand(3));
     std::tie(EVLLo, EVLHi) =
