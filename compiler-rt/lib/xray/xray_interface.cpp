@@ -512,13 +512,21 @@ bool Symbolize(int32_t PackedId, AddressInfo* AI) {
   auto Ids = UnpackId(PackedId);
   auto ObjId = Ids.first;
   auto FuncId = Ids.second;
-  auto& SledMap = XRayInstrMaps[ObjId];
 
-  // TODO: Thread safety
+  XRaySledMap InstrMap;
+  {
+    SpinMutexLock Guard(&XRayInstrMapMutex);
+    if (ObjId < 0 || static_cast<uint32_t>(ObjId) >=
+                         atomic_load(&XRayNumObjects, memory_order_acquire)) {
+      Report("Unable to patch function: invalid sled map index: %d\n", ObjId);
+      return false;
+    }
+    InstrMap = XRayInstrMaps[ObjId];
+  }
 
   const XRaySledEntry *Sled =
-      SledMap.SledsIndex ? SledMap.SledsIndex[FuncId - 1].fromPCRelative()
-                         : findFunctionSleds(FuncId, SledMap).Begin;
+      InstrMap.SledsIndex ? InstrMap.SledsIndex[FuncId - 1].fromPCRelative()
+                         : findFunctionSleds(FuncId, InstrMap).Begin;
   auto Addr = Sled->function();
 
   Symbolizer* Sym = Symbolizer::GetOrInit();
@@ -664,7 +672,7 @@ int __xray_symbolize(int32_t PackedId, XRaySymbolInfo* SymInfo) {
   SymInfo->File = ai.file;
   SymInfo->Line = ai.line;
 
-  // TODO: DataInfo owns its memory, so passing char pointers is okay for now.
+  // TODO: AddressInfo owns its memory, so passing char pointers is okay for now.
   //        Need to free at some point.
 
   return true;
