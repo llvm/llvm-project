@@ -599,6 +599,70 @@ described in the ``s2g.tile`` mode intrinsics above.
 For more information, refer PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
 
+'``llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.[1-5]d``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.1d(ptr %tensor_map, i32 %d0, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.2d(..., i32 %d0, i32 %d1, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.[1-5]d``' intrinsics
+correspond to the ``cp.async.bulk.prefetch.tensor.[1-5]d.L2.global*`` set
+of PTX instructions. These instructions initiate an asynchronous prefetch
+of tensor data from global memory to the L2 cache. In tile mode, the
+multi-dimensional layout of the source tensor is preserved at the destination.
+The dimension of the tensor data ranges from 1d to 5d with the coordinates
+specified by the ``i32 %d0 ... i32 %d4`` arguments.
+
+* The last argument to these intrinsics is a boolean flag
+  indicating support for cache_hint. This flag argument must
+  be a compile-time constant. When set, it indicates a valid
+  cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
+  variant of the PTX instruction.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor>`_.
+
+'``llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.[1-5]d``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.3d(ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, ...)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.[1-5]d``' intrinsics
+correspond to the ``cp.async.bulk.prefetch.tensor.[1-5]d.L2.global*`` set
+of PTX instructions. These instructions initiate an asynchronous prefetch
+of tensor data from global memory to the L2 cache. In im2col mode, some
+dimensions of the source tensor are unrolled into a single dimensional
+column at the destination. In this mode, the tensor has to be at least
+three-dimensional. Along with the tensor coordinates, im2col offsets are
+also specified (denoted by ``i16 im2col0...i16 %im2col2``). The number
+of im2col offsets is two less than the number of dimensions of the tensor
+operation. The last argument to these intrinsics is a boolean flag, with
+the same functionality as described in the ``tile`` mode intrinsics above.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor>`_.
+
 Other Intrinsics
 ----------------
 

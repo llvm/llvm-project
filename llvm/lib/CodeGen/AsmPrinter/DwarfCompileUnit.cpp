@@ -49,6 +49,12 @@ cl::opt<cl::boolOrDefault> AddLinkageNamesToDeclCallOrigins(
              "referenced by DW_AT_call_origin attributes. Enabled by default "
              "for -gsce debugger tuning."));
 
+static cl::opt<bool> EmitFuncLineTableOffsetsOption(
+    "emit-func-debug-line-table-offsets", cl::Hidden,
+    cl::desc("Include line table offset in function's debug info and emit end "
+             "sequence after each function's line data."),
+    cl::init(false));
+
 static bool AddLinkageNamesToDeclCallOriginsForTuning(const DwarfDebug *DD) {
   bool EnabledByDefault = DD->tuneForSCE();
   if (EnabledByDefault)
@@ -511,7 +517,8 @@ void DwarfCompileUnit::addWasmRelocBaseGlobal(DIELoc *Loc, StringRef GlobalName,
 // Find DIE for the given subprogram and attach appropriate DW_AT_low_pc
 // and DW_AT_high_pc attributes. If there are global variables in this
 // scope then create and insert DIEs for these variables.
-DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
+DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP,
+                                                MCSymbol *LineTableSym) {
   DIE *SPDie = getOrCreateSubprogramDIE(SP, includeMinimalInlineScopes());
   SmallVector<RangeSpan, 2> BB_List;
   // If basic block sections are on, ranges for each basic block section has
@@ -525,6 +532,12 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
       !DD->getCurrentFunction()->getTarget().Options.DisableFramePointerElim(
           *DD->getCurrentFunction()))
     addFlag(*SPDie, dwarf::DW_AT_APPLE_omit_frame_ptr);
+
+  if (emitFuncLineTableOffsets() && LineTableSym) {
+    addSectionLabel(
+        *SPDie, dwarf::DW_AT_LLVM_stmt_sequence, LineTableSym,
+        Asm->getObjFileLowering().getDwarfLineSection()->getBeginSymbol());
+  }
 
   // Only include DW_AT_frame_base in full debug info
   if (!includeMinimalInlineScopes()) {
@@ -1096,8 +1109,9 @@ sortLocalVars(SmallVectorImpl<DbgVariable *> &Input) {
 }
 
 DIE &DwarfCompileUnit::constructSubprogramScopeDIE(const DISubprogram *Sub,
-                                                   LexicalScope *Scope) {
-  DIE &ScopeDIE = updateSubprogramScopeDIE(Sub);
+                                                   LexicalScope *Scope,
+                                                   MCSymbol *LineTableSym) {
+  DIE &ScopeDIE = updateSubprogramScopeDIE(Sub, LineTableSym);
 
   if (Scope) {
     assert(!Scope->getInlinedAt());
@@ -1689,6 +1703,10 @@ void DwarfCompileUnit::finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) 
 bool DwarfCompileUnit::includeMinimalInlineScopes() const {
   return getCUNode()->getEmissionKind() == DICompileUnit::LineTablesOnly ||
          (DD->useSplitDwarf() && !Skeleton);
+}
+
+bool DwarfCompileUnit::emitFuncLineTableOffsets() const {
+  return EmitFuncLineTableOffsetsOption;
 }
 
 void DwarfCompileUnit::addAddrTableBase() {

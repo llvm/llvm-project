@@ -553,7 +553,7 @@ def err_test_module_file_extension_format : Error<
   "'blockname:major:minor:hashed:user info'">;
 
 def err_drv_module_output_with_multiple_arch : Error<
-  "option '-fmodule-output' can't be used with multiple arch options">;
+  "option '-fmodule-output' cannot be used with multiple arch options">;
 
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,
@@ -834,4 +834,7 @@ def err_drv_triple_version_invalid : Error<
 
 def warn_missing_include_dirs : Warning<
   "no such include directory: '%0'">, InGroup<MissingIncludeDirs>, DefaultIgnore;
+
+def err_drv_malformed_warning_suppression_mapping : Error<
+  "failed to process suppression mapping file '%0': %1">;
 }

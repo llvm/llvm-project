@@ -70,8 +70,8 @@ void TemplUses(ConvertsToInt CTI, Int IsI) {
 #pragma acc loop vector(length:CTI)
   for(int i = 0; i < 5; ++i);
 
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} parallel
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} parallel
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: parallel
   // CHECK-NEXT: vector clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'Int' lvalue ParmVar{{.*}}'IsI' 'Int'
   // CHECK-NEXT: ForStmt
@@ -90,8 +90,8 @@ void TemplUses(ConvertsToInt CTI, Int IsI) {
 #pragma acc loop vector(length:IsI)
   for(int i = 0; i < 5; ++i);
 
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} serial
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} serial
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: serial
   // CHECK-NEXT: vector clause
   // CHECK-NEXT: ForStmt
   // CHECK-NEXT: DeclStmt
@@ -109,8 +109,8 @@ void TemplUses(ConvertsToInt CTI, Int IsI) {
 #pragma acc loop vector
   for(int i = 0; i < 5; ++i);
 
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} kernels
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} kernels
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: kernels
   // CHECK-NEXT: vector clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'Int' lvalue ParmVar{{.*}}'IsI' 'Int'
   // CHECK-NEXT: ForStmt
@@ -194,8 +194,8 @@ void TemplUses(ConvertsToInt CTI, Int IsI) {
   // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} parallel
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} parallel
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: parallel
   // CHECK-NEXT: vector clause
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue ParmVar{{.*}}'IsI' 'int'
@@ -212,8 +212,8 @@ void TemplUses(ConvertsToInt CTI, Int IsI) {
   // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} serial
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} serial
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: serial
   // CHECK-NEXT: vector clause
   // CHECK-NEXT: ForStmt
   // CHECK-NEXT: DeclStmt
@@ -228,8 +228,8 @@ void TemplUses(ConvertsToInt CTI, Int IsI) {
   // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} kernels
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} kernels
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: kernels
   // CHECK-NEXT: vector clause
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue ParmVar{{.*}}'IsI' 'int'
@@ -330,8 +330,8 @@ void uses() {
 #pragma acc loop vector(length:C)
   for(int i = 0; i < 5; ++i);
 
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} parallel
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} parallel
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: parallel
   // CHECK-NEXT: vector clause
   // CHECK-NEXT: ForStmt
   // CHECK-NEXT: DeclStmt
@@ -349,8 +349,8 @@ void uses() {
 #pragma acc loop vector
   for(int i = 0; i < 5; ++i);
 
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} parallel
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} parallel
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: parallel
   // CHECK-NEXT: vector clause
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <UserDefinedConversion>
   // CHECK-NEXT: CXXMemberCallExpr{{.*}}'int'
@@ -372,8 +372,8 @@ void uses() {
 #pragma acc loop vector(C)
   for(int i = 0; i < 5; ++i);
 
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} parallel
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} parallel
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: parallel
   // CHECK-NEXT: vector clause
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue Var
@@ -393,8 +393,8 @@ void uses() {
 #pragma acc loop vector(length:i)
   for(int i = 0; i < 5; ++i);
 
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} kernels
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} kernels
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: kernels
   // CHECK-NEXT: vector clause
   // CHECK-NEXT: ForStmt
   // CHECK-NEXT: DeclStmt
@@ -412,8 +412,8 @@ void uses() {
 #pragma acc loop vector
   for(int i = 0; i < 5; ++i);
 
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} kernels
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} kernels
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: kernels
   // CHECK-NEXT: vector clause
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <UserDefinedConversion>
   // CHECK-NEXT: CXXMemberCallExpr{{.*}}'int'
@@ -435,8 +435,8 @@ void uses() {
 #pragma acc loop vector(C)
   for(int i = 0; i < 5; ++i);
 
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} kernels
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} kernels
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: kernels
   // CHECK-NEXT: vector clause
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue Var
@@ -456,8 +456,8 @@ void uses() {
 #pragma acc loop vector(length:i)
   for(int i = 0; i < 5; ++i);
 
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} serial
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} serial
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: serial
   // CHECK-NEXT: vector clause
   // CHECK-NEXT: ForStmt
   // CHECK-NEXT: DeclStmt

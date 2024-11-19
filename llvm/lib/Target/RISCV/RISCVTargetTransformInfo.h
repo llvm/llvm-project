@@ -239,12 +239,7 @@ public:
     if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
       return false;
 
-    // TODO: Move bf16/f16 support into isLegalElementTypeForRVV
-    return TLI->isLegalElementTypeForRVV(ElemType) ||
-           (DataTypeVT.getVectorElementType() == MVT::bf16 &&
-            ST->hasVInstructionsBF16Minimal()) ||
-           (DataTypeVT.getVectorElementType() == MVT::f16 &&
-            ST->hasVInstructionsF16Minimal());
+    return TLI->isLegalElementTypeForRVV(ElemType);
   }
 
   bool isLegalMaskedLoad(Type *DataType, Align Alignment) {
@@ -274,12 +269,7 @@ public:
     if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
       return false;
 
-    // TODO: Move bf16/f16 support into isLegalElementTypeForRVV
-    return TLI->isLegalElementTypeForRVV(ElemType) ||
-           (DataTypeVT.getVectorElementType() == MVT::bf16 &&
-            ST->hasVInstructionsBF16Minimal()) ||
-           (DataTypeVT.getVectorElementType() == MVT::f16 &&
-            ST->hasVInstructionsF16Minimal());
+    return TLI->isLegalElementTypeForRVV(ElemType);
   }
 
   bool isLegalMaskedGather(Type *DataType, Align Alignment) {
@@ -339,6 +329,12 @@ public:
 
     Type *Ty = RdxDesc.getRecurrenceType();
     if (!TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, Ty)))
+      return false;
+
+    // We can't promote f16/bf16 fadd reductions and scalable vectors can't be
+    // expanded.
+    // TODO: Promote f16/bf16 fmin/fmax reductions
+    if (Ty->isBFloatTy() || (Ty->isHalfTy() && !ST->hasVInstructionsF16()))
       return false;
 
     switch (RdxDesc.getRecurrenceKind()) {

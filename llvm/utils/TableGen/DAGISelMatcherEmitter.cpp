@@ -798,6 +798,8 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       break;
     }
     unsigned Bytes = OpBytes + EmitSignedVBRValue(Val, OS);
+    if (!OmitComments)
+      OS << " // " << Val << " #" << cast<EmitIntegerMatcher>(N)->getResultNo();
     OS << '\n';
     return Bytes;
   }
@@ -818,7 +820,10 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       OpBytes = EmitVBRValue(VT, OS) + 1;
       break;
     }
-    OS << Val << ",\n";
+    OS << Val << ',';
+    if (!OmitComments)
+      OS << " // #" << cast<EmitStringIntegerMatcher>(N)->getResultNo();
+    OS << '\n';
     return OpBytes + 1;
   }
 
@@ -851,24 +856,31 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       break;
     }
     if (Reg) {
-      OS << getQualifiedName(Reg->TheDef) << ",\n";
+      OS << getQualifiedName(Reg->TheDef);
     } else {
       OS << "0 ";
       if (!OmitComments)
         OS << "/*zero_reg*/";
-      OS << ",\n";
     }
+
+    OS << ',';
+    if (!OmitComments)
+      OS << " // #" << Matcher->getResultNo();
+    OS << '\n';
     return OpBytes + 1;
   }
 
   case Matcher::EmitConvertToTarget: {
-    unsigned Slot = cast<EmitConvertToTargetMatcher>(N)->getSlot();
-    if (Slot < 8) {
-      OS << "OPC_EmitConvertToTarget" << Slot << ",\n";
-      return 1;
-    }
-    OS << "OPC_EmitConvertToTarget, " << Slot << ",\n";
-    return 2;
+    const auto *CTTM = cast<EmitConvertToTargetMatcher>(N);
+    unsigned Slot = CTTM->getSlot();
+    OS << "OPC_EmitConvertToTarget";
+    if (Slot >= 8)
+      OS << ", ";
+    OS << Slot << ',';
+    if (!OmitComments)
+      OS << " // #" << CTTM->getResultNo();
+    OS << '\n';
+    return 1 + (Slot >= 8);
   }
 
   case Matcher::EmitMergeInputChains: {
@@ -914,7 +926,8 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     OS << "OPC_EmitNodeXForm, " << getNodeXFormID(XF->getNodeXForm()) << ", "
        << XF->getSlot() << ',';
     if (!OmitComments)
-      OS << " // " << XF->getNodeXForm()->getName();
+      OS << " // " << XF->getNodeXForm()->getName() << " #"
+         << XF->getResultNo();
     OS << '\n';
     return 3;
   }

@@ -18,7 +18,6 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaSwift.h"
 #include <stack>
@@ -645,6 +644,11 @@ static void ProcessAPINotes(Sema &S, TagDecl *D, const api_notes::TagInfo &Info,
   if (auto Copyable = Info.isSwiftCopyable()) {
     if (!*Copyable)
       D->addAttr(SwiftAttrAttr::Create(S.Context, "~Copyable"));
+  }
+
+  if (auto Escapable = Info.isSwiftEscapable()) {
+    D->addAttr(SwiftAttrAttr::Create(S.Context,
+                                     *Escapable ? "Escapable" : "~Escapable"));
   }
 
   if (auto Extensibility = Info.EnumExtensibility) {

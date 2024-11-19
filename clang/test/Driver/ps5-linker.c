@@ -67,18 +67,23 @@
 // CHECK-NO-EXE-NOT: "--unresolved-symbols
 // CHECK-NO-EXE-NOT: "-z"
 
-// Test that an appropriate linker script is supplied by the driver.
+// Test that an appropriate linker script is supplied by the driver, but can
+// be overridden with -T.
 
 // RUN: %clang --target=x86_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-SCRIPT -DSCRIPT=main %s
 // RUN: %clang --target=x86_64-sie-ps5 %s -shared -### 2>&1 | FileCheck --check-prefixes=CHECK-SCRIPT -DSCRIPT=prx %s
 // RUN: %clang --target=x86_64-sie-ps5 %s -static -### 2>&1 | FileCheck --check-prefixes=CHECK-SCRIPT -DSCRIPT=static %s
 // RUN: %clang --target=x86_64-sie-ps5 %s -r -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-SCRIPT %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -T custom.script -### 2>&1 | FileCheck --check-prefixes=CHECK-CUSTOM-SCRIPT --implicit-check-not "\"{{-T|--script|--default-script}}\"" %s
 
 // CHECK-SCRIPT: {{ld(\.exe)?}}"
 // CHECK-SCRIPT-SAME: "--default-script" "[[SCRIPT]].script"
 
 // CHECK-NO-SCRIPT: {{ld(\.exe)?}}"
 // CHECK-NO-SCRIPT-NOT: "--default-script"
+
+// CHECK-CUSTOM-SCRIPT: {{ld(\.exe)?}}"
+// CHECK-CUSTOM-SCRIPT-SAME: "-T" "custom.script"
 
 // Test that -static is forwarded to the linker
 
@@ -96,6 +101,60 @@
 
 // Check the default library name.
 // CHECK-JMC: "--push-state" "--whole-archive" "-lSceJmc_nosubmission" "--pop-state"
+
+// Test that CRT objects and libraries are supplied to the linker and can be
+// omitted with -noxxx options. These switches have some interaction with
+// sanitizer RT libraries. That's checked in fsanitize.c
+
+// RUN: %clang --target=x86_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-MAIN-CRT,CHECK-DYNAMIC-LIBC,CHECK-DYNAMIC-CORE-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -shared -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-SHARED-CRT,CHECK-DYNAMIC-LIBC,CHECK-DYNAMIC-CORE-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -static -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-STATIC-CRT,CHECK-STATIC-LIBCPP,CHECK-STATIC-LIBC,CHECK-STATIC-CORE-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -r -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-NO-CRT,CHECK-NO-LIBS %s
+
+// RUN: %clang --target=x86_64-sie-ps5 %s -pthread -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-PTHREAD %s
+
+// RUN: %clang --target=x86_64-sie-ps5 %s -nostartfiles -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-NO-CRT,CHECK-DYNAMIC-LIBC,CHECK-DYNAMIC-CORE-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nostartfiles -shared -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-NO-CRT,CHECK-DYNAMIC-LIBC,CHECK-DYNAMIC-CORE-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nostartfiles -static -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-NO-CRT,CHECK-STATIC-LIBCPP,CHECK-STATIC-LIBC,CHECK-STATIC-CORE-LIBS %s
+
+// RUN: %clang --target=x86_64-sie-ps5 %s -nodefaultlibs -pthread -fjmc -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-MAIN-CRT,CHECK-NO-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nodefaultlibs -pthread -fjmc -shared -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-SHARED-CRT,CHECK-NO-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nodefaultlibs -pthread -fjmc -static -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-STATIC-CRT,CHECK-NO-LIBS %s
+
+// RUN: %clang --target=x86_64-sie-ps5 %s -nostdlib -pthread -fjmc -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-NO-CRT,CHECK-NO-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nostdlib -pthread -fjmc -shared -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-NO-CRT,CHECK-NO-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nostdlib -pthread -fjmc -static -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-NO-CRT,CHECK-NO-LIBS %s
+
+// RUN: %clang --target=x86_64-sie-ps5 %s -nolibc -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-MAIN-CRT,CHECK-NO-LIBC,CHECK-DYNAMIC-CORE-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nolibc -shared -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-SHARED-CRT,CHECK-NO-LIBC,CHECK-DYNAMIC-CORE-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nolibc -static -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-STATIC-CRT,CHECK-STATIC-LIBCPP,CHECK-NO-LIBC,CHECK-STATIC-CORE-LIBS %s
+
+// RUN: %clang --target=x86_64-sie-ps5 %s -nostdlib++ -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-MAIN-CRT,CHECK-NO-LIBCPP,CHECK-DYNAMIC-CORE-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nostdlib++ -shared -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-SHARED-CRT,CHECK-NO-LIBCPP,CHECK-DYNAMIC-CORE-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nostdlib++ -static -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-STATIC-CRT,CHECK-NO-LIBCPP,CHECK-STATIC-LIBC,CHECK-STATIC-CORE-LIBS %s
+
+// CHECK-LD: {{ld(\.exe)?}}"
+// CHECK-MAIN-CRT-SAME: "crt1.o" "crti.o" "crtbegin.o"
+// CHECK-SHARED-CRT-SAME: "crti.o" "crtbeginS.o"
+// CHECK-STATIC-CRT-SAME: "crt1.o" "crti.o" "crtbeginT.o"
+
+// CHECK-NO-LIBC-NOT: "-lc{{(_stub_weak)?}}"
+// CHECK-NO-LIBCPP-NOT: "-l{{c_stub_weak|stdc\+\+}}"
+
+// CHECK-DYNAMIC-LIBC-SAME: "-lc_stub_weak"
+// CHECK-DYNAMIC-CORE-LIBS-SAME: "-lkernel_stub_weak"
+// CHECK-STATIC-LIBCPP-SAME: "-lstdc++"
+// CHECK-STATIC-LIBC-SAME: "-lm" "-lc"
+// CHECK-STATIC-CORE-LIBS-SAME: "-lcompiler_rt" "-lkernel"
+
+// CHECK-PTHREAD-SAME: "-lpthread"
+
+// CHECK-MAIN-CRT-SAME: "crtend.o" "crtn.o"
+// CHECK-SHARED-CRT-SAME: "crtendS.o" "crtn.o"
+// CHECK-STATIC-CRT-SAME: "crtend.o" "crtn.o"
+
+// CHECK-NO-CRT-NOT: "crt{{[^"]*}}.o"
+// CHECK-NO-LIBS-NOT: "-l{{[^"]*}}"
 
 // Test the driver's control over the -fcrash-diagnostics-dir behavior with linker flags.
 
@@ -122,7 +181,8 @@
 // CHECK-LDOT-SAME: "-L."
 
 // Test that <sdk-root>/target/lib is added to library search paths, if it
-// exists and no --sysroot is specified.
+// exists and no --sysroot is specified. Also confirm that CRT objects are
+// found there.
 
 // RUN: rm -rf %t.dir && mkdir %t.dir
 // RUN: env SCE_PROSPERO_SDK_DIR=%t.dir %clang --target=x64_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-TARGETLIB %s
@@ -132,7 +192,9 @@
 // CHECK-NO-TARGETLIB-NOT: "-L{{.*[/\\]}}target/lib"
 
 // RUN: mkdir -p %t.dir/target/lib
+// RUN: touch %t.dir/target/lib/crti.o
 // RUN: env SCE_PROSPERO_SDK_DIR=%t.dir %clang --target=x64_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-TARGETLIB %s
 
 // CHECK-TARGETLIB: {{ld(\.exe)?}}"
 // CHECK-TARGETLIB-SAME: "-L{{.*[/\\]}}target/lib"
+// CHECK-TARGETLIB-SAME: "{{.*[/\\]}}target{{/|\\\\}}lib{{/|\\\\}}crti.o"

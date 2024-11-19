@@ -43,6 +43,11 @@ using namespace llvm;
 using namespace lld::wasm;
 using namespace lld;
 
+static std::string getThinLTOOutputFile(StringRef modulePath) {
+  return lto::getThinLTOOutputFile(modulePath, config->thinLTOPrefixReplaceOld,
+                                   config->thinLTOPrefixReplaceNew);
+}
+
 static lto::Config createConfig() {
   lto::Config c;
   c.Options = initTargetOptionsFromCodeGenFlags();
@@ -84,7 +89,10 @@ BitcodeCompiler::BitcodeCompiler() {
   auto onIndexWrite = [&](StringRef s) { thinIndices.erase(s); };
   if (config->thinLTOIndexOnly) {
     backend = lto::createWriteIndexesThinBackend(
-        llvm::hardware_concurrency(config->thinLTOJobs), "", "", "",
+        llvm::hardware_concurrency(config->thinLTOJobs),
+        std::string(config->thinLTOPrefixReplaceOld),
+        std::string(config->thinLTOPrefixReplaceNew),
+        std::string(config->thinLTOPrefixReplaceNativeObject),
         config->thinLTOEmitImportsFiles, indexFile.get(), onIndexWrite);
   } else {
     backend = lto::createInProcessThinBackend(
@@ -158,7 +166,8 @@ static void thinLTOCreateEmptyIndexFiles() {
       continue;
     if (linkedBitCodeFiles.contains(f->getName()))
       continue;
-    std::string path(f->obj->getName());
+    std::string path =
+        replaceThinLTOSuffix(getThinLTOOutputFile(f->obj->getName()));
     std::unique_ptr<raw_fd_ostream> os = openFile(path + ".thinlto.bc");
     if (!os)
       continue;

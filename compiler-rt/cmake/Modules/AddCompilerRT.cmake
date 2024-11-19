@@ -706,15 +706,30 @@ macro(add_custom_libcxx name prefix)
                -DLLVM_INCLUDE_TESTS=OFF
                -DLLVM_INCLUDE_DOCS=OFF
                ${LIBCXX_CMAKE_ARGS}
-    STEP_TARGETS configure build install
+    STEP_TARGETS configure build
     BUILD_ALWAYS 1
     USES_TERMINAL_CONFIGURE 1
     USES_TERMINAL_BUILD 1
     USES_TERMINAL_INSTALL 1
     LIST_SEPARATOR |
     EXCLUDE_FROM_ALL TRUE
-    INSTALL_BYPRODUCTS "${prefix}/lib/libc++.a" "${prefix}/lib/libc++abi.a"
     )
+
+  # Once we depend on CMake 3.26, we can use the INSTALL_BYPRODUCTS argument
+  # instead of having to fall back to ExternalProject_Add_Step()
+  # Note: We can't use the normal name "install" here since that interferes
+  # with the default ExternalProject_Add() logic and causes errors.
+  ExternalProject_Add_Step(${name} install-cmake326-workaround
+    # Ensure that DESTDIR=... set in the out environment does not affect this
+    # target (we always need to install to the build directory).
+    COMMAND env DESTDIR= ${CMAKE_COMMAND} --build ${prefix}/build --target install
+    COMMENT "Installing ${name}..."
+    BYPRODUCTS "${prefix}/lib/libc++.a" "${prefix}/lib/libc++abi.a"
+    DEPENDEES build
+    EXCLUDE_FROM_MAIN 1
+    USES_TERMINAL 1
+  )
+  ExternalProject_Add_StepTargets(${name} install-cmake326-workaround)
 
   if (CMAKE_GENERATOR MATCHES "Make")
     set(run_clean "$(MAKE)" "-C" "${prefix}" "clean")

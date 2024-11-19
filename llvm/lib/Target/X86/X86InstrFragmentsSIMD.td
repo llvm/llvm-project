@@ -1450,9 +1450,6 @@ def X86Vpshufbitqmb_su : PatFrag<(ops node:$src1, node:$src2),
   return N->hasOneUse();
 }]>;
 
-// This fragment treats X86cmpm as commutable to help match loads in both
-// operands for PCMPEQ.
-def X86setcc_commute : SDNode<"ISD::SETCC", SDTSetCC, [SDNPCommutative]>;
 def X86pcmpgtm : PatFrag<(ops node:$src1, node:$src2),
                          (setcc node:$src1, node:$src2, SETGT)>;
 

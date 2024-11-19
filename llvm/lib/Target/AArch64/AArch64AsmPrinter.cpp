@@ -61,7 +61,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <map>
@@ -153,8 +152,12 @@ public:
   void emitPtrauthCheckAuthenticatedValue(Register TestedReg,
                                           Register ScratchReg,
                                           AArch64PACKey::ID Key,
+                                          AArch64PAuth::AuthCheckMethod Method,
                                           bool ShouldTrap,
                                           const MCSymbol *OnFailure);
+
+  // Check authenticated LR before tail calling.
+  void emitPtrauthTailCallHardening(const MachineInstr *TC);
 
   // Emit the sequence for AUT or AUTPAC.
   void emitPtrauthAuthResign(const MachineInstr *MI);
@@ -1752,7 +1755,8 @@ unsigned AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
 /// of proceeding to the next instruction (only if ShouldTrap is false).
 void AArch64AsmPrinter::emitPtrauthCheckAuthenticatedValue(
     Register TestedReg, Register ScratchReg, AArch64PACKey::ID Key,
-    bool ShouldTrap, const MCSymbol *OnFailure) {
+    AArch64PAuth::AuthCheckMethod Method, bool ShouldTrap,
+    const MCSymbol *OnFailure) {
   // Insert a sequence to check if authentication of TestedReg succeeded,
   // such as:
   //
@@ -1778,38 +1782,70 @@ void AArch64AsmPrinter::emitPtrauthCheckAuthenticatedValue(
   //    Lsuccess:
   //      ...
   //
-  // This sequence is expensive, but we need more information to be able to
-  // do better.
-  //
-  // We can't TBZ the poison bit because EnhancedPAC2 XORs the PAC bits
-  // on failure.
-  // We can't TST the PAC bits because we don't always know how the address
-  // space is setup for the target environment (and the bottom PAC bit is
-  // based on that).
-  // Either way, we also don't always know whether TBI is enabled or not for
-  // the specific target environment.
+  // See the documentation on AuthCheckMethod enumeration constants for
+  // the specific code sequences that can be used to perform the check.
+  using AArch64PAuth::AuthCheckMethod;
 
-  unsigned XPACOpc = getXPACOpcodeForKey(Key);
+  if (Method == AuthCheckMethod::None)
+    return;
+  if (Method == AuthCheckMethod::DummyLoad) {
+    EmitToStreamer(MCInstBuilder(AArch64::LDRWui)
+                       .addReg(getWRegFromXReg(ScratchReg))
+                       .addReg(TestedReg)
+                       .addImm(0));
+    assert(ShouldTrap && !OnFailure && "DummyLoad always traps on error");
+    return;
+  }
 
   MCSymbol *SuccessSym = createTempSymbol("auth_success_");
+  if (Method == AuthCheckMethod::XPAC || Method == AuthCheckMethod::XPACHint) {
+    //  mov Xscratch, Xtested
+    emitMovXReg(ScratchReg, TestedReg);
 
-  //  mov Xscratch, Xtested
-  emitMovXReg(ScratchReg, TestedReg);
+    if (Method == AuthCheckMethod::XPAC) {
+      //  xpac(i|d) Xscratch
+      unsigned XPACOpc = getXPACOpcodeForKey(Key);
+      EmitToStreamer(
+          MCInstBuilder(XPACOpc).addReg(ScratchReg).addReg(ScratchReg));
+    } else {
+      //  xpaclri
 
-  //  xpac(i|d) Xscratch
-  EmitToStreamer(MCInstBuilder(XPACOpc).addReg(ScratchReg).addReg(ScratchReg));
+      // Note that this method applies XPAC to TestedReg instead of ScratchReg.
+      assert(TestedReg == AArch64::LR &&
+             "XPACHint mode is only compatible with checking the LR register");
+      assert((Key == AArch64PACKey::IA || Key == AArch64PACKey::IB) &&
+             "XPACHint mode is only compatible with I-keys");
+      EmitToStreamer(MCInstBuilder(AArch64::XPACLRI));
+    }
 
-  //  cmp Xtested, Xscratch
-  EmitToStreamer(MCInstBuilder(AArch64::SUBSXrs)
-                     .addReg(AArch64::XZR)
-                     .addReg(TestedReg)
-                     .addReg(ScratchReg)
-                     .addImm(0));
+    //  cmp Xtested, Xscratch
+    EmitToStreamer(MCInstBuilder(AArch64::SUBSXrs)
+                       .addReg(AArch64::XZR)
+                       .addReg(TestedReg)
+                       .addReg(ScratchReg)
+                       .addImm(0));
 
-  //  b.eq Lsuccess
-  EmitToStreamer(MCInstBuilder(AArch64::Bcc)
-                     .addImm(AArch64CC::EQ)
-                     .addExpr(MCSymbolRefExpr::create(SuccessSym, OutContext)));
+    //  b.eq Lsuccess
+    EmitToStreamer(
+        MCInstBuilder(AArch64::Bcc)
+            .addImm(AArch64CC::EQ)
+            .addExpr(MCSymbolRefExpr::create(SuccessSym, OutContext)));
+  } else if (Method == AuthCheckMethod::HighBitsNoTBI) {
+    //  eor Xscratch, Xtested, Xtested, lsl #1
+    EmitToStreamer(MCInstBuilder(AArch64::EORXrs)
+                       .addReg(ScratchReg)
+                       .addReg(TestedReg)
+                       .addReg(TestedReg)
+                       .addImm(1));
+    //  tbz Xscratch, #62, Lsuccess
+    EmitToStreamer(
+        MCInstBuilder(AArch64::TBZX)
+            .addReg(ScratchReg)
+            .addImm(62)
+            .addExpr(MCSymbolRefExpr::create(SuccessSym, OutContext)));
+  } else {
+    llvm_unreachable("Unsupported check method");
+  }
 
   if (ShouldTrap) {
     assert(!OnFailure && "Cannot specify OnFailure with ShouldTrap");
@@ -1823,9 +1859,26 @@ void AArch64AsmPrinter::emitPtrauthCheckAuthenticatedValue(
     // Note that this can introduce an authentication oracle (such as based on
     // the high bits of the re-signed value).
 
-    // FIXME: Can we simply return the AUT result, already in TestedReg?
-    //  mov Xtested, Xscratch
-    emitMovXReg(TestedReg, ScratchReg);
+    // FIXME: The XPAC method can be optimized by applying XPAC to TestedReg
+    //        instead of ScratchReg, thus eliminating one `mov` instruction.
+    //        Both XPAC and XPACHint can be further optimized by not using a
+    //        conditional branch jumping over an unconditional one.
+
+    switch (Method) {
+    case AuthCheckMethod::XPACHint:
+      // LR is already XPAC-ed at this point.
+      break;
+    case AuthCheckMethod::XPAC:
+      //  mov Xtested, Xscratch
+      emitMovXReg(TestedReg, ScratchReg);
+      break;
+    default:
+      // If Xtested was not XPAC-ed so far, emit XPAC here.
+      //  xpac(i|d) Xtested
+      unsigned XPACOpc = getXPACOpcodeForKey(Key);
+      EmitToStreamer(
+          MCInstBuilder(XPACOpc).addReg(TestedReg).addReg(TestedReg));
+    }
 
     if (OnFailure) {
       //  b Lend
@@ -1840,6 +1893,30 @@ void AArch64AsmPrinter::emitPtrauthCheckAuthenticatedValue(
   OutStreamer->emitLabel(SuccessSym);
 }
 
+// With Pointer Authentication, it may be needed to explicitly check the
+// authenticated value in LR before performing a tail call.
+// Otherwise, the callee may re-sign the invalid return address,
+// introducing a signing oracle.
+void AArch64AsmPrinter::emitPtrauthTailCallHardening(const MachineInstr *TC) {
+  if (!AArch64FI->shouldSignReturnAddress(*MF))
+    return;
+
+  auto LRCheckMethod = STI->getAuthenticatedLRCheckMethod(*MF);
+  if (LRCheckMethod == AArch64PAuth::AuthCheckMethod::None)
+    return;
+
+  const AArch64RegisterInfo *TRI = STI->getRegisterInfo();
+  Register ScratchReg =
+      TC->readsRegister(AArch64::X16, TRI) ? AArch64::X17 : AArch64::X16;
+  assert(!TC->readsRegister(ScratchReg, TRI) &&
+         "Neither x16 nor x17 is available as a scratch register");
+  AArch64PACKey::ID Key =
+      AArch64FI->shouldSignWithBKey() ? AArch64PACKey::IB : AArch64PACKey::IA;
+  emitPtrauthCheckAuthenticatedValue(
+      AArch64::LR, ScratchReg, Key, LRCheckMethod,
+      /*ShouldTrap=*/true, /*OnFailure=*/nullptr);
+}
+
 void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
   const bool IsAUTPAC = MI->getOpcode() == AArch64::AUTPAC;
 
@@ -1851,7 +1928,7 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
   //      ; sign x16 (if AUTPAC)
   //    Lend:   ; if not trapping on failure
   //
-  // with the checking sequence chosen depending on whether we should check
+  // with the checking sequence chosen depending on whether/how we should check
   // the pointer and whether we should trap on failure.
 
   // By default, auth/resign sequences check for auth failures.
@@ -1911,6 +1988,7 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
       EndSym = createTempSymbol("resign_end_");
 
     emitPtrauthCheckAuthenticatedValue(AArch64::X16, AArch64::X17, AUTKey,
+                                       AArch64PAuth::AuthCheckMethod::XPAC,
                                        ShouldTrap, EndSym);
   }
 
@@ -2195,6 +2273,7 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
                                                      : AArch64PACKey::DA);
 
         emitPtrauthCheckAuthenticatedValue(AArch64::X16, AArch64::X17, AuthKey,
+                                           AArch64PAuth::AuthCheckMethod::XPAC,
                                            /*ShouldTrap=*/true,
                                            /*OnFailure=*/nullptr);
       }
@@ -2327,6 +2406,7 @@ void AArch64AsmPrinter::LowerLOADgotAUTH(const MachineInstr &MI) {
         (AuthOpcode == AArch64::AUTIA ? AArch64PACKey::IA : AArch64PACKey::DA);
 
     emitPtrauthCheckAuthenticatedValue(AuthResultReg, AArch64::X17, AuthKey,
+                                       AArch64PAuth::AuthCheckMethod::XPAC,
                                        /*ShouldTrap=*/true,
                                        /*OnFailure=*/nullptr);
 
@@ -2396,6 +2476,8 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   // Do any manual lowerings.
   switch (MI->getOpcode()) {
   default:
+    assert(!AArch64InstrInfo::isTailCallReturnInst(*MI) &&
+           "Unhandled tail call instruction");
     break;
   case AArch64::HINT: {
     // CurrentPatchableFunctionEntrySym can be CurrentFnBegin only for
@@ -2539,6 +2621,8 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
                               ? AArch64::X17
                               : AArch64::X16;
 
+    emitPtrauthTailCallHardening(MI);
+
     unsigned DiscReg = AddrDisc;
     if (Disc) {
       if (AddrDisc != AArch64::NoRegister) {
@@ -2569,6 +2653,8 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::TCRETURNrix17:
   case AArch64::TCRETURNrinotx16:
   case AArch64::TCRETURNriALL: {
+    emitPtrauthTailCallHardening(MI);
+
     MCInst TmpInst;
     TmpInst.setOpcode(AArch64::BR);
     TmpInst.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
@@ -2576,6 +2662,8 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   }
   case AArch64::TCRETURNdi: {
+    emitPtrauthTailCallHardening(MI);
+
     MCOperand Dest;
     MCInstLowering.lowerOperand(MI->getOperand(0), Dest);
     MCInst TmpInst;

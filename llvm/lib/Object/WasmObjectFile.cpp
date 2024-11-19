@@ -1242,7 +1242,6 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
     while (ParamCount--) {
       uint32_t ParamType = readUint8(Ctx);
       Sig.Params.push_back(parseValType(Ctx, ParamType));
-      continue;
     }
     uint32_t ReturnCount = readVaruint32(Ctx);
     while (ReturnCount--) {
