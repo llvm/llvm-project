@@ -462,6 +462,6 @@ private:
 } // end anonymous namespace
 
 void trans::rewriteUnbridgedCasts(MigrationPass &pass) {
-  BodyTransform<UnbridgedCastRewriter> trans(pass);
+  BodyTransform_OLD<UnbridgedCastRewriter> trans(pass);
   trans.TraverseDecl(pass.Ctx.getTranslationUnitDecl());
 }

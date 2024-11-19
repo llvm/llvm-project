@@ -31,20 +31,24 @@ using namespace trans;
 
 namespace {
 
-class UnusedInitRewriter : public DynamicRecursiveASTVisitor {
+class UnusedInitRewriter : public BodyTransform {
   Stmt *Body;
-  MigrationPass &Pass;
-
   ExprSet Removables;
+  bool TraversingBody = false;
 
 public:
   UnusedInitRewriter(MigrationPass &pass)
-    : Body(nullptr), Pass(pass) { }
+      : BodyTransform(pass), Body(nullptr) {}
 
-  void transformBody(Stmt *body, Decl *ParentD) {
+  bool TraverseStmt(Stmt *body) override {
+    if (TraversingBody)
+      return BodyTransform::TraverseStmt(body);
+
+    llvm::SaveAndRestore Restore{TraversingBody, true};
     Body = body;
     collectRemovables(body, Removables);
-    TraverseStmt(body);
+    BodyTransform::TraverseStmt(body);
+    return true;
   }
 
   bool VisitObjCMessageExpr(ObjCMessageExpr *ME) override {
@@ -73,6 +77,6 @@ private:
 } // anonymous namespace
 
 void trans::rewriteUnusedInitDelegate(MigrationPass &pass) {
-  BodyTransform<UnusedInitRewriter> trans(pass);
+  UnusedInitRewriter trans(pass);
   trans.TraverseDecl(pass.Ctx.getTranslationUnitDecl());
 }

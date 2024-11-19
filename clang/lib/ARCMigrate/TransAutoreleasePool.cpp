@@ -65,18 +65,25 @@ public:
 
 namespace {
 
-class AutoreleasePoolRewriter : public DynamicRecursiveASTVisitor {
+class AutoreleasePoolRewriter : public BodyTransform {
+  bool TraversingBody = false;
+
 public:
   AutoreleasePoolRewriter(MigrationPass &pass)
-    : Body(nullptr), Pass(pass) {
+      : BodyTransform(pass), Body(nullptr) {
     PoolII = &pass.Ctx.Idents.get("NSAutoreleasePool");
     DrainSel = pass.Ctx.Selectors.getNullarySelector(
                                                  &pass.Ctx.Idents.get("drain"));
   }
 
-  void transformBody(Stmt *body, Decl *ParentD) {
+  bool TraverseStmt(Stmt *body) override {
+    if (TraversingBody)
+      return BodyTransform::TraverseStmt(body);
+
+    llvm::SaveAndRestore Restore{TraversingBody, true};
     Body = body;
-    TraverseStmt(body);
+    BodyTransform::TraverseStmt(body);
+    return true;
   }
 
   ~AutoreleasePoolRewriter() override {
@@ -410,7 +417,6 @@ private:
   }
 
   Stmt *Body;
-  MigrationPass &Pass;
 
   IdentifierInfo *PoolII;
   Selector DrainSel;
@@ -429,6 +435,6 @@ private:
 } // anonymous namespace
 
 void trans::rewriteAutoreleasePool(MigrationPass &pass) {
-  BodyTransform<AutoreleasePoolRewriter> trans(pass);
+  AutoreleasePoolRewriter trans(pass);
   trans.TraverseDecl(pass.Ctx.getTranslationUnitDecl());
 }

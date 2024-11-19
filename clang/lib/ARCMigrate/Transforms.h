@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_LIB_ARCMIGRATE_TRANSFORMS_H
 #define LLVM_CLANG_LIB_ARCMIGRATE_TRANSFORMS_H
 
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "llvm/ADT/DenseSet.h"
@@ -182,13 +183,15 @@ bool isGlobalVar(Expr *E);
 StringRef getNilString(MigrationPass &Pass);
 
 template <typename BODY_TRANS>
-class BodyTransform : public RecursiveASTVisitor<BodyTransform<BODY_TRANS> > {
+class BodyTransform_OLD
+    : public RecursiveASTVisitor<BodyTransform_OLD<BODY_TRANS>> {
   MigrationPass &Pass;
   Decl *ParentD;
 
-  typedef RecursiveASTVisitor<BodyTransform<BODY_TRANS> > base;
+  typedef RecursiveASTVisitor<BodyTransform_OLD<BODY_TRANS>> base;
+
 public:
-  BodyTransform(MigrationPass &pass) : Pass(pass), ParentD(nullptr) { }
+  BodyTransform_OLD(MigrationPass &pass) : Pass(pass), ParentD(nullptr) {}
 
   bool TraverseStmt(Stmt *rootS) {
     if (rootS)
@@ -199,6 +202,20 @@ public:
   bool TraverseObjCMethodDecl(ObjCMethodDecl *D) {
     SaveAndRestore<Decl *> SetParent(ParentD, D);
     return base::TraverseObjCMethodDecl(D);
+  }
+};
+
+class BodyTransform : public DynamicRecursiveASTVisitor {
+protected:
+  MigrationPass &Pass;
+  Decl *ParentD;
+
+public:
+  BodyTransform(MigrationPass &pass) : Pass(pass), ParentD(nullptr) {}
+
+  bool TraverseObjCMethodDecl(ObjCMethodDecl *D) override {
+    SaveAndRestore<Decl *> SetParent(ParentD, D);
+    return DynamicRecursiveASTVisitor::TraverseObjCMethodDecl(D);
   }
 };
 
