@@ -436,13 +436,18 @@ def AMDGPU_DPPOp : AMDGPU_Op<"dpp", [SameTypeOperands, AllTypesMatch<["result", 
                   DefaultValuedAttr<BoolAttr, "false">:$bound_ctrl)> {
   let summary = "AMDGPU DPP operation";
   let description = [{
-    This operation represents DPP functionality in a GPU program.
+    This operation represents DPP (Data-Parallel Primitives) functionality in a GPU program.
 
-    The behavior should be equivalent to:
-    v_mov_b32 `result` `old`
-    v_mov_b32 `result` `src` `kind` `row_mask` `bank_mask` `bound_ctrl`
+    It will result in the values from `src`, permuted according to
+    the DPP attributes(`kind`, `permArgument`, `row_mask`, `bank_mask` and `bound_ctrl`).
 
-     DPP provides the following operations:
+    If a lane is masked off(by EXEC mask, `row_mask`, `bank_mask`, etc) or
+    has no value to receive(for example, if the source of a lane is out of range),
+    this operation will instead produce the value of `old`.
+
+    For detail explanation of the attributes, please check the ISA Reference Guide.
+
+    DPP provides the following operations:
     - Full crossbar in a group of four (`quad_perm`)
     - Wavefront shift left by one lane (`wave_shl`)
     - Wavefront shift right by one lane (`wave_shr`)

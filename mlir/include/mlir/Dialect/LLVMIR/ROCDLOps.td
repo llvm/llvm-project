@@ -621,14 +621,20 @@ def ROCDL_DPPUpdateOp : ROCDL_IntrOp<"update.dpp", [], [0],
   Arguments<(ins LLVM_Type:$old, LLVM_Type:$src, I32Attr:$dppCtrl, I32Attr:$rowMask,
       I32Attr:$bankMask, I1Attr:$boundCtrl)> {
   let results = (outs LLVM_Type:$res);
-  let summary = "Represent the DPP(Data-Parallel Primitives) functionality";
+  let summary = "Exchange data among lanes in a warp";
   let description = [{
-    Represent the DPP(Data-Parallel Primitives) functionality,
-    which supports cross-lane data operations.
+    This operation maps to the DPP (Data-Parallel Primitives) intrinsics,
+    which allows lanes in the same warp to exchange data in their registers
+    directly following some very specific patterns.
+    
+    It will result in the values from `src`, permuted according to
+    the DPP attributes(`dppCtrl`, `rowMask`, `bankMask` and `boundCtrl`).
 
-    The behavior should be equivalent to:
-    v_mov_b32 `res` `old`
-    v_mov_b32 `res` `src` `dppCtrl` `rowMask` `bankMask` `boundCtrl`
+    If a lane is masked off(by EXEC mask, `rowMask`, `bankMask`, etc) or
+    has no value to receive(for example, if the source of a lane is out of range),
+    this operation will instead produce the value of `old`.
+
+    For detail explanation of the attributes, please check the ISA Reference Guide.
   }];
   let assemblyFormat = [{
     attr-dict $old `,` $src `with` $dppCtrl `,` $rowMask `,` $bankMask `,` $boundCtrl `:` type($src)
