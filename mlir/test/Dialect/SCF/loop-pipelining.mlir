@@ -770,7 +770,10 @@ func.func @stage_0_value_escape(%A: memref<?xf32>, %result: memref<?xf32>, %ub: 
 //    CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
 //    CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
 //    CHECK-DAG:   %[[CM1:.*]] = arith.constant -1 : index
-//        CHECK:   %[[UBM:.*]] = arith.subi %[[UB:.*]], %{{.*}}
+//        CHECK:   %[[IT2_UB:.*]] = arith.muli %[[STEP:.*]], %[[C2:.*]]
+//        CHECK:   %[[ENTERKERNEL:.*]] = arith.cmpi slt, %[[IT2_UB:.*]], %[[UB:.*]]
+//        CHECK:   %[[PUBM:.*]] = arith.subi %[[UB:.*]], %[[IT2_UB:.*]]
+//        CHECK:   %[[UBM:.*]] = arith.select %[[ENTERKERNEL:.*]], %[[PUBM:.*]], %[[LB:.*]]
 //        CHECK:   %{{.*}}:2 = scf.for %[[ARG5:.*]] = %[[LB:.*]] to %[[UBM]] step %[[STEP:.*]] iter_args(%[[ARG6:.*]] = %{{.*}}, %[[ARG7:.*]] = %{{.*}})
 //        CHECK:       memref.store %[[ARG6]], %{{.*}}[%[[ARG5]]]
 //        CHECK:       %[[ADDF_24:.*]] = arith.addf %[[ARG7]], %{{.*}}
@@ -844,7 +847,9 @@ func.func @dynamic_loop(%A: memref<?xf32>, %result: memref<?xf32>, %lb: index, %
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[CM1:.*]] = arith.constant -1 : index
 //   CHECK-DAG:   %[[CF0:.*]] = arith.constant 0.000000e+00
-//       CHECK:   %[[UBM:.*]] = arith.subi %[[UB:.*]], %{{.*}}
+//       CHECK:   %[[ENTERKERNEL:.*]] = arith.cmpi slt, %[[STEP:.*]], %[[UB:.*]]
+//       CHECK:   %[[PUBM:.*]] = arith.subi %[[UB:.*]], %[[STEP:.*]]
+//       CHECK:   %[[UBM:.*]] = arith.select %[[ENTERKERNEL:.*]], %[[PUBM:.*]], %[[LB:.*]]
 //       CHECK:   %{{.*}}:2 = scf.for %[[ARG5:.*]] = %[[LB:.*]] to %[[UBM]] step %[[STEP:.*]] iter_args(%[[ARG6:.*]] = %{{.*}}, %[[ARG7:.*]] = %{{.*}})
 //       CHECK:       %[[ADDF_13:.*]] = arith.addf %[[ARG7]], %[[ARG6]]
 //       CHECK:       %[[MULF_14:.*]] = arith.mulf %[[ADDF_13]], %{{.*}}

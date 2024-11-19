@@ -444,7 +444,15 @@ scf::ForOp LoopPipelinerInternal::createKernelLoop(
         loc, rewriter.getIntegerAttr(t, maxStage));
     Value maxStageByStep =
         rewriter.create<arith::MulIOp>(loc, step, maxStageValue);
-    newUb = rewriter.create<arith::SubIOp>(loc, ub, maxStageByStep);
+    Value hasAtLeastOneIteration = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::slt, maxStageByStep, ub);
+    Value possibleNewUB =
+        rewriter.create<arith::SubIOp>(loc, ub, maxStageByStep);
+    // In case of `index` or `unsigned` type, we need to make sure that the
+    // subtraction does not result in a negative value, instead we use lb
+    // to avoid entering the kernel loop.
+    newUb = rewriter.create<arith::SelectOp>(
+        loc, hasAtLeastOneIteration, possibleNewUB, forOp.getLowerBound());
   }
   auto newForOp =
       rewriter.create<scf::ForOp>(forOp.getLoc(), forOp.getLowerBound(), newUb,
