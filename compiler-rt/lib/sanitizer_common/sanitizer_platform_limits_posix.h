@@ -389,6 +389,16 @@ typedef long __sanitizer_time_t;
 
 typedef long __sanitizer_suseconds_t;
 
+struct __sanitizer_timespec {
+  __sanitizer_time_t tv_sec; /* seconds */
+  u64 tv_nsec;               /* nanoseconds */
+};
+
+struct __sanitizer_itimerspec {
+  struct __sanitizer_timespec it_interval; /* timer period */
+  struct __sanitizer_timespec it_value;    /* timer expiration */
+};
+
 struct __sanitizer_timeval {
   __sanitizer_time_t tv_sec;
   __sanitizer_suseconds_t tv_usec;

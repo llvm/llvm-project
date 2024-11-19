@@ -14,10 +14,12 @@
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/ProfileData/MemProf.h"
 
 namespace llvm {
 class Function;
 class Module;
+class TargetLibraryInfo;
 
 namespace vfs {
 class FileSystem;
@@ -57,6 +59,14 @@ private:
   IntrusiveRefCntPtr<vfs::FileSystem> FS;
 };
 
+namespace memprof {
+
+// Extract all calls from the IR.  Arrange them in a map from caller GUIDs to a
+// list of call sites, each of the form {LineLocation, CalleeGUID}.
+DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>>
+extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI);
+
+} // namespace memprof
 } // namespace llvm
 
 #endif

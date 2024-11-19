@@ -691,5 +691,7 @@ SetVector<int> IRNormalizer::getOutputFootprint(
 PreservedAnalyses IRNormalizerPass::run(Function &F,
                                         FunctionAnalysisManager &AM) const {
   IRNormalizer{}.runOnFunction(F);
-  return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

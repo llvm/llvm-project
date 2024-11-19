@@ -710,9 +710,15 @@ class STORE_2RI14<bits<32> op>
                "$rd, $rj, $imm14">;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 1
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 1, Constraints = "@earlyclobber $rd" in
-class AM_3R<bits<32> op>
+let hasSideEffects = 0, mayLoad = 1, mayStore = 1,
+    Constraints = "@earlyclobber $rd" in class AM_3R<bits<32> op>
     : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rk, GPRMemAtomic:$rj),
+            "$rd, $rk, $rj">;
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 1,
+    Constraints =
+        "@earlyclobber $rd_wb, $rd_wb = $rd" in class AMCAS_3R<bits<32> op>
+    : Fmt3R<op, (outs GPR:$rd_wb), (ins GPR:$rd, GPR:$rk, GPRMemAtomic:$rj),
             "$rd, $rk, $rj">;
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
@@ -1024,14 +1030,14 @@ def AMMAX__DB_WU : AM_3R<0x38700000>;
 def AMMAX__DB_DU : AM_3R<0x38708000>;
 def AMMIN__DB_WU : AM_3R<0x38710000>;
 def AMMIN__DB_DU : AM_3R<0x38718000>;
-def AMCAS_B     : AM_3R<0x38580000>;
-def AMCAS_H     : AM_3R<0x38588000>;
-def AMCAS_W     : AM_3R<0x38590000>;
-def AMCAS_D     : AM_3R<0x38598000>;
-def AMCAS__DB_B     : AM_3R<0x385a0000>;
-def AMCAS__DB_H     : AM_3R<0x385a8000>;
-def AMCAS__DB_W     : AM_3R<0x385b0000>;
-def AMCAS__DB_D     : AM_3R<0x385b8000>;
+def AMCAS_B      : AMCAS_3R<0x38580000>;
+def AMCAS_H      : AMCAS_3R<0x38588000>;
+def AMCAS_W      : AMCAS_3R<0x38590000>;
+def AMCAS_D      : AMCAS_3R<0x38598000>;
+def AMCAS__DB_B  : AMCAS_3R<0x385a0000>;
+def AMCAS__DB_H  : AMCAS_3R<0x385a8000>;
+def AMCAS__DB_W  : AMCAS_3R<0x385b0000>;
+def AMCAS__DB_D  : AMCAS_3R<0x385b8000>;
 def LL_D : LLBase<0x22000000>;
 def SC_D : SCBase<0x23000000>;
 def SC_Q : SCBase_128<0x38570000>;
@@ -1469,12 +1475,12 @@ def PseudoBR : Pseudo<(outs), (ins simm26_b:$imm26), [(br bb:$imm26)]>,
                PseudoInstExpansion<(B simm26_b:$imm26)>;
 
 let isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in
-def PseudoBRIND : Pseudo<(outs), (ins GPR:$rj, simm16_lsl2:$imm16)>,
+def PseudoBRIND : Pseudo<(outs), (ins GPRJR:$rj, simm16_lsl2:$imm16)>,
                   PseudoInstExpansion<(JIRL R0, GPR:$rj, simm16_lsl2:$imm16)>;
 
-def : Pat<(brind GPR:$rj), (PseudoBRIND GPR:$rj, 0)>;
-def : Pat<(brind (add GPR:$rj, simm16_lsl2:$imm16)),
-          (PseudoBRIND GPR:$rj, simm16_lsl2:$imm16)>;
+def : Pat<(brind GPRJR:$rj), (PseudoBRIND GPRJR:$rj, 0)>;
+def : Pat<(brind (add GPRJR:$rj, simm16_lsl2:$imm16)),
+          (PseudoBRIND GPRJR:$rj, simm16_lsl2:$imm16)>;
 
 // Function call with 'Small' code model.
 let isCall = 1, Defs = [R1] in
@@ -1484,7 +1490,7 @@ def : Pat<(loongarch_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
 def : Pat<(loongarch_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
 
 // Function call with 'Medium' code model.
-let isCall = 1, Defs = [R1] in
+let isCall = 1, Defs = [R1, R20], Size = 8 in
 def PseudoCALL_MEDIUM : Pseudo<(outs), (ins bare_symbol:$func)>;
 
 let Predicates = [IsLA64] in {
@@ -1533,7 +1539,8 @@ def : Pat<(loongarch_tail (iPTR texternalsym:$dst)),
           (PseudoTAIL texternalsym:$dst)>;
 
 // Tail call with 'Medium' code model.
-let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3] in
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
+    Uses = [R3], Defs = [R20], Size = 8 in
 def PseudoTAIL_MEDIUM : Pseudo<(outs), (ins bare_symbol:$dst)>;
 
 let Predicates = [IsLA64] in {
@@ -1655,27 +1662,17 @@ let isCall = 1, isBarrier = 1, hasSideEffects = 0, mayStore = 0, mayLoad = 0,
 def PseudoDESC_CALL : Pseudo<(outs GPR:$rd), (ins GPR:$rj, simm16_lsl2:$imm16)>,
                       PseudoInstExpansion<(JIRL GPR:$rd, GPR:$rj,
                                            simm16_lsl2:$imm16)>;
-
 // TLSDESC
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0, isCodeGenOnly = 0,
-    isAsmParserOnly = 1, Defs = [R1] in {
-def PseudoLA_TLS_DESC_ABS : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src),
-                                   [], "la.tls.desc", "$dst, $src">,
-                                   Requires<[IsLA32, HasLaGlobalWithAbs]>;
-def PseudoLA_TLS_DESC_ABS_LARGE : Pseudo<(outs GPR:$dst),
-                                         (ins GPR:$tmp, bare_symbol:$src), [],
-                                         "la.tls.desc", "$dst, $src">,
-                                  Requires<[IsLA64, HasLaGlobalWithAbs]>;
-def PseudoLA_TLS_DESC_PC : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
-                                  "la.tls.desc", "$dst, $src">;
-}
-
+    isAsmParserOnly = 1, Defs = [R1] in
+def PseudoLA_TLS_DESC : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                               "la.tls.desc", "$dst, $src">;
 let isCall = 1, isBarrier = 1, hasSideEffects = 0, mayStore = 0, mayLoad = 0,
     isCodeGenOnly = 0, isAsmParserOnly = 1, Defs = [R1, R4] in
-def PseudoLA_TLS_DESC_PC_LARGE : Pseudo<(outs GPR:$dst),
-                                        (ins GPR:$tmp, bare_symbol:$src), [],
-                                        "la.tls.desc", "$dst, $tmp, $src">,
-                                 Requires<[IsLA64]>;
+def PseudoLA_TLS_DESC_LARGE : Pseudo<(outs GPR:$dst),
+                                     (ins GPR:$tmp, bare_symbol:$src), [],
+                                     "la.tls.desc", "$dst, $tmp, $src">,
+                              Requires<[IsLA64]>;
 
 // Load address inst alias: "la", "la.global" and "la.local".
 // Default:
@@ -2087,6 +2084,35 @@ multiclass binary_atomic_op_wd<string inst, string op, string signed = ""> {
   def : Pat<(!cast<PatFrag>(op#"_i64") GPR:$rj, GPR:$rk),
             (!cast<Instruction>(inst#"__DB_D"#signed) GPR:$rk, GPR:$rj)>;
 }
+
+// Atomic operation for byte and half word
+multiclass binary_atomic_op_bh<string inst, string op> {
+  def : Pat<(!cast<PatFrag>(op#"_i8_monotonic") GPR:$rj, GPR:$rk),
+            (!cast<Instruction>(inst#"_B") GPR:$rk, GPR:$rj)>;
+  def : Pat<(!cast<PatFrag>(op#"_i16_monotonic") GPR:$rj, GPR:$rk),
+            (!cast<Instruction>(inst#"_H") GPR:$rk, GPR:$rj)>;
+
+  def : Pat<(!cast<PatFrag>(op#"_i8") GPR:$rj, GPR:$rk),
+            (!cast<Instruction>(inst#"__DB_B") GPR:$rk, GPR:$rj)>;
+  def : Pat<(!cast<PatFrag>(op#"_i16") GPR:$rj, GPR:$rk),
+            (!cast<Instruction>(inst#"__DB_H") GPR:$rk, GPR:$rj)>;
+}
+
+let Predicates = [ HasLAM_BH, IsLA64 ] in {
+  
+defm : binary_atomic_op_bh<"AMSWAP", "atomic_swap">;
+defm : binary_atomic_op_bh<"AMADD", "atomic_load_add">;
+def : Pat<(atomic_load_sub_i8_monotonic GPR:$rj, GPR:$rk),
+          (AMADD_B (SUB_W R0, GPR:$rk), GPR:$rj)>;
+def : Pat<(atomic_load_sub_i16_monotonic GPR:$rj, GPR:$rk),
+          (AMADD_H (SUB_W R0, GPR:$rk), GPR:$rj)>;
+
+def : Pat<(atomic_load_sub_i8 GPR:$rj, GPR:$rk),
+          (AMADD__DB_B (SUB_W R0, GPR:$rk), GPR:$rj)>;
+def : Pat<(atomic_load_sub_i16 GPR:$rj, GPR:$rk),
+          (AMADD__DB_H (SUB_W R0, GPR:$rk), GPR:$rj)>;
+} // Predicates = [ IsLA64, HasLAM_BH ]
+
 
 let Predicates = [IsLA64] in {
 

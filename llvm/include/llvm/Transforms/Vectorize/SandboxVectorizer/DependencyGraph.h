@@ -33,6 +33,7 @@ namespace llvm::sandboxir {
 
 class DependencyGraph;
 class MemDGNode;
+class SchedBundle;
 
 /// SubclassIDs for isa/dyn_cast etc.
 enum class DGNodeID {
@@ -100,6 +101,12 @@ protected:
   unsigned UnscheduledSuccs = 0;
   /// This is true if this node has been scheduled.
   bool Scheduled = false;
+  /// The scheduler bundle that this node belongs to.
+  SchedBundle *SB = nullptr;
+
+  void setSchedBundle(SchedBundle &SB) { this->SB = &SB; }
+  void clearSchedBundle() { this->SB = nullptr; }
+  friend class SchedBundle; // For setSchedBundle(), clearSchedBundle().
 
   DGNode(Instruction *I, DGNodeID ID) : I(I), SubclassID(ID) {}
   friend class MemDGNode;       // For constructor.
@@ -122,6 +129,8 @@ public:
   /// \Returns true if this node has been scheduled.
   bool scheduled() const { return Scheduled; }
   void setScheduled(bool NewVal) { Scheduled = NewVal; }
+  /// \Returns the scheduling bundle that this node belongs to, or nullptr.
+  SchedBundle *getSchedBundle() const { return SB; }
   /// \Returns true if this is before \p Other in program order.
   bool comesBefore(const DGNode *Other) { return I->comesBefore(Other->I); }
   using iterator = PredIterator;
@@ -281,6 +290,9 @@ private:
   /// The DAG spans across all instructions in this interval.
   Interval<Instruction> DAGInterval;
 
+  Context *Ctx = nullptr;
+  std::optional<Context::CallbackID> CreateInstrCB;
+
   std::unique_ptr<BatchAAResults> BatchAA;
 
   enum class DependencyType {
@@ -316,9 +328,24 @@ private:
   /// chain.
   void createNewNodes(const Interval<Instruction> &NewInterval);
 
+  /// Called by the callbacks when a new instruction \p I has been created.
+  void notifyCreateInstr(Instruction *I) {
+    getOrCreateNode(I);
+    // TODO: Update the dependencies for the new node.
+    // TODO: Update the MemDGNode chain to include the new node if needed.
+  }
+
 public:
-  DependencyGraph(AAResults &AA)
-      : BatchAA(std::make_unique<BatchAAResults>(AA)) {}
+  /// This constructor also registers callbacks.
+  DependencyGraph(AAResults &AA, Context &Ctx)
+      : Ctx(&Ctx), BatchAA(std::make_unique<BatchAAResults>(AA)) {
+    CreateInstrCB = Ctx.registerCreateInstrCallback(
+        [this](Instruction *I) { notifyCreateInstr(I); });
+  }
+  ~DependencyGraph() {
+    if (CreateInstrCB)
+      Ctx->unregisterCreateInstrCallback(*CreateInstrCB);
+  }
 
   DGNode *getNode(Instruction *I) const {
     auto It = InstrToNodeMap.find(I);
@@ -345,6 +372,10 @@ public:
   Interval<Instruction> extend(ArrayRef<Instruction *> Instrs);
   /// \Returns the range of instructions included in the DAG.
   Interval<Instruction> getInterval() const { return DAGInterval; }
+  void clear() {
+    InstrToNodeMap.clear();
+    DAGInterval = {};
+  }
 #ifndef NDEBUG
   void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;

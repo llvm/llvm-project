@@ -2879,8 +2879,10 @@ Instruction *InstCombinerImpl::matchBSwapOrBitReverse(Instruction &I,
   Instruction *LastInst = Insts.pop_back_val();
   LastInst->removeFromParent();
 
-  for (auto *Inst : Insts)
+  for (auto *Inst : Insts) {
+    Inst->setDebugLoc(I.getDebugLoc());
     Worklist.push(Inst);
+  }
   return LastInst;
 }
 
@@ -4738,10 +4740,6 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   if (Instruction *R = foldBinOpShiftWithShift(I))
     return R;
 
-  // Fold (X & M) ^ (Y & ~M) -> (X & M) | (Y & ~M)
-  // This it a special case in haveNoCommonBitsSet, but the computeKnownBits
-  // calls in there are unnecessary as SimplifyDemandedInstructionBits should
-  // have already taken care of those cases.
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   Value *X, *Y, *M;
 
@@ -4756,6 +4754,10 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       return BinaryOperator::CreateXor(XorBC, X);
   }
 
+  // Fold (X & M) ^ (Y & ~M) -> (X & M) | (Y & ~M)
+  // This it a special case in haveNoCommonBitsSet, but the computeKnownBits
+  // calls in there are unnecessary as SimplifyDemandedInstructionBits should
+  // have already taken care of those cases.
   if (match(&I, m_c_Xor(m_c_And(m_Not(m_Value(M)), m_Value()),
                         m_c_And(m_Deferred(M), m_Value())))) {
     if (isGuaranteedNotToBeUndef(M))

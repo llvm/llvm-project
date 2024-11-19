@@ -109,7 +109,7 @@ public:
   /// \param implicitTrunc allow implicit truncation of non-zero/sign bits of
   ///                      val beyond the range of numBits
   APInt(unsigned numBits, uint64_t val, bool isSigned = false,
-        bool implicitTrunc = true)
+        bool implicitTrunc = false)
       : BitWidth(numBits) {
     if (!implicitTrunc) {
       if (isSigned) {
@@ -512,7 +512,7 @@ public:
       return isShiftedMask_64(U.VAL);
     unsigned Ones = countPopulationSlowCase();
     unsigned LeadZ = countLeadingZerosSlowCase();
-    return (Ones + LeadZ + countr_zero()) == BitWidth;
+    return (Ones + LeadZ + countTrailingZerosSlowCase()) == BitWidth;
   }
 
   /// Return true if this APInt value contains a non-empty sequence of ones with

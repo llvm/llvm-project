@@ -42,6 +42,9 @@ static void reduceFlagsInModule(Oracle &O, ReducerWorkItem &WorkItem) {
       } else if (auto *PDI = dyn_cast<PossiblyDisjointInst>(&I)) {
         if (PDI->isDisjoint() && !O.shouldKeep())
           PDI->setIsDisjoint(false);
+      } else if (auto *ICmp = dyn_cast<ICmpInst>(&I)) {
+        if (ICmp->hasSameSign() && !O.shouldKeep())
+          ICmp->setSameSign(false);
       } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
         GEPNoWrapFlags NW = GEP->getNoWrapFlags();
         if (NW.isInBounds() && !O.shouldKeep())

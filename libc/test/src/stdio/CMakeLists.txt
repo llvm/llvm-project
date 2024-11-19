@@ -98,7 +98,7 @@ add_libc_test(
     fopencookie_test.cpp
   DEPENDS
     libc.include.stdio
-    libc.include.stdlib
+    libc.hdr.types.size_t
     libc.src.errno.errno
     libc.src.stdio.clearerr
     libc.src.stdio.fclose

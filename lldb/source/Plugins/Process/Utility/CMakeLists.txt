@@ -66,6 +66,7 @@ add_lldb_library(lldbPluginProcessUtility
     lldbSymbol
     lldbTarget
     lldbUtility
+    lldbValueObject
   LINK_COMPONENTS
     Support
     TargetParser

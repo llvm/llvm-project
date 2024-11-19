@@ -69,6 +69,7 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::asin:
   case Intrinsic::acos:
   case Intrinsic::atan:
+  case Intrinsic::atan2:
   case Intrinsic::sin:
   case Intrinsic::cos:
   case Intrinsic::tan:
@@ -76,6 +77,7 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::cosh:
   case Intrinsic::tanh:
   case Intrinsic::exp:
+  case Intrinsic::exp10:
   case Intrinsic::exp2:
   case Intrinsic::log:
   case Intrinsic::log10:

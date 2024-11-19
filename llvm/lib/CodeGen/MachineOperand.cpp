@@ -768,6 +768,11 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
     if (MCSymbol *Label = CFI.getLabel())
       MachineOperand::printSymbol(OS, *Label);
     break;
+  case MCCFIInstruction::OpNegateRAStateWithPC:
+    OS << "negate_ra_sign_state_with_pc ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    break;
   default:
     // TODO: Print the other CFI Operations.
     OS << "<unserializable cfi directive>";
@@ -1244,7 +1249,8 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   MachineOperand::printOperandOffset(OS, getOffset());
   if (!getSize().hasValue() ||
-      getAlign() != getSize().getValue().getKnownMinValue())
+      (!getSize().isZero() &&
+       getAlign() != getSize().getValue().getKnownMinValue()))
     OS << ", align " << getAlign().value();
   if (getAlign() != getBaseAlign())
     OS << ", basealign " << getBaseAlign().value();

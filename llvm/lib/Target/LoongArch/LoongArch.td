@@ -112,6 +112,12 @@ def FeatureFrecipe
                        "Support frecipe.{s/d} and frsqrte.{s/d} instructions.">;
 def HasFrecipe : Predicate<"Subtarget->hasFrecipe()">;
 
+// Atomic memory swap and add instructions for byte and half word
+def FeatureLAM_BH
+    : SubtargetFeature<"lam-bh", "HasLAM_BH", "true",
+                        "Support amswap[_db].{b/h} and amadd[_db].{b/h} instructions.">;
+def HasLAM_BH : Predicate<"Subtarget->hasLAM_BH()">;
+
 def TunePreferWInst
     : SubtargetFeature<"prefer-w-inst", "PreferWInst", "true",
                        "Prefer instructions with W suffix">;
@@ -129,7 +135,9 @@ include "LoongArchInstrInfo.td"
 //===----------------------------------------------------------------------===//
 
 def : ProcessorModel<"generic-la32", NoSchedModel, [Feature32Bit]>;
-def : ProcessorModel<"generic-la64", NoSchedModel, [Feature64Bit, FeatureUAL]>;
+def : ProcessorModel<"generic-la64", NoSchedModel, [Feature64Bit,
+                                                    FeatureUAL,
+                                                    FeatureExtLSX]>;
 
 // Generic 64-bit processor with double-precision floating-point support.
 def : ProcessorModel<"loongarch64", NoSchedModel, [Feature64Bit,
@@ -151,7 +159,8 @@ def : ProcessorModel<"la664", NoSchedModel, [Feature64Bit,
                                              FeatureExtLASX,
                                              FeatureExtLVZ,
                                              FeatureExtLBT,
-                                             FeatureFrecipe]>;
+                                             FeatureFrecipe,
+                                             FeatureLAM_BH]>;
 
 //===----------------------------------------------------------------------===//
 // Define the LoongArch target.

@@ -18,12 +18,14 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/Wasm.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compression.h"
@@ -492,6 +494,20 @@ Expected<bool> RawCoverageMappingDummyChecker::isDummy() {
   return Tag == Counter::Zero;
 }
 
+/// Determine if we should skip the first byte of the section content
+static bool shouldSkipSectionFirstByte(SectionRef &Section) {
+  const ObjectFile *Obj = Section.getObject();
+  // If this is a linked PE/COFF file, then we have to skip over the null byte
+  // that is allocated in the .lprfn$A section in the LLVM profiling runtime.
+  // If the name section is .lprfcovnames, it doesn't have the null byte at the
+  // beginning.
+  if (isa<COFFObjectFile>(Obj) && !Obj->isRelocatableObject())
+    if (Expected<StringRef> NameOrErr = Section.getName())
+      if (*NameOrErr != getInstrProfSectionName(IPSK_covname, Triple::COFF))
+        return true;
+  return false;
+}
+
 Error InstrProfSymtab::create(SectionRef &Section) {
   Expected<StringRef> DataOrErr = Section.getContents();
   if (!DataOrErr)
@@ -499,15 +515,8 @@ Error InstrProfSymtab::create(SectionRef &Section) {
   Data = *DataOrErr;
   Address = Section.getAddress();
 
-  // If this is a linked PE/COFF file, then we have to skip over the null byte
-  // that is allocated in the .lprfn$A section in the LLVM profiling runtime.
-  // If the name section is .lprfcovnames, it doesn't have the null byte at the
-  // beginning.
-  const ObjectFile *Obj = Section.getObject();
-  if (isa<COFFObjectFile>(Obj) && !Obj->isRelocatableObject())
-    if (Expected<StringRef> NameOrErr = Section.getName())
-      if (*NameOrErr != getInstrProfSectionName(IPSK_covname, Triple::COFF))
-        Data = Data.drop_front(1);
+  if (shouldSkipSectionFirstByte(Section))
+    Data = Data.substr(1);
 
   return Error::success();
 }
@@ -1077,6 +1086,56 @@ lookupSections(ObjectFile &OF, InstrProfSectKind IPSK) {
   return Sections;
 }
 
+/// Find a section that matches \p Name and is allocatable at runtime.
+///
+/// Returns the contents of the section and its start offset in the object file.
+static Expected<std::pair<StringRef, uint64_t>>
+lookupAllocatableSection(ObjectFile &OF, InstrProfSectKind IPSK) {
+  // On Wasm, allocatable sections can live only in data segments.
+  if (auto *WOF = dyn_cast<WasmObjectFile>(&OF)) {
+    std::vector<const WasmSegment *> Segments;
+    auto ObjFormat = OF.getTripleObjectFormat();
+    auto Name =
+        getInstrProfSectionName(IPSK, ObjFormat, /*AddSegmentInfo=*/false);
+    for (const auto &DebugName : WOF->debugNames()) {
+      if (DebugName.Type != wasm::NameType::DATA_SEGMENT ||
+          DebugName.Name != Name)
+        continue;
+      if (DebugName.Index >= WOF->dataSegments().size())
+        return make_error<CoverageMapError>(coveragemap_error::malformed);
+      auto &Segment = WOF->dataSegments()[DebugName.Index];
+      Segments.push_back(&Segment);
+    }
+    if (Segments.empty())
+      return make_error<CoverageMapError>(coveragemap_error::no_data_found);
+    if (Segments.size() != 1)
+      return make_error<CoverageMapError>(coveragemap_error::malformed);
+
+    const auto &Segment = *Segments.front();
+    auto &Data = Segment.Data;
+    StringRef Content(reinterpret_cast<const char *>(Data.Content.data()),
+                      Data.Content.size());
+    return std::make_pair(Content, Segment.SectionOffset);
+  }
+
+  // On other object file types, delegate to lookupSections to find the section.
+  auto Sections = lookupSections(OF, IPSK);
+  if (!Sections)
+    return Sections.takeError();
+  if (Sections->size() != 1)
+    return make_error<CoverageMapError>(
+        coveragemap_error::malformed,
+        "the size of coverage mapping section is not one");
+  auto &Section = Sections->front();
+  auto ContentsOrErr = Section.getContents();
+  if (!ContentsOrErr)
+    return ContentsOrErr.takeError();
+  auto Content = *ContentsOrErr;
+  if (shouldSkipSectionFirstByte(Section))
+    Content = Content.drop_front(1);
+  return std::make_pair(Content, Section.getAddress());
+}
+
 static Expected<std::unique_ptr<BinaryCoverageReader>>
 loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
                  StringRef CompilationDir = "",
@@ -1107,23 +1166,20 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
 
   // Look for the sections that we are interested in.
   auto ProfileNames = std::make_unique<InstrProfSymtab>();
-  std::vector<SectionRef> NamesSectionRefs;
   // If IPSK_name is not found, fallback to search for IPK_covname, which is
   // used when binary correlation is enabled.
-  auto NamesSection = lookupSections(*OF, IPSK_name);
+  auto NamesSection = lookupAllocatableSection(*OF, IPSK_name);
   if (auto E = NamesSection.takeError()) {
     consumeError(std::move(E));
-    NamesSection = lookupSections(*OF, IPSK_covname);
+    NamesSection = lookupAllocatableSection(*OF, IPSK_covname);
     if (auto E = NamesSection.takeError())
       return std::move(E);
   }
-  NamesSectionRefs = *NamesSection;
 
-  if (NamesSectionRefs.size() != 1)
-    return make_error<CoverageMapError>(
-        coveragemap_error::malformed,
-        "the size of coverage mapping section is not one");
-  if (Error E = ProfileNames->create(NamesSectionRefs.back()))
+  uint64_t NamesAddress;
+  StringRef NamesContent;
+  std::tie(NamesContent, NamesAddress) = *NamesSection;
+  if (Error E = ProfileNames->create(NamesContent, NamesAddress))
     return std::move(E);
 
   auto CoverageSection = lookupSections(*OF, IPSK_covmap);

@@ -16,7 +16,7 @@ define <2 x i1> @test.vectorgep(<2 x ptr> %vec) {
 define <2 x i1> @test.vectorgep.ult.true(<2 x ptr> %vec) {
 ; CHECK-LABEL: @test.vectorgep.ult.true(
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i32, <2 x ptr> [[VEC:%.*]], i64 1
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %gep.1 = getelementptr inbounds i32, <2 x ptr> %vec, i64 1
   %t.1 = icmp ult <2 x ptr> %vec, %gep.1

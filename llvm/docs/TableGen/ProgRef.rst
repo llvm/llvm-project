@@ -1646,7 +1646,8 @@ and non-0 as true.
 ``!and(``\ *a*\ ``,`` *b*\ ``, ...)``
     This operator does a bitwise AND on *a*, *b*, etc., and produces the
     result. A logical AND can be performed if all the arguments are either
-    0 or 1.
+    0 or 1. This operator is short-circuit to 0 when the left-most operand
+    is 0.
 
 ``!cast<``\ *type*\ ``>(``\ *a*\ ``)``
     This operator performs a cast on *a* and produces the result.
@@ -1872,7 +1873,8 @@ and non-0 as true.
 ``!or(``\ *a*\ ``,`` *b*\ ``, ...)``
     This operator does a bitwise OR on *a*, *b*, etc., and produces the
     result. A logical OR can be performed if all the arguments are either
-    0 or 1.
+    0 or 1. This operator is short-circuit to -1 (all ones) the left-most
+    operand is -1.
 
 ``!range([``\ *start*\ ``,]`` *end*\ ``[,``\ *step*\ ``])``
     This operator produces half-open range sequence ``[start : end : step)`` as

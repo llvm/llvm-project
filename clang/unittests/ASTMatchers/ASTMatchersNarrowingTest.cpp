@@ -3342,6 +3342,45 @@ TEST_P(ASTMatchersTest,
                          declStmt(isInTemplateInstantiation())));
 }
 
+TEST_P(ASTMatchersTest, IsInstantiated_MatchesVariableInstantiation) {
+  if (!GetParam().isCXX14OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches("template<typename T> int V = 10; void x() { V<int>; }",
+                      varDecl(isInstantiated())));
+}
+
+TEST_P(ASTMatchersTest, IsInstantiated_NotMatchesVariableDefinition) {
+  if (!GetParam().isCXX14OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(notMatches("template<typename T> int V = 10;",
+                         varDecl(isInstantiated())));
+}
+
+TEST_P(ASTMatchersTest,
+       IsInTemplateInstantiation_MatchesVariableInstantiationStmt) {
+  if (!GetParam().isCXX14OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches(
+      "template<typename T> auto V = []() { T i; }; void x() { V<int>(); }",
+      declStmt(isInTemplateInstantiation())));
+}
+
+TEST_P(ASTMatchersTest,
+       IsInTemplateInstantiation_NotMatchesVariableDefinitionStmt) {
+  if (!GetParam().isCXX14OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(notMatches("template<typename T> auto V = []() { T i; };",
+                         declStmt(isInTemplateInstantiation())));
+}
+
 TEST_P(ASTMatchersTest, IsInTemplateInstantiation_Sharing) {
   if (!GetParam().isCXX()) {
     return;

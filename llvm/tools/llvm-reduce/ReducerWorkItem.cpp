@@ -521,9 +521,7 @@ ReducerWorkItem::clone(const TargetMachine *TM) const {
     // MachineModuleInfo contains a lot of other state used during codegen which
     // we won't be using here, but we should be able to ignore it (although this
     // is pretty ugly).
-    const LLVMTargetMachine *LLVMTM =
-        static_cast<const LLVMTargetMachine *>(TM);
-    CloneMMM->MMI = std::make_unique<MachineModuleInfo>(LLVMTM);
+    CloneMMM->MMI = std::make_unique<MachineModuleInfo>(TM);
 
     for (const Function &F : getModule()) {
       if (auto *MF = MMI->getMachineFunction(F))
@@ -839,9 +837,8 @@ llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
     };
 
     std::unique_ptr<Module> M = MParser->parseIRModule(SetDataLayout);
-    LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
 
-    MMM->MMI = std::make_unique<MachineModuleInfo>(LLVMTM);
+    MMM->MMI = std::make_unique<MachineModuleInfo>(TM.get());
     MParser->parseMachineFunctions(*M, *MMM->MMI);
     MMM->M = std::move(M);
   } else {
