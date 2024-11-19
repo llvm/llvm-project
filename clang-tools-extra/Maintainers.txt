@@ -14,8 +14,8 @@ assistance.
 
 Lead Maintainer
 ---------------
-| Manuel Klimek
-| klimek@google.com (email), r4nt (GitHub)
+| Aaron Ballman
+| aaron@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
 
 
 clang-tidy
@@ -59,6 +59,11 @@ Inactive Maintainers
 The following people have graciously spent time performing maintainership
 responsibilities but are no longer active in that role. Thank you for all your
 help with the success of the project!
+
+Emeritus Lead Maintainers
+-------------------------
+| Manuel Klimek (klimek@google.com (email), r4nt (GitHub))
+
 
 Inactive component maintainers
 ------------------------------
