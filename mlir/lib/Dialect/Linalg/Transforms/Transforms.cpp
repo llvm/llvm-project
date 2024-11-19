@@ -1138,7 +1138,7 @@ getPackUnpackRankReducedPerm(ArrayRef<int64_t> shape,
   return perm;
 }
 
-LogicalResult GeneralizeOuterUnitDimsPackOpPattern::matchAndRewrite(
+LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
     tensor::PackOp packOp, PatternRewriter &rewriter) const {
   // TODO: support the case that outer dimensions are not all 1s. A
   // tensor.expand_shape will be generated in this case.
@@ -1239,7 +1239,7 @@ LogicalResult GeneralizeOuterUnitDimsPackOpPattern::matchAndRewrite(
   return success();
 }
 
-LogicalResult GeneralizeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
+LogicalResult DecomposeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
     tensor::UnPackOp unpackOp, PatternRewriter &rewriter) const {
   int64_t srcRank = unpackOp.getSourceRank();
   int64_t destRank = unpackOp.getDestRank();
@@ -1619,7 +1619,7 @@ void linalg::populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
       patterns.getContext(), benefit);
 }
 
-void linalg::populateGeneralizePatterns(RewritePatternSet &patterns) {
+void linalg::populateDecomposePackUnpackPatterns(RewritePatternSet &patterns) {
   // TODO: Add and test patterns for tensor.unpack
-  patterns.add<GeneralizeOuterUnitDimsPackOpPattern>(patterns.getContext());
+  patterns.add<DecomposeOuterUnitDimsPackOpPattern>(patterns.getContext());
 }

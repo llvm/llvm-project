@@ -1548,7 +1548,7 @@ protected:
 ///     into %arg1[0, 0, 0, 0] [1, 1, 2, %tile_dim_1] [1, 1, 1, 1]
 ///     : tensor<2x?xf32> into tensor<1x1x2x?xf32>
 /// ```
-struct GeneralizeOuterUnitDimsPackOpPattern
+struct DecomposeOuterUnitDimsPackOpPattern
     : public OpRewritePattern<tensor::PackOp> {
   using OpRewritePattern<tensor::PackOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(tensor::PackOp packOp,
@@ -1558,7 +1558,7 @@ struct GeneralizeOuterUnitDimsPackOpPattern
 /// Rewrites a tensor::UnPackOp into a sequence of rank-reduced extract_slice op
 /// + transpose op + insert_slice op, where the tensor::UnPackOp has outer dims
 /// being all 1s.
-struct GeneralizeOuterUnitDimsUnPackOpPattern
+struct DecomposeOuterUnitDimsUnPackOpPattern
     : public OpRewritePattern<tensor::UnPackOp> {
   using OpRewritePattern<tensor::UnPackOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(tensor::UnPackOp unpackOp,
@@ -1686,7 +1686,7 @@ void populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
 /// Populates patterns to decompose tensor.pack and tensor.unpack Ops into e.g.
 /// tensor.pad, linalg.transpose, tensor.{insert|extract}_slice. Require all
 /// outer dims to be unit.
-void populateGeneralizePatterns(RewritePatternSet &patterns);
+void populateDecomposePackUnpackPatterns(RewritePatternSet &patterns);
 
 /// Populates patterns to transform linalg.conv_2d_xxx operations into
 /// linalg.generic (for img2col packing) and linalg.matmul.
