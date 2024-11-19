@@ -24,13 +24,12 @@
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/NonTrivialTypeVisitor.h"
 #include "clang/AST/MangleNumberingContext.h"
+#include "clang/AST/NonTrivialTypeVisitor.h"
 #include "clang/AST/Randstruct.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Builtins.h"
-#include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
@@ -62,7 +61,6 @@
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cstring>
-#include <functional>
 #include <optional>
 #include <unordered_map>
 
@@ -8352,9 +8350,15 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
     return;
 
   // Only warn about certain kinds of shadowing for class members.
-  if (NewDC && NewDC->isRecord()) {
+  if (NewDC) {
     // In particular, don't warn about shadowing non-class members.
-    if (!OldDC->isRecord())
+    if (NewDC->isRecord() && !OldDC->isRecord())
+      return;
+
+    // Skip shadowing check if we're in a class scope, dealing with an enum
+    // constant in a different context.
+    DeclContext *ReDC = NewDC->getRedeclContext();
+    if (ReDC->isRecord() && isa<EnumConstantDecl>(D) && !OldDC->Equals(ReDC))
       return;
 
     // TODO: should we warn about static data members shadowing
@@ -8364,7 +8368,6 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
     // This is hard to do perfectly because we might friend the
     // shadowing context, but that's just a false negative.
   }
-
 
   DeclarationName Name = R.getLookupName();
 
