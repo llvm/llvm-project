@@ -574,31 +574,6 @@ uint64_t DWARFFormValue::Reference(dw_offset_t base_offset) const {
   }
 }
 
-std::optional<uint64_t> DWARFFormValue::getAsUnsignedConstant() const {
-  if ((!IsDataForm(m_form)) || m_form == lldb_private::dwarf::DW_FORM_sdata)
-    return std::nullopt;
-  return m_value.uval;
-}
-
-std::optional<int64_t> DWARFFormValue::getAsSignedConstant() const {
-  if ((!IsDataForm(m_form)) ||
-      (m_form == lldb_private::dwarf::DW_FORM_udata &&
-       uint64_t(std::numeric_limits<int64_t>::max()) < m_value.uval))
-    return std::nullopt;
-  switch (m_form) {
-  case lldb_private::dwarf::DW_FORM_data4:
-    return int32_t(m_value.uval);
-  case lldb_private::dwarf::DW_FORM_data2:
-    return int16_t(m_value.uval);
-  case lldb_private::dwarf::DW_FORM_data1:
-    return int8_t(m_value.uval);
-  case lldb_private::dwarf::DW_FORM_sdata:
-  case lldb_private::dwarf::DW_FORM_data8:
-  default:
-    return m_value.sval;
-  }
-}
-
 const uint8_t *DWARFFormValue::BlockData() const { return m_value.data; }
 
 bool DWARFFormValue::IsBlockForm(const dw_form_t form) {
