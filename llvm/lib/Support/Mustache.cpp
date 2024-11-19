@@ -53,9 +53,9 @@ public:
 
 private:
   Type TokenType;
-  // RawBody is the original string that was tokenized
+  // RawBody is the original string that was tokenized.
   std::string RawBody;
-  // TokenBody is the original string with the identifier removed
+  // TokenBody is the original string with the identifier removed.
   std::string TokenBody;
   Accessor Accessor;
   size_t Indentation;
@@ -126,7 +126,7 @@ private:
   const llvm::json::Value *ParentContext;
 };
 
-// Custom stream to escape strings
+// Custom stream to escape strings.
 class EscapeStringStream : public raw_ostream {
 public:
   explicit EscapeStringStream(llvm::raw_ostream &WrappedStream,
@@ -154,7 +154,7 @@ private:
   llvm::raw_ostream &WrappedStream;
 };
 
-// Custom stream to add indentation used to for rendering partials
+// Custom stream to add indentation used to for rendering partials.
 class AddIndentationStringStream : public raw_ostream {
 public:
   explicit AddIndentationStringStream(llvm::raw_ostream &WrappedStream,
@@ -166,7 +166,8 @@ public:
 protected:
   void write_impl(const char *Ptr, size_t Size) override {
     llvm::StringRef Data(Ptr, Size);
-    std::string Indent(Indentation, ' ');
+    SmallString<0> Indent;
+    Indent.resize(Indentation, ' ');
     for (char C : Data) {
       WrappedStream << C;
       if (C == '\n')
@@ -182,19 +183,19 @@ private:
 };
 
 Accessor splitMustacheString(StringRef Str) {
-  // We split the mustache string into an accessor
-  // For example: "a.b.c" would be split into {"a", "b", "c"}
+  // We split the mustache string into an accessor.
+  // For example: 
+  //    "a.b.c" would be split into {"a", "b", "c"}
   // We make an exception for a single dot which
-  // refers to the current context
+  // refers to the current context.
   Accessor Tokens;
   if (Str == ".") {
     Tokens.emplace_back(Str);
     return Tokens;
   }
-  StringRef Ref(Str);
-  while (!Ref.empty()) {
+  while (!Str.empty()) {
     StringRef Part;
-    std::tie(Part, Ref) = Ref.split(".");
+    std::tie(Part, Str) = Str.split(".");
     Tokens.emplace_back(Part.trim());
   }
   return Tokens;
@@ -239,14 +240,15 @@ Token::Type Token::getTokenType(char Identifier) {
 // Function to check if there is meaningful text behind.
 // We determine if a token has meaningful text behind
 // if the right of previous token contains anything that is
-// not a newline
+// not a newline.
 // For example:
 //  "Stuff {{#Section}}" (returns true)
 //   vs
 //  "{{#Section}} \n" (returns false)
 // We make an exception for when previous token is empty
-// and the current token is the second token
-// For example: "{{#Section}}"
+// and the current token is the second token.
+// For example: 
+//  "{{#Section}}"
 bool hasTextBehind(size_t Idx, const ArrayRef<Token> &Tokens) {
   if (Idx == 0)
     return true;
@@ -260,9 +262,9 @@ bool hasTextBehind(size_t Idx, const ArrayRef<Token> &Tokens) {
   return !TokenBody.ends_with("\n") && !(TokenBody.empty() && Idx == 1);
 }
 
-// Function to check if there's no meaningful text ahead
-// We determine if a token has text ahead if the left of previous 
-// token does not start with a newline
+// Function to check if there's no meaningful text ahead.
+// We determine if a token has text ahead if the left of previous
+// token does not start with a newline.
 bool hasTextAhead(size_t Idx, const ArrayRef<Token> &Tokens) {
   if (Idx >= Tokens.size() - 1)
     return true;
@@ -277,17 +279,17 @@ bool hasTextAhead(size_t Idx, const ArrayRef<Token> &Tokens) {
 }
 
 bool requiresCleanUp(Token::Type T) {
-  // We must clean up all the tokens that could contain child nodes
+  // We must clean up all the tokens that could contain child nodes.
   return T == Token::Type::SectionOpen || T == Token::Type::InvertSectionOpen ||
          T == Token::Type::SectionClose || T == Token::Type::Comment ||
          T == Token::Type::Partial;
 }
 
-// Adjust next token body if there is no text ahead
+// Adjust next token body if there is no text ahead.
 // For example:
-//  The template string
+// The template string
 //  "{{! Comment }} \nLine 2"
-// would be considered as no text ahead and should be render as
+// would be considered as no text ahead and should be rendered as
 //  " Line 2"
 void stripTokenAhead(SmallVectorImpl<Token> &Tokens, size_t Idx) {
   Token &NextToken = Tokens[Idx + 1];
@@ -299,7 +301,7 @@ void stripTokenAhead(SmallVectorImpl<Token> &Tokens, size_t Idx) {
     NextToken.setTokenBody(NextTokenBody.substr(1).str());
 }
 
-// Adjust previous token body if there no text behind
+// Adjust previous token body if there no text behind.
 // For example:
 //  The template string
 //  " \t{{#section}}A{{/section}}"
@@ -319,7 +321,7 @@ void stripTokenBefore(SmallVectorImpl<Token> &Tokens, size_t Idx,
 }
 
 // Simple tokenizer that splits the template into tokens.
-// The mustache spec allows {{{ }}} to unescape variables
+// The mustache spec allows {{{ }}} to unescape variables,
 // but we don't support that here. An unescape variable
 // is represented only by {{& variable}}.
 SmallVector<Token> tokenize(StringRef Template) {
@@ -342,7 +344,7 @@ SmallVector<Token> tokenize(StringRef Template) {
       break;
     }
 
-    // Extract the Interpolated variable without delimiters {{ and }}
+    // Extract the Interpolated variable without delimiters.
     size_t InterpolatedStart = DelimiterStart + Open.size();
     size_t InterpolatedEnd = DelimiterEnd - DelimiterStart - Close.size();
     std::string Interpolated =
@@ -374,7 +376,7 @@ SmallVector<Token> tokenize(StringRef Template) {
   for (size_t Idx = 0, End = Tokens.size(); Idx < End; ++Idx) {
     Token &CurrentToken = Tokens[Idx];
     Token::Type CurrentType = CurrentToken.getType();
-    // Check if token type requires cleanup
+    // Check if token type requires cleanup.
     bool RequiresCleanUp = requiresCleanUp(CurrentType);
 
     if (!RequiresCleanUp)
@@ -408,7 +410,6 @@ public:
 
 private:
   void parseMustache(ASTNode *Parent);
-
   BumpPtrAllocator &Allocator;
   SmallVector<Token> Tokens;
   size_t CurrentPtr;
@@ -561,7 +562,7 @@ void ASTNode::render(const Value &Data, raw_ostream &OS) {
     return;
   }
   case Section: {
-    // Sections are not rendered if the context is falsey
+    // Sections are not rendered if the context is falsey.
     auto SectionLambda = SectionLambdas->find(Accessor[0]);
     bool IsLambda = SectionLambda != SectionLambdas->end();
     if (isFalsey(Context) && !IsLambda)
@@ -597,7 +598,7 @@ const Value *ASTNode::findContext() {
   // a single dot refers to the current context.
   // We attempt to find the JSON context in the current node, if it is not
   // found, then we traverse the parent nodes to find the context until we
-  // reach the root node or the context is found
+  // reach the root node or the context is found.
   if (Accessor.empty())
     return nullptr;
   if (Accessor[0] == ".")
@@ -681,8 +682,8 @@ void ASTNode::setUpNode(llvm::BumpPtrAllocator &Alloc,
                         StringMap<ASTNode *> &Par, StringMap<Lambda> &L,
                         StringMap<SectionLambda> &SC,
                         DenseMap<char, std::string> &E) {
-  // Passed down datastructures needed for rendering to
-  // the children nodes. This must be called before rendering
+  // Passed down data structures needed for rendering to
+  // the children nodes. This must be called before rendering.
   Allocator = &Alloc;
   Partials = &Par;
   Lambdas = &L;
@@ -717,7 +718,7 @@ void Template::registerEscape(DenseMap<char, std::string> E) { Escapes = E; }
 Template::Template(std::string TemplateStr) {
   Parser P = Parser(TemplateStr, AstAllocator);
   Tree = P.parse();
-  // the default behaviour is to escape html entities
+  // The default behavior is to escape html entities.
   DenseMap<char, std::string> HtmlEntities = {{'&', "&amp;"},
                                               {'<', "&lt;"},
                                               {'>', "&gt;"},
