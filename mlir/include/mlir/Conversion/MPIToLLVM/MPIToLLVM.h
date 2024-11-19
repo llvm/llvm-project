@@ -19,6 +19,7 @@ class RewritePatternSet;
 #include "mlir/Conversion/Passes.h.inc"
 
 namespace mpi {
+
 void populateMPIToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                          RewritePatternSet &patterns);
 
