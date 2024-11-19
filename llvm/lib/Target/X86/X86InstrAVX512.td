@@ -2190,7 +2190,7 @@ multiclass avx512_icmp_cc_rmb<bits<8> opc, string Suffix, PatFrag Frag,
                               PatFrag Frag_su, X86FoldableSchedWrite sched,
                               X86VectorVTInfo _, string Name> :
            avx512_icmp_cc<opc, Suffix, Frag, Frag_su, sched, _, Name> {
-  def rmib : AVX512AIi8<opc, MRMSrcMem,
+  def rmbi : AVX512AIi8<opc, MRMSrcMem,
              (outs _.KRC:$dst), (ins _.RC:$src1, _.ScalarMemOp:$src2,
                                      u8imm:$cc),
              !strconcat("vpcmp", Suffix,
@@ -2201,7 +2201,7 @@ multiclass avx512_icmp_cc_rmb<bits<8> opc, string Suffix, PatFrag Frag,
                                        (_.BroadcastLdFrag addr:$src2),
                                        cond)))]>,
              EVEX, VVVV, EVEX_B, Sched<[sched.Folded, sched.ReadAfterFold]>;
-  def rmibk : AVX512AIi8<opc, MRMSrcMem,
+  def rmbik : AVX512AIi8<opc, MRMSrcMem,
               (outs _.KRC:$dst), (ins _.KRCWM:$mask, _.RC:$src1,
                                        _.ScalarMemOp:$src2, u8imm:$cc),
               !strconcat("vpcmp", Suffix,
@@ -2216,13 +2216,13 @@ multiclass avx512_icmp_cc_rmb<bits<8> opc, string Suffix, PatFrag Frag,
 
   def : Pat<(_.KVT (Frag:$cc (_.BroadcastLdFrag addr:$src2),
                     (_.VT _.RC:$src1), cond)),
-            (!cast<Instruction>(Name#_.ZSuffix#"rmib")
+            (!cast<Instruction>(Name#_.ZSuffix#"rmbi")
              _.RC:$src1, addr:$src2, (X86pcmpm_imm_commute $cc))>;
 
   def : Pat<(and _.KRCWM:$mask,
                  (_.KVT (Frag_su:$cc (_.BroadcastLdFrag addr:$src2),
                                      (_.VT _.RC:$src1), cond))),
-            (!cast<Instruction>(Name#_.ZSuffix#"rmibk")
+            (!cast<Instruction>(Name#_.ZSuffix#"rmbik")
              _.KRCWM:$mask, _.RC:$src1, addr:$src2,
              (X86pcmpm_imm_commute $cc))>;
 }
@@ -2992,7 +2992,7 @@ multiclass axv512_icmp_packed_cc_rmb_no_vlx_lowering<PatFrag Frag, PatFrag Frag_
 def : Pat<(Narrow.KVT (Frag:$cc (Narrow.VT Narrow.RC:$src1),
                                 (Narrow.BroadcastLdFrag addr:$src2), cond)),
           (COPY_TO_REGCLASS
-           (!cast<Instruction>(InstStr#"Zrmib")
+           (!cast<Instruction>(InstStr#"Zrmbi")
             (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src1, Narrow.SubRegIdx)),
             addr:$src2, (X86pcmpm_imm $cc)), Narrow.KRC)>;
 
@@ -3001,7 +3001,7 @@ def : Pat<(Narrow.KVT (and Narrow.KRC:$mask,
                             (Frag_su:$cc (Narrow.VT Narrow.RC:$src1),
                                          (Narrow.BroadcastLdFrag addr:$src2),
                                          cond)))),
-          (COPY_TO_REGCLASS (!cast<Instruction>(InstStr#"Zrmibk")
+          (COPY_TO_REGCLASS (!cast<Instruction>(InstStr#"Zrmbik")
            (COPY_TO_REGCLASS Narrow.KRC:$mask, Wide.KRC),
            (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src1, Narrow.SubRegIdx)),
            addr:$src2, (X86pcmpm_imm $cc)), Narrow.KRC)>;
@@ -3011,7 +3011,7 @@ def : Pat<(Narrow.KVT (Frag:$cc (Narrow.BroadcastLdFrag addr:$src2),
                                 (Narrow.VT Narrow.RC:$src1),
                                 cond)),
           (COPY_TO_REGCLASS
-           (!cast<Instruction>(InstStr#"Zrmib")
+           (!cast<Instruction>(InstStr#"Zrmbi")
             (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src1, Narrow.SubRegIdx)),
             addr:$src2, (X86pcmpm_imm_commute $cc)), Narrow.KRC)>;
 
@@ -3020,7 +3020,7 @@ def : Pat<(Narrow.KVT (and Narrow.KRC:$mask,
                             (Frag_su:$cc (Narrow.BroadcastLdFrag addr:$src2),
                                          (Narrow.VT Narrow.RC:$src1),
                                          cond)))),
-          (COPY_TO_REGCLASS (!cast<Instruction>(InstStr#"Zrmibk")
+          (COPY_TO_REGCLASS (!cast<Instruction>(InstStr#"Zrmbik")
            (COPY_TO_REGCLASS Narrow.KRC:$mask, Wide.KRC),
            (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src1, Narrow.SubRegIdx)),
            addr:$src2, (X86pcmpm_imm_commute $cc)), Narrow.KRC)>;
