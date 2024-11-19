@@ -1949,8 +1949,6 @@ ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body) {
   LambdaScopeInfo LSI = *cast<LambdaScopeInfo>(FunctionScopes.back());
   ActOnFinishFunctionBody(LSI.CallOperator, Body);
 
-  maybeAddDeclWithEffects(LSI.CallOperator);
-
   return BuildLambdaExpr(StartLoc, Body->getEndLoc(), &LSI);
 }
 
@@ -2283,6 +2281,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
     case ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed:
       break;
     }
+    maybeAddDeclWithEffects(LSI->CallOperator);
   }
 
   return MaybeBindToTemporary(Lambda);
