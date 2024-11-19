@@ -2307,15 +2307,15 @@ static void writeWhyExtract(Ctx &ctx) {
 
   os << "reference\textracted\tsymbol\n";
   for (auto &entry : ctx.whyExtractRecords) {
-    os << std::get<0>(entry) << '\t' << toString(std::get<1>(entry)) << '\t'
-       << toString(std::get<2>(entry)) << '\n';
+    os << std::get<0>(entry) << '\t' << toStr(ctx, std::get<1>(entry)) << '\t'
+       << toStr(ctx, std::get<2>(entry)) << '\n';
   }
 }
 
 static void reportBackrefs(Ctx &ctx) {
   for (auto &ref : ctx.backwardReferences) {
     const Symbol &sym = *ref.first;
-    std::string to = toString(ref.second.second);
+    std::string to = toStr(ctx, ref.second.second);
     // Some libraries have known problems and can cause noise. Filter them out
     // with --warn-backrefs-exclude=. The value may look like (for --start-lib)
     // *.o or (archive member) *.a(*.o).
@@ -2807,23 +2807,23 @@ static void readSecurityNotes(Ctx &ctx) {
 
     checkAndReportMissingFeature(
         ctx, ctx.arg.zBtiReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_BTI,
-        toString(f) + ": -z bti-report: file does not have "
-                      "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property");
+        toStr(ctx, f) + ": -z bti-report: file does not have "
+                        "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property");
 
     checkAndReportMissingFeature(
         ctx, ctx.arg.zGcsReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_GCS,
-        toString(f) + ": -z gcs-report: file does not have "
-                      "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property");
+        toStr(ctx, f) + ": -z gcs-report: file does not have "
+                        "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property");
 
     checkAndReportMissingFeature(
         ctx, ctx.arg.zCetReport, features, GNU_PROPERTY_X86_FEATURE_1_IBT,
-        toString(f) + ": -z cet-report: file does not have "
-                      "GNU_PROPERTY_X86_FEATURE_1_IBT property");
+        toStr(ctx, f) + ": -z cet-report: file does not have "
+                        "GNU_PROPERTY_X86_FEATURE_1_IBT property");
 
     checkAndReportMissingFeature(
         ctx, ctx.arg.zCetReport, features, GNU_PROPERTY_X86_FEATURE_1_SHSTK,
-        toString(f) + ": -z cet-report: file does not have "
-                      "GNU_PROPERTY_X86_FEATURE_1_SHSTK property");
+        toStr(ctx, f) + ": -z cet-report: file does not have "
+                        "GNU_PROPERTY_X86_FEATURE_1_SHSTK property");
 
     if (ctx.arg.zForceBti && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
@@ -2854,7 +2854,7 @@ static void readSecurityNotes(Ctx &ctx) {
 
     if (f->aarch64PauthAbiCoreInfo.empty()) {
       reportMissingFeature(ctx, ctx.arg.zPauthReport,
-                           toString(f) +
+                           toStr(ctx, f) +
                                ": -z pauth-report: file does not have AArch64 "
                                "PAuth core info while '" +
                                referenceFileName + "' has one");
