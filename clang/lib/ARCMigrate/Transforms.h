@@ -9,9 +9,11 @@
 #ifndef LLVM_CLANG_LIB_ARCMIGRATE_TRANSFORMS_H
 #define LLVM_CLANG_LIB_ARCMIGRATE_TRANSFORMS_H
 
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/ExprObjC.h"
 #include "clang/AST/ParentMap.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/StmtObjC.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/SaveAndRestore.h"
 
@@ -181,29 +183,6 @@ bool hasSideEffects(Expr *E, ASTContext &Ctx);
 bool isGlobalVar(Expr *E);
 /// Returns "nil" or "0" if 'nil' macro is not actually defined.
 StringRef getNilString(MigrationPass &Pass);
-
-template <typename BODY_TRANS>
-class BodyTransform_OLD
-    : public RecursiveASTVisitor<BodyTransform_OLD<BODY_TRANS>> {
-  MigrationPass &Pass;
-  Decl *ParentD;
-
-  typedef RecursiveASTVisitor<BodyTransform_OLD<BODY_TRANS>> base;
-
-public:
-  BodyTransform_OLD(MigrationPass &pass) : Pass(pass), ParentD(nullptr) {}
-
-  bool TraverseStmt(Stmt *rootS) {
-    if (rootS)
-      BODY_TRANS(Pass).transformBody(rootS, ParentD);
-    return true;
-  }
-
-  bool TraverseObjCMethodDecl(ObjCMethodDecl *D) {
-    SaveAndRestore<Decl *> SetParent(ParentD, D);
-    return base::TraverseObjCMethodDecl(D);
-  }
-};
 
 class BodyTransform : public DynamicRecursiveASTVisitor {
 protected:

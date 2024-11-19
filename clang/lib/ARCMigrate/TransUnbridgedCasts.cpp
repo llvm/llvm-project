@@ -45,6 +45,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ParentMap.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
@@ -56,6 +57,33 @@ using namespace arcmt;
 using namespace trans;
 
 namespace {
+// FIXME: UnbridgedCastRewriter should probably just inherit from
+// BodyTransform (and this class shouldn't exist in the first place),
+// but I have so far been unable to untangle whatever is actually going
+// on in TraverseBlockDecl() that makes that not work properly...
+template <typename BODY_TRANS>
+class UnbridgedCastRewriterWrapper
+    : public RecursiveASTVisitor<UnbridgedCastRewriterWrapper<BODY_TRANS>> {
+  MigrationPass &Pass;
+  Decl *ParentD;
+
+  typedef RecursiveASTVisitor<UnbridgedCastRewriterWrapper<BODY_TRANS>> base;
+
+public:
+  UnbridgedCastRewriterWrapper(MigrationPass &pass)
+      : Pass(pass), ParentD(nullptr) {}
+
+  bool TraverseStmt(Stmt *rootS) {
+    if (rootS)
+      BODY_TRANS(Pass).transformBody(rootS, ParentD);
+    return true;
+  }
+
+  bool TraverseObjCMethodDecl(ObjCMethodDecl *D) {
+    SaveAndRestore<Decl *> SetParent(ParentD, D);
+    return base::TraverseObjCMethodDecl(D);
+  }
+};
 
 class UnbridgedCastRewriter : public DynamicRecursiveASTVisitor {
   MigrationPass &Pass;
@@ -462,6 +490,6 @@ private:
 } // end anonymous namespace
 
 void trans::rewriteUnbridgedCasts(MigrationPass &pass) {
-  BodyTransform_OLD<UnbridgedCastRewriter> trans(pass);
+  UnbridgedCastRewriterWrapper<UnbridgedCastRewriter> trans(pass);
   trans.TraverseDecl(pass.Ctx.getTranslationUnitDecl());
 }
