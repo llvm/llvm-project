@@ -22539,10 +22539,10 @@ Value *CodeGenFunction::EmitRISCVCpuIs(StringRef CPUStr) {
   Result = Builder.CreateAnd(
       Result, Builder.CreateICmpEQ(ArchID, Builder.getInt64(CPUModel.MArchID)));
 
-  // Compare mimplid.
-  Value *ImplID = loadRISCVCPUID(2);
+  // Compare mimpid.
+  Value *ImpID = loadRISCVCPUID(2);
   Result = Builder.CreateAnd(
-      Result, Builder.CreateICmpEQ(ImplID, Builder.getInt64(CPUModel.MImpID)));
+      Result, Builder.CreateICmpEQ(ImpID, Builder.getInt64(CPUModel.MImpID)));
 
   return Result;
 }
