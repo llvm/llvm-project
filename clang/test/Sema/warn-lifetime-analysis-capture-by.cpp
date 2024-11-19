@@ -1,14 +1,21 @@
-// RUN: %clang_cc1 --std=c++20 -fsyntax-only -Wdangling -Wdangling-field -Wreturn-stack-address -verify %s
+// RUN: %clang_cc1 --std=c++20 -fsyntax-only -verify %s
 
 #include "Inputs/lifetime-analysis.h"
 
-struct X {} x;
-X x;
+// ****************************************************************************
+// Helper class and functions.
+// ****************************************************************************
+// Lifetimebound helper functions: Returns a reference to the argument.
+std::string_view getLifetimeBoundView(const std::string& s [[clang::lifetimebound]]);
+std::string_view getNotLifetimeBoundView(const std::string& s);
+const std::string& getLifetimeBoundString(const std::string &s [[clang::lifetimebound]]);
+const std::string& getLifetimeBoundString(std::string_view sv [[clang::lifetimebound]]);
 
 // ****************************************************************************
 // Capture an integer
 // ****************************************************************************
 namespace capture_int {
+struct X {} x;
 void captureInt(const int &i [[clang::lifetime_capture_by(x)]], X &x);
 void captureRValInt(int &&i [[clang::lifetime_capture_by(x)]], X &x);
 void noCaptureInt(int i [[clang::lifetime_capture_by(x)]], X &x);
@@ -27,12 +34,8 @@ void use() {
 // ****************************************************************************
 // Capture std::string (gsl owner types)
 // ****************************************************************************
-std::string_view getLifetimeBoundView(const std::string& s [[clang::lifetimebound]]);
-std::string_view getNotLifetimeBoundView(const std::string& s);
-const std::string& getLifetimeBoundString(const std::string &s [[clang::lifetimebound]]);
-const std::string& getLifetimeBoundString(std::string_view sv [[clang::lifetimebound]]);
-
 namespace capture_string {
+struct X {} x;
 void captureString(const std::string &s [[clang::lifetime_capture_by(x)]], X &x);
 void captureRValString(std::string &&s [[clang::lifetime_capture_by(x)]], X &x);
 
@@ -49,6 +52,7 @@ void use() {
 // Capture std::string_view (gsl pointer types)
 // ****************************************************************************
 namespace capture_string_view {
+struct X {} x;
 void captureStringView(std::string_view s [[clang::lifetime_capture_by(x)]], X &x);
 void captureRValStringView(std::string_view &&sv [[clang::lifetime_capture_by(x)]], X &x);
 void noCaptureStringView(std::string_view sv, X &x);
@@ -92,6 +96,7 @@ const std::string* getLifetimeBoundPointer(const std::string &s [[clang::lifetim
 const std::string* getNotLifetimeBoundPointer(const std::string &s);
 
 namespace capture_pointer {
+struct X {} x;
 void capturePointer(const std::string* sp [[clang::lifetime_capture_by(x)]], X &x);
 void use() {
   capturePointer(getLifetimeBoundPointer(std::string()), x); // expected-warning {{object whose reference is captured by 'x'}}
@@ -107,25 +112,31 @@ void use() {
 // Arrays and initializer lists.
 // ****************************************************************************
 namespace init_lists {
+struct X {} x;
 void captureVector(const std::vector<int> &a [[clang::lifetime_capture_by(x)]], X &x);
 void captureArray(int array [[clang::lifetime_capture_by(x)]] [2], X &x);
 void captureInitList(std::initializer_list<int> abc [[clang::lifetime_capture_by(x)]], X &x);
 
+
+std::initializer_list<int> getLifetimeBoundInitList(std::initializer_list<int> abc [[clang::lifetimebound]]);
+
 void use() {
-  captureVector({1, 2, 3}, x); // expected-warning {{capture}}
-  captureVector(std::vector<int>{}, x); // expected-warning {{capture}}
+  captureVector({1, 2, 3}, x); // expected-warning {{captured by 'x'}}
+  captureVector(std::vector<int>{}, x); // expected-warning {{captured by 'x'}}
   std::vector<int> local_vector;
   captureVector(local_vector, x);
   int local_array[2]; 
   captureArray(local_array, x);
-  captureInitList({1, 2}, x); // expected-warning {{capture}}
+  captureInitList({1, 2}, x); // expected-warning {{captured by 'x'}}
+  captureInitList(getLifetimeBoundInitList({1, 2}), x); // expected-warning {{captured by 'x'}}
 }
-}
+} // namespace init_lists
 
 // ****************************************************************************
 // Implicit object param 'this' is captured
 // ****************************************************************************
 namespace this_is_captured {
+struct X {} x;
 struct S {
   void capture(X &x) [[clang::lifetime_capture_by(x)]];
 };
@@ -148,13 +159,13 @@ void use() {
   std::string local_string;
   // capture by global.
   captureByGlobal(std::string()); // expected-warning {{object whose reference is captured will be destroyed at the end of the full-expression}}
-  captureByGlobal(getLifetimeBoundView(std::string())); // expected-warning {{captured}}
+  captureByGlobal(getLifetimeBoundView(std::string())); // expected-warning {{object whose reference is captured will be destroyed at the end of the full-expression}}
   captureByGlobal(local_string);
   captureByGlobal(local_string_view);
 
   // capture by unknown.
   captureByUnknown(std::string()); // expected-warning {{object whose reference is captured will be destroyed at the end of the full-expression}}
-  captureByUnknown(getLifetimeBoundView(std::string())); // expected-warning {{captured}}
+  captureByUnknown(getLifetimeBoundView(std::string())); // expected-warning {{object whose reference is captured will be destroyed at the end of the full-expression}}
   captureByUnknown(local_string);
   captureByUnknown(local_string_view);
 }
@@ -171,9 +182,9 @@ struct S {
 void use() {
   S s;
   s.captureInt(1); // expected-warning {{object whose reference is captured by 's'}}
-  s.captureView(std::string()); // expected-warning {{captured}}
-  s.captureView(getLifetimeBoundView(std::string())); // expected-warning {{captured}}
-  s.captureView(getLifetimeBoundString(std::string()));  // expected-warning {{captured}}
+  s.captureView(std::string()); // expected-warning {{captured by 's'}}
+  s.captureView(getLifetimeBoundView(std::string())); // expected-warning {{captured by 's'}}
+  s.captureView(getLifetimeBoundString(std::string()));  // expected-warning {{captured by 's'}}
   s.captureView(getNotLifetimeBoundView(std::string()));
 }  
 } // namespace capture_by_this
@@ -182,13 +193,14 @@ void use() {
 // Struct with field as a reference
 // ****************************************************************************
 namespace reference_field {
+struct X {} x;
 struct Foo {
   const int& b;
 };
 void captureField(Foo param [[clang::lifetime_capture_by(x)]], X &x);
 void use() {
   captureField(Foo{
-    1 // expected-warning {{capture}}
+    1 // expected-warning {{captured by 'x'}}
   }, x);
   int local;
   captureField(Foo{local}, x);
@@ -199,11 +211,13 @@ void use() {
 // Capture default argument.
 // ****************************************************************************
 namespace default_arg {
+struct X {} x;
 void captureDefaultArg(X &x, std::string_view s [[clang::lifetime_capture_by(x)]] = std::string());
 void useCaptureDefaultArg() {
   X x;
   captureDefaultArg(x); // FIXME: Diagnose temporary default arg.
-  captureDefaultArg(x, std::string("temp")); // expected-warning {{captured}}
+  captureDefaultArg(x, std::string("temp")); // expected-warning {{captured by 'x'}}
+  captureDefaultArg(x, getLifetimeBoundView(std::string())); // expected-warning {{captured by 'x'}}
   std::string local;
   captureDefaultArg(x, local);
 }
@@ -251,11 +265,11 @@ void use_container() {
   
   MyVector<std::string_view> vector_of_view;
   vector_of_view.push_back(std::string()); // expected-warning {{object whose reference is captured by 'vector_of_view'}}
-  vector_of_view.push_back(getLifetimeBoundView(std::string())); // expected-warning {{captured}}
+  vector_of_view.push_back(getLifetimeBoundView(std::string())); // expected-warning {{captured by 'vector_of_view'}}
   
   MyVector<const std::string*> vector_of_pointer;
-  vector_of_pointer.push_back(getLifetimeBoundPointer(std::string())); // expected-warning {{captured}}
-  vector_of_pointer.push_back(getLifetimeBoundPointer(*getLifetimeBoundPointer(std::string()))); // expected-warning {{captured}}
+  vector_of_pointer.push_back(getLifetimeBoundPointer(std::string())); // expected-warning {{captured by 'vector_of_pointer'}}
+  vector_of_pointer.push_back(getLifetimeBoundPointer(*getLifetimeBoundPointer(std::string()))); // expected-warning {{captured by 'vector_of_pointer'}}
   vector_of_pointer.push_back(getLifetimeBoundPointer(local));
   vector_of_pointer.push_back(getNotLifetimeBoundPointer(std::string()));
 }
@@ -287,8 +301,8 @@ void use_my_view() {
   vector_of_my_view.push_back(MyStringView{});
   vector_of_my_view.push_back(std::string_view{});
   vector_of_my_view.push_back(std::string{}); // expected-warning {{object whose reference is captured by 'vector_of_my_view'}}
-  vector_of_my_view.push_back(getLifetimeBoundView(std::string{})); // expected-warning {{captured}}
-  vector_of_my_view.push_back(getLifetimeBoundString(getLifetimeBoundView(std::string{}))); // expected-warning {{captured}}
+  vector_of_my_view.push_back(getLifetimeBoundView(std::string{})); // expected-warning {{captured by 'vector_of_my_view'}}
+  vector_of_my_view.push_back(getLifetimeBoundString(getLifetimeBoundView(std::string{}))); // expected-warning {{captured by 'vector_of_my_view'}}
   vector_of_my_view.push_back(getNotLifetimeBoundView(getLifetimeBoundString(getLifetimeBoundView(std::string{}))));
   
   // Use with container of other view types.
@@ -305,7 +319,7 @@ void use_with_optional_view() {
 
   std::optional<std::string_view> optional_of_view;
   vector_of_view.push_back(optional_of_view.value());
-  vector_of_view.push_back(getOptionalS().value()); // expected-warning {{captured}}
+  vector_of_view.push_back(getOptionalS().value()); // expected-warning {{captured by 'vector_of_view'}}
   
   vector_of_view.push_back(getOptionalSV().value());
   vector_of_view.push_back(getOptionalMySV().value());

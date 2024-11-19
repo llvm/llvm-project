@@ -1438,7 +1438,6 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
     return false;
   };
 
-  bool HasReferenceBinding = Init->isGLValue();
   llvm::SmallVector<IndirectLocalPathEntry, 8> Path;
   switch (LK) {
   case LK_Assignment: {
@@ -1460,7 +1459,7 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
     break;
   }
 
-  if (HasReferenceBinding)
+  if (Init->isGLValue())
     visitLocalsRetainedByReferenceBinding(Path, Init, RK_ReferenceBinding,
                                           TemporaryVisitor);
   else
