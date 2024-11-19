@@ -256,6 +256,9 @@ SANITIZER_WEAK_IMPORT void *aligned_alloc(__sanitizer::usize __alignment,
   (SI_FREEBSD || SI_NETBSD || SI_LINUX || SI_SOLARIS)
 #define SANITIZER_INTERCEPT_CLOCK_GETCPUCLOCKID \
   (SI_LINUX || SI_FREEBSD || SI_NETBSD)
+// TODO: This should be SI_POSIX, adding glibc first until I have time
+// to verify all timer_t typedefs on other platforms.
+#define SANITIZER_INTERCEPT_TIMER_CREATE SI_GLIBC
 #define SANITIZER_INTERCEPT_GETITIMER SI_POSIX
 #define SANITIZER_INTERCEPT_TIME SI_POSIX
 #define SANITIZER_INTERCEPT_GLOB (SI_GLIBC || SI_SOLARIS)
