@@ -945,7 +945,7 @@ void LoongArch::finalizeRelax(int passes) const {
           continue;
 
         // Copy from last location to the current relocated location.
-        const Relocation &r = rels[i];
+        Relocation &r = rels[i];
         uint64_t size = r.offset - offset;
         memcpy(p, old.data() + offset, size);
         p += size;
@@ -959,6 +959,8 @@ void LoongArch::finalizeRelax(int passes) const {
           case R_LARCH_PCREL20_S2:
             skip = 4;
             write32le(p, aux.writes[writesIdx++]);
+            // RelExpr is needed for relocating.
+            r.expr = r.sym->hasFlag(NEEDS_PLT) ? R_PLT_PC : R_PC;
             break;
           default:
             llvm_unreachable("unsupported type");
