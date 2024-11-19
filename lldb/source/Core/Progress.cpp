@@ -151,10 +151,11 @@ void ProgressManager::Decrement(const Progress::ProgressData &progress_data) {
   std::lock_guard<std::mutex> lock(m_entries_mutex);
   llvm::StringRef key = progress_data.title;
 
-  if (!m_entries.contains(key))
+  auto it = m_entries.find(key);
+  if (it == m_entries.end())
     return;
 
-  Entry &entry = m_entries[key];
+  Entry &entry = it->second;
   entry.refcount--;
 
   if (entry.refcount == 0) {

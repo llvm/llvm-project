@@ -575,6 +575,11 @@ void ASTStmtReader::VisitConstantExpr(ConstantExpr *E) {
   E->setSubExpr(Record.readSubExpr());
 }
 
+void ASTStmtReader::VisitOpenACCAsteriskSizeExpr(OpenACCAsteriskSizeExpr *E) {
+  VisitExpr(E);
+  E->setAsteriskLocation(readSourceLocation());
+}
+
 void ASTStmtReader::VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *E) {
   VisitExpr(E);
 
@@ -701,6 +706,7 @@ void ASTStmtReader::VisitCharacterLiteral(CharacterLiteral *E) {
 
 void ASTStmtReader::VisitParenExpr(ParenExpr *E) {
   VisitExpr(E);
+  E->setIsProducedByFoldExpansion(Record.readInt());
   E->setLParen(readSourceLocation());
   E->setRParen(readSourceLocation());
   E->setSubExpr(Record.readSubExpr());
@@ -2830,10 +2836,15 @@ void ASTStmtReader::VisitOpenACCAssociatedStmtConstruct(
 void ASTStmtReader::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
   VisitStmt(S);
   VisitOpenACCAssociatedStmtConstruct(S);
-  S->findAndSetChildLoops();
 }
 
 void ASTStmtReader::VisitOpenACCLoopConstruct(OpenACCLoopConstruct *S) {
+  VisitStmt(S);
+  VisitOpenACCAssociatedStmtConstruct(S);
+  S->ParentComputeConstructKind = Record.readEnum<OpenACCDirectiveKind>();
+}
+
+void ASTStmtReader::VisitOpenACCCombinedConstruct(OpenACCCombinedConstruct *S) {
   VisitStmt(S);
   VisitOpenACCAssociatedStmtConstruct(S);
 }
@@ -3052,6 +3063,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case EXPR_SYCL_UNIQUE_STABLE_NAME:
       S = SYCLUniqueStableNameExpr::CreateEmpty(Context);
+      break;
+
+    case EXPR_OPENACC_ASTERISK_SIZE:
+      S = OpenACCAsteriskSizeExpr::CreateEmpty(Context);
       break;
 
     case EXPR_PREDEFINED:
@@ -4302,6 +4317,11 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case STMT_OPENACC_LOOP_CONSTRUCT: {
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
       S = OpenACCLoopConstruct::CreateEmpty(Context, NumClauses);
+      break;
+    }
+    case STMT_OPENACC_COMBINED_CONSTRUCT: {
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
+      S = OpenACCCombinedConstruct::CreateEmpty(Context, NumClauses);
       break;
     }
     case EXPR_REQUIRES: {

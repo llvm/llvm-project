@@ -17,7 +17,6 @@
 #define LLVM_CODEGEN_BASICTTIIMPL_H
 
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -793,6 +792,11 @@ public:
     return false;
   }
 
+  bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
+                                          unsigned ScalarOpdIdx) const {
+    return false;
+  }
+
   /// Helper wrapper for the DemandedElts variant of getScalarizationOverhead.
   InstructionCost getScalarizationOverhead(VectorType *InTy, bool Insert,
                                            bool Extract,
@@ -1222,10 +1226,12 @@ public:
     return BaseT::getCFInstrCost(Opcode, CostKind, I);
   }
 
-  InstructionCost getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
-                                     CmpInst::Predicate VecPred,
-                                     TTI::TargetCostKind CostKind,
-                                     const Instruction *I = nullptr) {
+  InstructionCost getCmpSelInstrCost(
+      unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+      TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
+      TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
+      const Instruction *I = nullptr) {
     const TargetLoweringBase *TLI = getTLI();
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
     assert(ISD && "Invalid opcode");
@@ -1233,7 +1239,7 @@ public:
     // TODO: Handle other cost kinds.
     if (CostKind != TTI::TCK_RecipThroughput)
       return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
-                                       I);
+                                       Op1Info, Op2Info, I);
 
     // Selects on vectors are actually vector selects.
     if (ISD == ISD::SELECT) {
@@ -1260,8 +1266,9 @@ public:
       unsigned Num = cast<FixedVectorType>(ValVTy)->getNumElements();
       if (CondTy)
         CondTy = CondTy->getScalarType();
-      InstructionCost Cost = thisT()->getCmpSelInstrCost(
-          Opcode, ValVTy->getScalarType(), CondTy, VecPred, CostKind, I);
+      InstructionCost Cost =
+          thisT()->getCmpSelInstrCost(Opcode, ValVTy->getScalarType(), CondTy,
+                                      VecPred, CostKind, Op1Info, Op2Info, I);
 
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
@@ -1278,6 +1285,18 @@ public:
                                      TTI::TargetCostKind CostKind,
                                      unsigned Index, Value *Op0, Value *Op1) {
     return getRegUsageForType(Val->getScalarType());
+  }
+
+  /// \param ScalarUserAndIdx encodes the information about extracts from a
+  /// vector with 'Scalar' being the value being extracted,'User' being the user
+  /// of the extract(nullptr if user is not known before vectorization) and
+  /// 'Idx' being the extract lane.
+  InstructionCost getVectorInstrCost(
+      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      Value *Scalar,
+      ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) {
+    return thisT()->getVectorInstrCost(Opcode, Val, CostKind, Index, nullptr,
+                                       nullptr);
   }
 
   InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
@@ -1552,8 +1571,69 @@ public:
 
     // Assume that target intrinsics are cheap.
     Intrinsic::ID IID = ICA.getID();
-    if (Function::isTargetIntrinsic(IID))
+    if (Intrinsic::isTargetIntrinsic(IID))
       return TargetTransformInfo::TCC_Basic;
+
+    // VP Intrinsics should have the same cost as their non-vp counterpart.
+    // TODO: Adjust the cost to make the vp intrinsic cheaper than its non-vp
+    // counterpart when the vector length argument is smaller than the maximum
+    // vector length.
+    // TODO: Support other kinds of VPIntrinsics
+    if (VPIntrinsic::isVPIntrinsic(ICA.getID())) {
+      std::optional<unsigned> FOp =
+          VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
+      if (FOp) {
+        if (ICA.getID() == Intrinsic::vp_load) {
+          Align Alignment;
+          if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
+            Alignment = VPI->getPointerAlignment().valueOrOne();
+          unsigned AS = 0;
+          if (ICA.getArgTypes().size() > 1)
+            if (auto *PtrTy = dyn_cast<PointerType>(ICA.getArgTypes()[0]))
+              AS = PtrTy->getAddressSpace();
+          return thisT()->getMemoryOpCost(*FOp, ICA.getReturnType(), Alignment,
+                                          AS, CostKind);
+        }
+        if (ICA.getID() == Intrinsic::vp_store) {
+          Align Alignment;
+          if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
+            Alignment = VPI->getPointerAlignment().valueOrOne();
+          unsigned AS = 0;
+          if (ICA.getArgTypes().size() >= 2)
+            if (auto *PtrTy = dyn_cast<PointerType>(ICA.getArgTypes()[1]))
+              AS = PtrTy->getAddressSpace();
+          return thisT()->getMemoryOpCost(*FOp, ICA.getArgTypes()[0], Alignment,
+                                          AS, CostKind);
+        }
+        if (VPBinOpIntrinsic::isVPBinOp(ICA.getID())) {
+          return thisT()->getArithmeticInstrCost(*FOp, ICA.getReturnType(),
+                                                 CostKind);
+        }
+      }
+
+      std::optional<Intrinsic::ID> FID =
+          VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID());
+      if (FID) {
+        // Non-vp version will have same arg types except mask and vector
+        // length.
+        assert(ICA.getArgTypes().size() >= 2 &&
+               "Expected VPIntrinsic to have Mask and Vector Length args and "
+               "types");
+        ArrayRef<Type *> NewTys = ArrayRef(ICA.getArgTypes()).drop_back(2);
+
+        // VPReduction intrinsics have a start value argument that their non-vp
+        // counterparts do not have, except for the fadd and fmul non-vp
+        // counterpart.
+        if (VPReductionIntrinsic::isVPReduction(ICA.getID()) &&
+            *FID != Intrinsic::vector_reduce_fadd &&
+            *FID != Intrinsic::vector_reduce_fmul)
+          NewTys = NewTys.drop_front();
+
+        IntrinsicCostAttributes NewICA(*FID, ICA.getReturnType(), NewTys,
+                                       ICA.getFlags());
+        return thisT()->getIntrinsicInstrCost(NewICA, CostKind);
+      }
+    }
 
     if (ICA.isTypeBasedOnly())
       return getTypeBasedIntrinsicInstrCost(ICA, CostKind);
@@ -1815,68 +1895,6 @@ public:
     }
     }
 
-    // VP Intrinsics should have the same cost as their non-vp counterpart.
-    // TODO: Adjust the cost to make the vp intrinsic cheaper than its non-vp
-    // counterpart when the vector length argument is smaller than the maximum
-    // vector length.
-    // TODO: Support other kinds of VPIntrinsics
-    if (VPIntrinsic::isVPIntrinsic(ICA.getID())) {
-      std::optional<unsigned> FOp =
-          VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
-      if (FOp) {
-        if (ICA.getID() == Intrinsic::vp_load) {
-          Align Alignment;
-          if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
-            Alignment = VPI->getPointerAlignment().valueOrOne();
-          unsigned AS = 0;
-          if (ICA.getArgs().size() > 1)
-            if (auto *PtrTy =
-                    dyn_cast<PointerType>(ICA.getArgs()[0]->getType()))
-              AS = PtrTy->getAddressSpace();
-          return thisT()->getMemoryOpCost(*FOp, ICA.getReturnType(), Alignment,
-                                          AS, CostKind);
-        }
-        if (ICA.getID() == Intrinsic::vp_store) {
-          Align Alignment;
-          if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
-            Alignment = VPI->getPointerAlignment().valueOrOne();
-          unsigned AS = 0;
-          if (ICA.getArgs().size() >= 2)
-            if (auto *PtrTy =
-                    dyn_cast<PointerType>(ICA.getArgs()[1]->getType()))
-              AS = PtrTy->getAddressSpace();
-          return thisT()->getMemoryOpCost(*FOp, Args[0]->getType(), Alignment,
-                                          AS, CostKind);
-        }
-        if (VPBinOpIntrinsic::isVPBinOp(ICA.getID())) {
-          return thisT()->getArithmeticInstrCost(*FOp, ICA.getReturnType(),
-                                                 CostKind);
-        }
-      }
-
-      std::optional<Intrinsic::ID> FID =
-          VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID());
-      if (FID) {
-        // Non-vp version will have same Args/Tys except mask and vector length.
-        assert(ICA.getArgs().size() >= 2 && ICA.getArgTypes().size() >= 2 &&
-               "Expected VPIntrinsic to have Mask and Vector Length args and "
-               "types");
-        ArrayRef<Type *> NewTys = ArrayRef(ICA.getArgTypes()).drop_back(2);
-
-        // VPReduction intrinsics have a start value argument that their non-vp
-        // counterparts do not have, except for the fadd and fmul non-vp
-        // counterpart.
-        if (VPReductionIntrinsic::isVPReduction(ICA.getID()) &&
-            *FID != Intrinsic::vector_reduce_fadd &&
-            *FID != Intrinsic::vector_reduce_fmul)
-          NewTys = NewTys.drop_front();
-
-        IntrinsicCostAttributes NewICA(*FID, ICA.getReturnType(), NewTys,
-                                       ICA.getFlags());
-        return thisT()->getIntrinsicInstrCost(NewICA, CostKind);
-      }
-    }
-
     // Assume that we need to scalarize this intrinsic.)
     // Compute the scalarization overhead based on Args for a vector
     // intrinsic.
@@ -1978,6 +1996,9 @@ public:
     case Intrinsic::cos:
       ISD = ISD::FCOS;
       break;
+    case Intrinsic::sincos:
+      ISD = ISD::FSINCOS;
+      break;
     case Intrinsic::tan:
       ISD = ISD::FTAN;
       break;
@@ -1989,6 +2010,9 @@ public:
       break;
     case Intrinsic::atan:
       ISD = ISD::FATAN;
+      break;
+    case Intrinsic::atan2:
+      ISD = ISD::FATAN2;
       break;
     case Intrinsic::sinh:
       ISD = ISD::FSINH;
@@ -2535,7 +2559,19 @@ public:
 
   unsigned getNumberOfParts(Type *Tp) {
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
-    return LT.first.isValid() ? *LT.first.getValue() : 0;
+    if (!LT.first.isValid())
+      return 0;
+    // Try to find actual number of parts for non-power-of-2 elements as
+    // ceil(num-of-elements/num-of-subtype-elements).
+    if (auto *FTp = dyn_cast<FixedVectorType>(Tp);
+        Tp && LT.second.isFixedLengthVector() &&
+        !has_single_bit(FTp->getNumElements())) {
+      if (auto *SubTp = dyn_cast_if_present<FixedVectorType>(
+              EVT(LT.second).getTypeForEVT(Tp->getContext()));
+          SubTp && SubTp->getElementType() == FTp->getElementType())
+        return divideCeil(FTp->getNumElements(), SubTp->getNumElements());
+    }
+    return *LT.first.getValue();
   }
 
   InstructionCost getAddressComputationCost(Type *Ty, ScalarEvolution *,

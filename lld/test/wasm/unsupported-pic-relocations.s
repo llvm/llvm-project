@@ -15,6 +15,10 @@
 # RUN: not wasm-ld --experimental-pic -shared %t.o -o /dev/null  --unresolved-symbols=import-dynamic 2>&1 | \
 # RUN:   FileCheck %s
 
+## These errors should not be reported under -r/--relocation (i.e. when
+## generating an object file)
+# RUN: wasm-ld --experimental-pic -r %t.o -o /dev/null
+
 .functype external_func () -> ()
 
 use_undefined_function:
@@ -23,7 +27,7 @@ use_undefined_function:
     # CHECK: error: {{.*}}.o: relocation R_WASM_TABLE_INDEX_REL_SLEB is not supported against an undefined symbol `external_func`
     drop
     end_function
-    
+
 use_undefined_data:
     .functype use_undefined_data () -> ()
     i32.const external_data@MBREL

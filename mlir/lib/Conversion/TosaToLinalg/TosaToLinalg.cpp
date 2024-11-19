@@ -78,16 +78,6 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   if (isa<tosa::SubOp>(op) && isa<IntegerType>(elementTy))
     return rewriter.create<arith::SubIOp>(loc, resultTypes, args);
 
-  // tosa::MulOp
-  if (isa<tosa::MulOp>(op) && isa<FloatType>(elementTy)) {
-    if (dyn_cast<tosa::MulOp>(op).getShift() != 0) {
-      (void)rewriter.notifyMatchFailure(op,
-                                        "Cannot have shift value for float");
-      return nullptr;
-    }
-    return rewriter.create<arith::MulFOp>(loc, resultTypes, args);
-  }
-
   // tosa::IntDivOp
   if (isa<tosa::IntDivOp>(op) && isa<IntegerType>(elementTy))
     return rewriter.create<arith::DivSIOp>(loc, resultTypes, args);
@@ -98,6 +88,10 @@ static Value createLinalgBodyCalculationForElementwiseOp(
         rewriter.create<arith::ConstantOp>(loc, FloatAttr::get(elementTy, 1));
     return rewriter.create<arith::DivFOp>(loc, resultTypes, one, args[0]);
   }
+
+  // tosa::MulOp
+  if (isa<tosa::MulOp>(op) && isa<FloatType>(elementTy))
+    return rewriter.create<arith::MulFOp>(loc, resultTypes, args);
 
   if (isa<tosa::MulOp>(op) && isa<IntegerType>(elementTy)) {
     Value a = args[0];
@@ -561,9 +555,10 @@ static Value createLinalgBodyCalculationForElementwiseOp(
       auto intMaxPlusOneFP = rewriter.create<arith::ConstantOp>(
           loc, rewriter.getFloatAttr(
                    getElementTypeOrSelf(srcTy),
-                   APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
-                           .getSExtValue() +
-                       1));
+                   static_cast<double>(
+                       APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
+                           .getSExtValue()) +
+                       1.0f));
 
       auto intMax = rewriter.create<arith::ConstantOp>(
           loc, rewriter.getIntegerAttr(
@@ -1157,6 +1152,9 @@ public:
     if (op.getDoubleRound() && !op.getScale32())
       return rewriter.notifyMatchFailure(
           op, "tosa.rescale requires scale32 for double_round to be true");
+
+    if (!isa<IntegerType>(inputTy.getElementType()))
+      return rewriter.notifyMatchFailure(op, "only support integer type");
 
     SmallVector<Value> dynDims;
     for (int i = 0; i < outputTy.getRank(); i++) {
@@ -1830,7 +1828,7 @@ public:
   LogicalResult matchAndRewrite(tosa::ReverseOp op,
                                 PatternRewriter &rewriter) const final {
     auto loc = op.getLoc();
-    Value input = op.getInput();
+    Value input = op.getInput1();
     auto inputTy = cast<ShapedType>(input.getType());
     auto resultTy = cast<ShapedType>(op.getType());
     auto axis = op.getAxis();
@@ -2161,7 +2159,7 @@ public:
   LogicalResult matchAndRewrite(tosa::TableOp op,
                                 PatternRewriter &rewriter) const final {
     auto loc = op.getLoc();
-    Value input = op.getInput();
+    Value input = op.getInput1();
     Value table = op.getTable();
     auto inputTy = cast<ShapedType>(input.getType());
     auto tableTy = cast<ShapedType>(table.getType());
@@ -2588,7 +2586,7 @@ struct FFT2dConverter final : OpRewritePattern<FFT2dOp> {
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgConversionPatterns(
-    TypeConverter &converter, RewritePatternSet *patterns) {
+    const TypeConverter &converter, RewritePatternSet *patterns) {
 
   // We have multiple resize coverters to handle degenerate cases.
   patterns->add<GenericResizeConverter>(patterns->getContext(),

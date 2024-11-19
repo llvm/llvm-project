@@ -2920,8 +2920,8 @@ static bool collectUnswitchCandidates(
   // Whether or not we should also collect guards in the loop.
   bool CollectGuards = false;
   if (UnswitchGuards) {
-    auto *GuardDecl = L.getHeader()->getParent()->getParent()->getFunction(
-        Intrinsic::getName(Intrinsic::experimental_guard));
+    auto *GuardDecl = Intrinsic::getDeclarationIfExists(
+        L.getHeader()->getParent()->getParent(), Intrinsic::experimental_guard);
     if (GuardDecl && !GuardDecl->use_empty())
       CollectGuards = true;
   }

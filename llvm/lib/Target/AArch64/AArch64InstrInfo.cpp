@@ -12,7 +12,6 @@
 
 #include "AArch64InstrInfo.h"
 #include "AArch64ExpandImm.h"
-#include "AArch64FrameLowering.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64PointerAuth.h"
 #include "AArch64Subtarget.h"
@@ -106,6 +105,19 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   //        before the assembly printer.
   unsigned NumBytes = 0;
   const MCInstrDesc &Desc = MI.getDesc();
+
+  if (!MI.isBundle() && isTailCallReturnInst(MI)) {
+    NumBytes = Desc.getSize() ? Desc.getSize() : 4;
+
+    const auto *MFI = MF->getInfo<AArch64FunctionInfo>();
+    if (!MFI->shouldSignReturnAddress(MF))
+      return NumBytes;
+
+    const auto &STI = MF->getSubtarget<AArch64Subtarget>();
+    auto Method = STI.getAuthenticatedLRCheckMethod(*MF);
+    NumBytes += AArch64PAuth::getCheckerSizeInBytes(Method);
+    return NumBytes;
+  }
 
   // Size should be preferably set in
   // llvm/lib/Target/AArch64/AArch64InstrInfo.td (default case).
@@ -1994,6 +2006,7 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         .addReg(AArch64::X0)
         .addMBB(TargetMBB)
         .addImm(0);
+    TargetMBB->setMachineBlockAddressTaken();
     return true;
   }
 
@@ -7356,7 +7369,8 @@ genSubAdd2SubSub(MachineFunction &MF, MachineRegisterInfo &MRI,
   bool RegBIsKill = AddMI->getOperand(IdxOpd1).isKill();
   Register RegC = AddMI->getOperand(IdxOtherOpd).getReg();
   bool RegCIsKill = AddMI->getOperand(IdxOtherOpd).isKill();
-  Register NewVR = MRI.createVirtualRegister(MRI.getRegClass(RegA));
+  Register NewVR =
+      MRI.createVirtualRegister(MRI.getRegClass(Root.getOperand(2).getReg()));
 
   unsigned Opcode = Root.getOpcode();
   if (Opcode == AArch64::SUBSWrr)

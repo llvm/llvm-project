@@ -998,7 +998,7 @@ static mlir::Value getReductionInitValue(fir::FirOpBuilder &builder,
         builder.getIntegerAttr(ty, getReductionInitValue<llvm::APInt>(op, ty)));
   if (op == mlir::acc::ReductionOperator::AccMin ||
       op == mlir::acc::ReductionOperator::AccMax) {
-    if (mlir::isa<fir::ComplexType>(ty))
+    if (mlir::isa<mlir::ComplexType>(ty))
       llvm::report_fatal_error(
           "min/max reduction not supported for complex type");
     if (auto floatTy = mlir::dyn_cast_or_null<mlir::FloatType>(ty))
@@ -1010,14 +1010,13 @@ static mlir::Value getReductionInitValue(fir::FirOpBuilder &builder,
     return builder.create<mlir::arith::ConstantOp>(
         loc, ty,
         builder.getFloatAttr(ty, getReductionInitValue<int64_t>(op, ty)));
-  } else if (auto cmplxTy = mlir::dyn_cast_or_null<fir::ComplexType>(ty)) {
-    mlir::Type floatTy =
-        Fortran::lower::convertReal(builder.getContext(), cmplxTy.getFKind());
+  } else if (auto cmplxTy = mlir::dyn_cast_or_null<mlir::ComplexType>(ty)) {
+    mlir::Type floatTy = cmplxTy.getElementType();
     mlir::Value realInit = builder.createRealConstant(
         loc, floatTy, getReductionInitValue<int64_t>(op, cmplxTy));
     mlir::Value imagInit = builder.createRealConstant(loc, floatTy, 0.0);
-    return fir::factory::Complex{builder, loc}.createComplex(
-        cmplxTy.getFKind(), realInit, imagInit);
+    return fir::factory::Complex{builder, loc}.createComplex(cmplxTy, realInit,
+                                                             imagInit);
   }
 
   if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty))
@@ -1136,7 +1135,7 @@ static mlir::Value genScalarCombiner(fir::FirOpBuilder &builder,
       return builder.create<mlir::arith::AddIOp>(loc, value1, value2);
     if (mlir::isa<mlir::FloatType>(ty))
       return builder.create<mlir::arith::AddFOp>(loc, value1, value2);
-    if (auto cmplxTy = mlir::dyn_cast_or_null<fir::ComplexType>(ty))
+    if (auto cmplxTy = mlir::dyn_cast_or_null<mlir::ComplexType>(ty))
       return builder.create<fir::AddcOp>(loc, value1, value2);
     TODO(loc, "reduction add type");
   }
@@ -1146,7 +1145,7 @@ static mlir::Value genScalarCombiner(fir::FirOpBuilder &builder,
       return builder.create<mlir::arith::MulIOp>(loc, value1, value2);
     if (mlir::isa<mlir::FloatType>(ty))
       return builder.create<mlir::arith::MulFOp>(loc, value1, value2);
-    if (mlir::isa<fir::ComplexType>(ty))
+    if (mlir::isa<mlir::ComplexType>(ty))
       return builder.create<fir::MulcOp>(loc, value1, value2);
     TODO(loc, "reduction mul type");
   }

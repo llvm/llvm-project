@@ -17,7 +17,6 @@
 #include "AMDGPULegalizerInfo.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "AMDGPUTargetMachine.h"
-#include "R600Subtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallString.h"
@@ -25,10 +24,7 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
-#include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/MDBuilder.h"
-#include "llvm/MC/MCSubtargetInfo.h"
 #include <algorithm>
 
 using namespace llvm;
@@ -143,11 +139,10 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (LDSBankCount == 0)
     LDSBankCount = 32;
 
-  if (TT.getArch() == Triple::amdgcn && LocalMemorySize == 0)
-    LocalMemorySize = 32768;
+  if (TT.getArch() == Triple::amdgcn && AddressableLocalMemorySize == 0)
+    AddressableLocalMemorySize = 32768;
 
-  AddressableLocalMemorySize = LocalMemorySize;
-
+  LocalMemorySize = AddressableLocalMemorySize;
   if (AMDGPU::isGFX10Plus(*this) &&
       !getFeatureBits().test(AMDGPU::FeatureCuMode))
     LocalMemorySize *= 2;

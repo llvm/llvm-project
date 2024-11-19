@@ -60,18 +60,18 @@ struct AliasAnalysis {
   //  module top
   //    real, pointer :: a(:)
   //  end module
-  //  
+  //
   //  subroutine test()
   //    use top
   //    a(1) = 1
   //  end subroutine
   //  -------------------------------------------------
-  // 
-  //  flang-new -fc1 -emit-fir test.f90 -o test.fir
+  //
+  //  flang -fc1 -emit-fir test.f90 -o test.fir
   //
   //  ------------------- test.fir --------------------
-  //  fir.global @_QMtopEa : !fir.box<!fir.ptr<!fir.array<?xf32>>> 
-  //  
+  //  fir.global @_QMtopEa : !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  //
   //  func.func @_QPtest() {
   //    %c1 = arith.constant 1 : index
   //    %cst = arith.constant 1.000000e+00 : f32
@@ -100,12 +100,12 @@ struct AliasAnalysis {
   // Additionally, because it is relied on in HLFIR lowering, we allow querying
   // on a box SSA value, which is interpreted as querying on its data.
   //
-  // So in the above example, !fir.ref<f32> and !fir.box<!fir.ptr<!fir.array<?xf32>>> is data, 
+  // So in the above example, !fir.ref<f32> and !fir.box<!fir.ptr<!fir.array<?xf32>>> is data,
   // while !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> is not data.
 
   // This also applies to function arguments. In the example below, %arg0
   // is data, %arg1 is not data but a load of %arg1 is.
-  // 
+  //
   // func.func @_QFPtest2(%arg0: !fir.ref<f32>, %arg1: !fir.ref<!fir.box<!fir.ptr<f32>>> )  {
   //    %0 = fir.load %arg1 : !fir.ref<!fir.box<!fir.ptr<f32>>>
   //    ... }
@@ -157,11 +157,35 @@ struct AliasAnalysis {
     bool isData() const;
     bool isBoxData() const;
 
+    /// @name Dummy Argument Aliasing
+    ///
+    /// Check conditions related to dummy argument aliasing.
+    ///
+    /// For all uses, a result of false can prevent MayAlias from being
+    /// reported, so the list of cases where false is returned is conservative.
+
+    ///@{
+    /// The address of a (possibly host associated) dummy argument of the
+    /// current function?
+    bool mayBeDummyArgOrHostAssoc() const;
+    /// \c mayBeDummyArgOrHostAssoc and the address of a pointer?
+    bool mayBePtrDummyArgOrHostAssoc() const;
+    /// The address of an actual argument of the current function?
+    bool mayBeActualArg() const;
+    /// \c mayBeActualArg and the address of either a pointer or a composite
+    /// with a pointer component?
+    bool mayBeActualArgWithPtr(const mlir::Value *val) const;
+    ///@}
+
     mlir::Type getType() const;
   };
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                                        const AliasAnalysis::Source &op);
+
+  /// Given the values and their sources, return their aliasing behavior.
+  mlir::AliasResult alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
+                          mlir::Value rhs);
 
   /// Given two values, return their aliasing behavior.
   mlir::AliasResult alias(mlir::Value lhs, mlir::Value rhs);
@@ -173,7 +197,8 @@ struct AliasAnalysis {
   /// If getInstantiationPoint is true, the search for the source
   /// will stop at [hl]fir.declare if it represents a dummy
   /// argument declaration (i.e. it has the dummy_scope operand).
-  Source getSource(mlir::Value, bool getInstantiationPoint = false);
+  fir::AliasAnalysis::Source getSource(mlir::Value,
+                                       bool getInstantiationPoint = false);
 
 private:
   /// Return true, if `ty` is a reference type to an object of derived type

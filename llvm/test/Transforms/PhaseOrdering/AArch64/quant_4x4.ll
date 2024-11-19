@@ -43,8 +43,8 @@ define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = sub nsw <8 x i32> [[TMP7]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = mul <8 x i32> [[TMP11]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = mul <8 x i32> [[TMP12]], [[TMP10]]
-; CHECK-NEXT:    [[TMP15:%.*]] = lshr <8 x i32> [[TMP13]], <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
-; CHECK-NEXT:    [[TMP16:%.*]] = lshr <8 x i32> [[TMP14]], <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+; CHECK-NEXT:    [[TMP15:%.*]] = lshr <8 x i32> [[TMP13]], splat (i32 16)
+; CHECK-NEXT:    [[TMP16:%.*]] = lshr <8 x i32> [[TMP14]], splat (i32 16)
 ; CHECK-NEXT:    [[TMP17:%.*]] = trunc nuw <8 x i32> [[TMP15]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP18:%.*]] = trunc nuw <8 x i32> [[TMP16]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP19:%.*]] = sub <8 x i16> zeroinitializer, [[TMP17]]
@@ -53,8 +53,8 @@ define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK-NEXT:    [[TMP22:%.*]] = add nuw nsw <8 x i32> [[TMP7]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = mul <8 x i32> [[TMP21]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = mul <8 x i32> [[TMP22]], [[TMP10]]
-; CHECK-NEXT:    [[TMP25:%.*]] = lshr <8 x i32> [[TMP23]], <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
-; CHECK-NEXT:    [[TMP26:%.*]] = lshr <8 x i32> [[TMP24]], <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+; CHECK-NEXT:    [[TMP25:%.*]] = lshr <8 x i32> [[TMP23]], splat (i32 16)
+; CHECK-NEXT:    [[TMP26:%.*]] = lshr <8 x i32> [[TMP24]], splat (i32 16)
 ; CHECK-NEXT:    [[TMP27:%.*]] = trunc nuw <8 x i32> [[TMP25]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP28:%.*]] = trunc nuw <8 x i32> [[TMP26]] to <8 x i16>
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <8 x i1> [[TMP3]], <8 x i16> [[TMP27]], <8 x i16> [[TMP19]]

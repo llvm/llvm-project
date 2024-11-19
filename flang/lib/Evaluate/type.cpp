@@ -518,7 +518,10 @@ static bool AreSameDerivedType(
 
 bool DynamicType::IsEquivalentTo(const DynamicType &that) const {
   return category_ == that.category_ && kind_ == that.kind_ &&
-      PointeeComparison(charLengthParamValue_, that.charLengthParamValue_) &&
+      (charLengthParamValue_ == that.charLengthParamValue_ ||
+          (charLengthParamValue_ && that.charLengthParamValue_ &&
+              charLengthParamValue_->IsEquivalentInInterface(
+                  *that.charLengthParamValue_))) &&
       knownLength().has_value() == that.knownLength().has_value() &&
       (!knownLength() || *knownLength() == *that.knownLength()) &&
       AreSameDerivedType(derived_, that.derived_);

@@ -26,7 +26,6 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeLocVisitor.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
@@ -39,18 +38,14 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLForwardCompat.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <bitset>
 #include <optional>
@@ -289,7 +284,7 @@ namespace {
     QualType getAttributedType(Attr *A, QualType ModifiedType,
                                QualType EquivType) {
       QualType T =
-          sema.Context.getAttributedType(A->getKind(), ModifiedType, EquivType);
+          sema.Context.getAttributedType(A, ModifiedType, EquivType);
       AttrsForTypes.push_back({cast<AttributedType>(T.getTypePtr()), A});
       AttrsForTypesSorted = false;
       return T;
@@ -803,7 +798,7 @@ static void maybeSynthesizeBlockSignature(TypeProcessingState &state,
       /*NumExceptions=*/0,
       /*NoexceptExpr=*/nullptr,
       /*ExceptionSpecTokens=*/nullptr,
-      /*DeclsInPrototype=*/std::nullopt, loc, loc, declarator));
+      /*DeclsInPrototype=*/{}, loc, loc, declarator));
 
   // For consistency, make sure the state still has us as processing
   // the decl spec.
@@ -1500,16 +1495,19 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     // C99 6.7.3p8:
     //   If the specification of a function type includes any type qualifiers,
     //   the behavior is undefined.
+    // C2y changed this behavior to be implementation-defined. Clang defines
+    // the behavior in all cases to ignore the qualifier, as in C++.
     // C++11 [dcl.fct]p7:
     //   The effect of a cv-qualifier-seq in a function declarator is not the
     //   same as adding cv-qualification on top of the function type. In the
     //   latter case, the cv-qualifiers are ignored.
     if (Result->isFunctionType()) {
+      unsigned DiagId = diag::warn_typecheck_function_qualifiers_ignored;
+      if (!S.getLangOpts().CPlusPlus && !S.getLangOpts().C2y)
+        DiagId = diag::ext_typecheck_function_qualifiers_unspecified;
       diagnoseAndRemoveTypeQualifiers(
           S, DS, TypeQuals, Result, DeclSpec::TQ_const | DeclSpec::TQ_volatile,
-          S.getLangOpts().CPlusPlus
-              ? diag::warn_typecheck_function_qualifiers_ignored
-              : diag::warn_typecheck_function_qualifiers_unspecified);
+          DiagId);
       // No diagnostic for 'restrict' or '_Atomic' applied to a
       // function type; we'll diagnose those later, in BuildQualifiedType.
     }
@@ -3035,7 +3033,9 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
             AutoLoc.getNestedNameSpecifierLoc(), AutoLoc.getConceptNameInfo(),
             AutoLoc.getNamedConcept(), /*FoundDecl=*/AutoLoc.getFoundDecl(),
             AutoLoc.hasExplicitTemplateArgs() ? &TAL : nullptr,
-            InventedTemplateParam, D.getEllipsisLoc());
+            InventedTemplateParam,
+            S.Context.getTypeDeclType(InventedTemplateParam),
+            D.getEllipsisLoc());
       }
     } else {
       // The 'auto' appears in the decl-specifiers; we've not finished forming
@@ -3072,7 +3072,9 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
             /*FoundDecl=*/
             USD ? cast<NamedDecl>(USD) : CD,
             TemplateId->LAngleLoc.isValid() ? &TemplateArgsInfo : nullptr,
-            InventedTemplateParam, D.getEllipsisLoc());
+            InventedTemplateParam,
+            S.Context.getTypeDeclType(InventedTemplateParam),
+            D.getEllipsisLoc());
       }
     }
   }
@@ -3734,12 +3736,12 @@ static CallingConv getCCForDeclaratorChunk(
       }
     }
   } else if (S.getLangOpts().CUDA) {
-    // If we're compiling CUDA/HIP code and targeting SPIR-V we need to make
+    // If we're compiling CUDA/HIP code and targeting HIPSPV we need to make
     // sure the kernels will be marked with the right calling convention so that
-    // they will be visible by the APIs that ingest SPIR-V.
+    // they will be visible by the APIs that ingest SPIR-V. We do not do this
+    // when targeting AMDGCNSPIRV, as it does not rely on OpenCL.
     llvm::Triple Triple = S.Context.getTargetInfo().getTriple();
-    if (Triple.getArch() == llvm::Triple::spirv32 ||
-        Triple.getArch() == llvm::Triple::spirv64) {
+    if (Triple.isSPIRV() && Triple.getVendor() != llvm::Triple::AMD) {
       for (const ParsedAttr &AL : D.getDeclSpec().getAttributes()) {
         if (AL.getKind() == ParsedAttr::AT_CUDAGlobal) {
           CC = CC_OpenCLKernel;
@@ -4880,9 +4882,17 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                       cast<AutoType>(T)->getKeyword() !=
                           AutoTypeKeyword::Auto ||
                       cast<AutoType>(T)->isConstrained())) {
-            S.Diag(D.getDeclSpec().getTypeSpecTypeLoc(),
-                   diag::err_trailing_return_without_auto)
-                << T << D.getDeclSpec().getSourceRange();
+            // Attach a valid source location for diagnostics on functions with
+            // trailing return types missing 'auto'. Attempt to get the location
+            // from the declared type; if invalid, fall back to the trailing
+            // return type's location.
+            SourceLocation Loc = D.getDeclSpec().getTypeSpecTypeLoc();
+            SourceRange SR = D.getDeclSpec().getSourceRange();
+            if (Loc.isInvalid()) {
+              Loc = FTI.getTrailingReturnTypeLoc();
+              SR = D.getSourceRange();
+            }
+            S.Diag(Loc, diag::err_trailing_return_without_auto) << T << SR;
             D.setInvalidType(true);
             // FIXME: recover and fill decls in `TypeLoc`s.
             AreDeclaratorChunksValid = false;
@@ -5830,6 +5840,30 @@ static void fillMatrixTypeLoc(MatrixTypeLoc MTL,
   llvm_unreachable("no matrix_type attribute found at the expected location!");
 }
 
+static void fillAtomicQualLoc(AtomicTypeLoc ATL, const DeclaratorChunk &Chunk) {
+  SourceLocation Loc;
+  switch (Chunk.Kind) {
+  case DeclaratorChunk::Function:
+  case DeclaratorChunk::Array:
+  case DeclaratorChunk::Paren:
+  case DeclaratorChunk::Pipe:
+    llvm_unreachable("cannot be _Atomic qualified");
+
+  case DeclaratorChunk::Pointer:
+    Loc = Chunk.Ptr.AtomicQualLoc;
+    break;
+
+  case DeclaratorChunk::BlockPointer:
+  case DeclaratorChunk::Reference:
+  case DeclaratorChunk::MemberPointer:
+    // FIXME: Provide a source location for the _Atomic keyword.
+    break;
+  }
+
+  ATL.setKWLoc(Loc);
+  ATL.setParensRange(SourceRange());
+}
+
 namespace {
   class TypeSpecLocFiller : public TypeLocVisitor<TypeSpecLocFiller> {
     Sema &SemaRef;
@@ -6216,6 +6250,9 @@ namespace {
     void VisitExtVectorTypeLoc(ExtVectorTypeLoc TL) {
       TL.setNameLoc(Chunk.Loc);
     }
+    void VisitAtomicTypeLoc(AtomicTypeLoc TL) {
+      fillAtomicQualLoc(TL, Chunk);
+    }
     void
     VisitDependentSizedExtVectorTypeLoc(DependentSizedExtVectorTypeLoc TL) {
       TL.setNameLoc(Chunk.Loc);
@@ -6229,30 +6266,6 @@ namespace {
     }
   };
 } // end anonymous namespace
-
-static void fillAtomicQualLoc(AtomicTypeLoc ATL, const DeclaratorChunk &Chunk) {
-  SourceLocation Loc;
-  switch (Chunk.Kind) {
-  case DeclaratorChunk::Function:
-  case DeclaratorChunk::Array:
-  case DeclaratorChunk::Paren:
-  case DeclaratorChunk::Pipe:
-    llvm_unreachable("cannot be _Atomic qualified");
-
-  case DeclaratorChunk::Pointer:
-    Loc = Chunk.Ptr.AtomicQualLoc;
-    break;
-
-  case DeclaratorChunk::BlockPointer:
-  case DeclaratorChunk::Reference:
-  case DeclaratorChunk::MemberPointer:
-    // FIXME: Provide a source location for the _Atomic keyword.
-    break;
-  }
-
-  ATL.setKWLoc(Loc);
-  ATL.setParensRange(SourceRange());
-}
 
 static void
 fillDependentAddressSpaceTypeLoc(DependentAddressSpaceTypeLoc DASTL,
@@ -7157,6 +7170,60 @@ static bool HandleWebAssemblyFuncrefAttr(TypeProcessingState &State,
   return false;
 }
 
+static void HandleSwiftAttr(TypeProcessingState &State, TypeAttrLocation TAL,
+                            QualType &QT, ParsedAttr &PAttr) {
+  if (TAL == TAL_DeclName)
+    return;
+
+  Sema &S = State.getSema();
+  auto &D = State.getDeclarator();
+
+  // If the attribute appears in declaration specifiers
+  // it should be handled as a declaration attribute,
+  // unless it's associated with a type or a function
+  // prototype (i.e. appears on a parameter or result type).
+  if (State.isProcessingDeclSpec()) {
+    if (!(D.isPrototypeContext() ||
+          D.getContext() == DeclaratorContext::TypeName))
+      return;
+
+    if (auto *chunk = D.getInnermostNonParenChunk()) {
+      moveAttrFromListToList(PAttr, State.getCurrentAttributes(),
+                             const_cast<DeclaratorChunk *>(chunk)->getAttrs());
+      return;
+    }
+  }
+
+  StringRef Str;
+  if (!S.checkStringLiteralArgumentAttr(PAttr, 0, Str)) {
+    PAttr.setInvalid();
+    return;
+  }
+
+  // If the attribute as attached to a paren move it closer to
+  // the declarator. This can happen in block declarations when
+  // an attribute is placed before `^` i.e. `(__attribute__((...)) ^)`.
+  //
+  // Note that it's actually invalid to use GNU style attributes
+  // in a block but such cases are currently handled gracefully
+  // but the parser and behavior should be consistent between
+  // cases when attribute appears before/after block's result
+  // type and inside (^).
+  if (TAL == TAL_DeclChunk) {
+    auto chunkIdx = State.getCurrentChunkIndex();
+    if (chunkIdx >= 1 &&
+        D.getTypeObject(chunkIdx).Kind == DeclaratorChunk::Paren) {
+      moveAttrFromListToList(PAttr, State.getCurrentAttributes(),
+                             D.getTypeObject(chunkIdx - 1).getAttrs());
+      return;
+    }
+  }
+
+  auto *A = ::new (S.Context) SwiftAttrAttr(S.Context, PAttr, Str);
+  QT = State.getAttributedType(A, QT, QT);
+  PAttr.setUsedAsTypeAttr();
+}
+
 /// Rebuild an attributed type without the nullability attribute on it.
 static QualType rebuildAttributedTypeWithoutNullability(ASTContext &Ctx,
                                                         QualType Type) {
@@ -7173,7 +7240,8 @@ static QualType rebuildAttributedTypeWithoutNullability(ASTContext &Ctx,
       Ctx, Attributed->getModifiedType());
   assert(Modified.getTypePtr() != Attributed->getModifiedType().getTypePtr());
   return Ctx.getAttributedType(Attributed->getAttrKind(), Modified,
-                               Attributed->getEquivalentType());
+                               Attributed->getEquivalentType(),
+                               Attributed->getAttr());
 }
 
 /// Map a nullability attribute kind to a nullability kind.
@@ -7302,8 +7370,7 @@ static bool CheckNullabilityTypeSpecifier(
     Attr *A = createNullabilityAttr(S.Context, *PAttr, Nullability);
     QT = State->getAttributedType(A, QT, QT);
   } else {
-    attr::Kind attrKind = AttributedType::getNullabilityAttrKind(Nullability);
-    QT = S.Context.getAttributedType(attrKind, QT, QT);
+    QT = S.Context.getAttributedType(Nullability, QT, QT);
   }
   return false;
 }
@@ -8548,6 +8615,15 @@ static void HandleLifetimeBoundAttr(TypeProcessingState &State,
   }
 }
 
+static void HandleLifetimeCaptureByAttr(TypeProcessingState &State,
+                                        QualType &CurType, ParsedAttr &PA) {
+  if (State.getDeclarator().isDeclarationOfFunction()) {
+    auto *Attr = State.getSema().ParseLifetimeCaptureByAttr(PA, "this");
+    if (Attr)
+      CurType = State.getAttributedType(Attr, CurType, CurType);
+  }
+}
+
 static void HandleHLSLParamModifierAttr(TypeProcessingState &State,
                                         QualType &CurType,
                                         const ParsedAttr &Attr, Sema &S) {
@@ -8709,6 +8785,10 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       if (TAL == TAL_DeclChunk)
         HandleLifetimeBoundAttr(state, type, attr);
       break;
+    case ParsedAttr::AT_LifetimeCaptureBy:
+      if (TAL == TAL_DeclChunk)
+        HandleLifetimeCaptureByAttr(state, type, attr);
+      break;
 
     case ParsedAttr::AT_NoDeref: {
       // FIXME: `noderef` currently doesn't work correctly in [[]] syntax.
@@ -8742,6 +8822,11 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_HLSLParamModifier: {
       HandleHLSLParamModifierAttr(state, type, attr, state.getSema());
       attr.setUsedAsTypeAttr();
+      break;
+    }
+
+    case ParsedAttr::AT_SwiftAttr: {
+      HandleSwiftAttr(state, TAL, type, attr);
       break;
     }
 
@@ -8860,7 +8945,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       // decl-specifier-seq; do not collect attributes on declarations or those
       // that get to slide after declaration name.
       if (TAL == TAL_DeclSpec &&
-          state.getSema().HLSL().handleResourceTypeAttr(attr))
+          state.getSema().HLSL().handleResourceTypeAttr(type, attr))
         attr.setUsedAsTypeAttr();
       break;
     }
@@ -8980,7 +9065,7 @@ bool Sema::RequireCompleteType(SourceLocation Loc, QualType T,
 }
 
 bool Sema::hasStructuralCompatLayout(Decl *D, Decl *Suggested) {
-  llvm::DenseSet<std::pair<Decl *, Decl *>> NonEquivalentDecls;
+  StructuralEquivalenceContext::NonEquivalentDeclSet NonEquivalentDecls;
   if (!Suggested)
     return false;
 

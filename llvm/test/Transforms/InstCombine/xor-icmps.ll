@@ -113,7 +113,7 @@ define i1 @slt_zero_sgt_minus1(i4 %x, i4 %y) {
 define <2 x i1> @sgt_minus1_slt_zero_sgt(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @sgt_minus1_slt_zero_sgt(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i4> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i4> [[TMP1]], <i4 -1, i4 -1>
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i4> [[TMP1]], splat (i4 -1)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %i1 = icmp sgt <2 x i4> %x, <i4 -1, i4 -1>

@@ -2045,8 +2045,7 @@ void WaitOp::getCanonicalizationPatterns(RewritePatternSet &results,
 LogicalResult AllocOp::verify() {
   auto memRefType = llvm::cast<MemRefType>(getMemref().getType());
 
-  if (static_cast<int64_t>(getDynamicSizes().size()) !=
-      memRefType.getNumDynamicDims())
+  if (getDynamicSizes().size() != memRefType.getNumDynamicDims())
     return emitOpError("dimension operand count does not equal memref "
                        "dynamic dimension count");
 
@@ -2303,17 +2302,31 @@ KernelMetadataAttr KernelTableAttr::lookup(StringAttr key) const {
 TargetOptions::TargetOptions(
     StringRef toolkitPath, ArrayRef<std::string> linkFiles,
     StringRef cmdOptions, CompilationTarget compilationTarget,
-    function_ref<SymbolTable *()> getSymbolTableCallback)
+    function_ref<SymbolTable *()> getSymbolTableCallback,
+    function_ref<void(llvm::Module &)> initialLlvmIRCallback,
+    function_ref<void(llvm::Module &)> linkedLlvmIRCallback,
+    function_ref<void(llvm::Module &)> optimizedLlvmIRCallback,
+    function_ref<void(StringRef)> isaCallback)
     : TargetOptions(TypeID::get<TargetOptions>(), toolkitPath, linkFiles,
-                    cmdOptions, compilationTarget, getSymbolTableCallback) {}
+                    cmdOptions, compilationTarget, getSymbolTableCallback,
+                    initialLlvmIRCallback, linkedLlvmIRCallback,
+                    optimizedLlvmIRCallback, isaCallback) {}
 
 TargetOptions::TargetOptions(
     TypeID typeID, StringRef toolkitPath, ArrayRef<std::string> linkFiles,
     StringRef cmdOptions, CompilationTarget compilationTarget,
-    function_ref<SymbolTable *()> getSymbolTableCallback)
+    function_ref<SymbolTable *()> getSymbolTableCallback,
+    function_ref<void(llvm::Module &)> initialLlvmIRCallback,
+    function_ref<void(llvm::Module &)> linkedLlvmIRCallback,
+    function_ref<void(llvm::Module &)> optimizedLlvmIRCallback,
+    function_ref<void(StringRef)> isaCallback)
     : toolkitPath(toolkitPath.str()), linkFiles(linkFiles),
       cmdOptions(cmdOptions.str()), compilationTarget(compilationTarget),
-      getSymbolTableCallback(getSymbolTableCallback), typeID(typeID) {}
+      getSymbolTableCallback(getSymbolTableCallback),
+      initialLlvmIRCallback(initialLlvmIRCallback),
+      linkedLlvmIRCallback(linkedLlvmIRCallback),
+      optimizedLlvmIRCallback(optimizedLlvmIRCallback),
+      isaCallback(isaCallback), typeID(typeID) {}
 
 TypeID TargetOptions::getTypeID() const { return typeID; }
 
@@ -2325,6 +2338,25 @@ StringRef TargetOptions::getCmdOptions() const { return cmdOptions; }
 
 SymbolTable *TargetOptions::getSymbolTable() const {
   return getSymbolTableCallback ? getSymbolTableCallback() : nullptr;
+}
+
+function_ref<void(llvm::Module &)>
+TargetOptions::getInitialLlvmIRCallback() const {
+  return initialLlvmIRCallback;
+}
+
+function_ref<void(llvm::Module &)>
+TargetOptions::getLinkedLlvmIRCallback() const {
+  return linkedLlvmIRCallback;
+}
+
+function_ref<void(llvm::Module &)>
+TargetOptions::getOptimizedLlvmIRCallback() const {
+  return optimizedLlvmIRCallback;
+}
+
+function_ref<void(StringRef)> TargetOptions::getISACallback() const {
+  return isaCallback;
 }
 
 CompilationTarget TargetOptions::getCompilationTarget() const {

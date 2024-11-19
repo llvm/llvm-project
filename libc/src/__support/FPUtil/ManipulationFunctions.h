@@ -12,6 +12,7 @@
 #include "FPBits.h"
 #include "NearestIntegerOperations.h"
 #include "NormalFloat.h"
+#include "cast.h"
 #include "dyadic_float.h"
 #include "rounding_mode.h"
 
@@ -30,8 +31,16 @@ namespace fputil {
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T frexp(T x, int &exp) {
   FPBits<T> bits(x);
-  if (bits.is_inf_or_nan())
+  if (bits.is_inf_or_nan()) {
+#ifdef LIBC_FREXP_INF_NAN_EXPONENT
+    // The value written back to the second parameter when calling
+    // frexp/frexpf/frexpl` with `+/-Inf`/`NaN` is unspecified in the standard.
+    // Set the exp value for Inf/NaN inputs explicitly to
+    // LIBC_FREXP_INF_NAN_EXPONENT if it is defined.
+    exp = LIBC_FREXP_INF_NAN_EXPONENT;
+#endif // LIBC_FREXP_INF_NAN_EXPONENT
     return x;
+  }
   if (bits.is_zero()) {
     exp = 0;
     return x;
@@ -192,7 +201,8 @@ ldexp(T x, U exp) {
   // For all other values, NormalFloat to T conversion handles it the right way.
   DyadicFloat<FPBits<T>::STORAGE_LEN> normal(bits.get_val());
   normal.exponent += static_cast<int>(exp);
-  return static_cast<T>(normal);
+  // TODO: Add tests for exceptions.
+  return normal.template as<T, /*ShouldRaiseExceptions=*/true>();
 }
 
 template <typename T, typename U,
@@ -207,17 +217,17 @@ LIBC_INLINE T nextafter(T from, U to) {
 
   FPBits<U> to_bits(to);
   if (to_bits.is_nan())
-    return static_cast<T>(to);
+    return cast<T>(to);
 
   // NOTE: This would work only if `U` has a greater or equal precision than
   // `T`. Otherwise `from` could loose its precision and the following statement
   // could incorrectly evaluate to `true`.
-  if (static_cast<U>(from) == to)
-    return static_cast<T>(to);
+  if (cast<U>(from) == to)
+    return cast<T>(to);
 
   using StorageType = typename FPBits<T>::StorageType;
   if (from != T(0)) {
-    if ((static_cast<U>(from) < to) == (from > T(0))) {
+    if ((cast<U>(from) < to) == (from > T(0))) {
       from_bits = FPBits<T>(StorageType(from_bits.uintval() + 1));
     } else {
       from_bits = FPBits<T>(StorageType(from_bits.uintval() - 1));

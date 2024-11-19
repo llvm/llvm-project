@@ -102,6 +102,7 @@ public:
   Instruction *visitSRem(BinaryOperator &I);
   Instruction *visitFRem(BinaryOperator &I);
   bool simplifyDivRemOfSelectWithZeroOp(BinaryOperator &I);
+  Instruction *commonIDivRemTransforms(BinaryOperator &I);
   Instruction *commonIRemTransforms(BinaryOperator &I);
   Instruction *commonIDivTransforms(BinaryOperator &I);
   Instruction *visitUDiv(BinaryOperator &I);
@@ -425,6 +426,9 @@ private:
   Instruction *foldLogicOfIsFPClass(BinaryOperator &Operator, Value *LHS,
                                     Value *RHS);
 
+  Value *foldBooleanAndOr(Value *LHS, Value *RHS, Instruction &I, bool IsAnd,
+                          bool IsLogical);
+
   Instruction *
   canonicalizeConditionalNegationViaMathToSelect(BinaryOperator &i);
 
@@ -739,6 +743,7 @@ public:
   Instruction *foldSelectOfBools(SelectInst &SI);
   Instruction *foldSelectToCmp(SelectInst &SI);
   Instruction *foldSelectExtConst(SelectInst &Sel);
+  Instruction *foldSelectEqualityTest(SelectInst &SI);
   Instruction *foldSelectOpOp(SelectInst &SI, Instruction *TI, Instruction *FI);
   Instruction *foldSelectIntoOp(SelectInst &SI, Value *, Value *);
   Instruction *foldSPFofSPF(Instruction *Inner, SelectPatternFlavor SPF1,

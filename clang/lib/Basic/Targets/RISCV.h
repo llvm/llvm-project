@@ -131,6 +131,38 @@ public:
   bool supportsCpuInit() const override { return getTriple().isOSLinux(); }
   bool validateCpuSupports(StringRef Feature) const override;
   bool isValidFeatureName(StringRef Name) const override;
+
+  bool validateGlobalRegisterVariable(StringRef RegName, unsigned RegSize,
+                                      bool &HasSizeMismatch) const override;
+
+  bool checkCFProtectionBranchSupported(DiagnosticsEngine &) const override {
+    // Always generate Zicfilp lpad insns
+    // Non-zicfilp CPUs would read them as NOP
+    return true;
+  }
+
+  bool
+  checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const override {
+    if (ISAInfo->hasExtension("zicfiss"))
+      return true;
+    return TargetInfo::checkCFProtectionReturnSupported(Diags);
+  }
+
+  CFBranchLabelSchemeKind getDefaultCFBranchLabelScheme() const override {
+    return CFBranchLabelSchemeKind::FuncSig;
+  }
+
+  bool
+  checkCFBranchLabelSchemeSupported(const CFBranchLabelSchemeKind Scheme,
+                                    DiagnosticsEngine &Diags) const override {
+    switch (Scheme) {
+    case CFBranchLabelSchemeKind::Default:
+    case CFBranchLabelSchemeKind::Unlabeled:
+    case CFBranchLabelSchemeKind::FuncSig:
+      return true;
+    }
+    return TargetInfo::checkCFBranchLabelSchemeSupported(Scheme, Diags);
+  }
 };
 class LLVM_LIBRARY_VISIBILITY RISCV32TargetInfo : public RISCVTargetInfo {
 public:

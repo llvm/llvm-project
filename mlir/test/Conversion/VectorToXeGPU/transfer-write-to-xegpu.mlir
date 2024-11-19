@@ -66,6 +66,26 @@ func.func @store_dynamic_source(%vec: vector<8x16xf32>,
 
 // -----
 
+func.func @store_out_of_bounds(%vec: vector<8x16xf32>,
+    %source: memref<7x64xf32>, %offset: index) {
+  vector.transfer_write %vec, %source[%offset, %offset]
+    {in_bounds = [false, true]}
+    : vector<8x16xf32>, memref<7x64xf32>
+  return
+}
+
+// CHECK-LABEL:   @store_out_of_bounds(
+// CHECK-SAME:  %[[VEC:.+]]: vector<8x16xf32>,
+// CHECK-SAME:  %[[SRC:.+]]: memref<7x64xf32>,
+// CHECK-SAME:  %[[OFFSET:.+]]: index
+// CHECK:       %[[DESC:.+]] = xegpu.create_nd_tdesc
+// CHECK-SAME:    %[[SRC]][%[[OFFSET]], %[[OFFSET]]]
+// CHECK-SAME:    memref<7x64xf32> -> !xegpu.tensor_desc<8x16xf32,
+// CHECK-SAME:    boundary_check = true
+// CHECK:       xegpu.store_nd %[[VEC]], %[[DESC]] : vector<8x16xf32>
+
+// -----
+
 func.func @no_store_transposed(%vec: vector<8x16xf32>,
     %source: memref<32x64xf32>, %offset: index) {
   vector.transfer_write %vec, %source[%offset, %offset]
@@ -77,19 +97,6 @@ func.func @no_store_transposed(%vec: vector<8x16xf32>,
 
 // CHECK-LABEL: @no_store_transposed(
 // CHECK:       vector.transfer_write
-
-// -----
-
-func.func @no_store_out_of_bounds(%vec: vector<8x16xf32>,
-    %source: memref<32x64xf32>, %offset: index) {
-  vector.transfer_write %vec, %source[%offset, %offset]
-    {in_bounds = [false, true]}
-    : vector<8x16xf32>, memref<32x64xf32>
-  return
-}
-
-// CHECK-LABEL:   @no_store_out_of_bounds(
-// CHECK:         vector.transfer_write
 
 // -----
 

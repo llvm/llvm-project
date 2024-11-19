@@ -42,7 +42,6 @@
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include <cassert>
 #include <optional>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -242,13 +241,12 @@ bool ShadowStackGCLoweringImpl::doInitialization(Module &M) {
   //   void *Roots[];          // Stack roots (in-place array, so we pretend).
   // };
 
-  StackEntryTy = StructType::create(M.getContext(), "gc_stackentry");
+  PointerType *StackEntryPtrTy = PointerType::getUnqual(M.getContext());
 
   EltTys.clear();
-  EltTys.push_back(PointerType::getUnqual(StackEntryTy));
+  EltTys.push_back(StackEntryPtrTy);
   EltTys.push_back(FrameMapPtrTy);
-  StackEntryTy->setBody(EltTys);
-  PointerType *StackEntryPtrTy = PointerType::getUnqual(StackEntryTy);
+  StackEntryTy = StructType::create(EltTys, "gc_stackentry");
 
   // Get the root chain if it already exists.
   Head = M.getGlobalVariable("llvm_gc_root_chain");

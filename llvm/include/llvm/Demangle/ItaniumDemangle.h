@@ -2632,7 +2632,8 @@ template<typename NodeT> struct NodeKind;
 #include "ItaniumNodes.def"
 
 inline bool NodeArray::printAsString(OutputBuffer &OB) const {
-  auto Fail = [&OB, StartPos = OB.getCurrentPosition()] {
+  auto StartPos = OB.getCurrentPosition();
+  auto Fail = [&OB, StartPos] {
     OB.setCurrentPosition(StartPos);
     return false;
   };
@@ -4330,6 +4331,101 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
         return nullptr;
       return make<BinaryFPType>(DimensionNumber);
     }
+    //                ::= [DS] DA  # N1169 fixed-point [_Sat] T _Accum
+    //                ::= [DS] DR  # N1169 fixed-point [_Sat] T _Frac
+    // <fixed-point-size>
+    //                ::= s # short
+    //                ::= t # unsigned short
+    //                ::= i # plain
+    //                ::= j # unsigned
+    //                ::= l # long
+    //                ::= m # unsigned long
+    case 'A': {
+      char c = look(2);
+      First += 3;
+      switch (c) {
+      case 's':
+        return make<NameType>("short _Accum");
+      case 't':
+        return make<NameType>("unsigned short _Accum");
+      case 'i':
+        return make<NameType>("_Accum");
+      case 'j':
+        return make<NameType>("unsigned _Accum");
+      case 'l':
+        return make<NameType>("long _Accum");
+      case 'm':
+        return make<NameType>("unsigned long _Accum");
+      default:
+        return nullptr;
+      }
+    }
+    case 'R': {
+      char c = look(2);
+      First += 3;
+      switch (c) {
+      case 's':
+        return make<NameType>("short _Fract");
+      case 't':
+        return make<NameType>("unsigned short _Fract");
+      case 'i':
+        return make<NameType>("_Fract");
+      case 'j':
+        return make<NameType>("unsigned _Fract");
+      case 'l':
+        return make<NameType>("long _Fract");
+      case 'm':
+        return make<NameType>("unsigned long _Fract");
+      default:
+        return nullptr;
+      }
+    }
+    case 'S': {
+      First += 2;
+      if (look() != 'D')
+        return nullptr;
+      if (look(1) == 'A') {
+        char c = look(2);
+        First += 3;
+        switch (c) {
+        case 's':
+          return make<NameType>("_Sat short _Accum");
+        case 't':
+          return make<NameType>("_Sat unsigned short _Accum");
+        case 'i':
+          return make<NameType>("_Sat _Accum");
+        case 'j':
+          return make<NameType>("_Sat unsigned _Accum");
+        case 'l':
+          return make<NameType>("_Sat long _Accum");
+        case 'm':
+          return make<NameType>("_Sat unsigned long _Accum");
+        default:
+          return nullptr;
+        }
+      }
+      if (look(1) == 'R') {
+        char c = look(2);
+        First += 3;
+        switch (c) {
+        case 's':
+          return make<NameType>("_Sat short _Fract");
+        case 't':
+          return make<NameType>("_Sat unsigned short _Fract");
+        case 'i':
+          return make<NameType>("_Sat _Fract");
+        case 'j':
+          return make<NameType>("_Sat unsigned _Fract");
+        case 'l':
+          return make<NameType>("_Sat long _Fract");
+        case 'm':
+          return make<NameType>("_Sat unsigned long _Fract");
+        default:
+          return nullptr;
+        }
+      }
+      return nullptr;
+    }
     //                ::= DB <number> _                             # C23 signed _BitInt(N)
     //                ::= DB <instantiation-dependent expression> _ # C23 signed _BitInt(N)
     //                ::= DU <number> _                             # C23 unsigned _BitInt(N)
@@ -4450,6 +4546,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
     // parse them, take the second production.
 
     if (TryToParseTemplateArgs && look() == 'I') {
+      Subs.push_back(Result);
       Node *TA = getDerived().parseTemplateArgs();
       if (TA == nullptr)
         return nullptr;

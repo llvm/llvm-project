@@ -119,8 +119,8 @@ multiple file formats.
 
 .. option:: --remove-symbol-prefix <prefix>
 
-Remove ``<prefix>`` from the start of every symbol name. No-op for symbols that do
-not start with ``<prefix>``.
+ Remove ``<prefix>`` from the start of every symbol name. No-op for symbols that do
+ not start with ``<prefix>``.
 
 .. option:: --remove-section <section>, -R
 

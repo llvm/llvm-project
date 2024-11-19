@@ -133,3 +133,35 @@ exit:
   %r = icmp slt i8 %phi, 0
   ret i1 %r
 }
+
+; Same as the first transformation, but the phi node uses the result of scmp twice. This verifies that we don't clone values more than once per block
+define i1 @icmp_of_phi_of_scmp_with_constant_one_user_two_uses(i8 %c, i16 %x, i16 %y, i8 %false_val) {
+; CHECK-LABEL: define i1 @icmp_of_phi_of_scmp_with_constant_one_user_two_uses(
+; CHECK-SAME: i8 [[C:%.*]], i16 [[X:%.*]], i16 [[Y:%.*]], i8 [[FALSE_VAL:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt i16 [[X]], [[Y]]
+; CHECK-NEXT:    switch i8 [[C]], label %[[BB_2:.*]] [
+; CHECK-NEXT:      i8 0, label %[[BB:.*]]
+; CHECK-NEXT:      i8 1, label %[[BB]]
+; CHECK-NEXT:    ]
+; CHECK:       [[BB_2]]:
+; CHECK-NEXT:    br label %[[BB]]
+; CHECK:       [[BB]]:
+; CHECK-NEXT:    [[R:%.*]] = phi i1 [ [[TMP0]], %[[ENTRY]] ], [ [[TMP0]], %[[ENTRY]] ], [ false, %[[BB_2]] ]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+entry:
+  %cmp = call i8 @llvm.scmp(i16 %x, i16 %y)
+  switch i8 %c, label %bb_2 [
+  i8 0, label %bb
+  i8 1, label %bb
+  ]
+
+bb_2:
+  br label %bb
+
+bb:
+  %phi = phi i8 [ %cmp, %entry ], [ %cmp, %entry ], [ 0, %bb_2 ]
+  %r = icmp slt i8 %phi, 0
+  ret i1 %r
+}

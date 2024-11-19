@@ -22,7 +22,7 @@
  */
 
 #include <clc/clc.h>
-#include "../clcmacro.h"
+#include <clc/clcmacro.h>
 
 _CLC_OVERLOAD _CLC_DEF float lgamma(float x) {
     int s;

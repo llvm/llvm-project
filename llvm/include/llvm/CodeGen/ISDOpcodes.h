@@ -425,6 +425,7 @@ enum NodeType {
   STRICT_FASIN,
   STRICT_FACOS,
   STRICT_FATAN,
+  STRICT_FATAN2,
   STRICT_FSINH,
   STRICT_FCOSH,
   STRICT_FTANH,
@@ -825,7 +826,7 @@ enum NodeType {
   /// be saturated against signed values, resulting in `S`, which will combine
   /// to `TRUNCATE_SSAT_S`. If the value of C ranges from `0 to 255`, it will
   /// be saturated against unsigned values, resulting in `U`, which will
-  /// combine to `TRUNATE_SSAT_U`. Similarly, in `truncate(umin(x, C))`, if
+  /// combine to `TRUNCATE_SSAT_U`. Similarly, in `truncate(umin(x, C))`, if
   /// value of C ranges from `0 to 255`, it becomes `U` because it is saturated
   /// for unsigned values. As a result, it combines to `TRUNCATE_USAT_U`.
   TRUNCATE_SSAT_S, // saturate signed input to signed result -
@@ -994,6 +995,8 @@ enum NodeType {
   FPOWI,
   /// FLDEXP - ldexp, inspired by libm (op0 * 2**op1).
   FLDEXP,
+  /// FATAN2 - atan2, inspired by libm.
+  FATAN2,
 
   /// FFREXP - frexp, extract fractional and exponent component of a
   /// floating-point value. Returns the two components as separate return

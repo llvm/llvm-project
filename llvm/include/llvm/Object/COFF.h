@@ -747,6 +747,11 @@ struct chpe_metadata {
   support::ulittle32_t ExtraRFETableSize;
   support::ulittle32_t __os_arm64x_dispatch_fptr;
   support::ulittle32_t AuxiliaryIATCopy;
+
+  // Added in CHPE metadata v2
+  support::ulittle32_t AuxiliaryDelayloadIAT;
+  support::ulittle32_t AuxiliaryDelayloadIATCopy;
+  support::ulittle32_t HybridImageInfoBitfield;
 };
 
 enum chpe_range_type { Arm64 = 0, Arm64EC = 1, Amd64 = 2 };

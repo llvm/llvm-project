@@ -52,12 +52,12 @@ struct SIInstrWorklist {
   void insert(MachineInstr *MI);
 
   MachineInstr *top() const {
-    auto iter = InstrList.begin();
+    const auto *iter = InstrList.begin();
     return *iter;
   }
 
   void erase_top() {
-    auto iter = InstrList.begin();
+    const auto *iter = InstrList.begin();
     InstrList.erase(iter);
   }
 
@@ -946,8 +946,8 @@ public:
            Opcode == AMDGPU::S_BARRIER_INIT_IMM ||
            Opcode == AMDGPU::S_BARRIER_JOIN_IMM ||
            Opcode == AMDGPU::S_BARRIER_LEAVE ||
-           Opcode == AMDGPU::DS_GWS_INIT ||
-           Opcode == AMDGPU::DS_GWS_BARRIER;
+           Opcode == AMDGPU::S_BARRIER_LEAVE_IMM ||
+           Opcode == AMDGPU::DS_GWS_INIT || Opcode == AMDGPU::DS_GWS_BARRIER;
   }
 
   static bool isF16PseudoScalarTrans(unsigned Opcode) {
@@ -1213,12 +1213,14 @@ public:
   /// Fix operands in \p MI to satisfy constant bus requirements.
   void legalizeOperandsVOP3(MachineRegisterInfo &MRI, MachineInstr &MI) const;
 
-  /// Copy a value from a VGPR (\p SrcReg) to SGPR.  This function can only
-  /// be used when it is know that the value in SrcReg is same across all
-  /// threads in the wave.
+  /// Copy a value from a VGPR (\p SrcReg) to SGPR. The desired register class
+  /// for the dst register (\p DstRC) can be optionally supplied. This function
+  /// can only be used when it is know that the value in SrcReg is same across
+  /// all threads in the wave.
   /// \returns The SGPR register that \p SrcReg was copied to.
   Register readlaneVGPRToSGPR(Register SrcReg, MachineInstr &UseMI,
-                              MachineRegisterInfo &MRI) const;
+                              MachineRegisterInfo &MRI,
+                              const TargetRegisterClass *DstRC = nullptr) const;
 
   void legalizeOperandsSMRD(MachineRegisterInfo &MRI, MachineInstr &MI) const;
   void legalizeOperandsFLAT(MachineRegisterInfo &MRI, MachineInstr &MI) const;

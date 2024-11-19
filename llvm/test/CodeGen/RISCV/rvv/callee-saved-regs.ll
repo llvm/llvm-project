@@ -7,7 +7,6 @@ define <vscale x 1 x i32> @test_vector_std(<vscale x 1 x i32> %va) nounwind {
 ; SPILL-O2:       # %bb.0: # %entry
 ; SPILL-O2-NEXT:    addi sp, sp, -16
 ; SPILL-O2-NEXT:    csrr a0, vlenb
-; SPILL-O2-NEXT:    slli a0, a0, 1
 ; SPILL-O2-NEXT:    sub sp, sp, a0
 ; SPILL-O2-NEXT:    addi a0, sp, 16
 ; SPILL-O2-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
@@ -15,7 +14,6 @@ define <vscale x 1 x i32> @test_vector_std(<vscale x 1 x i32> %va) nounwind {
 ; SPILL-O2-NEXT:    #NO_APP
 ; SPILL-O2-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
 ; SPILL-O2-NEXT:    csrr a0, vlenb
-; SPILL-O2-NEXT:    slli a0, a0, 1
 ; SPILL-O2-NEXT:    add sp, sp, a0
 ; SPILL-O2-NEXT:    addi sp, sp, 16
 ; SPILL-O2-NEXT:    ret
@@ -111,12 +109,14 @@ define riscv_vector_cc void @local_stack_allocation_frame_pointer() "frame-point
 ; SPILL-O2-NEXT:    addi sp, sp, -480
 ; SPILL-O2-NEXT:    lbu a0, -1912(s0)
 ; SPILL-O2-NEXT:    sb a0, -1912(s0)
-; SPILL-O2-NEXT:    addi sp, s0, -2048
-; SPILL-O2-NEXT:    addi sp, sp, -464
-; SPILL-O2-NEXT:    addi sp, sp, 480
+; SPILL-O2-NEXT:    addi sp, s0, -2032
+; SPILL-O2-NEXT:    .cfi_def_cfa sp, 2032
 ; SPILL-O2-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
 ; SPILL-O2-NEXT:    lw s0, 2024(sp) # 4-byte Folded Reload
+; SPILL-O2-NEXT:    .cfi_restore ra
+; SPILL-O2-NEXT:    .cfi_restore s0
 ; SPILL-O2-NEXT:    addi sp, sp, 2032
+; SPILL-O2-NEXT:    .cfi_def_cfa_offset 0
 ; SPILL-O2-NEXT:    ret
   %va = alloca [2500 x i8], align 4
   %va_gep = getelementptr [2000 x i8], ptr %va, i64 0, i64 600

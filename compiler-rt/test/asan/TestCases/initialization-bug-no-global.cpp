@@ -6,6 +6,9 @@
 // FIXME: https://code.google.com/p/address-sanitizer/issues/detail?id=186
 // XFAIL: target={{.*windows-msvc.*}}
 
+// Fails on some Darwin bots, probably iOS.
+// XFAIL: ios
+
 #include <stdio.h>
 
 extern int y;

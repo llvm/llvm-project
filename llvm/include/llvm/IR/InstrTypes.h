@@ -912,6 +912,11 @@ public:
   /// Determine if this is an equals/not equals predicate.
   bool isEquality() const { return isEquality(getPredicate()); }
 
+  /// Determine if one operand of this compare can always be replaced by the
+  /// other operand, ignoring provenance considerations. If \p Invert, check for
+  /// equivalence with the inverse predicate.
+  bool isEquivalence(bool Invert = false) const;
+
   /// Return true if the predicate is relational (not EQ or NE).
   static bool isRelational(Predicate P) { return !isEquality(P); }
 
@@ -1453,13 +1458,37 @@ public:
   /// looking through to the attributes on the called function when necessary).
   ///@{
 
-  /// Return the parameter attributes for this call.
-  ///
+  /// Return the attributes for this call.
   AttributeList getAttributes() const { return Attrs; }
 
-  /// Set the parameter attributes for this call.
-  ///
+  /// Set the attributes for this call.
   void setAttributes(AttributeList A) { Attrs = A; }
+
+  /// Return the return attributes for this call.
+  AttributeSet getRetAttributes() const {
+    return getAttributes().getRetAttrs();
+  }
+
+  /// Return the param attributes for this call.
+  AttributeSet getParamAttributes(unsigned ArgNo) const {
+    return getAttributes().getParamAttrs(ArgNo);
+  }
+
+  /// Try to intersect the attributes from 'this' CallBase and the
+  /// 'Other' CallBase. Sets the intersected attributes to 'this' and
+  /// return true if successful. Doesn't modify 'this' and returns
+  /// false if unsuccessful.
+  bool tryIntersectAttributes(const CallBase *Other) {
+    if (this == Other)
+      return true;
+    AttributeList AL = getAttributes();
+    AttributeList ALOther = Other->getAttributes();
+    auto Intersected = AL.intersectWith(getContext(), ALOther);
+    if (!Intersected)
+      return false;
+    setAttributes(*Intersected);
+    return true;
+  }
 
   /// Determine whether this call has the given attribute. If it does not
   /// then determine if the called function has the attribute, but only if

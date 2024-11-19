@@ -117,6 +117,12 @@ endif()
 # This allows an easy way of setting up a build directory for llvm and another
 # one for llvm+clang+... using the same sources.
 set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;mlir;openmp;polly;pstl")
+if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  # Disallow 'openmp' as a LLVM PROJECT on AIX as the supported way is to use
+  # LLVM_ENABLE_RUNTIMES.
+  list(REMOVE_ITEM LLVM_ALL_PROJECTS openmp)
+endif()
+
 # The flang project is not yet part of "all" projects (see C++ requirements)
 set(LLVM_EXTRA_PROJECTS "flang")
 # List of all known projects in the mono repo
@@ -198,6 +204,16 @@ if(NEED_LIBC_HDRGEN)
     list(APPEND LLVM_ENABLE_PROJECTS "libc")
   endif()
 endif()
+
+foreach(proj IN LISTS LLVM_ENABLE_RUNTIMES)
+  if("${proj}" IN_LIST LLVM_ENABLE_PROJECTS)
+    # The 'libc' project bootstraps a few executables via the project build and
+    # should not emit an error currently.
+    if(NOT (NEED_LIBC_HDRGEN AND "${proj}" STREQUAL "libc"))
+      message(FATAL_ERROR "Runtime project \"${proj}\" found in LLVM_ENABLE_PROJECTS and LLVM_ENABLE_RUNTIMES. It must only appear in one of them and that one should almost always be LLVM_ENABLE_RUNTIMES.")
+    endif()
+  endif()
+endforeach()
 unset(NEED_LIBC_HDRGEN)
 
 # LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the
@@ -526,6 +542,10 @@ endif()
 
 option(LLVM_ENABLE_CRASH_DUMPS "Turn on memory dumps on crashes. Currently only implemented on Windows." OFF)
 
+set(LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING "DISABLED" CACHE STRING
+  "Enhance Debugify's line number coverage tracking; enabling this is ABI-breaking. Can be DISABLED, or COVERAGE.")
+set_property(CACHE LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING PROPERTY STRINGS DISABLED COVERAGE)
+
 set(WINDOWS_PREFER_FORWARD_SLASH_DEFAULT OFF)
 if (MINGW)
   # Cygwin doesn't identify itself as Windows, and thus gets path::Style::posix
@@ -844,7 +864,7 @@ if(MSVC)
   if (BUILD_SHARED_LIBS)
     message(FATAL_ERROR "BUILD_SHARED_LIBS options is not supported on Windows.")
   endif()
- else()
+else()
   option(LLVM_BUILD_LLVM_C_DYLIB "Build libllvm-c re-export library (Darwin only)" OFF)
 endif()
 

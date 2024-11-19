@@ -44,7 +44,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -77,12 +76,10 @@
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrItineraries.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -1415,14 +1412,12 @@ private:
         auto Reg = Use.RegUnit;
         if (!TargetRegs.contains(Reg))
           continue;
-        auto Ite = LastUseMI.find(Reg);
-        if (Ite == LastUseMI.end()) {
-          LastUseMI[Reg] = MI;
-        } else {
+        auto [Ite, Inserted] = LastUseMI.try_emplace(Reg, MI);
+        if (!Inserted) {
           MachineInstr *Orig = Ite->second;
           MachineInstr *New = MI;
           if (InstrScore(Orig) < InstrScore(New))
-            LastUseMI[Reg] = New;
+            Ite->second = New;
         }
       }
     }

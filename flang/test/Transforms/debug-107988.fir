@@ -13,11 +13,11 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
 #loc1 = loc("test.f90":5:1)
 #loc2 = loc("test.f90":15:1)
 
-// CHECK: #[[VAR:.*]] = #llvm.di_local_variable<{{.*}}name = "._QFtestEstr"{{.*}}flags = Artificial>
+// CHECK: #[[VAR:.*]] = #llvm.di_local_variable<{{.*}}name = "._QFtestEstr{{.*}}flags = Artificial>
 // CHECK: func.func @test
 // CHECK: %[[V1:.*]]:2 = fir.unboxchar{{.*}}
 // CHECK: %[[V2:.*]] = fir.convert %[[V1]]#1 : (index) -> i64
-// CHECK: llvm.intr.dbg.value #di_local_variable = %[[V2]] : i64
+// CHECK: llvm.intr.dbg.value #[[VAR]] = %[[V2]] : i64
 // CHECK: #[[STR_TY:.*]] = #llvm.di_string_type<tag = DW_TAG_string_type, name = "", stringLength = #[[VAR]], encoding = DW_ATE_ASCII>
 // CHECK: #llvm.di_local_variable<{{.*}}name = "str"{{.*}}type = #[[STR_TY]]>
 

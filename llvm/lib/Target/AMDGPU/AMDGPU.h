@@ -49,7 +49,7 @@ FunctionPass *createSIFixSGPRCopiesLegacyPass();
 FunctionPass *createLowerWWMCopiesPass();
 FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIInsertWaitcntsPass();
-FunctionPass *createSIPreAllocateWWMRegsPass();
+FunctionPass *createSIPreAllocateWWMRegsLegacyPass();
 FunctionPass *createSIFormMemoryClausesPass();
 
 FunctionPass *createSIPostRABundlerPass();
@@ -57,6 +57,7 @@ FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);
 ModulePass *createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *);
 FunctionPass *createAMDGPUCodeGenPreparePass();
 FunctionPass *createAMDGPULateCodeGenPrepareLegacyPass();
+FunctionPass *createAMDGPUReserveWWMRegsPass();
 FunctionPass *createAMDGPURewriteOutArgumentsPass();
 ModulePass *
 createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
@@ -154,6 +155,9 @@ private:
   const TargetMachine &TM;
 };
 
+void initializeAMDGPUReserveWWMRegsPass(PassRegistry &);
+extern char &AMDGPUReserveWWMRegsID;
+
 void initializeAMDGPURewriteOutArgumentsPass(PassRegistry &);
 extern char &AMDGPURewriteOutArgumentsID;
 
@@ -208,8 +212,8 @@ extern char &SILateBranchLoweringPassID;
 void initializeSIOptimizeExecMaskingPass(PassRegistry &);
 extern char &SIOptimizeExecMaskingID;
 
-void initializeSIPreAllocateWWMRegsPass(PassRegistry &);
-extern char &SIPreAllocateWWMRegsID;
+void initializeSIPreAllocateWWMRegsLegacyPass(PassRegistry &);
+extern char &SIPreAllocateWWMRegsLegacyID;
 
 void initializeAMDGPUImageIntrinsicOptimizerPass(PassRegistry &);
 extern char &AMDGPUImageIntrinsicOptimizerID;
@@ -404,9 +408,6 @@ extern char &SIModeRegisterID;
 
 void initializeAMDGPUInsertDelayAluPass(PassRegistry &);
 extern char &AMDGPUInsertDelayAluID;
-
-void initializeAMDGPUInsertSingleUseVDSTPass(PassRegistry &);
-extern char &AMDGPUInsertSingleUseVDSTID;
 
 void initializeSIInsertHardClausesPass(PassRegistry &);
 extern char &SIInsertHardClausesID;

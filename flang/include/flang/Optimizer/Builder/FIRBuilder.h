@@ -85,13 +85,16 @@ public:
   // The listener self-reference has to be updated in case of copy-construction.
   FirOpBuilder(const FirOpBuilder &other)
       : OpBuilder(other), OpBuilder::Listener(), kindMap{other.kindMap},
-        fastMathFlags{other.fastMathFlags}, symbolTable{other.symbolTable} {
+        fastMathFlags{other.fastMathFlags},
+        integerOverflowFlags{other.integerOverflowFlags},
+        symbolTable{other.symbolTable} {
     setListener(this);
   }
 
   FirOpBuilder(FirOpBuilder &&other)
       : OpBuilder(other), OpBuilder::Listener(),
         kindMap{std::move(other.kindMap)}, fastMathFlags{other.fastMathFlags},
+        integerOverflowFlags{other.integerOverflowFlags},
         symbolTable{other.symbolTable} {
     setListener(this);
   }
@@ -211,6 +214,11 @@ public:
                             llvm::ArrayRef<mlir::Value> shape,
                             llvm::ArrayRef<mlir::Value> lenParams,
                             bool asTarget = false);
+
+  /// Create a two dimensional ArrayAttr containing integer data as
+  /// IntegerAttrs, effectively: ArrayAttr<ArrayAttr<IntegerAttr>>>.
+  mlir::ArrayAttr create2DI64ArrayAttr(
+      llvm::SmallVectorImpl<llvm::SmallVector<int64_t>> &intData);
 
   /// Create a temporary using `fir.alloca`. This function does not hoist.
   /// It is the callers responsibility to set the insertion point if
@@ -521,6 +529,18 @@ public:
     return fmfString;
   }
 
+  /// Set default IntegerOverflowFlags value for all operations
+  /// supporting mlir::arith::IntegerOverflowFlagsAttr that will be created
+  /// by this builder.
+  void setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags flags) {
+    integerOverflowFlags = flags;
+  }
+
+  /// Get current IntegerOverflowFlags value.
+  mlir::arith::IntegerOverflowFlags getIntegerOverflowFlags() const {
+    return integerOverflowFlags;
+  }
+
   /// Dump the current function. (debug)
   LLVM_DUMP_METHOD void dumpFunc();
 
@@ -546,6 +566,10 @@ private:
   /// FastMathFlags that need to be set for operations that support
   /// mlir::arith::FastMathAttr.
   mlir::arith::FastMathFlags fastMathFlags{};
+
+  /// IntegerOverflowFlags that need to be set for operations that support
+  /// mlir::arith::IntegerOverflowFlagsAttr.
+  mlir::arith::IntegerOverflowFlags integerOverflowFlags{};
 
   /// fir::GlobalOp and func::FuncOp symbol table to speed-up
   /// lookups.

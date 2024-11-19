@@ -265,7 +265,7 @@ public:
       case ('m'):
         // %m is an odd conversion in that it doesn't consume an argument, it
         // just takes the current value of errno as its argument.
-        section.conv_val_raw = libc_errno;
+        section.conv_val_raw = static_cast<int>(libc_errno);
         break;
 #endif // LIBC_COPT_PRINTF_DISABLE_STRERROR
 #ifndef LIBC_COPT_PRINTF_DISABLE_WRITE_INT

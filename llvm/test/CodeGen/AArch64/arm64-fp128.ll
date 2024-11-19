@@ -3,8 +3,6 @@
 ; RUN: llc -mtriple=arm64-linux-gnu -verify-machineinstrs -global-isel -global-isel-abort=2 < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 ; CHECK-GI:       warning: Instruction selection used fallback path for test_neg_sub
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_neg
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for vec_neg
 
 define fp128 @test_add(fp128 %lhs, fp128 %rhs) {
 ; CHECK-LABEL: test_add:
@@ -405,15 +403,23 @@ define fp128 @test_neg_sub(fp128 %in) {
 }
 
 define fp128 @test_neg(fp128 %in) {
-; CHECK-LABEL: test_neg:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str q0, [sp, #-16]!
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldrb w8, [sp, #15]
-; CHECK-NEXT:    eor w8, w8, #0x80
-; CHECK-NEXT:    strb w8, [sp, #15]
-; CHECK-NEXT:    ldr q0, [sp], #16
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_neg:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    str q0, [sp, #-16]!
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-SD-NEXT:    ldrb w8, [sp, #15]
+; CHECK-SD-NEXT:    eor w8, w8, #0x80
+; CHECK-SD-NEXT:    strb w8, [sp, #15]
+; CHECK-SD-NEXT:    ldr q0, [sp], #16
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_neg:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov x8, v0.d[1]
+; CHECK-GI-NEXT:    mov v0.d[0], v0.d[0]
+; CHECK-GI-NEXT:    eor x8, x8, #0x8000000000000000
+; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    ret
   %ret = fneg fp128 %in
   ret fp128 %ret
 }
@@ -1497,18 +1503,30 @@ define <2 x fp128> @vec_neg_sub(<2 x fp128> %in) {
 }
 
 define <2 x fp128> @vec_neg(<2 x fp128> %in) {
-; CHECK-LABEL: vec_neg:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp q0, q1, [sp, #-32]!
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    ldrb w8, [sp, #15]
-; CHECK-NEXT:    eor w8, w8, #0x80
-; CHECK-NEXT:    strb w8, [sp, #15]
-; CHECK-NEXT:    ldrb w8, [sp, #31]
-; CHECK-NEXT:    eor w8, w8, #0x80
-; CHECK-NEXT:    strb w8, [sp, #31]
-; CHECK-NEXT:    ldp q0, q1, [sp], #32
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: vec_neg:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    stp q0, q1, [sp, #-32]!
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-SD-NEXT:    ldrb w8, [sp, #15]
+; CHECK-SD-NEXT:    eor w8, w8, #0x80
+; CHECK-SD-NEXT:    strb w8, [sp, #15]
+; CHECK-SD-NEXT:    ldrb w8, [sp, #31]
+; CHECK-SD-NEXT:    eor w8, w8, #0x80
+; CHECK-SD-NEXT:    strb w8, [sp, #31]
+; CHECK-SD-NEXT:    ldp q0, q1, [sp], #32
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vec_neg:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov x8, v0.d[1]
+; CHECK-GI-NEXT:    mov x9, v1.d[1]
+; CHECK-GI-NEXT:    mov v0.d[0], v0.d[0]
+; CHECK-GI-NEXT:    mov v1.d[0], v1.d[0]
+; CHECK-GI-NEXT:    eor x8, x8, #0x8000000000000000
+; CHECK-GI-NEXT:    eor x9, x9, #0x8000000000000000
+; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v1.d[1], x9
+; CHECK-GI-NEXT:    ret
   %ret = fneg <2 x fp128> %in
   ret <2 x fp128> %ret
 }

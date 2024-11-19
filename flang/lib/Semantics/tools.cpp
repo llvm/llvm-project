@@ -688,7 +688,7 @@ bool IsInitialized(const Symbol &symbol, bool ignoreDataStatements,
   } else if (IsNamedConstant(symbol)) {
     return false;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-    if (!object->isDummy() && object->type()) {
+    if ((!object->isDummy() || IsIntentOut(symbol)) && object->type()) {
       if (const auto *derived{object->type()->AsDerived()}) {
         return derived->HasDefaultInitialization(
             ignoreAllocatable, ignorePointer);
@@ -705,7 +705,7 @@ bool IsDestructible(const Symbol &symbol, const Symbol *derivedTypeSymbol) {
       IsPointer(symbol)) {
     return false;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-    if (!object->isDummy() && object->type()) {
+    if ((!object->isDummy() || IsIntentOut(symbol)) && object->type()) {
       if (const auto *derived{object->type()->AsDerived()}) {
         return &derived->typeSymbol() != derivedTypeSymbol &&
             derived->HasDestruction();
@@ -1649,7 +1649,40 @@ bool HasDefinedIo(common::DefinedIo which, const DerivedTypeSpec &derived,
       }
     }
   }
-  return false;
+  // Check for inherited defined I/O
+  const auto *parentType{derived.typeSymbol().GetParentTypeSpec()};
+  return parentType && HasDefinedIo(which, *parentType, scope);
+}
+
+template <typename E>
+std::forward_list<std::string> GetOperatorNames(
+    const SemanticsContext &context, E opr) {
+  std::forward_list<std::string> result;
+  for (const char *name : context.languageFeatures().GetNames(opr)) {
+    result.emplace_front("operator("s + name + ')');
+  }
+  return result;
+}
+
+std::forward_list<std::string> GetAllNames(
+    const SemanticsContext &context, const SourceName &name) {
+  std::string str{name.ToString()};
+  if (!name.empty() && name.end()[-1] == ')' &&
+      name.ToString().rfind("operator(", 0) == 0) {
+    for (int i{0}; i != common::LogicalOperator_enumSize; ++i) {
+      auto names{GetOperatorNames(context, common::LogicalOperator{i})};
+      if (llvm::is_contained(names, str)) {
+        return names;
+      }
+    }
+    for (int i{0}; i != common::RelationalOperator_enumSize; ++i) {
+      auto names{GetOperatorNames(context, common::RelationalOperator{i})};
+      if (llvm::is_contained(names, str)) {
+        return names;
+      }
+    }
+  }
+  return {str};
 }
 
 void WarnOnDeferredLengthCharacterScalar(SemanticsContext &context,

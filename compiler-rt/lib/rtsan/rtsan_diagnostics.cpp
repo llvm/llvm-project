@@ -31,33 +31,57 @@ void BufferedStackTrace::UnwindImpl(uptr pc, uptr bp, void *context,
 } // namespace __sanitizer
 
 namespace {
-class Decorator : public __sanitizer::SanitizerCommonDecorator {
+class Decorator : public SanitizerCommonDecorator {
 public:
   Decorator() : SanitizerCommonDecorator() {}
-  const char *FunctionName() { return Green(); }
-  const char *Reason() { return Blue(); }
+  const char *FunctionName() const { return Green(); }
+  const char *Reason() const { return Blue(); }
 };
 } // namespace
 
-static void PrintStackTrace(uptr pc, uptr bp) {
-  BufferedStackTrace stack{};
+static void PrintError(const Decorator &decorator,
+                       const DiagnosticsInfo &info) {
+  const auto ErrorTypeStr = [&info]() -> const char * {
+    switch (info.type) {
+    case DiagnosticsInfoType::InterceptedCall:
+      return "unsafe-library-call";
+    case DiagnosticsInfoType::BlockingCall:
+      return "blocking-call";
+    }
+    return "(unknown error)";
+  };
 
-  stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal);
-  stack.Print();
+  Printf("%s", decorator.Error());
+  Report("ERROR: RealtimeSanitizer: %s\n", ErrorTypeStr());
 }
 
-void __rtsan::PrintDiagnostics(const char *intercepted_function_name, uptr pc,
-                               uptr bp) {
+static void PrintReason(const Decorator &decorator,
+                        const DiagnosticsInfo &info) {
+  Printf("%s", decorator.Reason());
+
+  switch (info.type) {
+  case DiagnosticsInfoType::InterceptedCall: {
+    Printf("Intercepted call to real-time unsafe function "
+           "`%s%s%s` in real-time context!",
+           decorator.FunctionName(), info.func_name, decorator.Reason());
+    break;
+  }
+  case DiagnosticsInfoType::BlockingCall: {
+    Printf("Call to blocking function "
+           "`%s%s%s` in real-time context!",
+           decorator.FunctionName(), info.func_name, decorator.Reason());
+    break;
+  }
+  }
+
+  Printf("\n");
+}
+
+void __rtsan::PrintDiagnostics(const DiagnosticsInfo &info) {
   ScopedErrorReportLock l;
 
   Decorator d;
-  Printf("%s", d.Error());
-  Report("ERROR: RealtimeSanitizer: unsafe-library-call\n");
-  Printf("%s", d.Reason());
-  Printf("Intercepted call to real-time unsafe function "
-         "`%s%s%s` in real-time context!\n",
-         d.FunctionName(), intercepted_function_name, d.Reason());
-
+  PrintError(d, info);
+  PrintReason(d, info);
   Printf("%s", d.Default());
-  PrintStackTrace(pc, bp);
 }

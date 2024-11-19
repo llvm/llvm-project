@@ -16,18 +16,14 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearchOptions.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
-#include "llvm/CodeGen/RegAllocRegistry.h"
-#include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/IR/DataLayout.h"
@@ -39,7 +35,6 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/LTO/LTOBackend.h"
-#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -429,7 +424,6 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.BBSections =
       llvm::StringSwitch<llvm::BasicBlockSection>(CodeGenOpts.BBSections)
           .Case("all", llvm::BasicBlockSection::All)
-          .Case("labels", llvm::BasicBlockSection::Labels)
           .StartsWith("list=", llvm::BasicBlockSection::List)
           .Case("none", llvm::BasicBlockSection::None)
           .Default(llvm::BasicBlockSection::None);
@@ -509,6 +503,8 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.MCOptions.X86RelaxRelocations = CodeGenOpts.X86RelaxRelocations;
   Options.MCOptions.CompressDebugSections =
       CodeGenOpts.getCompressDebugSections();
+  if (CodeGenOpts.OutputAsmVariant != 3) // 3 (default): not specified
+    Options.MCOptions.OutputAsmVariant = CodeGenOpts.OutputAsmVariant;
   Options.MCOptions.ABIName = TargetOpts.ABI;
   for (const auto &Entry : HSOpts.UserEntries)
     if (!Entry.IsFramework &&
@@ -673,7 +669,7 @@ static void addKCFIPass(const Triple &TargetTriple, const LangOptions &LangOpts,
 
   // Ensure we lower KCFI operand bundles with -O0.
   PB.registerOptimizerLastEPCallback(
-      [&](ModulePassManager &MPM, OptimizationLevel Level) {
+      [&](ModulePassManager &MPM, OptimizationLevel Level, ThinOrFullLTOPhase) {
         if (Level == OptimizationLevel::O0 &&
             LangOpts.Sanitize.has(SanitizerKind::KCFI))
           MPM.addPass(createModuleToFunctionPassAdaptor(KCFIPass()));
@@ -692,8 +688,8 @@ static void addKCFIPass(const Triple &TargetTriple, const LangOptions &LangOpts,
 static void addSanitizers(const Triple &TargetTriple,
                           const CodeGenOptions &CodeGenOpts,
                           const LangOptions &LangOpts, PassBuilder &PB) {
-  auto SanitizersCallback = [&](ModulePassManager &MPM,
-                                OptimizationLevel Level) {
+  auto SanitizersCallback = [&](ModulePassManager &MPM, OptimizationLevel Level,
+                                ThinOrFullLTOPhase) {
     if (CodeGenOpts.hasSanitizeCoverage()) {
       auto SancovOpts = getSancovOptsFromCGOpts(CodeGenOpts);
       MPM.addPass(SanitizerCoveragePass(
@@ -777,9 +773,10 @@ static void addSanitizers(const Triple &TargetTriple,
   };
   if (ClSanitizeOnOptimizerEarlyEP) {
     PB.registerOptimizerEarlyEPCallback(
-        [SanitizersCallback](ModulePassManager &MPM, OptimizationLevel Level) {
+        [SanitizersCallback](ModulePassManager &MPM, OptimizationLevel Level,
+                             ThinOrFullLTOPhase Phase) {
           ModulePassManager NewMPM;
-          SanitizersCallback(NewMPM, Level);
+          SanitizersCallback(NewMPM, Level, Phase);
           if (!NewMPM.isEmpty()) {
             // Sanitizers can abandon<GlobalsAA>.
             NewMPM.addPass(RequireAnalysisPass<GlobalsAA, llvm::Module>());
@@ -992,7 +989,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
                   createModuleToFunctionPassAdaptor(ObjCARCExpandPass()));
           });
       PB.registerPipelineEarlySimplificationEPCallback(
-          [](ModulePassManager &MPM, OptimizationLevel Level) {
+          [](ModulePassManager &MPM, OptimizationLevel Level,
+             ThinOrFullLTOPhase) {
             if (Level != OptimizationLevel::O0)
               MPM.addPass(ObjCARCAPElimPass());
           });
@@ -1012,9 +1010,10 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     if (IsThinLTOPostLink)
       PB.registerPipelineStartEPCallback(
           [](ModulePassManager &MPM, OptimizationLevel Level) {
-            MPM.addPass(LowerTypeTestsPass(/*ExportSummary=*/nullptr,
-                                           /*ImportSummary=*/nullptr,
-                                           /*DropTypeTests=*/true));
+            MPM.addPass(LowerTypeTestsPass(
+                /*ExportSummary=*/nullptr,
+                /*ImportSummary=*/nullptr,
+                /*DropTypeTests=*/lowertypetests::DropTestKind::Assume));
           });
 
     // Register callbacks to schedule sanitizer passes at the appropriate part
@@ -1055,11 +1054,12 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     // TODO: Consider passing the MemoryProfileOutput to the pass builder via
     // the PGOOptions, and set this up there.
     if (!CodeGenOpts.MemoryProfileOutput.empty()) {
-      PB.registerOptimizerLastEPCallback(
-          [](ModulePassManager &MPM, OptimizationLevel Level) {
-            MPM.addPass(createModuleToFunctionPassAdaptor(MemProfilerPass()));
-            MPM.addPass(ModuleMemProfilerPass());
-          });
+      PB.registerOptimizerLastEPCallback([](ModulePassManager &MPM,
+                                            OptimizationLevel Level,
+                                            ThinOrFullLTOPhase) {
+        MPM.addPass(createModuleToFunctionPassAdaptor(MemProfilerPass()));
+        MPM.addPass(ModuleMemProfilerPass());
+      });
     }
 
     if (CodeGenOpts.FatLTO) {
@@ -1323,7 +1323,8 @@ static void runThinLTOBackend(
   if (Error E =
           thinBackend(Conf, -1, AddStream, *M, *CombinedIndex, ImportList,
                       ModuleToDefinedGVSummaries[M->getModuleIdentifier()],
-                      /* ModuleMap */ nullptr, CGOpts.CmdArgs)) {
+                      /*ModuleMap=*/nullptr, Conf.CodeGenOnly,
+                      /*IRAddStream=*/nullptr, CGOpts.CmdArgs)) {
     handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) {
       errs() << "Error running ThinLTO backend: " << EIB.message() << '\n';
     });

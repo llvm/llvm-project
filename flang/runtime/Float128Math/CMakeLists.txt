@@ -47,9 +47,11 @@ set(sources
   mod-real.cpp
   modulo-real.cpp
   nearest.cpp
+  nearbyint.cpp
   norm2.cpp
   pow.cpp
   random.cpp
+  remainder.cpp
   round.cpp
   rrspacing.cpp
   scale.cpp

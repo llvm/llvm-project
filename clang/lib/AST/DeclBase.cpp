@@ -34,11 +34,8 @@
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/VersionTuple.h"
@@ -1166,6 +1163,10 @@ bool Decl::isFromGlobalModule() const {
 
 bool Decl::isInNamedModule() const {
   return getOwningModule() && getOwningModule()->isNamedModule();
+}
+
+bool Decl::isFromHeaderUnit() const {
+  return getOwningModule() && getOwningModule()->isHeaderUnit();
 }
 
 static Decl::Kind getKind(const Decl *D) { return D->getKind(); }

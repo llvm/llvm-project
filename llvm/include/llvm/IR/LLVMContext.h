@@ -130,6 +130,10 @@ public:
   /// scope names are ordered by increasing synchronization scope IDs.
   void getSyncScopeNames(SmallVectorImpl<StringRef> &SSNs) const;
 
+  /// getSyncScopeName - Returns the name of a SyncScope::ID
+  /// registered with LLVMContext, if any.
+  std::optional<StringRef> getSyncScopeName(SyncScope::ID Id) const;
+
   /// Define the GC for a function
   void setGC(const Function &Fn, std::string GCName);
 
@@ -315,17 +319,6 @@ public:
   /// The lifetime of the object must be guaranteed to extend as long as the
   /// LLVMContext is used by compilation.
   void setOptPassGate(OptPassGate&);
-
-  /// Set whether opaque pointers are enabled. The method may be called multiple
-  /// times, but only with the same value. Note that creating a pointer type or
-  /// otherwise querying the opaque pointer mode performs an implicit set to
-  /// the default value.
-  [[deprecated("Opaque pointers are always enabled")]]
-  void setOpaquePointers(bool Enable) const;
-
-  /// Whether typed pointers are supported. If false, all pointers are opaque.
-  [[deprecated("Always returns false")]]
-  bool supportsTypedPointers() const;
 
   /// Get or set the current "default" target CPU (target-cpu function
   /// attribute). The intent is that compiler frontends will set this to a value

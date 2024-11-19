@@ -22,7 +22,6 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveVariables.h"
-#include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -452,10 +451,13 @@ int X86InstrInfo::getSPAdjust(const MachineInstr &MI) const {
     return -(I->getOperand(1).getImm());
   }
 
-  // Currently handle only PUSHes we can reasonably expect to see
-  // in call sequences
+  // Handle other opcodes we reasonably expect to see in call
+  // sequences. Note this may include spill/restore of FP/BP.
   switch (MI.getOpcode()) {
   default:
+    assert(!(MI.modifiesRegister(X86::RSP, &RI) ||
+             MI.getDesc().hasImplicitDefOfPhysReg(X86::RSP)) &&
+           "Unhandled opcode in getSPAdjust");
     return 0;
   case X86::PUSH32r:
   case X86::PUSH32rmm:
@@ -467,6 +469,30 @@ int X86InstrInfo::getSPAdjust(const MachineInstr &MI) const {
   case X86::PUSH64rmr:
   case X86::PUSH64i32:
     return 8;
+  case X86::POP32r:
+  case X86::POP32rmm:
+  case X86::POP32rmr:
+    return -4;
+  case X86::POP64r:
+  case X86::POP64rmm:
+  case X86::POP64rmr:
+    return -8;
+  // FIXME: (implement and) use isAddImmediate in the
+  // default case instead of the following ADD/SUB cases.
+  case X86::ADD32ri:
+  case X86::ADD32ri8:
+  case X86::ADD64ri32:
+    if (MI.getOperand(0).getReg() == X86::RSP &&
+        MI.getOperand(1).getReg() == X86::RSP)
+      return -MI.getOperand(2).getImm();
+    return 0;
+  case X86::SUB32ri:
+  case X86::SUB32ri8:
+  case X86::SUB64ri32:
+    if (MI.getOperand(0).getReg() == X86::RSP &&
+        MI.getOperand(1).getReg() == X86::RSP)
+      return MI.getOperand(2).getImm();
+    return 0;
   }
 }
 
@@ -4538,6 +4564,11 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
     return Load ? GET_EGPR_IF_ENABLED(X86::TILELOADD)
                 : GET_EGPR_IF_ENABLED(X86::TILESTORED);
 #undef GET_EGPR_IF_ENABLED
+  case 2048:
+    assert(X86::TILEPAIRRegClass.hasSubClassEq(RC) &&
+           "Unknown 2048-byte regclass");
+    assert(STI.hasAMXTILE() && "Using 2048-bit register requires AMX-TILE");
+    return Load ? X86::PTILEPAIRLOAD : X86::PTILEPAIRSTORE;
   }
 }
 
@@ -4732,6 +4763,8 @@ static bool isAMXOpcode(unsigned Opc) {
   case X86::TILESTORED:
   case X86::TILELOADD_EVEX:
   case X86::TILESTORED_EVEX:
+  case X86::PTILEPAIRLOAD:
+  case X86::PTILEPAIRSTORE:
     return true;
   }
 }
@@ -4744,7 +4777,8 @@ void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
   default:
     llvm_unreachable("Unexpected special opcode!");
   case X86::TILESTORED:
-  case X86::TILESTORED_EVEX: {
+  case X86::TILESTORED_EVEX:
+  case X86::PTILEPAIRSTORE: {
     // tilestored %tmm, (%sp, %idx)
     MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
     Register VirtReg = RegInfo.createVirtualRegister(&X86::GR64_NOSPRegClass);
@@ -4758,7 +4792,8 @@ void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
     break;
   }
   case X86::TILELOADD:
-  case X86::TILELOADD_EVEX: {
+  case X86::TILELOADD_EVEX:
+  case X86::PTILEPAIRLOAD: {
     // tileloadd (%sp, %idx), %tmm
     MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
     Register VirtReg = RegInfo.createVirtualRegister(&X86::GR64_NOSPRegClass);
@@ -7762,8 +7797,8 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VFIXUPIMMSSZrri:
     case X86::VFIXUPIMMSSZrrik:
     case X86::VFIXUPIMMSSZrrikz:
-    case X86::VFPCLASSSSZrr:
-    case X86::VFPCLASSSSZrrk:
+    case X86::VFPCLASSSSZri:
+    case X86::VFPCLASSSSZrik:
     case X86::VGETEXPSSZr:
     case X86::VGETEXPSSZrk:
     case X86::VGETEXPSSZrkz:
@@ -7931,8 +7966,8 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VFIXUPIMMSDZrri:
     case X86::VFIXUPIMMSDZrrik:
     case X86::VFIXUPIMMSDZrrikz:
-    case X86::VFPCLASSSDZrr:
-    case X86::VFPCLASSSDZrrk:
+    case X86::VFPCLASSSDZri:
+    case X86::VFPCLASSSDZrik:
     case X86::VGETEXPSDZr:
     case X86::VGETEXPSDZrk:
     case X86::VGETEXPSDZrkz:

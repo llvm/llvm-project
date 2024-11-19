@@ -51,6 +51,7 @@ static cl::opt<PrintPseudoProbesOptions> PrintPseudoProbes(
     cl::Hidden, cl::cat(BoltCategory));
 
 extern cl::opt<bool> ProfileWritePseudoProbes;
+extern cl::opt<bool> StaleMatchingWithPseudoProbes;
 } // namespace opts
 
 namespace {
@@ -92,14 +93,14 @@ public:
 };
 
 Error PseudoProbeRewriter::preCFGInitializer() {
-  if (opts::ProfileWritePseudoProbes)
-    parsePseudoProbe(true);
+  if (opts::ProfileWritePseudoProbes || opts::StaleMatchingWithPseudoProbes)
+    parsePseudoProbe(opts::ProfileWritePseudoProbes);
 
   return Error::success();
 }
 
 Error PseudoProbeRewriter::postEmitFinalizer() {
-  if (!opts::ProfileWritePseudoProbes)
+  if (!opts::StaleMatchingWithPseudoProbes)
     parsePseudoProbe();
   updatePseudoProbes();
 
@@ -127,8 +128,8 @@ void PseudoProbeRewriter::parsePseudoProbe(bool ProfiledOnly) {
 
   StringRef Contents = PseudoProbeDescSection->getContents();
   if (!ProbeDecoder.buildGUID2FuncDescMap(
-          reinterpret_cast<const uint8_t *>(Contents.data()),
-          Contents.size())) {
+          reinterpret_cast<const uint8_t *>(Contents.data()), Contents.size(),
+          /*IsMMapped*/ true)) {
     errs() << "BOLT-WARNING: fail in building GUID2FuncDescMap\n";
     return;
   }

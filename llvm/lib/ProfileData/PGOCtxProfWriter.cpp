@@ -47,7 +47,7 @@ PGOCtxProfileWriter::PGOCtxProfileWriter(
   }
   Writer.ExitBlock();
   Writer.EnterSubblock(PGOCtxProfileBlockIDs::ProfileMetadataBlockID, CodeLen);
-  const auto Version = VersionOverride ? *VersionOverride : CurrentVersion;
+  const auto Version = VersionOverride.value_or(CurrentVersion);
   Writer.EmitRecord(PGOCtxProfileRecords::Version,
                     SmallVector<unsigned, 1>({Version}));
 }

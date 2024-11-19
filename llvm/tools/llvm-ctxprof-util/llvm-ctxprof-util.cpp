@@ -48,7 +48,8 @@ static cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
 
 // Save the bitstream profile from the JSON representation.
 Error convertFromJSON() {
-  auto BufOrError = MemoryBuffer::getFileOrSTDIN(InputFilename);
+  auto BufOrError =
+      MemoryBuffer::getFileOrSTDIN(InputFilename, /*IsText=*/true);
   if (!BufOrError)
     return createFileError(InputFilename, BufOrError.getError());
 

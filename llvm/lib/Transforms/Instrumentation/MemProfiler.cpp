@@ -680,7 +680,7 @@ bool MemProfiler::instrumentFunction(Function &F) {
 }
 
 static void addCallsiteMetadata(Instruction &I,
-                                std::vector<uint64_t> &InlinedCallStack,
+                                ArrayRef<uint64_t> InlinedCallStack,
                                 LLVMContext &Ctx) {
   I.setMetadata(LLVMContext::MD_callsite,
                 buildCallstackMetadata(InlinedCallStack, Ctx));
@@ -716,19 +716,22 @@ computeFullStackId(const std::vector<memprof::Frame> &CallStack) {
 }
 
 static AllocationType addCallStack(CallStackTrie &AllocTrie,
-                                   const AllocationInfo *AllocInfo) {
+                                   const AllocationInfo *AllocInfo,
+                                   uint64_t FullStackId) {
   SmallVector<uint64_t> StackIds;
   for (const auto &StackFrame : AllocInfo->CallStack)
     StackIds.push_back(computeStackId(StackFrame));
   auto AllocType = getAllocType(AllocInfo->Info.getTotalLifetimeAccessDensity(),
                                 AllocInfo->Info.getAllocCount(),
                                 AllocInfo->Info.getTotalLifetime());
-  uint64_t TotalSize = 0;
+  std::vector<ContextTotalSize> ContextSizeInfo;
   if (MemProfReportHintedSizes) {
-    TotalSize = AllocInfo->Info.getTotalSize();
+    auto TotalSize = AllocInfo->Info.getTotalSize();
     assert(TotalSize);
+    assert(FullStackId != 0);
+    ContextSizeInfo.push_back({FullStackId, TotalSize});
   }
-  AllocTrie.addCallStack(AllocType, StackIds, TotalSize);
+  AllocTrie.addCallStack(AllocType, StackIds, std::move(ContextSizeInfo));
   return AllocType;
 }
 
@@ -754,7 +757,7 @@ stackFrameIncludesInlinedCallStack(ArrayRef<Frame> ProfileCallStack,
   return InlCallStackIter == InlinedCallStack.end();
 }
 
-static bool isAllocationWithHotColdVariant(Function *Callee,
+static bool isAllocationWithHotColdVariant(const Function *Callee,
                                            const TargetLibraryInfo &TLI) {
   if (!Callee)
     return false;
@@ -794,6 +797,64 @@ struct AllocMatchInfo {
   AllocationType AllocType = AllocationType::None;
   bool Matched = false;
 };
+
+DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>>
+memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI) {
+  DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> Calls;
+
+  auto GetOffset = [](const DILocation *DIL) {
+    return (DIL->getLine() - DIL->getScope()->getSubprogram()->getLine()) &
+           0xffff;
+  };
+
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+
+    for (auto &BB : F) {
+      for (auto &I : BB) {
+        if (!isa<CallBase>(&I) || isa<IntrinsicInst>(&I))
+          continue;
+
+        auto *CB = dyn_cast<CallBase>(&I);
+        auto *CalledFunction = CB->getCalledFunction();
+        // Disregard indirect calls and intrinsics.
+        if (!CalledFunction || CalledFunction->isIntrinsic())
+          continue;
+
+        StringRef CalleeName = CalledFunction->getName();
+        bool IsAlloc = isAllocationWithHotColdVariant(CalledFunction, TLI);
+        for (const DILocation *DIL = I.getDebugLoc(); DIL;
+             DIL = DIL->getInlinedAt()) {
+          StringRef CallerName = DIL->getSubprogramLinkageName();
+          assert(!CallerName.empty() &&
+                 "Be sure to enable -fdebug-info-for-profiling");
+          uint64_t CallerGUID = IndexedMemProfRecord::getGUID(CallerName);
+          uint64_t CalleeGUID = IndexedMemProfRecord::getGUID(CalleeName);
+          // Pretend that we are calling a function with GUID == 0 if we are
+          // calling a heap allocation function.
+          if (IsAlloc)
+            CalleeGUID = 0;
+          LineLocation Loc = {GetOffset(DIL), DIL->getColumn()};
+          Calls[CallerGUID].emplace_back(Loc, CalleeGUID);
+          CalleeName = CallerName;
+          // FIXME: Recognize other frames that are associated with heap
+          // allocation functions.  It may be too early to reset IsAlloc to
+          // false here.
+          IsAlloc = false;
+        }
+      }
+    }
+  }
+
+  // Sort each call list by the source location.
+  for (auto &[CallerGUID, CallList] : Calls) {
+    llvm::sort(CallList);
+    CallList.erase(llvm::unique(CallList), CallList.end());
+  }
+
+  return Calls;
+}
 
 static void
 readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
@@ -905,7 +966,7 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
         continue;
       // List of call stack ids computed from the location hashes on debug
       // locations (leaf to inlined at root).
-      std::vector<uint64_t> InlinedCallStack;
+      SmallVector<uint64_t, 8> InlinedCallStack;
       // Was the leaf location found in one of the profile maps?
       bool LeafFound = false;
       // If leaf was found in a map, iterators pointing to its location in both
@@ -964,11 +1025,14 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
           if (stackFrameIncludesInlinedCallStack(AllocInfo->CallStack,
                                                  InlinedCallStack)) {
             NumOfMemProfMatchedAllocContexts++;
-            auto AllocType = addCallStack(AllocTrie, AllocInfo);
+            uint64_t FullStackId = 0;
+            if (ClPrintMemProfMatchInfo || MemProfReportHintedSizes)
+              FullStackId = computeFullStackId(AllocInfo->CallStack);
+            auto AllocType = addCallStack(AllocTrie, AllocInfo, FullStackId);
             // Record information about the allocation if match info printing
             // was requested.
             if (ClPrintMemProfMatchInfo) {
-              auto FullStackId = computeFullStackId(AllocInfo->CallStack);
+              assert(FullStackId != 0);
               FullStackIdToAllocMatchInfo[FullStackId] = {
                   AllocInfo->Info.getTotalSize(), AllocType, /*Matched=*/true};
             }

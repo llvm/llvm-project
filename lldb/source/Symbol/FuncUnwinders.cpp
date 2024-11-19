@@ -371,8 +371,8 @@ LazyBool FuncUnwinders::CompareUnwindPlansForIdenticalInitialPCLocation(
     UnwindPlan::RowSP b_first_row = b->GetRowAtIndex(0);
 
     if (a_first_row.get() && b_first_row.get()) {
-      UnwindPlan::Row::RegisterLocation a_pc_regloc;
-      UnwindPlan::Row::RegisterLocation b_pc_regloc;
+      UnwindPlan::Row::AbstractRegisterLocation a_pc_regloc;
+      UnwindPlan::Row::AbstractRegisterLocation b_pc_regloc;
 
       a_first_row->GetRegisterInfo(pc_reg_lldb_regnum, a_pc_regloc);
       b_first_row->GetRegisterInfo(pc_reg_lldb_regnum, b_pc_regloc);
