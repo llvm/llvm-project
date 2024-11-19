@@ -853,6 +853,8 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapNestedForallToThreadsImpl(
                                  "requires size-3 thread mapping");
   }
 
+  Block *parentBlock = target->getBlock();
+
   // Create an early zero index value for replacements.
   Location loc = target->getLoc();
   Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
@@ -872,7 +874,7 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapNestedForallToThreadsImpl(
 
   // Replace ids of dimensions known to be 1 by 0 to simplify the IR.
   // Here, the result of mapping determines the available mapping sizes.
-  replaceUnitMappingIdsHelper<ThreadIdOp>(rewriter, loc, target, zero,
+  replaceUnitMappingIdsHelper<ThreadIdOp>(rewriter, loc, parentBlock, zero,
                                           blockDims);
 
   return DiagnosedSilenceableFailure::success();
