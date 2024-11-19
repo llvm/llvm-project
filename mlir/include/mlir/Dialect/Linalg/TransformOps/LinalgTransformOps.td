@@ -41,13 +41,12 @@ def ApplyEraseUnnecessaryInputsPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
-def ApplyGeneralizeTensorPackUnpackPatternsOp
-    : Op<Transform_Dialect, "apply_patterns.linalg.generalize_pack_unpack",
+def ApplyDecomposeTensorPackUnpackPatternsOp
+    : Op<Transform_Dialect, "apply_patterns.linalg.decompose_pack_unpack",
          [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Collect patterns to generalize tensor.pack and tensor.unpack (i.e. to
-    decompose it into e.g. tensor::PadOp, linalg::transposeOp etc). Requires
-    all outer dims to be unit.
+    Collect patterns to decompose tensor.pack and tensor.unpack into e.g.
+    tensor::PadOp, linalg::transposeOp Ops. Requires all outer dims to be unit.
   }];
 
   let assemblyFormat = "attr-dict";
