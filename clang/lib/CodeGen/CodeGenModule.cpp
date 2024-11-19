@@ -1213,6 +1213,9 @@ void CodeGenModule::Release() {
       getModule().addModuleFlag(llvm::Module::Min,
                                 "sign-return-address-with-bkey", 1);
 
+    if (LangOpts.PointerAuthELFGOT)
+      getModule().addModuleFlag(llvm::Module::Min, "ptrauth-elf-got", 1);
+
     if (getTriple().isOSLinux()) {
       assert(getTriple().isOSBinFormatELF());
       using namespace llvm::ELF;
