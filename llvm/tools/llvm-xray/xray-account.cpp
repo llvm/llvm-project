@@ -466,12 +466,6 @@ static CommandRegistration Unused(&Account, []() -> Error {
     return make_error<StringError>(
         Twine("Cannot open file '") + AccountOutput + "' for writing.", EC);
 
-  const auto &FunctionAddresses = Map.getFunctionAddresses();
-  symbolize::LLVMSymbolizer Symbolizer;
-  llvm::xray::FuncIdConversionHelper FuncIdHelper(AccountInstrMap, Symbolizer,
-                                                  FunctionAddresses);
-  xray::LatencyAccountant FCA(FuncIdHelper, AccountRecursiveCallsOnly,
-                              AccountDeduceSiblingCalls);
   auto TraceOrErr = loadTraceFile(AccountInput);
   if (!TraceOrErr)
     return joinErrors(
@@ -481,6 +475,28 @@ static CommandRegistration Unused(&Account, []() -> Error {
         TraceOrErr.takeError());
 
   auto &T = *TraceOrErr;
+
+  auto &FMD = T.getFunctionMetadata();
+
+  std::for_each(FMD.mapping_begin(), FMD.mappping_end(), [](const auto& Mapping) {
+    outs() << "Function MD: " << Mapping.FuncId << " -> " << Mapping.Name << ", file=" << Mapping.File << "\n";
+  });
+
+  const auto &FunctionAddresses = Map.getFunctionAddresses();
+  symbolize::LLVMSymbolizer Symbolizer;
+  llvm::xray::FuncIdConversionHelper FuncIdHelper(AccountInstrMap, Symbolizer,
+                                                  FunctionAddresses, [&FMD](int32_t FuncId) -> const XRayFunctionInfo* {
+                                                    auto It =  std::find_if(FMD.mapping_begin(), FMD.mappping_end(), [FuncId](const auto&FInfo) {return FInfo.FuncId == FuncId;});
+                                                    if (It == FMD.mappping_end()) {
+                                                      return nullptr;
+                                                    }
+                                                    return &*It;
+                                                  });
+
+  xray::LatencyAccountant FCA(FuncIdHelper, AccountRecursiveCallsOnly,
+                              AccountDeduceSiblingCalls);
+
+
   for (const auto &Record : T) {
     if (FCA.accountRecord(Record))
       continue;

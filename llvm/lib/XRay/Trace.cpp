@@ -33,7 +33,8 @@ namespace {
 
 Error loadNaiveFormatLog(StringRef Data, bool IsLittleEndian,
                          XRayFileHeader &FileHeader,
-                         std::vector<XRayRecord> &Records) {
+                         std::vector<XRayRecord> &Records,
+                         FunctionMetadata &FuncMetadata) {
   if (Data.size() < 32)
     return make_error<StringError>(
         "Not enough bytes for an XRay log.",
@@ -53,6 +54,8 @@ Error loadNaiveFormatLog(StringRef Data, bool IsLittleEndian,
 
   size_t NumReservations = llvm::divideCeil(Reader.size() - OffsetPtr, 32U);
   Records.reserve(NumReservations);
+
+  llvm::SmallVector<std::string, 8> Filenames;
 
   // Each record after the header will be 32 bytes, in the following format:
   //
@@ -196,6 +199,146 @@ Error loadNaiveFormatLog(StringRef Data, bool IsLittleEndian,
             OffsetPtr);
 
       Record.CallArgs.push_back(Arg);
+      break;
+    }
+    case 2: { // Function info record.
+
+      XRayFunctionInfo Info;
+
+      auto FInfoBeginOffset = OffsetPtr;
+      PreReadOffset = OffsetPtr;
+      int32_t FuncId = Reader.getSigned(&OffsetPtr, sizeof(int32_t));
+      if (OffsetPtr == PreReadOffset)
+        return createStringError(
+            std::make_error_code(std::errc::executable_format_error),
+            "Failed reading function id field at offset %" PRId64 ".",
+            OffsetPtr);
+      Info.FuncId = FuncId;
+
+      PreReadOffset = OffsetPtr;
+      int32_t Line = Reader.getSigned(&OffsetPtr, sizeof(int32_t));
+      if (OffsetPtr == PreReadOffset)
+        return createStringError(
+            std::make_error_code(std::errc::executable_format_error),
+            "Failed reading function id field at offset %" PRId64 ".",
+            OffsetPtr);
+      Info.Line = Line;
+
+      PreReadOffset = OffsetPtr;
+      int16_t FileMDIdx = Reader.getSigned(&OffsetPtr, sizeof(int16_t));
+      if (OffsetPtr == PreReadOffset)
+        return createStringError(
+            std::make_error_code(std::errc::executable_format_error),
+            "Failed reading file metadata field at offset %" PRId64 ".",
+            OffsetPtr);
+      if (FileMDIdx < 0 || static_cast<size_t>(FileMDIdx) >= Filenames.size()) {
+        return createStringError(
+            std::make_error_code(std::errc::executable_format_error),
+            "File metadata does not exist at offset %" PRId64 ".",
+            OffsetPtr);
+      }
+      outs() << "MD index is: " << FileMDIdx  << "\n";
+      Info.File = Filenames[FileMDIdx];
+
+      PreReadOffset = OffsetPtr;
+      auto NameLen = Reader.getU16(&OffsetPtr);
+      if (OffsetPtr == PreReadOffset)
+        return createStringError(
+            std::make_error_code(std::errc::executable_format_error),
+            "Failed reading symbol length at offset %" PRId64 ".", OffsetPtr);
+
+
+      PreReadOffset = OffsetPtr;
+      auto FName = Reader.getFixedLengthString(&OffsetPtr, NameLen);
+      if (OffsetPtr == PreReadOffset)
+        return createStringError(
+            std::make_error_code(std::errc::executable_format_error),
+            "Failed reading symbol %" PRId64 ".", OffsetPtr);
+      Info.Name = FName;
+
+      FuncMetadata.AddFunctionInfo(Info);
+
+      llvm::outs() << "Read function: " << FuncId << ": " << FName << "\n";
+
+      // Skip to start of next 32 byte record. Subtract 8 to main to account
+      // for 8 byte advance after switch.
+      auto BytesUsedInChunk = (OffsetPtr - FInfoBeginOffset + 2) % 32;
+      auto BytesToSkip =
+          BytesUsedInChunk > 0 ? 32 - BytesUsedInChunk % 32 : 0;
+      OffsetPtr += BytesToSkip - 8;
+      break;
+    }
+    case 3: // Object info record
+    {
+      llvm_unreachable("Handling removed");
+//      XRayObjectInfo ObjInfo;
+//
+//      auto OInfoBeginOffset = OffsetPtr;
+//      PreReadOffset = OffsetPtr;
+//      int32_t ObjId = Reader.getSigned(&OffsetPtr, sizeof(int32_t));
+//      if (OffsetPtr == PreReadOffset)
+//        return createStringError(
+//            std::make_error_code(std::errc::executable_format_error),
+//            "Failed reading object id field at offset %" PRId64 ".",
+//            OffsetPtr);
+//
+//      ObjInfo.ObjId = ObjId;
+//
+//      PreReadOffset = OffsetPtr;
+//      auto NameLen = Reader.getU16(&OffsetPtr);
+//      if (OffsetPtr == PreReadOffset)
+//        return createStringError(
+//            std::make_error_code(std::errc::executable_format_error),
+//            "Failed reading symbol length at offset %" PRId64 ".", OffsetPtr);
+//
+//
+//      PreReadOffset = OffsetPtr;
+//      auto Filename = Reader.getFixedLengthString(&OffsetPtr, NameLen);
+//      if (OffsetPtr == PreReadOffset)
+//        return createStringError(
+//            std::make_error_code(std::errc::executable_format_error),
+//            "Failed reading symbol %" PRId64 ".", OffsetPtr);
+//      ObjInfo.Filename = Filename;
+//
+//      FuncMetadata.AddObjectInfo(ObjInfo);
+//
+//      llvm::outs() << "Read object: " << ObjId << ": " << Filename << "\n";
+//
+//      // Skip to start of next 32 byte record. Subtract 8 to main to account
+//      // for 8 byte advance after switch.
+//      auto BytesUsedInChunk = (OffsetPtr - OInfoBeginOffset + 2) % 32;
+//      auto BytesToSkip =
+//          BytesUsedInChunk > 0 ? 32 - BytesUsedInChunk % 32 : 0;
+//      OffsetPtr += BytesToSkip - 8;
+      break;
+    }
+    case 4: // Filename MD
+    {
+      auto FilenameBeginOffset = OffsetPtr;
+      PreReadOffset = OffsetPtr;
+      auto NameLen = Reader.getU16(&OffsetPtr);
+      if (OffsetPtr == PreReadOffset)
+        return createStringError(
+            std::make_error_code(std::errc::executable_format_error),
+            "Failed reading filename length at offset %" PRId64 ".", OffsetPtr);
+
+
+      PreReadOffset = OffsetPtr;
+      auto Filename = Reader.getFixedLengthString(&OffsetPtr, NameLen);
+      if (OffsetPtr == PreReadOffset)
+        return createStringError(
+            std::make_error_code(std::errc::executable_format_error),
+            "Failed reading symbol %" PRId64 ".", OffsetPtr);
+      Filenames.emplace_back(std::string(Filename));
+
+      llvm::outs() << "Read filename: " << Filename << "\n";
+
+      // Skip to start of next 32 byte record. Subtract 8 to main to account
+      // for 8 byte advance after switch.
+      auto BytesUsedInChunk = (OffsetPtr - FilenameBeginOffset + 2) % 32;
+      auto BytesToSkip =
+          BytesUsedInChunk > 0 ? 32 - BytesUsedInChunk % 32 : 0;
+      OffsetPtr += BytesToSkip - 8;
       break;
     }
     default:
@@ -443,8 +586,9 @@ Expected<Trace> llvm::xray::loadTrace(const DataExtractor &DE, bool Sort) {
   switch (Type) {
   case NAIVE_FORMAT:
     if (Version == 1 || Version == 2 || Version == 3) {
+      llvm::outs() << "Version is " << Version << "\n";
       if (auto E = loadNaiveFormatLog(DE.getData(), DE.isLittleEndian(),
-                                      T.FileHeader, T.Records))
+                                      T.FileHeader, T.Records, T.FuncMetadata))
         return std::move(E);
     } else {
       return make_error<StringError>(

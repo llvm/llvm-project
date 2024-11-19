@@ -39,9 +39,16 @@ int main() {
 #include <cstdio>
 #include <unistd.h>
 
+[[clang::xray_always_instrument]] void instrumented_in_dso2() {
+  printf("instrumented_in_dso2 called\n");
+}
+
+
 [[clang::xray_always_instrument]] void instrumented_in_dso() {
   printf("instrumented_in_dso called\n");
+  instrumented_in_dso2();
 }
+
 
 // ACCOUNT: funcid,count,min,median,90%ile,99%ile,max,sum,debug,function
 // ACCOUNT-NEXT: 1,1,{{.*}}

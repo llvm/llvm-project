@@ -15,14 +15,12 @@
 #define XRAY_INTERFACE_INTERNAL_H
 
 #include "sanitizer_common/sanitizer_platform.h"
+#include "sanitizer_common/sanitizer_symbolizer.h"
 #include "xray/xray_interface.h"
 #include <cstddef>
 #include <cstdint>
 #include <utility>
 
-namespace __sanitizer {
-struct DataInfo;
-}
 
 extern "C" {
 // The following functions have to be defined in assembler, on a per-platform
@@ -139,7 +137,7 @@ struct XRaySledMap {
   bool Loaded;
 };
 
-bool Symbolize(int32_t FuncId, DataInfo* DI);
+bool Symbolize(int32_t FuncId, AddressInfo* DI);
 
 bool patchFunctionEntry(bool Enable, uint32_t FuncId, const XRaySledEntry &Sled,
                         const XRayTrampolines &Trampolines, bool LogArgs);

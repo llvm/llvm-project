@@ -44,8 +44,9 @@ int main() {
   status = __xray_unpatch();
   printf("patching status: %d\n", static_cast<int32_t>(status));
   // CHECK-NEXT: patching status: 1
-  auto map = __xray_export_function_map();
-  printf("Entry: %d -> %x\n", map->FunctionId, map->Addr);
+  // FIXME
+//  auto map = __xray_export_function_map();
+//  printf("Entry: %d -> %x\n", map->FunctionId, map->Addr);
 }
 
 //--- testlib.cpp

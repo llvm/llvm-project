@@ -98,6 +98,18 @@ struct XRayRecord {
   std::string Data;
 };
 
+struct XRayFunctionInfo {
+  int32_t FuncId;
+  std::string Name;
+  int32_t Line;
+  std::string File;
+};
+
+struct XRayObjectInfo {
+  int32_t ObjId;
+  std::string Filename;
+};
+
 } // namespace xray
 } // namespace llvm
 

@@ -214,7 +214,8 @@ add_compiler_rt_component(xray)
 set(XRAY_COMMON_RUNTIME_OBJECT_LIBS
     RTSanitizerCommon
     RTSanitizerCommonLibc
-        RTSanitizerCommonSymbolizer)
+    RTSanitizerCommonSymbolizer
+    RTSanitizerCommonSymbolizerInternal)
 
 # XRay uses C++ standard library headers.
 if (TARGET cxx-headers OR HAVE_LIBCXX)

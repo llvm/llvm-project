@@ -19,7 +19,7 @@
 #include "llvm/ADT/Bitfields.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/XRay/XRayRecord.h"
+#include "llvm/XRay/Trace.h"
 
 namespace llvm {
 namespace xray {

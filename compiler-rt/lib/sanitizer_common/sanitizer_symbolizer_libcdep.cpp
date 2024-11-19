@@ -111,12 +111,18 @@ bool Symbolizer::SymbolizeData(uptr addr, DataInfo *info) {
   info->module = internal_strdup(module_name);
   info->module_offset = module_offset;
   info->module_arch = arch;
+
+  Report("Trying out %d tools\n", tools_.size());
   for (auto &tool : tools_) {
     SymbolizerScope sym_scope(this);
     if (tool.SymbolizeData(addr, info)) {
-      return true;
+      Report("Symbolize tool produced data: function %s from module %s in %s:%s\n", info->name, info->module, info->file, info->line);
+      //return true;
+    } else {
+      Report("Tool failed\n");
     }
   }
+  return true; // FIXME Debugging
   return false;
 }
 

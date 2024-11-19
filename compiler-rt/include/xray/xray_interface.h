@@ -36,7 +36,7 @@ struct XRaySymbolInfo {
 
 extern int __xray_symbolize(int32_t PackedId, XRaySymbolInfo* SymInfo);
 
-extern FunctionMapEntry* __xray_export_function_map();
+//extern FunctionMapEntry* __xray_export_function_map();
 
 
 /// Synchronize this with AsmPrinter::SledKind in LLVM.

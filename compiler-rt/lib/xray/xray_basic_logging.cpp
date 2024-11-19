@@ -29,7 +29,9 @@
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_dense_map.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
+#include "sanitizer_common/sanitizer_hash.h"
 #include "xray/xray_records.h"
+#include "xray/xray_allocator.h"
 #include "xray_recursion_guard.h"
 #include "xray_basic_flags.h"
 #include "xray_basic_logging.h"
@@ -39,12 +41,62 @@
 #include "xray_tsc.h"
 #include "xray_utils.h"
 
+#include <new>
+
+namespace {
+struct StringKey {
+  constexpr StringKey() {}
+  constexpr StringKey(const char *Key) : Key(Key), EmptyOrTombstone(1) {}
+
+  static constexpr StringKey Empty() {
+    StringKey Key;
+    Key.EmptyOrTombstone = __sanitizer::DenseMapInfo<char>::getEmptyKey();
+    return Key;
+  }
+
+  static constexpr StringKey Tombstone() {
+    StringKey Key;
+    Key.EmptyOrTombstone = __sanitizer::DenseMapInfo<char>::getTombstoneKey();
+    return Key;
+  }
+
+  const char *Key{nullptr};
+  mutable char EmptyOrTombstone{__sanitizer::DenseMapInfo<char>::getEmptyKey()};
+
+};
+} // namespace
+
+namespace __sanitizer {
+// Provide DenseMapInfo for chars.
+template <> struct DenseMapInfo<StringKey> {
+  static constexpr StringKey getEmptyKey() { return StringKey::Empty(); }
+  static constexpr StringKey getTombstoneKey() { return StringKey::Tombstone(); }
+  static unsigned getHashValue(const StringKey &Val) {
+    if (!Val.Key) {
+      return 0;
+    }
+    MurMur2HashBuilder Hash;
+    auto Len = internal_strlen(Val.Key);
+    for (unsigned I = 0; I < Len; I++) {
+      Hash.add(DenseMapInfo<char>::getHashValue(Val.Key[I]));
+    }
+    return Hash.get();
+  }
+
+  static bool isEqual(const StringKey &LHS, const StringKey &RHS) {
+    if (!LHS.Key || !RHS.Key) {
+      return !LHS.Key && !RHS.Key;
+    }
+    return __sanitizer::internal_strcmp(LHS.Key, RHS.Key) ==  0;
+  }
+};
+} // namespace __sanitizer
+
 namespace __xray {
 
 static SpinMutex LogMutex;
 
 namespace {
-
 
 // We use elements of this type to record the entry TSC of every function ID we
 // see as we're tracing a particular thread's execution.
@@ -89,6 +141,136 @@ static atomic_uint64_t TicksPerSec{0};
 static atomic_uint64_t CycleFrequency{NanosecondsPerSecond};
 
 
+struct FunctionRecordBuffer {
+
+  // First entry is buffer idx, second states if this entry has been flushed.
+  using FuncMapEntry = bool;//detail::DenseMapPair<int32_t, bool>;
+
+  //  DenseMap<int32_t, DataInfo> SymInfo;
+
+  // Using this like a set to track which function have been symbolized.
+  DenseMap<int32_t, FuncMapEntry> FuncMapping;
+
+  using MappedAddressInfo = std::pair<int, AddressInfo>;
+
+  MappedAddressInfo * AddrInfoBuf{nullptr};
+  unsigned Size{0};
+
+  DenseMap<StringKey, int32_t> FileMDMap;
+  unsigned FileMDCount{0};
+
+  DenseMap<int32_t, bool> ObjWrittenMap;
+
+  static constexpr unsigned BufferSize = 1024;
+
+  LogWriter* Writer;
+
+  FunctionRecordBuffer(LogWriter* LW)  XRAY_NEVER_INSTRUMENT  : Writer(LW) {
+    AddrInfoBuf = allocateBuffer<MappedAddressInfo>(BufferSize);
+  }
+
+  ~FunctionRecordBuffer()  XRAY_NEVER_INSTRUMENT  {
+    Flush();
+    deallocateBuffer<MappedAddressInfo>(AddrInfoBuf, BufferSize);
+  }
+
+  static FunctionRecordBuffer& Create(LogWriter* LW)  XRAY_NEVER_INSTRUMENT  {
+    auto *FRB = allocate<FunctionRecordBuffer>();
+    new (FRB) FunctionRecordBuffer(LW);
+    return *FRB;
+  }
+
+  void Destroy()  XRAY_NEVER_INSTRUMENT {
+    this->~FunctionRecordBuffer();
+    deallocate(this);
+  }
+
+  void StoreFunctionRecord(int32_t FuncId) XRAY_NEVER_INSTRUMENT {
+
+    auto& Symbolized = FuncMapping[FuncId];
+    if (!Symbolized) {
+      if (Size >= BufferSize) {
+        Flush();
+      }
+      auto&MAI = AddrInfoBuf[Size];
+      if (!Symbolize(FuncId, &MAI.second)) {
+        Report("Unable to symbolize function %d\n", FuncId);
+        return;
+      }
+      MAI.first = FuncId;
+      Symbolized = true;
+      Size++;
+    }
+
+
+  }
+
+  void Flush()  XRAY_NEVER_INSTRUMENT  {
+    if (Verbosity())
+      Report("Flushing function record buffer\n");
+    for (unsigned I = 0; I < Size; I++) {
+      auto& MDI = AddrInfoBuf[I];
+      auto Id = MDI.first;
+      AddressInfo& AI = MDI.second;
+
+      int FileMDIdx = 0;
+
+      // TODO: Does this work with strings?
+      if (auto *It = FileMDMap.find(StringKey(AI.file)); It) {
+        FileMDIdx = It->second;
+      } else {
+        XRayFileMD FMD;
+        FMD.FilenameLen = static_cast<int16_t>(internal_strlen(AI.file));
+        Writer->WriteAll(reinterpret_cast<char *>(&FMD),
+                         reinterpret_cast<char *>(&FMD.FilenameBuffer));
+        Writer->WriteAll(AI.file, AI.file + FMD.FilenameLen);
+        constexpr int FilenameBufferSize = sizeof(FMD.FilenameBuffer);
+        auto NumPaddingBytes = FMD.FilenameLen < FilenameBufferSize ? FilenameBufferSize - FMD.FilenameLen : 32 - (FMD.FilenameLen - FilenameBufferSize) % 32;
+        Writer->WritePadding(NumPaddingBytes);
+        FileMDMap[AI.file] = FileMDCount;
+        FileMDIdx = FileMDCount;
+        FileMDCount++;
+      }
+
+      XRayFunctionMD FIR;
+      FIR.FuncId = Id;
+      FIR.FileMDIdx = FileMDIdx;
+      FIR.Line = AI.line;
+      FIR.NameLen = static_cast<int16_t>(internal_strlen(AI.function));
+      // The padding bytes are used for string storage.
+      Writer->WriteAll(reinterpret_cast<char *>(&FIR),
+                       reinterpret_cast<char *>(&FIR.NameBuffer));
+      Writer->WriteAll(AI.function, AI.function + FIR.NameLen);
+      constexpr int NameBufferSize = sizeof(FIR.NameBuffer);
+      auto NumPaddingBytes = FIR.NameLen < NameBufferSize ? NameBufferSize - FIR.NameLen : 32 - (FIR.NameLen - NameBufferSize) % 32;
+      Report("Writing string %s (length %d) for ID %d, adding padding bytes: %d\n",
+          AI.function, FIR.NameLen, FIR.FuncId, NumPaddingBytes);
+      Writer->WritePadding(NumPaddingBytes);
+
+//      auto ObjId = UnpackId(Id).first;
+//      auto& ObjWritten = ObjWrittenMap[ObjId];
+//      if (!ObjWritten) {
+//        XRayObjectInfoRecord OIR;
+//        OIR.ObjId = ObjId;
+//        const char* Filename = AI.module;
+//        OIR.FilenameLen = static_cast<int16_t>(internal_strlen(Filename));
+//        Writer->WriteAll(reinterpret_cast<char *>(&OIR),
+//                         reinterpret_cast<char *>(&OIR.FilenameBuffer));
+//        Writer->WriteAll(Filename, Filename + OIR.FilenameLen);
+//        NumPaddingBytes = OIR.FilenameLen < 24 ? 24 - OIR.FilenameLen : 32 - (OIR.FilenameLen - 24) % 32;
+//        Writer->WritePadding(NumPaddingBytes);
+//        ObjWritten = true;
+//      }
+    }
+    Size = 0;
+  }
+};
+
+
+struct GlobalLoggingData {
+  LogWriter* Writer;
+  FunctionRecordBuffer* RecordBuffer;
+};
 
 static LogWriter *getLog() XRAY_NEVER_INSTRUMENT {
   LogWriter* LW = LogWriter::Open();
@@ -120,11 +302,17 @@ static LogWriter *getLog() XRAY_NEVER_INSTRUMENT {
   return LW;
 }
 
-static LogWriter *getGlobalLog() XRAY_NEVER_INSTRUMENT {
+static GlobalLoggingData createLoggingData() XRAY_NEVER_INSTRUMENT {
+  auto* LW = getLog();
+  auto* FRB = &FunctionRecordBuffer::Create(LW);
+  return {LW, FRB};
+}
+
+static GlobalLoggingData &getGlobalData() XRAY_NEVER_INSTRUMENT {
   static pthread_once_t OnceInit = PTHREAD_ONCE_INIT;
-  static LogWriter *LW = nullptr;
-  pthread_once(&OnceInit, +[] { LW = getLog(); });
-  return LW;
+  static GlobalLoggingData LD;
+  pthread_once(&OnceInit, +[] { LD = createLoggingData(); });
+  return LD;
 }
 
 static ThreadLocalData &getThreadLocalData() XRAY_NEVER_INSTRUMENT {
@@ -136,7 +324,7 @@ static ThreadLocalData &getThreadLocalData() XRAY_NEVER_INSTRUMENT {
       return false;
     }
     pthread_setspecific(PThreadKey, &TLD);
-    TLD.LogWriter = getGlobalLog();
+    TLD.LogWriter = getGlobalData().Writer;
     TLD.InMemoryBuffer = reinterpret_cast<XRayRecord *>(
         InternalAlloc(sizeof(XRayRecord) * GlobalOptions.ThreadBufferSize,
                       nullptr, alignof(XRayRecord)));
@@ -160,45 +348,14 @@ static ThreadLocalData &getThreadLocalData() XRAY_NEVER_INSTRUMENT {
   return TLD;
 }
 
-struct FunctionRecordLogger {
-  DenseMap<int32_t, DataInfo> SymInfo;
-
-  static FunctionRecordLogger& Get() {
-    static FunctionRecordLogger Instance;
-    return Instance;
-  }
-
-  static void LogFunctionRecord(int32_t FuncId) {
-    auto& Instance = Get();
-    if (Instance.SymInfo.contains(FuncId)) {
-      return;
-    }
-
-    auto& Entry = Instance.SymInfo[FuncId];
-    Symbolize(FuncId, &Entry);
-    // TODO: handle error
-
-  }
-
-  static void Flush(LogWriter* Writer) {
-    auto& Instance = Get();
-    Instance.SymInfo.forEach([&](auto& Entry) {
-      XRayFunctionInfoRecord FIR;
-      auto& Id = Entry.getFirst();
-      DataInfo& DI = Entry.getSecond();
-      FIR.FuncId = Id;
-      FIR.NameLen = internal_strlen(DI.name);
-      FIR.DemangledNameLen = internal_strlen(DI.name);
-    });
-    Writer->WriteAll();
-  }
-};
 
 template <class RDTSC>
 void InMemoryRawLog(int32_t FuncId, XRayEntryType Type,
                     RDTSC ReadTSC) XRAY_NEVER_INSTRUMENT {
   auto &TLD = getThreadLocalData();
-  LogWriter *LW = getGlobalLog();
+  auto &GD = getGlobalData();
+
+  LogWriter *LW = GD.Writer;
   if (LW == nullptr)
     return;
 
@@ -270,6 +427,8 @@ void InMemoryRawLog(int32_t FuncId, XRayEntryType Type,
     break;
   }
 
+  // Add function record
+  GD.RecordBuffer->StoreFunctionRecord(FuncId);
 
   // First determine whether the delta between the function's enter record and
   // the exit record is higher than the threshold.
@@ -299,7 +458,7 @@ void InMemoryRawLogWithArg(int32_t FuncId, XRayEntryType Type, uint64_t Arg1,
   auto FirstEntry =
       reinterpret_cast<XRayArgPayload *>(TLD.InMemoryBuffer);
   const auto &BuffLen = TLD.BufferSize;
-  LogWriter *LW = getGlobalLog();
+  LogWriter *LW = getGlobalData().Writer;
   if (LW == nullptr)
     return;
 
@@ -408,6 +567,7 @@ static void TLDDestructor(void *P) XRAY_NEVER_INSTRUMENT {
   // sync instead and hope that the pending writes are flushed as the
   // thread exits.
   TLD.LogWriter->Flush();
+  getGlobalData().RecordBuffer->Flush();
 }
 
 XRayLogInitStatus basicLoggingInit(UNUSED size_t BufferSize,
@@ -489,6 +649,11 @@ XRayLogInitStatus basicLoggingFinalize() XRAY_NEVER_INSTRUMENT {
 
   // Nothing really to do aside from marking state of the global to be
   // uninitialized.
+
+  if (Verbosity())
+    Report("Finalizing basic mode\n");
+
+  getGlobalData().RecordBuffer->Flush();
 
   return XRayLogInitStatus::XRAY_LOG_FINALIZED;
 }
