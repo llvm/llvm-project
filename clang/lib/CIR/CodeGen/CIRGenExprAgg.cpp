@@ -1708,13 +1708,18 @@ void CIRGenFunction::emitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
     }
   }
 
-  builder.createCopy(DestPtr.getPointer(), SrcPtr.getPointer(), isVolatile);
+  auto copyOp =
+      builder.createCopy(DestPtr.getPointer(), SrcPtr.getPointer(), isVolatile);
 
   // Determine the metadata to describe the position of any padding in this
   // memcpy, as well as the TBAA tags for the members of the struct, in case
   // the optimizer wishes to expand it in to scalar memory operations.
-  if (CGM.getCodeGenOpts().NewStructPathTBAA || cir::MissingFeatures::tbaa())
-    llvm_unreachable("TBAA is NYI");
+  assert(!cir::MissingFeatures::tbaa_struct() && "tbaa.struct NYI");
+  if (CGM.getCodeGenOpts().NewStructPathTBAA) {
+    TBAAAccessInfo TBAAInfo = CGM.mergeTBAAInfoForMemoryTransfer(
+        Dest.getTBAAInfo(), Src.getTBAAInfo());
+    CGM.decorateOperationWithTBAA(copyOp, TBAAInfo);
+  }
 }
 
 AggValueSlot::Overlap_t

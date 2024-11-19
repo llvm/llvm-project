@@ -158,7 +158,7 @@ public:
     llvm_unreachable("Zero initializer for given type is NYI");
   }
 
-  mlir::Value createLoad(mlir::Location loc, mlir::Value ptr,
+  cir::LoadOp createLoad(mlir::Location loc, mlir::Value ptr,
                          bool isVolatile = false, uint64_t alignment = 0) {
     mlir::IntegerAttr intAttr;
     if (alignment)
@@ -167,7 +167,9 @@ public:
 
     return create<cir::LoadOp>(loc, ptr, /*isDeref=*/false, isVolatile,
                                /*alignment=*/intAttr,
-                               /*mem_order=*/cir::MemOrderAttr{});
+                               /*mem_order=*/
+                               cir::MemOrderAttr{},
+                               /*tbaa=*/mlir::ArrayAttr{});
   }
 
   mlir::Value createAlignedLoad(mlir::Location loc, mlir::Value ptr,
@@ -353,7 +355,8 @@ public:
     if (mlir::cast<cir::PointerType>(dst.getType()).getPointee() !=
         val.getType())
       dst = createPtrBitcast(dst, val.getType());
-    return create<cir::StoreOp>(loc, val, dst, _volatile, align, order);
+    return create<cir::StoreOp>(loc, val, dst, _volatile, align, order,
+                                /*tbaa=*/mlir::ArrayAttr{});
   }
 
   mlir::Value createAlloca(mlir::Location loc, cir::PointerType addrType,
@@ -400,7 +403,8 @@ public:
   /// Create a copy with inferred length.
   cir::CopyOp createCopy(mlir::Value dst, mlir::Value src,
                          bool isVolatile = false) {
-    return create<cir::CopyOp>(dst.getLoc(), dst, src, isVolatile);
+    return create<cir::CopyOp>(dst.getLoc(), dst, src, isVolatile,
+                               /*tbaa=*/mlir::ArrayAttr{});
   }
 
   cir::MemCpyOp createMemCpy(mlir::Location loc, mlir::Value dst,

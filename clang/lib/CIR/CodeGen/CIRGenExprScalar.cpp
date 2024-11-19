@@ -1604,10 +1604,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     Address DestAddr =
         SourceAddr.withPointer(DestPtr).withElementType(DestElemTy);
     LValue DestLVal = CGF.makeAddrLValue(DestAddr, DestTy);
-
-    if (Kind == CK_LValueToRValueBitCast)
-      assert(!cir::MissingFeatures::tbaa());
-
+    DestLVal.setTBAAInfo(TBAAAccessInfo::getMayAliasInfo());
     return emitLoadOfLValue(DestLVal, CE->getExprLoc());
   }
 

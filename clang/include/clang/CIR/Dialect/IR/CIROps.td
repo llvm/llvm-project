@@ -587,7 +587,8 @@ def LoadOp : CIR_Op<"load", [
                            [MemRead]>:$addr, UnitAttr:$isDeref,
                        UnitAttr:$is_volatile,
                        OptionalAttr<I64Attr>:$alignment,
-                       OptionalAttr<MemOrder>:$mem_order
+                       OptionalAttr<MemOrder>:$mem_order,
+                       OptionalAttr<ArrayAttr>:$tbaa
                        );
   let results = (outs CIR_AnyType:$result);
 
@@ -597,6 +598,7 @@ def LoadOp : CIR_Op<"load", [
     (`align` `(` $alignment^ `)`)?
     (`atomic` `(` $mem_order^ `)`)?
     $addr `:` qualified(type($addr)) `,` type($result) attr-dict
+    (`tbaa` `(` $tbaa^ `)`)?
   }];
 
   let extraClassDeclaration = [{
@@ -654,13 +656,15 @@ def StoreOp : CIR_Op<"store", [
                            [MemWrite]>:$addr,
                        UnitAttr:$is_volatile,
                        OptionalAttr<I64Attr>:$alignment,
-                       OptionalAttr<MemOrder>:$mem_order);
+                       OptionalAttr<MemOrder>:$mem_order,
+                       OptionalAttr<ArrayAttr>:$tbaa);
 
   let assemblyFormat = [{
     (`volatile` $is_volatile^)?
     (`align` `(` $alignment^ `)`)?
     (`atomic` `(` $mem_order^ `)`)?
     $value `,` $addr attr-dict `:` type($value) `,` qualified(type($addr))
+    (`tbaa` `(` $tbaa^ `)`)?
   }];
 
   let extraClassDeclaration = [{
@@ -3980,7 +3984,8 @@ def CopyOp : CIR_Op<"copy",
               DeclareOpInterfaceMethods<PromotableMemOpInterface>]> {
   let arguments = (ins Arg<CIR_PointerType, "", [MemWrite]>:$dst,
                        Arg<CIR_PointerType, "", [MemRead]>:$src,
-                       UnitAttr:$is_volatile);
+                       UnitAttr:$is_volatile,
+                       OptionalAttr<ArrayAttr>:$tbaa);
   let summary = "Copies contents from a CIR pointer to another";
   let description = [{
     Given two CIR pointers, `src` and `dst`, `cir.copy` will copy the memory
@@ -3999,7 +4004,9 @@ def CopyOp : CIR_Op<"copy",
   }];
 
   let assemblyFormat = [{$src `to` $dst (`volatile` $is_volatile^)?
-                        attr-dict `:` qualified(type($dst)) }];
+                        attr-dict `:` qualified(type($dst))
+                        (`tbaa` `(` $tbaa^ `)`)?
+  }];
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{

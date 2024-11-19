@@ -751,8 +751,14 @@ void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
   assert(!cir::MissingFeatures::addressSpace());
   VTableField = builder.createElementBitCast(loc, VTableField,
                                              VTableAddressPoint.getType());
-  builder.createStore(loc, VTableAddressPoint, VTableField);
-  assert(!cir::MissingFeatures::tbaa());
+  auto storeOp = builder.createStore(loc, VTableAddressPoint, VTableField);
+  TBAAAccessInfo TBAAInfo =
+      CGM.getTBAAVTablePtrAccessInfo(VTableAddressPoint.getType());
+  CGM.decorateOperationWithTBAA(storeOp, TBAAInfo);
+  if (CGM.getCodeGenOpts().OptimizationLevel > 0 &&
+      CGM.getCodeGenOpts().StrictVTablePointers) {
+    assert(!cir::MissingFeatures::createInvariantGroup());
+  }
 }
 
 void CIRGenFunction::initializeVTablePointers(mlir::Location loc,
@@ -1659,14 +1665,16 @@ mlir::Value CIRGenFunction::getVTablePtr(mlir::Location Loc, Address This,
 
 Address CIRGenFunction::emitCXXMemberDataPointerAddress(
     const Expr *E, Address base, mlir::Value memberPtr,
-    const MemberPointerType *memberPtrType, LValueBaseInfo *baseInfo) {
+    const MemberPointerType *memberPtrType, LValueBaseInfo *baseInfo,
+    TBAAAccessInfo *tbaaInfo) {
   assert(!cir::MissingFeatures::cxxABI());
 
   auto op = builder.createGetIndirectMember(getLoc(E->getSourceRange()),
                                             base.getPointer(), memberPtr);
 
   QualType memberType = memberPtrType->getPointeeType();
-  CharUnits memberAlign = CGM.getNaturalTypeAlignment(memberType, baseInfo);
+  CharUnits memberAlign =
+      CGM.getNaturalTypeAlignment(memberType, baseInfo, tbaaInfo);
   memberAlign = CGM.getDynamicOffsetAlignment(
       base.getAlignment(), memberPtrType->getClass()->getAsCXXRecordDecl(),
       memberAlign);

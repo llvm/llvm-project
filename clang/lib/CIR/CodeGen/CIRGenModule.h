@@ -39,6 +39,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
@@ -506,9 +507,51 @@ public:
     return VTables.getItaniumVTableContext();
   }
 
-  /// getTBAAAccessInfo - Gte TBAA information that describes an access to an
-  /// object of the given type.
+  /// Get attribute used to describe accesses to objects of
+  /// the given type.
+  cir::TBAAAttr getTBAATypeInfo(QualType QTy);
+
+  /// Get TBAA information that describes an access to an object of the given
+  /// type.
   TBAAAccessInfo getTBAAAccessInfo(QualType accessType);
+
+  /// Get the TBAA information that describes an access to a virtual table
+  /// pointer.
+  TBAAAccessInfo getTBAAVTablePtrAccessInfo(mlir::Type VTablePtrType);
+
+  mlir::ArrayAttr getTBAAStructInfo(QualType QTy);
+
+  /// Get metadata that describes the given base access type. Return null if the
+  /// type is not suitable for use in TBAA access tags.
+  cir::TBAAAttr getTBAABaseTypeInfo(QualType QTy);
+
+  mlir::ArrayAttr getTBAAAccessTagInfo(TBAAAccessInfo tbaaInfo);
+
+  /// Get merged TBAA information for the purposes of type casts.
+  TBAAAccessInfo mergeTBAAInfoForCast(TBAAAccessInfo SourceInfo,
+                                      TBAAAccessInfo TargetInfo);
+
+  /// Get merged TBAA information for the purposes of conditional operator.
+  TBAAAccessInfo mergeTBAAInfoForConditionalOperator(TBAAAccessInfo InfoA,
+                                                     TBAAAccessInfo InfoB);
+
+  /// Get merged TBAA information for the purposes of memory transfer calls.
+  TBAAAccessInfo mergeTBAAInfoForMemoryTransfer(TBAAAccessInfo DestInfo,
+                                                TBAAAccessInfo SrcInfo);
+
+  /// Get TBAA information for an access with a given base lvalue.
+  TBAAAccessInfo getTBAAInfoForSubobject(LValue Base, QualType AccessType) {
+    if (Base.getTBAAInfo().isMayAlias())
+      return TBAAAccessInfo::getMayAliasInfo();
+    return getTBAAAccessInfo(AccessType);
+  }
+
+  template <typename Op>
+  void decorateOperationWithTBAA(Op op, TBAAAccessInfo tbaaInfo) {
+    if (auto tag = getTBAAAccessTagInfo(tbaaInfo)) {
+      op.setTbaaAttr(tag);
+    }
+  }
 
   /// This contains all the decls which have definitions but which are deferred
   /// for emission and therefore should only be output if they are actually

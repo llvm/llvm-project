@@ -327,7 +327,7 @@ void CIRGenFunction::emitAutoVarInit(const AutoVarEmission &emission) {
   // its removal/optimization to the CIR lowering.
   if (!constant || isa<CXXTemporaryObjectExpr>(Init)) {
     initializeWhatIsTechnicallyUninitialized(Loc);
-    LValue lv = LValue::makeAddr(Loc, type, AlignmentSource::Decl);
+    LValue lv = makeAddrLValue(Loc, type, AlignmentSource::Decl);
     emitExprAsInit(Init, &D, lv);
     // In case lv has uses it means we indeed initialized something
     // out of it while trying to build the expression, mark it as such.

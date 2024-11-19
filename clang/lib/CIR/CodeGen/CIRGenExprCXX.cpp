@@ -218,9 +218,9 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
   LValue This;
   if (IsArrow) {
     LValueBaseInfo BaseInfo;
-    assert(!cir::MissingFeatures::tbaa());
-    Address ThisValue = emitPointerWithAlignment(Base, &BaseInfo);
-    This = makeAddrLValue(ThisValue, Base->getType(), BaseInfo);
+    TBAAAccessInfo TBAAInfo;
+    Address ThisValue = emitPointerWithAlignment(Base, &BaseInfo, &TBAAInfo);
+    This = makeAddrLValue(ThisValue, Base->getType(), BaseInfo, TBAAInfo);
   } else {
     This = emitLValue(Base);
   }

@@ -886,7 +886,8 @@ public:
   LValue
   emitLoadOfReferenceLValue(Address RefAddr, mlir::Location Loc, QualType RefTy,
                             AlignmentSource Source = AlignmentSource::Type) {
-    LValue RefLVal = makeAddrLValue(RefAddr, RefTy, LValueBaseInfo(Source));
+    LValue RefLVal = makeAddrLValue(RefAddr, RefTy, LValueBaseInfo(Source),
+                                    CGM.getTBAAAccessInfo(RefTy));
     return emitLoadOfReferenceLValue(RefLVal, Loc);
   }
   void emitImplicitAssignmentOperatorBody(FunctionArgList &Args);
@@ -909,7 +910,8 @@ public:
   /// TODO: Add TBAAAccessInfo
   Address emitCXXMemberDataPointerAddress(
       const Expr *E, Address base, mlir::Value memberPtr,
-      const MemberPointerType *memberPtrType, LValueBaseInfo *baseInfo);
+      const MemberPointerType *memberPtrType, LValueBaseInfo *baseInfo,
+      TBAAAccessInfo *tbaaInfo);
 
   /// Generate a call of the given function, expecting the given
   /// result type, and using the given argument list which specifies both the
@@ -1649,9 +1651,8 @@ public:
                                             QualType DstTy, SourceLocation Loc);
 
   LValue makeAddrLValue(Address addr, clang::QualType ty,
-                        LValueBaseInfo baseInfo) {
-    return LValue::makeAddr(addr, ty, getContext(), baseInfo,
-                            CGM.getTBAAAccessInfo(ty));
+                        LValueBaseInfo baseInfo, TBAAAccessInfo tbaaInfo) {
+    return LValue::makeAddr(addr, ty, getContext(), baseInfo, tbaaInfo);
   }
 
   LValue makeAddrLValue(Address addr, clang::QualType ty,
@@ -1744,7 +1745,8 @@ public:
 
   /// TODO(cir): add TBAAAccessInfo
   Address emitArrayToPointerDecay(const Expr *Array,
-                                  LValueBaseInfo *BaseInfo = nullptr);
+                                  LValueBaseInfo *BaseInfo = nullptr,
+                                  TBAAAccessInfo *TBAAInfo = nullptr);
 
   /// Emits the code necessary to evaluate an arbitrary expression into the
   /// given memory location.

@@ -205,6 +205,11 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
                                                 /*line=*/0,
                                                 /*col=*/0));
   }
+  if (langOpts.Sanitize.has(SanitizerKind::Thread) ||
+      (!codeGenOpts.RelaxedAliasing && codeGenOpts.OptimizationLevel > 0)) {
+    tbaa.reset(new CIRGenTBAA(&context, astctx, genTypes, theModule,
+                              codeGenOpts, langOpts));
+  }
 }
 
 CIRGenModule::~CIRGenModule() {}
@@ -258,6 +263,9 @@ CharUnits CIRGenModule::getNaturalTypeAlignment(QualType T,
                                                 LValueBaseInfo *BaseInfo,
                                                 TBAAAccessInfo *tbaaInfo,
                                                 bool forPointeeType) {
+  if (tbaaInfo) {
+    *tbaaInfo = getTBAAAccessInfo(T);
+  }
   // FIXME: This duplicates logic in ASTContext::getTypeAlignIfKnown. But
   // that doesn't return the information we need to compute BaseInfo.
 
@@ -3513,8 +3521,69 @@ void CIRGenModule::emitGlobalAnnotations() {
   deferredAnnotations.clear();
 }
 
+cir::TBAAAttr CIRGenModule::getTBAATypeInfo(QualType QTy) {
+  if (!tbaa) {
+    return nullptr;
+  }
+  return tbaa->getTypeInfo(QTy);
+}
+
 TBAAAccessInfo CIRGenModule::getTBAAAccessInfo(QualType accessType) {
+  if (!tbaa) {
+    return TBAAAccessInfo();
+  }
+  if (getLangOpts().CUDAIsDevice) {
+    llvm_unreachable("NYI");
+  }
+  return tbaa->getAccessInfo(accessType);
+}
+
+TBAAAccessInfo
+CIRGenModule::getTBAAVTablePtrAccessInfo(mlir::Type VTablePtrType) {
   if (!tbaa)
     return TBAAAccessInfo();
-  llvm_unreachable("NYI");
+  return tbaa->getVTablePtrAccessInfo(VTablePtrType);
+}
+
+mlir::ArrayAttr CIRGenModule::getTBAAStructInfo(QualType QTy) {
+  if (!tbaa)
+    return nullptr;
+  return tbaa->getTBAAStructInfo(QTy);
+}
+
+cir::TBAAAttr CIRGenModule::getTBAABaseTypeInfo(QualType QTy) {
+  if (!tbaa) {
+    return nullptr;
+  }
+  return tbaa->getBaseTypeInfo(QTy);
+}
+
+mlir::ArrayAttr CIRGenModule::getTBAAAccessTagInfo(TBAAAccessInfo tbaaInfo) {
+  if (!tbaa) {
+    return nullptr;
+  }
+  return tbaa->getAccessTagInfo(tbaaInfo);
+}
+
+TBAAAccessInfo CIRGenModule::mergeTBAAInfoForCast(TBAAAccessInfo SourceInfo,
+                                                  TBAAAccessInfo TargetInfo) {
+  if (!tbaa)
+    return TBAAAccessInfo();
+  return tbaa->mergeTBAAInfoForCast(SourceInfo, TargetInfo);
+}
+
+TBAAAccessInfo
+CIRGenModule::mergeTBAAInfoForConditionalOperator(TBAAAccessInfo InfoA,
+                                                  TBAAAccessInfo InfoB) {
+  if (!tbaa)
+    return TBAAAccessInfo();
+  return tbaa->mergeTBAAInfoForConditionalOperator(InfoA, InfoB);
+}
+
+TBAAAccessInfo
+CIRGenModule::mergeTBAAInfoForMemoryTransfer(TBAAAccessInfo DestInfo,
+                                             TBAAAccessInfo SrcInfo) {
+  if (!tbaa)
+    return TBAAAccessInfo();
+  return tbaa->mergeTBAAInfoForConditionalOperator(DestInfo, SrcInfo);
 }

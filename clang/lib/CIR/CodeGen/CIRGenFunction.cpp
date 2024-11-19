@@ -824,14 +824,13 @@ LValue CIRGenFunction::MakeNaturalAlignPointeeAddrLValue(mlir::Value val,
   TBAAAccessInfo tbaaInfo;
   CharUnits align = CGM.getNaturalTypeAlignment(ty, &baseInfo, &tbaaInfo,
                                                 /* for PointeeType= */ true);
-  return makeAddrLValue(Address(val, align), ty, baseInfo);
+  return makeAddrLValue(Address(val, align), ty, baseInfo, tbaaInfo);
 }
 
 LValue CIRGenFunction::MakeNaturalAlignAddrLValue(mlir::Value val,
                                                   QualType ty) {
   LValueBaseInfo baseInfo;
   TBAAAccessInfo tbaaInfo;
-  assert(!cir::MissingFeatures::tbaa());
   CharUnits alignment = CGM.getNaturalTypeAlignment(ty, &baseInfo, &tbaaInfo);
   Address addr(val, getTypes().convertTypeForMem(ty), alignment);
   return LValue::makeAddr(addr, ty, getContext(), baseInfo, tbaaInfo);

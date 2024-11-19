@@ -832,7 +832,7 @@ public:
                    addr.getAlignment());
   }
 
-  mlir::Value createLoad(mlir::Location loc, Address addr,
+  cir::LoadOp createLoad(mlir::Location loc, Address addr,
                          bool isVolatile = false) {
     auto ptrTy = mlir::dyn_cast<cir::PointerType>(addr.getPointer().getType());
     if (addr.getElementType() != ptrTy.getPointee())
@@ -842,7 +842,7 @@ public:
     return create<cir::LoadOp>(
         loc, addr.getElementType(), addr.getPointer(), /*isDeref=*/false,
         /*is_volatile=*/isVolatile, /*alignment=*/mlir::IntegerAttr{},
-        /*mem_order=*/cir::MemOrderAttr{});
+        /*mem_order=*/cir::MemOrderAttr{}, /*tbaa=*/mlir::ArrayAttr{});
   }
 
   mlir::Value createAlignedLoad(mlir::Location loc, mlir::Type ty,

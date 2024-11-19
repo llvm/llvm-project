@@ -585,7 +585,7 @@ static void emitAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__atomic_load:
   case AtomicExpr::AO__scoped_atomic_load_n:
   case AtomicExpr::AO__scoped_atomic_load: {
-    auto *load = builder.createLoad(loc, Ptr).getDefiningOp();
+    auto load = builder.createLoad(loc, Ptr);
     // FIXME(cir): add scope information.
     assert(!cir::MissingFeatures::syncScopeID());
     load->setAttr("mem_order", orderAttr);
@@ -1462,8 +1462,7 @@ void CIRGenFunction::emitAtomicStore(RValue rvalue, LValue dest,
     if (IsVolatile)
       store.setIsVolatile(true);
 
-    // DecorateInstructionWithTBAA
-    assert(!cir::MissingFeatures::tbaa());
+    CGM.decorateOperationWithTBAA(store, dest.getTBAAInfo());
     return;
   }
 

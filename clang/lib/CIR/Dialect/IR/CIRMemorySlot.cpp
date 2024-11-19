@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
@@ -52,8 +53,7 @@ void cir::AllocaOp::handleBlockArgument(const MemorySlot &slot,
 
 std::optional<PromotableAllocationOpInterface>
 cir::AllocaOp::handlePromotionComplete(const MemorySlot &slot,
-                                       Value defaultValue,
-                                       OpBuilder &builder) {
+                                       Value defaultValue, OpBuilder &builder) {
   if (defaultValue && defaultValue.use_empty())
     defaultValue.getDefiningOp()->erase();
   this->erase();
@@ -150,7 +150,8 @@ DeletionKind cir::CopyOp::removeBlockingUses(
     const DataLayout &dataLayout) {
   if (loadsFrom(slot))
     builder.create<cir::StoreOp>(getLoc(), reachingDefinition, getDst(), false,
-                                 mlir::IntegerAttr{}, cir::MemOrderAttr());
+                                 mlir::IntegerAttr{}, cir::MemOrderAttr(),
+                                 mlir::ArrayAttr{});
   return DeletionKind::Delete;
 }
 

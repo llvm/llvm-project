@@ -1216,6 +1216,9 @@ def GlobalAnnotationValuesAttr : CIR_Attr<"GlobalAnnotationValues",
   let genVerifyDecl = 1;
 }
 
+def CIR_TBAAAttr : CIR_Attr<"TBAA", "tbaa", []> {
+}
+
 include "clang/CIR/Dialect/IR/CIROpenCLAttrs.td"
 
 #endif // MLIR_CIR_DIALECT_CIR_ATTRS

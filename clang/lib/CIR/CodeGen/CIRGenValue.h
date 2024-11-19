@@ -268,26 +268,14 @@ public:
   LValueBaseInfo getBaseInfo() const { return BaseInfo; }
   void setBaseInfo(LValueBaseInfo Info) { BaseInfo = Info; }
 
-  static LValue makeAddr(Address address, clang::QualType T,
-                         AlignmentSource Source = AlignmentSource::Type) {
-    LValue R;
-    R.LVType = Simple;
-    R.V = address.getPointer();
-    R.ElementType = address.getElementType();
-    R.Initialize(T, T.getQualifiers(), address.getAlignment(),
-                 LValueBaseInfo(Source), TBAAAccessInfo());
-    return R;
-  }
-
   // FIXME: only have one of these static methods.
-  static LValue makeAddr(Address address, clang::QualType T,
-                         LValueBaseInfo LBI) {
+  static LValue makeAddr(Address address, clang::QualType T, LValueBaseInfo LBI,
+                         TBAAAccessInfo tbaaInfo) {
     LValue R;
     R.LVType = Simple;
     R.V = address.getPointer();
     R.ElementType = address.getElementType();
-    R.Initialize(T, T.getQualifiers(), address.getAlignment(), LBI,
-                 TBAAAccessInfo());
+    R.Initialize(T, T.getQualifiers(), address.getAlignment(), LBI, tbaaInfo);
     return R;
   }
 
@@ -307,6 +295,7 @@ public:
   }
 
   TBAAAccessInfo getTBAAInfo() const { return tbaaInfo; }
+  void setTBAAInfo(TBAAAccessInfo info) { tbaaInfo = info; }
 
   const clang::Qualifiers &getQuals() const { return Quals; }
   clang::Qualifiers &getQuals() { return Quals; }

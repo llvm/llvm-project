@@ -58,6 +58,7 @@ struct MissingFeatures {
   // sanitizer related type check features
   static bool emitTypeCheck() { return false; }
   static bool tbaa() { return false; }
+  static bool tbaa_struct() { return false; }
   static bool cleanups() { return false; }
   static bool emitNullabilityCheck() { return false; }
   static bool ptrAuth() { return false; }
