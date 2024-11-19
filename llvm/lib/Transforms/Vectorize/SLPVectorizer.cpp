@@ -2386,6 +2386,9 @@ public:
     /// the whole vector (it is mixed with constants or loop invariant values).
     /// Note: This modifies the 'IsUsed' flag, so a cleanUsed() must follow.
     bool shouldBroadcast(Value *Op, unsigned OpIdx, unsigned Lane) {
+      // Small number of loads - try load matching.
+      if (isa<LoadInst>(Op) && getNumLanes() == 2 && getNumOperands() == 2)
+        return false;
       bool OpAPO = getData(OpIdx, Lane).APO;
       bool IsInvariant = L && L->isLoopInvariant(Op);
       unsigned Cnt = 0;
@@ -2511,23 +2514,23 @@ public:
         Value *OpLane0 = getValue(OpIdx, FirstLane);
         // Keep track if we have instructions with all the same opcode on one
         // side.
-        if (isa<LoadInst>(OpLane0))
-          ReorderingModes[OpIdx] = ReorderingMode::Load;
-        else if (auto *OpILane0 = dyn_cast<Instruction>(OpLane0)) {
+        if (auto *OpILane0 = dyn_cast<Instruction>(OpLane0)) {
           // Check if OpLane0 should be broadcast.
           if (shouldBroadcast(OpLane0, OpIdx, FirstLane) ||
               !canBeVectorized(OpILane0, OpIdx, FirstLane))
             ReorderingModes[OpIdx] = ReorderingMode::Splat;
+          else if (isa<LoadInst>(OpILane0))
+            ReorderingModes[OpIdx] = ReorderingMode::Load;
           else
             ReorderingModes[OpIdx] = ReorderingMode::Opcode;
-        } else if (isa<Constant>(OpLane0))
+        } else if (isa<Constant>(OpLane0)) {
           ReorderingModes[OpIdx] = ReorderingMode::Constant;
-        else if (isa<Argument>(OpLane0))
+        } else if (isa<Argument>(OpLane0)) {
           // Our best hope is a Splat. It may save some cost in some cases.
           ReorderingModes[OpIdx] = ReorderingMode::Splat;
-        else
-          // NOTE: This should be unreachable.
-          ReorderingModes[OpIdx] = ReorderingMode::Failed;
+        } else {
+          llvm_unreachable("Unexpected value kind.");
+        }
       }
 
       // Check that we don't have same operands. No need to reorder if operands
@@ -9768,6 +9771,28 @@ void BoUpSLP::transformNodes() {
           // Strided store is more profitable than reverse + consecutive store -
           // transform the node to strided store.
           E.State = TreeEntry::StridedVectorize;
+      } else if (!E.ReorderIndices.empty()) {
+        // Check for interleaved stores.
+        auto IsInterleaveMask = [&, &TTI = *TTI](ArrayRef<int> Mask) {
+          auto *BaseSI = cast<StoreInst>(E.Scalars.front());
+          assert(Mask.size() > 1 && "Expected mask greater than 1 element.");
+          if (Mask.size() < 4)
+            return 0u;
+          for (unsigned Factor : seq<unsigned>(2, Mask.size() / 2 + 1)) {
+            if (ShuffleVectorInst::isInterleaveMask(
+                    Mask, Factor, VecTy->getElementCount().getFixedValue()) &&
+                TTI.isLegalInterleavedAccessType(
+                    VecTy, Factor, BaseSI->getAlign(),
+                    BaseSI->getPointerAddressSpace()))
+              return Factor;
+          }
+
+          return 0u;
+        };
+        SmallVector<int> Mask(E.ReorderIndices.begin(), E.ReorderIndices.end());
+        unsigned InterleaveFactor = IsInterleaveMask(Mask);
+        if (InterleaveFactor != 0)
+          E.setInterleave(InterleaveFactor);
       }
       break;
     }
@@ -11438,10 +11463,19 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       } else {
         assert(E->State == TreeEntry::Vectorize &&
                "Expected either strided or consecutive stores.");
-        TTI::OperandValueInfo OpInfo = getOperandInfo(E->getOperand(0));
-        VecStCost = TTI->getMemoryOpCost(
-            Instruction::Store, VecTy, BaseSI->getAlign(),
-            BaseSI->getPointerAddressSpace(), CostKind, OpInfo);
+        if (unsigned Factor = E->getInterleaveFactor()) {
+          assert(E->ReuseShuffleIndices.empty() && !E->ReorderIndices.empty() &&
+                 "No reused shuffles expected");
+          CommonCost = 0;
+          VecStCost = TTI->getInterleavedMemoryOpCost(
+              Instruction::Store, VecTy, Factor, std::nullopt,
+              BaseSI->getAlign(), BaseSI->getPointerAddressSpace(), CostKind);
+        } else {
+          TTI::OperandValueInfo OpInfo = getOperandInfo(E->getOperand(0));
+          VecStCost = TTI->getMemoryOpCost(
+              Instruction::Store, VecTy, BaseSI->getAlign(),
+              BaseSI->getPointerAddressSpace(), CostKind, OpInfo);
+        }
       }
       return VecStCost + CommonCost;
     };

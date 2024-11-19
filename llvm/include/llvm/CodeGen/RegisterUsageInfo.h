@@ -20,6 +20,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
@@ -31,21 +32,14 @@ namespace llvm {
 class Function;
 class TargetMachine;
 
-class PhysicalRegisterUsageInfo : public ImmutablePass {
+class PhysicalRegisterUsageInfo {
 public:
-  static char ID;
-
-  PhysicalRegisterUsageInfo() : ImmutablePass(ID) {
-    PassRegistry &Registry = *PassRegistry::getPassRegistry();
-    initializePhysicalRegisterUsageInfoPass(Registry);
-  }
-
   /// Set TargetMachine which is used to print analysis.
   void setTargetMachine(const TargetMachine &TM);
 
-  bool doInitialization(Module &M) override;
+  bool doInitialization(Module &M);
 
-  bool doFinalization(Module &M) override;
+  bool doFinalization(Module &M);
 
   /// To store RegMask for given Function *.
   void storeUpdateRegUsageInfo(const Function &FP,
@@ -55,7 +49,10 @@ public:
   /// array if function is not known.
   ArrayRef<uint32_t> getRegUsageInfo(const Function &FP);
 
-  void print(raw_ostream &OS, const Module *M = nullptr) const override;
+  void print(raw_ostream &OS, const Module *M = nullptr) const;
+
+  bool invalidate(Module &M, const PreservedAnalyses &PA,
+                  ModuleAnalysisManager::Invalidator &Inv);
 
 private:
   /// A Dense map from Function * to RegMask.
@@ -64,6 +61,52 @@ private:
   DenseMap<const Function *, std::vector<uint32_t>> RegMasks;
 
   const TargetMachine *TM = nullptr;
+};
+
+class PhysicalRegisterUsageInfoWrapperLegacy : public ImmutablePass {
+  std::unique_ptr<PhysicalRegisterUsageInfo> PRUI;
+
+public:
+  static char ID;
+  PhysicalRegisterUsageInfoWrapperLegacy() : ImmutablePass(ID) {
+    initializePhysicalRegisterUsageInfoWrapperLegacyPass(
+        *PassRegistry::getPassRegistry());
+  }
+
+  PhysicalRegisterUsageInfo &getPRUI() { return *PRUI; }
+  const PhysicalRegisterUsageInfo &getPRUI() const { return *PRUI; }
+
+  bool doInitialization(Module &M) override {
+    PRUI.reset(new PhysicalRegisterUsageInfo());
+    return PRUI->doInitialization(M);
+  }
+
+  bool doFinalization(Module &M) override { return PRUI->doFinalization(M); }
+
+  void print(raw_ostream &OS, const Module *M = nullptr) const override {
+    PRUI->print(OS, M);
+  }
+};
+
+class PhysicalRegisterUsageAnalysis
+    : public AnalysisInfoMixin<PhysicalRegisterUsageAnalysis> {
+  friend AnalysisInfoMixin<PhysicalRegisterUsageAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = PhysicalRegisterUsageInfo;
+
+  PhysicalRegisterUsageInfo run(Module &M, ModuleAnalysisManager &);
+};
+
+class PhysicalRegisterUsageInfoPrinterPass
+    : public PassInfoMixin<PhysicalRegisterUsageInfoPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit PhysicalRegisterUsageInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

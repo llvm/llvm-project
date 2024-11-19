@@ -669,8 +669,11 @@ bool checkLazyECPair(SymbolTable *symtab, StringRef name, InputFile *f) {
   if (std::optional<std::string> mangledName =
           getArm64ECMangledFunctionName(name))
     pairName = std::move(*mangledName);
+  else if (std::optional<std::string> demangledName =
+               getArm64ECDemangledFunctionName(name))
+    pairName = std::move(*demangledName);
   else
-    pairName = *getArm64ECDemangledFunctionName(name);
+    return true;
 
   Symbol *sym = symtab->find(pairName);
   if (!sym)

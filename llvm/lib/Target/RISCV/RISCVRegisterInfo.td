@@ -231,7 +231,7 @@ class RISCVRegisterClass<list<ValueType> regTypes, int align, dag regList>
 }
 
 class GPRRegisterClass<dag regList>
-    : RISCVRegisterClass<[XLenVT, XLenFVT, i32], 32, regList> {
+    : RISCVRegisterClass<[XLenVT, XLenFVT, i32, i16], 32, regList> {
   let RegInfos = XLenRI;
 }
 

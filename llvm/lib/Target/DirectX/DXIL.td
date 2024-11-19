@@ -770,6 +770,14 @@ def CheckAccessFullyMapped : DXILOp<71, checkAccessFullyMapped> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
+def Discard : DXILOp<82, discard> {
+  let Doc = "discard the current pixel";
+  let LLVMIntrinsic = int_dx_discard;
+  let arguments = [Int1Ty];
+  let result = VoidTy;
+  let stages = [Stages<DXIL1_0, [pixel]>];
+}
+
 def ThreadId :  DXILOp<93, threadId> {
   let Doc = "Reads the thread ID";
   let LLVMIntrinsic = int_dx_thread_id;

@@ -865,6 +865,14 @@ def merge_of_x_and_undef : GICombineRule <
          [{ return Helper.matchMergeXAndUndef(*${MI}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${MI}, ${matchinfo}); }])>;
 
+/// Transform merge_x_zero -> zext.
+def merge_of_x_and_zero : GICombineRule <
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (G_CONSTANT $zero, 0),
+         (G_MERGE_VALUES $root, $x, $zero):$MI,
+         [{ return Helper.matchMergeXAndZero(*${MI}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${MI}, ${matchinfo}); }])>;
+
 def merge_combines: GICombineGroup<[
   unmerge_anyext_build_vector,
   unmerge_merge,
@@ -873,7 +881,8 @@ def merge_combines: GICombineGroup<[
   unmerge_undef,
   unmerge_dead_to_trunc,
   unmerge_zext_to_zext,
-  merge_of_x_and_undef
+  merge_of_x_and_undef,
+  merge_of_x_and_zero
 ]>;
 
 // Under certain conditions, transform:

@@ -223,12 +223,12 @@ multiclass VINTERP_Real_gfx12 <bits<7> op, string asmName> {
   }
 }
 
-multiclass VINTERP_Real_gfx11_gfx12 <bits<7> op, string asmName = !cast<VOP3_Pseudo>(NAME).Mnemonic, string opName = NAME> :
+multiclass VINTERP_Real_gfx11_gfx12 <bits<7> op, string asmName = !cast<VOP3_Pseudo>(NAME).Mnemonic> :
   VINTERP_Real_gfx11<op, asmName>, VINTERP_Real_gfx12<op, asmName>;
 
-multiclass VINTERP_Real_t16_and_fake16_gfx11_gfx12 <bits<7> op, string asmName = !cast<VOP3_Pseudo>(NAME).Mnemonic, string opName = NAME> {
-  defm _t16:    VINTERP_Real_gfx11_gfx12<op, asmName, opName#"_t16">;
-  defm _fake16: VINTERP_Real_gfx11_gfx12<op, asmName, opName#"_fake16">;
+multiclass VINTERP_Real_t16_and_fake16_gfx11_gfx12 <bits<7> op, string asmName = !cast<VOP3_Pseudo>(NAME).Mnemonic> {
+  defm _t16:    VINTERP_Real_gfx11_gfx12<op, asmName>;
+  defm _fake16: VINTERP_Real_gfx11_gfx12<op, asmName>;
 }
 
 

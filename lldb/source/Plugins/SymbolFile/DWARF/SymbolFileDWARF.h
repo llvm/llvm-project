@@ -318,6 +318,8 @@ public:
 
   StatsDuration &GetDebugInfoParseTimeRef() { return m_parse_time; }
 
+  void ResetStatistics() override;
+
   virtual lldb::offset_t
   GetVendorDWARFOpcodeSize(const DataExtractor &data,
                            const lldb::offset_t data_offset,

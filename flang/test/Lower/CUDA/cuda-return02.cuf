@@ -1,0 +1,48 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Check if finalization works with multiple return statements
+
+program test
+  integer, device :: a(10)
+  logical :: l
+
+  if (l) then
+    return
+  end if
+
+  return
+end
+
+! CHECK: func.func @_QQmain() attributes {fir.bindc_name = "test"} {
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare
+! CHECK: cf.cond_br %{{.*}}, ^bb1, ^bb2
+! CHECK-NEXT: ^bb1:
+! CHECK-NEXT: cuf.free %[[DECL]]#1 : !fir.ref<!fir.array<10xi32>>
+! CHECK-NEXT: return
+! CHECK-NEXT: ^bb2:
+! CHECK-NEXT: cuf.free %[[DECL]]#1 : !fir.ref<!fir.array<10xi32>>
+! CHECK-NEXT: return
+! CHECK-NEXT: }
+
+subroutine sub(l)
+  integer, device :: a(10)
+  logical :: l
+
+  if (l) then
+    l = .false.
+    return
+  end if
+
+  return
+end
+
+! CHECK: func.func @_QPsub(%arg0: !fir.ref<!fir.logical<4>> {fir.bindc_name = "l"}) {
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare
+! CHECK: cf.cond_br %6, ^bb1, ^bb2
+! CHECK: ^bb1:
+! CHECK: cf.br ^bb3
+! CHECK: ^bb2:
+! CHECK: cf.br ^bb3
+! CHECK: ^bb3:
+! CHECK: cuf.free %[[DECL]]#1 : !fir.ref<!fir.array<10xi32>>
+! CHECK: }
