@@ -2383,9 +2383,11 @@ void ExecutionSession::OL_applyQueryPhase1(
       // non-candidates to the empty set.
       NonOwningSymbolLookupSet Tmp;
       std::swap(IPLS->DefGeneratorNonCandidates, Tmp);
-      IPLS->DefGeneratorCandidates.reserve(IPLS->DefGeneratorCandidates.size() + IPLS->DefGeneratorCandidates.size());
+      IPLS->DefGeneratorCandidates.reserve(IPLS->DefGeneratorCandidates.size() +
+                                           IPLS->DefGeneratorCandidates.size());
       for (auto &KV : Tmp)
-        IPLS->DefGeneratorCandidates.emplace_back(NonOwningSymbolStringPtr(KV.first), KV.second);
+        IPLS->DefGeneratorCandidates.emplace_back(
+            NonOwningSymbolStringPtr(KV.first), KV.second);
 
       LLVM_DEBUG({
         dbgs() << "  First time visiting " << JD.getName()
