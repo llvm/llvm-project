@@ -4277,8 +4277,8 @@ let Predicates = [HasSVE2p2orSME2p2] in {
   defm FCVTZS_ZPzZ : sve_fp_z2op_p_zd_d<0b0, "fcvtzs", "int_aarch64_sve_fcvtzs", AArch64fcvtzs_mt>;
   defm FCVTZU_ZPzZ : sve_fp_z2op_p_zd_d<0b1, "fcvtzu", "int_aarch64_sve_fcvtzu", AArch64fcvtzu_mt>;
   // Integer convert to floating-point, zeroing predicate
-  defm SCVTF_ZPzZ  : sve_fp_z2op_p_zd_c<0b0, "scvtf">;
-  defm UCVTF_ZPzZ  : sve_fp_z2op_p_zd_c<0b1, "ucvtf">;
+  defm SCVTF_ZPzZ  : sve_fp_z2op_p_zd_c<0b0, "scvtf", "int_aarch64_sve_scvtf", AArch64scvtf_mt>;
+  defm UCVTF_ZPzZ  : sve_fp_z2op_p_zd_c<0b1, "ucvtf", "int_aarch64_sve_ucvtf", AArch64ucvtf_mt>;
   // Signed integer base 2 logarithm of fp value, zeroing predicate
   defm FLOGB_ZPzZ : sve_fp_z2op_p_zd_d_flogb<"flogb">;
 
