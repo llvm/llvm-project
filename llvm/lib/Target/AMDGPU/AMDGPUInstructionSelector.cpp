@@ -3329,6 +3329,16 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
   case 4:
     Opc = AMDGPU::GLOBAL_LOAD_LDS_DWORD;
     break;
+  case 12:
+    if (!Subtarget->hasLDSLoadB96_B128())
+      return false;
+    Opc = AMDGPU::GLOBAL_LOAD_LDS_DWORDX3;
+    break;
+  case 16:
+    if (!Subtarget->hasLDSLoadB96_B128())
+      return false;
+    Opc = AMDGPU::GLOBAL_LOAD_LDS_DWORDX4;
+    break;
   }
 
   MachineBasicBlock *MBB = MI.getParent();
