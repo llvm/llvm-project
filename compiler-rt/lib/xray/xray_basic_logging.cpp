@@ -214,22 +214,25 @@ struct FunctionRecordBuffer {
       AddressInfo& AI = MDI.second;
 
       int FileMDIdx = 0;
-
-      // TODO: Does this work with strings?
-      if (auto *It = FileMDMap.find(StringKey(AI.file)); It) {
-        FileMDIdx = It->second;
-      } else {
-        XRayFileMD FMD;
-        FMD.FilenameLen = static_cast<int16_t>(internal_strlen(AI.file));
-        Writer->WriteAll(reinterpret_cast<char *>(&FMD),
-                         reinterpret_cast<char *>(&FMD.FilenameBuffer));
-        Writer->WriteAll(AI.file, AI.file + FMD.FilenameLen);
-        constexpr int FilenameBufferSize = sizeof(FMD.FilenameBuffer);
-        auto NumPaddingBytes = FMD.FilenameLen < FilenameBufferSize ? FilenameBufferSize - FMD.FilenameLen : 32 - (FMD.FilenameLen - FilenameBufferSize) % 32;
-        Writer->WritePadding(NumPaddingBytes);
-        FileMDMap[AI.file] = FileMDCount;
-        FileMDIdx = FileMDCount;
-        FileMDCount++;
+      if (AI.file) {
+        if (auto *It = FileMDMap.find(StringKey(AI.file)); It) {
+          FileMDIdx = It->second;
+        } else {
+          XRayFileMD FMD;
+          FMD.FilenameLen = static_cast<int16_t>(internal_strlen(AI.file));
+          Writer->WriteAll(reinterpret_cast<char *>(&FMD),
+                           reinterpret_cast<char *>(&FMD.FilenameBuffer));
+          Writer->WriteAll(AI.file, AI.file + FMD.FilenameLen);
+          constexpr int FilenameBufferSize = sizeof(FMD.FilenameBuffer);
+          auto NumPaddingBytes =
+              FMD.FilenameLen < FilenameBufferSize
+                  ? FilenameBufferSize - FMD.FilenameLen
+                  : 32 - (FMD.FilenameLen - FilenameBufferSize) % 32;
+          Writer->WritePadding(NumPaddingBytes);
+          FileMDCount++;
+          FileMDMap[AI.file] = FileMDCount;
+          FileMDIdx = FileMDCount;
+        }
       }
 
       XRayFunctionMD FIR;
@@ -243,8 +246,7 @@ struct FunctionRecordBuffer {
       Writer->WriteAll(AI.function, AI.function + FIR.NameLen);
       constexpr int NameBufferSize = sizeof(FIR.NameBuffer);
       auto NumPaddingBytes = FIR.NameLen < NameBufferSize ? NameBufferSize - FIR.NameLen : 32 - (FIR.NameLen - NameBufferSize) % 32;
-      Report("Writing string %s (length %d) for ID %d, adding padding bytes: %d\n",
-          AI.function, FIR.NameLen, FIR.FuncId, NumPaddingBytes);
+
       Writer->WritePadding(NumPaddingBytes);
 
 //      auto ObjId = UnpackId(Id).first;

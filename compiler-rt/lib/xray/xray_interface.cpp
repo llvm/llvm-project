@@ -528,11 +528,7 @@ bool Symbolize(int32_t PackedId, AddressInfo* AI) {
     return false;
   }
 
-  printf("Adding Entry: %d -> %x\n", PackedId, Addr);
-//  printf("Symbol Info: function %s from module %s in %s:%s\n", DI->name, DI->module, DI->file, DI->line);
-
-
-  printf("Symbol Info (stack): function %s from module %s in %s:%d\n", SymStack->info.function, SymStack->info.module, SymStack->info.file, SymStack->info.line);
+//  printf("Symbol Info: function %s from module %s in %s:%d\n", SymStack->info.function, SymStack->info.module, SymStack->info.file, SymStack->info.line);
 
   // XRay does not support inlined function instrumentation.
   // Therefor we only look at the first function stack entry.

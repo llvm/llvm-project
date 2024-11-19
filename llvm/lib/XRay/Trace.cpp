@@ -231,14 +231,18 @@ Error loadNaiveFormatLog(StringRef Data, bool IsLittleEndian,
             std::make_error_code(std::errc::executable_format_error),
             "Failed reading file metadata field at offset %" PRId64 ".",
             OffsetPtr);
-      if (FileMDIdx < 0 || static_cast<size_t>(FileMDIdx) >= Filenames.size()) {
-        return createStringError(
-            std::make_error_code(std::errc::executable_format_error),
-            "File metadata does not exist at offset %" PRId64 ".",
-            OffsetPtr);
+      if (FileMDIdx == 0) {
+        // 0 means unavailable
+        Info.File = "(unknown)";
+      } else {
+        if (FileMDIdx < 1 ||
+            static_cast<size_t>(FileMDIdx-1) >= Filenames.size()) {
+          return createStringError(
+              std::make_error_code(std::errc::executable_format_error),
+              "File metadata does not exist at offset %" PRId64 ".", OffsetPtr);
+        }
+        Info.File = Filenames[FileMDIdx-1];
       }
-      outs() << "MD index is: " << FileMDIdx  << "\n";
-      Info.File = Filenames[FileMDIdx];
 
       PreReadOffset = OffsetPtr;
       auto NameLen = Reader.getU16(&OffsetPtr);
@@ -257,8 +261,6 @@ Error loadNaiveFormatLog(StringRef Data, bool IsLittleEndian,
       Info.Name = FName;
 
       FuncMetadata.AddFunctionInfo(Info);
-
-      llvm::outs() << "Read function: " << FuncId << ": " << FName << "\n";
 
       // Skip to start of next 32 byte record. Subtract 8 to main to account
       // for 8 byte advance after switch.
@@ -330,8 +332,6 @@ Error loadNaiveFormatLog(StringRef Data, bool IsLittleEndian,
             std::make_error_code(std::errc::executable_format_error),
             "Failed reading symbol %" PRId64 ".", OffsetPtr);
       Filenames.emplace_back(std::string(Filename));
-
-      llvm::outs() << "Read filename: " << Filename << "\n";
 
       // Skip to start of next 32 byte record. Subtract 8 to main to account
       // for 8 byte advance after switch.
@@ -586,7 +586,6 @@ Expected<Trace> llvm::xray::loadTrace(const DataExtractor &DE, bool Sort) {
   switch (Type) {
   case NAIVE_FORMAT:
     if (Version == 1 || Version == 2 || Version == 3) {
-      llvm::outs() << "Version is " << Version << "\n";
       if (auto E = loadNaiveFormatLog(DE.getData(), DE.isLittleEndian(),
                                       T.FileHeader, T.Records, T.FuncMetadata))
         return std::move(E);

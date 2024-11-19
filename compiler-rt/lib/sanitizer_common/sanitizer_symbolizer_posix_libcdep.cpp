@@ -341,16 +341,10 @@ __sanitizer_symbolize_set_inline_frames(bool InlineFrames);
 class InternalSymbolizer final : public SymbolizerTool {
  public:
   static InternalSymbolizer *get(LowLevelAllocator *alloc) {
-    if (&__sanitizer_symbolize_code == nullptr) {
-      VReport(2, "interal symbolizer not linked!\n");
-    }
     // These one is the most used one, so we will use it to detect a presence of
     // internal symbolizer.
-    if (&__sanitizer_symbolize_code == nullptr) {
+    if (&__sanitizer_symbolize_code == nullptr)
       return nullptr;
-    }
-
-
     CHECK(__sanitizer_symbolize_set_demangle(common_flags()->demangle));
     CHECK(__sanitizer_symbolize_set_inline_frames(
         common_flags()->symbolize_inline_frames));
@@ -471,7 +465,6 @@ static SymbolizerTool *ChooseExternalSymbolizer(LowLevelAllocator *allocator) {
 
 static void ChooseSymbolizerTools(IntrusiveList<SymbolizerTool> *list,
                                   LowLevelAllocator *allocator) {
-  VReport(2, "Choosing symbolizer\n");
   if (!common_flags()->symbolize) {
     VReport(2, "Symbolizer is disabled.\n");
     return;
@@ -487,14 +480,12 @@ static void ChooseSymbolizerTools(IntrusiveList<SymbolizerTool> *list,
   } else if (SymbolizerTool *tool = InternalSymbolizer::get(allocator)) {
     VReport(2, "Using internal symbolizer.\n");
     list->push_back(tool);
-//    return;
-  } else {
-    VReport(2, "Cannot instantiate internal symbolizer!\n");
+    return;
   }
   if (SymbolizerTool *tool = LibbacktraceSymbolizer::get(allocator)) {
     VReport(2, "Using libbacktrace symbolizer.\n");
     list->push_back(tool);
-//    return;
+    return;
   }
 
   if (SymbolizerTool *tool = ChooseExternalSymbolizer(allocator)) {

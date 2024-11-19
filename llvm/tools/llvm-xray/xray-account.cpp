@@ -478,9 +478,9 @@ static CommandRegistration Unused(&Account, []() -> Error {
 
   auto &FMD = T.getFunctionMetadata();
 
-  std::for_each(FMD.mapping_begin(), FMD.mappping_end(), [](const auto& Mapping) {
-    outs() << "Function MD: " << Mapping.FuncId << " -> " << Mapping.Name << ", file=" << Mapping.File << "\n";
-  });
+//  std::for_each(FMD.mapping_begin(), FMD.mappping_end(), [](const auto& Mapping) {
+//    outs() << "Function MD: " << Mapping.FuncId << " -> " << Mapping.Name << ", file=" << Mapping.File << "\n";
+//  });
 
   const auto &FunctionAddresses = Map.getFunctionAddresses();
   symbolize::LLVMSymbolizer Symbolizer;

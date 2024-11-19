@@ -111,18 +111,12 @@ bool Symbolizer::SymbolizeData(uptr addr, DataInfo *info) {
   info->module = internal_strdup(module_name);
   info->module_offset = module_offset;
   info->module_arch = arch;
-
-  Report("Trying out %d tools\n", tools_.size());
   for (auto &tool : tools_) {
     SymbolizerScope sym_scope(this);
     if (tool.SymbolizeData(addr, info)) {
-      Report("Symbolize tool produced data: function %s from module %s in %s:%s\n", info->name, info->module, info->file, info->line);
-      //return true;
-    } else {
-      Report("Tool failed\n");
+      return true;
     }
   }
-  return true; // FIXME Debugging
   return false;
 }
 
@@ -441,8 +435,6 @@ bool LLVMSymbolizer::SymbolizeData(uptr addr, DataInfo *info) {
       "DATA", info->module, info->module_offset, info->module_arch);
   if (!buf)
     return false;
-  // FIXME: Remove debug output
-  Report("Response: %s\n", buf);
   ParseSymbolizeDataOutput(buf, info);
   info->start += (addr - info->module_offset); // Add the base address.
   return true;
@@ -476,9 +468,6 @@ const char *LLVMSymbolizer::FormatAndSendCommand(const char *command_prefix,
     Report("WARNING: Command buffer too small");
     return nullptr;
   }
-
-  // FIXME: Remove
-  Report("Command: %s\n", buffer_);
 
   return symbolizer_process_->SendCommand(buffer_);
 }
