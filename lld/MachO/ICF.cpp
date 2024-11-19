@@ -495,7 +495,7 @@ Defined *macho::getBodyForThunkFoldedSym(Defined *foldedSym) {
   // the actual body of the function.
   InputSection *thunkBody = foldedSec->replacement;
 
-  // the actual (merged) body of the function that the thunk jumps to. This will
+  // The actual (merged) body of the function that the thunk jumps to. This will
   // end up in the final binary.
   InputSection *functionBody = target->getThunkBranchTarget(thunkBody);
 
