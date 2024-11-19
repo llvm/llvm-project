@@ -149,6 +149,9 @@ MVEMaxSupportedInterleaveFactor("mve-max-interleave-factor", cl::Hidden,
   cl::desc("Maximum interleave factor for MVE VLDn to generate."),
   cl::init(2));
 
+/// Value type used for "flags" operands / results (either CPSR or FPSCR_NZCV).
+constexpr MVT FlagsVT = MVT::i32;
+
 // The APCS parameter registers.
 static const MCPhysReg GPRArgRegs[] = {
   ARM::R0, ARM::R1, ARM::R2, ARM::R3
@@ -1730,14 +1733,14 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(ARMISD::ASRL)
     MAKE_CASE(ARMISD::LSRL)
     MAKE_CASE(ARMISD::LSLL)
-    MAKE_CASE(ARMISD::SRL_GLUE)
-    MAKE_CASE(ARMISD::SRA_GLUE)
+    MAKE_CASE(ARMISD::LSLS)
+    MAKE_CASE(ARMISD::LSRS1)
+    MAKE_CASE(ARMISD::ASRS1)
     MAKE_CASE(ARMISD::RRX)
     MAKE_CASE(ARMISD::ADDC)
     MAKE_CASE(ARMISD::ADDE)
     MAKE_CASE(ARMISD::SUBC)
     MAKE_CASE(ARMISD::SUBE)
-    MAKE_CASE(ARMISD::LSLS)
     MAKE_CASE(ARMISD::VMOVRRD)
     MAKE_CASE(ARMISD::VMOVDRR)
     MAKE_CASE(ARMISD::VMOVhr)
@@ -2970,8 +2973,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   Ops.push_back(Callee);
 
   if (isTailCall) {
-    Ops.push_back(
-        DAG.getSignedConstant(SPDiff, dl, MVT::i32, /*isTarget=*/true));
+    Ops.push_back(DAG.getSignedTargetConstant(SPDiff, dl, MVT::i32));
   }
 
   // Add argument registers to the end of the list so that they are known live
@@ -6847,10 +6849,10 @@ static SDValue Expand64BitShift(SDNode *N, SelectionDAG &DAG,
   SDValue Lo, Hi;
   std::tie(Lo, Hi) = DAG.SplitScalar(N->getOperand(0), dl, MVT::i32, MVT::i32);
 
-  // First, build a SRA_GLUE/SRL_GLUE op, which shifts the top part by one and
-  // captures the result into a carry flag.
-  unsigned Opc = N->getOpcode() == ISD::SRL ? ARMISD::SRL_GLUE:ARMISD::SRA_GLUE;
-  Hi = DAG.getNode(Opc, dl, DAG.getVTList(MVT::i32, MVT::Glue), Hi);
+  // First, build a LSRS1/ASRS1 op, which shifts the top part by one and
+  // captures the shifted out bit into a carry flag.
+  unsigned Opc = N->getOpcode() == ISD::SRL ? ARMISD::LSRS1 : ARMISD::ASRS1;
+  Hi = DAG.getNode(Opc, dl, DAG.getVTList(MVT::i32, FlagsVT), Hi);
 
   // The low part is an ARMISD::RRX operand, which shifts the carry in.
   Lo = DAG.getNode(ARMISD::RRX, dl, MVT::i32, Lo, Hi.getValue(1));
@@ -20615,8 +20617,7 @@ void ARMTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
         }
         return;
     }
-    Result = DAG.getSignedConstant(CVal, SDLoc(Op), Op.getValueType(),
-                                   /*isTarget=*/true);
+    Result = DAG.getSignedTargetConstant(CVal, SDLoc(Op), Op.getValueType());
     break;
   }
 

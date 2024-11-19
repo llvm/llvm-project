@@ -24,7 +24,6 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/iterator.h"
 #include <optional>
 

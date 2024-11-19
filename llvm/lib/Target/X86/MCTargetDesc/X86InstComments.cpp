@@ -41,18 +41,18 @@ using namespace llvm;
   CASE_MASKZ_INS_COMMON(Inst, Suffix, src)
 
 #define CASE_FPCLASS_PACKED(Inst, src)    \
-  CASE_AVX_INS_COMMON(Inst, Z, r##src)    \
-  CASE_AVX_INS_COMMON(Inst, Z256, r##src) \
-  CASE_AVX_INS_COMMON(Inst, Z128, r##src) \
-  CASE_MASK_INS_COMMON(Inst, Z, r##src)
+  CASE_AVX_INS_COMMON(Inst, Z, src##i)    \
+  CASE_AVX_INS_COMMON(Inst, Z256, src##i) \
+  CASE_AVX_INS_COMMON(Inst, Z128, src##i) \
+  CASE_MASK_INS_COMMON(Inst, Z, src##i)
 
 #define CASE_FPCLASS_PACKED_MEM(Inst) \
   CASE_FPCLASS_PACKED(Inst, m)        \
   CASE_FPCLASS_PACKED(Inst, mb)
 
 #define CASE_FPCLASS_SCALAR(Inst, src)  \
-  CASE_AVX_INS_COMMON(Inst, Z, r##src)  \
-  CASE_MASK_INS_COMMON(Inst, Z, r##src)
+  CASE_AVX_INS_COMMON(Inst, Z, src##i)  \
+  CASE_MASK_INS_COMMON(Inst, Z, src##i)
 
 #define CASE_PTERNLOG(Inst, src)                                               \
   CASE_AVX512_INS_COMMON(Inst, Z, r##src##i)                                   \
