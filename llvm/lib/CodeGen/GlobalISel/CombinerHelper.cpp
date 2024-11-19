@@ -7830,9 +7830,7 @@ bool CombinerHelper::matchSuboCarryOut(const MachineInstr &MI,
     case ConstantRange::OverflowResult::AlwaysOverflowsHigh: {
       MatchInfo = [=](MachineIRBuilder &B) {
         B.buildSub(Dst, LHS, RHS);
-        B.buildConstant(Carry, getICmpTrueVal(getTargetLowering(),
-                                              /*isVector=*/CarryTy.isVector(),
-                                              /*isFP=*/false));
+        B.buildConstant(Carry, 1);
       };
       return true;
     }
@@ -7855,9 +7853,7 @@ bool CombinerHelper::matchSuboCarryOut(const MachineInstr &MI,
   case ConstantRange::OverflowResult::AlwaysOverflowsHigh: {
     MatchInfo = [=](MachineIRBuilder &B) {
       B.buildSub(Dst, LHS, RHS);
-      B.buildConstant(Carry, getICmpTrueVal(getTargetLowering(),
-                                            /*isVector=*/CarryTy.isVector(),
-                                            /*isFP=*/false));
+      B.buildConstant(Carry, 1);
     };
     return true;
   }

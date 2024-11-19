@@ -277,3 +277,26 @@ body:             |
     $q1 = COPY %o_wide
     RET_ReallyLR implicit $w0
 ...
+---
+name:            usub_may_carry_non_const
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+    ; CHECK-LABEL: name: usub_may_carry_non_const
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: %sub:_(s32), %o:_(s1) = G_USUBO [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: %o_wide:_(s32) = G_ZEXT %o(s1)
+    ; CHECK-NEXT: $w0 = COPY %sub(s32)
+    ; CHECK-NEXT: $w1 = COPY %o_wide(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:_(s32) = COPY $w0
+    %1:_(s32) = COPY $w0
+    %sub:_(s32), %o:_(s1) = G_USUBO %0, %1
+    %o_wide:_(s32) = G_ZEXT %o(s1)
+    $w0 = COPY %sub(s32)
+    $w1 = COPY %o_wide
+    RET_ReallyLR implicit $w0
+...
