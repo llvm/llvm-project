@@ -2,9 +2,7 @@
 // DEFINE: -transform-interpreter -test-transform-dialect-erase-schedule |\
 // DEFINE:  mlir-opt --test-linalg-transform-patterns="test-decompose-tensor-pack"\
 // DEFINE:    --test-transform-dialect-erase-schedule \
-// DEFINE:    -one-shot-bufferize="bufferize-function-boundaries" \
-// DEFINE:    -buffer-deallocation-pipeline="private-function-dynamic-ownership" \
-// DEFINE:    -cse -canonicalize -test-lower-to-llvm -o %t
+// DEFINE:    -test-lower-to-llvm -o %t
 // DEFINE: %{entry_point} = main
 // DEFINE: %{run} = mlir-cpu-runner %t -e %{entry_point} -entry-point-result=void \
 // DEFINE:    -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
@@ -84,11 +82,29 @@ func.func private @pack(%A: tensor<7x16xi32>) {
 }
 
 module @transforms attributes { transform.with_named_sequence } {
-  transform.named_sequence @__transform_main(%module: !transform.any_op {transform.readonly}) {
+  transform.named_sequence @__transform_main(%module: !transform.any_op {transform.consume}) {
     %pack = transform.structured.match ops{["tensor.pack"]} in %module : (!transform.any_op) -> !transform.any_op
 
-    %tiled_linalg_op_p, %loops:2 = transform.structured.tile_using_for %pack tile_sizes [1, 1]
+    // 1. Tile so that we can decompose tensor.pack into tensor.pad,
+    // linalg.transpose, etc (see step 2).
+    %tiled_pack_op_p, %loops:2 = transform.structured.tile_using_for %pack tile_sizes [1, 1]
        : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+
+    // 2. Decompose the tiled Op into tensor.pad etc
+    %func_1 = transform.get_parent_op %tiled_pack_op_p {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func_1 {
+      transform.apply_patterns.linalg.decompose_pack_unpack
+    } : !transform.any_op
+
+    // 3. Bufferize before lowering to LLVM
+    %bufferize = transform.bufferization.one_shot_bufferize %module
+      {bufferize_function_boundaries=true} : (!transform.any_op) -> !transform.any_op
+
+    // 4. Canonicalize
+    %func_2 = transform.structured.match ops{["func.func"]} in %bufferize : (!transform.any_op) -> !transform.op<"func.func">
+    transform.apply_patterns to %func_2 {
+      transform.apply_patterns.canonicalization
+    } : !transform.op<"func.func">
 
     transform.yield
   }
