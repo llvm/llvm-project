@@ -39,7 +39,7 @@ int main(void) {
   _aligned_free(u);
 
   char *t = (char *)_aligned_malloc(128, 8);
-  t[-1] = 'a';
+  t[-153] = 'a';
   // CHECK: AddressSanitizer: heap-buffer-overflow on address [[ADDR:0x[0-9a-f]+]]
   // CHECK: WRITE of size 1 at [[ADDR]] thread T0
 

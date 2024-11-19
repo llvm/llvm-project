@@ -147,6 +147,10 @@ __declspec(noinline) void *_aligned_malloc(size_t size, size_t alignment) {
   return asan_aligned_alloc(alignment, size, &stack);
 }
 
+__declspec(noinline) void *_aligned_malloc_dbg(size_t size, size_t alignment) {
+  return _aligned_malloc(alignment, size);
+}
+
 __declspec(noinline) void *_aligned_realloc(void *p, size_t size,
                                             size_t alignment) {
   GET_STACK_TRACE_MALLOC;
@@ -160,13 +164,65 @@ __declspec(noinline) void *_aligned_realloc(void *p, size_t size,
   return n;
 }
 
-__declspec(noinline) void _aligned_free(void *p) { free(p); }
+__declspec(noinline) void *_aligned_realloc_dbg(void *p, size_t size,
+                                                size_t alignment) {
+  return _aligned_realloc(p, size, alignment);
+}
+
+__declspec(noinline) void *_aligned_recalloc(void *p, size_t nmemb, size_t size,
+                                             size_t alignment) {
+  const size_t total = nmemb * size;
+  if (total && total / size != nmemb)
+    return nullptr;
+  void *n = _aligned_realloc(p, total, alignment);
+  if (n)
+    REAL(memset)(n, 0, size);
+
+  return n;
+}
+
+__declspec(noinline) void *_aligned_recalloc_dbg(void *p, size_t nmemb,
+                                                 size_t size,
+                                                 size_t alignment) {
+  return _aligned_recalloc(p, nmemb, size, alignment);
+}
+
+__declspec(noinline) void *_aligned_offset_malloc(size_t size, size_t alignment,
+                                                  size_t offset) {
+  const size_t total = offset + size;
+  if (total && (total - offset) != size)
+    return nullptr;
+  void *p = _aligned_malloc(total, alignment);
+  if (p)
+    return ((u8 *)p) + offset;
+
+  return nullptr;
+}
+
+__declspec(noinline) void *_aligned_offset_malloc_dbg(size_t size,
+                                                      size_t alignment,
+                                                      size_t offset) {
+  return _aligned_offset_malloc(size, alignment, offset);
+}
+
+__declspec(noinline) void _aligned_free(void *p) {
+  void *b = const_cast<void *>(
+      __sanitizer_get_allocated_begin(const_cast<void *>(p)));
+  CHECK(b != nullptr && "invalid pointer");
+  free(b);
+}
+
+__declspec(noinline) void _aligned_free_dbg(void *p) { _aligned_free(p); }
 
 __declspec(noinline) size_t _aligned_msize(void *p) {
   GET_CURRENT_PC_BP_SP;
   (void)sp;
 
   return asan_malloc_usable_size(p, pc, bp);
+}
+
+__declspec(noinline) size_t _aligned_msize_dbg(void *p) {
+  return _aligned_msize(p);
 }
 
 __declspec(noinline) void *_expand(void *memblock, size_t size) {
@@ -531,8 +587,17 @@ void ReplaceSystemMalloc() {
   TryToOverrideFunction("_expand_base", (uptr)_expand);
   TryToOverrideFunction("_aligned_malloc", (uptr)_aligned_malloc);
   TryToOverrideFunction("_aligned_realloc", (uptr)_aligned_realloc);
+  TryToOverrideFunction("_aligned_recalloc", (uptr)_aligned_recalloc);
   TryToOverrideFunction("_aligned_free", (uptr)_aligned_free);
   TryToOverrideFunction("_aligned_msize", (uptr)_aligned_msize);
+  TryToOverrideFunction("_aligned_malloc_dbg", (uptr)_aligned_malloc_dbg);
+  TryToOverrideFunction("_aligned_realloc_dbg", (uptr)_aligned_realloc_dbg);
+  TryToOverrideFunction("_aligned_recalloc_dbg", (uptr)_aligned_recalloc_dbg);
+  TryToOverrideFunction("_aligned_free_dbg", (uptr)_aligned_free_dbg);
+  TryToOverrideFunction("_aligned_msize_dbg", (uptr)_aligned_msize_dbg);
+  TryToOverrideFunction("_aligned_offset_malloc", (uptr)_aligned_offset_malloc);
+  TryToOverrideFunction("_aligned_offset_malloc_dbg",
+                        (uptr)_aligned_offset_malloc_dbg);
 
   if (flags()->windows_hook_rtl_allocators) {
     ASAN_INTERCEPT_FUNC(HeapSize);
