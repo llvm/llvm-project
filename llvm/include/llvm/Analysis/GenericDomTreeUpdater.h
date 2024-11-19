@@ -151,13 +151,6 @@ public:
 
   /// Apply updates that the critical edge (FromBB, ToBB) has been
   /// split with NewBB.
-  ///
-  /// \note Do not use this method with regular edges.
-  ///
-  /// \note This kind updates are incompatible with generic updates,
-  /// call this method will submit all generic updates in lazy mode.
-  /// It is not recommended to interleave applyUpdates and
-  /// applyUpdatesForCriticalEdgeSplitting.
   void splitCriticalEdge(BasicBlockT *FromBB, BasicBlockT *ToBB,
                          BasicBlockT *NewBB);
 
