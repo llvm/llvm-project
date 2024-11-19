@@ -1899,8 +1899,12 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
     if (VT.isRISCVVectorTuple()) {
       assert(C->isNullValue() && "Can only zero this target type!");
       return NodeMap[V] = DAG.getNode(
-                 ISD::SPLAT_VECTOR, getCurSDLoc(), VT,
-                 DAG.getConstant(0, getCurSDLoc(), MVT::getIntegerVT(8)));
+                 ISD::BITCAST, getCurSDLoc(), VT,
+                 DAG.getNode(
+                     ISD::SPLAT_VECTOR, getCurSDLoc(),
+                     MVT::getScalableVectorVT(
+                         MVT::i8, VT.getSizeInBits().getKnownMinValue() / 8),
+                     DAG.getConstant(0, getCurSDLoc(), MVT::getIntegerVT(8))));
     }
 
     VectorType *VecTy = cast<VectorType>(V->getType());
