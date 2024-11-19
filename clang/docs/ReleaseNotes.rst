@@ -357,6 +357,7 @@ Non-comprehensive list of changes in this release
 
 - ``__builtin_reduce_add`` function can now be used in constant expressions.
 - ``__builtin_reduce_mul`` function can now be used in constant expressions.
+- ``__builtin_reduce_and`` function can now be used in constant expressions.
 
 New Compiler Flags
 ------------------
