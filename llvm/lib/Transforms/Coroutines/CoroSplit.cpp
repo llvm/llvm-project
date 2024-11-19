@@ -19,8 +19,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Coroutines/CoroSplit.h"
-#include "CoroInternal.h"
 #include "CoroCloner.h"
+#include "CoroInternal.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1092,8 +1092,8 @@ void CoroCloner::create() {
 
 void CoroSwitchCloner::create() {
   // Create a new function matching the original type
-  NewF = createCloneDeclaration(OrigF, Shape, Suffix,
-      OrigF.getParent()->end(), ActiveSuspend);
+  NewF = createCloneDeclaration(OrigF, Shape, Suffix, OrigF.getParent()->end(),
+                                ActiveSuspend);
 
   // Clone the function
   CoroCloner::create();
@@ -1101,7 +1101,7 @@ void CoroSwitchCloner::create() {
   // Eliminate coro.free from the clones, replacing it with 'null' in cleanup,
   // to suppress deallocation code.
   coro::replaceCoroFree(cast<CoroIdInst>(VMap[Shape.CoroBegin->getId()]),
-      /*Elide=*/FKind == CoroCloner::Kind::SwitchCleanup);
+                        /*Elide=*/FKind == CoroCloner::Kind::SwitchCleanup);
 }
 
 static void updateAsyncFuncPointerContextSize(coro::Shape &Shape) {

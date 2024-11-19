@@ -51,7 +51,6 @@ protected:
   Function *NewF = nullptr;
   Value *NewFramePtr = nullptr;
 
-
   /// The active suspend instruction; meaningful only for continuation and async
   /// ABIs.
   AnyCoroSuspendInst *ActiveSuspend = nullptr;
@@ -62,7 +61,8 @@ protected:
              TargetTransformInfo &TTI)
       : OrigF(OrigF), Suffix(Suffix), Shape(Shape),
         FKind(Shape.ABI == coro::ABI::Async ? Kind::Async : Kind::Continuation),
-        Builder(OrigF.getContext()), TTI(TTI), NewF(NewF), ActiveSuspend(ActiveSuspend)  {
+        Builder(OrigF.getContext()), TTI(TTI), NewF(NewF),
+        ActiveSuspend(ActiveSuspend) {
     assert(Shape.ABI == coro::ABI::Retcon ||
            Shape.ABI == coro::ABI::RetconOnce || Shape.ABI == coro::ABI::Async);
     assert(NewF && "need existing function for continuation");
@@ -71,11 +71,11 @@ protected:
 
 public:
   CoroCloner(Function &OrigF, const Twine &Suffix, coro::Shape &Shape,
-      Kind FKind, TargetTransformInfo &TTI) :
-    OrigF(OrigF), Suffix(Suffix), Shape(Shape), FKind(FKind), Builder(OrigF.getContext()), TTI(TTI) {
-    }
+             Kind FKind, TargetTransformInfo &TTI)
+      : OrigF(OrigF), Suffix(Suffix), Shape(Shape), FKind(FKind),
+        Builder(OrigF.getContext()), TTI(TTI) {}
 
-  virtual ~CoroCloner() { }
+  virtual ~CoroCloner() {}
 
   /// Create a clone for a continuation lowering.
   static Function *createClone(Function &OrigF, const Twine &Suffix,
@@ -122,13 +122,12 @@ protected:
   void handleFinalSuspend();
 };
 
-
 class CoroSwitchCloner : public CoroCloner {
 protected:
   /// Create a cloner for a switch lowering.
   CoroSwitchCloner(Function &OrigF, const Twine &Suffix, coro::Shape &Shape,
                    Kind FKind, TargetTransformInfo &TTI)
-      : CoroCloner(OrigF, Suffix, Shape, FKind, TTI) { }
+      : CoroCloner(OrigF, Suffix, Shape, FKind, TTI) {}
 
   void create() override;
 
