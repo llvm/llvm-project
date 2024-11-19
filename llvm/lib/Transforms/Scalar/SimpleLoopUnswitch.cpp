@@ -1716,7 +1716,7 @@ static void deleteDeadBlocksFromLoop(Loop &L,
     auto *BB = DeathCandidates.pop_back_val();
     if (!DeadBlockSet.count(BB) && !DT.isReachableFromEntry(BB)) {
       for (BasicBlock *SuccBB : successors(BB)) {
-        SuccBB->removePredecessor(BB, /*KeepOneInputPHIs*/ true);
+        SuccBB->removePredecessor(BB);
         DeathCandidates.push_back(SuccBB);
       }
       DeadBlockSet.insert(BB);
