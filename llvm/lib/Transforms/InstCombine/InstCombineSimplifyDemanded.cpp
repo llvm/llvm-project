@@ -1004,7 +1004,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
             uint64_t MaskedGEPIndex = HighBitsGEPIndex | MaskedLowBitsGEPIndex;
 
             if (MaskedGEPIndex != GEPIndex) {
-              auto *GEP = cast<GetElementPtrInst>(II->getArgOperand(0));
+              auto *GEP = cast<GEPOperator>(II->getArgOperand(0));
               Builder.SetInsertPoint(I);
               Type *GEPIndexType =
                   DL.getIndexType(GEP->getPointerOperand()->getType());
