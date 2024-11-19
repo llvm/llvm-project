@@ -3,6 +3,7 @@
 // the DT_GNU_HASH .dynamic key/value pairs that are loaded via the PT_DYNAMIC
 // segment.
 
+// REQUIRES: x86-registered-Target
 // RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj \
 // RUN:   -o - - <<<".globl defined, undefined; defined:" | \
 // RUN:   ld.lld /dev/stdin -o - --hash-style=gnu -export-dynamic -shared \
