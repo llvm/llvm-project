@@ -270,7 +270,7 @@ TYPE_PARSER(construct<OmpMapClause>(
 // 2.19.7.2 defaultmap(implicit-behavior[:variable-category])
 //  implicit-behavior -> ALLOC | TO | FROM | TOFROM | FIRSRTPRIVATE | NONE |
 //  DEFAULT
-//  variable-category -> SCALAR | AGGREGATE | ALLOCATABLE | POINTER
+//  variable-category -> ALL | SCALAR | AGGREGATE | ALLOCATABLE | POINTER
 TYPE_PARSER(construct<OmpDefaultmapClause>(
     construct<OmpDefaultmapClause::ImplicitBehavior>(
         "ALLOC" >> pure(OmpDefaultmapClause::ImplicitBehavior::Alloc) ||
@@ -283,6 +283,7 @@ TYPE_PARSER(construct<OmpDefaultmapClause>(
         "DEFAULT" >> pure(OmpDefaultmapClause::ImplicitBehavior::Default)),
     maybe(":" >>
         construct<OmpDefaultmapClause::VariableCategory>(
+            "ALL"_id >> pure(OmpDefaultmapClause::VariableCategory::All) ||
             "SCALAR" >> pure(OmpDefaultmapClause::VariableCategory::Scalar) ||
             "AGGREGATE" >>
                 pure(OmpDefaultmapClause::VariableCategory::Aggregate) ||

@@ -393,7 +393,6 @@ define void @replicate_operands_in_with_operands_in_minbws(ptr %dst, ptr noalias
 ; CHECK-LABEL: define void @replicate_operands_in_with_operands_in_minbws
 ; CHECK-SAME: (ptr [[DST:%.*]], ptr noalias [[SRC_1:%.*]], ptr noalias [[SRC_2:%.*]], i32 [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X]], 65526
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
@@ -405,10 +404,10 @@ define void @replicate_operands_in_with_operands_in_minbws(ptr %dst, ptr noalias
 ; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr inbounds i16, ptr [[SRC_2]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_2:%.*]] = load i16, ptr [[GEP_SRC_2]], align 2
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i16 [[L_2]], 100
-; CHECK-NEXT:    [[CONV:%.*]] = zext i16 [[L_2]] to i32
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C_2]], i32 [[SUB]], i32 [[CONV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[SEL]] to i16
-; CHECK-NEXT:    [[TRUNC:%.*]] = add i16 [[L_2]], [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[X]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[TMP0]], -10
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[C_2]], i16 [[TMP1]], i16 [[L_2]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = add i16 [[TMP2]], [[L_2]]
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[IV]]
 ; CHECK-NEXT:    store i16 [[TRUNC]], ptr [[GEP_DST]], align 2
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
