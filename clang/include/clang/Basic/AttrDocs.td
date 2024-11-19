@@ -3922,8 +3922,8 @@ def LifetimeCaptureByDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
     Similar to `lifetimebound`_, the ``lifetime_capture_by(X)`` attribute on a function
-parameter or implicit object parameter indicates that objects that are referred to by
-that parameter may also be referred to by a capturing entity ``X``.
+parameter or implicit object parameter indicates that indicates that the capturing entity
+``X`` may refer to the object referred by that parameter.
 
 Below is a list of types of the parameters and what they're considered to refer to:
 
