@@ -6815,16 +6815,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
         // Check if it is profitable to try vectorizing gathered loads. It is
         // profitable if we have more than 3 consecutive loads or if we have
         // less but all users are vectorized or deleted.
-        bool AllowToVectorize =
-            NumElts >= 3 ||
-            any_of(ValueToGatherNodes.at(Slice.front()),
-                   [=](const TreeEntry *TE) {
-                     return TE->Scalars.size() == 2 &&
-                            ((TE->Scalars.front() == Slice.front() &&
-                              TE->Scalars.back() == Slice.back()) ||
-                             (TE->Scalars.front() == Slice.back() &&
-                              TE->Scalars.back() == Slice.front()));
-                   });
+        bool AllowToVectorize = false;
         // Check if it is profitable to vectorize 2-elements loads.
         if (NumElts == 2) {
           bool IsLegalBroadcastLoad = TTI->isLegalBroadcastLoad(
@@ -6861,6 +6852,19 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
             return true;
           };
           AllowToVectorize = CheckIfAllowed(Slice);
+        } else {
+          AllowToVectorize =
+              (NumElts >= 3 ||
+               any_of(ValueToGatherNodes.at(Slice.front()),
+                      [=](const TreeEntry *TE) {
+                        return TE->Scalars.size() == 2 &&
+                               ((TE->Scalars.front() == Slice.front() &&
+                                 TE->Scalars.back() == Slice.back()) ||
+                                (TE->Scalars.front() == Slice.back() &&
+                                 TE->Scalars.back() == Slice.front()));
+                      })) &&
+              hasFullVectorsOrPowerOf2(*TTI, Slice.front()->getType(),
+                                       Slice.size());
         }
         if (AllowToVectorize) {
           SmallVector<Value *> PointerOps;
@@ -6903,7 +6907,8 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
       }
       // Mark masked gathers candidates as vectorized, if any.
       for (unsigned Cnt : MaskedGatherVectorized) {
-        ArrayRef<LoadInst *> Slice = ArrayRef(Loads).slice(Cnt, NumElts);
+        ArrayRef<LoadInst *> Slice = ArrayRef(Loads).slice(
+            Cnt, std::min<unsigned>(NumElts, Loads.size() - Cnt));
         ArrayRef<Value *> Values(
             reinterpret_cast<Value *const *>(Slice.begin()), Slice.size());
         Results.emplace_back(Values, LoadsState::ScatterVectorize);
@@ -10291,10 +10296,10 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
             Idx = EMask[Idx];
         }
         CommonVF = E->Scalars.size();
-      } else if (std::optional<unsigned> Factor = E->getInterleaveFactor();
-                 Factor && E->Scalars.size() != Mask.size() &&
+      } else if (unsigned Factor = E->getInterleaveFactor();
+                 Factor > 0 && E->Scalars.size() != Mask.size() &&
                  ShuffleVectorInst::isDeInterleaveMaskOfFactor(CommonMask,
-                                                               *Factor)) {
+                                                               Factor)) {
         // Deinterleaved nodes are free.
         std::iota(CommonMask.begin(), CommonMask.end(), 0);
       }
@@ -13609,7 +13614,10 @@ Value *BoUpSLP::gather(
     } else {
       Vec = CreateShuffle(Root, Vec, Mask);
       if (auto *OI = dyn_cast<Instruction>(OriginalRoot);
-          OI && OI->hasNUses(0))
+          OI && OI->hasNUses(0) &&
+          none_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+            return TE->VectorizedValue == OI;
+          }))
         eraseInstruction(OI);
     }
   }
@@ -15708,16 +15716,18 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
           return E->VectorizedValue;
         }
-        assert(isa<ShuffleVectorInst>(Src) &&
-               "Not supported shufflevector usage.");
-        auto *SVSrc = cast<ShuffleVectorInst>(Src);
-        assert(isa<PoisonValue>(SVSrc->getOperand(1)) &&
-               "Not supported shufflevector usage.");
         SmallVector<int> ThisMask(calculateShufflevectorMask(E->Scalars));
-        SmallVector<int> NewMask(ThisMask.size());
-        transform(ThisMask, NewMask.begin(),
-                  [&SVSrc](int Mask) { return SVSrc->getShuffleMask()[Mask]; });
-        V = Builder.CreateShuffleVector(SVSrc->getOperand(0), NewMask);
+        if (auto *SVSrc = dyn_cast<ShuffleVectorInst>(Src)) {
+          assert(isa<PoisonValue>(SVSrc->getOperand(1)) &&
+                 "Not supported shufflevector usage.");
+          SmallVector<int> NewMask(ThisMask.size());
+          transform(ThisMask, NewMask.begin(), [&SVSrc](int Mask) {
+            return SVSrc->getShuffleMask()[Mask];
+          });
+          V = Builder.CreateShuffleVector(SVSrc->getOperand(0), NewMask);
+        } else {
+          V = Builder.CreateShuffleVector(Src, ThisMask);
+        }
         propagateIRFlags(V, E->Scalars, VL0);
         if (auto *I = dyn_cast<Instruction>(V))
           V = propagateMetadata(I, E->Scalars);

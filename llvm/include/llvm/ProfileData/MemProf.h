@@ -354,10 +354,15 @@ struct IndexedAllocationInfo {
   PortableMemInfoBlock Info;
 
   IndexedAllocationInfo() = default;
+  // This constructor is soft deprecated.  It will be removed once we remove all
+  // users of the CallStack field.
   IndexedAllocationInfo(ArrayRef<FrameId> CS, CallStackId CSId,
                         const MemInfoBlock &MB,
                         const MemProfSchema &Schema = getFullSchema())
       : CallStack(CS), CSId(CSId), Info(MB, Schema) {}
+  IndexedAllocationInfo(CallStackId CSId, const MemInfoBlock &MB,
+                        const MemProfSchema &Schema = getFullSchema())
+      : CSId(CSId), Info(MB, Schema) {}
 
   // Returns the size in bytes when this allocation info struct is serialized.
   size_t serializedSize(const MemProfSchema &Schema,

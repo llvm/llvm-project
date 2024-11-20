@@ -745,3 +745,35 @@ constexpr long long reduceAddLong2 = __builtin_reduce_add((vector4long){(1LL << 
 // expected-note@-1 {{outside the range of representable values of type 'long long'}}
 static_assert(__builtin_reduce_add((vector4uint){~0U, 0, 0, 1}) == 0);
 static_assert(__builtin_reduce_add((vector4ulong){~0ULL, 0, 0, 1}) == 0);
+
+static_assert(__builtin_reduce_mul((vector4char){}) == 0);
+static_assert(__builtin_reduce_mul((vector4char){1, 2, 3, 4}) == 24);
+static_assert(__builtin_reduce_mul((vector4short){1, 2, 30, 40}) == 2400);
+static_assert(__builtin_reduce_mul((vector4int){10, 20, 300, 400}) == 24000000);
+static_assert(__builtin_reduce_mul((vector4long){1000L, 2000L, 3000L, 4000L}) == 24000000000000L);
+constexpr int reduceMulInt1 = __builtin_reduce_mul((vector4int){~(1 << 31), 1, 1, 2});
+// expected-error@-1 {{must be initialized by a constant expression}} \
+// expected-note@-1 {{outside the range of representable values of type 'int'}}
+constexpr long long reduceMulLong1 = __builtin_reduce_mul((vector4long){~(1LL << 63), 1, 1, 2});
+// expected-error@-1 {{must be initialized by a constant expression}} \
+// expected-note@-1 {{outside the range of representable values of type 'long long'}}
+constexpr int reduceMulInt2 = __builtin_reduce_mul((vector4int){(1 << 31), 1, 1, 2});
+// expected-error@-1 {{must be initialized by a constant expression}} \
+// expected-note@-1 {{outside the range of representable values of type 'int'}}
+constexpr long long reduceMulLong2 = __builtin_reduce_mul((vector4long){(1LL << 63), 1, 1, 2});
+// expected-error@-1 {{must be initialized by a constant expression}} \
+// expected-note@-1 {{outside the range of representable values of type 'long long'}}
+static_assert(__builtin_reduce_mul((vector4uint){~0U, 1, 1, 2}) == ~0U - 1);
+static_assert(__builtin_reduce_mul((vector4ulong){~0ULL, 1, 1, 2}) == ~0ULL - 1);
+
+static_assert(__builtin_reduce_and((vector4char){}) == 0);
+static_assert(__builtin_reduce_and((vector4char){(char)0x11, (char)0x22, (char)0x44, (char)0x88}) == 0);
+static_assert(__builtin_reduce_and((vector4short){(short)0x1111, (short)0x2222, (short)0x4444, (short)0x8888}) == 0);
+static_assert(__builtin_reduce_and((vector4int){(int)0x11111111, (int)0x22222222, (int)0x44444444, (int)0x88888888}) == 0);
+static_assert(__builtin_reduce_and((vector4long){(long long)0x1111111111111111L, (long long)0x2222222222222222L, (long long)0x4444444444444444L, (long long)0x8888888888888888L}) == 0L);
+static_assert(__builtin_reduce_and((vector4char){(char)-1, (char)~0x22, (char)~0x44, (char)~0x88}) == 0x11);
+static_assert(__builtin_reduce_and((vector4short){(short)~0x1111, (short)-1, (short)~0x4444, (short)~0x8888}) == 0x2222);
+static_assert(__builtin_reduce_and((vector4int){(int)~0x11111111, (int)~0x22222222, (int)-1, (int)~0x88888888}) == 0x44444444);
+static_assert(__builtin_reduce_and((vector4long){(long long)~0x1111111111111111L, (long long)~0x2222222222222222L, (long long)~0x4444444444444444L, (long long)-1}) == 0x8888888888888888L);
+static_assert(__builtin_reduce_and((vector4uint){0x11111111U, 0x22222222U, 0x44444444U, 0x88888888U}) == 0U);
+static_assert(__builtin_reduce_and((vector4ulong){0x1111111111111111UL, 0x2222222222222222UL, 0x4444444444444444UL, 0x8888888888888888UL}) == 0L);

@@ -311,6 +311,9 @@ let OtherPredicates = [UseRealTrue16Insts] in
 let OtherPredicates = [UseFakeTrue16Insts] in
   defm V_CVT_F32_F16_fake16 : VOP1Inst <"v_cvt_f32_f16_fake16", VOPProfile_Fake16<VOP_F32_F16>, any_fpextend>;
 
+let SubtargetPredicate = HasBF16ConversionInsts in
+defm V_CVT_F32_BF16 : VOP1Inst_t16 <"v_cvt_f32_bf16", VOP_F32_BF16>;
+
 let ReadsModeReg = 0, mayRaiseFPException = 0 in {
 defm V_CVT_RPI_I32_F32 : VOP1Inst <"v_cvt_rpi_i32_f32", VOP_I32_F32, cvt_rpi_i32_f32>;
 defm V_CVT_FLR_I32_F32 : VOP1Inst <"v_cvt_flr_i32_f32", VOP_I32_F32, cvt_flr_i32_f32>;
@@ -760,6 +763,9 @@ let SubtargetPredicate = isGFX11Plus in {
   defm V_CVT_I32_I16    : VOP1Inst_t16<"v_cvt_i32_i16", VOP_I32_I16>;
   defm V_CVT_U32_U16    : VOP1Inst_t16<"v_cvt_u32_u16", VOP_I32_I16>;
 } // End SubtargetPredicate = isGFX11Plus
+
+let SubtargetPredicate = HasPrngInst in
+defm V_PRNG_B32 : VOP1Inst <"v_prng_b32", VOP_I32_I32, int_amdgcn_prng_b32>;
 
 foreach vt = Reg32Types.types in {
   def : GCNPat<(int_amdgcn_permlane64 (vt VRegSrc_32:$src0)),
@@ -1268,7 +1274,7 @@ multiclass VOP1_Real_vi <bits<10> op> {
 
   if !cast<VOP1_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA then
   def _sdwa_vi :
-    VOP_SDWA_Real <!cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa")>,
+    VOP_SDWA8_Real <!cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa")>,
     VOP1_SDWAe <op{7-0}, !cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
 
   if !cast<VOP1_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA9 then
@@ -1474,7 +1480,7 @@ def : GCNPat <
 // GFX9
 //===----------------------------------------------------------------------===//
 
-let AssemblerPredicate = isGFX9Only, DecoderNamespace = "GFX9" in {
+let DecoderNamespace = "GFX9" in {
   multiclass VOP1_Real_gfx9 <bits<10> op> {
     defm NAME : VOP1_Real_e32e64_vi <op>;
 
@@ -1511,10 +1517,14 @@ defm V_SCREEN_PARTITION_4SE_B32 : VOP1_Real_gfx9 <0x37>;
 let AssemblerPredicate = isGFX940Plus in
 defm V_MOV_B64 : VOP1_Real_gfx9 <0x38>;
 
+defm V_CVT_F32_BF16          : VOP1_Real_gfx9 <0x5b>;
+
 defm V_CVT_F32_FP8       : VOP1_Real_NoDstSel_SDWA_gfx9<0x54>;
 defm V_CVT_F32_BF8       : VOP1_Real_NoDstSel_SDWA_gfx9<0x55>;
 defm V_CVT_PK_F32_FP8    : VOP1_Real_NoDstSel_SDWA_gfx9<0x56>;
 defm V_CVT_PK_F32_BF8    : VOP1_Real_NoDstSel_SDWA_gfx9<0x57>;
+
+defm V_PRNG_B32            : VOP1_Real_gfx9 <0x58>;
 
 class MovDPP8Pattern<Predicate Pred, Instruction Inst, ValueType vt> : GCNPat <
   (vt (int_amdgcn_mov_dpp8 vt:$src, timm:$dpp8)),
