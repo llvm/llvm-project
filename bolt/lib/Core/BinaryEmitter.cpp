@@ -923,6 +923,7 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
   // As a solution, for fixed-address binaries we set LPStart to 0, and for
   // position-independent binaries we set LP start to FDE start minus one byte
   // for FDEs that start with a landing pad.
+  const bool NeedsLPAdjustment = !FF.empty() && FF.front()->isLandingPad();
   std::function<void(const MCSymbol *)> emitLandingPad;
   if (BC.HasFixedLoadAddress) {
     Streamer.emitIntValue(dwarf::DW_EH_PE_udata4, 1); // LPStart format
@@ -934,7 +935,6 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
         Streamer.emitIntValue(0, 4);
     };
   } else {
-    const bool NeedsLPAdjustment = !FF.empty() && FF.front()->isLandingPad();
     if (NeedsLPAdjustment) {
       // Use relative LPStart format and emit LPStart as [SymbolStart - 1].
       Streamer.emitIntValue(dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4, 1);
