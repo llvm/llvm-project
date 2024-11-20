@@ -15,12 +15,10 @@ define i32 @foo(i32 %0, i1 %1) {
 ; RV32-NEXT:    slli a0, a0, 18
 ; RV32-NEXT:    srli a0, a0, 31
 ; RV32-NEXT:    bnez a0, .LBB0_4
-; RV32-NEXT:  .LBB0_2:
+; RV32-NEXT:  .LBB0_3:
 ; RV32-NEXT:    lui a0, 912096
 ; RV32-NEXT:    addi a0, a0, -1330
 ; RV32-NEXT:    ret
-; RV32-NEXT:  .LBB0_3:
-; RV32-NEXT:    beqz zero, .LBB0_2
 ; RV32-NEXT:  .LBB0_4:
 ; RV32-NEXT:    li a0, 1
 ; RV32-NEXT:    ret
@@ -34,12 +32,10 @@ define i32 @foo(i32 %0, i1 %1) {
 ; RV64-NEXT:    slli a0, a0, 50
 ; RV64-NEXT:    srli a0, a0, 63
 ; RV64-NEXT:    bnez a0, .LBB0_4
-; RV64-NEXT:  .LBB0_2:
+; RV64-NEXT:  .LBB0_3:
 ; RV64-NEXT:    lui a0, 912096
 ; RV64-NEXT:    addiw a0, a0, -1330
 ; RV64-NEXT:    ret
-; RV64-NEXT:  .LBB0_3:
-; RV64-NEXT:    beqz zero, .LBB0_2
 ; RV64-NEXT:  .LBB0_4:
 ; RV64-NEXT:    li a0, 1
 ; RV64-NEXT:    ret
