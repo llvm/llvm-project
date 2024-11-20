@@ -9,8 +9,6 @@
 #include "llvm/ExecutionEngine/Orc/JITLinkRedirectableSymbolManager.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 
-#include "llvm/ExecutionEngine/Orc/DebugUtils.h"
-
 #define DEBUG_TYPE "orc"
 
 using namespace llvm;
