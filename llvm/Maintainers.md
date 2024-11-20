@@ -201,7 +201,7 @@ mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
 #### Hexagon backend
 
 Sundeep Kushwaha \
-sundeepk@quicinc.com (email)
+sundeepk@quicinc.com (email), [SundeepKushwaha](https://github.com/SundeepKushwaha) (GitHub)
 
 #### Lanai backend
 
