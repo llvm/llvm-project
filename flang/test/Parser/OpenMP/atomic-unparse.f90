@@ -3,6 +3,7 @@
 program main
    implicit none
    integer :: i, j = 10
+   logical :: k
 !READ
 !$omp atomic read
    i = j
@@ -121,6 +122,30 @@ program main
    i = j
 !$omp end atomic
 
+!COMPARE
+!$omp atomic compare
+   r = i .eq. j
+!$omp atomic seq_cst compare
+   r = i .eq. j
+!$omp atomic compare seq_cst
+   r = i .eq. j
+!$omp atomic release compare
+   r = i .eq. j
+!$omp atomic compare release
+   r = i .eq. j
+!$omp atomic acq_rel compare
+   r = i .eq. j
+!$omp atomic compare acq_rel
+   r = i .eq. j
+!$omp atomic acquire compare
+   r = i .eq. j
+!$omp atomic compare acquire
+   r = i .eq. j
+!$omp atomic relaxed compare
+   r = i .eq. j
+!$omp atomic compare relaxed
+   r = i .eq. j
+
 !ATOMIC
 !$omp atomic
    i = j
@@ -204,6 +229,20 @@ end program main
 !CHECK: !$OMP END ATOMIC
 !CHECK: !$OMP ATOMIC CAPTURE RELAXED
 !CHECK: !$OMP END ATOMIC
+
+!COMPARE
+
+!CHECK: !$OMP ATOMIC COMPARE
+!CHECK: !$OMP ATOMIC SEQ_CST COMPARE
+!CHECK: !$OMP ATOMIC COMPARE SEQ_CST
+!CHECK: !$OMP ATOMIC RELEASE COMPARE
+!CHECK: !$OMP ATOMIC COMPARE RELEASE
+!CHECK: !$OMP ATOMIC ACQ_REL COMPARE
+!CHECK: !$OMP ATOMIC COMPARE ACQ_REL
+!CHECK: !$OMP ATOMIC ACQUIRE COMPARE
+!CHECK: !$OMP ATOMIC COMPARE ACQUIRE
+!CHECK: !$OMP ATOMIC RELAXED COMPARE
+!CHECK: !$OMP ATOMIC COMPARE RELAXED
 
 !ATOMIC
 !CHECK: !$OMP ATOMIC

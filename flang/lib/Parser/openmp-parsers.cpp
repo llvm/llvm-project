@@ -912,6 +912,12 @@ TYPE_PARSER("ATOMIC" >>
         Parser<OmpAtomicClauseList>{} / endOmpLine, statement(assignmentStmt),
         statement(assignmentStmt), Parser<OmpEndAtomic>{} / endOmpLine)))
 
+TYPE_PARSER("ATOMIC" >>
+    sourced(construct<OmpAtomicCompare>(
+        Parser<OmpAtomicClauseList>{} / maybe(","_tok), verbatim("COMPARE"_tok),
+        Parser<OmpAtomicClauseList>{} / endOmpLine, statement(assignmentStmt),
+        maybe(Parser<OmpEndAtomic>{} / endOmpLine))))
+
 // OMP ATOMIC [MEMORY-ORDER-CLAUSE-LIST] UPDATE [MEMORY-ORDER-CLAUSE-LIST]
 TYPE_PARSER("ATOMIC" >>
     sourced(construct<OmpAtomicUpdate>(
@@ -934,6 +940,7 @@ TYPE_PARSER("ATOMIC" >>
 // Atomic Construct
 TYPE_PARSER(construct<OpenMPAtomicConstruct>(Parser<OmpAtomicRead>{}) ||
     construct<OpenMPAtomicConstruct>(Parser<OmpAtomicCapture>{}) ||
+    construct<OpenMPAtomicConstruct>(Parser<OmpAtomicCompare>{}) ||
     construct<OpenMPAtomicConstruct>(Parser<OmpAtomicWrite>{}) ||
     construct<OpenMPAtomicConstruct>(Parser<OmpAtomicUpdate>{}) ||
     construct<OpenMPAtomicConstruct>(Parser<OmpAtomic>{}))
