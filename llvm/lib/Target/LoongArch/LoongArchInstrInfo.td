@@ -711,15 +711,21 @@ class STORE_2RI14<bits<32> op>
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 1
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 1,
-    Constraints = "@earlyclobber $rd" in class AM_3R<bits<32> op>
+    IsSubjectToAMORdConstraint = 1 in {
+class AM_3R<bits<32> op>
     : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rk, GPRMemAtomic:$rj),
-            "$rd, $rk, $rj">;
+            "$rd, $rk, $rj"> {
+  let Constraints = "@earlyclobber $rd";
+}
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 1,
-    Constraints =
-        "@earlyclobber $rd_wb, $rd_wb = $rd" in class AMCAS_3R<bits<32> op>
+class AMCAS_3R<bits<32> op>
     : Fmt3R<op, (outs GPR:$rd_wb), (ins GPR:$rd, GPR:$rk, GPRMemAtomic:$rj),
-            "$rd, $rk, $rj">;
+            "$rd, $rk, $rj"> {
+  let Constraints = "@earlyclobber $rd_wb, $rd_wb = $rd";
+  let IsAMCAS = 1;
+}
+} // hasSideEffects = 0, mayLoad = 1, mayStore = 1,
+  // IsSubjectToAMORdConstraint = 1
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 class LLBase<bits<32> op>
