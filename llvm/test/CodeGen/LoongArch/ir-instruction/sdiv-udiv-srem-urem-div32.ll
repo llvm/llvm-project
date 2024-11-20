@@ -2,7 +2,7 @@
 ; RUN: llc --mtriple=loongarch64 -mattr=+d,-div32 < %s | FileCheck %s --check-prefix=LA64
 ; RUN: llc --mtriple=loongarch64 -mattr=+d,+div32 < %s | FileCheck %s --check-prefix=LA64-DIV32
 
-define dso_local noundef signext i32 @divw(i64 noundef %0, i64 noundef %1) local_unnamed_addr #0 {
+define i32 @divw(i64 %0, i64 %1) {
 ; LA64-LABEL: divw:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.w $a1, $a1, 0
@@ -20,7 +20,7 @@ define dso_local noundef signext i32 @divw(i64 noundef %0, i64 noundef %1) local
   ret i32 %5
 }
 
-define dso_local noundef signext i32 @divwu(i64 noundef %0, i64 noundef %1) local_unnamed_addr #0 {
+define i32  @divwu(i64 %0, i64 %1) {
 ; LA64-LABEL: divwu:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.w $a1, $a1, 0
@@ -38,7 +38,7 @@ define dso_local noundef signext i32 @divwu(i64 noundef %0, i64 noundef %1) loca
   ret i32 %5
 }
 
-define dso_local signext range(i32 -2147483647, -2147483648) i32 @modw(i64 noundef %0, i64 noundef %1) local_unnamed_addr #0 {
+define i32 @modw(i64 %0, i64 %1) {
 ; LA64-LABEL: modw:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.w $a1, $a1, 0
@@ -56,7 +56,7 @@ define dso_local signext range(i32 -2147483647, -2147483648) i32 @modw(i64 nound
   ret i32 %5
 }
 
-define dso_local signext range(i32 0, -1) i32 @modwu(i64 noundef %0, i64 noundef %1) local_unnamed_addr #0 {
+define i32 @modwu(i64 %0, i64 %1) {
 ; LA64-LABEL: modwu:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.w $a1, $a1, 0
