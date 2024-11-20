@@ -258,9 +258,8 @@ private:
                          MachineInstr &I) const;
 
   bool selectWaveNOpInst(Register ResVReg, const SPIRVType *ResType,
-                                                       MachineInstr &I,
-                                                       unsigned Opcode,
-                                                       unsigned OperandCount) const;
+                         MachineInstr &I, unsigned Opcode,
+                         unsigned OperandCount) const;
   bool selectWaveActiveAnyTrue(Register ResVReg, const SPIRVType *ResType,
                                MachineInstr &I) const;
 
@@ -1957,10 +1956,10 @@ bool SPIRVInstructionSelector::selectSign(Register ResVReg,
 }
 
 bool SPIRVInstructionSelector::selectWaveNOpInst(Register ResVReg,
-                                                       const SPIRVType *ResType,
-                                                       MachineInstr &I,
-                                                       unsigned Opcode,
-                                                       unsigned OperandCount) const {
+                                                 const SPIRVType *ResType,
+                                                 MachineInstr &I,
+                                                 unsigned Opcode,
+                                                 unsigned OperandCount) const {
   assert(I.getNumOperands() == OperandCount);
   for (unsigned j = 2; j < OperandCount; j++) {
     assert(I.getOperand(j).isReg());
@@ -1970,9 +1969,10 @@ bool SPIRVInstructionSelector::selectWaveNOpInst(Register ResVReg,
   SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
 
   auto BMI = BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII));
+                 .addDef(ResVReg)
+                 .addUse(GR.getSPIRVTypeID(ResType))
+                 .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I,
+                                                IntTy, TII));
 
   for (unsigned j = 2; j < OperandCount; j++) {
     BMI.addUse(I.getOperand(j).getReg());
@@ -1980,7 +1980,6 @@ bool SPIRVInstructionSelector::selectWaveNOpInst(Register ResVReg,
 
   return BMI.constrainAllUses(TII, TRI, RBI);
 }
-
 
 bool SPIRVInstructionSelector::selectWaveActiveAnyTrue(Register ResVReg,
                                                        const SPIRVType *ResType,
@@ -1994,7 +1993,8 @@ bool SPIRVInstructionSelector::selectWaveActiveCountBits(
   SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
   SPIRVType *BallotType = GR.getOrCreateSPIRVVectorType(IntTy, 4, I, TII);
   Register BallotReg = MRI->createVirtualRegister(GR.getRegClass(BallotType));
-  bool Result = selectWaveNOpInst(BallotReg, BallotType, I, SPIRV::OpGroupNonUniformBallot, 3);
+  bool Result = selectWaveNOpInst(BallotReg, BallotType, I,
+                                  SPIRV::OpGroupNonUniformBallot, 3);
 
   MachineBasicBlock &BB = *I.getParent();
   Result &=
@@ -2013,7 +2013,8 @@ bool SPIRVInstructionSelector::selectWaveActiveCountBits(
 bool SPIRVInstructionSelector::selectWaveReadLaneAt(Register ResVReg,
                                                     const SPIRVType *ResType,
                                                     MachineInstr &I) const {
-  return selectWaveNOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformShuffle, 4);
+  return selectWaveNOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformShuffle,
+                           4);
 }
 
 bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
