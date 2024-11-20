@@ -4951,7 +4951,6 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::Kind::ARCUnbridgedCast:
     case clang::BuiltinType::Kind::BoundMember:
     case clang::BuiltinType::Kind::BuiltinFn:
-    case clang::BuiltinType::Kind::BuiltinCountedByRef:
     case clang::BuiltinType::Kind::Dependent:
     case clang::BuiltinType::Kind::OCLClkEvent:
     case clang::BuiltinType::Kind::OCLEvent:
@@ -6112,7 +6111,6 @@ uint32_t TypeSystemClang::GetNumPointeeChildren(clang::QualType type) {
     case clang::BuiltinType::ARCUnbridgedCast:
     case clang::BuiltinType::PseudoObject:
     case clang::BuiltinType::BuiltinFn:
-    case clang::BuiltinType::BuiltinCountedByRef:
     case clang::BuiltinType::ArraySection:
       return 1;
     default:
