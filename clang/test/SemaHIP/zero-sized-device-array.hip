@@ -7,6 +7,8 @@
 
 typedef float ZEROARR[0];
 
+float global_array[0];
+
 __global__ void global_fun() {
     extern __shared__ float externArray[];
     ZEROARR TypeDef; // expected-error {{zero-length arrays are not permitted in HIP device code}}
