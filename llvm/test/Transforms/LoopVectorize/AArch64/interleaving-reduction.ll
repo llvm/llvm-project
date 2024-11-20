@@ -5,6 +5,8 @@
 ; RUN: opt -passes=loop-vectorize -mtriple=arm64-apple-macos -mcpu=apple-a14 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
 ; RUN: opt -passes=loop-vectorize -mtriple=arm64-apple-macos -mcpu=apple-a15 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
 ; RUN: opt -passes=loop-vectorize -mtriple=arm64-apple-macos -mcpu=apple-a16 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
+; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=neoverse-v2 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
+; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=neoverse-v3 -S %s | FileCheck --check-prefix=INTERLEAVE-4-VLA %s
 
 ; Tests for selecting the interleave count for loops with reductions.
 
@@ -137,6 +139,12 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-2:       exit:
 ; INTERLEAVE-2-NEXT:    [[RED_NEXT_LCSSA:%.*]] = phi i32 [ [[RED_NEXT]], [[LOOP]] ], [ [[TMP9]], [[MIDDLE_BLOCK]] ]
 ; INTERLEAVE-2-NEXT:    ret i32 [[RED_NEXT_LCSSA]]
+;
+; INTERLEAVE-4-VLA-LABEL: @interleave_integer_reduction(
+; INTERLEAVE-4-VLA:       add <vscale x 4 x i32>
+; INTERLEAVE-4-VLA-NEXT:  add <vscale x 4 x i32>
+; INTERLEAVE-4-VLA-NEXT:  add <vscale x 4 x i32>
+; INTERLEAVE-4-VLA-NEXT:  add <vscale x 4 x i32>
 ;
 entry:
   br label %loop

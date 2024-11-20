@@ -131,7 +131,6 @@ template <typename Separator> struct MotionModifiers {
   constexpr MotionModifiers(const MotionModifiers &) = default;
   constexpr MotionModifiers(MotionModifiers &&) = default;
 
-  // Parsing of mappers if not implemented yet.
   using ExpParser = Parser<OmpFromClause::Expectation>;
   using IterParser = Parser<OmpIteratorModifier>;
   using ModParser = ConcatSeparated<Separator, ExpParser, IterParser>;
@@ -250,21 +249,26 @@ TYPE_PARSER(
         "TOFROM" >> pure(OmpMapClause::Type::Tofrom)))
 
 template <bool CommasEverywhere>
-static inline OmpMapClause makeMapClause(
+static inline OmpMapClause makeMapClause(OmpMapperIdentifier &&mm,
     std::tuple<std::optional<std::list<OmpMapClause::TypeModifier>>,
         std::optional<std::list<OmpIteratorModifier>>,
         std::optional<std::list<OmpMapClause::Type>>> &&mods,
     OmpObjectList &&objs) {
   auto &&[tm, it, ty] = std::move(mods);
-  return OmpMapClause{std::move(tm), std::move(it), std::move(ty),
-      std::move(objs), CommasEverywhere};
+  return OmpMapClause{std::move(mm), std::move(tm), std::move(it),
+      std::move(ty), std::move(objs), CommasEverywhere};
 }
 
+TYPE_PARSER(construct<OmpMapperIdentifier>(
+    maybe("MAPPER"_tok >> parenthesized(name) / ","_tok)))
+
 TYPE_PARSER(construct<OmpMapClause>(
-    applyFunction<OmpMapClause>(
-        makeMapClause<true>, MapModifiers(","_tok), Parser<OmpObjectList>{}) ||
+    applyFunction<OmpMapClause>(makeMapClause<true>,
+        Parser<OmpMapperIdentifier>{}, MapModifiers(","_tok),
+        Parser<OmpObjectList>{}) ||
     applyFunction<OmpMapClause>(makeMapClause<false>,
-        MapModifiers(maybe(","_tok)), Parser<OmpObjectList>{})))
+        Parser<OmpMapperIdentifier>{}, MapModifiers(maybe(","_tok)),
+        Parser<OmpObjectList>{})))
 
 // [OpenMP 5.0]
 // 2.19.7.2 defaultmap(implicit-behavior[:variable-category])
