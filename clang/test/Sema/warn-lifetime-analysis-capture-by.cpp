@@ -3,15 +3,6 @@
 #include "Inputs/lifetime-analysis.h"
 
 // ****************************************************************************
-// Helper class and functions.
-// ****************************************************************************
-// Lifetimebound helper functions: Returns a reference to the argument.
-std::string_view getLifetimeBoundView(const std::string& s [[clang::lifetimebound]]);
-std::string_view getNotLifetimeBoundView(const std::string& s);
-const std::string& getLifetimeBoundString(const std::string &s [[clang::lifetimebound]]);
-const std::string& getLifetimeBoundString(std::string_view sv [[clang::lifetimebound]]);
-
-// ****************************************************************************
 // Capture an integer
 // ****************************************************************************
 namespace capture_int {
@@ -24,7 +15,7 @@ void use() {
   int local;
   captureInt(1, // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
             x);
-  captureRValInt(1, x); // expected-warning {{object whose reference is captured by 'x'}}
+  captureRValInt(1, x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
   captureInt(local, x);
   noCaptureInt(1, x);
   noCaptureInt(local, x);
@@ -41,10 +32,10 @@ void captureRValString(std::string &&s [[clang::lifetime_capture_by(x)]], X &x);
 
 void use() {
   std::string local_string;
-  captureString(std::string(), x); // expected-warning {{object whose reference is captured by 'x'}}
+  captureString(std::string(), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
   captureString(local_string, x);
   captureRValString(std::move(local_string), x);
-  captureRValString(std::string(), x); // expected-warning {{object whose reference is captured by 'x'}}
+  captureRValString(std::string(), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
 }
 } // namespace capture_string
 
@@ -57,17 +48,22 @@ void captureStringView(std::string_view s [[clang::lifetime_capture_by(x)]], X &
 void captureRValStringView(std::string_view &&sv [[clang::lifetime_capture_by(x)]], X &x);
 void noCaptureStringView(std::string_view sv, X &x);
 
+std::string_view getLifetimeBoundView(const std::string& s [[clang::lifetimebound]]);
+std::string_view getNotLifetimeBoundView(const std::string& s);
+const std::string& getLifetimeBoundString(const std::string &s [[clang::lifetimebound]]);
+const std::string& getLifetimeBoundString(std::string_view sv [[clang::lifetimebound]]);
+
 void use() {
   std::string_view local_string_view;
   std::string local_string;
   captureStringView(local_string_view, x);
-  captureStringView(std::string(), // expected-warning {{object whose reference is captured by 'x'}}
+  captureStringView(std::string(), // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
             x);
 
   captureStringView(getLifetimeBoundView(local_string), x);
   captureStringView(getNotLifetimeBoundView(std::string()), x);
   captureRValStringView(std::move(local_string_view), x);
-  captureRValStringView(std::string(), x); // expected-warning {{object whose reference is captured by 'x'}}
+  captureRValStringView(std::string(), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
   captureRValStringView(std::string_view{"abcd"}, x);
 
   noCaptureStringView(local_string_view, x);
@@ -75,16 +71,16 @@ void use() {
 
   // With lifetimebound functions.
   captureStringView(getLifetimeBoundView(
-  std::string() // expected-warning {{object whose reference is captured by 'x'}}
+  std::string() // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
   ), x);
   captureRValStringView(getLifetimeBoundView(local_string), x);
-  captureRValStringView(getLifetimeBoundView(std::string()), x); // expected-warning {{object whose reference is captured by 'x'}}
+  captureRValStringView(getLifetimeBoundView(std::string()), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
   captureRValStringView(getNotLifetimeBoundView(std::string()), x);
   noCaptureStringView(getLifetimeBoundView(std::string()), x);
-  captureStringView(getLifetimeBoundString(std::string()), x); // expected-warning {{object whose reference is captured by 'x'}}
-  captureStringView(getLifetimeBoundString(getLifetimeBoundView(std::string())), x); // expected-warning {{object whose reference is captured by 'x'}}
+  captureStringView(getLifetimeBoundString(std::string()), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
+  captureStringView(getLifetimeBoundString(getLifetimeBoundView(std::string())), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
   captureStringView(getLifetimeBoundString(getLifetimeBoundString(
-    std::string()  // expected-warning {{object whose reference is captured by 'x'}}
+    std::string()  // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
     )), x);
 }
 } // namespace capture_string_view
@@ -99,9 +95,9 @@ namespace capture_pointer {
 struct X {} x;
 void capturePointer(const std::string* sp [[clang::lifetime_capture_by(x)]], X &x);
 void use() {
-  capturePointer(getLifetimeBoundPointer(std::string()), x); // expected-warning {{object whose reference is captured by 'x'}}
+  capturePointer(getLifetimeBoundPointer(std::string()), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
   capturePointer(getLifetimeBoundPointer(*getLifetimeBoundPointer(
-    std::string()  // expected-warning {{object whose reference is captured by 'x'}}
+    std::string()  // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
     )), x);
   capturePointer(getNotLifetimeBoundPointer(std::string()), x);
 
@@ -121,14 +117,14 @@ void captureInitList(std::initializer_list<int> abc [[clang::lifetime_capture_by
 std::initializer_list<int> getLifetimeBoundInitList(std::initializer_list<int> abc [[clang::lifetimebound]]);
 
 void use() {
-  captureVector({1, 2, 3}, x); // expected-warning {{captured by 'x'}}
-  captureVector(std::vector<int>{}, x); // expected-warning {{captured by 'x'}}
+  captureVector({1, 2, 3}, x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
+  captureVector(std::vector<int>{}, x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
   std::vector<int> local_vector;
   captureVector(local_vector, x);
   int local_array[2]; 
   captureArray(local_array, x);
-  captureInitList({1, 2}, x); // expected-warning {{captured by 'x'}}
-  captureInitList(getLifetimeBoundInitList({1, 2}), x); // expected-warning {{captured by 'x'}}
+  captureInitList({1, 2}, x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
+  captureInitList(getLifetimeBoundInitList({1, 2}), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
 }
 } // namespace init_lists
 
@@ -141,7 +137,7 @@ struct S {
   void capture(X &x) [[clang::lifetime_capture_by(x)]];
 };
 void use() {
-  S{}.capture(x); // expected-warning {{object whose reference is captured by 'x'}}
+  S{}.capture(x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
   S s;
   s.capture(x);
 }
@@ -153,6 +149,8 @@ void use() {
 namespace capture_by_global_unknown {
 void captureByGlobal(std::string_view s [[clang::lifetime_capture_by(global)]]);
 void captureByUnknown(std::string_view s [[clang::lifetime_capture_by(unknown)]]);
+
+std::string_view getLifetimeBoundView(const std::string& s [[clang::lifetimebound]]);
 
 void use() {  
   std::string_view local_string_view;
@@ -179,12 +177,16 @@ struct S {
   void captureInt(const int& x [[clang::lifetime_capture_by(this)]]);
   void captureView(std::string_view sv [[clang::lifetime_capture_by(this)]]);
 };
+std::string_view getLifetimeBoundView(const std::string& s [[clang::lifetimebound]]);
+std::string_view getNotLifetimeBoundView(const std::string& s);
+const std::string& getLifetimeBoundString(const std::string &s [[clang::lifetimebound]]);
+
 void use() {
   S s;
-  s.captureInt(1); // expected-warning {{object whose reference is captured by 's'}}
-  s.captureView(std::string()); // expected-warning {{captured by 's'}}
-  s.captureView(getLifetimeBoundView(std::string())); // expected-warning {{captured by 's'}}
-  s.captureView(getLifetimeBoundString(std::string()));  // expected-warning {{captured by 's'}}
+  s.captureInt(1); // expected-warning {{object whose reference is captured by 's' will be destroyed at the end of the full-expression}}
+  s.captureView(std::string()); // expected-warning {{object whose reference is captured by 's' will be destroyed at the end of the full-expression}}
+  s.captureView(getLifetimeBoundView(std::string())); // expected-warning {{object whose reference is captured by 's' will be destroyed at the end of the full-expression}}
+  s.captureView(getLifetimeBoundString(std::string()));  // expected-warning {{object whose reference is captured by 's' will be destroyed at the end of the full-expression}}
   s.captureView(getNotLifetimeBoundView(std::string()));
 }  
 } // namespace capture_by_this
@@ -200,7 +202,7 @@ struct Foo {
 void captureField(Foo param [[clang::lifetime_capture_by(x)]], X &x);
 void use() {
   captureField(Foo{
-    1 // expected-warning {{captured by 'x'}}
+    1 // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
   }, x);
   int local;
   captureField(Foo{local}, x);
@@ -213,11 +215,14 @@ void use() {
 namespace default_arg {
 struct X {} x;
 void captureDefaultArg(X &x, std::string_view s [[clang::lifetime_capture_by(x)]] = std::string());
+
+std::string_view getLifetimeBoundView(const std::string& s [[clang::lifetimebound]]);
+
 void useCaptureDefaultArg() {
   X x;
   captureDefaultArg(x); // FIXME: Diagnose temporary default arg.
-  captureDefaultArg(x, std::string("temp")); // expected-warning {{captured by 'x'}}
-  captureDefaultArg(x, getLifetimeBoundView(std::string())); // expected-warning {{captured by 'x'}}
+  captureDefaultArg(x, std::string("temp")); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
+  captureDefaultArg(x, getLifetimeBoundView(std::string())); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
   std::string local;
   captureDefaultArg(x, local);
 }
@@ -234,9 +239,9 @@ struct MySet {
 };
 void user_defined_containers() {
   MySet<int> set_of_int;
-  set_of_int.insert(1); // expected-warning {{object whose reference is captured by 'set_of_int' will be destroyed}}
+  set_of_int.insert(1); // expected-warning {{object whose reference is captured by 'set_of_int' will be destroyed at the end of the full-expression}}
   MySet<std::string_view> set_of_sv;
-  set_of_sv.insert(std::string());  // expected-warning {{object whose reference is captured by 'set_of_sv' will be destroyed}}
+  set_of_sv.insert(std::string());  // expected-warning {{object whose reference is captured by 'set_of_sv' will be destroyed at the end of the full-expression}}
   set_of_sv.insert(std::string_view());
 }
 } // namespace containers_no_distinction
@@ -257,6 +262,8 @@ template<class T> struct MyVector {
   void push_back(const T& t) requires (!IsPointerLikeType<T>);
 };
 
+std::string_view getLifetimeBoundView(const std::string& s [[clang::lifetimebound]]);
+
 void use_container() {
   std::string local;
 
@@ -264,12 +271,12 @@ void use_container() {
   vector_of_string.push_back(std::string()); // Ok.
   
   MyVector<std::string_view> vector_of_view;
-  vector_of_view.push_back(std::string()); // expected-warning {{object whose reference is captured by 'vector_of_view'}}
-  vector_of_view.push_back(getLifetimeBoundView(std::string())); // expected-warning {{captured by 'vector_of_view'}}
+  vector_of_view.push_back(std::string()); // expected-warning {{object whose reference is captured by 'vector_of_view' will be destroyed at the end of the full-expression}}
+  vector_of_view.push_back(getLifetimeBoundView(std::string())); // expected-warning {{object whose reference is captured by 'vector_of_view' will be destroyed at the end of the full-expression}}
   
   MyVector<const std::string*> vector_of_pointer;
-  vector_of_pointer.push_back(getLifetimeBoundPointer(std::string())); // expected-warning {{captured by 'vector_of_pointer'}}
-  vector_of_pointer.push_back(getLifetimeBoundPointer(*getLifetimeBoundPointer(std::string()))); // expected-warning {{captured by 'vector_of_pointer'}}
+  vector_of_pointer.push_back(getLifetimeBoundPointer(std::string())); // expected-warning {{object whose reference is captured by 'vector_of_pointer' will be destroyed at the end of the full-expression}}
+  vector_of_pointer.push_back(getLifetimeBoundPointer(*getLifetimeBoundPointer(std::string()))); // expected-warning {{object whose reference is captured by 'vector_of_pointer' will be destroyed at the end of the full-expression}}
   vector_of_pointer.push_back(getLifetimeBoundPointer(local));
   vector_of_pointer.push_back(getNotLifetimeBoundPointer(std::string()));
 }
@@ -294,15 +301,20 @@ class MyStringViewNotPointer : public std::string_view {};
 std::optional<MyStringViewNotPointer> getOptionalMySVNotP();
 MyStringViewNotPointer getMySVNotP();
 
+std::string_view getLifetimeBoundView(const std::string& s [[clang::lifetimebound]]);
+std::string_view getNotLifetimeBoundView(const std::string& s);
+const std::string& getLifetimeBoundString(const std::string &s [[clang::lifetimebound]]);
+const std::string& getLifetimeBoundString(std::string_view sv [[clang::lifetimebound]]);
+
 void use_my_view() {
   std::string local;
   MyVector<MyStringView> vector_of_my_view;
   vector_of_my_view.push_back(getMySV());
   vector_of_my_view.push_back(MyStringView{});
   vector_of_my_view.push_back(std::string_view{});
-  vector_of_my_view.push_back(std::string{}); // expected-warning {{object whose reference is captured by 'vector_of_my_view'}}
-  vector_of_my_view.push_back(getLifetimeBoundView(std::string{})); // expected-warning {{captured by 'vector_of_my_view'}}
-  vector_of_my_view.push_back(getLifetimeBoundString(getLifetimeBoundView(std::string{}))); // expected-warning {{captured by 'vector_of_my_view'}}
+  vector_of_my_view.push_back(std::string{}); // expected-warning {{object whose reference is captured by 'vector_of_my_view' will be destroyed at the end of the full-expression}}
+  vector_of_my_view.push_back(getLifetimeBoundView(std::string{})); // expected-warning {{object whose reference is captured by 'vector_of_my_view' will be destroyed at the end of the full-expression}}
+  vector_of_my_view.push_back(getLifetimeBoundString(getLifetimeBoundView(std::string{}))); // expected-warning {{object whose reference is captured by 'vector_of_my_view' will be destroyed at the end of the full-expression}}
   vector_of_my_view.push_back(getNotLifetimeBoundView(getLifetimeBoundString(getLifetimeBoundView(std::string{}))));
   
   // Use with container of other view types.
@@ -319,7 +331,7 @@ void use_with_optional_view() {
 
   std::optional<std::string_view> optional_of_view;
   vector_of_view.push_back(optional_of_view.value());
-  vector_of_view.push_back(getOptionalS().value()); // expected-warning {{captured by 'vector_of_view'}}
+  vector_of_view.push_back(getOptionalS().value()); // expected-warning {{object whose reference is captured by 'vector_of_view' will be destroyed at the end of the full-expression}}
   
   vector_of_view.push_back(getOptionalSV().value());
   vector_of_view.push_back(getOptionalMySV().value());
@@ -340,17 +352,17 @@ void capture3(const std::string_view& s [[clang::lifetime_capture_by(x)]], std::
 
 void use() {
   std::vector<std::string_view> x1;
-  capture1(std::string(), x1); // expected-warning {{captured by 'x1'}}
+  capture1(std::string(), x1); // expected-warning {{object whose reference is captured by 'x1' will be destroyed at the end of the full-expression}}
   capture1(std::string_view(), x1);
 
   std::vector<std::string_view*> x2;
   // Clang considers 'const std::string_view&' to refer to the owner
   // 'std::string' and not 'std::string_view'. Therefore no diagnostic here.
   capture2(std::string_view(), x2);
-  capture2(std::string(), x2); // expected-warning {{captured by 'x2'}}
+  capture2(std::string(), x2); // expected-warning {{object whose reference is captured by 'x2' will be destroyed at the end of the full-expression}}
   
   std::vector<std::string_view> x3;
   capture3(std::string_view(), x3);
-  capture3(std::string(), x3); // expected-warning {{captured by 'x3'}}
+  capture3(std::string(), x3); // expected-warning {{object whose reference is captured by 'x3' will be destroyed at the end of the full-expression}}
 }
 } // namespace temporary_views
