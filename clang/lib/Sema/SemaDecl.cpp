@@ -8269,7 +8269,7 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
       if (MD->isStatic())
         return;
 
-      if (!MD->getType().isNull() && MD->isExplicitObjectMemberFunction())
+      if (!MD->getParent()->isLambda() && MD->isExplicitObjectMemberFunction())
         return;
     }
     // Fields shadowed by constructor parameters are a special case. Usually
