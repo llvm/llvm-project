@@ -40,9 +40,3 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @bf2cvtl( <vscale x 16 x
   %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.fp8.bf2cvtl.x2(<vscale x 16 x i8> %zm)
   ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %res
 }
-
-
-declare { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.fp8.f1cvtl.x2(<vscale x 16 x i8>)
-declare { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.fp8.f2cvtl.x2(<vscale x 16 x i8>)
-declare { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.fp8.bf1cvtl.x2(<vscale x 16 x i8>)
-declare { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.fp8.bf2cvtl.x2(<vscale x 16 x i8>)
