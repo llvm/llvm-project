@@ -3382,9 +3382,7 @@ ExprResult Sema::BuildDeclarationNameExpr(
   case Decl::Function: {
     if (unsigned BID = cast<FunctionDecl>(VD)->getBuiltinID()) {
       if (!Context.BuiltinInfo.isDirectlyAddressable(BID)) {
-        type = (BID == Builtin::BI__builtin_counted_by_ref)
-                   ? Context.BuiltinCountedByRefTy
-                   : Context.BuiltinFnTy;
+        type = Context.BuiltinFnTy;
         valueKind = VK_PRValue;
         break;
       }
@@ -4898,15 +4896,10 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
 
   // We cannot use __builtin_counted_by_ref in a binary expression. It's
   // possible to leak the reference and violate bounds security.
-  Expr *E = base->IgnoreParenImpCasts();
-  if (auto *CE = dyn_cast<CallExpr>(E)) {
-    E = CE->getCallee()->IgnoreParenImpCasts();
-    if (const BuiltinType *PTy = E->getType()->getAsPlaceholderType();
-        PTy && PTy->getKind() == BuiltinType::BuiltinCountedByRef) {
-      Diag(E->getExprLoc(), diag::err_builtin_counted_by_ref_invalid_use)
-          << 0 << E->getSourceRange();
-    }
-  }
+  if (auto *CE = dyn_cast<CallExpr>(base->IgnoreParenImpCasts());
+      CE && CE->getBuiltinCallee() == Builtin::BI__builtin_counted_by_ref)
+    Diag(CE->getExprLoc(), diag::err_builtin_counted_by_ref_invalid_use)
+        << 0 << CE->getSourceRange();
 
   // Handle any non-overload placeholder types in the base and index
   // expressions.  We can't handle overloads here because the other
@@ -6202,7 +6195,6 @@ static bool isPlaceholderToRemoveAsArg(QualType type) {
   // These are always invalid as call arguments and should be reported.
   case BuiltinType::BoundMember:
   case BuiltinType::BuiltinFn:
-  case BuiltinType::BuiltinCountedByRef:
   case BuiltinType::IncompleteMatrixIdx:
   case BuiltinType::ArraySection:
   case BuiltinType::OMPArrayShaping:
@@ -6229,15 +6221,12 @@ bool Sema::CheckArgsForPlaceholders(MultiExprArg args) {
     // The result of __builtin_counted_by_ref cannot be used as a function
     // argument. It allows leaking and modification of bounds safety
     // information.
-    if (const auto *CE = dyn_cast<CallExpr>(args[i])) {
-      const Expr *E = CE->getCallee()->IgnoreParenImpCasts();
-      if (const BuiltinType *PTy = E->getType()->getAsPlaceholderType();
-          PTy && PTy->getKind() == BuiltinType::BuiltinCountedByRef) {
-        hasInvalid = true;
-        Diag(E->getExprLoc(),
-             diag::err_builtin_counted_by_ref_cannot_leak_reference)
-            << E->getSourceRange();
-      }
+    if (const auto *CE = dyn_cast<CallExpr>(args[i]);
+        CE && CE->getBuiltinCallee() == Builtin::BI__builtin_counted_by_ref) {
+      hasInvalid = true;
+      Diag(CE->getExprLoc(),
+           diag::err_builtin_counted_by_ref_cannot_leak_reference)
+          << CE->getSourceRange();
     }
   }
 
@@ -6802,9 +6791,7 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
   ExprResult Result;
   QualType ResultTy;
   if (BuiltinID &&
-      (Fn->getType()->isSpecificBuiltinType(BuiltinType::BuiltinFn) ||
-       Fn->getType()->isSpecificBuiltinType(
-           BuiltinType::BuiltinCountedByRef))) {
+      Fn->getType()->isSpecificBuiltinType(BuiltinType::BuiltinFn)) {
     // Extract the return type from the (builtin) function pointer type.
     // FIXME Several builtins still have setType in
     // Sema::CheckBuiltinFunctionCall. One should review their definitions in
@@ -15242,24 +15229,21 @@ ExprResult Sema::ActOnBinOp(Scope *S, SourceLocation TokLoc,
 
   // We cannot use __builtin_counted_by_ref in a binary expression. It's
   // possible to leak the reference and violate bounds security.
-  auto CheckBuiltinCountedByRefPlaceholder = [&](const Expr *E) {
-    if (const auto *CE = dyn_cast<CallExpr>(E->IgnoreParenImpCasts())) {
-      E = CE->getCallee()->IgnoreParenImpCasts();
-      if (const BuiltinType *PTy = E->getType()->getAsPlaceholderType();
-          PTy && PTy->getKind() == BuiltinType::BuiltinCountedByRef) {
-        if (BinaryOperator::isAssignmentOp(Opc))
-          Diag(E->getExprLoc(),
-               diag::err_builtin_counted_by_ref_cannot_leak_reference)
-              << E->getSourceRange();
-        else
-          Diag(E->getExprLoc(), diag::err_builtin_counted_by_ref_invalid_use)
-              << 1 << E->getSourceRange();
-      }
+  auto CheckBuiltinCountedByRef = [&](const Expr *E) {
+    if (const auto *CE = dyn_cast<CallExpr>(E->IgnoreParenImpCasts());
+        CE && CE->getBuiltinCallee() == Builtin::BI__builtin_counted_by_ref) {
+      if (BinaryOperator::isAssignmentOp(Opc))
+        Diag(E->getExprLoc(),
+             diag::err_builtin_counted_by_ref_cannot_leak_reference)
+            << E->getSourceRange();
+      else
+        Diag(E->getExprLoc(), diag::err_builtin_counted_by_ref_invalid_use)
+            << 1 << E->getSourceRange();
     }
   };
 
-  CheckBuiltinCountedByRefPlaceholder(LHSExpr);
-  CheckBuiltinCountedByRefPlaceholder(RHSExpr);
+  CheckBuiltinCountedByRef(LHSExpr);
+  CheckBuiltinCountedByRef(RHSExpr);
 
   return BuildBinOp(S, TokLoc, Opc, LHSExpr, RHSExpr);
 }
@@ -21058,13 +21042,6 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
     }
 
     Diag(E->getBeginLoc(), diag::err_builtin_fn_use);
-    return ExprError();
-  }
-
-  case BuiltinType::BuiltinCountedByRef: {
-    Diag(E->IgnoreParens()->getExprLoc(),
-         diag::err_builtin_counted_by_ref_cannot_leak_reference)
-        << E->IgnoreParens()->getSourceRange();
     return ExprError();
   }
 

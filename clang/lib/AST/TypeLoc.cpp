@@ -433,7 +433,6 @@ TypeSpecifierType BuiltinTypeLoc::getWrittenTypeSpec() const {
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
   case BuiltinType::BuiltinFn:
-  case BuiltinType::BuiltinCountedByRef:
   case BuiltinType::IncompleteMatrixIdx:
   case BuiltinType::ArraySection:
   case BuiltinType::OMPArrayShaping:

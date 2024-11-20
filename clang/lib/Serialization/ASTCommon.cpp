@@ -274,9 +274,6 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
   case BuiltinType::BuiltinFn:
     ID = PREDEF_TYPE_BUILTIN_FN;
     break;
-  case BuiltinType::BuiltinCountedByRef:
-    ID = PREDEF_TYPE_BUILTIN_COUNTED_BY_REF;
-    break;
   case BuiltinType::IncompleteMatrixIdx:
     ID = PREDEF_TYPE_INCOMPLETE_MATRIX_IDX;
     break;
