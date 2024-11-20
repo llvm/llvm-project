@@ -330,8 +330,9 @@ struct TemplateParameterListBuilder {
   // matches the CSE that is constructed when parsing the below C++ code:
   //
   // template<typename T>
-  // concept is_typed_resource_element_compatible = sizeof(T) <= 16;
-  // template<typename element_type> requires
+  // concept is_typed_resource_element_compatible =
+  // __builtin_hlsl_typed_resource_element_compatible<T> &&
+  // !__builtin_hlsl_is_intangible<T> template<typename element_type> requires
   // is_typed_resource_element_compatible<element_type>
   // struct RWBuffer {
   //     element_type Val;
@@ -568,11 +569,12 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
       .addDefaultHandleConstructor(S);
 }
 
-BinaryOperator *constructSizeOfLEQ16Expr(ASTContext &Context,
-                                         SourceLocation NameLoc,
+Expr *constructTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
                                          TemplateTypeParmDecl *T) {
+  ASTContext &Context = S.getASTContext();
+
   // Obtain the QualType for 'unsigned long'
-  QualType UnsignedLongType = Context.UnsignedLongTy;
+  QualType BoolTy = Context.BoolTy;
 
   // Create a QualType that points to this TemplateTypeParmDecl
   QualType TType = Context.getTypeDeclType(T);
@@ -581,41 +583,29 @@ BinaryOperator *constructSizeOfLEQ16Expr(ASTContext &Context,
   TypeSourceInfo *TTypeSourceInfo =
       Context.getTrivialTypeSourceInfo(TType, NameLoc);
 
-  UnaryExprOrTypeTraitExpr *sizeOfExpr = new (Context) UnaryExprOrTypeTraitExpr(
-      UETT_SizeOf, TTypeSourceInfo, UnsignedLongType, NameLoc, NameLoc);
+  TypeTraitExpr *TypedResExpr = TypeTraitExpr::Create(
+      Context, BoolTy, NameLoc, UTT_IsTypedResourceElementCompatible,
+      {TTypeSourceInfo}, NameLoc, true);
 
-  // Create an IntegerLiteral for the value '16' with size type
-  QualType SizeType = Context.getSizeType();
-  llvm::APInt SizeValue = llvm::APInt(Context.getTypeSize(SizeType), 16);
-  IntegerLiteral *SizeLiteral =
-      new (Context) IntegerLiteral(Context, SizeValue, SizeType, NameLoc);
+  TypeTraitExpr *IsIntangibleExpr =
+      TypeTraitExpr::Create(Context, BoolTy, NameLoc, UTT_IsIntangibleType,
+                            {TTypeSourceInfo}, NameLoc, true);
 
-  QualType BoolTy = Context.BoolTy;
+  UnaryOperator *NotIntangibleExpr = UnaryOperator::Create(
+      Context, IsIntangibleExpr, UO_Not, BoolTy, VK_LValue, OK_Ordinary,
+      NameLoc, false, FPOptionsOverride());
 
-  BinaryOperator *binaryOperator =
-      BinaryOperator::Create(Context, sizeOfExpr, // Left-hand side expression
-                             SizeLiteral,         // Right-hand side expression
-                             BO_LE,               // Binary operator kind (<=)
-                             BoolTy,              // Result type (bool)
-                             VK_LValue,           // Value kind
-                             OK_Ordinary,         // Object kind
-                             NameLoc,             // Source location of operator
+  BinaryOperator *TypedResourceConstraintExpr =
+      BinaryOperator::Create(Context, TypedResExpr, // Left-hand side expression
+                             NotIntangibleExpr, // Right-hand side expression
+                             BO_LAnd,           // Binary operator kind (&&)
+                             BoolTy,            // Result type (bool)
+                             VK_LValue,         // Value kind
+                             OK_Ordinary,       // Object kind
+                             NameLoc,           // Source location of operator
                              FPOptionsOverride());
 
-  return binaryOperator;
-}
-
-Expr *constructTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
-                                         TemplateTypeParmDecl *T) {
-  ASTContext &Context = S.getASTContext();
-
-  // first get the "sizeof(T) <= 16" expression, as a binary operator
-  BinaryOperator *SizeOfLEQ16 = constructSizeOfLEQ16Expr(Context, NameLoc, T);
-  // TODO: add the 'builtin_hlsl_is_typed_resource_element_compatible' builtin
-  // and return a binary operator that evaluates the builtin on the given
-  // template type parameter 'T'.
-  // Defined in issue https://github.com/llvm/llvm-project/issues/113223
-  return SizeOfLEQ16;
+  return TypedResourceConstraintExpr;
 }
 
 ConceptDecl *constructTypedBufferConceptDecl(Sema &S, NamespaceDecl *NSD) {
