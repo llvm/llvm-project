@@ -411,14 +411,14 @@ inline typename O1<T, U...>::template O2<V, A>::E O1<T, U...>::template O2<V, A>
           R"cpp(
             struct Foo {
               template <typename T, bool B = true>
-              void ^bar() {}
+              T ^bar() { return {}; }
             };)cpp",
           R"cpp(
             struct Foo {
               template <typename T, bool B = true>
-              void bar() ;
+              T bar() ;
             };template <typename T, bool B>
-inline void Foo::bar() {}
+inline T Foo::bar() { return {}; }
 )cpp",
           ""},
 
@@ -426,14 +426,14 @@ inline void Foo::bar() {}
       {
           R"cpp(
             template <typename T> struct Foo {
-              template <typename U> void ^bar(const T& t, const U& u) {}
+              template <typename U> T ^bar(const T& t, const U& u) { return {}; }
             };)cpp",
           R"cpp(
             template <typename T> struct Foo {
-              template <typename U> void bar(const T& t, const U& u) ;
+              template <typename U> T bar(const T& t, const U& u) ;
             };template <typename T>
 template <typename U>
-inline void Foo<T>::bar(const T& t, const U& u) {}
+inline T Foo<T>::bar(const T& t, const U& u) { return {}; }
 )cpp",
           ""},
   };
