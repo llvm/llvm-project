@@ -16,8 +16,8 @@ code.
 Videos
 ------
 
-`Run, Break, Inspect: Explore effective debugging in LLDB`_
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+`Run, Break, Inspect: Explore effective debugging in LLDB (2024)`_
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Learn how to use LLDB to explore and debug codebases. We'll show you
 how to make the most of crashlogs and backtraces, and how to
@@ -65,7 +65,7 @@ iOS apps.
 A collection of LLDB aliases/regexes and Python scripts.
 
 .. _Dancing in the Debugger — A Waltz with LLDB (2014): https://www.objc.io/issues/19-debugging/lldb-debugging/
-.. _Run, Break, Inspect: Explore effective debugging in LLDB: https://developer.apple.com/videos/play/wwdc2024/10198
+.. _`Run, Break, Inspect: Explore effective debugging in LLDB (2024)`: https://developer.apple.com/videos/play/wwdc2024/10198
 .. _`LLDB: Beyond “po” (2019)`: https://developer.apple.com/videos/play/wwdc2019/429/
 .. _Advanced Debugging with Xcode and LLDB (2018): https://developer.apple.com/videos/play/wwdc2018/412/
 .. _Advanced Apple Debugging & Reverse Engineering (2018): https://www.raywenderlich.com/books/advanced-apple-debugging-reverse-engineering/

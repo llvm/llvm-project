@@ -635,7 +635,9 @@ void CodeGenFunction::EmitKernelMetadata(const FunctionDecl *FD,
 
   CGM.GenKernelArgMetadata(Fn, FD, this);
 
-  if (!getLangOpts().OpenCL)
+  if (!(getLangOpts().OpenCL ||
+        (getLangOpts().CUDA &&
+         getContext().getTargetInfo().getTriple().isSPIRV())))
     return;
 
   if (const VecTypeHintAttr *A = FD->getAttr<VecTypeHintAttr>()) {
@@ -1022,6 +1024,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   }
 
   if (FD && (getLangOpts().OpenCL ||
+             (getLangOpts().CUDA &&
+              getContext().getTargetInfo().getTriple().isSPIRV()) ||
              ((getLangOpts().HIP || getLangOpts().OffloadViaLLVM) &&
               getLangOpts().CUDAIsDevice))) {
     // Add metadata for a kernel function.
