@@ -2023,8 +2023,8 @@ LogicalResult
 cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   // Verify that the result type underlying pointer type matches the type of
   // the referenced cir.global or cir.func op.
-  auto op = symbolTable.lookupNearestSymbolFrom(*this, getNameAttr());
-  if (!(isa<GlobalOp>(op) || isa<FuncOp>(op)))
+  auto *op = symbolTable.lookupNearestSymbolFrom(*this, getNameAttr());
+  if (op == nullptr || !(isa<GlobalOp>(op) || isa<FuncOp>(op)))
     return emitOpError("'")
            << getName()
            << "' does not reference a valid cir.global or cir.func";

@@ -1103,6 +1103,15 @@ module {
 
 // -----
 
+!s8i = !cir.int<s, 8>
+cir.func @no_reference_global() {
+  // expected-error @below {{'cir.get_global' op 'str' does not reference a valid cir.global or cir.func}}
+  %0 = cir.get_global @str : !cir.ptr<!s8i> 
+  cir.return 
+}
+
+// -----
+
 // expected-error@+1 {{invalid underlying type for long double}}
 cir.func @bad_long_double(%arg0 : !cir.long_double<!cir.float>) -> () {
   cir.return
