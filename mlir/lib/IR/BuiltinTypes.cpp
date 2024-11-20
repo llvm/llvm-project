@@ -91,11 +91,6 @@ IntegerType IntegerType::scaleElementBitwidth(unsigned scale) {
 //===----------------------------------------------------------------------===//
 
 unsigned FloatType::getWidth() {
-  // The actual width of TF32 is 19 bits. However, since it is a truncated
-  // version of Float32, we treat it as 32 bits in MLIR FloatType::getWidth
-  // for compatibility.
-  if (llvm::isa<FloatTF32Type>(*this))
-    return 32;
   return APFloat::semanticsSizeInBits(getFloatSemantics());
 }
 
