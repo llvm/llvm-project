@@ -37,6 +37,7 @@
  ******************************************************************************/
 
 #include "comgr-compiler.h"
+#include "comgr-cache-command.h"
 #include "comgr-device-libs.h"
 #include "comgr-diagnostic-handler.h"
 #include "comgr-env.h"
@@ -772,7 +773,8 @@ AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
   }
 
   for (auto &Job : C->getJobs()) {
-    if (auto Status = executeCommand(Job, LogS, *DiagOpts, *VFS)) {
+    CachedCommand C(Job, *DiagOpts, *VFS, executeCommand);
+    if (auto Status = C.execute(LogS)) {
       return Status;
     }
   }
