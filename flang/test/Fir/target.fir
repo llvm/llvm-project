@@ -26,7 +26,7 @@ func.func @gen4() -> complex<f32> {
   return %6 : complex<f32>
 }
 
-// I32-LABEL: define void @gen8(ptr sret({ double, double }) align 4 %
+// I32-LABEL: define void @gen8(ptr nocapture sret({ double, double }) align 4 %
 // X64-LABEL: define { double, double } @gen8()
 // AARCH64-LABEL: define { double, double } @gen8()
 // PPC-LABEL: define { double, double } @gen8()
@@ -93,9 +93,9 @@ func.func @call8() {
   return
 }
 
-// I32-LABEL: define i64 @char1lensum(ptr %0, ptr %1, i32 %2, i32 %3)
-// X64-LABEL: define i64 @char1lensum(ptr %0, ptr %1, i64 %2, i64 %3)
-// PPC-LABEL: define i64 @char1lensum(ptr %0, ptr %1, i64 %2, i64 %3)
+// I32-LABEL: define i64 @char1lensum(ptr nocapture %0, ptr nocapture %1, i32 %2, i32 %3)
+// X64-LABEL: define i64 @char1lensum(ptr nocapture %0, ptr nocapture %1, i64 %2, i64 %3)
+// PPC-LABEL: define i64 @char1lensum(ptr nocapture %0, ptr nocapture %1, i64 %2, i64 %3)
 func.func @char1lensum(%arg0 : !fir.boxchar<1>, %arg1 : !fir.boxchar<1>) -> i64 {
   // X64-DAG: %[[p0:.*]] = insertvalue { ptr, i64 } undef, ptr %1, 0
   // X64-DAG: = insertvalue { ptr, i64 } %[[p0]], i64 %3, 1
@@ -111,9 +111,9 @@ func.func @char1lensum(%arg0 : !fir.boxchar<1>, %arg1 : !fir.boxchar<1>) -> i64 
   return %3 : i64
 }
 
-// I32-LABEL: define void @char1copy(ptr sret(i8) %0, i32 %1, ptr %2, i32 %3)
-// I64-LABEL: define void @char1copy(ptr sret(i8) %0, i64 %1, ptr %2, i64 %3)
-// PPC-LABEL: define void @char1copy(ptr sret(i8) %0, i64 %1, ptr %2, i64 %3)
+// I32-LABEL: define void @char1copy(ptr nocapture sret(i8) %0, i32 %1, ptr nocapture %2, i32 %3)
+// I64-LABEL: define void @char1copy(ptr nocapture sret(i8) %0, i64 %1, ptr nocapture %2, i64 %3)
+// PPC-LABEL: define void @char1copy(ptr nocapture sret(i8) %0, i64 %1, ptr nocapture %2, i64 %3)
 func.func @char1copy(%arg0 : !fir.boxchar<1> {llvm.sret = !fir.char<1, ?>}, %arg1 : !fir.boxchar<1>) {
   // I32-DAG: %[[p0:.*]] = insertvalue { ptr, i32 } undef, ptr %2, 0
   // I32-DAG: = insertvalue { ptr, i32 } %[[p0]], i32 %3, 1
