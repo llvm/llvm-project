@@ -1526,7 +1526,7 @@ define i1 @test_logical_and_icmp_samesign(i8 %x) {
 ; CHECK-LABEL: @test_logical_and_icmp_samesign(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[X:%.*]], 9
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult i8 [[X]], 11
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 false
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %cmp1 = icmp ne i8 %x, 9
@@ -1539,7 +1539,7 @@ define i1 @test_logical_or_icmp_samesign(i8 %x) {
 ; CHECK-LABEL: @test_logical_or_icmp_samesign(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], -9
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult i8 [[X]], -11
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %cmp1 = icmp eq i8 %x, -9
@@ -1550,10 +1550,8 @@ define i1 @test_logical_or_icmp_samesign(i8 %x) {
 
 define i1 @test_double_logical_and_icmp_samesign1(i1 %cond, i32 %y) {
 ; CHECK-LABEL: @test_double_logical_and_icmp_samesign1(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[Y:%.*]], 5
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND:%.*]], i1 [[CMP1]], i1 false
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult i32 [[Y]], 4
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[SEL1]], i1 [[CMP2]], i1 false
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult i32 [[Y:%.*]], 4
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[SEL1:%.*]], i1 [[CMP2]], i1 false
 ; CHECK-NEXT:    ret i1 [[SEL2]]
 ;
   %cmp1 = icmp ne i32 %y, 5
@@ -1565,10 +1563,9 @@ define i1 @test_double_logical_and_icmp_samesign1(i1 %cond, i32 %y) {
 
 define i1 @test_double_logical_and_icmp_samesign2(i1 %cond, i32 %y) {
 ; CHECK-LABEL: @test_double_logical_and_icmp_samesign2(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign ugt i32 [[Y:%.*]], 65535
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND:%.*]], i1 [[CMP1]], i1 false
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult i32 [[Y]], 1114112
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[SEL1]], i1 [[CMP2]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[Y:%.*]], -65536
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[TMP1]], 1048576
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[SEL1:%.*]], i1 [[CMP2]], i1 false
 ; CHECK-NEXT:    ret i1 [[SEL2]]
 ;
   %cmp1 = icmp samesign ugt i32 %y, 65535
@@ -1582,7 +1579,7 @@ define <2 x i1> @test_logical_and_icmp_samesign_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @test_logical_and_icmp_samesign_vec(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i8> [[X:%.*]], splat (i8 9)
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult <2 x i8> [[X]], splat (i8 11)
-; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[CMP1]], <2 x i1> [[CMP2]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i1> [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    ret <2 x i1> [[AND]]
 ;
   %cmp1 = icmp ne <2 x i8> %x, splat(i8 9)
@@ -1595,7 +1592,7 @@ define <2 x i1> @test_logical_and_icmp_samesign_vec_with_poison_cond(<2 x i8> %x
 ; CHECK-LABEL: @test_logical_and_icmp_samesign_vec_with_poison_cond(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i8> [[X:%.*]], <i8 9, i8 poison>
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult <2 x i8> [[X]], splat (i8 11)
-; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[CMP1]], <2 x i1> [[CMP2]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i1> [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    ret <2 x i1> [[AND]]
 ;
   %cmp1 = icmp ne <2 x i8> %x, <i8 9, i8 poison>
