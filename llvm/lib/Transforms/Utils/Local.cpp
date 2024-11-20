@@ -3336,8 +3336,9 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
         K->setMetadata(Kind, MDNode::intersect(JMD, KMD));
         break;
       case LLVMContext::MD_access_group:
-        K->setMetadata(LLVMContext::MD_access_group,
-                       intersectAccessGroups(K, J));
+        if (DoesKMove)
+          K->setMetadata(LLVMContext::MD_access_group,
+                         intersectAccessGroups(K, J));
         break;
       case LLVMContext::MD_range:
         if (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef))

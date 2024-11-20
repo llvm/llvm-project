@@ -164,12 +164,6 @@ namespace std {
 #  pragma GCC system_header
 #endif
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
-#  include <cstddef>
-#  include <cstdint>
-#  include <limits>
-#endif
-
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <cmath>
 #  include <cstddef>

@@ -101,11 +101,6 @@ struct ConversionValueMapping {
     mapping.map(oldVal, newVal);
   }
 
-  /// Try to map a value to the one provided. Returns false if a transitive
-  /// mapping from the new value to the old value already exists, true if the
-  /// map was updated.
-  bool tryMap(Value oldVal, Value newVal);
-
   /// Drop the last mapping for the given value.
   void erase(Value value) { mapping.erase(value); }
 
@@ -147,14 +142,6 @@ Value ConversionValueMapping::lookupOrNull(Value from, Type desiredType) const {
   if (result == from || (desiredType && result.getType() != desiredType))
     return nullptr;
   return result;
-}
-
-bool ConversionValueMapping::tryMap(Value oldVal, Value newVal) {
-  for (Value it = newVal; it; it = mapping.lookupOrNull(it))
-    if (it == oldVal)
-      return false;
-  map(oldVal, newVal);
-  return true;
 }
 
 //===----------------------------------------------------------------------===//
