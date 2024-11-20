@@ -9937,7 +9937,7 @@ static unsigned getSHUFPDImm(ArrayRef<int> Mask) {
   // If the mask only uses one non-undef element, then fully 'splat' it to
   // improve later broadcast matching.
   int FirstIndex = find_if(Mask, [](int M) { return M >= 0; }) - Mask.begin();
-  assert(0 <= FirstIndex && FirstIndex < Mask.size() &&
+  assert(0 <= FirstIndex && FirstIndex < (int)Mask.size() &&
          "All undef shuffle mask");
 
   int FirstElt = Mask[FirstIndex];
