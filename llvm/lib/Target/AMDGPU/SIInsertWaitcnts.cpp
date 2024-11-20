@@ -888,7 +888,8 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
   if (auto VLDST = SIInstrInfo::getBundledIndexingInst(*MI, Op)) {
     return getRegIndexingInterval(VLDST, MRI, TRI);
   }
-
+  // Note that those staging-registers in the indexing bundle are not
+  // allocatable, so they do not directly affect scoreboard and waitcnts.
   if (!TRI->isInAllocatableClass(Op.getReg()))
     return {-1, -1};
 
