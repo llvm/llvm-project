@@ -2820,14 +2820,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectWaveActiveCountBits(ResVReg, ResType, I);
   case Intrinsic::spv_wave_any:
     return selectWaveNOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAny);
-  case Intrinsic::spv_wave_is_first_lane: {
-    SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-    return BuildMI(BB, I, I.getDebugLoc(),
-                   TII.get(SPIRV::OpGroupNonUniformElect))
-        .addDef(ResVReg)
-        .addUse(GR.getSPIRVTypeID(ResType))
-        .addUse(GR.getOrCreateConstInt(3, I, IntTy, TII));
-  }
+  case Intrinsic::spv_wave_is_first_lane:
+    return selectWaveNOpInst(ResVReg, ResType, I,
+                             SPIRV::OpGroupNonUniformElect);
   case Intrinsic::spv_wave_readlane:
     return selectWaveNOpInst(ResVReg, ResType, I,
                              SPIRV::OpGroupNonUniformShuffle);
