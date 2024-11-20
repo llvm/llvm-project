@@ -2324,7 +2324,9 @@ void InnerLoopVectorizer::scalarizeInstruction(const Instruction *Instr,
                                                VPReplicateRecipe *RepRecipe,
                                                const VPLane &Lane,
                                                VPTransformState &State) {
-  assert(!Instr->getType()->isAggregateType() && "Can't handle vectors");
+  assert((!Instr->getType()->isAggregateType() ||
+          canWidenType(Instr->getType())) &&
+         "Expected widenable or non-aggregate type.");
 
   // Does this instruction return a value ?
   bool IsVoidRetTy = Instr->getType()->isVoidTy();
@@ -2335,8 +2337,18 @@ void InnerLoopVectorizer::scalarizeInstruction(const Instruction *Instr,
 #if !defined(NDEBUG)
     // Verify that VPlan type inference results agree with the type of the
     // generated values.
-    assert(State.TypeAnalysis.inferScalarType(RepRecipe) == Cloned->getType() &&
-           "inferred type and type from generated instructions do not match");
+    if (auto *StructTy = dyn_cast<StructType>(Instr->getType())) {
+      for (auto [I, VPV] : enumerate(RepRecipe->definedValues())) {
+        assert(
+            State.TypeAnalysis.inferScalarType(VPV) ==
+                StructTy->getTypeAtIndex(I) &&
+            "inferred type and type from generated instructions do not match");
+      }
+    } else {
+      assert(State.TypeAnalysis.inferScalarType(
+                 RepRecipe->getVPSingleValue()) == Cloned->getType() &&
+             "inferred type and type from generated instructions do not match");
+    }
 #endif
   }
 
@@ -2359,7 +2371,14 @@ void InnerLoopVectorizer::scalarizeInstruction(const Instruction *Instr,
   // Place the cloned scalar in the new loop.
   State.Builder.Insert(Cloned);
 
-  State.set(RepRecipe, Cloned, Lane);
+  if (isa<StructType>(Instr->getType())) {
+    for (auto [I, Def] : enumerate(RepRecipe->definedValues())) {
+      Value *AggV = State.Builder.CreateExtractValue(Cloned, I);
+      State.set(Def, AggV, Lane);
+    }
+  } else {
+    State.set(RepRecipe->getVPSingleValue(), Cloned, Lane);
+  }
 
   // If we just cloned a new assumption, add it the assumption cache.
   if (auto *II = dyn_cast<AssumeInst>(Cloned))
@@ -2901,10 +2920,10 @@ LoopVectorizationCostModel::getVectorCallCost(CallInst *CI,
   return ScalarCallCost;
 }
 
-static Type *maybeVectorizeType(Type *Elt, ElementCount VF) {
-  if (VF.isScalar() || (!Elt->isIntOrPtrTy() && !Elt->isFloatingPointTy()))
-    return Elt;
-  return VectorType::get(Elt, VF);
+static Type *maybeVectorizeType(Type *Ty, ElementCount VF) {
+  if (VF.isScalar() || !canWidenType(Ty))
+    return Ty;
+  return ToWideTy(Ty, VF);
 }
 
 InstructionCost
@@ -3667,9 +3686,8 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
 
       // ExtractValue instructions must be uniform, because the operands are
       // known to be loop-invariant.
-      if (auto *EVI = dyn_cast<ExtractValueInst>(&I)) {
-        assert(IsOutOfScope(EVI->getAggregateOperand()) &&
-               "Expected aggregate value to be loop invariant");
+      if (auto *EVI = dyn_cast<ExtractValueInst>(&I);
+          EVI && IsOutOfScope(EVI->getAggregateOperand())) {
         AddToWorklistIfAllowed(EVI);
         continue;
       }
@@ -5517,10 +5535,13 @@ InstructionCost LoopVectorizationCostModel::computePredInstDiscount(
     // and phi nodes.
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     if (isScalarWithPredication(I, VF) && !I->getType()->isVoidTy()) {
-      ScalarCost += TTI.getScalarizationOverhead(
-          cast<VectorType>(ToVectorTy(I->getType(), VF)),
-          APInt::getAllOnes(VF.getFixedValue()), /*Insert*/ true,
-          /*Extract*/ false, CostKind);
+      Type *WideTy = ToWideTy(I->getType(), VF);
+      for (Type *VectorTy : getContainedTypes(WideTy)) {
+        ScalarCost += TTI.getScalarizationOverhead(
+            cast<VectorType>(VectorTy), APInt::getAllOnes(VF.getFixedValue()),
+            /*Insert*/ true,
+            /*Extract*/ false, CostKind);
+      }
       ScalarCost +=
           VF.getFixedValue() * TTI.getCFInstrCost(Instruction::PHI, CostKind);
     }
@@ -6011,13 +6032,17 @@ InstructionCost LoopVectorizationCostModel::getScalarizationOverhead(
     return 0;
 
   InstructionCost Cost = 0;
-  Type *RetTy = ToVectorTy(I->getType(), VF);
+  Type *RetTy = ToWideTy(I->getType(), VF);
   if (!RetTy->isVoidTy() &&
-      (!isa<LoadInst>(I) || !TTI.supportsEfficientVectorElementLoadStore()))
-    Cost += TTI.getScalarizationOverhead(
-        cast<VectorType>(RetTy), APInt::getAllOnes(VF.getKnownMinValue()),
-        /*Insert*/ true,
-        /*Extract*/ false, CostKind);
+      (!isa<LoadInst>(I) || !TTI.supportsEfficientVectorElementLoadStore())) {
+
+    for (Type *VectorTy : getContainedTypes(RetTy)) {
+      Cost += TTI.getScalarizationOverhead(
+          cast<VectorType>(VectorTy), APInt::getAllOnes(VF.getKnownMinValue()),
+          /*Insert*/ true,
+          /*Extract*/ false, CostKind);
+    }
+  }
 
   // Some targets keep addresses scalar.
   if (isa<LoadInst>(I) && !TTI.prefersVectorizedAddressing())
@@ -6277,9 +6302,9 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
 
       bool MaskRequired = Legal->isMaskRequired(CI);
       // Compute corresponding vector type for return value and arguments.
-      Type *RetTy = ToVectorTy(ScalarRetTy, VF);
+      Type *RetTy = ToWideTy(ScalarRetTy, VF);
       for (Type *ScalarTy : ScalarTys)
-        Tys.push_back(ToVectorTy(ScalarTy, VF));
+        Tys.push_back(ToWideTy(ScalarTy, VF));
 
       // An in-loop reduction using an fmuladd intrinsic is a special case;
       // we don't want the normal cost for that intrinsic.
@@ -6469,7 +6494,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
            HasSingleCopyAfterVectorization(I, VF));
     VectorTy = RetTy;
   } else
-    VectorTy = ToVectorTy(RetTy, VF);
+    VectorTy = ToWideTy(RetTy, VF);
 
   if (VF.isVector() && VectorTy->isVectorTy() &&
       !TTI.getNumberOfParts(VectorTy))
@@ -7454,6 +7479,10 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       return dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
     if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(R))
       return &WidenMem->getIngredient();
+    if (auto *WidenCall = dyn_cast<VPWidenCallRecipe>(R))
+      return WidenCall->getUnderlyingCallInstruction();
+    if (auto *Rep = dyn_cast<VPReplicateRecipe>(R))
+      return Rep->getUnderlyingInstr();
     return nullptr;
   };
 
@@ -8431,9 +8460,9 @@ VPBlendRecipe *VPRecipeBuilder::tryToBlend(PHINode *Phi,
   return new VPBlendRecipe(Phi, OperandsWithMask);
 }
 
-VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
-                                                   ArrayRef<VPValue *> Operands,
-                                                   VFRange &Range) {
+VPRecipeBase *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
+                                              ArrayRef<VPValue *> Operands,
+                                              VFRange &Range) {
   bool IsPredicated = LoopVectorizationPlanner::getDecisionAndClampRange(
       [this, CI](ElementCount VF) {
         return CM.isScalarWithPredication(CI, VF);
@@ -9140,6 +9169,20 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
     // TODO: Model and preserve debug intrinsics in VPlan.
     for (Instruction &I : drop_end(BB->instructionsWithoutDebug(false))) {
       Instruction *Instr = &I;
+
+      // Special case: Handle extractvalues from struct ret calls.
+      if (auto *ExtractValue = dyn_cast<ExtractValueInst>(Instr)) {
+        if (auto *CI =
+                dyn_cast<CallInst>(ExtractValue->getAggregateOperand())) {
+          auto *R = RecipeBuilder.getRecipe(cast<Instruction>(CI));
+          assert(R->getNumDefinedValues() ==
+                 cast<StructType>(CI->getType())->getNumElements());
+          unsigned Idx = ExtractValue->getIndices()[0];
+          RecipeBuilder.setRecipe(Instr, R->getVPValue(Idx));
+          continue;
+        }
+      }
+
       SmallVector<VPValue *, 4> Operands;
       auto *Phi = dyn_cast<PHINode>(Instr);
       if (Phi && Phi->getParent() == HeaderBB) {
@@ -9351,12 +9394,13 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
            "AnyOf reductions are not allowed for in-loop reductions");
 
     // Collect the chain of "link" recipes for the reduction starting at PhiR.
-    SetVector<VPSingleDefRecipe *> Worklist;
+    SetVector<VPRecipeBase *> Worklist;
     Worklist.insert(PhiR);
     for (unsigned I = 0; I != Worklist.size(); ++I) {
-      VPSingleDefRecipe *Cur = Worklist[I];
-      for (VPUser *U : Cur->users()) {
-        auto *UserRecipe = cast<VPSingleDefRecipe>(U);
+      VPRecipeBase *Cur = Worklist[I];
+      // TODO: This may need to handle recipes with multiple defs.
+      for (VPUser *U : Cur->getVPSingleValue()->users()) {
+        auto *UserRecipe = cast<VPRecipeBase>(U);
         if (!UserRecipe->getParent()->getEnclosingLoopRegion()) {
           assert((UserRecipe->getParent() == MiddleVPBB ||
                   UserRecipe->getParent() == Plan->getScalarPreheader()) &&
@@ -9376,8 +9420,10 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // get folded to their non-phi operand, as the reduction recipe handles the
     // condition directly.
     VPSingleDefRecipe *PreviousLink = PhiR; // Aka Worklist[0].
-    for (VPSingleDefRecipe *CurrentLink : Worklist.getArrayRef().drop_front()) {
-      Instruction *CurrentLinkI = CurrentLink->getUnderlyingInstr();
+    for (VPRecipeBase *CurrentLink : Worklist.getArrayRef().drop_front()) {
+      VPValue *CurrentLinkV = CurrentLink->getVPSingleValue();
+      Instruction *CurrentLinkI =
+          cast<Instruction>(CurrentLinkV->getUnderlyingValue());
 
       // Index of the first operand which holds a non-mask vector operand.
       unsigned IndexOfFirstOperand;
@@ -9460,7 +9506,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       // Note that this transformation may leave over dead recipes (including
       // CurrentLink), which will be cleaned by a later VPlan transform.
       LinkVPBB->appendRecipe(RedRecipe);
-      CurrentLink->replaceAllUsesWith(RedRecipe);
+      CurrentLinkV->replaceAllUsesWith(RedRecipe);
       PreviousLink = RedRecipe;
     }
   }
@@ -9611,16 +9657,18 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
            "uniform recipe shouldn't be predicated");
     assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
     State.ILV->scalarizeInstruction(UI, this, *State.Lane, State);
-    // Insert scalar instance packing it into a vector.
-    if (State.VF.isVector() && shouldPack()) {
-      // If we're constructing lane 0, initialize to start from poison.
-      if (State.Lane->isFirstLane()) {
-        assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
-        Value *Poison = PoisonValue::get(
-            VectorType::get(UI->getType(), State.VF));
-        State.set(this, Poison);
+    for (auto [I, Def] : enumerate(definedValues())) {
+      // Insert scalar instance packing it into a vector.
+      if (State.VF.isVector() && shouldPack(I)) {
+        // If we're constructing lane 0, initialize to start from poison.
+        if (State.Lane->isFirstLane()) {
+          assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
+          Value *Poison =
+              PoisonValue::get(VectorType::get(UI->getType(), State.VF));
+          State.set(Def, Poison);
+        }
+        State.packScalarIntoVectorValue(Def, *State.Lane);
       }
-      State.packScalarIntoVectorValue(this, *State.Lane);
     }
     return;
   }

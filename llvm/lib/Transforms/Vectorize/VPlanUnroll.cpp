@@ -97,12 +97,13 @@ public:
     }
   }
 
-  /// Given a uniform recipe \p R, add it for all parts.
-  void addUniformForAllParts(VPSingleDefRecipe *R) {
-    auto Ins = VPV2Parts.insert({R, {}});
-    assert(Ins.second && "uniform value already added");
-    for (unsigned Part = 0; Part != UF; ++Part)
-      Ins.first->second.push_back(R);
+  /// Given a uniform def \p Def, add it for all parts.
+  void addUniformForAllParts(VPDef *Def) {
+    for (VPValue *VPV : Def->definedValues()) {
+      auto [_, Inserted] =
+          VPV2Parts.insert({VPV, SmallVector<VPValue *>(UF, VPV)});
+      assert(Inserted && "uniform value already added");
+    }
   }
 
   bool contains(VPValue *VPV) const { return VPV2Parts.contains(VPV); }
@@ -265,13 +266,13 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     }
   }
   if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R)) {
-    if (isa<StoreInst>(RepR->getUnderlyingValue()) &&
+    if (isa<StoreInst>(RepR->getUnderlyingInstr()) &&
         RepR->getOperand(1)->isDefinedOutsideLoopRegions()) {
       // Stores to an invariant address only need to store the last part.
       remapOperands(&R, UF - 1);
       return;
     }
-    if (auto *II = dyn_cast<IntrinsicInst>(RepR->getUnderlyingValue())) {
+    if (auto *II = dyn_cast<IntrinsicInst>(RepR->getUnderlyingInstr())) {
       if (II->getIntrinsicID() == Intrinsic::experimental_noalias_scope_decl) {
         addUniformForAllParts(RepR);
         return;
@@ -373,9 +374,9 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
       continue;
     }
 
-    auto *SingleDef = dyn_cast<VPSingleDefRecipe>(&R);
-    if (SingleDef && vputils::isUniformAcrossVFsAndUFs(SingleDef)) {
-      addUniformForAllParts(SingleDef);
+    if (R.getNumDefinedValues() >= 1 &&
+        all_of(R.definedValues(), vputils::isUniformAcrossVFsAndUFs)) {
+      addUniformForAllParts(&R);
       continue;
     }
 

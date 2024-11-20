@@ -62,6 +62,7 @@ class Type;
 class VPBasicBlock;
 class VPRegionBlock;
 class VPlan;
+class VPRecipeIRFlags;
 class VPReplicateRecipe;
 class VPlanSlp;
 class Value;
@@ -803,6 +804,13 @@ public:
   /// Returns the debug location of the recipe.
   DebugLoc getDebugLoc() const { return DL; }
 
+  /// Returns the IR flags for the recipe.
+  virtual const VPRecipeIRFlags *getIRFlags() const { return nullptr; }
+  VPRecipeIRFlags *getIRFlags() {
+    return const_cast<VPRecipeIRFlags *>(
+        const_cast<const VPRecipeBase *>(this)->getIRFlags());
+  }
+
 protected:
   /// Compute the cost of this recipe either using a recipe's specialized
   /// implementation or using the legacy cost model and the underlying
@@ -857,11 +865,9 @@ public:
     case VPRecipeBase::VPInstructionSC:
     case VPRecipeBase::VPReductionEVLSC:
     case VPRecipeBase::VPReductionSC:
-    case VPRecipeBase::VPReplicateSC:
     case VPRecipeBase::VPScalarIVStepsSC:
     case VPRecipeBase::VPVectorPointerSC:
     case VPRecipeBase::VPReverseVectorPointerSC:
-    case VPRecipeBase::VPWidenCallSC:
     case VPRecipeBase::VPWidenCanonicalIVSC:
     case VPRecipeBase::VPWidenCastSC:
     case VPRecipeBase::VPWidenGEPSC:
@@ -883,6 +889,8 @@ public:
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPInterleaveSC:
     case VPRecipeBase::VPIRInstructionSC:
+    case VPRecipeBase::VPWidenCallSC:
+    case VPRecipeBase::VPReplicateSC:
     case VPRecipeBase::VPWidenLoadEVLSC:
     case VPRecipeBase::VPWidenLoadSC:
     case VPRecipeBase::VPWidenStoreEVLSC:
@@ -916,8 +924,8 @@ public:
 #endif
 };
 
-/// Class to record LLVM IR flag for a recipe along with it.
-class VPRecipeWithIRFlags : public VPSingleDefRecipe {
+/// Class to record LLVM IR flags for a recipe.
+class VPRecipeIRFlags {
   enum class OperationType : unsigned char {
     Cmp,
     OverflowingBinOp,
@@ -930,6 +938,8 @@ class VPRecipeWithIRFlags : public VPSingleDefRecipe {
   };
 
 public:
+  void transferFlags(const VPRecipeIRFlags &Other) { *this = Other; }
+
   struct WrapFlagsTy {
     char HasNUW : 1;
     char HasNSW : 1;
@@ -979,23 +989,10 @@ private:
     unsigned AllFlags;
   };
 
-protected:
-  void transferFlags(VPRecipeWithIRFlags &Other) {
-    OpType = Other.OpType;
-    AllFlags = Other.AllFlags;
-  }
-
 public:
-  template <typename IterT>
-  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands, DebugLoc DL = {})
-      : VPSingleDefRecipe(SC, Operands, DL) {
-    OpType = OperationType::Other;
-    AllFlags = 0;
-  }
+  VPRecipeIRFlags() : OpType(OperationType::Other), AllFlags(0) {}
 
-  template <typename IterT>
-  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands, Instruction &I)
-      : VPSingleDefRecipe(SC, Operands, &I, I.getDebugLoc()) {
+  VPRecipeIRFlags(Instruction &I) {
     if (auto *Op = dyn_cast<CmpInst>(&I)) {
       OpType = OperationType::Cmp;
       CmpPredicate = Op->getPredicate();
@@ -1023,54 +1020,22 @@ public:
     }
   }
 
-  template <typename IterT>
-  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
-                      CmpInst::Predicate Pred, DebugLoc DL = {})
-      : VPSingleDefRecipe(SC, Operands, DL), OpType(OperationType::Cmp),
-        CmpPredicate(Pred) {}
+  VPRecipeIRFlags(CmpInst::Predicate Pred)
+      : OpType(OperationType::Cmp), CmpPredicate(Pred) {}
 
-  template <typename IterT>
-  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
-                      WrapFlagsTy WrapFlags, DebugLoc DL = {})
-      : VPSingleDefRecipe(SC, Operands, DL),
-        OpType(OperationType::OverflowingBinOp), WrapFlags(WrapFlags) {}
+  VPRecipeIRFlags(WrapFlagsTy WrapFlags)
+      : OpType(OperationType::OverflowingBinOp), WrapFlags(WrapFlags) {}
 
-  template <typename IterT>
-  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
-                      FastMathFlags FMFs, DebugLoc DL = {})
-      : VPSingleDefRecipe(SC, Operands, DL), OpType(OperationType::FPMathOp),
-        FMFs(FMFs) {}
+  VPRecipeIRFlags(FastMathFlags FMFs)
+      : OpType(OperationType::FPMathOp), FMFs(FMFs) {}
 
-  template <typename IterT>
-  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
-                      DisjointFlagsTy DisjointFlags, DebugLoc DL = {})
-      : VPSingleDefRecipe(SC, Operands, DL), OpType(OperationType::DisjointOp),
-        DisjointFlags(DisjointFlags) {}
+  VPRecipeIRFlags(DisjointFlagsTy DisjointFlags)
+      : OpType(OperationType::DisjointOp), DisjointFlags(DisjointFlags) {}
 
-protected:
-  template <typename IterT>
-  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
-                      GEPFlagsTy GEPFlags, DebugLoc DL = {})
-      : VPSingleDefRecipe(SC, Operands, DL), OpType(OperationType::GEPOp),
-        GEPFlags(GEPFlags) {}
+  VPRecipeIRFlags(GEPFlagsTy GEPFlags)
+      : OpType(OperationType::GEPOp), GEPFlags(GEPFlags) {}
 
 public:
-  static inline bool classof(const VPRecipeBase *R) {
-    return R->getVPDefID() == VPRecipeBase::VPInstructionSC ||
-           R->getVPDefID() == VPRecipeBase::VPWidenSC ||
-           R->getVPDefID() == VPRecipeBase::VPWidenEVLSC ||
-           R->getVPDefID() == VPRecipeBase::VPWidenGEPSC ||
-           R->getVPDefID() == VPRecipeBase::VPWidenCastSC ||
-           R->getVPDefID() == VPRecipeBase::VPReplicateSC ||
-           R->getVPDefID() == VPRecipeBase::VPReverseVectorPointerSC ||
-           R->getVPDefID() == VPRecipeBase::VPVectorPointerSC;
-  }
-
-  static inline bool classof(const VPUser *U) {
-    auto *R = dyn_cast<VPRecipeBase>(U);
-    return R && classof(R);
-  }
-
   /// Drop all poison-generating flags.
   void dropPoisonGeneratingFlags() {
     // NOTE: This needs to be kept in-sync with
@@ -1179,6 +1144,56 @@ public:
 #endif
 };
 
+// Class to record LLVM IR flags for a single-def recipe along with it.
+class VPSingleDefRecipeWithIRFlags : public VPSingleDefRecipe,
+                                     public VPRecipeIRFlags {
+public:
+  using VPRecipeBase::getIRFlags;
+
+  template <typename IterT>
+  VPSingleDefRecipeWithIRFlags(const unsigned char SC, IterT Operands,
+                               DebugLoc DL = {})
+      : VPSingleDefRecipe(SC, Operands, DL), VPRecipeIRFlags() {}
+
+  template <typename IterT>
+  VPSingleDefRecipeWithIRFlags(const unsigned char SC, IterT Operands,
+                               Instruction &I)
+      : VPSingleDefRecipe(SC, Operands, &I, I.getDebugLoc()),
+        VPRecipeIRFlags(I) {}
+
+  template <typename IterT>
+  VPSingleDefRecipeWithIRFlags(const unsigned char SC, IterT Operands,
+                               CmpInst::Predicate Pred, DebugLoc DL = {})
+      : VPSingleDefRecipe(SC, Operands, DL), VPRecipeIRFlags(Pred) {}
+  template <typename IterT>
+  VPSingleDefRecipeWithIRFlags(const unsigned char SC, IterT Operands,
+                               VPRecipeIRFlags::WrapFlagsTy WrapFlags,
+                               DebugLoc DL = {})
+      : VPSingleDefRecipe(SC, Operands, DL), VPRecipeIRFlags(WrapFlags) {}
+
+  template <typename IterT>
+  VPSingleDefRecipeWithIRFlags(const unsigned char SC, IterT Operands,
+                               FastMathFlags FMFs, DebugLoc DL = {})
+      : VPSingleDefRecipe(SC, Operands, DL), VPRecipeIRFlags(FMFs) {}
+
+  template <typename IterT>
+  VPSingleDefRecipeWithIRFlags(const unsigned char SC, IterT Operands,
+                               VPRecipeIRFlags::DisjointFlagsTy DisjointFlags,
+                               DebugLoc DL = {})
+      : VPSingleDefRecipe(SC, Operands, DL), VPRecipeIRFlags(DisjointFlags) {}
+
+  virtual const VPRecipeIRFlags *getIRFlags() const override {
+    return static_cast<const VPRecipeIRFlags *>(this);
+  }
+
+protected:
+  template <typename IterT>
+  VPSingleDefRecipeWithIRFlags(const unsigned char SC, IterT Operands,
+                               VPRecipeIRFlags::GEPFlagsTy GEPFlags,
+                               DebugLoc DL = {})
+      : VPSingleDefRecipe(SC, Operands, DL), VPRecipeIRFlags(GEPFlags) {}
+};
+
 /// Helper to access the operand that contains the unroll part for this recipe
 /// after unrolling.
 template <unsigned PartOpIdx> class VPUnrollPartAccessor {
@@ -1195,7 +1210,7 @@ protected:
 /// While as any Recipe it may generate a sequence of IR instructions when
 /// executed, these instructions would always form a single-def expression as
 /// the VPInstruction is also a single def-use vertex.
-class VPInstruction : public VPRecipeWithIRFlags,
+class VPInstruction : public VPSingleDefRecipeWithIRFlags,
                       public VPUnrollPartAccessor<1> {
   friend class VPlanSlp;
 
@@ -1270,7 +1285,7 @@ private:
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL,
                 const Twine &Name = "")
-      : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, DL),
+      : VPSingleDefRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, DL),
         Opcode(Opcode), Name(Name.str()) {}
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
@@ -1281,22 +1296,27 @@ public:
                 VPValue *B, DebugLoc DL = {}, const Twine &Name = "");
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
-                WrapFlagsTy WrapFlags, DebugLoc DL = {}, const Twine &Name = "")
-      : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, WrapFlags, DL),
+                VPRecipeIRFlags::WrapFlagsTy WrapFlags, DebugLoc DL = {},
+                const Twine &Name = "")
+      : VPSingleDefRecipeWithIRFlags(VPDef::VPInstructionSC, Operands,
+                                     WrapFlags, DL),
         Opcode(Opcode), Name(Name.str()) {}
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
-                DisjointFlagsTy DisjointFlag, DebugLoc DL = {},
+                VPRecipeIRFlags::DisjointFlagsTy DisjointFlag, DebugLoc DL = {},
                 const Twine &Name = "")
-      : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, DisjointFlag, DL),
+      : VPSingleDefRecipeWithIRFlags(VPDef::VPInstructionSC, Operands,
+                                     DisjointFlag, DL),
         Opcode(Opcode), Name(Name.str()) {
     assert(Opcode == Instruction::Or && "only OR opcodes can be disjoint");
   }
 
-  VPInstruction(VPValue *Ptr, VPValue *Offset, GEPFlagsTy Flags,
-                DebugLoc DL = {}, const Twine &Name = "")
-      : VPRecipeWithIRFlags(VPDef::VPInstructionSC,
-                            ArrayRef<VPValue *>({Ptr, Offset}), Flags, DL),
+  VPInstruction(VPValue *Ptr, VPValue *Offset,
+                VPRecipeIRFlags::GEPFlagsTy Flags, DebugLoc DL = {},
+                const Twine &Name = "")
+      : VPSingleDefRecipeWithIRFlags(VPDef::VPInstructionSC,
+                                     ArrayRef<VPValue *>({Ptr, Offset}), Flags,
+                                     DL),
         Opcode(VPInstruction::PtrAdd), Name(Name.str()) {}
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
@@ -1435,14 +1455,15 @@ public:
 /// opcode and operands of the recipe. This recipe covers most of the
 /// traditional vectorization cases where each recipe transforms into a
 /// vectorized version of itself.
-class VPWidenRecipe : public VPRecipeWithIRFlags {
+class VPWidenRecipe : public VPSingleDefRecipeWithIRFlags {
   unsigned Opcode;
 
 protected:
   template <typename IterT>
   VPWidenRecipe(unsigned VPDefOpcode, Instruction &I,
                 iterator_range<IterT> Operands)
-      : VPRecipeWithIRFlags(VPDefOpcode, Operands, I), Opcode(I.getOpcode()) {}
+      : VPSingleDefRecipeWithIRFlags(VPDefOpcode, Operands, I),
+        Opcode(I.getOpcode()) {}
 
 public:
   template <typename IterT>
@@ -1487,8 +1508,6 @@ public:
 /// A recipe for widening operations with vector-predication intrinsics with
 /// explicit vector length (EVL).
 class VPWidenEVLRecipe : public VPWidenRecipe {
-  using VPRecipeWithIRFlags::transferFlags;
-
 public:
   template <typename IterT>
   VPWidenEVLRecipe(Instruction &I, iterator_range<IterT> Operands, VPValue &EVL)
@@ -1533,7 +1552,7 @@ public:
 };
 
 /// VPWidenCastRecipe is a recipe to create vector cast instructions.
-class VPWidenCastRecipe : public VPRecipeWithIRFlags {
+class VPWidenCastRecipe : public VPSingleDefRecipeWithIRFlags {
   /// Cast instruction opcode.
   Instruction::CastOps Opcode;
 
@@ -1543,14 +1562,14 @@ class VPWidenCastRecipe : public VPRecipeWithIRFlags {
 public:
   VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
                     CastInst &UI)
-      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op, UI), Opcode(Opcode),
-        ResultTy(ResultTy) {
+      : VPSingleDefRecipeWithIRFlags(VPDef::VPWidenCastSC, Op, UI),
+        Opcode(Opcode), ResultTy(ResultTy) {
     assert(UI.getOpcode() == Opcode &&
            "opcode of underlying cast doesn't match");
   }
 
   VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy)
-      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op), Opcode(Opcode),
+      : VPSingleDefRecipeWithIRFlags(VPDef::VPWidenCastSC, Op), Opcode(Opcode),
         ResultTy(ResultTy) {}
 
   ~VPWidenCastRecipe() override = default;
@@ -1631,7 +1650,7 @@ public:
 };
 
 /// A recipe for widening vector intrinsics.
-class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags {
+class VPWidenIntrinsicRecipe : public VPSingleDefRecipeWithIRFlags {
   /// ID of the vector intrinsic to widen.
   Intrinsic::ID VectorIntrinsicID;
 
@@ -1651,7 +1670,8 @@ public:
   VPWidenIntrinsicRecipe(CallInst &CI, Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
                          DebugLoc DL = {})
-      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, CI),
+      : VPSingleDefRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments,
+                                     CI),
         VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty),
         MayReadFromMemory(CI.mayReadFromMemory()),
         MayWriteToMemory(CI.mayWriteToMemory()),
@@ -1660,7 +1680,7 @@ public:
   VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
                          DebugLoc DL = {})
-      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments),
+      : VPSingleDefRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments),
         VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty) {
     LLVMContext &Ctx = Ty->getContext();
     AttributeList Attrs = Intrinsic::getAttributes(Ctx, VectorIntrinsicID);
@@ -1719,28 +1739,58 @@ public:
   bool onlyFirstLaneUsed(const VPValue *Op) const override;
 };
 
+/// A base class to define recipes with multiple results and IR flags.
+class VPMultipleDefRecipeWithIRFlags : public VPRecipeBase,
+                                       public VPRecipeIRFlags {
+public:
+  using VPRecipeBase::getIRFlags;
+
+  template <typename IterT>
+  VPMultipleDefRecipeWithIRFlags(const unsigned char SC, Instruction *I,
+                                 IterT Operands, unsigned NumDefs,
+                                 DebugLoc DL = {})
+      : VPRecipeBase(SC, Operands, DL), VPRecipeIRFlags(*I) {
+    assert(NumDefs >= 1 && "Expected at least one defined value.");
+    for (unsigned Def = 0; Def < NumDefs; ++Def)
+      new VPValue(I, this);
+  }
+
+  Instruction *getUnderlyingInstr() const {
+    return cast<Instruction>(getVPValue(0)->getUnderlyingValue());
+  }
+
+  virtual const VPRecipeIRFlags *getIRFlags() const override {
+    return static_cast<const VPRecipeIRFlags *>(this);
+  }
+};
+
 /// A recipe for widening Call instructions using library calls.
-class VPWidenCallRecipe : public VPRecipeWithIRFlags {
+class VPWidenCallRecipe : public VPMultipleDefRecipeWithIRFlags {
   /// Variant stores a pointer to the chosen function. There is a 1:1 mapping
   /// between a given VF and the chosen vectorized variant, so there will be a
   /// different VPlan for each VF with a valid variant.
   Function *Variant;
 
 public:
-  VPWidenCallRecipe(Value *UV, Function *Variant,
+  VPWidenCallRecipe(CallInst *CI, Function *Variant,
                     ArrayRef<VPValue *> CallArguments, DebugLoc DL = {})
-      : VPRecipeWithIRFlags(VPDef::VPWidenCallSC, CallArguments,
-                            *cast<Instruction>(UV)),
+      : VPMultipleDefRecipeWithIRFlags(
+            VPDef::VPWidenCallSC, CI, CallArguments,
+            /*NumDefs=*/getContainedTypes(CI->getType()).size(), DL),
         Variant(Variant) {
     assert(
         isa<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue()) &&
         "last operand must be the called function");
   }
 
+  CallInst *getUnderlyingCallInstruction() const {
+    return cast<CallInst>(getUnderlyingInstr());
+  }
+
   ~VPWidenCallRecipe() override = default;
 
   VPWidenCallRecipe *clone() override {
-    return new VPWidenCallRecipe(getUnderlyingValue(), Variant,
+    return new VPWidenCallRecipe(getUnderlyingCallInstruction(), Variant,
                                  {op_begin(), op_end()}, getDebugLoc());
   }
 
@@ -1855,7 +1905,7 @@ struct VPWidenSelectRecipe : public VPSingleDefRecipe {
 };
 
 /// A recipe for handling GEP instructions.
-class VPWidenGEPRecipe : public VPRecipeWithIRFlags {
+class VPWidenGEPRecipe : public VPSingleDefRecipeWithIRFlags {
   bool isPointerLoopInvariant() const {
     return getOperand(0)->isDefinedOutsideLoopRegions();
   }
@@ -1873,7 +1923,7 @@ class VPWidenGEPRecipe : public VPRecipeWithIRFlags {
 public:
   template <typename IterT>
   VPWidenGEPRecipe(GetElementPtrInst *GEP, iterator_range<IterT> Operands)
-      : VPRecipeWithIRFlags(VPDef::VPWidenGEPSC, Operands, *GEP) {}
+      : VPSingleDefRecipeWithIRFlags(VPDef::VPWidenGEPSC, Operands, *GEP) {}
 
   ~VPWidenGEPRecipe() override = default;
 
@@ -1903,16 +1953,16 @@ public:
 
 /// A recipe to compute the pointers for widened memory accesses of IndexTy
 /// in reverse order.
-class VPReverseVectorPointerRecipe : public VPRecipeWithIRFlags,
+class VPReverseVectorPointerRecipe : public VPSingleDefRecipeWithIRFlags,
                                      public VPUnrollPartAccessor<2> {
   Type *IndexedTy;
 
 public:
   VPReverseVectorPointerRecipe(VPValue *Ptr, VPValue *VF, Type *IndexedTy,
                                bool IsInBounds, DebugLoc DL)
-      : VPRecipeWithIRFlags(VPDef::VPReverseVectorPointerSC,
-                            ArrayRef<VPValue *>({Ptr, VF}),
-                            GEPFlagsTy(IsInBounds), DL),
+      : VPSingleDefRecipeWithIRFlags(VPDef::VPReverseVectorPointerSC,
+                                     ArrayRef<VPValue *>({Ptr, VF}),
+                                     GEPFlagsTy(IsInBounds), DL),
         IndexedTy(IndexedTy) {}
 
   VP_CLASSOF_IMPL(VPDef::VPReverseVectorPointerSC)
@@ -1956,15 +2006,16 @@ public:
 };
 
 /// A recipe to compute the pointers for widened memory accesses of IndexTy.
-class VPVectorPointerRecipe : public VPRecipeWithIRFlags,
+class VPVectorPointerRecipe : public VPSingleDefRecipeWithIRFlags,
                               public VPUnrollPartAccessor<1> {
   Type *IndexedTy;
 
 public:
   VPVectorPointerRecipe(VPValue *Ptr, Type *IndexedTy, bool IsInBounds,
                         DebugLoc DL)
-      : VPRecipeWithIRFlags(VPDef::VPVectorPointerSC, ArrayRef<VPValue *>(Ptr),
-                            GEPFlagsTy(IsInBounds), DL),
+      : VPSingleDefRecipeWithIRFlags(VPDef::VPVectorPointerSC,
+                                     ArrayRef<VPValue *>(Ptr),
+                                     GEPFlagsTy(IsInBounds), DL),
         IndexedTy(IndexedTy) {}
 
   VP_CLASSOF_IMPL(VPDef::VPVectorPointerSC)
@@ -2657,7 +2708,7 @@ public:
 /// copies of the original scalar type, one per lane, instead of producing a
 /// single copy of widened type for all lanes. If the instruction is known to be
 /// uniform only one copy, per lane zero, will be generated.
-class VPReplicateRecipe : public VPRecipeWithIRFlags {
+class VPReplicateRecipe : public VPMultipleDefRecipeWithIRFlags {
   /// Indicator if only a single replica per lane is needed.
   bool IsUniform;
 
@@ -2668,7 +2719,9 @@ public:
   template <typename IterT>
   VPReplicateRecipe(Instruction *I, iterator_range<IterT> Operands,
                     bool IsUniform, VPValue *Mask = nullptr)
-      : VPRecipeWithIRFlags(VPDef::VPReplicateSC, Operands, *I),
+      : VPMultipleDefRecipeWithIRFlags(
+            VPDef::VPReplicateSC, I, Operands,
+            /*NumDefs=*/getContainedTypes(I->getType()).size()),
         IsUniform(IsUniform), IsPredicated(Mask) {
     if (Mask)
       addOperand(Mask);
@@ -2719,10 +2772,10 @@ public:
     return true;
   }
 
-  /// Returns true if the recipe is used by a widened recipe via an intervening
-  /// VPPredInstPHIRecipe. In this case, the scalar values should also be packed
-  /// in a vector.
-  bool shouldPack() const;
+  /// Returns true if the recipe value at index \p I is used by a widened recipe
+  /// via an intervening VPPredInstPHIRecipe. In this case, the scalar values
+  /// should also be packed in a vector.
+  bool shouldPack(unsigned I) const;
 
   /// Return the mask of a predicated VPReplicateRecipe.
   VPValue *getMask() {
@@ -3356,15 +3409,15 @@ public:
 
 /// A recipe for handling phi nodes of integer and floating-point inductions,
 /// producing their scalar values.
-class VPScalarIVStepsRecipe : public VPRecipeWithIRFlags,
+class VPScalarIVStepsRecipe : public VPSingleDefRecipeWithIRFlags,
                               public VPUnrollPartAccessor<2> {
   Instruction::BinaryOps InductionOpcode;
 
 public:
   VPScalarIVStepsRecipe(VPValue *IV, VPValue *Step,
                         Instruction::BinaryOps Opcode, FastMathFlags FMFs)
-      : VPRecipeWithIRFlags(VPDef::VPScalarIVStepsSC,
-                            ArrayRef<VPValue *>({IV, Step}), FMFs),
+      : VPSingleDefRecipeWithIRFlags(VPDef::VPScalarIVStepsSC,
+                                     ArrayRef<VPValue *>({IV, Step}), FMFs),
         InductionOpcode(Opcode) {}
 
   VPScalarIVStepsRecipe(const InductionDescriptor &IndDesc, VPValue *IV,

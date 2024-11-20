@@ -102,7 +102,7 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
         // all their operands are invariant.
         // TODO: Further relax the restrictions.
         return R->isUniform() &&
-               (isa<LoadInst, StoreInst>(R->getUnderlyingValue())) &&
+               (isa<LoadInst, StoreInst>(R->getUnderlyingInstr())) &&
                all_of(R->operands(),
                       [](VPValue *Op) { return isUniformAcrossVFsAndUFs(Op); });
       })
