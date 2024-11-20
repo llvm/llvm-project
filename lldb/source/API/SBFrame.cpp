@@ -1155,7 +1155,7 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
   return expr_result;
 }
 
-SBStructuredData SBFrame::GetLanguageSpecificData() {
+SBStructuredData SBFrame::GetLanguageSpecificData() const {
   LLDB_INSTRUMENT_VA(this);
 
   SBStructuredData sb_data;
