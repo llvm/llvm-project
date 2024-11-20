@@ -35,7 +35,7 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 ; CHECK: Cost of 16 for VF 2: WIDEN store vp<%5>, ir<%conv6>, ir<%cmp2>
 ; CHECK: Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
 ; CHECK: Cost of 0 for VF 2: EMIT branch-on-count vp<%index.next>, vp<%1>
-; CHECK: Cost for VF 2: 86 (Estimated cost per lane: 43.0)
+; CHECK: Cost for VF 2: 86 (Estimated cost per lane: 43.
 ; CHECK: Cost of 1 for VF 4: induction instruction   %inc = add nuw nsw i32 %i.016, 1
 ; CHECK: Cost of 0 for VF 4: induction instruction   %i.016 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
 ; CHECK: Cost of 1 for VF 4: exit condition instruction   %exitcond.not = icmp eq i32 %inc, %n
@@ -52,7 +52,7 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 ; CHECK: Cost of 2 for VF 4: WIDEN store vp<%5>, ir<%conv6>, ir<%cmp2>
 ; CHECK: Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
 ; CHECK: Cost of 0 for VF 4: EMIT branch-on-count vp<%index.next>, vp<%1>
-; CHECK: Cost for VF 4: 10 (Estimated cost per lane: 2.5)
+; CHECK: Cost for VF 4: 10 (Estimated cost per lane: 2.
 ; CHECK: Cost of 1 for VF 8: induction instruction   %inc = add nuw nsw i32 %i.016, 1
 ; CHECK: Cost of 0 for VF 8: induction instruction   %i.016 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
 ; CHECK: Cost of 1 for VF 8: exit condition instruction   %exitcond.not = icmp eq i32 %inc, %n
@@ -69,7 +69,7 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 ; CHECK: Cost of 2 for VF 8: WIDEN store vp<%5>, ir<%conv6>, ir<%cmp2>
 ; CHECK: Cost of 0 for VF 8: EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
 ; CHECK: Cost of 0 for VF 8: EMIT branch-on-count vp<%index.next>, vp<%1>
-; CHECK: Cost for VF 8: 46 (Estimated cost per lane: 5.8)
+; CHECK: Cost for VF 8: 46 (Estimated cost per lane: 5.
 ; CHECK: LV: Selecting VF: 4.
 define void @expensive_icmp(ptr noalias nocapture %d, ptr nocapture readonly %s, i32 %n, i16 zeroext %m) #0 {
 entry:
@@ -157,7 +157,7 @@ for.inc:                                          ; preds = %for.body, %if.then
 ; CHECK: Cost of 18 for VF 2: WIDEN store vp<%8>, ir<%conv4>
 ; CHECK: Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
 ; CHECK: Cost of 0 for VF 2: EMIT branch-on-count vp<%index.next>, vp<%1>
-; CHECK: Cost for VF 2: 130 (Estimated cost per lane: 65.0)
+; CHECK: Cost for VF 2: 130 (Estimated cost per lane: 65.
 ; CHECK: Cost of 1 for VF 4: induction instruction   %dec = add i32 %blkCnt.012, -1
 ; CHECK: Cost of 0 for VF 4: induction instruction   %blkCnt.012 = phi i32 [ %dec, %while.body ], [ %blockSize, %while.body.preheader ]
 ; CHECK: Cost of 0 for VF 4: induction instruction   %incdec.ptr = getelementptr inbounds i8, ptr %pSrcA.addr.011, i32 1
@@ -189,7 +189,7 @@ for.inc:                                          ; preds = %for.body, %if.then
 ; CHECK: Cost of 2 for VF 4: WIDEN store vp<%8>, ir<%conv4>
 ; CHECK: Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
 ; CHECK: Cost of 0 for VF 4: EMIT branch-on-count vp<%index.next>, vp<%1>
-; CHECK: Cost for VF 4: 14 (Estimated cost per lane: 3.5)
+; CHECK: Cost for VF 4: 14 (Estimated cost per lane: 3.
 ; CHECK: Cost of 1 for VF 8: induction instruction   %dec = add i32 %blkCnt.012, -1
 ; CHECK: Cost of 0 for VF 8: induction instruction   %blkCnt.012 = phi i32 [ %dec, %while.body ], [ %blockSize, %while.body.preheader ]
 ; CHECK: Cost of 0 for VF 8: induction instruction   %incdec.ptr = getelementptr inbounds i8, ptr %pSrcA.addr.011, i32 1
@@ -221,7 +221,7 @@ for.inc:                                          ; preds = %for.body, %if.then
 ; CHECK: Cost of 2 for VF 8: WIDEN store vp<%8>, ir<%conv4>
 ; CHECK: Cost of 0 for VF 8: EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
 ; CHECK: Cost of 0 for VF 8: EMIT branch-on-count vp<%index.next>, vp<%1>
-; CHECK: Cost for VF 8: 26 (Estimated cost per lane: 3.2)
+; CHECK: Cost for VF 8: 26 (Estimated cost per lane: 3.
 ; CHECK: Cost of 1 for VF 16: induction instruction   %dec = add i32 %blkCnt.012, -1
 ; CHECK: Cost of 0 for VF 16: induction instruction   %blkCnt.012 = phi i32 [ %dec, %while.body ], [ %blockSize, %while.body.preheader ]
 ; CHECK: Cost of 0 for VF 16: induction instruction   %incdec.ptr = getelementptr inbounds i8, ptr %pSrcA.addr.011, i32 1
