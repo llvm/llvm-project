@@ -120,6 +120,9 @@ int llvm::compileModuleWithNewPM(
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
   PassBuilder PB(Target.get(), PipelineTuningOptions(), std::nullopt, &PIC);
+  CGPassBuilderOption &CGPBO = PB.getCGPBO();
+  CGPBO.DisableVerify = VK != VerifierKind::InputOutput;
+  CGPBO.RegAlloc = RegAlloc;
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
   PB.registerFunctionAnalyses(FAM);
@@ -156,8 +159,9 @@ int llvm::compileModuleWithNewPM(
     if (MIR->parseMachineFunctions(*M, MAM))
       return 1;
   } else {
-    ExitOnErr(Target->buildCodeGenPipeline(
-        MPM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt, &PIC));
+    ExitOnErr(PB.buildDefaultCodeGenPipeline(MPM, *OS,
+                                             DwoOut ? &DwoOut->os() : nullptr,
+                                             FileType, MMI.getContext()));
   }
 
   if (PrintPipelinePasses) {

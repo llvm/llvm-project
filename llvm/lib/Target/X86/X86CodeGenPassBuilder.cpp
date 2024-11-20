@@ -53,6 +53,10 @@ Error X86CodeGenPassBuilder::addInstSelector(AddMachinePass &addPass) const {
 void X86TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "X86PassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
+
+  PB.setAddInstSelectorCallback([this](MachineFunctionPassManager &MFPM) {
+    MFPM.addPass(X86ISelDAGToDAGPass(*this));
+  });
 }
 
 Error X86TargetMachine::buildCodeGenPipeline(
