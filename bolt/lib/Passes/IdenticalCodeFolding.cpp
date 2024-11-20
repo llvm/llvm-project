@@ -393,22 +393,12 @@ Error IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
       "markUnsafe", /*ForceSequential*/ false, 2);
 
   LLVM_DEBUG({
-    std::vector<StringRef> Vect;
-    std::mutex PrintMutex;
-    ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
-      if (BF.isSafeToICF())
-        return;
-      std::lock_guard<std::mutex> Lock(PrintMutex);
-      Vect.push_back(BF.getOneName());
-    };
-    ParallelUtilities::PredicateTy SkipFunc =
-        [&](const BinaryFunction &BF) -> bool { return false; };
-    ParallelUtilities::runOnEachFunction(
-        BC, ParallelUtilities::SchedulingPolicy::SP_TRIVIAL, WorkFun, SkipFunc,
-        "markUnsafe", /*ForceSequential*/ false, 2);
-    llvm::sort(Vect);
-    for (const auto &FuncName : Vect)
-      dbgs() << "BOLT-DEBUG: skipping function " << FuncName << '\n';
+    for (auto &BFIter : BC.getBinaryFunctions()) {
+      if (BFIter.second.isSafeToICF())
+        continue;
+      dbgs() << "BOLT-DEBUG: skipping function " << BFIter.second.getOneName()
+             << '\n';
+    }
   });
   return ErrorStatus;
 }
@@ -422,9 +412,6 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
   std::atomic<uint64_t> NumFoldedLastIteration{0};
   CongruentBucketsMap CongruentBuckets;
 
-  auto SkipFuncShared = [&](const BinaryFunction &BF) {
-    return !shouldOptimize(BF) || !BF.isSafeToICF();
-  };
   // Hash all the functions
   auto hashFunctions = [&]() {
     NamedRegionTimer HashFunctionsTimer("hashing", "hashing", "ICF breakdown",
@@ -444,7 +431,7 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
     };
 
     ParallelUtilities::PredicateTy SkipFunc = [&](const BinaryFunction &BF) {
-      return SkipFuncShared(BF);
+      return !shouldOptimize(BF);
     };
 
     ParallelUtilities::runOnEachFunction(
@@ -460,7 +447,7 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
                                            "ICF breakdown", opts::TimeICF);
     for (auto &BFI : BC.getBinaryFunctions()) {
       BinaryFunction &BF = BFI.second;
-      if (SkipFuncShared(BF))
+      if (!shouldOptimize(BF))
         continue;
       CongruentBuckets[&BF].emplace(&BF);
     }

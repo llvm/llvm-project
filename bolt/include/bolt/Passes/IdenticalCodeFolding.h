@@ -27,6 +27,8 @@ protected:
       return false;
     if (BF.hasSDTMarker())
       return false;
+    if (!BF.isSafeToICF())
+      return false;
     return BinaryFunctionPass::shouldOptimize(BF);
   }
 

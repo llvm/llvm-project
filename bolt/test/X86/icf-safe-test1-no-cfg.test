@@ -13,9 +13,9 @@
 # ICFCHECK-NEXT: folding _Z6barMulii into _Z6fooMulii
 # ICFCHECK-NEXT: folding _Z6barSubii into _Z6fooSubii
 
-# SAFEICFCHECK:      skipping function _Z6barAddii
+# SAFEICFCHECK:      skipping function _Z6fooMulii
 # SAFEICFCHECK-NEXT: skipping function _Z6barMulii
-# SAFEICFCHECK-NEXT: skipping function _Z6fooMulii
+# SAFEICFCHECK-NEXT: skipping function _Z6barAddii
 # SAFEICFCHECK-NEXT: ICF iteration 1
 # SAFEICFCHECK-NEXT: folding _Z6barSubii into _Z6fooSubii
 # SAFEICFCHECK-NEXT: ===---------
