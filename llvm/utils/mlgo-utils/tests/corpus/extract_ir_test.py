@@ -2,7 +2,6 @@
 
 ## Test the functionality of extract_ir_lib
 
-import os.path
 import sys
 
 from mlgo.corpus import extract_ir_lib

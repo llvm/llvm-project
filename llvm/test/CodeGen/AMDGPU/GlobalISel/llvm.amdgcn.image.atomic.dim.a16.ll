@@ -706,12 +706,12 @@ define amdgpu_ps float @atomic_add_i32_3d(<8 x i32> inreg %rsrc, i32 %data, i16 
 ; GFX10-NEXT:    s_mov_b32 s1, s3
 ; GFX10-NEXT:    s_mov_b32 s2, s4
 ; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    v_lshl_or_b32 v2, v2, 16, v1
+; GFX10-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
 ; GFX10-NEXT:    s_mov_b32 s4, s6
 ; GFX10-NEXT:    s_mov_b32 s5, s7
 ; GFX10-NEXT:    s_mov_b32 s6, s8
 ; GFX10-NEXT:    s_mov_b32 s7, s9
-; GFX10-NEXT:    image_atomic_add v0, v[2:3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_3D unorm glc a16
+; GFX10-NEXT:    image_atomic_add v0, [v1, v3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_3D unorm glc a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -760,12 +760,12 @@ define amdgpu_ps float @atomic_add_i32_cube(<8 x i32> inreg %rsrc, i32 %data, i1
 ; GFX10-NEXT:    s_mov_b32 s1, s3
 ; GFX10-NEXT:    s_mov_b32 s2, s4
 ; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    v_lshl_or_b32 v2, v2, 16, v1
+; GFX10-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
 ; GFX10-NEXT:    s_mov_b32 s4, s6
 ; GFX10-NEXT:    s_mov_b32 s5, s7
 ; GFX10-NEXT:    s_mov_b32 s6, s8
 ; GFX10-NEXT:    s_mov_b32 s7, s9
-; GFX10-NEXT:    image_atomic_add v0, v[2:3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_CUBE unorm glc a16
+; GFX10-NEXT:    image_atomic_add v0, [v1, v3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_CUBE unorm glc a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -868,12 +868,12 @@ define amdgpu_ps float @atomic_add_i32_2darray(<8 x i32> inreg %rsrc, i32 %data,
 ; GFX10-NEXT:    s_mov_b32 s1, s3
 ; GFX10-NEXT:    s_mov_b32 s2, s4
 ; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    v_lshl_or_b32 v2, v2, 16, v1
+; GFX10-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
 ; GFX10-NEXT:    s_mov_b32 s4, s6
 ; GFX10-NEXT:    s_mov_b32 s5, s7
 ; GFX10-NEXT:    s_mov_b32 s6, s8
 ; GFX10-NEXT:    s_mov_b32 s7, s9
-; GFX10-NEXT:    image_atomic_add v0, v[2:3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY unorm glc a16
+; GFX10-NEXT:    image_atomic_add v0, [v1, v3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY unorm glc a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -922,12 +922,12 @@ define amdgpu_ps float @atomic_add_i32_2dmsaa(<8 x i32> inreg %rsrc, i32 %data, 
 ; GFX10-NEXT:    s_mov_b32 s1, s3
 ; GFX10-NEXT:    s_mov_b32 s2, s4
 ; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    v_lshl_or_b32 v2, v2, 16, v1
+; GFX10-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
 ; GFX10-NEXT:    s_mov_b32 s4, s6
 ; GFX10-NEXT:    s_mov_b32 s5, s7
 ; GFX10-NEXT:    s_mov_b32 s6, s8
 ; GFX10-NEXT:    s_mov_b32 s7, s9
-; GFX10-NEXT:    image_atomic_add v0, v[2:3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm glc a16
+; GFX10-NEXT:    image_atomic_add v0, [v1, v3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm glc a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -1762,12 +1762,12 @@ define amdgpu_ps <2 x float> @atomic_add_i64_3d(<8 x i32> inreg %rsrc, i64 %data
 ; GFX10-NEXT:    s_mov_b32 s1, s3
 ; GFX10-NEXT:    s_mov_b32 s2, s4
 ; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    v_lshl_or_b32 v3, v3, 16, v2
+; GFX10-NEXT:    v_lshl_or_b32 v2, v3, 16, v2
 ; GFX10-NEXT:    s_mov_b32 s4, s6
 ; GFX10-NEXT:    s_mov_b32 s5, s7
 ; GFX10-NEXT:    s_mov_b32 s6, s8
 ; GFX10-NEXT:    s_mov_b32 s7, s9
-; GFX10-NEXT:    image_atomic_add v[0:1], v[3:4], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_3D unorm glc a16
+; GFX10-NEXT:    image_atomic_add v[0:1], [v2, v4], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_3D unorm glc a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -1816,12 +1816,12 @@ define amdgpu_ps <2 x float> @atomic_add_i64_cube(<8 x i32> inreg %rsrc, i64 %da
 ; GFX10-NEXT:    s_mov_b32 s1, s3
 ; GFX10-NEXT:    s_mov_b32 s2, s4
 ; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    v_lshl_or_b32 v3, v3, 16, v2
+; GFX10-NEXT:    v_lshl_or_b32 v2, v3, 16, v2
 ; GFX10-NEXT:    s_mov_b32 s4, s6
 ; GFX10-NEXT:    s_mov_b32 s5, s7
 ; GFX10-NEXT:    s_mov_b32 s6, s8
 ; GFX10-NEXT:    s_mov_b32 s7, s9
-; GFX10-NEXT:    image_atomic_add v[0:1], v[3:4], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_CUBE unorm glc a16
+; GFX10-NEXT:    image_atomic_add v[0:1], [v2, v4], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_CUBE unorm glc a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -1924,12 +1924,12 @@ define amdgpu_ps <2 x float> @atomic_add_i64_2darray(<8 x i32> inreg %rsrc, i64 
 ; GFX10-NEXT:    s_mov_b32 s1, s3
 ; GFX10-NEXT:    s_mov_b32 s2, s4
 ; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    v_lshl_or_b32 v3, v3, 16, v2
+; GFX10-NEXT:    v_lshl_or_b32 v2, v3, 16, v2
 ; GFX10-NEXT:    s_mov_b32 s4, s6
 ; GFX10-NEXT:    s_mov_b32 s5, s7
 ; GFX10-NEXT:    s_mov_b32 s6, s8
 ; GFX10-NEXT:    s_mov_b32 s7, s9
-; GFX10-NEXT:    image_atomic_add v[0:1], v[3:4], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D_ARRAY unorm glc a16
+; GFX10-NEXT:    image_atomic_add v[0:1], [v2, v4], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D_ARRAY unorm glc a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -1978,12 +1978,12 @@ define amdgpu_ps <2 x float> @atomic_add_i64_2dmsaa(<8 x i32> inreg %rsrc, i64 %
 ; GFX10-NEXT:    s_mov_b32 s1, s3
 ; GFX10-NEXT:    s_mov_b32 s2, s4
 ; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    v_lshl_or_b32 v3, v3, 16, v2
+; GFX10-NEXT:    v_lshl_or_b32 v2, v3, 16, v2
 ; GFX10-NEXT:    s_mov_b32 s4, s6
 ; GFX10-NEXT:    s_mov_b32 s5, s7
 ; GFX10-NEXT:    s_mov_b32 s6, s8
 ; GFX10-NEXT:    s_mov_b32 s7, s9
-; GFX10-NEXT:    image_atomic_add v[0:1], v[3:4], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D_MSAA unorm glc a16
+; GFX10-NEXT:    image_atomic_add v[0:1], [v2, v4], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D_MSAA unorm glc a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;

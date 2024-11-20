@@ -103,7 +103,7 @@ define <vscale x 1 x double> @fmul_nan_op0_scalable_vec_1(<vscale x 1 x double> 
 
 define <2 x float> @fmul_nan_op1(<2 x float> %x) {
 ; CHECK-LABEL: @fmul_nan_op1(
-; CHECK-NEXT:    ret <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x float> splat (float 0x7FF8000000000000)
 ;
   %r = fmul <2 x float> %x, <float 0x7FF8000000000000, float 0x7FF8000000000000>
   ret <2 x float> %r
@@ -121,7 +121,7 @@ define <vscale x 1 x double> @fmul_nan_op1_scalable_vec(<vscale x 1 x double> %x
 
 define <2 x double> @fdiv_nan_op0(<2 x double> %x) {
 ; CHECK-LABEL: @fdiv_nan_op0(
-; CHECK-NEXT:    ret <2 x double> <double 0xFFF800000000000F, double 0xFFF800000000000F>
+; CHECK-NEXT:    ret <2 x double> splat (double 0xFFF800000000000F)
 ;
   %r = fdiv <2 x double> <double 0xFFF800000000000F, double 0xFFF800000000000F>, %x
   ret <2 x double>  %r
@@ -237,8 +237,7 @@ define <2 x double> @unary_fneg_nan_2(<2 x double> %x) {
 ; FIXME: This doesn't behave the same way as the fixed-length vectors above
 define <vscale x 1 x double> @unary_fneg_nan_2_scalable_vec_0() {
 ; CHECK-LABEL: @unary_fneg_nan_2_scalable_vec_0(
-; CHECK-NEXT:    [[R:%.*]] = fneg <vscale x 1 x double> shufflevector (<vscale x 1 x double> insertelement (<vscale x 1 x double> poison, double 0xFFF1234567890ABC, i64 0), <vscale x 1 x double> poison, <vscale x 1 x i32> zeroinitializer)
-; CHECK-NEXT:    ret <vscale x 1 x double> [[R]]
+; CHECK-NEXT:    ret <vscale x 1 x double> shufflevector (<vscale x 1 x double> insertelement (<vscale x 1 x double> poison, double 0x7FF1234567890ABC, i64 0), <vscale x 1 x double> poison, <vscale x 1 x i32> zeroinitializer)
 ;
   %r = fneg <vscale x 1 x double> splat (double 0xFFF1234567890ABC)
   ret <vscale x 1 x double> %r
@@ -247,8 +246,7 @@ define <vscale x 1 x double> @unary_fneg_nan_2_scalable_vec_0() {
 ; FIXME: This doesn't behave the same way as the fixed-length vectors above
 define <vscale x 1 x double> @unary_fneg_nan_2_scalable_vec_1() {
 ; CHECK-LABEL: @unary_fneg_nan_2_scalable_vec_1(
-; CHECK-NEXT:    [[R:%.*]] = fneg <vscale x 1 x double> shufflevector (<vscale x 1 x double> insertelement (<vscale x 1 x double> poison, double 0x7FF0000000000001, i64 0), <vscale x 1 x double> poison, <vscale x 1 x i32> zeroinitializer)
-; CHECK-NEXT:    ret <vscale x 1 x double> [[R]]
+; CHECK-NEXT:    ret <vscale x 1 x double> shufflevector (<vscale x 1 x double> insertelement (<vscale x 1 x double> poison, double 0xFFF0000000000001, i64 0), <vscale x 1 x double> poison, <vscale x 1 x i32> zeroinitializer)
 ;
   %r = fneg <vscale x 1 x double> splat (double 0x7FF0000000000001)
   ret <vscale x 1 x double> %r

@@ -12,7 +12,7 @@ add_entrypoint_object(
   HDRS
     ../setjmp_impl.h
   DEPENDS
-    libc.include.setjmp
+    libc.hdr.types.jmp_buf
   ${setjmp_config_options}
 )
 
@@ -23,6 +23,6 @@ add_entrypoint_object(
   HDRS
     ../longjmp.h
   DEPENDS
-    libc.include.setjmp
+    libc.hdr.types.jmp_buf
   ${setjmp_config_options}
 )

@@ -120,3 +120,31 @@ void test_builtin_reduce_and(int i, float4 v, int3 iv) {
   i = __builtin_reduce_and(v);
   // expected-error@-1 {{1st argument must be a vector of integers (was 'float4' (vector of 4 'float' values))}}
 }
+
+void test_builtin_reduce_maximum(int i, float4 v, int3 iv) {
+  struct Foo s = __builtin_reduce_maximum(v);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'float'}}
+
+  i = __builtin_reduce_maximum(v, v);
+  // expected-error@-1 {{too many arguments to function call, expected 1, have 2}}
+
+  i = __builtin_reduce_maximum();
+  // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
+
+  i = __builtin_reduce_maximum(i);
+  // expected-error@-1 {{1st argument must be a vector of floating points (was 'int')}}
+}
+
+void test_builtin_reduce_minimum(int i, float4 v, int3 iv) {
+  struct Foo s = __builtin_reduce_minimum(v);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'float'}}
+
+  i = __builtin_reduce_minimum(v, v);
+  // expected-error@-1 {{too many arguments to function call, expected 1, have 2}}
+
+  i = __builtin_reduce_minimum();
+  // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
+
+  i = __builtin_reduce_minimum(i);
+  // expected-error@-1 {{1st argument must be a vector of floating points (was 'int')}}
+}

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReturnConstRefFromParameterCheck.h"
+#include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 
@@ -15,19 +16,24 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::bugprone {
 
 void ReturnConstRefFromParameterCheck::registerMatchers(MatchFinder *Finder) {
+  const auto DRef = ignoringParens(
+      declRefExpr(
+          to(parmVarDecl(hasType(hasCanonicalType(
+                             qualType(lValueReferenceType(pointee(
+                                          qualType(isConstQualified()))))
+                                 .bind("type"))))
+                 .bind("param")))
+          .bind("dref"));
+  const auto Func =
+      functionDecl(hasReturnTypeLoc(loc(
+                       qualType(hasCanonicalType(equalsBoundNode("type"))))))
+          .bind("func");
+
+  Finder->addMatcher(returnStmt(hasReturnValue(DRef), hasAncestor(Func)), this);
   Finder->addMatcher(
-      returnStmt(
-          hasReturnValue(declRefExpr(
-              to(parmVarDecl(hasType(hasCanonicalType(
-                                 qualType(lValueReferenceType(pointee(
-                                              qualType(isConstQualified()))))
-                                     .bind("type"))))
-                     .bind("param")))),
-          hasAncestor(
-              functionDecl(hasReturnTypeLoc(loc(qualType(
-                               hasCanonicalType(equalsBoundNode("type"))))))
-                  .bind("func")))
-          .bind("ret"),
+      returnStmt(hasReturnValue(ignoringParens(conditionalOperator(
+          eachOf(hasTrueExpression(DRef), hasFalseExpression(DRef)),
+          hasAncestor(Func))))),
       this);
 }
 
@@ -85,8 +91,8 @@ void ReturnConstRefFromParameterCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *FD = Result.Nodes.getNodeAs<FunctionDecl>("func");
   const auto *PD = Result.Nodes.getNodeAs<ParmVarDecl>("param");
-  const auto *R = Result.Nodes.getNodeAs<ReturnStmt>("ret");
-  const SourceRange Range = R->getRetValue()->getSourceRange();
+  const auto *DRef = Result.Nodes.getNodeAs<DeclRefExpr>("dref");
+  const SourceRange Range = DRef->getSourceRange();
   if (Range.isInvalid())
     return;
 

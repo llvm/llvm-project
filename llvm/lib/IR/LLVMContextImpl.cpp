@@ -15,7 +15,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringMapEntry.h"
 #include "llvm/ADT/iterator.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/DiagnosticHandler.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/Module.h"
@@ -24,10 +23,8 @@
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/Remarks/RemarkStreamer.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TypeSize.h"
 #include <cassert>
 #include <utility>
 
@@ -242,6 +239,16 @@ void LLVMContextImpl::getSyncScopeNames(
   SSNs.resize(SSC.size());
   for (const auto &SSE : SSC)
     SSNs[SSE.second] = SSE.first();
+}
+
+std::optional<StringRef>
+LLVMContextImpl::getSyncScopeName(SyncScope::ID Id) const {
+  for (const auto &SSE : SSC) {
+    if (SSE.second != Id)
+      continue;
+    return SSE.first();
+  }
+  return std::nullopt;
 }
 
 /// Gets the OptPassGate for this LLVMContextImpl, which defaults to the

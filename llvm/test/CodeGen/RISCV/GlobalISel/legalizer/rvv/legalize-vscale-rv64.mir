@@ -40,8 +40,7 @@ body:             |
     ; CHECK: [[READ_VLENB:%[0-9]+]]:_(s64) = G_READ_VLENB
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[READ_VLENB]], [[C]](s64)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
-    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[LSHR]], [[C1]]
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[LSHR]], [[C]]
     ; CHECK-NEXT: $x10 = COPY [[MUL]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s64) = G_VSCALE i64 3

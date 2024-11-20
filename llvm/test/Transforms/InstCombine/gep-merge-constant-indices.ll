@@ -140,12 +140,11 @@ define ptr @notDivisible(ptr %p) {
   ret ptr %2
 }
 
-; Negative test. Two GEP should not be merged if not both offsets are constant
-; or divisible by the other's size.
 define ptr @partialConstant2(ptr %p, i64 %a) {
 ; CHECK-LABEL: @partialConstant2(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i64], ptr [[TMP1]], i64 [[A:%.*]], i64 2
+; CHECK-NEXT:    [[DOTIDX:%.*]] = shl nsw i64 [[A:%.*]], 5
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 20
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 [[DOTIDX]]
 ; CHECK-NEXT:    ret ptr [[TMP2]]
 ;
   %1 = getelementptr inbounds i32, ptr %p, i64 1
@@ -153,13 +152,13 @@ define ptr @partialConstant2(ptr %p, i64 %a) {
   ret ptr %2
 }
 
-; Negative test. Two GEP should not be merged if there is another use of the
-; first GEP by the second GEP.
 define ptr @partialConstant3(ptr %p) {
 ; CHECK-LABEL: @partialConstant3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [4 x i64], ptr [[TMP1]], i64 [[TMP2]], i64 2
+; CHECK-NEXT:    [[DOTIDX:%.*]] = shl nsw i64 [[TMP2]], 5
+; CHECK-NEXT:    [[DOTOFFS:%.*]] = or disjoint i64 [[DOTIDX]], 16
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[DOTOFFS]]
 ; CHECK-NEXT:    ret ptr [[TMP3]]
 ;
   %1 = getelementptr inbounds i32, ptr %p, i64 1

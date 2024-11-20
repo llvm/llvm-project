@@ -191,6 +191,9 @@ function keep-modified-projects() {
 }
 
 function check-targets() {
+  # Do not use "check-all" here because if there is "check-all" plus a
+  # project specific target like "check-clang", that project's tests
+  # will be run twice.
   projects=${@}
   for project in ${projects}; do
     case ${project} in
@@ -198,7 +201,7 @@ function check-targets() {
       echo "check-clang-tools"
     ;;
     compiler-rt)
-      echo "check-all"
+      echo "check-compiler-rt"
     ;;
     cross-project-tests)
       echo "check-cross-project"
@@ -216,10 +219,10 @@ function check-targets() {
       echo "check-lldb"
     ;;
     pstl)
-      echo "check-all"
+      # Currently we do not run pstl tests in CI.
     ;;
     libclc)
-      echo "check-all"
+      # Currently there is no testing for libclc.
     ;;
     *)
       echo "check-${project}"
@@ -269,7 +272,7 @@ if [[ "${linux_projects}" != "" ]]; then
   artifact_paths:
   - 'artifacts/**/*'
   - '*_result.json'
-  - 'build/test-results.xml'
+  - 'build/test-results.*.xml'
   agents: ${LINUX_AGENTS}
   retry:
     automatic:
@@ -292,7 +295,7 @@ if [[ "${windows_projects}" != "" ]]; then
   artifact_paths:
   - 'artifacts/**/*'
   - '*_result.json'
-  - 'build/test-results.xml'
+  - 'build/test-results.*.xml'
   agents: ${WINDOWS_AGENTS}
   retry:
     automatic:

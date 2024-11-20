@@ -1748,10 +1748,10 @@ EmulateInstructionRISCV::GetRegisterInfo(RegisterKind reg_kind,
     }
   }
 
-  const RegisterInfo *array =
-      RegisterInfoPOSIX_riscv64::GetRegisterInfoPtr(m_arch);
-  const uint32_t length =
-      RegisterInfoPOSIX_riscv64::GetRegisterInfoCount(m_arch);
+  RegisterInfoPOSIX_riscv64 reg_info(m_arch,
+                                     RegisterInfoPOSIX_riscv64::eRegsetMaskAll);
+  const RegisterInfo *array = reg_info.GetRegisterInfo();
+  const uint32_t length = reg_info.GetRegisterCount();
 
   if (reg_index >= length || reg_kind != eRegisterKindLLDB)
     return {};

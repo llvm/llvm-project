@@ -74,27 +74,38 @@ llvm.func @parallel_op_firstprivate_multi_block(%arg0: !llvm.ptr) {
 // CHECK: [[PRIV_BB2]]:
 // CHECK-NEXT: %[[C1:.*]] = phi i32 [ 1, %[[PRIV_BB1]] ]
 // CHECK-NEXT: %[[PRIV_ALLOC:.*]] = alloca float, i32 %[[C1]], align 4
-// The entry block of the `copy` region is merged into the exit block of the
-// `alloc` region. So check for that.
+// CHECK-NEXT: br label %omp.region.cont
+
+// CHECK: omp.region.cont:
+// CHECK-NEXT: %[[PRIV_ALLOC2:.*]] = phi ptr [ %[[PRIV_ALLOC]], %[[PRIV_BB2]] ]
+// CHECK-NEXT: br label %omp.private.latealloc
+
+// CHECK: omp.private.latealloc:
+// CHECK-NEXT: br label %omp.private.copy
+
+// CHECK: omp.private.copy:
+// CHECK-NEXT: br label %omp.private.copy3
+
+// CHECK: omp.private.copy3:
 // CHECK-NEXT: %[[ORIG_VAL:.*]] = load float, ptr %[[ORIG_PTR]], align 4
 // CHECK-NEXT: br label %[[PRIV_BB3:.*]]
 
 // Check contents of the 2nd block in the `copy` region.
 // CHECK: [[PRIV_BB3]]:
-// CHECK-NEXT: %[[ORIG_VAL2:.*]] = phi float [ %[[ORIG_VAL]], %[[PRIV_BB2]] ]
-// CHECK-NEXT: %[[PRIV_ALLOC2:.*]] = phi ptr [ %[[PRIV_ALLOC]], %[[PRIV_BB2]] ]
-// CHECK-NEXT: store float %[[ORIG_VAL2]], ptr %[[PRIV_ALLOC2]], align 4
+// CHECK-NEXT: %[[ORIG_VAL2:.*]] = phi float [ %[[ORIG_VAL]], %omp.private.copy3 ]
+// CHECK-NEXT: %[[PRIV_ALLOC3:.*]] = phi ptr [ %[[PRIV_ALLOC2]], %omp.private.copy3 ]
+// CHECK-NEXT: store float %[[ORIG_VAL2]], ptr %[[PRIV_ALLOC3]], align 4
 // CHECK-NEXT: br label %[[PRIV_CONT:.*]]
 
 // Check that the privatizer's continuation block yileds the private clone's
 // address.
 // CHECK: [[PRIV_CONT]]:
-// CHECK-NEXT:   %[[PRIV_ALLOC3:.*]] = phi ptr [ %[[PRIV_ALLOC2]], %[[PRIV_BB3]] ]
+// CHECK-NEXT:   %[[PRIV_ALLOC4:.*]] = phi ptr [ %[[PRIV_ALLOC3]], %[[PRIV_BB3]] ]
 // CHECK-NEXT:   br label %[[PAR_REG:.*]]
 
 // Check that the body of the parallel region loads from the private clone.
 // CHECK: [[PAR_REG]]:
-// CHECK:        %{{.*}} = load float, ptr %[[PRIV_ALLOC3]], align 4
+// CHECK:        %{{.*}} = load float, ptr %[[PRIV_ALLOC2]], align 4
 
 omp.private {type = firstprivate} @multi_block.privatizer : !llvm.ptr alloc {
 ^bb0(%arg0: !llvm.ptr):

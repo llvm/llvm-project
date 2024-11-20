@@ -33,10 +33,10 @@ add_clang_library(clangFormat
 file(GLOB_RECURSE files
   *.cpp
   *.h
-  ../../include/clang/Format/*.h
-  ../../tools/clang-format/*.cpp
-  ../../unittests/Format/*.cpp
-  ../../unittests/Format/*.h
+  ${CLANG_SOURCE_DIR}/include/clang/Format/*.h
+  ${CLANG_SOURCE_DIR}/tools/clang-format/*.cpp
+  ${CLANG_SOURCE_DIR}/unittests/Format/*.cpp
+  ${CLANG_SOURCE_DIR}/unittests/Format/*.h
   )
 
 set(check_format_depends)
@@ -46,8 +46,8 @@ foreach (file IN LISTS files)
     COMMAND clang-format ${file} | diff -u ${file} -
     VERBATIM
     COMMENT "Checking format of ${file}..."
-  )
-  list(APPEND check_format_depends "clang-format-check-format${i}")
+    )
+  list(APPEND check_format_depends clang-format-check-format${i})
 
   math(EXPR i ${i}+1)
 endforeach ()

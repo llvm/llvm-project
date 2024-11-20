@@ -149,6 +149,8 @@ bool RISCVRegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
                                        const MachineRegisterInfo &MRI,
                                        const TargetRegisterInfo &TRI) const {
   switch (MI.getOpcode()) {
+  case RISCV::G_FCVT_W_RV64:
+  case RISCV::G_FCVT_WU_RV64:
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
   case TargetOpcode::G_FCMP:
@@ -432,6 +434,8 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OpdsMapping[0] = OpdsMapping[2] = OpdsMapping[3] = Mapping;
     break;
   }
+  case RISCV::G_FCVT_W_RV64:
+  case RISCV::G_FCVT_WU_RV64:
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
   case RISCV::G_FCLASS: {
@@ -476,6 +480,21 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[1] = GPRValueMapping;
       OpdsMapping[2] = getFPValueMapping(Ty.getSizeInBits());
     }
+    break;
+  }
+  case TargetOpcode::G_SPLAT_VECTOR: {
+    OpdsMapping[0] = getVRBValueMapping(MRI.getType(MI.getOperand(0).getReg())
+                                            .getSizeInBits()
+                                            .getKnownMinValue());
+
+    LLT ScalarTy = MRI.getType(MI.getOperand(1).getReg());
+    MachineInstr *DefMI = MRI.getVRegDef(MI.getOperand(1).getReg());
+    if ((GPRSize == 32 && ScalarTy.getSizeInBits() == 64) ||
+        onlyDefinesFP(*DefMI, MRI, TRI)) {
+      assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
+      OpdsMapping[1] = getFPValueMapping(ScalarTy.getSizeInBits());
+    } else
+      OpdsMapping[1] = GPRValueMapping;
     break;
   }
   default:

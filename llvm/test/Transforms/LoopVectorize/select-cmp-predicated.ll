@@ -6,7 +6,7 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-VF2IC1:       vector.body:
 ; CHECK-VF2IC1:         [[VEC_PHI:%.*]] = phi <2 x i1> [ zeroinitializer, %vector.ph ], [ [[PREDPHI:%.*]], %pred.load.continue2 ]
 ; CHECK-VF2IC1:         [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr {{%.*}}, align 4
-; CHECK-VF2IC1-NEXT:    [[TMP4:%.*]] = icmp sgt <2 x i32> [[WIDE_LOAD]], <i32 35, i32 35>
+; CHECK-VF2IC1-NEXT:    [[TMP4:%.*]] = icmp sgt <2 x i32> [[WIDE_LOAD]], splat (i32 35)
 ; CHECK-VF2IC1-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i32 0
 ; CHECK-VF2IC1-NEXT:    br i1 [[TMP5]], label %pred.load.if, label %pred.load.continue
 ; CHECK-VF2IC1:       pred.load.if:
@@ -25,7 +25,7 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-VF2IC1-NEXT:    br label %pred.load.continue2
 ; CHECK-VF2IC1:       pred.load.continue2:
 ; CHECK-VF2IC1-NEXT:    [[TMP15:%.*]] = phi <2 x i32> [ [[TMP9]], %pred.load.continue ], [ [[TMP14]], %pred.load.if1 ]
-; CHECK-VF2IC1-NEXT:    [[TMP16:%.*]] = icmp eq <2 x i32> [[TMP15]], <i32 2, i32 2>
+; CHECK-VF2IC1-NEXT:    [[TMP16:%.*]] = icmp eq <2 x i32> [[TMP15]], splat (i32 2)
 ; CHECK-VF2IC1-NEXT:    [[TMP17:%.*]] = or <2 x i1> [[VEC_PHI]], [[TMP16]]
 ; CHECK-VF2IC1-NEXT:    [[PREDPHI]] = select <2 x i1> [[TMP4]], <2 x i1> [[TMP17]], <2 x i1> [[VEC_PHI]]
 ; CHECK-VF2IC1:         br i1 {{%.*}}, label %middle.block, label %vector.body

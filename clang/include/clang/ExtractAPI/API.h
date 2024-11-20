@@ -23,9 +23,10 @@
 #include "clang/AST/RawCommentList.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/ExtractAPI/DeclarationFragments.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstddef>
 #include <iterator>
@@ -615,7 +616,24 @@ struct TagRecord : APIRecord, RecordContext {
     return classofKind(Record->getKind());
   }
   static bool classofKind(RecordKind K) {
-    return K == RK_Struct || K == RK_Union || K == RK_Enum;
+    switch (K) {
+    case RK_Enum:
+      LLVM_FALLTHROUGH;
+    case RK_Struct:
+      LLVM_FALLTHROUGH;
+    case RK_Union:
+      LLVM_FALLTHROUGH;
+    case RK_CXXClass:
+      LLVM_FALLTHROUGH;
+    case RK_ClassTemplate:
+      LLVM_FALLTHROUGH;
+    case RK_ClassTemplateSpecialization:
+      LLVM_FALLTHROUGH;
+    case RK_ClassTemplatePartialSpecialization:
+      return true;
+    default:
+      return false;
+    }
   }
 
   bool IsEmbeddedInVarDeclarator;
@@ -684,7 +702,22 @@ struct RecordRecord : TagRecord {
     return classofKind(Record->getKind());
   }
   static bool classofKind(RecordKind K) {
-    return K == RK_Struct || K == RK_Union;
+    switch (K) {
+    case RK_Struct:
+      LLVM_FALLTHROUGH;
+    case RK_Union:
+      LLVM_FALLTHROUGH;
+    case RK_CXXClass:
+      LLVM_FALLTHROUGH;
+    case RK_ClassTemplate:
+      LLVM_FALLTHROUGH;
+    case RK_ClassTemplateSpecialization:
+      LLVM_FALLTHROUGH;
+    case RK_ClassTemplatePartialSpecialization:
+      return true;
+    default:
+      return false;
+    }
   }
 
   bool isAnonymousWithNoTypedef() { return Name.empty(); }
@@ -1420,9 +1453,8 @@ public:
   typename std::enable_if_t<std::is_base_of_v<APIRecord, RecordTy>, RecordTy> *
   createRecord(StringRef USR, StringRef Name, CtorArgsContTy &&...CtorArgs);
 
-  auto getTopLevelRecords() const {
-    return llvm::iterator_range<decltype(TopLevelRecords)::iterator>(
-        TopLevelRecords);
+  ArrayRef<const APIRecord *> getTopLevelRecords() const {
+    return TopLevelRecords;
   }
 
   void removeRecord(StringRef USR);
@@ -1455,7 +1487,7 @@ private:
   // lives in the BumpPtrAllocator.
   using APIRecordStoredPtr = std::unique_ptr<APIRecord, APIRecordDeleter>;
   llvm::DenseMap<StringRef, APIRecordStoredPtr> USRBasedLookupTable;
-  llvm::SmallPtrSet<const APIRecord *, 32> TopLevelRecords;
+  llvm::SmallVector<const APIRecord *, 32> TopLevelRecords;
 
 public:
   const std::string ProductName;
@@ -1481,7 +1513,7 @@ APISet::createRecord(StringRef USR, StringRef Name,
             dyn_cast_if_present<RecordContext>(Record->Parent.Record))
       ParentContext->addToRecordChain(Record);
     else
-      TopLevelRecords.insert(Record);
+      TopLevelRecords.push_back(Record);
   } else {
     Record = dyn_cast<RecordTy>(Result.first->second.get());
   }
