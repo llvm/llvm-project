@@ -337,7 +337,8 @@ template <> struct MappingTraits<ModuleSummaryIndex> {
         // Save type id references in index and point TypeIdMap to use the
         // references owned by index.
         StringRef KeyRef = index.TypeIdSaver.save(TypeIdSummaryMap.first);
-        index.TypeIdMap.insert({TypeGUID, {KeyRef, TypeIdSummaryMap.second}});
+        index.TypeIdMap.insert(
+            {TypeGUID, {KeyRef, std::move(TypeIdSummaryMap.second)}});
       }
     }
 
