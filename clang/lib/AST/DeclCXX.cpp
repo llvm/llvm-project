@@ -77,11 +77,10 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
     : UserDeclaredConstructor(false), UserDeclaredSpecialMembers(0),
       Aggregate(true), PlainOldData(true), Empty(true), Polymorphic(false),
       Abstract(false), IsStandardLayout(true), IsCXX11StandardLayout(true),
-      HasVBases(false), HasBasesWithFields(false),
-      HasBasesWithNonStaticDataMembers(false), HasPrivateFields(false),
-      HasProtectedFields(false), HasPublicFields(false),
-      HasMutableFields(false), HasVariantMembers(false), HasOnlyCMembers(true),
-      HasInitMethod(false), HasInClassInitializer(false),
+      HasBasesWithFields(false), HasBasesWithNonStaticDataMembers(false),
+      HasPrivateFields(false), HasProtectedFields(false),
+      HasPublicFields(false), HasMutableFields(false), HasVariantMembers(false),
+      HasOnlyCMembers(true), HasInitMethod(false), HasInClassInitializer(false),
       HasUninitializedReferenceMember(false), HasUninitializedFields(false),
       HasInheritedConstructor(false), HasInheritedDefaultConstructor(false),
       HasInheritedAssignment(false),
@@ -317,8 +316,6 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
     }
 
     if (Base->isVirtual()) {
-      data().HasVBases = true;
-
       // Add this base if it's not already in the list.
       if (SeenVBaseTypes.insert(C.getCanonicalType(BaseType)).second)
         VBases.push_back(Base);

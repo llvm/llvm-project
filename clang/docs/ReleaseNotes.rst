@@ -148,6 +148,35 @@ C++ Specific Potentially Breaking Changes
     // Now diagnoses with an error.
     void f(int& i [[clang::lifetimebound]]);
 
+- Clang will now consider the implicitly deleted destructor of a union or
+  a non-union class without virtual base class to be ``constexpr`` in C++20
+  mode. Previously, Clang does so since C++23, but the standard specification
+  for this changed in C++20. (GH#85550)
+
+  .. code-block:: c++
+    struct NonLiteral {
+      NonLiteral() {}
+      ~NonLiteral() {}
+    };
+
+    template <class T>
+    struct Opt {
+      union {
+        char c;
+        T data;
+      };
+      bool engaged = false;
+
+      constexpr Opt() {}
+      constexpr ~Opt() {
+        if (engaged)
+          data.~T();
+      }
+    };
+
+    // Previously only accepted in C++23 and later, now also accepted in C++20.
+    consteval void foo() { Opt<NonLiteral>{}; }
+
 ABI Changes in This Version
 ---------------------------
 
