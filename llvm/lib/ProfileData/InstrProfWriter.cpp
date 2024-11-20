@@ -635,7 +635,7 @@ writeMemProfCallStackArray(
   llvm::DenseMap<memprof::CallStackId, memprof::LinearCallStackId>
       MemProfCallStackIndexes;
 
-  memprof::CallStackRadixTreeBuilder Builder;
+  memprof::CallStackRadixTreeBuilder<memprof::FrameId> Builder;
   Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
                 FrameHistogram);
   for (auto I : Builder.getRadixArray())

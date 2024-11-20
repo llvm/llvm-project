@@ -659,8 +659,8 @@ TEST(MemProf, RadixTreeBuilderEmpty) {
   llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> MemProfCallStackData;
   llvm::DenseMap<llvm::memprof::FrameId, llvm::memprof::FrameStat>
       FrameHistogram =
-          llvm::memprof::computeFrameHistogram(MemProfCallStackData);
-  llvm::memprof::CallStackRadixTreeBuilder Builder;
+          llvm::memprof::computeFrameHistogram<FrameId>(MemProfCallStackData);
+  llvm::memprof::CallStackRadixTreeBuilder<FrameId> Builder;
   Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
                 FrameHistogram);
   ASSERT_THAT(Builder.getRadixArray(), testing::IsEmpty());
@@ -677,8 +677,8 @@ TEST(MemProf, RadixTreeBuilderOne) {
   MemProfCallStackData.insert({llvm::memprof::hashCallStack(CS1), CS1});
   llvm::DenseMap<llvm::memprof::FrameId, llvm::memprof::FrameStat>
       FrameHistogram =
-          llvm::memprof::computeFrameHistogram(MemProfCallStackData);
-  llvm::memprof::CallStackRadixTreeBuilder Builder;
+          llvm::memprof::computeFrameHistogram<FrameId>(MemProfCallStackData);
+  llvm::memprof::CallStackRadixTreeBuilder<FrameId> Builder;
   Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
                 FrameHistogram);
   EXPECT_THAT(Builder.getRadixArray(), testing::ElementsAreArray({
@@ -704,8 +704,8 @@ TEST(MemProf, RadixTreeBuilderTwo) {
   MemProfCallStackData.insert({llvm::memprof::hashCallStack(CS2), CS2});
   llvm::DenseMap<llvm::memprof::FrameId, llvm::memprof::FrameStat>
       FrameHistogram =
-          llvm::memprof::computeFrameHistogram(MemProfCallStackData);
-  llvm::memprof::CallStackRadixTreeBuilder Builder;
+          llvm::memprof::computeFrameHistogram<FrameId>(MemProfCallStackData);
+  llvm::memprof::CallStackRadixTreeBuilder<FrameId> Builder;
   Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
                 FrameHistogram);
   EXPECT_THAT(Builder.getRadixArray(),
@@ -742,8 +742,8 @@ TEST(MemProf, RadixTreeBuilderSuccessiveJumps) {
   MemProfCallStackData.insert({llvm::memprof::hashCallStack(CS4), CS4});
   llvm::DenseMap<llvm::memprof::FrameId, llvm::memprof::FrameStat>
       FrameHistogram =
-          llvm::memprof::computeFrameHistogram(MemProfCallStackData);
-  llvm::memprof::CallStackRadixTreeBuilder Builder;
+          llvm::memprof::computeFrameHistogram<FrameId>(MemProfCallStackData);
+  llvm::memprof::CallStackRadixTreeBuilder<FrameId> Builder;
   Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
                 FrameHistogram);
   EXPECT_THAT(Builder.getRadixArray(),
