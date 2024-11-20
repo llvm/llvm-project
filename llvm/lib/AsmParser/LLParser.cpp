@@ -8866,7 +8866,7 @@ bool LLParser::parseTypeIdCompatibleVtableEntry(unsigned ID) {
     return true;
 
   TypeIdCompatibleVtableInfo &TI =
-      Index->getOrInsertTypeIdCompatibleVtableSummary(Name);
+      Index->getOrInsertTypeIdCompatibleVtableSummary(Index->saveString(Name));
   if (parseToken(lltok::comma, "expected ',' here") ||
       parseToken(lltok::kw_summary, "expected 'summary' here") ||
       parseToken(lltok::colon, "expected ':' here") ||
