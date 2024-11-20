@@ -37,6 +37,9 @@
 /clang/lib/CIR @lanza @bcardosolopes
 /clang/tools/cir-* @lanza @bcardosolopes
 
+# BEGIN SWIFT
+/lldb/**/*Swift* @adrian-prantl
+# END SWIFT
 /lldb/ @JDevlieghere
 
 # MLIR Interfaces.
