@@ -26,7 +26,6 @@ using namespace llvm;
 using namespace llvm::memprof;
 using testing::Contains;
 using testing::ElementsAre;
-using testing::FieldsAre;
 using testing::Pair;
 using testing::SizeIs;
 using testing::UnorderedElementsAre;
