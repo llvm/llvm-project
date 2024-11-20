@@ -3466,7 +3466,8 @@ static bool isSafeToRemoveBitCeilSelect(ICmpInst::Predicate Pred, Value *Cond0,
 // Note that the select is optimized away while the shift count is masked with
 // 31.  We handle some variations of the input operand like std::bit_ceil(X +
 // 1).
-static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder) {
+static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder,
+                                InstCombinerImpl &IC) {
   Type *SelType = SI.getType();
   unsigned BitWidth = SelType->getScalarSizeInBits();
 
@@ -3501,6 +3502,10 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder) {
   // single hardware instruction as opposed to BitWidth - CTLZ, where BitWidth
   // is an integer constant.  Masking with BitWidth-1 comes free on some
   // hardware as part of the shift instruction.
+
+  // Drop range attributes and re-infer them in the next iteration.
+  cast<Instruction>(Ctlz)->dropPoisonGeneratingAnnotations();
+  IC.addToWorklist(cast<Instruction>(Ctlz));
   Value *Neg = Builder.CreateNeg(Ctlz);
   Value *Masked =
       Builder.CreateAnd(Neg, ConstantInt::get(SelType, BitWidth - 1));
@@ -4148,7 +4153,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (sinkNotIntoOtherHandOfLogicalOp(SI))
     return &SI;
 
-  if (Instruction *I = foldBitCeil(SI, Builder))
+  if (Instruction *I = foldBitCeil(SI, Builder, *this))
     return I;
 
   if (Instruction *I = foldSelectToCmp(SI))
