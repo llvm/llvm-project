@@ -6760,6 +6760,13 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     if (SRsrc && !RI.isSGPRClass(MRI.getRegClass(SRsrc->getReg())))
       CreatedBB = loadMBUFScalarOperandsFromVGPR(*this, MI, {SRsrc}, MDT);
 
+    if (isMUBUF(MI) || isMTBUF(MI)) {
+      MachineOperand *SOffset = getNamedOperand(MI, AMDGPU::OpName::soffset);
+      if (SOffset && !RI.isSGPRClass(MRI.getRegClass(SOffset->getReg()))) {
+        CreatedBB = loadMBUFScalarOperandsFromVGPR(*this, MI, {SOffset}, MDT);
+      }
+    }
+
     int SampOpName = isMIMG(MI) ? AMDGPU::OpName::ssamp : AMDGPU::OpName::samp;
     MachineOperand *SSamp = getNamedOperand(MI, SampOpName);
     if (SSamp && !RI.isSGPRClass(MRI.getRegClass(SSamp->getReg())))

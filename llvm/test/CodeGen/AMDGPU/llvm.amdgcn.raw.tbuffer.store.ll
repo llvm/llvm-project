@@ -3,8 +3,8 @@
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck -check-prefix=PREGFX10 %s
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck -check-prefix=GFX10 %s
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck -check-prefix=GFX11 %s
-;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck -check-prefix=GFX12 %s
-;RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck -check-prefix=GFX12 %s
+;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck -check-prefixes=GFX12,GFX12-SDAG %s
+;RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s
 
 define amdgpu_ps void @tbuffer_store(<4 x i32> inreg, <4 x float>, <4 x float>, <4 x float>) {
 ; PREGFX10-LABEL: tbuffer_store:
@@ -316,6 +316,317 @@ define amdgpu_ps void @buffer_store_voffset_large_24bit(<4 x i32> inreg %rsrc, <
 ; GFX12-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.tbuffer.store.v4f32(<4 x float> %data, <4 x i32> %rsrc, i32 16777212, i32 0, i32 63, i32 0)
+  ret void
+}
+
+define amdgpu_ps void @raw_tbuffer_store_waterfall_soffset_vgpr(<4 x i32> inreg %rsrc, i32 %soffset, float %val) {
+; GFX10-LABEL: raw_tbuffer_store_waterfall_soffset_vgpr:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_mov_b32 s4, exec_lo
+; GFX10-NEXT:  .LBB11_1: ; =>This Inner Loop Header: Depth=1
+; GFX10-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s4, v0
+; GFX10-NEXT:    s_and_saveexec_b32 vcc_lo, vcc_lo
+; GFX10-NEXT:    tbuffer_store_format_x v1, off, s[0:3], s4 format:[BUF_FMT_INVALID]
+; GFX10-NEXT:    ; implicit-def: $vgpr0
+; GFX10-NEXT:    ; implicit-def: $vgpr1
+; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_xor_b32 exec_lo, exec_lo, vcc_lo
+; GFX10-NEXT:    s_cbranch_execnz .LBB11_1
+; GFX10-NEXT:  ; %bb.2:
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: raw_tbuffer_store_waterfall_soffset_vgpr:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_mov_b32 s4, exec_lo
+; GFX11-NEXT:  .LBB11_1: ; =>This Inner Loop Header: Depth=1
+; GFX11-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s4, v0
+; GFX11-NEXT:    s_and_saveexec_b32 vcc_lo, vcc_lo
+; GFX11-NEXT:    tbuffer_store_format_x v1, off, s[0:3], s4 format:[BUF_FMT_INVALID]
+; GFX11-NEXT:    ; implicit-def: $vgpr0
+; GFX11-NEXT:    ; implicit-def: $vgpr1
+; GFX11-NEXT:    s_xor_b32 exec_lo, exec_lo, vcc_lo
+; GFX11-NEXT:    s_cbranch_execnz .LBB11_1
+; GFX11-NEXT:  ; %bb.2:
+; GFX11-NEXT:    s_nop 0
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-SDAG-LABEL: raw_tbuffer_store_waterfall_soffset_vgpr:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_mov_b32 s4, exec_lo
+; GFX12-SDAG-NEXT:  .LBB11_1: ; =>This Inner Loop Header: Depth=1
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s4, v0
+; GFX12-SDAG-NEXT:    s_and_saveexec_b32 vcc_lo, vcc_lo
+; GFX12-SDAG-NEXT:    tbuffer_store_format_x v1, off, s[0:3], s4 format:[BUF_FMT_INVALID]
+; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr0
+; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr1
+; GFX12-SDAG-NEXT:    s_xor_b32 exec_lo, exec_lo, vcc_lo
+; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB11_1
+; GFX12-SDAG-NEXT:  ; %bb.2:
+; GFX12-SDAG-NEXT:    s_nop 0
+; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-SDAG-NEXT:    s_endpgm
+;
+; GFX12-GISEL-LABEL: raw_tbuffer_store_waterfall_soffset_vgpr:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_mov_b32 s4, exec_lo
+; GFX12-GISEL-NEXT:  .LBB11_1: ; =>This Inner Loop Header: Depth=1
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s5, v0
+; GFX12-GISEL-NEXT:    s_mov_b32 s4, exec_lo
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_cmpx_eq_u32_e64 s5, v0
+; GFX12-GISEL-NEXT:    tbuffer_store_format_x v1, off, s[0:3], s5 format:[BUF_FMT_INVALID]
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr0
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr1
+; GFX12-GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s4
+; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB11_1
+; GFX12-GISEL-NEXT:  ; %bb.2:
+; GFX12-GISEL-NEXT:    s_nop 0
+; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-GISEL-NEXT:    s_endpgm
+  call void @llvm.amdgcn.raw.tbuffer.store.f32(float %val, <4 x i32> %rsrc, i32 0, i32 %soffset, i32 0, i32 0);
+  ret void
+}
+
+define amdgpu_ps void @raw_tbuffer_store_waterfall_rsrc_vgpr(<4 x i32> %rsrc, i32 inreg %soffset, float %val) {
+; GFX10-LABEL: raw_tbuffer_store_waterfall_rsrc_vgpr:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_mov_b32 s1, exec_lo
+; GFX10-NEXT:  .LBB12_1: ; =>This Inner Loop Header: Depth=1
+; GFX10-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
+; GFX10-NEXT:    v_cmp_eq_u64_e64 s1, s[6:7], v[2:3]
+; GFX10-NEXT:    s_and_b32 s1, vcc_lo, s1
+; GFX10-NEXT:    s_and_saveexec_b32 s1, s1
+; GFX10-NEXT:    tbuffer_store_format_x v4, off, s[4:7], s0 format:[BUF_FMT_INVALID]
+; GFX10-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX10-NEXT:    ; implicit-def: $vgpr4
+; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
+; GFX10-NEXT:    s_cbranch_execnz .LBB12_1
+; GFX10-NEXT:  ; %bb.2:
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: raw_tbuffer_store_waterfall_rsrc_vgpr:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_mov_b32 s1, exec_lo
+; GFX11-NEXT:  .LBB12_1: ; =>This Inner Loop Header: Depth=1
+; GFX11-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX11-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX11-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX11-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
+; GFX11-NEXT:    v_cmp_eq_u64_e64 s1, s[6:7], v[2:3]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_and_b32 s1, vcc_lo, s1
+; GFX11-NEXT:    s_and_saveexec_b32 s1, s1
+; GFX11-NEXT:    tbuffer_store_format_x v4, off, s[4:7], s0 format:[BUF_FMT_INVALID]
+; GFX11-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX11-NEXT:    ; implicit-def: $vgpr4
+; GFX11-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
+; GFX11-NEXT:    s_cbranch_execnz .LBB12_1
+; GFX11-NEXT:  ; %bb.2:
+; GFX11-NEXT:    s_nop 0
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-SDAG-LABEL: raw_tbuffer_store_waterfall_rsrc_vgpr:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_mov_b32 s1, exec_lo
+; GFX12-SDAG-NEXT:  .LBB12_1: ; =>This Inner Loop Header: Depth=1
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
+; GFX12-SDAG-NEXT:    v_cmp_eq_u64_e64 s1, s[6:7], v[2:3]
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX12-SDAG-NEXT:    s_and_b32 s1, vcc_lo, s1
+; GFX12-SDAG-NEXT:    s_and_saveexec_b32 s1, s1
+; GFX12-SDAG-NEXT:    tbuffer_store_format_x v4, off, s[4:7], s0 format:[BUF_FMT_INVALID]
+; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr4
+; GFX12-SDAG-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
+; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB12_1
+; GFX12-SDAG-NEXT:  ; %bb.2:
+; GFX12-SDAG-NEXT:    s_nop 0
+; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-SDAG-NEXT:    s_endpgm
+;
+; GFX12-GISEL-LABEL: raw_tbuffer_store_waterfall_rsrc_vgpr:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v6, v1
+; GFX12-GISEL-NEXT:    s_mov_b32 s1, exec_lo
+; GFX12-GISEL-NEXT:  .LBB12_1: ; =>This Inner Loop Header: Depth=1
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s4, v5
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s5, v6
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[5:6]
+; GFX12-GISEL-NEXT:    v_cmp_eq_u64_e64 s1, s[6:7], v[2:3]
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX12-GISEL-NEXT:    s_and_b32 s1, vcc_lo, s1
+; GFX12-GISEL-NEXT:    s_and_saveexec_b32 s1, s1
+; GFX12-GISEL-NEXT:    tbuffer_store_format_x v4, off, s[4:7], s0 format:[BUF_FMT_INVALID]
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr5
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr4
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX12-GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
+; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB12_1
+; GFX12-GISEL-NEXT:  ; %bb.2:
+; GFX12-GISEL-NEXT:    s_nop 0
+; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-GISEL-NEXT:    s_endpgm
+  call void @llvm.amdgcn.raw.tbuffer.store.f32(float %val, <4 x i32> %rsrc, i32 0, i32 %soffset, i32 0, i32 0);
+  ret void
+}
+
+define amdgpu_ps void @raw_tbuffer_store_waterfall_both_rsrc_vgpr_soffset_vgpr(<4 x i32> %rsrc, i32 %soffset, float %val) {
+; GFX10-LABEL: raw_tbuffer_store_waterfall_both_rsrc_vgpr_soffset_vgpr:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_mov_b32 s0, exec_lo
+; GFX10-NEXT:  .LBB13_1: ; =>This Loop Header: Depth=1
+; GFX10-NEXT:    ; Child Loop BB13_2 Depth 2
+; GFX10-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
+; GFX10-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
+; GFX10-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX10-NEXT:    s_and_saveexec_b32 s0, s0
+; GFX10-NEXT:    s_mov_b32 s1, exec_lo
+; GFX10-NEXT:  .LBB13_2: ; Parent Loop BB13_1 Depth=1
+; GFX10-NEXT:    ; => This Inner Loop Header: Depth=2
+; GFX10-NEXT:    v_readfirstlane_b32 s2, v4
+; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s2, v4
+; GFX10-NEXT:    s_and_saveexec_b32 vcc_lo, vcc_lo
+; GFX10-NEXT:    tbuffer_store_format_x v5, off, s[4:7], s2 format:[BUF_FMT_INVALID]
+; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_xor_b32 exec_lo, exec_lo, vcc_lo
+; GFX10-NEXT:    s_cbranch_execnz .LBB13_2
+; GFX10-NEXT:  ; %bb.3: ; in Loop: Header=BB13_1 Depth=1
+; GFX10-NEXT:    s_mov_b32 exec_lo, s1
+; GFX10-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
+; GFX10-NEXT:    s_cbranch_execnz .LBB13_1
+; GFX10-NEXT:  ; %bb.4:
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: raw_tbuffer_store_waterfall_both_rsrc_vgpr_soffset_vgpr:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_mov_b32 s0, exec_lo
+; GFX11-NEXT:  .LBB13_1: ; =>This Loop Header: Depth=1
+; GFX11-NEXT:    ; Child Loop BB13_2 Depth 2
+; GFX11-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX11-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX11-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX11-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
+; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
+; GFX11-NEXT:    s_mov_b32 s1, exec_lo
+; GFX11-NEXT:  .LBB13_2: ; Parent Loop BB13_1 Depth=1
+; GFX11-NEXT:    ; => This Inner Loop Header: Depth=2
+; GFX11-NEXT:    v_readfirstlane_b32 s2, v4
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s2, v4
+; GFX11-NEXT:    s_and_saveexec_b32 vcc_lo, vcc_lo
+; GFX11-NEXT:    tbuffer_store_format_x v5, off, s[4:7], s2 format:[BUF_FMT_INVALID]
+; GFX11-NEXT:    s_xor_b32 exec_lo, exec_lo, vcc_lo
+; GFX11-NEXT:    s_cbranch_execnz .LBB13_2
+; GFX11-NEXT:  ; %bb.3: ; in Loop: Header=BB13_1 Depth=1
+; GFX11-NEXT:    s_mov_b32 exec_lo, s1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
+; GFX11-NEXT:    s_cbranch_execnz .LBB13_1
+; GFX11-NEXT:  ; %bb.4:
+; GFX11-NEXT:    s_nop 0
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-SDAG-LABEL: raw_tbuffer_store_waterfall_both_rsrc_vgpr_soffset_vgpr:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_mov_b32 s0, exec_lo
+; GFX12-SDAG-NEXT:  .LBB13_1: ; =>This Loop Header: Depth=1
+; GFX12-SDAG-NEXT:    ; Child Loop BB13_2 Depth 2
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
+; GFX12-SDAG-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX12-SDAG-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX12-SDAG-NEXT:    s_and_saveexec_b32 s0, s0
+; GFX12-SDAG-NEXT:    s_mov_b32 s1, exec_lo
+; GFX12-SDAG-NEXT:  .LBB13_2: ; Parent Loop BB13_1 Depth=1
+; GFX12-SDAG-NEXT:    ; => This Inner Loop Header: Depth=2
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s2, v4
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s2, v4
+; GFX12-SDAG-NEXT:    s_and_saveexec_b32 vcc_lo, vcc_lo
+; GFX12-SDAG-NEXT:    tbuffer_store_format_x v5, off, s[4:7], s2 format:[BUF_FMT_INVALID]
+; GFX12-SDAG-NEXT:    s_xor_b32 exec_lo, exec_lo, vcc_lo
+; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB13_2
+; GFX12-SDAG-NEXT:  ; %bb.3: ; in Loop: Header=BB13_1 Depth=1
+; GFX12-SDAG-NEXT:    s_mov_b32 exec_lo, s1
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-SDAG-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
+; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB13_1
+; GFX12-SDAG-NEXT:  ; %bb.4:
+; GFX12-SDAG-NEXT:    s_nop 0
+; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-SDAG-NEXT:    s_endpgm
+;
+; GFX12-GISEL-LABEL: raw_tbuffer_store_waterfall_both_rsrc_vgpr_soffset_vgpr:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v6, v0 :: v_dual_mov_b32 v7, v1
+; GFX12-GISEL-NEXT:    s_mov_b32 s0, exec_lo
+; GFX12-GISEL-NEXT:  .LBB13_1: ; =>This Inner Loop Header: Depth=1
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s4, v6
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s5, v7
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX12-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[6:7]
+; GFX12-GISEL-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GISEL-NEXT:    v_cmp_eq_u32_e64 s1, s2, v4
+; GFX12-GISEL-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; GFX12-GISEL-NEXT:    s_and_b32 s0, s0, s1
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-GISEL-NEXT:    s_and_saveexec_b32 s0, s0
+; GFX12-GISEL-NEXT:    tbuffer_store_format_x v5, off, s[4:7], s2 format:[BUF_FMT_INVALID]
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr6
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr4
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr5
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX12-GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
+; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB13_1
+; GFX12-GISEL-NEXT:  ; %bb.2:
+; GFX12-GISEL-NEXT:    s_nop 0
+; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-GISEL-NEXT:    s_endpgm
+  call void @llvm.amdgcn.raw.tbuffer.store.f32(float %val, <4 x i32> %rsrc, i32 0, i32 %soffset, i32 0, i32 0);
   ret void
 }
 
