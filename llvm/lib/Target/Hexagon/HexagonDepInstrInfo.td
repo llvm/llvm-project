@@ -40411,6 +40411,7 @@ def Y2_break : HInst<
 tc_55255f2b, TypeCR>, Enc_e3b0c4 {
 let Inst{13-0} = 0b00000000000000;
 let Inst{31-16} = 0b0110110000100000;
+let hasSideEffects = 1;
 let isSolo = 1;
 }
 def Y2_ciad : HInst<
