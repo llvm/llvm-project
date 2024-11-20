@@ -93,6 +93,11 @@ kcc@google.com (email), [kcc](https://github.com/kcc) (GitHub)
 Evgeniy Stepanov \
 eugenis@google.com (email), [eugenis](https://github.com/eugenis) (GitHub)
 
+#### NumericalStabilitySanitizer
+
+Alexander Shaposhnikov \
+ashaposhnikov@google.com (email), [alexander-shaposhnikov](https://github.com/alexander-shaposhnikov) (GitHub)
+
 #### RealtimeSanitizer
 
 Christopher Apple \
