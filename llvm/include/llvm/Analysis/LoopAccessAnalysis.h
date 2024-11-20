@@ -334,9 +334,6 @@ private:
            std::pair<const SCEV *, const SCEV *>>
       PointerBounds;
 
-  /// Cache for the loop guards of InnermostLoop.
-  std::optional<ScalarEvolution::LoopGuards> LoopGuards;
-
   /// Check whether there is a plausible dependence between the two
   /// accesses.
   ///
