@@ -134,6 +134,10 @@ public:
 
   static bool isRequired() { return true; }
 
+  /// Erase all passes that satisfy the predicate \p Pred.
+  /// For internal use only!
+  void eraseIf(function_ref<bool(StringRef)> Pred);
+
   size_t getNumLoopPasses() const { return LoopPasses.size(); }
   size_t getNumLoopNestPasses() const { return LoopNestPasses.size(); }
 
@@ -399,18 +403,17 @@ std::optional<PreservedAnalyses> LoopPassManager::runSinglePass(
 /// \fn createLoopFunctionToLoopPassAdaptor to see when loop mode and loop-nest
 /// mode are used.
 class FunctionToLoopPassAdaptor
-    : public PassInfoMixin<FunctionToLoopPassAdaptor> {
+    : public PassInfoMixin<FunctionToLoopPassAdaptor>,
+      public PassAdaptorMixin<
+          detail::PassConcept<Loop, LoopAnalysisManager,
+                              LoopStandardAnalysisResults &, LPMUpdater &>> {
 public:
-  using PassConceptT =
-      detail::PassConcept<Loop, LoopAnalysisManager,
-                          LoopStandardAnalysisResults &, LPMUpdater &>;
-
   explicit FunctionToLoopPassAdaptor(std::unique_ptr<PassConceptT> Pass,
                                      bool UseMemorySSA = false,
                                      bool UseBlockFrequencyInfo = false,
                                      bool UseBranchProbabilityInfo = false,
                                      bool LoopNestMode = false)
-      : Pass(std::move(Pass)), UseMemorySSA(UseMemorySSA),
+      : PassAdaptorMixin(std::move(Pass)), UseMemorySSA(UseMemorySSA),
         UseBlockFrequencyInfo(UseBlockFrequencyInfo),
         UseBranchProbabilityInfo(UseBranchProbabilityInfo),
         LoopNestMode(LoopNestMode) {
@@ -428,8 +431,6 @@ public:
   bool isLoopNestMode() const { return LoopNestMode; }
 
 private:
-  std::unique_ptr<PassConceptT> Pass;
-
   FunctionPassManager LoopCanonicalizationFPM;
 
   bool UseMemorySSA = false;
