@@ -8,10 +8,6 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ARMBuildAttributes.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/Support/LEB128.h"
-#include <iomanip>
-#include <sstream>
 
 using namespace llvm;
 
