@@ -385,7 +385,6 @@ func.func @_QPdevice_addr_conv() {
 // CHECK: fir.embox %[[DEV_ADDR_CONV]](%{{.*}}) : (!fir.ref<!fir.array<4xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<4xf32>>
 // CHECK: fir.call @_FortranACUFDataTransferDescDescNoRealloc
 
-
 func.func @_QQchar_transfer() attributes {fir.bindc_name = "char_transfer"} {
   %c1 = arith.constant 1 : index
   %c10 = arith.constant 10 : index
@@ -447,5 +446,24 @@ func.func @_QPdevmul(%arg0: !fir.ref<!fir.array<1x?xf32>> {fir.bindc_name = "b"}
 // CHECK: %[[DST:.*]] = fir.convert %[[ALLOCA0]] : (!fir.ref<!fir.box<!fir.array<?x?xf32>>>) -> !fir.ref<!fir.box<none>>
 // CHECK: fir.call @_FortranACUFDataTransferDescDesc(%[[DST]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> none
 
+func.func @_QPlogical_cst() {
+  %c0_i64 = arith.constant 0 : i64
+  %false = arith.constant false
+  %c0 = arith.constant 0 : index
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?x?x!fir.logical<1>>>> {bindc_name = "id2", data_attr = #cuf.cuda<device>, uniq_name = "_QFlogical_cstEid2"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.logical<1>>>>>
+  %4 = fir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFlogical_cstEid2"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.logical<1>>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.logical<1>>>>>
+  cuf.data_transfer %false to %4 {transfer_kind = #cuf.cuda_transfer<host_device>} : i1, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.logical<1>>>>>
+  return
+}
+
+// CHECK-LABEL: func.func @_QPlogical_cst()
+// CHECK: %[[DESC:.*]] = fir.alloca !fir.box<!fir.logical<4>>
+// CHECK: %[[CONST:.*]] = fir.alloca !fir.logical<4>
+// CHECK: %[[CONV:.*]] = fir.convert %false : (i1) -> !fir.logical<4>
+// CHECK: fir.store %[[CONV]] to %[[CONST]] : !fir.ref<!fir.logical<4>>
+// CHECK: %[[EMBOX:.*]] = fir.embox %[[CONST]] : (!fir.ref<!fir.logical<4>>) -> !fir.box<!fir.logical<4>>
+// CHECK: fir.store %[[EMBOX]] to %[[DESC]] : !fir.ref<!fir.box<!fir.logical<4>>>
+// CHECK: %[[BOX_NONE:.*]] = fir.convert %[[DESC]] : (!fir.ref<!fir.box<!fir.logical<4>>>) -> !fir.ref<!fir.box<none>>
+// CHECK: fir.call @_FortranACUFDataTransferDescDesc(%{{.*}}, %[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> none
 
 } // end of module
