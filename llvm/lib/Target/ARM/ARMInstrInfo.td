@@ -5107,6 +5107,10 @@ def MVNCCi : ARMPseudoInst<(outs GPR:$Rd),
 
 } // hasSideEffects
 
+// The following patterns have to be defined out-of-line because the number
+// of instruction operands does not match the number of SDNode operands
+// (`pred` counts as one operand).
+
 def : ARMPat<(ARMcmov i32:$false, i32:$Rm, imm:$cc, CPSR),
              (MOVCCr $false, $Rm, imm:$cc, CPSR)>;
 

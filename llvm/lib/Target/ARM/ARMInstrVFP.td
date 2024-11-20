@@ -2476,6 +2476,10 @@ def VMOVHcc  : PseudoInst<(outs HPR:$Sd), (ins HPR:$Sn, HPR:$Sm, pred:$p),
                RegConstraint<"$Sd = $Sn">, Requires<[HasFPRegs]>;
 } // hasSideEffects
 
+// The following patterns have to be defined out-of-line because the number
+// of instruction operands does not match the number of SDNode operands
+// (`pred` counts as one operand).
+
 def : Pat<(ARMcmov f64:$Dn, f64:$Dm, imm:$cc, CPSR),
           (VMOVDcc $Dn, $Dm, imm:$cc, CPSR)>,
       Requires<[HasFPRegs64]>;
