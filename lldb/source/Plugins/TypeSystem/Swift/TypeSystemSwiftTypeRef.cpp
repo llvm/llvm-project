@@ -2486,10 +2486,10 @@ constexpr ExecutionContextScope *g_no_exe_ctx = nullptr;
 
 #define FORWARD_TO_EXPRAST_ONLY(FUNC, ARGS, DEFAULT_RETVAL)                    \
   do {                                                                         \
-    auto target_sp = GetTargetWP().lock();                                     \
-    if (auto *swift_ast_ctx = GetSwiftASTContext(                              \
-            SymbolContext(target_sp, target_sp->GetExecutableModule())))       \
-      return swift_ast_ctx->FUNC ARGS;                                         \
+    if (auto target_sp = GetTargetWP().lock())                                 \
+      if (auto *swift_ast_ctx = GetSwiftASTContext(                            \
+              SymbolContext(target_sp, target_sp->GetExecutableModule())))     \
+        return swift_ast_ctx->FUNC ARGS;                                       \
     return DEFAULT_RETVAL;                                                     \
   } while (0)
 
@@ -2898,16 +2898,14 @@ uint32_t TypeSystemSwiftTypeRef::GetTypeInfo(
     NodePointer node = dem.demangleSymbol(AsMangledName(type));
     bool unresolved_typealias = false;
     uint32_t flags = CollectTypeInfo(dem, node, unresolved_typealias);
-    if (unresolved_typealias) {
-      auto target_sp = GetTargetWP().lock();
-      if (auto *swift_ast_ctx = GetSwiftASTContext(
-              SymbolContext(target_sp, target_sp->GetExecutableModule()))) {
-        // If this is a typealias defined in the expression evaluator,
-        // then we don't have debug info to resolve it from.
-        return swift_ast_ctx->GetTypeInfo(ReconstructType(type),
-                                          pointee_or_element_clang_type);
-      }
-    }
+    if (unresolved_typealias)
+      if (auto target_sp = GetTargetWP().lock())
+        if (auto *swift_ast_ctx = GetSwiftASTContext(
+                SymbolContext(target_sp, target_sp->GetExecutableModule())))
+          // If this is a typealias defined in the expression evaluator,
+          // then we don't have debug info to resolve it from.
+          return swift_ast_ctx->GetTypeInfo(ReconstructType(type),
+                                            pointee_or_element_clang_type);
     return flags;
   };
 
