@@ -465,6 +465,8 @@ def fir_SequenceType : FIR_Type<"Sequence", "array"> {
         size = size * static_cast<std::uint64_t>(extent);
       return size;
     }
+
+    mlir::Type getElementType() const { return getEleTy(); }
   }];
 }
 
@@ -519,6 +521,8 @@ def fir_VectorType : FIR_Type<"Vector", "vector"> {
 
   let extraClassDeclaration = [{
     static bool isValidElementType(mlir::Type t);
+
+    mlir::Type getElementType() const { return getEleTy(); }
   }];
 
   let skipDefaultBuilders = 1;

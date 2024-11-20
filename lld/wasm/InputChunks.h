@@ -177,8 +177,9 @@ public:
     inputSectionOffset = seg.SectionOffset;
   }
 
-  MergeInputChunk(const WasmSection &s, ObjFile *f)
-      : InputChunk(f, Merge, s.Name, 0, llvm::wasm::WASM_SEG_FLAG_STRINGS) {
+  MergeInputChunk(const WasmSection &s, ObjFile *f, uint32_t alignment)
+      : InputChunk(f, Merge, s.Name, alignment,
+                   llvm::wasm::WASM_SEG_FLAG_STRINGS) {
     assert(s.Type == llvm::wasm::WASM_SEC_CUSTOM);
     comdat = s.Comdat;
     rawData = s.Content;
@@ -234,6 +235,7 @@ public:
 
   void addMergeChunk(MergeInputChunk *ms) {
     comdat = ms->getComdat();
+    alignment = std::max(alignment, ms->alignment);
     ms->parent = this;
     chunks.push_back(ms);
   }
@@ -337,8 +339,8 @@ public:
 // Represents a single Wasm Section within an input file.
 class InputSection : public InputChunk {
 public:
-  InputSection(const WasmSection &s, ObjFile *f)
-      : InputChunk(f, InputChunk::Section, s.Name),
+  InputSection(const WasmSection &s, ObjFile *f, uint32_t alignment)
+      : InputChunk(f, InputChunk::Section, s.Name, alignment),
         tombstoneValue(getTombstoneForSection(s.Name)), section(s) {
     assert(section.Type == llvm::wasm::WASM_SEC_CUSTOM);
     comdat = section.Comdat;

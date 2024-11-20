@@ -637,6 +637,8 @@ namespace cwg337 { // cwg337: yes
   struct B { virtual ~B() = 0; };
 }
 
+// cwg338: dup 1884
+
 namespace cwg339 { // cwg339: 2.8
   template <int I> struct A { static const int value = I; };
 

@@ -1771,14 +1771,6 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   EmitNewInitializer(*this, E, allocType, elementTy, result, numElements,
                      allocSizeWithoutCookie);
   llvm::Value *resultPtr = result.emitRawPointer(*this);
-  if (E->isArray()) {
-    // NewPtr is a pointer to the base element type.  If we're
-    // allocating an array of arrays, we'll need to cast back to the
-    // array pointer type.
-    llvm::Type *resultType = ConvertTypeForMem(E->getType());
-    if (resultPtr->getType() != resultType)
-      resultPtr = Builder.CreateBitCast(resultPtr, resultType);
-  }
 
   // Deactivate the 'operator delete' cleanup if we finished
   // initialization.
@@ -1805,7 +1797,7 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
 }
 
 void CodeGenFunction::EmitDeleteCall(const FunctionDecl *DeleteFD,
-                                     llvm::Value *Ptr, QualType DeleteTy,
+                                     llvm::Value *DeletePtr, QualType DeleteTy,
                                      llvm::Value *NumElements,
                                      CharUnits CookieSize) {
   assert((!NumElements && CookieSize.isZero()) ||
@@ -1819,7 +1811,6 @@ void CodeGenFunction::EmitDeleteCall(const FunctionDecl *DeleteFD,
 
   // Pass the pointer itself.
   QualType ArgTy = *ParamTypeIt++;
-  llvm::Value *DeletePtr = Builder.CreateBitCast(Ptr, ConvertType(ArgTy));
   DeleteArgs.add(RValue::get(DeletePtr), ArgTy);
 
   // Pass the std::destroying_delete tag if present.

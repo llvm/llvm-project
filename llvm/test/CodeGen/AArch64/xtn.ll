@@ -174,9 +174,8 @@ define <2 x i16> @xtn_v2i128_v2i16(<2 x i128> %a) {
 ;
 ; CHECK-GI-LABEL: xtn_v2i128_v2i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov s0, w0
-; CHECK-GI-NEXT:    mov v0.h[1], w2
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    mov v0.s[0], w0
+; CHECK-GI-NEXT:    mov v0.s[1], w2
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:

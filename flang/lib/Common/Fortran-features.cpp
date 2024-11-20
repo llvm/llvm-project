@@ -30,6 +30,8 @@ LanguageFeatureControl::LanguageFeatureControl() {
   disable_.set(LanguageFeature::LogicalAbbreviations);
   disable_.set(LanguageFeature::XOROperator);
   disable_.set(LanguageFeature::OldStyleParameter);
+  // Possibly an accidental "feature" of nvfortran.
+  disable_.set(LanguageFeature::AssumedRankPassedToNonAssumedRank);
   // These warnings are enabled by default, but only because they used
   // to be unconditional.  TODO: prune this list
   warnLanguage_.set(LanguageFeature::ExponentMatchingKindParam);
@@ -48,6 +50,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::FoldingFailure);
   warnUsage_.set(UsageWarning::FoldingLimit);
   warnUsage_.set(UsageWarning::Interoperability);
+  // CharacterInteroperability warnings about length are off by default
   warnUsage_.set(UsageWarning::Bounds);
   warnUsage_.set(UsageWarning::Preprocessing);
   warnUsage_.set(UsageWarning::Scanning);
@@ -65,7 +68,6 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::ZeroDoStep);
   warnUsage_.set(UsageWarning::UnusedForallIndex);
   warnUsage_.set(UsageWarning::OpenMPUsage);
-  warnUsage_.set(UsageWarning::ModuleFile);
   warnUsage_.set(UsageWarning::DataLength);
   warnUsage_.set(UsageWarning::IgnoredDirective);
   warnUsage_.set(UsageWarning::HomonymousSpecific);

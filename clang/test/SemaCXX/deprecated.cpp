@@ -260,5 +260,25 @@ namespace ArrayComp {
   bool b7 = arr1 == +f();
 }
 
+namespace GH90073 {
+[[deprecated]] int f1() { // expected-note {{'f1' has been explicitly marked deprecated here}}
+  [[deprecated]] int a;  // expected-note {{'a' has been explicitly marked deprecated here}} \
+                         // expected-note {{'a' has been explicitly marked deprecated here}}
+  a = 0;    // expected-warning {{'a' is deprecated}}
+  return a; // expected-warning {{'a' is deprecated}}
+}
+
+[[deprecated]] void f2([[deprecated]] int x) { // expected-note {{'f2' has been explicitly marked deprecated here}} \
+                                               // expected-note {{'x' has been explicitly marked deprecated here}}
+  x = 4; // expected-warning {{'x' is deprecated}}
+}
+
+int main() {
+  f1();  // expected-warning {{'f1' is deprecated}}
+  f2(1); // expected-warning {{'f2' is deprecated}}
+  return 0;
+}
+}
+
 # 1 "/usr/include/system-header.h" 1 3
 void system_header_function(void) throw();

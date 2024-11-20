@@ -386,7 +386,7 @@ public:
   /// If the method is implicit (not coming from source) \p SelLocs is
   /// ignored.
   void setMethodParams(ASTContext &C, ArrayRef<ParmVarDecl *> Params,
-                       ArrayRef<SourceLocation> SelLocs = std::nullopt);
+                       ArrayRef<SourceLocation> SelLocs = {});
 
   // Iterator access to parameter types.
   struct GetTypeFn {

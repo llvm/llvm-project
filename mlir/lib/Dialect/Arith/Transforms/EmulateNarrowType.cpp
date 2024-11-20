@@ -40,11 +40,11 @@ arith::NarrowTypeEmulationConverter::NarrowTypeEmulationConverter(
   addConversion([this](FunctionType ty) -> std::optional<Type> {
     SmallVector<Type> inputs;
     if (failed(convertTypes(ty.getInputs(), inputs)))
-      return std::nullopt;
+      return nullptr;
 
     SmallVector<Type> results;
     if (failed(convertTypes(ty.getResults(), results)))
-      return std::nullopt;
+      return nullptr;
 
     return FunctionType::get(ty.getContext(), inputs, results);
   });

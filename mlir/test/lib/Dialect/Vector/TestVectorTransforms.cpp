@@ -709,27 +709,6 @@ struct TestVectorExtractStridedSliceLowering
   }
 };
 
-struct TestVectorContiguousExtractStridedSliceToExtract
-    : public PassWrapper<TestVectorContiguousExtractStridedSliceToExtract,
-                         OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
-      TestVectorExtractStridedSliceLowering)
-
-  StringRef getArgument() const final {
-    return "test-vector-contiguous-extract-strided-slice-to-extract";
-  }
-  StringRef getDescription() const final {
-    return "Test lowering patterns that rewrite simple cases of N-D "
-           "extract_strided_slice, where the slice is contiguous, into extract "
-           "and shape_cast";
-  }
-  void runOnOperation() override {
-    RewritePatternSet patterns(&getContext());
-    populateVectorContiguousExtractStridedSliceToExtractPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
-  }
-};
-
 struct TestVectorBreakDownBitCast
     : public PassWrapper<TestVectorBreakDownBitCast,
                          OperationPass<func::FuncOp>> {
@@ -955,8 +934,6 @@ void registerTestVectorLowerings() {
   PassRegistration<TestVectorDistribution>();
 
   PassRegistration<TestVectorExtractStridedSliceLowering>();
-
-  PassRegistration<TestVectorContiguousExtractStridedSliceToExtract>();
 
   PassRegistration<TestVectorBreakDownBitCast>();
 

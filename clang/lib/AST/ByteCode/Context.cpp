@@ -78,8 +78,7 @@ bool Context::evaluate(State &Parent, const Expr *E, APValue &Result,
   Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
 
   auto Res = C.interpretExpr(E, /*ConvertResultToRValue=*/false,
-                             /*DestroyToplevelScope=*/Kind ==
-                                 ConstantExprKind::ClassTemplateArgument);
+                             /*DestroyToplevelScope=*/true);
   if (Res.isInvalid()) {
     C.cleanup();
     Stk.clearTo(StackSizeBefore);

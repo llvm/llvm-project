@@ -94,6 +94,7 @@ set(SOURCES
     abi_tag_on_virtual.cpp
     header_exportable_declarations.cpp
     hide_from_abi.cpp
+    internal_ftm_use.cpp
     proper_version_checks.cpp
     qualify_declval.cpp
     robust_against_adl.cpp

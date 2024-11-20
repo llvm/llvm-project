@@ -854,13 +854,13 @@ define void @fshr_v2i32_uniformconst() {
 ;
 ; AVX256-LABEL: @fshr_v2i32_uniformconst(
 ; AVX256-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @a32, align 4
-; AVX256-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> [[TMP1]], <2 x i32> [[TMP1]], <2 x i32> <i32 1, i32 1>)
+; AVX256-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> [[TMP1]], <2 x i32> [[TMP1]], <2 x i32> splat (i32 1))
 ; AVX256-NEXT:    store <2 x i32> [[TMP2]], ptr @d32, align 4
 ; AVX256-NEXT:    ret void
 ;
 ; AVX512-LABEL: @fshr_v2i32_uniformconst(
 ; AVX512-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @a32, align 4
-; AVX512-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> [[TMP1]], <2 x i32> [[TMP1]], <2 x i32> <i32 1, i32 1>)
+; AVX512-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> [[TMP1]], <2 x i32> [[TMP1]], <2 x i32> splat (i32 1))
 ; AVX512-NEXT:    store <2 x i32> [[TMP2]], ptr @d32, align 4
 ; AVX512-NEXT:    ret void
 ;

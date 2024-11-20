@@ -354,6 +354,70 @@ define float @upgrade_amdgcn_global_atomic_fadd_f32_p1_f32(ptr addrspace(1) %ptr
   ret float %result
 }
 
+declare float @llvm.amdgcn.flat.atomic.fmin.f32.p0.f32(ptr nocapture, float) #0
+
+define float @upgrade_amdgcn_flat_atomic_fmin_f32_p0_f32(ptr %ptr, float %data) {
+  ; CHECK: %{{.+}} = atomicrmw fmin ptr %ptr, float %data syncscope("agent") seq_cst, align 4, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call float @llvm.amdgcn.flat.atomic.fmin.f32.p0.f32(ptr %ptr, float %data)
+  ret float %result
+}
+
+declare float @llvm.amdgcn.global.atomic.fmin.f32.p1.f32(ptr addrspace(1) nocapture, float) #0
+
+define float @upgrade_amdgcn_global_atomic_fmin_f32_p1_f32(ptr addrspace(1) %ptr, float %data) {
+  ; CHECK: %{{.+}} = atomicrmw fmin ptr addrspace(1) %ptr, float %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call float @llvm.amdgcn.global.atomic.fmin.f32.p1.f32(ptr addrspace(1) %ptr, float %data)
+  ret float %result
+}
+
+declare double @llvm.amdgcn.flat.atomic.fmin.f64.p0.f64(ptr nocapture, double) #0
+
+define double @upgrade_amdgcn_flat_atomic_fmin_f64_p0_f64(ptr %ptr, double %data) {
+  ; CHECK: %{{.+}} = atomicrmw fmin ptr %ptr, double %data syncscope("agent") seq_cst, align 8, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call double @llvm.amdgcn.flat.atomic.fmin.f64.p0.f64(ptr %ptr, double %data)
+  ret double %result
+}
+
+declare double @llvm.amdgcn.global.atomic.fmin.f64.p1.f64(ptr addrspace(1) nocapture, double) #0
+
+define double @upgrade_amdgcn_global_atomic_fmin_f64_p1_f64(ptr addrspace(1) %ptr, double %data) {
+  ; CHECK: %{{.+}} = atomicrmw fmin ptr addrspace(1) %ptr, double %data syncscope("agent") seq_cst, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call double @llvm.amdgcn.global.atomic.fmin.f64.p1.f64(ptr addrspace(1) %ptr, double %data)
+  ret double %result
+}
+
+declare float @llvm.amdgcn.flat.atomic.fmax.f32.p0.f32(ptr nocapture, float) #0
+
+define float @upgrade_amdgcn_flat_atomic_fmax_f32_p0_f32(ptr %ptr, float %data) {
+  ; CHECK: %{{.+}} = atomicrmw fmax ptr %ptr, float %data syncscope("agent") seq_cst, align 4, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call float @llvm.amdgcn.flat.atomic.fmax.f32.p0.f32(ptr %ptr, float %data)
+  ret float %result
+}
+
+declare float @llvm.amdgcn.global.atomic.fmax.f32.p1.f32(ptr addrspace(1) nocapture, float) #0
+
+define float @upgrade_amdgcn_global_atomic_fmax_f32_p1_f32(ptr addrspace(1) %ptr, float %data) {
+  ; CHECK: %{{.+}} = atomicrmw fmax ptr addrspace(1) %ptr, float %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call float @llvm.amdgcn.global.atomic.fmax.f32.p1.f32(ptr addrspace(1) %ptr, float %data)
+  ret float %result
+}
+
+declare double @llvm.amdgcn.flat.atomic.fmax.f64.p0.f64(ptr nocapture, double) #0
+
+define double @upgrade_amdgcn_flat_atomic_fmax_f64_p0_f64(ptr %ptr, double %data) {
+  ; CHECK: %{{.+}} = atomicrmw fmax ptr %ptr, double %data syncscope("agent") seq_cst, align 8, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call double @llvm.amdgcn.flat.atomic.fmax.f64.p0.f64(ptr %ptr, double %data)
+  ret double %result
+}
+
+declare double @llvm.amdgcn.global.atomic.fmax.f64.p1.f64(ptr addrspace(1) nocapture, double) #0
+
+define double @upgrade_amdgcn_global_atomic_fmax_f64_p1_f64(ptr addrspace(1) %ptr, double %data) {
+  ; CHECK: %{{.+}} = atomicrmw fmax ptr addrspace(1) %ptr, double %data syncscope("agent") seq_cst, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call double @llvm.amdgcn.global.atomic.fmax.f64.p1.f64(ptr addrspace(1) %ptr, double %data)
+  ret double %result
+}
+
 attributes #0 = { argmemonly nounwind willreturn }
 
 ; CHECK: !0 = !{i32 5, i32 6}

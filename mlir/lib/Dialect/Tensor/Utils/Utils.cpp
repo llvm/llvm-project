@@ -27,9 +27,9 @@ PadOp mlir::tensor::createPadHighOp(RankedTensorType resType, Value source,
                                     OpBuilder &b,
                                     SmallVector<Value> dynOutDims) {
 
-  assert((resType.getNumDynamicDims() == dynOutDims.size()) ||
-         dynOutDims.empty() &&
-             "Either none or all output dynamic dims must be specified!");
+  assert(((resType.getNumDynamicDims() == dynOutDims.size()) ||
+          dynOutDims.empty()) &&
+         "Either none or all output dynamic dims must be specified!");
 
   // Init "low" and "high" padding values ("low" is kept as is, "high" is
   // computed below).

@@ -218,18 +218,15 @@ struct TransferWriteLowering
     if (failed(transferPreconditions(rewriter, writeOp)))
       return failure();
 
-    if (writeOp.hasOutOfBoundsDim())
-      return rewriter.notifyMatchFailure(writeOp,
-                                         "Unsupported out-of-bounds write");
     AffineMap map = writeOp.getPermutationMap();
     if (!map.isMinorIdentity())
       return rewriter.notifyMatchFailure(writeOp, "Expects identity map");
 
     VectorType vecTy = writeOp.getVectorType();
-    auto descType =
-        xegpu::TensorDescType::get(vecTy.getShape(), vecTy.getElementType(),
-                                   /*array_length=*/1, /*boundary_check=*/false,
-                                   xegpu::MemorySpace::Global);
+    auto descType = xegpu::TensorDescType::get(
+        vecTy.getShape(), vecTy.getElementType(),
+        /*array_length=*/1, /*boundary_check=*/writeOp.hasOutOfBoundsDim(),
+        xegpu::MemorySpace::Global);
     xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
         rewriter, loc, descType,
         dyn_cast<TypedValue<MemRefType>>(writeOp.getSource()),

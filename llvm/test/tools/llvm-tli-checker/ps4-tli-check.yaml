@@ -34,7 +34,7 @@
 #
 # CHECK: << Total TLI yes SDK no:  18
 # CHECK: >> Total TLI no  SDK yes: 0
-# CHECK: == Total TLI yes SDK yes: 256
+# CHECK: == Total TLI yes SDK yes: 271
 #
 # WRONG_DETAIL: << TLI yes SDK no : '_ZdaPv' aka operator delete[](void*)
 # WRONG_DETAIL: >> TLI no  SDK yes: '_ZdaPvj' aka operator delete[](void*, unsigned int)
@@ -48,16 +48,16 @@
 # WRONG_DETAIL: << TLI yes SDK no : 'fminimum_numl'
 # WRONG_SUMMARY: << Total TLI yes SDK no:  19{{$}}
 # WRONG_SUMMARY: >> Total TLI no  SDK yes: 1{{$}}
-# WRONG_SUMMARY: == Total TLI yes SDK yes: 255
+# WRONG_SUMMARY: == Total TLI yes SDK yes: 270
 #
 ## The -COUNT suffix doesn't care if there are too many matches, so check
 ## the exact count first; the two directives should add up to that.
 ## Yes, this means additions to TLI will fail this test, but the argument
 ## to -COUNT can't be an expression.
-# AVAIL: TLI knows 507 symbols, 274 available
-# AVAIL-COUNT-274: {{^}} available
+# AVAIL: TLI knows 523 symbols, 289 available
+# AVAIL-COUNT-289: {{^}} available
 # AVAIL-NOT:       {{^}} available
-# UNAVAIL-COUNT-233: not available
+# UNAVAIL-COUNT-234: not available
 # UNAVAIL-NOT:       not available
 
 ## This is a large file so it's worth telling lit to stop here.
@@ -390,6 +390,18 @@ DynamicSymbols:
     Type:            STT_FUNC
     Section:         .text
     Binding:         STB_GLOBAL
+  - Name:            tgamma
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            tgammaf
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            tgammal
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
   - Name:            exp
     Type:            STT_FUNC
     Section:         .text
@@ -590,6 +602,18 @@ DynamicSymbols:
     Type:            STT_FUNC
     Section:         .text
     Binding:         STB_GLOBAL
+  - Name:            hypot
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            hypotf
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            hypotl
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
   - Name:            isdigit
     Type:            STT_FUNC
     Section:         .text
@@ -651,6 +675,18 @@ DynamicSymbols:
     Section:         .text
     Binding:         STB_GLOBAL
   - Name:            log2l
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            ilogb
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            ilogbf
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            ilogbl
     Type:            STT_FUNC
     Section:         .text
     Binding:         STB_GLOBAL
@@ -851,6 +887,30 @@ DynamicSymbols:
     Section:         .text
     Binding:         STB_GLOBAL
   - Name:            roundl
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            scalbln
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            scalblnf
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            scalblnl
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            scalbn
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            scalbnf
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            scalbnl
     Type:            STT_FUNC
     Section:         .text
     Binding:         STB_GLOBAL

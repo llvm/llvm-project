@@ -17,7 +17,6 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
@@ -78,8 +77,7 @@ public:
 Function *getBasePtrIntrinsic(Module &M, bool IsV5OrAbove) {
   auto IntrinsicId = IsV5OrAbove ? Intrinsic::amdgcn_implicitarg_ptr
                                  : Intrinsic::amdgcn_dispatch_ptr;
-  StringRef Name = Intrinsic::getName(IntrinsicId);
-  return M.getFunction(Name);
+  return Intrinsic::getDeclarationIfExists(&M, IntrinsicId);
 }
 
 } // end anonymous namespace

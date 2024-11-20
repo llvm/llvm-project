@@ -629,9 +629,8 @@ bool VPIntrinsic::canIgnoreVectorLengthParam() const {
   return false;
 }
 
-Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
-                                               Type *ReturnType,
-                                               ArrayRef<Value *> Params) {
+Function *VPIntrinsic::getOrInsertDeclarationForParams(
+    Module *M, Intrinsic::ID VPID, Type *ReturnType, ArrayRef<Value *> Params) {
   assert(isVPIntrinsic(VPID) && "not a VP intrinsic");
   Function *VPFunc;
   switch (VPID) {
@@ -641,7 +640,7 @@ Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
       OverloadTy =
           Params[*VPReductionIntrinsic::getVectorParamPos(VPID)]->getType();
 
-    VPFunc = Intrinsic::getDeclaration(M, VPID, OverloadTy);
+    VPFunc = Intrinsic::getOrInsertDeclaration(M, VPID, OverloadTy);
     break;
   }
   case Intrinsic::vp_trunc:
@@ -658,43 +657,43 @@ Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
   case Intrinsic::vp_lrint:
   case Intrinsic::vp_llrint:
   case Intrinsic::vp_cttz_elts:
-    VPFunc =
-        Intrinsic::getDeclaration(M, VPID, {ReturnType, Params[0]->getType()});
+    VPFunc = Intrinsic::getOrInsertDeclaration(
+        M, VPID, {ReturnType, Params[0]->getType()});
     break;
   case Intrinsic::vp_is_fpclass:
-    VPFunc = Intrinsic::getDeclaration(M, VPID, {Params[0]->getType()});
+    VPFunc = Intrinsic::getOrInsertDeclaration(M, VPID, {Params[0]->getType()});
     break;
   case Intrinsic::vp_merge:
   case Intrinsic::vp_select:
-    VPFunc = Intrinsic::getDeclaration(M, VPID, {Params[1]->getType()});
+    VPFunc = Intrinsic::getOrInsertDeclaration(M, VPID, {Params[1]->getType()});
     break;
   case Intrinsic::vp_load:
-    VPFunc = Intrinsic::getDeclaration(
+    VPFunc = Intrinsic::getOrInsertDeclaration(
         M, VPID, {ReturnType, Params[0]->getType()});
     break;
   case Intrinsic::experimental_vp_strided_load:
-    VPFunc = Intrinsic::getDeclaration(
+    VPFunc = Intrinsic::getOrInsertDeclaration(
         M, VPID, {ReturnType, Params[0]->getType(), Params[1]->getType()});
     break;
   case Intrinsic::vp_gather:
-    VPFunc = Intrinsic::getDeclaration(
+    VPFunc = Intrinsic::getOrInsertDeclaration(
         M, VPID, {ReturnType, Params[0]->getType()});
     break;
   case Intrinsic::vp_store:
-    VPFunc = Intrinsic::getDeclaration(
+    VPFunc = Intrinsic::getOrInsertDeclaration(
         M, VPID, {Params[0]->getType(), Params[1]->getType()});
     break;
   case Intrinsic::experimental_vp_strided_store:
-    VPFunc = Intrinsic::getDeclaration(
+    VPFunc = Intrinsic::getOrInsertDeclaration(
         M, VPID,
         {Params[0]->getType(), Params[1]->getType(), Params[2]->getType()});
     break;
   case Intrinsic::vp_scatter:
-    VPFunc = Intrinsic::getDeclaration(
+    VPFunc = Intrinsic::getOrInsertDeclaration(
         M, VPID, {Params[0]->getType(), Params[1]->getType()});
     break;
   case Intrinsic::experimental_vp_splat:
-    VPFunc = Intrinsic::getDeclaration(M, VPID, ReturnType);
+    VPFunc = Intrinsic::getOrInsertDeclaration(M, VPID, ReturnType);
     break;
   }
   assert(VPFunc && "Could not declare VP intrinsic");

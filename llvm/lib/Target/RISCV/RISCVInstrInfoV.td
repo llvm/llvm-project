@@ -104,13 +104,28 @@ class SchedCommon<list<SchedWrite> writes, list<SchedRead> reads,
                   string mx = "WorstCase", int sew = 0, bit forceMasked = 0,
                   bit forcePassthruRead = 0> : Sched<[]> {
   defvar isMasked = !ne(!find(NAME, "_MASK"), -1);
+  defvar isTied = !ne(!find(NAME, "_TIED"), -1);
   defvar isMaskedOrForceMasked = !or(forceMasked, isMasked);
+  defvar isTiedMasked = !and(isMaskedOrForceMasked, isTied);
   defvar passthruRead = !if(!or(!eq(mx, "WorstCase"), !eq(sew, 0)),
                             !cast<SchedRead>("ReadVPassthru_" # mx),
                             !cast<SchedRead>("ReadVPassthru_" # mx # "_E" #sew));
-  defvar needsPassthruRead = !or(isMaskedOrForceMasked, forcePassthruRead);
+  // We don't need passthru operand if it's already _TIED without mask.
+  defvar needsForcePassthruRead = !and(forcePassthruRead, !not(isTied));
+  defvar needsPassthruRead = !or(isMaskedOrForceMasked, needsForcePassthruRead);
+  // If this is a _TIED + masked operation, $rs2 (i.e. the first operand) is
+  // merged with the mask.
+  // NOTE: the following if statement is written in such a weird way because
+  // should we want to write something like
+  // `!if(!and(!not(!empty(reads), isTiedMasked), !tail(reads), reads)`
+  // since `!if` doesn't have a proper short-circuit behavior, if the
+  // condition of this `!if` cannot be resolved right away, `!tail(reads)` will
+  // be immediately evaluated anyway even when `reads` is empty, which leads to
+  // an assertion failure.
+  defvar readsWithTiedMask =
+      !if(isTiedMasked, !if(!not(!empty(reads)), !tail(reads), reads), reads);
   defvar readsWithMask =
-      !if(isMaskedOrForceMasked, !listconcat(reads, [ReadVMask]), reads);
+      !if(isMaskedOrForceMasked, !listconcat(readsWithTiedMask, [ReadVMask]), reads);
   defvar allReads =
       !if(needsPassthruRead, !listconcat([passthruRead], readsWithMask), reads);
   let SchedRW = !listconcat(writes, allReads);
@@ -630,31 +645,37 @@ multiclass VMRG_IV_V_X_I<string opcodestr, bits<6> funct6> {
 }
 
 multiclass VALUm_IV_V_X<string opcodestr, bits<6> funct6> {
+  // if LSB of funct6 is 1, it's a mask-producing instruction that
+  // uses a different scheduling class.
+  defvar WritePrefix = !if(funct6{0}, "WriteVICALUM", "WriteVICALU");
   def VM : VALUmVV<funct6, OPIVV, opcodestr # ".vvm">,
-           SchedBinaryMC<"WriteVICALUV", "ReadVICALUV", "ReadVICALUV">;
+           SchedBinaryMC<WritePrefix#"V", "ReadVICALUV", "ReadVICALUV">;
   def XM : VALUmVX<funct6, OPIVX, opcodestr # ".vxm">,
-           SchedBinaryMC<"WriteVICALUX", "ReadVICALUV", "ReadVICALUX">;
+           SchedBinaryMC<WritePrefix#"X", "ReadVICALUV", "ReadVICALUX">;
 }
 
 multiclass VALUm_IV_V_X_I<string opcodestr, bits<6> funct6>
     : VALUm_IV_V_X<opcodestr, funct6> {
+  // if LSB of funct6 is 1, it's a mask-producing instruction that
+  // uses a different scheduling class.
+  defvar WriteSched = !if(funct6{0}, "WriteVICALUMI", "WriteVICALUI");
   def IM : VALUmVI<funct6, opcodestr # ".vim">,
-           SchedUnaryMC<"WriteVICALUI", "ReadVICALUV">;
+           SchedUnaryMC<WriteSched, "ReadVICALUV">;
 }
 
 multiclass VALUNoVm_IV_V_X<string opcodestr, bits<6> funct6> {
   def V : VALUVVNoVm<funct6, OPIVV, opcodestr # ".vv">,
-          SchedBinaryMC<"WriteVICALUV", "ReadVICALUV", "ReadVICALUV",
+          SchedBinaryMC<"WriteVICALUMV", "ReadVICALUV", "ReadVICALUV",
                         forceMasked=0>;
   def X : VALUVXNoVm<funct6, OPIVX, opcodestr # ".vx">,
-          SchedBinaryMC<"WriteVICALUX", "ReadVICALUV", "ReadVICALUX",
+          SchedBinaryMC<"WriteVICALUMX", "ReadVICALUV", "ReadVICALUX",
                         forceMasked=0>;
 }
 
 multiclass VALUNoVm_IV_V_X_I<string opcodestr, bits<6> funct6>
    : VALUNoVm_IV_V_X<opcodestr, funct6> {
   def I : VALUVINoVm<funct6, opcodestr # ".vi">,
-          SchedUnaryMC<"WriteVICALUI", "ReadVICALUV", forceMasked=0>;
+          SchedUnaryMC<"WriteVICALUMI", "ReadVICALUV", forceMasked=0>;
 }
 
 multiclass VALU_FV_F<string opcodestr, bits<6> funct6> {
@@ -1142,13 +1163,11 @@ defm VSEXT_VF2 : VALU_MV_VS2<"vsext.vf2", 0b010010, 0b00111>;
 
 // Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
 defm VADC_V : VALUm_IV_V_X_I<"vadc", 0b010000>;
-let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint in {
-defm VMADC_V : VALUm_IV_V_X_I<"vmadc", 0b010001>;
-defm VMADC_V : VALUNoVm_IV_V_X_I<"vmadc", 0b010001>;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint
 defm VSBC_V : VALUm_IV_V_X<"vsbc", 0b010010>;
 let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint,
     DestEEW = EEW1 in {
+defm VMADC_V : VALUm_IV_V_X_I<"vmadc", 0b010001>;
+defm VMADC_V : VALUNoVm_IV_V_X_I<"vmadc", 0b010001>;
 defm VMSBC_V : VALUm_IV_V_X<"vmsbc", 0b010011>;
 defm VMSBC_V : VALUNoVm_IV_V_X<"vmsbc", 0b010011>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint, DestEEW = EEW1

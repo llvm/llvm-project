@@ -433,8 +433,7 @@ define <8 x i32> @test_v16i32_1_3_5_7_9_11_13_15(<16 x i32> %v) {
 define <4 x i32> @test_v16i32_0_1_2_12 (<16 x i32> %v) {
 ; SLOW-LABEL: test_v16i32_0_1_2_12:
 ; SLOW:       # %bb.0:
-; SLOW-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
-; SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; SLOW-NEXT:    vextractf32x4 $3, %zmm0, %xmm1
 ; SLOW-NEXT:    vbroadcastss %xmm1, %xmm1
 ; SLOW-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
 ; SLOW-NEXT:    vzeroupper

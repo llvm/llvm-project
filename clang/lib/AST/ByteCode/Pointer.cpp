@@ -200,15 +200,26 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   // Build the path into the object.
   Pointer Ptr = *this;
   while (Ptr.isField() || Ptr.isArrayElement()) {
+
     if (Ptr.isArrayRoot()) {
-      Path.push_back(APValue::LValuePathEntry(
-          {Ptr.getFieldDesc()->asDecl(), /*IsVirtual=*/false}));
+      // An array root may still be an array element itself.
+      if (Ptr.isArrayElement()) {
+        Ptr = Ptr.expand();
+        unsigned Index = Ptr.getIndex();
+        Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
+        QualType ElemType = Ptr.getFieldDesc()->getElemQualType();
+        Offset += (Index * ASTCtx.getTypeSizeInChars(ElemType));
+        Ptr = Ptr.getArray();
+      } else {
+        Path.push_back(APValue::LValuePathEntry(
+            {Ptr.getFieldDesc()->asDecl(), /*IsVirtual=*/false}));
 
-      if (const auto *FD =
-              dyn_cast_if_present<FieldDecl>(Ptr.getFieldDesc()->asDecl()))
-        Offset += getFieldOffset(FD);
+        if (const auto *FD =
+                dyn_cast_if_present<FieldDecl>(Ptr.getFieldDesc()->asDecl()))
+          Offset += getFieldOffset(FD);
 
-      Ptr = Ptr.getBase();
+        Ptr = Ptr.getBase();
+      }
     } else if (Ptr.isArrayElement()) {
       Ptr = Ptr.expand();
       unsigned Index;
@@ -219,7 +230,6 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
 
       QualType ElemType = Ptr.getFieldDesc()->getElemQualType();
       Offset += (Index * ASTCtx.getTypeSizeInChars(ElemType));
-
       Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
       Ptr = Ptr.getArray();
     } else {
@@ -252,11 +262,6 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
       llvm_unreachable("Invalid field type");
     }
   }
-
-  // FIXME(perf): We compute the lvalue path above, but we can't supply it
-  // for dummy pointers (that causes crashes later in CheckConstantExpression).
-  if (isDummy())
-    Path.clear();
 
   // We assemble the LValuePath starting from the innermost pointer to the
   // outermost one. SO in a.b.c, the first element in Path will refer to
@@ -640,7 +645,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
   // Return the composite type.
   APValue Result;
-  if (!Composite(getType(), *this, Result))
+  if (!Composite(ResultType, *this, Result))
     return std::nullopt;
   return Result;
 }

@@ -21,7 +21,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/TargetParser/Triple.h"
-#include <algorithm>
 
 using namespace llvm;
 using namespace object;

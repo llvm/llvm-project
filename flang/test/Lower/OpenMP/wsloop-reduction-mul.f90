@@ -69,7 +69,6 @@
 ! CHECK:                 %[[VAL_15:.*]] = arith.muli %[[VAL_13]], %[[VAL_14]] : i32
 ! CHECK:                 hlfir.assign %[[VAL_15]] to %[[VAL_12]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 omp.yield
-! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 ! CHECK:           return
 
@@ -108,7 +107,6 @@ end subroutine
 ! CHECK:                 %[[VAL_16:.*]] = arith.mulf %[[VAL_13]], %[[VAL_15]] fastmath<contract> : f32
 ! CHECK:                 hlfir.assign %[[VAL_16]] to %[[VAL_12]]#0 : f32, !fir.ref<f32>
 ! CHECK:                 omp.yield
-! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 ! CHECK:           return
 
@@ -146,7 +144,6 @@ end subroutine
 ! CHECK:                 %[[VAL_15:.*]] = arith.muli %[[VAL_13]], %[[VAL_14]] : i32
 ! CHECK:                 hlfir.assign %[[VAL_15]] to %[[VAL_12]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 omp.yield
-! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 ! CHECK:           return
 
@@ -185,7 +182,6 @@ end subroutine
 ! CHECK:                 %[[VAL_16:.*]] = arith.mulf %[[VAL_14]], %[[VAL_15]] fastmath<contract> : f32
 ! CHECK:                 hlfir.assign %[[VAL_16]] to %[[VAL_12]]#0 : f32, !fir.ref<f32>
 ! CHECK:                 omp.yield
-! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 ! CHECK:           return
 
@@ -241,7 +237,6 @@ end subroutine
 ! CHECK:                 %[[VAL_31:.*]] = arith.muli %[[VAL_29]], %[[VAL_30]] : i32
 ! CHECK:                 hlfir.assign %[[VAL_31]] to %[[VAL_22]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 omp.yield
-! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 ! CHECK:           return
 
@@ -304,7 +299,6 @@ end subroutine
 ! CHECK:                 %[[VAL_34:.*]] = arith.mulf %[[VAL_31]], %[[VAL_33]] fastmath<contract> : f32
 ! CHECK:                 hlfir.assign %[[VAL_34]] to %[[VAL_22]]#0 : f32, !fir.ref<f32>
 ! CHECK:                 omp.yield
-! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 ! CHECK:           return
 
@@ -376,7 +370,6 @@ end subroutine
 ! CHECK:                 %[[VAL_42:.*]] = arith.mulf %[[VAL_39]], %[[VAL_41]] fastmath<contract> : f64
 ! CHECK:                 hlfir.assign %[[VAL_42]] to %[[VAL_27]]#0 : f64, !fir.ref<f64>
 ! CHECK:                 omp.yield
-! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 ! CHECK:           return
 

@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix,alpha.unix.cstring,debug.ExprInspection -verify %s
 
 // Test functions that are called "memcpy" but aren't the memcpy
 // we're looking for. Unfortunately, this test cannot be put into
@@ -6,6 +6,7 @@
 // as a normal C function for the test to make sense.
 typedef __typeof(sizeof(int)) size_t;
 void *memcpy(void *, const void *, size_t);
+size_t strlen(const char *s);
 
 int sprintf(char *str, const char *format, ...);
 int snprintf(char *str, size_t size, const char *format, ...);
@@ -45,3 +46,10 @@ void log(const char* fmt, const Args&... args) {
 void test_gh_74269_no_crash() {
   log("%d", 1);
 }
+
+struct TestNotNullTerm {
+  void test1() {
+    TestNotNullTerm * const &x = this;
+    strlen((char *)&x); // expected-warning{{Argument to string length function is not a null-terminated string}}
+  }
+};

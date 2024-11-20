@@ -131,4 +131,10 @@
   !$omp end parallel do simd
   !ERROR: The END PARALLEL DO SIMD directive must follow the DO loop associated with the loop construct
   !$omp end parallel do simd
+
+  !ERROR: A DO loop must follow the SIMD directive
+  !$omp simd
+    a = i + 1
+  !ERROR: The END SIMD directive must follow the DO loop associated with the loop construct
+  !$omp end simd
 end

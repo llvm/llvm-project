@@ -12,6 +12,7 @@
 #ifndef LLVM_SANDBOXIR_UTILS_H
 #define LLVM_SANDBOXIR_UTILS_H
 
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -47,6 +48,16 @@ public:
     if (auto *RI = dyn_cast<ReturnInst>(I))
       return RI->getReturnValue();
     return const_cast<Instruction *>(I);
+  }
+
+  /// \Returns the base Value for load or store instruction \p LSI.
+  template <typename LoadOrStoreT>
+  static Value *getMemInstructionBase(const LoadOrStoreT *LSI) {
+    static_assert(std::is_same_v<LoadOrStoreT, LoadInst> ||
+                      std::is_same_v<LoadOrStoreT, StoreInst>,
+                  "Expected sandboxir::Load or sandboxir::Store!");
+    return LSI->Ctx.getOrCreateValue(
+        getUnderlyingObject(LSI->getPointerOperand()->Val));
   }
 
   /// \Returns the number of bits required to represent the operands or return
@@ -98,6 +109,13 @@ public:
     if (!Diff)
       return false;
     return *Diff > 0;
+  }
+
+  /// Equivalent to BatchAA::getModRefInfo().
+  static ModRefInfo
+  aliasAnalysisGetModRefInfo(BatchAAResults &BatchAA, const Instruction *I,
+                             const std::optional<MemoryLocation> &OptLoc) {
+    return BatchAA.getModRefInfo(cast<llvm::Instruction>(I->Val), OptLoc);
   }
 };
 

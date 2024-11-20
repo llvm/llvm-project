@@ -589,7 +589,7 @@ void RemoveDeadValues::runOnOperation() {
   });
 
   if (acceptableIR.wasInterrupted())
-    return;
+    return signalPassFailure();
 
   module->walk([&](Operation *op) {
     if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
