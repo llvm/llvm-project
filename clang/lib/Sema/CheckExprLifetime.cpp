@@ -197,7 +197,6 @@ struct IndirectLocalPathEntry {
     VarInit,
     LValToRVal,
     LifetimeBoundCall,
-    LifetimeCapture,
     TemporaryCopy,
     LambdaCaptureInit,
     GslReferenceInit,
@@ -1054,7 +1053,6 @@ static SourceRange nextPathEntryRange(const IndirectLocalPath &Path, unsigned I,
     case IndirectLocalPathEntry::AddressOf:
     case IndirectLocalPathEntry::LValToRVal:
     case IndirectLocalPathEntry::LifetimeBoundCall:
-    case IndirectLocalPathEntry::LifetimeCapture:
     case IndirectLocalPathEntry::TemporaryCopy:
     case IndirectLocalPathEntry::GslReferenceInit:
     case IndirectLocalPathEntry::GslPointerInit:
@@ -1088,7 +1086,6 @@ static bool pathOnlyHandlesGslPointer(const IndirectLocalPath &Path) {
     case IndirectLocalPathEntry::VarInit:
     case IndirectLocalPathEntry::AddressOf:
     case IndirectLocalPathEntry::LifetimeBoundCall:
-    case IndirectLocalPathEntry::LifetimeCapture:
       continue;
     case IndirectLocalPathEntry::GslPointerInit:
     case IndirectLocalPathEntry::GslReferenceInit:
@@ -1212,9 +1209,6 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
       // and the capturing entity does too, so don't warn.
       if (!MTE)
         return false;
-      assert(shouldLifetimeExtendThroughPath(Path) ==
-                 PathLifetimeKind::NoExtend &&
-             "No lifetime extension in function calls");
       if (CapEntity->Entity)
         SemaRef.Diag(DiagLoc, diag::warn_dangling_reference_captured)
             << CapEntity->Entity << DiagRange;
@@ -1227,9 +1221,6 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
     case LK_Assignment: {
       if (!MTE || pathContainsInit(Path))
         return false;
-      assert(shouldLifetimeExtendThroughPath(Path) ==
-                 PathLifetimeKind::NoExtend &&
-             "No lifetime extension for assignments");
       if (IsGslPtrValueFromGslTempOwner)
         SemaRef.Diag(DiagLoc, diag::warn_dangling_lifetime_pointer_assignment)
             << AEntity->LHS << DiagRange;
@@ -1384,7 +1375,6 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
         break;
 
       case IndirectLocalPathEntry::LifetimeBoundCall:
-      case IndirectLocalPathEntry::LifetimeCapture:
       case IndirectLocalPathEntry::TemporaryCopy:
       case IndirectLocalPathEntry::GslPointerInit:
       case IndirectLocalPathEntry::GslReferenceInit:
@@ -1450,7 +1440,6 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
     break;
   }
   case LK_LifetimeCapture: {
-    Path.push_back({IndirectLocalPathEntry::LifetimeCapture, Init});
     if (isPointerLikeType(Init->getType()))
       Path.push_back({IndirectLocalPathEntry::GslPointerInit, Init});
     break;
