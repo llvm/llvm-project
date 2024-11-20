@@ -2868,12 +2868,12 @@ func.func @flat_transpose_index(%arg0: vector<16xindex>) -> vector<16xindex> {
 
 // -----
 
-func.func @vector_load_op(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<8xf32> {
+func.func @vector_load(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<8xf32> {
   %0 = vector.load %memref[%i, %j] : memref<200x100xf32>, vector<8xf32>
   return %0 : vector<8xf32>
 }
 
-// CHECK-LABEL: func @vector_load_op
+// CHECK-LABEL: func @vector_load
 // CHECK: %[[c100:.*]] = llvm.mlir.constant(100 : index) : i64
 // CHECK: %[[mul:.*]] = llvm.mul %{{.*}}, %[[c100]]  : i64
 // CHECK: %[[add:.*]] = llvm.add %[[mul]], %{{.*}}  : i64
@@ -2882,12 +2882,26 @@ func.func @vector_load_op(%memref : memref<200x100xf32>, %i : index, %j : index)
 
 // -----
 
-func.func @vector_load_op_nontemporal(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<8xf32> {
+func.func @vector_load_scalable(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<[8]xf32> {
+  %0 = vector.load %memref[%i, %j] : memref<200x100xf32>, vector<[8]xf32>
+  return %0 : vector<[8]xf32>
+}
+
+// CHECK-LABEL: func @vector_load_scalable
+// CHECK: %[[c100:.*]] = llvm.mlir.constant(100 : index) : i64
+// CHECK: %[[mul:.*]] = llvm.mul %{{.*}}, %[[c100]]  : i64
+// CHECK: %[[add:.*]] = llvm.add %[[mul]], %{{.*}}  : i64
+// CHECK: %[[gep:.*]] = llvm.getelementptr %{{.*}}[%[[add]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: llvm.load %[[gep]] {alignment = 4 : i64} : !llvm.ptr -> vector<[8]xf32>
+
+// -----
+
+func.func @vector_load_nontemporal(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<8xf32> {
   %0 = vector.load %memref[%i, %j] {nontemporal = true} : memref<200x100xf32>, vector<8xf32>
   return %0 : vector<8xf32>
 }
 
-// CHECK-LABEL: func @vector_load_op_nontemporal
+// CHECK-LABEL: func @vector_load_nontemporal
 // CHECK: %[[c100:.*]] = llvm.mlir.constant(100 : index) : i64
 // CHECK: %[[mul:.*]] = llvm.mul %{{.*}}, %[[c100]]  : i64
 // CHECK: %[[add:.*]] = llvm.add %[[mul]], %{{.*}}  : i64
@@ -2896,24 +2910,65 @@ func.func @vector_load_op_nontemporal(%memref : memref<200x100xf32>, %i : index,
 
 // -----
 
-func.func @vector_load_op_index(%memref : memref<200x100xindex>, %i : index, %j : index) -> vector<8xindex> {
+func.func @vector_load_nontemporal_scalable(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<[8]xf32> {
+  %0 = vector.load %memref[%i, %j] {nontemporal = true} : memref<200x100xf32>, vector<[8]xf32>
+  return %0 : vector<[8]xf32>
+}
+
+// CHECK-LABEL: func @vector_load_nontemporal_scalable
+// CHECK: %[[c100:.*]] = llvm.mlir.constant(100 : index) : i64
+// CHECK: %[[mul:.*]] = llvm.mul %{{.*}}, %[[c100]]  : i64
+// CHECK: %[[add:.*]] = llvm.add %[[mul]], %{{.*}}  : i64
+// CHECK: %[[gep:.*]] = llvm.getelementptr %{{.*}}[%[[add]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: llvm.load %[[gep]] {alignment = 4 : i64, nontemporal} : !llvm.ptr -> vector<[8]xf32>
+
+// -----
+
+func.func @vector_load_index(%memref : memref<200x100xindex>, %i : index, %j : index) -> vector<8xindex> {
   %0 = vector.load %memref[%i, %j] : memref<200x100xindex>, vector<8xindex>
   return %0 : vector<8xindex>
 }
-// CHECK-LABEL: func @vector_load_op_index
+// CHECK-LABEL: func @vector_load_index
 // CHECK: %[[T0:.*]] = llvm.load %{{.*}} {alignment = 8 : i64} : !llvm.ptr -> vector<8xi64>
 // CHECK: %[[T1:.*]] = builtin.unrealized_conversion_cast %[[T0]] : vector<8xi64> to vector<8xindex>
 // CHECK: return %[[T1]] : vector<8xindex>
 
 // -----
 
-func.func @vector_store_op(%memref : memref<200x100xf32>, %i : index, %j : index) {
+func.func @vector_load_index_scalable(%memref : memref<200x100xindex>, %i : index, %j : index) -> vector<[8]xindex> {
+  %0 = vector.load %memref[%i, %j] : memref<200x100xindex>, vector<[8]xindex>
+  return %0 : vector<[8]xindex>
+}
+// CHECK-LABEL: func @vector_load_index_scalable
+// CHECK: %[[T0:.*]] = llvm.load %{{.*}} {alignment = 8 : i64} : !llvm.ptr -> vector<[8]xi64>
+// CHECK: %[[T1:.*]] = builtin.unrealized_conversion_cast %[[T0]] : vector<[8]xi64> to vector<[8]xindex>
+// CHECK: return %[[T1]] : vector<[8]xindex>
+
+// -----
+
+func.func @vector_load_0d(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<f32> {
+  %0 = vector.load %memref[%i, %j] : memref<200x100xf32>, vector<f32>
+  return %0 : vector<f32>
+}
+
+// CHECK-LABEL: func @vector_load_0d
+// CHECK: %[[load:.*]] = memref.load %{{.*}}[%{{.*}}, %{{.*}}]
+// CHECK: %[[vec:.*]] = llvm.mlir.undef : vector<1xf32>
+// CHECK: %[[c0:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK: %[[inserted:.*]] = llvm.insertelement %[[load]], %[[vec]][%[[c0]] : i32] : vector<1xf32>
+// CHECK: %[[cast:.*]] = builtin.unrealized_conversion_cast %[[inserted]] : vector<1xf32> to vector<f32>
+// CHECK: return %[[cast]] : vector<f32>
+
+// -----
+
+
+func.func @vector_store(%memref : memref<200x100xf32>, %i : index, %j : index) {
   %val = arith.constant dense<11.0> : vector<4xf32>
   vector.store %val, %memref[%i, %j] : memref<200x100xf32>, vector<4xf32>
   return
 }
 
-// CHECK-LABEL: func @vector_store_op
+// CHECK-LABEL: func @vector_store
 // CHECK: %[[c100:.*]] = llvm.mlir.constant(100 : index) : i64
 // CHECK: %[[mul:.*]] = llvm.mul %{{.*}}, %[[c100]]  : i64
 // CHECK: %[[add:.*]] = llvm.add %[[mul]], %{{.*}}  : i64
@@ -2922,13 +2977,28 @@ func.func @vector_store_op(%memref : memref<200x100xf32>, %i : index, %j : index
 
 // -----
 
-func.func @vector_store_op_nontemporal(%memref : memref<200x100xf32>, %i : index, %j : index) {
+func.func @vector_store_scalable(%memref : memref<200x100xf32>, %i : index, %j : index) {
+  %val = arith.constant dense<11.0> : vector<[4]xf32>
+  vector.store %val, %memref[%i, %j] : memref<200x100xf32>, vector<[4]xf32>
+  return
+}
+
+// CHECK-LABEL: func @vector_store_scalable
+// CHECK: %[[c100:.*]] = llvm.mlir.constant(100 : index) : i64
+// CHECK: %[[mul:.*]] = llvm.mul %{{.*}}, %[[c100]]  : i64
+// CHECK: %[[add:.*]] = llvm.add %[[mul]], %{{.*}}  : i64
+// CHECK: %[[gep:.*]] = llvm.getelementptr %{{.*}}[%[[add]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: llvm.store %{{.*}}, %[[gep]] {alignment = 4 : i64} :  vector<[4]xf32>, !llvm.ptr
+
+// -----
+
+func.func @vector_store_nontemporal(%memref : memref<200x100xf32>, %i : index, %j : index) {
   %val = arith.constant dense<11.0> : vector<4xf32>
   vector.store %val, %memref[%i, %j] {nontemporal = true} : memref<200x100xf32>, vector<4xf32>
   return
 }
 
-// CHECK-LABEL: func @vector_store_op_nontemporal
+// CHECK-LABEL: func @vector_store_nontemporal
 // CHECK: %[[c100:.*]] = llvm.mlir.constant(100 : index) : i64
 // CHECK: %[[mul:.*]] = llvm.mul %{{.*}}, %[[c100]]  : i64
 // CHECK: %[[add:.*]] = llvm.add %[[mul]], %{{.*}}  : i64
@@ -2937,28 +3007,38 @@ func.func @vector_store_op_nontemporal(%memref : memref<200x100xf32>, %i : index
 
 // -----
 
-func.func @vector_store_op_index(%memref : memref<200x100xindex>, %i : index, %j : index) {
+func.func @vector_store_nontemporal_scalable(%memref : memref<200x100xf32>, %i : index, %j : index) {
+  %val = arith.constant dense<11.0> : vector<[4]xf32>
+  vector.store %val, %memref[%i, %j] {nontemporal = true} : memref<200x100xf32>, vector<[4]xf32>
+  return
+}
+
+// CHECK-LABEL: func @vector_store_nontemporal_scalable
+// CHECK: %[[c100:.*]] = llvm.mlir.constant(100 : index) : i64
+// CHECK: %[[mul:.*]] = llvm.mul %{{.*}}, %[[c100]]  : i64
+// CHECK: %[[add:.*]] = llvm.add %[[mul]], %{{.*}}  : i64
+// CHECK: %[[gep:.*]] = llvm.getelementptr %{{.*}}[%[[add]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: llvm.store %{{.*}}, %[[gep]] {alignment = 4 : i64, nontemporal} :  vector<[4]xf32>, !llvm.ptr
+
+// -----
+
+func.func @vector_store_index(%memref : memref<200x100xindex>, %i : index, %j : index) {
   %val = arith.constant dense<11> : vector<4xindex>
   vector.store %val, %memref[%i, %j] : memref<200x100xindex>, vector<4xindex>
   return
 }
-// CHECK-LABEL: func @vector_store_op_index
+// CHECK-LABEL: func @vector_store_index
 // CHECK: llvm.store %{{.*}}, %{{.*}} {alignment = 8 : i64} : vector<4xi64>, !llvm.ptr
 
 // -----
 
-func.func @vector_load_op_0d(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<f32> {
-  %0 = vector.load %memref[%i, %j] : memref<200x100xf32>, vector<f32>
-  return %0 : vector<f32>
+func.func @vector_store_index_scalable(%memref : memref<200x100xindex>, %i : index, %j : index) {
+  %val = arith.constant dense<11> : vector<[4]xindex>
+  vector.store %val, %memref[%i, %j] : memref<200x100xindex>, vector<[4]xindex>
+  return
 }
-
-// CHECK-LABEL: func @vector_load_op_0d
-// CHECK: %[[load:.*]] = memref.load %{{.*}}[%{{.*}}, %{{.*}}]
-// CHECK: %[[vec:.*]] = llvm.mlir.undef : vector<1xf32>
-// CHECK: %[[c0:.*]] = llvm.mlir.constant(0 : i32) : i32
-// CHECK: %[[inserted:.*]] = llvm.insertelement %[[load]], %[[vec]][%[[c0]] : i32] : vector<1xf32>
-// CHECK: %[[cast:.*]] = builtin.unrealized_conversion_cast %[[inserted]] : vector<1xf32> to vector<f32>
-// CHECK: return %[[cast]] : vector<f32>
+// CHECK-LABEL: func @vector_store_index_scalable
+// CHECK: llvm.store %{{.*}}, %{{.*}} {alignment = 8 : i64} : vector<[4]xi64>, !llvm.ptr
 
 // -----
 
