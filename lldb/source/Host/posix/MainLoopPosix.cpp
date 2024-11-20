@@ -65,6 +65,7 @@ static void SignalHandler(int signo, siginfo_t *info, void *) {
   // We can safely ignore EAGAIN (pipe full), as that means poll will definitely
   // return.
   assert(bytes_written == 1 || (bytes_written == -1 && errno == EAGAIN));
+  (void)bytes_written;
 }
 
 class MainLoopPosix::RunImpl {
