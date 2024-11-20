@@ -5570,16 +5570,16 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       return;
     }
     case Intrinsic::aarch64_sme_fp8_bf1cvtl_x2:
-        SelectCVTIntrinsicFP8(Node, 2, AArch64::BF1CVTL_2ZZ_BtoH);
+      SelectCVTIntrinsicFP8(Node, 2, AArch64::BF1CVTL_2ZZ_BtoH);
       return;
     case Intrinsic::aarch64_sme_fp8_f1cvtl_x2:
-        SelectCVTIntrinsicFP8(Node, 2, AArch64::F1CVTL_2ZZ_BtoH);
+      SelectCVTIntrinsicFP8(Node, 2, AArch64::F1CVTL_2ZZ_BtoH);
       return;
     case Intrinsic::aarch64_sme_fp8_bf2cvtl_x2:
-        SelectCVTIntrinsicFP8(Node, 2, AArch64::BF2CVTL_2ZZ_BtoH);
+      SelectCVTIntrinsicFP8(Node, 2, AArch64::BF2CVTL_2ZZ_BtoH);
       return;
     case Intrinsic::aarch64_sme_fp8_f2cvtl_x2:
-        SelectCVTIntrinsicFP8(Node, 2, AArch64::F2CVTL_2ZZ_BtoH);
+      SelectCVTIntrinsicFP8(Node, 2, AArch64::F2CVTL_2ZZ_BtoH);
       return;
     }
   } break;
