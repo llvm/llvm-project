@@ -720,33 +720,7 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
                               Filename);
     };
 
-    // Add the frame mappings into the writer context.
-    const auto &IdToFrame = Reader->getFrameMapping();
-    for (const auto &I : IdToFrame) {
-      bool Succeeded = WC->Writer.addMemProfFrame(
-          /*Id=*/I.first, /*Frame=*/I.getSecond(), MemProfError);
-      // If we weren't able to add the frame mappings then it doesn't make sense
-      // to try to add the records from this profile.
-      if (!Succeeded)
-        return;
-    }
-
-    // Add the call stacks into the writer context.
-    const auto &CSIdToCallStacks = Reader->getCallStacks();
-    for (const auto &I : CSIdToCallStacks) {
-      bool Succeeded = WC->Writer.addMemProfCallStack(
-          /*Id=*/I.first, /*Frame=*/I.getSecond(), MemProfError);
-      // If we weren't able to add the call stacks then it doesn't make sense
-      // to try to add the records from this profile.
-      if (!Succeeded)
-        return;
-    }
-
-    const auto &FunctionProfileData = Reader->getProfileData();
-    // Add the memprof records into the writer context.
-    for (const auto &[GUID, Record] : FunctionProfileData) {
-      WC->Writer.addMemProfRecord(GUID, Record);
-    }
+    WC->Writer.addMemProfData(Reader->takeMemProfData(), MemProfError);
     return;
   }
 

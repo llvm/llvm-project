@@ -63,6 +63,24 @@ public:
     return FunctionProfileData;
   }
 
+  // Take the complete profile data.
+  IndexedMemProfData takeMemProfData() {
+    // TODO: Once we replace the three member variables, namely IdToFrame,
+    // CSIdToCallStack, and FunctionProfileData, with MemProfData, replace the
+    // following code with just "return std::move(MemProfData);".
+    IndexedMemProfData MemProfData;
+    // Copy key-value pairs because IdToFrame uses DenseMap, whereas
+    // IndexedMemProfData::Frames uses MapVector.
+    for (const auto &[FrameId, F] : IdToFrame)
+      MemProfData.Frames.try_emplace(FrameId, F);
+    // Copy key-value pairs because CSIdToCallStack uses DenseMap, whereas
+    // IndexedMemProfData::CallStacks uses MapVector.
+    for (const auto &[CSId, CS] : CSIdToCallStack)
+      MemProfData.CallStacks.try_emplace(CSId, CS);
+    MemProfData.Records = FunctionProfileData;
+    return MemProfData;
+  }
+
   virtual Error
   readNextRecord(GuidMemProfRecordPair &GuidRecord,
                  std::function<const Frame(const FrameId)> Callback = nullptr) {
