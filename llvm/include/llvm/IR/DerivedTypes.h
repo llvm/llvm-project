@@ -225,7 +225,9 @@ class StructType : public Type {
     SCDB_IsLiteral = 4,
     SCDB_IsSized = 8,
     SCDB_ContainsScalableVector = 16,
-    SCDB_NotContainsScalableVector = 32
+    SCDB_NotContainsScalableVector = 32,
+    SCDB_ContainsNonGlobalTargetExtType = 64,
+    SCDB_NotContainsNonGlobalTargetExtType = 128,
   };
 
   /// For a named struct that actually has a name, this is a pointer to the
@@ -293,6 +295,12 @@ public:
   /// Returns true if this struct contains a scalable vector.
   bool isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const;
   using Type::isScalableTy;
+
+  /// Return true if this type is or contains a target extension type that
+  /// disallows being used as a global.
+  bool
+  containsNonGlobalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
+  using Type::containsNonGlobalTargetExtType;
 
   /// Returns true if this struct contains homogeneous scalable vector types.
   /// Note that the definition of homogeneous scalable vector type is not
