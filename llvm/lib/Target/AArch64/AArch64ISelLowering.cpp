@@ -24722,49 +24722,6 @@ static SDValue tryToWidenSetCCOperands(SDNode *Op, SelectionDAG &DAG) {
                      Op0ExtV, Op1ExtV, Op->getOperand(2));
 }
 
-static SDValue skipElementSizePreservingCast(SDValue Op, EVT VT) {
-  if (Op->getOpcode() == ISD::BITCAST)
-    Op = Op->getOperand(0);
-  EVT OpVT = Op.getValueType();
-  if (OpVT.isVector() && OpVT.getVectorElementType().getSizeInBits() ==
-                             VT.getVectorElementType().getSizeInBits())
-    return Op;
-  return SDValue();
-}
-
-static SDValue performZIP1Combine(SDNode *N, SelectionDAG &DAG) {
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
-
-  // zip1(insert_vector_elt(undef, extract_vector_elt(vec, 0), 0),
-  //      insert_vector_elt(undef, extract_vector_elt(vec, 1), 0))
-  // -> vec
-  SDValue Op0 = skipElementSizePreservingCast(N->getOperand(0), VT);
-  SDValue Op1 = skipElementSizePreservingCast(N->getOperand(1), VT);
-  if (Op0 && Op1 && Op0->getOpcode() == ISD::INSERT_VECTOR_ELT &&
-      Op1->getOpcode() == ISD::INSERT_VECTOR_ELT) {
-    SDValue Op00 = Op0->getOperand(0);
-    SDValue Op10 = Op1->getOperand(0);
-    if (Op00.isUndef() && Op10.isUndef() &&
-        Op0->getConstantOperandVal(2) == 0 &&
-        Op1->getConstantOperandVal(2) == 0) {
-      SDValue Op01 = Op0->getOperand(1);
-      SDValue Op11 = Op1->getOperand(1);
-      if (Op01->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-          Op11->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-          Op01->getConstantOperandVal(1) == 0 &&
-          Op11->getConstantOperandVal(1) == 1) {
-        SDValue Op010 = skipElementSizePreservingCast(Op01->getOperand(0), VT);
-        SDValue Op110 = skipElementSizePreservingCast(Op11->getOperand(0), VT);
-        if (Op010 && Op010 == Op110)
-          return DAG.getBitcast(VT, Op010);
-      }
-    }
-  }
-
-  return SDValue();
-}
-
 static SDValue
 performVecReduceBitwiseCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                SelectionDAG &DAG) {
@@ -26206,8 +26163,6 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
 
     break;
   }
-  case AArch64ISD::ZIP1:
-    return performZIP1Combine(N, DAG);
   case ISD::XOR:
     return performXorCombine(N, DAG, DCI, Subtarget);
   case ISD::MUL:
@@ -29077,14 +29032,7 @@ static SDValue GenerateFixedLengthSVETBL(SDValue Op, SDValue Op1, SDValue Op2,
   if (!IsSingleOp && !Subtarget.hasSVE2())
     return SDValue();
 
-  // Small vectors (with few extracts) can be lowered more efficiently as a
-  // sequence of ZIPs.
   EVT VTOp1 = Op.getOperand(0).getValueType();
-  unsigned NumElts = VT.getVectorNumElements();
-  if (VT.isPow2VectorType() && VT.getFixedSizeInBits() <= 128 &&
-      (NumElts <= 2 || (NumElts <= 4 && !Op2.isUndef())))
-    return SDValue();
-
   unsigned BitsPerElt = VTOp1.getVectorElementType().getSizeInBits();
   unsigned IndexLen = MinSVESize / BitsPerElt;
   unsigned ElementsPerVectorReg = VTOp1.getVectorNumElements();
