@@ -423,7 +423,7 @@ class VOP3Pe <bits<7> op, VOPProfile P> : Enc64 {
   bits<2> index_key_8bit;
   bits<1> index_key_16bit;
 
-  let Inst{7-0} = vdst;
+  let Inst{7-0} = !if(P.HasDst, vdst, 0);
   let Inst{8} = !if(P.HasSrc0Mods, src0_modifiers{1}, 0); // neg_hi src0
   let Inst{9} = !if(P.HasSrc1Mods, src1_modifiers{1}, 0); // neg_hi src1
   let Inst{10} = !if(P.HasSrc2Mods, src2_modifiers{1}, 0); // neg_hi src2
@@ -1364,6 +1364,10 @@ def VOP3_CLAMP   : VOP3Features<1, 0, 0, 0>;
 def VOP3_OPSEL   : VOP3Features<1, 1, 0, 0>;
 def VOP3_PACKED  : VOP3Features<1, 1, 1, 0>;
 def VOP3_MAI     : VOP3Features<0, 0, 0, 1>;
+
+// Packed is misleading, but it enables the appropriate op_sel
+// modifiers.
+def VOP3P_LD_SCALE : VOP3Features<0, 1, 1, 0>;
 
 class VOP3_Profile_Base<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOPProfile<P.ArgVT> {
 
