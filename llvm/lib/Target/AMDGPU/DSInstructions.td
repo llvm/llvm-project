@@ -194,7 +194,6 @@ class DS_1A1D_RET <string opName, RegisterClass rc = VGPR_32,
   (ins VGPR_32:$addr, data_op:$data0, Offset:$offset, gds:$gds),
   " $vdst, $addr, $data0$offset$gds"> {
 
-  let hasPostISelHook = 1;
   let has_data1 = 0;
   let IsAtomicRet = 1;
 }
@@ -223,7 +222,6 @@ class DS_1A2D_RET<string opName,
   (ins VGPR_32:$addr, src_op:$data0, src_op:$data1, Offset:$offset, gds:$gds),
   " $vdst, $addr, $data0, $data1$offset$gds"> {
 
-  let hasPostISelHook = 1;
   let IsAtomicRet = 1;
 }
 
@@ -248,7 +246,6 @@ class DS_1A2D_Off8_RET<string opName,
   " $vdst, $addr, $data0, $data1$offset0$offset1$gds"> {
 
   let has_offset = 0;
-  let hasPostISelHook = 1;
 }
 
 multiclass DS_1A2D_Off8_RET_mc<string opName,
