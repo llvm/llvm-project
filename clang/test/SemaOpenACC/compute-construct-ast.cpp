@@ -8,7 +8,6 @@
 #define PCH_HELPER
 
 void NormalFunc() {
-  // FIXME: Add a test once we have clauses for this.
   // CHECK-LABEL: NormalFunc
   // CHECK-NEXT: CompoundStmt
   // CHECK-NEXT: OpenACCComputeConstruct {{.*}}parallel
@@ -24,7 +23,6 @@ void NormalFunc() {
 #pragma acc parallel default(present)
     {}
   }
-  // FIXME: Add a test once we have clauses for this.
   // CHECK-NEXT: OpenACCComputeConstruct {{.*}}serial
   // CHECK-NEXT: CompoundStmt
 #pragma acc serial
@@ -36,7 +34,6 @@ void NormalFunc() {
 #pragma acc serial
     {}
   }
-  // FIXME: Add a test once we have clauses for this.
   // CHECK-NEXT: OpenACCComputeConstruct {{.*}}kernels
   // CHECK-NEXT: CompoundStmt
 #pragma acc kernels
@@ -117,5 +114,26 @@ struct S {
 void use() {
   TemplFunc<S>();
 }
-#endif
 
+struct HasCtor { HasCtor(); operator int(); ~HasCtor();};
+
+void useCtorType() {
+  // CHECK-LABEL: useCtorType
+  // CHECK-NEXT: CompoundStmt
+
+#pragma acc kernels num_workers(HasCtor{})
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}} kernels
+  // CHECK-NEXT: num_workers clause
+  // CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <UserDefinedConversion>
+  // CHECK-NEXT: CXXMemberCallExpr{{.*}}'int'
+  // CHECK-NEXT: MemberExpr{{.*}}.operator int
+  // CHECK-NEXT: MaterializeTemporaryExpr{{.*}}'HasCtor'
+  // CHECK-NEXT: CXXBindTemporaryExpr{{.*}}'HasCtor'
+  // CHECK-NEXT: CXXTemporaryObjectExpr{{.*}}'HasCtor'
+
+  while(true);
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+}
+#endif

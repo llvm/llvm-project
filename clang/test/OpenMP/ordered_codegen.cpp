@@ -255,21 +255,21 @@ void foo_simd(int low, int up) {
 // CHECK1-NEXT:    call void @__kmpc_ordered(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK1-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[B_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP7:%.*]] = load i64, ptr [[I]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP6]], i64 [[TMP7]]
+// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[TMP6]], i64 [[TMP7]]
 // CHECK1-NEXT:    [[TMP8:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 // CHECK1-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[C_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP10:%.*]] = load i64, ptr [[I]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 [[TMP10]]
+// CHECK1-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw float, ptr [[TMP9]], i64 [[TMP10]]
 // CHECK1-NEXT:    [[TMP11:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
 // CHECK1-NEXT:    [[MUL3:%.*]] = fmul float [[TMP8]], [[TMP11]]
 // CHECK1-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[D_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP13:%.*]] = load i64, ptr [[I]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, ptr [[TMP12]], i64 [[TMP13]]
+// CHECK1-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw float, ptr [[TMP12]], i64 [[TMP13]]
 // CHECK1-NEXT:    [[TMP14:%.*]] = load float, ptr [[ARRAYIDX4]], align 4
 // CHECK1-NEXT:    [[MUL5:%.*]] = fmul float [[MUL3]], [[TMP14]]
 // CHECK1-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i64, ptr [[I]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, ptr [[TMP15]], i64 [[TMP16]]
+// CHECK1-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw float, ptr [[TMP15]], i64 [[TMP16]]
 // CHECK1-NEXT:    store float [[MUL5]], ptr [[ARRAYIDX6]], align 4
 // CHECK1-NEXT:    call void @__kmpc_end_ordered(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK1-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
@@ -485,24 +485,24 @@ void foo_simd(int low, int up) {
 // CHECK1-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[B_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i8, ptr [[I]], align 1
 // CHECK1-NEXT:    [[IDXPROM:%.*]] = zext i8 [[TMP9]] to i64
-// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i64 [[IDXPROM]]
+// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[TMP8]], i64 [[IDXPROM]]
 // CHECK1-NEXT:    [[TMP10:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 // CHECK1-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[C_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP12:%.*]] = load i8, ptr [[I]], align 1
 // CHECK1-NEXT:    [[IDXPROM7:%.*]] = zext i8 [[TMP12]] to i64
-// CHECK1-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[IDXPROM7]]
+// CHECK1-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw float, ptr [[TMP11]], i64 [[IDXPROM7]]
 // CHECK1-NEXT:    [[TMP13:%.*]] = load float, ptr [[ARRAYIDX8]], align 4
 // CHECK1-NEXT:    [[MUL9:%.*]] = fmul float [[TMP10]], [[TMP13]]
 // CHECK1-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[D_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP15:%.*]] = load i8, ptr [[I]], align 1
 // CHECK1-NEXT:    [[IDXPROM10:%.*]] = zext i8 [[TMP15]] to i64
-// CHECK1-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds float, ptr [[TMP14]], i64 [[IDXPROM10]]
+// CHECK1-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds nuw float, ptr [[TMP14]], i64 [[IDXPROM10]]
 // CHECK1-NEXT:    [[TMP16:%.*]] = load float, ptr [[ARRAYIDX11]], align 4
 // CHECK1-NEXT:    [[MUL12:%.*]] = fmul float [[MUL9]], [[TMP16]]
 // CHECK1-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP18:%.*]] = load i8, ptr [[I]], align 1
 // CHECK1-NEXT:    [[IDXPROM13:%.*]] = zext i8 [[TMP18]] to i64
-// CHECK1-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i64 [[IDXPROM13]]
+// CHECK1-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds nuw float, ptr [[TMP17]], i64 [[IDXPROM13]]
 // CHECK1-NEXT:    store float [[MUL12]], ptr [[ARRAYIDX14]], align 4
 // CHECK1-NEXT:    call void @__kmpc_end_ordered(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK1-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
@@ -866,21 +866,21 @@ void foo_simd(int low, int up) {
 // CHECK1-IRBUILDER-NEXT:    call void @__kmpc_ordered(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM3]])
 // CHECK1-IRBUILDER-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[B_ADDR]], align 8
 // CHECK1-IRBUILDER-NEXT:    [[TMP6:%.*]] = load i64, ptr [[I]], align 8
-// CHECK1-IRBUILDER-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[TMP6]]
+// CHECK1-IRBUILDER-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[TMP5]], i64 [[TMP6]]
 // CHECK1-IRBUILDER-NEXT:    [[TMP7:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 // CHECK1-IRBUILDER-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[C_ADDR]], align 8
 // CHECK1-IRBUILDER-NEXT:    [[TMP9:%.*]] = load i64, ptr [[I]], align 8
-// CHECK1-IRBUILDER-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i64 [[TMP9]]
+// CHECK1-IRBUILDER-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw float, ptr [[TMP8]], i64 [[TMP9]]
 // CHECK1-IRBUILDER-NEXT:    [[TMP10:%.*]] = load float, ptr [[ARRAYIDX4]], align 4
 // CHECK1-IRBUILDER-NEXT:    [[MUL5:%.*]] = fmul float [[TMP7]], [[TMP10]]
 // CHECK1-IRBUILDER-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[D_ADDR]], align 8
 // CHECK1-IRBUILDER-NEXT:    [[TMP12:%.*]] = load i64, ptr [[I]], align 8
-// CHECK1-IRBUILDER-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP12]]
+// CHECK1-IRBUILDER-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw float, ptr [[TMP11]], i64 [[TMP12]]
 // CHECK1-IRBUILDER-NEXT:    [[TMP13:%.*]] = load float, ptr [[ARRAYIDX6]], align 4
 // CHECK1-IRBUILDER-NEXT:    [[MUL7:%.*]] = fmul float [[MUL5]], [[TMP13]]
 // CHECK1-IRBUILDER-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // CHECK1-IRBUILDER-NEXT:    [[TMP15:%.*]] = load i64, ptr [[I]], align 8
-// CHECK1-IRBUILDER-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, ptr [[TMP14]], i64 [[TMP15]]
+// CHECK1-IRBUILDER-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw float, ptr [[TMP14]], i64 [[TMP15]]
 // CHECK1-IRBUILDER-NEXT:    store float [[MUL7]], ptr [[ARRAYIDX8]], align 4
 // CHECK1-IRBUILDER-NEXT:    br label [[OMP_INNER_FOR_BODY_ORDERED_AFTER:%.*]]
 // CHECK1-IRBUILDER:       omp.inner.for.body.ordered.after:
@@ -1110,24 +1110,24 @@ void foo_simd(int low, int up) {
 // CHECK1-IRBUILDER-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[B_ADDR]], align 8
 // CHECK1-IRBUILDER-NEXT:    [[TMP8:%.*]] = load i8, ptr [[I]], align 1
 // CHECK1-IRBUILDER-NEXT:    [[IDXPROM:%.*]] = zext i8 [[TMP8]] to i64
-// CHECK1-IRBUILDER-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[IDXPROM]]
+// CHECK1-IRBUILDER-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[TMP7]], i64 [[IDXPROM]]
 // CHECK1-IRBUILDER-NEXT:    [[TMP9:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 // CHECK1-IRBUILDER-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[C_ADDR]], align 8
 // CHECK1-IRBUILDER-NEXT:    [[TMP11:%.*]] = load i8, ptr [[I]], align 1
 // CHECK1-IRBUILDER-NEXT:    [[IDXPROM9:%.*]] = zext i8 [[TMP11]] to i64
-// CHECK1-IRBUILDER-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds float, ptr [[TMP10]], i64 [[IDXPROM9]]
+// CHECK1-IRBUILDER-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds nuw float, ptr [[TMP10]], i64 [[IDXPROM9]]
 // CHECK1-IRBUILDER-NEXT:    [[TMP12:%.*]] = load float, ptr [[ARRAYIDX10]], align 4
 // CHECK1-IRBUILDER-NEXT:    [[MUL11:%.*]] = fmul float [[TMP9]], [[TMP12]]
 // CHECK1-IRBUILDER-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[D_ADDR]], align 8
 // CHECK1-IRBUILDER-NEXT:    [[TMP14:%.*]] = load i8, ptr [[I]], align 1
 // CHECK1-IRBUILDER-NEXT:    [[IDXPROM12:%.*]] = zext i8 [[TMP14]] to i64
-// CHECK1-IRBUILDER-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i64 [[IDXPROM12]]
+// CHECK1-IRBUILDER-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds nuw float, ptr [[TMP13]], i64 [[IDXPROM12]]
 // CHECK1-IRBUILDER-NEXT:    [[TMP15:%.*]] = load float, ptr [[ARRAYIDX13]], align 4
 // CHECK1-IRBUILDER-NEXT:    [[MUL14:%.*]] = fmul float [[MUL11]], [[TMP15]]
 // CHECK1-IRBUILDER-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // CHECK1-IRBUILDER-NEXT:    [[TMP17:%.*]] = load i8, ptr [[I]], align 1
 // CHECK1-IRBUILDER-NEXT:    [[IDXPROM15:%.*]] = zext i8 [[TMP17]] to i64
-// CHECK1-IRBUILDER-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds float, ptr [[TMP16]], i64 [[IDXPROM15]]
+// CHECK1-IRBUILDER-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds nuw float, ptr [[TMP16]], i64 [[IDXPROM15]]
 // CHECK1-IRBUILDER-NEXT:    store float [[MUL14]], ptr [[ARRAYIDX16]], align 4
 // CHECK1-IRBUILDER-NEXT:    br label [[OMP_INNER_FOR_BODY_ORDERED_AFTER:%.*]]
 // CHECK1-IRBUILDER:       omp.inner.for.body.ordered.after:
@@ -1495,21 +1495,21 @@ void foo_simd(int low, int up) {
 // CHECK3-NEXT:    call void @__kmpc_ordered(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK3-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[B_ADDR]], align 8
 // CHECK3-NEXT:    [[TMP7:%.*]] = load i64, ptr [[I]], align 8
-// CHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP6]], i64 [[TMP7]]
+// CHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[TMP6]], i64 [[TMP7]]
 // CHECK3-NEXT:    [[TMP8:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 // CHECK3-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[C_ADDR]], align 8
 // CHECK3-NEXT:    [[TMP10:%.*]] = load i64, ptr [[I]], align 8
-// CHECK3-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 [[TMP10]]
+// CHECK3-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw float, ptr [[TMP9]], i64 [[TMP10]]
 // CHECK3-NEXT:    [[TMP11:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
 // CHECK3-NEXT:    [[MUL3:%.*]] = fmul float [[TMP8]], [[TMP11]]
 // CHECK3-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[D_ADDR]], align 8
 // CHECK3-NEXT:    [[TMP13:%.*]] = load i64, ptr [[I]], align 8
-// CHECK3-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, ptr [[TMP12]], i64 [[TMP13]]
+// CHECK3-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw float, ptr [[TMP12]], i64 [[TMP13]]
 // CHECK3-NEXT:    [[TMP14:%.*]] = load float, ptr [[ARRAYIDX4]], align 4
 // CHECK3-NEXT:    [[MUL5:%.*]] = fmul float [[MUL3]], [[TMP14]]
 // CHECK3-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // CHECK3-NEXT:    [[TMP16:%.*]] = load i64, ptr [[I]], align 8
-// CHECK3-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, ptr [[TMP15]], i64 [[TMP16]]
+// CHECK3-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw float, ptr [[TMP15]], i64 [[TMP16]]
 // CHECK3-NEXT:    store float [[MUL5]], ptr [[ARRAYIDX6]], align 4
 // CHECK3-NEXT:    call void @__kmpc_end_ordered(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK3-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
@@ -1725,24 +1725,24 @@ void foo_simd(int low, int up) {
 // CHECK3-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[B_ADDR]], align 8
 // CHECK3-NEXT:    [[TMP9:%.*]] = load i8, ptr [[I]], align 1
 // CHECK3-NEXT:    [[IDXPROM:%.*]] = zext i8 [[TMP9]] to i64
-// CHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i64 [[IDXPROM]]
+// CHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[TMP8]], i64 [[IDXPROM]]
 // CHECK3-NEXT:    [[TMP10:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 // CHECK3-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[C_ADDR]], align 8
 // CHECK3-NEXT:    [[TMP12:%.*]] = load i8, ptr [[I]], align 1
 // CHECK3-NEXT:    [[IDXPROM7:%.*]] = zext i8 [[TMP12]] to i64
-// CHECK3-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[IDXPROM7]]
+// CHECK3-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw float, ptr [[TMP11]], i64 [[IDXPROM7]]
 // CHECK3-NEXT:    [[TMP13:%.*]] = load float, ptr [[ARRAYIDX8]], align 4
 // CHECK3-NEXT:    [[MUL9:%.*]] = fmul float [[TMP10]], [[TMP13]]
 // CHECK3-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[D_ADDR]], align 8
 // CHECK3-NEXT:    [[TMP15:%.*]] = load i8, ptr [[I]], align 1
 // CHECK3-NEXT:    [[IDXPROM10:%.*]] = zext i8 [[TMP15]] to i64
-// CHECK3-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds float, ptr [[TMP14]], i64 [[IDXPROM10]]
+// CHECK3-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds nuw float, ptr [[TMP14]], i64 [[IDXPROM10]]
 // CHECK3-NEXT:    [[TMP16:%.*]] = load float, ptr [[ARRAYIDX11]], align 4
 // CHECK3-NEXT:    [[MUL12:%.*]] = fmul float [[MUL9]], [[TMP16]]
 // CHECK3-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // CHECK3-NEXT:    [[TMP18:%.*]] = load i8, ptr [[I]], align 1
 // CHECK3-NEXT:    [[IDXPROM13:%.*]] = zext i8 [[TMP18]] to i64
-// CHECK3-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i64 [[IDXPROM13]]
+// CHECK3-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds nuw float, ptr [[TMP17]], i64 [[IDXPROM13]]
 // CHECK3-NEXT:    store float [[MUL12]], ptr [[ARRAYIDX14]], align 4
 // CHECK3-NEXT:    call void @__kmpc_end_ordered(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK3-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
@@ -2106,21 +2106,21 @@ void foo_simd(int low, int up) {
 // CHECK3-IRBUILDER-NEXT:    call void @__kmpc_ordered(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM3]])
 // CHECK3-IRBUILDER-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[B_ADDR]], align 8
 // CHECK3-IRBUILDER-NEXT:    [[TMP6:%.*]] = load i64, ptr [[I]], align 8
-// CHECK3-IRBUILDER-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[TMP6]]
+// CHECK3-IRBUILDER-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[TMP5]], i64 [[TMP6]]
 // CHECK3-IRBUILDER-NEXT:    [[TMP7:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 // CHECK3-IRBUILDER-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[C_ADDR]], align 8
 // CHECK3-IRBUILDER-NEXT:    [[TMP9:%.*]] = load i64, ptr [[I]], align 8
-// CHECK3-IRBUILDER-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i64 [[TMP9]]
+// CHECK3-IRBUILDER-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw float, ptr [[TMP8]], i64 [[TMP9]]
 // CHECK3-IRBUILDER-NEXT:    [[TMP10:%.*]] = load float, ptr [[ARRAYIDX4]], align 4
 // CHECK3-IRBUILDER-NEXT:    [[MUL5:%.*]] = fmul float [[TMP7]], [[TMP10]]
 // CHECK3-IRBUILDER-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[D_ADDR]], align 8
 // CHECK3-IRBUILDER-NEXT:    [[TMP12:%.*]] = load i64, ptr [[I]], align 8
-// CHECK3-IRBUILDER-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP12]]
+// CHECK3-IRBUILDER-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw float, ptr [[TMP11]], i64 [[TMP12]]
 // CHECK3-IRBUILDER-NEXT:    [[TMP13:%.*]] = load float, ptr [[ARRAYIDX6]], align 4
 // CHECK3-IRBUILDER-NEXT:    [[MUL7:%.*]] = fmul float [[MUL5]], [[TMP13]]
 // CHECK3-IRBUILDER-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // CHECK3-IRBUILDER-NEXT:    [[TMP15:%.*]] = load i64, ptr [[I]], align 8
-// CHECK3-IRBUILDER-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, ptr [[TMP14]], i64 [[TMP15]]
+// CHECK3-IRBUILDER-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw float, ptr [[TMP14]], i64 [[TMP15]]
 // CHECK3-IRBUILDER-NEXT:    store float [[MUL7]], ptr [[ARRAYIDX8]], align 4
 // CHECK3-IRBUILDER-NEXT:    br label [[OMP_INNER_FOR_BODY_ORDERED_AFTER:%.*]]
 // CHECK3-IRBUILDER:       omp.inner.for.body.ordered.after:
@@ -2350,24 +2350,24 @@ void foo_simd(int low, int up) {
 // CHECK3-IRBUILDER-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[B_ADDR]], align 8
 // CHECK3-IRBUILDER-NEXT:    [[TMP8:%.*]] = load i8, ptr [[I]], align 1
 // CHECK3-IRBUILDER-NEXT:    [[IDXPROM:%.*]] = zext i8 [[TMP8]] to i64
-// CHECK3-IRBUILDER-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[IDXPROM]]
+// CHECK3-IRBUILDER-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[TMP7]], i64 [[IDXPROM]]
 // CHECK3-IRBUILDER-NEXT:    [[TMP9:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 // CHECK3-IRBUILDER-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[C_ADDR]], align 8
 // CHECK3-IRBUILDER-NEXT:    [[TMP11:%.*]] = load i8, ptr [[I]], align 1
 // CHECK3-IRBUILDER-NEXT:    [[IDXPROM9:%.*]] = zext i8 [[TMP11]] to i64
-// CHECK3-IRBUILDER-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds float, ptr [[TMP10]], i64 [[IDXPROM9]]
+// CHECK3-IRBUILDER-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds nuw float, ptr [[TMP10]], i64 [[IDXPROM9]]
 // CHECK3-IRBUILDER-NEXT:    [[TMP12:%.*]] = load float, ptr [[ARRAYIDX10]], align 4
 // CHECK3-IRBUILDER-NEXT:    [[MUL11:%.*]] = fmul float [[TMP9]], [[TMP12]]
 // CHECK3-IRBUILDER-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[D_ADDR]], align 8
 // CHECK3-IRBUILDER-NEXT:    [[TMP14:%.*]] = load i8, ptr [[I]], align 1
 // CHECK3-IRBUILDER-NEXT:    [[IDXPROM12:%.*]] = zext i8 [[TMP14]] to i64
-// CHECK3-IRBUILDER-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i64 [[IDXPROM12]]
+// CHECK3-IRBUILDER-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds nuw float, ptr [[TMP13]], i64 [[IDXPROM12]]
 // CHECK3-IRBUILDER-NEXT:    [[TMP15:%.*]] = load float, ptr [[ARRAYIDX13]], align 4
 // CHECK3-IRBUILDER-NEXT:    [[MUL14:%.*]] = fmul float [[MUL11]], [[TMP15]]
 // CHECK3-IRBUILDER-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // CHECK3-IRBUILDER-NEXT:    [[TMP17:%.*]] = load i8, ptr [[I]], align 1
 // CHECK3-IRBUILDER-NEXT:    [[IDXPROM15:%.*]] = zext i8 [[TMP17]] to i64
-// CHECK3-IRBUILDER-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds float, ptr [[TMP16]], i64 [[IDXPROM15]]
+// CHECK3-IRBUILDER-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds nuw float, ptr [[TMP16]], i64 [[IDXPROM15]]
 // CHECK3-IRBUILDER-NEXT:    store float [[MUL14]], ptr [[ARRAYIDX16]], align 4
 // CHECK3-IRBUILDER-NEXT:    br label [[OMP_INNER_FOR_BODY_ORDERED_AFTER:%.*]]
 // CHECK3-IRBUILDER:       omp.inner.for.body.ordered.after:
@@ -2674,21 +2674,21 @@ void foo_simd(int low, int up) {
 // CHECK5:       for.body:
 // CHECK5-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP2:%.*]] = load i64, ptr [[I]], align 8
-// CHECK5-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i64 [[TMP2]]
+// CHECK5-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[TMP1]], i64 [[TMP2]]
 // CHECK5-NEXT:    [[TMP3:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 // CHECK5-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[C_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP5:%.*]] = load i64, ptr [[I]], align 8
-// CHECK5-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds float, ptr [[TMP4]], i64 [[TMP5]]
+// CHECK5-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw float, ptr [[TMP4]], i64 [[TMP5]]
 // CHECK5-NEXT:    [[TMP6:%.*]] = load float, ptr [[ARRAYIDX1]], align 4
 // CHECK5-NEXT:    [[MUL:%.*]] = fmul float [[TMP3]], [[TMP6]]
 // CHECK5-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[D_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP8:%.*]] = load i64, ptr [[I]], align 8
-// CHECK5-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[TMP8]]
+// CHECK5-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw float, ptr [[TMP7]], i64 [[TMP8]]
 // CHECK5-NEXT:    [[TMP9:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
 // CHECK5-NEXT:    [[MUL3:%.*]] = fmul float [[MUL]], [[TMP9]]
 // CHECK5-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP11:%.*]] = load i64, ptr [[I]], align 8
-// CHECK5-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, ptr [[TMP10]], i64 [[TMP11]]
+// CHECK5-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw float, ptr [[TMP10]], i64 [[TMP11]]
 // CHECK5-NEXT:    store float [[MUL3]], ptr [[ARRAYIDX4]], align 4
 // CHECK5-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK5:       for.inc:
@@ -2804,24 +2804,24 @@ void foo_simd(int low, int up) {
 // CHECK5-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[B_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP3:%.*]] = load i8, ptr [[I]], align 1
 // CHECK5-NEXT:    [[IDXPROM:%.*]] = zext i8 [[TMP3]] to i64
-// CHECK5-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 [[IDXPROM]]
+// CHECK5-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[TMP2]], i64 [[IDXPROM]]
 // CHECK5-NEXT:    [[TMP4:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 // CHECK5-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[C_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP6:%.*]] = load i8, ptr [[I]], align 1
 // CHECK5-NEXT:    [[IDXPROM4:%.*]] = zext i8 [[TMP6]] to i64
-// CHECK5-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[IDXPROM4]]
+// CHECK5-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw float, ptr [[TMP5]], i64 [[IDXPROM4]]
 // CHECK5-NEXT:    [[TMP7:%.*]] = load float, ptr [[ARRAYIDX5]], align 4
 // CHECK5-NEXT:    [[MUL:%.*]] = fmul float [[TMP4]], [[TMP7]]
 // CHECK5-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[D_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP9:%.*]] = load i8, ptr [[I]], align 1
 // CHECK5-NEXT:    [[IDXPROM6:%.*]] = zext i8 [[TMP9]] to i64
-// CHECK5-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i64 [[IDXPROM6]]
+// CHECK5-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw float, ptr [[TMP8]], i64 [[IDXPROM6]]
 // CHECK5-NEXT:    [[TMP10:%.*]] = load float, ptr [[ARRAYIDX7]], align 4
 // CHECK5-NEXT:    [[MUL8:%.*]] = fmul float [[MUL]], [[TMP10]]
 // CHECK5-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP12:%.*]] = load i8, ptr [[I]], align 1
 // CHECK5-NEXT:    [[IDXPROM9:%.*]] = zext i8 [[TMP12]] to i64
-// CHECK5-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[IDXPROM9]]
+// CHECK5-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds nuw float, ptr [[TMP11]], i64 [[IDXPROM9]]
 // CHECK5-NEXT:    store float [[MUL8]], ptr [[ARRAYIDX10]], align 4
 // CHECK5-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK5:       for.inc:

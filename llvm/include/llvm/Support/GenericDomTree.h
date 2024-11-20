@@ -287,6 +287,8 @@ protected:
   }
 
   DominatorTreeBase &operator=(DominatorTreeBase &&RHS) {
+    if (this == &RHS)
+      return *this;
     Roots = std::move(RHS.Roots);
     DomTreeNodes = std::move(RHS.DomTreeNodes);
     NodeNumberMap = std::move(RHS.NodeNumberMap);
@@ -397,6 +399,8 @@ public:
   /// may (but is not required to) be null for a forward (backwards)
   /// statically unreachable block.
   DomTreeNodeBase<NodeT> *getNode(const NodeT *BB) const {
+    assert((!BB || Parent == NodeTrait::getParent(const_cast<NodeT *>(BB))) &&
+           "cannot get DomTreeNode of block with different parent");
     if (auto Idx = getNodeIndex(BB); Idx && *Idx < DomTreeNodes.size())
       return DomTreeNodes[*Idx].get();
     return nullptr;

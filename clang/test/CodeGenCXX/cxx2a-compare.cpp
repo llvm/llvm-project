@@ -18,7 +18,7 @@ auto test_signed(int x, int y) {
   // CHECK: %sel.lt = select i1 %cmp.lt, i8 [[LT]], i8 [[GT]]
   // CHECK: %cmp.eq = icmp eq i32 %{{.+}}, %{{.+}}
   // CHECK: %sel.eq = select i1 %cmp.eq, i8 [[EQ]], i8 %sel.lt
-  // CHECK: %__value_ = getelementptr inbounds %[[SO]], ptr %[[DEST]]
+  // CHECK: %__value_ = getelementptr inbounds nuw %[[SO]], ptr %[[DEST]]
   // CHECK: store i8 %sel.eq, ptr %__value_, align 1
   // CHECK: ret
   return x <=> y;
@@ -31,7 +31,7 @@ auto test_unsigned(unsigned x, unsigned y) {
   // CHECK: %sel.lt = select i1 %cmp.lt, i8 [[LT]], i8 [[GT]]
   // CHECK: %cmp.eq = icmp eq i32 %{{.+}}, %{{.+}}
   // CHECK: %sel.eq = select i1 %cmp.eq, i8 [[EQ]], i8 %sel.lt
-  // CHECK: %__value_ = getelementptr inbounds %[[SO]], ptr %[[DEST]]
+  // CHECK: %__value_ = getelementptr inbounds nuw %[[SO]], ptr %[[DEST]]
   // CHECK: store i8 %sel.eq, ptr %__value_
   // CHECK: ret
   return x <=> y;
@@ -46,7 +46,7 @@ auto float_test(double x, double y) {
   // CHECK: %sel.gt = select i1 %cmp.gt, i8 [[GT]], i8 %sel.eq
   // CHECK: %cmp.lt = fcmp olt double %{{.+}}, %{{.+}}
   // CHECK: %sel.lt = select i1 %cmp.lt, i8 [[LT]], i8 %sel.gt
-  // CHECK: %__value_ = getelementptr inbounds %[[PO]], ptr %[[DEST]]
+  // CHECK: %__value_ = getelementptr inbounds nuw %[[PO]], ptr %[[DEST]]
   // CHECK: store i8 %sel.lt, ptr %__value_
   // CHECK: ret
   return x <=> y;
@@ -59,7 +59,7 @@ auto ptr_test(int *x, int *y) {
   // CHECK: %sel.lt = select i1 %cmp.lt, i8 [[LT]], i8 [[GT]]
   // CHECK: %cmp.eq = icmp eq ptr %{{.+}}, %{{.+}}
   // CHECK: %sel.eq = select i1 %cmp.eq, i8 [[EQ]], i8 %sel.lt
-  // CHECK: %__value_ = getelementptr inbounds %[[SO]], ptr %[[DEST]]
+  // CHECK: %__value_ = getelementptr inbounds nuw %[[SO]], ptr %[[DEST]]
   // CHECK: store i8 %sel.eq, ptr %__value_, align 1
   // CHECK: ret
   return x <=> y;
@@ -69,7 +69,7 @@ auto ptr_test(int *x, int *y) {
 auto test_constant() {
   // CHECK: %[[DEST:retval|agg.result]]
   // CHECK-NOT: icmp
-  // CHECK: %__value_ = getelementptr inbounds %[[SO]], ptr %[[DEST]]
+  // CHECK: %__value_ = getelementptr inbounds nuw %[[SO]], ptr %[[DEST]]
   // CHECK-NEXT: store i8 -1, ptr %__value_
   // CHECK: ret
   const int x = 42;

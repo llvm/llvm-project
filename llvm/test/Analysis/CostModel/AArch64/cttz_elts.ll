@@ -3,6 +3,7 @@
 
 define void @foo_no_vscale_range() {
 ; CHECK-LABEL: 'foo_no_vscale_range'
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %res.i64.nxv1i1.zip = call i64 @llvm.experimental.cttz.elts.i64.nxv1i1(<vscale x 1 x i1> undef, i1 true)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res.i64.nxv2i1.zip = call i64 @llvm.experimental.cttz.elts.i64.nxv2i1(<vscale x 2 x i1> undef, i1 true)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res.i64.nxv4i1.zip = call i64 @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1> undef, i1 true)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res.i64.nxv8i1.zip = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> undef, i1 true)
@@ -45,6 +46,7 @@ define void @foo_no_vscale_range() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %res.i32.v32i1.nzip = call i32 @llvm.experimental.cttz.elts.i32.v32i1(<32 x i1> undef, i1 false)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
+  %res.i64.nxv1i1.zip = call i64 @llvm.experimental.cttz.elts.i64.nxv1i1(<vscale x 1 x i1> undef, i1 true)
   %res.i64.nxv2i1.zip = call i64 @llvm.experimental.cttz.elts.i64.nxv2i1(<vscale x 2 x i1> undef, i1 true)
   %res.i64.nxv4i1.zip = call i64 @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1> undef, i1 true)
   %res.i64.nxv8i1.zip = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> undef, i1 true)

@@ -115,8 +115,8 @@ func.func @pad_and_hoist_lhs_transpose(
   //     BUILD-PACKING-LOOP-NEST: %[[PACKED:.*]] = scf.for %{{.*}} -> (tensor<?x12x5xf32>) {
   //     BUILD-PACKING-LOOP-NEST:   tensor.pad %{{.*}}
   //     BUILD-PACKING-LOOP-NEST:     : tensor<?x12xf32> to tensor<5x12xf32>
-  //     BUILD-PACKING-LOOP-NEST:   linalg.generic
-  //     BUILD-PACKING-LOOP-NEST:     -> tensor<12x5xf32>
+  //     BUILD-PACKING-LOOP-NEST:   linalg.transpose
+  //     BUILD-PACKING-LOOP-NEST:     ins({{.*}} : tensor<5x12xf32>) outs({{.*}} : tensor<12x5xf32>)
   //     BUILD-PACKING-LOOP-NEST:   tensor.insert_slice %{{.*}} into %{{.*}}[%{{.*}}, 0, 0] [1, 12, 5] [1, 1, 1]
   // BUILD-PACKING-LOOP-NEST-SAME:   : tensor<12x5xf32> into tensor<?x12x5xf32>
   //     BUILD-PACKING-LOOP-NEST: scf.for %{{.*}} -> (tensor<24x25xf32>)

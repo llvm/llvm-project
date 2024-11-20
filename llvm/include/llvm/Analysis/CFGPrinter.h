@@ -265,18 +265,19 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
   /// Display the raw branch weights from PGO.
   std::string getEdgeAttributes(const BasicBlock *Node, const_succ_iterator I,
                                 DOTFuncInfo *CFGInfo) {
+    // If BPI is not provided do not display any edge attributes
+    if (!CFGInfo->showEdgeWeights())
+      return "";
+
     unsigned OpNo = I.getSuccessorIndex();
     const Instruction *TI = Node->getTerminator();
     BasicBlock *SuccBB = TI->getSuccessor(OpNo);
     auto BranchProb = CFGInfo->getBPI()->getEdgeProbability(Node, SuccBB);
     double WeightPercent = ((double)BranchProb.getNumerator()) /
                            ((double)BranchProb.getDenominator());
-
     std::string TTAttr =
         formatv("tooltip=\"{0} -> {1}\\nProbability {2:P}\" ", getBBName(Node),
                 getBBName(SuccBB), WeightPercent);
-    if (!CFGInfo->showEdgeWeights())
-      return TTAttr;
 
     if (TI->getNumSuccessors() == 1)
       return TTAttr + "penwidth=2";

@@ -34,11 +34,8 @@
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/VersionTuple.h"
@@ -1168,6 +1165,10 @@ bool Decl::isInNamedModule() const {
   return getOwningModule() && getOwningModule()->isNamedModule();
 }
 
+bool Decl::isFromHeaderUnit() const {
+  return getOwningModule() && getOwningModule()->isHeaderUnit();
+}
+
 static Decl::Kind getKind(const Decl *D) { return D->getKind(); }
 static Decl::Kind getKind(const DeclContext *DC) { return DC->getDeclKind(); }
 
@@ -1177,14 +1178,19 @@ int64_t Decl::getID() const {
 
 const FunctionType *Decl::getFunctionType(bool BlocksToo) const {
   QualType Ty;
-  if (isa<BindingDecl>(this))
-    return nullptr;
-  else if (const auto *D = dyn_cast<ValueDecl>(this))
+  if (const auto *D = dyn_cast<ValueDecl>(this))
     Ty = D->getType();
   else if (const auto *D = dyn_cast<TypedefNameDecl>(this))
     Ty = D->getUnderlyingType();
   else
     return nullptr;
+
+  if (Ty.isNull()) {
+    // BindingDecls do not have types during parsing, so return nullptr. This is
+    // the only known case where `Ty` is null.
+    assert(isa<BindingDecl>(this));
+    return nullptr;
+  }
 
   if (Ty->isFunctionPointerType())
     Ty = Ty->castAs<PointerType>()->getPointeeType();

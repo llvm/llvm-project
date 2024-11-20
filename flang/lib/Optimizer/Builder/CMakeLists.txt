@@ -35,12 +35,16 @@ add_flang_library(FIRBuilder
   TemporaryStorage.cpp
 
   DEPENDS
+  CUFAttrs
+  CUFDialect
   FIRDialect
   HLFIRDialect
   ${dialect_libs}
   ${extension_libs}
 
   LINK_LIBS
+  CUFAttrs
+  CUFDialect
   FIRDialect
   FIRDialectSupport
   FIRSupport

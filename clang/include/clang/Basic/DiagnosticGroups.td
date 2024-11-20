@@ -125,6 +125,7 @@ def FloatZeroConversion : DiagGroup<"float-zero-conversion">;
 def FloatConversion :
   DiagGroup<"float-conversion", [FloatOverflowConversion,
                                  FloatZeroConversion]>;
+def MathErrnoEnabledWithVecLib : DiagGroup<"math-errno-enabled-with-veclib">;
 
 def FrameAddress : DiagGroup<"frame-address">;
 def FreeNonHeapObject : DiagGroup<"free-nonheap-object">;
@@ -1125,6 +1126,11 @@ def ThreadSafety : DiagGroup<"thread-safety",
 def ThreadSafetyVerbose : DiagGroup<"thread-safety-verbose">;
 def ThreadSafetyBeta : DiagGroup<"thread-safety-beta">;
 
+// Warnings and notes related to the function effects system which underlies
+// the nonblocking and nonallocating attributes.
+def FunctionEffects : DiagGroup<"function-effects">;
+def PerfConstraintImpliesNoexcept : DiagGroup<"perf-constraint-implies-noexcept">;
+
 // Uniqueness Analysis warnings
 def Consumed       : DiagGroup<"consumed">;
 
@@ -1133,7 +1139,7 @@ def Consumed       : DiagGroup<"consumed">;
 // DefaultIgnore in addition to putting it here.
 def All : DiagGroup<"all", [Most, Parentheses, Switch, SwitchBool,
                             MisleadingIndentation, PackedNonPod,
-                            VLACxxExtension]>;
+                            VLACxxExtension, PerfConstraintImpliesNoexcept]>;
 
 // Warnings that should be in clang-cl /w4.
 def : DiagGroup<"CL4", [All, Extra]>;
@@ -1535,8 +1541,10 @@ def PedanticMacros : DiagGroup<"pedantic-macros",
 def BranchProtection : DiagGroup<"branch-protection">;
 
 // HLSL diagnostic groups
+def HLSL202y : DiagGroup<"hlsl-202y-extensions">;
+
 // Warnings for HLSL Clang extensions
-def HLSLExtension : DiagGroup<"hlsl-extensions">;
+def HLSLExtension : DiagGroup<"hlsl-extensions", [HLSL202y]>;
 
 // Warning for mix packoffset and non-packoffset.
 def HLSLMixPackOffset : DiagGroup<"mix-packoffset">;
@@ -1547,16 +1555,22 @@ def DXILValidation : DiagGroup<"dxil-validation">;
 // Warning for HLSL API availability
 def HLSLAvailability : DiagGroup<"hlsl-availability">;
 
+// Warnings specifically for DXC incompatabilities.
+def HLSLDXCCompat : DiagGroup<"hlsl-dxc-compatability">;
+
+// Warnings for legacy binding behavior
+def LegacyConstantRegisterBinding : DiagGroup<"legacy-constant-register-binding">;
+
+// Warning for HLSL Attributes on Statement.
+def HLSLAttributeStatement : DiagGroup<"attribute-statement">;
+
 // Warnings and notes related to const_var_decl_type attribute checks
 def ReadOnlyPlacementChecks : DiagGroup<"read-only-types">;
 
 // Warnings and fixes to support the "safe buffers" programming model.
 def UnsafeBufferUsageInContainer : DiagGroup<"unsafe-buffer-usage-in-container">;
-def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer]>;
-
-// Warnings and notes related to the function effects system underlying
-// the nonblocking and nonallocating attributes.
-def FunctionEffects : DiagGroup<"function-effects">;
+def UnsafeBufferUsageInLibcCall : DiagGroup<"unsafe-buffer-usage-in-libc-call">;
+def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall]>;
 
 // Warnings and notes InstallAPI verification.
 def InstallAPIViolation : DiagGroup<"installapi-violation">;
@@ -1570,3 +1584,7 @@ def ExtractAPIMisuse : DiagGroup<"extractapi-misuse">;
 // Warnings about using the non-standard extension having an explicit specialization
 // with a storage class specifier.
 def ExplicitSpecializationStorageClass : DiagGroup<"explicit-specialization-storage-class">;
+
+// A warning for options that enable a feature that is not yet complete
+def ExperimentalOption : DiagGroup<"experimental-option">;
+

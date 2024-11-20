@@ -18,7 +18,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags -no-pie %t.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -v=1 -o %t.out |& FileCheck %s
+# RUN: llvm-bolt %t.exe -v=1 -o %t.out 2>&1 | FileCheck %s
 
 # CHECK: BOLT-WARNING: unclaimed data to code reference (possibly an unrecognized jump table entry) to .Ltmp[[#]] in main
 # CHECK: BOLT-WARNING: unclaimed data to code reference (possibly an unrecognized jump table entry) to .Ltmp[[#]] in main

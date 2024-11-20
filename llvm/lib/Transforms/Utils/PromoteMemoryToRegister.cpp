@@ -80,7 +80,8 @@ bool llvm::isAllocaPromotable(const AllocaInst *AI) {
       if (SI->isVolatile())
         return false;
     } else if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(U)) {
-      if (!II->isLifetimeStartOrEnd() && !II->isDroppable())
+      if (!II->isLifetimeStartOrEnd() && !II->isDroppable() &&
+          II->getIntrinsicID() != Intrinsic::fake_use)
         return false;
     } else if (const BitCastInst *BCI = dyn_cast<BitCastInst>(U)) {
       if (!onlyUsedByLifetimeMarkersOrDroppableInsts(BCI))
@@ -443,7 +444,7 @@ private:
 /// Given a LoadInst LI this adds assume(LI != null) after it.
 static void addAssumeNonNull(AssumptionCache *AC, LoadInst *LI) {
   Function *AssumeIntrinsic =
-      Intrinsic::getDeclaration(LI->getModule(), Intrinsic::assume);
+      Intrinsic::getOrInsertDeclaration(LI->getModule(), Intrinsic::assume);
   ICmpInst *LoadNotNull = new ICmpInst(ICmpInst::ICMP_NE, LI,
                                        Constant::getNullValue(LI->getType()));
   LoadNotNull->insertAfter(LI);
@@ -595,6 +596,10 @@ rewriteSingleStoreAlloca(AllocaInst *AI, AllocaInfo &Info, LargeBlockInfo &LBI,
     for (auto *DbgItem : Container) {
       if (DbgItem->isAddressOfVariable()) {
         ConvertDebugDeclareToDebugValue(DbgItem, Info.OnlyStore, DIB);
+        DbgItem->eraseFromParent();
+      } else if (DbgItem->isValueOfVariable() &&
+                 DbgItem->getExpression()->startsWithDeref()) {
+        InsertDebugValueAtStoreLoc(DbgItem, Info.OnlyStore, DIB);
         DbgItem->eraseFromParent();
       } else if (DbgItem->getExpression()->startsWithDeref()) {
         DbgItem->eraseFromParent();

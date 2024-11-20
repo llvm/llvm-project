@@ -85,121 +85,32 @@ void StackFrameList::ResetCurrentInlinedDepth() {
     return;
 
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  
-  GetFramesUpTo(0, DoNotAllowInterruption);
-  if (m_frames.empty())
-    return;
-  if (!m_frames[0]->IsInlined()) {
-    m_current_inlined_depth = UINT32_MAX;
-    m_current_inlined_pc = LLDB_INVALID_ADDRESS;
-    Log *log = GetLog(LLDBLog::Step);
-    if (log && log->GetVerbose())
-      LLDB_LOGF(
-          log,
-          "ResetCurrentInlinedDepth: Invalidating current inlined depth.\n");
-    return;
-  }
 
-  // We only need to do something special about inlined blocks when we are
-  // at the beginning of an inlined function:
-  // FIXME: We probably also have to do something special if the PC is at
-  // the END of an inlined function, which coincides with the end of either
-  // its containing function or another inlined function.
+  m_current_inlined_pc = LLDB_INVALID_ADDRESS;
+  m_current_inlined_depth = UINT32_MAX;
 
-  Block *block_ptr = m_frames[0]->GetFrameBlock();
-  if (!block_ptr)
-    return;
-
-  Address pc_as_address;
-  lldb::addr_t curr_pc = m_thread.GetRegisterContext()->GetPC();
-  pc_as_address.SetLoadAddress(curr_pc, &(m_thread.GetProcess()->GetTarget()));
-  AddressRange containing_range;
-  if (!block_ptr->GetRangeContainingAddress(pc_as_address, containing_range) ||
-      pc_as_address != containing_range.GetBaseAddress())
-    return;
-
-  // If we got here because of a breakpoint hit, then set the inlined depth
-  // depending on where the breakpoint was set. If we got here because of a
-  // crash, then set the inlined depth to the deepest most block.  Otherwise,
-  // we stopped here naturally as the result of a step, so set ourselves in the
-  // containing frame of the whole set of nested inlines, so the user can then
-  // "virtually" step into the frames one by one, or next over the whole mess.
-  // Note: We don't have to handle being somewhere in the middle of the stack
-  // here, since ResetCurrentInlinedDepth doesn't get called if there is a
-  // valid inlined depth set.
   StopInfoSP stop_info_sp = m_thread.GetStopInfo();
   if (!stop_info_sp)
     return;
-  switch (stop_info_sp->GetStopReason()) {
-  case eStopReasonWatchpoint:
-  case eStopReasonException:
-  case eStopReasonExec:
-  case eStopReasonFork:
-  case eStopReasonVFork:
-  case eStopReasonVForkDone:
-  case eStopReasonSignal:
-    // In all these cases we want to stop in the deepest frame.
-    m_current_inlined_pc = curr_pc;
-    m_current_inlined_depth = 0;
-    break;
-  case eStopReasonBreakpoint: {
-    // FIXME: Figure out what this break point is doing, and set the inline
-    // depth appropriately.  Be careful to take into account breakpoints that
-    // implement step over prologue, since that should do the default
-    // calculation. For now, if the breakpoints corresponding to this hit are
-    // all internal, I set the stop location to the top of the inlined stack,
-    // since that will make things like stepping over prologues work right.
-    // But if there are any non-internal breakpoints I do to the bottom of the
-    // stack, since that was the old behavior.
-    uint32_t bp_site_id = stop_info_sp->GetValue();
-    BreakpointSiteSP bp_site_sp(
-        m_thread.GetProcess()->GetBreakpointSiteList().FindByID(bp_site_id));
-    bool all_internal = true;
-    if (bp_site_sp) {
-      uint32_t num_owners = bp_site_sp->GetNumberOfConstituents();
-      for (uint32_t i = 0; i < num_owners; i++) {
-        Breakpoint &bp_ref =
-            bp_site_sp->GetConstituentAtIndex(i)->GetBreakpoint();
-        if (!bp_ref.IsInternal()) {
-          all_internal = false;
-        }
-      }
-    }
-    if (!all_internal) {
-      m_current_inlined_pc = curr_pc;
-      m_current_inlined_depth = 0;
-      break;
-    }
-  }
-    [[fallthrough]];
-  default: {
-    // Otherwise, we should set ourselves at the container of the inlining, so
-    // that the user can descend into them. So first we check whether we have
-    // more than one inlined block sharing this PC:
-    int num_inlined_functions = 0;
 
-    for (Block *container_ptr = block_ptr->GetInlinedParent();
-         container_ptr != nullptr;
-         container_ptr = container_ptr->GetInlinedParent()) {
-      if (!container_ptr->GetRangeContainingAddress(pc_as_address,
-                                                    containing_range))
-        break;
-      if (pc_as_address != containing_range.GetBaseAddress())
-        break;
+  bool inlined = true;
+  auto inline_depth = stop_info_sp->GetSuggestedStackFrameIndex(inlined);
+  // We're only adjusting the inlined stack here.
+  Log *log = GetLog(LLDBLog::Step);
+  if (inline_depth) {
+    m_current_inlined_depth = *inline_depth;
+    m_current_inlined_pc = m_thread.GetRegisterContext()->GetPC();
 
-      num_inlined_functions++;
-    }
-    m_current_inlined_pc = curr_pc;
-    m_current_inlined_depth = num_inlined_functions + 1;
-    Log *log = GetLog(LLDBLog::Step);
     if (log && log->GetVerbose())
       LLDB_LOGF(log,
                 "ResetCurrentInlinedDepth: setting inlined "
                 "depth: %d 0x%" PRIx64 ".\n",
-                m_current_inlined_depth, curr_pc);
-
-    break;
-  }
+                m_current_inlined_depth, m_current_inlined_pc);
+  } else {
+    if (log && log->GetVerbose())
+      LLDB_LOGF(
+          log,
+          "ResetCurrentInlinedDepth: Invalidating current inlined depth.\n");
   }
 }
 
@@ -816,19 +727,48 @@ void StackFrameList::SelectMostRelevantFrame() {
 
   RecognizedStackFrameSP recognized_frame_sp = frame_sp->GetRecognizedFrame();
 
-  if (!recognized_frame_sp) {
-    LLDB_LOG(log, "Frame #0 not recognized");
-    return;
+  if (recognized_frame_sp) {
+    if (StackFrameSP most_relevant_frame_sp =
+            recognized_frame_sp->GetMostRelevantFrame()) {
+      LLDB_LOG(log, "Found most relevant frame at index {0}",
+               most_relevant_frame_sp->GetFrameIndex());
+      SetSelectedFrame(most_relevant_frame_sp.get());
+      return;
+    }
+  }
+  LLDB_LOG(log, "Frame #0 not recognized");
+
+  // If this thread has a non-trivial StopInof, then let it suggest
+  // a most relevant frame:
+  StopInfoSP stop_info_sp = m_thread.GetStopInfo();
+  uint32_t stack_idx = 0;
+  bool found_relevant = false;
+  if (stop_info_sp) {
+    // Here we're only asking the stop info if it wants to adjust the real stack
+    // index.  We have to ask about the m_inlined_stack_depth in
+    // Thread::ShouldStop since the plans need to reason with that info.
+    bool inlined = false;
+    std::optional<uint32_t> stack_opt =
+        stop_info_sp->GetSuggestedStackFrameIndex(inlined);
+    if (stack_opt) {
+      stack_idx = *stack_opt;
+      found_relevant = true;
+    }
   }
 
-  if (StackFrameSP most_relevant_frame_sp =
-          recognized_frame_sp->GetMostRelevantFrame()) {
-    LLDB_LOG(log, "Found most relevant frame at index {0}",
-             most_relevant_frame_sp->GetFrameIndex());
-    SetSelectedFrame(most_relevant_frame_sp.get());
-  } else {
+  frame_sp = GetFrameAtIndex(stack_idx);
+  if (!frame_sp)
+    LLDB_LOG(log, "Stop info suggested relevant frame {0} but it didn't exist",
+             stack_idx);
+  else if (found_relevant)
+    LLDB_LOG(log, "Setting selected frame from stop info to {0}", stack_idx);
+  // Note, we don't have to worry about "inlined" frames here, because we've
+  // already calculated the inlined frame in Thread::ShouldStop, and
+  // SetSelectedFrame will take care of that adjustment for us.
+  SetSelectedFrame(frame_sp.get());
+
+  if (!found_relevant)
     LLDB_LOG(log, "No relevant frame!");
-  }
 }
 
 uint32_t StackFrameList::GetSelectedFrameIndex(
@@ -841,6 +781,7 @@ uint32_t StackFrameList::GetSelectedFrameIndex(
     // isn't set, then don't force a selection here, just return 0.
     if (!select_most_relevant)
       return 0;
+    // If the inlined stack frame is set, then use that:
     m_selected_frame_idx = 0;
   }
   return *m_selected_frame_idx;
@@ -886,7 +827,7 @@ void StackFrameList::SetDefaultFileAndLineToSelectedFrame() {
       SymbolContext sc = frame_sp->GetSymbolContext(eSymbolContextLineEntry);
       if (sc.line_entry.GetFile())
         m_thread.CalculateTarget()->GetSourceManager().SetDefaultFileAndLine(
-            sc.line_entry.GetFile(), sc.line_entry.line);
+            sc.line_entry.file_sp, sc.line_entry.line);
     }
   }
 }
@@ -924,7 +865,7 @@ StackFrameList::GetStackFrameSPForStackFramePtr(StackFrame *stack_frame_ptr) {
 size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
                                  uint32_t num_frames, bool show_frame_info,
                                  uint32_t num_frames_with_source,
-                                 bool show_unique,
+                                 bool show_unique, bool show_hidden,
                                  const char *selected_frame_marker) {
   size_t num_frames_displayed = 0;
 
@@ -951,7 +892,6 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
     unselected_marker = buffer.c_str();
   }
   const char *marker = nullptr;
-
   for (frame_idx = first_frame; frame_idx < last_frame; ++frame_idx) {
     frame_sp = GetFrameAtIndex(frame_idx);
     if (!frame_sp)
@@ -963,6 +903,11 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
       else
         marker = unselected_marker;
     }
+
+    // Hide uninteresting frames unless it's the selected frame.
+    if (!show_hidden && frame_sp != selected_frame_sp && frame_sp->IsHidden())
+      continue;
+
     // Check for interruption here.  If we're fetching arguments, this loop
     // can go slowly:
     Debugger &dbg = m_thread.GetProcess()->GetTarget().GetDebugger();

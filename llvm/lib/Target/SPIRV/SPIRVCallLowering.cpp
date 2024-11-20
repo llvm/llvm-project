@@ -36,6 +36,13 @@ bool SPIRVCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                     const Value *Val, ArrayRef<Register> VRegs,
                                     FunctionLoweringInfo &FLI,
                                     Register SwiftErrorVReg) const {
+  // Ignore if called from the internal service function
+  if (MIRBuilder.getMF()
+          .getFunction()
+          .getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME)
+          .isValid())
+    return true;
+
   // Maybe run postponed production of types for function pointers
   if (IndirectCalls.size() > 0) {
     produceIndirectPtrTypes(MIRBuilder);
@@ -94,9 +101,6 @@ static FunctionType *
 fixFunctionTypeIfPtrArgs(SPIRVGlobalRegistry *GR, const Function &F,
                          FunctionType *FTy, const SPIRVType *SRetTy,
                          const SmallVector<SPIRVType *, 4> &SArgTys) {
-  if (F.getParent()->getNamedMetadata("spv.cloned_funcs"))
-    return FTy;
-
   bool hasArgPtrs = false;
   for (auto &Arg : F.args()) {
     // check if it's an instance of a non-typed PointerType
@@ -280,6 +284,10 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                              const Function &F,
                                              ArrayRef<ArrayRef<Register>> VRegs,
                                              FunctionLoweringInfo &FLI) const {
+  // Discard the internal service function
+  if (F.getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME).isValid())
+    return true;
+
   assert(GR && "Must initialize the SPIRV type registry before lowering args.");
   GR->setCurrentFunc(MIRBuilder.getMF());
 
@@ -371,8 +379,8 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   }
 
   auto MRI = MIRBuilder.getMRI();
-  Register FuncVReg = MRI->createGenericVirtualRegister(LLT::scalar(32));
-  MRI->setRegClass(FuncVReg, &SPIRV::IDRegClass);
+  Register FuncVReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+  MRI->setRegClass(FuncVReg, &SPIRV::iIDRegClass);
   if (F.isDeclaration())
     GR->add(&F, &MIRBuilder.getMF(), FuncVReg);
   FunctionType *FTy = getOriginalFunctionType(F);
@@ -403,12 +411,14 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   int i = 0;
   for (const auto &Arg : F.args()) {
     assert(VRegs[i].size() == 1 && "Formal arg has multiple vregs");
-    MRI->setRegClass(VRegs[i][0], &SPIRV::IDRegClass);
+    Register ArgReg = VRegs[i][0];
+    MRI->setRegClass(ArgReg, GR->getRegClass(ArgTypeVRegs[i]));
+    MRI->setType(ArgReg, GR->getRegType(ArgTypeVRegs[i]));
     MIRBuilder.buildInstr(SPIRV::OpFunctionParameter)
-        .addDef(VRegs[i][0])
+        .addDef(ArgReg)
         .addUse(GR->getSPIRVTypeID(ArgTypeVRegs[i]));
     if (F.isDeclaration())
-      GR->add(&Arg, &MIRBuilder.getMF(), VRegs[i][0]);
+      GR->add(&Arg, &MIRBuilder.getMF(), ArgReg);
     i++;
   }
   // Name the function.
@@ -532,10 +542,41 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     SmallVector<Register, 8> ArgVRegs;
     for (auto Arg : Info.OrigArgs) {
       assert(Arg.Regs.size() == 1 && "Call arg has multiple VRegs");
-      ArgVRegs.push_back(Arg.Regs[0]);
-      SPIRVType *SPIRVTy = GR->getOrCreateSPIRVType(Arg.Ty, MIRBuilder);
-      if (!GR->getSPIRVTypeForVReg(Arg.Regs[0]))
-        GR->assignSPIRVTypeToVReg(SPIRVTy, Arg.Regs[0], MF);
+      Register ArgReg = Arg.Regs[0];
+      ArgVRegs.push_back(ArgReg);
+      SPIRVType *SpvType = GR->getSPIRVTypeForVReg(ArgReg);
+      if (!SpvType) {
+        Type *ArgTy = nullptr;
+        if (auto *PtrArgTy = dyn_cast<PointerType>(Arg.Ty)) {
+          // If Arg.Ty is an untyped pointer (i.e., ptr [addrspace(...)]) and we
+          // don't have access to original value in LLVM IR or info about
+          // deduced pointee type, then we should wait with setting the type for
+          // the virtual register until pre-legalizer step when we access
+          // @llvm.spv.assign.ptr.type.p...(...)'s info.
+          if (Arg.OrigValue)
+            if (Type *ElemTy = GR->findDeducedElementType(Arg.OrigValue))
+              ArgTy =
+                  TypedPointerType::get(ElemTy, PtrArgTy->getAddressSpace());
+        } else {
+          ArgTy = Arg.Ty;
+        }
+        if (ArgTy) {
+          SpvType = GR->getOrCreateSPIRVType(ArgTy, MIRBuilder);
+          GR->assignSPIRVTypeToVReg(SpvType, ArgReg, MF);
+        }
+      }
+      if (!MRI->getRegClassOrNull(ArgReg)) {
+        // Either we have SpvType created, or Arg.Ty is an untyped pointer and
+        // we know its virtual register's class and type even if we don't know
+        // pointee type.
+        MRI->setRegClass(ArgReg, SpvType ? GR->getRegClass(SpvType)
+                                         : &SPIRV::pIDRegClass);
+        MRI->setType(
+            ArgReg,
+            SpvType ? GR->getRegType(SpvType)
+                    : LLT::pointer(cast<PointerType>(Arg.Ty)->getAddressSpace(),
+                                   GR->getPointerSize()));
+      }
     }
     auto instructionSet = canUseOpenCL ? SPIRV::InstructionSet::OpenCL_std
                                        : SPIRV::InstructionSet::GLSL_std_450;
@@ -557,14 +598,24 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     for (const Argument &Arg : CF->args()) {
       if (MIRBuilder.getDataLayout().getTypeStoreSize(Arg.getType()).isZero())
         continue; // Don't handle zero sized types.
-      Register Reg = MRI->createGenericVirtualRegister(LLT::scalar(32));
-      MRI->setRegClass(Reg, &SPIRV::IDRegClass);
+      Register Reg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+      MRI->setRegClass(Reg, &SPIRV::iIDRegClass);
       ToInsert.push_back({Reg});
       VRegArgs.push_back(ToInsert.back());
     }
     // TODO: Reuse FunctionLoweringInfo
     FunctionLoweringInfo FuncInfo;
     lowerFormalArguments(FirstBlockBuilder, *CF, VRegArgs, FuncInfo);
+  }
+
+  // Ignore the call if it's called from the internal service function
+  if (MIRBuilder.getMF()
+          .getFunction()
+          .getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME)
+          .isValid()) {
+    // insert a no-op
+    MIRBuilder.buildTrap();
+    return true;
   }
 
   unsigned CallOp;
@@ -596,7 +647,7 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // Make sure there's a valid return reg, even for functions returning void.
   if (!ResVReg.isValid())
-    ResVReg = MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::IDRegClass);
+    ResVReg = MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::iIDRegClass);
   SPIRVType *RetType = GR->assignTypeToVReg(OrigRetTy, ResVReg, MIRBuilder);
 
   // Emit the call instruction and its args.

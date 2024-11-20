@@ -67,6 +67,7 @@ void transform::ApplyFoldElementwiseToVectorPatternsOp::populatePatterns(
 void transform::ApplyVectorReductionToContractPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorReductionToContractPatterns(patterns);
+  vector::populateSinkVectorOpsPatterns(patterns);
 }
 
 void transform::ApplyLowerCreateMaskPatternsOp::populatePatterns(
@@ -82,6 +83,11 @@ void transform::ApplyRankReducingSubviewPatternsOp::populatePatterns(
 void transform::ApplyTransferPermutationPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorTransferPermutationMapLoweringPatterns(patterns);
+}
+
+void transform::ApplyDropUnitDimWithShapeCastPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateDropUnitDimWithShapeCastPatterns(patterns);
 }
 
 void transform::ApplyLowerBitCastPatternsOp::populatePatterns(

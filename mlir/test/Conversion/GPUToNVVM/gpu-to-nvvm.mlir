@@ -50,7 +50,7 @@ gpu.module @test_module_0 {
     %gDimZ = gpu.grid_dim z
 
 
-    // CHECK: = nvvm.read.ptx.sreg.laneid : i32
+    // CHECK: = nvvm.read.ptx.sreg.laneid range <i32, 0, 32> : i32
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
     %laneId = gpu.lane_id
 
@@ -610,6 +610,13 @@ gpu.module @test_module_29 {
     // CHECK-NEXT: %[[ALLOC:.*]] = llvm.alloca %[[O]] x !llvm.struct<()> : (i64) -> !llvm.ptr
     // CHECK-NEXT: llvm.call @vprintf(%[[FORMATSTART]], %[[ALLOC]]) : (!llvm.ptr, !llvm.ptr) -> i32
     gpu.printf "Hello, world\n"
+
+    // Make sure that the same global is reused.
+    // CHECK: %[[FORMATSTR2:.*]] = llvm.mlir.addressof @[[$PRINT_GLOBAL0]] : !llvm.ptr
+    // CHECK: %[[FORMATSTART2:.*]] = llvm.getelementptr %[[FORMATSTR2]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<14 x i8>
+    // CHECK: llvm.call @vprintf(%[[FORMATSTART2]], %{{.*}}) : (!llvm.ptr, !llvm.ptr) -> i32
+    gpu.printf "Hello, world\n"
+
     gpu.return
   }
 
@@ -699,9 +706,21 @@ gpu.module @test_module_32 {
 }
 
 gpu.module @test_module_33 {
-// CHECK-LABEL: func @kernel_with_block_size()
-// CHECK: attributes {gpu.kernel, gpu.known_block_size = array<i32: 128, 1, 1>, nvvm.kernel, nvvm.maxntid = array<i32: 128, 1, 1>}
-  gpu.func @kernel_with_block_size() kernel attributes {known_block_size = array<i32: 128, 1, 1>} {
+// CHECK-LABEL: func @kernel_with_block_size(
+// CHECK: attributes {gpu.kernel, gpu.known_block_size = array<i32: 32, 4, 2>, nvvm.kernel, nvvm.maxntid = array<i32: 32, 4, 2>}
+  gpu.func @kernel_with_block_size(%arg0: !llvm.ptr) kernel attributes {known_block_size = array<i32: 32, 4, 2>} {
+    // CHECK: = nvvm.read.ptx.sreg.tid.x range <i32, 0, 32> : i32
+    %0 = gpu.thread_id x
+    // CHECK: = nvvm.read.ptx.sreg.tid.y range <i32, 0, 4> : i32
+    %1 = gpu.thread_id y
+    // CHECK: = nvvm.read.ptx.sreg.tid.z range <i32, 0, 2> : i32
+    %2 = gpu.thread_id z
+
+    // Fake usage to prevent dead code elimination
+    %3 = arith.addi %0, %1 : index
+    %4 = arith.addi %3, %2 : index
+    %5 = arith.index_cast %4 : index to i64
+    llvm.store %5, %arg0 : i64, !llvm.ptr
     gpu.return
   }
 }
@@ -917,6 +936,39 @@ gpu.module @test_module_48 {
   }
 }
 
+gpu.module @test_module_49 {
+// CHECK-LABEL: func @explicit_id_bounds()
+  func.func @explicit_id_bounds() -> (index, index, index) {
+    // CHECK: = nvvm.read.ptx.sreg.tid.x range <i32, 0, 32> : i32
+    %0 = gpu.thread_id x upper_bound 32
+    // CHECK: = nvvm.read.ptx.sreg.ntid.x range <i32, 1, 33> : i32
+    %1 = gpu.block_dim x upper_bound 32
+    // CHECK: = nvvm.read.ptx.sreg.laneid range <i32, 0, 16> : i32
+    %2 = gpu.lane_id upper_bound 16
+
+    return %0, %1, %2 : index, index, index
+  }
+}
+
+gpu.module @test_module_50 {
+// CHECK-LABEL: func @kernel_with_grid_size(
+  gpu.func @kernel_with_grid_size(%arg0: !llvm.ptr) kernel attributes {known_grid_size = array<i32: 32, 4, 2>} {
+    // CHECK: = nvvm.read.ptx.sreg.ctaid.x range <i32, 0, 32> : i32
+    %0 = gpu.block_id x
+    // CHECK: = nvvm.read.ptx.sreg.ctaid.y range <i32, 0, 4> : i32
+    %1 = gpu.block_id y
+    // CHECK: = nvvm.read.ptx.sreg.ctaid.z range <i32, 0, 2> : i32
+    %2 = gpu.block_id z
+
+    // Fake usage to prevent dead code elimination
+    %3 = arith.addi %0, %1 : index
+    %4 = arith.addi %3, %2 : index
+    %5 = arith.index_cast %4 : index to i64
+    llvm.store %5, %arg0 : i64, !llvm.ptr
+    gpu.return
+  }
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%toplevel_module: !transform.any_op {transform.readonly}) {
     %gpu_module = transform.structured.match ops{["gpu.module"]} in %toplevel_module
@@ -942,7 +994,7 @@ module attributes {transform.with_named_sequence} {
         use_bare_ptr_call_conv = false}
     } {
       legal_dialects = ["llvm", "memref", "nvvm", "test"],
-      legal_ops = ["func.func", "gpu.module", "gpu.module_end", "gpu.yield"],
+      legal_ops = ["func.func", "gpu.module", "gpu.yield"],
       illegal_dialects = ["gpu"],
       illegal_ops = ["llvm.copysign", "llvm.cos", "llvm.exp", "llvm.exp2", "llvm.fabs", "llvm.fceil",
                     "llvm.ffloor", "llvm.fma", "llvm.frem", "llvm.log", "llvm.log10", "llvm.log2", "llvm.pow",

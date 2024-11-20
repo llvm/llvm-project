@@ -105,7 +105,6 @@ public:
 
   void spillFPBP(MachineFunction &MF) const override;
 
-  bool hasFP(const MachineFunction &MF) const override;
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
   bool canSimplifyCallFramePseudos(const MachineFunction &MF) const override;
   bool needsFrameIndexResolution(const MachineFunction &MF) const override;
@@ -201,6 +200,9 @@ public:
   /// frame of the top of stack function) as part of it's ABI.
   bool has128ByteRedZone(const MachineFunction& MF) const;
 
+protected:
+  bool hasFPImpl(const MachineFunction &MF) const override;
+
 private:
   bool isWin64Prologue(const MachineFunction &MF) const;
 
@@ -286,6 +288,11 @@ private:
                                  MachineBasicBlock::iterator BeforeMI,
                                  MachineBasicBlock::iterator AfterMI,
                                  bool SpillFP, bool SpillBP) const;
+
+  void checkInterferedAccess(MachineFunction &MF,
+                             MachineBasicBlock::reverse_iterator DefMI,
+                             MachineBasicBlock::reverse_iterator KillMI,
+                             bool SpillFP, bool SpillBP) const;
 
   // If MI uses fp/bp, but target can handle it, and doesn't want to be spilled
   // again, this function should return true, and update MI so we will not check

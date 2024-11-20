@@ -335,7 +335,9 @@ public:
 
     ScanInstance.getFrontendOpts().GenerateGlobalModuleIndex = false;
     ScanInstance.getFrontendOpts().UseGlobalModuleIndex = false;
-    ScanInstance.getFrontendOpts().ModulesShareFileManager = false;
+    // This will prevent us compiling individual modules asynchronously since
+    // FileManager is not thread-safe, but it does improve performance for now.
+    ScanInstance.getFrontendOpts().ModulesShareFileManager = true;
     ScanInstance.getHeaderSearchOpts().ModuleFormat = "raw";
     ScanInstance.getHeaderSearchOpts().ModulesIncludeVFSUsage =
         any(OptimizeArgs & ScanningOptimizations::VFS);
@@ -344,6 +346,26 @@ public:
     auto FS = createVFSFromCompilerInvocation(
         ScanInstance.getInvocation(), ScanInstance.getDiagnostics(),
         DriverFileMgr->getVirtualFileSystemPtr());
+
+    // Use the dependency scanning optimized file system if requested to do so.
+    if (DepFS) {
+      StringRef ModulesCachePath =
+          ScanInstance.getHeaderSearchOpts().ModuleCachePath;
+
+      DepFS->resetBypassedPathPrefix();
+      if (!ModulesCachePath.empty())
+        DepFS->setBypassedPathPrefix(ModulesCachePath);
+
+      ScanInstance.getPreprocessorOpts().DependencyDirectivesForFile =
+          [LocalDepFS = DepFS](FileEntryRef File)
+          -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
+        if (llvm::ErrorOr<EntryRef> Entry =
+                LocalDepFS->getOrCreateFileSystemEntry(File.getName()))
+          if (LocalDepFS->ensureDirectiveTokensArePopulated(*Entry))
+            return Entry->getDirectiveTokens();
+        return std::nullopt;
+      };
+    }
 
     // Create a new FileManager to match the invocation's FileSystemOptions.
     auto *FileMgr = ScanInstance.createFileManager(FS);
@@ -360,18 +382,6 @@ public:
               ScanInstance.getHeaderSearchOpts().PrebuiltModuleFiles,
               PrebuiltModuleVFSMap, ScanInstance.getDiagnostics()))
         return false;
-
-    // Use the dependency scanning optimized file system if requested to do so.
-    if (DepFS)
-      ScanInstance.getPreprocessorOpts().DependencyDirectivesForFile =
-          [LocalDepFS = DepFS](FileEntryRef File)
-          -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
-        if (llvm::ErrorOr<EntryRef> Entry =
-                LocalDepFS->getOrCreateFileSystemEntry(File.getName()))
-          if (LocalDepFS->ensureDirectiveTokensArePopulated(*Entry))
-            return Entry->getDirectiveTokens();
-        return std::nullopt;
-      };
 
     // Create the dependency collector that will collect the produced
     // dependencies.
@@ -412,6 +422,7 @@ public:
     // TODO: Implement diagnostic bucketing to reduce the impact of strict
     // context hashing.
     ScanInstance.getHeaderSearchOpts().ModulesStrictContextHash = true;
+    ScanInstance.getHeaderSearchOpts().ModulesSerializeOnlyPreprocessor = true;
     ScanInstance.getHeaderSearchOpts().ModulesSkipDiagnosticOptions = true;
     ScanInstance.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
     ScanInstance.getHeaderSearchOpts().ModulesSkipPragmaDiagnosticMappings =
@@ -422,7 +433,9 @@ public:
 
     std::unique_ptr<FrontendAction> Action;
 
-    if (ModuleName)
+    if (Format == ScanningOutputFormat::P1689)
+      Action = std::make_unique<PreprocessOnlyAction>();
+    else if (ModuleName)
       Action = std::make_unique<GetDependenciesByModuleNameAction>(*ModuleName);
     else
       Action = std::make_unique<ReadPCHAndPreprocessAction>();
@@ -490,6 +503,9 @@ DependencyScanningWorker::DependencyScanningWorker(
       std::make_unique<ObjectFilePCHContainerReader>());
   // The scanner itself writes only raw ast files.
   PCHContainerOps->registerWriter(std::make_unique<RawPCHContainerWriter>());
+
+  if (Service.shouldTraceVFS())
+    FS = llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(std::move(FS));
 
   switch (Service.getMode()) {
   case ScanningMode::DependencyDirectivesScan:

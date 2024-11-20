@@ -10,21 +10,13 @@
 
 #define DEBUG_TYPE "mask"
 
-#include "HexagonMachineFunctionInfo.h"
 #include "HexagonSubtarget.h"
-#include "HexagonTargetMachine.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -89,6 +81,9 @@ bool HexagonMask::runOnMachineFunction(MachineFunction &MF) {
   const Function &F = MF.getFunction();
 
   if (!F.hasFnAttribute(Attribute::OptimizeForSize))
+    return false;
+  // Mask instruction is available only from v66
+  if (!HST.hasV66Ops())
     return false;
   // The mask instruction available in v66 can be used to generate values in
   // registers using 2 immediates Eg. to form 0x07fffffc in R0, you would write

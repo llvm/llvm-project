@@ -42,7 +42,6 @@
 ; CHECK-NEXT:      Scalarize Masked Memory Intrinsics
 ; CHECK-NEXT:      Expand reduction intrinsics
 ; CHECK-NEXT:      Natural Loop Information
-; CHECK-NEXT:      TLS Variable Hoist
 ; CHECK-NEXT:      Scalar Evolution Analysis
 ; CHECK-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:      Function Alias Analysis Results
@@ -64,11 +63,14 @@
 ; CHECK-NEXT:        Transform predicated vector loops to use MVE tail predication
 ; CHECK-NEXT:      A No-Op Barrier Pass
 ; CHECK-NEXT:      FunctionPass Manager
+; CHECK-NEXT:      Dominator Tree Construction
+; CHECK-NEXT:      Basic Alias Analysis (stateless AA impl)
+; CHECK-NEXT:      Function Alias Analysis Results
+; CHECK-NEXT:      ObjC ARC contraction
 ; CHECK-NEXT:      Prepare callbr
 ; CHECK-NEXT:      Safe Stack instrumentation pass
 ; CHECK-NEXT:      Insert stack protectors
 ; CHECK-NEXT:      Module Verifier
-; CHECK-NEXT:      Dominator Tree Construction
 ; CHECK-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:      Function Alias Analysis Results
 ; CHECK-NEXT:      Natural Loop Information
@@ -190,6 +192,7 @@
 ; CHECK-NEXT:      ARM block placement
 ; CHECK-NEXT:      optimise barriers pass
 ; CHECK-NEXT:      Contiguously Lay Out Funclets
+; CHECK-NEXT:      Remove Loads Into Fake Uses
 ; CHECK-NEXT:      StackMap Liveness Analysis
 ; CHECK-NEXT:      Live DEBUG_VALUE analysis
 ; CHECK-NEXT:      Machine Sanitizer Binary Metadata

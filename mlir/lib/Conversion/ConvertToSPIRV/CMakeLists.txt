@@ -15,8 +15,11 @@ add_mlir_conversion_library(MLIRConvertToSPIRVPass
   MLIRArithToSPIRV
   MLIRArithTransforms
   MLIRFuncToSPIRV
+  MLIRGPUDialect
+  MLIRGPUToSPIRV
   MLIRIndexToSPIRV
   MLIRIR
+  MLIRMemRefToSPIRV
   MLIRPass
   MLIRRewrite
   MLIRSCFToSPIRV

@@ -63,6 +63,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-forward.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
 
@@ -89,40 +90,28 @@ using namespace lldb;
 using namespace lldb_private;
 
 #if !defined(__APPLE__)
-#if !defined(_WIN32)
-#include <syslog.h>
-void Host::SystemLog(Severity severity, llvm::StringRef message) {
-  static llvm::once_flag g_openlog_once;
-  llvm::call_once(g_openlog_once,
-                  [] { openlog("lldb", LOG_PID | LOG_NDELAY, LOG_USER); });
-  int level = LOG_DEBUG;
-  switch (severity) {
-  case lldb::eSeverityInfo:
-    level = LOG_INFO;
-    break;
-  case lldb::eSeverityWarning:
-    level = LOG_WARNING;
-    break;
-  case lldb::eSeverityError:
-    level = LOG_ERR;
-    break;
-  }
-  syslog(level, "%s", message.data());
-}
-#else
-void Host::SystemLog(Severity severity, llvm::StringRef message) {
-  switch (severity) {
-  case lldb::eSeverityInfo:
-  case lldb::eSeverityWarning:
-    llvm::outs() << message;
-    break;
-  case lldb::eSeverityError:
-    llvm::errs() << message;
-    break;
-  }
-}
+// The system log is currently only meaningful on Darwin, where this means
+// os_log. The meaning of a "system log" isn't as clear on other platforms, and
+// therefore we don't providate a default implementation. Vendors are free to
+// to implement this function if they have a use for it.
+void Host::SystemLog(Severity severity, llvm::StringRef message) {}
 #endif
-#endif
+
+static constexpr Log::Category g_categories[] = {
+    {{"system"}, {"system log"}, SystemLog::System}};
+
+static Log::Channel g_system_channel(g_categories, SystemLog::System);
+static Log g_system_log(g_system_channel);
+
+template <> Log::Channel &lldb_private::LogChannelFor<SystemLog>() {
+  return g_system_channel;
+}
+
+void LogChannelSystem::Initialize() {
+  g_system_log.Enable(std::make_shared<SystemLogHandler>());
+}
+
+void LogChannelSystem::Terminate() { g_system_log.Disable(); }
 
 #if !defined(__APPLE__) && !defined(_WIN32)
 static thread_result_t
@@ -501,11 +490,12 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
   const lldb::pid_t pid = launch_info.GetProcessID();
 
   if (error.Success() && pid == LLDB_INVALID_PROCESS_ID)
-    error.SetErrorString("failed to get process ID");
+    error = Status::FromErrorString("failed to get process ID");
 
   if (error.Success()) {
     if (!shell_info_sp->process_reaped.WaitForValueEqualTo(true, timeout)) {
-      error.SetErrorString("timed out waiting for shell command to complete");
+      error = Status::FromErrorString(
+          "timed out waiting for shell command to complete");
 
       // Kill the process since it didn't complete within the timeout specified
       Kill(pid, SIGKILL);
@@ -525,7 +515,7 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
             FileSystem::Instance().GetByteSize(output_file_spec);
         if (file_size > 0) {
           if (file_size > command_output_ptr->max_size()) {
-            error.SetErrorStringWithFormat(
+            error = Status::FromErrorStringWithFormat(
                 "shell command output is too large to fit into a std::string");
           } else {
             WritableDataBufferSP Buffer =

@@ -21,10 +21,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_void : _BoolConstant<__is_same(__remove_cv(_Tp), void)> {};
 
-#  if _LIBCPP_STD_VER >= 17
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_void_v = __is_same(__remove_cv(_Tp), void);
-#  endif
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -104,8 +104,8 @@
 #include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <algorithm>
 #include <cassert>
@@ -1077,17 +1077,16 @@ void DFSanFunction::addReachesFunctionCallbacksIfEnabled(IRBuilder<> &IRB,
 
   if (dbgloc.get() == nullptr) {
     CILine = llvm::ConstantInt::get(I.getContext(), llvm::APInt(32, 0));
-    FilePathPtr = IRB.CreateGlobalStringPtr(
+    FilePathPtr = IRB.CreateGlobalString(
         I.getFunction()->getParent()->getSourceFileName());
   } else {
     CILine = llvm::ConstantInt::get(I.getContext(),
                                     llvm::APInt(32, dbgloc.getLine()));
-    FilePathPtr =
-        IRB.CreateGlobalStringPtr(dbgloc->getFilename());
+    FilePathPtr = IRB.CreateGlobalString(dbgloc->getFilename());
   }
 
   llvm::Value *FunctionNamePtr =
-      IRB.CreateGlobalStringPtr(I.getFunction()->getName());
+      IRB.CreateGlobalString(I.getFunction()->getName());
 
   CallInst *CB;
   std::vector<Value *> args;
@@ -1175,7 +1174,7 @@ bool DataFlowSanitizer::initializeModule(Module &M) {
                                 PointerType::getUnqual(*Ctx), IntptrTy};
   DFSanSetLabelFnTy = FunctionType::get(Type::getVoidTy(*Ctx),
                                         DFSanSetLabelArgs, /*isVarArg=*/false);
-  DFSanNonzeroLabelFnTy = FunctionType::get(Type::getVoidTy(*Ctx), std::nullopt,
+  DFSanNonzeroLabelFnTy = FunctionType::get(Type::getVoidTy(*Ctx), {},
                                             /*isVarArg=*/false);
   DFSanVarargWrapperFnTy = FunctionType::get(
       Type::getVoidTy(*Ctx), PointerType::getUnqual(*Ctx), /*isVarArg=*/false);
@@ -1293,7 +1292,7 @@ void DataFlowSanitizer::buildExternWeakCheckIfNeeded(IRBuilder<> &IRB,
   if (GlobalValue::isExternalWeakLinkage(F->getLinkage())) {
     std::vector<Value *> Args;
     Args.push_back(F);
-    Args.push_back(IRB.CreateGlobalStringPtr(F->getName()));
+    Args.push_back(IRB.CreateGlobalString(F->getName()));
     IRB.CreateCall(DFSanWrapperExternWeakNullFn, Args);
   }
 }
@@ -1306,15 +1305,14 @@ DataFlowSanitizer::buildWrapperFunction(Function *F, StringRef NewFName,
   Function *NewF = Function::Create(NewFT, NewFLink, F->getAddressSpace(),
                                     NewFName, F->getParent());
   NewF->copyAttributesFrom(F);
-  NewF->removeRetAttrs(
-      AttributeFuncs::typeIncompatible(NewFT->getReturnType()));
+  NewF->removeRetAttrs(AttributeFuncs::typeIncompatible(
+      NewFT->getReturnType(), NewF->getAttributes().getRetAttrs()));
 
   BasicBlock *BB = BasicBlock::Create(*Ctx, "entry", NewF);
   if (F->isVarArg()) {
     NewF->removeFnAttr("split-stack");
     CallInst::Create(DFSanVarargWrapperFn,
-                     IRBuilder<>(BB).CreateGlobalStringPtr(F->getName()), "",
-                     BB);
+                     IRBuilder<>(BB).CreateGlobalString(F->getName()), "", BB);
     new UnreachableInst(*Ctx, BB);
   } else {
     auto ArgIt = pointer_iterator<Argument *>(NewF->arg_begin());
@@ -3086,7 +3084,7 @@ bool DFSanVisitor::visitWrappedCallBase(Function &F, CallBase &CB) {
   case DataFlowSanitizer::WK_Warning:
     CB.setCalledFunction(&F);
     IRB.CreateCall(DFSF.DFS.DFSanUnimplementedFn,
-                   IRB.CreateGlobalStringPtr(F.getName()));
+                   IRB.CreateGlobalString(F.getName()));
     DFSF.DFS.buildExternWeakCheckIfNeeded(IRB, &F);
     DFSF.setShadow(&CB, DFSF.DFS.getZeroShadow(&CB));
     DFSF.setOrigin(&CB, DFSF.DFS.ZeroOrigin);
@@ -3473,6 +3471,9 @@ void DFSanVisitor::visitPHINode(PHINode &PN) {
 
 PreservedAnalyses DataFlowSanitizerPass::run(Module &M,
                                              ModuleAnalysisManager &AM) {
+  // Return early if nosanitize_dataflow module flag is present for the module.
+  if (checkIfAlreadyInstrumented(M, "nosanitize_dataflow"))
+    return PreservedAnalyses::all();
   auto GetTLI = [&](Function &F) -> TargetLibraryInfo & {
     auto &FAM =
         AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();

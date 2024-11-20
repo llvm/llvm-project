@@ -38,6 +38,8 @@ template <> struct ScalarEnumerationTraits<AMXProgModelEnum> {
 
 struct X86MachineFunctionInfo final : public yaml::MachineFunctionInfo {
   AMXProgModelEnum AMXProgModel;
+  bool FPClobberedByCall;
+  bool HasPushSequences;
 
   X86MachineFunctionInfo() = default;
   X86MachineFunctionInfo(const llvm::X86MachineFunctionInfo &MFI);
@@ -49,6 +51,8 @@ struct X86MachineFunctionInfo final : public yaml::MachineFunctionInfo {
 template <> struct MappingTraits<X86MachineFunctionInfo> {
   static void mapping(IO &YamlIO, X86MachineFunctionInfo &MFI) {
     YamlIO.mapOptional("amxProgModel", MFI.AMXProgModel);
+    YamlIO.mapOptional("FPClobberedByCall", MFI.FPClobberedByCall, false);
+    YamlIO.mapOptional("hasPushSequences", MFI.HasPushSequences, false);
   }
 };
 } // end namespace yaml
@@ -173,6 +177,8 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   // True if a function clobbers FP/BP according to its calling convention.
   bool FPClobberedByCall = false;
   bool BPClobberedByCall = false;
+  bool FPClobberedByInvoke = false;
+  bool BPClobberedByInvoke = false;
 
 private:
   /// ForwardedMustTailRegParms - A list of virtual and physical registers
@@ -338,6 +344,12 @@ public:
 
   bool getBPClobberedByCall() const { return BPClobberedByCall; }
   void setBPClobberedByCall(bool C) { BPClobberedByCall = C; }
+
+  bool getFPClobberedByInvoke() const { return FPClobberedByInvoke; }
+  void setFPClobberedByInvoke(bool C) { FPClobberedByInvoke = C; }
+
+  bool getBPClobberedByInvoke() const { return BPClobberedByInvoke; }
+  void setBPClobberedByInvoke(bool C) { BPClobberedByInvoke = C; }
 };
 
 } // End llvm namespace

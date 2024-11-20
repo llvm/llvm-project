@@ -1,6 +1,5 @@
 #include <clc/clc.h>
-
-#include "../../../generic/lib/clcmacro.h"
+#include <clc/clcmacro.h>
 
 _CLC_DEF _CLC_OVERLOAD float fmax(float x, float y)
 {

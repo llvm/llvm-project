@@ -2231,11 +2231,9 @@ void InstrRefBasedLDV::accumulateFragmentMap(MachineInstr &MI) {
   // If this is the first sighting of this variable, then we are guaranteed
   // there are currently no overlapping fragments either. Initialize the set
   // of seen fragments, record no overlaps for the current one, and return.
-  auto SeenIt = SeenFragments.find(MIVar.getVariable());
-  if (SeenIt == SeenFragments.end()) {
-    SmallSet<FragmentInfo, 4> OneFragment;
-    OneFragment.insert(ThisFragment);
-    SeenFragments.insert({MIVar.getVariable(), OneFragment});
+  auto [SeenIt, Inserted] = SeenFragments.try_emplace(MIVar.getVariable());
+  if (Inserted) {
+    SeenIt->second.insert(ThisFragment);
 
     OverlapFragments.insert({{MIVar.getVariable(), ThisFragment}, {}});
     return;
@@ -3960,12 +3958,10 @@ public:
   /// For a given MBB, create a wrapper block for it. Stores it in the
   /// LDVSSAUpdater block map.
   LDVSSABlock *getSSALDVBlock(MachineBasicBlock *BB) {
-    auto it = BlockMap.find(BB);
-    if (it == BlockMap.end()) {
-      BlockMap[BB] = new LDVSSABlock(*BB, *this);
-      it = BlockMap.find(BB);
-    }
-    return it->second;
+    auto [It, Inserted] = BlockMap.try_emplace(BB);
+    if (Inserted)
+      It->second = new LDVSSABlock(*BB, *this);
+    return It->second;
   }
 
   /// Find the live-in value number for the given block. Looks up the value at

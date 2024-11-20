@@ -795,12 +795,19 @@ defm : DSReadPat_mc <DS_READ_B32, vt, "load_local">;
 
 defm : DSReadPat_mc <DS_READ_U8, i16, "atomic_load_8_local">;
 defm : DSReadPat_mc <DS_READ_U8, i32, "atomic_load_8_local">;
+defm : DSReadPat_mc <DS_READ_U8, i16, "atomic_load_zext_8_local">;
+defm : DSReadPat_mc <DS_READ_U8, i32, "atomic_load_zext_8_local">;
+defm : DSReadPat_mc <DS_READ_I8, i16, "atomic_load_sext_8_local">;
+defm : DSReadPat_mc <DS_READ_I8, i32, "atomic_load_sext_8_local">;
 defm : DSReadPat_mc <DS_READ_U16, i16, "atomic_load_16_local">;
 defm : DSReadPat_mc <DS_READ_U16, i32, "atomic_load_16_local">;
+defm : DSReadPat_mc <DS_READ_U16, i32, "atomic_load_zext_16_local">;
+defm : DSReadPat_mc <DS_READ_I16, i32, "atomic_load_sext_16_local">;
 defm : DSReadPat_mc <DS_READ_B32, i32, "atomic_load_32_local">;
 defm : DSReadPat_mc <DS_READ_B64, i64, "atomic_load_64_local">;
 
 let OtherPredicates = [D16PreservesUnusedBits] in {
+// TODO: Atomic loads
 def : DSReadPat_D16<DS_READ_U16_D16_HI, load_d16_hi_local, v2i16>;
 def : DSReadPat_D16<DS_READ_U16_D16_HI, load_d16_hi_local, v2f16>;
 def : DSReadPat_D16<DS_READ_U8_D16_HI, az_extloadi8_d16_hi_local, v2i16>;
@@ -1135,11 +1142,7 @@ class DSAtomicRetPatIntrinsic<DS_Pseudo inst, ValueType vt, PatFrag frag,
   (vt (frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$value)),
   (inst $ptr, getVregSrcForVT<vt>.ret:$value, Offset:$offset, (i1 gds))> {
 }
-
-def : DSAtomicRetPatIntrinsic<DS_ADD_RTN_F64, f64, int_amdgcn_flat_atomic_fadd_local_addrspace>;
-let AddedComplexity = 1 in
-def : DSAtomicRetPatIntrinsic<DS_ADD_F64, f64, int_amdgcn_flat_atomic_fadd_noret_local_addrspace>;
-}
+} // End SubtargetPredicate = HasLdsAtomicAddF64
 
 let SubtargetPredicate = HasAtomicDsPkAdd16Insts in {
 defm : DSAtomicRetNoRetPat_mc<DS_PK_ADD_RTN_F16, DS_PK_ADD_F16, v2f16, "atomic_load_fadd">;

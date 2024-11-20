@@ -12,7 +12,6 @@
 
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtCXX.h"
 using namespace clang;
 
@@ -28,42 +27,13 @@ OpenACCComputeConstruct::CreateEmpty(const ASTContext &C, unsigned NumClauses) {
 OpenACCComputeConstruct *OpenACCComputeConstruct::Create(
     const ASTContext &C, OpenACCDirectiveKind K, SourceLocation BeginLoc,
     SourceLocation DirLoc, SourceLocation EndLoc,
-    ArrayRef<const OpenACCClause *> Clauses, Stmt *StructuredBlock,
-    ArrayRef<OpenACCLoopConstruct *> AssociatedLoopConstructs) {
+    ArrayRef<const OpenACCClause *> Clauses, Stmt *StructuredBlock) {
   void *Mem = C.Allocate(
       OpenACCComputeConstruct::totalSizeToAlloc<const OpenACCClause *>(
           Clauses.size()));
   auto *Inst = new (Mem) OpenACCComputeConstruct(K, BeginLoc, DirLoc, EndLoc,
                                                  Clauses, StructuredBlock);
-
-  llvm::for_each(AssociatedLoopConstructs, [&](OpenACCLoopConstruct *C) {
-    C->setParentComputeConstruct(Inst);
-  });
-
   return Inst;
-}
-
-void OpenACCComputeConstruct::findAndSetChildLoops() {
-  struct LoopConstructFinder : RecursiveASTVisitor<LoopConstructFinder> {
-    OpenACCComputeConstruct *Construct = nullptr;
-
-    LoopConstructFinder(OpenACCComputeConstruct *Construct)
-        : Construct(Construct) {}
-
-    bool TraverseOpenACCComputeConstruct(OpenACCComputeConstruct *C) {
-      // Stop searching if we find a compute construct.
-      return true;
-    }
-    bool TraverseOpenACCLoopConstruct(OpenACCLoopConstruct *C) {
-      // Stop searching if we find a loop construct, after taking ownership of
-      // it.
-      C->setParentComputeConstruct(Construct);
-      return true;
-    }
-  };
-
-  LoopConstructFinder f(this);
-  f.TraverseStmt(getAssociatedStmt());
 }
 
 OpenACCLoopConstruct::OpenACCLoopConstruct(unsigned NumClauses)
@@ -79,11 +49,13 @@ OpenACCLoopConstruct::OpenACCLoopConstruct(unsigned NumClauses)
 }
 
 OpenACCLoopConstruct::OpenACCLoopConstruct(
-    SourceLocation Start, SourceLocation DirLoc, SourceLocation End,
+    OpenACCDirectiveKind ParentKind, SourceLocation Start,
+    SourceLocation DirLoc, SourceLocation End,
     ArrayRef<const OpenACCClause *> Clauses, Stmt *Loop)
     : OpenACCAssociatedStmtConstruct(OpenACCLoopConstructClass,
                                      OpenACCDirectiveKind::Loop, Start, DirLoc,
-                                     End, Loop) {
+                                     End, Loop),
+      ParentComputeConstructKind(ParentKind) {
   // accept 'nullptr' for the loop. This is diagnosed somewhere, but this gives
   // us some level of AST fidelity in the error case.
   assert((Loop == nullptr || isa<ForStmt, CXXForRangeStmt>(Loop)) &&
@@ -96,12 +68,6 @@ OpenACCLoopConstruct::OpenACCLoopConstruct(
                                 Clauses.size()));
 }
 
-void OpenACCLoopConstruct::setLoop(Stmt *Loop) {
-  assert((isa<ForStmt, CXXForRangeStmt>(Loop)) &&
-         "Associated Loop not a for loop?");
-  setAssociatedStmt(Loop);
-}
-
 OpenACCLoopConstruct *OpenACCLoopConstruct::CreateEmpty(const ASTContext &C,
                                                         unsigned NumClauses) {
   void *Mem =
@@ -111,15 +77,36 @@ OpenACCLoopConstruct *OpenACCLoopConstruct::CreateEmpty(const ASTContext &C,
   return Inst;
 }
 
-OpenACCLoopConstruct *
-OpenACCLoopConstruct::Create(const ASTContext &C, SourceLocation BeginLoc,
-                             SourceLocation DirLoc, SourceLocation EndLoc,
-                             ArrayRef<const OpenACCClause *> Clauses,
-                             Stmt *Loop) {
+OpenACCLoopConstruct *OpenACCLoopConstruct::Create(
+    const ASTContext &C, OpenACCDirectiveKind ParentKind,
+    SourceLocation BeginLoc, SourceLocation DirLoc, SourceLocation EndLoc,
+    ArrayRef<const OpenACCClause *> Clauses, Stmt *Loop) {
   void *Mem =
       C.Allocate(OpenACCLoopConstruct::totalSizeToAlloc<const OpenACCClause *>(
           Clauses.size()));
-  auto *Inst =
-      new (Mem) OpenACCLoopConstruct(BeginLoc, DirLoc, EndLoc, Clauses, Loop);
+  auto *Inst = new (Mem)
+      OpenACCLoopConstruct(ParentKind, BeginLoc, DirLoc, EndLoc, Clauses, Loop);
+  return Inst;
+}
+
+OpenACCCombinedConstruct *
+OpenACCCombinedConstruct::CreateEmpty(const ASTContext &C,
+                                      unsigned NumClauses) {
+  void *Mem = C.Allocate(
+      OpenACCCombinedConstruct::totalSizeToAlloc<const OpenACCClause *>(
+          NumClauses));
+  auto *Inst = new (Mem) OpenACCCombinedConstruct(NumClauses);
+  return Inst;
+}
+
+OpenACCCombinedConstruct *OpenACCCombinedConstruct::Create(
+    const ASTContext &C, OpenACCDirectiveKind DK, SourceLocation BeginLoc,
+    SourceLocation DirLoc, SourceLocation EndLoc,
+    ArrayRef<const OpenACCClause *> Clauses, Stmt *Loop) {
+  void *Mem = C.Allocate(
+      OpenACCCombinedConstruct::totalSizeToAlloc<const OpenACCClause *>(
+          Clauses.size()));
+  auto *Inst = new (Mem)
+      OpenACCCombinedConstruct(DK, BeginLoc, DirLoc, EndLoc, Clauses, Loop);
   return Inst;
 }

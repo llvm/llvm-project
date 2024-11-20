@@ -12,7 +12,6 @@
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LazyCallGraph.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/PassManager.h"
 #include <memory>
 
@@ -288,7 +287,6 @@ class PluginInlineAdvisorAnalysis
     : public AnalysisInfoMixin<PluginInlineAdvisorAnalysis> {
 public:
   static AnalysisKey Key;
-  static bool HasBeenRegistered;
 
   typedef InlineAdvisor *(*AdvisorFactory)(Module &M,
                                            FunctionAnalysisManager &FAM,
@@ -296,7 +294,6 @@ public:
                                            InlineContext IC);
 
   PluginInlineAdvisorAnalysis(AdvisorFactory Factory) : Factory(Factory) {
-    HasBeenRegistered = true;
     assert(Factory != nullptr &&
            "The plugin advisor factory should not be a null pointer.");
   }
@@ -372,7 +369,8 @@ getDevelopmentModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
 /// using that cost, so we won't do so from this function. Return std::nullopt
 /// if inlining should not be attempted.
 std::optional<InlineCost>
-shouldInline(CallBase &CB, function_ref<InlineCost(CallBase &CB)> GetInlineCost,
+shouldInline(CallBase &CB, TargetTransformInfo &CalleeTTI,
+             function_ref<InlineCost(CallBase &CB)> GetInlineCost,
              OptimizationRemarkEmitter &ORE, bool EnableDeferral = true);
 
 /// Emit ORE message.

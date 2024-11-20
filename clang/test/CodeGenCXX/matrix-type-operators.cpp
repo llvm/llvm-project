@@ -177,7 +177,7 @@ MyMatrix<float, 2, 2> test_multiply_template(MyMatrix<float, 2, 5> Mat1,
   // CHECK-LABEL: define{{.*}} void @_Z22test_multiply_template8MyMatrixIfLj2ELj5EES_IfLj5ELj2EE(
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    [[RES:%.*]] = call noundef <4 x float> @_Z8multiplyIfLj2ELj5ELj2EEN8MyMatrixIT_XT0_EXT2_EE8matrix_tERS0_IS1_XT0_EXT1_EERS0_IS1_XT1_EXT2_EE(ptr noundef nonnull align 4 dereferenceable(40) %Mat1, ptr noundef nonnull align 4 dereferenceable(40) %Mat2)
-  // CHECK-NEXT:    %value = getelementptr inbounds %struct.MyMatrix.1, ptr %agg.result, i32 0, i32 0
+  // CHECK-NEXT:    %value = getelementptr inbounds nuw %struct.MyMatrix.1, ptr %agg.result, i32 0, i32 0
   // CHECK-NEXT:    store <4 x float> [[RES]], ptr %value, align 4
   // CHECK-NEXT:    ret void
   //
@@ -407,7 +407,7 @@ void test_constexpr2(matrix_type<int, 5, 5> &m) {
   // NOOPT:         [[MAT:%.*]] = load <25 x i32>, ptr {{.*}}, align 4{{$}}
   // OPT:           [[MAT:%.*]] = load <25 x i32>, ptr {{.*}}, align 4, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:    [[SUB:%.*]] = sub <25 x i32> [[IM]], [[MAT]]
-  // CHECK-NEXT:    [[SUB2:%.*]] = add <25 x i32> [[SUB]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  // CHECK-NEXT:    [[SUB2:%.*]] = add <25 x i32> [[SUB]], splat (i32 1)
   // NOOPT-NEXT:    [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align 8{{$}}
   // OPT-NEXT:      [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:    store <25 x i32> [[SUB2]], ptr [[MAT_ADDR]], align 4

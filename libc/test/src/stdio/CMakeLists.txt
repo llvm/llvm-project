@@ -98,7 +98,7 @@ add_libc_test(
     fopencookie_test.cpp
   DEPENDS
     libc.include.stdio
-    libc.include.stdlib
+    libc.hdr.types.size_t
     libc.src.errno.errno
     libc.src.stdio.clearerr
     libc.src.stdio.fclose
@@ -116,6 +116,9 @@ add_libc_test(
 if(LIBC_CONF_PRINTF_DISABLE_FLOAT)
   list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_FLOAT")
 endif()
+if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT)
+  list(APPEND sprintf_test_copts "-DLIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
+endif()
 if(LIBC_CONF_PRINTF_DISABLE_INDEX_MODE)
   list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_INDEX_MODE")
 endif()
@@ -124,6 +127,9 @@ if(LIBC_CONF_PRINTF_DISABLE_WRITE_INT)
 endif()
 if(LIBC_CONF_PRINTF_DISABLE_FIXED_POINT)
   list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_FIXED_POINT")
+endif()
+if(LIBC_CONF_PRINTF_DISABLE_STRERROR)
+  list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_STRERROR")
 endif()
 
 add_fp_unittest(
@@ -272,19 +278,37 @@ if(LLVM_LIBC_FULL_BUILD)
   )
 endif()
 
-add_libc_test(
-  fscanf_test
-  SUITE
-    libc_stdio_unittests
-  SRCS
-    fscanf_test.cpp
-  DEPENDS
-    libc.src.stdio.fscanf
-    ${fscanf_test_deps}
-    libc.src.__support.CPP.string_view
-  COMPILE_OPTIONS
-    ${use_system_file}
-)
+# FIXME: These tests currently fail on AMDGPU due to an optimization bug in the
+#        `amdgpu-attributor` pass. Disable until that's fixed.
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
+  add_libc_test(
+    fscanf_test
+    SUITE
+      libc_stdio_unittests
+    SRCS
+      fscanf_test.cpp
+    DEPENDS
+      libc.src.stdio.fscanf
+      ${fscanf_test_deps}
+      libc.src.__support.CPP.string_view
+    COMPILE_OPTIONS
+      ${use_system_file}
+  )
+
+  add_libc_test(
+    vfscanf_test
+    SUITE
+      libc_stdio_unittests
+    SRCS
+      vfscanf_test.cpp
+    DEPENDS
+      libc.src.stdio.vfscanf
+      ${fscanf_test_deps}
+      libc.src.__support.CPP.string_view
+    COMPILE_OPTIONS
+      ${use_system_file}
+  )
+endif()
 
 if(LIBC_CONF_SCANF_DISABLE_FLOAT)
   list(APPEND sscanf_test_copts "-DLIBC_COPT_SCANF_DISABLE_FLOAT")

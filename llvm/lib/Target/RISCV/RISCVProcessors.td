@@ -57,15 +57,19 @@ class RISCVTuneProcessorModel<string n,
                               list<SubtargetFeature> f = []>
     : ProcessorModel<n, m, f,tunef>;
 
+defvar GenericTuneFeatures = [TuneOptimizedNF2SegmentLoadStore];
+
 def GENERIC_RV32 : RISCVProcessorModel<"generic-rv32",
                                        NoSchedModel,
                                        [Feature32Bit,
-                                        FeatureStdExtI]>,
+                                        FeatureStdExtI],
+                                       GenericTuneFeatures>,
                    GenericTuneInfo;
 def GENERIC_RV64 : RISCVProcessorModel<"generic-rv64",
                                        NoSchedModel,
                                        [Feature64Bit,
-                                        FeatureStdExtI]>,
+                                        FeatureStdExtI],
+                                       GenericTuneFeatures>,
                    GenericTuneInfo;
 // Support generic for compatibility with other targets. The triple will be used
 // to change to the appropriate rv32/rv64 version.
@@ -221,7 +225,8 @@ def SIFIVE_U74 : RISCVProcessorModel<"sifive-u74",
 
 defvar SiFiveX280TuneFeatures = !listconcat(SiFive7TuneFeatures,
                                             [TuneDLenFactor2,
-                                             TuneOptimizedZeroStrideLoad]);
+                                             TuneOptimizedZeroStrideLoad,
+                                             TuneOptimizedNF2SegmentLoadStore]);
 def SIFIVE_X280 : RISCVProcessorModel<"sifive-x280", SiFive7Model,
                                       [Feature64Bit,
                                        FeatureStdExtI,
@@ -333,7 +338,7 @@ def SYNTACORE_SCR3_RV64 : RISCVProcessorModel<"syntacore-scr3-rv64",
                                               [TuneNoDefaultUnroll, FeaturePostRAScheduler]>;
 
 def SYNTACORE_SCR4_RV32 : RISCVProcessorModel<"syntacore-scr4-rv32",
-                                              NoSchedModel,
+                                              SyntacoreSCR4RV32Model,
                                               [Feature32Bit,
                                                FeatureStdExtI,
                                                FeatureStdExtZicsr,
@@ -345,7 +350,7 @@ def SYNTACORE_SCR4_RV32 : RISCVProcessorModel<"syntacore-scr4-rv32",
                                               [TuneNoDefaultUnroll, FeaturePostRAScheduler]>;
 
 def SYNTACORE_SCR4_RV64 : RISCVProcessorModel<"syntacore-scr4-rv64",
-                                              NoSchedModel,
+                                              SyntacoreSCR4RV64Model,
                                               [Feature64Bit,
                                                FeatureStdExtI,
                                                FeatureStdExtZicsr,
@@ -355,6 +360,51 @@ def SYNTACORE_SCR4_RV64 : RISCVProcessorModel<"syntacore-scr4-rv64",
                                                FeatureStdExtF,
                                                FeatureStdExtD,
                                                FeatureStdExtC],
+                                              [TuneNoDefaultUnroll, FeaturePostRAScheduler]>;
+
+def SYNTACORE_SCR5_RV32 : RISCVProcessorModel<"syntacore-scr5-rv32",
+                                              SyntacoreSCR5RV32Model,
+                                              [Feature32Bit,
+                                               FeatureStdExtI,
+                                               FeatureStdExtZicsr,
+                                               FeatureStdExtZifencei,
+                                               FeatureStdExtM,
+                                               FeatureStdExtA,
+                                               FeatureStdExtF,
+                                               FeatureStdExtD,
+                                               FeatureStdExtC],
+                                              [TuneNoDefaultUnroll, FeaturePostRAScheduler]>;
+
+def SYNTACORE_SCR5_RV64 : RISCVProcessorModel<"syntacore-scr5-rv64",
+                                              SyntacoreSCR5RV64Model,
+                                              [Feature64Bit,
+                                               FeatureStdExtI,
+                                               FeatureStdExtZicsr,
+                                               FeatureStdExtZifencei,
+                                               FeatureStdExtM,
+                                               FeatureStdExtA,
+                                               FeatureStdExtF,
+                                               FeatureStdExtD,
+                                               FeatureStdExtC],
+                                              [TuneNoDefaultUnroll, FeaturePostRAScheduler]>;
+
+def SYNTACORE_SCR7 : RISCVProcessorModel<"syntacore-scr7",
+                                              SyntacoreSCR7Model,
+                                              [Feature64Bit,
+                                               FeatureStdExtI,
+                                               FeatureStdExtZicsr,
+                                               FeatureStdExtZifencei,
+                                               FeatureStdExtM,
+                                               FeatureStdExtA,
+                                               FeatureStdExtF,
+                                               FeatureStdExtD,
+                                               FeatureStdExtC,
+                                               FeatureStdExtV,
+                                               FeatureStdExtZba,
+                                               FeatureStdExtZbb,
+                                               FeatureStdExtZbc,
+                                               FeatureStdExtZbs,
+                                               FeatureStdExtZkn],
                                               [TuneNoDefaultUnroll, FeaturePostRAScheduler]>;
 
 def VENTANA_VEYRON_V1 : RISCVProcessorModel<"veyron-v1",
@@ -426,5 +476,25 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
                                         FeatureStdExtZicond,
                                         FeatureStdExtZvfh,
                                         FeatureStdExtZvkt,
-                                        FeatureStdExtZvl256b]),
-                                       [TuneDLenFactor2]>;
+                                        FeatureStdExtZvl256b,
+                                        FeatureUnalignedScalarMem]),
+                                       [TuneDLenFactor2,
+                                        TuneOptimizedNF2SegmentLoadStore,
+                                        TuneOptimizedNF3SegmentLoadStore,
+                                        TuneOptimizedNF4SegmentLoadStore]>;
+
+def RP2350_HAZARD3 : RISCVProcessorModel<"rp2350-hazard3",
+                                         NoSchedModel,
+                                         [Feature32Bit,
+                                          FeatureStdExtI,
+                                          FeatureStdExtM,
+                                          FeatureStdExtA,
+                                          FeatureStdExtC,
+                                          FeatureStdExtZicsr,
+                                          FeatureStdExtZifencei,
+                                          FeatureStdExtZba,
+                                          FeatureStdExtZbb,
+                                          FeatureStdExtZbs,
+                                          FeatureStdExtZbkb,
+                                          FeatureStdExtZcb,
+                                          FeatureStdExtZcmp]>;

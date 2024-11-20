@@ -54,7 +54,7 @@ void test_lambda_ref() {
 // CHECK: define dso_local void @_Z15test_lambda_refv() #0 {
 // CHECK: entry:
 // CHECK:   %[[This_address:.]] = alloca %class.anon{{.*}}, align 4
-// CHECK:   %[[i_addr:.*]] = getelementptr inbounds %class.anon{{.*}}, ptr %[[This_address]], i32 0, i32 0
+// CHECK:   %[[i_addr:.*]] = getelementptr inbounds nuw %class.anon{{.*}}, ptr %[[This_address]], i32 0, i32 0
 // CHECK:   store i32 42, ptr %[[i_addr]], align 4
 // CHECK:   %call = call noundef i32 @"_ZZ15test_lambda_refvENH3$_0clIS_EEiRT_i"{{.*}}
 // CHECK:   ret void
@@ -205,7 +205,7 @@ void f() {
     // CHECK-NEXT:    [[SelfAddr:%.*]] = alloca ptr
     // CHECK-NEXT:    store ptr [[Self]], ptr [[SelfAddr]]
     // CHECK-NEXT:    [[SelfPtr:%.*]] = load ptr, ptr [[SelfAddr]]
-    // CHECK-NEXT:    [[XRef:%.*]] = getelementptr inbounds %{{.*}}, ptr [[SelfPtr]], i32 0, i32 0
+    // CHECK-NEXT:    [[XRef:%.*]] = getelementptr inbounds nuw %{{.*}}, ptr [[SelfPtr]], i32 0, i32 0
     // CHECK-NEXT:    [[X:%.*]] = load ptr, ptr [[XRef]]
     // CHECK-NEXT:    ret ptr [[X]]
     [&](this auto& self) {

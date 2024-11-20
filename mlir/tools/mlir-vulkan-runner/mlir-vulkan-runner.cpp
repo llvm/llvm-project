@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Conversion/ConvertToSPIRV/ConvertToSPIRVPass.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRVPass.h"
 #include "mlir/Conversion/GPUToVulkan/ConvertGPUToVulkanPass.h"
@@ -64,7 +65,9 @@ static LogicalResult runMLIRPasses(Operation *op,
   passManager.addPass(createGpuKernelOutliningPass());
   passManager.addPass(memref::createFoldMemRefAliasOpsPass());
 
-  passManager.addPass(createConvertGPUToSPIRVPass(/*mapMemorySpace=*/true));
+  ConvertToSPIRVPassOptions convertToSPIRVOptions{};
+  convertToSPIRVOptions.convertGPUModules = true;
+  passManager.addPass(createConvertToSPIRVPass(convertToSPIRVOptions));
   OpPassManager &modulePM = passManager.nest<spirv::ModuleOp>();
   modulePM.addPass(spirv::createSPIRVLowerABIAttributesPass());
   modulePM.addPass(spirv::createSPIRVUpdateVCEPass());

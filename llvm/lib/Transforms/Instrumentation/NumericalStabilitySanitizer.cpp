@@ -16,7 +16,6 @@
 #include "llvm/Transforms/Instrumentation/NumericalStabilitySanitizer.h"
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -32,15 +31,12 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/EscapeEnumerator.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -2038,7 +2034,8 @@ static void moveFastMathFlags(Function &F,
 
 bool NumericalStabilitySanitizer::sanitizeFunction(
     Function &F, const TargetLibraryInfo &TLI) {
-  if (!F.hasFnAttribute(Attribute::SanitizeNumericalStability))
+  if (!F.hasFnAttribute(Attribute::SanitizeNumericalStability) ||
+      F.isDeclaration())
     return false;
 
   // This is required to prevent instrumenting call to __nsan_init from within

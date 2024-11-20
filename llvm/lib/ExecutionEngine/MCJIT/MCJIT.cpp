@@ -219,7 +219,7 @@ void MCJIT::generateCodeForModule(Module *M) {
     std::string Buf;
     raw_string_ostream OS(Buf);
     logAllUnhandledErrors(LoadedObject.takeError(), OS);
-    report_fatal_error(Twine(OS.str()));
+    report_fatal_error(Twine(Buf));
   }
   std::unique_ptr<RuntimeDyld::LoadedObjectInfo> L =
     Dyld.loadObject(*LoadedObject.get());
@@ -588,7 +588,7 @@ GenericValue MCJIT::runFunction(Function *F, ArrayRef<GenericValue> ArgValues) {
       return rv;
     }
     case Type::VoidTyID:
-      rv.IntVal = APInt(32, ((int(*)())(intptr_t)FPtr)());
+      rv.IntVal = APInt(32, ((int (*)())(intptr_t)FPtr)(), true);
       return rv;
     case Type::FloatTyID:
       rv.FloatVal = ((float(*)())(intptr_t)FPtr)();

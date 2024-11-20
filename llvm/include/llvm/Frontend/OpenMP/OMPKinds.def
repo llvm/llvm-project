@@ -506,6 +506,9 @@ __OMP_RTL(__kmpc_barrier_simple_generic, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_warp_active_thread_mask, false, Int64,)
 __OMP_RTL(__kmpc_syncwarp, false, Void, Int64)
 
+__OMP_RTL(__llvm_profile_register_function, false, Void, VoidPtr)
+__OMP_RTL(__llvm_profile_register_names_function, false, Void, VoidPtr, Int64)
+
 __OMP_RTL(__last, false, Void, )
 
 #undef __OMP_RTL
@@ -943,7 +946,8 @@ __OMP_RTL_ATTRS(__kmpc_proxy_task_completed_ooo, DefaultAttrs, AttributeSet(),
 __OMP_RTL_ATTRS(__kmpc_omp_wait_deps, BarrierAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs, SExt, SExt, ReadOnlyPtrAttrs, SExt))
 __OMP_RTL_ATTRS(__kmpc_omp_taskwait_deps_51, BarrierAttrs, AttributeSet(),
-                ParamAttrs(ReadOnlyPtrAttrs, SExt, SExt, ReadOnlyPtrAttrs))
+                ParamAttrs(ReadOnlyPtrAttrs, SExt, SExt, ReadOnlyPtrAttrs, SExt,
+                           AttributeSet(), SExt))
 __OMP_RTL_ATTRS(__kmpc_cancellationpoint, DefaultAttrs, SExt,
                 ParamAttrs(ReadOnlyPtrAttrs, SExt, SExt))
 

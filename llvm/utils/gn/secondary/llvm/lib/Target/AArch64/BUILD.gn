@@ -165,6 +165,7 @@ static_library("LLVMAArch64CodeGen") {
     "GISel/AArch64PreLegalizerCombiner.cpp",
     "GISel/AArch64RegisterBankInfo.cpp",
     "SMEABIPass.cpp",
+    "SMEPeepholeOpt.cpp",
     "SVEIntrinsicOpts.cpp",
   ]
 }

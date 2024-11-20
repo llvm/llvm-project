@@ -16,21 +16,6 @@
 #include "gtest/gtest.h"
 using namespace llvm;
 
-namespace llvm {
-
-std::ostream &operator<<(std::ostream &OS, const StringRef &S) {
-  OS << S.str();
-  return OS;
-}
-
-std::ostream &operator<<(std::ostream &OS,
-                         const std::pair<StringRef, StringRef> &P) {
-  OS << "(" << P.first << ", " << P.second << ")";
-  return OS;
-}
-
-}
-
 // Check that we can't accidentally assign a temporary std::string to a
 // StringRef. (Unfortunately we can't make use of the same thing with
 // constructors.)
@@ -72,9 +57,17 @@ TEST(StringRefTest, EmptyInitializerList) {
 
 TEST(StringRefTest, Iteration) {
   StringRef S("hello");
-  const char *p = "hello";
-  for (const char *it = S.begin(), *ie = S.end(); it != ie; ++it, ++p)
-    EXPECT_EQ(*it, *p);
+  constexpr StringLiteral CS("hello");
+
+  // Note: Cannot use literal strings in equal() as iteration over a literal
+  // string includes the null terminator.
+  const std::string_view RefFwd("hello");
+  const std::string_view RefRev("olleh");
+
+  EXPECT_TRUE(equal(S, RefFwd));
+  EXPECT_TRUE(equal(CS, RefFwd));
+  EXPECT_TRUE(equal(make_range(S.rbegin(), S.rend()), RefRev));
+  EXPECT_TRUE(equal(make_range(CS.rbegin(), CS.rend()), RefRev));
 }
 
 TEST(StringRefTest, StringOps) {
@@ -939,16 +932,17 @@ struct GetDoubleStrings {
   bool AllowInexact;
   bool ShouldFail;
   double D;
-} DoubleStrings[] = {{"0", false, false, 0.0},
-                     {"0.0", false, false, 0.0},
-                     {"-0.0", false, false, -0.0},
-                     {"123.45", false, true, 123.45},
-                     {"123.45", true, false, 123.45},
-                     {"1.8e308", true, false, std::numeric_limits<double>::infinity()},
-                     {"1.8e308", false, true, std::numeric_limits<double>::infinity()},
-                     {"0x0.0000000000001P-1023", false, true, 0.0},
-                     {"0x0.0000000000001P-1023", true, false, 0.0},
-                    };
+} DoubleStrings[] = {
+    {"0", false, false, 0.0},
+    {"0.0", false, false, 0.0},
+    {"-0.0", false, false, -0.0},
+    {"123.45", false, true, 123.45},
+    {"123.45", true, false, 123.45},
+    {"1.8e308", true, false, std::numeric_limits<double>::infinity()},
+    {"1.8e308", false, true, std::numeric_limits<double>::infinity()},
+    {"0x0.0000000000001P-1023", false, true, 0.0},
+    {"0x0.0000000000001P-1023", true, false, 0.0},
+};
 
 TEST(StringRefTest, getAsDouble) {
   for (const auto &Entry : DoubleStrings) {
@@ -1117,7 +1111,8 @@ TEST(StringRefTest, StringLiteral) {
   constexpr StringRef StringRefs[] = {"Foo", "Bar"};
   EXPECT_EQ(StringRef("Foo"), StringRefs[0]);
   EXPECT_EQ(3u, (std::integral_constant<size_t, StringRefs[0].size()>::value));
-  EXPECT_EQ(false, (std::integral_constant<bool, StringRefs[0].empty()>::value));
+  EXPECT_EQ(false,
+            (std::integral_constant<bool, StringRefs[0].empty()>::value));
   EXPECT_EQ(StringRef("Bar"), StringRefs[1]);
 
   constexpr StringLiteral Strings[] = {"Foo", "Bar"};

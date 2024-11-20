@@ -1529,8 +1529,7 @@ void UserValue::rewriteLocations(VirtRegMap &VRM, const MachineFunction &MF,
     // Only virtual registers are rewritten.
     if (Loc.isReg() && Loc.getReg() && Loc.getReg().isVirtual()) {
       Register VirtReg = Loc.getReg();
-      if (VRM.isAssignedReg(VirtReg) &&
-          Register::isPhysicalRegister(VRM.getPhys(VirtReg))) {
+      if (VRM.isAssignedReg(VirtReg) && VRM.hasPhys(VirtReg)) {
         // This can create a %noreg operand in rare cases when the sub-register
         // index is no longer available. That means the user value is in a
         // non-existent sub-register, and %noreg is exactly what we want.
@@ -1626,8 +1625,9 @@ findInsertLocation(MachineBasicBlock *MBB, SlotIndex Idx, LiveIntervals &LIS,
   }
 
   // Don't insert anything after the first terminator, though.
-  return MI->isTerminator() ? MBB->getFirstTerminator() :
-                              std::next(MachineBasicBlock::iterator(MI));
+  auto It = MI->isTerminator() ? MBB->getFirstTerminator()
+                               : std::next(MachineBasicBlock::iterator(MI));
+  return skipDebugInstructionsForward(It, MBB->end());
 }
 
 /// Find an iterator for inserting the next DBG_VALUE instruction
@@ -1839,8 +1839,7 @@ void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
     unsigned SubReg = It.second.SubReg;
 
     MachineBasicBlock *OrigMBB = Slots->getMBBFromIndex(Slot);
-    if (VRM->isAssignedReg(Reg) &&
-        Register::isPhysicalRegister(VRM->getPhys(Reg))) {
+    if (VRM->isAssignedReg(Reg) && VRM->hasPhys(Reg)) {
       unsigned PhysReg = VRM->getPhys(Reg);
       if (SubReg != 0)
         PhysReg = TRI->getSubReg(PhysReg, SubReg);
@@ -1875,12 +1874,10 @@ void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
         Builder.addImm(regSizeInBits);
       }
 
-      LLVM_DEBUG(
-      if (SpillOffset != 0) {
-        dbgs() << "DBG_PHI for Vreg " << Reg << " subreg " << SubReg <<
-                  " has nonzero offset\n";
-      }
-      );
+      LLVM_DEBUG(if (SpillOffset != 0) {
+        dbgs() << "DBG_PHI for " << printReg(Reg, TRI, SubReg)
+               << " has nonzero offset\n";
+      });
     }
     // If there was no mapping for a value ID, it's optimized out. Create no
     // DBG_PHI, and any variables using this value will become optimized out.

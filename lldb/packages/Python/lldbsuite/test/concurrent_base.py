@@ -290,6 +290,10 @@ class ConcurrentEventsBase(TestBase):
                         if funcname in f.GetDisplayFunctionName():
                             thread_has_user_code = True
                             break
+
+                    if thread_has_user_code:
+                        break
+
                 if thread_has_user_code:
                     num_threads_with_usercode += 1
 

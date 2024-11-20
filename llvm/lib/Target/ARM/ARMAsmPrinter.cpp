@@ -17,13 +17,11 @@
 #include "ARMMachineFunctionInfo.h"
 #include "ARMTargetMachine.h"
 #include "ARMTargetObjectFile.h"
-#include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMInstPrinter.h"
 #include "MCTargetDesc/ARMMCExpr.h"
 #include "TargetInfo/ARMTargetInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/COFF.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/IR/Constants.h"
@@ -1219,7 +1217,7 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
     assert(DstReg == ARM::SP &&
            "Only stack pointer as a destination reg is supported");
 
-    SmallVector<unsigned, 4> RegList;
+    SmallVector<MCRegister, 4> RegList;
     // Skip src & dst reg, and pred ops.
     unsigned StartOp = 2 + 2;
     // Use all the operands.
@@ -2410,12 +2408,6 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case ARM::SEH_EpilogEnd:
     ATS.emitARMWinCFIEpilogEnd();
-    return;
-
-  case ARM::PseudoARMInitUndefMQPR:
-  case ARM::PseudoARMInitUndefSPR:
-  case ARM::PseudoARMInitUndefDPR_VFP2:
-  case ARM::PseudoARMInitUndefGPR:
     return;
   }
 

@@ -70,6 +70,20 @@ in such buffers."
   :safe #'stringp)
 (make-variable-buffer-local 'clang-format-fallback-style)
 
+(defcustom clang-format-on-save-p 'clang-format-on-save-check-config-exists
+  "Only reformat on save if this function returns non-nil.
+
+You may wish to choose one of the following options:
+- `always': To always format on save.
+- `clang-format-on-save-check-config-exists':
+  Only reformat when \".clang-format\" exists.
+
+Otherwise you can set this to a user defined function."
+  :group 'clang-format
+  :type 'function
+  :risky t)
+(make-variable-buffer-local 'clang-format-on-save-p)
+
 (defun clang-format--extract (xml-node)
   "Extract replacements and cursor information from XML-NODE."
   (unless (and (listp xml-node) (eq (xml-node-name xml-node) 'replacements))
@@ -166,19 +180,19 @@ uses the function `buffer-file-name'."
         (let ((status (apply #'call-process-region
                              nil nil clang-format-executable
                              nil `(,temp-buffer ,temp-file) nil
-                             `("-output-replacements-xml"
+                             `("--output-replacements-xml"
                                ;; Guard against a nil assume-file-name.
                                ;; If the clang-format option -assume-filename
                                ;; is given a blank string it will crash as per
                                ;; the following bug report
                                ;; https://bugs.llvm.org/show_bug.cgi?id=34667
                                ,@(and assume-file-name
-                                      (list "-assume-filename" assume-file-name))
-                               ,@(and style (list "-style" style))
-                               "-fallback-style" ,clang-format-fallback-style
-                               "-offset" ,(number-to-string file-start)
-                               "-length" ,(number-to-string (- file-end file-start))
-                               "-cursor" ,(number-to-string cursor))))
+                                      (list "--assume-filename" assume-file-name))
+                               ,@(and style (list "--style" style))
+                               "--fallback-style" ,clang-format-fallback-style
+                               "--offset" ,(number-to-string file-start)
+                               "--length" ,(number-to-string (- file-end file-start))
+                               "--cursor" ,(number-to-string cursor))))
               (stderr (with-temp-buffer
                         (unless (zerop (cadr (insert-file-contents temp-file)))
                           (insert ": "))
@@ -216,6 +230,49 @@ the function `buffer-file-name'."
 
 ;;;###autoload
 (defalias 'clang-format 'clang-format-region)
+
+;; Format on save minor mode.
+
+(defun clang-format--on-save-buffer-hook ()
+  "The hook to run on buffer saving to format the buffer."
+  ;; Demote errors as this is user configurable, we can't be sure it wont error.
+  (when (with-demoted-errors "clang-format: Error %S"
+          (funcall clang-format-on-save-p))
+    (clang-format-buffer))
+  ;; Continue to save.
+  nil)
+
+(defun clang-format--on-save-enable ()
+  "Disable the minor mode."
+  (add-hook 'before-save-hook #'clang-format--on-save-buffer-hook nil t))
+
+(defun clang-format--on-save-disable ()
+  "Enable the minor mode."
+  (remove-hook 'before-save-hook #'clang-format--on-save-buffer-hook t))
+
+;; Default value for `clang-format-on-save-p'.
+(defun clang-format-on-save-check-config-exists ()
+  "Return non-nil when `.clang-format' is found in a parent directory."
+  ;; Unlikely but possible this is nil.
+  (let ((filepath buffer-file-name))
+    (cond
+     (filepath
+      (not (null (locate-dominating-file (file-name-directory filepath) ".clang-format"))))
+     (t
+      nil))))
+
+;;;###autoload
+(define-minor-mode clang-format-on-save-mode
+  "Clang-format on save minor mode."
+  :global nil
+  :lighter ""
+  :keymap nil
+
+  (cond
+   (clang-format-on-save-mode
+    (clang-format--on-save-enable))
+   (t
+    (clang-format--on-save-disable))))
 
 (provide 'clang-format)
 ;;; clang-format.el ends here

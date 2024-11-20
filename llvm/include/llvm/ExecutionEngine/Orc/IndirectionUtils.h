@@ -18,6 +18,7 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
+#include "llvm/ExecutionEngine/Orc/RedirectionManager.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/Process.h"
@@ -278,7 +279,7 @@ private:
 };
 
 /// Base class for managing collections of named indirect stubs.
-class IndirectStubsManager {
+class IndirectStubsManager : public RedirectableSymbolManager {
 public:
   /// Map type for initializing the manager. See init.
   using StubInitsMap = StringMap<std::pair<ExecutorAddr, JITSymbolFlags>>;
@@ -305,8 +306,15 @@ public:
   /// Change the value of the implementation pointer for the stub.
   virtual Error updatePointer(StringRef Name, ExecutorAddr NewAddr) = 0;
 
+  /// --- RedirectableSymbolManager implementation ---
+  Error redirect(JITDylib &JD, const SymbolMap &NewDests) override;
+
+  void
+  emitRedirectableSymbols(std::unique_ptr<MaterializationResponsibility> MR,
+                          SymbolMap InitialDests) override;
+
 private:
-  virtual void anchor();
+  void anchor() override;
 };
 
 template <typename ORCABI> class LocalIndirectStubsInfo {

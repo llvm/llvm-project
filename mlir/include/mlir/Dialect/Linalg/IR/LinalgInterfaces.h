@@ -110,11 +110,25 @@ struct ConvolutionDimensions {
 FailureOr<ConvolutionDimensions> inferConvolutionDims(LinalgOp linalgOp);
 
 /// Checks whether `linalgOp` conforms to ConvolutionOpInterface.
+/// By default, we require the `linalgOp` to have non-empty convolved dims
+/// (implicitly non-empty `output_image` and `filter_loop`).
+/// Users can loosen the constraint by setting `allowEmptyConvolvedDims` to true
 // TODO: embed within `isa<ConvolutionOpInterface>` if possible / natural.
-bool isaConvolutionOpInterface(LinalgOp linalgOp);
+bool isaConvolutionOpInterface(LinalgOp linalgOp,
+                               bool allowEmptyConvolvedDims = false);
 
 /// Checks whether `linalgOp` is semantically equivalent to a `linalg.copyOp`.
 bool isaCopyOpInterface(LinalgOp linalgOp);
+
+/// Checks whether `genericOp` is semantically equivalent to a
+///  `linalg.broadcast`. Returns broadcast dimensions if true.
+std::optional<SmallVector<int64_t>>
+isaBroadcastOpInterface(GenericOp genericOp);
+
+/// Checks whether `genericOp` is semantically equivalent to a
+///  `linalg.transpose`. Returns permuted dimensions if true.
+std::optional<SmallVector<int64_t>>
+isaTransposeOpInterface(GenericOp genericOp);
 
 /// Checks whether a given `genericOp` is semantically equivalent to a single
 /// linalgelementwise unary op. e.g. linalg.exp.
@@ -175,9 +189,12 @@ enum class MatchConvolutionResult;
 /// Checks whether `op` conforms to ConvolutionOpInterface and populates
 /// `dimensions` with indexes of the different kinds of dimensions when
 /// present.
+/// If `allowEmptyConvolvedDims` is not set, we further checks whether the `op`
+/// contains convolved dims.
 MatchConvolutionResult
 isConvolutionInterfaceImpl(Operation *op,
-                           ConvolutionDimensions *dimensions = nullptr);
+                           ConvolutionDimensions *dimensions = nullptr,
+                           bool allowEmptyConvolvedDims = false);
 
 /// Returns the error message corresponding to the convolution checking return
 /// code.

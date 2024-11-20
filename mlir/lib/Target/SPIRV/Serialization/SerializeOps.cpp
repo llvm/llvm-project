@@ -137,7 +137,7 @@ Serializer::processSpecConstantOperationOp(spirv::SpecConstantOperationOp op) {
   std::string enclosedOpName;
   llvm::raw_string_ostream rss(enclosedOpName);
   rss << "Op" << enclosedOp.getName().stripDialect();
-  auto enclosedOpcode = spirv::symbolizeOpcode(rss.str());
+  auto enclosedOpcode = spirv::symbolizeOpcode(enclosedOpName);
 
   if (!enclosedOpcode) {
     op.emitError("Couldn't find op code for op ")

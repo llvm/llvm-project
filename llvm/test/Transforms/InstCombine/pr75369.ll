@@ -5,7 +5,7 @@ define i32 @main(ptr %a, i8 %a0, i32 %conv, i8 %a1) {
 ; CHECK-LABEL: define i32 @main(
 ; CHECK-SAME: ptr [[A:%.*]], i8 [[A0:%.*]], i32 [[CONV:%.*]], i8 [[A1:%.*]]) {
 ; CHECK-NEXT:    [[A3:%.*]] = trunc i32 [[CONV]] to i8
-; CHECK-NEXT:    [[OR11:%.*]] = or i8 [[A3]], [[A0]]
+; CHECK-NEXT:    [[OR11:%.*]] = or i8 [[A0]], [[A3]]
 ; CHECK-NEXT:    store i8 [[OR11]], ptr [[A]], align 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[A1]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])

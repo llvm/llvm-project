@@ -1,12 +1,8 @@
 ; Test that storage for allocas with disjoint lifetimes is reused with
 ; use-after-scope.
 
-; RUN: opt -S -passes=hwasan %s -hwasan-use-after-scope -o - | \
-; RUN:   llc -no-stack-coloring=false -o - | \
-; RUN:   FileCheck %s --check-prefix=COLOR
-; RUN: opt -S -passes=hwasan -hwasan-use-after-scope %s -o - | \
-; RUN:   llc -no-stack-coloring=true -o - | \
-; RUN:   FileCheck %s --check-prefix=NOCOLOR
+; RUN: opt -S -passes=hwasan %s -hwasan-use-after-scope -o - | llc -no-stack-coloring=false -o - | FileCheck %s --check-prefix=COLOR
+; RUN: opt -S -passes=hwasan -hwasan-use-after-scope %s -o - | llc -no-stack-coloring=true -o - | FileCheck %s --check-prefix=NOCOLOR
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-android29"

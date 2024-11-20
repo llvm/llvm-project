@@ -110,7 +110,7 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_tpidr2_restore)
 END_COMPILERRT_OUTLINE_FUNCTION(__arm_tpidr2_restore)
 
 DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_tpidr2_save)
-  .variant_pcs __arm_tpidr2_restore
+  .variant_pcs __arm_tpidr2_save
   BTI_C
   // If the current thread does not have access to TPIDR2_EL0, the subroutine
   // does nothing.
@@ -151,7 +151,7 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_tpidr2_save)
 END_COMPILERRT_OUTLINE_FUNCTION(__arm_tpidr2_save)
 
 DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_za_disable)
-  .variant_pcs __arm_tpidr2_restore
+  .variant_pcs __arm_za_disable
   BTI_C
   // If the current thread does not have access to SME, the subroutine does
   // nothing.

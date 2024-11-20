@@ -80,9 +80,9 @@ int explicit_maps_inside_captured(int a){
 // CK23-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
 // CK23-DAG: store ptr [[VAR00:%.+]], ptr [[P0]]
 // CK23-DAG: [[VAR0]] = load ptr, ptr [[CAP0:%[^,]+]]
-// CK23-DAG: [[CAP0]] = getelementptr inbounds %class.anon,
+// CK23-DAG: [[CAP0]] = getelementptr inbounds nuw %class.anon,
 // CK23-DAG: [[VAR00]] = load ptr, ptr [[CAP00:%[^,]+]]
-// CK23-DAG: [[CAP00]] = getelementptr inbounds %class.anon,
+// CK23-DAG: [[CAP00]] = getelementptr inbounds nuw %class.anon,
 
 // CK23: call void [[CALL00:@.+]](ptr {{[^,]+}})
 #pragma omp target map(a)
@@ -101,9 +101,9 @@ int explicit_maps_inside_captured(int a){
 // CK23-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
 // CK23-DAG: store ptr [[VAR00:%.+]], ptr [[P0]]
 // CK23-DAG: [[VAR0]] = load ptr, ptr [[CAP0:%[^,]+]]
-// CK23-DAG: [[CAP0]] = getelementptr inbounds %class.anon,
+// CK23-DAG: [[CAP0]] = getelementptr inbounds nuw %class.anon,
 // CK23-DAG: [[VAR00]] = load ptr, ptr [[CAP00:%[^,]+]]
-// CK23-DAG: [[CAP00]] = getelementptr inbounds %class.anon,
+// CK23-DAG: [[CAP00]] = getelementptr inbounds nuw %class.anon,
 
 // CK23: call void [[CALL01:@.+]](ptr {{[^,]+}})
 #pragma omp target map(b)
@@ -122,9 +122,9 @@ int explicit_maps_inside_captured(int a){
 // CK23-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
 // CK23-DAG: store ptr [[VAR00:%.+]], ptr [[P0]]
 // CK23-DAG: [[VAR0]] = load ptr, ptr [[CAP0:%[^,]+]]
-// CK23-DAG: [[CAP0]] = getelementptr inbounds %class.anon,
+// CK23-DAG: [[CAP0]] = getelementptr inbounds nuw %class.anon,
 // CK23-DAG: [[VAR00]] = load ptr, ptr [[CAP00:%[^,]+]]
-// CK23-DAG: [[CAP00]] = getelementptr inbounds %class.anon,
+// CK23-DAG: [[CAP00]] = getelementptr inbounds nuw %class.anon,
 
 // CK23: call void [[CALL02:@.+]](ptr {{[^,]+}})
 #pragma omp target map(c)
@@ -144,9 +144,9 @@ int explicit_maps_inside_captured(int a){
 // CK23-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
 // CK23-DAG: store ptr [[VAR00:%.+]], ptr [[P0]]
 // CK23-DAG: [[VAR0]] = load ptr, ptr [[CAP0:%[^,]+]]
-// CK23-DAG: [[CAP0]] = getelementptr inbounds %class.anon,
+// CK23-DAG: [[CAP0]] = getelementptr inbounds nuw %class.anon,
 // CK23-DAG: [[VAR00]] = load ptr, ptr [[CAP00:%[^,]+]]
-// CK23-DAG: [[CAP00]] = getelementptr inbounds %class.anon,
+// CK23-DAG: [[CAP00]] = getelementptr inbounds nuw %class.anon,
 
 // CK23: call void [[CALL03:@.+]](ptr {{[^,]+}})
 #pragma omp target map(d)
@@ -166,9 +166,9 @@ int explicit_maps_inside_captured(int a){
 // CK23-DAG: store ptr [[SEC0:%.+]], ptr [[P0]]
 // CK23-DAG: [[SEC0]] = getelementptr {{.*}}ptr [[VAR00:%.+]], i{{.+}} 0, i{{.+}} 2
 // CK23-DAG: [[VAR0]] = load ptr, ptr [[CAP0:%[^,]+]]
-// CK23-DAG: [[CAP0]] = getelementptr inbounds %class.anon,
+// CK23-DAG: [[CAP0]] = getelementptr inbounds nuw %class.anon,
 // CK23-DAG: [[VAR00]] = load ptr, ptr [[CAP00:%[^,]+]]
-// CK23-DAG: [[CAP00]] = getelementptr inbounds %class.anon,
+// CK23-DAG: [[CAP00]] = getelementptr inbounds nuw %class.anon,
 
 // CK23: call void [[CALL04:@.+]](ptr {{[^,]+}})
 #pragma omp target map(c [2:4])
@@ -191,9 +191,9 @@ int explicit_maps_inside_captured(int a){
 // CK23-DAG: [[SEC0]] = getelementptr {{.*}}ptr [[RVAR00:%.+]], i{{.+}} 2
 // CK23-DAG: [[RVAR00]] = load ptr, ptr [[VAR00:%[^,]+]]
 // CK23-DAG: [[VAR0]] = load ptr, ptr [[CAP0:%[^,]+]]
-// CK23-DAG: [[CAP0]] = getelementptr inbounds %class.anon,
+// CK23-DAG: [[CAP0]] = getelementptr inbounds nuw %class.anon,
 // CK23-DAG: [[VAR00]] = load ptr, ptr [[CAP00:%[^,]+]]
-// CK23-DAG: [[CAP00]] = getelementptr inbounds %class.anon,
+// CK23-DAG: [[CAP00]] = getelementptr inbounds nuw %class.anon,
 
 // CK23: call void [[CALL05:@.+]](ptr {{[^,]+}})
 #pragma omp target map(d [2:4])

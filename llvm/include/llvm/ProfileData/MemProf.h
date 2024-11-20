@@ -1,14 +1,17 @@
 #ifndef LLVM_PROFILEDATA_MEMPROF_H_
 #define LLVM_PROFILEDATA_MEMPROF_H_
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/ProfileData/MemProfData.inc"
+#include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/Support/HashBuilder.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <bitset>
@@ -22,8 +25,6 @@ struct MemProfRecord;
 
 // The versions of the indexed MemProf format
 enum IndexedVersion : uint64_t {
-  // Version 0: This version didn't have a version field.
-  Version0 = 0,
   // Version 1: Added a version field to the header.
   Version1 = 1,
   // Version 2: Added a call stack table.
@@ -33,7 +34,7 @@ enum IndexedVersion : uint64_t {
   Version3 = 3,
 };
 
-constexpr uint64_t MinimumSupportedVersion = Version0;
+constexpr uint64_t MinimumSupportedVersion = Version1;
 constexpr uint64_t MaximumSupportedVersion = Version3;
 
 // Verify that the minimum and maximum satisfy the obvious constraint.
@@ -143,6 +144,15 @@ struct PortableMemInfoBlock {
   Type get##Name() const {                                                     \
     assert(Schema[llvm::to_underlying(Meta::Name)]);                           \
     return Name;                                                               \
+  }
+#include "llvm/ProfileData/MIBEntryDef.inc"
+#undef MIBEntryDef
+
+  // Define setters for each type which can be called by the writer.
+#define MIBEntryDef(NameTag, Name, Type)                                       \
+  void set##Name(Type NewVal) {                                                \
+    assert(Schema[llvm::to_underlying(Meta::Name)]);                           \
+    Name = NewVal;                                                             \
   }
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
@@ -308,24 +318,19 @@ struct Frame {
        << "        Inline: " << IsInlineFrame << "\n";
   }
 
-  // Return a hash value based on the contents of the frame. Here we don't use
-  // hashing from llvm ADT since we are going to persist the hash id, the hash
-  // combine algorithm in ADT uses a new randomized seed each time.
+  // Return a hash value based on the contents of the frame. Here we use a
+  // cryptographic hash function to minimize the chance of hash collisions.  We
+  // do persist FrameIds as part of memprof formats up to Version 2, inclusive.
+  // However, the deserializer never calls this function; it uses FrameIds
+  // merely as keys to look up Frames proper.
   inline FrameId hash() const {
-    auto HashCombine = [](auto Value, size_t Seed) {
-      std::hash<decltype(Value)> Hasher;
-      // The constant used below is the 64 bit representation of the fractional
-      // part of the golden ratio. Used here for the randomness in their bit
-      // pattern.
-      return Hasher(Value) + 0x9e3779b97f4a7c15 + (Seed << 6) + (Seed >> 2);
-    };
-
-    size_t Result = 0;
-    Result ^= HashCombine(Function, Result);
-    Result ^= HashCombine(LineOffset, Result);
-    Result ^= HashCombine(Column, Result);
-    Result ^= HashCombine(IsInlineFrame, Result);
-    return static_cast<FrameId>(Result);
+    llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
+        HashBuilder;
+    HashBuilder.add(Function, LineOffset, Column, IsInlineFrame);
+    llvm::BLAKE3Result<8> Hash = HashBuilder.final();
+    FrameId Id;
+    std::memcpy(&Id, Hash.data(), sizeof(Hash));
+    return Id;
   }
 };
 
@@ -349,10 +354,15 @@ struct IndexedAllocationInfo {
   PortableMemInfoBlock Info;
 
   IndexedAllocationInfo() = default;
+  // This constructor is soft deprecated.  It will be removed once we remove all
+  // users of the CallStack field.
   IndexedAllocationInfo(ArrayRef<FrameId> CS, CallStackId CSId,
                         const MemInfoBlock &MB,
                         const MemProfSchema &Schema = getFullSchema())
       : CallStack(CS), CSId(CSId), Info(MB, Schema) {}
+  IndexedAllocationInfo(CallStackId CSId, const MemInfoBlock &MB,
+                        const MemProfSchema &Schema = getFullSchema())
+      : CSId(CSId), Info(MB, Schema) {}
 
   // Returns the size in bytes when this allocation info struct is serialized.
   size_t serializedSize(const MemProfSchema &Schema,
@@ -889,11 +899,12 @@ struct LinearFrameIdConverter {
 // call stack array in the profile.
 struct LinearCallStackIdConverter {
   const unsigned char *CallStackBase;
-  std::function<Frame(LinearFrameId)> FrameIdToFrame;
+  llvm::function_ref<Frame(LinearFrameId)> FrameIdToFrame;
 
   LinearCallStackIdConverter() = delete;
-  LinearCallStackIdConverter(const unsigned char *CallStackBase,
-                             std::function<Frame(LinearFrameId)> FrameIdToFrame)
+  LinearCallStackIdConverter(
+      const unsigned char *CallStackBase,
+      llvm::function_ref<Frame(LinearFrameId)> FrameIdToFrame)
       : CallStackBase(CallStackBase), FrameIdToFrame(FrameIdToFrame) {}
 
   std::vector<Frame> operator()(LinearCallStackId LinearCSId) {
@@ -922,6 +933,98 @@ struct LinearCallStackIdConverter {
     }
 
     return Frames;
+  }
+};
+
+struct LineLocation {
+  LineLocation(uint32_t L, uint32_t D) : LineOffset(L), Column(D) {}
+
+  bool operator<(const LineLocation &O) const {
+    return LineOffset < O.LineOffset ||
+           (LineOffset == O.LineOffset && Column < O.Column);
+  }
+
+  bool operator==(const LineLocation &O) const {
+    return LineOffset == O.LineOffset && Column == O.Column;
+  }
+
+  bool operator!=(const LineLocation &O) const {
+    return LineOffset != O.LineOffset || Column != O.Column;
+  }
+
+  uint64_t getHashCode() const { return ((uint64_t)Column << 32) | LineOffset; }
+
+  uint32_t LineOffset;
+  uint32_t Column;
+};
+
+// A pair of a call site location and its corresponding callee GUID.
+using CallEdgeTy = std::pair<LineLocation, uint64_t>;
+
+// Used to extract caller-callee pairs from the call stack array.  The leaf
+// frame is assumed to call a heap allocation function with GUID 0.  The
+// resulting pairs are accumulated in CallerCalleePairs.  Users can take it
+// with:
+//
+//   auto Pairs = std::move(Extractor.CallerCalleePairs);
+struct CallerCalleePairExtractor {
+  // The base address of the radix tree array.
+  const unsigned char *CallStackBase;
+  // A functor to convert a linear FrameId to a Frame.
+  llvm::function_ref<Frame(LinearFrameId)> FrameIdToFrame;
+  // A map from caller GUIDs to lists of call sites in respective callers.
+  DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> CallerCalleePairs;
+
+  // The set of linear call stack IDs that we've visited.
+  BitVector Visited;
+
+  CallerCalleePairExtractor() = delete;
+  CallerCalleePairExtractor(
+      const unsigned char *CallStackBase,
+      llvm::function_ref<Frame(LinearFrameId)> FrameIdToFrame,
+      unsigned RadixTreeSize)
+      : CallStackBase(CallStackBase), FrameIdToFrame(FrameIdToFrame),
+        Visited(RadixTreeSize) {}
+
+  void operator()(LinearCallStackId LinearCSId) {
+    const unsigned char *Ptr =
+        CallStackBase +
+        static_cast<uint64_t>(LinearCSId) * sizeof(LinearFrameId);
+    uint32_t NumFrames =
+        support::endian::readNext<uint32_t, llvm::endianness::little>(Ptr);
+    // The leaf frame calls a function with GUID 0.
+    uint64_t CalleeGUID = 0;
+    for (; NumFrames; --NumFrames) {
+      LinearFrameId Elem =
+          support::endian::read<LinearFrameId, llvm::endianness::little>(Ptr);
+      // Follow a pointer to the parent, if any.  See comments below on
+      // CallStackRadixTreeBuilder for the description of the radix tree format.
+      if (static_cast<std::make_signed_t<LinearFrameId>>(Elem) < 0) {
+        Ptr += (-Elem) * sizeof(LinearFrameId);
+        Elem =
+            support::endian::read<LinearFrameId, llvm::endianness::little>(Ptr);
+      }
+      // We shouldn't encounter another pointer.
+      assert(static_cast<std::make_signed_t<LinearFrameId>>(Elem) >= 0);
+
+      // Add a new caller-callee pair.
+      Frame F = FrameIdToFrame(Elem);
+      uint64_t CallerGUID = F.Function;
+      LineLocation Loc(F.LineOffset, F.Column);
+      CallerCalleePairs[CallerGUID].emplace_back(Loc, CalleeGUID);
+
+      // Keep track of the indices we've visited.  If we've already visited the
+      // current one, terminate the traversal.  We will not discover any new
+      // caller-callee pair by continuing the traversal.
+      unsigned Offset =
+          std::distance(CallStackBase, Ptr) / sizeof(LinearFrameId);
+      if (Visited.test(Offset))
+        break;
+      Visited.set(Offset);
+
+      Ptr += sizeof(LinearFrameId);
+      CalleeGUID = CallerGUID;
+    }
   }
 };
 
@@ -1051,7 +1154,7 @@ public:
              const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes,
              llvm::DenseMap<FrameId, FrameStat> &FrameHistogram);
 
-  const std::vector<LinearFrameId> &getRadixArray() const { return RadixArray; }
+  ArrayRef<LinearFrameId> getRadixArray() const { return RadixArray; }
 
   llvm::DenseMap<CallStackId, LinearCallStackId> takeCallStackPos() {
     return std::move(CallStackPos);

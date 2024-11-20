@@ -96,24 +96,32 @@ public:
     return *this;
   }
 
+  bool isSubSetOf(const I64BitSet p) const {
+    I64BitSet tmp = *this;
+    tmp |= p;
+    return tmp == p;
+  }
+
   // Needed by `llvm::const_set_bits_iterator_impl`.
   int find_first() const { return min(); }
   int find_next(unsigned prev) const {
-    if (prev >= max())
+    if (prev >= max() - 1)
       return -1;
 
-    uint64_t b = storage >> (prev + 1);
-    if (b == 0)
-      return -1;
+    uint64_t b = storage >> (prev + static_cast<int64_t>(1));
+    assert(b != 0);
 
-    return llvm::countr_zero(b) + prev + 1;
+    return llvm::countr_zero(b) + prev + static_cast<int64_t>(1);
   }
 
   bool operator[](unsigned i) const {
     assert(i < 64);
-    return (storage & (1 << i)) != 0;
+    return (storage & (static_cast<int64_t>(1) << i)) != 0;
   }
-  unsigned min() const { return llvm::countr_zero(storage); }
+  unsigned min() const {
+    unsigned m = llvm::countr_zero(storage);
+    return m == 64 ? -1 : m;
+  }
   unsigned max() const { return 64 - llvm::countl_zero(storage); }
   unsigned count() const { return llvm::popcount(storage); }
   bool empty() const { return storage == 0; }

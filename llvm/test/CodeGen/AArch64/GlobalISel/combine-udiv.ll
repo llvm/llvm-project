@@ -257,10 +257,10 @@ define i32 @udiv_div_by_180(i32 %x)
 ;
 ; GISEL-LABEL: udiv_div_by_180:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    uxtb w8, w0
-; GISEL-NEXT:    mov w9, #5826 // =0x16c2
-; GISEL-NEXT:    movk w9, #364, lsl #16
-; GISEL-NEXT:    umull x8, w8, w9
+; GISEL-NEXT:    mov w8, #5826 // =0x16c2
+; GISEL-NEXT:    and w9, w0, #0xff
+; GISEL-NEXT:    movk w8, #364, lsl #16
+; GISEL-NEXT:    umull x8, w9, w8
 ; GISEL-NEXT:    lsr x0, x8, #32
 ; GISEL-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; GISEL-NEXT:    ret

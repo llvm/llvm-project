@@ -9,16 +9,17 @@
 #ifndef SUPPORT_FP_COMPARE_H
 #define SUPPORT_FP_COMPARE_H
 
-#include <cmath>     // for std::abs
 #include <algorithm> // for std::max
 #include <cassert>
-#include <__config>
+#include <cmath> // for std::abs
+
+#include "test_macros.h"
 
 // See https://www.boost.org/doc/libs/1_70_0/libs/test/doc/html/boost_test/testing_tools/extended_comparison/floating_point/floating_points_comparison_theory.html
 
 template <typename T>
 bool fptest_close(T val, T expected, T eps) {
-  _LIBCPP_CONSTEXPR T zero = T(0);
+  TEST_CONSTEXPR T zero = T(0);
   assert(eps >= zero);
 
   // Handle the zero cases

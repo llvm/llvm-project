@@ -140,9 +140,9 @@ extern "C" void foo10(data_t data) {
 // CHECK1-NEXT:    [[DOTTILE_0_IV_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK1-NEXT:    [[I:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK1-NEXT:    [[I:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 7, ptr [[I]], align 4
-// CHECK1-NEXT:    [[I3:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[THIS1]], i32 0, i32 0
+// CHECK1-NEXT:    [[I3:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    store ptr [[I3]], ptr [[I2]], align 8
 // CHECK1-NEXT:    store i32 0, ptr [[DOTFLOOR_0_IV_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND:%.*]]
@@ -1200,7 +1200,7 @@ extern "C" void foo10(data_t data) {
 // CHECK1-NEXT:    [[DOTFLOOR_0_IV___BEGIN2:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[DOTTILE_0_IV___BEGIN2:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[V:%.*]] = alloca double, align 8
-// CHECK1-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds [[STRUCT_DATA_T]], ptr [[DATA]], i32 0, i32 0
+// CHECK1-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw [[STRUCT_DATA_T]], ptr [[DATA]], i32 0, i32 0
 // CHECK1-NEXT:    store ptr [[ARRAY]], ptr [[__RANGE2]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__RANGE2]], align 8
 // CHECK1-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [12 x double], ptr [[TMP0]], i64 0, i64 0
@@ -1299,7 +1299,7 @@ extern "C" void foo10(data_t data) {
 // CHECK1-NEXT:    [[DOTTILE_0_IV___BEGIN2:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[V:%.*]] = alloca double, align 8
 // CHECK1-NEXT:    store double 4.200000e+01, ptr [[C]], align 8
-// CHECK1-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds [[STRUCT_DATA_T]], ptr [[DATA]], i32 0, i32 0
+// CHECK1-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw [[STRUCT_DATA_T]], ptr [[DATA]], i32 0, i32 0
 // CHECK1-NEXT:    store ptr [[ARRAY]], ptr [[__RANGE2]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__RANGE2]], align 8
 // CHECK1-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [12 x double], ptr [[TMP0]], i64 0, i64 0
@@ -1418,9 +1418,9 @@ extern "C" void foo10(data_t data) {
 // CHECK2-NEXT:    [[DOTTILE_0_IV_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK2-NEXT:    [[I:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK2-NEXT:    [[I:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK2-NEXT:    store i32 7, ptr [[I]], align 4
-// CHECK2-NEXT:    [[I3:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[THIS1]], i32 0, i32 0
+// CHECK2-NEXT:    [[I3:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[THIS1]], i32 0, i32 0
 // CHECK2-NEXT:    store ptr [[I3]], ptr [[I2]], align 8
 // CHECK2-NEXT:    store i32 0, ptr [[DOTFLOOR_0_IV_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND:%.*]]
@@ -1586,7 +1586,7 @@ extern "C" void foo10(data_t data) {
 // CHECK2-NEXT:    [[DOTTILE_0_IV___BEGIN2:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[V:%.*]] = alloca double, align 8
 // CHECK2-NEXT:    store double 4.200000e+01, ptr [[C]], align 8
-// CHECK2-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds [[STRUCT_DATA_T]], ptr [[DATA]], i32 0, i32 0
+// CHECK2-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw [[STRUCT_DATA_T]], ptr [[DATA]], i32 0, i32 0
 // CHECK2-NEXT:    store ptr [[ARRAY]], ptr [[__RANGE2]], align 8
 // CHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__RANGE2]], align 8
 // CHECK2-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [12 x double], ptr [[TMP0]], i64 0, i64 0
@@ -2493,7 +2493,7 @@ extern "C" void foo10(data_t data) {
 // CHECK2-NEXT:    [[DOTFLOOR_0_IV___BEGIN2:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[DOTTILE_0_IV___BEGIN2:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[V:%.*]] = alloca double, align 8
-// CHECK2-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds [[STRUCT_DATA_T]], ptr [[DATA]], i32 0, i32 0
+// CHECK2-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw [[STRUCT_DATA_T]], ptr [[DATA]], i32 0, i32 0
 // CHECK2-NEXT:    store ptr [[ARRAY]], ptr [[__RANGE2]], align 8
 // CHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__RANGE2]], align 8
 // CHECK2-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [12 x double], ptr [[TMP0]], i64 0, i64 0

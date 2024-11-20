@@ -125,8 +125,8 @@ void member_access(S *p) {
 
 // CHECK-LABEL: @_Z12lsh_overflow
 int lsh_overflow(int a, int b) {
-  // CHECK: %[[RHS_INBOUNDS:.*]] = icmp ule i32 %[[RHS:.*]], 31
-  // CHECK-NEXT: br i1 %[[RHS_INBOUNDS]], label %[[CHECK_BB:.*]], label %[[CONT_BB:.*]],
+  // CHECK: %[[RHS_inbounds:.*]] = icmp ule i32 %[[RHS:.*]], 31
+  // CHECK-NEXT: br i1 %[[RHS_inbounds]], label %[[CHECK_BB:.*]], label %[[CONT_BB:.*]],
 
   // CHECK:      [[CHECK_BB]]:
   // CHECK-NEXT: %[[SHIFTED_OUT_WIDTH:.*]] = sub nuw nsw i32 31, %[[RHS]]
@@ -141,7 +141,7 @@ int lsh_overflow(int a, int b) {
 
   // CHECK:      [[CONT_BB]]:
   // CHECK-NEXT: %[[VALID_BASE:.*]] = phi i1 [ true, {{.*}} ], [ %[[NO_OVERFLOW]], %[[CHECK_BB]] ]
-  // CHECK-NEXT: %[[VALID:.*]] = and i1 %[[RHS_INBOUNDS]], %[[VALID_BASE]]
+  // CHECK-NEXT: %[[VALID:.*]] = and i1 %[[RHS_inbounds]], %[[VALID_BASE]]
   // CHECK-NEXT: br i1 %[[VALID]]
 
   // CHECK: call void @__ubsan_handle_shift_out_of_bounds
@@ -625,7 +625,7 @@ void ThisAlign::this_align_lambda() {
   // CHECK: %[[this_addr:.*]] = alloca
   // CHECK: store ptr %[[this]], ptr %[[this_addr]],
   // CHECK: %[[this_inner:.*]] = load ptr, ptr %[[this_addr]],
-  // CHECK: %[[this_outer_addr:.*]] = getelementptr inbounds %{{.*}}, ptr %[[this_inner]], i32 0, i32 0
+  // CHECK: %[[this_outer_addr:.*]] = getelementptr inbounds nuw %{{.*}}, ptr %[[this_inner]], i32 0, i32 0
   // CHECK: %[[this_outer:.*]] = load ptr, ptr %[[this_outer_addr]],
   //
   // CHECK: %[[this_inner_isnonnull:.*]] = icmp ne ptr %[[this_inner]], null

@@ -101,6 +101,15 @@ local_function:
 # RELAX: R_RISCV_PCREL_LO12_I	.Lpcrel_label5
 # RELAX: R_RISCV_RELAX	*ABS*
 
+.Lpcrel_label6:
+	auipc	a0, %pcrel_hi(ifunc)
+# NORELAX: auipc	a0, 0
+# NORELAX: R_RISCV_PCREL_HI20	ifunc
+
+# RELAX: auipc	a0, 0
+# RELAX: R_RISCV_PCREL_HI20	ifunc
+# RELAX: R_RISCV_RELAX	*ABS*
+
 	.global	global_function
 	.type	global_function,@function
 global_function:
@@ -110,3 +119,6 @@ global_function:
 	.type	weak_function,@function
 weak_function:
 	ret
+
+.type ifunc, %gnu_indirect_function
+.set ifunc, global_function

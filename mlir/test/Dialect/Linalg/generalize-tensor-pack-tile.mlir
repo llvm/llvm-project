@@ -9,19 +9,17 @@ func.func @KCRS_to_KCRSsr(%arg0: tensor<1x1x128x64xf32>, %arg1: tensor<1x1x4x8x8
 // CHECK:       func.func @KCRS_to_KCRSsr
 // CHECK-SAME:    %[[SRC:[a-zA-Z0-9]+]]
 // CHECK-SAME:    %[[DEST:[a-zA-Z0-9]+]]
-// CHECK:         %{{.+}} = scf.for %[[R:[a-zA-Z0-9]+]] =
-// CHECK:           %{{.+}} = scf.for %[[S:[a-zA-Z0-9]+]] =
+// CHECK:         scf.for %[[R:[a-zA-Z0-9]+]] =
+// CHECK:           scf.for %[[S:[a-zA-Z0-9]+]] {{.*}} iter_args(%[[ITER_SLICE:.*]] =
 // CHECK:             %[[IN_R:.+]] = affine.apply #[[MAP0]](%[[R]])
 // CHECK:             %[[IN_S:.+]] = affine.apply #[[MAP2]](%[[S]])
 // CHECK:             %[[SRC_SLICE:.+]] = tensor.extract_slice %[[SRC]]
 // CHECK-SAME:          [0, 0, %[[IN_R]], %[[IN_S]]] [1, 1, 32, 8] [1, 1, 1, 1]
-// CHECK:             %[[TILE:.+]] = tensor.extract_slice %[[SRC_SLICE]]
-// CHECK-SAME:          [0, 0, 0, 0] [1, 1, 32, 8] [1, 1, 1, 1] : tensor<1x1x32x8xf32> to tensor<32x8xf32>
-// CHECK:             %[[EMPTY:.+]] = tensor.empty() : tensor<8x32xf32>
-// CHECK:             %[[TRANSP:.+]] =  linalg.transpose
-// CHECK-SAME:          ins(%[[TILE]]
-// CHECK-SAME:          outs(%[[EMPTY]]
-// CHECK-SAME:          permutation = [1, 0]
+// CHECK:             %[[EMPTY:.*]] = tensor.empty() : tensor<1x1x8x32xf32>
+// CHECK:             %[[TRANSP:.*]] = linalg.transpose
+// CHECK-SAME:          ins(%[[SRC_SLICE]] : tensor<1x1x32x8xf32>)
+// CHECK-SAME:          outs(%[[EMPTY]] : tensor<1x1x8x32xf32>)
+// CHECK-SAME:          permutation = [0, 1, 3, 2]
 // CHECK:             %{{.+}} = tensor.insert_slice %[[TRANSP]] into %{{.+}}
 
 module attributes {transform.with_named_sequence} {

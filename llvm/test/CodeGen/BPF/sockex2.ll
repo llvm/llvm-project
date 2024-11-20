@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=bpfel -show-mc-encoding | FileCheck %s
+; RUN: llc < %s -march=bpfel -mcpu=v1 -show-mc-encoding | FileCheck %s
 
 %struct.bpf_map_def = type { i32, i32, i32, i32 }
 %struct.sk_buff = type opaque
@@ -311,7 +311,7 @@ flow_dissector.exit.thread:                       ; preds = %86, %12, %196, %199
 ; CHECK-LABEL: bpf_prog2:
 ; CHECK: r0 = *(u16 *)skb[12] # encoding: [0x28,0x00,0x00,0x00,0x0c,0x00,0x00,0x00]
 ; CHECK: r0 = *(u16 *)skb[16] # encoding: [0x28,0x00,0x00,0x00,0x10,0x00,0x00,0x00]
-; CHECK: implicit-def: $r8
+; CHECK: implicit-def: $r7
 ; CHECK: r1 =
 ; CHECK: call 1 # encoding: [0x85,0x00,0x00,0x00,0x01,0x00,0x00,0x00]
 ; CHECK: call 2 # encoding: [0x85,0x00,0x00,0x00,0x02,0x00,0x00,0x00]

@@ -138,9 +138,9 @@
 // RUN:             | FileCheck -check-prefix=LDGARANGE %s
 // RUN: %clang -### %s -g -flto=full -target x86_64-scei-ps4 2>&1 \
 // RUN:             | FileCheck -check-prefix=LDGARANGE %s
-// RUN: %clang -### %s -g -flto -target x86_64-scei-ps5 2>&1 \
+// RUN: %clang -### %s -g -flto -target x86_64-sie-ps5 2>&1 \
 // RUN:             | FileCheck -check-prefix=LDGARANGE %s
-// RUN: %clang -### %s -g -target x86_64-scei-ps5 2>&1 \
+// RUN: %clang -### %s -g -target x86_64-sie-ps5 2>&1 \
 // RUN:             | FileCheck -check-prefix=LDGARANGE %s
 
 // On the AIX, -g defaults to limited debug info.

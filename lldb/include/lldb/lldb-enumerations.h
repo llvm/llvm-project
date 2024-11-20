@@ -655,6 +655,8 @@ enum CommandArgumentType {
   eArgTypeRemotePath,
   eArgTypeRemoteFilename,
   eArgTypeModule,
+  eArgTypeCPUName,
+  eArgTypeCPUFeatures,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -1222,6 +1224,7 @@ enum SaveCoreStyle {
   eSaveCoreFull = 1,
   eSaveCoreDirtyOnly = 2,
   eSaveCoreStackOnly = 3,
+  eSaveCoreCustomOnly = 4,
 };
 
 /// Events that might happen during a trace session.

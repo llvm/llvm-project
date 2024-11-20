@@ -115,6 +115,38 @@ JITCompileCallbackManager::executeCompileCallback(ExecutorAddr TrampolineAddr) {
   }
 }
 
+Error IndirectStubsManager::redirect(JITDylib &JD, const SymbolMap &NewDests) {
+  for (auto &[Name, Dest] : NewDests)
+    if (auto Err = updatePointer(*Name, Dest.getAddress()))
+      return Err;
+  return Error::success();
+}
+
+void IndirectStubsManager::emitRedirectableSymbols(
+    std::unique_ptr<MaterializationResponsibility> MR, SymbolMap InitialDests) {
+  StubInitsMap StubInits;
+  for (auto &[Name, Dest] : InitialDests)
+    StubInits[*Name] = {Dest.getAddress(), Dest.getFlags()};
+  if (auto Err = createStubs(StubInits)) {
+    MR->getExecutionSession().reportError(std::move(Err));
+    return MR->failMaterialization();
+  }
+  SymbolMap Stubs;
+  for (auto &[Name, Dest] : InitialDests) {
+    auto StubSym = findStub(*Name, false);
+    assert(StubSym.getAddress() && "Stub symbol should be present");
+    Stubs[Name] = StubSym;
+  }
+  if (auto Err = MR->notifyResolved(Stubs)) {
+    MR->getExecutionSession().reportError(std::move(Err));
+    return MR->failMaterialization();
+  }
+  if (auto Err = MR->notifyEmitted({})) {
+    MR->getExecutionSession().reportError(std::move(Err));
+    return MR->failMaterialization();
+  }
+}
+
 Expected<std::unique_ptr<JITCompileCallbackManager>>
 createLocalCompileCallbackManager(const Triple &T, ExecutionSession &ES,
                                   ExecutorAddr ErrorHandlerAddress) {

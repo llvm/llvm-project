@@ -489,6 +489,16 @@ public:
   virtual const MCPhysReg*
   getCalleeSavedRegs(const MachineFunction *MF) const = 0;
 
+  /// Return a null-terminated list of all of the callee-saved registers on
+  /// this target when IPRA is on. The list should include any non-allocatable
+  /// registers that the backend uses and assumes will be saved by all calling
+  /// conventions. This is typically the ISA-standard frame pointer, but could
+  /// include the thread pointer, TOC pointer, or base pointer for different
+  /// targets.
+  virtual const MCPhysReg *getIPRACSRegs(const MachineFunction *MF) const {
+    return nullptr;
+  }
+
   /// Return a mask of call-preserved registers for the given calling convention
   /// on the current function. The mask should include all call-preserved
   /// aliases. This is used by the register allocator to determine which
@@ -1204,26 +1214,13 @@ public:
     return false;
   }
 
-  /// Returns the Largest Super Class that is being initialized. There
-  /// should be a Pseudo Instruction implemented for the super class
-  /// that is being returned to ensure that Init Undef can apply the
-  /// initialization correctly.
-  virtual const TargetRegisterClass *
-  getLargestSuperClass(const TargetRegisterClass *RC) const {
-    llvm_unreachable("Unexpected target register class.");
+  virtual std::optional<uint8_t> getVRegFlagValue(StringRef Name) const {
+    return {};
   }
 
-  /// Returns if the architecture being targeted has the required Pseudo
-  /// Instructions for initializing the register. By default this returns false,
-  /// but where it is overriden for an architecture, the behaviour will be
-  /// different. This can either be a check to ensure the Register Class is
-  /// present, or to return true as an indication the architecture supports the
-  /// pass. If using the method that does not check for the Register Class, it
-  /// is imperative to ensure all required Pseudo Instructions are implemented,
-  /// otherwise compilation may fail with an `Unexpected register class` error.
-  virtual bool
-  doesRegClassHavePseudoInitUndef(const TargetRegisterClass *RC) const {
-    return false;
+  virtual SmallVector<StringLiteral>
+  getVRegFlagsOfReg(Register Reg, const MachineFunction &MF) const {
+    return {};
   }
 };
 

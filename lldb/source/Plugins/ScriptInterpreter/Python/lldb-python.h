@@ -13,7 +13,7 @@
 // This declaration works around a clang module build failure.
 // It should be deleted ASAP.
 #include "llvm/Support/Error.h"
-static llvm::Expected<bool> *g_fcxx_modules_workaround;
+static llvm::Expected<bool> *g_fcxx_modules_workaround [[maybe_unused]];
 // END
 
 #include "lldb/Host/Config.h"
@@ -47,6 +47,11 @@ static llvm::Expected<bool> *g_fcxx_modules_workaround;
 
 // Include python for non windows machines
 #include <Python.h>
+
+// Provide a meaningful diagnostic error if someone tries to compile this file
+// with a version of Python we don't support.
+static_assert(PY_VERSION_HEX >= 0x03000000,
+              "LLDB requires at least Python 3.0");
 #endif
 
 #endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_LLDB_PYTHON_H

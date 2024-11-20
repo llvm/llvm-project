@@ -22,7 +22,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CallGraph.h"
-#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MustExecute.h"
@@ -1852,22 +1851,6 @@ bool Attributor::checkForAllUses(
 
     User &Usr = *U->getUser();
     AddUsers(Usr, /* OldUse */ nullptr);
-
-    auto *RI = dyn_cast<ReturnInst>(&Usr);
-    if (!RI)
-      continue;
-
-    Function &F = *RI->getFunction();
-    auto CallSitePred = [&](AbstractCallSite ACS) {
-      return AddUsers(*ACS.getInstruction(), U);
-    };
-    if (!checkForAllCallSites(CallSitePred, F, /* RequireAllCallSites */ true,
-                              &QueryingAA, UsedAssumedInformation)) {
-      LLVM_DEBUG(dbgs() << "[Attributor] Could not follow return instruction "
-                           "to all call sites: "
-                        << *RI << "\n");
-      return false;
-    }
   }
 
   return true;
@@ -3310,6 +3293,12 @@ InformationCache::getIndirectlyCallableFunctions(Attributor &A) const {
   return IndirectlyCallableFunctions;
 }
 
+std::optional<unsigned> InformationCache::getFlatAddressSpace() const {
+  if (TargetTriple.isAMDGPU() || TargetTriple.isNVPTX())
+    return 0;
+  return std::nullopt;
+}
+
 void Attributor::recordDependence(const AbstractAttribute &FromAA,
                                   const AbstractAttribute &ToAA,
                                   DepClassTy DepClass) {
@@ -3836,7 +3825,7 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
   if (MaxSpecializationPerCB.getNumOccurrences()) {
     AC.IndirectCalleeSpecializationCallback =
         [&](Attributor &, const AbstractAttribute &AA, CallBase &CB,
-            Function &Callee) {
+            Function &Callee, unsigned) {
           if (MaxSpecializationPerCB == 0)
             return false;
           auto &Set = IndirectCalleeTrackingMap[&CB];
