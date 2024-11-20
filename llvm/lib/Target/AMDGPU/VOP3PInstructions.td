@@ -20,6 +20,11 @@ class VOP3P_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR,
   let AsmVOP3Base = AsmVOP3P;
 }
 
+def VOP_MFMA_LD_SCALE : VOP3P_Profile<VOPProfile<[untyped, i32, i32, untyped]>, VOP3P_LD_SCALE> {
+  let HasModifiers = 1;
+  let HasNeg = 0;
+}
+
 // Used for FMA_MIX* and MAD_MIX* insts
 // Their operands are only sort of f16 operands. Depending on
 // op_sel_hi, these may be interpreted as f32. The inline immediate
@@ -748,6 +753,10 @@ let SubtargetPredicate = HasGFX950Insts, is_gfx940_xdl = 1 in {
 defm V_MFMA_F32_16X16X32_F16   : MAIInst<"v_mfma_f32_16x16x32f16",    "F32_V8F16_X32", int_amdgcn_mfma_f32_16x16x32_f16>;
 defm V_MFMA_F32_32X32X16_F16   : MAIInst<"v_mfma_f32_32x32x16f16",    "F32_V8F16_X16", int_amdgcn_mfma_f32_32x32x16_f16>;
 defm V_MFMA_F32_32X32X16_BF16  : MAIInst<"v_mfma_f32_32x32x16bf16",   "F32_V8BF16_X16", int_amdgcn_mfma_f32_32x32x16_bf16>;
+}
+
+let SubtargetPredicate = HasGFX950Insts in {
+defm V_MFMA_LD_SCALE_B32 : VOP3PInst<"v_mfma_ld_scale_b32", VOP_MFMA_LD_SCALE>;
 }
 
 let SubtargetPredicate = isGFX90APlus in {
@@ -1786,6 +1795,8 @@ defm V_MFMA_F64_4X4X4F64        : VOP3P_Real_MFMA_gfx90a <0x6f>;
 defm V_MFMA_F32_16X16X32_F16     : VOP3P_Real_MFMA_gfx950 <0x54, "v_mfma_f32_16x16x32_f16">;
 defm V_MFMA_F32_32X32X16_F16     : VOP3P_Real_MFMA_gfx950 <0x55, "v_mfma_f32_32x32x16_f16">;
 defm V_MFMA_F32_32X32X16_BF16    : VOP3P_Real_MFMA_gfx950 <0x37, "v_mfma_f32_32x32x16_bf16">;
+
+defm V_MFMA_LD_SCALE_B32 : VOP3P_Real_vi <0x2c>;
 
 defm V_MFMA_I32_32X32X16I8       : VOP3P_Real_MFMA_gfx940 <0x56, "v_mfma_i32_32x32x16_i8">;
 defm V_MFMA_I32_16X16X32I8       : VOP3P_Real_MFMA_gfx940 <0x57, "v_mfma_i32_16x16x32_i8">;
