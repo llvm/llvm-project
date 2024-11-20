@@ -38,8 +38,8 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
-std::string lld::toString(RelType type) {
-  StringRef s = getELFRelocationTypeName(elf::ctx.arg.emachine, type);
+std::string elf::toStr(Ctx &ctx, RelType type) {
+  StringRef s = getELFRelocationTypeName(ctx.arg.emachine, type);
   if (s == "Unknown")
     return ("Unknown (" + Twine(type) + ")").str();
   return std::string(s);
@@ -123,7 +123,7 @@ TargetInfo::~TargetInfo() {}
 
 int64_t TargetInfo::getImplicitAddend(const uint8_t *buf, RelType type) const {
   internalLinkerError(getErrorLoc(ctx, buf),
-                      "cannot read addend for relocation " + toString(type));
+                      "cannot read addend for relocation " + toStr(ctx, type));
   return 0;
 }
 
