@@ -40,6 +40,9 @@ void initializeRISCVLandingPadSetupPass(PassRegistry &);
 FunctionPass *createRISCVISelDag(RISCVTargetMachine &TM,
                                  CodeGenOptLevel OptLevel);
 
+FunctionPass *createRISCVLatePeepholeOptPass();
+void initializeRISCVLatePeepholeOptPass(PassRegistry &);
+
 FunctionPass *createRISCVMakeCompressibleOptPass();
 void initializeRISCVMakeCompressibleOptPass(PassRegistry &);
 
