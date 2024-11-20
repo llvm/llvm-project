@@ -1513,62 +1513,62 @@ void aggregate() {
 
   S::foo(S{1, 2, 3, 4});
   S::foo(S{.s1 = 100, .s4 = 100});
-  S::foo(S{.s1 = 100}); // expected-warning {{field 's4' is not explicitly initialized, but was marked as requiring explicit initialization}} expected-note@#FIELD_S4 {{'s4' declared here}}
+  S::foo(S{.s1 = 100}); // expected-warning {{field 's4' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_S4 {{'s4' declared here}}
 
   S s{.s1 = 100, .s4 = 100};
   (void)s;
 
-  S t{.s4 = 100}; // expected-warning {{field 's1' is not explicitly initialized, but was marked as requiring explicit initialization}} expected-note@#FIELD_S1 {{'s1' declared here}}
+  S t{.s4 = 100}; // expected-warning {{field 's1' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_S1 {{'s1' declared here}}
   (void)t;
 
-  S *ptr1 = new S; // expected-warning {{field in 'S' is not explicitly initialized, but was marked as requiring explicit initialization}} expected-note@#FIELD_S4 {{'s4' declared here}} expected-note@#FIELD_S1 {{'s1' declared here}}
+  S *ptr1 = new S; // expected-warning {{field in 'S' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_S4 {{'s4' declared here}} expected-note@#FIELD_S1 {{'s1' declared here}}
   delete ptr1;
 
   S *ptr2 = new S{.s1 = 100, .s4 = 100};
   delete ptr2;
 
 #if __cplusplus >= 202002L
-  // expected-warning@+2 {{field 'd2' is not explicitly initialized, but was marked as requiring explicit initialization}} expected-note@#FIELD_D2 {{'d2' declared here}}
-  // expected-warning {{field 's1' is not explicitly initialized, but was marked as requiring explicit initialization}} expected-note@#FIELD_S1 {{'s1' declared here}}
+  // expected-warning@+2 {{field 'd2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_D2 {{'d2' declared here}}
+  // expected-warning {{field 's1' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_S1 {{'s1' declared here}}
   D a({}, 0);
   (void)a;
 #else
-  C a; // expected-warning {{field in 'C' is not explicitly initialized, but was marked as requiring explicit initialization}} expected-note@#FIELD_C1 {{'c1' declared here}}
+  C a; // expected-warning {{field in 'C' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_C1 {{'c1' declared here}}
   (void)a;
 #endif
 
-  // expected-warning@+2 {{field 's4' is not explicitly initialized, but was marked as requiring explicit initialization}} expected-note@#FIELD_S4 {{'s4' declared here}}
-  // expected-warning@+1 {{field 's1' is not explicitly initialized, but was marked as requiring explicit initialization}} expected-note@#FIELD_S1 {{'s1' declared here}}
+  // expected-warning@+2 {{field 's4' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_S4 {{'s4' declared here}}
+  // expected-warning@+1 {{field 's1' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_S1 {{'s1' declared here}}
   D b{.d2 = 1};
   (void)b;
 
-  // expected-warning@+3 {{field 's4' is not explicitly initialized, but was marked as requiring explicit initialization}} expected-note@#FIELD_S4 {{'s4' declared here}}
-  // expected-warning@+2 {{field 'd2' is not explicitly initialized, but was marked as requiring explicit initialization}} expected-note@#FIELD_D2 {{'d2' declared here}}
-  // expected-warning@+1 {{field 's1' is not explicitly initialized, but was marked as requiring explicit initialization}} expected-note@#FIELD_S1 {{'s1' declared here}}
+  // expected-warning@+3 {{field 's4' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_S4 {{'s4' declared here}}
+  // expected-warning@+2 {{field 'd2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_D2 {{'d2' declared here}}
+  // expected-warning@+1 {{field 's1' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_S1 {{'s1' declared here}}
   D c{.d1 = 5};
 
-  // expected-warning@+3 {{field 's4' is not explicitly initialized, but was marked as requiring explicit initialization}} expected-note@#FIELD_S4 {{'s4' declared here}}
-  // expected-warning@+2 {{field 'd2' is not explicitly initialized, but was marked as requiring explicit initialization}} expected-note@#FIELD_D2 {{'d2' declared here}}
-  // expected-warning@+1 {{field 's1' is not explicitly initialized, but was marked as requiring explicit initialization}} expected-note@#FIELD_S1 {{'s1' declared here}}
+  // expected-warning@+3 {{field 's4' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_S4 {{'s4' declared here}}
+  // expected-warning@+2 {{field 'd2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_D2 {{'d2' declared here}}
+  // expected-warning@+1 {{field 's1' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_S1 {{'s1' declared here}}
   c = {{}, 0};
   (void)c;
 
   // expected-note@+3 {{in implicit default constructor for 'D' first required here}}
-  // expected-warning@#TYPE_D {{field in 'S' is not explicitly initialized, but was marked as requiring explicit initialization}} expected-note@#FIELD_S1 {{'s1' declared here}} expected-note@#FIELD_S4 {{'s4' declared here}}
-  // expected-warning@+1 {{field in 'D' is not explicitly initialized, but was marked as requiring explicit initialization}} expected-note@#FIELD_D2 {{'d2' declared here}}
+  // expected-warning@#TYPE_D {{field in 'S' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_S1 {{'s1' declared here}} expected-note@#FIELD_S4 {{'s4' declared here}}
+  // expected-warning@+1 {{field in 'D' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_D2 {{'d2' declared here}}
   D d;
   (void)d;
 
-  // expected-warning@+12 {{field in 'E' is not explicitly initialized, but was marked as requiring explicit initialization}}
+  // expected-warning@+12 {{field in 'E' requires explicit initialization but is not explicitly initialized}}
   // expected-note@#FIELD_E2 {{'e2' declared here}}
-  // expected-warning@#TYPE_E {{field in 'D' is not explicitly initialized, but was marked as requiring explicit initialization}}
+  // expected-warning@#TYPE_E {{field in 'D' requires explicit initialization but is not explicitly initialized}}
   // expected-note@+9 {{in implicit default constructor for 'E' first required here}}
   // expected-note@#FIELD_D2 {{'d2' declared here}}
-  // expected-warning@#TYPE_E {{field in 'D' is not explicitly initialized, but was marked as requiring explicit initialization}}
+  // expected-warning@#TYPE_E {{field in 'D' requires explicit initialization but is not explicitly initialized}}
   // expected-note@#FIELD_D2 {{'d2' declared here}}
-  // expected-warning@#TYPE_E {{field in 'D2' is not explicitly initialized, but was marked as requiring explicit initialization}}
+  // expected-warning@#TYPE_E {{field in 'D2' requires explicit initialization but is not explicitly initialized}}
   // expected-note@#TYPE_E {{in implicit default constructor for 'D2' first required here}}
-  // expected-warning@#TYPE_D2 {{field in 'D' is not explicitly initialized, but was marked as requiring explicit initialization}}
+  // expected-warning@#TYPE_D2 {{field in 'D' requires explicit initialization but is not explicitly initialized}}
   // expected-note@+2 {{in implicit default constructor for 'E' first required here}}
   // expected-note@#FIELD_D2 {{'d2' declared here}}
   E e;

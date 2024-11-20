@@ -2319,9 +2319,10 @@ def warn_cxx20_compat_aggregate_init_with_ctors : Warning<
   "aggregate initialization of type %0 with user-declared constructors "
   "is incompatible with C++20">, DefaultIgnore, InGroup<CXX20Compat>;
 def warn_cxx20_compat_requires_explicit_init_non_aggregate : Warning<
-  "explicit initialization of field %0 may not be enforced in C++20 as type %1 "
-  "will become a non-aggregate due to the presence of user-declared "
-  "constructors">, DefaultIgnore, InGroup<CXX20Compat>;
+  "explicit initialization of field %0 will not be enforced in C++20 and later "
+  "because %1 has a user-declared constructor, making the type no longer an "
+  "aggregate">,
+  DefaultIgnore, InGroup<CXX20Compat>;
 def warn_cxx17_compat_aggregate_init_paren_list : Warning<
   "aggregate initialization of type %0 from a parenthesized list of values "
   "is a C++20 extension">, DefaultIgnore, InGroup<CXX20>;
@@ -2352,8 +2353,8 @@ def err_init_reference_member_uninitialized : Error<
 def note_uninit_reference_member : Note<
   "uninitialized reference member is here">;
 def warn_field_requires_explicit_init : Warning<
-  "field %select{%1|in %1}0 is not explicitly initialized, but was marked as "
-  "requiring explicit initialization">, InGroup<UninitializedExplicitInit>;
+  "field %select{%1|in %1}0 requires explicit initialization but is not "
+   "explicitly initialized">, InGroup<UninitializedExplicitInit>;
 def warn_field_is_uninit : Warning<"field %0 is uninitialized when used here">,
   InGroup<Uninitialized>;
 def warn_base_class_is_uninit : Warning<

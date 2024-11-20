@@ -558,7 +558,7 @@ struct with_explicit_field {
 };
 
 void aggregate() {
-  struct with_explicit_field a; // expected-warning {{field in 'with_explicit_field' is not explicitly initialized, but was marked as requiring explicit initialization}} expected-note@#FIELD_Y {{'y' declared here}}
-  struct with_explicit_field b = {1}; // expected-warning {{field 'y' is not explicitly initialized, but was marked as requiring explicit initialization}} expected-note@#FIELD_Y {{'y' declared here}}
+  struct with_explicit_field a; // expected-warning {{field in 'with_explicit_field' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_Y {{'y' declared here}}
+  struct with_explicit_field b = {1}; // expected-warning {{field 'y' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_Y {{'y' declared here}}
   (void)(&a != &b);
 }
