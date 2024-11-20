@@ -2726,39 +2726,8 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
   TypeQuery query_full(query);
   bool have_index_match = false;
   m_index->GetTypesWithQuery(query_full, [&](DWARFDIE die) {
-    // Check the language, but only if we have a language filter.
-    if (query.HasLanguage()) {
-      if (!query.LanguageMatches(GetLanguageFamily(*die.GetCU())))
-        return true; // Keep iterating over index types, language mismatch.
-    }
-
-    // Since mangled names are unique, we only need to check if the names are
-    // the same.
-    if (query.GetSearchByMangledName()) {
-      if (die.GetMangledName(/*substitute_name_allowed=*/false) !=
-          query.GetTypeBasename().GetStringRef())
-        return true; // Keep iterating over index types, mangled name mismatch.
-      if (Type *matching_type = ResolveType(die, true, true)) {
-        results.InsertUnique(matching_type->shared_from_this());
-        return !results.Done(query); // Keep iterating if we aren't done.
-      }
-      return true; // Keep iterating over index types, weren't able to resolve
-                   // this type
-    }
-
-    // Check the context matches
-    std::vector<lldb_private::CompilerContext> die_context;
-    if (query.GetModuleSearch())
-      die_context = die.GetDeclContext();
-    else
-      die_context = die.GetTypeLookupContext();
-    assert(!die_context.empty());
-    if (!query.ContextMatches(die_context))
-      return true; // Keep iterating over index types, context mismatch.
-
-    // Try to resolve the type.
     if (Type *matching_type = ResolveType(die, true, true)) {
-      if (matching_type->IsTemplateType()) {
+      if (!query.GetSearchByMangledName() && matching_type->IsTemplateType()) {
         // We have to watch out for case where we lookup a type by basename and
         // it matches a template with simple template names. Like looking up
         // "Foo" and if we have simple template names then we will match
@@ -2790,7 +2759,7 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
   // With -gsimple-template-names, a templated type's DW_AT_name will not
   // contain the template parameters. Try again stripping '<' and anything
   // after, filtering out entries with template parameters that don't match.
-  if (!have_index_match) {
+  if (!have_index_match && !query.GetSearchByMangledName()) {
     // Create a type matcher with a compiler context that is tuned for
     // -gsimple-template-names. We will use this for the index lookup and the
     // context matching, but will use the original "match" to insert matches
@@ -2804,23 +2773,6 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
       // Copy our match's context and update the basename we are looking for
       // so we can use this only to compare the context correctly.
       m_index->GetTypesWithQuery(query_simple, [&](DWARFDIE die) {
-        // Check the language, but only if we have a language filter.
-        if (query.HasLanguage()) {
-          if (!query.LanguageMatches(GetLanguageFamily(*die.GetCU())))
-            return true; // Keep iterating over index types, language mismatch.
-        }
-
-        // Check the context matches
-        std::vector<lldb_private::CompilerContext> die_context;
-        if (query.GetModuleSearch())
-          die_context = die.GetDeclContext();
-        else
-          die_context = die.GetTypeLookupContext();
-        assert(!die_context.empty());
-        if (!query_simple.ContextMatches(die_context))
-          return true; // Keep iterating over index types, context mismatch.
-
-        // Try to resolve the type.
         if (Type *matching_type = ResolveType(die, true, true)) {
           ConstString name = matching_type->GetQualifiedName();
           // We have found a type that still might not match due to template
