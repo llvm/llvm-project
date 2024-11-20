@@ -22,9 +22,6 @@ mlir::gpu::GPUModuleOp cuf::getOrCreateGPUModule(mlir::ModuleOp mod,
   mlir::OpBuilder builder(ctx);
   auto gpuMod = builder.create<mlir::gpu::GPUModuleOp>(mod.getLoc(),
                                                        cudaDeviceModuleName);
-  llvm::SmallVector<mlir::Attribute> targets;
-  targets.push_back(mlir::NVVM::NVVMTargetAttr::get(ctx));
-  gpuMod.setTargetsAttr(builder.getArrayAttr(targets));
   mlir::Block::iterator insertPt(mod.getBodyRegion().front().end());
   symTab.insert(gpuMod, insertPt);
   return gpuMod;
