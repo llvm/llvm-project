@@ -3,10 +3,8 @@ add_object_library(
   SRCS
     io.cpp
     exit.cpp
-    time.cpp
   HDRS
     io.h
-    time.h
   DEPENDS
     libc.src.__support.common
     libc.src.__support.CPP.string_view

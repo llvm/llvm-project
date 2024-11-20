@@ -7,5 +7,4 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.time_macros
     libc.hdr.types.struct_timespec
-    libc.src.__support.OSUtil.osutil
 )
