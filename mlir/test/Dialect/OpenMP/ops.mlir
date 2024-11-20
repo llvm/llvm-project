@@ -879,6 +879,14 @@ cleanup {
   omp.yield
 }
 
+// CHECK: %[[DECL_VAR:.*]] = llvm.alloca %{{.*}}
+// CHECK: %[[DECL_MAP_INFO:.*]] = omp.map.info var_ptr(%[[DECL_VAR]] : !llvm.ptr, !llvm.struct<"my_type", (i32)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+// CHECK: omp.declare_mapper @my_mapper : %[[DECL_VAR]] : !llvm.ptr : !llvm.struct<"my_type", (i32)> map_entries(%[[DECL_MAP_INFO]] : !llvm.ptr)
+%decl_c1 = arith.constant 1 : i64
+%decl_var = llvm.alloca %decl_c1 x !llvm.struct<"my_type", (i32)> : (i64) -> !llvm.ptr
+%decl_map_info = omp.map.info var_ptr(%decl_var : !llvm.ptr, !llvm.struct<"my_type", (i32)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+omp.declare_mapper @my_mapper : %decl_var : !llvm.ptr : !llvm.struct<"my_type", (i32)> map_entries(%decl_map_info : !llvm.ptr)
+
 // CHECK-LABEL: func @wsloop_reduction
 func.func @wsloop_reduction(%lb : index, %ub : index, %step : index) {
   %c1 = arith.constant 1 : i32

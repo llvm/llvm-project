@@ -1750,6 +1750,34 @@ def ScanOp : OpenMP_Op<"scan", [
 }
 
 //===----------------------------------------------------------------------===//
+// 2.19.7.3 Declare Mapper Directive
+//===----------------------------------------------------------------------===//
+def DeclareMapperOp : OpenMP_Op<"declare_mapper", traits = [
+  Symbol], clauses = [
+    OpenMP_MapClause
+  ]> {
+  let summary = "declare mapper directive";
+  let description = [{
+    The declare mapper directive declares a user-defined mapper for a given
+    type, and may define a mapper-identifier that can be used in a map clause.
+  }] # clausesDescription;
+
+  let arguments = !con((ins SymbolNameAttr:$sym_name,
+                            OpenMP_PointerLikeType:$var_ptr,
+                            TypeAttr:$var_type), clausesArgs);
+
+  let builders = [
+    OpBuilder<(ins CArg<"const DeclareMapperOperands &">:$clauses)>
+  ];
+
+  // Override clause-based assemblyFormat.
+  let assemblyFormat = "$sym_name `:` $var_ptr `:` type($var_ptr) `:` $var_type" # " oilist(" #
+    clausesOptAssemblyFormat # ")  attr-dict";
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // 2.19.5.7 declare reduction Directive
 //===----------------------------------------------------------------------===//
 
