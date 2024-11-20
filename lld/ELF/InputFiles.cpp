@@ -222,7 +222,7 @@ std::optional<MemoryBufferRef> elf::readFile(Ctx &ctx, StringRef path) {
   // The --chroot option changes our virtual root directory.
   // This is useful when you are dealing with files created by --reproduce.
   if (!ctx.arg.chroot.empty() && path.starts_with("/"))
-    path = saver().save(ctx.arg.chroot + path);
+    path = saver(ctx).save(ctx.arg.chroot + path);
 
   bool remapped = false;
   auto it = ctx.arg.remapInputs.find(path);
@@ -427,9 +427,9 @@ static void addDependentLibrary(Ctx &ctx, StringRef specifier,
   if (!ctx.arg.dependentLibraries)
     return;
   if (std::optional<std::string> s = searchLibraryBaseName(ctx, specifier))
-    ctx.driver.addFile(saver().save(*s), /*withLOption=*/true);
+    ctx.driver.addFile(saver(ctx).save(*s), /*withLOption=*/true);
   else if (std::optional<std::string> s = findFromSearchPaths(ctx, specifier))
-    ctx.driver.addFile(saver().save(*s), /*withLOption=*/true);
+    ctx.driver.addFile(saver(ctx).save(*s), /*withLOption=*/true);
   else if (fs::exists(specifier))
     ctx.driver.addFile(specifier, /*withLOption=*/false);
   else
@@ -1515,6 +1515,7 @@ template <class ELFT> void SharedFile::parse() {
   }
 
   // DSOs are uniquified not by filename but by soname.
+  StringSaver &ss = saver(ctx);
   DenseMap<CachedHashStringRef, SharedFile *>::iterator it;
   bool wasInserted;
   std::tie(it, wasInserted) =
@@ -1581,8 +1582,7 @@ template <class ELFT> void SharedFile::parse() {
         }
         StringRef verName = stringTable.data() + verneeds[idx];
         versionedNameBuffer.clear();
-        name = saver().save(
-            (name + "@" + verName).toStringRef(versionedNameBuffer));
+        name = ss.save((name + "@" + verName).toStringRef(versionedNameBuffer));
       }
       Symbol *s = ctx.symtab->addSymbol(
           Undefined{this, name, sym.getBinding(), sym.st_other, sym.getType()});
@@ -1627,7 +1627,7 @@ template <class ELFT> void SharedFile::parse() {
     versionedNameBuffer.clear();
     name = (name + "@" + verName).toStringRef(versionedNameBuffer);
     auto *s = ctx.symtab->addSymbol(
-        SharedSymbol{*this, saver().save(name), sym.getBinding(), sym.st_other,
+        SharedSymbol{*this, ss.save(name), sym.getBinding(), sym.st_other,
                      sym.getType(), sym.st_value, sym.st_size, alignment});
     s->dsoDefined = true;
     if (s->file == this)
@@ -1723,10 +1723,11 @@ BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
   // into consideration at LTO time (which very likely causes undefined
   // symbols later in the link stage). So we append file offset to make
   // filename unique.
+  StringSaver &ss = saver(ctx);
   StringRef name = archiveName.empty()
-                       ? saver().save(path)
-                       : saver().save(archiveName + "(" + path::filename(path) +
-                                      " at " + utostr(offsetInArchive) + ")");
+                       ? ss.save(path)
+                       : ss.save(archiveName + "(" + path::filename(path) +
+                                 " at " + utostr(offsetInArchive) + ")");
   MemoryBufferRef mbref(mb.getBuffer(), name);
 
   obj = CHECK2(lto::InputFile::create(mbref), this);
@@ -1763,7 +1764,7 @@ static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
     // Update objSym.Name to reference (via StringRef) the string saver's copy;
     // this way LTO can reference the same string saver's copy rather than
     // keeping copies of its own.
-    objSym.Name = uniqueSaver().save(objSym.getName());
+    objSym.Name = uniqueSaver(ctx).save(objSym.getName());
     sym = ctx.symtab->insert(objSym.getName());
   }
 
@@ -1816,13 +1817,14 @@ void BitcodeFile::parse() {
 void BitcodeFile::parseLazy() {
   numSymbols = obj->symbols().size();
   symbols = std::make_unique<Symbol *[]>(numSymbols);
+  auto &ss = uniqueSaver(ctx);
   for (auto [i, irSym] : llvm::enumerate(obj->symbols())) {
     // Symbols can be duplicated in bitcode files because of '#include' and
     // linkonce_odr. Use uniqueSaver to save symbol names for de-duplication.
     // Update objSym.Name to reference (via StringRef) the string saver's copy;
     // this way LTO can reference the same string saver's copy rather than
     // keeping copies of its own.
-    irSym.Name = uniqueSaver().save(irSym.getName());
+    irSym.Name = ss.save(irSym.getName());
     if (!irSym.isUndefined()) {
       auto *sym = ctx.symtab->insert(irSym.getName());
       sym->resolve(ctx, LazySymbol{*this});
@@ -1859,16 +1861,15 @@ void BinaryFile::parse() {
     if (!isAlnum(c))
       c = '_';
 
-  llvm::StringSaver &saver = lld::saver();
-
+  llvm::StringSaver &ss = saver(ctx);
   ctx.symtab->addAndCheckDuplicate(
-      ctx, Defined{ctx, this, saver.save(s + "_start"), STB_GLOBAL, STV_DEFAULT,
+      ctx, Defined{ctx, this, ss.save(s + "_start"), STB_GLOBAL, STV_DEFAULT,
                    STT_OBJECT, 0, 0, section});
   ctx.symtab->addAndCheckDuplicate(
-      ctx, Defined{ctx, this, saver.save(s + "_end"), STB_GLOBAL, STV_DEFAULT,
+      ctx, Defined{ctx, this, ss.save(s + "_end"), STB_GLOBAL, STV_DEFAULT,
                    STT_OBJECT, data.size(), 0, section});
   ctx.symtab->addAndCheckDuplicate(
-      ctx, Defined{ctx, this, saver.save(s + "_size"), STB_GLOBAL, STV_DEFAULT,
+      ctx, Defined{ctx, this, ss.save(s + "_size"), STB_GLOBAL, STV_DEFAULT,
                    STT_OBJECT, data.size(), 0, nullptr});
 }
 
