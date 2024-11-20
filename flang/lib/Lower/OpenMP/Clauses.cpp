@@ -10,6 +10,7 @@
 
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/expression.h"
+#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/symbol.h"
@@ -264,7 +265,7 @@ makeIteratorSpecifiers(const parser::OmpIteratorSpecifier &inp,
   return specifiers;
 }
 
-Iterator makeIterator(const parser::OmpIteratorModifier &inp,
+Iterator makeIterator(const parser::OmpIterator &inp,
                       semantics::SemanticsContext &semaCtx) {
   Iterator iterator;
   for (auto &&spec : inp.v)
@@ -324,8 +325,9 @@ makeProcedureDesignator(const parser::ProcedureDesignator &inp,
       inp.u)};
 }
 
-ReductionOperator makeReductionOperator(const parser::OmpReductionOperator &inp,
-                                        semantics::SemanticsContext &semaCtx) {
+ReductionOperator
+makeReductionOperator(const parser::OmpReductionIdentifier &inp,
+                      semantics::SemanticsContext &semaCtx) {
   return Fortran::common::visit(
       common::visitors{
           [&](const parser::DefinedOperator &s) {
@@ -340,9 +342,9 @@ ReductionOperator makeReductionOperator(const parser::OmpReductionOperator &inp,
 
 clause::DependenceType makeDepType(const parser::OmpDependenceType &inp) {
   switch (inp.v) {
-  case parser::OmpDependenceType::Type::Sink:
+  case parser::OmpDependenceType::Value::Sink:
     return clause::DependenceType::Sink;
-  case parser::OmpDependenceType::Type::Source:
+  case parser::OmpDependenceType::Value::Source:
     return clause::DependenceType::Source;
   }
   llvm_unreachable("Unexpected dependence type");
@@ -350,17 +352,17 @@ clause::DependenceType makeDepType(const parser::OmpDependenceType &inp) {
 
 clause::DependenceType makeDepType(const parser::OmpTaskDependenceType &inp) {
   switch (inp.v) {
-  case parser::OmpTaskDependenceType::Type::Depobj:
+  case parser::OmpTaskDependenceType::Value::Depobj:
     return clause::DependenceType::Depobj;
-  case parser::OmpTaskDependenceType::Type::In:
+  case parser::OmpTaskDependenceType::Value::In:
     return clause::DependenceType::In;
-  case parser::OmpTaskDependenceType::Type::Inout:
+  case parser::OmpTaskDependenceType::Value::Inout:
     return clause::DependenceType::Inout;
-  case parser::OmpTaskDependenceType::Type::Inoutset:
+  case parser::OmpTaskDependenceType::Value::Inoutset:
     return clause::DependenceType::Inoutset;
-  case parser::OmpTaskDependenceType::Type::Mutexinoutset:
+  case parser::OmpTaskDependenceType::Value::Mutexinoutset:
     return clause::DependenceType::Mutexinoutset;
-  case parser::OmpTaskDependenceType::Type::Out:
+  case parser::OmpTaskDependenceType::Value::Out:
     return clause::DependenceType::Out;
   }
   llvm_unreachable("Unexpected task dependence type");
@@ -381,7 +383,7 @@ Absent make(const parser::OmpClause::Absent &inp,
 Affinity make(const parser::OmpClause::Affinity &inp,
               semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpAffinityClause
-  auto &t0 = std::get<std::optional<parser::OmpIteratorModifier>>(inp.v.t);
+  auto &t0 = std::get<std::optional<parser::OmpIterator>>(inp.v.t);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
 
   auto &&maybeIter =
@@ -626,7 +628,7 @@ Depend make(const parser::OmpClause::Depend &inp,
   using Variant = decltype(Depend::u);
 
   auto visitTaskDep = [&](const wrapped::TaskDep &s) -> Variant {
-    auto &t0 = std::get<std::optional<parser::OmpIteratorModifier>>(s.t);
+    auto &t0 = std::get<std::optional<parser::OmpIterator>>(s.t);
     auto &t1 = std::get<parser::OmpTaskDependenceType>(s.t);
     auto &t2 = std::get<parser::OmpObjectList>(s.t);
 
@@ -769,8 +771,7 @@ From make(const parser::OmpClause::From &inp,
   );
 
   auto &t0 = std::get<std::optional<std::list<wrapped::Expectation>>>(inp.v.t);
-  auto &t1 =
-      std::get<std::optional<std::list<parser::OmpIteratorModifier>>>(inp.v.t);
+  auto &t1 = std::get<std::optional<std::list<parser::OmpIterator>>>(inp.v.t);
   auto &t2 = std::get<parser::OmpObjectList>(inp.v.t);
 
   assert((!t0 || t0->size() == 1) && "Only one expectation modifier allowed");
@@ -881,7 +882,7 @@ Init make(const parser::OmpClause::Init &inp,
 InReduction make(const parser::OmpClause::InReduction &inp,
                  semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpInReductionClause
-  auto &t0 = std::get<parser::OmpReductionOperator>(inp.v.t);
+  auto &t0 = std::get<parser::OmpReductionIdentifier>(inp.v.t);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
   return InReduction{
       {/*ReductionIdentifiers=*/{makeReductionOperator(t0, semaCtx)},
@@ -920,7 +921,7 @@ Linear make(const parser::OmpClause::Linear &inp,
   using wrapped = parser::OmpLinearClause;
 
   CLAUSET_ENUM_CONVERT( //
-      convert, parser::OmpLinearModifier::Type, Linear::LinearModifier,
+      convert, parser::OmpLinearModifier::Value, Linear::LinearModifier,
       // clang-format off
       MS(Ref,  Ref)
       MS(Val,  Val)
@@ -984,10 +985,13 @@ Map make(const parser::OmpClause::Map &inp,
   );
 
   auto &t0 = std::get<std::optional<std::list<wrapped::TypeModifier>>>(inp.v.t);
-  auto &t1 =
-      std::get<std::optional<std::list<parser::OmpIteratorModifier>>>(inp.v.t);
+  auto &t1 = std::get<std::optional<std::list<parser::OmpIterator>>>(inp.v.t);
   auto &t2 = std::get<std::optional<std::list<wrapped::Type>>>(inp.v.t);
   auto &t3 = std::get<parser::OmpObjectList>(inp.v.t);
+  auto &t4 = std::get<parser::OmpMapperIdentifier>(inp.v.t);
+
+  if (t4.v)
+    TODO_NOLOC("OmpMapClause(MAPPER(...)): user defined mapper not supported");
 
   // These should have been diagnosed already.
   assert((!t1 || t1->size() == 1) && "Only one iterator modifier is allowed");
@@ -1188,7 +1192,7 @@ Reduction make(const parser::OmpClause::Reduction &inp,
   auto &t0 =
       std::get<std::optional<parser::OmpReductionClause::ReductionModifier>>(
           inp.v.t);
-  auto &t1 = std::get<parser::OmpReductionOperator>(inp.v.t);
+  auto &t1 = std::get<parser::OmpReductionIdentifier>(inp.v.t);
   auto &t2 = std::get<parser::OmpObjectList>(inp.v.t);
   return Reduction{
       {/*ReductionModifier=*/t0
@@ -1315,7 +1319,7 @@ Permutation make(const parser::OmpClause::Permutation &inp,
 TaskReduction make(const parser::OmpClause::TaskReduction &inp,
                    semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpReductionClause
-  auto &t0 = std::get<parser::OmpReductionOperator>(inp.v.t);
+  auto &t0 = std::get<parser::OmpReductionIdentifier>(inp.v.t);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
   return TaskReduction{
       {/*ReductionIdentifiers=*/{makeReductionOperator(t0, semaCtx)},
@@ -1344,8 +1348,7 @@ To make(const parser::OmpClause::To &inp,
   );
 
   auto &t0 = std::get<std::optional<std::list<wrapped::Expectation>>>(inp.v.t);
-  auto &t1 =
-      std::get<std::optional<std::list<parser::OmpIteratorModifier>>>(inp.v.t);
+  auto &t1 = std::get<std::optional<std::list<parser::OmpIterator>>>(inp.v.t);
   auto &t2 = std::get<parser::OmpObjectList>(inp.v.t);
 
   assert((!t0 || t0->size() == 1) && "Only one expectation modifier allowed");

@@ -1327,16 +1327,16 @@ bool InstCombinerImpl::replaceInInstruction(Value *V, Value *Old, Value *New,
 /// We can't replace %sel with %add unless we strip away the flags.
 /// TODO: Wrapping flags could be preserved in some cases with better analysis.
 Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
-                                                          ICmpInst &Cmp) {
-  if (!Cmp.isEquality())
-    return nullptr;
-
-  // Canonicalize the pattern to ICMP_EQ by swapping the select operands.
+                                                          CmpInst &Cmp) {
+  // Canonicalize the pattern to an equivalence on the predicate by swapping the
+  // select operands.
   Value *TrueVal = Sel.getTrueValue(), *FalseVal = Sel.getFalseValue();
   bool Swapped = false;
-  if (Cmp.getPredicate() == ICmpInst::ICMP_NE) {
+  if (Cmp.isEquivalence(/*Invert=*/true)) {
     std::swap(TrueVal, FalseVal);
     Swapped = true;
+  } else if (!Cmp.isEquivalence()) {
+    return nullptr;
   }
 
   Value *CmpLHS = Cmp.getOperand(0), *CmpRHS = Cmp.getOperand(1);
@@ -1347,7 +1347,7 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     // would lead to an infinite replacement cycle.
     // If we will be able to evaluate f(Y) to a constant, we can allow undef,
     // otherwise Y cannot be undef as we might pick different values for undef
-    // in the icmp and in f(Y).
+    // in the cmp and in f(Y).
     if (TrueVal == OldOp)
       return nullptr;
 
@@ -1901,9 +1901,6 @@ static Instruction *foldSelectICmpEq(SelectInst &SI, ICmpInst *ICI,
 /// Visit a SelectInst that has an ICmpInst as its first operand.
 Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
                                                       ICmpInst *ICI) {
-  if (Instruction *NewSel = foldSelectValueEquivalence(SI, *ICI))
-    return NewSel;
-
   if (Value *V =
           canonicalizeSPF(*ICI, SI.getTrueValue(), SI.getFalseValue(), *this))
     return replaceInstUsesWith(SI, V);
@@ -3469,7 +3466,8 @@ static bool isSafeToRemoveBitCeilSelect(ICmpInst::Predicate Pred, Value *Cond0,
 // Note that the select is optimized away while the shift count is masked with
 // 31.  We handle some variations of the input operand like std::bit_ceil(X +
 // 1).
-static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder) {
+static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder,
+                                InstCombinerImpl &IC) {
   Type *SelType = SI.getType();
   unsigned BitWidth = SelType->getScalarSizeInBits();
 
@@ -3504,6 +3502,10 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder) {
   // single hardware instruction as opposed to BitWidth - CTLZ, where BitWidth
   // is an integer constant.  Masking with BitWidth-1 comes free on some
   // hardware as part of the shift instruction.
+
+  // Drop range attributes and re-infer them in the next iteration.
+  cast<Instruction>(Ctlz)->dropPoisonGeneratingAnnotations();
+  IC.addToWorklist(cast<Instruction>(Ctlz));
   Value *Neg = Builder.CreateNeg(Ctlz);
   Value *Masked =
       Builder.CreateAnd(Neg, ConstantInt::get(SelType, BitWidth - 1));
@@ -3848,6 +3850,10 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     return Fabs;
 
   // See if we are selecting two values based on a comparison of the two values.
+  if (CmpInst *CI = dyn_cast<CmpInst>(CondVal))
+    if (Instruction *NewSel = foldSelectValueEquivalence(SI, *CI))
+      return NewSel;
+
   if (ICmpInst *ICI = dyn_cast<ICmpInst>(CondVal))
     if (Instruction *Result = foldSelectInstWithICmp(SI, ICI))
       return Result;
@@ -4147,7 +4153,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (sinkNotIntoOtherHandOfLogicalOp(SI))
     return &SI;
 
-  if (Instruction *I = foldBitCeil(SI, Builder))
+  if (Instruction *I = foldBitCeil(SI, Builder, *this))
     return I;
 
   if (Instruction *I = foldSelectToCmp(SI))
