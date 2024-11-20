@@ -5211,8 +5211,10 @@ static bool isConstantPowerOf2(SDValue V, unsigned EltSizeInBIts,
 // Match not(pcmpgt(C, X)) -> pcmpgt(X, C - 1).
 // Match not(extract_subvector(xor X, -1)) -> extract_subvector(X).
 // Match not(concat_vectors(xor X, -1, xor Y, -1)) -> concat_vectors(X, Y).
+// Match or(not(X),not(Y)) -> and(X, Y).
 static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
   V = peekThroughBitcasts(V);
+  EVT VT = V.getValueType();
   if (V.getOpcode() == ISD::XOR &&
       (ISD::isBuildVectorAllOnes(V.getOperand(1).getNode()) ||
        isAllOnesConstant(V.getOperand(1))))
@@ -5221,8 +5223,8 @@ static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
       (isNullConstant(V.getOperand(1)) || V.getOperand(0).hasOneUse())) {
     if (SDValue Not = IsNOT(V.getOperand(0), DAG)) {
       Not = DAG.getBitcast(V.getOperand(0).getValueType(), Not);
-      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(Not), V.getValueType(),
-                         Not, V.getOperand(1));
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(Not), VT, Not,
+                         V.getOperand(1));
     }
   }
   if (V.getOpcode() == X86ISD::PCMPGT &&
@@ -5255,7 +5257,15 @@ static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
       if (!NotCat) return SDValue();
       CatOp = DAG.getBitcast(CatOp.getValueType(), NotCat);
     }
-    return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(V), V.getValueType(), CatOps);
+    return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(V), VT, CatOps);
+  }
+  if (V.getOpcode() == ISD::OR && DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
+      V.getOperand(0).hasOneUse() && V.getOperand(1).hasOneUse()) {
+    // TODO: Handle cases with single NOT operand -> ANDNP
+    if (SDValue Op1 = IsNOT(V.getOperand(1), DAG))
+      if (SDValue Op0 = IsNOT(V.getOperand(0), DAG))
+        return DAG.getNode(ISD::AND, SDLoc(V), VT, DAG.getBitcast(VT, Op0),
+                           DAG.getBitcast(VT, Op1));
   }
   return SDValue();
 }
