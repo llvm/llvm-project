@@ -351,8 +351,6 @@ public:
   // Verdefs, otherwise it is empty.
   SmallVector<uint32_t, 0> vernauxs;
 
-  static unsigned vernauxNum;
-
   SmallVector<StringRef, 0> dtNeeded;
   StringRef soName;
 
