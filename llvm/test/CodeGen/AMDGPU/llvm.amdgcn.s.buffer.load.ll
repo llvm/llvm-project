@@ -736,8 +736,6 @@ define amdgpu_ps void @s_buffer_load_index_across_bb(<4 x i32> inreg %desc, i32 
 ; GFX11-NEXT:    buffer_load_b32 v0, v0, s[0:3], 0 offen
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    exp mrt0 v0, v0, v0, v0 done
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: s_buffer_load_index_across_bb:
@@ -755,8 +753,6 @@ define amdgpu_ps void @s_buffer_load_index_across_bb(<4 x i32> inreg %desc, i32 
 ; GFX12-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    export mrt0 v0, v0, v0, v0 done
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 main_body:
   %tmp = shl i32 %index, 4

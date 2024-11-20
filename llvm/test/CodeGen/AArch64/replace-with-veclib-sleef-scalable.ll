@@ -4,7 +4,7 @@
 target triple = "aarch64-unknown-linux-gnu"
 
 ;.
-; CHECK: @llvm.compiler.used = appending global [32 x ptr] [ptr @_ZGVsMxv_cos, ptr @_ZGVsMxv_cosf, ptr @_ZGVsMxv_exp, ptr @_ZGVsMxv_expf, ptr @_ZGVsMxv_exp10, ptr @_ZGVsMxv_exp10f, ptr @_ZGVsMxv_exp2, ptr @_ZGVsMxv_exp2f, ptr @_ZGVsMxv_log, ptr @_ZGVsMxv_logf, ptr @_ZGVsMxv_log10, ptr @_ZGVsMxv_log10f, ptr @_ZGVsMxv_log2, ptr @_ZGVsMxv_log2f, ptr @_ZGVsMxvv_pow, ptr @_ZGVsMxvv_powf, ptr @_ZGVsMxv_sin, ptr @_ZGVsMxv_sinf, ptr @_ZGVsMxv_tan, ptr @_ZGVsMxv_tanf, ptr @_ZGVsMxv_acos, ptr @_ZGVsMxv_acosf, ptr @_ZGVsMxv_asin, ptr @_ZGVsMxv_asinf, ptr @_ZGVsMxv_atan, ptr @_ZGVsMxv_atanf, ptr @_ZGVsMxv_cosh, ptr @_ZGVsMxv_coshf, ptr @_ZGVsMxv_sinh, ptr @_ZGVsMxv_sinhf, ptr @_ZGVsMxv_tanh, ptr @_ZGVsMxv_tanhf], section "llvm.metadata"
+; CHECK: @llvm.compiler.used = appending global [34 x ptr] [ptr @_ZGVsMxv_cos, ptr @_ZGVsMxv_cosf, ptr @_ZGVsMxv_exp, ptr @_ZGVsMxv_expf, ptr @_ZGVsMxv_exp10, ptr @_ZGVsMxv_exp10f, ptr @_ZGVsMxv_exp2, ptr @_ZGVsMxv_exp2f, ptr @_ZGVsMxv_log, ptr @_ZGVsMxv_logf, ptr @_ZGVsMxv_log10, ptr @_ZGVsMxv_log10f, ptr @_ZGVsMxv_log2, ptr @_ZGVsMxv_log2f, ptr @_ZGVsMxvv_pow, ptr @_ZGVsMxvv_powf, ptr @_ZGVsMxv_sin, ptr @_ZGVsMxv_sinf, ptr @_ZGVsMxv_tan, ptr @_ZGVsMxv_tanf, ptr @_ZGVsMxv_acos, ptr @_ZGVsMxv_acosf, ptr @_ZGVsMxv_asin, ptr @_ZGVsMxv_asinf, ptr @_ZGVsMxv_atan, ptr @_ZGVsMxv_atanf, ptr @_ZGVsMxvv_atan2, ptr @_ZGVsMxvv_atan2f, ptr @_ZGVsMxv_cosh, ptr @_ZGVsMxv_coshf, ptr @_ZGVsMxv_sinh, ptr @_ZGVsMxv_sinhf, ptr @_ZGVsMxv_tanh, ptr @_ZGVsMxv_tanhf], section "llvm.metadata"
 ;.
 define <vscale x 2 x double> @llvm_ceil_vscale_f64(<vscale x 2 x double> %in) {
 ; CHECK-LABEL: @llvm_ceil_vscale_f64(
@@ -435,6 +435,24 @@ define <vscale x 4 x float> @llvm_atan_vscale_f32(<vscale x 4 x float> %in) {
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = call fast <vscale x 4 x float> @llvm.atan.nxv4f32(<vscale x 4 x float> %in)
+  ret <vscale x 4 x float> %1
+}
+
+define <vscale x 2 x double> @llvm_atan2_vscale_f64(<vscale x 2 x double> %x, <vscale x 2 x double> %y) {
+; CHECK-LABEL: @llvm_atan2_vscale_f64(
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @_ZGVsMxvv_atan2(<vscale x 2 x double> [[INX:%.*]], <vscale x 2 x double> [[INY:%.*]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
+;
+  %1 = call fast <vscale x 2 x double> @llvm.atan2.nxv2f64(<vscale x 2 x double> %x, <vscale x 2 x double> %y)
+  ret <vscale x 2 x double> %1
+}
+
+define <vscale x 4 x float> @llvm_atan2_vscale_f32(<vscale x 4 x float> %x, <vscale x 4 x float> %y) {
+; CHECK-LABEL: @llvm_atan2_vscale_f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @_ZGVsMxvv_atan2f(<vscale x 4 x float> [[INX:%.*]], <vscale x 4 x float> [[INY:%.*]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
+;
+  %1 = call fast <vscale x 4 x float> @llvm.atan2.nxv4f32(<vscale x 4 x float> %x, <vscale x 4 x float> %y)
   ret <vscale x 4 x float> %1
 }
 

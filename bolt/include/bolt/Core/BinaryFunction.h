@@ -386,6 +386,9 @@ private:
   /// Raw branch count for this function in the profile.
   uint64_t RawBranchCount{0};
 
+  /// Dynamically executed function bytes, used for density computation.
+  uint64_t SampleCountInBytes{0};
+
   /// Indicates the type of profile the function is using.
   uint16_t ProfileFlags{PF_NONE};
 
@@ -903,6 +906,10 @@ public:
   BinaryBasicBlock *getBasicBlockAtOffset(uint64_t Offset) {
     BinaryBasicBlock *BB = getBasicBlockContainingOffset(Offset);
     return BB && BB->getOffset() == Offset ? BB : nullptr;
+  }
+
+  const BinaryBasicBlock *getBasicBlockAtOffset(uint64_t Offset) const {
+    return const_cast<BinaryFunction *>(this)->getBasicBlockAtOffset(Offset);
   }
 
   /// Retrieve the landing pad BB associated with invoke instruction \p Invoke
@@ -1843,6 +1850,9 @@ public:
   /// Set the profile data about the number of branch executions corresponding
   /// to this function.
   void setRawBranchCount(uint64_t Count) { RawBranchCount = Count; }
+
+  /// Return the number of dynamically executed bytes, from raw perf data.
+  uint64_t getSampleCountInBytes() const { return SampleCountInBytes; }
 
   /// Return the execution count for functions with known profile.
   /// Return 0 if the function has no profile.

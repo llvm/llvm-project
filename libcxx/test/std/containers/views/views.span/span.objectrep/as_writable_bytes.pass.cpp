@@ -16,9 +16,9 @@
 //              : sizeof(ElementType) * Extent>
 //     as_writable_bytes(span<ElementType, Extent> s) noexcept;
 
-
-#include <span>
 #include <cassert>
+#include <cstddef>
+#include <span>
 #include <string>
 
 #include "test_macros.h"

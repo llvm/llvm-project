@@ -149,6 +149,8 @@ bool RISCVRegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
                                        const MachineRegisterInfo &MRI,
                                        const TargetRegisterInfo &TRI) const {
   switch (MI.getOpcode()) {
+  case RISCV::G_FCVT_W_RV64:
+  case RISCV::G_FCVT_WU_RV64:
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
   case TargetOpcode::G_FCMP:
@@ -432,6 +434,8 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OpdsMapping[0] = OpdsMapping[2] = OpdsMapping[3] = Mapping;
     break;
   }
+  case RISCV::G_FCVT_W_RV64:
+  case RISCV::G_FCVT_WU_RV64:
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
   case RISCV::G_FCLASS: {

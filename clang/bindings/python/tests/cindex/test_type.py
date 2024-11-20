@@ -1,5 +1,6 @@
 import os
-from clang.cindex import Config
+
+from clang.cindex import Config, CursorKind, RefQualifierKind, TranslationUnit, TypeKind
 
 if "CLANG_LIBRARY_PATH" in os.environ:
     Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
@@ -7,14 +8,7 @@ if "CLANG_LIBRARY_PATH" in os.environ:
 import gc
 import unittest
 
-from clang.cindex import CursorKind
-from clang.cindex import TranslationUnit
-from clang.cindex import TypeKind
-from clang.cindex import RefQualifierKind
-from .util import get_cursor
-from .util import get_cursors
-from .util import get_tu
-
+from .util import get_cursor, get_cursors, get_tu
 
 kInput = """\
 
@@ -138,7 +132,7 @@ class TestType(unittest.TestCase):
         self.assertIsInstance(t.translation_unit, TranslationUnit)
 
         # If the TU was destroyed, this should cause a segfault.
-        decl = t.get_declaration()
+        t.get_declaration()
 
     def testConstantArray(self):
         tu = get_tu(constarrayInput)
@@ -459,8 +453,8 @@ class A
             (["-target", "i386-pc-win32"], (8, 16, 0, 32, 64, 96)),
             (["-target", "msp430-none-none"], (2, 14, 0, 32, 64, 96)),
         ]
-        for flags, values in tries:
-            align, total, f1, bariton, foo, bar = values
+        for _, values in tries:
+            _, _, f1, bariton, foo, bar = values
             tu = get_tu(source)
             teststruct = get_cursor(tu, "Test")
             children = list(teststruct.get_children())

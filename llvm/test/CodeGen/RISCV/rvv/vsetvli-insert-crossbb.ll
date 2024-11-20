@@ -448,11 +448,11 @@ define void @saxpy_vec(i64 %n, float %a, ptr nocapture readonly %x, ptr nocaptur
 ; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    vle32.v v16, (a2)
 ; CHECK-NEXT:    slli a4, a3, 2
+; CHECK-NEXT:    sub a0, a0, a3
 ; CHECK-NEXT:    add a1, a1, a4
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, tu, ma
 ; CHECK-NEXT:    vfmacc.vf v16, fa0, v8
 ; CHECK-NEXT:    vse32.v v16, (a2)
-; CHECK-NEXT:    sub a0, a0, a3
 ; CHECK-NEXT:    vsetvli a3, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    add a2, a2, a4
 ; CHECK-NEXT:    bnez a3, .LBB8_1
@@ -496,11 +496,11 @@ define void @saxpy_vec_demanded_fields(i64 %n, float %a, ptr nocapture readonly 
 ; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    vle32.v v16, (a2)
 ; CHECK-NEXT:    slli a4, a3, 2
+; CHECK-NEXT:    sub a0, a0, a3
 ; CHECK-NEXT:    add a1, a1, a4
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, tu, ma
 ; CHECK-NEXT:    vfmacc.vf v16, fa0, v8
 ; CHECK-NEXT:    vse32.v v16, (a2)
-; CHECK-NEXT:    sub a0, a0, a3
 ; CHECK-NEXT:    vsetvli a3, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    add a2, a2, a4
 ; CHECK-NEXT:    bnez a3, .LBB9_1
@@ -640,11 +640,11 @@ define void @vlmax(i64 %N, ptr %c, ptr %a, ptr %b) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vle64.v v8, (a2)
 ; CHECK-NEXT:    vle64.v v9, (a3)
+; CHECK-NEXT:    add a4, a4, a6
+; CHECK-NEXT:    add a3, a3, a5
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
 ; CHECK-NEXT:    vse64.v v8, (a1)
-; CHECK-NEXT:    add a4, a4, a6
 ; CHECK-NEXT:    add a1, a1, a5
-; CHECK-NEXT:    add a3, a3, a5
 ; CHECK-NEXT:    add a2, a2, a5
 ; CHECK-NEXT:    blt a4, a0, .LBB12_2
 ; CHECK-NEXT:  .LBB12_3: # %for.end

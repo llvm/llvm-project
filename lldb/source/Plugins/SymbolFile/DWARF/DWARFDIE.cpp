@@ -199,9 +199,9 @@ DWARFDIE::LookupDeepestBlock(lldb::addr_t address) const {
   return result;
 }
 
-const char *DWARFDIE::GetMangledName() const {
+const char *DWARFDIE::GetMangledName(bool substitute_name_allowed) const {
   if (IsValid())
-    return m_die->GetMangledName(m_cu);
+    return m_die->GetMangledName(m_cu, substitute_name_allowed);
   else
     return nullptr;
 }

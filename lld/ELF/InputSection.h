@@ -287,8 +287,7 @@ public:
   }
 
 protected:
-  template <typename ELFT>
-  void parseCompressedHeader();
+  template <typename ELFT> void parseCompressedHeader(Ctx &);
   void decompress() const;
 };
 
@@ -501,9 +500,11 @@ inline bool isDebugSection(const InputSectionBase &sec) {
   return (sec.flags & llvm::ELF::SHF_ALLOC) == 0 &&
          sec.name.starts_with(".debug");
 }
-} // namespace elf
 
-std::string toString(const elf::InputSectionBase *);
+std::string toStr(elf::Ctx &, const elf::InputSectionBase *);
+const ELFSyncStream &operator<<(const ELFSyncStream &,
+                                const InputSectionBase *);
+} // namespace elf
 } // namespace lld
 
 #endif

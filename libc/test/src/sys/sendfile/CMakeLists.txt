@@ -9,7 +9,7 @@ add_libc_unittest(
   SRCS
     sendfile_test.cpp
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.sys_stat
     libc.src.errno.errno 
     libc.src.fcntl.open

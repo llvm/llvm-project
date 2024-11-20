@@ -39,8 +39,8 @@ define void @arm_mult_q15(ptr %pSrcA, ptr %pSrcB, ptr noalias %pDst, i32 %blockS
 ; CHECK-NEXT:    [[WIDE_LOAD17:%.*]] = load <8 x i16>, ptr [[NEXT_GEP16]], align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext <8 x i16> [[WIDE_LOAD17]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul nsw <8 x i32> [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr <8 x i32> [[TMP5]], <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
-; CHECK-NEXT:    [[TMP7:%.*]] = tail call <8 x i32> @llvm.smin.v8i32(<8 x i32> [[TMP6]], <8 x i32> <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>)
+; CHECK-NEXT:    [[TMP6:%.*]] = ashr <8 x i32> [[TMP5]], splat (i32 15)
+; CHECK-NEXT:    [[TMP7:%.*]] = tail call <8 x i32> @llvm.smin.v8i32(<8 x i32> [[TMP6]], <8 x i32> splat (i32 32767))
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc <8 x i32> [[TMP7]] to <8 x i16>
 ; CHECK-NEXT:    store <8 x i16> [[TMP8]], ptr [[NEXT_GEP14]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8

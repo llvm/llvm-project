@@ -34,6 +34,7 @@
 #ifndef LLVM_ANALYSIS_LAZYCALLGRAPH_H
 #define LLVM_ANALYSIS_LAZYCALLGRAPH_H
 
+#include "llvm/ADT/Any.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -1308,6 +1309,8 @@ public:
   static bool isRequired() { return true; }
 };
 
+extern template struct LLVM_TEMPLATE_ABI
+    Any::TypeId<const LazyCallGraph::SCC *>;
 } // end namespace llvm
 
 #endif // LLVM_ANALYSIS_LAZYCALLGRAPH_H

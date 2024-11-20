@@ -10,6 +10,7 @@ add_lldb_library(lldbPluginProcessElfCore PLUGIN
   RegisterContextPOSIXCore_s390x.cpp
   RegisterContextPOSIXCore_x86_64.cpp
   RegisterContextPOSIXCore_riscv64.cpp
+  RegisterContextPOSIXCore_loongarch64.cpp
   RegisterUtilities.cpp
 
   LINK_LIBS

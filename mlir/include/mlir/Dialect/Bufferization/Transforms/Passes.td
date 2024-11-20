@@ -584,7 +584,7 @@ def EmptyTensorElimination : Pass<"eliminate-empty-tensors"> {
     ```
     %0 = tensor.empty() : tensor<10xf32>
     %1 = linalg.fill ... outs(%0 : tensor<10xf32>)
-    %2 = tensor.insert_slice %0 into %t ...
+    %2 = tensor.insert_slice %1 into %t ...
     ```
 
     In the above example, the subset op is "tensor.insert_slice". When tracing

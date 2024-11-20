@@ -1,4 +1,4 @@
-; RUN: llc --mtriple=wasm32-unknown-unknown -filetype=obj %s -o %t.atomics.o -mattr=+atomics
+; RUN: llc --mtriple=wasm32-unknown-unknown -filetype=obj %s -o %t.atomics.o -mattr=+atomics,-bulk-memory
 ; RUN: llc --mtriple=wasm32-unknown-unknown -filetype=obj %s -o %t.bulk-mem.o -mattr=+bulk-memory
 ; RUN: llc --mtriple=wasm64-unknown-unknown -filetype=obj %s -o %t.bulk-mem64.o -mattr=+bulk-memory
 ; RUN: llc --mtriple=wasm32-unknown-unknown -filetype=obj %s -o %t.atomics.bulk-mem.o -mattr=+atomics,+bulk-memory

@@ -258,12 +258,12 @@ bool MapTableEmitter::isKeyColInstr(const Record *CurInstr) {
 
   // Check if the instruction is a KeyCol instruction.
   bool MatchFound = true;
-  for (unsigned j = 0, endCF = ColFields->size(); (j < endCF) && MatchFound;
-       j++) {
+  for (unsigned J = 0, EndCf = ColFields->size(); (J < EndCf) && MatchFound;
+       J++) {
     const RecordVal *ColFieldName =
-        CurInstr->getValue(ColFields->getElement(j));
+        CurInstr->getValue(ColFields->getElement(J));
     std::string CurInstrVal = ColFieldName->getValue()->getAsUnquotedString();
-    std::string KeyColValue = KeyCol->getElement(j)->getAsUnquotedString();
+    std::string KeyColValue = KeyCol->getElement(J)->getAsUnquotedString();
     MatchFound = CurInstrVal == KeyColValue;
   }
   return MatchFound;
@@ -318,12 +318,12 @@ const Record *MapTableEmitter::getInstrForColumn(const Record *KeyInstr,
 
   for (const Record *CurInstr : RelatedInstrVec) {
     bool MatchFound = true;
-    for (unsigned j = 0, endCF = ColFields->size(); (j < endCF) && MatchFound;
-         j++) {
-      const Init *ColFieldJ = ColFields->getElement(j);
+    for (unsigned J = 0, EndCf = ColFields->size(); (J < EndCf) && MatchFound;
+         J++) {
+      const Init *ColFieldJ = ColFields->getElement(J);
       const Init *CurInstrInit = CurInstr->getValue(ColFieldJ)->getValue();
       std::string CurInstrVal = CurInstrInit->getAsUnquotedString();
-      const Init *ColFieldJVallue = CurValueCol->getElement(j);
+      const Init *ColFieldJVallue = CurValueCol->getElement(J);
       MatchFound = CurInstrVal == ColFieldJVallue->getAsUnquotedString();
     }
 
@@ -368,19 +368,19 @@ unsigned MapTableEmitter::emitBinSearchTable(raw_ostream &OS) {
   // Number of columns in the table are NumCol+1 because key instructions are
   // emitted as first column.
   OS << "Table[][" << NumCol + 1 << "] = {\n";
-  for (unsigned i = 0; i < TotalNumInstr; i++) {
-    const Record *CurInstr = NumberedInstructions[i]->TheDef;
+  for (unsigned I = 0; I < TotalNumInstr; I++) {
+    const Record *CurInstr = NumberedInstructions[I]->TheDef;
     ArrayRef<const Record *> ColInstrs = MapTable[CurInstr];
     std::string OutStr;
     unsigned RelExists = 0;
     if (!ColInstrs.empty()) {
-      for (unsigned j = 0; j < NumCol; j++) {
-        if (ColInstrs[j] != nullptr) {
+      for (unsigned J = 0; J < NumCol; J++) {
+        if (ColInstrs[J] != nullptr) {
           RelExists = 1;
           OutStr += ", ";
           OutStr += Namespace;
           OutStr += "::";
-          OutStr += ColInstrs[j]->getName();
+          OutStr += ColInstrs[J]->getName();
         } else {
           OutStr += ", (uint16_t)-1U";
         }
@@ -441,20 +441,20 @@ void MapTableEmitter::emitMapFuncBody(raw_ostream &OS, unsigned TableSize) {
   emitBinSearch(OS, TableSize);
 
   if (ValueCols.size() > 1) {
-    for (unsigned i = 0, e = ValueCols.size(); i < e; i++) {
-      const ListInit *ColumnI = ValueCols[i];
+    for (unsigned I = 0, E = ValueCols.size(); I < E; I++) {
+      const ListInit *ColumnI = ValueCols[I];
       OS << "  if (";
-      for (unsigned j = 0, ColSize = ColumnI->size(); j < ColSize; ++j) {
-        std::string ColName = ColFields->getElement(j)->getAsUnquotedString();
+      for (unsigned J = 0, ColSize = ColumnI->size(); J < ColSize; ++J) {
+        std::string ColName = ColFields->getElement(J)->getAsUnquotedString();
         OS << "in" << ColName;
         OS << " == ";
-        OS << ColName << "_" << ColumnI->getElement(j)->getAsUnquotedString();
-        if (j < ColumnI->size() - 1)
+        OS << ColName << "_" << ColumnI->getElement(J)->getAsUnquotedString();
+        if (J < ColumnI->size() - 1)
           OS << " && ";
       }
       OS << ")\n";
       OS << "    return " << InstrMapDesc.getName();
-      OS << "Table[mid][" << i + 1 << "];\n";
+      OS << "Table[mid][" << I + 1 << "];\n";
     }
     OS << "  return -1;";
   } else
@@ -509,8 +509,8 @@ static void emitEnums(raw_ostream &OS, const RecordKeeper &Records) {
     std::vector<const ListInit *> ValueCols;
     unsigned ListSize = List->size();
 
-    for (unsigned j = 0; j < ListSize; j++) {
-      const auto *ListJ = cast<ListInit>(List->getElement(j));
+    for (unsigned J = 0; J < ListSize; J++) {
+      const auto *ListJ = cast<ListInit>(List->getElement(J));
 
       if (ListJ->size() != ColFields->size())
         PrintFatalError("Record `" + CurMap->getName() +
@@ -520,10 +520,10 @@ static void emitEnums(raw_ostream &OS, const RecordKeeper &Records) {
       ValueCols.push_back(ListJ);
     }
 
-    for (unsigned j = 0, endCF = ColFields->size(); j < endCF; j++) {
-      for (unsigned k = 0; k < ListSize; k++) {
-        std::string ColName = ColFields->getElement(j)->getAsUnquotedString();
-        ColFieldValueMap[ColName].push_back((ValueCols[k])->getElement(j));
+    for (unsigned J = 0, EndCf = ColFields->size(); J < EndCf; J++) {
+      for (unsigned K = 0; K < ListSize; K++) {
+        std::string ColName = ColFields->getElement(J)->getAsUnquotedString();
+        ColFieldValueMap[ColName].push_back((ValueCols[K])->getElement(J));
       }
     }
   }

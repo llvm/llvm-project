@@ -12,10 +12,15 @@
 #include "rpc.h"
 
 #include "include/llvm-libc-types/rpc_opcodes_t.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace rpc {
+
+static_assert(cpp::is_trivially_copyable<Client>::value &&
+                  sizeof(Process<true>) == sizeof(Process<false>),
+              "The client is not trivially copyable from the server");
 
 /// The libc client instance used to communicate with the server.
 extern Client client;
