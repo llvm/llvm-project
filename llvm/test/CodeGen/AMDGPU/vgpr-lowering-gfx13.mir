@@ -932,6 +932,6 @@ body:             |
     ; GCN-NEXT: global_store_b32 v1, v0, s[2:3] offset:28 scale_offset
     BUNDLE implicit-def dead $vgpr1, implicit $idx1, implicit $exec, implicit killed $vgpr1, implicit renamable $sgpr2_sgpr3 {
       $vgpr1 = V_LOAD_IDX $idx1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 10)
-      GLOBAL_STORE_DWORD_SADDR $vgpr1, internal $vgpr1, renamable $sgpr2_sgpr3, 28, 2048, implicit $exec :: (store (s32), addrspace 1)
+      GLOBAL_STORE_DWORD_SADDR $vgpr1, internal $vgpr1, renamable $sgpr2_sgpr3, 28, 512, implicit $exec :: (store (s32), addrspace 1)
     }
 ...

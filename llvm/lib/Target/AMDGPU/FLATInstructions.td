@@ -177,7 +177,7 @@ class VFLAT_Real <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
 
   bits<7> saddr;
   bits<8> vdst;
-  bits<12> cpol;
+  bits<10> cpol;
   bits<8> vdata; // vsrc
   bits<8> vaddr;
   bits<24> offset;
@@ -3551,6 +3551,7 @@ multiclass VFLAT_Real_gfx13 <bits<8> op, string name = get_FLAT_ps<NAME>.Mnemoni
     let AssemblerPredicate = isGFX13Only;
     let DecoderNamespace = "GFX13";
 
+    let Inst{9-8} = cpol{8-7};
     let Inst{25-24} = {ps.is_flat_global, ps.is_flat_scratch};
     let Inst{48} = cpol{CPolBit.SCAL}; // scale offset
   }

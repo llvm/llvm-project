@@ -1,4 +1,5 @@
 ; RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -show-encoding %s | FileCheck --check-prefixes=GFX13 %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX12-ERR --strict-whitespace %s
 
 image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D
 // GFX13: encoding: [0x00,0x00,0xc0,0xd3,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
@@ -151,8 +152,26 @@ image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_RT_NT
 image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_NT_HT
 // GFX13: encoding: [0x00,0x00,0x40,0xd0,0x00,0x00,0x60,0x00,0x00,0x00,0x00,0x00]
 
-image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_BYPASS scope:SCOPE_SYS
+image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_256B
 // GFX13: encoding: [0x00,0x00,0x40,0xd0,0x00,0x00,0x3c,0x00,0x00,0x00,0x00,0x00]
+
+image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B
+// GFX13: encoding: [0x00,0x01,0x40,0xd0,0x00,0x00,0x3c,0x00,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B
+// GFX12-ERR-NEXT:{{^}}                                                                                             ^
+
+image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_64B
+// GFX13: encoding: [0x00,0x02,0x40,0xd0,0x00,0x00,0x3c,0x00,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_64B
+// GFX12-ERR-NEXT:{{^}}                                                                                             ^
+
+image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_32B
+// GFX13: encoding: [0x00,0x03,0x40,0xd0,0x00,0x00,0x3c,0x00,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_32B
+// GFX12-ERR-NEXT:{{^}}                                                                                             ^
 
 image_load v[0:2], [v4, v5], s[8:15] dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY th:TH_LOAD_HT scope:SCOPE_SE a16 tfe d16
 // GFX13: encoding: [0x65,0x00,0xc0,0xd3,0x00,0x10,0xa4,0x00,0x04,0x05,0x00,0x00]
@@ -230,8 +249,26 @@ image_load_pck v[5:7], [v1, v2, v3], s[8:15] dmask:0x7 dim:SQ_RSRC_IMG_2D_MSAA
 image_load_pck v[5:8], [v1, v2, v3, v4], s[8:15] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY
 // GFX13: encoding: [0x07,0x80,0xc0,0xd3,0x05,0x10,0x00,0x00,0x01,0x02,0x03,0x04]
 
-image_load_pck v5, v1, s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_NT
+image_load_pck v5, v1, s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_NT cfs:CFS_256B
 // GFX13: encoding: [0x00,0x80,0x40,0xd0,0x05,0x10,0x10,0x00,0x01,0x00,0x00,0x00]
+
+image_load_pck v5, v1, s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_NT cfs:CFS_128B
+// GFX13: encoding: [0x00,0x81,0x40,0xd0,0x05,0x10,0x10,0x00,0x01,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}image_load_pck v5, v1, s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_NT cfs:CFS_128B
+// GFX12-ERR-NEXT:{{^}}                                                                              ^
+
+image_load_pck v5, v1, s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_NT cfs:CFS_64B
+// GFX13: encoding: [0x00,0x82,0x40,0xd0,0x05,0x10,0x10,0x00,0x01,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}image_load_pck v5, v1, s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_NT cfs:CFS_64B
+// GFX12-ERR-NEXT:{{^}}                                                                              ^
+
+image_load_pck v5, v1, s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_NT cfs:CFS_32B
+// GFX13: encoding: [0x00,0x83,0x40,0xd0,0x05,0x10,0x10,0x00,0x01,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}image_load_pck v5, v1, s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_NT cfs:CFS_32B
+// GFX12-ERR-NEXT:{{^}}                                                                              ^
 
 image_load_pck_sgn v5, v1, s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_1D
 // GFX13: encoding: [0x00,0xc0,0x40,0xd0,0x05,0x10,0x00,0x00,0x01,0x00,0x00,0x00]
@@ -438,8 +475,26 @@ image_store v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_NT_HT
 image_store v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_NT_WB
 // GFX13: encoding: [0x00,0x80,0x41,0xd0,0x00,0x00,0x70,0x00,0x00,0x00,0x00,0x00]
 
-image_store v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_BYPASS scope:SCOPE_SYS
+image_store v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_BYPASS scope:SCOPE_SYS cfs:CFS_256B
 // GFX13: encoding: [0x00,0x80,0x41,0xd0,0x00,0x00,0x3c,0x00,0x00,0x00,0x00,0x00]
+
+image_store v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_BYPASS scope:SCOPE_SYS cfs:CFS_128B
+// GFX13: encoding: [0x00,0x81,0x41,0xd0,0x00,0x00,0x3c,0x00,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}image_store v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_BYPASS scope:SCOPE_SYS cfs:CFS_128B
+// GFX12-ERR-NEXT:{{^}}                                                                                               ^
+
+image_store v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_BYPASS scope:SCOPE_SYS cfs:CFS_64B
+// GFX13: encoding: [0x00,0x82,0x41,0xd0,0x00,0x00,0x3c,0x00,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}image_store v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_BYPASS scope:SCOPE_SYS cfs:CFS_64B
+// GFX12-ERR-NEXT:{{^}}                                                                                               ^
+
+image_store v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_BYPASS scope:SCOPE_SYS cfs:CFS_32B
+// GFX13: encoding: [0x00,0x83,0x41,0xd0,0x00,0x00,0x3c,0x00,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}image_store v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_BYPASS scope:SCOPE_SYS cfs:CFS_32B
+// GFX12-ERR-NEXT:{{^}}                                                                                               ^
 
 image_store v[1:4], [v2, v0], s[4:11] dmask:0xf dim:SQ_RSRC_IMG_2D
 // GFX13: encoding: [0x01,0x80,0xc1,0xd3,0x01,0x08,0x00,0x00,0x02,0x00,0x00,0x00]
@@ -510,8 +565,26 @@ image_store_pck v[5:7], [v1, v2, v3], s[8:15] dmask:0x7 dim:SQ_RSRC_IMG_2D_MSAA
 image_store_pck v[5:8], [v1, v2, v3, v4], s[8:15] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY
 // GFX13: encoding: [0x07,0x00,0xc2,0xd3,0x05,0x10,0x00,0x00,0x01,0x02,0x03,0x04]
 
-image_store_pck v5, v1, s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_NT
+image_store_pck v5, v1, s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_NT cfs:CFS_256B
 // GFX13: encoding: [0x00,0x00,0x42,0xd0,0x05,0x10,0x10,0x00,0x01,0x00,0x00,0x00]
+
+image_store_pck v5, v1, s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_NT cfs:CFS_128B
+// GFX13: encoding: [0x00,0x01,0x42,0xd0,0x05,0x10,0x10,0x00,0x01,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}image_store_pck v5, v1, s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_NT cfs:CFS_128B
+// GFX12-ERR-NEXT:{{^}}                                                                                ^
+
+image_store_pck v5, v1, s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_NT cfs:CFS_64B
+// GFX13: encoding: [0x00,0x02,0x42,0xd0,0x05,0x10,0x10,0x00,0x01,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}image_store_pck v5, v1, s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_NT cfs:CFS_64B
+// GFX12-ERR-NEXT:{{^}}                                                                                ^
+
+image_store_pck v5, v1, s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_NT cfs:CFS_32B
+// GFX13: encoding: [0x00,0x03,0x42,0xd0,0x05,0x10,0x10,0x00,0x01,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}image_store_pck v5, v1, s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_NT cfs:CFS_32B
+// GFX12-ERR-NEXT:{{^}}                                                                                ^
 
 image_store_mip_pck v5, [v0, v1], s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_1D
 // GFX13: encoding: [0x00,0x40,0x42,0xd0,0x05,0x10,0x00,0x00,0x00,0x01,0x00,0x00]
@@ -856,8 +929,26 @@ image_atomic_and v[3:4], [v4, v5, v6], s[8:15] dmask:0x3 dim:SQ_RSRC_IMG_2D_MSAA
 image_atomic_and v[254:255], [v4, v5, v6, v7], s[96:103] dmask:0x3 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY
 // GFX13: encoding: [0x07,0x80,0xc4,0xd0,0xfe,0xc0,0x00,0x00,0x04,0x05,0x06,0x07]
 
-image_atomic_and v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_NT
+image_atomic_and v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_NT cfs:CFS_256B
 // GFX13: encoding: [0x00,0x80,0x44,0xd0,0x00,0x00,0x20,0x00,0x00,0x00,0x00,0x00]
+
+image_atomic_and v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_NT cfs:CFS_128B
+// GFX13: encoding: [0x00,0x81,0x44,0xd0,0x00,0x00,0x20,0x00,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}image_atomic_and v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_NT cfs:CFS_128B
+// GFX12-ERR-NEXT:{{^}}                                                                                 ^
+
+image_atomic_and v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_NT cfs:CFS_64B
+// GFX13: encoding: [0x00,0x82,0x44,0xd0,0x00,0x00,0x20,0x00,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}image_atomic_and v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_NT cfs:CFS_64B
+// GFX12-ERR-NEXT:{{^}}                                                                                 ^
+
+image_atomic_and v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_NT cfs:CFS_32B
+// GFX13: encoding: [0x00,0x83,0x44,0xd0,0x00,0x00,0x20,0x00,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}image_atomic_and v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_NT cfs:CFS_32B
+// GFX12-ERR-NEXT:{{^}}                                                                                 ^
 
 image_atomic_or v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D
 // GFX13: encoding: [0x00,0xc0,0x44,0xd0,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
@@ -1045,8 +1136,26 @@ image_atomic_add_flt v[3:4], [v4, v5, v6], s[8:15] dmask:0x3 dim:SQ_RSRC_IMG_2D_
 image_atomic_add_flt v[254:255], [v4, v5, v6, v7], s[96:103] dmask:0x3 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY
 // GFX13: encoding: [0x07,0xc0,0xe0,0xd0,0xfe,0xc0,0x00,0x00,0x04,0x05,0x06,0x07]
 
-image_atomic_add_flt v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_NT
+image_atomic_add_flt v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_NT cfs:CFS_256B
 // GFX13: encoding: [0x00,0xc0,0x60,0xd0,0x00,0x00,0x20,0x00,0x00,0x00,0x00,0x00]
+
+image_atomic_add_flt v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_NT cfs:CFS_128B
+// GFX13: encoding: [0x00,0xc1,0x60,0xd0,0x00,0x00,0x20,0x00,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}image_atomic_add_flt v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_NT cfs:CFS_128B
+// GFX12-ERR-NEXT:{{^}}                                                                                     ^
+
+image_atomic_add_flt v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_NT cfs:CFS_64B
+// GFX13: encoding: [0x00,0xc2,0x60,0xd0,0x00,0x00,0x20,0x00,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}image_atomic_add_flt v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_NT cfs:CFS_64B
+// GFX12-ERR-NEXT:{{^}}                                                                                     ^
+
+image_atomic_add_flt v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_NT cfs:CFS_32B
+// GFX13: encoding: [0x00,0xc3,0x60,0xd0,0x00,0x00,0x20,0x00,0x00,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}image_atomic_add_flt v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_NT cfs:CFS_32B
+// GFX12-ERR-NEXT:{{^}}                                                                                     ^
 
 image_atomic_min_flt v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D
 // GFX13: encoding: [0x00,0x00,0x61,0xd0,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
@@ -1153,8 +1262,26 @@ image_get_resinfo v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_RT_
 image_get_resinfo v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_NT_HT
 // GFX13: encoding: [0x00,0xc0,0x45,0xd0,0x04,0xc0,0x60,0x00,0x20,0x00,0x00,0x00]
 
-image_get_resinfo v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_BYPASS scope:SCOPE_SYS
+image_get_resinfo v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_256B
 // GFX13: encoding: [0x00,0xc0,0x45,0xd0,0x04,0xc0,0x3c,0x00,0x20,0x00,0x00,0x00]
+
+image_get_resinfo v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B
+// GFX13: encoding: [0x00,0xc1,0x45,0xd0,0x04,0xc0,0x3c,0x00,0x20,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}image_get_resinfo v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B
+// GFX12-ERR-NEXT:{{^}}                                                                                                        ^
+
+image_get_resinfo v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_64B
+// GFX13: encoding: [0x00,0xc2,0x45,0xd0,0x04,0xc0,0x3c,0x00,0x20,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}image_get_resinfo v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_64B
+// GFX12-ERR-NEXT:{{^}}                                                                                                        ^
+
+image_get_resinfo v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_32B
+// GFX13: encoding: [0x00,0xc3,0x45,0xd0,0x04,0xc0,0x3c,0x00,0x20,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}image_get_resinfo v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_32B
+// GFX12-ERR-NEXT:{{^}}                                                                                                        ^
 
 rts_trace_ray [v0, v[1:3], v[4], v[5:7], v[8:10]], s[4:7] r128
 // GFX13: encoding: [0x10,0x80,0x3c,0xd0,0x00,0x08,0x00,0x08,0x00,0x01,0x04,0x05]

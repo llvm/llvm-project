@@ -1,4 +1,5 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -show-encoding < %s | FileCheck -check-prefix=GFX13 %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX12-ERR --strict-whitespace %s
 
 buffer_load_d16_format_x v5, off, s[8:11], s3 offset:8388607
 // GFX13: encoding: [0x03,0x00,0x20,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
@@ -114,8 +115,26 @@ buffer_load_d16_format_xyz v[5:6], off, s[8:11], s3 offset:7
 buffer_load_d16_format_xyz v[5:6], off, s[8:11], s3 offset:8388607 th:TH_LOAD_NT_HT scope:SCOPE_DEV
 // GFX13: encoding: [0x03,0x80,0x20,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
 
-buffer_load_d16_format_xyz v[5:6], off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS
+buffer_load_d16_format_xyz v[5:6], off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_256B
 // GFX13: encoding: [0x03,0x80,0x20,0xc4,0x05,0x10,0xbc,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_load_d16_format_xyz v[5:6], off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B
+// GFX13: encoding: [0x03,0x81,0x20,0xc4,0x05,0x10,0xbc,0x00,0x00,0xff,0xff,0x7f]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}buffer_load_d16_format_xyz v[5:6], off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B
+// GFX12-ERR-NEXT:{{^}}                                                                                                         ^
+
+buffer_load_d16_format_xyz v[5:6], off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_64B
+// GFX13: encoding: [0x03,0x82,0x20,0xc4,0x05,0x10,0xbc,0x00,0x00,0xff,0xff,0x7f]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}buffer_load_d16_format_xyz v[5:6], off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_64B
+// GFX12-ERR-NEXT:{{^}}                                                                                                         ^
+
+buffer_load_d16_format_xyz v[5:6], off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_32B
+// GFX13: encoding: [0x03,0x83,0x20,0xc4,0x05,0x10,0xbc,0x00,0x00,0xff,0xff,0x7f]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}buffer_load_d16_format_xyz v[5:6], off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_32B
+// GFX12-ERR-NEXT:{{^}}                                                                                                         ^
 
 buffer_load_d16_format_xyzw v[5:6], off, s[8:11], s3 offset:8388607
 // GFX13: encoding: [0x03,0xc0,0x20,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
@@ -231,8 +250,26 @@ buffer_load_format_x v5, off, s[8:11], s3 offset:7
 buffer_load_format_x v5, off, s[8:11], s3 offset:8388607 th:TH_LOAD_NT_HT scope:SCOPE_DEV
 // GFX13: encoding: [0x03,0x00,0x00,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
 
-buffer_load_format_x v5, off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS
+buffer_load_format_x v5, off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_256B
 // GFX13: encoding: [0x03,0x00,0x00,0xc4,0x05,0x10,0xbc,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_load_format_x v5, off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B
+// GFX13: encoding: [0x03,0x01,0x00,0xc4,0x05,0x10,0xbc,0x00,0x00,0xff,0xff,0x7f]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}buffer_load_format_x v5, off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B
+// GFX12-ERR-NEXT:{{^}}                                                                                               ^
+
+buffer_load_format_x v5, off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_64B
+// GFX13: encoding: [0x03,0x02,0x00,0xc4,0x05,0x10,0xbc,0x00,0x00,0xff,0xff,0x7f]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}buffer_load_format_x v5, off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_64B
+// GFX12-ERR-NEXT:{{^}}                                                                                               ^
+
+buffer_load_format_x v5, off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_32B
+// GFX13: encoding: [0x03,0x03,0x00,0xc4,0x05,0x10,0xbc,0x00,0x00,0xff,0xff,0x7f]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: Cache fill size is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}buffer_load_format_x v5, off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_32B
+// GFX12-ERR-NEXT:{{^}}                                                                                               ^
 
 buffer_load_format_xy v[5:6], off, s[8:11], s3 offset:8388607
 // GFX13: encoding: [0x03,0x40,0x00,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
