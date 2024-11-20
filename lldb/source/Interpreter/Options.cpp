@@ -19,11 +19,46 @@
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
+
+namespace lldb_private {
+
+/// An llvm::Error that represents an option parsing diagnostic.
+class OptionParseError
+    : public llvm::ErrorInfo<OptionParseError, DiagnosticError> {
+  std::vector<DiagnosticDetail> m_details;
+
+public:
+  using llvm::ErrorInfo<OptionParseError, DiagnosticError>::ErrorInfo;
+  OptionParseError(DiagnosticDetail detail)
+      : ErrorInfo(std::error_code(EINVAL, std::generic_category())),
+        m_details({detail}) {}
+  OptionParseError(const Args::ArgEntry &arg, std::string msg)
+      : ErrorInfo(std::error_code(EINVAL, std::generic_category())) {
+    DiagnosticDetail::SourceLocation sloc;
+    if (auto pos = arg.GetPos()) {
+      uint16_t len = arg.GetLength();
+      sloc = {FileSpec{}, 1, *pos, len, false, true};
+    }
+    m_details.push_back(DiagnosticDetail{sloc, lldb::eSeverityError, msg, msg});
+  }
+  std::unique_ptr<CloneableError> Clone() const override {
+    return std::make_unique<OptionParseError>(m_details[0]);
+  }
+  llvm::ArrayRef<DiagnosticDetail> GetDetails() const override {
+    return m_details;
+  }
+  static char ID;
+};
+
+char OptionParseError::ID;
+
+} // namespace lldb_private
 
 // Options
 Options::Options() { BuildValidOptionSets(); }
@@ -216,12 +251,9 @@ Option *Options::GetLongOptions() {
       m_getopt_table[i].flag = nullptr;
       m_getopt_table[i].val = short_opt;
 
-      if (option_seen.find(short_opt) == option_seen.end()) {
-        option_seen[short_opt] = i;
-      } else if (short_opt) {
+      auto [pos, inserted] = option_seen.try_emplace(short_opt, i);
+      if (!inserted && short_opt) {
         m_getopt_table[i].val = 0;
-        std::map<int, uint32_t>::const_iterator pos =
-            option_seen.find(short_opt);
         StreamString strm;
         if (defs[i].HasShortOption())
           Debugger::ReportError(
@@ -661,7 +693,9 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
 
     } else if (opt_arg_pos == request.GetCursorIndex()) {
       // Okay the cursor is on the completion of an argument. See if it has a
-      // completion, otherwise return no matches.
+      // completion, otherwise return no matches.  Note, opt_defs_index == -1
+      // means we're after an option, but that option doesn't exist.  We'll
+      // end up treating that as an argument.  Not sure we can do much better.
       if (opt_defs_index != -1) {
         HandleOptionArgumentCompletion(request, opt_element_vector, i,
                                        interpreter);
@@ -688,7 +722,6 @@ void Options::HandleOptionArgumentCompletion(
   int opt_defs_index = opt_element_vector[opt_element_index].opt_defs_index;
 
   // See if this is an enumeration type option, and if so complete it here:
-
   const auto &enum_values = opt_defs[opt_defs_index].enum_values;
   if (!enum_values.empty())
     for (const auto &enum_value : enum_values)
@@ -923,7 +956,7 @@ static std::string BuildShortOptions(const Option *long_options) {
       }
     }
   }
-  return std::move(sstr.str());
+  return storage;
 }
 
 llvm::Expected<Args> Options::ParseAlias(const Args &args,
@@ -1253,13 +1286,13 @@ llvm::Expected<Args> Options::Parse(const Args &args,
 
   std::string short_options = BuildShortOptions(long_options);
   std::vector<char *> argv = GetArgvForParsing(args);
+
   std::unique_lock<std::mutex> lock;
   OptionParser::Prepare(lock);
-  int val;
   while (true) {
     int long_options_index = -1;
-    val = OptionParser::Parse(argv, short_options, long_options,
-                              &long_options_index);
+    int val = OptionParser::Parse(argv, short_options, long_options,
+                                  &long_options_index);
 
     if (val == ':') {
       error = Status::FromErrorString("last option requires an argument");
@@ -1271,7 +1304,14 @@ llvm::Expected<Args> Options::Parse(const Args &args,
 
     // Did we get an error?
     if (val == '?') {
-      error = Status::FromErrorString("unknown or ambiguous option");
+      // Account for "argv[0]" and that it points to the next option.
+      int idx = OptionParser::GetOptionIndex() - 2;
+      if (idx >= 0 && (size_t)idx < args.GetArgumentCount())
+        error = Status::FromError(llvm::make_error<OptionParseError>(
+            args[idx], "unknown or ambiguous option"));
+      else
+        error = Status("unknown or ambiguous option");
+
       break;
     }
     // The option auto-set itself

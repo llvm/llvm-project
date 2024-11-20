@@ -7239,9 +7239,9 @@ Given
   void z(Y y, X x) { y.m(); x.m(); x.g(); (g()).m(); }
 cxxMemberCallExpr(onImplicitObjectArgument(hasType(
     cxxRecordDecl(hasName("Y")))))
-  matches `y.m()`, `x.m()` and (g()).m(), but not `x.g()`.
+  matches `y.m()`, `x.m()` and (`g()).m()`, but not `x.g()`).
 cxxMemberCallExpr(on(callExpr()))
-  does not match `(g()).m()`, because the parens are not ignored.
+  only matches `(g()).m()` (the parens are ignored).
 
 FIXME: Overload to allow directly matching types?
 </pre></td></tr>

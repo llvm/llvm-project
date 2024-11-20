@@ -126,6 +126,7 @@ add_library(libc-memory-benchmark
 target_include_directories(libc-memory-benchmark
     PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${LIBC_SOURCE_DIR}
 )
 target_link_libraries(libc-memory-benchmark
     PUBLIC

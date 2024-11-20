@@ -26,6 +26,7 @@ static_library("Tooling") {
     "GuessTargetAndModeCompilationDatabase.cpp",
     "InterpolatingCompilationDatabase.cpp",
     "JSONCompilationDatabase.cpp",
+    "LocateToolCompilationDatabase.cpp",
     "Refactoring.cpp",
     "RefactoringCallbacks.cpp",
     "StandaloneExecution.cpp",

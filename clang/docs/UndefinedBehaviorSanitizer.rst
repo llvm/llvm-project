@@ -256,6 +256,8 @@ Volatile
 The ``null``, ``alignment``, ``object-size``, ``local-bounds``, and ``vptr`` checks do not apply
 to pointers to types with the ``volatile`` qualifier.
 
+.. _minimal-runtime:
+
 Minimal Runtime
 ===============
 
@@ -415,6 +417,15 @@ There are several limitations:
   most of UBSan checks are recoverable by default.
 * Check groups (like ``undefined``) can't be used in suppressions file, only
   fine-grained checks are supported.
+
+Security Considerations
+=======================
+
+UndefinedBehaviorSanitizer's runtime is meant for testing purposes and its usage
+in production environment should be carefully considered from security
+perspective as it may compromise the security of the resulting executable.
+For security-sensitive applications consider using :ref:`Minimal Runtime
+<minimal-runtime>` or trap mode for all checks.
 
 Supported Platforms
 ===================

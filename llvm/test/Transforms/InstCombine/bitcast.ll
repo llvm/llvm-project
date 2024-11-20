@@ -77,7 +77,7 @@ define <2 x i32> @or_bitcast_int_to_vec(i64 %a) {
 
 define <2 x i64> @is_negative(<4 x i32> %x) {
 ; CHECK-LABEL: @is_negative(
-; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr <4 x i32> [[X:%.*]], <i32 31, i32 31, i32 31, i32 31>
+; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr <4 x i32> [[X:%.*]], splat (i32 31)
 ; CHECK-NEXT:    [[NOTNOT:%.*]] = bitcast <4 x i32> [[X_LOBIT]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[NOTNOT]]
 ;
@@ -93,7 +93,7 @@ define <2 x i64> @is_negative(<4 x i32> %x) {
 
 define <4 x i32> @is_negative_bonus_bitcast(<4 x i32> %x) {
 ; CHECK-LABEL: @is_negative_bonus_bitcast(
-; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr <4 x i32> [[X:%.*]], <i32 31, i32 31, i32 31, i32 31>
+; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr <4 x i32> [[X:%.*]], splat (i32 31)
 ; CHECK-NEXT:    ret <4 x i32> [[X_LOBIT]]
 ;
   %lobit = ashr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
@@ -109,7 +109,7 @@ define <4 x i32> @is_negative_bonus_bitcast(<4 x i32> %x) {
 define <2 x i8> @canonicalize_bitcast_logic_with_constant(<4 x i4> %x) {
 ; CHECK-LABEL: @canonicalize_bitcast_logic_with_constant(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i4> [[X:%.*]] to <2 x i8>
-; CHECK-NEXT:    [[B:%.*]] = and <2 x i8> [[TMP1]], <i8 -128, i8 -128>
+; CHECK-NEXT:    [[B:%.*]] = and <2 x i8> [[TMP1]], splat (i8 -128)
 ; CHECK-NEXT:    ret <2 x i8> [[B]]
 ;
   %a = and <4 x i4> %x, <i4 0, i4 8, i4 0, i4 8>
@@ -796,7 +796,7 @@ define double @copysign_idiom_f64(double %x, i64 %mag) {
 
 define <2 x float> @copysign_idiom_vec(<2 x float> %x) {
 ; CHECK-LABEL: @copysign_idiom_vec(
-; CHECK-NEXT:    [[Y:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float> [[X:%.*]])
+; CHECK-NEXT:    [[Y:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> splat (float 1.000000e+00), <2 x float> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[Y]]
 ;
   %bits = bitcast <2 x float> %x to <2 x i32>
@@ -878,4 +878,27 @@ define half @copysign_idiom_constant_wrong_type2(bfloat %x, i16 %mag) {
   %res = or i16 %sign, %mag
   %y = bitcast i16 %res to half
   ret half %y
+}
+
+define i16 @bitcast_undef_to_vector() {
+; CHECK-LABEL: @bitcast_undef_to_vector(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       unreachable:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret i16 undef
+;
+entry:
+  br label %end
+
+unreachable:                                 ; No predecessors!
+  %0 = extractvalue { i32, i32 } zeroinitializer, 1
+  br label %end
+
+end:                                        ; preds = %unreachable, %entry
+  %1 = phi i32 [ %0, %unreachable ], [ undef, %entry ]
+  %2 = bitcast i32 %1 to <2 x i16>
+  %3 = extractelement <2 x i16> %2, i64 0
+  ret i16 %3
 }

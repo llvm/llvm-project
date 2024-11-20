@@ -207,9 +207,9 @@ module asm ".previous"
 	%union.pager_info = type <{ [4 x i8] }>
 	%union.sigval = type <{ [8 x i8] }>
 
-define i32 @vlrureclaim(ptr %mp) nounwind {
+define i32 @vlrureclaim(ptr %mp, i1 %arg) nounwind {
 entry:
-	br i1 undef, label %if.then11, label %do.end
+	br i1 %arg, label %if.then11, label %do.end
 
 if.then11:		; preds = %entry
 	br label %do.end
@@ -230,19 +230,19 @@ while.body:		; preds = %while.cond
 	br label %while.cond27
 
 while.cond27:		; preds = %while.body36, %while.body
-	br i1 undef, label %do.body288.loopexit, label %land.rhs
+	br i1 %arg, label %do.body288.loopexit, label %land.rhs
 
 land.rhs:		; preds = %while.cond27
-	br i1 undef, label %while.body36, label %while.end
+	br i1 %arg, label %while.body36, label %while.end
 
 while.body36:		; preds = %land.rhs
 	br label %while.cond27
 
 while.end:		; preds = %land.rhs
-	br i1 undef, label %do.body288.loopexit4, label %do.body46
+	br i1 %arg, label %do.body288.loopexit4, label %do.body46
 
 do.body46:		; preds = %while.end
-	br i1 undef, label %if.else64, label %if.then53
+	br i1 %arg, label %if.else64, label %if.then53
 
 if.then53:		; preds = %do.body46
 	br label %if.end72
@@ -252,58 +252,58 @@ if.else64:		; preds = %do.body46
 
 if.end72:		; preds = %if.else64, %if.then53
 	%dec = add i32 %count.0, -1		; <i32> [#uses=2]
-	br i1 undef, label %next_iter, label %if.end111
+	br i1 %arg, label %next_iter, label %if.end111
 
 if.end111:		; preds = %if.end72
-	br i1 undef, label %lor.lhs.false, label %do.body145
+	br i1 %arg, label %lor.lhs.false, label %do.body145
 
 lor.lhs.false:		; preds = %if.end111
-	br i1 undef, label %lor.lhs.false122, label %do.body145
+	br i1 %arg, label %lor.lhs.false122, label %do.body145
 
 lor.lhs.false122:		; preds = %lor.lhs.false
-	br i1 undef, label %lor.lhs.false128, label %do.body145
+	br i1 %arg, label %lor.lhs.false128, label %do.body145
 
 lor.lhs.false128:		; preds = %lor.lhs.false122
-	br i1 undef, label %do.body162, label %land.lhs.true
+	br i1 %arg, label %do.body162, label %land.lhs.true
 
 land.lhs.true:		; preds = %lor.lhs.false128
-	br i1 undef, label %do.body145, label %do.body162
+	br i1 %arg, label %do.body145, label %do.body162
 
 do.body145:		; preds = %land.lhs.true, %lor.lhs.false122, %lor.lhs.false, %if.end111
-	br i1 undef, label %if.then156, label %next_iter
+	br i1 %arg, label %if.then156, label %next_iter
 
 if.then156:		; preds = %do.body145
 	br label %next_iter
 
 do.body162:		; preds = %land.lhs.true, %lor.lhs.false128
-	br i1 undef, label %if.then173, label %do.end177
+	br i1 %arg, label %if.then173, label %do.end177
 
 if.then173:		; preds = %do.body162
 	br label %do.end177
 
 do.end177:		; preds = %if.then173, %do.body162
-	br i1 undef, label %do.body185, label %if.then182
+	br i1 %arg, label %do.body185, label %if.then182
 
 if.then182:		; preds = %do.end177
 	br label %next_iter_mntunlocked
 
 do.body185:		; preds = %do.end177
-	br i1 undef, label %if.then196, label %do.end202
+	br i1 %arg, label %if.then196, label %do.end202
 
 if.then196:		; preds = %do.body185
 	br label %do.end202
 
 do.end202:		; preds = %if.then196, %do.body185
-	br i1 undef, label %lor.lhs.false207, label %if.then231
+	br i1 %arg, label %lor.lhs.false207, label %if.then231
 
 lor.lhs.false207:		; preds = %do.end202
-	br i1 undef, label %lor.lhs.false214, label %if.then231
+	br i1 %arg, label %lor.lhs.false214, label %if.then231
 
 lor.lhs.false214:		; preds = %lor.lhs.false207
-	br i1 undef, label %do.end236, label %land.lhs.true221
+	br i1 %arg, label %do.end236, label %land.lhs.true221
 
 land.lhs.true221:		; preds = %lor.lhs.false214
-	br i1 undef, label %if.then231, label %do.end236
+	br i1 %arg, label %if.then231, label %do.end236
 
 if.then231:		; preds = %land.lhs.true221, %lor.lhs.false207, %do.end202
 	br label %next_iter_mntunlocked
@@ -312,7 +312,7 @@ do.end236:		; preds = %land.lhs.true221, %lor.lhs.false214
 	br label %next_iter_mntunlocked
 
 next_iter_mntunlocked:		; preds = %do.end236, %if.then231, %if.then182
-	br i1 undef, label %yield, label %do.body269
+	br i1 %arg, label %yield, label %do.body269
 
 next_iter:		; preds = %if.then156, %do.body145, %if.end72
 	%rem2482 = and i32 %dec, 255		; <i32> [#uses=1]
@@ -320,7 +320,7 @@ next_iter:		; preds = %if.then156, %do.body145, %if.end72
 	br i1 %cmp249, label %do.body253, label %while.cond
 
 do.body253:		; preds = %next_iter
-	br i1 undef, label %if.then264, label %yield
+	br i1 %arg, label %if.then264, label %yield
 
 if.then264:		; preds = %do.body253
 	br label %yield
@@ -329,7 +329,7 @@ yield:		; preds = %if.then264, %do.body253, %next_iter_mntunlocked
 	br label %do.body269
 
 do.body269:		; preds = %yield, %next_iter_mntunlocked
-	br i1 undef, label %if.then280, label %while.cond.outer.backedge
+	br i1 %arg, label %if.then280, label %while.cond.outer.backedge
 
 if.then280:		; preds = %do.body269
 	br label %while.cond.outer.backedge
@@ -344,7 +344,7 @@ do.body288.loopexit4:		; preds = %while.end, %while.cond
 	br label %do.body288
 
 do.body288:		; preds = %do.body288.loopexit4, %do.body288.loopexit
-	br i1 undef, label %if.then299, label %do.end303
+	br i1 %arg, label %if.then299, label %do.end303
 
 if.then299:		; preds = %do.body288
 	br label %do.end303

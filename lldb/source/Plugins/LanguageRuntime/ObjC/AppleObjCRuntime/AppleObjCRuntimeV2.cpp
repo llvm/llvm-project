@@ -14,8 +14,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/ValueObjectConstResult.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Expression/UtilityFunction.h"
@@ -48,6 +46,8 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 #include "lldb/lldb-enumerations.h"
 
 #include "AppleObjCClassDescriptorV2.h"
@@ -2685,7 +2685,7 @@ void AppleObjCRuntimeV2::WarnIfNoExpandedSharedCache() {
   }
   os << ". This will likely reduce debugging performance.\n";
 
-  Debugger::ReportWarning(os.str(), debugger.GetID(),
+  Debugger::ReportWarning(buffer, debugger.GetID(),
                           &m_no_expanded_cache_warning);
 }
 

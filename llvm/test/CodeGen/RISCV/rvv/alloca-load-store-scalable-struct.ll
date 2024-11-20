@@ -20,8 +20,8 @@ define <vscale x 1 x double> @test(ptr %addr, i64 %vl) {
 ; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    vl1re64.v v9, (a0)
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs1r.v v8, (a0)
 ; CHECK-NEXT:    add a2, a0, a2
+; CHECK-NEXT:    vs1r.v v8, (a0)
 ; CHECK-NEXT:    vs1r.v v9, (a2)
 ; CHECK-NEXT:    vl1re64.v v8, (a2)
 ; CHECK-NEXT:    vl1re64.v v9, (a0)
@@ -30,7 +30,9 @@ define <vscale x 1 x double> @test(ptr %addr, i64 %vl) {
 ; CHECK-NEXT:    csrrs a0, vlenb, zero
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %ret = alloca %struct.test, align 8

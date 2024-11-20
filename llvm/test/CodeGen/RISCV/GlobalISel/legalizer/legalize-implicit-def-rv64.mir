@@ -76,9 +76,8 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: implicit_def_i72
     ; CHECK: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $x10 = COPY [[DEF]](s64)
-    ; CHECK-NEXT: $x11 = COPY [[DEF1]](s64)
+    ; CHECK-NEXT: $x11 = COPY [[DEF]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10, implicit $x11
     %0:_(s72) = G_IMPLICIT_DEF
     %1:_(s128) = G_ANYEXT %0(s72)
@@ -94,9 +93,8 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: implicit_def_i128
     ; CHECK: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $x10 = COPY [[DEF]](s64)
-    ; CHECK-NEXT: $x11 = COPY [[DEF1]](s64)
+    ; CHECK-NEXT: $x11 = COPY [[DEF]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10, implicit $x11
     %0:_(s128) = G_IMPLICIT_DEF
     %1:_(s64), %2:_(s64) = G_UNMERGE_VALUES %0(s128)
@@ -111,11 +109,9 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: implicit_def_i192
     ; CHECK: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF2:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $x10 = COPY [[DEF]](s64)
-    ; CHECK-NEXT: $x11 = COPY [[DEF1]](s64)
-    ; CHECK-NEXT: $x12 = COPY [[DEF2]](s64)
+    ; CHECK-NEXT: $x11 = COPY [[DEF]](s64)
+    ; CHECK-NEXT: $x12 = COPY [[DEF]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10, implicit $x11, implicit $x12
     %0:_(s192) = G_IMPLICIT_DEF
     %1:_(s64), %2:_(s64), %3:_(s64) = G_UNMERGE_VALUES %0(s192)

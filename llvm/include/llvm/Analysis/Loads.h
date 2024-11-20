@@ -27,6 +27,8 @@ class LoadInst;
 class Loop;
 class MemoryLocation;
 class ScalarEvolution;
+class SCEVPredicate;
+template <typename T> class SmallVectorImpl;
 class TargetLibraryInfo;
 
 /// Return true if this is always a dereferenceable pointer. If the context
@@ -81,14 +83,16 @@ bool isSafeToLoadUnconditionally(Value *V, Align Alignment, const APInt &Size,
 /// that required by the header itself and could be hoisted into the header
 /// if desired.)  This is more powerful than the variants above when the
 /// address loaded from is analyzeable by SCEV.
-bool isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
-                                       ScalarEvolution &SE, DominatorTree &DT,
-                                       AssumptionCache *AC = nullptr);
+bool isDereferenceableAndAlignedInLoop(
+    LoadInst *LI, Loop *L, ScalarEvolution &SE, DominatorTree &DT,
+    AssumptionCache *AC = nullptr,
+    SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
 
 /// Return true if the loop \p L cannot fault on any iteration and only
 /// contains read-only memory accesses.
-bool isDereferenceableReadOnlyLoop(Loop *L, ScalarEvolution *SE,
-                                   DominatorTree *DT, AssumptionCache *AC);
+bool isDereferenceableReadOnlyLoop(
+    Loop *L, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
+    SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
 
 /// Return true if we know that executing a load from this value cannot trap.
 ///

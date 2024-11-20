@@ -11,6 +11,8 @@
 #define BENCHMARK_CONTAINER_BENCHMARKS_H
 
 #include <cassert>
+#include <iterator>
+#include <utility>
 
 #include "Utilities.h"
 #include "benchmark/benchmark.h"
@@ -150,7 +152,35 @@ void BM_EmplaceDuplicate(benchmark::State& st, Container c, GenInputs gen) {
 }
 
 template <class Container, class GenInputs>
-static void BM_Find(benchmark::State& st, Container c, GenInputs gen) {
+void BM_erase_iter_in_middle(benchmark::State& st, Container, GenInputs gen) {
+  auto in = gen(st.range(0));
+  Container c(in.begin(), in.end());
+  assert(c.size() > 2);
+  for (auto _ : st) {
+    auto mid    = std::next(c.begin(), c.size() / 2);
+    auto tmp    = *mid;
+    auto result = c.erase(mid); // erase an element in the middle
+    benchmark::DoNotOptimize(result);
+    c.push_back(std::move(tmp)); // and then push it back at the end to avoid needing a new container
+  }
+}
+
+template <class Container, class GenInputs>
+void BM_erase_iter_at_start(benchmark::State& st, Container, GenInputs gen) {
+  auto in = gen(st.range(0));
+  Container c(in.begin(), in.end());
+  assert(c.size() > 2);
+  for (auto _ : st) {
+    auto it     = c.begin();
+    auto tmp    = *it;
+    auto result = c.erase(it); // erase the first element
+    benchmark::DoNotOptimize(result);
+    c.push_back(std::move(tmp)); // and then push it back at the end to avoid needing a new container
+  }
+}
+
+template <class Container, class GenInputs>
+void BM_Find(benchmark::State& st, Container c, GenInputs gen) {
   auto in = gen(st.range(0));
   c.insert(in.begin(), in.end());
   benchmark::DoNotOptimize(&(*c.begin()));
@@ -164,7 +194,7 @@ static void BM_Find(benchmark::State& st, Container c, GenInputs gen) {
 }
 
 template <class Container, class GenInputs>
-static void BM_FindRehash(benchmark::State& st, Container c, GenInputs gen) {
+void BM_FindRehash(benchmark::State& st, Container c, GenInputs gen) {
   c.rehash(8);
   auto in = gen(st.range(0));
   c.insert(in.begin(), in.end());
@@ -179,7 +209,7 @@ static void BM_FindRehash(benchmark::State& st, Container c, GenInputs gen) {
 }
 
 template <class Container, class GenInputs>
-static void BM_Rehash(benchmark::State& st, Container c, GenInputs gen) {
+void BM_Rehash(benchmark::State& st, Container c, GenInputs gen) {
   auto in = gen(st.range(0));
   c.max_load_factor(3.0);
   c.insert(in.begin(), in.end());
@@ -193,7 +223,7 @@ static void BM_Rehash(benchmark::State& st, Container c, GenInputs gen) {
 }
 
 template <class Container, class GenInputs>
-static void BM_Compare_same_container(benchmark::State& st, Container, GenInputs gen) {
+void BM_Compare_same_container(benchmark::State& st, Container, GenInputs gen) {
   auto in = gen(st.range(0));
   Container c1(in.begin(), in.end());
   Container c2 = c1;
@@ -208,7 +238,7 @@ static void BM_Compare_same_container(benchmark::State& st, Container, GenInputs
 }
 
 template <class Container, class GenInputs>
-static void BM_Compare_different_containers(benchmark::State& st, Container, GenInputs gen) {
+void BM_Compare_different_containers(benchmark::State& st, Container, GenInputs gen) {
   auto in1 = gen(st.range(0));
   auto in2 = gen(st.range(0));
   Container c1(in1.begin(), in1.end());
@@ -223,6 +253,6 @@ static void BM_Compare_different_containers(benchmark::State& st, Container, Gen
   }
 }
 
-} // end namespace ContainerBenchmarks
+} // namespace ContainerBenchmarks
 
 #endif // BENCHMARK_CONTAINER_BENCHMARKS_H

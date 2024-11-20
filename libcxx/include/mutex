@@ -190,7 +190,6 @@ template<class Callable, class ...Args>
 #include <__chrono/time_point.h>
 #include <__condition_variable/condition_variable.h>
 #include <__config>
-#include <__memory/shared_ptr.h>
 #include <__mutex/lock_guard.h>
 #include <__mutex/mutex.h>
 #include <__mutex/once_flag.h>
@@ -199,7 +198,6 @@ template<class Callable, class ...Args>
 #include <__thread/id.h>
 #include <__thread/support.h>
 #include <__utility/forward.h>
-#include <cstddef>
 #include <limits>
 #ifndef _LIBCPP_CXX03_LANG
 #  include <tuple>
@@ -215,7 +213,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#ifndef _LIBCPP_HAS_NO_THREADS
+#if _LIBCPP_HAS_THREADS
 
 class _LIBCPP_EXPORTED_FROM_ABI recursive_mutex {
   __libcpp_recursive_mutex_t __m_;
@@ -492,7 +490,7 @@ private:
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(scoped_lock);
 
 #  endif // _LIBCPP_STD_VER >= 17
-#endif   // !_LIBCPP_HAS_NO_THREADS
+#endif   // _LIBCPP_HAS_THREADS
 
 _LIBCPP_END_NAMESPACE_STD
 

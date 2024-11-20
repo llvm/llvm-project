@@ -22,21 +22,21 @@ class FunctionPointer;
 class MemberPointer final {
 private:
   Pointer Base;
-  const Decl *Dcl = nullptr;
+  const ValueDecl *Dcl = nullptr;
   int32_t PtrOffset = 0;
 
-  MemberPointer(Pointer Base, const Decl *Dcl, int32_t PtrOffset)
+  MemberPointer(Pointer Base, const ValueDecl *Dcl, int32_t PtrOffset)
       : Base(Base), Dcl(Dcl), PtrOffset(PtrOffset) {}
 
 public:
   MemberPointer() = default;
-  MemberPointer(Pointer Base, const Decl *Dcl) : Base(Base), Dcl(Dcl) {}
+  MemberPointer(Pointer Base, const ValueDecl *Dcl) : Base(Base), Dcl(Dcl) {}
   MemberPointer(uint32_t Address, const Descriptor *D) {
     // We only reach this for Address == 0, when creating a null member pointer.
     assert(Address == 0);
   }
 
-  MemberPointer(const Decl *D) : Dcl(D) {
+  MemberPointer(const ValueDecl *D) : Dcl(D) {
     assert((isa<FieldDecl, IndirectFieldDecl, CXXMethodDecl>(D)));
   }
 
@@ -67,7 +67,7 @@ public:
   }
 
   bool hasDecl() const { return Dcl; }
-  const Decl *getDecl() const { return Dcl; }
+  const ValueDecl *getDecl() const { return Dcl; }
 
   MemberPointer atInstanceBase(unsigned Offset) const {
     if (Base.isZero())
@@ -84,6 +84,11 @@ public:
 
   bool isZero() const { return Base.isZero() && !Dcl; }
   bool hasBase() const { return !Base.isZero(); }
+  bool isWeak() const {
+    if (const auto *MF = getMemberFunction())
+      return MF->isWeak();
+    return false;
+  }
 
   void print(llvm::raw_ostream &OS) const {
     OS << "MemberPtr(" << Base << " " << (const void *)Dcl << " + " << PtrOffset
@@ -91,7 +96,7 @@ public:
   }
 
   std::string toDiagnosticString(const ASTContext &Ctx) const {
-    return "FIXME";
+    return toAPValue(Ctx).getAsString(Ctx, Dcl->getType());
   }
 
   ComparisonCategoryResult compare(const MemberPointer &RHS) const {

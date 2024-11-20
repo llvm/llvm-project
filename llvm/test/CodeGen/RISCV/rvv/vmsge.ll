@@ -1084,6 +1084,45 @@ entry:
   ret <vscale x 4 x i1> %a
 }
 
+define <vscale x 4 x i1> @intrinsic_vmsge_mask_vx_nxv4i8_i8_1(<vscale x 4 x i1> %0, <vscale x 4 x i8> %1, <vscale x 4 x i1> %2, iXLen %3) nounwind {
+; CHECK-LABEL: intrinsic_vmsge_mask_vx_nxv4i8_i8_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vmv1r.v v10, v0
+; CHECK-NEXT:    li a1, 99
+; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; CHECK-NEXT:    vmsgt.vx v10, v8, a1, v0.t
+; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 4 x i1> @llvm.riscv.vmsge.mask.nxv4i8.i8(
+    <vscale x 4 x i1> %0,
+    <vscale x 4 x i8> %1,
+    i8 100,
+    <vscale x 4 x i1> %2,
+    iXLen %3)
+
+  ret <vscale x 4 x i1> %a
+}
+
+define <vscale x 4 x i1> @intrinsic_vmsge_mask_vx_nxv4i8_i8_2(<vscale x 4 x i1> %0, <vscale x 4 x i8> %1, <vscale x 4 x i1> %2, iXLen %3) nounwind {
+; CHECK-LABEL: intrinsic_vmsge_mask_vx_nxv4i8_i8_2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-NEXT:    vmor.mm v0, v9, v0
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 4 x i1> @llvm.riscv.vmsge.mask.nxv4i8.i8(
+    <vscale x 4 x i1> %0,
+    <vscale x 4 x i8> %1,
+    i8 -128,
+    <vscale x 4 x i1> %2,
+    iXLen %3)
+
+  ret <vscale x 4 x i1> %a
+}
+
+
 declare <vscale x 8 x i1> @llvm.riscv.vmsge.nxv8i8.i8(
   <vscale x 8 x i8>,
   i8,
@@ -1669,8 +1708,8 @@ define <vscale x 1 x i1> @intrinsic_vmsge_vx_nxv1i64_i64(<vscale x 1 x i64> %0, 
 ; RV32-LABEL: intrinsic_vmsge_vx_nxv1i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -1704,8 +1743,8 @@ define <vscale x 1 x i1> @intrinsic_vmsge_mask_vx_nxv1i64_i64(<vscale x 1 x i1> 
 ; RV32-LABEL: intrinsic_vmsge_mask_vx_nxv1i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; RV32-NEXT:    vlse64.v v11, (a0), zero
@@ -1744,8 +1783,8 @@ define <vscale x 2 x i1> @intrinsic_vmsge_vx_nxv2i64_i64(<vscale x 2 x i64> %0, 
 ; RV32-LABEL: intrinsic_vmsge_vx_nxv2i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
@@ -1779,8 +1818,8 @@ define <vscale x 2 x i1> @intrinsic_vmsge_mask_vx_nxv2i64_i64(<vscale x 2 x i1> 
 ; RV32-LABEL: intrinsic_vmsge_mask_vx_nxv2i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
 ; RV32-NEXT:    vlse64.v v12, (a0), zero
@@ -1819,8 +1858,8 @@ define <vscale x 4 x i1> @intrinsic_vmsge_vx_nxv4i64_i64(<vscale x 4 x i64> %0, 
 ; RV32-LABEL: intrinsic_vmsge_vx_nxv4i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m4, ta, ma
 ; RV32-NEXT:    vlse64.v v12, (a0), zero
@@ -1854,8 +1893,8 @@ define <vscale x 4 x i1> @intrinsic_vmsge_mask_vx_nxv4i64_i64(<vscale x 4 x i1> 
 ; RV32-LABEL: intrinsic_vmsge_mask_vx_nxv4i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
 ; RV32-NEXT:    vlse64.v v16, (a0), zero
@@ -1965,6 +2004,37 @@ entry:
   %a = call <vscale x 4 x i1> @llvm.riscv.vmsge.nxv4i8.i8(
     <vscale x 4 x i8> %0,
     i8 -11,
+    iXLen %1)
+
+  ret <vscale x 4 x i1> %a
+}
+
+define <vscale x 4 x i1> @intrinsic_vmsge_vi_nxv4i8_i8_1(<vscale x 4 x i8> %0, iXLen %1) nounwind {
+; CHECK-LABEL: intrinsic_vmsge_vi_nxv4i8_i8_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a1, 99
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-NEXT:    vmsgt.vx v0, v8, a1
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 4 x i1> @llvm.riscv.vmsge.nxv4i8.i8(
+    <vscale x 4 x i8> %0,
+    i8 100,
+    iXLen %1)
+
+  ret <vscale x 4 x i1> %a
+}
+
+define <vscale x 4 x i1> @intrinsic_vmsge_vi_nxv4i8_i8_2(<vscale x 4 x i8> %0, iXLen %1) nounwind {
+; CHECK-LABEL: intrinsic_vmsge_vi_nxv4i8_i8_2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-NEXT:    vmset.m v0
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 4 x i1> @llvm.riscv.vmsge.nxv4i8.i8(
+    <vscale x 4 x i8> %0,
+    i8 -128,
     iXLen %1)
 
   ret <vscale x 4 x i1> %a
@@ -2790,8 +2860,8 @@ define <vscale x 1 x i1> @intrinsic_vmsge_maskedoff_mask_vx_nxv1i64_i64(<vscale 
 ; RV32-LABEL: intrinsic_vmsge_maskedoff_mask_vx_nxv1i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -2820,8 +2890,8 @@ define <vscale x 2 x i1> @intrinsic_vmsge_maskedoff_mask_vx_nxv2i64_i64(<vscale 
 ; RV32-LABEL: intrinsic_vmsge_maskedoff_mask_vx_nxv2i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
 ; RV32-NEXT:    vlse64.v v12, (a0), zero
@@ -2852,8 +2922,8 @@ define <vscale x 4 x i1> @intrinsic_vmsge_maskedoff_mask_vx_nxv4i64_i64(<vscale 
 ; RV32-LABEL: intrinsic_vmsge_maskedoff_mask_vx_nxv4i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
 ; RV32-NEXT:    vlse64.v v16, (a0), zero

@@ -346,13 +346,14 @@ fromfpx(T x, int rnd, unsigned int width) {
 
 namespace internal {
 
-template <typename F, typename I,
-          cpp::enable_if_t<cpp::is_floating_point_v<F> && cpp::is_integral_v<I>,
+template <typename FloatType, typename IntType,
+          cpp::enable_if_t<cpp::is_floating_point_v<FloatType> &&
+                               cpp::is_integral_v<IntType>,
                            int> = 0>
-LIBC_INLINE I rounded_float_to_signed_integer(F x) {
-  constexpr I INTEGER_MIN = (I(1) << (sizeof(I) * 8 - 1));
-  constexpr I INTEGER_MAX = -(INTEGER_MIN + 1);
-  FPBits<F> bits(x);
+LIBC_INLINE IntType rounded_float_to_signed_integer(FloatType x) {
+  constexpr IntType INTEGER_MIN = (IntType(1) << (sizeof(IntType) * 8 - 1));
+  constexpr IntType INTEGER_MAX = -(INTEGER_MIN + 1);
+  FPBits<FloatType> bits(x);
   auto set_domain_error_and_raise_invalid = []() {
     set_errno_if_required(EDOM);
     raise_except_if_required(FE_INVALID);
@@ -364,7 +365,7 @@ LIBC_INLINE I rounded_float_to_signed_integer(F x) {
   }
 
   int exponent = bits.get_exponent();
-  constexpr int EXPONENT_LIMIT = sizeof(I) * 8 - 1;
+  constexpr int EXPONENT_LIMIT = sizeof(IntType) * 8 - 1;
   if (exponent > EXPONENT_LIMIT) {
     set_domain_error_and_raise_invalid();
     return bits.is_neg() ? INTEGER_MIN : INTEGER_MAX;
@@ -374,29 +375,33 @@ LIBC_INLINE I rounded_float_to_signed_integer(F x) {
       return bits.is_neg() ? INTEGER_MIN : INTEGER_MAX;
     }
     // If the control reaches here, then it means that the rounded
-    // value is the most negative number for the signed integer type I.
+    // value is the most negative number for the signed integer type IntType.
   }
 
-  // For all other cases, if `x` can fit in the integer type `I`,
+  // For all other cases, if `x` can fit in the integer type `IntType`,
   // we just return `x`. static_cast will convert the floating
   // point value to the exact integer value.
-  return static_cast<I>(x);
+  return static_cast<IntType>(x);
 }
 
 } // namespace internal
 
-template <typename F, typename I,
-          cpp::enable_if_t<cpp::is_floating_point_v<F> && cpp::is_integral_v<I>,
+template <typename FloatType, typename IntType,
+          cpp::enable_if_t<cpp::is_floating_point_v<FloatType> &&
+                               cpp::is_integral_v<IntType>,
                            int> = 0>
-LIBC_INLINE I round_to_signed_integer(F x) {
-  return internal::rounded_float_to_signed_integer<F, I>(round(x));
+LIBC_INLINE IntType round_to_signed_integer(FloatType x) {
+  return internal::rounded_float_to_signed_integer<FloatType, IntType>(
+      round(x));
 }
 
-template <typename F, typename I,
-          cpp::enable_if_t<cpp::is_floating_point_v<F> && cpp::is_integral_v<I>,
+template <typename FloatType, typename IntType,
+          cpp::enable_if_t<cpp::is_floating_point_v<FloatType> &&
+                               cpp::is_integral_v<IntType>,
                            int> = 0>
-LIBC_INLINE I round_to_signed_integer_using_current_rounding_mode(F x) {
-  return internal::rounded_float_to_signed_integer<F, I>(
+LIBC_INLINE IntType
+round_to_signed_integer_using_current_rounding_mode(FloatType x) {
+  return internal::rounded_float_to_signed_integer<FloatType, IntType>(
       round_using_current_rounding_mode(x));
 }
 

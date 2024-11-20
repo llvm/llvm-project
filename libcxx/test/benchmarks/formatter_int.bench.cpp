@@ -6,12 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14, c++17
+
 #include <array>
 #include <format>
 #include <random>
 
 #include "CartesianBenchmarks.h"
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 
 // Tests the full range of the value.
 template <class T>
@@ -32,12 +35,13 @@ static void BM_Basic(benchmark::State& state) {
     for (auto value : data)
       benchmark::DoNotOptimize(std::format_to(output.begin(), "{}", value));
 }
-BENCHMARK_TEMPLATE(BM_Basic, uint32_t);
-BENCHMARK_TEMPLATE(BM_Basic, int32_t);
-BENCHMARK_TEMPLATE(BM_Basic, uint64_t);
-BENCHMARK_TEMPLATE(BM_Basic, int64_t);
+BENCHMARK(BM_Basic<uint32_t>);
+BENCHMARK(BM_Basic<int32_t>);
+BENCHMARK(BM_Basic<uint64_t>);
+BENCHMARK(BM_Basic<int64_t>);
 
 // Ideally the low values of a 128-bit value are all dispatched to a 64-bit routine.
+#ifndef TEST_HAS_NO_INT128
 template <class T>
 static void BM_BasicLow(benchmark::State& state) {
   using U = std::conditional_t<std::is_signed_v<T>, int64_t, uint64_t>;
@@ -49,11 +53,12 @@ static void BM_BasicLow(benchmark::State& state) {
     for (auto value : data)
       benchmark::DoNotOptimize(std::format_to(output.begin(), "{}", value));
 }
-BENCHMARK_TEMPLATE(BM_BasicLow, __uint128_t);
-BENCHMARK_TEMPLATE(BM_BasicLow, __int128_t);
+BENCHMARK(BM_BasicLow<__uint128_t>);
+BENCHMARK(BM_BasicLow<__int128_t>);
 
-BENCHMARK_TEMPLATE(BM_Basic, __uint128_t);
-BENCHMARK_TEMPLATE(BM_Basic, __int128_t);
+BENCHMARK(BM_Basic<__uint128_t>);
+BENCHMARK(BM_Basic<__int128_t>);
+#endif
 
 // *** Localization ***
 enum class LocalizationE { False, True };

@@ -157,7 +157,7 @@ public:
   /// So that the stream could keep at least tell() + ExtraSize bytes
   /// without re-allocations. reserveExtraSpace() does not change
   /// the size/data of the stream.
-  virtual void reserveExtraSpace(uint64_t ExtraSize) {}
+  virtual void reserveExtraSpace(uint64_t ExtraSize) { (void)ExtraSize; }
 
   /// Set the stream to be buffered, with an automatically determined buffer
   /// size.
@@ -768,6 +768,64 @@ public:
   }
   ~buffer_unique_ostream() override { *OS << str(); }
 };
+
+// Helper struct to add indentation to raw_ostream. Instead of
+// OS.indent(6) << "more stuff";
+// you can use
+// OS << indent(6) << "more stuff";
+// which has better ergonomics (and clang-formats better as well).
+//
+// If indentation is always in increments of a fixed value, you can use Scale
+// to set that value once. So indent(1, 2) will add 2 spaces and
+// indent(1,2) + 1 will add 4 spaces.
+struct indent {
+  // Indentation is represented as `NumIndents` steps of size `Scale` each.
+  unsigned NumIndents;
+  unsigned Scale;
+
+  explicit indent(unsigned NumIndents, unsigned Scale = 1)
+      : NumIndents(NumIndents), Scale(Scale) {}
+
+  // These arithmeric operators preserve scale.
+  void operator+=(unsigned N) { NumIndents += N; }
+  void operator-=(unsigned N) {
+    assert(NumIndents >= N && "Indentation underflow");
+    NumIndents -= N;
+  }
+  indent operator+(unsigned N) const { return indent(NumIndents + N, Scale); }
+  indent operator-(unsigned N) const {
+    assert(NumIndents >= N && "Indentation undeflow");
+    return indent(NumIndents - N, Scale);
+  }
+  indent &operator++() { // Prefix ++.
+    ++NumIndents;
+    return *this;
+  }
+  indent operator++(int) { // Postfix ++.
+    indent Old = *this;
+    ++NumIndents;
+    return Old;
+  }
+  indent &operator--() { // Prefix --.
+    assert(NumIndents >= 1);
+    --NumIndents;
+    return *this;
+  }
+  indent operator--(int) { // Postfix --.
+    indent Old = *this;
+    assert(NumIndents >= 1);
+    --NumIndents;
+    return Old;
+  }
+  indent &operator=(unsigned N) {
+    NumIndents = N;
+    return *this;
+  }
+};
+
+inline raw_ostream &operator<<(raw_ostream &OS, const indent &Indent) {
+  return OS.indent(Indent.NumIndents * Indent.Scale);
+}
 
 class Error;
 

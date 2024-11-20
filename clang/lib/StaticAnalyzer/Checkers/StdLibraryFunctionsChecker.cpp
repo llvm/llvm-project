@@ -1401,7 +1401,10 @@ void StdLibraryFunctionsChecker::checkPostCall(const CallEvent &Call,
         ErrnoNote =
             llvm::formatv("After calling '{0}' {1}", FunctionName, ErrnoNote);
     } else {
-      CaseNote = llvm::formatv(Case.getNote().str().c_str(), FunctionName);
+      // Disable formatv() validation as the case note may not always have the
+      // {0} placeholder for function name.
+      CaseNote =
+          llvm::formatv(false, Case.getNote().str().c_str(), FunctionName);
     }
     const SVal RV = Call.getReturnValue();
 

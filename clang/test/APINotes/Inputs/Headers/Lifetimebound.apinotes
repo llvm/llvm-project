@@ -1,0 +1,18 @@
+---
+Name: Lifetimebound
+Functions:
+  - Name:              funcToAnnotate
+    Parameters:
+      - Position:      0
+        Lifetimebound: true
+Tags:
+- Name: MyClass
+  Methods:
+    - Name: annotateThis
+      Parameters:
+        - Position:      -1
+          Lifetimebound: true
+    - Name: methodToAnnotate
+      Parameters:
+        - Position:      0
+          Lifetimebound: true

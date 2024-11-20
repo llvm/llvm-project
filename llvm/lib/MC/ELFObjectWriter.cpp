@@ -18,7 +18,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -40,22 +39,17 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -68,6 +62,8 @@ using namespace llvm;
 namespace {
 namespace stats {
 
+STATISTIC(ELFHeaderBytes, "Total size of ELF headers");
+STATISTIC(SectionHeaderBytes, "Total size of section headers table");
 STATISTIC(AllocTextBytes, "Total size of SHF_ALLOC text sections");
 STATISTIC(AllocROBytes, "Total size of SHF_ALLOC readonly sections");
 STATISTIC(AllocRWBytes, "Total size of SHF_ALLOC read-write sections");
@@ -167,7 +163,7 @@ public:
                                                : llvm::endianness::big),
         Mode(Mode) {}
 
-  void WriteWord(uint64_t Word) {
+  void writeWord(uint64_t Word) {
     if (is64Bit())
       W.write<uint64_t>(Word);
     else
@@ -197,20 +193,20 @@ public:
   MCSectionELF *createRelocationSection(MCContext &Ctx,
                                         const MCSectionELF &Sec);
 
-  void writeSectionHeader(const MCAssembler &Asm);
+  void writeSectionHeaders(const MCAssembler &Asm);
 
   void writeSectionData(const MCAssembler &Asm, MCSection &Sec);
 
-  void WriteSecHdrEntry(uint32_t Name, uint32_t Type, uint64_t Flags,
-                        uint64_t Address, uint64_t Offset, uint64_t Size,
-                        uint32_t Link, uint32_t Info, MaybeAlign Alignment,
-                        uint64_t EntrySize);
+  void writeSectionHeaderEntry(uint32_t Name, uint32_t Type, uint64_t Flags,
+                               uint64_t Address, uint64_t Offset, uint64_t Size,
+                               uint32_t Link, uint32_t Info,
+                               MaybeAlign Alignment, uint64_t EntrySize);
 
   void writeRelocations(const MCAssembler &Asm, const MCSectionELF &Sec);
 
   uint64_t writeObject(MCAssembler &Asm);
-  void writeSection(uint32_t GroupSymbolIndex, uint64_t Offset, uint64_t Size,
-                    const MCSectionELF &Section);
+  void writeSectionHeader(uint32_t GroupSymbolIndex, uint64_t Offset,
+                          uint64_t Size, const MCSectionELF &Section);
 };
 } // end anonymous namespace
 
@@ -317,9 +313,9 @@ void ELFWriter::writeHeader(const MCAssembler &Asm) {
   W.write<uint16_t>(OWriter.TargetObjectWriter->getEMachine()); // e_machine = target
 
   W.write<uint32_t>(ELF::EV_CURRENT);         // e_version
-  WriteWord(0);                    // e_entry, no entry point in .o file
-  WriteWord(0);                    // e_phoff, no program header for .o
-  WriteWord(0);                     // e_shoff = sec hdr table off in bytes
+  writeWord(0); // e_entry, no entry point in .o file
+  writeWord(0); // e_phoff, no program header for .o
+  writeWord(0); // e_shoff = sec hdr table off in bytes
 
   // e_flags = whatever the target wants
   W.write<uint32_t>(OWriter.getELFHeaderEFlags());
@@ -791,20 +787,22 @@ void ELFWriter::writeSectionData(const MCAssembler &Asm, MCSection &Sec) {
   W.OS << toStringRef(Compressed);
 }
 
-void ELFWriter::WriteSecHdrEntry(uint32_t Name, uint32_t Type, uint64_t Flags,
-                                 uint64_t Address, uint64_t Offset,
-                                 uint64_t Size, uint32_t Link, uint32_t Info,
-                                 MaybeAlign Alignment, uint64_t EntrySize) {
+void ELFWriter::writeSectionHeaderEntry(uint32_t Name, uint32_t Type,
+                                        uint64_t Flags, uint64_t Address,
+                                        uint64_t Offset, uint64_t Size,
+                                        uint32_t Link, uint32_t Info,
+                                        MaybeAlign Alignment,
+                                        uint64_t EntrySize) {
   W.write<uint32_t>(Name);        // sh_name: index into string table
   W.write<uint32_t>(Type);        // sh_type
-  WriteWord(Flags);     // sh_flags
-  WriteWord(Address);   // sh_addr
-  WriteWord(Offset);    // sh_offset
-  WriteWord(Size);      // sh_size
+  writeWord(Flags);               // sh_flags
+  writeWord(Address);             // sh_addr
+  writeWord(Offset);              // sh_offset
+  writeWord(Size);                // sh_size
   W.write<uint32_t>(Link);        // sh_link
   W.write<uint32_t>(Info);        // sh_info
-  WriteWord(Alignment ? Alignment->value() : 0); // sh_addralign
-  WriteWord(EntrySize); // sh_entsize
+  writeWord(Alignment ? Alignment->value() : 0); // sh_addralign
+  writeWord(EntrySize);                          // sh_entsize
 }
 
 template <bool Is64>
@@ -888,8 +886,8 @@ void ELFWriter::writeRelocations(const MCAssembler &Asm,
   }
 }
 
-void ELFWriter::writeSection(uint32_t GroupSymbolIndex, uint64_t Offset,
-                             uint64_t Size, const MCSectionELF &Section) {
+void ELFWriter::writeSectionHeader(uint32_t GroupSymbolIndex, uint64_t Offset,
+                                   uint64_t Size, const MCSectionELF &Section) {
   uint64_t sh_link = 0;
   uint64_t sh_info = 0;
 
@@ -936,19 +934,21 @@ void ELFWriter::writeSection(uint32_t GroupSymbolIndex, uint64_t Offset,
       sh_link = Sym->getSection().getOrdinal();
   }
 
-  WriteSecHdrEntry(StrTabBuilder.getOffset(Section.getName()),
-                   Section.getType(), Section.getFlags(), 0, Offset, Size,
-                   sh_link, sh_info, Section.getAlign(),
-                   Section.getEntrySize());
+  writeSectionHeaderEntry(StrTabBuilder.getOffset(Section.getName()),
+                          Section.getType(), Section.getFlags(), 0, Offset,
+                          Size, sh_link, sh_info, Section.getAlign(),
+                          Section.getEntrySize());
 }
 
-void ELFWriter::writeSectionHeader(const MCAssembler &Asm) {
+void ELFWriter::writeSectionHeaders(const MCAssembler &Asm) {
+  uint64_t Start = W.OS.tell();
   const unsigned NumSections = SectionTable.size();
 
   // Null section first.
   uint64_t FirstSectionSize =
       (NumSections + 1) >= ELF::SHN_LORESERVE ? NumSections + 1 : 0;
-  WriteSecHdrEntry(0, 0, 0, 0, 0, FirstSectionSize, 0, 0, std::nullopt, 0);
+  writeSectionHeaderEntry(0, 0, 0, 0, 0, FirstSectionSize, 0, 0, std::nullopt,
+                          0);
 
   for (const MCSectionELF *Section : SectionTable) {
     uint32_t GroupSymbolIndex;
@@ -1003,8 +1003,10 @@ void ELFWriter::writeSectionHeader(const MCAssembler &Asm) {
       }
     }
 
-    writeSection(GroupSymbolIndex, Offsets.first, Size, *Section);
+    writeSectionHeader(GroupSymbolIndex, Offsets.first, Size, *Section);
   }
+
+  stats::SectionHeaderBytes += W.OS.tell() - Start;
 }
 
 uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
@@ -1019,6 +1021,8 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
 
   // Write out the ELF header ...
   writeHeader(Asm);
+
+  stats::ELFHeaderBytes += W.OS.tell() - StartOffset;
 
   // ... then the sections ...
   SmallVector<std::pair<MCSectionELF *, SmallVector<unsigned>>, 0> Groups;
@@ -1126,7 +1130,7 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
   const uint64_t SectionHeaderOffset = align(is64Bit() ? Align(8) : Align(4));
 
   // ... then the section header table ...
-  writeSectionHeader(Asm);
+  writeSectionHeaders(Asm);
 
   uint16_t NumSections = support::endian::byte_swap<uint16_t>(
       (SectionTable.size() + 1 >= ELF::SHN_LORESERVE) ? (uint16_t)ELF::SHN_UNDEF

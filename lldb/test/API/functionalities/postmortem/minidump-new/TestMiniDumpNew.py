@@ -505,8 +505,42 @@ class MiniDumpNewTestCase(TestBase):
         self.assertEqual(region.GetRegionBase(), 0x7FFF12A84030)
         self.assertTrue(region.GetRegionEnd(), 0x7FFF12A84030 + 0x2FD0)
         self.assertTrue(region_info_list.GetMemoryRegionAtIndex(1, region))
-        self.assertEqual(region.GetRegionBase(), 0x00007fff12a87000)
-        self.assertTrue(region.GetRegionEnd(), 0x00007fff12a87000 + 0x00000018)
+        self.assertEqual(region.GetRegionBase(), 0x00007FFF12A87000)
+        self.assertTrue(region.GetRegionEnd(), 0x00007FFF12A87000 + 0x00000018)
         self.assertTrue(region_info_list.GetMemoryRegionAtIndex(2, region))
-        self.assertEqual(region.GetRegionBase(), 0x00007fff12a87018)
-        self.assertTrue(region.GetRegionEnd(), 0x00007fff12a87018 + 0x00000400)
+        self.assertEqual(region.GetRegionBase(), 0x00007FFF12A87018)
+        self.assertTrue(region.GetRegionEnd(), 0x00007FFF12A87018 + 0x00000400)
+
+    def test_multiple_exceptions_or_signals(self):
+        """Test that lldb can read the exception information from the Minidump."""
+        print("Starting to read multiple-sigsev.yaml")
+        self.process_from_yaml("multiple-sigsev.yaml")
+        print("Done reading multiple-sigsev.yaml")
+        self.check_state()
+        # This process crashed due to a segmentation fault in both it's threads.
+        self.assertEqual(self.process.GetNumThreads(), 2)
+        for i in range(2):
+            thread = self.process.GetThreadAtIndex(i)
+            self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonSignal)
+            stop_description = thread.GetStopDescription(256)
+            self.assertIn("SIGSEGV", stop_description)
+
+    def test_breakpoint_on_minidump(self):
+        """
+        Test that LLDB breakpoints are recorded in Minidumps
+        """
+        yaml = "linux-x86_64-exceptiondescription.yaml"
+        core = self.getBuildArtifact("breakpoint.core.dmp")
+        self.yaml2obj(yaml, core)
+        try:
+            # Create a target with the object file we just created from YAML
+            target = self.dbg.CreateTarget(None)
+            self.assertTrue(target, VALID_TARGET)
+            process = target.LoadCore(core)
+            self.assertTrue(process, VALID_PROCESS)
+            thread = process.GetThreadAtIndex(0)
+            stop_reason = thread.GetStopDescription(256)
+            self.assertIn("breakpoint 1.1", stop_reason)
+        finally:
+            if os.path.isfile(core):
+                os.unlink(core)
