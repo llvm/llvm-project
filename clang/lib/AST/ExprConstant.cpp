@@ -13528,7 +13528,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   }
 
   case Builtin::BI__builtin_reduce_add:
-  case Builtin::BI__builtin_reduce_mul: {
+  case Builtin::BI__builtin_reduce_mul:
+  case Builtin::BI__builtin_reduce_and: {
     APValue Source;
     if (!EvaluateAsRValue(Info, E->getArg(0), Source))
       return false;
@@ -13551,6 +13552,10 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                 Info, E, Reduced, Source.getVectorElt(EltNum).getInt(),
                 Reduced.getBitWidth() * 2, std::multiplies<APSInt>(), Reduced))
           return false;
+        break;
+      }
+      case Builtin::BI__builtin_reduce_and: {
+        Reduced &= Source.getVectorElt(EltNum).getInt();
         break;
       }
       }
