@@ -1140,8 +1140,7 @@ static void ltoValidateAllVtablesHaveTypeInfos(Ctx &ctx,
           << knownSafeName;
     Expected<GlobPattern> pat = GlobPattern::create(knownSafeName);
     if (!pat)
-      ErrAlways(ctx) << "--lto-known-safe-vtables=: "
-                     << pat.takeError();
+      ErrAlways(ctx) << "--lto-known-safe-vtables=: " << pat.takeError();
     vtableSymbolsWithNoRTTI.remove_if(
         [&](StringRef s) { return pat->match(s); });
   }
@@ -1271,8 +1270,7 @@ static bool remapInputs(Ctx &ctx, StringRef line, const Twine &location) {
   else if (Expected<GlobPattern> pat = GlobPattern::create(fields[0]))
     ctx.arg.remapInputsWildcards.emplace_back(std::move(*pat), fields[1]);
   else {
-    ErrAlways(ctx) << location << ": " << pat.takeError() << ": "
-                   << fields[0];
+    ErrAlways(ctx) << location << ": " << pat.takeError() << ": " << fields[0];
     return true;
   }
   return false;
@@ -1600,8 +1598,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     else if (Expected<GlobPattern> pat = GlobPattern::create(kv.first))
       ctx.arg.shuffleSections.emplace_back(std::move(*pat), uint32_t(v));
     else
-      ErrAlways(ctx) << errPrefix << pat.takeError() << ": "
-                     << kv.first;
+      ErrAlways(ctx) << errPrefix << pat.takeError() << ": " << kv.first;
   }
 
   auto reports = {std::make_pair("bti-report", &ctx.arg.zBtiReport),
