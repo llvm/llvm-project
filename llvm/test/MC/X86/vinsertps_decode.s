@@ -2,6 +2,6 @@
 
 .intel_syntax
 
-# CHECK:  vinsertps {{.*}} # xmm2 = xmm2[0,1,2],mem[0]
+# CHECK: vinsertps $176, 76(%r14,%rdi,8), %xmm2, %xmm2 # xmm2 = xmm2[0,1,2],mem[0]
 
 vinsertps xmm2,xmm2,dword ptr [r14+rdi*8+0x4C],0x0B0

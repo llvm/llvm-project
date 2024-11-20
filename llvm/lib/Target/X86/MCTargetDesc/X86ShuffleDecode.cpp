@@ -23,7 +23,8 @@
 
 namespace llvm {
 
-void DecodeINSERTPSMask(unsigned Imm, SmallVectorImpl<int> &ShuffleMask, bool SrcIsMem) {
+void DecodeINSERTPSMask(unsigned Imm, SmallVectorImpl<int> &ShuffleMask,
+                        bool SrcIsMem) {
   // Defaults the copying the dest value.
   ShuffleMask.push_back(0);
   ShuffleMask.push_back(1);

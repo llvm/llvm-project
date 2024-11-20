@@ -1125,8 +1125,8 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     DestName = getRegName(MI->getOperand(0).getReg());
     Src1Name = getRegName(MI->getOperand(1).getReg());
     if (MI->getOperand(NumOperands - 1).isImm())
-      DecodeINSERTPSMask(MI->getOperand(NumOperands - 1).getImm(),
-                         ShuffleMask, false);
+      DecodeINSERTPSMask(MI->getOperand(NumOperands - 1).getImm(), ShuffleMask,
+                         /*SrcIsMem=*/false);
     break;
 
   case X86::INSERTPSrmi:
@@ -1135,8 +1135,8 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     DestName = getRegName(MI->getOperand(0).getReg());
     Src1Name = getRegName(MI->getOperand(1).getReg());
     if (MI->getOperand(NumOperands - 1).isImm())
-      DecodeINSERTPSMask(MI->getOperand(NumOperands - 1).getImm(),
-                         ShuffleMask, true);
+      DecodeINSERTPSMask(MI->getOperand(NumOperands - 1).getImm(), ShuffleMask,
+                         /*SrcIsMem=*/true);
     break;
 
   case X86::MOVLHPSrr:
