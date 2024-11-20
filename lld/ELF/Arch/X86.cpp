@@ -281,7 +281,8 @@ int64_t X86::getImplicitAddend(const uint8_t *buf, RelType type) const {
     return 0;
   default:
     internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " + toString(type));
+                        "cannot read addend for relocation " +
+                            toStr(ctx, type));
     return 0;
   }
 }
