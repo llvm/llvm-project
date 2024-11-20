@@ -2633,7 +2633,8 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
     case LibFunc_scalblnf:
     case LibFunc_scalblnl:
       if (TLI->has(Func)) {
-        APFloat ret = scalbn(Op1V, Op2Vi.getSExtValue(), RoundingMode::TowardZero);
+        APFloat ret =
+            scalbn(Op1V, Op2Vi.getSExtValue(), RoundingMode::TowardZero);
         return ConstantFP::get(Ty->getContext(), ret);
       }
       break;
