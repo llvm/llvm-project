@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchInstPrinter.h"
 #include "MCTargetDesc/LoongArchMCExpr.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
@@ -1560,12 +1561,14 @@ bool LoongArchAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
 
 unsigned LoongArchAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   unsigned Opc = Inst.getOpcode();
+  const MCInstrDesc &MCID = MII.get(Opc);
   switch (Opc) {
   default:
-    if (Opc >= LoongArch::AMADD_D && Opc <= LoongArch::AMXOR_W) {
+    if (LoongArchII::isSubjectToAMORdConstraint(MCID.TSFlags)) {
+      const bool IsAMCAS = LoongArchII::isAMCAS(MCID.TSFlags);
       MCRegister Rd = Inst.getOperand(0).getReg();
-      MCRegister Rk = Inst.getOperand(1).getReg();
-      MCRegister Rj = Inst.getOperand(2).getReg();
+      MCRegister Rk = Inst.getOperand(IsAMCAS ? 2 : 1).getReg();
+      MCRegister Rj = Inst.getOperand(IsAMCAS ? 3 : 2).getReg();
       if ((Rd == Rk || Rd == Rj) && Rd != LoongArch::R0)
         return Match_RequiresAMORdDifferRkRj;
     }

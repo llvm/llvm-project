@@ -367,6 +367,24 @@ private:
   int fd = -1;
 };
 
+TEST_F(RtsanOpenedFileTest, LseekDiesWhenRealtime) {
+  auto Func = [this]() { lseek(GetOpenFd(), 0, SEEK_SET); };
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("lseek"));
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, DupDiesWhenRealtime) {
+  auto Func = [this]() { dup(GetOpenFd()); };
+  ExpectRealtimeDeath(Func, "dup");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, Dup2DiesWhenRealtime) {
+  auto Func = [this]() { dup2(GetOpenFd(), 0); };
+  ExpectRealtimeDeath(Func, "dup2");
+  ExpectNonRealtimeSurvival(Func);
+}
+
 TEST_F(RtsanOpenedFileTest, FreadDiesWhenRealtime) {
   auto Func = [this]() {
     char c{};
@@ -946,5 +964,18 @@ TEST_F(KqueueTest, Kevent64DiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 #endif // SANITIZER_INTERCEPT_KQUEUE
+
+TEST(TestRtsanInterceptors, MkfifoDiesWhenRealtime) {
+  auto Func = []() { mkfifo("/tmp/rtsan_test_fifo", 0); };
+  ExpectRealtimeDeath(Func, "mkfifo");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, PipeDiesWhenRealtime) {
+  int fds[2];
+  auto Func = [&fds]() { pipe(fds); };
+  ExpectRealtimeDeath(Func, "pipe");
+  ExpectNonRealtimeSurvival(Func);
+}
 
 #endif // SANITIZER_POSIX

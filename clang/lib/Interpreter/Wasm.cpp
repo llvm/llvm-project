@@ -72,13 +72,13 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
   OutputFile.close();
 
   std::vector<const char *> LinkerArgs = {"wasm-ld",
-                                          "-pie",
+                                          "-shared",
                                           "--import-memory",
                                           "--no-entry",
                                           "--export-all",
                                           "--experimental-pic",
-                                          "--no-export-dynamic",
                                           "--stack-first",
+                                          "--allow-undefined",
                                           OutputFileName.c_str(),
                                           "-o",
                                           OutputFileName.c_str()};
@@ -106,6 +106,12 @@ llvm::Error WasmIncrementalExecutor::removeModule(PartialTranslationUnit &PTU) {
 
 llvm::Error WasmIncrementalExecutor::runCtors() const {
   // This seems to be automatically done when using dlopen()
+  return llvm::Error::success();
+}
+
+llvm::Error WasmIncrementalExecutor::cleanUp() const {
+  // Can't call cleanUp through IncrementalExecutor as it
+  // tries to deinitialize JIT which hasn't been initialized
   return llvm::Error::success();
 }
 
