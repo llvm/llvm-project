@@ -4584,6 +4584,22 @@ void FieldDecl::setInClassInitializer(Expr *NewInit) {
   setLazyInClassInitializer(LazyDeclStmtPtr(NewInit));
 }
 
+void FieldDecl::removeInClassInitializer() {
+  assert(hasInClassInitializer() && "no initializer to remove");
+  StorageKind = ISK_NoInit;
+  if (BitField) {
+    // Read the bit width before we change the active union member.
+    Expr *ExistingBitWidth = InitAndBitWidth->BitWidth;
+    BitWidth = ExistingBitWidth;
+  }
+
+  // The RecordDecl::hasInClassInitializer() needs to be consistent with the
+  // FieldDecl::hasInClassInitializer(). Check the number of C++11
+  // in-class-initializers in the parent class.
+  if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(getParent()))
+    RD->removeInClassInitializer();
+}
+
 void FieldDecl::setLazyInClassInitializer(LazyDeclStmtPtr NewInit) {
   assert(hasInClassInitializer() && !getInClassInitializer());
   if (BitField)

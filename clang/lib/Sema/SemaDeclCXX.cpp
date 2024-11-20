@@ -4088,6 +4088,7 @@ void Sema::ActOnFinishCXXInClassMemberInitializer(Decl *D,
   assert((isa<MSPropertyDecl>(D) || FD->getInClassInitStyle() != ICIS_NoInit) &&
          "must set init style when field is created");
 
+  /// FIXME: We might create an RecoveryExpr for the in-class-initializer.
   if (!InitExpr) {
     D->setInvalidDecl();
     if (FD)
