@@ -551,14 +551,11 @@ struct InStruct {
   std::unique_ptr<SymtabShndxSection> symTabShndx;
 };
 
-struct Ctx {
+struct Ctx : CommonLinkerContext {
   Config arg;
   LinkerDriver driver;
   LinkerScript *script;
   std::unique_ptr<TargetInfo> target;
-
-  CommonLinkerContext *commonCtx;
-  ErrorHandler *errHandler;
 
   // These variables are initialized by Writer and should not be used before
   // Writer is initialized.
@@ -689,18 +686,16 @@ static inline ArrayRef<VersionDefinition> namedVersionDefs(Ctx &ctx) {
   return llvm::ArrayRef(ctx.arg.versionDefinitions).slice(2);
 }
 
-inline llvm::BumpPtrAllocator &bAlloc(Ctx &ctx) {
-  return ctx.commonCtx->bAlloc;
-}
-inline llvm::StringSaver &saver(Ctx &ctx) { return ctx.commonCtx->saver; }
+inline llvm::BumpPtrAllocator &bAlloc(Ctx &ctx) { return ctx.bAlloc; }
+inline llvm::StringSaver &saver(Ctx &ctx) { return ctx.saver; }
 inline llvm::UniqueStringSaver &uniqueSaver(Ctx &ctx) {
-  return ctx.commonCtx->uniqueSaver;
+  return ctx.uniqueSaver;
 }
 
 struct ELFSyncStream : SyncStream {
   Ctx &ctx;
   ELFSyncStream(Ctx &ctx, DiagLevel level)
-      : SyncStream(*ctx.errHandler, level), ctx(ctx) {}
+      : SyncStream(ctx.e, level), ctx(ctx) {}
 };
 
 template <typename T>
