@@ -3425,7 +3425,7 @@ extern __inline
 extern __inline
     __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m128i
     __lsx_vorn_v(__m128i _1, __m128i _2) {
-  return (__m128i)__builtin_lsx_vorn_v((v16i8)_1, (v16i8)_2);
+  return (__m128i)__builtin_lsx_vorn_v((v16u8)_1, (v16u8)_2);
 }
 
 #define __lsx_vldi(/*i13*/ _1) ((__m128i)__builtin_lsx_vldi((_1)))
