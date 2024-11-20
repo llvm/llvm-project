@@ -1354,6 +1354,8 @@ void StdLibraryFunctionsChecker::checkPreCall(const CallEvent &Call,
             if (BR.isInteresting(ArgSVal))
               OS << Msg;
           }));
+      if (NewNode->isSink())
+        break;
     }
   }
 }
