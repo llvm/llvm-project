@@ -93,6 +93,7 @@ public:
   // guess the language type from the mangled name.
   lldb::LanguageType GuessLanguage() const;
 
+  LLDB_DEPRECATED("Use SBFrame::IsHidden() instead.")
   bool IsSwiftThunk() const;
 
   lldb::SBStructuredData GetLanguageSpecificData() const;
