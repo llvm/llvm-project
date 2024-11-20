@@ -105,7 +105,8 @@ class SPIRVEmitIntrinsics
   Type *deduceElementType(Value *I, bool UnknownElemTypeI8);
   Type *deduceElementTypeHelper(Value *I, bool UnknownElemTypeI8);
   Type *deduceElementTypeHelper(Value *I, std::unordered_set<Value *> &Visited,
-                                bool UnknownElemTypeI8);
+                                bool UnknownElemTypeI8,
+                                bool IgnoreKnownType = false);
   Type *deduceElementTypeByValueDeep(Type *ValueTy, Value *Operand,
                                      bool UnknownElemTypeI8);
   Type *deduceElementTypeByValueDeep(Type *ValueTy, Value *Operand,
@@ -482,14 +483,16 @@ void SPIRVEmitIntrinsics::maybeAssignPtrType(Type *&Ty, Value *Op, Type *RefTy,
 }
 
 Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
-    Value *I, std::unordered_set<Value *> &Visited, bool UnknownElemTypeI8) {
+    Value *I, std::unordered_set<Value *> &Visited, bool UnknownElemTypeI8,
+    bool IgnoreKnownType) {
   // allow to pass nullptr as an argument
   if (!I)
     return nullptr;
 
   // maybe already known
-  if (Type *KnownTy = GR->findDeducedElementType(I))
-    return KnownTy;
+  if (!IgnoreKnownType)
+    if (Type *KnownTy = GR->findDeducedElementType(I))
+      return KnownTy;
 
   // maybe a cycle
   if (!Visited.insert(I).second)
@@ -577,7 +580,7 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
   }
 
   // remember the found relationship
-  if (Ty) {
+  if (Ty && !IgnoreKnownType) {
     // specify nested types if needed, otherwise return unchanged
     GR->addDeducedElementType(I, Ty);
   }
@@ -2028,15 +2031,12 @@ bool SPIRVEmitIntrinsics::postprocessTypes(Module &M) {
       continue;
     assert(Op == AssignCI->getArgOperand(0));
     // Try to improve the type deduced after all Functions are processed.
-    if (auto *CI = dyn_cast<CallInst>(Op)) {
-      // TODO: deduceElementTypeHelper() & replaceWithPtrcasted() if
-      // isa<Instruction>(Op)
+    if (auto *CI = dyn_cast<Instruction>(Op)) {
       CurrF = CI->getParent()->getParent();
-      if (Function *CalledF = CI->getCalledFunction()) {
-        Type *RetElemTy = GR->findDeducedElementType(CalledF);
-        // Fix inconsistency between known type and function's return type.
-        if (RetElemTy && RetElemTy != KnownTy) {
-          replaceWithPtrcasted(CI, RetElemTy, KnownTy, AssignCI);
+      std::unordered_set<Value *> Visited;
+      if (Type *ElemTy = deduceElementTypeHelper(Op, Visited, false, true)) {
+        if (ElemTy != KnownTy) {
+          replaceWithPtrcasted(CI, ElemTy, KnownTy, AssignCI);
           eraseTodoType(Op);
           continue;
         }
