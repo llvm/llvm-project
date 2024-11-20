@@ -998,7 +998,11 @@ public:
 
 private:
   bool btiHeader; // bti instruction needed in PLT Header and Entry
-  bool pacEntry;  // autia1716 instruction needed in PLT Entry
+  enum {
+    PEK_NoAuth,
+    PEK_AuthHint, // use autia1716 instr for authenticated branch in PLT entry
+    PEK_Auth,     // use braa instr for authenticated branch in PLT entry
+  } pacEntryKind;
 };
 } // namespace
 
@@ -1013,9 +1017,21 @@ AArch64BtiPac::AArch64BtiPac(Ctx &ctx) : AArch64(ctx) {
   // relocations.
   // The PAC PLT entries require dynamic loader support and this isn't known
   // from properties in the objects, so we use the command line flag.
-  pacEntry = ctx.arg.zPacPlt;
+  // By default we only use hint-space instructions, but if we detect the
+  // PAuthABI, which requires v8.3-A, we can use the non-hint space
+  // instructions.
 
-  if (btiHeader || pacEntry) {
+  if (ctx.arg.zPacPlt) {
+    if (llvm::any_of(ctx.aarch64PauthAbiCoreInfo,
+                     [](uint8_t c) { return c != 0; }))
+      pacEntryKind = PEK_Auth;
+    else
+      pacEntryKind = PEK_AuthHint;
+  } else {
+    pacEntryKind = PEK_NoAuth;
+  }
+
+  if (btiHeader || (pacEntryKind != PEK_NoAuth)) {
     pltEntrySize = 24;
     ipltEntrySize = 24;
   }
@@ -1065,9 +1081,13 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
       0x11, 0x02, 0x40, 0xf9,  // ldr  x17, [x16, Offset(&(.got.plt[n]))]
       0x10, 0x02, 0x00, 0x91   // add  x16, x16, Offset(&(.got.plt[n]))
   };
+  const uint8_t pacHintBr[] = {
+      0x9f, 0x21, 0x03, 0xd5, // autia1716
+      0x20, 0x02, 0x1f, 0xd6  // br   x17
+  };
   const uint8_t pacBr[] = {
-      0x9f, 0x21, 0x03, 0xd5,  // autia1716
-      0x20, 0x02, 0x1f, 0xd6   // br   x17
+      0x30, 0x0a, 0x1f, 0xd7, // braa x17, x16
+      0x1f, 0x20, 0x03, 0xd5  // nop
   };
   const uint8_t stdBr[] = {
       0x20, 0x02, 0x1f, 0xd6,  // br   x17
@@ -1095,8 +1115,10 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
   relocateNoSym(buf + 4, R_AARCH64_LDST64_ABS_LO12_NC, gotPltEntryAddr);
   relocateNoSym(buf + 8, R_AARCH64_ADD_ABS_LO12_NC, gotPltEntryAddr);
 
-  if (pacEntry)
-    memcpy(buf + sizeof(addrInst), pacBr, sizeof(pacBr));
+  if (pacEntryKind != PEK_NoAuth)
+    memcpy(buf + sizeof(addrInst),
+           pacEntryKind == PEK_AuthHint ? pacHintBr : pacBr,
+           sizeof(pacEntryKind == PEK_AuthHint ? pacHintBr : pacBr));
   else
     memcpy(buf + sizeof(addrInst), stdBr, sizeof(stdBr));
   if (!hasBti)
