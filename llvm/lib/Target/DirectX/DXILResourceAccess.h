@@ -18,7 +18,7 @@
 
 namespace llvm {
 
-class DXILResourceAccess: public PassInfoMixin<DXILResourceAccess> {
+class DXILResourceAccess : public PassInfoMixin<DXILResourceAccess> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
