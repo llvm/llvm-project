@@ -438,13 +438,9 @@ def SDT_AArch64FCCMP : SDTypeProfile<1, 5,
                                       SDTCisInt<3>,
                                       SDTCisInt<4>,
                                       SDTCisVT<5, i32>]>;
-
-def SDT_AArch64FCmp   : SDTypeProfile<1, 2, [
-  SDTCisVT<0, i32>,   // out flags
-  SDTCisFP<1>,        // lhs
-  SDTCisSameAs<2, 1>  // rhs
-]>;
-
+def SDT_AArch64FCmp  : SDTypeProfile<1, 2, [SDTCisVT<0, i32>,
+                                            SDTCisFP<1>,
+                                            SDTCisSameAs<2, 1>]>;
 def SDT_AArch64Dup   : SDTypeProfile<1, 1, [SDTCisVec<0>]>;
 def SDT_AArch64DupLane   : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisInt<2>]>;
 def SDT_AArch64Insr  : SDTypeProfile<1, 2, [SDTCisVec<0>]>;
@@ -995,13 +991,10 @@ def AArch64probedalloca
              [SDNPHasChain, SDNPMayStore]>;
 
 def AArch64mrs : SDNode<"AArch64ISD::MRS",
-  SDTypeProfile<2, 1, [
-    SDTCisVT<0, i64>, // result
-    SDTCisVT<1, i32>, // out flags
-    SDTCisVT<2, i32>  // system register number
-  ]>,
-  [SDNPHasChain]
->;
+                        SDTypeProfile<2, 1, [SDTCisVT<0, i64>,
+                                             SDTCisVT<1, i32>,
+                                             SDTCisVT<2, i32>]>,
+                        [SDNPHasChain]>;
 
 def SD_AArch64rshrnb : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisInt<2>]>;
 def AArch64rshrnb : SDNode<"AArch64ISD::RSHRNB_I", SD_AArch64rshrnb>;
