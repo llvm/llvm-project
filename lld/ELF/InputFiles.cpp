@@ -1042,8 +1042,8 @@ InputSectionBase *ObjFile<ELFT>::getRelocTarget(uint32_t idx, uint32_t info) {
       return target;
   }
 
-  ErrAlways(ctx) << this << Twine(": relocation section (index ") << Twine(idx)
-                 << ") has invalid sh_info (" << Twine(info) << ")";
+  ErrAlways(ctx) << this << Twine(": relocation section (index ") << idx
+                 << ") has invalid sh_info (" << info << ')';
   return nullptr;
 }
 
@@ -1211,9 +1211,8 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
     if (LLVM_UNLIKELY(secIdx >= sections.size()))
       Fatal(ctx) << this << ": invalid section index: " << Twine(secIdx);
     if (LLVM_UNLIKELY(eSym.getBinding() != STB_LOCAL))
-      ErrAlways(ctx) << this << ": non-local symbol (" << Twine(i)
-                     << ") found at index < .symtab's sh_info (" << Twine(end)
-                     << ")";
+      ErrAlways(ctx) << this << ": non-local symbol (" << i
+                     << ") found at index < .symtab's sh_info (" << end << ")";
 
     InputSectionBase *sec = sections[secIdx];
     uint8_t type = eSym.getType();
@@ -1247,8 +1246,8 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
     uint8_t binding = eSym.getBinding();
     if (LLVM_UNLIKELY(binding != STB_GLOBAL && binding != STB_WEAK &&
                       binding != STB_GNU_UNIQUE))
-      Err(ctx) << this << ": symbol (" << Twine(i)
-               << ") has invalid binding: " << Twine((int)binding);
+      Err(ctx) << this << ": symbol (" << i
+               << ") has invalid binding: " << (int)binding;
 
     // st_value of STT_TLS represents the assigned offset, not the actual
     // address which is used by STT_FUNC and STT_OBJECT. STT_TLS symbols can
