@@ -277,9 +277,9 @@ class BinaryContext {
 
 public:
   enum class ICFLevel {
-    None,
-    Safe,
-    All,
+    None, // No ICF. (Default)
+    Safe, // Safe ICF for all sections.
+    All,  // Aggressive ICF for code.
   };
   static Expected<std::unique_ptr<BinaryContext>>
   createBinaryContext(Triple TheTriple, StringRef InputFileName,

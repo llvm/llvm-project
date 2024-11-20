@@ -40,10 +40,10 @@ public:
   Error runOnFunctions(BinaryContext &BC) override;
 
 private:
-  /// Analyses .text section and relocations and marks functions that are not
+  /// Analyze .text section and relocations and mark functions that are not
   /// safe to fold.
   Error markFunctionsUnsafeToFold(BinaryContext &BC);
-  /// Processes relocations in the .data section to identify function
+  /// Process relocations in the .data section to identify function
   /// references.
   void processDataRelocations(BinaryContext &BC,
                               const SectionRef &SecRefRelData);

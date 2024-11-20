@@ -2015,6 +2015,7 @@ static void printDebugInfo(raw_ostream &OS, const MCInst &Instruction,
     OS << " discriminator:" << Row.Discriminator;
 }
 
+/// Skip instructions that are not interesting for safe ICF.
 static bool skipInstruction(const MCInst &Inst, const BinaryContext &BC) {
   const bool IsX86 = BC.isX86();
   return (BC.MIB->isPseudo(Inst) || BC.MIB->isUnconditionalBranch(Inst) ||
