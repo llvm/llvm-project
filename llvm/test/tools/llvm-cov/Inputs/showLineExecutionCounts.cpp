@@ -12,8 +12,8 @@ int main() {                              // TEXT: [[@LINE]]|     [[C161:161|1]]
     x = 1;                                // TEXT: [[@LINE]]|           [[C161]]|    x = 1
   }                                       // TEXT: [[@LINE]]|           [[C161]]|  }
 
-  for (int i = 0; i < 100; ++i) {         // TEXT: [[@LINE]]| [[C16K2:16\.2k|161]]|  for (
-    x = 1;                                // TEXT: [[@LINE]]| [[C16K1:16\.1k|161]]|    x = 1
+  for (int i = 0; i < 100; ++i) {         // TEXT: [[@LINE]]| [[C16K2:16\.2k|1]]|  for (
+    x = 1;                                // TEXT: [[@LINE]]| [[C16K1:16\.1k|1]]|    x = 1
   }                                       // TEXT: [[@LINE]]|          [[C16K1]]|  }
 
   x = x < 10 ? x + 1 : x - 1;             // TEXT: [[@LINE]]|           [[C161]]|  x =
