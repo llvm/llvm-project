@@ -686,12 +686,6 @@ static inline ArrayRef<VersionDefinition> namedVersionDefs(Ctx &ctx) {
   return llvm::ArrayRef(ctx.arg.versionDefinitions).slice(2);
 }
 
-inline llvm::BumpPtrAllocator &bAlloc(Ctx &ctx) { return ctx.bAlloc; }
-inline llvm::StringSaver &saver(Ctx &ctx) { return ctx.saver; }
-inline llvm::UniqueStringSaver &uniqueSaver(Ctx &ctx) {
-  return ctx.uniqueSaver;
-}
-
 struct ELFSyncStream : SyncStream {
   Ctx &ctx;
   ELFSyncStream(Ctx &ctx, DiagLevel level)
