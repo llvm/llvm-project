@@ -316,6 +316,31 @@ INTERCEPTOR(ssize_t, writev, int fd, const struct iovec *iov, int iovcnt) {
   return REAL(writev)(fd, iov, iovcnt);
 }
 
+INTERCEPTOR(off_t, lseek, int fd, off_t offset, int whence) {
+  __rtsan_notify_intercepted_call("lseek");
+  return REAL(lseek)(fd, offset, whence);
+}
+
+#if SANITIZER_INTERCEPT_LSEEK64
+INTERCEPTOR(off64_t, lseek64, int fd, off64_t offset, int whence) {
+  __rtsan_notify_intercepted_call("lseek64");
+  return REAL(lseek64)(fd, offset, whence);
+}
+#define RTSAN_MAYBE_INTERCEPT_LSEEK64 INTERCEPT_FUNCTION(lseek64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_LSEEK64
+#endif // SANITIZER_INTERCEPT_LSEEK64
+
+INTERCEPTOR(int, dup, int oldfd) {
+  __rtsan_notify_intercepted_call("dup");
+  return REAL(dup)(oldfd);
+}
+
+INTERCEPTOR(int, dup2, int oldfd, int newfd) {
+  __rtsan_notify_intercepted_call("dup2");
+  return REAL(dup2)(oldfd, newfd);
+}
+
 // Concurrency
 #if SANITIZER_APPLE
 #pragma clang diagnostic push
@@ -711,6 +736,16 @@ INTERCEPTOR(int, kevent64, int kq, const struct kevent64_s *changelist,
 #define RTSAN_MAYBE_INTERCEPT_KEVENT64
 #endif // SANITIZER_INTERCEPT_KQUEUE
 
+INTERCEPTOR(int, pipe, int pipefd[2]) {
+  __rtsan_notify_intercepted_call("pipe");
+  return REAL(pipe)(pipefd);
+}
+
+INTERCEPTOR(int, mkfifo, const char *pathname, mode_t mode) {
+  __rtsan_notify_intercepted_call("mkfifo");
+  return REAL(mkfifo)(pathname, mode);
+}
+
 // Preinit
 void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(calloc);
@@ -757,6 +792,10 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_CREAT64;
   INTERCEPT_FUNCTION(puts);
   INTERCEPT_FUNCTION(fputs);
+  INTERCEPT_FUNCTION(lseek);
+  RTSAN_MAYBE_INTERCEPT_LSEEK64;
+  INTERCEPT_FUNCTION(dup);
+  INTERCEPT_FUNCTION(dup2);
 
 #if SANITIZER_APPLE
   INTERCEPT_FUNCTION(OSSpinLockLock);
@@ -807,6 +846,9 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_KQUEUE;
   RTSAN_MAYBE_INTERCEPT_KEVENT;
   RTSAN_MAYBE_INTERCEPT_KEVENT64;
+
+  INTERCEPT_FUNCTION(pipe);
+  INTERCEPT_FUNCTION(mkfifo);
 }
 
 #endif // SANITIZER_POSIX

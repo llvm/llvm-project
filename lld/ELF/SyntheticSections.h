@@ -1439,6 +1439,31 @@ Defined *addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
 
 void addVerneed(Ctx &, Symbol &ss);
 
+// This describes a program header entry.
+// Each contains type, access flags and range of output sections that will be
+// placed in it.
+struct PhdrEntry {
+  PhdrEntry(Ctx &ctx, unsigned type, unsigned flags)
+      : p_align(type == llvm::ELF::PT_LOAD ? ctx.arg.maxPageSize : 0),
+        p_type(type), p_flags(flags) {}
+  void add(OutputSection *sec);
+
+  uint64_t p_paddr = 0;
+  uint64_t p_vaddr = 0;
+  uint64_t p_memsz = 0;
+  uint64_t p_filesz = 0;
+  uint64_t p_offset = 0;
+  uint32_t p_align = 0;
+  uint32_t p_type = 0;
+  uint32_t p_flags = 0;
+
+  OutputSection *firstSec = nullptr;
+  OutputSection *lastSec = nullptr;
+  bool hasLMA = false;
+
+  uint64_t lmaOffset = 0;
+};
+
 // Linker generated per-partition sections.
 struct Partition {
   Ctx &ctx;
@@ -1447,7 +1472,7 @@ struct Partition {
 
   std::unique_ptr<SyntheticSection> elfHeader;
   std::unique_ptr<SyntheticSection> programHeaders;
-  SmallVector<PhdrEntry *, 0> phdrs;
+  SmallVector<std::unique_ptr<PhdrEntry>, 0> phdrs;
 
   std::unique_ptr<ARMExidxSyntheticSection> armExidx;
   std::unique_ptr<BuildIdSection> buildId;
