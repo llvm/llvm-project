@@ -2518,6 +2518,11 @@ private:
 
   bool BuiltinNonDeterministicValue(CallExpr *TheCall);
 
+  bool IsBuiltinCountedByRef(const Expr *E) {
+    const CallExpr *CE = E ? dyn_cast<CallExpr>(E->IgnoreParenImpCasts())
+                           : nullptr;
+    return CE && CE->getBuiltinCallee() == Builtin::BI__builtin_counted_by_ref;
+  }
   bool BuiltinCountedByRef(CallExpr *TheCall);
 
   // Matrix builtin handling.

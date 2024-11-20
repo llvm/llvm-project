@@ -4896,10 +4896,9 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
 
   // We cannot use __builtin_counted_by_ref in a binary expression. It's
   // possible to leak the reference and violate bounds security.
-  if (auto *CE = dyn_cast<CallExpr>(base->IgnoreParenImpCasts());
-      CE && CE->getBuiltinCallee() == Builtin::BI__builtin_counted_by_ref)
-    Diag(CE->getExprLoc(), diag::err_builtin_counted_by_ref_invalid_use)
-        << 0 << CE->getSourceRange();
+  if (IsBuiltinCountedByRef(base))
+    Diag(base->getExprLoc(), diag::err_builtin_counted_by_ref_invalid_use)
+        << 0 << base->getSourceRange();
 
   // Handle any non-overload placeholder types in the base and index
   // expressions.  We can't handle overloads here because the other
@@ -6492,6 +6491,16 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
 
   if (CheckArgsForPlaceholders(ArgExprs))
     return ExprError();
+
+  // The result of __builtin_counted_by_ref cannot be used as a function
+  // argument. It allows leaking and modification of bounds safety information.
+  for (const Expr *Arg : ArgExprs)
+    if (IsBuiltinCountedByRef(Arg)) {
+      Diag(Arg->getExprLoc(),
+           diag::err_builtin_counted_by_ref_cannot_leak_reference)
+          << Arg->getSourceRange();
+      return ExprError();
+    }
 
   if (getLangOpts().CPlusPlus) {
     // If this is a pseudo-destructor expression, build the call immediately.
@@ -15216,8 +15225,7 @@ ExprResult Sema::ActOnBinOp(Scope *S, SourceLocation TokLoc,
   // We cannot use __builtin_counted_by_ref in a binary expression. It's
   // possible to leak the reference and violate bounds security.
   auto CheckBuiltinCountedByRef = [&](const Expr *E) {
-    if (const auto *CE = dyn_cast<CallExpr>(E->IgnoreParenImpCasts());
-        CE && CE->getBuiltinCallee() == Builtin::BI__builtin_counted_by_ref) {
+    if (IsBuiltinCountedByRef(E)) {
       if (BinaryOperator::isAssignmentOp(Opc))
         Diag(E->getExprLoc(),
              diag::err_builtin_counted_by_ref_cannot_leak_reference)
