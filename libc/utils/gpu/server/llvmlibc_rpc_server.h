@@ -79,7 +79,7 @@ rpc_status_t rpc_handle_server(rpc_device_t rpc_device);
 /// Register a callback to handle an opcode from the RPC client. The associated
 /// data must remain accessible as long as the user intends to handle the server
 /// with this callback.
-rpc_status_t rpc_register_callback(rpc_device_t rpc_device, uint16_t opcode,
+rpc_status_t rpc_register_callback(rpc_device_t rpc_device, uint32_t opcode,
                                    rpc_opcode_callback_ty callback, void *data);
 
 /// Obtain a pointer to a local client buffer that can be copied directly to the

@@ -51,7 +51,7 @@ static_assert(sizeof(Buffer) == 64, "Buffer size mismatch");
 /// perform and which threads are active in the slots.
 struct Header {
   uint64_t mask;
-  uint16_t opcode;
+  uint32_t opcode;
 };
 
 /// The maximum number of parallel ports that the RPC interface can support.
@@ -319,11 +319,11 @@ public:
   template <typename A>
   LIBC_INLINE void recv_n(void **dst, uint64_t *size, A &&alloc);
 
-  LIBC_INLINE uint16_t get_opcode() const {
+  LIBC_INLINE uint32_t get_opcode() const {
     return process.header[index].opcode;
   }
 
-  LIBC_INLINE uint16_t get_index() const { return index; }
+  LIBC_INLINE uint32_t get_index() const { return index; }
 
   LIBC_INLINE void close() {
     // Wait for all lanes to finish using the port.
@@ -357,7 +357,7 @@ struct Client {
       : process(port_count, buffer) {}
 
   using Port = rpc::Port<false>;
-  template <uint16_t opcode> LIBC_INLINE Port open();
+  template <uint32_t opcode> LIBC_INLINE Port open();
 
 private:
   Process<false> process;
@@ -518,7 +518,7 @@ LIBC_INLINE void Port<T>::recv_n(void **dst, uint64_t *size, A &&alloc) {
 /// port. Each port instance uses an associated \p opcode to tell the server
 /// what to do. The Client interface provides the appropriate lane size to the
 /// port using the platform's returned value.
-template <uint16_t opcode>
+template <uint32_t opcode>
 [[clang::convergent]] LIBC_INLINE Client::Port Client::open() {
   // Repeatedly perform a naive linear scan for a port that can be opened to
   // send data.

@@ -16,7 +16,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-template <uint16_t opcode>
+template <uint32_t opcode>
 LIBC_INLINE int vfprintf_impl(::FILE *__restrict file,
                               const char *__restrict format, size_t format_size,
                               va_list vlist) {
