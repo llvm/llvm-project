@@ -383,6 +383,7 @@ public:
   void SelectPExtPair(SDNode *N, unsigned Opc);
   void SelectWhilePair(SDNode *N, unsigned Opc);
   void SelectCVTIntrinsic(SDNode *N, unsigned NumVecs, unsigned Opcode);
+  void SelectCVTIntrinsicFP8(SDNode *N, unsigned NumVecs, unsigned Opcode);
   void SelectClamp(SDNode *N, unsigned NumVecs, unsigned Opcode);
   void SelectUnaryMultiIntrinsic(SDNode *N, unsigned NumOutVecs,
                                  bool IsTupleInput, unsigned Opc);
@@ -1863,6 +1864,27 @@ void AArch64DAGToDAGISel::SelectCVTIntrinsic(SDNode *N, unsigned NumVecs,
     ReplaceUses(SDValue(N, i), CurDAG->getTargetExtractSubreg(
                                    AArch64::zsub0 + i, DL, VT, SuperReg));
 
+  CurDAG->RemoveDeadNode(N);
+}
+
+void AArch64DAGToDAGISel::SelectCVTIntrinsicFP8(SDNode *N, unsigned NumVecs,
+                                                unsigned Opcode) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SmallVector<SDValue, 4> Ops(N->op_begin() + 2, N->op_end());
+  Ops.push_back(/*Chain*/ N->getOperand(0));
+
+  SDNode *Instruction =
+      CurDAG->getMachineNode(Opcode, DL, {MVT::Untyped, MVT::Other}, Ops);
+  SDValue SuperReg = SDValue(Instruction, 0);
+
+  for (unsigned i = 0; i < NumVecs; ++i)
+    ReplaceUses(SDValue(N, i), CurDAG->getTargetExtractSubreg(
+                                   AArch64::zsub0 + i, DL, VT, SuperReg));
+
+  // Copy chain
+  unsigned ChainIdx = NumVecs;
+  ReplaceUses(SDValue(N, ChainIdx), SDValue(Instruction, 1));
   CurDAG->RemoveDeadNode(N);
 }
 
@@ -5547,6 +5569,18 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       SelectMultiVectorLuti(Node, 4, AArch64::LUTI4_4ZZT2Z);
       return;
     }
+    case Intrinsic::aarch64_sme_fp8_bf1cvtl_x2:
+        SelectCVTIntrinsicFP8(Node, 2, AArch64::BF1CVTL_2ZZ_BtoH);
+      return;
+    case Intrinsic::aarch64_sme_fp8_f1cvtl_x2:
+        SelectCVTIntrinsicFP8(Node, 2, AArch64::F1CVTL_2ZZ_BtoH);
+      return;
+    case Intrinsic::aarch64_sme_fp8_bf2cvtl_x2:
+        SelectCVTIntrinsicFP8(Node, 2, AArch64::BF2CVTL_2ZZ_BtoH);
+      return;
+    case Intrinsic::aarch64_sme_fp8_f2cvtl_x2:
+        SelectCVTIntrinsicFP8(Node, 2, AArch64::F2CVTL_2ZZ_BtoH);
+      return;
     }
   } break;
   case ISD::INTRINSIC_WO_CHAIN: {

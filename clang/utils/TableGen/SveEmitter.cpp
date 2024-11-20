@@ -926,6 +926,12 @@ void SVEType::applyModifier(char Mod) {
     Float = false;
     BFloat = false;
     break;
+  case '~':
+    Float = false;
+    BFloat = false;
+    MFloat = true;
+    ElementBitwidth = 8;
+    break;
   case '.':
     llvm_unreachable(". is never a type in itself");
     break;

@@ -824,4 +824,11 @@ let SMETargetGuard = "sme-lutv2" in {
   def SVLUTI4_ZT_X4 : SInst<"svluti4_zt_{d}_x4", "4i2.u", "cUc", MergeNone, "aarch64_sme_luti4_zt_x4", [IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>]>;
 }
 
+let SMETargetGuard = "sme2,fp8" in {
+  // Convert from half-precision/BFloat16 to deinterleaved FP8 multi-vector
+  def SVF1CVTL    : Inst<"svcvtl1_f16[_mf8]_x2_fpm",  "2~n", "h", MergeNone, "aarch64_sme_fp8_f1cvtl_x2",  [IsStreaming, IsOverloadNone, SetsFPMR], []>;
+  def SVF1CVTL_BF : Inst<"svcvtl1_bf16[_mf8]_x2_fpm", "2~n", "b", MergeNone, "aarch64_sme_fp8_bf1cvtl_x2", [IsStreaming, IsOverloadNone, SetsFPMR], []>;
+  def SVF2CVTL    : Inst<"svcvtl2_f16[_mf8]_x2_fpm",  "2~n", "h", MergeNone, "aarch64_sme_fp8_f2cvtl_x2",  [IsStreaming, IsOverloadNone, SetsFPMR], []>;
+  def SVF2CVTL_BF : Inst<"svcvtl2_bf16[_mf8]_x2_fpm", "2~n", "b", MergeNone, "aarch64_sme_fp8_bf2cvtl_x2", [IsStreaming, IsOverloadNone, SetsFPMR], []>;
+}
 } // let SVETargetGuard = InvalidMode
