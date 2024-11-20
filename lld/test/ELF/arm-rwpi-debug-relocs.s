@@ -2,26 +2,23 @@
 // RUN: rm -rf %t && split-file %s %t && cd %t
 
 // RUN: llvm-mc -filetype=obj -triple=armv7a asm.s -o obj.o
-// RUN: ld.lld -T lds.ld obj.o -o exe.elf -e main 2>&1 | FileCheck %s --implicit-check-not=warning: --allow-empty
+// RUN: ld.lld -T lds.ld obj.o -o exe.elf 2>&1 | FileCheck %s --implicit-check-not=warning: --allow-empty
 // RUN: llvm-objdump -D exe.elf | FileCheck --check-prefix=DISASM %s
 
-// DISASM:      Disassembly of section data1:
-// DISASM:      00001000 <rw>:
-// DISASM-NEXT:     1000: 0000002a
+// DISASM-LABEL: <rw>:
+// DISASM-NEXT:      1000: 0000002a
 
-// DISASM:      Disassembly of section data2:
-// DISASM:      00002000 <rw2>:
-// DISASM-NEXT:     2000: 000004d2
+// DISASM-LABEL: <rw2>:
+// DISASM-NEXT:      2000: 000004d2
 
-// DISASM:      Disassembly of section .debug_something:
-// DISASM:      00000000 <.debug_something>:
-// DISASM-NEXT:        0: 00001000
-// DISASM-NEXT:      ...
-// DISASM-NEXT:      104: 00002000
+// DISASM-LABEL: <.debug_something>:
+// DISASM-NEXT:         0: 00001000
+// DISASM-NEXT:        ...
+// DISASM-NEXT:       104: 00002000
 
-// Test that R_ARM_SBREL32 relocations in debug info are relocated as if the
-// static base register (r9) is zero. Real DWARF info will use an expression to
-// add this to the real value of the static base at runtime.
+/// Test that R_ARM_SBREL32 relocations in debug info are relocated as if the
+/// static base register (r9) is zero. Real DWARF info will use an expression to
+/// add this to the real value of the static base at runtime.
 
 //--- lds.ld
 SECTIONS {
@@ -31,11 +28,11 @@ SECTIONS {
 
 //--- asm.s
   .text
-	.type	main,%function
-	.globl	main
-main:
+	.type	_start,%function
+	.globl	_start
+_start:
   bx lr
-  .size main, .-main
+  .size _start, .-_start
 
 	.section data1, "aw", %progbits
 	.type	rw,%object
