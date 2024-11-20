@@ -29,7 +29,7 @@ define void @test(ptr %x, i32 %n) {
 ; CHECK-NEXT:    br label [[IF_END_1]]
 ; CHECK:       if.end.1:
 ; CHECK-NEXT:    [[INCDEC_PTR_1:%.*]] = getelementptr inbounds i8, ptr [[X]], i32 8
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sgt i32 [[REM]], 2
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp samesign ugt i32 [[REM]], 2
 ; CHECK-NEXT:    br i1 [[CMP_1]], label [[WHILE_BODY_2:%.*]], label [[WHILE_END]]
 ; CHECK:       while.body.2:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[INCDEC_PTR_1]], align 4

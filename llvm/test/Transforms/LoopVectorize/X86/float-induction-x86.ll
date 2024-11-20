@@ -21,10 +21,10 @@ define void @fp_iv_loop1(ptr noalias nocapture %A, i32 %N) #0 {
 ; AUTO_VEC-NEXT:    br i1 [[CMP4]], label [[ITER_CHECK:%.*]], label [[FOR_END:%.*]]
 ; AUTO_VEC:       iter.check:
 ; AUTO_VEC-NEXT:    [[ZEXT:%.*]] = zext nneg i32 [[N]] to i64
-; AUTO_VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
+; AUTO_VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp samesign ult i32 [[N]], 4
 ; AUTO_VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY:%.*]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; AUTO_VEC:       vector.main.loop.iter.check:
-; AUTO_VEC-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i32 [[N]], 32
+; AUTO_VEC-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp samesign ult i32 [[N]], 32
 ; AUTO_VEC-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; AUTO_VEC:       vector.ph:
 ; AUTO_VEC-NEXT:    [[N_VEC:%.*]] = and i64 [[ZEXT]], 2147483616
