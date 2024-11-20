@@ -3713,6 +3713,8 @@ static void GeneratePointerAuthArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_fptrauth_init_fini);
   if (Opts.PointerAuthInitFiniAddressDiscrimination)
     GenerateArg(Consumer, OPT_fptrauth_init_fini_address_discrimination);
+  if (Opts.PointerAuthELFGOT)
+    GenerateArg(Consumer, OPT_fptrauth_elf_got);
 
   if (Opts.SoftPointerAuth)
     GenerateArg(Consumer, OPT_fptrauth_soft);
@@ -3743,6 +3745,7 @@ static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
   Opts.PointerAuthInitFini = Args.hasArg(OPT_fptrauth_init_fini);
   Opts.PointerAuthInitFiniAddressDiscrimination =
       Args.hasArg(OPT_fptrauth_init_fini_address_discrimination);
+  Opts.PointerAuthELFGOT = Args.hasArg(OPT_fptrauth_elf_got);
 
   Opts.SoftPointerAuth = Args.hasArg(OPT_fptrauth_soft);
 
