@@ -206,12 +206,14 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
     if (!CodeGenOpts.PointerTBAA)
       return AnyPtr;
     // Compute the depth of the pointer and generate a tag of the form "p<depth>
-    // <base type tag>".
+    // <base type tag>". Look through pointer and array types to determine the
+    // base type.
     unsigned PtrDepth = 0;
     do {
       PtrDepth++;
-      Ty = Ty->getPointeeType().getTypePtr();
-    } while (Ty->isPointerType());
+      Ty = Ty->isPointerType() ? Ty->getPointeeType().getTypePtr()
+                               : Ty->getArrayElementTypeNoTypeQual();
+    } while (Ty->isPointerType() || Ty->isArrayType());
     Ty = Context.getBaseElementType(QualType(Ty, 0)).getTypePtr();
     assert(!isa<VariableArrayType>(Ty));
     // When the underlying type is a builtin type, we compute the pointee type
@@ -230,10 +232,9 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
               ->getString();
       TyName = Name;
     } else {
-      // Be conservative if the type isn't a record type. Handling other types
-      // may require stripping const-qualifiers inside the type, e.g.
-      // MemberPointerType.
-      if (!Ty->isRecordType())
+      // Be conservative if the type a MemberPointerType. Those would require
+      // stripping const-qualifiers inside the type.
+      if (Ty->isMemberPointerType())
         return AnyPtr;
 
       // For non-builtin types use the mangled name of the canonical type.
