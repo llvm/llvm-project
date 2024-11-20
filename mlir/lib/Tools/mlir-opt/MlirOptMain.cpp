@@ -159,6 +159,11 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         cl::desc("Run the verifier after each transformation pass"),
         cl::location(verifyPassesFlag), cl::init(true));
 
+    static cl::opt<bool, /*ExternalStorage=*/true> disableVerifyOnParsing(
+        "mlir-very-unsafe-disable-verifier-on-parsing",
+        cl::desc("Disable the verifier on parsing (very unsafe)"),
+        cl::location(disableVerifierOnParsingFlag), cl::init(false));
+
     static cl::opt<bool, /*ExternalStorage=*/true> verifyRoundtrip(
         "verify-roundtrip",
         cl::desc("Round-trip the IR after parsing and ensure it succeeds"),
@@ -310,10 +315,9 @@ static LogicalResult doVerifyRoundTrip(Operation *op,
                 OpPrintingFlags().printGenericOpForm().enableDebugInfo());
     }
     FallbackAsmResourceMap fallbackResourceMap;
-    ParserConfig parseConfig(&roundtripContext, /*verifyAfterParse=*/true,
+    ParserConfig parseConfig(&roundtripContext, config.shouldVerifyOnParsing(),
                              &fallbackResourceMap);
-    roundtripModule =
-        parseSourceString<Operation *>(ostream.str(), parseConfig);
+    roundtripModule = parseSourceString<Operation *>(buffer, parseConfig);
     if (!roundtripModule) {
       op->emitOpError() << "failed to parse " << testType
                         << " content back, cannot verify round-trip.\n";
@@ -378,7 +382,7 @@ performActions(raw_ostream &os,
   // untouched.
   PassReproducerOptions reproOptions;
   FallbackAsmResourceMap fallbackResourceMap;
-  ParserConfig parseConfig(context, /*verifyAfterParse=*/true,
+  ParserConfig parseConfig(context, config.shouldVerifyOnParsing(),
                            &fallbackResourceMap);
   if (config.shouldRunReproducer())
     reproOptions.attachResourceParser(parseConfig);

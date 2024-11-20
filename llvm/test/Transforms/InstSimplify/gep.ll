@@ -206,7 +206,7 @@ define ptr @ptr_idx_scalar() {
 
 define <2 x ptr> @ptr_idx_vector() {
 ; CHECK-LABEL: @ptr_idx_vector(
-; CHECK-NEXT:    ret <2 x ptr> getelementptr (i32, ptr null, <2 x i64> <i64 1, i64 1>)
+; CHECK-NEXT:    ret <2 x ptr> getelementptr (i32, ptr null, <2 x i64> splat (i64 1))
 ;
   %gep = getelementptr i32, ptr null, <2 x i64> <i64 1, i64 1>
   ret <2 x ptr> %gep
@@ -224,7 +224,7 @@ define <4 x ptr> @ptr_idx_mix_scalar_vector(){
 
 define <4 x ptr> @vector_idx_scalar() {
 ; CHECK-LABEL: @vector_idx_scalar(
-; CHECK-NEXT:    ret <4 x ptr> getelementptr (i32, <4 x ptr> zeroinitializer, <4 x i64> <i64 1, i64 1, i64 1, i64 1>)
+; CHECK-NEXT:    ret <4 x ptr> getelementptr (i32, <4 x ptr> zeroinitializer, <4 x i64> splat (i64 1))
 ;
   %gep = getelementptr i32, <4 x ptr> zeroinitializer, i64 1
   ret <4 x ptr> %gep
@@ -232,7 +232,7 @@ define <4 x ptr> @vector_idx_scalar() {
 
 define <4 x ptr> @vector_idx_vector() {
 ; CHECK-LABEL: @vector_idx_vector(
-; CHECK-NEXT:    ret <4 x ptr> getelementptr (i32, <4 x ptr> zeroinitializer, <4 x i64> <i64 1, i64 1, i64 1, i64 1>)
+; CHECK-NEXT:    ret <4 x ptr> getelementptr (i32, <4 x ptr> zeroinitializer, <4 x i64> splat (i64 1))
 ;
   %gep = getelementptr i32, <4 x ptr> zeroinitializer, <4 x i64> <i64 1, i64 1, i64 1, i64 1>
   ret <4 x ptr> %gep
@@ -370,6 +370,14 @@ define <8 x ptr> @gep_vector_index_op3_poison_constant_index_afterwards(ptr %ptr
 }
 
 define i64 @gep_array_of_scalable_vectors_ptrdiff(ptr %ptr) {
+; CHECK-LABEL: @gep_array_of_scalable_vectors_ptrdiff(
+; CHECK-NEXT:    [[C1:%.*]] = getelementptr inbounds [8 x <vscale x 4 x i32>], ptr [[PTR:%.*]], i64 4
+; CHECK-NEXT:    [[C2:%.*]] = getelementptr inbounds [8 x <vscale x 4 x i32>], ptr [[PTR]], i64 6
+; CHECK-NEXT:    [[C1_INT:%.*]] = ptrtoint ptr [[C1]] to i64
+; CHECK-NEXT:    [[C2_INT:%.*]] = ptrtoint ptr [[C2]] to i64
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[C2_INT]], [[C1_INT]]
+; CHECK-NEXT:    ret i64 [[DIFF]]
+;
   %c1 = getelementptr inbounds [8 x <vscale x 4 x i32>], ptr %ptr, i64 4
   %c2 = getelementptr inbounds [8 x <vscale x 4 x i32>], ptr %ptr, i64 6
   %c1.int = ptrtoint ptr %c1 to i64

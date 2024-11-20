@@ -8,6 +8,7 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
@@ -21,16 +22,17 @@ add_header_library(
     FMA.h
   DEPENDS
     libc.hdr.fenv_macros
+    libc.src.__support.big_int
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
-    libc.src.__support.big_int
     libc.src.__support.macros.optimization
     libc.src.__support.uint128
 )
@@ -60,9 +62,10 @@ add_header_library(
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.attributes
     libc.src.__support.macros.optimization

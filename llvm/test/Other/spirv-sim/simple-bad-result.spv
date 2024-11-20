@@ -1,0 +1,26 @@
+; RUN: %if spirv-tools %{ spirv-as %s -o - | spirv-val - %}
+; RUN: not spirv-sim --function=simple --wave=1 --expects=1 -i %s 2>&1 | FileCheck %s
+
+; CHECK: Expected != Observed
+; CHECK: [1] != [2]
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource HLSL 670
+               OpName %simple "simple"
+               OpName %main "main"
+        %int = OpTypeInt 32 1
+      %int_2 = OpConstant %int 2
+       %void = OpTypeVoid
+  %main_type = OpTypeFunction %void
+   %simple_type = OpTypeFunction %int
+       %main = OpFunction %void None %main_type
+      %entry = OpLabel
+               OpReturn
+               OpFunctionEnd
+     %simple = OpFunction %int None %simple_type
+          %1 = OpLabel
+               OpReturnValue %int_2
+               OpFunctionEnd
+

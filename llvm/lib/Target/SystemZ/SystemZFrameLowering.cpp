@@ -8,7 +8,6 @@
 
 #include "SystemZFrameLowering.h"
 #include "SystemZCallingConv.h"
-#include "SystemZInstrBuilder.h"
 #include "SystemZInstrInfo.h"
 #include "SystemZMachineFunctionInfo.h"
 #include "SystemZRegisterInfo.h"
@@ -832,7 +831,7 @@ void SystemZELFFrameLowering::inlineStackProbe(
   }
 }
 
-bool SystemZELFFrameLowering::hasFP(const MachineFunction &MF) const {
+bool SystemZELFFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   return (MF.getTarget().Options.DisableFramePointerElim(MF) ||
           MF.getFrameInfo().hasVarSizedObjects());
 }
@@ -1449,7 +1448,7 @@ void SystemZXPLINKFrameLowering::inlineStackProbe(
   fullyRecomputeLiveIns({StackExtMBB, NextMBB});
 }
 
-bool SystemZXPLINKFrameLowering::hasFP(const MachineFunction &MF) const {
+bool SystemZXPLINKFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   return (MF.getFrameInfo().hasVarSizedObjects());
 }
 

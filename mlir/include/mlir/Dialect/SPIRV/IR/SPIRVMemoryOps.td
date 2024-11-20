@@ -74,6 +74,12 @@ def SPIRV_AccessChainOp : SPIRV_Op<"AccessChain", [Pure]> {
   let builders = [OpBuilder<(ins "Value":$basePtr, "ValueRange":$indices)>];
 
   let hasCanonicalizer = 1;
+
+  let hasCustomAssemblyFormat = 0;
+
+  let assemblyFormat = [{
+    $base_ptr `[` $indices `]` attr-dict `:` type($base_ptr) `,` type($indices) `->` type(results)
+  }];
 }
 
 // -----

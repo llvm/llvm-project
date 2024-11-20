@@ -162,6 +162,24 @@ def testAffineMapAttr():
         assert attr_built == attr_parsed
 
 
+# CHECK-LABEL: TEST: testIntegerSetAttr
+@run
+def testIntegerSetAttr():
+    with Context() as ctx:
+        d0 = AffineDimExpr.get(0)
+        d1 = AffineDimExpr.get(1)
+        s0 = AffineSymbolExpr.get(0)
+        c42 = AffineConstantExpr.get(42)
+        set0 = IntegerSet.get(2, 1, [d0 - d1, s0 - c42], [True, False])
+
+        # CHECK: affine_set<(d0, d1)[s0] : (d0 - d1 == 0, s0 - 42 >= 0)>
+        attr_built = IntegerSetAttr.get(set0)
+        print(str(attr_built))
+
+        attr_parsed = Attribute.parse(str(attr_built))
+        assert attr_built == attr_parsed
+
+
 # CHECK-LABEL: TEST: testFloatAttr
 @run
 def testFloatAttr():

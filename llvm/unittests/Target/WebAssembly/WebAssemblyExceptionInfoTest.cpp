@@ -22,7 +22,7 @@ using namespace llvm;
 
 namespace {
 
-std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
+std::unique_ptr<TargetMachine> createTargetMachine() {
   auto TT(Triple::normalize("wasm32-unknown-unknown"));
   std::string CPU;
   std::string FS;
@@ -35,9 +35,9 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
   const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
   assert(TheTarget);
 
-  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+  return std::unique_ptr<TargetMachine>(
       TheTarget->createTargetMachine(TT, CPU, FS, TargetOptions(), std::nullopt,
-                                     std::nullopt, CodeGenOptLevel::Default)));
+                                     std::nullopt, CodeGenOptLevel::Default));
 }
 
 std::unique_ptr<Module> parseMIR(LLVMContext &Context,
@@ -65,7 +65,7 @@ std::unique_ptr<Module> parseMIR(LLVMContext &Context,
 } // namespace
 
 TEST(WebAssemblyExceptionInfoTest, TEST0) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
   ASSERT_TRUE(TM);
 
   StringRef MIRString = R"MIR(
@@ -101,14 +101,14 @@ body: |
   ; predecessors: %bb.0
     successors: %bb.3, %bb.9
     liveins: $value_stack
-    CATCH_ALL implicit-def $arguments
+    CATCH_ALL_LEGACY implicit-def $arguments
     RETHROW 0, implicit-def dead $arguments
 
   bb.3 (landing-pad):
   ; predecessors: %bb.2
     successors: %bb.4, %bb.6
     liveins: $value_stack
-    %1:i32 = CATCH &__cpp_exception, implicit-def $arguments
+    %1:i32 = CATCH_LEGACY &__cpp_exception, implicit-def $arguments
     BR_IF %bb.4, %58:i32, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
     BR %bb.6, implicit-def $arguments
 
@@ -139,13 +139,13 @@ body: |
   ; predecessors: %bb.4
     successors: %bb.9
     liveins: $value_stack
-    CATCH_ALL implicit-def $arguments
+    CATCH_ALL_LEGACY implicit-def $arguments
     RETHROW 0, implicit-def dead $arguments
 
   bb.9 (landing-pad):
   ; predecessors: %bb.2, %bb.6, %bb.8
     liveins: $value_stack
-    CATCH_ALL implicit-def $arguments
+    CATCH_ALL_LEGACY implicit-def $arguments
     RETHROW 0, implicit-def dead $arguments
 
   bb.10:
@@ -227,7 +227,7 @@ body: |
 }
 
 TEST(WebAssemblyExceptionInfoTest, TEST1) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
   ASSERT_TRUE(TM);
 
   StringRef MIRString = R"MIR(
@@ -257,7 +257,7 @@ body: |
   ; predecessors: %bb.0
     successors: %bb.2, %bb.8
     liveins: $value_stack
-    %0:i32 = CATCH &__cpp_exception, implicit-def $arguments
+    %0:i32 = CATCH_LEGACY &__cpp_exception, implicit-def $arguments
     BR_IF %bb.2, %32:i32, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
     BR %bb.8, implicit-def $arguments
 
@@ -271,7 +271,7 @@ body: |
   ; predecessors: %bb.2
     successors: %bb.4, %bb.6
     liveins: $value_stack
-    %1:i32 = CATCH &__cpp_exception, implicit-def $arguments
+    %1:i32 = CATCH_LEGACY &__cpp_exception, implicit-def $arguments
     BR_IF %bb.4, %43:i32, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
     BR %bb.6, implicit-def $arguments
 
@@ -313,13 +313,13 @@ body: |
   ; predecessors: %bb.4
     successors: %bb.11
     liveins: $value_stack
-    CATCH_ALL implicit-def $arguments
+    CATCH_ALL_LEGACY implicit-def $arguments
     RETHROW 0, implicit-def dead $arguments
 
   bb.11 (landing-pad):
   ; predecessors: %bb.2, %bb.6, %bb.10
     liveins: $value_stack
-    CATCH_ALL implicit-def $arguments
+    CATCH_ALL_LEGACY implicit-def $arguments
     RETHROW 0, implicit-def dead $arguments
 
   bb.12:

@@ -859,9 +859,9 @@ bool SampleProfileLoaderBaseImpl<BT>::propagateThroughEdges(
         LLVM_DEBUG(dbgs() << "Set self-referential edge weight to: ";
                    printEdgeWeight(dbgs(), SelfReferentialEdge));
       }
-      if (UpdateBlockCount && !VisitedBlocks.count(EC) && TotalWeight > 0) {
+      if (UpdateBlockCount && TotalWeight > 0 &&
+          VisitedBlocks.insert(EC).second) {
         BlockWeights[EC] = TotalWeight;
-        VisitedBlocks.insert(EC);
         Changed = true;
       }
     }

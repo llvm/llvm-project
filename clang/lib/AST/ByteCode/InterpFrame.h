@@ -46,9 +46,6 @@ public:
   void destroy(unsigned Idx);
   void initScope(unsigned Idx);
 
-  /// Pops the arguments off the stack.
-  void popArgs();
-
   /// Describes the frame with arguments for diagnostic purposes.
   void describe(llvm::raw_ostream &OS) const override;
 
@@ -119,6 +116,8 @@ public:
   SourceRange getRange(CodePtr PC) const;
 
   unsigned getDepth() const { return Depth; }
+
+  bool isStdFunction() const;
 
   void dump() const { dump(llvm::errs(), 0); }
   void dump(llvm::raw_ostream &OS, unsigned Indent = 0) const;

@@ -320,15 +320,41 @@ conversion target, via a set of pattern-based operation rewriting patterns. This
 framework also provides support for type conversions. More information on this
 driver can be found [here](DialectConversion.md).
 
+### Walk Pattern Rewrite Driver
+
+This is a fast and simple driver that walks the given op and applies patterns
+that locally have the most benefit. The benefit of a pattern is decided solely
+by the benefit specified on the pattern, and the relative order of the pattern
+within the pattern list (when two patterns have the same local benefit).
+
+The driver performs a post-order traversal. Note that it walks regions of the
+given op but does not visit the op.
+
+This driver does not (re)visit modified or newly replaced ops, and does not
+allow for progressive rewrites of the same op. Op and block erasure is only
+supported for the currently matched op and its descendant. If your pattern
+set requires these, consider using the Greedy Pattern Rewrite Driver instead,
+at the expense of extra overhead.
+
+This driver is exposed using the `walkAndApplyPatterns` function.
+
+Note: This driver listens for IR changes via the callbacks provided by
+`RewriterBase`. It is important that patterns announce all IR changes to the
+rewriter and do not bypass the rewriter API by modifying ops directly.
+
+#### Debugging
+
+You can debug the Walk Pattern Rewrite Driver by passing the
+`--debug-only=walk-rewriter` CLI flag. This will print the visited and matched
+ops.
+
 ### Greedy Pattern Rewrite Driver
 
 This driver processes ops in a worklist-driven fashion and greedily applies the
-patterns that locally have the most benefit. The benefit of a pattern is decided
-solely by the benefit specified on the pattern, and the relative order of the
-pattern within the pattern list (when two patterns have the same local benefit).
-Patterns are iteratively applied to operations until a fixed point is reached or
-until the configurable maximum number of iterations exhausted, at which point
-the driver finishes.
+patterns that locally have the most benefit (same as the Walk Pattern Rewrite
+Driver). Patterns are iteratively applied to operations until a fixed point is
+reached or until the configurable maximum number of iterations exhausted, at
+which point the driver finishes.
 
 This driver comes in two fashions:
 
@@ -368,7 +394,7 @@ rewriter and do not bypass the rewriter API by modifying ops directly.
 Note: This driver is the one used by the [canonicalization](Canonicalization.md)
 [pass](Passes.md/#-canonicalize) in MLIR.
 
-### Debugging
+#### Debugging
 
 To debug the execution of the greedy pattern rewrite driver,
 `-debug-only=greedy-rewriter` may be used. This command line flag activates

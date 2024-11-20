@@ -107,7 +107,7 @@ end subroutine
 ! CHECK:             %[[VAL_13:.*]] = arith.addi %[[VAL_5]], %[[VAL_12]] : index
 ! CHECK:             %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (index) -> i64
 ! CHECK:             %[[VAL_15:.*]] = fir.convert %[[VAL_14]] : (i64) -> i32
-! CHECK:             %[[VAL_16:.*]] = fir.call @_QPfoo(%[[VAL_15]]) fastmath<contract> : (i32) -> i32
+! CHECK:             %[[VAL_16:.*]] = fir.call @_QPfoo(%[[VAL_15]]) proc_attrs<pure> fastmath<contract> : (i32) -> i32
 ! CHECK:             hlfir.yield_element %[[VAL_16]] : i32
 ! CHECK:           }
 ! CHECK:           %[[VAL_17:.*]]:3 = hlfir.associate %[[VAL_18:.*]](%[[VAL_3]]) {adapt.valuebyref} : (!hlfir.expr<4xi32>, !fir.shape<1>) -> (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>, i1)

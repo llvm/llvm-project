@@ -6,13 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 #include "clang/Driver/SanitizerArgs.h"
-#include "ToolChains/CommonArgs.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/ToolChain.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Path.h"
@@ -929,10 +926,16 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         DiagnoseErrors);
   }
 
-  SharedRuntime =
-      Args.hasFlag(options::OPT_shared_libsan, options::OPT_static_libsan,
-                   TC.getTriple().isAndroid() || TC.getTriple().isOSFuchsia() ||
-                       TC.getTriple().isOSDarwin());
+  SharedRuntime = Args.hasFlag(
+      options::OPT_shared_libsan, options::OPT_static_libsan,
+      TC.getTriple().isAndroid() || TC.getTriple().isOSFuchsia() ||
+          TC.getTriple().isOSDarwin() || TC.getTriple().isOSWindows());
+  if (!SharedRuntime && TC.getTriple().isOSWindows()) {
+    Arg *A =
+        Args.getLastArg(options::OPT_shared_libsan, options::OPT_static_libsan);
+    D.Diag(clang::diag::err_drv_unsupported_opt_for_target)
+        << A->getSpelling() << TC.getTriple().str();
+  }
 
   ImplicitCfiRuntime = TC.getTriple().isAndroid();
 

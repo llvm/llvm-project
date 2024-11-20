@@ -16,7 +16,6 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 
@@ -226,7 +225,7 @@ bool SILateBranchLowering::runOnMachineFunction(MachineFunction &MF) {
     }
 
     for (auto *MI : EpilogInstrs) {
-      auto MBB = MI->getParent();
+      auto *MBB = MI->getParent();
       if (MBB == &MF.back() && MI == &MBB->back())
         continue;
 

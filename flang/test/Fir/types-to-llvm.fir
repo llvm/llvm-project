@@ -257,27 +257,27 @@ func.func private @foo5(%arg0: complex<f128>)
 
 // Test `!fir.complex<KIND>` conversion.
 
-func.func private @foo0(%arg0: !fir.complex<2>)
+func.func private @foo0(%arg0: complex<f16>)
 // CHECK-LABEL: foo0
 // CHECK-SAME: !llvm.struct<(f16, f16)>)
 
-func.func private @foo1(%arg0: !fir.complex<3>)
+func.func private @foo1(%arg0: complex<bf16>)
 // CHECK-LABEL: foo1
 // CHECK-SAME: !llvm.struct<(bf16, bf16)>)
 
-func.func private @foo2(%arg0: !fir.complex<4>)
+func.func private @foo2(%arg0: complex<f32>)
 // CHECK-LABEL: foo2
 // CHECK-SAME: !llvm.struct<(f32, f32)>)
 
-func.func private @foo3(%arg0: !fir.complex<8>)
+func.func private @foo3(%arg0: complex<f64>)
 // CHECK-LABEL: foo3
 // CHECK-SAME: !llvm.struct<(f64, f64)>)
 
-func.func private @foo4(%arg0: !fir.complex<10>)
+func.func private @foo4(%arg0: complex<f80>)
 // CHECK-LABEL: foo4
 // CHECK-SAME: !llvm.struct<(f80, f80)>)
 
-func.func private @foo5(%arg0: !fir.complex<16>)
+func.func private @foo5(%arg0: complex<f128>)
 // CHECK-LABEL: foo5
 // CHECK-SAME: !llvm.struct<(f128, f128)>)
 
@@ -328,30 +328,6 @@ func.func private @foo9(%arg0: !fir.vector<20:i32>)
 func.func private @foo10(%arg0: !fir.vector<30:i64>)
 // CHECK-LABEL: foo10
 // CHECK-SAME: vector<30xi64>
-
-func.func private @foo11(%arg0: !fir.vector<2:!fir.real<2>>)
-// CHECK-LABEL: foo11
-// CHECK-SAME: vector<2xf16>
-
-func.func private @foo12(%arg0: !fir.vector<2:!fir.real<3>>)
-// CHECK-LABEL: foo12
-// CHECK-SAME: vector<2xbf16>
-
-func.func private @foo13(%arg0: !fir.vector<2:!fir.real<4>>)
-// CHECK-LABEL: foo13
-// CHECK-SAME: vector<2xf32>
-
-func.func private @foo14(%arg0: !fir.vector<2:!fir.real<8>>)
-// CHECK-LABEL: foo14
-// CHECK-SAME: vector<2xf64>
-
-func.func private @foo15(%arg0: !fir.vector<2:!fir.real<10>>)
-// CHECK-LABEL: foo15
-// CHECK-SAME: vector<2xf80>
-
-func.func private @foo16(%arg0: !fir.vector<2:!fir.real<16>>)
-// CHECK-LABEL: foo16
-// CHECK-SAME: vector<2xf128>
 
 // -----
 

@@ -60,6 +60,10 @@ def ConstIgnoringExceptions : Attribute<"g">;
 // This function requires a specific header or an explicit declaration.
 def RequireDeclaration : Attribute<"h">;
 
+// FIXME: Why is this not simply the min_vector_width attribute?
+// Vector has to be at least N bits wide.
+class RequiredVectorWidth<int N> : IndexedAttribute<"V", N>;
+
 class PrintfFormat<int I> : IndexedAttribute<"p", I>;
 class VPrintfFormat<int I> : IndexedAttribute<"P", I>;
 class ScanfFormat<int I> : IndexedAttribute<"s", I>;

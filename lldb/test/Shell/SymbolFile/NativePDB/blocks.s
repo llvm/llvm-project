@@ -4,7 +4,7 @@
 // Test block range is set.
 // RUN: llvm-mc -triple=x86_64-windows-msvc --filetype=obj %s > %t.obj
 // RUN: lld-link /debug:full /nodefaultlib /entry:main %t.obj /out:%t.exe /base:0x140000000
-// RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb %t.exe -o "image lookup -a 0x140001014 -v" -o "exit" | FileCheck %s
+// RUN: %lldb %t.exe -o "image lookup -a 0x140001014 -v" -o "exit" | FileCheck %s
 
 // CHECK:      Function: id = {{.*}}, name = "main", range = [0x0000000140001000-0x0000000140001044)
 // CHECK-NEXT: FuncType: id = {{.*}}, byte-size = 0, compiler_type = "int (void)"

@@ -60,7 +60,7 @@ Opt::Opt(StringRef Name, FnT CB, StringRef Desc, bool ByDefault) {
 
 /// Apply callback specified on the command line. Returns true if no callback
 /// was applied.
-bool llvm::TableGen::Emitter::ApplyCallback(RecordKeeper &Records,
+bool llvm::TableGen::Emitter::ApplyCallback(const RecordKeeper &Records,
                                             raw_ostream &OS) {
   FnT Fn = CallbackFunction->getValue();
   if (!Fn)

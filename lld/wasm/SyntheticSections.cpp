@@ -38,7 +38,6 @@ public:
   explicit SubSection(uint32_t type) : type(type) {}
 
   void writeTo(raw_ostream &to) {
-    os.flush();
     writeUleb128(to, type, "subsection type");
     writeUleb128(to, body.size(), "subsection size");
     to.write(body.data(), body.size());
@@ -515,7 +514,10 @@ void GlobalSection::writeBody() {
     } else {
       WasmInitExpr initExpr;
       if (auto *d = dyn_cast<DefinedData>(sym))
-        initExpr = intConst(d->getVA(), is64);
+        // In the sharedMemory case TLS globals are set during
+        // `__wasm_apply_global_tls_relocs`, but in the non-shared case
+        // we know the absolute value at link time.
+        initExpr = intConst(d->getVA(/*absolute=*/!config->sharedMemory), is64);
       else if (auto *f = dyn_cast<FunctionSymbol>(sym))
         initExpr = intConst(f->isStub ? 0 : f->getTableIndex(), is64);
       else {
@@ -587,8 +589,7 @@ void ElemSection::writeBody() {
     initExpr.Inst.Value.Global = WasmSym::tableBase->getGlobalIndex();
   } else {
     bool is64 = config->is64.value_or(false);
-    initExpr.Inst.Opcode = is64 ? WASM_OPCODE_I64_CONST : WASM_OPCODE_I32_CONST;
-    initExpr.Inst.Value.Int32 = config->tableBase;
+    initExpr = intConst(config->tableBase, is64);
   }
   writeInitExpr(os, initExpr);
 
