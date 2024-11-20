@@ -358,16 +358,16 @@ Status ScriptInterpreterLua::SetBreakpointCommandCallback(
 Status ScriptInterpreterLua::RegisterBreakpointCallback(
     BreakpointOptions &bp_options, const char *command_body_text,
     StructuredData::ObjectSP extra_args_sp) {
-  Status error;
   auto data_up = std::make_unique<CommandDataLua>(extra_args_sp);
-  error = m_lua->RegisterBreakpointCallback(data_up.get(), command_body_text);
-  if (error.Fail())
-    return error;
+  llvm::Error err =
+      m_lua->RegisterBreakpointCallback(data_up.get(), command_body_text);
+  if (err)
+    return Status::FromError(std::move(err));
   auto baton_sp =
       std::make_shared<BreakpointOptions::CommandBaton>(std::move(data_up));
   bp_options.SetCallback(ScriptInterpreterLua::BreakpointCallbackFunction,
                          baton_sp);
-  return error;
+  return {};
 }
 
 void ScriptInterpreterLua::SetWatchpointCommandCallback(
@@ -379,16 +379,16 @@ void ScriptInterpreterLua::SetWatchpointCommandCallback(
 Status ScriptInterpreterLua::RegisterWatchpointCallback(
     WatchpointOptions *wp_options, const char *command_body_text,
     StructuredData::ObjectSP extra_args_sp) {
-  Status error;
   auto data_up = std::make_unique<WatchpointOptions::CommandData>();
-  error = m_lua->RegisterWatchpointCallback(data_up.get(), command_body_text);
-  if (error.Fail())
-    return error;
+  llvm::Error err =
+      m_lua->RegisterWatchpointCallback(data_up.get(), command_body_text);
+  if (err)
+    return Status::FromError(std::move(err));
   auto baton_sp =
       std::make_shared<WatchpointOptions::CommandBaton>(std::move(data_up));
   wp_options->SetCallback(ScriptInterpreterLua::WatchpointCallbackFunction,
                           baton_sp);
-  return error;
+  return {};
 }
 
 lldb::ScriptInterpreterSP

@@ -164,7 +164,7 @@ void ObjCSuperDeallocChecker::checkLocation(SVal L, bool IsLoad, const Stmt *S,
   if (IvarRegion) {
     OS << "Use of instance variable '" << *IvarRegion->getDecl() <<
           "' after 'self' has been deallocated";
-    Desc = OS.str();
+    Desc = Buf;
   }
 
   reportUseAfterDealloc(BaseSym, Desc, S, C);

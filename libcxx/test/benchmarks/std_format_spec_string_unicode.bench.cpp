@@ -4,16 +4,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_HAS_NO_UNICODE
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
+#  include <concepts>
 #  include <format>
 #  include <string_view>
 
 #  include "benchmark/benchmark.h"
-
 #  include "make_string.h"
+#  include "test_macros.h"
 
 #  define SV(S) MAKE_STRING_VIEW(CharT, S)
+
+#if _LIBCPP_HAS_UNICODE
 
 // generated with https://generator.lorem-ipsum.info/_latin
 
@@ -276,25 +279,22 @@ void BM_emoji_text(benchmark::State& state) {
   BM_text(state, emoji_text<CharT>());
 }
 
-BENCHMARK_TEMPLATE(BM_ascii_text, char);
-BENCHMARK_TEMPLATE(BM_unicode_text, char);
-BENCHMARK_TEMPLATE(BM_cyrillic_text, char);
-BENCHMARK_TEMPLATE(BM_japanese_text, char);
-BENCHMARK_TEMPLATE(BM_emoji_text, char);
+BENCHMARK(BM_ascii_text<char>);
+BENCHMARK(BM_unicode_text<char>);
+BENCHMARK(BM_cyrillic_text<char>);
+BENCHMARK(BM_japanese_text<char>);
+BENCHMARK(BM_emoji_text<char>);
 
-BENCHMARK_TEMPLATE(BM_ascii_text, wchar_t);
-BENCHMARK_TEMPLATE(BM_unicode_text, wchar_t);
-BENCHMARK_TEMPLATE(BM_cyrillic_text, wchar_t);
-BENCHMARK_TEMPLATE(BM_japanese_text, wchar_t);
-BENCHMARK_TEMPLATE(BM_emoji_text, wchar_t);
+#  ifndef TEST_HAS_NO_WIDE_CHARACTERS
+BENCHMARK(BM_ascii_text<wchar_t>);
+BENCHMARK(BM_unicode_text<wchar_t>);
+BENCHMARK(BM_cyrillic_text<wchar_t>);
+BENCHMARK(BM_japanese_text<wchar_t>);
+BENCHMARK(BM_emoji_text<wchar_t>);
+#  endif
 
-int main(int argc, char** argv) {
-  benchmark::Initialize(&argc, argv);
-  if (benchmark::ReportUnrecognizedArguments(argc, argv))
-    return 1;
+BENCHMARK_MAIN();
 
-  benchmark::RunSpecifiedBenchmarks();
-}
 #else
 int main(int, char**) { return 0; }
 #endif

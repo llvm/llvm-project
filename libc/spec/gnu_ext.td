@@ -22,6 +22,16 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
     ]
   >;
 
+  HeaderSpec Malloc = HeaderSpec<
+      "malloc.h",
+      [], // Macros
+      [], // Types
+      [], // Enumerations
+      [
+          FunctionSpec<"mallopt", RetValSpec<IntType>, [ArgSpec<IntType>, ArgSpec<IntType>]>,
+      ]
+  >;
+
   HeaderSpec Math = HeaderSpec<
       "math.h",
       [], // Macros
@@ -291,6 +301,7 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
   let Headers = [
     CType,
     FEnv,
+    Malloc,
     Math,
     PThread,
     Sched,

@@ -459,16 +459,14 @@ IRSimilarityCandidate::IRSimilarityCandidate(unsigned StartIdx, unsigned Len,
     // Map the operand values to an unsigned integer if it does not already
     // have an unsigned integer assigned to it.
     for (Value *Arg : ID->OperVals)
-      if (!ValueToNumber.contains(Arg)) {
-        ValueToNumber.try_emplace(Arg, LocalValNumber);
+      if (ValueToNumber.try_emplace(Arg, LocalValNumber).second) {
         NumberToValue.try_emplace(LocalValNumber, Arg);
         LocalValNumber++;
       }
 
     // Mapping the instructions to an unsigned integer if it is not already
     // exist in the mapping.
-    if (!ValueToNumber.contains(ID->Inst)) {
-      ValueToNumber.try_emplace(ID->Inst, LocalValNumber);
+    if (ValueToNumber.try_emplace(ID->Inst, LocalValNumber).second) {
       NumberToValue.try_emplace(LocalValNumber, ID->Inst);
       LocalValNumber++;
     }
@@ -484,12 +482,10 @@ IRSimilarityCandidate::IRSimilarityCandidate(unsigned StartIdx, unsigned Len,
   DenseSet<BasicBlock *> BBSet;
   getBasicBlocks(BBSet);
   for (BasicBlock *BB : BBSet) {
-    if (ValueToNumber.contains(BB))
-      continue;
-    
-    ValueToNumber.try_emplace(BB, LocalValNumber);
-    NumberToValue.try_emplace(LocalValNumber, BB);
-    LocalValNumber++;
+    if (ValueToNumber.try_emplace(BB, LocalValNumber).second) {
+      NumberToValue.try_emplace(LocalValNumber, BB);
+      LocalValNumber++;
+    }
   }
 }
 
@@ -1424,16 +1420,8 @@ void IRSimilarityIdentifier::findCandidates(
         // IRSimilarityCandidates that include that instruction.
         for (IRSimilarityCandidate &IRCand : SimilarityCandidates->back()) {
           for (unsigned Idx = IRCand.getStartIdx(), Edx = IRCand.getEndIdx();
-               Idx <= Edx; ++Idx) {
-            DenseMap<unsigned, DenseSet<IRSimilarityCandidate *>>::iterator
-                IdIt;
-            IdIt = IndexToIncludedCand.find(Idx);
-            bool Inserted = false;
-            if (IdIt == IndexToIncludedCand.end())
-              std::tie(IdIt, Inserted) = IndexToIncludedCand.insert(
-                  std::make_pair(Idx, DenseSet<IRSimilarityCandidate *>()));
-            IdIt->second.insert(&IRCand);
-          }
+               Idx <= Edx; ++Idx)
+            IndexToIncludedCand[Idx].insert(&IRCand);
           // Add mapping of candidate to the overall similarity group number.
           CandToGroup.insert(
               std::make_pair(&IRCand, SimilarityCandidates->size() - 1));

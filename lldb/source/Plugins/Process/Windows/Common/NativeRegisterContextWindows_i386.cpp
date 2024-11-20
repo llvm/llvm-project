@@ -61,7 +61,7 @@ static Status GetThreadContextHelper(lldb::thread_t thread_handle,
   memset(context_ptr, 0, sizeof(::CONTEXT));
   context_ptr->ContextFlags = control_flag;
   if (!::GetThreadContext(thread_handle, context_ptr)) {
-    error.SetError(GetLastError(), eErrorTypeWin32);
+    error = Status(GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "{0} GetThreadContext failed with error {1}", __FUNCTION__,
              error);
     return error;
@@ -75,7 +75,7 @@ static Status SetThreadContextHelper(lldb::thread_t thread_handle,
   Status error;
 
   if (!::SetThreadContext(thread_handle, context_ptr)) {
-    error.SetError(GetLastError(), eErrorTypeWin32);
+    error = Status(GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "{0} SetThreadContext failed with error {1}", __FUNCTION__,
              error);
     return error;

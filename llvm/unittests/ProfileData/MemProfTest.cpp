@@ -255,7 +255,6 @@ TEST(MemProf, PortableWrapper) {
   std::string Buffer;
   llvm::raw_string_ostream OS(Buffer);
   WriteBlock.serialize(Schema, OS);
-  OS.flush();
 
   PortableMemInfoBlock ReadBlock(
       Schema, reinterpret_cast<const unsigned char *>(Buffer.data()));
@@ -269,9 +268,7 @@ TEST(MemProf, PortableWrapper) {
   EXPECT_EQ(3UL, ReadBlock.getAllocCpuId());
 }
 
-// Version0 and Version1 serialize IndexedMemProfRecord in the same format, so
-// we share one test.
-TEST(MemProf, RecordSerializationRoundTripVersion0And1) {
+TEST(MemProf, RecordSerializationRoundTripVersion1) {
   const auto Schema = llvm::memprof::getFullSchema();
 
   MemInfoBlock Info(/*size=*/16, /*access_count=*/7, /*alloc_timestamp=*/1000,
@@ -295,12 +292,11 @@ TEST(MemProf, RecordSerializationRoundTripVersion0And1) {
 
   std::string Buffer;
   llvm::raw_string_ostream OS(Buffer);
-  Record.serialize(Schema, OS, llvm::memprof::Version0);
-  OS.flush();
+  Record.serialize(Schema, OS, llvm::memprof::Version1);
 
   const IndexedMemProfRecord GotRecord = IndexedMemProfRecord::deserialize(
       Schema, reinterpret_cast<const unsigned char *>(Buffer.data()),
-      llvm::memprof::Version0);
+      llvm::memprof::Version1);
 
   EXPECT_EQ(Record, GotRecord);
 }
@@ -319,14 +315,13 @@ TEST(MemProf, RecordSerializationRoundTripVerion2) {
   IndexedMemProfRecord Record;
   for (const auto &CSId : CallStackIds) {
     // Use the same info block for both allocation sites.
-    Record.AllocSites.emplace_back(llvm::SmallVector<FrameId>(), CSId, Info);
+    Record.AllocSites.emplace_back(CSId, Info);
   }
   Record.CallSiteIds.assign(CallSiteIds);
 
   std::string Buffer;
   llvm::raw_string_ostream OS(Buffer);
   Record.serialize(Schema, OS, llvm::memprof::Version2);
-  OS.flush();
 
   const IndexedMemProfRecord GotRecord = IndexedMemProfRecord::deserialize(
       Schema, reinterpret_cast<const unsigned char *>(Buffer.data()),
@@ -351,8 +346,7 @@ TEST(MemProf, RecordSerializationRoundTripVersion2HotColdSchema) {
   IndexedMemProfRecord Record;
   for (const auto &CSId : CallStackIds) {
     // Use the same info block for both allocation sites.
-    Record.AllocSites.emplace_back(llvm::SmallVector<FrameId>(), CSId, Info,
-                                   Schema);
+    Record.AllocSites.emplace_back(CSId, Info, Schema);
   }
   Record.CallSiteIds.assign(CallSiteIds);
 
@@ -378,7 +372,6 @@ TEST(MemProf, RecordSerializationRoundTripVersion2HotColdSchema) {
   std::string Buffer;
   llvm::raw_string_ostream OS(Buffer);
   Record.serialize(Schema, OS, llvm::memprof::Version2);
-  OS.flush();
 
   const IndexedMemProfRecord GotRecord = IndexedMemProfRecord::deserialize(
       Schema, reinterpret_cast<const unsigned char *>(Buffer.data()),
@@ -516,7 +509,6 @@ TEST(MemProf, BaseMemProfReaderWithCSIdMap) {
   Block.AllocCount = 1U, Block.TotalAccessDensity = 4,
   Block.TotalLifetime = 200001;
   FakeRecord.AllocSites.emplace_back(
-      /*CS=*/llvm::SmallVector<FrameId>(),
       /*CSId=*/llvm::memprof::hashCallStack(CallStack),
       /*MB=*/Block);
   ProfData.insert({F1.hash(), FakeRecord});
@@ -616,7 +608,7 @@ MemInfoBlock makePartialMIB() {
 TEST(MemProf, MissingCallStackId) {
   // Use a non-existent CallStackId to trigger a mapping error in
   // toMemProfRecord.
-  llvm::memprof::IndexedAllocationInfo AI({}, 0xdeadbeefU, makePartialMIB(),
+  llvm::memprof::IndexedAllocationInfo AI(0xdeadbeefU, makePartialMIB(),
                                           llvm::memprof::getHotColdSchema());
 
   IndexedMemProfRecord IndexedMR;
@@ -639,7 +631,7 @@ TEST(MemProf, MissingCallStackId) {
 }
 
 TEST(MemProf, MissingFrameId) {
-  llvm::memprof::IndexedAllocationInfo AI({}, 0x222, makePartialMIB(),
+  llvm::memprof::IndexedAllocationInfo AI(0x222, makePartialMIB(),
                                           llvm::memprof::getHotColdSchema());
 
   IndexedMemProfRecord IndexedMR;

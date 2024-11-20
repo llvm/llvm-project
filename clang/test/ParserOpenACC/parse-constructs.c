@@ -84,35 +84,29 @@ void func() {
   for(;;){}
   // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc loop clause list
-  for(;;){}
+  for(int i = 0; i < 6;++i){}
   // expected-error@+1{{invalid OpenACC clause 'invalid'}}
 #pragma acc parallel invalid clause list
-  for(;;){}
+  for(int i = 0; i < 6;++i){}
   // expected-error@+1{{invalid OpenACC clause 'invalid'}}
 #pragma acc serial invalid clause list
-  for(;;){}
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'parallel loop' not yet implemented, pragma ignored}}
+  for(int i = 0; i < 6;++i){}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc parallel loop clause list
-  for(;;){}
+  for(int i = 0; i < 6;++i){}
 
-  // expected-warning@+1{{OpenACC construct 'parallel loop' not yet implemented, pragma ignored}}
 #pragma acc parallel loop
-  for(;;){}
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'serial loop' not yet implemented, pragma ignored}}
+  for(int i = 0; i < 6;++i){}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc serial loop clause list
-  for(;;){}
-  // expected-warning@+1{{OpenACC construct 'serial loop' not yet implemented, pragma ignored}}
+  for(int i = 0; i < 6;++i){}
 #pragma acc serial loop
-  for(;;){}
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'kernels loop' not yet implemented, pragma ignored}}
+  for(int i = 0; i < 6;++i){}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc kernels loop clause list
-  for(;;){}
-  // expected-warning@+1{{OpenACC construct 'kernels loop' not yet implemented, pragma ignored}}
+  for(int i = 0; i < 6;++i){}
 #pragma acc kernels loop
-  for(;;){}
+  for(int i = 0; i < 6;++i){}
 
   int i = 0, j = 0, k = 0;
   // expected-warning@+1{{OpenACC construct 'atomic' not yet implemented, pragma ignored}}

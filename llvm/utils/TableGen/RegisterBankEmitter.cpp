@@ -19,6 +19,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/TGTimer.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
 #define DEBUG_TYPE "register-bank-emitter"
@@ -107,18 +108,18 @@ public:
 
 class RegisterBankEmitter {
 private:
-  CodeGenTarget Target;
-  RecordKeeper &Records;
+  const CodeGenTarget Target;
+  const RecordKeeper &Records;
 
   void emitHeader(raw_ostream &OS, const StringRef TargetName,
-                  const std::vector<RegisterBank> &Banks);
+                  ArrayRef<RegisterBank> Banks);
   void emitBaseClassDefinition(raw_ostream &OS, const StringRef TargetName,
-                               const std::vector<RegisterBank> &Banks);
+                               ArrayRef<RegisterBank> Banks);
   void emitBaseClassImplementation(raw_ostream &OS, const StringRef TargetName,
-                                   std::vector<RegisterBank> &Banks);
+                                   ArrayRef<RegisterBank> Banks);
 
 public:
-  RegisterBankEmitter(RecordKeeper &R) : Target(R), Records(R) {}
+  RegisterBankEmitter(const RecordKeeper &R) : Target(R), Records(R) {}
 
   void run(raw_ostream &OS);
 };
@@ -129,7 +130,7 @@ public:
 /// variables.
 void RegisterBankEmitter::emitHeader(raw_ostream &OS,
                                      const StringRef TargetName,
-                                     const std::vector<RegisterBank> &Banks) {
+                                     ArrayRef<RegisterBank> Banks) {
   // <Target>RegisterBankInfo.h
   OS << "namespace llvm {\n"
      << "namespace " << TargetName << " {\n"
@@ -147,8 +148,7 @@ void RegisterBankEmitter::emitHeader(raw_ostream &OS,
 
 /// Emit declarations of the <Target>GenRegisterBankInfo class.
 void RegisterBankEmitter::emitBaseClassDefinition(
-    raw_ostream &OS, const StringRef TargetName,
-    const std::vector<RegisterBank> &Banks) {
+    raw_ostream &OS, const StringRef TargetName, ArrayRef<RegisterBank> Banks) {
   OS << "private:\n"
      << "  static const RegisterBank *RegBanks[];\n"
      << "  static const unsigned Sizes[];\n\n"
@@ -218,7 +218,7 @@ static void visitRegisterBankClasses(
 }
 
 void RegisterBankEmitter::emitBaseClassImplementation(
-    raw_ostream &OS, StringRef TargetName, std::vector<RegisterBank> &Banks) {
+    raw_ostream &OS, StringRef TargetName, ArrayRef<RegisterBank> Banks) {
   const CodeGenRegBank &RegisterClassHierarchy = Target.getRegBank();
   const CodeGenHwModes &CGH = Target.getHwModes();
 
@@ -386,7 +386,8 @@ void RegisterBankEmitter::run(raw_ostream &OS) {
   const CodeGenRegBank &RegisterClassHierarchy = Target.getRegBank();
   const CodeGenHwModes &CGH = Target.getHwModes();
 
-  Records.startTimer("Analyze records");
+  TGTimer &Timer = Records.getTimer();
+  Timer.startTimer("Analyze records");
   std::vector<RegisterBank> Banks;
   for (const auto &V : Records.getAllDerivedDefinitions("RegisterBank")) {
     SmallPtrSet<const CodeGenRegisterClass *, 8> VisitedRCs;
@@ -408,7 +409,7 @@ void RegisterBankEmitter::run(raw_ostream &OS) {
   }
 
   // Warn about ambiguous MIR caused by register bank/class name clashes.
-  Records.startTimer("Warn ambiguous");
+  Timer.startTimer("Warn ambiguous");
   for (const auto &Class : RegisterClassHierarchy.getRegClasses()) {
     for (const auto &Bank : Banks) {
       if (Bank.getName().lower() == StringRef(Class.getName()).lower()) {
@@ -421,7 +422,7 @@ void RegisterBankEmitter::run(raw_ostream &OS) {
     }
   }
 
-  Records.startTimer("Emit output");
+  Timer.startTimer("Emit output");
   emitSourceFileHeader("Register Bank Source Fragments", OS);
   OS << "#ifdef GET_REGBANK_DECLARATIONS\n"
      << "#undef GET_REGBANK_DECLARATIONS\n";

@@ -211,7 +211,7 @@ struct __fn {
     requires constructible_from<decay_t<_Pattern>, _Pattern>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Pattern&& __pattern) const
       noexcept(is_nothrow_constructible_v<decay_t<_Pattern>, _Pattern>) {
-    return __range_adaptor_closure_t(std::__bind_back(*this, std::forward<_Pattern>(__pattern)));
+    return __pipeable(std::__bind_back(*this, std::forward<_Pattern>(__pattern)));
   }
 };
 } // namespace __split_view

@@ -217,7 +217,7 @@ public:
     return CombineContents(x);
   }
   Result operator()(const semantics::DerivedTypeSpec &x) const {
-    return Combine(x.typeSymbol(), x.parameters());
+    return Combine(x.originalTypeSymbol(), x.parameters());
   }
   Result operator()(const StructureConstructorValues::value_type &x) const {
     return visitor_(x.second);

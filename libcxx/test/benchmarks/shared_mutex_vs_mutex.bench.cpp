@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14
+
 // This benchmark compares the performance of std::mutex and std::shared_mutex in contended scenarios.
 // it's meant to establish a baseline overhead for std::shared_mutex and std::mutex, and to help inform decisions about
 // which mutex to use when selecting a mutex type for a given use case.

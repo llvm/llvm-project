@@ -113,9 +113,12 @@ def ext_cxx11_enum_fixed_underlying_type : Extension<
 def ext_ms_c_enum_fixed_underlying_type : Extension<
   "enumeration types with a fixed underlying type are a Microsoft extension">,
   InGroup<MicrosoftFixedEnum>;
-def ext_clang_c_enum_fixed_underlying_type : Extension<
-  "enumeration types with a fixed underlying type are a Clang extension">,
-  InGroup<DiagGroup<"fixed-enum-extension">>;
+def ext_c23_enum_fixed_underlying_type : Extension<
+  "enumeration types with a fixed underlying type are a C23 extension">,
+  InGroup<C23>;
+def warn_c17_compat_enum_fixed_underlying_type : Warning<
+  "enumeration types with a fixed underlying type are incompatible with C standards before C23">,
+  DefaultIgnore, InGroup<CPre23Compat>;
 def warn_cxx98_compat_enum_fixed_underlying_type : Warning<
   "enumeration types with a fixed underlying type are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
@@ -200,8 +203,13 @@ def err_expected_equal_designator : Error<"expected '=' or another designator">;
 def ext_gnu_old_style_field_designator : ExtWarn<
   "use of GNU old-style field designator extension">,
   InGroup<GNUDesignator>;
-def ext_gnu_case_range : Extension<"use of GNU case range extension">,
-  InGroup<GNUCaseRange>;
+def ext_gnu_case_range : Extension<
+  "case ranges are a GNU extension">, InGroup<GNUCaseRange>;
+def warn_c23_compat_case_range : Warning<
+  "case ranges are incompatible with C standards before C2y">,
+  DefaultIgnore, InGroup<CPre2yCompat>;
+def ext_c2y_case_range : Extension<
+  "case ranges are a C2y extension">, InGroup<C2y>;
 
 // Generic errors.
 def err_expected_expression : Error<"expected expression">;
@@ -470,6 +478,12 @@ def warn_c17_compat_static_assert_no_message : Warning<
   "'_Static_assert' with no message is incompatible with C standards before "
   "C23">,
   DefaultIgnore, InGroup<CPre23Compat>;
+def ext_cxx_static_assert_user_generated_message : ExtWarn<
+  "'static_assert' with a user-generated message is a C++26 extension">,
+  InGroup<CXX26>;
+def warn_cxx20_compat_static_assert_user_generated_message : Warning<
+  "'static_assert' with a user-generated message is incompatible with "
+  "C++ standards before C++26">, DefaultIgnore, InGroup<CXXPre26Compat>;
 def err_function_definition_not_allowed : Error<
   "function definition is not allowed here">;
 def err_expected_end_of_enumerator : Error<
@@ -962,7 +976,7 @@ def warn_cxx98_compat_defaulted_deleted_function : Warning<
   "%select{defaulted|deleted}0 function definitions are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 
-def ext_delete_with_message : ExtWarn<
+def ext_delete_with_message : Extension<
   "'= delete' with a message is a C++2c extension">, InGroup<CXX26>;
 def warn_cxx23_delete_with_message : Warning<
   "'= delete' with a message is incompatible with C++ standards before C++2c">,
@@ -1067,7 +1081,10 @@ def err_expected_lambda_body : Error<"expected body of lambda expression">;
 def warn_cxx98_compat_lambda : Warning<
   "lambda expressions are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
-def ext_lambda : ExtWarn<"lambdas are a C++11 extension">, InGroup<CXX11>;
+def ext_lambda : ExtWarn<"lambdas are a %select{C++11|clang HLSL}0 extension">,
+  InGroup<CXX11>;
+def ext_hlsl_lambda : ExtWarn<ext_lambda.Summary>,
+  InGroup<HLSLExtension>;
 def err_lambda_decl_specifier_repeated : Error<
   "%select{'mutable'|'static'|'constexpr'|'consteval'}0 cannot "
   "appear multiple times in a lambda declarator">;
@@ -1388,8 +1405,6 @@ def err_modifier_expected_colon : Error<"missing ':' after %0 modifier">;
 // OpenCL errors.
 def err_opencl_taking_function_address_parser : Error<
   "taking address of function is not allowed">;
-def err_opencl_logical_exclusive_or : Error<
-  "^^ is a reserved operator in OpenCL">;
 
 // C++ for OpenCL.
 def err_openclcxx_virtual_function : Error<

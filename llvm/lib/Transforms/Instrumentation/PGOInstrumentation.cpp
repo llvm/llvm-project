@@ -107,10 +107,10 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/BlockCoverageInference.h"
 #include "llvm/Transforms/Instrumentation/CFGMST.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/MisExpect.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
@@ -319,6 +319,20 @@ static cl::opt<unsigned> PGOFunctionCriticalEdgeThreshold(
     cl::desc("Do not instrument functions with the number of critical edges "
              " greater than this threshold."));
 
+static cl::opt<uint64_t> PGOColdInstrumentEntryThreshold(
+    "pgo-cold-instrument-entry-threshold", cl::init(0), cl::Hidden,
+    cl::desc("For cold function instrumentation, skip instrumenting functions "
+             "whose entry count is above the given value."));
+
+static cl::opt<bool> PGOTreatUnknownAsCold(
+    "pgo-treat-unknown-as-cold", cl::init(false), cl::Hidden,
+    cl::desc("For cold function instrumentation, treat count unknown(e.g. "
+             "unprofiled) functions as cold."));
+
+cl::opt<bool> PGOInstrumentColdFunctionOnly(
+    "pgo-instrument-cold-function-only", cl::init(false), cl::Hidden,
+    cl::desc("Enable cold function only instrumentation."));
+
 extern cl::opt<unsigned> MaxNumVTableAnnotations;
 
 namespace llvm {
@@ -404,7 +418,6 @@ static std::string getBranchCondString(Instruction *TI) {
     else
       OS << "_Const";
   }
-  OS.flush();
   return result;
 }
 
@@ -919,8 +932,8 @@ void FunctionInstrumenter::instrument() {
     IRBuilder<> Builder(&EntryBB, EntryBB.getFirstInsertionPt());
     // llvm.instrprof.cover(i8* <name>, i64 <hash>, i32 <num-counters>,
     //                      i32 <index>)
-    Builder.CreateCall(
-        Intrinsic::getDeclaration(&M, Intrinsic::instrprof_cover),
+    Builder.CreateIntrinsic(
+        Intrinsic::instrprof_cover, {},
         {NormalizedNamePtr, CFGHash, Builder.getInt32(1), Builder.getInt32(0)});
     return;
   }
@@ -932,7 +945,7 @@ void FunctionInstrumenter::instrument() {
 
   if (IsCtxProf) {
     auto *CSIntrinsic =
-        Intrinsic::getDeclaration(&M, Intrinsic::instrprof_callsite);
+        Intrinsic::getOrInsertDeclaration(&M, Intrinsic::instrprof_callsite);
     // We want to count the instrumentable callsites, then instrument them. This
     // is because the llvm.instrprof.callsite intrinsic has an argument (like
     // the other instrprof intrinsics) capturing the total number of
@@ -945,23 +958,21 @@ void FunctionInstrumenter::instrument() {
       for (auto &BB : F)
         for (auto &Instr : BB)
           if (auto *CS = dyn_cast<CallBase>(&Instr)) {
-            if ((CS->getCalledFunction() &&
-                 CS->getCalledFunction()->isIntrinsic()) ||
-                dyn_cast<InlineAsm>(CS->getCalledOperand()))
+            if (!InstrProfCallsite::canInstrumentCallsite(*CS))
               continue;
             Visitor(CS);
           }
     };
     // First, count callsites.
-    uint32_t TotalNrCallsites = 0;
-    Visit([&TotalNrCallsites](auto *) { ++TotalNrCallsites; });
+    uint32_t TotalNumCallsites = 0;
+    Visit([&TotalNumCallsites](auto *) { ++TotalNumCallsites; });
 
     // Now instrument.
     uint32_t CallsiteIndex = 0;
     Visit([&](auto *CB) {
       IRBuilder<> Builder(CB);
       Builder.CreateCall(CSIntrinsic,
-                         {Name, CFGHash, Builder.getInt32(TotalNrCallsites),
+                         {Name, CFGHash, Builder.getInt32(TotalNumCallsites),
                           Builder.getInt32(CallsiteIndex++),
                           CB->getCalledOperand()});
     });
@@ -974,10 +985,10 @@ void FunctionInstrumenter::instrument() {
     IRBuilder<> Builder(&EntryBB, EntryBB.getFirstInsertionPt());
     // llvm.instrprof.timestamp(i8* <name>, i64 <hash>, i32 <num-counters>,
     //                          i32 <index>)
-    Builder.CreateCall(
-        Intrinsic::getDeclaration(&M, Intrinsic::instrprof_timestamp),
-        {NormalizedNamePtr, CFGHash, Builder.getInt32(NumCounters),
-         Builder.getInt32(I)});
+    Builder.CreateIntrinsic(Intrinsic::instrprof_timestamp, {},
+                            {NormalizedNamePtr, CFGHash,
+                             Builder.getInt32(NumCounters),
+                             Builder.getInt32(I)});
     I += PGOBlockCoverage ? 8 : 1;
   }
 
@@ -987,12 +998,12 @@ void FunctionInstrumenter::instrument() {
            "Cannot get the Instrumentation point");
     // llvm.instrprof.increment(i8* <name>, i64 <hash>, i32 <num-counters>,
     //                          i32 <index>)
-    Builder.CreateCall(
-        Intrinsic::getDeclaration(&M, PGOBlockCoverage
-                                          ? Intrinsic::instrprof_cover
-                                          : Intrinsic::instrprof_increment),
-        {NormalizedNamePtr, CFGHash, Builder.getInt32(NumCounters),
-         Builder.getInt32(I++)});
+    Builder.CreateIntrinsic(PGOBlockCoverage ? Intrinsic::instrprof_cover
+                                             : Intrinsic::instrprof_increment,
+                            {},
+                            {NormalizedNamePtr, CFGHash,
+                             Builder.getInt32(NumCounters),
+                             Builder.getInt32(I++)});
   }
 
   // Now instrument select instructions:
@@ -1041,7 +1052,8 @@ void FunctionInstrumenter::instrument() {
       SmallVector<OperandBundleDef, 1> OpBundles;
       populateEHOperandBundle(Cand, BlockColors, OpBundles);
       Builder.CreateCall(
-          Intrinsic::getDeclaration(&M, Intrinsic::instrprof_value_profile),
+          Intrinsic::getOrInsertDeclaration(&M,
+                                            Intrinsic::instrprof_value_profile),
           {NormalizedNamePtr, Builder.getInt64(FuncInfo.FunctionHash),
            ToProfile, Builder.getInt32(Kind), Builder.getInt32(SiteIndex++)},
           OpBundles);
@@ -1617,6 +1629,10 @@ void PGOUseFunc::populateCounters() {
     assert(BI->Count && "BB count is not valid");
   }
 #endif
+  // Now annotate select instructions.  This may fixup impossible block counts.
+  FuncInfo.SIVisitor.annotateSelects(this, &CountPosition);
+  assert(CountPosition == ProfileCountSize);
+
   uint64_t FuncEntryCount = *getBBInfo(&*F.begin()).Count;
   uint64_t FuncMaxCount = FuncEntryCount;
   for (auto &BB : F) {
@@ -1631,10 +1647,6 @@ void PGOUseFunc::populateCounters() {
     FuncEntryCount = 1;
   F.setEntryCount(ProfileCount(FuncEntryCount, Function::PCT_Real));
   markFunctionAttributes(FuncEntryCount, FuncMaxCount);
-
-  // Now annotate select instructions
-  FuncInfo.SIVisitor.annotateSelects(this, &CountPosition);
-  assert(CountPosition == ProfileCountSize);
 
   LLVM_DEBUG(FuncInfo.dumpInfo("after reading profile."));
 }
@@ -1728,10 +1740,10 @@ void SelectInstVisitor::instrumentOneSelectInst(SelectInst &SI) {
   auto *NormalizedFuncNameVarPtr =
       ConstantExpr::getPointerBitCastOrAddrSpaceCast(
           FuncNameVar, PointerType::get(M->getContext(), 0));
-  Builder.CreateCall(
-      Intrinsic::getDeclaration(M, Intrinsic::instrprof_increment_step),
-      {NormalizedFuncNameVarPtr, Builder.getInt64(FuncHash),
-       Builder.getInt32(TotalNumCtrs), Builder.getInt32(*CurCtrIdx), Step});
+  Builder.CreateIntrinsic(Intrinsic::instrprof_increment_step, {},
+                          {NormalizedFuncNameVarPtr, Builder.getInt64(FuncHash),
+                           Builder.getInt32(TotalNumCtrs),
+                           Builder.getInt32(*CurCtrIdx), Step});
   ++(*CurCtrIdx);
 }
 
@@ -1744,8 +1756,13 @@ void SelectInstVisitor::annotateOneSelectInst(SelectInst &SI) {
   ++(*CurCtrIdx);
   uint64_t TotalCount = 0;
   auto BI = UseFunc->findBBInfo(SI.getParent());
-  if (BI != nullptr)
+  if (BI != nullptr) {
     TotalCount = *BI->Count;
+
+    // Fix the block count if it is impossible.
+    if (TotalCount < SCounts[0])
+      BI->Count = SCounts[0];
+  }
   // False Count
   SCounts[1] = (TotalCount > SCounts[0] ? TotalCount - SCounts[0] : 0);
   uint64_t MaxCount = std::max(SCounts[0], SCounts[1]);
@@ -1894,6 +1911,11 @@ static bool skipPGOGen(const Function &F) {
     return true;
   if (F.getInstructionCount() < PGOFunctionSizeThreshold)
     return true;
+  if (PGOInstrumentColdFunctionOnly) {
+    if (auto EntryCount = F.getEntryCount())
+      return EntryCount->getCount() > PGOColdInstrumentEntryThreshold;
+    return !PGOTreatUnknownAsCold;
+  }
   return false;
 }
 
@@ -2366,7 +2388,6 @@ void llvm::setProfMetadata(Module *M, Instruction *TI,
     raw_string_ostream OS(BranchProbStr);
     OS << BP;
     OS << " (total count : " << TotalCount << ")";
-    OS.flush();
     Function *F = TI->getParent()->getParent();
     OptimizationRemarkEmitter ORE(F);
     ORE.emit([&]() {

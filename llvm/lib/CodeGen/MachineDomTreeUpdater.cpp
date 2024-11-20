@@ -12,13 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineDomTreeUpdater.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/GenericDomTreeUpdaterImpl.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
-#include "llvm/Support/GenericDomTree.h"
-#include <algorithm>
-#include <functional>
-#include <utility>
 
 namespace llvm {
 
