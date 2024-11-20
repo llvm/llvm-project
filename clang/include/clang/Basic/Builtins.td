@@ -1498,7 +1498,7 @@ def ReduceOr : Builtin {
 
 def ReduceAnd : Builtin {
   let Spellings = ["__builtin_reduce_and"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
