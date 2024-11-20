@@ -132,13 +132,13 @@ if config.default_sysroot:
 tools = [
     ToolSubst(
         "%flang",
-        command=FindTool("flang-new"),
+        command=FindTool("flang"),
         extra_args=isysroot_flag,
         unresolved="fatal",
     ),
     ToolSubst(
         "%flang_fc1",
-        command=FindTool("flang-new"),
+        command=FindTool("flang"),
         extra_args=["-fc1"],
         unresolved="fatal",
     ),
@@ -216,8 +216,9 @@ if config.have_openmp_rtl:
 # Add features and substitutions to test F128 math support.
 # %f128-lib substitution may be used to generate check prefixes
 # for LIT tests checking for F128 library support.
-if config.flang_runtime_f128_math_lib:
+if config.flang_runtime_f128_math_lib or config.have_ldbl_mant_dig_113:
     config.available_features.add("flang-supports-f128-math")
+if config.flang_runtime_f128_math_lib:
     config.available_features.add(
         "flang-f128-math-lib-" + config.flang_runtime_f128_math_lib
     )

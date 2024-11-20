@@ -63,7 +63,7 @@ define amdgpu_vs void @promote_store_aggr() #0 {
 ; CHECK-NEXT:    [[FOO6_FCA_1_INSERT:%.*]] = insertvalue [2 x float] [[FOO6_FCA_0_INSERT]], float 2.000000e+00, 1
 ; CHECK-NEXT:    [[FOO7:%.*]] = getelementptr [[BLOCK2:%.*]], ptr addrspace(1) @block2, i32 0, i32 1
 ; CHECK-NEXT:    store [2 x float] [[FOO6_FCA_1_INSERT]], ptr addrspace(1) [[FOO7]], align 4
-; CHECK-NEXT:    store <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, ptr addrspace(1) @pv, align 16
+; CHECK-NEXT:    store <4 x float> splat (float 1.000000e+00), ptr addrspace(1) @pv, align 16
 ; CHECK-NEXT:    ret void
 ;
   %i = alloca i32, addrspace(5)

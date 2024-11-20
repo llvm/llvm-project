@@ -4,14 +4,14 @@
 module m
 contains
 ! CHECK-LABEL:   func.func @handler(
-! CHECK-SAME:                       %[[VAL_0:.*]]: i32 {fir.bindc_name = "signum"}) attributes {fir.bindc_name = "handler"} {
+! CHECK-SAME:                       %[[VAL_0:.*]]: i32
   subroutine handler(signum) bind(C)
     use iso_c_binding, only: c_int
     integer(c_int), value :: signum
   end subroutine
 
 ! CHECK-LABEL:   func.func @_QMmPsetup_signals(
-! CHECK-SAME:                                  %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "optional_status", fir.optional}) {
+! CHECK-SAME:                                  %[[VAL_0:.*]]: !fir.ref<i32>
   subroutine setup_signals(optional_status)
     ! not portable accross systems
     integer, parameter :: SIGFPE = 8

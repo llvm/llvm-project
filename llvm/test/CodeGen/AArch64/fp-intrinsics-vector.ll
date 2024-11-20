@@ -279,7 +279,7 @@ define <4 x i1> @fcmps_v4f32(<4 x float> %x, <4 x float> %y) #0 {
 ; CHECK-NEXT:    xtn v0.4h, v4.4s
 ; CHECK-NEXT:    ret
 entry:
-  %val = call <4 x i1> @llvm.experimental.constrained.fcmps.v4f64(<4 x float> %x, <4 x float> %y, metadata !"oeq", metadata !"fpexcept.strict")
+  %val = call <4 x i1> @llvm.experimental.constrained.fcmps.v4f32(<4 x float> %x, <4 x float> %y, metadata !"oeq", metadata !"fpexcept.strict")
   ret <4 x i1> %val
 }
 
@@ -825,8 +825,8 @@ declare <4 x float> @llvm.experimental.constrained.floor.v4f32(<4 x float>, meta
 declare <4 x float> @llvm.experimental.constrained.round.v4f32(<4 x float>, metadata)
 declare <4 x float> @llvm.experimental.constrained.roundeven.v4f32(<4 x float>, metadata)
 declare <4 x float> @llvm.experimental.constrained.trunc.v4f32(<4 x float>, metadata)
-declare <4 x i1> @llvm.experimental.constrained.fcmp.v4f64(<4 x float>, <4 x float>, metadata, metadata)
-declare <4 x i1> @llvm.experimental.constrained.fcmps.v4f64(<4 x float>, <4 x float>, metadata, metadata)
+declare <4 x i1> @llvm.experimental.constrained.fcmp.v4f32(<4 x float>, <4 x float>, metadata, metadata)
+declare <4 x i1> @llvm.experimental.constrained.fcmps.v4f32(<4 x float>, <4 x float>, metadata, metadata)
 
 declare <2 x double> @llvm.experimental.constrained.fadd.v2f64(<2 x double>, <2 x double>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.fsub.v2f64(<2 x double>, <2 x double>, metadata, metadata)

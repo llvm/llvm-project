@@ -22,19 +22,37 @@ def MapInfoFinalizationPass
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
+def MapsForPrivatizedSymbolsPass
+    : Pass<"omp-maps-for-privatized-symbols", "mlir::func::FuncOp"> {
+  let summary = "Creates MapInfoOp instances for privatized symbols when needed";
+  let description = [{
+    Adds omp.map.info operations for privatized symbols on omp.target ops
+    In certain situations, such as when an allocatable is privatized, its
+    descriptor is needed in the alloc region of the privatizer. This results
+    in the use of the descriptor inside the target region. As such, the
+    descriptor then needs to be mapped. This pass adds such MapInfoOp operations.
+  }];
+  let dependentDialects = ["mlir::omp::OpenMPDialect"];
+}
+
 def MarkDeclareTargetPass
     : Pass<"omp-mark-declare-target", "mlir::ModuleOp"> {
   let summary = "Marks all functions called by an OpenMP declare target function as declare target";
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
-def FunctionFiltering : Pass<"omp-function-filtering"> {
+def FunctionFilteringPass : Pass<"omp-function-filtering"> {
   let summary = "Filters out functions intended for the host when compiling "
                 "for the target device.";
   let dependentDialects = [
     "mlir::func::FuncDialect",
     "fir::FIROpsDialect"
   ];
+}
+
+// Needs to be scheduled on Module as we create functions in it
+def LowerWorkshare : Pass<"lower-workshare", "::mlir::ModuleOp"> {
+  let summary = "Lower workshare construct";
 }
 
 #endif //FORTRAN_OPTIMIZER_OPENMP_PASSES

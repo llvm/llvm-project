@@ -45,6 +45,7 @@ public:
   const char *GetOutput();
 
   const char *GetError();
+  SBStructuredData GetErrorData();
 
 #ifndef SWIG
   LLDB_DEPRECATED_FIXME("Use PutOutput(SBFile) or PutOutput(FileSP)",

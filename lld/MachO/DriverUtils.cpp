@@ -69,28 +69,31 @@ MachOOptTable::MachOOptTable() : GenericOptTable(optInfo) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.
-static void handleColorDiagnostics(InputArgList &args) {
+static void handleColorDiagnostics(CommonLinkerContext &ctx,
+                                   InputArgList &args) {
   const Arg *arg =
       args.getLastArg(OPT_color_diagnostics, OPT_color_diagnostics_eq,
                       OPT_no_color_diagnostics);
   if (!arg)
     return;
+  auto &errs = ctx.e.errs();
   if (arg->getOption().getID() == OPT_color_diagnostics) {
-    lld::errs().enable_colors(true);
+    errs.enable_colors(true);
   } else if (arg->getOption().getID() == OPT_no_color_diagnostics) {
-    lld::errs().enable_colors(false);
+    errs.enable_colors(false);
   } else {
     StringRef s = arg->getValue();
     if (s == "always")
-      lld::errs().enable_colors(true);
+      errs.enable_colors(true);
     else if (s == "never")
-      lld::errs().enable_colors(false);
+      errs.enable_colors(false);
     else if (s != "auto")
       error("unknown option: --color-diagnostics=" + s);
   }
 }
 
-InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
+InputArgList MachOOptTable::parse(CommonLinkerContext &ctx,
+                                  ArrayRef<const char *> argv) {
   // Make InputArgList from string vectors.
   unsigned missingIndex;
   unsigned missingCount;
@@ -109,7 +112,7 @@ InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
   if (missingCount)
     error(Twine(args.getArgString(missingIndex)) + ": missing argument");
 
-  handleColorDiagnostics(args);
+  handleColorDiagnostics(ctx, args);
 
   for (const Arg *arg : args.filtered(OPT_UNKNOWN)) {
     std::string nearest;
@@ -122,11 +125,12 @@ InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
   return args;
 }
 
-void MachOOptTable::printHelp(const char *argv0, bool showHidden) const {
-  OptTable::printHelp(lld::outs(),
-                      (std::string(argv0) + " [options] file...").c_str(),
+void MachOOptTable::printHelp(CommonLinkerContext &ctx, const char *argv0,
+                              bool showHidden) const {
+  auto &outs = ctx.e.outs();
+  OptTable::printHelp(outs, (std::string(argv0) + " [options] file...").c_str(),
                       "LLVM Linker", showHidden);
-  lld::outs() << "\n";
+  outs << '\n';
 }
 
 static std::string rewritePath(StringRef s) {

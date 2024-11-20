@@ -88,7 +88,7 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 
 #include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_THREADS)
+#if _LIBCPP_HAS_THREADS
 
 #  include <__thread/formatter.h>
 #  include <__thread/jthread.h>
@@ -106,7 +106,7 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 #    pragma GCC system_header
 #  endif
 
-#endif // !defined(_LIBCPP_HAS_NO_THREADS)
+#endif // _LIBCPP_HAS_THREADS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
 #  include <cstddef>

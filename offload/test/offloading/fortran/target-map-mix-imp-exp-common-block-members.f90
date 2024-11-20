@@ -1,14 +1,12 @@
-! Offloading test checking interaction of
-! mapping all the members of a common block
-! with a mix of explicit and implicit
-! mapping to a target region
+! Offloading test checking interaction of mapping all the members of a common
+! block with a mix of explicit and implicit mapping to a target region
 ! REQUIRES: flang, amdgcn-amd-amdhsa
 ! UNSUPPORTED: nvptx64-nvidia-cuda
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 ! UNSUPPORTED: aarch64-unknown-linux-gnu
 ! UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
-! UNSUPPORTED: x86_64-pc-linux-gnu
-! UNSUPPORTED: x86_64-pc-linux-gnu-LTO
+! UNSUPPORTED: x86_64-unknown-linux-gnu
+! UNSUPPORTED: x86_64-unknown-linux-gnu-LTO
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main

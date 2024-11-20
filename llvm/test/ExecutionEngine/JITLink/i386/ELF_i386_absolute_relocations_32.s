@@ -7,17 +7,25 @@
 # Test ELF 32 bit absolute relocations
 
         .text
-        .globl  main     
+        .globl  main
         .p2align        4, 0x90
         .type   main,@function
-main:                                   
+main:
         retl
         .size   main, .-main
 
 # jitlink-check: decode_operand(foo, 0) = external_data
-        .globl  foo     
+        .globl  foo
         .p2align        4, 0x90
         .type   foo,@function
 foo:
         movl    external_data, %eax
         .size   foo, .-foo
+
+# jitlink-check: decode_operand(bar, 0) = external_data + 4000
+        .globl  bar
+        .p2align        4, 0x90
+        .type   bar,@function
+bar:
+        movl    external_data + 4000, %eax
+        .size   bar, .-bar

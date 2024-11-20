@@ -26,6 +26,7 @@ class Value;
 class Function;
 class CallGraph;
 class Module;
+class TargetExtType;
 
 namespace AMDGPU {
 
@@ -34,12 +35,16 @@ using VariableFunctionMap = DenseMap<GlobalVariable *, DenseSet<Function *>>;
 
 Align getAlign(const DataLayout &DL, const GlobalVariable *GV);
 
+// If GV is a named-barrier return its type. Otherwise return nullptr.
+TargetExtType *isNamedBarrier(const GlobalVariable &GV);
+
 bool isDynamicLDS(const GlobalVariable &GV);
 bool isLDSVariableToLower(const GlobalVariable &GV);
 
 struct LDSUsesInfoTy {
   FunctionVariableMap direct_access;
   FunctionVariableMap indirect_access;
+  bool HasSpecialGVs = false;
 };
 
 bool eliminateConstantExprUsesOfLDSFromAllInstructions(Module &M);

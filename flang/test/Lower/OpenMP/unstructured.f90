@@ -79,7 +79,6 @@ end
 ! CHECK:         @_FortranAioOutputInteger32(%{{.*}}, %[[LOAD_1]])
 ! CHECK:         omp.yield
 ! CHECK:       }
-! CHECK:       omp.terminator
 ! CHECK:     }
 
 ! CHECK:     %[[ALLOCA_1:.*]] = fir.alloca i32 {{{.*}}, pinned, {{.*}}}
@@ -101,7 +100,6 @@ end
 ! CHECK:       ^bb6:  // 2 preds: ^bb2, ^bb4
 ! CHECK:         omp.yield
 ! CHECK:       }
-! CHECK:       omp.terminator
 ! CHECK:     }
 ! CHECK:     br ^bb1
 ! CHECK:   ^bb4:  // pred: ^bb1
@@ -141,11 +139,9 @@ end
 ! CHECK:              @_FortranAioBeginExternalListOutput
 ! CHECK:              %[[LOAD:.*]] = fir.load %[[OMP_LOOP_J_DECL]]#0 : !fir.ref<i32>
 ! CHECK:              @_FortranAioOutputInteger32(%{{.*}}, %[[LOAD]])
-! CHECK:             } else {
 ! CHECK:             }
 ! CHECK-NEXT:        omp.yield
 ! CHECK-NEXT:      }
-! CHECK-NEXT:      omp.terminator
 ! CHECK-NEXT:    }
 ! CHECK:         omp.terminator
 ! CHECK-NEXT:  }
@@ -180,7 +176,6 @@ end
 ! CHECK:      ^[[BB6]]:
 ! CHECK:        omp.yield
 ! CHECK:      }
-! CHECK:      omp.terminator
 ! CHECK:    }
 ! CHECK:    omp.terminator
 ! CHECK:  }
@@ -223,7 +218,6 @@ end
 ! CHECK:      ^[[BB6]]:
 ! CHECK:        omp.yield
 ! CHECK:      }
-! CHECK:      omp.terminator
 ! CHECK:    }
 ! CHECK:    br ^[[BB1_OUTER]]
 ! CHECK:  ^[[BB3_OUTER]]:
@@ -270,7 +264,6 @@ end
 ! CHECK-NEXT:       ^[[BB6]]:
 ! CHECK:         omp.yield
 ! CHECK:       }
-! CHECK:       omp.terminator
 ! CHECK:     }
 ! CHECK:     omp.terminator
 ! CHECK:   }
@@ -311,7 +304,6 @@ end
 ! CHECK-NEXT:      ^[[BB6]]:
 ! CHECK:        omp.yield
 ! CHECK:      }
-! CHECK:      omp.terminator
 ! CHECK:    }
 ! CHECK:    omp.terminator
 ! CHECK:  }
@@ -331,7 +323,7 @@ end
 
 ! CHECK-LABEL: func @_QPss9() {
 ! CHECK:    omp.parallel  {
-! CHECK-NEXT: omp.parallel private(@{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}, @{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
+! CHECK-NEXT: omp.parallel private(@{{.*}} %{{.*}}#0 -> %{{.*}}, @{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
 ! CHECK:      br ^[[BB1:.*]]
 ! CHECK:         ^[[BB1]]:
 ! CHECK:      cond_br %{{.*}}, ^[[BB2:.*]], ^[[BB5:.*]]

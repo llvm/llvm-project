@@ -10,9 +10,9 @@
 #define _LIBCPP___MEMORY_RESOURCE_MONOTONIC_BUFFER_RESOURCE_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__memory/addressof.h>
 #include <__memory_resource/memory_resource.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

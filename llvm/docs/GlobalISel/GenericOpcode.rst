@@ -504,6 +504,11 @@ G_FPTOSI, G_FPTOUI, G_SITOFP, G_UITOFP
 
 Convert between integer and floating point.
 
+G_FPTOSI_SAT, G_FPTOUI_SAT
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Saturating convert between integer and floating point.
+
 G_FABS
 ^^^^^^
 
@@ -628,8 +633,8 @@ G_FCEIL, G_FSQRT, G_FFLOOR, G_FRINT, G_FNEARBYINT
 
 These correspond to the standard C functions of the same name.
 
-G_FCOS, G_FSIN, G_FTAN, G_FACOS, G_FASIN, G_FATAN, G_FCOSH, G_FSINH, G_FTANH
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+G_FCOS, G_FSIN, G_FSINCOS, G_FTAN, G_FACOS, G_FASIN, G_FATAN, G_FATAN2, G_FCOSH, G_FSINH, G_FTANH
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 These correspond to the standard C trigonometry functions of the same name.
 
@@ -701,6 +706,8 @@ vector must be valid indices of that vector. If this condition cannot be
 determined statically but is false at runtime, then the result vector is
 undefined.
 
+Mixing scalable vectors and fixed vectors are not allowed.
+
 .. code-block:: none
 
   %3:_(<vscale x 4 x i64>) = G_EXTRACT_SUBVECTOR %2:_(<vscale x 8 x i64>), 2
@@ -745,6 +752,24 @@ Create a vector where all elements are the scalar from the source operand.
 The type of the operand must be equal to or larger than the vector element
 type. If the operand is larger than the vector element type, the scalar is
 implicitly truncated to the vector element type.
+
+G_STEP_VECTOR
+^^^^^^^^^^^^^
+
+Create a scalable vector where all lanes are linear sequences starting at 0
+with a given unsigned step.
+
+The type of the operand must be equal to the vector element type. Arithmetic
+is performed modulo the bitwidth of the element. The step must be > 0.
+Otherwise the vector is zero.
+
+.. code-block::
+
+  %0:_(<vscale x 2 x s64>) = G_STEP_VECTOR i64 4
+
+  %1:_(<vscale x s32>) = G_STEP_VECTOR i32 4
+
+  0, 1*Step, 2*Step, 3*Step, 4*Step, ...
 
 G_VECTOR_COMPRESS
 ^^^^^^^^^^^^^^^^^
@@ -863,7 +888,9 @@ operands.
                                G_ATOMICRMW_MIN, G_ATOMICRMW_UMAX,
                                G_ATOMICRMW_UMIN, G_ATOMICRMW_FADD,
                                G_ATOMICRMW_FSUB, G_ATOMICRMW_FMAX,
-                               G_ATOMICRMW_FMIN
+                               G_ATOMICRMW_FMIN, G_ATOMICRMW_UINC_WRAP,
+			       G_ATOMICRMW_UDEC_WRAP, G_ATOMICRMW_USUB_COND,
+			       G_ATOMICRMW_USUB_SAT
 
 Generic atomicrmw. Expects a MachineMemOperand in addition to explicit
 operands.

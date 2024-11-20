@@ -47,6 +47,7 @@ function(add_fp_unittest name)
 endfunction(add_fp_unittest)
 
 add_subdirectory(__support)
+add_subdirectory(complex)
 add_subdirectory(ctype)
 add_subdirectory(errno)
 add_subdirectory(fenv)

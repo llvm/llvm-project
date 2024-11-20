@@ -916,8 +916,7 @@ bool ConstructDecompositionT<C, H>::applyClause(
            /*ReductionIdentifiers=*/std::get<ReductionIdentifiers>(clause.t),
            /*List=*/objects}});
 
-  ReductionModifier effective =
-      modifier.has_value() ? *modifier : ReductionModifier::Default;
+  ReductionModifier effective = modifier.value_or(ReductionModifier::Default);
   bool effectiveApplied = false;
   // Walk over the leaf constructs starting from the innermost, and apply
   // the clause as required by the spec.

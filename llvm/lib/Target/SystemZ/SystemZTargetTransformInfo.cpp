@@ -16,7 +16,6 @@
 #include "SystemZTargetTransformInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
-#include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -53,17 +52,83 @@ static bool isUsedAsMemCpySource(const Value *V, bool &OtherUse) {
   return UsedAsMemCpySource;
 }
 
+static void countNumMemAccesses(const Value *Ptr, unsigned &NumStores,
+                                unsigned &NumLoads, const Function *F) {
+  if (!isa<PointerType>(Ptr->getType()))
+    return;
+  for (const User *U : Ptr->users())
+    if (const Instruction *User = dyn_cast<Instruction>(U)) {
+      if (User->getParent()->getParent() == F) {
+        if (const auto *SI = dyn_cast<StoreInst>(User)) {
+          if (SI->getPointerOperand() == Ptr && !SI->isVolatile())
+            NumStores++;
+        } else if (const auto *LI = dyn_cast<LoadInst>(User)) {
+          if (LI->getPointerOperand() == Ptr && !LI->isVolatile())
+            NumLoads++;
+        } else if (const auto *GEP = dyn_cast<GetElementPtrInst>(User)) {
+          if (GEP->getPointerOperand() == Ptr)
+            countNumMemAccesses(GEP, NumStores, NumLoads, F);
+        }
+      }
+    }
+}
+
 unsigned SystemZTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
   unsigned Bonus = 0;
+  const Function *Caller = CB->getParent()->getParent();
+  const Function *Callee = CB->getCalledFunction();
+  if (!Callee)
+    return 0;
+  const Module *M = Caller->getParent();
 
   // Increase the threshold if an incoming argument is used only as a memcpy
   // source.
-  if (Function *Callee = CB->getCalledFunction())
-    for (Argument &Arg : Callee->args()) {
-      bool OtherUse = false;
-      if (isUsedAsMemCpySource(&Arg, OtherUse) && !OtherUse)
-        Bonus += 150;
+  for (const Argument &Arg : Callee->args()) {
+    bool OtherUse = false;
+    if (isUsedAsMemCpySource(&Arg, OtherUse) && !OtherUse) {
+      Bonus = 1000;
+      break;
     }
+  }
+
+  // Give bonus for globals used much in both caller and callee.
+  std::set<const GlobalVariable *> CalleeGlobals;
+  std::set<const GlobalVariable *> CallerGlobals;
+  for (const GlobalVariable &Global : M->globals())
+    for (const User *U : Global.users())
+      if (const Instruction *User = dyn_cast<Instruction>(U)) {
+        if (User->getParent()->getParent() == Callee)
+          CalleeGlobals.insert(&Global);
+        if (User->getParent()->getParent() == Caller)
+          CallerGlobals.insert(&Global);
+      }
+  for (auto *GV : CalleeGlobals)
+    if (CallerGlobals.count(GV)) {
+      unsigned CalleeStores = 0, CalleeLoads = 0;
+      unsigned CallerStores = 0, CallerLoads = 0;
+      countNumMemAccesses(GV, CalleeStores, CalleeLoads, Callee);
+      countNumMemAccesses(GV, CallerStores, CallerLoads, Caller);
+      if ((CalleeStores + CalleeLoads) > 10 &&
+          (CallerStores + CallerLoads) > 10) {
+        Bonus = 1000;
+        break;
+      }
+    }
+
+  // Give bonus when Callee accesses an Alloca of Caller heavily.
+  unsigned NumStores = 0;
+  unsigned NumLoads = 0;
+  for (unsigned OpIdx = 0; OpIdx != Callee->arg_size(); ++OpIdx) {
+    Value *CallerArg = CB->getArgOperand(OpIdx);
+    Argument *CalleeArg = Callee->getArg(OpIdx);
+    if (isa<AllocaInst>(CallerArg))
+      countNumMemAccesses(CalleeArg, NumStores, NumLoads, Callee);
+  }
+  if (NumLoads > 10)
+    Bonus += NumLoads * 50;
+  if (NumStores > 10)
+    Bonus += NumStores * 50;
+  Bonus = std::min(Bonus, unsigned(1000));
 
   LLVM_DEBUG(if (Bonus)
                dbgs() << "++ SZTTI Adding inlining bonus: " << Bonus << "\n";);
@@ -959,13 +1024,13 @@ static unsigned getOperandsExtensionCost(const Instruction *I) {
   return ExtCost;
 }
 
-InstructionCost SystemZTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
-                                                   Type *CondTy,
-                                                   CmpInst::Predicate VecPred,
-                                                   TTI::TargetCostKind CostKind,
-                                                   const Instruction *I) {
+InstructionCost SystemZTTIImpl::getCmpSelInstrCost(
+    unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+    TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
+    TTI::OperandValueInfo Op2Info, const Instruction *I) {
   if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind);
+    return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                     Op1Info, Op2Info);
 
   if (!ValTy->isVectorTy()) {
     switch (Opcode) {
@@ -1041,7 +1106,8 @@ InstructionCost SystemZTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     }
   }
 
-  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind);
+  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                   Op1Info, Op2Info);
 }
 
 InstructionCost SystemZTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
