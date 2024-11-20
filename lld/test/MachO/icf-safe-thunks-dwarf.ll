@@ -20,6 +20,59 @@
 ; VERIFY-STABS:  N_FUN{{.*}}_func_A
 ; VERIFY-STABS:  N_FUN{{.*}}_take_func_addr
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;; Check safe_thunks ICF + keeping STABS entries ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Check scenario with where we do safe_thunks ICF and also generate STABS entries
+; RUN: %lld -arch arm64 -lSystem --icf=safe_thunks --keep-icf-stabs -dylib -o %t/a_thunks.dylib %t/a.o
+; RUN: dsymutil -s %t/a_thunks.dylib > %t/a_thunks.txt
+
+
+; RUN: dsymutil --flat --verify-dwarf=none %t/a_thunks.dylib -o %t/a_thunks.dSYM
+; RUN: dsymutil -s %t/a_thunks.dSYM >> %t/a_thunks.txt
+; RUN: llvm-dwarfdump -a %t/a_thunks.dSYM >> %t/a_thunks.txt
+
+; RUN: cat %t/a_thunks.txt | FileCheck %s --check-prefix=VERIFY-THUNK
+
+# VERIFY-THUNK-LABEL: Symbol table for: '{{.*}}/a_thunks.dylib'
+# Capture the 'n_value's for N_FUN entries of _func_A, _func_B, and _func_C
+# VERIFY-THUNK:  [[MERGED_FUN_ADDR:[0-9a-f]+]] '_func_A'
+# VERIFY-THUNK:  [[MERGED_FUN_ADDR]] '_func_B'
+# VERIFY-THUNK:  [[MERGED_FUN_ADDR]] '_func_C'
+
+# Capture the 'n_value's for SECT EXT entries in the first part
+# VERIFY-THUNK: SECT EXT{{.*}} [[SECT_EXT_A_NVALUE:[0-9a-f]+]] '_func_A'
+# VERIFY-THUNK: SECT EXT{{.*}} [[SECT_EXT_B_NVALUE:[0-9a-f]+]] '_func_B'
+# VERIFY-THUNK: SECT EXT{{.*}} [[SECT_EXT_C_NVALUE:[0-9a-f]+]] '_func_C'
+
+# VERIFY-THUNK: ----------------------------------------------------------------------
+# VERIFY-THUNK-LABEL: Symbol table for: '{{.*}}/a_thunks.dSYM'
+
+# Verify that the SECT EXT 'n_value's in the second part match the first part
+# VERIFY-THUNK: SECT EXT{{.*}} [[SECT_EXT_A_NVALUE]] '_func_A'
+# VERIFY-THUNK: SECT EXT{{.*}} [[SECT_EXT_B_NVALUE]] '_func_B'
+# VERIFY-THUNK: SECT EXT{{.*}} [[SECT_EXT_C_NVALUE]] '_func_C'
+
+# Ensure that N_FUN 'n_value's match the DW_TAG_subprogram's DW_AT_low_pc
+# and that the DW_AT_name is at a specific relative position
+
+# VERIFY-THUNK-LABEL: .debug_info contents:
+# VERIFY-THUNK: Compile Unit: length = {{.*}}
+
+# Match the subprogram for func_A
+# VERIFY-THUNK: :   DW_TAG_subprogram
+# VERIFY-THUNK-NEXT: {{ +}}DW_AT_low_pc	(0x[[MERGED_FUN_ADDR]])
+# VERIFY-THUNK-NEXT-NEXT-NEXT-NEXT-NEXT: {{ +}}DW_AT_name	("func_A")
+
+# Match the subprogram for func_B
+# VERIFY-THUNK: :   DW_TAG_subprogram
+# VERIFY-THUNK-NEXT: {{ +}}DW_AT_low_pc	(0x[[MERGED_FUN_ADDR]])
+# VERIFY-THUNK-NEXT-NEXT-NEXT-NEXT-NEXT: {{ +}}DW_AT_name	("func_B")
+
+# Match the subprogram for func_C
+# VERIFY-THUNK: :   DW_TAG_subprogram
+# VERIFY-THUNK-NEXT: {{ +}}DW_AT_low_pc	(0x[[MERGED_FUN_ADDR]])
+# VERIFY-THUNK-NEXT-NEXT-NEXT-NEXT-NEXT: {{ +}}DW_AT_name	("func_C")
+
 ;--- a.cpp
 #define ATTR __attribute__((noinline)) extern "C"
 typedef unsigned long long ULL;
