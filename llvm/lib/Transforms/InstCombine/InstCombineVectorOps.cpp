@@ -1160,7 +1160,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     // Avoid constructing constant aggregate because constant value may expose
     // more optimizations.
     bool ConstAgg = true;
-    for (auto [Idx, Val] : enumerate(AggElts)) {
+    for (auto Val : AggElts) {
       Value *Elt = (*Val)->DoPHITranslation(UseBB, It.first);
       if (!isa<Constant>(Elt)) {
         ConstAgg = false;
@@ -1178,7 +1178,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
       continue;
 
     BasicBlock *Pred = It.first;
-    Builder.SetInsertPoint(Pred, Pred->getTerminator()->getIterator());
+    Builder.SetInsertPoint(Pred->getTerminator());
     Value *V = PoisonValue::get(AggTy);
     for (auto [Idx, Val] : enumerate(AggElts)) {
       Value *Elt = (*Val)->DoPHITranslation(UseBB, Pred);
