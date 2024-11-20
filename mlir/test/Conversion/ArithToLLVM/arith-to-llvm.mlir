@@ -540,6 +540,45 @@ func.func @select(%arg0 : i1, %arg1 : i32, %arg2 : i32) -> i32 {
 
 // -----
 
+// CHECK-LABEL: @ceildivsi
+func.func @ceildivsi(%arg0 : i64) -> i64 {
+  // CHECK: llvm.icmp "sgt" %arg0, %1 : i64
+  // CHECK: llvm.select %3, %2, %0 : i1, i64
+  // CHECK: llvm.add %4, %arg0 : i64
+  // CHECK: llvm.sdiv %5, %arg0 : i64
+  // CHECK: llvm.add %6, %0 : i64
+  // CHECK: llvm.sub %1, %arg0 : i64
+  // CHECK: llvm.sdiv %8, %arg0 : i64
+  %0 = arith.ceildivsi %arg0, %arg0 : i64
+  return %0: i64
+}
+
+// CHECK-LABEL: @ceildivui
+func.func @ceildivui(%arg0 : i32) -> i32 {
+  // CHECK: llvm.icmp "eq" %arg0, %0 : i32
+  // CHECK: llvm.sub %arg0, %2 : i32
+  // CHECK: llvm.udiv %3, %arg0 : i32
+  // CHECK: llvm.add %4, %2 : i32
+  // CHECK: llvm.select %1, %0, %5 : i1, i32
+  %0 = arith.ceildivui %arg0, %arg0 : i32
+  return %0: i32
+}
+
+// -----
+
+// CHECK-LABEL: @floordivsi
+func.func @floordivsi(%arg0 : i32, %arg1 : i32) -> i32 {
+  // CHECK: %0 = llvm.sdiv %arg0, %arg1 : i32
+  // CHECK: %1 = llvm.mul %0, %arg1 : i32
+  // CHECK: %2 = llvm.icmp "ne" %arg0, %1 : i32
+  // CHECK: %3 = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: %4 = llvm.icmp "slt" %arg0, %3 : i32
+  %0 = arith.floordivsi %arg0, %arg1 : i32
+  return %0 : i32
+}
+
+// -----
+
 // CHECK-LABEL: @minmaxi
 func.func @minmaxi(%arg0 : i32, %arg1 : i32) -> i32 {
   // CHECK: = llvm.intr.smin(%arg0, %arg1) : (i32, i32) -> i32
@@ -564,25 +603,6 @@ func.func @minmaxf(%arg0 : f32, %arg1 : f32) -> f32 {
   // CHECK: = llvm.intr.maxnum(%arg0, %arg1) : (f32, f32) -> f32
   %3 = arith.maxnumf %arg0, %arg1 : f32
   return %0 : f32
-}
-
-// -----
-
-// CHECK-LABEL: @ceilops
-func.func @ceilops(%arg0 : index, %arg1 : i32) -> index {
-  // CHECK-NOT: = arith.
-  %0 = arith.ceildivsi %arg0, %arg0 : index
-  %1 = arith.ceildivui %arg1, %arg1 : i32
-  return %0 : index
-}
-
-// -----
-
-// CHECK-LABEL: @floordivsi
-func.func @floordivsi(%arg0 : i32, %arg1 : i32) -> i32 {
-  // CHECK-NOT: = arith.
-  %0 = arith.floordivsi %arg0, %arg1 : i32
-  return %0 : i32
 }
 
 // -----
