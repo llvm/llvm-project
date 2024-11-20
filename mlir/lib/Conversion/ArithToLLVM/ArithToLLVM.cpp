@@ -478,8 +478,8 @@ struct ArithToLLVMConversionPass
       options.overrideIndexBitwidth(indexBitwidth);
 
     LLVMTypeConverter converter(&getContext(), options);
-    mlir::arith::populateArithExpandOpsPatterns(patterns);
-    mlir::arith::populateArithToLLVMConversionPatterns(converter, patterns);
+    arith::populateArithExpandOpsPatterns(patterns);
+    arith::populateArithToLLVMConversionPatterns(converter, patterns);
 
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
@@ -505,7 +505,7 @@ struct ArithToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
   void populateConvertToLLVMConversionPatterns(
       ConversionTarget &target, LLVMTypeConverter &typeConverter,
       RewritePatternSet &patterns) const final {
-    mlir::arith::populateArithExpandOpsPatterns(patterns);
+    arith::populateArithExpandOpsPatterns(patterns);
     arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
   }
 };
