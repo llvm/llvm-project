@@ -241,41 +241,21 @@ print(
 def generate_default_conversion(src, dst, mode):
     close_conditional = conditional_guard(src, dst)
 
-    # scalar conversions
-    print(
-        """_CLC_DEF _CLC_OVERLOAD
-{DST} convert_{DST}{M}({SRC} x)
-{{
-  return ({DST})x;
+    for size in vector_sizes:
+        if not size:
+            print(
+                f"""_CLC_DEF _CLC_OVERLOAD {dst} convert_{dst}{mode}({src} x) {{
+  return ({dst})x;
 }}
-""".format(
-            SRC=src, DST=dst, M=mode
-        )
-    )
-
-    # vector conversions, done through decomposition to components
-    for size, half_size in half_sizes:
-        print(
-            """_CLC_DEF _CLC_OVERLOAD
-{DST}{N} convert_{DST}{N}{M}({SRC}{N} x)
-{{
-  return ({DST}{N})(convert_{DST}{H}(x.lo), convert_{DST}{H}(x.hi));
-}}
-""".format(
-                SRC=src, DST=dst, N=size, H=half_size, M=mode
+"""
             )
-        )
-
-    # 3-component vector conversions
-    print(
-        """_CLC_DEF _CLC_OVERLOAD
-{DST}3 convert_{DST}3{M}({SRC}3 x)
-{{
-  return ({DST}3)(convert_{DST}2(x.s01), convert_{DST}(x.s2));
-}}""".format(
-            SRC=src, DST=dst, M=mode
-        )
-    )
+        else:
+            print(
+                f"""_CLC_DEF _CLC_OVERLOAD {dst}{size} convert_{dst}{size}{mode}({src}{size} x) {{
+  return __builtin_convertvector(x, {dst}{size});
+}}
+"""
+            )
 
     if close_conditional:
         print("#endif")

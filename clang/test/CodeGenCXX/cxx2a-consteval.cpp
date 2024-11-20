@@ -6,6 +6,14 @@
 // RUN: %clang_cc1 -emit-llvm %s -Dconsteval="" -std=c++2a -triple x86_64-unknown-linux-gnu -o %t.ll
 // RUN: FileCheck -check-prefix=EXPR -input-file=%t.ll %s
 
+// RUN: %clang_cc1 -emit-llvm %s -std=c++2a -triple x86_64-unknown-linux-gnu -o %t.ll -fexperimental-new-constant-interpreter
+// RUN: FileCheck -check-prefix=EVAL -input-file=%t.ll %s
+// RUN: FileCheck -check-prefix=EVAL-STATIC -input-file=%t.ll %s
+// RUN: FileCheck -check-prefix=EVAL-FN -input-file=%t.ll %s
+//
+// RUN: %clang_cc1 -emit-llvm %s -Dconsteval="" -std=c++2a -triple x86_64-unknown-linux-gnu -o %t.ll -fexperimental-new-constant-interpreter
+// RUN: FileCheck -check-prefix=EXPR -input-file=%t.ll %s
+
 // there is two version of symbol checks to ensure
 // that the symbol we are looking for are correct
 // EVAL-NOT: @__cxx_global_var_init()

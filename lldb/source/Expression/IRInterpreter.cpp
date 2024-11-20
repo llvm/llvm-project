@@ -10,7 +10,6 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRMemoryMap.h"
@@ -22,6 +21,7 @@
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -49,7 +49,6 @@ static std::string PrintValue(const Value *value, bool truncate = false) {
   std::string s;
   raw_string_ostream rso(s);
   value->print(rso);
-  rso.flush();
   if (truncate)
     s.resize(s.length() - 1);
 
@@ -66,7 +65,6 @@ static std::string PrintType(const Type *type, bool truncate = false) {
   std::string s;
   raw_string_ostream rso(s);
   type->print(rso);
-  rso.flush();
   if (truncate)
     s.resize(s.length() - 1);
   return s;
@@ -697,8 +695,6 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
     raw_string_ostream oss(s);
 
     module.print(oss, nullptr);
-
-    oss.flush();
 
     LLDB_LOGF(log, "Module as passed in to IRInterpreter::Interpret: \n\"%s\"",
               s.c_str());

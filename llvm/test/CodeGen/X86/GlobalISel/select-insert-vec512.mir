@@ -51,8 +51,8 @@ body:             |
     ; ALL-LABEL: name: test_insert_128_idx0
     ; ALL: [[COPY:%[0-9]+]]:vr512 = COPY $zmm0
     ; ALL: [[COPY1:%[0-9]+]]:vr128x = COPY $xmm1
-    ; ALL: [[VINSERTF32x4Zrr:%[0-9]+]]:vr512 = VINSERTF32x4Zrr [[COPY]], [[COPY1]], 0
-    ; ALL: $zmm0 = COPY [[VINSERTF32x4Zrr]]
+    ; ALL: [[VINSERTF32x4Zrri:%[0-9]+]]:vr512 = VINSERTF32x4Zrri [[COPY]], [[COPY1]], 0
+    ; ALL: $zmm0 = COPY [[VINSERTF32x4Zrri]]
     ; ALL: RET 0, implicit $ymm0
     %0(<16 x s32>) = COPY $zmm0
     %1(<4 x s32>) = COPY $xmm1
@@ -102,8 +102,8 @@ body:             |
     ; ALL-LABEL: name: test_insert_128_idx1
     ; ALL: [[COPY:%[0-9]+]]:vr512 = COPY $zmm0
     ; ALL: [[COPY1:%[0-9]+]]:vr128x = COPY $xmm1
-    ; ALL: [[VINSERTF32x4Zrr:%[0-9]+]]:vr512 = VINSERTF32x4Zrr [[COPY]], [[COPY1]], 1
-    ; ALL: $zmm0 = COPY [[VINSERTF32x4Zrr]]
+    ; ALL: [[VINSERTF32x4Zrri:%[0-9]+]]:vr512 = VINSERTF32x4Zrri [[COPY]], [[COPY1]], 1
+    ; ALL: $zmm0 = COPY [[VINSERTF32x4Zrri]]
     ; ALL: RET 0, implicit $ymm0
     %0(<16 x s32>) = COPY $zmm0
     %1(<4 x s32>) = COPY $xmm1
@@ -127,8 +127,8 @@ body:             |
     ; ALL-LABEL: name: test_insert_128_idx1_undef
     ; ALL: [[DEF:%[0-9]+]]:vr512 = IMPLICIT_DEF
     ; ALL: [[COPY:%[0-9]+]]:vr128x = COPY $xmm1
-    ; ALL: [[VINSERTF32x4Zrr:%[0-9]+]]:vr512 = VINSERTF32x4Zrr [[DEF]], [[COPY]], 1
-    ; ALL: $zmm0 = COPY [[VINSERTF32x4Zrr]]
+    ; ALL: [[VINSERTF32x4Zrri:%[0-9]+]]:vr512 = VINSERTF32x4Zrri [[DEF]], [[COPY]], 1
+    ; ALL: $zmm0 = COPY [[VINSERTF32x4Zrri]]
     ; ALL: RET 0, implicit $ymm0
     %0(<16 x s32>) = IMPLICIT_DEF
     %1(<4 x s32>) = COPY $xmm1
@@ -152,8 +152,8 @@ body:             |
     ; ALL-LABEL: name: test_insert_256_idx0
     ; ALL: [[COPY:%[0-9]+]]:vr512 = COPY $zmm0
     ; ALL: [[COPY1:%[0-9]+]]:vr256x = COPY $ymm1
-    ; ALL: [[VINSERTF64x4Zrr:%[0-9]+]]:vr512 = VINSERTF64x4Zrr [[COPY]], [[COPY1]], 0
-    ; ALL: $zmm0 = COPY [[VINSERTF64x4Zrr]]
+    ; ALL: [[VINSERTF64x4Zrri:%[0-9]+]]:vr512 = VINSERTF64x4Zrri [[COPY]], [[COPY1]], 0
+    ; ALL: $zmm0 = COPY [[VINSERTF64x4Zrri]]
     ; ALL: RET 0, implicit $ymm0
     %0(<16 x s32>) = COPY $zmm0
     %1(<8 x s32>) = COPY $ymm1
@@ -203,8 +203,8 @@ body:             |
     ; ALL-LABEL: name: test_insert_256_idx1
     ; ALL: [[COPY:%[0-9]+]]:vr512 = COPY $zmm0
     ; ALL: [[COPY1:%[0-9]+]]:vr256x = COPY $ymm1
-    ; ALL: [[VINSERTF64x4Zrr:%[0-9]+]]:vr512 = VINSERTF64x4Zrr [[COPY]], [[COPY1]], 1
-    ; ALL: $zmm0 = COPY [[VINSERTF64x4Zrr]]
+    ; ALL: [[VINSERTF64x4Zrri:%[0-9]+]]:vr512 = VINSERTF64x4Zrri [[COPY]], [[COPY1]], 1
+    ; ALL: $zmm0 = COPY [[VINSERTF64x4Zrri]]
     ; ALL: RET 0, implicit $ymm0
     %0(<16 x s32>) = COPY $zmm0
     %1(<8 x s32>) = COPY $ymm1
@@ -228,8 +228,8 @@ body:             |
     ; ALL-LABEL: name: test_insert_256_idx1_undef
     ; ALL: [[DEF:%[0-9]+]]:vr512 = IMPLICIT_DEF
     ; ALL: [[COPY:%[0-9]+]]:vr256x = COPY $ymm1
-    ; ALL: [[VINSERTF64x4Zrr:%[0-9]+]]:vr512 = VINSERTF64x4Zrr [[DEF]], [[COPY]], 1
-    ; ALL: $zmm0 = COPY [[VINSERTF64x4Zrr]]
+    ; ALL: [[VINSERTF64x4Zrri:%[0-9]+]]:vr512 = VINSERTF64x4Zrri [[DEF]], [[COPY]], 1
+    ; ALL: $zmm0 = COPY [[VINSERTF64x4Zrri]]
     ; ALL: RET 0, implicit $ymm0
     %0(<16 x s32>) = IMPLICIT_DEF
     %1(<8 x s32>) = COPY $ymm1

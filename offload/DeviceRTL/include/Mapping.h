@@ -12,7 +12,7 @@
 #ifndef OMPTARGET_MAPPING_H
 #define OMPTARGET_MAPPING_H
 
-#include "Types.h"
+#include "DeviceTypes.h"
 
 namespace ompx {
 

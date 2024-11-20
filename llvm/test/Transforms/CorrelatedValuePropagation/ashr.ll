@@ -133,10 +133,10 @@ define void @test5(i32 %n) {
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[A:%.*]] = phi i32 [ [[N]], %[[ENTRY]] ], [ [[SHR:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i32 [[A]], 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp samesign ugt i32 [[A]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
 ; CHECK-NEXT:    [[SHR]] = lshr i32 [[A]], 1
-; CHECK-NEXT:    [[LOOPCOND:%.*]] = icmp ugt i32 [[SHR]], 8
+; CHECK-NEXT:    [[LOOPCOND:%.*]] = icmp samesign ugt i32 [[SHR]], 8
 ; CHECK-NEXT:    br i1 [[LOOPCOND]], label %[[LOOP]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -159,7 +159,7 @@ exit:
 
 ; check that ashr of -1 or 0 is optimized away
 define i32 @test6(i32 %f, i32 %g) {
-; CHECK-LABEL: define i32 @test6(
+; CHECK-LABEL: define range(i32 -1, 1) i32 @test6(
 ; CHECK-SAME: i32 [[F:%.*]], i32 [[G:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[F]], 1
@@ -177,7 +177,7 @@ entry:
 
 ; same test as above with different numbers
 define i32 @test7(i32 %f, i32 %g) {
-; CHECK-LABEL: define i32 @test7(
+; CHECK-LABEL: define range(i32 -1, 1) i32 @test7(
 ; CHECK-SAME: i32 [[F:%.*]], i32 [[G:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[F]], -2
@@ -197,7 +197,7 @@ entry:
 
 ; check that ashr of -2 or 1 is not optimized away
 define i32 @test8(i32 %f, i32 %g, i1 %s) {
-; CHECK-LABEL: define i32 @test8(
+; CHECK-LABEL: define range(i32 -2, 2) i32 @test8(
 ; CHECK-SAME: i32 [[F:%.*]], i32 [[G:%.*]], i1 [[S:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = ashr i32 -2, [[F]]
@@ -213,7 +213,7 @@ entry:
 }
 
 define i32 @may_including_undef(i1 %c.1, i1 %c.2) {
-; CHECK-LABEL: define i32 @may_including_undef(
+; CHECK-LABEL: define range(i32 -1073741824, 1073741824) i32 @may_including_undef(
 ; CHECK-SAME: i1 [[C_1:%.*]], i1 [[C_2:%.*]]) {
 ; CHECK-NEXT:    br i1 [[C_1]], label %[[TRUE_1:.*]], label %[[FALSE:.*]]
 ; CHECK:       [[TRUE_1]]:

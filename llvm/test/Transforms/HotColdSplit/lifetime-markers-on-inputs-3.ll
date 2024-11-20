@@ -12,11 +12,11 @@ declare void @use(ptr, ptr)
 declare void @use2(ptr, ptr) cold
 
 ; CHECK-LABEL: define {{.*}}@foo(
-define void @foo() {
+define void @foo(i1 %arg) {
 entry:
   %local1 = alloca ptr
   %local2 = alloca ptr
-  br i1 undef, label %normalPath, label %outlinedPath
+  br i1 %arg, label %normalPath, label %outlinedPath
 
 normalPath:
   call void @use(ptr %local1, ptr %local2)

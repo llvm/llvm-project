@@ -63,6 +63,7 @@ enum ProcessorTypes {
   INTEL_SIERRAFOREST,
   INTEL_GRANDRIDGE,
   INTEL_CLEARWATERFOREST,
+  AMDFAM1AH,
   CPU_TYPE_MAX
 };
 
@@ -101,6 +102,8 @@ enum ProcessorSubtypes {
   INTEL_COREI7_ARROWLAKE,
   INTEL_COREI7_ARROWLAKE_S,
   INTEL_COREI7_PANTHERLAKE,
+  AMDFAM1AH_ZNVER5,
+  INTEL_COREI7_DIAMONDRAPIDS,
   CPU_SUBTYPE_MAX
 };
 
@@ -227,6 +230,7 @@ enum ProcessorFeatures {
   FEATURE_AVX10_1_512,
   FEATURE_AVX10_2_256,
   FEATURE_AVX10_2_512,
+  FEATURE_MOVRS,
   CPU_FEATURE_MAX
 };
 
@@ -473,6 +477,8 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
 
     // Arrowlake:
     case 0xc5:
+    // Arrowlake U:
+    case 0xb5:
       CPU = "arrowlake";
       *Type = INTEL_COREI7;
       *Subtype = INTEL_COREI7_ARROWLAKE;
@@ -595,6 +601,19 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
       break;
     }
     break;
+  case 19:
+    switch (Model) {
+    // Diamond Rapids:
+    case 0x01:
+      CPU = "diamondrapids";
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_DIAMONDRAPIDS;
+      break;
+
+    default: // Unknown family 19 CPU.
+      break;
+    }
+    break;
   default:
     break; // Unknown.
   }
@@ -647,6 +666,7 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
     CPU = "k8";
     break;
   case 16:
+  case 18:
     CPU = "amdfam10";
     *Type = AMDFAM10H; // "amdfam10"
     switch (Model) {
@@ -748,6 +768,24 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
       break; //  "znver4"
     }
     break; // family 19h
+  case 26:
+    CPU = "znver5";
+    *Type = AMDFAM1AH;
+    if (Model <= 0x77) {
+      // Models 00h-0Fh (Breithorn).
+      // Models 10h-1Fh (Breithorn-Dense).
+      // Models 20h-2Fh (Strix 1).
+      // Models 30h-37h (Strix 2).
+      // Models 38h-3Fh (Strix 3).
+      // Models 40h-4Fh (Granite Ridge).
+      // Models 50h-5Fh (Weisshorn).
+      // Models 60h-6Fh (Krackan1).
+      // Models 70h-77h (Sarlak).
+      CPU = "znver5";
+      *Subtype = AMDFAM1AH_ZNVER5;
+      break; //  "znver5"
+    }
+    break;
   default:
     break; // Unknown AMD CPU.
   }
@@ -949,6 +987,8 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_HRESET);
   if (HasLeaf7Subleaf1 && ((EAX >> 23) & 1) && HasAVXSave)
     setFeature(FEATURE_AVXIFMA);
+  if (HasLeaf7Subleaf1 && ((EAX >> 31) & 1))
+    setFeature(FEATURE_MOVRS);
 
   if (HasLeaf7Subleaf1 && ((EDX >> 4) & 1) && HasAVXSave)
     setFeature(FEATURE_AVXVNNIINT8);

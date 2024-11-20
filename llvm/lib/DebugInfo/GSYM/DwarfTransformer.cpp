@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <thread>
-#include <unordered_set>
-
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -620,7 +617,6 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
           // Print ThreadLogStorage lines into an actual stream under a lock
           std::lock_guard<std::mutex> guard(LogMutex);
           if (Out.GetOS()) {
-            StrStream.flush();
             Out << storage;
           }
           Out.Merge(ThreadOut);
@@ -700,7 +696,6 @@ llvm::Error DwarfTransformer::verify(StringRef GsymPath,
             Log << "    [" << Idx << "]: " << gii.Name << " @ " << gii.Dir
                 << '/' << gii.Base << ':' << gii.Line << '\n';
           }
-          DwarfInlineInfos = DICtx.getInliningInfoForAddress(SectAddr, DLIS);
           Gsym->dump(Log, *FI);
         }
         continue;

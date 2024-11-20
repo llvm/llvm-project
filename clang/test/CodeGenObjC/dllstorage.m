@@ -112,7 +112,7 @@ __declspec(dllimport)
 // CHECK-IR-DAG: @"OBJC_IVAR_$_M._ivar" = external dllimport global i32
 
 // CHECK-NF-DAG: @"$_OBJC_REF_CLASS_M" = external dllimport global ptr
-// CHECK-NF-DAG: @"__objc_ivar_offset_M._ivar.@" = external global i32
+// CHECK-NF-DAG: @"__objc_ivar_offset_M._ivar.@" = external dllimport global i32
 
 __declspec(dllexport)
 __attribute__((__objc_exception__))
@@ -151,7 +151,7 @@ id f(Q *q) {
 
 // CHECK-IR-DAG: @"OBJC_IVAR_$_M._ivar" = external dllimport global i32
 
-// CHECK-NF-DAG: @"__objc_ivar_offset_M._ivar.@" = external global i32
+// CHECK-NF-DAG: @"__objc_ivar_offset_M._ivar.@" = external dllimport global i32
 
 int g(void) {
   @autoreleasepool {

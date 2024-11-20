@@ -44,7 +44,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -77,12 +76,10 @@
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrItineraries.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -1344,9 +1341,11 @@ private:
     LLVM_DEBUG({
       for (auto Reg : FixedRegs) {
         dbgs() << printReg(Reg, TRI, 0, &MRI) << ": [";
-        const int *Sets = TRI->getRegUnitPressureSets(Reg);
-        for (; *Sets != -1; Sets++) {
-          dbgs() << TRI->getRegPressureSetName(*Sets) << ", ";
+        for (MCRegUnit Unit : TRI->regunits(Reg)) {
+          const int *Sets = TRI->getRegUnitPressureSets(Unit);
+          for (; *Sets != -1; Sets++) {
+            dbgs() << TRI->getRegPressureSetName(*Sets) << ", ";
+          }
         }
         dbgs() << "]\n";
       }
@@ -1355,15 +1354,18 @@ private:
     for (auto Reg : FixedRegs) {
       LLVM_DEBUG(dbgs() << "fixed register: " << printReg(Reg, TRI, 0, &MRI)
                         << "\n");
-      auto PSetIter = MRI.getPressureSets(Reg);
-      unsigned Weight = PSetIter.getWeight();
-      for (; PSetIter.isValid(); ++PSetIter) {
-        unsigned &Limit = PressureSetLimit[*PSetIter];
-        assert(Limit >= Weight &&
-               "register pressure limit must be greater than or equal weight");
-        Limit -= Weight;
-        LLVM_DEBUG(dbgs() << "PSet=" << *PSetIter << " Limit=" << Limit
-                          << " (decreased by " << Weight << ")\n");
+      for (MCRegUnit Unit : TRI->regunits(Reg)) {
+        auto PSetIter = MRI.getPressureSets(Unit);
+        unsigned Weight = PSetIter.getWeight();
+        for (; PSetIter.isValid(); ++PSetIter) {
+          unsigned &Limit = PressureSetLimit[*PSetIter];
+          assert(
+              Limit >= Weight &&
+              "register pressure limit must be greater than or equal weight");
+          Limit -= Weight;
+          LLVM_DEBUG(dbgs() << "PSet=" << *PSetIter << " Limit=" << Limit
+                            << " (decreased by " << Weight << ")\n");
+        }
       }
     }
   }
@@ -1410,14 +1412,12 @@ private:
         auto Reg = Use.RegUnit;
         if (!TargetRegs.contains(Reg))
           continue;
-        auto Ite = LastUseMI.find(Reg);
-        if (Ite == LastUseMI.end()) {
-          LastUseMI[Reg] = MI;
-        } else {
+        auto [Ite, Inserted] = LastUseMI.try_emplace(Reg, MI);
+        if (!Inserted) {
           MachineInstr *Orig = Ite->second;
           MachineInstr *New = MI;
           if (InstrScore(Orig) < InstrScore(New))
-            LastUseMI[Reg] = New;
+            Ite->second = New;
         }
       }
     }
@@ -1706,6 +1706,7 @@ void SwingSchedulerDAG::Circuits::createAdjacencyStructure(
 /// Identify an elementary circuit in the dependence graph starting at the
 /// specified node.
 bool SwingSchedulerDAG::Circuits::circuit(int V, int S, NodeSetType &NodeSets,
+                                          const SwingSchedulerDAG *DAG,
                                           bool HasBackedge) {
   SUnit *SV = &SUnits[V];
   bool F = false;
@@ -1719,12 +1720,13 @@ bool SwingSchedulerDAG::Circuits::circuit(int V, int S, NodeSetType &NodeSets,
       continue;
     if (W == S) {
       if (!HasBackedge)
-        NodeSets.push_back(NodeSet(Stack.begin(), Stack.end()));
+        NodeSets.push_back(NodeSet(Stack.begin(), Stack.end(), DAG));
       F = true;
       ++NumPaths;
       break;
-    } else if (!Blocked.test(W)) {
-      if (circuit(W, S, NodeSets,
+    }
+    if (!Blocked.test(W)) {
+      if (circuit(W, S, NodeSets, DAG,
                   Node2Idx->at(W) < Node2Idx->at(V) ? true : HasBackedge))
         F = true;
     }
@@ -1767,9 +1769,9 @@ void SwingSchedulerDAG::findCircuits(NodeSetType &NodeSets) {
   Circuits Cir(SUnits, Topo);
   // Create the adjacency structure.
   Cir.createAdjacencyStructure(this);
-  for (int i = 0, e = SUnits.size(); i != e; ++i) {
+  for (int I = 0, E = SUnits.size(); I != E; ++I) {
     Cir.reset();
-    Cir.circuit(i, i, NodeSets);
+    Cir.circuit(I, I, NodeSets, this);
   }
 
   // Change the dependences back so that we've created a DAG again.
@@ -2565,7 +2567,7 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
 
 /// Return true if we can compute the amount the instruction changes
 /// during each iteration. Set Delta to the amount of the change.
-bool SwingSchedulerDAG::computeDelta(MachineInstr &MI, unsigned &Delta) {
+bool SwingSchedulerDAG::computeDelta(MachineInstr &MI, unsigned &Delta) const {
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   const MachineOperand *BaseOp;
   int64_t Offset;
@@ -2719,7 +2721,7 @@ MachineInstr *SwingSchedulerDAG::findDefInLoop(Register Reg) {
 /// potentially. A dependence is loop carried if the destination defines a value
 /// that may be used or defined by the source in a subsequent iteration.
 bool SwingSchedulerDAG::isLoopCarriedDep(SUnit *Source, const SDep &Dep,
-                                         bool isSucc) {
+                                         bool isSucc) const {
   if ((Dep.getKind() != SDep::Order && Dep.getKind() != SDep::Output) ||
       Dep.isArtificial() || Dep.getSUnit()->isBoundaryNode())
     return false;

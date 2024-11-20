@@ -312,8 +312,7 @@ def call          : SDNode<"SPISD::CALL", SDT_SPCall,
                             SDNPVariadic]>;
 
 def tailcall      : SDNode<"SPISD::TAIL_CALL", SDT_SPCall,
-                           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                            SDNPVariadic]>;
+                           [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 def SDT_SPRet     : SDTypeProfile<0, 1, [SDTCisVT<0, i32>]>;
 def retglue       : SDNode<"SPISD::RET_GLUE", SDT_SPRet,

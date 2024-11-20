@@ -353,6 +353,24 @@ struct ErrorBadParamsToAnnotateDoubleEndedContiguousContainer : ErrorBase {
   void Print();
 };
 
+struct ErrorBadParamsToCopyContiguousContainerAnnotations : ErrorBase {
+  const BufferedStackTrace *stack;
+  uptr old_storage_beg, old_storage_end, new_storage_beg, new_storage_end;
+
+  ErrorBadParamsToCopyContiguousContainerAnnotations() = default;  // (*)
+  ErrorBadParamsToCopyContiguousContainerAnnotations(
+      u32 tid, BufferedStackTrace *stack_, uptr old_storage_beg_,
+      uptr old_storage_end_, uptr new_storage_beg_, uptr new_storage_end_)
+      : ErrorBase(tid, 10,
+                  "bad-__sanitizer_annotate_double_ended_contiguous_container"),
+        stack(stack_),
+        old_storage_beg(old_storage_beg_),
+        old_storage_end(old_storage_end_),
+        new_storage_beg(new_storage_beg_),
+        new_storage_end(new_storage_end_) {}
+  void Print();
+};
+
 struct ErrorODRViolation : ErrorBase {
   __asan_global global1, global2;
   u32 stack_id1, stack_id2;
@@ -421,6 +439,7 @@ struct ErrorGeneric : ErrorBase {
   macro(StringFunctionSizeOverflow)                        \
   macro(BadParamsToAnnotateContiguousContainer)            \
   macro(BadParamsToAnnotateDoubleEndedContiguousContainer) \
+  macro(BadParamsToCopyContiguousContainerAnnotations)     \
   macro(ODRViolation)                                      \
   macro(InvalidPointerPair)                                \
   macro(Generic)
