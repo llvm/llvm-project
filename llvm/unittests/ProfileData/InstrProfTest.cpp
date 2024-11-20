@@ -640,29 +640,13 @@ TEST_F(InstrProfTest, test_memprof_getrecord_error) {
   ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
                     Succeeded());
 
-  const IndexedMemProfRecord IndexedMR = makeRecord(
-      /*AllocFrames=*/
-      {
-          {0, 1},
-          {2, 3},
-      },
-      /*CallSiteFrames=*/{
-          {4, 5},
-      });
-  // We skip adding the frame mappings here unlike the test_memprof unit test
-  // above to exercise the failure path when getMemProfRecord is invoked.
-  Writer.addMemProfRecord(/*Id=*/0x9999, IndexedMR);
-
+  Writer.setMemProfVersionRequested(memprof::Version3);
+  // Generate an empty profile.
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
-  // Missing frames give a hash_mismatch error.
-  auto RecordOr = Reader->getMemProfRecord(0x9999);
-  ASSERT_TRUE(
-      ErrorEquals(instrprof_error::hash_mismatch, RecordOr.takeError()));
-
   // Missing functions give a unknown_function error.
-  RecordOr = Reader->getMemProfRecord(0x1111);
+  auto RecordOr = Reader->getMemProfRecord(0x1111);
   ASSERT_TRUE(
       ErrorEquals(instrprof_error::unknown_function, RecordOr.takeError()));
 }
