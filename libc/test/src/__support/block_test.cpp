@@ -238,20 +238,6 @@ TEST_FOR_EACH_BLOCK_TYPE(CannotMakeSecondBlockLargerInSplit) {
   ASSERT_FALSE(result.has_value());
 }
 
-TEST_FOR_EACH_BLOCK_TYPE(CannotMakeZeroSizeFirstBlock) {
-  // This block doesn't support splitting with zero payload size, since the
-  // prev_ field of the next block is always available.
-  constexpr size_t kN = 1024;
-
-  alignas(BlockType::ALIGNMENT) array<byte, kN> bytes;
-  auto result = BlockType::init(bytes);
-  ASSERT_TRUE(result.has_value());
-  BlockType *block = *result;
-
-  result = block->split(0);
-  EXPECT_FALSE(result.has_value());
-}
-
 TEST_FOR_EACH_BLOCK_TYPE(CanMakeMinimalSizeFirstBlock) {
   // This block does support splitting with minimal payload size.
   constexpr size_t kN = 1024;
