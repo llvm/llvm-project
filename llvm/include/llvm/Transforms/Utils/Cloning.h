@@ -211,9 +211,9 @@ void CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
 /// subprograms that are reachable from \p F and can be considered global for
 /// the purposes of cloning (and hence not needing to be cloned).
 ///
-/// The latter depends on \p Changes: when cloning into the same module we
-/// process \p F's subprogram and instructions; when into a cloned module,
-/// neither of those.
+/// What debug information is considered global depends on \p Changes: when
+/// cloning into the same module we process \p F's subprogram and instructions;
+/// when into a cloned module, neither of those.
 ///
 /// Returns DISubprogram of the cloned function when cloning into the same
 /// module or nullptr otherwise.
