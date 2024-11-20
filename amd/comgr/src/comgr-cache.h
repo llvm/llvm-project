@@ -33,27 +33,45 @@
  *
  ******************************************************************************/
 
-#ifndef COMGR_DEVICE_LIBS_H
-#define COMGR_DEVICE_LIBS_H
+#ifndef COMGR_CACHE_H
+#define COMGR_CACHE_H
 
 #include "amd_comgr.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringRef.h"
-#include <tuple>
+#include "comgr-cache-command.h"
+
+#include <llvm/ADT/StringRef.h>
+#include <llvm/Support/CachePruning.h>
+#include <llvm/Support/MemoryBuffer.h>
+
+#include <functional>
+#include <memory>
+
+namespace llvm {
+class raw_ostream;
+} // namespace llvm
 
 namespace COMGR {
+class CommandCache {
+  std::string CacheDir;
+  llvm::CachePruningPolicy Policy;
 
-struct DataAction;
-struct DataSet;
+  CommandCache(llvm::StringRef CacheDir,
+               const llvm::CachePruningPolicy &Policy);
 
-amd_comgr_status_t addPrecompiledHeaders(DataAction *ActionInfo,
-                                         DataSet *ResultSet);
+  static std::optional<llvm::CachePruningPolicy>
+  getPolicyFromEnv(llvm::raw_ostream &LogS);
 
-llvm::StringRef getDeviceLibrariesIdentifier();
+public:
+  static std::unique_ptr<CommandCache> get(llvm::raw_ostream &);
 
-llvm::ArrayRef<std::tuple<llvm::StringRef, llvm::StringRef>>
-getDeviceLibraries();
+  ~CommandCache();
+  void prune();
 
+  /// Checks if the Command C is cached.
+  /// If it is the case, it replaces its output and logs its error-stream.
+  /// Otherwise it executes C through the callback Execute
+  amd_comgr_status_t execute(CachedCommandAdaptor &C, llvm::raw_ostream &LogS);
+};
 } // namespace COMGR
 
-#endif // COMGR_DEVICE_LIBS_H
+#endif

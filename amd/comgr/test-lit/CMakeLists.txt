@@ -37,5 +37,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 add_comgr_lit_binary(source-to-bc-with-dev-libs)
 add_comgr_lit_binary(spirv-translator)
+add_comgr_lit_binary(compile-minimal-test)
 
 add_dependencies(check-comgr test-lit)

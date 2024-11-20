@@ -317,6 +317,10 @@ amd_comgr_status_t COMGR::setCStr(char *&Dest, StringRef Src, size_t *Size) {
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
+StringRef COMGR::getComgrHashIdentifier() {
+  return xstringify(AMD_COMGR_VERSION_ID);
+}
+
 amd_comgr_status_t COMGR::parseTargetIdentifier(StringRef IdentStr,
                                                 TargetIdentifier &Ident) {
   SmallVector<StringRef, 5> IsaNameComponents;

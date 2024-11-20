@@ -58,12 +58,26 @@ class raw_ostream;
 namespace COMGR {
 class CachedCommandAdaptor {
 public:
+  using ActionClass = clang::driver::Action::ActionClass;
+  using HashAlgorithm = llvm::SHA256;
+  using Identifier = llvm::SmallString<64>;
+
+  llvm::Expected<Identifier> getIdentifier() const;
+
+  virtual bool canCache() const = 0;
+  virtual llvm::Error writeExecuteOutput(llvm::StringRef CachedBuffer) = 0;
+  virtual llvm::Expected<llvm::StringRef> readExecuteOutput() = 0;
   virtual amd_comgr_status_t execute(llvm::raw_ostream &LogS) = 0;
 
   virtual ~CachedCommandAdaptor() = default;
+
+protected:
+  virtual ActionClass getClass() const = 0;
+  virtual void addOptionsIdentifier(HashAlgorithm &) const = 0;
+  virtual llvm::Error addInputIdentifier(HashAlgorithm &) const = 0;
 };
 
-class CachedCommand final : public CachedCommandAdaptor {
+class ClangCommand final : public CachedCommandAdaptor {
 public:
   using ExecuteFnTy = std::function<amd_comgr_status_t(
       clang::driver::Command &, llvm::raw_ostream &, clang::DiagnosticOptions &,
@@ -75,14 +89,26 @@ private:
   llvm::vfs::FileSystem &VFS;
   ExecuteFnTy ExecuteImpl;
 
-public:
-  CachedCommand(clang::driver::Command &Command,
-                clang::DiagnosticOptions &DiagOpts, llvm::vfs::FileSystem &VFS,
-                ExecuteFnTy &&ExecuteImpl);
+  // To avoid copies, store the output of execute, such that readExecuteOutput
+  // can return a reference.
+  std::unique_ptr<llvm::MemoryBuffer> Output;
 
+public:
+  ClangCommand(clang::driver::Command &Command,
+               clang::DiagnosticOptions &DiagOpts, llvm::vfs::FileSystem &VFS,
+               ExecuteFnTy &&ExecuteImpl);
+
+  bool canCache() const override;
+  llvm::Error writeExecuteOutput(llvm::StringRef CachedBuffer) override;
+  llvm::Expected<llvm::StringRef> readExecuteOutput() override;
   amd_comgr_status_t execute(llvm::raw_ostream &LogS) override;
 
-  ~CachedCommand() override = default;
+  ~ClangCommand() override = default;
+
+protected:
+  ActionClass getClass() const override;
+  void addOptionsIdentifier(HashAlgorithm &) const override;
+  llvm::Error addInputIdentifier(HashAlgorithm &) const override;
 };
 } // namespace COMGR
 
