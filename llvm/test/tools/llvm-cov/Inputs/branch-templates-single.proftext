@@ -4,34 +4,31 @@ _Z4funcIbEiT_
 # Func Hash:
 11045778961
 # Num Counters:
-4
+3
 # Counter Values:
 1
 1
-0
 0
 
 _Z4funcIfEiT_
 # Func Hash:
 11045778961
 # Num Counters:
-4
+3
 # Counter Values:
 1
 0
 1
-0
 
 _Z4funcIiEiT_
 # Func Hash:
 11045778961
 # Num Counters:
-4
+3
 # Counter Values:
 1
 0
 1
-0
 
 main
 # Func Hash:
@@ -41,9 +38,9 @@ main
 # Counter Values:
 1
 1
+0
 1
 0
 1
-1
-1
+0
 

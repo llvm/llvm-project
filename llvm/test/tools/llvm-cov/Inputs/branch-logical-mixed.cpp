@@ -53,22 +53,22 @@ void func(int a, int b) {
            (b5  ||         // BRCOV: Branch ([[@LINE]]:13): [True: 1, False: [[C2]]]
             b0);           // BRCOV: Branch ([[@LINE]]:13): [True: [[C2]], False: 0]
 
-  if (c)                   // BRCOV: Branch ([[@LINE]]:7): [True: 0, False: [[C4]]]
+  if (c)                   // CHECK: Branch ([[@LINE]]:7): [True: 0, False: [[C4]]]
     printf("case0\n");
   else
     printf("case1\n");
 
-  if (d)                   // BRCOV: Branch ([[@LINE]]:7): [True: [[C4]], False: 0]
+  if (d)                   // CHECK: Branch ([[@LINE]]:7): [True: [[C4]], False: 0]
     printf("case2\n");
   else
     printf("case3\n");
 
-  if (e)                   // BRCOV: Branch ([[@LINE]]:7): [True: 1, False: [[C3]]]
+  if (e)                   // CHECK: Branch ([[@LINE]]:7): [True: 1, False: [[C3:3|1]]]
     printf("case4\n");
   else
     printf("case5\n");
 
-  if (f)                   // BRCOV: Branch ([[@LINE]]:7): [True: [[C3]], False: 1]
+  if (f)                   // CHECK: Branch ([[@LINE]]:7): [True: [[C3]], False: 1]
     printf("case6\n");
   else
     printf("case7\n");
