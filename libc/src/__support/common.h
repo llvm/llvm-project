@@ -32,7 +32,7 @@
 #define LLVM_LIBC_EMPTY
 
 #define GET_SECOND(first, second, ...) second
-#define EXPAND_THEN_SECOND(name) GET_SECOND(name, LLVM_LIBC_EMPTY, )
+#define EXPAND_THEN_SECOND(name) GET_SECOND(name, LLVM_LIBC_EMPTY)
 
 #define LLVM_LIBC_ATTR(name) EXPAND_THEN_SECOND(LLVM_LIBC_FUNCTION_ATTR_##name)
 
