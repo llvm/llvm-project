@@ -1351,6 +1351,9 @@ private:
   /// Holds strings for combined index, mapping to the corresponding module ID.
   ModulePathStringTableTy ModulePathStringTable;
 
+  BumpPtrAllocator TypeIdSaverAlloc;
+  UniqueStringSaver TypeIdSaver;
+
   /// Mapping from type identifier GUIDs to type identifier and its summary
   /// information. Produced by thin link.
   TypeIdSummaryMapTy TypeIdMap;
@@ -1423,9 +1426,6 @@ private:
   BumpPtrAllocator Alloc;
   StringSaver Saver;
 
-  BumpPtrAllocator TypeIdSaverAlloc;
-  UniqueStringSaver TypeIdSaver;
-
   // The total number of basic blocks in the module in the per-module summary or
   // the total number of basic blocks in the LTO unit in the combined index.
   // FIXME: Putting this in the distributed ThinLTO index files breaks LTO
@@ -1458,8 +1458,8 @@ public:
   // See HaveGVs variable comment.
   ModuleSummaryIndex(bool HaveGVs, bool EnableSplitLTOUnit = false,
                      bool UnifiedLTO = false)
-      : HaveGVs(HaveGVs), EnableSplitLTOUnit(EnableSplitLTOUnit),
-        UnifiedLTO(UnifiedLTO), Saver(Alloc), TypeIdSaver(TypeIdSaverAlloc) {}
+      : TypeIdSaver(TypeIdSaverAlloc), HaveGVs(HaveGVs), EnableSplitLTOUnit(EnableSplitLTOUnit),
+        UnifiedLTO(UnifiedLTO),  Saver(Alloc) {}
 
   // Current version for the module summary in bitcode files.
   // The BitcodeSummaryVersion should be bumped whenever we introduce changes
