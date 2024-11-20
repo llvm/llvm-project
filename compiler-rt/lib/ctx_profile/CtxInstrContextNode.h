@@ -8,9 +8,9 @@
 //==============================================================================
 //
 // NOTE!
-// llvm/lib/ProfileData/CtxInstrContextNode.h and
+// llvm/include/llvm/ProfileData/CtxInstrContextNode.h and
 //   compiler-rt/lib/ctx_profile/CtxInstrContextNode.h
-// must be exact copies of eachother
+// must be exact copies of each other.
 //
 // compiler-rt creates these objects as part of the instrumentation runtime for
 // contextual profiling. LLVM only consumes them to convert a contextual tree

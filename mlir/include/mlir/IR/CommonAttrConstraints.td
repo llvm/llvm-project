@@ -558,6 +558,15 @@ CPred<"::llvm::isa<::mlir::AffineMapAttr>($_self)">, "AffineMap attribute"> {
   let constBuilderCall = "::mlir::AffineMapAttr::get($0)";
 }
 
+// Attributes containing integer sets.
+def IntegerSetAttr : Attr<
+CPred<"::llvm::isa<::mlir::IntegerSetAttr>($_self)">, "IntegerSet attribute"> {
+  let storageType = [{::mlir::IntegerSetAttr }];
+  let returnType = [{ ::mlir::IntegerSet }];
+  let valueType = NoneType;
+  let constBuilderCall = "::mlir::IntegerSetAttr::get($0)";
+}
+
 // Base class for array attributes.
 class ArrayAttrBase<Pred condition, string summary> : Attr<condition, summary> {
   let storageType = [{ ::mlir::ArrayAttr }];

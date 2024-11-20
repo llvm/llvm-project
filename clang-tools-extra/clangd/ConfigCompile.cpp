@@ -43,7 +43,6 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
-#include <algorithm>
 #include <memory>
 #include <optional>
 #include <string>
@@ -669,6 +668,11 @@ struct FragmentCompiler {
       Out.Apply.push_back([Value(**F.BlockEnd)](const Params &, Config &C) {
         C.InlayHints.BlockEnd = Value;
       });
+    if (F.DefaultArguments)
+      Out.Apply.push_back(
+          [Value(**F.DefaultArguments)](const Params &, Config &C) {
+            C.InlayHints.DefaultArguments = Value;
+          });
     if (F.TypeNameLimit)
       Out.Apply.push_back(
           [Value(**F.TypeNameLimit)](const Params &, Config &C) {

@@ -255,15 +255,20 @@ static void stubifyDirectory(const StringRef InputPath, Context &Ctx) {
     if (EC)
       reportError(IT->path() + ": " + EC.message());
 
-    // Skip header directories (include/Headers/PrivateHeaders) and module
-    // files.
+    // Skip header directories (include/Headers/PrivateHeaders).
     StringRef Path = IT->path();
-    if (Path.ends_with("/include") || Path.ends_with("/Headers") ||
-        Path.ends_with("/PrivateHeaders") || Path.ends_with("/Modules") ||
-        Path.ends_with(".map") || Path.ends_with(".modulemap")) {
-      IT.no_push();
-      continue;
+    if (sys::fs::is_directory(Path)) {
+      const StringRef Stem = sys::path::stem(Path);
+      if ((Stem == "include") || (Stem == "Headers") ||
+          (Stem == "PrivateHeaders") || (Stem == "Modules")) {
+        IT.no_push();
+        continue;
+      }
     }
+
+    // Skip module files too.
+    if (Path.ends_with(".map") || Path.ends_with(".modulemap"))
+      continue;
 
     // Check if the entry is a symlink. We don't follow symlinks but we record
     // their content.
@@ -382,7 +387,7 @@ static void stubifyDirectory(const StringRef InputPath, Context &Ctx) {
     // libraries to stubify.
     StringRef LibToCheck = Found->second;
     for (int i = 0; i < 20; ++i) {
-      auto LinkIt = SymLinks.find(LibToCheck.str());
+      auto LinkIt = SymLinks.find(LibToCheck);
       if (LinkIt != SymLinks.end()) {
         for (auto &SymInfo : LinkIt->second) {
           SmallString<PATH_MAX> LinkSrc(SymInfo.SrcPath);

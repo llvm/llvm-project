@@ -46,6 +46,13 @@ std::string toString(const wasm::InputFile *file) {
 
 namespace wasm {
 
+std::string replaceThinLTOSuffix(StringRef path) {
+  auto [suffix, repl] = config->thinLTOObjectSuffixReplace;
+  if (path.consume_back(suffix))
+    return (path + repl).str();
+  return std::string(path);
+}
+
 void InputFile::checkArch(Triple::ArchType arch) const {
   bool is64 = arch == Triple::wasm64;
   if (is64 && !config->is64) {
@@ -837,6 +844,8 @@ BitcodeFile::BitcodeFile(MemoryBufferRef m, StringRef archiveName,
   this->archiveName = std::string(archiveName);
 
   std::string path = mb.getBufferIdentifier().str();
+  if (config->thinLTOIndexOnly)
+    path = replaceThinLTOSuffix(mb.getBufferIdentifier());
 
   // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
   // name. If two archives define two members with the same name, this

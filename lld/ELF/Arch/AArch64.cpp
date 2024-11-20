@@ -213,8 +213,8 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_NONE:
     return R_NONE;
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -348,8 +348,7 @@ int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
     return SignExtend64<28>(getBits(read32le(buf), 0, 25) << 2);
 
   default:
-    internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " + toString(type));
+    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   }
 }
@@ -360,7 +359,7 @@ void AArch64::writeGotPlt(uint8_t *buf, const Symbol &) const {
 
 void AArch64::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   if (ctx.arg.writeAddends)
-    write64(ctx, buf, s.getVA());
+    write64(ctx, buf, s.getVA(ctx));
 }
 
 void AArch64::writePltHeader(uint8_t *buf) const {
@@ -416,7 +415,7 @@ bool AArch64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   if (type != R_AARCH64_CALL26 && type != R_AARCH64_JUMP26 &&
       type != R_AARCH64_PLT32)
     return false;
-  uint64_t dst = expr == R_PLT_PC ? s.getPltVA(ctx) : s.getVA(a);
+  uint64_t dst = expr == R_PLT_PC ? s.getPltVA(ctx) : s.getVA(ctx, a);
   return !inBranchRange(type, branchAddr, dst);
 }
 
@@ -808,7 +807,7 @@ bool AArch64Relaxer::tryRelaxAdrpAdd(const Relocation &adrpRel,
 
   Symbol &sym = *adrpRel.sym;
   // Check if the address difference is within 1MiB range.
-  int64_t val = sym.getVA() - (secAddr + addRel.offset);
+  int64_t val = sym.getVA(ctx) - (secAddr + addRel.offset);
   if (val < -1024 * 1024 || val >= 1024 * 1024)
     return false;
 
@@ -874,7 +873,7 @@ bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
     return false;
   // Check if the address difference is within 4GB range.
   int64_t val =
-      getAArch64Page(sym.getVA()) - getAArch64Page(secAddr + adrpRel.offset);
+      getAArch64Page(sym.getVA(ctx)) - getAArch64Page(secAddr + adrpRel.offset);
   if (val != llvm::SignExtend64(val, 33))
     return false;
 
@@ -890,11 +889,11 @@ bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
 
   ctx.target->relocate(
       buf + adrpSymRel.offset, adrpSymRel,
-      SignExtend64(getAArch64Page(sym.getVA()) -
+      SignExtend64(getAArch64Page(sym.getVA(ctx)) -
                        getAArch64Page(secAddr + adrpSymRel.offset),
                    64));
   ctx.target->relocate(buf + addRel.offset, addRel,
-                       SignExtend64(sym.getVA(), 64));
+                       SignExtend64(sym.getVA(ctx), 64));
   tryRelaxAdrpAdd(adrpSymRel, addRel, secAddr, buf);
   return true;
 }
@@ -999,7 +998,11 @@ public:
 
 private:
   bool btiHeader; // bti instruction needed in PLT Header and Entry
-  bool pacEntry;  // autia1716 instruction needed in PLT Entry
+  enum {
+    PEK_NoAuth,
+    PEK_AuthHint, // use autia1716 instr for authenticated branch in PLT entry
+    PEK_Auth,     // use braa instr for authenticated branch in PLT entry
+  } pacEntryKind;
 };
 } // namespace
 
@@ -1014,9 +1017,21 @@ AArch64BtiPac::AArch64BtiPac(Ctx &ctx) : AArch64(ctx) {
   // relocations.
   // The PAC PLT entries require dynamic loader support and this isn't known
   // from properties in the objects, so we use the command line flag.
-  pacEntry = ctx.arg.zPacPlt;
+  // By default we only use hint-space instructions, but if we detect the
+  // PAuthABI, which requires v8.3-A, we can use the non-hint space
+  // instructions.
 
-  if (btiHeader || pacEntry) {
+  if (ctx.arg.zPacPlt) {
+    if (llvm::any_of(ctx.aarch64PauthAbiCoreInfo,
+                     [](uint8_t c) { return c != 0; }))
+      pacEntryKind = PEK_Auth;
+    else
+      pacEntryKind = PEK_AuthHint;
+  } else {
+    pacEntryKind = PEK_NoAuth;
+  }
+
+  if (btiHeader || (pacEntryKind != PEK_NoAuth)) {
     pltEntrySize = 24;
     ipltEntrySize = 24;
   }
@@ -1048,7 +1063,7 @@ void AArch64BtiPac::writePltHeader(uint8_t *buf) const {
   memcpy(buf, pltData, sizeof(pltData));
 
   relocateNoSym(buf + 4, R_AARCH64_ADR_PREL_PG_HI21,
-                getAArch64Page(got + 16) - getAArch64Page(plt + 8));
+                getAArch64Page(got + 16) - getAArch64Page(plt + 4));
   relocateNoSym(buf + 8, R_AARCH64_LDST64_ABS_LO12_NC, got + 16);
   relocateNoSym(buf + 12, R_AARCH64_ADD_ABS_LO12_NC, got + 16);
   if (!btiHeader)
@@ -1066,9 +1081,13 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
       0x11, 0x02, 0x40, 0xf9,  // ldr  x17, [x16, Offset(&(.got.plt[n]))]
       0x10, 0x02, 0x00, 0x91   // add  x16, x16, Offset(&(.got.plt[n]))
   };
+  const uint8_t pacHintBr[] = {
+      0x9f, 0x21, 0x03, 0xd5, // autia1716
+      0x20, 0x02, 0x1f, 0xd6  // br   x17
+  };
   const uint8_t pacBr[] = {
-      0x9f, 0x21, 0x03, 0xd5,  // autia1716
-      0x20, 0x02, 0x1f, 0xd6   // br   x17
+      0x30, 0x0a, 0x1f, 0xd7, // braa x17, x16
+      0x1f, 0x20, 0x03, 0xd5  // nop
   };
   const uint8_t stdBr[] = {
       0x20, 0x02, 0x1f, 0xd6,  // br   x17
@@ -1096,8 +1115,10 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
   relocateNoSym(buf + 4, R_AARCH64_LDST64_ABS_LO12_NC, gotPltEntryAddr);
   relocateNoSym(buf + 8, R_AARCH64_ADD_ABS_LO12_NC, gotPltEntryAddr);
 
-  if (pacEntry)
-    memcpy(buf + sizeof(addrInst), pacBr, sizeof(pacBr));
+  if (pacEntryKind != PEK_NoAuth)
+    memcpy(buf + sizeof(addrInst),
+           pacEntryKind == PEK_AuthHint ? pacHintBr : pacBr,
+           sizeof(pacEntryKind == PEK_AuthHint ? pacHintBr : pacBr));
   else
     memcpy(buf + sizeof(addrInst), stdBr, sizeof(stdBr));
   if (!hasBti)
@@ -1107,13 +1128,14 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
 
 template <class ELFT>
 static void
-addTaggedSymbolReferences(InputSectionBase &sec,
+addTaggedSymbolReferences(Ctx &ctx, InputSectionBase &sec,
                           DenseMap<Symbol *, unsigned> &referenceCount) {
   assert(sec.type == SHT_AARCH64_MEMTAG_GLOBALS_STATIC);
 
   const RelsOrRelas<ELFT> rels = sec.relsOrRelas<ELFT>();
   if (rels.areRelocsRel())
-    error("non-RELA relocations are not allowed with memtag globals");
+    ErrAlways(ctx)
+        << "non-RELA relocations are not allowed with memtag globals";
 
   for (const typename ELFT::Rela &rel : rels.relas) {
     Symbol &sym = sec.file->getRelocTargetSym(rel);
@@ -1162,7 +1184,7 @@ void elf::createTaggedSymbols(Ctx &ctx) {
       if (!section || section->type != SHT_AARCH64_MEMTAG_GLOBALS_STATIC ||
           section == &InputSection::discarded)
         continue;
-      invokeELFT(addTaggedSymbolReferences, *section,
+      invokeELFT(addTaggedSymbolReferences, ctx, *section,
                  taggedSymbolReferenceCount);
     }
   }
@@ -1196,7 +1218,7 @@ void elf::createTaggedSymbols(Ctx &ctx) {
   // relocations, the only other way to get written addends is with
   // --apply-dynamic-relocs.
   if (!taggedSymbolReferenceCount.empty() && ctx.arg.writeAddends)
-    error("--apply-dynamic-relocs cannot be used with MTE globals");
+    ErrAlways(ctx) << "--apply-dynamic-relocs cannot be used with MTE globals";
 
   // Now, `taggedSymbolReferenceCount` should only contain symbols that are
   // defined as tagged exactly the same amount as it's referenced, meaning all

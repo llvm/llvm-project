@@ -314,6 +314,49 @@ def SingleOp : OpenMP_Op<"single", traits = [
 }
 
 //===----------------------------------------------------------------------===//
+// 2.8.3 Workshare Construct
+//===----------------------------------------------------------------------===//
+
+def WorkshareOp : OpenMP_Op<"workshare", traits = [
+    RecursiveMemoryEffects,
+  ], clauses = [
+    OpenMP_NowaitClause,
+  ], singleRegion = true> {
+  let summary = "workshare directive";
+  let description = [{
+    The workshare construct divides the execution of the enclosed structured
+    block into separate units of work, and causes the threads of the team to
+    share the work such that each unit is executed only once by one thread, in
+    the context of its implicit task
+
+    This operation is used for the intermediate representation of the workshare
+    block before the work gets divided between the threads. See the flang
+    LowerWorkshare pass for details.
+  }] # clausesDescription;
+
+  let builders = [
+    OpBuilder<(ins CArg<"const WorkshareOperands &">:$clauses)>
+  ];
+}
+
+def WorkshareLoopWrapperOp : OpenMP_Op<"workshare.loop_wrapper", traits = [
+    DeclareOpInterfaceMethods<LoopWrapperInterface>, NoTerminator,
+    RecursiveMemoryEffects, SingleBlock
+  ], singleRegion = true> {
+  let summary = "contains loop nests to be parallelized by workshare";
+  let description = [{
+    This operation wraps a loop nest that is marked for dividing into units of
+    work by an encompassing omp.workshare operation.
+  }];
+
+  let builders = [
+    OpBuilder<(ins), [{ build($_builder, $_state, {}); }]>
+  ];
+  let assemblyFormat = "$region attr-dict";
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // Loop Nest
 //===----------------------------------------------------------------------===//
 
@@ -381,6 +424,54 @@ def LoopNestOp : OpenMP_Op<"loop_nest", traits = [
 //===----------------------------------------------------------------------===//
 // 2.9.2 Workshare Loop Construct
 //===----------------------------------------------------------------------===//
+
+def LoopOp : OpenMP_Op<"loop", traits = [
+    AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopWrapperInterface>,
+    NoTerminator, SingleBlock
+  ], clauses = [
+    OpenMP_BindClause, OpenMP_PrivateClause, OpenMP_OrderClause,
+    OpenMP_ReductionClause
+  ], singleRegion = true> {
+  let summary = "loop construct";
+  let description = [{
+    A loop construct specifies that the logical iterations of the associated loops
+    may execute concurrently and permits the encountering threads to execute the
+    loop accordingly. A loop construct can have 3 different types of binding:
+      1. teams: in which case the binding region is the innermost enclosing `teams`
+         region.
+      2. parallel: in which case the binding region is the innermost enclosing `parallel`
+         region.
+      3. thread: in which case the binding region is not defined.
+
+    The body region can only contain a single block which must contain a single
+    operation, this operation must be an `omp.loop_nest`.
+
+    ```
+    omp.loop <clauses> {
+      omp.loop_nest (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
+        %a = load %arrA[%i1, %i2] : memref<?x?xf32>
+        %b = load %arrB[%i1, %i2] : memref<?x?xf32>
+        %sum = arith.addf %a, %b : f32
+        store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
+        omp.yield
+      }
+    }
+    ```
+  }] # clausesDescription;
+
+  let assemblyFormat = clausesAssemblyFormat # [{
+    custom<PrivateReductionRegion>($region, $private_vars, type($private_vars),
+        $private_syms, $reduction_vars, type($reduction_vars), $reduction_byref,
+        $reduction_syms) attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins CArg<"const LoopOperands &">:$clauses)>
+  ];
+
+  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
+}
 
 def WsloopOp : OpenMP_Op<"wsloop", traits = [
     AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>,
@@ -895,7 +986,7 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
                        TypeAttr:$var_type,
                        Optional<OpenMP_PointerLikeType>:$var_ptr_ptr,
                        Variadic<OpenMP_PointerLikeType>:$members,
-                       OptionalAttr<AnyIntElementsAttr>:$members_index,
+                       OptionalAttr<IndexListArrayAttr>:$members_index,
                        Variadic<OpenMP_MapBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
                        OptionalAttr<UI64Attr>:$map_type,
                        OptionalAttr<VariableCaptureKindAttr>:$map_capture_type,
@@ -948,7 +1039,7 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
        objects (e.g. derived types or classes), indicates the bounds to be copied
        of the variable. When it's an array slice it is in rank order where rank 0
        is the inner-most dimension.
-    - 'map_clauses': OpenMP map type for this map capture, for example: from, to and
+    - 'map_type': OpenMP map type for this map capture, for example: from, to and
        always. It's a bitfield composed of the OpenMP runtime flags stored in
        OpenMPOffloadMappingFlags.
     - 'map_capture_type': Capture type for the variable e.g. this, byref, byvalue, byvla
@@ -1286,7 +1377,7 @@ def TaskwaitOp : OpenMP_Op<"taskwait", clauses = [
 // two-step process.
 
 def AtomicReadOp : OpenMP_Op<"atomic.read", traits = [
-    AllTypesMatch<["x", "v"]>, AtomicReadOpInterface
+    AtomicReadOpInterface
   ], clauses = [
     OpenMP_HintClause, OpenMP_MemoryOrderClause
   ]> {
@@ -1304,7 +1395,8 @@ def AtomicReadOp : OpenMP_Op<"atomic.read", traits = [
 
   // Override clause-based assemblyFormat.
   let assemblyFormat = "$v `=` $x" # clausesReqAssemblyFormat # " oilist(" #
-    clausesOptAssemblyFormat # ") `:` type($x) `,` $element_type attr-dict";
+    clausesOptAssemblyFormat #
+    ") `:` type($v) `,` type($x) `,` $element_type attr-dict";
 
   let extraClassDeclaration = [{
     /// The number of variable operands.

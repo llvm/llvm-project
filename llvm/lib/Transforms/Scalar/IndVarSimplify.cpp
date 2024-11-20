@@ -55,8 +55,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
@@ -66,7 +64,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1533,6 +1530,8 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
           L->getLoopPreheader()->getTerminator()->getIterator());
       ICmp->setOperand(Swapped ? 1 : 0, LHSOp);
       ICmp->setOperand(Swapped ? 0 : 1, NewRHS);
+      // Samesign flag cannot be preserved after narrowing the compare.
+      ICmp->setSameSign(false);
       if (LHS->use_empty())
         DeadInsts.push_back(LHS);
     };

@@ -503,7 +503,7 @@ public:
       const auto &BranchParams = B->getBranchParams();
       PosToID[I] = BranchParams.ID;
       CondLoc[I] = B->startLoc();
-      Folded[I++] = (B->Count.isZero() && B->FalseCount.isZero());
+      Folded[I++] = (B->Count.isZero() || B->FalseCount.isZero());
     }
 
     // Using Profile Bitmap from runtime, mark the executed test vectors.

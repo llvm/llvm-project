@@ -231,7 +231,7 @@ but the following example shows how it can be used by a standard user.
   }
 
   // Routines to allocate mapped memory that both the host and the device can
-  // access asychonrously to communicate with eachother.
+  // access asychonrously to communicate with each other.
   void *alloc_host(size_t size, void *) {
     void *sharable_ptr;
     if (cudaError_t err = cudaMallocHost(&sharable_ptr, sizeof(void *)))
@@ -302,6 +302,6 @@ associated with relocatable device code linking.
 Extensions
 ----------
 
-We describe which operation the RPC server should take with a 16-bit opcode. We
-consider the first 32768 numbers to be reserved while the others are free to
-use.
+The opcode is a 32-bit integer that must be unique to the requested operation. 
+All opcodes used by ``libc`` internally have the character ``c`` in the most 
+significant byte.

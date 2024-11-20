@@ -23,6 +23,13 @@ kernel void builtins_amdgcn_s_barrier_signal_isfirst_err(global int* in, global 
   *out = *in;
 }
 
+kernel void builtins_amdgcn_s_barrier_leave_err(global int* in, global int* out, int barrier) {
+
+  __builtin_amdgcn_s_barrier_signal(-1);
+  __builtin_amdgcn_s_barrier_leave(barrier); // expected-error {{'__builtin_amdgcn_s_barrier_leave' must be a constant integer}}
+  *out = *in;
+}
+
 void test_s_buffer_prefetch_data(__amdgpu_buffer_rsrc_t rsrc, unsigned int off)
 {
   __builtin_amdgcn_s_buffer_prefetch_data(rsrc, off, 31); // expected-error {{'__builtin_amdgcn_s_buffer_prefetch_data' must be a constant integer}}

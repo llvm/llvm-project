@@ -2685,61 +2685,77 @@ func.func @matrix_ops_index(%A: vector<64xindex>, %B: vector<48xindex>) -> vecto
 
 // -----
 
-func.func @genbool_0d_f() -> vector<i1> {
+func.func @constant_mask_0d_f() -> vector<i1> {
   %0 = vector.constant_mask [0] : vector<i1>
   return %0 : vector<i1>
 }
-// CHECK-LABEL: func @genbool_0d_f
+// CHECK-LABEL: func @constant_mask_0d_f
 // CHECK: %[[VAL_0:.*]] = arith.constant dense<false> : vector<i1>
 // CHECK: return %[[VAL_0]] : vector<i1>
 
 // -----
 
-func.func @genbool_0d_t() -> vector<i1> {
+func.func @constant_mask_0d_t() -> vector<i1> {
   %0 = vector.constant_mask [1] : vector<i1>
   return %0 : vector<i1>
 }
-// CHECK-LABEL: func @genbool_0d_t
+// CHECK-LABEL: func @constant_mask_0d_t
 // CHECK: %[[VAL_0:.*]] = arith.constant dense<true> : vector<i1>
 // CHECK: return %[[VAL_0]] : vector<i1>
 
 // -----
 
-func.func @genbool_1d() -> vector<8xi1> {
+func.func @constant_mask_1d() -> vector<8xi1> {
   %0 = vector.constant_mask [4] : vector<8xi1>
   return %0 : vector<8xi1>
 }
-// CHECK-LABEL: func @genbool_1d
+// CHECK-LABEL: func @constant_mask_1d
 // CHECK: %[[VAL_0:.*]] = arith.constant dense<[true, true, true, true, false, false, false, false]> : vector<8xi1>
 // CHECK: return %[[VAL_0]] : vector<8xi1>
 
 // -----
 
-func.func @genbool_1d_scalable_all_false() -> vector<[8]xi1> {
+func.func @constant_mask_1d_scalable_all_false() -> vector<[8]xi1> {
   %0 = vector.constant_mask [0] : vector<[8]xi1>
   return %0 : vector<[8]xi1>
 }
-// CHECK-LABEL: func @genbool_1d_scalable_all_false
+// CHECK-LABEL: func @constant_mask_1d_scalable_all_false
 // CHECK: %[[VAL_0:.*]] = arith.constant dense<false> : vector<[8]xi1>
 // CHECK: return %[[VAL_0]] : vector<[8]xi1>
 
 // -----
 
-func.func @genbool_1d_scalable_all_true() -> vector<[8]xi1> {
+func.func @constant_mask_1d_scalable_all_true() -> vector<[8]xi1> {
   %0 = vector.constant_mask [8] : vector<[8]xi1>
   return %0 : vector<[8]xi1>
 }
-// CHECK-LABEL: func @genbool_1d_scalable_all_true
+// CHECK-LABEL: func @constant_mask_1d_scalable_all_true
 // CHECK: %[[VAL_0:.*]] = arith.constant dense<true> : vector<[8]xi1>
 // CHECK: return %[[VAL_0]] : vector<[8]xi1>
 
 // -----
 
-func.func @genbool_2d_trailing_scalable() -> vector<4x[4]xi1> {
+func.func @constant_mask_2d() -> vector<4x4xi1> {
+  %v = vector.constant_mask [2, 2] : vector<4x4xi1>
+  return %v: vector<4x4xi1>
+}
+
+// CHECK-LABEL: func @constant_mask_2d
+// CHECK: %[[VAL_0:.*]] = arith.constant dense<[true, true, false, false]> : vector<4xi1>
+// CHECK: %[[VAL_1:.*]] = arith.constant dense<false> : vector<4x4xi1>
+// CHECK: %[[VAL_2:.*]] = builtin.unrealized_conversion_cast %[[VAL_1]] : vector<4x4xi1> to !llvm.array<4 x vector<4xi1>>
+// CHECK: %[[VAL_3:.*]] = llvm.insertvalue %[[VAL_0]], %[[VAL_2]][0] : !llvm.array<4 x vector<4xi1>>
+// CHECK: %[[VAL_4:.*]] = llvm.insertvalue %[[VAL_0]], %[[VAL_3]][1] : !llvm.array<4 x vector<4xi1>>
+// CHECK: %[[VAL_5:.*]] = builtin.unrealized_conversion_cast %[[VAL_4]] : !llvm.array<4 x vector<4xi1>> to vector<4x4xi1>
+// CHECK: return %[[VAL_5]] : vector<4x4xi1>
+
+// -----
+
+func.func @constant_mask_2d_trailing_scalable() -> vector<4x[4]xi1> {
   %0 = vector.constant_mask [2, 4] : vector<4x[4]xi1>
   return %0 : vector<4x[4]xi1>
 }
-// CHECK-LABEL:   func.func @genbool_2d_trailing_scalable
+// CHECK-LABEL:   func.func @constant_mask_2d_trailing_scalable
 // CHECK:           %[[VAL_0:.*]] = arith.constant dense<true> : vector<[4]xi1>
 // CHECK:           %[[VAL_1:.*]] = arith.constant dense<false> : vector<4x[4]xi1>
 // CHECK:           %[[VAL_2:.*]] = builtin.unrealized_conversion_cast %[[VAL_1]] : vector<4x[4]xi1> to !llvm.array<4 x vector<[4]xi1>>
@@ -2752,29 +2768,13 @@ func.func @genbool_2d_trailing_scalable() -> vector<4x[4]xi1> {
 
 /// Currently, this is not supported as generating the mask would require
 /// unrolling the leading scalable dimension at compile time.
-func.func @cannot_genbool_2d_leading_scalable() -> vector<[4]x4xi1> {
+func.func @negative_constant_mask_2d_leading_scalable() -> vector<[4]x4xi1> {
   %0 = vector.constant_mask [4, 2] : vector<[4]x4xi1>
   return %0 : vector<[4]x4xi1>
 }
-// CHECK-LABEL:   func.func @cannot_genbool_2d_leading_scalable
+// CHECK-LABEL:   func.func @negative_constant_mask_2d_leading_scalable
 // CHECK:           %[[VAL_0:.*]] = vector.constant_mask [4, 2] : vector<[4]x4xi1>
 // CHECK:           return %[[VAL_0]] : vector<[4]x4xi1>
-
-// -----
-
-func.func @genbool_2d() -> vector<4x4xi1> {
-  %v = vector.constant_mask [2, 2] : vector<4x4xi1>
-  return %v: vector<4x4xi1>
-}
-
-// CHECK-LABEL: func @genbool_2d
-// CHECK: %[[VAL_0:.*]] = arith.constant dense<[true, true, false, false]> : vector<4xi1>
-// CHECK: %[[VAL_1:.*]] = arith.constant dense<false> : vector<4x4xi1>
-// CHECK: %[[VAL_2:.*]] = builtin.unrealized_conversion_cast %[[VAL_1]] : vector<4x4xi1> to !llvm.array<4 x vector<4xi1>>
-// CHECK: %[[VAL_3:.*]] = llvm.insertvalue %[[VAL_0]], %[[VAL_2]][0] : !llvm.array<4 x vector<4xi1>>
-// CHECK: %[[VAL_4:.*]] = llvm.insertvalue %[[VAL_0]], %[[VAL_3]][1] : !llvm.array<4 x vector<4xi1>>
-// CHECK: %[[VAL_5:.*]] = builtin.unrealized_conversion_cast %[[VAL_4]] : !llvm.array<4 x vector<4xi1>> to vector<4x4xi1>
-// CHECK: return %[[VAL_5]] : vector<4x4xi1>
 
 // -----
 
@@ -3447,4 +3447,14 @@ func.func @vector_from_elements_0d(%a: f32) -> vector<f32> {
 func.func @vector_step_scalable() -> vector<[4]xindex> {
   %0 = vector.step : vector<[4]xindex>
   return %0 : vector<[4]xindex>
+}
+
+// -----
+
+// CHECK-LABEL: @vector_step
+// CHECK: %[[CST:.+]] = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
+// CHECK: return %[[CST]] : vector<4xindex>
+func.func @vector_step() -> vector<4xindex> {
+  %0 = vector.step : vector<4xindex>
+  return %0 : vector<4xindex>
 }

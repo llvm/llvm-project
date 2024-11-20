@@ -179,9 +179,9 @@ define i1 @eq_21_comm_eq2(i32 %x, i32 %y) {
 
 define <2x i1> @eq_21_vector(<2x i32> %x, <2x i32> %y) {
 ; CHECK-LABEL: @eq_21_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 8, i32 8>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i32> [[TMP1]] to <2 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr <2 x i32> [[Y:%.*]], <i32 8, i32 8>
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr <2 x i32> [[Y:%.*]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i32> [[TMP3]] to <2 x i16>
 ; CHECK-NEXT:    [[C_210:%.*]] = icmp eq <2 x i16> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    ret <2 x i1> [[C_210]]
@@ -835,9 +835,9 @@ define i1 @ne_21_comm_ne2(i32 %x, i32 %y) {
 
 define <2x i1> @ne_21_vector(<2x i32> %x, <2x i32> %y) {
 ; CHECK-LABEL: @ne_21_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 8, i32 8>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i32> [[TMP1]] to <2 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr <2 x i32> [[Y:%.*]], <i32 8, i32 8>
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr <2 x i32> [[Y:%.*]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i32> [[TMP3]] to <2 x i16>
 ; CHECK-NEXT:    [[C_210:%.*]] = icmp ne <2 x i16> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    ret <2 x i1> [[C_210]]

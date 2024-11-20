@@ -77,9 +77,6 @@ class MachineCombiner : public MachineFunctionPass {
 
   TargetSchedModel TSchedModel;
 
-  /// True if optimizing for code size.
-  bool OptSize = false;
-
 public:
   static char ID;
   MachineCombiner() : MachineFunctionPass(ID) {
@@ -571,7 +568,7 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
   SparseSet<LiveRegUnit> RegUnits;
   RegUnits.setUniverse(TRI->getNumRegUnits());
 
-  bool OptForSize = OptSize || llvm::shouldOptimizeForSize(MBB, PSI, MBFI);
+  bool OptForSize = llvm::shouldOptimizeForSize(MBB, PSI, MBFI);
 
   bool DoRegPressureReduce =
       TII->shouldReduceRegisterPressure(MBB, &RegClassInfo);
@@ -733,7 +730,6 @@ bool MachineCombiner::runOnMachineFunction(MachineFunction &MF) {
          &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI() :
          nullptr;
   TraceEnsemble = nullptr;
-  OptSize = MF.getFunction().hasOptSize();
   RegClassInfo.runOnMachineFunction(MF);
 
   LLVM_DEBUG(dbgs() << getPassName() << ": " << MF.getName() << '\n');

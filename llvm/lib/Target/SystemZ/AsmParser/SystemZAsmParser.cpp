@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/SystemZInstPrinter.h"
+#include "MCTargetDesc/SystemZGNUInstPrinter.h"
 #include "MCTargetDesc/SystemZMCAsmInfo.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "SystemZTargetStreamer.h"
@@ -721,7 +721,7 @@ void SystemZOperand::print(raw_ostream &OS) const {
     OS << "Token:" << getToken();
     break;
   case KindReg:
-    OS << "Reg:" << SystemZInstPrinter::getRegisterName(getReg());
+    OS << "Reg:" << SystemZGNUInstPrinter::getRegisterName(getReg());
     break;
   case KindImm:
     OS << "Imm:";
@@ -743,10 +743,10 @@ void SystemZOperand::print(raw_ostream &OS) const {
       if (Op.MemKind == BDLMem)
         OS << *cast<MCConstantExpr>(Op.Length.Imm) << ",";
       else if (Op.MemKind == BDRMem)
-        OS << SystemZInstPrinter::getRegisterName(Op.Length.Reg) << ",";
+        OS << SystemZGNUInstPrinter::getRegisterName(Op.Length.Reg) << ",";
       if (Op.Index)
-        OS << SystemZInstPrinter::getRegisterName(Op.Index) << ",";
-      OS << SystemZInstPrinter::getRegisterName(Op.Base);
+        OS << SystemZGNUInstPrinter::getRegisterName(Op.Index) << ",";
+      OS << SystemZGNUInstPrinter::getRegisterName(Op.Base);
       OS << ")";
     }
     break;
@@ -1071,9 +1071,16 @@ bool SystemZAsmParser::parseAddress(bool &HaveReg1, Register &Reg1,
       if (getLexer().is(AsmToken::Integer)) {
         if (parseIntegerRegister(Reg2, RegGR))
           return true;
-      } else {
-        if (isParsingGNU() && parseRegister(Reg2, /*RequirePercent=*/true))
-          return true;
+      } else if (isParsingGNU()) {
+        if (Parser.getTok().is(AsmToken::Percent)) {
+          if (parseRegister(Reg2, /*RequirePercent=*/true))
+            return true;
+        } else {
+          // GAS allows ",)" to indicate a missing base register.
+          Reg2.Num = 0;
+          Reg2.Group = RegGR;
+          Reg2.StartLoc = Reg2.EndLoc = Parser.getTok().getLoc();
+        }
       }
     }
 
@@ -1186,6 +1193,10 @@ ParseStatus SystemZAsmParser::parseAddress(OperandVector &Operands,
     if (!HaveReg1 || Reg1.Group != RegV)
       return Error(StartLoc, "vector index required in address");
     Index = SystemZMC::VR128Regs[Reg1.Num];
+    // In GAS mode, we must have Reg2, since a single register would be
+    // interpreted as base register, which cannot be a vector register.
+    if (isParsingGNU() && !HaveReg2)
+      return Error(Reg1.StartLoc, "invalid use of vector addressing");
     // If we have Reg2, it must be an address register.
     if (HaveReg2) {
       if (parseAddressRegister(Reg2))

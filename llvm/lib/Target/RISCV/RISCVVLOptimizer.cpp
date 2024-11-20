@@ -17,7 +17,6 @@
 //===---------------------------------------------------------------------===//
 
 #include "RISCV.h"
-#include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineDominators.h"

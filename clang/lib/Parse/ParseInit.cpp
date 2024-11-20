@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/TokenKinds.h"
-#include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/Designator.h"
@@ -487,7 +487,7 @@ ExprResult Parser::ParseBraceInitializer() {
                           : diag::ext_c_empty_initializer);
     }
     // Match the '}'.
-    return Actions.ActOnInitList(LBraceLoc, std::nullopt, ConsumeBrace());
+    return Actions.ActOnInitList(LBraceLoc, {}, ConsumeBrace());
   }
 
   // Enter an appropriate expression evaluation context for an initializer list.

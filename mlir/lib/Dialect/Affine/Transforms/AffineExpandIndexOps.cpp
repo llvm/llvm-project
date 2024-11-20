@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Transforms/Transforms.h"
 #include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
@@ -37,10 +38,33 @@ struct LowerDelinearizeIndexOps
                                 PatternRewriter &rewriter) const override {
     FailureOr<SmallVector<Value>> multiIndex =
         delinearizeIndex(rewriter, op->getLoc(), op.getLinearIndex(),
-                         llvm::to_vector(op.getBasis()));
+                         op.getEffectiveBasis(), /*hasOuterBound=*/false);
     if (failed(multiIndex))
       return failure();
     rewriter.replaceOp(op, *multiIndex);
+    return success();
+  }
+};
+
+/// Lowers `affine.linearize_index` into a sequence of multiplications and
+/// additions.
+struct LowerLinearizeIndexOps final : OpRewritePattern<AffineLinearizeIndexOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(AffineLinearizeIndexOp op,
+                                PatternRewriter &rewriter) const override {
+    // Should be folded away, included here for safety.
+    if (op.getMultiIndex().empty()) {
+      rewriter.replaceOpWithNewOp<arith::ConstantIndexOp>(op, 0);
+      return success();
+    }
+
+    SmallVector<OpFoldResult> multiIndex =
+        getAsOpFoldResult(op.getMultiIndex());
+    OpFoldResult linearIndex =
+        linearizeIndex(rewriter, op.getLoc(), multiIndex, op.getMixedBasis());
+    Value linearIndexValue =
+        getValueOrCreateConstantIntOp(rewriter, op.getLoc(), linearIndex);
+    rewriter.replaceOp(op, linearIndexValue);
     return success();
   }
 };
@@ -64,7 +88,8 @@ public:
 
 void mlir::affine::populateAffineExpandIndexOpsPatterns(
     RewritePatternSet &patterns) {
-  patterns.insert<LowerDelinearizeIndexOps>(patterns.getContext());
+  patterns.insert<LowerDelinearizeIndexOps, LowerLinearizeIndexOps>(
+      patterns.getContext());
 }
 
 std::unique_ptr<Pass> mlir::affine::createAffineExpandIndexOpsPass() {

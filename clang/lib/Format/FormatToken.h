@@ -586,6 +586,9 @@ public:
   /// Might be function declaration open/closing paren.
   bool MightBeFunctionDeclParen = false;
 
+  /// Has "\n\f\n" or "\n\f\r\n" before TokenText.
+  bool HasFormFeedBefore = false;
+
   /// Number of optional braces to be inserted after this token:
   ///   -1: a single left brace
   ///    0: no braces

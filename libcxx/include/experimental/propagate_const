@@ -108,6 +108,8 @@
 */
 
 #include <__config>
+#include <__cstddef/nullptr_t.h>
+#include <__cstddef/size_t.h>
 #include <__functional/operations.h>
 #include <__fwd/functional.h>
 #include <__type_traits/conditional.h>
@@ -128,7 +130,7 @@
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
-#include <cstddef>
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -484,6 +486,7 @@ _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_POP_MACROS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <cstddef>
 #  include <type_traits>
 #endif
 

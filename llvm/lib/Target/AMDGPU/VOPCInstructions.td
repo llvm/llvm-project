@@ -2290,7 +2290,7 @@ multiclass VOPC_Real_vi <bits<10> op> {
 
   if !cast<VOPC_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA then
   def _sdwa_vi :
-    VOP_SDWA_Real <!cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa")>,
+    VOP_SDWA8_Real <!cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa")>,
     VOPC_SDWAe <op{7-0}, !cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
 
   if !cast<VOPC_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA9 then

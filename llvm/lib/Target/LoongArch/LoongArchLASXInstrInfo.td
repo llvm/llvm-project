@@ -1444,6 +1444,12 @@ def : Pat<(xor (v8i32 LASX256:$xj), (v8i32 (vsplat_uimm_pow2 uimm5:$imm))),
 def : Pat<(xor (v4i64 LASX256:$xj), (v4i64 (vsplat_uimm_pow2 uimm6:$imm))),
           (XVBITREVI_D LASX256:$xj, uimm6:$imm)>;
 
+// Vector bswaps
+def : Pat<(bswap (v16i16 LASX256:$xj)), (XVSHUF4I_B LASX256:$xj, 0b10110001)>;
+def : Pat<(bswap (v8i32 LASX256:$xj)), (XVSHUF4I_B LASX256:$xj, 0b00011011)>;
+def : Pat<(bswap (v4i64 LASX256:$xj)),
+          (XVSHUF4I_W (XVSHUF4I_B LASX256:$xj, 0b00011011), 0b10110001)>;
+
 // XVFADD_{S/D}
 defm : PatXrXrF<fadd, "XVFADD">;
 
@@ -1567,6 +1573,15 @@ def : Pat<(lasxsplati8 GPR:$rj), (XVREPLGR2VR_B GPR:$rj)>;
 def : Pat<(lasxsplati16 GPR:$rj), (XVREPLGR2VR_H GPR:$rj)>;
 def : Pat<(lasxsplati32 GPR:$rj), (XVREPLGR2VR_W GPR:$rj)>;
 def : Pat<(lasxsplati64 GPR:$rj), (XVREPLGR2VR_D GPR:$rj)>;
+
+def : Pat<(v32i8 (loongarch_vreplgr2vr GRLenVT:$rj)),
+          (v32i8 (XVREPLGR2VR_B GRLenVT:$rj))>;
+def : Pat<(v16i16 (loongarch_vreplgr2vr GRLenVT:$rj)),
+          (v16i16 (XVREPLGR2VR_H GRLenVT:$rj))>;
+def : Pat<(v8i32 (loongarch_vreplgr2vr GRLenVT:$rj)),
+          (v8i32 (XVREPLGR2VR_W GRLenVT:$rj))>;
+def : Pat<(v4i64 (loongarch_vreplgr2vr GRLenVT:$rj)),
+          (v4i64 (XVREPLGR2VR_D GRLenVT:$rj))>;
 
 // XVREPLVE_{B/H/W/D}
 def : Pat<(loongarch_vreplve v32i8:$xj, GRLenVT:$rk),

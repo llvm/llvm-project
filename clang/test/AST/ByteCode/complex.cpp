@@ -407,8 +407,7 @@ namespace ComplexConstexpr {
                                   // ref-note {{cannot access real component of null}} \
                                   // expected-note {{read of dereferenced null pointer}}
   constexpr float pi = __imag *p; // both-error {{constant expr}} \
-                                  // ref-note {{cannot access imaginary component of null}} \
-                                  // expected-note {{cannot perform pointer arithmetic on null pointer}}
+                                  // ref-note {{cannot access imaginary component of null}}
   constexpr const _Complex double *q = &test3 + 1;
   constexpr double qr = __real *q; // ref-error {{constant expr}} \
                                    // ref-note {{cannot access real component of pointer past the end}}
