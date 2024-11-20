@@ -277,7 +277,8 @@ LanguageRuntime::GetRuntimeUnwindPlan(Thread &thread, RegisterContext *regctx,
   return UnwindPlanSP();
 }
 
-StructuredData::ObjectSP LanguageRuntime::GetLanguageInfo(SymbolContext sc) {
+StructuredData::ObjectSP
+LanguageRuntime::GetLanguageSpecificData(SymbolContext sc) {
   return {};
 }
 

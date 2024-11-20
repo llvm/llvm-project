@@ -244,7 +244,7 @@ public:
   /// Language runtime plugins can use this API to report
   /// language-specific runtime information about this compile unit,
   /// such as additional language version details or feature flags.
-  virtual StructuredData::ObjectSP GetLanguageInfo(SymbolContext sc);
+  virtual StructuredData::ObjectSP GetLanguageSpecificData(SymbolContext sc);
 
 protected:
   // The static GetRuntimeUnwindPlan method above is only implemented in the

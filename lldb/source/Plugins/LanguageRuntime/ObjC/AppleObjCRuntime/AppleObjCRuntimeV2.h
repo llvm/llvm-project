@@ -106,7 +106,7 @@ public:
 
   std::optional<uint64_t> GetSharedCacheImageHeaderVersion();
 
-  StructuredData::ObjectSP GetLanguageInfo(SymbolContext sc) override;
+  StructuredData::ObjectSP GetLanguageSpecificData(SymbolContext sc) override;
 
 protected:
   lldb::BreakpointResolverSP
