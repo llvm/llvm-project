@@ -359,6 +359,10 @@ bool TargetTransformInfo::isHardwareLoopProfitable(
   return TTIImpl->isHardwareLoopProfitable(L, SE, AC, LibInfo, HWLoopInfo);
 }
 
+unsigned TargetTransformInfo::getEpilogueVectorizationMinVF() const {
+  return TTIImpl->getEpilogueVectorizationMinVF();
+}
+
 bool TargetTransformInfo::preferPredicateOverEpilogue(
     TailFoldingInfo *TFI) const {
   return TTIImpl->preferPredicateOverEpilogue(TFI);
