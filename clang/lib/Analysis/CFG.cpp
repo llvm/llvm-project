@@ -760,6 +760,12 @@ private:
   void cleanupConstructionContext(Expr *E);
 
   void autoCreateBlock() { if (!Block) Block = createBlock(); }
+  void createConstructorBlock(CXXConstructorDecl *C) {
+    if (C && C->isNoReturn())
+      Block = createNoReturnBlock();
+    else
+      autoCreateBlock();
+  };
   CFGBlock *createBlock(bool add_successor = true);
   CFGBlock *createNoReturnBlock();
 
@@ -4830,7 +4836,7 @@ CFGBlock *CFGBuilder::VisitCXXConstructExpr(CXXConstructExpr *C,
   // constructor C, they're for its arguments only.
   findConstructionContextsForArguments(C);
 
-  autoCreateBlock();
+  createConstructorBlock(C->getConstructor());
   appendConstructor(Block, C);
 
   return VisitChildren(C);
@@ -4896,13 +4902,9 @@ CFGBlock *CFGBuilder::VisitCXXTemporaryObjectExpr(CXXTemporaryObjectExpr *E,
   // constructor C, they're for its arguments only.
   findConstructionContextsForArguments(E);
 
-  CXXConstructorDecl *C = E->getConstructor();
-  if (C && C->isNoReturn())
-    Block = createNoReturnBlock();
-  else
-    autoCreateBlock();
-
+  createConstructorBlock(E->getConstructor());
   appendConstructor(Block, E);
+
   return VisitChildren(E);
 }
 

@@ -51,13 +51,18 @@ void check() {
 }
 
 namespace GH63009 {
-struct S {
-  [[noreturn]] S() { throw int {}; }
+struct S1 {
+  [[noreturn]] S1() { throw int {}; }
+};
+struct S2 {
+  [[noreturn]] ~S2() { throw int {}; }
 };
 
-int test_no_return_constructor() { S(); } // ok
+int test_no_return_constructor() { S1(); } // ok
+int test_no_return_destructor() { S2(); } // ok
 
 int main() {
   test_no_return_constructor();
+  test_no_return_destructor();
 }
 }
