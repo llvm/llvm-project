@@ -13720,11 +13720,11 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   unsigned NumElts = VT.getVectorNumElements();
   unsigned EltSize = VT.getScalarSizeInBits();
   if (isREVMask(ShuffleMask, EltSize, NumElts, 64))
-    return DAG.getNode(AArch64ISD::REV64, dl, V1.getValueType(), V1, V2);
+    return DAG.getNode(AArch64ISD::REV64, dl, V1.getValueType(), V1);
   if (isREVMask(ShuffleMask, EltSize, NumElts, 32))
-    return DAG.getNode(AArch64ISD::REV32, dl, V1.getValueType(), V1, V2);
+    return DAG.getNode(AArch64ISD::REV32, dl, V1.getValueType(), V1);
   if (isREVMask(ShuffleMask, EltSize, NumElts, 16))
-    return DAG.getNode(AArch64ISD::REV16, dl, V1.getValueType(), V1, V2);
+    return DAG.getNode(AArch64ISD::REV16, dl, V1.getValueType(), V1);
 
   if (((NumElts == 8 && EltSize == 16) || (NumElts == 16 && EltSize == 8)) &&
       ShuffleVectorInst::isReverseMask(ShuffleMask, ShuffleMask.size())) {
@@ -15741,7 +15741,7 @@ static SDValue EmitVectorComparison(SDValue LHS, SDValue RHS,
     if (IsZero)
       return DAG.getNode(AArch64ISD::CMGTz, dl, VT, LHS);
     if (IsMinusOne)
-      return DAG.getNode(AArch64ISD::CMGEz, dl, VT, LHS, RHS);
+      return DAG.getNode(AArch64ISD::CMGEz, dl, VT, LHS);
     return DAG.getNode(AArch64ISD::CMGT, dl, VT, LHS, RHS);
   case AArch64CC::LE:
     if (IsZero)

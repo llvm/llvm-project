@@ -885,8 +885,7 @@ def AArch64uitof: SDNode<"AArch64ISD::UITOF", SDT_AArch64ITOF>;
 
 def AArch64tlsdesc_callseq : SDNode<"AArch64ISD::TLSDESC_CALLSEQ",
                                     SDT_AArch64TLSDescCallSeq,
-                                    [SDNPInGlue, SDNPOutGlue, SDNPHasChain,
-                                     SDNPVariadic]>;
+                                    [SDNPOutGlue, SDNPHasChain, SDNPVariadic]>;
 
 
 def AArch64WrapperLarge : SDNode<"AArch64ISD::WrapperLarge",
