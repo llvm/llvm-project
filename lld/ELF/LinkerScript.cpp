@@ -1440,17 +1440,17 @@ void LinkerScript::adjustSectionsAfterSorting() {
 // We check if the headers fit below the first allocated section. If there isn't
 // enough space for these sections, we'll remove them from the PT_LOAD segment,
 // and we'll also remove the PT_PHDR segment.
-void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
+void LinkerScript::allocateHeaders(
+    SmallVector<std::unique_ptr<PhdrEntry>, 0> &phdrs) {
   uint64_t min = std::numeric_limits<uint64_t>::max();
   for (OutputSection *sec : ctx.outputSections)
     if (sec->flags & SHF_ALLOC)
       min = std::min<uint64_t>(min, sec->addr);
 
-  auto it = llvm::find_if(
-      phdrs, [](const PhdrEntry *e) { return e->p_type == PT_LOAD; });
+  auto it = llvm::find_if(phdrs, [](auto &e) { return e->p_type == PT_LOAD; });
   if (it == phdrs.end())
     return;
-  PhdrEntry *firstPTLoad = *it;
+  PhdrEntry *firstPTLoad = it->get();
 
   bool hasExplicitHeaders =
       llvm::any_of(phdrsCommands, [](const PhdrsCommand &cmd) {
@@ -1479,8 +1479,7 @@ void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
   ctx.out.programHeaders->ptLoad = nullptr;
   firstPTLoad->firstSec = findFirstSection(ctx, firstPTLoad);
 
-  llvm::erase_if(phdrs,
-                 [](const PhdrEntry *e) { return e->p_type == PT_PHDR; });
+  llvm::erase_if(phdrs, [](auto &e) { return e->p_type == PT_PHDR; });
 }
 
 LinkerScript::AddressState::AddressState(const LinkerScript &script) {
@@ -1643,13 +1642,14 @@ void LinkerScript::erasePotentialSpillSections() {
 }
 
 // Creates program headers as instructed by PHDRS linker script command.
-SmallVector<PhdrEntry *, 0> LinkerScript::createPhdrs() {
-  SmallVector<PhdrEntry *, 0> ret;
+SmallVector<std::unique_ptr<PhdrEntry>, 0> LinkerScript::createPhdrs() {
+  SmallVector<std::unique_ptr<PhdrEntry>, 0> ret;
 
   // Process PHDRS and FILEHDR keywords because they are not
   // real output sections and cannot be added in the following loop.
   for (const PhdrsCommand &cmd : phdrsCommands) {
-    PhdrEntry *phdr = make<PhdrEntry>(ctx, cmd.type, cmd.flags.value_or(PF_R));
+    auto phdr =
+        std::make_unique<PhdrEntry>(ctx, cmd.type, cmd.flags.value_or(PF_R));
 
     if (cmd.hasFilehdr)
       phdr->add(ctx.out.elfHeader.get());
@@ -1660,7 +1660,7 @@ SmallVector<PhdrEntry *, 0> LinkerScript::createPhdrs() {
       phdr->p_paddr = cmd.lmaExpr().getValue();
       phdr->hasLMA = true;
     }
-    ret.push_back(phdr);
+    ret.push_back(std::move(phdr));
   }
 
   // Add output sections to program headers.

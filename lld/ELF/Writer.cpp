@@ -65,7 +65,7 @@ private:
   void checkExecuteOnly();
   void setReservedSymbolSections();
 
-  SmallVector<PhdrEntry *, 0> createPhdrs(Partition &part);
+  SmallVector<std::unique_ptr<PhdrEntry>, 0> createPhdrs(Partition &part);
   void addPhdrForSection(Partition &part, unsigned shType, unsigned pType,
                          unsigned pFlags);
   void assignFileOffsets();
@@ -96,20 +96,22 @@ template <class ELFT> void elf::writeResult(Ctx &ctx) {
   Writer<ELFT>(ctx).run();
 }
 
-static void removeEmptyPTLoad(Ctx &ctx, SmallVector<PhdrEntry *, 0> &phdrs) {
-  auto it = std::stable_partition(
-      phdrs.begin(), phdrs.end(), [&](const PhdrEntry *p) {
-        if (p->p_type != PT_LOAD)
-          return true;
-        if (!p->firstSec)
-          return false;
-        uint64_t size = p->lastSec->addr + p->lastSec->size - p->firstSec->addr;
-        return size != 0;
-      });
+static void
+removeEmptyPTLoad(Ctx &ctx, SmallVector<std::unique_ptr<PhdrEntry>, 0> &phdrs) {
+  auto it = std::stable_partition(phdrs.begin(), phdrs.end(), [&](auto &p) {
+    if (p->p_type != PT_LOAD)
+      return true;
+    if (!p->firstSec)
+      return false;
+    uint64_t size = p->lastSec->addr + p->lastSec->size - p->firstSec->addr;
+    return size != 0;
+  });
 
   // Clear OutputSection::ptLoad for sections contained in removed
   // segments.
-  DenseSet<PhdrEntry *> removed(it, phdrs.end());
+  DenseSet<PhdrEntry *> removed;
+  for (auto it2 = it; it2 != phdrs.end(); ++it2)
+    removed.insert(it2->get());
   for (OutputSection *sec : ctx.outputSections)
     if (removed.count(sec->ptLoad))
       sec->ptLoad = nullptr;
@@ -853,10 +855,10 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
     return ctx.arg.emachine == EM_X86_64 && osec->flags & SHF_X86_64_LARGE;
   };
   for (Partition &part : ctx.partitions) {
-    for (PhdrEntry *p : part.phdrs) {
+    for (auto &p : part.phdrs) {
       if (p->p_type != PT_LOAD)
         continue;
-      last = p;
+      last = p.get();
       if (!(p->p_flags & PF_W) && p->lastSec && !isLarge(p->lastSec))
         lastRO = p->lastSec;
     }
@@ -1978,9 +1980,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // Android relocation packing can look up TLS symbol addresses. We only need
     // to care about the main partition here because all TLS symbols were moved
     // to the main partition (see MarkLive.cpp).
-    for (PhdrEntry *p : ctx.mainPart->phdrs)
+    for (auto &p : ctx.mainPart->phdrs)
       if (p->p_type == PT_TLS)
-        ctx.tlsPhdr = p;
+        ctx.tlsPhdr = p.get();
   }
 
   // Some symbols are defined in term of program headers. Now that we
@@ -2190,11 +2192,12 @@ static uint64_t computeFlags(Ctx &ctx, uint64_t flags) {
 // Decide which program headers to create and which sections to include in each
 // one.
 template <class ELFT>
-SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
-  SmallVector<PhdrEntry *, 0> ret;
+SmallVector<std::unique_ptr<PhdrEntry>, 0>
+Writer<ELFT>::createPhdrs(Partition &part) {
+  SmallVector<std::unique_ptr<PhdrEntry>, 0> ret;
   auto addHdr = [&, &ctx = ctx](unsigned type, unsigned flags) -> PhdrEntry * {
-    ret.push_back(make<PhdrEntry>(ctx, type, flags));
-    return ret.back();
+    ret.push_back(std::make_unique<PhdrEntry>(ctx, type, flags));
+    return ret.back().get();
   };
 
   unsigned partNo = part.getNumber(ctx);
@@ -2232,7 +2235,7 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
   // read-only by dynamic linker after processing relocations.
   // Current dynamic loaders only support one PT_GNU_RELRO PHDR, give
   // an error message if more than one PT_GNU_RELRO PHDR is required.
-  PhdrEntry *relRo = make<PhdrEntry>(ctx, PT_GNU_RELRO, PF_R);
+  auto relRo = std::make_unique<PhdrEntry>(ctx, PT_GNU_RELRO, PF_R);
   bool inRelroPhdr = false;
   OutputSection *relroEnd = nullptr;
   for (OutputSection *sec : ctx.outputSections) {
@@ -2309,19 +2312,19 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
   }
 
   // Add a TLS segment if any.
-  PhdrEntry *tlsHdr = make<PhdrEntry>(ctx, PT_TLS, PF_R);
+  auto tlsHdr = std::make_unique<PhdrEntry>(ctx, PT_TLS, PF_R);
   for (OutputSection *sec : ctx.outputSections)
     if (sec->partition == partNo && sec->flags & SHF_TLS)
       tlsHdr->add(sec);
   if (tlsHdr->firstSec)
-    ret.push_back(tlsHdr);
+    ret.push_back(std::move(tlsHdr));
 
   // Add an entry for .dynamic.
   if (OutputSection *sec = part.dynamic->getParent())
     addHdr(PT_DYNAMIC, sec->getPhdrFlags())->add(sec);
 
   if (relRo->firstSec)
-    ret.push_back(relRo);
+    ret.push_back(std::move(relRo));
 
   // PT_GNU_EH_FRAME is a special section pointing on .eh_frame_hdr.
   if (part.ehFrame->isNeeded() && part.ehFrameHdr &&
@@ -2394,9 +2397,9 @@ void Writer<ELFT>::addPhdrForSection(Partition &part, unsigned shType,
   if (i == ctx.outputSections.end())
     return;
 
-  PhdrEntry *entry = make<PhdrEntry>(ctx, pType, pFlags);
+  auto entry = std::make_unique<PhdrEntry>(ctx, pType, pFlags);
   entry->add(*i);
-  part.phdrs.push_back(entry);
+  part.phdrs.push_back(std::move(entry));
 }
 
 // Place the first section of each PT_LOAD to a different page (of maxPageSize).
@@ -2459,10 +2462,10 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
 
   for (Partition &part : ctx.partitions) {
     prev = nullptr;
-    for (const PhdrEntry *p : part.phdrs)
+    for (auto &p : part.phdrs)
       if (p->p_type == PT_LOAD && p->firstSec) {
-        pageAlign(p);
-        prev = p;
+        pageAlign(p.get());
+        prev = p.get();
       }
   }
 }
@@ -2524,9 +2527,9 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
 
   PhdrEntry *lastRX = nullptr;
   for (Partition &part : ctx.partitions)
-    for (PhdrEntry *p : part.phdrs)
+    for (auto &p : part.phdrs)
       if (p->p_type == PT_LOAD && (p->p_flags & PF_X))
-        lastRX = p;
+        lastRX = p.get();
 
   // Layout SHF_ALLOC sections before non-SHF_ALLOC sections. A non-SHF_ALLOC
   // will not occupy file offsets contained by a PT_LOAD.
@@ -2579,7 +2582,7 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
 // Finalize the program headers. We call this function after we assign
 // file offsets and VAs to all sections.
 template <class ELFT> void Writer<ELFT>::setPhdrs(Partition &part) {
-  for (PhdrEntry *p : part.phdrs) {
+  for (std::unique_ptr<PhdrEntry> &p : part.phdrs) {
     OutputSection *first = p->firstSec;
     OutputSection *last = p->lastSec;
 
@@ -2838,7 +2841,7 @@ static void fillTrap(std::array<uint8_t, 4> trapInstr, uint8_t *i,
 template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
   for (Partition &part : ctx.partitions) {
     // Fill the last page.
-    for (PhdrEntry *p : part.phdrs)
+    for (std::unique_ptr<PhdrEntry> &p : part.phdrs)
       if (p->p_type == PT_LOAD && (p->p_flags & PF_X))
         fillTrap(
             ctx.target->trapInstr,
@@ -2850,9 +2853,9 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
     // an executable segment to ensure that other tools don't accidentally
     // trim the instruction padding (e.g. when stripping the file).
     PhdrEntry *last = nullptr;
-    for (PhdrEntry *p : part.phdrs)
+    for (std::unique_ptr<PhdrEntry> &p : part.phdrs)
       if (p->p_type == PT_LOAD)
-        last = p;
+        last = p.get();
 
     if (last && (last->p_flags & PF_X))
       last->p_memsz = last->p_filesz =
