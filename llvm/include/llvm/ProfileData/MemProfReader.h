@@ -120,12 +120,23 @@ public:
 
   // Initialize the MemProfReader with the frame mappings, call stack mappings,
   // and profile contents.
+  LLVM_DEPRECATED("Construct MemProfReader with IndexedMemProfData",
+                  "MemProfReader")
   MemProfReader(
       llvm::DenseMap<FrameId, Frame> FrameIdMap,
       llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> CSIdMap,
       llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> ProfData)
       : IdToFrame(std::move(FrameIdMap)), CSIdToCallStack(std::move(CSIdMap)),
         FunctionProfileData(std::move(ProfData)) {}
+
+  // Initialize the MemProfReader with the given MemProf profile.
+  MemProfReader(IndexedMemProfData MemProfData) {
+    for (const auto &[FrameId, F] : MemProfData.Frames)
+      IdToFrame.try_emplace(FrameId, F);
+    for (const auto &[CSId, CS] : MemProfData.CallStacks)
+      CSIdToCallStack.try_emplace(CSId, CS);
+    FunctionProfileData = std::move(MemProfData.Records);
+  }
 
 protected:
   // A helper method to extract the frame from the IdToFrame map.

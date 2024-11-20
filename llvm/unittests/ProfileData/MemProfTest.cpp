@@ -490,20 +490,18 @@ TEST(MemProf, BaseMemProfReader) {
 }
 
 TEST(MemProf, BaseMemProfReaderWithCSIdMap) {
-  llvm::DenseMap<FrameId, Frame> FrameIdMap;
+  llvm::memprof::IndexedMemProfData MemProfData;
   Frame F1(/*Hash=*/IndexedMemProfRecord::getGUID("foo"), /*LineOffset=*/20,
            /*Column=*/5, /*IsInlineFrame=*/true);
   Frame F2(/*Hash=*/IndexedMemProfRecord::getGUID("bar"), /*LineOffset=*/10,
            /*Column=*/2, /*IsInlineFrame=*/false);
-  FrameIdMap.insert({F1.hash(), F1});
-  FrameIdMap.insert({F2.hash(), F2});
+  MemProfData.Frames.insert({F1.hash(), F1});
+  MemProfData.Frames.insert({F2.hash(), F2});
 
-  llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> CSIdMap;
   llvm::SmallVector<FrameId> CallStack = {F1.hash(), F2.hash()};
   CallStackId CSId = llvm::memprof::hashCallStack(CallStack);
-  CSIdMap.insert({CSId, CallStack});
+  MemProfData.CallStacks.insert({CSId, CallStack});
 
-  llvm::MapVector<llvm::GlobalValue::GUID, IndexedMemProfRecord> ProfData;
   IndexedMemProfRecord FakeRecord;
   MemInfoBlock Block;
   Block.AllocCount = 1U, Block.TotalAccessDensity = 4,
@@ -511,9 +509,9 @@ TEST(MemProf, BaseMemProfReaderWithCSIdMap) {
   FakeRecord.AllocSites.emplace_back(
       /*CSId=*/llvm::memprof::hashCallStack(CallStack),
       /*MB=*/Block);
-  ProfData.insert({F1.hash(), FakeRecord});
+  MemProfData.Records.insert({F1.hash(), FakeRecord});
 
-  MemProfReader Reader(FrameIdMap, CSIdMap, ProfData);
+  MemProfReader Reader(MemProfData);
 
   llvm::SmallVector<MemProfRecord, 1> Records;
   for (const auto &KeyRecordPair : Reader) {
