@@ -45,6 +45,8 @@ static void EmitDeclInit(CodeGenFunction &CGF, const VarDecl &D,
     if (lv.isObjCStrong())
       CGM.getObjCRuntime().EmitObjCGlobalAssign(CGF, CGF.EmitScalarExpr(Init),
                                                 DeclPtr, D.getTLSKind());
+    else if (D.hasAttr<HLSLVkExtBuiltinInputAttr>())
+      CGM.getHLSLRuntime().EmitBuiltinConstructor(CGF, D, DeclPtr);
     else if (lv.isObjCWeak())
       CGM.getObjCRuntime().EmitObjCWeakAssign(CGF, CGF.EmitScalarExpr(Init),
                                               DeclPtr);
@@ -79,6 +81,15 @@ static void EmitDeclDestroy(CodeGenFunction &CGF, const VarDecl &D,
   QualType::DestructionKind DtorKind = D.needsDestruction(CGF.getContext());
 
   // FIXME:  __attribute__((cleanup)) ?
+  CodeGenModule &CGM = CGF.CGM;
+
+  if (D.hasAttr<HLSLVkExtBuiltinOutputAttr>()) {
+    llvm::Constant *Argument = llvm::Constant::getNullValue(CGF.Int8PtrTy);
+    llvm::FunctionCallee Func =
+        CGF.CGM.getHLSLRuntime().EmitBuiltinDestructor(D, Addr);
+    CGM.getCXXABI().registerGlobalDtor(CGF, D, Func, Argument);
+    return;
+  }
 
   switch (DtorKind) {
   case QualType::DK_none:
@@ -97,8 +108,6 @@ static void EmitDeclDestroy(CodeGenFunction &CGF, const VarDecl &D,
 
   llvm::FunctionCallee Func;
   llvm::Constant *Argument;
-
-  CodeGenModule &CGM = CGF.CGM;
   QualType Type = D.getType();
 
   // Special-case non-array C++ destructors, if they have the right signature.
@@ -1177,6 +1186,11 @@ void CodeGenFunction::GenerateCXXGlobalCleanUpFunc(
       // Make sure the call and the callee agree on calling convention.
       if (llvm::Function *F = dyn_cast<llvm::Function>(Callee))
         CI->setCallingConv(F->getCallingConv());
+
+      // This is required if the destructor is marked as convergent.
+      if (CGM.shouldEmitConvergenceTokens() && CI->isConvergent()) {
+        addControlledConvergenceToken(CI);
+      }
     }
   }
 

@@ -14,6 +14,7 @@
 
 #include "CGHLSLRuntime.h"
 #include "CGDebugInfo.h"
+#include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "TargetInfo.h"
 #include "clang/AST/Decl.h"
@@ -379,6 +380,18 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
                                               const ParmVarDecl &D,
                                               llvm::Type *Ty) {
   assert(D.hasAttrs() && "Entry parameter missing annotation attribute!");
+
+  if (D.hasAttr<HLSLSV_GroupIDAttr>()) {
+    if (getArch() == llvm::Triple::spirv) {
+      llvm::Type *Ty = CGM.getTypes().ConvertTypeForMem(D.getType());
+      llvm::Function *IntrinsicID =
+          CGM.getIntrinsic(Intrinsic::spv_load_builtin, {Ty});
+      return B.CreateCall(IntrinsicID, {B.getInt32(/* WorkgroupID */ 26)});
+    } else
+      // FIXME: getIntrinsic(getGroupIDIntrinsic())
+      return nullptr;
+  }
+
   if (D.hasAttr<HLSLSV_GroupIndexAttr>()) {
     llvm::Function *DxGroupIndex =
         CGM.getIntrinsic(Intrinsic::dx_flattened_thread_id_in_group);
@@ -503,13 +516,17 @@ void CGHLSLRuntime::generateGlobalCtorDtorCalls() {
       IP = Token->getNextNode();
     }
     IRBuilder<> B(IP);
-    for (auto *Fn : CtorFns)
-      B.CreateCall(FunctionCallee(Fn), {}, OB);
+    for (auto *Fn : CtorFns) {
+      CallInst *CI = B.CreateCall(FunctionCallee(Fn), {}, OB);
+      CI->setCallingConv(Fn->getCallingConv());
+    }
 
     // Insert global dtors before the terminator of the last instruction
     B.SetInsertPoint(F.back().getTerminator());
-    for (auto *Fn : DtorFns)
-      B.CreateCall(FunctionCallee(Fn), {}, OB);
+    for (auto *Fn : DtorFns) {
+      CallInst *CI = B.CreateCall(FunctionCallee(Fn), {}, OB);
+      CI->setCallingConv(Fn->getCallingConv());
+    }
   }
 
   // No need to keep global ctors/dtors for non-lib profile after call to
@@ -606,6 +623,55 @@ llvm::Function *CGHLSLRuntime::createResourceBindingInitFn() {
 
   Builder.CreateRetVoid();
   return InitResBindingsFunc;
+}
+
+void CGHLSLRuntime::EmitBuiltinConstructor(CodeGenFunction &CGF,
+                                           const VarDecl &VD, Address dst) {
+  HLSLVkExtBuiltinInputAttr *BuiltinAttr =
+      VD.getAttr<HLSLVkExtBuiltinInputAttr>();
+  assert(BuiltinAttr);
+
+  CGBuilderTy &B = CGF.Builder;
+  llvm::Type *Ty = CGF.ConvertTypeForMem(VD.getType());
+  llvm::Function *IntrinsicID =
+      CGM.getIntrinsic(Intrinsic::spv_load_builtin, {Ty});
+
+  llvm::Value *Value =
+      B.CreateCall(IntrinsicID, {B.getInt32(BuiltinAttr->getBuiltIn())});
+  B.CreateStore(Value, dst);
+}
+
+llvm::Function *CGHLSLRuntime::EmitBuiltinDestructor(const VarDecl &VD,
+                                                     Address dst) {
+  HLSLVkExtBuiltinOutputAttr *BuiltinAttr =
+      VD.getAttr<HLSLVkExtBuiltinOutputAttr>();
+  assert(BuiltinAttr);
+
+  CodeGenFunction CGF(CGM);
+  FunctionArgList args;
+  ASTContext &Ctx = CGM.getContext();
+  ImplicitParamDecl Dst(Ctx, Ctx.VoidPtrTy, ImplicitParamKind::Other);
+  args.push_back(&Dst);
+  const CGFunctionInfo &FI =
+      CGM.getTypes().arrangeBuiltinFunctionDeclaration(Ctx.VoidTy, args);
+  llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FI);
+  llvm::Function *fn = CGM.CreateGlobalInitOrCleanUpFunction(
+      FTy, "__cxx_global_array_dtor", FI, VD.getLocation());
+
+  CGF.StartFunction(GlobalDecl(&VD, DynamicInitKind::GlobalArrayDestructor),
+                    Ctx.VoidTy, fn, FI, args);
+
+  CGBuilderTy &B = CGF.Builder;
+  llvm::Type *Ty = CGF.ConvertTypeForMem(VD.getType());
+  llvm::Function *IntrinsicID =
+      CGM.getIntrinsic(Intrinsic::spv_store_builtin, {Ty});
+
+  llvm::Value *V = B.CreateLoad(dst);
+  B.CreateCall(IntrinsicID, {B.getInt32(BuiltinAttr->getBuiltIn()), V});
+
+  CGF.FinishFunction();
+
+  return fn;
 }
 
 llvm::Instruction *CGHLSLRuntime::getConvergenceToken(BasicBlock &BB) {

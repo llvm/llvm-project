@@ -53,7 +53,7 @@ define spir_kernel void @test5(ptr addrspace(4) %arg1) !kernel_arg_addr_space !6
 
 !6 = !{i32 4}
 
-; CHECK-DAG:  %[[#PTR6:]] = OpTypePointer Input %[[#INT]]
+; CHECK-DAG:  %[[#PTR6:]] = OpTypePointer Private %[[#INT]]
 ; CHECK-DAG:  %[[#ARG:]] = OpFunctionParameter %[[#PTR6]]
 
 define spir_kernel void @test6(ptr addrspace(7) %arg1) !kernel_arg_addr_space !7 !kernel_arg_type !2 {
@@ -62,3 +62,23 @@ define spir_kernel void @test6(ptr addrspace(7) %arg1) !kernel_arg_addr_space !7
 }
 
 !7 = !{i32 7}
+
+; CHECK-DAG:  %[[#PTR7:]] = OpTypePointer Input %[[#INT]]
+; CHECK-DAG:  %[[#ARG:]] = OpFunctionParameter %[[#PTR7]]
+
+define spir_kernel void @test7(ptr addrspace(8) %arg1) !kernel_arg_addr_space !8 !kernel_arg_type !2 {
+  %a = getelementptr inbounds i32, ptr addrspace(8) %arg1, i32 2
+  ret void
+}
+
+!8 = !{i32 8}
+
+; CHECK-DAG:  %[[#PTR8:]] = OpTypePointer Output %[[#INT]]
+; CHECK-DAG:  %[[#ARG:]] = OpFunctionParameter %[[#PTR8]]
+
+define spir_kernel void @test8(ptr addrspace(9) %arg1) !kernel_arg_addr_space !9 !kernel_arg_type !2 {
+  %a = getelementptr inbounds i32, ptr addrspace(9) %arg1, i32 2
+  ret void
+}
+
+!9 = !{i32 9}

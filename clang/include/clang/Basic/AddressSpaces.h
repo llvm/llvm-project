@@ -59,6 +59,9 @@ enum class LangAS : unsigned {
   // HLSL specific address spaces.
   hlsl_groupshared,
 
+  // Vulkan specific address spaces.
+  vulkan_private,
+
   // Wasm specific address spaces.
   wasm_funcref,
 
