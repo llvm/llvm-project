@@ -12,17 +12,17 @@
 ; CHECK-DAG: OpName %[[test:.*]] "test"
 ; CHECK-DAG: %[[TyVoid:.*]] = OpTypeVoid
 ; CHECK-DAG: %[[TyFloat32:.*]] = OpTypeFloat 32
-; CHECK-DAG: %[[TyInt8:.*]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[TyInt64:.*]] = OpTypeInt 64 0
+; CHECK-DAG: %[[TyInt8:.*]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[TyPtrInt8:.*]] = OpTypePointer Function %[[TyInt8]]
-; CHECK-DAG: %[[TyUncompleteBar:.*]] = OpTypeFunction %[[TyInt64]] %[[TyPtrInt8]] %[[TyPtrInt8]]
-; CHECK-DAG: %[[TyPtrUncompleteBar:.*]] = OpTypePointer Function %[[TyUncompleteBar]]
-; CHECK-DAG: %[[TyUncompleteFp:.*]] = OpTypeFunction %[[TyFloat32]] %[[TyPtrUncompleteBar]]
+; CHECK-DAG: %[[TyUncompleteFp:.*]] = OpTypeFunction %[[TyFloat32]] %[[TyPtrInt8]]
 ; CHECK-DAG: %[[TyPtrUncompleteFp:.*]] = OpTypePointer Function %[[TyUncompleteFp]]
-; CHECK-DAG: %[[TyBar:.*]] = OpTypeFunction %[[TyInt64]] %[[TyPtrUncompleteFp]] %[[TyPtrInt8]]
-; CHECK-DAG: %[[TyPtrBar:.*]] = OpTypePointer Function %[[TyBar]]
-; CHECK-DAG: %[[TyFp:.*]] = OpTypeFunction %[[TyFloat32]] %[[TyPtrBar]]
+; CHECK-DAG: %[[TyUncompleteBar:.*]] = OpTypeFunction %[[TyInt64]] %[[TyPtrUncompleteFp]] %[[TyPtrInt8]]
+; CHECK-DAG: %[[TyPtrUncompleteBar:.*]] = OpTypePointer Function %[[TyUncompleteBar]]
+; CHECK-DAG: %[[TyFp:.*]] = OpTypeFunction %[[TyFloat32]] %[[TyPtrUncompleteBar]]
 ; CHECK-DAG: %[[TyPtrFp:.*]] = OpTypePointer Function %[[TyFp]]
+; CHECK-DAG: %[[TyBar:.*]] = OpTypeFunction %[[TyInt64]] %[[TyPtrFp]] %[[TyPtrInt8]]
+; CHECK-DAG: %[[TyPtrBar:.*]] = OpTypePointer Function %[[TyBar]]
 ; CHECK-DAG: %[[TyTest:.*]] = OpTypeFunction %[[TyVoid]] %[[TyPtrFp]] %[[TyPtrInt8]] %[[TyPtrBar]]
 ; CHECK: %[[test]] = OpFunction %[[TyVoid]] None %[[TyTest]]
 ; CHECK: %[[fp]] = OpFunctionParameter %[[TyPtrFp]]

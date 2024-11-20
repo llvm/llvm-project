@@ -77,7 +77,6 @@ class SPIRVEmitIntrinsics
 
   // a register of Instructions that don't have a complete type definition
   bool CanTodoType = true;
-  bool CanUpdateType = true;
   unsigned TodoTypeSz = 0;
   DenseMap<Value *, bool> TodoType;
   void insertTodoType(Value *Op) {
@@ -938,8 +937,7 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
       continue;
     Value *OpTyVal = PoisonValue::get(KnownElemTy);
     Type *OpTy = Op->getType();
-    if (!Ty || (CanUpdateType &&
-                (AskTy || isUntypedPointerTy(Ty) || isTodoType(Op)))) {
+    if (!Ty || AskTy || isUntypedPointerTy(Ty) || isTodoType(Op)) {
       GR->addDeducedElementType(Op, KnownElemTy);
       // check if KnownElemTy is complete
       if (!Uncomplete)
@@ -2089,17 +2087,6 @@ bool SPIRVEmitIntrinsics::runOnModule(Module &M) {
 
   CanTodoType = false;
   Changed |= postprocessTypes(M);
-
-  // Validation pass.
-  CanUpdateType = false;
-  TodoType.clear();
-  for (auto &F : M) {
-    CurrF = &F;
-    for (BasicBlock &BB : F)
-      for (PHINode &Phi : BB.phis())
-        if (isPointerTy(Phi.getType()))
-          deduceOperandElementType(&Phi, nullptr, true);
-  }
 
   if (HaveFunPtrs)
     Changed |= processFunctionPointers(M);
