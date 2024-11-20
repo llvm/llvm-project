@@ -40,6 +40,7 @@
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include <string>
 
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
@@ -3119,7 +3120,39 @@ static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OpenMPDeclareMapperConstruct &declareMapperConstruct) {
-  TODO(converter.getCurrentLocation(), "OpenMPDeclareMapperConstruct");
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  lower::StatementContext stmtCtx;
+  const auto &spec =
+      std::get<parser::OmpDeclareMapperSpecifier>(declareMapperConstruct.t);
+  const auto &mapperName{std::get<std::optional<parser::Name>>(spec.t)};
+  const auto &varType{std::get<parser::TypeSpec>(spec.t)};
+  const auto &varName{std::get<parser::Name>(spec.t)};
+  std::stringstream mapperNameStr;
+  if (mapperName.has_value()) {
+    mapperNameStr << mapperName->ToString();
+  } else {
+    mapperNameStr << "default_"
+                  << varType.declTypeSpec->derivedTypeSpec().name().ToString();
+  }
+
+  mlir::OpBuilder::InsertPoint insPt = firOpBuilder.saveInsertionPoint();
+  firOpBuilder.setInsertionPointToStart(converter.getModuleOp().getBody());
+  auto mlirType = converter.genType(varType.declTypeSpec->derivedTypeSpec());
+  auto varVal = firOpBuilder.createTemporaryAlloc(
+      converter.getCurrentLocation(), mlirType, varName.ToString());
+  symTable.addSymbol(*varName.symbol, varVal);
+
+  mlir::omp::DeclareMapperOperands clauseOps;
+  const auto *clauseList{
+      parser::Unwrap<parser::OmpClauseList>(declareMapperConstruct.t)};
+  List<Clause> clauses = makeClauses(*clauseList, semaCtx);
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processMap(converter.getCurrentLocation(), stmtCtx, clauseOps);
+  auto declMapperOp = firOpBuilder.create<mlir::omp::DeclareMapperOp>(
+      converter.getCurrentLocation(), mapperNameStr.str(), varVal, mlirType,
+      clauseOps.mapVars);
+  converter.getMLIRSymbolTable()->insert(declMapperOp.getOperation());
+  firOpBuilder.restoreInsertionPoint(insPt);
 }
 
 static void

@@ -10,7 +10,7 @@ subroutine declare_mapper_1
  type my_type
    integer              :: num_vals
    integer, allocatable :: values(:)
- end type 
+ end type
 
  type my_type2
    type (my_type)        :: my_type_var
@@ -21,7 +21,7 @@ subroutine declare_mapper_1
   type (my_type2)        :: t
   real                   :: x, y(nvals)
   !$omp declare mapper (my_type :: var) map (var, var%values (1:var%num_vals))
-!CHECK: not yet implemented: OpenMPDeclareMapperConstruct
+!CHECK: not yet implemented: lowering symbol to HLFIR
 end subroutine declare_mapper_1
 
 
@@ -31,7 +31,7 @@ subroutine declare_mapper_2
  type my_type
    integer              :: num_vals
    integer, allocatable :: values(:)
- end type 
+ end type
 
  type my_type2
    type (my_type)        :: my_type_var
@@ -43,5 +43,5 @@ subroutine declare_mapper_2
   real                   :: x, y(nvals)
   !$omp declare mapper (my_mapper : my_type2 :: v) map (v%arr, x, y(:)) &
   !$omp&                map (alloc : v%temp)
-!CHECK: not yet implemented: OpenMPDeclareMapperConstruct
+!CHECK: not yet implemented: lowering symbol to HLFIR
 end subroutine declare_mapper_2

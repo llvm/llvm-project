@@ -464,7 +464,8 @@ class MapInfoFinalizationPass
     for (auto *user : mapOp->getUsers()) {
       if (llvm::isa<mlir::omp::TargetOp, mlir::omp::TargetDataOp,
                     mlir::omp::TargetUpdateOp, mlir::omp::TargetExitDataOp,
-                    mlir::omp::TargetEnterDataOp>(user))
+                    mlir::omp::TargetEnterDataOp, mlir::omp::DeclareMapperOp>(
+              user))
         return user;
 
       if (auto mapUser = llvm::dyn_cast<mlir::omp::MapInfoOp>(user))
