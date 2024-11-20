@@ -691,7 +691,7 @@ public:
 
   GlobalValueSummary &getAliasee() {
     return const_cast<GlobalValueSummary &>(
-        static_cast<const AliasSummary *>(this)->getAliasee());
+                         static_cast<const AliasSummary *>(this)->getAliasee());
   }
   ValueInfo getAliaseeVI() const {
     assert(AliaseeValueInfo && "Unexpected missing aliasee");
@@ -1579,7 +1579,9 @@ public:
   }
 
   bool withAttributePropagation() const { return WithAttributePropagation; }
-  void setWithAttributePropagation() { WithAttributePropagation = true; }
+  void setWithAttributePropagation() {
+    WithAttributePropagation = true;
+  }
 
   bool withDSOLocalPropagation() const { return WithDSOLocalPropagation; }
   void setWithDSOLocalPropagation() { WithDSOLocalPropagation = true; }
@@ -1716,13 +1718,13 @@ public:
 
   /// Find the summary for ValueInfo \p VI in module \p ModuleId, or nullptr if
   /// not found.
-  GlobalValueSummary *findSummaryInModule(ValueInfo VI,
-                                          StringRef ModuleId) const {
+  GlobalValueSummary *findSummaryInModule(ValueInfo VI, StringRef ModuleId) const {
     auto SummaryList = VI.getSummaryList();
-    auto Summary = llvm::find_if(
-        SummaryList, [&](const std::unique_ptr<GlobalValueSummary> &Summary) {
-          return Summary->modulePath() == ModuleId;
-        });
+    auto Summary =
+        llvm::find_if(SummaryList,
+                      [&](const std::unique_ptr<GlobalValueSummary> &Summary) {
+                        return Summary->modulePath() == ModuleId;
+                      });
     if (Summary == SummaryList.end())
       return nullptr;
     return Summary->get();
