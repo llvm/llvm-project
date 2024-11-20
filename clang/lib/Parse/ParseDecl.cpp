@@ -2890,8 +2890,9 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
       // ProduceConstructorSignatureHelp only on VarDecls.
       ExpressionStarts = SetPreferredType;
     }
-
-    bool SawError = ParseExpressionList(Exprs, ExpressionStarts);
+    bool HasTrailingComma = false;
+    bool SawError =
+        ParseExpressionList(Exprs, ExpressionStarts, HasTrailingComma);
 
     if (SawError) {
       if (ThisVarDecl && PP.isCodeCompletionReached() && !CalledSignatureHelp) {

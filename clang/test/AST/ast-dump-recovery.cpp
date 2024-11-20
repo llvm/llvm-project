@@ -42,9 +42,14 @@ void test_invalid_call_2() {
 
 void test_invalid_call_3() {
   // CHECK:   `-RecoveryExpr {{.*}} 'int' contains-errors
-  // CHECK-NEXT: |-UnresolvedLookupExpr {{.*}} '<overloaded function type>' lvalue (ADL) = 'some_func2'
-  // CHECK-NEXT: `-IntegerLiteral {{.*}} 'int' 1
-  some_func2(1);
+  // CHECK-NEXT: -UnresolvedLookupExpr {{.*}} '<overloaded function type>' lvalue (ADL) = 'some_func2'
+  some_func2(,);
+}
+
+void test_invalid_call_4() {
+  // CHECK:   `-RecoveryExpr {{.*}} 'int' contains-errors
+  // CHECK-NEXT: -UnresolvedLookupExpr {{.*}} '<overloaded function type>' lvalue (ADL) = 'some_func2'
+  some_func2(,,);
 }
 
 int ambig_func(double);
