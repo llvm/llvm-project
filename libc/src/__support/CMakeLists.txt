@@ -14,38 +14,16 @@ add_header_library(
     libc.src.__support.CPP.type_traits
 )
 
-add_object_library(
+add_header_library(
   freelist
   HDRS
     freelist.h
-  SRCS
-    freelist.cpp
   DEPENDS
-    .block
     libc.src.__support.fixedvector
     libc.src.__support.CPP.array
     libc.src.__support.CPP.cstddef
     libc.src.__support.CPP.new
     libc.src.__support.CPP.span
-)
-
-add_object_library(
-  freetrie
-  HDRS
-    freetrie.h
-  SRCS
-    freetrie.cpp
-  DEPENDS
-    .block
-    .freelist
-)
-
-add_header_library(
-  freestore
-  HDRS
-    freestore.h
-  DEPENDS
-    .freetrie
 )
 
 add_header_library(
@@ -54,7 +32,7 @@ add_header_library(
     freelist_heap.h
   DEPENDS
     .block
-    .freestore
+    .freelist
     libc.src.__support.CPP.cstddef
     libc.src.__support.CPP.array
     libc.src.__support.CPP.optional
