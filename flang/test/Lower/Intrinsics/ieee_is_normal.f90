@@ -1,5 +1,5 @@
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s
-! RUN: flang-new -fc1 -emit-fir %s -o - | FileCheck %s
+! RUN: flang -fc1 -emit-fir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: ieee_is_normal_f16
 subroutine ieee_is_normal_f16(r)

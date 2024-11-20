@@ -8,14 +8,13 @@
 
 #include "src/stdio/vfprintf.h"
 
+#include "hdr/types/FILE.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/arg_list.h"
 #include "src/errno/libc_errno.h"
 #include "src/stdio/gpu/vfprintf_utils.h"
 
-#include <stdio.h>
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, vfprintf,
                    (::FILE *__restrict stream, const char *__restrict format,
@@ -25,4 +24,4 @@ LLVM_LIBC_FUNCTION(int, vfprintf,
   return ret_val;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

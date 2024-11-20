@@ -122,7 +122,7 @@ define <32 x i8> @mul_v32i8(<32 x i8> %i, <32 x i8> %j) nounwind readnone {
 ; CHECK-LABEL: mul_v32i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; CHECK-NEXT:    vpand %ymm1, %ymm2, %ymm3
+; CHECK-NEXT:    vpand %ymm2, %ymm1, %ymm3
 ; CHECK-NEXT:    vpmaddubsw %ymm3, %ymm0, %ymm3
 ; CHECK-NEXT:    vpand %ymm2, %ymm3, %ymm3
 ; CHECK-NEXT:    vpandn %ymm1, %ymm2, %ymm1

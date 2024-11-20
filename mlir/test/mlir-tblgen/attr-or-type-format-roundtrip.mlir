@@ -23,10 +23,10 @@ attributes {
   attr7 = #test.custom_anchor<5>,
   // CHECK: #test.custom_anchor<5, true>
   attr8 = #test.custom_anchor<5, true>,
-  // CHECK: #test.attr_with_optional_signed<-12>
-  attr9 = #test.attr_with_optional_signed<-12>,
-  // CHECK: #test.attr_with_optional_unsigned<22>
-  attr_10 = #test.attr_with_optional_unsigned<22>
+  // CHECK: #test.attr_with_optional_signed<-9223372036854775808>
+  attr9 = #test.attr_with_optional_signed<-9223372036854775808>,
+  // CHECK: #test.attr_with_optional_unsigned<18446744073709551615>
+  attr_10 = #test.attr_with_optional_unsigned<18446744073709551615>
 }
 
 // CHECK-LABEL: @test_roundtrip_default_parsers_struct

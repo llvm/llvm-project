@@ -103,6 +103,28 @@ def Linux : StandardSpec<"Linux"> {
             ArgSpec<UnsignedIntType>,
           ]
         >,
+        FunctionSpec<
+          "remap_file_pages",
+          RetValSpec<IntType>,
+          [
+            ArgSpec<VoidPtr>,
+            ArgSpec<SizeTType>,
+            ArgSpec<IntType>,
+            ArgSpec<SizeTType>,
+            ArgSpec<IntType>,
+          ]
+        >,
+        FunctionSpec<
+          "mremap",
+          RetValSpec<VoidPtr>,
+          [
+            ArgSpec<VoidPtr>,
+            ArgSpec<SizeTType>,
+            ArgSpec<SizeTType>,
+            ArgSpec<IntType>,
+            ArgSpec<VarArgType>,
+          ]
+        >,
       ]  // Functions
   >;
 
@@ -276,6 +298,23 @@ def Linux : StandardSpec<"Linux"> {
       ]
   >;
 
+
+  HeaderSpec UniStd = HeaderSpec<
+    "unistd.h",
+    [], // Macros
+    [],
+    [], // Enumerations
+    [
+        FunctionSpec<
+          "pipe2",
+          RetValSpec<IntType>,
+          [ArgSpec<IntPtr>, ArgSpec<IntType>] //TODO: make this int[2]
+        >,
+    ],
+    []
+  >;
+  
+
   let Headers = [
     Errno,
     SysEpoll,
@@ -284,5 +323,6 @@ def Linux : StandardSpec<"Linux"> {
     SysRandom,
     SysTime,
     Signal,
+    UniStd,
   ];
 }

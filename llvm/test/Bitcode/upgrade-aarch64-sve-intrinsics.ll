@@ -54,7 +54,7 @@ define <vscale x 32 x i8> @ld2.nxv32i8_no_eltty(<vscale x 16 x i1> %Pg, i8 *%bas
 ret <vscale x 32 x i8> %res
 }
 
-; ldN instrinsic name with only output type
+; ldN intrinsic name with only output type
 define <vscale x 32 x i8> @ld2.nxv32i8_no_predty_pty(<vscale x 16 x i1> %Pg, i8 *%base_ptr) {
 ; CHECK-LABEL:  @ld2.nxv32i8_no_predty_pty
 ; CHECK:  %1 = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld2.sret.nxv16i8(<vscale x 16 x i1> %Pg, ptr %base_ptr)

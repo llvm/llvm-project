@@ -35,7 +35,7 @@ public:
 
     // Init commonly used types
     realTy1 = mlir::FloatType::getF32(&context);
-    complexTy1 = fir::ComplexType::get(&context, 4);
+    complexTy1 = mlir::ComplexType::get(realTy1);
     integerTy1 = mlir::IntegerType::get(&context, 32);
 
     // Create commonly used reals
@@ -52,7 +52,7 @@ public:
 
   // Commonly used real/complex/integer types
   mlir::FloatType realTy1;
-  fir::ComplexType complexTy1;
+  mlir::ComplexType complexTy1;
   mlir::IntegerType integerTy1;
 
   // Commonly used real numbers
@@ -64,20 +64,13 @@ public:
 
 TEST_F(ComplexTest, verifyTypes) {
   mlir::Value cVal1 = helper->createComplex(complexTy1, rOne, rTwo);
-  mlir::Value cVal2 = helper->createComplex(4, rOne, rTwo);
   EXPECT_TRUE(fir::isa_complex(cVal1.getType()));
-  EXPECT_TRUE(fir::isa_complex(cVal2.getType()));
   EXPECT_TRUE(fir::isa_real(helper->getComplexPartType(cVal1)));
-  EXPECT_TRUE(fir::isa_real(helper->getComplexPartType(cVal2)));
 
   mlir::Value real1 = helper->extractComplexPart(cVal1, /*isImagPart=*/false);
   mlir::Value imag1 = helper->extractComplexPart(cVal1, /*isImagPart=*/true);
-  mlir::Value real2 = helper->extractComplexPart(cVal2, /*isImagPart=*/false);
-  mlir::Value imag2 = helper->extractComplexPart(cVal2, /*isImagPart=*/true);
   EXPECT_EQ(realTy1, real1.getType());
   EXPECT_EQ(realTy1, imag1.getType());
-  EXPECT_EQ(realTy1, real2.getType());
-  EXPECT_EQ(realTy1, imag2.getType());
 
   mlir::Value cVal3 =
       helper->insertComplexPart(cVal1, rThree, /*isImagPart=*/false);

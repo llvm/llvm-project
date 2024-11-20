@@ -12,7 +12,6 @@
 
 #include "AArch64InstrInfo.h"
 #include "AArch64ExpandImm.h"
-#include "AArch64FrameLowering.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64PointerAuth.h"
 #include "AArch64Subtarget.h"
@@ -106,6 +105,19 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   //        before the assembly printer.
   unsigned NumBytes = 0;
   const MCInstrDesc &Desc = MI.getDesc();
+
+  if (!MI.isBundle() && isTailCallReturnInst(MI)) {
+    NumBytes = Desc.getSize() ? Desc.getSize() : 4;
+
+    const auto *MFI = MF->getInfo<AArch64FunctionInfo>();
+    if (!MFI->shouldSignReturnAddress(MF))
+      return NumBytes;
+
+    const auto &STI = MF->getSubtarget<AArch64Subtarget>();
+    auto Method = STI.getAuthenticatedLRCheckMethod(*MF);
+    NumBytes += AArch64PAuth::getCheckerSizeInBytes(Method);
+    return NumBytes;
+  }
 
   // Size should be preferably set in
   // llvm/lib/Target/AArch64/AArch64InstrInfo.td (default case).
@@ -1994,6 +2006,7 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         .addReg(AArch64::X0)
         .addMBB(TargetMBB)
         .addImm(0);
+    TargetMBB->setMachineBlockAddressTaken();
     return true;
   }
 
@@ -4521,7 +4534,20 @@ AArch64InstrInfo::getLdStAmountOp(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode");
+  case AArch64::LDRBroX:
   case AArch64::LDRBBroX:
+  case AArch64::LDRSBXroX:
+  case AArch64::LDRSBWroX:
+  case AArch64::LDRHroX:
+  case AArch64::LDRHHroX:
+  case AArch64::LDRSHXroX:
+  case AArch64::LDRSHWroX:
+  case AArch64::LDRWroX:
+  case AArch64::LDRSroX:
+  case AArch64::LDRSWroX:
+  case AArch64::LDRDroX:
+  case AArch64::LDRXroX:
+  case AArch64::LDRQroX:
     return MI.getOperand(4);
   }
 }
@@ -5546,10 +5572,6 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   if (PNRReg.isValid() && !PNRReg.isVirtual())
     MI.addDef(PNRReg, RegState::Implicit);
   MI.addMemOperand(MMO);
-
-  if (PNRReg.isValid() && PNRReg.isVirtual())
-    BuildMI(MBB, MBBI, DebugLoc(), get(TargetOpcode::COPY), PNRReg)
-        .addReg(DestReg);
 }
 
 bool llvm::isNZCVTouchedInInstructionRange(const MachineInstr &DefMI,
@@ -7347,7 +7369,8 @@ genSubAdd2SubSub(MachineFunction &MF, MachineRegisterInfo &MRI,
   bool RegBIsKill = AddMI->getOperand(IdxOpd1).isKill();
   Register RegC = AddMI->getOperand(IdxOtherOpd).getReg();
   bool RegCIsKill = AddMI->getOperand(IdxOtherOpd).isKill();
-  Register NewVR = MRI.createVirtualRegister(MRI.getRegClass(RegA));
+  Register NewVR =
+      MRI.createVirtualRegister(MRI.getRegClass(Root.getOperand(2).getReg()));
 
   unsigned Opcode = Root.getOpcode();
   if (Opcode == AArch64::SUBSWrr)
@@ -8686,10 +8709,11 @@ static bool outliningCandidatesV8_3OpsConsensus(const outliner::Candidate &a,
   return SubtargetA.hasV8_3aOps() == SubtargetB.hasV8_3aOps();
 }
 
-std::optional<outliner::OutlinedFunction>
+std::optional<std::unique_ptr<outliner::OutlinedFunction>>
 AArch64InstrInfo::getOutliningCandidateInfo(
     const MachineModuleInfo &MMI,
-    std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
+    std::vector<outliner::Candidate> &RepeatedSequenceLocs,
+    unsigned MinRepeats) const {
   unsigned SequenceSize = 0;
   for (auto &MI : RepeatedSequenceLocs[0])
     SequenceSize += getInstSizeInBytes(MI);
@@ -8803,7 +8827,7 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     llvm::erase_if(RepeatedSequenceLocs, hasIllegalSPModification);
 
     // If the sequence doesn't have enough candidates left, then we're done.
-    if (RepeatedSequenceLocs.size() < 2)
+    if (RepeatedSequenceLocs.size() < MinRepeats)
       return std::nullopt;
   }
 
@@ -8989,7 +9013,7 @@ AArch64InstrInfo::getOutliningCandidateInfo(
         NumBytesNoStackCalls <= RepeatedSequenceLocs.size() * 12) {
       RepeatedSequenceLocs = CandidatesWithoutStackFixups;
       FrameID = MachineOutlinerNoLRSave;
-      if (RepeatedSequenceLocs.size() < 2)
+      if (RepeatedSequenceLocs.size() < MinRepeats)
         return std::nullopt;
     } else {
       SetCandidateCallInfo(MachineOutlinerDefault, 12);
@@ -9050,10 +9074,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     }
 
     // If we dropped all of the candidates, bail out here.
-    if (RepeatedSequenceLocs.size() < 2) {
-      RepeatedSequenceLocs.clear();
+    if (RepeatedSequenceLocs.size() < MinRepeats)
       return std::nullopt;
-    }
   }
 
   // Does every candidate's MBB contain a call? If so, then we might have a call
@@ -9078,10 +9100,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
 
     if (ModStackToSaveLR) {
       // We can't fix up the stack. Bail out.
-      if (!AllStackInstrsSafe) {
-        RepeatedSequenceLocs.clear();
+      if (!AllStackInstrsSafe)
         return std::nullopt;
-      }
 
       // Save + restore LR.
       NumBytesToCreateFrame += 8;
@@ -9093,8 +9113,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   if (FrameID != MachineOutlinerTailCall && CFICount > 0)
     return std::nullopt;
 
-  return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize,
-                                    NumBytesToCreateFrame, FrameID);
+  return std::make_unique<outliner::OutlinedFunction>(
+      RepeatedSequenceLocs, SequenceSize, NumBytesToCreateFrame, FrameID);
 }
 
 void AArch64InstrInfo::mergeOutliningCandidateAttributes(

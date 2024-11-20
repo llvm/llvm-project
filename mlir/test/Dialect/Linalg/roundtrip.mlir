@@ -664,3 +664,33 @@ func.func @winograd_output_dyn(%arg0: tensor<6x6x?x?x?x?xf32>, %arg1: tensor<?x?
 
 // CHECK-LABEL: func @winograd_output_dyn
 // CHECK:         linalg.winograd_output_transform m(4) r(3) ins(%arg0 : tensor<6x6x?x?x?x?xf32>) outs(%arg1 : tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
+
+// -----
+
+func.func @conv2d_channel_first_q(%img: tensor<100x3x224x224xi32>, %filt: tensor<64x3x5x5xi32>, %a: i32, %b: i32) -> tensor<100x64x220x220xi32> {
+  %init = arith.constant dense<0> : tensor<100x64x220x220xi32>
+  %1 = linalg.conv_2d_nchw_fchw_q  {dilations = dense<1> : tensor<2xi64>,
+      strides = dense<1> : tensor<2xi64>}
+    ins(%img, %filt, %a, %b : tensor<100x3x224x224xi32>, tensor<64x3x5x5xi32>, i32, i32)
+    outs(%init : tensor<100x64x220x220xi32>) -> tensor<100x64x220x220xi32>
+  return %1 : tensor<100x64x220x220xi32>
+}
+
+// CHECK-LABEL: func @conv2d_channel_first_q(
+// CHECK:   %[[arg0:[a-zA-z0-9]*]]: tensor<100x3x224x224xi32>, %[[arg1:[a-zA-z0-9]*]]: tensor<64x3x5x5xi32>, %[[arg2:[a-zA-z0-9]*]]: i32, %[[arg3:[a-zA-z0-9]*]]: i32)
+// CHECK:         linalg.conv_2d_nchw_fchw_q {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>} ins(%[[arg0]], %[[arg1]], %[[arg2]], %[[arg3]] : tensor<100x3x224x224xi32>, tensor<64x3x5x5xi32>, i32, i32) outs(%{{.*}} : tensor<100x64x220x220xi32>) -> tensor<100x64x220x220xi32>
+
+// -----
+
+func.func @conv2d_channel_first_q_promote(%img: tensor<100x3x224x224xi8>, %filt: tensor<64x3x5x5xi8>, %a: i8, %b: i8) -> tensor<100x64x220x220xi32> {
+  %init = arith.constant dense<0> : tensor<100x64x220x220xi32>
+  %1 = linalg.conv_2d_nchw_fchw_q  {dilations = dense<1> : tensor<2xi64>,
+      strides = dense<1> : tensor<2xi64>}
+    ins(%img, %filt, %a, %b : tensor<100x3x224x224xi8>, tensor<64x3x5x5xi8>, i8, i8)
+    outs(%init : tensor<100x64x220x220xi32>) -> tensor<100x64x220x220xi32>
+  return %1 : tensor<100x64x220x220xi32>
+}
+
+// CHECK-LABEL: func @conv2d_channel_first_q_promote(
+// CHECK:   %[[arg0:[a-zA-z0-9]*]]: tensor<100x3x224x224xi8>, %[[arg1:[a-zA-z0-9]*]]: tensor<64x3x5x5xi8>, %[[arg2:[a-zA-z0-9]*]]: i8, %[[arg3:[a-zA-z0-9]*]]: i8)
+// CHECK:         linalg.conv_2d_nchw_fchw_q {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>} ins(%[[arg0]], %[[arg1]], %[[arg2]], %[[arg3]] : tensor<100x3x224x224xi8>, tensor<64x3x5x5xi8>, i8, i8) outs(%{{.*}} : tensor<100x64x220x220xi32>) -> tensor<100x64x220x220xi32>

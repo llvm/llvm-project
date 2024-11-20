@@ -296,10 +296,8 @@ private:
     return false;
   }
   void WarnOnIoStmt(const parser::CharBlock &source) {
-    if (context_.ShouldWarn(common::UsageWarning::CUDAUsage)) {
-      context_.Say(
-          source, "I/O statement might not be supported on device"_warn_en_US);
-    }
+    context_.Warn(common::UsageWarning::CUDAUsage, source,
+        "I/O statement might not be supported on device"_warn_en_US);
   }
   template <typename A>
   void WarnIfNotInternal(const A &stmt, const parser::CharBlock &source) {
@@ -565,13 +563,18 @@ void CUDAChecker::Enter(const parser::CUFKernelDoConstruct &x) {
       std::get<std::list<parser::CUFReduction>>(directive.t)) {
     CheckReduce(context_, reduce);
   }
+  inCUFKernelDoConstruct_ = true;
+}
+
+void CUDAChecker::Leave(const parser::CUFKernelDoConstruct &) {
+  inCUFKernelDoConstruct_ = false;
 }
 
 void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
   auto lhsLoc{std::get<parser::Variable>(x.t).GetSource()};
   const auto &scope{context_.FindScope(lhsLoc)};
   const Scope &progUnit{GetProgramUnitContaining(scope)};
-  if (IsCUDADeviceContext(&progUnit)) {
+  if (IsCUDADeviceContext(&progUnit) || inCUFKernelDoConstruct_) {
     return; // Data transfer with assignment is only perform on host.
   }
 

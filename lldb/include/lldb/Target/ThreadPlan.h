@@ -385,7 +385,13 @@ public:
   virtual void SetStopOthers(bool new_value);
 
   virtual bool StopOthers();
-  
+
+  // Returns true if the thread plan supports ThreadPlanSingleThreadTimeout to
+  // resume other threads after timeout. If the thread plan returns false it
+  // will prevent ThreadPlanSingleThreadTimeout from being created when this
+  // thread plan is alive.
+  virtual bool SupportsResumeOthers() { return true; }
+
   virtual bool ShouldRunBeforePublicStop() { return false; }
 
   // This is the wrapper for DoWillResume that does generic ThreadPlan logic,

@@ -123,7 +123,7 @@ void promoteTypeIds(Module &M, StringRef ModuleId) {
   };
 
   if (Function *TypeTestFunc =
-          M.getFunction(Intrinsic::getName(Intrinsic::type_test))) {
+          Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test)) {
     for (const Use &U : TypeTestFunc->uses()) {
       auto CI = cast<CallInst>(U.getUser());
       ExternalizeTypeId(CI, 1);
@@ -131,7 +131,7 @@ void promoteTypeIds(Module &M, StringRef ModuleId) {
   }
 
   if (Function *PublicTypeTestFunc =
-          M.getFunction(Intrinsic::getName(Intrinsic::public_type_test))) {
+          Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test)) {
     for (const Use &U : PublicTypeTestFunc->uses()) {
       auto CI = cast<CallInst>(U.getUser());
       ExternalizeTypeId(CI, 1);
@@ -139,15 +139,15 @@ void promoteTypeIds(Module &M, StringRef ModuleId) {
   }
 
   if (Function *TypeCheckedLoadFunc =
-          M.getFunction(Intrinsic::getName(Intrinsic::type_checked_load))) {
+          Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_checked_load)) {
     for (const Use &U : TypeCheckedLoadFunc->uses()) {
       auto CI = cast<CallInst>(U.getUser());
       ExternalizeTypeId(CI, 2);
     }
   }
 
-  if (Function *TypeCheckedLoadRelativeFunc = M.getFunction(
-          Intrinsic::getName(Intrinsic::type_checked_load_relative))) {
+  if (Function *TypeCheckedLoadRelativeFunc = Intrinsic::getDeclarationIfExists(
+          &M, Intrinsic::type_checked_load_relative)) {
     for (const Use &U : TypeCheckedLoadRelativeFunc->uses()) {
       auto CI = cast<CallInst>(U.getUser());
       ExternalizeTypeId(CI, 2);

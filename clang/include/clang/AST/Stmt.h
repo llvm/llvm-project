@@ -561,8 +561,11 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasFPFeatures : 1;
 
+    /// True if the call expression is a must-elide call to a coroutine.
+    unsigned IsCoroElideSafe : 1;
+
     /// Padding used to align OffsetToTrailingObjects to a byte multiple.
-    unsigned : 24 - 3 - NumExprBits;
+    unsigned : 24 - 4 - NumExprBits;
 
     /// The offset in bytes from the this pointer to the start of the
     /// trailing objects belonging to CallExpr. Intentionally byte sized
@@ -714,6 +717,18 @@ protected:
     /// Ex. __builtin_LINE, __builtin_FUNCTION, etc.
     LLVM_PREFERRED_TYPE(SourceLocIdentKind)
     unsigned Kind : 3;
+  };
+
+  class ParenExprBitfields {
+    friend class ASTStmtReader;
+    friend class ASTStmtWriter;
+    friend class ParenExpr;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ProducedByFoldExpansion : 1;
   };
 
   class StmtExprBitfields {
@@ -1238,6 +1253,7 @@ protected:
     GenericSelectionExprBitfields GenericSelectionExprBits;
     PseudoObjectExprBitfields PseudoObjectExprBits;
     SourceLocExprBitfields SourceLocExprBits;
+    ParenExprBitfields ParenExprBits;
 
     // GNU Extensions.
     StmtExprBitfields StmtExprBits;

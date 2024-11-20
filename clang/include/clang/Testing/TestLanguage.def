@@ -1,0 +1,47 @@
+
+//===-- TestLanguage.def - Language Versions for Testing --------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// The TESTLANGUAGE(-C/-CXX) macros have four parameters:
+// the language, the standard version, the corresponding compile-flag,
+// and an index of the language version for each language.
+// The standard version is used to compare a standard version numerically,
+// and the index is used to impose ordering for the language versions
+// with respect to each language.
+
+#ifndef TESTLANGUAGE
+#  define TESTLANGUAGE(...)
+#endif
+
+#ifndef TESTLANGUAGE_C
+#  define TESTLANGUAGE_C(...) TESTLANGUAGE(__VA_ARGS__)
+#endif
+
+#ifndef TESTLANGUAGE_CXX
+#  define TESTLANGUAGE_CXX(...) TESTLANGUAGE(__VA_ARGS__)
+#endif
+
+TESTLANGUAGE_C(C, 89, c89, 0)
+TESTLANGUAGE_C(C, 99, c99, 1)
+TESTLANGUAGE_C(C, 11, c11, 2)
+TESTLANGUAGE_C(C, 17, c17, 3)
+TESTLANGUAGE_C(C, 23, c23, 4)
+TESTLANGUAGE_C(C, 26, c2y, 5)
+
+// TESTLANGUAGE_CXX(CXX, 98, c++98, 0)
+TESTLANGUAGE_CXX(CXX, 03, c++03, 1)
+TESTLANGUAGE_CXX(CXX, 11, c++11, 2)
+TESTLANGUAGE_CXX(CXX, 14, c++14, 3)
+TESTLANGUAGE_CXX(CXX, 17, c++17, 4)
+TESTLANGUAGE_CXX(CXX, 20, c++20, 5)
+TESTLANGUAGE_CXX(CXX, 23, c++23, 6)
+TESTLANGUAGE_CXX(CXX, 26, c++26, 7)
+
+#undef TESTLANGUAGE_CXX
+#undef TESTLANGUAGE_C
+#undef TESTLANGUAGE

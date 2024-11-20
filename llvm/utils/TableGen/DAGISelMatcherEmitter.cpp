@@ -64,16 +64,16 @@ class MatcherTableEmitter {
 
   std::vector<const ComplexPattern *> ComplexPatterns;
 
-  DenseMap<Record *, unsigned> NodeXFormMap;
-  std::vector<Record *> NodeXForms;
+  DenseMap<const Record *, unsigned> NodeXFormMap;
+  std::vector<const Record *> NodeXForms;
 
   std::vector<std::string> VecIncludeStrings;
   MapVector<std::string, unsigned, StringMap<unsigned>> VecPatterns;
 
   unsigned getPatternIdxFromTable(std::string &&P, std::string &&include_loc) {
-    const auto It = VecPatterns.find(P);
-    if (It == VecPatterns.end()) {
-      VecPatterns.insert(std::pair(std::move(P), VecPatterns.size()));
+    const auto [It, Inserted] =
+        VecPatterns.try_emplace(std::move(P), VecPatterns.size());
+    if (Inserted) {
       VecIncludeStrings.push_back(std::move(include_loc));
       return VecIncludeStrings.size() - 1;
     }
@@ -203,7 +203,7 @@ private:
     return llvm::find(ComplexPatterns, &P) - ComplexPatterns.begin();
   }
 
-  unsigned getNodeXFormID(Record *Rec) {
+  unsigned getNodeXFormID(const Record *Rec) {
     unsigned &Entry = NodeXFormMap[Rec];
     if (Entry == 0) {
       NodeXForms.push_back(Rec);
@@ -798,6 +798,8 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       break;
     }
     unsigned Bytes = OpBytes + EmitSignedVBRValue(Val, OS);
+    if (!OmitComments)
+      OS << " // " << Val << " #" << cast<EmitIntegerMatcher>(N)->getResultNo();
     OS << '\n';
     return Bytes;
   }
@@ -818,7 +820,10 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       OpBytes = EmitVBRValue(VT, OS) + 1;
       break;
     }
-    OS << Val << ",\n";
+    OS << Val << ',';
+    if (!OmitComments)
+      OS << " // #" << cast<EmitStringIntegerMatcher>(N)->getResultNo();
+    OS << '\n';
     return OpBytes + 1;
   }
 
@@ -851,24 +856,31 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       break;
     }
     if (Reg) {
-      OS << getQualifiedName(Reg->TheDef) << ",\n";
+      OS << getQualifiedName(Reg->TheDef);
     } else {
       OS << "0 ";
       if (!OmitComments)
         OS << "/*zero_reg*/";
-      OS << ",\n";
     }
+
+    OS << ',';
+    if (!OmitComments)
+      OS << " // #" << Matcher->getResultNo();
+    OS << '\n';
     return OpBytes + 1;
   }
 
   case Matcher::EmitConvertToTarget: {
-    unsigned Slot = cast<EmitConvertToTargetMatcher>(N)->getSlot();
-    if (Slot < 8) {
-      OS << "OPC_EmitConvertToTarget" << Slot << ",\n";
-      return 1;
-    }
-    OS << "OPC_EmitConvertToTarget, " << Slot << ",\n";
-    return 2;
+    const auto *CTTM = cast<EmitConvertToTargetMatcher>(N);
+    unsigned Slot = CTTM->getSlot();
+    OS << "OPC_EmitConvertToTarget";
+    if (Slot >= 8)
+      OS << ", ";
+    OS << Slot << ',';
+    if (!OmitComments)
+      OS << " // #" << CTTM->getResultNo();
+    OS << '\n';
+    return 1 + (Slot >= 8);
   }
 
   case Matcher::EmitMergeInputChains: {
@@ -914,7 +926,8 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     OS << "OPC_EmitNodeXForm, " << getNodeXFormID(XF->getNodeXForm()) << ", "
        << XF->getSlot() << ',';
     if (!OmitComments)
-      OS << " // " << XF->getNodeXForm()->getName();
+      OS << " // " << XF->getNodeXForm()->getName() << " #"
+         << XF->getResultNo();
     OS << '\n';
     return 3;
   }
@@ -930,7 +943,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
             GetPatFromTreePatternNode(SNT->getPattern().getSrcPattern());
         std::string dst =
             GetPatFromTreePatternNode(SNT->getPattern().getDstPattern());
-        Record *PatRecord = SNT->getPattern().getSrcRecord();
+        const Record *PatRecord = SNT->getPattern().getSrcRecord();
         std::string include_src = getIncludePath(PatRecord);
         unsigned Offset =
             getPatternIdxFromTable(src + " -> " + dst, std::move(include_src));
@@ -1043,7 +1056,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
           GetPatFromTreePatternNode(CM->getPattern().getSrcPattern());
       std::string dst =
           GetPatFromTreePatternNode(CM->getPattern().getDstPattern());
-      Record *PatRecord = CM->getPattern().getSrcRecord();
+      const Record *PatRecord = CM->getPattern().getSrcRecord();
       std::string include_src = getIncludePath(PatRecord);
       unsigned Offset =
           getPatternIdxFromTable(src + " -> " + dst, std::move(include_src));
@@ -1214,7 +1227,7 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
       const CodeGenDAGPatterns::NodeXForm &Entry =
           CGP.getSDNodeTransform(NodeXForms[i]);
 
-      Record *SDNode = Entry.first;
+      const Record *SDNode = Entry.first;
       const std::string &Code = Entry.second;
 
       OS << "  case " << i << ": {  ";

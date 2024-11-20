@@ -17,7 +17,7 @@ define void @foo(ptr %p1, ptr %p2, ptr %p3, ptr %p4) {
 ; CHECK-NEXT:    movl (%rax), %eax
 ; CHECK-NEXT:    shll %cl, %eax
 ; CHECK-NEXT:    movl %r8d, (%rdx)
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %loop2.header
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl $5, %edi

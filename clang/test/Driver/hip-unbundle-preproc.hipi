@@ -23,5 +23,5 @@
 // RDC: {{".*clang.*"}} "-cc1" {{.*}}"-target-cpu" "gfx803" {{.*}}"-o" "[[DEV_BC:.*bc]]" {{.*}}"[[DEV_PP]]"
 // RDC: {{".*lld.*"}} {{.*}}"-o" "[[DEV_ISA:.*]]" "[[DEV_BC]]"
 // RDC: {{".*clang-offload-bundler.*"}} {{.*}}"-input={{.*}}" "-input=[[DEV_ISA]]" "-output=[[FATBIN:.*]]"
-// RDC: {{".*llvm-mc.*"}} "-o" "[[FATBIN_O:.*o]]"
+// RDC: {{".*clang.*"}} "-o" "[[FATBIN_O:.*o]]"
 // RDC: {{".*ld.*"}} {{.*}}"[[HOST_O]]" "[[FATBIN_O]]"
