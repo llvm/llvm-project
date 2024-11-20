@@ -14,7 +14,7 @@ kernel void test() {
   // address space variables. User defined initialization could
   // make sense, but would it mean that all work items need to
   // execute it? Potentially disallowing any initialization would
-  // make things easier and assingments can be used to set specific
+  // make things easier and assignments can be used to set specific
   // values. This rules should make it consistent with OpenCL C.
   //__local C c();
 }

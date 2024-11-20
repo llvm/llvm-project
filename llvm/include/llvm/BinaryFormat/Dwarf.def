@@ -617,6 +617,7 @@ HANDLE_DW_AT(0x3e07, LLVM_apinotes, 0, APPLE)
 HANDLE_DW_AT(0x3e08, LLVM_ptrauth_isa_pointer, 0, LLVM)
 HANDLE_DW_AT(0x3e09, LLVM_ptrauth_authenticates_null_values, 0, LLVM)
 HANDLE_DW_AT(0x3e0a, LLVM_ptrauth_authentication_mode, 0, LLVM)
+HANDLE_DW_AT(0x3e0b, LLVM_num_extra_inhabitants, 0, LLVM)
 
 // Apple extensions.
 
@@ -728,7 +729,7 @@ HANDLE_DW_OP(0x24, shl, 0, 2, 2, DWARF)
 HANDLE_DW_OP(0x25, shr, 0, 2, 2, DWARF)
 HANDLE_DW_OP(0x26, shra, 0, 2, 2, DWARF)
 HANDLE_DW_OP(0x27, xor, 0, 2, 2, DWARF)
-HANDLE_DW_OP(0x28, bra, 1, 0, 2, DWARF)
+HANDLE_DW_OP(0x28, bra, 1, 1, 2, DWARF)
 HANDLE_DW_OP(0x29, eq, 0, 2, 2, DWARF)
 HANDLE_DW_OP(0x2a, ge, 0, 2, 2, DWARF)
 HANDLE_DW_OP(0x2b, gt, 0, 2, 2, DWARF)
@@ -1238,6 +1239,7 @@ HANDLE_DW_CFA(0x16, val_expression)
 // Vendor extensions:
 HANDLE_DW_CFA_PRED(0x1d, MIPS_advance_loc8, SELECT_MIPS64)
 HANDLE_DW_CFA_PRED(0x2d, GNU_window_save, SELECT_SPARC)
+HANDLE_DW_CFA_PRED(0x2c, AARCH64_negate_ra_state_with_pc, SELECT_AARCH64)
 HANDLE_DW_CFA_PRED(0x2d, AARCH64_negate_ra_state, SELECT_AARCH64)
 HANDLE_DW_CFA_PRED(0x2e, GNU_args_size, SELECT_X86)
 // Heterogeneous Debugging Extension defined at

@@ -371,5 +371,6 @@ const AMDGPUSubtarget &AMDGPUSubtarget::get(const TargetMachine &TM, const Funct
 
 SmallVector<unsigned>
 AMDGPUSubtarget::getMaxNumWorkGroups(const Function &F) const {
-  return AMDGPU::getIntegerVecAttribute(F, "amdgpu-max-num-workgroups", 3);
+  return AMDGPU::getIntegerVecAttribute(F, "amdgpu-max-num-workgroups", 3,
+                                        std::numeric_limits<uint32_t>::max());
 }

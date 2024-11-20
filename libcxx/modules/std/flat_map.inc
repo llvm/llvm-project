@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-#if 0
-  // [flat.map], class template flat_­map
+#if _LIBCPP_STD_VER >= 23
+  // [flat.map], class template flat_map
   using std::flat_map;
 
   using std::sorted_unique;
@@ -17,15 +17,17 @@ export namespace std {
 
   using std::uses_allocator;
 
-  // [flat.map.erasure], erasure for flat_­map
+  // [flat.map.erasure], erasure for flat_map
   using std::erase_if;
 
-  // [flat.multimap], class template flat_­multimap
+#endif // _LIBCPP_STD_VER >= 23
+#if 0
+  // [flat.multimap], class template flat_multimap
   using std::flat_multimap;
 
   using std::sorted_equivalent;
   using std::sorted_equivalent_t;
 
-  // [flat.multimap.erasure], erasure for flat_­multimap
+  // [flat.multimap.erasure], erasure for flat_multimap
 #endif
 } // namespace std

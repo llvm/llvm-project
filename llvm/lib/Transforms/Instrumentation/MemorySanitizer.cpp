@@ -2694,40 +2694,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  /// Build the lowest possible value of V, taking into account V's
-  ///        uninitialized bits.
-  Value *getLowestPossibleValue(IRBuilder<> &IRB, Value *A, Value *Sa,
-                                bool isSigned) {
-    if (isSigned) {
-      // Split shadow into sign bit and other bits.
-      Value *SaOtherBits = IRB.CreateLShr(IRB.CreateShl(Sa, 1), 1);
-      Value *SaSignBit = IRB.CreateXor(Sa, SaOtherBits);
-      // Maximise the undefined shadow bit, minimize other undefined bits.
-      return IRB.CreateOr(IRB.CreateAnd(A, IRB.CreateNot(SaOtherBits)),
-                          SaSignBit);
-    } else {
-      // Minimize undefined bits.
-      return IRB.CreateAnd(A, IRB.CreateNot(Sa));
-    }
-  }
-
-  /// Build the highest possible value of V, taking into account V's
-  ///        uninitialized bits.
-  Value *getHighestPossibleValue(IRBuilder<> &IRB, Value *A, Value *Sa,
-                                 bool isSigned) {
-    if (isSigned) {
-      // Split shadow into sign bit and other bits.
-      Value *SaOtherBits = IRB.CreateLShr(IRB.CreateShl(Sa, 1), 1);
-      Value *SaSignBit = IRB.CreateXor(Sa, SaOtherBits);
-      // Minimise the undefined shadow bit, maximise other undefined bits.
-      return IRB.CreateOr(IRB.CreateAnd(A, IRB.CreateNot(SaSignBit)),
-                          SaOtherBits);
-    } else {
-      // Maximize undefined bits.
-      return IRB.CreateOr(A, Sa);
-    }
-  }
-
   /// Instrument relational comparisons.
   ///
   /// This function does exact shadow propagation for all relational
@@ -2750,12 +2716,30 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // its undefined bits. Let [b0, b1] be the interval of possible values of B.
     // Then (A cmp B) is defined iff (a0 cmp b1) == (a1 cmp b0).
     bool IsSigned = I.isSigned();
-    Value *Amin = getLowestPossibleValue(IRB, A, Sa, IsSigned);
-    Value *Bmax = getHighestPossibleValue(IRB, B, Sb, IsSigned);
-    Value *S1 = IRB.CreateICmp(I.getPredicate(), Amin, Bmax);
-    Value *Amax = getHighestPossibleValue(IRB, A, Sa, IsSigned);
-    Value *Bmin = getLowestPossibleValue(IRB, B, Sb, IsSigned);
-    Value *S2 = IRB.CreateICmp(I.getPredicate(), Amax, Bmin);
+
+    auto GetMinMaxUnsigned = [&](Value *V, Value *S) {
+      if (IsSigned) {
+        // Sign-flip to map from signed range to unsigned range. Relation A vs B
+        // should be preserved, if checked with `getUnsignedPredicate()`.
+        // Relationship between Amin, Amax, Bmin, Bmax also will not be
+        // affected, as they are created by effectively adding/substructing from
+        // A (or B) a value, derived from shadow, with no overflow, either
+        // before or after sign flip.
+        APInt MinVal =
+            APInt::getSignedMinValue(V->getType()->getScalarSizeInBits());
+        V = IRB.CreateXor(V, ConstantInt::get(V->getType(), MinVal));
+      }
+      // Minimize undefined bits.
+      Value *Min = IRB.CreateAnd(V, IRB.CreateNot(S));
+      Value *Max = IRB.CreateOr(V, S);
+      return std::make_pair(Min, Max);
+    };
+
+    auto [Amin, Amax] = GetMinMaxUnsigned(A, Sa);
+    auto [Bmin, Bmax] = GetMinMaxUnsigned(B, Sb);
+    Value *S1 = IRB.CreateICmp(I.getUnsignedPredicate(), Amin, Bmax);
+    Value *S2 = IRB.CreateICmp(I.getUnsignedPredicate(), Amax, Bmin);
+
     Value *Si = IRB.CreateXor(S1, S2);
     setShadow(&I, Si);
     setOriginForNaryOp(I);
@@ -3960,6 +3944,56 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
+  /// Handle intrinsics by applying the intrinsic to the shadows.
+  ///
+  /// The trailing arguments are passed verbatim to the intrinsic, though any
+  /// uninitialized trailing arguments can also taint the shadow e.g., for an
+  /// intrinsic with one trailing verbatim argument:
+  ///     out = intrinsic(var1, var2, opType)
+  /// we compute:
+  ///     shadow[out] =
+  ///         intrinsic(shadow[var1], shadow[var2], opType) | shadow[opType]
+  ///
+  /// For example, this can be applied to the Arm NEON vector table intrinsics
+  /// (tbl{1,2,3,4}).
+  ///
+  /// The origin is approximated using setOriginForNaryOp.
+  void handleIntrinsicByApplyingToShadow(IntrinsicInst &I,
+                                         unsigned int trailingVerbatimArgs) {
+    IRBuilder<> IRB(&I);
+
+    assert(trailingVerbatimArgs < I.arg_size());
+
+    SmallVector<Value *, 8> ShadowArgs;
+    // Don't use getNumOperands() because it includes the callee
+    for (unsigned int i = 0; i < I.arg_size() - trailingVerbatimArgs; i++) {
+      Value *Shadow = getShadow(&I, i);
+      ShadowArgs.push_back(Shadow);
+    }
+
+    for (unsigned int i = I.arg_size() - trailingVerbatimArgs; i < I.arg_size();
+         i++) {
+      Value *Arg = I.getArgOperand(i);
+      ShadowArgs.push_back(Arg);
+    }
+
+    CallInst *CI =
+        IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(), ShadowArgs);
+    Value *CombinedShadow = CI;
+
+    // Combine the computed shadow with the shadow of trailing args
+    for (unsigned int i = I.arg_size() - trailingVerbatimArgs; i < I.arg_size();
+         i++) {
+      Value *Shadow =
+          CreateShadowCast(IRB, getShadow(&I, i), CombinedShadow->getType());
+      CombinedShadow = IRB.CreateOr(Shadow, CombinedShadow, "_msprop");
+    }
+
+    setShadow(&I, CombinedShadow);
+
+    setOriginForNaryOp(I);
+  }
+
   void visitIntrinsicInst(IntrinsicInst &I) {
     switch (I.getIntrinsicID()) {
     case Intrinsic::uadd_with_overflow:
@@ -4332,6 +4366,28 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_st3lane:
     case Intrinsic::aarch64_neon_st4lane: {
       handleNEONVectorStoreIntrinsic(I, true);
+      break;
+    }
+
+    // Arm NEON vector table intrinsics have the source/table register(s) as
+    // arguments, followed by the index register. They return the output.
+    //
+    // 'TBL writes a zero if an index is out-of-range, while TBX leaves the
+    //  original value unchanged in the destination register.'
+    // Conveniently, zero denotes a clean shadow, which means out-of-range
+    // indices for TBL will initialize the user data with zero and also clean
+    // the shadow. (For TBX, neither the user data nor the shadow will be
+    // updated, which is also correct.)
+    case Intrinsic::aarch64_neon_tbl1:
+    case Intrinsic::aarch64_neon_tbl2:
+    case Intrinsic::aarch64_neon_tbl3:
+    case Intrinsic::aarch64_neon_tbl4:
+    case Intrinsic::aarch64_neon_tbx1:
+    case Intrinsic::aarch64_neon_tbx2:
+    case Intrinsic::aarch64_neon_tbx3:
+    case Intrinsic::aarch64_neon_tbx4: {
+      // The last trailing argument (index register) should be handled verbatim
+      handleIntrinsicByApplyingToShadow(I, 1);
       break;
     }
 

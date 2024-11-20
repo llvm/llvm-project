@@ -8,7 +8,6 @@
 
 #include "CommandObjectDWIMPrint.h"
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/UserExpression.h"
@@ -19,6 +18,7 @@
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
@@ -121,10 +121,10 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
       if (note_shown)
         return;
 
-      result.GetOutputStream()
-          << "note: object description requested, but type doesn't implement "
-             "a custom object description. Consider using \"p\" instead of "
-             "\"po\" (this note will only be shown once per debug session).\n";
+      result.AppendNote(
+          "object description requested, but type doesn't implement "
+          "a custom object description. Consider using \"p\" instead of "
+          "\"po\" (this note will only be shown once per debug session).\n");
       note_shown = true;
     }
   };
@@ -164,8 +164,8 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
         StringRef flags;
         if (args.HasArgs())
           flags = args.GetArgString();
-        result.AppendMessageWithFormatv("note: ran `frame variable {0}{1}`",
-                                        flags, expr);
+        result.AppendNoteWithFormatv("ran `frame variable {0}{1}`", flags,
+                                     expr);
       }
 
       dump_val_object(*valobj_sp);
@@ -224,14 +224,13 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
       StringRef flags;
       if (args.HasArgs())
         flags = args.GetArgStringWithDelimiter();
-      result.AppendMessageWithFormatv("note: ran `expression {0}{1}`", flags,
-                                      expr);
+      result.AppendNoteWithFormatv("ran `expression {0}{1}`", flags, expr);
     }
 
     if (valobj_sp->GetError().GetError() != UserExpression::kNoResult)
       dump_val_object(*valobj_sp);
     else
-      result.SetStatus(eReturnStatusSuccessFinishResult);
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
 
     if (suppress_result)
       if (auto result_var_sp =

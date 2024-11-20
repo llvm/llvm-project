@@ -976,8 +976,9 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         actualDataAttr = common::CUDADataAttr::Device;
       }
     }
+    std::optional<std::string> warning;
     if (!common::AreCompatibleCUDADataAttrs(dummyDataAttr, actualDataAttr,
-            dummy.ignoreTKR,
+            dummy.ignoreTKR, &warning,
             /*allowUnifiedMatchingRule=*/true, &context.languageFeatures())) {
       auto toStr{[](std::optional<common::CUDADataAttr> x) {
         return x ? "ATTRIBUTES("s +
@@ -987,6 +988,10 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       messages.Say(
           "%s has %s but its associated actual argument has %s"_err_en_US,
           dummyName, toStr(dummyDataAttr), toStr(actualDataAttr));
+    }
+    if (warning && context.ShouldWarn(common::UsageWarning::CUDAUsage)) {
+      messages.Say(common::UsageWarning::CUDAUsage, "%s"_warn_en_US,
+          std::move(*warning));
     }
   }
 

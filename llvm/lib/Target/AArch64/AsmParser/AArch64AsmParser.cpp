@@ -195,6 +195,7 @@ private:
   bool parseDirectiveReq(StringRef Name, SMLoc L);
   bool parseDirectiveUnreq(SMLoc L);
   bool parseDirectiveCFINegateRAState();
+  bool parseDirectiveCFINegateRAStateWithPC();
   bool parseDirectiveCFIBKeyFrame();
   bool parseDirectiveCFIMTETaggedFrame();
 
@@ -896,6 +897,7 @@ public:
     if (DarwinRefKind == MCSymbolRefExpr::VK_PAGEOFF ||
         ELFRefKind == AArch64MCExpr::VK_LO12 ||
         ELFRefKind == AArch64MCExpr::VK_GOT_LO12 ||
+        ELFRefKind == AArch64MCExpr::VK_GOT_AUTH_LO12 ||
         ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12 ||
         ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12_NC ||
         ELFRefKind == AArch64MCExpr::VK_TPREL_LO12 ||
@@ -1007,19 +1009,20 @@ public:
     int64_t Addend;
     if (AArch64AsmParser::classifySymbolRef(Expr, ELFRefKind,
                                           DarwinRefKind, Addend)) {
-      return DarwinRefKind == MCSymbolRefExpr::VK_PAGEOFF
-          || DarwinRefKind == MCSymbolRefExpr::VK_TLVPPAGEOFF
-          || (DarwinRefKind == MCSymbolRefExpr::VK_GOTPAGEOFF && Addend == 0)
-          || ELFRefKind == AArch64MCExpr::VK_LO12
-          || ELFRefKind == AArch64MCExpr::VK_DTPREL_HI12
-          || ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12
-          || ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12_NC
-          || ELFRefKind == AArch64MCExpr::VK_TPREL_HI12
-          || ELFRefKind == AArch64MCExpr::VK_TPREL_LO12
-          || ELFRefKind == AArch64MCExpr::VK_TPREL_LO12_NC
-          || ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12
-          || ELFRefKind == AArch64MCExpr::VK_SECREL_HI12
-          || ELFRefKind == AArch64MCExpr::VK_SECREL_LO12;
+      return DarwinRefKind == MCSymbolRefExpr::VK_PAGEOFF ||
+             DarwinRefKind == MCSymbolRefExpr::VK_TLVPPAGEOFF ||
+             (DarwinRefKind == MCSymbolRefExpr::VK_GOTPAGEOFF && Addend == 0) ||
+             ELFRefKind == AArch64MCExpr::VK_LO12 ||
+             ELFRefKind == AArch64MCExpr::VK_GOT_AUTH_LO12 ||
+             ELFRefKind == AArch64MCExpr::VK_DTPREL_HI12 ||
+             ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12 ||
+             ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12_NC ||
+             ELFRefKind == AArch64MCExpr::VK_TPREL_HI12 ||
+             ELFRefKind == AArch64MCExpr::VK_TPREL_LO12 ||
+             ELFRefKind == AArch64MCExpr::VK_TPREL_LO12_NC ||
+             ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12 ||
+             ELFRefKind == AArch64MCExpr::VK_SECREL_HI12 ||
+             ELFRefKind == AArch64MCExpr::VK_SECREL_LO12;
     }
 
     // If it's a constant, it should be a real immediate in range.
@@ -1285,6 +1288,7 @@ public:
     case AArch64::ZPR_4bRegClassID:
     case AArch64::ZPRMul2_LoRegClassID:
     case AArch64::ZPRMul2_HiRegClassID:
+    case AArch64::ZPR_KRegClassID:
       RK = RegKind::SVEDataVector;
       break;
     case AArch64::PPRRegClassID:
@@ -2079,6 +2083,20 @@ public:
   }
 
   void addPCRelLabel19Operands(MCInst &Inst, unsigned N) const {
+    // Branch operands don't encode the low bits, so shift them off
+    // here. If it's a label, however, just put it on directly as there's
+    // not enough information now to do anything.
+    assert(N == 1 && "Invalid number of operands!");
+    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
+    if (!MCE) {
+      addExpr(Inst, getImm());
+      return;
+    }
+    assert(MCE && "Invalid constant immediate operand!");
+    Inst.addOperand(MCOperand::createImm(MCE->getValue() >> 2));
+  }
+
+  void addPCRelLabel9Operands(MCInst &Inst, unsigned N) const {
     // Branch operands don't encode the low bits, so shift them off
     // here. If it's a label, however, just put it on directly as there's
     // not enough information now to do anything.
@@ -3293,6 +3311,7 @@ ParseStatus AArch64AsmParser::tryParseAdrpLabel(OperandVector &Operands) {
                DarwinRefKind != MCSymbolRefExpr::VK_TLVPPAGE &&
                ELFRefKind != AArch64MCExpr::VK_ABS_PAGE_NC &&
                ELFRefKind != AArch64MCExpr::VK_GOT_PAGE &&
+               ELFRefKind != AArch64MCExpr::VK_GOT_AUTH_PAGE &&
                ELFRefKind != AArch64MCExpr::VK_GOT_PAGE_LO15 &&
                ELFRefKind != AArch64MCExpr::VK_GOTTPREL_PAGE &&
                ELFRefKind != AArch64MCExpr::VK_TLSDESC_PAGE) {
@@ -3779,6 +3798,7 @@ static const struct Extension {
     {"sme-fa64", {AArch64::FeatureSMEFA64}},
     {"cpa", {AArch64::FeatureCPA}},
     {"tlbiw", {AArch64::FeatureTLBIW}},
+    {"pops", {AArch64::FeaturePoPS}},
     {"cmpbr", {AArch64::FeatureCMPBR}},
     {"f8f32mm", {AArch64::FeatureF8F32MM}},
     {"f8f16mm", {AArch64::FeatureF8F16MM}},
@@ -4411,6 +4431,8 @@ bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
                   .Case("got", AArch64MCExpr::VK_GOT_PAGE)
                   .Case("gotpage_lo15", AArch64MCExpr::VK_GOT_PAGE_LO15)
                   .Case("got_lo12", AArch64MCExpr::VK_GOT_LO12)
+                  .Case("got_auth", AArch64MCExpr::VK_GOT_AUTH_PAGE)
+                  .Case("got_auth_lo12", AArch64MCExpr::VK_GOT_AUTH_LO12)
                   .Case("gottprel", AArch64MCExpr::VK_GOTTPREL_PAGE)
                   .Case("gottprel_lo12", AArch64MCExpr::VK_GOTTPREL_LO12_NC)
                   .Case("gottprel_g1", AArch64MCExpr::VK_GOTTPREL_G1)
@@ -5784,6 +5806,7 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
 
         // Only allow these with ADDXri/ADDWri
         if ((ELFRefKind == AArch64MCExpr::VK_LO12 ||
+             ELFRefKind == AArch64MCExpr::VK_GOT_AUTH_LO12 ||
              ELFRefKind == AArch64MCExpr::VK_DTPREL_HI12 ||
              ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12 ||
              ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12_NC ||
@@ -5987,6 +6010,8 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "immediate must be an integer in range [1, 32].");
   case Match_InvalidImm1_64:
     return Error(Loc, "immediate must be an integer in range [1, 64].");
+  case Match_InvalidImmM1_62:
+    return Error(Loc, "immediate must be an integer in range [-1, 62].");
   case Match_InvalidMemoryIndexedRange2UImm0:
     return Error(Loc, "vector select offset must be the immediate range 0:1.");
   case Match_InvalidMemoryIndexedRange2UImm1:
@@ -6179,6 +6204,9 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
   case Match_InvalidZPRMul2_Hi64:
     return Error(Loc, "Invalid restricted vector register, expected even "
                       "register in z16.d..z30.d");
+  case Match_InvalidZPR_K0:
+    return Error(Loc, "invalid restricted vector register, expected register "
+                      "in z20..z23 or z28..z31");
   case Match_InvalidSVEPattern:
     return Error(Loc, "invalid predicate pattern");
   case Match_InvalidSVEPPRorPNRAnyReg:
@@ -6240,6 +6268,8 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
   case Match_InvalidMatrixTileVectorV128:
     return Error(Loc,
                  "invalid matrix operand, expected za[0-15]h.q or za[0-15]v.q");
+  case Match_InvalidMatrixTile16:
+    return Error(Loc, "invalid matrix operand, expected za[0-1].h");
   case Match_InvalidMatrixTile32:
     return Error(Loc, "invalid matrix operand, expected za[0-3].s");
   case Match_InvalidMatrixTile64:
@@ -6757,6 +6787,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidImm1_16:
   case Match_InvalidImm1_32:
   case Match_InvalidImm1_64:
+  case Match_InvalidImmM1_62:
   case Match_InvalidMemoryIndexedRange2UImm0:
   case Match_InvalidMemoryIndexedRange2UImm1:
   case Match_InvalidMemoryIndexedRange2UImm2:
@@ -6859,6 +6890,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSVEExactFPImmOperandHalfOne:
   case Match_InvalidSVEExactFPImmOperandHalfTwo:
   case Match_InvalidSVEExactFPImmOperandZeroOne:
+  case Match_InvalidMatrixTile16:
   case Match_InvalidMatrixTile32:
   case Match_InvalidMatrixTile64:
   case Match_InvalidMatrix:
@@ -6888,6 +6920,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidZPRMul2_Hi32:
   case Match_InvalidZPRMul2_Lo64:
   case Match_InvalidZPRMul2_Hi64:
+  case Match_InvalidZPR_K0:
   case Match_InvalidSVEVectorList2x8Mul2:
   case Match_InvalidSVEVectorList2x16Mul2:
   case Match_InvalidSVEVectorList2x32Mul2:
@@ -6952,6 +6985,8 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
     parseDirectiveInst(Loc);
   else if (IDVal == ".cfi_negate_ra_state")
     parseDirectiveCFINegateRAState();
+  else if (IDVal == ".cfi_negate_ra_state_with_pc")
+    parseDirectiveCFINegateRAStateWithPC();
   else if (IDVal == ".cfi_b_key_frame")
     parseDirectiveCFIBKeyFrame();
   else if (IDVal == ".cfi_mte_tagged_frame")
@@ -7399,6 +7434,13 @@ bool AArch64AsmParser::parseDirectiveCFINegateRAState() {
   if (parseEOL())
     return true;
   getStreamer().emitCFINegateRAState();
+  return false;
+}
+
+bool AArch64AsmParser::parseDirectiveCFINegateRAStateWithPC() {
+  if (parseEOL())
+    return true;
+  getStreamer().emitCFINegateRAStateWithPC();
   return false;
 }
 
@@ -8222,5 +8264,39 @@ ParseStatus AArch64AsmParser::tryParseImmRange(OperandVector &Operands) {
 
   Operands.push_back(
       AArch64Operand::CreateImmRange(ImmFVal, ImmLVal, S, E, getContext()));
+  return ParseStatus::Success;
+}
+
+template <int Adj>
+ParseStatus AArch64AsmParser::tryParseAdjImm0_63(OperandVector &Operands) {
+  SMLoc S = getLoc();
+
+  parseOptionalToken(AsmToken::Hash);
+  bool IsNegative = parseOptionalToken(AsmToken::Minus);
+
+  if (getTok().isNot(AsmToken::Integer))
+    return ParseStatus::NoMatch;
+
+  const MCExpr *Ex;
+  if (getParser().parseExpression(Ex))
+    return ParseStatus::NoMatch;
+
+  int64_t Imm = dyn_cast<MCConstantExpr>(Ex)->getValue();
+  if (IsNegative)
+    Imm = -Imm;
+
+  // We want an adjusted immediate in the range [0, 63]. If we don't have one,
+  // return a value, which is certain to trigger a error message about invalid
+  // immediate range instead of a non-descriptive invalid operand error.
+  static_assert(Adj == 1 || Adj == -1, "Unsafe immediate adjustment");
+  if (Imm == INT64_MIN || Imm == INT64_MAX || Imm + Adj < 0 || Imm + Adj > 63)
+    Imm = -2;
+  else
+    Imm += Adj;
+
+  SMLoc E = SMLoc::getFromPointer(getLoc().getPointer() - 1);
+  Operands.push_back(AArch64Operand::CreateImm(
+      MCConstantExpr::create(Imm, getContext()), S, E, getContext()));
+
   return ParseStatus::Success;
 }

@@ -188,8 +188,9 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; RV64I-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[COPY]], 1234
-    ; RV64I-NEXT: $x10 = COPY [[ADDIW]]
+    ; RV64I-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1234
+    ; RV64I-NEXT: [[SUBW:%[0-9]+]]:gpr = SUBW [[COPY]], [[ADDI]]
+    ; RV64I-NEXT: $x10 = COPY [[SUBW]]
     ; RV64I-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = COPY $x10
     %1:gprb(s32) = G_TRUNC %0(s64)
@@ -440,8 +441,9 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; RV64I-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[COPY]], 1234
-    ; RV64I-NEXT: $x10 = COPY [[ADDI]]
+    ; RV64I-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1234
+    ; RV64I-NEXT: [[SUB:%[0-9]+]]:gpr = SUB [[COPY]], [[ADDI]]
+    ; RV64I-NEXT: $x10 = COPY [[SUB]]
     ; RV64I-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = COPY $x10
     %1:gprb(s64) = G_CONSTANT i64 -1234

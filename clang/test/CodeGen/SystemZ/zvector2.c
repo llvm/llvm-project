@@ -32,7 +32,7 @@ void test_preinc (void)
 {
 // CHECK-LABEL: test_preinc
 // CHECK: [[VAL:%[^ ]+]] = load volatile <4 x float>, ptr @ff2
-// CHECK: %{{.*}} = fadd <4 x float> [[VAL]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+// CHECK: %{{.*}} = fadd <4 x float> [[VAL]], splat (float 1.000000e+00)
   ++ff2;
 }
 
@@ -40,7 +40,7 @@ void test_postinc (void)
 {
 // CHECK-LABEL: test_postinc
 // CHECK: [[VAL:%[^ ]+]] = load volatile <4 x float>, ptr @ff2
-// CHECK: %{{.*}} = fadd <4 x float> [[VAL]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+// CHECK: %{{.*}} = fadd <4 x float> [[VAL]], splat (float 1.000000e+00)
   ff2++;
 }
 
@@ -48,7 +48,7 @@ void test_predec (void)
 {
 // CHECK-LABEL: test_predec
 // CHECK: [[VAL:%[^ ]+]] = load volatile <4 x float>, ptr @ff2
-// CHECK: %{{.*}} = fadd <4 x float> [[VAL]], <float -1.000000e+00, float -1.000000e+00, float -1.000000e+00, float -1.000000e+00>
+// CHECK: %{{.*}} = fadd <4 x float> [[VAL]], splat (float -1.000000e+00)
   --ff2;
 }
 
@@ -56,7 +56,7 @@ void test_postdec (void)
 {
 // CHECK-LABEL: test_postdec
 // CHECK: [[VAL:%[^ ]+]] = load volatile <4 x float>, ptr @ff2
-// CHECK: %{{.*}} = fadd <4 x float> [[VAL]], <float -1.000000e+00, float -1.000000e+00, float -1.000000e+00, float -1.000000e+00>
+// CHECK: %{{.*}} = fadd <4 x float> [[VAL]], splat (float -1.000000e+00)
   ff2--;
 }
 

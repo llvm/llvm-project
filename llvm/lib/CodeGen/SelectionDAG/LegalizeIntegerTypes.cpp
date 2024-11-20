@@ -4674,9 +4674,9 @@ void DAGTypeLegalizer::ExpandIntRes_ShiftThroughStack(SDNode *N, SDValue &Lo,
       DAG.getNode(ISD::SHL, dl, ShAmtVT, SrlTmp,
                   DAG.getConstant(Log2_32(ShiftUnitInBits), dl, ShAmtVT));
 
-  Flags.setExact(true);
-  SDValue ByteOffset = DAG.getNode(ISD::SRL, dl, ShAmtVT, BitOffset,
-                                   DAG.getConstant(3, dl, ShAmtVT), Flags);
+  SDValue ByteOffset =
+      DAG.getNode(ISD::SRL, dl, ShAmtVT, BitOffset,
+                  DAG.getConstant(3, dl, ShAmtVT), SDNodeFlags::Exact);
   // And clamp it, because OOB load is an immediate UB,
   // while shift overflow would have *just* been poison.
   ByteOffset = DAG.getNode(ISD::AND, dl, ShAmtVT, ByteOffset,

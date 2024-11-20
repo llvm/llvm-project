@@ -136,6 +136,8 @@ CODEGENOPT(XRayIgnoreLoops , 1, 0)
 ///< Emit the XRay function index section.
 CODEGENOPT(XRayFunctionIndex , 1, 1)
 
+///< Set when -fxray-shared is enabled
+CODEGENOPT(XRayShared , 1, 0)
 
 ///< Set the minimum number of instructions in a function to determine selective
 ///< XRay instrumentation.

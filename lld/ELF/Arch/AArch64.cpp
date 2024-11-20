@@ -213,8 +213,8 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_NONE:
     return R_NONE;
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -1048,7 +1048,7 @@ void AArch64BtiPac::writePltHeader(uint8_t *buf) const {
   memcpy(buf, pltData, sizeof(pltData));
 
   relocateNoSym(buf + 4, R_AARCH64_ADR_PREL_PG_HI21,
-                getAArch64Page(got + 16) - getAArch64Page(plt + 8));
+                getAArch64Page(got + 16) - getAArch64Page(plt + 4));
   relocateNoSym(buf + 8, R_AARCH64_LDST64_ABS_LO12_NC, got + 16);
   relocateNoSym(buf + 12, R_AARCH64_ADD_ABS_LO12_NC, got + 16);
   if (!btiHeader)
@@ -1113,7 +1113,8 @@ addTaggedSymbolReferences(InputSectionBase &sec,
 
   const RelsOrRelas<ELFT> rels = sec.relsOrRelas<ELFT>();
   if (rels.areRelocsRel())
-    error("non-RELA relocations are not allowed with memtag globals");
+    ErrAlways(ctx)
+        << "non-RELA relocations are not allowed with memtag globals";
 
   for (const typename ELFT::Rela &rel : rels.relas) {
     Symbol &sym = sec.file->getRelocTargetSym(rel);
@@ -1196,7 +1197,7 @@ void elf::createTaggedSymbols(Ctx &ctx) {
   // relocations, the only other way to get written addends is with
   // --apply-dynamic-relocs.
   if (!taggedSymbolReferenceCount.empty() && ctx.arg.writeAddends)
-    error("--apply-dynamic-relocs cannot be used with MTE globals");
+    ErrAlways(ctx) << "--apply-dynamic-relocs cannot be used with MTE globals";
 
   // Now, `taggedSymbolReferenceCount` should only contain symbols that are
   // defined as tagged exactly the same amount as it's referenced, meaning all

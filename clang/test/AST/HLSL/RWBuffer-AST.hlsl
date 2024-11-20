@@ -15,7 +15,7 @@
 // EMPTY-NEXT: CXXRecordDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> implicit <undeserialized declarations> class RWBuffer
 // EMPTY-NEXT: FinalAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit final
 
-// There should be no more occurrances of RWBuffer
+// There should be no more occurrences of RWBuffer
 // EMPTY-NOT: RWBuffer
 
 #ifndef EMPTY

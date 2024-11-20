@@ -1110,6 +1110,13 @@ def FeatureRequiresCOV6 : SubtargetFeature<"requires-cov6",
   "Target Requires Code Object V6"
 >;
 
+def FeatureXF32Insts : SubtargetFeature<"xf32-insts",
+   "HasXF32Insts",
+   "true",
+   "Has instructions that support xf32 format, such as "
+   "v_mfma_f32_16x16x8_xf32 and v_mfma_f32_32x32x4_xf32"
+ >;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -1448,6 +1455,7 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureFP8ConversionInsts,
    FeatureCvtFP8VOP1Bug,
    FeaturePkFmacF16Inst,
+   FeatureXF32Insts,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
    FeatureAtomicBufferGlobalPkAddF16Insts,
@@ -2288,6 +2296,9 @@ def HasNoCvtFP8VOP1Bug : Predicate<"!Subtarget->hasCvtFP8VOP1Bug()">;
 def HasAtomicCSubNoRtnInsts : Predicate<"Subtarget->hasAtomicCSubNoRtnInsts()">;
 
 def HasScalarDwordx3Loads : Predicate<"Subtarget->hasScalarDwordx3Loads()">;
+
+def HasXF32Insts : Predicate<"Subtarget->hasXF32Insts()">,
+   AssemblerPredicate<(all_of FeatureXF32Insts)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"

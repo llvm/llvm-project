@@ -287,7 +287,7 @@ void ScriptParser::readLinkerScript() {
 }
 
 void ScriptParser::readDefsym() {
-  if (errorCount())
+  if (errCount(ctx))
     return;
   inExpr = true;
   StringRef name = readName();
@@ -306,7 +306,8 @@ void ScriptParser::readNoCrossRefs(bool to) {
   while (auto tok = till(")"))
     cmd.outputSections.push_back(unquote(tok));
   if (cmd.outputSections.size() < 2)
-    warn(getCurrentLocation() + ": ignored with fewer than 2 output sections");
+    Warn(ctx) << getCurrentLocation()
+              << ": ignored with fewer than 2 output sections";
   else
     ctx.script->noCrossRefs.push_back(std::move(cmd));
 }
@@ -515,7 +516,7 @@ void ScriptParser::readPhdrs() {
     cmd.name = tok;
     cmd.type = readPhdrType();
 
-    while (!errorCount() && !consume(";")) {
+    while (!errCount(ctx) && !consume(";")) {
       if (consume("FILEHDR"))
         cmd.hasFilehdr = true;
       else if (consume("PHDRS"))
@@ -574,7 +575,7 @@ SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
 
   SmallVector<SectionCommand *, 0> v;
   OutputSection *prev = nullptr;
-  while (!errorCount() && !consume("}")) {
+  while (!errCount(ctx) && !consume("}")) {
     // VA is the same for all sections. The LMAs are consecutive in memory
     // starting from the base load address specified.
     OutputDesc *osd = readOverlaySectionDescription();
@@ -765,7 +766,7 @@ SortSectionPolicy ScriptParser::readSortKind() {
 // any file but a.o, and section .baz in any file but b.o.
 SmallVector<SectionPattern, 0> ScriptParser::readInputSectionsList() {
   SmallVector<SectionPattern, 0> ret;
-  while (!errorCount() && peek() != ")") {
+  while (!errCount(ctx) && peek() != ")") {
     StringMatcher excludeFilePat;
     if (consume("EXCLUDE_FILE")) {
       expect("(");
@@ -774,7 +775,7 @@ SmallVector<SectionPattern, 0> ScriptParser::readInputSectionsList() {
 
     StringMatcher SectionMatcher;
     // Break if the next token is ), EXCLUDE_FILE, or SORT*.
-    while (!errorCount() && peekSortKind() == SortSectionPolicy::Default) {
+    while (!errCount(ctx) && peekSortKind() == SortSectionPolicy::Default) {
       StringRef s = peek();
       if (s == ")" || s == "EXCLUDE_FILE")
         break;
@@ -891,9 +892,9 @@ Expr ScriptParser::readAssert() {
   StringRef msg = readName();
   expect(")");
 
-  return [=, s = ctx.script]() -> ExprValue {
+  return [=, s = ctx.script, &ctx = ctx]() -> ExprValue {
     if (!e().getValue())
-      errorOrWarn(msg);
+      Err(ctx) << msg;
     return s->getDot();
   };
 }
@@ -975,7 +976,7 @@ static Expr checkAlignment(Expr e, std::string &loc) {
   return [=] {
     uint64_t alignment = std::max((uint64_t)1, e().getValue());
     if (!isPowerOf2_64(alignment)) {
-      error(loc + ": alignment must be power of 2");
+      ErrAlways(ctx) << loc << ": alignment must be power of 2";
       return (uint64_t)1; // Return a dummy value.
     }
     return alignment;
@@ -1081,7 +1082,7 @@ OutputDesc *ScriptParser::readOutputSectionDescription(StringRef outSec) {
   }
 
   if (osec->lmaExpr && !osec->lmaRegionName.empty())
-    error("section can't have both LMA and a load region");
+    ErrAlways(ctx) << "section can't have both LMA and a load region";
 
   osec->phdrs = readOutputSectionPhdrs();
 
@@ -1196,7 +1197,7 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
   Expr e = readExpr();
   if (op != "=") {
     std::string loc = getCurrentLocation();
-    e = [=, s = ctx.script, c = op[0]]() -> ExprValue {
+    e = [=, s = ctx.script, c = op[0], &ctx = ctx]() -> ExprValue {
       ExprValue lhs = s->getSymbolValue(name, loc);
       switch (c) {
       case '*':
@@ -1204,7 +1205,7 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
       case '/':
         if (uint64_t rv = e().getValue())
           return lhs.getValue() / rv;
-        error(loc + ": division by zero");
+        ErrAlways(ctx) << loc << ": division by zero";
         return 0;
       case '+':
         return add(*s, lhs, e());
@@ -1248,19 +1249,19 @@ Expr ScriptParser::combine(StringRef op, Expr l, Expr r) {
     return [=] { return l().getValue() * r().getValue(); };
   if (op == "/") {
     std::string loc = getCurrentLocation();
-    return [=]() -> uint64_t {
+    return [=, &ctx = ctx]() -> uint64_t {
       if (uint64_t rv = r().getValue())
         return l().getValue() / rv;
-      error(loc + ": division by zero");
+      ErrAlways(ctx) << loc << ": division by zero";
       return 0;
     };
   }
   if (op == "%") {
     std::string loc = getCurrentLocation();
-    return [=]() -> uint64_t {
+    return [=, &ctx = ctx]() -> uint64_t {
       if (uint64_t rv = r().getValue())
         return l().getValue() % rv;
-      error(loc + ": modulo by zero");
+      ErrAlways(ctx) << loc << ": modulo by zero";
       return 0;
     };
   }
@@ -1296,7 +1297,7 @@ Expr ScriptParser::combine(StringRef op, Expr l, Expr r) {
 // This is a part of the operator-precedence parser. This function
 // assumes that the remaining token stream starts with an operator.
 Expr ScriptParser::readExpr1(Expr lhs, int minPrec) {
-  while (!atEOF() && !errorCount()) {
+  while (!atEOF() && !errCount(ctx)) {
     // Read an operator and an expression.
     StringRef op1 = peek();
     if (precedence(op1) < minPrec)
@@ -1327,7 +1328,7 @@ Expr ScriptParser::getPageSize() {
   return [=, &ctx = this->ctx]() -> uint64_t {
     if (ctx.target)
       return ctx.arg.commonPageSize;
-    error(location + ": unable to calculate page size");
+    ErrAlways(ctx) << location << ": unable to calculate page size";
     return 4096; // Return a dummy value.
   };
 }
@@ -1428,7 +1429,7 @@ std::pair<uint64_t, uint64_t> ScriptParser::readInputSectionFlags() {
   uint64_t withFlags = 0;
   uint64_t withoutFlags = 0;
   expect("(");
-  while (!errorCount()) {
+  while (!errCount(ctx)) {
     StringRef tok = readName();
     bool without = tok.consume_front("!");
     if (std::optional<uint64_t> flag = parseFlag(tok)) {
@@ -1683,7 +1684,7 @@ Expr ScriptParser::readParenExpr() {
 
 SmallVector<StringRef, 0> ScriptParser::readOutputSectionPhdrs() {
   SmallVector<StringRef, 0> phdrs;
-  while (!errorCount() && peek().starts_with(":")) {
+  while (!errCount(ctx) && peek().starts_with(":")) {
     StringRef tok = next();
     phdrs.push_back((tok.size() == 1) ? readName() : tok.substr(1));
   }

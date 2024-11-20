@@ -130,11 +130,19 @@ bool AliasAnalysis::Source::mayBeActualArgWithPtr(
 }
 
 AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
+  // A wrapper around alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
+  // mlir::Value rhs) This allows a user to provide Source that may be obtained
+  // through other dialects
+  auto lhsSrc = getSource(lhs);
+  auto rhsSrc = getSource(rhs);
+  return alias(lhsSrc, rhsSrc, lhs, rhs);
+}
+
+AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
+                                 mlir::Value rhs) {
   // TODO: alias() has to be aware of the function scopes.
   // After MLIR inlining, the current implementation may
   // not recognize non-aliasing entities.
-  auto lhsSrc = getSource(lhs);
-  auto rhsSrc = getSource(rhs);
   bool approximateSource = lhsSrc.approximateSource || rhsSrc.approximateSource;
   LLVM_DEBUG(llvm::dbgs() << "\nAliasAnalysis::alias\n";
              llvm::dbgs() << "  lhs: " << lhs << "\n";

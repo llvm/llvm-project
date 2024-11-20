@@ -149,6 +149,15 @@ struct PortableMemInfoBlock {
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
 
+  // Define setters for each type which can be called by the writer.
+#define MIBEntryDef(NameTag, Name, Type)                                       \
+  void set##Name(Type NewVal) {                                                \
+    assert(Schema[llvm::to_underlying(Meta::Name)]);                           \
+    Name = NewVal;                                                             \
+  }
+#include "llvm/ProfileData/MIBEntryDef.inc"
+#undef MIBEntryDef
+
   void clear() { *this = PortableMemInfoBlock(); }
 
   bool operator==(const PortableMemInfoBlock &Other) const {

@@ -457,19 +457,19 @@ entry:
 define i64 @subi_i64(i64 %a) {
 ; RV32IM-LABEL: subi_i64:
 ; RV32IM:       # %bb.0: # %entry
-; RV32IM-NEXT:    lui a2, 301
-; RV32IM-NEXT:    addi a3, a2, 1548
-; RV32IM-NEXT:    sub a2, a0, a3
-; RV32IM-NEXT:    sltu a0, a0, a3
-; RV32IM-NEXT:    sub a1, a1, a0
-; RV32IM-NEXT:    mv a0, a2
+; RV32IM-NEXT:    lui a2, 1048275
+; RV32IM-NEXT:    addi a2, a2, -1548
+; RV32IM-NEXT:    add a0, a0, a2
+; RV32IM-NEXT:    sltu a2, a0, a2
+; RV32IM-NEXT:    addi a1, a1, -1
+; RV32IM-NEXT:    add a1, a1, a2
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: subi_i64:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    lui a1, 301
-; RV64IM-NEXT:    addiw a1, a1, 1548
-; RV64IM-NEXT:    sub a0, a0, a1
+; RV64IM-NEXT:    lui a1, 1048275
+; RV64IM-NEXT:    addiw a1, a1, -1548
+; RV64IM-NEXT:    add a0, a0, a1
 ; RV64IM-NEXT:    ret
 entry:
   %0 = sub i64 %a, 1234444

@@ -53,8 +53,8 @@ define i128 @testi128i128(i128 %add) {
 
 define <4 x i8> @testv4i16i8(<4 x i16> %add) {
 ; CHECK-LABEL: @testv4i16i8(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i16> [[ADD:%.*]], <i16 -1, i16 -1, i16 -1, i16 -1>
-; CHECK-NEXT:    [[X:%.*]] = select <4 x i1> [[TMP1]], <4 x i8> <i8 27, i8 27, i8 27, i8 27>, <4 x i8> <i8 -28, i8 -28, i8 -28, i8 -28>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i16> [[ADD:%.*]], splat (i16 -1)
+; CHECK-NEXT:    [[X:%.*]] = select <4 x i1> [[TMP1]], <4 x i8> splat (i8 27), <4 x i8> splat (i8 -28)
 ; CHECK-NEXT:    ret <4 x i8> [[X]]
 ;
   %sh = ashr <4 x i16> %add, <i16 15, i16 15, i16 15, i16 15>
@@ -65,7 +65,7 @@ define <4 x i8> @testv4i16i8(<4 x i16> %add) {
 
 define <4 x i8> @testv4i16i8_poison(<4 x i16> %add) {
 ; CHECK-LABEL: @testv4i16i8_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i16> [[ADD:%.*]], <i16 -1, i16 -1, i16 -1, i16 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i16> [[ADD:%.*]], splat (i16 -1)
 ; CHECK-NEXT:    [[X:%.*]] = select <4 x i1> [[TMP1]], <4 x i8> <i8 27, i8 27, i8 poison, i8 27>, <4 x i8> <i8 -28, i8 -28, i8 poison, i8 -28>
 ; CHECK-NEXT:    ret <4 x i8> [[X]]
 ;
@@ -94,7 +94,7 @@ define i8 @wrongimm(i16 %add) {
 define <4 x i32> @vectorpoison(<6 x i32> %0) {
 ; CHECK-LABEL: @vectorpoison(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt <6 x i32> [[TMP0:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt <6 x i32> [[TMP0:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    [[SHR:%.*]] = sext <6 x i1> [[ISNOTNEG]] to <6 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <6 x i32> [[SHR]], <6 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 2>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]

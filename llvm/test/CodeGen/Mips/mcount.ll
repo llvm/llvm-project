@@ -104,9 +104,8 @@ define void @foo() {
 ; MIPS32-MM-PIC-NEXT:    .cfi_def_cfa_offset 24
 ; MIPS32-MM-PIC-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; MIPS32-MM-PIC-NEXT:    .cfi_offset 31, -4
-; MIPS32-MM-PIC-NEXT:    addu $2, $2, $25
-; MIPS32-MM-PIC-NEXT:    lw $25, %call16(_mcount)($2)
-; MIPS32-MM-PIC-NEXT:    move $gp, $2
+; MIPS32-MM-PIC-NEXT:    addu $gp, $2, $25
+; MIPS32-MM-PIC-NEXT:    lw $25, %call16(_mcount)($gp)
 ; MIPS32-MM-PIC-NEXT:    move $1, $ra
 ; MIPS32-MM-PIC-NEXT:    .reloc ($tmp0), R_MICROMIPS_JALR, _mcount
 ; MIPS32-MM-PIC-NEXT:  $tmp0:

@@ -388,6 +388,46 @@ def uimm16 : Operand<i16>, ImmLeaf<i16, [{return Imm >= 0 && Imm < 65536;}]>{
   let ParserMatchClass = AsmImmRange<0, 65535>;
 }
 
+def uimm6_64b : Operand<i64>, ImmLeaf<i64, [{ return Imm >= 0 && Imm < 64; }]> {
+    let ParserMatchClass = UImm6Operand;
+}
+
+def uimm6_32b : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm < 64; }]> {
+   let ParserMatchClass = UImm6Operand;
+}
+
+def UImm6Plus1Operand : AsmOperandClass {
+  let Name = "UImm6P1";
+  let DiagnosticType = "InvalidImm1_64";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "tryParseAdjImm0_63<-1>";
+  let PredicateMethod = "isImmInRange<0,63>";
+}
+
+def UImm6Minus1Operand : AsmOperandClass {
+  let Name = "UImm6M1";
+  let DiagnosticType = "InvalidImmM1_62";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "tryParseAdjImm0_63<1>";
+  let PredicateMethod = "isImmInRange<0,63>";
+}
+
+def uimm6p1_32b : Operand<i32> {
+  let ParserMatchClass = UImm6Plus1Operand;
+}
+
+def uimm6p1_64b : Operand<i64> {
+  let ParserMatchClass = UImm6Plus1Operand;
+}
+
+def uimm6m1_32b : Operand<i32> {
+  let ParserMatchClass = UImm6Minus1Operand;
+}
+
+def uimm6m1_64b : Operand<i64> {
+  let ParserMatchClass = UImm6Minus1Operand;
+}
+
 def SImm9Operand : SImmOperand<9>;
 def simm9 : Operand<i64>, ImmLeaf<i64, [{ return Imm >= -256 && Imm < 256; }]> {
   let ParserMatchClass = SImm9Operand;
@@ -657,6 +697,7 @@ class PCRelLabel<int N> : BranchTarget<N> {
 def BranchTarget14Operand : BranchTarget<14>;
 def BranchTarget26Operand : BranchTarget<26>;
 def PCRelLabel19Operand   : PCRelLabel<19>;
+def PCRelLabel9Operand    : PCRelLabel<9>;
 
 def MovWSymbolG3AsmOperand : AsmOperandClass {
   let Name = "MovWSymbolG3";
@@ -1349,15 +1390,13 @@ def arith_uxtx : ComplexPattern<i64, 2, "SelectArithUXTXRegister", []>;
 // Floating-point immediate.
 
 def fpimm16XForm : SDNodeXForm<fpimm, [{
-      APFloat InVal = N->getValueAPF();
-      uint32_t enc = AArch64_AM::getFP16Imm(InVal);
-      return CurDAG->getTargetConstant(enc, SDLoc(N), MVT::i32);
+      uint32_t Enc = AArch64_AM::getFP16Imm(N->getValueAPF());
+      return CurDAG->getTargetConstant(Enc, SDLoc(N), MVT::i32);
     }]>;
 
 def fpimm32XForm : SDNodeXForm<fpimm, [{
-      APFloat InVal = N->getValueAPF();
-      uint32_t enc = AArch64_AM::getFP32Imm(InVal);
-      return CurDAG->getTargetConstant(enc, SDLoc(N), MVT::i32);
+      uint32_t Enc = AArch64_AM::getFP32Imm(N->getValueAPF());
+      return CurDAG->getTargetConstant(Enc, SDLoc(N), MVT::i32);
     }]>;
 
 def fpimm32SIMDModImmType4XForm : SDNodeXForm<fpimm, [{
@@ -1368,9 +1407,8 @@ def fpimm32SIMDModImmType4XForm : SDNodeXForm<fpimm, [{
     }]>;
 
 def fpimm64XForm : SDNodeXForm<fpimm, [{
-      APFloat InVal = N->getValueAPF();
-      uint32_t enc = AArch64_AM::getFP64Imm(InVal);
-      return CurDAG->getTargetConstant(enc, SDLoc(N), MVT::i32);
+      uint32_t Enc = AArch64_AM::getFP64Imm(N->getValueAPF());
+      return CurDAG->getTargetConstant(Enc, SDLoc(N), MVT::i32);
     }]>;
 
 def fpimm16 : Operand<f16>,
@@ -1640,7 +1678,6 @@ def simdimmtype10 : Operand<i32>,
       return AArch64_AM::isAdvSIMDModImmType10(
                  Imm.bitcastToAPInt().getZExtValue());
     }], SDNodeXForm<fpimm, [{
-      APFloat InVal = N->getValueAPF();
       uint32_t enc = AArch64_AM::encodeAdvSIMDModImmType10(N->getValueAPF()
                                                            .bitcastToAPInt()
                                                            .getZExtValue());
@@ -2158,6 +2195,17 @@ def am_brcond : Operand<OtherVT> {
   let OperandType = "OPERAND_PCREL";
 }
 
+// Conditional branch target. 9-bit immediate. The low two bits of the target
+// offset are implied zero and so are not part of the immediate.
+def am_brcmpcond : Operand<OtherVT> {
+  let EncoderMethod = "getCondCompBranchTargetOpValue";
+  let DecoderMethod = "DecodePCRelLabel9";
+  let PrintMethod   = "printAlignedLabel";
+  let ParserMatchClass = PCRelLabel9Operand;
+  let OperandType = "OPERAND_PCREL";
+}
+
+
 class BranchCond<bit bit4, string mnemonic>
    : I<(outs), (ins ccode:$cond, am_brcond:$target),
        mnemonic, ".$cond\t$target", "",
@@ -2531,8 +2579,7 @@ class BaseAddSubCarry<bit isSub, RegisterClass regtype, string asm,
 class BaseAddSubCarrySetFlags<bit isSub, RegisterClass regtype, string asm,
                               SDNode OpNode>
     : BaseBaseAddSubCarry<isSub, regtype, asm,
-        [(set regtype:$Rd, (OpNode regtype:$Rn, regtype:$Rm, NZCV)),
-         (implicit NZCV)]> {
+        [(set regtype:$Rd, (OpNode regtype:$Rn, regtype:$Rm, NZCV))]> {
   let Defs = [NZCV];
 }
 
@@ -5182,6 +5229,32 @@ multiclass FPToIntegerUnscaled<bits<2> rmode, bits<3> opcode, string asm,
   }
 }
 
+multiclass FPToIntegerSIMDScalar<bits<2> rmode, bits<3> opcode, string asm> {
+  // double-precision to 32-bit SIMD/FPR
+  def SDr :  BaseFPToIntegerUnscaled<0b01, rmode, opcode, FPR64, FPR32, asm,
+                                     []> {
+    let Inst{31} = 0; // 32-bit FPR flag
+  }
+
+  // half-precision to 32-bit SIMD/FPR
+  def SHr :  BaseFPToIntegerUnscaled<0b11, rmode, opcode, FPR16, FPR32, asm,
+                                     []> {
+    let Inst{31} = 0; // 32-bit FPR flag
+  }
+
+  // half-precision to 64-bit SIMD/FPR
+  def DHr :  BaseFPToIntegerUnscaled<0b11, rmode, opcode, FPR16, FPR64, asm,
+                                     []> {
+    let Inst{31} = 1; // 64-bit FPR flag
+  }
+
+  // single-precision to 64-bit SIMD/FPR
+  def DSr :  BaseFPToIntegerUnscaled<0b00, rmode, opcode, FPR32, FPR64, asm,
+                                     []> {
+    let Inst{31} = 1; // 64-bit FPR flag
+  }
+}
+
 multiclass FPToIntegerScaled<bits<2> rmode, bits<3> opcode, string asm,
                              SDPatternOperator OpN> {
   // Scaled half-precision to 32-bit
@@ -5243,7 +5316,7 @@ multiclass FPToIntegerScaled<bits<2> rmode, bits<3> opcode, string asm,
 //---
 
 let mayStore = 0, mayLoad = 0, hasSideEffects = 0, mayRaiseFPException = 1, Uses = [FPCR] in
-class BaseIntegerToFP<bit isUnsigned,
+class BaseIntegerToFP<bits<2> rmode, bits<3> opcode,
                       RegisterClass srcType, RegisterClass dstType,
                       Operand immType, string asm, list<dag> pattern>
     : I<(outs dstType:$Rd), (ins srcType:$Rn, immType:$scale),
@@ -5253,15 +5326,16 @@ class BaseIntegerToFP<bit isUnsigned,
   bits<5> Rn;
   bits<6> scale;
   let Inst{30-24} = 0b0011110;
-  let Inst{21-17} = 0b00001;
-  let Inst{16}    = isUnsigned;
+  let Inst{21}    = 0b0;
+  let Inst{20-19} = rmode;
+  let Inst{18-16} = opcode;
   let Inst{15-10} = scale;
   let Inst{9-5}   = Rn;
   let Inst{4-0}   = Rd;
 }
 
 let mayRaiseFPException = 1, Uses = [FPCR] in
-class BaseIntegerToFPUnscaled<bit isUnsigned,
+class BaseIntegerToFPUnscaled<bits<2> rmode, bits<3> opcode,
                       RegisterClass srcType, RegisterClass dstType,
                       ValueType dvt, string asm, SDPatternOperator node>
     : I<(outs dstType:$Rd), (ins srcType:$Rn),
@@ -5271,49 +5345,50 @@ class BaseIntegerToFPUnscaled<bit isUnsigned,
   bits<5> Rn;
   bits<6> scale;
   let Inst{30-24} = 0b0011110;
-  let Inst{21-17} = 0b10001;
-  let Inst{16}    = isUnsigned;
+  let Inst{21}    = 0b1;
+  let Inst{20-19} = rmode;
+  let Inst{18-16} = opcode;
   let Inst{15-10} = 0b000000;
   let Inst{9-5}   = Rn;
   let Inst{4-0}   = Rd;
 }
 
-multiclass IntegerToFP<bit isUnsigned, string asm, SDPatternOperator node> {
+multiclass IntegerToFP<bits<2> rmode, bits<3> opcode, string asm, SDPatternOperator node> {
   // Unscaled
-  def UWHri: BaseIntegerToFPUnscaled<isUnsigned, GPR32, FPR16, f16, asm, node> {
+  def UWHri: BaseIntegerToFPUnscaled<rmode, opcode, GPR32, FPR16, f16, asm, node> {
     let Inst{31} = 0; // 32-bit GPR flag
     let Inst{23-22} = 0b11; // 16-bit FPR flag
     let Predicates = [HasFullFP16];
   }
 
-  def UWSri: BaseIntegerToFPUnscaled<isUnsigned, GPR32, FPR32, f32, asm, node> {
+  def UWSri: BaseIntegerToFPUnscaled<rmode, opcode, GPR32, FPR32, f32, asm, node> {
     let Inst{31} = 0; // 32-bit GPR flag
     let Inst{23-22} = 0b00; // 32-bit FPR flag
   }
 
-  def UWDri: BaseIntegerToFPUnscaled<isUnsigned, GPR32, FPR64, f64, asm, node> {
+  def UWDri: BaseIntegerToFPUnscaled<rmode, opcode, GPR32, FPR64, f64, asm, node> {
     let Inst{31} = 0; // 32-bit GPR flag
     let Inst{23-22} = 0b01; // 64-bit FPR flag
   }
 
-  def UXHri: BaseIntegerToFPUnscaled<isUnsigned, GPR64, FPR16, f16, asm, node> {
+  def UXHri: BaseIntegerToFPUnscaled<rmode, opcode, GPR64, FPR16, f16, asm, node> {
     let Inst{31} = 1; // 64-bit GPR flag
     let Inst{23-22} = 0b11; // 16-bit FPR flag
     let Predicates = [HasFullFP16];
   }
 
-  def UXSri: BaseIntegerToFPUnscaled<isUnsigned, GPR64, FPR32, f32, asm, node> {
+  def UXSri: BaseIntegerToFPUnscaled<rmode, opcode, GPR64, FPR32, f32, asm, node> {
     let Inst{31} = 1; // 64-bit GPR flag
     let Inst{23-22} = 0b00; // 32-bit FPR flag
   }
 
-  def UXDri: BaseIntegerToFPUnscaled<isUnsigned, GPR64, FPR64, f64, asm, node> {
+  def UXDri: BaseIntegerToFPUnscaled<rmode, opcode, GPR64, FPR64, f64, asm, node> {
     let Inst{31} = 1; // 64-bit GPR flag
     let Inst{23-22} = 0b01; // 64-bit FPR flag
   }
 
   // Scaled
-  def SWHri: BaseIntegerToFP<isUnsigned, GPR32, FPR16, fixedpoint_recip_f16_i32, asm,
+  def SWHri: BaseIntegerToFP<rmode, opcode, GPR32, FPR16, fixedpoint_recip_f16_i32, asm,
                              [(set (f16 FPR16:$Rd),
                                    (fmul (node GPR32:$Rn),
                                          fixedpoint_recip_f16_i32:$scale))]> {
@@ -5323,7 +5398,7 @@ multiclass IntegerToFP<bit isUnsigned, string asm, SDPatternOperator node> {
     let Predicates = [HasFullFP16];
   }
 
-  def SWSri: BaseIntegerToFP<isUnsigned, GPR32, FPR32, fixedpoint_recip_f32_i32, asm,
+  def SWSri: BaseIntegerToFP<rmode, opcode, GPR32, FPR32, fixedpoint_recip_f32_i32, asm,
                              [(set FPR32:$Rd,
                                    (fmul (node GPR32:$Rn),
                                          fixedpoint_recip_f32_i32:$scale))]> {
@@ -5332,7 +5407,7 @@ multiclass IntegerToFP<bit isUnsigned, string asm, SDPatternOperator node> {
     let scale{5} = 1;
   }
 
-  def SWDri: BaseIntegerToFP<isUnsigned, GPR32, FPR64, fixedpoint_recip_f64_i32, asm,
+  def SWDri: BaseIntegerToFP<rmode, opcode, GPR32, FPR64, fixedpoint_recip_f64_i32, asm,
                              [(set FPR64:$Rd,
                                    (fmul (node GPR32:$Rn),
                                          fixedpoint_recip_f64_i32:$scale))]> {
@@ -5341,7 +5416,7 @@ multiclass IntegerToFP<bit isUnsigned, string asm, SDPatternOperator node> {
     let scale{5} = 1;
   }
 
-  def SXHri: BaseIntegerToFP<isUnsigned, GPR64, FPR16, fixedpoint_recip_f16_i64, asm,
+  def SXHri: BaseIntegerToFP<rmode, opcode, GPR64, FPR16, fixedpoint_recip_f16_i64, asm,
                              [(set (f16 FPR16:$Rd),
                                    (fmul (node GPR64:$Rn),
                                          fixedpoint_recip_f16_i64:$scale))]> {
@@ -5350,7 +5425,7 @@ multiclass IntegerToFP<bit isUnsigned, string asm, SDPatternOperator node> {
     let Predicates = [HasFullFP16];
   }
 
-  def SXSri: BaseIntegerToFP<isUnsigned, GPR64, FPR32, fixedpoint_recip_f32_i64, asm,
+  def SXSri: BaseIntegerToFP<rmode, opcode, GPR64, FPR32, fixedpoint_recip_f32_i64, asm,
                              [(set FPR32:$Rd,
                                    (fmul (node GPR64:$Rn),
                                          fixedpoint_recip_f32_i64:$scale))]> {
@@ -5358,12 +5433,38 @@ multiclass IntegerToFP<bit isUnsigned, string asm, SDPatternOperator node> {
     let Inst{23-22} = 0b00; // 32-bit FPR flag
   }
 
-  def SXDri: BaseIntegerToFP<isUnsigned, GPR64, FPR64, fixedpoint_recip_f64_i64, asm,
+  def SXDri: BaseIntegerToFP<rmode, opcode, GPR64, FPR64, fixedpoint_recip_f64_i64, asm,
                              [(set FPR64:$Rd,
                                    (fmul (node GPR64:$Rn),
                                          fixedpoint_recip_f64_i64:$scale))]> {
     let Inst{31} = 1; // 64-bit GPR flag
     let Inst{23-22} = 0b01; // 64-bit FPR flag
+  }
+}
+
+multiclass IntegerToFPSIMDScalar<bits<2> rmode, bits<3> opcode, string asm, SDPatternOperator node = null_frag> {
+  // 32-bit to half-precision
+  def HSr: BaseIntegerToFPUnscaled<rmode, opcode, FPR32, FPR16, f16, asm, node> {
+    let Inst{31} = 0; // 32-bit FPR flag
+    let Inst{23-22} = 0b11; // 16-bit FPR flag
+  }
+
+  // 32-bit to double-precision
+  def DSr: BaseIntegerToFPUnscaled<rmode, opcode, FPR32, FPR64, f64, asm, node> {
+    let Inst{31} = 0; // 32-bit FPR flag
+    let Inst{23-22} = 0b01; // 64-bit FPR flag
+  }
+
+  // 64-bit to half-precision
+  def HDr: BaseIntegerToFPUnscaled<rmode, opcode, FPR64, FPR16, f16, asm, node> {
+    let Inst{31} = 1; // 64-bit FPR flag
+    let Inst{23-22} = 0b11; // 16-bit FPR flag
+  }
+
+  // 64-bit to single-precision
+  def SDr: BaseIntegerToFPUnscaled<rmode, opcode, FPR64, FPR32, f32, asm, node> {
+    let Inst{31} = 1; // 64-bit FPR flag
+    let Inst{23-22} = 0b00; // 32-bit FPR flag
   }
 }
 
@@ -5719,6 +5820,13 @@ multiclass ThreeOperandFPData<bit isNegated, bit isSub,string asm,
                        (f16 FPR16:$Ra))),
             (!cast<Instruction>(NAME # Hrrr)
               (f16 (EXTRACT_SUBREG V128:$Rn, hsub)), FPR16:$Rm, FPR16:$Ra)>;
+
+  def : Pat<(f16 (node (f16 (extractelt (v8f16 V128:$Rn), (i64 0))),
+                       (f16 (extractelt (v8f16 V128:$Rm), (i64 0))),
+                       (f16 FPR16:$Ra))),
+            (!cast<Instruction>(NAME # Hrrr)
+              (f16 (EXTRACT_SUBREG V128:$Rn, hsub)),
+              (f16 (EXTRACT_SUBREG V128:$Rm, hsub)), FPR16:$Ra)>;
   }
 
   def : Pat<(f32 (node (f32 FPR32:$Rn),
@@ -5733,6 +5841,13 @@ multiclass ThreeOperandFPData<bit isNegated, bit isSub,string asm,
             (!cast<Instruction>(NAME # Srrr)
               (EXTRACT_SUBREG V128:$Rn, ssub), FPR32:$Rm, FPR32:$Ra)>;
 
+  def : Pat<(f32 (node (f32 (extractelt (v4f32 V128:$Rn), (i64 0))),
+                       (f32 (extractelt (v4f32 V128:$Rm), (i64 0))),
+                       (f32 FPR32:$Ra))),
+            (!cast<Instruction>(NAME # Srrr)
+              (EXTRACT_SUBREG V128:$Rn, ssub),
+              (EXTRACT_SUBREG V128:$Rm, ssub), FPR32:$Ra)>;
+
   def : Pat<(f64 (node (f64 FPR64:$Rn),
                        (f64 (extractelt (v2f64 V128:$Rm), (i64 0))),
                        (f64 FPR64:$Ra))),
@@ -5744,6 +5859,13 @@ multiclass ThreeOperandFPData<bit isNegated, bit isSub,string asm,
                        (f64 FPR64:$Ra))),
             (!cast<Instruction>(NAME # Drrr)
               (EXTRACT_SUBREG V128:$Rn, dsub), FPR64:$Rm, FPR64:$Ra)>;
+
+  def : Pat<(f64 (node (f64 (extractelt (v2f64 V128:$Rn), (i64 0))),
+                       (f64 (extractelt (v2f64 V128:$Rm), (i64 0))),
+                       (f64 FPR64:$Ra))),
+            (!cast<Instruction>(NAME # Drrr)
+              (EXTRACT_SUBREG V128:$Rn, dsub),
+              (EXTRACT_SUBREG V128:$Rm, dsub), FPR64:$Ra)>;
 }
 
 //---
@@ -5789,34 +5911,34 @@ multiclass FPComparison<bit signalAllNans, string asm,
                         SDPatternOperator OpNode = null_frag> {
   let Defs = [NZCV] in {
   def Hrr : BaseTwoOperandFPComparison<signalAllNans, FPR16, asm,
-      [(OpNode (f16 FPR16:$Rn), (f16 FPR16:$Rm)), (implicit NZCV)]> {
+      [(OpNode (f16 FPR16:$Rn), (f16 FPR16:$Rm))]> {
     let Inst{23-22} = 0b11;
     let Predicates = [HasFullFP16];
   }
 
   def Hri : BaseOneOperandFPComparison<signalAllNans, FPR16, asm,
-      [(OpNode (f16 FPR16:$Rn), fpimm0), (implicit NZCV)]> {
+      [(OpNode (f16 FPR16:$Rn), fpimm0)]> {
     let Inst{23-22} = 0b11;
     let Predicates = [HasFullFP16];
   }
 
   def Srr : BaseTwoOperandFPComparison<signalAllNans, FPR32, asm,
-      [(OpNode FPR32:$Rn, (f32 FPR32:$Rm)), (implicit NZCV)]> {
+      [(OpNode FPR32:$Rn, (f32 FPR32:$Rm))]> {
     let Inst{23-22} = 0b00;
   }
 
   def Sri : BaseOneOperandFPComparison<signalAllNans, FPR32, asm,
-      [(OpNode (f32 FPR32:$Rn), fpimm0), (implicit NZCV)]> {
+      [(OpNode (f32 FPR32:$Rn), fpimm0)]> {
     let Inst{23-22} = 0b00;
   }
 
   def Drr : BaseTwoOperandFPComparison<signalAllNans, FPR64, asm,
-      [(OpNode FPR64:$Rn, (f64 FPR64:$Rm)), (implicit NZCV)]> {
+      [(OpNode FPR64:$Rn, (f64 FPR64:$Rm))]> {
     let Inst{23-22} = 0b01;
   }
 
   def Dri : BaseOneOperandFPComparison<signalAllNans, FPR64, asm,
-      [(OpNode (f64 FPR64:$Rn), fpimm0), (implicit NZCV)]> {
+      [(OpNode (f64 FPR64:$Rn), fpimm0)]> {
     let Inst{23-22} = 0b01;
   }
   } // Defs = [NZCV]
@@ -9180,6 +9302,11 @@ multiclass SIMDFPIndexedTiedPatterns<string INST, SDPatternOperator OpNode> {
                          (vector_extract (v8f16 V128_lo:$Rm), VectorIndexH:$idx))),
             (!cast<Instruction>(INST # "v1i16_indexed") FPR16:$Rd, FPR16:$Rn,
                 V128_lo:$Rm, VectorIndexH:$idx)>;
+  def : Pat<(f16 (OpNode (f16 FPR16:$Rd),
+                         (vector_extract (v8f16 V128:$Rn), (i64 0)),
+                         (vector_extract (v8f16 V128_lo:$Rm), VectorIndexH:$idx))),
+            (!cast<Instruction>(INST # "v1i16_indexed") FPR16:$Rd,
+                (f16 (EXTRACT_SUBREG V128:$Rn, hsub)), V128_lo:$Rm, VectorIndexH:$idx)>;
   } // Predicates = [HasNEON, HasFullFP16]
 
   // 2 variants for the .2s version: DUPLANE from 128-bit and DUP scalar.
@@ -9221,12 +9348,22 @@ multiclass SIMDFPIndexedTiedPatterns<string INST, SDPatternOperator OpNode> {
                          (vector_extract (v4f32 V128:$Rm), VectorIndexS:$idx))),
             (!cast<Instruction>(INST # "v1i32_indexed") FPR32:$Rd, FPR32:$Rn,
                 V128:$Rm, VectorIndexS:$idx)>;
+  def : Pat<(f32 (OpNode (f32 FPR32:$Rd),
+                         (vector_extract (v4f32 V128:$Rn), (i64 0)),
+                         (vector_extract (v4f32 V128:$Rm), VectorIndexS:$idx))),
+            (!cast<Instruction>(INST # "v1i32_indexed") FPR32:$Rd,
+                (f32 (EXTRACT_SUBREG V128:$Rn, ssub)), V128:$Rm, VectorIndexS:$idx)>;
 
   // 1 variant for 64-bit scalar version: extract from .1d or from .2d
   def : Pat<(f64 (OpNode (f64 FPR64:$Rd), (f64 FPR64:$Rn),
                          (vector_extract (v2f64 V128:$Rm), VectorIndexD:$idx))),
             (!cast<Instruction>(INST # "v1i64_indexed") FPR64:$Rd, FPR64:$Rn,
                 V128:$Rm, VectorIndexD:$idx)>;
+  def : Pat<(f64 (OpNode (f64 FPR64:$Rd),
+                         (vector_extract (v2f64 V128:$Rn), (i64 0)),
+                         (vector_extract (v2f64 V128:$Rm), VectorIndexD:$idx))),
+            (!cast<Instruction>(INST # "v1i64_indexed") FPR64:$Rd,
+                (f64 (EXTRACT_SUBREG V128:$Rn, dsub)), V128:$Rm, VectorIndexD:$idx)>;
 }
 
 let mayRaiseFPException = 1, Uses = [FPCR] in
@@ -12911,6 +13048,89 @@ class MulAccumCPA<bit isSub, string asm>
   let Inst{31} = 0b1;
 }
 
+
+//----------------------------------------------------------------------------
+// 2024 Armv9.6 Extensions
+//----------------------------------------------------------------------------
+
+//---
+// Compare-and-branch instructions.
+//---
+
+class BaseCmpBranchRegister<RegisterClass regtype, bit sf, bits<3> cc,
+                            bits<2>sz, string asm>
+    : I<(outs), (ins regtype:$Rt, regtype:$Rm, am_brcmpcond:$target),
+         asm, "\t$Rt, $Rm, $target", "",
+         []>,
+      Sched<[WriteBr]> {
+  let isBranch = 1;
+  let isTerminator = 1;
+
+  bits<5> Rm;
+  bits<5> Rt;
+  bits<9> target;
+  let Inst{31}    = sf;
+  let Inst{30-24} = 0b1110100;
+  let Inst{23-21} = cc;
+  let Inst{20-16} = Rm;
+  let Inst{15-14} = sz;
+  let Inst{13-5}  = target;
+  let Inst{4-0}   = Rt;
+}
+
+multiclass CmpBranchRegister<bits<3> cc, string asm> {
+  def Wrr : BaseCmpBranchRegister<GPR32, 0b0, cc, 0b00, asm>;
+  def Xrr : BaseCmpBranchRegister<GPR64, 0b1, cc, 0b00, asm>;
+}
+
+class BaseCmpBranchImmediate<RegisterClass regtype, bit sf, bits<3> cc,
+                             Operand imm_ty, string asm>
+    : I<(outs), (ins regtype:$Rt, imm_ty:$imm, am_brcmpcond:$target),
+         asm, "\t$Rt, $imm, $target", "",
+         []>,
+      Sched<[WriteBr]> {
+  let isBranch = 1;
+  let isTerminator = 1;
+
+  bits<5> Rt;
+  bits<6> imm;
+  bits<9> target;
+  let Inst{31}    = sf;
+  let Inst{30-24} = 0b1110101;
+  let Inst{23-21} = cc;
+  let Inst{20-15} = imm;
+  let Inst{14}    = 0b0;
+  let Inst{13-5}  = target;
+  let Inst{4-0}   = Rt;
+}
+
+multiclass CmpBranchImmediate<bits<3> cc, string imm_ty, string asm> {
+  def Wri : BaseCmpBranchImmediate<GPR32, 0b0, cc, !cast<Operand>(imm_ty # "_32b"), asm>;
+  def Xri : BaseCmpBranchImmediate<GPR64, 0b1, cc, !cast<Operand>(imm_ty # "_64b"), asm>;
+}
+
+multiclass CmpBranchImmediateAlias<string mnemonic, string insn, string imm_ty> {
+ def : InstAlias<mnemonic # "\t$Rt, $imm, $target",
+                 (!cast<Instruction>(insn # "Wri") GPR32:$Rt,
+                  !cast<Operand>(imm_ty # "_32b"):$imm,
+                  am_brcmpcond:$target), 0>;
+ def : InstAlias<mnemonic # "\t$Rt, $imm, $target",
+                 (!cast<Instruction>(insn # "Xri") GPR64:$Rt,
+                  !cast<Operand>(imm_ty # "_64b"):$imm,
+                  am_brcmpcond:$target), 0>;
+}
+
+multiclass CmpBranchWRegisterAlias<string mnemonic, string insn> {
+  def : InstAlias<mnemonic # "\t$Rt, $Rm, $target",
+                 (!cast<Instruction>(insn # "Wrr") GPR32:$Rm, GPR32:$Rt, am_brcmpcond:$target), 0>;
+}
+
+multiclass CmpBranchRegisterAlias<string mnemonic, string insn> {
+  defm : CmpBranchWRegisterAlias<mnemonic, insn>;
+
+  def : InstAlias<mnemonic # "\t$Rt, $Rm, $target",
+                 (!cast<Instruction>(insn # "Xrr") GPR64:$Rm, GPR64:$Rt, am_brcmpcond:$target), 0>;
+}
 //----------------------------------------------------------------------------
 // Allow the size specifier tokens to be upper case, not just lower.
 def : TokenAlias<".4B", ".4b">;  // Add dot product
@@ -12991,3 +13211,20 @@ multiclass AtomicFPStore<bit R, bits<3> op0, string asm> {
   def S : BaseAtomicFPStore<FPR32, 0b10, R, op0, asm>;
   def H : BaseAtomicFPStore<FPR16, 0b01, R, op0, asm>;
 }
+
+class BaseSIMDThreeSameVectorFP8MatrixMul<string asm, bits<2> size, string kind>
+  : BaseSIMDThreeSameVectorTied<1, 1, {size, 0}, 0b11101,
+                                V128, asm, ".16b", []> {
+  let AsmString = !strconcat(asm, "{\t$Rd", kind, ", $Rn", ".16b",
+                                    ", $Rm", ".16b", "}");
+}
+
+multiclass SIMDThreeSameVectorFP8MatrixMul<string asm>{
+    def v8f16: BaseSIMDThreeSameVectorFP8MatrixMul<asm, 0b00, ".8h">{
+      let Predicates = [HasNEON, HasF8F16MM];
+    }
+    def v4f32: BaseSIMDThreeSameVectorFP8MatrixMul<asm, 0b10, ".4s">{
+      let Predicates = [HasNEON, HasF8F32MM];
+    }
+}
+

@@ -36,10 +36,10 @@ public:
   void printOperand(const MCOperand &MO, const MCAsmInfo *MAI, raw_ostream &O);
 
   virtual void printFormattedRegName(const MCAsmInfo *MAI, MCRegister Reg,
-                                     raw_ostream &O) const {}
+                                     raw_ostream &O) {}
 
   // Override MCInstPrinter.
-  void printRegName(raw_ostream &O, MCRegister Reg) const override;
+  void printRegName(raw_ostream &O, MCRegister Reg) override;
 
 protected:
   template <unsigned N>

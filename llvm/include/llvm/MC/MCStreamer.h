@@ -441,7 +441,7 @@ public:
 
   /// Returns the mnemonic for \p MI, if the streamer has access to a
   /// instruction printer and returns an empty string otherwise.
-  virtual StringRef getMnemonic(MCInst &MI) { return ""; }
+  virtual StringRef getMnemonic(const MCInst &MI) const { return ""; }
 
   /// Emit a label for \p Symbol into the current section.
   ///
@@ -1022,6 +1022,7 @@ public:
                                SMLoc Loc = {});
   virtual void emitCFIWindowSave(SMLoc Loc = {});
   virtual void emitCFINegateRAState(SMLoc Loc = {});
+  virtual void emitCFINegateRAStateWithPC(SMLoc Loc = {});
   virtual void emitCFILabelDirective(SMLoc Loc, StringRef Name);
 
   virtual void emitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc = SMLoc());

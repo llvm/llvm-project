@@ -919,7 +919,8 @@ getIntegerPairAttribute(const Function &F, StringRef Name,
 ///
 /// \returns false if any error occurs.
 SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
-                                             unsigned Size);
+                                             unsigned Size,
+                                             unsigned DefaultVal = 0);
 
 /// Represents the counter values to wait for in an s_waitcnt instruction.
 ///

@@ -311,11 +311,20 @@ DivModValue getDivMod(OpBuilder &b, Location loc, Value lhs, Value rhs);
 FailureOr<SmallVector<Value>> delinearizeIndex(OpBuilder &b, Location loc,
                                                Value linearIndex,
                                                ArrayRef<Value> basis);
+
+FailureOr<SmallVector<Value>> delinearizeIndex(OpBuilder &b, Location loc,
+                                               Value linearIndex,
+                                               ArrayRef<OpFoldResult> basis);
+
 // Generate IR that extracts the linear index from a multi-index according to
 // a basis/shape.
 OpFoldResult linearizeIndex(ArrayRef<OpFoldResult> multiIndex,
                             ArrayRef<OpFoldResult> basis,
                             ImplicitLocOpBuilder &builder);
+
+OpFoldResult linearizeIndex(OpBuilder &builder, Location loc,
+                            ArrayRef<OpFoldResult> multiIndex,
+                            ArrayRef<OpFoldResult> basis);
 
 /// Ensure that all operations that could be executed after `start`
 /// (noninclusive) and prior to `memOp` (e.g. on a control flow/op path

@@ -70,16 +70,17 @@ static lto::Config createConfig(Ctx &ctx) {
       c.Options.BBSections = BasicBlockSection::All;
     } else if (ctx.arg.ltoBasicBlockSections == "labels") {
       c.Options.BBAddrMap = true;
-      warn("'--lto-basic-block-sections=labels' is deprecated; Please use "
-           "'--lto-basic-block-address-map' instead");
+      Warn(ctx)
+          << "'--lto-basic-block-sections=labels' is deprecated; Please use "
+             "'--lto-basic-block-address-map' instead";
     } else if (ctx.arg.ltoBasicBlockSections == "none") {
       c.Options.BBSections = BasicBlockSection::None;
     } else {
       ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
           MemoryBuffer::getFile(ctx.arg.ltoBasicBlockSections.str());
       if (!MBOrErr) {
-        error("cannot open " + ctx.arg.ltoBasicBlockSections + ":" +
-              MBOrErr.getError().message());
+        ErrAlways(ctx) << "cannot open " << ctx.arg.ltoBasicBlockSections << ":"
+                       << MBOrErr.getError().message();
       } else {
         c.Options.BBSectionsFuncListBuf = std::move(*MBOrErr);
       }

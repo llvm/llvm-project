@@ -87,9 +87,9 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
     // (e.g. a table of function pointers). When we encounter this, ignore the
     // relocation and emit a warning instead.
     if (!s.isFunc() && s.type != STT_NOTYPE) {
-      warn(getErrorLoc(ctx, loc) +
-           "found R_MIPS_JALR relocation against non-function symbol " +
-           toString(s) + ". This is invalid and most likely a compiler bug.");
+      Warn(ctx) << getErrorLoc(ctx, loc)
+                << "found R_MIPS_JALR relocation against non-function symbol "
+                << &s << ". This is invalid and most likely a compiler bug.";
       return R_NONE;
     }
 
@@ -191,8 +191,8 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
   case R_MIPS_NONE:
     return R_NONE;
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -503,8 +503,8 @@ calculateMipsRelChain(Ctx &ctx, uint8_t *loc, RelType type, uint64_t val) {
     return std::make_pair(type2, val);
   if (type2 == R_MIPS_SUB && (type3 == R_MIPS_HI16 || type3 == R_MIPS_LO16))
     return std::make_pair(type3, -val);
-  error(getErrorLoc(ctx, loc) + "unsupported relocations combination " +
-        Twine(type));
+  Err(ctx) << getErrorLoc(ctx, loc) << "unsupported relocations combination "
+           << Twine(type);
   return std::make_pair(type & 0xff, val);
 }
 
@@ -562,9 +562,10 @@ static uint64_t fixupCrossModeJump(Ctx &ctx, uint8_t *loc, RelType type,
     llvm_unreachable("unexpected jump/branch relocation");
   }
 
-  error(getErrorLoc(ctx, loc) +
-        "unsupported jump/branch instruction between ISA modes referenced by " +
-        toString(type) + " relocation");
+  ErrAlways(ctx)
+      << getErrorLoc(ctx, loc)
+      << "unsupported jump/branch instruction between ISA modes referenced by "
+      << type << " relocation";
   return val;
 }
 

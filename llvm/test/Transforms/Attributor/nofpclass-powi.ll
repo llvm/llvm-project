@@ -104,7 +104,7 @@ define float @ret_powi_f32_masked_to_even_extrabits(float %arg0, i32 %arg1) #0 {
 define <2 x float> @ret_powi_v2f32_masked_to_even(<2 x float> %arg0, <2 x i32> %arg1) #0 {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) <2 x float> @ret_powi_v2f32_masked_to_even
 ; CHECK-SAME: (<2 x float> [[ARG0:%.*]], <2 x i32> [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[KNOWN_EVEN:%.*]] = and <2 x i32> [[ARG1]], <i32 -2, i32 -2>
+; CHECK-NEXT:    [[KNOWN_EVEN:%.*]] = and <2 x i32> [[ARG1]], splat (i32 -2)
 ; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) <2 x float> @llvm.powi.v2f32.v2i32(<2 x float> [[ARG0]], <2 x i32> [[KNOWN_EVEN]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
@@ -277,7 +277,7 @@ define <4 x float> @powi_v4f32_i32_regression(<4 x float> %arg) {
 ; CHECK-LABEL: define nofpclass(nzero) <4 x float> @powi_v4f32_i32_regression
 ; CHECK-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    [[POWI:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[ARG]], i32 noundef 4) #[[ATTR6]]
-; CHECK-NEXT:    [[USER:%.*]] = fsub <4 x float> [[POWI]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[USER:%.*]] = fsub <4 x float> [[POWI]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    ret <4 x float> [[USER]]
 ;
   %powi = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> %arg, i32 4)

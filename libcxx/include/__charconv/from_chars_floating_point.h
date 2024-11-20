@@ -14,8 +14,8 @@
 #include <__charconv/chars_format.h>
 #include <__charconv/from_chars_result.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__system_error/errc.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -37,13 +37,13 @@ struct __from_chars_result {
 
 template <class _Fp>
 _LIBCPP_EXPORTED_FROM_ABI __from_chars_result<_Fp> __from_chars_floating_point(
-    [[clang::noescape]] const char* __first, [[clang::noescape]] const char* __last, chars_format __fmt);
+    _LIBCPP_NOESCAPE const char* __first, _LIBCPP_NOESCAPE const char* __last, chars_format __fmt);
 
 extern template __from_chars_result<float> __from_chars_floating_point(
-    [[clang::noescape]] const char* __first, [[clang::noescape]] const char* __last, chars_format __fmt);
+    _LIBCPP_NOESCAPE const char* __first, _LIBCPP_NOESCAPE const char* __last, chars_format __fmt);
 
 extern template __from_chars_result<double> __from_chars_floating_point(
-    [[clang::noescape]] const char* __first, [[clang::noescape]] const char* __last, chars_format __fmt);
+    _LIBCPP_NOESCAPE const char* __first, _LIBCPP_NOESCAPE const char* __last, chars_format __fmt);
 
 template <class _Fp>
 _LIBCPP_HIDE_FROM_ABI from_chars_result

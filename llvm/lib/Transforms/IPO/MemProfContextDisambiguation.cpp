@@ -33,13 +33,11 @@
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Bitcode/BitcodeReader.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
@@ -134,6 +132,11 @@ cl::opt<bool> EnableMemProfContextDisambiguation(
 cl::opt<bool> SupportsHotColdNew(
     "supports-hot-cold-new", cl::init(false), cl::Hidden,
     cl::desc("Linking with hot/cold operator new interfaces"));
+
+cl::opt<bool> MemProfRequireDefinitionForPromotion(
+    "memprof-require-definition-for-promotion", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Require target function definition when promoting indirect calls"));
 } // namespace llvm
 
 extern cl::opt<bool> MemProfReportHintedSizes;
@@ -928,8 +931,11 @@ bool allocTypesMatch(
     const std::vector<uint8_t> &InAllocTypes,
     const std::vector<std::shared_ptr<ContextEdge<DerivedCCG, FuncTy, CallTy>>>
         &Edges) {
+  // This should be called only when the InAllocTypes vector was computed for
+  // this set of Edges. Make sure the sizes are the same.
+  assert(InAllocTypes.size() == Edges.size());
   return std::equal(
-      InAllocTypes.begin(), InAllocTypes.end(), Edges.begin(),
+      InAllocTypes.begin(), InAllocTypes.end(), Edges.begin(), Edges.end(),
       [](const uint8_t &l,
          const std::shared_ptr<ContextEdge<DerivedCCG, FuncTy, CallTy>> &r) {
         // Can share if one of the edges is None type - don't
@@ -940,6 +946,46 @@ bool allocTypesMatch(
           return true;
         return allocTypeToUse(l) == allocTypeToUse(r->AllocTypes);
       });
+}
+
+// Helper to check if the alloc types for all edges recorded in the
+// InAllocTypes vector match the alloc types for callee edges in the given
+// clone. Because the InAllocTypes were computed from the original node's callee
+// edges, and other cloning could have happened after this clone was created, we
+// need to find the matching clone callee edge, which may or may not exist.
+template <typename DerivedCCG, typename FuncTy, typename CallTy>
+bool allocTypesMatchClone(
+    const std::vector<uint8_t> &InAllocTypes,
+    const ContextNode<DerivedCCG, FuncTy, CallTy> *Clone) {
+  const ContextNode<DerivedCCG, FuncTy, CallTy> *Node = Clone->CloneOf;
+  assert(Node);
+  // InAllocTypes should have been computed for the original node's callee
+  // edges.
+  assert(InAllocTypes.size() == Node->CalleeEdges.size());
+  // First create a map of the clone callee edge callees to the edge alloc type.
+  DenseMap<const ContextNode<DerivedCCG, FuncTy, CallTy> *, uint8_t>
+      EdgeCalleeMap;
+  for (const auto &E : Clone->CalleeEdges) {
+    assert(!EdgeCalleeMap.contains(E->Callee));
+    EdgeCalleeMap[E->Callee] = E->AllocTypes;
+  }
+  // Next, walk the original node's callees, and look for the corresponding
+  // clone edge to that callee.
+  for (unsigned I = 0; I < Node->CalleeEdges.size(); I++) {
+    auto Iter = EdgeCalleeMap.find(Node->CalleeEdges[I]->Callee);
+    // Not found is ok, we will simply add an edge if we use this clone.
+    if (Iter == EdgeCalleeMap.end())
+      continue;
+    // Can share if one of the edges is None type - don't
+    // care about the type along that edge as it doesn't
+    // exist for those context ids.
+    if (InAllocTypes[I] == (uint8_t)AllocationType::None ||
+        Iter->second == (uint8_t)AllocationType::None)
+      continue;
+    if (allocTypeToUse(Iter->second) != allocTypeToUse(InAllocTypes[I]))
+      return false;
+  }
+  return true;
 }
 
 } // end anonymous namespace
@@ -1352,6 +1398,17 @@ static void checkNode(const ContextNode<DerivedCCG, FuncTy, CallTy> *Node,
     }
     assert(NodeContextIds == CalleeEdgeContextIds);
   }
+  // FIXME: Since this checking is only invoked under an option, we should
+  // change the error checking from using assert to something that will trigger
+  // an error on a release build.
+#ifndef NDEBUG
+  // Make sure we don't end up with duplicate edges between the same caller and
+  // callee.
+  DenseSet<ContextNode<DerivedCCG, FuncTy, CallTy> *> NodeSet;
+  for (const auto &E : Node->CalleeEdges)
+    NodeSet.insert(E->Callee);
+  assert(NodeSet.size() == Node->CalleeEdges.size());
+#endif
 }
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
@@ -3125,7 +3182,15 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     // from the same callers as the old node. That should be true in the current
     // use case, where we will remove None-type edges after copying over all
     // caller edges from the callee.
-    assert(IsNewNode || NewCaller->findEdgeFromCaller(OldCallerEdge->Caller));
+    auto *ExistingCallerEdge =
+        NewCaller->findEdgeFromCaller(OldCallerEdge->Caller);
+    assert(IsNewNode || ExistingCallerEdge);
+    if (ExistingCallerEdge) {
+      ExistingCallerEdge->getContextIds().insert(EdgeContextIdsToMove.begin(),
+                                                 EdgeContextIdsToMove.end());
+      ExistingCallerEdge->AllocTypes |= computeAllocType(EdgeContextIdsToMove);
+      continue;
+    }
     auto NewEdge = std::make_shared<ContextEdge>(
         NewCaller, OldCallerEdge->Caller,
         computeAllocType(EdgeContextIdsToMove), EdgeContextIdsToMove);
@@ -3345,11 +3410,22 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
           allocTypeToUse(CallerAllocTypeForAlloc))
         continue;
 
-      if (!allocTypesMatch<DerivedCCG, FuncTy, CallTy>(
-              CalleeEdgeAllocTypesForCallerEdge, CurClone->CalleeEdges))
-        continue;
-      Clone = CurClone;
-      break;
+      bool BothSingleAlloc = hasSingleAllocType(CurClone->AllocTypes) &&
+                             hasSingleAllocType(CallerAllocTypeForAlloc);
+      // The above check should mean that if both have single alloc types that
+      // they should be equal.
+      assert(!BothSingleAlloc ||
+             CurClone->AllocTypes == CallerAllocTypeForAlloc);
+
+      // If either both have a single alloc type (which are the same), or if the
+      // clone's callee edges have the same alloc types as those for the current
+      // allocation on Node's callee edges (CalleeEdgeAllocTypesForCallerEdge),
+      // then we can reuse this clone.
+      if (BothSingleAlloc || allocTypesMatchClone<DerivedCCG, FuncTy, CallTy>(
+                                 CalleeEdgeAllocTypesForCallerEdge, CurClone)) {
+        Clone = CurClone;
+        break;
+      }
     }
 
     // The edge iterator is adjusted when we move the CallerEdge to the clone.
@@ -4072,7 +4148,17 @@ bool MemProfContextDisambiguation::initializeIndirectCallPromotionInfo(
     Module &M) {
   ICallAnalysis = std::make_unique<ICallPromotionAnalysis>();
   Symtab = std::make_unique<InstrProfSymtab>();
-  if (Error E = Symtab->create(M, /*InLTO=*/true)) {
+  // Don't add canonical names, to avoid multiple functions to the symtab
+  // when they both have the same root name with "." suffixes stripped.
+  // If we pick the wrong one then this could lead to incorrect ICP and calling
+  // a memprof clone that we don't actually create (resulting in linker unsats).
+  // What this means is that the GUID of the function (or its PGOFuncName
+  // metadata) *must* match that in the VP metadata to allow promotion.
+  // In practice this should not be a limitation, since local functions should
+  // have PGOFuncName metadata and global function names shouldn't need any
+  // special handling (they should not get the ".llvm.*" suffix that the
+  // canonicalization handling is attempting to strip).
+  if (Error E = Symtab->create(M, /*InLTO=*/true, /*AddCanonical=*/false)) {
     std::string SymtabFailure = toString(std::move(E));
     M.getContext().emitError("Failed to create symtab: " + SymtabFailure);
     return false;
@@ -4521,7 +4607,13 @@ void MemProfContextDisambiguation::performICP(
       // target (or version of the code), and we need to be conservative
       // (similar to what is done in the ICP pass).
       Function *TargetFunction = Symtab->getFunction(Candidate.Value);
-      if (TargetFunction == nullptr || TargetFunction->isDeclaration()) {
+      if (TargetFunction == nullptr ||
+          // Any ThinLTO global dead symbol removal should have already
+          // occurred, so it should be safe to promote when the target is a
+          // declaration.
+          // TODO: Remove internal option once more fully tested.
+          (MemProfRequireDefinitionForPromotion &&
+           TargetFunction->isDeclaration())) {
         ORE.emit([&]() {
           return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToFindTarget", CB)
                  << "Memprof cannot promote indirect call: target with md5sum "

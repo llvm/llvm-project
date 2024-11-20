@@ -36,7 +36,7 @@ class hlfir_Op<string mnemonic, list<Trait> traits>
 // from the declare operation can be used to generate debug information so we
 // don't want to remove it as dead code
 def hlfir_DeclareOp : hlfir_Op<"declare", [AttrSizedOperandSegments,
-    MemoryEffects<[MemWrite<DebuggingResource>]>,
+    MemoryEffects<[MemAlloc<DebuggingResource>]>,
     DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
   let summary = "declare a variable and produce an SSA value that can be used as a variable in HLFIR operations";
 
@@ -130,7 +130,7 @@ def hlfir_DeclareOp : hlfir_Op<"declare", [AttrSizedOperandSegments,
   let hasVerifier = 1;
 }
 
-def fir_AssignOp : hlfir_Op<"assign", [MemoryEffects<[MemWrite]>]> {
+def fir_AssignOp : hlfir_Op<"assign", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "Assign an expression or variable value to a Fortran variable";
 
   let description = [{
@@ -166,7 +166,7 @@ def fir_AssignOp : hlfir_Op<"assign", [MemoryEffects<[MemWrite]>]> {
   }];
 
   let arguments = (ins AnyFortranEntity:$rhs,
-                   Arg<AnyFortranVariable, "", [MemWrite]>:$lhs,
+                   AnyFortranVariable:$lhs,
                    UnitAttr:$realloc,
                    UnitAttr:$keep_lhs_length_if_realloc,
                    UnitAttr:$temporary_lhs);

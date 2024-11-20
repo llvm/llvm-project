@@ -277,7 +277,7 @@ class OMPExecutableDirective : public Stmt {
   /// Get the clauses storage.
   MutableArrayRef<OMPClause *> getClauses() {
     if (!Data)
-      return std::nullopt;
+      return {};
     return Data->getClauses();
   }
 
@@ -572,7 +572,7 @@ public:
 
   ArrayRef<OMPClause *> clauses() const {
     if (!Data)
-      return std::nullopt;
+      return {};
     return Data->getClauses();
   }
 

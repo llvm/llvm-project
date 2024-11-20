@@ -82,13 +82,13 @@ define void @func_add_constant_to_fi_i32() #0 {
 ; vgpr
 
 ; GCN-LABEL: {{^}}func_other_fi_user_i32:
+; MUBUF: s_lshr_b32 [[SCALED:s[0-9]+]], s32, 6
+; MUBUF: s_mul_i32 [[MUL:s[0-9]+]], [[SCALED]], 9
+; MUBUF: v_mov_b32_e32 v0, [[MUL]]
 
-; CI: v_lshr_b32_e64 v0, s32, 6
+; GFX9-FLATSCR: s_mul_i32 [[MUL:s[0-9]+]], s32, 9
+; GFX9-FLATSCR: v_mov_b32_e32 v0, [[MUL]]
 
-; GFX9-MUBUF:   v_lshrrev_b32_e64 v0, 6, s32
-; GFX9-FLATSCR: v_mov_b32_e32 v0, s32
-
-; GCN-NEXT: v_mul_lo_u32 v0, v0, 9
 ; GCN-NOT: v_mov
 ; GCN: ds_write_b32 v0, v0
 define void @func_other_fi_user_i32() #0 {
@@ -126,8 +126,7 @@ define void @func_load_private_arg_i32_ptr(ptr addrspace(5) %ptr) #0 {
 ; GFX9-MUBUF:      v_lshrrev_b32_e64 [[SHIFT:v[0-9]+]], 6, s32
 ; GFX9-MUBUF-NEXT: v_or_b32_e32 v0, 4, [[SHIFT]]
 
-; GFX9-FLATSCR:      v_mov_b32_e32 [[SP:v[0-9]+]], s32
-; GFX9-FLATSCR-NEXT: v_or_b32_e32 v0, 4, [[SP]]
+; GFX9-FLATSCR: v_or_b32_e64 v0, s32, 4
 
 ; GCN-NOT: v_mov
 ; GCN: ds_write_b32 v0, v0
@@ -190,17 +189,16 @@ ret:
 ; Added offset can't be used with VOP3 add
 ; GCN-LABEL: {{^}}func_other_fi_user_non_inline_imm_offset_i32:
 
-; CI-DAG: s_movk_i32 [[K:s[0-9]+|vcc_lo|vcc_hi]], 0x200
-; CI-DAG: v_lshr_b32_e64 [[SCALED:v[0-9]+]], s32, 6
-; CI: v_add_i32_e32 [[VZ:v[0-9]+]], vcc, [[K]], [[SCALED]]
+; MUBUF: s_lshr_b32 [[SCALED:s[0-9]+]], s32, 6
+; MUBUF: s_addk_i32 [[SCALED]], 0x200
 
-; GFX9-MUBUF-DAG: v_lshrrev_b32_e64 [[SCALED:v[0-9]+]], 6, s32
-; GFX9-MUBUF:     v_add_u32_e32 [[VZ:v[0-9]+]], 0x200, [[SCALED]]
+; MUBUF: s_mul_i32 [[Z:s[0-9]+]], [[SCALED]], 9
+; MUBUF: v_mov_b32_e32 [[VZ:v[0-9]+]], [[Z]]
 
-; GFX9-FLATSCR-DAG: s_add_i32 [[SZ:[^,]+]], s32, 0x200
-; GFX9-FLATSCR:     v_mov_b32_e32 [[VZ:v[0-9]+]], [[SZ]]
+; GFX9-FLATSCR: s_add_i32 [[SZ:[^,]+]], s32, 0x200
+; GFX9-FLATSCR: s_mul_i32 [[MUL:s[0-9]+]], [[SZ]], 9
+; GFX9-FLATSCR: v_mov_b32_e32 [[VZ:v[0-9]+]], [[MUL]]
 
-; GCN: v_mul_lo_u32 [[VZ]], [[VZ]], 9
 ; GCN: ds_write_b32 v0, [[VZ]]
 define void @func_other_fi_user_non_inline_imm_offset_i32() #0 {
   %alloca0 = alloca [128 x i32], align 4, addrspace(5)
@@ -215,17 +213,15 @@ define void @func_other_fi_user_non_inline_imm_offset_i32() #0 {
 
 ; GCN-LABEL: {{^}}func_other_fi_user_non_inline_imm_offset_i32_vcc_live:
 
-; CI-DAG: s_movk_i32 [[OFFSET:s[0-9]+]], 0x200
-; CI-DAG: v_lshr_b32_e64 [[SCALED:v[0-9]+]], s32, 6
-; CI: v_add_i32_e64 [[VZ:v[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, [[OFFSET]], [[SCALED]]
+; MUBUF: s_lshr_b32 [[SCALED:s[0-9]+]], s32, 6
+; MUBUF: s_addk_i32 [[SCALED]], 0x200
+; MUBUF: s_mul_i32 [[Z:s[0-9]+]], [[SCALED]], 9
+; MUBUF: v_mov_b32_e32 [[VZ:v[0-9]+]], [[Z]]
 
-; GFX9-MUBUF-DAG: v_lshrrev_b32_e64 [[SCALED:v[0-9]+]], 6, s32
-; GFX9-MUBUF:     v_add_u32_e32 [[VZ:v[0-9]+]], 0x200, [[SCALED]]
+; GFX9-FLATSCR: s_add_i32 [[SZ:[^,]+]], s32, 0x200
+; GFX9-FLATSCR: s_mul_i32 [[MUL:s[0-9]+]], [[SZ]], 9
+; GFX9-FLATSCR: v_mov_b32_e32 [[VZ:v[0-9]+]], [[MUL]]
 
-; GFX9-FLATSCR-DAG: s_add_i32 [[SZ:[^,]+]], s32, 0x200
-; GFX9-FLATSCR:     v_mov_b32_e32 [[VZ:v[0-9]+]], [[SZ]]
-
-; GCN: v_mul_lo_u32 [[VZ]], [[VZ]], 9
 ; GCN: ds_write_b32 v0, [[VZ]]
 define void @func_other_fi_user_non_inline_imm_offset_i32_vcc_live() #0 {
   %alloca0 = alloca [128 x i32], align 4, addrspace(5)
@@ -284,8 +280,7 @@ bb5:
 ; GFX9-MUBUF: v_lshrrev_b32_e64 [[SHIFT:v[0-9]+]], 6, s32
 ; GFX9-MUBUF-NEXT: v_or_b32_e32 [[PTR:v[0-9]+]], 4, [[SHIFT]]
 
-; GFX9-FLATSCR:      v_mov_b32_e32 [[SP:v[0-9]+]], s32
-; GFX9-FLATSCR-NEXT: v_or_b32_e32 [[PTR:v[0-9]+]], 4, [[SP]]
+; GFX9-FLATSCR: v_or_b32_e64 [[PTR:v[0-9]+]], s32, 4
 
 ; GCN: ds_write_b32 v{{[0-9]+}}, [[PTR]]
 define void @alloca_ptr_nonentry_block(i32 %arg0) #0 {

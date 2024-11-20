@@ -335,6 +335,14 @@ def mul_to_shl : GICombineRule<
          [{ return Helper.matchCombineMulToShl(*${mi}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineMulToShl(*${mi}, ${matchinfo}); }])>;
 
+// (sub x, C) -> (add x, -C)
+def sub_to_add : GICombineRule<
+  (defs root:$d, build_fn_matchinfo:$matchinfo),
+  (match (G_CONSTANT $c, $imm),
+         (G_SUB $d, $op1, $c):$mi,
+         [{ return Helper.matchCombineSubToAdd(*${mi}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFnNoErase(*${mi}, ${matchinfo}); }])>;
+
 // shl ([asz]ext x), y => zext (shl x, y), if shift does not overflow int
 def reduce_shl_of_extend_matchdata : GIDefMatchData<"RegisterImmPair">;
 def reduce_shl_of_extend : GICombineRule<
@@ -566,7 +574,8 @@ def binop_same_val: GICombineRule<
 // Fold (0 op x) - > 0
 def binop_left_to_zero: GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_SDIV, G_UDIV, G_SREM, G_UREM):$root,
+  (match (wip_match_opcode G_SHL, G_LSHR, G_ASHR, G_SDIV, G_UDIV, G_SREM,
+                           G_UREM):$root,
     [{ return Helper.matchOperandIsZero(*${root}, 1); }]),
   (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
 >;
@@ -1568,6 +1577,14 @@ def expand_const_fpowi : GICombineRule<
           [{ return Helper.matchFPowIExpansion(*${root}, ${imm}.getCImm()->getSExtValue()); }]),
    (apply [{ Helper.applyExpandFPowI(*${root}, ${imm}.getCImm()->getSExtValue()); }])>;
 
+def combine_shuffle_undef_rhs : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (G_IMPLICIT_DEF $undef),
+         (G_SHUFFLE_VECTOR $root, $src1, $undef, $mask):$root,
+        [{ return Helper.matchShuffleUndefRHS(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])
+>;
+
 // match_extract_of_element and insert_vector_elt_oob must be the first!
 def vector_ops_combines: GICombineGroup<[
 match_extract_of_element_undef_vector,
@@ -1903,8 +1920,9 @@ def bitreverse_shift : GICombineGroup<[bitreverse_shl, bitreverse_lshr]>;
 def select_combines : GICombineGroup<[select_undef_cmp, select_constant_cmp,
                                       select_to_iminmax, match_selects]>;
 
-def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl, add_p2i_to_ptradd,
-                                       mul_by_neg_one, idempotent_prop]>;
+def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl, sub_to_add,
+                                       add_p2i_to_ptradd, mul_by_neg_one,
+                                       idempotent_prop]>;
 
 def fma_combines : GICombineGroup<[combine_fadd_fmul_to_fmad_or_fma,
   combine_fadd_fpext_fmul_to_fmad_or_fma, combine_fadd_fma_fmul_to_fmad_or_fma,
@@ -1916,6 +1934,9 @@ def constant_fold_binops : GICombineGroup<[constant_fold_binop,
                                            constant_fold_fp_binop]>;
 
 def prefer_sign_combines : GICombineGroup<[nneg_zext]>;
+
+def shuffle_combines : GICombineGroup<[combine_shuffle_concat,
+                                       combine_shuffle_undef_rhs]>;
 
 def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     vector_ops_combines, freeze_combines, cast_combines,
@@ -1938,7 +1959,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     sub_add_reg, select_to_minmax,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     combine_concat_vector, match_addos,
-    sext_trunc, zext_trunc, prefer_sign_combines, combine_shuffle_concat,
+    sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
     combine_use_vector_truncate, merge_combines]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in

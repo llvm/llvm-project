@@ -34,6 +34,12 @@
 #include <utility>
 using namespace llvm;
 
+/// Most of the errors produced by this module are inconvertible StringErrors.
+/// This convenience function lets us return one of those more easily.
+static Error stringErr(const Twine &T) {
+  return make_error<StringError>(T, inconvertibleErrorCode());
+}
+
 //===----------------------------------------------------------------------===//
 // TypeMap implementation.
 //===----------------------------------------------------------------------===//
@@ -69,7 +75,7 @@ public:
 
   /// Produce a body for an opaque type in the dest module from a type
   /// definition in the source module.
-  void linkDefinedTypeBodies();
+  Error linkDefinedTypeBodies();
 
   /// Return the mapped type to use for the specified input type from the
   /// source module.
@@ -207,7 +213,7 @@ bool TypeMapTy::areTypesIsomorphic(Type *DstTy, Type *SrcTy) {
   return true;
 }
 
-void TypeMapTy::linkDefinedTypeBodies() {
+Error TypeMapTy::linkDefinedTypeBodies() {
   SmallVector<Type *, 16> Elements;
   for (StructType *SrcSTy : SrcDefinitionsToResolve) {
     StructType *DstSTy = cast<StructType>(MappedTypes[SrcSTy]);
@@ -218,11 +224,13 @@ void TypeMapTy::linkDefinedTypeBodies() {
     for (unsigned I = 0, E = Elements.size(); I != E; ++I)
       Elements[I] = get(SrcSTy->getElementType(I));
 
-    DstSTy->setBody(Elements, SrcSTy->isPacked());
+    if (auto E = DstSTy->setBodyOrError(Elements, SrcSTy->isPacked()))
+      return E;
     DstStructTypesSet.switchToNonOpaque(DstSTy);
   }
   SrcDefinitionsToResolve.clear();
   DstResolvedOpaqueTypes.clear();
+  return Error::success();
 }
 
 void TypeMapTy::finishType(StructType *DTy, StructType *STy,
@@ -439,12 +447,6 @@ class IRLinker {
       FoundError = std::move(E);
   }
 
-  /// Most of the errors produced by this module are inconvertible StringErrors.
-  /// This convenience function lets us return one of those more easily.
-  Error stringErr(const Twine &T) {
-    return make_error<StringError>(T, inconvertibleErrorCode());
-  }
-
   /// Entry point for mapping values and alternate context for mapping aliases.
   ValueMapper Mapper;
   unsigned IndirectSymbolMCID;
@@ -595,11 +597,15 @@ Value *IRLinker::materialize(Value *V, bool ForIndirectSymbol) {
   if (!SGV)
     return nullptr;
 
+  // If SGV is from dest, it was already materialized when dest was loaded.
+  if (SGV->getParent() == &DstM)
+    return nullptr;
+
   // When linking a global from other modules than source & dest, skip
   // materializing it because it would be mapped later when its containing
   // module is linked. Linking it now would potentially pull in many types that
   // may not be mapped properly.
-  if (SGV->getParent() != &DstM && SGV->getParent() != SrcM.get())
+  if (SGV->getParent() != SrcM.get())
     return nullptr;
 
   Expected<Constant *> NewProto = linkGlobalValueProto(SGV, ForIndirectSymbol);
@@ -871,7 +877,7 @@ void IRLinker::computeTypeMapping() {
 
   // Now that we have discovered all of the type equivalences, get a body for
   // any 'opaque' types in the dest module that are now resolved.
-  TypeMap.linkDefinedTypeBodies();
+  setError(TypeMap.linkDefinedTypeBodies());
 }
 
 static void getArrayElements(const Constant *C,

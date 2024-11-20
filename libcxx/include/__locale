@@ -27,7 +27,7 @@
 #include <cstddef>
 #include <cstring>
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 #  include <cwchar>
 #else
 #  include <__std_mbstate_t.h>
@@ -236,7 +236,7 @@ long collate<_CharT>::do_hash(const char_type* __lo, const char_type* __hi) cons
 }
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS collate<char>;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS collate<wchar_t>;
 #endif
 
@@ -247,7 +247,7 @@ class _LIBCPP_TEMPLATE_VIS collate_byname;
 
 template <>
 class _LIBCPP_EXPORTED_FROM_ABI collate_byname<char> : public collate<char> {
-  locale_t __l_;
+  __locale::__locale_t __l_;
 
 public:
   typedef char char_type;
@@ -263,10 +263,10 @@ protected:
   string_type do_transform(const char_type* __lo, const char_type* __hi) const override;
 };
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 class _LIBCPP_EXPORTED_FROM_ABI collate_byname<wchar_t> : public collate<wchar_t> {
-  locale_t __l_;
+  __locale::__locale_t __l_;
 
 public:
   typedef wchar_t char_type;
@@ -449,7 +449,7 @@ public:
 template <class _CharT>
 class _LIBCPP_TEMPLATE_VIS ctype;
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 class _LIBCPP_EXPORTED_FROM_ABI ctype<wchar_t> : public locale::facet, public ctype_base {
 public:
@@ -514,7 +514,7 @@ protected:
   virtual const char_type*
   do_narrow(const char_type* __low, const char_type* __high, char __dfault, char* __dest) const;
 };
-#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 template <>
 class _LIBCPP_EXPORTED_FROM_ABI ctype<char> : public locale::facet, public ctype_base {
@@ -616,7 +616,7 @@ class _LIBCPP_TEMPLATE_VIS ctype_byname;
 
 template <>
 class _LIBCPP_EXPORTED_FROM_ABI ctype_byname<char> : public ctype<char> {
-  locale_t __l_;
+  __locale::__locale_t __l_;
 
 public:
   explicit ctype_byname(const char*, size_t = 0);
@@ -630,10 +630,10 @@ protected:
   const char_type* do_tolower(char_type* __low, const char_type* __high) const override;
 };
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 class _LIBCPP_EXPORTED_FROM_ABI ctype_byname<wchar_t> : public ctype<wchar_t> {
-  locale_t __l_;
+  __locale::__locale_t __l_;
 
 public:
   explicit ctype_byname(const char*, size_t = 0);
@@ -655,7 +655,7 @@ protected:
   const char_type*
   do_narrow(const char_type* __low, const char_type* __high, char __dfault, char* __dest) const override;
 };
-#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 template <class _CharT>
 inline _LIBCPP_HIDE_FROM_ABI bool isspace(_CharT __c, const locale& __loc) {
@@ -821,10 +821,10 @@ protected:
 
 // template <> class codecvt<wchar_t, char, mbstate_t>
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 class _LIBCPP_EXPORTED_FROM_ABI codecvt<wchar_t, char, mbstate_t> : public locale::facet, public codecvt_base {
-  locale_t __l_;
+  __locale::__locale_t __l_;
 
 public:
   typedef wchar_t intern_type;
@@ -900,7 +900,7 @@ protected:
   virtual int do_length(state_type&, const extern_type* __frm, const extern_type* __end, size_t __mx) const;
   virtual int do_max_length() const _NOEXCEPT;
 };
-#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 // template <> class codecvt<char16_t, char, mbstate_t> // deprecated in C++20
 
@@ -1248,7 +1248,7 @@ codecvt_byname<_InternT, _ExternT, _StateT>::~codecvt_byname() {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char, char, mbstate_t>;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<wchar_t, char, mbstate_t>;
 #endif
 extern template class _LIBCPP_DEPRECATED_IN_CXX20
@@ -1438,7 +1438,7 @@ protected:
   string __grouping_;
 };
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 class _LIBCPP_EXPORTED_FROM_ABI numpunct<wchar_t> : public locale::facet {
 public:
@@ -1467,7 +1467,7 @@ protected:
   char_type __thousands_sep_;
   string __grouping_;
 };
-#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 // template <class charT> class numpunct_byname
 
@@ -1490,7 +1490,7 @@ private:
   void __init(const char*);
 };
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 class _LIBCPP_EXPORTED_FROM_ABI numpunct_byname<wchar_t> : public numpunct<wchar_t> {
 public:
@@ -1506,7 +1506,7 @@ protected:
 private:
   void __init(const char*);
 };
-#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 _LIBCPP_END_NAMESPACE_STD
 

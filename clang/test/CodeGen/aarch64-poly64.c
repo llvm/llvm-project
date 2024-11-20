@@ -42,7 +42,7 @@ uint64x2_t test_vtstq_p64(poly64x2_t a, poly64x2_t b) {
 
 // CHECK-LABEL: define{{.*}} <1 x i64> @test_vbsl_p64(<1 x i64> noundef %a, <1 x i64> noundef %b, <1 x i64> noundef %c) #0 {
 // CHECK:   [[VBSL3_I:%.*]] = and <1 x i64> %a, %b
-// CHECK:   [[TMP3:%.*]] = xor <1 x i64> %a, <i64 -1>
+// CHECK:   [[TMP3:%.*]] = xor <1 x i64> %a, splat (i64 -1)
 // CHECK:   [[VBSL4_I:%.*]] = and <1 x i64> [[TMP3]], %c
 // CHECK:   [[VBSL5_I:%.*]] = or <1 x i64> [[VBSL3_I]], [[VBSL4_I]]
 // CHECK:   ret <1 x i64> [[VBSL5_I]]
@@ -52,7 +52,7 @@ poly64x1_t test_vbsl_p64(poly64x1_t a, poly64x1_t b, poly64x1_t c) {
 
 // CHECK-LABEL: define{{.*}} <2 x i64> @test_vbslq_p64(<2 x i64> noundef %a, <2 x i64> noundef %b, <2 x i64> noundef %c) #0 {
 // CHECK:   [[VBSL3_I:%.*]] = and <2 x i64> %a, %b
-// CHECK:   [[TMP3:%.*]] = xor <2 x i64> %a, <i64 -1, i64 -1>
+// CHECK:   [[TMP3:%.*]] = xor <2 x i64> %a, splat (i64 -1)
 // CHECK:   [[VBSL4_I:%.*]] = and <2 x i64> [[TMP3]], %c
 // CHECK:   [[VBSL5_I:%.*]] = or <2 x i64> [[VBSL3_I]], [[VBSL4_I]]
 // CHECK:   ret <2 x i64> [[VBSL5_I]]

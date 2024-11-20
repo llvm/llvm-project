@@ -1048,14 +1048,16 @@ void OptNoneInstrumentation::registerCallbacks(
 }
 
 bool OptNoneInstrumentation::shouldRun(StringRef PassID, Any IR) {
-  const auto *F = unwrapIR<Function>(IR);
-  if (!F) {
-    if (const auto *L = unwrapIR<Loop>(IR))
-      F = L->getHeader()->getParent();
-  }
-  bool ShouldRun = !(F && F->hasOptNone());
+  bool ShouldRun = true;
+  if (const auto *F = unwrapIR<Function>(IR))
+    ShouldRun = !F->hasOptNone();
+  else if (const auto *L = unwrapIR<Loop>(IR))
+    ShouldRun = !L->getHeader()->getParent()->hasOptNone();
+  else if (const auto *MF = unwrapIR<MachineFunction>(IR))
+    ShouldRun = !MF->getFunction().hasOptNone();
+
   if (!ShouldRun && DebugLogging) {
-    errs() << "Skipping pass " << PassID << " on " << F->getName()
+    errs() << "Skipping pass " << PassID << " on " << getIRName(IR)
            << " due to optnone attribute\n";
   }
   return ShouldRun;

@@ -8,6 +8,8 @@
 
 #include "LLDBUtils.h"
 #include "DAP.h"
+#include "JSONUtils.h"
+#include "lldb/API/SBStringList.h"
 
 #include <mutex>
 

@@ -1100,14 +1100,11 @@ define dso_local ptr @load_addr_offset_281474439839744() nounwind {
 ;
 ; LA64-LARGE-LABEL: load_addr_offset_281474439839744:
 ; LA64-LARGE:       # %bb.0: # %entry
-; LA64-LARGE-NEXT:    pcalau12i $a0, %pc_hi20(g_a64)
-; LA64-LARGE-NEXT:    addi.d $a1, $zero, %pc_lo12(g_a64)
-; LA64-LARGE-NEXT:    lu32i.d $a1, %pc64_lo20(g_a64)
-; LA64-LARGE-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(g_a64)
+; LA64-LARGE-NEXT:    pcalau12i $a0, %pc_hi20(g_a64+2251795518717952)
+; LA64-LARGE-NEXT:    addi.d $a1, $zero, %pc_lo12(g_a64+2251795518717952)
+; LA64-LARGE-NEXT:    lu32i.d $a1, %pc64_lo20(g_a64+2251795518717952)
+; LA64-LARGE-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(g_a64+2251795518717952)
 ; LA64-LARGE-NEXT:    add.d $a0, $a1, $a0
-; LA64-LARGE-NEXT:    ori $a1, $zero, 0
-; LA64-LARGE-NEXT:    lu32i.d $a1, 524287
-; LA64-LARGE-NEXT:    add.d $a0, $a0, $a1
 ; LA64-LARGE-NEXT:    ret
 entry:
   ret ptr getelementptr inbounds ([1 x i64], ptr @g_a64, i64 281474439839744)
@@ -1131,14 +1128,11 @@ define dso_local ptr @load_addr_offset_248792680471040() nounwind {
 ;
 ; LA64-LARGE-LABEL: load_addr_offset_248792680471040:
 ; LA64-LARGE:       # %bb.0: # %entry
-; LA64-LARGE-NEXT:    pcalau12i $a0, %pc_hi20(g_a64)
-; LA64-LARGE-NEXT:    addi.d $a1, $zero, %pc_lo12(g_a64)
-; LA64-LARGE-NEXT:    lu32i.d $a1, %pc64_lo20(g_a64)
-; LA64-LARGE-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(g_a64)
+; LA64-LARGE-NEXT:    pcalau12i $a0, %pc_hi20(g_a64+1990341443768320)
+; LA64-LARGE-NEXT:    addi.d $a1, $zero, %pc_lo12(g_a64+1990341443768320)
+; LA64-LARGE-NEXT:    lu32i.d $a1, %pc64_lo20(g_a64+1990341443768320)
+; LA64-LARGE-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(g_a64+1990341443768320)
 ; LA64-LARGE-NEXT:    add.d $a0, $a1, $a0
-; LA64-LARGE-NEXT:    lu12i.w $a1, 502733
-; LA64-LARGE-NEXT:    lu32i.d $a1, 463412
-; LA64-LARGE-NEXT:    add.d $a0, $a0, $a1
 ; LA64-LARGE-NEXT:    ret
 entry:
   ret ptr getelementptr inbounds ([1 x i64], ptr @g_a64, i64 248792680471040)
@@ -1163,15 +1157,11 @@ define dso_local ptr @load_addr_offset_9380351707272() nounwind {
 ;
 ; LA64-LARGE-LABEL: load_addr_offset_9380351707272:
 ; LA64-LARGE:       # %bb.0: # %entry
-; LA64-LARGE-NEXT:    pcalau12i $a0, %pc_hi20(g_a64)
-; LA64-LARGE-NEXT:    addi.d $a1, $zero, %pc_lo12(g_a64)
-; LA64-LARGE-NEXT:    lu32i.d $a1, %pc64_lo20(g_a64)
-; LA64-LARGE-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(g_a64)
+; LA64-LARGE-NEXT:    pcalau12i $a0, %pc_hi20(g_a64+75042813658176)
+; LA64-LARGE-NEXT:    addi.d $a1, $zero, %pc_lo12(g_a64+75042813658176)
+; LA64-LARGE-NEXT:    lu32i.d $a1, %pc64_lo20(g_a64+75042813658176)
+; LA64-LARGE-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(g_a64+75042813658176)
 ; LA64-LARGE-NEXT:    add.d $a0, $a1, $a0
-; LA64-LARGE-NEXT:    lu12i.w $a1, 279556
-; LA64-LARGE-NEXT:    ori $a1, $a1, 1088
-; LA64-LARGE-NEXT:    lu32i.d $a1, 17472
-; LA64-LARGE-NEXT:    add.d $a0, $a0, $a1
 ; LA64-LARGE-NEXT:    ret
 entry:
   ret ptr getelementptr inbounds ([1 x i64], ptr @g_a64, i64 9380351707272)
@@ -1194,13 +1184,11 @@ define dso_local ptr @load_addr_offset_562949953421312() nounwind {
 ;
 ; LA64-LARGE-LABEL: load_addr_offset_562949953421312:
 ; LA64-LARGE:       # %bb.0: # %entry
-; LA64-LARGE-NEXT:    pcalau12i $a0, %pc_hi20(g_a64)
-; LA64-LARGE-NEXT:    addi.d $a1, $zero, %pc_lo12(g_a64)
-; LA64-LARGE-NEXT:    lu32i.d $a1, %pc64_lo20(g_a64)
-; LA64-LARGE-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(g_a64)
+; LA64-LARGE-NEXT:    pcalau12i $a0, %pc_hi20(g_a64+4503599627370496)
+; LA64-LARGE-NEXT:    addi.d $a1, $zero, %pc_lo12(g_a64+4503599627370496)
+; LA64-LARGE-NEXT:    lu32i.d $a1, %pc64_lo20(g_a64+4503599627370496)
+; LA64-LARGE-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(g_a64+4503599627370496)
 ; LA64-LARGE-NEXT:    add.d $a0, $a1, $a0
-; LA64-LARGE-NEXT:    lu52i.d $a1, $zero, 1
-; LA64-LARGE-NEXT:    add.d $a0, $a0, $a1
 ; LA64-LARGE-NEXT:    ret
 entry:
   ret ptr getelementptr inbounds ([1 x i64], ptr @g_a64, i64 562949953421312)
@@ -1226,16 +1214,11 @@ define dso_local ptr @load_addr_offset_614749556925924693() nounwind {
 ;
 ; LA64-LARGE-LABEL: load_addr_offset_614749556925924693:
 ; LA64-LARGE:       # %bb.0: # %entry
-; LA64-LARGE-NEXT:    pcalau12i $a0, %pc_hi20(g_a64)
-; LA64-LARGE-NEXT:    addi.d $a1, $zero, %pc_lo12(g_a64)
-; LA64-LARGE-NEXT:    lu32i.d $a1, %pc64_lo20(g_a64)
-; LA64-LARGE-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(g_a64)
+; LA64-LARGE-NEXT:    pcalau12i $a0, %pc_hi20(g_a64+4917996455407397544)
+; LA64-LARGE-NEXT:    addi.d $a1, $zero, %pc_lo12(g_a64+4917996455407397544)
+; LA64-LARGE-NEXT:    lu32i.d $a1, %pc64_lo20(g_a64+4917996455407397544)
+; LA64-LARGE-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(g_a64+4917996455407397544)
 ; LA64-LARGE-NEXT:    add.d $a0, $a1, $a0
-; LA64-LARGE-NEXT:    lu12i.w $a1, 209666
-; LA64-LARGE-NEXT:    ori $a1, $a1, 2728
-; LA64-LARGE-NEXT:    lu32i.d $a1, 15288
-; LA64-LARGE-NEXT:    lu52i.d $a1, $a1, 1092
-; LA64-LARGE-NEXT:    add.d $a0, $a0, $a1
 ; LA64-LARGE-NEXT:    ret
 entry:
   ret ptr getelementptr inbounds ([1 x i64], ptr @g_a64, i64 614749556925924693)

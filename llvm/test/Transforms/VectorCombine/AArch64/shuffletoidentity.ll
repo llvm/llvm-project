@@ -292,7 +292,7 @@ define <8 x i8> @undeflane(<8 x i8> %a, <8 x i8> %b) {
 
 define <8 x i8> @constantsplat(<8 x i8> %a) {
 ; CHECK-LABEL: @constantsplat(
-; CHECK-NEXT:    [[R:%.*]] = add <8 x i8> [[A:%.*]], <i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10>
+; CHECK-NEXT:    [[R:%.*]] = add <8 x i8> [[A:%.*]], splat (i8 10)
 ; CHECK-NEXT:    ret <8 x i8> [[R]]
 ;
   %ab = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -339,7 +339,7 @@ define <8 x i8> @constantdiff2(<8 x i8> %a) {
 
 define <8 x half> @constantsplatf(<8 x half> %a) {
 ; CHECK-LABEL: @constantsplatf(
-; CHECK-NEXT:    [[R:%.*]] = fadd <8 x half> [[A:%.*]], <half 0xH4900, half 0xH4900, half 0xH4900, half 0xH4900, half 0xH4900, half 0xH4900, half 0xH4900, half 0xH4900>
+; CHECK-NEXT:    [[R:%.*]] = fadd <8 x half> [[A:%.*]], splat (half 0xH4900)
 ; CHECK-NEXT:    ret <8 x half> [[R]]
 ;
   %ab = shufflevector <8 x half> %a, <8 x half> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -937,10 +937,9 @@ define <4 x i64> @cast_mismatched_types(<4 x i32> %x) {
 
 define <4 x float> @fadd_mismatched_types(<4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: @fadd_mismatched_types(
-; CHECK-NEXT:    [[SHUF_X:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> poison, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[SHUF_Y:%.*]] = shufflevector <4 x float> [[Y:%.*]], <4 x float> poison, <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[FADD:%.*]] = fadd fast <2 x float> [[SHUF_X]], [[SHUF_Y]]
-; CHECK-NEXT:    [[EXTSHUF:%.*]] = shufflevector <2 x float> [[FADD]], <2 x float> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> poison, <4 x i32> <i32 0, i32 poison, i32 2, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[Y:%.*]], <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 3, i32 poison>
+; CHECK-NEXT:    [[EXTSHUF:%.*]] = fadd fast <4 x float> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <4 x float> [[EXTSHUF]]
 ;
   %shuf.x = shufflevector <4 x float> %x, <4 x float> poison, <2 x i32> <i32 0, i32 2>

@@ -11,12 +11,12 @@
 #define _LIBCPP_EXPERIMENTAL___SIMD_SIMD_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
-#include <cstddef>
 #include <experimental/__simd/declaration.h>
 #include <experimental/__simd/reference.h>
 #include <experimental/__simd/traits.h>

@@ -911,7 +911,7 @@ private:
     getActiveModuleMacros(Preprocessor &PP, const IdentifierInfo *II) const {
       if (auto *Info = getModuleInfo(PP, II))
         return Info->ActiveModuleMacros;
-      return std::nullopt;
+      return {};
     }
 
     MacroDirective::DefInfo findDirectiveAtLoc(SourceLocation Loc,
@@ -935,7 +935,7 @@ private:
     ArrayRef<ModuleMacro*> getOverriddenMacros() const {
       if (auto *Info = State.dyn_cast<ModuleMacroInfo*>())
         return Info->OverriddenMacros;
-      return std::nullopt;
+      return {};
     }
 
     void setOverriddenMacros(Preprocessor &PP,
@@ -1444,7 +1444,7 @@ public:
     auto I = LeafModuleMacros.find(II);
     if (I != LeafModuleMacros.end())
       return I->second;
-    return std::nullopt;
+    return {};
   }
 
   /// Get the list of submodules that we're currently building.
@@ -1490,7 +1490,7 @@ public:
   /// Mark the file as included.
   /// Returns true if this is the first time the file was included.
   bool markIncluded(FileEntryRef File) {
-    HeaderInfo.getFileInfo(File);
+    HeaderInfo.getFileInfo(File).IsLocallyIncluded = true;
     return IncludedFiles.insert(File).second;
   }
 
@@ -2616,6 +2616,19 @@ private:
   /// Install the standard preprocessor pragmas:
   /// \#pragma GCC poison/system_header/dependency and \#pragma once.
   void RegisterBuiltinPragmas();
+
+  /// RegisterBuiltinMacro - Register the specified identifier in the identifier
+  /// table and mark it as a builtin macro to be expanded.
+  IdentifierInfo *RegisterBuiltinMacro(const char *Name) {
+    // Get the identifier.
+    IdentifierInfo *Id = getIdentifierInfo(Name);
+
+    // Mark it as being a macro that is builtin.
+    MacroInfo *MI = AllocateMacroInfo(SourceLocation());
+    MI->setIsBuiltinMacro();
+    appendDefMacroDirective(Id, MI);
+    return Id;
+  }
 
   /// Register builtin macros such as __LINE__ with the identifier table.
   void RegisterBuiltinMacros();

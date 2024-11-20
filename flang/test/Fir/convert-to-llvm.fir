@@ -862,8 +862,8 @@ func.func @test_store_box(%array : !fir.ref<!fir.box<!fir.array<?x?xf32>>>, %box
 // CHECK-LABEL:  llvm.func @test_store_box
 // CHECK-SAME:  (%[[arg0:.*]]: !llvm.ptr,
 // CHECK-SAME:  %[[arg1:.*]]: !llvm.ptr) {
-// CHECK-NEXT:  %[[box_to_store:.*]] = llvm.load %arg1 : !llvm.ptr -> !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i{{.*}}>>)>
-// CHECK-NEXT:  llvm.store %[[box_to_store]], %[[arg0]] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i{{.*}}>>)>, !llvm.ptr
+// CHECK-NEXT:  %[[size:.*]] = llvm.mlir.constant(72 : i32) : i32
+// CHECK-NEXT:  "llvm.intr.memcpy"(%[[arg0]], %[[arg1]], %[[size]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK-NEXT:  llvm.return
 // CHECK-NEXT:  }
 
@@ -875,15 +875,17 @@ func.func @store_unlimited_polymorphic_box(%arg0 : !fir.class<none>, %arg1 : !fi
   fir.store %arg3 to %arg3r : !fir.ref<!fir.box<!fir.array<?xnone>>>
   return
 }
-// CHECK-LABEL:   llvm.func @store_unlimited_polymorphic_box(
-// CHECK:  %[[VAL_8:.*]] = llvm.load %{{.*}} : !llvm.ptr -> !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr, array<1 x i{{.*}}>)>
-// CHECK:  llvm.store %[[VAL_8]], %{{.*}} : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr, array<1 x i{{.*}}>)>, !llvm.ptr
-// CHECK:  %[[VAL_9:.*]] = llvm.load %{{.*}} : !llvm.ptr -> !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i{{.*}}>>, ptr, array<1 x i{{.*}}>)>
-// CHECK:  llvm.store %[[VAL_9]], %{{.*}} : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i{{.*}}>>, ptr, array<1 x i{{.*}}>)>, !llvm.ptr
-// CHECK:  %[[VAL_10:.*]] = llvm.load %{{.*}} : !llvm.ptr -> !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr, array<1 x i{{.*}}>)>
-// CHECK:  llvm.store %[[VAL_10]], %{{.*}} : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr, array<1 x i{{.*}}>)>, !llvm.ptr
-// CHECK:  %[[VAL_11:.*]] = llvm.load %{{.*}}: !llvm.ptr
-// CHECK:  llvm.store %[[VAL_11]], %{{.*}} : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i{{.*}}>>, ptr, array<1 x i{{.*}}>)>, !llvm.ptr
+// CHECK:   llvm.func @store_unlimited_polymorphic_box(%[[VAL_0:.*]]: !llvm.ptr, %[[VAL_1:.*]]: !llvm.ptr, %[[VAL_2:.*]]: !llvm.ptr, %[[VAL_3:.*]]: !llvm.ptr, %[[VAL_4:.*]]: !llvm.ptr, %[[VAL_5:.*]]: !llvm.ptr, %[[VAL_6:.*]]: !llvm.ptr, %[[VAL_7:.*]]: !llvm.ptr) {
+// CHECK:     %[[VAL_8:.*]] = llvm.mlir.constant(40 : i32) : i32
+// CHECK:     "llvm.intr.memcpy"(%[[VAL_4]], %[[VAL_0]], %[[VAL_8]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK:     %[[VAL_9:.*]] = llvm.mlir.constant(64 : i32) : i32
+// CHECK:     "llvm.intr.memcpy"(%[[VAL_5]], %[[VAL_1]], %[[VAL_9]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK:     %[[VAL_10:.*]] = llvm.mlir.constant(40 : i32) : i32
+// CHECK:     "llvm.intr.memcpy"(%[[VAL_6]], %[[VAL_2]], %[[VAL_10]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK:     %[[VAL_11:.*]] = llvm.mlir.constant(64 : i32) : i32
+// CHECK:     "llvm.intr.memcpy"(%[[VAL_7]], %[[VAL_3]], %[[VAL_11]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK:     llvm.return
+// CHECK:   }
 
 
 // -----
@@ -935,8 +937,8 @@ func.func @test_load_box(%addr : !fir.ref<!fir.box<!fir.array<10xf32>>>) {
 // GENERIC-NEXT:  %[[box_copy:.*]] = llvm.alloca %[[c1]] x !llvm.struct<([[DESC_TYPE:.*]])>
 // AMDGPU-NEXT:   %[[alloca_box_copy:.*]] = llvm.alloca %[[c1]] x !llvm.struct<([[DESC_TYPE:.*]])>{{.*}} : (i32) -> !llvm.ptr<5>
 // AMDGPU-NEXT:   %[[box_copy:.*]] = llvm.addrspacecast %[[alloca_box_copy]] : !llvm.ptr<5> to !llvm.ptr
-// CHECK-NEXT:    %[[box_val:.*]] = llvm.load %[[arg0]] : !llvm.ptr -> !llvm.struct<([[DESC_TYPE]])>
-// CHECK-NEXT:    llvm.store %[[box_val]], %[[box_copy]] : !llvm.struct<([[DESC_TYPE]])>, !llvm.ptr
+// CHECK-NEXT:    %[[size:.*]] = llvm.mlir.constant(48 : i32) : i32
+// CHECK-NEXT:    "llvm.intr.memcpy"(%[[box_copy]], %[[arg0]], %[[size]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK-NEXT:    llvm.call @takes_box(%[[box_copy]]) : (!llvm.ptr) -> ()
 // CHECK-NEXT:    llvm.return
 // CHECK-NEXT:  }

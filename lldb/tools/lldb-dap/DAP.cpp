@@ -10,11 +10,14 @@
 #include <cstdarg>
 #include <fstream>
 #include <mutex>
-#include <sstream>
 
 #include "DAP.h"
+#include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBLanguageRuntime.h"
+#include "lldb/API/SBListener.h"
+#include "lldb/API/SBStream.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -71,21 +74,21 @@ void DAP::PopulateExceptionBreakpoints() {
     exception_breakpoints = std::vector<ExceptionBreakpoint>{};
 
     if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeC_plus_plus)) {
-      exception_breakpoints->emplace_back("cpp_catch", "C++ Catch",
+      exception_breakpoints->emplace_back(*this, "cpp_catch", "C++ Catch",
                                           lldb::eLanguageTypeC_plus_plus);
-      exception_breakpoints->emplace_back("cpp_throw", "C++ Throw",
+      exception_breakpoints->emplace_back(*this, "cpp_throw", "C++ Throw",
                                           lldb::eLanguageTypeC_plus_plus);
     }
     if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeObjC)) {
-      exception_breakpoints->emplace_back("objc_catch", "Objective-C Catch",
-                                          lldb::eLanguageTypeObjC);
-      exception_breakpoints->emplace_back("objc_throw", "Objective-C Throw",
-                                          lldb::eLanguageTypeObjC);
+      exception_breakpoints->emplace_back(
+          *this, "objc_catch", "Objective-C Catch", lldb::eLanguageTypeObjC);
+      exception_breakpoints->emplace_back(
+          *this, "objc_throw", "Objective-C Throw", lldb::eLanguageTypeObjC);
     }
     if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeSwift)) {
-      exception_breakpoints->emplace_back("swift_catch", "Swift Catch",
+      exception_breakpoints->emplace_back(*this, "swift_catch", "Swift Catch",
                                           lldb::eLanguageTypeSwift);
-      exception_breakpoints->emplace_back("swift_throw", "Swift Throw",
+      exception_breakpoints->emplace_back(*this, "swift_throw", "Swift Throw",
                                           lldb::eLanguageTypeSwift);
     }
     // Besides handling the hardcoded list of languages from above, we try to
@@ -116,7 +119,7 @@ void DAP::PopulateExceptionBreakpoints() {
             raw_throw_keyword ? raw_throw_keyword : "throw";
 
         exception_breakpoints->emplace_back(
-            raw_lang_name + "_" + throw_keyword,
+            *this, raw_lang_name + "_" + throw_keyword,
             capitalized_lang_name + " " + capitalize(throw_keyword), lang);
       }
 
@@ -127,7 +130,7 @@ void DAP::PopulateExceptionBreakpoints() {
             raw_catch_keyword ? raw_catch_keyword : "catch";
 
         exception_breakpoints->emplace_back(
-            raw_lang_name + "_" + catch_keyword,
+            *this, raw_lang_name + "_" + catch_keyword,
             capitalized_lang_name + " " + capitalize(catch_keyword), lang);
       }
     }
@@ -689,7 +692,7 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
   const auto packet_type = GetString(object, "type");
   if (packet_type == "request") {
     const auto command = GetString(object, "command");
-    auto handler_pos = request_handlers.find(std::string(command));
+    auto handler_pos = request_handlers.find(command);
     if (handler_pos != request_handlers.end()) {
       handler_pos->second(object);
       return true; // Success
@@ -1057,7 +1060,7 @@ void DAP::SetThreadFormat(llvm::StringRef format) {
 InstructionBreakpoint *
 DAP::GetInstructionBreakpoint(const lldb::break_id_t bp_id) {
   for (auto &bp : instruction_breakpoints) {
-    if (bp.second.id == bp_id)
+    if (bp.second.bp.GetID() == bp_id)
       return &bp.second;
   }
   return nullptr;

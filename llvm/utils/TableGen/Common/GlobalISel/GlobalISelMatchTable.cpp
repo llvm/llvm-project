@@ -842,7 +842,7 @@ Error RuleMatcher::defineComplexSubOperand(StringRef SymbolicName,
 
   ComplexSubOperands[SymbolicName] =
       std::tuple(ComplexPattern, RendererID, SubOperandID);
-  ComplexSubOperandsParentName[SymbolicName] = ParentName;
+  ComplexSubOperandsParentName[SymbolicName] = std::move(ParentName);
 
   return Error::success();
 }

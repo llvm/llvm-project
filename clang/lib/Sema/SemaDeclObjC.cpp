@@ -4572,9 +4572,7 @@ static QualType mergeTypeNullabilityForRedecl(Sema &S, SourceLocation loc,
     return type;
 
   // Otherwise, provide the result with the same nullability.
-  return S.Context.getAttributedType(
-           AttributedType::getNullabilityAttrKind(*prevNullability),
-           type, type);
+  return S.Context.getAttributedType(*prevNullability, type, type);
 }
 
 /// Merge information from the declaration of a method in the \@interface
@@ -4720,13 +4718,67 @@ static void checkObjCDirectMethodClashes(Sema &S, ObjCInterfaceDecl *IDecl,
           diagClash(IMD);
 }
 
+ParmVarDecl *SemaObjC::ActOnMethodParmDeclaration(Scope *S,
+                                                  ObjCArgInfo &ArgInfo,
+                                                  int ParamIndex,
+                                                  bool MethodDefinition) {
+  ASTContext &Context = getASTContext();
+  QualType ArgType;
+  TypeSourceInfo *DI;
+
+  if (!ArgInfo.Type) {
+    ArgType = Context.getObjCIdType();
+    DI = nullptr;
+  } else {
+    ArgType = SemaRef.GetTypeFromParser(ArgInfo.Type, &DI);
+  }
+  LookupResult R(SemaRef, ArgInfo.Name, ArgInfo.NameLoc,
+                 Sema::LookupOrdinaryName,
+                 SemaRef.forRedeclarationInCurContext());
+  SemaRef.LookupName(R, S);
+  if (R.isSingleResult()) {
+    NamedDecl *PrevDecl = R.getFoundDecl();
+    if (S->isDeclScope(PrevDecl)) {
+      Diag(ArgInfo.NameLoc,
+           (MethodDefinition ? diag::warn_method_param_redefinition
+                             : diag::warn_method_param_declaration))
+          << ArgInfo.Name;
+      Diag(PrevDecl->getLocation(), diag::note_previous_declaration);
+    }
+  }
+  SourceLocation StartLoc =
+      DI ? DI->getTypeLoc().getBeginLoc() : ArgInfo.NameLoc;
+
+  // Temporarily put parameter variables in the translation unit. This is what
+  // ActOnParamDeclarator does in the case of C arguments to the Objective-C
+  // method too.
+  ParmVarDecl *Param = SemaRef.CheckParameter(
+      Context.getTranslationUnitDecl(), StartLoc, ArgInfo.NameLoc, ArgInfo.Name,
+      ArgType, DI, SC_None);
+  Param->setObjCMethodScopeInfo(ParamIndex);
+  Param->setObjCDeclQualifier(
+      CvtQTToAstBitMask(ArgInfo.DeclSpec.getObjCDeclQualifier()));
+
+  // Apply the attributes to the parameter.
+  SemaRef.ProcessDeclAttributeList(SemaRef.TUScope, Param, ArgInfo.ArgAttrs);
+  SemaRef.AddPragmaAttributes(SemaRef.TUScope, Param);
+  if (Param->hasAttr<BlocksAttr>()) {
+    Diag(Param->getLocation(), diag::err_block_on_nonlocal);
+    Param->setInvalidDecl();
+  }
+
+  S->AddDecl(Param);
+  SemaRef.IdResolver.AddDecl(Param);
+  return Param;
+}
+
 Decl *SemaObjC::ActOnMethodDeclaration(
     Scope *S, SourceLocation MethodLoc, SourceLocation EndLoc,
     tok::TokenKind MethodType, ObjCDeclSpec &ReturnQT, ParsedType ReturnType,
     ArrayRef<SourceLocation> SelectorLocs, Selector Sel,
     // optional arguments. The number of types/arguments is obtained
     // from the Sel.getNumArgs().
-    ObjCArgInfo *ArgInfo, DeclaratorChunk::ParamInfo *CParamInfo,
+    ParmVarDecl **ArgInfo, DeclaratorChunk::ParamInfo *CParamInfo,
     unsigned CNumArgs, // c-style args
     const ParsedAttributesView &AttrList, tok::ObjCKeywordKind MethodDeclKind,
     bool isVariadic, bool MethodDefinition) {
@@ -4768,60 +4820,10 @@ Decl *SemaObjC::ActOnMethodDeclaration(
       HasRelatedResultType);
 
   SmallVector<ParmVarDecl*, 16> Params;
-
-  for (unsigned i = 0, e = Sel.getNumArgs(); i != e; ++i) {
-    QualType ArgType;
-    TypeSourceInfo *DI;
-
-    if (!ArgInfo[i].Type) {
-      ArgType = Context.getObjCIdType();
-      DI = nullptr;
-    } else {
-      ArgType = SemaRef.GetTypeFromParser(ArgInfo[i].Type, &DI);
-    }
-
-    LookupResult R(SemaRef, ArgInfo[i].Name, ArgInfo[i].NameLoc,
-                   Sema::LookupOrdinaryName,
-                   SemaRef.forRedeclarationInCurContext());
-    SemaRef.LookupName(R, S);
-    if (R.isSingleResult()) {
-      NamedDecl *PrevDecl = R.getFoundDecl();
-      if (S->isDeclScope(PrevDecl)) {
-        Diag(ArgInfo[i].NameLoc,
-             (MethodDefinition ? diag::warn_method_param_redefinition
-                               : diag::warn_method_param_declaration))
-          << ArgInfo[i].Name;
-        Diag(PrevDecl->getLocation(),
-             diag::note_previous_declaration);
-      }
-    }
-
-    SourceLocation StartLoc = DI
-      ? DI->getTypeLoc().getBeginLoc()
-      : ArgInfo[i].NameLoc;
-
-    ParmVarDecl *Param =
-        SemaRef.CheckParameter(ObjCMethod, StartLoc, ArgInfo[i].NameLoc,
-                               ArgInfo[i].Name, ArgType, DI, SC_None);
-
-    Param->setObjCMethodScopeInfo(i);
-
-    Param->setObjCDeclQualifier(
-      CvtQTToAstBitMask(ArgInfo[i].DeclSpec.getObjCDeclQualifier()));
-
-    // Apply the attributes to the parameter.
-    SemaRef.ProcessDeclAttributeList(SemaRef.TUScope, Param,
-                                     ArgInfo[i].ArgAttrs);
-    SemaRef.AddPragmaAttributes(SemaRef.TUScope, Param);
+  for (unsigned I = 0; I < Sel.getNumArgs(); ++I) {
+    ParmVarDecl *Param = ArgInfo[I];
+    Param->setDeclContext(ObjCMethod);
     SemaRef.ProcessAPINotes(Param);
-
-    if (Param->hasAttr<BlocksAttr>()) {
-      Diag(Param->getLocation(), diag::err_block_on_nonlocal);
-      Param->setInvalidDecl();
-    }
-    S->AddDecl(Param);
-    SemaRef.IdResolver.AddDecl(Param);
-
     Params.push_back(Param);
   }
 
@@ -5511,10 +5513,9 @@ void SemaObjC::SetIvarInitializers(ObjCImplementationDecl *ObjCImplementation) {
       InitializationKind InitKind =
           InitializationKind::CreateDefault(ObjCImplementation->getLocation());
 
-      InitializationSequence InitSeq(SemaRef, InitEntity, InitKind,
-                                     std::nullopt);
+      InitializationSequence InitSeq(SemaRef, InitEntity, InitKind, {});
       ExprResult MemberInit =
-          InitSeq.Perform(SemaRef, InitEntity, InitKind, std::nullopt);
+          InitSeq.Perform(SemaRef, InitEntity, InitKind, {});
       MemberInit = SemaRef.MaybeCreateExprWithCleanups(MemberInit);
       // Note, MemberInit could actually come back empty if no initialization
       // is required (e.g., because it would call a trivial default constructor)

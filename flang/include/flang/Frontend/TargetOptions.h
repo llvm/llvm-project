@@ -44,6 +44,9 @@ public:
 
   /// The integer KINDs disabled for this target
   std::vector<int> disabledIntegerKinds;
+
+  /// Extended Altivec ABI on AIX
+  bool EnableAIXExtendedAltivecABI;
 };
 
 } // end namespace Fortran::frontend

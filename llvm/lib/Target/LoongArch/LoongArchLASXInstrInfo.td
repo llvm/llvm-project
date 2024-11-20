@@ -1444,6 +1444,12 @@ def : Pat<(xor (v8i32 LASX256:$xj), (v8i32 (vsplat_uimm_pow2 uimm5:$imm))),
 def : Pat<(xor (v4i64 LASX256:$xj), (v4i64 (vsplat_uimm_pow2 uimm6:$imm))),
           (XVBITREVI_D LASX256:$xj, uimm6:$imm)>;
 
+// Vector bswaps
+def : Pat<(bswap (v16i16 LASX256:$xj)), (XVSHUF4I_B LASX256:$xj, 0b10110001)>;
+def : Pat<(bswap (v8i32 LASX256:$xj)), (XVSHUF4I_B LASX256:$xj, 0b00011011)>;
+def : Pat<(bswap (v4i64 LASX256:$xj)),
+          (XVSHUF4I_W (XVSHUF4I_B LASX256:$xj, 0b00011011), 0b10110001)>;
+
 // XVFADD_{S/D}
 defm : PatXrXrF<fadd, "XVFADD">;
 

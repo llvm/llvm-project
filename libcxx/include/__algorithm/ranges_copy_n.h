@@ -37,6 +37,7 @@ namespace ranges {
 template <class _Ip, class _Op>
 using copy_n_result = in_out_result<_Ip, _Op>;
 
+// TODO: Merge this with copy_n
 struct __copy_n {
   template <class _InIter, class _DiffType, class _OutIter>
   _LIBCPP_HIDE_FROM_ABI constexpr static copy_n_result<_InIter, _OutIter>

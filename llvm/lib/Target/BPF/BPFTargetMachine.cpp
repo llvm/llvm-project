@@ -138,7 +138,7 @@ void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         FPM.addPass(BPFPreserveStaticOffsetPass(false));
       });
   PB.registerPipelineEarlySimplificationEPCallback(
-      [=](ModulePassManager &MPM, OptimizationLevel) {
+      [=](ModulePassManager &MPM, OptimizationLevel, ThinOrFullLTOPhase) {
         MPM.addPass(BPFAdjustOptPass());
       });
 }

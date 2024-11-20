@@ -15,7 +15,6 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCSection.h"
@@ -235,6 +234,9 @@ void AsmPrinter::emitCFIInstruction(const MCCFIInstruction &Inst) const {
     break;
   case MCCFIInstruction::OpNegateRAState:
     OutStreamer->emitCFINegateRAState(Loc);
+    break;
+  case MCCFIInstruction::OpNegateRAStateWithPC:
+    OutStreamer->emitCFINegateRAStateWithPC(Loc);
     break;
   case MCCFIInstruction::OpSameValue:
     OutStreamer->emitCFISameValue(Inst.getRegister(), Loc);

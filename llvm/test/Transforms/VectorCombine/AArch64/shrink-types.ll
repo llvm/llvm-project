@@ -25,7 +25,7 @@ define i32 @test_mask_or(<16 x i32> %a, ptr %b) {
 ; CHECK-LABEL: @test_mask_or(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[B:%.*]], align 1
-; CHECK-NEXT:    [[A_MASKED:%.*]] = and <16 x i32> [[A:%.*]], <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+; CHECK-NEXT:    [[A_MASKED:%.*]] = and <16 x i32> [[A:%.*]], splat (i32 16)
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc <16 x i32> [[A_MASKED]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <16 x i8> [[WIDE_LOAD]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <16 x i8> [[TMP1]] to <16 x i32>
@@ -44,14 +44,14 @@ entry:
 define i32 @multiuse(<16 x i32> %u, <16 x i32> %v, ptr %b) {
 ; CHECK-LABEL: @multiuse(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[U_MASKED:%.*]] = and <16 x i32> [[U:%.*]], <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
-; CHECK-NEXT:    [[V_MASKED:%.*]] = and <16 x i32> [[V:%.*]], <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
+; CHECK-NEXT:    [[U_MASKED:%.*]] = and <16 x i32> [[U:%.*]], splat (i32 255)
+; CHECK-NEXT:    [[V_MASKED:%.*]] = and <16 x i32> [[V:%.*]], splat (i32 255)
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[B:%.*]], align 1
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr <16 x i8> [[WIDE_LOAD]], <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr <16 x i8> [[WIDE_LOAD]], splat (i8 4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <16 x i32> [[V_MASKED]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP2:%.*]] = or <16 x i8> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <16 x i8> [[TMP2]] to <16 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = and <16 x i8> [[WIDE_LOAD]], <i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15>
+; CHECK-NEXT:    [[TMP4:%.*]] = and <16 x i8> [[WIDE_LOAD]], splat (i8 15)
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc <16 x i32> [[U_MASKED]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP6:%.*]] = or <16 x i8> [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <16 x i8> [[TMP6]] to <16 x i32>

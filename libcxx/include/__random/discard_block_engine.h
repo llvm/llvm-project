@@ -10,11 +10,11 @@
 #define _LIBCPP___RANDOM_DISCARD_BLOCK_ENGINE_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__random/is_seed_sequence.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_convertible.h>
 #include <__utility/move.h>
-#include <cstddef>
 #include <iosfwd>
 #include <limits>
 

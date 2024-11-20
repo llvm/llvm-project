@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr8 -enable-global-merge=false \
+; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr8 \
 ; RUN:   -ppc-asm-full-reg-names < %s | FileCheck %s --check-prefixes=AIX32,AIXDATA
-; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr8 -enable-global-merge=false \
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr8 \
 ; RUN:   -ppc-asm-full-reg-names < %s | FileCheck %s --check-prefixes=AIX64,AIXDATA
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-unknown-linux -mcpu=pwr8 \
 ; RUN:   -ppc-asm-full-reg-names < %s | FileCheck %s --check-prefixes=LINUX64BE,LINUXDATA
@@ -40,9 +40,9 @@ define dso_local signext i32 @str1() local_unnamed_addr #0 {
 ; AIX32:       # %bb.0: # %entry
 ; AIX32-NEXT:    mflr r0
 ; AIX32-NEXT:    stwu r1, -64(r1)
-; AIX32-NEXT:    lwz r3, L..C0(r2) # @__ModuleStringPool
+; AIX32-NEXT:    lwz r3, L..C0(r2) # @_MergedGlobals
 ; AIX32-NEXT:    stw r0, 72(r1)
-; AIX32-NEXT:    addi r3, r3, 422
+; AIX32-NEXT:    addi r3, r3, 20
 ; AIX32-NEXT:    bl .callee[PR]
 ; AIX32-NEXT:    nop
 ; AIX32-NEXT:    addi r1, r1, 64
@@ -54,9 +54,9 @@ define dso_local signext i32 @str1() local_unnamed_addr #0 {
 ; AIX64:       # %bb.0: # %entry
 ; AIX64-NEXT:    mflr r0
 ; AIX64-NEXT:    stdu r1, -112(r1)
-; AIX64-NEXT:    ld r3, L..C0(r2) # @__ModuleStringPool
+; AIX64-NEXT:    ld r3, L..C0(r2) # @_MergedGlobals
 ; AIX64-NEXT:    std r0, 128(r1)
-; AIX64-NEXT:    addi r3, r3, 422
+; AIX64-NEXT:    addi r3, r3, 20
 ; AIX64-NEXT:    bl .callee[PR]
 ; AIX64-NEXT:    nop
 ; AIX64-NEXT:    addi r1, r1, 112
@@ -105,9 +105,9 @@ define dso_local signext i32 @str2() local_unnamed_addr #0 {
 ; AIX32:       # %bb.0: # %entry
 ; AIX32-NEXT:    mflr r0
 ; AIX32-NEXT:    stwu r1, -64(r1)
-; AIX32-NEXT:    lwz r3, L..C0(r2) # @__ModuleStringPool
+; AIX32-NEXT:    lwz r3, L..C0(r2) # @_MergedGlobals
 ; AIX32-NEXT:    stw r0, 72(r1)
-; AIX32-NEXT:    addi r3, r3, 388
+; AIX32-NEXT:    addi r3, r3, 32
 ; AIX32-NEXT:    bl .callee[PR]
 ; AIX32-NEXT:    nop
 ; AIX32-NEXT:    addi r1, r1, 64
@@ -119,9 +119,9 @@ define dso_local signext i32 @str2() local_unnamed_addr #0 {
 ; AIX64:       # %bb.0: # %entry
 ; AIX64-NEXT:    mflr r0
 ; AIX64-NEXT:    stdu r1, -112(r1)
-; AIX64-NEXT:    ld r3, L..C0(r2) # @__ModuleStringPool
+; AIX64-NEXT:    ld r3, L..C0(r2) # @_MergedGlobals
 ; AIX64-NEXT:    std r0, 128(r1)
-; AIX64-NEXT:    addi r3, r3, 388
+; AIX64-NEXT:    addi r3, r3, 32
 ; AIX64-NEXT:    bl .callee[PR]
 ; AIX64-NEXT:    nop
 ; AIX64-NEXT:    addi r1, r1, 112
@@ -170,13 +170,13 @@ define dso_local signext i32 @str3() local_unnamed_addr #0 {
 ; AIX32-NEXT:    stwu r1, -64(r1)
 ; AIX32-NEXT:    stw r0, 72(r1)
 ; AIX32-NEXT:    stw r30, 56(r1) # 4-byte Folded Spill
-; AIX32-NEXT:    lwz r30, L..C0(r2) # @__ModuleStringPool
-; AIX32-NEXT:    addi r3, r30, 434
+; AIX32-NEXT:    lwz r30, L..C0(r2) # @_MergedGlobals
+; AIX32-NEXT:    addi r3, r30, 44
 ; AIX32-NEXT:    stw r31, 60(r1) # 4-byte Folded Spill
 ; AIX32-NEXT:    bl .callee[PR]
 ; AIX32-NEXT:    nop
 ; AIX32-NEXT:    mr r31, r3
-; AIX32-NEXT:    addi r3, r30, 388
+; AIX32-NEXT:    addi r3, r30, 32
 ; AIX32-NEXT:    bl .callee[PR]
 ; AIX32-NEXT:    nop
 ; AIX32-NEXT:    add r3, r3, r31
@@ -193,13 +193,13 @@ define dso_local signext i32 @str3() local_unnamed_addr #0 {
 ; AIX64-NEXT:    stdu r1, -128(r1)
 ; AIX64-NEXT:    std r0, 144(r1)
 ; AIX64-NEXT:    std r30, 112(r1) # 8-byte Folded Spill
-; AIX64-NEXT:    ld r30, L..C0(r2) # @__ModuleStringPool
-; AIX64-NEXT:    addi r3, r30, 434
+; AIX64-NEXT:    ld r30, L..C0(r2) # @_MergedGlobals
+; AIX64-NEXT:    addi r3, r30, 44
 ; AIX64-NEXT:    std r31, 120(r1) # 8-byte Folded Spill
 ; AIX64-NEXT:    bl .callee[PR]
 ; AIX64-NEXT:    nop
 ; AIX64-NEXT:    mr r31, r3
-; AIX64-NEXT:    addi r3, r30, 388
+; AIX64-NEXT:    addi r3, r30, 32
 ; AIX64-NEXT:    bl .callee[PR]
 ; AIX64-NEXT:    nop
 ; AIX64-NEXT:    add r3, r3, r31
@@ -272,9 +272,9 @@ define dso_local signext i32 @str4() local_unnamed_addr #0 {
 ; AIX32:       # %bb.0: # %entry
 ; AIX32-NEXT:    mflr r0
 ; AIX32-NEXT:    stwu r1, -64(r1)
-; AIX32-NEXT:    lwz r3, L..C0(r2) # @__ModuleStringPool
+; AIX32-NEXT:    lwz r3, L..C0(r2) # @_MergedGlobals
 ; AIX32-NEXT:    stw r0, 72(r1)
-; AIX32-NEXT:    addi r3, r3, 446
+; AIX32-NEXT:    addi r3, r3, 56
 ; AIX32-NEXT:    bl .callee[PR]
 ; AIX32-NEXT:    nop
 ; AIX32-NEXT:    addi r1, r1, 64
@@ -286,9 +286,9 @@ define dso_local signext i32 @str4() local_unnamed_addr #0 {
 ; AIX64:       # %bb.0: # %entry
 ; AIX64-NEXT:    mflr r0
 ; AIX64-NEXT:    stdu r1, -112(r1)
-; AIX64-NEXT:    ld r3, L..C0(r2) # @__ModuleStringPool
+; AIX64-NEXT:    ld r3, L..C0(r2) # @_MergedGlobals
 ; AIX64-NEXT:    std r0, 128(r1)
-; AIX64-NEXT:    addi r3, r3, 446
+; AIX64-NEXT:    addi r3, r3, 56
 ; AIX64-NEXT:    bl .callee[PR]
 ; AIX64-NEXT:    nop
 ; AIX64-NEXT:    addi r1, r1, 112
@@ -335,9 +335,9 @@ define dso_local signext i32 @str5() local_unnamed_addr #0 {
 ; AIX32:       # %bb.0: # %entry
 ; AIX32-NEXT:    mflr r0
 ; AIX32-NEXT:    stwu r1, -64(r1)
-; AIX32-NEXT:    lwz r3, L..C0(r2) # @__ModuleStringPool
+; AIX32-NEXT:    lwz r3, L..C0(r2) # @_MergedGlobals
 ; AIX32-NEXT:    stw r0, 72(r1)
-; AIX32-NEXT:    addi r3, r3, 493
+; AIX32-NEXT:    addi r3, r3, 736
 ; AIX32-NEXT:    bl .callee[PR]
 ; AIX32-NEXT:    nop
 ; AIX32-NEXT:    addi r1, r1, 64
@@ -349,9 +349,9 @@ define dso_local signext i32 @str5() local_unnamed_addr #0 {
 ; AIX64:       # %bb.0: # %entry
 ; AIX64-NEXT:    mflr r0
 ; AIX64-NEXT:    stdu r1, -112(r1)
-; AIX64-NEXT:    ld r3, L..C0(r2) # @__ModuleStringPool
+; AIX64-NEXT:    ld r3, L..C0(r2) # @_MergedGlobals
 ; AIX64-NEXT:    std r0, 128(r1)
-; AIX64-NEXT:    addi r3, r3, 493
+; AIX64-NEXT:    addi r3, r3, 736
 ; AIX64-NEXT:    bl .callee[PR]
 ; AIX64-NEXT:    nop
 ; AIX64-NEXT:    addi r1, r1, 112
@@ -398,15 +398,15 @@ define dso_local signext i32 @array1() local_unnamed_addr #0 {
 ; AIX32:       # %bb.0: # %entry
 ; AIX32-NEXT:    mflr r0
 ; AIX32-NEXT:    stwu r1, -96(r1)
-; AIX32-NEXT:    lwz r5, L..C0(r2) # @__ModuleStringPool
-; AIX32-NEXT:    li r6, 372
+; AIX32-NEXT:    lwz r5, L..C0(r2) # @_MergedGlobals
+; AIX32-NEXT:    li r6, 308
 ; AIX32-NEXT:    li r4, 12
 ; AIX32-NEXT:    addi r3, r1, 64
 ; AIX32-NEXT:    stw r0, 104(r1)
 ; AIX32-NEXT:    rlwimi r4, r3, 0, 30, 27
 ; AIX32-NEXT:    lxvw4x vs0, r5, r6
 ; AIX32-NEXT:    stxvw4x vs0, 0, r4
-; AIX32-NEXT:    li r4, 360
+; AIX32-NEXT:    li r4, 296
 ; AIX32-NEXT:    lxvw4x vs0, r5, r4
 ; AIX32-NEXT:    stxvw4x vs0, 0, r3
 ; AIX32-NEXT:    bl .calleeInt[PR]
@@ -420,13 +420,13 @@ define dso_local signext i32 @array1() local_unnamed_addr #0 {
 ; AIX64:       # %bb.0: # %entry
 ; AIX64-NEXT:    mflr r0
 ; AIX64-NEXT:    stdu r1, -144(r1)
-; AIX64-NEXT:    ld r3, L..C0(r2) # @__ModuleStringPool
-; AIX64-NEXT:    li r4, 372
+; AIX64-NEXT:    ld r3, L..C0(r2) # @_MergedGlobals
+; AIX64-NEXT:    li r4, 308
 ; AIX64-NEXT:    std r0, 160(r1)
 ; AIX64-NEXT:    lxvw4x vs0, r3, r4
 ; AIX64-NEXT:    addi r4, r1, 124
 ; AIX64-NEXT:    stxvw4x vs0, 0, r4
-; AIX64-NEXT:    li r4, 360
+; AIX64-NEXT:    li r4, 296
 ; AIX64-NEXT:    lxvw4x vs0, r3, r4
 ; AIX64-NEXT:    addi r3, r1, 112
 ; AIX64-NEXT:    stxvw4x vs0, 0, r3
@@ -666,8 +666,8 @@ define dso_local signext i32 @str7() local_unnamed_addr #0 {
 ; AIX32-NEXT:    bl .callee[PR]
 ; AIX32-NEXT:    nop
 ; AIX32-NEXT:    mr r31, r3
-; AIX32-NEXT:    lwz r3, L..C0(r2) # @__ModuleStringPool
-; AIX32-NEXT:    addi r3, r3, 458
+; AIX32-NEXT:    lwz r3, L..C0(r2) # @_MergedGlobals
+; AIX32-NEXT:    addi r3, r3, 80
 ; AIX32-NEXT:    bl .callee[PR]
 ; AIX32-NEXT:    nop
 ; AIX32-NEXT:    add r3, r3, r31
@@ -688,8 +688,8 @@ define dso_local signext i32 @str7() local_unnamed_addr #0 {
 ; AIX64-NEXT:    bl .callee[PR]
 ; AIX64-NEXT:    nop
 ; AIX64-NEXT:    mr r31, r3
-; AIX64-NEXT:    ld r3, L..C0(r2) # @__ModuleStringPool
-; AIX64-NEXT:    addi r3, r3, 458
+; AIX64-NEXT:    ld r3, L..C0(r2) # @_MergedGlobals
+; AIX64-NEXT:    addi r3, r3, 80
 ; AIX64-NEXT:    bl .callee[PR]
 ; AIX64-NEXT:    nop
 ; AIX64-NEXT:    add r3, r3, r31
@@ -766,8 +766,8 @@ define dso_local signext i32 @mixed1() local_unnamed_addr #0 {
 ; AIX32-NEXT:    bl .calleeInt[PR]
 ; AIX32-NEXT:    nop
 ; AIX32-NEXT:    mr r31, r3
-; AIX32-NEXT:    lwz r3, L..C0(r2) # @__ModuleStringPool
-; AIX32-NEXT:    addi r3, r3, 400
+; AIX32-NEXT:    lwz r3, L..C0(r2) # @_MergedGlobals
+; AIX32-NEXT:    addi r3, r3, 68
 ; AIX32-NEXT:    bl .callee[PR]
 ; AIX32-NEXT:    nop
 ; AIX32-NEXT:    add r3, r3, r31
@@ -787,8 +787,8 @@ define dso_local signext i32 @mixed1() local_unnamed_addr #0 {
 ; AIX64-NEXT:    bl .calleeInt[PR]
 ; AIX64-NEXT:    nop
 ; AIX64-NEXT:    mr r31, r3
-; AIX64-NEXT:    ld r3, L..C0(r2) # @__ModuleStringPool
-; AIX64-NEXT:    addi r3, r3, 400
+; AIX64-NEXT:    ld r3, L..C0(r2) # @_MergedGlobals
+; AIX64-NEXT:    addi r3, r3, 68
 ; AIX64-NEXT:    bl .callee[PR]
 ; AIX64-NEXT:    nop
 ; AIX64-NEXT:    add r3, r3, r31
@@ -860,15 +860,15 @@ define dso_local signext i32 @mixed2() local_unnamed_addr #0 {
 ; AIX32-NEXT:    stwu r1, -112(r1)
 ; AIX32-NEXT:    stw r0, 120(r1)
 ; AIX32-NEXT:    stw r30, 104(r1) # 4-byte Folded Spill
-; AIX32-NEXT:    lwz r30, L..C0(r2) # @__ModuleStringPool
-; AIX32-NEXT:    li r5, 372
+; AIX32-NEXT:    lwz r30, L..C0(r2) # @_MergedGlobals
+; AIX32-NEXT:    li r5, 308
 ; AIX32-NEXT:    li r4, 12
 ; AIX32-NEXT:    addi r3, r1, 64
 ; AIX32-NEXT:    stw r31, 108(r1) # 4-byte Folded Spill
 ; AIX32-NEXT:    rlwimi r4, r3, 0, 30, 27
 ; AIX32-NEXT:    lxvw4x vs0, r30, r5
 ; AIX32-NEXT:    stxvw4x vs0, 0, r4
-; AIX32-NEXT:    li r4, 360
+; AIX32-NEXT:    li r4, 296
 ; AIX32-NEXT:    lxvw4x vs0, r30, r4
 ; AIX32-NEXT:    stxvw4x vs0, 0, r3
 ; AIX32-NEXT:    bl .calleeInt[PR]
@@ -878,11 +878,11 @@ define dso_local signext i32 @mixed2() local_unnamed_addr #0 {
 ; AIX32-NEXT:    bl .calleeInt[PR]
 ; AIX32-NEXT:    nop
 ; AIX32-NEXT:    add r31, r3, r31
-; AIX32-NEXT:    addi r3, r30, 400
+; AIX32-NEXT:    addi r3, r30, 68
 ; AIX32-NEXT:    bl .callee[PR]
 ; AIX32-NEXT:    nop
 ; AIX32-NEXT:    add r31, r31, r3
-; AIX32-NEXT:    addi r3, r30, 473
+; AIX32-NEXT:    addi r3, r30, 273
 ; AIX32-NEXT:    bl .callee[PR]
 ; AIX32-NEXT:    nop
 ; AIX32-NEXT:    add r3, r31, r3
@@ -899,13 +899,13 @@ define dso_local signext i32 @mixed2() local_unnamed_addr #0 {
 ; AIX64-NEXT:    stdu r1, -160(r1)
 ; AIX64-NEXT:    std r0, 176(r1)
 ; AIX64-NEXT:    std r30, 144(r1) # 8-byte Folded Spill
-; AIX64-NEXT:    ld r30, L..C0(r2) # @__ModuleStringPool
-; AIX64-NEXT:    li r3, 372
+; AIX64-NEXT:    ld r30, L..C0(r2) # @_MergedGlobals
+; AIX64-NEXT:    li r3, 308
 ; AIX64-NEXT:    std r31, 152(r1) # 8-byte Folded Spill
 ; AIX64-NEXT:    lxvw4x vs0, r30, r3
 ; AIX64-NEXT:    addi r3, r1, 124
 ; AIX64-NEXT:    stxvw4x vs0, 0, r3
-; AIX64-NEXT:    li r3, 360
+; AIX64-NEXT:    li r3, 296
 ; AIX64-NEXT:    lxvw4x vs0, r30, r3
 ; AIX64-NEXT:    addi r3, r1, 112
 ; AIX64-NEXT:    stxvw4x vs0, 0, r3
@@ -916,11 +916,11 @@ define dso_local signext i32 @mixed2() local_unnamed_addr #0 {
 ; AIX64-NEXT:    bl .calleeInt[PR]
 ; AIX64-NEXT:    nop
 ; AIX64-NEXT:    add r31, r3, r31
-; AIX64-NEXT:    addi r3, r30, 400
+; AIX64-NEXT:    addi r3, r30, 68
 ; AIX64-NEXT:    bl .callee[PR]
 ; AIX64-NEXT:    nop
 ; AIX64-NEXT:    add r31, r31, r3
-; AIX64-NEXT:    addi r3, r30, 473
+; AIX64-NEXT:    addi r3, r30, 273
 ; AIX64-NEXT:    bl .callee[PR]
 ; AIX64-NEXT:    nop
 ; AIX64-NEXT:    add r3, r31, r3
@@ -1033,8 +1033,9 @@ define dso_local signext i32 @str9() local_unnamed_addr #0 {
 ; AIX32:       # %bb.0: # %entry
 ; AIX32-NEXT:    mflr r0
 ; AIX32-NEXT:    stwu r1, -64(r1)
-; AIX32-NEXT:    lwz r3, L..C4(r2) # @.str.9
+; AIX32-NEXT:    lwz r3, L..C0(r2) # @_MergedGlobals
 ; AIX32-NEXT:    stw r0, 72(r1)
+; AIX32-NEXT:    addi r3, r3, 128
 ; AIX32-NEXT:    bl .callee[PR]
 ; AIX32-NEXT:    nop
 ; AIX32-NEXT:    addi r1, r1, 64
@@ -1046,8 +1047,9 @@ define dso_local signext i32 @str9() local_unnamed_addr #0 {
 ; AIX64:       # %bb.0: # %entry
 ; AIX64-NEXT:    mflr r0
 ; AIX64-NEXT:    stdu r1, -112(r1)
-; AIX64-NEXT:    ld r3, L..C4(r2) # @.str.9
+; AIX64-NEXT:    ld r3, L..C0(r2) # @_MergedGlobals
 ; AIX64-NEXT:    std r0, 128(r1)
+; AIX64-NEXT:    addi r3, r3, 128
 ; AIX64-NEXT:    bl .callee[PR]
 ; AIX64-NEXT:    nop
 ; AIX64-NEXT:    addi r1, r1, 112
@@ -1092,8 +1094,9 @@ define dso_local signext i32 @str10() local_unnamed_addr #0 {
 ; AIX32:       # %bb.0: # %entry
 ; AIX32-NEXT:    mflr r0
 ; AIX32-NEXT:    stwu r1, -64(r1)
-; AIX32-NEXT:    lwz r3, L..C5(r2) # @.str.10
+; AIX32-NEXT:    lwz r3, L..C0(r2) # @_MergedGlobals
 ; AIX32-NEXT:    stw r0, 72(r1)
+; AIX32-NEXT:    addi r3, r3, 256
 ; AIX32-NEXT:    bl .callee[PR]
 ; AIX32-NEXT:    nop
 ; AIX32-NEXT:    addi r1, r1, 64
@@ -1105,8 +1108,9 @@ define dso_local signext i32 @str10() local_unnamed_addr #0 {
 ; AIX64:       # %bb.0: # %entry
 ; AIX64-NEXT:    mflr r0
 ; AIX64-NEXT:    stdu r1, -112(r1)
-; AIX64-NEXT:    ld r3, L..C5(r2) # @.str.10
+; AIX64-NEXT:    ld r3, L..C0(r2) # @_MergedGlobals
 ; AIX64-NEXT:    std r0, 128(r1)
+; AIX64-NEXT:    addi r3, r3, 256
 ; AIX64-NEXT:    bl .callee[PR]
 ; AIX64-NEXT:    nop
 ; AIX64-NEXT:    addi r1, r1, 112
@@ -1148,8 +1152,18 @@ entry:
 
 attributes #0 = { nounwind }
 
-; AIXDATA: .csect L..__ModuleStringPool[RO],3
-; AIXDATA:       .align  3                               # @__ModuleStringPool
+; AIXDATA: .csect L.._MergedGlobals[RO],7
+; AIXDATA:       .align  7                               # @_MergedGlobals
+; AIXDATA:       .string "ABCABCABC"
+; AIXDATA:       .string "str1_STRING"
+; AIXDATA:       .string "str2_STRING"
+; AIXDATA:       .string "str3_STRING"
+; AIXDATA:       .string "str4_STRING"
+; AIXDATA:       .string "MixedString"
+; AIXDATA:       .byte   'S,'t,'a,'t,'i,'c,' ,'G,'l,'o,'b,'a,'l,0012,0000
+; AIXDATA:       .string "str9_STRING....."
+; AIXDATA:       .string "str10_STRING...."
+; AIXDATA:       .string "Different String 01"
 ; AIXDATA:       .vbyte  4, 5                            # 0x5
 ; AIXDATA:       .vbyte  4, 7                            # 0x7
 ; AIXDATA:       .vbyte  4, 9                            # 0x9
@@ -1157,14 +1171,6 @@ attributes #0 = { nounwind }
 ; AIXDATA:       .vbyte  4, 17                           # 0x11
 ; AIXDATA:       .vbyte  4, 1235                         # 0x4d3
 ; AIXDATA:       .vbyte  4, 32                           # 0x20
-; AIXDATA:       .string "str2_STRING"
-; AIXDATA:       .string "MixedString"
-; AIXDATA:       .string "ABCABCABC"
-; AIXDATA:       .string "str1_STRING"
-; AIXDATA:       .string "str3_STRING"
-; AIXDATA:       .string "str4_STRING"
-; AIXDATA:       .byte   'S,'t,'a,'t,'i,'c,' ,'G,'l,'o,'b,'a,'l,0012,0000
-; AIXDATA:       .string "Different String 01"
 ; AIXDATA:       .string "longerstr5_longerstr5_longerstr5_longerstr5_longerstr5_longerstr5_longerstr5_longerstr5_longerstr5_longerstr5_longerstr5_longerstr5_longerstr5_longerstr5_longerstr5_longerstr5_STRING"
 
 ; LINUXDATA: .L__ModuleStringPool:

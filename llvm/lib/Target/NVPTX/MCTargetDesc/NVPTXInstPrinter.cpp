@@ -34,7 +34,7 @@ NVPTXInstPrinter::NVPTXInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
                                    const MCRegisterInfo &MRI)
     : MCInstPrinter(MAI, MII, MRI) {}
 
-void NVPTXInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void NVPTXInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   // Decode the virtual register
   // Must be kept in sync with NVPTXAsmPrinter::encodeVirtualRegister
   unsigned RCId = (Reg.id() >> 28);

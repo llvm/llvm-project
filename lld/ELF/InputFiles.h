@@ -386,6 +386,8 @@ ELFFileBase *createObjFile(Ctx &, MemoryBufferRef mb,
 
 std::string replaceThinLTOSuffix(Ctx &, StringRef path);
 
+const ELFSyncStream &operator<<(const ELFSyncStream &, const InputFile *);
+
 } // namespace elf
 } // namespace lld
 

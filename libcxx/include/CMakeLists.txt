@@ -358,6 +358,8 @@ set(files
   __filesystem/recursive_directory_iterator.h
   __filesystem/space_info.h
   __filesystem/u8path.h
+  __flat_map/flat_map.h
+  __flat_map/sorted_unique.h
   __format/buffer.h
   __format/concepts.h
   __format/container_adaptor.h
@@ -487,6 +489,7 @@ set(files
   __iterator/segmented_iterator.h
   __iterator/size.h
   __iterator/sortable.h
+  __iterator/static_bounded_iter.h
   __iterator/unreachable_sentinel.h
   __iterator/wrap_iter.h
   __locale
@@ -496,11 +499,13 @@ set(files
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
   __locale_dir/locale_base_api/fuchsia.h
   __locale_dir/locale_base_api/ibm.h
-  __locale_dir/locale_base_api/locale_guard.h
   __locale_dir/locale_base_api/musl.h
-  __locale_dir/locale_base_api/newlib.h
   __locale_dir/locale_base_api/openbsd.h
   __locale_dir/locale_base_api/win32.h
+  __locale_dir/locale_guard.h
+  __locale_dir/support/apple.h
+  __locale_dir/support/bsd_like.h
+  __locale_dir/support/freebsd.h
   __math/abs.h
   __math/copysign.h
   __math/error_functions.h
@@ -734,12 +739,10 @@ set(files
   __tuple/tuple_like_no_subrange.h
   __tuple/tuple_size.h
   __tuple/tuple_types.h
-  __type_traits/add_const.h
-  __type_traits/add_cv.h
+  __type_traits/add_cv_quals.h
   __type_traits/add_lvalue_reference.h
   __type_traits/add_pointer.h
   __type_traits/add_rvalue_reference.h
-  __type_traits/add_volatile.h
   __type_traits/aligned_storage.h
   __type_traits/aligned_union.h
   __type_traits/alignment_of.h
@@ -882,6 +885,14 @@ set(files
   __utility/to_underlying.h
   __utility/unreachable.h
   __variant/monostate.h
+  __vector/comparison.h
+  __vector/container_traits.h
+  __vector/erase.h
+  __vector/pmr.h
+  __vector/swap.h
+  __vector/vector.h
+  __vector/vector_bool.h
+  __vector/vector_bool_formatter.h
   __verbose_abort
   algorithm
   any
@@ -912,6 +923,7 @@ set(files
   coroutine
   csetjmp
   csignal
+  cstdalign
   cstdarg
   cstdbool
   cstddef
@@ -950,6 +962,7 @@ set(files
   ext/hash_set
   fenv.h
   filesystem
+  flat_map
   float.h
   format
   forward_list
@@ -1045,7 +1058,7 @@ endforeach()
 # "include" for dependency tracking.
 add_custom_command(OUTPUT "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
   COMMAND "${Python3_EXECUTABLE}" "${LIBCXX_SOURCE_DIR}/utils/generate_iwyu_mapping.py" "-o" "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
-  DEPENDS ${_all_includes}
+  DEPENDS "${LIBCXX_SOURCE_DIR}/utils/libcxx/header_information.py"
   COMMENT "Generate the mapping file for include-what-you-use"
 )
 list(APPEND _all_includes "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp")

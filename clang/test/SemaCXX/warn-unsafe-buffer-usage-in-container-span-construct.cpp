@@ -157,3 +157,23 @@ namespace test_flag {
 
   }
 } //namespace test_flag
+
+struct HoldsStdSpanAndInitializedInCtor {
+  char* Ptr;
+  unsigned Size;
+  std::span<char> Span{Ptr, Size};  // no-warning (this code is unreachable)
+
+  HoldsStdSpanAndInitializedInCtor(char* P, unsigned S)
+      : Span(P, S)  // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+  {}
+};
+
+struct HoldsStdSpanAndNotInitializedInCtor {
+  char* Ptr;
+  unsigned Size;
+  std::span<char> Span{Ptr, Size}; // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+
+  HoldsStdSpanAndNotInitializedInCtor(char* P, unsigned S)
+      : Ptr(P), Size(S)
+  {}
+};
