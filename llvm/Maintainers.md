@@ -121,8 +121,10 @@ evan.cheng@apple.com (email)
 
 #### SelectionDAG
 
-Justin Bogner \
-mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
+Simon Pilgrim \
+llvm-dev@redking.me.uk (email), [RKSimon](https://github.com/RKSimon) (GitHub) \
+Craig Topper \
+craig.topper@sifive.com (email), [topperc](https://github.com/topperc) (GitHub)
 
 #### FastISel
 
@@ -462,6 +464,7 @@ sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattn
 ### Inactive or former component maintainers
 
 Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management
+Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- SelectionDAG
 
 ### Former maintainers of removed components
 
