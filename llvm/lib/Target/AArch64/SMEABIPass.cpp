@@ -71,7 +71,7 @@ void emitTPIDR2Save(Module *M, IRBuilder<> &Builder) {
 
   // A save to TPIDR2 should be followed by clearing TPIDR2_EL0.
   Function *WriteIntr =
-      Intrinsic::getDeclaration(M, Intrinsic::aarch64_sme_set_tpidr2);
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::aarch64_sme_set_tpidr2);
   Builder.CreateCall(WriteIntr->getFunctionType(), WriteIntr,
                      Builder.getInt64(0));
 }
@@ -114,7 +114,7 @@ bool SMEABI::updateNewStateFunctions(Module *M, Function *F,
     // Read TPIDR2_EL0 in PreludeBB & branch to SaveBB if not 0.
     Builder.SetInsertPoint(PreludeBB);
     Function *TPIDR2Intr =
-        Intrinsic::getDeclaration(M, Intrinsic::aarch64_sme_get_tpidr2);
+        Intrinsic::getOrInsertDeclaration(M, Intrinsic::aarch64_sme_get_tpidr2);
     auto *TPIDR2 = Builder.CreateCall(TPIDR2Intr->getFunctionType(), TPIDR2Intr,
                                       {}, "tpidr2");
     auto *Cmp = Builder.CreateCmp(ICmpInst::ICMP_NE, TPIDR2,
@@ -128,20 +128,20 @@ bool SMEABI::updateNewStateFunctions(Module *M, Function *F,
     // Enable pstate.za at the start of the function.
     Builder.SetInsertPoint(&OrigBB->front());
     Function *EnableZAIntr =
-        Intrinsic::getDeclaration(M, Intrinsic::aarch64_sme_za_enable);
+        Intrinsic::getOrInsertDeclaration(M, Intrinsic::aarch64_sme_za_enable);
     Builder.CreateCall(EnableZAIntr->getFunctionType(), EnableZAIntr);
   }
 
   if (FnAttrs.isNewZA()) {
     Function *ZeroIntr =
-        Intrinsic::getDeclaration(M, Intrinsic::aarch64_sme_zero);
+        Intrinsic::getOrInsertDeclaration(M, Intrinsic::aarch64_sme_zero);
     Builder.CreateCall(ZeroIntr->getFunctionType(), ZeroIntr,
                        Builder.getInt32(0xff));
   }
 
   if (FnAttrs.isNewZT0()) {
     Function *ClearZT0Intr =
-        Intrinsic::getDeclaration(M, Intrinsic::aarch64_sme_zero_zt);
+        Intrinsic::getOrInsertDeclaration(M, Intrinsic::aarch64_sme_zero_zt);
     Builder.CreateCall(ClearZT0Intr->getFunctionType(), ClearZT0Intr,
                        {Builder.getInt32(0)});
   }
@@ -153,8 +153,8 @@ bool SMEABI::updateNewStateFunctions(Module *M, Function *F,
       if (!T || !isa<ReturnInst>(T))
         continue;
       Builder.SetInsertPoint(T);
-      Function *DisableZAIntr =
-          Intrinsic::getDeclaration(M, Intrinsic::aarch64_sme_za_disable);
+      Function *DisableZAIntr = Intrinsic::getOrInsertDeclaration(
+          M, Intrinsic::aarch64_sme_za_disable);
       Builder.CreateCall(DisableZAIntr->getFunctionType(), DisableZAIntr);
     }
   }

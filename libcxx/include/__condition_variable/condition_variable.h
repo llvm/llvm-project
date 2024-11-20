@@ -45,7 +45,7 @@ class _LIBCPP_EXPORTED_FROM_ABI condition_variable {
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR condition_variable() _NOEXCEPT = default;
 
-#  ifdef _LIBCPP_HAS_TRIVIAL_CONDVAR_DESTRUCTION
+#  if _LIBCPP_HAS_TRIVIAL_CONDVAR_DESTRUCTION
   ~condition_variable() = default;
 #  else
   ~condition_variable();
@@ -83,7 +83,7 @@ public:
 private:
   void
   __do_timed_wait(unique_lock<mutex>& __lk, chrono::time_point<chrono::system_clock, chrono::nanoseconds>) _NOEXCEPT;
-#  if defined(_LIBCPP_HAS_COND_CLOCKWAIT)
+#  if _LIBCPP_HAS_COND_CLOCKWAIT
   _LIBCPP_HIDE_FROM_ABI void
   __do_timed_wait(unique_lock<mutex>& __lk, chrono::time_point<chrono::steady_clock, chrono::nanoseconds>) _NOEXCEPT;
 #  endif
@@ -180,7 +180,7 @@ cv_status condition_variable::wait_for(unique_lock<mutex>& __lk, const chrono::d
   using __ns_rep                   = nanoseconds::rep;
   steady_clock::time_point __c_now = steady_clock::now();
 
-#  if defined(_LIBCPP_HAS_COND_CLOCKWAIT)
+#  if _LIBCPP_HAS_COND_CLOCKWAIT
   using __clock_tp_ns     = time_point<steady_clock, nanoseconds>;
   __ns_rep __now_count_ns = std::__safe_nanosecond_cast(__c_now.time_since_epoch()).count();
 #  else
@@ -205,7 +205,7 @@ condition_variable::wait_for(unique_lock<mutex>& __lk, const chrono::duration<_R
   return wait_until(__lk, chrono::steady_clock::now() + __d, std::move(__pred));
 }
 
-#  if defined(_LIBCPP_HAS_COND_CLOCKWAIT)
+#  if _LIBCPP_HAS_COND_CLOCKWAIT
 inline void condition_variable::__do_timed_wait(
     unique_lock<mutex>& __lk, chrono::time_point<chrono::steady_clock, chrono::nanoseconds> __tp) _NOEXCEPT {
   using namespace chrono;

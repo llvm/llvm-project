@@ -1657,7 +1657,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
 attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "denormal-fp-math-f32"="ieee.ieee" }
+attributes #2 = { nounwind "denormal-fp-math-f32"="ieee,ieee" }
 attributes #3 = { nounwind "denormal-fp-math-f32"="ieee,ieee" "denormal-fp-math"="preserve-sign,preserve-sign" }
 
 !llvm.dbg.cu = !{!0}

@@ -269,7 +269,7 @@ body:             |
     %1:gprb(s64) = COPY $x11
     %2:gprb(s32) = G_TRUNC %0
     %3:gprb(s32) = G_TRUNC %1
-    %4:gprb(s64) = G_CONSTANT i64 1
+    %4:gprb(s32) = G_CONSTANT i32 1
     %5:gprb(s32) = G_SHL %2, %4
     %6:gprb(s32) = G_ADD %5, %3
     %7:gprb(s64) = G_ANYEXT %6
@@ -295,7 +295,7 @@ body:             |
     %1:gprb(s64) = COPY $x11
     %2:gprb(s32) = G_TRUNC %0
     %3:gprb(s32) = G_TRUNC %1
-    %4:gprb(s64) = G_CONSTANT i64 2
+    %4:gprb(s32) = G_CONSTANT i32 2
     %5:gprb(s32) = G_SHL %2, %4
     %6:gprb(s32) = G_ADD %5, %3
     %7:gprb(s64) = G_ANYEXT %6
@@ -321,7 +321,7 @@ body:             |
     %1:gprb(s64) = COPY $x11
     %2:gprb(s32) = G_TRUNC %0
     %3:gprb(s32) = G_TRUNC %1
-    %4:gprb(s64) = G_CONSTANT i64 3
+    %4:gprb(s32) = G_CONSTANT i32 3
     %5:gprb(s32) = G_SHL %2, %4
     %6:gprb(s32) = G_ADD %5, %3
     %7:gprb(s64) = G_ANYEXT %6

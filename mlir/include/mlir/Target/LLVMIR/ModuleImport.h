@@ -199,6 +199,10 @@ public:
   /// Converts !llvm.ident metadata to the llvm.ident LLVM ModuleOp attribute.
   LogicalResult convertIdentMetadata();
 
+  /// Converts !llvm.commandline metadata to the llvm.commandline LLVM ModuleOp
+  /// attribute.
+  LogicalResult convertCommandlineMetadata();
+
   /// Converts all LLVM metadata nodes that translate to attributes such as
   /// alias analysis or access group metadata, and builds a map from the
   /// metadata nodes to the converted attributes.
@@ -239,6 +243,8 @@ public:
   /// corresponding MLIR attribute names.
   LogicalResult
   convertIntrinsicArguments(ArrayRef<llvm::Value *> values,
+                            ArrayRef<llvm::OperandBundleUse> opBundles,
+                            bool requiresOpBundles,
                             ArrayRef<unsigned> immArgPositions,
                             ArrayRef<StringLiteral> immArgAttrNames,
                             SmallVectorImpl<Value> &valuesOut,
@@ -355,6 +361,10 @@ private:
   /// and stores a mapping from the struct to the symbol pointing to the
   /// translated operation.
   void processComdat(const llvm::Comdat *comdat);
+  /// Returns a symbol name for a nameless global. MLIR, in contrast to LLVM,
+  /// always requires a symbol name.
+  FlatSymbolRefAttr
+  getOrCreateNamelessSymbolName(llvm::GlobalVariable *globalVar);
 
   /// Builder pointing at where the next instruction should be generated.
   OpBuilder builder;

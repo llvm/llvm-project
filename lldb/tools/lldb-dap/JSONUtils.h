@@ -16,6 +16,7 @@
 #include "llvm/Support/JSON.h"
 #include <cstdint>
 #include <optional>
+#include <unordered_map>
 
 namespace lldb_dap {
 
@@ -158,6 +159,27 @@ DecodeMemoryReference(llvm::StringRef memoryReference);
 ///     strings, numbers or booleans.
 std::vector<std::string> GetStrings(const llvm::json::Object *obj,
                                     llvm::StringRef key);
+
+/// Extract an object of key value strings for the specified key from an object.
+///
+/// String values in the object will be extracted without any quotes
+/// around them. Numbers and Booleans will be converted into
+/// strings. Any NULL, array or objects values in the array will be
+/// ignored.
+///
+/// \param[in] obj
+///     A JSON object that we will attempt to extract the array from
+///
+/// \param[in] key
+///     The key to use when extracting the value
+///
+/// \return
+///     An object of key value strings for the specified \a key, or
+///     \a fail_value if there is no key that matches or if the
+///     value is not an object or key and values in the object are not
+///     strings, numbers or booleans.
+std::unordered_map<std::string, std::string>
+GetStringMap(const llvm::json::Object &obj, llvm::StringRef key);
 
 /// Fill a response object given the request object.
 ///
@@ -457,6 +479,16 @@ struct VariableDescription {
   /// Returns a description of the value appropriate for the specified context.
   std::string GetResult(llvm::StringRef context);
 };
+
+/// Does the given variable have an associated value location?
+bool ValuePointsToCode(lldb::SBValue v);
+
+/// Pack a location into a single integer which we can send via
+/// the debug adapter protocol.
+int64_t PackLocation(int64_t var_ref, bool is_value_location);
+
+/// Reverse of `PackLocation`
+std::pair<int64_t, bool> UnpackLocation(int64_t location_id);
 
 /// Create a "Variable" object for a LLDB thread object.
 ///

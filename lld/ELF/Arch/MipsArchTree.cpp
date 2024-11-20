@@ -12,6 +12,7 @@
 
 #include "InputFiles.h"
 #include "SymbolTable.h"
+#include "Target.h"
 #include "Writer.h"
 
 #include "lld/Common/ErrorHandler.h"
@@ -62,7 +63,7 @@ static StringRef getNanName(bool isNan2008) {
 
 static StringRef getFpName(bool isFp64) { return isFp64 ? "64" : "32"; }
 
-static void checkFlags(ArrayRef<FileFlags> files) {
+static void checkFlags(Ctx &ctx, ArrayRef<FileFlags> files) {
   assert(!files.empty() && "expected non-empty file list");
 
   uint32_t abi = files[0].flags & (EF_MIPS_ABI | EF_MIPS_ABI2);
@@ -293,7 +294,7 @@ static uint32_t getArchFlags(ArrayRef<FileFlags> files) {
   return ret;
 }
 
-template <class ELFT> uint32_t elf::calcMipsEFlags() {
+template <class ELFT> uint32_t elf::calcMipsEFlags(Ctx &ctx) {
   std::vector<FileFlags> v;
   for (InputFile *f : ctx.objectFiles)
     v.push_back({f, cast<ObjFile<ELFT>>(f)->getObj().getHeader().e_flags});
@@ -305,7 +306,7 @@ template <class ELFT> uint32_t elf::calcMipsEFlags() {
       return 0;
     return ctx.arg.mipsN32Abi ? EF_MIPS_ABI2 : EF_MIPS_ABI_O32;
   }
-  checkFlags(v);
+  checkFlags(ctx, v);
   return getMiscFlags(v) | getPicFlags(v) | getArchFlags(v);
 }
 
@@ -360,13 +361,13 @@ uint8_t elf::getMipsFpAbiFlag(uint8_t oldFlag, uint8_t newFlag,
   return oldFlag;
 }
 
-template <class ELFT> static bool isN32Abi(const InputFile *f) {
-  if (auto *ef = dyn_cast<ELFFileBase>(f))
+template <class ELFT> static bool isN32Abi(const InputFile &f) {
+  if (auto *ef = dyn_cast<ELFFileBase>(&f))
     return ef->template getObj<ELFT>().getHeader().e_flags & EF_MIPS_ABI2;
   return false;
 }
 
-bool elf::isMipsN32Abi(const InputFile *f) {
+bool elf::isMipsN32Abi(Ctx &ctx, const InputFile &f) {
   switch (ctx.arg.ekind) {
   case ELF32LEKind:
     return isN32Abi<ELF32LE>(f);
@@ -381,14 +382,14 @@ bool elf::isMipsN32Abi(const InputFile *f) {
   }
 }
 
-bool elf::isMicroMips() { return ctx.arg.eflags & EF_MIPS_MICROMIPS; }
+bool elf::isMicroMips(Ctx &ctx) { return ctx.arg.eflags & EF_MIPS_MICROMIPS; }
 
-bool elf::isMipsR6() {
+bool elf::isMipsR6(Ctx &ctx) {
   uint32_t arch = ctx.arg.eflags & EF_MIPS_ARCH;
   return arch == EF_MIPS_ARCH_32R6 || arch == EF_MIPS_ARCH_64R6;
 }
 
-template uint32_t elf::calcMipsEFlags<ELF32LE>();
-template uint32_t elf::calcMipsEFlags<ELF32BE>();
-template uint32_t elf::calcMipsEFlags<ELF64LE>();
-template uint32_t elf::calcMipsEFlags<ELF64BE>();
+template uint32_t elf::calcMipsEFlags<ELF32LE>(Ctx &);
+template uint32_t elf::calcMipsEFlags<ELF32BE>(Ctx &);
+template uint32_t elf::calcMipsEFlags<ELF64LE>(Ctx &);
+template uint32_t elf::calcMipsEFlags<ELF64BE>(Ctx &);

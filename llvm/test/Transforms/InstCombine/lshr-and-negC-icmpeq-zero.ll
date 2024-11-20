@@ -177,7 +177,7 @@ define i1 @scalar_lshr_and_negC_eq_extra_use_lshr_and(i32 %x, i32 %y, i32 %z, pt
 define i1 @scalar_i32_lshr_and_negC_eq_X_is_constant1(i32 %y) {
 ; CHECK-LABEL: @scalar_i32_lshr_and_negC_eq_X_is_constant1(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 12345, [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[LSHR]], 8
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign ult i32 [[LSHR]], 8
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %lshr = lshr i32 12345, %y

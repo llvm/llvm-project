@@ -15,49 +15,77 @@
 
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
 
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Transforms/Instrumentation/RealtimeSanitizer.h"
 
 using namespace llvm;
 
+static SmallVector<Type *> getArgTypes(ArrayRef<Value *> FunctionArgs) {
+  SmallVector<Type *> Types;
+  for (Value *Arg : FunctionArgs)
+    Types.push_back(Arg->getType());
+  return Types;
+}
+
 static void insertCallBeforeInstruction(Function &Fn, Instruction &Instruction,
-                                        const char *FunctionName) {
+                                        const char *FunctionName,
+                                        ArrayRef<Value *> FunctionArgs) {
   LLVMContext &Context = Fn.getContext();
-  FunctionType *FuncType = FunctionType::get(Type::getVoidTy(Context), false);
+  FunctionType *FuncType = FunctionType::get(Type::getVoidTy(Context),
+                                             getArgTypes(FunctionArgs), false);
   FunctionCallee Func =
       Fn.getParent()->getOrInsertFunction(FunctionName, FuncType);
   IRBuilder<> Builder{&Instruction};
-  Builder.CreateCall(Func, {});
+  Builder.CreateCall(Func, FunctionArgs);
 }
 
 static void insertCallAtFunctionEntryPoint(Function &Fn,
-                                           const char *InsertFnName) {
-
-  insertCallBeforeInstruction(Fn, Fn.front().front(), InsertFnName);
+                                           const char *InsertFnName,
+                                           ArrayRef<Value *> FunctionArgs) {
+  insertCallBeforeInstruction(Fn, Fn.front().front(), InsertFnName,
+                              FunctionArgs);
 }
 
 static void insertCallAtAllFunctionExitPoints(Function &Fn,
-                                              const char *InsertFnName) {
-  for (auto &BB : Fn)
-    for (auto &I : BB)
-      if (isa<ReturnInst>(&I))
-        insertCallBeforeInstruction(Fn, I, InsertFnName);
+                                              const char *InsertFnName,
+                                              ArrayRef<Value *> FunctionArgs) {
+  for (auto &I : instructions(Fn))
+    if (isa<ReturnInst>(&I))
+      insertCallBeforeInstruction(Fn, I, InsertFnName, FunctionArgs);
+}
+
+static PreservedAnalyses rtsanPreservedCFGAnalyses() {
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+static PreservedAnalyses runSanitizeRealtime(Function &Fn) {
+  insertCallAtFunctionEntryPoint(Fn, "__rtsan_realtime_enter", {});
+  insertCallAtAllFunctionExitPoints(Fn, "__rtsan_realtime_exit", {});
+  return rtsanPreservedCFGAnalyses();
+}
+
+static PreservedAnalyses runSanitizeRealtimeUnsafe(Function &Fn) {
+  IRBuilder<> Builder(&Fn.front().front());
+  Value *Name = Builder.CreateGlobalString(demangle(Fn.getName()));
+  insertCallAtFunctionEntryPoint(Fn, "__rtsan_notify_blocking_call", {Name});
+  return rtsanPreservedCFGAnalyses();
 }
 
 RealtimeSanitizerPass::RealtimeSanitizerPass(
     const RealtimeSanitizerOptions &Options) {}
 
-PreservedAnalyses RealtimeSanitizerPass::run(Function &F,
+PreservedAnalyses RealtimeSanitizerPass::run(Function &Fn,
                                              AnalysisManager<Function> &AM) {
-  if (F.hasFnAttribute(Attribute::SanitizeRealtime)) {
-    insertCallAtFunctionEntryPoint(F, "__rtsan_realtime_enter");
-    insertCallAtAllFunctionExitPoints(F, "__rtsan_realtime_exit");
+  if (Fn.hasFnAttribute(Attribute::SanitizeRealtime))
+    return runSanitizeRealtime(Fn);
 
-    PreservedAnalyses PA;
-    PA.preserveSet<CFGAnalyses>();
-    return PA;
-  }
+  if (Fn.hasFnAttribute(Attribute::SanitizeRealtimeUnsafe))
+    return runSanitizeRealtimeUnsafe(Fn);
 
   return PreservedAnalyses::all();
 }

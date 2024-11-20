@@ -280,7 +280,7 @@ feature_test_macros = [
                 "string_view",
             ],
             "test_suite_guard": "defined(__cpp_char8_t)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_CHAR8_T)",
+            "libcxx_guard": "_LIBCPP_HAS_CHAR8_T",
         },
         {
             "name": "__cpp_lib_chrono",
@@ -741,6 +741,13 @@ feature_test_macros = [
             "name": "__cpp_lib_is_final",
             "values": {"c++14": 201402},
             "headers": ["type_traits"],
+        },
+        {
+            "name": "__cpp_lib_is_implicit_lifetime",
+            "values": {"c++23": 202302},
+            "headers": ["type_traits"],
+            "test_suite_guard": "__has_builtin(__builtin_is_implicit_lifetime)",
+            "libcxx_guard": "__has_builtin(__builtin_is_implicit_lifetime)",
         },
         {
             "name": "__cpp_lib_is_invocable",

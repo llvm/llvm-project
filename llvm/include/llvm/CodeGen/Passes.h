@@ -273,7 +273,7 @@ namespace llvm {
 
   /// EarlyIfConverter - This pass performs if-conversion on SSA form by
   /// inserting cmov instructions.
-  extern char &EarlyIfConverterID;
+  extern char &EarlyIfConverterLegacyID;
 
   /// EarlyIfPredicator - This pass performs if-conversion on SSA form by
   /// predicating if/else block and insert select at the join point.
@@ -285,7 +285,7 @@ namespace llvm {
 
   /// StackSlotColoring - This pass performs stack coloring and merging.
   /// It merges disjoint allocas to reduce the stack size.
-  extern char &StackColoringID;
+  extern char &StackColoringLegacyID;
 
   /// StackFramePrinter - This pass prints the stack frame layout and variable
   /// mappings.

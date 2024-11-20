@@ -1168,6 +1168,10 @@ bool Decl::isInNamedModule() const {
   return getOwningModule() && getOwningModule()->isNamedModule();
 }
 
+bool Decl::isFromHeaderUnit() const {
+  return getOwningModule() && getOwningModule()->isHeaderUnit();
+}
+
 static Decl::Kind getKind(const Decl *D) { return D->getKind(); }
 static Decl::Kind getKind(const DeclContext *DC) { return DC->getDeclKind(); }
 

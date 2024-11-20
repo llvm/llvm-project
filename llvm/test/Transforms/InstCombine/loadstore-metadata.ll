@@ -173,6 +173,19 @@ define i32 @test_load_cast_combine_noundef(ptr %ptr) {
   ret i32 %c
 }
 
+define i32 @test_load_cast_combine_noalias_addrspace(ptr %ptr) {
+; Ensure (cast (load (...))) -> (load (cast (...))) preserves TBAA.
+; CHECK-LABEL: @test_load_cast_combine_noalias_addrspace(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    ret i32 [[L1]]
+;
+entry:
+  %l = load float, ptr %ptr, align 4, !noalias.addrspace !11
+  %c = bitcast float %l to i32
+  ret i32 %c
+}
+
 !0 = !{!1, !1, i64 0}
 !1 = !{!"scalar type", !2}
 !2 = !{!"root"}
@@ -184,3 +197,4 @@ define i32 @test_load_cast_combine_noundef(ptr %ptr) {
 !8 = !{i32 1}
 !9 = !{i64 8}
 !10 = distinct !{}
+!11 = !{i32 5, i32 6}

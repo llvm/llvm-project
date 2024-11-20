@@ -291,11 +291,14 @@ MachOPlatform::HeaderOptions::BuildVersionOpts::fromTriple(const Triple &TT,
   return MachOPlatform::HeaderOptions::BuildVersionOpts{Platform, MinOS, SDK};
 }
 
-Expected<std::unique_ptr<MachOPlatform>> MachOPlatform::Create(
-    ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-    JITDylib &PlatformJD, std::unique_ptr<DefinitionGenerator> OrcRuntime,
-    HeaderOptions PlatformJDOpts, MachOHeaderMUBuilder BuildMachOHeaderMU,
-    std::optional<SymbolAliasMap> RuntimeAliases) {
+Expected<std::unique_ptr<MachOPlatform>>
+MachOPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
+                      std::unique_ptr<DefinitionGenerator> OrcRuntime,
+                      HeaderOptions PlatformJDOpts,
+                      MachOHeaderMUBuilder BuildMachOHeaderMU,
+                      std::optional<SymbolAliasMap> RuntimeAliases) {
+
+  auto &ES = ObjLinkingLayer.getExecutionSession();
 
   // If the target is not supported then bail out immediately.
   if (!supportedTarget(ES.getTargetTriple()))
@@ -326,7 +329,7 @@ Expected<std::unique_ptr<MachOPlatform>> MachOPlatform::Create(
   // Create the instance.
   Error Err = Error::success();
   auto P = std::unique_ptr<MachOPlatform>(new MachOPlatform(
-      ES, ObjLinkingLayer, PlatformJD, std::move(OrcRuntime),
+      ObjLinkingLayer, PlatformJD, std::move(OrcRuntime),
       std::move(PlatformJDOpts), std::move(BuildMachOHeaderMU), Err));
   if (Err)
     return std::move(Err);
@@ -334,9 +337,8 @@ Expected<std::unique_ptr<MachOPlatform>> MachOPlatform::Create(
 }
 
 Expected<std::unique_ptr<MachOPlatform>>
-MachOPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-                      JITDylib &PlatformJD, const char *OrcRuntimePath,
-                      HeaderOptions PlatformJDOpts,
+MachOPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
+                      const char *OrcRuntimePath, HeaderOptions PlatformJDOpts,
                       MachOHeaderMUBuilder BuildMachOHeaderMU,
                       std::optional<SymbolAliasMap> RuntimeAliases) {
 
@@ -346,7 +348,7 @@ MachOPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
   if (!OrcRuntimeArchiveGenerator)
     return OrcRuntimeArchiveGenerator.takeError();
 
-  return Create(ES, ObjLinkingLayer, PlatformJD,
+  return Create(ObjLinkingLayer, PlatformJD,
                 std::move(*OrcRuntimeArchiveGenerator),
                 std::move(PlatformJDOpts), std::move(BuildMachOHeaderMU),
                 std::move(RuntimeAliases));
@@ -471,12 +473,12 @@ MachOPlatform::flagsForSymbol(jitlink::Symbol &Sym) {
 }
 
 MachOPlatform::MachOPlatform(
-    ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-    JITDylib &PlatformJD,
+    ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
     std::unique_ptr<DefinitionGenerator> OrcRuntimeGenerator,
     HeaderOptions PlatformJDOpts, MachOHeaderMUBuilder BuildMachOHeaderMU,
     Error &Err)
-    : ES(ES), PlatformJD(PlatformJD), ObjLinkingLayer(ObjLinkingLayer),
+    : ES(ObjLinkingLayer.getExecutionSession()), PlatformJD(PlatformJD),
+      ObjLinkingLayer(ObjLinkingLayer),
       BuildMachOHeaderMU(std::move(BuildMachOHeaderMU)) {
   ErrorAsOutParameter _(&Err);
   ObjLinkingLayer.addPlugin(std::make_unique<MachOPlatformPlugin>(*this));

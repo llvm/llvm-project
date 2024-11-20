@@ -328,6 +328,28 @@ body: |
 ...
 
 ---
+name: or_s64_vv_flags
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; CHECK-LABEL: name: or_s64_vv_flags
+    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY1]](s64)
+    ; CHECK-NEXT: %3:vgpr(s32) = disjoint G_OR [[UV]], [[UV2]]
+    ; CHECK-NEXT: %4:vgpr(s32) = disjoint G_OR [[UV1]], [[UV3]]
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES %3(s32), %4(s32)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s64) = COPY $vgpr2_vgpr3
+    %2:_(s64) = disjoint G_OR %0, %1
+...
+
+---
 name: or_s64_vv_user
 legalized: true
 

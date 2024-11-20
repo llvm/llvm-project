@@ -127,6 +127,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-dwarfdump
     llvm-ifs
     llvm-lto2
+    llvm-mc
     llvm-modextract
     llvm-nm
     llvm-objcopy

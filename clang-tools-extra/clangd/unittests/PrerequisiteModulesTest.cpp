@@ -402,6 +402,86 @@ import A;
   EXPECT_TRUE(D.isFromASTFile());
 }
 
+// An end to end test for code complete in modules
+TEST_F(PrerequisiteModulesTests, CodeCompleteTest) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+export void printA();
+  )cpp");
+
+  llvm::StringLiteral UserContents = R"cpp(
+import A;
+void func() {
+  print^
+}
+)cpp";
+
+  CDB.addFile("Use.cpp", UserContents);
+  Annotations Test(UserContents);
+
+  ModulesBuilder Builder(CDB);
+
+  ParseInputs Use = getInputs("Use.cpp", CDB);
+  Use.ModulesManager = &Builder;
+
+  std::unique_ptr<CompilerInvocation> CI =
+      buildCompilerInvocation(Use, DiagConsumer);
+  EXPECT_TRUE(CI);
+
+  auto Preamble =
+      buildPreamble(getFullPath("Use.cpp"), *CI, Use, /*InMemory=*/true,
+                    /*Callback=*/nullptr);
+  EXPECT_TRUE(Preamble);
+  EXPECT_TRUE(Preamble->RequiredModules);
+  
+  auto Result = codeComplete(getFullPath("Use.cpp"), Test.point(),
+                             Preamble.get(), Use, {});
+  EXPECT_FALSE(Result.Completions.empty());
+  EXPECT_EQ(Result.Completions[0].Name, "printA");
+}
+
+TEST_F(PrerequisiteModulesTests, SignatureHelpTest) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+export void printA(int a);
+  )cpp");
+
+  llvm::StringLiteral UserContents = R"cpp(
+import A;
+void func() {
+  printA(^);
+}
+)cpp";
+
+  CDB.addFile("Use.cpp", UserContents);
+  Annotations Test(UserContents);
+
+  ModulesBuilder Builder(CDB);
+
+  ParseInputs Use = getInputs("Use.cpp", CDB);
+  Use.ModulesManager = &Builder;
+
+  std::unique_ptr<CompilerInvocation> CI =
+      buildCompilerInvocation(Use, DiagConsumer);
+  EXPECT_TRUE(CI);
+
+  auto Preamble =
+      buildPreamble(getFullPath("Use.cpp"), *CI, Use, /*InMemory=*/true,
+                    /*Callback=*/nullptr);
+  EXPECT_TRUE(Preamble);
+  EXPECT_TRUE(Preamble->RequiredModules);
+  
+  auto Result = signatureHelp(getFullPath("Use.cpp"), Test.point(),
+                              *Preamble.get(), Use, MarkupKind::PlainText);
+  EXPECT_FALSE(Result.signatures.empty());
+  EXPECT_EQ(Result.signatures[0].label, "printA(int a) -> void");
+  EXPECT_EQ(Result.signatures[0].parameters[0].labelString, "int a");
+}
+
 } // namespace
 } // namespace clang::clangd
 

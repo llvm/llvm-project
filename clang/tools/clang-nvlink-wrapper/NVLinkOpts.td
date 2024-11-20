@@ -47,9 +47,6 @@ def arch : Separate<["--", "-"], "arch">,
 def : Joined<["--", "-"], "plugin-opt=mcpu=">,
   Flags<[HelpHidden, WrapperOnlyOption]>, Alias<arch>;
 
-def feature : Separate<["--", "-"], "feature">, Flags<[WrapperOnlyOption]>,
-  HelpText<"Specify the '+ptx' freature to use for LTO.">;
-
 def g : Flag<["-"], "g">, HelpText<"Specify that this was a debug compile.">;
 def debug : Flag<["--"], "debug">, Alias<g>;
 

@@ -154,6 +154,7 @@ on support follow.
      ``Za64rs``        Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zaamo``         Assembly Support
      ``Zabha``         Supported
+     ``Zacas``         Supported (`See note <#riscv-zacas-note>`__)
      ``Zalrsc``        Assembly Support
      ``Zama16b``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zawrs``         Assembly Support
@@ -287,6 +288,11 @@ Supported
 ``Za128rs``, ``Za64rs``, ``Zama16b``, ``Zic64b``, ``Ziccamoa``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
   These extensions are defined as part of the `RISC-V Profiles specification <https://github.com/riscv/riscv-profiles/releases/tag/v1.0>`__.  They do not introduce any new features themselves, but instead describe existing hardware features.
 
+.. _riscv-zacas-note:
+
+``Zacas``
+  The compiler will not generate amocas.d on RV32 or amocas.q on RV64 due to ABI compatibilty. These can only be used in the assembler.
+
 Atomics ABIs
 ============
 
@@ -303,9 +309,6 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 ``experimental-ssnpm``, ``experimental-smnpm``, ``experimental-smmpm``, ``experimental-sspm``, ``experimental-supm``
   LLVM implements the `v1.0.0-rc2 specification <https://github.com/riscv/riscv-j-extension/releases/tag/pointer-masking-v1.0.0-rc2>`__.
-
-``experimental-zacas``
-  LLVM implements the `1.0 release specification <https://github.com/riscvarchive/riscv-zacas/releases/tag/v1.0>`__. amocas.w will be used for i32 cmpxchg. amocas.d will be used i64 cmpxchg on RV64. The compiler will not generate amocas.d on RV32 or amocas.q on RV64 due to ABI compatibilty. These can only be used in the assembler. The extension will be left as experimental until `an ABI issue <https://github.com/riscv-non-isa/riscv-elf-psabi-doc/issues/444>`__ is resolved.
 
 ``experimental-zalasr``
   LLVM implements the `0.0.5 draft specification <https://github.com/mehnadnerd/riscv-zalasr>`__.
@@ -422,6 +425,20 @@ from `clang`, you must add `-menable-experimental-extensions` to the command
 line.  This currently applies to the following extensions:
 
 No extensions have experimental intrinsics.
+
+Long (>32-bit) Instruction Support
+==================================
+
+RISC-V is a variable-length ISA, but the standard currently only defines 16- and 32-bit instructions. The specification describes longer instruction encodings, but these are not ratified.
+
+The LLVM disassembler, `llvm-objdump`, does use the longer instruction encodings described in the specification to guess the instruction length (up to 176 bits) and will group the disassembly view of encoding bytes correspondingly.
+
+The LLVM integrated assembler for RISC-V supports two different kinds of ``.insn`` directive, for assembling instructions that LLVM does not yet support:
+
+* ``.insn type, args*`` which takes a known instruction type, and a list of fields. You are strongly recommended to use this variant of the directive if your instruction fits an existing instruction type.
+* ``.insn [ length , ] encoding`` which takes an (optional) explicit length (in bytes) and a raw encoding for the instruction. When given an explicit length, this variant can encode instructions up to 64 bits long. The encoding part of the directive must be given all bits for the instruction, none are filled in for the user. When used without the optional length, this variant of the directive will use the LSBs of the raw encoding to work out if an instruction is 16 or 32 bits long. LLVM does not infer that an instruction might be longer than 32 bits - in this case, the user must give the length explicitly.
+
+It is strongly recommended to use the ``.insn`` directive for assembling unsupported instructions instead of ``.word`` or ``.hword``, because it will produce the correct mapping symbols to mark the word as an instruction, not data.
 
 Global Pointer (GP) Relaxation and the Small Data Limit
 =======================================================

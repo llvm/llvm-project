@@ -36,7 +36,7 @@ using namespace mlir;
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 
 template <typename OpTy>
-static void populateOpPatterns(LLVMTypeConverter &converter,
+static void populateOpPatterns(const LLVMTypeConverter &converter,
                                RewritePatternSet &patterns, StringRef f32Func,
                                StringRef f64Func, StringRef f16Func,
                                StringRef f32ApproxFunc = "") {
@@ -45,8 +45,8 @@ static void populateOpPatterns(LLVMTypeConverter &converter,
                                            f32ApproxFunc, f16Func);
 }
 
-void mlir::populateMathToROCDLConversionPatterns(LLVMTypeConverter &converter,
-                                                 RewritePatternSet &patterns) {
+void mlir::populateMathToROCDLConversionPatterns(
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   // Handled by mathToLLVM: math::AbsIOp
   // Handled by mathToLLVM: math::AbsFOp
   // Handled by mathToLLVM: math::CopySignOp

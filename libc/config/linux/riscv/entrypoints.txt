@@ -249,6 +249,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.munlock
     libc.src.sys.mman.munlockall
     libc.src.sys.mman.munmap
+    libc.src.sys.mman.remap_file_pages
     libc.src.sys.mman.posix_madvise
     libc.src.sys.mman.shm_open
     libc.src.sys.mman.shm_unlink
@@ -345,6 +346,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     # wchar.h entrypoints
     libc.src.wchar.wctob
 )
+
+if(LLVM_LIBC_INCLUDE_SCUDO)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # malloc.h external entrypoints
+    libc.src.stdlib.mallopt
+  )
+endif()
 
 set(TARGET_LIBM_ENTRYPOINTS
     # fenv.h entrypoints
@@ -479,9 +487,15 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ilogb
     libc.src.math.ilogbf
     libc.src.math.ilogbl
+    libc.src.math.iscanonical
+    libc.src.math.iscanonicalf
+    libc.src.math.iscanonicall
     libc.src.math.isnan
     libc.src.math.isnanf
     libc.src.math.isnanl
+    libc.src.math.issignaling
+    libc.src.math.issignalingf
+    libc.src.math.issignalingl
     libc.src.math.ldexp
     libc.src.math.ldexpf
     libc.src.math.ldexpl
@@ -627,6 +641,8 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.fsubf128
     libc.src.math.getpayloadf128
     libc.src.math.ilogbf128
+    libc.src.math.iscanonicalf128
+    libc.src.math.issignalingf128
     libc.src.math.ldexpf128
     libc.src.math.llogbf128
     libc.src.math.llrintf128

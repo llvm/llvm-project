@@ -226,8 +226,8 @@ void OpenMPCounterVisitor::Post(const OmpDependenceType::Type &c) {
   clauseDetails +=
       "type=" + std::string{OmpDependenceType::EnumToString(c)} + ";";
 }
-void OpenMPCounterVisitor::Post(const OmpMapType::Type &c) {
-  clauseDetails += "type=" + std::string{OmpMapType::EnumToString(c)} + ";";
+void OpenMPCounterVisitor::Post(const OmpMapClause::Type &c) {
+  clauseDetails += "type=" + std::string{OmpMapClause::EnumToString(c)} + ";";
 }
 void OpenMPCounterVisitor::Post(const OmpScheduleClause::ScheduleType &c) {
   clauseDetails +=

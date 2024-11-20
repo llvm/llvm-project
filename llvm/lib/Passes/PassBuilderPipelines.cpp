@@ -300,8 +300,6 @@ extern cl::opt<std::string> UseCtxProfile;
 
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
-
-extern cl::opt<bool> EnableInferAlignmentPass;
 } // namespace llvm
 
 PipelineTuningOptions::PipelineTuningOptions() {
@@ -1250,8 +1248,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
   FPM.addPass(LoopVectorizePass(
       LoopVectorizeOptions(!PTO.LoopInterleaving, !PTO.LoopVectorization)));
 
-  if (EnableInferAlignmentPass)
-    FPM.addPass(InferAlignmentPass());
+  FPM.addPass(InferAlignmentPass());
   if (IsFullLTO) {
     // The vectorizer may have significantly shortened a loop body; unroll
     // again. Unroll small loops to hide loop backedge latency and saturate any
@@ -1369,8 +1366,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     FPM.addPass(SROAPass(SROAOptions::PreserveCFG));
   }
 
-  if (EnableInferAlignmentPass)
-    FPM.addPass(InferAlignmentPass());
+  FPM.addPass(InferAlignmentPass());
   FPM.addPass(InstCombinePass());
 
   // This is needed for two reasons:
@@ -1714,7 +1710,8 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     // For ThinLTO we must apply the context disambiguation decisions early, to
     // ensure we can correctly match the callsites to summary data.
     if (EnableMemProfContextDisambiguation)
-      MPM.addPass(MemProfContextDisambiguation(ImportSummary));
+      MPM.addPass(MemProfContextDisambiguation(
+          ImportSummary, PGOOpt && PGOOpt->Action == PGOOptions::SampleUse));
 
     // These passes import type identifier resolutions for whole-program
     // devirtualization and CFI. They must run early because other passes may
@@ -1927,7 +1924,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // amount of additional cloning required to distinguish the allocation
   // contexts.
   if (EnableMemProfContextDisambiguation)
-    MPM.addPass(MemProfContextDisambiguation());
+    MPM.addPass(MemProfContextDisambiguation(
+        /*Summary=*/nullptr,
+        PGOOpt && PGOOpt->Action == PGOOptions::SampleUse));
 
   // Optimize globals again after we ran the inliner.
   MPM.addPass(GlobalOptPass());

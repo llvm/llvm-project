@@ -1422,8 +1422,12 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
   // the implicit object parameter are of the same type.
 
   auto NormalizeQualifiers = [&](const CXXMethodDecl *M, Qualifiers Q) {
-    if (M->isExplicitObjectMemberFunction())
+    if (M->isExplicitObjectMemberFunction()) {
+      auto ThisType = M->getFunctionObjectParameterReferenceType();
+      if (ThisType.isConstQualified())
+        Q.removeConst();
       return Q;
+    }
 
     // We do not allow overloading based off of '__restrict'.
     Q.removeRestrict();
@@ -1439,14 +1443,23 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
     return Q;
   };
 
-  auto CompareType = [&](QualType Base, QualType D) {
-    auto BS = Base.getNonReferenceType().getCanonicalType().split();
+  auto AreQualifiersEqual = [&](SplitQualType BS, SplitQualType DS) {
     BS.Quals = NormalizeQualifiers(OldMethod, BS.Quals);
-
-    auto DS = D.getNonReferenceType().getCanonicalType().split();
     DS.Quals = NormalizeQualifiers(NewMethod, DS.Quals);
 
-    if (BS.Quals != DS.Quals)
+    if (OldMethod->isExplicitObjectMemberFunction()) {
+      BS.Quals.removeVolatile();
+      DS.Quals.removeVolatile();
+    }
+
+    return BS.Quals == DS.Quals;
+  };
+
+  auto CompareType = [&](QualType Base, QualType D) {
+    auto BS = Base.getNonReferenceType().getCanonicalType().split();
+    auto DS = D.getNonReferenceType().getCanonicalType().split();
+
+    if (!AreQualifiersEqual(BS, DS))
       return false;
 
     if (OldMethod->isImplicitObjectMemberFunction() &&
@@ -1783,6 +1796,23 @@ TryImplicitConversion(Sema &S, Expr *From, QualType ToType,
       ICS.Standard.Second = ICK_Derived_To_Base;
 
     return ICS;
+  }
+
+  if (S.getLangOpts().HLSL && ToType->isHLSLAttributedResourceType() &&
+      FromType->isHLSLAttributedResourceType()) {
+    auto *ToResType = cast<HLSLAttributedResourceType>(ToType);
+    auto *FromResType = cast<HLSLAttributedResourceType>(FromType);
+    if (S.Context.hasSameUnqualifiedType(ToResType->getWrappedType(),
+                                         FromResType->getWrappedType()) &&
+        S.Context.hasSameUnqualifiedType(ToResType->getContainedType(),
+                                         FromResType->getContainedType()) &&
+        ToResType->getAttrs() == FromResType->getAttrs()) {
+      ICS.setStandard();
+      ICS.Standard.setAsIdentityConversion();
+      ICS.Standard.setFromType(FromType);
+      ICS.Standard.setAllToTypes(ToType);
+      return ICS;
+    }
   }
 
   return TryUserDefinedConversion(S, From, ToType, SuppressUserConversions,
@@ -2232,16 +2262,21 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // just strip the qualifiers because they don't matter.
     FromType = FromType.getUnqualifiedType();
   } else if (S.getLangOpts().HLSL && FromType->isConstantArrayType() &&
-             ToType->isArrayParameterType()) {
+             ToType->isConstantArrayType()) {
     // HLSL constant array parameters do not decay, so if the argument is a
     // constant array and the parameter is an ArrayParameterType we have special
     // handling here.
-    FromType = S.Context.getArrayParameterType(FromType);
+    if (ToType->isArrayParameterType()) {
+      FromType = S.Context.getArrayParameterType(FromType);
+      SCS.First = ICK_HLSL_Array_RValue;
+    } else {
+      SCS.First = ICK_Identity;
+    }
+
     if (S.Context.getCanonicalType(FromType) !=
         S.Context.getCanonicalType(ToType))
       return false;
 
-    SCS.First = ICK_HLSL_Array_RValue;
     SCS.setAllToTypes(ToType);
     return true;
   } else if (FromType->isArrayType()) {
@@ -7300,10 +7335,8 @@ static bool diagnoseDiagnoseIfAttrsWith(Sema &S, const NamedDecl *ND,
     return false;
 
   auto WarningBegin = std::stable_partition(
-      Attrs.begin(), Attrs.end(), [](const DiagnoseIfAttr *DIA) {
-        return DIA->getDefaultSeverity() == DiagnoseIfAttr::DS_error &&
-               DIA->getWarningGroup().empty();
-      });
+      Attrs.begin(), Attrs.end(),
+      [](const DiagnoseIfAttr *DIA) { return DIA->isError(); });
 
   // Note that diagnose_if attributes are late-parsed, so they appear in the
   // correct order (unlike enable_if attributes).
@@ -7317,32 +7350,11 @@ static bool diagnoseDiagnoseIfAttrsWith(Sema &S, const NamedDecl *ND,
     return true;
   }
 
-  auto ToSeverity = [](DiagnoseIfAttr::DefaultSeverity Sev) {
-    switch (Sev) {
-    case DiagnoseIfAttr::DS_warning:
-      return diag::Severity::Warning;
-    case DiagnoseIfAttr::DS_error:
-      return diag::Severity::Error;
-    }
-    llvm_unreachable("Fully covered switch above!");
-  };
-
   for (const auto *DIA : llvm::make_range(WarningBegin, Attrs.end()))
     if (IsSuccessful(DIA)) {
-      if (DIA->getWarningGroup().empty() &&
-          DIA->getDefaultSeverity() == DiagnoseIfAttr::DS_warning) {
-        S.Diag(Loc, diag::warn_diagnose_if_succeeded) << DIA->getMessage();
-        S.Diag(DIA->getLocation(), diag::note_from_diagnose_if)
-            << DIA->getParent() << DIA->getCond()->getSourceRange();
-      } else {
-        auto DiagGroup = S.Diags.getDiagnosticIDs()->getGroupForWarningOption(
-            DIA->getWarningGroup());
-        assert(DiagGroup);
-        auto DiagID = S.Diags.getDiagnosticIDs()->getCustomDiagID(
-            {ToSeverity(DIA->getDefaultSeverity()), "%0",
-             DiagnosticIDs::CLASS_WARNING, false, false, *DiagGroup});
-        S.Diag(Loc, DiagID) << DIA->getMessage();
-      }
+      S.Diag(Loc, diag::warn_diagnose_if_succeeded) << DIA->getMessage();
+      S.Diag(DIA->getLocation(), diag::note_from_diagnose_if)
+          << DIA->getParent() << DIA->getCond()->getSourceRange();
     }
 
   return false;

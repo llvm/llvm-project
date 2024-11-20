@@ -558,6 +558,68 @@ define i64 @cttz_i64(i64 %a) nounwind {
   ret i64 %1
 }
 
+define signext i32 @sexti1_i32(i32 signext %a) nounwind {
+; RV64I-LABEL: sexti1_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 63
+; RV64I-NEXT:    srai a0, a0, 63
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBB-LABEL: sexti1_i32:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    th.ext a0, a0, 0, 0
+; RV64XTHEADBB-NEXT:    ret
+  %shl = shl i32 %a, 31
+  %shr = ashr exact i32 %shl, 31
+  ret i32 %shr
+}
+
+define signext i32 @sexti1_i32_2(i1 %a) nounwind {
+; RV64I-LABEL: sexti1_i32_2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 63
+; RV64I-NEXT:    srai a0, a0, 63
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBB-LABEL: sexti1_i32_2:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    th.ext a0, a0, 0, 0
+; RV64XTHEADBB-NEXT:    ret
+  %sext = sext i1 %a to i32
+  ret i32 %sext
+}
+
+define i64 @sexti1_i64(i64 %a) nounwind {
+; RV64I-LABEL: sexti1_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 63
+; RV64I-NEXT:    srai a0, a0, 63
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBB-LABEL: sexti1_i64:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    th.ext a0, a0, 0, 0
+; RV64XTHEADBB-NEXT:    ret
+  %shl = shl i64 %a, 63
+  %shr = ashr exact i64 %shl, 63
+  ret i64 %shr
+}
+
+define i64 @sexti1_i64_2(i1 %a) nounwind {
+; RV64I-LABEL: sexti1_i64_2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 63
+; RV64I-NEXT:    srai a0, a0, 63
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBB-LABEL: sexti1_i64_2:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    th.ext a0, a0, 0, 0
+; RV64XTHEADBB-NEXT:    ret
+  %sext = sext i1 %a to i64
+  ret i64 %sext
+}
+
 define signext i32 @sextb_i32(i32 signext %a) nounwind {
 ; RV64I-LABEL: sextb_i32:
 ; RV64I:       # %bb.0:

@@ -20,8 +20,10 @@ static void BM_format_string(benchmark::State& state) {
   size_t size = state.range(0);
   std::basic_string<CharT> str(size, CharT('*'));
 
-  while (state.KeepRunningBatch(str.size()))
-    benchmark::DoNotOptimize(std::format(CSTR("{}"), str));
+  while (state.KeepRunningBatch(str.size())) {
+    std::basic_string<CharT> s = std::format(CSTR("{}"), str);
+    benchmark::DoNotOptimize(s);
+  }
 
   state.SetBytesProcessed(state.iterations() * size * sizeof(CharT));
 }

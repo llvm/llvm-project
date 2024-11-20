@@ -85,7 +85,7 @@ private:
 /// Populates the patterns needed to drive the conversion process for
 /// decomposing call graph types with the given `ValueDecomposer`.
 void populateDecomposeCallGraphTypesPatterns(MLIRContext *context,
-                                             TypeConverter &typeConverter,
+                                             const TypeConverter &typeConverter,
                                              ValueDecomposer &decomposer,
                                              RewritePatternSet &patterns);
 

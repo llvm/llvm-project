@@ -167,10 +167,36 @@ static VectorTypeModifier getTupleVTM(unsigned NF) {
       static_cast<uint8_t>(VectorTypeModifier::Tuple2) + (NF - 2));
 }
 
+static unsigned getIndexedLoadStorePtrIdx(const RVVIntrinsic *RVVI) {
+  // We need a special rule for segment load/store since the data width is not
+  // encoded in the intrinsic name itself.
+  const StringRef IRName = RVVI->getIRName();
+  constexpr unsigned RVV_VTA = 0x1;
+  constexpr unsigned RVV_VMA = 0x2;
+
+  if (IRName.starts_with("vloxseg") || IRName.starts_with("vluxseg")) {
+    bool NoPassthru =
+        (RVVI->isMasked() && (RVVI->getPolicyAttrsBits() & RVV_VTA) &&
+         (RVVI->getPolicyAttrsBits() & RVV_VMA)) ||
+        (!RVVI->isMasked() && (RVVI->getPolicyAttrsBits() & RVV_VTA));
+    return RVVI->isMasked() ? NoPassthru ? 1 : 2 : NoPassthru ? 0 : 1;
+  }
+  if (IRName.starts_with("vsoxseg") || IRName.starts_with("vsuxseg"))
+    return RVVI->isMasked() ? 1 : 0;
+
+  return (unsigned)-1;
+}
+
 // This function is used to get the log2SEW of each segment load/store, this
 // prevent to add a member to RVVIntrinsic.
 static unsigned getSegInstLog2SEW(StringRef InstName) {
   // clang-format off
+  // We need a special rule for indexed segment load/store since the data width
+  // is not encoded in the intrinsic name itself.
+  if (InstName.starts_with("vloxseg") || InstName.starts_with("vluxseg") ||
+      InstName.starts_with("vsoxseg") || InstName.starts_with("vsuxseg"))
+    return (unsigned)-1;
+
 #define KEY_VAL(KEY, VAL) {#KEY, VAL}
 #define KEY_VAL_ALL_W_POLICY(KEY, VAL) \
   KEY_VAL(KEY, VAL),                   \
@@ -179,20 +205,20 @@ static unsigned getSegInstLog2SEW(StringRef InstName) {
   KEY_VAL(KEY ## _tumu, VAL),          \
   KEY_VAL(KEY ## _mu, VAL)
 
-#define KEY_VAL_ALL_NF_BASE(MACRO_NAME, NAME, SEW, LOG2SEW, SUFFIX) \
-  MACRO_NAME(NAME ## 2e ## SEW, LOG2SEW), \
-  MACRO_NAME(NAME ## 3e ## SEW, LOG2SEW), \
-  MACRO_NAME(NAME ## 4e ## SEW, LOG2SEW), \
-  MACRO_NAME(NAME ## 5e ## SEW, LOG2SEW), \
-  MACRO_NAME(NAME ## 6e ## SEW, LOG2SEW), \
-  MACRO_NAME(NAME ## 7e ## SEW, LOG2SEW), \
-  MACRO_NAME(NAME ## 8e ## SEW, LOG2SEW)
+#define KEY_VAL_ALL_NF_BASE(MACRO_NAME, NAME, SEW, LOG2SEW, FF) \
+  MACRO_NAME(NAME ## 2e ## SEW ## FF, LOG2SEW), \
+  MACRO_NAME(NAME ## 3e ## SEW ## FF, LOG2SEW), \
+  MACRO_NAME(NAME ## 4e ## SEW ## FF, LOG2SEW), \
+  MACRO_NAME(NAME ## 5e ## SEW ## FF, LOG2SEW), \
+  MACRO_NAME(NAME ## 6e ## SEW ## FF, LOG2SEW), \
+  MACRO_NAME(NAME ## 7e ## SEW ## FF, LOG2SEW), \
+  MACRO_NAME(NAME ## 8e ## SEW ## FF, LOG2SEW)
 
 #define KEY_VAL_ALL_NF(NAME, SEW, LOG2SEW) \
   KEY_VAL_ALL_NF_BASE(KEY_VAL_ALL_W_POLICY, NAME, SEW, LOG2SEW,)
 
 #define KEY_VAL_FF_ALL_NF(NAME, SEW, LOG2SEW) \
-  KEY_VAL_ALL_NF_BASE(KEY_VAL_ALL_W_POLICY, NAME, SEW, LOG2SEW, _FF)
+  KEY_VAL_ALL_NF_BASE(KEY_VAL_ALL_W_POLICY, NAME, SEW, LOG2SEW, ff)
 
 #define KEY_VAL_ALL_NF_SEW_BASE(MACRO_NAME, NAME) \
   MACRO_NAME(NAME, 8, 3),  \
@@ -208,11 +234,9 @@ static unsigned getSegInstLog2SEW(StringRef InstName) {
   // clang-format on
 
   static StringMap<unsigned> SegInsts = {
-      KEY_VAL_ALL_NF_SEW(vlseg),   KEY_VAL_FF_ALL_NF_SEW(vlseg),
-      KEY_VAL_ALL_NF_SEW(vlsseg),  KEY_VAL_ALL_NF_SEW(vloxseg),
-      KEY_VAL_ALL_NF_SEW(vluxseg), KEY_VAL_ALL_NF_SEW(vsseg),
-      KEY_VAL_ALL_NF_SEW(vssseg),  KEY_VAL_ALL_NF_SEW(vsoxseg),
-      KEY_VAL_ALL_NF_SEW(vsuxseg)};
+      KEY_VAL_ALL_NF_SEW(vlseg), KEY_VAL_FF_ALL_NF_SEW(vlseg),
+      KEY_VAL_ALL_NF_SEW(vlsseg), KEY_VAL_ALL_NF_SEW(vsseg),
+      KEY_VAL_ALL_NF_SEW(vssseg)};
 
 #undef KEY_VAL_ALL_NF_SEW
 #undef KEY_VAL_ALL_NF
@@ -231,6 +255,14 @@ void emitCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
 
   if (RVVI->hasManualCodegen()) {
     OS << "IsMasked = " << (RVVI->isMasked() ? "true" : "false") << ";\n";
+
+    // Skip the non-indexed load/store and compatible header load/store.
+    OS << "if (SegInstSEW == (unsigned)-1) {\n";
+    OS << "  auto PointeeType = E->getArg(" << getIndexedLoadStorePtrIdx(RVVI)
+       << "      )->getType()->getPointeeType();\n";
+    OS << "  SegInstSEW = "
+          "      llvm::Log2_64(getContext().getTypeSize(PointeeType));\n}\n";
+
     OS << RVVI->getManualCodegen();
     OS << "break;\n";
     return;

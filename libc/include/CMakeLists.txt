@@ -147,6 +147,16 @@ add_header_macro(
 )
 
 add_header_macro(
+  malloc
+  ../libc/newhdrgen/yaml/malloc.yaml
+  malloc.h.def
+  malloc.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.malloc_macros
+)
+
+add_header_macro(
   math
   ../libc/newhdrgen/yaml/math.yaml
   math.h.def
@@ -190,6 +200,16 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.assert_macros
+)
+
+add_header_macro(
+  complex
+  ../libc/newhdrgen/yaml/complex.yaml
+  complex.h.def
+  complex.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.complex_macros
 )
 
 add_header_macro(

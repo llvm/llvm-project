@@ -86,15 +86,13 @@ static inline bool checkIfSupported(GlobalVariable &G) {
     auto U = std::move(Tmp.back());
     Tmp.pop_back();
 
-    if (Visited.contains(U))
+    if (!Visited.insert(U).second)
       continue;
 
     if (isa<Instruction>(U))
       I = cast<Instruction>(U);
     else
       Tmp.insert(Tmp.end(), U->user_begin(), U->user_end());
-
-    Visited.insert(U);
   } while (!I && !Tmp.empty());
 
   assert(I && "thread_local global should have at least one non-constant use.");

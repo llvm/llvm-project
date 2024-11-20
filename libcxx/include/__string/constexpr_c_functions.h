@@ -43,7 +43,7 @@ inline const bool __is_char_type = false;
 template <>
 inline const bool __is_char_type<char> = true;
 
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#if _LIBCPP_HAS_CHAR8_T
 template <>
 inline const bool __is_char_type<char8_t> = true;
 #endif

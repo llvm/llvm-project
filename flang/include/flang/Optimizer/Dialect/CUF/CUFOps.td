@@ -18,6 +18,7 @@ include "flang/Optimizer/Dialect/CUF/CUFDialect.td"
 include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
+include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/IR/BuiltinAttributes.td"
 
@@ -286,6 +287,40 @@ def cuf_KernelOp : cuf_Op<"kernel", [AttrSizedOperandSegments,
   }];
 
   let hasVerifier = 1;
+}
+
+def cuf_RegisterModuleOp : cuf_Op<"register_module", []> {
+  let summary = "Register a CUDA module";
+
+  let arguments = (ins
+    SymbolRefAttr:$name
+  );
+
+  let assemblyFormat = [{
+    $name attr-dict `->` type($modulePtr)
+  }];
+
+  let results = (outs LLVM_AnyPointer:$modulePtr);
+}
+
+def cuf_RegisterKernelOp : cuf_Op<"register_kernel", []> {
+  let summary = "Register a CUDA kernel";
+
+  let arguments = (ins
+    SymbolRefAttr:$name,
+    LLVM_AnyPointer:$modulePtr
+  );
+
+  let assemblyFormat = [{
+    $name `(` $modulePtr `:` type($modulePtr) `)`attr-dict
+  }];
+
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    mlir::StringAttr getKernelName();
+    mlir::StringAttr getKernelModuleName();
+  }];
 }
 
 #endif // FORTRAN_DIALECT_CUF_CUF_OPS

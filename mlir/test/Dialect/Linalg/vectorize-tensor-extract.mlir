@@ -38,6 +38,33 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+#map = affine_map<() -> ()>
+func.func @negative_no_loops(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<f32> {
+  %1 = linalg.generic {
+    indexing_maps = [#map],
+    iterator_types = []
+  } outs(%arg1 : tensor<f32>) {
+  ^bb0(%arg4: f32):
+    %2 = tensor.extract %arg0[] : tensor<f32>
+    linalg.yield %2 : f32
+  } -> tensor<f32>
+  return %1 : tensor<f32>
+}
+// CHECK-LABEL: func.func @negative_no_loops
+// CHECK: tensor.extract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+
+// -----
+
 #map = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 func.func @vectorize_nd_tensor_extract_constant_idx(%arg0: tensor<3x3xf32>, %arg2: tensor<1x1x3xf32>) -> tensor<1x1x3xf32> {
   %c0 = arith.constant 1 : index

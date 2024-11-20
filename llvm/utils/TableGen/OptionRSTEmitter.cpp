@@ -18,7 +18,6 @@ using namespace llvm;
 /// and emits a RST man page.
 static void EmitOptionRST(const RecordKeeper &Records, raw_ostream &OS) {
   llvm::StringMap<std::vector<const Record *>> OptionsByGroup;
-  std::vector<Record *> OptionsWithoutGroup;
 
   // Get the options.
   std::vector<const Record *> Opts = Records.getAllDerivedDefinitions("Option");

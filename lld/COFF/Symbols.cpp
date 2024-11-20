@@ -112,12 +112,12 @@ DefinedImportThunk::DefinedImportThunk(COFFLinkerContext &ctx, StringRef name,
                                        ImportThunkChunk *chunk)
     : Defined(DefinedImportThunkKind, name), wrappedSym(s), data(chunk) {}
 
-Defined *Undefined::getWeakAlias() {
+Symbol *Undefined::getWeakAlias() {
   // A weak alias may be a weak alias to another symbol, so check recursively.
   DenseSet<Symbol *> weakChain;
   for (Symbol *a = weakAlias; a; a = cast<Undefined>(a)->weakAlias) {
-    if (auto *d = dyn_cast<Defined>(a))
-      return d;
+    if (!isa<Undefined>(a))
+      return a;
     if (!weakChain.insert(a).second)
       break; // We have a cycle.
   }
@@ -125,7 +125,7 @@ Defined *Undefined::getWeakAlias() {
 }
 
 bool Undefined::resolveWeakAlias() {
-  Defined *d = getWeakAlias();
+  Defined *d = getDefinedWeakAlias();
   if (!d)
     return false;
 

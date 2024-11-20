@@ -982,7 +982,7 @@ protected:
   virtual int do_max_length() const _NOEXCEPT;
 };
 
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#if _LIBCPP_HAS_CHAR8_T
 
 // template <> class codecvt<char16_t, char8_t, mbstate_t> // C++20
 
@@ -1145,7 +1145,7 @@ protected:
   virtual int do_max_length() const _NOEXCEPT;
 };
 
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#if _LIBCPP_HAS_CHAR8_T
 
 // template <> class codecvt<char32_t, char8_t, mbstate_t> // C++20
 
@@ -1255,7 +1255,7 @@ extern template class _LIBCPP_DEPRECATED_IN_CXX20
 _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char, mbstate_t>; // deprecated in C++20
 extern template class _LIBCPP_DEPRECATED_IN_CXX20
 _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char32_t, char, mbstate_t>; // deprecated in C++20
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#if _LIBCPP_HAS_CHAR8_T
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char8_t, mbstate_t>; // C++20
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char32_t, char8_t, mbstate_t>; // C++20
 #endif

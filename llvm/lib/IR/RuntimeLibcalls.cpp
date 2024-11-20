@@ -49,6 +49,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::ASIN_F128, "asinf128");
     setLibcallName(RTLIB::ACOS_F128, "acosf128");
     setLibcallName(RTLIB::ATAN_F128, "atanf128");
+    setLibcallName(RTLIB::ATAN2_F128, "atan2f128");
     setLibcallName(RTLIB::SINH_F128, "sinhf128");
     setLibcallName(RTLIB::COSH_F128, "coshf128");
     setLibcallName(RTLIB::TANH_F128, "tanhf128");

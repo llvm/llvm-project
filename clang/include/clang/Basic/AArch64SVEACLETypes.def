@@ -115,6 +115,9 @@ SVE_VECTOR_TYPE_FLOAT("__SVFloat64_t", "__SVFloat64_t", SveFloat64, SveFloat64Ty
 
 SVE_VECTOR_TYPE_BFLOAT("__SVBfloat16_t", "__SVBfloat16_t", SveBFloat16, SveBFloat16Ty, 8, 16, 1)
 
+// This is a 8 bits opaque type.
+SVE_VECTOR_TYPE_INT("__SVMfloat8_t", "__SVMfloat8_t",  SveMFloat8, SveMFloat8Ty, 16, 8, 1, false)
+
 //
 // x2
 //
@@ -134,6 +137,8 @@ SVE_VECTOR_TYPE_FLOAT("__clang_svfloat32x2_t", "svfloat32x2_t", SveFloat32x2, Sv
 SVE_VECTOR_TYPE_FLOAT("__clang_svfloat64x2_t", "svfloat64x2_t", SveFloat64x2, SveFloat64x2Ty, 2, 64, 2)
 
 SVE_VECTOR_TYPE_BFLOAT("__clang_svbfloat16x2_t", "svbfloat16x2_t", SveBFloat16x2, SveBFloat16x2Ty, 8, 16, 2)
+
+SVE_VECTOR_TYPE_INT("__clang_svmfloat8x2_t", "svmfloat8x2_t", SveMFloat8x2, SveMFloat8x2Ty, 16, 8, 2, false)
 
 //
 // x3
@@ -155,6 +160,8 @@ SVE_VECTOR_TYPE_FLOAT("__clang_svfloat64x3_t", "svfloat64x3_t", SveFloat64x3, Sv
 
 SVE_VECTOR_TYPE_BFLOAT("__clang_svbfloat16x3_t", "svbfloat16x3_t", SveBFloat16x3, SveBFloat16x3Ty, 8, 16, 3)
 
+SVE_VECTOR_TYPE_INT("__clang_svmfloat8x3_t", "svmfloat8x3_t", SveMFloat8x3, SveMFloat8x3Ty, 16, 8, 3, false)
+
 //
 // x4
 //
@@ -174,6 +181,8 @@ SVE_VECTOR_TYPE_FLOAT("__clang_svfloat32x4_t", "svfloat32x4_t", SveFloat32x4, Sv
 SVE_VECTOR_TYPE_FLOAT("__clang_svfloat64x4_t", "svfloat64x4_t", SveFloat64x4, SveFloat64x4Ty, 2, 64, 4)
 
 SVE_VECTOR_TYPE_BFLOAT("__clang_svbfloat16x4_t", "svbfloat16x4_t", SveBFloat16x4, SveBFloat16x4Ty, 8, 16, 4)
+
+SVE_VECTOR_TYPE_INT("__clang_svmfloat8x4_t", "svmfloat8x4_t", SveMFloat8x4, SveMFloat8x4Ty, 16, 8, 4, false)
 
 SVE_PREDICATE_TYPE_ALL("__SVBool_t", "__SVBool_t", SveBool, SveBoolTy, 16, 1)
 SVE_PREDICATE_TYPE_ALL("__clang_svboolx2_t", "svboolx2_t", SveBoolx2, SveBoolx2Ty, 16, 2)

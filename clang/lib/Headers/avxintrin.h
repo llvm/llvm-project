@@ -66,6 +66,14 @@ typedef __bf16 __m256bh __attribute__((__vector_size__(32), __aligned__(32)));
                  __min_vector_width__(128)))
 #endif
 
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128 constexpr
+#else
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS128
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS
+#endif
+
 /* Arithmetic */
 /// Adds two 256-bit vectors of [4 x double].
 ///
@@ -4331,10 +4339,8 @@ _mm256_set1_epi64x(long long __q)
 /// This intrinsic corresponds to the <c> VXORPS </c> instruction.
 ///
 /// \returns A 256-bit vector of [4 x double] with all elements set to zero.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_setzero_pd(void)
-{
-  return __extension__ (__m256d){ 0.0, 0.0, 0.0, 0.0 };
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_setzero_pd(void) {
+  return __extension__(__m256d){0.0, 0.0, 0.0, 0.0};
 }
 
 /// Constructs a 256-bit floating-point vector of [8 x float] with all
@@ -4345,9 +4351,7 @@ _mm256_setzero_pd(void)
 /// This intrinsic corresponds to the <c> VXORPS </c> instruction.
 ///
 /// \returns A 256-bit vector of [8 x float] with all elements set to zero.
-static __inline __m256 __DEFAULT_FN_ATTRS
-_mm256_setzero_ps(void)
-{
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_setzero_ps(void) {
   return __extension__ (__m256){ 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
 }
 
@@ -4358,9 +4362,8 @@ _mm256_setzero_ps(void)
 /// This intrinsic corresponds to the <c> VXORPS </c> instruction.
 ///
 /// \returns A 256-bit integer vector initialized to zero.
-static __inline __m256i __DEFAULT_FN_ATTRS
-_mm256_setzero_si256(void)
-{
+static __inline __m256i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_setzero_si256(void) {
   return __extension__ (__m256i)(__v4di){ 0, 0, 0, 0 };
 }
 
@@ -5130,6 +5133,8 @@ _mm256_storeu2_m128i(__m128i_u *__addr_hi, __m128i_u *__addr_lo, __m256i __a)
 }
 
 #undef __DEFAULT_FN_ATTRS
+#undef __DEFAULT_FN_ATTRS_CONSTEXPR
 #undef __DEFAULT_FN_ATTRS128
+#undef __DEFAULT_FN_ATTRS128_CONSTEXPR
 
 #endif /* __AVXINTRIN_H */

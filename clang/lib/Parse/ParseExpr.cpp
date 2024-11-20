@@ -3694,7 +3694,7 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
       SawError = true;
       if (FailImmediatelyOnInvalidExpr)
         break;
-      SkipUntil(tok::comma, tok::r_paren, StopBeforeMatch);
+      SkipUntil(tok::comma, tok::r_paren, StopAtSemi | StopBeforeMatch);
     } else {
       Exprs.push_back(Expr.get());
     }

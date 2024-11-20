@@ -198,6 +198,26 @@ TEST(raw_ostreamTest, Indent) {
   EXPECT_EQ(Spaces(10), printToString(Scaled));
   Scaled -= 1;
   EXPECT_EQ(Spaces(8), printToString(Scaled));
+
+  // Operators.
+  Indent = 10;
+  EXPECT_EQ(Spaces(10), printToString(Indent));
+
+  indent Temp = Indent++;
+  EXPECT_EQ(Spaces(11), printToString(Indent));
+  EXPECT_EQ(Spaces(10), printToString(Temp));
+
+  Temp = Indent--;
+  EXPECT_EQ(Spaces(10), printToString(Indent));
+  EXPECT_EQ(Spaces(11), printToString(Temp));
+
+  Temp = ++Indent;
+  EXPECT_EQ(Spaces(11), printToString(Indent));
+  EXPECT_EQ(Spaces(11), printToString(Temp));
+
+  Temp = --Indent;
+  EXPECT_EQ(Spaces(10), printToString(Indent));
+  EXPECT_EQ(Spaces(10), printToString(Temp));
 }
 
 TEST(raw_ostreamTest, FormatHex) {  

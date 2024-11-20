@@ -27,9 +27,8 @@ public:
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;
 
-  bool hasFP(const MachineFunction &MF) const override {
-    return false;
-  }
+protected:
+  bool hasFPImpl(const MachineFunction &MF) const override { return false; }
 };
 
 } // end namespace llvm

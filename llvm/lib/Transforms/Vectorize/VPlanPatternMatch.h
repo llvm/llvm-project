@@ -26,7 +26,7 @@ namespace llvm {
 namespace VPlanPatternMatch {
 
 template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
-  return const_cast<Pattern &>(P).match(V);
+  return P.match(V);
 }
 
 template <typename Pattern> bool match(VPUser *U, const Pattern &P) {
@@ -35,7 +35,7 @@ template <typename Pattern> bool match(VPUser *U, const Pattern &P) {
 }
 
 template <typename Class> struct class_match {
-  template <typename ITy> bool match(ITy *V) { return isa<Class>(V); }
+  template <typename ITy> bool match(ITy *V) const { return isa<Class>(V); }
 };
 
 /// Match an arbitrary VPValue and ignore it.
@@ -46,7 +46,7 @@ template <typename Class> struct bind_ty {
 
   bind_ty(Class *&V) : VR(V) {}
 
-  template <typename ITy> bool match(ITy *V) {
+  template <typename ITy> bool match(ITy *V) const {
     if (auto *CV = dyn_cast<Class>(V)) {
       VR = CV;
       return true;
@@ -63,7 +63,7 @@ template <unsigned BitWidth = 0> struct specific_intval {
 
   specific_intval(APInt V) : Val(std::move(V)) {}
 
-  bool match(VPValue *VPV) {
+  bool match(VPValue *VPV) const {
     if (!VPV->isLiveIn())
       return false;
     Value *V = VPV->getLiveInIRValue();
@@ -94,7 +94,7 @@ template <typename LTy, typename RTy> struct match_combine_or {
 
   match_combine_or(const LTy &Left, const RTy &Right) : L(Left), R(Right) {}
 
-  template <typename ITy> bool match(ITy *V) {
+  template <typename ITy> bool match(ITy *V) const {
     if (L.match(V))
       return true;
     if (R.match(V))
@@ -139,16 +139,16 @@ struct UnaryRecipe_match {
 
   UnaryRecipe_match(Op0_t Op0) : Op0(Op0) {}
 
-  bool match(const VPValue *V) {
+  bool match(const VPValue *V) const {
     auto *DefR = V->getDefiningRecipe();
     return DefR && match(DefR);
   }
 
-  bool match(const VPSingleDefRecipe *R) {
+  bool match(const VPSingleDefRecipe *R) const {
     return match(static_cast<const VPRecipeBase *>(R));
   }
 
-  bool match(const VPRecipeBase *R) {
+  bool match(const VPRecipeBase *R) const {
     if (!detail::MatchRecipeAndOpcode<Opcode, RecipeTys...>::match(R))
       return false;
     assert(R->getNumOperands() == 1 &&
@@ -174,16 +174,16 @@ struct BinaryRecipe_match {
 
   BinaryRecipe_match(Op0_t Op0, Op1_t Op1) : Op0(Op0), Op1(Op1) {}
 
-  bool match(const VPValue *V) {
+  bool match(const VPValue *V) const {
     auto *DefR = V->getDefiningRecipe();
     return DefR && match(DefR);
   }
 
-  bool match(const VPSingleDefRecipe *R) {
+  bool match(const VPSingleDefRecipe *R) const {
     return match(static_cast<const VPRecipeBase *>(R));
   }
 
-  bool match(const VPRecipeBase *R) {
+  bool match(const VPRecipeBase *R) const {
     if (!detail::MatchRecipeAndOpcode<Opcode, RecipeTys...>::match(R))
       return false;
     assert(R->getNumOperands() == 2 &&
@@ -314,12 +314,14 @@ m_LogicalAnd(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 struct VPCanonicalIVPHI_match {
-  bool match(const VPValue *V) {
+  bool match(const VPValue *V) const {
     auto *DefR = V->getDefiningRecipe();
     return DefR && match(DefR);
   }
 
-  bool match(const VPRecipeBase *R) { return isa<VPCanonicalIVPHIRecipe>(R); }
+  bool match(const VPRecipeBase *R) const {
+    return isa<VPCanonicalIVPHIRecipe>(R);
+  }
 };
 
 inline VPCanonicalIVPHI_match m_CanonicalIV() {
@@ -332,12 +334,12 @@ template <typename Op0_t, typename Op1_t> struct VPScalarIVSteps_match {
 
   VPScalarIVSteps_match(Op0_t Op0, Op1_t Op1) : Op0(Op0), Op1(Op1) {}
 
-  bool match(const VPValue *V) {
+  bool match(const VPValue *V) const {
     auto *DefR = V->getDefiningRecipe();
     return DefR && match(DefR);
   }
 
-  bool match(const VPRecipeBase *R) {
+  bool match(const VPRecipeBase *R) const {
     if (!isa<VPScalarIVStepsRecipe>(R))
       return false;
     assert(R->getNumOperands() == 2 &&

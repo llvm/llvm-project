@@ -32,7 +32,7 @@ using namespace parser::literals;
 class RewriteMutator {
 public:
   RewriteMutator(SemanticsContext &context)
-      : errorOnUnresolvedName_{!context.AnyFatalError()},
+      : context_{context}, errorOnUnresolvedName_{!context.AnyFatalError()},
         messages_{context.messages()} {}
 
   // Default action for a parse tree node is to visit children.
@@ -42,6 +42,7 @@ public:
   void Post(parser::Name &);
   void Post(parser::SpecificationPart &);
   bool Pre(parser::ExecutionPart &);
+  bool Pre(parser::ActionStmt &);
   void Post(parser::ReadStmt &);
   void Post(parser::WriteStmt &);
 
@@ -66,6 +67,7 @@ public:
 private:
   using stmtFuncType =
       parser::Statement<common::Indirection<parser::StmtFunctionStmt>>;
+  SemanticsContext &context_;
   bool errorOnUnresolvedName_{true};
   parser::Messages &messages_;
   std::list<stmtFuncType> stmtFuncsToConvert_;
@@ -127,6 +129,29 @@ bool RewriteMutator::Pre(parser::ExecutionPart &x) {
             parser::ExecutableConstruct{std::move(stmt)}});
   }
   stmtFuncsToConvert_.clear();
+  return true;
+}
+
+// Rewrite PRINT NML -> WRITE(*,NML=NML)
+bool RewriteMutator::Pre(parser::ActionStmt &x) {
+  if (auto *print{std::get_if<common::Indirection<parser::PrintStmt>>(&x.u)};
+      print &&
+      std::get<std::list<parser::OutputItem>>(print->value().t).empty()) {
+    auto &format{std::get<parser::Format>(print->value().t)};
+    if (std::holds_alternative<parser::Expr>(format.u)) {
+      if (auto *name{parser::Unwrap<parser::Name>(format)}; name &&
+          name->symbol && name->symbol->GetUltimate().has<NamelistDetails>() &&
+          context_.IsEnabled(common::LanguageFeature::PrintNamelist)) {
+        context_.Warn(common::LanguageFeature::PrintNamelist, name->source,
+            "nonstandard: namelist in PRINT statement"_port_en_US);
+        std::list<parser::IoControlSpec> controls;
+        controls.emplace_back(std::move(*name));
+        x.u = common::Indirection<parser::WriteStmt>::Make(
+            parser::IoUnit{parser::Star{}}, std::optional<parser::Format>{},
+            std::move(controls), std::list<parser::OutputItem>{});
+      }
+    }
+  }
   return true;
 }
 

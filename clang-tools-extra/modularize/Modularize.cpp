@@ -621,7 +621,6 @@ public:
     std::string Name;
     llvm::raw_string_ostream OS(Name);
     ND->printQualifiedName(OS);
-    OS.flush();
     if (Name.empty())
       return true;
 

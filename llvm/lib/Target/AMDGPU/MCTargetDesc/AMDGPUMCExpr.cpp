@@ -77,7 +77,7 @@ void AMDGPUMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
     OS << "occupancy(";
     break;
   }
-  for (auto It = Args.begin(); It != Args.end(); ++It) {
+  for (const auto *It = Args.begin(); It != Args.end(); ++It) {
     (*It)->print(OS, MAI, /*InParens=*/false);
     if ((It + 1) != Args.end())
       OS << ", ";

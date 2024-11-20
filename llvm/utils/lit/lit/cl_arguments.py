@@ -168,7 +168,7 @@ def parse_args():
     execution_group.add_argument(
         "--resultdb-output",
         type=lit.reports.ResultDBReport,
-        help="Write LuCI ResuldDB compatible JSON to the specified file",
+        help="Write LuCI ResultDB compatible JSON to the specified file",
     )
     execution_group.add_argument(
         "--time-trace-output",

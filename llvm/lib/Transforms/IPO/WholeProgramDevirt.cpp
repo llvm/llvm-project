@@ -851,12 +851,12 @@ void llvm::updateVCallVisibilityInModule(
 void llvm::updatePublicTypeTestCalls(Module &M,
                                      bool WholeProgramVisibilityEnabledInLTO) {
   Function *PublicTypeTestFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::public_type_test));
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
   if (!PublicTypeTestFunc)
     return;
   if (hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO)) {
     Function *TypeTestFunc =
-        Intrinsic::getDeclaration(&M, Intrinsic::type_test);
+        Intrinsic::getOrInsertDeclaration(&M, Intrinsic::type_test);
     for (Use &U : make_early_inc_range(PublicTypeTestFunc->uses())) {
       auto *CI = cast<CallInst>(U.getUser());
       auto *NewCI = CallInst::Create(
@@ -1187,7 +1187,8 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
         Instruction *ThenTerm =
             SplitBlockAndInsertIfThen(Cond, &CB, /*Unreachable=*/false);
         Builder.SetInsertPoint(ThenTerm);
-        Function *TrapFn = Intrinsic::getDeclaration(&M, Intrinsic::debugtrap);
+        Function *TrapFn =
+            Intrinsic::getOrInsertDeclaration(&M, Intrinsic::debugtrap);
         auto *CallTrap = Builder.CreateCall(TrapFn);
         CallTrap->setDebugLoc(CB.getDebugLoc());
       }
@@ -1434,8 +1435,8 @@ void DevirtModule::tryICallBranchFunnel(
   }
 
   BasicBlock *BB = BasicBlock::Create(M.getContext(), "", JT, nullptr);
-  Function *Intr =
-      Intrinsic::getDeclaration(&M, llvm::Intrinsic::icall_branch_funnel, {});
+  Function *Intr = Intrinsic::getOrInsertDeclaration(
+      &M, llvm::Intrinsic::icall_branch_funnel, {});
 
   auto *CI = CallInst::Create(Intr, JTArgs, "", BB);
   CI->setTailCallKind(CallInst::TCK_MustTail);
@@ -2026,7 +2027,8 @@ void DevirtModule::scanTypeTestUsers(
 }
 
 void DevirtModule::scanTypeCheckedLoadUsers(Function *TypeCheckedLoadFunc) {
-  Function *TypeTestFunc = Intrinsic::getDeclaration(&M, Intrinsic::type_test);
+  Function *TypeTestFunc =
+      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::type_test);
 
   for (Use &U : llvm::make_early_inc_range(TypeCheckedLoadFunc->uses())) {
     auto *CI = dyn_cast<CallInst>(U.getUser());
@@ -2245,12 +2247,13 @@ bool DevirtModule::run() {
     return false;
 
   Function *TypeTestFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::type_test));
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
   Function *TypeCheckedLoadFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::type_checked_load));
-  Function *TypeCheckedLoadRelativeFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::type_checked_load_relative));
-  Function *AssumeFunc = M.getFunction(Intrinsic::getName(Intrinsic::assume));
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_checked_load);
+  Function *TypeCheckedLoadRelativeFunc = Intrinsic::getDeclarationIfExists(
+      &M, Intrinsic::type_checked_load_relative);
+  Function *AssumeFunc =
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::assume);
 
   // Normally if there are no users of the devirtualization intrinsics in the
   // module, this pass has nothing to do. But if we are exporting, we also need

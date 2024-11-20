@@ -41,8 +41,6 @@ llvm::StringRef Attributes::getIntExtensionAttrName() const {
 static const llvm::fltSemantics &floatToSemantics(const KindMapping &kindMap,
                                                   mlir::Type type) {
   assert(isa_real(type));
-  if (auto ty = mlir::dyn_cast<fir::RealType>(type))
-    return kindMap.getFloatSemantics(ty.getFKind());
   return mlir::cast<mlir::FloatType>(type).getFloatSemantics();
 }
 
@@ -100,6 +98,11 @@ struct GenericTarget : public CodeGenSpecifics {
   structArgumentType(mlir::Location loc, fir::RecordType,
                      const Marshalling &) const override {
     TODO(loc, "passing VALUE BIND(C) derived type for this target");
+  }
+
+  CodeGenSpecifics::Marshalling
+  structReturnType(mlir::Location loc, fir::RecordType ty) const override {
+    TODO(loc, "returning BIND(C) derived type for this target");
   }
 
   CodeGenSpecifics::Marshalling
@@ -356,7 +359,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
           else
             current = ArgClass::Integer;
         })
-        .template Case<mlir::FloatType, fir::RealType>([&](mlir::Type floatTy) {
+        .template Case<mlir::FloatType>([&](mlir::Type floatTy) {
           const auto *sem = &floatToSemantics(kindMap, floatTy);
           if (sem == &llvm::APFloat::x87DoubleExtended()) {
             Lo = ArgClass::X87;
@@ -368,7 +371,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
             current = ArgClass::SSE;
           }
         })
-        .template Case<fir::ComplexType>([&](fir::ComplexType cmplx) {
+        .template Case<mlir::ComplexType>([&](mlir::ComplexType cmplx) {
           const auto *sem = &floatToSemantics(kindMap, cmplx.getElementType());
           if (sem == &llvm::APFloat::x87DoubleExtended()) {
             current = ArgClass::ComplexX87;
@@ -535,14 +538,24 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
   /// When \p recTy is a one field record type that can be passed
   /// like the field on its own, returns the field type. Returns
   /// a null type otherwise.
-  mlir::Type passAsFieldIfOneFieldStruct(fir::RecordType recTy) const {
+  mlir::Type passAsFieldIfOneFieldStruct(fir::RecordType recTy,
+                                         bool allowComplex = false) const {
     auto typeList = recTy.getTypeList();
     if (typeList.size() != 1)
       return {};
     mlir::Type fieldType = typeList[0].second;
-    if (mlir::isa<mlir::FloatType, mlir::IntegerType, fir::RealType,
-                  fir::CharacterType, fir::LogicalType>(fieldType))
+    if (mlir::isa<mlir::FloatType, mlir::IntegerType, fir::LogicalType>(
+            fieldType))
       return fieldType;
+    if (allowComplex && mlir::isa<mlir::ComplexType>(fieldType))
+      return fieldType;
+    if (mlir::isa<fir::CharacterType>(fieldType)) {
+      // Only CHARACTER(1) are expected in BIND(C) contexts, which is the only
+      // contexts where derived type may be passed in registers.
+      assert(mlir::cast<fir::CharacterType>(fieldType).getLen() == 1 &&
+             "fir.type value arg character components must have length 1");
+      return fieldType;
+    }
     // Complex field that needs to be split, or array.
     return {};
   }
@@ -588,7 +601,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
     postMerge(byteOffset, Lo, Hi);
     if (Lo == ArgClass::Memory || Lo == ArgClass::X87 ||
         Lo == ArgClass::ComplexX87)
-      return passOnTheStack(loc, recTy);
+      return passOnTheStack(loc, recTy, /*isResult=*/false);
     int neededIntRegisters = 0;
     int neededSSERegisters = 0;
     if (Lo == ArgClass::SSE)
@@ -604,7 +617,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
     // all in registers or all on the stack).
     if (!hasEnoughRegisters(loc, neededIntRegisters, neededSSERegisters,
                             previousArguments))
-      return passOnTheStack(loc, recTy);
+      return passOnTheStack(loc, recTy, /*isResult=*/false);
 
     if (auto fieldType = passAsFieldIfOneFieldStruct(recTy)) {
       CodeGenSpecifics::Marshalling marshal;
@@ -636,9 +649,57 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
     return marshal;
   }
 
+  CodeGenSpecifics::Marshalling
+  structReturnType(mlir::Location loc, fir::RecordType recTy) const override {
+    std::uint64_t byteOffset = 0;
+    ArgClass Lo, Hi;
+    Lo = Hi = ArgClass::NoClass;
+    byteOffset = classifyStruct(loc, recTy, byteOffset, Lo, Hi);
+    mlir::MLIRContext *context = recTy.getContext();
+    postMerge(byteOffset, Lo, Hi);
+    if (Lo == ArgClass::Memory)
+      return passOnTheStack(loc, recTy, /*isResult=*/true);
+
+    // Note that X87/ComplexX87 are passed in memory, but returned via %st0
+    // %st1 registers. Here, they are returned as fp80 or {fp80, fp80} by
+    // passAsFieldIfOneFieldStruct, and LLVM will use the expected registers.
+
+    // Note that {_Complex long double} is not 100% clear from an ABI
+    // perspective because the aggregate post merger rules say it should be
+    // passed in memory because it is bigger than 2 eight bytes. This has the
+    // funny effect of
+    // {_Complex long double} return to be dealt with differently than
+    // _Complex long double.
+
+    if (auto fieldType =
+            passAsFieldIfOneFieldStruct(recTy, /*allowComplex=*/true)) {
+      if (auto complexType = mlir::dyn_cast<mlir::ComplexType>(fieldType))
+        return complexReturnType(loc, complexType.getElementType());
+      CodeGenSpecifics::Marshalling marshal;
+      marshal.emplace_back(fieldType, AT{});
+      return marshal;
+    }
+
+    if (Hi == ArgClass::NoClass || Hi == ArgClass::SSEUp) {
+      // Return a single integer or floating point argument.
+      mlir::Type lowType = pickLLVMArgType(loc, context, Lo, byteOffset);
+      CodeGenSpecifics::Marshalling marshal;
+      marshal.emplace_back(lowType, AT{});
+      return marshal;
+    }
+    // Will be returned in two different registers. Generate {lowTy, HiTy} for
+    // the LLVM IR result type.
+    CodeGenSpecifics::Marshalling marshal;
+    mlir::Type lowType = pickLLVMArgType(loc, context, Lo, 8u);
+    mlir::Type hiType = pickLLVMArgType(loc, context, Hi, byteOffset - 8u);
+    marshal.emplace_back(mlir::TupleType::get(context, {lowType, hiType}),
+                         AT{});
+    return marshal;
+  }
+
   /// Marshal an argument that must be passed on the stack.
-  CodeGenSpecifics::Marshalling passOnTheStack(mlir::Location loc,
-                                               mlir::Type ty) const {
+  CodeGenSpecifics::Marshalling
+  passOnTheStack(mlir::Location loc, mlir::Type ty, bool isResult) const {
     CodeGenSpecifics::Marshalling marshal;
     auto sizeAndAlign =
         fir::getTypeSizeAndAlignmentOrCrash(loc, ty, getDataLayout(), kindMap);
@@ -646,7 +707,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
     unsigned short align =
         std::max(sizeAndAlign.second, static_cast<unsigned short>(8));
     marshal.emplace_back(fir::ReferenceType::get(ty),
-                         AT{align, /*byval=*/true, /*sret=*/false});
+                         AT{align, /*byval=*/!isResult, /*sret=*/isResult});
     return marshal;
   }
 };

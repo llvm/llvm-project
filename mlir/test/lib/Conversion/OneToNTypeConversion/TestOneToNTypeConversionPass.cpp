@@ -129,8 +129,9 @@ public:
 
 } // namespace
 
-static void populateDecomposeTuplesTestPatterns(TypeConverter &typeConverter,
-                                                RewritePatternSet &patterns) {
+static void
+populateDecomposeTuplesTestPatterns(const TypeConverter &typeConverter,
+                                    RewritePatternSet &patterns) {
   patterns.add<
       // clang-format off
       ConvertMakeTupleOp,

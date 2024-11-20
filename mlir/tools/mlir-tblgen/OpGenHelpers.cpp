@@ -41,18 +41,18 @@ static std::string getOperationName(const Record &def) {
   auto opName = def.getValueAsString("opName");
   if (prefix.empty())
     return std::string(opName);
-  return std::string(llvm::formatv("{0}.{1}", prefix, opName));
+  return std::string(formatv("{0}.{1}", prefix, opName));
 }
 
 std::vector<const Record *>
-mlir::tblgen::getRequestedOpDefinitions(const RecordKeeper &recordKeeper) {
-  const Record *classDef = recordKeeper.getClass("Op");
+mlir::tblgen::getRequestedOpDefinitions(const RecordKeeper &records) {
+  const Record *classDef = records.getClass("Op");
   if (!classDef)
     PrintFatalError("ERROR: Couldn't find the 'Op' class!\n");
 
-  llvm::Regex includeRegex(opIncFilter), excludeRegex(opExcFilter);
+  Regex includeRegex(opIncFilter), excludeRegex(opExcFilter);
   std::vector<const Record *> defs;
-  for (const auto &def : recordKeeper.getDefs()) {
+  for (const auto &def : records.getDefs()) {
     if (!def.second->isSubClassOf(classDef))
       continue;
     // Include if no include filter or include filter matches.
@@ -70,7 +70,7 @@ mlir::tblgen::getRequestedOpDefinitions(const RecordKeeper &recordKeeper) {
 }
 
 bool mlir::tblgen::isPythonReserved(StringRef str) {
-  static llvm::StringSet<> reserved({
+  static StringSet<> reserved({
       "False",  "None",   "True",    "and",      "as",       "assert", "async",
       "await",  "break",  "class",   "continue", "def",      "del",    "elif",
       "else",   "except", "finally", "for",      "from",     "global", "if",
@@ -86,8 +86,8 @@ bool mlir::tblgen::isPythonReserved(StringRef str) {
 }
 
 void mlir::tblgen::shardOpDefinitions(
-    ArrayRef<const llvm::Record *> defs,
-    SmallVectorImpl<ArrayRef<const llvm::Record *>> &shardedDefs) {
+    ArrayRef<const Record *> defs,
+    SmallVectorImpl<ArrayRef<const Record *>> &shardedDefs) {
   assert(opShardCount > 0 && "expected a positive shard count");
   if (opShardCount == 1) {
     shardedDefs.push_back(defs);

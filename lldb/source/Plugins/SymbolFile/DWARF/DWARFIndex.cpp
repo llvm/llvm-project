@@ -126,3 +126,28 @@ bool DWARFIndex::GetFullyQualifiedTypeImpl(
     return callback(die);
   return true;
 }
+
+void DWARFIndex::GetTypesWithQuery(
+    TypeQuery &query, llvm::function_ref<bool(DWARFDIE die)> callback) {
+  GetTypes(query.GetTypeBasename(), [&](DWARFDIE die) {
+    return ProcessTypeDIEMatchQuery(query, die, callback);
+  });
+}
+
+bool DWARFIndex::ProcessTypeDIEMatchQuery(
+    TypeQuery &query, DWARFDIE die,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
+  // Nothing to match from query
+  if (query.GetContextRef().size() <= 1)
+    return callback(die);
+
+  std::vector<lldb_private::CompilerContext> die_context;
+  if (query.GetModuleSearch())
+    die_context = die.GetDeclContext();
+  else
+    die_context = die.GetTypeLookupContext();
+
+  if (!query.ContextMatches(die_context))
+    return true;
+  return callback(die);
+}

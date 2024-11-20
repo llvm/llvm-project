@@ -171,7 +171,7 @@ bool isHsaAbi(const MCSubtargetInfo &STI) {
 }
 
 unsigned getAMDHSACodeObjectVersion(const Module &M) {
-  if (auto Ver = mdconst::extract_or_null<ConstantInt>(
+  if (auto *Ver = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("amdhsa_code_object_version"))) {
     return (unsigned)Ver->getZExtValue() / 100;
   }
@@ -649,8 +649,8 @@ int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily) {
 std::pair<unsigned, unsigned> getVOPDComponents(unsigned VOPDOpcode) {
   const VOPDInfo *Info = getVOPDOpcodeHelper(VOPDOpcode);
   assert(Info);
-  auto OpX = getVOPDBaseFromComponent(Info->OpX);
-  auto OpY = getVOPDBaseFromComponent(Info->OpY);
+  const auto *OpX = getVOPDBaseFromComponent(Info->OpX);
+  const auto *OpY = getVOPDBaseFromComponent(Info->OpY);
   assert(OpX && OpY);
   return {OpX->BaseVOP, OpY->BaseVOP};
 }
@@ -911,9 +911,9 @@ unsigned getLocalMemorySize(const MCSubtargetInfo *STI) {
 }
 
 unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
-  if (STI->getFeatureBits().test(FeatureLocalMemorySize32768))
+  if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize32768))
     return 32768;
-  if (STI->getFeatureBits().test(FeatureLocalMemorySize65536))
+  if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
     return 65536;
   return 0;
 }
@@ -1789,7 +1789,7 @@ static StringLiteral const *getNfmtLookupTable(const MCSubtargetInfo &STI) {
 }
 
 int64_t getNfmt(const StringRef Name, const MCSubtargetInfo &STI) {
-  auto lookupTable = getNfmtLookupTable(STI);
+  const auto *lookupTable = getNfmtLookupTable(STI);
   for (int Id = NFMT_MIN; Id <= NFMT_MAX; ++Id) {
     if (Name == lookupTable[Id])
       return Id;
@@ -2219,9 +2219,9 @@ int32_t getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR,
   return std::max(ArgNumVGPR, ArgNumAGPR);
 }
 
-bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {
+bool isSGPR(MCRegister Reg, const MCRegisterInfo *TRI) {
   const MCRegisterClass SGPRClass = TRI->getRegClass(AMDGPU::SReg_32RegClassID);
-  const unsigned FirstSubReg = TRI->getSubReg(Reg, AMDGPU::sub0);
+  const MCRegister FirstSubReg = TRI->getSubReg(Reg, AMDGPU::sub0);
   return SGPRClass.contains(FirstSubReg != 0 ? FirstSubReg : Reg) ||
     Reg == AMDGPU::SCC;
 }
@@ -2232,7 +2232,7 @@ bool isHi16Reg(MCRegister Reg, const MCRegisterInfo &MRI) {
 
 #define MAP_REG2REG \
   using namespace AMDGPU; \
-  switch(Reg) { \
+  switch(Reg.id()) { \
   default: return Reg; \
   CASE_CI_VI(FLAT_SCR) \
   CASE_CI_VI(FLAT_SCR_LO) \
@@ -2287,7 +2287,7 @@ bool isHi16Reg(MCRegister Reg, const MCRegisterInfo &MRI) {
 #define CASE_GFXPRE11_GFX11PLUS_TO(node, result) \
   case node: return isGFX11Plus(STI) ? result##_gfx11plus : result##_gfxpre11;
 
-unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
+MCRegister getMCReg(MCRegister Reg, const MCSubtargetInfo &STI) {
   if (STI.getTargetTriple().getArch() == Triple::r600)
     return Reg;
   MAP_REG2REG
@@ -2303,9 +2303,7 @@ unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
 #define CASE_GFXPRE11_GFX11PLUS(node) case node##_gfx11plus: case node##_gfxpre11: return node;
 #define CASE_GFXPRE11_GFX11PLUS_TO(node, result)
 
-unsigned mc2PseudoReg(unsigned Reg) {
-  MAP_REG2REG
-}
+MCRegister mc2PseudoReg(MCRegister Reg) { MAP_REG2REG }
 
 bool isInlineValue(unsigned Reg) {
   switch (Reg) {

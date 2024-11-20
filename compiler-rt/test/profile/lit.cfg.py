@@ -77,12 +77,8 @@ def exclude_unsupported_files_for_aix(dirname):
         f = open(source_path, "r")
         try:
             data = f.read()
-            # -fprofile-instr-generate and rpath are not supported on AIX, exclude all tests with them.
-            if (
-                "%clang_profgen" in data
-                or "%clangxx_profgen" in data
-                or "-rpath" in data
-            ):
+            # rpath is not supported on AIX, exclude all tests with them.
+            if ( "-rpath" in data ):
                 config.excludes += [filename]
         finally:
             f.close()

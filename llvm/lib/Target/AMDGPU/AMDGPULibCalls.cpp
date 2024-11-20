@@ -753,7 +753,7 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
         CI->setArgOperand(1, SplatArg1);
       }
 
-      CI->setCalledFunction(Intrinsic::getDeclaration(
+      CI->setCalledFunction(Intrinsic::getOrInsertDeclaration(
           CI->getModule(), Intrinsic::ldexp,
           {CI->getType(), CI->getArgOperand(1)->getType()}));
       return true;
@@ -788,7 +788,8 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
               B.CreateFPToSI(FPOp->getOperand(1), PownType->getParamType(1));
           // Have to drop any nofpclass attributes on the original call site.
           Call->removeParamAttrs(
-              1, AttributeFuncs::typeIncompatible(CastedArg->getType()));
+              1, AttributeFuncs::typeIncompatible(CastedArg->getType(),
+                                                  Call->getParamAttributes(1)));
           Call->setCalledFunction(PownFunc);
           Call->setArgOperand(1, CastedArg);
           return fold_pow(FPOp, B, PownInfo) || true;
@@ -1034,7 +1035,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   // pown/pow ---> powr(fabs(x), y) | (x & ((int)y << 31))
   FunctionCallee ExpExpr;
   if (ShouldUseIntrinsic)
-    ExpExpr = Intrinsic::getDeclaration(M, Intrinsic::exp2, {FPOp->getType()});
+    ExpExpr = Intrinsic::getOrInsertDeclaration(M, Intrinsic::exp2,
+                                                {FPOp->getType()});
   else {
     ExpExpr = getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_EXP2, FInfo));
     if (!ExpExpr)
@@ -1108,8 +1110,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   if (needlog) {
     FunctionCallee LogExpr;
     if (ShouldUseIntrinsic) {
-      LogExpr =
-          Intrinsic::getDeclaration(M, Intrinsic::log2, {FPOp->getType()});
+      LogExpr = Intrinsic::getOrInsertDeclaration(M, Intrinsic::log2,
+                                                  {FPOp->getType()});
     } else {
       LogExpr = getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_LOG2, FInfo));
       if (!LogExpr)
@@ -1298,8 +1300,8 @@ void AMDGPULibCalls::replaceLibCallWithSimpleIntrinsic(IRBuilder<> &B,
     }
   }
 
-  CI->setCalledFunction(
-      Intrinsic::getDeclaration(CI->getModule(), IntrID, {CI->getType()}));
+  CI->setCalledFunction(Intrinsic::getOrInsertDeclaration(
+      CI->getModule(), IntrID, {CI->getType()}));
 }
 
 bool AMDGPULibCalls::tryReplaceLibcallWithSimpleIntrinsic(

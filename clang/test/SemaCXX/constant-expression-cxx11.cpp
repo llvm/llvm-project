@@ -2,6 +2,10 @@
 // RUN: %clang_cc1 -std=c++20 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx11_20,cxx20_23,pre-cxx23 -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
 // RUN: %clang_cc1 -std=c++11 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx11_20,cxx11,pre-cxx23    -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
 
+// This macro forces its argument to be constant-folded, even if it's not
+// otherwise a constant expression.
+#define fold(x) (__builtin_constant_p(x) ? (x) : (x))
+
 namespace StaticAssertFoldTest {
 
 int x;
@@ -358,10 +362,35 @@ struct Str {
 
 extern char externalvar[];
 constexpr bool constaddress = (void *)externalvar == (void *)0x4000UL; // expected-error {{must be initialized by a constant expression}} expected-note {{reinterpret_cast}}
-constexpr bool litaddress = "foo" == "foo"; // expected-error {{must be initialized by a constant expression}}
-// expected-note@-1 {{comparison of addresses of literals has unspecified value}}
-// cxx20_23-warning@-2 {{comparison between two arrays is deprecated}}
 static_assert(0 != "foo", "");
+
+// OK: These string literals cannot possibly overlap.
+static_assert(+"foo" != +"bar", "");
+static_assert("xfoo" + 1 != "yfoo" + 1, "");
+static_assert(+"foot" != +"foo", "");
+static_assert(+"foo\0bar" != +"foo\0baz", "");
+
+// These can't overlap because the null terminator for UTF-16 is two bytes wide.
+static_assert(fold((const char*)u"A" != (const char*)"\0A\0x"), "");
+static_assert(fold((const char*)u"A" != (const char*)"A\0\0x"), "");
+
+constexpr const char *string = "hello";
+constexpr const char *also_string = string;
+static_assert(string == string, "");
+static_assert(string == also_string, "");
+
+// These strings may overlap, and so the result of the comparison is unknown.
+constexpr bool may_overlap_1 = +"foo" == +"foo"; // expected-error {{}} expected-note {{addresses of literals}}
+constexpr bool may_overlap_2 = +"foo" == +"foo\0bar"; // expected-error {{}} expected-note {{addresses of literals}}
+constexpr bool may_overlap_3 = +"foo" == "bar\0foo" + 4; // expected-error {{}} expected-note {{addresses of literals}}
+constexpr bool may_overlap_4 = "xfoo" + 1 == "xfoo" + 1; // expected-error {{}} expected-note {{addresses of literals}}
+
+// These may overlap even though they have different encodings.
+// One of these two comparisons is non-constant, but due to endianness we don't
+// know which one.
+constexpr bool may_overlap_different_encoding[] =
+  {fold((const char*)u"A" != (const char*)"xA\0\0\0x" + 1), fold((const char*)u"A" != (const char*)"x\0A\0\0x" + 1)};
+  // expected-error@-2 {{}} expected-note@-1 {{addresses of literals}}
 
 }
 
@@ -1543,15 +1572,9 @@ namespace MutableMembers {
 
 namespace Fold {
 
-  // This macro forces its argument to be constant-folded, even if it's not
-  // otherwise a constant expression.
-  #define fold(x) (__builtin_constant_p(x) ? (x) : (x))
-
   constexpr int n = (long)(char*)123; // expected-error {{constant expression}} expected-note {{reinterpret_cast}}
   constexpr int m = fold((long)(char*)123); // ok
   static_assert(m == 123, "");
-
-  #undef fold
 
 }
 

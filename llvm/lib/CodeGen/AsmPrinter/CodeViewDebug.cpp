@@ -3406,10 +3406,8 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
     OS.emitInt32(getCompleteTypeIndex(DIGV->getType()).getIndex());
     OS.AddComment("DataOffset");
 
-    uint64_t Offset = 0;
-    if (CVGlobalVariableOffsets.contains(DIGV))
-      // Use the offset seen while collecting info on globals.
-      Offset = CVGlobalVariableOffsets[DIGV];
+    // Use the offset seen while collecting info on globals.
+    uint64_t Offset = CVGlobalVariableOffsets.lookup(DIGV);
     OS.emitCOFFSecRel32(GVSym, Offset);
 
     OS.AddComment("Segment");

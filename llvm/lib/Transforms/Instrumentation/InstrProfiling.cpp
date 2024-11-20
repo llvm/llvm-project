@@ -267,10 +267,6 @@ private:
   GlobalVariable *NamesVar = nullptr;
   size_t NamesSize = 0;
 
-  /// The instance of [[alwaysinline]] rmw_or(ptr, i8).
-  /// This is name-insensitive.
-  Function *RMWOrFunc = nullptr;
-
   // vector of counter load/store pairs to be register promoted.
   std::vector<LoadStorePair> PromotionCandidates;
 
@@ -336,14 +332,6 @@ private:
   GlobalVariable *createRegionCounters(InstrProfCntrInstBase *Inc,
                                        StringRef Name,
                                        GlobalValue::LinkageTypes Linkage);
-
-  /// Create [[alwaysinline]] rmw_or(ptr, i8).
-  /// This doesn't update `RMWOrFunc`.
-  Function *createRMWOrFunc();
-
-  /// Get the call to `rmw_or`.
-  /// Create the instance if it is unknown.
-  CallInst *getRMWOrCall(Value *Addr, Value *Val);
 
   /// Compute the address of the test vector bitmap that this profiling
   /// instruction acts on.
@@ -914,15 +902,15 @@ static bool needsRuntimeHookUnconditionally(const Triple &TT) {
 /// Check if the module contains uses of any profiling intrinsics.
 static bool containsProfilingIntrinsics(Module &M) {
   auto containsIntrinsic = [&](int ID) {
-    if (auto *F = M.getFunction(Intrinsic::getName(ID)))
+    if (auto *F = Intrinsic::getDeclarationIfExists(&M, ID))
       return !F->use_empty();
     return false;
   };
-  return containsIntrinsic(llvm::Intrinsic::instrprof_cover) ||
-         containsIntrinsic(llvm::Intrinsic::instrprof_increment) ||
-         containsIntrinsic(llvm::Intrinsic::instrprof_increment_step) ||
-         containsIntrinsic(llvm::Intrinsic::instrprof_timestamp) ||
-         containsIntrinsic(llvm::Intrinsic::instrprof_value_profile);
+  return containsIntrinsic(Intrinsic::instrprof_cover) ||
+         containsIntrinsic(Intrinsic::instrprof_increment) ||
+         containsIntrinsic(Intrinsic::instrprof_increment_step) ||
+         containsIntrinsic(Intrinsic::instrprof_timestamp) ||
+         containsIntrinsic(Intrinsic::instrprof_value_profile);
 }
 
 bool InstrLowerer::lower() {
@@ -1137,68 +1125,6 @@ Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
   return Builder.CreateIntToPtr(Add, Addr->getType());
 }
 
-/// Create `void [[alwaysinline]] rmw_or(uint8_t *ArgAddr, uint8_t ArgVal)`
-/// "Basic" sequence is `*ArgAddr |= ArgVal`
-Function *InstrLowerer::createRMWOrFunc() {
-  auto &Ctx = M.getContext();
-  auto *Int8Ty = Type::getInt8Ty(Ctx);
-  Function *Fn = Function::Create(
-      FunctionType::get(Type::getVoidTy(Ctx),
-                        {PointerType::getUnqual(Ctx), Int8Ty}, false),
-      Function::LinkageTypes::PrivateLinkage, "rmw_or", M);
-  Fn->addFnAttr(Attribute::AlwaysInline);
-  auto *ArgAddr = Fn->getArg(0);
-  auto *ArgVal = Fn->getArg(1);
-  IRBuilder<> Builder(BasicBlock::Create(Ctx, "", Fn));
-
-  // Load profile bitmap byte.
-  //  %mcdc.bits = load i8, ptr %4, align 1
-  auto *Bitmap = Builder.CreateLoad(Int8Ty, ArgAddr, "mcdc.bits");
-
-  if (Options.Atomic || AtomicCounterUpdateAll) {
-    // If ((Bitmap & Val) != Val), then execute atomic (Bitmap |= Val).
-    // Note, just-loaded Bitmap might not be up-to-date. Use it just for
-    // early testing.
-    auto *Masked = Builder.CreateAnd(Bitmap, ArgVal);
-    auto *ShouldStore = Builder.CreateICmpNE(Masked, ArgVal);
-    auto *ThenTerm = BasicBlock::Create(Ctx, "", Fn);
-    auto *ElseTerm = BasicBlock::Create(Ctx, "", Fn);
-    // Assume updating will be rare.
-    auto *Unlikely = MDBuilder(Ctx).createUnlikelyBranchWeights();
-    Builder.CreateCondBr(ShouldStore, ThenTerm, ElseTerm, Unlikely);
-
-    IRBuilder<> ThenBuilder(ThenTerm);
-    ThenBuilder.CreateAtomicRMW(AtomicRMWInst::Or, ArgAddr, ArgVal,
-                                MaybeAlign(), AtomicOrdering::Monotonic);
-    ThenBuilder.CreateRetVoid();
-
-    IRBuilder<> ElseBuilder(ElseTerm);
-    ElseBuilder.CreateRetVoid();
-
-    return Fn;
-  }
-
-  // Perform logical OR of profile bitmap byte and shifted bit offset.
-  //  %8 = or i8 %mcdc.bits, %7
-  auto *Result = Builder.CreateOr(Bitmap, ArgVal);
-
-  // Store the updated profile bitmap byte.
-  //  store i8 %8, ptr %3, align 1
-  Builder.CreateStore(Result, ArgAddr);
-
-  // Terminator
-  Builder.CreateRetVoid();
-
-  return Fn;
-}
-
-CallInst *InstrLowerer::getRMWOrCall(Value *Addr, Value *Val) {
-  if (!RMWOrFunc)
-    RMWOrFunc = createRMWOrFunc();
-
-  return CallInst::Create(RMWOrFunc, {Addr, Val});
-}
-
 Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
   auto *Bitmaps = getOrCreateRegionBitmaps(I);
   if (!isRuntimeCounterRelocationEnabled())
@@ -1291,9 +1217,10 @@ void InstrLowerer::lowerCoverageData(GlobalVariable *CoverageNamesVar) {
 
 void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
     InstrProfMCDCTVBitmapUpdate *Update) {
+  auto &Ctx = M.getContext();
   IRBuilder<> Builder(Update);
-  auto *Int8Ty = Type::getInt8Ty(M.getContext());
-  auto *Int32Ty = Type::getInt32Ty(M.getContext());
+  auto *Int8Ty = Type::getInt8Ty(Ctx);
+  auto *Int32Ty = Type::getInt32Ty(Ctx);
   auto *MCDCCondBitmapAddr = Update->getMCDCCondBitmapAddr();
   auto *BitmapAddr = getBitmapAddress(Update);
 
@@ -1321,7 +1248,36 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
   //  %7 = shl i8 1, %6
   auto *ShiftedVal = Builder.CreateShl(Builder.getInt8(0x1), BitToSet);
 
-  Builder.Insert(getRMWOrCall(BitmapByteAddr, ShiftedVal));
+  // Load profile bitmap byte.
+  //  %mcdc.bits = load i8, ptr %4, align 1
+  auto *Bitmap = Builder.CreateLoad(Int8Ty, BitmapByteAddr, "mcdc.bits");
+
+  if (Options.Atomic || AtomicCounterUpdateAll) {
+    // If ((Bitmap & Val) != Val), then execute atomic (Bitmap |= Val).
+    // Note, just-loaded Bitmap might not be up-to-date. Use it just for
+    // early testing.
+    auto *Masked = Builder.CreateAnd(Bitmap, ShiftedVal);
+    auto *ShouldStore = Builder.CreateICmpNE(Masked, ShiftedVal);
+
+    // Assume updating will be rare.
+    auto *Unlikely = MDBuilder(Ctx).createUnlikelyBranchWeights();
+    Instruction *ThenBranch =
+        SplitBlockAndInsertIfThen(ShouldStore, Update, false, Unlikely);
+
+    // Execute if (unlikely(ShouldStore)).
+    Builder.SetInsertPoint(ThenBranch);
+    Builder.CreateAtomicRMW(AtomicRMWInst::Or, BitmapByteAddr, ShiftedVal,
+                            MaybeAlign(), AtomicOrdering::Monotonic);
+  } else {
+    // Perform logical OR of profile bitmap byte and shifted bit offset.
+    //  %8 = or i8 %mcdc.bits, %7
+    auto *Result = Builder.CreateOr(Bitmap, ShiftedVal);
+
+    // Store the updated profile bitmap byte.
+    //  store i8 %8, ptr %3, align 1
+    Builder.CreateStore(Result, BitmapByteAddr);
+  }
+
   Update->eraseFromParent();
 }
 
@@ -1450,9 +1406,10 @@ static inline Constant *getFuncAddrForProfData(Function *Fn) {
 
 static bool needsRuntimeRegistrationOfSectionRange(const Triple &TT) {
   // compiler-rt uses linker support to get data/counters/name start/end for
-  // ELF, COFF, Mach-O and XCOFF.
+  // ELF, COFF, Mach-O, XCOFF, and Wasm.
   if (TT.isOSBinFormatELF() || TT.isOSBinFormatCOFF() ||
-      TT.isOSBinFormatMachO() || TT.isOSBinFormatXCOFF())
+      TT.isOSBinFormatMachO() || TT.isOSBinFormatXCOFF() ||
+      TT.isOSBinFormatWasm())
     return false;
 
   return true;

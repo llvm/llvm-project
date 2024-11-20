@@ -14,6 +14,7 @@
 #include "flang/Evaluate/intrinsics-library.h"
 #include "fold-implementation.h"
 #include "host.h"
+#include "flang/Common/erfc-scaled.h"
 #include "flang/Common/static-multimap-view.h"
 #include "flang/Evaluate/expression.h"
 #include <cfloat>
@@ -231,6 +232,7 @@ struct HostRuntimeLibrary<HostT, LibraryVersion::Libm> {
       FolderFactory<F, F{std::cosh}>::Create("cosh"),
       FolderFactory<F, F{std::erf}>::Create("erf"),
       FolderFactory<F, F{std::erfc}>::Create("erfc"),
+      FolderFactory<F, F{common::ErfcScaled}>::Create("erfc_scaled"),
       FolderFactory<F, F{std::exp}>::Create("exp"),
       FolderFactory<F, F{std::tgamma}>::Create("gamma"),
       FolderFactory<F, F{std::log}>::Create("log"),
@@ -415,7 +417,7 @@ template <> struct HostRuntimeLibrary<double, LibraryVersion::LibmExtensions> {
   static_assert(map.Verify(), "map must be sorted");
 };
 
-#if HAS_FLOAT80 || HAS_LDBL128
+#if defined(__GLIBC__) && (HAS_FLOAT80 || HAS_LDBL128)
 template <>
 struct HostRuntimeLibrary<long double, LibraryVersion::LibmExtensions> {
   using F = FuncPointer<long double, long double>;

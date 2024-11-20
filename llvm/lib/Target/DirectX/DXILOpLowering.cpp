@@ -134,9 +134,8 @@ public:
   /// piecemeal way - we can add the casts in to avoid updating all of the uses
   /// or defs, and by the end all of the casts will be redundant.
   Value *createTmpHandleCast(Value *V, Type *Ty) {
-    Function *CastFn = Intrinsic::getDeclaration(&M, Intrinsic::dx_cast_handle,
-                                                 {Ty, V->getType()});
-    CallInst *Cast = OpBuilder.getIRB().CreateCall(CastFn, {V});
+    CallInst *Cast = OpBuilder.getIRB().CreateIntrinsic(
+        Intrinsic::dx_cast_handle, {Ty, V->getType()}, {V});
     CleanupCasts.push_back(Cast);
     return Cast;
   }
@@ -525,7 +524,6 @@ public:
 
   static char ID; // Pass identification.
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
-    AU.addRequired<DXILIntrinsicExpansionLegacy>();
     AU.addRequired<DXILResourceWrapperPass>();
     AU.addPreserved<DXILResourceWrapperPass>();
   }

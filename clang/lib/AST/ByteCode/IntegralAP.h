@@ -61,7 +61,7 @@ public:
 
   IntegralAP(APInt V) : V(V) {}
   /// Arbitrary value for uninitialized variables.
-  IntegralAP() : IntegralAP(-1, 3) {}
+  IntegralAP() : IntegralAP(Signed ? -1 : 7, 3) {}
 
   IntegralAP operator-() const { return IntegralAP(-V); }
   IntegralAP operator-(const IntegralAP &Other) const {
@@ -112,9 +112,7 @@ public:
 
   template <unsigned Bits, bool InputSigned>
   static IntegralAP from(Integral<Bits, InputSigned> I, unsigned BitWidth) {
-    APInt Copy = APInt(BitWidth, static_cast<uint64_t>(I), InputSigned);
-
-    return IntegralAP<Signed>(Copy);
+    return IntegralAP<Signed>(I.toAPInt(BitWidth));
   }
 
   static IntegralAP zero(int32_t BitWidth) {

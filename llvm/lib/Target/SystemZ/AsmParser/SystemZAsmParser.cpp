@@ -442,7 +442,7 @@ private:
 
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
 
-  // Both the hlasm and att variants still rely on the basic gnu asm
+  // Both the hlasm and gnu variants still rely on the basic gnu asm
   // format with respect to inputs, clobbers, outputs etc.
   //
   // However, calling the overriden getAssemblerDialect() method in
@@ -475,8 +475,8 @@ private:
   // Are we parsing using the AD_HLASM dialect?
   inline bool isParsingHLASM() { return getMAIAssemblerDialect() == AD_HLASM; }
 
-  // Are we parsing using the AD_ATT dialect?
-  inline bool isParsingATT() { return getMAIAssemblerDialect() == AD_ATT; }
+  // Are we parsing using the AD_GNU dialect?
+  inline bool isParsingGNU() { return getMAIAssemblerDialect() == AD_GNU; }
 
 public:
   SystemZAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
@@ -848,7 +848,7 @@ ParseStatus SystemZAsmParser::parseRegister(OperandVector &Operands,
   }
 
   // Handle register names of the form %<prefix><number>
-  if (isParsingATT() && Parser.getTok().is(AsmToken::Percent)) {
+  if (isParsingGNU() && Parser.getTok().is(AsmToken::Percent)) {
     if (parseRegister(Reg, /*RequirePercent=*/true))
       return ParseStatus::Failure;
 
@@ -1029,7 +1029,7 @@ bool SystemZAsmParser::parseAddress(bool &HaveReg1, Register &Reg1,
   if (getLexer().is(AsmToken::LParen)) {
     Parser.Lex();
 
-    if (isParsingATT() && getLexer().is(AsmToken::Percent)) {
+    if (isParsingGNU() && getLexer().is(AsmToken::Percent)) {
       // Parse the first register.
       HaveReg1 = true;
       if (parseRegister(Reg1, /*RequirePercent=*/true))
@@ -1072,7 +1072,7 @@ bool SystemZAsmParser::parseAddress(bool &HaveReg1, Register &Reg1,
         if (parseIntegerRegister(Reg2, RegGR))
           return true;
       } else {
-        if (isParsingATT() && parseRegister(Reg2, /*RequirePercent=*/true))
+        if (isParsingGNU() && parseRegister(Reg2, /*RequirePercent=*/true))
           return true;
       }
     }
@@ -1490,7 +1490,7 @@ bool SystemZAsmParser::parseOperand(OperandVector &Operands,
   // a context-dependent parse routine, which gives the required register
   // class.  The code is here to mop up other cases, like those where
   // the instruction isn't recognized.
-  if (isParsingATT() && Parser.getTok().is(AsmToken::Percent)) {
+  if (isParsingGNU() && Parser.getTok().is(AsmToken::Percent)) {
     Register Reg;
     if (parseRegister(Reg, /*RequirePercent=*/true))
       return true;
@@ -1672,7 +1672,7 @@ ParseStatus SystemZAsmParser::parsePCRel(OperandVector &Operands,
 }
 
 bool SystemZAsmParser::isLabel(AsmToken &Token) {
-  if (isParsingATT())
+  if (isParsingGNU())
     return true;
 
   // HLASM labels are ordinary symbols.

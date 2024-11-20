@@ -1701,8 +1701,8 @@ struct NVGPURcpOpLowering : public ConvertOpToLLVMPattern<nvgpu::RcpOp> {
 };
 } // namespace
 
-void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
-                                                 RewritePatternSet &patterns) {
+void mlir::populateNVGPUToNVVMConversionPatterns(
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<
       NVGPUMBarrierCreateLowering,           // nvgpu.mbarrier.create
       NVGPUMBarrierInitLowering,             // nvgpu.mbarrier.init

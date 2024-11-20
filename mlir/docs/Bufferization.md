@@ -651,7 +651,7 @@ is very small, and follows the basic pattern of any dialect conversion pass.
 
 ```
 void mlir::populateTensorBufferizePatterns(
-    BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns) {
+    const BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns) {
   patterns.add<BufferizeCastOp, BufferizeExtractOp>(typeConverter,
                                                     patterns.getContext());
 }

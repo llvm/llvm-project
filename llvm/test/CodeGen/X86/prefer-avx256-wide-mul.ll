@@ -64,7 +64,7 @@ define <32 x i8> @test_mul_32i8(<32 x i8> %a, <32 x i8> %b) {
 ; AVX256BW-NEXT:    vpandn %ymm1, %ymm2, %ymm1
 ; AVX256BW-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0
 ; AVX256BW-NEXT:    vpsllw $8, %ymm0, %ymm0
-; AVX256BW-NEXT:    vpternlogq $248, %ymm2, %ymm3, %ymm0
+; AVX256BW-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm0 | (ymm3 & ymm2)
 ; AVX256BW-NEXT:    retq
 ;
 ; AVX512BWVL-LABEL: test_mul_32i8:

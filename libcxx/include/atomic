@@ -613,7 +613,7 @@ template <class T>
 #  pragma GCC system_header
 #endif
 
-#ifdef _LIBCPP_HAS_NO_ATOMIC_HEADER
+#if !_LIBCPP_HAS_ATOMIC_HEADER
 #  error <atomic> is not implemented
 #endif
 

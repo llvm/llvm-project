@@ -844,7 +844,7 @@ void MatcherGen::EmitResultInstructionAsOperand(
     // children may themselves emit multiple MI operands.
     unsigned NumSubOps = 1;
     if (OperandNode->isSubClassOf("Operand")) {
-      DagInit *MIOpInfo = OperandNode->getValueAsDag("MIOperandInfo");
+      const DagInit *MIOpInfo = OperandNode->getValueAsDag("MIOperandInfo");
       if (unsigned NumArgs = MIOpInfo->getNumArgs())
         NumSubOps = NumArgs;
     }

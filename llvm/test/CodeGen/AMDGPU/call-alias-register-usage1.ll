@@ -9,8 +9,12 @@
 ; The parent kernel has a higher VGPR usage than the possible callees.
 
 ; CHECK-LABEL: {{^}}kernel1:
-; CHECK: .amdhsa_next_free_vgpr 41
-; CHECK-NEXT: .amdhsa_next_free_sgpr 33
+; CHECK:      .amdhsa_next_free_vgpr max(totalnumvgprs(kernel1.num_agpr, kernel1.num_vgpr), 1, 0)
+; CHECK-NEXT: .amdhsa_next_free_sgpr (max(kernel1.numbered_sgpr+(extrasgprs(kernel1.uses_vcc, kernel1.uses_flat_scratch, 1)), 1, 0))-(extrasgprs(kernel1.uses_vcc, kernel1.uses_flat_scratch, 1))
+
+; CHECK:      .set kernel1.num_vgpr, max(41, aliasee_vgpr32_sgpr76.num_vgpr)
+; CHECK-NEXT: .set kernel1.num_agpr, max(0, aliasee_vgpr32_sgpr76.num_agpr)
+; CHECK-NEXT: .set kernel1.numbered_sgpr, max(33, aliasee_vgpr32_sgpr76.numbered_sgpr)
 define amdgpu_kernel void @kernel1() #0 {
 bb:
   call void asm sideeffect "; clobber v40 ", "~{v40}"()
@@ -18,6 +22,9 @@ bb:
   ret void
 }
 
+; CHECK:      .set aliasee_vgpr32_sgpr76.num_vgpr, 27
+; CHECK-NEXT: .set aliasee_vgpr32_sgpr76.num_agpr, 0
+; CHECK-NEXT: .set aliasee_vgpr32_sgpr76.numbered_sgpr, 32
 define internal void @aliasee_vgpr32_sgpr76() #1 {
 bb:
   call void asm sideeffect "; clobber v26 ", "~{v26}"()

@@ -13,7 +13,7 @@
 
 ; ASM:      .loc    0 0 0 is_stmt 0
 ; ASM-NEXT: .L{{.*}}:
-; ASM-NEXT: .p2align        4, 0x90
+; ASM-NEXT: .p2align        4
 
 ;; $ cat test.cpp
 ;; void g();

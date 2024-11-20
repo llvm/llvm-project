@@ -28,12 +28,59 @@ class AttributeCommonInfo;
 class IdentifierInfo;
 class ParsedAttr;
 class Scope;
+class VarDecl;
+
+using llvm::dxil::ResourceClass;
 
 // FIXME: This can be hidden (as static function in SemaHLSL.cpp) once we no
 // longer need to create builtin buffer types in HLSLExternalSemaSource.
 bool CreateHLSLAttributedResourceType(
     Sema &S, QualType Wrapped, ArrayRef<const Attr *> AttrList,
     QualType &ResType, HLSLAttributedResourceLocInfo *LocInfo = nullptr);
+
+enum class BindingType : uint8_t { NotAssigned, Explicit, Implicit };
+
+// DeclBindingInfo struct stores information about required/assigned resource
+// binding onon a declaration for specific resource class.
+struct DeclBindingInfo {
+  const VarDecl *Decl;
+  ResourceClass ResClass;
+  const HLSLResourceBindingAttr *Attr;
+  BindingType BindType;
+
+  DeclBindingInfo(const VarDecl *Decl, ResourceClass ResClass,
+                  BindingType BindType = BindingType::NotAssigned,
+                  const HLSLResourceBindingAttr *Attr = nullptr)
+      : Decl(Decl), ResClass(ResClass), Attr(Attr), BindType(BindType) {}
+
+  void setBindingAttribute(HLSLResourceBindingAttr *A, BindingType BT) {
+    assert(Attr == nullptr && BindType == BindingType::NotAssigned &&
+           "binding attribute already assigned");
+    Attr = A;
+    BindType = BT;
+  }
+};
+
+// ResourceBindings class stores information about all resource bindings
+// in a shader. It is used for binding diagnostics and implicit binding
+// assigments.
+class ResourceBindings {
+public:
+  DeclBindingInfo *addDeclBindingInfo(const VarDecl *VD,
+                                      ResourceClass ResClass);
+  DeclBindingInfo *getDeclBindingInfo(const VarDecl *VD,
+                                      ResourceClass ResClass);
+  bool hasBindingInfoForDecl(const VarDecl *VD) const;
+
+private:
+  // List of all resource bindings required by the shader.
+  // A global declaration can have multiple bindings for different
+  // resource classes. They are all stored sequentially in this list.
+  // The DeclToBindingListIndex hashtable maps a declaration to the
+  // index of the first binding info in the list.
+  llvm::SmallVector<DeclBindingInfo> BindingsList;
+  llvm::DenseMap<const VarDecl *, unsigned> DeclToBindingListIndex;
+};
 
 class SemaHLSL : public SemaBase {
 public:
@@ -55,6 +102,7 @@ public:
   mergeParamModifierAttr(Decl *D, const AttributeCommonInfo &AL,
                          HLSLParamModifierAttr::Spelling Spelling);
   void ActOnTopLevelFunction(FunctionDecl *FD);
+  void ActOnVariableDeclarator(VarDecl *VD);
   void CheckEntryPoint(FunctionDecl *FD);
   void CheckSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
                                const HLSLAnnotationAttr *AnnotationAttr);
@@ -63,6 +111,11 @@ public:
       std::initializer_list<llvm::Triple::EnvironmentType> AllowedStages);
   void DiagnoseAvailabilityViolations(TranslationUnitDecl *TU);
 
+  QualType handleVectorBinOpConversion(ExprResult &LHS, ExprResult &RHS,
+                                       QualType LHSType, QualType RHSType,
+                                       bool IsCompAssign);
+  void emitLogicalOperatorFixIt(Expr *LHS, Expr *RHS, BinaryOperatorKind Opc);
+
   void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL);
@@ -70,7 +123,7 @@ public:
   void handleShaderAttr(Decl *D, const ParsedAttr &AL);
   void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
   void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
-  bool handleResourceTypeAttr(const ParsedAttr &AL);
+  bool handleResourceTypeAttr(QualType T, const ParsedAttr &AL);
 
   bool CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   QualType ProcessResourceTypeAttributes(QualType Wrapped);
@@ -97,6 +150,15 @@ private:
   llvm::DenseMap<const HLSLAttributedResourceType *,
                  HLSLAttributedResourceLocInfo>
       LocsForHLSLAttributedResources;
+
+  // List of all resource bindings
+  ResourceBindings Bindings;
+
+private:
+  void collectResourcesOnVarDecl(VarDecl *D);
+  void collectResourcesOnUserRecordDecl(const VarDecl *VD,
+                                        const RecordType *RT);
+  void processExplicitBindingsOnDecl(VarDecl *D);
 };
 
 } // namespace clang

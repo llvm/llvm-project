@@ -34,6 +34,12 @@ void initializeDXILIntrinsicExpansionLegacyPass(PassRegistry &);
 /// Pass to expand intrinsic operations that lack DXIL opCodes
 ModulePass *createDXILIntrinsicExpansionLegacyPass();
 
+/// Initializer for DXIL Data Scalarization Pass
+void initializeDXILDataScalarizationLegacyPass(PassRegistry &);
+
+/// Pass to scalarize llvm global data into a DXIL legal form
+ModulePass *createDXILDataScalarizationLegacyPass();
+
 /// Initializer for DXILOpLowering
 void initializeDXILOpLoweringLegacyPass(PassRegistry &);
 

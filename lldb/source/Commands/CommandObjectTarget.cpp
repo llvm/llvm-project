@@ -2775,7 +2775,7 @@ protected:
           result.AppendErrorWithFormat(
               "Unable to locate the executable or symbol file with UUID %s",
               strm.GetData());
-          result.SetError(error);
+          result.SetError(std::move(error));
           return;
         }
       } else {
@@ -4409,7 +4409,7 @@ protected:
         return AddModuleSymbols(m_exe_ctx.GetTargetPtr(), module_spec, flush,
                                 result);
     } else {
-      result.SetError(error);
+      result.SetError(std::move(error));
     }
     return false;
   }

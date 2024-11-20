@@ -30,7 +30,7 @@ public:
   mutex(const mutex&)            = delete;
   mutex& operator=(const mutex&) = delete;
 
-#  if defined(_LIBCPP_HAS_TRIVIAL_MUTEX_DESTRUCTION)
+#  if _LIBCPP_HAS_TRIVIAL_MUTEX_DESTRUCTION
   _LIBCPP_HIDE_FROM_ABI ~mutex() = default;
 #  else
   ~mutex() _NOEXCEPT;

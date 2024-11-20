@@ -97,13 +97,14 @@ using ::Decl;
 __attribute__((target_version("jscvt"))) void Decl();
 } // namespace Nms
 
-class Out {
+class Out { // #defined-here
   int __attribute__((target_version("bti"))) func(void);
-  int __attribute__((target_version("ssbs2"))) func(void);
+  int __attribute__((target_version("ssbs"))) func(void);
 };
 int __attribute__((target_version("bti"))) Out::func(void) { return 1; }
-int __attribute__((target_version("ssbs2"))) Out::func(void) { return 2; }
-// expected-error@+3 {{out-of-line definition of 'func' does not match any declaration in 'Out'}}
-// expected-note@-3 {{member declaration nearly matches}}
-// expected-note@-3 {{member declaration nearly matches}}
+int __attribute__((target_version("ssbs"))) Out::func(void) { return 2; }
+// expected-error@+4 {{out-of-line definition of 'func' does not match any declaration in 'Out'}}
+// expected-note@-2 {{member declaration nearly matches}}
+// expected-note@-4 {{member declaration nearly matches}}
+// expected-note@#defined-here {{defined here}}
 int __attribute__((target_version("rng"))) Out::func(void) { return 3; }

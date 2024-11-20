@@ -767,6 +767,8 @@ SizeOffsetAPInt ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
   TypeSize ElemSize = DL.getTypeAllocSize(I.getAllocatedType());
   if (ElemSize.isScalable() && Options.EvalMode != ObjectSizeOpts::Mode::Min)
     return ObjectSizeOffsetVisitor::unknown();
+  if (!isUIntN(IntTyBits, ElemSize.getKnownMinValue()))
+    return ObjectSizeOffsetVisitor::unknown();
   APInt Size(IntTyBits, ElemSize.getKnownMinValue());
   if (!I.isArrayAllocation())
     return SizeOffsetAPInt(align(Size, I.getAlign()), Zero);

@@ -25,8 +25,6 @@
 #include "exp10f_impl.h" // Speedup for powf(10, y) = exp10f(y)
 #include "exp2f_impl.h"  // Speedup for powf(2, y) = exp2f(y)
 
-#include <errno.h>
-
 namespace LIBC_NAMESPACE_DECL {
 
 using fputil::DoubleDouble;
@@ -563,6 +561,11 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
       switch (y_u) {
       case 0x3f00'0000: // y = 0.5f
         // pow(x, 1/2) = sqrt(x)
+        if (LIBC_UNLIKELY(x_u == 0x8000'0000 || x_u == 0xff80'0000)) {
+          // pow(-0, 1/2) = +0
+          // pow(-inf, 1/2) = +inf
+          return FloatBits(x_abs).get_val();
+        }
         return fputil::sqrt<float>(x);
       case 0x3f80'0000: // y = 1.0f
         return x;
@@ -852,9 +855,9 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
           : 0.0;
   exp2_hi_mid_dd.hi = exp2_hi_mid;
 
-  return static_cast<float>(
-             powf_double_double(idx_x, dx, y6, lo6_hi, exp2_hi_mid_dd)) +
-         0.0f;
+  double r_dd = powf_double_double(idx_x, dx, y6, lo6_hi, exp2_hi_mid_dd);
+
+  return static_cast<float>(r_dd);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

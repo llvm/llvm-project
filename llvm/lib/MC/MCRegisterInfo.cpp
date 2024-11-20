@@ -141,7 +141,7 @@ unsigned MCRegisterInfo::getSubRegIndex(MCRegister Reg,
   return 0;
 }
 
-int MCRegisterInfo::getDwarfRegNum(MCRegister RegNum, bool isEH) const {
+int64_t MCRegisterInfo::getDwarfRegNum(MCRegister RegNum, bool isEH) const {
   const DwarfLLVMRegPair *M = isEH ? EHL2DwarfRegs : L2DwarfRegs;
   unsigned Size = isEH ? EHL2DwarfRegsSize : L2DwarfRegsSize;
 
@@ -151,24 +151,28 @@ int MCRegisterInfo::getDwarfRegNum(MCRegister RegNum, bool isEH) const {
   const DwarfLLVMRegPair *I = std::lower_bound(M, M+Size, Key);
   if (I == M+Size || I->FromReg != RegNum)
     return -1;
-  return I->ToReg;
+  // Consumers need to be able to detect -1 and -2, but at various points
+  // the numbers move between unsigned and signed representations, as well as
+  // between 32- and 64-bit representations. We need to convert first to int
+  // before int64_t for proper sign handling.
+  return int64_t(int(I->ToReg));
 }
 
-std::optional<MCRegister> MCRegisterInfo::getLLVMRegNum(unsigned RegNum,
+std::optional<MCRegister> MCRegisterInfo::getLLVMRegNum(uint64_t RegNum,
                                                         bool isEH) const {
   const DwarfLLVMRegPair *M = isEH ? EHDwarf2LRegs : Dwarf2LRegs;
   unsigned Size = isEH ? EHDwarf2LRegsSize : Dwarf2LRegsSize;
 
   if (!M)
     return std::nullopt;
-  DwarfLLVMRegPair Key = { RegNum, 0 };
+  DwarfLLVMRegPair Key = {unsigned(RegNum), 0};
   const DwarfLLVMRegPair *I = std::lower_bound(M, M+Size, Key);
   if (I != M + Size && I->FromReg == RegNum)
     return MCRegister::from(I->ToReg);
   return std::nullopt;
 }
 
-int MCRegisterInfo::getDwarfRegNumFromDwarfEHRegNum(unsigned RegNum) const {
+int64_t MCRegisterInfo::getDwarfRegNumFromDwarfEHRegNum(uint64_t RegNum) const {
   // On ELF platforms, DWARF EH register numbers are the same as DWARF
   // other register numbers.  On Darwin x86, they differ and so need to be
   // mapped.  The .cfi_* directives accept integer literals as well as

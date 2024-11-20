@@ -325,7 +325,12 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDISubprogramAttrGet(
     MlirAttribute compileUnit, MlirAttribute scope, MlirAttribute name,
     MlirAttribute linkageName, MlirAttribute file, unsigned int line,
     unsigned int scopeLine, uint64_t subprogramFlags, MlirAttribute type,
-    intptr_t nRetainedNodes, MlirAttribute const *retainedNodes);
+    intptr_t nRetainedNodes, MlirAttribute const *retainedNodes,
+    intptr_t nAnnotations, MlirAttribute const *annotations);
+
+/// Creates a LLVM DIAnnotation attribute.
+MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIAnnotationAttrGet(
+    MlirContext ctx, MlirAttribute name, MlirAttribute value);
 
 /// Gets the scope from this DISubprogramAttr.
 MLIR_CAPI_EXPORTED MlirAttribute

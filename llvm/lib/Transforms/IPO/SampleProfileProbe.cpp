@@ -401,7 +401,7 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
     assert(Builder.GetInsertPoint() != BB->end() &&
            "Cannot get the probing point");
     Function *ProbeFn =
-        llvm::Intrinsic::getDeclaration(M, Intrinsic::pseudoprobe);
+        llvm::Intrinsic::getOrInsertDeclaration(M, Intrinsic::pseudoprobe);
     Value *Args[] = {Builder.getInt64(Guid), Builder.getInt64(Index),
                      Builder.getInt32(0),
                      Builder.getInt64(PseudoProbeFullDistributionFactor)};

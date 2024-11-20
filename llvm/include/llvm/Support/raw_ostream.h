@@ -797,6 +797,30 @@ struct indent {
     assert(NumIndents >= N && "Indentation undeflow");
     return indent(NumIndents - N, Scale);
   }
+  indent &operator++() { // Prefix ++.
+    ++NumIndents;
+    return *this;
+  }
+  indent operator++(int) { // Postfix ++.
+    indent Old = *this;
+    ++NumIndents;
+    return Old;
+  }
+  indent &operator--() { // Prefix --.
+    assert(NumIndents >= 1);
+    --NumIndents;
+    return *this;
+  }
+  indent operator--(int) { // Postfix --.
+    indent Old = *this;
+    assert(NumIndents >= 1);
+    --NumIndents;
+    return Old;
+  }
+  indent &operator=(unsigned N) {
+    NumIndents = N;
+    return *this;
+  }
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const indent &Indent) {

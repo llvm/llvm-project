@@ -7,11 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/BottomUpVec.h"
-#include "llvm/ADT/SmallVector.h"
 
-using namespace llvm::sandboxir;
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/SandboxIR/Function.h"
+#include "llvm/SandboxIR/Instruction.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerPassBuilder.h"
 
 namespace llvm::sandboxir {
+
+BottomUpVec::BottomUpVec(StringRef Pipeline)
+    : FunctionPass("bottom-up-vec"),
+      RPM("rpm", Pipeline, SandboxVectorizerPassBuilder::createRegionPass) {}
+
 // TODO: This is a temporary function that returns some seeds.
 //       Replace this with SeedCollector's function when it lands.
 static llvm::SmallVector<Value *, 4> collectSeeds(BasicBlock &BB) {
@@ -31,8 +38,6 @@ static SmallVector<Value *, 4> getOperand(ArrayRef<Value *> Bndl,
   }
   return Operands;
 }
-
-} // namespace llvm::sandboxir
 
 void BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl) {
   auto LegalityRes = Legality.canVectorize(Bndl);
@@ -57,8 +62,12 @@ bool BottomUpVec::runOnFunction(Function &F) {
     // TODO: Replace with proper SeedCollector function.
     auto Seeds = collectSeeds(BB);
     // TODO: Slice Seeds into smaller chunks.
+    // TODO: If vectorization succeeds, run the RegionPassManager on the
+    // resulting region.
     if (Seeds.size() >= 2)
       tryVectorize(Seeds);
   }
   return Change;
 }
+
+} // namespace llvm::sandboxir

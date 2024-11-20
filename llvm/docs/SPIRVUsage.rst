@@ -147,6 +147,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds atomic add instruction on floating-point numbers.
    * - ``SPV_EXT_shader_atomic_float_min_max``
      - Adds atomic min and max instruction on floating-point numbers.
+   * - ``SPV_EXT_arithmetic_fence``
+     - Adds an instruction that prevents fast-math optimizations between its argument and the expression that contains it.
    * - ``SPV_INTEL_arbitrary_precision_integers``
      - Allows generating arbitrary width integer types.
    * - ``SPV_INTEL_bfloat16_conversion``
@@ -163,6 +165,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds decorations that can be applied to global (module scope) variables to help code generation for FPGA devices.
    * - ``SPV_INTEL_optnone``
      - Adds OptNoneINTEL value for Function Control mask that indicates a request to not optimize the function.
+   * - ``SPV_INTEL_split_barrier``
+     - Adds SPIR-V instructions to split a control barrier into two separate operations: the first indicates that an invocation has "arrived" at the barrier but should continue executing, and the second indicates that an invocation should "wait" for other invocations to arrive at the barrier before executing further.
    * - ``SPV_INTEL_subgroups``
      - Allows work items in a subgroup to share data without the use of local memory and work group barriers, and to utilize specialized hardware to load and store blocks of data from images or buffers.
    * - ``SPV_INTEL_usm_storage_classes``
@@ -221,19 +225,19 @@ using target extension types and are represented as follows:
 
   .. table:: SPIR-V Opaque Types
 
-     ================== ====================== =========================================================================================
+     ================== ====================== ===========================================================================================
      SPIR-V Type        LLVM type name         LLVM type arguments
-     ================== ====================== =========================================================================================
-     OpTypeImage        ``spirv.Image``        sampled type, dimensionality, depth, arrayed, MS, sampled, image format, access qualifier
+     ================== ====================== ===========================================================================================
+     OpTypeImage        ``spirv.Image``        sampled type, dimensionality, depth, arrayed, MS, sampled, image format, [access qualifier]
      OpTypeSampler      ``spirv.Sampler``      (none)
-     OpTypeSampledImage ``spirv.SampledImage`` sampled type, dimensionality, depth, arrayed, MS, sampled, image format, access qualifier
+     OpTypeSampledImage ``spirv.SampledImage`` sampled type, dimensionality, depth, arrayed, MS, sampled, image format, [access qualifier]
      OpTypeEvent        ``spirv.Event``        (none)
      OpTypeDeviceEvent  ``spirv.DeviceEvent``  (none)
      OpTypeReserveId    ``spirv.ReserveId``    (none)
      OpTypeQueue        ``spirv.Queue``        (none)
      OpTypePipe         ``spirv.Pipe``         access qualifier
      OpTypePipeStorage  ``spirv.PipeStorage``  (none)
-     ================== ====================== =========================================================================================
+     ================== ====================== ===========================================================================================
 
 All integer arguments take the same value as they do in their `corresponding
 SPIR-V instruction <https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_type_declaration_instructions>`_.
@@ -275,6 +279,10 @@ SPIR-V backend, along with their descriptions and argument details.
      - None
      - `[Type, Vararg]`
      - Assigns names to types or values, enhancing readability and debuggability of SPIR-V code. Not emitted directly but used for metadata enrichment.
+   * - `int_spv_value_md`
+     - None
+     - `[Metadata]`
+     - Assigns a set of attributes (such as name and data type) to a value that is the argument of the associated `llvm.fake.use` intrinsic call. The latter is used as a mean to map virtual registers created by IRTranslator to the original value.
    * - `int_spv_assign_decoration`
      - None
      - `[Type, Metadata]`
@@ -375,6 +383,13 @@ SPIR-V backend, along with their descriptions and argument details.
      - Pointer
      - `[8-bit Integer]`
      - Creates a resource handle for graphics or compute resources. Facilitates the management and use of resources in shaders.
+   * - `int_spv_handle_fromBinding`
+     - spirv.Image
+     - `[32-bit Integer set, 32-bit Integer binding, 32-bit Integer arraySize, 32-bit Integer index, bool isUniformIndex]`
+     - Returns the handle for the resource at the given set and binding.\
+       If `arraySize > 1`, then the binding represents an array of resources\
+       of the given size, and the handle for the resource at the given index is returned.\
+       If the index is possibly non-uniform, then `isUniformIndex` must get set to true.
 
 .. _spirv-builtin-functions:
 

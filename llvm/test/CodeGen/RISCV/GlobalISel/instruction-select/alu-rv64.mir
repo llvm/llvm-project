@@ -245,8 +245,8 @@ body:             |
     ; RV64I-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = COPY $x10
     %1:gprb(s32) = G_TRUNC %0(s64)
-    %2:gprb(s64) = G_CONSTANT i64 31
-    %3:gprb(s32) = G_SHL %1, %2(s64)
+    %2:gprb(s32) = G_CONSTANT i32 31
+    %3:gprb(s32) = G_SHL %1, %2
     %4:gprb(s64) = G_ANYEXT %3(s32)
     $x10 = COPY %4(s64)
     PseudoRET implicit $x10
@@ -297,8 +297,8 @@ body:             |
     ; RV64I-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = COPY $x10
     %1:gprb(s32) = G_TRUNC %0(s64)
-    %2:gprb(s64) = G_CONSTANT i64 31
-    %3:gprb(s32) = G_ASHR %1, %2(s64)
+    %2:gprb(s32) = G_CONSTANT i32 31
+    %3:gprb(s32) = G_ASHR %1, %2
     %4:gprb(s64) = G_ANYEXT %3(s32)
     $x10 = COPY %4(s64)
     PseudoRET implicit $x10
@@ -349,8 +349,8 @@ body:             |
     ; RV64I-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = COPY $x10
     %1:gprb(s32) = G_TRUNC %0(s64)
-    %2:gprb(s64) = G_CONSTANT i64 31
-    %3:gprb(s32) = G_LSHR %1, %2(s64)
+    %2:gprb(s32) = G_CONSTANT i32 31
+    %3:gprb(s32) = G_LSHR %1, %2
     %4:gprb(s64) = G_ANYEXT %3(s32)
     $x10 = COPY %4(s64)
     PseudoRET implicit $x10

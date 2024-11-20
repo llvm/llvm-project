@@ -524,6 +524,11 @@ private:
   // the VGPR and its stack slot index.
   WWMSpillsMap WWMSpills;
 
+  // Before allocation, the VGPR registers are partitioned into two distinct
+  // sets, the first one for WWM-values and the second set for non-WWM values.
+  // The latter set should be reserved during WWM-regalloc.
+  BitVector NonWWMRegMask;
+
   using ReservedRegSet = SmallSetVector<Register, 8>;
   // To track the VGPRs reserved for WWM instructions. They get stack slots
   // later during PrologEpilogInserter and get added into the superset WWMSpills
@@ -590,6 +595,10 @@ public:
 
   void reserveWWMRegister(Register Reg) { WWMReservedRegs.insert(Reg); }
 
+  void updateNonWWMRegMask(BitVector &RegMask) { NonWWMRegMask = RegMask; }
+  BitVector getNonWWMRegMask() const { return NonWWMRegMask; }
+  void clearNonWWMRegAllocMask() { NonWWMRegMask.clear(); }
+
   SIModeRegisterDefaults getMode() const { return Mode; }
 
   ArrayRef<SIRegisterInfo::SpilledReg>
@@ -630,15 +639,17 @@ public:
   // Check if an entry created for \p Reg in PrologEpilogSGPRSpills. Return true
   // on success and false otherwise.
   bool hasPrologEpilogSGPRSpillEntry(Register Reg) const {
-    auto I = find_if(PrologEpilogSGPRSpills,
-                     [&Reg](const auto &Spill) { return Spill.first == Reg; });
+    const auto *I = find_if(PrologEpilogSGPRSpills, [&Reg](const auto &Spill) {
+      return Spill.first == Reg;
+    });
     return I != PrologEpilogSGPRSpills.end();
   }
 
   // Get the scratch SGPR if allocated to save/restore \p Reg.
   Register getScratchSGPRCopyDstReg(Register Reg) const {
-    auto I = find_if(PrologEpilogSGPRSpills,
-                     [&Reg](const auto &Spill) { return Spill.first == Reg; });
+    const auto *I = find_if(PrologEpilogSGPRSpills, [&Reg](const auto &Spill) {
+      return Spill.first == Reg;
+    });
     if (I != PrologEpilogSGPRSpills.end() &&
         I->second.getKind() == SGPRSaveKind::COPY_TO_SCRATCH_SGPR)
       return I->second.getReg();
@@ -667,8 +678,9 @@ public:
 
   const PrologEpilogSGPRSaveRestoreInfo &
   getPrologEpilogSGPRSaveRestoreInfo(Register Reg) const {
-    auto I = find_if(PrologEpilogSGPRSpills,
-                     [&Reg](const auto &Spill) { return Spill.first == Reg; });
+    const auto *I = find_if(PrologEpilogSGPRSpills, [&Reg](const auto &Spill) {
+      return Spill.first == Reg;
+    });
     assert(I != PrologEpilogSGPRSpills.end());
 
     return I->second;
@@ -729,9 +741,11 @@ public:
       I->second.IsDead = true;
   }
 
-  // To bring the Physical VGPRs in the highest range allocated for CSR SGPR
-  // spilling into the lowest available range.
-  void shiftSpillPhysVGPRsToLowestRange(MachineFunction &MF);
+  // To bring the allocated WWM registers in \p WWMVGPRs to the lowest available
+  // range.
+  void shiftWwmVGPRsToLowestRange(MachineFunction &MF,
+                                  SmallVectorImpl<Register> &WWMVGPRs,
+                                  BitVector &SavedVGPRs);
 
   bool allocateSGPRSpillToVGPRLane(MachineFunction &MF, int FI,
                                    bool SpillToPhysVGPRLane = false,
@@ -877,7 +891,7 @@ public:
   }
 
   MCRegister getPreloadedReg(AMDGPUFunctionArgInfo::PreloadedValue Value) const {
-    auto Arg = std::get<0>(ArgInfo.getPreloadedValue(Value));
+    const auto *Arg = std::get<0>(ArgInfo.getPreloadedValue(Value));
     return Arg ? Arg->getRegister() : MCRegister();
   }
 

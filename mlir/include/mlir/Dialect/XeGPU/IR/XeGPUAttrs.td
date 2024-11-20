@@ -142,4 +142,36 @@ def XeGPU_FenceScopeAttr:
     let assemblyFormat = "$value";
 }
 
+def XeGPU_SGMapAttr : XeGPUAttr<"SGMap", "sg_map"> {
+  let summary = [{
+    Describes the mapping between work item (WI) and the 2D tensor specified by the tensor descriptor.
+  }];
+  let description = [{
+    To distribute the XeGPU operation to work items, the tensor_desc must be specified with the sg_map
+    attribute at the tensor description creation time.
+    Within the `sg_map`, `wi_layout` specifies the layout of work items,
+    describing the mapping of work items to the tensor.
+    wi_layout[0] x wi_layout[1] must be equal to the total number of work items within a subgroup.
+    `wi_data` specifies the minimum number of data elements assigned to each work item for a single distribution.
+
+    E.g., #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>
+    In this example, the subgroup has 16 work items in wi_layout=[1, 16],
+    each accessing 1 element as specified by wi_data=[1, 1].
+
+    `wi_data[0] * wi_data[1]` can be greater than 1, meaning that each work item operates on multiple elements,
+    which is eventually lowered to "SIMT-flavor" vector, like SPIR-V vector or llvm vector, or packed to a storage data type.
+    The multiple elements indicated by `wi_data` can only be from one dimension and must be contiguous in the memory along either dimension.
+  }];
+  let parameters = (ins
+    ArrayRefParameter<"uint32_t">:$wi_layout,
+    ArrayRefParameter<"uint32_t">:$wi_data);
+
+  let builders = [
+    AttrBuilder<(ins)>
+  ];
+
+  let hasCustomAssemblyFormat = 1;
+  let genVerifyDecl = 1;
+}
+
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUATTRS_TD

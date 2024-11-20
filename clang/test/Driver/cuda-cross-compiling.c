@@ -104,4 +104,4 @@
 // RUN: %clang -target nvptx64-nvidia-cuda --cuda-feature=+ptx63 -march=sm_52 -### %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=FEATURE %s
 
-// FEATURE: clang-nvlink-wrapper{{.*}}"--feature" "+ptx63"
+// FEATURE: clang-nvlink-wrapper{{.*}}"--plugin-opt=-mattr=+ptx63"

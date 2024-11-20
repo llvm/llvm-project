@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_INTERPSTACK_H
 #define LLVM_CLANG_AST_INTERP_INTERPSTACK_H
 
+#include "FixedPoint.h"
 #include "FunctionPointer.h"
 #include "IntegralAP.h"
 #include "MemberPointer.h"
@@ -190,6 +191,8 @@ private:
       return PT_IntAP;
     else if constexpr (std::is_same_v<T, MemberPointer>)
       return PT_MemberPtr;
+    else if constexpr (std::is_same_v<T, FixedPoint>)
+      return PT_FixedPoint;
 
     llvm_unreachable("unknown type push()'ed into InterpStack");
   }

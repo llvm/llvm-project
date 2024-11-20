@@ -93,6 +93,13 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::Hurd, T.getOS());
   EXPECT_EQ(Triple::GNU, T.getEnvironment());
 
+  T = Triple("i686-pc-linux-gnu");
+  EXPECT_EQ(Triple::x86, T.getArch());
+  EXPECT_EQ(Triple::PC, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNU, T.getEnvironment());
+  EXPECT_FALSE(T.isTime64ABI());
+
   T = Triple("x86_64-pc-linux-gnu");
   EXPECT_EQ(Triple::x86_64, T.getArch());
   EXPECT_EQ(Triple::PC, T.getVendor());
@@ -187,24 +194,52 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
   EXPECT_EQ(Triple::EABI, T.getEnvironment());
+  EXPECT_FALSE(T.isHardFloatABI());
+
+  T = Triple("arm-none-none-eabihf");
+  EXPECT_EQ(Triple::arm, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+  EXPECT_EQ(Triple::EABIHF, T.getEnvironment());
+  EXPECT_TRUE(T.isHardFloatABI());
 
   T = Triple("arm-none-linux-musleabi");
   EXPECT_EQ(Triple::arm, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::MuslEABI, T.getEnvironment());
+  EXPECT_FALSE(T.isHardFloatABI());
+
+  T = Triple("arm-none-linux-musleabihf");
+  EXPECT_EQ(Triple::arm, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::MuslEABIHF, T.getEnvironment());
+  EXPECT_TRUE(T.isHardFloatABI());
 
   T = Triple("armv6hl-none-linux-gnueabi");
   EXPECT_EQ(Triple::arm, T.getArch());
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::GNUEABI, T.getEnvironment());
+  EXPECT_FALSE(T.isTime64ABI());
+  EXPECT_FALSE(T.isHardFloatABI());
 
   T = Triple("armv7hl-none-linux-gnueabi");
   EXPECT_EQ(Triple::arm, T.getArch());
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::GNUEABI, T.getEnvironment());
+  EXPECT_FALSE(T.isTime64ABI());
+  EXPECT_FALSE(T.isHardFloatABI());
+
+  T = Triple("armv7hl-none-linux-gnueabihf");
+  EXPECT_EQ(Triple::arm, T.getArch());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::GNUEABIHF, T.getEnvironment());
+  EXPECT_FALSE(T.isTime64ABI());
+  EXPECT_TRUE(T.isHardFloatABI());
 
   T = Triple("amdil-unknown-unknown");
   EXPECT_EQ(Triple::amdil, T.getArch());
@@ -1282,6 +1317,29 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::PAuthTest, T.getEnvironment());
+
+  // Gentoo time64 triples
+  T = Triple("i686-pc-linux-gnut64");
+  EXPECT_EQ(Triple::x86, T.getArch());
+  EXPECT_EQ(Triple::PC, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNUT64, T.getEnvironment());
+  EXPECT_TRUE(T.isTime64ABI());
+
+  T = Triple("armv5tel-softfloat-linux-gnueabit64");
+  EXPECT_EQ(Triple::arm, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNUEABIT64, T.getEnvironment());
+  EXPECT_TRUE(T.isTime64ABI());
+
+  T = Triple("armv7a-unknown-linux-gnueabihft64");
+  EXPECT_EQ(Triple::arm, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNUEABIHFT64, T.getEnvironment());
+  EXPECT_TRUE(T.isTime64ABI());
+  EXPECT_TRUE(T.isHardFloatABI());
 
   T = Triple("huh");
   EXPECT_EQ(Triple::UnknownArch, T.getArch());
@@ -2410,6 +2468,10 @@ TEST(TripleTest, NormalizeWindows) {
             Triple::normalize("i686-pc-windows-elf-elf"));
 
   EXPECT_TRUE(Triple("x86_64-pc-win32").isWindowsMSVCEnvironment());
+
+  EXPECT_TRUE(Triple(Triple::normalize("mipsel-windows-msvccoff")).isOSBinFormatCOFF());
+  EXPECT_TRUE(Triple(Triple::normalize("mipsel-windows-msvc")).isOSBinFormatCOFF());
+  EXPECT_TRUE(Triple(Triple::normalize("mipsel-windows-gnu")).isOSBinFormatCOFF());
 }
 
 TEST(TripleTest, NormalizeAndroid) {

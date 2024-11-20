@@ -25,8 +25,6 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-#include <errno.h>
-
 namespace LIBC_NAMESPACE_DECL {
 
 using fputil::DoubleDouble;

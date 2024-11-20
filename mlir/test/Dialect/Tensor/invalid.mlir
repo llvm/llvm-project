@@ -200,7 +200,6 @@ func.func @tensor.reshape_num_elements_mismatch(
 func.func @extract_slice_wrong_result_rank(%t: tensor<?xf32>, %idx : index) {
   // expected-error @+1 {{expected rank to be smaller or equal to the other rank.}}
   %0 = tensor.extract_slice %t[0][4][1] : tensor<?xf32> to tensor<?x?xf32>
-
   return
 }
 
@@ -209,7 +208,25 @@ func.func @extract_slice_wrong_result_rank(%t: tensor<?xf32>, %idx : index) {
 func.func @extract_slice_wrong_result_rank(%t: tensor<?xf32>, %idx : index) {
   // expected-error @+1 {{expected element type to be 'f32'}}
   %0 = tensor.extract_slice %t[0][4][1] : tensor<?xf32> to tensor<4xi8>
+  return
+}
 
+
+// -----
+
+func.func @extract_slice_size_and_output_dim_mismatch_static_size(%t: tensor<16xf32>) {
+  // expected-error @+1 {{expected type to be 'tensor<4xf32>' or a rank-reduced version. (size mismatch)}}
+  %0 = tensor.extract_slice %t[0][4][1]
+    : tensor<16xf32> to tensor<6xf32>
+  return
+}
+
+// -----
+
+func.func @extract_slice_size_and_output_dim_mismatch_dynamic_size(%t: tensor<?xf32>, %idx : index) {
+  // expected-error @+2 {{expected type to be 'tensor<?xf32>' or a rank-reduced version. (size mismatch)}}
+  %c4 = arith.constant 4 : index
+  %0 = tensor.extract_slice %t[0][%c4][1] : tensor<?xf32> to tensor<4xi8>
   return
 }
 
@@ -219,7 +236,6 @@ func.func @extract_slice_wrong_static_type(%t: tensor<8x16x4xf32>, %idx : index)
   // expected-error @+1 {{expected type to be 'tensor<?x4x4xf32>' or a rank-reduced version. (size mismatch)}}
   %0 = tensor.extract_slice %t[0, 0, 0][%idx, 4, 4][1, 1, 1]
     : tensor<8x16x4xf32> to tensor<4x4x4xf32>
-
   return
 }
 
@@ -229,7 +245,14 @@ func.func @extract_slice_wrong_dynamic_type(%t: tensor<8x16x4xf32>, %idx : index
   // expected-error @+1 {{expected type to be 'tensor<4x4x4xf32>' or a rank-reduced version. (size mismatch)}}
   %0 = tensor.extract_slice %t[0, 2, 0][4, 4, 4][1, 1, 1]
     : tensor<8x16x4xf32> to tensor<?x4x4xf32>
+  return
+}
 
+// -----
+
+func.func @illegal_num_offsets(%arg0 : tensor<?x?x?xf32>, %arg1 : index, %arg2 : index) {
+  // expected-error@+1 {{expected 3 offset values}}
+  %0 = tensor.extract_slice %arg0[0, 0] [%arg1, %arg2] [1, 1] : tensor<?x?x?xf32> to tensor<?x?x?xf32>
   return
 }
 
@@ -344,14 +367,6 @@ func.func @illegal_collapsing_reshape_mixed_tensor_2(%arg0 : tensor<?x4x5xf32>)
 func.func @rank(%0: f32) {
   // expected-error@+1 {{'tensor.rank' op operand #0 must be tensor of any type values}}
   "tensor.rank"(%0): (f32)->index
-  return
-}
-
-// -----
-
-func.func @illegal_num_offsets(%arg0 : tensor<?x?x?xf32>, %arg1 : index, %arg2 : index) {
-  // expected-error@+1 {{expected 3 offset values}}
-  %0 = tensor.extract_slice %arg0[0, 0] [%arg1, %arg2] [1, 1] : tensor<?x?x?xf32> to tensor<?x?x?xf32>
   return
 }
 

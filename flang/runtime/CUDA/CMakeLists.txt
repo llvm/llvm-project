@@ -18,6 +18,7 @@ add_flang_library(${CUFRT_LIBNAME}
   allocatable.cpp
   descriptor.cpp
   memory.cpp
+  registration.cpp
 )
 
 if (BUILD_SHARED_LIBS)

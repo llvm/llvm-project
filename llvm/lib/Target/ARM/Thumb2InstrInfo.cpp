@@ -264,8 +264,11 @@ void Thumb2InstrInfo::expandLoadStackGuard(
   }
 
   const auto *GV = cast<GlobalValue>((*MI->memoperands_begin())->getValue());
-  if (MF.getSubtarget<ARMSubtarget>().isTargetELF() && !GV->isDSOLocal())
+  const ARMSubtarget &Subtarget = MF.getSubtarget<ARMSubtarget>();
+  if (Subtarget.isTargetELF() && !GV->isDSOLocal())
     expandLoadStackGuardBase(MI, ARM::t2LDRLIT_ga_pcrel, ARM::t2LDRi12);
+  else if (!Subtarget.useMovt())
+    expandLoadStackGuardBase(MI, ARM::tLDRLIT_ga_abs, ARM::t2LDRi12);
   else if (MF.getTarget().isPositionIndependent())
     expandLoadStackGuardBase(MI, ARM::t2MOV_ga_pcrel, ARM::t2LDRi12);
   else

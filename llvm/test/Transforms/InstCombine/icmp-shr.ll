@@ -1072,7 +1072,7 @@ define <2 x i1> @lshr_pow2_ugt_vec(<2 x i8> %x) {
 define i1 @lshr_not_pow2_ugt(i8 %x) {
 ; CHECK-LABEL: @lshr_not_pow2_ugt(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i8 3, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[S]], 1
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign ugt i8 [[S]], 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = lshr i8 3, %x
@@ -1095,7 +1095,7 @@ define i1 @lshr_pow2_ugt1(i8 %x) {
 define i1 @ashr_pow2_ugt(i8 %x) {
 ; CHECK-LABEL: @ashr_pow2_ugt(
 ; CHECK-NEXT:    [[S:%.*]] = ashr exact i8 -128, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[S]], -96
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign ugt i8 [[S]], -96
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = ashr i8 128, %x
@@ -1154,7 +1154,7 @@ define <2 x i1> @lshr_pow2_ult_vec(<2 x i8> %x) {
 define i1 @lshr_not_pow2_ult(i8 %x) {
 ; CHECK-LABEL: @lshr_not_pow2_ult(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i8 3, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[S]], 2
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign ult i8 [[S]], 2
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = lshr i8 3, %x
@@ -1187,7 +1187,7 @@ define i1 @lshr_pow2_ult_smin(i8 %x) {
 define i1 @ashr_pow2_ult(i8 %x) {
 ; CHECK-LABEL: @ashr_pow2_ult(
 ; CHECK-NEXT:    [[S:%.*]] = ashr exact i8 -128, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[S]], -96
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign ult i8 [[S]], -96
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = ashr i8 128, %x
@@ -1631,7 +1631,7 @@ define i1 @slt_zero_ult_i1_fail1(i32 %a, i1 %b) {
 ; CHECK-LABEL: @slt_zero_ult_i1_fail1(
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[B:%.*]] to i32
 ; CHECK-NEXT:    [[CMP1:%.*]] = lshr i32 [[A:%.*]], 30
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[CMP1]], [[CONV]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ugt i32 [[CMP1]], [[CONV]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %conv = zext i1 %b to i32

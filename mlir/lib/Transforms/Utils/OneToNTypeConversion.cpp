@@ -418,7 +418,7 @@ class FunctionOpInterfaceSignatureConversion : public OneToNConversionPattern {
 public:
   FunctionOpInterfaceSignatureConversion(StringRef functionLikeOpName,
                                          MLIRContext *ctx,
-                                         TypeConverter &converter)
+                                         const TypeConverter &converter)
       : OneToNConversionPattern(converter, functionLikeOpName, /*benefit=*/1,
                                 ctx) {}
 
@@ -466,7 +466,7 @@ public:
 } // namespace
 
 void populateOneToNFunctionOpInterfaceTypeConversionPattern(
-    StringRef functionLikeOpName, TypeConverter &converter,
+    StringRef functionLikeOpName, const TypeConverter &converter,
     RewritePatternSet &patterns) {
   patterns.add<FunctionOpInterfaceSignatureConversion>(
       functionLikeOpName, patterns.getContext(), converter);

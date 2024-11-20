@@ -157,22 +157,38 @@ INTERCEPTOR(int, creat64, const char *path, mode_t mode) {
 INTERCEPTOR(int, fcntl, int filedes, int cmd, ...) {
   __rtsan_notify_intercepted_call("fcntl");
 
-  va_list args;
-  va_start(args, cmd);
-
   // Following precedent here. The linux source (fcntl.c, do_fcntl) accepts the
   // final argument in a variable that will hold the largest of the possible
-  // argument types (pointers and ints are typical in fcntl) It is then assumed
-  // that the implementation of fcntl will cast it properly depending on cmd.
+  // argument types. It is then assumed that the implementation of fcntl will
+  // cast it properly depending on cmd.
   //
-  // This is also similar to what is done in
-  // sanitizer_common/sanitizer_common_syscalls.inc
-  const unsigned long arg = va_arg(args, unsigned long);
-  int result = REAL(fcntl)(filedes, cmd, arg);
+  // The two types we expect for possible args are `struct flock*` and `int`
+  // we will cast to `intptr_t` which should hold both comfortably.
+  // Why `intptr_t`? It should fit both types, and it follows the freeBSD
+  // approach linked below.
+  using arg_type = intptr_t;
+  static_assert(sizeof(arg_type) >= sizeof(struct flock *));
+  static_assert(sizeof(arg_type) >= sizeof(int));
 
+  // Some cmds will not actually have an argument passed in this va_list.
+  // Calling va_arg when no arg exists is UB, however all currently
+  // supported architectures will give us a result in all three cases
+  // (no arg/int arg/struct flock* arg)
+  // va_arg() will generally read the next argument register or the
+  // stack. If we ever support an arch like CHERI with bounds checking, we
+  // may have to re-evaluate this approach.
+  //
+  // More discussion, and other examples following this approach
+  // https://discourse.llvm.org/t/how-to-write-an-interceptor-for-fcntl/81203
+  // https://reviews.freebsd.org/D46403
+  // https://github.com/bminor/glibc/blob/c444cc1d8335243c5c4e636d6a26c472df85522c/sysdeps/unix/sysv/linux/fcntl64.c#L37-L46
+
+  va_list args;
+  va_start(args, cmd);
+  const arg_type arg = va_arg(args, arg_type);
   va_end(args);
 
-  return result;
+  return REAL(fcntl)(filedes, cmd, arg);
 }
 
 #if SANITIZER_INTERCEPT_FCNTL64

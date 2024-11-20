@@ -16,6 +16,8 @@
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::Sign;
+
 template <typename OutType, typename InType>
 class DivTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 

@@ -80,7 +80,7 @@ void CodeGenSubRegIndex::updateComponents(CodeGenRegBank &RegBank) {
     return;
 
   std::vector<const Record *> Comps =
-      TheDef->getValueAsListOfConstDefs("ComposedOf");
+      TheDef->getValueAsListOfDefs("ComposedOf");
   if (!Comps.empty()) {
     if (Comps.size() != 2)
       PrintFatalError(TheDef->getLoc(),
@@ -93,7 +93,7 @@ void CodeGenSubRegIndex::updateComponents(CodeGenRegBank &RegBank) {
   }
 
   std::vector<const Record *> Parts =
-      TheDef->getValueAsListOfConstDefs("CoveringSubRegIndices");
+      TheDef->getValueAsListOfDefs("CoveringSubRegIndices");
   if (!Parts.empty()) {
     if (Parts.size() < 2)
       PrintFatalError(TheDef->getLoc(),
@@ -169,9 +169,8 @@ CodeGenRegister::CodeGenRegister(const Record *R, unsigned Enum)
 
 void CodeGenRegister::buildObjectGraph(CodeGenRegBank &RegBank) {
   std::vector<const Record *> SRIs =
-      TheDef->getValueAsListOfConstDefs("SubRegIndices");
-  std::vector<const Record *> SRs =
-      TheDef->getValueAsListOfConstDefs("SubRegs");
+      TheDef->getValueAsListOfDefs("SubRegIndices");
+  std::vector<const Record *> SRs = TheDef->getValueAsListOfDefs("SubRegs");
 
   if (SRIs.size() != SRs.size())
     PrintFatalError(TheDef->getLoc(),
@@ -629,9 +628,9 @@ struct TupleExpander : SetTheory::Expander {
   void expand(SetTheory &ST, const Record *Def,
               SetTheory::RecSet &Elts) override {
     std::vector<const Record *> Indices =
-        Def->getValueAsListOfConstDefs("SubRegIndices");
+        Def->getValueAsListOfDefs("SubRegIndices");
     unsigned Dim = Indices.size();
-    ListInit *SubRegs = Def->getValueAsListInit("SubRegs");
+    const ListInit *SubRegs = Def->getValueAsListInit("SubRegs");
     if (Dim != SubRegs->size())
       PrintFatalError(Def->getLoc(), "SubRegIndices and SubRegs size mismatch");
     if (Dim < 2)
@@ -651,7 +650,7 @@ struct TupleExpander : SetTheory::Expander {
 
     // Precompute some types.
     Record *RegisterCl = Def->getRecords().getClass("Register");
-    RecTy *RegisterRecTy = RecordRecTy::get(RegisterCl);
+    const RecTy *RegisterRecTy = RecordRecTy::get(RegisterCl);
     std::vector<StringRef> RegNames =
         Def->getValueAsListOfStrings("RegAsmNames");
 
@@ -670,11 +669,11 @@ struct TupleExpander : SetTheory::Expander {
       }
 
       // Take the cost list of the first register in the tuple.
-      ListInit *CostList = Proto->getValueAsListInit("CostPerUse");
-      SmallVector<Init *, 2> CostPerUse;
+      const ListInit *CostList = Proto->getValueAsListInit("CostPerUse");
+      SmallVector<const Init *, 2> CostPerUse;
       CostPerUse.insert(CostPerUse.end(), CostList->begin(), CostList->end());
 
-      StringInit *AsmName = StringInit::get(RK, "");
+      const StringInit *AsmName = StringInit::get(RK, "");
       if (!RegNames.empty()) {
         if (RegNames.size() <= n)
           PrintFatalError(Def->getLoc(),
@@ -698,9 +697,8 @@ struct TupleExpander : SetTheory::Expander {
                         "Register tuple redefines register '" + Name + "'.");
 
       // Copy Proto super-classes.
-      ArrayRef<std::pair<Record *, SMRange>> Supers = Proto->getSuperClasses();
-      for (const auto &SuperPair : Supers)
-        NewReg->addSuperClass(SuperPair.first, SuperPair.second);
+      for (const auto &[Super, Loc] : Proto->getSuperClasses())
+        NewReg->addSuperClass(Super, Loc);
 
       // Copy Proto fields.
       for (unsigned i = 0, e = Proto->getValues().size(); i != e; ++i) {
@@ -764,8 +762,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
     : TheDef(R), Name(std::string(R->getName())),
       TopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1), TSFlags(0) {
   GeneratePressureSet = R->getValueAsBit("GeneratePressureSet");
-  std::vector<const Record *> TypeList =
-      R->getValueAsListOfConstDefs("RegTypes");
+  std::vector<const Record *> TypeList = R->getValueAsListOfDefs("RegTypes");
   if (TypeList.empty())
     PrintFatalError(R->getLoc(), "RegTypes list must not be empty!");
   for (unsigned i = 0, e = TypeList.size(); i != e; ++i) {
@@ -779,7 +776,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
 
   // Allocation order 0 is the full set. AltOrders provides others.
   const SetTheory::RecVec *Elements = RegBank.getSets().expand(R);
-  ListInit *AltOrders = R->getValueAsListInit("AltOrders");
+  const ListInit *AltOrders = R->getValueAsListInit("AltOrders");
   Orders.resize(1 + AltOrders->size());
 
   // Default allocation order always contains all registers.
@@ -811,7 +808,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
   Namespace = R->getValueAsString("Namespace");
 
   if (const RecordVal *RV = R->getValue("RegInfos"))
-    if (DefInit *DI = dyn_cast_or_null<DefInit>(RV->getValue()))
+    if (const DefInit *DI = dyn_cast_or_null<DefInit>(RV->getValue()))
       RSI = RegSizeInfoByHwMode(DI->getDef(), RegBank.getHwModes());
   unsigned Size = R->getValueAsInt("Size");
   assert((RSI.hasDefault() || Size != 0 || VTs[0].isSimple()) &&
@@ -834,9 +831,9 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
 
   GlobalPriority = R->getValueAsBit("GlobalPriority");
 
-  BitsInit *TSF = R->getValueAsBitsInit("TSFlags");
+  const BitsInit *TSF = R->getValueAsBitsInit("TSFlags");
   for (unsigned I = 0, E = TSF->getNumBits(); I != E; ++I) {
-    BitInit *Bit = cast<BitInit>(TSF->getBit(I));
+    const BitInit *Bit = cast<BitInit>(TSF->getBit(I));
     TSFlags |= uint8_t(Bit->getValue()) << I;
   }
 }

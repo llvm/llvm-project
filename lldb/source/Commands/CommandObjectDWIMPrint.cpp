@@ -191,6 +191,17 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     ExpressionResults expr_result = target.EvaluateExpression(
         expr, exe_scope, valobj_sp, eval_options, &fixed_expression);
 
+    // Record the position of the expression in the command.
+    std::optional<uint16_t> indent;
+    if (fixed_expression.empty()) {
+      size_t pos = m_original_command.rfind(expr);
+      if (pos != llvm::StringRef::npos)
+        indent = pos;
+    }
+    // Previously the indent was set up for diagnosing command line
+    // parsing errors. Now point it to the expression.
+    result.SetDiagnosticIndent(indent);
+
     // Only mention Fix-Its if the expression evaluator applied them.
     // Compiler errors refer to the final expression after applying Fix-It(s).
     if (!fixed_expression.empty() && target.GetEnableNotifyAboutFixIts()) {
@@ -202,7 +213,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     // If the expression failed, return an error.
     if (expr_result != eExpressionCompleted) {
       if (valobj_sp)
-        result.SetError(valobj_sp->GetError());
+        result.SetError(valobj_sp->GetError().Clone());
       else
         result.AppendErrorWithFormatv(
             "unknown error evaluating expression `{0}`", expr);

@@ -1604,15 +1604,45 @@ static bool isTargetVariantEnvironment(const TargetInfo &TI,
   return false;
 }
 
-#if defined(__sun__) && defined(__svr4__)
+#if defined(__sun__) && defined(__svr4__) && defined(__clang__) &&             \
+    __clang__ < 20
 // GCC mangles std::tm as tm for binary compatibility on Solaris (Issue
 // #33114).  We need to match this to allow the std::put_time calls to link
-// (PR #99075).
+// (PR #99075).  clang 20 contains a fix, but the workaround is still needed
+// with older versions.
 asm("_ZNKSt8time_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEE3putES3_"
     "RSt8ios_basecPKSt2tmPKcSB_ = "
     "_ZNKSt8time_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEE3putES3_"
     "RSt8ios_basecPK2tmPKcSB_");
 #endif
+
+static bool IsBuiltinTrait(Token &Tok) {
+
+#define TYPE_TRAIT_1(Spelling, Name, Key)                                      \
+  case tok::kw_##Spelling:                                                     \
+    return true;
+#define TYPE_TRAIT_2(Spelling, Name, Key)                                      \
+  case tok::kw_##Spelling:                                                     \
+    return true;
+#define TYPE_TRAIT_N(Spelling, Name, Key)                                      \
+  case tok::kw_##Spelling:                                                     \
+    return true;
+#define ARRAY_TYPE_TRAIT(Spelling, Name, Key)                                  \
+  case tok::kw_##Spelling:                                                     \
+    return true;
+#define EXPRESSION_TRAIT(Spelling, Name, Key)                                  \
+  case tok::kw_##Spelling:                                                     \
+    return true;
+#define TRANSFORM_TYPE_TRAIT_DEF(K, Spelling)                                  \
+  case tok::kw___##Spelling:                                                   \
+    return true;
+
+  switch (Tok.getKind()) {
+  default:
+    return false;
+#include "clang/Basic/TokenKinds.def"
+  }
+}
 
 /// ExpandBuiltinMacro - If an identifier token is read that is to be expanded
 /// as a builtin macro, handle it and return the next token as 'Tok'.
@@ -1812,25 +1842,11 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
                 getTargetInfo().getTargetOpts().FeatureMap);
           }
           return true;
-        } else if (II->getTokenID() != tok::identifier ||
-                   II->hasRevertedTokenIDToIdentifier()) {
-          // Treat all keywords that introduce a custom syntax of the form
-          //
-          //   '__some_keyword' '(' [...] ')'
-          //
-          // as being "builtin functions", even if the syntax isn't a valid
-          // function call (for example, because the builtin takes a type
-          // argument).
-          if (II->getName().starts_with("__builtin_") ||
-              II->getName().starts_with("__is_") ||
-              II->getName().starts_with("__has_"))
-            return true;
-          return llvm::StringSwitch<bool>(II->getName())
-              .Case("__array_rank", true)
-              .Case("__array_extent", true)
-#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) .Case("__" #Trait, true)
-#include "clang/Basic/TransformTypeTraits.def"
-              .Default(false);
+        } else if (IsBuiltinTrait(Tok)) {
+          return true;
+        } else if (II->getTokenID() != tok::identifier &&
+                   II->getName().starts_with("__builtin_")) {
+          return true;
         } else {
           return llvm::StringSwitch<bool>(II->getName())
               // Report builtin templates as being builtins.

@@ -355,9 +355,9 @@ PPCFrameLowering::determineFrameLayout(const MachineFunction &MF,
   return FrameSize;
 }
 
-// hasFP - Return true if the specified function actually has a dedicated frame
-// pointer register.
-bool PPCFrameLowering::hasFP(const MachineFunction &MF) const {
+// hasFPImpl - Return true if the specified function actually has a dedicated
+// frame pointer register.
+bool PPCFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   // FIXME: This is pretty much broken by design: hasFP() might be called really
   // early, before the stack layout was calculated and thus hasFP() might return

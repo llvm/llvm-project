@@ -296,8 +296,8 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
   DTU = std::move(DTU_);
   BFI = BFI_;
   BPI = BPI_;
-  auto *GuardDecl = F->getParent()->getFunction(
-      Intrinsic::getName(Intrinsic::experimental_guard));
+  auto *GuardDecl = Intrinsic::getDeclarationIfExists(
+      F->getParent(), Intrinsic::experimental_guard);
   HasGuards = GuardDecl && !GuardDecl->use_empty();
 
   // Reduce the number of instructions duplicated when optimizing strictly for

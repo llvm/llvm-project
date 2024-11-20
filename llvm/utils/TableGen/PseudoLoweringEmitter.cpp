@@ -15,6 +15,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/TGTimer.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <vector>
 using namespace llvm;
@@ -298,13 +299,14 @@ void PseudoLoweringEmitter::run(raw_ostream &OS) {
   StringRef Classes[] = {"PseudoInstExpansion", "Instruction"};
 
   // Process the pseudo expansion definitions, validating them as we do so.
-  Records.startTimer("Process definitions");
+  TGTimer &Timer = Records.getTimer();
+  Timer.startTimer("Process definitions");
   for (const Record *Inst : Records.getAllDerivedDefinitions(Classes))
     evaluateExpansion(Inst);
 
   // Generate expansion code to lower the pseudo to an MCInst of the real
   // instruction.
-  Records.startTimer("Emit expansion code");
+  Timer.startTimer("Emit expansion code");
   emitLoweringEmitter(OS);
 }
 

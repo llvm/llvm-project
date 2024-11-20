@@ -112,6 +112,12 @@ static cl::opt<unsigned> PHICSENumPHISmallSize(
         "When the basic block contains not more than this number of PHI nodes, "
         "perform a (faster!) exhaustive search instead of set-driven one."));
 
+static cl::opt<unsigned> MaxPhiEntriesIncreaseAfterRemovingEmptyBlock(
+    "max-phi-entries-increase-after-removing-empty-block", cl::init(1000),
+    cl::Hidden,
+    cl::desc("Stop removing an empty block if removing it will introduce more "
+             "than this number of phi entries in its successor"));
+
 // Max recursion depth for collectBitParts used when detecting bswap and
 // bitreverse idioms.
 static const unsigned BitPartRecursionMaxDepth = 48;
@@ -919,7 +925,7 @@ CanPropagatePredecessorsForPHIs(BasicBlock *BB, BasicBlock *Succ,
 }
 
 using PredBlockVector = SmallVector<BasicBlock *, 16>;
-using IncomingValueMap = DenseMap<BasicBlock *, Value *>;
+using IncomingValueMap = SmallDenseMap<BasicBlock *, Value *, 16>;
 
 /// Determines the value to use as the phi node input for a block.
 ///
@@ -1017,7 +1023,6 @@ static void replaceUndefValuesInPhi(PHINode *PN,
 static bool
 CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
                                 const SmallPtrSetImpl<BasicBlock *> &BBPreds,
-                                const SmallPtrSetImpl<BasicBlock *> &SuccPreds,
                                 BasicBlock *&CommonPred) {
 
   // There must be phis in BB, otherwise BB will be merged into Succ directly
@@ -1036,7 +1041,7 @@ CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
 
   // Get the single common predecessor of both BB and Succ. Return false
   // when there are more than one common predecessors.
-  for (BasicBlock *SuccPred : SuccPreds) {
+  for (BasicBlock *SuccPred : predecessors(Succ)) {
     if (BBPreds.count(SuccPred)) {
       if (CommonPred)
         return false;
@@ -1045,6 +1050,33 @@ CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
   }
 
   return true;
+}
+
+/// Check whether removing \p BB will make the phis in its \p Succ have too
+/// many incoming entries. This function does not check whether \p BB is
+/// foldable or not.
+static bool introduceTooManyPhiEntries(BasicBlock *BB, BasicBlock *Succ) {
+  // If BB only has one predecessor, then removing it will not introduce more
+  // incoming edges for phis.
+  if (BB->hasNPredecessors(1))
+    return false;
+  unsigned NumPreds = pred_size(BB);
+  unsigned NumChangedPhi = 0;
+  for (auto &Phi : Succ->phis()) {
+    // If the incoming value is a phi and the phi is defined in BB,
+    // then removing BB will not increase the total phi entries of the ir.
+    if (auto *IncomingPhi = dyn_cast<PHINode>(Phi.getIncomingValueForBlock(BB)))
+      if (IncomingPhi->getParent() == BB)
+        continue;
+    // Otherwise, we need to add entries to the phi
+    NumChangedPhi++;
+  }
+  // For every phi that needs to be changed, (NumPreds - 1) new entries will be
+  // added. If the total increase in phi entries exceeds
+  // MaxPhiEntriesIncreaseAfterRemovingEmptyBlock, it will be considered as
+  // introducing too many new phi entries.
+  return (NumPreds - 1) * NumChangedPhi >
+         MaxPhiEntriesIncreaseAfterRemovingEmptyBlock;
 }
 
 /// Replace a value flowing from a block to a phi with
@@ -1133,7 +1165,6 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     return false;
 
   SmallPtrSet<BasicBlock *, 16> BBPreds(pred_begin(BB), pred_end(BB));
-  SmallPtrSet<BasicBlock *, 16> SuccPreds(pred_begin(Succ), pred_end(Succ));
 
   // The single common predecessor of BB and Succ when BB cannot be killed
   BasicBlock *CommonPred = nullptr;
@@ -1142,11 +1173,10 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
 
   // Even if we can not fold BB into Succ, we may be able to redirect the
   // predecessors of BB to Succ.
-  bool BBPhisMergeable =
-      BBKillable ||
-      CanRedirectPredsOfEmptyBBToSucc(BB, Succ, BBPreds, SuccPreds, CommonPred);
+  bool BBPhisMergeable = BBKillable || CanRedirectPredsOfEmptyBBToSucc(
+                                           BB, Succ, BBPreds, CommonPred);
 
-  if (!BBKillable && !BBPhisMergeable)
+  if ((!BBKillable && !BBPhisMergeable) || introduceTooManyPhiEntries(BB, Succ))
     return false;
 
   // Check to see if merging these blocks/phis would cause conflicts for any of
@@ -1269,7 +1299,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     // All predecessors of BB (except the common predecessor) will be moved to
     // Succ.
     Updates.reserve(Updates.size() + 2 * pred_size(BB) + 1);
-
+    SmallPtrSet<BasicBlock *, 16> SuccPreds(pred_begin(Succ), pred_end(Succ));
     for (auto *PredOfBB : predecessors(BB)) {
       // Do not modify those common predecessors of BB and Succ
       if (!SuccPreds.contains(PredOfBB))
@@ -2434,7 +2464,7 @@ Value *getSalvageOpsForGEP(GetElementPtrInst *GEP, const DataLayout &DL,
                            SmallVectorImpl<Value *> &AdditionalValues) {
   unsigned BitWidth = DL.getIndexSizeInBits(GEP->getPointerAddressSpace());
   // Rewrite a GEP into a DIExpression.
-  MapVector<Value *, APInt> VariableOffsets;
+  SmallMapVector<Value *, APInt, 4> VariableOffsets;
   APInt ConstantOffset(BitWidth, 0);
   if (!GEP->collectOffset(DL, BitWidth, VariableOffsets, ConstantOffset))
     return nullptr;
@@ -4111,7 +4141,8 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
   else
     return false;
 
-  Function *F = Intrinsic::getDeclaration(I->getModule(), Intrin, DemandedTy);
+  Function *F =
+      Intrinsic::getOrInsertDeclaration(I->getModule(), Intrin, DemandedTy);
   Value *Provider = Res->Provider;
 
   // We may need to truncate the provider.

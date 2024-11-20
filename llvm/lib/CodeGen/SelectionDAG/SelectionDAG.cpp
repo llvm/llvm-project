@@ -1641,7 +1641,11 @@ SDValue SelectionDAG::getConstant(uint64_t Val, const SDLoc &DL, EVT VT,
   assert((EltVT.getSizeInBits() >= 64 ||
           (uint64_t)((int64_t)Val >> EltVT.getSizeInBits()) + 1 < 2) &&
          "getConstant with a uint64_t value that doesn't fit in the type!");
-  return getConstant(APInt(EltVT.getSizeInBits(), Val), DL, VT, isT, isO);
+  // TODO: Avoid implicit trunc?
+  // See https://github.com/llvm/llvm-project/issues/112510.
+  return getConstant(APInt(EltVT.getSizeInBits(), Val, /*isSigned=*/false,
+                           /*implicitTrunc=*/true),
+                     DL, VT, isT, isO);
 }
 
 SDValue SelectionDAG::getConstant(const APInt &Val, const SDLoc &DL, EVT VT,
@@ -1655,6 +1659,11 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
 
   EVT EltVT = VT.getScalarType();
   const ConstantInt *Elt = &Val;
+
+  // Vector splats are explicit within the DAG, with ConstantSDNode holding the
+  // to-be-splatted scalar ConstantInt.
+  if (isa<VectorType>(Elt->getType()))
+    Elt = ConstantInt::get(*getContext(), Elt->getValue());
 
   // In some cases the vector type is legal but the element type is illegal and
   // needs to be promoted, for example v8i8 on ARM.  In this case, promote the
@@ -1809,6 +1818,12 @@ SDValue SelectionDAG::getConstantFP(const ConstantFP &V, const SDLoc &DL,
   assert(VT.isFloatingPoint() && "Cannot create integer FP constant!");
 
   EVT EltVT = VT.getScalarType();
+  const ConstantFP *Elt = &V;
+
+  // Vector splats are explicit within the DAG, with ConstantFPSDNode holding
+  // the to-be-splatted scalar ConstantFP.
+  if (isa<VectorType>(Elt->getType()))
+    Elt = ConstantFP::get(*getContext(), Elt->getValue());
 
   // Do the map lookup using the actual bit pattern for the floating point
   // value, so that we don't have problems with 0.0 comparing equal to -0.0, and
@@ -1817,7 +1832,7 @@ SDValue SelectionDAG::getConstantFP(const ConstantFP &V, const SDLoc &DL,
   SDVTList VTs = getVTList(EltVT);
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, Opc, VTs, {});
-  ID.AddPointer(&V);
+  ID.AddPointer(Elt);
   void *IP = nullptr;
   SDNode *N = nullptr;
   if ((N = FindNodeOrInsertPos(ID, DL, IP)))
@@ -1825,7 +1840,7 @@ SDValue SelectionDAG::getConstantFP(const ConstantFP &V, const SDLoc &DL,
       return SDValue(N, 0);
 
   if (!N) {
-    N = newSDNode<ConstantFPSDNode>(isTarget, &V, VTs);
+    N = newSDNode<ConstantFPSDNode>(isTarget, Elt, VTs);
     CSEMap.InsertNode(N, IP);
     InsertNode(N);
   }
@@ -5460,6 +5475,7 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
   case ISD::FASIN:
   case ISD::FACOS:
   case ISD::FATAN:
+  case ISD::FATAN2:
   case ISD::FSINH:
   case ISD::FCOSH:
   case ISD::FTANH:
@@ -6643,6 +6659,44 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
     if (TLI->isCommutativeBinOp(Opcode))
       if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Ops[1]))
         return FoldSymbolOffset(Opcode, VT, GA, Ops[0].getNode());
+
+    // fold (sext_in_reg c1) -> c2
+    if (Opcode == ISD::SIGN_EXTEND_INREG) {
+      EVT EVT = cast<VTSDNode>(Ops[1])->getVT();
+
+      auto SignExtendInReg = [&](APInt Val, llvm::EVT ConstantVT) {
+        unsigned FromBits = EVT.getScalarSizeInBits();
+        Val <<= Val.getBitWidth() - FromBits;
+        Val.ashrInPlace(Val.getBitWidth() - FromBits);
+        return getConstant(Val, DL, ConstantVT);
+      };
+
+      if (auto *C1 = dyn_cast<ConstantSDNode>(Ops[0])) {
+        const APInt &Val = C1->getAPIntValue();
+        return SignExtendInReg(Val, VT);
+      }
+
+      if (ISD::isBuildVectorOfConstantSDNodes(Ops[0].getNode())) {
+        SmallVector<SDValue, 8> ScalarOps;
+        llvm::EVT OpVT = Ops[0].getOperand(0).getValueType();
+        for (int I = 0, E = VT.getVectorNumElements(); I != E; ++I) {
+          SDValue Op = Ops[0].getOperand(I);
+          if (Op.isUndef()) {
+            ScalarOps.push_back(getUNDEF(OpVT));
+            continue;
+          }
+          APInt Val = cast<ConstantSDNode>(Op)->getAPIntValue();
+          ScalarOps.push_back(SignExtendInReg(Val, OpVT));
+        }
+        return getBuildVector(VT, DL, ScalarOps);
+      }
+
+      if (Ops[0].getOpcode() == ISD::SPLAT_VECTOR &&
+          isa<ConstantSDNode>(Ops[0].getOperand(0)))
+        return getNode(ISD::SPLAT_VECTOR, DL, VT,
+                       SignExtendInReg(Ops[0].getConstantOperandAPInt(0),
+                                       Ops[0].getOperand(0).getValueType()));
+    }
   }
 
   // This is for vector folding only from here on.
@@ -7189,41 +7243,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            "Vector element counts must match in SIGN_EXTEND_INREG");
     assert(EVT.bitsLE(VT) && "Not extending!");
     if (EVT == VT) return N1;  // Not actually extending
-
-    auto SignExtendInReg = [&](APInt Val, llvm::EVT ConstantVT) {
-      unsigned FromBits = EVT.getScalarSizeInBits();
-      Val <<= Val.getBitWidth() - FromBits;
-      Val.ashrInPlace(Val.getBitWidth() - FromBits);
-      return getConstant(Val, DL, ConstantVT);
-    };
-
-    if (N1C) {
-      const APInt &Val = N1C->getAPIntValue();
-      return SignExtendInReg(Val, VT);
-    }
-
-    if (ISD::isBuildVectorOfConstantSDNodes(N1.getNode())) {
-      SmallVector<SDValue, 8> Ops;
-      llvm::EVT OpVT = N1.getOperand(0).getValueType();
-      for (int i = 0, e = VT.getVectorNumElements(); i != e; ++i) {
-        SDValue Op = N1.getOperand(i);
-        if (Op.isUndef()) {
-          Ops.push_back(getUNDEF(OpVT));
-          continue;
-        }
-        ConstantSDNode *C = cast<ConstantSDNode>(Op);
-        APInt Val = C->getAPIntValue();
-        Ops.push_back(SignExtendInReg(Val, OpVT));
-      }
-      return getBuildVector(VT, DL, Ops);
-    }
-
-    if (N1.getOpcode() == ISD::SPLAT_VECTOR &&
-        isa<ConstantSDNode>(N1.getOperand(0)))
-      return getNode(
-          ISD::SPLAT_VECTOR, DL, VT,
-          SignExtendInReg(N1.getConstantOperandAPInt(0),
-                          N1.getOperand(0).getValueType()));
     break;
   }
   case ISD::FP_TO_SINT_SAT:
@@ -11725,7 +11744,7 @@ void SelectionDAG::CreateTopologicalOrder(std::vector<SDNode *> &Order) {
   }
 }
 
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
 void SelectionDAG::VerifyDAGDivergence() {
   std::vector<SDNode *> TopoOrder;
   CreateTopologicalOrder(TopoOrder);

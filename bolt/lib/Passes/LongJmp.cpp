@@ -324,9 +324,8 @@ uint64_t LongJmpPass::tentativeLayoutRelocColdPart(
 uint64_t LongJmpPass::tentativeLayoutRelocMode(
     const BinaryContext &BC, std::vector<BinaryFunction *> &SortedFunctions,
     uint64_t DotAddress) {
-
   // Compute hot cold frontier
-  uint32_t LastHotIndex = -1u;
+  int64_t LastHotIndex = -1u;
   uint32_t CurrentIndex = 0;
   if (opts::HotFunctionsAtEnd) {
     for (BinaryFunction *BF : SortedFunctions) {
@@ -351,19 +350,20 @@ uint64_t LongJmpPass::tentativeLayoutRelocMode(
   // Hot
   CurrentIndex = 0;
   bool ColdLayoutDone = false;
+  auto runColdLayout = [&]() {
+    DotAddress = tentativeLayoutRelocColdPart(BC, SortedFunctions, DotAddress);
+    ColdLayoutDone = true;
+    if (opts::HotFunctionsAtEnd)
+      DotAddress = alignTo(DotAddress, opts::AlignText);
+  };
   for (BinaryFunction *Func : SortedFunctions) {
     if (!BC.shouldEmit(*Func)) {
       HotAddresses[Func] = Func->getAddress();
       continue;
     }
 
-    if (!ColdLayoutDone && CurrentIndex >= LastHotIndex) {
-      DotAddress =
-          tentativeLayoutRelocColdPart(BC, SortedFunctions, DotAddress);
-      ColdLayoutDone = true;
-      if (opts::HotFunctionsAtEnd)
-        DotAddress = alignTo(DotAddress, opts::AlignText);
-    }
+    if (!ColdLayoutDone && CurrentIndex >= LastHotIndex)
+      runColdLayout();
 
     DotAddress = alignTo(DotAddress, Func->getMinAlignment());
     uint64_t Pad =
@@ -382,6 +382,11 @@ uint64_t LongJmpPass::tentativeLayoutRelocMode(
     DotAddress += Func->estimateConstantIslandSize();
     ++CurrentIndex;
   }
+
+  // Ensure that tentative code layout always runs for cold blocks.
+  if (!ColdLayoutDone)
+    runColdLayout();
+
   // BBs
   for (BinaryFunction *Func : SortedFunctions)
     tentativeBBLayout(*Func);

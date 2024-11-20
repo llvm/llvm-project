@@ -86,11 +86,11 @@ const MipsFrameLowering *MipsFrameLowering::create(const MipsSubtarget &ST) {
   return llvm::createMipsSEFrameLowering(ST);
 }
 
-// hasFP - Return true if the specified function should have a dedicated frame
-// pointer register.  This is true if the function has variable sized allocas,
-// if it needs dynamic stack realignment, if frame pointer elimination is
-// disabled, or if the frame address is taken.
-bool MipsFrameLowering::hasFP(const MachineFunction &MF) const {
+// hasFPImpl - Return true if the specified function should have a dedicated
+// frame pointer register.  This is true if the function has variable sized
+// allocas, if it needs dynamic stack realignment, if frame pointer elimination
+// is disabled, or if the frame address is taken.
+bool MipsFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 

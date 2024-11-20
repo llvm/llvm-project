@@ -10,8 +10,8 @@ import os, pathlib
 
 header_restrictions = {
     # headers with #error directives
-    "atomic": "!defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)",
-    "stdatomic.h": "!defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)",
+    "atomic": "_LIBCPP_HAS_ATOMIC_HEADER",
+    "stdatomic.h": "_LIBCPP_HAS_ATOMIC_HEADER",
 
     # headers with #error directives
     "ios": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",

@@ -926,7 +926,7 @@ LogicalResult ReinterpretCastPattern::matchAndRewrite(
 //===----------------------------------------------------------------------===//
 
 namespace mlir {
-void populateMemRefToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+void populateMemRefToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                    RewritePatternSet &patterns) {
   patterns.add<AllocaOpPattern, AllocOpPattern, AtomicRMWOpPattern,
                DeallocOpPattern, IntLoadOpPattern, IntStoreOpPattern,

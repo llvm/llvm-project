@@ -538,7 +538,7 @@ def gen_instr_coverage_report(path, instructions):
 
     prefix = "def SPIRV_OC_"
     existing_opcodes = [
-        k[len(prefix) :] for k in re.findall(prefix + "\w+", content[1])
+        k[len(prefix) :] for k in re.findall(prefix + r"\w+", content[1])
     ]
     existing_instructions = list(
         filter(lambda inst: (inst["opname"] in existing_opcodes), instructions)
@@ -597,7 +597,7 @@ def update_td_opcodes(path, instructions, filter_list):
     # Extend opcode list with existing list
     prefix = "def SPIRV_OC_"
     existing_opcodes = [
-        k[len(prefix) :] for k in re.findall(prefix + "\w+", content[1])
+        k[len(prefix) :] for k in re.findall(prefix + r"\w+", content[1])
     ]
     filter_list.extend(existing_opcodes)
     filter_list = list(set(filter_list))
@@ -644,7 +644,7 @@ def update_td_enum_attrs(path, operand_kinds, filter_list):
     suffix = "Attr"
     existing_kinds = [
         k[len(prefix) : -len(suffix)]
-        for k in re.findall(prefix + "\w+" + suffix, content[1])
+        for k in re.findall(prefix + r"\w+" + suffix, content[1])
     ]
     filter_list.extend(existing_kinds)
 
@@ -971,7 +971,7 @@ def extract_td_op_info(op_def):
     suffix = "Op"
     opname = [
         o[len(prefix) : -len(suffix)]
-        for o in re.findall(prefix + "\w+" + suffix, op_def)
+        for o in re.findall(prefix + r"\w+" + suffix, op_def)
     ]
     assert len(opname) == 1, "more than one ops in the same section!"
     opname = opname[0]
@@ -979,7 +979,8 @@ def extract_td_op_info(op_def):
     # Get instruction category
     prefix = "SPIRV_"
     inst_category = [
-        o[len(prefix) :] for o in re.findall(prefix + "\w+Op", op_def.split(":", 1)[1])
+        o[len(prefix) :]
+        for o in re.findall(prefix + r"\w+Op\b", op_def.split(":", 1)[1])
     ]
     assert len(inst_category) <= 1, "more than one ops in the same section!"
     inst_category = inst_category[0] if len(inst_category) == 1 else "Op"

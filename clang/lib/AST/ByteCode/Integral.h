@@ -122,11 +122,14 @@ public:
   APSInt toAPSInt() const {
     return APSInt(APInt(Bits, static_cast<uint64_t>(V), Signed), !Signed);
   }
-  APSInt toAPSInt(unsigned NumBits) const {
+  APSInt toAPSInt(unsigned BitWidth) const { return APSInt(toAPInt(BitWidth)); }
+  APInt toAPInt(unsigned BitWidth) const {
     if constexpr (Signed)
-      return APSInt(toAPSInt().sextOrTrunc(NumBits), !Signed);
+      return APInt(Bits, static_cast<uint64_t>(V), Signed)
+          .sextOrTrunc(BitWidth);
     else
-      return APSInt(toAPSInt().zextOrTrunc(NumBits), !Signed);
+      return APInt(Bits, static_cast<uint64_t>(V), Signed)
+          .zextOrTrunc(BitWidth);
   }
   APValue toAPValue(const ASTContext &) const { return APValue(toAPSInt()); }
 

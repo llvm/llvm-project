@@ -24,7 +24,7 @@ define i32 @test(ptr noalias %p, ptr noalias %addr) {
   ; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
   ; YAML-NEXT:   - Cost:            '-1'
   ; YAML-NEXT:   - String:          ' and with tree size '
-  ; YAML-NEXT:   - TreeSize:        '7'
+  ; YAML-NEXT:   - TreeSize:        '8'
 entry:
   %off0.1 = getelementptr inbounds i32, ptr %addr, i32 1
   %idx0 = load i32, ptr %off0.1, align 8

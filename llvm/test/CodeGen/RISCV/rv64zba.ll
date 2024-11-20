@@ -3217,3 +3217,25 @@ entry:
   %z = and i64 %y, -8192
   ret i64 %z
 }
+
+define i64 @add_u32simm32_zextw(i64 %x) nounwind {
+; RV64I-LABEL: add_u32simm32_zextw:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    li a1, 1
+; RV64I-NEXT:    slli a1, a1, 32
+; RV64I-NEXT:    addi a1, a1, -2
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    addi a1, a1, 1
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: add_u32simm32_zextw:
+; RV64ZBA:       # %bb.0: # %entry
+; RV64ZBA-NEXT:    addi a0, a0, -2
+; RV64ZBA-NEXT:    zext.w a0, a0
+; RV64ZBA-NEXT:    ret
+entry:
+  %add = add i64 %x, 4294967294
+  %and = and i64 %add, 4294967295
+  ret i64 %and
+}

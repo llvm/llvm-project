@@ -61,17 +61,17 @@ static lto::Config createConfig(Ctx &ctx) {
   c.Options.FunctionSections = true;
   c.Options.DataSections = true;
 
-  c.Options.BBAddrMap = ctx.arg.ltoBBAddrMap;
-
   // Check if basic block sections must be used.
-  // Allowed values for --lto-basic-block-sections are "all", "labels",
+  // Allowed values for --lto-basic-block-sections are "all",
   // "<file name specifying basic block ids>", or none.  This is the equivalent
   // of -fbasic-block-sections= flag in clang.
   if (!ctx.arg.ltoBasicBlockSections.empty()) {
     if (ctx.arg.ltoBasicBlockSections == "all") {
       c.Options.BBSections = BasicBlockSection::All;
     } else if (ctx.arg.ltoBasicBlockSections == "labels") {
-      c.Options.BBSections = BasicBlockSection::Labels;
+      c.Options.BBAddrMap = true;
+      warn("'--lto-basic-block-sections=labels' is deprecated; Please use "
+           "'--lto-basic-block-address-map' instead");
     } else if (ctx.arg.ltoBasicBlockSections == "none") {
       c.Options.BBSections = BasicBlockSection::None;
     } else {
@@ -86,6 +86,8 @@ static lto::Config createConfig(Ctx &ctx) {
       c.Options.BBSections = BasicBlockSection::List;
     }
   }
+
+  c.Options.BBAddrMap = ctx.arg.ltoBBAddrMap;
 
   c.Options.UniqueBasicBlockSectionNames =
       ctx.arg.ltoUniqueBasicBlockSectionNames;
@@ -178,6 +180,7 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
   auto onIndexWrite = [&](StringRef s) { thinIndices.erase(s); };
   if (ctx.arg.thinLTOIndexOnly) {
     backend = lto::createWriteIndexesThinBackend(
+        llvm::hardware_concurrency(ctx.arg.thinLTOJobs),
         std::string(ctx.arg.thinLTOPrefixReplaceOld),
         std::string(ctx.arg.thinLTOPrefixReplaceNew),
         std::string(ctx.arg.thinLTOPrefixReplaceNativeObject),
@@ -246,12 +249,12 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     // 5) Symbols that will be referenced after linker wrapping is performed.
     r.VisibleToRegularObj = ctx.arg.relocatable || sym->isUsedInRegularObj ||
                             sym->referencedAfterWrap ||
-                            (r.Prevailing && sym->includeInDynsym()) ||
+                            (r.Prevailing && sym->includeInDynsym(ctx)) ||
                             usedStartStop.count(objSym.getSectionName());
     // Identify symbols exported dynamically, and that therefore could be
     // referenced by a shared library not visible to the linker.
     r.ExportDynamic =
-        sym->computeBinding() != STB_LOCAL &&
+        sym->computeBinding(ctx) != STB_LOCAL &&
         (ctx.arg.exportDynamic || sym->exportDynamic || sym->inDynamicList);
     const auto *dr = dyn_cast<Defined>(sym);
     r.FinalDefinitionInLinkageUnit =
@@ -280,7 +283,7 @@ void BitcodeCompiler::add(BitcodeFile &f) {
 // If LazyObjFile has not been added to link, emit empty index files.
 // This is needed because this is what GNU gold plugin does and we have a
 // distributed build system that depends on that behavior.
-static void thinLTOCreateEmptyIndexFiles() {
+static void thinLTOCreateEmptyIndexFiles(Ctx &ctx) {
   DenseSet<StringRef> linkedBitCodeFiles;
   for (BitcodeFile *f : ctx.bitcodeFiles)
     linkedBitCodeFiles.insert(f->getName());
@@ -291,7 +294,7 @@ static void thinLTOCreateEmptyIndexFiles() {
     if (linkedBitCodeFiles.contains(f->getName()))
       continue;
     std::string path =
-        replaceThinLTOSuffix(getThinLTOOutputFile(ctx, f->obj->getName()));
+        replaceThinLTOSuffix(ctx, getThinLTOOutputFile(ctx, f->obj->getName()));
     std::unique_ptr<raw_fd_ostream> os = openFile(path + ".thinlto.bc");
     if (!os)
       continue;
@@ -344,7 +347,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   }
 
   if (ctx.arg.thinLTOEmitIndexFiles)
-    thinLTOCreateEmptyIndexFiles();
+    thinLTOCreateEmptyIndexFiles(ctx);
 
   if (ctx.arg.thinLTOIndexOnly) {
     if (!ctx.arg.ltoObjPath.empty())
@@ -412,7 +415,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
     if (savePrelink || ctx.arg.ltoEmitAsm)
       saveBuffer(buf[i].second, ltoObjName);
     if (!ctx.arg.ltoEmitAsm)
-      ret.push_back(createObjFile(MemoryBufferRef(objBuf, ltoObjName)));
+      ret.push_back(createObjFile(ctx, MemoryBufferRef(objBuf, ltoObjName)));
   }
   return ret;
 }
