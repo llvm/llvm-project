@@ -740,7 +740,6 @@ class MUBUF_Atomic_Pseudo<string opName,
     MUBUF_SetupAddr<addrKindCopy> {
   let mayStore = 1;
   let mayLoad = 1;
-  let hasPostISelHook = 1;
   let hasSideEffects = 1;
   let DisableWQM = 1;
   let has_glc = 0;
