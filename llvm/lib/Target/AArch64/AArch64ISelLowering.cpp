@@ -24736,67 +24736,64 @@ static SDValue performZIP1Combine(SDNode *N, SelectionDAG &DAG) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   EVT EltVT = VT.getVectorElementType();
-
   SDValue Op0 = skipElementSizePreservingCast(N->getOperand(0), VT);
   SDValue Op1 = skipElementSizePreservingCast(N->getOperand(1), VT);
-  if (!Op0 || !Op1 || Op0->getOpcode() != ISD::INSERT_VECTOR_ELT ||
-      Op1->getOpcode() != ISD::INSERT_VECTOR_ELT)
-    return SDValue();
-
-  SDValue Op00 = Op0->getOperand(0);
-  SDValue Op10 = Op1->getOperand(0);
-  if (!Op00.isUndef() || !Op10.isUndef() ||
-      Op0->getConstantOperandVal(2) != 0 || Op1->getConstantOperandVal(2) != 0)
-    return SDValue();
-
-  SDValue Op01 = Op0->getOperand(1);
-  SDValue Op11 = Op1->getOperand(1);
-  if (Op01->getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
-      Op11->getOpcode() != ISD::EXTRACT_VECTOR_ELT)
-    return SDValue();
-
-  SDValue Op010 = skipElementSizePreservingCast(Op01->getOperand(0), VT);
-  SDValue Op110 = skipElementSizePreservingCast(Op11->getOperand(0), VT);
-  unsigned StartExtractIdx = Op01->getConstantOperandVal(1);
-  if (!Op010 || Op010 != Op110 ||
-      Op11->getConstantOperandVal(1) != StartExtractIdx + 1 ||
-      StartExtractIdx % 2 != 0)
-    return SDValue();
-
-  //       t0: nxv16i8 = ...
-  //     t1: i32 = extract_vector_elt t0, Constant:i64<n>
-  //     t2: i32 = extract_vector_elt t0, Constant:i64<n + 1>
-  //   t3: nxv16i8 = insert_vector_elt(undef, t1, 0)
-  //   t4: nxv16i8 = insert_vector_elt(undef, t2, 0)
-  // t5: nxv16i8 = zip1(t3, t4)
-  //
-  // ->
-  //         t0: nxv16i8 = ...
-  //       t1: nxv8i16 = bitcast t0
-  //     t2: i32 = extract_vector_elt t1, Constant:i64<n / 2>
-  //   t3: nxv8i16 = insert_vector_elt(undef, t2, 0)
-  // t4: nxv16i8 = bitcast t3
-  //
-  // Where n % 2 == 0
-  SDValue Result;
-  if (StartExtractIdx == 0)
-    Result = Op010;
-  else if (EltVT.getSizeInBits() < 64) {
-    unsigned LargeEltBits = EltVT.getSizeInBits() * 2;
-    EVT LargeEltVT =
-        MVT::getVectorVT(MVT::getIntegerVT(LargeEltBits),
-                         VT.getVectorElementCount().divideCoefficientBy(2));
-    EVT ExtractVT = MVT::getIntegerVT(std::max(LargeEltBits, 32U));
-    SDValue Extract =
-        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ExtractVT,
-                    DAG.getBitcast(LargeEltVT, Op010),
-                    DAG.getVectorIdxConstant(StartExtractIdx / 2, DL));
-    Result = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, LargeEltVT,
-                         DAG.getUNDEF(LargeEltVT), Extract,
-                         DAG.getVectorIdxConstant(0, DL));
+  if (Op0 && Op1 && Op0->getOpcode() == ISD::INSERT_VECTOR_ELT &&
+      Op1->getOpcode() == ISD::INSERT_VECTOR_ELT) {
+    SDValue Op00 = Op0->getOperand(0);
+    SDValue Op10 = Op1->getOperand(0);
+    if (Op00.isUndef() && Op10.isUndef() &&
+        Op0->getConstantOperandVal(2) == 0 &&
+        Op1->getConstantOperandVal(2) == 0) {
+      SDValue Op01 = Op0->getOperand(1);
+      SDValue Op11 = Op1->getOperand(1);
+      if (Op01->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+          Op11->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+        SDValue Op010 = skipElementSizePreservingCast(Op01->getOperand(0), VT);
+        SDValue Op110 = skipElementSizePreservingCast(Op11->getOperand(0), VT);
+        unsigned StartExtractIdx = Op01->getConstantOperandVal(1);
+        if (Op010 && Op010 == Op110 &&
+            Op11->getConstantOperandVal(1) == StartExtractIdx + 1 &&
+            StartExtractIdx % 2 == 0) {
+          //       t0: nxv16i8 = ...
+          //     t1: i32 = extract_vector_elt t0, Constant:i64<n>
+          //     t2: i32 = extract_vector_elt t0, Constant:i64<n + 1>
+          //   t3: nxv16i8 = insert_vector_elt(undef, t1, 0)
+          //   t4: nxv16i8 = insert_vector_elt(undef, t2, 0)
+          // t5: nxv16i8 = zip1(t3, t4)
+          //
+          // ->
+          //         t0: nxv16i8 = ...
+          //       t1: nxv8i16 = bitcast t0
+          //     t2: i32 = extract_vector_elt t1, Constant:i64<n / 2>
+          //   t3: nxv8i16 = insert_vector_elt(undef, t2, 0)
+          // t4: nxv16i8 = bitcast t3
+          //
+          // Where n % 2 == 0
+          SDValue Result;
+          if (StartExtractIdx == 0)
+            Result = Op010;
+          else if (EltVT.getSizeInBits() < 64) {
+            unsigned LargeEltBits = EltVT.getSizeInBits() * 2;
+            EVT LargeEltVT = MVT::getVectorVT(
+                MVT::getIntegerVT(LargeEltBits),
+                VT.getVectorElementCount().divideCoefficientBy(2));
+            EVT ExtractVT = MVT::getIntegerVT(std::max(LargeEltBits, 32U));
+            SDValue Extract =
+                DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ExtractVT,
+                            DAG.getBitcast(LargeEltVT, Op010),
+                            DAG.getVectorIdxConstant(StartExtractIdx / 2, DL));
+            Result = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, LargeEltVT,
+                                 DAG.getUNDEF(LargeEltVT), Extract,
+                                 DAG.getVectorIdxConstant(0, DL));
+          }
+          if (Result)
+            return DAG.getBitcast(VT, Result);
+        }
+      }
+    }
   }
-
-  return Result ? DAG.getBitcast(VT, Result) : SDValue();
+  return SDValue();
 }
 
 static SDValue
