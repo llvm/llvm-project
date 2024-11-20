@@ -26,7 +26,6 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
-#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/TarWriter.h"
 #include <atomic>
 #include <memory>
