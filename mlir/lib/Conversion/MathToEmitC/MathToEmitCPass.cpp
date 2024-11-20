@@ -40,9 +40,9 @@ void ConvertMathToEmitC::runOnOperation() {
   ConversionTarget target(getContext());
   target.addLegalOp<emitc::CallOpaqueOp>();
 
-  target.addIllegalOp<math::FloorOp, math::ExpOp, math::RoundEvenOp,
-                      math::CosOp, math::SinOp, math::Atan2Op, math::CeilOp,
-                      math::AcosOp, math::AsinOp, math::AbsFOp, math::PowFOp>();
+  target.addIllegalOp<math::FloorOp, math::ExpOp, math::RoundOp, math::CosOp,
+                      math::SinOp, math::Atan2Op, math::CeilOp, math::AcosOp,
+                      math::AsinOp, math::AbsFOp, math::PowFOp>();
 
   RewritePatternSet patterns(&getContext());
   populateConvertMathToEmitCPatterns(patterns, languageTarget);

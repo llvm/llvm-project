@@ -15,5 +15,5 @@ add_mlir_conversion_library(MLIRMathToEmitC
   MLIREmitCDialect
   MLIRMathDialect
   MLIRPass
-  MLIRTransforms
+  MLIRTransformUtils
 )

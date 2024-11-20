@@ -1,4 +1,4 @@
-//===- MathToEmitC.cpp - Math to EmitC  Patterns ----------------*- C++ -*-===//
+//===- MathToEmitC.cpp - Math to EmitC Patterns -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,11 +18,11 @@ namespace {
 template <typename OpType>
 class LowerToEmitCCallOpaque : public OpRewritePattern<OpType> {
   std::string calleeStr;
-  emitc::MathToEmitCLanguageTarget languageTarget;
+  emitc::LanguageTarget languageTarget;
 
 public:
   LowerToEmitCCallOpaque(MLIRContext *context, std::string calleeStr,
-                         emitc::MathToEmitCLanguageTarget languageTarget)
+                         emitc::LanguageTarget languageTarget)
       : OpRewritePattern<OpType>(context), calleeStr(std::move(calleeStr)),
         languageTarget(languageTarget) {}
 
@@ -36,11 +36,12 @@ LogicalResult LowerToEmitCCallOpaque<OpType>::matchAndRewrite(
   if (!llvm::all_of(op->getOperandTypes(), llvm::IsaPred<Float32Type, Float64Type>)||
       !llvm::all_of(op->getResultTypes(),llvm::IsaPred<Float32Type, Float64Type>))
     return rewriter.notifyMatchFailure(
-        op.getLoc(), "expected all operands and results to be of type f32");
+        op.getLoc(),
+        "expected all operands and results to be of type f32 or f64");
   std::string modifiedCalleeStr = calleeStr;
-  if (languageTarget == emitc::MathToEmitCLanguageTarget::CPP) {
+  if (languageTarget == emitc::LanguageTarget::cpp11) {
     modifiedCalleeStr = "std::" + calleeStr;
-  } else if (languageTarget == emitc::MathToEmitCLanguageTarget::C) {
+  } else if (languageTarget == emitc::LanguageTarget::c99) {
     auto operandType = op->getOperandTypes()[0];
     if (operandType.isF32())
       modifiedCalleeStr = calleeStr + "f";
@@ -55,8 +56,7 @@ LogicalResult LowerToEmitCCallOpaque<OpType>::matchAndRewrite(
 // Populates patterns to replace `math` operations with `emitc.call_opaque`,
 // using function names consistent with those in <math.h>.
 void mlir::populateConvertMathToEmitCPatterns(
-    RewritePatternSet &patterns,
-    emitc::MathToEmitCLanguageTarget languageTarget) {
+    RewritePatternSet &patterns, emitc::LanguageTarget languageTarget) {
   auto *context = patterns.getContext();
   patterns.insert<LowerToEmitCCallOpaque<math::FloorOp>>(context, "floor",
                                                          languageTarget);
