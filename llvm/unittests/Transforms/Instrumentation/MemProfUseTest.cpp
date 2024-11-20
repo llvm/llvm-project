@@ -323,7 +323,7 @@ makeRecordV2(std::initializer_list<::llvm::memprof::CallStackId> AllocFrames,
   for (const auto &CSId : AllocFrames) {
     // We don't populate IndexedAllocationInfo::CallStack because we use it only
     // in Version1.
-    MR.AllocSites.push_back({{}, CSId, Block, Schema});
+    MR.AllocSites.emplace_back(CSId, Block, Schema);
   }
   for (const auto &CSId : CallSiteFrames)
     MR.CallSiteIds.push_back(CSId);
