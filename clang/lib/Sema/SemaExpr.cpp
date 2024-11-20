@@ -6212,24 +6212,10 @@ bool Sema::CheckArgsForPlaceholders(MultiExprArg args) {
   for (size_t i = 0, e = args.size(); i != e; i++) {
     if (isPlaceholderToRemoveAsArg(args[i]->getType())) {
       ExprResult result = CheckPlaceholderExpr(args[i]);
-      if (result.isInvalid())
-        hasInvalid = true;
-      else
-        args[i] = result.get();
-    }
-
-    // The result of __builtin_counted_by_ref cannot be used as a function
-    // argument. It allows leaking and modification of bounds safety
-    // information.
-    if (const auto *CE = dyn_cast<CallExpr>(args[i]);
-        CE && CE->getBuiltinCallee() == Builtin::BI__builtin_counted_by_ref) {
-      hasInvalid = true;
-      Diag(CE->getExprLoc(),
-           diag::err_builtin_counted_by_ref_cannot_leak_reference)
-          << CE->getSourceRange();
+      if (result.isInvalid()) hasInvalid = true;
+      else args[i] = result.get();
     }
   }
-
   return hasInvalid;
 }
 
