@@ -189,6 +189,11 @@ bool isCombinedConstruct(Directive D) {
   return !getLeafConstructs(D).empty() && !isCompositeConstruct(D);
 }
 
+ArrayRef<unsigned> getOpenMPVersions() {
+  static unsigned Versions[]{45, 50, 51, 52, 60};
+  return Versions;
+}
+
 std::string prettifyFunctionName(StringRef FunctionName) {
   // Internalized functions have the right name, but simply a suffix.
   if (FunctionName.ends_with(".internalized"))
