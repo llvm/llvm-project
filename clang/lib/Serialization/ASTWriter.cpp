@@ -878,7 +878,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(MODULE_NAME);
   RECORD(MODULE_DIRECTORY);
   RECORD(MODULE_MAP_FILE);
-  RECORD(IMPORTS);
+  RECORD(IMPORT);
   RECORD(ORIGINAL_FILE);
   RECORD(ORIGINAL_FILE_ID);
   RECORD(INPUT_FILE_OFFSETS);
@@ -1536,34 +1536,53 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
 
   // Imports
   if (Chain) {
-    serialization::ModuleManager &Mgr = Chain->getModuleManager();
-    Record.clear();
+    auto Abbrev = std::make_shared<BitCodeAbbrev>();
+    Abbrev->Add(BitCodeAbbrevOp(IMPORT));
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // Kind
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // ImportLoc
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Module name len
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Standard C++ mod
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File size
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File timestamp
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File name len
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Strings
+    unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
 
-    for (ModuleFile &M : Mgr) {
+    SmallString<128> Blob;
+
+    for (ModuleFile &M : Chain->getModuleManager()) {
       // Skip modules that weren't directly imported.
       if (!M.isDirectlyImported())
         continue;
 
+      Record.clear();
+      Blob.clear();
+
+      Record.push_back(IMPORT);
       Record.push_back((unsigned)M.Kind); // FIXME: Stable encoding
-      Record.push_back(M.StandardCXXModule);
       AddSourceLocation(M.ImportLoc, Record);
+      AddStringBlob(M.ModuleName, Record, Blob);
+      Record.push_back(M.StandardCXXModule);
 
       // We don't want to hard code the information about imported modules
       // in the C++20 named modules.
-      if (!M.StandardCXXModule) {
+      if (M.StandardCXXModule) {
+        Record.push_back(0);
+        Record.push_back(0);
+        Record.push_back(0);
+      } else {
         // If we have calculated signature, there is no need to store
         // the size or timestamp.
         Record.push_back(M.Signature ? 0 : M.File.getSize());
         Record.push_back(M.Signature ? 0 : getTimestampForOutput(M.File));
-        llvm::append_range(Record, M.Signature);
+
+        llvm::append_range(Blob, M.Signature);
+
+        AddPathBlob(M.FileName, Record, Blob);
       }
 
-      AddString(M.ModuleName, Record);
-
-      if (!M.StandardCXXModule)
-        AddPath(M.FileName, Record);
+      Stream.EmitRecordWithBlob(AbbrevCode, Record, Blob);
     }
-    Stream.EmitRecord(IMPORTS, Record);
   }
 
   // Write the options block.
@@ -4777,6 +4796,12 @@ void ASTWriter::AddString(StringRef Str, RecordDataImpl &Record) {
   Record.insert(Record.end(), Str.begin(), Str.end());
 }
 
+void ASTWriter::AddStringBlob(StringRef Str, RecordDataImpl &Record,
+                              SmallVectorImpl<char> &Blob) {
+  Record.push_back(Str.size());
+  Blob.insert(Blob.end(), Str.begin(), Str.end());
+}
+
 bool ASTWriter::PreparePathForOutput(SmallVectorImpl<char> &Path) {
   assert(WritingAST && "can't prepare path for output when not writing AST");
 
@@ -4803,6 +4828,13 @@ void ASTWriter::AddPath(StringRef Path, RecordDataImpl &Record) {
   SmallString<128> FilePath(Path);
   PreparePathForOutput(FilePath);
   AddString(FilePath, Record);
+}
+
+void ASTWriter::AddPathBlob(StringRef Path, RecordDataImpl &Record,
+                            SmallVectorImpl<char> &Blob) {
+  SmallString<128> FilePath(Path);
+  PreparePathForOutput(FilePath);
+  AddStringBlob(FilePath, Record, Blob);
 }
 
 void ASTWriter::EmitRecordWithPath(unsigned Abbrev, RecordDataRef Record,
