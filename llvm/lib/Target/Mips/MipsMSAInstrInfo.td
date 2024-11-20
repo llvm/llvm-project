@@ -341,32 +341,14 @@ def vsplat_maskr_bits_uimm6
                           [build_vector, bitconvert]>;
 
 
-def vbclr_b : PatFrag<(ops node:$ws, node:$wt),
-                      (and node:$ws, (vnot (shl (vsplat_imm_eq_1), node:$wt)))>;
-def vbclr_h : PatFrag<(ops node:$ws, node:$wt),
-                      (and node:$ws, (vnot (shl (vsplat_imm_eq_1), node:$wt)))>;
-def vbclr_w : PatFrag<(ops node:$ws, node:$wt),
-                      (and node:$ws, (vnot (shl (vsplat_imm_eq_1), node:$wt)))>;
-def vbclr_d : PatFrag<(ops node:$ws, node:$wt),
-                      (and node:$ws, (vnot (shl (vsplat_imm_eq_1), node:$wt)))>;
+def vbclr : PatFrag<(ops node:$ws, node:$wt),
+                    (and node:$ws, (vnot (shl (vsplat_imm_eq_1), node:$wt)))>;
 
-def vbneg_b : PatFrag<(ops node:$ws, node:$wt),
-                      (xor node:$ws, (shl (vsplat_imm_eq_1), node:$wt))>;
-def vbneg_h : PatFrag<(ops node:$ws, node:$wt),
-                      (xor node:$ws, (shl (vsplat_imm_eq_1), node:$wt))>;
-def vbneg_w : PatFrag<(ops node:$ws, node:$wt),
-                      (xor node:$ws, (shl (vsplat_imm_eq_1), node:$wt))>;
-def vbneg_d : PatFrag<(ops node:$ws, node:$wt),
-                      (xor node:$ws, (shl (vsplat_imm_eq_1), node:$wt))>;
+def vbneg : PatFrag<(ops node:$ws, node:$wt),
+                    (xor node:$ws, (shl (vsplat_imm_eq_1), node:$wt))>;
 
-def vbset_b : PatFrag<(ops node:$ws, node:$wt),
-                      (or node:$ws, (shl (vsplat_imm_eq_1), node:$wt))>;
-def vbset_h : PatFrag<(ops node:$ws, node:$wt),
-                      (or node:$ws, (shl (vsplat_imm_eq_1), node:$wt))>;
-def vbset_w : PatFrag<(ops node:$ws, node:$wt),
-                      (or node:$ws, (shl (vsplat_imm_eq_1), node:$wt))>;
-def vbset_d : PatFrag<(ops node:$ws, node:$wt),
-                      (or node:$ws, (shl (vsplat_imm_eq_1), node:$wt))>;
+def vbset : PatFrag<(ops node:$ws, node:$wt),
+                    (or node:$ws, (shl (vsplat_imm_eq_1), node:$wt))>;
 
 def muladd : PatFrag<(ops node:$wd, node:$ws, node:$wt),
                      (add node:$wd, (mul node:$ws, node:$wt))>;
@@ -1583,10 +1565,10 @@ class AVER_U_W_DESC : MSA_3R_DESC_BASE<"aver_u.w", int_mips_aver_u_w,
 class AVER_U_D_DESC : MSA_3R_DESC_BASE<"aver_u.d", int_mips_aver_u_d,
                                        MSA128DOpnd>, IsCommutable;
 
-class BCLR_B_DESC : MSA_3R_DESC_BASE<"bclr.b", vbclr_b, MSA128BOpnd>;
-class BCLR_H_DESC : MSA_3R_DESC_BASE<"bclr.h", vbclr_h, MSA128HOpnd>;
-class BCLR_W_DESC : MSA_3R_DESC_BASE<"bclr.w", vbclr_w, MSA128WOpnd>;
-class BCLR_D_DESC : MSA_3R_DESC_BASE<"bclr.d", vbclr_d, MSA128DOpnd>;
+class BCLR_B_DESC : MSA_3R_DESC_BASE<"bclr.b", vbclr, MSA128BOpnd>;
+class BCLR_H_DESC : MSA_3R_DESC_BASE<"bclr.h", vbclr, MSA128HOpnd>;
+class BCLR_W_DESC : MSA_3R_DESC_BASE<"bclr.w", vbclr, MSA128WOpnd>;
+class BCLR_D_DESC : MSA_3R_DESC_BASE<"bclr.d", vbclr, MSA128DOpnd>;
 
 class BCLRI_B_DESC : MSA_BIT_B_DESC_BASE<"bclri.b", and, vsplat_uimm_inv_pow2,
                                          MSA128BOpnd>;
@@ -1681,10 +1663,10 @@ class BMZI_B_DESC {
   string Constraints = "$wd = $wd_in";
 }
 
-class BNEG_B_DESC : MSA_3R_DESC_BASE<"bneg.b", vbneg_b, MSA128BOpnd>;
-class BNEG_H_DESC : MSA_3R_DESC_BASE<"bneg.h", vbneg_h, MSA128HOpnd>;
-class BNEG_W_DESC : MSA_3R_DESC_BASE<"bneg.w", vbneg_w, MSA128WOpnd>;
-class BNEG_D_DESC : MSA_3R_DESC_BASE<"bneg.d", vbneg_d, MSA128DOpnd>;
+class BNEG_B_DESC : MSA_3R_DESC_BASE<"bneg.b", vbneg, MSA128BOpnd>;
+class BNEG_H_DESC : MSA_3R_DESC_BASE<"bneg.h", vbneg, MSA128HOpnd>;
+class BNEG_W_DESC : MSA_3R_DESC_BASE<"bneg.w", vbneg, MSA128WOpnd>;
+class BNEG_D_DESC : MSA_3R_DESC_BASE<"bneg.d", vbneg, MSA128DOpnd>;
 
 class BNEGI_B_DESC : MSA_BIT_B_DESC_BASE<"bnegi.b", xor, vsplat_uimm_pow2,
                                          MSA128BOpnd>;
@@ -1734,10 +1716,10 @@ class BSELI_B_DESC {
   string Constraints = "$wd = $wd_in";
 }
 
-class BSET_B_DESC : MSA_3R_DESC_BASE<"bset.b", vbset_b, MSA128BOpnd>;
-class BSET_H_DESC : MSA_3R_DESC_BASE<"bset.h", vbset_h, MSA128HOpnd>;
-class BSET_W_DESC : MSA_3R_DESC_BASE<"bset.w", vbset_w, MSA128WOpnd>;
-class BSET_D_DESC : MSA_3R_DESC_BASE<"bset.d", vbset_d, MSA128DOpnd>;
+class BSET_B_DESC : MSA_3R_DESC_BASE<"bset.b", vbset, MSA128BOpnd>;
+class BSET_H_DESC : MSA_3R_DESC_BASE<"bset.h", vbset, MSA128HOpnd>;
+class BSET_W_DESC : MSA_3R_DESC_BASE<"bset.w", vbset, MSA128WOpnd>;
+class BSET_D_DESC : MSA_3R_DESC_BASE<"bset.d", vbset, MSA128DOpnd>;
 
 class BSETI_B_DESC : MSA_BIT_B_DESC_BASE<"bseti.b", or, vsplat_uimm_pow2,
                                          MSA128BOpnd>;
