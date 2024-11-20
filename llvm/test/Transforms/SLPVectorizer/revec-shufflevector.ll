@@ -107,6 +107,11 @@ entry:
 }
 
 define void @test5(ptr %out) {
+; CHECK-LABEL: @test5(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store <8 x i32> zeroinitializer, ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
 entry:
   %0 = shufflevector <8 x i32> zeroinitializer, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %1 = shufflevector <8 x i32> zeroinitializer, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
