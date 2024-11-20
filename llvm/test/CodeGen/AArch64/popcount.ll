@@ -113,9 +113,9 @@ define i16 @popcount256(ptr nocapture nonnull readonly %0) {
 ;
 ; GISEL-LABEL: popcount256:
 ; GISEL:       // %bb.0: // %Entry
-; GISEL-NEXT:    ldp x8, x9, [x0, #16]
+; GISEL-NEXT:    ldp x8, x9, [x0]
 ; GISEL-NEXT:    mov v0.d[0], x8
-; GISEL-NEXT:    ldp x8, x10, [x0]
+; GISEL-NEXT:    ldp x8, x10, [x0, #16]
 ; GISEL-NEXT:    mov v1.d[0], x8
 ; GISEL-NEXT:    mov v0.d[1], x9
 ; GISEL-NEXT:    mov v1.d[1], x10
