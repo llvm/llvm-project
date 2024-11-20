@@ -906,17 +906,6 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
   if (Sites.empty())
     return;
 
-  // Calculate callsite table size. Size of each callsite entry is:
-  //
-  //  sizeof(start) + sizeof(length) + sizeof(LP) + sizeof(uleb128(action))
-  //
-  // or
-  //
-  //  sizeof(dwarf::DW_EH_PE_data4) * 3 + sizeof(uleb128(action))
-  uint64_t CallSiteTableLength = llvm::size(Sites) * 4 * 3;
-  for (const auto &FragmentCallSite : Sites)
-    CallSiteTableLength += getULEB128Size(FragmentCallSite.second.Action);
-
   Streamer.switchSection(BC.MOFI->getLSDASection());
 
   const unsigned TTypeEncoding = BF.getLSDATypeEncoding();
@@ -975,36 +964,24 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
 
   Streamer.emitIntValue(TTypeEncoding, 1); // TType format
 
-  // See the comment in EHStreamer::emitExceptionTable() on to use
-  // uleb128 encoding (which can use variable number of bytes to encode the same
-  // value) to ensure type info table is properly aligned at 4 bytes without
-  // iteratively fixing sizes of the tables.
-  unsigned CallSiteTableLengthSize = getULEB128Size(CallSiteTableLength);
-  unsigned TTypeBaseOffset =
-      sizeof(int8_t) +                 // Call site format
-      CallSiteTableLengthSize +        // Call site table length size
-      CallSiteTableLength +            // Call site table length
-      BF.getLSDAActionTable().size() + // Actions table size
-      BF.getLSDATypeTable().size() * TTypeEncodingSize; // Types table size
-  unsigned TTypeBaseOffsetSize = getULEB128Size(TTypeBaseOffset);
-  unsigned TotalSize = sizeof(int8_t) +      // LPStart format
-                       sizeof(int8_t) +      // TType format
-                       TTypeBaseOffsetSize + // TType base offset size
-                       TTypeBaseOffset;      // TType base offset
-  unsigned SizeAlign = (4 - TotalSize) & 3;
-
-  if (TTypeEncoding != dwarf::DW_EH_PE_omit)
-    // Account for any extra padding that will be added to the call site table
-    // length.
-    Streamer.emitULEB128IntValue(TTypeBaseOffset,
-                                 /*PadTo=*/TTypeBaseOffsetSize + SizeAlign);
+  MCSymbol *TTBaseLabel = nullptr;
+  if (TTypeEncoding != dwarf::DW_EH_PE_omit) {
+    TTBaseLabel = BC.Ctx->createTempSymbol("TTBase");
+    MCSymbol *TTBaseRefLabel = BC.Ctx->createTempSymbol("TTBaseRef");
+    Streamer.emitAbsoluteSymbolDiffAsULEB128(TTBaseLabel, TTBaseRefLabel);
+    Streamer.emitLabel(TTBaseRefLabel);
+  }
 
   // Emit the landing pad call site table. We use signed data4 since we can emit
   // a landing pad in a different part of the split function that could appear
   // earlier in the address space than LPStart.
   Streamer.emitIntValue(dwarf::DW_EH_PE_sdata4, 1);
-  Streamer.emitULEB128IntValue(CallSiteTableLength);
 
+  MCSymbol *CSTStartLabel = BC.Ctx->createTempSymbol("CSTStart");
+  MCSymbol *CSTEndLabel = BC.Ctx->createTempSymbol("CSTEnd");
+  Streamer.emitAbsoluteSymbolDiffAsULEB128(CSTEndLabel, CSTStartLabel);
+
+  Streamer.emitLabel(CSTStartLabel);
   for (const auto &FragmentCallSite : Sites) {
     const BinaryFunction::CallSite &CallSite = FragmentCallSite.second;
     const MCSymbol *BeginLabel = CallSite.Start;
@@ -1020,6 +997,7 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
     emitLandingPad(CallSite.LP);
     Streamer.emitULEB128IntValue(CallSite.Action);
   }
+  Streamer.emitLabel(CSTEndLabel);
 
   // Write out action, type, and type index tables at the end.
   //
@@ -1037,6 +1015,8 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
                                                  : BF.getLSDATypeTable();
   assert(TypeTable.size() == BF.getLSDATypeTable().size() &&
          "indirect type table size mismatch");
+
+  Streamer.emitValueToAlignment(Align(TTypeAlignment));
 
   for (int Index = TypeTable.size() - 1; Index >= 0; --Index) {
     const uint64_t TypeAddress = TypeTable[Index];
@@ -1063,6 +1043,10 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
     }
     }
   }
+
+  if (TTypeEncoding != dwarf::DW_EH_PE_omit)
+    Streamer.emitLabel(TTBaseLabel);
+
   for (uint8_t const &Byte : BF.getLSDATypeIndexTable())
     Streamer.emitIntValue(Byte, 1);
 }
