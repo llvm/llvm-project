@@ -38,7 +38,7 @@ using namespace lldb_private;
 StackFrameList::StackFrameList(Thread &thread,
                                const lldb::StackFrameListSP &prev_frames_sp,
                                bool show_inline_frames)
-    : m_thread(thread), m_prev_frames_sp(prev_frames_sp), m_mutex(), m_frames(),
+    : m_thread(thread), m_prev_frames_sp(prev_frames_sp), m_frames(),
       m_selected_frame_idx(), m_concrete_frames_fetched(0),
       m_current_inlined_depth(UINT32_MAX),
       m_current_inlined_pc(LLDB_INVALID_ADDRESS),
@@ -63,6 +63,7 @@ void StackFrameList::CalculateCurrentInlinedDepth() {
 }
 
 uint32_t StackFrameList::GetCurrentInlinedDepth() {
+  std::lock_guard<std::mutex> guard(m_inlined_depth_mutex);
   if (m_show_inlined_frames && m_current_inlined_pc != LLDB_INVALID_ADDRESS) {
     lldb::addr_t cur_pc = m_thread.GetRegisterContext()->GetPC();
     if (cur_pc != m_current_inlined_pc) {
@@ -84,11 +85,6 @@ void StackFrameList::ResetCurrentInlinedDepth() {
   if (!m_show_inlined_frames)
     return;
 
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
-
-  m_current_inlined_pc = LLDB_INVALID_ADDRESS;
-  m_current_inlined_depth = UINT32_MAX;
-
   StopInfoSP stop_info_sp = m_thread.GetStopInfo();
   if (!stop_info_sp)
     return;
@@ -98,6 +94,7 @@ void StackFrameList::ResetCurrentInlinedDepth() {
   // We're only adjusting the inlined stack here.
   Log *log = GetLog(LLDBLog::Step);
   if (inline_depth) {
+    std::lock_guard<std::mutex> guard(m_inlined_depth_mutex);
     m_current_inlined_depth = *inline_depth;
     m_current_inlined_pc = m_thread.GetRegisterContext()->GetPC();
 
@@ -107,6 +104,9 @@ void StackFrameList::ResetCurrentInlinedDepth() {
                 "depth: %d 0x%" PRIx64 ".\n",
                 m_current_inlined_depth, m_current_inlined_pc);
   } else {
+    std::lock_guard<std::mutex> guard(m_inlined_depth_mutex);
+    m_current_inlined_pc = LLDB_INVALID_ADDRESS;
+    m_current_inlined_depth = UINT32_MAX;
     if (log && log->GetVerbose())
       LLDB_LOGF(
           log,
@@ -119,6 +119,7 @@ bool StackFrameList::DecrementCurrentInlinedDepth() {
     uint32_t current_inlined_depth = GetCurrentInlinedDepth();
     if (current_inlined_depth != UINT32_MAX) {
       if (current_inlined_depth > 0) {
+        std::lock_guard<std::mutex> guard(m_inlined_depth_mutex);
         m_current_inlined_depth--;
         return true;
       }
@@ -128,6 +129,7 @@ bool StackFrameList::DecrementCurrentInlinedDepth() {
 }
 
 void StackFrameList::SetCurrentInlinedDepth(uint32_t new_depth) {
+  std::lock_guard<std::mutex> guard(m_inlined_depth_mutex);
   m_current_inlined_depth = new_depth;
   if (new_depth == UINT32_MAX)
     m_current_inlined_pc = LLDB_INVALID_ADDRESS;
@@ -167,6 +169,8 @@ using CallSequence = std::vector<CallDescriptor>;
 /// Find the unique path through the call graph from \p begin (with return PC
 /// \p return_pc) to \p end. On success this path is stored into \p path, and
 /// on failure \p path is unchanged.
+/// This function doesn't currently access StackFrameLists at all, it only looks 
+/// at the frame set in the ExecutionContext it passes around.
 static void FindInterveningFrames(Function &begin, Function &end,
                                   ExecutionContext &exe_ctx, Target &target,
                                   addr_t return_pc, CallSequence &path,
@@ -547,7 +551,7 @@ bool StackFrameList::GetFramesUpTo(uint32_t end_idx,
 }
 
 uint32_t StackFrameList::GetNumFrames(bool can_create) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  std::lock_guard<std::mutex> guard(m_mutex);
 
   if (can_create) {
     // Don't allow interrupt or we might not return the correct count
@@ -560,7 +564,7 @@ void StackFrameList::Dump(Stream *s) {
   if (s == nullptr)
     return;
 
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  std::lock_guard<std::mutex> guard(m_mutex);
 
   const_iterator pos, begin = m_frames.begin(), end = m_frames.end();
   for (pos = begin; pos != end; ++pos) {
@@ -577,8 +581,12 @@ void StackFrameList::Dump(Stream *s) {
 }
 
 StackFrameSP StackFrameList::GetFrameAtIndex(uint32_t idx) {
+  std::lock_guard<std::mutex> guard(m_mutex);
+  return GetFrameAtIndexNoLock(idx);
+}
+
+StackFrameSP StackFrameList::GetFrameAtIndexNoLock(uint32_t idx) {
   StackFrameSP frame_sp;
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   uint32_t original_idx = idx;
 
   uint32_t inlined_depth = GetCurrentInlinedDepth();
@@ -657,11 +665,12 @@ StackFrameList::GetFrameWithConcreteFrameIndex(uint32_t unwind_idx) {
   // after we make all the inlined frames. Most of the time the unwind frame
   // index (or the concrete frame index) is the same as the frame index.
   uint32_t frame_idx = unwind_idx;
-  StackFrameSP frame_sp(GetFrameAtIndex(frame_idx));
+  std::lock_guard<std::mutex> guard(m_mutex);
+  StackFrameSP frame_sp(GetFrameAtIndexNoLock(frame_idx));
   while (frame_sp) {
     if (frame_sp->GetFrameIndex() == unwind_idx)
       break;
-    frame_sp = GetFrameAtIndex(++frame_idx);
+    frame_sp = GetFrameAtIndexNoLock(++frame_idx);
   }
   return frame_sp;
 }
@@ -675,7 +684,7 @@ StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
   StackFrameSP frame_sp;
 
   if (stack_id.IsValid()) {
-    std::lock_guard<std::recursive_mutex> guard(m_mutex);
+    std::lock_guard<std::mutex> guard(m_mutex);
     uint32_t frame_idx = 0;
     // Do a binary search in case the stack frame is already in our cache
     collection::const_iterator begin = m_frames.begin();
@@ -689,7 +698,7 @@ StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
       }
     }
     do {
-      frame_sp = GetFrameAtIndex(frame_idx);
+      frame_sp = GetFrameAtIndexNoLock(frame_idx);
       if (frame_sp && frame_sp->GetStackID() == stack_id)
         break;
       frame_idx++;
@@ -738,7 +747,7 @@ void StackFrameList::SelectMostRelevantFrame() {
   }
   LLDB_LOG(log, "Frame #0 not recognized");
 
-  // If this thread has a non-trivial StopInof, then let it suggest
+  // If this thread has a non-trivial StopInfo, then let it suggest
   // a most relevant frame:
   StopInfoSP stop_info_sp = m_thread.GetStopInfo();
   uint32_t stack_idx = 0;
@@ -773,43 +782,55 @@ void StackFrameList::SelectMostRelevantFrame() {
 
 uint32_t StackFrameList::GetSelectedFrameIndex(
     SelectMostRelevant select_most_relevant) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (!m_selected_frame_idx && select_most_relevant)
     SelectMostRelevantFrame();
-  if (!m_selected_frame_idx) {
-    // If we aren't selecting the most relevant frame, and the selected frame
-    // isn't set, then don't force a selection here, just return 0.
-    if (!select_most_relevant)
-      return 0;
-    // If the inlined stack frame is set, then use that:
-    m_selected_frame_idx = 0;
+  { // Scope for lock guard
+    std::lock_guard<std::mutex> guard(m_mutex);
+    if (!m_selected_frame_idx) {
+      // If we aren't selecting the most relevant frame, and the selected frame
+      // isn't set, then don't force a selection here, just return 0.
+      if (!select_most_relevant)
+        return 0;
+      // If the inlined stack frame is set, then use that:
+      m_selected_frame_idx = 0;
+    }
+    return *m_selected_frame_idx;
   }
-  return *m_selected_frame_idx;
 }
 
 uint32_t StackFrameList::SetSelectedFrame(lldb_private::StackFrame *frame) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  const_iterator pos;
-  const_iterator begin = m_frames.begin();
-  const_iterator end = m_frames.end();
-  m_selected_frame_idx = 0;
-
-  for (pos = begin; pos != end; ++pos) {
-    if (pos->get() == frame) {
-      m_selected_frame_idx = std::distance(begin, pos);
-      uint32_t inlined_depth = GetCurrentInlinedDepth();
-      if (inlined_depth != UINT32_MAX)
-        m_selected_frame_idx = *m_selected_frame_idx - inlined_depth;
-      break;
-    }
+  uint32_t result = 0;
+  {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    result = SetSelectedFrameNoLock(frame);
   }
-
   SetDefaultFileAndLineToSelectedFrame();
-  return *m_selected_frame_idx;
+  return result;
+}
+
+uint32_t StackFrameList::SetSelectedFrameNoLock(lldb_private::StackFrame *frame)
+{
+  uint32_t result = 0;
+  
+    const_iterator pos;
+    const_iterator begin = m_frames.begin();
+    const_iterator end = m_frames.end();
+    m_selected_frame_idx = 0;
+
+    for (pos = begin; pos != end; ++pos) {
+      if (pos->get() == frame) {
+        m_selected_frame_idx = std::distance(begin, pos);
+        uint32_t inlined_depth = GetCurrentInlinedDepth();
+        if (inlined_depth != UINT32_MAX)
+          m_selected_frame_idx = *m_selected_frame_idx - inlined_depth;
+        break;
+      }
+    }
+    result = *m_selected_frame_idx;
+  return result;
 }
 
 bool StackFrameList::SetSelectedFrameByIndex(uint32_t idx) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   StackFrameSP frame_sp(GetFrameAtIndex(idx));
   if (frame_sp) {
     SetSelectedFrame(frame_sp.get());
@@ -840,7 +861,7 @@ void StackFrameList::SetDefaultFileAndLineToSelectedFrame() {
 // does not describe how StackFrameLists are currently used.
 // Clear is currently only used to clear the list in the destructor.
 void StackFrameList::Clear() {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  std::lock_guard<std::mutex> guard(m_mutex);
   m_frames.clear();
   m_concrete_frames_fetched = 0;
   m_selected_frame_idx.reset();
@@ -848,6 +869,7 @@ void StackFrameList::Clear() {
 
 lldb::StackFrameSP
 StackFrameList::GetStackFrameSPForStackFramePtr(StackFrame *stack_frame_ptr) {
+  std::lock_guard<std::mutex> guard(m_mutex);
   const_iterator pos;
   const_iterator begin = m_frames.begin();
   const_iterator end = m_frames.end();

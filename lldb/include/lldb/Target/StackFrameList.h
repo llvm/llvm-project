@@ -103,11 +103,15 @@ protected:
   /// Realizes frames up to (and including) end_idx (which can be greater than  
   /// the actual number of frames.)  
   /// Returns true if the function was interrupted, false otherwise.
+  /// Does not hold the StackFrameList mutex.
   bool GetFramesUpTo(uint32_t end_idx, 
       InterruptionControl allow_interrupt = AllowInterruption);
 
+  /// Does not hold the StackFrameList mutex.
   void GetOnlyConcreteFramesUpTo(uint32_t end_idx, Unwind &unwinder);
 
+  // This gets called without the StackFrameList lock held, callers should 
+  // hold the lock.
   void SynthesizeTailCallFrames(StackFrame &next_frame);
 
   bool GetAllFramesFetched() { return m_concrete_frames_fetched == UINT32_MAX; }
@@ -122,6 +126,9 @@ protected:
 
   void SetCurrentInlinedDepth(uint32_t new_depth);
 
+  /// Calls into the stack frame recognizers and stop info to set the most
+  /// relevant frame.  This can call out to arbitrary user code so it can't
+  /// hold the StackFrameList mutex.
   void SelectMostRelevantFrame();
 
   typedef std::vector<lldb::StackFrameSP> collection;
@@ -142,7 +149,14 @@ protected:
   // TODO: This mutex may not always be held when required. In particular, uses
   // of the StackFrameList APIs in lldb_private::Thread look suspect. Consider
   // passing around a lock_guard reference to enforce proper locking.
-  mutable std::recursive_mutex m_mutex;
+  mutable std::mutex m_mutex;
+  
+  // llvm::sys::RWMutex m_stack_list_mutex;
+  
+  // Setting the inlined depth should be protected against other attempts to
+  // change it, but since it doesn't mutate the list itself, we can limit the
+  // critical regions it produces by having a separate mutex.
+  mutable std::mutex m_inlined_depth_mutex;
 
   /// A cache of frames. This may need to be updated when the program counter
   /// changes.
@@ -171,6 +185,9 @@ protected:
   const bool m_show_inlined_frames;
 
 private:
+  uint32_t SetSelectedFrameNoLock(lldb_private::StackFrame *frame);
+  lldb::StackFrameSP GetFrameAtIndexNoLock(uint32_t idx);
+
   StackFrameList(const StackFrameList &) = delete;
   const StackFrameList &operator=(const StackFrameList &) = delete;
 };
