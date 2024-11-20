@@ -180,8 +180,8 @@ marksl@synopsys.com (email), [markschimmel](https://github.com/markschimmel) (Gi
 
 #### ARM backend
 
-Renato Golin \
-rengolin@systemcall.eu (email), [rengolin](https://github.com/rengolin) (GitHub)
+David Green \
+david.green@arm.com (email), [davemgreen](https://github.com/davemgreen) (GitHub)
 
 #### AVR backend
 
@@ -470,6 +470,7 @@ sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattn
 
 Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- SelectionDAG \
 Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
+Renato Golin (rengolin@systemcall.eu), [rengolin](https://github.com/rengolin)) -- ARM backend \
 Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management \
 
 ### Former maintainers of removed components
