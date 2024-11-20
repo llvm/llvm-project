@@ -45,7 +45,7 @@ end
 !PARSE-TREE: OmpSimpleStandaloneDirective -> llvm::omp::Directive = target update
 !PARSE-TREE: OmpClauseList -> OmpClause -> To -> OmpToClause
 !PARSE-TREE: | Expectation = Present
-!PARSE-TREE: | OmpIteratorModifier -> OmpIteratorSpecifier
+!PARSE-TREE: | OmpIterator -> OmpIteratorSpecifier
 !PARSE-TREE: | | TypeDeclarationStmt
 !PARSE-TREE: | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
 !PARSE-TREE: | | | EntityDecl
@@ -74,7 +74,7 @@ end
 !PARSE-TREE: OmpSimpleStandaloneDirective -> llvm::omp::Directive = target update
 !PARSE-TREE: OmpClauseList -> OmpClause -> To -> OmpToClause
 !PARSE-TREE: | Expectation = Present
-!PARSE-TREE: | OmpIteratorModifier -> OmpIteratorSpecifier
+!PARSE-TREE: | OmpIterator -> OmpIteratorSpecifier
 !PARSE-TREE: | | TypeDeclarationStmt
 !PARSE-TREE: | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
 !PARSE-TREE: | | | EntityDecl

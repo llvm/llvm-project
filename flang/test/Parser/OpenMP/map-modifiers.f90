@@ -159,7 +159,7 @@ end
 !PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
 !PARSE-TREE: | | TypeModifier = Present
-!PARSE-TREE: | | OmpIteratorModifier -> OmpIteratorSpecifier
+!PARSE-TREE: | | OmpIterator -> OmpIteratorSpecifier
 !PARSE-TREE: | | | TypeDeclarationStmt
 !PARSE-TREE: | | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
 !PARSE-TREE: | | | | EntityDecl
@@ -194,7 +194,7 @@ end
 !PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
 !PARSE-TREE: | | TypeModifier = Present
-!PARSE-TREE: | | OmpIteratorModifier -> OmpIteratorSpecifier
+!PARSE-TREE: | | OmpIterator -> OmpIteratorSpecifier
 !PARSE-TREE: | | | TypeDeclarationStmt
 !PARSE-TREE: | | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
 !PARSE-TREE: | | | | EntityDecl
@@ -229,7 +229,7 @@ end
 !PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
 !PARSE-TREE: | | TypeModifier = Present
-!PARSE-TREE: | | OmpIteratorModifier -> OmpIteratorSpecifier
+!PARSE-TREE: | | OmpIterator -> OmpIteratorSpecifier
 !PARSE-TREE: | | | TypeDeclarationStmt
 !PARSE-TREE: | | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
 !PARSE-TREE: | | | | EntityDecl
@@ -287,7 +287,7 @@ end
 !PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
 !PARSE-TREE: | | TypeModifier = Present
-!PARSE-TREE: | | OmpIteratorModifier -> OmpIteratorSpecifier
+!PARSE-TREE: | | OmpIterator -> OmpIteratorSpecifier
 !PARSE-TREE: | | | TypeDeclarationStmt
 !PARSE-TREE: | | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
 !PARSE-TREE: | | | | EntityDecl

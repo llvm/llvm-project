@@ -518,8 +518,8 @@ public:
   }
 
   bool Pre(const parser::OmpClause::Reduction &x) {
-    const parser::OmpReductionOperator &opr{
-        std::get<parser::OmpReductionOperator>(x.v.t)};
+    const parser::OmpReductionIdentifier &opr{
+        std::get<parser::OmpReductionIdentifier>(x.v.t)};
     auto createDummyProcSymbol = [&](const parser::Name *name) {
       // If name resolution failed, create a dummy symbol
       const auto namePair{
