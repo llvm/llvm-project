@@ -203,9 +203,28 @@ def HasStdExtM : Predicate<"Subtarget->hasStdExtM()">,
 
 // Atomic Extensions
 
+def FeatureStdExtZaamo
+    : RISCVExtension<"zaamo", 1, 0,
+                     "'Zaamo' (Atomic Memory Operations)">;
+def HasStdExtAOrZaamo
+    : Predicate<"Subtarget->hasStdExtZaamo()">,
+      AssemblerPredicate<(any_of FeatureStdExtZaamo),
+                         "'A' (Atomic Instructions) or "
+                         "'Zaamo' (Atomic Memory Operations)">;
+
+def FeatureStdExtZalrsc
+    : RISCVExtension<"zalrsc", 1, 0,
+                     "'Zalrsc' (Load-Reserved/Store-Conditional)">;
+def HasStdExtAOrZalrsc
+    : Predicate<"Subtarget->hasStdExtZalrsc()">,
+      AssemblerPredicate<(any_of FeatureStdExtZalrsc),
+                         "'A' (Atomic Instructions) or "
+                         "'Zalrsc' (Load-Reserved/Store-Conditional)">;
+
 def FeatureStdExtA
     : RISCVExtension<"a", 2, 1,
-                     "'A' (Atomic Instructions)">,
+                     "'A' (Atomic Instructions)",
+                     [FeatureStdExtZaamo, FeatureStdExtZalrsc]>,
       RISCVExtensionBitmask<0, 0>;
 def HasStdExtA : Predicate<"Subtarget->hasStdExtA()">,
                  AssemblerPredicate<(all_of FeatureStdExtA),
@@ -225,15 +244,6 @@ def FeatureStdExtZa64rs : RISCVExtension<"za64rs", 1, 0,
 
 def FeatureStdExtZa128rs : RISCVExtension<"za128rs", 1, 0,
                                           "'Za128rs' (Reservation Set Size of at Most 128 Bytes)">;
-
-def FeatureStdExtZaamo
-    : RISCVExtension<"zaamo", 1, 0,
-                     "'Zaamo' (Atomic Memory Operations)">;
-def HasStdExtAOrZaamo
-    : Predicate<"Subtarget->hasStdExtA() || Subtarget->hasStdExtZaamo()">,
-      AssemblerPredicate<(any_of FeatureStdExtA, FeatureStdExtZaamo),
-                         "'A' (Atomic Instructions) or "
-                         "'Zaamo' (Atomic Memory Operations)">;
 
 def FeatureStdExtZabha
     : RISCVExtension<"zabha", 1, 0,
@@ -259,15 +269,6 @@ def FeatureStdExtZalasr
 def HasStdExtZalasr : Predicate<"Subtarget->hasStdExtZalasr()">,
                       AssemblerPredicate<(all_of FeatureStdExtZalasr),
                           "'Zalasr' (Load-Acquire and Store-Release Instructions)">;
-
-def FeatureStdExtZalrsc
-    : RISCVExtension<"zalrsc", 1, 0,
-                     "'Zalrsc' (Load-Reserved/Store-Conditional)">;
-def HasStdExtAOrZalrsc
-    : Predicate<"Subtarget->hasStdExtA() || Subtarget->hasStdExtZalrsc()">,
-      AssemblerPredicate<(any_of FeatureStdExtA, FeatureStdExtZalrsc),
-                         "'A' (Atomic Instructions) or "
-                         "'Zalrsc' (Load-Reserved/Store-Conditional)">;
 
 def FeatureStdExtZama16b
     : RISCVExtension<"zama16b", 1, 0,
