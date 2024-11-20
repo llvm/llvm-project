@@ -61,7 +61,7 @@ int testWhile() {       // CHECK-NEXT: File 0, [[@LINE]]:17 -> [[@LINE+12]]:2 = 
   int i = 0;
   int sum = 0;
   while (i < 10) {      // CHECK-NEXT: File 0, [[@LINE]]:10 -> [[@LINE]]:16 = ([[C40]] + [[C4T:#1]])
-                        // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:10 -> [[@LINE-1]]:16 = [[C4T]], [[C4F:#2]]
+                        // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:10 -> [[@LINE-1]]:16 = [[C4T]], [[C4F:#0]]
                         // CHECK-NEXT: Gap,File 0, [[@LINE-2]]:17 -> [[@LINE-2]]:18 = [[C4T]]
                         // CHECK-NEXT: File 0, [[@LINE-3]]:18 -> [[@LINE+3]]:4 = [[C4T]]
     sum += i;
@@ -96,7 +96,7 @@ int testFor() { // CHECK-NEXT: File 0, [[@LINE]]:15 -> [[@LINE+13]]:2 = [[C60:#0
   int i;
   int sum = 0;
                 // CHECK-NEXT: File 0, [[@LINE+3]]:19 -> [[@LINE+3]]:25 = ([[C60]] + [[C6B:#1]])
-                // CHECK-NEXT: Branch,File 0, [[@LINE+2]]:19 -> [[@LINE+2]]:25 = [[C6B]], [[C6E:#2]]
+                // CHECK-NEXT: Branch,File 0, [[@LINE+2]]:19 -> [[@LINE+2]]:25 = [[C6B]], [[C6E:#0]]
                 // CHECK-NEXT: File 0, [[@LINE+1]]:27 -> [[@LINE+1]]:30 = [[C6B]]
   for (int i = 0; i < 10; i++) {
                 // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:31 -> [[@LINE-1]]:32 = [[C6B]]
@@ -112,7 +112,7 @@ int testForRange() {    // CHECK-NEXT: File 0, [[@LINE]]:20 -> [[@LINE+12]]:2 = 
   int sum = 0;
   int array[] = {1, 2, 3, 4, 5};
 
-                        // CHECK-NEXT: Branch,File 0, [[@LINE+1]]:20 -> [[@LINE+1]]:21 = [[C7B:#1]], [[C7E:#2]]
+                        // CHECK-NEXT: Branch,File 0, [[@LINE+1]]:20 -> [[@LINE+1]]:21 = [[C7B:#1]], [[C7E:#0]]
   for (int element : array) {
                         // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:28 -> [[@LINE-1]]:29 = [[C7B]]
                         // CHECK-NEXT: File 0, [[@LINE-2]]:29 -> [[@LINE+2]]:4 = [[C7B]]
@@ -130,7 +130,7 @@ int testDo() {          // CHECK-NEXT: File 0, [[@LINE]]:14 -> [[@LINE+10]]:2 = 
     sum += i;
     i++;
   } while (i < 5);      // CHECK-NEXT: File 0, [[@LINE]]:12 -> [[@LINE]]:17 = ([[C80]] + [[C8B]])
-                        // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:12 -> [[@LINE-1]]:17 = [[C8B]], [[C8E:#2]]
+                        // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:12 -> [[@LINE-1]]:17 = [[C8B]], [[C8E:#0]]
 
   return sum;           // #0
 }
