@@ -53,7 +53,7 @@ program main
   n1 = 10
   n2 = 10
   !$omp target teams map(to:a)
-  !PORTABILITY: If TARGET DATA directive is nested inside TARGET TEAMS region, the behaviour is unspecified
+  !PORTABILITY: If TARGET DATA directive is nested inside TARGET region, the behaviour is unspecified
   !$omp target data map(n1,n2)
   do i=1, n1
      do j=1, n2
