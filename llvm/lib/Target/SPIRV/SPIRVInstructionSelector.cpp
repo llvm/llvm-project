@@ -257,6 +257,10 @@ private:
   bool selectSpvThreadId(Register ResVReg, const SPIRVType *ResType,
                          MachineInstr &I) const;
 
+  bool selectWaveNOpInst(Register ResVReg, const SPIRVType *ResType,
+                                                       MachineInstr &I,
+                                                       unsigned Opcode,
+                                                       unsigned OperandCount) const;
   bool selectWaveActiveAnyTrue(Register ResVReg, const SPIRVType *ResType,
                                MachineInstr &I) const;
 
@@ -1952,41 +1956,47 @@ bool SPIRVInstructionSelector::selectSign(Register ResVReg,
   return Result;
 }
 
-bool SPIRVInstructionSelector::selectWaveActiveAnyTrue(Register ResVReg,
+bool SPIRVInstructionSelector::selectWaveNOpInst(Register ResVReg,
                                                        const SPIRVType *ResType,
-                                                       MachineInstr &I) const {
-  assert(I.getNumOperands() == 3);
-  assert(I.getOperand(2).isReg());
+                                                       MachineInstr &I,
+                                                       unsigned Opcode,
+                                                       unsigned OperandCount) const {
+  assert(I.getNumOperands() == OperandCount);
+  for (unsigned j = 2; j < OperandCount; j++) {
+    assert(I.getOperand(j).isReg());
+  }
 
   MachineBasicBlock &BB = *I.getParent();
   SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
 
-  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpGroupNonUniformAny))
+  auto BMI = BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII))
-      .addUse(I.getOperand(2).getReg())
-      .constrainAllUses(TII, TRI, RBI);
+      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII));
+
+  for (unsigned j = 2; j < OperandCount; j++) {
+    BMI.addUse(I.getOperand(j).getReg());
+  }
+
+  return BMI.constrainAllUses(TII, TRI, RBI);
+}
+
+
+bool SPIRVInstructionSelector::selectWaveActiveAnyTrue(Register ResVReg,
+                                                       const SPIRVType *ResType,
+                                                       MachineInstr &I) const {
+  return selectWaveNOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAny, 3);
 }
 
 bool SPIRVInstructionSelector::selectWaveActiveCountBits(
     Register ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
-  assert(I.getNumOperands() == 3);
-  assert(I.getOperand(2).isReg());
-  MachineBasicBlock &BB = *I.getParent();
 
   SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
   SPIRVType *BallotType = GR.getOrCreateSPIRVVectorType(IntTy, 4, I, TII);
   Register BallotReg = MRI->createVirtualRegister(GR.getRegClass(BallotType));
+  bool Result = selectWaveNOpInst(BallotReg, BallotType, I, SPIRV::OpGroupNonUniformBallot, 3);
 
-  bool Result =
-      BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpGroupNonUniformBallot))
-          .addDef(BallotReg)
-          .addUse(GR.getSPIRVTypeID(BallotType))
-          .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII))
-          .addUse(I.getOperand(2).getReg())
-          .constrainAllUses(TII, TRI, RBI);
-
+  MachineBasicBlock &BB = *I.getParent();
   Result &=
       BuildMI(BB, I, I.getDebugLoc(),
               TII.get(SPIRV::OpGroupNonUniformBallotBitCount))
@@ -2003,22 +2013,7 @@ bool SPIRVInstructionSelector::selectWaveActiveCountBits(
 bool SPIRVInstructionSelector::selectWaveReadLaneAt(Register ResVReg,
                                                     const SPIRVType *ResType,
                                                     MachineInstr &I) const {
-  assert(I.getNumOperands() == 4);
-  assert(I.getOperand(2).isReg());
-  assert(I.getOperand(3).isReg());
-  MachineBasicBlock &BB = *I.getParent();
-
-  // IntTy is used to define the execution scope, set to 3 to denote a
-  // cross-lane interaction equivalent to a SPIR-V subgroup.
-  SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  return BuildMI(BB, I, I.getDebugLoc(),
-                 TII.get(SPIRV::OpGroupNonUniformShuffle))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII))
-      .addUse(I.getOperand(2).getReg())
-      .addUse(I.getOperand(3).getReg())
-      .constrainAllUses(TII, TRI, RBI);
+  return selectWaveNOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformShuffle, 4);
 }
 
 bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
