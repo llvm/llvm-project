@@ -1364,8 +1364,6 @@ static bool isNonCommonDef(Ctx &ctx, MemoryBufferRef mb, StringRef symName,
   }
 }
 
-unsigned SharedFile::vernauxNum;
-
 SharedFile::SharedFile(Ctx &ctx, MemoryBufferRef m, StringRef defaultSoName)
     : ELFFileBase(ctx, SharedKind, getELFKind(ctx, m, ""), m),
       soName(defaultSoName), isNeeded(!ctx.arg.asNeeded) {}
