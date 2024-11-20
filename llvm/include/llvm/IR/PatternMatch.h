@@ -1787,10 +1787,11 @@ m_SelectCst(const Cond &C) {
 }
 
 /// Match Select(C, LHS, RHS) or Select(C, RHS, LHS)
-template <typename Cond, typename LHS, typename RHS>
-inline ThreeOps_match<Cond, LHS, RHS, Instruction::Select, true>
-m_c_Select(const Cond &C, const LHS &L, const RHS &R) {
-  return ThreeOps_match<Cond, LHS, RHS, Instruction::Select, true>(C, L, R);
+template <typename LHS, typename RHS>
+inline ThreeOps_match<decltype(m_Value()), LHS, RHS, Instruction::Select, true>
+m_c_Select(const LHS &L, const RHS &R) {
+  return ThreeOps_match<decltype(m_Value()), LHS, RHS, Instruction::Select,
+                        true>(m_Value(), L, R);
 }
 
 /// Matches FreezeInst.
