@@ -1118,7 +1118,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
     } else if (!T.isCXX98PODType(Context))
       data().PlainOldData = false;
 
-    if (Field->hasAttr<ExplicitInitAttr>() && !Field->hasInClassInitializer())
+    if (Field->hasAttr<ExplicitInitAttr>())
       setHasUninitializedExplicitInitFields(true);
 
     if (T->isReferenceType()) {
@@ -1381,7 +1381,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
           data().ImplicitCopyAssignmentHasConstParam = false;
 
         if (FieldRec->hasUninitializedExplicitInitFields() &&
-            FieldRec->isAggregate() && !Field->hasInClassInitializer())
+            FieldRec->isAggregate())
           setHasUninitializedExplicitInitFields(true);
 
         if (FieldRec->hasUninitializedReferenceMember() &&

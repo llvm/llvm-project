@@ -1490,7 +1490,7 @@ void aggregate() {
   };
 
   struct C {
-    [[clang::requires_explicit_initialization]] int c1; // #FIELD_C1
+    [[clang::requires_explicit_initialization]] int c1 = 2; // #FIELD_C1
     C() = default;  // Test pre-C++20 aggregates
   };
 
