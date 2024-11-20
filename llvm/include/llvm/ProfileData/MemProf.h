@@ -1050,8 +1050,9 @@ struct FrameStat {
 };
 
 // Compute a histogram of Frames in call stacks.
-llvm::DenseMap<FrameId, FrameStat>
-computeFrameHistogram(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
+template <typename FrameIdTy>
+llvm::DenseMap<FrameIdTy, FrameStat>
+computeFrameHistogram(llvm::MapVector<CallStackId, llvm::SmallVector<FrameIdTy>>
                           &MemProfCallStackData);
 
 // Construct a radix tree of call stacks.
@@ -1109,7 +1110,7 @@ computeFrameHistogram(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
 // On-disk IndexedMemProfRecord will refer to call stacks by their indexes into
 // the radix tree array, so we do not explicitly encode mappings like:
 // "CallStackId 1 -> 11".
-class CallStackRadixTreeBuilder {
+template <typename FrameIdTy> class CallStackRadixTreeBuilder {
   // The radix tree array.
   std::vector<LinearFrameId> RadixArray;
 
@@ -1136,23 +1137,25 @@ class CallStackRadixTreeBuilder {
   // RadixArray[Indexes[5 - 1]] is the last frame of the common prefix.
   std::vector<LinearCallStackId> Indexes;
 
-  using CSIdPair = std::pair<CallStackId, llvm::SmallVector<FrameId>>;
+  using CSIdPair = std::pair<CallStackId, llvm::SmallVector<FrameIdTy>>;
 
   // Encode a call stack into RadixArray.  Return the starting index within
   // RadixArray.
-  LinearCallStackId encodeCallStack(
-      const llvm::SmallVector<FrameId> *CallStack,
-      const llvm::SmallVector<FrameId> *Prev,
-      const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes);
+  LinearCallStackId
+  encodeCallStack(const llvm::SmallVector<FrameIdTy> *CallStack,
+                  const llvm::SmallVector<FrameIdTy> *Prev,
+                  std::optional<const llvm::DenseMap<FrameIdTy, LinearFrameId>>
+                      MemProfFrameIndexes);
 
 public:
   CallStackRadixTreeBuilder() = default;
 
   // Build a radix tree array.
-  void build(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
+  void build(llvm::MapVector<CallStackId, llvm::SmallVector<FrameIdTy>>
                  &&MemProfCallStackData,
-             const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes,
-             llvm::DenseMap<FrameId, FrameStat> &FrameHistogram);
+             std::optional<const llvm::DenseMap<FrameIdTy, LinearFrameId>>
+                 MemProfFrameIndexes,
+             llvm::DenseMap<FrameIdTy, FrameStat> &FrameHistogram);
 
   ArrayRef<LinearFrameId> getRadixArray() const { return RadixArray; }
 
