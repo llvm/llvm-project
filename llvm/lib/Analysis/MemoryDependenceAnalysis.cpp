@@ -1066,8 +1066,8 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   // Invariant loads don't participate in caching. Thus no need to reconcile.
   if (!isInvariantLoad && !Pair.second) {
     if (CacheInfo->Size != Loc.Size) {
-      // The query's Size is greater than the cached one. Throw out the
-      // cached data and proceed with the query at the greater size.
+      // The query's Size is not equal to the cached one. Throw out the cached
+      // data and proceed with the query with the new size.
       CacheInfo->Pair = BBSkipFirstBlockPair();
       CacheInfo->Size = Loc.Size;
       for (auto &Entry : CacheInfo->NonLocalDeps)
