@@ -1688,10 +1688,11 @@ IndexedMemProfReader::getMemProfCallerCalleePairs() const {
   // duplicates, we first collect them in the form of a bit vector before
   // processing them.
   for (const memprof::IndexedMemProfRecord &IndexedRecord :
-       MemProfRecordTable->data())
+       MemProfRecordTable->data()) {
     for (const memprof::IndexedAllocationInfo &IndexedAI :
          IndexedRecord.AllocSites)
       Worklist.set(IndexedAI.CSId);
+  }
 
   // Collect caller-callee pairs for each linear call stack ID in Worklist.
   for (unsigned CS : Worklist.set_bits())
