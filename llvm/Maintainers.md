@@ -201,7 +201,7 @@ mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
 #### Hexagon backend
 
 Sundeep Kushwaha \
-sundeepk@quicinc.com (email)
+sundeepk@quicinc.com (email), [SundeepKushwaha](https://github.com/SundeepKushwaha) (GitHub)
 
 #### Lanai backend
 
@@ -463,8 +463,8 @@ sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattn
 
 ### Inactive or former component maintainers
 
-Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management
-Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- SelectionDAG
+Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- SelectionDAG \
+Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management \
 
 ### Former maintainers of removed components
 

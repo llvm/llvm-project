@@ -202,7 +202,7 @@ private:
   void CheckWorkshareBlockStmts(const parser::Block &, parser::CharBlock);
 
   void CheckIteratorRange(const parser::OmpIteratorSpecifier &x);
-  void CheckIteratorModifier(const parser::OmpIteratorModifier &x);
+  void CheckIteratorModifier(const parser::OmpIterator &x);
   void CheckLoopItrVariableIsInt(const parser::OpenMPLoopConstruct &x);
   void CheckDoWhile(const parser::OpenMPLoopConstruct &x);
   void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
@@ -218,8 +218,8 @@ private:
   void CheckSIMDNest(const parser::OpenMPConstruct &x);
   void CheckTargetNest(const parser::OpenMPConstruct &x);
   void CheckTargetUpdate();
-  void CheckDependenceType(const parser::OmpDependenceType::Type &x);
-  void CheckTaskDependenceType(const parser::OmpTaskDependenceType::Type &x);
+  void CheckDependenceType(const parser::OmpDependenceType::Value &x);
+  void CheckTaskDependenceType(const parser::OmpTaskDependenceType::Value &x);
   void CheckCancellationNest(
       const parser::CharBlock &source, const parser::OmpCancelType::Type &type);
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
