@@ -395,6 +395,7 @@ public:
   }
 
   size_t getSize() const override { return 3 * sizeof(uint32_t); }
+  MachineTypes getMachine() const override { return AMD64; }
 
   void writeTo(uint8_t *buf) const override {
     write32le(buf + 0, tm->getRVA()); // TailMergeChunk start RVA
@@ -415,6 +416,7 @@ public:
   }
 
   size_t getSize() const override { return sizeof(tailMergeUnwindInfoX64); }
+  MachineTypes getMachine() const override { return AMD64; }
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, tailMergeUnwindInfoX64, sizeof(tailMergeUnwindInfoX64));
@@ -882,6 +884,7 @@ Chunk *DelayLoadContents::newTailMergeChunk(Chunk *dir) {
 Chunk *DelayLoadContents::newTailMergeUnwindInfoChunk() {
   switch (ctx.config.machine) {
   case AMD64:
+  case ARM64EC:
     return make<TailMergeUnwindInfoX64>();
     // FIXME: Add support for other architectures.
   default:
@@ -891,6 +894,7 @@ Chunk *DelayLoadContents::newTailMergeUnwindInfoChunk() {
 Chunk *DelayLoadContents::newTailMergePDataChunk(Chunk *tm, Chunk *unwind) {
   switch (ctx.config.machine) {
   case AMD64:
+  case ARM64EC:
     return make<TailMergePDataChunkX64>(tm, unwind);
     // FIXME: Add support for other architectures.
   default:
