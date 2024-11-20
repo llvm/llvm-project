@@ -11,6 +11,6 @@ class ObjCiVarIMPTestCase(TestBase):
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_name_breakpoint(self, "main")
         frame = thread.GetFrameAtIndex(0)
-        lang_info = frame.GetLanguageInfo()
+        lang_info = frame.GetLanguageSpecificData()
         version = lang_info.GetValueForKey("Objective-C runtime version")
         self.assertEqual(version.GetIntegerValue(), 2)
