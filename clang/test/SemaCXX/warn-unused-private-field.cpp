@@ -20,6 +20,20 @@ public:
   int operator<=>(const SpaceShipDefaultCompare &) const = default;
 };
 
+class EqDefaultCompareOutOfClass {
+  int used;
+  bool operator==(const EqDefaultCompareOutOfClass &) const;
+};
+
+bool EqDefaultCompareOutOfClass::operator==(const EqDefaultCompareOutOfClass &) const = default;
+
+class FriendEqDefaultCompareOutOfClass {
+  int used;
+  friend bool operator==(const FriendEqDefaultCompareOutOfClass &, const FriendEqDefaultCompareOutOfClass &);
+};
+
+bool operator==(const FriendEqDefaultCompareOutOfClass &, const FriendEqDefaultCompareOutOfClass &) = default;
+
 #endif
 
 class NotFullyDefined {

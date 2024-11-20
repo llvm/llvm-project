@@ -1874,8 +1874,16 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
           Context.getAttributedType(attr::NoDeref, MemberType, MemberType);
   }
 
-  auto *CurMethod = dyn_cast<CXXMethodDecl>(CurContext);
-  if (!(CurMethod && CurMethod->isDefaulted()))
+  auto isDefaultedSpecialMember = [this](const DeclContext *Ctx) {
+    auto *Method = dyn_cast<CXXMethodDecl>(CurContext);
+    if (!Method || !Method->isDefaulted())
+      return false;
+
+    return getDefaultedFunctionKind(Method).isSpecialMember();
+  };
+
+  // Implicit special members should not mark fields as used.
+  if (!isDefaultedSpecialMember(CurContext))
     UnusedPrivateFields.remove(Field);
 
   ExprResult Base = PerformObjectMemberConversion(BaseExpr, SS.getScopeRep(),
