@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Config/config.h" // C_INCLUDE_DIRS
@@ -18,8 +17,6 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
