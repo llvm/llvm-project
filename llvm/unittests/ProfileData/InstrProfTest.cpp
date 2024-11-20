@@ -25,8 +25,10 @@
 #include <optional>
 
 using namespace llvm;
+using ::llvm::memprof::LineLocation;
 using ::testing::EndsWith;
 using ::testing::IsSubsetOf;
+using ::testing::Pair;
 using ::testing::SizeIs;
 using ::testing::UnorderedElementsAre;
 
@@ -620,18 +622,18 @@ TEST_F(InstrProfTest, test_caller_callee_pairs) {
   auto It = Pairs.find(0x123);
   ASSERT_NE(It, Pairs.end());
   ASSERT_THAT(It->second, SizeIs(2));
-  EXPECT_THAT(It->second[0], testing::Pair(testing::FieldsAre(1U, 2U), 0x234U));
-  EXPECT_THAT(It->second[1], testing::Pair(testing::FieldsAre(5U, 6U), 0x345U));
+  EXPECT_THAT(It->second[0], Pair(LineLocation(1, 2), 0x234U));
+  EXPECT_THAT(It->second[1], Pair(LineLocation(5, 6), 0x345U));
 
   It = Pairs.find(0x234);
   ASSERT_NE(It, Pairs.end());
   ASSERT_THAT(It->second, SizeIs(1));
-  EXPECT_THAT(It->second[0], testing::Pair(testing::FieldsAre(3U, 4U), 0U));
+  EXPECT_THAT(It->second[0], Pair(LineLocation(3, 4), 0U));
 
   It = Pairs.find(0x345);
   ASSERT_NE(It, Pairs.end());
   ASSERT_THAT(It->second, SizeIs(1));
-  EXPECT_THAT(It->second[0], testing::Pair(testing::FieldsAre(7U, 8U), 0U));
+  EXPECT_THAT(It->second[0], Pair(LineLocation(7, 8), 0U));
 }
 
 TEST_F(InstrProfTest, test_memprof_getrecord_error) {
