@@ -15,8 +15,6 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/ExecutionEngine/JITLink/COFF_x86_64.h"
 #include "llvm/Object/COFF.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include <cstring>
 
 using namespace llvm;
