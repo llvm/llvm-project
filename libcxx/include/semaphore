@@ -50,7 +50,7 @@ using binary_semaphore = counting_semaphore<1>; // since C++20
 #if _LIBCPP_HAS_THREADS
 
 #  include <__assert>
-#  include <__atomic/atomic_base.h>
+#  include <__atomic/atomic.h>
 #  include <__atomic/atomic_sync.h>
 #  include <__atomic/memory_order.h>
 #  include <__chrono/time_point.h>
@@ -83,7 +83,7 @@ functions. It avoids contention against users' own use of those facilities.
 #    define _LIBCPP_SEMAPHORE_MAX (numeric_limits<ptrdiff_t>::max())
 
 class __atomic_semaphore_base {
-  __atomic_base<ptrdiff_t> __a_;
+  atomic<ptrdiff_t> __a_;
 
 public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __atomic_semaphore_base(ptrdiff_t __count) : __a_(__count) {}

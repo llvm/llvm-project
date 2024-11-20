@@ -17,7 +17,6 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SwapByteOrder.h"
-#include "llvm/Support/type_traits.h"
 
 using namespace llvm;
 using namespace object;
