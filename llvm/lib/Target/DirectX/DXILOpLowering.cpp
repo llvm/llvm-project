@@ -533,7 +533,8 @@ public:
             inconvertibleErrorCode());
 
       // Since we're post-scalarizer, we likely have a vector that's constructed
-      // solely for the argument of the store.
+      // solely for the argument of the store. If so, just use the scalar values
+      // from before they're inserted into the temporary.
       std::array<Value *, 4> DataElements{nullptr, nullptr, nullptr, nullptr};
       auto *IEI = dyn_cast<InsertElementInst>(Data);
       while (IEI) {
