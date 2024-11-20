@@ -2890,6 +2890,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
       // ProduceConstructorSignatureHelp only on VarDecls.
       ExpressionStarts = SetPreferredType;
     }
+
     bool SawError = ParseExpressionList(Exprs, ExpressionStarts);
 
     if (SawError) {
