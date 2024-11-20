@@ -71,7 +71,6 @@ jobs:
           echo "upload=$upload" >> "$GITHUB_OUTPUT"
 
   release-binaries-all:
-    if: false
     name: Build Release Binaries
     needs:
       - setup-variables
@@ -84,8 +83,6 @@ jobs:
       matrix:
         runs-on:
           - depot-ubuntu-22.04-4
-          - macos-13
-          - macos-14
 
     uses: ./.github/workflows/release-binaries.yml
     with:
