@@ -277,6 +277,10 @@ LanguageRuntime::GetRuntimeUnwindPlan(Thread &thread, RegisterContext *regctx,
   return UnwindPlanSP();
 }
 
+StructuredData::ObjectSP LanguageRuntime::GetLanguageInfo(SymbolContext sc) {
+  return {};
+}
+
 void LanguageRuntime::InitializeCommands(CommandObject *parent) {
   if (!parent)
     return;
