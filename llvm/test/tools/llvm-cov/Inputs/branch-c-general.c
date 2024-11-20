@@ -6,16 +6,16 @@
 
 void simple_loops() {           // CHECK: @LINE|{{.*}}simple_loops()
   int i;
-  for (i = 0; i < 100; ++i) {   // BRCOV: Branch ([[@LINE]]:15): [True: [[C100:100|1]], False: 1]
+  for (i = 0; i < 100; ++i) {   // CHECK: Branch ([[@LINE]]:15): [True: [[C100:100|1]], False: 1]
   }
-  while (i > 0)                 // BRCOV: Branch ([[@LINE]]:10): [True: [[C100]], False: 1]
+  while (i > 0)                 // CHECK: Branch ([[@LINE]]:10): [True: [[C100]], False: 1]
     i--;
-  do {} while (i++ < 75);       // BRCOV: Branch ([[@LINE]]:16): [True: [[C75:75|1]], False: 1]
+  do {} while (i++ < 75);       // CHECK: Branch ([[@LINE]]:16): [True: [[C75:75|1]], False: 1]
 
 }
 
 void conditionals() {           // CHECK: @LINE|{{.*}}conditionals()
-  for (int i = 0; i < 100; ++i) {//BRCOV: Branch ([[@LINE]]:19): [True: [[C100]], False: 1]
+  for (int i = 0; i < 100; ++i) {//CHECK: Branch ([[@LINE]]:19): [True: [[C100]], False: 1]
     if (i % 2) {                // BRCOV: Branch ([[@LINE]]:9): [True: [[C50:50|1]], False: [[C50]]]
       if (i) {}                 // BRCOV: Branch ([[@LINE]]:11): [True: [[C50]], False: 0]
     } else if (i % 3) {         // BRCOV: Branch ([[@LINE]]:16): [True: [[C33:33|1]], False: [[C17:17|1]]]
@@ -35,7 +35,7 @@ void early_exits() {            // CHECK: @LINE|{{.*}}early_exits()
 
   if (i) {}                     // BRCOV: Branch ([[@LINE]]:7): [True: 0, False: 1]
 
-  while (i < 100) {             // BRCOV: Branch ([[@LINE]]:10): [True: [[C51:51|1]], False: 0]
+  while (i < 100) {             // CHECK: Branch ([[@LINE]]:10): [True: [[C51:51|1]], False: 0]
     i++;
     if (i > 50)                 // BRCOV: Branch ([[@LINE]]:9): [True: 1, False: [[C50]]]
       break;
@@ -50,7 +50,7 @@ void early_exits() {            // CHECK: @LINE|{{.*}}early_exits()
       return;
     else
       i++;
-  } while (i < 100);            // BRCOV: Branch ([[@LINE]]:12): [True: [[C25]], False: 0]
+  } while (i < 100);            // CHECK: Branch ([[@LINE]]:12): [True: [[C25:25|1]], False: 0]
 
   if (i) {}                     // BRCOV: Branch ([[@LINE]]:7): [True: 0, False: 0]
 
@@ -59,7 +59,7 @@ void early_exits() {            // CHECK: @LINE|{{.*}}early_exits()
 void jumps() {                  // CHECK: @LINE|{{.*}}jumps()
   int i;
 
-  for (i = 0; i < 2; ++i) {     // BRCOV: Branch ([[@LINE]]:15): [True: 1, False: 0]
+  for (i = 0; i < 2; ++i) {     // CHECK: Branch ([[@LINE]]:15): [True: 1, False: 0]
     goto outofloop;
     // Never reached -> no weights
     if (i) {}                   // BRCOV: Branch ([[@LINE]]:9): [True: 0, False: 0]
@@ -70,7 +70,7 @@ outofloop:
 
   goto loop1;
 
-  while (i) {                   // BRCOV: Branch ([[@LINE]]:10): [True: 0, False: 1]
+  while (i) {                   // CHECK: Branch ([[@LINE]]:10): [True: 0, False: 1]
   loop1:
     if (i) {}                   // BRCOV: Branch ([[@LINE]]:9): [True: 0, False: 1]
   }
@@ -83,7 +83,7 @@ third:
   if (i < 3)                    // BRCOV: Branch ([[@LINE]]:7): [True: [[C2:2|1]], False: 1]
     goto loop2;
 
-  while (i < 3) {               // BRCOV: Branch ([[@LINE]]:10): [True: 0, False: 1]
+  while (i < 3) {               // CHECK: Branch ([[@LINE]]:10): [True: 0, False: 1]
   loop2:
     switch (i) {
     case 0:                     // BRCOV: Branch ([[@LINE]]:5): [True: 1, Folded]
@@ -95,7 +95,7 @@ third:
     }
   }
 
-  for (i = 0; i < 10; ++i) {    // BRCOV: Branch ([[@LINE]]:15): [True: [[C10:10|1]], False: 1]
+  for (i = 0; i < 10; ++i) {    // CHECK: Branch ([[@LINE]]:15): [True: [[C10:10|1]], False: 1]
     goto withinloop;
                                 // never reached -> no weights
     if (i) {}                   // BRCOV: Branch ([[@LINE]]:9): [True: 0, False: 0]
@@ -113,7 +113,7 @@ void switches() {               // CHECK: @LINE|{{.*}}switches()
   default:                      // BRCOV: Branch ([[@LINE]]:3): [True: 1, Folded]
     break;
   }
-                                // BRCOV: Branch ([[@LINE+1]]:63): [True: [[C15:15|1]], False: 0]
+                                // CHECK: Branch ([[@LINE+1]]:63): [True: [[C15:15|1]], False: 0]
   for (int i = 0, len = sizeof(weights) / sizeof(weights[0]); i < len; ++i) {
     switch (i[weights]) {
     case 1:                     // BRCOV: Branch ([[@LINE]]:5): [True: 1, Folded]
@@ -145,7 +145,7 @@ void switches() {               // CHECK: @LINE|{{.*}}switches()
 }
 
 void big_switch() {             // CHECK: @LINE|{{.*}}big_switch()
-  for (int i = 0; i < 32; ++i) {// BRCOV: Branch ([[@LINE]]:19): [True: [[C32:32|1]], False: 1]
+  for (int i = 0; i < 32; ++i) {// CHECK: Branch ([[@LINE]]:19): [True: [[C32:32|1]], False: 1]
     switch (1 << i) {
     case (1 << 0):              // BRCOV: Branch ([[@LINE]]:5): [True: 1, Folded]
       if (i) {}                 // BRCOV: Branch ([[@LINE]]:11): [True: 0, False: 1]
@@ -216,7 +216,7 @@ void conditional_operator() {   // CHECK: @LINE|{{.*}}conditional_operator()
 }
 
 void do_fallthrough() {         // CHECK: @LINE|{{.*}}do_fallthrough()
-  for (int i = 0; i < 10; ++i) {// BRCOV: Branch ([[@LINE]]:19): [True: [[C10]], False: 1]
+  for (int i = 0; i < 10; ++i) {// CHECK: Branch ([[@LINE]]:19): [True: [[C10]], False: 1]
     int j = 0;
     do {
       // The number of exits out of this do-loop via the break statement
@@ -224,12 +224,12 @@ void do_fallthrough() {         // CHECK: @LINE|{{.*}}do_fallthrough()
       // fallthrough count). Make sure that does not violate any assertions.
       if (i < 8) break;
       j++;
-    } while (j < 2);            // BRCOV: Branch ([[@LINE]]:14): [True: [[C2]], False: [[C2]]]
+    } while (j < 2);            // CHECK: Branch ([[@LINE]]:14): [True: [[C2:2|1]], False: [[C2]]]
   }
 }
 
 static void static_func() {     // CHECK: @LINE|{{.*}}static_func()
-  for (int i = 0; i < 10; ++i) {// BRCOV: Branch ([[@LINE]]:19): [True: [[C10]], False: 1]
+  for (int i = 0; i < 10; ++i) {// CHECK: Branch ([[@LINE]]:19): [True: [[C10]], False: 1]
   }
 }
 
