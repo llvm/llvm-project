@@ -9694,7 +9694,7 @@ void AArch64InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator Iter,
                                           DebugLoc &DL,
                                           bool AllowSideEffects) const {
-  MachineFunction &MF = *MBB.getParent();
+  const MachineFunction &MF = *MBB.getParent();
   const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
   const AArch64RegisterInfo &TRI = *STI.getRegisterInfo();
 
