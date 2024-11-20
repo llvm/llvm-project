@@ -107,12 +107,12 @@ declare !dbg !19 void @_Z2f3v()
 
   // Verify that call sites show up in the ascending order of their source
   // locations.
-  EXPECT_THAT(CallSites[0],
-              Pair(FieldsAre(1U, 3U), IndexedMemProfRecord::getGUID("_Z2f1v")));
-  EXPECT_THAT(CallSites[1],
-              Pair(FieldsAre(2U, 3U), IndexedMemProfRecord::getGUID("_Z2f2v")));
-  EXPECT_THAT(CallSites[2],
-              Pair(FieldsAre(2U, 9U), IndexedMemProfRecord::getGUID("_Z2f3v")));
+  EXPECT_THAT(CallSites[0], Pair(LineLocation(1, 3),
+                                 IndexedMemProfRecord::getGUID("_Z2f1v")));
+  EXPECT_THAT(CallSites[1], Pair(LineLocation(2, 3),
+                                 IndexedMemProfRecord::getGUID("_Z2f2v")));
+  EXPECT_THAT(CallSites[2], Pair(LineLocation(2, 9),
+                                 IndexedMemProfRecord::getGUID("_Z2f3v")));
 }
 
 TEST(MemProf, ExtractDirectCallsFromIRInline) {
@@ -207,9 +207,9 @@ declare !dbg !25 void @_Z2g2v() local_unnamed_addr
   const auto &[FooCallerGUID, FooCallSites] = *FooIt;
   EXPECT_EQ(FooCallerGUID, IndexedMemProfRecord::getGUID("_Z3foov"));
   ASSERT_THAT(FooCallSites, SizeIs(2));
-  EXPECT_THAT(FooCallSites[0], Pair(FieldsAre(1U, 3U),
+  EXPECT_THAT(FooCallSites[0], Pair(LineLocation(1, 3),
                                     IndexedMemProfRecord::getGUID("_ZL2f3v")));
-  EXPECT_THAT(FooCallSites[1], Pair(FieldsAre(2U, 9U),
+  EXPECT_THAT(FooCallSites[1], Pair(LineLocation(2, 9),
                                     IndexedMemProfRecord::getGUID("_ZL2g3v")));
 
   auto F2It = Calls.find(IndexedMemProfRecord::getGUID("_ZL2f2v"));
@@ -217,15 +217,15 @@ declare !dbg !25 void @_Z2g2v() local_unnamed_addr
   const auto &[F2CallerGUID, F2CallSites] = *F2It;
   EXPECT_EQ(F2CallerGUID, IndexedMemProfRecord::getGUID("_ZL2f2v"));
   ASSERT_THAT(F2CallSites, SizeIs(1));
-  EXPECT_THAT(F2CallSites[0],
-              Pair(FieldsAre(2U, 3U), IndexedMemProfRecord::getGUID("_Z2f1v")));
+  EXPECT_THAT(F2CallSites[0], Pair(LineLocation(2, 3),
+                                   IndexedMemProfRecord::getGUID("_Z2f1v")));
 
   auto F3It = Calls.find(IndexedMemProfRecord::getGUID("_ZL2f3v"));
   ASSERT_NE(F3It, Calls.end());
   const auto &[F3CallerGUID, F3CallSites] = *F3It;
   EXPECT_EQ(F3CallerGUID, IndexedMemProfRecord::getGUID("_ZL2f3v"));
   ASSERT_THAT(F3CallSites, SizeIs(1));
-  EXPECT_THAT(F3CallSites[0], Pair(FieldsAre(1U, 10U),
+  EXPECT_THAT(F3CallSites[0], Pair(LineLocation(1, 10),
                                    IndexedMemProfRecord::getGUID("_ZL2f2v")));
 
   auto G3It = Calls.find(IndexedMemProfRecord::getGUID("_ZL2g3v"));
@@ -233,10 +233,10 @@ declare !dbg !25 void @_Z2g2v() local_unnamed_addr
   const auto &[G3CallerGUID, G3CallSites] = *G3It;
   EXPECT_EQ(G3CallerGUID, IndexedMemProfRecord::getGUID("_ZL2g3v"));
   ASSERT_THAT(G3CallSites, SizeIs(2));
-  EXPECT_THAT(G3CallSites[0],
-              Pair(FieldsAre(1U, 8U), IndexedMemProfRecord::getGUID("_Z2g1v")));
-  EXPECT_THAT(G3CallSites[1],
-              Pair(FieldsAre(2U, 3U), IndexedMemProfRecord::getGUID("_Z2g2v")));
+  EXPECT_THAT(G3CallSites[0], Pair(LineLocation(1, 8),
+                                   IndexedMemProfRecord::getGUID("_Z2g1v")));
+  EXPECT_THAT(G3CallSites[1], Pair(LineLocation(2, 3),
+                                   IndexedMemProfRecord::getGUID("_Z2g2v")));
 }
 
 TEST(MemProf, ExtractDirectCallsFromIRCallingNew) {
@@ -302,7 +302,7 @@ attributes #2 = { builtin allocsize(0) }
   const auto &[FooCallerGUID, FooCallSites] = *FooIt;
   EXPECT_EQ(FooCallerGUID, IndexedMemProfRecord::getGUID("_Z3foov"));
   ASSERT_THAT(FooCallSites, SizeIs(1));
-  EXPECT_THAT(FooCallSites[0], Pair(FieldsAre(1U, 10U), 0));
+  EXPECT_THAT(FooCallSites[0], Pair(LineLocation(1, 10), 0));
 }
 
 // Populate those fields returned by getHotColdSchema.
