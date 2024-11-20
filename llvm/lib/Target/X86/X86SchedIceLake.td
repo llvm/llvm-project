@@ -392,7 +392,7 @@ defm : ICXWriteResPair<WriteShuffle,  [ICXPort5],  1, [1], 1, 5>; // Vector shuf
 defm : ICXWriteResPair<WriteShuffleX, [ICXPort15], 1, [1], 1, 6>;
 defm : ICXWriteResPair<WriteShuffleY, [ICXPort15], 1, [1], 1, 7>;
 defm : ICXWriteResPair<WriteShuffleZ, [ICXPort5],  1, [1], 1, 7>;
-defm : ICXWriteResPair<WriteVarShuffle,  [ICXPort5],  1, [1], 1, 5>; // Vector variable shuffles.
+defm : ICXWriteResPair<WriteVarShuffle,  [ICXPort0,ICXPort5],  1, [1,1], 2, 5>; // Vector variable shuffles.
 defm : ICXWriteResPair<WriteVarShuffleX, [ICXPort15], 1, [1], 1, 6>;
 defm : ICXWriteResPair<WriteVarShuffleY, [ICXPort15], 1, [1], 1, 7>;
 defm : ICXWriteResPair<WriteVarShuffleZ, [ICXPort5],  1, [1], 1, 7>;

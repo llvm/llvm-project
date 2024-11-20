@@ -387,7 +387,7 @@ defm : SKXWriteResPair<WriteShuffle,  [SKXPort5], 1, [1], 1, 5>; // Vector shuff
 defm : SKXWriteResPair<WriteShuffleX, [SKXPort5], 1, [1], 1, 6>;
 defm : SKXWriteResPair<WriteShuffleY, [SKXPort5], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WriteShuffleZ, [SKXPort5], 1, [1], 1, 7>;
-defm : SKXWriteResPair<WriteVarShuffle,  [SKXPort5], 1, [1], 1, 5>; // Vector variable shuffles.
+defm : SKXWriteResPair<WriteVarShuffle,  [SKXPort0,SKXPort5], 1, [1,1], 2, 5>; // Vector variable shuffles.
 defm : SKXWriteResPair<WriteVarShuffleX, [SKXPort5], 1, [1], 1, 6>;
 defm : SKXWriteResPair<WriteVarShuffleY, [SKXPort5], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WriteVarShuffleZ, [SKXPort5], 1, [1], 1, 7>;

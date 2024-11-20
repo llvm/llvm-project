@@ -387,7 +387,7 @@ defm : SKLWriteResPair<WriteShuffle,  [SKLPort5], 1, [1], 1, 5>; // Vector shuff
 defm : SKLWriteResPair<WriteShuffleX, [SKLPort5], 1, [1], 1, 6>;
 defm : SKLWriteResPair<WriteShuffleY, [SKLPort5], 1, [1], 1, 7>;
 defm : X86WriteResPairUnsupported<WriteShuffleZ>;
-defm : SKLWriteResPair<WriteVarShuffle,  [SKLPort5], 1, [1], 1, 5>; // Vector shuffles.
+defm : SKLWriteResPair<WriteVarShuffle,  [SKLPort0,SKLPort5], 1, [1,1], 2, 5>; // Vector shuffles.
 defm : SKLWriteResPair<WriteVarShuffleX, [SKLPort5], 1, [1], 1, 6>;
 defm : SKLWriteResPair<WriteVarShuffleY, [SKLPort5], 1, [1], 1, 7>;
 defm : X86WriteResPairUnsupported<WriteVarShuffleZ>;
