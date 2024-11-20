@@ -20,6 +20,7 @@ add_mlir_dialect_library(MLIRArithTransforms
   MLIRAnalysis
   MLIRArithDialect
   MLIRBufferizationDialect
+  MLIRBufferizationTransforms
   MLIRFuncDialect
   MLIRFuncTransforms
   MLIRInferIntRangeInterface
