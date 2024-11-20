@@ -316,6 +316,31 @@ INTERCEPTOR(ssize_t, writev, int fd, const struct iovec *iov, int iovcnt) {
   return REAL(writev)(fd, iov, iovcnt);
 }
 
+INTERCEPTOR(off_t, lseek, int fd, off_t offset, int whence) {
+  __rtsan_notify_intercepted_call("lseek");
+  return REAL(lseek)(fd, offset, whence);
+}
+
+#if SANITIZER_INTERCEPT_LSEEK64
+INTERCEPTOR(off64_t, lseek64, int fd, off64_t offset, int whence) {
+  __rtsan_notify_intercepted_call("lseek64");
+  return REAL(lseek64)(fd, offset, whence);
+}
+#define RTSAN_MAYBE_INTERCEPT_LSEEK64 INTERCEPT_FUNCTION(lseek64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_LSEEK64
+#endif // SANITIZER_INTERCEPT_LSEEK64
+
+INTERCEPTOR(int, dup, int oldfd) {
+  __rtsan_notify_intercepted_call("dup");
+  return REAL(dup)(oldfd);
+}
+
+INTERCEPTOR(int, dup2, int oldfd, int newfd) {
+  __rtsan_notify_intercepted_call("dup2");
+  return REAL(dup2)(oldfd, newfd);
+}
+
 // Concurrency
 #if SANITIZER_APPLE
 #pragma clang diagnostic push
@@ -757,6 +782,10 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_CREAT64;
   INTERCEPT_FUNCTION(puts);
   INTERCEPT_FUNCTION(fputs);
+  INTERCEPT_FUNCTION(lseek);
+  RTSAN_MAYBE_INTERCEPT_LSEEK64;
+  INTERCEPT_FUNCTION(dup);
+  INTERCEPT_FUNCTION(dup2);
 
 #if SANITIZER_APPLE
   INTERCEPT_FUNCTION(OSSpinLockLock);
