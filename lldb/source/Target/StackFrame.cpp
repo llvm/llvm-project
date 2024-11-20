@@ -2008,7 +2008,7 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
             have_source = true;
           // TODO: Give here a one time warning if source file is missing.
           if (!m_sc.line_entry.line)
-            strm << "Note: This address is not associated with a specific line "
+            strm << "note: This address is not associated with a specific line "
                     "of code. This may be due to compiler optimizations.\n";
         }
       }
