@@ -5621,6 +5621,7 @@ cc_library(
         ":SCFDialect",
         ":SideEffectInterfaces",
         ":Support",
+        "//llvm:Core",
         "//llvm:Support",
     ],
 )
