@@ -5186,40 +5186,6 @@ SDValue AArch64TargetLowering::LowerBITCAST(SDValue Op,
   return DAG.getTargetExtractSubreg(AArch64::hsub, DL, OpVT, Op);
 }
 
-static EVT getExtensionTo64Bits(const EVT &OrigVT) {
-  if (OrigVT.getSizeInBits() >= 64)
-    return OrigVT;
-
-  assert(OrigVT.isSimple() && "Expecting a simple value type");
-
-  MVT::SimpleValueType OrigSimpleTy = OrigVT.getSimpleVT().SimpleTy;
-  switch (OrigSimpleTy) {
-  default: llvm_unreachable("Unexpected Vector Type");
-  case MVT::v2i8:
-  case MVT::v2i16:
-     return MVT::v2i32;
-  case MVT::v4i8:
-    return  MVT::v4i16;
-  }
-}
-
-static SDValue addRequiredExtensionForVectorMULL(SDValue N, SelectionDAG &DAG,
-                                                 const EVT &OrigTy,
-                                                 const EVT &ExtTy,
-                                                 unsigned ExtOpcode) {
-  // The vector originally had a size of OrigTy. It was then extended to ExtTy.
-  // We expect the ExtTy to be 128-bits total. If the OrigTy is less than
-  // 64-bits we need to insert a new extension so that it will be 64-bits.
-  assert(ExtTy.is128BitVector() && "Unexpected extension size");
-  if (OrigTy.getSizeInBits() >= 64)
-    return N;
-
-  // Must extend size to at least 64 bits to be used as an operand for VMULL.
-  EVT NewVT = getExtensionTo64Bits(OrigTy);
-
-  return DAG.getNode(ExtOpcode, SDLoc(N), NewVT, N);
-}
-
 // Returns lane if Op extracts from a two-element vector and lane is constant
 // (i.e., extractelt(<2 x Ty> %v, ConstantLane)), and std::nullopt otherwise.
 static std::optional<uint64_t>
@@ -5265,31 +5231,11 @@ static bool isExtendedBUILD_VECTOR(SDValue N, SelectionDAG &DAG,
 static SDValue skipExtensionForVectorMULL(SDValue N, SelectionDAG &DAG) {
   EVT VT = N.getValueType();
   assert(VT.is128BitVector() && "Unexpected vector MULL size");
-
-  unsigned NumElts = VT.getVectorNumElements();
-  unsigned OrigEltSize = VT.getScalarSizeInBits();
-  unsigned EltSize = OrigEltSize / 2;
-  MVT TruncVT = MVT::getVectorVT(MVT::getIntegerVT(EltSize), NumElts);
-
-  APInt HiBits = APInt::getHighBitsSet(OrigEltSize, EltSize);
-  if (DAG.MaskedValueIsZero(N, HiBits))
-    return DAG.getNode(ISD::TRUNCATE, SDLoc(N), TruncVT, N);
-
-  if (ISD::isExtOpcode(N.getOpcode()))
-    return addRequiredExtensionForVectorMULL(N.getOperand(0), DAG,
-                                             N.getOperand(0).getValueType(), VT,
-                                             N.getOpcode());
-
-  assert(N.getOpcode() == ISD::BUILD_VECTOR && "expected BUILD_VECTOR");
-  SDLoc dl(N);
-  SmallVector<SDValue, 8> Ops;
-  for (unsigned i = 0; i != NumElts; ++i) {
-    const APInt &CInt = N.getConstantOperandAPInt(i);
-    // Element types smaller than 32 bits are not legal, so use i32 elements.
-    // The values are implicitly truncated so sext vs. zext doesn't matter.
-    Ops.push_back(DAG.getConstant(CInt.zextOrTrunc(32), dl, MVT::i32));
-  }
-  return DAG.getBuildVector(TruncVT, dl, Ops);
+  EVT HalfVT = EVT::getVectorVT(
+      *DAG.getContext(),
+      VT.getScalarType().getHalfSizedIntegerVT(*DAG.getContext()),
+      VT.getVectorElementCount());
+  return DAG.getNode(ISD::TRUNCATE, SDLoc(N), HalfVT, N);
 }
 
 static bool isSignExtended(SDValue N, SelectionDAG &DAG) {
@@ -5465,33 +5411,26 @@ static unsigned selectUmullSmull(SDValue &N0, SDValue &N1, SelectionDAG &DAG,
   if (IsN0ZExt && IsN1ZExt)
     return AArch64ISD::UMULL;
 
-  // Select SMULL if we can replace zext with sext.
-  if (((IsN0SExt && IsN1ZExt) || (IsN0ZExt && IsN1SExt)) &&
-      !isExtendedBUILD_VECTOR(N0, DAG, false) &&
-      !isExtendedBUILD_VECTOR(N1, DAG, false)) {
-    SDValue ZextOperand;
-    if (IsN0ZExt)
-      ZextOperand = N0.getOperand(0);
-    else
-      ZextOperand = N1.getOperand(0);
-    if (DAG.SignBitIsZero(ZextOperand)) {
-      SDValue NewSext =
-          DAG.getSExtOrTrunc(ZextOperand, DL, N0.getValueType());
-      if (IsN0ZExt)
-        N0 = NewSext;
-      else
-        N1 = NewSext;
-      return AArch64ISD::SMULL;
-    }
-  }
-
   // Select UMULL if we can replace the other operand with an extend.
+  EVT VT = N0.getValueType();
+  unsigned EltSize = VT.getScalarSizeInBits();
+  APInt Mask = APInt::getHighBitsSet(EltSize, EltSize / 2);
   if (IsN0ZExt || IsN1ZExt) {
-    EVT VT = N0.getValueType();
-    APInt Mask = APInt::getHighBitsSet(VT.getScalarSizeInBits(),
-                                       VT.getScalarSizeInBits() / 2);
     if (DAG.MaskedValueIsZero(IsN0ZExt ? N1 : N0, Mask))
       return AArch64ISD::UMULL;
+  } else if (VT == MVT::v2i64 && DAG.MaskedValueIsZero(N0, Mask) &&
+             DAG.MaskedValueIsZero(N1, Mask)) {
+    // For v2i64 we look more aggresively at both operands being zero, to avoid
+    // scalarization.
+    return AArch64ISD::UMULL;
+  }
+
+  if (IsN0SExt || IsN1SExt) {
+    if (DAG.ComputeNumSignBits(IsN0SExt ? N1 : N0) > EltSize / 2)
+      return AArch64ISD::SMULL;
+  } else if (VT == MVT::v2i64 && DAG.ComputeNumSignBits(N0) > EltSize / 2 &&
+             DAG.ComputeNumSignBits(N1) > EltSize / 2) {
+    return AArch64ISD::SMULL;
   }
 
   if (!IsN1SExt && !IsN1ZExt)
