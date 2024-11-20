@@ -522,9 +522,8 @@ public:
   /// provides this additional bypass block along with the resume value coming
   /// from it.
   void createInductionResumeVPValue(
-      VPIRInstruction *PhiIRI, const InductionDescriptor &ID,
-      Value *Step, ArrayRef<BasicBlock *> BypassBlocks,
-      VPBuilder &ScalarPHBuilder,
+      VPIRInstruction *PhiIRI, const InductionDescriptor &ID, Value *Step,
+      ArrayRef<BasicBlock *> BypassBlocks, VPBuilder &ScalarPHBuilder,
       std::pair<BasicBlock *, Value *> AdditionalBypass = {nullptr, nullptr});
 
   /// Returns the original loop trip count.
@@ -2593,9 +2592,8 @@ void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
 }
 
 void InnerLoopVectorizer::createInductionResumeVPValue(
-    VPIRInstruction *PhiR, const InductionDescriptor &II,
-    Value *Step, ArrayRef<BasicBlock *> BypassBlocks,
-    VPBuilder &ScalarPHBuilder,
+    VPIRInstruction *PhiR, const InductionDescriptor &II, Value *Step,
+    ArrayRef<BasicBlock *> BypassBlocks, VPBuilder &ScalarPHBuilder,
     std::pair<BasicBlock *, Value *> AdditionalBypass) {
   auto *OrigPhi = cast<PHINode>(&PhiR->getInstruction());
   Value *VectorTripCount = getOrCreateVectorTripCount(LoopVectorPreHeader);
@@ -2682,9 +2680,9 @@ void InnerLoopVectorizer::createInductionResumeVPValues(
     if (!Legal->getInductionVars().contains(Phi))
       continue;
     const InductionDescriptor &II = Legal->getInductionVars().find(Phi)->second;
-    createInductionResumeVPValue(
-        PhiR, II, getExpandedStep(II, ExpandedSCEVs), LoopBypassBlocks,
-        ScalarPHBuilder, AdditionalBypass);
+    createInductionResumeVPValue(PhiR, II, getExpandedStep(II, ExpandedSCEVs),
+                                 LoopBypassBlocks, ScalarPHBuilder,
+                                 AdditionalBypass);
   }
 }
 
@@ -8045,8 +8043,8 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton(
   // the trip count of the main vector loop, hence passing the AdditionalBypass
   // argument.
   createInductionResumeVPValues(ExpandedSCEVs,
-                              {VecEpilogueIterationCountCheck,
-                               EPI.VectorTripCount} /* AdditionalBypass */);
+                                {VecEpilogueIterationCountCheck,
+                                 EPI.VectorTripCount} /* AdditionalBypass */);
 
   return {LoopVectorPreHeader, EPResumeVal};
 }
