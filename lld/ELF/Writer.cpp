@@ -49,7 +49,7 @@ template <class ELFT> class Writer {
 public:
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
-  Writer(Ctx &ctx) : ctx(ctx), buffer(ctx.e.outputBuffer) {}
+  Writer(Ctx &ctx) : ctx(ctx), buffer(ctx.e.outputBuffer), tc(ctx) {}
 
   void run();
 
@@ -82,6 +82,8 @@ private:
 
   Ctx &ctx;
   std::unique_ptr<FileOutputBuffer> &buffer;
+  // ThunkCreator holds Thunks that are used at writeTo time.
+  ThunkCreator tc;
 
   void addRelIpltSymbols();
   void addStartEndSymbols();
@@ -1448,7 +1450,6 @@ static void finalizeSynthetic(Ctx &ctx, SyntheticSection *sec) {
 // in Writer<ELFT>::finalizeSections().
 template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   llvm::TimeTraceScope timeScope("Finalize address dependent content");
-  ThunkCreator tc(ctx);
   AArch64Err843419Patcher a64p(ctx);
   ARMErr657417Patcher a32p(ctx);
   ctx.script->assignAddresses();
