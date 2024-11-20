@@ -1501,7 +1501,7 @@ void MachineLICMImpl::InitializeLoadsHoistableLoops() {
       if (!AllowedToHoistLoads[Loop])
         continue;
       for (auto &MI : *MBB) {
-        if (!MI.mayStore() && !MI.isCall() &&
+        if (!MI.isLoadFoldBarrier() && !MI.mayStore() && !MI.isCall() &&
             !(MI.mayLoad() && MI.hasOrderedMemoryRef()))
           continue;
         for (MachineLoop *L = Loop; L != nullptr; L = L->getParentLoop())
