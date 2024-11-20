@@ -432,6 +432,14 @@ TARGET_BUILTIN(__builtin_amdgcn_cvt_sr_bf8_f32, "ifiiIi", "nc", "fp8-conversion-
 TARGET_BUILTIN(__builtin_amdgcn_cvt_sr_fp8_f32, "ifiiIi", "nc", "fp8-conversion-insts")
 
 //===----------------------------------------------------------------------===//
+// GFX950 only builtins.
+//===----------------------------------------------------------------------===//
+TARGET_BUILTIN(__builtin_amdgcn_mfma_f32_16x16x32_f16, "V4fV8hV8hV4fIiIiIi", "nc", "gfx950-insts")
+TARGET_BUILTIN(__builtin_amdgcn_mfma_f32_32x32x16_f16, "V16fV8hV8hV16fIiIiIi", "nc", "gfx950-insts")
+
+TARGET_BUILTIN(__builtin_amdgcn_mfma_f32_32x32x16_bf16, "V16fV8yV8yV16fIiIiIi", "nc", "gfx950-insts")
+
+//===----------------------------------------------------------------------===//
 // GFX12+ only builtins.
 //===----------------------------------------------------------------------===//
 
@@ -521,6 +529,8 @@ TARGET_BUILTIN(__builtin_amdgcn_swmmac_f32_16x16x32_fp8_fp8_w64, "V4fiV2iV4fs", 
 TARGET_BUILTIN(__builtin_amdgcn_swmmac_f32_16x16x32_fp8_bf8_w64, "V4fiV2iV4fs", "nc", "gfx12-insts,wavefrontsize64")
 TARGET_BUILTIN(__builtin_amdgcn_swmmac_f32_16x16x32_bf8_fp8_w64, "V4fiV2iV4fs", "nc", "gfx12-insts,wavefrontsize64")
 TARGET_BUILTIN(__builtin_amdgcn_swmmac_f32_16x16x32_bf8_bf8_w64, "V4fiV2iV4fs", "nc", "gfx12-insts,wavefrontsize64")
+
+TARGET_BUILTIN(__builtin_amdgcn_prng_b32, "UiUi", "nc", "prng-inst")
 
 #undef BUILTIN
 #undef TARGET_BUILTIN

@@ -19,7 +19,6 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/ProfileCommon.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
@@ -347,6 +346,36 @@ bool InstrProfWriter::addMemProfCallStack(
                                     "call stack to id mapping mismatch"));
     return false;
   }
+  return true;
+}
+
+bool InstrProfWriter::addMemProfData(memprof::IndexedMemProfData Incoming,
+                                     function_ref<void(Error)> Warn) {
+  // TODO: Once we remove support for MemProf format Version V1, assert that
+  // the three components (frames, call stacks, and records) are either all
+  // empty or populated.
+
+  if (MemProfData.Frames.empty())
+    MemProfData.Frames = std::move(Incoming.Frames);
+  else
+    for (const auto &[Id, F] : Incoming.Frames)
+      if (addMemProfFrame(Id, F, Warn))
+        return false;
+
+  if (MemProfData.CallStacks.empty())
+    MemProfData.CallStacks = std::move(Incoming.CallStacks);
+  else
+    for (const auto &[CSId, CS] : Incoming.CallStacks)
+      if (addMemProfCallStack(CSId, CS, Warn))
+        return false;
+
+  // Add one record at a time if randomization is requested.
+  if (MemProfData.Records.empty() && !MemprofGenerateRandomHotness)
+    MemProfData.Records = std::move(Incoming.Records);
+  else
+    for (const auto &[GUID, Record] : Incoming.Records)
+      addMemProfRecord(GUID, Record);
+
   return true;
 }
 

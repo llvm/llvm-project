@@ -315,7 +315,7 @@ TEST(MemProf, RecordSerializationRoundTripVerion2) {
   IndexedMemProfRecord Record;
   for (const auto &CSId : CallStackIds) {
     // Use the same info block for both allocation sites.
-    Record.AllocSites.emplace_back(llvm::SmallVector<FrameId>(), CSId, Info);
+    Record.AllocSites.emplace_back(CSId, Info);
   }
   Record.CallSiteIds.assign(CallSiteIds);
 
@@ -346,8 +346,7 @@ TEST(MemProf, RecordSerializationRoundTripVersion2HotColdSchema) {
   IndexedMemProfRecord Record;
   for (const auto &CSId : CallStackIds) {
     // Use the same info block for both allocation sites.
-    Record.AllocSites.emplace_back(llvm::SmallVector<FrameId>(), CSId, Info,
-                                   Schema);
+    Record.AllocSites.emplace_back(CSId, Info, Schema);
   }
   Record.CallSiteIds.assign(CallSiteIds);
 
@@ -510,7 +509,6 @@ TEST(MemProf, BaseMemProfReaderWithCSIdMap) {
   Block.AllocCount = 1U, Block.TotalAccessDensity = 4,
   Block.TotalLifetime = 200001;
   FakeRecord.AllocSites.emplace_back(
-      /*CS=*/llvm::SmallVector<FrameId>(),
       /*CSId=*/llvm::memprof::hashCallStack(CallStack),
       /*MB=*/Block);
   ProfData.insert({F1.hash(), FakeRecord});
@@ -610,7 +608,7 @@ MemInfoBlock makePartialMIB() {
 TEST(MemProf, MissingCallStackId) {
   // Use a non-existent CallStackId to trigger a mapping error in
   // toMemProfRecord.
-  llvm::memprof::IndexedAllocationInfo AI({}, 0xdeadbeefU, makePartialMIB(),
+  llvm::memprof::IndexedAllocationInfo AI(0xdeadbeefU, makePartialMIB(),
                                           llvm::memprof::getHotColdSchema());
 
   IndexedMemProfRecord IndexedMR;
@@ -633,7 +631,7 @@ TEST(MemProf, MissingCallStackId) {
 }
 
 TEST(MemProf, MissingFrameId) {
-  llvm::memprof::IndexedAllocationInfo AI({}, 0x222, makePartialMIB(),
+  llvm::memprof::IndexedAllocationInfo AI(0x222, makePartialMIB(),
                                           llvm::memprof::getHotColdSchema());
 
   IndexedMemProfRecord IndexedMR;

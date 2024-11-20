@@ -10,7 +10,8 @@ set(LLVM_LINK_COMPONENTS
    Support
    Target
    TargetParser
-  )
+   TransformUtils
+   )
 
 if (EMSCRIPTEN AND "lld" IN_LIST LLVM_ENABLE_PROJECTS)
   set(WASM_SRC Wasm.cpp)

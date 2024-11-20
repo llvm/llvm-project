@@ -710,10 +710,22 @@ class STORE_2RI14<bits<32> op>
                "$rd, $rj, $imm14">;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 1
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 1, Constraints = "@earlyclobber $rd" in
+let hasSideEffects = 0, mayLoad = 1, mayStore = 1,
+    IsSubjectToAMORdConstraint = 1 in {
 class AM_3R<bits<32> op>
     : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rk, GPRMemAtomic:$rj),
-            "$rd, $rk, $rj">;
+            "$rd, $rk, $rj"> {
+  let Constraints = "@earlyclobber $rd";
+}
+
+class AMCAS_3R<bits<32> op>
+    : Fmt3R<op, (outs GPR:$rd_wb), (ins GPR:$rd, GPR:$rk, GPRMemAtomic:$rj),
+            "$rd, $rk, $rj"> {
+  let Constraints = "@earlyclobber $rd_wb, $rd_wb = $rd";
+  let IsAMCAS = 1;
+}
+} // hasSideEffects = 0, mayLoad = 1, mayStore = 1,
+  // IsSubjectToAMORdConstraint = 1
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 class LLBase<bits<32> op>
@@ -1024,14 +1036,14 @@ def AMMAX__DB_WU : AM_3R<0x38700000>;
 def AMMAX__DB_DU : AM_3R<0x38708000>;
 def AMMIN__DB_WU : AM_3R<0x38710000>;
 def AMMIN__DB_DU : AM_3R<0x38718000>;
-def AMCAS_B     : AM_3R<0x38580000>;
-def AMCAS_H     : AM_3R<0x38588000>;
-def AMCAS_W     : AM_3R<0x38590000>;
-def AMCAS_D     : AM_3R<0x38598000>;
-def AMCAS__DB_B     : AM_3R<0x385a0000>;
-def AMCAS__DB_H     : AM_3R<0x385a8000>;
-def AMCAS__DB_W     : AM_3R<0x385b0000>;
-def AMCAS__DB_D     : AM_3R<0x385b8000>;
+def AMCAS_B      : AMCAS_3R<0x38580000>;
+def AMCAS_H      : AMCAS_3R<0x38588000>;
+def AMCAS_W      : AMCAS_3R<0x38590000>;
+def AMCAS_D      : AMCAS_3R<0x38598000>;
+def AMCAS__DB_B  : AMCAS_3R<0x385a0000>;
+def AMCAS__DB_H  : AMCAS_3R<0x385a8000>;
+def AMCAS__DB_W  : AMCAS_3R<0x385b0000>;
+def AMCAS__DB_D  : AMCAS_3R<0x385b8000>;
 def LL_D : LLBase<0x22000000>;
 def SC_D : SCBase<0x23000000>;
 def SC_Q : SCBase_128<0x38570000>;
