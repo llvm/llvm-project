@@ -61,6 +61,7 @@ class SymMap;
 struct SymbolBox;
 namespace pft {
 struct Variable;
+struct FunctionLikeUnit;
 }
 
 using SomeExpr = Fortran::evaluate::Expr<Fortran::evaluate::SomeType>;
@@ -232,6 +233,10 @@ public:
   /// during the instatiation of the variables.
   virtual bool
   isRegisteredDummySymbol(Fortran::semantics::SymbolRef symRef) const = 0;
+
+  /// Returns the FunctionLikeUnit being lowered, if any.
+  virtual const Fortran::lower::pft::FunctionLikeUnit *
+  getCurrentFunctionUnit() const = 0;
 
   //===--------------------------------------------------------------------===//
   // Types

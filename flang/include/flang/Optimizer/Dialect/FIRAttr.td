@@ -32,14 +32,17 @@ def FIRpointer      : I32BitEnumAttrCaseBit<"pointer", 9>;
 def FIRtarget       : I32BitEnumAttrCaseBit<"target", 10>;
 def FIRvalue        : I32BitEnumAttrCaseBit<"value", 11>;
 def FIRvolatile     : I32BitEnumAttrCaseBit<"fortran_volatile", 12, "volatile">;
+// Used inside internal procedure to flag variables host associated from parent procedure.
 def FIRHostAssoc    : I32BitEnumAttrCaseBit<"host_assoc", 13>;
+// Used inside parent procedure to flag variables host associated in internal procedure.
+def FIRInternalAssoc    : I32BitEnumAttrCaseBit<"internal_assoc", 14>;
 
 def fir_FortranVariableFlagsEnum : I32BitEnumAttr<
     "FortranVariableFlagsEnum",
     "Fortran variable attributes",
     [FIRnoAttributes, FIRallocatable, FIRasynchronous, FIRbind_c, FIRcontiguous,
      FIRintent_in, FIRintent_inout, FIRintent_out, FIRoptional, FIRparameter,
-     FIRpointer, FIRtarget, FIRvalue, FIRvolatile, FIRHostAssoc]> {
+     FIRpointer, FIRtarget, FIRvalue, FIRvolatile, FIRHostAssoc, FIRInternalAssoc]> {
   let separator = ", ";
   let cppNamespace = "::fir";
   let printBitEnumPrimaryGroups = 1;
