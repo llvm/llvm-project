@@ -555,7 +555,8 @@ Improvements to Clang's diagnostics
       getS(); // Now diagnoses "Reason 2", previously diagnoses "Reason 1"
     }
 
-- Clang now omits warnings for constructors marked with the ``[[noreturn]]`` attribute (#GH63009).
+- Clang now correctly recognises code after a call to a ``[[noreturn]]`` constructor
+  as unreachable (#GH63009).
 
 Improvements to Clang's time-trace
 ----------------------------------
