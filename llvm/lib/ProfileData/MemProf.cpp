@@ -615,6 +615,7 @@ void CallStackRadixTreeBuilder<FrameIdTy>::build(
 
 // Explicitly instantiate class with the utilized FrameIdTy.
 template class CallStackRadixTreeBuilder<FrameId>;
+template class CallStackRadixTreeBuilder<LinearFrameId>;
 
 template <typename FrameIdTy>
 llvm::DenseMap<FrameIdTy, FrameStat>
@@ -636,6 +637,10 @@ computeFrameHistogram(llvm::MapVector<CallStackId, llvm::SmallVector<FrameIdTy>>
 // Explicitly instantiate function with the utilized FrameIdTy.
 template llvm::DenseMap<FrameId, FrameStat> computeFrameHistogram<FrameId>(
     llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
+        &MemProfCallStackData);
+template llvm::DenseMap<LinearFrameId, FrameStat>
+computeFrameHistogram<LinearFrameId>(
+    llvm::MapVector<CallStackId, llvm::SmallVector<LinearFrameId>>
         &MemProfCallStackData);
 
 void verifyIndexedMemProfRecord(const IndexedMemProfRecord &Record) {
