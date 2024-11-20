@@ -3718,40 +3718,6 @@ CmpInst::Predicate CmpInst::getFlippedStrictnessPredicate(Predicate pred) {
   llvm_unreachable("Unknown predicate!");
 }
 
-CmpInst::Predicate CmpInst::getSignedPredicate(Predicate pred) {
-  assert(CmpInst::isUnsigned(pred) && "Call only with unsigned predicates!");
-
-  switch (pred) {
-  default:
-    llvm_unreachable("Unknown predicate!");
-  case CmpInst::ICMP_ULT:
-    return CmpInst::ICMP_SLT;
-  case CmpInst::ICMP_ULE:
-    return CmpInst::ICMP_SLE;
-  case CmpInst::ICMP_UGT:
-    return CmpInst::ICMP_SGT;
-  case CmpInst::ICMP_UGE:
-    return CmpInst::ICMP_SGE;
-  }
-}
-
-CmpInst::Predicate CmpInst::getUnsignedPredicate(Predicate pred) {
-  assert(CmpInst::isSigned(pred) && "Call only with signed predicates!");
-
-  switch (pred) {
-  default:
-    llvm_unreachable("Unknown predicate!");
-  case CmpInst::ICMP_SLT:
-    return CmpInst::ICMP_ULT;
-  case CmpInst::ICMP_SLE:
-    return CmpInst::ICMP_ULE;
-  case CmpInst::ICMP_SGT:
-    return CmpInst::ICMP_UGT;
-  case CmpInst::ICMP_SGE:
-    return CmpInst::ICMP_UGE;
-  }
-}
-
 bool CmpInst::isUnsigned(Predicate predicate) {
   switch (predicate) {
     default: return false;
@@ -3867,7 +3833,7 @@ std::optional<bool> ICmpInst::compare(const KnownBits &LHS,
   }
 }
 
-CmpInst::Predicate CmpInst::getFlippedSignednessPredicate(Predicate pred) {
+CmpInst::Predicate ICmpInst::getFlippedSignednessPredicate(Predicate pred) {
   assert(CmpInst::isRelational(pred) &&
          "Call only with non-equality predicates!");
 
