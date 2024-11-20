@@ -379,8 +379,6 @@ public:
     FastMask = (1 << FastWidth) - 1
   };
 
-  Qualifiers() : Mask(0) {}
-
   /// Returns the common set of qualifiers while removing them from
   /// the given sets.
   static Qualifiers removeCommonQualifiers(Qualifiers &L, Qualifiers &R) {

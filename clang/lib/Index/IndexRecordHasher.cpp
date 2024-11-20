@@ -20,7 +20,6 @@
 
 using namespace clang;
 using namespace clang::index;
-using namespace llvm;
 
 namespace {
 
@@ -42,7 +41,7 @@ struct IndexRecordHasher {
   void hashTemplateName(TemplateName name);
   void hashTemplateArg(const TemplateArgument &arg);
   void hashLoc(SourceLocation loc, bool includeOffset);
-  void hashAPInt(const APInt &val);
+  void hashAPInt(const llvm::APInt &val);
 };
 
 class DeclHashVisitor : public ConstDeclVisitor<DeclHashVisitor, void> {
@@ -488,7 +487,7 @@ void IndexRecordHasher::hashLoc(SourceLocation loc, bool includeOffset) {
   }
 }
 
-void IndexRecordHasher::hashAPInt(const APInt &val) {
+void IndexRecordHasher::hashAPInt(const llvm::APInt &val) {
   HashBuilder.add(val.getBitWidth());
   HashBuilder.addRangeElements(
       llvm::ArrayRef(val.getRawData(), val.getNumWords()));
