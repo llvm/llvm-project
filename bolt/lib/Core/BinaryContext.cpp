@@ -76,16 +76,18 @@ cl::opt<std::string> CompDirOverride(
              "to *.dwo files."),
     cl::Hidden, cl::init(""), cl::cat(BoltCategory));
 
-cl::opt<bolt::BinaryContext::ICFLevel> ICF(
-    "icf", cl::desc("fold functions with identical code"),
-    cl::init(bolt::BinaryContext::ICFLevel::None),
-    cl::values(
-        clEnumValN(bolt::BinaryContext::ICFLevel::All, "all", "enable ICF"),
-        clEnumValN(bolt::BinaryContext::ICFLevel::All, "", "enable ICF"),
-        clEnumValN(bolt::BinaryContext::ICFLevel::None, "none", "disable ICF"),
-        clEnumValN(bolt::BinaryContext::ICFLevel::Safe, "safe",
-                   "enable safe ICF")),
-    cl::ZeroOrMore, cl::ValueOptional, cl::cat(BoltOptCategory));
+cl::opt<bolt::BinaryContext::ICFLevel>
+    ICF("icf", cl::desc("fold functions with identical code"),
+        cl::init(bolt::BinaryContext::ICFLevel::None),
+        cl::values(clEnumValN(bolt::BinaryContext::ICFLevel::All, "all",
+                              "Enable identical code folding"),
+                   clEnumValN(bolt::BinaryContext::ICFLevel::All, "",
+                              "Enable identical code folding"),
+                   clEnumValN(bolt::BinaryContext::ICFLevel::None, "none",
+                              "Disable identical code folding (default)"),
+                   clEnumValN(bolt::BinaryContext::ICFLevel::Safe, "safe",
+                              "Enable safe identical code folding")),
+        cl::ZeroOrMore, cl::ValueOptional, cl::cat(BoltOptCategory));
 } // namespace opts
 
 namespace {
