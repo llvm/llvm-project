@@ -15714,8 +15714,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           return E->VectorizedValue;
         }
         SmallVector<int> ThisMask(calculateShufflevectorMask(E->Scalars));
-        if (isa<ShuffleVectorInst>(Src)) {
-          auto *SVSrc = cast<ShuffleVectorInst>(Src);
+        if (auto *SVSrc = dyn_cast<ShuffleVectorInst>(Src)) {
           assert(isa<PoisonValue>(SVSrc->getOperand(1)) &&
                  "Not supported shufflevector usage.");
           SmallVector<int> NewMask(ThisMask.size());
