@@ -21,6 +21,15 @@ add_entrypoint_library(
     libc.src.errno.errno
     libc.src.unistd.__llvm_libc_syscall
     libc.src.sched.__sched_getcpucount
+    libc.src.unistd.sysconf
+    libc.src.sys.auxv.getauxval
+    libc.src.sys.prctl.prctl
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.unistd.read
+    libc.src.unistd.write
+    libc.src.unistd.close
+    libc.src.fcntl.open
 )
 
 add_executable(
