@@ -238,9 +238,9 @@ struct BuiltinTypeDeclBuilder {
 
     // TODO: Map to an hlsl_device address space.
     QualType ElemPtrTy = AST.getPointerType(ElemTy);
-    Expr *Call = CallExpr::Create(AST, Builtin, {HandleExpr, IndexExpr},
-                                  ElemPtrTy, VK_PRValue,
-                                  SourceLocation(), FPOptionsOverride());
+    Expr *Call =
+        CallExpr::Create(AST, Builtin, {HandleExpr, IndexExpr}, ElemPtrTy,
+                         VK_PRValue, SourceLocation(), FPOptionsOverride());
     Expr *Deref = UnaryOperator::Create(
         AST, Call, UO_Deref, ElemTy, VK_PRValue, OK_Ordinary, SourceLocation(),
         /*CanOverflow=*/false, FPOptionsOverride());
