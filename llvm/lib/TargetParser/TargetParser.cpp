@@ -107,6 +107,7 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx940"},    {"gfx940"},  GK_GFX940,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK|FEATURE_SRAMECC},
     {{"gfx941"},    {"gfx941"},  GK_GFX941,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK|FEATURE_SRAMECC},
     {{"gfx942"},    {"gfx942"},  GK_GFX942,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK|FEATURE_SRAMECC},
+    {{"gfx950"},    {"gfx950"},  GK_GFX950,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK|FEATURE_SRAMECC},
     {{"gfx1010"},   {"gfx1010"}, GK_GFX1010, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK|FEATURE_WGP},
     {{"gfx1011"},   {"gfx1011"}, GK_GFX1011, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK|FEATURE_WGP},
     {{"gfx1012"},   {"gfx1012"}, GK_GFX1012, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK|FEATURE_WGP},
@@ -262,6 +263,7 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX940:  return {9, 4, 0};
   case GK_GFX941:  return {9, 4, 1};
   case GK_GFX942:  return {9, 4, 2};
+  case GK_GFX950:  return {9, 5, 0};
   case GK_GFX1010: return {10, 1, 0};
   case GK_GFX1011: return {10, 1, 1};
   case GK_GFX1012: return {10, 1, 2};
@@ -361,7 +363,8 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     Features["wavefrontsize32"] = true;
     Features["wavefrontsize64"] = true;
   } else if (T.isAMDGCN()) {
-    switch (parseArchAMDGCN(GPU)) {
+    AMDGPU::GPUKind Kind = parseArchAMDGCN(GPU);
+    switch (Kind) {
     case GK_GFX1201:
     case GK_GFX1200:
     case GK_GFX12_GENERIC:
@@ -466,12 +469,16 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["s-memtime-inst"] = true;
       Features["gws"] = true;
       break;
+    case GK_GFX950:
+      Features["gfx950-insts"] = true;
+      [[fallthrough]];
     case GK_GFX942:
     case GK_GFX941:
     case GK_GFX940:
       Features["fp8-insts"] = true;
       Features["fp8-conversion-insts"] = true;
-      Features["xf32-insts"] = true;
+      if (Kind != GK_GFX950)
+        Features["xf32-insts"] = true;
       [[fallthrough]];
     case GK_GFX9_4_GENERIC:
       Features["gfx940-insts"] = true;
