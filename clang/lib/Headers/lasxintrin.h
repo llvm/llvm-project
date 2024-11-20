@@ -2585,7 +2585,7 @@ extern __inline
 extern __inline
     __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m256i
     __lasx_xvorn_v(__m256i _1, __m256i _2) {
-  return (__m256i)__builtin_lasx_xvorn_v((v32i8)_1, (v32i8)_2);
+  return (__m256i)__builtin_lasx_xvorn_v((v32u8)_1, (v32u8)_2);
 }
 
 #define __lasx_xvldi(/*i13*/ _1) ((__m256i)__builtin_lasx_xvldi((_1)))
