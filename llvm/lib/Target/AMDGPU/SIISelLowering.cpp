@@ -9605,7 +9605,9 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     unsigned Opc = Done->isZero() ? AMDGPU::EXP : AMDGPU::EXP_DONE;
     return SDValue(DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops), 0);
   }
-  case Intrinsic::amdgcn_s_barrier: {
+  case Intrinsic::amdgcn_s_barrier:
+  case Intrinsic::amdgcn_s_barrier_signal:
+  case Intrinsic::amdgcn_s_barrier_wait: {
     const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
     if (getTargetMachine().getOptLevel() > CodeGenOptLevel::None) {
       unsigned WGSize = ST.getFlatWorkGroupSizes(MF.getFunction()).second;
@@ -9615,8 +9617,8 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                        0);
     }
 
-    // On GFX12 lower s_barrier into s_barrier_signal_imm and s_barrier_wait
-    if (ST.hasSplitBarriers()) {
+    if (ST.hasSplitBarriers() && IntrinsicID == Intrinsic::amdgcn_s_barrier) {
+      // On GFX12 lower s_barrier into s_barrier_signal_imm and s_barrier_wait
       SDValue K =
           DAG.getTargetConstant(AMDGPU::Barrier::WORKGROUP, DL, MVT::i32);
       SDValue BarSignal =
