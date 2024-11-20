@@ -101,6 +101,7 @@ CGOPT(EABI, EABIVersion)
 CGOPT(DebuggerKind, DebuggerTuningOpt)
 CGOPT(bool, EnableStackSizeSection)
 CGOPT(bool, EnableAddrsig)
+CGOPT(bool, EnableCallGraphSection)
 CGOPT(bool, EmitCallSiteInfo)
 CGOPT(bool, EnableMachineFunctionSplitter)
 CGOPT(bool, EnableDebugEntryValues)
@@ -460,6 +461,11 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(EnableAddrsig);
 
+  static cl::opt<bool> EnableCallGraphSection(
+      "call-graph-section", cl::desc("Emit a call graph section"),
+      cl::init(false));
+  CGBINDOPT(EnableCallGraphSection);
+
   static cl::opt<bool> EmitCallSiteInfo(
       "emit-call-site-info",
       cl::desc(
@@ -587,6 +593,7 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.EmitStackSizeSection = getEnableStackSizeSection();
   Options.EnableMachineFunctionSplitter = getEnableMachineFunctionSplitter();
   Options.EmitAddrsig = getEnableAddrsig();
+  Options.EmitCallGraphSection = getEnableCallGraphSection();
   Options.EmitCallSiteInfo = getEmitCallSiteInfo();
   Options.EnableDebugEntryValues = getEnableDebugEntryValues();
   Options.ForceDwarfFrameSection = getForceDwarfFrameSection();
