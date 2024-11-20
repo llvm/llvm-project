@@ -71,6 +71,9 @@ public:
 
   virtual ~CachedCommandAdaptor() = default;
 
+  // helper to work around the comgr-xxxxx string appearing in files
+  static void addFileContents(HashAlgorithm &H, llvm::StringRef Buf);
+
 protected:
   virtual ActionClass getClass() const = 0;
   virtual void addOptionsIdentifier(HashAlgorithm &) const = 0;

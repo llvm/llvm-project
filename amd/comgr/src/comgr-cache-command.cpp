@@ -76,23 +76,6 @@ void addString(CachedCommandAdaptor::HashAlgorithm &H, StringRef S) {
   H.update(S);
 }
 
-void addFileContents(CachedCommandAdaptor::HashAlgorithm &H, StringRef Buf) {
-  // this is a workaround temporary paths getting in the output files of the
-  // different commands in #line directives in preprocessed files, and the
-  // ModuleID or source_filename in the bitcode.
-  while (!Buf.empty()) {
-    std::optional<size_t> ComgrTmpPos = searchComgrTmpModel(Buf);
-    if (!ComgrTmpPos) {
-      addString(H, Buf);
-      break;
-    }
-
-    StringRef ToHash = Buf.substr(0, *ComgrTmpPos);
-    addString(H, ToHash);
-    Buf = Buf.substr(ToHash.size() + StringRef("comgr-xxxxxx").size());
-  }
-}
-
 Error addFile(CachedCommandAdaptor::HashAlgorithm &H, StringRef Path) {
   auto BufOrError = MemoryBuffer::getFile(Path);
   if (std::error_code EC = BufOrError.getError()) {
@@ -100,7 +83,7 @@ Error addFile(CachedCommandAdaptor::HashAlgorithm &H, StringRef Path) {
   }
   StringRef Buf = BufOrError.get()->getBuffer();
 
-  addFileContents(H, Buf);
+  CachedCommandAdaptor::addFileContents(H, Buf);
 
   return Error::success();
 }
@@ -149,6 +132,24 @@ bool isSourceCodeInput(const driver::InputInfo &II) {
   return driver::types::isSrcFile(II.getType());
 }
 } // namespace
+
+void CachedCommandAdaptor::addFileContents(
+    CachedCommandAdaptor::HashAlgorithm &H, StringRef Buf) {
+  // this is a workaround temporary paths getting in the output files of the
+  // different commands in #line directives in preprocessed files, and the
+  // ModuleID or source_filename in the bitcode.
+  while (!Buf.empty()) {
+    std::optional<size_t> ComgrTmpPos = searchComgrTmpModel(Buf);
+    if (!ComgrTmpPos) {
+      addString(H, Buf);
+      break;
+    }
+
+    StringRef ToHash = Buf.substr(0, *ComgrTmpPos);
+    addString(H, ToHash);
+    Buf = Buf.substr(ToHash.size() + StringRef("comgr-xxxxxx").size());
+  }
+}
 
 Expected<CachedCommandAdaptor::Identifier>
 CachedCommandAdaptor::getIdentifier() const {
