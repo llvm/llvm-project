@@ -226,7 +226,6 @@ inline raw_ostream &operator<<(raw_ostream &OS,
     Sep = ",\n        ";
     TotalCount += AccessInfo.Count;
   }
-  SS.flush();
 
   OS << TotalCount << " total counts : " << TempString;
   return OS;

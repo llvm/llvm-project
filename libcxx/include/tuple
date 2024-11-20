@@ -211,9 +211,10 @@ template <class... Types>
 // clang-format on
 
 #include <__compare/common_comparison_category.h>
+#include <__compare/ordering.h>
 #include <__compare/synth_three_way.h>
 #include <__config>
-#include <__functional/invoke.h>
+#include <__cstddef/size_t.h>
 #include <__fwd/array.h>
 #include <__fwd/pair.h>
 #include <__fwd/tuple.h>
@@ -234,6 +235,8 @@ template <class... Types>
 #include <__type_traits/conjunction.h>
 #include <__type_traits/copy_cvref.h>
 #include <__type_traits/disjunction.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/is_arithmetic.h>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constructible.h>
@@ -254,12 +257,12 @@ template <class... Types>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/remove_reference.h>
 #include <__type_traits/unwrap_ref.h>
+#include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <__utility/integer_sequence.h>
 #include <__utility/move.h>
 #include <__utility/piecewise_construct.h>
 #include <__utility/swap.h>
-#include <cstddef>
 #include <version>
 
 // standard-mandated includes
@@ -833,8 +836,8 @@ public:
 
   // [tuple.assign]
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
-  operator=(_If<_And<is_copy_assignable<_Tp>...>::value, tuple, __nat> const& __tuple)
-      noexcept(_And<is_nothrow_copy_assignable<_Tp>...>::value) {
+  operator=(_If<_And<is_copy_assignable<_Tp>...>::value, tuple, __nat> const& __tuple) noexcept(
+      _And<is_nothrow_copy_assignable<_Tp>...>::value) {
     std::__memberwise_copy_assign(*this, __tuple, typename __make_tuple_indices<sizeof...(_Tp)>::type());
     return *this;
   }
@@ -857,8 +860,8 @@ public:
 #  endif // _LIBCPP_STD_VER >= 23
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
-  operator=(_If<_And<is_move_assignable<_Tp>...>::value, tuple, __nat>&& __tuple)
-      noexcept(_And<is_nothrow_move_assignable<_Tp>...>::value) {
+  operator=(_If<_And<is_move_assignable<_Tp>...>::value, tuple, __nat>&& __tuple) noexcept(
+      _And<is_nothrow_move_assignable<_Tp>...>::value) {
     std::__memberwise_forward_assign(
         *this, std::move(__tuple), __tuple_types<_Tp...>(), typename __make_tuple_indices<sizeof...(_Tp)>::type());
     return *this;
@@ -868,8 +871,8 @@ public:
       class... _Up,
       __enable_if_t< _And< _BoolConstant<sizeof...(_Tp) == sizeof...(_Up)>, is_assignable<_Tp&, _Up const&>... >::value,
                      int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple& operator=(tuple<_Up...> const& __tuple)
-      noexcept(_And<is_nothrow_assignable<_Tp&, _Up const&>...>::value) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
+  operator=(tuple<_Up...> const& __tuple) noexcept(_And<is_nothrow_assignable<_Tp&, _Up const&>...>::value) {
     std::__memberwise_copy_assign(*this, __tuple, typename __make_tuple_indices<sizeof...(_Tp)>::type());
     return *this;
   }
@@ -877,8 +880,8 @@ public:
   template <class... _Up,
             __enable_if_t< _And< _BoolConstant<sizeof...(_Tp) == sizeof...(_Up)>, is_assignable<_Tp&, _Up>... >::value,
                            int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple& operator=(tuple<_Up...>&& __tuple)
-      noexcept(_And<is_nothrow_assignable<_Tp&, _Up>...>::value) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
+  operator=(tuple<_Up...>&& __tuple) noexcept(_And<is_nothrow_assignable<_Tp&, _Up>...>::value) {
     std::__memberwise_forward_assign(
         *this, std::move(__tuple), __tuple_types<_Up...>(), typename __make_tuple_indices<sizeof...(_Tp)>::type());
     return *this;
@@ -942,16 +945,16 @@ public:
   template <class _Up1,
             class _Up2,
             __enable_if_t< _EnableAssignFromPair<false, pair<_Up1, _Up2> const&>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple& operator=(pair<_Up1, _Up2> const& __pair)
-      noexcept(_NothrowAssignFromPair<false, pair<_Up1, _Up2> const&>::value) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
+  operator=(pair<_Up1, _Up2> const& __pair) noexcept(_NothrowAssignFromPair<false, pair<_Up1, _Up2> const&>::value) {
     std::get<0>(*this) = __pair.first;
     std::get<1>(*this) = __pair.second;
     return *this;
   }
 
   template <class _Up1, class _Up2, __enable_if_t< _EnableAssignFromPair<false, pair<_Up1, _Up2>&&>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple& operator=(pair<_Up1, _Up2>&& __pair)
-      noexcept(_NothrowAssignFromPair<false, pair<_Up1, _Up2>&&>::value) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
+  operator=(pair<_Up1, _Up2>&& __pair) noexcept(_NothrowAssignFromPair<false, pair<_Up1, _Up2>&&>::value) {
     std::get<0>(*this) = std::forward<_Up1>(__pair.first);
     std::get<1>(*this) = std::forward<_Up2>(__pair.second);
     return *this;
@@ -962,8 +965,8 @@ public:
       class _Up,
       size_t _Np,
       __enable_if_t< _And< _BoolConstant<_Np == sizeof...(_Tp)>, is_assignable<_Tp&, _Up const&>... >::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple& operator=(array<_Up, _Np> const& __array)
-      noexcept(_And<is_nothrow_assignable<_Tp&, _Up const&>...>::value) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
+  operator=(array<_Up, _Np> const& __array) noexcept(_And<is_nothrow_assignable<_Tp&, _Up const&>...>::value) {
     std::__memberwise_copy_assign(*this, __array, typename __make_tuple_indices<sizeof...(_Tp)>::type());
     return *this;
   }
@@ -973,8 +976,8 @@ public:
             size_t _Np,
             class = void,
             __enable_if_t< _And< _BoolConstant<_Np == sizeof...(_Tp)>, is_assignable<_Tp&, _Up>... >::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple& operator=(array<_Up, _Np>&& __array)
-      noexcept(_And<is_nothrow_assignable<_Tp&, _Up>...>::value) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
+  operator=(array<_Up, _Np>&& __array) noexcept(_And<is_nothrow_assignable<_Tp&, _Up>...>::value) {
     std::__memberwise_forward_assign(
         *this,
         std::move(__array),
@@ -984,8 +987,8 @@ public:
   }
 
   // [tuple.swap]
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void swap(tuple& __t)
-      noexcept(__all<__is_nothrow_swappable_v<_Tp>...>::value) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
+  swap(tuple& __t) noexcept(__all<__is_nothrow_swappable_v<_Tp>...>::value) {
     __base_.swap(__t.__base_);
   }
 
@@ -1043,8 +1046,8 @@ tuple(allocator_arg_t, _Alloc, tuple<_Tp...>) -> tuple<_Tp...>;
 #  endif
 
 template <class... _Tp, __enable_if_t<__all<__is_swappable_v<_Tp>...>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void swap(tuple<_Tp...>& __t, tuple<_Tp...>& __u)
-    noexcept(__all<__is_nothrow_swappable_v<_Tp>...>::value) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
+swap(tuple<_Tp...>& __t, tuple<_Tp...>& __u) noexcept(__all<__is_nothrow_swappable_v<_Tp>...>::value) {
   __t.swap(__u);
 }
 
@@ -1408,6 +1411,7 @@ _LIBCPP_POP_MACROS
 // clang-format on
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <cstddef>
 #  include <exception>
 #  include <iosfwd>
 #  include <new>

@@ -450,38 +450,38 @@ void ShiftBitIntByConstant(uint16_t4 Ext) {
 // LIN32: define dso_local void @_Z21ShiftBitIntByConstantDv4_DU16_(i64 %
 // WIN: define dso_local void @"?ShiftBitIntByConstant@@YAXT?$__vector@U?$_UBitInt@$0BA@@__clang@@$03@__clang@@@Z"(<4 x i16>
   Ext << 7;
-  // CHECK: shl <4 x i16> %{{.+}}, <i16 7, i16 7, i16 7, i16 7>
+  // CHECK: shl <4 x i16> %{{.+}}, splat (i16 7)
   Ext >> 7;
-  // CHECK: lshr <4 x i16> %{{.+}}, <i16 7, i16 7, i16 7, i16 7>
+  // CHECK: lshr <4 x i16> %{{.+}}, splat (i16 7)
   Ext << -7;
-  // CHECK: shl <4 x i16> %{{.+}}, <i16 -7, i16 -7, i16 -7, i16 -7>
+  // CHECK: shl <4 x i16> %{{.+}}, splat (i16 -7)
   Ext >> -7;
-  // CHECK: lshr <4 x i16> %{{.+}}, <i16 -7, i16 -7, i16 -7, i16 -7>
+  // CHECK: lshr <4 x i16> %{{.+}}, splat (i16 -7)
 
   // UB in C/C++, Defined in OpenCL.
   Ext << 29;
-  // CHECK: shl <4 x i16> %{{.+}}, <i16 29, i16 29, i16 29, i16 29>
+  // CHECK: shl <4 x i16> %{{.+}}, splat (i16 29)
   Ext >> 29;
-  // CHECK: lshr <4 x i16> %{{.+}}, <i16 29, i16 29, i16 29, i16 29>
+  // CHECK: lshr <4 x i16> %{{.+}}, splat (i16 29)
 }
 void ShiftBitIntByConstant(vint32_t8 Ext) {
 // LIN64: define{{.*}} void @_Z21ShiftBitIntByConstantDv8_DB32_(ptr byval(<8 x i32>) align 32 %
 // LIN32: define dso_local void @_Z21ShiftBitIntByConstantDv8_DB32_(<8 x i32> %
 // WIN: define dso_local void @"?ShiftBitIntByConstant@@YAXT?$__vector@U?$_BitInt@$0CA@@__clang@@$07@__clang@@@Z"(<8 x i32>
   Ext << 7;
-  // CHECK: shl <8 x i32> %{{.+}}, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
+  // CHECK: shl <8 x i32> %{{.+}}, splat (i32 7)
   Ext >> 7;
-  // CHECK: ashr <8 x i32> %{{.+}}, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
+  // CHECK: ashr <8 x i32> %{{.+}}, splat (i32 7)
   Ext << -7;
-  // CHECK: shl <8 x i32> %{{.+}}, <i32 -7, i32 -7, i32 -7, i32 -7, i32 -7, i32 -7, i32 -7, i32 -7>
+  // CHECK: shl <8 x i32> %{{.+}}, splat (i32 -7)
   Ext >> -7;
-  // CHECK: ashr <8 x i32> %{{.+}}, <i32 -7, i32 -7, i32 -7, i32 -7, i32 -7, i32 -7, i32 -7, i32 -7>
+  // CHECK: ashr <8 x i32> %{{.+}}, splat (i32 -7)
 
   // UB in C/C++, Defined in OpenCL.
   Ext << 29;
-  // CHECK: shl <8 x i32> %{{.+}}, <i32 29, i32 29, i32 29, i32 29, i32 29, i32 29, i32 29, i32 29>
+  // CHECK: shl <8 x i32> %{{.+}}, splat (i32 29)
   Ext >> 29;
-  // CHECK: ashr <8 x i32> %{{.+}}, <i32 29, i32 29, i32 29, i32 29, i32 29, i32 29, i32 29, i32 29>
+  // CHECK: ashr <8 x i32> %{{.+}}, splat (i32 29)
 }
 
 void ConstantShiftByBitInt(_BitInt(28) Ext, _BitInt(65) LargeExt) {
@@ -614,3 +614,18 @@ void TBAATest(_BitInt(sizeof(int) * 8) ExtInt,
 // NewStructPathTBAA-DAG: ![[EXTINT_TBAA_ROOT]] = !{![[CHAR_TBAA_ROOT]], i64 4, !"_BitInt(32)"}
 // NewStructPathTBAA-DAG: ![[EXTINT6_TBAA]] = !{![[EXTINT6_TBAA_ROOT:.+]], ![[EXTINT6_TBAA_ROOT]], i64 0, i64 1}
 // NewStructPathTBAA-DAG: ![[EXTINT6_TBAA_ROOT]] = !{![[CHAR_TBAA_ROOT]], i64 1, !"_BitInt(6)"}
+
+namespace A {
+template <int N> struct S {
+  using T = _BitInt(N);
+  T Data;
+};
+template <int N> void foo(S<N> B) {
+  const auto Var = B.Data;
+}
+
+void bar() {
+  S<2080> a;
+  foo(a);
+}
+}

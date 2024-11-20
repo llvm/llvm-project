@@ -1365,6 +1365,10 @@ static codeview::CPUType toCodeViewMachine(COFF::MachineTypes machine) {
     return codeview::CPUType::ARM7;
   case COFF::IMAGE_FILE_MACHINE_ARM64:
     return codeview::CPUType::ARM64;
+  case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+    return codeview::CPUType::ARM64EC;
+  case COFF::IMAGE_FILE_MACHINE_ARM64X:
+    return codeview::CPUType::ARM64X;
   case COFF::IMAGE_FILE_MACHINE_ARMNT:
     return codeview::CPUType::ARMNT;
   case COFF::IMAGE_FILE_MACHINE_I386:
@@ -1431,7 +1435,13 @@ void PDBLinker::addCommonLinkerModuleSymbols(
   ObjNameSym ons(SymbolRecordKind::ObjNameSym);
   EnvBlockSym ebs(SymbolRecordKind::EnvBlockSym);
   Compile3Sym cs(SymbolRecordKind::Compile3Sym);
-  fillLinkerVerRecord(cs, ctx.config.machine);
+
+  MachineTypes machine = ctx.config.machine;
+  // MSVC uses the ARM64X machine type for ARM64EC targets in the common linker
+  // module record.
+  if (isArm64EC(machine))
+    machine = ARM64X;
+  fillLinkerVerRecord(cs, machine);
 
   ons.Name = "* Linker *";
   ons.Signature = 0;
@@ -1527,8 +1537,8 @@ void PDBLinker::addImportFilesToPDB() {
     if (!file->thunkSym)
       continue;
 
-    if (!file->thunkLive)
-        continue;
+    if (!file->thunkSym->isLive())
+      continue;
 
     std::string dll = StringRef(file->dllName).lower();
     llvm::pdb::DbiModuleDescriptorBuilder *&mod = dllToModuleDbi[dll];

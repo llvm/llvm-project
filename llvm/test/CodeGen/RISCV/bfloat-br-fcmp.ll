@@ -292,9 +292,9 @@ define void @br_fcmp_ord(bfloat %a, bfloat %b) nounwind {
 ; RV32IZFBFMIN-LABEL: br_fcmp_ord:
 ; RV32IZFBFMIN:       # %bb.0:
 ; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa1
+; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa0
 ; RV32IZFBFMIN-NEXT:    feq.s a0, fa5, fa5
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; RV32IZFBFMIN-NEXT:    feq.s a1, fa5, fa5
+; RV32IZFBFMIN-NEXT:    feq.s a1, fa4, fa4
 ; RV32IZFBFMIN-NEXT:    and a0, a1, a0
 ; RV32IZFBFMIN-NEXT:    bnez a0, .LBB8_2
 ; RV32IZFBFMIN-NEXT:  # %bb.1: # %if.else
@@ -307,9 +307,9 @@ define void @br_fcmp_ord(bfloat %a, bfloat %b) nounwind {
 ; RV64IZFBFMIN-LABEL: br_fcmp_ord:
 ; RV64IZFBFMIN:       # %bb.0:
 ; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa1
+; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa0
 ; RV64IZFBFMIN-NEXT:    feq.s a0, fa5, fa5
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; RV64IZFBFMIN-NEXT:    feq.s a1, fa5, fa5
+; RV64IZFBFMIN-NEXT:    feq.s a1, fa4, fa4
 ; RV64IZFBFMIN-NEXT:    and a0, a1, a0
 ; RV64IZFBFMIN-NEXT:    bnez a0, .LBB8_2
 ; RV64IZFBFMIN-NEXT:  # %bb.1: # %if.else
@@ -545,9 +545,9 @@ define void @br_fcmp_uno(bfloat %a, bfloat %b) nounwind {
 ; RV32IZFBFMIN-LABEL: br_fcmp_uno:
 ; RV32IZFBFMIN:       # %bb.0:
 ; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa1
+; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa0
 ; RV32IZFBFMIN-NEXT:    feq.s a0, fa5, fa5
-; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; RV32IZFBFMIN-NEXT:    feq.s a1, fa5, fa5
+; RV32IZFBFMIN-NEXT:    feq.s a1, fa4, fa4
 ; RV32IZFBFMIN-NEXT:    and a0, a1, a0
 ; RV32IZFBFMIN-NEXT:    beqz a0, .LBB15_2
 ; RV32IZFBFMIN-NEXT:  # %bb.1: # %if.else
@@ -560,9 +560,9 @@ define void @br_fcmp_uno(bfloat %a, bfloat %b) nounwind {
 ; RV64IZFBFMIN-LABEL: br_fcmp_uno:
 ; RV64IZFBFMIN:       # %bb.0:
 ; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa1
+; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fa0
 ; RV64IZFBFMIN-NEXT:    feq.s a0, fa5, fa5
-; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; RV64IZFBFMIN-NEXT:    feq.s a1, fa5, fa5
+; RV64IZFBFMIN-NEXT:    feq.s a1, fa4, fa4
 ; RV64IZFBFMIN-NEXT:    and a0, a1, a0
 ; RV64IZFBFMIN-NEXT:    beqz a0, .LBB15_2
 ; RV64IZFBFMIN-NEXT:  # %bb.1: # %if.else

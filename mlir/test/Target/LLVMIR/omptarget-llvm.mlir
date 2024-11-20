@@ -209,8 +209,8 @@ llvm.func @_QPopenmp_target_use_dev_ptr() {
   %0 = llvm.mlir.constant(1 : i64) : i64
   %a = llvm.alloca %0 x !llvm.ptr : (i64) -> !llvm.ptr
   %map1 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
-  omp.target_data  map_entries(%map1 : !llvm.ptr) use_device_ptr(%a : !llvm.ptr)  {
-  ^bb0(%arg0: !llvm.ptr):
+  %map2 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
+  omp.target_data  map_entries(%map1 : !llvm.ptr) use_device_ptr(%map2 -> %arg0 : !llvm.ptr)  {
     %1 = llvm.mlir.constant(10 : i32) : i32
     %2 = llvm.load %arg0 : !llvm.ptr -> !llvm.ptr
     llvm.store %1, %2 : i32, !llvm.ptr
@@ -237,14 +237,14 @@ llvm.func @_QPopenmp_target_use_dev_ptr() {
 // CHECK:         store ptr null, ptr %[[VAL_9]], align 8
 // CHECK:         %[[VAL_10:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         %[[VAL_11:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_10]], ptr %[[VAL_11]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
+// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @{{.*}}, i64 -1, i32 1, ptr %[[VAL_10]], ptr %[[VAL_11]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
 // CHECK:         %[[VAL_12:.*]] = load ptr, ptr %[[VAL_7]], align 8
 // CHECK:         store ptr %[[VAL_12]], ptr %[[VAL_3]], align 8
 // CHECK:         %[[VAL_13:.*]] = load ptr, ptr %[[VAL_3]], align 8
 // CHECK:         store i32 10, ptr %[[VAL_13]], align 4
 // CHECK:         %[[VAL_14:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         %[[VAL_15:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_end_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_14]], ptr %[[VAL_15]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
+// CHECK:         call void @__tgt_target_data_end_mapper(ptr @{{.*}}, i64 -1, i32 1, ptr %[[VAL_14]], ptr %[[VAL_15]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
 // CHECK:         ret void
 
 // -----
@@ -253,8 +253,8 @@ llvm.func @_QPopenmp_target_use_dev_addr() {
   %0 = llvm.mlir.constant(1 : i64) : i64
   %a = llvm.alloca %0 x !llvm.ptr : (i64) -> !llvm.ptr
   %map = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
-  omp.target_data  map_entries(%map : !llvm.ptr) use_device_addr(%a : !llvm.ptr)  {
-  ^bb0(%arg0: !llvm.ptr):
+  %map2 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
+  omp.target_data  map_entries(%map : !llvm.ptr) use_device_addr(%map2 -> %arg0 : !llvm.ptr)  {
     %1 = llvm.mlir.constant(10 : i32) : i32
     %2 = llvm.load %arg0 : !llvm.ptr -> !llvm.ptr
     llvm.store %1, %2 : i32, !llvm.ptr
@@ -280,13 +280,13 @@ llvm.func @_QPopenmp_target_use_dev_addr() {
 // CHECK:         store ptr null, ptr %[[VAL_8]], align 8
 // CHECK:         %[[VAL_9:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         %[[VAL_10:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_9]], ptr %[[VAL_10]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
+// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @{{.*}}, i64 -1, i32 1, ptr %[[VAL_9]], ptr %[[VAL_10]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
 // CHECK:         %[[VAL_11:.*]] = load ptr, ptr %[[VAL_6]], align 8
 // CHECK:         %[[VAL_12:.*]] = load ptr, ptr %[[VAL_11]], align 8
 // CHECK:         store i32 10, ptr %[[VAL_12]], align 4
 // CHECK:         %[[VAL_13:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         %[[VAL_14:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_end_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_13]], ptr %[[VAL_14]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
+// CHECK:         call void @__tgt_target_data_end_mapper(ptr @{{.*}}, i64 -1, i32 1, ptr %[[VAL_13]], ptr %[[VAL_14]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
 // CHECK:         ret void
 
 // -----
@@ -295,8 +295,8 @@ llvm.func @_QPopenmp_target_use_dev_addr_no_ptr() {
   %0 = llvm.mlir.constant(1 : i64) : i64
   %a = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr
   %map = omp.map.info var_ptr(%a : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-  omp.target_data  map_entries(%map : !llvm.ptr) use_device_addr(%a : !llvm.ptr)  {
-  ^bb0(%arg0: !llvm.ptr):
+  %map2 = omp.map.info var_ptr(%a : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+  omp.target_data  map_entries(%map : !llvm.ptr) use_device_addr(%map2 -> %arg0 : !llvm.ptr)  {
     %1 = llvm.mlir.constant(10 : i32) : i32
     llvm.store %1, %arg0 : i32, !llvm.ptr
     omp.terminator
@@ -321,12 +321,12 @@ llvm.func @_QPopenmp_target_use_dev_addr_no_ptr() {
 // CHECK:         store ptr null, ptr %[[VAL_8]], align 8
 // CHECK:         %[[VAL_9:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         %[[VAL_10:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_9]], ptr %[[VAL_10]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
+// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @{{.*}}, i64 -1, i32 1, ptr %[[VAL_9]], ptr %[[VAL_10]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
 // CHECK:         %[[VAL_11:.*]] = load ptr, ptr %[[VAL_6]], align 8
 // CHECK:         store i32 10, ptr %[[VAL_11]], align 4
 // CHECK:         %[[VAL_12:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         %[[VAL_13:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_end_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_12]], ptr %[[VAL_13]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
+// CHECK:         call void @__tgt_target_data_end_mapper(ptr @{{.*}}, i64 -1, i32 1, ptr %[[VAL_12]], ptr %[[VAL_13]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
 // CHECK:         ret void
 
 // -----
@@ -337,8 +337,8 @@ llvm.func @_QPopenmp_target_use_dev_addr_nomap() {
   %1 = llvm.mlir.constant(1 : i64) : i64
   %b = llvm.alloca %0 x !llvm.ptr : (i64) -> !llvm.ptr
   %map = omp.map.info var_ptr(%b : !llvm.ptr, !llvm.ptr)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
-  omp.target_data  map_entries(%map : !llvm.ptr) use_device_addr(%a : !llvm.ptr)  {
-  ^bb0(%arg0: !llvm.ptr):
+  %map2 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+  omp.target_data  map_entries(%map : !llvm.ptr) use_device_addr(%map2 -> %arg0 : !llvm.ptr)  {
     %2 = llvm.mlir.constant(10 : i32) : i32
     %3 = llvm.load %arg0 : !llvm.ptr -> !llvm.ptr
     llvm.store %2, %3 : i32, !llvm.ptr
@@ -394,13 +394,14 @@ llvm.func @_QPopenmp_target_use_dev_both() {
   %b = llvm.alloca %0 x !llvm.ptr : (i64) -> !llvm.ptr
   %map = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
   %map1 = omp.map.info var_ptr(%b : !llvm.ptr, !llvm.ptr)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-  omp.target_data  map_entries(%map, %map1 : !llvm.ptr, !llvm.ptr) use_device_ptr(%a : !llvm.ptr) use_device_addr(%b : !llvm.ptr)  {
-  ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  %map2 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+  %map3 = omp.map.info var_ptr(%b : !llvm.ptr, !llvm.ptr)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+  omp.target_data  map_entries(%map, %map1 : !llvm.ptr, !llvm.ptr) use_device_addr(%map3 -> %arg0 : !llvm.ptr) use_device_ptr(%map2 -> %arg1 : !llvm.ptr)  {
     %2 = llvm.mlir.constant(10 : i32) : i32
-    %3 = llvm.load %arg0 : !llvm.ptr -> !llvm.ptr
+    %3 = llvm.load %arg1 : !llvm.ptr -> !llvm.ptr
     llvm.store %2, %3 : i32, !llvm.ptr
     %4 = llvm.mlir.constant(20 : i32) : i32
-    %5 = llvm.load %arg1 : !llvm.ptr -> !llvm.ptr
+    %5 = llvm.load %arg0 : !llvm.ptr -> !llvm.ptr
     llvm.store %4, %5 : i32, !llvm.ptr
     omp.terminator
   }
@@ -432,7 +433,7 @@ llvm.func @_QPopenmp_target_use_dev_both() {
 // CHECK:         store ptr null, ptr %[[VAL_13]], align 8
 // CHECK:         %[[VAL_14:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         %[[VAL_15:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @3, i64 -1, i32 2, ptr %[[VAL_14]], ptr %[[VAL_15]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
+// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @{{.*}}, i64 -1, i32 2, ptr %[[VAL_14]], ptr %[[VAL_15]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
 // CHECK:         %[[VAL_16:.*]] = load ptr, ptr %[[VAL_8]], align 8
 // CHECK:         store ptr %[[VAL_16]], ptr %[[VAL_3]], align 8
 // CHECK:         %[[VAL_17:.*]] = load ptr, ptr %[[VAL_11]], align 8
@@ -442,7 +443,7 @@ llvm.func @_QPopenmp_target_use_dev_both() {
 // CHECK:         store i32 20, ptr %[[VAL_19]], align 4
 // CHECK:         %[[VAL_20:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         %[[VAL_21:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_end_mapper(ptr @3, i64 -1, i32 2, ptr %[[VAL_20]], ptr %[[VAL_21]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
+// CHECK:         call void @__tgt_target_data_end_mapper(ptr @{{.*}}, i64 -1, i32 2, ptr %[[VAL_20]], ptr %[[VAL_21]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
 // CHECK:         ret void
 
 // -----

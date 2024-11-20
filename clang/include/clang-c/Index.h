@@ -2166,7 +2166,9 @@ enum CXCursorKind {
    */
   CXCursor_OpenACCLoopConstruct = 321,
 
-  CXCursor_LastStmt = CXCursor_OpenACCLoopConstruct,
+  CXCursor_OpenACCCombinedConstruct = 322,
+
+  CXCursor_LastStmt = CXCursor_OpenACCCombinedConstruct,
 
   /**
    * Cursor that represents the translation unit itself.
@@ -2980,8 +2982,9 @@ enum CXTypeKind {
   CXType_Atomic = 177,
   CXType_BTFTagAttributed = 178,
 
-  // HLSL Intangible Types
-  CXType_HLSLResource = 179
+  /* HLSL Types */
+  CXType_HLSLResource = 179,
+  CXType_HLSLAttributedResource = 180
 };
 
 /**

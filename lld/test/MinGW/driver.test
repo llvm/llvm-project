@@ -249,6 +249,9 @@ REQUIRE-DEFINED: -include:_foo -include:_bar -include:_baz -include:_foo2
 RUN: ld.lld -### foo.o -m i386pe -u _foo --undefined _bar -undefined=_baz --undefined=_foo2 -u_foo3 2>&1 | FileCheck -check-prefix=UNDEFINED %s
 UNDEFINED: -includeoptional:_foo -includeoptional:_bar -includeoptional:_baz -includeoptional:_foo2 -includeoptional:_foo3
 
+RUN: ld.lld -### foo.o -m i386pe --undefined-glob="_foo*" 2>&1 | FileCheck -check-prefix=UNDEFINED-GLOB %s
+UNDEFINED-GLOB: -includeglob:_foo*
+
 RUN: ld.lld -### -m i386pep foo.o -Llibpath 2>&1 | FileCheck -check-prefix LIBPATH %s
 LIBPATH: -libpath:libpath
 
@@ -441,6 +444,13 @@ BUILD_ID: -build-id{{ }}
 RUN: ld.lld -### foo.o -m i386pep --build-id=fast 2>&1 | FileCheck -check-prefix=BUILD_ID_WARN %s
 BUILD_ID_WARN: unsupported build id hashing: fast, using default hashing.
 BUILD_ID_WARN: -build-id{{ }}
+
+RUN: ld.lld -### foo.o -m i386pep --functionpadmin= 2>&1 | FileCheck -check-prefix=FUNCTIONPADMIN %s
+RUN: ld.lld -### foo.o -m i386pep --functionpadmin 2>&1 | FileCheck -check-prefix=FUNCTIONPADMIN %s
+FUNCTIONPADMIN: -functionpadmin{{ }}
+
+RUN: ld.lld -### foo.o -m i386pep --functionpadmin=2 2>&1 | FileCheck -check-prefix=FUNCTIONPADMIN2 %s
+FUNCTIONPADMIN2: -functionpadmin:2{{ }}
 
 RUN: ld.lld -### foo.o -m i386pep --build-id=none 2>&1 | FileCheck -check-prefix=NO_BUILD_ID %s
 RUN: ld.lld -### foo.o -m i386pep -s 2>&1 | FileCheck -check-prefix=NO_BUILD_ID %s

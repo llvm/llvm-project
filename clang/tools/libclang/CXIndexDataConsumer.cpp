@@ -952,18 +952,12 @@ void CXIndexDataConsumer::addContainerInMap(const DeclContext *DC,
   if (!DC)
     return;
 
-  ContainerMapTy::iterator I = ContainerMap.find(DC);
-  if (I == ContainerMap.end()) {
-    if (container)
-      ContainerMap[DC] = container;
-    return;
-  }
   // Allow changing the container of a previously seen DeclContext so we
   // can handle invalid user code, like a function re-definition.
   if (container)
-    I->second = container;
+    ContainerMap[DC] = container;
   else
-    ContainerMap.erase(I);
+    ContainerMap.erase(DC);
 }
 
 CXIdxClientEntity CXIndexDataConsumer::getClientEntity(const Decl *D) const {

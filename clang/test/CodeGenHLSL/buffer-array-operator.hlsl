@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
+// XFAIL: *
+// Resource indexing will be properly implemented in llvm/llvm-project#95956
+
 const RWBuffer<float> In;
 RWBuffer<float> Out;
 

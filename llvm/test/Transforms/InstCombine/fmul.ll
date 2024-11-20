@@ -377,7 +377,7 @@ define void @test8(ptr %inout, i1 %c1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    [[LOCAL_VAR_7_0:%.*]] = phi <4 x float> [ <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, [[ENTRY:%.*]] ], [ [[TMP0:%.*]], [[FOR_BODY:%.*]] ]
+; CHECK-NEXT:    [[LOCAL_VAR_7_0:%.*]] = phi <4 x float> [ splat (float -0.000000e+00), [[ENTRY:%.*]] ], [ [[TMP0:%.*]], [[FOR_BODY:%.*]] ]
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[TMP0]] = insertelement <4 x float> [[LOCAL_VAR_7_0]], float 0.000000e+00, i64 2
@@ -821,8 +821,8 @@ define float @fmul_fadd_distribute(float %x) {
 
 define <2 x float> @fmul_fadd_distribute_vec(<2 x float> %x) {
 ; CHECK-LABEL: @fmul_fadd_distribute_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc <2 x float> [[X:%.*]], <float 6.000000e+03, float 6.000000e+03>
-; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc <2 x float> [[TMP1]], <float 1.200000e+07, float 1.200000e+07>
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc <2 x float> [[X:%.*]], splat (float 6.000000e+03)
+; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc <2 x float> [[TMP1]], splat (float 1.200000e+07)
 ; CHECK-NEXT:    ret <2 x float> [[T3]]
 ;
   %t1 = fadd reassoc <2 x float> <float 2.0e+3, float 2.0e+3>, %x
@@ -1164,7 +1164,7 @@ define float @negate_if_false(float %x, i1 %cond) {
 
 define <2 x double> @negate_if_true_commute(<2 x double> %px, i1 %cond) {
 ; CHECK-LABEL: @negate_if_true_commute(
-; CHECK-NEXT:    [[X:%.*]] = fdiv <2 x double> <double 4.200000e+01, double 4.200000e+01>, [[PX:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = fdiv <2 x double> splat (double 4.200000e+01), [[PX:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg ninf <2 x double> [[X]]
 ; CHECK-NEXT:    [[R:%.*]] = select ninf i1 [[COND:%.*]], <2 x double> [[TMP1]], <2 x double> [[X]]
 ; CHECK-NEXT:    ret <2 x double> [[R]]
@@ -1207,8 +1207,8 @@ define float @negate_if_true_extra_use(float %x, i1 %cond) {
 
 define <2 x double> @negate_if_true_wrong_constant(<2 x double> %px, i1 %cond) {
 ; CHECK-LABEL: @negate_if_true_wrong_constant(
-; CHECK-NEXT:    [[X:%.*]] = fdiv <2 x double> <double 4.200000e+01, double 4.200000e+01>, [[PX:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], <2 x double> <double -1.000000e+00, double 0.000000e+00>, <2 x double> <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[X:%.*]] = fdiv <2 x double> splat (double 4.200000e+01), [[PX:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], <2 x double> <double -1.000000e+00, double 0.000000e+00>, <2 x double> splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[R:%.*]] = fmul <2 x double> [[X]], [[SEL]]
 ; CHECK-NEXT:    ret <2 x double> [[R]]
 ;

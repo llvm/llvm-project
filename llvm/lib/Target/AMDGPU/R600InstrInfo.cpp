@@ -12,9 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "R600InstrInfo.h"
-#include "AMDGPU.h"
 #include "MCTargetDesc/R600MCTargetDesc.h"
-#include "R600.h"
 #include "R600Defines.h"
 #include "R600Subtarget.h"
 #include "llvm/ADT/SmallSet.h"
@@ -75,12 +73,9 @@ void R600InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 /// \returns true if \p MBBI can be moved into a new basic.
 bool R600InstrInfo::isLegalToSplitMBBAt(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator MBBI) const {
-  for (MachineInstr::const_mop_iterator I = MBBI->operands_begin(),
-                                        E = MBBI->operands_end(); I != E; ++I) {
-    if (I->isReg() && !I->getReg().isVirtual() && I->isUse() &&
-        RI.isPhysRegLiveAcrossClauses(I->getReg()))
+  for (const MachineOperand &MO : MBBI->all_uses())
+    if (!MO.getReg().isVirtual() && RI.isPhysRegLiveAcrossClauses(MO.getReg()))
       return false;
-  }
   return true;
 }
 
@@ -219,15 +214,10 @@ bool R600InstrInfo::readsLDSSrcReg(const MachineInstr &MI) const {
   if (!isALUInstr(MI.getOpcode())) {
     return false;
   }
-  for (MachineInstr::const_mop_iterator I = MI.operands_begin(),
-                                        E = MI.operands_end();
-       I != E; ++I) {
-    if (!I->isReg() || !I->isUse() || I->getReg().isVirtual())
-      continue;
-
-    if (R600::R600_LDS_SRC_REGRegClass.contains(I->getReg()))
+  for (const MachineOperand &MO : MI.all_uses())
+    if (MO.getReg().isPhysical() &&
+        R600::R600_LDS_SRC_REGRegClass.contains(MO.getReg()))
       return true;
-  }
   return false;
 }
 

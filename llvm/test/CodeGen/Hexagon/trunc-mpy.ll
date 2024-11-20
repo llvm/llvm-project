@@ -69,7 +69,7 @@ b1:                                               ; preds = %b0
 
 b2:                                               ; preds = %b2, %b1
   %v2 = phi ptr [ %v0, %b1 ], [ %v14, %b2 ]
-  %v3 = phi ptr [ %v1, %b1 ], [ undef, %b2 ]
+  %v3 = phi ptr [ %v1, %b1 ], [ poison, %b2 ]
   %v4 = phi ptr [ null, %b1 ], [ %v6, %b2 ]
   %v5 = load i32, ptr %v4, align 4
   %v6 = getelementptr inbounds i32, ptr %v4, i32 2

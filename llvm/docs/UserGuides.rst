@@ -286,7 +286,7 @@ Additional Topics
    DirectX runtime.
 
 :doc:`RISCVUsage`
-   This document describes using the RISCV-V target.
+   This document describes using the RISC-V target.
 
 :doc:`RISCV/RISCVVectorExtension`
    This document describes how the RISC-V Vector extension can be expressed in LLVM IR and how code is generated for it in the backend.
