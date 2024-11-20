@@ -1907,6 +1907,10 @@ static void forEachInputSectionDescription(
   }
 }
 
+ThunkCreator::ThunkCreator(Ctx &ctx) : ctx(ctx) {}
+
+ThunkCreator::~ThunkCreator() {}
+
 // Thunk Implementation
 //
 // Thunks (sometimes called stubs, veneers or branch islands) are small pieces
@@ -2212,7 +2216,7 @@ static bool isThunkSectionCompatible(InputSection *source,
 
 std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
                                                 Relocation &rel, uint64_t src) {
-  std::vector<Thunk *> *thunkVec = nullptr;
+  SmallVector<std::unique_ptr<Thunk>, 0> *thunkVec = nullptr;
   // Arm and Thumb have a PC Bias of 8 and 4 respectively, this is cancelled
   // out in the relocation addend. We compensate for the PC bias so that
   // an Arm and Thumb relocation to the same destination get the same keyAddend,
@@ -2233,17 +2237,16 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
     thunkVec = &thunkedSymbols[{rel.sym, keyAddend}];
 
   // Check existing Thunks for Sym to see if they can be reused
-  for (Thunk *t : *thunkVec)
+  for (auto &t : *thunkVec)
     if (isThunkSectionCompatible(isec, t->getThunkTargetSym()->section) &&
         t->isCompatibleWith(*isec, rel) &&
         ctx.target->inBranchRange(rel.type, src,
                                   t->getThunkTargetSym()->getVA(ctx, -pcBias)))
-      return std::make_pair(t, false);
+      return std::make_pair(t.get(), false);
 
   // No existing compatible Thunk in range, create a new one
-  Thunk *t = addThunk(ctx, *isec, rel);
-  thunkVec->push_back(t);
-  return std::make_pair(t, true);
+  thunkVec->push_back(addThunk(ctx, *isec, rel));
+  return std::make_pair(thunkVec->back().get(), true);
 }
 
 std::pair<Thunk *, bool> ThunkCreator::getSyntheticLandingPad(Defined &d,
@@ -2252,7 +2255,7 @@ std::pair<Thunk *, bool> ThunkCreator::getSyntheticLandingPad(Defined &d,
       {{d.section, d.value}, a}, nullptr);
   if (isNew)
     it->second = addLandingPadThunk(ctx, d, a);
-  return {it->second, isNew};
+  return {it->second.get(), isNew};
 }
 
 // Return true if the relocation target is an in range Thunk.
