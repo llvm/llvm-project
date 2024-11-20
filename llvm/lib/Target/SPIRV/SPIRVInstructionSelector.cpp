@@ -257,8 +257,8 @@ private:
   bool selectSpvThreadId(Register ResVReg, const SPIRVType *ResType,
                          MachineInstr &I) const;
 
-  bool selectWaveNOpInst(Register ResVReg, const SPIRVType *ResType,
-                         MachineInstr &I, unsigned Opcode) const;
+  bool selectWaveOpInst(Register ResVReg, const SPIRVType *ResType,
+                        MachineInstr &I, unsigned Opcode) const;
 
   bool selectWaveActiveCountBits(Register ResVReg, const SPIRVType *ResType,
                                  MachineInstr &I) const;
@@ -1949,10 +1949,10 @@ bool SPIRVInstructionSelector::selectSign(Register ResVReg,
   return Result;
 }
 
-bool SPIRVInstructionSelector::selectWaveNOpInst(Register ResVReg,
-                                                 const SPIRVType *ResType,
-                                                 MachineInstr &I,
-                                                 unsigned Opcode) const {
+bool SPIRVInstructionSelector::selectWaveOpInst(Register ResVReg,
+                                                const SPIRVType *ResType,
+                                                MachineInstr &I,
+                                                unsigned Opcode) const {
   MachineBasicBlock &BB = *I.getParent();
   SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
 
@@ -1975,8 +1975,8 @@ bool SPIRVInstructionSelector::selectWaveActiveCountBits(
   SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
   SPIRVType *BallotType = GR.getOrCreateSPIRVVectorType(IntTy, 4, I, TII);
   Register BallotReg = MRI->createVirtualRegister(GR.getRegClass(BallotType));
-  bool Result = selectWaveNOpInst(BallotReg, BallotType, I,
-                                  SPIRV::OpGroupNonUniformBallot);
+  bool Result = selectWaveOpInst(BallotReg, BallotType, I,
+                                 SPIRV::OpGroupNonUniformBallot);
 
   MachineBasicBlock &BB = *I.getParent();
   Result &=
@@ -2819,13 +2819,12 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_wave_active_countbits:
     return selectWaveActiveCountBits(ResVReg, ResType, I);
   case Intrinsic::spv_wave_any:
-    return selectWaveNOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAny);
+    return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAny);
   case Intrinsic::spv_wave_is_first_lane:
-    return selectWaveNOpInst(ResVReg, ResType, I,
-                             SPIRV::OpGroupNonUniformElect);
+    return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformElect);
   case Intrinsic::spv_wave_readlane:
-    return selectWaveNOpInst(ResVReg, ResType, I,
-                             SPIRV::OpGroupNonUniformShuffle);
+    return selectWaveOpInst(ResVReg, ResType, I,
+                            SPIRV::OpGroupNonUniformShuffle);
   case Intrinsic::spv_step:
     return selectExtInst(ResVReg, ResType, I, CL::step, GL::Step);
   case Intrinsic::spv_radians:
