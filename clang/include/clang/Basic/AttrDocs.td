@@ -3921,17 +3921,42 @@ have their lifetimes extended.
 def LifetimeCaptureByDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-    Similar to `lifetimebound`_, the ``lifetime_capture_by(X)`` attribute on a function
-parameter or implicit object parameter indicates that that objects that are referred to
-by that parameter may also be referred to by the capturing entity ``X``.
+Similar to `lifetimebound`_, the ``lifetime_capture_by(X)`` attribute on a
+function parameter or implicit object parameter indicates that the capturing
+entity ``X`` may refer to the object referred by that parameter.
 
-By default, a reference is considered to refer to its referenced object, a
-pointer is considered to refer to its pointee, a ``std::initializer_list<T>``
-is considered to refer to its underlying array, and aggregates (arrays and
-simple ``struct``\s) are considered to refer to all objects that their
-transitive subobjects refer to.
+Below is a list of types of the parameters and what they're considered to refer to:
+
+- A reference param (of non-view type) is considered to refer to its referenced object.
+- A pointer param (of non-view type) is considered to refer to its pointee.
+- View type param (type annotated with ``[[gsl::Pointer()]]``) is considered to refer
+  to its pointee (gsl owner). This holds true even if the view type appears as a reference
+  in the parameter. For example, both ``std::string_view`` and
+  ``const std::string_view &`` are considered to refer to a ``std::string``.
+- A ``std::initializer_list<T>`` is considered to refer to its underlying array.
+- Aggregates (arrays and simple ``struct``\s) are considered to refer to all
+  objects that their transitive subobjects refer to.
+
+Clang would diagnose when a temporary object is used as an argument to such an
+annotated parameter.
+In this case, the capturing entity ``X`` could capture a dangling reference to this
+temporary object.
+
+.. code-block:: c++
+  
+  void addToSet(std::string_view a [[clang::lifetime_capture_by(s)]], std::set<std::string_view>& s) {
+    s.insert(a);
+  }
+  void use() {
+    std::set<std::string_view> s;
+    addToSet(std::string(), s); // Warning: object whose reference is captured by 's' will be destroyed at the end of the full-expression.
+    //       ^^^^^^^^^^^^^
+    std::string local;
+    addToSet(local, s); // Ok.
+  }
 
 The capturing entity ``X`` can be one of the following:
+
 - Another (named) function parameter. 
   
   .. code-block:: c++
@@ -3951,7 +3976,7 @@ The capturing entity ``X`` can be one of the following:
       std::set<std::string_view> s;
     };
 
-- 'global', 'unknown' (without quotes).
+- `global`, `unknown`.
   
   .. code-block:: c++
 
@@ -3981,6 +4006,22 @@ The attribute supports specifying more than one capturing entities:
                  std::set<std::string_view>& s2) {
     s1.insert(a);
     s2.insert(a);
+  }
+
+Limitation: The capturing entity ``X`` is not used by the analysis and is
+used for documentation purposes only. This is because the analysis is
+statement-local and only detects use of a temporary as an argument to the
+annotated parameter.
+
+.. code-block:: c++
+  
+  void addToSet(std::string_view a [[clang::lifetime_capture_by(s)]], std::set<std::string_view>& s);
+  void use() {
+    std::set<std::string_view> s;
+    if (foo()) {
+      std::string str;
+      addToSet(str, s); // Not detected.
+    }
   }
 
 .. _`lifetimebound`: https://clang.llvm.org/docs/AttributeReference.html#lifetimebound
