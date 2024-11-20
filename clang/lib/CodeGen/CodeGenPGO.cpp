@@ -1146,10 +1146,11 @@ void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
       NormalizedFuncNameVarPtr, Builder.getInt64(FunctionHash),
       Builder.getInt32(NumRegionCounters), Builder.getInt32(Counter), StepV};
 
-  if (llvm::EnableSingleByteCoverage)
+  if (llvm::EnableSingleByteCoverage) {
+    assert(!StepV && "StepV is impossible in SingleByte");
     Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_cover),
                        ArrayRef(Args, 4));
-  else if (!StepV)
+  } else if (!StepV)
     Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment),
                        ArrayRef(Args, 4));
   else

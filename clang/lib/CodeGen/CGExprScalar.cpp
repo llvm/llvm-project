@@ -55,6 +55,10 @@ using llvm::Value;
 //                         Scalar Expression Emitter
 //===----------------------------------------------------------------------===//
 
+namespace llvm {
+extern cl::opt<bool> EnableSingleByteCoverage;
+} // namespace llvm
+
 namespace {
 
 /// Determine whether the given binary operation may overflow.
@@ -5383,7 +5387,7 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   // If this is a really simple expression (like x ? 4 : 5), emit this as a
   // select instead of as control flow.  We can only do this if it is cheap and
   // safe to evaluate the LHS and RHS unconditionally.
-  if (!CGF.getIsCounterPair(E).second &&
+  if (!llvm::EnableSingleByteCoverage &&
       isCheapEnoughToEvaluateUnconditionally(lhsExpr, CGF) &&
       isCheapEnoughToEvaluateUnconditionally(rhsExpr, CGF)) {
     llvm::Value *CondV = CGF.EvaluateExprAsBool(condExpr);
