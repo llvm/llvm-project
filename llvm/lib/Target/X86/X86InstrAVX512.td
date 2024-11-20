@@ -2619,9 +2619,9 @@ multiclass avx512_mask_mov<bits<8> opc_kk, bits<8> opc_km, bits<8> opc_mk,
                           X86MemOperand x86memop, string Suffix = ""> {
   let isMoveReg = 1, hasSideEffects = 0, SchedRW = [WriteMove],
       explicitOpPrefix = !if(!eq(Suffix, ""), NoExplicitOpPrefix, ExplicitEVEX) in
-  def kk#Suffix : I<opc_kk, MRMSrcReg, (outs KRC:$dst), (ins KRC:$src),
-                    !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"), []>,
-                  Sched<[WriteMove]>;
+    def kk#Suffix : I<opc_kk, MRMSrcReg, (outs KRC:$dst), (ins KRC:$src),
+                      !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"), []>,
+                    Sched<[WriteMove]>;
   def km#Suffix : I<opc_km, MRMSrcMem, (outs KRC:$dst), (ins x86memop:$src),
                     !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
                     [(set KRC:$dst, (vvt (load addr:$src)))]>,
