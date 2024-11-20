@@ -420,15 +420,16 @@ static void emitDXILAttributes(const RecordKeeper &Records, raw_ostream &OS) {
 static void emitDXILProperties(const RecordKeeper &Records, raw_ostream &OS) {
   // Generate their definitions
   OS << "#ifdef DXIL_PROPERTY\n";
-  for (const Record *Prop: Records.getAllDerivedDefinitions("DXILProperty"))
+  for (const Record *Prop : Records.getAllDerivedDefinitions("DXILProperty"))
     OS << "DXIL_PROPERTY(" << Prop->getName() << ")\n";
   OS << "#undef DXIL_PROPERTY\n";
   OS << "#endif\n\n";
 }
 
-static void emitDXILPropertyHelpers(const RecordKeeper &Records, raw_ostream &OS) {
+static void emitDXILPropertyHelpers(const RecordKeeper &Records,
+                                    raw_ostream &OS) {
   // Generate their helper functions
-  for (const Record *Prop: Records.getAllDerivedDefinitions("DXILProperty")) {
+  for (const Record *Prop : Records.getAllDerivedDefinitions("DXILProperty")) {
     OS << "[[maybe_unused]]\n";
     OS << "static bool has" << Prop->getName() << "(dxil::OpCode Op) {\n";
     OS << "  auto *OpCodeProp = getOpCodeProperty(Op);\n";
