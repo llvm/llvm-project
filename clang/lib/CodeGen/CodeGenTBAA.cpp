@@ -230,6 +230,12 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
               ->getString();
       TyName = Name;
     } else {
+      // Be conservative if the type isn't a record type. Handling other types
+      // may require stripping const-qualifiers inside the type, e.g.
+      // MemberPointerType.
+      if (!Ty->isRecordType())
+        return AnyPtr;
+
       // For non-builtin types use the mangled name of the canonical type.
       llvm::raw_svector_ostream TyOut(TyName);
       MangleCtx->mangleCanonicalTypeName(QualType(Ty, 0), TyOut);
