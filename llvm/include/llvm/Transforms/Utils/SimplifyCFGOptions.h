@@ -27,6 +27,7 @@ struct SimplifyCFGOptions {
   bool ConvertSwitchToLookupTable = false;
   bool NeedCanonicalLoop = true;
   bool HoistCommonInsts = false;
+  bool HoistLoadsStoresWithCondFaulting = false;
   bool SinkCommonInsts = false;
   bool SimplifyCondBranch = true;
   bool SpeculateBlocks = true;
@@ -57,6 +58,10 @@ struct SimplifyCFGOptions {
   }
   SimplifyCFGOptions &hoistCommonInsts(bool B) {
     HoistCommonInsts = B;
+    return *this;
+  }
+  SimplifyCFGOptions &hoistLoadsStoresWithCondFaulting(bool B) {
+    HoistLoadsStoresWithCondFaulting = B;
     return *this;
   }
   SimplifyCFGOptions &sinkCommonInsts(bool B) {

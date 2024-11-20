@@ -34,7 +34,8 @@ DominanceInfoBase<IsPostDom>::~DominanceInfoBase() {
     delete entry.second.getPointer();
 }
 
-template <bool IsPostDom> void DominanceInfoBase<IsPostDom>::invalidate() {
+template <bool IsPostDom>
+void DominanceInfoBase<IsPostDom>::invalidate() {
   for (auto entry : dominanceInfos)
     delete entry.second.getPointer();
   dominanceInfos.clear();
@@ -214,12 +215,14 @@ DominanceInfoBase<IsPostDom>::findNearestCommonDominator(Block *a,
 
 /// Return true if the specified block A properly dominates block B.
 template <bool IsPostDom>
-bool DominanceInfoBase<IsPostDom>::properlyDominates(Block *a, Block *b) const {
+bool DominanceInfoBase<IsPostDom>::properlyDominatesImpl(Block *a,
+                                                         Block *b) const {
   assert(a && b && "null blocks not allowed");
 
-  // A block dominates itself but does not properly dominate itself.
+  // A block dominates, but does not properly dominate, itself unless this
+  // is a graph region.
   if (a == b)
-    return false;
+    return !hasSSADominance(a);
 
   // If both blocks are not in the same region, `a` properly dominates `b` if
   // `b` is defined in an operation region that (recursively) ends up being
@@ -228,7 +231,7 @@ bool DominanceInfoBase<IsPostDom>::properlyDominates(Block *a, Block *b) const {
   if (regionA != b->getParent()) {
     b = regionA ? regionA->findAncestorBlockInRegion(*b) : nullptr;
     // If we could not find a valid block b then it is a not a dominator.
-    if (b == nullptr)
+    if (!b)
       return false;
 
     // Check to see if the ancestor of `b` is the same block as `a`.  A properly
@@ -239,6 +242,51 @@ bool DominanceInfoBase<IsPostDom>::properlyDominates(Block *a, Block *b) const {
 
   // Otherwise, they are two different blocks in the same region, use DomTree.
   return getDomTree(regionA).properlyDominates(a, b);
+}
+
+template <bool IsPostDom>
+bool DominanceInfoBase<IsPostDom>::properlyDominatesImpl(
+    Operation *a, Operation *b, bool enclosingOpOk) const {
+  Block *aBlock = a->getBlock(), *bBlock = b->getBlock();
+  assert(aBlock && bBlock && "operations must be in a block");
+
+  // An operation (pos)dominates, but does not properly (pos)dominate, itself
+  // unless this is a graph region.
+  if (a == b)
+    return !hasSSADominance(aBlock);
+
+  // If these ops are in different regions, then normalize one into the other.
+  Region *aRegion = aBlock->getParent();
+  if (aRegion != bBlock->getParent()) {
+    // Scoot up b's region tree until we find an operation in A's region that
+    // encloses it.  If this fails, then we know there is no (post)dom relation.
+    b = aRegion ? aRegion->findAncestorOpInRegion(*b) : nullptr;
+    if (!b)
+      return false;
+    bBlock = b->getBlock();
+    assert(bBlock->getParent() == aRegion);
+
+    // If 'a' encloses 'b', then we consider it to (post)dominate.
+    if (a == b && enclosingOpOk)
+      return true;
+  }
+
+  // Ok, they are in the same region now.
+  if (aBlock == bBlock) {
+    // Dominance changes based on the region type. In a region with SSA
+    // dominance, uses inside the same block must follow defs. In other
+    // regions kinds, uses and defs can come in any order inside a block.
+    if (!hasSSADominance(aBlock))
+      return true;
+    if constexpr (IsPostDom) {
+      return b->isBeforeInBlock(a);
+    } else {
+      return a->isBeforeInBlock(b);
+    }
+  }
+
+  // If the blocks are different, use DomTree to resolve the query.
+  return getDomTree(aRegion).properlyDominates(aBlock, bBlock);
 }
 
 /// Return true if the specified block is reachable from the entry block of
@@ -261,51 +309,6 @@ template class detail::DominanceInfoBase</*IsPostDom=*/false>;
 // DominanceInfo
 //===----------------------------------------------------------------------===//
 
-/// Return true if operation `a` properly dominates operation `b`.  The
-/// 'enclosingOpOk' flag says whether we should return true if the `b` op is
-/// enclosed by a region on 'a'.
-bool DominanceInfo::properlyDominatesImpl(Operation *a, Operation *b,
-                                          bool enclosingOpOk) const {
-  Block *aBlock = a->getBlock(), *bBlock = b->getBlock();
-  assert(aBlock && bBlock && "operations must be in a block");
-
-  // An instruction dominates, but does not properlyDominate, itself unless this
-  // is a graph region.
-  if (a == b)
-    return !hasSSADominance(aBlock);
-
-  // If these ops are in different regions, then normalize one into the other.
-  Region *aRegion = aBlock->getParent();
-  if (aRegion != bBlock->getParent()) {
-    // Scoot up b's region tree until we find an operation in A's region that
-    // encloses it.  If this fails, then we know there is no post-dom relation.
-    b = aRegion ? aRegion->findAncestorOpInRegion(*b) : nullptr;
-    if (!b)
-      return false;
-    bBlock = b->getBlock();
-    assert(bBlock->getParent() == aRegion);
-
-    // If 'a' encloses 'b', then we consider it to dominate.
-    if (a == b && enclosingOpOk)
-      return true;
-  }
-
-  // Ok, they are in the same region now.
-  if (aBlock == bBlock) {
-    // Dominance changes based on the region type. In a region with SSA
-    // dominance, uses inside the same block must follow defs. In other
-    // regions kinds, uses and defs can come in any order inside a block.
-    if (hasSSADominance(aBlock)) {
-      // If the blocks are the same, then check if b is before a in the block.
-      return a->isBeforeInBlock(b);
-    }
-    return true;
-  }
-
-  // If the blocks are different, use DomTree to resolve the query.
-  return getDomTree(aRegion).properlyDominates(aBlock, bBlock);
-}
-
 /// Return true if the `a` value properly dominates operation `b`, i.e if the
 /// operation that defines `a` properlyDominates `b` and the operation that
 /// defines `a` does not contain `b`.
@@ -317,50 +320,5 @@ bool DominanceInfo::properlyDominates(Value a, Operation *b) const {
 
   // `a` properlyDominates `b` if the operation defining `a` properlyDominates
   // `b`, but `a` does not itself enclose `b` in one of its regions.
-  return properlyDominatesImpl(a.getDefiningOp(), b, /*enclosingOpOk=*/false);
-}
-
-//===----------------------------------------------------------------------===//
-// PostDominanceInfo
-//===----------------------------------------------------------------------===//
-
-/// Returns true if statement 'a' properly postdominates statement b.
-bool PostDominanceInfo::properlyPostDominates(Operation *a, Operation *b) {
-  auto *aBlock = a->getBlock(), *bBlock = b->getBlock();
-  assert(aBlock && bBlock && "operations must be in a block");
-
-  // An instruction postDominates, but does not properlyPostDominate, itself
-  // unless this is a graph region.
-  if (a == b)
-    return !hasSSADominance(aBlock);
-
-  // If these ops are in different regions, then normalize one into the other.
-  Region *aRegion = aBlock->getParent();
-  if (aRegion != bBlock->getParent()) {
-    // Scoot up b's region tree until we find an operation in A's region that
-    // encloses it.  If this fails, then we know there is no post-dom relation.
-    b = aRegion ? aRegion->findAncestorOpInRegion(*b) : nullptr;
-    if (!b)
-      return false;
-    bBlock = b->getBlock();
-    assert(bBlock->getParent() == aRegion);
-
-    // If 'a' encloses 'b', then we consider it to postdominate.
-    if (a == b)
-      return true;
-  }
-
-  // Ok, they are in the same region.  If they are in the same block, check if b
-  // is before a in the block.
-  if (aBlock == bBlock) {
-    // Dominance changes based on the region type.
-    if (hasSSADominance(aBlock)) {
-      // If the blocks are the same, then check if b is before a in the block.
-      return b->isBeforeInBlock(a);
-    }
-    return true;
-  }
-
-  // If the blocks are different, check if a's block post dominates b's.
-  return getDomTree(aRegion).properlyDominates(aBlock, bBlock);
+  return properlyDominates(a.getDefiningOp(), b, /*enclosingOpOk=*/false);
 }

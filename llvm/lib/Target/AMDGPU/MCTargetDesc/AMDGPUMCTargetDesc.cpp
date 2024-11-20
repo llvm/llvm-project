@@ -19,7 +19,6 @@
 #include "R600InstPrinter.h"
 #include "R600MCTargetDesc.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
-#include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCELFStreamer.h"
@@ -130,10 +129,8 @@ public:
       return false;
 
     int64_t Imm = Inst.getOperand(0).getImm();
-    // Our branches take a simm16, but we need two extra bits to account for
-    // the factor of 4.
-    APInt SignedOffset(18, Imm * 4, true);
-    Target = (SignedOffset.sext(64) + Addr + Size).getZExtValue();
+    // Our branches take a simm16.
+    Target = SignExtend64<16>(Imm) * 4 + Addr + Size;
     return true;
   }
 };

@@ -23,6 +23,9 @@
 ## Assembler Pseudo Instructions (User-Level ISA, Version 2.2, Chapter 20)
 ##===----------------------------------------------------------------------===##
 
+# CHECK-INST: fsgnj.h s1, s2, s2
+# CHECK-ALIAS: fmv.h s1, s2
+fmv.h s1, s2
 # CHECK-INST: fsgnjx.h s1, s2, s2
 # CHECK-ALIAS: fabs.h s1, s2
 fabs.h s1, s2

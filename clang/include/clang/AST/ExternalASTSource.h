@@ -25,10 +25,12 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <new>
 #include <optional>
 #include <utility>
 
@@ -326,29 +328,49 @@ struct LazyOffsetPtr {
   ///
   /// If the low bit is clear, a pointer to the AST node. If the low
   /// bit is set, the upper 63 bits are the offset.
-  mutable uint64_t Ptr = 0;
+  static constexpr size_t DataSize = std::max(sizeof(uint64_t), sizeof(T *));
+  alignas(uint64_t) alignas(T *) mutable unsigned char Data[DataSize] = {};
+
+  unsigned char GetLSB() const {
+    return Data[llvm::sys::IsBigEndianHost ? DataSize - 1 : 0];
+  }
+
+  template <typename U> U &As(bool New) const {
+    unsigned char *Obj =
+        Data + (llvm::sys::IsBigEndianHost ? DataSize - sizeof(U) : 0);
+    if (New)
+      return *new (Obj) U;
+    return *std::launder(reinterpret_cast<U *>(Obj));
+  }
+
+  T *&GetPtr() const { return As<T *>(false); }
+  uint64_t &GetU64() const { return As<uint64_t>(false); }
+  void SetPtr(T *Ptr) const { As<T *>(true) = Ptr; }
+  void SetU64(uint64_t U64) const { As<uint64_t>(true) = U64; }
 
 public:
   LazyOffsetPtr() = default;
-  explicit LazyOffsetPtr(T *Ptr) : Ptr(reinterpret_cast<uint64_t>(Ptr)) {}
+  explicit LazyOffsetPtr(T *Ptr) : Data() { SetPtr(Ptr); }
 
-  explicit LazyOffsetPtr(uint64_t Offset) : Ptr((Offset << 1) | 0x01) {
+  explicit LazyOffsetPtr(uint64_t Offset) : Data() {
     assert((Offset << 1 >> 1) == Offset && "Offsets must require < 63 bits");
     if (Offset == 0)
-      Ptr = 0;
+      SetPtr(nullptr);
+    else
+      SetU64((Offset << 1) | 0x01);
   }
 
   LazyOffsetPtr &operator=(T *Ptr) {
-    this->Ptr = reinterpret_cast<uint64_t>(Ptr);
+    SetPtr(Ptr);
     return *this;
   }
 
   LazyOffsetPtr &operator=(uint64_t Offset) {
     assert((Offset << 1 >> 1) == Offset && "Offsets must require < 63 bits");
     if (Offset == 0)
-      Ptr = 0;
+      SetPtr(nullptr);
     else
-      Ptr = (Offset << 1) | 0x01;
+      SetU64((Offset << 1) | 0x01);
 
     return *this;
   }
@@ -356,15 +378,15 @@ public:
   /// Whether this pointer is non-NULL.
   ///
   /// This operation does not require the AST node to be deserialized.
-  explicit operator bool() const { return Ptr != 0; }
+  explicit operator bool() const { return isOffset() || GetPtr() != nullptr; }
 
   /// Whether this pointer is non-NULL.
   ///
   /// This operation does not require the AST node to be deserialized.
-  bool isValid() const { return Ptr != 0; }
+  bool isValid() const { return isOffset() || GetPtr() != nullptr; }
 
   /// Whether this pointer is currently stored as an offset.
-  bool isOffset() const { return Ptr & 0x01; }
+  bool isOffset() const { return GetLSB() & 0x01; }
 
   /// Retrieve the pointer to the AST node that this lazy pointer points to.
   ///
@@ -375,9 +397,9 @@ public:
     if (isOffset()) {
       assert(Source &&
              "Cannot deserialize a lazy pointer without an AST source");
-      Ptr = reinterpret_cast<uint64_t>((Source->*Get)(OffsT(Ptr >> 1)));
+      SetPtr((Source->*Get)(OffsT(GetU64() >> 1)));
     }
-    return reinterpret_cast<T*>(Ptr);
+    return GetPtr();
   }
 
   /// Retrieve the address of the AST node pointer. Deserializes the pointee if
@@ -385,7 +407,7 @@ public:
   T **getAddressOfPointer(ExternalASTSource *Source) const {
     // Ensure the integer is in pointer form.
     (void)get(Source);
-    return reinterpret_cast<T**>(&Ptr);
+    return &GetPtr();
   }
 };
 

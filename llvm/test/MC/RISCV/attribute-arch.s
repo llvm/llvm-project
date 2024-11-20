@@ -321,11 +321,20 @@
 .attribute arch, "rv32i_sscsrind1p0"
 # CHECK: attribute      5, "rv32i2p1_sscsrind1p0"
 
+.attribute arch, "rv32i_smdbltrp1p0"
+# CHECK: attribute      5, "rv32i2p1_smdbltrp1p0"
+
+.attribute arch, "rv32i_ssdbltrp1p0"
+# CHECK: attribute      5, "rv32i2p1_ssdbltrp1p0"
+
 .attribute arch, "rv32i_smcdeleg1p0"
 # CHECK: attribute      5, "rv32i2p1_smcdeleg1p0"
 
 .attribute arch, "rv32i_smepmp1p0"
 # CHECK: attribute      5, "rv32i2p1_smepmp1p0"
+
+.attribute arch, "rv32i_smrnmi1p0"
+# CHECK: attribute      5, "rv32i2p1_smrnmi1p0"
 
 .attribute arch, "rv32i_ssccfg1p0"
 # CHECK: attribute      5, "rv32i2p1_ssccfg1p0"
@@ -372,6 +381,9 @@
 .attribute arch, "rv32i_svbare1p0"
 # CHECK: attribute      5, "rv32i2p1_svbare1p0"
 
+.attribute arch, "rv32i_svvptc1p0"
+# CHECK: attribute      5, "rv32i2p1_svvptc1p0"
+
 .attribute arch, "rv32i_zfbfmin1p0"
 # CHECK: .attribute     5, "rv32i2p1_f2p2_zicsr2p0_zfbfmin1p0"
 
@@ -382,7 +394,7 @@
 # CHECK: .attribute     5, "rv32i2p1_f2p2_zicsr2p0_zfbfmin1p0_zve32f1p0_zve32x1p0_zvfbfmin1p0_zvfbfwma1p0_zvl32b1p0"
 
 .attribute arch, "rv32ia_zacas1p0"
-# CHECK: attribute      5, "rv32i2p1_a2p1_zacas1p0"
+# CHECK: attribute      5, "rv32i2p1_a2p1_zaamo1p0_zacas1p0"
 
 .attribute arch, "rv32izalasr0p1"
 # CHECK: attribute      5, "rv32i2p1_zalasr0p1"

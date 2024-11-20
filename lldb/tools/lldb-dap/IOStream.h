@@ -9,8 +9,6 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_IOSTREAM_H
 #define LLDB_TOOLS_LLDB_DAP_IOSTREAM_H
 
-#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
-
 #if defined(_WIN32)
 // We need to #define NOMINMAX in order to skip `min()` and `max()` macro
 // definitions that conflict with other system headers.

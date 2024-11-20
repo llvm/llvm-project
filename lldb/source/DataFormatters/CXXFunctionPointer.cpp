@@ -8,11 +8,11 @@
 
 #include "lldb/DataFormatters/CXXFunctionPointer.h"
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
 
 #include <string>

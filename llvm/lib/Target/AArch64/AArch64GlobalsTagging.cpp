@@ -9,39 +9,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
-#include "llvm/BinaryFormat/ELF.h"
-#include "llvm/IR/Attributes.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
-#include <set>
 
 using namespace llvm;
 
 static const Align kTagGranuleSize = Align(16);
 
-static bool shouldTagGlobal(GlobalVariable &G) {
-  if (!G.isTagged())
-    return false;
-
-  assert(G.hasSanitizerMetadata() &&
-         "Missing sanitizer metadata, but symbol is apparently tagged.");
-  GlobalValue::SanitizerMetadata Meta = G.getSanitizerMetadata();
-
+static bool shouldTagGlobal(const GlobalVariable &G) {
   // For now, don't instrument constant data, as it'll be in .rodata anyway. It
   // may be worth instrumenting these in future to stop them from being used as
   // gadgets.
-  if (G.getName().starts_with("llvm.") || G.isThreadLocal() || G.isConstant()) {
-    Meta.Memtag = false;
-    G.setSanitizerMetadata(Meta);
+  if (G.getName().starts_with("llvm.") || G.isThreadLocal() || G.isConstant())
     return false;
-  }
 
   // Globals can be placed implicitly or explicitly in sections. There's two
   // different types of globals that meet this criteria that cause problems:
@@ -54,18 +40,15 @@ static bool shouldTagGlobal(GlobalVariable &G) {
   //     them causes SIGSEGV/MTE[AS]ERR).
   //  2. Global variables put into an explicit section, where the section's name
   //     is a valid C-style identifier. The linker emits a `__start_<name>` and
-  //     `__stop_<na,e>` symbol for the section, so that you can iterate over
+  //     `__stop_<name>` symbol for the section, so that you can iterate over
   //     globals within this section. Unfortunately, again, these globals would
   //     be tagged and so iteration causes SIGSEGV/MTE[AS]ERR.
   //
   // To mitigate both these cases, and because specifying a section is rare
   // outside of these two cases, disable MTE protection for globals in any
   // section.
-  if (G.hasSection()) {
-    Meta.Memtag = false;
-    G.setSanitizerMetadata(Meta);
+  if (G.hasSection())
     return false;
-  }
 
   return true;
 }
@@ -132,9 +115,6 @@ public:
   bool runOnModule(Module &M) override;
 
   StringRef getPassName() const override { return "AArch64 Globals Tagging"; }
-
-private:
-  std::set<GlobalVariable *> GlobalsToTag;
 };
 } // anonymous namespace
 
@@ -142,10 +122,19 @@ char AArch64GlobalsTagging::ID = 0;
 
 bool AArch64GlobalsTagging::runOnModule(Module &M) {
   // No mutating the globals in-place, or iterator invalidation occurs.
-  std::vector<GlobalVariable *> GlobalsToTag;
+  SmallVector<GlobalVariable *> GlobalsToTag;
   for (GlobalVariable &G : M.globals()) {
-    if (G.isDeclaration() || !shouldTagGlobal(G))
+    if (G.isDeclaration() || !G.isTagged())
       continue;
+
+    assert(G.hasSanitizerMetadata() &&
+           "Missing sanitizer metadata, but symbol is apparently tagged.");
+    if (!shouldTagGlobal(G)) {
+      GlobalValue::SanitizerMetadata Meta = G.getSanitizerMetadata();
+      Meta.Memtag = false;
+      G.setSanitizerMetadata(Meta);
+      assert(!G.isTagged());
+    }
     GlobalsToTag.push_back(&G);
   }
 

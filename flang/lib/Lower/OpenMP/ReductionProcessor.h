@@ -126,8 +126,7 @@ public:
       llvm::SmallVectorImpl<mlir::Value> &reductionVars,
       llvm::SmallVectorImpl<bool> &reduceVarByRef,
       llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
-      llvm::SmallVectorImpl<const semantics::Symbol *> *reductionSymbols =
-          nullptr);
+      llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols);
 };
 
 template <typename FloatOp, typename IntegerOp>

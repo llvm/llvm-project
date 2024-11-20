@@ -11,6 +11,7 @@ void main(unsigned GI : SV_GroupIndex) {
 // Even at -O0 the subscript operators get inlined. The -O0 IR is a bit messy
 // and confusing to follow so the match here is pretty weak.
 
-// CHECK: define internal void @"?main@@YAXI@Z"
-// CHECK-NOT: call
+// CHECK: define void @main()
+// Verify inlining leaves only calls to "llvm." intrinsics
+// CHECK-NOT:   call {{[^@]*}} @{{[^l][^l][^v][^m][^\.]}}
 // CHECK: ret void

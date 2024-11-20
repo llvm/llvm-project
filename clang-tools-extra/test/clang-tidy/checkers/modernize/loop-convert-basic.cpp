@@ -980,3 +980,30 @@ namespace PR78381 {
     }
   }
 }
+
+namespace GH109083 {
+void test() {
+  const int N = 6;
+  int Arr[N] = {1, 2, 3, 4, 5, 6};
+
+  for (int I = 0; I < N; ++I) {
+    auto V = [T = Arr[I]]() {};
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (int I : Arr)
+  // CHECK-FIXES-NEXT: auto V = [T = I]() {};
+  for (int I = 0; I < N; ++I) {
+    auto V = [T = 10 + Arr[I]]() {};
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (int I : Arr)
+  // CHECK-FIXES-NEXT: auto V = [T = 10 + I]() {};
+
+  for (int I = 0; I < N; ++I) {
+    auto V = [T = I]() {};
+  }
+  for (int I = 0; I < N; ++I) {
+    auto V = [T = I + 10]() {};
+  }
+}
+} // namespace GH109083

@@ -44,8 +44,7 @@ llvm.func @sectionsreduction_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attribute
   %2 = llvm.mlir.constant(1 : index) : i64
   omp.parallel {
     %3 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> : (i64) -> !llvm.ptr
-    omp.sections reduction(byref @add_reduction_byref_box_Uxf32 -> %3 : !llvm.ptr) {
-    ^bb0(%arg1: !llvm.ptr):
+    omp.sections reduction(byref @add_reduction_byref_box_Uxf32 %3 -> %arg1 : !llvm.ptr) {
       omp.section {
       ^bb0(%arg2: !llvm.ptr):
         llvm.br ^bb1(%0 : i64)

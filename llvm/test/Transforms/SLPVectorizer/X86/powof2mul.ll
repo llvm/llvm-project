@@ -9,7 +9,7 @@ define void @powof2mul_uniform(ptr noalias nocapture %a, ptr noalias nocapture r
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B:%.*]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[C:%.*]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i32> [[TMP4]], <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i32> [[TMP4]], splat (i32 2)
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -52,7 +52,7 @@ define void @negpowof2mul_uniform(ptr noalias nocapture %a, ptr noalias nocaptur
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B:%.*]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[C:%.*]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i32> [[TMP4]], <i32 -2, i32 -2, i32 -2, i32 -2>
+; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i32> [[TMP4]], splat (i32 -2)
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -182,20 +182,20 @@ define void @PR51436(ptr nocapture %a) {
 ; SSE-NEXT:    [[GEP4:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 4
 ; SSE-NEXT:    [[GEP6:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 6
 ; SSE-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[A]], align 8
-; SSE-NEXT:    [[TMP2:%.*]] = mul <2 x i64> [[TMP1]], <i64 -17592186044416, i64 -17592186044416>
-; SSE-NEXT:    [[TMP3:%.*]] = add <2 x i64> [[TMP2]], <i64 -17592186044416, i64 -17592186044416>
+; SSE-NEXT:    [[TMP2:%.*]] = mul <2 x i64> [[TMP1]], splat (i64 -17592186044416)
+; SSE-NEXT:    [[TMP3:%.*]] = add <2 x i64> [[TMP2]], splat (i64 -17592186044416)
 ; SSE-NEXT:    store <2 x i64> [[TMP3]], ptr [[A]], align 8
 ; SSE-NEXT:    [[TMP6:%.*]] = load <2 x i64>, ptr [[GEP2]], align 8
-; SSE-NEXT:    [[TMP7:%.*]] = mul <2 x i64> [[TMP6]], <i64 -17592186044416, i64 -17592186044416>
-; SSE-NEXT:    [[TMP8:%.*]] = add <2 x i64> [[TMP7]], <i64 -17592186044416, i64 -17592186044416>
+; SSE-NEXT:    [[TMP4:%.*]] = mul <2 x i64> [[TMP6]], splat (i64 -17592186044416)
+; SSE-NEXT:    [[TMP8:%.*]] = add <2 x i64> [[TMP4]], splat (i64 -17592186044416)
 ; SSE-NEXT:    store <2 x i64> [[TMP8]], ptr [[GEP2]], align 8
 ; SSE-NEXT:    [[TMP11:%.*]] = load <2 x i64>, ptr [[GEP4]], align 8
-; SSE-NEXT:    [[TMP12:%.*]] = mul <2 x i64> [[TMP11]], <i64 -17592186044416, i64 -17592186044416>
-; SSE-NEXT:    [[TMP13:%.*]] = add <2 x i64> [[TMP12]], <i64 -17592186044416, i64 -17592186044416>
+; SSE-NEXT:    [[TMP7:%.*]] = mul <2 x i64> [[TMP11]], splat (i64 -17592186044416)
+; SSE-NEXT:    [[TMP13:%.*]] = add <2 x i64> [[TMP7]], splat (i64 -17592186044416)
 ; SSE-NEXT:    store <2 x i64> [[TMP13]], ptr [[GEP4]], align 8
 ; SSE-NEXT:    [[TMP16:%.*]] = load <2 x i64>, ptr [[GEP6]], align 8
-; SSE-NEXT:    [[TMP17:%.*]] = mul <2 x i64> [[TMP16]], <i64 -17592186044416, i64 -17592186044416>
-; SSE-NEXT:    [[TMP18:%.*]] = add <2 x i64> [[TMP17]], <i64 -17592186044416, i64 -17592186044416>
+; SSE-NEXT:    [[TMP10:%.*]] = mul <2 x i64> [[TMP16]], splat (i64 -17592186044416)
+; SSE-NEXT:    [[TMP18:%.*]] = add <2 x i64> [[TMP10]], splat (i64 -17592186044416)
 ; SSE-NEXT:    store <2 x i64> [[TMP18]], ptr [[GEP6]], align 8
 ; SSE-NEXT:    ret void
 ;
@@ -203,12 +203,12 @@ define void @PR51436(ptr nocapture %a) {
 ; AVX-NEXT:  entry:
 ; AVX-NEXT:    [[GEP4:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 4
 ; AVX-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[A]], align 8
-; AVX-NEXT:    [[TMP2:%.*]] = mul <4 x i64> [[TMP1]], <i64 -17592186044416, i64 -17592186044416, i64 -17592186044416, i64 -17592186044416>
-; AVX-NEXT:    [[TMP3:%.*]] = add <4 x i64> [[TMP2]], <i64 -17592186044416, i64 -17592186044416, i64 -17592186044416, i64 -17592186044416>
+; AVX-NEXT:    [[TMP2:%.*]] = mul <4 x i64> [[TMP1]], splat (i64 -17592186044416)
+; AVX-NEXT:    [[TMP3:%.*]] = add <4 x i64> [[TMP2]], splat (i64 -17592186044416)
 ; AVX-NEXT:    store <4 x i64> [[TMP3]], ptr [[A]], align 8
 ; AVX-NEXT:    [[TMP6:%.*]] = load <4 x i64>, ptr [[GEP4]], align 8
-; AVX-NEXT:    [[TMP7:%.*]] = mul <4 x i64> [[TMP6]], <i64 -17592186044416, i64 -17592186044416, i64 -17592186044416, i64 -17592186044416>
-; AVX-NEXT:    [[TMP8:%.*]] = add <4 x i64> [[TMP7]], <i64 -17592186044416, i64 -17592186044416, i64 -17592186044416, i64 -17592186044416>
+; AVX-NEXT:    [[TMP4:%.*]] = mul <4 x i64> [[TMP6]], splat (i64 -17592186044416)
+; AVX-NEXT:    [[TMP8:%.*]] = add <4 x i64> [[TMP4]], splat (i64 -17592186044416)
 ; AVX-NEXT:    store <4 x i64> [[TMP8]], ptr [[GEP4]], align 8
 ; AVX-NEXT:    ret void
 ;

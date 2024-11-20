@@ -19,7 +19,6 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVSymbol.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVType.h"
-#include "llvm/Object/Error.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -304,12 +303,12 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
     CurrentElement->setBitSize(*FormValue.getAsUnsignedConstant());
     break;
   case dwarf::DW_AT_call_file:
-    CurrentElement->setCallFilenameIndex(GetAsUnsignedConstant());
+    CurrentElement->setCallFilenameIndex(IncrementFileIndex
+                                             ? GetAsUnsignedConstant() + 1
+                                             : GetAsUnsignedConstant());
     break;
   case dwarf::DW_AT_call_line:
-    CurrentElement->setCallLineNumber(IncrementFileIndex
-                                          ? GetAsUnsignedConstant() + 1
-                                          : GetAsUnsignedConstant());
+    CurrentElement->setCallLineNumber(GetAsUnsignedConstant());
     break;
   case dwarf::DW_AT_comp_dir:
     CompileUnit->setCompilationDirectory(dwarf::toStringRef(FormValue));
@@ -789,7 +788,7 @@ std::string LVDWARFReader::getRegisterName(LVSmall Opcode,
   auto GetRegName = [&MCRegInfo](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
     if (!MCRegInfo)
       return {};
-    if (std::optional<unsigned> LLVMRegNum =
+    if (std::optional<MCRegister> LLVMRegNum =
             MCRegInfo->getLLVMRegNum(DwarfRegNum, IsEH))
       if (const char *RegName = MCRegInfo->getName(*LLVMRegNum))
         return StringRef(RegName);
@@ -1139,9 +1138,8 @@ void LVDWARFReader::updateReference(dwarf::Attribute Attr,
 // Get an element given the DIE offset.
 LVElement *LVDWARFReader::getElementForOffset(LVOffset Offset,
                                               LVElement *Element, bool IsType) {
-  auto Iter = ElementTable.try_emplace(Offset).first;
   // Update the element and all the references pointing to this element.
-  LVElementEntry &Entry = Iter->second;
+  LVElementEntry &Entry = ElementTable[Offset];
   if (!Entry.Element) {
     if (IsType)
       Entry.Types.insert(Element);

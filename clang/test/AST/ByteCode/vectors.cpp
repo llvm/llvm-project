@@ -101,3 +101,45 @@ namespace bigint {
   static_assert(A[3] == -1, "");
 }
 #endif
+
+using VI __attribute__((ext_vector_type(4))) = int;
+
+constexpr int a1() {
+    VI a = {0, 0, 0, 0};
+    VI b = {1,1,1,1};
+
+    VI C = (a += b);
+
+    return 0;
+}
+
+static_assert(a1() == 0);
+
+constexpr int a2() {
+    VI a = {0, 0, 0, 0};
+    VI b = {1,1,1,1};
+
+    VI C = (a + b);
+
+    return 0;
+}
+
+static_assert(a2() == 0);
+
+namespace {
+  /// convertvector expr with a per-element floating-point cast
+
+  typedef float __m128 __attribute__((__vector_size__(16), __aligned__(16)));
+  typedef double __m128d __attribute__((__vector_size__(16), __aligned__(16)));
+  typedef float __v4sf __attribute__((__vector_size__(16)));
+  typedef double __v2df __attribute__((__vector_size__(16)));
+
+  static inline constexpr __m128d
+  _mm_cvtps_pd(__m128 __a) {
+    return __builtin_convertvector(__builtin_shufflevector(__a, __a, 0, 1), __v2df);
+  }
+
+  constexpr __m128 kf1 {-1.0f,+2.0f,-3.0f,+4.0f};
+  constexpr __m128d v_mm_cvtps_pd = _mm_cvtps_pd(kf1);
+  static_assert(v_mm_cvtps_pd[0] == -1.0 && v_mm_cvtps_pd[1] == +2.0);
+}

@@ -43,7 +43,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
-#include <iterator>
 #include <map>
 #include <utility>
 

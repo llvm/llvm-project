@@ -24,7 +24,7 @@ class Pass;
 /// Note: The ROCDL target does not support the LLVM bfloat type at this time
 /// and so this function will add conversions to change all `bfloat` uses
 /// to `i16`.
-void populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
+void populateAMDGPUToROCDLConversionPatterns(const LLVMTypeConverter &converter,
                                              RewritePatternSet &patterns,
                                              amdgpu::Chipset chipset);
 
