@@ -475,7 +475,6 @@ private:
 
   /// Get the number of symbols from the DT_GNU_HASH dynamic entry.
   std::optional<uint32_t> GetNumSymbolsFromDynamicGnuHash();
-
 };
 
 #endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_ELF_OBJECTFILEELF_H

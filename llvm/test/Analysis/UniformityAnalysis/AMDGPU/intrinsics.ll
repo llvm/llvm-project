@@ -523,7 +523,6 @@ define amdgpu_kernel void @v_permlane32_swap(ptr addrspace(1) %out, i32 %src0, i
 }
 
 
-
 declare i32 @llvm.amdgcn.ds.swizzle(i32, i32) #1
 declare i32 @llvm.amdgcn.permlane16.i32(i32, i32, i32, i32, i1, i1) #1
 declare i32 @llvm.amdgcn.permlanex16.i32(i32, i32, i32, i32, i1, i1) #1
