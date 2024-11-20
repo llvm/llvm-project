@@ -461,7 +461,7 @@ static void combineRelocHashes(unsigned cnt, InputSection *isec,
 
 static void print(Ctx &ctx, const Twine &s) {
   if (ctx.arg.printIcfSections)
-    message(s);
+    Msg(ctx) << s;
 }
 
 // The main function of ICF.

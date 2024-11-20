@@ -154,9 +154,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(0, sXLen, sXLen);
 
   getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
+      .legalFor({{sXLen, s16}})
+      .legalFor(ST.is64Bit(), {{s64, s32}})
       .legalIf(all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
                    typeIsLegalIntOrFPVec(1, IntOrFPVecTys, ST)))
-      .legalFor(ST.is64Bit(), {{sXLen, s32}})
       .customIf(typeIsLegalBoolVec(1, BoolVecTys, ST))
       .maxScalar(0, sXLen);
 
@@ -234,8 +235,18 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(0, sXLen, sXLen);
 
   // TODO: transform illegal vector types into legal vector type
+  getActionDefinitionsBuilder(G_FREEZE)
+      .legalFor({s16, s32, p0})
+      .legalFor(ST.is64Bit(), {s64})
+      .legalIf(typeIsLegalBoolVec(0, BoolVecTys, ST))
+      .legalIf(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST))
+      .widenScalarToNextPow2(0)
+      .clampScalar(0, s16, sXLen);
+
+  // TODO: transform illegal vector types into legal vector type
+  // TODO: Merge with G_FREEZE?
   getActionDefinitionsBuilder(
-      {G_IMPLICIT_DEF, G_CONSTANT_FOLD_BARRIER, G_FREEZE})
+      {G_IMPLICIT_DEF, G_CONSTANT_FOLD_BARRIER})
       .legalFor({s32, sXLen, p0})
       .legalIf(typeIsLegalBoolVec(0, BoolVecTys, ST))
       .legalIf(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST))
@@ -271,12 +282,16 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   };
 
   LoadActions.legalForTypesWithMemDesc(
-      {{s32, p0, s8, getScalarMemAlign(8)},
+      {{s16, p0, s8, getScalarMemAlign(8)},
+       {s32, p0, s8, getScalarMemAlign(8)},
+       {s16, p0, s16, getScalarMemAlign(16)},
        {s32, p0, s16, getScalarMemAlign(16)},
        {s32, p0, s32, getScalarMemAlign(32)},
        {p0, p0, sXLen, getScalarMemAlign(XLen)}});
   StoreActions.legalForTypesWithMemDesc(
-      {{s32, p0, s8, getScalarMemAlign(8)},
+      {{s16, p0, s8, getScalarMemAlign(8)},
+       {s32, p0, s8, getScalarMemAlign(8)},
+       {s16, p0, s16, getScalarMemAlign(16)},
        {s32, p0, s16, getScalarMemAlign(16)},
        {s32, p0, s32, getScalarMemAlign(32)},
        {p0, p0, sXLen, getScalarMemAlign(XLen)}});
@@ -370,10 +385,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   LoadActions.widenScalarToNextPow2(0, /* MinSize = */ 8)
       .lowerIfMemSizeNotByteSizePow2()
-      .clampScalar(0, s32, sXLen)
+      .clampScalar(0, s16, sXLen)
       .lower();
   StoreActions
-      .clampScalar(0, s32, sXLen)
+      .clampScalar(0, s16, sXLen)
       .lowerIfMemSizeNotByteSizePow2()
       .lower();
 

@@ -46,11 +46,7 @@ std::string elf::toStr(Ctx &ctx, RelType type) {
 }
 
 const ELFSyncStream &elf::operator<<(const ELFSyncStream &s, RelType type) {
-  StringRef buf = getELFRelocationTypeName(s.ctx.arg.emachine, type);
-  if (buf == "Unknown")
-    s << "Unknown (" << type << ')';
-  else
-    s << buf;
+  s << toStr(s.ctx, type);
   return s;
 }
 
@@ -122,8 +118,7 @@ ErrorPlace elf::getErrorPlace(Ctx &ctx, const uint8_t *loc) {
 TargetInfo::~TargetInfo() {}
 
 int64_t TargetInfo::getImplicitAddend(const uint8_t *buf, RelType type) const {
-  internalLinkerError(getErrorLoc(ctx, buf),
-                      "cannot read addend for relocation " + toStr(ctx, type));
+  InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
   return 0;
 }
 

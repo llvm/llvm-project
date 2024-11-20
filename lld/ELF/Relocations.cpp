@@ -100,44 +100,41 @@ static std::string getLocation(Ctx &ctx, InputSectionBase &s, const Symbol &sym,
 void elf::reportRangeError(Ctx &ctx, uint8_t *loc, const Relocation &rel,
                            const Twine &v, int64_t min, uint64_t max) {
   ErrorPlace errPlace = getErrorPlace(ctx, loc);
-  std::string hint;
+  auto diag = Err(ctx);
+  diag << errPlace.loc << "relocation " << rel.type
+       << " out of range: " << v.str() << " is not in [" << min << ", " << max
+       << ']';
+
   if (rel.sym) {
     if (!rel.sym->isSection())
-      hint = "; references '" + toStr(ctx, *rel.sym) + '\'';
+      diag << "; references '" << rel.sym << '\'';
     else if (auto *d = dyn_cast<Defined>(rel.sym))
-      hint = ("; references section '" + d->section->name + "'").str();
+      diag << "; references section '" << d->section->name << "'";
 
     if (ctx.arg.emachine == EM_X86_64 && rel.type == R_X86_64_PC32 &&
         rel.sym->getOutputSection() &&
         (rel.sym->getOutputSection()->flags & SHF_X86_64_LARGE)) {
-      hint += "; R_X86_64_PC32 should not reference a section marked "
+      diag << "; R_X86_64_PC32 should not reference a section marked "
               "SHF_X86_64_LARGE";
     }
   }
   if (!errPlace.srcLoc.empty())
-    hint += "\n>>> referenced by " + errPlace.srcLoc;
+    diag << "\n>>> referenced by " << errPlace.srcLoc;
   if (rel.sym && !rel.sym->isSection())
-    hint += getDefinedLocation(ctx, *rel.sym);
+    diag << getDefinedLocation(ctx, *rel.sym);
 
   if (errPlace.isec && errPlace.isec->name.starts_with(".debug"))
-    hint += "; consider recompiling with -fdebug-types-section to reduce size "
+    diag << "; consider recompiling with -fdebug-types-section to reduce size "
             "of debug sections";
-
-  Err(ctx) << errPlace.loc << "relocation " << rel.type
-           << " out of range: " << v.str() << " is not in [" << Twine(min).str()
-           << ", " << Twine(max).str() << "]" << hint;
 }
 
 void elf::reportRangeError(Ctx &ctx, uint8_t *loc, int64_t v, int n,
                            const Symbol &sym, const Twine &msg) {
-  ErrorPlace errPlace = getErrorPlace(ctx, loc);
-  std::string hint;
+  auto diag = Err(ctx);
+  diag << getErrorPlace(ctx, loc).loc << msg << " is out of range: " << v
+       << " is not in [" << llvm::minIntN(n) << ", " << llvm::maxIntN(n) << "]";
   if (!sym.getName().empty())
-    hint = "; references '" + toStr(ctx, sym) + '\'' +
-           getDefinedLocation(ctx, sym);
-  Err(ctx) << errPlace.loc << msg << " is out of range: " << Twine(v)
-           << " is not in [" << Twine(llvm::minIntN(n)) << ", "
-           << Twine(llvm::maxIntN(n)) << "]" << hint;
+    diag << "; references '" << &sym << '\'' << getDefinedLocation(ctx, sym);
 }
 
 // Build a bitmask with one bit set for each 64 subset of RelExpr.
@@ -505,7 +502,7 @@ int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
     return 0;
 
   RelType type = rel.getType(ctx.arg.isMips64EL);
-  uint32_t pairTy = getMipsPairType(type, isLocal);
+  RelType pairTy = getMipsPairType(type, isLocal);
   if (pairTy == R_MIPS_NONE)
     return 0;
 
@@ -561,24 +558,6 @@ static std::string maybeReportDiscarded(Ctx &ctx, Undefined &sym) {
     }
   }
   return msg;
-}
-
-namespace {
-// Undefined diagnostics are collected in a vector and emitted once all of
-// them are known, so that some postprocessing on the list of undefined symbols
-// can happen before lld emits diagnostics.
-struct UndefinedDiag {
-  Undefined *sym;
-  struct Loc {
-    InputSectionBase *sec;
-    uint64_t offset;
-  };
-  std::vector<Loc> locs;
-  bool isWarning;
-};
-
-std::vector<UndefinedDiag> undefs;
-std::mutex relocMutex;
 }
 
 // Check whether the definition name def is a mangled function name that matches
@@ -798,14 +777,14 @@ static void reportUndefinedSymbol(Ctx &ctx, const UndefinedDiag &undef,
   if (undef.isWarning)
     Warn(ctx) << msg;
   else
-    error(msg, ErrorTag::SymbolNotFound, {sym.getName()});
+    ctx.e.error(msg, ErrorTag::SymbolNotFound, {sym.getName()});
 }
 
 void elf::reportUndefinedSymbols(Ctx &ctx) {
   // Find the first "undefined symbol" diagnostic for each diagnostic, and
   // collect all "referenced from" lines at the first diagnostic.
   DenseMap<Symbol *, UndefinedDiag *> firstRef;
-  for (UndefinedDiag &undef : undefs) {
+  for (UndefinedDiag &undef : ctx.undefErrs) {
     assert(undef.locs.size() == 1);
     if (UndefinedDiag *canon = firstRef.lookup(undef.sym)) {
       canon->locs.push_back(undef.locs[0]);
@@ -815,21 +794,20 @@ void elf::reportUndefinedSymbols(Ctx &ctx) {
   }
 
   // Enable spell corrector for the first 2 diagnostics.
-  for (const auto &[i, undef] : llvm::enumerate(undefs))
+  for (auto [i, undef] : llvm::enumerate(ctx.undefErrs))
     if (!undef.locs.empty())
       reportUndefinedSymbol(ctx, undef, i < 2);
-  undefs.clear();
 }
 
 // Report an undefined symbol if necessary.
 // Returns true if the undefined symbol will produce an error message.
 static bool maybeReportUndefined(Ctx &ctx, Undefined &sym,
                                  InputSectionBase &sec, uint64_t offset) {
-  std::lock_guard<std::mutex> lock(relocMutex);
+  std::lock_guard<std::mutex> lock(ctx.relocMutex);
   // If versioned, issue an error (even if the symbol is weak) because we don't
   // know the defining filename which is required to construct a Verneed entry.
   if (sym.hasVersionSuffix) {
-    undefs.push_back({&sym, {{&sec, offset}}, false});
+    ctx.undefErrs.push_back({&sym, {{&sec, offset}}, false});
     return true;
   }
   if (sym.isWeak())
@@ -854,7 +832,7 @@ static bool maybeReportUndefined(Ctx &ctx, Undefined &sym,
   bool isWarning =
       (ctx.arg.unresolvedSymbols == UnresolvedPolicy::Warn && canBeExternal) ||
       ctx.arg.noinhibitExec;
-  undefs.push_back({&sym, {{&sec, offset}}, isWarning});
+  ctx.undefErrs.push_back({&sym, {{&sec, offset}}, isWarning});
   return !isWarning;
 }
 
@@ -865,7 +843,7 @@ static bool maybeReportUndefined(Ctx &ctx, Undefined &sym,
 // theirs types into the single bit-set.
 template <class RelTy>
 RelType RelocationScanner::getMipsN32RelType(RelTy *&rel) const {
-  RelType type = 0;
+  uint32_t type = 0;
   uint64_t offset = rel->r_offset;
 
   int n = 0;
@@ -881,7 +859,7 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
   Partition &part = isec.getPartition(ctx);
 
   if (sym.isTagged()) {
-    std::lock_guard<std::mutex> lock(relocMutex);
+    std::lock_guard<std::mutex> lock(ctx.relocMutex);
     part.relaDyn->addRelativeReloc(ctx.target->relativeRel, isec, offsetInSec,
                                    sym, addend, type, expr);
     // With MTE globals, we always want to derive the address tag by `ldg`-ing
@@ -1092,7 +1070,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   // We were asked not to generate PLT entries for ifuncs. Instead, pass the
   // direct relocation on through.
   if (LLVM_UNLIKELY(isIfunc) && ctx.arg.zIfuncNoplt) {
-    std::lock_guard<std::mutex> lock(relocMutex);
+    std::lock_guard<std::mutex> lock(ctx.relocMutex);
     sym.exportDynamic = true;
     ctx.mainPart->relaDyn->addSymbolReloc(type, *sec, offset, sym, addend,
                                           type);
@@ -1159,7 +1137,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
     if (rel != 0) {
       if (ctx.arg.emachine == EM_MIPS && rel == ctx.target->symbolicRel)
         rel = ctx.target->relativeRel;
-      std::lock_guard<std::mutex> lock(relocMutex);
+      std::lock_guard<std::mutex> lock(ctx.relocMutex);
       Partition &part = sec->getPartition(ctx);
       if (ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64) {
         // For a preemptible symbol, we can't use a relative relocation. For an
@@ -1929,6 +1907,10 @@ static void forEachInputSectionDescription(
   }
 }
 
+ThunkCreator::ThunkCreator(Ctx &ctx) : ctx(ctx) {}
+
+ThunkCreator::~ThunkCreator() {}
+
 // Thunk Implementation
 //
 // Thunks (sometimes called stubs, veneers or branch islands) are small pieces
@@ -2234,7 +2216,7 @@ static bool isThunkSectionCompatible(InputSection *source,
 
 std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
                                                 Relocation &rel, uint64_t src) {
-  std::vector<Thunk *> *thunkVec = nullptr;
+  SmallVector<std::unique_ptr<Thunk>, 0> *thunkVec = nullptr;
   // Arm and Thumb have a PC Bias of 8 and 4 respectively, this is cancelled
   // out in the relocation addend. We compensate for the PC bias so that
   // an Arm and Thumb relocation to the same destination get the same keyAddend,
@@ -2255,17 +2237,16 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
     thunkVec = &thunkedSymbols[{rel.sym, keyAddend}];
 
   // Check existing Thunks for Sym to see if they can be reused
-  for (Thunk *t : *thunkVec)
+  for (auto &t : *thunkVec)
     if (isThunkSectionCompatible(isec, t->getThunkTargetSym()->section) &&
         t->isCompatibleWith(*isec, rel) &&
         ctx.target->inBranchRange(rel.type, src,
                                   t->getThunkTargetSym()->getVA(ctx, -pcBias)))
-      return std::make_pair(t, false);
+      return std::make_pair(t.get(), false);
 
   // No existing compatible Thunk in range, create a new one
-  Thunk *t = addThunk(ctx, *isec, rel);
-  thunkVec->push_back(t);
-  return std::make_pair(t, true);
+  thunkVec->push_back(addThunk(ctx, *isec, rel));
+  return std::make_pair(thunkVec->back().get(), true);
 }
 
 std::pair<Thunk *, bool> ThunkCreator::getSyntheticLandingPad(Defined &d,
@@ -2274,7 +2255,7 @@ std::pair<Thunk *, bool> ThunkCreator::getSyntheticLandingPad(Defined &d,
       {{d.section, d.value}, a}, nullptr);
   if (isNew)
     it->second = addLandingPadThunk(ctx, d, a);
-  return {it->second, isNew};
+  return {it->second.get(), isNew};
 }
 
 // Return true if the relocation target is an in range Thunk.

@@ -628,6 +628,12 @@ struct CUFDataTransferOpConversion
 
       mlir::Value dst = getDeviceAddress(rewriter, op.getDstMutable(), symtab);
       mlir::Value src = getDeviceAddress(rewriter, op.getSrcMutable(), symtab);
+      // Materialize the src if constant.
+      if (matchPattern(src.getDefiningOp(), mlir::m_Constant())) {
+        mlir::Value temp = builder.createTemporary(loc, srcTy);
+        builder.create<fir::StoreOp>(loc, src, temp);
+        src = temp;
+      }
       llvm::SmallVector<mlir::Value> args{
           fir::runtime::createArguments(builder, loc, fTy, dst, src, bytes,
                                         modeValue, sourceFile, sourceLine)};
@@ -654,7 +660,7 @@ struct CUFDataTransferOpConversion
               loc, builder);
       }
       auto materializeBoxIfNeeded = [&](mlir::Value val) -> mlir::Value {
-        if (mlir::isa<fir::EmboxOp>(val.getDefiningOp())) {
+        if (mlir::isa<fir::EmboxOp, fir::ReboxOp>(val.getDefiningOp())) {
           // Materialize the box to memory to be able to call the runtime.
           mlir::Value box = builder.createTemporary(loc, val.getType());
           builder.create<fir::StoreOp>(loc, val, box);
