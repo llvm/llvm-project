@@ -2095,7 +2095,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   if (ctx.arg.emachine == EM_ARM && !ctx.arg.isLE && ctx.arg.armBe8) {
     addArmInputSectionMappingSymbols(ctx);
-    sortArmMappingSymbols();
+    sortArmMappingSymbols(ctx);
   }
 }
 
