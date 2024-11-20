@@ -1611,19 +1611,26 @@ is not specified.
 def ExplicitInitDocs : Documentation {
   let Category = DocCatField;
   let Content = [{
-The ``clang::requires_explicit_initialization`` attribute indicates that the
-field of an aggregate must be initialized explicitly by users when the class
-is constructed. Its usage is invalid on non-aggregates.
+The ``clang::requires_explicit_initialization`` attribute indicates that a
+field of an aggregate must be initialized explicitly by the user when an object
+of the aggregate type is constructed. The attribute supports both C and C++,
+but its usage is invalid on non-aggregates.
 
 Note that this attribute is *not* a memory safety feature, and is *not* intended
 to guard against use of uninitialized memory.
 
-Rather, it is intended for use in "parameter-objects", used to simulate the
-passing of named parameters.
+Rather, it is intended for use in "parameter-objects", used to simulate,
+for example, the passing of named parameters.
 The attribute generates a warning when explicit initializers for such
-"named parameters" are not provided:
+variables are not provided (this occurs regardless of whether any in-class field
+initializers exist):
 
 .. code-block:: c++
+
+  struct Buffer {
+    void *address [[clang::requires_explicit_initialization]];
+    size_t length [[clang::requires_explicit_initialization]] = 0;
+  };
 
   struct ArrayIOParams {
     size_t count [[clang::requires_explicit_initialization]];
@@ -1631,11 +1638,15 @@ The attribute generates a warning when explicit initializers for such
     int flags = 0;
   };
 
-  size_t ReadArray(FILE *file, void *buffer, ArrayIOParams params);
+  size_t ReadArray(FILE *file, struct Buffer buffer,
+                   struct ArrayIOParams params);
 
   int main() {
     unsigned int buf[512];
-    ReadArray(stdin, buf, {
+    ReadArray(stdin, {
+      buf
+      // warning: field 'length' is not explicitly initialized
+    }, {
       .count = sizeof(buf) / sizeof(*buf),
       // warning: field 'element_size' is not explicitly initialized
     });
