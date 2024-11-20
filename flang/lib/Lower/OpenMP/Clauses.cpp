@@ -10,6 +10,7 @@
 
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/expression.h"
+#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/symbol.h"
@@ -988,6 +989,10 @@ Map make(const parser::OmpClause::Map &inp,
       std::get<std::optional<std::list<parser::OmpIteratorModifier>>>(inp.v.t);
   auto &t2 = std::get<std::optional<std::list<wrapped::Type>>>(inp.v.t);
   auto &t3 = std::get<parser::OmpObjectList>(inp.v.t);
+  auto &t4 = std::get<parser::OmpMapperIdentifier>(inp.v.t);
+
+  if (t4.v)
+    TODO_NOLOC("OmpMapClause(MAPPER(...)): user defined mapper not supported");
 
   // These should have been diagnosed already.
   assert((!t1 || t1->size() == 1) && "Only one iterator modifier is allowed");
