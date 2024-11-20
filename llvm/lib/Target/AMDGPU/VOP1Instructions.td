@@ -761,6 +761,9 @@ let SubtargetPredicate = isGFX11Plus in {
   defm V_CVT_U32_U16    : VOP1Inst_t16<"v_cvt_u32_u16", VOP_I32_I16>;
 } // End SubtargetPredicate = isGFX11Plus
 
+let SubtargetPredicate = HasPrngInst in
+defm V_PRNG_B32 : VOP1Inst <"v_prng_b32", VOP_I32_I32, int_amdgcn_prng_b32>;
+
 foreach vt = Reg32Types.types in {
   def : GCNPat<(int_amdgcn_permlane64 (vt VRegSrc_32:$src0)),
         (vt (V_PERMLANE64_B32 (vt VRegSrc_32:$src0)))
@@ -1515,6 +1518,8 @@ defm V_CVT_F32_FP8       : VOP1_Real_NoDstSel_SDWA_gfx9<0x54>;
 defm V_CVT_F32_BF8       : VOP1_Real_NoDstSel_SDWA_gfx9<0x55>;
 defm V_CVT_PK_F32_FP8    : VOP1_Real_NoDstSel_SDWA_gfx9<0x56>;
 defm V_CVT_PK_F32_BF8    : VOP1_Real_NoDstSel_SDWA_gfx9<0x57>;
+
+defm V_PRNG_B32            : VOP1_Real_gfx9 <0x58>;
 
 class MovDPP8Pattern<Predicate Pred, Instruction Inst, ValueType vt> : GCNPat <
   (vt (int_amdgcn_mov_dpp8 vt:$src, timm:$dpp8)),
