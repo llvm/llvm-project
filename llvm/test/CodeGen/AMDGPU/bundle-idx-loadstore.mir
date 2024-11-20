@@ -15,17 +15,17 @@ body:             |
   bb.0:
     ; GCN-LABEL: name: same-bb-load-trivial
     ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
-    ; GCN-NEXT: BUNDLE implicit-def %1, implicit-def %2, implicit [[S_LSHL_B32_]], implicit $exec {
-    ; GCN-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, internal [[V_LOAD_IDX]], implicit $exec
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srca, implicit-def %2, implicit [[S_LSHL_B32_]], implicit $exec {
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, internal $stg_srca, implicit $exec
     ; GCN-NEXT: }
     ;
     ; ALLOC-LABEL: name: same-bb-load-trivial
     ; ALLOC: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
-    ; ALLOC-NEXT: BUNDLE implicit-def %1, implicit-def %2, implicit $idx1, implicit $exec {
-    ; ALLOC-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx1, 0, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, internal [[V_LOAD_IDX]], implicit $exec
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srca, implicit-def %2, implicit $idx1, implicit $exec {
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX $idx1, 0, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, internal $stg_srca, implicit $exec
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: same-bb-load-trivial
@@ -37,7 +37,7 @@ body:             |
     ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 2, implicit-def dead $scc
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 4
-    ; LOWERED-NEXT: renamable $vgpr1 = V_MAX_U32_e64 12345, undef $vgpr0, implicit $exec
+    ; LOWERED-NEXT: renamable $vgpr0 = V_MAX_U32_e64 12345, undef $vgpr0, implicit $exec
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:vgpr_32 = V_LOAD_IDX %0, 0, implicit $exec :: (load (s32), addrspace 10)
     %2:vgpr_32 = V_MAX_U32_e64 12345, %1, implicit $exec
@@ -56,17 +56,17 @@ body:             |
     ; GCN-LABEL: name: same-bb-store-trivial
     ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[S_LSHL_B32_]]
-    ; GCN-NEXT: BUNDLE implicit-def %2, implicit [[COPY]], implicit $exec, implicit [[S_LSHL_B32_]] {
-    ; GCN-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, [[COPY]], implicit $exec
-    ; GCN-NEXT:   V_STORE_IDX internal [[V_MAX_U32_e64_]], [[S_LSHL_B32_]], 0, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[COPY]], implicit $exec, implicit [[S_LSHL_B32_]] {
+    ; GCN-NEXT:   $stg_dsta = V_MAX_U32_e64 12345, [[COPY]], implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHL_B32_]], 0, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
     ;
     ; ALLOC-LABEL: name: same-bb-store-trivial
     ; ALLOC: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
-    ; ALLOC-NEXT: BUNDLE implicit-def %2, implicit $idx1, implicit $exec, implicit [[S_LSHL_B32_]] {
-    ; ALLOC-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, [[S_LSHL_B32_]], implicit $exec
-    ; ALLOC-NEXT:   V_STORE_IDX internal [[V_MAX_U32_e64_]], $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_dsta, implicit $idx1, implicit $exec, implicit [[S_LSHL_B32_]] {
+    ; ALLOC-NEXT:   $stg_dsta = V_MAX_U32_e64 12345, [[S_LSHL_B32_]], implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: same-bb-store-trivial
@@ -78,7 +78,7 @@ body:             |
     ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 2, implicit-def dead $scc
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 renamable $sgpr0
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 64
-    ; LOWERED-NEXT: undef renamable $vgpr0 = V_MAX_U32_e64 12345, killed $sgpr0, implicit $exec
+    ; LOWERED-NEXT: undef $vgpr0 = V_MAX_U32_e64 12345, killed $sgpr0, implicit $exec
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:vgpr_32 = COPY %0:sreg_32_xexec_hi
     %2:vgpr_32 = V_MAX_U32_e64 12345, %1, implicit $exec
@@ -100,18 +100,18 @@ body:             |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[S_LSHL_B32_]]
     ; GCN-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[S_LSHL_B32_]], 429496640, implicit-def dead $scc
     ; GCN-NEXT: [[S_ADD_I32_1:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[S_LSHL_B32_]], 5, implicit-def dead $scc
-    ; GCN-NEXT: BUNDLE implicit-def %2, implicit [[COPY]], implicit $exec, implicit [[S_ADD_I32_]] {
-    ; GCN-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, [[COPY]], implicit $exec
-    ; GCN-NEXT:   V_STORE_IDX internal [[V_MAX_U32_e64_]], [[S_ADD_I32_]], 0, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[COPY]], implicit $exec, implicit [[S_ADD_I32_]] {
+    ; GCN-NEXT:   $stg_dsta = V_MAX_U32_e64 12345, [[COPY]], implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_ADD_I32_]], 0, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
     ;
     ; ALLOC-LABEL: name: same-bb-store-out-of-order
     ; ALLOC: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; ALLOC-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[S_LSHL_B32_]], 429496640, implicit-def dead $scc
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_ADD_I32_]]
-    ; ALLOC-NEXT: BUNDLE implicit-def %2, implicit [[S_LSHL_B32_]], implicit $exec, implicit $idx1 {
-    ; ALLOC-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, [[S_LSHL_B32_]], implicit $exec
-    ; ALLOC-NEXT:   V_STORE_IDX internal [[V_MAX_U32_e64_]], $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[S_LSHL_B32_]], implicit $exec, implicit $idx1 {
+    ; ALLOC-NEXT:   $stg_dsta = V_MAX_U32_e64 12345, [[S_LSHL_B32_]], implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: same-bb-store-out-of-order
@@ -124,7 +124,7 @@ body:             |
     ; LOWERED-NEXT: renamable $sgpr1 = S_ADD_I32 renamable $sgpr0, 429496640, implicit-def dead $scc
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 64
-    ; LOWERED-NEXT: undef renamable $vgpr0 = V_MAX_U32_e64 12345, killed $sgpr0, implicit $exec
+    ; LOWERED-NEXT: undef $vgpr0 = V_MAX_U32_e64 12345, killed $sgpr0, implicit $exec
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:vgpr_32 = COPY %0:sreg_32_xexec_hi
     %2:vgpr_32 = V_MAX_U32_e64 12345, %1, implicit $exec
@@ -225,19 +225,19 @@ body:             |
   bb.0:
     ; GCN-LABEL: name: same-bb-load-store-trivial
     ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
-    ; GCN-NEXT: BUNDLE implicit-def %1, implicit-def %2, implicit [[S_LSHL_B32_]], implicit $exec {
-    ; GCN-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, internal [[V_LOAD_IDX]], implicit $exec
-    ; GCN-NEXT:   V_STORE_IDX internal [[V_MAX_U32_e64_]], [[S_LSHL_B32_]], 0, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHL_B32_]], implicit $exec {
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_dsta = V_MAX_U32_e64 12345, internal $stg_srca, implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHL_B32_]], 0, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
     ;
     ; ALLOC-LABEL: name: same-bb-load-store-trivial
     ; ALLOC: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
-    ; ALLOC-NEXT: BUNDLE implicit-def %1, implicit-def %2, implicit $idx1, implicit $exec {
-    ; ALLOC-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx1, 0, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, internal [[V_LOAD_IDX]], implicit $exec
-    ; ALLOC-NEXT:   V_STORE_IDX internal [[V_MAX_U32_e64_]], $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit $idx1, implicit $exec {
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX $idx1, 0, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_dsta = V_MAX_U32_e64 12345, internal $stg_srca, implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: same-bb-load-store-trivial
@@ -315,10 +315,10 @@ body:             |
     ; GCN-LABEL: name: same-bb-load-store-different-idx
     ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; GCN-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
-    ; GCN-NEXT: BUNDLE implicit-def %2, implicit-def %3, implicit [[S_LSHL_B32_]], implicit $exec, implicit [[S_LSHR_B32_]] {
-    ; GCN-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, internal [[V_LOAD_IDX]], implicit $exec
-    ; GCN-NEXT:   V_STORE_IDX internal [[V_MAX_U32_e64_]], [[S_LSHR_B32_]], 0, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHL_B32_]], implicit $exec, implicit [[S_LSHR_B32_]] {
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_dsta = V_MAX_U32_e64 12345, internal $stg_srca, implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHR_B32_]], 0, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
     ;
     ; ALLOC-LABEL: name: same-bb-load-store-different-idx
@@ -326,10 +326,10 @@ body:             |
     ; ALLOC-NEXT: $idx2 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
     ; ALLOC-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_]]
-    ; ALLOC-NEXT: BUNDLE implicit-def %2, implicit-def %3, implicit $idx2, implicit $exec, implicit $idx1 {
-    ; ALLOC-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx2, 0, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, internal [[V_LOAD_IDX]], implicit $exec
-    ; ALLOC-NEXT:   V_STORE_IDX internal [[V_MAX_U32_e64_]], $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit $idx2, implicit $exec, implicit $idx1 {
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX $idx2, 0, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_dsta = V_MAX_U32_e64 12345, internal $stg_srca, implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: same-bb-load-store-different-idx
@@ -365,10 +365,10 @@ body:             |
     ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; GCN-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
     ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
-    ; GCN-NEXT: BUNDLE implicit-def %2, implicit-def %3, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]] {
-    ; GCN-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHR_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_MAX_U32_e64_1:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, internal [[V_LOAD_IDX]], implicit $exec
-    ; GCN-NEXT:   V_STORE_IDX internal [[V_MAX_U32_e64_1]], [[S_LSHL_B32_]], 0, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]] {
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX [[S_LSHR_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_dsta = V_MAX_U32_e64 12345, internal $stg_srca, implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHL_B32_]], 0, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
     ;
     ; ALLOC-LABEL: name: same-bb-load-store-different-idx-out-of-order
@@ -376,10 +376,10 @@ body:             |
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
     ; ALLOC-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
     ; ALLOC-NEXT: $idx2 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_]]
-    ; ALLOC-NEXT: BUNDLE implicit-def %2, implicit-def %3, implicit $idx2, implicit $exec, implicit $idx1 {
-    ; ALLOC-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx2, 0, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, internal [[V_LOAD_IDX]], implicit $exec
-    ; ALLOC-NEXT:   V_STORE_IDX internal [[V_MAX_U32_e64_]], $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit $idx2, implicit $exec, implicit $idx1 {
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX $idx2, 0, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_dsta = V_MAX_U32_e64 12345, internal $stg_srca, implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: same-bb-load-store-different-idx-out-of-order
@@ -414,9 +414,9 @@ body:             |
   bb.0:
     ; GCN-LABEL: name: same-bb-multi-use-coremi
     ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
-    ; GCN-NEXT: BUNDLE implicit-def %1, implicit-def %2, implicit [[S_LSHL_B32_]], implicit $exec {
-    ; GCN-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, internal [[V_LOAD_IDX]], implicit $exec
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srca, implicit-def %2, implicit [[S_LSHL_B32_]], implicit $exec {
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, internal $stg_srca, implicit $exec
     ; GCN-NEXT: }
     ; GCN-NEXT: [[V_MIN_U32_e64_:%[0-9]+]]:vgpr_32 = V_MIN_U32_e64 12345, [[V_MAX_U32_e64_]], implicit $exec
     ; GCN-NEXT: V_STORE_IDX [[V_MAX_U32_e64_]], [[S_LSHL_B32_]], 0, implicit $exec :: (store (s32), addrspace 10)
@@ -424,9 +424,9 @@ body:             |
     ; ALLOC-LABEL: name: same-bb-multi-use-coremi
     ; ALLOC: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
-    ; ALLOC-NEXT: BUNDLE implicit-def %1, implicit-def %2, implicit $idx1, implicit $exec {
-    ; ALLOC-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx1, 0, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, internal [[V_LOAD_IDX]], implicit $exec
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srca, implicit-def %2, implicit $idx1, implicit $exec {
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX $idx1, 0, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, internal $stg_srca, implicit $exec
     ; ALLOC-NEXT: }
     ; ALLOC-NEXT: V_STORE_IDX [[V_MAX_U32_e64_]], $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     ;
@@ -439,9 +439,9 @@ body:             |
     ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 2, implicit-def dead $scc
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 4
-    ; LOWERED-NEXT: renamable $vgpr1 = V_MAX_U32_e64 12345, undef $vgpr0, implicit $exec
+    ; LOWERED-NEXT: renamable $vgpr0 = V_MAX_U32_e64 12345, undef $vgpr0, implicit $exec
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 64
-    ; LOWERED-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
+    ; LOWERED-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:vgpr_32 = V_LOAD_IDX %0, 0, implicit $exec :: (load (s32), addrspace 10)
     %2:vgpr_32 = V_MAX_U32_e64 12345, %1, implicit $exec
@@ -467,9 +467,9 @@ body:             |
     ; GCN-NEXT: [[V_MIN_U32_e64_:%[0-9]+]]:vgpr_32 = V_MIN_U32_e64 12345, [[V_MAX_U32_e64_]], implicit $exec
     ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 5
     ; GCN-NEXT: V_STORE_IDX [[V_MAX_U32_e64_]], [[S_MOV_B32_]], 0, implicit $exec :: (store (s32), addrspace 10)
-    ; GCN-NEXT: BUNDLE implicit-def %3, implicit [[V_LOAD_IDX]], implicit $exec, implicit [[S_LSHL_B32_]] {
-    ; GCN-NEXT:   [[V_MIN_U32_e64_1:%[0-9]+]]:vgpr_32 = V_MIN_U32_e64 12345, [[V_LOAD_IDX]], implicit $exec
-    ; GCN-NEXT:   V_STORE_IDX internal [[V_MIN_U32_e64_1]], [[S_LSHL_B32_]], 16, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[V_LOAD_IDX]], implicit $exec, implicit [[S_LSHL_B32_]] {
+    ; GCN-NEXT:   $stg_dsta = V_MIN_U32_e64 12345, [[V_LOAD_IDX]], implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHL_B32_]], 16, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
     ;
     ; ALLOC-LABEL: name: same-bb-multi-use-load-coremi
@@ -479,9 +479,9 @@ body:             |
     ; ALLOC-NEXT: [[V_MAX_U32_e32_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e32 12345, [[V_LOAD_IDX]], implicit $exec
     ; ALLOC-NEXT: $idx2 = S_SET_GPR_IDX_U32 0
     ; ALLOC-NEXT: V_STORE_IDX [[V_MAX_U32_e32_]], $idx2, 5, implicit $exec :: (store (s32), addrspace 10)
-    ; ALLOC-NEXT: BUNDLE implicit-def %3, implicit [[V_LOAD_IDX]], implicit $exec, implicit $idx1 {
-    ; ALLOC-NEXT:   [[V_MIN_U32_e64_:%[0-9]+]]:vgpr_32 = V_MIN_U32_e64 12345, [[V_LOAD_IDX]], implicit $exec
-    ; ALLOC-NEXT:   V_STORE_IDX internal [[V_MIN_U32_e64_]], $idx1, 16, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[V_LOAD_IDX]], implicit $exec, implicit $idx1 {
+    ; ALLOC-NEXT:   $stg_dsta = V_MIN_U32_e64 12345, [[V_LOAD_IDX]], implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 16, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: same-bb-multi-use-load-coremi
@@ -525,9 +525,9 @@ body:             |
     ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; GCN-NEXT: [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT: [[V_MIN_U32_e64_:%[0-9]+]]:vgpr_32 = V_MIN_U32_e64 65432, [[V_LOAD_IDX]], implicit $exec
-    ; GCN-NEXT: BUNDLE implicit-def %2, implicit [[V_LOAD_IDX]], implicit $exec, implicit [[S_LSHL_B32_]] {
-    ; GCN-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, [[V_LOAD_IDX]], implicit $exec
-    ; GCN-NEXT:   V_STORE_IDX internal [[V_MAX_U32_e64_]], [[S_LSHL_B32_]], 0, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[V_LOAD_IDX]], implicit $exec, implicit [[S_LSHL_B32_]] {
+    ; GCN-NEXT:   $stg_dsta = V_MAX_U32_e64 12345, [[V_LOAD_IDX]], implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHL_B32_]], 0, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
     ; GCN-NEXT: V_STORE_IDX [[V_MIN_U32_e64_]], [[S_LSHL_B32_]], 0, implicit $exec :: (store (s32), addrspace 10)
     ;
@@ -536,9 +536,9 @@ body:             |
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
     ; ALLOC-NEXT: [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx1, 0, implicit $exec :: (load (s32), addrspace 10)
     ; ALLOC-NEXT: [[V_MIN_U32_e32_:%[0-9]+]]:vgpr_32 = V_MIN_U32_e32 65432, [[V_LOAD_IDX]], implicit $exec
-    ; ALLOC-NEXT: BUNDLE implicit-def %2, implicit [[V_LOAD_IDX]], implicit $exec, implicit $idx1 {
-    ; ALLOC-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, [[V_LOAD_IDX]], implicit $exec
-    ; ALLOC-NEXT:   V_STORE_IDX internal [[V_MAX_U32_e64_]], $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[V_LOAD_IDX]], implicit $exec, implicit $idx1 {
+    ; ALLOC-NEXT:   $stg_dsta = V_MAX_U32_e64 12345, [[V_LOAD_IDX]], implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
     ; ALLOC-NEXT: V_STORE_IDX [[V_MIN_U32_e32_]], $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     ;
@@ -552,9 +552,11 @@ body:             |
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 1
     ; LOWERED-NEXT: $vgpr0 = V_MOV_B32_e32 undef $vgpr0, implicit $exec
-    ; LOWERED-NEXT: renamable $vgpr1 = V_MIN_U32_e32 65432, $vgpr0, implicit $exec
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 64
-    ; LOWERED-NEXT: undef renamable $vgpr0 = V_MAX_U32_e64 12345, killed $vgpr0, implicit $exec
+    ; LOWERED-NEXT: undef $vgpr0 = V_MAX_U32_e64 12345, $vgpr0, implicit $exec
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 0
+    ; LOWERED-NEXT: renamable $vgpr1 = V_MIN_U32_e32 65432, killed $vgpr0, implicit $exec
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 64
     ; LOWERED-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:vgpr_32 = V_LOAD_IDX %0, 0, implicit $exec :: (load (s32), addrspace 10)
@@ -578,11 +580,11 @@ body:             |
     ; GCN-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
     ; GCN-NEXT: [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 3, implicit-def dead $scc
     ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
-    ; GCN-NEXT: BUNDLE implicit-def %4, implicit-def %3, implicit-def %5, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]], implicit [[S_LSHL_B32_1]] {
-    ; GCN-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_LOAD_IDX1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHL_B32_]], 5, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 internal [[V_LOAD_IDX1]], internal [[V_LOAD_IDX]], 0, implicit $exec
-    ; GCN-NEXT:   V_STORE_IDX internal [[V_ADD_U32_e64_]], [[S_LSHL_B32_1]], 20, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]], implicit [[S_LSHL_B32_1]] {
+    ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX [[S_LSHL_B32_]], 5, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_dsta = V_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, 0, implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHL_B32_1]], 20, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
     ;
     ; ALLOC-LABEL: name: same-bb-load-store-vop2
@@ -592,11 +594,11 @@ body:             |
     ; ALLOC-NEXT: $idx3 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_]]
     ; ALLOC-NEXT: [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 3, implicit-def dead $scc
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_1]]
-    ; ALLOC-NEXT: BUNDLE implicit-def %4, implicit-def %3, implicit-def %5, implicit $idx3, implicit $exec, implicit $idx2, implicit $idx1 {
-    ; ALLOC-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx3, 10, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_LOAD_IDX1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx2, 5, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 internal [[V_LOAD_IDX1]], internal [[V_LOAD_IDX]], 0, implicit $exec
-    ; ALLOC-NEXT:   V_STORE_IDX internal [[V_ADD_U32_e64_]], $idx1, 20, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit $idx3, implicit $exec, implicit $idx2, implicit $idx1 {
+    ; ALLOC-NEXT:   $stg_srcb = V_LOAD_IDX $idx3, 10, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX $idx2, 5, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_dsta = V_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, 0, implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 20, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: same-bb-load-store-vop2
@@ -641,11 +643,11 @@ body:             |
     ; GCN-NEXT: [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHR_B32_]], 4, implicit-def dead $scc
     ; GCN-NEXT: [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHL_B32_1]], 15, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
-    ; GCN-NEXT: BUNDLE implicit-def %5, implicit-def %4, implicit-def %7, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]], implicit [[V_LOAD_IDX]], implicit [[S_LSHR_B32_1]] {
-    ; GCN-NEXT:   [[V_LOAD_IDX1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_LOAD_IDX2:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHL_B32_]], 5, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_LSHL_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_ADD_U32_e64 internal [[V_LOAD_IDX2]], internal [[V_LOAD_IDX1]], [[V_LOAD_IDX]], implicit $exec
-    ; GCN-NEXT:   V_STORE_IDX internal [[V_LSHL_ADD_U32_e64_]], [[S_LSHR_B32_1]], 20, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]], implicit [[V_LOAD_IDX]], implicit [[S_LSHR_B32_1]] {
+    ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX [[S_LSHL_B32_]], 5, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_dsta = V_LSHL_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, [[V_LOAD_IDX]], implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHR_B32_1]], 20, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
     ;
     ; ALLOC-LABEL: name: same-bb-load-store-vop3
@@ -658,11 +660,11 @@ body:             |
     ; ALLOC-NEXT: [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHR_B32_]], 4, implicit-def dead $scc
     ; ALLOC-NEXT: [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx1, 15, implicit $exec :: (load (s32), addrspace 10)
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_1]]
-    ; ALLOC-NEXT: BUNDLE implicit-def %5, implicit-def %4, implicit-def %7, implicit $idx3, implicit $exec, implicit $idx2, implicit [[V_LOAD_IDX]], implicit $idx1 {
-    ; ALLOC-NEXT:   [[V_LOAD_IDX1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx3, 10, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_LOAD_IDX2:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx2, 5, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_LSHL_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_ADD_U32_e64 internal [[V_LOAD_IDX2]], internal [[V_LOAD_IDX1]], [[V_LOAD_IDX]], implicit $exec
-    ; ALLOC-NEXT:   V_STORE_IDX internal [[V_LSHL_ADD_U32_e64_]], $idx1, 20, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit $idx3, implicit $exec, implicit $idx2, implicit [[V_LOAD_IDX]], implicit $idx1 {
+    ; ALLOC-NEXT:   $stg_srcb = V_LOAD_IDX $idx3, 10, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX $idx2, 5, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_dsta = V_LSHL_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, [[V_LOAD_IDX]], implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 20, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: same-bb-load-store-vop3
@@ -709,12 +711,12 @@ body:             |
     ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; GCN-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
     ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
-    ; GCN-NEXT: BUNDLE implicit-def %4, implicit-def %3, implicit-def %2, implicit-def %5, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]] {
-    ; GCN-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHR_B32_]], 15, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_LOAD_IDX1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHL_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_LOAD_IDX2:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHL_B32_]], 5, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_LSHL_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_ADD_U32_e64 internal [[V_LOAD_IDX2]], internal [[V_LOAD_IDX1]], internal [[V_LOAD_IDX]], implicit $exec
-    ; GCN-NEXT:   V_STORE_IDX internal [[V_LSHL_ADD_U32_e64_]], [[S_LSHR_B32_]], 20, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srcc, implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]] {
+    ; GCN-NEXT:   $stg_srcc = V_LOAD_IDX [[S_LSHR_B32_]], 15, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX [[S_LSHL_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX [[S_LSHL_B32_]], 5, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_dsta = V_LSHL_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, internal $stg_srcc, implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHR_B32_]], 20, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
     ;
     ; ALLOC-LABEL: name: same-bb-load-store-vop3-two-unique-idx
@@ -722,12 +724,12 @@ body:             |
     ; ALLOC-NEXT: $idx2 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
     ; ALLOC-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_]]
-    ; ALLOC-NEXT: BUNDLE implicit-def %4, implicit-def %3, implicit-def %2, implicit-def %5, implicit $idx1, implicit $exec, implicit $idx2 {
-    ; ALLOC-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx1, 15, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_LOAD_IDX1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx2, 10, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_LOAD_IDX2:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx2, 5, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_LSHL_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_ADD_U32_e64 internal [[V_LOAD_IDX2]], internal [[V_LOAD_IDX1]], internal [[V_LOAD_IDX]], implicit $exec
-    ; ALLOC-NEXT:   V_STORE_IDX internal [[V_LSHL_ADD_U32_e64_]], $idx1, 20, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srcc, implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit $idx1, implicit $exec, implicit $idx2 {
+    ; ALLOC-NEXT:   $stg_srcc = V_LOAD_IDX $idx1, 15, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_srcb = V_LOAD_IDX $idx2, 10, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX $idx2, 5, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_dsta = V_LSHL_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, internal $stg_srcc, implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 20, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: same-bb-load-store-vop3-two-unique-idx
@@ -767,16 +769,16 @@ body:             |
     ; GCN-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
     ; GCN-NEXT: [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 3, implicit-def dead $scc
     ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
-    ; GCN-NEXT: BUNDLE implicit-def %4, implicit-def %3, implicit-def %5, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]], implicit [[S_LSHL_B32_1]] {
-    ; GCN-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_LOAD_IDX1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHL_B32_]], 5, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 internal [[V_LOAD_IDX1]], internal [[V_LOAD_IDX]], 0, implicit $exec
-    ; GCN-NEXT:   V_STORE_IDX internal [[V_ADD_U32_e64_]], [[S_LSHL_B32_1]], 20, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]], implicit [[S_LSHL_B32_1]] {
+    ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX [[S_LSHL_B32_]], 5, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_dsta = V_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, 0, implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHL_B32_1]], 20, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
     ; GCN-NEXT: [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 3, implicit-def $scc
-    ; GCN-NEXT: [[V_LOAD_IDX2:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHL_B32_2]], 1, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT: [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHL_B32_2]], 1, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT: [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 4, implicit-def $scc
-    ; GCN-NEXT: [[V_LOAD_IDX3:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHL_B32_3]], 2, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT: [[V_LOAD_IDX1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHL_B32_3]], 2, implicit $exec :: (load (s32), addrspace 10)
     ;
     ; ALLOC-LABEL: name: insert-set-gpr-idx-after-bundle
     ; ALLOC: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
@@ -785,18 +787,18 @@ body:             |
     ; ALLOC-NEXT: $idx3 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_]]
     ; ALLOC-NEXT: [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 3, implicit-def dead $scc
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_1]]
-    ; ALLOC-NEXT: BUNDLE implicit-def %4, implicit-def %3, implicit-def %5, implicit $idx3, implicit $exec, implicit $idx2, implicit $idx1 {
-    ; ALLOC-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx3, 10, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_LOAD_IDX1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx2, 5, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 internal [[V_LOAD_IDX1]], internal [[V_LOAD_IDX]], 0, implicit $exec
-    ; ALLOC-NEXT:   V_STORE_IDX internal [[V_ADD_U32_e64_]], $idx1, 20, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit $idx3, implicit $exec, implicit $idx2, implicit $idx1 {
+    ; ALLOC-NEXT:   $stg_srcb = V_LOAD_IDX $idx3, 10, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX $idx2, 5, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_dsta = V_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, 0, implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 20, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
     ; ALLOC-NEXT: [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 3, implicit-def $scc
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_2]]
-    ; ALLOC-NEXT: [[V_LOAD_IDX2:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx1, 1, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT: [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx1, 1, implicit $exec :: (load (s32), addrspace 10)
     ; ALLOC-NEXT: [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 4, implicit-def $scc
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_3]]
-    ; ALLOC-NEXT: [[V_LOAD_IDX3:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx1, 2, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT: [[V_LOAD_IDX1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx1, 2, implicit $exec :: (load (s32), addrspace 10)
     ;
     ; LOWERED-LABEL: name: insert-set-gpr-idx-after-bundle
     ; LOWERED: S_WAIT_LOADCNT_DSCNT 0
@@ -850,21 +852,21 @@ body:             |
     ; GCN-NEXT: [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHR_B32_]], 4, implicit-def dead $scc
     ; GCN-NEXT: [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHL_B32_1]], 15, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
-    ; GCN-NEXT: BUNDLE implicit-def %5, implicit-def %4, implicit-def %7, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]], implicit [[V_LOAD_IDX]], implicit [[S_LSHR_B32_1]] {
-    ; GCN-NEXT:   [[V_LOAD_IDX1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_LOAD_IDX2:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHL_B32_]], 5, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_LSHL_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_ADD_U32_e64 internal [[V_LOAD_IDX2]], internal [[V_LOAD_IDX1]], [[V_LOAD_IDX]], implicit $exec
-    ; GCN-NEXT:   V_STORE_IDX internal [[V_LSHL_ADD_U32_e64_]], [[S_LSHR_B32_1]], 20, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]], implicit [[V_LOAD_IDX]], implicit [[S_LSHR_B32_1]] {
+    ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX [[S_LSHL_B32_]], 5, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_dsta = V_LSHL_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, [[V_LOAD_IDX]], implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHR_B32_1]], 20, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
     ; GCN-NEXT: [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 12, implicit-def $scc
     ; GCN-NEXT: [[S_LSHR_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 12, implicit-def dead $scc
     ; GCN-NEXT: [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 13, implicit-def dead $scc
     ; GCN-NEXT: [[V_MAX_U32_e64_1:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54, [[S_LSHL_B32_]], implicit $exec
-    ; GCN-NEXT: BUNDLE implicit-def %13, implicit-def %12, implicit-def %14, implicit [[S_LSHR_B32_2]], implicit $exec, implicit [[S_LSHL_B32_2]], implicit [[S_LSHL_B32_3]] {
-    ; GCN-NEXT:   [[V_LOAD_IDX3:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHR_B32_2]], 11, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_LOAD_IDX4:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHL_B32_2]], 6, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 internal [[V_LOAD_IDX4]], internal [[V_LOAD_IDX3]], 0, implicit $exec
-    ; GCN-NEXT:   V_STORE_IDX internal [[V_ADD_U32_e64_]], [[S_LSHL_B32_3]], 21, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHR_B32_2]], implicit $exec, implicit [[S_LSHL_B32_2]], implicit [[S_LSHL_B32_3]] {
+    ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX [[S_LSHR_B32_2]], 11, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX [[S_LSHL_B32_2]], 6, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_dsta = V_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, 0, implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHL_B32_3]], 21, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
     ;
     ; ALLOC-LABEL: name: two-bundles-vop3-vop2
@@ -877,11 +879,11 @@ body:             |
     ; ALLOC-NEXT: [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHR_B32_]], 4, implicit-def dead $scc
     ; ALLOC-NEXT: [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx1, 15, implicit $exec :: (load (s32), addrspace 10)
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_1]]
-    ; ALLOC-NEXT: BUNDLE implicit-def %5, implicit-def %4, implicit-def %7, implicit $idx3, implicit $exec, implicit $idx2, implicit [[V_LOAD_IDX]], implicit $idx1 {
-    ; ALLOC-NEXT:   [[V_LOAD_IDX1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx3, 10, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_LOAD_IDX2:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx2, 5, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_LSHL_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_ADD_U32_e64 internal [[V_LOAD_IDX2]], internal [[V_LOAD_IDX1]], [[V_LOAD_IDX]], implicit $exec
-    ; ALLOC-NEXT:   V_STORE_IDX internal [[V_LSHL_ADD_U32_e64_]], $idx1, 20, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit $idx3, implicit $exec, implicit $idx2, implicit [[V_LOAD_IDX]], implicit $idx1 {
+    ; ALLOC-NEXT:   $stg_srcb = V_LOAD_IDX $idx3, 10, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX $idx2, 5, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_dsta = V_LSHL_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, [[V_LOAD_IDX]], implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 20, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
     ; ALLOC-NEXT: [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 12, implicit-def $scc
     ; ALLOC-NEXT: $idx2 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_2]]
@@ -889,11 +891,11 @@ body:             |
     ; ALLOC-NEXT: $idx3 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_2]]
     ; ALLOC-NEXT: [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 13, implicit-def dead $scc
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_3]]
-    ; ALLOC-NEXT: BUNDLE implicit-def %13, implicit-def %12, implicit-def %14, implicit $idx3, implicit $exec, implicit $idx2, implicit $idx1 {
-    ; ALLOC-NEXT:   [[V_LOAD_IDX3:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx3, 11, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_LOAD_IDX4:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx2, 6, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 internal [[V_LOAD_IDX4]], internal [[V_LOAD_IDX3]], 0, implicit $exec
-    ; ALLOC-NEXT:   V_STORE_IDX internal [[V_ADD_U32_e64_]], $idx1, 21, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit $idx3, implicit $exec, implicit $idx2, implicit $idx1 {
+    ; ALLOC-NEXT:   $stg_srcb = V_LOAD_IDX $idx3, 11, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX $idx2, 6, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_dsta = V_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, 0, implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 21, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: two-bundles-vop3-vop2
@@ -956,18 +958,18 @@ body:             |
     ; GCN-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
     ; GCN-NEXT: [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 3, implicit-def dead $scc
     ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
-    ; GCN-NEXT: BUNDLE implicit-def %4, implicit-def %3, implicit-def %5, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]], implicit [[S_LSHL_B32_1]] {
-    ; GCN-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_LOAD_IDX1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHL_B32_]], 5, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 internal [[V_LOAD_IDX1]], internal [[V_LOAD_IDX]], 0, implicit $exec
-    ; GCN-NEXT:   V_STORE_IDX internal [[V_ADD_U32_e64_]], [[S_LSHL_B32_1]], 20, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]], implicit [[S_LSHL_B32_1]] {
+    ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX [[S_LSHL_B32_]], 5, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_dsta = V_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, 0, implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHL_B32_1]], 20, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
     ; GCN-NEXT: [[V_MAX_U32_e64_1:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54, [[S_LSHL_B32_]], implicit $exec
-    ; GCN-NEXT: BUNDLE implicit-def %8, implicit-def %7, implicit-def %9, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]], implicit [[S_LSHL_B32_1]] {
-    ; GCN-NEXT:   [[V_LOAD_IDX2:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHR_B32_]], 11, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_LOAD_IDX3:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHL_B32_]], 6, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 internal [[V_LOAD_IDX3]], internal [[V_LOAD_IDX2]], 0, implicit $exec
-    ; GCN-NEXT:   V_STORE_IDX internal [[V_ADD_U32_e64_1]], [[S_LSHL_B32_1]], 21, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]], implicit [[S_LSHL_B32_1]] {
+    ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX [[S_LSHR_B32_]], 11, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX [[S_LSHL_B32_]], 6, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_dsta = V_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, 0, implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHL_B32_1]], 21, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
     ;
     ; ALLOC-LABEL: name: two-bundles-same-idx
@@ -977,17 +979,17 @@ body:             |
     ; ALLOC-NEXT: $idx3 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_]]
     ; ALLOC-NEXT: [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 3, implicit-def dead $scc
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_1]]
-    ; ALLOC-NEXT: BUNDLE implicit-def %4, implicit-def %3, implicit-def %5, implicit $idx3, implicit $exec, implicit $idx2, implicit $idx1 {
-    ; ALLOC-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx3, 10, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_LOAD_IDX1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx2, 5, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 internal [[V_LOAD_IDX1]], internal [[V_LOAD_IDX]], 0, implicit $exec
-    ; ALLOC-NEXT:   V_STORE_IDX internal [[V_ADD_U32_e64_]], $idx1, 20, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit $idx3, implicit $exec, implicit $idx2, implicit $idx1 {
+    ; ALLOC-NEXT:   $stg_srcb = V_LOAD_IDX $idx3, 10, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX $idx2, 5, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_dsta = V_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, 0, implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 20, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
-    ; ALLOC-NEXT: BUNDLE implicit-def %8, implicit-def %7, implicit-def %9, implicit $idx3, implicit $exec, implicit $idx2, implicit $idx1 {
-    ; ALLOC-NEXT:   [[V_LOAD_IDX2:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx3, 11, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_LOAD_IDX3:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx2, 6, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 internal [[V_LOAD_IDX3]], internal [[V_LOAD_IDX2]], 0, implicit $exec
-    ; ALLOC-NEXT:   V_STORE_IDX internal [[V_ADD_U32_e64_1]], $idx1, 21, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit $idx3, implicit $exec, implicit $idx2, implicit $idx1 {
+    ; ALLOC-NEXT:   $stg_srcb = V_LOAD_IDX $idx3, 11, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX $idx2, 6, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_dsta = V_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, 0, implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 21, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: two-bundles-same-idx
@@ -1037,22 +1039,22 @@ body:             |
     ; GCN-NEXT: [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_1]], 2, implicit-def dead $scc
     ; GCN-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 0
     ; GCN-NEXT: [[S_LSHR_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_2]], 2, implicit-def dead $scc
-    ; GCN-NEXT: BUNDLE implicit-def dead %5, implicit-def dead %2, implicit-def early-clobber %6, implicit [[S_LSHR_B32_1]], implicit $exec, implicit [[S_LSHR_B32_]], implicit [[S_LSHR_B32_2]] {
-    ; GCN-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vreg_128_align2 = V_LOAD_IDX [[S_LSHR_B32_1]], 0, implicit $exec :: (load (s128), addrspace 10)
-    ; GCN-NEXT:   [[V_LOAD_IDX1:%[0-9]+]]:vreg_128_align2 = V_LOAD_IDX [[S_LSHR_B32_]], 0, implicit $exec :: (load (s128), addrspace 10)
-    ; GCN-NEXT:   early-clobber %6:vreg_256_align2 = contract V_WMMA_F32_16X16X16_F16_w32_threeaddr 8, internal killed [[V_LOAD_IDX1]], 8, internal killed [[V_LOAD_IDX]], 8, 0, 0, 0, implicit $exec
-    ; GCN-NEXT:   V_STORE_IDX internal %6, [[S_LSHR_B32_2]], 0, implicit $exec :: (store (s256), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def dead $stg_srcb, implicit-def dead $stg_srca, implicit-def early-clobber $stg_dsta, implicit [[S_LSHR_B32_1]], implicit $exec, implicit [[S_LSHR_B32_]], implicit [[S_LSHR_B32_2]] {
+    ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX [[S_LSHR_B32_1]], 0, implicit $exec :: (load (s128), addrspace 10)
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX [[S_LSHR_B32_]], 0, implicit $exec :: (load (s128), addrspace 10)
+    ; GCN-NEXT:   early-clobber $stg_dsta = contract V_WMMA_F32_16X16X16_F16_w32_threeaddr 8, internal killed $stg_srca, 8, internal killed $stg_srcb, 8, 0, 0, 0, implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHR_B32_2]], 0, implicit $exec :: (store (s256), addrspace 10)
     ; GCN-NEXT: }
     ;
     ; ALLOC-LABEL: name: same-bb-wide-load-store
     ; ALLOC: $idx2 = S_SET_GPR_IDX_U32 12
     ; ALLOC-NEXT: $idx3 = S_SET_GPR_IDX_U32 8
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 0
-    ; ALLOC-NEXT: BUNDLE implicit-def dead %5, implicit-def dead %2, implicit-def early-clobber %6, implicit $idx3, implicit $exec, implicit $idx2, implicit $idx1 {
-    ; ALLOC-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vreg_128_align2 = V_LOAD_IDX $idx3, 0, implicit $exec :: (load (s128), addrspace 10)
-    ; ALLOC-NEXT:   [[V_LOAD_IDX1:%[0-9]+]]:vreg_128_align2 = V_LOAD_IDX $idx2, 0, implicit $exec :: (load (s128), addrspace 10)
-    ; ALLOC-NEXT:   early-clobber %6:vreg_256_align2 = contract V_WMMA_F32_16X16X16_F16_w32_threeaddr 8, internal killed [[V_LOAD_IDX1]], 8, internal killed [[V_LOAD_IDX]], 8, 0, 0, 0, implicit $exec
-    ; ALLOC-NEXT:   V_STORE_IDX internal %6, $idx1, 0, implicit $exec :: (store (s256), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def dead $stg_srcb, implicit-def dead $stg_srca, implicit-def early-clobber $stg_dsta, implicit $idx3, implicit $exec, implicit $idx2, implicit $idx1 {
+    ; ALLOC-NEXT:   $stg_srcb = V_LOAD_IDX $idx3, 0, implicit $exec :: (load (s128), addrspace 10)
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX $idx2, 0, implicit $exec :: (load (s128), addrspace 10)
+    ; ALLOC-NEXT:   early-clobber $stg_dsta = contract V_WMMA_F32_16X16X16_F16_w32_threeaddr 8, internal killed $stg_srca, 8, internal killed $stg_srcb, 8, 0, 0, 0, implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s256), addrspace 10)
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: same-bb-wide-load-store
@@ -1065,7 +1067,7 @@ body:             |
     ; LOWERED-NEXT: $idx3 = S_SET_GPR_IDX_U32 8
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 0
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 78
-    ; LOWERED-NEXT: undef early-clobber renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = contract V_WMMA_F32_16X16X16_F16_w32_threeaddr 8, undef $vgpr0_vgpr1_vgpr2_vgpr3, 8, undef $vgpr0_vgpr1_vgpr2_vgpr3, 8, 0, 0, 0, implicit $exec
+    ; LOWERED-NEXT: undef early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = contract V_WMMA_F32_16X16X16_F16_w32_threeaddr 8, killed undef $vgpr0_vgpr1_vgpr2_vgpr3, 8, killed undef $vgpr0_vgpr1_vgpr2_vgpr3, 8, 0, 0, 0, implicit $exec
     %0:sreg_32_xexec_hi = S_MOV_B32 48
     %1:sreg_32_xexec_hi = S_LSHR_B32 %0, 2, implicit-def dead $scc
     %2:vreg_128_align2 = V_LOAD_IDX %1, 0, implicit $exec :: (load (s128), addrspace 10)
@@ -1103,17 +1105,17 @@ body:             |
     ; GCN-NEXT: [[S_LSHR_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 12, implicit-def dead $scc
     ; GCN-NEXT: [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 13, implicit-def dead $scc
     ; GCN-NEXT: [[V_LOAD_IDX1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHL_B32_2]], 6, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT: BUNDLE implicit-def %5, implicit-def %4, implicit-def %7, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]], implicit [[V_LOAD_IDX]], implicit [[S_LSHR_B32_1]] {
-    ; GCN-NEXT:   [[V_LOAD_IDX2:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_LOAD_IDX3:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHL_B32_]], 5, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_LSHL_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_ADD_U32_e64 internal [[V_LOAD_IDX3]], internal [[V_LOAD_IDX2]], [[V_LOAD_IDX]], implicit $exec
-    ; GCN-NEXT:   V_STORE_IDX internal [[V_LSHL_ADD_U32_e64_]], [[S_LSHR_B32_1]], 20, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]], implicit [[V_LOAD_IDX]], implicit [[S_LSHR_B32_1]] {
+    ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX [[S_LSHL_B32_]], 5, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_dsta = V_LSHL_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, [[V_LOAD_IDX]], implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHR_B32_1]], 20, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
     ; GCN-NEXT: [[V_MAX_U32_e64_1:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54, [[S_LSHL_B32_]], implicit $exec
-    ; GCN-NEXT: BUNDLE implicit-def %13, implicit-def %14, implicit [[S_LSHR_B32_2]], implicit $exec, implicit [[V_LOAD_IDX1]], implicit [[S_LSHL_B32_3]] {
-    ; GCN-NEXT:   [[V_LOAD_IDX4:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHR_B32_2]], 11, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_LOAD_IDX1]], internal [[V_LOAD_IDX4]], 0, implicit $exec
-    ; GCN-NEXT:   V_STORE_IDX internal [[V_ADD_U32_e64_]], [[S_LSHL_B32_3]], 21, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHR_B32_2]], implicit $exec, implicit [[V_LOAD_IDX1]], implicit [[S_LSHL_B32_3]] {
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX [[S_LSHR_B32_2]], 11, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_dsta = V_ADD_U32_e64 [[V_LOAD_IDX1]], internal $stg_srca, 0, implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHL_B32_3]], 21, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
     ;
     ; ALLOC-LABEL: name: unsafe-load-past-store
@@ -1131,18 +1133,18 @@ body:             |
     ; ALLOC-NEXT: [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 13, implicit-def dead $scc
     ; ALLOC-NEXT: [[V_LOAD_IDX1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx1, 6, implicit $exec :: (load (s32), addrspace 10)
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
-    ; ALLOC-NEXT: BUNDLE implicit-def %5, implicit-def %4, implicit-def %7, implicit $idx2, implicit $exec, implicit $idx1, implicit [[V_LOAD_IDX]], implicit $idx3 {
-    ; ALLOC-NEXT:   [[V_LOAD_IDX2:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx2, 10, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_LOAD_IDX3:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx1, 5, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_LSHL_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_ADD_U32_e64 internal [[V_LOAD_IDX3]], internal [[V_LOAD_IDX2]], [[V_LOAD_IDX]], implicit $exec
-    ; ALLOC-NEXT:   V_STORE_IDX internal [[V_LSHL_ADD_U32_e64_]], $idx3, 20, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit $idx2, implicit $exec, implicit $idx1, implicit [[V_LOAD_IDX]], implicit $idx3 {
+    ; ALLOC-NEXT:   $stg_srcb = V_LOAD_IDX $idx2, 10, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX $idx1, 5, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_dsta = V_LSHL_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, [[V_LOAD_IDX]], implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx3, 20, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
     ; ALLOC-NEXT: $idx2 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_2]]
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_3]]
-    ; ALLOC-NEXT: BUNDLE implicit-def %13, implicit-def %14, implicit $idx2, implicit $exec, implicit [[V_LOAD_IDX1]], implicit $idx1 {
-    ; ALLOC-NEXT:   [[V_LOAD_IDX4:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx2, 11, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_LOAD_IDX1]], internal [[V_LOAD_IDX4]], 0, implicit $exec
-    ; ALLOC-NEXT:   V_STORE_IDX internal [[V_ADD_U32_e64_]], $idx1, 21, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit $idx2, implicit $exec, implicit [[V_LOAD_IDX1]], implicit $idx1 {
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX $idx2, 11, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_dsta = V_ADD_U32_e64 [[V_LOAD_IDX1]], internal $stg_srca, 0, implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 21, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: unsafe-load-past-store
@@ -1435,9 +1437,9 @@ body:             |
     ; GCN-NEXT: [[V_LOAD_IDX1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
     ; GCN-NEXT: DS_WRITE_B32_gfx9 [[V_LOAD_IDX1]], [[V_MAX_U32_e64_]], 4, 0, implicit $exec :: (store (s32), addrspace 3)
-    ; GCN-NEXT: BUNDLE implicit-def %5, implicit [[V_LOAD_IDX1]], implicit $exec, implicit [[S_LSHL_B32_1]] {
-    ; GCN-NEXT:   [[DS_READ_B32_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[V_LOAD_IDX1]], 0, 0, implicit $exec :: (load (s32), addrspace 3)
-    ; GCN-NEXT:   V_STORE_IDX internal [[DS_READ_B32_gfx9_]], [[S_LSHL_B32_1]], 20, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[V_LOAD_IDX1]], implicit $exec, implicit [[S_LSHL_B32_1]] {
+    ; GCN-NEXT:   $stg_dsta = DS_READ_B32_gfx9 [[V_LOAD_IDX1]], 0, 0, implicit $exec :: (load (s32), addrspace 3)
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHL_B32_1]], 20, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
     ;
     ; ALLOC-LABEL: name: coremi-store-store-trivially-distinct
@@ -1451,9 +1453,9 @@ body:             |
     ; ALLOC-NEXT: [[V_LOAD_IDX1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx2, 10, implicit $exec :: (load (s32), addrspace 10)
     ; ALLOC-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
     ; ALLOC-NEXT: DS_WRITE_B32_gfx9 [[V_LOAD_IDX1]], [[V_MAX_U32_e64_]], 4, 0, implicit $exec :: (store (s32), addrspace 3)
-    ; ALLOC-NEXT: BUNDLE implicit-def %5, implicit [[V_LOAD_IDX1]], implicit $exec, implicit $idx1 {
-    ; ALLOC-NEXT:   [[DS_READ_B32_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[V_LOAD_IDX1]], 0, 0, implicit $exec :: (load (s32), addrspace 3)
-    ; ALLOC-NEXT:   V_STORE_IDX internal [[DS_READ_B32_gfx9_]], $idx1, 20, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[V_LOAD_IDX1]], implicit $exec, implicit $idx1 {
+    ; ALLOC-NEXT:   $stg_dsta = DS_READ_B32_gfx9 [[V_LOAD_IDX1]], 0, 0, implicit $exec :: (load (s32), addrspace 3)
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 20, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: coremi-store-store-trivially-distinct
@@ -1499,17 +1501,17 @@ body:             |
   bb.0:
     ; GCN-LABEL: name: same-bb-load-store-no-core
     ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
-    ; GCN-NEXT: BUNDLE implicit-def %1, implicit [[S_LSHL_B32_]], implicit $exec {
-    ; GCN-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   V_STORE_IDX internal [[V_LOAD_IDX]], [[S_LSHL_B32_]], 1, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[S_LSHL_B32_]], implicit $exec {
+    ; GCN-NEXT:   $stg_dsta = V_LOAD_IDX [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHL_B32_]], 1, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
     ;
     ; ALLOC-LABEL: name: same-bb-load-store-no-core
     ; ALLOC: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
-    ; ALLOC-NEXT: BUNDLE implicit-def %1, implicit $idx1, implicit $exec {
-    ; ALLOC-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx1, 0, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   V_STORE_IDX internal [[V_LOAD_IDX]], $idx1, 1, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_dsta, implicit $idx1, implicit $exec {
+    ; ALLOC-NEXT:   $stg_dsta = V_LOAD_IDX $idx1, 0, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 1, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: same-bb-load-store-no-core
@@ -1541,17 +1543,17 @@ body:             |
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 48
     ; GCN-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 16
     ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, [[S_MOV_B32_]], implicit $exec
-    ; GCN-NEXT: BUNDLE implicit-def %1, implicit [[S_MOV_B32_]], implicit $exec, implicit [[S_MOV_B32_1]] {
-    ; GCN-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vreg_128_align2 = V_LOAD_IDX [[S_MOV_B32_]], 8, implicit $exec :: (load (s128), addrspace 10)
-    ; GCN-NEXT:   V_STORE_IDX internal [[V_LOAD_IDX]], [[S_MOV_B32_1]], 4, implicit $exec :: (store (s128), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[S_MOV_B32_]], implicit $exec, implicit [[S_MOV_B32_1]] {
+    ; GCN-NEXT:   $stg_dsta = V_LOAD_IDX [[S_MOV_B32_]], 8, implicit $exec :: (load (s128), addrspace 10)
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_MOV_B32_1]], 4, implicit $exec :: (store (s128), addrspace 10)
     ; GCN-NEXT: }
     ;
     ; ALLOC-LABEL: name: same-bb-wide-no-core
     ; ALLOC: $idx2 = S_SET_GPR_IDX_U32 48
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 16
-    ; ALLOC-NEXT: BUNDLE implicit-def %1, implicit $idx2, implicit $exec, implicit $idx1 {
-    ; ALLOC-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vreg_128_align2 = V_LOAD_IDX $idx2, 8, implicit $exec :: (load (s128), addrspace 10)
-    ; ALLOC-NEXT:   V_STORE_IDX internal [[V_LOAD_IDX]], $idx1, 4, implicit $exec :: (store (s128), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_dsta, implicit $idx2, implicit $exec, implicit $idx1 {
+    ; ALLOC-NEXT:   $stg_dsta = V_LOAD_IDX $idx2, 8, implicit $exec :: (load (s128), addrspace 10)
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 4, implicit $exec :: (store (s128), addrspace 10)
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: same-bb-wide-no-core
@@ -1588,17 +1590,17 @@ body:             |
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 48
     ; GCN-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 16
     ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, [[S_MOV_B32_]], implicit $exec
-    ; GCN-NEXT: BUNDLE implicit-def %1, implicit [[S_MOV_B32_]], implicit $exec, implicit [[S_MOV_B32_1]] {
-    ; GCN-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vreg_128_align2 = V_LOAD_IDX [[S_MOV_B32_]], 1022, implicit $exec :: (load (s128), addrspace 10)
-    ; GCN-NEXT:   V_STORE_IDX internal [[V_LOAD_IDX]], [[S_MOV_B32_1]], 1020, implicit $exec :: (store (s128), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[S_MOV_B32_]], implicit $exec, implicit [[S_MOV_B32_1]] {
+    ; GCN-NEXT:   $stg_dsta = V_LOAD_IDX [[S_MOV_B32_]], 1022, implicit $exec :: (load (s128), addrspace 10)
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_MOV_B32_1]], 1020, implicit $exec :: (store (s128), addrspace 10)
     ; GCN-NEXT: }
     ;
     ; ALLOC-LABEL: name: wide-no-core-regno-wrap
     ; ALLOC: $idx2 = S_SET_GPR_IDX_U32 48
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 16
-    ; ALLOC-NEXT: BUNDLE implicit-def %1, implicit $idx2, implicit $exec, implicit $idx1 {
-    ; ALLOC-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vreg_128_align2 = V_LOAD_IDX $idx2, 1022, implicit $exec :: (load (s128), addrspace 10)
-    ; ALLOC-NEXT:   V_STORE_IDX internal [[V_LOAD_IDX]], $idx1, 1020, implicit $exec :: (store (s128), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_dsta, implicit $idx2, implicit $exec, implicit $idx1 {
+    ; ALLOC-NEXT:   $stg_dsta = V_LOAD_IDX $idx2, 1022, implicit $exec :: (load (s128), addrspace 10)
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 1020, implicit $exec :: (store (s128), addrspace 10)
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: wide-no-core-regno-wrap

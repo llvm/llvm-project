@@ -11319,7 +11319,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         SDValue(DAG.getMachineNode(AMDGPU::S_AND_B32, DL, MVT::i32, CntOp,
                                    DAG.getTargetConstant(0x3F, DL, MVT::i32)),
                 0);
-    constexpr unsigned ShAmt = 16;
+    unsigned ShAmt = Subtarget->getBarrierMemberCountShift();
     M0Val = DAG.getNode(ISD::SHL, DL, MVT::i32, CntOp,
                         DAG.getShiftAmountConstant(ShAmt, MVT::i32, DL));
 
@@ -11369,9 +11369,8 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       }
       // extract the BarrierID from bits 4-9 of BarOp, copy to M0[5:0]
       SDValue M0Val;
-      unsigned ShAmt = Subtarget->getBarrierMemberCountShift();
       M0Val = DAG.getNode(ISD::SRL, DL, MVT::i32, BarOp,
-                          DAG.getShiftAmountConstant(ShAmt, MVT::i32, DL));
+                          DAG.getShiftAmountConstant(4, MVT::i32, DL));
       M0Val =
           SDValue(DAG.getMachineNode(AMDGPU::S_AND_B32, DL, MVT::i32, M0Val,
                                      DAG.getTargetConstant(0x3F, DL, MVT::i32)),
@@ -16772,7 +16771,8 @@ void SITargetLowering::AddMemOpInit(MachineInstr &MI) const {
 
   BuildMI(MBB, MI, DL, TII->get(AMDGPU::IMPLICIT_DEF), PrevDst);
   for (; SizeLeft; SizeLeft--, CurrIdx++) {
-    NewDst = MRI.createVirtualRegister(TII->getOpRegClass(MI, DstIdx));
+    NewDst = MRI.createVirtualRegister(
+        TRI.getAllocatableClass(TII->getOpRegClass(MI, DstIdx)));
     // Initialize dword
     Register SubReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     // clang-format off
@@ -16986,9 +16986,10 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
         RC = &AMDGPU::VGPR_32_Lo256RegClass;
         break;
       default:
-        RC = Subtarget->has1024AddressableVGPRs()
-                 ? TRI->getAlignedLo256VGPRClassForBitWidth(BitWidth)
-                 : TRI->getVGPRClassForBitWidth(BitWidth);
+        RC = TRI->getAllocatableClass(
+            Subtarget->has1024AddressableVGPRs()
+                ? TRI->getAlignedLo256VGPRClassForBitWidth(BitWidth)
+                : TRI->getVGPRClassForBitWidth(BitWidth));
         if (!RC)
           return std::pair(0U, nullptr);
         break;
@@ -17042,9 +17043,10 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
             return std::pair(0U, nullptr);
           MCRegister Reg = RC->getRegister(Idx);
           if (SIRegisterInfo::isVGPRClass(RC))
-            RC = Subtarget->has1024AddressableVGPRs()
-                     ? TRI->getAlignedLo256VGPRClassForBitWidth(Width)
-                     : TRI->getVGPRClassForBitWidth(Width);
+            RC = TRI->getAllocatableClass(
+                Subtarget->has1024AddressableVGPRs()
+                    ? TRI->getAlignedLo256VGPRClassForBitWidth(Width)
+                    : TRI->getVGPRClassForBitWidth(Width));
           else if (SIRegisterInfo::isSGPRClass(RC))
             RC = TRI->getSGPRClassForBitWidth(Width);
           else if (SIRegisterInfo::isAGPRClass(RC))
@@ -17069,8 +17071,9 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
   if (Ret.first) {
     Ret.second = TRI->getPhysRegBaseClass(Ret.first);
     if (Subtarget->has1024AddressableVGPRs() && TRI->isVGPRClass(Ret.second))
-      Ret.second = TRI->getAlignedLo256VGPRClassForBitWidth(
-          Ret.second->MC->getSizeInBits());
+      Ret.second =
+          TRI->getAllocatableClass(TRI->getAlignedLo256VGPRClassForBitWidth(
+              Ret.second->MC->getSizeInBits()));
   }
 
   return Ret;
@@ -18080,7 +18083,7 @@ SITargetLowering::getRegClassFor(MVT VT, bool isDivergent) const {
   if (TRI->isSGPRClass(RC) && isDivergent)
     return TRI->getEquivalentVGPRClass(RC);
 
-  return RC;
+  return TRI->getAllocatableClass(RC);
 }
 
 // FIXME: This is a workaround for DivergenceAnalysis not understanding always

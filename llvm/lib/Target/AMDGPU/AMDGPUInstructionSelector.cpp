@@ -6088,7 +6088,7 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInit(
       .setOperandDead(3); // Dead scc
 
   Register TmpReg3 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
-  constexpr unsigned ShAmt = 16;
+  unsigned ShAmt = Subtarget->getBarrierMemberCountShift();
   BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_LSHL_B32), TmpReg3)
       .addReg(TmpReg2)
       .addImm(ShAmt)

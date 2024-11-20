@@ -5705,46 +5705,43 @@ adjustAllocatableRegClass(const GCNSubtarget &ST, const SIRegisterInfo &RI,
     case AMDGPU::AV_32RegClassID:
       RCID = AMDGPU::VGPR_32RegClassID;
       break;
+    case AMDGPU::AV_32_STAGINGRegClassID:
+      RCID = AMDGPU::VGPR_32_STAGINGRegClassID;
+      break;
     case AMDGPU::AV_64RegClassID:
       RCID = AMDGPU::VReg_64RegClassID;
+      break;
+    case AMDGPU::AV_64_STAGINGRegClassID:
+      RCID = AMDGPU::VReg_64_STAGINGRegClassID;
       break;
     case AMDGPU::AV_96RegClassID:
       RCID = AMDGPU::VReg_96RegClassID;
       break;
+    case AMDGPU::AV_96_STAGINGRegClassID:
+      RCID = AMDGPU::VReg_96_STAGINGRegClassID;
+      break;
     case AMDGPU::AV_128RegClassID:
       RCID = AMDGPU::VReg_128RegClassID;
+      break;
+    case AMDGPU::AV_128_STAGINGRegClassID:
+      RCID = AMDGPU::VReg_128_STAGINGRegClassID;
       break;
     case AMDGPU::AV_160RegClassID:
       RCID = AMDGPU::VReg_160RegClassID;
       break;
+    case AMDGPU::AV_160_STAGINGRegClassID:
+      RCID = AMDGPU::VReg_160_STAGINGRegClassID;
+      break;
     case AMDGPU::AV_512RegClassID:
       RCID = AMDGPU::VReg_512RegClassID;
       break;
-    default:
-      break;
-    }
-  } else if (IsAllocatable) {
-    switch (RCID) {
-    case AMDGPU::VGPR_32_STAGINGRegClassID:
-      RCID = AMDGPU::VGPR_32RegClassID;
-      break;
-    case AMDGPU::VGPR_32_Lo256_STAGINGRegClassID:
-      RCID = AMDGPU::VGPR_32_Lo256RegClassID;
-      break;
-    case AMDGPU::VGPR_32_Lo128_STAGINGRegClassID:
-      RCID = AMDGPU::VGPR_32_Lo128RegClassID;
-      break;
-    case AMDGPU::VGPR_16_STAGINGRegClassID:
-      RCID = AMDGPU::VGPR_16RegClassID;
-      break;
-    case AMDGPU::VGPR_16_Lo128_STAGINGRegClassID:
-      RCID = AMDGPU::VGPR_16_Lo128RegClassID;
+    case AMDGPU::AV_512_STAGINGRegClassID:
+      RCID = AMDGPU::VReg_512_STAGINGRegClassID;
       break;
     default:
       break;
     }
   }
-
   return RI.getProperlyAlignedRC(RI.getRegClass(RCID));
 }
 
@@ -7785,7 +7782,8 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     Register DstReg = NewInstr->getOperand(0).getReg();
     assert(DstReg.isVirtual());
     // Update the destination register class.
-    const TargetRegisterClass *NewDstRC = getDestEquivalentVGPRClass(*NewInstr);
+    const TargetRegisterClass *NewDstRC =
+        RI.getAllocatableClass(getDestEquivalentVGPRClass(*NewInstr));
     assert(NewDstRC);
     NewDstReg = MRI.createVirtualRegister(NewDstRC);
     MRI.replaceRegWith(DstReg, NewDstReg);

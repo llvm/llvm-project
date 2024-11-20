@@ -8,8 +8,10 @@
 //
 /// \file
 /// Form Bundles with VALU instructions and the V_LOAD/STORE_IDX that are used
-/// to index the operands. The Bundles can be lowered to a single VALU in the
-/// AMDGPULowerVGPREncoding pass.
+/// to index the operands. Most bundles can be lowered to a single VALU in the
+/// AMDGPULowerVGPREncoding pass (with the exception of data movement bundles
+/// containing only loads and stores). Replace the V_LOAD/STORE_IDX data
+/// operands with staging registers.
 ///
 //
 //===----------------------------------------------------------------------===//
@@ -30,6 +32,15 @@ using namespace llvm;
 #define DEBUG_TYPE "bundle-indexed-load-store"
 
 namespace {
+
+// OpInLdSt and OpInCoreMI are null if MI is CoreMI, including if V_STORE_IDX is
+// the CoreMI
+struct BundleItem {
+  MachineInstr *MI;
+  MachineOperand *OpInLdSt;
+  MachineOperand *OpInCoreMI;
+  Register StagingReg;
+};
 
 class AMDGPUBundleIdxLdSt : public MachineFunctionPass {
 public:
@@ -66,7 +77,7 @@ INITIALIZE_PASS(AMDGPUBundleIdxLdSt, DEBUG_TYPE,
 bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
   MachineRegisterInfo *MRI = &MI->getParent()->getParent()->getRegInfo();
   MachineBasicBlock *MBB = MI->getParent();
-  SmallVector<MachineInstr *, 4> Worklist;
+  SmallVector<BundleItem, 4> Worklist;
   std::unordered_set<unsigned> IdxList;
   // Prevent cycles in data-flow from multiple defs. This check is too coarse.
   // We could fix this with per BB analysis, but prefer to fix it later while
@@ -108,7 +119,7 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
 
     MachineOperand *IdxOp = STI->getNamedOperand(*StoreMI, AMDGPU::OpName::idx);
     IdxList.insert(IdxOp->getReg());
-    Worklist.push_back(StoreMI);
+    Worklist.push_back({StoreMI, UseOfMI, &Def, AMDGPU::STG_DSTA});
   }
 
   // Check for constraints on moving MI down to StoreMI
@@ -122,16 +133,24 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
                                   "stores but does not load");
     if (MILoads) {
       MachineBasicBlock::iterator I = MI->getIterator(),
-                                  E = Worklist[0]->getIterator();
+                                  E = Worklist[0].MI->getIterator();
       for (++I; I != E; ++I) {
         if (I->mayStore() && !STI->areMemAccessesTriviallyDisjoint(*MI, *I))
           return false;
       }
     }
   }
-  Worklist.push_back(MI);
+  Worklist.push_back({MI, nullptr, nullptr, 0});
 
-  for (const auto &Use : MI->explicit_uses()) {
+  const unsigned NumSrcStagingRegs = 6;
+  static const Register StagingRegs[NumSrcStagingRegs] = {
+      AMDGPU::STG_SRCA, AMDGPU::STG_SRCB, AMDGPU::STG_SRCC,
+      AMDGPU::STG_SRCD, AMDGPU::STG_SRCE, AMDGPU::STG_SRCF};
+  unsigned StagingRegIdx = 0;
+
+  for (auto &Use : MI->explicit_uses()) {
+    if (StagingRegIdx == NumSrcStagingRegs)
+      break;
     if (!Use.isReg())
       continue;
     // TODO-GFX13 Update TwoAddressInstructionPass to handle Bundles
@@ -165,7 +184,7 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     // TODO-GFX13 make this more precise by checking idx and offset
     bool AliasConflict = false;
     MachineBasicBlock::instr_iterator I = UseMI->getIterator(),
-                                      E = Worklist[0]->getIterator();
+                                      E = Worklist[0].MI->getIterator();
     for (++I; I != E; ++I) {
       if (I->getOpcode() == AMDGPU::V_STORE_IDX) {
         AliasConflict = true;
@@ -183,19 +202,36 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
         continue;
       IdxList.insert(IdxOp->getReg());
     }
-    Worklist.push_back(UseMI);
+    Worklist.push_back({UseMI,
+                        STI->getNamedOperand(*UseMI, AMDGPU::OpName::data_op),
+                        &Use, StagingRegs[StagingRegIdx]});
+    StagingRegIdx++;
   }
   if (IdxList.size() == 0)
     return false;
 
   // Insert bundle where the store was, or where MI was if there was no store.
-  auto LastMII = MachineBasicBlock::instr_iterator(Worklist[0]);
+  auto LastMII = MachineBasicBlock::instr_iterator(Worklist[0].MI);
   auto FirstMII = LastMII;
+  // Replace the registers in the bundle with the staging registers
+  if (auto *Op = Worklist[0].OpInLdSt) {
+    Op->setReg(Worklist[0].StagingReg);
+  }
+  if (auto *Op = Worklist[0].OpInCoreMI) {
+    Op->setReg(Worklist[0].StagingReg);
+  }
 
   for (unsigned I = 1; I < Worklist.size(); I++) {
-    Worklist[I]->removeFromParent();
-    MBB->insert(FirstMII, Worklist[I]);
-    FirstMII = MachineBasicBlock::instr_iterator(Worklist[I]);
+    MachineInstr *CurMI = Worklist[I].MI;
+    CurMI->removeFromParent();
+    MBB->insert(FirstMII, CurMI);
+    if (auto *Op = Worklist[I].OpInLdSt) {
+      Op->setReg(Worklist[I].StagingReg);
+    }
+    if (auto *Op = Worklist[I].OpInCoreMI) {
+      Op->setReg(Worklist[I].StagingReg);
+    }
+    FirstMII = MachineBasicBlock::instr_iterator(CurMI);
   }
   finalizeBundle(*MBB, FirstMII, ++LastMII);
   return true;

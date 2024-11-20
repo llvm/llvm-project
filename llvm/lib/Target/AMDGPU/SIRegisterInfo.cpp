@@ -3416,25 +3416,25 @@ SIRegisterInfo::getAnyVGPRClassForBitWidth(unsigned BitWidth) const {
   if (BitWidth == 1)
     return &AMDGPU::VReg_1RegClass;
   if (BitWidth == 16)
-    return &AMDGPU::VGPR_16RegClass;
+    return &AMDGPU::VGPR_16_STAGINGRegClass;
   if (BitWidth == 32)
-    return &AMDGPU::VGPR_32RegClass;
+    return &AMDGPU::VGPR_32_STAGINGRegClass;
   if (BitWidth == 64)
-    return &AMDGPU::VReg_64RegClass;
+    return &AMDGPU::VReg_64_STAGINGRegClass;
   if (BitWidth == 96)
-    return &AMDGPU::VReg_96RegClass;
+    return &AMDGPU::VReg_96_STAGINGRegClass;
   if (BitWidth == 128)
-    return &AMDGPU::VReg_128RegClass;
+    return &AMDGPU::VReg_128_STAGINGRegClass;
   if (BitWidth == 160)
-    return &AMDGPU::VReg_160RegClass;
+    return &AMDGPU::VReg_160_STAGINGRegClass;
   if (BitWidth == 192)
-    return &AMDGPU::VReg_192RegClass;
+    return &AMDGPU::VReg_192_STAGINGRegClass;
   if (BitWidth == 224)
     return &AMDGPU::VReg_224RegClass;
   if (BitWidth == 256)
-    return &AMDGPU::VReg_256RegClass;
+    return &AMDGPU::VReg_256_STAGINGRegClass;
   if (BitWidth == 288)
-    return &AMDGPU::VReg_288RegClass;
+    return &AMDGPU::VReg_288_STAGINGRegClass;
   if (BitWidth == 320)
     return &AMDGPU::VReg_320RegClass;
   if (BitWidth == 352)
@@ -3442,33 +3442,39 @@ SIRegisterInfo::getAnyVGPRClassForBitWidth(unsigned BitWidth) const {
   if (BitWidth == 384)
     return &AMDGPU::VReg_384RegClass;
   if (BitWidth == 512)
-    return &AMDGPU::VReg_512RegClass;
+    return &AMDGPU::VReg_512_STAGINGRegClass;
   if (BitWidth == 576)
-    return &AMDGPU::VReg_576RegClass;
+    return &AMDGPU::VReg_576_STAGINGRegClass;
   if (BitWidth == 1024)
-    return &AMDGPU::VReg_1024RegClass;
+    return &AMDGPU::VReg_1024_STAGINGRegClass;
 
   return nullptr;
 }
 
 static const TargetRegisterClass *
 getAlignedVGPRClassForBitWidth(unsigned BitWidth) {
+  if (BitWidth == 1)
+    return &AMDGPU::VReg_1RegClass;
+  if (BitWidth == 16)
+    return &AMDGPU::VGPR_16_STAGINGRegClass;
+  if (BitWidth == 32)
+    return &AMDGPU::VGPR_32_STAGINGRegClass;
   if (BitWidth == 64)
-    return &AMDGPU::VReg_64_Align2RegClass;
+    return &AMDGPU::VReg_64_STAGING_Align2RegClass;
   if (BitWidth == 96)
-    return &AMDGPU::VReg_96_Align2RegClass;
+    return &AMDGPU::VReg_96_STAGING_Align2RegClass;
   if (BitWidth == 128)
-    return &AMDGPU::VReg_128_Align2RegClass;
+    return &AMDGPU::VReg_128_STAGING_Align2RegClass;
   if (BitWidth == 160)
-    return &AMDGPU::VReg_160_Align2RegClass;
+    return &AMDGPU::VReg_160_STAGING_Align2RegClass;
   if (BitWidth == 192)
-    return &AMDGPU::VReg_192_Align2RegClass;
+    return &AMDGPU::VReg_192_STAGING_Align2RegClass;
   if (BitWidth == 224)
     return &AMDGPU::VReg_224_Align2RegClass;
   if (BitWidth == 256)
-    return &AMDGPU::VReg_256_Align2RegClass;
+    return &AMDGPU::VReg_256_STAGING_Align2RegClass;
   if (BitWidth == 288)
-    return &AMDGPU::VReg_288_Align2RegClass;
+    return &AMDGPU::VReg_288_STAGING_Align2RegClass;
   if (BitWidth == 320)
     return &AMDGPU::VReg_320_Align2RegClass;
   if (BitWidth == 352)
@@ -3476,23 +3482,17 @@ getAlignedVGPRClassForBitWidth(unsigned BitWidth) {
   if (BitWidth == 384)
     return &AMDGPU::VReg_384_Align2RegClass;
   if (BitWidth == 512)
-    return &AMDGPU::VReg_512_Align2RegClass;
+    return &AMDGPU::VReg_512_STAGING_Align2RegClass;
   if (BitWidth == 576)
-    return &AMDGPU::VReg_576_Align2RegClass;
+    return &AMDGPU::VReg_576_STAGING_Align2RegClass;
   if (BitWidth == 1024)
-    return &AMDGPU::VReg_1024_Align2RegClass;
+    return &AMDGPU::VReg_1024_STAGING_Align2RegClass;
 
   return nullptr;
 }
 
 const TargetRegisterClass *
 SIRegisterInfo::getVGPRClassForBitWidth(unsigned BitWidth) const {
-  if (BitWidth == 1)
-    return &AMDGPU::VReg_1RegClass;
-  if (BitWidth == 16)
-    return &AMDGPU::VGPR_16RegClass;
-  if (BitWidth == 32)
-    return &AMDGPU::VGPR_32RegClass;
   return ST.needsAlignedVGPRs() ? getAlignedVGPRClassForBitWidth(BitWidth)
                                 : getAnyVGPRClassForBitWidth(BitWidth);
 }
@@ -3500,9 +3500,9 @@ SIRegisterInfo::getVGPRClassForBitWidth(unsigned BitWidth) const {
 const TargetRegisterClass *
 SIRegisterInfo::getAlignedLo256VGPRClassForBitWidth(unsigned BitWidth) const {
   if (BitWidth <= 32)
-    return &AMDGPU::VGPR_32_Lo256RegClass;
+    return &AMDGPU::VGPR_32_STAGING_Lo256RegClass;
   if (BitWidth <= 64)
-    return &AMDGPU::VReg_64_Lo256_Align2RegClass;
+    return &AMDGPU::VReg_64_STAGING_Lo256_Align2RegClass;
   if (BitWidth <= 96)
     return &AMDGPU::VReg_96_Lo256_Align2RegClass;
   if (BitWidth <= 128)
@@ -3614,21 +3614,21 @@ SIRegisterInfo::getAGPRClassForBitWidth(unsigned BitWidth) const {
 static const TargetRegisterClass *
 getAnyVectorSuperClassForBitWidth(unsigned BitWidth) {
   if (BitWidth == 64)
-    return &AMDGPU::AV_64RegClass;
+    return &AMDGPU::AV_64_STAGINGRegClass;
   if (BitWidth == 96)
-    return &AMDGPU::AV_96RegClass;
+    return &AMDGPU::AV_96_STAGINGRegClass;
   if (BitWidth == 128)
-    return &AMDGPU::AV_128RegClass;
+    return &AMDGPU::AV_128_STAGINGRegClass;
   if (BitWidth == 160)
-    return &AMDGPU::AV_160RegClass;
+    return &AMDGPU::AV_160_STAGINGRegClass;
   if (BitWidth == 192)
-    return &AMDGPU::AV_192RegClass;
+    return &AMDGPU::AV_192_STAGINGRegClass;
   if (BitWidth == 224)
     return &AMDGPU::AV_224RegClass;
   if (BitWidth == 256)
-    return &AMDGPU::AV_256RegClass;
+    return &AMDGPU::AV_256_STAGINGRegClass;
   if (BitWidth == 288)
-    return &AMDGPU::AV_288RegClass;
+    return &AMDGPU::AV_288_STAGINGRegClass;
   if (BitWidth == 320)
     return &AMDGPU::AV_320RegClass;
   if (BitWidth == 352)
@@ -3636,11 +3636,11 @@ getAnyVectorSuperClassForBitWidth(unsigned BitWidth) {
   if (BitWidth == 384)
     return &AMDGPU::AV_384RegClass;
   if (BitWidth == 512)
-    return &AMDGPU::AV_512RegClass;
+    return &AMDGPU::AV_512_STAGINGRegClass;
   if (BitWidth == 576)
-    return &AMDGPU::AV_576RegClass;
+    return &AMDGPU::AV_576_STAGINGRegClass;
   if (BitWidth == 1024)
-    return &AMDGPU::AV_1024RegClass;
+    return &AMDGPU::AV_1024_STAGINGRegClass;
 
   return nullptr;
 }
@@ -3648,21 +3648,21 @@ getAnyVectorSuperClassForBitWidth(unsigned BitWidth) {
 static const TargetRegisterClass *
 getAlignedVectorSuperClassForBitWidth(unsigned BitWidth) {
   if (BitWidth == 64)
-    return &AMDGPU::AV_64_Align2RegClass;
+    return &AMDGPU::AV_64_STAGING_Align2RegClass;
   if (BitWidth == 96)
-    return &AMDGPU::AV_96_Align2RegClass;
+    return &AMDGPU::AV_96_STAGING_Align2RegClass;
   if (BitWidth == 128)
-    return &AMDGPU::AV_128_Align2RegClass;
+    return &AMDGPU::AV_128_STAGING_Align2RegClass;
   if (BitWidth == 160)
-    return &AMDGPU::AV_160_Align2RegClass;
+    return &AMDGPU::AV_160_STAGING_Align2RegClass;
   if (BitWidth == 192)
-    return &AMDGPU::AV_192_Align2RegClass;
+    return &AMDGPU::AV_192_STAGING_Align2RegClass;
   if (BitWidth == 224)
     return &AMDGPU::AV_224_Align2RegClass;
   if (BitWidth == 256)
-    return &AMDGPU::AV_256_Align2RegClass;
+    return &AMDGPU::AV_256_STAGING_Align2RegClass;
   if (BitWidth == 288)
-    return &AMDGPU::AV_288_Align2RegClass;
+    return &AMDGPU::AV_288_STAGING_Align2RegClass;
   if (BitWidth == 320)
     return &AMDGPU::AV_320_Align2RegClass;
   if (BitWidth == 352)
@@ -3670,11 +3670,11 @@ getAlignedVectorSuperClassForBitWidth(unsigned BitWidth) {
   if (BitWidth == 384)
     return &AMDGPU::AV_384_Align2RegClass;
   if (BitWidth == 512)
-    return &AMDGPU::AV_512_Align2RegClass;
+    return &AMDGPU::AV_512_STAGING_Align2RegClass;
   if (BitWidth == 576)
-    return &AMDGPU::AV_576_Align2RegClass;
+    return &AMDGPU::AV_576_STAGING_Align2RegClass;
   if (BitWidth == 1024)
-    return &AMDGPU::AV_1024_Align2RegClass;
+    return &AMDGPU::AV_1024_STAGING_Align2RegClass;
 
   return nullptr;
 }
@@ -3682,7 +3682,7 @@ getAlignedVectorSuperClassForBitWidth(unsigned BitWidth) {
 const TargetRegisterClass *
 SIRegisterInfo::getVectorSuperClassForBitWidth(unsigned BitWidth) const {
   if (BitWidth == 32)
-    return &AMDGPU::AV_32RegClass;
+    return &AMDGPU::AV_32_STAGINGRegClass;
   return ST.needsAlignedVGPRs()
              ? getAlignedVectorSuperClassForBitWidth(BitWidth)
              : getAnyVectorSuperClassForBitWidth(BitWidth);
@@ -3739,7 +3739,8 @@ bool SIRegisterInfo::isSGPRReg(const MachineRegisterInfo &MRI,
 const TargetRegisterClass *
 SIRegisterInfo::getEquivalentVGPRClass(const TargetRegisterClass *SRC) const {
   unsigned Size = getRegSizeInBits(*SRC);
-  const TargetRegisterClass *VRC = getVGPRClassForBitWidth(Size);
+  const TargetRegisterClass *VRC =
+      getAllocatableClass(getVGPRClassForBitWidth(Size));
   assert(VRC && "Invalid register class size");
   return VRC;
 }
@@ -3982,8 +3983,8 @@ SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
                                          const RegisterBank &RB) const {
   switch (RB.getID()) {
   case AMDGPU::VGPRRegBankID:
-    return getVGPRClassForBitWidth(
-        std::max(ST.useRealTrue16Insts() ? 16u : 32u, Size));
+    return getAllocatableClass(getVGPRClassForBitWidth(
+        std::max(ST.useRealTrue16Insts() ? 16u : 32u, Size)));
   case AMDGPU::VCCRegBankID:
     assert(Size == 1);
     return getWaveMaskRegClass();
@@ -4019,6 +4020,7 @@ MCRegister SIRegisterInfo::getExec() const {
 
 const TargetRegisterClass *SIRegisterInfo::getVGPR64Class() const {
   // VGPR tuples have an alignment requirement on gfx90a variants.
+  // It is possible to return RC with STAGING_REGs here, but not needed.
   return ST.needsAlignedVGPRs() ? &AMDGPU::VReg_64_Align2RegClass
                                 : &AMDGPU::VReg_64RegClass;
 }
@@ -4112,6 +4114,8 @@ bool SIRegisterInfo::isProperlyAlignedRC(const TargetRegisterClass &RC) const {
   if (!ST.needsAlignedVGPRs())
     return true;
 
+  if (&RC == &AMDGPU::VGPR_IDX_DATA_OP_RCRegClass)
+    return true;
   if (isVGPRClass(&RC))
     return RC.hasSuperClassEq(getVGPRClassForBitWidth(getRegSizeInBits(RC)));
   if (isAGPRClass(&RC))
@@ -4128,6 +4132,7 @@ SIRegisterInfo::getProperlyAlignedRC(const TargetRegisterClass *RC) const {
   if (!RC || !ST.needsAlignedVGPRs())
     return RC;
 
+  // RsrcRegClass and VGPR_IDX_DATA_OP_RC are implicitly aligned.
   unsigned Size = getRegSizeInBits(*RC);
   if (Size <= 32)
     return RC;

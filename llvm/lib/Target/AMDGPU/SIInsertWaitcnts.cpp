@@ -853,9 +853,9 @@ WaitcntBrackets::getRegIndexingInterval(const MachineInstr *MI,
         AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::offset);
     auto Offset = MI->getOperand(OffsetSrcIdx).getImm();
     Result.first += GprIdxImmedVals[Idx].value() + Offset;
-    const TargetRegisterClass *DataOpRC =
-        TRI->getPhysRegBaseClass(MI->getOperand(0).getReg());
-    unsigned Size = TRI->getRegSizeInBits(*DataOpRC);
+    assert(MI->hasOneMemOperand() && "V_LOAD/STORE_IDX must have one MMO");
+    MachineMemOperand *MMO = *MI->memoperands_begin();
+    auto Size = MMO->getSizeInBits().getValue();
     Result.second = Result.first + divideCeil(Size, 32);
     // Handle the case where the range is out of bound.
     Result.first = Result.first % MaxNumVGPRs;
@@ -2327,11 +2327,6 @@ SIInsertWaitcnts::getSoftwareHazardEventType(const MachineInstr &Inst) const {
     // when it is bundled because it is processed as an indirect-operand
     // of other instructions.
     if (Inst.getOpcode() == AMDGPU::V_STORE_IDX && Inst.isBundled())
-      return {};
-    // TODO-GFX13: remove this condition after we introduce staging-reg.
-    // This is a hack to avoid fake valu-write event, however this mess up
-    // the case in which v_load_idx destination is a v_store_idx
-    if (Inst.getOpcode() == AMDGPU::V_LOAD_IDX && Inst.isBundled())
       return {};
     return VGPR_CSMACC_WRITE;
   }

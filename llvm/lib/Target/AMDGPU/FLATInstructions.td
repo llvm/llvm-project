@@ -444,8 +444,8 @@ class FLAT_Global_Invalidate_Writeback<string opName, SDPatternOperator node = n
 class FLAT_RTS<string opName, bit HasVdst, bit HasData, RegisterClass vdstClass = VGPR_32> : FLAT_Pseudo<
   opName,
   !if(HasVdst, (outs vdstClass:$vdst), (outs)),
-  !con(!if(HasData,(ins VReg_64:$vdata), (ins)),(ins CPol:$cpol)),
-  !if(HasVdst," $vdst","")#!if(HasData,", $vdata","")#"$cpol">{
+  !con(!if(HasData, !if(HasVdst, (ins VReg_64:$vdata), (ins VGPR_32:$vdata)), (ins)),(ins CPol:$cpol)),
+  !if(!and(HasVdst, HasData), " $vdst, $vdata", !if(HasVdst, " $vdst", !if(HasData, " $vdata", "")))#"$cpol">{
 
   let is_flat_global = 1;
   let has_offset = 0;
@@ -1335,7 +1335,7 @@ defm SCRATCH_DISCARD_B128 : FLAT_Scratch_Discard_Pseudo<"scratch_discard_b128">;
 let SubtargetPredicate = isGFX13Plus in {
   def RTS_READ_RESULT_ALL_STOP : FLAT_RTS<"rts_read_result_all_stop", 1, 0, VReg_64>;
   def RTS_READ_RESULT_ONGOING  : FLAT_RTS<"rts_read_result_ongoing", 1, 0, VReg_64>;
-  def RTS_RAY_RESTORE          : FLAT_RTS<"rts_ray_restore", 1, 0>;
+  def RTS_RAY_RESTORE          : FLAT_RTS<"rts_ray_restore", 0, 1>;
   def RTS_RAY_SAVE             : FLAT_RTS<"rts_ray_save", 1, 0>;
   def RTS_UPDATE_RAY           : FLAT_RTS<"rts_update_ray", 1, 1>;
   def RTS_FLUSH                : FLAT_RTS<"rts_flush", 0, 0>;
