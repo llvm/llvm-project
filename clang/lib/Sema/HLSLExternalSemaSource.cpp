@@ -196,8 +196,7 @@ public:
       return *this;
 
     ASTContext &AST = Record->getASTContext();
-    IdentifierInfo &II =
-        AST.Idents.get("Load", tok::TokenKind::identifier);
+    IdentifierInfo &II = AST.Idents.get("Load", tok::TokenKind::identifier);
     DeclarationName Load(&II);
     addHandleAccessFunction(Load, /*IsConst=*/false, /*IsRef=*/false);
 
