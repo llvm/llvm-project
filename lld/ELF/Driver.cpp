@@ -79,8 +79,6 @@ using namespace llvm::support;
 using namespace lld;
 using namespace lld::elf;
 
-Ctx elf::ctx;
-
 static void setConfigs(Ctx &ctx, opt::InputArgList &args);
 static void readConfigs(Ctx &ctx, opt::InputArgList &args);
 
@@ -102,55 +100,6 @@ ELFSyncStream elf::InternalErr(Ctx &ctx, const uint8_t *buf) {
 
 Ctx::Ctx() : driver(*this) {}
 
-void Ctx::reset() {
-  arg.~Config();
-  new (&arg) Config();
-  driver.~LinkerDriver();
-  new (&driver) LinkerDriver(*this);
-  script = nullptr;
-  target.reset();
-
-  commonCtx = nullptr;
-  errHandler = nullptr;
-
-  bufferStart = nullptr;
-  mainPart = nullptr;
-  tlsPhdr = nullptr;
-  out = OutSections{};
-  outputSections.clear();
-  partitions.clear();
-
-  in.reset();
-  sym = ElfSym{};
-  symtab = std::make_unique<SymbolTable>(*this);
-
-  memoryBuffers.clear();
-  objectFiles.clear();
-  sharedFiles.clear();
-  binaryFiles.clear();
-  bitcodeFiles.clear();
-  lazyBitcodeFiles.clear();
-  inputSections.clear();
-  ehInputSections.clear();
-
-  symAux.clear();
-  duplicates.clear();
-  nonPrevailingSyms.clear();
-  whyExtractRecords.clear();
-  backwardReferences.clear();
-  auxiliaryFiles.clear();
-  tar.reset();
-  internalFile = nullptr;
-  hasSympart.store(false, std::memory_order_relaxed);
-  hasTlsIe.store(false, std::memory_order_relaxed);
-  needsTlsLd.store(false, std::memory_order_relaxed);
-  vernauxNum = 0;
-  scriptSymOrderCounter = 1;
-  scriptSymOrder.clear();
-  ppc64noTocRelax.clear();
-  ltoAllVtablesHaveTypeInfos = false;
-}
-
 llvm::raw_fd_ostream Ctx::openAuxiliaryFile(llvm::StringRef filename,
                                             std::error_code &ec) {
   using namespace llvm::sys::fs;
@@ -163,21 +112,16 @@ namespace lld {
 namespace elf {
 bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
           llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput) {
+  Ctx ctx;
   // This driver-specific context will be freed later by unsafeLldMain().
   auto *context = new CommonLinkerContext;
 
   context->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
-  context->e.cleanupCallback = []() {
-    Ctx &ctx = elf::ctx;
-    ctx.reset();
-    ctx.partitions.emplace_back(ctx);
-  };
   context->e.logName = args::getFilenameWithoutExe(args[0]);
   context->e.errorLimitExceededMsg =
       "too many errors emitted, stopping now (use "
       "--error-limit=0 to see all errors)";
 
-  Ctx &ctx = elf::ctx;
   LinkerScript script(ctx);
   ctx.script = &script;
   ctx.commonCtx = context;
