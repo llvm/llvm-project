@@ -29,8 +29,8 @@ class SwiftCompletionTest(PExpectTest):
         # Try completing something that has multiple completions.
         self.child.send("Hash\t")
         self.child.expect_exact("Available completions:")
-        self.child.expect_exact("\tHash --")
-        self.child.expect_exact("\tHash --")
+        self.child.expect_exact("        Hash --")
+        self.child.expect_exact("        Hash --")
         self.child.sendline("")
 
         self.quit()
