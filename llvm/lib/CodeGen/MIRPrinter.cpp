@@ -366,7 +366,7 @@ void MIRPrinter::convert(yaml::MachineFunction &YamlMF,
       printRegMIR(*I, Reg, TRI);
       CalleeSavedRegisters.push_back(std::move(Reg));
     }
-    YamlMF.CalleeSavedRegisters = CalleeSavedRegisters;
+    YamlMF.CalleeSavedRegisters = std::move(CalleeSavedRegisters);
   }
 }
 
