@@ -1491,13 +1491,15 @@ void checkAssignmentLifetime(Sema &SemaRef, const AssignedEntity &Entity,
 
 void checkCaptureByLifetime(Sema &SemaRef, const CapturingEntity &Entity,
                             Expr *Init) {
-  if (!SemaRef.getDiagnostics().isIgnored(
-          diag::warn_dangling_reference_captured, SourceLocation()))
-    return checkExprLifetimeImpl(SemaRef, /*InitEntity=*/nullptr,
-                                 /*ExtendingEntity=*/nullptr,
-                                 LK_LifetimeCapture,
-                                 /*AEntity=*/nullptr,
-                                 /*CapEntity=*/&Entity, Init);
+  if (SemaRef.getDiagnostics().isIgnored(diag::warn_dangling_reference_captured,
+                                         SourceLocation()) &&
+      SemaRef.getDiagnostics().isIgnored(
+          diag::warn_dangling_reference_captured_by_unknown, SourceLocation()))
+    return;
+  return checkExprLifetimeImpl(SemaRef, /*InitEntity=*/nullptr,
+                               /*ExtendingEntity=*/nullptr, LK_LifetimeCapture,
+                               /*AEntity=*/nullptr,
+                               /*CapEntity=*/&Entity, Init);
 }
 
 } // namespace clang::sema
