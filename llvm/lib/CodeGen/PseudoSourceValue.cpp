@@ -12,6 +12,8 @@
 
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/PseudoSourceValueManager.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -121,7 +123,12 @@ const PseudoSourceValue *PseudoSourceValueManager::getJumpTable() {
 
 const PseudoSourceValue *
 PseudoSourceValueManager::getFixedStack(int FI) {
-  std::unique_ptr<FixedStackPseudoSourceValue> &V = FSValues[FI];
+  // Frame index is often continuously positive, but can be negative. Use
+  // zig-zag encoding for dense index into FSValues vector.
+  unsigned Idx = (2 * unsigned(FI)) ^ (FI >> (sizeof(FI) * 8 - 1));
+  if (FSValues.size() <= Idx)
+    FSValues.resize(Idx + 1);
+  std::unique_ptr<FixedStackPseudoSourceValue> &V = FSValues[Idx];
   if (!V)
     V = std::make_unique<FixedStackPseudoSourceValue>(FI, TM);
   return V.get();

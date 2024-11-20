@@ -2,7 +2,7 @@
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+zbb -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+zbb < %s \
-# RUN:     | llvm-objdump --mattr=+zbb -M no-aliases -d -r - \
+# RUN:     | llvm-objdump --mattr=+zbb -M no-aliases --no-print-imm-hex -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: zext.h t0, t1
@@ -11,9 +11,6 @@ zext.h t0, t1
 # CHECK-ASM-AND-OBJ: rori t0, t1, 63
 # CHECK-ASM: encoding: [0x93,0x52,0xf3,0x63]
 rori t0, t1, 63
-# CHECK-ASM-AND-OBJ: rori t0, t1, 0
-# CHECK-ASM: encoding: [0x93,0x52,0x03,0x60]
-rori t0, t1, 0
 # CHECK-ASM-AND-OBJ: rev8 t0, t1
 # CHECK-ASM: encoding: [0x93,0x52,0x83,0x6b]
 rev8 t0, t1

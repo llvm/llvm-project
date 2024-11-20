@@ -2,6 +2,9 @@
 ; RUN: llc -mtriple=aarch64              < %s | FileCheck --check-prefixes=CHECK,COMPAT %s
 ; RUN: llc -mtriple=aarch64 -mattr=v8.3a < %s | FileCheck --check-prefixes=CHECK,V83A %s
 
+; v9.5-A is not expected to change codegen without -mbranch-protection=+pc, so reuse V83A.
+; RUN: llc -mtriple=aarch64 -mattr=v9.5a < %s | FileCheck --check-prefixes=CHECK,V83A %s
+
 define i32 @leaf(i32 %x) {
 ; CHECK-LABEL: leaf:
 ; CHECK:       // %bb.0:
@@ -9,7 +12,7 @@ define i32 @leaf(i32 %x) {
   ret i32 %x
 }
 
-define i32 @leaf_sign_none(i32 %x) "sign-return-address"="none"  {
+define i32 @leaf_sign_none(i32 %x) {
 ; CHECK-LABEL: leaf_sign_none:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
@@ -235,7 +238,7 @@ define i32 @leaf_sign_all_v83_b_key(i32 %x) "sign-return-address"="all" "target-
 }
 
 ; Note that BTI instruction is not needed before PACIASP.
-define i32 @leaf_sign_all_a_key_bti(i32 %x) "sign-return-address"="all" "sign-return-address-key"="a_key" "branch-target-enforcement"="true"{
+define i32 @leaf_sign_all_a_key_bti(i32 %x) "sign-return-address"="all" "sign-return-address-key"="a_key" "branch-target-enforcement"{
 ; COMPAT-LABEL: leaf_sign_all_a_key_bti:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    hint #25
@@ -252,7 +255,7 @@ define i32 @leaf_sign_all_a_key_bti(i32 %x) "sign-return-address"="all" "sign-re
 }
 
 ; Note that BTI instruction is not needed before PACIBSP.
-define i32 @leaf_sign_all_b_key_bti(i32 %x) "sign-return-address"="all" "sign-return-address-key"="b_key" "branch-target-enforcement"="true"{
+define i32 @leaf_sign_all_b_key_bti(i32 %x) "sign-return-address"="all" "sign-return-address-key"="b_key" "branch-target-enforcement"{
 ; COMPAT-LABEL: leaf_sign_all_b_key_bti:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    .cfi_b_key_frame
@@ -271,7 +274,7 @@ define i32 @leaf_sign_all_b_key_bti(i32 %x) "sign-return-address"="all" "sign-re
 }
 
 ; Note that BTI instruction is not needed before PACIBSP.
-define i32 @leaf_sign_all_v83_b_key_bti(i32 %x) "sign-return-address"="all" "target-features"="+v8.3a" "sign-return-address-key"="b_key" "branch-target-enforcement"="true" {
+define i32 @leaf_sign_all_v83_b_key_bti(i32 %x) "sign-return-address"="all" "target-features"="+v8.3a" "sign-return-address-key"="b_key" "branch-target-enforcement" {
 ; CHECK-LABEL: leaf_sign_all_v83_b_key_bti:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    .cfi_b_key_frame

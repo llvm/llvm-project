@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 -std=c++2a -verify %s -DNEW=__builtin_operator_new -DDELETE=__builtin_operator_delete
-// RUN: %clang_cc1 -std=c++2a -verify %s "-DNEW=operator new" "-DDELETE=operator delete"
-// RUN: %clang_cc1 -std=c++2a -verify %s "-DNEW=::operator new" "-DDELETE=::operator delete"
+// RUN: %clang_cc1 -std=c++2a -verify=expected,cxx20 %s -DNEW=__builtin_operator_new -DDELETE=__builtin_operator_delete
+// RUN: %clang_cc1 -std=c++2a -verify=expected,cxx20 %s "-DNEW=operator new" "-DDELETE=operator delete"
+// RUN: %clang_cc1 -std=c++2a -verify=expected,cxx20 %s "-DNEW=::operator new" "-DDELETE=::operator delete"
+// RUN: %clang_cc1 -std=c++2c -verify=expected,cxx26 %s "-DNEW=::operator new" "-DDELETE=::operator delete"
 
 constexpr bool alloc_from_user_code() {
   void *p = NEW(sizeof(int)); // expected-note {{cannot allocate untyped memory in a constant expression; use 'std::allocator<T>::allocate'}}
@@ -90,9 +91,10 @@ constexpr int no_deallocate_nonalloc = (std::allocator<int>().deallocate((int*)&
 // expected-note@-2 {{declared here}}
 
 void *operator new(std::size_t, void *p) { return p; }
-constexpr bool no_placement_new_in_user_code() { // expected-error {{never produces a constant expression}}
+void* operator new[] (std::size_t, void* p) {return p;}
+constexpr bool no_placement_new_in_user_code() { // cxx20-error {{constexpr function never produces a constant expression}}
   int a;
-  new (&a) int(42); // expected-note {{call to placement 'operator new'}}
+  new (&a) int(42); // cxx20-note {{this placement new expression is not supported in constant expressions before C++2c}}
   return a == 42;
 }
 

@@ -27,7 +27,6 @@ BreakpointResolverFileRegex::BreakpointResolverFileRegex(
       m_function_names(func_names) {}
 
 BreakpointResolverSP BreakpointResolverFileRegex::CreateFromStructuredData(
-    const lldb::BreakpointSP &bkpt,
     const StructuredData::Dictionary &options_dict, Status &error) {
   bool success;
 
@@ -35,7 +34,7 @@ BreakpointResolverSP BreakpointResolverFileRegex::CreateFromStructuredData(
   success = options_dict.GetValueForKeyAsString(
       GetKey(OptionNames::RegexString), regex_string);
   if (!success) {
-    error.SetErrorString("BRFR::CFSD: Couldn't find regex entry.");
+    error = Status::FromErrorString("BRFR::CFSD: Couldn't find regex entry.");
     return nullptr;
   }
   RegularExpression regex(regex_string);
@@ -44,7 +43,8 @@ BreakpointResolverSP BreakpointResolverFileRegex::CreateFromStructuredData(
   success = options_dict.GetValueForKeyAsBoolean(
       GetKey(OptionNames::ExactMatch), exact_match);
   if (!success) {
-    error.SetErrorString("BRFL::CFSD: Couldn't find exact match entry.");
+    error =
+        Status::FromErrorString("BRFL::CFSD: Couldn't find exact match entry.");
     return nullptr;
   }
 
@@ -59,16 +59,16 @@ BreakpointResolverSP BreakpointResolverFileRegex::CreateFromStructuredData(
       std::optional<llvm::StringRef> maybe_name =
           names_array->GetItemAtIndexAsString(i);
       if (!maybe_name) {
-        error.SetErrorStringWithFormat(
-            "BRFR::CFSD: Malformed element %zu in the names array.", i);
+        error = Status::FromErrorStringWithFormatv(
+            "BRFR::CFSD: Malformed element {0} in the names array.", i);
         return nullptr;
       }
       names_set.insert(std::string(*maybe_name));
     }
   }
 
-  return std::make_shared<BreakpointResolverFileRegex>(bkpt, std::move(regex),
-                                                       names_set, exact_match);
+  return std::make_shared<BreakpointResolverFileRegex>(
+      nullptr, std::move(regex), names_set, exact_match);
 }
 
 StructuredData::ObjectSP
@@ -102,7 +102,8 @@ Searcher::CallbackReturn BreakpointResolverFileRegex::SearchCallback(
   FileSpec cu_file_spec = cu->GetPrimaryFile();
   std::vector<uint32_t> line_matches;
   context.target_sp->GetSourceManager().FindLinesMatchingRegex(
-      cu_file_spec, m_regex, 1, UINT32_MAX, line_matches);
+      std::make_shared<SupportFile>(cu_file_spec), m_regex, 1, UINT32_MAX,
+      line_matches);
 
   uint32_t num_matches = line_matches.size();
   for (uint32_t i = 0; i < num_matches; i++) {

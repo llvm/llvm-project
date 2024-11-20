@@ -73,7 +73,7 @@ decltype(auto) bindAssignmentToDecl(const char *DeclName) {
 static bool isTest(const Decl *D) {
   if (const auto* ND = dyn_cast<NamedDecl>(D)) {
     std::string DeclName = ND->getNameAsString();
-    if (StringRef(DeclName).startswith("test"))
+    if (StringRef(DeclName).starts_with("test"))
       return true;
   }
   if (const auto *OD = dyn_cast<ObjCMethodDecl>(D)) {

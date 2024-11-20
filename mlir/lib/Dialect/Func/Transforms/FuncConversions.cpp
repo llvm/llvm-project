@@ -44,7 +44,7 @@ struct CallOpSignatureConversion : public OpConversionPattern<CallOp> {
 } // namespace
 
 void mlir::populateCallOpTypeConversionPattern(RewritePatternSet &patterns,
-                                               TypeConverter &converter) {
+                                               const TypeConverter &converter) {
   patterns.add<CallOpSignatureConversion>(converter, patterns.getContext());
 }
 
@@ -59,7 +59,7 @@ public:
       BranchOpInterface>::OpInterfaceConversionPattern;
 
   BranchOpInterfaceTypeConversion(
-      TypeConverter &typeConverter, MLIRContext *ctx,
+      const TypeConverter &typeConverter, MLIRContext *ctx,
       function_ref<bool(BranchOpInterface, int)> shouldConvertBranchOperand)
       : OpInterfaceConversionPattern(typeConverter, ctx, /*benefit=*/1),
         shouldConvertBranchOperand(shouldConvertBranchOperand) {}
@@ -84,7 +84,7 @@ public:
           newOperands[idx] = operands[idx];
       }
     }
-    rewriter.updateRootInPlace(
+    rewriter.modifyOpInPlace(
         op, [newOperands, op]() { op->setOperands(newOperands); });
     return success();
   }
@@ -107,22 +107,22 @@ public:
                   ConversionPatternRewriter &rewriter) const final {
     // For a return, all operands go to the results of the parent, so
     // rewrite them all.
-    rewriter.updateRootInPlace(op,
-                               [&] { op->setOperands(adaptor.getOperands()); });
+    rewriter.modifyOpInPlace(op,
+                             [&] { op->setOperands(adaptor.getOperands()); });
     return success();
   }
 };
 } // namespace
 
 void mlir::populateBranchOpInterfaceTypeConversionPattern(
-    RewritePatternSet &patterns, TypeConverter &typeConverter,
+    RewritePatternSet &patterns, const TypeConverter &typeConverter,
     function_ref<bool(BranchOpInterface, int)> shouldConvertBranchOperand) {
   patterns.add<BranchOpInterfaceTypeConversion>(
       typeConverter, patterns.getContext(), shouldConvertBranchOperand);
 }
 
 bool mlir::isLegalForBranchOpInterfaceTypeConversionPattern(
-    Operation *op, TypeConverter &converter) {
+    Operation *op, const TypeConverter &converter) {
   // All successor operands of branch like operations must be rewritten.
   if (auto branchOp = dyn_cast<BranchOpInterface>(op)) {
     for (int p = 0, e = op->getBlock()->getNumSuccessors(); p < e; ++p) {
@@ -137,14 +137,13 @@ bool mlir::isLegalForBranchOpInterfaceTypeConversionPattern(
   return false;
 }
 
-void mlir::populateReturnOpTypeConversionPattern(RewritePatternSet &patterns,
-                                                 TypeConverter &typeConverter) {
+void mlir::populateReturnOpTypeConversionPattern(
+    RewritePatternSet &patterns, const TypeConverter &typeConverter) {
   patterns.add<ReturnOpTypeConversion>(typeConverter, patterns.getContext());
 }
 
-bool mlir::isLegalForReturnOpTypeConversionPattern(Operation *op,
-                                                   TypeConverter &converter,
-                                                   bool returnOpAlwaysLegal) {
+bool mlir::isLegalForReturnOpTypeConversionPattern(
+    Operation *op, const TypeConverter &converter, bool returnOpAlwaysLegal) {
   // If this is a `return` and the user pass wants to convert/transform across
   // function boundaries, then `converter` is invoked to check whether the
   // `return` op is legal.

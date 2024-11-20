@@ -17,6 +17,10 @@
 # RUN: llvm-readobj --section-headers %t-aarch64.o | FileCheck %s --check-prefix=AARCH64-LLVM
 # RUN: llvm-readelf --section-headers %t-aarch64.o | FileCheck %s --check-prefix=AARCH64-GNU
 
+# RUN: yaml2obj %s --docnum=5 -o %t-hexagon.o
+# RUN: llvm-readobj --section-headers %t-hexagon.o | FileCheck %s --check-prefix=HEXAGON-LLVM
+# RUN: llvm-readelf --section-headers %t-hexagon.o | FileCheck %s --check-prefix=HEXAGON-GNU
+
 # ARM-LLVM: Name: exidx
 # ARM-LLVM: Type: SHT_ARM_EXIDX
 # ARM-LLVM: Name: preemptmap
@@ -53,13 +57,23 @@
 # MIPS-GNU: abiflags MIPS_ABIFLAGS
 # MIPS-GNU: dwarf    MIPS_DWARF
 
+# AARCH64-LLVM: Name: aarch64_auth_relr
+# AARCH64-LLVM: Type: SHT_AARCH64_AUTH_RELR
 # AARCH64-LLVM: Name: .memtag.globals.dynamic
 # AARCH64-LLVM: Type: SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC
 # AARCH64-LLVM: Name: .memtag.globals.static
 # AARCH64-LLVM: Type: SHT_AARCH64_MEMTAG_GLOBALS_STATIC
 
+# AARCH64-GNU: aarch64_auth_relr       AARCH64_AUTH_RELR
 # AARCH64-GNU: .memtag.globals.dynamic AARCH64_MEMTAG_GLOBALS_DYNAMIC
 # AARCH64-GNU: .memtag.globals.static  AARCH64_MEMTAG_GLOBALS_STATIC
+
+# HEXAGON-LLVM: Name: hexagon_ordered
+# HEXAGON-LLVM: Type: SHT_HEX_ORDERED
+# HEXAGON-LLVM: Name: .hexagon.attributes
+# HEXAGON-LLVM: Type: SHT_HEXAGON_ATTRIBUTES
+
+# HEXAGON-GNU: hexagon_ordered HEX_ORDERED
 
 --- !ELF
 FileHeader:
@@ -113,7 +127,21 @@ FileHeader:
   Type:    ET_REL
   Machine: EM_AARCH64
 Sections:
+  - Name: aarch64_auth_relr
+    Type: SHT_AARCH64_AUTH_RELR
   - Name:  .memtag.globals.dynamic
     Type:  SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC
   - Name:  .memtag.globals.static
     Type:  SHT_AARCH64_MEMTAG_GLOBALS_STATIC
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_HEXAGON
+Sections:
+  - Name: hexagon_ordered
+    Type: SHT_HEX_ORDERED
+  - Name: .hexagon.attributes
+    Type: SHT_HEXAGON_ATTRIBUTES

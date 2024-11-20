@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -affine-super-vectorizer-test -vector-shape-ratio 4 -vector-shape-ratio 8 2>&1 | FileCheck %s
-// RUN: mlir-opt %s -affine-super-vectorizer-test -vector-shape-ratio 2 -vector-shape-ratio 5 -vector-shape-ratio 2 2>&1 | FileCheck %s -check-prefix=TEST-3x4x5x8
-// RUN: mlir-opt %s -affine-super-vectorizer-test -vectorize-affine-loop-nest 2>&1 | FileCheck %s -check-prefix=VECNEST
+// RUN: mlir-opt %s -affine-super-vectorizer-test="vector-shape-ratio=4,8" 2>&1 | FileCheck %s
+// RUN: mlir-opt %s -affine-super-vectorizer-test="vector-shape-ratio=2,5,2" 2>&1 | FileCheck %s -check-prefix=TEST-3x4x5x8
+// RUN: mlir-opt %s -affine-super-vectorizer-test=vectorize-affine-loop-nest 2>&1 | FileCheck %s -check-prefix=VECNEST
 
 func.func @vector_add_2d(%arg0: index, %arg1: index) -> f32 {
   // Nothing should be matched in this first block.

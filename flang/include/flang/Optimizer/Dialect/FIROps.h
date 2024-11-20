@@ -9,12 +9,14 @@
 #ifndef FORTRAN_OPTIMIZER_DIALECT_FIROPS_H
 #define FORTRAN_OPTIMIZER_DIALECT_FIROPS_H
 
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/FirAliasTagOpInterface.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
@@ -37,10 +39,6 @@ mlir::ParseResult parseSelector(mlir::OpAsmParser &parser,
                                 mlir::OperationState &result,
                                 mlir::OpAsmParser::UnresolvedOperand &selector,
                                 mlir::Type &type);
-
-static constexpr llvm::StringRef getAdaptToByRefAttrName() {
-  return "adapt.valuebyref";
-}
 
 static constexpr llvm::StringRef getNormalizedLowerBoundAttrName() {
   return "normalized.lb";

@@ -1,5 +1,7 @@
 ; RUN: opt -passes=sroa,verify -S %s -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt --try-experimental-debuginfo-iterators -passes=sroa,verify -S %s -o - \
+; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; Check that the new slices of an alloca and memcpy intructions get dbg.assign
 ;; intrinsics with the correct fragment info.
@@ -26,10 +28,10 @@
 ;; Split alloca.
 ; CHECK: entry:
 ; CHECK-NEXT: %To.sroa.0 = alloca { i32, i32, i32 }, align 8, !DIAssignID ![[ID_1:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata {{.+}} undef, metadata ![[TO:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 96), metadata ![[ID_1]], metadata ptr %To.sroa.0, metadata !DIExpression()), !dbg
+; CHECK-NEXT: #dbg_assign({{.+}} undef, ![[TO:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 96), ![[ID_1]], ptr %To.sroa.0, !DIExpression(),
 
 ; CHECK-NEXT: %To.sroa.4 = alloca { i32, i32, i32 }, align 8, !DIAssignID ![[ID_3:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata {{.+}} undef, metadata ![[TO]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 96), metadata ![[ID_3]], metadata ptr %To.sroa.4, metadata !DIExpression()), !dbg
+; CHECK-NEXT: #dbg_assign({{.+}} undef, ![[TO]], !DIExpression(DW_OP_LLVM_fragment, 128, 96), ![[ID_3]], ptr %To.sroa.4, !DIExpression(),
 
 ;; Split memcpy.
 ; CHECK: call void @llvm.memcpy{{.*}}(ptr align 8 %To.sroa.0, ptr align 4 @From, i64 12, i1 false),{{.*}}!DIAssignID ![[ID_4:[0-9]+]]
@@ -38,9 +40,9 @@
 ; CHECK: call void @llvm.memcpy{{.*}}(ptr align 8 %To.sroa.4, ptr align 4 getelementptr inbounds (i8, ptr @From, i64 16), i64 12, i1 false){{.*}}!DIAssignID ![[ID_6:[0-9]+]]
 
 ;; Intrinsics for the splits above.
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata {{.+}} undef, metadata ![[TO]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 96), metadata ![[ID_4]], metadata ptr %To.sroa.0, metadata !DIExpression()), !dbg
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %To.sroa.3.0.copyload, metadata ![[TO]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32))
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata {{.+}} undef, metadata ![[TO]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 96), metadata ![[ID_6]], metadata ptr %To.sroa.4, metadata !DIExpression()), !dbg
+; CHECK-NEXT: #dbg_assign({{.+}} undef, ![[TO]], !DIExpression(DW_OP_LLVM_fragment, 0, 96), ![[ID_4]], ptr %To.sroa.0, !DIExpression(),
+; CHECK-NEXT: #dbg_value(i32 %To.sroa.3.0.copyload, ![[TO]], !DIExpression(DW_OP_LLVM_fragment, 96, 32),
+; CHECK-NEXT: #dbg_assign({{.+}} undef, ![[TO]], !DIExpression(DW_OP_LLVM_fragment, 128, 96), ![[ID_6]], ptr %To.sroa.4, !DIExpression(),
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -54,25 +56,25 @@ entry:
   %To = alloca %struct.LargeStruct, align 4, !DIAssignID !25
   call void @llvm.dbg.assign(metadata i1 undef, metadata !24, metadata !DIExpression(), metadata !25, metadata ptr %To, metadata !DIExpression()), !dbg !26
   %0 = bitcast ptr %To to ptr, !dbg !27
-  call void @llvm.lifetime.start.p0i8(i64 28, ptr %0) #3, !dbg !27
+  call void @llvm.lifetime.start.p0(i64 28, ptr %0) #3, !dbg !27
   %1 = bitcast ptr %To to ptr, !dbg !28
-  call void @llvm.memcpy.p0i8.p0i8.i64(ptr align 4 %1, ptr align 4 bitcast (ptr @From to ptr), i64 28, i1 false), !dbg !28, !DIAssignID !34
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %1, ptr align 4 @From, i64 28, i1 false), !dbg !28, !DIAssignID !34
   call void @llvm.dbg.assign(metadata i1 undef, metadata !24, metadata !DIExpression(), metadata !34, metadata ptr %1, metadata !DIExpression()), !dbg !28
   %Var = getelementptr inbounds %struct.LargeStruct, ptr %To, i32 0, i32 3, !dbg !35
   %2 = load i32, ptr %Var, align 4, !dbg !35
   %3 = bitcast ptr %To to ptr, !dbg !38
-  call void @llvm.lifetime.end.p0i8(i64 28, ptr %3) #3, !dbg !38
+  call void @llvm.lifetime.end.p0(i64 28, ptr %3) #3, !dbg !38
   ret i32 %2, !dbg !39
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.memcpy.p0i8.p0i8.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #1
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #2

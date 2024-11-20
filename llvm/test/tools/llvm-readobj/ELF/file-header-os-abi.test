@@ -167,21 +167,21 @@ FileHeader:
 # RUN: llvm-readelf --file-headers %t.osabi.amd.hsa | FileCheck %s --match-full-lines --check-prefix=OSABI-AMDHSA-GNU
 
 # OSABI-AMDHSA-LLVM: OS/ABI: AMDGPU_HSA (0x40)
-# OSABI-AMDHSA-GNU:  OS/ABI: 40
+# OSABI-AMDHSA-GNU:  OS/ABI: AMDGPU - HSA
 
 # RUN: yaml2obj %s -DOSABI=ELFOSABI_AMDGPU_PAL -DMACHINE=EM_AMDGPU -o %t.osabi.amd.pal
 # RUN: llvm-readobj --file-headers %t.osabi.amd.pal | FileCheck %s --match-full-lines --check-prefix=OSABI-AMDPAL-LLVM
 # RUN: llvm-readelf --file-headers %t.osabi.amd.pal | FileCheck %s --match-full-lines --check-prefix=OSABI-AMDPAL-GNU
 
 # OSABI-AMDPAL-LLVM: OS/ABI: AMDGPU_PAL (0x41)
-# OSABI-AMDPAL-GNU:  OS/ABI: 41
+# OSABI-AMDPAL-GNU:  OS/ABI: AMDGPU - PAL
 
 # RUN: yaml2obj %s -DOSABI=ELFOSABI_AMDGPU_MESA3D -DMACHINE=EM_AMDGPU -o %t.osabi.amd.mesa3d
 # RUN: llvm-readobj --file-headers %t.osabi.amd.mesa3d | FileCheck %s --match-full-lines --check-prefix=OSABI-AMDMESA3D-LLVM
 # RUN: llvm-readelf --file-headers %t.osabi.amd.mesa3d | FileCheck %s --match-full-lines --check-prefix=OSABI-AMDMESA3D-GNU
 
 # OSABI-AMDMESA3D-LLVM: OS/ABI: AMDGPU_MESA3D (0x42)
-# OSABI-AMDMESA3D-GNU:  OS/ABI: 42
+# OSABI-AMDMESA3D-GNU:  OS/ABI: AMDGPU - MESA3D
 
 # Check all EM_ARM specific values.
 
@@ -190,7 +190,14 @@ FileHeader:
 # RUN: llvm-readelf --file-headers %t.osabi.arm | FileCheck %s --match-full-lines --check-prefix=OSABI-ARM-GNU
 
 # OSABI-ARM-LLVM: OS/ABI: ARM (0x61)
-# OSABI-ARM-GNU:  OS/ABI: 61
+# OSABI-ARM-GNU:  OS/ABI: ARM
+
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_ARM_FDPIC -DMACHINE=EM_ARM -o %t.osabi.arm_fdpic
+# RUN: llvm-readobj --file-headers %t.osabi.arm_fdpic | FileCheck %s --match-full-lines --check-prefix=OSABI-ARMFDPIC-LLVM
+# RUN: llvm-readelf --file-headers %t.osabi.arm_fdpic | FileCheck %s --match-full-lines --check-prefix=OSABI-ARMFDPIC-GNU
+
+# OSABI-ARMFDPIC-LLVM: OS/ABI: ARM FDPIC (0x41)
+# OSABI-ARMFDPIC-GNU:  OS/ABI: ARM FDPIC
 
 ## Check all EM_TI_C6000 specific values.
 

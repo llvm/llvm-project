@@ -3,7 +3,9 @@
 
 // Check that main is a thumb symbol (with LSB set) and printf is arm (with LSB clear)
 //
-// CHECK-LABEL: Symbol table:
+// CHECK-LABEL: JITDylib "main"
+// CHECK-NEXT: Link order: [ ("main", MatchAllSymbols), ("Process", MatchExportedSymbolsOnly) ]
+// CHECK-NEXT: Symbol table:
 // CHECK-NEXT:    "main":   0x{{[0-9a-f]+[13579bdf]}} [Callable] Ready
 // CHECK-NEXT:    "printf": 0x76bbe880 [Data] Ready
 

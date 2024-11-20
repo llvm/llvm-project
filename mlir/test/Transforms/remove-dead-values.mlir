@@ -1,13 +1,25 @@
 // RUN: mlir-opt %s -remove-dead-values -split-input-file -verify-diagnostics | FileCheck %s
 
 // The IR remains untouched because of the presence of a non-function-like
-// symbol op (module @dont_touch_unacceptable_ir).
+// symbol op inside the module (const @__dont_touch_unacceptable_ir).
 //
+module {
 // expected-error @+1 {{cannot optimize an IR with non-function symbol ops, non-call symbol user ops or branch ops}}
-module @dont_touch_unacceptable_ir {
-  func.func @has_cleanable_simple_op(%arg0 : i32) {
-    %non_live = arith.addi %arg0, %arg0 : i32
-    return
+  memref.global "private" constant @__dont_touch_unacceptable_ir : memref<i32> = dense<0>
+  func.func @main(%arg0: i32) -> i32 {
+    return %arg0 : i32
+  }
+}
+
+// -----
+
+// Dead values are removed from the IR even if the module has a name
+//
+module @named_module_acceptable {
+  func.func @main(%arg0: tensor<10xf32>) -> tensor<10xf32> {
+    %0 = tensor.empty() : tensor<10xbf16>
+    // CHECK-NOT: tensor.empty
+    return %arg0 : tensor<10xf32>
   }
 }
 
@@ -335,3 +347,30 @@ func.func @main(%arg3 : i32, %arg4 : i1) {
   %non_live_0 = func.call @clean_region_branch_op_erase_it(%arg3, %arg4) : (i32, i1) -> (i32)
   return
 }
+
+// -----
+
+#map = affine_map<(d0)[s0, s1] -> (d0 * s0 + s1)>
+func.func @kernel(%arg0: memref<18xf32>) {
+  %c1 = arith.constant 1 : index
+  %c18 = arith.constant 18 : index
+  gpu.launch blocks(%arg3, %arg4, %arg5) in (%arg9 = %c18, %arg10 = %c18, %arg11 = %c18) threads(%arg6, %arg7, %arg8) in (%arg12 = %c1, %arg13 = %c1, %arg14 = %c1) {
+    %c1_0 = arith.constant 1 : index
+    %c0_1 = arith.constant 0 : index
+    %cst_2 = arith.constant 25.4669495 : f32
+    %6 = affine.apply #map(%arg3)[%c1_0, %c0_1]
+    memref.store %cst_2, %arg0[%6] : memref<18xf32>
+    gpu.terminator
+  } {SCFToGPU_visited}
+  return
+}
+
+// CHECK-LABEL: func.func @kernel(%arg0: memref<18xf32>) {
+// CHECK: gpu.launch blocks
+// CHECK: memref.store
+// CHECK-NEXT: gpu.terminator
+
+// -----
+
+// CHECK: func.func private @no_block_func_declaration()
+func.func private @no_block_func_declaration() -> ()

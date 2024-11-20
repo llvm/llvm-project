@@ -59,14 +59,14 @@ typedef union {
   } y;
 } bug3177;
 
-// check that we don't consume the token after the access specifier 
+// check that we don't consume the token after the access specifier
 // when it's not a colon
 class D {
 public // expected-error{{expected ':'}}
   int i;
 };
 
-// consume the token after the access specifier if it's a semicolon 
+// consume the token after the access specifier if it's a semicolon
 // that was meant to be a colon
 class E {
 public; // expected-error{{expected ':'}}
@@ -100,9 +100,10 @@ class F {
 #endif
 
 namespace ctor_error {
-  class Foo {};
+  class Foo {}; // #defined-here
   // By [class.qual]p2, this is a constructor declaration.
   Foo::Foo (F) = F(); // expected-error{{does not match any declaration in 'ctor_error::Foo'}}
+                      // expected-note@#defined-here{{defined here}}
 
   class Ctor { // expected-note{{not complete until the closing '}'}}
     Ctor(f)(int); // ok
@@ -281,7 +282,7 @@ struct A {} ::PR41192::a; // ok, no missing ';' here  expected-warning {{extra q
 #if __cplusplus >= 201103L
 struct C;
 struct D { static C c; };
-struct C {} decltype(D())::c; // expected-error {{'decltype' cannot be used to name a declaration}}
+struct C {} decltype(D())::c; // expected-error {{a 'decltype' specifier cannot be used in a declarative nested name specifier}}
 #endif
 }
 

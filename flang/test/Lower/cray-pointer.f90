@@ -59,7 +59,6 @@ subroutine cray_derivedType()
 
 ! CHECK: %[[dt:.*]] = fir.alloca !fir.type<_QFcray_derivedtypeTdt{i:i32,j:i32}>
 ! CHECK: %[[k:.*]] = fir.alloca i32 {{.*}}
-! CHECK: %[[pte:.*]] = fir.alloca i32 {{.*}}
 ! CHECK: %[[ptr:.*]] = fir.alloca i64 {{.*}}
 ! CHECK: %[[xdt:.*]] = fir.alloca !fir.type<_QFcray_derivedtypeTdt{i:i32,j:i32}> {{.*}}
 ! CHECK: %[[xdtbox:.*]] = fir.embox %[[xdt]] : (!fir.ref<!fir.type<_QFcray_derivedtypeTdt{i:i32,j:i32}>>) -> !fir.box<!fir.type<_QFcray_derivedtypeTdt{i:i32,j:i32}>>
@@ -107,7 +106,6 @@ subroutine cray_ptrArth()
 
 ! CHECK: %[[dt:.*]] = fir.alloca !fir.type<_QFcray_ptrarthTdt{x:i32,y:i32,z:i32}>
 ! CHECK: %[[i:.*]] = fir.alloca i32 {{.*}}
-! CHECK: %[[pte:.*]] = fir.alloca i32 {{.*}}
 ! CHECK: %[[ptr:.*]] = fir.alloca i64 {{.*}}
 ! CHECK: %[[xdt:.*]] = fir.alloca !fir.type<_QFcray_ptrarthTdt{x:i32,y:i32,z:i32}> {{.*}}
 ! CHECK: %[[xdtbox:.*]] = fir.embox %[[xdt]] : (!fir.ref<!fir.type<_QFcray_ptrarthTdt{x:i32,y:i32,z:i32}>>) -> !fir.box<!fir.type<_QFcray_ptrarthTdt{x:i32,y:i32,z:i32}>>
@@ -154,7 +152,6 @@ subroutine cray_arrayElement()
 
 ! CHECK: %[[data:.*]] = fir.alloca !fir.array<5xi32> {{.*}}
 ! CHECK: %[[k:.*]] = fir.alloca i32 {{.*}}
-! CHECK: %[[pte:.*]] = fir.alloca !fir.array<3xi32> {{.*}}
 ! CHECK: %[[ptr:.*]] = fir.alloca i64 {{.*}}
 ! CHECK: %[[c2:.*]] = arith.constant 2 : i64
 ! CHECK: %[[c1:.*]] = arith.constant 1 : i64
@@ -206,7 +203,6 @@ subroutine cray_2darrayElement()
 
 ! CHECK: %[[data:.*]] = fir.alloca !fir.array<2x4xi32> {{.*}}
 ! CHECK: %[[k:.*]] = fir.alloca i32 {{.*}}
-! CHECK: %[[pte:.*]] = fir.alloca !fir.array<2x3xi32> {{.*}}
 ! CHECK: %[[ptr:.*]] = fir.alloca i64 {{.*}}
 ! CHECK: %[[c2:.*]] = arith.constant 2 : i64
 ! CHECK: %[[c1:.*]] = arith.constant 1 : i64
@@ -268,9 +264,8 @@ subroutine cray_array()
 ! CHECK: %[[data:.*]] = fir.alloca !fir.array<5xi32> {{.*}}
 ! CHECK: %[[c3:.*]] = arith.constant 3 : index
 ! CHECK: %[[k:.*]] = fir.alloca !fir.array<3xi32> {{.*}}
-! CHECK: %[[c31:.*]] = arith.constant 3 : index
-! CHECK: %[[pte:.*]] = fir.alloca !fir.array<3xi32> {{.*}}
 ! CHECK: %[[ptr:.*]] = fir.alloca i64 {{.*}}
+! CHECK: %[[c31:.*]] = arith.constant 3 : index
 ! CHECK: %[[c2:.*]] = arith.constant 2 : i64
 ! CHECK: %[[c1:.*]] = arith.constant 1 : i64
 ! CHECK: %[[sub:.*]] = arith.subi %[[c2]], %[[c1]] : i64
@@ -332,9 +327,8 @@ subroutine cray_arraySection()
 ! CHECK: %[[data:.*]] = fir.alloca !fir.array<5xi32> {{.*}}
 ! CHECK: %[[c2:.*]] = arith.constant 2 : index
 ! CHECK: %[[k:.*]] = fir.alloca !fir.array<2xi32> {{.*}}
-! CHECK: %[[c3:.*]] = arith.constant 3 : index
-! CHECK: %[[pte:.*]] = fir.alloca !fir.array<3xi32> {{.*}}
 ! CHECK: %[[ptr:.*]] = fir.alloca i64 {{.*}}
+! CHECK: %[[c3:.*]] = arith.constant 3 : index
 ! CHECK: %[[c1:.*]] = arith.constant 2 : i64
 ! CHECK: %[[c0:.*]] = arith.constant 1 : i64
 ! CHECK: %[[sub:.*]] = arith.subi %[[c1]], %[[c0]] : i64

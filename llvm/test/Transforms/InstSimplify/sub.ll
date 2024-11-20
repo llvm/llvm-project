@@ -29,7 +29,7 @@ define <2 x i32> @sub_zero_vec(<2 x i32> %A) {
 ; CHECK-LABEL: @sub_zero_vec(
 ; CHECK-NEXT:    ret <2 x i32> [[A:%.*]]
 ;
-  %B = sub <2 x i32> %A, <i32 0, i32 undef>
+  %B = sub <2 x i32> %A, <i32 0, i32 poison>
   ret <2 x i32> %B
 }
 
@@ -46,8 +46,8 @@ define <2 x i32> @neg_neg_vec(<2 x i32> %A) {
 ; CHECK-LABEL: @neg_neg_vec(
 ; CHECK-NEXT:    ret <2 x i32> [[A:%.*]]
 ;
-  %B = sub <2 x i32> <i32 0, i32 undef>, %A
-  %C = sub <2 x i32> <i32 0, i32 undef>, %B
+  %B = sub <2 x i32> <i32 0, i32 poison>, %A
+  %C = sub <2 x i32> <i32 0, i32 poison>, %B
   ret <2 x i32> %C
 }
 

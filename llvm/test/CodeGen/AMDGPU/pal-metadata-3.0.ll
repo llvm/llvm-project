@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 <%s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}_amdgpu_cs_main:
-; CHECK: ; NumSgprs: 4
+; CHECK: ; TotalNumSgprs: 4
 ; CHECK: ; NumVgprs: 2
 ; CHECK:           .amdgpu_pal_metadata
 ; CHECK-NEXT: ---
@@ -107,10 +107,33 @@
 ; CHECK-NEXT:        .vgpr_limit:     0x100
 ; CHECK-NEXT:        .wavefront_size: 0x40
 ; CHECK-NEXT:        .wgp_mode:       false
+; CHECK-NEXT:      .gs:
+; CHECK-NEXT:        .debug_mode:     false
+; CHECK-NEXT:        .entry_point:    gs_shader
+; CHECK-NEXT:        .ieee_mode:      false
+; CHECK-NEXT:        .lds_size:       0x200
+; CHECK-NEXT:        .mem_ordered:    true
+; CHECK-NEXT:        .scratch_en:     false
+; CHECK-NEXT:        .scratch_memory_size: 0
+; CHECK-NEXT:        .sgpr_count:     0x1
+; CHECK-NEXT:        .vgpr_count:     0x1
+; CHECK-NEXT:        .wgp_mode:       true
+; CHECK-NEXT:      .hs:
+; CHECK-NEXT:        .debug_mode:     false
+; CHECK-NEXT:        .entry_point:    hs_shader
+; CHECK-NEXT:        .ieee_mode:      false
+; CHECK-NEXT:        .lds_size:       0x1000
+; CHECK-NEXT:        .mem_ordered:    true
+; CHECK-NEXT:        .scratch_en:     false
+; CHECK-NEXT:        .scratch_memory_size: 0
+; CHECK-NEXT:        .sgpr_count:     0x1
+; CHECK-NEXT:        .vgpr_count:     0x1
+; CHECK-NEXT:        .wgp_mode:       true
 ; CHECK-NEXT:      .ps:
 ; CHECK-NEXT:        .debug_mode:     false
 ; CHECK-NEXT:        .entry_point:    ps_shader
 ; CHECK-NEXT:        .ieee_mode:      false
+; CHECK-NEXT:        .lds_size:       0
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0
@@ -142,6 +165,22 @@ define dllexport amdgpu_cs void @_amdgpu_cs_main(i32 inreg %arg1, i32 %arg2) #0 
 }
 
 define dllexport amdgpu_ps void @ps_shader() #1 {
+  ret void
+}
+
+@LDS.GS = external addrspace(3) global [1 x i32], align 4
+
+define dllexport amdgpu_gs void @gs_shader() #2 {
+  %ptr = getelementptr i32, ptr addrspace(3) @LDS.GS, i32 0
+  store i32 0, ptr addrspace(3) %ptr, align 4
+  ret void
+}
+
+@LDS.HS = external addrspace(3) global [1024 x i32], align 4
+
+define dllexport amdgpu_hs void @hs_shader() #2 {
+  %ptr = getelementptr i32, ptr addrspace(3) @LDS.HS, i32 0
+  store i32 0, ptr addrspace(3) %ptr, align 4
   ret void
 }
 

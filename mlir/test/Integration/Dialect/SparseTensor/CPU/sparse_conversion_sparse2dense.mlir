@@ -10,9 +10,10 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_libs_sve} = -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
-// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs_sve}
 //
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
@@ -107,7 +108,7 @@ module {
   //
   // Main driver.
   //
-  func.func @entry() {
+  func.func @main() {
     //
     // Initialize a 3-dim dense tensor.
     //
@@ -233,6 +234,19 @@ module {
     // bufferization.dealloc_tensor %s2pp4 : tensor<2x?x?xf64, #Tensor4>
     // bufferization.dealloc_tensor %s2pp5 : tensor<2x?x?xf64, #Tensor5>
     // bufferization.dealloc_tensor %s2pp6 : tensor<2x?x?xf64, #Tensor6>
+
+    bufferization.dealloc_tensor %d2341 : tensor<2x3x4xf64>
+    bufferization.dealloc_tensor %d2342 : tensor<2x3x4xf64>
+    bufferization.dealloc_tensor %d2343 : tensor<2x3x4xf64>
+    bufferization.dealloc_tensor %d2344 : tensor<2x3x4xf64>
+    bufferization.dealloc_tensor %d2345 : tensor<2x3x4xf64>
+    bufferization.dealloc_tensor %d2346 : tensor<2x3x4xf64>
+    bufferization.dealloc_tensor %dp344 : tensor<?x3x4xf64>
+    bufferization.dealloc_tensor %d2p45 : tensor<2x?x4xf64>
+    bufferization.dealloc_tensor %d23p6 : tensor<2x3x?xf64>
+    bufferization.dealloc_tensor %dp3p4 : tensor<?x3x?xf64>
+    bufferization.dealloc_tensor %dpp45 : tensor<?x?x4xf64>
+
     return
   }
 }

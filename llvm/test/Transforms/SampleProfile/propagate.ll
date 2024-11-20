@@ -84,8 +84,8 @@ for.body:                                         ; preds = %for.cond
   %div = sdiv i64 %7, 3, !dbg !43
   %cmp2 = icmp sgt i64 %6, %div, !dbg !44
   br i1 %cmp2, label %if.then3, label %if.end, !dbg !45
-; CHECK:  edge for.body -> if.then3 probability is 0x51292fa6 / 0x80000000 = 63.41%
-; CHECK:  edge for.body -> if.end probability is 0x2ed6d05a / 0x80000000 = 36.59%
+; CHECK:  edge %for.body -> %if.then3 probability is 0x51292fa6 / 0x80000000 = 63.41%
+; CHECK:  edge %for.body -> %if.end probability is 0x2ed6d05a / 0x80000000 = 36.59%
 
 if.then3:                                         ; preds = %for.body
   %8 = load i32, ptr %x.addr, align 4, !dbg !46
@@ -99,8 +99,8 @@ if.end:                                           ; preds = %if.then3, %for.body
   %div4 = sdiv i64 %10, 4, !dbg !51
   %cmp5 = icmp sgt i64 %9, %div4, !dbg !52
   br i1 %cmp5, label %if.then6, label %if.else7, !dbg !53
-; CHECK:  edge if.end -> if.then6 probability is 0x5d89d89e / 0x80000000 = 73.08%
-; CHECK:  edge if.end -> if.else7 probability is 0x22762762 / 0x80000000 = 26.92%
+; CHECK:  edge %if.end -> %if.then6 probability is 0x5d89d89e / 0x80000000 = 73.08%
+; CHECK:  edge %if.end -> %if.else7 probability is 0x22762762 / 0x80000000 = 26.92%
 
 if.then6:                                         ; preds = %if.end
   %11 = load i32, ptr %y.addr, align 4, !dbg !54
@@ -120,8 +120,8 @@ for.cond8:                                        ; preds = %for.inc, %if.else7
   %13 = load i64, ptr %j, align 8, !dbg !64
   %cmp9 = icmp slt i64 %13, 100, !dbg !67
   br i1 %cmp9, label %for.body10, label %for.end, !dbg !68
-; CHECK: edge for.cond8 -> for.body10 probability is 0x7e941a89 / 0x80000000 = 98.89% [HOT edge]
-; CHECK: edge for.cond8 -> for.end probability is 0x016be577 / 0x80000000 = 1.11%
+; CHECK: edge %for.cond8 -> %for.body10 probability is 0x7e941a89 / 0x80000000 = 98.89% [HOT edge]
+; CHECK: edge %for.cond8 -> %for.end probability is 0x016be577 / 0x80000000 = 1.11%
 
 
 for.body10:                                       ; preds = %for.cond8

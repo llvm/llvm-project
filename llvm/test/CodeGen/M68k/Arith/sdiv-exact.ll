@@ -9,7 +9,7 @@ define i32 @test1(i32 %x) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset -16
 ; CHECK-NEXT:    move.l #-1030792151, (4,%sp)
 ; CHECK-NEXT:    move.l (16,%sp), (%sp)
-; CHECK-NEXT:    jsr __mulsi3@PLT
+; CHECK-NEXT:    jsr __mulsi3
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
   %div = sdiv exact i32 %x, 25
@@ -26,7 +26,7 @@ define i32 @test2(i32 %x) {
 ; CHECK-NEXT:    asr.l #3, %d0
 ; CHECK-NEXT:    move.l %d0, (%sp)
 ; CHECK-NEXT:    move.l #-1431655765, (4,%sp)
-; CHECK-NEXT:    jsr __mulsi3@PLT
+; CHECK-NEXT:    jsr __mulsi3
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
   %div = sdiv exact i32 %x, 24

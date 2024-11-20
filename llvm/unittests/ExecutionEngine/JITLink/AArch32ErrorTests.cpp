@@ -72,6 +72,17 @@ protected:
     return G->createMutableContentBlock(
         *S, CharContent, orc::ExecutorAddr(Addr), Alignment, AlignmentOffset);
   }
+
+  Symbol &createSymbolWithDistance(Block &Origin, uint64_t Dist) {
+    uint64_t TargetAddr = Origin.getAddress().getValue() + Dist;
+    return G->addAnonymousSymbol(createBlock(Zeros, TargetAddr), 0 /*Offset*/,
+                                 PointerSize, false, false);
+  };
+
+  template <endianness Endian> void write(uint8_t *Mem, HalfWords Data) {
+    write16<Endian>(Mem, Data.Hi);
+    write16<Endian>(Mem + 2, Data.Lo);
+  }
 };
 
 TEST_F(AArch32Errors, readAddendDataGeneric) {
@@ -208,4 +219,84 @@ TEST(AArch32_ELF, applyFixupThumbErrors) {
                           testing::StartsWith("Invalid opcode"),
                           testing::EndsWith(aarch32::getEdgeKindName(K)))));
   }
+}
+
+TEST_F(AArch32Errors, applyFixupThumbCall) {
+  // Check range of R_ARM_THM_CALL relocation
+  constexpr uint64_t Call1Offset = 0; //< first out-of-range
+  constexpr uint64_t Call2Offset = 4; //< last in-range
+
+  uint8_t TwoCallsMem[8];
+  Block &Site = createMutableBlock(TwoCallsMem, 0);
+  constexpr HalfWords CallOpcode = FixupInfo<Thumb_Call>::Opcode;
+  write<endianness::little>(TwoCallsMem + Call1Offset, CallOpcode);
+  write<endianness::little>(TwoCallsMem + Call2Offset, CallOpcode);
+
+  // Thumb call with J1J2-encoding has range of 25 bit
+  ArmConfig ArmCfg;
+  ArmCfg.J1J2BranchEncoding = true;
+  Symbol &J1J2Target = createSymbolWithDistance(Site, 0x01ull << 24);
+  {
+    Edge LastInRange(Thumb_Call, Call2Offset, J1J2Target, 0);
+    EXPECT_THAT_ERROR(applyFixup(*G, Site, LastInRange, ArmCfg), Succeeded());
+    Edge FirstOutOfRange(Thumb_Call, Call1Offset, J1J2Target, 0);
+    EXPECT_THAT_ERROR(applyFixup(*G, Site, FirstOutOfRange, ArmCfg),
+                      FailedWithMessage(testing::HasSubstr("out of range")));
+  }
+
+  // Thumb call without J1J2-encoding has range of 22 bit
+  ArmCfg.J1J2BranchEncoding = false;
+  Symbol &NonJ1J2Target = createSymbolWithDistance(Site, 0x01ull << 21);
+  {
+    Edge LastInRange(Thumb_Call, Call2Offset, NonJ1J2Target, 0);
+    EXPECT_THAT_ERROR(applyFixup(*G, Site, LastInRange, ArmCfg), Succeeded());
+    Edge FirstOutOfRange(Thumb_Call, Call1Offset, NonJ1J2Target, 0);
+    EXPECT_THAT_ERROR(applyFixup(*G, Site, FirstOutOfRange, ArmCfg),
+                      FailedWithMessage(testing::HasSubstr("out of range")));
+  }
+}
+
+TEST_F(AArch32Errors, applyFixupThumbJump24) {
+  // Check range of R_ARM_THM_JUMP24 relocation
+  constexpr uint64_t Jump1Offset = 0; //< first out-of-range
+  constexpr uint64_t Jump2Offset = 4; //< last in-range
+
+  uint8_t TwoJumpsMem[8];
+  constexpr HalfWords JumpOpcode = FixupInfo<Thumb_Jump24>::Opcode;
+  write<endianness::little>(TwoJumpsMem + Jump1Offset, JumpOpcode);
+  write<endianness::little>(TwoJumpsMem + Jump2Offset, JumpOpcode);
+  Block &Site = createMutableBlock(TwoJumpsMem, 0);
+
+  // Thumb Jump24 with J1J2-encoding has range of 25 bit
+  ArmCfg.J1J2BranchEncoding = true;
+  Symbol &J1J2Target = createSymbolWithDistance(Site, 0x01ull << 24);
+  J1J2Target.setTargetFlags(TargetFlags_aarch32::ThumbSymbol);
+  {
+    Edge LastInRange(Thumb_Jump24, Jump2Offset, J1J2Target, 0);
+    EXPECT_THAT_ERROR(applyFixup(*G, Site, LastInRange, ArmCfg), Succeeded());
+    Edge FirstOutOfRange(Thumb_Jump24, Jump1Offset, J1J2Target, 0);
+    EXPECT_THAT_ERROR(applyFixup(*G, Site, FirstOutOfRange, ArmCfg),
+                      FailedWithMessage(testing::HasSubstr("out of range")));
+  }
+
+  // Thumb Jump24 without J1J2-encoding has range of 22 bit
+  ArmCfg.J1J2BranchEncoding = false;
+  Symbol &NonJ1J2Target = createSymbolWithDistance(Site, 0x01ull << 21);
+  NonJ1J2Target.setTargetFlags(TargetFlags_aarch32::ThumbSymbol);
+  {
+    Edge LastInRange(Thumb_Jump24, Jump2Offset, NonJ1J2Target, 0);
+    EXPECT_THAT_ERROR(applyFixup(*G, Site, LastInRange, ArmCfg), Succeeded());
+    Edge FirstOutOfRange(Thumb_Jump24, Jump1Offset, NonJ1J2Target, 0);
+    EXPECT_THAT_ERROR(applyFixup(*G, Site, FirstOutOfRange, ArmCfg),
+                      FailedWithMessage(testing::HasSubstr("out of range")));
+  }
+
+  // Check that branching to an ARM target with Jump24 fails
+  Symbol &ArmTarget = createSymbolWithDistance(Site, 0x1000);
+  assert((ArmTarget.getTargetFlags() & TargetFlags_aarch32::ThumbSymbol) == 0);
+  Edge Interworking(Thumb_Jump24, Jump2Offset, ArmTarget, 0);
+  EXPECT_THAT_ERROR(applyFixup(*G, Site, Interworking, ArmCfg),
+                    FailedWithMessage(testing::HasSubstr(
+                        "Branch relocation needs interworking "
+                        "stub when bridging to ARM")));
 }

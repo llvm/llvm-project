@@ -25,13 +25,12 @@
 #  include "sanitizer_common/sanitizer_allocator_checks.h"
 #  include "sanitizer_common/sanitizer_allocator_dlsym.h"
 #  include "sanitizer_common/sanitizer_errno.h"
-#  include "sanitizer_common/sanitizer_tls_get_addr.h"
 
 // ---------------------- Replacement functions ---------------- {{{1
 using namespace __asan;
 
 struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
-  static bool UseImpl() { return AsanInitIsRunning(); }
+  static bool UseImpl() { return !TryAsanInitFromRtl(); }
   static void OnAllocate(const void *ptr, uptr size) {
 #  if CAN_SANITIZE_LEAKS
     // Suppress leaks from dlerror(). Previously dlsym hack on global array was
@@ -65,7 +64,6 @@ INTERCEPTOR(void, cfree, void *ptr) {
 INTERCEPTOR(void*, malloc, uptr size) {
   if (DlsymAlloc::Use())
     return DlsymAlloc::Allocate(size);
-  ENSURE_ASAN_INITED();
   GET_STACK_TRACE_MALLOC;
   return asan_malloc(size, &stack);
 }
@@ -73,7 +71,6 @@ INTERCEPTOR(void*, malloc, uptr size) {
 INTERCEPTOR(void*, calloc, uptr nmemb, uptr size) {
   if (DlsymAlloc::Use())
     return DlsymAlloc::Callocate(nmemb, size);
-  ENSURE_ASAN_INITED();
   GET_STACK_TRACE_MALLOC;
   return asan_calloc(nmemb, size, &stack);
 }
@@ -81,14 +78,13 @@ INTERCEPTOR(void*, calloc, uptr nmemb, uptr size) {
 INTERCEPTOR(void*, realloc, void *ptr, uptr size) {
   if (DlsymAlloc::Use() || DlsymAlloc::PointerIsMine(ptr))
     return DlsymAlloc::Realloc(ptr, size);
-  ENSURE_ASAN_INITED();
   GET_STACK_TRACE_MALLOC;
   return asan_realloc(ptr, size, &stack);
 }
 
 #if SANITIZER_INTERCEPT_REALLOCARRAY
 INTERCEPTOR(void*, reallocarray, void *ptr, uptr nmemb, uptr size) {
-  ENSURE_ASAN_INITED();
+  AsanInitFromRtl();
   GET_STACK_TRACE_MALLOC;
   return asan_reallocarray(ptr, nmemb, size, &stack);
 }
@@ -102,9 +98,7 @@ INTERCEPTOR(void*, memalign, uptr boundary, uptr size) {
 
 INTERCEPTOR(void*, __libc_memalign, uptr boundary, uptr size) {
   GET_STACK_TRACE_MALLOC;
-  void *res = asan_memalign(boundary, size, &stack, FROM_MALLOC);
-  DTLS_on_libc_memalign(res, size);
-  return res;
+  return asan_memalign(boundary, size, &stack, FROM_MALLOC);
 }
 #endif // SANITIZER_INTERCEPT_MEMALIGN
 
@@ -188,11 +182,11 @@ struct MallocDebugL {
   void* (*valloc)(uptr size);
 };
 
-ALIGNED(32) const MallocDebugK asan_malloc_dispatch_k = {
+alignas(32) const MallocDebugK asan_malloc_dispatch_k = {
     WRAP(malloc),  WRAP(free),     WRAP(calloc),
     WRAP(realloc), WRAP(memalign), WRAP(malloc_usable_size)};
 
-ALIGNED(32) const MallocDebugL asan_malloc_dispatch_l = {
+alignas(32) const MallocDebugL asan_malloc_dispatch_l = {
     WRAP(calloc),         WRAP(free),               WRAP(mallinfo),
     WRAP(malloc),         WRAP(malloc_usable_size), WRAP(memalign),
     WRAP(posix_memalign), WRAP(pvalloc),            WRAP(realloc),

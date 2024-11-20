@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_JMP_BUF_H__
-#define __LLVM_LIBC_TYPES_JMP_BUF_H__
+#ifndef LLVM_LIBC_TYPES_JMP_BUF_H
+#define LLVM_LIBC_TYPES_JMP_BUF_H
 
 typedef struct {
 #ifdef __x86_64__
@@ -19,6 +19,13 @@ typedef struct {
   __UINT64_TYPE__ r15;
   __UINTPTR_TYPE__ rsp;
   __UINTPTR_TYPE__ rip;
+#elif defined(__i386__)
+  long ebx;
+  long esi;
+  long edi;
+  long ebp;
+  long esp;
+  long eip;
 #elif defined(__riscv)
   /* Program counter.  */
   long int __pc;
@@ -32,6 +39,14 @@ typedef struct {
 #elif defined(__riscv_float_abi_single)
 #error "__jmp_buf not available for your target architecture."
 #endif
+#elif defined(__arm__)
+  // r4, r5, r6, r7, r8, r9, r10, r11, r12, lr
+  long opaque[10];
+#elif defined(__aarch64__)
+  long opaque[14]; // x19-x29, lr, sp, optional x18
+#if __ARM_FP
+  long fopaque[8]; // d8-d15
+#endif
 #else
 #error "__jmp_buf not available for your target architecture."
 #endif
@@ -39,4 +54,4 @@ typedef struct {
 
 typedef __jmp_buf jmp_buf[1];
 
-#endif // __LLVM_LIBC_TYPES_JMP_BUF_H__
+#endif // LLVM_LIBC_TYPES_JMP_BUF_H

@@ -14,10 +14,11 @@
 //   count(Iter first, Iter last, const T& value);
 
 // ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=20000000
-// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=70000000
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=80000000
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <vector>
 
 #include "test_macros.h"
@@ -38,7 +39,7 @@ struct Test {
 TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::cpp17_input_iterator_list<const int*>(), Test());
 
-  if (!TEST_IS_CONSTANT_EVALUATED || TEST_STD_VER >= 20) {
+  if (TEST_STD_AT_LEAST_20_OR_RUNTIME_EVALUATED) {
     std::vector<bool> vec(256 + 64);
     for (ptrdiff_t i = 0; i != 256; ++i) {
       for (size_t offset = 0; offset != 64; ++offset) {

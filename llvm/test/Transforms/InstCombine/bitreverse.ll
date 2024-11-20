@@ -106,6 +106,30 @@ entry:
   ret i32 %or.4
 }
 
+define i32 @rev32_bswap(i32 %v) {
+; CHECK-LABEL: @rev32_bswap(
+; CHECK-NEXT:    [[RET:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[V:%.*]])
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %and.i = lshr i32 %v, 1
+  %shr.i = and i32 %and.i, 1431655765
+  %and1.i = shl i32 %v, 1
+  %shl.i = and i32 %and1.i, -1431655766
+  %or.i = or disjoint i32 %shr.i, %shl.i
+  %and2.i = lshr i32 %or.i, 2
+  %shr3.i = and i32 %and2.i, 858993459
+  %and4.i = shl i32 %or.i, 2
+  %shl5.i = and i32 %and4.i, -858993460
+  %or6.i = or disjoint i32 %shr3.i, %shl5.i
+  %and7.i = lshr i32 %or6.i, 4
+  %shr8.i = and i32 %and7.i, 252645135
+  %and9.i = shl i32 %or6.i, 4
+  %shl10.i = and i32 %and9.i, -252645136
+  %or11.i = or disjoint i32 %shr8.i, %shl10.i
+  %ret = call i32 @llvm.bswap.i32(i32 %or11.i)
+  ret i32 %ret
+}
+
 define i64 @rev64(i64 %v) {
 ; CHECK-LABEL: @rev64(
 ; CHECK-NEXT:  entry:
@@ -243,7 +267,7 @@ define i8 @rev8_mul_and_lshr(i8 %0) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 139536
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw nsw i64 [[TMP2]], 32800
 ; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 558144
-; CHECK-NEXT:    [[TMP7:%.*]] = or i64 [[TMP4]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = or disjoint i64 [[TMP4]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul nuw nsw i64 [[TMP7]], 65793
 ; CHECK-NEXT:    [[TMP9:%.*]] = lshr i64 [[TMP8]], 16
 ; CHECK-NEXT:    [[TMP10:%.*]] = trunc i64 [[TMP9]] to i8
@@ -298,7 +322,7 @@ define i4 @shuf_bitcast_twice_4bits(i4 %x) {
 ; Negative tests - not reverse
 define i4 @shuf_4bits_not_reverse(<4 x i1> %x) {
 ; CHECK-LABEL: @shuf_4bits_not_reverse(
-; CHECK-NEXT:    [[BITREVERSE:%.*]] = shufflevector <4 x i1> [[X:%.*]], <4 x i1> undef, <4 x i32> <i32 3, i32 1, i32 2, i32 0>
+; CHECK-NEXT:    [[BITREVERSE:%.*]] = shufflevector <4 x i1> [[X:%.*]], <4 x i1> poison, <4 x i32> <i32 3, i32 1, i32 2, i32 0>
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i1> [[BITREVERSE]] to i4
 ; CHECK-NEXT:    ret i4 [[CAST]]
 ;
@@ -312,7 +336,7 @@ declare void @use(<4 x i1>)
 
 define i4 @shuf_4bits_extra_use(<4 x i1> %x) {
 ; CHECK-LABEL: @shuf_4bits_extra_use(
-; CHECK-NEXT:    [[BITREVERSE:%.*]] = shufflevector <4 x i1> [[X:%.*]], <4 x i1> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[BITREVERSE:%.*]] = shufflevector <4 x i1> [[X:%.*]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    call void @use(<4 x i1> [[BITREVERSE]])
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i1> [[BITREVERSE]] to i4
 ; CHECK-NEXT:    ret i4 [[CAST]]
@@ -338,7 +362,7 @@ define i32 @rev_i1(i1 %x) {
 
 define <2 x i8> @rev_v2i1(<2 x i1> %x) {
 ; CHECK-LABEL: @rev_v2i1(
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[X:%.*]], <2 x i8> <i8 -128, i8 -128>, <2 x i8> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[X:%.*]], <2 x i8> splat (i8 -128), <2 x i8> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %z = zext <2 x i1> %x to <2 x i8>
@@ -379,7 +403,7 @@ define i64 @PR59897(i1 %X1_2) {
 define i16 @rev_xor_lhs_rev16(i16 %a, i16 %b) #0 {
 ; CHECK-LABEL: @rev_xor_lhs_rev16(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[B:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i16 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i16 [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[TMP2]]
 ;
   %1 = tail call i16 @llvm.bitreverse.i16(i16 %a)
@@ -451,7 +475,7 @@ define <2 x i32> @rev_xor_rhs_i32vec(<2 x i32> %a, <2 x i32> %b) #0 {
 define i64 @rev_and_rhs_rev64_multiuse1(i64 %a, i64 %b) #0 {
 ; CHECK-LABEL: @rev_and_rhs_rev64_multiuse1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.bitreverse.i64(i64 [[B:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i64 @llvm.bitreverse.i64(i64 [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
@@ -466,7 +490,7 @@ define i64 @rev_and_rhs_rev64_multiuse1(i64 %a, i64 %b) #0 {
 define i64 @rev_and_rhs_rev64_multiuse2(i64 %a, i64 %b) #0 {
 ; CHECK-LABEL: @rev_and_rhs_rev64_multiuse2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.bitreverse.i64(i64 [[B:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i64 @llvm.bitreverse.i64(i64 [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
@@ -508,3 +532,5 @@ define i64 @rev_all_operand64_multiuse_both(i64 %a, i64 %b) #0 {
   call void @use_i64(i64 %2)
   ret i64 %4
 }
+
+declare i32 @llvm.bswap.i32(i32 %or11.i)

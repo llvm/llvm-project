@@ -14,6 +14,7 @@
 #include <set>
 #include <vector>
 
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTImporter.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
@@ -127,6 +128,27 @@ public:
       llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
           &vbase_offsets);
 
+  /// If \ref record has a valid origin, this function copies that
+  /// origin's layout into this ClangASTImporter instance.
+  ///
+  /// \param[in] record The decl whose layout we're calculating.
+  /// \param[out] size Size of \ref record in bytes.
+  /// \param[out] alignment Alignment of \ref record in bytes.
+  /// \param[out] field_offsets Offsets of fields of \ref record.
+  /// \param[out] base_offsets Offsets of base classes of \ref record.
+  /// \param[out] vbase_offsets Offsets of virtual base classes of \ref record.
+  ///
+  /// \returns Returns 'false' if no valid origin was found for \ref record or
+  /// this function failed to import the layout from the origin. Otherwise,
+  /// returns 'true' and the offsets/size/alignment are valid for use.
+  bool importRecordLayoutFromOrigin(
+      const clang::RecordDecl *record, uint64_t &size, uint64_t &alignment,
+      llvm::DenseMap<const clang::FieldDecl *, uint64_t> &field_offsets,
+      llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
+          &base_offsets,
+      llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
+          &vbase_offsets);
+
   /// Returns true iff the given type was copied from another TypeSystemClang
   /// and the original type in this other TypeSystemClang might contain
   /// additional information (e.g., the definition of a 'class' type) that could
@@ -167,7 +189,7 @@ public:
   /// is only a shallow clone that lacks any contents.
   void SetDeclOrigin(const clang::Decl *decl, clang::Decl *original_decl);
 
-  ClangASTMetadata *GetDeclMetadata(const clang::Decl *decl);
+  std::optional<ClangASTMetadata> GetDeclMetadata(const clang::Decl *decl);
 
   //
   // Namespace maps
@@ -455,6 +477,58 @@ public:
 
   RecordDeclToLayoutMap m_record_decl_to_layout_map;
 };
+
+template <class D> class TaggedASTDecl {
+public:
+  TaggedASTDecl() : decl(nullptr) {}
+  TaggedASTDecl(D *_decl) : decl(_decl) {}
+  bool IsValid() const { return (decl != nullptr); }
+  bool IsInvalid() const { return !IsValid(); }
+  D *operator->() const { return decl; }
+  D *decl;
+};
+
+template <class D2, template <class D> class TD, class D1>
+TD<D2> DynCast(TD<D1> source) {
+  return TD<D2>(llvm::dyn_cast<D2>(source.decl));
+}
+
+template <class D = clang::Decl> class DeclFromParser;
+template <class D = clang::Decl> class DeclFromUser;
+
+template <class D> class DeclFromParser : public TaggedASTDecl<D> {
+public:
+  DeclFromParser() : TaggedASTDecl<D>() {}
+  DeclFromParser(D *_decl) : TaggedASTDecl<D>(_decl) {}
+
+  DeclFromUser<D> GetOrigin(ClangASTImporter &importer);
+};
+
+template <class D> class DeclFromUser : public TaggedASTDecl<D> {
+public:
+  DeclFromUser() : TaggedASTDecl<D>() {}
+  DeclFromUser(D *_decl) : TaggedASTDecl<D>(_decl) {}
+
+  DeclFromParser<D> Import(clang::ASTContext *dest_ctx,
+                           ClangASTImporter &importer);
+};
+
+template <class D>
+DeclFromUser<D> DeclFromParser<D>::GetOrigin(ClangASTImporter &importer) {
+  ClangASTImporter::DeclOrigin origin = importer.GetDeclOrigin(this->decl);
+  if (!origin.Valid())
+    return DeclFromUser<D>();
+  return DeclFromUser<D>(llvm::dyn_cast<D>(origin.decl));
+}
+
+template <class D>
+DeclFromParser<D> DeclFromUser<D>::Import(clang::ASTContext *dest_ctx,
+                                          ClangASTImporter &importer) {
+  DeclFromParser<> parser_generic_decl(importer.CopyDecl(dest_ctx, this->decl));
+  if (parser_generic_decl.IsInvalid())
+    return DeclFromParser<D>();
+  return DeclFromParser<D>(llvm::dyn_cast<D>(parser_generic_decl.decl));
+}
 
 } // namespace lldb_private
 

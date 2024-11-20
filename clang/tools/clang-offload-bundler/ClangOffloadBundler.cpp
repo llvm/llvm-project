@@ -130,6 +130,11 @@ int main(int argc, const char **argv) {
     BundleAlignment("bundle-align",
                     cl::desc("Alignment of bundle for binary files"),
                     cl::init(1), cl::cat(ClangOffloadBundlerCategory));
+  cl::opt<bool> CheckInputArchive(
+      "check-input-archive",
+      cl::desc("Check if input heterogeneous archive is "
+               "valid in terms of TargetID rules.\n"),
+      cl::init(false), cl::cat(ClangOffloadBundlerCategory));
   cl::opt<bool> HipOpenmpCompatible(
     "hip-openmp-compatible",
     cl::desc("Treat hip and hipv4 offload kinds as "
@@ -140,6 +145,9 @@ int main(int argc, const char **argv) {
                          cl::init(false), cl::cat(ClangOffloadBundlerCategory));
   cl::opt<bool> Verbose("verbose", cl::desc("Print debug information.\n"),
                         cl::init(false), cl::cat(ClangOffloadBundlerCategory));
+  cl::opt<int> CompressionLevel(
+      "compression-level", cl::desc("Specify the compression level (integer)"),
+      cl::value_desc("n"), cl::Optional, cl::cat(ClangOffloadBundlerCategory));
 
   // Process commandline options and report errors
   sys::PrintStackTraceOnErrorSignal(argv[0]);
@@ -162,6 +170,7 @@ int main(int argc, const char **argv) {
   // Avoid using cl::opt variables after these assignments when possible
   OffloadBundlerConfig BundlerConfig;
   BundlerConfig.AllowMissingBundles = AllowMissingBundles;
+  BundlerConfig.CheckInputArchive = CheckInputArchive;
   BundlerConfig.PrintExternalCommands = PrintExternalCommands;
   BundlerConfig.HipOpenmpCompatible = HipOpenmpCompatible;
   BundlerConfig.BundleAlignment = BundleAlignment;
@@ -172,6 +181,8 @@ int main(int argc, const char **argv) {
     BundlerConfig.Compress = Compress;
   if (Verbose.getNumOccurrences() > 0)
     BundlerConfig.Verbose = Verbose;
+  if (CompressionLevel.getNumOccurrences() > 0)
+    BundlerConfig.CompressionLevel = CompressionLevel;
 
   BundlerConfig.TargetNames = TargetNames;
   BundlerConfig.InputFileNames = InputFileNames;
@@ -274,6 +285,19 @@ int main(int argc, const char **argv) {
     return 0;
   }
 
+  if (BundlerConfig.CheckInputArchive) {
+    if (!Unbundle) {
+      reportError(createStringError(errc::invalid_argument,
+                                    "-check-input-archive cannot be used while "
+                                    "bundling"));
+    }
+    if (Unbundle && BundlerConfig.FilesType != "a") {
+      reportError(createStringError(errc::invalid_argument,
+                                    "-check-input-archive can only be used for "
+                                    "unbundling archives (-type=a)"));
+    }
+  }
+
   if (OutputFileNames.size() == 0) {
     reportError(
         createStringError(errc::invalid_argument, "no output file specified!"));
@@ -325,11 +349,10 @@ int main(int argc, const char **argv) {
   // Standardize target names to include env field
   std::vector<std::string> StandardizedTargetNames;
   for (StringRef Target : TargetNames) {
-    if (ParsedTargets.contains(Target)) {
+    if (!ParsedTargets.insert(Target).second) {
       reportError(createStringError(errc::invalid_argument,
                                     "Duplicate targets are not allowed"));
     }
-    ParsedTargets.insert(Target);
 
     auto OffloadInfo = OffloadTargetInfo(Target, BundlerConfig);
     bool KindIsValid = OffloadInfo.isOffloadKindValid();

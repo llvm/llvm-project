@@ -41,6 +41,19 @@ struct SCEVOperand {
   const SCEV* S;
 };
 
+struct PoisonFlags {
+  unsigned NUW : 1;
+  unsigned NSW : 1;
+  unsigned Exact : 1;
+  unsigned Disjoint : 1;
+  unsigned NNeg : 1;
+  unsigned SameSign : 1;
+  GEPNoWrapFlags GEPNW;
+
+  PoisonFlags(const Instruction *I);
+  void apply(Instruction *I);
+};
+
 /// This class uses information about analyze scalars to rewrite expressions
 /// in canonical form.
 ///
@@ -48,6 +61,8 @@ struct SCEVOperand {
 /// and destroy it when finished to allow the release of the associated
 /// memory.
 class SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
+  friend class SCEVExpanderCleaner;
+
   ScalarEvolution &SE;
   const DataLayout &DL;
 
@@ -69,6 +84,10 @@ class SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
   /// FIXME: Ideally re-used instructions would not be added to
   /// InsertedValues/InsertedPostIncValues.
   SmallPtrSet<Value *, 16> ReusedValues;
+
+  /// Original flags of instructions for which they were modified. Used
+  /// by SCEVExpanderCleaner to undo changes.
+  DenseMap<PoisoningVH<Instruction>, PoisonFlags> OrigFlags;
 
   // The induction variables generated.
   SmallVector<WeakVH, 2> InsertedIVs;
@@ -106,6 +125,11 @@ class SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
   /// only difference is that phi's are only reused if they are already in
   /// "expanded" form.
   bool LSRMode;
+
+  /// When true, rewrite any divisors of UDiv expressions that may be 0 to
+  /// umax(Divisor, 1) to avoid introducing UB. If the divisor may be poison,
+  /// freeze it first.
+  bool SafeUDivMode = false;
 
   typedef IRBuilder<InstSimplifyFolder, IRBuilderCallbackInserter> BuilderType;
   BuilderType Builder;
@@ -150,7 +174,7 @@ class SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
   /// consistent when instructions are moved.
   SmallVector<SCEVInsertPointGuard *, 8> InsertPointGuards;
 
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   const char *DebugType;
 #endif
 
@@ -166,7 +190,7 @@ public:
         Builder(se.getContext(), InstSimplifyFolder(DL),
                 IRBuilderCallbackInserter(
                     [this](Instruction *I) { rememberInstruction(I); })) {
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     DebugType = "";
 #endif
   }
@@ -176,7 +200,7 @@ public:
     assert(InsertPointGuards.empty());
   }
 
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   void setDebugType(const char *s) { DebugType = s; }
 #endif
 
@@ -188,6 +212,7 @@ public:
     InsertedValues.clear();
     InsertedPostIncValues.clear();
     ReusedValues.clear();
+    OrigFlags.clear();
     ChainedPhis.clear();
     InsertedIVs.clear();
   }
@@ -257,6 +282,14 @@ public:
   /// trigger new UB in case of poison.
   bool hoistIVInc(Instruction *IncV, Instruction *InsertPos,
                   bool RecomputePoisonFlags = false);
+
+  /// Return true if both increments directly increment the corresponding IV PHI
+  /// nodes and have the same opcode. It is not safe to re-use the flags from
+  /// the original increment, if it is more complex and SCEV expansion may have
+  /// yielded a more simplified wider increment.
+  static bool canReuseFlagsFromOriginalIVInc(PHINode *OrigPhi, PHINode *WidePhi,
+                                             Instruction *OrigInc,
+                                             Instruction *WideInc);
 
   /// replace congruent phis with their most canonical representative. Return
   /// the number of phis eliminated.
@@ -424,7 +457,7 @@ private:
 
   /// Expand a SCEVAddExpr with a pointer type into a GEP instead of using
   /// ptrtoint+arithmetic+inttoptr.
-  Value *expandAddToGEP(const SCEV *Op, Value *V);
+  Value *expandAddToGEP(const SCEV *Op, Value *V, SCEV::NoWrapFlags Flags);
 
   /// Find a previous Value in ExprValueMap for expand.
   /// DropPoisonGeneratingInsts is populated with instructions for which
@@ -483,6 +516,8 @@ private:
 
   void rememberInstruction(Value *I);
 
+  void rememberFlags(Instruction *I);
+
   bool isNormalAddRecExprPHI(PHINode *PN, Instruction *IncV, const Loop *L);
 
   bool isExpandedAddRecExprPHI(PHINode *PN, Instruction *IncV, const Loop *L);
@@ -499,6 +534,13 @@ private:
   /// Create LCSSA PHIs for \p V, if it is required for uses at the Builder's
   /// current insertion point.
   Value *fixupLCSSAFormFor(Value *V);
+
+  /// Replace congruent phi increments with their most canonical representative.
+  /// May swap \p Phi and \p OrigPhi, if \p Phi is more canonical, due to its
+  /// increment.
+  void replaceCongruentIVInc(PHINode *&Phi, PHINode *&OrigPhi, Loop *L,
+                             const DominatorTree *DT,
+                             SmallVectorImpl<WeakTrackingVH> &DeadInsts);
 };
 
 /// Helper to remove instructions inserted during SCEV expansion, unless they

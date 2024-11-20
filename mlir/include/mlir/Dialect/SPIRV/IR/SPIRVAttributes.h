@@ -76,9 +76,12 @@ public:
   /// Returns `spirv::StorageClass`.
   std::optional<StorageClass> getStorageClass();
 
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              IntegerAttr descriptorSet, IntegerAttr binding,
-                              IntegerAttr storageClass);
+  static LogicalResult
+  verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                   IntegerAttr descriptorSet, IntegerAttr binding,
+                   IntegerAttr storageClass);
+
+  static constexpr StringLiteral name = "spirv.interface_var_abi";
 };
 
 /// An attribute that specifies the SPIR-V (version, capabilities, extensions)
@@ -126,9 +129,12 @@ public:
   /// Returns the capabilities as an integer array attribute.
   ArrayAttr getCapabilitiesAttr();
 
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              IntegerAttr version, ArrayAttr capabilities,
-                              ArrayAttr extensions);
+  static LogicalResult
+  verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                   IntegerAttr version, ArrayAttr capabilities,
+                   ArrayAttr extensions);
+
+  static constexpr StringLiteral name = "spirv.ver_cap_ext";
 };
 
 /// An attribute that specifies the target version, allowed extensions and
@@ -183,6 +189,8 @@ public:
 
   /// Returns the target resource limits.
   ResourceLimitsAttr getResourceLimits() const;
+
+  static constexpr StringLiteral name = "spirv.target_env";
 };
 } // namespace spirv
 } // namespace mlir

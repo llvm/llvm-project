@@ -10,13 +10,18 @@
 #define LLVM_CLANG_ANALYZER_WEBKIT_PTRTYPESEMANTICS_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/PointerUnion.h"
 #include <optional>
 
 namespace clang {
 class CXXBaseSpecifier;
 class CXXMethodDecl;
 class CXXRecordDecl;
+class Decl;
 class FunctionDecl;
+class QualType;
+class Stmt;
 class Type;
 
 // Ref-countability of a type is implicitly defined by Ref<T> and RefPtr<T>
@@ -29,33 +34,105 @@ class Type;
 /// \returns CXXRecordDecl of the base if the type has ref as a public method,
 /// nullptr if not, std::nullopt if inconclusive.
 std::optional<const clang::CXXRecordDecl *>
-hasPublicMethodInBase(const CXXBaseSpecifier *Base, const char *NameToMatch);
+hasPublicMethodInBase(const CXXBaseSpecifier *Base,
+                      llvm::StringRef NameToMatch);
 
 /// \returns true if \p Class is ref-countable, false if not, std::nullopt if
 /// inconclusive.
-std::optional<bool> isRefCountable(const clang::CXXRecordDecl* Class);
+std::optional<bool> isRefCountable(const clang::CXXRecordDecl *Class);
+
+/// \returns true if \p Class is checked-pointer compatible, false if not,
+/// std::nullopt if inconclusive.
+std::optional<bool> isCheckedPtrCapable(const clang::CXXRecordDecl *Class);
 
 /// \returns true if \p Class is ref-counted, false if not.
 bool isRefCounted(const clang::CXXRecordDecl *Class);
+
+/// \returns true if \p Class is a CheckedPtr / CheckedRef, false if not.
+bool isCheckedPtr(const clang::CXXRecordDecl *Class);
+
+/// \returns true if \p Class is ref-countable AND not ref-counted, false if
+/// not, std::nullopt if inconclusive.
+std::optional<bool> isUncounted(const clang::QualType T);
+
+/// \returns true if \p Class is CheckedPtr capable AND not checked, false if
+/// not, std::nullopt if inconclusive.
+std::optional<bool> isUnchecked(const clang::QualType T);
 
 /// \returns true if \p Class is ref-countable AND not ref-counted, false if
 /// not, std::nullopt if inconclusive.
 std::optional<bool> isUncounted(const clang::CXXRecordDecl* Class);
 
+/// \returns true if \p Class is CheckedPtr capable AND not checked, false if
+/// not, std::nullopt if inconclusive.
+std::optional<bool> isUnchecked(const clang::CXXRecordDecl *Class);
+
 /// \returns true if \p T is either a raw pointer or reference to an uncounted
 /// class, false if not, std::nullopt if inconclusive.
-std::optional<bool> isUncountedPtr(const clang::Type* T);
+std::optional<bool> isUncountedPtr(const clang::QualType T);
+
+/// \returns true if \p T is either a raw pointer or reference to an unchecked
+/// class, false if not, std::nullopt if inconclusive.
+std::optional<bool> isUncheckedPtr(const clang::QualType T);
+
+/// \returns true if \p T is either a raw pointer or reference to an uncounted
+/// or unchecked class, false if not, std::nullopt if inconclusive.
+std::optional<bool> isUnsafePtr(const QualType T);
+
+/// \returns true if \p T is a RefPtr, Ref, CheckedPtr, CheckedRef, or its
+/// variant, false if not.
+bool isSafePtrType(const clang::QualType T);
+
+/// \returns true if \p T is a RefPtr, Ref, CheckedPtr, CheckedRef, or
+/// unique_ptr, false if not.
+bool isOwnerPtrType(const clang::QualType T);
 
 /// \returns true if \p F creates ref-countable object from uncounted parameter,
 /// false if not.
 bool isCtorOfRefCounted(const clang::FunctionDecl *F);
 
+/// \returns true if \p F creates checked ptr object from uncounted parameter,
+/// false if not.
+bool isCtorOfCheckedPtr(const clang::FunctionDecl *F);
+
+/// \returns true if \p F creates ref-countable or checked ptr object from
+/// uncounted parameter, false if not.
+bool isCtorOfSafePtr(const clang::FunctionDecl *F);
+
+/// \returns true if \p Name is RefPtr, Ref, or its variant, false if not.
+bool isRefType(const std::string &Name);
+
+/// \returns true if \p Name is CheckedRef or CheckedPtr, false if not.
+bool isCheckedPtr(const std::string &Name);
+
 /// \returns true if \p M is getter of a ref-counted class, false if not.
-std::optional<bool> isGetterOfRefCounted(const clang::CXXMethodDecl* Method);
+std::optional<bool> isGetterOfSafePtr(const clang::CXXMethodDecl *Method);
 
 /// \returns true if \p F is a conversion between ref-countable or ref-counted
 /// pointer types.
 bool isPtrConversion(const FunctionDecl *F);
+
+/// \returns true if \p F is a static singleton function.
+bool isSingleton(const FunctionDecl *F);
+
+/// An inter-procedural analysis facility that detects functions with "trivial"
+/// behavior with respect to reference counting, such as simple field getters.
+class TrivialFunctionAnalysis {
+public:
+  /// \returns true if \p D is a "trivial" function.
+  bool isTrivial(const Decl *D) const { return isTrivialImpl(D, TheCache); }
+  bool isTrivial(const Stmt *S) const { return isTrivialImpl(S, TheCache); }
+
+private:
+  friend class TrivialFunctionAnalysisVisitor;
+
+  using CacheTy =
+      llvm::DenseMap<llvm::PointerUnion<const Decl *, const Stmt *>, bool>;
+  mutable CacheTy TheCache{};
+
+  static bool isTrivialImpl(const Decl *D, CacheTy &Cache);
+  static bool isTrivialImpl(const Stmt *S, CacheTy &Cache);
+};
 
 } // namespace clang
 

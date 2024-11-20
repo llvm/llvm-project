@@ -1,4 +1,4 @@
-//===--------- Definition of the AddressSanitizer class ---------*- C++ -*-===//
+//===- AddressSanitizer.h - AddressSanitizer instrumentation ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,6 +26,9 @@ struct AddressSanitizerOptions {
   bool UseAfterScope = false;
   AsanDetectStackUseAfterReturnMode UseAfterReturn =
       AsanDetectStackUseAfterReturnMode::Runtime;
+  int InstrumentationWithCallsThreshold = 7000;
+  uint32_t MaxInlinePoisoningSize = 64;
+  bool InsertVersionCheck = true;
 };
 
 /// Public interface to the address sanitizer module pass for instrumenting code

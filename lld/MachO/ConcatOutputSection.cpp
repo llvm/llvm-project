@@ -127,10 +127,20 @@ bool TextOutputSection::needsThunks() const {
   uint64_t isecAddr = addr;
   for (ConcatInputSection *isec : inputs)
     isecAddr = alignToPowerOf2(isecAddr, isec->align) + isec->getSize();
-  if (isecAddr - addr + in.stubs->getSize() <=
-      std::min(target->backwardBranchRange, target->forwardBranchRange))
+  // Other sections besides __text might be small enough to pass this
+  // test but nevertheless need thunks for calling into other sections.
+  // An imperfect heuristic to use in this case is that if a section
+  // we've already processed in this segment needs thunks, so do the
+  // rest.
+  bool needsThunks = parent && parent->needsThunks;
+  if (!needsThunks &&
+      isecAddr - addr + in.stubs->getSize() <=
+          std::min(target->backwardBranchRange, target->forwardBranchRange))
     return false;
   // Yes, this program is large enough to need thunks.
+  if (parent) {
+    parent->needsThunks = true;
+  }
   for (ConcatInputSection *isec : inputs) {
     for (Reloc &r : isec->relocs) {
       if (!target->hasAttr(r.type, RelocAttrBits::BRANCH))
@@ -323,11 +333,7 @@ void TextOutputSection::finalize() {
       thunkInfo.isec =
           makeSyntheticInputSection(isec->getSegName(), isec->getName());
       thunkInfo.isec->parent = this;
-
-      // This code runs after dead code removal. Need to set the `live` bit
-      // on the thunk isec so that asserts that check that only live sections
-      // get written are happy.
-      thunkInfo.isec->live = true;
+      assert(thunkInfo.isec->live);
 
       StringRef thunkName = saver().save(funcSym->getName() + ".thunk." +
                                          std::to_string(thunkInfo.sequence++));

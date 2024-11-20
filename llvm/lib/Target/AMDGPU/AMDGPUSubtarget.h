@@ -51,6 +51,7 @@ protected:
   bool Has16BitInsts = false;
   bool HasTrue16BitInsts = false;
   bool EnableRealTrue16Insts = false;
+  bool HasBF16ConversionInsts = false;
   bool HasMadMixInsts = false;
   bool HasMadMacF32Insts = false;
   bool HasDsSrc2Insts = false;
@@ -71,7 +72,7 @@ protected:
   char WavefrontSizeLog2 = 0;
 
 public:
-  AMDGPUSubtarget(const Triple &TT);
+  AMDGPUSubtarget(Triple TT);
 
   static const AMDGPUSubtarget &get(const MachineFunction &MF);
   static const AMDGPUSubtarget &get(const TargetMachine &TM,
@@ -166,6 +167,10 @@ public:
   // supported and the support for fake True16 instructions is removed.
   bool useRealTrue16Insts() const;
 
+  bool hasBF16ConversionInsts() const {
+    return HasBF16ConversionInsts;
+  }
+
   bool hasMadMixInsts() const {
     return HasMadMixInsts;
   }
@@ -226,10 +231,18 @@ public:
     return WavefrontSizeLog2;
   }
 
+  /// Return the maximum number of bytes of LDS available for all workgroups
+  /// running on the same WGP or CU.
+  /// For GFX10-GFX12 in WGP mode this is 128k even though each workgroup is
+  /// limited to 64k.
   unsigned getLocalMemorySize() const {
     return LocalMemorySize;
   }
 
+  /// Return the maximum number of bytes of LDS that can be allocated to a
+  /// single workgroup.
+  /// For GFX10-GFX12 in WGP mode this is limited to 64k even though the WGP has
+  /// 128k in total.
   unsigned getAddressableLocalMemorySize() const {
     return AddressableLocalMemorySize;
   }
@@ -287,6 +300,9 @@ public:
   /// Return the maximum workitem ID value in the function, for the given (0, 1,
   /// 2) dimension.
   unsigned getMaxWorkitemID(const Function &Kernel, unsigned Dimension) const;
+
+  /// Return the number of work groups for the function.
+  SmallVector<unsigned> getMaxNumWorkGroups(const Function &F) const;
 
   /// Return true if only a single workitem can be active in a wave.
   bool isSingleLaneExecution(const Function &Kernel) const;

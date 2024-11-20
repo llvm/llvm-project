@@ -100,20 +100,11 @@ template <class Edge, class BBInfo> class CFGMST {
     //   i8 0, label %await.ready
     //   i8 1, label %exit
     // ]
-    const BasicBlock *EdgeTarget = E->DestBB;
-    if (!EdgeTarget)
+    if (!E->DestBB)
       return;
     assert(E->SrcBB);
-    const Function *F = EdgeTarget->getParent();
-    if (!F->isPresplitCoroutine())
-      return;
-
-    const Instruction *TI = E->SrcBB->getTerminator();
-    if (auto *SWInst = dyn_cast<SwitchInst>(TI))
-      if (auto *Intrinsic = dyn_cast<IntrinsicInst>(SWInst->getCondition()))
-        if (Intrinsic->getIntrinsicID() == Intrinsic::coro_suspend &&
-            SWInst->getDefaultDest() == EdgeTarget)
-          E->Removed = true;
+    if (llvm::isPresplitCoroSuspendExitEdge(*E->SrcBB, *E->DestBB))
+      E->Removed = true;
   }
 
   // Traverse the CFG using a stack. Find all the edges and assign the weight.
@@ -289,13 +280,13 @@ public:
     std::tie(Iter, Inserted) = BBInfos.insert(std::make_pair(Src, nullptr));
     if (Inserted) {
       // Newly inserted, update the real info.
-      Iter->second = std::move(std::make_unique<BBInfo>(Index));
+      Iter->second = std::make_unique<BBInfo>(Index);
       Index++;
     }
     std::tie(Iter, Inserted) = BBInfos.insert(std::make_pair(Dest, nullptr));
     if (Inserted)
       // Newly inserted, update the real info.
-      Iter->second = std::move(std::make_unique<BBInfo>(Index));
+      Iter->second = std::make_unique<BBInfo>(Index);
     AllEdges.emplace_back(new Edge(Src, Dest, W));
     return *AllEdges.back();
   }

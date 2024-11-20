@@ -4374,6 +4374,8 @@ _func:
 	mrs x9, ID_AA64AFR1_EL1
 	mrs x9, ID_AA64ISAR0_EL1
 	mrs x9, ID_AA64ISAR1_EL1
+	mrs x9, ID_AA64ISAR2_EL1
+	mrs x9, ID_AA64ISAR3_EL1
 	mrs x9, ID_AA64MMFR0_EL1
 	mrs x9, ID_AA64MMFR1_EL1
 	mrs x9, ID_AA64MMFR2_EL1
@@ -4712,6 +4714,8 @@ _func:
 // CHECK: mrs      x9, {{id_aa64afr1_el1|ID_AA64AFR1_EL1}}        // encoding: [0xa9,0x05,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64isar0_el1|ID_AA64ISAR0_EL1}}       // encoding: [0x09,0x06,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64isar1_el1|ID_AA64ISAR1_EL1}}       // encoding: [0x29,0x06,0x38,0xd5]
+// CHECK: mrs      x9, {{id_aa64isar2_el1|ID_AA64ISAR2_EL1}}       // encoding: [0x49,0x06,0x38,0xd5]
+// CHECK: mrs      x9, {{id_aa64isar3_el1|ID_AA64ISAR3_EL1}}       // encoding: [0x69,0x06,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64mmfr0_el1|ID_AA64MMFR0_EL1}}       // encoding: [0x09,0x07,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64mmfr1_el1|ID_AA64MMFR1_EL1}}       // encoding: [0x29,0x07,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64mmfr2_el1|ID_AA64MMFR2_EL1}}       // encoding: [0x49,0x07,0x38,0xd5]

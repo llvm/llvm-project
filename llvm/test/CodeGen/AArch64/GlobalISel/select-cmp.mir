@@ -361,8 +361,8 @@ body:             |
     ; CHECK-NEXT: %cmp_lhs:fpr128 = COPY $q0
     ; CHECK-NEXT: %cmp_rhs:fpr128 = COPY $q1
     ; CHECK-NEXT: %add_lhs:fpr128 = COPY $q2
-    ; CHECK-NEXT: [[CMEQv4i32_:%[0-9]+]]:fpr128 = CMEQv4i32 %cmp_lhs, %cmp_rhs
-    ; CHECK-NEXT: %add:fpr128 = ADDv4i32 %add_lhs, [[CMEQv4i32_]]
+    ; CHECK-NEXT: %cmp:fpr128 = CMEQv4i32 %cmp_lhs, %cmp_rhs
+    ; CHECK-NEXT: %add:fpr128 = ADDv4i32 %add_lhs, %cmp
     ; CHECK-NEXT: $q0 = COPY %add
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %cmp_lhs:fpr(<4 x s32>) = COPY $q0

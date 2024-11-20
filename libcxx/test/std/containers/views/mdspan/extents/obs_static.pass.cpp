@@ -26,8 +26,10 @@
 //   Returns: Di.
 //
 
-#include <mdspan>
 #include <cassert>
+#include <cstddef>
+#include <mdspan>
+#include <span> // dynamic_extent
 #include <utility>
 
 #include "test_macros.h"
@@ -81,7 +83,7 @@ void test() {
 int main(int, char**) {
   test<int>();
   test<unsigned>();
-  test<char>();
+  test<signed char>();
   test<long long>();
   test<size_t>();
   return 0;

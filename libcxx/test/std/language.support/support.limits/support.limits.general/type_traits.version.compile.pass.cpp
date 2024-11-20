@@ -23,6 +23,7 @@
     __cpp_lib_is_aggregate                         201703L [C++17]
     __cpp_lib_is_constant_evaluated                201811L [C++20]
     __cpp_lib_is_final                             201402L [C++14]
+    __cpp_lib_is_implicit_lifetime                 202302L [C++23]
     __cpp_lib_is_invocable                         201703L [C++17]
     __cpp_lib_is_layout_compatible                 201907L [C++20]
     __cpp_lib_is_nothrow_convertible               201806L [C++20]
@@ -30,6 +31,8 @@
     __cpp_lib_is_pointer_interconvertible          201907L [C++20]
     __cpp_lib_is_scoped_enum                       202011L [C++23]
     __cpp_lib_is_swappable                         201603L [C++17]
+    __cpp_lib_is_virtual_base_of                   202406L [C++26]
+    __cpp_lib_is_within_lifetime                   202306L [C++26]
     __cpp_lib_logical_traits                       201510L [C++17]
     __cpp_lib_reference_from_temporary             202202L [C++23]
     __cpp_lib_remove_cvref                         201711L [C++20]
@@ -38,7 +41,6 @@
     __cpp_lib_type_identity                        201806L [C++20]
     __cpp_lib_type_trait_variable_templates        201510L [C++17]
     __cpp_lib_void_t                               201411L [C++17]
-    __cpp_lib_within_lifetime                      202306L [C++26]
 */
 
 #include <type_traits>
@@ -74,6 +76,10 @@
 #   error "__cpp_lib_is_final should not be defined before c++14"
 # endif
 
+# ifdef __cpp_lib_is_implicit_lifetime
+#   error "__cpp_lib_is_implicit_lifetime should not be defined before c++23"
+# endif
+
 # ifdef __cpp_lib_is_invocable
 #   error "__cpp_lib_is_invocable should not be defined before c++17"
 # endif
@@ -100,6 +106,14 @@
 
 # ifdef __cpp_lib_is_swappable
 #   error "__cpp_lib_is_swappable should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_is_virtual_base_of
+#   error "__cpp_lib_is_virtual_base_of should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_is_within_lifetime
+#   error "__cpp_lib_is_within_lifetime should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_logical_traits
@@ -132,10 +146,6 @@
 
 # ifdef __cpp_lib_void_t
 #   error "__cpp_lib_void_t should not be defined before c++17"
-# endif
-
-# ifdef __cpp_lib_within_lifetime
-#   error "__cpp_lib_within_lifetime should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 14
@@ -174,6 +184,10 @@
 #   error "__cpp_lib_is_final should have the value 201402L in c++14"
 # endif
 
+# ifdef __cpp_lib_is_implicit_lifetime
+#   error "__cpp_lib_is_implicit_lifetime should not be defined before c++23"
+# endif
+
 # ifdef __cpp_lib_is_invocable
 #   error "__cpp_lib_is_invocable should not be defined before c++17"
 # endif
@@ -203,6 +217,14 @@
 
 # ifdef __cpp_lib_is_swappable
 #   error "__cpp_lib_is_swappable should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_is_virtual_base_of
+#   error "__cpp_lib_is_virtual_base_of should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_is_within_lifetime
+#   error "__cpp_lib_is_within_lifetime should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_logical_traits
@@ -241,10 +263,6 @@
 
 # ifdef __cpp_lib_void_t
 #   error "__cpp_lib_void_t should not be defined before c++17"
-# endif
-
-# ifdef __cpp_lib_within_lifetime
-#   error "__cpp_lib_within_lifetime should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 17
@@ -292,6 +310,10 @@
 #   error "__cpp_lib_is_final should have the value 201402L in c++17"
 # endif
 
+# ifdef __cpp_lib_is_implicit_lifetime
+#   error "__cpp_lib_is_implicit_lifetime should not be defined before c++23"
+# endif
+
 # ifndef __cpp_lib_is_invocable
 #   error "__cpp_lib_is_invocable should be defined in c++17"
 # endif
@@ -327,6 +349,14 @@
 # endif
 # if __cpp_lib_is_swappable != 201603L
 #   error "__cpp_lib_is_swappable should have the value 201603L in c++17"
+# endif
+
+# ifdef __cpp_lib_is_virtual_base_of
+#   error "__cpp_lib_is_virtual_base_of should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_is_within_lifetime
+#   error "__cpp_lib_is_within_lifetime should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_logical_traits
@@ -374,10 +404,6 @@
 # endif
 # if __cpp_lib_void_t != 201411L
 #   error "__cpp_lib_void_t should have the value 201411L in c++17"
-# endif
-
-# ifdef __cpp_lib_within_lifetime
-#   error "__cpp_lib_within_lifetime should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 20
@@ -429,6 +455,10 @@
 # endif
 # if __cpp_lib_is_final != 201402L
 #   error "__cpp_lib_is_final should have the value 201402L in c++20"
+# endif
+
+# ifdef __cpp_lib_is_implicit_lifetime
+#   error "__cpp_lib_is_implicit_lifetime should not be defined before c++23"
 # endif
 
 # ifndef __cpp_lib_is_invocable
@@ -489,6 +519,14 @@
 #   error "__cpp_lib_is_swappable should have the value 201603L in c++20"
 # endif
 
+# ifdef __cpp_lib_is_virtual_base_of
+#   error "__cpp_lib_is_virtual_base_of should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_is_within_lifetime
+#   error "__cpp_lib_is_within_lifetime should not be defined before c++26"
+# endif
+
 # ifndef __cpp_lib_logical_traits
 #   error "__cpp_lib_logical_traits should be defined in c++20"
 # endif
@@ -542,10 +580,6 @@
 #   error "__cpp_lib_void_t should have the value 201411L in c++20"
 # endif
 
-# ifdef __cpp_lib_within_lifetime
-#   error "__cpp_lib_within_lifetime should not be defined before c++26"
-# endif
-
 #elif TEST_STD_VER == 23
 
 # ifndef __cpp_lib_bool_constant
@@ -595,6 +629,19 @@
 # endif
 # if __cpp_lib_is_final != 201402L
 #   error "__cpp_lib_is_final should have the value 201402L in c++23"
+# endif
+
+# if __has_builtin(__builtin_is_implicit_lifetime)
+#   ifndef __cpp_lib_is_implicit_lifetime
+#     error "__cpp_lib_is_implicit_lifetime should be defined in c++23"
+#   endif
+#   if __cpp_lib_is_implicit_lifetime != 202302L
+#     error "__cpp_lib_is_implicit_lifetime should have the value 202302L in c++23"
+#   endif
+# else
+#   ifdef __cpp_lib_is_implicit_lifetime
+#     error "__cpp_lib_is_implicit_lifetime should not be defined when the requirement '__has_builtin(__builtin_is_implicit_lifetime)' is not met!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_is_invocable
@@ -656,6 +703,14 @@
 # endif
 # if __cpp_lib_is_swappable != 201603L
 #   error "__cpp_lib_is_swappable should have the value 201603L in c++23"
+# endif
+
+# ifdef __cpp_lib_is_virtual_base_of
+#   error "__cpp_lib_is_virtual_base_of should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_is_within_lifetime
+#   error "__cpp_lib_is_within_lifetime should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_logical_traits
@@ -720,10 +775,6 @@
 #   error "__cpp_lib_void_t should have the value 201411L in c++23"
 # endif
 
-# ifdef __cpp_lib_within_lifetime
-#   error "__cpp_lib_within_lifetime should not be defined before c++26"
-# endif
-
 #elif TEST_STD_VER > 23
 
 # ifndef __cpp_lib_bool_constant
@@ -773,6 +824,19 @@
 # endif
 # if __cpp_lib_is_final != 201402L
 #   error "__cpp_lib_is_final should have the value 201402L in c++26"
+# endif
+
+# if __has_builtin(__builtin_is_implicit_lifetime)
+#   ifndef __cpp_lib_is_implicit_lifetime
+#     error "__cpp_lib_is_implicit_lifetime should be defined in c++26"
+#   endif
+#   if __cpp_lib_is_implicit_lifetime != 202302L
+#     error "__cpp_lib_is_implicit_lifetime should have the value 202302L in c++26"
+#   endif
+# else
+#   ifdef __cpp_lib_is_implicit_lifetime
+#     error "__cpp_lib_is_implicit_lifetime should not be defined when the requirement '__has_builtin(__builtin_is_implicit_lifetime)' is not met!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_is_invocable
@@ -836,6 +900,32 @@
 #   error "__cpp_lib_is_swappable should have the value 201603L in c++26"
 # endif
 
+# if __has_builtin(__builtin_is_virtual_base_of)
+#   ifndef __cpp_lib_is_virtual_base_of
+#     error "__cpp_lib_is_virtual_base_of should be defined in c++26"
+#   endif
+#   if __cpp_lib_is_virtual_base_of != 202406L
+#     error "__cpp_lib_is_virtual_base_of should have the value 202406L in c++26"
+#   endif
+# else
+#   ifdef __cpp_lib_is_virtual_base_of
+#     error "__cpp_lib_is_virtual_base_of should not be defined when the requirement '__has_builtin(__builtin_is_virtual_base_of)' is not met!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_is_within_lifetime
+#     error "__cpp_lib_is_within_lifetime should be defined in c++26"
+#   endif
+#   if __cpp_lib_is_within_lifetime != 202306L
+#     error "__cpp_lib_is_within_lifetime should have the value 202306L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_is_within_lifetime
+#     error "__cpp_lib_is_within_lifetime should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
 # ifndef __cpp_lib_logical_traits
 #   error "__cpp_lib_logical_traits should be defined in c++26"
 # endif
@@ -896,19 +986,6 @@
 # endif
 # if __cpp_lib_void_t != 201411L
 #   error "__cpp_lib_void_t should have the value 201411L in c++26"
-# endif
-
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_within_lifetime
-#     error "__cpp_lib_within_lifetime should be defined in c++26"
-#   endif
-#   if __cpp_lib_within_lifetime != 202306L
-#     error "__cpp_lib_within_lifetime should have the value 202306L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_within_lifetime
-#     error "__cpp_lib_within_lifetime should not be defined because it is unimplemented in libc++!"
-#   endif
 # endif
 
 #endif // TEST_STD_VER > 23

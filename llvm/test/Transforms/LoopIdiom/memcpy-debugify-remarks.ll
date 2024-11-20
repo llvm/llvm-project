@@ -2,6 +2,9 @@
 ; RUN: opt -passes=debugify,loop-idiom,verify -pass-remarks=loop-idiom -pass-remarks-analysis=loop-idiom -pass-remarks-output=%t.yaml -verify-each -verify-dom-info -verify-loop-info  < %s -S 2>&1 | FileCheck %s
 ; RUN: FileCheck --input-file=%t.yaml %s --check-prefixes=YAML
 
+; RUN: opt -passes=debugify,loop-idiom,verify -pass-remarks=loop-idiom -pass-remarks-analysis=loop-idiom -pass-remarks-output=%t.yaml -verify-each -verify-dom-info -verify-loop-info  < %s -S 2>&1 --try-experimental-debuginfo-iterators | FileCheck %s
+; RUN: FileCheck --input-file=%t.yaml %s --check-prefixes=YAML
+
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -35,17 +38,17 @@ define void @test6_dest_align(ptr noalias align 1 %Base, ptr noalias align 4 %De
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]], !dbg [[DBG18]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[BB_NPH:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ], !dbg [[DBG20:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i64 [[INDVAR]], metadata [[META9:![0-9]+]], metadata !DIExpression()), !dbg [[DBG20]]
+; CHECK-NEXT:      #dbg_value(i64 [[INDVAR]], [[META9:![0-9]+]], !DIExpression(), [[DBG20]])
 ; CHECK-NEXT:    [[I_0_014:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[INDVAR]], !dbg [[DBG21:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr [[I_0_014]], metadata [[META11:![0-9]+]], metadata !DIExpression()), !dbg [[DBG21]]
+; CHECK-NEXT:      #dbg_value(ptr [[I_0_014]], [[META11:![0-9]+]], !DIExpression(), [[DBG21]])
 ; CHECK-NEXT:    [[DESTI:%.*]] = getelementptr i32, ptr [[DEST]], i64 [[INDVAR]], !dbg [[DBG22:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr [[DESTI]], metadata [[META12:![0-9]+]], metadata !DIExpression()), !dbg [[DBG22]]
+; CHECK-NEXT:      #dbg_value(ptr [[DESTI]], [[META12:![0-9]+]], !DIExpression(), [[DBG22]])
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[I_0_014]], align 1, !dbg [[DBG23:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[V]], metadata [[META13:![0-9]+]], metadata !DIExpression()), !dbg [[DBG23]]
+; CHECK-NEXT:      #dbg_value(i32 [[V]], [[META13:![0-9]+]], !DIExpression(), [[DBG23]])
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1, !dbg [[DBG24:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i64 [[INDVAR_NEXT]], metadata [[META15:![0-9]+]], metadata !DIExpression()), !dbg [[DBG24]]
+; CHECK-NEXT:      #dbg_value(i64 [[INDVAR_NEXT]], [[META15:![0-9]+]], !DIExpression(), [[DBG24]])
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVAR_NEXT]], [[SIZE]], !dbg [[DBG25:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i1 [[EXITCOND]], metadata [[META16:![0-9]+]], metadata !DIExpression()), !dbg [[DBG25]]
+; CHECK-NEXT:      #dbg_value(i1 [[EXITCOND]], [[META16:![0-9]+]], !DIExpression(), [[DBG25]])
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]], !dbg [[DBG26:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void, !dbg [[DBG27:![0-9]+]]

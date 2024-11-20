@@ -31,11 +31,14 @@
 
 namespace Fortran::lower::pft {
 
+struct CompilerDirectiveUnit;
 struct Evaluation;
-struct Program;
-struct ModuleLikeUnit;
 struct FunctionLikeUnit;
+struct ModuleLikeUnit;
+struct Program;
 
+using ContainedUnit = std::variant<CompilerDirectiveUnit, FunctionLikeUnit>;
+using ContainedUnitList = std::list<ContainedUnit>;
 using EvaluationList = std::list<Evaluation>;
 
 /// Provide a variant like container that can hold references. It can hold
@@ -73,7 +76,7 @@ public:
   }
   template <typename VISITOR>
   constexpr auto visit(VISITOR &&visitor) const {
-    return std::visit(
+    return Fortran::common::visit(
         common::visitors{[&visitor](auto ref) { return visitor(ref.get()); }},
         u);
   }
@@ -100,13 +103,14 @@ using ActionStmts = std::tuple<
     parser::EventPostStmt, parser::EventWaitStmt, parser::ExitStmt,
     parser::FailImageStmt, parser::FlushStmt, parser::FormTeamStmt,
     parser::GotoStmt, parser::IfStmt, parser::InquireStmt, parser::LockStmt,
-    parser::NullifyStmt, parser::OpenStmt, parser::PointerAssignmentStmt,
-    parser::PrintStmt, parser::ReadStmt, parser::ReturnStmt, parser::RewindStmt,
-    parser::StopStmt, parser::SyncAllStmt, parser::SyncImagesStmt,
-    parser::SyncMemoryStmt, parser::SyncTeamStmt, parser::UnlockStmt,
-    parser::WaitStmt, parser::WhereStmt, parser::WriteStmt,
-    parser::ComputedGotoStmt, parser::ForallStmt, parser::ArithmeticIfStmt,
-    parser::AssignStmt, parser::AssignedGotoStmt, parser::PauseStmt>;
+    parser::NotifyWaitStmt, parser::NullifyStmt, parser::OpenStmt,
+    parser::PointerAssignmentStmt, parser::PrintStmt, parser::ReadStmt,
+    parser::ReturnStmt, parser::RewindStmt, parser::StopStmt,
+    parser::SyncAllStmt, parser::SyncImagesStmt, parser::SyncMemoryStmt,
+    parser::SyncTeamStmt, parser::UnlockStmt, parser::WaitStmt,
+    parser::WhereStmt, parser::WriteStmt, parser::ComputedGotoStmt,
+    parser::ForallStmt, parser::ArithmeticIfStmt, parser::AssignStmt,
+    parser::AssignedGotoStmt, parser::PauseStmt>;
 
 using OtherStmts = std::tuple<parser::EntryStmt, parser::FormatStmt>;
 
@@ -137,7 +141,8 @@ using Directives =
     std::tuple<parser::CompilerDirective, parser::OpenACCConstruct,
                parser::OpenACCRoutineConstruct,
                parser::OpenACCDeclarativeConstruct, parser::OpenMPConstruct,
-               parser::OpenMPDeclarativeConstruct, parser::OmpEndLoopDirective>;
+               parser::OpenMPDeclarativeConstruct, parser::OmpEndLoopDirective,
+               parser::CUFKernelDoConstruct>;
 
 using DeclConstructs = std::tuple<parser::OpenMPDeclarativeConstruct,
                                   parser::OpenACCDeclarativeConstruct>;
@@ -177,7 +182,7 @@ static constexpr bool isNopConstructStmt{common::HasMember<
 template <typename A>
 static constexpr bool isExecutableDirective{common::HasMember<
     A, std::tuple<parser::CompilerDirective, parser::OpenACCConstruct,
-                  parser::OpenMPConstruct>>};
+                  parser::OpenMPConstruct, parser::CUFKernelDoConstruct>>};
 
 template <typename A>
 static constexpr bool isFunctionLike{common::HasMember<
@@ -345,6 +350,8 @@ struct Evaluation : EvaluationVariant {
   parser::CharBlock position{};
   std::optional<parser::Label> label{};
   std::unique_ptr<EvaluationList> evaluationList; // nested evaluations
+  // associated compiler directives
+  llvm::SmallVector<const parser::CompilerDirective *, 1> dirs;
   Evaluation *parentConstruct{nullptr};  // set for nodes below the top level
   Evaluation *lexicalSuccessor{nullptr}; // set for leaf nodes, some directives
   Evaluation *controlSuccessor{nullptr}; // set for some leaf nodes
@@ -462,6 +469,9 @@ struct Variable {
     return *std::get<Nominal>(var).symbol;
   }
 
+  /// Is this variable a compiler generated global to describe derived types?
+  bool isRuntimeTypeInfoData() const;
+
   /// Return the aggregate store.
   const AggregateStore &getAggregateStore() const {
     assert(isAggregateStore());
@@ -484,7 +494,8 @@ struct Variable {
 
   /// Is this variable a global?
   bool isGlobal() const {
-    return std::visit([](const auto &x) { return x.isGlobal(); }, var);
+    return Fortran::common::visit([](const auto &x) { return x.isGlobal(); },
+                                  var);
   }
 
   /// Is this a module or submodule variable?
@@ -494,7 +505,7 @@ struct Variable {
   }
 
   const Fortran::semantics::Scope *getOwningScope() const {
-    return std::visit(
+    return Fortran::common::visit(
         common::visitors{
             [](const Nominal &x) { return &x.symbol->GetUltimate().owner(); },
             [](const AggregateStore &agg) { return &agg.getOwningScope(); }},
@@ -589,8 +600,8 @@ VariableList getDependentVariableList(const Fortran::semantics::Symbol &);
 
 void dump(VariableList &, std::string s = {}); // `s` is an optional dump label
 
-/// Function-like units may contain evaluations (executable statements) and
-/// nested function-like units (internal procedures and function statements).
+/// Function-like units may contain evaluations (executable statements),
+/// directives, and internal (nested) function-like units.
 struct FunctionLikeUnit : public ProgramUnit {
   // wrapper statements for function-like syntactic structures
   using FunctionStatement =
@@ -692,10 +703,10 @@ struct FunctionLikeUnit : public ProgramUnit {
   std::optional<FunctionStatement> beginStmt;
   FunctionStatement endStmt;
   const semantics::Scope *scope;
-  EvaluationList evaluationList;
   LabelEvalMap labelEvaluationMap;
   SymbolLabelMap assignSymbolLabelMap;
-  std::list<FunctionLikeUnit> nestedFunctions;
+  ContainedUnitList containedUnitList;
+  EvaluationList evaluationList;
   /// <Symbol, Evaluation> pairs for each entry point. The pair at index 0
   /// is the primary entry point; remaining pairs are alternate entry points.
   /// The primary entry point symbol is Null for an anonymous program.
@@ -708,6 +719,8 @@ struct FunctionLikeUnit : public ProgramUnit {
   /// Primary result for function subprograms with alternate entries. This
   /// is one of the largest result values, not necessarily the first one.
   const semantics::Symbol *primaryResult{nullptr};
+  bool hasIeeeAccess{false};
+  bool mayModifyHaltingMode{false};
   bool mayModifyRoundingMode{false};
   /// Terminal basic block (if any)
   mlir::Block *finalBlock{};
@@ -739,7 +752,7 @@ struct ModuleLikeUnit : public ProgramUnit {
 
   ModuleStatement beginStmt;
   ModuleStatement endStmt;
-  std::list<FunctionLikeUnit> nestedFunctions;
+  ContainedUnitList containedUnitList;
   EvaluationList evaluationList;
 };
 

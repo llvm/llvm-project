@@ -9,11 +9,15 @@
 #ifndef LLVM_LIBC_PTHREAD_H
 #define LLVM_LIBC_PTHREAD_H
 
-#include <__llvm-libc-common.h>
+#include "__llvm-libc-common.h"
+
+// TODO: move to a pthreads-macros.h file:
+// https://github.com/llvm/llvm-project/issues/88997
 
 #define PTHREAD_STACK_MIN (1 << 14) // 16KB
 
 #define PTHREAD_MUTEX_INITIALIZER {0}
+#define PTHREAD_RWLOCK_INITIALIZER {}
 #define PTHREAD_ONCE_INIT {0}
 
 enum {
@@ -31,6 +35,14 @@ enum {
   PTHREAD_MUTEX_STALLED = 0x0,
   PTHREAD_MUTEX_ROBUST = 0x1,
 };
+
+#define PTHREAD_PROCESS_PRIVATE 0
+#define PTHREAD_PROCESS_SHARED 1
+
+#define PTHREAD_RWLOCK_PREFER_READER_NP 0
+#define PTHREAD_RWLOCK_PREFER_WRITER_NP 1
+#define PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP 2
+
 
 %%public_api()
 

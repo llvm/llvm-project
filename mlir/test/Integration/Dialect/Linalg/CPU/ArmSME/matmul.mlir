@@ -1,16 +1,10 @@
 // RUN: mlir-opt %s \
 // RUN:   -transform-interpreter -test-transform-dialect-erase-schedule \
-// RUN:   -canonicalize \
-// RUN:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za" \
-// RUN:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf \
-// RUN:   -convert-vector-to-scf -cse -arm-sve-legalize-vector-storage \
-// RUN:   -convert-arm-sme-to-llvm \
-// RUN:   -convert-vector-to-llvm=enable-arm-sve \
-// RUN:   -cse -canonicalize -allocate-arm-sme-tiles -test-lower-to-llvm | \
+// RUN:   -test-lower-to-arm-sme -test-lower-to-llvm | \
 // RUN: %mcr_aarch64_cmd \
 // RUN:   -e=main -entry-point-result=void \
 // RUN:   -march=aarch64 -mattr="+sve,+sme" \
-// RUN:   -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils,%arm_sme_abi_shlib | \
+// RUN:   -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils,%native_arm_sme_abi_shlib | \
 // RUN: FileCheck %s
 
 func.func @matmul(%A : tensor<?x?xf32>, %B : tensor<?x?xf32>, %C : tensor<?x?xf32>) {
@@ -21,7 +15,7 @@ func.func @matmul(%A : tensor<?x?xf32>, %B : tensor<?x?xf32>, %C : tensor<?x?xf3
   return
 }
 
-func.func @main() attributes { enable_arm_streaming_ignore } {
+func.func @main() {
   %c0 = arith.constant 0 : i32
   %c7 = arith.constant 7 : index
 
@@ -65,7 +59,7 @@ module attributes {transform.with_named_sequence} {
 
     // Step 1: Tile for size [4] x [4], which corresponds to SVLs x SVLs, where
     // SVLs is the number of 32-bit elements in a vector of SVL bits.
-    %tiled_linalg_op, %loops:3 = transform.structured.tile_using_for %matmul[[4], [4], 1]
+    %tiled_linalg_op, %loops:3 = transform.structured.tile_using_for %matmul tile_sizes [[4], [4], 1]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
 
     // Step 2: Vectorize.
@@ -94,8 +88,16 @@ module attributes {transform.with_named_sequence} {
       transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
       transform.apply_patterns.vector.lower_masks
       transform.apply_patterns.vector.rank_reducing_subview_patterns
+      transform.apply_patterns.canonicalization
     } : !transform.any_op
 
+    // Step 6 (optional optimization): Hoist accumulator load/store.
+    %func_h = transform.structured.hoist_redundant_vector_transfers %func
+        : (!transform.any_op) -> !transform.any_op
+    %all_loops = transform.structured.match interface{LoopLikeInterface} in %bufferize
+      : (!transform.any_op) -> !transform.any_op
+    transform.apply_licm to %all_loops : !transform.any_op
+    transform.loop.hoist_loop_invariant_subsets %all_loops : !transform.any_op
     transform.yield
   }
 }

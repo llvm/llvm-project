@@ -1,0 +1,28 @@
+/// Check non-darwin triple is rejected.
+// RUN: not clang-installapi -target x86_64-unknown-unknown %s -o tmp.tbd 2> %t 
+// RUN: FileCheck --check-prefix INVALID_INSTALLAPI -input-file %t %s
+// INVALID_INSTALLAPI: error: unsupported option 'installapi' for target 'x86_64-unknown-unknown'
+
+/// Check that missing install_name is reported.
+// RUN: not clang-installapi -target x86_64-apple-ios-simulator  %s -o tmp.tbd 2> %t 
+// RUN: FileCheck --check-prefix INVALID_INSTALL_NAME -input-file %t %s
+// INVALID_INSTALL_NAME: error: no install name specified: add -install_name <path>
+
+/// Check invalid verification mode.
+// RUN: not clang-installapi -install_name Foo -target arm64-apple-ios13 \
+// RUN: --verify-mode=Invalid -o tmp.tbd 2> %t
+// RUN: FileCheck --check-prefix INVALID_VERIFY_MODE -input-file %t %s 
+// INVALID_VERIFY_MODE: error: invalid value 'Invalid' in '--verify-mode=Invalid'
+
+/// Check that invalid sysroot is fatal.
+// RUN: not clang-installapi -install_name Foo -target arm64-apple-ios13 \
+// RUN: -isysroot /no/such/path -o tmp.tbd 2> %t 
+// RUN: FileCheck --check-prefix INVALID_ISYSROOT -input-file %t %s 
+// INVALID_ISYSROOT: error: no such sysroot directory: {{.*}}no/such/path'
+
+/// Check invalid target-variant.
+// RUN: not clang-installapi -target x86_64-apple-macosx12 \
+// RUN: -darwin-target-variant arm64-apple-ios15-macabi \
+// RUN: -install_name tmp.dylib -o tmp.tbd 2> %t 
+// RUN: FileCheck --check-prefix INVALID_TARGET_VARIANT -input-file %t %s
+// INVALID_TARGET_VARIANT: error: no matching target found for target variant 'arm64-apple-ios15-macabi'

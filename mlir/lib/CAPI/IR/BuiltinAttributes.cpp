@@ -10,6 +10,7 @@
 #include "mlir-c/Support.h"
 #include "mlir/CAPI/AffineMap.h"
 #include "mlir/CAPI/IR.h"
+#include "mlir/CAPI/IntegerSet.h"
 #include "mlir/CAPI/Support.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Attributes.h"
@@ -192,6 +193,14 @@ MlirTypeID mlirIntegerSetAttrGetTypeID(void) {
   return wrap(IntegerSetAttr::getTypeID());
 }
 
+MlirAttribute mlirIntegerSetAttrGet(MlirIntegerSet set) {
+  return wrap(IntegerSetAttr::get(unwrap(set)));
+}
+
+MlirIntegerSet mlirIntegerSetAttrGetValue(MlirAttribute attr) {
+  return wrap(llvm::cast<IntegerSetAttr>(unwrap(attr)).getValue());
+}
+
 //===----------------------------------------------------------------------===//
 // Opaque attribute.
 //===----------------------------------------------------------------------===//
@@ -287,6 +296,10 @@ MlirAttribute mlirSymbolRefAttrGetNestedReference(MlirAttribute attr,
 
 MlirTypeID mlirSymbolRefAttrGetTypeID(void) {
   return wrap(SymbolRefAttr::getTypeID());
+}
+
+MlirAttribute mlirDisctinctAttrCreate(MlirAttribute referencedAttr) {
+  return wrap(mlir::DistinctAttr::create(unwrap(referencedAttr)));
 }
 
 //===----------------------------------------------------------------------===//

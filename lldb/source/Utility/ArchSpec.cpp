@@ -16,6 +16,7 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 
@@ -59,6 +60,8 @@ static const CoreDefinition g_core_definitions[] = {
      "armv6m"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7,
      "armv7"},
+    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7a,
+     "armv7a"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7l,
      "armv7l"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7f,
@@ -101,6 +104,8 @@ static const CoreDefinition g_core_definitions[] = {
      ArchSpec::eCore_arm_arm64, "arm64"},
     {eByteOrderLittle, 8, 4, 4, llvm::Triple::aarch64,
      ArchSpec::eCore_arm_armv8, "armv8"},
+    {eByteOrderLittle, 8, 4, 4, llvm::Triple::aarch64,
+     ArchSpec::eCore_arm_armv8a, "armv8a"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv8l,
      "armv8l"},
     {eByteOrderLittle, 8, 4, 4, llvm::Triple::aarch64,
@@ -459,10 +464,23 @@ static const ArchDefinition g_coff_arch_def = {
     "pe-coff",
 };
 
+static const ArchDefinitionEntry g_xcoff_arch_entries[] = {
+    {ArchSpec::eCore_ppc_generic, llvm::XCOFF::TCPU_COM, LLDB_INVALID_CPUTYPE,
+     0xFFFFFFFFu, 0xFFFFFFFFu},
+    {ArchSpec::eCore_ppc64_generic, llvm::XCOFF::TCPU_PPC64,
+     LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu}};
+
+static const ArchDefinition g_xcoff_arch_def = {
+    eArchTypeXCOFF,
+    std::size(g_xcoff_arch_entries),
+    g_xcoff_arch_entries,
+    "xcoff",
+};
+
 //===----------------------------------------------------------------------===//
 // Table of all ArchDefinitions
 static const ArchDefinition *g_arch_definitions[] = {
-    &g_macho_arch_def, &g_elf_arch_def, &g_coff_arch_def};
+    &g_macho_arch_def, &g_elf_arch_def, &g_coff_arch_def, &g_xcoff_arch_def};
 
 //===----------------------------------------------------------------------===//
 // Static helper functions.
@@ -903,6 +921,9 @@ bool ArchSpec::SetArchitecture(ArchitectureType arch_type, uint32_t cpu,
         } else if (arch_type == eArchTypeCOFF && os == llvm::Triple::Win32) {
           m_triple.setVendor(llvm::Triple::PC);
           m_triple.setOS(llvm::Triple::Win32);
+        } else if (arch_type == eArchTypeXCOFF && os == llvm::Triple::AIX) {
+          m_triple.setVendor(llvm::Triple::IBM);
+          m_triple.setOS(llvm::Triple::AIX);
         } else {
           m_triple.setVendor(llvm::Triple::UnknownVendor);
           m_triple.setOS(llvm::Triple::UnknownOS);
@@ -1419,23 +1440,6 @@ bool ArchSpec::IsFullySpecifiedTriple() const {
     return false;
 
   return true;
-}
-
-void ArchSpec::PiecewiseTripleCompare(
-    const ArchSpec &other, bool &arch_different, bool &vendor_different,
-    bool &os_different, bool &os_version_different, bool &env_different) const {
-  const llvm::Triple &me(GetTriple());
-  const llvm::Triple &them(other.GetTriple());
-
-  arch_different = (me.getArch() != them.getArch());
-
-  vendor_different = (me.getVendor() != them.getVendor());
-
-  os_different = (me.getOS() != them.getOS());
-
-  os_version_different = (me.getOSMajorVersion() != them.getOSMajorVersion());
-
-  env_different = (me.getEnvironment() != them.getEnvironment());
 }
 
 bool ArchSpec::IsAlwaysThumbInstructions() const {

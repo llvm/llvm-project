@@ -8,7 +8,7 @@
 
 #include "llvm/DebugInfo/PDB/Native/FormatUtil.h"
 
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
@@ -119,9 +119,7 @@ std::string llvm::pdb::formatTypeLeafKind(TypeLeafKind K) {
     return #EnumName;
 #include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
   default:
-    return formatv("UNKNOWN RECORD ({0:X})",
-                   static_cast<std::underlying_type_t<TypeLeafKind>>(K))
-        .str();
+    return formatv("UNKNOWN RECORD ({0:X})", llvm::to_underlying(K)).str();
   }
 }
 

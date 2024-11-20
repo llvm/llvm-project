@@ -4,7 +4,7 @@
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=thumbv8.1m.main-none-eabi -mattr=+mve,+mve4beat < %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-MVE4
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=thumbv8m.main-none-eabi < %s | FileCheck %s --check-prefix=CHECK-V8M-MAIN
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=thumbv8m.base-none-eabi < %s | FileCheck %s --check-prefix=CHECK-V8M-BASE
-; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=armv8r-none-eabi < %s | FileCheck %s --check-prefix=CHECK-V8R
+; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=armv8r-none-eabi -mattr=+neon,+fp-armv8 < %s | FileCheck %s --check-prefix=CHECK-V8R
 ; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=thumbv8.1m.main -mattr=+mve < %s | FileCheck %s --check-prefix=CHECK-MVE-SIZE
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"

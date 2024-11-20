@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_GSYM_DWARFTRANSFORMER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/GSYM/ExtractRanges.h"
 #include "llvm/Support/Error.h"
 
@@ -22,6 +23,7 @@ namespace gsym {
 struct CUInfo;
 struct FunctionInfo;
 class GsymCreator;
+class OutputAggregator;
 
 /// A class that transforms the DWARF in a DWARFContext into GSYM information
 /// by populating the GsymCreator object that it is constructed with. This
@@ -52,9 +54,9 @@ public:
   ///
   /// \returns An error indicating any fatal issues that happen when parsing
   /// the DWARF, or Error::success() if all goes well.
-  llvm::Error convert(uint32_t NumThreads, raw_ostream *OS);
+  llvm::Error convert(uint32_t NumThreads, OutputAggregator &OS);
 
-  llvm::Error verify(StringRef GsymPath, raw_ostream &OS);
+  llvm::Error verify(StringRef GsymPath, OutputAggregator &OS);
 
 private:
 
@@ -79,7 +81,7 @@ private:
   /// information.
   ///
   /// \param Die The DWARF debug info entry to parse.
-  void handleDie(raw_ostream *Strm, CUInfo &CUI, DWARFDie Die);
+  void handleDie(OutputAggregator &Strm, CUInfo &CUI, DWARFDie Die);
 
   DWARFContext &DICtx;
   GsymCreator &Gsym;

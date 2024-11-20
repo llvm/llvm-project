@@ -28,7 +28,7 @@ define <vscale x 8 x i1> @vscale_version() {
 ; The non-scalable version should be optimized as normal.
 
 ; CHECK-LABEL: define <8 x i1> @fixed_length_version() {
-; CHECK-NEXT:  ret <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:  ret <8 x i1> splat (i1 true)
 define <8 x i1> @fixed_length_version() {
   %splatter = insertelement <8 x i1> undef, i1 true, i32 0
   %foo = shufflevector <8 x i1> %splatter,

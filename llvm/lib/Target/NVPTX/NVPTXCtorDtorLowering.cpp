@@ -22,6 +22,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
@@ -189,7 +190,7 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
       LoopBB, ExitBB);
   IRB.SetInsertPoint(LoopBB);
   auto *CallBackPHI = IRB.CreatePHI(PtrTy, 2, "ptr");
-  auto *CallBack = IRB.CreateLoad(CallBackTy->getPointerTo(F.getAddressSpace()),
+  auto *CallBack = IRB.CreateLoad(IRB.getPtrTy(F.getAddressSpace()),
                                   CallBackPHI, "callback");
   IRB.CreateCall(CallBackTy, CallBack);
   auto *NewCallBack =

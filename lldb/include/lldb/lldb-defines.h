@@ -49,6 +49,9 @@
   ((type & LLDB_WATCH_TYPE_READ) || (type & LLDB_WATCH_TYPE_WRITE) ||          \
    (type & LLDB_WATCH_TYPE_MODIFY))
 
+// StopPointSites
+#define LLDB_INVALID_SITE_ID UINT32_MAX
+
 // Generic Register Numbers
 #define LLDB_REGNUM_GENERIC_PC 0    // Program Counter
 #define LLDB_REGNUM_GENERIC_SP 1    // Stack Pointer
@@ -92,6 +95,7 @@
 #define LLDB_INVALID_COLUMN_NUMBER 0
 #define LLDB_INVALID_QUEUE_ID 0
 #define LLDB_INVALID_CPU_ID UINT32_MAX
+#define LLDB_INVALID_WATCHPOINT_RESOURCE_ID UINT32_MAX
 
 /// CPU Type definitions
 #define LLDB_ARCH_DEFAULT "systemArch"
@@ -122,6 +126,11 @@
 #if defined(_WIN32) && !defined(MAX_PATH)
 #define MAX_PATH 260
 #endif
+
+/// Address Mask
+/// Bits not used for addressing are set to 1 in the mask;
+/// all mask bits set is an invalid value.
+#define LLDB_INVALID_ADDRESS_MASK UINT64_MAX
 
 // ignore GCC function attributes
 #if defined(_MSC_VER) && !defined(__clang__)

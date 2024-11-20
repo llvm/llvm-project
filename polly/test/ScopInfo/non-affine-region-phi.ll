@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-allow-nonaffine -S < %s | FileCheck %s --check-prefix=CODE
-; RUN: opt %loadPolly -polly-allow-nonaffine -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-allow-nonaffine -S < %s 2>&1 | FileCheck %s --check-prefix=CODE
+; RUN: opt %loadNPMPolly -polly-allow-nonaffine '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; Verify there is a phi in the non-affine region but it is not represented in
 ; the SCoP as all operands as well as the uses are inside the region too.

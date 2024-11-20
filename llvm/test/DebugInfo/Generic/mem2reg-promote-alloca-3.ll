@@ -1,4 +1,5 @@
 ; RUN: opt -passes=mem2reg %s -S -o - | FileCheck %s
+; RUN: opt -passes=mem2reg %s -S -o - --try-experimental-debuginfo-iterators | FileCheck %s
 
 ;; Check that mem2reg removes dbg.value(%local, DIExpression(DW_OP_deref...))
 ;; that instcombine LowerDbgDeclare inserted before the call to 'esc' when
@@ -20,8 +21,8 @@
 
 ; CHECK: define dso_local void @fun()
 ; CHECK-NEXT: entry:
-; CHECK-NEXT: call void @llvm.dbg.value(metadata ptr null, metadata ![[LOCAL:[0-9]+]], metadata !DIExpression())
-; CHECK-NOT: call void @llvm.dbg.value({{.*}}, metadata ![[LOCAL]]
+; CHECK-NEXT: #dbg_value(ptr null, ![[LOCAL:[0-9]+]], !DIExpression(),
+; CHECK-NOT: #dbg_value({{.*}}, ![[LOCAL]]
 ; CHECK: ![[LOCAL]] = !DILocalVariable(name: "local",
 
 define dso_local void @fun() !dbg !7 {

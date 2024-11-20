@@ -39,6 +39,8 @@ class DIGlobalVariableExpression;
 class GlobalVariable : public GlobalObject, public ilist_node<GlobalVariable> {
   friend class SymbolTableListTraits<GlobalVariable>;
 
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
+
   AttributeSet Attrs;
 
   // Is this a global constant?
@@ -46,6 +48,11 @@ class GlobalVariable : public GlobalObject, public ilist_node<GlobalVariable> {
   // Is this a global whose value can change from its initial value before
   // global initializers are run?
   bool isExternallyInitializedConstant : 1;
+
+private:
+  static const unsigned CodeModelBits = LastCodeModelBit - LastAlignmentBit;
+  static const unsigned CodeModelMask = (1 << CodeModelBits) - 1;
+  static const unsigned CodeModelShift = LastAlignmentBit + 1;
 
 public:
   /// GlobalVariable ctor - If a parent module is specified, the global is
@@ -65,24 +72,31 @@ public:
   GlobalVariable(const GlobalVariable &) = delete;
   GlobalVariable &operator=(const GlobalVariable &) = delete;
 
+private:
+  /// Set the number of operands on a GlobalVariable.
+  ///
+  /// GlobalVariable always allocates space for a single operands, but
+  /// doesn't always use it.
+  void setGlobalVariableNumOperands(unsigned NumOps) {
+    assert(NumOps <= 1 && "GlobalVariable can only have 0 or 1 operands");
+    NumUserOperands = NumOps;
+  }
+
+public:
   ~GlobalVariable() {
     dropAllReferences();
+
+    // Number of operands can be set to 0 after construction and initialization.
+    // Make sure that number of operands is reset to 1, as this is needed in
+    // User::operator delete
+    setGlobalVariableNumOperands(1);
   }
 
   // allocate space for exactly one operand
-  void *operator new(size_t s) {
-    return User::operator new(s, 1);
-  }
+  void *operator new(size_t s) { return User::operator new(s, AllocMarker); }
 
   // delete space for exactly one operand as created in the corresponding new operator
-  void operator delete(void *ptr){
-    assert(ptr != nullptr && "must not be nullptr");
-    User *Obj = static_cast<User *>(ptr);
-    // Number of operands can be set to 0 after construction and initialization. Make sure
-    // that number of operands is reset to 1, as this is needed in User::operator delete
-    Obj->setGlobalVariableNumOperands(1);
-    User::operator delete(Obj);
-  }
+  void operator delete(void *ptr) { User::operator delete(ptr); }
 
   /// Provide fast operand accessors
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -142,9 +156,15 @@ public:
     return static_cast<Constant*>(Op<0>().get());
   }
   /// setInitializer - Sets the initializer for this global variable, removing
-  /// any existing initializer if InitVal==NULL.  If this GV has type T*, the
-  /// initializer must have type T.
+  /// any existing initializer if InitVal==NULL. The initializer must have the
+  /// type getValueType().
   void setInitializer(Constant *InitVal);
+
+  /// replaceInitializer - Sets the initializer for this global variable, and
+  /// sets the value type of the global to the type of the initializer. The
+  /// initializer must not be null.  This may affect the global's alignment if
+  /// it isn't explicitly set.
+  void replaceInitializer(Constant *InitVal);
 
   /// If the value is a global constant, its value is immutable throughout the
   /// runtime execution of the program.  Assigning a value into the constant
@@ -246,6 +266,28 @@ public:
            getAttributes().hasAttribute("relro-section") ||
            getAttributes().hasAttribute("rodata-section");
   }
+
+  /// Get the custom code model raw value of this global.
+  ///
+  unsigned getCodeModelRaw() const {
+    unsigned Data = getGlobalValueSubClassData();
+    return (Data >> CodeModelShift) & CodeModelMask;
+  }
+
+  /// Get the custom code model of this global if it has one.
+  ///
+  /// If this global does not have a custom code model, the empty instance
+  /// will be returned.
+  std::optional<CodeModel::Model> getCodeModel() const {
+    unsigned CodeModelData = getCodeModelRaw();
+    if (CodeModelData > 0)
+      return static_cast<CodeModel::Model>(CodeModelData - 1);
+    return {};
+  }
+
+  /// Change the code model for this global.
+  ///
+  void setCodeModel(CodeModel::Model CM);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {

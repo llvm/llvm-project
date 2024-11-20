@@ -11,19 +11,17 @@
 
 #include "bolt/Core/DIEBuilder.h"
 #include "bolt/Core/DebugData.h"
+#include "bolt/Core/DebugNames.h"
+#include "bolt/Core/GDBIndex.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DIE.h"
-#include "llvm/DWP/DWP.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include <cstdint>
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <set>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 namespace llvm {
@@ -42,13 +40,6 @@ public:
     uint64_t TypeHash;
     uint64_t TypeDIERelativeOffset;
   };
-  /// Contains information for CU or TU so we can output correct {cu, tu}-index.
-  struct UnitMeta {
-    uint64_t Offset;
-    uint64_t Length;
-    uint64_t TUHash;
-  };
-  using UnitMetaVectorType = std::vector<UnitMeta>;
 
 private:
   BinaryContext &BC;
@@ -66,10 +57,6 @@ private:
   /// Stores and serializes information that will be put into the
   /// .debug_aranges DWARF section.
   std::unique_ptr<DebugARangesSectionWriter> ARangesSectionWriter;
-
-  /// Stores and serializes information that will be put into the
-  /// .debug_addr DWARF section.
-  std::unique_ptr<DebugAddrWriter> AddrWriter;
 
   /// Stores and serializes information that will be put in to the
   /// .debug_addr DWARF section.
@@ -90,13 +77,18 @@ private:
   /// Store Rangelists writer for each DWO CU.
   RangeListsDWOWriers RangeListsWritersByCU;
 
+  /// Stores ranges writer for each DWO CU.
+  std::unordered_map<uint64_t, std::unique_ptr<DebugRangesSectionWriter>>
+      LegacyRangesWritersByCU;
+
+  /// Stores address writer for each CU.
+  std::unordered_map<uint64_t, std::unique_ptr<DebugAddrWriter>>
+      AddressWritersByCU;
+
   std::mutex LocListDebugInfoPatchesMutex;
 
-  /// Dwo id specific its RangesBase.
-  std::unordered_map<uint64_t, uint64_t> DwoRangesBase;
-
   std::unordered_map<DWARFUnit *, uint64_t> LineTablePatchMap;
-  std::unordered_map<DWARFUnit *, uint64_t> TypeUnitRelocMap;
+  std::unordered_map<const DWARFUnit *, uint64_t> TypeUnitRelocMap;
 
   /// Entries for GDB Index Types CU List
   using GDBIndexTUEntryType = std::vector<GDBIndexTUEntry>;
@@ -112,6 +104,7 @@ private:
   void updateUnitDebugInfo(DWARFUnit &Unit, DIEBuilder &DIEBldr,
                            DebugLocWriter &DebugLocWriter,
                            DebugRangesSectionWriter &RangesSectionWriter,
+                           DebugAddrWriter &AddressWriter,
                            std::optional<uint64_t> RangesBase = std::nullopt);
 
   /// Patches the binary for an object's address ranges to be updated.
@@ -132,23 +125,25 @@ private:
   makeFinalLocListsSection(DWARFVersion Version);
 
   /// Finalize type sections in the main binary.
-  CUOffsetMap finalizeTypeSections(DIEBuilder &DIEBlder, DIEStreamer &Streamer);
+  CUOffsetMap finalizeTypeSections(DIEBuilder &DIEBlder, DIEStreamer &Streamer,
+                                   GDBIndex &GDBIndexSection);
 
   /// Process and write out CUs that are passsed in.
   void finalizeCompileUnits(DIEBuilder &DIEBlder, DIEStreamer &Streamer,
                             CUOffsetMap &CUMap,
-                            const std::list<DWARFUnit *> &CUs);
+                            const std::list<DWARFUnit *> &CUs,
+                            DebugAddrWriter &FinalAddrWriter);
 
   /// Finalize debug sections in the main binary.
-  void finalizeDebugSections(DIEBuilder &DIEBlder, DIEStreamer &Streamer,
-                             raw_svector_ostream &ObjOS, CUOffsetMap &CUMap);
+  void finalizeDebugSections(DIEBuilder &DIEBlder,
+                             DWARF5AcceleratorTable &DebugNamesTable,
+                             DIEStreamer &Streamer, raw_svector_ostream &ObjOS,
+                             CUOffsetMap &CUMap,
+                             DebugAddrWriter &FinalAddrWriter);
 
   /// Patches the binary for DWARF address ranges (e.g. in functions and lexical
   /// blocks) to be updated.
   void updateDebugAddressRanges();
-
-  /// Rewrite .gdb_index section if present.
-  void updateGdbIndexSection(CUOffsetMap &CUMap, uint32_t NumCUs);
 
   /// DWARFDie contains a pointer to a DIE and hence gets invalidated once the
   /// embedded DIE is destroyed. This wrapper class stores a DIE internally and
@@ -176,13 +171,6 @@ private:
       DIEValue &HighPCAttrInfo,
       std::optional<uint64_t> RangesBase = std::nullopt);
 
-  /// Adds a \p Str to .debug_str section.
-  /// Uses \p AttrInfoVal to either update entry in a DIE for legacy DWARF using
-  /// \p DebugInfoPatcher, or for DWARF5 update an index in .debug_str_offsets
-  /// for this contribution of \p Unit.
-  void addStringHelper(DIEBuilder &DIEBldr, DIE &Die, const DWARFUnit &Unit,
-                       DIEValue &DIEAttrInfo, StringRef Str);
-
 public:
   DWARFRewriter(BinaryContext &BC) : BC(BC) {}
 
@@ -190,53 +178,15 @@ public:
   void updateDebugInfo();
 
   /// Update stmt_list for CUs based on the new .debug_line \p Layout.
-  void updateLineTableOffsets(const MCAsmLayout &Layout);
-
-  uint64_t getDwoRangesBase(uint64_t DWOId) { return DwoRangesBase[DWOId]; }
-
-  void setDwoRangesBase(uint64_t DWOId, uint64_t RangesBase) {
-    DwoRangesBase[DWOId] = RangesBase;
-  }
-
-  /// Adds an GDBIndexTUEntry if .gdb_index seciton exists.
-  void addGDBTypeUnitEntry(const GDBIndexTUEntry &&Entry);
-
-  /// Returns all entries needed for Types CU list
-  const GDBIndexTUEntryType &getGDBIndexTUEntryVector() const {
-    return GDBIndexTUEntryVector;
-  }
+  void updateLineTableOffsets(const MCAssembler &Asm);
 
   using OverriddenSectionsMap = std::unordered_map<DWARFSectionKind, StringRef>;
   /// Output .dwo files.
   void writeDWOFiles(DWARFUnit &, const OverriddenSectionsMap &,
-                     const std::string &, DebugLocWriter &);
+                     const std::string &, DebugLocWriter &,
+                     DebugStrOffsetsWriter &, DebugStrWriter &,
+                     DebugRangesSectionWriter &);
   using KnownSectionsEntry = std::pair<MCSection *, DWARFSectionKind>;
-  struct DWPState {
-    std::unique_ptr<ToolOutputFile> Out;
-    std::unique_ptr<BinaryContext> TmpBC;
-    std::unique_ptr<MCStreamer> Streamer;
-    std::unique_ptr<DWPStringPool> Strings;
-    const MCObjectFileInfo *MCOFI = nullptr;
-    const DWARFUnitIndex *CUIndex = nullptr;
-    std::deque<SmallString<32>> UncompressedSections;
-    MapVector<uint64_t, UnitIndexEntry> IndexEntries;
-    MapVector<uint64_t, UnitIndexEntry> TypeIndexEntries;
-    StringMap<KnownSectionsEntry> KnownSections;
-    uint32_t ContributionOffsets[8] = {};
-    uint32_t IndexVersion = 2;
-    uint64_t DebugInfoSize = 0;
-    uint16_t Version = 0;
-    bool IsDWP = false;
-  };
-  /// Init .dwp file
-  void initDWPState(DWPState &);
-
-  /// Write out .dwp File
-  void finalizeDWP(DWPState &);
-
-  /// add content of dwo to .dwp file.
-  void updateDWP(DWARFUnit &, const OverriddenSectionsMap &, const UnitMeta &,
-                 UnitMetaVectorType &, DWPState &, DebugLocWriter &);
 };
 
 } // namespace bolt

@@ -17,7 +17,6 @@
 #include "llvm/IR/NoFolder.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/KnownBits.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -36,7 +35,7 @@ protected:
 
     // A failure here means that the test itself is buggy.
     if (!M)
-      report_fatal_error(Twine(os.str()));
+      report_fatal_error(Twine(errMsg));
 
     Function *F = M->getFunction("test");
     if (F == nullptr)
@@ -241,6 +240,30 @@ TEST_F(BasicTest, getShuffleDemandedElts) {
   EXPECT_TRUE(getShuffleDemandedElts(4, {4, 2, 7, 3}, APInt(4, 0xf), LHS, RHS));
   EXPECT_EQ(LHS.getZExtValue(), 0xcU);
   EXPECT_EQ(RHS.getZExtValue(), 0x9U);
+}
+
+TEST_F(BasicTest, getHorizontalDemandedEltsForFirstOperand) {
+  APInt LHS, RHS;
+
+  getHorizDemandedEltsForFirstOperand(128, APInt(4, 0b0000), LHS, RHS);
+  EXPECT_EQ(LHS.getZExtValue(), 0b0000U);
+  EXPECT_EQ(RHS.getZExtValue(), 0b0000U);
+
+  getHorizDemandedEltsForFirstOperand(128, APInt(4, 0b0001), LHS, RHS);
+  EXPECT_EQ(LHS.getZExtValue(), 0b0001U);
+  EXPECT_EQ(RHS.getZExtValue(), 0b0000U);
+
+  getHorizDemandedEltsForFirstOperand(128, APInt(4, 0b1000), LHS, RHS);
+  EXPECT_EQ(LHS.getZExtValue(), 0b0000U);
+  EXPECT_EQ(RHS.getZExtValue(), 0b0100U);
+
+  getHorizDemandedEltsForFirstOperand(128, APInt(4, 0b0110), LHS, RHS);
+  EXPECT_EQ(LHS.getZExtValue(), 0b0100U);
+  EXPECT_EQ(RHS.getZExtValue(), 0b0001U);
+
+  getHorizDemandedEltsForFirstOperand(256, APInt(4, 0b0100), LHS, RHS);
+  EXPECT_EQ(LHS.getZExtValue(), 0b0100U);
+  EXPECT_EQ(RHS.getZExtValue(), 0b0000U);
 }
 
 TEST_F(BasicTest, getSplatIndex) {
@@ -580,12 +603,11 @@ protected:
   SmallVector<VFParameter, 8> &ExpectedParams = Expected.Parameters;
 
   void buildShape(ElementCount VF, bool HasGlobalPred) {
-    Shape = VFShape::get(*CI, VF, HasGlobalPred);
+    Shape = VFShape::get(CI->getFunctionType(), VF, HasGlobalPred);
   }
 
   bool validParams(ArrayRef<VFParameter> Parameters) {
-    Shape.Parameters =
-        SmallVector<VFParameter, 8>(Parameters.begin(), Parameters.end());
+    Shape.Parameters = SmallVector<VFParameter, 8>(Parameters);
     return Shape.hasValidParameterList();
   }
 };
@@ -619,11 +641,11 @@ TEST_F(VFShapeAPITest, API_buildVFShape) {
 
 TEST_F(VFShapeAPITest, API_getScalarShape) {
   buildShape(/*VF*/ ElementCount::getFixed(1), /*HasGlobalPred*/ false);
-  EXPECT_EQ(VFShape::getScalarShape(*CI), Shape);
+  EXPECT_EQ(VFShape::getScalarShape(CI->getFunctionType()), Shape);
 }
 
 TEST_F(VFShapeAPITest, API_getVectorizedFunction) {
-  VFShape ScalarShape = VFShape::getScalarShape(*CI);
+  VFShape ScalarShape = VFShape::getScalarShape(CI->getFunctionType());
   EXPECT_EQ(VFDatabase(*CI).getVectorizedFunction(ScalarShape),
             M->getFunction("g"));
 

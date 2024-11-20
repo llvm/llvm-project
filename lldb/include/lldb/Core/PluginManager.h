@@ -10,6 +10,7 @@
 #define LLDB_CORE_PLUGINMANAGER_H
 
 #include "lldb/Core/Architecture.h"
+#include "lldb/Interpreter/Interfaces/ScriptedInterfaceUsages.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/FileSpec.h"
@@ -178,6 +179,8 @@ public:
 
   static bool UnregisterPlugin(ObjectFileCreateInstance create_callback);
 
+  static bool IsRegisteredObjectFilePluginName(llvm::StringRef name);
+
   static ObjectFileCreateInstance
   GetObjectFileCreateCallbackAtIndex(uint32_t idx);
 
@@ -191,9 +194,7 @@ public:
   GetObjectFileCreateMemoryCallbackForPluginName(llvm::StringRef name);
 
   static Status SaveCore(const lldb::ProcessSP &process_sp,
-                         const FileSpec &outfile,
-                         lldb::SaveCoreStyle &core_style,
-                         llvm::StringRef plugin_name);
+                         lldb_private::SaveCoreOptions &core_options);
 
   // ObjectContainer
   static bool RegisterPlugin(
@@ -355,7 +356,8 @@ public:
           nullptr,
       SymbolLocatorDownloadObjectAndSymbolFile download_object_symbol_file =
           nullptr,
-      SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle = nullptr);
+      SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle = nullptr,
+      DebuggerInitializeCallback debugger_init_callback = nullptr);
 
   static bool UnregisterPlugin(SymbolLocatorCreateInstance create_callback);
 
@@ -486,6 +488,25 @@ public:
 
   static LanguageSet GetAllTypeSystemSupportedLanguagesForExpressions();
 
+  // Scripted Interface
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                             ScriptedInterfaceCreateInstance create_callback,
+                             lldb::ScriptLanguage language,
+                             ScriptedInterfaceUsages usages);
+
+  static bool UnregisterPlugin(ScriptedInterfaceCreateInstance create_callback);
+
+  static uint32_t GetNumScriptedInterfaces();
+
+  static llvm::StringRef GetScriptedInterfaceNameAtIndex(uint32_t idx);
+
+  static llvm::StringRef GetScriptedInterfaceDescriptionAtIndex(uint32_t idx);
+
+  static lldb::ScriptLanguage GetScriptedInterfaceLanguageAtIndex(uint32_t idx);
+
+  static ScriptedInterfaceUsages
+  GetScriptedInterfaceUsagesAtIndex(uint32_t idx);
+
   // REPL
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              REPLCreateInstance create_callback,
@@ -525,6 +546,14 @@ public:
   GetSettingForProcessPlugin(Debugger &debugger, llvm::StringRef setting_name);
 
   static bool CreateSettingForProcessPlugin(
+      Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
+      llvm::StringRef description, bool is_global_property);
+
+  static lldb::OptionValuePropertiesSP
+  GetSettingForSymbolLocatorPlugin(Debugger &debugger,
+                                   llvm::StringRef setting_name);
+
+  static bool CreateSettingForSymbolLocatorPlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
       llvm::StringRef description, bool is_global_property);
 

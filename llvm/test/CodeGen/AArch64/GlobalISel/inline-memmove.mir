@@ -4,46 +4,46 @@
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64"
 
-  define void @test_memmove1(i32* nocapture %dst, i32* nocapture readonly %src, i64 %len) local_unnamed_addr #0 {
+  define void @test_memmove1(ptr nocapture %dst, ptr nocapture readonly %src, i64 %len) local_unnamed_addr #0 {
   entry:
-    %0 = bitcast i32* %dst to i8*
-    %1 = bitcast i32* %src to i8*
-    tail call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 %1, i64 %len, i1 false)
+    %0 = bitcast ptr %dst to ptr
+    %1 = bitcast ptr %src to ptr
+    tail call void @llvm.memmove.p0.p0.i64(ptr align 4 %0, ptr align 4 %1, i64 %len, i1 false)
     ret void
   }
 
-  declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1 immarg) #1
-  declare void @llvm.memmove.p1i8.p2i8.i64(i8 addrspace(1)* nocapture, i8 addrspace(2)* nocapture readonly, i64, i1 immarg) #1
+  declare void @llvm.memmove.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1 immarg) #1
+  declare void @llvm.memmove.p1.p2.i64(ptr addrspace(1) nocapture, ptr addrspace(2) nocapture readonly, i64, i1 immarg) #1
 
-  define void @test_memmove2_const(i32* nocapture %dst, i32* nocapture readonly %src) local_unnamed_addr #0 {
+  define void @test_memmove2_const(ptr nocapture %dst, ptr nocapture readonly %src) local_unnamed_addr #0 {
   entry:
-    %0 = bitcast i32* %dst to i8*
-    %1 = bitcast i32* %src to i8*
-    tail call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 %1, i64 48, i1 false)
+    %0 = bitcast ptr %dst to ptr
+    %1 = bitcast ptr %src to ptr
+    tail call void @llvm.memmove.p0.p0.i64(ptr align 4 %0, ptr align 4 %1, i64 48, i1 false)
     ret void
   }
 
-  define void @test_memmove3_const_toolarge(i32* nocapture %dst, i32* nocapture readonly %src) local_unnamed_addr #0 {
+  define void @test_memmove3_const_toolarge(ptr nocapture %dst, ptr nocapture readonly %src) local_unnamed_addr #0 {
   entry:
-    %0 = bitcast i32* %dst to i8*
-    %1 = bitcast i32* %src to i8*
-    tail call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 %1, i64 96, i1 false)
+    %0 = bitcast ptr %dst to ptr
+    %1 = bitcast ptr %src to ptr
+    tail call void @llvm.memmove.p0.p0.i64(ptr align 4 %0, ptr align 4 %1, i64 96, i1 false)
     ret void
   }
 
-  define void @test_memmove4_const_unaligned(i32* nocapture %dst, i32* nocapture readonly %src) local_unnamed_addr #0 {
+  define void @test_memmove4_const_unaligned(ptr nocapture %dst, ptr nocapture readonly %src) local_unnamed_addr #0 {
   entry:
-    %0 = bitcast i32* %dst to i8*
-    %1 = bitcast i32* %src to i8*
-    tail call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 %1, i64 52, i1 false)
+    %0 = bitcast ptr %dst to ptr
+    %1 = bitcast ptr %src to ptr
+    tail call void @llvm.memmove.p0.p0.i64(ptr align 4 %0, ptr align 4 %1, i64 52, i1 false)
     ret void
   }
 
-  define void @test_memmove_addrspace(i32 addrspace(1)* nocapture %dst, i32 addrspace(2)* nocapture readonly %src) local_unnamed_addr #0 {
+  define void @test_memmove_addrspace(ptr addrspace(1) nocapture %dst, ptr addrspace(2) nocapture readonly %src) local_unnamed_addr #0 {
   entry:
-    %0 = bitcast i32 addrspace(1)* %dst to i8 addrspace(1)*
-    %1 = bitcast i32 addrspace(2)* %src to i8 addrspace(2)*
-    tail call void @llvm.memmove.p1i8.p2i8.i64(i8 addrspace(1)* align 4 %0, i8 addrspace(2)* align 4 %1, i64 8, i1 false)
+    %0 = bitcast ptr addrspace(1) %dst to ptr addrspace(1)
+    %1 = bitcast ptr addrspace(2) %src to ptr addrspace(2)
+    tail call void @llvm.memmove.p1.p2.i64(ptr addrspace(1) align 4 %0, ptr addrspace(2) align 4 %1, i64 8, i1 false)
     ret void
   }
 
@@ -61,11 +61,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_memmove1
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-    ; CHECK: G_MEMMOVE [[COPY]](p0), [[COPY1]](p0), [[COPY2]](s64), 1 :: (store (s8) into %ir.0, align 4), (load (s8) from %ir.1, align 4)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: G_MEMMOVE [[COPY]](p0), [[COPY1]](p0), [[COPY2]](s64), 1 :: (store (s8) into %ir.0, align 4), (load (s8) from %ir.1, align 4)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s64) = COPY $x2
@@ -83,23 +84,24 @@ body:             |
 
     ; CHECK-LABEL: name: test_memmove2_const
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY1]](p0) :: (load (s128) from %ir.1, align 4)
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD]](p0) :: (load (s128) from %ir.1 + 16, align 4)
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
-    ; CHECK: [[LOAD2:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD1]](p0) :: (load (s128) from %ir.1 + 32, align 4)
-    ; CHECK: G_STORE [[LOAD]](s128), [[COPY]](p0) :: (store (s128) into %ir.0, align 4)
-    ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
-    ; CHECK: G_STORE [[LOAD1]](s128), [[PTR_ADD2]](p0) :: (store (s128) into %ir.0 + 16, align 4)
-    ; CHECK: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-    ; CHECK: [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
-    ; CHECK: G_STORE [[LOAD2]](s128), [[PTR_ADD3]](p0) :: (store (s128) into %ir.0 + 32, align 4)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY1]](p0) :: (load (s128) from %ir.1, align 4)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s64)
+    ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD]](p0) :: (load (s128) from %ir.1 + 16, align 4)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
+    ; CHECK-NEXT: [[LOAD2:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD1]](p0) :: (load (s128) from %ir.1 + 32, align 4)
+    ; CHECK-NEXT: G_STORE [[LOAD]](s128), [[COPY]](p0) :: (store (s128) into %ir.0, align 4)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
+    ; CHECK-NEXT: G_STORE [[LOAD1]](s128), [[PTR_ADD2]](p0) :: (store (s128) into %ir.0 + 16, align 4)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+    ; CHECK-NEXT: [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
+    ; CHECK-NEXT: G_STORE [[LOAD2]](s128), [[PTR_ADD3]](p0) :: (store (s128) into %ir.0 + 32, align 4)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s64) = G_CONSTANT i64 48
@@ -117,11 +119,42 @@ body:             |
 
     ; CHECK-LABEL: name: test_memmove3_const_toolarge
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 96
-    ; CHECK: G_MEMMOVE [[COPY]](p0), [[COPY1]](p0), [[C]](s64), 1 :: (store (s8) into %ir.0, align 4), (load (s8) from %ir.1, align 4)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY1]](p0) :: (load (s128) from %ir.1, align 4)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s64)
+    ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD]](p0) :: (load (s128) from %ir.1 + 16, align 4)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
+    ; CHECK-NEXT: [[LOAD2:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD1]](p0) :: (load (s128) from %ir.1 + 32, align 4)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
+    ; CHECK-NEXT: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C2]](s64)
+    ; CHECK-NEXT: [[LOAD3:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD2]](p0) :: (load (s128) from %ir.1 + 48, align 4)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
+    ; CHECK-NEXT: [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C3]](s64)
+    ; CHECK-NEXT: [[LOAD4:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD3]](p0) :: (load (s128) from %ir.1 + 64, align 4)
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 80
+    ; CHECK-NEXT: [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C4]](s64)
+    ; CHECK-NEXT: [[LOAD5:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD4]](p0) :: (load (s128) from %ir.1 + 80, align 4)
+    ; CHECK-NEXT: G_STORE [[LOAD]](s128), [[COPY]](p0) :: (store (s128) into %ir.0, align 4)
+    ; CHECK-NEXT: [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C5]](s64)
+    ; CHECK-NEXT: G_STORE [[LOAD1]](s128), [[PTR_ADD5]](p0) :: (store (s128) into %ir.0 + 16, align 4)
+    ; CHECK-NEXT: [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+    ; CHECK-NEXT: [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C6]](s64)
+    ; CHECK-NEXT: G_STORE [[LOAD2]](s128), [[PTR_ADD6]](p0) :: (store (s128) into %ir.0 + 32, align 4)
+    ; CHECK-NEXT: [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
+    ; CHECK-NEXT: [[PTR_ADD7:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C7]](s64)
+    ; CHECK-NEXT: G_STORE [[LOAD3]](s128), [[PTR_ADD7]](p0) :: (store (s128) into %ir.0 + 48, align 4)
+    ; CHECK-NEXT: [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
+    ; CHECK-NEXT: [[PTR_ADD8:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C8]](s64)
+    ; CHECK-NEXT: G_STORE [[LOAD4]](s128), [[PTR_ADD8]](p0) :: (store (s128) into %ir.0 + 64, align 4)
+    ; CHECK-NEXT: [[C9:%[0-9]+]]:_(s64) = G_CONSTANT i64 80
+    ; CHECK-NEXT: [[PTR_ADD9:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C9]](s64)
+    ; CHECK-NEXT: G_STORE [[LOAD5]](s128), [[PTR_ADD9]](p0) :: (store (s128) into %ir.0 + 80, align 4)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s64) = G_CONSTANT i64 96
@@ -139,29 +172,30 @@ body:             |
 
     ; CHECK-LABEL: name: test_memmove4_const_unaligned
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY1]](p0) :: (load (s128) from %ir.1, align 4)
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD]](p0) :: (load (s128) from %ir.1 + 16, align 4)
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
-    ; CHECK: [[LOAD2:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD1]](p0) :: (load (s128) from %ir.1 + 32, align 4)
-    ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
-    ; CHECK: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C2]](s64)
-    ; CHECK: [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p0) :: (load (s32) from %ir.1 + 48)
-    ; CHECK: G_STORE [[LOAD]](s128), [[COPY]](p0) :: (store (s128) into %ir.0, align 4)
-    ; CHECK: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK: [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
-    ; CHECK: G_STORE [[LOAD1]](s128), [[PTR_ADD3]](p0) :: (store (s128) into %ir.0 + 16, align 4)
-    ; CHECK: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-    ; CHECK: [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C4]](s64)
-    ; CHECK: G_STORE [[LOAD2]](s128), [[PTR_ADD4]](p0) :: (store (s128) into %ir.0 + 32, align 4)
-    ; CHECK: [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
-    ; CHECK: [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C5]](s64)
-    ; CHECK: G_STORE [[LOAD3]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %ir.0 + 48)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY1]](p0) :: (load (s128) from %ir.1, align 4)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s64)
+    ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD]](p0) :: (load (s128) from %ir.1 + 16, align 4)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
+    ; CHECK-NEXT: [[LOAD2:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD1]](p0) :: (load (s128) from %ir.1 + 32, align 4)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
+    ; CHECK-NEXT: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C2]](s64)
+    ; CHECK-NEXT: [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p0) :: (load (s32) from %ir.1 + 48)
+    ; CHECK-NEXT: G_STORE [[LOAD]](s128), [[COPY]](p0) :: (store (s128) into %ir.0, align 4)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
+    ; CHECK-NEXT: G_STORE [[LOAD1]](s128), [[PTR_ADD3]](p0) :: (store (s128) into %ir.0 + 16, align 4)
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+    ; CHECK-NEXT: [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C4]](s64)
+    ; CHECK-NEXT: G_STORE [[LOAD2]](s128), [[PTR_ADD4]](p0) :: (store (s128) into %ir.0 + 32, align 4)
+    ; CHECK-NEXT: [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
+    ; CHECK-NEXT: [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C5]](s64)
+    ; CHECK-NEXT: G_STORE [[LOAD3]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %ir.0 + 48)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s64) = G_CONSTANT i64 52
@@ -179,23 +213,24 @@ body:             |
 
     ; CHECK-LABEL: name: test_memmove_addrspace
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p2) = COPY $x1
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY1]](p2) :: (load (s128) from %ir.1, align 4, addrspace 2)
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p2) = G_PTR_ADD [[COPY1]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD]](p2) :: (load (s128) from %ir.1 + 16, align 4, addrspace 2)
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p2) = G_PTR_ADD [[COPY1]], [[C1]](s64)
-    ; CHECK: [[LOAD2:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD1]](p2) :: (load (s128) from %ir.1 + 32, align 4, addrspace 2)
-    ; CHECK: G_STORE [[LOAD]](s128), [[COPY]](p1) :: (store (s128) into %ir.0, align 4, addrspace 1)
-    ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK: [[PTR_ADD2:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C2]](s64)
-    ; CHECK: G_STORE [[LOAD1]](s128), [[PTR_ADD2]](p1) :: (store (s128) into %ir.0 + 16, align 4, addrspace 1)
-    ; CHECK: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-    ; CHECK: [[PTR_ADD3:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C3]](s64)
-    ; CHECK: G_STORE [[LOAD2]](s128), [[PTR_ADD3]](p1) :: (store (s128) into %ir.0 + 32, align 4, addrspace 1)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p2) = COPY $x1
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY1]](p2) :: (load (s128) from %ir.1, align 4, addrspace 2)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p2) = G_PTR_ADD [[COPY1]], [[C]](s64)
+    ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD]](p2) :: (load (s128) from %ir.1 + 16, align 4, addrspace 2)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p2) = G_PTR_ADD [[COPY1]], [[C1]](s64)
+    ; CHECK-NEXT: [[LOAD2:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD1]](p2) :: (load (s128) from %ir.1 + 32, align 4, addrspace 2)
+    ; CHECK-NEXT: G_STORE [[LOAD]](s128), [[COPY]](p1) :: (store (s128) into %ir.0, align 4, addrspace 1)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[PTR_ADD2:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C2]](s64)
+    ; CHECK-NEXT: G_STORE [[LOAD1]](s128), [[PTR_ADD2]](p1) :: (store (s128) into %ir.0 + 16, align 4, addrspace 1)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+    ; CHECK-NEXT: [[PTR_ADD3:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C3]](s64)
+    ; CHECK-NEXT: G_STORE [[LOAD2]](s128), [[PTR_ADD3]](p1) :: (store (s128) into %ir.0 + 32, align 4, addrspace 1)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(p1) = COPY $x0
     %1:_(p2) = COPY $x1
     %2:_(s64) = G_CONSTANT i64 48

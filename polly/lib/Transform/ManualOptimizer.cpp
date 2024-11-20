@@ -22,6 +22,7 @@
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <optional>
 
+#include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-opt-manual"
 
 using namespace polly;
@@ -159,13 +160,13 @@ private:
       return Result;
 
     LLVMContext &Ctx = LoopMD->getContext();
-    LLVM_DEBUG(dbgs() << "Dependency violation detected\n");
+    POLLY_DEBUG(dbgs() << "Dependency violation detected\n");
 
     DebugLoc TransformLoc = findTransformationDebugLoc(LoopMD, DebugLocAttr);
 
     if (IgnoreDepcheck) {
-      LLVM_DEBUG(dbgs() << "Still accepting transformation due to "
-                           "-polly-pragma-ignore-depcheck\n");
+      POLLY_DEBUG(dbgs() << "Still accepting transformation due to "
+                            "-polly-pragma-ignore-depcheck\n");
       if (ORE) {
         ORE->emit(
             OptimizationRemark(DEBUG_TYPE, RemarkName, TransformLoc, CodeRegion)
@@ -177,7 +178,7 @@ private:
       return Result;
     }
 
-    LLVM_DEBUG(dbgs() << "Rolling back transformation\n");
+    POLLY_DEBUG(dbgs() << "Rolling back transformation\n");
 
     if (ORE) {
       ORE->emit(DiagnosticInfoOptimizationFailure(DEBUG_TYPE, RemarkName,

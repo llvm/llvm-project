@@ -15,12 +15,11 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
-#include <errno.h>
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // Exceptional cases for tanf.
 constexpr size_t N_EXCEPTS = 6;
@@ -114,7 +113,7 @@ LLVM_LIBC_FUNCTION(float, tanf, (float x)) {
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_INVALID);
       }
-      return x + FPBits::build_quiet_nan(0);
+      return x + FPBits::quiet_nan().get_val();
     }
     // Other large exceptional values
     if (auto r = TANF_EXCEPTS.lookup_odd(x_abs, x_sign);
@@ -139,4 +138,4 @@ LLVM_LIBC_FUNCTION(float, tanf, (float x)) {
       multiply_add(sin_y, -sin_k, multiply_add(cosm1_y, cos_k, cos_k)));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

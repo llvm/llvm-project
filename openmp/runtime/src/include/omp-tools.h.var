@@ -78,6 +78,8 @@
                                             /* implicit barrier at the end of worksharing */    \
     macro (ompt_state_wait_barrier_implicit, 0x013)  /* implicit barrier */                      \
     macro (ompt_state_wait_barrier_explicit, 0x014)  /* explicit barrier */                      \
+    macro (ompt_state_wait_barrier_implementation, 0x015) /* implementation barrier */           \
+    macro (ompt_state_wait_barrier_teams, 0x016)          /* teams barrier */                    \
                                                                                                 \
     /* task wait states (32..63) */                                                             \
     macro (ompt_state_wait_taskwait, 0x020)  /* waiting at a taskwait */                         \
@@ -210,6 +212,10 @@ typedef enum kmp_mutex_impl_t {
 /*****************************************************************************
  * definitions generated from spec
  *****************************************************************************/
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
 typedef enum ompt_callbacks_t {
   ompt_callback_thread_begin             = 1,
@@ -1404,6 +1410,14 @@ typedef ompt_record_ompt_t *(*ompt_get_record_ompt_t) (
   ompt_buffer_cursor_t current
 );
 
+#ifdef _WIN32
+__declspec(dllexport)
+#else
+__attribute__((visibility("default")))
+#endif
+ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
+                                          const char *runtime_version);
+
 #define ompt_id_none 0
 #define ompt_data_none {0}
 #define ompt_time_none 0
@@ -1413,5 +1427,9 @@ typedef ompt_record_ompt_t *(*ompt_get_record_ompt_t) (
 #define ompt_wait_id_none 0
 
 #define ompd_segment_none 0
+
+#if defined(__cplusplus)
+} // extern "C"
+#endif
 
 #endif /* __OMPT__ */

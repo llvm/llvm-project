@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/IRDL/IR/IRDL.h"
+#include "mlir/Dialect/IRDL/IRDLSymbols.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Diagnostics.h"
@@ -16,7 +17,6 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Metadata.h"
@@ -115,6 +115,58 @@ LogicalResult AttributesOp::verify() {
            << namesSize << " and " << valuesSize << " respectively";
 
   return success();
+}
+
+LogicalResult BaseOp::verify() {
+  std::optional<StringRef> baseName = getBaseName();
+  std::optional<SymbolRefAttr> baseRef = getBaseRef();
+  if (baseName.has_value() == baseRef.has_value())
+    return emitOpError() << "the base type or attribute should be specified by "
+                            "either a name or a reference";
+
+  if (baseName &&
+      (baseName->empty() || ((*baseName)[0] != '!' && (*baseName)[0] != '#')))
+    return emitOpError() << "the base type or attribute name should start with "
+                            "'!' or '#'";
+
+  return success();
+}
+
+/// Finds whether the provided symbol is an IRDL type or attribute definition.
+/// The source operation must be within a DialectOp.
+static LogicalResult
+checkSymbolIsTypeOrAttribute(SymbolTableCollection &symbolTable,
+                             Operation *source, SymbolRefAttr symbol) {
+  Operation *targetOp =
+      irdl::lookupSymbolNearDialect(symbolTable, source, symbol);
+
+  if (!targetOp)
+    return source->emitOpError() << "symbol '" << symbol << "' not found";
+
+  if (!isa<TypeOp, AttributeOp>(targetOp))
+    return source->emitOpError() << "symbol '" << symbol
+                                 << "' does not refer to a type or attribute "
+                                    "definition (refers to '"
+                                 << targetOp->getName() << "')";
+
+  return success();
+}
+
+LogicalResult BaseOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  std::optional<SymbolRefAttr> baseRef = getBaseRef();
+  if (!baseRef)
+    return success();
+
+  return checkSymbolIsTypeOrAttribute(symbolTable, *this, *baseRef);
+}
+
+LogicalResult
+ParametricOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  std::optional<SymbolRefAttr> baseRef = getBaseType();
+  if (!baseRef)
+    return success();
+
+  return checkSymbolIsTypeOrAttribute(symbolTable, *this, *baseRef);
 }
 
 /// Parse a value with its variadicity first. By default, the variadicity is

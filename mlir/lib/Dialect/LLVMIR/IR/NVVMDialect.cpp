@@ -22,12 +22,12 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Types.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/AsmParser/Parser.h"
@@ -75,20 +75,30 @@ ParseResult VoteBallotOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void VoteBallotOp::print(OpAsmPrinter &p) { printNVVMIntrinsicOp(p, *this); }
 
-LogicalResult CpAsyncBulkTensorGlobalToSharedClusterOp::verify() {
-  if (getCoordinates().empty() || getCoordinates().size() > 5)
-    return emitError("expects coordinates between 1 to 5 dimension");
+// This verifier is shared across:
+// CpAsyncBulkTensorGlobalToSharedClusterOp (TMA Load) and
+// CpAsyncBulkTensorPrefetchOp (TMA Prefetch) Ops.
+static LogicalResult CpAsyncBulkTensorCommonVerifier(size_t tensorDims,
+                                                     size_t numIm2ColOffsets,
+                                                     Location loc) {
+  if (tensorDims < 1 || tensorDims > 5)
+    return emitError(loc, "expects coordinates between 1 to 5 dimension");
 
-  // Check for im2col mode
-  if (!getIm2colOffsets().empty()) {
-    if (getCoordinates().size() < 3)
+  if (numIm2ColOffsets) {
+    if (tensorDims < 3)
       return emitError(
+          loc,
           "to use im2col mode, the tensor has to be at least 3-dimensional");
-    if (getCoordinates().size() != (getIm2colOffsets().size() + 2))
+    if (tensorDims != (numIm2ColOffsets + 2))
       return emitError(
-          "im2col offsets must be 2 less than number of coordinates");
+          loc, "im2col offsets must be 2 less than number of coordinates");
   }
   return success();
+}
+
+LogicalResult CpAsyncBulkTensorGlobalToSharedClusterOp::verify() {
+  return CpAsyncBulkTensorCommonVerifier(getCoordinates().size(),
+                                         getIm2colOffsets().size(), getLoc());
 }
 
 LogicalResult CpAsyncBulkTensorSharedCTAToGlobalOp::verify() {
@@ -106,6 +116,11 @@ LogicalResult CpAsyncOp::verify() {
   if (getModifier() == LoadCacheModifierKind::CG && getSize() != 16)
     return emitError("CG cache modifier is only support for 16 bytes copy.");
   return success();
+}
+
+LogicalResult CpAsyncBulkTensorPrefetchOp::verify() {
+  return CpAsyncBulkTensorCommonVerifier(getCoordinates().size(),
+                                         getIm2colOffsets().size(), getLoc());
 }
 
 // Given the element type of an operand and whether or not it is an accumulator,
@@ -213,8 +228,7 @@ void MmaOp::print(OpAsmPrinter &p) {
   p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
 
   // Print the types of the operands and result.
-  p << " : "
-    << "(";
+  p << " : " << "(";
   llvm::interleaveComma(SmallVector<Type, 3>{frags[0].regs[0].getType(),
                                              frags[1].regs[0].getType(),
                                              frags[2].regs[0].getType()},
@@ -522,7 +536,7 @@ LogicalResult MmaOp::verify() {
       }
       errorStream << "but got ";
       llvm::interleaveComma(operandTySeg, errorStream);
-      return emitOpError(errorStream.str());
+      return emitOpError(errorMessage);
     }
   }
 
@@ -534,7 +548,7 @@ LogicalResult MmaOp::verify() {
         << "Could not match allowed types for the result; expected one of ";
     llvm::interleaveComma(expectedResult, errorStream);
     errorStream << " but got " << getResult().getType();
-    return emitOpError(errorStream.str());
+    return emitOpError(errorMessage);
   }
 
   // Ensure that binary MMA variants have a b1 MMA operation defined.
@@ -754,36 +768,43 @@ FailureOr<int> getAllowedSizeK(NVVM::WGMMATypes typeA) {
   return failure();
 }
 
-LogicalResult isAllowedWGMMADataType(Type typeD, NVVM::WGMMATypes typeA,
+LogicalResult isAllowedWGMMADataType(NVVM::WGMMATypes typeD,
+                                     NVVM::WGMMATypes typeA,
                                      NVVM::WGMMATypes typeB) {
   switch (typeA) {
   case NVVM::WGMMATypes::f16:
-    if ((typeD.isF32() || typeD.isF16()) && typeB == NVVM::WGMMATypes::f16)
+    if ((typeD == NVVM::WGMMATypes::f32 || typeD == NVVM::WGMMATypes::f16) &&
+        typeB == NVVM::WGMMATypes::f16)
       return success();
     break;
   case NVVM::WGMMATypes::tf32:
-    if (typeD.isF32() && typeB == NVVM::WGMMATypes::tf32)
+    if (typeD == NVVM::WGMMATypes::f32 && typeB == NVVM::WGMMATypes::tf32)
       return success();
     break;
   case NVVM::WGMMATypes::u8:
   case NVVM::WGMMATypes::s8:
-    if (typeD.isInteger(32) &&
+    if (typeD == NVVM::WGMMATypes::s32 &&
         (typeB == NVVM::WGMMATypes::u8 || typeB == NVVM::WGMMATypes::s8))
       return success();
     break;
   case NVVM::WGMMATypes::b1:
-    if (typeD.isInteger(32) && typeB == NVVM::WGMMATypes::b1)
+    if (typeD == NVVM::WGMMATypes::s32 && typeB == NVVM::WGMMATypes::b1)
       return success();
     break;
   case NVVM::WGMMATypes::bf16:
-    if ((typeD.isF32() || typeD.isF16()) && typeB == NVVM::WGMMATypes::bf16)
+    if ((typeD == NVVM::WGMMATypes::f32 || typeD == NVVM::WGMMATypes::f16) &&
+        typeB == NVVM::WGMMATypes::bf16)
       return success();
     break;
   case NVVM::WGMMATypes::e4m3:
   case NVVM::WGMMATypes::e5m2:
-    if ((typeD.isF32() || typeD.isF16()) &&
+    if ((typeD == NVVM::WGMMATypes::f32 || typeD == NVVM::WGMMATypes::f16) &&
         (typeB == NVVM::WGMMATypes::e5m2 || typeB == NVVM::WGMMATypes::e4m3))
       return success();
+    break;
+  case WGMMATypes::f32:
+  case WGMMATypes::s32:
+    llvm_unreachable("unsupported input types");
     break;
   }
   return failure();
@@ -798,19 +819,24 @@ LogicalResult isAllowedSizeN(int sizeN, NVVM::WGMMATypes typeA) {
                                     80,  96,  112, 128, 144, 160,
                                     176, 192, 208, 224, 240, 256};
   switch (typeA) {
-  case mlir::NVVM::WGMMATypes::f16:
-  case mlir::NVVM::WGMMATypes::tf32:
-  case mlir::NVVM::WGMMATypes::bf16:
-  case mlir::NVVM::WGMMATypes::e4m3:
-  case mlir::NVVM::WGMMATypes::e5m2:
+  case WGMMATypes::f16:
+  case WGMMATypes::tf32:
+  case WGMMATypes::bf16:
+  case WGMMATypes::e4m3:
+  case WGMMATypes::e5m2:
     if (llvm::is_contained(allowedN, sizeN))
       return success();
     break;
-  case mlir::NVVM::WGMMATypes::u8:
-  case mlir::NVVM::WGMMATypes::s8:
-  case mlir::NVVM::WGMMATypes::b1:
+  case WGMMATypes::u8:
+  case WGMMATypes::s8:
+  case WGMMATypes::b1:
     if (llvm::is_contained(allowedNshort, sizeN))
       return success();
+    break;
+  case WGMMATypes::f32:
+  case WGMMATypes::s32:
+    llvm_unreachable("unsupported input types");
+    break;
   }
   return failure();
 }
@@ -820,27 +846,29 @@ LogicalResult NVVM::WgmmaMmaAsyncOp::verify() {
   auto stype = dyn_cast<LLVM::LLVMStructType>(outValue.getType());
   if (!stype)
     return emitOpError() << "expected results to be struct";
-  Type outputType = stype.getBody().front();
   int outputSize = stype.getBody().size();
+  WGMMATypes typeD = getTypeD();
+  WGMMATypes typeA = getTypeA();
+  WGMMATypes typeB = getTypeB();
+
   for (Type t : stype.getBody()) {
-    if (t != outputType)
+    if (t != stype.getBody().front())
       return emitOpError()
              << "all elements in struct must be same type but there is " << t;
   }
 
-  if (!outputType.isF32() && !outputType.isInteger(32) && !outputType.isF16()) {
+  if (typeD != WGMMATypes::f32 && typeD != WGMMATypes::f16 &&
+      typeD != WGMMATypes::s32) {
     return emitOpError() << "does not support the given output type "
-                         << outputType;
+                         << NVVM::stringifyWGMMATypes(typeD);
   }
-  if (outputType.isInteger(32) && (getScaleA() == NVVM::WGMMAScaleIn::neg ||
-                                   getScaleB() == NVVM::WGMMAScaleIn::neg)) {
+  if (typeD == WGMMATypes::s32 &&
+      (getScaleA() == WGMMAScaleIn::neg || getScaleB() == WGMMAScaleIn::neg)) {
     return emitOpError() << "has s32 output, scaleA and scaleB cannot be neg";
   }
 
-  mlir::NVVM::WGMMATypes typeA = getTypeA();
-  mlir::NVVM::WGMMATypes typeB = getTypeB();
-  if (failed(isAllowedWGMMADataType(outputType, typeA, typeB))) {
-    return emitOpError() << outputType
+  if (failed(isAllowedWGMMADataType(typeD, typeA, typeB))) {
+    return emitOpError() << NVVM::stringifyWGMMATypes(typeD)
                          << " += " << NVVM::stringifyWGMMATypes(typeA) << " * "
                          << NVVM::stringifyWGMMATypes(typeB)
                          << ", it is not supported.";
@@ -865,39 +893,41 @@ LogicalResult NVVM::WgmmaMmaAsyncOp::verify() {
   }
 
   // Check transpose (only available for f16/bf16)
-  if ((typeA != mlir::NVVM::WGMMATypes::f16 &&
-       typeA != mlir::NVVM::WGMMATypes::bf16) &&
+  // Matrices A should be stored in row-major and B in column-major.
+  // Only f16/bf16 matrices can be stored in either column-major or row-major
+  // by setting the tranpose value(imm-trans-a,imm-trans-b) in PTX code.
+  if ((typeA != WGMMATypes::f16 && typeA != WGMMATypes::bf16) &&
       (getLayoutA() == mlir::NVVM::MMALayout::col ||
-       getLayoutB() == mlir::NVVM::MMALayout::col)) {
+       getLayoutB() == mlir::NVVM::MMALayout::row)) {
     return emitOpError()
            << "given layouts layout_a = " << stringifyMMALayout(getLayoutA())
            << " and layout_b = " << stringifyMMALayout(getLayoutB())
            << " for input types " << stringifyWGMMATypes(typeA) << " and "
            << stringifyWGMMATypes(typeB)
            << " requires transpose. However, this is only supported for: "
-           << stringifyMMATypes(mlir::NVVM::MMATypes::f16) << " and "
-           << stringifyMMATypes(mlir::NVVM::MMATypes::bf16);
+           << stringifyMMATypes(MMATypes::f16) << " and "
+           << stringifyMMATypes(MMATypes::bf16);
   }
 
   // Check result registers
-  int expectedOutput;
-  if (outputType.isF32() || outputType.isInteger(32))
+  int expectedOutput = 0;
+  if (typeD == WGMMATypes::f32 || typeD == WGMMATypes::s32)
     expectedOutput = getShape().getN() / 2;
-  if (outputType.isF16())
+  if (typeD == WGMMATypes::f16)
     expectedOutput = getShape().getN() / 4;
   if (outputSize != expectedOutput) {
     return emitOpError() << "results " << expectedOutput
                          << ", however output struct has " << outputSize
                          << " elements";
   }
-  // Check satfinite (only availalbe for s32 accumulator)
-  if (!outputType.isInteger(32) &&
+  // Check satfinite (only available for s32 accumulator)
+  if (typeD != WGMMATypes::s32 &&
       getSatfinite().value_or(NVVM::MMAIntOverflow::wrapped) ==
           NVVM::MMAIntOverflow::satfinite) {
     return emitOpError()
            << " `satfinite` can be only used with s32 accumulator, however "
               "the current accumulator is "
-           << outputType;
+           << NVVM::stringifyWGMMATypes(typeD);
   }
 
   return success();
@@ -906,27 +936,15 @@ LogicalResult NVVM::WgmmaMmaAsyncOp::verify() {
 std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
 
   int m = getShape().getM(), n = getShape().getN(), k = getShape().getK();
-  bool isF16 = getTypeA() == mlir::NVVM::WGMMATypes::f16 ||
-               getTypeA() == mlir::NVVM::WGMMATypes::bf16;
+  bool isF16 = getTypeA() == WGMMATypes::f16 || getTypeA() == WGMMATypes::bf16;
 
-  Value outValue = getResults() ? getResults() : getInouts();
-  auto stype = dyn_cast<LLVM::LLVMStructType>(outValue.getType());
-  Type outputType = stype.getBody().front();
-  std::string outputTypeName;
-  if (outputType.isF16())
-    outputTypeName = "f16";
-  else if (outputType.isF32())
-    outputTypeName = "f32";
-  else if (outputType.isInteger(32))
-    outputTypeName = "s32";
-  else
-    assert(false && "unsupported output type");
+  StringRef outputTypeName = stringifyWGMMATypes(getTypeD());
 
-  int expectedOutputRegisters;
-  if (outputType.isF32() || outputType.isInteger(32))
-    expectedOutputRegisters = getShape().getN() / 2;
-  if (outputType.isF16())
+  int expectedOutputRegisters = 0;
+  if (getTypeD() == WGMMATypes::f16)
     expectedOutputRegisters = getShape().getN() / 4;
+  else
+    expectedOutputRegisters = getShape().getN() / 2;
 
   std::string ptx;
   llvm::raw_string_ostream ss(ptx);
@@ -954,10 +972,8 @@ std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
   ss << "},";
   // Need to map read/write registers correctly.
   regCnt = (regCnt * 2);
-  ss << " $" << (regCnt) << ","
-     << " $" << (regCnt + 1) << ","
-     << " p";
-  if (!outputType.isInteger(32)) {
+  ss << " $" << (regCnt) << "," << " $" << (regCnt + 1) << "," << " p";
+  if (getTypeD() != WGMMATypes::s32) {
     ss << ", $" << (regCnt + 3) << ",  $" << (regCnt + 4);
   }
   // Don't add transpose parameters unless needed.
@@ -966,7 +982,6 @@ std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
   }
   ss << ";\n"
      << "}\n";
-  ss.flush();
   return ptx;
 }
 
@@ -974,11 +989,7 @@ void NVVM::WgmmaMmaAsyncOp::getAsmValues(
     RewriterBase &rewriter,
     llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>>
         &asmValues) {
-  Value outValue = getResults() ? getResults() : getInouts();
-  auto stype = dyn_cast<LLVM::LLVMStructType>(outValue.getType());
-  Type outputType = stype.getBody().front();
-  bool isF16 = getTypeA() == mlir::NVVM::WGMMATypes::f16 ||
-               getTypeA() == mlir::NVVM::WGMMATypes::bf16;
+  bool isF16 = getTypeA() == WGMMATypes::f16 || getTypeA() == WGMMATypes::bf16;
   if (getResults())
     asmValues.push_back({getResults(), mlir::NVVM::PTXRegisterMod::Write});
   if (getInouts())
@@ -987,7 +998,7 @@ void NVVM::WgmmaMmaAsyncOp::getAsmValues(
   asmValues.push_back({getDescriptorB(), mlir::NVVM::PTXRegisterMod::Read});
   asmValues.push_back({makeConstantI32(rewriter, static_cast<int>(getScaleD())),
                        mlir::NVVM::PTXRegisterMod::Read});
-  if (!outputType.isInteger(32)) {
+  if (getTypeD() != WGMMATypes::s32) {
     asmValues.push_back(
         {makeConstantI32(rewriter,
                          getScaleA() == NVVM::WGMMAScaleIn::neg ? -1 : 1),
@@ -1002,8 +1013,84 @@ void NVVM::WgmmaMmaAsyncOp::getAsmValues(
         {makeConstantI32(rewriter, static_cast<int>(getLayoutA())),
          mlir::NVVM::PTXRegisterMod::Read});
     asmValues.push_back(
-        {makeConstantI32(rewriter, static_cast<int>(getLayoutB())),
+        {makeConstantI32(rewriter, 1 - static_cast<int>(getLayoutB())),
          mlir::NVVM::PTXRegisterMod::Read});
+  }
+}
+LogicalResult NVVM::FenceProxyOp::verify() {
+  if (getKind() == NVVM::ProxyKind::TENSORMAP)
+    return emitOpError() << "tensormap proxy is not a supported proxy kind";
+  if (getKind() == NVVM::ProxyKind::GENERIC)
+    return emitOpError() << "generic proxy not a supported proxy kind";
+  if (getKind() == NVVM::ProxyKind::async_shared && !getSpace().has_value()) {
+    return emitOpError() << "async_shared fence requires space attribute";
+  }
+  if (getKind() != NVVM::ProxyKind::async_shared && getSpace().has_value()) {
+    return emitOpError() << "only async_shared fence can have space attribute";
+  }
+  return success();
+}
+
+LogicalResult NVVM::FenceProxyAcquireOp::verify() {
+  if (getFromProxy() != NVVM::ProxyKind::GENERIC)
+    return emitOpError("uni-directional proxies only support generic for "
+                       "from_proxy attribute");
+
+  if (getToProxy() != NVVM::ProxyKind::TENSORMAP)
+    return emitOpError("uni-directional proxies only support tensormap "
+                       "for to_proxy attribute");
+
+  return success();
+}
+
+LogicalResult NVVM::FenceProxyReleaseOp::verify() {
+  if (getFromProxy() != NVVM::ProxyKind::GENERIC)
+    return emitOpError("uni-directional proxies only support generic for "
+                       "from_proxy attribute");
+
+  if (getToProxy() != NVVM::ProxyKind::TENSORMAP)
+    return emitOpError("uni-directional proxies only support tensormap "
+                       "for to_proxy attribute");
+
+  return success();
+}
+
+LogicalResult NVVM::SetMaxRegisterOp::verify() {
+  if (getRegCount() % 8)
+    return emitOpError("new register size must be multiple of 8");
+  if (getRegCount() < 24 || getRegCount() > 256)
+    return emitOpError("new register size must be in between 24 to 256");
+  return success();
+}
+
+LogicalResult NVVM::BarrierOp::verify() {
+  if (getNumberOfThreads() && !getBarrierId())
+    return emitOpError(
+        "barrier id is missing, it should be set between 0 to 15");
+  return success();
+}
+
+llvm::Intrinsic::ID CpAsyncBulkTensorPrefetchOp::getIntrinsicID(int tensorDims,
+                                                                bool isIm2Col) {
+  switch (tensorDims) {
+  case 1:
+    return llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_1d;
+  case 2:
+    return llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_2d;
+  case 3:
+    return isIm2Col
+               ? llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_3d
+               : llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_3d;
+  case 4:
+    return isIm2Col
+               ? llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_4d
+               : llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_4d;
+  case 5:
+    return isIm2Col
+               ? llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_5d
+               : llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_5d;
+  default:
+    llvm_unreachable("Invalid TensorDim in CpAsyncBulkTensorPrefetchOp.");
   }
 }
 
@@ -1025,8 +1112,8 @@ void NVVMDialect::initialize() {
   // Support unknown operations because not all NVVM operations are
   // registered.
   allowUnknownOperations();
-  declarePromisedInterface<NVVMDialect, ConvertToLLVMPatternInterface>();
-  declarePromisedInterface<NVVMTargetAttr, gpu::TargetAttrInterface>();
+  declarePromisedInterface<ConvertToLLVMPatternInterface, NVVMDialect>();
+  declarePromisedInterface<gpu::TargetAttrInterface, NVVMTargetAttr>();
 }
 
 LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
@@ -1042,24 +1129,47 @@ LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
   // If maxntid and reqntid exist, it must be an array with max 3 dim
   if (attrName == NVVMDialect::getMaxntidAttrName() ||
       attrName == NVVMDialect::getReqntidAttrName()) {
-    auto values = llvm::dyn_cast<ArrayAttr>(attr.getValue());
+    auto values = llvm::dyn_cast<DenseI32ArrayAttr>(attr.getValue());
     if (!values || values.empty() || values.size() > 3)
       return op->emitError()
              << "'" << attrName
              << "' attribute must be integer array with maximum 3 index";
-    for (auto val : llvm::cast<ArrayAttr>(attr.getValue())) {
-      if (!llvm::dyn_cast<IntegerAttr>(val))
-        return op->emitError()
-               << "'" << attrName
-               << "' attribute must be integer array with maximum 3 index";
-    }
   }
-  // If minctasm and maxnreg exist, it must be an array with max 3 dim
+  // If minctasm and maxnreg exist, it must be an integer attribute
   if (attrName == NVVMDialect::getMinctasmAttrName() ||
       attrName == NVVMDialect::getMaxnregAttrName()) {
     if (!llvm::dyn_cast<IntegerAttr>(attr.getValue()))
       return op->emitError()
              << "'" << attrName << "' attribute must be integer constant";
+  }
+
+  return success();
+}
+
+LogicalResult NVVMDialect::verifyRegionArgAttribute(Operation *op,
+                                                    unsigned regionIndex,
+                                                    unsigned argIndex,
+                                                    NamedAttribute argAttr) {
+  auto funcOp = dyn_cast<FunctionOpInterface>(op);
+  if (!funcOp)
+    return success();
+
+  bool isKernel = op->hasAttr(NVVMDialect::getKernelFuncAttrName());
+  StringAttr attrName = argAttr.getName();
+  if (attrName == NVVM::NVVMDialect::getGridConstantAttrName()) {
+    if (!isKernel) {
+      return op->emitError()
+             << "'" << attrName
+             << "' attribute must be present only on kernel arguments";
+    }
+    if (!isa<UnitAttr>(argAttr.getValue()))
+      return op->emitError() << "'" << attrName << "' must be a unit attribute";
+    if (!funcOp.getArgAttr(argIndex, LLVM::LLVMDialect::getByValAttrName())) {
+      return op->emitError()
+             << "'" << attrName
+             << "' attribute requires the argument to also have attribute '"
+             << LLVM::LLVMDialect::getByValAttrName() << "'";
+    }
   }
 
   return success();

@@ -202,7 +202,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 		Edge from Callee [[FOO]] to Caller: [[MAIN2:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 6
 
 ; DUMP: Node [[AX]]
-; DUMP: 	Callee: 12914368124089294956 (_Z3foov) Clones: 0 StackIds: 6	(clone 0)
+; DUMP: 	Callee: 15844184524768596045 (_Z3foov) Clones: 0 StackIds: 6	(clone 0)
 ; DUMP: 	AllocTypes: NotColdCold
 ; DUMP: 	ContextIds: 1 2
 ; DUMP: 	CalleeEdges:
@@ -225,7 +225,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 		Edge from Callee [[BAR]] to Caller: [[MAIN6:0x[a-z0-9]+]] AllocTypes: NotCold ContextIds: 5
 
 ; DUMP: Node [[MAIN3]]
-; DUMP: 	Callee: 4095956691517954349 (_Z3barP1A) Clones: 0 StackIds: 4	(clone 0)
+; DUMP: 	Callee: 2040285415115148168 (_Z3barP1A) Clones: 0 StackIds: 4	(clone 0)
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 1
 ; DUMP: 	CalleeEdges:
@@ -233,7 +233,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[MAIN4]]
-; DUMP: 	Callee: 4095956691517954349 (_Z3barP1A) Clones: 0 StackIds: 5	(clone 0)
+; DUMP: 	Callee: 2040285415115148168 (_Z3barP1A) Clones: 0 StackIds: 5	(clone 0)
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 2
 ; DUMP: 	CalleeEdges:
@@ -241,7 +241,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[MAIN1]]
-; DUMP: 	Callee: 12914368124089294956 (_Z3foov) Clones: 0 StackIds: 0	(clone 0)
+; DUMP: 	Callee: 15844184524768596045 (_Z3foov) Clones: 0 StackIds: 0	(clone 0)
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 3
 ; DUMP: 	CalleeEdges:
@@ -249,7 +249,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[BX]]
-; DUMP: 	Callee: 12914368124089294956 (_Z3foov) Clones: 0 StackIds: 7	(clone 0)
+; DUMP: 	Callee: 15844184524768596045 (_Z3foov) Clones: 0 StackIds: 7	(clone 0)
 ; DUMP: 	AllocTypes: NotColdCold
 ; DUMP: 	ContextIds: 4 5
 ; DUMP: 	CalleeEdges:
@@ -258,7 +258,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 		Edge from Callee [[BX]] to Caller: [[BAR]] AllocTypes: NotColdCold ContextIds: 4 5
 
 ; DUMP: Node [[MAIN5]]
-; DUMP: 	Callee: 4095956691517954349 (_Z3barP1A) Clones: 0 StackIds: 2	(clone 0)
+; DUMP: 	Callee: 2040285415115148168 (_Z3barP1A) Clones: 0 StackIds: 2	(clone 0)
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 4
 ; DUMP: 	CalleeEdges:
@@ -266,7 +266,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[MAIN6]]
-; DUMP: 	Callee: 4095956691517954349 (_Z3barP1A) Clones: 0 StackIds: 3	(clone 0)
+; DUMP: 	Callee: 2040285415115148168 (_Z3barP1A) Clones: 0 StackIds: 3	(clone 0)
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 5
 ; DUMP: 	CalleeEdges:
@@ -274,7 +274,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[MAIN2]]
-; DUMP: 	Callee: 12914368124089294956 (_Z3foov) Clones: 0 StackIds: 1	(clone 0)
+; DUMP: 	Callee: 15844184524768596045 (_Z3foov) Clones: 0 StackIds: 1	(clone 0)
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 6
 ; DUMP: 	CalleeEdges:
@@ -302,7 +302,7 @@ attributes #0 = { noinline optnone }
 ; DUMP:		Clones: [[FOO2:0x[a-z0-9]+]]
 
 ; DUMP: Node [[AX]]
-; DUMP: 	Callee: 12914368124089294956 (_Z3foov) Clones: 0 StackIds: 6    (clone 0)
+; DUMP: 	Callee: 15844184524768596045 (_Z3foov) Clones: 0 StackIds: 6    (clone 0)
 ; DUMP: 	AllocTypes: NotColdCold
 ; DUMP: 	ContextIds: 1 2
 ; DUMP: 	CalleeEdges:
@@ -324,7 +324,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 		Edge from Callee [[BAR]] to Caller: [[MAIN6]] AllocTypes: NotCold ContextIds: 5
 
 ; DUMP: Node [[MAIN3]]
-; DUMP: 	Callee: 4095956691517954349 (_Z3barP1A) Clones: 0 StackIds: 4   (clone 0)
+; DUMP: 	Callee: 2040285415115148168 (_Z3barP1A) Clones: 0 StackIds: 4   (clone 0)
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 1
 ; DUMP: 	CalleeEdges:
@@ -332,7 +332,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[MAIN4]]
-; DUMP: 	Callee: 4095956691517954349 (_Z3barP1A) Clones: 0 StackIds: 5   (clone 0)
+; DUMP: 	Callee: 2040285415115148168 (_Z3barP1A) Clones: 0 StackIds: 5   (clone 0)
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 2
 ; DUMP: 	CalleeEdges:
@@ -340,7 +340,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[MAIN1]]
-; DUMP: 	Callee: 12914368124089294956 (_Z3foov) Clones: 0 StackIds: 0    (clone 0)
+; DUMP: 	Callee: 15844184524768596045 (_Z3foov) Clones: 0 StackIds: 0    (clone 0)
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 3
 ; DUMP: 	CalleeEdges:
@@ -348,7 +348,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[BX]]
-; DUMP: 	Callee: 12914368124089294956 (_Z3foov) Clones: 0 StackIds: 7    (clone 0)
+; DUMP: 	Callee: 15844184524768596045 (_Z3foov) Clones: 0 StackIds: 7    (clone 0)
 ; DUMP: 	AllocTypes: NotColdCold
 ; DUMP: 	ContextIds: 4 5
 ; DUMP: 	CalleeEdges:
@@ -357,7 +357,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 		Edge from Callee [[BX]] to Caller: [[BAR]] AllocTypes: NotColdCold ContextIds: 4 5
 
 ; DUMP: Node [[MAIN5]]
-; DUMP: 	Callee: 4095956691517954349 (_Z3barP1A) Clones: 0 StackIds: 2   (clone 0)
+; DUMP: 	Callee: 2040285415115148168 (_Z3barP1A) Clones: 0 StackIds: 2   (clone 0)
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 4
 ; DUMP: 	CalleeEdges:
@@ -365,7 +365,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[MAIN6]]
-; DUMP: 	Callee: 4095956691517954349 (_Z3barP1A) Clones: 0 StackIds: 3   (clone 0)
+; DUMP: 	Callee: 2040285415115148168 (_Z3barP1A) Clones: 0 StackIds: 3   (clone 0)
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 5
 ; DUMP: 	CalleeEdges:
@@ -373,7 +373,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[MAIN2]]
-; DUMP: 	Callee: 12914368124089294956 (_Z3foov) Clones: 0 StackIds: 1    (clone 0)
+; DUMP: 	Callee: 15844184524768596045 (_Z3foov) Clones: 0 StackIds: 1    (clone 0)
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 6
 ; DUMP: 	CalleeEdges:

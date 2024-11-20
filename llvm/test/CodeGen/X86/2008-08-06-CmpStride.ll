@@ -10,7 +10,7 @@ define i32 @main() nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movl $10271, %ebx # imm = 0x281F
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %forbody
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl $.str, %edi
@@ -31,7 +31,7 @@ forbody:
         %i.0 = phi i32 [ 0, %entry ], [ %inc, %forbody ]                ; <i32>[#uses=3]
         %sub14 = sub i32 1027, %i.0             ; <i32> [#uses=1]
         %mul15 = mul i32 %sub14, 10             ; <i32> [#uses=1]
-        %add166 = or i32 %mul15, 1              ; <i32> ptr
+        %add166 = or disjoint i32 %mul15, 1              ; <i32> ptr
         call i32 (ptr, ...) @printf( ptr noalias  @.str, i32 %add166 ) nounwind
         %inc = add i32 %i.0, 1          ; <i32> [#uses=3]
         %cmp = icmp ne i32 %inc, 1027          ; <i1> [#uses=1]

@@ -65,6 +65,7 @@ bool applyDebugifyMetadataToMachineFunction(MachineModuleInfo &MMI,
   // all the others.
   Function *DbgValF = M.getFunction("llvm.dbg.value");
   DbgValueInst *EarliestDVI = nullptr;
+  DbgVariableRecord *EarliestDVR = nullptr;
   DenseMap<unsigned, DILocalVariable *> Line2Var;
   DIExpression *Expr = nullptr;
   if (DbgValF) {
@@ -78,6 +79,20 @@ bool applyDebugifyMetadataToMachineFunction(MachineModuleInfo &MMI,
       if (!EarliestDVI || Line < EarliestDVI->getDebugLoc().getLine())
         EarliestDVI = DVI;
       Expr = DVI->getExpression();
+    }
+  }
+  for (BasicBlock &BB : F) {
+    for (Instruction &I : BB) {
+      for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+        if (!DVR.isDbgValue())
+          continue;
+        unsigned Line = DVR.getDebugLoc().getLine();
+        assert(Line != 0 && "debugify should not insert line 0 locations");
+        Line2Var[Line] = DVR.getVariable();
+        if (!EarliestDVR || Line < EarliestDVR->getDebugLoc().getLine())
+          EarliestDVR = &DVR;
+        Expr = DVR.getExpression();
+      }
     }
   }
   if (Line2Var.empty())
@@ -109,7 +124,8 @@ bool applyDebugifyMetadataToMachineFunction(MachineModuleInfo &MMI,
       // Find a suitable local variable for the DBG_VALUE.
       unsigned Line = MI.getDebugLoc().getLine();
       if (!Line2Var.count(Line))
-        Line = EarliestDVI->getDebugLoc().getLine();
+        Line = EarliestDVI ? EarliestDVI->getDebugLoc().getLine()
+                           : EarliestDVR->getDebugLoc().getLine();
       DILocalVariable *LocalVar = Line2Var[Line];
       assert(LocalVar && "No variable for current line?");
       VarSet.insert(LocalVar);

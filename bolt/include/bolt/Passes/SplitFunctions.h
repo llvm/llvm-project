@@ -23,6 +23,9 @@ enum SplitFunctionsStrategy : char {
   /// Split each function into a hot and cold fragment using profiling
   /// information.
   Profile2 = 0,
+  /// Split each function into a hot, warm, and cold fragment using
+  /// profiling information.
+  CDSplit,
   /// Split each function into a hot and cold fragment at a randomly chosen
   /// split point (ignoring any available profiling information).
   Random2,
@@ -40,7 +43,7 @@ public:
 
   virtual ~SplitStrategy() = default;
   virtual bool canSplit(const BinaryFunction &BF) = 0;
-  virtual bool keepEmpty() = 0;
+  virtual bool compactFragments() = 0;
   virtual void fragment(const BlockIt Start, const BlockIt End) = 0;
 };
 
@@ -101,7 +104,7 @@ public:
 
   const char *getName() const override { return "split-functions"; }
 
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 } // namespace bolt

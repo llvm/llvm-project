@@ -193,7 +193,7 @@ multiclass FMA<bit add> {
     def sq_m_n: Intrinsic<Vector, (args Vector:$m1, Vector:$m2,
                                         unpromoted<Scalar>:$addend_s,
                                         Predicate:$pred),
-                          (seq (splat $addend_s):$addend, pred_cg)>;
+                          (select $pred, (seq (splat $addend_s):$addend, unpred_cg), $m1)>;
   }
 }
 
@@ -753,8 +753,8 @@ let params = T.Float in {
   defm: compare<"ne", fcmp_ne>;
   defm: compare<"gt", fcmp_gt>;
   defm: compare<"ge", fcmp_ge>;
-  defm: compare<"lt", fcmp_lt>;
-  defm: compare<"le", fcmp_le>;
+  defm: compare<"lt", fcmp_ult>;
+  defm: compare<"le", fcmp_ule>;
 }
 
 let params = T.Signed in {

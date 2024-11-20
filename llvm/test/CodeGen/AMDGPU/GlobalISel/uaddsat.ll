@@ -192,9 +192,7 @@ define i16 @v_uaddsat_v2i8(i16 %lhs.arg, i16 %rhs.arg) {
 ; GFX6-NEXT:    v_min_u32_e32 v2, v3, v2
 ; GFX6-NEXT:    v_add_i32_e32 v1, vcc, v1, v2
 ; GFX6-NEXT:    v_lshrrev_b32_e32 v1, 24, v1
-; GFX6-NEXT:    v_lshrrev_b32_e32 v0, 24, v0
-; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
-; GFX6-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX6-NEXT:    v_alignbit_b32 v0, v1, v0, 24
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_uaddsat_v2i8:
@@ -290,9 +288,9 @@ define amdgpu_ps i16 @s_uaddsat_v2i8(i16 inreg %lhs.arg, i16 inreg %rhs.arg) {
 ; GFX6-NEXT:    s_min_u32 s2, s3, s2
 ; GFX6-NEXT:    s_add_i32 s1, s1, s2
 ; GFX6-NEXT:    s_lshr_b32 s1, s1, 24
-; GFX6-NEXT:    s_lshr_b32 s0, s0, 24
-; GFX6-NEXT:    s_lshl_b32 s1, s1, 8
-; GFX6-NEXT:    s_or_b32 s0, s0, s1
+; GFX6-NEXT:    v_mov_b32_e32 v0, s0
+; GFX6-NEXT:    v_alignbit_b32 v0, s1, v0, 24
+; GFX6-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: s_uaddsat_v2i8:

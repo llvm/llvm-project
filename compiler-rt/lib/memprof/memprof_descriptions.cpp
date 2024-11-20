@@ -51,7 +51,7 @@ void DescribeThread(MemprofThreadContext *context) {
   InternalScopedString str;
   str.AppendF("Thread %s", MemprofThreadIdAndName(context).c_str());
   if (context->parent_tid == kInvalidTid) {
-    str.AppendF(" created by unknown thread\n");
+    str.Append(" created by unknown thread\n");
     Printf("%s", str.data());
     return;
   }

@@ -35,17 +35,55 @@ define ptr @test2() {
   ret ptr %tmp
 }
 
+define void @test3_multiple_fields(ptr nocapture %a, ptr nocapture %b) {
+; CHECK-LABEL: @test3_multiple_fields(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    store i64 [[TMP0]], ptr [[A:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 %a, ptr align 4 %b, i64 8, i1 false), !tbaa.struct !6
+  ret void
+}
+
+define void @test4_multiple_copy_first_field(ptr nocapture %a, ptr nocapture %b) {
+; CHECK-LABEL: @test4_multiple_copy_first_field(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B:%.*]], align 4, !tbaa [[TBAA0]]
+; CHECK-NEXT:    store i32 [[TMP0]], ptr [[A:%.*]], align 4, !tbaa [[TBAA0]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 %a, ptr align 4 %b, i64 4, i1 false), !tbaa.struct !6
+  ret void
+}
+
+define void @test5_multiple_copy_more_than_first_field(ptr nocapture %a, ptr nocapture %b) {
+; CHECK-LABEL: @test5_multiple_copy_more_than_first_field(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    store i32 [[TMP0]], ptr [[A:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 %a, ptr align 4 %b, i64 4, i1 false), !tbaa.struct !7
+  ret void
+}
+
 !0 = !{!"Simple C/C++ TBAA"}
 !1 = !{!"omnipotent char", !0}
 !2 = !{!5, !5, i64 0}
 !3 = !{i64 0, i64 4, !2}
 !4 = !{i64 0, i64 8, null}
 !5 = !{!"float", !0}
+!6 = !{i64 0, i64 4, !2, i64 4, i64 4, !2}
+!7 = !{i64 0, i64 2, !2, i64 4, i64 6, !2}
 
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 ;.
-; CHECK: [[TBAA0]] = !{!1, !1, i64 0}
-; CHECK: [[META1:![0-9]+]] = !{!"float", !2}
-; CHECK: [[META2:![0-9]+]] = !{!"Simple C/C++ TBAA"}
+; CHECK: [[TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
+; CHECK: [[META1]] = !{!"float", [[META2:![0-9]+]]}
+; CHECK: [[META2]] = !{!"Simple C/C++ TBAA"}
 ;.

@@ -8,7 +8,10 @@
 
 #include "src/stdio/printf_core/converter.h"
 
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/core_structs.h"
+#include "src/stdio/printf_core/printf_config.h"
+#include "src/stdio/printf_core/strerror_converter.h"
 #include "src/stdio/printf_core/writer.h"
 
 // This option allows for replacing all of the conversion functions with custom
@@ -21,7 +24,7 @@
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 int convert(Writer *writer, const FormatSection &to_conv) {
@@ -58,6 +61,8 @@ int convert(Writer *writer, const FormatSection &to_conv) {
   case 'o':
   case 'x':
   case 'X':
+  case 'b':
+  case 'B':
     return convert_int(writer, to_conv);
 #ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
   case 'f':
@@ -73,6 +78,17 @@ int convert(Writer *writer, const FormatSection &to_conv) {
   case 'G':
     return convert_float_dec_auto(writer, to_conv);
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
+#ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+  case 'r':
+  case 'R':
+  case 'k':
+  case 'K':
+    return convert_fixed(writer, to_conv);
+#endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+#ifndef LIBC_COPT_PRINTF_DISABLE_STRERROR
+  case 'm':
+    return convert_strerror(writer, to_conv);
+#endif // LIBC_COPT_PRINTF_DISABLE_STRERROR
 #ifndef LIBC_COPT_PRINTF_DISABLE_WRITE_INT
   case 'n':
     return convert_write_int(writer, to_conv);
@@ -86,4 +102,4 @@ int convert(Writer *writer, const FormatSection &to_conv) {
 }
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

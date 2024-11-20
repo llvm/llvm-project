@@ -105,4 +105,33 @@ EXIT STATUS
 :program:`llvm-reduce` returns 0 under normal operation. It returns a non-zero
 exit code if there were any errors.
 
+EXAMPLE
+-------
 
+:program:`llvm-reduce` can be used to simplify a test that causes a
+compiler crash.
+
+For example, let's assume that `opt` is crashing on the IR file
+`test.ll` with error message `Assertion failed at line 1234 of
+WhateverFile.cpp`, when running at `-O2`.
+
+The test case of `test.ll` can be reduced by invoking the following
+command:
+
+.. code-block:: bash
+
+   $(LLVM_BUILD_FOLDER)/bin/llvm-reduce --test=script.sh <path to>/test.ll
+
+The shell script passed to the option `test` consists of the
+following:
+
+.. code-block:: bash
+
+   $(LLVM_BUILD_FOLDER)/bin/opt -O2 -disable-output $1 \
+     |& grep "Assertion failed at line 1234 of WhateverFile.cpp"
+
+(In this script, `grep` exits with 0 if it finds the string and that
+becomes the whole script's status.)
+
+This example can be generalized to other tools that process IR files,
+for example `llc`.

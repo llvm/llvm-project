@@ -63,6 +63,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -427,7 +428,7 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
       // Special case: virtual void ^method() = 0: jump to all overrides.
       // FIXME: extend it to ^virtual, unfortunately, virtual location is not
       // saved in the AST.
-      if (CMD->isPure()) {
+      if (CMD->isPureVirtual()) {
         if (TouchedIdentifier && SM.getSpellingLoc(CMD->getLocation()) ==
                                      TouchedIdentifier->location()) {
           VirtualMethods.insert(getSymbolID(CMD));
@@ -844,7 +845,7 @@ std::vector<DocumentLink> getDocumentLinks(ParsedAST &AST) {
     if (Inc.Resolved.empty())
       continue;
     auto HashLoc = SM.getComposedLoc(SM.getMainFileID(), Inc.HashOffset);
-    const auto *HashTok = AST.getTokens().spelledTokenAt(HashLoc);
+    const auto *HashTok = AST.getTokens().spelledTokenContaining(HashLoc);
     assert(HashTok && "got inclusion at wrong offset");
     const auto *IncludeTok = std::next(HashTok);
     const auto *FileTok = std::next(IncludeTok);
@@ -938,7 +939,7 @@ public:
     CollectorOpts.CollectMainFileSymbols = true;
     for (SourceLocation L : Locs) {
       L = SM.getFileLoc(L);
-      if (const auto *Tok = TB.spelledTokenAt(L))
+      if (const auto *Tok = TB.spelledTokenContaining(L))
         References.push_back(
             {*Tok, Roles,
              SymbolCollector::getRefContainer(ASTNode.Parent, CollectorOpts)});
@@ -1216,7 +1217,7 @@ DocumentHighlight toHighlight(const ReferenceFinder::Reference &Ref,
 std::optional<DocumentHighlight> toHighlight(SourceLocation Loc,
                                              const syntax::TokenBuffer &TB) {
   Loc = TB.sourceManager().getFileLoc(Loc);
-  if (const auto *Tok = TB.spelledTokenAt(Loc)) {
+  if (const auto *Tok = TB.spelledTokenContaining(Loc)) {
     DocumentHighlight Result;
     Result.range = halfOpenToRange(
         TB.sourceManager(),
@@ -1339,7 +1340,7 @@ maybeFindIncludeReferences(ParsedAST &AST, Position Pos,
   auto Converted = convertIncludes(AST);
   include_cleaner::walkUsed(
       AST.getLocalTopLevelDecls(), collectMacroReferences(AST),
-      AST.getPragmaIncludes().get(), AST.getPreprocessor(),
+      &AST.getPragmaIncludes(), AST.getPreprocessor(),
       [&](const include_cleaner::SymbolReference &Ref,
           llvm::ArrayRef<include_cleaner::Header> Providers) {
         if (Ref.RT != include_cleaner::RefType::Explicit ||
@@ -1353,7 +1354,8 @@ maybeFindIncludeReferences(ParsedAST &AST, Position Pos,
           Loc = SM.getIncludeLoc(SM.getFileID(Loc));
 
         ReferencesResult::Reference Result;
-        const auto *Token = AST.getTokens().spelledTokenAt(Loc);
+        const auto *Token = AST.getTokens().spelledTokenContaining(Loc);
+        assert(Token && "references expected token here");
         Result.Loc.range = Range{sourceLocToPosition(SM, Token->location()),
                                  sourceLocToPosition(SM, Token->endLocation())};
         Result.Loc.uri = URIMainFile;
@@ -1619,7 +1621,7 @@ std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
     }
     llvm::SmallString<32> USR;
     if (!index::generateUSRForDecl(D, USR)) {
-      NewSymbol.USR = std::string(USR.str());
+      NewSymbol.USR = std::string(USR);
       NewSymbol.ID = SymbolID(NewSymbol.USR);
     }
     if (const NamedDecl *Def = getDefinition(D))
@@ -1642,7 +1644,7 @@ std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
     llvm::SmallString<32> USR;
     if (!index::generateUSRForMacro(NewMacro.name, M->Info->getDefinitionLoc(),
                                     SM, USR)) {
-      NewMacro.USR = std::string(USR.str());
+      NewMacro.USR = std::string(USR);
       NewMacro.ID = SymbolID(NewMacro.USR);
     }
     Results.push_back(std::move(NewMacro));
@@ -2237,7 +2239,10 @@ prepareCallHierarchy(ParsedAST &AST, Position Pos, PathRef TUPath) {
   for (const NamedDecl *Decl : getDeclAtPosition(AST, *Loc, {})) {
     if (!(isa<DeclContext>(Decl) &&
           cast<DeclContext>(Decl)->isFunctionOrMethod()) &&
-        Decl->getKind() != Decl::Kind::FunctionTemplate)
+        Decl->getKind() != Decl::Kind::FunctionTemplate &&
+        !(Decl->getKind() == Decl::Kind::Var &&
+          !cast<VarDecl>(Decl)->isLocalVarDecl()) &&
+        Decl->getKind() != Decl::Kind::Field)
       continue;
     if (auto CHI = declToCallHierarchyItem(*Decl, AST.tuPath()))
       Result.emplace_back(std::move(*CHI));
@@ -2271,7 +2276,7 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
   // Initially store the ranges in a map keyed by SymbolID of the caller.
   // This allows us to group different calls with the same caller
   // into the same CallHierarchyIncomingCall.
-  llvm::DenseMap<SymbolID, std::vector<Range>> CallsIn;
+  llvm::DenseMap<SymbolID, std::vector<Location>> CallsIn;
   // We can populate the ranges based on a refs request only. As we do so, we
   // also accumulate the container IDs into a lookup request.
   LookupRequest ContainerLookup;
@@ -2281,8 +2286,7 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
       elog("incomingCalls failed to convert location: {0}", Loc.takeError());
       return;
     }
-    auto It = CallsIn.try_emplace(R.Container, std::vector<Range>{}).first;
-    It->second.push_back(Loc->range);
+    CallsIn[R.Container].push_back(*Loc);
 
     ContainerLookup.IDs.insert(R.Container);
   });
@@ -2291,9 +2295,21 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
   Index->lookup(ContainerLookup, [&](const Symbol &Caller) {
     auto It = CallsIn.find(Caller.ID);
     assert(It != CallsIn.end());
-    if (auto CHI = symbolToCallHierarchyItem(Caller, Item.uri.file()))
+    if (auto CHI = symbolToCallHierarchyItem(Caller, Item.uri.file())) {
+      std::vector<Range> FromRanges;
+      for (const Location &L : It->second) {
+        if (L.uri != CHI->uri) {
+          // Call location not in same file as caller.
+          // This can happen in some edge cases. There's not much we can do,
+          // since the protocol only allows returning ranges interpreted as
+          // being in the caller's file.
+          continue;
+        }
+        FromRanges.push_back(L.range);
+      }
       Results.push_back(
-          CallHierarchyIncomingCall{std::move(*CHI), std::move(It->second)});
+          CallHierarchyIncomingCall{std::move(*CHI), std::move(FromRanges)});
+    }
   });
   // Sort results by name of container.
   llvm::sort(Results, [](const CallHierarchyIncomingCall &A,

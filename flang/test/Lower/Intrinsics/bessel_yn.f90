@@ -42,7 +42,7 @@ subroutine test_transformational_real4(x, n1, n2, r)
   ! ALL-DAG: %[[x:.*]] = fir.load %[[argx]] : !fir.ref<f32>
   ! ALL-DAG: %[[n1:.*]] = fir.load %[[argn1]] : !fir.ref<i32>
   ! ALL-DAG: %[[n2:.*]] = fir.load %[[argn2]] : !fir.ref<i32>
-  ! ALL-DAG: %[[xeq0:.*]] = arith.cmpf ueq, %[[x]], %[[zero]] : f32
+  ! ALL-DAG: %[[xeq0:.*]] = arith.cmpf ueq, %[[x]], %[[zero]] {{.*}} : f32
   ! ALL-DAG: %[[n1ltn2:.*]] = arith.cmpi slt, %[[n1]], %[[n2]] : i32
   ! ALL-DAG: %[[n1eqn2:.*]] = arith.cmpi eq, %[[n1]], %[[n2]] : i32
   ! ALL: fir.if %[[xeq0]] {
@@ -85,7 +85,7 @@ subroutine test_transformational_real8(x, n1, n2, r)
   ! ALL-DAG: %[[x:.*]] = fir.load %[[argx]] : !fir.ref<f64>
   ! ALL-DAG: %[[n1:.*]] = fir.load %[[argn1]] : !fir.ref<i32>
   ! ALL-DAG: %[[n2:.*]] = fir.load %[[argn2]] : !fir.ref<i32>
-  ! ALL-DAG: %[[xeq0:.*]] = arith.cmpf ueq, %[[x]], %[[zero]] : f64
+  ! ALL-DAG: %[[xeq0:.*]] = arith.cmpf ueq, %[[x]], %[[zero]] {{.*}} : f64
   ! ALL-DAG: %[[n1ltn2:.*]] = arith.cmpi slt, %[[n1]], %[[n2]] : i32
   ! ALL-DAG: %[[n1eqn2:.*]] = arith.cmpi eq, %[[n1]], %[[n2]] : i32
   ! ALL: fir.if %[[xeq0]] {

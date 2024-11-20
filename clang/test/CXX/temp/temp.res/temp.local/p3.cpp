@@ -16,8 +16,7 @@ template <class T> struct Derived: Base<int>, Base<char> {
   void g(X0 *t) {
     t->Derived::Base<T>::f();
     t->Base<T>::f();
-    t->Base::f(); // expected-error{{member 'Base' found in multiple base classes of different types}} \
-    // expected-error{{no member named 'f' in 'X0'}}
+    t->Base::f(); // expected-error{{member 'Base' found in multiple base classes of different types}}
   }
 };
 

@@ -50,7 +50,6 @@ struct LoopNestStateCollector {
 // top-level operations in a `Block` which contain load/store ops, and edges
 // are memref dependences between the nodes.
 // TODO: Add a more flexible dependence graph representation.
-// TODO: Add a depth parameter to dependence graph construction.
 struct MemRefDependenceGraph {
 public:
   // Node represents a node in the graph. A Node is either an entire loop nest
@@ -394,7 +393,6 @@ bool buildSliceTripCountMap(
 /// nest surrounding ops in 'opsA' at 'loopDepth'. Returns
 /// 'SliceComputationResult::Success' if union was computed correctly, an
 /// appropriate 'failure' otherwise.
-// TODO: Change this API to take 'forOpA'/'forOpB'.
 SliceComputationResult
 computeSliceUnion(ArrayRef<Operation *> opsA, ArrayRef<Operation *> opsB,
                   unsigned loopDepth, unsigned numCommonLoops,
@@ -532,7 +530,6 @@ struct MemRefRegion {
   /// variables since getMemRefRegion() is called with a specific loop depth,
   /// and thus the region is symbolic in the outer surrounding loops at that
   /// depth.
-  // TODO: Replace this to exploit HyperRectangularSet.
   FlatAffineValueConstraints cst;
 };
 

@@ -35,7 +35,7 @@ define i1 @icmp_select_var_commuted(i8 %x, i8 %y, i8 %_z) {
 ; CHECK-LABEL: @icmp_select_var_commuted(
 ; CHECK-NEXT:    [[Z:%.*]] = udiv i8 42, [[_Z:%.*]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[CMP21:%.*]] = icmp eq i8 [[Z]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp eq i8 [[Y:%.*]], [[Z]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP21]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
@@ -122,7 +122,7 @@ define i1 @icmp_select_var_pred_ult(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @icmp_select_var_pred_ult(
 ; CHECK-NEXT:    [[Z1:%.*]] = add nuw i8 [[Z:%.*]], 2
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[CMP21:%.*]] = icmp ugt i8 [[Z1]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp ult i8 [[Y:%.*]], [[Z1]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP21]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
@@ -137,7 +137,7 @@ define i1 @icmp_select_var_pred_uge(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @icmp_select_var_pred_uge(
 ; CHECK-NEXT:    [[Z1:%.*]] = add nuw i8 [[Z:%.*]], 2
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[CMP21:%.*]] = icmp ule i8 [[Z1]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp uge i8 [[Y:%.*]], [[Z1]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[CMP1]], i1 [[CMP21]], i1 false
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
@@ -152,7 +152,7 @@ define i1 @icmp_select_var_pred_uge_commuted(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @icmp_select_var_pred_uge_commuted(
 ; CHECK-NEXT:    [[Z1:%.*]] = add nuw i8 [[Z:%.*]], 2
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[CMP21:%.*]] = icmp uge i8 [[Z1]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp ule i8 [[Y:%.*]], [[Z1]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP21]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
@@ -485,7 +485,7 @@ define i1 @select_constants_and_icmp_ne0_all_uses(i1 %x, i1 %y) {
 define <2 x i1> @select_constants_and_icmp_ne0_vec_splat(<2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @select_constants_and_icmp_ne0_vec_splat(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = xor <2 x i1> [[TMP1]], <i1 true, i1 true>
+; CHECK-NEXT:    [[CMP:%.*]] = xor <2 x i1> [[TMP1]], splat (i1 true)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %s1 = select <2 x i1> %x, <2 x i9> <i9 3, i9 3>, <2 x i9> <i9 48, i9 48>
@@ -603,4 +603,28 @@ define i1 @select_constants_and_icmp_ne_fval(i1 %x, i1 %y) {
   %and = and i8 %s1, %s2
   %cmp = icmp ne i8 %and, 3
   ret i1 %cmp
+}
+
+define i1 @icmp_eq_select(i1 %cond, i32 %a, i32 %b) {
+; CHECK-LABEL: @icmp_eq_select(
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %lhs = select i1 %cond, i32 %a, i32 %b
+  %rhs = select i1 %cond, i32 %b, i32 %a
+  %res = icmp eq i32 %lhs, %rhs
+  ret i1 %res
+}
+
+define i1 @icmp_slt_select(i1 %cond, i32 %a, i32 %b) {
+; CHECK-LABEL: @icmp_slt_select(
+; CHECK-NEXT:    [[LHS:%.*]] = select i1 [[COND:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]
+; CHECK-NEXT:    [[RHS:%.*]] = select i1 [[COND]], i32 [[B]], i32 [[A]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp slt i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %lhs = select i1 %cond, i32 %a, i32 %b
+  %rhs = select i1 %cond, i32 %b, i32 %a
+  %res = icmp slt i32 %lhs, %rhs
+  ret i1 %res
 }

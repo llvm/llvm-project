@@ -14,11 +14,13 @@
 #include "sanitizer_common/sanitizer_platform.h"
 
 #if SANITIZER_POSIX
-#include "lsan.h"
-#include "lsan_allocator.h"
-#include "lsan_thread.h"
-#include "sanitizer_common/sanitizer_stacktrace.h"
-#include "sanitizer_common/sanitizer_tls_get_addr.h"
+#  include <pthread.h>
+
+#  include "lsan.h"
+#  include "lsan_allocator.h"
+#  include "lsan_thread.h"
+#  include "sanitizer_common/sanitizer_stacktrace.h"
+#  include "sanitizer_common/sanitizer_tls_get_addr.h"
 
 namespace __lsan {
 
@@ -48,12 +50,8 @@ void ThreadContext::OnStarted(void *arg) {
 
 void ThreadStart(u32 tid, tid_t os_id, ThreadType thread_type) {
   OnStartedArgs args;
-  uptr stack_size = 0;
-  uptr tls_size = 0;
-  GetThreadStackAndTls(tid == kMainTid, &args.stack_begin, &stack_size,
-                       &args.tls_begin, &tls_size);
-  args.stack_end = args.stack_begin + stack_size;
-  args.tls_end = args.tls_begin + tls_size;
+  GetThreadStackAndTls(tid == kMainTid, &args.stack_begin, &args.stack_end,
+                       &args.tls_begin, &args.tls_end);
   GetAllocatorCacheRange(&args.cache_begin, &args.cache_end);
   args.dtls = DTLS_Get();
   ThreadContextLsanBase::ThreadStart(tid, os_id, thread_type, &args);
@@ -96,6 +94,31 @@ void LsanOnDeadlySignal(int signo, void *siginfo, void *context) {
 void InstallAtExitCheckLeaks() {
   if (common_flags()->detect_leaks && common_flags()->leak_check_at_exit)
     Atexit(DoLeakCheck);
+}
+
+static void BeforeFork() {
+  VReport(2, "BeforeFork tid: %llu\n", GetTid());
+  LockGlobal();
+  LockThreads();
+  LockAllocator();
+  StackDepotLockBeforeFork();
+}
+
+static void AfterFork(bool fork_child) {
+  StackDepotUnlockAfterFork(fork_child);
+  UnlockAllocator();
+  UnlockThreads();
+  UnlockGlobal();
+  VReport(2, "AfterFork tid: %llu\n", GetTid());
+}
+
+void InstallAtForkHandler() {
+#  if SANITIZER_SOLARIS || SANITIZER_NETBSD || SANITIZER_APPLE
+  return;  // FIXME: Implement FutexWait.
+#  endif
+  pthread_atfork(
+      &BeforeFork, []() { AfterFork(/* fork_child= */ false); },
+      []() { AfterFork(/* fork_child= */ true); });
 }
 
 }  // namespace __lsan

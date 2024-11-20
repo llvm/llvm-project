@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-win32 | FileCheck %s -check-prefix=WIN64
 ; RUN: llc < %s -mtriple=x86_64-mingw32 | FileCheck %s -check-prefix=WIN64
 
-define i64 @double_to_i128(double %d) nounwind {
+define i64 @double_to_i128(double %d) nounwind strictfp {
 ; WIN64-LABEL: double_to_i128:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $40, %rsp
@@ -15,7 +15,7 @@ define i64 @double_to_i128(double %d) nounwind {
   ret i64 %2
 }
 
-define i64 @double_to_ui128(double %d) nounwind {
+define i64 @double_to_ui128(double %d) nounwind strictfp {
 ; WIN64-LABEL: double_to_ui128:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $40, %rsp
@@ -28,7 +28,7 @@ define i64 @double_to_ui128(double %d) nounwind {
   ret i64 %2
 }
 
-define i64 @float_to_i128(float %d) nounwind {
+define i64 @float_to_i128(float %d) nounwind strictfp {
 ; WIN64-LABEL: float_to_i128:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $40, %rsp
@@ -41,7 +41,7 @@ define i64 @float_to_i128(float %d) nounwind {
   ret i64 %2
 }
 
-define i64 @float_to_ui128(float %d) nounwind {
+define i64 @float_to_ui128(float %d) nounwind strictfp {
 ; WIN64-LABEL: float_to_ui128:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $40, %rsp
@@ -54,12 +54,13 @@ define i64 @float_to_ui128(float %d) nounwind {
   ret i64 %2
 }
 
-define i64 @longdouble_to_i128(ptr nocapture readonly %0) nounwind {
+define i64 @longdouble_to_i128(ptr nocapture readonly %0) nounwind strictfp {
 ; WIN64-LABEL: longdouble_to_i128:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $56, %rsp
 ; WIN64-NEXT:    fldt (%rcx)
 ; WIN64-NEXT:    fstpt {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    wait
 ; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN64-NEXT:    callq __fixxfti
 ; WIN64-NEXT:    movq %xmm0, %rax
@@ -71,12 +72,13 @@ define i64 @longdouble_to_i128(ptr nocapture readonly %0) nounwind {
   ret i64 %4
 }
 
-define i64 @longdouble_to_ui128(ptr nocapture readonly %0) nounwind {
+define i64 @longdouble_to_ui128(ptr nocapture readonly %0) nounwind strictfp {
 ; WIN64-LABEL: longdouble_to_ui128:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $56, %rsp
 ; WIN64-NEXT:    fldt (%rcx)
 ; WIN64-NEXT:    fstpt {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    wait
 ; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN64-NEXT:    callq __fixunsxfti
 ; WIN64-NEXT:    movq %xmm0, %rax
@@ -88,7 +90,7 @@ define i64 @longdouble_to_ui128(ptr nocapture readonly %0) nounwind {
   ret i64 %4
 }
 
-define double @i128_to_double(ptr nocapture readonly %0) nounwind {
+define double @i128_to_double(ptr nocapture readonly %0) nounwind strictfp {
 ; WIN64-LABEL: i128_to_double:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $56, %rsp
@@ -103,7 +105,7 @@ define double @i128_to_double(ptr nocapture readonly %0) nounwind {
   ret double %3
 }
 
-define double @ui128_to_double(ptr nocapture readonly %0) nounwind {
+define double @ui128_to_double(ptr nocapture readonly %0) nounwind strictfp {
 ; WIN64-LABEL: ui128_to_double:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $56, %rsp
@@ -118,7 +120,7 @@ define double @ui128_to_double(ptr nocapture readonly %0) nounwind {
   ret double %3
 }
 
-define float @i128_to_float(ptr nocapture readonly %0) nounwind {
+define float @i128_to_float(ptr nocapture readonly %0) nounwind strictfp {
 ; WIN64-LABEL: i128_to_float:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $56, %rsp
@@ -133,7 +135,7 @@ define float @i128_to_float(ptr nocapture readonly %0) nounwind {
   ret float %3
 }
 
-define float @ui128_to_float(ptr nocapture readonly %0) nounwind {
+define float @ui128_to_float(ptr nocapture readonly %0) nounwind strictfp {
 ; WIN64-LABEL: ui128_to_float:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $56, %rsp
@@ -148,7 +150,7 @@ define float @ui128_to_float(ptr nocapture readonly %0) nounwind {
   ret float %3
 }
 
-define void @i128_to_longdouble(ptr noalias nocapture sret(x86_fp80) align 16 %agg.result, ptr nocapture readonly %0) nounwind {
+define void @i128_to_longdouble(ptr noalias nocapture sret(x86_fp80) align 16 %agg.result, ptr nocapture readonly %0) nounwind strictfp {
 ; WIN64-LABEL: i128_to_longdouble:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    pushq %rsi
@@ -161,6 +163,7 @@ define void @i128_to_longdouble(ptr noalias nocapture sret(x86_fp80) align 16 %a
 ; WIN64-NEXT:    callq __floattixf
 ; WIN64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; WIN64-NEXT:    fstpt (%rsi)
+; WIN64-NEXT:    wait
 ; WIN64-NEXT:    movq %rsi, %rax
 ; WIN64-NEXT:    addq $64, %rsp
 ; WIN64-NEXT:    popq %rsi
@@ -171,7 +174,7 @@ define void @i128_to_longdouble(ptr noalias nocapture sret(x86_fp80) align 16 %a
   ret void
 }
 
-define void @ui128_to_longdouble(ptr noalias nocapture sret(x86_fp80) align 16 %agg.result, ptr nocapture readonly %0) nounwind {
+define void @ui128_to_longdouble(ptr noalias nocapture sret(x86_fp80) align 16 %agg.result, ptr nocapture readonly %0) nounwind strictfp {
 ; WIN64-LABEL: ui128_to_longdouble:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    pushq %rsi
@@ -184,6 +187,7 @@ define void @ui128_to_longdouble(ptr noalias nocapture sret(x86_fp80) align 16 %
 ; WIN64-NEXT:    callq __floatuntixf
 ; WIN64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; WIN64-NEXT:    fstpt (%rsi)
+; WIN64-NEXT:    wait
 ; WIN64-NEXT:    movq %rsi, %rax
 ; WIN64-NEXT:    addq $64, %rsp
 ; WIN64-NEXT:    popq %rsi

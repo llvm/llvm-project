@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC___COMMON_H
-#define LLVM_LIBC___COMMON_H
+#ifndef LLVM_LIBC_COMMON_H
+#define LLVM_LIBC_COMMON_H
 
 #ifdef __cplusplus
 
@@ -16,6 +16,12 @@
 
 #undef __END_C_DECLS
 #define __END_C_DECLS }
+
+// Standard C++ doesn't have C99 restrict but GNU C++ has it with __ spelling.
+#undef __restrict
+#ifndef __GNUC__
+#define __restrict
+#endif
 
 #undef _Noreturn
 #define _Noreturn [[noreturn]]
@@ -51,4 +57,4 @@
 
 #endif // __cplusplus
 
-#endif // LLVM_LIBC___COMMON_H
+#endif // LLVM_LIBC_COMMON_H

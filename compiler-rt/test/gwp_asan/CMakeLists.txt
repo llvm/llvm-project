@@ -14,7 +14,7 @@ set(GWP_ASAN_TEST_DEPS
 # exported libc++ from the Android NDK is x86-64, even though it's part of the
 # ARM[64] toolchain... See similar measures for ASan and sanitizer-common that
 # disable unit tests for Android.
-if (COMPILER_RT_INCLUDE_TESTS AND COMPILER_RT_HAS_GWP_ASAN AND NOT ANDROID)
+if (NOT ANDROID)
   list(APPEND GWP_ASAN_TEST_DEPS GwpAsanUnitTests)
   configure_lit_site_cfg(
     ${CMAKE_CURRENT_SOURCE_DIR}/unit/lit.site.cfg.py.in
@@ -22,7 +22,7 @@ if (COMPILER_RT_INCLUDE_TESTS AND COMPILER_RT_HAS_GWP_ASAN AND NOT ANDROID)
   list(APPEND GWP_ASAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/unit)
 endif()
 
-if (COMPILER_RT_INCLUDE_TESTS AND COMPILER_RT_HAS_SCUDO_STANDALONE AND COMPILER_RT_HAS_GWP_ASAN)
+if (COMPILER_RT_HAS_SCUDO_STANDALONE)
   foreach(arch ${GWP_ASAN_SUPPORTED_ARCH})
     set(GWP_ASAN_TEST_TARGET_ARCH ${arch})
     string(TOLOWER "-${arch}" GWP_ASAN_TEST_CONFIG_SUFFIX)
@@ -35,9 +35,8 @@ if (COMPILER_RT_INCLUDE_TESTS AND COMPILER_RT_HAS_SCUDO_STANDALONE AND COMPILER_
       ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py)
     list(APPEND GWP_ASAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
   endforeach()
-endif()
 
-add_lit_testsuite(check-gwp_asan "Running the GWP-ASan tests"
-  ${GWP_ASAN_TESTSUITES}
-  DEPENDS ${GWP_ASAN_TEST_DEPS})
-set_target_properties(check-gwp_asan PROPERTIES FOLDER "Compiler-RT Misc")
+  add_lit_testsuite(check-gwp_asan "Running the GWP-ASan tests"
+    ${GWP_ASAN_TESTSUITES}
+    DEPENDS ${GWP_ASAN_TEST_DEPS})
+endif()

@@ -35,8 +35,8 @@ declare void @free(ptr nocapture)
 declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind
 
 ;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal global ptr undef, align 4
-; CHECK: @[[GTL:[a-zA-Z0-9_$"\\.-]+]] = internal thread_local global ptr undef, align 4
+; CHECK: @G = internal global ptr undef, align 4
+; CHECK: @Gtl = internal thread_local global ptr undef, align 4
 ;.
 define void @nofree_arg_only(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: define {{[^@]+}}@nofree_arg_only
@@ -451,15 +451,15 @@ define i32 @malloc_in_loop(i32 %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@malloc_in_loop
 ; CHECK-SAME: (i32 [[ARG:%.*]]) {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[I1:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    [[I11:%.*]] = alloca i8, i32 0, align 8
-; CHECK-NEXT:    store i32 [[ARG]], ptr [[I]], align 4
+; CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4, addrspace(5)
+; CHECK-NEXT:    [[I1:%.*]] = alloca ptr, align 8, addrspace(5)
+; CHECK-NEXT:    [[I11:%.*]] = alloca i8, i32 0, align 8, addrspace(5)
+; CHECK-NEXT:    store i32 [[ARG]], ptr addrspace(5) [[I]], align 4
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[I3:%.*]] = load i32, ptr [[I]], align 4
+; CHECK-NEXT:    [[I3:%.*]] = load i32, ptr addrspace(5) [[I]], align 4
 ; CHECK-NEXT:    [[I4:%.*]] = add nsw i32 [[I3]], -1
-; CHECK-NEXT:    store i32 [[I4]], ptr [[I]], align 4
+; CHECK-NEXT:    store i32 [[I4]], ptr addrspace(5) [[I]], align 4
 ; CHECK-NEXT:    [[I5:%.*]] = icmp sgt i32 [[I4]], 0
 ; CHECK-NEXT:    br i1 [[I5]], label [[BB6:%.*]], label [[BB9:%.*]]
 ; CHECK:       bb6:
@@ -469,15 +469,15 @@ define i32 @malloc_in_loop(i32 %arg) {
 ; CHECK-NEXT:    ret i32 5
 ;
 bb:
-  %i = alloca i32, align 4
-  %i1 = alloca ptr, align 8
-  store i32 %arg, ptr %i, align 4
+  %i = alloca i32, align 4, addrspace(5)
+  %i1 = alloca ptr, align 8, addrspace(5)
+  store i32 %arg, ptr addrspace(5) %i, align 4
   br label %bb2
 
 bb2:
-  %i3 = load i32, ptr %i, align 4
+  %i3 = load i32, ptr addrspace(5) %i, align 4
   %i4 = add nsw i32 %i3, -1
-  store i32 %i4, ptr %i, align 4
+  store i32 %i4, ptr addrspace(5) %i, align 4
   %i5 = icmp sgt i32 %i4, 0
   br i1 %i5, label %bb6, label %bb9
 

@@ -14,38 +14,45 @@
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD
 
-#include "msan.h"
-#include "msan_report.h"
-#include "msan_thread.h"
+#  include <elf.h>
+#  include <link.h>
+#  include <pthread.h>
+#  include <signal.h>
+#  include <stdio.h>
+#  include <stdlib.h>
+#  if SANITIZER_LINUX
+#    include <sys/personality.h>
+#  endif
+#  include <sys/resource.h>
+#  include <sys/time.h>
+#  include <unistd.h>
+#  include <unwind.h>
 
-#include <elf.h>
-#include <link.h>
-#include <pthread.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <signal.h>
-#include <unistd.h>
-#include <unwind.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-
-#include "sanitizer_common/sanitizer_common.h"
-#include "sanitizer_common/sanitizer_procmaps.h"
+#  include "msan.h"
+#  include "msan_allocator.h"
+#  include "msan_chained_origin_depot.h"
+#  include "msan_report.h"
+#  include "msan_thread.h"
+#  include "sanitizer_common/sanitizer_common.h"
+#  include "sanitizer_common/sanitizer_procmaps.h"
+#  include "sanitizer_common/sanitizer_stackdepot.h"
 
 namespace __msan {
 
 void ReportMapRange(const char *descr, uptr beg, uptr size) {
   if (size > 0) {
     uptr end = beg + size - 1;
-    VPrintf(1, "%s : 0x%zx - 0x%zx\n", descr, beg, end);
+    VPrintf(1, "%s : %p-%p\n", descr, (void *)beg, (void *)end);
   }
 }
 
-static bool CheckMemoryRangeAvailability(uptr beg, uptr size) {
+static bool CheckMemoryRangeAvailability(uptr beg, uptr size, bool verbose) {
   if (size > 0) {
     uptr end = beg + size - 1;
     if (!MemoryRangeIsAvailable(beg, end)) {
-      Printf("FATAL: Memory range 0x%zx - 0x%zx is not available.\n", beg, end);
+      if (verbose)
+        Printf("FATAL: MemorySanitizer: Shadow range %p-%p is not available.\n",
+               (void *)beg, (void *)end);
       return false;
     }
   }
@@ -65,8 +72,9 @@ static bool ProtectMemoryRange(uptr beg, uptr size, const char *name) {
     }
     if ((uptr)addr != beg) {
       uptr end = beg + size - 1;
-      Printf("FATAL: Cannot protect memory range 0x%zx - 0x%zx (%s).\n", beg,
-             end, name);
+      Printf(
+          "FATAL: MemorySanitizer: Cannot protect memory range %p-%p (%s).\n",
+          (void *)beg, (void *)end, name);
       return false;
     }
   }
@@ -84,7 +92,7 @@ static void CheckMemoryLayoutSanity() {
     CHECK(addr_is_type(start, type));
     CHECK(addr_is_type((start + end) / 2, type));
     CHECK(addr_is_type(end - 1, type));
-    if (type == MappingDesc::APP) {
+    if (type == MappingDesc::APP || type == MappingDesc::ALLOCATOR) {
       uptr addr = start;
       CHECK(MEM_IS_SHADOW(MEM_TO_SHADOW(addr)));
       CHECK(MEM_IS_ORIGIN(MEM_TO_ORIGIN(addr)));
@@ -104,7 +112,7 @@ static void CheckMemoryLayoutSanity() {
   }
 }
 
-bool InitShadow(bool init_origins) {
+static bool InitShadow(bool init_origins, bool dry_run) {
   // Let user know mapping parameters first.
   VPrintf(1, "__msan_init %p\n", reinterpret_cast<void *>(&__msan_init));
   for (unsigned i = 0; i < kMemoryLayoutSize; ++i)
@@ -114,8 +122,9 @@ bool InitShadow(bool init_origins) {
   CheckMemoryLayoutSanity();
 
   if (!MEM_IS_APP(&__msan_init)) {
-    Printf("FATAL: Code %p is out of application range. Non-PIE build?\n",
-           reinterpret_cast<void *>(&__msan_init));
+    if (!dry_run)
+      Printf("FATAL: Code %p is out of application range. Non-PIE build?\n",
+             reinterpret_cast<void *>(&__msan_init));
     return false;
   }
 
@@ -136,25 +145,60 @@ bool InitShadow(bool init_origins) {
     bool protect = type == MappingDesc::INVALID ||
                    (!init_origins && type == MappingDesc::ORIGIN);
     CHECK(!(map && protect));
-    if (!map && !protect)
-      CHECK(type == MappingDesc::APP);
+    if (!map && !protect) {
+      CHECK(type == MappingDesc::APP || type == MappingDesc::ALLOCATOR);
+
+      if (dry_run && type == MappingDesc::ALLOCATOR &&
+          !CheckMemoryRangeAvailability(start, size, !dry_run))
+        return false;
+    }
     if (map) {
-      if (!CheckMemoryRangeAvailability(start, size))
+      if (dry_run && !CheckMemoryRangeAvailability(start, size, !dry_run))
         return false;
-      if (!MmapFixedSuperNoReserve(start, size, kMemoryLayout[i].name))
+      if (!dry_run &&
+          !MmapFixedSuperNoReserve(start, size, kMemoryLayout[i].name))
         return false;
-      if (common_flags()->use_madv_dontdump)
+      if (!dry_run && common_flags()->use_madv_dontdump)
         DontDumpShadowMemory(start, size);
     }
     if (protect) {
-      if (!CheckMemoryRangeAvailability(start, size))
+      if (dry_run && !CheckMemoryRangeAvailability(start, size, !dry_run))
         return false;
-      if (!ProtectMemoryRange(start, size, kMemoryLayout[i].name))
+      if (!dry_run && !ProtectMemoryRange(start, size, kMemoryLayout[i].name))
         return false;
     }
   }
 
   return true;
+}
+
+bool InitShadowWithReExec(bool init_origins) {
+  // Start with dry run: check layout is ok, but don't print warnings because
+  // warning messages will cause tests to fail (even if we successfully re-exec
+  // after the warning).
+  bool success = InitShadow(init_origins, true);
+  if (!success) {
+#  if SANITIZER_LINUX
+    // Perhaps ASLR entropy is too high. If ASLR is enabled, re-exec without it.
+    int old_personality = personality(0xffffffff);
+    bool aslr_on =
+        (old_personality != -1) && ((old_personality & ADDR_NO_RANDOMIZE) == 0);
+
+    if (aslr_on) {
+      VReport(1,
+              "WARNING: MemorySanitizer: memory layout is incompatible, "
+              "possibly due to high-entropy ASLR.\n"
+              "Re-execing with fixed virtual address space.\n"
+              "N.B. reducing ASLR entropy is preferable.\n");
+      CHECK_NE(personality(old_personality | ADDR_NO_RANDOMIZE), -1);
+      ReExec();
+    }
+#  endif
+  }
+
+  // The earlier dry run didn't actually map or protect anything. Run again in
+  // non-dry run mode.
+  return success && InitShadow(init_origins, false);
 }
 
 static void MsanAtExit(void) {
@@ -249,12 +293,35 @@ void MsanTSDDtor(void *tsd) {
     CHECK_EQ(0, pthread_setspecific(tsd_key, tsd));
     return;
   }
+  ScopedBlockSignals block(nullptr);
   msan_current_thread = nullptr;
   // Make sure that signal handler can not see a stale current thread pointer.
   atomic_signal_fence(memory_order_seq_cst);
   MsanThread::TSDDtor(tsd);
 }
-#endif
+#  endif
+
+static void BeforeFork() {
+  VReport(2, "BeforeFork tid: %llu\n", GetTid());
+  // Usually we lock ThreadRegistry, but msan does not have one.
+  LockAllocator();
+  StackDepotLockBeforeFork();
+  ChainedOriginDepotBeforeFork();
+}
+
+static void AfterFork(bool fork_child) {
+  ChainedOriginDepotAfterFork(fork_child);
+  StackDepotUnlockAfterFork(fork_child);
+  UnlockAllocator();
+  // Usually we unlock ThreadRegistry, but msan does not have one.
+  VReport(2, "AfterFork tid: %llu\n", GetTid());
+}
+
+void InstallAtForkHandler() {
+  pthread_atfork(
+      &BeforeFork, []() { AfterFork(/* fork_child= */ false); },
+      []() { AfterFork(/* fork_child= */ true); });
+}
 
 } // namespace __msan
 

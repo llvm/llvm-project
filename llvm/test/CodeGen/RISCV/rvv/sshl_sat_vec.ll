@@ -12,8 +12,8 @@ define <2 x i64> @vec_v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vmsle.vi v0, v8, -1
 ; CHECK-NEXT:    li a0, -1
-; CHECK-NEXT:    srli a1, a0, 1
 ; CHECK-NEXT:    vsll.vv v10, v8, v9
+; CHECK-NEXT:    srli a1, a0, 1
 ; CHECK-NEXT:    vsra.vv v9, v10, v9
 ; CHECK-NEXT:    vmsne.vv v8, v8, v9
 ; CHECK-NEXT:    vmv.v.x v9, a1
@@ -32,8 +32,8 @@ define <4 x i32> @vec_v4i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vmsle.vi v0, v8, -1
 ; CHECK-NEXT:    lui a0, 524288
-; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    vsll.vv v10, v8, v9
+; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    vsra.vv v9, v10, v9
 ; CHECK-NEXT:    vmsne.vv v8, v8, v9
 ; CHECK-NEXT:    vmv.v.x v9, a1
@@ -51,8 +51,8 @@ define <8 x i16> @vec_v8i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vmsle.vi v0, v8, -1
 ; CHECK-NEXT:    lui a0, 8
-; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    vsll.vv v10, v8, v9
+; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    vsra.vv v9, v10, v9
 ; CHECK-NEXT:    vmsne.vv v8, v8, v9
 ; CHECK-NEXT:    vmv.v.x v9, a1
@@ -94,8 +94,8 @@ define <vscale x 2 x i64> @vec_nxv2i64(<vscale x 2 x i64> %x, <vscale x 2 x i64>
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vmsle.vi v0, v8, -1
 ; CHECK-NEXT:    li a0, -1
-; CHECK-NEXT:    srli a1, a0, 1
 ; CHECK-NEXT:    vsll.vv v12, v8, v10
+; CHECK-NEXT:    srli a1, a0, 1
 ; CHECK-NEXT:    vsra.vv v14, v12, v10
 ; CHECK-NEXT:    vmsne.vv v10, v8, v14
 ; CHECK-NEXT:    vmv.v.x v8, a1
@@ -114,8 +114,8 @@ define <vscale x 4 x i32> @vec_nxv4i32(<vscale x 4 x i32> %x, <vscale x 4 x i32>
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vmsle.vi v0, v8, -1
 ; CHECK-NEXT:    lui a0, 524288
-; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    vsll.vv v12, v8, v10
+; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    vsra.vv v14, v12, v10
 ; CHECK-NEXT:    vmsne.vv v10, v8, v14
 ; CHECK-NEXT:    vmv.v.x v8, a1
@@ -133,8 +133,8 @@ define <vscale x 8 x i16> @vec_nxv8i16(<vscale x 8 x i16> %x, <vscale x 8 x i16>
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmsle.vi v0, v8, -1
 ; CHECK-NEXT:    lui a0, 8
-; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    vsll.vv v12, v8, v10
+; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    vsra.vv v14, v12, v10
 ; CHECK-NEXT:    vmsne.vv v10, v8, v14
 ; CHECK-NEXT:    vmv.v.x v8, a1

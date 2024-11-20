@@ -323,3 +323,22 @@ define i32 @test_alias_3xs16(ptr %ptr, ptr %ptr2, ptr %ptr3, ptr noalias %safe_p
   store i32 14, ptr %addr4
   ret i32 %safeld
 }
+
+@G = external global [10 x i32]
+
+define void @invalid_zero_offset_no_merge(i64 %0) {
+; CHECK-LABEL: invalid_zero_offset_no_merge:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:  Lloh0:
+; CHECK-NEXT:    adrp x8, _G@GOTPAGE
+; CHECK-NEXT:  Lloh1:
+; CHECK-NEXT:    ldr x8, [x8, _G@GOTPAGEOFF]
+; CHECK-NEXT:    str wzr, [x8, x0, lsl #2]
+; CHECK-NEXT:    str wzr, [x8, #4]
+; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdrGot Lloh0, Lloh1
+  %2 = getelementptr [10 x i32], ptr @G, i64 0, i64 %0
+  store i32 0, ptr %2, align 4
+  store i32 0, ptr getelementptr inbounds ([10 x i32], ptr @G, i64 0, i64 1), align 4
+  ret void
+}

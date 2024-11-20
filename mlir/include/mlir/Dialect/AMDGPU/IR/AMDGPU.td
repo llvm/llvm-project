@@ -25,6 +25,7 @@ def AMDGPU_Dialect : Dialect {
 
 
   let dependentDialects = [
+    "ROCDL::ROCDLDialect",
     "arith::ArithDialect",
     "gpu::GPUDialect"
   ];
@@ -126,11 +127,7 @@ def AMDGPU_RawBufferLoadOp :
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
                    OptionalAttr<I32Attr>:$indexOffset,
                    Optional<I32>:$sgprOffset)>,
-    Results<(outs AnyTypeOf<[BF16, F16, F32, I32, I8, F8E5M2FNUZ, F8E4M3FNUZ,
-                              VectorOfLengthAndType<[2, 4], [F32, I32]>,
-                              VectorOfLengthAndType<[2, 4, 8], [F16, BF16]>,
-                              VectorOfLengthAndType<[2, 4, 8, 16],
-                                [I8, F8E5M2FNUZ, F8E4M3FNUZ]>]>:$value)> {
+    Results<(outs AnyType:$value)> {
 
   let summary = "Raw Buffer load, exposing GCN features";
   let description = [{
@@ -176,11 +173,7 @@ def AMDGPU_RawBufferLoadOp :
 def AMDGPU_RawBufferStoreOp :
     AMDGPU_Op<"raw_buffer_store", [AllElementTypesMatch<["value", "memref"]>,
       AttrSizedOperandSegments]>,
-    Arguments<(ins AnyTypeOf<[BF16, F16, F32, I32, I8, F8E5M2FNUZ, F8E4M3FNUZ,
-                              VectorOfLengthAndType<[2, 4], [F32, I32]>,
-                              VectorOfLengthAndType<[2, 4, 8], [F16, BF16]>,
-                              VectorOfLengthAndType<[2, 4, 8, 16],
-                                [I8, F8E5M2FNUZ, F8E4M3FNUZ]>]>:$value,
+    Arguments<(ins AnyType:$value,
                    Arg<AnyMemRef, "buffer to store to", [MemWrite]>:$memref,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
@@ -221,7 +214,7 @@ def AMDGPU_RawBufferAtomicCmpswapOp :
       AttrSizedOperandSegments,
       AllTypesMatch<["src", "cmp", "value"]>,
       AllElementTypesMatch<["value", "memref"]>]>,
-    Arguments<(ins AnyTypeOf<[I32, I64, F32, F64]>:$src,
+    Arguments<(ins AnyType:$src,
                    AnyType:$cmp,
                    Arg<AnyMemRef, "buffer to operate on", [MemRead, MemWrite]>:$memref,
                    Variadic<I32>:$indices,
@@ -261,7 +254,7 @@ def AMDGPU_RawBufferAtomicCmpswapOp :
 def AMDGPU_RawBufferAtomicFaddOp :
     AMDGPU_Op<"raw_buffer_atomic_fadd", [AllElementTypesMatch<["value", "memref"]>,
       AttrSizedOperandSegments]>,
-    Arguments<(ins F32:$value,
+    Arguments<(ins AnyTypeOf<[F32, VectorOfLengthAndType<[2], [F16, BF16]>]>:$value,
                    Arg<AnyMemRef, "buffer to operate on", [MemRead, MemWrite]>:$memref,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
@@ -410,6 +403,61 @@ def AMDGPU_RawBufferAtomicUminOp :
   let hasVerifier = 1;
 }
 
+def AMDGPU_DPPPerm : I32EnumAttr<"DPPPerm",
+    "The possible permutations for a DPP operation",
+    [
+      I32EnumAttrCase<"quad_perm",  0>,
+      I32EnumAttrCase<"row_shl",    1>,
+      I32EnumAttrCase<"row_shr",    2>,
+      I32EnumAttrCase<"row_ror",    3>,
+      I32EnumAttrCase<"wave_shl",   4>,
+      I32EnumAttrCase<"wave_shr",   5>,
+      I32EnumAttrCase<"wave_ror",   6>,
+      I32EnumAttrCase<"wave_rol",   7>,
+      I32EnumAttrCase<"row_mirror", 8>,
+      I32EnumAttrCase<"row_half_mirror", 9>,
+      I32EnumAttrCase<"row_bcast_15", 10>,
+      I32EnumAttrCase<"row_bcast_31", 11>
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::amdgpu";
+}
+
+def AMDGPU_DPPPermAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_DPPPerm,
+  "dpp_perm">;
+
+def AMDGPU_DPPOp : AMDGPU_Op<"dpp", [SameTypeOperands, AllTypesMatch<["result", "old", "src"]>]>,
+  Arguments<(ins AnyType:$old,
+                  AnyType:$src,
+                  AMDGPU_DPPPermAttr:$kind,
+                  OptionalAttr<AnyAttrOf<[I32Attr, ArrayAttr, UnitAttr]>>:$permArgument,
+                  DefaultValuedAttr<I32Attr, "0xf">:$row_mask,
+                  DefaultValuedAttr<I32Attr, "0xf">:$bank_mask,
+                  DefaultValuedAttr<BoolAttr, "false">:$bound_ctrl)> {
+  let summary = "AMDGPU DPP operation";
+  let description = [{
+    This operation represents DPP functionality in a GPU program.
+     DPP provides the following operations:
+    - Full crossbar in a group of four (`quad_perm`)
+    - Wavefront shift left by one lane (`wave_shl`)
+    - Wavefront shift right by one lane (`wave_shr`)
+    - Wavefront rotate right by one lane (`wave_ror`)
+    - Wavefront rotate left by one lane (`wave_rol`)
+    - Row shift left by 1–15 lanes (`row_shl`)
+    - Row shift right by 1–15 lanes (`row_shr`)
+    - Row rotate right by 1–15 lanes (`row_ror`)
+    - Reverse within a row (`row_mirror`)
+    - Reverse within a half-row (`row_half_mirror`)
+    - Broadcast the 15th lane of each row to the next row (`row_bcast`)
+    - Broadcast lane 31 to rows 2 and 3 (`row_bcast`)
+  }];
+  let results = (outs AnyType:$result);
+  let assemblyFormat = [{
+    $old $src $kind (`(` $permArgument^ `)`)? attr-dict `:` type($result)
+  }];
+  let hasVerifier = 1;
+}
+
 def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
   let summary = "Barrier that includes a wait for LDS memory operations.";
   let description = [{
@@ -424,8 +472,53 @@ def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
     to complete before execution continues. Therefore, it should be used when
     operations on global memory can be issued far in advance of when their results
     are used (for example, by writing them to LDS).
+
+    WARNING: On architectures that do not support the BackOffBarrier feature,
+    (those which will implement this barrier by emitting inline assembly),
+    use of this operation will impede the usabiliity of memory watches (including
+    breakpoints set on variables) when debugging.
   }];
   let assemblyFormat = "attr-dict";
+}
+
+def AMDGPU_SchedBarrierOpOpt : I32BitEnumAttr<"sched_barrier_opt_enum",
+    "The possible options for scheduling barriers",
+    [
+      I32BitEnumAttrCaseNone<"none">,
+      I32BitEnumAttrCaseBit<"non_mem_non_sideffect", 0>,
+      I32BitEnumAttrCaseBit<"valu", 1>,
+      I32BitEnumAttrCaseBit<"salu", 2>,
+      I32BitEnumAttrCaseBit<"mfma_wmma",  3>,
+      I32BitEnumAttrCaseBit<"all_vmem",  4>,
+      I32BitEnumAttrCaseBit<"vmem_read",  5>,
+      I32BitEnumAttrCaseBit<"vmem_write", 6>,
+      I32BitEnumAttrCaseBit<"all_ds", 7>,
+      I32BitEnumAttrCaseBit<"ds_read", 8>,
+      I32BitEnumAttrCaseBit<"ds_write", 9>,
+      I32BitEnumAttrCaseBit<"transcendental", 10>
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::amdgpu";
+}
+
+def AMDGPU_SchedBarrierOpOptAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_SchedBarrierOpOpt,
+  "sched_barrier_opt">{
+   let assemblyFormat = "`<` $value `>`";
+}
+
+def AMDGPU_SchedBarrierOp :
+  AMDGPU_Op<"sched_barrier">,
+  Arguments<(ins  AMDGPU_SchedBarrierOpOptAttr:$opts)>
+  {
+  let summary = "Barrier that limits the backend scheduler of instruction movement";
+  let description = [{
+    `amdgpu.sched_barrier` serves as a barrier that could be
+    configured to restrict movements of instructions through it as
+    defined by sched_barrier_opts.
+  }];
+  let assemblyFormat = [{
+    `allow` `=` $opts attr-dict
+  }];
 }
 
 def AMDGPU_MFMAPermB : I32EnumAttr<"MFMAPermB",
@@ -459,7 +552,7 @@ def MFMAOutTypes : AnyTypeOf<[F64,
                               VectorOfLengthAndType<[4, 16, 32], [I32]>,
                               VectorOfLengthAndType<[4], [F64]>]>;
 // wmma
-def WMMAInTypes : AnyTypeOf<[VectorOfLengthAndType<[16], [F16, BF16, I8, SI8, UI8]>]>;
+def WMMAInTypes : AnyTypeOf<[VectorOfLengthAndType<[8, 16], [F16, BF16, I8, SI8, UI8, F8E4M3FN, F8E5M2]>]>;
 def WMMAOutTypes : AnyTypeOf<[VectorOfLengthAndType<[4, 8], [F32, I32]>,
                               VectorOfLengthAndType<[8, 16], [F16, BF16]>]>;
 

@@ -1,5 +1,7 @@
 ; RUN: opt -S %s -passes=simplifycfg -o - \
 ; RUN: | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -S %s -passes=simplifycfg -o - \
+; RUN: | FileCheck %s
 
 ;; $ cat test.cpp
 ;; class a {};
@@ -31,10 +33,10 @@
 
 ; CHECK: entry:
 ;; -- alloca dbg.assign
-; CHECK: call void @llvm.dbg.assign(metadata i1 undef
+; CHECK: #dbg_assign(i1 undef
 ;; -- sunk dbg.assigns
-; CHECK: call void @llvm.dbg.assign(metadata float undef, metadata ![[var:[0-9]+]], metadata !DIExpression(), metadata ![[id:[0-9]+]], metadata ptr %h, metadata !DIExpression()), !dbg
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata float undef, metadata ![[var]], metadata !DIExpression(), metadata ![[id]], metadata ptr %h, metadata !DIExpression()), !dbg
+; CHECK: #dbg_assign(float undef, ![[var:[0-9]+]], !DIExpression(), ![[id:[0-9]+]], ptr %h, !DIExpression(),
+; CHECK-NEXT: #dbg_assign(float undef, ![[var]], !DIExpression(), ![[id]], ptr %h, !DIExpression(),
 ; CHECK-NEXT: %storemerge.in = getelementptr
 ; CHECK-NEXT: %storemerge = load float
 ; CHECK-NEXT: store float %storemerge, ptr %h, align 4{{.+}}!DIAssignID ![[id]]
@@ -52,7 +54,7 @@ entry:
   %h = alloca float, align 4, !DIAssignID !32
   call void @llvm.dbg.assign(metadata i1 undef, metadata !31, metadata !DIExpression(), metadata !32, metadata ptr %h, metadata !DIExpression()), !dbg !33
   %0 = bitcast ptr %h to ptr, !dbg !34
-  call void @llvm.lifetime.start.p0i8(i64 4, ptr nonnull %0) #4, !dbg !34
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %0) #4, !dbg !34
   call void @_Zml1aRf(ptr nonnull align 4 dereferenceable(4) %h), !dbg !35
   %1 = load float, ptr %h, align 4, !dbg !36
   %tobool = fcmp une float %1, 0.000000e+00, !dbg !36
@@ -70,13 +72,13 @@ if.end:                                           ; preds = %if.else, %if.then
   %storemerge.in = getelementptr inbounds %class.e, ptr %this, i64 0, i32 1, !dbg !45
   %storemerge = load float, ptr %storemerge.in, align 4, !dbg !45
   store float %storemerge, ptr %h, align 4, !dbg !45, !DIAssignID !43
-  call void @llvm.lifetime.end.p0i8(i64 4, ptr nonnull %0) #4, !dbg !48
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %0) #4, !dbg !48
   ret void, !dbg !48
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 declare !dbg !49 dso_local void @_Zml1aRf(ptr nonnull align 4 dereferenceable(4)) local_unnamed_addr #2
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #3
 
 !llvm.dbg.cu = !{!2}

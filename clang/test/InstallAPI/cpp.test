@@ -1,0 +1,530 @@
+// RUN: rm -rf %t
+// RUN: split-file %s %t
+// RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
+
+// Invoke C++ with no-rtti.
+// RUN: clang-installapi -target arm64-apple-macos13.1 \
+// RUN: -I%t/usr/include -I%t/usr/local/include -x c++ -dynamiclib \
+// RUN: -install_name @rpath/lib/libcpp.dylib -fno-rtti \
+// RUN: %t/inputs.json -o %t/no-rtti.tbd 2>&1 | FileCheck %s --allow-empty
+
+// RUN: llvm-readtapi -compare %t/no-rtti.tbd \
+// RUN: %t/expected-no-rtti.tbd 2>&1 | FileCheck %s --allow-empty
+
+// Invoke C++ with rtti.
+// RUN: clang-installapi -target arm64-apple-macos13.1 \
+// RUN: -I%t/usr/include -I%t/usr/local/include -x c++ \
+// RUN: -install_name @rpath/lib/libcpp.dylib -frtti -dynamiclib \
+// RUN: %t/inputs.json -o %t/rtti.tbd 2>&1 | FileCheck %s --allow-empty
+// RUN: llvm-readtapi -compare %t/rtti.tbd \
+// RUN: %t/expected-rtti.tbd 2>&1 | FileCheck %s --allow-empty
+
+// CHECK-NOT: error: 
+// CHECK-NOT: warning: 
+
+//--- usr/include/basic.h
+#ifndef CPP_H
+#define CPP_H
+
+inline int foo(int x) { return x + 1; }
+
+extern int bar(int x) { return x + 1; }
+
+inline int baz(int x) {
+  static const int a[] = {1, 2, 3};
+  return a[x];
+}
+
+extern "C" {
+  int cFunc(const char*);
+}
+
+class Bar {
+public:
+  static const int x = 0;
+  static int y;
+
+  inline int func1(int x) { return x + 2; }
+  inline int func2(int x);
+  int func3(int x);
+};
+
+class __attribute__((visibility("hidden"))) BarI {
+  static const int x = 0;
+  static int y;
+
+  inline int func1(int x) { return x + 2; }
+  inline int func2(int x);
+  int func3(int x);
+};
+
+int Bar::func2(int x) { return x + 3; }
+inline int Bar::func3(int x) { return x + 4; }
+
+int BarI::func2(int x) { return x + 3; }
+inline int BarI::func3(int x) { return x + 4; }
+#endif
+
+//--- usr/local/include/vtable.h
+// Simple test class with no virtual functions. There should be no vtable or
+// RTTI.
+namespace test1 {
+class Simple {
+public:
+  void run();
+};
+} // end namespace test1
+
+// Simple test class with virtual function. There should be an external vtable
+// and RTTI.
+namespace test2 {
+class Simple {
+public:
+  virtual void run();
+};
+} // end namespace test2
+
+// Abstract class with no sub classes. There should be no vtable or RTTI.
+namespace test3 {
+class Abstract {
+public:
+  virtual ~Abstract() {}
+  virtual void run() = 0;
+};
+} // end namespace test3
+
+// Abstract base class with a sub class. There should be weak-def RTTI for the
+// abstract base class.
+// The sub-class should have vtable and RTTI.
+namespace test4 {
+class Base {
+public:
+  virtual ~Base() {}
+  virtual void run() = 0;
+};
+
+class Sub : public Base {
+public:
+  void run() override;
+};
+} // end namespace test4
+
+// Abstract base class with a sub class. Same as above, but with a user defined
+// inlined destructor.
+namespace test5 {
+class Base {
+public:
+  virtual ~Base() {}
+  virtual void run() = 0;
+};
+
+class Sub : public Base {
+public:
+  virtual ~Sub() {}
+  void run() override;
+};
+} // end namespace test5
+
+// Abstract base class with a sub class. Same as above, but with a different
+// inlined key method.
+namespace test6 {
+class Base {
+public:
+  virtual ~Base() {}
+  virtual void run() = 0;
+};
+
+class Sub : public Base {
+public:
+  virtual void foo() {}
+  void run() override;
+};
+} // end namespace test6
+
+// Abstract base class with a sub class. Overloaded method is implemented
+// inline. No vtable or RTTI.
+namespace test7 {
+class Base {
+public:
+  virtual ~Base() {}
+  virtual bool run() = 0;
+};
+
+class Sub : public Base {
+public:
+  bool run() override { return true; }
+};
+} // end namespace test7
+
+// Abstract base class with a sub class. Overloaded method has no inline
+// attribute and is recognized as key method,
+// but is later implemented inline. Weak-def RTTI only.
+namespace test8 {
+class Base {
+public:
+  virtual ~Base() {}
+  virtual void run() = 0;
+};
+
+class Sub : public Base {
+public:
+  void run() override;
+};
+
+inline void Sub::run() {}
+} // end namespace test8
+
+namespace test9 {
+class Base {
+public:
+  virtual ~Base() {}
+  virtual void run1() = 0;
+  virtual void run2() = 0;
+};
+
+class Sub : public Base {
+public:
+  void run1() override {}
+  void run2() override;
+};
+
+inline void Sub::run2() {}
+} // end namespace test9
+
+namespace test10 {
+class Base {
+public:
+  virtual ~Base() {}
+  virtual void run1() = 0;
+  virtual void run2() = 0;
+};
+
+class Sub : public Base {
+public:
+  void run1() override {}
+  inline void run2() override;
+};
+
+void Sub::run2() {}
+} // end namespace test10
+
+namespace test11 {
+class Base {
+public:
+  virtual ~Base() {}
+  virtual void run1() = 0;
+  virtual void run2() = 0;
+  virtual void run3() = 0;
+};
+
+class Sub : public Base {
+public:
+  void run1() override {}
+  void run2() override;
+  void run3() override;
+};
+
+inline void Sub::run2() {}
+} // end namespace test11
+
+namespace test12 {
+template <class T> class Simple {
+public:
+  virtual void foo() {}
+};
+extern template class Simple<int>;
+} // end namespace test12
+
+namespace test13 {
+class Base {
+public:
+  virtual ~Base() {}
+  virtual void run1() = 0;
+  virtual void run2() {};
+  virtual void run3(); // key function.
+};
+
+class Sub : public Base {
+public:
+  void run1() override {}
+  void run2() override {}
+};
+
+} // end namespace test13
+
+namespace test14 {
+
+class __attribute__((visibility("hidden"))) Base
+{
+public:
+    Base() {}
+    virtual ~Base(); // keyfunction.
+    virtual void run1() const = 0;
+};
+
+class Sub : public Base
+{
+public:
+    Sub();
+    virtual ~Sub();
+    virtual void run1() const;
+    void run2() const {}
+};
+
+} // end namespace test14
+
+namespace test15 {
+
+class Base {
+public:
+  virtual ~Base() {}
+  virtual void run() {};
+};
+
+class Base1 {
+public:
+  virtual ~Base1() {}
+  virtual void run1() {};
+};
+
+class Sub : public Base, public Base1 {
+public:
+  Sub() {}
+  ~Sub();
+  void run() override;
+  void run1() override;
+};
+
+class Sub1 : public Base, public Base1 {
+public:
+  Sub1() {}
+  ~Sub1() = default;
+  void run() override;
+  void run1() override;
+};
+
+} // end namespace test15
+
+//--- usr/local/include/templates.h
+#ifndef TEMPLATES_H
+#define TEMPLATES_H
+
+namespace templates {
+
+// Full specialization.
+template <class T> int foo1(T a) { return 1; }
+template <> int foo1<int>(int a);
+extern template int foo1<short>(short a);
+
+template <class T> int foo2(T a);
+
+// Partial specialization.
+template <class A, class B> class Partial {
+  static int run(A a, B b) { return a + b; }
+};
+
+template <class A> class Partial<A, int> {
+  static int run(A a, int b) { return a - b; }
+};
+
+template <class T> class Foo {
+public:
+  Foo();
+  ~Foo();
+};
+
+template <class T> class Bar {
+public:
+  Bar();
+  ~Bar() {}
+
+  inline int bazinga() { return 7; }
+};
+
+extern template class Bar<int>;
+
+class Bazz {
+public:
+  Bazz() {}
+
+  template <class T> int buzz(T a);
+
+  float implicit() const { return foo1(0.0f); }
+};
+
+template <class T> int Bazz::buzz(T a) { return sizeof(T); }
+
+template <class T> struct S { static int x; };
+
+template <class T> int S<T>::x = 0;
+
+} // end namespace templates.
+
+#endif
+
+
+//--- inputs.json.in
+{
+  "headers": [ {
+    "path" : "DSTROOT/usr/include/basic.h",
+    "type" : "public"
+  }, 
+  {
+    "path" : "DSTROOT/usr/local/include/vtable.h",
+    "type" : "private"
+  },
+  {
+    "path" : "DSTROOT/usr/local/include/templates.h",
+    "type" : "private"
+  }
+  ],
+  "version": "3"
+}
+
+//--- expected-no-rtti.tbd
+{
+  "main_library": {
+    "compatibility_versions": [
+      {
+        "version": "0"
+      }
+    ],
+    "current_versions": [
+      {
+        "version": "0"
+      }
+    ],
+    "exported_symbols": [
+      {
+        "data": {
+          "global": [
+            "__ZTVN6test143SubE", "__ZTVN6test113SubE", "__ZTVN5test26SimpleE",
+            "__ZTVN5test53SubE", "__ZTVN6test154Sub1E", "__ZTVN6test153SubE",
+            "__ZN3Bar1yE", "__ZTVN5test43SubE", "__ZTVN5test63SubE",
+            "__ZTVN6test134BaseE"
+          ],
+          "weak": [
+            "__ZTVN6test126SimpleIiEE"
+          ]
+        },
+        "text": {
+          "global": [
+            "__ZN6test153Sub3runEv", "__ZN6test154Sub13runEv",
+            "__Z3bari", "__ZThn8_N6test153SubD1Ev",
+            "__ZNK6test143Sub4run1Ev", "__ZN6test154Sub14run1Ev",
+            "__ZThn8_N6test153Sub4run1Ev", "__ZN6test143SubD1Ev",
+            "__ZN6test134Base4run3Ev", "__ZN5test16Simple3runEv",
+            "__ZN5test43Sub3runEv", "__ZN6test113Sub4run3Ev", "__ZN6test153SubD2Ev",
+            "__ZN5test53Sub3runEv", "__ZN6test153SubD1Ev", "__ZN6test143SubC1Ev",
+            "__ZN9templates4foo1IiEEiT_", "__ZN6test143SubC2Ev", "__ZN5test63Sub3runEv",
+            "__ZN5test26Simple3runEv", "__ZN6test153SubD0Ev",
+            "__ZN6test143SubD2Ev", "__ZN6test153Sub4run1Ev", "__ZN6test143SubD0Ev",
+            "__ZThn8_N6test153SubD0Ev", "__ZThn8_N6test154Sub14run1Ev", "_cFunc"
+          ],
+          "weak": [
+            "__ZN9templates3BarIiED2Ev", "__ZN9templates3BarIiEC2Ev",
+            "__ZN9templates3BarIiEC1Ev", "__ZN9templates3BarIiED1Ev",
+            "__ZN6test126SimpleIiE3fooEv", "__ZN9templates3BarIiE7bazingaEv",
+            "__ZN9templates4foo1IsEEiT_"
+          ]
+        }
+      }
+    ],
+    "flags": [
+      {
+        "attributes": [
+          "not_app_extension_safe"
+        ]
+      }
+    ],
+    "install_names": [
+      {
+        "name": "@rpath/lib/libcpp.dylib"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "13.1",
+        "target": "arm64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}
+
+//--- expected-rtti.tbd
+{
+  "main_library": {
+    "compatibility_versions": [
+      {
+        "version": "0"
+      }
+    ],
+    "current_versions": [
+      {
+        "version": "0"
+      }
+    ],
+    "exported_symbols": [
+      {
+        "data": {
+          "global": [
+            "__ZTVN6test143SubE", "__ZTIN5test63SubE", "__ZTSN5test26SimpleE",
+            "__ZTIN6test153SubE", "__ZTVN6test113SubE", "__ZTIN5test43SubE",
+            "__ZTIN6test134BaseE", "__ZTVN5test26SimpleE", "__ZTIN5test26SimpleE",
+            "__ZTSN6test134BaseE", "__ZTVN6test154Sub1E", "__ZTVN5test43SubE",
+            "__ZTVN5test63SubE", "__ZTSN5test43SubE", "__ZTSN6test113SubE",
+            "__ZTIN6test154Sub1E", "__ZTSN6test153SubE", "__ZTSN5test63SubE",
+            "__ZTSN6test154Sub1E", "__ZTIN6test113SubE", "__ZTSN6test143SubE",
+            "__ZTVN5test53SubE", "__ZTIN6test143SubE", "__ZTVN6test153SubE",
+            "__ZTIN5test53SubE", "__ZN3Bar1yE", "__ZTVN6test134BaseE",
+            "__ZTSN5test53SubE"
+          ],
+          "weak": [
+            "__ZTVN6test126SimpleIiEE"
+          ]
+        },
+        "text": {
+          "global": [
+            "__ZN6test154Sub13runEv", "__ZN6test153Sub3runEv", "__ZNK6test143Sub4run1Ev",
+            "__ZN6test134Base4run3Ev", "__ZN5test16Simple3runEv", "__ZN6test153SubD2Ev",
+            "__ZN6test143SubC2Ev", "__ZN5test63Sub3runEv", "__ZN6test153SubD0Ev", 
+            "__ZN6test143SubD2Ev", "__ZThn8_N6test154Sub14run1Ev",
+            "__ZThn8_N6test153SubD0Ev", "__Z3bari", "__ZThn8_N6test153SubD1Ev",
+            "__ZN6test154Sub14run1Ev", "__ZThn8_N6test153Sub4run1Ev",
+            "__ZN6test143SubD1Ev", "__ZN5test43Sub3runEv",
+            "__ZN6test113Sub4run3Ev", "__ZN5test53Sub3runEv", "__ZN6test143SubC1Ev",
+            "__ZN6test153SubD1Ev", "__ZN9templates4foo1IiEEiT_", "__ZN5test26Simple3runEv",
+            "__ZN6test153Sub4run1Ev", "__ZN6test143SubD0Ev", "_cFunc"
+          ],
+          "weak": [
+            "__ZN9templates3BarIiEC2Ev", "__ZN9templates3BarIiEC1Ev",
+            "__ZN9templates3BarIiED1Ev", "__ZN6test126SimpleIiE3fooEv",
+            "__ZN9templates4foo1IsEEiT_", "__ZN9templates3BarIiED2Ev",
+            "__ZN9templates3BarIiE7bazingaEv"
+          ]
+        }
+      }
+    ],
+    "flags": [
+      {
+        "attributes": [
+          "not_app_extension_safe"
+        ]
+      }
+    ],
+    "install_names": [
+      {
+        "name": "@rpath/lib/libcpp.dylib"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "13.1",
+        "target": "arm64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}
+

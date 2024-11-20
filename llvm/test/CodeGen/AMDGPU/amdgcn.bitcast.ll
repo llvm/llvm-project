@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -amdgpu-codegenprepare-break-large-phis-threshold=4096 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -amdgpu-codegenprepare-break-large-phis-threshold=4096 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -amdgpu-codegenprepare-break-large-phis-threshold=4096 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-codegenprepare-break-large-phis-threshold=4096 < %s | FileCheck %s
 
 ; This test just checks that the compiler doesn't crash.
 
@@ -855,5 +855,1260 @@ if:
 end:
   %phi_cast = phi <30 x i32> [zeroinitializer, %entry], [%cast, %if]
   store <30 x i32> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v2bf16_to_i32:
+define void @v_bitcast_v2bf16_to_i32(i32 %cond, ptr addrspace(1) %out, <2 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <2 x bfloat> %value to i32
+  br label %end
+
+end:
+  %phi = phi i32 [0, %entry], [%cast, %if]
+  store i32 %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v2bf16_to_v2i16:
+define void @v_bitcast_v2bf16_to_v2i16(i32 %cond, ptr addrspace(1) %out, <2 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <2 x bfloat> %value to <2 x i16>
+  br label %end
+
+end:
+  %phi = phi <2 x i16> [zeroinitializer, %entry], [%cast, %if]
+  store <2 x i16> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v2bf16_to_v2f16:
+define void @v_bitcast_v2bf16_to_v2f16(i32 %cond, ptr addrspace(1) %out, <2 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <2 x bfloat> %value to <2 x half>
+  br label %end
+
+end:
+  %phi = phi <2 x half> [zeroinitializer, %entry], [%cast, %if]
+  store <2 x half> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v2bf16_to_v4i8:
+define void @v_bitcast_v2bf16_to_v4i8(i32 %cond, ptr addrspace(1) %out, <2 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <2 x bfloat> %value to <4 x i8>
+  br label %end
+
+end:
+  %phi = phi <4 x i8> [zeroinitializer, %entry], [%cast, %if]
+  store <4 x i8> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v3bf16_to_v3i16:
+define void @v_bitcast_v3bf16_to_v3i16(i32 %cond, ptr addrspace(1) %out, <3 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <3 x bfloat> %value to <3 x i16>
+  br label %end
+
+end:
+  %phi = phi <3 x i16> [zeroinitializer, %entry], [%cast, %if]
+  store <3 x i16> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v3bf16_to_v3f16:
+define void @v_bitcast_v3bf16_to_v3f16(i32 %cond, ptr addrspace(1) %out, <3 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <3 x bfloat> %value to <3 x half>
+  br label %end
+
+end:
+  %phi = phi <3 x half> [zeroinitializer, %entry], [%cast, %if]
+  store <3 x half> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_i32_to_v2bf16:
+define void @v_bitcast_i32_to_v2bf16(i32 %cond, ptr addrspace(1) %out, i32 %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast i32 %value to <2 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <2 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <2 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v2i16_to_v2bf16:
+define void @v_bitcast_v2i16_to_v2bf16(i32 %cond, ptr addrspace(1) %out, <2 x i16> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <2 x i16> %value to <2 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <2 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <2 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v2f16_to_v2bf16:
+define void @v_bitcast_v2f16_to_v2bf16(i32 %cond, ptr addrspace(1) %out, <2 x half> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <2 x half> %value to <2 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <2 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <2 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v4i8_to_v2bf16:
+define void @v_bitcast_v4i8_to_v2bf16(i32 %cond, ptr addrspace(1) %out, <4 x i8> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <4 x i8> %value to <2 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <2 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <2 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v3i16_to_v3bf16:
+define void @v_bitcast_v3i16_to_v3bf16(i32 %cond, ptr addrspace(1) %out, <3 x i16> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <3 x i16> %value to <3 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <3 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <3 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v4bf16_to_v4f16:
+define void @v_bitcast_v4bf16_to_v4f16(i32 %cond, ptr addrspace(1) %out, <4 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <4 x bfloat> %value to <4 x half>
+  br label %end
+
+end:
+  %phi = phi <4 x half> [zeroinitializer, %entry], [%cast, %if]
+  store <4 x half> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v4bf16_to_v4i16:
+define void @v_bitcast_v4bf16_to_v4i16(i32 %cond, ptr addrspace(1) %out, <4 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <4 x bfloat> %value to <4 x i16>
+  br label %end
+
+end:
+  %phi = phi <4 x i16> [zeroinitializer, %entry], [%cast, %if]
+  store <4 x i16> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v4bf16_to_v2i32:
+define void @v_bitcast_v4bf16_to_v2i32(i32 %cond, ptr addrspace(1) %out, <4 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <4 x bfloat> %value to <2 x i32>
+  br label %end
+
+end:
+  %phi = phi <2 x i32> [zeroinitializer, %entry], [%cast, %if]
+  store <2 x i32> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v4bf16_to_v2f32:
+define void @v_bitcast_v4bf16_to_v2f32(i32 %cond, ptr addrspace(1) %out, <4 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <4 x bfloat> %value to <2 x float>
+  br label %end
+
+end:
+  %phi = phi <2 x float> [zeroinitializer, %entry], [%cast, %if]
+  store <2 x float> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v4bf16_to_f64:
+define void @v_bitcast_v4bf16_to_f64(i32 %cond, ptr addrspace(1) %out, <4 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <4 x bfloat> %value to double
+  br label %end
+
+end:
+  %phi = phi double [0.0, %entry], [%cast, %if]
+  store double %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v4bf16_to_i64:
+define void @v_bitcast_v4bf16_to_i64(i32 %cond, ptr addrspace(1) %out, <4 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <4 x bfloat> %value to i64
+  br label %end
+
+end:
+  %phi = phi i64 [0, %entry], [%cast, %if]
+  store i64 %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v4bf16_to_v8i8:
+define void @v_bitcast_v4bf16_to_v8i8(i32 %cond, ptr addrspace(1) %out, <4 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <4 x bfloat> %value to <8 x i8>
+  br label %end
+
+end:
+  %phi = phi <8 x i8> [zeroinitializer, %entry], [%cast, %if]
+  store <8 x i8> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_i64_to_v4bf16:
+define void @v_bitcast_i64_to_v4bf16(i32 %cond, ptr addrspace(1) %out, i64 %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast i64 %value to <4 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <4 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <4 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v2f32_to_v4bf16:
+define void @v_bitcast_v2f32_to_v4bf16(i32 %cond, ptr addrspace(1) %out, <2 x float> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <2 x float> %value to <4 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <4 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <4 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v2i32_to_v4bf16:
+define void @v_bitcast_v2i32_to_v4bf16(i32 %cond, ptr addrspace(1) %out, <2 x i32> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <2 x i32> %value to <4 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <4 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <4 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v4i16_to_v4bf16:
+define void @v_bitcast_v4i16_to_v4bf16(i32 %cond, ptr addrspace(1) %out, <4 x i16> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <4 x i16> %value to <4 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <4 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <4 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v4f16_to_v4bf16:
+define void @v_bitcast_v4f16_to_v4bf16(i32 %cond, ptr addrspace(1) %out, <4 x half> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <4 x half> %value to <4 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <4 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <4 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v6bf16_to_v6i16:
+define void @v_bitcast_v6bf16_to_v6i16(i32 %cond, ptr addrspace(1) %out, <6 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <6 x bfloat> %value to <6 x i16>
+  br label %end
+
+end:
+  %phi = phi <6 x i16> [zeroinitializer, %entry], [%cast, %if]
+  store <6 x i16> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v6bf16_to_v6f16:
+define void @v_bitcast_v6bf16_to_v6f16(i32 %cond, ptr addrspace(1) %out, <6 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <6 x bfloat> %value to <6 x half>
+  br label %end
+
+end:
+  %phi = phi <6 x half> [zeroinitializer, %entry], [%cast, %if]
+  store <6 x half> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v6bf16_to_v12i8:
+define void @v_bitcast_v6bf16_to_v12i8(i32 %cond, ptr addrspace(1) %out, <6 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <6 x bfloat> %value to <12 x i8>
+  br label %end
+
+end:
+  %phi = phi <12 x i8> [zeroinitializer, %entry], [%cast, %if]
+  store <12 x i8> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v6f16_to_v6bf16:
+define void @v_bitcast_v6f16_to_v6bf16(i32 %cond, ptr addrspace(1) %out, <6 x half> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <6 x half> %value to <6 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <6 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <6 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v6i16_to_v6bf16:
+define void @v_bitcast_v6i16_to_v6bf16(i32 %cond, ptr addrspace(1) %out, <6 x i16> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <6 x i16> %value to <6 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <6 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <6 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v12i8_to_v6bf16:
+define void @v_bitcast_v12i8_to_v6bf16(i32 %cond, ptr addrspace(1) %out, <12 x i8> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <12 x i8> %value to <6 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <6 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <6 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v8bf16_to_v2f64:
+define void @v_bitcast_v8bf16_to_v2f64(i32 %cond, ptr addrspace(1) %out, <8 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <8 x bfloat> %value to <2 x double>
+  br label %end
+
+end:
+  %phi = phi <2 x double> [zeroinitializer, %entry], [%cast, %if]
+  store <2 x double> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v8bf16_to_v2i64:
+define void @v_bitcast_v8bf16_to_v2i64(i32 %cond, ptr addrspace(1) %out, <8 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <8 x bfloat> %value to <2 x i64>
+  br label %end
+
+end:
+  %phi = phi <2 x i64> [zeroinitializer, %entry], [%cast, %if]
+  store <2 x i64> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v8bf16_to_v4f32:
+define void @v_bitcast_v8bf16_to_v4f32(i32 %cond, ptr addrspace(1) %out, <8 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <8 x bfloat> %value to <4 x float>
+  br label %end
+
+end:
+  %phi = phi <4 x float> [zeroinitializer, %entry], [%cast, %if]
+  store <4 x float> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v8bf16_to_v4i32:
+define void @v_bitcast_v8bf16_to_v4i32(i32 %cond, ptr addrspace(1) %out, <8 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <8 x bfloat> %value to <4 x i32>
+  br label %end
+
+end:
+  %phi = phi <4 x i32> [zeroinitializer, %entry], [%cast, %if]
+  store <4 x i32> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v8bf16_to_v8f16:
+define void @v_bitcast_v8bf16_to_v8f16(i32 %cond, ptr addrspace(1) %out, <8 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <8 x bfloat> %value to <8 x half>
+  br label %end
+
+end:
+  %phi = phi <8 x half> [zeroinitializer, %entry], [%cast, %if]
+  store <8 x half> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v8bf16_to_v8i16:
+define void @v_bitcast_v8bf16_to_v8i16(i32 %cond, ptr addrspace(1) %out, <8 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <8 x bfloat> %value to <8 x i16>
+  br label %end
+
+end:
+  %phi = phi <8 x i16> [zeroinitializer, %entry], [%cast, %if]
+  store <8 x i16> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v8f16_to_v8bf16:
+define void @v_bitcast_v8f16_to_v8bf16(i32 %cond, ptr addrspace(1) %out, <8 x half> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <8 x half> %value to <8 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <8 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <8 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v8i16_to_v8bf16:
+define void @v_bitcast_v8i16_to_v8bf16(i32 %cond, ptr addrspace(1) %out, <8 x i16> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <8 x i16> %value to <8 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <8 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <8 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v16i8_to_v8bf16:
+define void @v_bitcast_v16i8_to_v8bf16(i32 %cond, ptr addrspace(1) %out, <16 x i8> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <16 x i8> %value to <8 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <8 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <8 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v2i64_to_v8bf16:
+define void @v_bitcast_v2i64_to_v8bf16(i32 %cond, ptr addrspace(1) %out, <2 x i64> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <2 x i64> %value to <8 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <8 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <8 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v2f64_to_v8bf16:
+define void @v_bitcast_v2f64_to_v8bf16(i32 %cond, ptr addrspace(1) %out, <2 x double> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <2 x double> %value to <8 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <8 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <8 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v4i32_to_v8bf16:
+define void @v_bitcast_v4i32_to_v8bf16(i32 %cond, ptr addrspace(1) %out, <4 x i32> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <4 x i32> %value to <8 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <8 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <8 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v4f32_to_v8bf16:
+define void @v_bitcast_v4f32_to_v8bf16(i32 %cond, ptr addrspace(1) %out, <4 x float> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <4 x float> %value to <8 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <8 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <8 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v16bf16_to_v16i16:
+define void @v_bitcast_v16bf16_to_v16i16(i32 %cond, ptr addrspace(1) %out, <16 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <16 x bfloat> %value to <16 x i16>
+  br label %end
+
+end:
+  %phi = phi <16 x i16> [zeroinitializer, %entry], [%cast, %if]
+  store <16 x i16> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v16bf16_to_v16f16:
+define void @v_bitcast_v16bf16_to_v16f16(i32 %cond, ptr addrspace(1) %out, <16 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <16 x bfloat> %value to <16 x half>
+  br label %end
+
+end:
+  %phi = phi <16 x half> [zeroinitializer, %entry], [%cast, %if]
+  store <16 x half> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v16bf16_to_v8i32:
+define void @v_bitcast_v16bf16_to_v8i32(i32 %cond, ptr addrspace(1) %out, <16 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <16 x bfloat> %value to <8 x i32>
+  br label %end
+
+end:
+  %phi = phi <8 x i32> [zeroinitializer, %entry], [%cast, %if]
+  store <8 x i32> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v16bf16_to_v8f32:
+define void @v_bitcast_v16bf16_to_v8f32(i32 %cond, ptr addrspace(1) %out, <16 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <16 x bfloat> %value to <8 x float>
+  br label %end
+
+end:
+  %phi = phi <8 x float> [zeroinitializer, %entry], [%cast, %if]
+  store <8 x float> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v16bf16_to_v4f64:
+define void @v_bitcast_v16bf16_to_v4f64(i32 %cond, ptr addrspace(1) %out, <16 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <16 x bfloat> %value to <4 x double>
+  br label %end
+
+end:
+  %phi = phi <4 x double> [zeroinitializer, %entry], [%cast, %if]
+  store <4 x double> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v16bf16_to_v4i64:
+define void @v_bitcast_v16bf16_to_v4i64(i32 %cond, ptr addrspace(1) %out, <16 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <16 x bfloat> %value to <4 x i64>
+  br label %end
+
+end:
+  %phi = phi <4 x i64> [zeroinitializer, %entry], [%cast, %if]
+  store <4 x i64> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v16bf16_to_v32i8:
+define void @v_bitcast_v16bf16_to_v32i8(i32 %cond, ptr addrspace(1) %out, <16 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <16 x bfloat> %value to <32 x i8>
+  br label %end
+
+end:
+  %phi = phi <32 x i8> [zeroinitializer, %entry], [%cast, %if]
+  store <32 x i8> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v8f32_to_v16bf16:
+define void @v_bitcast_v8f32_to_v16bf16(i32 %cond, ptr addrspace(1) %out, <8 x float> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <8 x float> %value to <16 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <16 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <16 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v8i32_to_v16bf16:
+define void @v_bitcast_v8i32_to_v16bf16(i32 %cond, ptr addrspace(1) %out, <8 x i32> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <8 x i32> %value to <16 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <16 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <16 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v4i64_to_v16bf16:
+define void @v_bitcast_v4i64_to_v16bf16(i32 %cond, ptr addrspace(1) %out, <4 x i64> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <4 x i64> %value to <16 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <16 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <16 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v4f64_to_v16bf16:
+define void @v_bitcast_v4f64_to_v16bf16(i32 %cond, ptr addrspace(1) %out, <4 x double> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <4 x double> %value to <16 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <16 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <16 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v32i8_to_v16bf16:
+define void @v_bitcast_v32i8_to_v16bf16(i32 %cond, ptr addrspace(1) %out, <32 x i8> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <32 x i8> %value to <16 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <16 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <16 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v32bf16_to_v8i64:
+define void @v_bitcast_v32bf16_to_v8i64(i32 %cond, ptr addrspace(1) %out, <32 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <32 x bfloat> %value to <8 x i64>
+  br label %end
+
+end:
+  %phi = phi <8 x i64> [zeroinitializer, %entry], [%cast, %if]
+  store <8 x i64> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v32bf16_to_v8f64:
+define void @v_bitcast_v32bf16_to_v8f64(i32 %cond, ptr addrspace(1) %out, <32 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <32 x bfloat> %value to <8 x double>
+  br label %end
+
+end:
+  %phi = phi <8 x double> [zeroinitializer, %entry], [%cast, %if]
+  store <8 x double> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v32bf16_to_v16i32:
+define void @v_bitcast_v32bf16_to_v16i32(i32 %cond, ptr addrspace(1) %out, <32 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <32 x bfloat> %value to <16 x i32>
+  br label %end
+
+end:
+  %phi = phi <16 x i32> [zeroinitializer, %entry], [%cast, %if]
+  store <16 x i32> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v32bf16_to_v16f32:
+define void @v_bitcast_v32bf16_to_v16f32(i32 %cond, ptr addrspace(1) %out, <32 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <32 x bfloat> %value to <16 x float>
+  br label %end
+
+end:
+  %phi = phi <16 x float> [zeroinitializer, %entry], [%cast, %if]
+  store <16 x float> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v32bf16_to_v32f16:
+define void @v_bitcast_v32bf16_to_v32f16(i32 %cond, ptr addrspace(1) %out, <32 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <32 x bfloat> %value to <32 x half>
+  br label %end
+
+end:
+  %phi = phi <32 x half> [zeroinitializer, %entry], [%cast, %if]
+  store <32 x half> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v32bf16_to_v32i16:
+define void @v_bitcast_v32bf16_to_v32i16(i32 %cond, ptr addrspace(1) %out, <32 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <32 x bfloat> %value to <32 x i16>
+  br label %end
+
+end:
+  %phi = phi <32 x i16> [zeroinitializer, %entry], [%cast, %if]
+  store <32 x i16> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v32bf16_to_v64i8:
+define void @v_bitcast_v32bf16_to_v64i8(i32 %cond, ptr addrspace(1) %out, <32 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <32 x bfloat> %value to <64 x i8>
+  br label %end
+
+end:
+  %phi = phi <64 x i8> [zeroinitializer, %entry], [%cast, %if]
+  store <64 x i8> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v64i8_to_v32bf16:
+define void @v_bitcast_v64i8_to_v32bf16(i32 %cond, ptr addrspace(1) %out, <64 x i8> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <64 x i8> %value to <32 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <32 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <32 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v32i16_to_v32bf16:
+define void @v_bitcast_v32i16_to_v32bf16(i32 %cond, ptr addrspace(1) %out, <32 x i16> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <32 x i16> %value to <32 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <32 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <32 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v32f16_to_v32bf16:
+define void @v_bitcast_v32f16_to_v32bf16(i32 %cond, ptr addrspace(1) %out, <32 x half> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <32 x half> %value to <32 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <32 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <32 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v16i32_to_v32bf16:
+define void @v_bitcast_v16i32_to_v32bf16(i32 %cond, ptr addrspace(1) %out, <16 x i32> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <16 x i32> %value to <32 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <32 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <32 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v16f32_to_v32bf16:
+define void @v_bitcast_v16f32_to_v32bf16(i32 %cond, ptr addrspace(1) %out, <16 x float> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <16 x float> %value to <32 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <32 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <32 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v8f64_to_v32bf16:
+define void @v_bitcast_v8f64_to_v32bf16(i32 %cond, ptr addrspace(1) %out, <8 x double> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <8 x double> %value to <32 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <32 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <32 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v8i64_to_v32bf16:
+define void @v_bitcast_v8i64_to_v32bf16(i32 %cond, ptr addrspace(1) %out, <8 x i64> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <8 x i64> %value to <32 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <32 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <32 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+
+
+
+
+
+
+
+; CHECK-LABEL: {{^}}v_bitcast_v32f32_to_v64bf16:
+define void @v_bitcast_v32f32_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <32 x float> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <32 x float> %value to <64 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <64 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <64 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v32i32_to_v64bf16:
+define void @v_bitcast_v32i32_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <32 x i32> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <32 x i32> %value to <64 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <64 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <64 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v64i16_to_v64bf16:
+define void @v_bitcast_v64i16_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <64 x i16> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <64 x i16> %value to <64 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <64 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <64 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v64f16_to_v64bf16:
+define void @v_bitcast_v64f16_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <64 x half> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <64 x half> %value to <64 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <64 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <64 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v128i8_to_v64bf16:
+define void @v_bitcast_v128i8_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <128 x i8> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <128 x i8> %value to <64 x bfloat>
+  br label %end
+
+end:
+  %phi = phi <64 x bfloat> [zeroinitializer, %entry], [%cast, %if]
+  store <64 x bfloat> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v64bf16_to_v64i16:
+define void @v_bitcast_v64bf16_to_v64i16(i32 %cond, ptr addrspace(1) %out, <64 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <64 x bfloat> %value to <64 x i16>
+  br label %end
+
+end:
+  %phi = phi <64 x i16> [zeroinitializer, %entry], [%cast, %if]
+  store <64 x i16> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v64bf16_to_v64f16:
+define void @v_bitcast_v64bf16_to_v64f16(i32 %cond, ptr addrspace(1) %out, <64 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <64 x bfloat> %value to <64 x half>
+  br label %end
+
+end:
+  %phi = phi <64 x half> [zeroinitializer, %entry], [%cast, %if]
+  store <64 x half> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v64bf16_to_v128i8:
+define void @v_bitcast_v64bf16_to_v128i8(i32 %cond, ptr addrspace(1) %out, <64 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <64 x bfloat> %value to <128 x i8>
+  br label %end
+
+end:
+  %phi = phi <128 x i8> [zeroinitializer, %entry], [%cast, %if]
+  store <128 x i8> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v64bf16_to_v16i64:
+define void @v_bitcast_v64bf16_to_v16i64(i32 %cond, ptr addrspace(1) %out, <64 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <64 x bfloat> %value to <16 x i64>
+  br label %end
+
+end:
+  %phi = phi <16 x i64> [zeroinitializer, %entry], [%cast, %if]
+  store <16 x i64> %phi, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v64bf16_to_v16f64:
+define void @v_bitcast_v64bf16_to_v16f64(i32 %cond, ptr addrspace(1) %out, <64 x bfloat> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <64 x bfloat> %value to <16 x double>
+  br label %end
+
+end:
+  %phi = phi <16 x double> [zeroinitializer, %entry], [%cast, %if]
+  store <16 x double> %phi, ptr addrspace(1) %out
   ret void
 }

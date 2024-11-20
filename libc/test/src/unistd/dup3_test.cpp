@@ -16,6 +16,8 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
+#include <sys/stat.h>
+
 // The tests here are exactly the same as those of dup2. We only test the
 // plumbing of the dup3 syscall and not the dup3 functionality itself as it is
 // a simple syscall wrapper. Testing dup3 functionality is beyond the scope of
@@ -23,15 +25,16 @@
 
 TEST(LlvmLibcdupTest, ReadAndWriteViaDup) {
   constexpr int DUPFD = 0xD0;
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *TEST_FILE = "testdata/dup3.test";
+  constexpr const char *FILENAME = "dup3.test";
+  auto TEST_FILE = libc_make_test_file_path(FILENAME);
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
   int dupfd = LIBC_NAMESPACE::dup3(fd, DUPFD, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(dupfd, DUPFD);
 
   // Write something via the dup
@@ -43,10 +46,10 @@ TEST(LlvmLibcdupTest, ReadAndWriteViaDup) {
 
   // Reopen the file for reading and create a dup.
   fd = LIBC_NAMESPACE::open(TEST_FILE, O_RDONLY);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
   dupfd = LIBC_NAMESPACE::dup3(fd, DUPFD, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(dupfd, DUPFD);
 
   // Read the file content via the dup.

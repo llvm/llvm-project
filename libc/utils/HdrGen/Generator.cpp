@@ -57,14 +57,15 @@ void Generator::parseCommandArgs(llvm::StringRef ArgStr, ArgVector &Args) {
   ArgStr.split(Args, ",");
   for (llvm::StringRef &A : Args) {
     A = A.trim(' ');
-    if (A.startswith(ParamNamePrefix) && A.endswith(ParamNameSuffix)) {
+    if (A.starts_with(ParamNamePrefix) && A.ends_with(ParamNameSuffix)) {
       A = A.drop_front(ParamNamePrefixSize).drop_back(ParamNameSuffixSize);
       A = ArgMap[std::string(A)];
     }
   }
 }
 
-void Generator::generate(llvm::raw_ostream &OS, llvm::RecordKeeper &Records) {
+void Generator::generate(llvm::raw_ostream &OS,
+                         const llvm::RecordKeeper &Records) {
   auto DefFileBuffer = llvm::MemoryBuffer::getFile(HeaderDefFile);
   if (!DefFileBuffer) {
     llvm::errs() << "Unable to open " << HeaderDefFile << ".\n";
@@ -80,15 +81,23 @@ void Generator::generate(llvm::raw_ostream &OS, llvm::RecordKeeper &Records) {
     Content = P.second;
 
     llvm::StringRef Line = P.first.trim(' ');
-    if (Line.startswith(CommandPrefix)) {
+    if (Line.starts_with(CommandPrefix)) {
       Line = Line.drop_front(CommandPrefixSize);
 
       P = Line.split("(");
+      // It's possible that we have windows line endings, so strip off the extra
+      // CR.
+      P.second = P.second.trim();
       if (P.second.empty() || P.second[P.second.size() - 1] != ')') {
         SrcMgr.PrintMessage(llvm::SMLoc::getFromPointer(P.second.data()),
                             llvm::SourceMgr::DK_Error,
                             "Command argument list should begin with '(' "
                             "and end with ')'.");
+        SrcMgr.PrintMessage(llvm::SMLoc::getFromPointer(P.second.data()),
+                            llvm::SourceMgr::DK_Error, P.second.data());
+        SrcMgr.PrintMessage(llvm::SMLoc::getFromPointer(P.second.data()),
+                            llvm::SourceMgr::DK_Error,
+                            std::to_string(P.second.size()));
         std::exit(1);
       }
       llvm::StringRef CommandName = P.first;
@@ -107,7 +116,7 @@ void Generator::generate(llvm::raw_ostream &OS, llvm::RecordKeeper &Records) {
       Command::ErrorReporter Reporter(
           llvm::SMLoc::getFromPointer(CommandName.data()), SrcMgr);
       Cmd->run(OS, Args, StdHeader, Records, Reporter);
-    } else if (!Line.startswith(CommentPrefix)) {
+    } else if (!Line.starts_with(CommentPrefix)) {
       // There is no comment or command on this line so we just write it as is.
       OS << P.first << "\n";
     }
@@ -118,7 +127,7 @@ void Generator::generate(llvm::raw_ostream &OS, llvm::RecordKeeper &Records) {
 }
 
 void Generator::generateDecls(llvm::raw_ostream &OS,
-                              llvm::RecordKeeper &Records) {
+                              const llvm::RecordKeeper &Records) {
 
   OS << "//===-- C standard declarations for " << StdHeader << " "
      << std::string(80 - (42 + StdHeader.size()), '-') << "===//\n"
@@ -153,15 +162,15 @@ void Generator::generateDecls(llvm::raw_ostream &OS,
     if (G.FunctionSpecMap.find(Name) == G.FunctionSpecMap.end())
       continue;
 
-    llvm::Record *FunctionSpec = G.FunctionSpecMap[Name];
-    llvm::Record *RetValSpec = FunctionSpec->getValueAsDef("Return");
-    llvm::Record *ReturnType = RetValSpec->getValueAsDef("ReturnType");
+    const llvm::Record *FunctionSpec = G.FunctionSpecMap[Name];
+    const llvm::Record *RetValSpec = FunctionSpec->getValueAsDef("Return");
+    const llvm::Record *ReturnType = RetValSpec->getValueAsDef("ReturnType");
 
     OS << G.getTypeAsString(ReturnType) << " " << Name << "(";
 
     auto ArgsList = FunctionSpec->getValueAsListOfDefs("Args");
     for (size_t i = 0; i < ArgsList.size(); ++i) {
-      llvm::Record *ArgType = ArgsList[i]->getValueAsDef("ArgType");
+      const llvm::Record *ArgType = ArgsList[i]->getValueAsDef("ArgType");
       OS << G.getTypeAsString(ArgType);
       if (i < ArgsList.size() - 1)
         OS << ", ";
@@ -174,7 +183,7 @@ void Generator::generateDecls(llvm::raw_ostream &OS,
   for (const auto &Name : EntrypointNameList) {
     if (G.ObjectSpecMap.find(Name) == G.ObjectSpecMap.end())
       continue;
-    llvm::Record *ObjectSpec = G.ObjectSpecMap[Name];
+    const llvm::Record *ObjectSpec = G.ObjectSpecMap[Name];
     auto Type = ObjectSpec->getValueAsString("Type");
     OS << "extern " << Type << " " << Name << " __LIBC_ATTRS;\n";
   }

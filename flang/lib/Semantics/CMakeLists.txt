@@ -2,6 +2,7 @@ add_flang_library(FortranSemantics
   assignment.cpp
   attr.cpp
   canonicalize-acc.cpp
+  canonicalize-directives.cpp
   canonicalize-do.cpp
   canonicalize-omp.cpp
   check-acc-structure.cpp

@@ -57,12 +57,8 @@ protected:
   llvm::Value *getThisValue(CodeGenFunction &CGF) {
     return CGF.CXXABIThisValue;
   }
-  Address getThisAddress(CodeGenFunction &CGF) {
-    return Address(
-        CGF.CXXABIThisValue,
-        CGF.ConvertTypeForMem(CGF.CXXABIThisDecl->getType()->getPointeeType()),
-        CGF.CXXABIThisAlignment);
-  }
+
+  Address getThisAddress(CodeGenFunction &CGF);
 
   /// Issue a diagnostic about unsupported features in the ABI.
   void ErrorUnsupportedABI(CodeGenFunction &CGF, StringRef S);
@@ -278,8 +274,7 @@ public:
   getAddrOfCXXCatchHandlerType(QualType Ty, QualType CatchHandlerType) = 0;
   virtual CatchTypeInfo getCatchAllTypeInfo();
 
-  virtual bool shouldTypeidBeNullChecked(bool IsDeref,
-                                         QualType SrcRecordTy) = 0;
+  virtual bool shouldTypeidBeNullChecked(QualType SrcRecordTy) = 0;
   virtual void EmitBadTypeidCall(CodeGenFunction &CGF) = 0;
   virtual llvm::Value *EmitTypeid(CodeGenFunction &CGF, QualType SrcRecordTy,
                                   Address ThisPtr,
@@ -475,12 +470,6 @@ public:
                                   BaseSubobject Base,
                                   const CXXRecordDecl *NearestVBase) = 0;
 
-  /// Get the address point of the vtable for the given base subobject while
-  /// building a constexpr.
-  virtual llvm::Constant *
-  getVTableAddressPointForConstExpr(BaseSubobject Base,
-                                    const CXXRecordDecl *VTableClass) = 0;
-
   /// Get the address of the vtable for the given record decl which should be
   /// used for the vptr at the given offset in RD.
   virtual llvm::GlobalVariable *getAddrOfVTable(const CXXRecordDecl *RD,
@@ -496,11 +485,11 @@ public:
       llvm::PointerUnion<const CXXDeleteExpr *, const CXXMemberCallExpr *>;
 
   /// Emit the ABI-specific virtual destructor call.
-  virtual llvm::Value *EmitVirtualDestructorCall(CodeGenFunction &CGF,
-                                                 const CXXDestructorDecl *Dtor,
-                                                 CXXDtorType DtorType,
-                                                 Address This,
-                                                 DeleteOrMemberCallExpr E) = 0;
+  virtual llvm::Value *
+  EmitVirtualDestructorCall(CodeGenFunction &CGF, const CXXDestructorDecl *Dtor,
+                            CXXDtorType DtorType, Address This,
+                            DeleteOrMemberCallExpr E,
+                            llvm::CallBase **CallOrInvoke) = 0;
 
   virtual void adjustCallArgsForDestructorThunk(CodeGenFunction &CGF,
                                                 GlobalDecl GD,
@@ -515,13 +504,15 @@ public:
   virtual void setThunkLinkage(llvm::Function *Thunk, bool ForVTable,
                                GlobalDecl GD, bool ReturnAdjustment) = 0;
 
-  virtual llvm::Value *performThisAdjustment(CodeGenFunction &CGF,
-                                             Address This,
-                                             const ThisAdjustment &TA) = 0;
+  virtual llvm::Value *
+  performThisAdjustment(CodeGenFunction &CGF, Address This,
+                        const CXXRecordDecl *UnadjustedClass,
+                        const ThunkInfo &TI) = 0;
 
-  virtual llvm::Value *performReturnAdjustment(CodeGenFunction &CGF,
-                                               Address Ret,
-                                               const ReturnAdjustment &RA) = 0;
+  virtual llvm::Value *
+  performReturnAdjustment(CodeGenFunction &CGF, Address Ret,
+                          const CXXRecordDecl *UnadjustedClass,
+                          const ReturnAdjustment &RA) = 0;
 
   virtual void EmitReturnFromThunk(CodeGenFunction &CGF,
                                    RValue RV, QualType ResultType);

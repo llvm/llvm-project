@@ -20,8 +20,32 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
+#include "llvm/ADT/ArrayRef.h"
 
 namespace mlir {
+
+using ReassociationIndices = SmallVector<int64_t, 2>;
+
+/// Infer the output shape for a {memref|tensor}.expand_shape when it is
+/// possible to do so.
+///
+/// Note: This should *only* be used to implement
+/// `ExpandShapeOp::inferOutputShape` in both the memref and tensor namespaces.
+/// If you need to infer the output shape you should use the static method of
+/// `ExpandShapeOp` instead of calling this.
+///
+/// `inputShape` is the shape of the tensor or memref being expanded as a
+/// sequence of SSA values or constants. `expandedType` is the output shape of
+/// the expand_shape operation. `reassociation` is the reassociation denoting
+/// the output dims each input dim is mapped to.
+///
+/// Returns the output shape in `outputShape` and `staticOutputShape`, following
+/// the conventions for the output_shape and static_output_shape inputs to the
+/// expand_shape ops.
+std::optional<SmallVector<OpFoldResult>>
+inferExpandShapeOutputShape(OpBuilder &b, Location loc, ShapedType expandedType,
+                            ArrayRef<ReassociationIndices> reassociation,
+                            ArrayRef<OpFoldResult> inputShape);
 
 /// Matches a ConstantIndexOp.
 detail::op_matcher<arith::ConstantIndexOp> matchConstantIndex();
@@ -30,7 +54,13 @@ llvm::SmallBitVector getPositionsOfShapeOne(unsigned rank,
                                             ArrayRef<int64_t> shape);
 
 /// Converts an OpFoldResult to a Value. Returns the fold result if it casts to
-/// a Value or creates a ConstantIndexOp if it casts to an IntegerAttribute.
+/// a Value or creates a ConstantOp if it casts to an Integer Attribute.
+/// Other attribute types are not supported.
+Value getValueOrCreateConstantIntOp(OpBuilder &b, Location loc,
+                                    OpFoldResult ofr);
+
+/// Converts an OpFoldResult to a Value. Returns the fold result if it casts to
+/// a Value or creates a ConstantIndexOp if it casts to an Integer Attribute.
 /// Other attribute types are not supported.
 Value getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
                                       OpFoldResult ofr);
@@ -53,6 +83,21 @@ Value getValueOrCreateCastToIndexLike(OpBuilder &b, Location loc,
 Value convertScalarToDtype(OpBuilder &b, Location loc, Value operand,
                            Type toType, bool isUnsignedCast);
 
+/// Create a constant of type `type` at location `loc` whose value is `value`
+/// (an APInt or APFloat whose type must match the element type of `type`).
+/// If `type` is a shaped type, create a splat constant of the given value.
+/// Constants are folded if possible.
+Value createScalarOrSplatConstant(OpBuilder &builder, Location loc, Type type,
+                                  const APInt &value);
+Value createScalarOrSplatConstant(OpBuilder &builder, Location loc, Type type,
+                                  int64_t value);
+Value createScalarOrSplatConstant(OpBuilder &builder, Location loc, Type type,
+                                  const APFloat &value);
+
+/// Returns the int type of the integer in ofr.
+/// Other attribute types are not supported.
+Type getType(OpFoldResult ofr);
+
 /// Helper struct to build simple arithmetic quantities with minimal type
 /// inference support.
 struct ArithBuilder {
@@ -70,6 +115,26 @@ private:
   OpBuilder &b;
   Location loc;
 };
+
+namespace arith {
+
+// Build the product of a sequence.
+// If values = (v0, v1, ..., vn) than the returned
+// value is v0 * v1 * ... * vn.
+// All values must have the same type.
+//
+// The version without `resultType` must contain at least one element in values.
+// Then the result will have the same type as the elements in `values`.
+// If `values` is empty in the version with `resultType` returns 1 with type
+// `resultType`.
+Value createProduct(OpBuilder &builder, Location loc, ArrayRef<Value> values);
+Value createProduct(OpBuilder &builder, Location loc, ArrayRef<Value> values,
+                    Type resultType);
+
+// Map strings to float types.
+std::optional<FloatType> parseFloatType(MLIRContext *ctx, StringRef name);
+
+} // namespace arith
 } // namespace mlir
 
 #endif // MLIR_DIALECT_ARITH_UTILS_UTILS_H

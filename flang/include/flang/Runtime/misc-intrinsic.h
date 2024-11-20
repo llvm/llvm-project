@@ -19,9 +19,11 @@ namespace Fortran::runtime {
 class Descriptor;
 
 extern "C" {
-void RTNAME(Transfer)(Descriptor &result, const Descriptor &source,
+void RTDECL(Rename)(const Descriptor &path1, const Descriptor &path2,
+    const Descriptor *status, const char *sourceFile, int line);
+void RTDECL(Transfer)(Descriptor &result, const Descriptor &source,
     const Descriptor &mold, const char *sourceFile, int line);
-void RTNAME(TransferSize)(Descriptor &result, const Descriptor &source,
+void RTDECL(TransferSize)(Descriptor &result, const Descriptor &source,
     const Descriptor &mold, const char *sourceFile, int line,
     std::int64_t size);
 } // extern "C"

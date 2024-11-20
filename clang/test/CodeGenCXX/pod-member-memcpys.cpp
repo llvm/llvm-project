@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-apple-darwin10 -emit-llvm -std=c++03 -fexceptions -fcxx-exceptions -o - %s | FileCheck %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple i386-apple-darwin10 -emit-llvm -std=c++03 -o - %s | FileCheck --check-prefix=CHECK-2 %s
 
+struct Empty {};
+
 struct POD {
   int w, x, y, z;
 };
@@ -106,6 +108,20 @@ struct __attribute__((packed)) PackedMembers {
   int w, x, y, z;
 };
 
+struct WithEmptyField {
+    int a;
+    Empty e;
+    NonPOD np;
+    int b;
+};
+
+struct WithEmptyNUAField {
+    int a;
+    [[no_unique_address]] Empty e;
+    NonPOD np;
+    int b;
+};
+
 // COPY-ASSIGNMENT OPERATORS:
 
 // Assignment operators are output in the order they're encountered.
@@ -121,6 +137,8 @@ CALL_AO(VolatileMember)
 CALL_AO(BitfieldMember)
 CALL_AO(InnerClassMember)
 CALL_AO(PackedMembers)
+CALL_AO(WithEmptyField)
+CALL_AO(WithEmptyNUAField)
 
 // Basic copy-assignment:
 // CHECK-LABEL: define linkonce_odr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN5BasicaSERKS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
@@ -183,6 +201,18 @@ CALL_AO(PackedMembers)
 // CHECK-LABEL: define linkonce_odr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN13PackedMembersaSERKS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 // CHECK: call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN6NonPODaSERKS_
 // CHECK: call void @llvm.memcpy.p0.p0.i64({{.*}} align 1 {{.*}} align 1 {{.*}}i64 16, i1 {{.*}})
+// CHECK: ret ptr
+
+// WithEmptyField copy-assignment:
+// CHECK-LABEL: define linkonce_odr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN14WithEmptyFieldaSERKS_
+// CHECK: call void @llvm.memcpy.p0.p0.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 4, i1 {{.*}})
+// CHECK: call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN6NonPODaSERKS_
+// CHECK: ret ptr
+
+// WithEmptyNUAField copy-assignment:
+// CHECK-LABEL: define linkonce_odr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN17WithEmptyNUAFieldaSERKS_
+// CHECK: call void @llvm.memcpy.p0.p0.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 4, i1 {{.*}})
+// CHECK: call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN6NonPODaSERKS_
 // CHECK: ret ptr
 
 // COPY-CONSTRUCTORS:
@@ -280,3 +310,15 @@ CALL_CC(Basic)
 // CHECK: call void @_ZN6NonPODC1ERKS_
 // CHECK: call void @llvm.memcpy.p0.p0.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 16, i1 {{.*}})
 // CHECK: ret void
+
+CALL_CC(WithEmptyField)
+// WithEmptyField copy-constructor:
+// CHECK-LABEL: define linkonce_odr void @_ZN14WithEmptyFieldC2ERKS_
+// CHECK: call void @llvm.memcpy.p0.p0.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 4, i1 {{.*}})
+// CHECK: call void @_ZN6NonPODC1ERKS_
+
+CALL_CC(WithEmptyNUAField)
+// WithEmptyNUAField copy-constructor:
+// CHECK-LABEL: define linkonce_odr void @_ZN17WithEmptyNUAFieldC2ERKS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+// CHECK: call void @llvm.memcpy.p0.p0.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 4, i1 {{.*}})
+// CHECK: call void @_ZN6NonPODC1ERKS_

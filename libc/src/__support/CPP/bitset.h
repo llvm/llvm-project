@@ -10,9 +10,11 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_BITSET_H
 
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include <stddef.h> // For size_t.
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 template <size_t NumberOfBits> struct bitset {
   static_assert(NumberOfBits != 0,
@@ -65,7 +67,8 @@ template <size_t NumberOfBits> struct bitset {
     }
   }
 
-  LIBC_INLINE constexpr bool operator==(const bitset<NumberOfBits> &other) {
+  LIBC_INLINE constexpr bool
+  operator==(const bitset<NumberOfBits> &other) const {
     for (size_t i = 0; i < NUMBER_OF_UNITS; ++i) {
       if (Data[i] != other.Data[i])
         return false;
@@ -85,6 +88,7 @@ private:
   size_t Data[NUMBER_OF_UNITS] = {0};
 };
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_BITSET_H

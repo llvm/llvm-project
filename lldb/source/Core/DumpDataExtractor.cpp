@@ -128,9 +128,10 @@ static lldb::offset_t DumpInstructions(const DataExtractor &DE, Stream *s,
   if (exe_scope)
     target_sp = exe_scope->CalculateTarget();
   if (target_sp) {
-    DisassemblerSP disassembler_sp(
-        Disassembler::FindPlugin(target_sp->GetArchitecture(),
-                                 target_sp->GetDisassemblyFlavor(), nullptr));
+    DisassemblerSP disassembler_sp(Disassembler::FindPlugin(
+        target_sp->GetArchitecture(), target_sp->GetDisassemblyFlavor(),
+        target_sp->GetDisassemblyCPU(), target_sp->GetDisassemblyFeatures(),
+        nullptr));
     if (disassembler_sp) {
       lldb::addr_t addr = base_addr + start_offset;
       lldb_private::Address so_addr;
@@ -150,8 +151,8 @@ static lldb::offset_t DumpInstructions(const DataExtractor &DE, Stream *s,
       if (bytes_consumed) {
         offset += bytes_consumed;
         const bool show_address = base_addr != LLDB_INVALID_ADDRESS;
-        const bool show_bytes = true;
-        const bool show_control_flow_kind = true;
+        const bool show_bytes = false;
+        const bool show_control_flow_kind = false;
         ExecutionContext exe_ctx;
         exe_scope->CalculateExecutionContext(exe_ctx);
         disassembler_sp->GetInstructionList().Dump(

@@ -12,7 +12,7 @@ def REG : Register<"REG">;
 def GPR : RegisterClass<"TestTarget", [i32], 32, (add REG)>;
 
 // CHECK-LABEL: OPC_CheckOpcode, TARGET_VAL(ISD::UDIVREM)
-// CHECK: OPC_EmitNode2, TARGET_VAL(::INSTR)
+// CHECK: OPC_EmitNode2None, TARGET_VAL(::INSTR)
 // CHECK: Results = #2 #3
 // CHECK: OPC_CompleteMatch, 2, 3, 2
 def INSTR : Instruction {

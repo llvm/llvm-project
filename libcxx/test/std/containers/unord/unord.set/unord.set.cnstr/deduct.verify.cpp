@@ -55,42 +55,42 @@ int main(int, char**)
     {
         // cannot deduce Key from nothing
         std::unordered_set s;
-            // expected-error@-1{{no viable constructor or deduction guide for deduction of template arguments of 'unordered_set'}}
+            // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_set'}}
     }
     {
         // cannot deduce Key from just (Size)
         std::unordered_set s(42);
-            // expected-error@-1{{no viable constructor or deduction guide for deduction of template arguments of 'unordered_set'}}
+            // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_set'}}
     }
     {
         // cannot deduce Key from just (Size, Hash)
         std::unordered_set s(42, std::hash<int>());
-            // expected-error@-1{{no viable constructor or deduction guide for deduction of template arguments of 'unordered_set'}}
+            // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_set'}}
     }
     {
         // cannot deduce Key from just (Size, Hash, Pred)
         std::unordered_set s(42, std::hash<int>(), std::equal_to<>());
-            // expected-error@-1{{no viable constructor or deduction guide for deduction of template arguments of 'unordered_set'}}
+            // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_set'}}
     }
     {
         // cannot deduce Key from just (Size, Hash, Pred, Allocator)
         std::unordered_set s(42, std::hash<int>(), std::equal_to<>(), std::allocator<int>());
-            // expected-error@-1{{no viable constructor or deduction guide for deduction of template arguments of 'unordered_set'}}
+            // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_set'}}
     }
     {
         // cannot deduce Key from just (Allocator)
         std::unordered_set s(std::allocator<int>{});
-            // expected-error@-1{{no viable constructor or deduction guide for deduction of template arguments of 'unordered_set'}}
+            // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_set'}}
     }
     {
         // cannot deduce Key from just (Size, Allocator)
         std::unordered_set s(42, std::allocator<int>());
-            // expected-error@-1{{no viable constructor or deduction guide for deduction of template arguments of 'unordered_set'}}
+            // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_set'}}
     }
     {
         // cannot deduce Key from just (Size, Hash, Allocator)
         std::unordered_set s(42, std::hash<short>(), std::allocator<int>());
-            // expected-error@-1{{no viable constructor or deduction guide for deduction of template arguments of 'unordered_set'}}
+            // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_set'}}
     }
 
     return 0;

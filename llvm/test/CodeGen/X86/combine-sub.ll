@@ -104,14 +104,14 @@ define <4 x i32> @combine_vec_sub_add1(<4 x i32> %a, <4 x i32> %b) {
 define <4 x i32> @combine_vec_sub_constant_add(<4 x i32> %a) {
 ; SSE-LABEL: combine_vec_sub_constant_add:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [3,1,4294967295,4294967293]
+; SSE-NEXT:    pmovsxbd {{.*#+}} xmm1 = [3,1,4294967295,4294967293]
 ; SSE-NEXT:    psubd %xmm0, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sub_constant_add:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [3,1,4294967295,4294967293]
+; AVX-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [3,1,4294967295,4294967293]
 ; AVX-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = add <4 x i32> %a, <i32 0, i32 1, i32 2, i32 3>
@@ -451,4 +451,16 @@ define void @PR52032_4(ptr %p, ptr %q) {
   %i9 = add nsw <4 x i32> %i8, <i32 1, i32 1, i32 1, i32 1>
   store <4 x i32> %i9, ptr %p2, align 4
   ret void
+}
+
+; Fold sub(32,xor(bsr(x),31)) -> add(xor(bsr(x),-32),33) -> add(or(bsr(x),-32),33) -> add(bsr(x),1)
+define i32 @PR74101(i32 %a0) {
+; CHECK-LABEL: PR74101:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    bsrl %edi, %eax
+; CHECK-NEXT:    incl %eax
+; CHECK-NEXT:    retq
+  %lz = call i32 @llvm.ctlz.i32(i32 %a0, i1 true)
+  %add = sub nuw nsw i32 32, %lz
+  ret i32 %add
 }

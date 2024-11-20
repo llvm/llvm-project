@@ -68,9 +68,14 @@ void AssignmentContext::Analyze(const parser::AssignmentStmt &stmt) {
     const Scope &scope{context_.FindScope(lhsLoc)};
     if (auto whyNot{WhyNotDefinable(lhsLoc, scope,
             DefinabilityFlags{DefinabilityFlag::VectorSubscriptIsOk}, lhs)}) {
-      if (auto *msg{Say(lhsLoc,
-              "Left-hand side of assignment is not definable"_err_en_US)}) {
-        msg->Attach(std::move(*whyNot));
+      if (whyNot->IsFatal()) {
+        if (auto *msg{Say(lhsLoc,
+                "Left-hand side of assignment is not definable"_err_en_US)}) {
+          msg->Attach(
+              std::move(whyNot->set_severity(parser::Severity::Because)));
+        }
+      } else {
+        context_.Say(std::move(*whyNot));
       }
     }
     auto rhsLoc{std::get<parser::Expr>(stmt.t).source};

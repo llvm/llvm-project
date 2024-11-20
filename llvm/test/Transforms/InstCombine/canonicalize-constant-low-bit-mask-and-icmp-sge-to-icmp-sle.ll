@@ -30,7 +30,7 @@ define i1 @p0(i8 %x) {
 
 define <2 x i1> @p1_vec_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @p1_vec_splat(
-; CHECK-NEXT:    [[RET:%.*]] = icmp slt <2 x i8> [[X:%.*]], <i8 4, i8 4>
+; CHECK-NEXT:    [[RET:%.*]] = icmp slt <2 x i8> [[X:%.*]], splat (i8 4)
 ; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %tmp0 = and <2 x i8> %x, <i8 3, i8 3>
@@ -50,8 +50,7 @@ define <2 x i1> @p2_vec_nonsplat(<2 x i8> %x) {
 
 define <2 x i1> @p2_vec_nonsplat_edgecase(<2 x i8> %x) {
 ; CHECK-LABEL: @p2_vec_nonsplat_edgecase(
-; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i8> [[X:%.*]], <i8 3, i8 0>
-; CHECK-NEXT:    [[RET:%.*]] = icmp sge <2 x i8> [[TMP0]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp slt <2 x i8> [[X:%.*]], <i8 4, i8 1>
 ; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %tmp0 = and <2 x i8> %x, <i8 3, i8 0>
@@ -59,12 +58,12 @@ define <2 x i1> @p2_vec_nonsplat_edgecase(<2 x i8> %x) {
   ret <2 x i1> %ret
 }
 
-define <3 x i1> @p3_vec_splat_undef(<3 x i8> %x) {
-; CHECK-LABEL: @p3_vec_splat_undef(
-; CHECK-NEXT:    [[RET:%.*]] = icmp slt <3 x i8> [[X:%.*]], <i8 4, i8 4, i8 4>
+define <3 x i1> @p3_vec_splat_poison(<3 x i8> %x) {
+; CHECK-LABEL: @p3_vec_splat_poison(
+; CHECK-NEXT:    [[RET:%.*]] = icmp slt <3 x i8> [[X:%.*]], splat (i8 4)
 ; CHECK-NEXT:    ret <3 x i1> [[RET]]
 ;
-  %tmp0 = and <3 x i8> %x, <i8 3, i8 undef, i8 3>
+  %tmp0 = and <3 x i8> %x, <i8 3, i8 poison, i8 3>
   %ret = icmp sge <3 x i8> %tmp0, %x
   ret <3 x i1> %ret
 }
@@ -99,8 +98,7 @@ declare i8 @gen8()
 define i1 @c0() {
 ; CHECK-LABEL: @c0(
 ; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[X]], 3
-; CHECK-NEXT:    [[RET:%.*]] = icmp sge i8 [[X]], [[TMP0]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp sgt i8 [[X]], -1
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %x = call i8 @gen8()
@@ -176,11 +174,11 @@ define <2 x i1> @n3_vec(<2 x i8> %x) {
 
 define <3 x i1> @n4_vec(<3 x i8> %x) {
 ; CHECK-LABEL: @n4_vec(
-; CHECK-NEXT:    [[TMP0:%.*]] = and <3 x i8> [[X:%.*]], <i8 3, i8 undef, i8 -1>
+; CHECK-NEXT:    [[TMP0:%.*]] = and <3 x i8> [[X:%.*]], <i8 3, i8 poison, i8 -1>
 ; CHECK-NEXT:    [[RET:%.*]] = icmp sge <3 x i8> [[TMP0]], [[X]]
 ; CHECK-NEXT:    ret <3 x i1> [[RET]]
 ;
-  %tmp0 = and <3 x i8> %x, <i8 3, i8 undef, i8 -1>
+  %tmp0 = and <3 x i8> %x, <i8 3, i8 poison, i8 -1>
   %ret = icmp sge <3 x i8> %tmp0, %x
   ret <3 x i1> %ret
 }

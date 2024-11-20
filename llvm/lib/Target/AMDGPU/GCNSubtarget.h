@@ -87,6 +87,7 @@ protected:
   bool EnableTgSplit = false;
   bool EnableCuMode = false;
   bool TrapHandler = false;
+  bool EnablePreciseMemory = false;
 
   // Used as options.
   bool EnableLoadStoreOpt = false;
@@ -105,6 +106,7 @@ protected:
   bool GFX9Insts = false;
   bool GFX90AInsts = false;
   bool GFX940Insts = false;
+  bool GFX950Insts = false;
   bool GFX10Insts = false;
   bool GFX11Insts = false;
   bool GFX12Insts = false;
@@ -119,6 +121,7 @@ protected:
   bool HasFmaMixInsts = false;
   bool HasMovrel = false;
   bool HasVGPRIndexMode = false;
+  bool HasScalarDwordx3Loads = false;
   bool HasScalarStores = false;
   bool HasScalarAtomics = false;
   bool HasSDWAOmod = false;
@@ -152,18 +155,36 @@ protected:
   bool HasDot8Insts = false;
   bool HasDot9Insts = false;
   bool HasDot10Insts = false;
+  bool HasDot11Insts = false;
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
+  bool HasFP8ConversionInsts = false;
+  bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
+  bool HasAtomicFMinFMaxF32GlobalInsts = false;
+  bool HasAtomicFMinFMaxF64GlobalInsts = false;
+  bool HasAtomicFMinFMaxF32FlatInsts = false;
+  bool HasAtomicFMinFMaxF64FlatInsts = false;
   bool HasAtomicDsPkAdd16Insts = false;
   bool HasAtomicFlatPkAdd16Insts = false;
   bool HasAtomicFaddRtnInsts = false;
   bool HasAtomicFaddNoRtnInsts = false;
+  bool HasMemoryAtomicFaddF32DenormalSupport = false;
   bool HasAtomicBufferGlobalPkAddF16NoRtnInsts = false;
   bool HasAtomicBufferGlobalPkAddF16Insts = false;
   bool HasAtomicCSubNoRtnInsts = false;
   bool HasAtomicGlobalPkAddBF16Inst = false;
+  bool HasAtomicBufferPkAddBF16Inst = false;
   bool HasFlatAtomicFaddF32Inst = false;
+  bool HasFlatBufferGlobalAtomicFaddF64Inst = false;
+  bool HasDefaultComponentZero = false;
+  bool HasAgentScopeFineGrainedRemoteMemoryAtomics = false;
+  bool HasDefaultComponentBroadcast = false;
+  bool HasXF32Insts = false;
+  /// The maximum number of instructions that may be placed within an S_CLAUSE,
+  /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
+  /// indicates a lack of S_CLAUSE support.
+  unsigned MaxHardClauseLength = 0;
   bool SupportsSRAMECC = false;
 
   // This should not be used directly. 'TargetID' tracks the dynamic settings
@@ -175,6 +196,7 @@ protected:
   bool HasGetWaveIdInst = false;
   bool HasSMemTimeInst = false;
   bool HasShaderCyclesRegister = false;
+  bool HasShaderCyclesHiLoRegisters = false;
   bool HasVOP3Literal = false;
   bool HasNoDataDepHazard = false;
   bool FlatAddressSpace = false;
@@ -196,8 +218,9 @@ protected:
   bool HasPackedTID = false;
   bool ScalarizeGlobal = false;
   bool HasSALUFloatInsts = false;
-  bool HasVGPRSingleUseHintInsts = false;
-
+  bool HasPseudoScalarTrans = false;
+  bool HasRestrictedSOffset = false;
+  bool HasPrngInst = false;
   bool HasVcmpxPermlaneHazard = false;
   bool HasVMEMtoScalarWriteHazard = false;
   bool HasSMEMtoVectorWriteHazard = false;
@@ -211,11 +234,17 @@ protected:
   bool HasImageStoreD16Bug = false;
   bool HasImageGather4D16Bug = false;
   bool HasMSAALoadDstSelBug = false;
-  bool HasGFX11FullVGPRs = false;
+  bool HasPrivEnabledTrap2NopBug = false;
+  bool Has1_5xVGPRs = false;
   bool HasMADIntraFwdBug = false;
   bool HasVOPDInsts = false;
   bool HasVALUTransUseHazard = false;
   bool HasForceStoreSC0SC1 = false;
+  bool HasRequiredExportPriority = false;
+  bool HasVmemWriteVgprInOrder = false;
+  bool HasMinimum3Maximum3F32 = false;
+  bool HasMinimum3Maximum3F16 = false;
+  bool RequiresCOV6 = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -233,6 +262,10 @@ public:
 
   GCNSubtarget &initializeSubtargetDependencies(const Triple &TT,
                                                    StringRef GPU, StringRef FS);
+
+  /// Diagnose inconsistent subtarget features before attempting to codegen
+  /// function \p F.
+  void checkSubtargetFeatures(const Function &F) const;
 
   const SIInstrInfo *getInstrInfo() const override {
     return &InstrInfo;
@@ -291,12 +324,16 @@ public:
 
   unsigned getMaxWaveScratchSize() const {
     // See COMPUTE_TMPRING_SIZE.WAVESIZE.
-    if (getGeneration() < GFX11) {
-      // 13-bit field in units of 256-dword.
-      return (256 * 4) * ((1 << 13) - 1);
+    if (getGeneration() >= GFX12) {
+      // 18-bit field in units of 64-dword.
+      return (64 * 4) * ((1 << 18) - 1);
     }
-    // 15-bit field in units of 64-dword.
-    return (64 * 4) * ((1 << 15) - 1);
+    if (getGeneration() == GFX11) {
+      // 15-bit field in units of 64-dword.
+      return (64 * 4) * ((1 << 15) - 1);
+    }
+    // 13-bit field in units of 256-dword.
+    return (256 * 4) * ((1 << 13) - 1);
   }
 
   /// Return the number of high bits known to be zero for a frame index.
@@ -418,6 +455,8 @@ public:
   bool hasScalarMulHiInsts() const {
     return GFX9Insts;
   }
+
+  bool hasScalarSubwordLoads() const { return getGeneration() >= GFX12; }
 
   TrapHandlerAbi getTrapHandlerAbi() const {
     return isAmdHsaOS() ? TrapHandlerAbi::AMDHSA : TrapHandlerAbi::NONE;
@@ -555,6 +594,10 @@ public:
     return UnalignedScratchAccess;
   }
 
+  bool hasUnalignedScratchAccessEnabled() const {
+    return UnalignedScratchAccess && UnalignedAccessMode;
+  }
+
   bool hasUnalignedAccessMode() const {
     return UnalignedAccessMode;
   }
@@ -578,6 +621,8 @@ public:
   bool isCuModeEnabled() const {
     return EnableCuMode;
   }
+
+  bool isPreciseMemoryEnabled() const { return EnablePreciseMemory; }
 
   bool hasFlatAddressSpace() const {
     return FlatAddressSpace;
@@ -624,6 +669,17 @@ public:
   bool hasAtomicCSub() const {
     return GFX10_BEncoding;
   }
+
+  bool hasExportInsts() const {
+    return !hasGFX940Insts();
+  }
+
+  bool hasVINTERPEncoding() const {
+    return GFX11Insts;
+  }
+
+  // DS_ADD_F64/DS_ADD_RTN_F64
+  bool hasLdsAtomicAddF64() const { return hasGFX90AInsts(); }
 
   bool hasMultiDwordFlatScratchAddressing() const {
     return getGeneration() >= GFX9;
@@ -676,6 +732,10 @@ public:
   bool hasAddNoCarry() const {
     return AddNoCarryInsts;
   }
+
+  bool hasScalarAddSub64() const { return getGeneration() >= GFX12; }
+
+  bool hasScalarSMulU64() const { return getGeneration() >= GFX12; }
 
   bool hasUnpackedD16VMem() const {
     return HasUnpackedD16VMem;
@@ -756,6 +816,10 @@ public:
     return HasDot10Insts;
   }
 
+  bool hasDot11Insts() const {
+    return HasDot11Insts;
+  }
+
   bool hasMAIInsts() const {
     return HasMAIInsts;
   }
@@ -764,8 +828,26 @@ public:
     return HasFP8Insts;
   }
 
+  bool hasFP8ConversionInsts() const { return HasFP8ConversionInsts; }
+
   bool hasPkFmacF16Inst() const {
     return HasPkFmacF16Inst;
+  }
+
+  bool hasAtomicFMinFMaxF32GlobalInsts() const {
+    return HasAtomicFMinFMaxF32GlobalInsts;
+  }
+
+  bool hasAtomicFMinFMaxF64GlobalInsts() const {
+    return HasAtomicFMinFMaxF64GlobalInsts;
+  }
+
+  bool hasAtomicFMinFMaxF32FlatInsts() const {
+    return HasAtomicFMinFMaxF32FlatInsts;
+  }
+
+  bool hasAtomicFMinFMaxF64FlatInsts() const {
+    return HasAtomicFMinFMaxF64FlatInsts;
   }
 
   bool hasAtomicDsPkAdd16Insts() const { return HasAtomicDsPkAdd16Insts; }
@@ -792,7 +874,36 @@ public:
     return HasAtomicGlobalPkAddBF16Inst;
   }
 
+  bool hasAtomicBufferPkAddBF16Inst() const {
+    return HasAtomicBufferPkAddBF16Inst;
+  }
+
   bool hasFlatAtomicFaddF32Inst() const { return HasFlatAtomicFaddF32Inst; }
+
+  /// \return true if the target has flat, global, and buffer atomic fadd for
+  /// double.
+  bool hasFlatBufferGlobalAtomicFaddF64Inst() const {
+    return HasFlatBufferGlobalAtomicFaddF64Inst;
+  }
+
+  /// \return true if the target's flat, global, and buffer atomic fadd for
+  /// float supports denormal handling.
+  bool hasMemoryAtomicFaddF32DenormalSupport() const {
+    return HasMemoryAtomicFaddF32DenormalSupport;
+  }
+
+  /// \return true if atomic operations targeting fine-grained memory work
+  /// correctly at device scope, in allocations in host or peer PCIe device
+  /// memory.
+  bool supportsAgentScopeFineGrainedRemoteMemoryAtomics() const {
+    return HasAgentScopeFineGrainedRemoteMemoryAtomics;
+  }
+
+  bool hasDefaultComponentZero() const { return HasDefaultComponentZero; }
+
+  bool hasDefaultComponentBroadcast() const {
+    return HasDefaultComponentBroadcast;
+  }
 
   bool hasNoSdstCMPX() const {
     return HasNoSdstCMPX;
@@ -814,6 +925,10 @@ public:
     return HasShaderCyclesRegister;
   }
 
+  bool hasShaderCyclesHiLoRegisters() const {
+    return HasShaderCyclesHiLoRegisters;
+  }
+
   bool hasVOP3Literal() const {
     return HasVOP3Literal;
   }
@@ -826,7 +941,14 @@ public:
     return getGeneration() < SEA_ISLANDS;
   }
 
-  bool hasInstPrefetch() const { return getGeneration() >= GFX10; }
+  bool hasInstPrefetch() const {
+    return getGeneration() == GFX10 || getGeneration() == GFX11;
+  }
+
+  bool hasPrefetch() const { return GFX12Insts; }
+
+  // Has s_cmpk_* instructions.
+  bool hasSCmpK() const { return getGeneration() < GFX12; }
 
   // Scratch is allocated in 256 dword per wave blocks for the entire
   // wavefront. When viewed from the perspective of an arbitrary workitem, this
@@ -862,6 +984,8 @@ public:
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            unsigned NumRegionInstrs) const override;
 
+  void mirFileLoaded(MachineFunction &MF) const override;
+
   unsigned getMaxNumUserSGPRs() const {
     return AMDGPU::getMaxNumUserSGPRs(*this);
   }
@@ -884,6 +1008,8 @@ public:
     return getGeneration() >= VOLCANIC_ISLANDS;
   }
 
+  bool hasScalarDwordx3Loads() const { return HasScalarDwordx3Loads; }
+
   bool hasScalarStores() const {
     return HasScalarStores;
   }
@@ -892,7 +1018,8 @@ public:
     return HasScalarAtomics;
   }
 
-  bool hasLDSFPAtomicAdd() const { return GFX8Insts; }
+  bool hasLDSFPAtomicAddF32() const { return GFX8Insts; }
+  bool hasLDSFPAtomicAddF64() const { return GFX90AInsts; }
 
   /// \returns true if the subtarget has the v_permlanex16_b32 instruction.
   bool hasPermLaneX16() const { return getGeneration() >= GFX10; }
@@ -963,11 +1090,17 @@ public:
 
   bool hasMSAALoadDstSelBug() const { return HasMSAALoadDstSelBug; }
 
+  bool hasPrivEnabledTrap2NopBug() const { return HasPrivEnabledTrap2NopBug; }
+
   bool hasNSAEncoding() const { return HasNSAEncoding; }
+
+  bool hasNonNSAEncoding() const { return getGeneration() < GFX12; }
 
   bool hasPartialNSAEncoding() const { return HasPartialNSAEncoding; }
 
-  unsigned getNSAMaxSize() const { return AMDGPU::getNSAMaxSize(*this); }
+  unsigned getNSAMaxSize(bool HasSampler = false) const {
+    return AMDGPU::getNSAMaxSize(*this, HasSampler);
+  }
 
   bool hasGFX10_AEncoding() const {
     return GFX10_AEncoding;
@@ -1082,7 +1215,7 @@ public:
   bool hasDstSelForwardingHazard() const { return GFX940Insts; }
 
   // Cannot use op_sel with v_dot instructions.
-  bool hasDOTOpSelHazard() const { return GFX940Insts; }
+  bool hasDOTOpSelHazard() const { return GFX940Insts || GFX11Insts; }
 
   // Does not have HW interlocs for VALU writing and then reading SGPRs.
   bool hasVDecCoExecHazard() const {
@@ -1095,7 +1228,7 @@ public:
 
   bool hasNSAClauseBug() const { return HasNSAClauseBug; }
 
-  bool hasHardClauses() const { return getGeneration() >= GFX10; }
+  bool hasHardClauses() const { return MaxHardClauseLength > 0; }
 
   bool hasGFX90AInsts() const { return GFX90AInsts; }
 
@@ -1107,15 +1240,21 @@ public:
 
   bool hasLdsDirect() const { return getGeneration() >= GFX11; }
 
+  bool hasLdsWaitVMSRC() const { return getGeneration() >= GFX12; }
+
   bool hasVALUPartialForwardingHazard() const {
-    return getGeneration() >= GFX11;
+    return getGeneration() == GFX11;
   }
 
   bool hasVALUTransUseHazard() const { return HasVALUTransUseHazard; }
 
   bool hasForceStoreSC0SC1() const { return HasForceStoreSC0SC1; }
 
-  bool hasVALUMaskWriteHazard() const { return getGeneration() >= GFX11; }
+  bool requiresCodeObjectV6() const { return RequiresCOV6; }
+
+  bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
+
+  bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
 
   /// Return if operations acting on VGPR tuples require even alignment.
   bool needsAlignedVGPRs() const { return GFX90AInsts; }
@@ -1131,7 +1270,7 @@ public:
   /// target.
   bool hasNullExportTarget() const { return !GFX11Insts; }
 
-  bool hasGFX11FullVGPRs() const { return HasGFX11FullVGPRs; }
+  bool has1_5xVGPRs() const { return Has1_5xVGPRs; }
 
   bool hasVOPDInsts() const { return HasVOPDInsts; }
 
@@ -1146,9 +1285,54 @@ public:
   // hasGFX90AInsts is also true.
   bool hasGFX940Insts() const { return GFX940Insts; }
 
+  // GFX950 is a derivation to GFX940. hasGFX950Insts() implies that
+  // hasGFX940Insts and hasGFX90AInsts are also true.
+  bool hasGFX950Insts() const { return GFX950Insts; }
+
+  /// Returns true if the target supports
+  /// global_load_lds_dwordx3/global_load_lds_dwordx4 or
+  /// buffer_load_dwordx3/buffer_load_dwordx4 with the lds bit.
+  bool hasLDSLoadB96_B128() const {
+    return hasGFX950Insts();
+  }
+
   bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
 
-  bool hasVGPRSingleUseHintInsts() const { return HasVGPRSingleUseHintInsts; }
+  bool hasPseudoScalarTrans() const { return HasPseudoScalarTrans; }
+
+  bool hasRestrictedSOffset() const { return HasRestrictedSOffset; }
+
+  bool hasRequiredExportPriority() const { return HasRequiredExportPriority; }
+
+  bool hasVmemWriteVgprInOrder() const { return HasVmemWriteVgprInOrder; }
+
+  /// \returns true if the target uses LOADcnt/SAMPLEcnt/BVHcnt, DScnt/KMcnt
+  /// and STOREcnt rather than VMcnt, LGKMcnt and VScnt respectively.
+  bool hasExtendedWaitCounts() const { return getGeneration() >= GFX12; }
+
+  /// \returns true if inline constants are not supported for F16 pseudo
+  /// scalar transcendentals.
+  bool hasNoF16PseudoScalarTransInlineConstants() const {
+    return getGeneration() == GFX12;
+  }
+
+  /// \returns true if the target has instructions with xf32 format support.
+  bool hasXF32Insts() const { return HasXF32Insts; }
+
+  bool hasMinimum3Maximum3F32() const {
+    return HasMinimum3Maximum3F32;
+  }
+
+  bool hasMinimum3Maximum3F16() const {
+    return HasMinimum3Maximum3F16;
+  }
+
+  /// \returns The maximum number of instructions that can be enclosed in an
+  /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that
+  /// instruction.
+  unsigned maxHardClauseLength() const { return MaxHardClauseLength; }
+
+  bool hasPrngInst() const { return HasPrngInst; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
@@ -1196,17 +1380,38 @@ public:
   // \returns true if preloading kernel arguments is supported.
   bool hasKernargPreload() const { return KernargPreload; }
 
-  // \returns true if we need to generate backwards compatible code when
-  // preloading kernel arguments.
-  bool needsKernargPreloadBackwardsCompatibility() const {
-    return hasKernargPreload() && !hasGFX940Insts();
-  }
+  // \returns true if the target has split barriers feature
+  bool hasSplitBarriers() const { return getGeneration() >= GFX12; }
 
   // \returns true if FP8/BF8 VOP1 form of conversion to F32 is unreliable.
-  bool hasCvtFP8VOP1Bug() const { return true; }
+  bool hasCvtFP8VOP1Bug() const { return HasCvtFP8Vop1Bug; }
 
-  // \returns true is CSUB atomics support a no-return form.
+  // \returns true if CSUB (a.k.a. SUB_CLAMP on GFX12) atomics support a
+  // no-return form.
   bool hasAtomicCSubNoRtnInsts() const { return HasAtomicCSubNoRtnInsts; }
+
+  // \returns true if the target has DX10_CLAMP kernel descriptor mode bit
+  bool hasDX10ClampMode() const { return getGeneration() < GFX12; }
+
+  // \returns true if the target has IEEE kernel descriptor mode bit
+  bool hasIEEEMode() const { return getGeneration() < GFX12; }
+
+  // \returns true if the target has IEEE fminimum/fmaximum instructions
+  bool hasIEEEMinMax() const { return getGeneration() >= GFX12; }
+
+  // \returns true if the target has IEEE fminimum3/fmaximum3 instructions
+  bool hasIEEEMinMax3() const { return hasIEEEMinMax(); }
+
+  // \returns true if the target has WG_RR_MODE kernel descriptor mode bit
+  bool hasRrWGMode() const { return getGeneration() >= GFX12; }
+
+  /// \returns true if VADDR and SADDR fields in VSCRATCH can use negative
+  /// values.
+  bool hasSignedScratchOffsets() const { return getGeneration() >= GFX12; }
+
+  // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
+  // of sign-extending.
+  bool hasGetPCZeroExtension() const { return GFX12Insts; }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
@@ -1291,6 +1496,12 @@ public:
   /// \returns Total number of VGPRs supported by the subtarget.
   unsigned getTotalNumVGPRs() const {
     return AMDGPU::IsaInfo::getTotalNumVGPRs(this);
+  }
+
+  /// \returns Addressable number of architectural VGPRs supported by the
+  /// subtarget.
+  unsigned getAddressableNumArchVGPRs() const {
+    return AMDGPU::IsaInfo::getAddressableNumArchVGPRs(this);
   }
 
   /// \returns Addressable number of VGPRs supported by the subtarget.
@@ -1387,7 +1598,8 @@ public:
   }
 
   void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,
-                             SDep &Dep) const override;
+                             SDep &Dep,
+                             const TargetSchedModel *SchedModel) const override;
 
   // \returns true if it's beneficial on this subtarget for the scheduler to
   // cluster stores as well as loads.
@@ -1403,6 +1615,12 @@ public:
     // Currently all targets that support the dealloc VGPRs message also require
     // the nop.
     return true;
+  }
+
+  bool requiresDisjointEarlyClobberAndUndef() const override {
+    // AMDGPU doesn't care if early-clobber and undef operands are allocated
+    // to the same register.
+    return false;
   }
 };
 
@@ -1421,6 +1639,8 @@ public:
   bool hasDispatchID() const { return DispatchID; }
 
   bool hasFlatScratchInit() const { return FlatScratchInit; }
+
+  bool hasPrivateSegmentSize() const { return PrivateSegmentSize; }
 
   unsigned getNumKernargPreloadSGPRs() const { return NumKernargPreloadSGPRs; }
 
@@ -1485,6 +1705,8 @@ private:
   bool DispatchID = false;
 
   bool FlatScratchInit = false;
+
+  bool PrivateSegmentSize = false;
 
   unsigned NumKernargPreloadSGPRs = 0;
 

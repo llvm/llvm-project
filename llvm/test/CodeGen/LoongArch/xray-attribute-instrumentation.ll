@@ -1,5 +1,5 @@
-; RUN: llc --mtriple=loongarch64 %s -o - | FileCheck %s
-; RUN: llc --mtriple=loongarch64 -filetype=obj %s -o %t
+; RUN: llc --mtriple=loongarch64 -mattr=+d %s -o - | FileCheck %s
+; RUN: llc --mtriple=loongarch64 -mattr=+d -filetype=obj %s -o %t
 ; RUN: llvm-readobj -r %t | FileCheck %s --check-prefix=RELOC
 
 define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" {

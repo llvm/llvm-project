@@ -20,8 +20,8 @@
 
 using namespace llvm;
 
-static_assert(std::is_pod<MCSchedModel>::value,
-              "We shouldn't have a static constructor here");
+static_assert(std::is_trivial_v<MCSchedModel>,
+              "MCSchedModel is required to be a trivial type");
 const MCSchedModel MCSchedModel::Default = {DefaultIssueWidth,
                                             DefaultMicroOpBufferSize,
                                             DefaultLoopMicroOpBufferSize,
@@ -30,7 +30,7 @@ const MCSchedModel MCSchedModel::Default = {DefaultIssueWidth,
                                             DefaultMispredictPenalty,
                                             false,
                                             true,
-                                            false /*EnableIntervals*/,
+                                            /*EnableIntervals=*/false,
                                             0,
                                             nullptr,
                                             nullptr,
@@ -69,21 +69,28 @@ int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,
 int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,
                                       const MCInstrInfo &MCII,
                                       const MCInst &Inst) const {
-  unsigned SchedClass = MCII.get(Inst.getOpcode()).getSchedClass();
-  const MCSchedClassDesc *SCDesc = getSchedClassDesc(SchedClass);
-  if (!SCDesc->isValid())
-    return 0;
+  return MCSchedModel::computeInstrLatency<MCSubtargetInfo, MCInstrInfo,
+                                           InstrItineraryData, MCInst>(
+      STI, MCII, Inst,
+      [&](const MCSchedClassDesc *SCDesc) -> const MCSchedClassDesc * {
+        if (!SCDesc->isValid())
+          return nullptr;
 
-  unsigned CPUID = getProcessorID();
-  while (SCDesc->isVariant()) {
-    SchedClass = STI.resolveVariantSchedClass(SchedClass, &Inst, &MCII, CPUID);
-    SCDesc = getSchedClassDesc(SchedClass);
-  }
+        unsigned CPUID = getProcessorID();
+        unsigned SchedClass = 0;
+        while (SCDesc->isVariant()) {
+          SchedClass =
+              STI.resolveVariantSchedClass(SchedClass, &Inst, &MCII, CPUID);
+          SCDesc = getSchedClassDesc(SchedClass);
+        }
 
-  if (SchedClass)
-    return MCSchedModel::computeInstrLatency(STI, *SCDesc);
+        if (!SchedClass) {
+          assert(false && "unsupported variant scheduling class");
+          return nullptr;
+        }
 
-  llvm_unreachable("unsupported variant scheduling class");
+        return SCDesc;
+      });
 }
 
 double

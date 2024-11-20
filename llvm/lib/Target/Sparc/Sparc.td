@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 include "llvm/Target/Target.td"
+include "llvm/TableGen/SearchableTable.td"
 
 //===----------------------------------------------------------------------===//
 // SPARC Subtarget features.
@@ -33,6 +34,9 @@ def FeatureNoFMULS
 def FeatureV9
   : SubtargetFeature<"v9", "IsV9", "true",
                      "Enable SPARC-V9 instructions">;
+def FeatureV8Plus
+  : SubtargetFeature<"v8plus", "IsV8Plus", "true",
+                     "Enable V8+ mode, allowing use of 64-bit V9 instructions in 32-bit code">;
 def FeatureV8Deprecated
   : SubtargetFeature<"deprecated-v8", "UseV8DeprecatedInsts", "true",
                      "Enable deprecated V8 instructions in V9 mode">;
@@ -62,14 +66,36 @@ def UsePopc : SubtargetFeature<"popc", "UsePopc", "true",
 def FeatureSoftFloat : SubtargetFeature<"soft-float", "UseSoftFloat", "true",
                               "Use software emulation for floating point">;
 
+//===----------------------------------------------------------------------===//
+// SPARC Subtarget tuning features.
+//
+
+def TuneSlowRDPC : SubtargetFeature<"slow-rdpc", "HasSlowRDPC", "true",
+                                    "rd %pc, %XX is slow", [FeatureV9]>;
+
 //==== Features added predmoninantly for LEON subtarget support
 include "LeonFeatures.td"
+
+//==== Register allocation tweaks needed by some low-level software
+foreach i = 1 ... 7  in
+    def FeatureReserveG#i : SubtargetFeature<"reserve-g"#i, "ReserveRegister["#i#" + SP::G0]", "true",
+                                             "Reserve G"#i#", making it unavailable as a GPR">;
+foreach i = 0 ... 5 in
+    def FeatureReserveO#i : SubtargetFeature<"reserve-o"#i, "ReserveRegister["#i#" + SP::O0]", "true",
+                                             "Reserve O"#i#", making it unavailable as a GPR">;
+foreach i = 0 ... 7 in
+    def FeatureReserveL#i : SubtargetFeature<"reserve-l"#i, "ReserveRegister["#i#" + SP::L0]", "true",
+                                             "Reserve L"#i#", making it unavailable as a GPR">;
+foreach i = 0 ... 5 in
+    def FeatureReserveI#i : SubtargetFeature<"reserve-i"#i, "ReserveRegister["#i#" + SP::I0]", "true",
+                                             "Reserve I"#i#", making it unavailable as a GPR">;
 
 //===----------------------------------------------------------------------===//
 // Register File, Calling Conv, Instruction Descriptions
 //===----------------------------------------------------------------------===//
 
 include "SparcASITags.td"
+include "SparcPrefetchTags.td"
 include "SparcRegisterInfo.td"
 include "SparcCallingConv.td"
 include "SparcSchedule.td"
@@ -78,7 +104,8 @@ include "SparcInstrInfo.td"
 def SparcInstrInfo : InstrInfo;
 
 def SparcAsmParser : AsmParser {
-  bit ShouldEmitMatchRegisterName = 0;
+  let ShouldEmitMatchRegisterAltName = true;
+  let AllowDuplicateRegisterNames = true;
 }
 
 def SparcAsmParserVariant : AsmParserVariant {
@@ -89,8 +116,9 @@ def SparcAsmParserVariant : AsmParserVariant {
 // SPARC processors supported.
 //===----------------------------------------------------------------------===//
 
-class Proc<string Name, list<SubtargetFeature> Features>
- : Processor<Name, NoItineraries, Features>;
+class Proc<string Name, list<SubtargetFeature> Features,
+           list<SubtargetFeature> TuneFeatures = []>
+ : Processor<Name, NoItineraries, Features, TuneFeatures>;
 
 def : Proc<"generic",         []>;
 def : Proc<"v7",              [FeatureSoftMulDiv, FeatureNoFSMULD]>;
@@ -118,9 +146,11 @@ def : Proc<"ma2480",          [FeatureLeon, LeonCASA]>;
 def : Proc<"ma2485",          [FeatureLeon, LeonCASA]>;
 def : Proc<"ma2x8x",          [FeatureLeon, LeonCASA]>;
 def : Proc<"v9",              [FeatureV9]>;
-def : Proc<"ultrasparc",      [FeatureV9, FeatureV8Deprecated, FeatureVIS]>;
+def : Proc<"ultrasparc",      [FeatureV9, FeatureV8Deprecated, FeatureVIS],
+                              [TuneSlowRDPC]>;
 def : Proc<"ultrasparc3",     [FeatureV9, FeatureV8Deprecated, FeatureVIS,
-                               FeatureVIS2]>;
+                               FeatureVIS2],
+                              [TuneSlowRDPC]>;
 def : Proc<"niagara",         [FeatureV9, FeatureV8Deprecated, FeatureVIS,
                                FeatureVIS2]>;
 def : Proc<"niagara2",        [FeatureV9, FeatureV8Deprecated, UsePopc,

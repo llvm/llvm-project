@@ -27,18 +27,15 @@ namespace arm_sme {
 /// Pass to enable Armv9 Streaming SVE mode.
 std::unique_ptr<Pass> createEnableArmStreamingPass(
     const ArmStreamingMode = ArmStreamingMode::Streaming,
-    const ArmZaMode = ArmZaMode::Disabled);
+    const ArmZaMode = ArmZaMode::Disabled, bool ifRequiredByOps = false,
+    bool ifContainsScalableVectors = false);
 
-/// Pass that replaces 'arm_sme.get_tile_id' ops with actual tiles.
-std::unique_ptr<Pass> createTileAllocationPass();
+/// Pass that fuses 'arm_sme.outerproduct' ops into 2-way or 4-way widening
+/// variants.
+std::unique_ptr<Pass> createOuterProductFusionPass();
 
-//===----------------------------------------------------------------------===//
-// Type ArmSMETypeConverter pass.
-//===----------------------------------------------------------------------===//
-class ArmSMETypeConverter : public LLVMTypeConverter {
-public:
-  ArmSMETypeConverter(MLIRContext *ctx, const LowerToLLVMOptions &options);
-};
+/// Pass that legalizes vectors so they can be lowered to ArmSME.
+std::unique_ptr<Pass> createVectorLegalizationPass();
 
 //===----------------------------------------------------------------------===//
 // Registration

@@ -31,9 +31,9 @@
 
 void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
                                           const SparsifierOptions &options) {
-  // Rewrite named linalg ops into generic ops.
-
-  pm.addNestedPass<func::FuncOp>(createLinalgGeneralizationPass());
+  // Rewrite named linalg ops into generic ops and apply fusion.
+  pm.addNestedPass<func::FuncOp>(createLinalgGeneralizeNamedOpsPass());
+  pm.addNestedPass<func::FuncOp>(createLinalgElementwiseOpFusionPass());
 
   // Sparsification and bufferization mini-pipeline.
   pm.addPass(createSparsificationAndBufferizationPass(
@@ -44,7 +44,9 @@ void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
       options.vectorLength,
       /*enableVLAVectorization=*/options.armSVE,
       /*enableSIMDIndex32=*/options.force32BitVectorIndices,
-      options.enableGPULibgen));
+      options.enableGPULibgen,
+      options.sparsificationOptions().sparseEmitStrategy,
+      options.sparsificationOptions().parallelizationStrategy));
 
   // Bail-early for test setup.
   if (options.testBufferizationAnalysisOnly)
@@ -65,6 +67,8 @@ void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
     pm.addNestedPass<gpu::GPUModuleOp>(createConvertGpuOpsToNVVMOps());
   }
 
+  // Progressively lower to LLVM. Note that the convert-vector-to-llvm
+  // pass is repeated on purpose.
   // TODO(springerm): Add sparse support to the BufferDeallocation pass and add
   // it to this pipeline.
   pm.addNestedPass<func::FuncOp>(createConvertLinalgToLoopsPass());
@@ -73,19 +77,19 @@ void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
   pm.addNestedPass<func::FuncOp>(createConvertSCFToCFPass());
   pm.addPass(memref::createExpandStridedMetadataPass());
   pm.addPass(createLowerAffinePass());
-  pm.addPass(createConvertVectorToLLVMPass(options.lowerVectorToLLVMOptions()));
+  pm.addPass(
+      createConvertVectorToLLVMPass(options.convertVectorToLLVMOptions()));
   pm.addPass(createFinalizeMemRefToLLVMConversionPass());
   pm.addNestedPass<func::FuncOp>(createConvertComplexToStandardPass());
   pm.addNestedPass<func::FuncOp>(arith::createArithExpandOpsPass());
   pm.addNestedPass<func::FuncOp>(createConvertMathToLLVMPass());
   pm.addPass(createConvertMathToLibmPass());
   pm.addPass(createConvertComplexToLibmPass());
-
-  // Repeat convert-vector-to-llvm.
-  pm.addPass(createConvertVectorToLLVMPass(options.lowerVectorToLLVMOptions()));
-
+  pm.addPass(
+      createConvertVectorToLLVMPass(options.convertVectorToLLVMOptions()));
   pm.addPass(createConvertComplexToLLVMPass());
-  pm.addPass(createConvertVectorToLLVMPass(options.lowerVectorToLLVMOptions()));
+  pm.addPass(
+      createConvertVectorToLLVMPass(options.convertVectorToLLVMOptions()));
   pm.addPass(createConvertFuncToLLVMPass());
 
   // Finalize GPU code generation.
@@ -101,6 +105,7 @@ void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
     pm.addPass(createGpuModuleToBinaryPass(gpuModuleToBinaryPassOptions));
   }
 
+  // Ensure all casts are realized.
   pm.addPass(createReconcileUnrealizedCastsPass());
 }
 

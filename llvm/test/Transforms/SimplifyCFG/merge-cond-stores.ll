@@ -322,10 +322,9 @@ define i32 @test_diamond_alias3(ptr %p, ptr %q, i32 %a, i32 %b) {
 ; CHECK-NEXT:    br label [[FALLTHROUGH:%.*]]
 ; CHECK:       no1:
 ; CHECK-NEXT:    call void @f()
-; CHECK-NEXT:    [[Z1:%.*]] = add i32 [[A]], [[B:%.*]]
 ; CHECK-NEXT:    br label [[FALLTHROUGH]]
 ; CHECK:       fallthrough:
-; CHECK-NEXT:    [[Z2:%.*]] = phi i32 [ [[Z1]], [[NO1]] ], [ 0, [[YES1]] ]
+; CHECK-NEXT:    [[Z2:%.*]] = phi i32 [ [[B:%.*]], [[NO1]] ], [ 0, [[YES1]] ]
 ; CHECK-NEXT:    [[X2:%.*]] = icmp eq i32 [[B]], 0
 ; CHECK-NEXT:    br i1 [[X2]], label [[NO2:%.*]], label [[YES2:%.*]]
 ; CHECK:       yes2:
@@ -333,7 +332,7 @@ define i32 @test_diamond_alias3(ptr %p, ptr %q, i32 %a, i32 %b) {
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       no2:
 ; CHECK-NEXT:    call void @f()
-; CHECK-NEXT:    [[Z3:%.*]] = sub i32 [[Z2]], [[B]]
+; CHECK-NEXT:    [[Z3:%.*]] = sub nuw nsw i32 [[Z2]], [[B]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[Z4:%.*]] = phi i32 [ [[Z3]], [[NO2]] ], [ 3, [[YES2]] ]

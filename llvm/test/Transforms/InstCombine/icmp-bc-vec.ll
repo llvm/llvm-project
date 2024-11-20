@@ -74,7 +74,7 @@ define i1 @test_i8_pattern_2(i8 %val) {
 ; Make sure we don't try to fold if the shufflemask has differing element values
 define i1 @test_i8_pattern_3(<4 x i8> %invec) {
 ; CHECK-LABEL: @test_i8_pattern_3(
-; CHECK-NEXT:    [[VEC:%.*]] = shufflevector <4 x i8> [[INVEC:%.*]], <4 x i8> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; CHECK-NEXT:    [[VEC:%.*]] = shufflevector <4 x i8> [[INVEC:%.*]], <4 x i8> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i8> [[VEC]] to i32
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[CAST]], 1212696648
 ; CHECK-NEXT:    ret i1 [[COND]]
@@ -88,8 +88,8 @@ define i1 @test_i8_pattern_3(<4 x i8> %invec) {
 ; Make sure we don't try to fold if the compared-to constant isn't a splatted value
 define i1 @test_i8_nopattern(i8 %val) {
 ; CHECK-LABEL: @test_i8_nopattern(
-; CHECK-NEXT:    [[INSVEC:%.*]] = insertelement <4 x i8> undef, i8 [[VAL:%.*]], i64 0
-; CHECK-NEXT:    [[VEC:%.*]] = shufflevector <4 x i8> [[INSVEC]], <4 x i8> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[INSVEC:%.*]] = insertelement <4 x i8> poison, i8 [[VAL:%.*]], i64 0
+; CHECK-NEXT:    [[VEC:%.*]] = shufflevector <4 x i8> [[INSVEC]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i8> [[VEC]] to i32
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[CAST]], 1212696647
 ; CHECK-NEXT:    ret i1 [[COND]]

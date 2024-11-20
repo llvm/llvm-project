@@ -210,6 +210,20 @@ TEST_F(LlvmLibcPrintfConverterTest, HexConversion) {
   ASSERT_EQ(writer.get_chars_written(), 18);
 }
 
+TEST_F(LlvmLibcPrintfConverterTest, BinaryConversion) {
+  LIBC_NAMESPACE::printf_core::FormatSection section;
+  section.has_conv = true;
+  section.raw_string = "%b";
+  section.conv_name = 'b';
+  section.conv_val_raw = 42;
+  LIBC_NAMESPACE::printf_core::convert(&writer, section);
+
+  wb.buff[wb.buff_cur] = '\0';
+
+  ASSERT_STREQ(str, "101010");
+  ASSERT_EQ(writer.get_chars_written(), 6);
+}
+
 TEST_F(LlvmLibcPrintfConverterTest, PointerConversion) {
 
   LIBC_NAMESPACE::printf_core::FormatSection section;

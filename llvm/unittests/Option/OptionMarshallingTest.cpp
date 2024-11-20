@@ -1,4 +1,4 @@
-//===- unittest/Support/OptionMarshallingTest.cpp - OptParserEmitter tests ===//
+//===- OptionMarshallingTest.cpp - OptionParserEmitter tests -================//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,9 +19,9 @@ struct OptionWithMarshallingInfo {
 static const OptionWithMarshallingInfo MarshallingTable[] = {
 #define OPTION_WITH_MARSHALLING(                                               \
     PREFIX_TYPE, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,      \
-    VISIBILITY, PARAM, HELPTEXT, METAVAR, VALUES, SHOULD_PARSE, ALWAYS_EMIT,   \
-    KEYPATH, DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER,          \
-    DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)                              \
+    VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES,        \
+    SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE, IMPLIED_CHECK,          \
+    IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)   \
   {PREFIXED_NAME, #KEYPATH, #IMPLIED_CHECK, #IMPLIED_VALUE},
 #include "Opts.inc"
 #undef OPTION_WITH_MARSHALLING

@@ -463,7 +463,7 @@ DenseSet<int64_t> getEquivalentBuffers(Block::BlockArgListType bbArgs,
 /// Helper function for loop bufferization. Return the bufferized values of the
 /// given OpOperands. If an operand is not a tensor, return the original value.
 static FailureOr<SmallVector<Value>>
-getBuffers(RewriterBase &rewriter, MutableOperandRange operands,
+getBuffers(RewriterBase &rewriter, const MutableOperandRange &operands,
            const BufferizationOptions &options) {
   SmallVector<Value> result;
   for (OpOperand &opOperand : operands) {
@@ -649,7 +649,8 @@ struct ForOpInterface
     if (failed(bufferizableOp.resolveTensorOpOperandConflicts(rewriter, state)))
       return failure();
 
-    if (!state.getOptions().enforceAliasingInvariants)
+    if (!state.getOptions().enforceAliasingInvariants ||
+        state.getOptions().copyBeforeWrite)
       return success();
 
     // According to the `getAliasing...` implementations, a bufferized OpResult
@@ -688,7 +689,7 @@ struct ForOpInterface
       yieldValues.push_back(*alloc);
     }
 
-    rewriter.updateRootInPlace(
+    rewriter.modifyOpInPlace(
         yieldOp, [&]() { yieldOp.getResultsMutable().assign(yieldValues); });
     return success();
   }
@@ -889,7 +890,8 @@ struct WhileOpInterface
     if (failed(bufferizableOp.resolveTensorOpOperandConflicts(rewriter, state)))
       return failure();
 
-    if (!state.getOptions().enforceAliasingInvariants)
+    if (!state.getOptions().enforceAliasingInvariants ||
+        state.getOptions().copyBeforeWrite)
       return success();
 
     // According to the `getAliasing...` implementations, a bufferized OpResult
@@ -928,7 +930,7 @@ struct WhileOpInterface
         return failure();
       beforeYieldValues.push_back(*alloc);
     }
-    rewriter.updateRootInPlace(conditionOp, [&]() {
+    rewriter.modifyOpInPlace(conditionOp, [&]() {
       conditionOp.getArgsMutable().assign(beforeYieldValues);
     });
 
@@ -1266,6 +1268,9 @@ struct ForallOpInterface
         forallOp.getLoc(), forallOp.getMixedLowerBound(),
         forallOp.getMixedUpperBound(), forallOp.getMixedStep(),
         /*outputs=*/ValueRange(), forallOp.getMapping());
+
+    // Keep discardable attributes from the original op.
+    newForallOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
 
     rewriter.eraseOp(newForallOp.getBody()->getTerminator());
 

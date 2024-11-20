@@ -17,10 +17,8 @@ define void @dead_masked_store_alltrue_same(<vscale x 4 x i32> %val, ptr %a, <vs
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %alltrue.ins = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %alltrue = shufflevector  <vscale x 4 x i1> %alltrue.ins,  <vscale x 4 x i1> poison,  <vscale x 4 x i32> zeroinitializer
   call void @llvm.masked.store.nxv4i32(<vscale x 4 x i32> %val, ptr %a, i32 4, <vscale x 4 x i1> %mask)
-  call void @llvm.masked.store.nxv4i32(<vscale x 4 x i32> %val, ptr %a, i32 4, <vscale x 4 x i1> %alltrue)
+  call void @llvm.masked.store.nxv4i32(<vscale x 4 x i32> %val, ptr %a, i32 4, <vscale x 4 x i1> splat(i1 true))
   ret void
 }
 
@@ -30,10 +28,8 @@ define void @dead_masked_store_alltrue_bigger(<vscale x 4 x i16> %val, <vscale x
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %alltrue.ins = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %alltrue = shufflevector  <vscale x 4 x i1> %alltrue.ins,  <vscale x 4 x i1> poison,  <vscale x 4 x i32> zeroinitializer
   call void @llvm.masked.store.nxv4i16(<vscale x 4 x i16> %val, ptr %a, i32 4, <vscale x 4 x i1> %mask)
-  call void @llvm.masked.store.nxv4i32(<vscale x 4 x i32> %val1, ptr %a, i32 4, <vscale x 4 x i1> %alltrue)
+  call void @llvm.masked.store.nxv4i32(<vscale x 4 x i32> %val1, ptr %a, i32 4, <vscale x 4 x i1> splat(i1 true))
   ret void
 }
 
@@ -44,10 +40,8 @@ define void @dead_masked_store_alltrue_smaller(<vscale x 4 x i32> %val, <vscale 
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    st1h { z1.s }, p1, [x0]
 ; CHECK-NEXT:    ret
-  %alltrue.ins = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %alltrue = shufflevector  <vscale x 4 x i1> %alltrue.ins,  <vscale x 4 x i1> poison,  <vscale x 4 x i32> zeroinitializer
   call void @llvm.masked.store.nxv4i32(<vscale x 4 x i32> %val, ptr %a, i32 4, <vscale x 4 x i1> %mask)
-  call void @llvm.masked.store.nxv4i16(<vscale x 4 x i16> %val1, ptr %a, i32 4, <vscale x 4 x i1> %alltrue)
+  call void @llvm.masked.store.nxv4i16(<vscale x 4 x i16> %val1, ptr %a, i32 4, <vscale x 4 x i1> splat(i1 true))
   ret void
 }
 
@@ -73,5 +67,5 @@ define void @dead_masked_store_same_mask_bigger_type(<vscale x 4 x i16> %val, <v
   ret void
 }
 
-declare void @llvm.masked.store.nxv4i16(<vscale x 4 x i16>, <vscale x 4 x i16>*, i32, <vscale x 4 x i1>)
-declare void @llvm.masked.store.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>*, i32, <vscale x 4 x i1>)
+declare void @llvm.masked.store.nxv4i16(<vscale x 4 x i16>, ptr, i32, <vscale x 4 x i1>)
+declare void @llvm.masked.store.nxv4i32(<vscale x 4 x i32>, ptr, i32, <vscale x 4 x i1>)

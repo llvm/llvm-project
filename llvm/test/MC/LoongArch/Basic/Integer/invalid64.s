@@ -65,7 +65,7 @@ addu16i.d $a0, $a0, 32768
 
 ## simm20
 pcaddu18i $a0, 0x80000
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-524288, 524287]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %call36) or an integer in the range [-524288, 524287]
 
 ## simm20_lu32id
 lu32i.d $a0, 0x80000
@@ -91,3 +91,14 @@ amxor.w $a0, $a1, $a0
 amadd.d $a0, $a1, $a2, $a3
 # CHECK: :[[#@LINE+1]]:24: error: optional integer offset must be 0
 amadd.d $a0, $a1, $a2, 1
+
+## According to experiment results on real LA664 HW, the AMCAS instructions
+## are subject to the same constraint as the other 3-register atomic insns.
+## This is undocumented in v1.10 of the LoongArch Reference Manual.
+
+# CHECK: :[[#@LINE+1]]:10: error: $rd must be different from both $rk and $rj
+amcas.b $a0, $a0, $a0
+# CHECK: :[[#@LINE+1]]:10: error: $rd must be different from both $rk and $rj
+amcas.h $a0, $a0, $a1
+# CHECK: :[[#@LINE+1]]:13: error: $rd must be different from both $rk and $rj
+amcas_db.w $a0, $a1, $a0

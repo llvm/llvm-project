@@ -103,7 +103,7 @@ define i64 @fold_strlen_a_S3_p2_s4_to_1() {
 define void @fold_strlen_a_s3_S4_to_4() {
 ; CHECK-LABEL: @fold_strlen_a_s3_S4_to_4(
 ; CHECK-NEXT:    store i64 4, ptr @ax, align 4
-; CHECK-NEXT:    store i64 4, ptr getelementptr inbounds ([0 x i64], ptr @ax, i64 0, i64 1), align 4
+; CHECK-NEXT:    store i64 4, ptr getelementptr inbounds (i8, ptr @ax, i64 8), align 4
 ; CHECK-NEXT:    ret void
 ;
   %p1 = getelementptr %struct.A_a4_a5, ptr @a_s3_s4, i32 0, i32 0, i32 4
@@ -125,7 +125,7 @@ define void @fold_strlen_a_s3_S4_to_4() {
 define void @fold_strlen_a_s3_S4_p1_to_3() {
 ; CHECK-LABEL: @fold_strlen_a_s3_S4_p1_to_3(
 ; CHECK-NEXT:    store i64 3, ptr @ax, align 4
-; CHECK-NEXT:    store i64 3, ptr getelementptr inbounds ([0 x i64], ptr @ax, i64 0, i64 1), align 4
+; CHECK-NEXT:    store i64 3, ptr getelementptr inbounds (i8, ptr @ax, i64 8), align 4
 ; CHECK-NEXT:    ret void
 ;
   %p1 = getelementptr %struct.A_a4_a5, ptr @a_s3_s4, i32 0, i32 0, i32 5
@@ -147,7 +147,7 @@ define void @fold_strlen_a_s3_S4_p1_to_3() {
 define void @fold_strlen_a_s3_i32_S4_to_4() {
 ; CHECK-LABEL: @fold_strlen_a_s3_i32_S4_to_4(
 ; CHECK-NEXT:    store i64 4, ptr @ax, align 4
-; CHECK-NEXT:    store i64 4, ptr getelementptr inbounds ([0 x i64], ptr @ax, i64 0, i64 1), align 4
+; CHECK-NEXT:    store i64 4, ptr getelementptr inbounds (i8, ptr @ax, i64 8), align 4
 ; CHECK-NEXT:    ret void
 ;
   %p1 = getelementptr %struct.A_a4_i32_a5, ptr @a_s3_i32_s4, i32 0, i32 0, i32 8
@@ -169,7 +169,7 @@ define void @fold_strlen_a_s3_i32_S4_to_4() {
 define void @fold_strlen_a_s3_i32_S4_p1_to_3() {
 ; CHECK-LABEL: @fold_strlen_a_s3_i32_S4_p1_to_3(
 ; CHECK-NEXT:    store i64 3, ptr @ax, align 4
-; CHECK-NEXT:    store i64 3, ptr getelementptr inbounds ([0 x i64], ptr @ax, i64 0, i64 1), align 4
+; CHECK-NEXT:    store i64 3, ptr getelementptr inbounds (i8, ptr @ax, i64 8), align 4
 ; CHECK-NEXT:    ret void
 ;
   %p1 = getelementptr %struct.A_a4_i32_a5, ptr @a_s3_i32_s4, i32 0, i32 0, i32 9
@@ -191,7 +191,7 @@ define void @fold_strlen_a_s3_i32_S4_p1_to_3() {
 define void @fold_strlen_a_s3_i32_S4_p2_to_2() {
 ; CHECK-LABEL: @fold_strlen_a_s3_i32_S4_p2_to_2(
 ; CHECK-NEXT:    store i64 2, ptr @ax, align 4
-; CHECK-NEXT:    store i64 2, ptr getelementptr inbounds ([0 x i64], ptr @ax, i64 0, i64 1), align 4
+; CHECK-NEXT:    store i64 2, ptr getelementptr inbounds (i8, ptr @ax, i64 8), align 4
 ; CHECK-NEXT:    ret void
 ;
   %p1 = getelementptr %struct.A_a4_i32_a5, ptr @a_s3_i32_s4, i32 0, i32 0, i32 10
@@ -213,7 +213,7 @@ define void @fold_strlen_a_s3_i32_S4_p2_to_2() {
 define void @fold_strlen_a_s3_i32_S4_p3_to_1() {
 ; CHECK-LABEL: @fold_strlen_a_s3_i32_S4_p3_to_1(
 ; CHECK-NEXT:    store i64 1, ptr @ax, align 4
-; CHECK-NEXT:    store i64 1, ptr getelementptr inbounds ([0 x i64], ptr @ax, i64 0, i64 1), align 4
+; CHECK-NEXT:    store i64 1, ptr getelementptr inbounds (i8, ptr @ax, i64 8), align 4
 ; CHECK-NEXT:    ret void
 ;
   %p1 = getelementptr %struct.A_a4_i32_a5, ptr @a_s3_i32_s4, i32 0, i32 0, i32 11
@@ -235,7 +235,7 @@ define void @fold_strlen_a_s3_i32_S4_p3_to_1() {
 define void @fold_strlen_a_s3_i32_S4_p4_to_0() {
 ; CHECK-LABEL: @fold_strlen_a_s3_i32_S4_p4_to_0(
 ; CHECK-NEXT:    store i64 0, ptr @ax, align 4
-; CHECK-NEXT:    store i64 0, ptr getelementptr inbounds ([0 x i64], ptr @ax, i64 0, i64 1), align 4
+; CHECK-NEXT:    store i64 0, ptr getelementptr inbounds (i8, ptr @ax, i64 8), align 4
 ; CHECK-NEXT:    ret void
 ;
   %p1 = getelementptr %struct.A_a4_i32_a5, ptr @a_s3_i32_s4, i32 0, i32 0, i32 12
@@ -257,8 +257,8 @@ define void @fold_strlen_a_s3_i32_S4_p4_to_0() {
 define void @fold_strlen_ax_s() {
 ; CHECK-LABEL: @fold_strlen_ax_s(
 ; CHECK-NEXT:    store i64 3, ptr @ax, align 4
-; CHECK-NEXT:    store i64 5, ptr getelementptr inbounds ([0 x i64], ptr @ax, i64 0, i64 1), align 4
-; CHECK-NEXT:    store i64 7, ptr getelementptr inbounds ([0 x i64], ptr @ax, i64 0, i64 2), align 4
+; CHECK-NEXT:    store i64 5, ptr getelementptr inbounds (i8, ptr @ax, i64 8), align 4
+; CHECK-NEXT:    store i64 7, ptr getelementptr inbounds (i8, ptr @ax, i64 16), align 4
 ; CHECK-NEXT:    ret void
 ;
   %pax_s3 = getelementptr { i8, [4 x i8] }, ptr @ax_s3, i64 0, i32 1, i64 0

@@ -196,10 +196,10 @@ IncludeCategoryManager::IncludeCategoryManager(const IncludeStyle &Style,
                                                     ? llvm::Regex::NoFlags
                                                     : llvm::Regex::IgnoreCase);
   }
-  IsMainFile = FileName.endswith(".c") || FileName.endswith(".cc") ||
-               FileName.endswith(".cpp") || FileName.endswith(".c++") ||
-               FileName.endswith(".cxx") || FileName.endswith(".m") ||
-               FileName.endswith(".mm");
+  IsMainFile = FileName.ends_with(".c") || FileName.ends_with(".cc") ||
+               FileName.ends_with(".cpp") || FileName.ends_with(".c++") ||
+               FileName.ends_with(".cxx") || FileName.ends_with(".m") ||
+               FileName.ends_with(".mm");
   if (!Style.IncludeIsMainSourceRegex.empty()) {
     llvm::Regex MainFileRegex(Style.IncludeIsMainSourceRegex);
     IsMainFile |= MainFileRegex.match(FileName);
@@ -234,8 +234,18 @@ int IncludeCategoryManager::getSortIncludePriority(StringRef IncludeName,
   return Ret;
 }
 bool IncludeCategoryManager::isMainHeader(StringRef IncludeName) const {
-  if (!IncludeName.startswith("\""))
-    return false;
+  switch (Style.MainIncludeChar) {
+  case IncludeStyle::MICD_Quote:
+    if (!IncludeName.starts_with("\""))
+      return false;
+    break;
+  case IncludeStyle::MICD_AngleBracket:
+    if (!IncludeName.starts_with("<"))
+      return false;
+    break;
+  case IncludeStyle::MICD_Any:
+    break;
+  }
 
   IncludeName =
       IncludeName.drop_front(1).drop_back(1); // remove the surrounding "" or <>
@@ -310,12 +320,9 @@ HeaderIncludes::HeaderIncludes(StringRef FileName, StringRef Code,
   // - If CategoryEndOffset[Priority] isn't set, use the next higher value
   // that is set, up to CategoryEndOffset[Highest].
   auto Highest = Priorities.begin();
-  if (CategoryEndOffsets.find(*Highest) == CategoryEndOffsets.end()) {
-    if (FirstIncludeOffset >= 0)
-      CategoryEndOffsets[*Highest] = FirstIncludeOffset;
-    else
-      CategoryEndOffsets[*Highest] = MinInsertOffset;
-  }
+  auto [It, Inserted] = CategoryEndOffsets.try_emplace(*Highest);
+  if (Inserted)
+    It->second = FirstIncludeOffset >= 0 ? FirstIncludeOffset : MinInsertOffset;
   // By this point, CategoryEndOffset[Highest] is always set appropriately:
   //  - to an appropriate location before/after existing #includes, or
   //  - to right after the header guard, or
@@ -328,10 +335,9 @@ HeaderIncludes::HeaderIncludes(StringRef FileName, StringRef Code,
 // \p Offset: the start of the line following this include directive.
 void HeaderIncludes::addExistingInclude(Include IncludeToAdd,
                                         unsigned NextLineOffset) {
-  auto Iter =
-      ExistingIncludes.try_emplace(trimInclude(IncludeToAdd.Name)).first;
-  Iter->second.push_back(std::move(IncludeToAdd));
-  auto &CurInclude = Iter->second.back();
+  auto &Incs = ExistingIncludes[trimInclude(IncludeToAdd.Name)];
+  Incs.push_back(std::move(IncludeToAdd));
+  auto &CurInclude = Incs.back();
   // The header name with quotes or angle brackets.
   // Only record the offset of current #include if we can insert after it.
   if (CurInclude.R.getOffset() <= MaxInsertOffset) {
@@ -357,8 +363,8 @@ HeaderIncludes::insert(llvm::StringRef IncludeName, bool IsAngled,
   if (It != ExistingIncludes.end()) {
     for (const auto &Inc : It->second)
       if (Inc.Directive == Directive &&
-          ((IsAngled && StringRef(Inc.Name).startswith("<")) ||
-           (!IsAngled && StringRef(Inc.Name).startswith("\""))))
+          ((IsAngled && StringRef(Inc.Name).starts_with("<")) ||
+           (!IsAngled && StringRef(Inc.Name).starts_with("\""))))
         return std::nullopt;
   }
   std::string Quoted =
@@ -400,8 +406,8 @@ tooling::Replacements HeaderIncludes::remove(llvm::StringRef IncludeName,
   if (Iter == ExistingIncludes.end())
     return Result;
   for (const auto &Inc : Iter->second) {
-    if ((IsAngled && StringRef(Inc.Name).startswith("\"")) ||
-        (!IsAngled && StringRef(Inc.Name).startswith("<")))
+    if ((IsAngled && StringRef(Inc.Name).starts_with("\"")) ||
+        (!IsAngled && StringRef(Inc.Name).starts_with("<")))
       continue;
     llvm::Error Err = Result.add(tooling::Replacement(
         FileName, Inc.R.getOffset(), Inc.R.getLength(), ""));

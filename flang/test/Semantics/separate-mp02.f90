@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 
 ! When a module subprogram has the MODULE prefix the following must match
 ! with the corresponding separate module procedure interface body:
@@ -148,6 +148,8 @@ module m2b
     end
     module subroutine s6() bind(c)
     end
+    module subroutine s7() bind(c, name="s7")
+    end
   end interface
 end
 
@@ -171,6 +173,8 @@ contains
   end
   !ERROR: Module subprogram 's6' has binding label 'not_s6' but the corresponding interface body has 's6'
   module subroutine s6() bind(c, name="not_s6")
+  end
+  module procedure s7
   end
 end
 
@@ -234,7 +238,7 @@ contains
     procedure(s_real2) :: x
   end
   module subroutine s2(x)
-    !ERROR: Dummy procedure 'x' does not match the corresponding argument in the interface body
+    !ERROR: Dummy procedure 'x' is not compatible with the corresponding argument in the interface body: incompatible dummy procedure interfaces: incompatible dummy argument #1: incompatible dummy data object types: INTEGER(4) vs REAL(4)
     procedure(s_integer) :: x
   end
 end
@@ -353,3 +357,19 @@ submodule(m10) sm10
   module character(3) function f()
   end function
 end submodule
+
+module m11
+  interface
+    module subroutine s(x)
+      ! The subroutine/function distinction is not known.
+      external x
+    end
+  end interface
+end
+submodule(m11) sm11
+ contains
+  !WARNING: Dummy procedure 'x' does not exactly match the corresponding argument in the interface body
+  module subroutine s(x)
+    call x ! no error
+  end
+end

@@ -87,7 +87,7 @@ bool Broadcaster::BroadcasterImpl::HasListeners(uint32_t event_mask) {
 }
 
 void Broadcaster::BroadcasterImpl::Clear() {
-  std::lock_guard<std::recursive_mutex> guard(m_listeners_mutex);
+  std::lock_guard<std::mutex> guard(m_listeners_mutex);
 
   // Make sure the listener forgets about this broadcaster. We do this in the
   // broadcaster in case the broadcaster object initiates the removal.
@@ -137,7 +137,7 @@ Broadcaster::BroadcasterImpl::AddListener(const lldb::ListenerSP &listener_sp,
   if (!listener_sp)
     return 0;
 
-  std::lock_guard<std::recursive_mutex> guard(m_listeners_mutex);
+  std::lock_guard<std::mutex> guard(m_listeners_mutex);
 
   // See if we already have this listener, and if so, update its mask
 
@@ -171,7 +171,7 @@ Broadcaster::BroadcasterImpl::AddListener(const lldb::ListenerSP &listener_sp,
 }
 
 bool Broadcaster::BroadcasterImpl::EventTypeHasListeners(uint32_t event_type) {
-  std::lock_guard<std::recursive_mutex> guard(m_listeners_mutex);
+  std::lock_guard<std::mutex> guard(m_listeners_mutex);
 
   if (!m_hijacking_listeners.empty() && event_type & m_hijacking_masks.back())
     return true;
@@ -195,14 +195,14 @@ bool Broadcaster::BroadcasterImpl::RemoveListener(
     return true;
   }
 
-  std::lock_guard<std::recursive_mutex> guard(m_listeners_mutex);
+  std::lock_guard<std::mutex> guard(m_listeners_mutex);
   for (auto it = m_listeners.begin(); it != m_listeners.end();) {
     lldb::ListenerSP curr_listener_sp(it->first.lock());
 
     if (!curr_listener_sp) {
       // The weak pointer for this listener didn't resolve, lets' prune it
       // as we go.
-      m_listeners.erase(it);
+      it = m_listeners.erase(it);
       continue;
     }
 
@@ -213,8 +213,8 @@ bool Broadcaster::BroadcasterImpl::RemoveListener(
       if (!it->second)
         m_listeners.erase(it);
       return true;
-    } else
-      it++;
+    }
+    it++;
   }
   return false;
 }
@@ -243,7 +243,7 @@ void Broadcaster::BroadcasterImpl::PrivateBroadcastEvent(EventSP &event_sp,
 
   const uint32_t event_type = event_sp->GetType();
 
-  std::lock_guard<std::recursive_mutex> guard(m_listeners_mutex);
+  std::lock_guard<std::mutex> guard(m_listeners_mutex);
 
   ListenerSP hijacking_listener_sp;
 
@@ -300,9 +300,8 @@ void Broadcaster::BroadcasterImpl::PrivateBroadcastEvent(EventSP &event_sp,
   }
 }
 
-void Broadcaster::BroadcasterImpl::BroadcastEvent(uint32_t event_type,
-                                                  EventData *event_data) {
-  auto event_sp = std::make_shared<Event>(event_type, event_data);
+void Broadcaster::BroadcasterImpl::BroadcastEvent(uint32_t event_type) {
+  auto event_sp = std::make_shared<Event>(event_type, /*data = */ nullptr);
   PrivateBroadcastEvent(event_sp, false);
 }
 
@@ -312,9 +311,8 @@ void Broadcaster::BroadcasterImpl::BroadcastEvent(
   PrivateBroadcastEvent(event_sp, false);
 }
 
-void Broadcaster::BroadcasterImpl::BroadcastEventIfUnique(
-    uint32_t event_type, EventData *event_data) {
-  auto event_sp = std::make_shared<Event>(event_type, event_data);
+void Broadcaster::BroadcasterImpl::BroadcastEventIfUnique(uint32_t event_type) {
+  auto event_sp = std::make_shared<Event>(event_type, /*data = */ nullptr);
   PrivateBroadcastEvent(event_sp, true);
 }
 
@@ -329,7 +327,7 @@ void Broadcaster::BroadcasterImpl::SetPrimaryListener(lldb::ListenerSP
 
 bool Broadcaster::BroadcasterImpl::HijackBroadcaster(
     const lldb::ListenerSP &listener_sp, uint32_t event_mask) {
-  std::lock_guard<std::recursive_mutex> guard(m_listeners_mutex);
+  std::lock_guard<std::mutex> guard(m_listeners_mutex);
 
   Log *log = GetLog(LLDBLog::Events);
   LLDB_LOG(
@@ -343,7 +341,7 @@ bool Broadcaster::BroadcasterImpl::HijackBroadcaster(
 }
 
 bool Broadcaster::BroadcasterImpl::IsHijackedForEvent(uint32_t event_mask) {
-  std::lock_guard<std::recursive_mutex> guard(m_listeners_mutex);
+  std::lock_guard<std::mutex> guard(m_listeners_mutex);
 
   if (!m_hijacking_listeners.empty())
     return (event_mask & m_hijacking_masks.back()) != 0;
@@ -358,7 +356,7 @@ const char *Broadcaster::BroadcasterImpl::GetHijackingListenerName() {
 }
 
 void Broadcaster::BroadcasterImpl::RestoreBroadcaster() {
-  std::lock_guard<std::recursive_mutex> guard(m_listeners_mutex);
+  std::lock_guard<std::mutex> guard(m_listeners_mutex);
 
   if (!m_hijacking_listeners.empty()) {
     ListenerSP listener_sp = m_hijacking_listeners.back();
@@ -375,8 +373,8 @@ void Broadcaster::BroadcasterImpl::RestoreBroadcaster() {
     m_hijacking_masks.pop_back();
 }
 
-ConstString &Broadcaster::GetBroadcasterClass() const {
-  static ConstString class_name("lldb.anonymous");
+llvm::StringRef Broadcaster::GetBroadcasterClass() const {
+  static constexpr llvm::StringLiteral class_name("lldb.anonymous");
   return class_name;
 }
 
@@ -393,10 +391,8 @@ lldb::BroadcasterManagerSP BroadcasterManager::MakeBroadcasterManager() {
   return lldb::BroadcasterManagerSP(new BroadcasterManager());
 }
 
-uint32_t BroadcasterManager::RegisterListenerForEvents(
+uint32_t BroadcasterManager::RegisterListenerForEventsNoLock(
     const lldb::ListenerSP &listener_sp, const BroadcastEventSpec &event_spec) {
-  std::lock_guard<std::recursive_mutex> guard(m_manager_mutex);
-
   collection::iterator iter = m_event_map.begin(), end_iter = m_event_map.end();
   uint32_t available_bits = event_spec.GetEventBits();
 
@@ -421,9 +417,8 @@ uint32_t BroadcasterManager::RegisterListenerForEvents(
   return available_bits;
 }
 
-bool BroadcasterManager::UnregisterListenerForEvents(
+bool BroadcasterManager::UnregisterListenerForEventsNoLock(
     const lldb::ListenerSP &listener_sp, const BroadcastEventSpec &event_spec) {
-  std::lock_guard<std::recursive_mutex> guard(m_manager_mutex);
   bool removed_some = false;
 
   if (m_listeners.erase(listener_sp) == 0)
@@ -466,7 +461,7 @@ bool BroadcasterManager::UnregisterListenerForEvents(
 
 ListenerSP BroadcasterManager::GetListenerForEventSpec(
     const BroadcastEventSpec &event_spec) const {
-  std::lock_guard<std::recursive_mutex> guard(m_manager_mutex);
+  std::lock_guard<std::mutex> guard(m_manager_mutex);
 
   auto event_spec_matches =
       [&event_spec](const event_listener_key &input) -> bool {
@@ -481,7 +476,7 @@ ListenerSP BroadcasterManager::GetListenerForEventSpec(
 }
 
 void BroadcasterManager::RemoveListener(Listener *listener) {
-  std::lock_guard<std::recursive_mutex> guard(m_manager_mutex);
+  std::lock_guard<std::mutex> guard(m_manager_mutex);
   auto listeners_predicate =
       [&listener](const lldb::ListenerSP &input) -> bool {
     return input.get() == listener;
@@ -506,7 +501,7 @@ void BroadcasterManager::RemoveListener(Listener *listener) {
 }
 
 void BroadcasterManager::RemoveListener(const lldb::ListenerSP &listener_sp) {
-  std::lock_guard<std::recursive_mutex> guard(m_manager_mutex);
+  std::lock_guard<std::mutex> guard(m_manager_mutex);
 
   auto listener_matches =
       [&listener_sp](const event_listener_key &input) -> bool {
@@ -528,7 +523,7 @@ void BroadcasterManager::RemoveListener(const lldb::ListenerSP &listener_sp) {
 
 void BroadcasterManager::SignUpListenersForBroadcaster(
     Broadcaster &broadcaster) {
-  std::lock_guard<std::recursive_mutex> guard(m_manager_mutex);
+  std::lock_guard<std::mutex> guard(m_manager_mutex);
 
   collection::iterator iter = m_event_map.begin(), end_iter = m_event_map.end();
 
@@ -546,7 +541,7 @@ void BroadcasterManager::SignUpListenersForBroadcaster(
 }
 
 void BroadcasterManager::Clear() {
-  std::lock_guard<std::recursive_mutex> guard(m_manager_mutex);
+  std::lock_guard<std::mutex> guard(m_manager_mutex);
 
   for (auto &listener : m_listeners)
     listener->BroadcasterManagerWillDestruct(this->shared_from_this());

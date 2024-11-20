@@ -24,6 +24,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <cassert>
 #include <list>
 #include <memory>
@@ -133,6 +134,24 @@ class CompilerInstance : public ModuleLoader {
 
   std::vector<std::shared_ptr<DependencyCollector>> DependencyCollectors;
 
+  /// Records the set of modules
+  class FailedModulesSet {
+    llvm::StringSet<> Failed;
+
+  public:
+    bool hasAlreadyFailed(StringRef module) { return Failed.count(module) > 0; }
+
+    void addFailed(StringRef module) { Failed.insert(module); }
+  };
+
+  /// The set of modules that failed to build.
+  ///
+  /// This pointer will be shared among all of the compiler instances created
+  /// to (re)build modules, so that once a module fails to build anywhere,
+  /// other instances will see that the module has failed and won't try to
+  /// build it again.
+  std::shared_ptr<FailedModulesSet> FailedModules;
+
   /// The set of top-level modules that has already been built on the
   /// fly as part of this overall compilation action.
   std::map<std::string, std::string, std::less<>> BuiltModules;
@@ -225,6 +244,9 @@ public:
   // of the context or else not CompilerInstance specific.
   bool ExecuteAction(FrontendAction &Act);
 
+  /// At the end of a compilation, print the number of warnings/errors.
+  void printDiagnosticStats();
+
   /// Load the list of plugins requested in the \c FrontendOptions.
   void LoadRequestedPlugins();
 
@@ -311,6 +333,9 @@ public:
 
   LangOptions &getLangOpts() { return Invocation->getLangOpts(); }
   const LangOptions &getLangOpts() const { return Invocation->getLangOpts(); }
+  std::shared_ptr<LangOptions> getLangOptsPtr() const {
+    return Invocation->getLangOptsPtr();
+  }
 
   PreprocessorOptions &getPreprocessorOpts() {
     return Invocation->getPreprocessorOpts();
@@ -613,6 +638,24 @@ public:
   }
 
   /// @}
+  /// @name Failed modules set
+  /// @{
+
+  bool hasFailedModulesSet() const { return (bool)FailedModules; }
+
+  void createFailedModulesSet() {
+    FailedModules = std::make_shared<FailedModulesSet>();
+  }
+
+  std::shared_ptr<FailedModulesSet> getFailedModulesSetPtr() const {
+    return FailedModules;
+  }
+
+  void setFailedModulesSet(std::shared_ptr<FailedModulesSet> FMS) {
+    FailedModules = FMS;
+  }
+
+  /// }
   /// @name Output Files
   /// @{
 
@@ -659,11 +702,10 @@ public:
   /// used by some diagnostics printers (for logging purposes only).
   ///
   /// \return The new object on success, or null on failure.
-  static IntrusiveRefCntPtr<DiagnosticsEngine>
-  createDiagnostics(DiagnosticOptions *Opts,
-                    DiagnosticConsumer *Client = nullptr,
-                    bool ShouldOwnClient = true,
-                    const CodeGenOptions *CodeGenOpts = nullptr);
+  static IntrusiveRefCntPtr<DiagnosticsEngine> createDiagnostics(
+      DiagnosticOptions *Opts, DiagnosticConsumer *Client = nullptr,
+      bool ShouldOwnClient = true, const CodeGenOptions *CodeGenOpts = nullptr,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
 
   /// Create the file manager and replace any existing one with it.
   ///

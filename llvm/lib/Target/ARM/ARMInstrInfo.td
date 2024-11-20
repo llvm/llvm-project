@@ -14,6 +14,9 @@
 // ARM specific DAG Nodes.
 //
 
+/// Value type used for "flags" operands / results (either CPSR or FPSCR_NZCV).
+defvar FlagsVT = i32;
+
 // Type profiles.
 def SDT_ARMCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32>,
                                            SDTCisVT<1, i32> ]>;
@@ -76,6 +79,18 @@ def SDT_WIN__DBZCHK : SDTypeProfile<0, 1, [SDTCisVT<0, i32>]>;
 def SDT_ARMMEMCPY  : SDTypeProfile<2, 3, [SDTCisVT<0, i32>, SDTCisVT<1, i32>,
                                           SDTCisVT<2, i32>, SDTCisVT<3, i32>,
                                           SDTCisVT<4, i32>]>;
+
+def SDTIntUnaryOpWithFlagsOut : SDTypeProfile<2, 1, [
+  SDTCisInt<0>,         // result
+  SDTCisVT<1, FlagsVT>, // out flags
+  SDTCisSameAs<2, 0>    // operand
+]>;
+
+def SDTIntUnaryOpWithFlagsIn : SDTypeProfile<1, 2, [
+  SDTCisInt<0>,        // result
+  SDTCisSameAs<1, 0>,  // operand
+  SDTCisVT<1, FlagsVT> // in flags
+]>;
 
 def SDTBinaryArithWithFlags : SDTypeProfile<2, 2,
                                             [SDTCisSameAs<0, 2>,
@@ -160,7 +175,6 @@ def ARMintretglue    : SDNode<"ARMISD::INTRET_GLUE", SDT_ARMcall,
                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def ARMcmov          : SDNode<"ARMISD::CMOV", SDT_ARMCMov,
                               [SDNPInGlue]>;
-def ARMsubs          : SDNode<"ARMISD::SUBS", SDTIntBinOp, [SDNPOutGlue]>;
 
 def ARMssat   : SDNode<"ARMISD::SSAT", SDTIntSatNoShOp, []>;
 
@@ -192,9 +206,9 @@ def ARMasrl          : SDNode<"ARMISD::ASRL", SDT_ARMIntShiftParts, []>;
 def ARMlsrl          : SDNode<"ARMISD::LSRL", SDT_ARMIntShiftParts, []>;
 def ARMlsll          : SDNode<"ARMISD::LSLL", SDT_ARMIntShiftParts, []>;
 
-def ARMsrl_glue      : SDNode<"ARMISD::SRL_GLUE", SDTIntUnaryOp, [SDNPOutGlue]>;
-def ARMsra_glue      : SDNode<"ARMISD::SRA_GLUE", SDTIntUnaryOp, [SDNPOutGlue]>;
-def ARMrrx           : SDNode<"ARMISD::RRX"     , SDTIntUnaryOp, [SDNPInGlue ]>;
+def ARMlsrs1 : SDNode<"ARMISD::LSRS1", SDTIntUnaryOpWithFlagsOut>;
+def ARMasrs1 : SDNode<"ARMISD::ASRS1", SDTIntUnaryOpWithFlagsOut>;
+def ARMrrx   : SDNode<"ARMISD::RRX"  , SDTIntUnaryOpWithFlagsIn>;
 
 def ARMaddc          : SDNode<"ARMISD::ADDC",  SDTBinaryArithWithFlags,
                               [SDNPCommutative]>;
@@ -372,13 +386,17 @@ def ARMVCCElse : PatLeaf<(i32 2)>;
 
 // imm_neg_XFORM - Return the negation of an i32 immediate value.
 def imm_neg_XFORM : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(-(int)N->getZExtValue(), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(-(int)N->getZExtValue(), SDLoc(N),
+                                         MVT::i32);
 }]>;
 
 // imm_not_XFORM - Return the complement of a i32 immediate value.
 def imm_not_XFORM : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(~(int)N->getZExtValue(), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(~(int)N->getZExtValue(), SDLoc(N),
+                                         MVT::i32);
 }]>;
+def gi_imm_not_XFORM : GICustomOperandRenderer<"renderInvertedImm">,
+  GISDNodeXFormEquiv<imm_not_XFORM>;
 
 // asr_imm_XFORM - Returns a shift immediate with bit {5} set to 1
 def asr_imm_XFORM : SDNodeXForm<imm, [{
@@ -830,8 +848,8 @@ def mod_imm : Operand<i32>, ImmLeaf<i32, [{
 // instructions, which use mod_imm.
 
 def ModImmNotAsmOperand : AsmOperandClass { let Name = "ModImmNot"; }
-def mod_imm_not : Operand<i32>, PatLeaf<(imm), [{
-    return ARM_AM::getSOImmVal(~(uint32_t)N->getZExtValue()) != -1;
+def mod_imm_not : Operand<i32>, ImmLeaf<i32, [{
+    return ARM_AM::getSOImmVal(~(uint32_t)Imm) != -1;
   }], imm_not_XFORM> {
   let ParserMatchClass = ModImmNotAsmOperand;
 }
@@ -2375,13 +2393,13 @@ def UDF : AInoP<(outs), (ins imm0_65535:$imm16), MiscFrm, NoItinerary,
  *  - In ARM: UDF #60896;
  *  - In Thumb: UDF #254 followed by a branch-to-self.
  */
-let isBarrier = 1, isTerminator = 1 in
+let isTrap = 1 in
 def TRAPNaCl : AXI<(outs), (ins), MiscFrm, NoItinerary,
                "trap", [(trap)]>,
            Requires<[IsARM,UseNaClTrap]> {
   let Inst = 0xe7fedef0;
 }
-let isBarrier = 1, isTerminator = 1 in
+let isTrap = 1 in
 def TRAP : AXI<(outs), (ins), MiscFrm, NoItinerary,
                "trap", [(trap)]>,
            Requires<[IsARM,DontUseNaClTrap]> {
@@ -2673,6 +2691,9 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [SP] in {
                    Sched<[WriteBr]>;
 
   def TCRETURNri : PseudoInst<(outs), (ins tcGPR:$dst, i32imm:$SPDiff), IIC_Br, []>,
+                   Sched<[WriteBr]>;
+
+  def TCRETURNrinotr12 : PseudoInst<(outs), (ins tcGPRnotr12:$dst, i32imm:$SPDiff), IIC_Br, []>,
                    Sched<[WriteBr]>;
 
   def TAILJMPd : ARMPseudoExpand<(outs), (ins arm_br_target:$dst),
@@ -3724,20 +3745,17 @@ def : ARMPat<(or GPR:$src, 0xffff0000), (MOVTi16 GPR:$src, 0xffff)>,
       Requires<[IsARM, HasV6T2]>;
 
 let Uses = [CPSR] in
-def RRX: PseudoInst<(outs GPR:$Rd), (ins GPR:$Rm), IIC_iMOVsi,
-                    [(set GPR:$Rd, (ARMrrx GPR:$Rm))]>, UnaryDP,
-                    Requires<[IsARM]>, Sched<[WriteALU]>;
-
-// These aren't really mov instructions, but we have to define them this way
-// due to glue operands.
+def RRX : PseudoInst<(outs GPR:$Rd), (ins GPR:$Rm), IIC_iMOVsi,
+                     [(set GPR:$Rd, (ARMrrx GPR:$Rm, CPSR))]>,
+          UnaryDP, Requires<[IsARM]>, Sched<[WriteALU]>;
 
 let Defs = [CPSR] in {
-def MOVsrl_glue : PseudoInst<(outs GPR:$dst), (ins GPR:$src), IIC_iMOVsi,
-                      [(set GPR:$dst, (ARMsrl_glue GPR:$src))]>, UnaryDP,
-                      Sched<[WriteALU]>, Requires<[IsARM]>;
-def MOVsra_glue : PseudoInst<(outs GPR:$dst), (ins GPR:$src), IIC_iMOVsi,
-                      [(set GPR:$dst, (ARMsra_glue GPR:$src))]>, UnaryDP,
-                      Sched<[WriteALU]>, Requires<[IsARM]>;
+  def LSRs1 : PseudoInst<(outs GPR:$dst), (ins GPR:$src), IIC_iMOVsi,
+                         [(set GPR:$dst, CPSR, (ARMlsrs1 GPR:$src))]>,
+              UnaryDP, Sched<[WriteALU]>, Requires<[IsARM]>;
+  def ASRs1 : PseudoInst<(outs GPR:$dst), (ins GPR:$src), IIC_iMOVsi,
+                         [(set GPR:$dst, CPSR, (ARMasrs1 GPR:$src))]>,
+              UnaryDP, Sched<[WriteALU]>, Requires<[IsARM]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3873,14 +3891,6 @@ defm SUB  : AsI1_bin_irs<0b0010, "sub",
 let isAdd = 1 in
 defm ADDS : AsI1_bin_s_irs<IIC_iALUi, IIC_iALUr, IIC_iALUsr, ARMaddc, 1>;
 defm SUBS : AsI1_bin_s_irs<IIC_iALUi, IIC_iALUr, IIC_iALUsr, ARMsubc>;
-
-def : ARMPat<(ARMsubs GPR:$Rn, mod_imm:$imm), (SUBSri $Rn, mod_imm:$imm)>;
-def : ARMPat<(ARMsubs GPR:$Rn, GPR:$Rm), (SUBSrr $Rn, $Rm)>;
-def : ARMPat<(ARMsubs GPR:$Rn, so_reg_imm:$shift),
-             (SUBSrsi $Rn, so_reg_imm:$shift)>;
-def : ARMPat<(ARMsubs GPR:$Rn, so_reg_reg:$shift),
-             (SUBSrsr $Rn, so_reg_reg:$shift)>;
-
 
 let isAdd = 1 in
 defm ADC : AI1_adde_sube_irs<0b0101, "adc", ARMadde, 1>;
@@ -6079,8 +6089,14 @@ def : ARMPat<(ARMWrapperJT tjumptable:$dst),
 // TODO: add,sub,and, 3-instr forms?
 
 // Tail calls. These patterns also apply to Thumb mode.
+// Regular indirect tail call
 def : Pat<(ARMtcret tcGPR:$dst, (i32 timm:$SPDiff)),
-          (TCRETURNri tcGPR:$dst, timm:$SPDiff)>;
+          (TCRETURNri tcGPR:$dst, timm:$SPDiff)>,
+          Requires<[NoSignRetAddr]>;
+// Indirect tail call when PACBTI is enabled
+def : Pat<(ARMtcret tcGPRnotr12:$dst, (i32 timm:$SPDiff)),
+          (TCRETURNrinotr12 tcGPRnotr12:$dst, timm:$SPDiff)>,
+          Requires<[SignRetAddr]>;
 def : Pat<(ARMtcret (i32 tglobaladdr:$dst), (i32 timm:$SPDiff)),
           (TCRETURNdi texternalsym:$dst, (i32 timm:$SPDiff))>;
 def : Pat<(ARMtcret (i32 texternalsym:$dst), (i32 timm:$SPDiff)),
@@ -6505,8 +6521,21 @@ def CMP_SWAP_32 : PseudoInst<(outs GPR:$Rd, GPR:$temp),
                              (ins GPR:$addr, GPR:$desired, GPR:$new),
                              NoItinerary, []>, Sched<[]>;
 
-def CMP_SWAP_64 : PseudoInst<(outs GPRPair:$Rd, GPR:$temp),
-                             (ins GPR:$addr, GPRPair:$desired, GPRPair:$new),
+// The addr_temp and addr_temp_out operands are logically a pair of GPR
+// operands:
+// * addr is an input, holding the address to swap.
+// * temp is a earlyclobber output, used internally in the expansion of the
+//   pseudo-inst.
+// These are combined into one GPRPair operand to ensure that register
+// allocation always succeeds. In the worst case there are only 4 GPRPair
+// registers available, of which this instruction needs 3 for the other
+// operands. If these operands weren't combined they would also use two GPR
+// registers, which could overlap with two different GPRPairs, causing
+// allocation to fail. With them combined, we need to allocate 4 GPRPairs,
+// which will always succeed.
+let Constraints = "@earlyclobber $Rd,$addr_temp_out = $addr_temp" in
+def CMP_SWAP_64 : PseudoInst<(outs GPRPair:$Rd, GPRPair:$addr_temp_out),
+                             (ins GPRPair:$addr_temp, GPRPair:$desired, GPRPair:$new),
                              NoItinerary, []>, Sched<[]>;
 }
 

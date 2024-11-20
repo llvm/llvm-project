@@ -17,6 +17,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
@@ -62,7 +63,7 @@ static const int NVPTXDWARFAddrSpaceMap[] = {
 
 class LLVM_LIBRARY_VISIBILITY NVPTXTargetInfo : public TargetInfo {
   static const char *const GCCRegNames[];
-  CudaArch GPU;
+  OffloadArch GPU;
   uint32_t PTXVersion;
   std::unique_ptr<TargetInfo> HostTarget;
 
@@ -75,22 +76,39 @@ public:
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
+  bool useFP16ConversionIntrinsics() const override { return false; }
+
   bool
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                  StringRef CPU,
                  const std::vector<std::string> &FeaturesVec) const override {
-    Features[CudaArchToString(GPU)] = true;
+    if (GPU != OffloadArch::UNUSED)
+      Features[OffloadArchToString(GPU)] = true;
     Features["ptx" + std::to_string(PTXVersion)] = true;
     return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
   }
 
   bool hasFeature(StringRef Feature) const override;
 
+  virtual bool isAddressSpaceSupersetOf(LangAS A, LangAS B) const override {
+    // The generic address space AS(0) is a superset of all the other address
+    // spaces used by the backend target.
+    return A == B ||
+           ((A == LangAS::Default ||
+             (isTargetAddressSpace(A) &&
+              toTargetAddressSpace(A) ==
+                  llvm::NVPTXAS::ADDRESS_SPACE_GENERIC)) &&
+            isTargetAddressSpace(B) &&
+            toTargetAddressSpace(B) >= llvm::NVPTXAS::ADDRESS_SPACE_GENERIC &&
+            toTargetAddressSpace(B) <= llvm::NVPTXAS::ADDRESS_SPACE_LOCAL &&
+            toTargetAddressSpace(B) != 2);
+  }
+
   ArrayRef<const char *> getGCCRegNames() const override;
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
     // No aliases.
-    return std::nullopt;
+    return {};
   }
 
   bool validateAsmConstraint(const char *&Name,
@@ -104,6 +122,7 @@ public:
     case 'l':
     case 'f':
     case 'd':
+    case 'q':
       Info.setAllowsRegister();
       return true;
     }
@@ -115,23 +134,22 @@ public:
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
-    // FIXME: implement
     return TargetInfo::CharPtrBuiltinVaList;
   }
 
   bool isValidCPUName(StringRef Name) const override {
-    return StringToCudaArch(Name) != CudaArch::UNKNOWN;
+    return StringToOffloadArch(Name) != OffloadArch::UNKNOWN;
   }
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override {
-    for (int i = static_cast<int>(CudaArch::SM_20);
-         i < static_cast<int>(CudaArch::Generic); ++i)
-      Values.emplace_back(CudaArchToString(static_cast<CudaArch>(i)));
+    for (int i = static_cast<int>(OffloadArch::SM_20);
+         i < static_cast<int>(OffloadArch::Generic); ++i)
+      Values.emplace_back(OffloadArchToString(static_cast<OffloadArch>(i)));
   }
 
   bool setCPU(const std::string &Name) override {
-    GPU = StringToCudaArch(Name);
-    return GPU != CudaArch::UNKNOWN;
+    GPU = StringToOffloadArch(Name);
+    return GPU != OffloadArch::UNKNOWN;
   }
 
   void setSupportedOpenCLOpts() override {
@@ -182,7 +200,7 @@ public:
   bool hasBitIntType() const override { return true; }
   bool hasBFloat16Type() const override { return true; }
 
-  CudaArch getGPU() const { return GPU; }
+  OffloadArch getGPU() const { return GPU; }
 };
 } // namespace targets
 } // namespace clang

@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1100 -run-pass=si-optimize-exec-masking-pre-ra,greedy -verify-machineinstrs -o - %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass=si-optimize-exec-masking-pre-ra,greedy -verify-machineinstrs -o - %s
 
 # This sample can trigger a "Non-empty but used interval" assert in regalloc if
 # SIOptimizeExecMaskingPreRA does not update live intervals correctly.
@@ -10,7 +10,7 @@ body:             |
   bb.0:
     %0:sreg_32 = IMPLICIT_DEF
     %1:sreg_32_xm0_xexec = IMPLICIT_DEF
-    %2:sreg_64_xexec = IMPLICIT_DEF
+    %2:sreg_64_xexec_xnull = IMPLICIT_DEF
     %3:sgpr_32 = IMPLICIT_DEF
     %4:sreg_32_xexec_hi = IMPLICIT_DEF
     %5:sreg_32 = IMPLICIT_DEF
@@ -21,7 +21,7 @@ body:             |
     %10:sreg_32 = IMPLICIT_DEF
     %11:sreg_32 = IMPLICIT_DEF
     %12:sreg_64_xexec = IMPLICIT_DEF
-    %13:sreg_64_xexec = IMPLICIT_DEF
+    %13:sreg_64_xexec_xnull = IMPLICIT_DEF
     %14:sreg_32 = IMPLICIT_DEF
     %15:sreg_32 = IMPLICIT_DEF
     %16:sreg_32 = IMPLICIT_DEF
@@ -39,19 +39,19 @@ body:             |
     S_CMP_EQ_U32 %15, undef %15, implicit-def $scc
     %19:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit killed undef $scc
     %20:sreg_32 = IMPLICIT_DEF
-    dead $vcc_lo = COPY undef %20
+    $vcc_lo = COPY undef %20
     S_CBRANCH_VCCNZ %bb.3, implicit $vcc
     S_BRANCH %bb.3
 
   bb.3:
-    dead $vcc_lo = S_AND_B32 $exec_lo, undef %19, implicit-def dead $scc
+    $vcc_lo = S_AND_B32 $exec_lo, undef %19, implicit-def dead $scc
     S_CBRANCH_VCCNZ %bb.6, implicit $vcc
     S_BRANCH %bb.4
 
   bb.4:
     %21:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %19, implicit $exec
     %22:sreg_32_xm0_xexec = V_CMP_NE_U32_e64 1, undef %21, implicit $exec
-    dead $vcc_lo = S_AND_B32 $exec_lo, undef %22, implicit-def dead $scc
+    $vcc_lo = S_AND_B32 $exec_lo, undef %22, implicit-def dead $scc
     S_CBRANCH_VCCNZ %bb.7, implicit $vcc
     S_BRANCH %bb.5
 
@@ -174,7 +174,7 @@ body:             |
     S_BRANCH %bb.20
 
   bb.28:
-    dead $vcc_lo = S_AND_B32 $exec_lo, %22, implicit-def dead $scc
+    $vcc_lo = S_AND_B32 $exec_lo, %22, implicit-def dead $scc
     S_CBRANCH_VCCNZ %bb.29, implicit $vcc
     S_BRANCH %bb.29
 

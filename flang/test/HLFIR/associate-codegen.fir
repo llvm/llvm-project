@@ -178,7 +178,7 @@ func.func @test_0dim_box(%x : !fir.ref<!fir.box<!fir.heap<i32>>>) {
   %1:2 = hlfir.declare %0 {uniq_name = ".tmp.intrinsic_result"} : (!fir.box<!fir.heap<i32>>) -> (!fir.box<!fir.heap<i32>>, !fir.box<!fir.heap<i32>>)
   %true = arith.constant true
   %2 = hlfir.as_expr %1#0 move %true : (!fir.box<!fir.heap<i32>>, i1) -> !hlfir.expr<i32>
-  %3:3 = hlfir.associate %2 {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<i32>) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
+  %3:3 = hlfir.associate %2 {adapt.valuebyref} : (!hlfir.expr<i32>) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
   return
 }
 // CHECK-LABEL:   func.func @test_0dim_box(
@@ -207,7 +207,7 @@ func.func @test_shape_of(%arg0: !fir.ref<!fir.array<4x3xi32>>) {
     hlfir.yield_element %5 : i32
   }
   %1 = hlfir.shape_of %0 : (!hlfir.expr<3x4xi32>) -> !fir.shape<2>
-  %2:3 = hlfir.associate %0(%1) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<3x4xi32>, !fir.shape<2>) -> (!fir.ref<!fir.array<3x4xi32>>, !fir.ref<!fir.array<3x4xi32>>, i1)
+  %2:3 = hlfir.associate %0(%1) {adapt.valuebyref} : (!hlfir.expr<3x4xi32>, !fir.shape<2>) -> (!fir.ref<!fir.array<3x4xi32>>, !fir.ref<!fir.array<3x4xi32>>, i1)
   // ...
   hlfir.end_associate %2#1, %2#2 : !fir.ref<!fir.array<3x4xi32>>, i1
   return
@@ -294,7 +294,7 @@ func.func @test_get_length(%arg0: !fir.ref<!fir.char<1,2>>) {
   %0 = hlfir.as_expr %arg0 : (!fir.ref<!fir.char<1,2>>) -> !hlfir.expr<!fir.char<1,2>>
   %1 = hlfir.get_length %0 : (!hlfir.expr<!fir.char<1,2>>)  -> index
   %c2 = arith.constant 2 : index
-  %2:3 = hlfir.associate %0 typeparams %c2 {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>, i1)
+  %2:3 = hlfir.associate %0 typeparams %c2 {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>, i1)
   // ...
   hlfir.end_associate %2#1, %2#2 : !fir.ref<!fir.char<1,2>>, i1
   return
@@ -331,7 +331,7 @@ func.func @_QPtest_multiple_expr_uses_inside_elemental() {
   %22 = fir.shape %21 : (index) -> !fir.shape<1>
   %23 = hlfir.elemental %22 unordered : (!fir.shape<1>) -> !hlfir.expr<?x!fir.logical<4>> {
   ^bb0(%arg2: index):
-    %35:3 = hlfir.associate %20 typeparams %17 {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
+    %35:3 = hlfir.associate %20 typeparams %17 {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
     hlfir.end_associate %35#1, %35#2 : !fir.ref<!fir.char<1,?>>, i1
     %ci1 = arith.constant 1 : i1
     %42 = fir.convert %ci1 : (i1) -> !fir.logical<4>
@@ -383,9 +383,9 @@ func.func @_QPtest_multitple_associates_for_same_expr() {
     %44 = fir.undefined !fir.ref<!fir.char<1>>
     hlfir.yield_element %44 : !fir.ref<!fir.char<1>>
   }
-  %12:3 = hlfir.associate %11(%4) typeparams %c1 {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<10x!fir.char<1>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<10x!fir.char<1>>>, !fir.ref<!fir.array<10x!fir.char<1>>>, i1)
+  %12:3 = hlfir.associate %11(%4) typeparams %c1 {adapt.valuebyref} : (!hlfir.expr<10x!fir.char<1>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<10x!fir.char<1>>>, !fir.ref<!fir.array<10x!fir.char<1>>>, i1)
   hlfir.end_associate %12#1, %12#2 : !fir.ref<!fir.array<10x!fir.char<1>>>, i1
-  %31:3 = hlfir.associate %11(%4) typeparams %c1 {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<10x!fir.char<1>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<10x!fir.char<1>>>, !fir.ref<!fir.array<10x!fir.char<1>>>, i1)
+  %31:3 = hlfir.associate %11(%4) typeparams %c1 {adapt.valuebyref} : (!hlfir.expr<10x!fir.char<1>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<10x!fir.char<1>>>, !fir.ref<!fir.array<10x!fir.char<1>>>, i1)
   hlfir.end_associate %31#1, %31#2 : !fir.ref<!fir.array<10x!fir.char<1>>>, i1
   hlfir.destroy %11 : !hlfir.expr<10x!fir.char<1>>
   return
@@ -444,7 +444,7 @@ func.func @_QPtest(%arg0: index, %arg1: index, %arg2 : i32) {
     hlfir.yield_element %16 : i32
   }
   %5 = hlfir.shape_of %4 : (!hlfir.expr<?x?xi32>) -> !fir.shape<2>
-  %6:3 = hlfir.associate %4(%5) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<?x?xi32>, !fir.shape<2>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.ref<!fir.array<?x?xi32>>, i1)
+  %6:3 = hlfir.associate %4(%5) {adapt.valuebyref} : (!hlfir.expr<?x?xi32>, !fir.shape<2>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.ref<!fir.array<?x?xi32>>, i1)
   %13 = arith.cmpi ne, %arg2, %c1_i32 : i32
   cf.cond_br %13, ^bb1, ^bb2
 ^bb1:  // pred: ^bb0

@@ -24,8 +24,8 @@ void f() {
 }
 
 // RUN: rm -rf %t
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -x objective-c++ -emit-module -fmodules-cache-path=%t -fmodule-name=lookup_left_cxx %S/Inputs/module.map -verify
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -x objective-c++ -emit-module -fmodules-cache-path=%t -fmodule-name=lookup_right_cxx %S/Inputs/module.map -verify
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -x objective-c++ -emit-module -fmodules-cache-path=%t -fmodule-name=lookup_left_cxx %S/Inputs/module.modulemap -verify
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -x objective-c++ -emit-module -fmodules-cache-path=%t -fmodule-name=lookup_right_cxx %S/Inputs/module.modulemap -verify
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -x objective-c++ -fmodules-cache-path=%t -I %S/Inputs %s -verify
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -ast-print -x objective-c++ -fmodules-cache-path=%t -I %S/Inputs %s | FileCheck -check-prefix=CHECK-PRINT %s
 // FIXME: When we have a syntax for modules in C++, use that.

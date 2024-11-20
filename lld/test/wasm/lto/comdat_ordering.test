@@ -1,0 +1,19 @@
+; Check if we handle a variable (here __cxx_global_var_init) in different LTO
+; bitcode modules sharing a comdat.
+
+; RUN: llvm-as %S/Inputs/comdat_ordering1.ll -o %t1.o
+; RUN: llvm-as %S/Inputs/comdat_ordering2.ll -o %t2.o
+; RUN: llvm-ar rcs %t1.a %t1.o
+; RUN: llvm-ar rcs %t2.a %t2.o
+; RUN: wasm-ld %t1.a %t2.a -o %t.wasm --no-entry --export=main --export=__wasm_call_ctors
+; RUN: obj2yaml %t.wasm | FileCheck %s
+
+; CHECK:       - Type:            CUSTOM
+; CHECK-NEXT:    Name:            name
+; CHECK-NEXT:    FunctionNames:
+; CHECK-NEXT:      - Index:           0
+; CHECK-NEXT:        Name:            __wasm_call_ctors
+; CHECK-NEXT:      - Index:           1
+; CHECK-NEXT:        Name:            __cxx_global_var_init
+
+; CHECK-NOT:         Name:            __cxx_global_var_init.2

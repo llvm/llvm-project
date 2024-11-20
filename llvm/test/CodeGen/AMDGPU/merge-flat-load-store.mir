@@ -13,8 +13,8 @@ body:             |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY killed [[FLAT_LOAD_DWORDX2_]].sub1
     ; GCN-NEXT: S_NOP 0, implicit [[COPY]], implicit [[COPY1]]
     %0:vreg_64_align2 = IMPLICIT_DEF
-    %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
-    %2:vgpr_32 = FLAT_LOAD_DWORD %0, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
+    %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
+    %2:vgpr_32 = FLAT_LOAD_DWORD %0, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
     S_NOP 0, implicit %1, implicit %2
 ...
 
@@ -32,9 +32,9 @@ body:             |
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY killed [[COPY]].sub1
     ; GCN-NEXT: S_NOP 0, implicit [[COPY2]], implicit [[COPY3]], implicit [[COPY1]]
     %0:vreg_64_align2 = IMPLICIT_DEF
-    %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 1, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
-    %2:vgpr_32 = FLAT_LOAD_DWORD %0, 4, 1, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
-    %3:vgpr_32 = FLAT_LOAD_DWORD %0, 8, 1, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
+    %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 1, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
+    %2:vgpr_32 = FLAT_LOAD_DWORD %0, 4, 1, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
+    %3:vgpr_32 = FLAT_LOAD_DWORD %0, 8, 1, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
     S_NOP 0, implicit %1, implicit %2, implicit %3
 ...
 
@@ -54,10 +54,10 @@ body:             |
     ; GCN-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY killed [[COPY2]].sub1
     ; GCN-NEXT: S_NOP 0, implicit [[COPY4]], implicit [[COPY5]], implicit [[COPY3]], implicit [[COPY1]]
     %0:vreg_64_align2 = IMPLICIT_DEF
-    %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 2, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
-    %2:vgpr_32 = FLAT_LOAD_DWORD %0, 4, 2, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
-    %3:vgpr_32 = FLAT_LOAD_DWORD %0, 8, 2, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
-    %4:vgpr_32 = FLAT_LOAD_DWORD %0, 12, 2, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
+    %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 2, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
+    %2:vgpr_32 = FLAT_LOAD_DWORD %0, 4, 2, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
+    %3:vgpr_32 = FLAT_LOAD_DWORD %0, 8, 2, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
+    %4:vgpr_32 = FLAT_LOAD_DWORD %0, 12, 2, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
     S_NOP 0, implicit %1, implicit %2, implicit %3, implicit %4
 ...
 
@@ -78,11 +78,11 @@ body:             |
     ; GCN-NEXT: [[FLAT_LOAD_DWORD:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[DEF]], 16, 3, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`)
     ; GCN-NEXT: S_NOP 0, implicit [[COPY4]], implicit [[COPY5]], implicit [[COPY3]], implicit [[COPY1]], implicit [[FLAT_LOAD_DWORD]]
     %0:vreg_64_align2 = IMPLICIT_DEF
-    %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 3, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
-    %2:vgpr_32 = FLAT_LOAD_DWORD %0, 4, 3, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
-    %3:vgpr_32 = FLAT_LOAD_DWORD %0, 8, 3, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
-    %4:vgpr_32 = FLAT_LOAD_DWORD %0, 12, 3, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
-    %5:vgpr_32 = FLAT_LOAD_DWORD %0, 16, 3, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
+    %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 3, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
+    %2:vgpr_32 = FLAT_LOAD_DWORD %0, 4, 3, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
+    %3:vgpr_32 = FLAT_LOAD_DWORD %0, 8, 3, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
+    %4:vgpr_32 = FLAT_LOAD_DWORD %0, 12, 3, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
+    %5:vgpr_32 = FLAT_LOAD_DWORD %0, 16, 3, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
     S_NOP 0, implicit %1, implicit %2, implicit %3, implicit %4, implicit %5
 ...
 
@@ -105,12 +105,12 @@ body:             |
     ; GCN-NEXT: [[COPY7:%[0-9]+]]:vgpr_32 = COPY killed [[FLAT_LOAD_DWORDX2_]].sub1
     ; GCN-NEXT: S_NOP 0, implicit [[COPY4]], implicit [[COPY5]], implicit [[COPY3]], implicit [[COPY1]], implicit [[COPY6]], implicit [[COPY7]]
     %0:vreg_64_align2 = IMPLICIT_DEF
-    %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
-    %2:vgpr_32 = FLAT_LOAD_DWORD %0, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
-    %3:vgpr_32 = FLAT_LOAD_DWORD %0, 8, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
-    %4:vgpr_32 = FLAT_LOAD_DWORD %0, 12, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
-    %5:vgpr_32 = FLAT_LOAD_DWORD %0, 16, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
-    %6:vgpr_32 = FLAT_LOAD_DWORD %0, 20, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
+    %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
+    %2:vgpr_32 = FLAT_LOAD_DWORD %0, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
+    %3:vgpr_32 = FLAT_LOAD_DWORD %0, 8, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
+    %4:vgpr_32 = FLAT_LOAD_DWORD %0, 12, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
+    %5:vgpr_32 = FLAT_LOAD_DWORD %0, 16, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
+    %6:vgpr_32 = FLAT_LOAD_DWORD %0, 20, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
     S_NOP 0, implicit %1, implicit %2, implicit %3, implicit %4, implicit %5, implicit %6
 ...
 
@@ -126,8 +126,8 @@ body:             |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY killed [[FLAT_LOAD_DWORDX4_]].sub2_sub3
     ; GCN-NEXT: S_NOP 0, implicit [[COPY]], implicit [[COPY1]]
     %0:vreg_64_align2 = IMPLICIT_DEF
-    %1:vreg_64_align2 = FLAT_LOAD_DWORDX2 %0, 0, 0, implicit $exec, implicit $flat_scr :: (load (s64) from `i64* undef`, align 4)
-    %2:vreg_64_align2 = FLAT_LOAD_DWORDX2 %0, 8, 0, implicit $exec, implicit $flat_scr :: (load (s64) from `i64* undef`, align 4)
+    %1:vreg_64_align2 = FLAT_LOAD_DWORDX2 %0, 0, 0, implicit $exec, implicit $flat_scr :: (load (s64) from `ptr undef`, align 4)
+    %2:vreg_64_align2 = FLAT_LOAD_DWORDX2 %0, 8, 0, implicit $exec, implicit $flat_scr :: (load (s64) from `ptr undef`, align 4)
     S_NOP 0, implicit %1, implicit %2
 ...
 
@@ -143,8 +143,8 @@ body:             |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY killed [[FLAT_LOAD_DWORDX4_]].sub3
     ; GCN-NEXT: S_NOP 0, implicit [[COPY]], implicit [[COPY1]]
     %0:vreg_64_align2 = IMPLICIT_DEF
-    %1:vreg_96_align2 = FLAT_LOAD_DWORDX3 %0, 12, 0, implicit $exec, implicit $flat_scr :: (load (s96) from `i128* undef`, align 8)
-    %2:vgpr_32 = FLAT_LOAD_DWORD %0, 24, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
+    %1:vreg_96_align2 = FLAT_LOAD_DWORDX3 %0, 12, 0, implicit $exec, implicit $flat_scr :: (load (s96) from `ptr undef`, align 8)
+    %2:vgpr_32 = FLAT_LOAD_DWORD %0, 24, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
     S_NOP 0, implicit %1, implicit %2
 ...
 
@@ -160,8 +160,8 @@ body:             |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY killed [[FLAT_LOAD_DWORDX3_]].sub1_sub2
     ; GCN-NEXT: S_NOP 0, implicit [[COPY1]], implicit [[COPY]]
     %0:vreg_64_align2 = IMPLICIT_DEF
-    %2:vgpr_32 = FLAT_LOAD_DWORD %0, 12, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
-    %1:vreg_64_align2 = FLAT_LOAD_DWORDX2 %0, 16, 0, implicit $exec, implicit $flat_scr :: (load (s64) from `i64* undef`, align 8)
+    %2:vgpr_32 = FLAT_LOAD_DWORD %0, 12, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
+    %1:vreg_64_align2 = FLAT_LOAD_DWORDX2 %0, 16, 0, implicit $exec, implicit $flat_scr :: (load (s64) from `ptr undef`, align 8)
     S_NOP 0, implicit %1, implicit %2
 ...
 
@@ -176,8 +176,8 @@ body:             |
     ; GCN-NEXT: [[FLAT_LOAD_DWORD1:%[0-9]+]]:agpr_32 = FLAT_LOAD_DWORD [[DEF]], 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`)
     ; GCN-NEXT: S_NOP 0, implicit [[FLAT_LOAD_DWORD]], implicit [[FLAT_LOAD_DWORD1]]
     %0:vreg_64_align2 = IMPLICIT_DEF
-    %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
-    %2:agpr_32 = FLAT_LOAD_DWORD %0, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
+    %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
+    %2:agpr_32 = FLAT_LOAD_DWORD %0, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
     S_NOP 0, implicit %1, implicit %2
 ...
 
@@ -192,8 +192,8 @@ body:             |
     ; GCN-NEXT: [[FLAT_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[DEF]], 8, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`)
     ; GCN-NEXT: S_NOP 0, implicit [[FLAT_LOAD_DWORD]], implicit [[FLAT_LOAD_DWORD1]]
     %0:vreg_64_align2 = IMPLICIT_DEF
-    %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
-    %2:vgpr_32 = FLAT_LOAD_DWORD %0, 8, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
+    %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
+    %2:vgpr_32 = FLAT_LOAD_DWORD %0, 8, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
     S_NOP 0, implicit %1, implicit %2
 ...
 
@@ -208,8 +208,8 @@ body:             |
     ; GCN-NEXT: [[FLAT_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[DEF]], 3, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`)
     ; GCN-NEXT: S_NOP 0, implicit [[FLAT_LOAD_DWORD]], implicit [[FLAT_LOAD_DWORD1]]
     %0:vreg_64_align2 = IMPLICIT_DEF
-    %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
-    %2:vgpr_32 = FLAT_LOAD_DWORD %0, 3, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`)
+    %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
+    %2:vgpr_32 = FLAT_LOAD_DWORD %0, 3, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`)
     S_NOP 0, implicit %1, implicit %2
 ...
 
@@ -224,8 +224,8 @@ body:             |
     ; GCN-NEXT: [[FLAT_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[DEF]], 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`)
     ; GCN-NEXT: S_NOP 0, implicit [[FLAT_LOAD_DWORD]], implicit [[FLAT_LOAD_DWORD1]]
     %0:vreg_64_align2 = IMPLICIT_DEF
-    %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 1, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
-    %2:vgpr_32 = FLAT_LOAD_DWORD %0, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `i32* undef`, align 4)
+    %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 1, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
+    %2:vgpr_32 = FLAT_LOAD_DWORD %0, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`, align 4)
     S_NOP 0, implicit %1, implicit %2
 ...
 
@@ -243,8 +243,8 @@ body:             |
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
-    FLAT_STORE_DWORD %0, killed %1, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
-    FLAT_STORE_DWORD killed %0, killed %2, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
+    FLAT_STORE_DWORD %0, killed %1, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
+    FLAT_STORE_DWORD killed %0, killed %2, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
 ...
 
 ---
@@ -264,9 +264,9 @@ body:             |
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
     %3:vgpr_32 = IMPLICIT_DEF
-    FLAT_STORE_DWORD %0, killed %1, 4, 1, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
-    FLAT_STORE_DWORD %0, killed %2, 8, 1, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
-    FLAT_STORE_DWORD killed %0, killed %3, 12, 1, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
+    FLAT_STORE_DWORD %0, killed %1, 4, 1, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
+    FLAT_STORE_DWORD %0, killed %2, 8, 1, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
+    FLAT_STORE_DWORD killed %0, killed %3, 12, 1, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
 ...
 
 ---
@@ -283,10 +283,10 @@ body:             |
     ; GCN-NEXT: FLAT_STORE_DWORDX4 [[DEF]], killed [[REG_SEQUENCE2]], 4, 2, implicit $exec, implicit $flat_scr :: (store (s128) into `ptr undef`, align 4)
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vreg_128 = IMPLICIT_DEF
-    FLAT_STORE_DWORD %0, %1.sub1, 8, 2, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
-    FLAT_STORE_DWORD %0, %1.sub2, 12, 2, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
-    FLAT_STORE_DWORD %0, %1.sub3, 16, 2, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
-    FLAT_STORE_DWORD killed %0, %1.sub0, 4, 2, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
+    FLAT_STORE_DWORD %0, %1.sub1, 8, 2, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
+    FLAT_STORE_DWORD %0, %1.sub2, 12, 2, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
+    FLAT_STORE_DWORD %0, %1.sub3, 16, 2, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
+    FLAT_STORE_DWORD killed %0, %1.sub0, 4, 2, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
 ...
 
 ---
@@ -312,11 +312,11 @@ body:             |
     %3:agpr_32 = IMPLICIT_DEF
     %4:agpr_32 = IMPLICIT_DEF
     %5:agpr_32 = IMPLICIT_DEF
-    FLAT_STORE_DWORD %0, %1, 4, 3, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
-    FLAT_STORE_DWORD %0, %2, 8, 3, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 8)
-    FLAT_STORE_DWORD %0, %3, 12, 3, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
-    FLAT_STORE_DWORD %0, %4, 16, 3, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
-    FLAT_STORE_DWORD %0, %5, 20, 3, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
+    FLAT_STORE_DWORD %0, %1, 4, 3, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
+    FLAT_STORE_DWORD %0, %2, 8, 3, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 8)
+    FLAT_STORE_DWORD %0, %3, 12, 3, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
+    FLAT_STORE_DWORD %0, %4, 16, 3, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
+    FLAT_STORE_DWORD %0, %5, 20, 3, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
 ...
 
 ---
@@ -345,12 +345,12 @@ body:             |
     %4:vgpr_32 = IMPLICIT_DEF
     %5:vgpr_32 = IMPLICIT_DEF
     %6:vgpr_32 = IMPLICIT_DEF
-    FLAT_STORE_DWORD %0, %1, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 8)
-    FLAT_STORE_DWORD %0, %2, 8, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
-    FLAT_STORE_DWORD %0, %3, 12, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
-    FLAT_STORE_DWORD %0, %4, 16, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
-    FLAT_STORE_DWORD %0, %5, 20, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
-    FLAT_STORE_DWORD %0, %6, 24, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
+    FLAT_STORE_DWORD %0, %1, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 8)
+    FLAT_STORE_DWORD %0, %2, 8, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
+    FLAT_STORE_DWORD %0, %3, 12, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
+    FLAT_STORE_DWORD %0, %4, 16, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
+    FLAT_STORE_DWORD %0, %5, 20, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
+    FLAT_STORE_DWORD %0, %6, 24, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
 ...
 
 ---
@@ -367,8 +367,8 @@ body:             |
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vreg_64_align2 = IMPLICIT_DEF
     %2:vreg_64_align2 = IMPLICIT_DEF
-    FLAT_STORE_DWORDX2 %0, killed %1, 4, 0, implicit $exec, implicit $flat_scr :: (store (s64) into `i64* undef`, align 4)
-    FLAT_STORE_DWORDX2 %0, killed %2, 12, 0, implicit $exec, implicit $flat_scr :: (store (s64) into `i64* undef`, align 4)
+    FLAT_STORE_DWORDX2 %0, killed %1, 4, 0, implicit $exec, implicit $flat_scr :: (store (s64) into `ptr undef`, align 4)
+    FLAT_STORE_DWORDX2 %0, killed %2, 12, 0, implicit $exec, implicit $flat_scr :: (store (s64) into `ptr undef`, align 4)
 ...
 
 ---
@@ -385,8 +385,8 @@ body:             |
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vreg_96_align2 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
-    FLAT_STORE_DWORDX3 %0, killed %1, 4, 0, implicit $exec, implicit $flat_scr :: (store (s96) into `i64* undef`, align 16)
-    FLAT_STORE_DWORD %0, killed %2, 16, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
+    FLAT_STORE_DWORDX3 %0, killed %1, 4, 0, implicit $exec, implicit $flat_scr :: (store (s96) into `ptr undef`, align 16)
+    FLAT_STORE_DWORD %0, killed %2, 16, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
 ...
 
 ---
@@ -403,8 +403,8 @@ body:             |
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:agpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
-    FLAT_STORE_DWORD %0, killed %1, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
-    FLAT_STORE_DWORD killed %0, killed %2, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
+    FLAT_STORE_DWORD %0, killed %1, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
+    FLAT_STORE_DWORD killed %0, killed %2, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
 ...
 
 ---
@@ -421,8 +421,8 @@ body:             |
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
-    FLAT_STORE_DWORD %0, killed %1, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
-    FLAT_STORE_DWORD killed %0, killed %2, 6, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
+    FLAT_STORE_DWORD %0, killed %1, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
+    FLAT_STORE_DWORD killed %0, killed %2, 6, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
 ...
 
 ---
@@ -439,8 +439,8 @@ body:             |
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
-    FLAT_STORE_DWORD %0, killed %1, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
-    FLAT_STORE_DWORD killed %0, killed %2, 2, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 2)
+    FLAT_STORE_DWORD %0, killed %1, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
+    FLAT_STORE_DWORD killed %0, killed %2, 2, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 2)
 ...
 
 ---
@@ -457,8 +457,8 @@ body:             |
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
-    FLAT_STORE_DWORD %0, killed %1, 0, 1, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
-    FLAT_STORE_DWORD killed %0, killed %2, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
+    FLAT_STORE_DWORD %0, killed %1, 0, 1, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
+    FLAT_STORE_DWORD killed %0, killed %2, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
 ...
 
 ---
@@ -475,6 +475,6 @@ body:             |
     %0:vreg_128_align2 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
-    FLAT_STORE_DWORD %0.sub0_sub1, killed %1, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
-    FLAT_STORE_DWORD %0.sub2_sub3, killed %2, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `i32* undef`, align 4)
+    FLAT_STORE_DWORD %0.sub0_sub1, killed %1, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
+    FLAT_STORE_DWORD %0.sub2_sub3, killed %2, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`, align 4)
 ...

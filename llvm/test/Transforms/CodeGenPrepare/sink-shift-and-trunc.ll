@@ -1,5 +1,6 @@
 ; REQUIRES: aarch64-registered-target
 ; RUN: opt < %s -codegenprepare -mtriple=arm64-apple-ios -S | FileCheck %s
+; RUN: opt < %s -codegenprepare -mtriple=arm64-apple-ios -S --try-experimental-debuginfo-iterators | FileCheck %s
 
 @first_ones = external global [65536 x i8]
 
@@ -11,7 +12,7 @@ entry:
 
   %x.sroa.3.0.extract.shift = lshr i64 %arg1, 32, !dbg !37
   call void @llvm.dbg.value(metadata i64 %x.sroa.3.0.extract.shift, metadata !13, metadata !DIExpression()), !dbg !37
-; CHECK: call void @llvm.dbg.value(metadata i64 %arg1, metadata {{.*}}, metadata !DIExpression(DW_OP_constu, 32, DW_OP_shr, DW_OP_stack_value)), !dbg [[shift2_loc:![0-9]+]]
+; CHECK: #dbg_value(i64 %arg1, {{.*}}, !DIExpression(DW_OP_constu, 32, DW_OP_shr, DW_OP_stack_value), [[shift2_loc:![0-9]+]]
 
   %x.sroa.5.0.extract.shift = lshr i64 %arg1, 48, !dbg !38
   %tobool = icmp eq i64 %x.sroa.5.0.extract.shift, 0, !dbg !39

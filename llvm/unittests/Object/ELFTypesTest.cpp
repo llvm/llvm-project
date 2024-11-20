@@ -94,3 +94,42 @@ TEST(ELFTypesTest, BBEntryMetadataInvalidEncodingTest) {
         FailedWithMessage(Errors[i]));
   }
 }
+
+static_assert(
+    std::is_same_v<decltype(PGOAnalysisMap::PGOBBEntry::SuccessorEntry::ID),
+                   decltype(BBAddrMap::BBEntry::ID)>,
+    "PGOAnalysisMap should use the same type for basic block ID as BBAddrMap");
+
+TEST(ELFTypesTest, BBAddrMapFeaturesEncodingTest) {
+  const std::array<BBAddrMap::Features, 9> Decoded = {
+      {{false, false, false, false},
+       {true, false, false, false},
+       {false, true, false, false},
+       {false, false, true, false},
+       {false, false, false, true},
+       {true, true, false, false},
+       {false, true, true, false},
+       {false, true, true, true},
+       {true, true, true, true}}};
+  const std::array<uint8_t, 9> Encoded = {
+      {0b0000, 0b0001, 0b0010, 0b0100, 0b1000, 0b0011, 0b0110, 0b1110, 0b1111}};
+  for (const auto &[Feat, EncodedVal] : llvm::zip(Decoded, Encoded))
+    EXPECT_EQ(Feat.encode(), EncodedVal);
+  for (const auto &[Feat, EncodedVal] : llvm::zip(Decoded, Encoded)) {
+    Expected<BBAddrMap::Features> FeatEnableOrError =
+        BBAddrMap::Features::decode(EncodedVal);
+    ASSERT_THAT_EXPECTED(FeatEnableOrError, Succeeded());
+    EXPECT_EQ(*FeatEnableOrError, Feat);
+  }
+}
+
+TEST(ELFTypesTest, BBAddrMapFeaturesInvalidEncodingTest) {
+  const std::array<std::string, 2> Errors = {
+      "invalid encoding for BBAddrMap::Features: 0x10",
+      "invalid encoding for BBAddrMap::Features: 0xff"};
+  const std::array<uint8_t, 2> Values = {{0b10000, 0b1111'1111}};
+  for (const auto &[Val, Error] : llvm::zip(Values, Errors)) {
+    EXPECT_THAT_ERROR(BBAddrMap::Features::decode(Val).takeError(),
+                      FailedWithMessage(Error));
+  }
+}

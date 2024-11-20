@@ -19,6 +19,8 @@
 #include <initializer_list>
 #include <iterator>
 #include <ranges>
+#include <type_traits>
+
 #include "test_macros.h"
 
 struct Foo {
@@ -75,6 +77,7 @@ constexpr bool test_all() {
   test(std::ranges::any_of, in, &Foo::unary_pred, &Bar::val);
   test(std::ranges::all_of, in, &Foo::unary_pred, &Bar::val);
 #if TEST_STD_VER >= 23
+  test(std::ranges::contains, in, x, &Bar::val);
   test(std::ranges::ends_with, in, in2, &Foo::binary_pred, &Bar::val, &Bar::val);
 #endif
   test(std::ranges::none_of, in, &Foo::unary_pred, &Bar::val);

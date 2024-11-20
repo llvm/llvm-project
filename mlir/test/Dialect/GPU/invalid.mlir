@@ -16,7 +16,7 @@ func.func @no_region_attrs(%sz : index) {
   ^bb1(%bx: index, %by: index, %bz: index,
        %tx: index, %ty: index, %tz: index):
     gpu.terminator
-  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0>} : (index, index, index, index, index, index) -> ()
+  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0>} : (index, index, index, index, index, index) -> ()
   return
 }
 
@@ -301,17 +301,17 @@ func.func @reduce_invalid_op_type_xor(%arg0 : f32) {
 
 // -----
 
-func.func @reduce_invalid_op_type_minf(%arg0 : i32) {
-  // expected-error@+1 {{`minf` reduction operation is not compatible with type 'i32'}}
-  %res = gpu.all_reduce minf %arg0 {} : (i32) -> (i32)
+func.func @reduce_invalid_op_type_minnumf(%arg0 : i32) {
+  // expected-error@+1 {{`minnumf` reduction operation is not compatible with type 'i32'}}
+  %res = gpu.all_reduce minnumf %arg0 {} : (i32) -> (i32)
   return
 }
 
 // -----
 
-func.func @reduce_invalid_op_type_maxf(%arg0 : i32) {
-  // expected-error@+1 {{`maxf` reduction operation is not compatible with type 'i32'}}
-  %res = gpu.all_reduce maxf %arg0 {} : (i32) -> (i32)
+func.func @reduce_invalid_op_type_maxnumf(%arg0 : i32) {
+  // expected-error@+1 {{`maxnumf` reduction operation is not compatible with type 'i32'}}
+  %res = gpu.all_reduce maxnumf %arg0 {} : (i32) -> (i32)
   return
 }
 
@@ -333,9 +333,50 @@ func.func @reduce_invalid_op_type_maximumf(%arg0 : i32) {
 
 // -----
 
-func.func @subgroup_reduce_bad_type(%arg0 : vector<2xf32>) {
-  // expected-error@+1 {{'gpu.subgroup_reduce' op operand #0 must be Integer or Float}}
-  %res = gpu.subgroup_reduce add %arg0 : (vector<2xf32>) -> vector<2xf32>
+func.func @subgroup_reduce_zero_cluster_size(%arg0 : vector<4xf32>) {
+  // expected-error@+1 {{cluster size 0 is not a power of two}}
+  %res = gpu.subgroup_reduce add %arg0 cluster(size = 0) : (vector<4xf32>) -> vector<4xf32>
+  return
+}
+
+// -----
+
+func.func @subgroup_reduce_npot_cluster_size(%arg0 : vector<4xf32>) {
+  // expected-error@+1 {{cluster size 3 is not a power of two}}
+  %res = gpu.subgroup_reduce add %arg0 cluster(size = 3) : (vector<4xf32>) -> vector<4xf32>
+  return
+}
+
+// -----
+
+func.func @subgroup_reduce_zero_cluster_stride(%arg0 : vector<4xf32>) {
+  // expected-error@+1 {{cluster stride 0 is not a power of two}}
+  %res = gpu.subgroup_reduce add %arg0 cluster(size = 4, stride = 0) : (vector<4xf32>) -> vector<4xf32>
+  return
+}
+
+// -----
+
+func.func @subgroup_reduce_cluster_stride_without_size(%arg0 : vector<4xf32>) {
+  // expected-error@+1 {{cluster stride can only be specified if cluster size is specified}}
+  %res = gpu.subgroup_reduce add %arg0 { cluster_stride = 2 : i32 } : (vector<4xf32>) -> vector<4xf32>
+  return
+}
+
+
+// -----
+
+func.func @subgroup_reduce_bad_type(%arg0 : vector<2x2xf32>) {
+  // expected-error@+1 {{'gpu.subgroup_reduce' op operand #0 must be Integer or Float or vector of}}
+  %res = gpu.subgroup_reduce add %arg0 : (vector<2x2xf32>) -> vector<2x2xf32>
+  return
+}
+
+// -----
+
+func.func @subgroup_reduce_bad_type_scalable(%arg0 : vector<[2]xf32>) {
+  // expected-error@+1 {{is not compatible with scalable vector types}}
+  %res = gpu.subgroup_reduce add %arg0 : (vector<[2]xf32>) -> vector<[2]xf32>
   return
 }
 
@@ -349,9 +390,9 @@ func.func @subgroup_reduce_invalid_op_type_and(%arg0 : f32) {
 
 // -----
 
-func.func @subgroup_reduce_invalid_op_type_maxf(%arg0 : i32) {
-  // expected-error@+1 {{`maxf` reduction operation is not compatible with type 'i32'}}
-  %res = gpu.subgroup_reduce maxf %arg0 : (i32) -> (i32)
+func.func @subgroup_reduce_invalid_op_type_maxnumf(%arg0 : i32) {
+  // expected-error@+1 {{`maxnumf` reduction operation is not compatible with type 'i32'}}
+  %res = gpu.subgroup_reduce maxnumf %arg0 : (i32) -> (i32)
   return
 }
 
@@ -422,7 +463,7 @@ func.func @shuffle_mismatching_type(%arg0 : f32, %arg1 : i32, %arg2 : i32) {
 // -----
 
 func.func @shuffle_unsupported_type(%arg0 : index, %arg1 : i32, %arg2 : i32) {
-  // expected-error@+1 {{operand #0 must be i32, i64, f32 or f64}}
+  // expected-error@+1 {{op operand #0 must be Integer or Float or vector of Integer or Float values of ranks 1, but got 'index'}}
   %shfl, %pred = gpu.shuffle xor %arg0, %arg1, %arg2 : index
   return
 }
@@ -696,11 +737,9 @@ func.func @alloc() {
 // -----
 
 module attributes {gpu.container_module} {
-  gpu.module @kernel {
-    // expected-error@+1 {{'gpu.func' op gpu.known_block_size must be a dense i32 array}}
-    gpu.func @kernel() kernel attributes {gpu.known_block_size = 32 : i32} {
-      gpu.return
-    }
+  // expected-error@+1 {{'func.func' op gpu.known_block_size must be a dense i32 array}}
+  func.func @kernel() attributes {gpu.known_block_size = 32 : i32} {
+    func.return
   }
 }
 
@@ -708,10 +747,19 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   gpu.module @kernel {
-    // expected-error@+1 {{'gpu.func' op gpu.known_block_size must contain exactly 3 elements}}
-    gpu.func @kernel() kernel attributes {gpu.known_block_size = array<i32: 2, 1>} {
+    // expected-error@+1 {{'gpu.func' op attribute 'known_block_size' failed to satisfy constraint: i32 dense array attribute with 3 elements (if present)}}
+    gpu.func @kernel() kernel attributes {known_block_size = array<i32: 2, 1>} {
       gpu.return
     }
+  }
+}
+
+// -----
+
+module {
+  // expected-error@+1 {{'func.func' op gpu.known_block_size must contain exactly 3 elements}}
+  func.func @kernel() attributes {gpu.known_block_size = array<i32: 2, 1>} {
+    func.return
   }
 }
 
@@ -810,3 +858,22 @@ func.func @main(%arg0 : index) {
   return
 }
 
+// -----
+
+module attributes {gpu.container_module} {
+  // expected-error@+1 {{expected attribute value}}
+  gpu.module @kernel <> {
+  }
+}
+
+// -----
+
+gpu.binary @binary [#gpu.object<#rocdl.target<chip = "gfx900">,
+  // expected-error@+1{{expected all kernels to be uniquely named}}
+    kernels = #gpu.kernel_table<[
+      #gpu.kernel_metadata<"kernel", (i32) -> ()>,
+      #gpu.kernel_metadata<"kernel", (i32, f32) -> (), metadata = {sgpr_count = 255}>
+  // expected-error@below{{failed to parse GPU_ObjectAttr parameter 'kernels' which is to be a `KernelTableAttr`}}
+    ]>,
+    bin = "BLOB">
+  ]

@@ -48,7 +48,7 @@
 #include <utility>
 #include <vector>
 
-namespace __orc_rt {
+namespace orc_rt {
 
 /// Output char buffer with overflow check.
 class SPSOutputBuffer {
@@ -277,6 +277,13 @@ public:
 /// Trivial std::vector<T> -> SPSSequence<SPSElementTagT> serialization.
 template <typename SPSElementTagT, typename T>
 class TrivialSPSSequenceSerialization<SPSElementTagT, std::vector<T>> {
+public:
+  static constexpr bool available = true;
+};
+
+/// Trivial span<T> -> SPSSequence<SPSElementTagT> serialization.
+template <typename SPSElementTagT, typename T>
+class TrivialSPSSequenceSerialization<SPSElementTagT, span<T>> {
 public:
   static constexpr bool available = true;
 };
@@ -569,7 +576,7 @@ Expected<T> fromSPSSerializable(SPSSerializableExpected<T> BSE) {
     return make_error<StringError>(BSE.ErrMsg);
 }
 
-} // end namespace detail
+} // namespace detail
 
 /// Serialize to a SPSError from a detail::SPSSerializableError.
 template <>
@@ -677,6 +684,6 @@ public:
   }
 };
 
-} // end namespace __orc_rt
+} // namespace orc_rt
 
 #endif // ORC_RT_SIMPLE_PACKED_SERIALIZATION_H

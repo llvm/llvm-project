@@ -17,9 +17,21 @@ extern "C" {
 __attribute__((weak)) const char *__scudo_default_options(void);
 
 // Post-allocation & pre-deallocation hooks.
-// They must be thread-safe and not use heap related functions.
 __attribute__((weak)) void __scudo_allocate_hook(void *ptr, size_t size);
 __attribute__((weak)) void __scudo_deallocate_hook(void *ptr);
+
+// `realloc` involves both deallocation and allocation but they are not reported
+// atomically. In one specific case which may keep taking a snapshot right in
+// the middle of `realloc` reporting the deallocation and allocation, it may
+// confuse the user by missing memory from `realloc`. To alleviate that case,
+// define the two `realloc` hooks to get the knowledge of the bundled hook
+// calls. These hooks are optional and should only be used when a hooks user
+// wants to track reallocs more closely.
+//
+// See more details in the comment of `realloc` in wrapper_c.inc.
+__attribute__((weak)) void
+__scudo_realloc_allocate_hook(void *old_ptr, void *new_ptr, size_t size);
+__attribute__((weak)) void __scudo_realloc_deallocate_hook(void *old_ptr);
 
 void __scudo_print_stats(void);
 
@@ -73,7 +85,8 @@ typedef void (*iterate_callback)(uintptr_t base, size_t size, void *arg);
 // pointer.
 void __scudo_get_error_info(struct scudo_error_info *error_info,
                             uintptr_t fault_addr, const char *stack_depot,
-                            const char *region_info, const char *ring_buffer,
+                            size_t stack_depot_size, const char *region_info,
+                            const char *ring_buffer, size_t ring_buffer_size,
                             const char *memory, const char *memory_tags,
                             uintptr_t memory_addr, size_t memory_size);
 

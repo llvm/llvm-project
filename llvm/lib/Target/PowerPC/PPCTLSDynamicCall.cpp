@@ -21,10 +21,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPC.h"
-#include "PPCInstrBuilder.h"
 #include "PPCInstrInfo.h"
 #include "PPCTargetMachine.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/InitializePasses.h"
@@ -48,9 +48,15 @@ protected:
     bool processBlock(MachineBasicBlock &MBB) {
       bool Changed = false;
       bool NeedFence = true;
-      bool Is64Bit = MBB.getParent()->getSubtarget<PPCSubtarget>().isPPC64();
-      bool IsAIX = MBB.getParent()->getSubtarget<PPCSubtarget>().isAIXABI();
+      const PPCSubtarget &Subtarget =
+          MBB.getParent()->getSubtarget<PPCSubtarget>();
+      bool Is64Bit = Subtarget.isPPC64();
+      bool IsAIX = Subtarget.isAIXABI();
+      bool IsLargeModel =
+          Subtarget.getTargetMachine().getCodeModel() == CodeModel::Large;
       bool IsPCREL = false;
+      MachineFunction *MF = MBB.getParent();
+      MachineRegisterInfo &RegInfo = MF->getRegInfo();
 
       for (MachineBasicBlock::iterator I = MBB.begin(), IE = MBB.end();
            I != IE;) {
@@ -59,13 +65,16 @@ protected:
         // There are a number of slight differences in code generation
         // when we call .__get_tpointer (32-bit AIX TLS).
         bool IsTLSTPRelMI = MI.getOpcode() == PPC::GETtlsTpointer32AIX;
+        bool IsTLSLDAIXMI = (MI.getOpcode() == PPC::TLSLDAIX8 ||
+                             MI.getOpcode() == PPC::TLSLDAIX);
 
         if (MI.getOpcode() != PPC::ADDItlsgdLADDR &&
             MI.getOpcode() != PPC::ADDItlsldLADDR &&
             MI.getOpcode() != PPC::ADDItlsgdLADDR32 &&
             MI.getOpcode() != PPC::ADDItlsldLADDR32 &&
             MI.getOpcode() != PPC::TLSGDAIX &&
-            MI.getOpcode() != PPC::TLSGDAIX8 && !IsTLSTPRelMI && !IsPCREL) {
+            MI.getOpcode() != PPC::TLSGDAIX8 && !IsTLSTPRelMI && !IsPCREL &&
+            !IsTLSLDAIXMI) {
           // Although we create ADJCALLSTACKDOWN and ADJCALLSTACKUP
           // as scheduling fences, we skip creating fences if we already
           // have existing ADJCALLSTACKDOWN/UP to avoid nesting,
@@ -109,6 +118,16 @@ protected:
           Opc1 = PPC::ADDItlsldL32;
           Opc2 = PPC::GETtlsldADDR32;
           break;
+        case PPC::TLSLDAIX:
+          // TLSLDAIX is expanded to one copy and GET_TLS_MOD, so we only set
+          // Opc2 here.
+          Opc2 = PPC::GETtlsMOD32AIX;
+          break;
+        case PPC::TLSLDAIX8:
+          // TLSLDAIX8 is expanded to one copy and GET_TLS_MOD, so we only set
+          // Opc2 here.
+          Opc2 = PPC::GETtlsMOD64AIX;
+          break;
         case PPC::TLSGDAIX8:
           // TLSGDAIX8 is expanded to two copies and GET_TLS_ADDR, so we only
           // set Opc2 here.
@@ -140,14 +159,104 @@ protected:
         // We don't really need to save data to the stack - the clobbered
         // registers are already saved when the SDNode (e.g. PPCaddiTlsgdLAddr)
         // gets translated to the pseudo instruction (e.g. ADDItlsgdLADDR).
-        if (NeedFence)
+        if (NeedFence) {
+          MBB.getParent()->getFrameInfo().setAdjustsStack(true);
           BuildMI(MBB, I, DL, TII->get(PPC::ADJCALLSTACKDOWN)).addImm(0)
                                                               .addImm(0);
+        }
 
         if (IsAIX) {
-          // The variable offset and region handle are copied in r4 and r3. The
-          // copies are followed by GETtlsADDR32AIX/GETtlsADDR64AIX.
-          if (!IsTLSTPRelMI) {
+          if (IsTLSLDAIXMI) {
+            // The relative order between the node that loads the variable
+            // offset from the TOC, and the .__tls_get_mod node is being tuned
+            // here. It is better to put the variable offset TOC load after the
+            // call, since this node can use clobbers r4/r5.
+            // Search for the pattern of the two nodes that load from the TOC
+            // (either for the variable offset or for the module handle), and
+            // then move the variable offset TOC load right before the node that
+            // uses the OutReg of the .__tls_get_mod node.
+            unsigned LDTocOp =
+                Is64Bit ? (IsLargeModel ? PPC::LDtocL : PPC::LDtoc)
+                        : (IsLargeModel ? PPC::LWZtocL : PPC::LWZtoc);
+            if (!RegInfo.use_empty(OutReg)) {
+              std::set<MachineInstr *> Uses;
+              // Collect all instructions that use the OutReg.
+              for (MachineOperand &MO : RegInfo.use_operands(OutReg))
+                Uses.insert(MO.getParent());
+              // Find the first user (e.g.: lwax/stfdx) of the OutReg within the
+              // current BB.
+              MachineBasicBlock::iterator UseIter = MBB.begin();
+              for (MachineBasicBlock::iterator IE = MBB.end(); UseIter != IE;
+                   ++UseIter)
+                if (Uses.count(&*UseIter))
+                  break;
+
+              // Additional handling is required when UserIter (the first user
+              // of OutReg) is pointing to a valid node that loads from the TOC.
+              // Check the pattern and do the movement if the pattern matches.
+              if (UseIter != MBB.end()) {
+                // Collect all associated nodes that load from the TOC. Use
+                // hasOneDef() to guard against unexpected scenarios.
+                std::set<MachineInstr *> LoadFromTocs;
+                for (MachineOperand &MO : UseIter->operands())
+                  if (MO.isReg() && MO.isUse()) {
+                    Register MOReg = MO.getReg();
+                    if (RegInfo.hasOneDef(MOReg)) {
+                      MachineInstr *Temp =
+                          RegInfo.getOneDef(MOReg)->getParent();
+                      // For the current TLSLDAIX node, get the corresponding
+                      // node that loads from the TOC for the InReg. Otherwise,
+                      // Temp probably pointed to the variable offset TOC load
+                      // we would like to move.
+                      if (Temp == &MI && RegInfo.hasOneDef(InReg))
+                        Temp = RegInfo.getOneDef(InReg)->getParent();
+                      if (Temp->getOpcode() == LDTocOp)
+                        LoadFromTocs.insert(Temp);
+                    } else {
+                      // FIXME: analyze this scenario if there is one.
+                      LoadFromTocs.clear();
+                      break;
+                    }
+                  }
+
+                // Check the two nodes that loaded from the TOC: one should be
+                // "_$TLSML", and the other will be moved before the node that
+                // uses the OutReg of the .__tls_get_mod node.
+                if (LoadFromTocs.size() == 2) {
+                  MachineBasicBlock::iterator TLSMLIter = MBB.end();
+                  MachineBasicBlock::iterator OffsetIter = MBB.end();
+                  // Make sure the two nodes that loaded from the TOC are within
+                  // the current BB, and that one of them is from the "_$TLSML"
+                  // pseudo symbol, while the other is from the variable.
+                  for (MachineBasicBlock::iterator I = MBB.begin(),
+                                                   IE = MBB.end();
+                       I != IE; ++I)
+                    if (LoadFromTocs.count(&*I)) {
+                      MachineOperand MO = I->getOperand(1);
+                      if (MO.isGlobal() && MO.getGlobal()->hasName() &&
+                          MO.getGlobal()->getName() == "_$TLSML")
+                        TLSMLIter = I;
+                      else
+                        OffsetIter = I;
+                    }
+                  // Perform the movement when the desired scenario has been
+                  // identified, which should be when both of the iterators are
+                  // valid.
+                  if (TLSMLIter != MBB.end() && OffsetIter != MBB.end())
+                    OffsetIter->moveBefore(&*UseIter);
+                }
+              }
+            }
+            // The module-handle is copied into r3. The copy is followed by
+            // GETtlsMOD32AIX/GETtlsMOD64AIX.
+            BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR3)
+                .addReg(InReg);
+            // The call to .__tls_get_mod.
+            BuildMI(MBB, I, DL, TII->get(Opc2), GPR3).addReg(GPR3);
+          } else if (!IsTLSTPRelMI) {
+            // The variable offset and region handle (for TLSGD) are copied in
+            // r4 and r3. The copies are followed by
+            // GETtlsADDR32AIX/GETtlsADDR64AIX.
             BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR4)
                 .addReg(MI.getOperand(1).getReg());
             BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR3)
@@ -215,8 +324,8 @@ public:
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<LiveIntervals>();
-      AU.addRequired<SlotIndexes>();
+      AU.addRequired<LiveIntervalsWrapperPass>();
+      AU.addRequired<SlotIndexesWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
   };
@@ -224,8 +333,8 @@ public:
 
 INITIALIZE_PASS_BEGIN(PPCTLSDynamicCall, DEBUG_TYPE,
                       "PowerPC TLS Dynamic Call Fixup", false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
-INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_END(PPCTLSDynamicCall, DEBUG_TYPE,
                     "PowerPC TLS Dynamic Call Fixup", false, false)
 

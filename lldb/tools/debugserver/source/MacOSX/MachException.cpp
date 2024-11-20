@@ -247,7 +247,7 @@ kern_return_t MachException::Message::Receive(mach_port_t port,
   DNBError err;
   const bool log_exceptions = DNBLogCheckLogBit(LOG_EXCEPTIONS);
   mach_msg_timeout_t mach_msg_timeout =
-      options & MACH_RCV_TIMEOUT ? timeout : 0;
+      (options & MACH_RCV_TIMEOUT) ? timeout : 0;
   if (log_exceptions && ((options & MACH_RCV_TIMEOUT) == 0)) {
     // Dump this log message if we have no timeout in case it never returns
     DNBLogThreaded("::mach_msg ( msg->{bits = %#x, size = %u remote_port = "

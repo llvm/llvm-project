@@ -13,7 +13,7 @@ subroutine charconvert1(c,n)
 end subroutine charconvert1
 
 ! CHECK-LABEL: func.func @_QPcharconvert1
-! CHECK:   %[[VAL_2:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFcharconvert1Ec"} : (!fir.box<!fir.array<?x!fir.char<4,?>>>) -> (!fir.box<!fir.array<?x!fir.char<4,?>>>, !fir.box<!fir.array<?x!fir.char<4,?>>>)
+! CHECK:   %[[VAL_2:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFcharconvert1Ec"} : (!fir.box<!fir.array<?x!fir.char<4,?>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<4,?>>>, !fir.box<!fir.array<?x!fir.char<4,?>>>)
 ! CHECK:   ^bb0(%[[ARG2:.*]]: index):
 ! CHECK:     %[[VAL_37:.*]] = fir.box_elesize %[[VAL_2]]#1 : (!fir.box<!fir.array<?x!fir.char<4,?>>>) -> index
 ! CHECK:     %[[C4_4:.*]] = arith.constant 4 : index
@@ -36,7 +36,7 @@ end subroutine charconvert2
 ! CHECK:   %[[C1:.*]] = arith.constant 1 : index
 ! CHECK:   %[[VAL_1:.*]] = fir.alloca !fir.char<4> {bindc_name = "cx", uniq_name = "_QFcharconvert2Ecx"}
 ! CHECK:   %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] typeparams %[[C1]] {uniq_name = "_QFcharconvert2Ecx"} : (!fir.ref<!fir.char<4>>, index) -> (!fir.ref<!fir.char<4>>, !fir.ref<!fir.char<4>>)
-! CHECK:   %[[VAL_3:.*]]:2 = hlfir.declare %[[ARG0]] {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFcharconvert2Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:   %[[VAL_3:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFcharconvert2Ex"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:   %[[VAL_4:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i32>
 ! CHECK:   %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (i32) -> i64
 ! CHECK:   %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (i64) -> i8
@@ -58,12 +58,12 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPcharconvert3
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.boxchar<1> {{.*}}, %[[ARG1:.*]]: !fir.boxchar<4> 
 ! CHECK:   %[[VAL_0:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK:   %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]]#0 typeparams %[[VAL_0]]#1 {uniq_name = "_QFcharconvert3Ec"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:   %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]]#0 typeparams %[[VAL_0]]#1 dummy_scope %{{[0-9]+}} {uniq_name = "_QFcharconvert3Ec"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 ! CHECK:   %[[VAL_2:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<4>) -> (!fir.ref<!fir.char<4,?>>, index)
-! CHECK:   %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]]#0 typeparams %[[VAL_2]]#1 {uniq_name = "_QFcharconvert3Ec4"} : (!fir.ref<!fir.char<4,?>>, index) -> (!fir.boxchar<4>, !fir.ref<!fir.char<4,?>>)
+! CHECK:   %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]]#0 typeparams %[[VAL_2]]#1 dummy_scope %{{[0-9]+}} {uniq_name = "_QFcharconvert3Ec4"} : (!fir.ref<!fir.char<4,?>>, index, !fir.dscope) -> (!fir.boxchar<4>, !fir.ref<!fir.char<4,?>>)
 ! CHECK:   %[[VAL_4:.*]] = arith.addi %[[VAL_0]]#1, %[[VAL_0]]#1 : index
 ! CHECK:   %[[VAL_5:.*]] = hlfir.concat %[[VAL_1]]#0, %[[VAL_1]]#0 len %[[VAL_4]] : (!fir.boxchar<1>, !fir.boxchar<1>, index) -> !hlfir.expr<!fir.char<1,?>>
-! CHECK:   %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_5]] typeparams %[[VAL_4]] {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
+! CHECK:   %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_5]] typeparams %[[VAL_4]] {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
 ! CHECK:   %[[VAL_6:.*]] = fir.alloca !fir.char<4,?>(%[[VAL_4]] : index)
 ! CHECK:   fir.char_convert %[[VAL_7]]#1 for %[[VAL_4:.*]] to %[[VAL_6]] : !fir.ref<!fir.char<1,?>>, index, !fir.ref<!fir.char<4,?>>
 ! CHECK:   hlfir.end_associate %[[VAL_7]]#1, %[[VAL_7]]#2 : !fir.ref<!fir.char<1,?>>, i1

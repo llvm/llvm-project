@@ -69,8 +69,5 @@ static int int_zvar;
 // CHECK: define internal void @int_fun() #0 section ".int_fun_attr"
 // CHECK: define internal void @int_fun2() #0 section ".int_fun2_attr"
 //
-// Function attributes should not include implicit-section-name.
-// CHECK-NOT: attributes #0 = {{.*}}implicit-section-name
-//
 // No other attribute group should be present in the file.
 // CHECK-NOT: attributes #1

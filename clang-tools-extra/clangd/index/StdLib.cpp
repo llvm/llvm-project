@@ -87,7 +87,6 @@ std::string buildUmbrella(llvm::StringLiteral Mandatory,
                         "#endif\n",
                         Header);
   }
-  OS.flush();
   return Result;
 }
 
@@ -167,7 +166,7 @@ SymbolSlab filter(SymbolSlab Slab, const StdLibLocation &Loc) {
         R.first->second = llvm::any_of(
             StdLibURIPrefixes,
             [&, URIStr(llvm::StringRef(URI))](const std::string &Prefix) {
-              return URIStr.startswith(Prefix);
+              return URIStr.starts_with(Prefix);
             });
       }
     }

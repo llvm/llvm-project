@@ -17,7 +17,6 @@
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
-#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/InitializePasses.h"
@@ -70,9 +69,10 @@ public:
       // subtarget doesn't support them.
       auto MMO = *MI.memoperands_begin();
       const MipsSubtarget &STI = MI.getMF()->getSubtarget<MipsSubtarget>();
-      if (!isPowerOf2_64(MMO->getSize()))
+      if (!MMO->getSize().hasValue() ||
+          !isPowerOf2_64(MMO->getSize().getValue()))
         return false;
-      bool isUnaligned = MMO->getAlign() < MMO->getSize();
+      bool isUnaligned = MMO->getAlign() < MMO->getSize().getValue();
       if (!STI.systemSupportsUnalignedAccess() && isUnaligned)
         return false;
 

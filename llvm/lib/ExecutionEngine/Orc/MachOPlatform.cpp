@@ -12,11 +12,9 @@
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
-#include "llvm/ExecutionEngine/Orc/DebugUtils.h"
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
-#include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
-#include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
-#include "llvm/Support/BinaryByteStream.h"
+#include "llvm/ExecutionEngine/Orc/MachOBuilder.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -33,6 +31,8 @@ namespace shared {
 using SPSMachOJITDylibDepInfo = SPSTuple<bool, SPSSequence<SPSExecutorAddr>>;
 using SPSMachOJITDylibDepInfoMap =
     SPSSequence<SPSTuple<SPSExecutorAddr, SPSMachOJITDylibDepInfo>>;
+
+class SPSMachOExecutorSymbolFlags;
 
 template <>
 class SPSSerializationTraits<SPSMachOJITDylibDepInfo,
@@ -55,11 +55,42 @@ public:
   }
 };
 
+template <>
+class SPSSerializationTraits<SPSMachOExecutorSymbolFlags,
+                             MachOPlatform::MachOExecutorSymbolFlags> {
+private:
+  using UT = std::underlying_type_t<MachOPlatform::MachOExecutorSymbolFlags>;
+
+public:
+  static size_t size(const MachOPlatform::MachOExecutorSymbolFlags &SF) {
+    return sizeof(UT);
+  }
+
+  static bool serialize(SPSOutputBuffer &OB,
+                        const MachOPlatform::MachOExecutorSymbolFlags &SF) {
+    return SPSArgList<UT>::serialize(OB, static_cast<UT>(SF));
+  }
+
+  static bool deserialize(SPSInputBuffer &IB,
+                          MachOPlatform::MachOExecutorSymbolFlags &SF) {
+    UT Tmp;
+    if (!SPSArgList<UT>::deserialize(IB, Tmp))
+      return false;
+    SF = static_cast<MachOPlatform::MachOExecutorSymbolFlags>(Tmp);
+    return true;
+  }
+};
+
 } // namespace shared
 } // namespace orc
 } // namespace llvm
 
 namespace {
+
+using SPSRegisterSymbolsArgs =
+    SPSArgList<SPSExecutorAddr,
+               SPSSequence<SPSTuple<SPSExecutorAddr, SPSExecutorAddr,
+                                    SPSMachOExecutorSymbolFlags>>>;
 
 std::unique_ptr<jitlink::LinkGraph> createPlatformGraph(MachOPlatform &MOP,
                                                         std::string Name) {
@@ -82,119 +113,32 @@ std::unique_ptr<jitlink::LinkGraph> createPlatformGraph(MachOPlatform &MOP,
                                               jitlink::getGenericEdgeKindName);
 }
 
-// Generates a MachO header.
-class MachOHeaderMaterializationUnit : public MaterializationUnit {
-public:
-  MachOHeaderMaterializationUnit(MachOPlatform &MOP,
-                                 const SymbolStringPtr &HeaderStartSymbol)
-      : MaterializationUnit(createHeaderInterface(MOP, HeaderStartSymbol)),
-        MOP(MOP) {}
-
-  StringRef getName() const override { return "MachOHeaderMU"; }
-
-  void materialize(std::unique_ptr<MaterializationResponsibility> R) override {
-    auto G = createPlatformGraph(MOP, "<MachOHeaderMU>");
-    addMachOHeader(*G, MOP, R->getInitializerSymbol());
-    MOP.getObjectLinkingLayer().emit(std::move(R), std::move(G));
-  }
-
-  void discard(const JITDylib &JD, const SymbolStringPtr &Sym) override {}
-
-  static void addMachOHeader(jitlink::LinkGraph &G, MachOPlatform &MOP,
-                             const SymbolStringPtr &InitializerSymbol) {
-    auto &HeaderSection = G.createSection("__header", MemProt::Read);
-    auto &HeaderBlock = createHeaderBlock(G, HeaderSection);
-
-    // Init symbol is header-start symbol.
-    G.addDefinedSymbol(HeaderBlock, 0, *InitializerSymbol,
-                       HeaderBlock.getSize(), jitlink::Linkage::Strong,
-                       jitlink::Scope::Default, false, true);
-    for (auto &HS : AdditionalHeaderSymbols)
-      G.addDefinedSymbol(HeaderBlock, HS.Offset, HS.Name, HeaderBlock.getSize(),
-                         jitlink::Linkage::Strong, jitlink::Scope::Default,
-                         false, true);
-  }
-
-private:
-  struct HeaderSymbol {
-    const char *Name;
-    uint64_t Offset;
-  };
-
-  static constexpr HeaderSymbol AdditionalHeaderSymbols[] = {
-      {"___mh_executable_header", 0}};
-
-  static jitlink::Block &createHeaderBlock(jitlink::LinkGraph &G,
-                                           jitlink::Section &HeaderSection) {
-    MachO::mach_header_64 Hdr;
-    Hdr.magic = MachO::MH_MAGIC_64;
-    switch (G.getTargetTriple().getArch()) {
-    case Triple::aarch64:
-      Hdr.cputype = MachO::CPU_TYPE_ARM64;
-      Hdr.cpusubtype = MachO::CPU_SUBTYPE_ARM64_ALL;
-      break;
-    case Triple::x86_64:
-      Hdr.cputype = MachO::CPU_TYPE_X86_64;
-      Hdr.cpusubtype = MachO::CPU_SUBTYPE_X86_64_ALL;
-      break;
-    default:
-      llvm_unreachable("Unrecognized architecture");
-    }
-    Hdr.filetype = MachO::MH_DYLIB; // Custom file type?
-    Hdr.ncmds = 0;
-    Hdr.sizeofcmds = 0;
-    Hdr.flags = 0;
-    Hdr.reserved = 0;
-
-    if (G.getEndianness() != llvm::endianness::native)
-      MachO::swapStruct(Hdr);
-
-    auto HeaderContent = G.allocateContent(
-        ArrayRef<char>(reinterpret_cast<const char *>(&Hdr), sizeof(Hdr)));
-
-    return G.createContentBlock(HeaderSection, HeaderContent, ExecutorAddr(), 8,
-                                0);
-  }
-
-  static MaterializationUnit::Interface
-  createHeaderInterface(MachOPlatform &MOP,
-                        const SymbolStringPtr &HeaderStartSymbol) {
-    SymbolFlagsMap HeaderSymbolFlags;
-
-    HeaderSymbolFlags[HeaderStartSymbol] = JITSymbolFlags::Exported;
-    for (auto &HS : AdditionalHeaderSymbols)
-      HeaderSymbolFlags[MOP.getExecutionSession().intern(HS.Name)] =
-          JITSymbolFlags::Exported;
-
-    return MaterializationUnit::Interface(std::move(HeaderSymbolFlags),
-                                          HeaderStartSymbol);
-  }
-
-  MachOPlatform &MOP;
-};
-
-constexpr MachOHeaderMaterializationUnit::HeaderSymbol
-    MachOHeaderMaterializationUnit::AdditionalHeaderSymbols[];
-
 // Creates a Bootstrap-Complete LinkGraph to run deferred actions.
 class MachOPlatformCompleteBootstrapMaterializationUnit
     : public MaterializationUnit {
 public:
+  using SymbolTableVector =
+      SmallVector<std::tuple<ExecutorAddr, ExecutorAddr,
+                             MachOPlatform::MachOExecutorSymbolFlags>>;
+
   MachOPlatformCompleteBootstrapMaterializationUnit(
       MachOPlatform &MOP, StringRef PlatformJDName,
-      SymbolStringPtr CompleteBootstrapSymbol, shared::AllocActions DeferredAAs,
+      SymbolStringPtr CompleteBootstrapSymbol, SymbolTableVector SymTab,
+      shared::AllocActions DeferredAAs, ExecutorAddr MachOHeaderAddr,
       ExecutorAddr PlatformBootstrap, ExecutorAddr PlatformShutdown,
       ExecutorAddr RegisterJITDylib, ExecutorAddr DeregisterJITDylib,
-      ExecutorAddr MachOHeaderAddr)
+      ExecutorAddr RegisterObjectSymbolTable,
+      ExecutorAddr DeregisterObjectSymbolTable)
       : MaterializationUnit(
             {{{CompleteBootstrapSymbol, JITSymbolFlags::None}}, nullptr}),
         MOP(MOP), PlatformJDName(PlatformJDName),
         CompleteBootstrapSymbol(std::move(CompleteBootstrapSymbol)),
-        DeferredAAs(std::move(DeferredAAs)),
-        PlatformBootstrap(PlatformBootstrap),
+        SymTab(std::move(SymTab)), DeferredAAs(std::move(DeferredAAs)),
+        MachOHeaderAddr(MachOHeaderAddr), PlatformBootstrap(PlatformBootstrap),
         PlatformShutdown(PlatformShutdown), RegisterJITDylib(RegisterJITDylib),
         DeregisterJITDylib(DeregisterJITDylib),
-        MachOHeaderAddr(MachOHeaderAddr) {}
+        RegisterObjectSymbolTable(RegisterObjectSymbolTable),
+        DeregisterObjectSymbolTable(DeregisterObjectSymbolTable) {}
 
   StringRef getName() const override {
     return "MachOPlatformCompleteBootstrap";
@@ -211,7 +155,7 @@ public:
                         Linkage::Strong, Scope::Hidden, false, true);
 
     // Reserve space for the stolen actions, plus two extras.
-    G->allocActions().reserve(DeferredAAs.size() + 2);
+    G->allocActions().reserve(DeferredAAs.size() + 3);
 
     // 1. Bootstrap the platform support code.
     G->allocActions().push_back(
@@ -227,7 +171,14 @@ public:
          cantFail(WrapperFunctionCall::Create<SPSArgList<SPSExecutorAddr>>(
              DeregisterJITDylib, MachOHeaderAddr))});
 
-    // 3. Add the deferred actions to the graph.
+    // 3. Register deferred symbols.
+    G->allocActions().push_back(
+        {cantFail(WrapperFunctionCall::Create<SPSRegisterSymbolsArgs>(
+             RegisterObjectSymbolTable, MachOHeaderAddr, SymTab)),
+         cantFail(WrapperFunctionCall::Create<SPSRegisterSymbolsArgs>(
+             DeregisterObjectSymbolTable, MachOHeaderAddr, SymTab))});
+
+    // 4. Add the deferred actions to the graph.
     std::move(DeferredAAs.begin(), DeferredAAs.end(),
               std::back_inserter(G->allocActions()));
 
@@ -240,18 +191,24 @@ private:
   MachOPlatform &MOP;
   StringRef PlatformJDName;
   SymbolStringPtr CompleteBootstrapSymbol;
+  SymbolTableVector SymTab;
   shared::AllocActions DeferredAAs;
+  ExecutorAddr MachOHeaderAddr;
   ExecutorAddr PlatformBootstrap;
   ExecutorAddr PlatformShutdown;
   ExecutorAddr RegisterJITDylib;
   ExecutorAddr DeregisterJITDylib;
-  ExecutorAddr MachOHeaderAddr;
+  ExecutorAddr RegisterObjectSymbolTable;
+  ExecutorAddr DeregisterObjectSymbolTable;
 };
 
 static StringRef ObjCRuntimeObjectSectionsData[] = {
-    MachOObjCCatListSectionName,   MachOObjCClassListSectionName,
-    MachOObjCClassRefsSectionName, MachOObjCConstSectionName,
-    MachOObjCDataSectionName,      MachOObjCSelRefsSectionName};
+    MachOObjCCatListSectionName,   MachOObjCCatList2SectionName,
+    MachOObjCClassListSectionName, MachOObjCClassRefsSectionName,
+    MachOObjCConstSectionName,     MachOObjCDataSectionName,
+    MachOObjCProtoListSectionName, MachOObjCProtoRefsSectionName,
+    MachOObjCNLCatListSectionName, MachOObjCNLClassListSectionName,
+    MachOObjCSelRefsSectionName};
 
 static StringRef ObjCRuntimeObjectSectionsText[] = {
     MachOObjCClassNameSectionName, MachOObjCMethNameSectionName,
@@ -298,11 +255,47 @@ struct ObjCImageInfoFlags {
 namespace llvm {
 namespace orc {
 
+std::optional<MachOPlatform::HeaderOptions::BuildVersionOpts>
+MachOPlatform::HeaderOptions::BuildVersionOpts::fromTriple(const Triple &TT,
+                                                           uint32_t MinOS,
+                                                           uint32_t SDK) {
+
+  uint32_t Platform;
+  switch (TT.getOS()) {
+  case Triple::IOS:
+    Platform = TT.isSimulatorEnvironment() ? MachO::PLATFORM_IOSSIMULATOR
+                                           : MachO::PLATFORM_IOS;
+    break;
+  case Triple::MacOSX:
+    Platform = MachO::PLATFORM_MACOS;
+    break;
+  case Triple::TvOS:
+    Platform = TT.isSimulatorEnvironment() ? MachO::PLATFORM_TVOSSIMULATOR
+                                           : MachO::PLATFORM_TVOS;
+    break;
+  case Triple::WatchOS:
+    Platform = TT.isSimulatorEnvironment() ? MachO::PLATFORM_WATCHOSSIMULATOR
+                                           : MachO::PLATFORM_WATCHOS;
+    break;
+  case Triple::XROS:
+    Platform = TT.isSimulatorEnvironment() ? MachO::PLATFORM_XROS_SIMULATOR
+                                           : MachO::PLATFORM_XROS;
+    break;
+  default:
+    return std::nullopt;
+  }
+
+  return MachOPlatform::HeaderOptions::BuildVersionOpts{Platform, MinOS, SDK};
+}
+
 Expected<std::unique_ptr<MachOPlatform>>
-MachOPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-                      JITDylib &PlatformJD,
+MachOPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
                       std::unique_ptr<DefinitionGenerator> OrcRuntime,
+                      HeaderOptions PlatformJDOpts,
+                      MachOHeaderMUBuilder BuildMachOHeaderMU,
                       std::optional<SymbolAliasMap> RuntimeAliases) {
+
+  auto &ES = ObjLinkingLayer.getExecutionSession();
 
   // If the target is not supported then bail out immediately.
   if (!supportedTarget(ES.getTargetTriple()))
@@ -333,15 +326,17 @@ MachOPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
   // Create the instance.
   Error Err = Error::success();
   auto P = std::unique_ptr<MachOPlatform>(new MachOPlatform(
-      ES, ObjLinkingLayer, PlatformJD, std::move(OrcRuntime), Err));
+      ObjLinkingLayer, PlatformJD, std::move(OrcRuntime),
+      std::move(PlatformJDOpts), std::move(BuildMachOHeaderMU), Err));
   if (Err)
     return std::move(Err);
   return std::move(P);
 }
 
 Expected<std::unique_ptr<MachOPlatform>>
-MachOPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-                      JITDylib &PlatformJD, const char *OrcRuntimePath,
+MachOPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
+                      const char *OrcRuntimePath, HeaderOptions PlatformJDOpts,
+                      MachOHeaderMUBuilder BuildMachOHeaderMU,
                       std::optional<SymbolAliasMap> RuntimeAliases) {
 
   // Create a generator for the ORC runtime archive.
@@ -350,14 +345,18 @@ MachOPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
   if (!OrcRuntimeArchiveGenerator)
     return OrcRuntimeArchiveGenerator.takeError();
 
-  return Create(ES, ObjLinkingLayer, PlatformJD,
+  return Create(ObjLinkingLayer, PlatformJD,
                 std::move(*OrcRuntimeArchiveGenerator),
+                std::move(PlatformJDOpts), std::move(BuildMachOHeaderMU),
                 std::move(RuntimeAliases));
 }
 
 Error MachOPlatform::setupJITDylib(JITDylib &JD) {
-  if (auto Err = JD.define(std::make_unique<MachOHeaderMaterializationUnit>(
-          *this, MachOHeaderStartSymbol)))
+  return setupJITDylib(JD, /*Opts=*/{});
+}
+
+Error MachOPlatform::setupJITDylib(JITDylib &JD, HeaderOptions Opts) {
+  if (auto Err = JD.define(BuildMachOHeaderMU(*this, std::move(Opts))))
     return Err;
 
   return ES.lookup({&JD}, MachOHeaderStartSymbol).takeError();
@@ -428,6 +427,7 @@ MachOPlatform::standardRuntimeUtilityAliases() {
           {"___orc_rt_run_program", "___orc_rt_macho_run_program"},
           {"___orc_rt_jit_dlerror", "___orc_rt_macho_jit_dlerror"},
           {"___orc_rt_jit_dlopen", "___orc_rt_macho_jit_dlopen"},
+          {"___orc_rt_jit_dlupdate", "___orc_rt_macho_jit_dlupdate"},
           {"___orc_rt_jit_dlclose", "___orc_rt_macho_jit_dlclose"},
           {"___orc_rt_jit_dlsym", "___orc_rt_macho_jit_dlsym"},
           {"___orc_rt_log_error", "___orc_rt_log_error_to_stderr"}};
@@ -446,11 +446,37 @@ bool MachOPlatform::supportedTarget(const Triple &TT) {
   }
 }
 
+jitlink::Edge::Kind MachOPlatform::getPointerEdgeKind(jitlink::LinkGraph &G) {
+  switch (G.getTargetTriple().getArch()) {
+  case Triple::aarch64:
+    return jitlink::aarch64::Pointer64;
+  case Triple::x86_64:
+    return jitlink::x86_64::Pointer64;
+  default:
+    llvm_unreachable("Unsupported architecture");
+  }
+}
+
+MachOPlatform::MachOExecutorSymbolFlags
+MachOPlatform::flagsForSymbol(jitlink::Symbol &Sym) {
+  MachOPlatform::MachOExecutorSymbolFlags Flags{};
+  if (Sym.getLinkage() == jitlink::Linkage::Weak)
+    Flags |= MachOExecutorSymbolFlags::Weak;
+
+  if (Sym.isCallable())
+    Flags |= MachOExecutorSymbolFlags::Callable;
+
+  return Flags;
+}
+
 MachOPlatform::MachOPlatform(
-    ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-    JITDylib &PlatformJD,
-    std::unique_ptr<DefinitionGenerator> OrcRuntimeGenerator, Error &Err)
-    : ES(ES), PlatformJD(PlatformJD), ObjLinkingLayer(ObjLinkingLayer) {
+    ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
+    std::unique_ptr<DefinitionGenerator> OrcRuntimeGenerator,
+    HeaderOptions PlatformJDOpts, MachOHeaderMUBuilder BuildMachOHeaderMU,
+    Error &Err)
+    : ES(ObjLinkingLayer.getExecutionSession()), PlatformJD(PlatformJD),
+      ObjLinkingLayer(ObjLinkingLayer),
+      BuildMachOHeaderMU(std::move(BuildMachOHeaderMU)) {
   ErrorAsOutParameter _(&Err);
   ObjLinkingLayer.addPlugin(std::make_unique<MachOPlatformPlugin>(*this));
   PlatformJD.addGenerator(std::move(OrcRuntimeGenerator));
@@ -513,8 +539,8 @@ MachOPlatform::MachOPlatform(
   //    the support methods callable. The bootstrap is now complete.
 
   // Step (1) Add header materialization unit and request.
-  if ((Err = PlatformJD.define(std::make_unique<MachOHeaderMaterializationUnit>(
-           *this, MachOHeaderStartSymbol))))
+  if ((Err = PlatformJD.define(
+           this->BuildMachOHeaderMU(*this, std::move(PlatformJDOpts)))))
     return;
   if ((Err = ES.lookup(&PlatformJD, MachOHeaderStartSymbol).takeError()))
     return;
@@ -525,6 +551,8 @@ MachOPlatform::MachOPlatform(
                        SymbolLookupSet(
                            {PlatformBootstrap.Name, PlatformShutdown.Name,
                             RegisterJITDylib.Name, DeregisterJITDylib.Name,
+                            RegisterObjectSymbolTable.Name,
+                            DeregisterObjectSymbolTable.Name,
                             RegisterObjectPlatformSections.Name,
                             DeregisterObjectPlatformSections.Name,
                             CreatePThreadKey.Name}))
@@ -543,9 +571,11 @@ MachOPlatform::MachOPlatform(
   if ((Err = PlatformJD.define(
            std::make_unique<MachOPlatformCompleteBootstrapMaterializationUnit>(
                *this, PlatformJD.getName(), BootstrapCompleteSymbol,
-               std::move(BI.DeferredAAs), PlatformBootstrap.Addr,
+               std::move(BI.SymTab), std::move(BI.DeferredAAs),
+               BI.MachOHeaderAddr, PlatformBootstrap.Addr,
                PlatformShutdown.Addr, RegisterJITDylib.Addr,
-               DeregisterJITDylib.Addr, BI.MachOHeaderAddr))))
+               DeregisterJITDylib.Addr, RegisterObjectSymbolTable.Addr,
+               DeregisterObjectSymbolTable.Addr))))
     return;
   if ((Err = ES.lookup(makeJITDylibSearchOrder(
                            &PlatformJD, JITDylibLookupFlags::MatchAllSymbols),
@@ -567,11 +597,11 @@ Error MachOPlatform::associateRuntimeSupportFunctions() {
       ES.wrapAsyncWithSPS<PushInitializersSPSSig>(
           this, &MachOPlatform::rt_pushInitializers);
 
-  using LookupSymbolSPSSig =
-      SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSString);
-  WFs[ES.intern("___orc_rt_macho_symbol_lookup_tag")] =
-      ES.wrapAsyncWithSPS<LookupSymbolSPSSig>(this,
-                                              &MachOPlatform::rt_lookupSymbol);
+  using PushSymbolsSPSSig =
+      SPSError(SPSExecutorAddr, SPSSequence<SPSTuple<SPSString, bool>>);
+  WFs[ES.intern("___orc_rt_macho_push_symbols_tag")] =
+      ES.wrapAsyncWithSPS<PushSymbolsSPSSig>(this,
+                                             &MachOPlatform::rt_pushSymbols);
 
   return ES.registerJITDispatchHandlers(PlatformJD, std::move(WFs));
 }
@@ -692,11 +722,9 @@ void MachOPlatform::rt_pushInitializers(PushInitializersSendResultFn SendResult,
   pushInitializersLoop(std::move(SendResult), JD);
 }
 
-void MachOPlatform::rt_lookupSymbol(SendSymbolAddressFn SendResult,
-                                    ExecutorAddr Handle, StringRef SymbolName) {
-  LLVM_DEBUG({
-    dbgs() << "MachOPlatform::rt_lookupSymbol(\"" << Handle << "\")\n";
-  });
+void MachOPlatform::rt_pushSymbols(
+    PushSymbolsInSendResultFn SendResult, ExecutorAddr Handle,
+    const std::vector<std::pair<StringRef, bool>> &SymbolNames) {
 
   JITDylib *JD = nullptr;
 
@@ -706,39 +734,37 @@ void MachOPlatform::rt_lookupSymbol(SendSymbolAddressFn SendResult,
     if (I != HeaderAddrToJITDylib.end())
       JD = I->second;
   }
+  LLVM_DEBUG({
+    dbgs() << "MachOPlatform::rt_pushSymbols(";
+    if (JD)
+      dbgs() << "\"" << JD->getName() << "\", [ ";
+    else
+      dbgs() << "<invalid handle " << Handle << ">, [ ";
+    for (auto &Name : SymbolNames)
+      dbgs() << "\"" << Name.first << "\" ";
+    dbgs() << "])\n";
+  });
 
   if (!JD) {
-    LLVM_DEBUG(dbgs() << "  No JITDylib for handle " << Handle << "\n");
     SendResult(make_error<StringError>("No JITDylib associated with handle " +
                                            formatv("{0:x}", Handle),
                                        inconvertibleErrorCode()));
     return;
   }
 
-  // Use functor class to work around XL build compiler issue on AIX.
-  class RtLookupNotifyComplete {
-  public:
-    RtLookupNotifyComplete(SendSymbolAddressFn &&SendResult)
-        : SendResult(std::move(SendResult)) {}
-    void operator()(Expected<SymbolMap> Result) {
-      if (Result) {
-        assert(Result->size() == 1 && "Unexpected result map count");
-        SendResult(Result->begin()->second.getAddress());
-      } else {
-        SendResult(Result.takeError());
-      }
-    }
+  SymbolLookupSet LS;
+  for (auto &[Name, Required] : SymbolNames)
+    LS.add(ES.intern(Name), Required
+                                ? SymbolLookupFlags::RequiredSymbol
+                                : SymbolLookupFlags::WeaklyReferencedSymbol);
 
-  private:
-    SendSymbolAddressFn SendResult;
-  };
-
-  // FIXME: Proper mangling.
-  auto MangledName = ("_" + SymbolName).str();
   ES.lookup(
       LookupKind::DLSym, {{JD, JITDylibLookupFlags::MatchExportedSymbolsOnly}},
-      SymbolLookupSet(ES.intern(MangledName)), SymbolState::Ready,
-      RtLookupNotifyComplete(std::move(SendResult)), NoDependenciesToRegister);
+      std::move(LS), SymbolState::Ready,
+      [SendResult = std::move(SendResult)](Expected<SymbolMap> Result) mutable {
+        SendResult(Result.takeError());
+      },
+      NoDependenciesToRegister);
 }
 
 Expected<uint64_t> MachOPlatform::createPThreadKey() {
@@ -808,6 +834,18 @@ void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
         return fixTLVSectionsAndEdges(G, JD);
       });
 
+  // Add symbol table prepare and register passes: These will add strings for
+  // all symbols to the c-strings section, and build a symbol table registration
+  // call.
+  auto JITSymTabInfo = std::make_shared<JITSymTabVector>();
+  Config.PostPrunePasses.push_back([this, JITSymTabInfo](LinkGraph &G) {
+    return prepareSymbolTableRegistration(G, *JITSymTabInfo);
+  });
+  Config.PostFixupPasses.push_back([this, &MR, JITSymTabInfo,
+                                    InBootstrapPhase](LinkGraph &G) {
+    return addSymbolTableRegistration(G, MR, *JITSymTabInfo, InBootstrapPhase);
+  });
+
   // Add a pass to register the final addresses of any special sections in the
   // object with the runtime.
   Config.PostAllocationPasses.push_back(
@@ -820,20 +858,6 @@ void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
   if (InBootstrapPhase)
     Config.PostFixupPasses.push_back(
         [this](LinkGraph &G) { return bootstrapPipelineEnd(G); });
-}
-
-ObjectLinkingLayer::Plugin::SyntheticSymbolDependenciesMap
-MachOPlatform::MachOPlatformPlugin::getSyntheticSymbolDependencies(
-    MaterializationResponsibility &MR) {
-  std::lock_guard<std::mutex> Lock(PluginMutex);
-  auto I = InitSymbolDeps.find(&MR);
-  if (I != InitSymbolDeps.end()) {
-    SyntheticSymbolDependenciesMap Result;
-    Result[MR.getInitializerSymbol()] = std::move(I->second);
-    InitSymbolDeps.erase(&MR);
-    return Result;
-  }
-  return SyntheticSymbolDependenciesMap();
 }
 
 Error MachOPlatform::MachOPlatformPlugin::bootstrapPipelineStart(
@@ -853,6 +877,9 @@ Error MachOPlatform::MachOPlatformPlugin::
       {*MP.PlatformShutdown.Name, &MP.PlatformShutdown.Addr},
       {*MP.RegisterJITDylib.Name, &MP.RegisterJITDylib.Addr},
       {*MP.DeregisterJITDylib.Name, &MP.DeregisterJITDylib.Addr},
+      {*MP.RegisterObjectSymbolTable.Name, &MP.RegisterObjectSymbolTable.Addr},
+      {*MP.DeregisterObjectSymbolTable.Name,
+       &MP.DeregisterObjectSymbolTable.Addr},
       {*MP.RegisterObjectPlatformSections.Name,
        &MP.RegisterObjectPlatformSections.Addr},
       {*MP.DeregisterObjectPlatformSections.Name,
@@ -956,40 +983,38 @@ Error MachOPlatform::MachOPlatformPlugin::preserveImportantSections(
   // Init sections are important: We need to preserve them and so that their
   // addresses can be captured and reported to the ORC runtime in
   // registerObjectPlatformSections.
-  JITLinkSymbolSet InitSectionSymbols;
-  for (auto &InitSectionName : MachOInitSectionNames) {
-    // Skip ObjCImageInfo -- this shouldn't have any dependencies, and we may
-    // remove it later.
-    if (InitSectionName == MachOObjCImageInfoSectionName)
-      continue;
+  if (const auto &InitSymName = MR.getInitializerSymbol()) {
 
-    // Skip non-init sections.
-    auto *InitSection = G.findSectionByName(InitSectionName);
-    if (!InitSection)
-      continue;
+    jitlink::Symbol *InitSym = nullptr;
+    for (auto &InitSectionName : MachOInitSectionNames) {
+      // Skip ObjCImageInfo -- this shouldn't have any dependencies, and we may
+      // remove it later.
+      if (InitSectionName == MachOObjCImageInfoSectionName)
+        continue;
 
-    // Make a pass over live symbols in the section: those blocks are already
-    // preserved.
-    DenseSet<jitlink::Block *> AlreadyLiveBlocks;
-    for (auto &Sym : InitSection->symbols()) {
-      auto &B = Sym->getBlock();
-      if (Sym->isLive() && Sym->getOffset() == 0 &&
-          Sym->getSize() == B.getSize() && !AlreadyLiveBlocks.count(&B)) {
-        InitSectionSymbols.insert(Sym);
-        AlreadyLiveBlocks.insert(&B);
+      // Skip non-init sections.
+      auto *InitSection = G.findSectionByName(InitSectionName);
+      if (!InitSection || InitSection->empty())
+        continue;
+
+      // Create the init symbol if it has not been created already and attach it
+      // to the first block.
+      if (!InitSym) {
+        auto &B = **InitSection->blocks().begin();
+        InitSym = &G.addDefinedSymbol(B, 0, *InitSymName, B.getSize(),
+                                      jitlink::Linkage::Strong,
+                                      jitlink::Scope::Default, false, true);
+      }
+
+      // Add keep-alive edges to anonymous symbols in all other init blocks.
+      for (auto *B : InitSection->blocks()) {
+        if (B == &InitSym->getBlock())
+          continue;
+
+        auto &S = G.addAnonymousSymbol(*B, 0, B->getSize(), false, true);
+        InitSym->getBlock().addEdge(jitlink::Edge::KeepAlive, 0, S, 0);
       }
     }
-
-    // Add anonymous symbols to preserve any not-already-preserved blocks.
-    for (auto *B : InitSection->blocks())
-      if (!AlreadyLiveBlocks.count(B))
-        InitSectionSymbols.insert(
-            &G.addAnonymousSymbol(*B, 0, B->getSize(), false, true));
-  }
-
-  if (!InitSectionSymbols.empty()) {
-    std::lock_guard<std::mutex> Lock(PluginMutex);
-    InitSymbolDeps[&MR] = std::move(InitSectionSymbols);
   }
 
   return Error::success();
@@ -1100,12 +1125,16 @@ Error MachOPlatform::MachOPlatformPlugin::mergeImageInfoFlags(
                                        " does not match first registered flags",
                                    inconvertibleErrorCode());
 
-  if (Old.HasCategoryClassProperties != New.HasCategoryClassProperties)
+  // HasCategoryClassProperties and HasSignedObjCClassROs can be disabled before
+  // they are registered, if necessary, but once they are in use must be
+  // supported by subsequent objects.
+  if (Info.Finalized && Old.HasCategoryClassProperties &&
+      !New.HasCategoryClassProperties)
     return make_error<StringError>("ObjC category class property support in " +
                                        G.getName() +
                                        " does not match first registered flags",
                                    inconvertibleErrorCode());
-  if (Old.HasSignedObjCClassROs != New.HasSignedObjCClassROs)
+  if (Info.Finalized && Old.HasSignedObjCClassROs && !New.HasSignedObjCClassROs)
     return make_error<StringError>("ObjC class_ro_t pointer signing in " +
                                        G.getName() +
                                        " does not match first registered flags",
@@ -1124,6 +1153,12 @@ Error MachOPlatform::MachOPlatformPlugin::mergeImageInfoFlags(
   // Add a Swift ABI version if it was pure objc before.
   if (!New.SwiftABIVersion)
     New.SwiftABIVersion = Old.SwiftABIVersion;
+  // Disable class properties if any object does not support it.
+  if (Old.HasCategoryClassProperties != New.HasCategoryClassProperties)
+    New.HasCategoryClassProperties = false;
+  // Disable signed class ro data if any object does not support it.
+  if (Old.HasSignedObjCClassROs != New.HasSignedObjCClassROs)
+    New.HasSignedObjCClassROs = false;
 
   LLVM_DEBUG({
     dbgs() << "MachOPlatform: Merging __objc_imageinfo flags for "
@@ -1335,15 +1370,6 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
                                  UI->CompactUnwindSection);
 
   if (!MachOPlatformSecs.empty() || UnwindInfo) {
-    ExecutorAddr HeaderAddr;
-    {
-      std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
-      auto I = MP.JITDylibToHeaderAddr.find(&JD);
-      assert(I != MP.JITDylibToHeaderAddr.end() &&
-             "Missing header for JITDylib");
-      HeaderAddr = I->second;
-    }
-
     // Dump the scraped inits.
     LLVM_DEBUG({
       dbgs() << "MachOPlatform: Scraped " << G.getName() << " init sections:\n";
@@ -1361,6 +1387,15 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
                                              ? G.allocActions()
                                              : MP.Bootstrap.load()->DeferredAAs;
 
+    ExecutorAddr HeaderAddr;
+    {
+      std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
+      auto I = MP.JITDylibToHeaderAddr.find(&JD);
+      assert(I != MP.JITDylibToHeaderAddr.end() &&
+             "No header registered for JD");
+      assert(I->second && "Null header registered for JD");
+      HeaderAddr = I->second;
+    }
     allocActions.push_back(
         {cantFail(
              WrapperFunctionCall::Create<SPSRegisterObjectPlatformSectionsArgs>(
@@ -1459,17 +1494,7 @@ Error MachOPlatform::MachOPlatformPlugin::populateObjCRuntimeObject(
     strcpy(SD.Sec.segname, "__DATA");
     SD.Sec.size = 8;
     SD.AddFixups = [&](size_t RecordOffset) {
-      jitlink::Edge::Kind PointerEdge = jitlink::Edge::Invalid;
-      switch (G.getTargetTriple().getArch()) {
-      case Triple::aarch64:
-        PointerEdge = jitlink::aarch64::Pointer64;
-        break;
-      case Triple::x86_64:
-        PointerEdge = jitlink::x86_64::Pointer64;
-        break;
-      default:
-        llvm_unreachable("Unsupported architecture");
-      }
+      auto PointerEdge = getPointerEdgeKind(G);
 
       // Look for an existing __objc_imageinfo symbol.
       jitlink::Symbol *ObjCImageInfoSym = nullptr;
@@ -1593,6 +1618,202 @@ Error MachOPlatform::MachOPlatformPlugin::populateObjCRuntimeObject(
 
   assert(P == SecContent.end() && "Underflow writing ObjC runtime object");
   return Error::success();
+}
+
+Error MachOPlatform::MachOPlatformPlugin::prepareSymbolTableRegistration(
+    jitlink::LinkGraph &G, JITSymTabVector &JITSymTabInfo) {
+
+  auto *CStringSec = G.findSectionByName(MachOCStringSectionName);
+  if (!CStringSec)
+    CStringSec = &G.createSection(MachOCStringSectionName,
+                                  MemProt::Read | MemProt::Exec);
+
+  // Make a map of existing strings so that we can re-use them:
+  DenseMap<StringRef, jitlink::Symbol *> ExistingStrings;
+  for (auto *Sym : CStringSec->symbols()) {
+
+    // The LinkGraph builder should have created single strings blocks, and all
+    // plugins should have maintained this invariant.
+    auto Content = Sym->getBlock().getContent();
+    ExistingStrings.insert(
+        std::make_pair(StringRef(Content.data(), Content.size()), Sym));
+  }
+
+  // Add all symbol names to the string section, and record the symbols for
+  // those names.
+  {
+    SmallVector<jitlink::Symbol *> SymsToProcess;
+    for (auto *Sym : G.defined_symbols())
+      SymsToProcess.push_back(Sym);
+    for (auto *Sym : G.absolute_symbols())
+      SymsToProcess.push_back(Sym);
+
+    for (auto *Sym : SymsToProcess) {
+      if (!Sym->hasName())
+        continue;
+
+      auto I = ExistingStrings.find(Sym->getName());
+      if (I == ExistingStrings.end()) {
+        auto &NameBlock = G.createMutableContentBlock(
+            *CStringSec, G.allocateCString(Sym->getName()), orc::ExecutorAddr(),
+            1, 0);
+        auto &SymbolNameSym = G.addAnonymousSymbol(
+            NameBlock, 0, NameBlock.getSize(), false, true);
+        JITSymTabInfo.push_back({Sym, &SymbolNameSym});
+      } else
+        JITSymTabInfo.push_back({Sym, I->second});
+    }
+  }
+
+  return Error::success();
+}
+
+Error MachOPlatform::MachOPlatformPlugin::addSymbolTableRegistration(
+    jitlink::LinkGraph &G, MaterializationResponsibility &MR,
+    JITSymTabVector &JITSymTabInfo, bool InBootstrapPhase) {
+
+  ExecutorAddr HeaderAddr;
+  {
+    std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
+    auto I = MP.JITDylibToHeaderAddr.find(&MR.getTargetJITDylib());
+    assert(I != MP.JITDylibToHeaderAddr.end() && "No header registered for JD");
+    assert(I->second && "Null header registered for JD");
+    HeaderAddr = I->second;
+  }
+
+  if (LLVM_UNLIKELY(InBootstrapPhase)) {
+    // If we're in the bootstrap phase then just record these symbols in the
+    // bootstrap object and then bail out -- registration will be attached to
+    // the bootstrap graph.
+    std::lock_guard<std::mutex> Lock(MP.Bootstrap.load()->Mutex);
+    auto &SymTab = MP.Bootstrap.load()->SymTab;
+    for (auto &[OriginalSymbol, NameSym] : JITSymTabInfo)
+      SymTab.push_back({NameSym->getAddress(), OriginalSymbol->getAddress(),
+                        flagsForSymbol(*OriginalSymbol)});
+    return Error::success();
+  }
+
+  SymbolTableVector SymTab;
+  for (auto &[OriginalSymbol, NameSym] : JITSymTabInfo)
+    SymTab.push_back({NameSym->getAddress(), OriginalSymbol->getAddress(),
+                      flagsForSymbol(*OriginalSymbol)});
+
+  G.allocActions().push_back(
+      {cantFail(WrapperFunctionCall::Create<SPSRegisterSymbolsArgs>(
+           MP.RegisterObjectSymbolTable.Addr, HeaderAddr, SymTab)),
+       cantFail(WrapperFunctionCall::Create<SPSRegisterSymbolsArgs>(
+           MP.DeregisterObjectSymbolTable.Addr, HeaderAddr, SymTab))});
+
+  return Error::success();
+}
+
+template <typename MachOTraits>
+jitlink::Block &createHeaderBlock(MachOPlatform &MOP,
+                                  const MachOPlatform::HeaderOptions &Opts,
+                                  JITDylib &JD, jitlink::LinkGraph &G,
+                                  jitlink::Section &HeaderSection) {
+  auto HdrInfo =
+      getMachOHeaderInfoFromTriple(MOP.getExecutionSession().getTargetTriple());
+  MachOBuilder<MachOTraits> B(HdrInfo.PageSize);
+
+  B.Header.filetype = MachO::MH_DYLIB;
+  B.Header.cputype = HdrInfo.CPUType;
+  B.Header.cpusubtype = HdrInfo.CPUSubType;
+
+  if (Opts.IDDylib)
+    B.template addLoadCommand<MachO::LC_ID_DYLIB>(
+        Opts.IDDylib->Name, Opts.IDDylib->Timestamp,
+        Opts.IDDylib->CurrentVersion, Opts.IDDylib->CompatibilityVersion);
+  else
+    B.template addLoadCommand<MachO::LC_ID_DYLIB>(JD.getName(), 0, 0, 0);
+
+  for (auto &BV : Opts.BuildVersions)
+    B.template addLoadCommand<MachO::LC_BUILD_VERSION>(
+        BV.Platform, BV.MinOS, BV.SDK, static_cast<uint32_t>(0));
+  for (auto &D : Opts.LoadDylibs)
+    B.template addLoadCommand<MachO::LC_LOAD_DYLIB>(
+        D.Name, D.Timestamp, D.CurrentVersion, D.CompatibilityVersion);
+  for (auto &P : Opts.RPaths)
+    B.template addLoadCommand<MachO::LC_RPATH>(P);
+
+  auto HeaderContent = G.allocateBuffer(B.layout());
+  B.write(HeaderContent);
+
+  return G.createContentBlock(HeaderSection, HeaderContent, ExecutorAddr(), 8,
+                              0);
+}
+
+SimpleMachOHeaderMU::SimpleMachOHeaderMU(MachOPlatform &MOP,
+                                         SymbolStringPtr HeaderStartSymbol,
+                                         MachOPlatform::HeaderOptions Opts)
+    : MaterializationUnit(
+          createHeaderInterface(MOP, std::move(HeaderStartSymbol))),
+      MOP(MOP), Opts(std::move(Opts)) {}
+
+void SimpleMachOHeaderMU::materialize(
+    std::unique_ptr<MaterializationResponsibility> R) {
+  auto G = createPlatformGraph(MOP, "<MachOHeaderMU>");
+  addMachOHeader(R->getTargetJITDylib(), *G, R->getInitializerSymbol());
+  MOP.getObjectLinkingLayer().emit(std::move(R), std::move(G));
+}
+
+void SimpleMachOHeaderMU::discard(const JITDylib &JD,
+                                  const SymbolStringPtr &Sym) {}
+
+void SimpleMachOHeaderMU::addMachOHeader(
+    JITDylib &JD, jitlink::LinkGraph &G,
+    const SymbolStringPtr &InitializerSymbol) {
+  auto &HeaderSection = G.createSection("__header", MemProt::Read);
+  auto &HeaderBlock = createHeaderBlock(JD, G, HeaderSection);
+
+  // Init symbol is header-start symbol.
+  G.addDefinedSymbol(HeaderBlock, 0, *InitializerSymbol, HeaderBlock.getSize(),
+                     jitlink::Linkage::Strong, jitlink::Scope::Default, false,
+                     true);
+  for (auto &HS : AdditionalHeaderSymbols)
+    G.addDefinedSymbol(HeaderBlock, HS.Offset, HS.Name, HeaderBlock.getSize(),
+                       jitlink::Linkage::Strong, jitlink::Scope::Default, false,
+                       true);
+}
+
+jitlink::Block &
+SimpleMachOHeaderMU::createHeaderBlock(JITDylib &JD, jitlink::LinkGraph &G,
+                                       jitlink::Section &HeaderSection) {
+  switch (MOP.getExecutionSession().getTargetTriple().getArch()) {
+  case Triple::aarch64:
+  case Triple::x86_64:
+    return ::createHeaderBlock<MachO64LE>(MOP, Opts, JD, G, HeaderSection);
+  default:
+    llvm_unreachable("Unsupported architecture");
+  }
+}
+
+MaterializationUnit::Interface SimpleMachOHeaderMU::createHeaderInterface(
+    MachOPlatform &MOP, const SymbolStringPtr &HeaderStartSymbol) {
+  SymbolFlagsMap HeaderSymbolFlags;
+
+  HeaderSymbolFlags[HeaderStartSymbol] = JITSymbolFlags::Exported;
+  for (auto &HS : AdditionalHeaderSymbols)
+    HeaderSymbolFlags[MOP.getExecutionSession().intern(HS.Name)] =
+        JITSymbolFlags::Exported;
+
+  return MaterializationUnit::Interface(std::move(HeaderSymbolFlags),
+                                        HeaderStartSymbol);
+}
+
+MachOHeaderInfo getMachOHeaderInfoFromTriple(const Triple &TT) {
+  switch (TT.getArch()) {
+  case Triple::aarch64:
+    return {/* PageSize   = */ 16 * 1024,
+            /* CPUType    = */ MachO::CPU_TYPE_ARM64,
+            /* CPUSubType = */ MachO::CPU_SUBTYPE_ARM64_ALL};
+  case Triple::x86_64:
+    return {/* PageSize   = */ 4 * 1024,
+            /* CPUType    = */ MachO::CPU_TYPE_X86_64,
+            /* CPUSubType = */ MachO::CPU_SUBTYPE_X86_64_ALL};
+  default:
+    llvm_unreachable("Unrecognized architecture");
+  }
 }
 
 } // End namespace orc.

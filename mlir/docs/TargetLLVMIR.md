@@ -41,7 +41,7 @@ they use or produce `memref`-typed values.
 
 The process relies on the [Dialect Conversion](DialectConversion.md)
 infrastructure and, in particular, on the
-[materialization](DialectConversion.md#type-conversion) hooks of `TypeConverter`
+[materialization](DialectConversion.md/#type-conversion) hooks of `TypeConverter`
 to support progressive lowering by injecting `unrealized_conversion_cast`
 operations between converted and unconverted operations. After multiple partial
 conversions to the LLVM dialect are performed, the cast operations that became
@@ -58,7 +58,7 @@ same type converter.
 
 #### LLVM Dialect-compatible Types
 
-The types [compatible](Dialects/LLVM.md#built-in-type-compatibility) with the
+The types [compatible](Dialects/LLVM.md/#built-in-type-compatibility) with the
 LLVM dialect are kept as is.
 
 #### Complex Type
@@ -188,7 +188,7 @@ Function types are converted to LLVM dialect function types as follows:
     arguments to allow for specifying metadata such as aliasing information on
     individual pointers;
 -   the conversion of `memref`-typed arguments is subject to
-    [calling conventions](TargetLLVMIR.md#calling-conventions).
+    [calling conventions](#calling-conventions).
 -   if a function type has boolean attribute `func.varargs` being set, the
     converted LLVM function will be variadic.
 
@@ -336,7 +336,7 @@ func.func @bar() {
 // is transformed into
 
 llvm.func @foo(%arg0: i32, %arg1: i64) -> !llvm.struct<(i32, i64)> {
-  // insert the vales into a structure
+  // insert the values into a structure
   %0 = llvm.mlir.undef : !llvm.struct<(i32, i64)>
   %1 = llvm.insertvalue %arg0, %0[0] : !llvm.struct<(i32, i64)>
   %2 = llvm.insertvalue %arg1, %1[1] : !llvm.struct<(i32, i64)>
@@ -349,8 +349,8 @@ llvm.func @bar() {
   %1 = llvm.mlir.constant(17 : i64) : i64
 
   // call and extract the values from the structure
-  %2 = llvm.call @bar(%0, %1)
-     : (i32, i32) -> !llvm.struct<(i32, i64)>
+  %2 = llvm.call @foo(%0, %1)
+     : (i32, i64) -> !llvm.struct<(i32, i64)>
   %3 = llvm.extractvalue %2[0] : !llvm.struct<(i32, i64)>
   %4 = llvm.extractvalue %2[1] : !llvm.struct<(i32, i64)>
 
@@ -364,7 +364,7 @@ llvm.func @bar() {
 
 The default calling convention converts `memref`-typed function arguments to
 LLVM dialect literal structs
-[defined above](TargetLLVMIR.md#ranked-memref-types) before unbundling them into
+[defined above](#ranked-memref-types) before unbundling them into
 individual scalar arguments.
 
 Examples:

@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -31,6 +32,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include <list>
@@ -220,6 +222,10 @@ namespace options {
   static std::string cs_profile_path;
   static bool cs_pgo_gen = false;
 
+  // Time trace options.
+  static std::string time_trace_file;
+  static unsigned time_trace_granularity = 500;
+
   static void process_plugin_option(const char *opt_)
   {
     if (opt_ == nullptr)
@@ -301,13 +307,22 @@ namespace options {
     } else if (opt.consume_front("opt-remarks-hotness-threshold=")) {
       auto ResultOrErr = remarks::parseHotnessThresholdOption(opt);
       if (!ResultOrErr)
-        message(LDPL_FATAL, "Invalid remarks hotness threshold: %s", opt);
+        message(LDPL_FATAL, "Invalid remarks hotness threshold: %s",
+                opt.data());
       else
         RemarksHotnessThreshold = *ResultOrErr;
     } else if (opt.consume_front("opt-remarks-format=")) {
       RemarksFormat = std::string(opt);
     } else if (opt.consume_front("stats-file=")) {
       stats_file = std::string(opt);
+    } else if (opt.consume_front("time-trace=")) {
+      time_trace_file = std::string(opt);
+    } else if (opt.consume_front("time-trace-granularity=")) {
+      unsigned Granularity;
+      if (opt.getAsInteger(10, Granularity))
+        message(LDPL_FATAL, "Invalid time trace granularity: %s", opt.data());
+      else
+        time_trace_granularity = Granularity;
     } else {
       // Save this option to pass to the code generator.
       // ParseCommandLineOptions() expects argv[0] to be program name. Lazily
@@ -434,8 +449,10 @@ ld_plugin_status onload(ld_plugin_tv *tv) {
       // FIXME: When binutils 2.31 (containing gold 1.16) is the minimum
       // required version, this should be changed to:
       // get_wrap_symbols = tv->tv_u.tv_get_wrap_symbols;
-      get_wrap_symbols =
-          (ld_plugin_get_wrap_symbols)tv->tv_u.tv_message;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
+      get_wrap_symbols = (ld_plugin_get_wrap_symbols)tv->tv_u.tv_message;
+#pragma GCC diagnostic pop
       break;
     default:
       break;
@@ -857,7 +874,7 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
 
   // Disable the new X86 relax relocations since gold might not support them.
   // FIXME: Check the gold version or add a new option to enable them.
-  Conf.Options.RelaxELFRelocations = false;
+  Conf.Options.MCOptions.X86RelaxRelocations = false;
 
   // Toggle function/data sections.
   if (!codegen::getExplicitFunctionSections())
@@ -882,7 +899,7 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
     std::string OldPrefix, NewPrefix;
     getThinLTOOldAndNewPrefix(OldPrefix, NewPrefix);
     Backend = createWriteIndexesThinBackend(
-        OldPrefix, NewPrefix,
+        llvm::hardware_concurrency(options::Parallelism), OldPrefix, NewPrefix,
         // TODO: Add support for optional native object path in
         // thinlto_prefix_replace option to match lld.
         /*NativeObjectPrefix=*/"", options::thinlto_emit_imports_files,
@@ -951,6 +968,10 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   Conf.HasWholeProgramVisibility = options::whole_program_visibility;
 
   Conf.StatsFile = options::stats_file;
+
+  Conf.TimeTraceEnabled = !options::time_trace_file.empty();
+  Conf.TimeTraceGranularity = options::time_trace_granularity;
+
   return std::make_unique<LTO>(std::move(Conf), Backend,
                                 options::ParallelCodeGenParallelismLevel);
 }
@@ -1036,9 +1057,11 @@ static std::vector<std::pair<SmallString<128>, bool>> runLTO() {
   getThinLTOOldAndNewSuffix(OldSuffix, NewSuffix);
 
   for (claimed_file &F : Modules) {
-    if (options::thinlto && !HandleToInputFile.count(F.leader_handle))
-      HandleToInputFile.insert(std::make_pair(
-          F.leader_handle, std::make_unique<PluginInputFile>(F.handle)));
+    if (options::thinlto) {
+      auto [It, Inserted] = HandleToInputFile.try_emplace(F.leader_handle);
+      if (Inserted)
+        It->second = std::make_unique<PluginInputFile>(F.handle);
+    }
     // In case we are thin linking with a minimized bitcode file, ensure
     // the module paths encoded in the index reflect where the backends
     // will locate the full bitcode files for compiling/importing.
@@ -1110,6 +1133,19 @@ static ld_plugin_status allSymbolsReadHook() {
 
   if (unsigned NumOpts = options::extra.size())
     cl::ParseCommandLineOptions(NumOpts, &options::extra[0]);
+
+  // Initialize time trace profiler
+  if (!options::time_trace_file.empty())
+    llvm::timeTraceProfilerInitialize(options::time_trace_granularity,
+                                      options::extra.size() ? options::extra[0]
+                                                            : "LLVMgold");
+  auto FinalizeTimeTrace = llvm::make_scope_exit([&]() {
+    if (!llvm::timeTraceProfilerEnabled())
+      return;
+    assert(!options::time_trace_file.empty());
+    check(llvm::timeTraceProfilerWrite(options::time_trace_file, output_name));
+    llvm::timeTraceProfilerCleanup();
+  });
 
   std::vector<std::pair<SmallString<128>, bool>> Files = runLTO();
 

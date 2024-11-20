@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-detect -polly-scops  -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>,print<polly-function-scops>'  -disable-output < %s 2>&1 | FileCheck %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; This test case contains two scops.
@@ -20,7 +20,7 @@ for.end:                                          ; preds = %for.body, %entry.sp
 
 for.body81:                                       ; preds = %for.body81, %for.end
   %j.19 = phi i32 [ %shl, %for.end ], [ %add169, %for.body81 ]
-  %add13710 = or i32 %j.19, 1
+  %add13710 = or disjoint i32 %j.19, 1
   %idxprom138 = sext i32 %add13710 to i64
   %arrayidx139 = getelementptr inbounds double, ptr %a, i64 %idxprom138
   store double undef, ptr %arrayidx139, align 8

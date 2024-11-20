@@ -44,8 +44,8 @@ def ULO7 : SDNodeXForm<imm, [{
                                    SDLoc(N), MVT::i32);
 }]>;
 def LO7 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(SignExtend32(N->getSExtValue(), 7),
-                                   SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(SignExtend64(N->getSExtValue(), 7),
+                                         SDLoc(N), MVT::i32);
 }]>;
 def MIMM : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(val2MImm(getImmVal(N)),
@@ -1158,9 +1158,9 @@ defm ATMAM : RRCASm<"atmam", 0x53, I64, i64, uimm0to2>;
 
 // Section 8.2.20 - CAS (Compare and Swap)
 let DecoderMethod = "DecodeCASI64" in
-defm CASL : RRCASm<"cas.l", 0x62, I64, i64, simm7, atomic_cmp_swap_64>;
+defm CASL : RRCASm<"cas.l", 0x62, I64, i64, simm7, atomic_cmp_swap_i64>;
 let DecoderMethod = "DecodeCASI32", cx = 1 in
-defm CASW : RRCASm<"cas.w", 0x62, I32, i32, simm7, atomic_cmp_swap_32>;
+defm CASW : RRCASm<"cas.w", 0x62, I32, i32, simm7, atomic_cmp_swap_i32>;
 
 //-----------------------------------------------------------------------------
 // Section 8.3 - Transfer Control Instructions
@@ -1785,14 +1785,14 @@ defm : TRUNC64m<truncstorei8, ST1Brri, ST1Brii, ST1Bzri, ST1Bzii>;
 defm : TRUNC64m<truncstorei16, ST2Brri, ST2Brii, ST2Bzri, ST2Bzii>;
 defm : TRUNC64m<truncstorei32, STLrri, STLrii, STLzri, ST1Bzii>;
 
-// Atomic loads
+// Atomic loads (FIXME: replace iAny with the correct integer VT:)
 multiclass ATMLDm<SDPatternOperator from,
                   RM torri, RM torii,
                   RM tozri, RM tozii> {
-  def : Pat<(from ADDRrri:$addr), (torri MEMrri:$addr)>;
-  def : Pat<(from ADDRrii:$addr), (torii MEMrii:$addr)>;
-  def : Pat<(from ADDRzri:$addr), (tozri MEMzri:$addr)>;
-  def : Pat<(from ADDRzii:$addr), (tozii MEMzii:$addr)>;
+  def : Pat<(iAny (from ADDRrri:$addr)), (torri MEMrri:$addr)>;
+  def : Pat<(iAny (from ADDRrii:$addr)), (torii MEMrii:$addr)>;
+  def : Pat<(iAny (from ADDRzri:$addr)), (tozri MEMzri:$addr)>;
+  def : Pat<(iAny (from ADDRzii:$addr)), (tozii MEMzii:$addr)>;
 }
 defm : ATMLDm<atomic_load_8, LD1BZXrri, LD1BZXrii, LD1BZXzri, LD1BZXzii>;
 defm : ATMLDm<atomic_load_16, LD2BZXrri, LD2BZXrii, LD2BZXzri, LD2BZXzii>;
@@ -1896,9 +1896,9 @@ defm : TRATMSTm<atomic_store_32, STLrri, STLrii, STLzri, STLzii>;
 // Atomic swaps
 def : Pat<(i32 (ts1am i64:$src, i32:$flag, i32:$new)),
           (TS1AMWrir $src, 0, $flag, $new)>;
-def : Pat<(i32 (atomic_swap_32 ADDRri:$src, i32:$new)),
+def : Pat<(i32 (atomic_swap_i32 ADDRri:$src, i32:$new)),
           (TS1AMWrii MEMriRRM:$src, 15, $new)>;
-def : Pat<(i64 (atomic_swap_64 ADDRri:$src, i64:$new)),
+def : Pat<(i64 (atomic_swap_i64 ADDRri:$src, i64:$new)),
           (TS1AMLrir MEMriRRM:$src, (LEAzii 0, 0, 255), i64:$new)>;
 
 //===----------------------------------------------------------------------===//

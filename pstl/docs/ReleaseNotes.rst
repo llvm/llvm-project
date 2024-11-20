@@ -1,5 +1,5 @@
 =======================================
-PSTL 18.0.0 (In-Progress) Release Notes
+PSTL 20.0.0 (In-Progress) Release Notes
 =======================================
 
 .. contents::
@@ -10,7 +10,7 @@ Written by the `PSTL Team <https://pstl.llvm.org>`_
 
 .. warning::
 
-   These are in-progress notes for the upcoming pstl 17 release.
+   These are in-progress notes for the upcoming pstl 19 release.
    Release notes for previous releases can be found on
    `the Download Page <https://releases.llvm.org/download.html>`_.
 
@@ -30,7 +30,7 @@ web page, this document applies to the *next* release, not the current one.
 To see the release notes for a specific release, please see the `releases
 page <https://llvm.org/releases/>`_.
 
-What's New in PSTL 18.0.0?
+What's New in PSTL 19.0.0?
 ==========================
 
 New Features

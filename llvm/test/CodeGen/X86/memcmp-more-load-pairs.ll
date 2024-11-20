@@ -113,8 +113,7 @@ define i1 @length2_gt(ptr %X, ptr %Y) nounwind {
 define i1 @length2_eq_const(ptr %X) nounwind {
 ; X64-LABEL: length2_eq_const:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzwl (%rdi), %eax
-; X64-NEXT:    cmpl $12849, %eax # imm = 0x3231
+; X64-NEXT:    cmpw $12849, (%rdi) # imm = 0x3231
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(ptr %X, ptr getelementptr inbounds ([513 x i8], ptr @.str, i32 0, i32 1), i64 2) nounwind
@@ -947,7 +946,7 @@ define i1 @length24_eq_const(ptr %X) nounwind {
 ; X64-MIC-AVX:       # %bb.0:
 ; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %xmm0
 ; X64-MIC-AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [959985462,858927408,0,0]
+; X64-MIC-AVX-NEXT:    vmovq {{.*#+}} xmm2 = [959985462,858927408,0,0]
 ; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm2, %zmm1, %k0
 ; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [858927408,926299444,825243960,892613426]
 ; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm1, %zmm0, %k1

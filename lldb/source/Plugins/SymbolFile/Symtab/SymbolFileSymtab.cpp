@@ -186,7 +186,7 @@ size_t SymbolFileSymtab::ParseFunctions(CompileUnit &comp_unit) {
                                                // for this function
                              curr_symbol->GetMangled(), // Linker/mangled name
                              nullptr, // no return type for a code symbol...
-                             func_range)); // first address range
+                             AddressRanges{func_range}));
 
             if (func_sp.get() != nullptr) {
               comp_unit.AddFunction(func_sp);
@@ -211,7 +211,7 @@ bool SymbolFileSymtab::ParseDebugMacros(CompileUnit &comp_unit) {
 }
 
 bool SymbolFileSymtab::ParseSupportFiles(CompileUnit &comp_unit,
-                                         FileSpecList &support_files) {
+                                         SupportFileList &support_files) {
   return false;
 }
 

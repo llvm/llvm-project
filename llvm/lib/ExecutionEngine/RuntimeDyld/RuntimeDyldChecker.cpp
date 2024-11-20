@@ -8,7 +8,6 @@
 
 #include "llvm/ExecutionEngine/RuntimeDyldChecker.h"
 #include "RuntimeDyldCheckerImpl.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -21,9 +20,7 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include <cctype>
 #include <memory>
 #include <utility>
@@ -142,7 +139,7 @@ private:
       std::tie(Token, Remaining) = parseNumberString(Expr);
     else {
       unsigned TokLen = 1;
-      if (Expr.startswith("<<") || Expr.startswith(">>"))
+      if (Expr.starts_with("<<") || Expr.starts_with(">>"))
         TokLen = 2;
       Token = Expr.substr(0, TokLen);
     }
@@ -177,9 +174,9 @@ private:
       return std::make_pair(BinOpToken::Invalid, "");
 
     // Handle the two 2-character tokens.
-    if (Expr.startswith("<<"))
+    if (Expr.starts_with("<<"))
       return std::make_pair(BinOpToken::ShiftLeft, Expr.substr(2).ltrim());
-    if (Expr.startswith(">>"))
+    if (Expr.starts_with(">>"))
       return std::make_pair(BinOpToken::ShiftRight, Expr.substr(2).ltrim());
 
     // Handle one-character tokens.
@@ -242,7 +239,7 @@ private:
   // On success, returns a pair containing the value of the operand, plus
   // the expression remaining to be evaluated.
   std::pair<EvalResult, StringRef> evalDecodeOperand(StringRef Expr) const {
-    if (!Expr.startswith("("))
+    if (!Expr.starts_with("("))
       return std::make_pair(unexpectedToken(Expr, Expr, "expected '('"), "");
     StringRef RemainingExpr = Expr.substr(1).ltrim();
     StringRef Symbol;
@@ -273,7 +270,7 @@ private:
           "");
     }
 
-    if (!RemainingExpr.startswith(","))
+    if (!RemainingExpr.starts_with(","))
       return std::make_pair(
           unexpectedToken(RemainingExpr, RemainingExpr, "expected ','"), "");
     RemainingExpr = RemainingExpr.substr(1).ltrim();
@@ -283,7 +280,7 @@ private:
     if (OpIdxExpr.hasError())
       return std::make_pair(OpIdxExpr, "");
 
-    if (!RemainingExpr.startswith(")"))
+    if (!RemainingExpr.starts_with(")"))
       return std::make_pair(
           unexpectedToken(RemainingExpr, RemainingExpr, "expected ')'"), "");
     RemainingExpr = RemainingExpr.substr(1).ltrim();
@@ -304,10 +301,10 @@ private:
       if (auto E = TI.takeError()) {
         errs() << "Error obtaining instruction printer: "
                << toString(std::move(E)) << "\n";
-        return std::make_pair(EvalResult(ErrMsgStream.str()), "");
+        return;
       }
       Inst.dump_pretty(ErrMsgStream, TI->InstPrinter.get());
-      return std::make_pair(EvalResult(ErrMsgStream.str()), "");
+      return;
     };
 
     if (OpIdx >= Inst.getNumOperands()) {
@@ -319,7 +316,8 @@ private:
                    << format("%i", Inst.getNumOperands())
                    << " operands.\nInstruction is:\n  ";
 
-      return printInst(Symbol, Inst, ErrMsgStream);
+      printInst(Symbol, Inst, ErrMsgStream);
+      return {EvalResult(std::move(ErrMsg)), ""};
     }
 
     const MCOperand &Op = Inst.getOperand(OpIdx);
@@ -329,7 +327,8 @@ private:
       ErrMsgStream << "Operand '" << format("%i", OpIdx) << "' of instruction '"
                    << Symbol << "' is not an immediate.\nInstruction is:\n  ";
 
-      return printInst(Symbol, Inst, ErrMsgStream);
+      printInst(Symbol, Inst, ErrMsgStream);
+      return {EvalResult(std::move(ErrMsg)), ""};
     }
 
     return std::make_pair(EvalResult(Op.getImm()), RemainingExpr);
@@ -343,7 +342,7 @@ private:
   // expression remaining to be evaluated.
   std::pair<EvalResult, StringRef> evalNextPC(StringRef Expr,
                                               ParseContext PCtx) const {
-    if (!Expr.startswith("("))
+    if (!Expr.starts_with("("))
       return std::make_pair(unexpectedToken(Expr, Expr, "expected '('"), "");
     StringRef RemainingExpr = Expr.substr(1).ltrim();
     StringRef Symbol;
@@ -354,7 +353,7 @@ private:
           EvalResult(("Cannot decode unknown symbol '" + Symbol + "'").str()),
           "");
 
-    if (!RemainingExpr.startswith(")"))
+    if (!RemainingExpr.starts_with(")"))
       return std::make_pair(
           unexpectedToken(RemainingExpr, RemainingExpr, "expected ')'"), "");
     RemainingExpr = RemainingExpr.substr(1).ltrim();
@@ -369,7 +368,13 @@ private:
     uint64_t SymbolAddr = PCtx.IsInsideLoad
                               ? Checker.getSymbolLocalAddr(Symbol)
                               : Checker.getSymbolRemoteAddr(Symbol);
-    uint64_t NextPC = SymbolAddr + InstSize;
+
+    // ARM PC offset is 8 instead of 4, because it accounts for an additional
+    // prefetch instruction that increments PC even though it is implicit.
+    auto TT = Checker.getTripleForSymbol(Checker.getTargetFlag(Symbol));
+    uint64_t PCOffset = TT.getArch() == Triple::ArchType::arm ? 4 : 0;
+
+    uint64_t NextPC = SymbolAddr + InstSize + PCOffset;
 
     return std::make_pair(EvalResult(NextPC), RemainingExpr);
   }
@@ -381,7 +386,7 @@ private:
   // remaining to be evaluated.
   std::pair<EvalResult, StringRef>
   evalStubOrGOTAddr(StringRef Expr, ParseContext PCtx, bool IsStubAddr) const {
-    if (!Expr.startswith("("))
+    if (!Expr.starts_with("("))
       return std::make_pair(unexpectedToken(Expr, Expr, "expected '('"), "");
     StringRef RemainingExpr = Expr.substr(1).ltrim();
 
@@ -392,7 +397,7 @@ private:
     StubContainerName = RemainingExpr.substr(0, ComaIdx).rtrim();
     RemainingExpr = RemainingExpr.substr(ComaIdx).ltrim();
 
-    if (!RemainingExpr.startswith(","))
+    if (!RemainingExpr.starts_with(","))
       return std::make_pair(
           unexpectedToken(RemainingExpr, Expr, "expected ','"), "");
     RemainingExpr = RemainingExpr.substr(1).ltrim();
@@ -400,15 +405,25 @@ private:
     StringRef Symbol;
     std::tie(Symbol, RemainingExpr) = parseSymbol(RemainingExpr);
 
-    if (!RemainingExpr.startswith(")"))
+    // Parse optional parameter to filter by stub kind
+    StringRef KindNameFilter;
+    if (RemainingExpr.starts_with(",")) {
+      RemainingExpr = RemainingExpr.substr(1).ltrim();
+      size_t ClosingBracket = RemainingExpr.find(")");
+      KindNameFilter = RemainingExpr.substr(0, ClosingBracket);
+      RemainingExpr = RemainingExpr.substr(ClosingBracket);
+    }
+
+    if (!RemainingExpr.starts_with(")"))
       return std::make_pair(
           unexpectedToken(RemainingExpr, Expr, "expected ')'"), "");
     RemainingExpr = RemainingExpr.substr(1).ltrim();
 
     uint64_t StubAddr;
     std::string ErrorMsg;
-    std::tie(StubAddr, ErrorMsg) = Checker.getStubOrGOTAddrFor(
-        StubContainerName, Symbol, PCtx.IsInsideLoad, IsStubAddr);
+    std::tie(StubAddr, ErrorMsg) =
+        Checker.getStubOrGOTAddrFor(StubContainerName, Symbol, KindNameFilter,
+                                    PCtx.IsInsideLoad, IsStubAddr);
 
     if (ErrorMsg != "")
       return std::make_pair(EvalResult(ErrorMsg), "");
@@ -418,7 +433,7 @@ private:
 
   std::pair<EvalResult, StringRef> evalSectionAddr(StringRef Expr,
                                                    ParseContext PCtx) const {
-    if (!Expr.startswith("("))
+    if (!Expr.starts_with("("))
       return std::make_pair(unexpectedToken(Expr, Expr, "expected '('"), "");
     StringRef RemainingExpr = Expr.substr(1).ltrim();
 
@@ -429,7 +444,7 @@ private:
     FileName = RemainingExpr.substr(0, ComaIdx).rtrim();
     RemainingExpr = RemainingExpr.substr(ComaIdx).ltrim();
 
-    if (!RemainingExpr.startswith(","))
+    if (!RemainingExpr.starts_with(","))
       return std::make_pair(
           unexpectedToken(RemainingExpr, Expr, "expected ','"), "");
     RemainingExpr = RemainingExpr.substr(1).ltrim();
@@ -439,7 +454,7 @@ private:
     SectionName = RemainingExpr.substr(0, CloseParensIdx).rtrim();
     RemainingExpr = RemainingExpr.substr(CloseParensIdx).ltrim();
 
-    if (!RemainingExpr.startswith(")"))
+    if (!RemainingExpr.starts_with(")"))
       return std::make_pair(
           unexpectedToken(RemainingExpr, Expr, "expected ')'"), "");
     RemainingExpr = RemainingExpr.substr(1).ltrim();
@@ -480,7 +495,7 @@ private:
       std::string ErrMsg("No known address for symbol '");
       ErrMsg += Symbol;
       ErrMsg += "'";
-      if (Symbol.startswith("L"))
+      if (Symbol.starts_with("L"))
         ErrMsg += " (this appears to be an assembler local label - "
                   " perhaps drop the 'L'?)";
 
@@ -501,7 +516,7 @@ private:
   // pair representing the number and the expression remaining to be parsed.
   std::pair<StringRef, StringRef> parseNumberString(StringRef Expr) const {
     size_t FirstNonDigit = StringRef::npos;
-    if (Expr.startswith("0x")) {
+    if (Expr.starts_with("0x")) {
       FirstNonDigit = Expr.find_first_not_of("0123456789abcdefABCDEF", 2);
       if (FirstNonDigit == StringRef::npos)
         FirstNonDigit = Expr.size();
@@ -535,14 +550,14 @@ private:
   // remaining to be parsed.
   std::pair<EvalResult, StringRef> evalParensExpr(StringRef Expr,
                                                   ParseContext PCtx) const {
-    assert(Expr.startswith("(") && "Not a parenthesized expression");
+    assert(Expr.starts_with("(") && "Not a parenthesized expression");
     EvalResult SubExprResult;
     StringRef RemainingExpr;
     std::tie(SubExprResult, RemainingExpr) =
         evalComplexExpr(evalSimpleExpr(Expr.substr(1).ltrim(), PCtx), PCtx);
     if (SubExprResult.hasError())
       return std::make_pair(SubExprResult, "");
-    if (!RemainingExpr.startswith(")"))
+    if (!RemainingExpr.starts_with(")"))
       return std::make_pair(
           unexpectedToken(RemainingExpr, Expr, "expected ')'"), "");
     RemainingExpr = RemainingExpr.substr(1).ltrim();
@@ -554,11 +569,11 @@ private:
   // Return a pair containing the result, plus the expression remaining to be
   // parsed.
   std::pair<EvalResult, StringRef> evalLoadExpr(StringRef Expr) const {
-    assert(Expr.startswith("*") && "Not a load expression");
+    assert(Expr.starts_with("*") && "Not a load expression");
     StringRef RemainingExpr = Expr.substr(1).ltrim();
 
     // Parse read size.
-    if (!RemainingExpr.startswith("{"))
+    if (!RemainingExpr.starts_with("{"))
       return std::make_pair(EvalResult("Expected '{' following '*'."), "");
     RemainingExpr = RemainingExpr.substr(1).ltrim();
     EvalResult ReadSizeExpr;
@@ -568,7 +583,7 @@ private:
     uint64_t ReadSize = ReadSizeExpr.getValue();
     if (ReadSize < 1 || ReadSize > 8)
       return std::make_pair(EvalResult("Invalid size for dereference."), "");
-    if (!RemainingExpr.startswith("}"))
+    if (!RemainingExpr.starts_with("}"))
       return std::make_pair(EvalResult("Missing '}' for dereference."), "");
     RemainingExpr = RemainingExpr.substr(1).ltrim();
 
@@ -625,7 +640,7 @@ private:
       return std::make_pair(SubExprResult, RemainingExpr);
 
     // Evaluate bit-slice if present.
-    if (RemainingExpr.startswith("["))
+    if (RemainingExpr.starts_with("["))
       std::tie(SubExprResult, RemainingExpr) =
           evalSliceExpr(std::make_pair(SubExprResult, RemainingExpr));
 
@@ -645,7 +660,7 @@ private:
     StringRef RemainingExpr;
     std::tie(SubExprResult, RemainingExpr) = Ctx;
 
-    assert(RemainingExpr.startswith("[") && "Not a slice expr.");
+    assert(RemainingExpr.starts_with("[") && "Not a slice expr.");
     RemainingExpr = RemainingExpr.substr(1).ltrim();
 
     EvalResult HighBitExpr;
@@ -654,7 +669,7 @@ private:
     if (HighBitExpr.hasError())
       return std::make_pair(HighBitExpr, RemainingExpr);
 
-    if (!RemainingExpr.startswith(":"))
+    if (!RemainingExpr.starts_with(":"))
       return std::make_pair(
           unexpectedToken(RemainingExpr, RemainingExpr, "expected ':'"), "");
     RemainingExpr = RemainingExpr.substr(1).ltrim();
@@ -665,7 +680,7 @@ private:
     if (LowBitExpr.hasError())
       return std::make_pair(LowBitExpr, RemainingExpr);
 
-    if (!RemainingExpr.startswith("]"))
+    if (!RemainingExpr.starts_with("]"))
       return std::make_pair(
           unexpectedToken(RemainingExpr, RemainingExpr, "expected ']'"), "");
     RemainingExpr = RemainingExpr.substr(1).ltrim();
@@ -846,7 +861,7 @@ bool RuntimeDyldCheckerImpl::checkAllRulesInBuffer(StringRef RulePrefix,
       ++LineEnd;
 
     StringRef Line(LineStart, LineEnd - LineStart);
-    if (Line.startswith(RulePrefix))
+    if (Line.starts_with(RulePrefix))
       CheckExpr += Line.substr(RulePrefix.size()).str();
 
     // If there's a check expr string...
@@ -985,11 +1000,14 @@ std::pair<uint64_t, std::string> RuntimeDyldCheckerImpl::getSectionAddr(
 }
 
 std::pair<uint64_t, std::string> RuntimeDyldCheckerImpl::getStubOrGOTAddrFor(
-    StringRef StubContainerName, StringRef SymbolName, bool IsInsideLoad,
-    bool IsStubAddr) const {
+    StringRef StubContainerName, StringRef SymbolName, StringRef StubKindFilter,
+    bool IsInsideLoad, bool IsStubAddr) const {
 
-  auto StubInfo = IsStubAddr ? GetStubInfo(StubContainerName, SymbolName)
-                             : GetGOTInfo(StubContainerName, SymbolName);
+  assert((StubKindFilter.empty() || IsStubAddr) &&
+         "Kind name filter only supported for stubs");
+  auto StubInfo =
+      IsStubAddr ? GetStubInfo(StubContainerName, SymbolName, StubKindFilter)
+                 : GetGOTInfo(StubContainerName, SymbolName);
 
   if (!StubInfo) {
     std::string ErrMsg;

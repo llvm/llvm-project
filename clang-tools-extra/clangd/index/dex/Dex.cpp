@@ -264,7 +264,7 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
     return LHS.second > RHS.second;
   };
   TopN<IDAndScore, decltype(Compare)> Top(
-      Req.Limit ? *Req.Limit : std::numeric_limits<size_t>::max(), Compare);
+      Req.Limit.value_or(std::numeric_limits<size_t>::max()), Compare);
   for (const auto &IDAndScore : IDAndScores) {
     const DocID SymbolDocID = IDAndScore.first;
     const auto *Sym = Symbols[SymbolDocID];
@@ -395,7 +395,7 @@ generateProximityURIs(llvm::StringRef URI) {
       return Result;
   }
   // The root foo://bar/ is a proximity URI.
-  if (Path.startswith("/"))
+  if (Path.starts_with("/"))
     Result.push_back(URI.substr(0, Path.begin() + 1 - URI.data()));
   return Result;
 }

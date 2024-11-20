@@ -2,7 +2,7 @@
 ! that is syntactically present, but may be absent at runtime (is
 ! an optional or a pointer/allocatable).
 !
-! RUN: bbc -emit-hlfir -polymorphic-type -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 subroutine optional_copy_in_out(x)
   interface
@@ -14,21 +14,20 @@ subroutine optional_copy_in_out(x)
   call  takes_optional_explicit(x)
 end subroutine
 ! CHECK-LABEL: func.func @_QPoptional_copy_in_out(
-! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFoptional_copy_in_outEx"} : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFoptional_copy_in_outEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
 ! CHECK:  %[[VAL_2:.*]] = fir.is_present %[[VAL_1]]#0 : (!fir.box<!fir.array<?xf32>>) -> i1
-! CHECK:  %[[VAL_3:.*]]:4 = fir.if %[[VAL_2]] -> (!fir.ref<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>, i1, !fir.box<!fir.array<?xf32>>) {
-! CHECK:    %[[VAL_4:.*]]:2 = hlfir.copy_in %[[VAL_1]]#0 : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, i1)
+! CHECK:  %[[VAL_3:.*]]:3 = fir.if %[[VAL_2]] -> (!fir.ref<!fir.array<?xf32>>, i1, !fir.box<!fir.array<?xf32>>) {
+! CHECK:    %[[VAL_4:.*]]:2 = hlfir.copy_in %[[VAL_1]]#0 to %[[TMP_BOX:.*]] : (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.box<!fir.array<?xf32>>, i1)
 ! CHECK:    %[[VAL_5:.*]] = fir.box_addr %[[VAL_4]]#0 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
-! CHECK:    fir.result %[[VAL_5]], %[[VAL_4]]#0, %[[VAL_4]]#1, %[[VAL_1]]#0 : !fir.ref<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>, i1, !fir.box<!fir.array<?xf32>>
+! CHECK:    fir.result %[[VAL_5]], %[[VAL_4]]#1, %[[VAL_1]]#0 : !fir.ref<!fir.array<?xf32>>, i1, !fir.box<!fir.array<?xf32>>
 ! CHECK:  } else {
-! CHECK:    %[[VAL_6:.*]] = fir.absent !fir.ref<!fir.array<?xf32>>
-! CHECK:    %[[VAL_7:.*]] = fir.absent !fir.box<!fir.array<?xf32>>
+! CHECK:    %[[VAL_7:.*]] = fir.absent !fir.ref<!fir.array<?xf32>>
 ! CHECK:    %[[VAL_8:.*]] = arith.constant false
 ! CHECK:    %[[VAL_9:.*]] = fir.absent !fir.box<!fir.array<?xf32>>
-! CHECK:    fir.result %[[VAL_6]], %[[VAL_7]], %[[VAL_8]], %[[VAL_9]] : !fir.ref<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>, i1, !fir.box<!fir.array<?xf32>>
+! CHECK:    fir.result %[[VAL_7]], %[[VAL_8]], %[[VAL_9]] : !fir.ref<!fir.array<?xf32>>, i1, !fir.box<!fir.array<?xf32>>
 ! CHECK:  }
 ! CHECK:  fir.call @_QPtakes_optional_explicit(%[[VAL_3]]#0) {{.*}} : (!fir.ref<!fir.array<?xf32>>) -> ()
-! CHECK:  hlfir.copy_out %[[VAL_3]]#1, %[[VAL_3]]#2 to %[[VAL_3]]#3 : (!fir.box<!fir.array<?xf32>>, i1, !fir.box<!fir.array<?xf32>>) -> ()
+! CHECK:  hlfir.copy_out %[[TMP_BOX]], %[[VAL_3]]#1 to %[[VAL_3]]#2 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, i1, !fir.box<!fir.array<?xf32>>) -> ()
 
 subroutine optional_value_copy(x)
   interface
@@ -40,11 +39,11 @@ subroutine optional_value_copy(x)
   call  takes_optional_explicit_value(x)
 end subroutine
 ! CHECK-LABEL: func.func @_QPoptional_value_copy(
-! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]](%[[VAL_2:[a-z0-9]*]]) {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFoptional_value_copyEx"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]](%[[VAL_2:[a-z0-9]*]]) dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFoptional_value_copyEx"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
 ! CHECK:  %[[VAL_4:.*]] = fir.is_present %[[VAL_3]]#0 : (!fir.ref<!fir.array<100xf32>>) -> i1
 ! CHECK:  %[[VAL_5:.*]]:3 = fir.if %[[VAL_4]] -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>, i1) {
 ! CHECK:    %[[VAL_6:.*]] = hlfir.as_expr %[[VAL_3]]#0 : (!fir.ref<!fir.array<100xf32>>) -> !hlfir.expr<100xf32>
-! CHECK:    %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_6]](%[[VAL_2]]) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<100xf32>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>, i1)
+! CHECK:    %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_6]](%[[VAL_2]]) {adapt.valuebyref} : (!hlfir.expr<100xf32>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>, i1)
 ! CHECK:    fir.result %[[VAL_7]]#1, %[[VAL_7]]#1, %[[VAL_7]]#2 : !fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>, i1
 ! CHECK:  } else {
 ! CHECK:    %[[VAL_8:.*]] = fir.absent !fir.ref<!fir.array<100xf32>>
@@ -66,8 +65,8 @@ subroutine elem_pointer_to_optional(x, y)
   call elem_takes_two_optional(x, y)
 end subroutine
 ! CHECK-LABEL: func.func @_QPelem_pointer_to_optional(
-! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] {uniq_name = "_QFelem_pointer_to_optionalEx"} : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
-! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFelem_pointer_to_optionalEy"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFelem_pointer_to_optionalEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFelem_pointer_to_optionalEy"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
 ! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_3]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:  %[[VAL_5:.*]] = fir.box_addr %[[VAL_4]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>>
 ! CHECK:  %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (!fir.ptr<!fir.array<?xf32>>) -> i64
@@ -105,7 +104,7 @@ subroutine optional_cannot_be_absent_optional(x)
   call elem_takes_one_optional(x)
 end subroutine
 ! CHECK-LABEL: func.func @_QPoptional_cannot_be_absent_optional(
-! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFoptional_cannot_be_absent_optionalEx"} : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFoptional_cannot_be_absent_optionalEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
 ! CHECK:  %[[VAL_2:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_3:.*]]:3 = fir.box_dims %[[VAL_1]]#0, %[[VAL_2]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 ! CHECK:  %[[VAL_4:.*]] = arith.constant 1 : index
@@ -125,8 +124,8 @@ subroutine optional_elem_poly(x, y)
   call elem_optional_poly(x, y)
 end subroutine
 ! CHECK-LABEL: func.func @_QPoptional_elem_poly(
-! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] {uniq_name = "_QFoptional_elem_polyEx"} : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
-! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFoptional_elem_polyEy"} : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFoptional_elem_polyEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFoptional_elem_polyEy"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
 ! CHECK:  %[[VAL_4:.*]] = fir.is_present %[[VAL_3]]#0 : (!fir.box<!fir.array<?xf32>>) -> i1
 ! CHECK:  %[[VAL_5:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_6:.*]]:3 = fir.box_dims %[[VAL_2]]#0, %[[VAL_5]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)

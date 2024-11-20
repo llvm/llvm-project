@@ -1,3 +1,6 @@
+// AIX does not support -gdwarf-5.
+// UNSUPPORTED: target={{.*}}-aix{{.*}}
+
 // RUN: %clang -emit-llvm -S -g -gcodeview -x c \
 // RUN:     %S/Inputs/debug-info-file-checksum.c -o - | FileCheck %s
 // RUN: %clang -emit-llvm -S -g -gcodeview -Xclang -gsrc-hash=md5 \

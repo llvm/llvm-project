@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Config/mlir-config.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/MLIRContext.h"
@@ -17,6 +18,7 @@
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
 
+#include "llvm/Config/llvm-config.h" // for LLVM_HAS_NVPTX_TARGET
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Process.h"
@@ -29,15 +31,15 @@
 using namespace mlir;
 
 // Skip the test if the NVPTX target was not built.
-#if MLIR_CUDA_CONVERSIONS_ENABLED == 0
-#define SKIP_WITHOUT_NVPTX(x) DISABLED_##x
-#else
+#if LLVM_HAS_NVPTX_TARGET
 #define SKIP_WITHOUT_NVPTX(x) x
+#else
+#define SKIP_WITHOUT_NVPTX(x) DISABLED_##x
 #endif
 
 class MLIRTargetLLVMNVVM : public ::testing::Test {
 protected:
-  virtual void SetUp() {
+  void SetUp() override {
     registerBuiltinDialectTranslation(registry);
     registerLLVMDialectTranslation(registry);
     registerGPUDialectTranslation(registry);
@@ -85,7 +87,7 @@ TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(SerializeNVVMMToLLVM)) {
         serializer.serializeToObject(gpuModule, options);
     // Check that the serializer was successful.
     ASSERT_TRUE(object != std::nullopt);
-    ASSERT_TRUE(object->size() > 0);
+    ASSERT_TRUE(!object->empty());
 
     // Read the serialized module.
     llvm::MemoryBufferRef buffer(StringRef(object->data(), object->size()),
@@ -121,7 +123,7 @@ TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(SerializeNVVMToPTX)) {
         serializer.serializeToObject(gpuModule, options);
     // Check that the serializer was successful.
     ASSERT_TRUE(object != std::nullopt);
-    ASSERT_TRUE(object->size() > 0);
+    ASSERT_TRUE(!object->empty());
 
     ASSERT_TRUE(
         StringRef(object->data(), object->size()).contains("nvvm_kernel"));
@@ -151,6 +153,6 @@ TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(SerializeNVVMToBinary)) {
         serializer.serializeToObject(gpuModule, options);
     // Check that the serializer was successful.
     ASSERT_TRUE(object != std::nullopt);
-    ASSERT_TRUE(object->size() > 0);
+    ASSERT_TRUE(!object->empty());
   }
 }

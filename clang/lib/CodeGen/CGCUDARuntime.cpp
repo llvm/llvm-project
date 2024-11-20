@@ -15,7 +15,6 @@
 #include "CGCUDARuntime.h"
 #include "CGCall.h"
 #include "CodeGenFunction.h"
-#include "clang/AST/Decl.h"
 #include "clang/AST/ExprCXX.h"
 
 using namespace clang;
@@ -25,7 +24,8 @@ CGCUDARuntime::~CGCUDARuntime() {}
 
 RValue CGCUDARuntime::EmitCUDAKernelCallExpr(CodeGenFunction &CGF,
                                              const CUDAKernelCallExpr *E,
-                                             ReturnValueSlot ReturnValue) {
+                                             ReturnValueSlot ReturnValue,
+                                             llvm::CallBase **CallOrInvoke) {
   llvm::BasicBlock *ConfigOKBlock = CGF.createBasicBlock("kcall.configok");
   llvm::BasicBlock *ContBlock = CGF.createBasicBlock("kcall.end");
 
@@ -35,7 +35,7 @@ RValue CGCUDARuntime::EmitCUDAKernelCallExpr(CodeGenFunction &CGF,
 
   eval.begin(CGF);
   CGF.EmitBlock(ConfigOKBlock);
-  CGF.EmitSimpleCallExpr(E, ReturnValue);
+  CGF.EmitSimpleCallExpr(E, ReturnValue, CallOrInvoke);
   CGF.EmitBranch(ContBlock);
 
   CGF.EmitBlock(ContBlock);

@@ -25,14 +25,14 @@ define float @fmul_f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 2
 ; CHECK-NEXT:    vfmul.vv v8, v8, v10
+; CHECK-NEXT:    vslidedown.vi v10, v9, 2
+; CHECK-NEXT:    vfmul.vv v9, v9, v10
 ; CHECK-NEXT:    vrgather.vi v10, v8, 1
 ; CHECK-NEXT:    vfmul.vv v8, v8, v10
+; CHECK-NEXT:    vrgather.vi v10, v9, 1
+; CHECK-NEXT:    vfmul.vv v9, v9, v10
 ; CHECK-NEXT:    vfmv.f.s fa5, v8
-; CHECK-NEXT:    vslidedown.vi v8, v9, 2
-; CHECK-NEXT:    vfmul.vv v8, v9, v8
-; CHECK-NEXT:    vrgather.vi v9, v8, 1
-; CHECK-NEXT:    vfmul.vv v8, v8, v9
-; CHECK-NEXT:    vfmv.f.s fa4, v8
+; CHECK-NEXT:    vfmv.f.s fa4, v9
 ; CHECK-NEXT:    fmul.s fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fmul.f32.v4f32(float 1.0, <4 x float> %a)
@@ -113,7 +113,7 @@ define i16 @add_ext_v32i16(<32 x i8> %a, <16 x i8> %b) {
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; CHECK-NEXT:    vwredsumu.vs v8, v8, v10
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %ae = zext <32 x i8> %a to <32 x i16>
@@ -130,14 +130,14 @@ define i32 @mul_i32(<4 x i32> %a, <4 x i32> %b) {
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vi v10, v8, 2
 ; RV32-NEXT:    vmul.vv v8, v8, v10
+; RV32-NEXT:    vslidedown.vi v10, v9, 2
+; RV32-NEXT:    vmul.vv v9, v9, v10
 ; RV32-NEXT:    vrgather.vi v10, v8, 1
 ; RV32-NEXT:    vmul.vv v8, v8, v10
+; RV32-NEXT:    vrgather.vi v10, v9, 1
+; RV32-NEXT:    vmul.vv v9, v9, v10
 ; RV32-NEXT:    vmv.x.s a0, v8
-; RV32-NEXT:    vslidedown.vi v8, v9, 2
-; RV32-NEXT:    vmul.vv v8, v9, v8
-; RV32-NEXT:    vrgather.vi v9, v8, 1
-; RV32-NEXT:    vmul.vv v8, v8, v9
-; RV32-NEXT:    vmv.x.s a1, v8
+; RV32-NEXT:    vmv.x.s a1, v9
 ; RV32-NEXT:    mul a0, a0, a1
 ; RV32-NEXT:    ret
 ;
@@ -146,14 +146,14 @@ define i32 @mul_i32(<4 x i32> %a, <4 x i32> %b) {
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v10, v8, 2
 ; RV64-NEXT:    vmul.vv v8, v8, v10
+; RV64-NEXT:    vslidedown.vi v10, v9, 2
+; RV64-NEXT:    vmul.vv v9, v9, v10
 ; RV64-NEXT:    vrgather.vi v10, v8, 1
 ; RV64-NEXT:    vmul.vv v8, v8, v10
+; RV64-NEXT:    vrgather.vi v10, v9, 1
+; RV64-NEXT:    vmul.vv v9, v9, v10
 ; RV64-NEXT:    vmv.x.s a0, v8
-; RV64-NEXT:    vslidedown.vi v8, v9, 2
-; RV64-NEXT:    vmul.vv v8, v9, v8
-; RV64-NEXT:    vrgather.vi v9, v8, 1
-; RV64-NEXT:    vmul.vv v8, v8, v9
-; RV64-NEXT:    vmv.x.s a1, v8
+; RV64-NEXT:    vmv.x.s a1, v9
 ; RV64-NEXT:    mulw a0, a0, a1
 ; RV64-NEXT:    ret
   %r1 = call i32 @llvm.vector.reduce.mul.i32.v4i32(<4 x i32> %a)

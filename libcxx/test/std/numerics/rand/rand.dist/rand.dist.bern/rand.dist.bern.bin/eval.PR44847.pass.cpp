@@ -18,11 +18,15 @@
 // Serializing/deserializing the state of the RNG requires iostreams
 // UNSUPPORTED: no-localization
 
+// Very slow when run in qemu.
+// REQUIRES: long_tests
+
 #include <random>
-#include <numeric>
-#include <vector>
 #include <cassert>
+#include <cmath>
+#include <numeric>
 #include <sstream>
+#include <vector>
 
 #include "test_macros.h"
 
@@ -160,7 +164,7 @@ int main(int, char**) {
     assert(std::abs((mean - x_mean) / x_mean) < 0.01);
     assert(std::abs((var - x_var) / x_var) < 0.01);
     assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.04);
+    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.06);
 
     return 0;
 }

@@ -34,7 +34,7 @@ struct f4 {
 
 struct f4 return_f4(void) { while (1); }
 
-// CHECK: define dso_local void @return_f4(ptr noalias sret(%struct.f4) align 4 %agg.result)
+// CHECK: define dso_local void @return_f4(ptr dead_on_unwind noalias writable sret(%struct.f4) align 4 %agg.result)
 
 void receive_f4(struct f4 a0) { }
 

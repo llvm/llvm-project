@@ -33,7 +33,7 @@ define i32 @f2(i32 %dummy, ptr %src) {
 ; Check ANDs of the low end of the NILH range.
 define i32 @f3(i32 %dummy, ptr %src) {
 ; CHECK-LABEL: f3:
-; CHECK: nilh %r0, 0
+; CHECK: llhr %r0, %r2
 ; CHECK: br %r14
   %res = atomicrmw and ptr %src, i32 65535 seq_cst
   ret i32 %res

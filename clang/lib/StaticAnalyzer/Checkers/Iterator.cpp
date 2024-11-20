@@ -181,8 +181,7 @@ const ContainerData *getContainerData(ProgramStateRef State,
   return State->get<ContainerMap>(Cont);
 }
 
-const IteratorPosition *getIteratorPosition(ProgramStateRef State,
-                                            const SVal &Val) {
+const IteratorPosition *getIteratorPosition(ProgramStateRef State, SVal Val) {
   if (auto Reg = Val.getAsRegion()) {
     Reg = Reg->getMostDerivedObjectRegion();
     return State->get<IteratorRegionMap>(Reg);
@@ -194,7 +193,7 @@ const IteratorPosition *getIteratorPosition(ProgramStateRef State,
   return nullptr;
 }
 
-ProgramStateRef setIteratorPosition(ProgramStateRef State, const SVal &Val,
+ProgramStateRef setIteratorPosition(ProgramStateRef State, SVal Val,
                                     const IteratorPosition &Pos) {
   if (auto Reg = Val.getAsRegion()) {
     Reg = Reg->getMostDerivedObjectRegion();
@@ -207,8 +206,8 @@ ProgramStateRef setIteratorPosition(ProgramStateRef State, const SVal &Val,
   return nullptr;
 }
 
-ProgramStateRef createIteratorPosition(ProgramStateRef State, const SVal &Val,
-                                       const MemRegion *Cont, const Stmt* S,
+ProgramStateRef createIteratorPosition(ProgramStateRef State, SVal Val,
+                                       const MemRegion *Cont, const Stmt *S,
                                        const LocationContext *LCtx,
                                        unsigned blockCount) {
   auto &StateMgr = State->getStateManager();
@@ -221,9 +220,8 @@ ProgramStateRef createIteratorPosition(ProgramStateRef State, const SVal &Val,
                              IteratorPosition::getPosition(Cont, Sym));
 }
 
-ProgramStateRef advancePosition(ProgramStateRef State, const SVal &Iter,
-                                OverloadedOperatorKind Op,
-                                const SVal &Distance) {
+ProgramStateRef advancePosition(ProgramStateRef State, SVal Iter,
+                                OverloadedOperatorKind Op, SVal Distance) {
   const auto *Pos = getIteratorPosition(State, Iter);
   if (!Pos)
     return nullptr;

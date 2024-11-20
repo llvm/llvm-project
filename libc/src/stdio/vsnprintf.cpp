@@ -9,13 +9,14 @@
 #include "src/stdio/vsnprintf.h"
 
 #include "src/__support/arg_list.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/printf_main.h"
 #include "src/stdio/printf_core/writer.h"
 
 #include <stdarg.h>
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, vsnprintf,
                    (char *__restrict buffer, size_t buffsz,
@@ -32,4 +33,4 @@ LLVM_LIBC_FUNCTION(int, vsnprintf,
   return ret_val;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

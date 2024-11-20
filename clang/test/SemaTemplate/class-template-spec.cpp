@@ -18,7 +18,7 @@ int test_specs(A<float, float> *a1, A<float, int> *a2) {
   return a1->x + a2->y;
 }
 
-int test_incomplete_specs(A<double, double> *a1, 
+int test_incomplete_specs(A<double, double> *a1,
                           A<double> *a2)
 {
   (void)a1->x; // expected-error{{member access into incomplete type}}
@@ -39,7 +39,7 @@ template <> struct X<int, int> { int foo(); }; // #1
 template <> struct X<float> { int bar(); };  // #2
 
 typedef int int_type;
-void testme(X<int_type> *x1, X<float, int> *x2) { 
+void testme(X<int_type> *x1, X<float, int> *x2) {
   (void)x1->foo(); // okay: refers to #1
   (void)x2->bar(); // okay: refers to #2
 }
@@ -53,7 +53,7 @@ struct A<char> {
 A<char>::A() { }
 
 // Make sure we can see specializations defined before the primary template.
-namespace N{ 
+namespace N{
   template<typename T> struct A0;
 }
 
@@ -74,14 +74,14 @@ namespace N {
 // Diagnose specialization errors
 struct A<double> { }; // expected-error{{template specialization requires 'template<>'}}
 
-template<> struct ::A<double>;
+template<> struct ::A<double>; // expected-warning {{extra qualification on member}}
 
 namespace N {
   template<typename T> struct B; // expected-note {{explicitly specialized}}
 
-  template<> struct ::N::B<char>; // okay
-  template<> struct ::N::B<short>; // okay
-  template<> struct ::N::B<int>; // okay
+  template<> struct ::N::B<char>; // expected-warning {{extra qualification on member}}
+  template<> struct ::N::B<short>; // expected-warning {{extra qualification on member}}
+  template<> struct ::N::B<int>; // expected-warning {{extra qualification on member}}
 
   int f(int);
 }
@@ -97,7 +97,7 @@ namespace M {
   template<> struct ::A<long double>; // expected-error{{must occur at global scope}}
 }
 
-template<> struct N::B<char> { 
+template<> struct N::B<char> {
   int testf(int x) { return f(x); }
 };
 
@@ -138,9 +138,9 @@ namespace PR18009 {
 
   template <typename T> struct C {
     template <int N, int M> struct S;
-    template <int N> struct S<N, N ? **(T(*)[N])0 : 0> {}; // expected-error {{depends on a template parameter of the partial specialization}}
+    template <int N> struct S<N, N ? **(T(*)[N])0 : 0> {}; // ok
   };
-  C<int> c; // expected-note {{in instantiation of}}
+  C<int> c;
 
   template<int A> struct outer {
     template<int B, int C> struct inner {};

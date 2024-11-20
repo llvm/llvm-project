@@ -16,21 +16,6 @@
 #include "gtest/gtest.h"
 using namespace llvm;
 
-namespace llvm {
-
-std::ostream &operator<<(std::ostream &OS, const StringRef &S) {
-  OS << S.str();
-  return OS;
-}
-
-std::ostream &operator<<(std::ostream &OS,
-                         const std::pair<StringRef, StringRef> &P) {
-  OS << "(" << P.first << ", " << P.second << ")";
-  return OS;
-}
-
-}
-
 // Check that we can't accidentally assign a temporary std::string to a
 // StringRef. (Unfortunately we can't make use of the same thing with
 // constructors.)
@@ -59,6 +44,7 @@ TEST(StringRefTest, Construction) {
 TEST(StringRefTest, Conversion) {
   EXPECT_EQ("hello", std::string(StringRef("hello")));
   EXPECT_EQ("hello", std::string_view(StringRef("hello")));
+  static_assert(std::string_view(StringRef("hello")) == "hello");
 }
 
 TEST(StringRefTest, EmptyInitializerList) {
@@ -71,16 +57,37 @@ TEST(StringRefTest, EmptyInitializerList) {
 
 TEST(StringRefTest, Iteration) {
   StringRef S("hello");
-  const char *p = "hello";
-  for (const char *it = S.begin(), *ie = S.end(); it != ie; ++it, ++p)
-    EXPECT_EQ(*it, *p);
+  constexpr StringLiteral CS("hello");
+
+  // Note: Cannot use literal strings in equal() as iteration over a literal
+  // string includes the null terminator.
+  const std::string_view RefFwd("hello");
+  const std::string_view RefRev("olleh");
+
+  EXPECT_TRUE(equal(S, RefFwd));
+  EXPECT_TRUE(equal(CS, RefFwd));
+  EXPECT_TRUE(equal(make_range(S.rbegin(), S.rend()), RefRev));
+  EXPECT_TRUE(equal(make_range(CS.rbegin(), CS.rend()), RefRev));
 }
 
 TEST(StringRefTest, StringOps) {
   const char *p = "hello";
+
   EXPECT_EQ(p, StringRef(p, 0).data());
+  static_assert(StringRef("hello").data()[0] == 'h');
+  static_assert(StringRef("hello").data()[1] == 'e');
+  static_assert(StringRef("hello").data()[2] == 'l');
+  static_assert(StringRef("hello").data()[3] == 'l');
+  static_assert(StringRef("hello").data()[4] == 'o');
+  static_assert(StringRef("hello").data()[5] == '\0');
+
   EXPECT_TRUE(StringRef().empty());
+  static_assert(StringRef("").empty());
+  static_assert(!StringRef("hello").empty());
+
   EXPECT_EQ((size_t) 5, StringRef("hello").size());
+  static_assert(StringRef("hello").size() == 5);
+
   EXPECT_GT( 0, StringRef("aab").compare("aad"));
   EXPECT_EQ( 0, StringRef("aab").compare("aab"));
   EXPECT_LT( 0, StringRef("aab").compare("aaa"));
@@ -354,6 +361,8 @@ TEST(StringRefTest, StartsWith) {
   EXPECT_TRUE(Str.starts_with("he"));
   EXPECT_FALSE(Str.starts_with("helloworld"));
   EXPECT_FALSE(Str.starts_with("hi"));
+  EXPECT_TRUE(Str.starts_with('h'));
+  EXPECT_FALSE(Str.starts_with('i'));
 }
 
 TEST(StringRefTest, StartsWithInsensitive) {
@@ -407,6 +416,8 @@ TEST(StringRefTest, EndsWith) {
   EXPECT_FALSE(Str.ends_with("helloworld"));
   EXPECT_FALSE(Str.ends_with("worldhello"));
   EXPECT_FALSE(Str.ends_with("so"));
+  EXPECT_TRUE(Str.ends_with('o'));
+  EXPECT_FALSE(Str.ends_with('p'));
 }
 
 TEST(StringRefTest, EndsWithInsensitive) {
@@ -921,16 +932,17 @@ struct GetDoubleStrings {
   bool AllowInexact;
   bool ShouldFail;
   double D;
-} DoubleStrings[] = {{"0", false, false, 0.0},
-                     {"0.0", false, false, 0.0},
-                     {"-0.0", false, false, -0.0},
-                     {"123.45", false, true, 123.45},
-                     {"123.45", true, false, 123.45},
-                     {"1.8e308", true, false, std::numeric_limits<double>::infinity()},
-                     {"1.8e308", false, true, std::numeric_limits<double>::infinity()},
-                     {"0x0.0000000000001P-1023", false, true, 0.0},
-                     {"0x0.0000000000001P-1023", true, false, 0.0},
-                    };
+} DoubleStrings[] = {
+    {"0", false, false, 0.0},
+    {"0.0", false, false, 0.0},
+    {"-0.0", false, false, -0.0},
+    {"123.45", false, true, 123.45},
+    {"123.45", true, false, 123.45},
+    {"1.8e308", true, false, std::numeric_limits<double>::infinity()},
+    {"1.8e308", false, true, std::numeric_limits<double>::infinity()},
+    {"0x0.0000000000001P-1023", false, true, 0.0},
+    {"0x0.0000000000001P-1023", true, false, 0.0},
+};
 
 TEST(StringRefTest, getAsDouble) {
   for (const auto &Entry : DoubleStrings) {
@@ -980,7 +992,7 @@ TEST(StringRefTest, AllocatorCopy) {
   // allocator.
   StringRef StrEmpty = "";
   StringRef StrEmptyc = StrEmpty.copy(Alloc);
-  EXPECT_TRUE(StrEmpty.equals(StrEmptyc));
+  EXPECT_TRUE(StrEmpty == StrEmptyc);
   EXPECT_EQ(StrEmptyc.data(), nullptr);
   EXPECT_EQ(StrEmptyc.size(), 0u);
   EXPECT_EQ(Alloc.getTotalMemory(), 0u);
@@ -989,9 +1001,9 @@ TEST(StringRefTest, AllocatorCopy) {
   StringRef Str2 = "bye";
   StringRef Str1c = Str1.copy(Alloc);
   StringRef Str2c = Str2.copy(Alloc);
-  EXPECT_TRUE(Str1.equals(Str1c));
+  EXPECT_TRUE(Str1 == Str1c);
   EXPECT_NE(Str1.data(), Str1c.data());
-  EXPECT_TRUE(Str2.equals(Str2c));
+  EXPECT_TRUE(Str2 == Str2c);
   EXPECT_NE(Str2.data(), Str2c.data());
 }
 
@@ -1099,7 +1111,8 @@ TEST(StringRefTest, StringLiteral) {
   constexpr StringRef StringRefs[] = {"Foo", "Bar"};
   EXPECT_EQ(StringRef("Foo"), StringRefs[0]);
   EXPECT_EQ(3u, (std::integral_constant<size_t, StringRefs[0].size()>::value));
-  EXPECT_EQ(false, (std::integral_constant<bool, StringRefs[0].empty()>::value));
+  EXPECT_EQ(false,
+            (std::integral_constant<bool, StringRefs[0].empty()>::value));
   EXPECT_EQ(StringRef("Bar"), StringRefs[1]);
 
   constexpr StringLiteral Strings[] = {"Foo", "Bar"};

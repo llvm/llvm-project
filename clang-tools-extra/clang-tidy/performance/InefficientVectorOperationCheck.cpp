@@ -105,9 +105,9 @@ void InefficientVectorOperationCheck::addMatcher(
           onImplicitObjectArgument(declRefExpr(to(TargetVarDecl))))
           .bind(AppendCallName);
   const auto AppendCall = expr(ignoringImplicit(AppendCallExpr));
-  const auto LoopVarInit =
-      declStmt(hasSingleDecl(varDecl(hasInitializer(integerLiteral(equals(0))))
-                                 .bind(LoopInitVarName)));
+  const auto LoopVarInit = declStmt(hasSingleDecl(
+      varDecl(hasInitializer(ignoringParenImpCasts(integerLiteral(equals(0)))))
+          .bind(LoopInitVarName)));
   const auto RefersToLoopVar = ignoringParenImpCasts(
       declRefExpr(to(varDecl(equalsBoundNode(LoopInitVarName)))));
 

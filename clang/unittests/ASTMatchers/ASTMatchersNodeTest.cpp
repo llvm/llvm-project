@@ -471,6 +471,19 @@ TEST_P(ASTMatchersTest, CXXOperatorCallExpr) {
   EXPECT_TRUE(notMatches("int t = 5 << 2;", OpCall));
 }
 
+TEST_P(ASTMatchersTest, FoldExpr) {
+  if (!GetParam().isCXX() || !GetParam().isCXX17OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (0 + ... + args); }",
+                      cxxFoldExpr()));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ...); }",
+                      cxxFoldExpr()));
+}
+
 TEST_P(ASTMatchersTest, ThisPointerType) {
   if (!GetParam().isCXX()) {
     return;
@@ -601,8 +614,10 @@ TEST_P(ASTMatchersTest, MemberExpr_MatchesVariable) {
   EXPECT_TRUE(matches("template <class T>"
                       "class X : T { void f() { this->T::v; } };",
                       cxxDependentScopeMemberExpr()));
-  EXPECT_TRUE(matches("template <class T> class X : T { void f() { T::v; } };",
-                      cxxDependentScopeMemberExpr()));
+  // FIXME: Add a matcher for DependentScopeDeclRefExpr.
+  EXPECT_TRUE(
+      notMatches("template <class T> class X : T { void f() { T::v; } };",
+                 cxxDependentScopeMemberExpr()));
   EXPECT_TRUE(matches("template <class T> void x() { T t; t.v; }",
                       cxxDependentScopeMemberExpr()));
 }
@@ -1209,7 +1224,7 @@ TEST_P(ASTMatchersTest, CastExpression_MatchesImplicitCasts) {
 }
 
 TEST_P(ASTMatchersTest, CastExpr_DoesNotMatchNonCasts) {
-  if (GetParam().Language == Lang_C89 || GetParam().Language == Lang_C99) {
+  if (GetParam().isC()) {
     // This does have a cast in C
     EXPECT_TRUE(matches("char c = '0';", implicitCastExpr()));
   } else {
@@ -1412,8 +1427,8 @@ TEST_P(ASTMatchersTest,
     return;
   }
   StringRef code = "namespace std {"
-                   "template <typename> class initializer_list {"
-                   "  public: initializer_list() noexcept {}"
+                   "template <typename E> class initializer_list {"
+                   "  public: const E *a, *b;"
                    "};"
                    "}"
                    "struct A {"
@@ -1663,7 +1678,7 @@ TEST_P(ASTMatchersTest, FunctionProtoType) {
 }
 
 TEST_P(ASTMatchersTest, FunctionProtoType_C) {
-  if (!GetParam().isC()) {
+  if (!GetParam().isCOrEarlier(17)) {
     return;
   }
   EXPECT_TRUE(notMatches("void f();", functionProtoType()));
@@ -2015,8 +2030,6 @@ TEST_P(ASTMatchersTest,
 template <typename T>
 class VerifyAncestorHasChildIsEqual : public BoundNodesCallback {
 public:
-  bool run(const BoundNodes *Nodes) override { return false; }
-
   bool run(const BoundNodes *Nodes, ASTContext *Context) override {
     const T *Node = Nodes->getNodeAs<T>("");
     return verify(*Nodes, *Context, Node);
@@ -2200,18 +2213,6 @@ TEST_P(ASTMatchersTest, ReferenceTypeLocTest_BindsToAnyRvalueReferenceTypeLoc) {
   EXPECT_TRUE(matches("float&& r = 3.0;", matcher));
 }
 
-TEST_P(
-    ASTMatchersTest,
-    TemplateSpecializationTypeLocTest_BindsToTemplateSpecializationExplicitInstantiation) {
-  if (!GetParam().isCXX()) {
-    return;
-  }
-  EXPECT_TRUE(
-      matches("template <typename T> class C {}; template class C<int>;",
-              classTemplateSpecializationDecl(
-                  hasName("C"), hasTypeLoc(templateSpecializationTypeLoc()))));
-}
-
 TEST_P(ASTMatchersTest,
        TemplateSpecializationTypeLocTest_BindsToVarDeclTemplateSpecialization) {
   if (!GetParam().isCXX()) {
@@ -2308,6 +2309,8 @@ TEST_P(ASTMatchersTest, LambdaCaptureTest_BindsToCaptureOfVarDecl) {
       matches("int main() { int cc; auto f = [=](){ return cc; }; }", matcher));
   EXPECT_TRUE(
       matches("int main() { int cc; auto f = [&](){ return cc; }; }", matcher));
+  EXPECT_TRUE(matches(
+      "void f(int a) { int cc[a]; auto f = [&](){ return cc;}; }", matcher));
 }
 
 TEST_P(ASTMatchersTest, LambdaCaptureTest_BindsToCaptureWithInitializer) {
@@ -2740,8 +2743,11 @@ TEST(MatchFinderAPI, MatchesDynamic) {
 
 static std::vector<TestClangConfig> allTestClangConfigs() {
   std::vector<TestClangConfig> all_configs;
-  for (TestLanguage lang : {Lang_C89, Lang_C99, Lang_CXX03, Lang_CXX11,
-                            Lang_CXX14, Lang_CXX17, Lang_CXX20}) {
+  for (TestLanguage lang : {
+#define TESTLANGUAGE(lang, version, std_flag, version_index)                   \
+  Lang_##lang##version,
+#include "clang/Testing/TestLanguage.def"
+       }) {
     TestClangConfig config;
     config.Language = lang;
 
@@ -2765,8 +2771,11 @@ static std::vector<TestClangConfig> allTestClangConfigs() {
   return all_configs;
 }
 
-INSTANTIATE_TEST_SUITE_P(ASTMatchersTests, ASTMatchersTest,
-                         testing::ValuesIn(allTestClangConfigs()));
+INSTANTIATE_TEST_SUITE_P(
+    ASTMatchersTests, ASTMatchersTest, testing::ValuesIn(allTestClangConfigs()),
+    [](const testing::TestParamInfo<TestClangConfig> &Info) {
+      return Info.param.toShortString();
+    });
 
 } // namespace ast_matchers
 } // namespace clang

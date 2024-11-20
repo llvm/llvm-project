@@ -27,7 +27,7 @@ if.then:
   %arrayidx4 = getelementptr inbounds i8, ptr %q, i32 %mul
   store i8 %0, ptr %arrayidx4, align 1
   %sub = sub i8 0, %0
-  %add = or i32 %mul, 1
+  %add = or disjoint i32 %mul, 1
   %arrayidx8 = getelementptr inbounds i8, ptr %q, i32 %add
   store i8 %sub, ptr %arrayidx8, align 1
   br label %for.inc

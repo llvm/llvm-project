@@ -144,8 +144,6 @@ func.func @transfer_read_of_extract_slice_swappy_rank_reducing(%t : tensor<?x?x?
 
 // -----
 
-//   CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>
-
 //       CHECK: func @fold_vector_transfer_write_with_rank_reduced_insert_slice
 //  CHECK-SAME:    %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?x?xf32>
 //  CHECK-SAME:    %[[ARG1:[a-zA-Z0-9]+]]: vector<4xf32>
@@ -155,6 +153,7 @@ func.func @transfer_read_of_extract_slice_swappy_rank_reducing(%t : tensor<?x?x?
 //  CHECK-SAME:    %[[ARG5:[a-zA-Z0-9]+]]: index
 //  CHECK-SAME:    %[[ARG6:[a-zA-Z0-9]+]]: index
 //  CHECK-SAME:    %[[ARG7:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG8:[a-zA-Z0-9]+]]: tensor<?x?xf32>
 func.func @fold_vector_transfer_write_with_rank_reduced_insert_slice(
     %arg0 : tensor<?x?x?xf32>,
     %arg1 : vector<4xf32>, %arg2: index, %arg3 : index, %arg4 : index,
@@ -162,11 +161,8 @@ func.func @fold_vector_transfer_write_with_rank_reduced_insert_slice(
     %st : tensor<?x?xf32>) -> tensor<?x?x?xf32> {
   %cst = arith.constant 0.0 : f32
 
-//   CHECK-NOT:    insert_slice
-//   CHECK-DAG:    %[[C0:.+]] = arith.constant 0 : index
-//   CHECK-DAG:    %[[IDX0:.+]] = affine.apply #[[MAP1]]()[%[[ARG2]], %[[ARG6]]]
-//   CHECK-DAG:    %[[IDX1:.+]] = affine.apply #[[MAP1]]()[%[[ARG3]], %[[ARG7]]]
-//   CHECK-DAG:    vector.transfer_write %[[ARG1]], %[[ARG0]][%[[C0]], %[[IDX0]], %[[IDX1]]] {in_bounds = [true]} : vector<4xf32>, tensor<?x?x?xf32
+  //   CHECK-DAG:  %[[r1:.*]] = vector.transfer_write %[[ARG1]], %[[ARG8]][%[[ARG6]], %[[ARG7]]] {in_bounds = [true]} : vector<4xf32>, tensor<?x?xf32>
+  //   CHECK-DAG:  %[[r2:.*]] = tensor.insert_slice %[[r1]] into %[[ARG0]][0, %[[ARG2]], %[[ARG3]]] [1, %[[ARG4]], %[[ARG5]]] [1, 1, 1] : tensor<?x?xf32> into tensor<?x?x?xf32>
   %0 = vector.transfer_write %arg1, %st[%arg6, %arg7] {in_bounds = [true]}
       : vector<4xf32>, tensor<?x?xf32>
   %1 = tensor.insert_slice %0 into %arg0[0, %arg2, %arg3] [1, %arg4, %arg5] [1, 1, 1]
@@ -175,9 +171,6 @@ func.func @fold_vector_transfer_write_with_rank_reduced_insert_slice(
 }
 
 // -----
-
-//   CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>
-//   CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1, d2) -> (d1)>
 
 //       CHECK: func @fold_vector_transfer_write_with_inner_rank_reduced_insert_slice
 //  CHECK-SAME:    %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?x?xf32>
@@ -188,6 +181,7 @@ func.func @fold_vector_transfer_write_with_rank_reduced_insert_slice(
 //  CHECK-SAME:    %[[ARG5:[a-zA-Z0-9]+]]: index
 //  CHECK-SAME:    %[[ARG6:[a-zA-Z0-9]+]]: index
 //  CHECK-SAME:    %[[ARG7:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG8:[a-zA-Z0-9]+]]: tensor<?x?xf32>
 func.func @fold_vector_transfer_write_with_inner_rank_reduced_insert_slice(
     %arg0 : tensor<?x?x?xf32>,
     %arg1 : vector<4xf32>, %arg2: index, %arg3 : index, %arg4 : index,
@@ -195,12 +189,8 @@ func.func @fold_vector_transfer_write_with_inner_rank_reduced_insert_slice(
     %st : tensor<?x?xf32>) -> tensor<?x?x?xf32> {
   %cst = arith.constant 0.0 : f32
 
-  //   CHECK-NOT: insert_slice
-  //   CHECK-DAG:  %[[C0:.+]] = arith.constant 0 : index
-  //   CHECK-DAG:  %[[IDX0:.+]] = affine.apply #[[MAP1]]()[%[[ARG2]], %[[ARG6]]]
-  //   CHECK-DAG:  %[[IDX1:.+]] = affine.apply #[[MAP1]]()[%[[ARG3]], %[[ARG7]]]
-  //   CHECK-DAG:  vector.transfer_write %[[ARG1]], %[[ARG0]][%[[IDX0]], %[[IDX1]], %[[C0]]]
-  //  CHECK-SAME:    {in_bounds = [true], permutation_map = #[[MAP2]]} : vector<4xf32>, tensor<?x?x?xf32
+  //   CHECK-DAG:  %[[r1:.*]] = vector.transfer_write %[[ARG1]], %[[ARG8]][%[[ARG6]], %[[ARG7]]] {in_bounds = [true]} : vector<4xf32>, tensor<?x?xf32>
+  //   CHECK-DAG:  %[[r2:.*]] = tensor.insert_slice %[[r1]] into %[[ARG0]][%[[ARG2]], %[[ARG3]], 0] [%[[ARG4]], %[[ARG5]], 1] [1, 1, 1] : tensor<?x?xf32> into tensor<?x?x?xf32>
   %0 = vector.transfer_write %arg1, %st[%arg6, %arg7] {in_bounds = [true]}
       : vector<4xf32>, tensor<?x?xf32>
   %1 = tensor.insert_slice %0 into %arg0[%arg2, %arg3, 0] [%arg4, %arg5, 1] [1, 1, 1]
@@ -222,6 +212,24 @@ func.func @insert_slice_of_transfer_write(%t1 : tensor<?x12xf32>, %v : vector<5x
   %0 = vector.transfer_write %v, %t2[%c0, %c0] {in_bounds = [true, true]} : vector<5x6xf32>, tensor<5x6xf32>
   %1 = tensor.insert_slice %0 into %t1[3, %s] [5, 6] [1, 1] : tensor<5x6xf32> into tensor<?x12xf32>
   return %1 : tensor<?x12xf32>
+}
+
+// -----
+
+// This test is negative since `transfer_write` only
+// writes to `5x6` of the `100x100` elements of `%arg3`
+// CHECK-LABEL: func @insert_slice_of_transfer_write_overwrite_all(
+//  CHECK-SAME:     %[[arg0:.*]]: tensor<1000x1000xf32>, %[[arg1:.*]]: vector<5x6xf32>, %[[arg2:.*]]: index, %[[arg3:.*]]: tensor<100x100xf32>
+func.func @insert_slice_of_transfer_write_overwrite_all(%arg0: tensor<1000x1000xf32>, %arg1: vector<5x6xf32>, %arg2: index, %arg3: tensor<100x100xf32>) -> tensor<1000x1000xf32> {
+  %c0 = arith.constant 0 : index
+
+//       CHECK:   %[[c0:.*]] = arith.constant 0 : index
+//       CHECK:   %[[r1:.*]] = vector.transfer_write %[[arg1]], %[[arg3]][%[[c0]], %[[c0]]] {in_bounds = [true, true]} : vector<5x6xf32>, tensor<100x100xf32>
+//       CHECK:   %[[r2:.*]] = tensor.insert_slice %[[r1]] into %[[arg0]][3, %[[arg2]]] [100, 100] [1, 1] : tensor<100x100xf32> into tensor<1000x1000xf32>
+//       CHECK:   return %[[r2]] : tensor<1000x1000xf32>
+  %0 = vector.transfer_write %arg1, %arg3[%c0, %c0] {in_bounds = [true, true]} : vector<5x6xf32>, tensor<100x100xf32>
+  %inserted_slice = tensor.insert_slice %0 into %arg0[3, %arg2] [100, 100] [1, 1] : tensor<100x100xf32> into tensor<1000x1000xf32>
+  return %inserted_slice : tensor<1000x1000xf32>
 }
 
 // -----
@@ -282,11 +290,13 @@ func.func @insert_slice_of_insert_slice(%t: tensor<f32>, %r0: tensor<1x1xf32>, %
 
 // -----
 
+//   CHECK-DAG: #[[$map:.*]] = affine_map<()[s0] -> (s0 + 2)>
 // CHECK-LABEL: func @insert_slice_of_insert_slice(
 //  CHECK-SAME:     %[[t:[0-9a-z]*]]: tensor<f32>
 //  CHECK-SAME:     %[[r1:[0-9a-z]*]]: tensor<1x14xf32>
 //  CHECK-SAME:     %[[pos:[0-9a-z]*]]: index
-//       CHECK:   tensor.insert_slice %[[t]] into %[[r1]][5, %[[pos]]] [1, 1] [1, 1] : tensor<f32> into tensor<1x14xf32>
+//       CHECK:   %[[composed_pos:.+]] = affine.apply #[[$map]]()[%[[pos]]]
+//       CHECK:   tensor.insert_slice %[[t]] into %[[r1]][3, %[[composed_pos]]] [1, 1] [1, 1] : tensor<f32> into tensor<1x14xf32>
 func.func @insert_slice_of_insert_slice(%t: tensor<f32>, %r0: tensor<1xf32>, %r1: tensor<1x14xf32>, %pos: index)
     -> tensor<1x14xf32> 
 {

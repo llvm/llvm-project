@@ -74,7 +74,7 @@ declare void @llvm.nvvm.barrier0() convergent
 
 define i32 @intrinsic() convergent {
   ; Implicitly convergent, because the intrinsic is convergent.
-; CHECK: Function Attrs: convergent nounwind
+; CHECK: Function Attrs: convergent norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@intrinsic
 ; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.nvvm.barrier0()

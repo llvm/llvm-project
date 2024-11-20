@@ -387,8 +387,8 @@ define internal i32 @may_return_undef(i32 %c) {
 ; CGSCC-LABEL: define {{[^@]+}}@may_return_undef
 ; CGSCC-SAME: (i32 noundef [[C:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:    switch i32 [[C]], label [[OTHERWISE:%.*]] [
-; CGSCC-NEXT:    i32 1, label [[A:%.*]]
-; CGSCC-NEXT:    i32 -1, label [[B:%.*]]
+; CGSCC-NEXT:      i32 1, label [[A:%.*]]
+; CGSCC-NEXT:      i32 -1, label [[B:%.*]]
 ; CGSCC-NEXT:    ]
 ; CGSCC:       a:
 ; CGSCC-NEXT:    ret i32 1

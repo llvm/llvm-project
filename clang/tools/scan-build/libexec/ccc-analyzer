@@ -361,6 +361,7 @@ sub Analyze {
 
 my %CompileOptionMap = (
   '-nostdinc' => 0,
+  '-nostdlibinc' => 0,
   '-include' => 1,
   '-idirafter' => 1,
   '-imacros' => 1,
@@ -388,6 +389,7 @@ my %CompilerLinkerOptionMap = (
   '-target' => 1,
   '-v' => 0,
   '-mmacosx-version-min' => 0, # This is really a 1 argument, but always has '='
+  '-mmacos-version-min' => 0, # This is really a 1 argument, but always has '='
   '-miphoneos-version-min' => 0, # This is really a 1 argument, but always has '='
   '--target' => 0
 );

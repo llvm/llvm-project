@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global,-xnack -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global,-xnack -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
@@ -227,10 +227,10 @@ define amdgpu_kernel void @s_and_32_bit_constant_i64(ptr addrspace(1) %out, i32,
 ; SI: s_load_dword [[B:s[0-9]+]]
 ; SI: s_load_dwordx2
 ; SI-NOT: and
-; SI: s_lshl_b32 [[A]], [[A]], 1
-; SI: s_lshl_b32 [[B]], [[B]], 1
-; SI: s_and_b32 s{{[0-9]+}}, [[A]], 62
-; SI: s_and_b32 s{{[0-9]+}}, [[B]], 62
+; SI: s_lshl_b32 [[C:s[0-9]+]], [[A]], 1
+; SI: s_lshl_b32 [[D:s[0-9]+]], [[B]], 1
+; SI: s_and_b32 s{{[0-9]+}}, [[C]], 62
+; SI: s_and_b32 s{{[0-9]+}}, [[D]], 62
 ; SI-NOT: and
 ; SI: buffer_store_dwordx2
 define amdgpu_kernel void @s_and_multi_use_inline_imm_i64(ptr addrspace(1) %out, i32, i64 %a, i32, i64 %b, i32, i64 %c) {
@@ -371,9 +371,9 @@ define amdgpu_kernel void @s_and_inline_imm_64_i64(ptr addrspace(1) %out, ptr ad
 
 ; FUNC-LABEL: {{^}}s_and_inline_imm_64_i64_noshrink:
 ; SI: s_load_dword [[A:s[0-9]+]]
-; SI: s_lshl_b32 [[A]], [[A]], 1{{$}}
+; SI: s_lshl_b32 [[B:s[0-9]+]], [[A]], 1{{$}}
 ; SI-NOT: and
-; SI: s_and_b32 s{{[0-9]+}}, [[A]], 64
+; SI: s_and_b32 s{{[0-9]+}}, [[B]], 64
 ; SI-NOT: and
 ; SI: s_add_u32
 ; SI-NEXT: s_addc_u32

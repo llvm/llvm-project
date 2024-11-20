@@ -6,11 +6,11 @@ namespace std {
   struct type_info;
   using size_t = decltype(sizeof(0)); // expected-warning {{decltype}} expected-warning {{alias}}
   template<typename T> struct initializer_list {
-    initializer_list(T*, size_t);
-    T *p;
+    initializer_list(const T*, size_t);
+    const T *p;
     size_t n;
-    T *begin();
-    T *end();
+    const T *begin();
+    const T *end();
   };
 }
 
@@ -84,7 +84,7 @@ struct DelayedDefaultArgumentParseInitList {
   }
 };
 
-int operator"" _hello(const char *); // expected-warning {{literal operators are incompatible with C++98}}
+int operator""_hello(const char *); // expected-warning {{literal operators are incompatible with C++98}}
 
 enum EnumFixed : int { // expected-warning {{enumeration types with a fixed underlying type are incompatible with C++98}}
 };
@@ -220,7 +220,8 @@ struct HasExplicitConversion {
 struct Struct {};
 enum Enum { enum_val = 0 };
 struct BadFriends {
-  friend enum ::Enum; // expected-warning {{befriending enumeration type 'enum ::Enum' is incompatible with C++98}}
+  friend enum ::Enum; // expected-warning {{elaborated enum specifier cannot be declared as a friend}}
+                      // expected-note@-1 {{remove 'enum' to befriend an enum}}
   friend int; // expected-warning {{non-class friend type 'int' is incompatible with C++98}}
   friend Struct; // expected-warning {{befriending 'Struct' without 'struct' keyword is incompatible with C++98}}
 };

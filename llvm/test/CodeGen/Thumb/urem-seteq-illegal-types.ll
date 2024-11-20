@@ -122,8 +122,8 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:    cmp r0, #170
-; CHECK-NEXT:    push {r3}
-; CHECK-NEXT:    pop {r0}
+; CHECK-NEXT:    mov r12, r3
+; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    bhi .LBB4_2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:    movs r0, r4
@@ -134,8 +134,8 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; CHECK-NEXT:    movs r1, #73
 ; CHECK-NEXT:    lsls r1, r1, #23
 ; CHECK-NEXT:    cmp r5, r1
-; CHECK-NEXT:    push {r3}
-; CHECK-NEXT:    pop {r1}
+; CHECK-NEXT:    mov r12, r3
+; CHECK-NEXT:    mov r1, r12
 ; CHECK-NEXT:    bhi .LBB4_4
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:    movs r1, r4

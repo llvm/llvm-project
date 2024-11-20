@@ -1,5 +1,7 @@
 ; RUN: opt -passes=inline %s -S -o - \
 ; RUN: | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes=inline %s -S -o - \
+; RUN: | FileCheck %s
 
 ;; $ cat test.cpp
 ;; __attribute__((always_inline))
@@ -82,17 +84,17 @@ entry:
 ;;
 ; CHECK-LABEL: define dso_local i32 @_Z2f1v()
 ; CHECK:       store i32 1, ptr %f1_local, align 4,{{.*}} !DIAssignID ![[ID_1:[0-9]+]]
-; CHECK-NEXT:  call void @llvm.dbg.assign(metadata i32 1, metadata ![[f1_local:[0-9]+]], metadata !DIExpression(), metadata ![[ID_1]], metadata ptr %f1_local, metadata !DIExpression()), !dbg ![[f1_dbg:[0-9]+]]
+; CHECK-NEXT:  #dbg_assign(i32 1, ![[f1_local:[0-9]+]], !DIExpression(), ![[ID_1]], ptr %f1_local, !DIExpression(), ![[f1_dbg:[0-9]+]]
 define dso_local i32 @_Z2f1v() #3 !dbg !37 {
 entry:
   %f1_local = alloca i32, align 4, !DIAssignID !42
   call void @llvm.dbg.assign(metadata i1 undef, metadata !41, metadata !DIExpression(), metadata !42, metadata ptr %f1_local, metadata !DIExpression()), !dbg !43
   %0 = bitcast ptr %f1_local to ptr, !dbg !44
-  call void @llvm.lifetime.start.p0i8(i64 4, ptr %0) #5, !dbg !44
+  call void @llvm.lifetime.start.p0(i64 4, ptr %0) #5, !dbg !44
   call void @_ZL1aPii(ptr %f1_local, i32 1), !dbg !45
   %1 = load i32, ptr %f1_local, align 4, !dbg !46
   %2 = bitcast ptr %f1_local to ptr, !dbg !47
-  call void @llvm.lifetime.end.p0i8(i64 4, ptr %2) #5, !dbg !47
+  call void @llvm.lifetime.end.p0(i64 4, ptr %2) #5, !dbg !47
   ret i32 %1, !dbg !48
 }
 
@@ -105,19 +107,19 @@ entry:
 ;;
 ; CHECK-LABEL: define dso_local i32 @_Z2f2v()
 ; CHECK:       store i32 2, ptr %arraydecay, align 4,{{.*}} !DIAssignID ![[ID_2:[0-9]+]]
-; CHECK-NEXT:  call void @llvm.dbg.assign(metadata i32 2, metadata ![[f2_local:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32), metadata ![[ID_2]], metadata ptr %arraydecay, metadata !DIExpression())
+; CHECK-NEXT:  #dbg_assign(i32 2, ![[f2_local:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 32), ![[ID_2]], ptr %arraydecay, !DIExpression(),
 define dso_local i32 @_Z2f2v() #3 !dbg !49 {
 entry:
   %f2_local = alloca [2 x i32], align 4, !DIAssignID !55
   call void @llvm.dbg.assign(metadata i1 undef, metadata !51, metadata !DIExpression(), metadata !55, metadata ptr %f2_local, metadata !DIExpression()), !dbg !56
   %0 = bitcast ptr %f2_local to ptr, !dbg !57
-  call void @llvm.lifetime.start.p0i8(i64 8, ptr %0) #5, !dbg !57
+  call void @llvm.lifetime.start.p0(i64 8, ptr %0) #5, !dbg !57
   %arraydecay = getelementptr inbounds [2 x i32], ptr %f2_local, i64 0, i64 0, !dbg !58
   call void @_ZL1aPii(ptr %arraydecay, i32 2), !dbg !59
   %arrayidx = getelementptr inbounds [2 x i32], ptr %f2_local, i64 0, i64 0, !dbg !60
   %1 = load i32, ptr %arrayidx, align 4, !dbg !60
   %2 = bitcast ptr %f2_local to ptr, !dbg !61
-  call void @llvm.lifetime.end.p0i8(i64 8, ptr %2) #5, !dbg !61
+  call void @llvm.lifetime.end.p0(i64 8, ptr %2) #5, !dbg !61
   ret i32 %1, !dbg !62
 }
 
@@ -129,20 +131,20 @@ entry:
 ;; }
 ; CHECK-LABEL: define dso_local i32 @_Z2f3v()
 ; CHECK:       store i32 3, ptr %add.ptr, align 4,{{.*}} !DIAssignID ![[ID_3:[0-9]+]]
-; CHECK-NEXT:  call void @llvm.dbg.assign(metadata i32 3, metadata ![[f3_local:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata ![[ID_3]], metadata ptr %add.ptr, metadata !DIExpression())
+; CHECK-NEXT:  #dbg_assign(i32 3, ![[f3_local:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 32, 32), ![[ID_3]], ptr %add.ptr, !DIExpression(),
 define dso_local i32 @_Z2f3v() #3 !dbg !63 {
 entry:
   %f3_local = alloca [2 x i32], align 4, !DIAssignID !66
   call void @llvm.dbg.assign(metadata i1 undef, metadata !65, metadata !DIExpression(), metadata !66, metadata ptr %f3_local, metadata !DIExpression()), !dbg !67
   %0 = bitcast ptr %f3_local to ptr, !dbg !68
-  call void @llvm.lifetime.start.p0i8(i64 8, ptr %0) #5, !dbg !68
+  call void @llvm.lifetime.start.p0(i64 8, ptr %0) #5, !dbg !68
   %arraydecay = getelementptr inbounds [2 x i32], ptr %f3_local, i64 0, i64 0, !dbg !69
   %add.ptr = getelementptr inbounds i32, ptr %arraydecay, i64 1, !dbg !70
   call void @_ZL1aPii(ptr %add.ptr, i32 3), !dbg !71
   %arrayidx = getelementptr inbounds [2 x i32], ptr %f3_local, i64 0, i64 1, !dbg !72
   %1 = load i32, ptr %arrayidx, align 4, !dbg !72
   %2 = bitcast ptr %f3_local to ptr, !dbg !73
-  call void @llvm.lifetime.end.p0i8(i64 8, ptr %2) #5, !dbg !73
+  call void @llvm.lifetime.end.p0(i64 8, ptr %2) #5, !dbg !73
   ret i32 %1, !dbg !74
 }
 
@@ -153,7 +155,7 @@ entry:
 ;; }
 ; CHECK-LABEL: define dso_local i32 @_Z2f4i(i32 %f4_param)
 ; CHECK:       store i32 4, ptr %f4_param.addr, align 4,{{.*}} !DIAssignID ![[ID_4:[0-9]+]]
-; CHECK-NEXT:  call void @llvm.dbg.assign(metadata i32 4, metadata ![[f4_param:[0-9]+]], metadata !DIExpression(), metadata ![[ID_4]], metadata ptr %f4_param.addr, metadata !DIExpression())
+; CHECK-NEXT:  #dbg_assign(i32 4, ![[f4_param:[0-9]+]], !DIExpression(), ![[ID_4]], ptr %f4_param.addr, !DIExpression(),
 define dso_local i32 @_Z2f4i(i32 %f4_param) #3 !dbg !75 {
 entry:
   %f4_param.addr = alloca i32, align 4, !DIAssignID !80
@@ -173,7 +175,7 @@ entry:
 ;; }
 ; CHECK-LABEL: define dso_local i32 @_Z2f5i(i32 %f5_param)
 ; CHECK:       store i32 5, ptr %f5_param.addr, align 4,{{.*}}!DIAssignID ![[ID_5:[0-9]+]]
-; CHECK-NEXT:  call void @llvm.dbg.assign(metadata i32 5, metadata ![[f5_param:[0-9]+]], metadata !DIExpression(), metadata ![[ID_5]], metadata ptr %f5_param.addr, metadata !DIExpression())
+; CHECK-NEXT:  #dbg_assign(i32 5, ![[f5_param:[0-9]+]], !DIExpression(), ![[ID_5]], ptr %f5_param.addr, !DIExpression(),
 define dso_local i32 @_Z2f5i(i32 %f5_param) #3 !dbg !86 {
 entry:
   %f5_param.addr = alloca i32, align 4, !DIAssignID !91
@@ -194,22 +196,22 @@ entry:
 ;; }
 ; CHECK-LABEL: define dso_local i32 @_Z2f6v()
 ; CHECK:       store i32 6, ptr %f6_local, align 4,{{.*}} !DIAssignID ![[ID_6:[0-9]+]]
-; CHECK-NEXT:  call void @llvm.dbg.assign(metadata i32 6, metadata ![[f6_local:[0-9]+]], metadata !DIExpression(), metadata ![[ID_6]], metadata ptr %f6_local, metadata !DIExpression())
+; CHECK-NEXT:  #dbg_assign(i32 6, ![[f6_local:[0-9]+]], !DIExpression(), ![[ID_6]], ptr %f6_local, !DIExpression(),
 define dso_local i32 @_Z2f6v() #3 !dbg !99 {
 entry:
   %f6_local = alloca i32, align 4, !DIAssignID !102
   call void @llvm.dbg.assign(metadata i1 undef, metadata !101, metadata !DIExpression(), metadata !102, metadata ptr %f6_local, metadata !DIExpression()), !dbg !103
   %0 = bitcast ptr %f6_local to ptr, !dbg !104
-  call void @llvm.lifetime.start.p0i8(i64 4, ptr %0) #5, !dbg !104
+  call void @llvm.lifetime.start.p0(i64 4, ptr %0) #5, !dbg !104
   call void @_Z1bPii(ptr %f6_local, i32 6), !dbg !105
   %1 = load i32, ptr %f6_local, align 4, !dbg !106
   %2 = bitcast ptr %f6_local to ptr, !dbg !107
-  call void @llvm.lifetime.end.p0i8(i64 4, ptr %2) #5, !dbg !107
+  call void @llvm.lifetime.end.p0(i64 4, ptr %2) #5, !dbg !107
   ret i32 %1, !dbg !108
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture)
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 ; CHECK-DAG: ![[f1_local]] = !DILocalVariable(name: "f1_local",

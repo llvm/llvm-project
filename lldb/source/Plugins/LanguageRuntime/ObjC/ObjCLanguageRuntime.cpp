@@ -12,7 +12,6 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/Type.h"
@@ -23,6 +22,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DJB.h"
@@ -139,17 +139,10 @@ ObjCLanguageRuntime::LookupInCompleteClassCache(ConstString &name) {
     if (!module_sp)
       return TypeSP();
 
-    const bool exact_match = true;
-    const uint32_t max_matches = UINT32_MAX;
-    TypeList types;
-
-    llvm::DenseSet<SymbolFile *> searched_symbol_files;
-    module_sp->FindTypes(name, exact_match, max_matches, searched_symbol_files,
-                         types);
-
-    for (uint32_t i = 0; i < types.GetSize(); ++i) {
-      TypeSP type_sp(types.GetTypeAtIndex(i));
-
+    TypeQuery query(name.GetStringRef(), TypeQueryOptions::e_exact_match);
+    TypeResults results;
+    module_sp->FindTypes(query, results);
+    for (const TypeSP &type_sp : results.GetTypeMap().Types()) {
       if (TypeSystemClang::IsObjCObjectOrInterfaceType(
               type_sp->GetForwardCompilerType())) {
         if (TypePayloadClang(type_sp->GetPayload()).IsCompleteObjCClass()) {
@@ -357,18 +350,17 @@ ObjCLanguageRuntime::EncodingToTypeSP ObjCLanguageRuntime::GetEncodingToType() {
   return nullptr;
 }
 
-bool ObjCLanguageRuntime::GetTypeBitSize(const CompilerType &compiler_type,
-                                         uint64_t &size) {
+std::optional<uint64_t>
+ObjCLanguageRuntime::GetTypeBitSize(const CompilerType &compiler_type) {
   void *opaque_ptr = compiler_type.GetOpaqueQualType();
-  size = m_type_size_cache.Lookup(opaque_ptr);
-  // an ObjC object will at least have an ISA, so 0 is definitely not OK
-  if (size > 0)
-    return true;
+  uint64_t cached_size = m_type_size_cache.Lookup(opaque_ptr);
+  if (cached_size > 0)
+    return cached_size;
 
   ClassDescriptorSP class_descriptor_sp =
       GetClassDescriptorFromClassName(compiler_type.GetTypeName());
   if (!class_descriptor_sp)
-    return false;
+    return {};
 
   int32_t max_offset = INT32_MIN;
   uint64_t sizeof_max = 0;
@@ -384,11 +376,13 @@ bool ObjCLanguageRuntime::GetTypeBitSize(const CompilerType &compiler_type,
     }
   }
 
-  size = 8 * (max_offset + sizeof_max);
-  if (found)
+  uint64_t size = 8 * (max_offset + sizeof_max);
+  if (found && size > 0) {
     m_type_size_cache.Insert(opaque_ptr, size);
+    return size;
+  }
 
-  return found;
+  return {};
 }
 
 lldb::BreakpointPreconditionSP
@@ -424,7 +418,7 @@ Status ObjCLanguageRuntime::ObjCExceptionPrecondition::ConfigurePrecondition(
     Args &args) {
   Status error;
   if (args.GetArgumentCount() > 0)
-    error.SetErrorString(
+    error = Status::FromErrorString(
         "The ObjC Exception breakpoint doesn't support extra options.");
   return error;
 }

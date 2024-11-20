@@ -1,3 +1,8 @@
+fun:__isoc23_sscanf=uninstrumented
+fun:__isoc23_strtol=uninstrumented
+fun:__isoc23_strtoll=uninstrumented
+fun:__isoc23_strtoul=uninstrumented
+fun:__isoc23_strtoull=uninstrumented
 fun:_Exit=uninstrumented
 fun:_IO_adjust_column=uninstrumented
 fun:_IO_adjust_wcolumn=uninstrumented

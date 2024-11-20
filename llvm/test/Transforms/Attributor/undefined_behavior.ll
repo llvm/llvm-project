@@ -864,8 +864,8 @@ define nonnull ptr @returned_nonnnull(i32 %c) {
 ; CHECK-LABEL: define {{[^@]+}}@returned_nonnnull
 ; CHECK-SAME: (i32 noundef [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    switch i32 [[C]], label [[ONDEFAULT:%.*]] [
-; CHECK-NEXT:    i32 0, label [[ONZERO:%.*]]
-; CHECK-NEXT:    i32 1, label [[ONONE:%.*]]
+; CHECK-NEXT:      i32 0, label [[ONZERO:%.*]]
+; CHECK-NEXT:      i32 1, label [[ONONE:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       onzero:
 ; CHECK-NEXT:    [[PTR:%.*]] = alloca i32, align 4
@@ -891,8 +891,8 @@ define noundef ptr @returned_noundef(i32 %c) {
 ; CHECK-LABEL: define {{[^@]+}}@returned_noundef
 ; CHECK-SAME: (i32 noundef [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    switch i32 [[C]], label [[ONDEFAULT:%.*]] [
-; CHECK-NEXT:    i32 0, label [[ONZERO:%.*]]
-; CHECK-NEXT:    i32 1, label [[ONONE:%.*]]
+; CHECK-NEXT:      i32 0, label [[ONZERO:%.*]]
+; CHECK-NEXT:      i32 1, label [[ONONE:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       onzero:
 ; CHECK-NEXT:    [[PTR:%.*]] = alloca i32, align 4
@@ -918,8 +918,8 @@ define nonnull noundef ptr @returned_nonnnull_noundef(i32 %c) {
 ; CHECK-LABEL: define {{[^@]+}}@returned_nonnnull_noundef
 ; CHECK-SAME: (i32 noundef [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    switch i32 [[C]], label [[ONDEFAULT:%.*]] [
-; CHECK-NEXT:    i32 0, label [[ONZERO:%.*]]
-; CHECK-NEXT:    i32 1, label [[ONONE:%.*]]
+; CHECK-NEXT:      i32 0, label [[ONZERO:%.*]]
+; CHECK-NEXT:      i32 1, label [[ONONE:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       onzero:
 ; CHECK-NEXT:    [[PTR:%.*]] = alloca i32, align 4

@@ -12,9 +12,6 @@
 
 #include "JITLinkGeneric.h"
 
-#include "llvm/Support/BinaryStreamReader.h"
-#include "llvm/Support/MemoryBuffer.h"
-
 #define DEBUG_TYPE "jitlink"
 
 namespace llvm {
@@ -47,6 +44,14 @@ void JITLinkerBase::linkPhase1(std::unique_ptr<JITLinkerBase> Self) {
   // Run post-pruning passes.
   if (auto Err = runPasses(Passes.PostPrunePasses))
     return Ctx->notifyFailed(std::move(Err));
+
+  // Skip straight to phase 2 if the graph is empty with no associated actions.
+  if (G->allocActions().empty() && llvm::all_of(G->sections(), [](Section &S) {
+        return S.getMemLifetime() == orc::MemLifetime::NoAlloc;
+      })) {
+    linkPhase2(std::move(Self), nullptr);
+    return;
+  }
 
   Ctx->getMemoryManager().allocate(
       Ctx->getJITLinkDylib(), *G,
@@ -162,6 +167,12 @@ void JITLinkerBase::linkPhase3(std::unique_ptr<JITLinkerBase> Self,
 
   if (auto Err = runPasses(Passes.PostFixupPasses))
     return abandonAllocAndBailOut(std::move(Self), std::move(Err));
+
+  // Skip straight to phase 4 if the graph has no allocation.
+  if (!Alloc) {
+    linkPhase4(std::move(Self), JITLinkMemoryManager::FinalizedAlloc{});
+    return;
+  }
 
   Alloc->finalize([S = std::move(Self)](FinalizeResult FR) mutable {
     // FIXME: Once MSVC implements c++17 order of evaluation rules for calls

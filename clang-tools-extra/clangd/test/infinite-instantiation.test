@@ -1,5 +1,6 @@
-// RUN: cp %s %t.cpp
-// RUN: not clangd -check=%t.cpp 2>&1 | FileCheck -strict-whitespace %s
+// RUN: rm -rf %t.dir && mkdir -p %t.dir
+// RUN: echo '[{"directory": "%/t.dir", "command": "clang -ftemplate-depth=100 -x c++ %/s", "file": "%/s"}]' > %t.dir/compile_commands.json
+// RUN: not clangd --compile-commands-dir=%t.dir -check=%s 2>&1 | FileCheck -strict-whitespace %s
 
 // CHECK: [template_recursion_depth_exceeded]
 

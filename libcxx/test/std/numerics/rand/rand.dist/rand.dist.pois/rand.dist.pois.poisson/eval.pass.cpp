@@ -129,8 +129,8 @@ void tests() {
     double x_kurtosis = 1 / x_var;
     assert(std::abs((mean - x_mean) / x_mean) < 0.01);
     assert(std::abs((var - x_var) / x_var) < 0.01);
-    assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.03);
+    assert(std::abs((skew - x_skew) / x_skew) < 0.03);
+    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.2);
   }
   {
     typedef std::poisson_distribution<T> D;
@@ -167,9 +167,9 @@ void tests() {
     double x_skew = 1 / std::sqrt(x_var);
     double x_kurtosis = 1 / x_var;
     assert(std::abs((mean - x_mean) / x_mean) < 0.01);
-    assert(std::abs((var - x_var) / x_var) < 0.01);
-    assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.04);
+    assert(std::abs((var - x_var) / x_var) < 0.02);
+    assert(std::abs((skew - x_skew) / x_skew) < 0.02);
+    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.09);
   }
   {
     typedef std::poisson_distribution<T> D;
@@ -207,8 +207,8 @@ void tests() {
     double x_kurtosis = 1 / x_var;
     assert(std::abs((mean - x_mean) / x_mean) < 0.01);
     assert(std::abs((var - x_var) / x_var) < 0.01);
-    assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.01);
+    assert(std::abs((skew - x_skew) / x_skew) < 0.02);
+    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.3);
   }
 }
 

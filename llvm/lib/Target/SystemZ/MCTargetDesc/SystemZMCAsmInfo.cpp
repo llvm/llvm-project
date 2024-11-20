@@ -8,12 +8,11 @@
 
 #include "SystemZMCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCSectionELF.h"
 
 using namespace llvm;
 
 SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT) {
-  AssemblerDialect = AD_ATT;
+  AssemblerDialect = AD_GNU;
   CalleeSaveStackSlotSize = 8;
   CodePointerSize = 8;
   Data64bitsDirective = "\t.quad\t";
@@ -38,6 +37,7 @@ SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT) {
   DotIsPC = false;
   EmitGNUAsmStartIndentationMarker = false;
   EmitLabelsInUpperCase = true;
+  ExceptionsType = ExceptionHandling::ZOS;
   IsLittleEndian = false;
   MaxInstLength = 6;
   RestrictCommentStringToStartOfStatement = true;

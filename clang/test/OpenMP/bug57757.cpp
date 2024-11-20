@@ -19,9 +19,9 @@ void foo() {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @__kmpc_global_thread_num(ptr nonnull @[[GLOB1:[0-9]+]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call ptr @__kmpc_omp_task_alloc(ptr nonnull @[[GLOB1]], i32 [[TMP0]], i32 0, i64 56, i64 1, ptr nonnull @.omp_task_entry.)
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP1]], i64 0, i32 1
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 40
 // CHECK-NEXT:    store ptr @_Z3barif, ptr [[TMP2]], align 8, !tbaa [[TBAA3:![0-9]+]]
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP1]], i64 0, i32 2
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 16
 // CHECK-NEXT:    store i32 0, ptr [[TMP3]], align 8, !tbaa [[TBAA12:![0-9]+]]
 // CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @__kmpc_omp_task(ptr nonnull @[[GLOB1]], i32 [[TMP0]], ptr [[TMP1]])
 // CHECK-NEXT:    ret void
@@ -30,7 +30,7 @@ void foo() {
 // CHECK-LABEL: define {{[^@]+}}@.omp_task_entry.
 // CHECK-SAME: (i32 noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP1]], i64 0, i32 2
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 16
 // CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META13:![0-9]+]])
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4, !tbaa [[TBAA16:![0-9]+]], !alias.scope [[META13]], !noalias [[META17:![0-9]+]]
 // CHECK-NEXT:    switch i32 [[TMP3]], label [[DOTOMP_OUTLINED__EXIT:%.*]] [
@@ -39,12 +39,12 @@ void foo() {
 // CHECK-NEXT:    ]
 // CHECK:       .untied.jmp..i:
 // CHECK-NEXT:    store i32 1, ptr [[TMP2]], align 4, !tbaa [[TBAA16]], !alias.scope [[META13]], !noalias [[META17]]
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @__kmpc_omp_task(ptr nonnull @[[GLOB1]], i32 [[TMP0]], ptr [[TMP1]]), !noalias [[META13]]
+// CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @__kmpc_omp_task(ptr nonnull @[[GLOB1]], i32 [[TMP0]], ptr nonnull [[TMP1]]), !noalias [[META13]]
 // CHECK-NEXT:    br label [[DOTOMP_OUTLINED__EXIT]]
 // CHECK:       .untied.next..i:
-// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP1]], i64 0, i32 1
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP1]], i64 0, i32 1, i32 2
-// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP1]], i64 0, i32 1, i32 1
+// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 40
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 52
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 48
 // CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP5]], align 8, !tbaa [[TBAA19:![0-9]+]], !noalias [[META13]]
 // CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP7]], align 4, !tbaa [[TBAA16]], !noalias [[META13]]
 // CHECK-NEXT:    [[TMP10:%.*]] = load float, ptr [[TMP6]], align 4, !tbaa [[TBAA20:![0-9]+]], !noalias [[META13]]

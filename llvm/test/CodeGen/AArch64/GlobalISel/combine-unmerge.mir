@@ -10,9 +10,8 @@ body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_merge
     ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $w0 = COPY [[DEF]](s32)
-    ; CHECK-NEXT: $w1 = COPY [[DEF1]](s32)
+    ; CHECK-NEXT: $w1 = COPY [[DEF]](s32)
     %0:_(s32) = G_IMPLICIT_DEF
     %1:_(s32) = G_IMPLICIT_DEF
     %2:_(s64) = G_MERGE_VALUES %0(s32), %1(s32)
@@ -54,9 +53,8 @@ body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_build_vector
     ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $w0 = COPY [[DEF]](s32)
-    ; CHECK-NEXT: $w1 = COPY [[DEF1]](s32)
+    ; CHECK-NEXT: $w1 = COPY [[DEF]](s32)
     %0:_(s32) = G_IMPLICIT_DEF
     %1:_(s32) = G_IMPLICIT_DEF
     %2:_(<2 x s32>) = G_BUILD_VECTOR %0(s32), %1(s32)
@@ -74,11 +72,9 @@ body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_buildvector_3ops
     ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $w0 = COPY [[DEF]](s32)
-    ; CHECK-NEXT: $w1 = COPY [[DEF1]](s32)
-    ; CHECK-NEXT: $w2 = COPY [[DEF2]](s32)
+    ; CHECK-NEXT: $w1 = COPY [[DEF]](s32)
+    ; CHECK-NEXT: $w2 = COPY [[DEF]](s32)
     %0:_(s32) = G_IMPLICIT_DEF
     %1:_(s32) = G_IMPLICIT_DEF
     %5:_(s32) = G_IMPLICIT_DEF
@@ -118,9 +114,8 @@ body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_bitcast_merge
     ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $w0 = COPY [[DEF]](s32)
-    ; CHECK-NEXT: $w1 = COPY [[DEF1]](s32)
+    ; CHECK-NEXT: $w1 = COPY [[DEF]](s32)
     %0:_(s32) = G_IMPLICIT_DEF
     %1:_(s32) = G_IMPLICIT_DEF
     %2:_(s64) = G_MERGE_VALUES %0(s32), %1(s32)
@@ -138,14 +133,11 @@ name:            test_combine_unmerge_merge_incompatible_types
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_merge_incompatible_types
-    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[DEF]](s32), [[DEF1]](s32)
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[MV]](s64)
-    ; CHECK-NEXT: $h0 = COPY [[UV]](s16)
-    ; CHECK-NEXT: $h1 = COPY [[UV1]](s16)
-    ; CHECK-NEXT: $h2 = COPY [[UV2]](s16)
-    ; CHECK-NEXT: $h3 = COPY [[UV3]](s16)
+    ; CHECK: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $h0 = COPY [[DEF]](s16)
+    ; CHECK-NEXT: $h1 = COPY [[DEF]](s16)
+    ; CHECK-NEXT: $h2 = COPY [[DEF]](s16)
+    ; CHECK-NEXT: $h3 = COPY [[DEF]](s16)
     %0:_(s32) = G_IMPLICIT_DEF
     %1:_(s32) = G_IMPLICIT_DEF
     %2:_(s64) = G_MERGE_VALUES %0(s32), %1(s32)
@@ -326,10 +318,8 @@ body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_dead_to_trunc_vec_in_n_out
     ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $x0
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[COPY]](<4 x s16>)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[BITCAST]](s64)
-    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[TRUNC]](s32)
-    ; CHECK-NEXT: $w0 = COPY [[BITCAST1]](<2 x s16>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
+    ; CHECK-NEXT: $w0 = COPY [[UV]](<2 x s16>)
     %0:_(<4 x s16>) = COPY $x0
     %1:_(<2 x s16>),%2:_(<2 x s16>) = G_UNMERGE_VALUES %0(<4 x s16>)
     $w0 = COPY %1(<2 x s16>)
@@ -343,9 +333,8 @@ body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_dead_to_trunc_vec_in
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $x0
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[COPY]](<2 x s32>)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s64)
-    ; CHECK-NEXT: $h0 = COPY [[TRUNC]](s16)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+    ; CHECK-NEXT: $h0 = COPY [[UV]](s16)
     %0:_(<2 x s32>) = COPY $x0
     %1:_(s16),%2:_(s16),%3:_(s16),%4:_(s16) = G_UNMERGE_VALUES %0(<2 x s32>)
     $h0 = COPY %1(s16)
@@ -436,4 +425,191 @@ body:             |
     %1:_(s32),%2:_(s32) = G_UNMERGE_VALUES %3(<2 x s32>)
     $w0 = COPY %1(s32)
     $w1 = COPY %2(s32)
+...
+
+# Check that we unmerge the build vector on the anyext
+---
+name:            test_anyext_buildvector
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_anyext_buildvector
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[COPY]](s32)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[COPY1]](s32)
+    ; CHECK-NEXT: %un1:_(<2 x s64>) = G_BUILD_VECTOR [[ANYEXT]](s64), [[ANYEXT1]](s64)
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s64) = G_ANYEXT [[COPY2]](s32)
+    ; CHECK-NEXT: [[ANYEXT3:%[0-9]+]]:_(s64) = G_ANYEXT [[COPY3]](s32)
+    ; CHECK-NEXT: %un2:_(<2 x s64>) = G_BUILD_VECTOR [[ANYEXT2]](s64), [[ANYEXT3]](s64)
+    ; CHECK-NEXT: $q0 = COPY %un1(<2 x s64>)
+    ; CHECK-NEXT: $q1 = COPY %un2(<2 x s64>)
+    %0:_(s32) = COPY $w0
+    %1:_(s32) = COPY $w0
+    %2:_(s32) = COPY $w0
+    %3:_(s32) = COPY $w0
+    %bv:_(<4 x s32>) = G_BUILD_VECTOR %0(s32), %1(s32), %2(s32), %3(s32)
+    %any:_(<4 x s64>) = G_ANYEXT %bv(<4 x s32>)
+    %un1:_(<2 x s64>), %un2:_(<2 x s64>) = G_UNMERGE_VALUES %any(<4 x s64>)
+    $q0 = COPY %un1(<2 x s64>)
+    $q1 = COPY %un2(<2 x s64>)
+...
+
+# Check that we unmerge the build vector on the anyext and undef
+---
+name:            test_anyext_buildvector_undef
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_anyext_buildvector_undef
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[COPY]](s32)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[COPY1]](s32)
+    ; CHECK-NEXT: %un1:_(<2 x s64>) = G_BUILD_VECTOR [[ANYEXT]](s64), [[ANYEXT1]](s64)
+    ; CHECK-NEXT: %un2:_(<2 x s64>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $q0 = COPY %un1(<2 x s64>)
+    ; CHECK-NEXT: $q1 = COPY %un2(<2 x s64>)
+    %0:_(s32) = COPY $w0
+    %1:_(s32) = COPY $w0
+    %2:_(s32) = G_IMPLICIT_DEF
+    %3:_(s32) = G_IMPLICIT_DEF
+    %bv:_(<4 x s32>) = G_BUILD_VECTOR %0(s32), %1(s32), %2(s32), %3(s32)
+    %any:_(<4 x s64>) = G_ANYEXT %bv(<4 x s32>)
+    %un1:_(<2 x s64>), %un2:_(<2 x s64>) = G_UNMERGE_VALUES %any(<4 x s64>)
+    $q0 = COPY %un1(<2 x s64>)
+    $q1 = COPY %un2(<2 x s64>)
+...
+
+# Check that we don't unmerge the build vector on the anyext, multi-use
+---
+name:            test_anyext_buildvector_multi
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_anyext_buildvector_multi
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: %bv:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[DEF]](s32), [[DEF1]](s32)
+    ; CHECK-NEXT: %any:_(<4 x s64>) = G_ANYEXT %bv(<4 x s32>)
+    ; CHECK-NEXT: %un1:_(<2 x s64>), %un2:_(<2 x s64>) = G_UNMERGE_VALUES %any(<4 x s64>)
+    ; CHECK-NEXT: $q0 = COPY %un1(<2 x s64>)
+    ; CHECK-NEXT: $q1 = COPY %un2(<2 x s64>)
+    ; CHECK-NEXT: $q2 = COPY %bv(<4 x s32>)
+    %0:_(s32) = COPY $w0
+    %1:_(s32) = COPY $w0
+    %2:_(s32) = G_IMPLICIT_DEF
+    %3:_(s32) = G_IMPLICIT_DEF
+    %bv:_(<4 x s32>) = G_BUILD_VECTOR %0(s32), %1(s32), %2(s32), %3(s32)
+    %any:_(<4 x s64>) = G_ANYEXT %bv(<4 x s32>)
+    %un1:_(<2 x s64>), %un2:_(<2 x s64>) = G_UNMERGE_VALUES %any(<4 x s64>)
+    $q0 = COPY %un1(<2 x s64>)
+    $q1 = COPY %un2(<2 x s64>)
+    $q2 = COPY %bv(<4 x s32>)
+...
+
+# Check that we don't unmerge the build vector on the anyext into scalar
+---
+name:            test_anyext_buildvector_scalar
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_anyext_buildvector_scalar
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: %bv:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
+    ; CHECK-NEXT: %any:_(<4 x s64>) = G_ANYEXT %bv(<4 x s32>)
+    ; CHECK-NEXT: %un1:_(s128), %un2:_(s128) = G_UNMERGE_VALUES %any(<4 x s64>)
+    ; CHECK-NEXT: $q0 = COPY %un1(s128)
+    ; CHECK-NEXT: $q1 = COPY %un2(s128)
+    %0:_(s32) = COPY $w0
+    %1:_(s32) = COPY $w0
+    %2:_(s32) = COPY $w0
+    %3:_(s32) = COPY $w0
+    %bv:_(<4 x s32>) = G_BUILD_VECTOR %0(s32), %1(s32), %2(s32), %3(s32)
+    %any:_(<4 x s64>) = G_ANYEXT %bv(<4 x s32>)
+    %un1:_(s128), %un2:_(s128) = G_UNMERGE_VALUES %any(<4 x s64>)
+    $q0 = COPY %un1(s128)
+    $q1 = COPY %un2(s128)
+...
+
+# Check that we anyext the merge
+---
+name:            test_merge_undef
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_merge_undef
+    ; CHECK: %opaque:_(s64) = COPY $x0
+    ; CHECK-NEXT: %me:_(s128) = G_ANYEXT %opaque(s64)
+    ; CHECK-NEXT: $q0 = COPY %me(s128)
+    %opaque:_(s64) = COPY $x0
+    %def:_(s64) = G_IMPLICIT_DEF
+    %me:_(s128) = G_MERGE_VALUES %opaque(s64), %def
+    $q0 = COPY %me(s128)
+...
+
+# Check that we don't anyext the merge, multi-use
+---
+name:            test_merge_undef_multi_use
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_merge_undef_multi_use
+    ; CHECK: %opaque:_(s64) = COPY $x0
+    ; CHECK-NEXT: %def:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: %me:_(s128) = G_ANYEXT %opaque(s64)
+    ; CHECK-NEXT: $q0 = COPY %me(s128)
+    ; CHECK-NEXT: $x0 = COPY %def(s64)
+    %opaque:_(s64) = COPY $x0
+    %def:_(s64) = G_IMPLICIT_DEF
+    %me:_(s128) = G_MERGE_VALUES %opaque(s64), %def
+    $q0 = COPY %me(s128)
+    $x0 = COPY %def(s64)
+...
+# Check that we zext the merge
+---
+name:            test_merge_zero
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_merge_zero
+    ; CHECK: %opaque:_(s64) = COPY $x0
+    ; CHECK-NEXT: %me:_(s128) = G_ZEXT %opaque(s64)
+    ; CHECK-NEXT: $q0 = COPY %me(s128)
+    %opaque:_(s64) = COPY $x0
+    %def:_(s64) = G_CONSTANT i64 0
+    %me:_(s128) = G_MERGE_VALUES %opaque(s64), %def
+    $q0 = COPY %me(s128)
+...
+# Check that we still zext the merge, multi-use
+---
+name:            test_merge_zero_multi_use
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_merge_zero_multi_use
+    ; CHECK: %opaque:_(s64) = COPY $x0
+    ; CHECK-NEXT: %def:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %me:_(s128) = G_ZEXT %opaque(s64)
+    ; CHECK-NEXT: $q0 = COPY %me(s128)
+    ; CHECK-NEXT: $x0 = COPY %def(s64)
+    %opaque:_(s64) = COPY $x0
+    %def:_(s64) = G_CONSTANT i64 0
+    %me:_(s128) = G_MERGE_VALUES %opaque(s64), %def
+    $q0 = COPY %me(s128)
+    $x0 = COPY %def(s64)
+...
+# Check that we don't zext the merge with one
+---
+name:            test_merge_one
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_merge_one
+    ; CHECK: %opaque:_(s64) = COPY $x0
+    ; CHECK-NEXT: %def:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: %me:_(s128) = G_MERGE_VALUES %opaque(s64), %def(s64)
+    ; CHECK-NEXT: $q0 = COPY %me(s128)
+    %opaque:_(s64) = COPY $x0
+    %def:_(s64) = G_CONSTANT i64 1
+    %me:_(s128) = G_MERGE_VALUES %opaque(s64), %def
+    $q0 = COPY %me(s128)
 ...

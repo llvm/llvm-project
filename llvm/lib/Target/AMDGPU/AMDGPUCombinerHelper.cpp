@@ -29,6 +29,8 @@ static bool fnegFoldsIntoMI(const MachineInstr &MI) {
   case AMDGPU::G_FMAXNUM:
   case AMDGPU::G_FMINNUM_IEEE:
   case AMDGPU::G_FMAXNUM_IEEE:
+  case AMDGPU::G_FMINIMUM:
+  case AMDGPU::G_FMAXIMUM:
   case AMDGPU::G_FSIN:
   case AMDGPU::G_FPEXT:
   case AMDGPU::G_INTRINSIC_TRUNC:
@@ -43,7 +45,7 @@ static bool fnegFoldsIntoMI(const MachineInstr &MI) {
   case AMDGPU::G_AMDGPU_FMAX_LEGACY:
     return true;
   case AMDGPU::G_INTRINSIC: {
-    unsigned IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
+    Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
     switch (IntrinsicID) {
     case Intrinsic::amdgcn_rcp:
     case Intrinsic::amdgcn_rcp_legacy:
@@ -94,7 +96,7 @@ static bool hasSourceMods(const MachineInstr &MI) {
     return false;
   case AMDGPU::G_INTRINSIC:
   case AMDGPU::G_INTRINSIC_CONVERGENT: {
-    unsigned IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
+    Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
     switch (IntrinsicID) {
     case Intrinsic::amdgcn_interp_p1:
     case Intrinsic::amdgcn_interp_p2:
@@ -174,6 +176,10 @@ static unsigned inverseMinMax(unsigned Opc) {
     return AMDGPU::G_FMINNUM_IEEE;
   case AMDGPU::G_FMINNUM_IEEE:
     return AMDGPU::G_FMAXNUM_IEEE;
+  case AMDGPU::G_FMAXIMUM:
+    return AMDGPU::G_FMINIMUM;
+  case AMDGPU::G_FMINIMUM:
+    return AMDGPU::G_FMAXIMUM;
   case AMDGPU::G_AMDGPU_FMAX_LEGACY:
     return AMDGPU::G_AMDGPU_FMIN_LEGACY;
   case AMDGPU::G_AMDGPU_FMIN_LEGACY:
@@ -207,6 +213,8 @@ bool AMDGPUCombinerHelper::matchFoldableFneg(MachineInstr &MI,
   case AMDGPU::G_FMAXNUM:
   case AMDGPU::G_FMINNUM_IEEE:
   case AMDGPU::G_FMAXNUM_IEEE:
+  case AMDGPU::G_FMINIMUM:
+  case AMDGPU::G_FMAXIMUM:
   case AMDGPU::G_AMDGPU_FMIN_LEGACY:
   case AMDGPU::G_AMDGPU_FMAX_LEGACY:
     // 0 doesn't have a negated inline immediate.
@@ -231,7 +239,7 @@ bool AMDGPUCombinerHelper::matchFoldableFneg(MachineInstr &MI,
     return true;
   case AMDGPU::G_INTRINSIC:
   case AMDGPU::G_INTRINSIC_CONVERGENT: {
-    unsigned IntrinsicID = cast<GIntrinsic>(MatchInfo)->getIntrinsicID();
+    Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MatchInfo)->getIntrinsicID();
     switch (IntrinsicID) {
     case Intrinsic::amdgcn_rcp:
     case Intrinsic::amdgcn_rcp_legacy:
@@ -304,6 +312,8 @@ void AMDGPUCombinerHelper::applyFoldableFneg(MachineInstr &MI,
   case AMDGPU::G_FMAXNUM:
   case AMDGPU::G_FMINNUM_IEEE:
   case AMDGPU::G_FMAXNUM_IEEE:
+  case AMDGPU::G_FMINIMUM:
+  case AMDGPU::G_FMAXIMUM:
   case AMDGPU::G_AMDGPU_FMIN_LEGACY:
   case AMDGPU::G_AMDGPU_FMAX_LEGACY: {
     NegateOperand(MatchInfo->getOperand(1));
@@ -331,7 +341,7 @@ void AMDGPUCombinerHelper::applyFoldableFneg(MachineInstr &MI,
     break;
   case AMDGPU::G_INTRINSIC:
   case AMDGPU::G_INTRINSIC_CONVERGENT: {
-    unsigned IntrinsicID = cast<GIntrinsic>(MatchInfo)->getIntrinsicID();
+    Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MatchInfo)->getIntrinsicID();
     switch (IntrinsicID) {
     case Intrinsic::amdgcn_rcp:
     case Intrinsic::amdgcn_rcp_legacy:
@@ -422,8 +432,6 @@ void AMDGPUCombinerHelper::applyExpandPromotedF16FMed3(MachineInstr &MI,
                                                        Register Src0,
                                                        Register Src1,
                                                        Register Src2) {
-  Builder.setInstrAndDebugLoc(MI);
-
   // We expect fptrunc (fpext x) to fold out, and to constant fold any constant
   // sources.
   Src0 = Builder.buildFPTrunc(LLT::scalar(16), Src0).getReg(0);

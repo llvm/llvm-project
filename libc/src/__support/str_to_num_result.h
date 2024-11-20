@@ -6,28 +6,43 @@
 //
 //===----------------------------------------------------------------------===//
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This file is shared with libc++. You should also be careful when adding
+// dependencies to this file, since it needs to build for all libc++ targets.
+// -----------------------------------------------------------------------------
+
 #ifndef LLVM_LIBC_SRC___SUPPORT_STR_TO_NUM_RESULT_H
 #define LLVM_LIBC_SRC___SUPPORT_STR_TO_NUM_RESULT_H
 
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"
+
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This interface is shared with libc++, if you change this interface you need
+// to update it in both libc and libc++.
+// -----------------------------------------------------------------------------
 template <typename T> struct StrToNumResult {
   T value;
   int error;
   ptrdiff_t parsed_len;
 
-  constexpr StrToNumResult(T value) : value(value), error(0), parsed_len(0) {}
-  constexpr StrToNumResult(T value, ptrdiff_t parsed_len)
+  LIBC_INLINE constexpr StrToNumResult(T value)
+      : value(value), error(0), parsed_len(0) {}
+  LIBC_INLINE constexpr StrToNumResult(T value, ptrdiff_t parsed_len)
       : value(value), error(0), parsed_len(parsed_len) {}
-  constexpr StrToNumResult(T value, ptrdiff_t parsed_len, int error)
+  LIBC_INLINE constexpr StrToNumResult(T value, ptrdiff_t parsed_len, int error)
       : value(value), error(error), parsed_len(parsed_len) {}
 
-  constexpr bool has_error() { return error != 0; }
+  LIBC_INLINE constexpr bool has_error() { return error != 0; }
 
-  constexpr operator T() { return value; }
+  LIBC_INLINE constexpr operator T() { return value; }
 };
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STR_TO_NUM_RESULT_H

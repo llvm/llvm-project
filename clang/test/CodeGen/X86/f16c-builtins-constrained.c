@@ -1,11 +1,14 @@
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +f16c -emit-llvm -ffp-exception-behavior=strict -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +f16c -emit-llvm -ffp-exception-behavior=strict -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c -ffreestanding %s -triple=i386-apple-darwin -target-feature +f16c -emit-llvm -ffp-exception-behavior=strict -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +f16c -emit-llvm -ffp-exception-behavior=strict -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=i386-apple-darwin -target-feature +f16c -emit-llvm -ffp-exception-behavior=strict -o - -Wall -Werror | FileCheck %s
 
 
 #include <immintrin.h>
 
 float test_cvtsh_ss(unsigned short a) {
   // CHECK-LABEL: test_cvtsh_ss
-  // CHECK: insertelement <8 x i16> undef, i16 %{{.*}}, i32 0
+  // CHECK: insertelement <8 x i16> poison, i16 %{{.*}}, i32 0
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 0, i32 1
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 0, i32 2
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 0, i32 3
@@ -21,7 +24,7 @@ float test_cvtsh_ss(unsigned short a) {
 
 unsigned short test_cvtss_sh(float a) {
   // CHECK-LABEL: test_cvtss_sh
-  // CHECK: insertelement <4 x float> undef, float %{{.*}}, i32 0
+  // CHECK: insertelement <4 x float> poison, float %{{.*}}, i32 0
   // CHECK: call float @llvm.experimental.constrained.sitofp.f32.i32(i32 0, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 1
   // CHECK: call float @llvm.experimental.constrained.sitofp.f32.i32(i32 0, metadata !"round.tonearest", metadata !"fpexcept.strict")
@@ -36,13 +39,13 @@ unsigned short test_cvtss_sh(float a) {
 __m128 test_mm_cvtph_ps(__m128i a) {
   // CHECK-LABEL: test_mm_cvtph_ps
   // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  // CHECK: call <4 x float> @llvm.experimental.constrained.fpext.v4f32.v4f16(<4 x half> %{{.*}}, metadata !"fpexcept.strict")
+  // CHECK: call {{.*}}<4 x float> @llvm.experimental.constrained.fpext.v4f32.v4f16(<4 x half> %{{.*}}, metadata !"fpexcept.strict")
   return _mm_cvtph_ps(a);
 }
 
 __m256 test_mm256_cvtph_ps(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtph_ps
-  // CHECK: call <8 x float> @llvm.experimental.constrained.fpext.v8f32.v8f16(<8 x half> %{{.*}}, metadata !"fpexcept.strict")
+  // CHECK: call {{.*}}<8 x float> @llvm.experimental.constrained.fpext.v8f32.v8f16(<8 x half> %{{.*}}, metadata !"fpexcept.strict")
   return _mm256_cvtph_ps(a);
 }
 

@@ -233,4 +233,216 @@ TEST_F(AArch64GISelMITest, TestConstantFoldCTL) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
+TEST_F(AArch64GISelMITest, TestConstantFoldCTT) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT s32 = LLT::scalar(32);
+
+  GISelCSEInfo CSEInfo;
+  CSEInfo.setCSEConfig(std::make_unique<CSEConfigConstantOnly>());
+  CSEInfo.analyze(*MF);
+  B.setCSEInfo(&CSEInfo);
+  CSEMIRBuilder CSEB(B.getState());
+  auto Cst8 = CSEB.buildConstant(s32, 8);
+  auto *CttzDef = &*CSEB.buildCTTZ(s32, Cst8);
+  EXPECT_TRUE(CttzDef->getOpcode() == TargetOpcode::G_CONSTANT);
+  EXPECT_TRUE(CttzDef->getOperand(1).getCImm()->getZExtValue() == 3);
+
+  // Test vector.
+  auto Cst16 = CSEB.buildConstant(s32, 16);
+  auto Cst32 = CSEB.buildConstant(s32, 32);
+  auto Cst64 = CSEB.buildConstant(s32, 64);
+  LLT VecTy = LLT::fixed_vector(4, s32);
+  auto BV = CSEB.buildBuildVector(VecTy, {Cst8.getReg(0), Cst16.getReg(0),
+                                          Cst32.getReg(0), Cst64.getReg(0)});
+  CSEB.buildCTTZ(VecTy, BV);
+
+  auto CheckStr = R"(
+  ; CHECK: [[CST8:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; CHECK: [[CST3:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
+  ; CHECK: [[CST16:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+  ; CHECK: [[CST32:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+  ; CHECK: [[CST64:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
+  ; CHECK: [[BV1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[CST8]]:_(s32), [[CST16]]:_(s32), [[CST32]]:_(s32), [[CST64]]:_(s32)
+  ; CHECK: [[CST27:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; CHECK: [[CST26:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
+  ; CHECK: [[CST25:%[0-9]+]]:_(s32) = G_CONSTANT i32 6
+  ; CHECK: [[BV2:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[CST3]]:_(s32), [[CST27]]:_(s32), [[CST26]]:_(s32), [[CST25]]:_(s32)
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(AArch64GISelMITest, TestConstantFoldICMP) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT s32 = LLT::scalar(32);
+  LLT s1 = LLT::scalar(1);
+
+  GISelCSEInfo CSEInfo;
+  CSEInfo.setCSEConfig(std::make_unique<CSEConfigConstantOnly>());
+  CSEInfo.analyze(*MF);
+  B.setCSEInfo(&CSEInfo);
+  CSEMIRBuilder CSEB(B.getState());
+
+  auto One = CSEB.buildConstant(s32, 1);
+  auto Two = CSEB.buildConstant(s32, 2);
+  auto MinusOne = CSEB.buildConstant(s32, -1);
+  auto MinusTwo = CSEB.buildConstant(s32, -2);
+
+  // ICMP_EQ
+  {
+    auto I = CSEB.buildICmp(CmpInst::Predicate::ICMP_EQ, s1, One, One);
+    EXPECT_TRUE(I->getOpcode() == TargetOpcode::G_CONSTANT);
+    EXPECT_TRUE(I->getOperand(1).getCImm()->getZExtValue());
+  }
+
+  // ICMP_NE
+  {
+    auto I = CSEB.buildICmp(CmpInst::Predicate::ICMP_NE, s1, One, Two);
+    EXPECT_TRUE(I->getOpcode() == TargetOpcode::G_CONSTANT);
+    EXPECT_TRUE(I->getOperand(1).getCImm()->getZExtValue());
+  }
+
+  // ICMP_UGT
+  {
+    auto I = CSEB.buildICmp(CmpInst::Predicate::ICMP_UGT, s1, Two, One);
+    EXPECT_TRUE(I->getOpcode() == TargetOpcode::G_CONSTANT);
+    EXPECT_TRUE(I->getOperand(1).getCImm()->getZExtValue());
+  }
+
+  // ICMP_UGE
+  {
+    auto I = CSEB.buildICmp(CmpInst::Predicate::ICMP_UGE, s1, One, One);
+    EXPECT_TRUE(I->getOpcode() == TargetOpcode::G_CONSTANT);
+    EXPECT_TRUE(I->getOperand(1).getCImm()->getZExtValue());
+  }
+
+  // ICMP_ULT
+  {
+    auto I = CSEB.buildICmp(CmpInst::Predicate::ICMP_ULT, s1, One, Two);
+    EXPECT_TRUE(I->getOpcode() == TargetOpcode::G_CONSTANT);
+    EXPECT_TRUE(I->getOperand(1).getCImm()->getZExtValue());
+  }
+
+  // ICMP_ULE
+  {
+    auto I = CSEB.buildICmp(CmpInst::Predicate::ICMP_ULE, s1, Two, Two);
+    EXPECT_TRUE(I->getOpcode() == TargetOpcode::G_CONSTANT);
+    EXPECT_TRUE(I->getOperand(1).getCImm()->getZExtValue());
+  }
+
+  // ICMP_SGT
+  {
+    auto I =
+        CSEB.buildICmp(CmpInst::Predicate::ICMP_SGT, s1, MinusOne, MinusTwo);
+    EXPECT_TRUE(I->getOpcode() == TargetOpcode::G_CONSTANT);
+    EXPECT_TRUE(I->getOperand(1).getCImm()->getZExtValue());
+  }
+
+  // ICMP_SGE
+  {
+    auto I =
+        CSEB.buildICmp(CmpInst::Predicate::ICMP_SGE, s1, MinusOne, MinusOne);
+    EXPECT_TRUE(I->getOpcode() == TargetOpcode::G_CONSTANT);
+    EXPECT_TRUE(I->getOperand(1).getCImm()->getZExtValue());
+  }
+
+  // ICMP_SLT
+  {
+    auto I =
+        CSEB.buildICmp(CmpInst::Predicate::ICMP_SLT, s1, MinusTwo, MinusOne);
+    EXPECT_TRUE(I->getOpcode() == TargetOpcode::G_CONSTANT);
+    EXPECT_TRUE(I->getOperand(1).getCImm()->getZExtValue());
+  }
+
+  // ICMP_SLE
+  {
+    auto I =
+        CSEB.buildICmp(CmpInst::Predicate::ICMP_SLE, s1, MinusTwo, MinusOne);
+    EXPECT_TRUE(I->getOpcode() == TargetOpcode::G_CONSTANT);
+    EXPECT_TRUE(I->getOperand(1).getCImm()->getZExtValue());
+  }
+
+  LLT VecTy = LLT::fixed_vector(2, s32);
+  LLT DstTy = LLT::fixed_vector(2, s1);
+  auto Three = CSEB.buildConstant(s32, 3);
+  auto MinusThree = CSEB.buildConstant(s32, -3);
+  auto OneOne = CSEB.buildBuildVector(VecTy, {One.getReg(0), One.getReg(0)});
+  auto OneTwo = CSEB.buildBuildVector(VecTy, {One.getReg(0), Two.getReg(0)});
+  auto TwoThree =
+      CSEB.buildBuildVector(VecTy, {Two.getReg(0), Three.getReg(0)});
+  auto MinusOneOne =
+      CSEB.buildBuildVector(VecTy, {MinusOne.getReg(0), MinusOne.getReg(0)});
+  auto MinusOneTwo =
+      CSEB.buildBuildVector(VecTy, {MinusOne.getReg(0), MinusTwo.getReg(0)});
+  auto MinusTwoThree =
+      CSEB.buildBuildVector(VecTy, {MinusTwo.getReg(0), MinusThree.getReg(0)});
+
+  // ICMP_EQ
+  CSEB.buildICmp(CmpInst::Predicate::ICMP_EQ, DstTy, OneOne, OneOne);
+
+  // ICMP_NE
+  CSEB.buildICmp(CmpInst::Predicate::ICMP_NE, DstTy, OneOne, OneTwo);
+
+  // ICMP_UGT
+  CSEB.buildICmp(CmpInst::Predicate::ICMP_UGT, DstTy, TwoThree, OneTwo);
+
+  // ICMP_UGE
+  CSEB.buildICmp(CmpInst::Predicate::ICMP_UGE, DstTy, OneTwo, OneOne);
+
+  // ICMP_ULT
+  CSEB.buildICmp(CmpInst::Predicate::ICMP_ULT, DstTy, OneOne, OneTwo);
+
+  // ICMP_ULE
+  CSEB.buildICmp(CmpInst::Predicate::ICMP_ULE, DstTy, OneTwo, OneOne);
+
+  // ICMP_SGT
+  CSEB.buildICmp(CmpInst::Predicate::ICMP_SGT, DstTy, MinusOneTwo,
+                 MinusTwoThree);
+
+  // ICMP_SGE
+  CSEB.buildICmp(CmpInst::Predicate::ICMP_SGE, DstTy, MinusOneTwo, MinusOneOne);
+
+  // ICMP_SLT
+  CSEB.buildICmp(CmpInst::Predicate::ICMP_SLT, DstTy, MinusTwoThree,
+                 MinusOneTwo);
+
+  // ICMP_SLE
+  CSEB.buildICmp(CmpInst::Predicate::ICMP_SLE, DstTy, MinusOneTwo, MinusOneOne);
+
+  auto CheckStr = R"(
+  ; CHECK: [[One:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; CHECK: [[Two:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
+  ; CHECK: [[MinusOne:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+  ; CHECK: [[MinusTwo:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2
+  ; CHECK: [[True:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
+  ; CHECK: [[Three:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
+  ; CHECK: [[MinusThree:%[0-9]+]]:_(s32) = G_CONSTANT i32 -3
+  ; CHECK: {{%[0-9]+}}:_(<2 x s32>) = G_BUILD_VECTOR [[One]]:_(s32), [[One]]:_(s32)
+  ; CHECK: {{%[0-9]+}}:_(<2 x s32>) = G_BUILD_VECTOR [[One]]:_(s32), [[Two]]:_(s32)
+  ; CHECK: {{%[0-9]+}}:_(<2 x s32>) = G_BUILD_VECTOR [[Two]]:_(s32), [[Three]]:_(s32)
+  ; CHECK: {{%[0-9]+}}:_(<2 x s32>) = G_BUILD_VECTOR [[MinusOne]]:_(s32), [[MinusOne]]:_(s32)
+  ; CHECK: {{%[0-9]+}}:_(<2 x s32>) = G_BUILD_VECTOR [[MinusOne]]:_(s32), [[MinusTwo]]:_(s32)
+  ; CHECK: {{%[0-9]+}}:_(<2 x s32>) = G_BUILD_VECTOR [[MinusTwo]]:_(s32), [[MinusThree]]:_(s32)
+  ; CHECK: {{%[0-9]+}}:_(<2 x s1>) = G_BUILD_VECTOR [[True]]:_(s1), [[True]]:_(s1)
+  ; CHECK: [[False:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
+  ; CHECK: {{%[0-9]+}}:_(<2 x s1>) = G_BUILD_VECTOR [[False]]:_(s1), [[True]]:_(s1)
+  ; CHECK: {{%[0-9]+}}:_(<2 x s1>) = G_BUILD_VECTOR [[True]]:_(s1), [[True]]:_(s1)
+  ; CHECK: {{%[0-9]+}}:_(<2 x s1>) = G_BUILD_VECTOR [[True]]:_(s1), [[True]]:_(s1)
+  ; CHECK: {{%[0-9]+}}:_(<2 x s1>) = G_BUILD_VECTOR [[False]]:_(s1), [[True]]:_(s1)
+  ; CHECK: {{%[0-9]+}}:_(<2 x s1>) = G_BUILD_VECTOR [[True]]:_(s1), [[False]]:_(s1)
+  ; CHECK: {{%[0-9]+}}:_(<2 x s1>) = G_BUILD_VECTOR [[True]]:_(s1), [[True]]:_(s1)
+  ; CHECK: {{%[0-9]+}}:_(<2 x s1>) = G_BUILD_VECTOR [[True]]:_(s1), [[False]]:_(s1)
+  ; CHECK: {{%[0-9]+}}:_(<2 x s1>) = G_BUILD_VECTOR [[True]]:_(s1), [[True]]:_(s1)
+  ; CHECK: {{%[0-9]+}}:_(<2 x s1>) = G_BUILD_VECTOR [[True]]:_(s1), [[True]]:_(s1)
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
 } // namespace

@@ -16,15 +16,15 @@
 #include "CoroutineStmtBuilder.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/ScopeInfo.h"
-#include "clang/Sema/SemaInternal.h"
-#include "llvm/ADT/SmallSet.h"
 
 using namespace clang;
 using namespace sema;
@@ -339,33 +339,11 @@ static Expr *maybeTailCall(Sema &S, QualType RetType, Expr *E,
   // EvaluateBinaryTypeTrait(BTT_IsConvertible, ...) which is at the moment
   // a private function in SemaExprCXX.cpp
 
-  ExprResult AddressExpr = buildMemberCall(S, E, Loc, "address", std::nullopt);
+  ExprResult AddressExpr = buildMemberCall(S, E, Loc, "address", {});
   if (AddressExpr.isInvalid())
     return nullptr;
 
   Expr *JustAddress = AddressExpr.get();
-
-  // FIXME: Without optimizations, the temporary result from `await_suspend()`
-  // may be put on the coroutine frame since the coroutine frame constructor
-  // will think the temporary variable will escape from the
-  // `coroutine_handle<>::address()` call. This is problematic since the
-  // coroutine should be considered to be suspended after it enters
-  // `await_suspend` so it shouldn't access/update the coroutine frame after
-  // that.
-  //
-  // See https://github.com/llvm/llvm-project/issues/65054 for the report.
-  //
-  // The long term solution may wrap the whole logic about `await-suspend`
-  // into a standalone function. This is similar to the proposed solution
-  // in tryMarkAwaitSuspendNoInline. See the comments there for details.
-  //
-  // The short term solution here is to mark `coroutine_handle<>::address()`
-  // function as always-inline so that the coroutine frame constructor won't
-  // think the temporary result is escaped incorrectly.
-  if (auto *FD = cast<CallExpr>(JustAddress)->getDirectCallee())
-    if (!FD->hasAttr<AlwaysInlineAttr>() && !FD->hasAttr<NoInlineAttr>())
-      FD->addAttr(AlwaysInlineAttr::CreateImplicit(S.getASTContext(),
-                                                   FD->getLocation()));
 
   // Check that the type of AddressExpr is void*
   if (!JustAddress->getType().getTypePtr()->isVoidPointerType())
@@ -373,71 +351,9 @@ static Expr *maybeTailCall(Sema &S, QualType RetType, Expr *E,
            diag::warn_coroutine_handle_address_invalid_return_type)
         << JustAddress->getType();
 
-  // Clean up temporary objects so that they don't live across suspension points
-  // unnecessarily. We choose to clean up before the call to
-  // __builtin_coro_resume so that the cleanup code are not inserted in-between
-  // the resume call and return instruction, which would interfere with the
-  // musttail call contract.
-  JustAddress = S.MaybeCreateExprWithCleanups(JustAddress);
-  return S.BuildBuiltinCallExpr(Loc, Builtin::BI__builtin_coro_resume,
-                                JustAddress);
-}
-
-/// The await_suspend call performed by co_await is essentially asynchronous
-/// to the execution of the coroutine. Inlining it normally into an unsplit
-/// coroutine can cause miscompilation because the coroutine CFG misrepresents
-/// the true control flow of the program: things that happen in the
-/// await_suspend are not guaranteed to happen prior to the resumption of the
-/// coroutine, and things that happen after the resumption of the coroutine
-/// (including its exit and the potential deallocation of the coroutine frame)
-/// are not guaranteed to happen only after the end of await_suspend.
-///
-/// See https://github.com/llvm/llvm-project/issues/56301 and
-/// https://reviews.llvm.org/D157070 for the example and the full discussion.
-///
-/// The short-term solution to this problem is to mark the call as uninlinable.
-/// But we don't want to do this if the call is known to be trivial, which is
-/// very common.
-///
-/// The long-term solution may introduce patterns like:
-///
-///  call @llvm.coro.await_suspend(ptr %awaiter, ptr %handle,
-///                                ptr @awaitSuspendFn)
-///
-/// Then it is much easier to perform the safety analysis in the middle end.
-/// If it is safe to inline the call to awaitSuspend, we can replace it in the
-/// CoroEarly pass. Otherwise we could replace it in the CoroSplit pass.
-static void tryMarkAwaitSuspendNoInline(Sema &S, OpaqueValueExpr *Awaiter,
-                                        CallExpr *AwaitSuspend) {
-  // The method here to extract the awaiter decl is not precise.
-  // This is intentional. Since it is hard to perform the analysis in the
-  // frontend due to the complexity of C++'s type systems.
-  // And we prefer to perform such analysis in the middle end since it is
-  // easier to implement and more powerful.
-  CXXRecordDecl *AwaiterDecl =
-      Awaiter->getType().getNonReferenceType()->getAsCXXRecordDecl();
-
-  if (AwaiterDecl && AwaiterDecl->field_empty())
-    return;
-
-  FunctionDecl *FD = AwaitSuspend->getDirectCallee();
-
-  assert(FD);
-
-  // If the `await_suspend()` function is marked as `always_inline` explicitly,
-  // we should give the user the right to control the codegen.
-  if (FD->hasAttr<NoInlineAttr>() || FD->hasAttr<AlwaysInlineAttr>())
-    return;
-
-  // This is problematic if the user calls the await_suspend standalone. But on
-  // the on hand, it is not incorrect semantically since inlining is not part
-  // of the standard. On the other hand, it is relatively rare to call
-  // the await_suspend function standalone.
-  //
-  // And given we've already had the long-term plan, the current workaround
-  // looks relatively tolerant.
-  FD->addAttr(
-      NoInlineAttr::CreateImplicit(S.getASTContext(), FD->getLocation()));
+  // Clean up temporary objects, because the resulting expression
+  // will become the body of await_suspend wrapper.
+  return S.MaybeCreateExprWithCleanups(JustAddress);
 }
 
 /// Build calls to await_ready, await_suspend, and await_resume for a co_await
@@ -474,8 +390,8 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
     return Result.get();
   };
 
-  CallExpr *AwaitReady = cast_or_null<CallExpr>(
-      BuildSubExpr(ACT::ACT_Ready, "await_ready", std::nullopt));
+  CallExpr *AwaitReady =
+      cast_or_null<CallExpr>(BuildSubExpr(ACT::ACT_Ready, "await_ready", {}));
   if (!AwaitReady)
     return Calls;
   if (!AwaitReady->getType()->isDependentType()) {
@@ -511,10 +427,6 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
     //     type Z.
     QualType RetType = AwaitSuspend->getCallReturnType(S.Context);
 
-    // We need to mark await_suspend as noinline temporarily. See the comment
-    // of tryMarkAwaitSuspendNoInline for details.
-    tryMarkAwaitSuspendNoInline(S, Operand, AwaitSuspend);
-
     // Support for coroutine_handle returning await_suspend.
     if (Expr *TailCallSuspend =
             maybeTailCall(S, RetType, AwaitSuspend, Loc))
@@ -540,7 +452,7 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
     }
   }
 
-  BuildSubExpr(ACT::ACT_Resume, "await_resume", std::nullopt);
+  BuildSubExpr(ACT::ACT_Resume, "await_resume", {});
 
   // Make sure the awaiter object gets a chance to be cleaned up.
   S.Cleanup.setExprNeedsCleanups(true);
@@ -770,12 +682,32 @@ bool Sema::checkFinalSuspendNoThrow(const Stmt *FinalSuspend) {
   return ThrowingDecls.empty();
 }
 
+// [stmt.return.coroutine]p1:
+//   A coroutine shall not enclose a return statement ([stmt.return]).
+static void checkReturnStmtInCoroutine(Sema &S, FunctionScopeInfo *FSI) {
+  assert(FSI && "FunctionScopeInfo is null");
+  assert(FSI->FirstCoroutineStmtLoc.isValid() &&
+         "first coroutine location not set");
+  if (FSI->FirstReturnLoc.isInvalid())
+    return;
+  S.Diag(FSI->FirstReturnLoc, diag::err_return_in_coroutine);
+  S.Diag(FSI->FirstCoroutineStmtLoc, diag::note_declared_coroutine_here)
+      << FSI->getFirstCoroutineStmtKeyword();
+}
+
 bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
                                    StringRef Keyword) {
+  // Ignore previous expr evaluation contexts.
+  EnterExpressionEvaluationContext PotentiallyEvaluated(
+      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
   if (!checkCoroutineContext(*this, KWLoc, Keyword))
     return false;
   auto *ScopeInfo = getCurFunction();
   assert(ScopeInfo->CoroutinePromise);
+
+  // Avoid duplicate errors, report only on first keyword.
+  if (ScopeInfo->FirstCoroutineStmtLoc == KWLoc)
+    checkReturnStmtInCoroutine(*this, ScopeInfo);
 
   // If we have existing coroutine statements then we have already built
   // the initial and final suspend points.
@@ -788,8 +720,8 @@ bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
   SourceLocation Loc = Fn->getLocation();
   // Build the initial suspend point
   auto buildSuspends = [&](StringRef Name) mutable -> StmtResult {
-    ExprResult Operand = buildPromiseCall(*this, ScopeInfo->CoroutinePromise,
-                                          Loc, Name, std::nullopt);
+    ExprResult Operand =
+        buildPromiseCall(*this, ScopeInfo->CoroutinePromise, Loc, Name, {});
     if (Operand.isInvalid())
       return StmtError();
     ExprResult Suspend =
@@ -884,6 +816,7 @@ ExprResult Sema::ActOnCoawaitExpr(Scope *S, SourceLocation Loc, Expr *E) {
     if (R.isInvalid()) return ExprError();
     E = R.get();
   }
+
   ExprResult Lookup = BuildOperatorCoawaitLookupExpr(S, Loc);
   if (Lookup.isInvalid())
     return ExprError();
@@ -900,15 +833,42 @@ ExprResult Sema::BuildOperatorCoawaitLookupExpr(Scope *S, SourceLocation Loc) {
 
   assert(!Operators.isAmbiguous() && "Operator lookup cannot be ambiguous");
   const auto &Functions = Operators.asUnresolvedSet();
-  bool IsOverloaded =
-      Functions.size() > 1 ||
-      (Functions.size() == 1 && isa<FunctionTemplateDecl>(*Functions.begin()));
   Expr *CoawaitOp = UnresolvedLookupExpr::Create(
       Context, /*NamingClass*/ nullptr, NestedNameSpecifierLoc(),
-      DeclarationNameInfo(OpName, Loc), /*RequiresADL*/ true, IsOverloaded,
-      Functions.begin(), Functions.end());
+      DeclarationNameInfo(OpName, Loc), /*RequiresADL*/ true, Functions.begin(),
+      Functions.end(), /*KnownDependent=*/false,
+      /*KnownInstantiationDependent=*/false);
   assert(CoawaitOp);
   return CoawaitOp;
+}
+
+static bool isAttributedCoroAwaitElidable(const QualType &QT) {
+  auto *Record = QT->getAsCXXRecordDecl();
+  return Record && Record->hasAttr<CoroAwaitElidableAttr>();
+}
+
+static void applySafeElideContext(Expr *Operand) {
+  auto *Call = dyn_cast<CallExpr>(Operand->IgnoreImplicit());
+  if (!Call || !Call->isPRValue())
+    return;
+
+  if (!isAttributedCoroAwaitElidable(Call->getType()))
+    return;
+
+  Call->setCoroElideSafe();
+
+  // Check parameter
+  auto *Fn = llvm::dyn_cast_if_present<FunctionDecl>(Call->getCalleeDecl());
+  if (!Fn)
+    return;
+
+  size_t ParmIdx = 0;
+  for (ParmVarDecl *PD : Fn->parameters()) {
+    if (PD->hasAttr<CoroAwaitElidableArgumentAttr>())
+      applySafeElideContext(Call->getArg(ParmIdx));
+
+    ParmIdx++;
+  }
 }
 
 // Attempts to resolve and build a CoawaitExpr from "raw" inputs, bailing out to
@@ -934,7 +894,14 @@ ExprResult Sema::BuildUnresolvedCoawaitExpr(SourceLocation Loc, Expr *Operand,
   }
 
   auto *RD = Promise->getType()->getAsCXXRecordDecl();
-  auto *Transformed = Operand;
+
+  bool CurFnAwaitElidable = isAttributedCoroAwaitElidable(
+      getCurFunctionDecl(/*AllowLambda=*/true)->getReturnType());
+
+  if (CurFnAwaitElidable)
+    applySafeElideContext(Operand);
+
+  Expr *Transformed = Operand;
   if (lookupMember(*this, "await_transform", RD, Loc)) {
     ExprResult R =
         buildPromiseCall(*this, Promise, Loc, "await_transform", Operand);
@@ -1080,7 +1047,7 @@ StmtResult Sema::BuildCoreturnStmt(SourceLocation Loc, Expr *E,
     PC = buildPromiseCall(*this, Promise, Loc, "return_value", E);
   } else {
     E = MakeFullDiscardedValueExpr(E).get();
-    PC = buildPromiseCall(*this, Promise, Loc, "return_void", std::nullopt);
+    PC = buildPromiseCall(*this, Promise, Loc, "return_void", {});
   }
   if (PC.isInvalid())
     return StmtError();
@@ -1203,16 +1170,6 @@ void Sema::CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body) {
   // diagnose if we've seen a VLA in the body of this function.
   if (Fn->FirstVLALoc.isValid())
     Diag(Fn->FirstVLALoc, diag::err_vla_in_coroutine_unsupported);
-
-  // [stmt.return.coroutine]p1:
-  //   A coroutine shall not enclose a return statement ([stmt.return]).
-  if (Fn->FirstReturnLoc.isValid()) {
-    assert(Fn->FirstCoroutineStmtLoc.isValid() &&
-                   "first coroutine location not set");
-    Diag(Fn->FirstReturnLoc, diag::err_return_in_coroutine);
-    Diag(Fn->FirstCoroutineStmtLoc, diag::note_declared_coroutine_here)
-            << Fn->getFirstCoroutineStmtKeyword();
-  }
 
   // Coroutines will get splitted into pieces. The GNU address of label
   // extension wouldn't be meaningful in coroutines.
@@ -1743,7 +1700,7 @@ bool CoroutineStmtBuilder::makeOnFallthrough() {
       return false;
   } else if (HasRVoid) {
     Fallthrough = S.BuildCoreturnStmt(FD.getLocation(), nullptr,
-                                      /*IsImplicit*/false);
+                                      /*IsImplicit=*/true);
     Fallthrough = S.ActOnFinishFullStmt(Fallthrough.get());
     if (Fallthrough.isInvalid())
       return false;
@@ -1776,8 +1733,8 @@ bool CoroutineStmtBuilder::makeOnException() {
   if (!S.getLangOpts().CXXExceptions)
     return true;
 
-  ExprResult UnhandledException = buildPromiseCall(
-      S, Fn.CoroutinePromise, Loc, "unhandled_exception", std::nullopt);
+  ExprResult UnhandledException =
+      buildPromiseCall(S, Fn.CoroutinePromise, Loc, "unhandled_exception", {});
   UnhandledException = S.ActOnFinishFullExpr(UnhandledException.get(), Loc,
                                              /*DiscardedValue*/ false);
   if (UnhandledException.isInvalid())
@@ -1800,8 +1757,8 @@ bool CoroutineStmtBuilder::makeReturnObject() {
   // [dcl.fct.def.coroutine]p7
   // The expression promise.get_return_object() is used to initialize the
   // returned reference or prvalue result object of a call to a coroutine.
-  ExprResult ReturnObject = buildPromiseCall(S, Fn.CoroutinePromise, Loc,
-                                             "get_return_object", std::nullopt);
+  ExprResult ReturnObject =
+      buildPromiseCall(S, Fn.CoroutinePromise, Loc, "get_return_object", {});
   if (ReturnObject.isInvalid())
     return false;
 

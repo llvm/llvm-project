@@ -31,7 +31,7 @@ using namespace llvm;
 // pointer register.  This is true if frame pointer elimination is
 // disabled, if it needs dynamic stack realignment, if the function has
 // variable sized allocas, or if the frame address is taken.
-bool LoongArchFrameLowering::hasFP(const MachineFunction &MF) const {
+bool LoongArchFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -149,7 +149,8 @@ void LoongArchFrameLowering::processFunctionBeforeFrameFinalized(
 
   unsigned ScavSlotsNum = 0;
 
-  // Far branches beyond 27-bit offset require a spill slot for scratch register.
+  // Far branches beyond 27-bit offset require a spill slot for scratch
+  // register.
   bool IsLargeFunction = !isInt<27>(estimateFunctionSizeInBytes(TII, MF));
   if (IsLargeFunction)
     ScavSlotsNum = 1;
@@ -206,22 +207,19 @@ void LoongArchFrameLowering::emitPrologue(MachineFunction &MF,
   if (StackSize == 0 && !MFI.adjustsStack())
     return;
 
-  uint64_t FirstSPAdjustAmount = getFirstSPAdjustAmount(MF, true);
-  uint64_t SecondSPAdjustAmount = RealStackSize - FirstSPAdjustAmount;
+  uint64_t FirstSPAdjustAmount = getFirstSPAdjustAmount(MF);
   // Split the SP adjustment to reduce the offsets of callee saved spill.
   if (FirstSPAdjustAmount)
     StackSize = FirstSPAdjustAmount;
 
   // Adjust stack.
   adjustReg(MBB, MBBI, DL, SPReg, SPReg, -StackSize, MachineInstr::FrameSetup);
-  if (FirstSPAdjustAmount != 2048 || SecondSPAdjustAmount == 0) {
-    // Emit ".cfi_def_cfa_offset StackSize".
-    unsigned CFIIndex =
-        MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, StackSize));
-    BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex)
-        .setMIFlag(MachineInstr::FrameSetup);
-  }
+  // Emit ".cfi_def_cfa_offset StackSize".
+  unsigned CFIIndex =
+      MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, StackSize));
+  BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+      .addCFIIndex(CFIIndex)
+      .setMIFlag(MachineInstr::FrameSetup);
 
   const auto &CSI = MFI.getCalleeSavedInfo();
 
@@ -258,25 +256,14 @@ void LoongArchFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   // Emit the second SP adjustment after saving callee saved registers.
-  if (FirstSPAdjustAmount && SecondSPAdjustAmount) {
-    if (hasFP(MF)) {
-      assert(SecondSPAdjustAmount > 0 &&
-             "SecondSPAdjustAmount should be greater than zero");
-      adjustReg(MBB, MBBI, DL, SPReg, SPReg, -SecondSPAdjustAmount,
-                MachineInstr::FrameSetup);
-    } else {
-      // FIXME: RegScavenger will place the spill instruction before the
-      // prologue if a VReg is created in the prologue. This will pollute the
-      // caller's stack data. Therefore, until there is better way, we just use
-      // the `addi.w/d` instruction for stack adjustment to ensure that VReg
-      // will not be created.
-      for (int Val = SecondSPAdjustAmount; Val > 0; Val -= 2048)
-        BuildMI(MBB, MBBI, DL,
-                TII->get(IsLA64 ? LoongArch::ADDI_D : LoongArch::ADDI_W), SPReg)
-            .addReg(SPReg)
-            .addImm(Val < 2048 ? -Val : -2048)
-            .setMIFlag(MachineInstr::FrameSetup);
+  if (FirstSPAdjustAmount) {
+    uint64_t SecondSPAdjustAmount = RealStackSize - FirstSPAdjustAmount;
+    assert(SecondSPAdjustAmount > 0 &&
+           "SecondSPAdjustAmount should be greater than zero");
+    adjustReg(MBB, MBBI, DL, SPReg, SPReg, -SecondSPAdjustAmount,
+              MachineInstr::FrameSetup);
 
+    if (!hasFP(MF)) {
       // If we are using a frame-pointer, and thus emitted ".cfi_def_cfa fp, 0",
       // don't emit an sp-based .cfi_def_cfa_offset
       // Emit ".cfi_def_cfa_offset RealStackSize"
@@ -369,27 +356,20 @@ void LoongArchFrameLowering::emitEpilogue(MachineFunction &MF,
 //   st.d    $ra, $sp,  2024
 //   st.d    $fp, $sp,  2016
 //   addi.d  $sp, $sp,   -16
-uint64_t
-LoongArchFrameLowering::getFirstSPAdjustAmount(const MachineFunction &MF,
-                                               bool IsPrologue) const {
+uint64_t LoongArchFrameLowering::getFirstSPAdjustAmount(
+    const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
 
   // Return the FirstSPAdjustAmount if the StackSize can not fit in a signed
   // 12-bit and there exists a callee-saved register needing to be pushed.
-  if (!isInt<12>(MFI.getStackSize())) {
+  if (!isInt<12>(MFI.getStackSize()) && (CSI.size() > 0)) {
     // FirstSPAdjustAmount is chosen as (2048 - StackAlign) because 2048 will
     // cause sp = sp + 2048 in the epilogue to be split into multiple
     // instructions. Offsets smaller than 2048 can fit in a single load/store
     // instruction, and we have to stick with the stack alignment.
     // So (2048 - StackAlign) will satisfy the stack alignment.
-    //
-    // FIXME: This place may seem odd. When using multiple ADDI instructions to
-    // adjust the stack in Prologue, and there are no callee-saved registers, we
-    // can take advantage of the logic of split sp ajustment to reduce code
-    // changes.
-    return CSI.size() > 0 ? 2048 - getStackAlign().value()
-                          : (IsPrologue ? 2048 : 0);
+    return 2048 - getStackAlign().value();
   }
   return 0;
 }

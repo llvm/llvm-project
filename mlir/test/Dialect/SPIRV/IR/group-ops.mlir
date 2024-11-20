@@ -80,16 +80,16 @@ func.func @subgroup_ballot(%predicate: i1) -> vector<4xi32> {
 //===----------------------------------------------------------------------===//
 
 func.func @subgroup_block_read_intel(%ptr : !spirv.ptr<i32, StorageBuffer>) -> i32 {
-  // CHECK: spirv.INTEL.SubgroupBlockRead %{{.*}} : i32
-  %0 = spirv.INTEL.SubgroupBlockRead "StorageBuffer" %ptr : i32
+  // CHECK: spirv.INTEL.SubgroupBlockRead %{{.*}} : !spirv.ptr<i32, StorageBuffer> -> i32
+  %0 = spirv.INTEL.SubgroupBlockRead %ptr : !spirv.ptr<i32, StorageBuffer> -> i32
   return %0: i32
 }
 
 // -----
 
 func.func @subgroup_block_read_intel_vector(%ptr : !spirv.ptr<i32, StorageBuffer>) -> vector<3xi32> {
-  // CHECK: spirv.INTEL.SubgroupBlockRead %{{.*}} : vector<3xi32>
-  %0 = spirv.INTEL.SubgroupBlockRead "StorageBuffer" %ptr : vector<3xi32>
+  // CHECK: spirv.INTEL.SubgroupBlockRead %{{.*}} : !spirv.ptr<i32, StorageBuffer> -> vector<3xi32>
+  %0 = spirv.INTEL.SubgroupBlockRead %ptr : !spirv.ptr<i32, StorageBuffer> -> vector<3xi32>
   return %0: vector<3xi32>
 }
 

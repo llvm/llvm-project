@@ -3,6 +3,8 @@
 
 ; Test case reported on D134605 where the vectorization was causing a slowdown due to an underestimation in the cost of the extractions.
 
+; NOTE: cost of shuffle <4 x float>,  <4 x float>, <2 x i32> <i32 2, i32 5> is 12!
+
 define fastcc i64 @zot(float %arg, float %arg1, float %arg2, float %arg3, float %arg4, ptr %arg5, i1 %arg6, i1 %arg7, i1 %arg8) {
 ; CHECK-LABEL: @zot(
 ; CHECK-NEXT:  bb:

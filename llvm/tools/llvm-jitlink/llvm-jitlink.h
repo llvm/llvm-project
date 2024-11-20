@@ -15,8 +15,11 @@
 
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/EPCIndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/LazyObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/RedirectionManager.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
 #include "llvm/ExecutionEngine/RuntimeDyldChecker.h"
 #include "llvm/Support/Error.h"
@@ -25,15 +28,34 @@
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 
-#include <vector>
-
 namespace llvm {
 
 struct Session {
 
+  struct LazyLinkingSupport {
+    LazyLinkingSupport(std::unique_ptr<orc::EPCIndirectionUtils> EPCIU,
+                       std::unique_ptr<orc::RedirectableSymbolManager> RSMgr,
+                       orc::ObjectLinkingLayer &ObjLinkingLayer)
+        : EPCIU(std::move(EPCIU)), RSMgr(std::move(RSMgr)),
+          LazyObjLinkingLayer(ObjLinkingLayer,
+                              this->EPCIU->getLazyCallThroughManager(),
+                              *this->RSMgr) {}
+    ~LazyLinkingSupport() {
+      if (auto Err = EPCIU->cleanup())
+        LazyObjLinkingLayer.getExecutionSession().reportError(std::move(Err));
+    }
+
+    std::unique_ptr<orc::EPCIndirectionUtils> EPCIU;
+    std::unique_ptr<orc::RedirectableSymbolManager> RSMgr;
+    orc::LazyObjectLinkingLayer LazyObjLinkingLayer;
+  };
+
   orc::ExecutionSession ES;
   orc::JITDylib *MainJD = nullptr;
+  orc::JITDylib *ProcessSymsJD = nullptr;
+  orc::JITDylib *PlatformJD = nullptr;
   orc::ObjectLinkingLayer ObjLayer;
+  std::unique_ptr<LazyLinkingSupport> LazyLinking;
   orc::JITDylibSearchOrder JDSearchOrder;
   SubtargetFeatures Features;
 
@@ -42,29 +64,50 @@ struct Session {
   static Expected<std::unique_ptr<Session>> Create(Triple TT,
                                                    SubtargetFeatures Features);
   void dumpSessionInfo(raw_ostream &OS);
-  void modifyPassConfig(const Triple &FTT,
+  void modifyPassConfig(jitlink::LinkGraph &G,
                         jitlink::PassConfiguration &PassConfig);
 
   using MemoryRegionInfo = RuntimeDyldChecker::MemoryRegionInfo;
 
   struct FileInfo {
     StringMap<MemoryRegionInfo> SectionInfos;
-    StringMap<MemoryRegionInfo> StubInfos;
+    StringMap<SmallVector<MemoryRegionInfo, 1>> StubInfos;
     StringMap<MemoryRegionInfo> GOTEntryInfos;
+
+    using Symbol = jitlink::Symbol;
+    using LinkGraph = jitlink::LinkGraph;
+    using GetSymbolTargetFunction =
+        unique_function<Expected<Symbol &>(LinkGraph &G, jitlink::Block &)>;
+
+    Error registerGOTEntry(LinkGraph &G, Symbol &Sym,
+                           GetSymbolTargetFunction GetSymbolTarget);
+    Error registerStubEntry(LinkGraph &G, Symbol &Sym,
+                            GetSymbolTargetFunction GetSymbolTarget);
+    Error registerMultiStubEntry(LinkGraph &G, Symbol &Sym,
+                                 GetSymbolTargetFunction GetSymbolTarget);
   };
 
-  using DynLibJDMap = std::map<std::string, orc::JITDylib *>;
+  using DynLibJDMap = std::map<std::string, orc::JITDylib *, std::less<>>;
   using SymbolInfoMap = StringMap<MemoryRegionInfo>;
   using FileInfoMap = StringMap<FileInfo>;
 
   Expected<orc::JITDylib *> getOrLoadDynamicLibrary(StringRef LibPath);
   Error loadAndLinkDynamicLibrary(orc::JITDylib &JD, StringRef LibPath);
 
+  orc::ObjectLayer &getLinkLayer(bool Lazy) {
+    assert((!Lazy || LazyLinking) &&
+           "Lazy linking requested but not available");
+    return Lazy ? static_cast<orc::ObjectLayer &>(
+                      LazyLinking->LazyObjLinkingLayer)
+                : static_cast<orc::ObjectLayer &>(ObjLayer);
+  }
+
   Expected<FileInfo &> findFileInfo(StringRef FileName);
   Expected<MemoryRegionInfo &> findSectionInfo(StringRef FileName,
                                                StringRef SectionName);
   Expected<MemoryRegionInfo &> findStubInfo(StringRef FileName,
-                                            StringRef TargetName);
+                                            StringRef TargetName,
+                                            StringRef KindNameFilter);
   Expected<MemoryRegionInfo &> findGOTEntryInfo(StringRef FileName,
                                                 StringRef TargetName);
 

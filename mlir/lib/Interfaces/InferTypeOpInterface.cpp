@@ -240,10 +240,24 @@ LogicalResult mlir::detail::verifyInferredResultTypes(Operation *op) {
   auto retTypeFn = cast<InferTypeOpInterface>(op);
   auto result = retTypeFn.refineReturnTypes(
       op->getContext(), op->getLoc(), op->getOperands(),
-      op->getDiscardableAttrDictionary(), op->getPropertiesStorage(),
-      op->getRegions(), inferredReturnTypes);
+      op->getRawDictionaryAttrs(), op->getPropertiesStorage(), op->getRegions(),
+      inferredReturnTypes);
   if (failed(result))
     op->emitOpError() << "failed to infer returned types";
 
   return result;
+}
+
+void mlir::detail::reportFatalInferReturnTypesError(OperationState &state) {
+  std::string buffer;
+  llvm::raw_string_ostream os(buffer);
+  os << "Failed to infer result type(s):\n";
+  os << "\"" << state.name << "\"(...) ";
+  os << state.attributes.getDictionary(state.location.getContext());
+  os << " : (";
+  llvm::interleaveComma(state.operands, os,
+                        [&](Value val) { os << val.getType(); });
+  os << ") -> ( ??? )";
+  emitRemark(state.location, "location of op");
+  llvm::report_fatal_error(llvm::StringRef(buffer));
 }

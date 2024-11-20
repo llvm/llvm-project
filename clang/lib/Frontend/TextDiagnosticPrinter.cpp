@@ -36,7 +36,7 @@ TextDiagnosticPrinter::~TextDiagnosticPrinter() {
 void TextDiagnosticPrinter::BeginSourceFile(const LangOptions &LO,
                                             const Preprocessor *PP) {
   // Build the TextDiagnostic utility.
-  TextDiag.reset(new TextDiagnostic(OS, LO, &*DiagOpts));
+  TextDiag.reset(new TextDiagnostic(OS, LO, &*DiagOpts, PP));
 }
 
 void TextDiagnosticPrinter::EndSourceFile() {
@@ -80,7 +80,7 @@ static void printDiagnosticOptions(raw_ostream &OS,
     if (!Opt.empty()) {
       OS << (Started ? "," : " [")
          << (Level == DiagnosticsEngine::Remark ? "-R" : "-W") << Opt;
-      StringRef OptValue = Info.getDiags()->getFlagValue();
+      StringRef OptValue = Info.getFlagValue();
       if (!OptValue.empty())
         OS << "=" << OptValue;
       Started = true;

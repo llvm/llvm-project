@@ -38,15 +38,12 @@ extern "C" {
 /// This is the "swiss army knife" method for materializing sparse
 /// tensors into the computation.  The types of the `ptr` argument and
 /// the result depend on the action, as explained in the following table,
-/// where "STS" means a sparse-tensor-storage object and "COO" means
-/// a coordinate-scheme object.
+/// where "STS" means a sparse-tensor-storage object.
 ///
 /// Action:         `ptr`:          Returns:
+/// ---------------------------------------------------------------------------
 /// kEmpty          -               STS, empty
-/// kEmptyForward   -               STS, empty, with forwarding COO
-/// kFromCOO        COO             STS, copied from the COO source
 /// kFromReader     reader          STS, input from reader
-/// kToCOO          STS             COO, copied from the STS source
 /// kPack           buffers         STS, from level buffers
 /// kSortCOOInPlace STS             STS, sorted in place
 MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_newSparseTensor( // NOLINT
@@ -80,13 +77,13 @@ MLIR_SPARSETENSOR_FOREVERY_O(DECL_SPARSEPOSITIONS)
 MLIR_SPARSETENSOR_FOREVERY_O(DECL_SPARSECOORDINATES)
 #undef DECL_SPARSECOORDINATES
 
-/// Tensor-storage method for a dim to lvl forwarding insertion.
-#define DECL_FORWARDINGINSERT(VNAME, V)                                        \
-  MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_forwardingInsert##VNAME(          \
-      void *tensor, StridedMemRefType<V, 0> *vref,                             \
-      StridedMemRefType<index_type, 1> *dimCoordsRef);                         \
-  MLIR_SPARSETENSOR_FOREVERY_V(DECL_FORWARDINGINSERT)
-#undef DECL_FORWARDINGINSERT
+/// Tensor-storage method to obtain direct access to the coordinates array
+/// buffer for the given level (provides an AoS view into the library).
+#define DECL_SPARSECOORDINATES(CNAME, C)                                       \
+  MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_sparseCoordinatesBuffer##CNAME(   \
+      StridedMemRefType<C, 1> *out, void *tensor, index_type lvl);
+MLIR_SPARSETENSOR_FOREVERY_O(DECL_SPARSECOORDINATES)
+#undef DECL_SPARSECOORDINATES
 
 /// Tensor-storage method to insert elements in lexicographical
 /// level-coordinate order.
@@ -160,20 +157,11 @@ MLIR_CRUNNERUTILS_EXPORT index_type sparseLvlSize(void *tensor, index_type l);
 /// Tensor-storage method to get the size of the given dimension.
 MLIR_CRUNNERUTILS_EXPORT index_type sparseDimSize(void *tensor, index_type d);
 
-/// Tensor-storage method to finalize forwarding insertions.
-MLIR_CRUNNERUTILS_EXPORT void endForwardingInsert(void *tensor);
-
 /// Tensor-storage method to finalize lexicographic insertions.
 MLIR_CRUNNERUTILS_EXPORT void endLexInsert(void *tensor);
 
 /// Releases the memory for the tensor-storage object.
 MLIR_CRUNNERUTILS_EXPORT void delSparseTensor(void *tensor);
-
-/// Releases the memory for the coordinate-scheme object.
-#define DECL_DELCOO(VNAME, V)                                                  \
-  MLIR_CRUNNERUTILS_EXPORT void delSparseTensorCOO##VNAME(void *coo);
-MLIR_SPARSETENSOR_FOREVERY_V(DECL_DELCOO)
-#undef DECL_DELCOO
 
 /// Helper function to read a sparse tensor filename from the environment,
 /// defined with the naming convention ${TENSOR0}, ${TENSOR1}, etc.

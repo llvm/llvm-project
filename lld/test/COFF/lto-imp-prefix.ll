@@ -8,13 +8,9 @@
 
 ; RUN: lld-link /entry:entry %t.main.obj %t.other1.obj /out:%t1.exe /subsystem:console /debug:symtab
 
-;; The current implementation for handling __imp_ symbols retains all of them.
-;; Observe that this currently produces __imp_unusedFunc even if nothing
-;; references unusedFunc in any form.
-
+;; Check that we don't retain __imp_ prefixed symbols we don't need.
 ; RUN: llvm-nm %t1.exe | FileCheck %s
-
-; CHECK: __imp_unusedFunc
+; CHECK-NOT: __imp_unusedFunc
 
 ; RUN: lld-link /entry:entry %t.main.obj %t.other2.obj /out:%t2.exe /subsystem:console
 

@@ -190,7 +190,12 @@ struct IsActuallyConstantHelper {
   bool operator()(const StructureConstructor &x) {
     for (const auto &pair : x) {
       const Expr<SomeType> &y{pair.second.value()};
-      if (!(*this)(y) && !IsNullPointer(y)) {
+      const auto sym{pair.first};
+      const bool compIsConstant{(*this)(y)};
+      // If an allocatable component is initialized by a constant,
+      // the structure constructor is not a constant.
+      if ((!compIsConstant && !IsNullPointer(y)) ||
+          (compIsConstant && IsAllocatable(sym))) {
         return false;
       }
     }
@@ -245,6 +250,8 @@ public:
         }
       }
       return false;
+    } else if (!CheckVarOrComponent(ultimate)) {
+      return false;
     } else if (!ultimate.attrs().test(semantics::Attr::TARGET)) {
       if (messages_) {
         messages_->Say(
@@ -262,7 +269,7 @@ public:
       }
       return false;
     } else {
-      return CheckVarOrComponent(ultimate);
+      return true;
     }
   }
   bool operator()(const StaticDataObject &) const { return false; }
@@ -313,24 +320,23 @@ public:
 private:
   bool CheckVarOrComponent(const semantics::Symbol &symbol) {
     const Symbol &ultimate{symbol.GetUltimate()};
-    if (IsAllocatable(ultimate)) {
-      if (messages_) {
-        messages_->Say(
-            "An initial data target may not be a reference to an ALLOCATABLE '%s'"_err_en_US,
-            ultimate.name());
-        emittedMessage_ = true;
-      }
-      return false;
-    } else if (ultimate.Corank() > 0) {
-      if (messages_) {
-        messages_->Say(
-            "An initial data target may not be a reference to a coarray '%s'"_err_en_US,
-            ultimate.name());
-        emittedMessage_ = true;
-      }
-      return false;
+    const char *unacceptable{nullptr};
+    if (ultimate.Corank() > 0) {
+      unacceptable = "a coarray";
+    } else if (IsAllocatable(ultimate)) {
+      unacceptable = "an ALLOCATABLE";
+    } else if (IsPointer(ultimate)) {
+      unacceptable = "a POINTER";
+    } else {
+      return true;
     }
-    return true;
+    if (messages_) {
+      messages_->Say(
+          "An initial data target may not be a reference to %s '%s'"_err_en_US,
+          unacceptable, ultimate.name());
+      emittedMessage_ = true;
+    }
+    return false;
   }
 
   parser::ContextualMessages *messages_;
@@ -352,10 +358,14 @@ bool IsInitialProcedureTarget(const semantics::Symbol &symbol) {
   const auto &ultimate{symbol.GetUltimate()};
   return common::visit(
       common::visitors{
-          [](const semantics::SubprogramDetails &subp) {
-            return !subp.isDummy();
+          [&](const semantics::SubprogramDetails &subp) {
+            return !subp.isDummy() && !subp.stmtFunction() &&
+                symbol.owner().kind() != semantics::Scope::Kind::MainProgram &&
+                symbol.owner().kind() != semantics::Scope::Kind::Subprogram;
           },
-          [](const semantics::SubprogramNameDetails &) { return true; },
+          [](const semantics::SubprogramNameDetails &x) {
+            return x.kind() != semantics::SubprogramKind::Internal;
+          },
           [&](const semantics::ProcEntityDetails &proc) {
             return !semantics::IsPointer(ultimate) && !proc.isDummy();
           },
@@ -402,6 +412,7 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
           symbol.owner().context().ShouldWarn(
               common::LanguageFeature::LogicalIntegerAssignment)) {
         context.messages().Say(
+            common::LanguageFeature::LogicalIntegerAssignment,
             "nonstandard usage: initialization of %s with %s"_port_en_US,
             symTS->type().AsFortran(), x.GetType().value().AsFortran());
       }
@@ -409,7 +420,7 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
     if (converted) {
       auto folded{Fold(context, std::move(*converted))};
       if (IsActuallyConstant(folded)) {
-        int symRank{GetRank(symTS->shape())};
+        int symRank{symTS->Rank()};
         if (IsImpliedShape(symbol)) {
           if (folded.Rank() == symRank) {
             return ArrayConstantBoundChanger{
@@ -432,7 +443,8 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
                     context, GetRawLowerBounds(context, NamedEntity{symbol}))}
                 .Expand(std::move(folded));
           } else if (auto resultShape{GetShape(context, folded)}) {
-            if (CheckConformance(context.messages(), symTS->shape(),
+            CHECK(symTS->shape()); // Assumed-ranks cannot be initialized.
+            if (CheckConformance(context.messages(), *symTS->shape(),
                     *resultShape, CheckConformanceFlags::None,
                     "initialized object", "initialization expression")
                     .value_or(false /*fail if not known now to conform*/)) {
@@ -468,13 +480,21 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
           return {std::move(folded)};
         }
       } else if (IsNamedConstant(symbol)) {
+        if (symbol.name() == "numeric_storage_size" &&
+            symbol.owner().IsModule() &&
+            DEREF(symbol.owner().symbol()).name() == "iso_fortran_env") {
+          // Very special case: numeric_storage_size is not folded until
+          // it read from the iso_fortran_env module file, as its value
+          // depends on compilation options.
+          return {std::move(folded)};
+        }
         context.messages().Say(
             "Value of named constant '%s' (%s) cannot be computed as a constant value"_err_en_US,
             symbol.name(), folded.AsFortran());
       } else {
         context.messages().Say(
             "Initialization expression for '%s' (%s) cannot be computed as a constant value"_err_en_US,
-            symbol.name(), folded.AsFortran());
+            symbol.name(), x.AsFortran());
       }
     } else if (xType) {
       context.messages().Say(
@@ -489,43 +509,6 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
   return std::nullopt;
 }
 
-static bool IsNonLocal(const semantics::Symbol &symbol) {
-  return semantics::IsDummy(symbol) || symbol.has<semantics::UseDetails>() ||
-      symbol.owner().kind() == semantics::Scope::Kind::Module ||
-      semantics::FindCommonBlockContaining(symbol) ||
-      symbol.has<semantics::HostAssocDetails>();
-}
-
-static bool IsPermissibleInquiry(const semantics::Symbol &firstSymbol,
-    const semantics::Symbol &lastSymbol, DescriptorInquiry::Field field,
-    const semantics::Scope &localScope) {
-  if (IsNonLocal(firstSymbol)) {
-    return true;
-  }
-  if (&localScope != &firstSymbol.owner()) {
-    return true;
-  }
-  // Inquiries on local objects may not access a deferred bound or length.
-  // (This code used to be a switch, but it proved impossible to write it
-  // thus without running afoul of bogus warnings from different C++
-  // compilers.)
-  if (field == DescriptorInquiry::Field::Rank) {
-    return true; // always known
-  }
-  const auto *object{lastSymbol.detailsIf<semantics::ObjectEntityDetails>()};
-  if (field == DescriptorInquiry::Field::LowerBound ||
-      field == DescriptorInquiry::Field::Extent ||
-      field == DescriptorInquiry::Field::Stride) {
-    return object && !object->shape().CanBeDeferredShape();
-  }
-  if (field == DescriptorInquiry::Field::Len) {
-    return object && object->type() &&
-        object->type()->category() == semantics::DeclTypeSpec::Character &&
-        !object->type()->characterTypeSpec().length().isDeferred();
-  }
-  return false;
-}
-
 // Specification expression validation (10.1.11(2), C1010)
 class CheckSpecificationExprHelper
     : public AnyTraverse<CheckSpecificationExprHelper,
@@ -533,15 +516,21 @@ class CheckSpecificationExprHelper
 public:
   using Result = std::optional<std::string>;
   using Base = AnyTraverse<CheckSpecificationExprHelper, Result>;
-  explicit CheckSpecificationExprHelper(
-      const semantics::Scope &s, FoldingContext &context)
-      : Base{*this}, scope_{s}, context_{context} {}
+  explicit CheckSpecificationExprHelper(const semantics::Scope &s,
+      FoldingContext &context, bool forElementalFunctionResult)
+      : Base{*this}, scope_{s}, context_{context},
+        forElementalFunctionResult_{forElementalFunctionResult} {}
   using Base::operator();
 
   Result operator()(const CoarrayRef &) const { return "coindexed reference"; }
 
   Result operator()(const semantics::Symbol &symbol) const {
     const auto &ultimate{symbol.GetUltimate()};
+    const auto *object{ultimate.detailsIf<semantics::ObjectEntityDetails>()};
+    bool isInitialized{semantics::IsSaved(ultimate) &&
+        !IsAllocatable(ultimate) && object &&
+        (ultimate.test(Symbol::Flag::InDataStmt) ||
+            object->init().has_value())};
     if (const auto *assoc{
             ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
       return (*this)(assoc->expr());
@@ -554,7 +543,10 @@ public:
              "reference variable '"s +
           ultimate.name().ToString() + "'";
     } else if (IsDummy(ultimate)) {
-      if (ultimate.attrs().test(semantics::Attr::OPTIONAL)) {
+      if (!inInquiry_ && forElementalFunctionResult_) {
+        return "dependence on value of dummy argument '"s +
+            ultimate.name().ToString() + "'";
+      } else if (ultimate.attrs().test(semantics::Attr::OPTIONAL)) {
         return "reference to OPTIONAL dummy argument '"s +
             ultimate.name().ToString() + "'";
       } else if (!inInquiry_ &&
@@ -568,6 +560,17 @@ public:
       }
     } else if (&symbol.owner() != &scope_ || &ultimate.owner() != &scope_) {
       return std::nullopt; // host association is in play
+    } else if (isInitialized &&
+        context_.languageFeatures().IsEnabled(
+            common::LanguageFeature::SavedLocalInSpecExpr)) {
+      if (!scope_.IsModuleFile() &&
+          context_.languageFeatures().ShouldWarn(
+              common::LanguageFeature::SavedLocalInSpecExpr)) {
+        context_.messages().Say(common::LanguageFeature::SavedLocalInSpecExpr,
+            "specification expression refers to local object '%s' (initialized and saved)"_port_en_US,
+            ultimate.name().ToString());
+      }
+      return std::nullopt;
     } else if (const auto *object{
                    ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {
       if (object->commonBlock()) {
@@ -611,8 +614,8 @@ public:
     // expressions will have been converted to expressions over descriptor
     // inquiries by Fold().
     // Catch REAL, ALLOCATABLE :: X(:); REAL :: Y(SIZE(X))
-    if (IsPermissibleInquiry(x.base().GetFirstSymbol(),
-            x.base().GetLastSymbol(), x.field(), scope_)) {
+    if (IsPermissibleInquiry(
+            x.base().GetFirstSymbol(), x.base().GetLastSymbol(), x.field())) {
       auto restorer{common::ScopedSet(inInquiry_, true)};
       return (*this)(x.base());
     } else if (IsConstantExpr(x)) {
@@ -623,10 +626,18 @@ public:
   }
 
   Result operator()(const TypeParamInquiry &inq) const {
-    if (scope_.IsDerivedType() && !IsConstantExpr(inq) &&
-        inq.base() /* X%T, not local T */) { // C750, C754
-      return "non-constant reference to a type parameter inquiry not "
-             "allowed for derived type components or type parameter values";
+    if (scope_.IsDerivedType()) {
+      if (!IsConstantExpr(inq) &&
+          inq.base() /* X%T, not local T */) { // C750, C754
+        return "non-constant reference to a type parameter inquiry not allowed "
+               "for derived type components or type parameter values";
+      }
+    } else if (inq.base() &&
+        IsInquiryAlwaysPermissible(inq.base()->GetFirstSymbol())) {
+      auto restorer{common::ScopedSet(inInquiry_, true)};
+      return (*this)(inq.base());
+    } else if (!IsConstantExpr(inq)) {
+      return "non-constant type parameter inquiry not allowed for local object";
     }
     return std::nullopt;
   }
@@ -648,15 +659,16 @@ public:
             "' not allowed for derived type components or type parameter"
             " values";
       }
-      if (auto procChars{
-              characteristics::Procedure::Characterize(x.proc(), context_)}) {
+      if (auto procChars{characteristics::Procedure::Characterize(
+              x.proc(), context_, /*emitError=*/true)}) {
         const auto iter{std::find_if(procChars->dummyArguments.begin(),
             procChars->dummyArguments.end(),
             [](const characteristics::DummyArgument &dummy) {
               return std::holds_alternative<characteristics::DummyProcedure>(
                   dummy.u);
             })};
-        if (iter != procChars->dummyArguments.end()) {
+        if (iter != procChars->dummyArguments.end() &&
+            ultimate.name().ToString() != "__builtin_c_funloc") {
           return "reference to function '"s + ultimate.name().ToString() +
               "' with dummy procedure argument '" + iter->name + '\'';
         }
@@ -701,19 +713,19 @@ public:
                 intrin.name == "is_contiguous") { // ok
             } else if (intrin.name == "len" &&
                 IsPermissibleInquiry(dataRef->GetFirstSymbol(),
-                    dataRef->GetLastSymbol(), DescriptorInquiry::Field::Len,
-                    scope_)) { // ok
+                    dataRef->GetLastSymbol(),
+                    DescriptorInquiry::Field::Len)) { // ok
             } else if (intrin.name == "lbound" &&
                 IsPermissibleInquiry(dataRef->GetFirstSymbol(),
                     dataRef->GetLastSymbol(),
-                    DescriptorInquiry::Field::LowerBound, scope_)) { // ok
+                    DescriptorInquiry::Field::LowerBound)) { // ok
             } else if ((intrin.name == "shape" || intrin.name == "size" ||
                            intrin.name == "sizeof" ||
                            intrin.name == "storage_size" ||
                            intrin.name == "ubound") &&
                 IsPermissibleInquiry(dataRef->GetFirstSymbol(),
-                    dataRef->GetLastSymbol(), DescriptorInquiry::Field::Extent,
-                    scope_)) { // ok
+                    dataRef->GetLastSymbol(),
+                    DescriptorInquiry::Field::Extent)) { // ok
             } else {
               return "non-constant inquiry function '"s + intrin.name +
                   "' not allowed for local object";
@@ -732,32 +744,87 @@ private:
   // Contextual information: this flag is true when in an argument to
   // an inquiry intrinsic like SIZE().
   mutable bool inInquiry_{false};
+  bool forElementalFunctionResult_{false}; // F'2023 C15121
   const std::set<std::string> badIntrinsicsForComponents_{
       "allocated", "associated", "extends_type_of", "present", "same_type_as"};
+
+  bool IsInquiryAlwaysPermissible(const semantics::Symbol &) const;
+  bool IsPermissibleInquiry(const semantics::Symbol &firstSymbol,
+      const semantics::Symbol &lastSymbol,
+      DescriptorInquiry::Field field) const;
 };
 
-template <typename A>
-void CheckSpecificationExpr(
-    const A &x, const semantics::Scope &scope, FoldingContext &context) {
-  if (auto why{CheckSpecificationExprHelper{scope, context}(x)}) {
-    context.messages().Say(
-        "Invalid specification expression: %s"_err_en_US, *why);
+bool CheckSpecificationExprHelper::IsInquiryAlwaysPermissible(
+    const semantics::Symbol &symbol) const {
+  if (&symbol.owner() != &scope_ || symbol.has<semantics::UseDetails>() ||
+      symbol.owner().kind() == semantics::Scope::Kind::Module ||
+      semantics::FindCommonBlockContaining(symbol) ||
+      symbol.has<semantics::HostAssocDetails>()) {
+    return true; // it's nonlocal
+  } else if (semantics::IsDummy(symbol) && !forElementalFunctionResult_) {
+    return true;
+  } else {
+    return false;
   }
 }
 
-template void CheckSpecificationExpr(
-    const Expr<SomeType> &, const semantics::Scope &, FoldingContext &);
-template void CheckSpecificationExpr(
-    const Expr<SomeInteger> &, const semantics::Scope &, FoldingContext &);
-template void CheckSpecificationExpr(
-    const Expr<SubscriptInteger> &, const semantics::Scope &, FoldingContext &);
+bool CheckSpecificationExprHelper::IsPermissibleInquiry(
+    const semantics::Symbol &firstSymbol, const semantics::Symbol &lastSymbol,
+    DescriptorInquiry::Field field) const {
+  if (IsInquiryAlwaysPermissible(firstSymbol)) {
+    return true;
+  }
+  // Inquiries on local objects may not access a deferred bound or length.
+  // (This code used to be a switch, but it proved impossible to write it
+  // thus without running afoul of bogus warnings from different C++
+  // compilers.)
+  if (field == DescriptorInquiry::Field::Rank) {
+    return true; // always known
+  }
+  const auto *object{lastSymbol.detailsIf<semantics::ObjectEntityDetails>()};
+  if (field == DescriptorInquiry::Field::LowerBound ||
+      field == DescriptorInquiry::Field::Extent ||
+      field == DescriptorInquiry::Field::Stride) {
+    return object && !object->shape().CanBeDeferredShape();
+  }
+  if (field == DescriptorInquiry::Field::Len) {
+    return object && object->type() &&
+        object->type()->category() == semantics::DeclTypeSpec::Character &&
+        !object->type()->characterTypeSpec().length().isDeferred();
+  }
+  return false;
+}
+
+template <typename A>
+void CheckSpecificationExpr(const A &x, const semantics::Scope &scope,
+    FoldingContext &context, bool forElementalFunctionResult) {
+  CheckSpecificationExprHelper helper{
+      scope, context, forElementalFunctionResult};
+  if (auto why{helper(x)}) {
+    context.messages().Say("Invalid specification expression%s: %s"_err_en_US,
+        forElementalFunctionResult ? " for elemental function result" : "",
+        *why);
+  }
+}
+
+template void CheckSpecificationExpr(const Expr<SomeType> &,
+    const semantics::Scope &, FoldingContext &,
+    bool forElementalFunctionResult);
+template void CheckSpecificationExpr(const Expr<SomeInteger> &,
+    const semantics::Scope &, FoldingContext &,
+    bool forElementalFunctionResult);
+template void CheckSpecificationExpr(const Expr<SubscriptInteger> &,
+    const semantics::Scope &, FoldingContext &,
+    bool forElementalFunctionResult);
 template void CheckSpecificationExpr(const std::optional<Expr<SomeType>> &,
-    const semantics::Scope &, FoldingContext &);
+    const semantics::Scope &, FoldingContext &,
+    bool forElementalFunctionResult);
 template void CheckSpecificationExpr(const std::optional<Expr<SomeInteger>> &,
-    const semantics::Scope &, FoldingContext &);
+    const semantics::Scope &, FoldingContext &,
+    bool forElementalFunctionResult);
 template void CheckSpecificationExpr(
     const std::optional<Expr<SubscriptInteger>> &, const semantics::Scope &,
-    FoldingContext &);
+    FoldingContext &, bool forElementalFunctionResult);
 
 // IsContiguous() -- 9.5.4
 class IsContiguousHelper
@@ -783,8 +850,14 @@ public:
       // simple contiguity to allow their use in contexts like
       // data targets in pointer assignments with remapping.
       return true;
-    } else if (ultimate.has<semantics::AssocEntityDetails>()) {
-      return Base::operator()(ultimate); // use expr
+    } else if (const auto *details{
+                   ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
+      // RANK(*) associating entity is contiguous.
+      if (details->IsAssumedSize()) {
+        return true;
+      } else {
+        return Base::operator()(ultimate); // use expr
+      }
     } else if (semantics::IsPointer(ultimate) ||
         semantics::IsAssumedShape(ultimate) || IsAssumedRank(ultimate)) {
       return std::nullopt;
@@ -835,11 +908,62 @@ public:
   Result operator()(const ComplexPart &x) const {
     return x.complex().Rank() == 0;
   }
-  Result operator()(const Substring &) const { return std::nullopt; }
+  Result operator()(const Substring &x) const {
+    if (x.Rank() == 0) {
+      return true; // scalar substring always contiguous
+    }
+    // Substrings with rank must have DataRefs as their parents
+    const DataRef &parentDataRef{DEREF(x.GetParentIf<DataRef>())};
+    std::optional<std::int64_t> len;
+    if (auto lenExpr{parentDataRef.LEN()}) {
+      len = ToInt64(Fold(context_, std::move(*lenExpr)));
+      if (len) {
+        if (*len <= 0) {
+          return true; // empty substrings
+        } else if (*len == 1) {
+          // Substrings can't be incomplete; is base array contiguous?
+          return (*this)(parentDataRef);
+        }
+      }
+    }
+    std::optional<std::int64_t> upper;
+    bool upperIsLen{false};
+    if (auto upperExpr{x.upper()}) {
+      upper = ToInt64(Fold(context_, common::Clone(*upperExpr)));
+      if (upper) {
+        if (*upper < 1) {
+          return true; // substring(n:0) empty
+        }
+        upperIsLen = len && *upper >= *len;
+      } else if (const auto *inquiry{
+                     UnwrapConvertedExpr<DescriptorInquiry>(*upperExpr)};
+                 inquiry && inquiry->field() == DescriptorInquiry::Field::Len) {
+        upperIsLen =
+            &parentDataRef.GetLastSymbol() == &inquiry->base().GetLastSymbol();
+      }
+    } else {
+      upperIsLen = true; // substring(n:)
+    }
+    if (auto lower{ToInt64(Fold(context_, x.lower()))}) {
+      if (*lower == 1 && upperIsLen) {
+        // known complete substring; is base contiguous?
+        return (*this)(parentDataRef);
+      } else if (upper) {
+        if (*upper < *lower) {
+          return true; // empty substring(3:2)
+        } else if (*lower > 1) {
+          return false; // known incomplete substring
+        } else if (len && *upper < *len) {
+          return false; // known incomplete substring
+        }
+      }
+    }
+    return std::nullopt; // contiguity not known
+  }
 
   Result operator()(const ProcedureRef &x) const {
-    if (auto chars{
-            characteristics::Procedure::Characterize(x.proc(), context_)}) {
+    if (auto chars{characteristics::Procedure::Characterize(
+            x.proc(), context_, /*emitError=*/true)}) {
       if (chars->functionResult) {
         const auto &result{*chars->functionResult};
         if (!result.IsProcedurePointer()) {
@@ -1030,44 +1154,53 @@ class StmtFunctionChecker
 public:
   using Result = std::optional<parser::Message>;
   using Base = AnyTraverse<StmtFunctionChecker, Result>;
+
+  static constexpr auto feature{
+      common::LanguageFeature::StatementFunctionExtensions};
+
   StmtFunctionChecker(const Symbol &sf, FoldingContext &context)
       : Base{*this}, sf_{sf}, context_{context} {
-    if (!context_.languageFeatures().IsEnabled(
-            common::LanguageFeature::StatementFunctionExtensions)) {
+    if (!context_.languageFeatures().IsEnabled(feature)) {
       severity_ = parser::Severity::Error;
-    } else if (context_.languageFeatures().ShouldWarn(
-                   common::LanguageFeature::StatementFunctionExtensions)) {
+    } else if (context_.languageFeatures().ShouldWarn(feature)) {
       severity_ = parser::Severity::Portability;
     }
   }
   using Base::operator();
 
+  Result Return(parser::Message &&msg) const {
+    if (severity_) {
+      msg.set_severity(*severity_);
+      if (*severity_ != parser::Severity::Error) {
+        msg.set_languageFeature(feature);
+      }
+    }
+    return std::move(msg);
+  }
+
   template <typename T> Result operator()(const ArrayConstructor<T> &) const {
     if (severity_) {
-      auto msg{
-          "Statement function '%s' should not contain an array constructor"_port_en_US};
-      msg.set_severity(*severity_);
-      return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+      return Return(parser::Message{sf_.name(),
+          "Statement function '%s' should not contain an array constructor"_port_en_US,
+          sf_.name()});
     } else {
       return std::nullopt;
     }
   }
   Result operator()(const StructureConstructor &) const {
     if (severity_) {
-      auto msg{
-          "Statement function '%s' should not contain a structure constructor"_port_en_US};
-      msg.set_severity(*severity_);
-      return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+      return Return(parser::Message{sf_.name(),
+          "Statement function '%s' should not contain a structure constructor"_port_en_US,
+          sf_.name()});
     } else {
       return std::nullopt;
     }
   }
   Result operator()(const TypeParamInquiry &) const {
     if (severity_) {
-      auto msg{
-          "Statement function '%s' should not contain a type parameter inquiry"_port_en_US};
-      msg.set_severity(*severity_);
-      return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+      return Return(parser::Message{sf_.name(),
+          "Statement function '%s' should not contain a type parameter inquiry"_port_en_US,
+          sf_.name()});
     } else {
       return std::nullopt;
     }
@@ -1085,25 +1218,22 @@ public:
           }
         }
       }
-      if (auto chars{
-              characteristics::Procedure::Characterize(proc, context_)}) {
+      if (auto chars{characteristics::Procedure::Characterize(
+              proc, context_, /*emitError=*/true)}) {
         if (!chars->CanBeCalledViaImplicitInterface()) {
           if (severity_) {
-            auto msg{
-                "Statement function '%s' should not reference function '%s' that requires an explicit interface"_port_en_US};
-            msg.set_severity(*severity_);
-            return parser::Message{
-                sf_.name(), std::move(msg), sf_.name(), symbol->name()};
+            return Return(parser::Message{sf_.name(),
+                "Statement function '%s' should not reference function '%s' that requires an explicit interface"_port_en_US,
+                sf_.name(), symbol->name()});
           }
         }
       }
     }
     if (proc.Rank() > 0) {
       if (severity_) {
-        auto msg{
-            "Statement function '%s' should not reference a function that returns an array"_port_en_US};
-        msg.set_severity(*severity_);
-        return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+        return Return(parser::Message{sf_.name(),
+            "Statement function '%s' should not reference a function that returns an array"_port_en_US,
+            sf_.name()});
       }
     }
     return std::nullopt;
@@ -1115,10 +1245,9 @@ public:
       }
       if (expr->Rank() > 0 && !UnwrapWholeSymbolOrComponentDataRef(*expr)) {
         if (severity_) {
-          auto msg{
-              "Statement function '%s' should not pass an array argument that is not a whole array"_port_en_US};
-          msg.set_severity(*severity_);
-          return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+          return Return(parser::Message{sf_.name(),
+              "Statement function '%s' should not pass an array argument that is not a whole array"_port_en_US,
+              sf_.name()});
         }
       }
     }

@@ -11,8 +11,10 @@
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
-#include "llvm-c-test.h"
 #include "llvm-c/DebugInfo.h"
+#include "llvm-c-test.h"
+#include "llvm-c/Core.h"
+#include "llvm-c/Types.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -32,6 +34,10 @@ declare_objc_class(LLVMDIBuilderRef DIB, LLVMMetadataRef File) {
 int llvm_test_dibuilder(void) {
   const char *Filename = "debuginfo.c";
   LLVMModuleRef M = LLVMModuleCreateWithName(Filename);
+
+  LLVMSetIsNewDbgInfoFormat(M, true);
+  assert(LLVMIsNewDbgInfoFormat(M));
+
   LLVMDIBuilderRef DIB = LLVMCreateDIBuilder(M);
 
   LLVMMetadataRef File = LLVMDIBuilderCreateFile(DIB, Filename,
@@ -135,23 +141,32 @@ int llvm_test_dibuilder(void) {
   LLVMMetadataRef FooParamVar1 =
     LLVMDIBuilderCreateParameterVariable(DIB, FunctionMetadata, "a", 1, 1, File,
                                          42, Int64Ty, true, 0);
-  LLVMDIBuilderInsertDeclareAtEnd(DIB, LLVMConstInt(LLVMInt64Type(), 0, false),
-                                  FooParamVar1, FooParamExpression,
-                                  FooParamLocation, FooEntryBlock);
+
+  LLVMDIBuilderInsertDeclareRecordAtEnd(
+      DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar1,
+      FooParamExpression, FooParamLocation, FooEntryBlock);
+
   LLVMMetadataRef FooParamVar2 =
     LLVMDIBuilderCreateParameterVariable(DIB, FunctionMetadata, "b", 1, 2, File,
                                          42, Int64Ty, true, 0);
-  LLVMDIBuilderInsertDeclareAtEnd(DIB, LLVMConstInt(LLVMInt64Type(), 0, false),
-                                  FooParamVar2, FooParamExpression,
-                                  FooParamLocation, FooEntryBlock);
-  LLVMMetadataRef FooParamVar3 =
-    LLVMDIBuilderCreateParameterVariable(DIB, FunctionMetadata, "c", 1, 3, File,
-                                         42, VectorTy, true, 0);
-  LLVMDIBuilderInsertDeclareAtEnd(DIB, LLVMConstInt(LLVMInt64Type(), 0, false),
-                                  FooParamVar3, FooParamExpression,
-                                  FooParamLocation, FooEntryBlock);
+
+  LLVMDIBuilderInsertDeclareRecordAtEnd(
+      DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar2,
+      FooParamExpression, FooParamLocation, FooEntryBlock);
+
+  LLVMMetadataRef FooParamVar3 = LLVMDIBuilderCreateParameterVariable(
+      DIB, FunctionMetadata, "c", 1, 3, File, 42, VectorTy, true, 0);
+
+  LLVMDIBuilderInsertDeclareRecordAtEnd(
+      DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar3,
+      FooParamExpression, FooParamLocation, FooEntryBlock);
 
   LLVMSetSubprogram(FooFunction, FunctionMetadata);
+
+  LLVMMetadataRef FooLabel1 = LLVMDIBuilderCreateLabel(DIB, FunctionMetadata,
+    "label1", 6, File, 42, false);
+  LLVMDIBuilderInsertLabelAtEnd(DIB, FooLabel1, FooParamLocation,
+    FooEntryBlock);
 
   LLVMMetadataRef FooLexicalBlock =
     LLVMDIBuilderCreateLexicalBlock(DIB, FunctionMetadata, File, 42, 0);
@@ -164,11 +179,20 @@ int llvm_test_dibuilder(void) {
     LLVMDIBuilderCreateAutoVariable(DIB, FooLexicalBlock, "d", 1, File,
                                     43, Int64Ty, true, 0, 0);
   LLVMValueRef FooVal1 = LLVMConstInt(LLVMInt64Type(), 0, false);
-  LLVMMetadataRef FooVarValueExpr =
-    LLVMDIBuilderCreateConstantValueExpression(DIB, 0);
+  LLVMMetadataRef FooVarValueExpr1 =
+      LLVMDIBuilderCreateConstantValueExpression(DIB, 0);
 
-  LLVMDIBuilderInsertDbgValueAtEnd(DIB, FooVal1, FooVar1, FooVarValueExpr,
-                                   FooVarsLocation, FooVarBlock);
+  LLVMDIBuilderInsertDbgValueRecordAtEnd(
+      DIB, FooVal1, FooVar1, FooVarValueExpr1, FooVarsLocation, FooVarBlock);
+
+  LLVMMetadataRef FooVar2 = LLVMDIBuilderCreateAutoVariable(
+      DIB, FooLexicalBlock, "e", 1, File, 44, Int64Ty, true, 0, 0);
+  LLVMValueRef FooVal2 = LLVMConstInt(LLVMInt64Type(), 1, false);
+  LLVMMetadataRef FooVarValueExpr2 =
+      LLVMDIBuilderCreateConstantValueExpression(DIB, 1);
+
+  LLVMDIBuilderInsertDbgValueRecordAtEnd(
+      DIB, FooVal2, FooVar2, FooVarValueExpr2, FooVarsLocation, FooVarBlock);
 
   LLVMMetadataRef MacroFile =
       LLVMDIBuilderCreateTempMacroFile(DIB, NULL, 0, File);
@@ -191,12 +215,81 @@ int llvm_test_dibuilder(void) {
   LLVMAddNamedMetadataOperand(
       M, "EnumTest", LLVMMetadataAsValue(LLVMGetModuleContext(M), EnumTest));
 
+  // Using the new debug format, debug records get attached to instructions.
+  // Insert a `br` and `ret` now to absorb the debug records which are
+  // currently "trailing", meaning that they're associated with a block
+  // but no particular instruction, which is only valid as a transient state.
+  LLVMContextRef Ctx = LLVMGetModuleContext(M);
+  LLVMBuilderRef Builder = LLVMCreateBuilderInContext(Ctx);
+  LLVMPositionBuilderAtEnd(Builder, FooEntryBlock);
+  // Build `br label %vars` in entry.
+  LLVMBuildBr(Builder, FooVarBlock);
+
+  // Build another br for the sake of testing labels.
+  LLVMMetadataRef FooLabel2 = LLVMDIBuilderCreateLabel(DIB, FunctionMetadata,
+    "label2", 6, File, 42, false);
+  LLVMDIBuilderInsertLabelBefore(DIB, FooLabel2, FooParamLocation,
+    LLVMBuildBr(Builder, FooVarBlock));
+  // label3 will be emitted, but label4 won't be emitted
+  // because label3 is AlwaysPreserve and label4 is not.
+  LLVMDIBuilderCreateLabel(DIB, FunctionMetadata,
+    "label3", 6, File, 42, true);
+  LLVMDIBuilderCreateLabel(DIB, FunctionMetadata,
+    "label4", 6, File, 42, false);
   LLVMDIBuilderFinalize(DIB);
+
+  // Build `ret i64 0` in vars.
+  LLVMPositionBuilderAtEnd(Builder, FooVarBlock);
+  LLVMTypeRef I64 = LLVMInt64TypeInContext(Ctx);
+  LLVMValueRef Zero = LLVMConstInt(I64, 0, false);
+  LLVMValueRef Ret = LLVMBuildRet(Builder, Zero);
+
+  // Insert a `phi` before the `ret`. In the new debug info mode we need to
+  // be careful to insert before debug records too, else the debug records
+  // will come before the `phi` (and be absorbed onto it) which is an invalid
+  // state.
+  LLVMValueRef InsertPos = LLVMGetFirstInstruction(FooVarBlock);
+  LLVMPositionBuilderBeforeInstrAndDbgRecords(Builder, InsertPos);
+  LLVMValueRef Phi1 = LLVMBuildPhi(Builder, I64, "p1");
+  LLVMAddIncoming(Phi1, &Zero, &FooEntryBlock, 1);
+
+  // Do the same again using the other position-setting function.
+  LLVMPositionBuilderBeforeDbgRecords(Builder, FooVarBlock, InsertPos);
+  LLVMValueRef Phi2 = LLVMBuildPhi(Builder, I64, "p2");
+  LLVMAddIncoming(Phi2, &Zero, &FooEntryBlock, 1);
+
+  // Insert a non-phi before the `ret` but not before the debug records to
+  // test that works as expected.
+  LLVMPositionBuilder(Builder, FooVarBlock, Ret);
+  LLVMValueRef Add = LLVMBuildAdd(Builder, Phi1, Phi2, "a");
+
+  // Iterate over debug records in the add instruction. There should be two.
+  LLVMDbgRecordRef AddDbgRecordFirst = LLVMGetFirstDbgRecord(Add);
+  assert(AddDbgRecordFirst != NULL);
+  LLVMDbgRecordRef AddDbgRecordSecond = LLVMGetNextDbgRecord(AddDbgRecordFirst);
+  assert(AddDbgRecordSecond != NULL);
+  LLVMDbgRecordRef AddDbgRecordLast = LLVMGetLastDbgRecord(Add);
+  assert(AddDbgRecordLast != NULL);
+  (void)AddDbgRecordLast;
+  assert(AddDbgRecordSecond == AddDbgRecordLast);
+  LLVMDbgRecordRef AddDbgRecordOverTheRange =
+      LLVMGetNextDbgRecord(AddDbgRecordSecond);
+  assert(AddDbgRecordOverTheRange == NULL);
+  (void)AddDbgRecordOverTheRange;
+  LLVMDbgRecordRef AddDbgRecordFirstPrev =
+      LLVMGetPreviousDbgRecord(AddDbgRecordSecond);
+  assert(AddDbgRecordFirstPrev != NULL);
+  assert(AddDbgRecordFirst == AddDbgRecordFirstPrev);
+  LLVMDbgRecordRef AddDbgRecordUnderTheRange =
+      LLVMGetPreviousDbgRecord(AddDbgRecordFirstPrev);
+  assert(AddDbgRecordUnderTheRange == NULL);
+  (void)AddDbgRecordUnderTheRange;
 
   char *MStr = LLVMPrintModuleToString(M);
   puts(MStr);
   LLVMDisposeMessage(MStr);
 
+  LLVMDisposeBuilder(Builder);
   LLVMDisposeDIBuilder(DIB);
   LLVMDisposeModule(M);
 

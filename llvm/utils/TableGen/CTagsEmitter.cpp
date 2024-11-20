@@ -1,4 +1,4 @@
-//===- CTagsEmitter.cpp - Generate ctags-compatible index ------------------===//
+//===- CTagsEmitter.cpp - Generate ctags-compatible index -----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <algorithm>
+#include <tuple>
 #include <vector>
 using namespace llvm;
 
@@ -30,6 +30,7 @@ private:
   StringRef Id;
   StringRef BufferIdentifier;
   unsigned Line;
+
 public:
   Tag(StringRef Name, const SMLoc Location) : Id(Name) {
     const MemoryBuffer *CurMB =
@@ -39,7 +40,8 @@ public:
     Line = LineAndColumn.first;
   }
   int operator<(const Tag &B) const {
-    return std::make_tuple(Id, BufferIdentifier, Line) < std::make_tuple(B.Id, B.BufferIdentifier, B.Line);
+    return std::tuple(Id, BufferIdentifier, Line) <
+           std::tuple(B.Id, B.BufferIdentifier, B.Line);
   }
   void emit(raw_ostream &OS) const {
     OS << Id << "\t" << BufferIdentifier << "\t" << Line << "\n";
@@ -48,9 +50,10 @@ public:
 
 class CTagsEmitter {
 private:
-  RecordKeeper &Records;
+  const RecordKeeper &Records;
+
 public:
-  CTagsEmitter(RecordKeeper &R) : Records(R) {}
+  CTagsEmitter(const RecordKeeper &R) : Records(R) {}
 
   void run(raw_ostream &OS);
 

@@ -27,7 +27,7 @@ define void @f(ptr %p) !dbg !11 {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOCAL:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
-; CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr [[LOCAL]], metadata [[META22:![0-9]+]], metadata !DIExpression()), !dbg [[DBG23:![0-9]+]]
+; CHECK-NEXT:      #dbg_declare(ptr [[LOCAL]], [[META22:![0-9]+]], !DIExpression(), [[META23:![0-9]+]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[P:%.*]], align 8, !dbg [[DBG24:![0-9]+]], !tbaa [[TBAA25:![0-9]+]]
 ; CHECK-NEXT:    store i64 [[TMP0]], ptr [[LOCAL]], align 4, !dbg [[DBG29:![0-9]+]], !tbaa [[TBAA25]]
 ; CHECK-NEXT:    call void @escape(ptr nonnull [[LOCAL]]), !dbg [[DBG30:![0-9]+]]

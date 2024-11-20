@@ -27,7 +27,6 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MachineLocation.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
@@ -84,7 +83,7 @@ static MCSubtargetInfo *createMipsMCSubtargetInfo(const Triple &TT,
 static MCAsmInfo *createMipsMCAsmInfo(const MCRegisterInfo &MRI,
                                       const Triple &TT,
                                       const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new MipsMCAsmInfo(TT, Options);
+  MCAsmInfo *MAI = new MipsELFMCAsmInfo(TT, Options);
 
   unsigned SP = MRI.getDwarfRegNum(Mips::SP, true);
   MCCFIInstruction Inst = MCCFIInstruction::createDefCfaRegister(nullptr, SP);
@@ -104,22 +103,20 @@ static MCInstPrinter *createMipsMCInstPrinter(const Triple &T,
 static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
                                     std::unique_ptr<MCAsmBackend> &&MAB,
                                     std::unique_ptr<MCObjectWriter> &&OW,
-                                    std::unique_ptr<MCCodeEmitter> &&Emitter,
-                                    bool RelaxAll) {
+                                    std::unique_ptr<MCCodeEmitter> &&Emitter) {
   MCStreamer *S;
   if (!T.isOSNaCl())
     S = createMipsELFStreamer(Context, std::move(MAB), std::move(OW),
-                              std::move(Emitter), RelaxAll);
+                              std::move(Emitter));
   else
     S = createMipsNaClELFStreamer(Context, std::move(MAB), std::move(OW),
-                                  std::move(Emitter), RelaxAll);
+                                  std::move(Emitter));
   return S;
 }
 
 static MCTargetStreamer *createMipsAsmTargetStreamer(MCStreamer &S,
                                                      formatted_raw_ostream &OS,
-                                                     MCInstPrinter *InstPrint,
-                                                     bool isVerboseAsm) {
+                                                     MCInstPrinter *InstPrint) {
   return new MipsTargetAsmStreamer(S, OS);
 }
 

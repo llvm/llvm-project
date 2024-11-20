@@ -16,6 +16,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "mlir/TableGen/Builder.h"
+#include "mlir/TableGen/Constraint.h"
 #include "mlir/TableGen/Trait.h"
 
 namespace llvm {
@@ -85,6 +86,9 @@ public:
   /// Get an optional C++ parameter parser.
   std::optional<StringRef> getParser() const;
 
+  /// If this is a type constraint, return it.
+  std::optional<Constraint> getConstraint() const;
+
   /// Get an optional C++ parameter printer.
   std::optional<StringRef> getPrinter() const;
 
@@ -101,7 +105,7 @@ public:
   std::optional<StringRef> getDefaultValue() const;
 
   /// Return the underlying def of this parameter.
-  llvm::Init *getDef() const;
+  const llvm::Init *getDef() const;
 
   /// The parameter is pointer-comparable.
   bool operator==(const AttrOrTypeParameter &other) const {
@@ -198,6 +202,10 @@ public:
   /// method.
   bool genVerifyDecl() const;
 
+  /// Return true if we need to generate any type constraint verification and
+  /// the getChecked method.
+  bool genVerifyInvariantsImpl() const;
+
   /// Returns the def's extra class declaration code.
   std::optional<StringRef> getExtraDecls() const;
 
@@ -257,6 +265,9 @@ public:
   std::optional<StringRef> getTypeBuilder() const;
 
   static bool classof(const AttrOrTypeDef *def);
+
+  /// Get the unique attribute name "dialect.attrname".
+  StringRef getAttrName() const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -267,6 +278,11 @@ public:
 class TypeDef : public AttrOrTypeDef {
 public:
   using AttrOrTypeDef::AttrOrTypeDef;
+
+  static bool classof(const AttrOrTypeDef *def);
+
+  /// Get the unique type name "dialect.typename".
+  StringRef getTypeName() const;
 };
 
 } // namespace tblgen

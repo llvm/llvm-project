@@ -26,6 +26,15 @@
 
 namespace lldb_private {
 
+class LanguageProperties : public Properties {
+public:
+  LanguageProperties();
+
+  static llvm::StringRef GetSettingName();
+
+  bool GetEnableFilterForLineBreakpoints() const;
+};
+
 class Language : public PluginInterface {
 public:
   class TypeScavenger {
@@ -236,7 +245,7 @@ public:
   // a match.  But we wouldn't want this to match AnotherA::my_function.  The
   // user is specifying a truncated path, not a truncated set of characters.
   // This function does a language-aware comparison for those purposes.
-  virtual bool DemangledNameContainsPath(llvm::StringRef path, 
+  virtual bool DemangledNameContainsPath(llvm::StringRef path,
                                          ConstString demangled) const;
 
   // if a language has a custom format for printing variable declarations that
@@ -270,6 +279,10 @@ public:
       return demangled;
 
     return mangled.GetMangledName();
+  }
+
+  virtual ConstString GetDisplayDemangledName(Mangled mangled) const {
+    return mangled.GetDemangledName();
   }
 
   virtual void GetExceptionResolverDescription(bool catch_on, bool throw_on,
@@ -324,6 +337,8 @@ public:
   static LanguageSet GetLanguagesSupportingTypeSystemsForExpressions();
   static LanguageSet GetLanguagesSupportingREPLs();
 
+  static LanguageProperties &GetGlobalLanguageProperties();
+
   // Given a mangled function name, calculates some alternative manglings since
   // the compiler mangling may not line up with the symbol we are expecting.
   virtual std::vector<ConstString>
@@ -338,6 +353,42 @@ public:
   }
 
   virtual llvm::StringRef GetInstanceVariableName() { return {}; }
+
+  /// Returns true if this SymbolContext should be ignored when setting
+  /// breakpoints by line (number or regex). Helpful for languages that create
+  /// artificial functions without meaningful user code associated with them
+  /// (e.g. code that gets expanded in late compilation stages, like by
+  /// CoroSplitter).
+  virtual bool IgnoreForLineBreakpoints(const SymbolContext &) const {
+    return false;
+  }
+
+  /// Returns a boolean indicating whether two symbol contexts are equal for the
+  /// purposes of frame comparison. If the plugin has no opinion, it should
+  /// return nullopt.
+  virtual std::optional<bool>
+  AreEqualForFrameComparison(const SymbolContext &sc1,
+                             const SymbolContext &sc2) const {
+    return {};
+  }
+
+  virtual std::optional<bool> GetBooleanFromString(llvm::StringRef str) const;
+
+  /// Returns true if this Language supports exception breakpoints on throw via
+  /// a corresponding LanguageRuntime plugin.
+  virtual bool SupportsExceptionBreakpointsOnThrow() const { return false; }
+
+  /// Returns true if this Language supports exception breakpoints on catch via
+  /// a corresponding LanguageRuntime plugin.
+  virtual bool SupportsExceptionBreakpointsOnCatch() const { return false; }
+
+  /// Returns the keyword used for throw statements in this language, e.g.
+  /// Python uses \b raise. Defaults to \b throw.
+  virtual llvm::StringRef GetThrowKeyword() const { return "throw"; }
+
+  /// Returns the keyword used for catch statements in this language, e.g.
+  /// Python uses \b except. Defaults to \b catch.
+  virtual llvm::StringRef GetCatchKeyword() const { return "catch"; }
 
 protected:
   // Classes that inherit from Language can see and modify these

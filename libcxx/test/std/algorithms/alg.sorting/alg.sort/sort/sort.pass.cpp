@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// This test did pass but is very slow when run using qemu. ~7 minutes on a
+// Neoverse N1 (AArch64) server core.
+// REQUIRES: long_tests
+
 // <algorithm>
 
 // template<RandomAccessIterator Iter>

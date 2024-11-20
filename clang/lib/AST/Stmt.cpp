@@ -23,6 +23,7 @@
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
+#include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/CharInfo.h"
@@ -33,7 +34,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -43,7 +43,6 @@
 #include <cstring>
 #include <optional>
 #include <string>
-#include <type_traits>
 #include <utility>
 
 using namespace clang;
@@ -811,11 +810,12 @@ std::string MSAsmStmt::generateAsmString(const ASTContext &C) const {
     StringRef Instruction = Pieces[I];
     // For vex/vex2/vex3/evex masm style prefix, convert it to att style
     // since we don't support masm style prefix in backend.
-    if (Instruction.startswith("vex "))
+    if (Instruction.starts_with("vex "))
       MSAsmString += '{' + Instruction.substr(0, 3).str() + '}' +
                      Instruction.substr(3).str();
-    else if (Instruction.startswith("vex2 ") ||
-             Instruction.startswith("vex3 ") || Instruction.startswith("evex "))
+    else if (Instruction.starts_with("vex2 ") ||
+             Instruction.starts_with("vex3 ") ||
+             Instruction.starts_with("evex "))
       MSAsmString += '{' + Instruction.substr(0, 4).str() + '}' +
                      Instruction.substr(4).str();
     else

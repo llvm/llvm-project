@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/TaskDispatch.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
+#include "llvm/ExecutionEngine/Orc/Core.h"
 
 namespace llvm {
 namespace orc {
@@ -24,16 +26,52 @@ void InPlaceTaskDispatcher::shutdown() {}
 
 #if LLVM_ENABLE_THREADS
 void DynamicThreadPoolTaskDispatcher::dispatch(std::unique_ptr<Task> T) {
+  bool IsMaterializationTask = isa<MaterializationTask>(*T);
+
   {
     std::lock_guard<std::mutex> Lock(DispatchMutex);
+
+    if (IsMaterializationTask) {
+
+      // If this is a materialization task and there are too many running
+      // already then queue this one up and return early.
+      if (MaxMaterializationThreads &&
+          NumMaterializationThreads == *MaxMaterializationThreads) {
+        MaterializationTaskQueue.push_back(std::move(T));
+        return;
+      }
+
+      // Otherwise record that we have a materialization task running.
+      ++NumMaterializationThreads;
+    }
+
     ++Outstanding;
   }
 
-  std::thread([this, T = std::move(T)]() mutable {
-    T->run();
-    std::lock_guard<std::mutex> Lock(DispatchMutex);
-    --Outstanding;
-    OutstandingCV.notify_all();
+  std::thread([this, T = std::move(T), IsMaterializationTask]() mutable {
+    while (true) {
+
+      // Run the task.
+      T->run();
+
+      std::lock_guard<std::mutex> Lock(DispatchMutex);
+      if (!MaterializationTaskQueue.empty()) {
+        // If there are any materialization tasks running then steal that work.
+        T = std::move(MaterializationTaskQueue.front());
+        MaterializationTaskQueue.pop_front();
+        if (!IsMaterializationTask) {
+          ++NumMaterializationThreads;
+          IsMaterializationTask = true;
+        }
+      } else {
+        // Otherwise decrement work counters.
+        if (IsMaterializationTask)
+          --NumMaterializationThreads;
+        --Outstanding;
+        OutstandingCV.notify_all();
+        return;
+      }
+    }
   }).detach();
 }
 

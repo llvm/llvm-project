@@ -11,15 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "MSP430RegisterInfo.h"
-#include "MSP430.h"
-#include "MSP430MachineFunctionInfo.h"
 #include "MSP430TargetMachine.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
@@ -134,6 +131,9 @@ MSP430RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
     MI.setDesc(TII.get(MSP430::MOV16rr));
     MI.getOperand(FIOperandNum).ChangeToRegister(BasePtr, false);
+
+    // Remove the now unused Offset operand.
+    MI.removeOperand(FIOperandNum + 1);
 
     if (Offset == 0)
       return false;

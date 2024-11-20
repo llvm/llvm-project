@@ -22,6 +22,8 @@ static_library("ObjectYAML") {
     "DXContainerYAML.cpp",
     "ELFEmitter.cpp",
     "ELFYAML.cpp",
+    "GOFFEmitter.cpp",
+    "GOFFYAML.cpp",
     "MachOEmitter.cpp",
     "MachOYAML.cpp",
     "MinidumpEmitter.cpp",

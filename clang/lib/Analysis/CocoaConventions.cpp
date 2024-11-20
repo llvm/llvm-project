@@ -26,10 +26,10 @@ bool cocoa::isRefType(QualType RetTy, StringRef Prefix,
   // Recursively walk the typedef stack, allowing typedefs of reference types.
   while (const TypedefType *TD = RetTy->getAs<TypedefType>()) {
     StringRef TDName = TD->getDecl()->getIdentifier()->getName();
-    if (TDName.startswith(Prefix) && TDName.endswith("Ref"))
+    if (TDName.starts_with(Prefix) && TDName.ends_with("Ref"))
       return true;
     // XPC unfortunately uses CF-style function names, but aren't CF types.
-    if (TDName.startswith("xpc_"))
+    if (TDName.starts_with("xpc_"))
       return false;
     RetTy = TD->getDecl()->getUnderlyingType();
   }
@@ -43,7 +43,7 @@ bool cocoa::isRefType(QualType RetTy, StringRef Prefix,
     return false;
 
   // Does the name start with the prefix?
-  return Name.startswith(Prefix);
+  return Name.starts_with(Prefix);
 }
 
 /// Returns true when the passed-in type is a CF-style reference-counted
@@ -127,10 +127,9 @@ bool coreFoundation::followsCreateRule(const FunctionDecl *fn) {
     // Scan for *lowercase* 'reate' or 'opy', followed by no lowercase
     // character.
     StringRef suffix = functionName.substr(it - start);
-    if (suffix.startswith("reate")) {
+    if (suffix.starts_with("reate")) {
       it += 5;
-    }
-    else if (suffix.startswith("opy")) {
+    } else if (suffix.starts_with("opy")) {
       it += 3;
     } else {
       // Keep scanning.

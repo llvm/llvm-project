@@ -22,17 +22,17 @@
     br label %bb7
 
   bb7:                                              ; preds = %bb7, %bb6
-    %lsr.iv1 = phi [512 x i32]* [ %0, %bb7 ], [ undef, %bb6 ]
+    %lsr.iv1 = phi ptr [ %0, %bb7 ], [ undef, %bb6 ]
     %tmp8 = phi i32 [ %tmp27, %bb7 ], [ -1000000, %bb6 ]
     %tmp9 = phi i64 [ %tmp28, %bb7 ], [ 0, %bb6 ]
     %lsr3 = trunc i64 %tmp9 to i32
-    %lsr.iv12 = bitcast [512 x i32]* %lsr.iv1 to i32*
-    %tmp11 = load i32, i32* %lsr.iv12
+    %lsr.iv12 = bitcast ptr %lsr.iv1 to ptr
+    %tmp11 = load i32, ptr %lsr.iv12
     %tmp12 = icmp sgt i32 %tmp11, undef
     %tmp13 = trunc i64 %tmp9 to i32
     %tmp14 = select i1 %tmp12, i32 %lsr3, i32 0
     %tmp15 = select i1 %tmp12, i32 %tmp13, i32 %tmp8
-    %tmp16 = load i32, i32* undef
+    %tmp16 = load i32, ptr undef
     %tmp17 = select i1 false, i32 undef, i32 %tmp14
     %tmp18 = select i1 false, i32 undef, i32 %tmp15
     %tmp19 = select i1 false, i32 %tmp16, i32 undef
@@ -46,8 +46,8 @@
     %tmp27 = select i1 %tmp24, i32 %tmp25, i32 %tmp21
     %tmp28 = add nuw nsw i64 %tmp9, 4
     %tmp29 = icmp eq i64 undef, 0
-    %scevgep = getelementptr [512 x i32], [512 x i32]* %lsr.iv1, i64 0, i64 4
-    %0 = bitcast i32* %scevgep to [512 x i32]*
+    %scevgep = getelementptr [512 x i32], ptr %lsr.iv1, i64 0, i64 4
+    %0 = bitcast ptr %scevgep to ptr
     br i1 %tmp29, label %bb30, label %bb7
 
   bb30:                                             ; preds = %bb7
@@ -56,7 +56,7 @@
 
   bb33:                                             ; preds = %bb30
     call void @fun()
-    store i32 %tmp26, i32* @globvar
+    store i32 %tmp26, ptr @globvar
     %tmp34 = icmp ugt i32 undef, 1
     br label %bb6
 
@@ -71,7 +71,7 @@
   }
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
 
   attributes #0 = { "target-cpu"="z15" }
   attributes #1 = { nounwind }
@@ -116,6 +116,7 @@ registers:
   - { id: 27, class: grx32bit }
   - { id: 28, class: addr64bit }
 frameInfo:
+  adjustsStack:    true
   hasCalls:        true
 body:             |
   bb.0.bb5:
@@ -134,7 +135,7 @@ body:             |
     %16:grx32bit = COPY %28.subreg_l32
     %16:grx32bit = LOCHIMux %16, 0, 14, 12, implicit $cc
     %17:grx32bit = SELRMux %27, %28.subreg_l32, 14, 2, implicit killed $cc
-    %18:gr32bit = LMux undef %19:addr64bit, 0, $noreg :: (load (s32) from `i32* undef`)
+    %18:gr32bit = LMux undef %19:addr64bit, 0, $noreg :: (load (s32) from `ptr undef`)
     %20:grx32bit = COPY %28.subreg_l32
     %20:grx32bit = OILMux %20, 3, implicit-def dead $cc
     CR undef %21:gr32bit, %18, implicit-def $cc
@@ -154,9 +155,7 @@ body:             |
     J %bb.4
 
   bb.4.bb33:
-    ADJCALLSTACKDOWN 0, 0
     CallBRASL @fun, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc
-    ADJCALLSTACKUP 0, 0
     STRL %4, @globvar :: (store (s32) into @globvar)
     CLFIMux undef %23:grx32bit, 1, implicit-def $cc
     %25:grx32bit = LHIMux 0

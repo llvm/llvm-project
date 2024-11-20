@@ -49,8 +49,8 @@
 // CHECKYAML-NEXT: 'contents': [
 // CHECKYAML-NEXT:   {
 // CHECKYAML-NEXT:     'type': 'file',
-// CHECKYAML-NEXT:     'name': "module.map",
-// CHECKYAML-NEXT:     'external-contents': "/[[PATH]]/i/usr/include/module.map"
+// CHECKYAML-NEXT:     'name': "module.modulemap",
+// CHECKYAML-NEXT:     'external-contents': "/[[PATH]]/i/usr/include/module.modulemap"
 // CHECKYAML-NEXT:   },
 
 // Test that by using the previous generated YAML file clang is able to find the

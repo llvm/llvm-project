@@ -11,14 +11,14 @@ define void @reduce_compare(ptr nocapture %A, i32 %n) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[N:%.*]] to double
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[CONV]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[SHUFFLE]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP4]], <double 7.000000e+00, double 4.000000e+00>
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP5]], <double 5.000000e+00, double 9.000000e+00>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP6]], i32 0
@@ -48,7 +48,7 @@ for.body:                                         ; preds = %for.inc, %entry
   %mul1 = fmul double %conv, %1
   %mul2 = fmul double %mul1, 7.000000e+00
   %add = fadd double %mul2, 5.000000e+00
-  %2 = or i64 %0, 1
+  %2 = or disjoint i64 %0, 1
   %arrayidx6 = getelementptr inbounds double, ptr %A, i64 %2
   %3 = load double, ptr %arrayidx6, align 8
   %mul8 = fmul double %conv, %3
@@ -80,11 +80,11 @@ declare i32 @printf(ptr nocapture, ...)
 
 define float @merge_anyof_v4f32_wrong_first(<4 x float> %x) {
 ; CHECK-LABEL: @merge_anyof_v4f32_wrong_first(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[X:%.*]], i32 3
-; CHECK-NEXT:    [[CMP3WRONG:%.*]] = fcmp olt float [[TMP1]], 4.200000e+01
-; CHECK-NEXT:    [[TMP2:%.*]] = fcmp ogt <4 x float> [[X]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
-; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP2]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP3]], [[CMP3WRONG]]
+; CHECK-NEXT:    [[X3:%.*]] = extractelement <4 x float> [[X:%.*]], i32 3
+; CHECK-NEXT:    [[CMP3WRONG:%.*]] = fcmp olt float [[X3]], 4.200000e+01
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt <4 x float> [[X]], splat (float 1.000000e+00)
+; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP1]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP2]], [[CMP3WRONG]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[OP_RDX]], float -1.000000e+00, float 1.000000e+00
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -107,11 +107,11 @@ define float @merge_anyof_v4f32_wrong_first(<4 x float> %x) {
 
 define float @merge_anyof_v4f32_wrong_last(<4 x float> %x) {
 ; CHECK-LABEL: @merge_anyof_v4f32_wrong_last(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[X:%.*]], i32 3
-; CHECK-NEXT:    [[CMP3WRONG:%.*]] = fcmp olt float [[TMP1]], 4.200000e+01
-; CHECK-NEXT:    [[TMP2:%.*]] = fcmp ogt <4 x float> [[X]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
-; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP2]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP3]], [[CMP3WRONG]]
+; CHECK-NEXT:    [[X3:%.*]] = extractelement <4 x float> [[X:%.*]], i32 3
+; CHECK-NEXT:    [[CMP3WRONG:%.*]] = fcmp olt float [[X3]], 4.200000e+01
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt <4 x float> [[X]], splat (float 1.000000e+00)
+; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP1]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP2]], [[CMP3WRONG]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[OP_RDX]], float -1.000000e+00, float 1.000000e+00
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -134,11 +134,11 @@ define float @merge_anyof_v4f32_wrong_last(<4 x float> %x) {
 
 define i32 @merge_anyof_v4i32_wrong_middle(<4 x i32> %x) {
 ; CHECK-LABEL: @merge_anyof_v4i32_wrong_middle(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[X:%.*]], i32 3
-; CHECK-NEXT:    [[CMP3WRONG:%.*]] = icmp slt i32 [[TMP1]], 42
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i32> [[X]], <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP2]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP3]], [[CMP3WRONG]]
+; CHECK-NEXT:    [[X3:%.*]] = extractelement <4 x i32> [[X:%.*]], i32 3
+; CHECK-NEXT:    [[CMP3WRONG:%.*]] = icmp slt i32 [[X3]], 42
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[X]], splat (i32 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP1]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP2]], [[CMP3WRONG]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[OP_RDX]], i32 -1, i32 1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -164,12 +164,12 @@ define i32 @merge_anyof_v4i32_wrong_middle(<4 x i32> %x) {
 
 define i32 @merge_anyof_v4i32_wrong_middle_better_rdx(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @merge_anyof_v4i32_wrong_middle_better_rdx(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[Y:%.*]], i32 3
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[X:%.*]], i32 3
-; CHECK-NEXT:    [[CMP3WRONG:%.*]] = icmp slt i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <4 x i32> [[X]], [[Y]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP3]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP4]], [[CMP3WRONG]]
+; CHECK-NEXT:    [[X3:%.*]] = extractelement <4 x i32> [[X:%.*]], i32 3
+; CHECK-NEXT:    [[Y3:%.*]] = extractelement <4 x i32> [[Y:%.*]], i32 3
+; CHECK-NEXT:    [[CMP3WRONG:%.*]] = icmp slt i32 [[X3]], [[Y3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP1]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP2]], [[CMP3WRONG]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[OP_RDX]], i32 -1, i32 1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;

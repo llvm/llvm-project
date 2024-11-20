@@ -1,5 +1,5 @@
-# Verifies that BOLT emits DWARF line table with the same size if
-# no functions with debug info were modified.
+## Verifies that BOLT emits DWARF line table with the same size if
+## no functions with debug info were modified.
 
 REQUIRES: system-linux
 
@@ -9,12 +9,12 @@ RUN: llvm-readobj -S %t > %t2
 RUN: llvm-readobj -S %t1 >> %t2
 RUN: FileCheck %s --input-file %t2
 
-# Check the input and grab .debug_line size.
+## Check the input and grab .debug_line size.
 CHECK: File:
 CHECK: Name: .debug_line
 CHECK: Size: [[SIZE:[0-9]+]]
 
-# Verify .debug_line size is the same after BOLT.
+## Verify .debug_line size is the same after BOLT.
 CHECK: File:
 CHECK: Name: .debug_line
 CHECK: Size:

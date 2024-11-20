@@ -19,8 +19,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DebugLoc.h"
@@ -275,7 +275,7 @@ public:
 
   /// This is a wrapper around getRegForValue that also takes care of
   /// truncating or sign-extending the given getelementptr index value.
-  Register getRegForGEPIndex(const Value *Idx);
+  Register getRegForGEPIndex(MVT PtrVT, const Value *Idx);
 
   /// We're checking to see if we can fold \p LI into \p FoldInst. Note
   /// that we could have a sequence where multiple LLVM IR instructions are
@@ -318,6 +318,10 @@ public:
 
   /// Reset InsertPt to the given old insert position.
   void leaveLocalValueArea(SavePoint Old);
+
+  /// Target-independent lowering of non-instruction debug info associated with
+  /// this instruction.
+  void handleDbgInfo(const Instruction *II);
 
 protected:
   explicit FastISel(FunctionLoweringInfo &FuncInfo,
@@ -517,6 +521,16 @@ protected:
     // TODO: Implement PGSO.
     return MF->getFunction().hasOptSize();
   }
+
+  /// Target-independent lowering of debug information. Returns false if the
+  /// debug information couldn't be lowered and was instead discarded.
+  virtual bool lowerDbgValue(const Value *V, DIExpression *Expr,
+                             DILocalVariable *Var, const DebugLoc &DL);
+
+  /// Target-independent lowering of debug information. Returns false if the
+  /// debug information couldn't be lowered and was instead discarded.
+  virtual bool lowerDbgDeclare(const Value *V, DIExpression *Expr,
+                               DILocalVariable *Var, const DebugLoc &DL);
 
 private:
   /// Handle PHI nodes in successor blocks.

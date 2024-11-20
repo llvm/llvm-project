@@ -29,7 +29,6 @@
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/Analysis/ObjCARCAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -47,7 +46,6 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include <algorithm>
 #include <cassert>
 #include <functional>
 #include <iterator>
@@ -72,6 +70,8 @@ static cl::opt<bool> EnableAATrace("aa-trace", cl::Hidden, cl::init(false));
 #else
 static const bool EnableAATrace = false;
 #endif
+
+AAResults::AAResults(const TargetLibraryInfo &TLI) : TLI(TLI) {}
 
 AAResults::AAResults(AAResults &&Arg)
     : TLI(Arg.TLI), AAs(std::move(Arg.AAs)), AADeps(std::move(Arg.AADeps)) {}
@@ -419,42 +419,6 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, AliasResult AR) {
     if (AR.hasOffset())
       OS << " (off " << AR.getOffset() << ")";
     break;
-  }
-  return OS;
-}
-
-raw_ostream &llvm::operator<<(raw_ostream &OS, ModRefInfo MR) {
-  switch (MR) {
-  case ModRefInfo::NoModRef:
-    OS << "NoModRef";
-    break;
-  case ModRefInfo::Ref:
-    OS << "Ref";
-    break;
-  case ModRefInfo::Mod:
-    OS << "Mod";
-    break;
-  case ModRefInfo::ModRef:
-    OS << "ModRef";
-    break;
-  }
-  return OS;
-}
-
-raw_ostream &llvm::operator<<(raw_ostream &OS, MemoryEffects ME) {
-  for (IRMemLocation Loc : MemoryEffects::locations()) {
-    switch (Loc) {
-    case IRMemLocation::ArgMem:
-      OS << "ArgMem: ";
-      break;
-    case IRMemLocation::InaccessibleMem:
-      OS << "InaccessibleMem: ";
-      break;
-    case IRMemLocation::Other:
-      OS << "Other: ";
-      break;
-    }
-    OS << ME.getModRef(Loc) << ", ";
   }
   return OS;
 }
@@ -883,6 +847,11 @@ bool llvm::isEscapeSource(const Value *V) {
   if (isa<IntToPtrInst>(V))
     return true;
 
+  // Same for inttoptr constant expressions.
+  if (auto *CE = dyn_cast<ConstantExpr>(V))
+    if (CE->getOpcode() == Instruction::IntToPtr)
+      return true;
+
   return false;
 }
 
@@ -896,7 +865,7 @@ bool llvm::isNotVisibleOnUnwind(const Value *Object,
 
   // Byval goes out of scope on unwind.
   if (auto *A = dyn_cast<Argument>(Object))
-    return A->hasByValAttr();
+    return A->hasByValAttr() || A->hasAttribute(Attribute::DeadOnUnwind);
 
   // A noalias return is not accessible from any other code. If the pointer
   // does not escape prior to the unwind, then the caller cannot access the
@@ -921,7 +890,10 @@ bool llvm::isWritableObject(const Value *Object,
     return true;
 
   if (auto *A = dyn_cast<Argument>(Object)) {
-    if (A->hasAttribute(Attribute::Writable)) {
+    // Also require noalias, otherwise writability at function entry cannot be
+    // generalized to writability at other program points, even if the pointer
+    // does not escape.
+    if (A->hasAttribute(Attribute::Writable) && A->hasNoAliasAttr()) {
       ExplicitlyDereferenceableOnly = true;
       return true;
     }

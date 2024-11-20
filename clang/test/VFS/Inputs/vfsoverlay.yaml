@@ -9,7 +9,7 @@
         { 'name': 'import_some_frame.h', 'type': 'file',
           'external-contents': 'INPUT_DIR/import_some_frame.h'
         },
-        { 'name': 'module.map', 'type': 'file',
+        { 'name': 'module.modulemap', 'type': 'file',
           'external-contents': 'INPUT_DIR/actual_module.map'
         },
         { 'name': 'include_real.h', 'type': 'file',

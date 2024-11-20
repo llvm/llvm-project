@@ -1,0 +1,18 @@
+# RUN: llvm-mc --disassemble %s -triple=x86_64 | FileCheck %s --check-prefixes=ATT
+# RUN: llvm-mc --disassemble %s -triple=x86_64 -x86-asm-syntax=intel --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
+
+# ATT:   pdepl	%r18d, %r22d, %r26d
+# INTEL: pdep	r26d, r22d, r18d
+0x62,0x6a,0x4f,0x00,0xf5,0xd2
+
+# ATT:   pdepq	%r19, %r23, %r27
+# INTEL: pdep	r27, r23, r19
+0x62,0x6a,0xc7,0x00,0xf5,0xdb
+
+# ATT:   pdepl	291(%r28,%r29,4), %r18d, %r22d
+# INTEL: pdep	r22d, r18d, dword ptr [r28 + 4*r29 + 291]
+0x62,0x8a,0x6b,0x00,0xf5,0xb4,0xac,0x23,0x01,0x00,0x00
+
+# ATT:   pdepq	291(%r28,%r29,4), %r19, %r23
+# INTEL: pdep	r23, r19, qword ptr [r28 + 4*r29 + 291]
+0x62,0x8a,0xe3,0x00,0xf5,0xbc,0xac,0x23,0x01,0x00,0x00

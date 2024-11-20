@@ -40,3 +40,26 @@ FailureOr<TilingResult> tensor::replaceExtractSliceWithTiledProducer(
 
   return *tiledResult;
 }
+
+FailureOr<TilingResult> tensor::replaceInsertSliceWithTiledConsumer(
+    OpBuilder &builder, OffsetSizeAndStrideOpInterface sliceOp,
+    OpOperand &consumer) {
+  auto consumerOp = dyn_cast<TilingInterface>(consumer.getOwner());
+  if (!consumerOp)
+    return failure();
+
+  // `TilingInterface` currently only supports strides being 1.
+  if (llvm::any_of(sliceOp.getMixedStrides(), [](OpFoldResult ofr) {
+        return !isConstantIntValue(ofr, 1);
+      }))
+    return failure();
+
+  FailureOr<TilingResult> tiledResult =
+      consumerOp.getTiledImplementationFromOperandTile(
+          builder, consumer.getOperandNumber(), sliceOp.getMixedOffsets(),
+          sliceOp.getMixedSizes());
+  if (failed(tiledResult))
+    return failure();
+
+  return *tiledResult;
+}

@@ -25,7 +25,7 @@ define i16 @foo() {
 ; CHECK-NEXT:    ret i16 [[ADD5_LCSSA_LCSSA]]
 ; CHECK:       for.cond.cleanup3:
 ; CHECK-NEXT:    [[ADD5_LCSSA]] = phi i16 [ [[ADD5:%.*]], [[FOR_BODY4]] ]
-; CHECK-NEXT:    [[INDVAR_NEXT3]] = add i32 [[INDVAR2]], 1
+; CHECK-NEXT:    [[INDVAR_NEXT3]] = add nuw nsw i32 [[INDVAR2]], 1
 ; CHECK-NEXT:    [[INC7]] = add nuw nsw i16 [[I_013]], 1
 ; CHECK-NEXT:    [[EXITCOND14_NOT:%.*]] = icmp eq i32 [[INDVAR_NEXT3]], 4
 ; CHECK-NEXT:    br i1 [[EXITCOND14_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_COND1_PREHEADER]]
@@ -35,11 +35,11 @@ define i16 @foo() {
 ; CHECK-NEXT:    [[SUM_110:%.*]] = phi i16 [ [[SUM_012]], [[FOR_COND1_PREHEADER]] ], [ [[ADD5]], [[FOR_BODY4]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[INDVAR]], [[TMP0]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[J_011]], [[MUL]]
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i16
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc nuw nsw i32 [[TMP2]] to i16
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [64 x i16], ptr @v, i16 0, i16 [[TMP3]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[ADD5]] = add nsw i16 [[TMP4]], [[SUM_110]]
-; CHECK-NEXT:    [[INDVAR_NEXT]] = add i32 [[INDVAR]], 1
+; CHECK-NEXT:    [[INDVAR_NEXT]] = add nuw nsw i32 [[INDVAR]], 1
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i16 [[J_011]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INDVAR_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP3]], label [[FOR_BODY4]]

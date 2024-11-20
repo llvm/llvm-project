@@ -29,7 +29,6 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -268,24 +267,36 @@ void X86FastPreTileConfig::reload(MachineBasicBlock::iterator UseMI,
                     << printReg(TileReg, TRI) << '\n');
 }
 
+static unsigned getTileDefNum(MachineRegisterInfo *MRI, Register Reg) {
+  if (Reg.isVirtual()) {
+    unsigned RegClassID = MRI->getRegClass(Reg)->getID();
+    if (RegClassID == X86::TILERegClassID)
+      return 1;
+    if (RegClassID == X86::TILEPAIRRegClassID)
+      return 2;
+  } else {
+    if (Reg >= X86::TMM0 && Reg <= X86::TMM7)
+      return 1;
+    if (Reg >= X86::TMM0_TMM1 && Reg <= X86::TMM6_TMM7)
+      return 2;
+  }
+  return 0;
+}
+
+static bool isTileRegister(MachineRegisterInfo *MRI, Register VirtReg) {
+  return getTileDefNum(MRI, VirtReg) > 0;
+}
+
 static bool isTileDef(MachineRegisterInfo *MRI, MachineInstr &MI) {
   // The instruction must have 3 operands: tile def, row, col.
   if (MI.isDebugInstr() || MI.getNumOperands() < 3 || !MI.isPseudo())
     return false;
   MachineOperand &MO = MI.getOperand(0);
 
-  if (MO.isReg()) {
-    Register Reg = MO.getReg();
-    // FIXME it may be used after Greedy RA and the physical
-    // register is not rewritten yet.
-    if (Reg.isVirtual() &&
-        MRI->getRegClass(Reg)->getID() == X86::TILERegClassID)
-      return true;
-    if (Reg >= X86::TMM0 && Reg <= X86::TMM7)
-      return true;
-  }
+  if (!MO.isReg())
+    return false;
 
-  return false;
+  return getTileDefNum(MRI, MO.getReg()) > 0;
 }
 
 static ShapeT getShape(MachineRegisterInfo *MRI, Register TileReg) {
@@ -424,8 +435,7 @@ void X86FastPreTileConfig::convertPHI(MachineBasicBlock *MBB,
 
 static bool isTileRegDef(MachineRegisterInfo *MRI, MachineInstr &MI) {
   MachineOperand &MO = MI.getOperand(0);
-  if (MO.isReg() && MO.getReg().isVirtual() &&
-      MRI->getRegClass(MO.getReg())->getID() == X86::TILERegClassID)
+  if (MO.isReg() && MO.getReg().isVirtual() && isTileRegister(MRI, MO.getReg()))
     return true;
   return false;
 }
@@ -524,8 +534,7 @@ bool X86FastPreTileConfig::configBasicBlock(MachineBasicBlock &MBB) {
       if (!MO.isReg())
         continue;
       Register Reg = MO.getReg();
-      if (Reg.isVirtual() &&
-          MRI->getRegClass(Reg)->getID() == X86::TILERegClassID)
+      if (Reg.isVirtual() && isTileRegister(MRI, Reg))
         return true;
     }
     return false;
@@ -617,6 +626,19 @@ bool X86FastPreTileConfig::configBasicBlock(MachineBasicBlock &MBB) {
       else if (dominates(MBB, LastShapeMI, ColMI))
         LastShapeMI = ColMI;
     }
+    unsigned TileDefNum = getTileDefNum(MRI, MI.getOperand(0).getReg());
+    if (TileDefNum > 1) {
+      for (unsigned I = 1; I < TileDefNum; I++) {
+        MachineOperand *ColxMO = &MI.getOperand(2 + I);
+        MachineInstr *ColxMI = MRI->getVRegDef(ColxMO->getReg());
+        if (ColxMI->getParent() == &MBB) {
+          if (!LastShapeMI)
+            LastShapeMI = ColxMI;
+          else if (dominates(MBB, LastShapeMI, ColxMI))
+            LastShapeMI = ColxMI;
+        }
+      }
+    }
     // If there is user live out of the tilecfg, spill it and reload in
     // before the user.
     Register TileReg = MI.getOperand(0).getReg();
@@ -653,27 +675,20 @@ bool X86FastPreTileConfig::configBasicBlock(MachineBasicBlock &MBB) {
 }
 
 bool X86FastPreTileConfig::runOnMachineFunction(MachineFunction &MFunc) {
+  X86FI = MFunc.getInfo<X86MachineFunctionInfo>();
+  // Early exit in the common case of non-AMX code.
+  if (X86FI->getAMXProgModel() != AMXProgModelEnum::ManagedRA)
+    return false;
+
   MF = &MFunc;
   MRI = &MFunc.getRegInfo();
   ST = &MFunc.getSubtarget<X86Subtarget>();
   TII = ST->getInstrInfo();
-  X86FI = MFunc.getInfo<X86MachineFunctionInfo>();
   MFI = &MFunc.getFrameInfo();
   TRI = ST->getRegisterInfo();
   CfgSS = -1;
 
   unsigned NumVirtRegs = MRI->getNumVirtRegs();
-  // Abandon early if there is no tile register to config.
-  bool HasVirtTileReg = false;
-  for (unsigned I = 0, E = NumVirtRegs; I != E; ++I) {
-    Register VirtReg = Register::index2VirtReg(I);
-    if (MRI->getRegClass(VirtReg)->getID() == X86::TILERegClassID) {
-      HasVirtTileReg = true;
-      break;
-    }
-  }
-  if (!HasVirtTileReg)
-    return false;
 
   StackSlotForVirtReg.resize(NumVirtRegs);
   MayLiveAcrossBlocks.clear();

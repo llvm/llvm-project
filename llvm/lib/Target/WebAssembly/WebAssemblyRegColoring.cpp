@@ -40,9 +40,9 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<LiveIntervals>();
-    AU.addRequired<MachineBlockFrequencyInfo>();
-    AU.addPreserved<MachineBlockFrequencyInfo>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     AU.addPreservedID(MachineDominatorsID);
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -129,14 +129,13 @@ buildVRegToDbgValueMap(MachineFunction &MF, const LiveIntervals *Liveness) {
 // changes.
 static void undefInvalidDbgValues(
     const LiveIntervals *Liveness,
-    const ArrayRef<SmallVector<LiveInterval *, 4>> &Assignments,
+    ArrayRef<SmallVector<LiveInterval *, 4>> Assignments,
     DenseMap<Register, std::vector<std::pair<SlotIndex, MachineInstr *>>>
         &DbgVRegToValues) {
 #ifndef NDEBUG
   DenseSet<Register> SeenRegs;
 #endif
-  for (size_t I = 0, E = Assignments.size(); I < E; ++I) {
-    const auto &CoalescedIntervals = Assignments[I];
+  for (const auto &CoalescedIntervals : Assignments) {
     if (CoalescedIntervals.empty())
       continue;
     for (LiveInterval *LI : CoalescedIntervals) {
@@ -232,9 +231,9 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   MachineRegisterInfo *MRI = &MF.getRegInfo();
-  LiveIntervals *Liveness = &getAnalysis<LiveIntervals>();
+  LiveIntervals *Liveness = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   const MachineBlockFrequencyInfo *MBFI =
-      &getAnalysis<MachineBlockFrequencyInfo>();
+      &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
   WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
 
   // We don't preserve SSA form.

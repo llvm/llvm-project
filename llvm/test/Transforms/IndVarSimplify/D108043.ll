@@ -9,7 +9,7 @@ define internal fastcc void @func_2() unnamed_addr {
 ; CHECK-NEXT:  lbl_2898.preheader:
 ; CHECK-NEXT:    br label [[LBL_2898:%.*]]
 ; CHECK:       lbl_2898.loopexit:
-; CHECK-NEXT:    store ptr getelementptr inbounds ([4 x [6 x i32]], ptr @g_2168, i64 0, i64 3, i64 1), ptr @g_1150, align 8
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @g_2168, i64 76), ptr @g_1150, align 8
 ; CHECK-NEXT:    br label [[LBL_2898]]
 ; CHECK:       lbl_2898:
 ; CHECK-NEXT:    br label [[FOR_COND884:%.*]]

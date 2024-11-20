@@ -59,6 +59,15 @@ def SDT_ZBinaryWithCarry    : SDTypeProfile<2, 3,
                                              SDTCisSameAs<0, 2>,
                                              SDTCisSameAs<0, 3>,
                                              SDTCisVT<1, i32>]>;
+def SDT_ZBinaryConv         : SDTypeProfile<1, 2,
+                                            [SDTCisInt<0>,
+                                             SDTCisInt<1>,
+                                             SDTCisSameAs<1, 2>]>;
+def SDT_ZTernary            : SDTypeProfile<1, 3,
+                                            [SDTCisInt<0>,
+                                             SDTCisSameAs<0, 1>,
+                                             SDTCisSameAs<0, 2>,
+                                             SDTCisSameAs<0, 3>]>;
 def SDT_ZAtomicLoadBinaryW  : SDTypeProfile<1, 5,
                                             [SDTCisVT<0, i32>,
                                              SDTCisPtrTy<1>,
@@ -123,6 +132,8 @@ def SDT_ZIPM                : SDTypeProfile<1, 1,
 def SDT_ZPrefetch           : SDTypeProfile<0, 2,
                                             [SDTCisVT<0, i32>,
                                              SDTCisPtrTy<1>]>;
+def SDT_ZStoreInherent      : SDTypeProfile<0, 1,
+                                            [SDTCisPtrTy<0>]>;
 def SDT_ZTBegin             : SDTypeProfile<1, 2,
                                             [SDTCisVT<0, i32>,
                                              SDTCisPtrTy<1>,
@@ -283,6 +294,12 @@ def z_uaddo             : SDNode<"SystemZISD::UADDO", SDT_ZBinaryWithFlags>;
 def z_usubo             : SDNode<"SystemZISD::USUBO", SDT_ZBinaryWithFlags>;
 def z_addcarry_1        : SDNode<"SystemZISD::ADDCARRY", SDT_ZBinaryWithCarry>;
 def z_subcarry_1        : SDNode<"SystemZISD::SUBCARRY", SDT_ZBinaryWithCarry>;
+def z_vacc              : SDNode<"SystemZISD::VACC", SDTIntBinOp>;
+def z_vac               : SDNode<"SystemZISD::VAC", SDT_ZTernary>;
+def z_vaccc             : SDNode<"SystemZISD::VACCC", SDT_ZTernary>;
+def z_vscbi             : SDNode<"SystemZISD::VSCBI", SDTIntBinOp>;
+def z_vsbi              : SDNode<"SystemZISD::VSBI", SDT_ZTernary>;
+def z_vsbcbi            : SDNode<"SystemZISD::VSBCBI", SDT_ZTernary>;
 
 def z_loadbswap        : SDNode<"SystemZISD::LRV", SDTLoad,
                                  [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
@@ -292,6 +309,8 @@ def z_loadeswap        : SDNode<"SystemZISD::VLER", SDTLoad,
                                  [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def z_storeeswap       : SDNode<"SystemZISD::VSTER", SDTStore,
                                  [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def z_stckf            : SDNode<"SystemZISD::STCKF", SDT_ZStoreInherent,
+                                [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def z_tdc               : SDNode<"SystemZISD::TDC", SDT_ZTest>;
 
@@ -324,7 +343,9 @@ def z_vsrl_by_scalar    : SDNode<"SystemZISD::VSRL_BY_SCALAR",
                                  SDT_ZVecBinaryInt>;
 def z_vsra_by_scalar    : SDNode<"SystemZISD::VSRA_BY_SCALAR",
                                  SDT_ZVecBinaryInt>;
-def z_vsum              : SDNode<"SystemZISD::VSUM", SDT_ZVecBinaryConv>;
+def z_vrotl_by_scalar   : SDNode<"SystemZISD::VROTL_BY_SCALAR",
+                                 SDT_ZVecBinaryInt>;
+def z_vsum              : SDNode<"SystemZISD::VSUM", SDT_ZBinaryConv>;
 def z_vicmpe            : SDNode<"SystemZISD::VICMPE", SDT_ZVecBinary>;
 def z_vicmph            : SDNode<"SystemZISD::VICMPH", SDT_ZVecBinary>;
 def z_vicmphl           : SDNode<"SystemZISD::VICMPHL", SDT_ZVecBinary>;
@@ -356,6 +377,8 @@ def z_vround            : SDNode<"SystemZISD::VROUND", SDT_ZVecUnaryConv>;
 def z_strict_vround     : SDNode<"SystemZISD::STRICT_VROUND",
                                  SDT_ZVecUnaryConv, [SDNPHasChain]>;
 def z_vtm               : SDNode<"SystemZISD::VTM", SDT_ZCmp>;
+def z_scmp128hi         : SDNode<"SystemZISD::SCMP128HI", SDT_ZCmp>;
+def z_ucmp128hi         : SDNode<"SystemZISD::UCMP128HI", SDT_ZCmp>;
 def z_vfae_cc           : SDNode<"SystemZISD::VFAE_CC", SDT_ZVecTernaryIntCC>;
 def z_vfaez_cc          : SDNode<"SystemZISD::VFAEZ_CC", SDT_ZVecTernaryIntCC>;
 def z_vfee_cc           : SDNode<"SystemZISD::VFEE_CC", SDT_ZVecBinaryCC>;
@@ -488,11 +511,11 @@ def z_subcarry : PatFrag<(ops node:$lhs, node:$rhs),
 
 // Signed and unsigned comparisons.
 def z_scmp : PatFrag<(ops node:$a, node:$b), (z_icmp node:$a, node:$b, timm), [{
-  unsigned Type = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
+  unsigned Type = N->getConstantOperandVal(2);
   return Type != SystemZICMP::UnsignedOnly;
 }]>;
 def z_ucmp : PatFrag<(ops node:$a, node:$b), (z_icmp node:$a, node:$b, timm), [{
-  unsigned Type = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
+  unsigned Type = N->getConstantOperandVal(2);
   return Type != SystemZICMP::SignedOnly;
 }]>;
 
@@ -515,37 +538,108 @@ def zext8  : PatFrag<(ops node:$src), (and node:$src, 0xff)>;
 def zext16 : PatFrag<(ops node:$src), (and node:$src, 0xffff)>;
 def zext32 : PatFrag<(ops node:$src), (zext (i32 node:$src))>;
 
-// Extending loads in which the extension type can be signed.
-def asextload : PatFrag<(ops node:$ptr), (unindexedload node:$ptr), [{
-  unsigned Type = cast<LoadSDNode>(N)->getExtensionType();
-  return Type == ISD::EXTLOAD || Type == ISD::SEXTLOAD;
-}]>;
-def asextloadi8 : PatFrag<(ops node:$ptr), (asextload node:$ptr), [{
-  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i8;
-}]>;
-def asextloadi16 : PatFrag<(ops node:$ptr), (asextload node:$ptr), [{
-  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i16;
-}]>;
-def asextloadi32 : PatFrag<(ops node:$ptr), (asextload node:$ptr), [{
-  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i32;
+// Match a load or a non-extending atomic load.
+def z_load : PatFrags<(ops node:$ptr),
+                      [(load node:$ptr),
+                       (atomic_load node:$ptr)], [{
+  if (auto *AL = dyn_cast<AtomicSDNode>(N))
+    if (AL->getExtensionType() != ISD::NON_EXTLOAD)
+      return false;
+  return true;
 }]>;
 
-// Extending loads in which the extension type can be unsigned.
-def azextload : PatFrag<(ops node:$ptr), (unindexedload node:$ptr), [{
-  unsigned Type = cast<LoadSDNode>(N)->getExtensionType();
-  return Type == ISD::EXTLOAD || Type == ISD::ZEXTLOAD;
+// Sign extending (atomic) loads.
+def z_sextload : PatFrags<(ops node:$ptr),
+                          [(unindexedload node:$ptr),
+                           (atomic_load node:$ptr)], [{
+  return getLoadExtType(N) == ISD::SEXTLOAD;
 }]>;
-def azextloadi8 : PatFrag<(ops node:$ptr), (azextload node:$ptr), [{
-  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i8;
+def z_sextloadi8 : PatFrag<(ops node:$ptr), (z_sextload node:$ptr), [{
+  return cast<MemSDNode>(N)->getMemoryVT() == MVT::i8;
 }]>;
-def azextloadi16 : PatFrag<(ops node:$ptr), (azextload node:$ptr), [{
-  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i16;
+def z_sextloadi16 : PatFrag<(ops node:$ptr), (z_sextload node:$ptr), [{
+  return cast<MemSDNode>(N)->getMemoryVT() == MVT::i16;
 }]>;
-def azextloadi32 : PatFrag<(ops node:$ptr), (azextload node:$ptr), [{
-  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i32;
+def z_sextloadi32 : PatFrag<(ops node:$ptr), (z_sextload node:$ptr), [{
+  return cast<MemSDNode>(N)->getMemoryVT() == MVT::i32;
+}]>;
+def z_sextloadi64 : PatFrag<(ops node:$ptr), (z_sextload node:$ptr), [{
+  return cast<MemSDNode>(N)->getMemoryVT() == MVT::i64;
 }]>;
 
-// Extending loads in which the extension type doesn't matter.
+// Zero extending (atomic) loads.
+def z_zextload : PatFrags<(ops node:$ptr),
+                          [(unindexedload node:$ptr),
+                           (atomic_load node:$ptr)], [{
+  return getLoadExtType(N) == ISD::ZEXTLOAD;
+}]>;
+def z_zextloadi8 : PatFrag<(ops node:$ptr), (z_zextload node:$ptr), [{
+  return cast<MemSDNode>(N)->getMemoryVT() == MVT::i8;
+}]>;
+def z_zextloadi16 : PatFrag<(ops node:$ptr), (z_zextload node:$ptr), [{
+  return cast<MemSDNode>(N)->getMemoryVT() == MVT::i16;
+}]>;
+def z_zextloadi32 : PatFrag<(ops node:$ptr), (z_zextload node:$ptr), [{
+  return cast<MemSDNode>(N)->getMemoryVT() == MVT::i32;
+}]>;
+def z_zextloadi64 : PatFrag<(ops node:$ptr), (z_zextload node:$ptr), [{
+  return cast<MemSDNode>(N)->getMemoryVT() == MVT::i64;
+}]>;
+
+// Extending (atomic) loads in which the extension type can be signed.
+def z_asextload : PatFrags<(ops node:$ptr),
+                           [(unindexedload node:$ptr),
+                            (atomic_load node:$ptr)], [{
+  ISD::LoadExtType ETy = getLoadExtType(N);
+  return ETy == ISD::EXTLOAD || ETy == ISD::SEXTLOAD;
+}]>;
+def z_asextloadi8 : PatFrag<(ops node:$ptr), (z_asextload node:$ptr), [{
+  return cast<MemSDNode>(N)->getMemoryVT() == MVT::i8;
+}]>;
+def z_asextloadi16 : PatFrag<(ops node:$ptr), (z_asextload node:$ptr), [{
+  return cast<MemSDNode>(N)->getMemoryVT() == MVT::i16;
+}]>;
+def z_asextloadi32 : PatFrag<(ops node:$ptr), (z_asextload node:$ptr), [{
+  return cast<MemSDNode>(N)->getMemoryVT() == MVT::i32;
+}]>;
+
+// Extending (atomic) loads in which the extension type can be unsigned.
+def z_azextload : PatFrags<(ops node:$ptr),
+                           [(unindexedload node:$ptr),
+                           (atomic_load node:$ptr)], [{
+  ISD::LoadExtType ETy = getLoadExtType(N);
+  return ETy == ISD::EXTLOAD || ETy == ISD::ZEXTLOAD;
+}]>;
+def z_azextloadi8 : PatFrag<(ops node:$ptr), (z_azextload node:$ptr), [{
+  return cast<MemSDNode>(N)->getMemoryVT() == MVT::i8;
+}]>;
+def z_azextloadi16 : PatFrag<(ops node:$ptr), (z_azextload node:$ptr), [{
+  return cast<MemSDNode>(N)->getMemoryVT() == MVT::i16;
+}]>;
+def z_azextloadi32 : PatFrag<(ops node:$ptr), (z_azextload node:$ptr), [{
+  return cast<MemSDNode>(N)->getMemoryVT() == MVT::i32;
+}]>;
+
+// Extending (atomic) loads in which the extension type doesn't matter.
+def z_anyextload : PatFrags<(ops node:$ptr),
+                            [(unindexedload node:$ptr),
+                             (atomic_load node:$ptr)], [{
+  return getLoadExtType(N) != ISD::NON_EXTLOAD;
+}]>;
+def z_anyextloadi8 : PatFrag<(ops node:$ptr), (z_anyextload node:$ptr), [{
+  return cast<MemSDNode>(N)->getMemoryVT() == MVT::i8;
+}]>;
+def z_anyextloadi16 : PatFrag<(ops node:$ptr), (z_anyextload node:$ptr), [{
+  return cast<MemSDNode>(N)->getMemoryVT() == MVT::i16;
+}]>;
+def z_anyextloadi32 : PatFrag<(ops node:$ptr), (z_anyextload node:$ptr), [{
+  return cast<MemSDNode>(N)->getMemoryVT() == MVT::i32;
+}]>;
+def z_anyextloadi64 : PatFrag<(ops node:$ptr), (z_anyextload node:$ptr), [{
+  return cast<MemSDNode>(N)->getMemoryVT() == MVT::i64;
+}]>;
+
+// Extending non-atomic loads in which the extension type doesn't matter.
 def anyextload : PatFrag<(ops node:$ptr), (unindexedload node:$ptr), [{
   return cast<LoadSDNode>(N)->getExtensionType() != ISD::NON_EXTLOAD;
 }]>;
@@ -559,15 +653,42 @@ def anyextloadi32 : PatFrag<(ops node:$ptr), (anyextload node:$ptr), [{
   return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i32;
 }]>;
 
+// Extending (atomic) loads that are not sign/zero extending.
+def z_extload : PatFrags<(ops node:$ptr),
+                         [(extload node:$ptr),
+                          (atomic_load node:$ptr)], [{
+  return getLoadExtType(N) == ISD::EXTLOAD;
+}]>;
+def z_extloadi8 : PatFrag<(ops node:$ptr), (z_extload node:$ptr), [{
+  return cast<MemSDNode>(N)->getMemoryVT() == MVT::i8;
+}]>;
+def z_extloadi16 : PatFrag<(ops node:$ptr), (z_extload node:$ptr), [{
+  return cast<MemSDNode>(N)->getMemoryVT() == MVT::i16;
+}]>;
+def z_extloadi32 : PatFrag<(ops node:$ptr), (z_extload node:$ptr), [{
+  return cast<MemSDNode>(N)->getMemoryVT() == MVT::i32;
+}]>;
+def z_extloadi64 : PatFrag<(ops node:$ptr), (z_extload node:$ptr), [{
+  return cast<MemSDNode>(N)->getMemoryVT() == MVT::i64;
+}]>;
+
+// Extending atomic FP loads.
+def z_any_extloadf32 : PatFrags<(ops node:$ptr),
+                                [(any_extloadf32 node:$ptr),
+                                 (any_fpextend (f32 (atomic_load node:$ptr)))]>;
+def z_any_extloadf64 : PatFrags<(ops node:$ptr),
+                                [(any_extloadf64 node:$ptr),
+                                 (any_fpextend (f64 (atomic_load node:$ptr)))]>;
+
 // Aligned loads.
 class AlignedLoad<SDPatternOperator load>
   : PatFrag<(ops node:$addr), (load node:$addr),
   [{ return storeLoadIsAligned(N); }]>;
-def aligned_load         : AlignedLoad<load>;
-def aligned_asextloadi16 : AlignedLoad<asextloadi16>;
-def aligned_asextloadi32 : AlignedLoad<asextloadi32>;
-def aligned_azextloadi16 : AlignedLoad<azextloadi16>;
-def aligned_azextloadi32 : AlignedLoad<azextloadi32>;
+def aligned_z_load         : AlignedLoad<z_load>;
+def aligned_z_asextloadi16 : AlignedLoad<z_asextloadi16>;
+def aligned_z_asextloadi32 : AlignedLoad<z_asextloadi32>;
+def aligned_z_azextloadi16 : AlignedLoad<z_azextloadi16>;
+def aligned_z_azextloadi32 : AlignedLoad<z_azextloadi32>;
 
 // Aligned stores.
 class AlignedStore<SDPatternOperator store>
@@ -708,6 +829,18 @@ def any_fnms : PatFrag<(ops node:$src1, node:$src2, node:$src3),
 // Floating-point negative absolute.
 def fnabs : PatFrag<(ops node:$ptr), (fneg (fabs node:$ptr))>;
 
+// Floating-point operations which will not participate in reassociation, and
+// therefore are candidates for reg/mem folding during isel.
+def z_any_fadd_noreassoc : PatFrag<(ops node:$src1, node:$src2),
+                                   (any_fadd node:$src1, node:$src2),
+                                   [{ return !shouldSelectForReassoc(N); }]>;
+def z_any_fsub_noreassoc : PatFrag<(ops node:$src1, node:$src2),
+                                   (any_fsub node:$src1, node:$src2),
+                                   [{ return !shouldSelectForReassoc(N); }]>;
+def z_any_fmul_noreassoc : PatFrag<(ops node:$src1, node:$src2),
+                                   (any_fmul node:$src1, node:$src2),
+                                   [{ return !shouldSelectForReassoc(N); }]>;
+
 // Strict floating-point fragments.
 def z_any_fcmp    : PatFrags<(ops node:$lhs, node:$rhs),
                              [(z_strict_fcmp node:$lhs, node:$rhs),
@@ -730,7 +863,7 @@ def z_any_vround  : PatFrags<(ops node:$src),
 
 // Create a unary operator that loads from memory and then performs
 // the given operation on it.
-class loadu<SDPatternOperator operator, SDPatternOperator load = load>
+class loadu<SDPatternOperator operator, SDPatternOperator load = z_load>
   : PatFrag<(ops node:$addr), (operator (load node:$addr))>;
 
 // Create a store operator that performs the given unary operation
@@ -755,20 +888,37 @@ class shiftop<SDPatternOperator operator>
              [(operator node:$val, node:$count),
               (operator node:$val, (and node:$count, imm32bottom6set))]>;
 
+// Create a shift operator that optionally ignores an AND of the
+// shift count with an immediate if the bottom 7 bits are all set.
+def imm32bottom7set : PatLeaf<(i32 imm), [{
+  return (N->getZExtValue() & 0x7f) == 0x7f;
+}]>;
+class vshiftop<SDPatternOperator operator>
+  : PatFrags<(ops node:$val, node:$count),
+             [(operator node:$val, node:$count),
+              (operator node:$val, (and node:$count, imm32bottom7set))]>;
+
 def imm32mod64  : PatLeaf<(i32 imm), [{
   return (N->getZExtValue() % 64 == 0);
+}]>;
+
+def imm32nobits : PatLeaf<(i32 imm), [{
+  return (N->getZExtValue() & 0x07) == 0;
+}]>;
+def imm32nobytes : PatLeaf<(i32 imm), [{
+  return (N->getZExtValue() & 0x78) == 0;
 }]>;
 
 // Load a scalar and replicate it in all elements of a vector.
 class z_replicate_load<ValueType scalartype, SDPatternOperator load>
   : PatFrag<(ops node:$addr),
             (z_replicate (scalartype (load node:$addr)))>;
-def z_replicate_loadi8  : z_replicate_load<i32, anyextloadi8>;
-def z_replicate_loadi16 : z_replicate_load<i32, anyextloadi16>;
-def z_replicate_loadi32 : z_replicate_load<i32, load>;
-def z_replicate_loadi64 : z_replicate_load<i64, load>;
-def z_replicate_loadf32 : z_replicate_load<f32, load>;
-def z_replicate_loadf64 : z_replicate_load<f64, load>;
+def z_replicate_loadi8  : z_replicate_load<i32, z_anyextloadi8>;
+def z_replicate_loadi16 : z_replicate_load<i32, z_anyextloadi16>;
+def z_replicate_loadi32 : z_replicate_load<i32, z_load>;
+def z_replicate_loadi64 : z_replicate_load<i64, z_load>;
+def z_replicate_loadf32 : z_replicate_load<f32, z_load>;
+def z_replicate_loadf64 : z_replicate_load<f64, z_load>;
 // Byte-swapped replicated vector element loads.
 def z_replicate_loadbswapi16 : z_replicate_load<i32, z_loadbswap16>;
 def z_replicate_loadbswapi32 : z_replicate_load<i32, z_loadbswap32>;
@@ -779,12 +929,12 @@ class z_vle<ValueType scalartype, SDPatternOperator load>
   : PatFrag<(ops node:$vec, node:$addr, node:$index),
             (z_vector_insert node:$vec, (scalartype (load node:$addr)),
                              node:$index)>;
-def z_vlei8  : z_vle<i32, anyextloadi8>;
-def z_vlei16 : z_vle<i32, anyextloadi16>;
-def z_vlei32 : z_vle<i32, load>;
-def z_vlei64 : z_vle<i64, load>;
-def z_vlef32 : z_vle<f32, load>;
-def z_vlef64 : z_vle<f64, load>;
+def z_vlei8  : z_vle<i32, z_anyextloadi8>;
+def z_vlei16 : z_vle<i32, z_anyextloadi16>;
+def z_vlei32 : z_vle<i32, z_load>;
+def z_vlei64 : z_vle<i64, z_load>;
+def z_vlef32 : z_vle<f32, z_load>;
+def z_vlef64 : z_vle<f64, z_load>;
 // Byte-swapped vector element loads.
 def z_vlebri16 : z_vle<i32, z_loadbswap16>;
 def z_vlebri32 : z_vle<i32, z_loadbswap32>;
@@ -796,13 +946,13 @@ class z_vllez<ValueType scalartype, SDPatternOperator load, int index>
   : PatFrag<(ops node:$addr),
             (z_vector_insert immAllZerosV,
                              (scalartype (load node:$addr)), (i32 index))>;
-def z_vllezi8  : z_vllez<i32, anyextloadi8, 7>;
-def z_vllezi16 : z_vllez<i32, anyextloadi16, 3>;
-def z_vllezi32 : z_vllez<i32, load, 1>;
+def z_vllezi8  : z_vllez<i32, z_anyextloadi8, 7>;
+def z_vllezi16 : z_vllez<i32, z_anyextloadi16, 3>;
+def z_vllezi32 : z_vllez<i32, z_load, 1>;
 def z_vllezi64 : PatFrags<(ops node:$addr),
                           [(z_vector_insert immAllZerosV,
-                                            (i64 (load node:$addr)), (i32 0)),
-                           (z_join_dwords (i64 (load node:$addr)), (i64 0))]>;
+                                            (i64 (z_load node:$addr)), (i32 0)),
+                           (z_join_dwords (i64 (z_load node:$addr)), (i64 0))]>;
 // We use high merges to form a v4f32 from four f32s.  Propagating zero
 // into all elements but index 1 gives this expression.
 def z_vllezf32 : PatFrag<(ops node:$addr),
@@ -812,23 +962,23 @@ def z_vllezf32 : PatFrag<(ops node:$addr),
                             (v4i32
                              (bitconvert
                               (v4f32 (scalar_to_vector
-                                      (f32 (load node:$addr)))))))),
+                                      (f32 (z_load node:$addr)))))))),
                           (v2i64
                            (bitconvert (v4f32 immAllZerosV))))>;
 def z_vllezf64 : PatFrag<(ops node:$addr),
                          (z_merge_high
-                          (v2f64 (scalar_to_vector (f64 (load node:$addr)))),
+                          (v2f64 (scalar_to_vector (f64 (z_load node:$addr)))),
                           immAllZerosV)>;
 
 // Similarly for the high element of a zeroed vector.
-def z_vllezli32 : z_vllez<i32, load, 0>;
+def z_vllezli32 : z_vllez<i32, z_load, 0>;
 def z_vllezlf32 : PatFrag<(ops node:$addr),
                           (z_merge_high
                            (v2i64
                             (bitconvert
                              (z_merge_high
                               (v4f32 (scalar_to_vector
-                                      (f32 (load node:$addr)))),
+                                      (f32 (z_load node:$addr)))),
                               (v4f32 immAllZerosV)))),
                            (v2i64
                             (bitconvert (v4f32 immAllZerosV))))>;

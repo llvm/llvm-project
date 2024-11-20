@@ -203,7 +203,7 @@ void RVVType::initBuiltinStr() {
     }
     break;
   case ScalarTypeKind::BFloat:
-    BuiltinStr += "b";
+    BuiltinStr += "y";
     break;
   default:
     llvm_unreachable("ScalarType is invalid!");
@@ -464,7 +464,7 @@ PrototypeDescriptor::parsePrototypeDescriptor(
   PrototypeDescriptorStr = PrototypeDescriptorStr.drop_back();
 
   // Compute the vector type transformers, it can only appear one time.
-  if (PrototypeDescriptorStr.startswith("(")) {
+  if (PrototypeDescriptorStr.starts_with("(")) {
     assert(VTM == VectorTypeModifier::NoModifier &&
            "VectorTypeModifier should only have one modifier");
     size_t Idx = PrototypeDescriptorStr.find(')');
@@ -978,8 +978,7 @@ RVVIntrinsic::RVVIntrinsic(
     bool HasMaskedOffOperand, bool HasVL, PolicyScheme Scheme,
     bool SupportOverloading, bool HasBuiltinAlias, StringRef ManualCodegen,
     const RVVTypes &OutInTypes, const std::vector<int64_t> &NewIntrinsicTypes,
-    const std::vector<StringRef> &RequiredFeatures, unsigned NF,
-    Policy NewPolicyAttrs, bool HasFRMRoundModeOp)
+    unsigned NF, Policy NewPolicyAttrs, bool HasFRMRoundModeOp)
     : IRName(IRName), IsMasked(IsMasked),
       HasMaskedOffOperand(HasMaskedOffOperand), HasVL(HasVL), Scheme(Scheme),
       SupportOverloading(SupportOverloading), HasBuiltinAlias(HasBuiltinAlias),
@@ -1011,7 +1010,7 @@ RVVIntrinsic::RVVIntrinsic(
       (!IsMasked && hasPassthruOperand())) {
     for (auto &I : IntrinsicTypes) {
       if (I >= 0)
-        I += NF;
+        I += 1;
     }
   }
 }
@@ -1040,8 +1039,7 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
     llvm::ArrayRef<PrototypeDescriptor> Prototype, bool IsMasked,
     bool HasMaskedOffOperand, bool HasVL, unsigned NF,
     PolicyScheme DefaultScheme, Policy PolicyAttrs, bool IsTuple) {
-  SmallVector<PrototypeDescriptor> NewPrototype(Prototype.begin(),
-                                                Prototype.end());
+  SmallVector<PrototypeDescriptor> NewPrototype(Prototype);
   bool HasPassthruOp = DefaultScheme == PolicyScheme::HasPassthruOperand;
   if (IsMasked) {
     // If HasMaskedOffOperand, insert result type as first input operand if
@@ -1150,11 +1148,6 @@ void RVVIntrinsic::updateNamesAndPolicy(
     OverloadedName += suffix;
   };
 
-  // This follows the naming guideline under riscv-c-api-doc to add the
-  // `__riscv_` suffix for all RVV intrinsics.
-  Name = "__riscv_" + Name;
-  OverloadedName = "__riscv_" + OverloadedName;
-
   if (HasFRMRoundModeOp) {
     Name += "_rm";
     BuiltinName += "_rm";
@@ -1217,7 +1210,7 @@ raw_ostream &operator<<(raw_ostream &OS, const RVVIntrinsicRecord &Record) {
   OS << (int)Record.PrototypeLength << ",";
   OS << (int)Record.SuffixLength << ",";
   OS << (int)Record.OverloadedSuffixSize << ",";
-  OS << (int)Record.RequiredExtensions << ",";
+  OS << Record.RequiredExtensions << ",";
   OS << (int)Record.TypeRangeMask << ",";
   OS << (int)Record.Log2LMULMask << ",";
   OS << (int)Record.NF << ",";

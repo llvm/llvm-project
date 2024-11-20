@@ -55,11 +55,12 @@ static const SymbolHeaderMapping *getMappingPerLang(Lang L) {
 }
 
 static int countSymbols(Lang Language) {
-  ArrayRef<const char*> Symbols;
+  ArrayRef<const char *> Symbols;
 #define SYMBOL(Name, NS, Header) #NS #Name,
   switch (Language) {
   case Lang::C: {
     static constexpr const char *CSymbols[] = {
+#include "CSpecialSymbolMap.inc"
 #include "CSymbolMap.inc"
     };
     Symbols = CSymbols;
@@ -114,19 +115,19 @@ static int initialize(Lang Language) {
       NSLen = 0;
     }
 
-    if (SymIndex >= 0 &&
-        Mapping->SymbolNames[SymIndex].qualifiedName() == QName) {
-      // Not a new symbol, use the same index.
+    if (SymIndex > 0) {
       assert(llvm::none_of(llvm::ArrayRef(Mapping->SymbolNames, SymIndex),
                            [&QName](const SymbolHeaderMapping::SymbolName &S) {
                              return S.qualifiedName() == QName;
                            }) &&
              "The symbol has been added before, make sure entries in the .inc "
              "file are grouped by symbol name!");
-    } else {
+    }
+    if (SymIndex < 0 ||
+        Mapping->SymbolNames[SymIndex].qualifiedName() != QName) {
       // First symbol or new symbol, increment next available index.
       ++SymIndex;
-    }
+    } // Else use the same index.
     Mapping->SymbolNames[SymIndex] = {
         QName.data(), NSLen, static_cast<unsigned int>(QName.size() - NSLen)};
     if (!HeaderName.empty())
@@ -147,6 +148,7 @@ static int initialize(Lang Language) {
   switch (Language) {
   case Lang::C: {
     static constexpr Symbol CSymbols[] = {
+#include "CSpecialSymbolMap.inc"
 #include "CSymbolMap.inc"
     };
     for (const Symbol &S : CSymbols)

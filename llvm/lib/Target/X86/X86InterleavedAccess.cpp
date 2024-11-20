@@ -18,21 +18,18 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/VectorUtils.h"
-#include "llvm/CodeGen/MachineValueType.h"
-#include "llvm/IR/Constants.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <cstdint>
 
 using namespace llvm;
 
@@ -112,7 +109,7 @@ public:
                                      const X86Subtarget &STarget,
                                      IRBuilder<> &B)
       : Inst(I), Shuffles(Shuffs), Indices(Ind), Factor(F), Subtarget(STarget),
-        DL(Inst->getModule()->getDataLayout()), Builder(B) {}
+        DL(Inst->getDataLayout()), Builder(B) {}
 
   /// Returns true if this interleaved access group can be lowered into
   /// x86-specific instructions/intrinsics, false otherwise.

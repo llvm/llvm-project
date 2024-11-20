@@ -27,7 +27,7 @@ int e = h<0>(q); // ok, found by unqualified lookup
 void fn() {
   f<0>(q);
   int f;
-  f<0>(q); // expected-error {{invalid operands to binary expression}}
+  f<0>(q); // expected-error {{invalid operands to binary expression}} // expected-warning {{comparisons like 'X<=Y<=Z' don't have their mathematical meaning}}
 }
 
 void disambig() {

@@ -6,11 +6,11 @@
 
 // RUN: %clang_cc1 -DOMP45 -verify -Wno-vla -fopenmp -fopenmp-version=45 -ast-print %s | FileCheck %s --check-prefix=OMP45
 // RUN: %clang_cc1 -DOMP45 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP45 -fopenmp -fopenmp-version=45 -std=c++11 -include-pch %t -fsyntax-only -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefix=OMP45
+// RUN: %clang_cc1 -DOMP45 -fopenmp -fopenmp-version=45 -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefix=OMP45
 
 // RUN: %clang_cc1 -DOMP45 -verify -Wno-vla -fopenmp-simd -fopenmp-version=45 -ast-print %s | FileCheck %s --check-prefix=OMP45
 // RUN: %clang_cc1 -DOMP45 -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP45 -fopenmp-simd -fopenmp-version=45 -std=c++11 -include-pch %t -fsyntax-only -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefix=OMP45
+// RUN: %clang_cc1 -DOMP45 -fopenmp-simd -fopenmp-version=45 -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefix=OMP45
 #ifdef OMP45
 
 void foo() {}
@@ -337,19 +337,19 @@ int main (int argc, char **argv) {
 ///==========================================================================///
 // RUN: %clang_cc1 -DOMP5 -verify -Wno-vla -fopenmp -fopenmp-version=50 -ast-print %s | FileCheck %s --check-prefix OMP5
 // RUN: %clang_cc1 -DOMP5 -fopenmp -fopenmp-version=50 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP5 -fopenmp -fopenmp-version=50 -std=c++11 -include-pch %t -fsyntax-only -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefix OMP5
+// RUN: %clang_cc1 -DOMP5 -fopenmp -fopenmp-version=50 -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefix OMP5
 
 // RUN: %clang_cc1 -DOMP5 -verify -Wno-vla -fopenmp-simd -fopenmp-version=50 -ast-print %s | FileCheck %s --check-prefix OMP5
 // RUN: %clang_cc1 -DOMP5 -fopenmp-simd -fopenmp-version=50 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP5 -fopenmp-simd -fopenmp-version=50 -std=c++11 -include-pch %t -fsyntax-only -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefix OMP5
+// RUN: %clang_cc1 -DOMP5 -fopenmp-simd -fopenmp-version=50 -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefix OMP5
 
 // RUN: %clang_cc1 -DOMP5 -verify -Wno-vla -fopenmp -fopenmp-version=99 -DOMP99 -ast-print %s | FileCheck %s --check-prefixes=OMP5,REV
 // RUN: %clang_cc1 -DOMP5 -fopenmp -fopenmp-version=99 -DOMP99 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP5 -fopenmp -fopenmp-version=99 -DOMP99 -std=c++11 -include-pch %t -fsyntax-only -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefixes=OMP5,REV
+// RUN: %clang_cc1 -DOMP5 -fopenmp -fopenmp-version=99 -DOMP99 -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefixes=OMP5,REV
 
 // RUN: %clang_cc1 -DOMP5 -verify -Wno-vla -fopenmp-simd -fopenmp-version=99 -DOMP99 -ast-print %s | FileCheck %s --check-prefixes=OMP5,REV
 // RUN: %clang_cc1 -DOMP5 -fopenmp-simd -fopenmp-version=99 -DOMP99 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP5 -fopenmp-simd -fopenmp-version=99 -DOMP99 -std=c++11 -include-pch %t -fsyntax-only -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefixes=OMP5,REV
+// RUN: %clang_cc1 -DOMP5 -fopenmp-simd -fopenmp-version=99 -DOMP99 -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefixes=OMP5,REV
 
 #ifdef OMP99
 #pragma omp requires reverse_offload
@@ -1092,11 +1092,11 @@ int main (int argc, char **argv) {
 ///==========================================================================///
 // RUN: %clang_cc1 -DOMP51 -verify -Wno-vla -fopenmp -ast-print %s | FileCheck %s --check-prefix OMP51
 // RUN: %clang_cc1 -DOMP51 -fopenmp -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP51 -fopenmp -std=c++11 -include-pch %t -fsyntax-only -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefix OMP51
+// RUN: %clang_cc1 -DOMP51 -fopenmp -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefix OMP51
 
 // RUN: %clang_cc1 -DOMP51 -verify -Wno-vla -fopenmp-simd -ast-print %s | FileCheck %s --check-prefix OMP51
 // RUN: %clang_cc1 -DOMP51 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP51 -fopenmp-simd -std=c++11 -include-pch %t -fsyntax-only -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefix OMP51
+// RUN: %clang_cc1 -DOMP51 -fopenmp-simd -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefix OMP51
 
 void foo() {}
 
@@ -1110,6 +1110,8 @@ T tmain(T argc, T *argv) {
   foo();
   #pragma omp target thread_limit(C)
   foo();
+  #pragma omp target defaultmap(present)
+  foo();
 
   return 0;
 }
@@ -1122,6 +1124,8 @@ T tmain(T argc, T *argv) {
 // OMP51-NEXT: #pragma omp target defaultmap(present: pointer)
 // OMP51-NEXT: foo()
 // OMP51-NEXT: #pragma omp target thread_limit(C)
+// OMP51-NEXT: foo()
+// OMP51-NEXT: #pragma omp target defaultmap(present)
 // OMP51-NEXT: foo()
 
 // OMP51-LABEL: int main(int argc, char **argv) {
@@ -1148,11 +1152,11 @@ int main (int argc, char **argv) {
 ///==========================================================================///
 // RUN: %clang_cc1 -DOMP52 -verify -Wno-vla -fopenmp -fopenmp-version=52 -ast-print %s | FileCheck %s --check-prefix OMP52
 // RUN: %clang_cc1 -DOMP52 -fopenmp -fopenmp-version=52 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP52 -fopenmp -fopenmp-version=52 -std=c++11 -include-pch %t -fsyntax-only -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefix OMP52
+// RUN: %clang_cc1 -DOMP52 -fopenmp -fopenmp-version=52 -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefix OMP52
 
 // RUN: %clang_cc1 -DOMP52 -verify -Wno-vla -fopenmp-simd -fopenmp-version=52 -ast-print %s | FileCheck %s --check-prefix OMP52
 // RUN: %clang_cc1 -DOMP52 -fopenmp-simd -fopenmp-version=52 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP52 -fopenmp-simd -fopenmp-version=52 -std=c++11 -include-pch %t -fsyntax-only -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefix OMP52
+// RUN: %clang_cc1 -DOMP52 -fopenmp-simd -fopenmp-version=52 -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefix OMP52
 
 void foo() {}
 
@@ -1197,15 +1201,73 @@ foo();
 }
 #endif // OMP52
 
+#ifdef OMP60
+
+///==========================================================================///
+// RUN: %clang_cc1 -DOMP60 -verify -Wno-vla -fopenmp -fopenmp-version=60 -ast-print %s | FileCheck %s --check-prefix OMP60
+// RUN: %clang_cc1 -DOMP60 -fopenmp -fopenmp-version=60 -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -DOMP60 -fopenmp -fopenmp-version=60 -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefix OMP60
+
+// RUN: %clang_cc1 -DOMP60 -verify -Wno-vla -fopenmp-simd -fopenmp-version=60 -ast-print %s | FileCheck %s --check-prefix OMP60
+// RUN: %clang_cc1 -DOMP60 -fopenmp-simd -fopenmp-version=60 -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -DOMP60 -fopenmp-simd -fopenmp-version=60 -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefix OMP60
+
+void foo() {}
+template <typename T, int C>
+T tmain(T argc, T *argv) {
+  T i;
+#pragma omp target map(from always: i)
+  foo();
+#pragma omp target map(from, close: i)
+  foo();
+#pragma omp target map(always,close: i)
+  foo();
+  return 0;
+}
+//OMP60: template <typename T, int C> T tmain(T argc, T *argv) {
+//OMP60-NEXT: T i;
+//OMP60-NEXT: #pragma omp target map(always,from: i)
+//OMP60-NEXT:     foo();
+//OMP60-NEXT: #pragma omp target map(close,from: i)
+//OMP60-NEXT:     foo();
+//OMP60-NEXT: #pragma omp target map(always,close,tofrom: i)
+//OMP60-NEXT:     foo();
+//OMP60-NEXT: return 0;
+//OMP60-NEXT:}
+//OMP60:  template<> int tmain<int, 5>(int argc, int *argv) {
+//OMP60-NEXT:  int i;
+//OMP60-NEXT:  #pragma omp target map(always,from: i)
+//OMP60-NEXT:      foo();
+//OMP60-NEXT:  #pragma omp target map(close,from: i)
+//OMP60-NEXT:      foo();
+//OMP60-NEXT:  #pragma omp target map(always,close,tofrom: i)
+//OMP60-NEXT:      foo();
+//OMP60-NEXT:  return 0;
+//OMP60-NEXT:}
+//OMP60:  template<> char tmain<char, 1>(char argc, char *argv) {
+//OMP60-NEXT:  char i;
+//OMP60-NEXT:  #pragma omp target map(always,from: i)
+//OMP60-NEXT:      foo();
+//OMP60-NEXT:  #pragma omp target map(close,from: i)
+//OMP60-NEXT:      foo();
+//OMP60-NEXT:  #pragma omp target map(always,close,tofrom: i)
+//OMP60-NEXT:      foo();
+//OMP60-NEXT:  return 0;
+//OMP60-NEXT:}
+int main (int argc, char **argv) {
+  return tmain<int, 5>(argc, &argc) + tmain<char, 1>(argv[0][0], argv[0]);
+}
+#endif // OMP60
+
 #ifdef OMPX
 
 // RUN: %clang_cc1 -DOMPX -verify -Wno-vla -fopenmp -fopenmp-extensions -ast-print %s | FileCheck %s --check-prefix=OMPX
 // RUN: %clang_cc1 -DOMPX -fopenmp -fopenmp-extensions -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMPX -fopenmp -fopenmp-extensions -std=c++11 -include-pch %t -fsyntax-only -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefix=OMPX
+// RUN: %clang_cc1 -DOMPX -fopenmp -fopenmp-extensions -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefix=OMPX
 
 // RUN: %clang_cc1 -DOMPX -verify -Wno-vla -fopenmp-simd -fopenmp-extensions -ast-print %s | FileCheck %s --check-prefix=OMPX
 // RUN: %clang_cc1 -DOMPX -fopenmp-simd -fopenmp-extensions -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMPX -fopenmp-simd -fopenmp-extensions -std=c++11 -include-pch %t -fsyntax-only -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefix=OMPX
+// RUN: %clang_cc1 -DOMPX -fopenmp-simd -fopenmp-extensions -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefix=OMPX
 
 void foo() {}
 

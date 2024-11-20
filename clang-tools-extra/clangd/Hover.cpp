@@ -150,7 +150,6 @@ std::string printDefinition(const Decl *D, PrintingPolicy PP,
   std::string Definition;
   llvm::raw_string_ostream OS(Definition);
   D->print(OS, PP);
-  OS.flush();
   return Definition;
 }
 
@@ -179,7 +178,6 @@ HoverInfo::PrintedType printType(QualType QT, ASTContext &ASTCtx,
       OS << TT->getDecl()->getKindName() << " ";
   }
   QT.print(OS, PP);
-  OS.flush();
 
   const Config &Cfg = Config::current();
   if (!QT.isNull() && Cfg.Hover.ShowAKA) {
@@ -229,7 +227,6 @@ HoverInfo::PrintedType printType(const TemplateTemplateParmDecl *TTP,
   // FIXME: TemplateTemplateParameter doesn't store the info on whether this
   // param was a "typename" or "class".
   OS << "> class";
-  OS.flush();
   return Result;
 }
 
@@ -247,8 +244,12 @@ fetchTemplateParameters(const TemplateParameterList *Params,
       if (!TTP->getName().empty())
         P.Name = TTP->getNameAsString();
 
-      if (TTP->hasDefaultArgument())
-        P.Default = TTP->getDefaultArgument().getAsString(PP);
+      if (TTP->hasDefaultArgument()) {
+        P.Default.emplace();
+        llvm::raw_string_ostream Out(*P.Default);
+        TTP->getDefaultArgument().getArgument().print(PP, Out,
+                                                      /*IncludeType=*/false);
+      }
     } else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
       P.Type = printType(NTTP, PP);
 
@@ -258,7 +259,8 @@ fetchTemplateParameters(const TemplateParameterList *Params,
       if (NTTP->hasDefaultArgument()) {
         P.Default.emplace();
         llvm::raw_string_ostream Out(*P.Default);
-        NTTP->getDefaultArgument()->printPretty(Out, nullptr, PP);
+        NTTP->getDefaultArgument().getArgument().print(PP, Out,
+                                                       /*IncludeType=*/false);
       }
     } else if (const auto *TTPD = dyn_cast<TemplateTemplateParmDecl>(Param)) {
       P.Type = printType(TTPD, PP);
@@ -816,7 +818,6 @@ std::string typeAsDefinition(const HoverInfo::PrintedType &PType) {
   OS << PType.Type;
   if (PType.AKA)
     OS << " // aka: " << *PType.AKA;
-  OS.flush();
   return Result;
 }
 
@@ -960,7 +961,7 @@ std::optional<HoverInfo> getHoverContents(const Attr *A, ParsedAST &AST) {
 }
 
 bool isParagraphBreak(llvm::StringRef Rest) {
-  return Rest.ltrim(" \t").startswith("\n");
+  return Rest.ltrim(" \t").starts_with("\n");
 }
 
 bool punctuationIndicatesLineBreak(llvm::StringRef Line) {
@@ -984,7 +985,7 @@ bool isHardLineBreakIndicator(llvm::StringRef Rest) {
 
   if (llvm::isDigit(Rest.front())) {
     llvm::StringRef AfterDigit = Rest.drop_while(llvm::isDigit);
-    if (AfterDigit.startswith(".") || AfterDigit.startswith(")"))
+    if (AfterDigit.starts_with(".") || AfterDigit.starts_with(")"))
       return true;
   }
   return false;
@@ -1194,7 +1195,7 @@ void maybeAddSymbolProviders(ParsedAST &AST, HoverInfo &HI,
 
   const SourceManager &SM = AST.getSourceManager();
   llvm::SmallVector<include_cleaner::Header> RankedProviders =
-      include_cleaner::headersForSymbol(Sym, SM, AST.getPragmaIncludes().get());
+      include_cleaner::headersForSymbol(Sym, SM, &AST.getPragmaIncludes());
   if (RankedProviders.empty())
     return;
 
@@ -1254,7 +1255,7 @@ void maybeAddUsedSymbols(ParsedAST &AST, HoverInfo &HI, const Inclusion &Inc) {
   llvm::DenseSet<include_cleaner::Symbol> UsedSymbols;
   include_cleaner::walkUsed(
       AST.getLocalTopLevelDecls(), collectMacroReferences(AST),
-      AST.getPragmaIncludes().get(), AST.getPreprocessor(),
+      &AST.getPragmaIncludes(), AST.getPreprocessor(),
       [&](const include_cleaner::SymbolReference &Ref,
           llvm::ArrayRef<include_cleaner::Header> Providers) {
         if (Ref.RT != include_cleaner::RefType::Explicit ||

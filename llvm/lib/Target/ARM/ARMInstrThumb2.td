@@ -77,8 +77,8 @@ def t2_so_imm_not_XFORM : SDNodeXForm<imm, [{
 
 // t2_so_imm_neg_XFORM - Return the negation of a t2_so_imm value
 def t2_so_imm_neg_XFORM : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(-((int)N->getZExtValue()), SDLoc(N),
-                                   MVT::i32);
+  return CurDAG->getSignedTargetConstant(-((int)N->getZExtValue()), SDLoc(N),
+                                         MVT::i32);
 }]>;
 
 // so_imm_notSext_XFORM - Return a so_imm value packed into the format
@@ -2438,12 +2438,6 @@ defm t2SUB  : T2I_bin_ii12rs<0b101, "sub", sub>;
 defm t2ADDS : T2I_bin_s_irs <IIC_iALUi, IIC_iALUr, IIC_iALUsi, ARMaddc, 1>;
 defm t2SUBS : T2I_bin_s_irs <IIC_iALUi, IIC_iALUr, IIC_iALUsi, ARMsubc>;
 
-def : T2Pat<(ARMsubs GPRnopc:$Rn, t2_so_imm:$imm),
-            (t2SUBSri $Rn, t2_so_imm:$imm)>;
-def : T2Pat<(ARMsubs GPRnopc:$Rn, rGPR:$Rm), (t2SUBSrr $Rn, $Rm)>;
-def : T2Pat<(ARMsubs GPRnopc:$Rn, t2_so_reg:$ShiftedRm),
-            (t2SUBSrs $Rn, t2_so_reg:$ShiftedRm)>;
-
 defm t2ADC  : T2I_adde_sube_irs<0b1010, "adc", ARMadde, 1, 1>;
 defm t2SBC  : T2I_adde_sube_irs<0b1011, "sbc", ARMsube, 0, 1>;
 
@@ -2793,8 +2787,9 @@ def : T2Pat<(rotr rGPR:$lhs, (and rGPR:$rhs, lo5AllOne)),
 
 let Uses = [CPSR] in {
 def t2RRX : T2sTwoReg<(outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
-                   "rrx", "\t$Rd, $Rm",
-                   [(set rGPR:$Rd, (ARMrrx rGPR:$Rm))]>, Sched<[WriteALU]> {
+                      "rrx", "\t$Rd, $Rm",
+                      [(set rGPR:$Rd, (ARMrrx rGPR:$Rm, CPSR))]>,
+            Sched<[WriteALU]> {
   let Inst{31-27} = 0b11101;
   let Inst{26-25} = 0b01;
   let Inst{24-21} = 0b0010;
@@ -2806,12 +2801,13 @@ def t2RRX : T2sTwoReg<(outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
 }
 }
 
+// These differ from t2LSRri / t2ASRri in that they are flag-setting
+// and have a hardcoded shift amount = 1.
 let isCodeGenOnly = 1, Defs = [CPSR] in {
-def t2MOVsrl_glue : T2TwoRegShiftImm<
-                        (outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
-                        "lsrs", ".w\t$Rd, $Rm, #1",
-                        [(set rGPR:$Rd, (ARMsrl_glue rGPR:$Rm))]>,
-                        Sched<[WriteALU]> {
+def t2LSRs1 : T2TwoRegShiftImm<(outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
+                               "lsrs", ".w\t$Rd, $Rm, #1",
+                               [(set rGPR:$Rd, CPSR, (ARMlsrs1 rGPR:$Rm))]>,
+              Sched<[WriteALU]> {
   let Inst{31-27} = 0b11101;
   let Inst{26-25} = 0b01;
   let Inst{24-21} = 0b0010;
@@ -2822,11 +2818,10 @@ def t2MOVsrl_glue : T2TwoRegShiftImm<
   let Inst{14-12} = 0b000;
   let Inst{7-6} = 0b01;
 }
-def t2MOVsra_glue : T2TwoRegShiftImm<
-                        (outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
-                        "asrs", ".w\t$Rd, $Rm, #1",
-                        [(set rGPR:$Rd, (ARMsra_glue rGPR:$Rm))]>,
-                        Sched<[WriteALU]> {
+def t2ASRs1 : T2TwoRegShiftImm<(outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
+                               "asrs", ".w\t$Rd, $Rm, #1",
+                               [(set rGPR:$Rd, CPSR, (ARMasrs1 rGPR:$Rm))]>,
+              Sched<[WriteALU]> {
   let Inst{31-27} = 0b11101;
   let Inst{26-25} = 0b01;
   let Inst{24-21} = 0b0010;
@@ -5092,14 +5087,14 @@ def : InstAlias<"dmb${p}.w", (t2DMB 0xf, pred:$p), 0>, Requires<[HasDB]>;
 def : InstAlias<"dsb${p}.w\t$opt", (t2DSB memb_opt:$opt, pred:$p), 0>, Requires<[HasDB]>;
 def : InstAlias<"dsb${p}", (t2DSB 0xf, pred:$p), 0>, Requires<[HasDB]>;
 def : InstAlias<"dsb${p}.w", (t2DSB 0xf, pred:$p), 0>, Requires<[HasDB]>;
-def : InstAlias<"isb${p}.w\t$opt", (t2ISB memb_opt:$opt, pred:$p), 0>, Requires<[HasDB]>;
+def : InstAlias<"isb${p}.w\t$opt", (t2ISB instsyncb_opt:$opt, pred:$p), 0>, Requires<[HasDB]>;
 def : InstAlias<"isb${p}", (t2ISB 0xf, pred:$p), 0>, Requires<[HasDB]>;
 def : InstAlias<"isb${p}.w", (t2ISB 0xf, pred:$p), 0>, Requires<[HasDB]>;
 
-// Non-predicable aliases of a predicable DSB: the predicate is (14, 0) where
-// 14 = AL (always execute) and 0 = "instruction doesn't read the CPSR".
-def : InstAlias<"ssbb", (t2DSB 0x0, 14, 0), 1>, Requires<[HasDB, IsThumb2]>;
-def : InstAlias<"pssbb", (t2DSB 0x4, 14, 0), 1>, Requires<[HasDB, IsThumb2]>;
+// Non-predicable aliases of a predicable DSB: the predicate is (14, zero_reg) where
+// 14 = AL (always execute) and zero_reg = "instruction doesn't read the CPSR".
+def : InstAlias<"ssbb", (t2DSB 0x0, 14, zero_reg), 1>, Requires<[HasDB, IsThumb2]>;
+def : InstAlias<"pssbb", (t2DSB 0x4, 14, zero_reg), 1>, Requires<[HasDB, IsThumb2]>;
 
 // Armv8-R 'Data Full Barrier'
 def : InstAlias<"dfb${p}", (t2DSB 0xc, pred:$p), 1>, Requires<[HasDFB]>;
@@ -5855,6 +5850,7 @@ def t2AUT    : PACBTIHintSpaceUseInst<"aut", 0b00101101> {
 def ARMt2CallBTI : SDNode<"ARMISD::t2CALL_BTI", SDT_ARMcall,
                    [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
 
+let Defs = [LR], Uses = [SP] in
 def t2CALL_BTI : PseudoInst<(outs), (ins pred:$p, thumb_bl_target:$func),
                  IIC_Br, [(ARMt2CallBTI tglobaladdr:$func)]>,
                  Requires<[IsThumb2]>, Sched<[WriteBrL]>;

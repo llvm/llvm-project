@@ -29,9 +29,7 @@ namespace spirv {
 namespace detail {
 struct ArrayTypeStorage;
 struct CooperativeMatrixTypeStorage;
-struct CooperativeMatrixNVTypeStorage;
 struct ImageTypeStorage;
-struct JointMatrixTypeStorage;
 struct MatrixTypeStorage;
 struct PointerTypeStorage;
 struct RuntimeArrayTypeStorage;
@@ -132,6 +130,8 @@ class ArrayType : public Type::TypeBase<ArrayType, CompositeType,
 public:
   using Base::Base;
 
+  static constexpr StringLiteral name = "spirv.array";
+
   static ArrayType get(Type elementType, unsigned elementCount);
 
   /// Returns an array type with the given stride in bytes.
@@ -161,6 +161,8 @@ class ImageType
     : public Type::TypeBase<ImageType, SPIRVType, detail::ImageTypeStorage> {
 public:
   using Base::Base;
+
+  static constexpr StringLiteral name = "spirv.image";
 
   static ImageType
   get(Type elementType, Dim dim,
@@ -201,6 +203,8 @@ class PointerType : public Type::TypeBase<PointerType, SPIRVType,
 public:
   using Base::Base;
 
+  static constexpr StringLiteral name = "spirv.pointer";
+
   static PointerType get(Type pointeeType, StorageClass storageClass);
 
   Type getPointeeType() const;
@@ -219,6 +223,8 @@ class RuntimeArrayType
                             detail::RuntimeArrayTypeStorage> {
 public:
   using Base::Base;
+
+  static constexpr StringLiteral name = "spirv.rtarray";
 
   static RuntimeArrayType get(Type elementType);
 
@@ -244,13 +250,16 @@ class SampledImageType
 public:
   using Base::Base;
 
+  static constexpr StringLiteral name = "spirv.sampled_image";
+
   static SampledImageType get(Type imageType);
 
   static SampledImageType
   getChecked(function_ref<InFlightDiagnostic()> emitError, Type imageType);
 
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              Type imageType);
+  static LogicalResult
+  verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                   Type imageType);
 
   Type getImageType() const;
 
@@ -287,6 +296,8 @@ public:
 
   // Type for specifying the offset of the struct members
   using OffsetInfo = uint32_t;
+
+  static constexpr StringLiteral name = "spirv.struct";
 
   // Type for specifying the decoration(s) on struct members
   struct MemberDecorationInfo {
@@ -387,6 +398,8 @@ class CooperativeMatrixType
 public:
   using Base::Base;
 
+  static constexpr StringLiteral name = "spirv.coopmatrix";
+
   static CooperativeMatrixType get(Type elementType, uint32_t rows,
                                    uint32_t columns, Scope scope,
                                    CooperativeMatrixUseKHR use);
@@ -407,70 +420,22 @@ public:
                        std::optional<StorageClass> storage = std::nullopt);
 };
 
-// SPIR-V NV cooperative matrix type
-class CooperativeMatrixNVType
-    : public Type::TypeBase<CooperativeMatrixNVType, CompositeType,
-                            detail::CooperativeMatrixNVTypeStorage> {
-public:
-  using Base::Base;
-
-  static CooperativeMatrixNVType get(Type elementType, Scope scope,
-                                     unsigned rows, unsigned columns);
-  Type getElementType() const;
-
-  /// Returns the scope of the matrix.
-  Scope getScope() const;
-  /// Returns the number of rows of the matrix.
-  unsigned getRows() const;
-  /// Returns the number of columns of the matrix.
-  unsigned getColumns() const;
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
-  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                       std::optional<StorageClass> storage = std::nullopt);
-};
-
-// SPIR-V joint matrix type
-class JointMatrixINTELType
-    : public Type::TypeBase<JointMatrixINTELType, CompositeType,
-                            detail::JointMatrixTypeStorage> {
-public:
-  using Base::Base;
-
-  static JointMatrixINTELType get(Type elementType, Scope scope, unsigned rows,
-                                  unsigned columns, MatrixLayout matrixLayout);
-  Type getElementType() const;
-
-  /// Return the scope of the joint matrix.
-  Scope getScope() const;
-  /// return the number of rows of the matrix.
-  unsigned getRows() const;
-  /// return the number of columns of the matrix.
-  unsigned getColumns() const;
-
-  /// return the layout of the matrix
-  MatrixLayout getMatrixLayout() const;
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
-  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                       std::optional<StorageClass> storage = std::nullopt);
-};
-
 // SPIR-V matrix type
 class MatrixType : public Type::TypeBase<MatrixType, CompositeType,
                                          detail::MatrixTypeStorage> {
 public:
   using Base::Base;
 
+  static constexpr StringLiteral name = "spirv.matrix";
+
   static MatrixType get(Type columnType, uint32_t columnCount);
 
   static MatrixType getChecked(function_ref<InFlightDiagnostic()> emitError,
                                Type columnType, uint32_t columnCount);
 
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              Type columnType, uint32_t columnCount);
+  static LogicalResult
+  verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                   Type columnType, uint32_t columnCount);
 
   /// Returns true if the matrix elements are vectors of float elements.
   static bool isValidColumnType(Type columnType);

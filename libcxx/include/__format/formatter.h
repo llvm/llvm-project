@@ -10,9 +10,8 @@
 #ifndef _LIBCPP___FORMAT_FORMATTER_H
 #define _LIBCPP___FORMAT_FORMATTER_H
 
-#include <__availability>
 #include <__config>
-#include <__format/format_fwd.h>
+#include <__fwd/format.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -33,12 +32,15 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 /// - is_move_assignable<F>.
 template <class _Tp, class _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter {
-  formatter() = delete;
-  formatter(const formatter&) = delete;
+  formatter()                            = delete;
+  formatter(const formatter&)            = delete;
   formatter& operator=(const formatter&) = delete;
 };
 
 #  if _LIBCPP_STD_VER >= 23
+
+template <class _Tp>
+constexpr bool enable_nonlocking_formatter_optimization = false;
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr void __set_debug_format(_Tp& __formatter) {

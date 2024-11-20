@@ -23,14 +23,15 @@ volatile vec_uint vui;
 volatile vec_ulong vul;
 volatile vec_double vd;
 volatile vec_float vf;
+volatile unsigned __int128 ui128;
 
 volatile unsigned int len;
 int cc;
 
 void test_integer(void) {
-  __builtin_s390_vmslg(vul, vul, vuc, -1);   // expected-error-re {{argument value {{.*}} is outside the valid range}}
-  __builtin_s390_vmslg(vul, vul, vuc, 16);   // expected-error-re {{argument value {{.*}} is outside the valid range}}
-  __builtin_s390_vmslg(vul, vul, vuc, len);  // expected-error {{must be a constant integer}}
+  __builtin_s390_vmslg(vul, vul, ui128, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_s390_vmslg(vul, vul, ui128, 16); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_s390_vmslg(vul, vul, ui128, len);// expected-error {{must be a constant integer}}
 }
 
 void test_float(void) {

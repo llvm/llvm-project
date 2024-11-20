@@ -136,16 +136,16 @@ constexpr void test_iterators() {
   { // prefix has zero length
     {
       int a[] = {1, 2, 3, 4, 5, 6};
-      int p[] = {};
+      std::array<int, 0> p = {};
       std::same_as<bool> decltype(auto) ret =
-          std::ranges::starts_with(Iter1(a), Sent1(Iter1(a + 6)), Iter2(p), Sent2(Iter2(p)));
+          std::ranges::starts_with(Iter1(a), Sent1(Iter1(a + 6)), Iter2(p.data()), Sent2(Iter2(p.data())));
       assert(ret);
     }
     {
       int a[]                               = {1, 2, 3, 4, 5, 6};
-      int p[]                               = {};
+      std::array<int, 0> p = {};
       auto whole                            = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 6)));
-      auto prefix                           = std::ranges::subrange(Iter2(p), Sent2(Iter2(p)));
+      auto prefix                           = std::ranges::subrange(Iter2(p.data()), Sent2(Iter2(p.data())));
       std::same_as<bool> decltype(auto) ret = std::ranges::starts_with(whole, prefix);
       assert(ret);
     }
@@ -153,16 +153,16 @@ constexpr void test_iterators() {
 
   { // range has zero length
     {
-      int a[] = {};
+      std::array<int, 0> a = {};
       int p[] = {1, 2, 3, 4, 5, 6, 7, 8};
       std::same_as<bool> decltype(auto) ret =
-          std::ranges::starts_with(Iter1(a), Sent1(Iter1(a)), Iter2(p), Sent2(Iter2(p + 8)));
+          std::ranges::starts_with(Iter1(a.data()), Sent1(Iter1(a.data())), Iter2(p), Sent2(Iter2(p + 8)));
       assert(!ret);
     }
     {
-      int a[]                               = {};
+      std::array<int, 0> a = {};
       int p[]                               = {1, 2, 3, 4, 5, 6, 7, 8};
-      auto whole                            = std::ranges::subrange(Iter1(a), Sent1(Iter1(a)));
+      auto whole                            = std::ranges::subrange(Iter1(a.data()), Sent1(Iter1(a.data())));
       auto prefix                           = std::ranges::subrange(Iter2(p), Sent2(Iter2(p + 8)));
       std::same_as<bool> decltype(auto) ret = std::ranges::starts_with(whole, prefix);
       assert(!ret);

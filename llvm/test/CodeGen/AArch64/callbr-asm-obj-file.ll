@@ -7,10 +7,10 @@
 @l = common hidden local_unnamed_addr global i32 0, align 4
 
 ; CHECK-LABEL: <test1>:
-; CHECK-LABEL: <$d.1>:
-; CHECK-LABEL: <$x.2>:
+; CHECK-LABEL: <$d>:
+; CHECK-LABEL: <$x>:
 ; CHECK-NEXT:    b 0x2c <test1+0x2c>
-; CHECK-LABEL: <$x.4>:
+; CHECK-LABEL: <$x>:
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ldr x30, [sp], #16
 ; CHECK-NEXT:    ret
@@ -40,9 +40,9 @@ declare dso_local i32 @g(...) local_unnamed_addr
 declare dso_local i32 @i(...) local_unnamed_addr
 
 ; CHECK-LABEL: <test2>:
-; CHECK:         bl {{.*}} <test2+0x18>
-; CHECK-LABEL: <$d.5>:
-; CHECK-LABEL: <$x.6>:
+; CHECK:         b {{.*}} <test2+0x1c>
+; CHECK-LABEL: <$d>:
+; CHECK-LABEL: <$x>:
 ; CHECK-NEXT:    b {{.*}} <test2+0x18>
 define hidden i32 @test2() local_unnamed_addr {
   %1 = load i32, ptr @l, align 4
@@ -70,10 +70,10 @@ define hidden i32 @test2() local_unnamed_addr {
 }
 
 ; CHECK-LABEL: <test3>:
-; CHECK-LABEL: <$d.9>:
-; CHECK-LABEL: <$x.10>:
+; CHECK-LABEL: <$d>:
+; CHECK-LABEL: <$x>:
 ; CHECK-NEXT:    b {{.*}} <test3+0x34>
-; CHECK-LABEL: <$x.12>:
+; CHECK-LABEL: <$x>:
 ; CHECK-NEXT:    ldr x30, [sp], #16
 ; CHECK-NEXT:    ret
 define internal i1 @test3() {

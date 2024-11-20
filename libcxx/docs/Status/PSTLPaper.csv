@@ -8,7 +8,7 @@ Section,Description,Assignee,Complete
 | `[alg.copy] <https://wg21.link/alg.copy>`_,std::copy_n,Nikolas Klauser,|Complete|
 | `[alg.count] <https://wg21.link/alg.count>`_,std::count,Nikolas Klauser,|Complete|
 | `[alg.count] <https://wg21.link/alg.count>`_,std::count_if,Nikolas Klauser,|Complete|
-| `[alg.equal] <https://wg21.link/alg.equal>`_,std::equal,Nikolas Klauser,|Not Started|
+| `[alg.equal] <https://wg21.link/alg.equal>`_,std::equal,Nikolas Klauser,|Complete|
 | `[alg.exclusive.scan] <https://wg21.link/alg.exclusive.scan>`_,std::exclusive_scan,Nikolas Klauser,|Not Started|
 | `[alg.exclusive.scan] <https://wg21.link/alg.exclusive.scan>`_,std::exclusive_scan,Nikolas Klauser,|Not Started|
 | `[alg.fill] <https://wg21.link/alg.fill>`_,std::fill,Nikolas Klauser,|Complete|

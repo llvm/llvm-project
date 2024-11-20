@@ -27,7 +27,7 @@ void InitializeAMDGPUTarget() {
   });
 }
 
-std::unique_ptr<LLVMTargetMachine>
+std::unique_ptr<TargetMachine>
 createTargetMachine(std::string TStr, StringRef CPU, StringRef FS) {
   InitializeAMDGPUTarget();
 
@@ -37,9 +37,8 @@ createTargetMachine(std::string TStr, StringRef CPU, StringRef FS) {
     return nullptr;
 
   TargetOptions Options;
-  return std::unique_ptr<LLVMTargetMachine>(
-      static_cast<LLVMTargetMachine *>(T->createTargetMachine(
-          TStr, CPU, FS, Options, std::nullopt, std::nullopt)));
+  return std::unique_ptr<TargetMachine>(T->createTargetMachine(
+      TStr, CPU, FS, Options, std::nullopt, std::nullopt));
 }
 
 TEST(AMDGPUDwarfRegMappingTests, TestWave64DwarfRegMapping) {
@@ -55,6 +54,7 @@ TEST(AMDGPUDwarfRegMappingTests, TestWave64DwarfRegMapping) {
       for (int llvmReg : {16, 17, 32, 95, 1088, 1129, 2560, 2815, 3072, 3327}) {
         MCRegister PCReg(*MRI->getLLVMRegNum(llvmReg, false));
         EXPECT_EQ(llvmReg, MRI->getDwarfRegNum(PCReg, false));
+        EXPECT_EQ(llvmReg, MRI->getDwarfRegNum(PCReg, true));
       }
     }
   }
@@ -73,6 +73,7 @@ TEST(AMDGPUDwarfRegMappingTests, TestWave32DwarfRegMapping) {
       for (int llvmReg : {16, 1, 32, 95, 1088, 1129, 1536, 1791, 2048, 2303}) {
         MCRegister PCReg(*MRI->getLLVMRegNum(llvmReg, false));
         EXPECT_EQ(llvmReg, MRI->getDwarfRegNum(PCReg, false));
+        EXPECT_EQ(llvmReg, MRI->getDwarfRegNum(PCReg, true));
       }
     }
   }

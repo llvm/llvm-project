@@ -10,9 +10,10 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_libs_sve} = -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
 // DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
-// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs_sve}
 //
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
@@ -99,7 +100,9 @@ module {
     call @dump(%0) : (tensor<2x3x4xf64>) -> ()
     %1 = call @convert1(%b) : (tensor<2x3x4xf64, #S1>) -> tensor<2x3x4xf64>
     call @dump(%1) : (tensor<2x3x4xf64>) -> ()
+    bufferization.dealloc_tensor %0 : tensor<2x3x4xf64>
     bufferization.dealloc_tensor %b : tensor<2x3x4xf64, #S1>
+    bufferization.dealloc_tensor %1 : tensor<2x3x4xf64>
     return
   }
 
@@ -127,7 +130,9 @@ module {
     call @dump(%0) : (tensor<2x3x4xf64>) -> ()
     %2 = call @convert2(%b) : (tensor<2x3x4xf64, #S2>) -> tensor<2x3x4xf64>
     call @dump(%2) : (tensor<2x3x4xf64>) -> ()
+    bufferization.dealloc_tensor %0 : tensor<2x3x4xf64>
     bufferization.dealloc_tensor %b : tensor<2x3x4xf64, #S2>
+    bufferization.dealloc_tensor %2 : tensor<2x3x4xf64>
     return
   }
 
@@ -155,7 +160,9 @@ module {
     call @dump(%0) : (tensor<2x3x4xf64>) -> ()
     %3 = call @convert3(%b) : (tensor<2x3x4xf64, #S3>) -> tensor<2x3x4xf64>
     call @dump(%3) : (tensor<2x3x4xf64>) -> ()
+    bufferization.dealloc_tensor %0 : tensor<2x3x4xf64>
     bufferization.dealloc_tensor %b : tensor<2x3x4xf64, #S3>
+    bufferization.dealloc_tensor %3 : tensor<2x3x4xf64>
     return
   }
 
@@ -183,7 +190,9 @@ module {
     call @dump(%0) : (tensor<2x3x4xf64>) -> ()
     %4 = call @convert4(%b) : (tensor<2x3x4xf64, #S4>) -> tensor<2x3x4xf64>
     call @dump(%4) : (tensor<2x3x4xf64>) -> ()
+    bufferization.dealloc_tensor %0 : tensor<2x3x4xf64>
     bufferization.dealloc_tensor %b : tensor<2x3x4xf64, #S4>
+    bufferization.dealloc_tensor %4 : tensor<2x3x4xf64>
     return
   }
 
@@ -211,7 +220,9 @@ module {
     call @dump(%0) : (tensor<2x3x4xf64>) -> ()
     %5 = call @convert5(%b) : (tensor<2x3x4xf64, #S5>) -> tensor<2x3x4xf64>
     call @dump(%5) : (tensor<2x3x4xf64>) -> ()
+    bufferization.dealloc_tensor %0 : tensor<2x3x4xf64>
     bufferization.dealloc_tensor %b : tensor<2x3x4xf64, #S5>
+    bufferization.dealloc_tensor %5 : tensor<2x3x4xf64>
     return
   }
 
@@ -239,7 +250,9 @@ module {
     call @dump(%0) : (tensor<2x3x4xf64>) -> ()
     %6 = call @convert6(%b) : (tensor<2x3x4xf64, #S6>) -> tensor<2x3x4xf64>
     call @dump(%6) : (tensor<2x3x4xf64>) -> ()
+    bufferization.dealloc_tensor %0 : tensor<2x3x4xf64>
     bufferization.dealloc_tensor %b : tensor<2x3x4xf64, #S6>
+    bufferization.dealloc_tensor %6 : tensor<2x3x4xf64>
     return
   }
 

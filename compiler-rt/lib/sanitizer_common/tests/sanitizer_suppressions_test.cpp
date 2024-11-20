@@ -130,9 +130,15 @@ TEST_F(SuppressionContextTest, HasSuppressionType) {
 }
 
 TEST_F(SuppressionContextTest, RegressionTestForBufferOverflowInSuppressions) {
-  EXPECT_DEATH(ctx_.Parse("race"), "failed to parse suppressions");
-  EXPECT_DEATH(ctx_.Parse("foo"), "failed to parse suppressions");
+  const char *expected_output =
+      "failed to parse suppressions.\n"
+      "Supported suppression types are:\n"
+      "- race\n"
+      "- thread\n"
+      "- mutex\n"
+      "- signal\n";
+  EXPECT_DEATH(ctx_.Parse("race"), expected_output);
+  EXPECT_DEATH(ctx_.Parse("foo"), expected_output);
 }
-
 
 }  // namespace __sanitizer

@@ -73,7 +73,7 @@ protected:
     // If ARCH has sub-arch support, find it
     SmallVectorImpl<std::string>::const_iterator I = SupportedSubArchs.begin();
     for(; I != SupportedSubArchs.end(); ++I)
-      if (Host.getArchName().startswith(*I))
+      if (Host.getArchName().starts_with(*I))
         return true;
 
     return false;

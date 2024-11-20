@@ -1,6 +1,8 @@
 // REQUIRES: arm
 // RUN: llvm-mc --triple=armv7a-none-eabi --arm-add-build-attributes -filetype=obj -o %t.o %s
 // RUN: ld.lld %t.o -o %t
+/// R_ARM_ALU_PC_G0 referencing a non-preemptible symbol can be used in PIC links.
+// RUN: ld.lld %t.o --shared -o /dev/null
 // RUN: llvm-objdump -d --no-show-raw-insn --triple=armv7a-none-eabi %t | FileCheck %s
 
 /// Test the short range cases of R_ARM_ALU_PC_G0. The range of the instruction

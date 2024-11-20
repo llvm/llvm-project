@@ -31,7 +31,7 @@ func.func @reduce(%buffer: memref<100xf32>) {
   %c1 = arith.constant 1 : index
   scf.parallel (%iv) = (%c0) to (%c1) step (%c1) init (%init) -> f32 {
     %elem_to_reduce = memref.load %buffer[%iv] : memref<100xf32>
-    scf.reduce(%elem_to_reduce) : f32 {
+    scf.reduce(%elem_to_reduce : f32) {
       ^bb0(%lhs : f32, %rhs: f32):
         %alloc = memref.alloc() : memref<2xf32>
         memref.store %lhs, %alloc [%c0] : memref<2xf32>

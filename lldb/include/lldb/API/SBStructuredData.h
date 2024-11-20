@@ -9,6 +9,7 @@
 #ifndef LLDB_API_SBSTRUCTUREDDATA_H
 #define LLDB_API_SBSTRUCTUREDDATA_H
 
+#include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBModule.h"
 #include "lldb/API/SBScriptObject.h"
@@ -110,6 +111,7 @@ public:
 
 protected:
   friend class SBAttachInfo;
+  friend class SBCommandReturnObject;
   friend class SBLaunchInfo;
   friend class SBDebugger;
   friend class SBTarget;
@@ -122,6 +124,7 @@ protected:
   friend class SBTrace;
   friend class lldb_private::python::SWIGBridge;
   friend class lldb_private::lua::SWIGBridge;
+  friend class SBCommandInterpreter;
 
   SBStructuredData(const lldb_private::StructuredDataImpl &impl);
 

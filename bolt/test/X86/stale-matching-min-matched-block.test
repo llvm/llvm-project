@@ -1,0 +1,11 @@
+## This script checks the stale-matching-min-matched-block flag.
+
+REQUIRES: asserts
+RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
+
+## Testing "usqrt"
+RUN: llvm-bolt %t.exe -o %t.null --b %p/Inputs/blarge_profile_stale_low_matched_blocks.yaml \
+RUN:   --infer-stale-profile=1 --stale-matching-min-matched-block=75 \
+RUN:   --profile-ignore-hash=1 --debug-only=bolt-prof 2>&1 | FileCheck %s
+
+CHECK:    BOLT-INFO: inferred profile for 1 (50.00% of profiled, 50.00% of stale) functions responsible for 46.31% samples (552 out of 1192)

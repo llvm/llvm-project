@@ -10,12 +10,9 @@ define i32 @test() {
 ; CHECK:       bb.i:
 ; CHECK-NEXT:    br label [[BB51_I_I:%.*]]
 ; CHECK:       bb27.i.i:
-; CHECK-NEXT:    [[TMP50_I_I:%.*]] = add i32 [[X_0_I_I:%.*]], 2
 ; CHECK-NEXT:    br label [[BB51_I_I]]
 ; CHECK:       bb51.i.i:
-; CHECK-NEXT:    [[X_0_I_I]] = phi i32 [ [[TMP50_I_I]], [[BB27_I_I:%.*]] ], [ 0, [[BB_I]] ]
-; CHECK-NEXT:    [[TMP54_I_I:%.*]] = icmp slt i32 [[X_0_I_I]], 0
-; CHECK-NEXT:    br i1 [[TMP54_I_I]], label [[BB27_I_I]], label [[BB57_I_I:%.*]]
+; CHECK-NEXT:    br i1 false, label [[BB27_I_I:%.*]], label [[BB57_I_I:%.*]]
 ; CHECK:       bb57.i.i:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       calculateColorSpecificBlackLevel.exit:

@@ -11,10 +11,13 @@
 #define _LIBCPP___ITERATOR_OSTREAMBUF_ITERATOR_H
 
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
+#include <__fwd/ios.h>
+#include <__fwd/ostream.h>
+#include <__fwd/streambuf.h>
 #include <__iterator/iterator.h>
 #include <__iterator/iterator_traits.h>
-#include <cstddef>
-#include <iosfwd> // for forward declaration of basic_streambuf
+#include <iosfwd> // for forward declaration of ostreambuf_iterator
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -29,47 +32,44 @@ class _LIBCPP_TEMPLATE_VIS ostreambuf_iterator
     : public iterator<output_iterator_tag, void, void, void, void>
 #endif
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
+  _LIBCPP_SUPPRESS_DEPRECATED_POP
+
 public:
-    typedef output_iterator_tag                 iterator_category;
-    typedef void                                value_type;
+  typedef output_iterator_tag iterator_category;
+  typedef void value_type;
 #if _LIBCPP_STD_VER >= 20
-    typedef ptrdiff_t                           difference_type;
+  typedef ptrdiff_t difference_type;
 #else
-    typedef void                                difference_type;
+  typedef void difference_type;
 #endif
-    typedef void                                pointer;
-    typedef void                                reference;
-    typedef _CharT                              char_type;
-    typedef _Traits                             traits_type;
-    typedef basic_streambuf<_CharT, _Traits>    streambuf_type;
-    typedef basic_ostream<_CharT, _Traits>      ostream_type;
+  typedef void pointer;
+  typedef void reference;
+  typedef _CharT char_type;
+  typedef _Traits traits_type;
+  typedef basic_streambuf<_CharT, _Traits> streambuf_type;
+  typedef basic_ostream<_CharT, _Traits> ostream_type;
 
 private:
-    streambuf_type* __sbuf_;
-public:
-    _LIBCPP_INLINE_VISIBILITY ostreambuf_iterator(ostream_type& __s) _NOEXCEPT
-        : __sbuf_(__s.rdbuf()) {}
-    _LIBCPP_INLINE_VISIBILITY ostreambuf_iterator(streambuf_type* __s) _NOEXCEPT
-        : __sbuf_(__s) {}
-    _LIBCPP_INLINE_VISIBILITY ostreambuf_iterator& operator=(_CharT __c)
-        {
-            if (__sbuf_ && traits_type::eq_int_type(__sbuf_->sputc(__c), traits_type::eof()))
-                __sbuf_ = nullptr;
-            return *this;
-        }
-    _LIBCPP_INLINE_VISIBILITY ostreambuf_iterator& operator*()     {return *this;}
-    _LIBCPP_INLINE_VISIBILITY ostreambuf_iterator& operator++()    {return *this;}
-    _LIBCPP_INLINE_VISIBILITY ostreambuf_iterator& operator++(int) {return *this;}
-    _LIBCPP_INLINE_VISIBILITY bool failed() const _NOEXCEPT {return __sbuf_ == nullptr;}
+  streambuf_type* __sbuf_;
 
-    template <class _Ch, class _Tr>
-    friend
-    _LIBCPP_HIDE_FROM_ABI
-    ostreambuf_iterator<_Ch, _Tr>
-    __pad_and_output(ostreambuf_iterator<_Ch, _Tr> __s,
-                     const _Ch* __ob, const _Ch* __op, const _Ch* __oe,
-                     ios_base& __iob, _Ch __fl);
+public:
+  _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator(ostream_type& __s) _NOEXCEPT : __sbuf_(__s.rdbuf()) {}
+  _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator(streambuf_type* __s) _NOEXCEPT : __sbuf_(__s) {}
+  _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator& operator=(_CharT __c) {
+    if (__sbuf_ && traits_type::eq_int_type(__sbuf_->sputc(__c), traits_type::eof()))
+      __sbuf_ = nullptr;
+    return *this;
+  }
+  _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator& operator*() { return *this; }
+  _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator& operator++() { return *this; }
+  _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator& operator++(int) { return *this; }
+  _LIBCPP_HIDE_FROM_ABI bool failed() const _NOEXCEPT { return __sbuf_ == nullptr; }
+
+#if _LIBCPP_HAS_LOCALIZATION
+  template <class _Ch, class _Tr>
+  friend _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator<_Ch, _Tr> __pad_and_output(
+      ostreambuf_iterator<_Ch, _Tr> __s, const _Ch* __ob, const _Ch* __op, const _Ch* __oe, ios_base& __iob, _Ch __fl);
+#endif // _LIBCPP_HAS_LOCALIZATION
 };
 
 _LIBCPP_END_NAMESPACE_STD

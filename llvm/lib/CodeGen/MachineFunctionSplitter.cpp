@@ -24,7 +24,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/EHUtils.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -109,12 +108,6 @@ static bool isColdBlock(const MachineBasicBlock &MBB,
                         const MachineBlockFrequencyInfo *MBFI,
                         ProfileSummaryInfo *PSI) {
   std::optional<uint64_t> Count = MBFI->getBlockProfileCount(&MBB);
-
-  // Temporary hack to cope with AArch64's jump table encoding
-  const TargetInstrInfo &TII = *MBB.getParent()->getSubtarget().getInstrInfo();
-  if (!TII.isMBBSafeToSplitToCold(MBB))
-    return false;
-
   // For instrumentation profiles and sample profiles, we use different ways
   // to judge whether a block is cold and should be split.
   if (PSI->hasInstrumentationProfile() || PSI->hasCSInstrumentationProfile()) {
@@ -156,7 +149,7 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
   MachineBlockFrequencyInfo *MBFI = nullptr;
   ProfileSummaryInfo *PSI = nullptr;
   if (UseProfileData) {
-    MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
+    MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
     PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
     // If we don't have a good profile (sample profile is not deemed
     // as a "good profile") and the function is not hot, then early
@@ -178,7 +171,8 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
 
     if (MBB.isEHPad())
       LandingPads.push_back(&MBB);
-    else if (UseProfileData && isColdBlock(MBB, MBFI, PSI) && !SplitAllEHCode)
+    else if (UseProfileData && isColdBlock(MBB, MBFI, PSI) &&
+             TII.isMBBSafeToSplitToCold(MBB) && !SplitAllEHCode)
       MBB.setSectionID(MBBSectionID::ColdSectionID);
   }
 
@@ -190,7 +184,7 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
     // Here we have UseProfileData == true.
     bool HasHotLandingPads = false;
     for (const MachineBasicBlock *LP : LandingPads) {
-      if (!isColdBlock(*LP, MBFI, PSI))
+      if (!isColdBlock(*LP, MBFI, PSI) || !TII.isMBBSafeToSplitToCold(*LP))
         HasHotLandingPads = true;
     }
     if (!HasHotLandingPads) {
@@ -205,7 +199,7 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
 
 void MachineFunctionSplitter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineModuleInfoWrapperPass>();
-  AU.addRequired<MachineBlockFrequencyInfo>();
+  AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
   AU.addRequired<ProfileSummaryInfoWrapperPass>();
 }
 
