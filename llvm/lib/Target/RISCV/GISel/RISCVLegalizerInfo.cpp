@@ -720,9 +720,8 @@ bool RISCVLegalizerInfo::legalizeBRJT(MachineInstr &MI,
     // For PIC, the sequence is:
     // BRIND(load(Jumptable + index) + RelocBase)
     // RelocBase can be JumpTable, GOT or some sort of global base.
-    auto Load = MIRBuilder.buildLoadInstr(
-        TargetOpcode::G_LOAD, LLT::scalar(EntrySize * 8), Addr, *MMO);
-    Load = MIRBuilder.buildSExtOrTrunc(IndexTy, Load);
+    unsigned LoadOpc = STI.is64Bit() ? TargetOpcode::G_SEXTLOAD : TargetOpcode::G_LOAD;
+    auto Load = MIRBuilder.buildLoadInstr(LoadOpc, IndexTy, Addr, *MMO);
     TargetReg = MIRBuilder.buildPtrAdd(PtrTy, PtrReg, Load).getReg(0);
     break;
   }

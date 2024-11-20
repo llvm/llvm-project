@@ -67,9 +67,8 @@ body:             |
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
   ; CHECK-NEXT:   [[SHL:%[0-9]+]]:_(s64) = G_SHL [[SUB]], [[C2]](s64)
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[JUMP_TABLE]], [[SHL]](s64)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s32) from jump-table)
-  ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[LOAD]](s32)
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[JUMP_TABLE]], [[SEXT]](s64)
+  ; CHECK-NEXT:   [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[PTR_ADD]](p0) :: (load (s32) from jump-table)
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[JUMP_TABLE]], [[SEXTLOAD]](s64)
   ; CHECK-NEXT:   G_BRINDIRECT [[PTR_ADD1]](p0)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.bb1:

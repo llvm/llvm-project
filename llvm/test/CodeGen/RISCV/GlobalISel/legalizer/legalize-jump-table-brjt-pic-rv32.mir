@@ -73,8 +73,7 @@ body:             |
   ; CHECK-NEXT:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ADD]], [[C9]](s32)
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[JUMP_TABLE]], [[SHL]](s32)
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s32) from jump-table)
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[JUMP_TABLE]], [[COPY1]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[JUMP_TABLE]], [[LOAD]](s32)
   ; CHECK-NEXT:   G_BRINDIRECT [[PTR_ADD1]](p0)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.bb1:
