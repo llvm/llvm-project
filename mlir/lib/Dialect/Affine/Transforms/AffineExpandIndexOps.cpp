@@ -36,8 +36,9 @@ struct LowerDelinearizeIndexOps
   using OpRewritePattern<AffineDelinearizeIndexOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(AffineDelinearizeIndexOp op,
                                 PatternRewriter &rewriter) const override {
-    FailureOr<SmallVector<Value>> multiIndex = delinearizeIndex(
-        rewriter, op->getLoc(), op.getLinearIndex(), op.getMixedBasis());
+    FailureOr<SmallVector<Value>> multiIndex =
+        delinearizeIndex(rewriter, op->getLoc(), op.getLinearIndex(),
+                         op.getEffectiveBasis(), /*hasOuterBound=*/false);
     if (failed(multiIndex))
       return failure();
     rewriter.replaceOp(op, *multiIndex);
@@ -51,6 +52,12 @@ struct LowerLinearizeIndexOps final : OpRewritePattern<AffineLinearizeIndexOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(AffineLinearizeIndexOp op,
                                 PatternRewriter &rewriter) const override {
+    // Should be folded away, included here for safety.
+    if (op.getMultiIndex().empty()) {
+      rewriter.replaceOpWithNewOp<arith::ConstantIndexOp>(op, 0);
+      return success();
+    }
+
     SmallVector<OpFoldResult> multiIndex =
         getAsOpFoldResult(op.getMultiIndex());
     OpFoldResult linearIndex =

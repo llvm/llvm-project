@@ -1151,7 +1151,7 @@ def err_pragma_attribute_matcher_subrule_contradicts_rule : Error<
 def err_pragma_attribute_matcher_negated_subrule_contradicts_subrule : Error<
   "negated attribute subject matcher sub-rule '%0' contradicts sub-rule '%1'">;
 def err_pragma_attribute_invalid_matchers : Error<
-  "attribute %0 can't be applied to %1">;
+  "attribute %0 cannot be applied to %1">;
 def err_pragma_attribute_stack_mismatch : Error<
   "'#pragma clang attribute %select{%1.|}0pop' with no matching"
   " '#pragma clang attribute %select{%1.|}0push'">;
@@ -6150,7 +6150,7 @@ def err_mismatched_owning_module : Error<
   "declaration of %0 in %select{the global module|module %2}1 follows "
   "declaration in %select{the global module|module %4}3">;
 def err_multiple_decl_in_different_modules : Error<
-  "declaration %0 attached to named module '%1' can't be attached to "
+  "declaration %0 attached to named module '%1' cannot be attached to "
   "other modules">;
 def err_redefinition_different_type : Error<
   "redefinition of %0 with a different type%diff{: $ vs $|}1,2">;
@@ -8560,7 +8560,7 @@ def err_typecheck_missing_return_type_incompatible : Error<
   "literal|lambda expression}2 has unspecified explicit return type">;
 
 def note_incomplete_class_and_qualified_id : Note<
-  "conformance of forward class %0 to protocol %1 can not be confirmed">;
+  "conformance of forward class %0 to protocol %1 cannot be confirmed">;
 def warn_incompatible_qualified_id : Warning<
   "%select{%diff{assigning to $ from incompatible type $|"
   "assigning to type from incompatible type}0,1"
@@ -9300,11 +9300,11 @@ def warn_unused_container_subscript_expr : Warning<
 def warn_unused_call : Warning<
   "ignoring return value of function declared with %0 attribute">,
   InGroup<UnusedValue>;
-def warn_unused_constructor : Warning<
-  "ignoring temporary created by a constructor declared with %0 attribute">,
+def warn_unused_return_type : Warning<
+  "ignoring %select{return value|temporary}0 of type %2 declared with %1 attribute%select{|: %4}3">,
   InGroup<UnusedValue>;
-def warn_unused_constructor_msg : Warning<
-  "ignoring temporary created by a constructor declared with %0 attribute: %1">,
+def warn_unused_constructor : Warning<
+  "ignoring temporary created by a constructor declared with %0 attribute%select{|: %2}1">,
   InGroup<UnusedValue>;
 def warn_side_effects_unevaluated_context : Warning<
   "expression with side effects has no effect in an unevaluated context">,
@@ -9313,10 +9313,7 @@ def warn_side_effects_typeid : Warning<
   "expression with side effects will be evaluated despite being used as an "
   "operand to 'typeid'">, InGroup<PotentiallyEvaluatedExpression>;
 def warn_unused_result : Warning<
-  "ignoring return value of function declared with %0 attribute">,
-  InGroup<UnusedResult>;
-def warn_unused_result_msg : Warning<
-  "ignoring return value of function declared with %0 attribute: %1">,
+  "ignoring return value of function declared with %0 attribute%select{|: %2}1">,
   InGroup<UnusedResult>;
 def warn_unused_result_typedef_unsupported_spelling : Warning<
   "'[[%select{nodiscard|gnu::warn_unused_result}0]]' attribute ignored when "
@@ -9414,7 +9411,7 @@ let CategoryName = "Inline Assembly Issue" in {
     "asm constraint has an unexpected number of alternatives: %0 vs %1">;
   def err_asm_incomplete_type : Error<"asm operand has incomplete type %0">;
   def err_asm_unknown_register_name : Error<"unknown register name '%0' in asm">;
-  def err_asm_unwind_and_goto : Error<"unwind clobber can't be used with asm goto">;
+  def err_asm_unwind_and_goto : Error<"unwind clobber cannot be used with asm goto">;
   def err_asm_invalid_global_var_reg : Error<"register '%0' unsuitable for "
     "global register variables on this target">;
   def err_asm_register_size_mismatch : Error<"size of register '%0' does not "
@@ -9433,7 +9430,7 @@ let CategoryName = "Inline Assembly Issue" in {
   def err_asm_input_duplicate_match : Error<
     "more than one input constraint matches the same output '%0'">;
   def err_store_value_to_reg : Error<
-    "impossible constraint in asm: can't store value into a register">;
+    "impossible constraint in asm: cannot store value into a register">;
 
   def warn_asm_label_on_auto_decl : Warning<
     "ignored asm label '%0' on automatic variable">;
@@ -10132,10 +10129,11 @@ def err_lifetimebound_ctor_dtor : Error<
   "%select{constructor|destructor}0">;
 def err_lifetimebound_parameter_void_return_type : Error<
   "'lifetimebound' attribute cannot be applied to a parameter of a function "
-  "that returns void">;
+  "that returns void; did you mean 'lifetime_capture_by(X)'">;
 def err_lifetimebound_implicit_object_parameter_void_return_type : Error<
   "'lifetimebound' attribute cannot be applied to an implicit object "
-  "parameter of a function that returns void">;
+  "parameter of a function that returns void; "
+  "did you mean 'lifetime_capture_by(X)'">;
 
 // CHECK: returning address/reference of stack memory
 def warn_ret_stack_addr_ref : Warning<
@@ -10230,6 +10228,12 @@ def warn_dangling_pointer_assignment : Warning<
    "object backing %select{|the pointer }0%1 "
    "will be destroyed at the end of the full-expression">,
    InGroup<DanglingAssignment>;
+def warn_dangling_reference_captured : Warning<
+   "object whose reference is captured by '%0' will be destroyed at the end of "
+   "the full-expression">, InGroup<DanglingCapture>, DefaultIgnore;
+def warn_dangling_reference_captured_by_unknown : Warning<
+   "object whose reference is captured will be destroyed at the end of "
+   "the full-expression">, InGroup<DanglingCapture>, DefaultIgnore;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
@@ -10960,7 +10964,7 @@ def err_opencl_builtin_pipe_invalid_access_modifier : Error<
 def err_opencl_invalid_access_qualifier : Error<
   "access qualifier can only be used for pipe and image type">;
 def err_opencl_invalid_read_write : Error<
-  "access qualifier %0 can not be used for %1 %select{|prior to OpenCL C version 2.0 or in version 3.0 "
+  "access qualifier %0 cannot be used for %1 %select{|prior to OpenCL C version 2.0 or in version 3.0 "
   "and without __opencl_c_read_write_images feature}2">;
 def err_opencl_multiple_access_qualifiers : Error<
   "multiple access qualifiers">;
@@ -11460,7 +11464,7 @@ def err_omp_wrong_linear_modifier : Error<
 def err_omp_wrong_linear_modifier_non_reference : Error<
   "variable of non-reference type %0 can be used only with 'val' modifier, but used with '%1'">;
 def err_omp_step_simple_modifier_exclusive : Error<
-  "step simple modifier is exclusive and can't be use with 'val', 'uval' or 'ref' modifier">;
+  "step simple modifier is exclusive and cannot be use with 'val', 'uval' or 'ref' modifier">;
 def err_omp_wrong_simdlen_safelen_values : Error<
   "the value of 'simdlen' parameter must be less than or equal to the value of the 'safelen' parameter">;
 def err_omp_wrong_if_directive_name_modifier : Error<
@@ -11534,7 +11538,7 @@ def err_omp_schedule_nonmonotonic_static : Error<
 def err_omp_simple_clause_incompatible_with_ordered : Error<
   "'%0' clause with '%1' modifier cannot be specified if an 'ordered' clause is specified">;
 def err_omp_ordered_simd : Error<
-  "'ordered' clause with a parameter can not be specified in '#pragma omp %0' directive">;
+  "'ordered' clause with a parameter cannot be specified in '#pragma omp %0' directive">;
 def err_omp_variable_in_given_clause_and_dsa : Error<
   "%0 variable cannot be in a %1 clause in '#pragma omp %2' directive">;
 def err_omp_param_or_this_in_clause : Error<
@@ -12366,7 +12370,7 @@ def err_preserve_enum_value_not_const: Error<
   "__builtin_preserve_enum_value argument %0 not a constant">;
 
 def err_bit_cast_non_trivially_copyable : Error<
-  "__builtin_bit_cast %select{source|destination}0 type must be trivially copyable">;
+  "'__builtin_bit_cast' %select{source|destination}0 type must be trivially copyable">;
 def err_bit_cast_type_size_mismatch : Error<
   "size of '__builtin_bit_cast' source type %0 does not match destination type %1 (%2 vs %3 bytes)">;
 
