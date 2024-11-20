@@ -365,7 +365,6 @@ void IdenticalCodeFolding::processDataRelocations(
 
 Error IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
   Error ErrorStatus = Error::success();
-  ErrorOr<BinarySection &> SecRelData = BC.getUniqueSectionByName(".rela.data");
   if (!BC.HasRelocations)
     ErrorStatus = joinErrors(
         std::move(ErrorStatus),
@@ -373,6 +372,7 @@ Error IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
                                    "relocations. Safe ICF is not supported")));
   if (ErrorStatus)
     return ErrorStatus;
+  ErrorOr<BinarySection &> SecRelData = BC.getUniqueSectionByName(".rela.data");
   if (SecRelData) {
     SectionRef SecRefRelData = SecRelData->getSectionRef();
     processDataRelocations(BC, SecRefRelData);
