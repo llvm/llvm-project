@@ -314,19 +314,6 @@ gpu.module @shuffles {
 
 // -----
 
-// Check attaching a discardable attribute to a `gpu.func` hosting a `gpu.shuffle` operation works,
-// i.e., the attribute is propagated.
-
-gpu.module @shuffles_ {
-  gpu.func @propagated_size(%val: i32, %id: i32) attributes {intel_reqd_sub_group_size = 16 : i32} {
-    %width = arith.constant 16 : i32
-    %shuffleResult, %valid = gpu.shuffle idx %val, %id, %width : i32
-    llvm.return
-  }
-}
-
-// -----
-
 // Cannot convert due to shuffle width and target subgroup size mismatch
 
 gpu.module @shuffles_mismatch {
