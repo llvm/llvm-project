@@ -207,7 +207,7 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
   case MCSymbolRefExpr::VK_GOTPCREL:
     checkIs32(Ctx, Loc, Type);
     // Older versions of ld.bfd/ld.gold/lld
-    // do not support GOTPCRELX/REX_GOTPCRELX/REX2_GOTPCRELX,
+    // do not support GOTPCRELX/REX_GOTPCRELX/CODE_4_GOTPCRELX,
     // and we want to keep back-compatibility.
     if (!Ctx.getTargetOptions()->X86RelaxRelocations)
       return ELF::R_X86_64_GOTPCREL;
@@ -221,7 +221,7 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
       return ELF::R_X86_64_REX_GOTPCRELX;
     case X86::reloc_riprel_4byte_relax_rex2:
     case X86::reloc_riprel_4byte_movq_load_rex2:
-      return ELF::R_X86_64_REX2_GOTPCRELX;
+      return ELF::R_X86_64_CODE_4_GOTPCRELX;
     }
     llvm_unreachable("unexpected relocation type!");
   case MCSymbolRefExpr::VK_GOTPCREL_NORELAX:
