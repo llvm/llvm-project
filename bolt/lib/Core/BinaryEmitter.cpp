@@ -976,9 +976,8 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
     Streamer.emitLabel(TTBaseRefLabel);
   }
 
-  // Emit the landing pad call site table. We use signed data4 since we can emit
-  // a landing pad in a different part of the split function that could appear
-  // earlier in the address space than LPStart.
+  // Emit encoding of entries in the call site table. The format is used for the
+  // call site start, length, and corresponding landing pad.
   if (BC.HasFixedLoadAddress)
     Streamer.emitIntValue(dwarf::DW_EH_PE_sdata4, 1);
   else
