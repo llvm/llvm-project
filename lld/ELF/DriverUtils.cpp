@@ -58,9 +58,9 @@ static void handleColorDiagnostics(Ctx &ctx, opt::InputArgList &args) {
     return;
   StringRef s = arg->getValue();
   if (s == "always")
-    ctx.errHandler->errs().enable_colors(true);
+    ctx.e.errs().enable_colors(true);
   else if (s == "never")
-    ctx.errHandler->errs().enable_colors(false);
+    ctx.e.errs().enable_colors(false);
   else if (s != "auto")
     ErrAlways(ctx) << "unknown option: --color-diagnostics=" << s;
 }
@@ -138,7 +138,7 @@ opt::InputArgList ELFOptTable::parse(Ctx &ctx, ArrayRef<const char *> argv) {
 }
 
 void elf::printHelp(Ctx &ctx) {
-  auto &outs = ctx.errHandler->outs();
+  auto &outs = ctx.e.outs();
   ELFOptTable().printHelp(
       outs, (ctx.arg.progName + " [options] file...").str().c_str(), "lld",
       false /*ShowHidden*/, true /*ShowAllAliases*/);
