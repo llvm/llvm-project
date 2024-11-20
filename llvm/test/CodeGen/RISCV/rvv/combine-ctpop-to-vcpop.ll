@@ -109,6 +109,20 @@ entry:
   ret i128 %b
 }
 
+define i32 @test_trunc_v128i1(<128 x i1> %x) {
+; CHECK-LABEL: test_trunc_v128i1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vcpop.m a0, v0
+; CHECK-NEXT:    ret
+entry:
+  %a = bitcast <128 x i1> %x to i128
+  %b = call i128 @llvm.ctpop.i128(i128 %a)
+  %c = trunc i128 %b to i32
+  ret i32 %c
+}
+
 define i256 @test_v256i1(<256 x i1> %x) {
 ; RV32-LABEL: test_v256i1:
 ; RV32:       # %bb.0: # %entry
@@ -148,10 +162,10 @@ define i256 @test_v256i1(<256 x i1> %x) {
 ; RV32-NEXT:    sltu a2, a1, a6
 ; RV32-NEXT:    add a3, a4, a3
 ; RV32-NEXT:    add a3, a3, a2
-; RV32-NEXT:    beq a3, a4, .LBB7_2
+; RV32-NEXT:    beq a3, a4, .LBB8_2
 ; RV32-NEXT:  # %bb.1: # %entry
 ; RV32-NEXT:    sltu a2, a3, a4
-; RV32-NEXT:  .LBB7_2: # %entry
+; RV32-NEXT:  .LBB8_2: # %entry
 ; RV32-NEXT:    sw zero, 16(a0)
 ; RV32-NEXT:    sw zero, 20(a0)
 ; RV32-NEXT:    sw zero, 24(a0)
@@ -188,4 +202,64 @@ entry:
   %a = bitcast <256 x i1> %x to i256
   %b = call i256 @llvm.ctpop.i256(i256 %a)
   ret i256 %b
+}
+
+define i32 @test_trunc_v256i1(<256 x i1> %x) {
+; RV32-LABEL: test_trunc_v256i1:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV32-NEXT:    vslidedown.vi v9, v0, 1
+; RV32-NEXT:    li a0, 32
+; RV32-NEXT:    vslidedown.vi v10, v8, 1
+; RV32-NEXT:    vmv.x.s a1, v0
+; RV32-NEXT:    vmv.x.s a2, v8
+; RV32-NEXT:    vsrl.vx v11, v9, a0
+; RV32-NEXT:    vsrl.vx v12, v0, a0
+; RV32-NEXT:    vmv.x.s a3, v9
+; RV32-NEXT:    vsrl.vx v9, v10, a0
+; RV32-NEXT:    vsrl.vx v8, v8, a0
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    cpop a2, a2
+; RV32-NEXT:    cpop a1, a1
+; RV32-NEXT:    vmv.x.s a4, v11
+; RV32-NEXT:    vmv.x.s a5, v12
+; RV32-NEXT:    vmv.x.s a6, v9
+; RV32-NEXT:    vmv.x.s a7, v8
+; RV32-NEXT:    cpop a0, a0
+; RV32-NEXT:    cpop a3, a3
+; RV32-NEXT:    cpop a7, a7
+; RV32-NEXT:    cpop a6, a6
+; RV32-NEXT:    cpop a5, a5
+; RV32-NEXT:    cpop a4, a4
+; RV32-NEXT:    add a2, a2, a7
+; RV32-NEXT:    add a0, a0, a6
+; RV32-NEXT:    add a1, a1, a5
+; RV32-NEXT:    add a3, a3, a4
+; RV32-NEXT:    add a0, a2, a0
+; RV32-NEXT:    add a1, a1, a3
+; RV32-NEXT:    add a0, a1, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_trunc_v256i1:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vslidedown.vi v9, v0, 1
+; RV64-NEXT:    vmv.x.s a0, v0
+; RV64-NEXT:    vslidedown.vi v10, v8, 1
+; RV64-NEXT:    vmv.x.s a1, v8
+; RV64-NEXT:    vmv.x.s a2, v9
+; RV64-NEXT:    vmv.x.s a3, v10
+; RV64-NEXT:    cpop a1, a1
+; RV64-NEXT:    cpop a0, a0
+; RV64-NEXT:    cpop a3, a3
+; RV64-NEXT:    cpop a2, a2
+; RV64-NEXT:    add a1, a1, a3
+; RV64-NEXT:    add a0, a0, a2
+; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    ret
+entry:
+  %a = bitcast <256 x i1> %x to i256
+  %b = call i256 @llvm.ctpop.i256(i256 %a)
+  %c = trunc i256 %b to i32
+  ret i32 %c
 }
