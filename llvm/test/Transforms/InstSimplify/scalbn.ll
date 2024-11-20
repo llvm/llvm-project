@@ -8,8 +8,6 @@ declare double @scalbn(double, i32)
 declare float @scalbnf(float, i32)
 declare x86_fp80 @scalbnl(x86_fp80, i32)
 
-;
-
 define double @scalbln_undef() {
 ; CHECK-LABEL: @scalbln_undef(
 ; CHECK-NEXT:    ret double 0x7FF8000000000000
@@ -58,12 +56,34 @@ define x86_fp80 @scalbnl_undef() {
   ret x86_fp80 %call
 }
 
-;
-
 define double @scalbn_check() {
 ; CHECK-LABEL: @scalbn_check(
-; CHECK-NEXT:    ret double 12
+; CHECK-NEXT:    ret double 12.0
 ;
   %call = call double @scalbn(double 3.0, i32 2)
+  ret %call
+}
+
+define double @scalbn_check0() {
+; CHECK-LABEL: @scalbn_check0(
+; CHECK-NEXT:    ret double 0.0
+;
+  %call = call double @scalbn(double 0.0, i32 2)
+  ret %call
+}
+
+define double @scalbn_check0n() {
+; CHECK-LABEL: @scalbn_check0n(
+; CHECK-NEXT:    ret double 0.0
+;
+  %call = call double @scalbn(double -0.0, i32 2)
+  ret %call
+}
+
+define double @scalbn_check0n() {
+; CHECK-LABEL: @scalbn_check0n(
+; CHECK-NEXT:    ret double 0.5
+;
+  %call = call double @scalbn(double 1.0, i32 -1)
   ret %call
 }
