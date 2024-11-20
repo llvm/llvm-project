@@ -2307,10 +2307,8 @@ static void emitNeonTypeDefs(const std::string& types, raw_ostream &OS) {
     OS << T.getNumElements();
     if (T.isMFloat8())
       OS << "_t ";
-    else {
-      OS << "))) ";
-      OS << T2.str();
-    }
+    else
+      OS << "))) " << T2.str();
     OS << " " << T.str() << ";\n";
   }
   if (InIfdef)
