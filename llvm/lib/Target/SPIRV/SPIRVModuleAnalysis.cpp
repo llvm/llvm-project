@@ -1014,12 +1014,13 @@ static void AddDotProductRequirements(const MachineInstr &MI,
 
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   assert(MI.getOperand(2).isReg() && "Unexpected operand in dot");
-  const MachineInstr *InputInstr = MRI.getVRegDef(MI.getOperand(2).getReg());
-  assert(InputInstr->getOperand(1).isReg() &&
-         "Unexpected operand in dot input");
+  // We do not consider what the previous instruction is. This is just used
+  // to get the input register and to check the type.
+  const MachineInstr *Input = MRI.getVRegDef(MI.getOperand(2).getReg());
+  assert(Input->getOperand(1).isReg() && "Unexpected operand in dot input");
+  Register InputReg = Input->getOperand(1).getReg();
 
-  Register TypeReg = InputInstr->getOperand(1).getReg();
-  SPIRVType *TypeDef = MRI.getVRegDef(TypeReg);
+  SPIRVType *TypeDef = MRI.getVRegDef(InputReg);
   if (TypeDef->getOpcode() == SPIRV::OpTypeInt) {
     assert(TypeDef->getOperand(1).getImm() == 32);
     Reqs.addCapability(SPIRV::Capability::DotProductInput4x8BitPacked);
