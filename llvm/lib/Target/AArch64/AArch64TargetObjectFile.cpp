@@ -9,7 +9,6 @@
 #include "AArch64TargetObjectFile.h"
 #include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64MCExpr.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/IR/Mangler.h"

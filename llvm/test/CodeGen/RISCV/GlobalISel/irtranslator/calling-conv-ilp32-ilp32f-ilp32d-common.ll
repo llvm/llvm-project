@@ -1091,8 +1091,8 @@ define %struct.large2 @callee_large_struct_ret2() nounwind {
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
   ; RV32I-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; RV32I-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; RV32I-NEXT:   [[DEF2:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+  ; RV32I-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY [[DEF]](s32)
+  ; RV32I-NEXT:   [[DEF1:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; RV32I-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; RV32I-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 2.000000e+00
   ; RV32I-NEXT:   [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 3

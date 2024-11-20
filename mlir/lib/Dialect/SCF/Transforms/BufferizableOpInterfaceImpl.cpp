@@ -649,7 +649,8 @@ struct ForOpInterface
     if (failed(bufferizableOp.resolveTensorOpOperandConflicts(rewriter, state)))
       return failure();
 
-    if (!state.getOptions().enforceAliasingInvariants)
+    if (!state.getOptions().enforceAliasingInvariants ||
+        state.getOptions().copyBeforeWrite)
       return success();
 
     // According to the `getAliasing...` implementations, a bufferized OpResult
@@ -889,7 +890,8 @@ struct WhileOpInterface
     if (failed(bufferizableOp.resolveTensorOpOperandConflicts(rewriter, state)))
       return failure();
 
-    if (!state.getOptions().enforceAliasingInvariants)
+    if (!state.getOptions().enforceAliasingInvariants ||
+        state.getOptions().copyBeforeWrite)
       return success();
 
     // According to the `getAliasing...` implementations, a bufferized OpResult

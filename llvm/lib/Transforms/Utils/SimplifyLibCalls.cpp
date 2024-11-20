@@ -342,7 +342,13 @@ static Value *copyFlags(const CallInst &Old, Value *New) {
 static Value *mergeAttributesAndFlags(CallInst *NewCI, const CallInst &Old) {
   NewCI->setAttributes(AttributeList::get(
       NewCI->getContext(), {NewCI->getAttributes(), Old.getAttributes()}));
-  NewCI->removeRetAttrs(AttributeFuncs::typeIncompatible(NewCI->getType()));
+  NewCI->removeRetAttrs(AttributeFuncs::typeIncompatible(
+      NewCI->getType(), NewCI->getRetAttributes()));
+  for (unsigned I = 0; I < NewCI->arg_size(); ++I)
+    NewCI->removeParamAttrs(
+        I, AttributeFuncs::typeIncompatible(NewCI->getArgOperand(I)->getType(),
+                                            NewCI->getParamAttributes(I)));
+
   return copyFlags(Old, NewCI);
 }
 
@@ -1407,8 +1413,7 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
     return nullptr;
   }
 
-  bool OptForSize = CI->getFunction()->hasOptSize() ||
-                    llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI,
+  bool OptForSize = llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI,
                                                 PGSOQueryType::IRPass);
 
   // If the char is variable but the input str and length are not we can turn
@@ -1958,10 +1963,9 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilderBase &B,
   // g((double) float) -> (double) gf(float)
   Value *R;
   if (IsIntrinsic) {
-    Module *M = CI->getModule();
     Intrinsic::ID IID = CalleeFn->getIntrinsicID();
-    Function *Fn = Intrinsic::getDeclaration(M, IID, B.getFloatTy());
-    R = isBinary ? B.CreateCall(Fn, V) : B.CreateCall(Fn, V[0]);
+    R = isBinary ? B.CreateIntrinsic(IID, B.getFloatTy(), V)
+                 : B.CreateIntrinsic(IID, B.getFloatTy(), V[0]);
   } else {
     AttributeList CalleeAttrs = CalleeFn->getAttributes();
     R = isBinary ? emitBinaryFloatFnCall(V[0], V[1], TLI, CalleeName, B,
@@ -2278,8 +2282,8 @@ Value *LibCallSimplifier::replacePowWithSqrt(CallInst *Pow, IRBuilderBase &B) {
   // pow(-Inf, 0.5) is optionally required to have a result of +Inf (not setting
   // errno), but sqrt(-Inf) is required by various standards to set errno.
   if (!Pow->doesNotAccessMemory() && !Pow->hasNoInfs() &&
-      !isKnownNeverInfinity(Base, 0,
-                            SimplifyQuery(DL, TLI, /*DT=*/nullptr, AC, Pow)))
+      !isKnownNeverInfinity(
+          Base, 0, SimplifyQuery(DL, TLI, DT, AC, Pow, true, true, DC)))
     return nullptr;
 
   Sqrt = getSqrtCall(Base, AttributeList(), Pow->doesNotAccessMemory(), Mod, B,
@@ -2510,20 +2514,15 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
   Intrinsic::ID LogID = LogFn->getIntrinsicID();
   Module *Mod = Log->getModule();
   Type *Ty = Log->getType();
-  Value *Ret = nullptr;
 
   if (UnsafeFPShrink && hasFloatVersion(Mod, LogNm))
-    Ret = optimizeUnaryDoubleFP(Log, B, TLI, true);
-
-  // The earlier call must also be 'fast' in order to do these transforms.
-  CallInst *Arg = dyn_cast<CallInst>(Log->getArgOperand(0));
-  if (!Log->isFast() || !Arg || !Arg->isFast() || !Arg->hasOneUse())
-    return Ret;
+    if (Value *Ret = optimizeUnaryDoubleFP(Log, B, TLI, true))
+      return Ret;
 
   LibFunc LogLb, ExpLb, Exp2Lb, Exp10Lb, PowLb;
 
   // This is only applicable to log(), log2(), log10().
-  if (TLI->getLibFunc(LogNm, LogLb))
+  if (TLI->getLibFunc(LogNm, LogLb)) {
     switch (LogLb) {
     case LibFunc_logf:
       LogID = Intrinsic::log;
@@ -2589,10 +2588,28 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
       PowLb = LibFunc_powl;
       break;
     default:
-      return Ret;
+      return nullptr;
     }
-  else if (LogID == Intrinsic::log || LogID == Intrinsic::log2 ||
-           LogID == Intrinsic::log10) {
+
+    // Convert libcall to intrinsic if the value is known > 0.
+    bool IsKnownNoErrno = Log->hasNoNaNs() && Log->hasNoInfs();
+    if (!IsKnownNoErrno) {
+      SimplifyQuery SQ(DL, TLI, DT, AC, Log, true, true, DC);
+      KnownFPClass Known = computeKnownFPClass(
+          Log->getOperand(0),
+          KnownFPClass::OrderedLessThanZeroMask | fcSubnormal,
+          /*Depth=*/0, SQ);
+      Function *F = Log->getParent()->getParent();
+      IsKnownNoErrno = Known.cannotBeOrderedLessThanZero() &&
+                       Known.isKnownNeverLogicalZero(*F, Ty);
+    }
+    if (IsKnownNoErrno) {
+      auto *NewLog = B.CreateUnaryIntrinsic(LogID, Log->getArgOperand(0), Log);
+      NewLog->copyMetadata(*Log);
+      return copyFlags(*Log, NewLog);
+    }
+  } else if (LogID == Intrinsic::log || LogID == Intrinsic::log2 ||
+             LogID == Intrinsic::log10) {
     if (Ty->getScalarType()->isFloatTy()) {
       ExpLb = LibFunc_expf;
       Exp2Lb = LibFunc_exp2f;
@@ -2604,9 +2621,14 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
       Exp10Lb = LibFunc_exp10;
       PowLb = LibFunc_pow;
     } else
-      return Ret;
+      return nullptr;
   } else
-    return Ret;
+    return nullptr;
+
+  // The earlier call must also be 'fast' in order to do these transforms.
+  CallInst *Arg = dyn_cast<CallInst>(Log->getArgOperand(0));
+  if (!Log->isFast() || !Arg || !Arg->isFast() || !Arg->hasOneUse())
+    return nullptr;
 
   IRBuilderBase::FastMathFlagGuard Guard(B);
   B.setFastMathFlags(FastMathFlags::getFast());
@@ -2655,7 +2677,7 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
     return MulY;
   }
 
-  return Ret;
+  return nullptr;
 }
 
 // sqrt(exp(X)) -> exp(X * 0.5)
@@ -2794,6 +2816,34 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilderBase &B) {
     return copyFlags(*CI, B.CreateFMul(FabsCall, SqrtCall));
   }
   return copyFlags(*CI, FabsCall);
+}
+
+Value *LibCallSimplifier::optimizeFMod(CallInst *CI, IRBuilderBase &B) {
+
+  // fmod(x,y) can set errno if y == 0 or x == +/-inf, and returns Nan in those
+  // case. If we know those do not happen, then we can convert the fmod into
+  // frem.
+  bool IsNoNan = CI->hasNoNaNs();
+  if (!IsNoNan) {
+    SimplifyQuery SQ(DL, TLI, DT, AC, CI, true, true, DC);
+    KnownFPClass Known0 = computeKnownFPClass(CI->getOperand(0), fcInf,
+                                              /*Depth=*/0, SQ);
+    if (Known0.isKnownNeverInfinity()) {
+      KnownFPClass Known1 =
+          computeKnownFPClass(CI->getOperand(1), fcZero | fcSubnormal,
+                              /*Depth=*/0, SQ);
+      Function *F = CI->getParent()->getParent();
+      IsNoNan = Known1.isKnownNeverLogicalZero(*F, CI->getType());
+    }
+  }
+
+  if (IsNoNan) {
+    Value *FRem = B.CreateFRemFMF(CI->getOperand(0), CI->getOperand(1), CI);
+    if (auto *FRemI = dyn_cast<Instruction>(FRem))
+      FRemI->setHasNoNaNs(true);
+    return FRem;
+  }
+  return nullptr;
 }
 
 Value *LibCallSimplifier::optimizeTrigInversionPairs(CallInst *CI,
@@ -3078,6 +3128,33 @@ Value *LibCallSimplifier::optimizeRemquo(CallInst *CI, IRBuilderBase &B) {
       ConstantInt::get(B.getIntNTy(IntBW), QuotInt.getExtValue()),
       CI->getArgOperand(2), CI->getParamAlign(2));
   return ConstantFP::get(CI->getType(), Rem);
+}
+
+/// Constant folds fdim
+Value *LibCallSimplifier::optimizeFdim(CallInst *CI, IRBuilderBase &B) {
+  // Cannot perform the fold unless the call has attribute memory(none)
+  if (!CI->doesNotAccessMemory())
+    return nullptr;
+
+  // TODO : Handle undef values
+  // Propagate poison if any
+  if (isa<PoisonValue>(CI->getArgOperand(0)))
+    return CI->getArgOperand(0);
+  if (isa<PoisonValue>(CI->getArgOperand(1)))
+    return CI->getArgOperand(1);
+
+  const APFloat *X, *Y;
+  // Check if both values are constants
+  if (!match(CI->getArgOperand(0), m_APFloat(X)) ||
+      !match(CI->getArgOperand(1), m_APFloat(Y)))
+    return nullptr;
+
+  APFloat Difference = *X;
+  Difference.subtract(*Y, RoundingMode::NearestTiesToEven);
+
+  APFloat MaxVal =
+      maximum(Difference, APFloat::getZero(CI->getType()->getFltSemantics()));
+  return ConstantFP::get(CI->getType(), MaxVal);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3404,10 +3481,8 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI,
       return B.CreateIntCast(PtrDiff, CI->getType(), false);
     }
 
-    bool OptForSize = CI->getFunction()->hasOptSize() ||
-                      llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI,
-                                                  PGSOQueryType::IRPass);
-    if (OptForSize)
+    if (llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI,
+                                    PGSOQueryType::IRPass))
       return nullptr;
 
     Value *Len = emitStrLen(CI->getArgOperand(2), B, DL, TLI);
@@ -3717,10 +3792,8 @@ Value *LibCallSimplifier::optimizeFPuts(CallInst *CI, IRBuilderBase &B) {
 
   // Don't rewrite fputs to fwrite when optimising for size because fwrite
   // requires more arguments and thus extra MOVs are required.
-  bool OptForSize = CI->getFunction()->hasOptSize() ||
-                    llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI,
-                                                PGSOQueryType::IRPass);
-  if (OptForSize)
+  if (llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI,
+                                  PGSOQueryType::IRPass))
     return nullptr;
 
   // We can't optimize if return value is used.
@@ -3945,6 +4018,10 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_sqrt:
   case LibFunc_sqrtl:
     return optimizeSqrt(CI, Builder);
+  case LibFunc_fmod:
+  case LibFunc_fmodf:
+  case LibFunc_fmodl:
+    return optimizeFMod(CI, Builder);
   case LibFunc_logf:
   case LibFunc_log:
   case LibFunc_logl:
@@ -4009,6 +4086,10 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
     if (hasFloatVersion(M, CI->getCalledFunction()->getName()))
       return optimizeBinaryDoubleFP(CI, Builder, TLI);
     return nullptr;
+  case LibFunc_fdim:
+  case LibFunc_fdimf:
+  case LibFunc_fdiml:
+    return optimizeFdim(CI, Builder);
   case LibFunc_fminf:
   case LibFunc_fmin:
   case LibFunc_fminl:
@@ -4162,13 +4243,13 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
 }
 
 LibCallSimplifier::LibCallSimplifier(
-    const DataLayout &DL, const TargetLibraryInfo *TLI, AssumptionCache *AC,
-    OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
-    ProfileSummaryInfo *PSI,
+    const DataLayout &DL, const TargetLibraryInfo *TLI, DominatorTree *DT,
+    DomConditionCache *DC, AssumptionCache *AC, OptimizationRemarkEmitter &ORE,
+    BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
     function_ref<void(Instruction *, Value *)> Replacer,
     function_ref<void(Instruction *)> Eraser)
-    : FortifiedSimplifier(TLI), DL(DL), TLI(TLI), AC(AC), ORE(ORE), BFI(BFI),
-      PSI(PSI), Replacer(Replacer), Eraser(Eraser) {}
+    : FortifiedSimplifier(TLI), DL(DL), TLI(TLI), DT(DT), DC(DC), AC(AC),
+      ORE(ORE), BFI(BFI), PSI(PSI), Replacer(Replacer), Eraser(Eraser) {}
 
 void LibCallSimplifier::replaceAllUsesWith(Instruction *I, Value *With) {
   // Indirect through the replacer used in this instance.

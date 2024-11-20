@@ -54,5 +54,5 @@ void Test() {
 
   // expected-error@+1{{OpenACC 'num_gangs' clause is not valid on 'loop' directive}}
 #pragma acc loop num_gangs(1)
-  for(;;);
+  for(int i = 5; i < 10;++i);
 }

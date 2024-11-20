@@ -25,7 +25,7 @@ def add(instr, model, resource=None):
 def filter_model(m):
     global filt
     if m and filt:
-        return filt.search(m) != None
+        return filt.search(m) is not None
     else:
         return True
 

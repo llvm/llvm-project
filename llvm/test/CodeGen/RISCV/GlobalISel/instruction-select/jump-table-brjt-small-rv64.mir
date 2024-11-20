@@ -112,8 +112,8 @@ body:             |
     %2:gprb(s64) = G_ASSERT_SEXT %1, 32
     %7:gprb(s64) = G_CONSTANT i64 5
     %3:gprb(s64) = G_SEXT_INREG %2, 32
-    %4:gprb(s64) = G_CONSTANT i64 1
-    %5:gprb(s64) = G_SUB %3, %4
+    %4:gprb(s64) = G_CONSTANT i64 -1
+    %5:gprb(s64) = G_ADD %3, %4
     %26:gprb(s64) = G_ICMP intpred(ugt), %5(s64), %7
     G_BRCOND %26(s64), %bb.8
 

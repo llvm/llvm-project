@@ -60,10 +60,10 @@ Value *VectorBuilder::createVectorInstruction(unsigned Opcode, Type *ReturnTy,
   return createVectorInstructionImpl(VPID, ReturnTy, InstOpArray, Name);
 }
 
-Value *VectorBuilder::createSimpleTargetReduction(Intrinsic::ID RdxID,
-                                                  Type *ValTy,
-                                                  ArrayRef<Value *> InstOpArray,
-                                                  const Twine &Name) {
+Value *VectorBuilder::createSimpleReduction(Intrinsic::ID RdxID,
+                                            Type *ValTy,
+                                            ArrayRef<Value *> InstOpArray,
+                                            const Twine &Name) {
   auto VPID = VPIntrinsic::getForIntrinsic(RdxID);
   assert(VPReductionIntrinsic::isVPReduction(VPID) &&
          "No VPIntrinsic for this reduction");
@@ -108,8 +108,8 @@ Value *VectorBuilder::createVectorInstructionImpl(Intrinsic::ID VPID,
   if (VLenPosOpt)
     IntrinParams[*VLenPosOpt] = &requestEVL();
 
-  auto *VPDecl = VPIntrinsic::getDeclarationForParams(&getModule(), VPID,
-                                                      ReturnTy, IntrinParams);
+  auto *VPDecl = VPIntrinsic::getOrInsertDeclarationForParams(
+      &getModule(), VPID, ReturnTy, IntrinParams);
   return Builder.CreateCall(VPDecl, IntrinParams, Name);
 }
 

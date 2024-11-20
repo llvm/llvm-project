@@ -130,13 +130,8 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
   // the file could also have been removed during processing. Since we can't
   // really deal with this situation, just create an empty buffer.
   if (!BufferOrError) {
-    if (Diag.isDiagnosticInFlight())
-      Diag.SetDelayedDiagnostic(diag::err_cannot_open_file,
-                                ContentsEntry->getName(),
-                                BufferOrError.getError().message());
-    else
-      Diag.Report(Loc, diag::err_cannot_open_file)
-          << ContentsEntry->getName() << BufferOrError.getError().message();
+    Diag.Report(Loc, diag::err_cannot_open_file)
+        << ContentsEntry->getName() << BufferOrError.getError().message();
 
     return std::nullopt;
   }
@@ -153,12 +148,7 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
   // ContentsEntry::getSize() could have the wrong size. Use
   // MemoryBuffer::getBufferSize() instead.
   if (Buffer->getBufferSize() >= std::numeric_limits<unsigned>::max()) {
-    if (Diag.isDiagnosticInFlight())
-      Diag.SetDelayedDiagnostic(diag::err_file_too_large,
-                                ContentsEntry->getName());
-    else
-      Diag.Report(Loc, diag::err_file_too_large)
-        << ContentsEntry->getName();
+    Diag.Report(Loc, diag::err_file_too_large) << ContentsEntry->getName();
 
     return std::nullopt;
   }
@@ -168,12 +158,7 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
   // have come from a stat cache).
   if (!ContentsEntry->isNamedPipe() &&
       Buffer->getBufferSize() != (size_t)ContentsEntry->getSize()) {
-    if (Diag.isDiagnosticInFlight())
-      Diag.SetDelayedDiagnostic(diag::err_file_modified,
-                                ContentsEntry->getName());
-    else
-      Diag.Report(Loc, diag::err_file_modified)
-        << ContentsEntry->getName();
+    Diag.Report(Loc, diag::err_file_modified) << ContentsEntry->getName();
 
     return std::nullopt;
   }
@@ -350,6 +335,7 @@ void SourceManager::clearIDTables() {
   LastLineNoContentCache = nullptr;
   LastFileIDLookup = FileID();
 
+  IncludedLocMap.clear();
   if (LineTable)
     LineTable->clear();
 
@@ -2310,7 +2296,8 @@ void SourceManager::noteSLocAddressSpaceUsage(
   int UsagePercent = static_cast<int>(100.0 * double(LocalUsage + LoadedUsage) /
                                       MaxLoadedOffset);
   Diag.Report(SourceLocation(), diag::note_total_sloc_usage)
-    << LocalUsage << LoadedUsage << (LocalUsage + LoadedUsage) << UsagePercent;
+      << LocalUsage << LoadedUsage << (LocalUsage + LoadedUsage)
+      << UsagePercent;
 
   // Produce notes on sloc address space usage for each file with a high usage.
   uint64_t ReportedSize = 0;

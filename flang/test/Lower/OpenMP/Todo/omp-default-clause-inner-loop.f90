@@ -8,7 +8,7 @@
 
 ! The string "EXPECTED" denotes the expected FIR
 
-! CHECK: omp.parallel  private(@{{.*}} %{{.*}} -> %[[PRIVATE_Y:.*]] : !fir.ref<i32>, @{{.*}} %{{.*}} -> %[[PRIVATE_Y:.*]] : !fir.ref<i32>) {
+! CHECK: omp.parallel  private(@{{.*}} %{{.*}} -> %[[PRIVATE_Y:.*]], @{{.*}} %{{.*}} -> %[[PRIVATE_Y:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
 ! CHECK: %[[TEMP:.*]] = fir.alloca i32 {bindc_name = "x", pinned, {{.*}}}
 ! CHECK: %[[const_1:.*]] = arith.constant 1 : i32
 ! CHECK: %[[const_2:.*]] = arith.constant 10 : i32
@@ -24,7 +24,6 @@
 ! CHECK: fir.store %[[result]] to %{{.*}} : !fir.ref<i32>
 ! CHECK: omp.yield
 ! CHECK: }
-! CHECK: omp.terminator
 ! CHECK: }
 ! CHECK: omp.terminator
 ! CHECK: }

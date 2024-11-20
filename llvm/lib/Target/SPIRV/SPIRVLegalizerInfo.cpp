@@ -287,7 +287,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   // TODO: add proper legalization rules.
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG).alwaysLegal();
 
-  getActionDefinitionsBuilder({G_UADDO, G_USUBO, G_SMULO, G_UMULO})
+  getActionDefinitionsBuilder(
+      {G_UADDO, G_SADDO, G_USUBO, G_SSUBO, G_UMULO, G_SMULO})
       .alwaysLegal();
 
   // FP conversions.
@@ -320,6 +321,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_FACOS,
                                G_FASIN,
                                G_FATAN,
+                               G_FATAN2,
                                G_FCOSH,
                                G_FSINH,
                                G_FTANH,

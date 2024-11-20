@@ -13,8 +13,8 @@ Analysis mode in `llvm-exegesis` is supported on all platforms on which LLVM is.
 #### Currently Supported Operating Systems for Benchmarking
 
 Currently, `llvm-exegesis`  only supports benchmarking on Linux. This is mainly
-due to a dependency on the Linux perf subsystem for reading performance
-counters.
+due to a dependency on the Linux perf subsystem for reading
+performance counters.
 
 The subprocess execution mode and memory annotations currently only supports
 Linux due to a heavy reliance on many Linux specific syscalls/syscall
@@ -28,7 +28,8 @@ architectures:
   * 64-bit only due to this being the only implemented calling convention
     in `llvm-exegesis` currently.
 * ARM
-  * AArch64 only
+  * Very experimental AArch64 support only: most opcodes probably won't work as
+    e.g. pseudo instructions and most register classes are not supported.
 * MIPS
 * PowerPC (PowerPC64LE only)
 

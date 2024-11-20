@@ -1619,6 +1619,7 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX940, "gfx940"),                            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX941, "gfx941"),                            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX942, "gfx942"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX950, "gfx950"),                            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1010, "gfx1010"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1011, "gfx1011"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1012, "gfx1012"),                          \
@@ -1637,9 +1638,11 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1150, "gfx1150"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1151, "gfx1151"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1152, "gfx1152"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1153, "gfx1153"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1200, "gfx1200"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1201, "gfx1201"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, "gfx9-generic"),                \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic"),            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, "gfx10-1-generic"),          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC, "gfx10-3-generic"),          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, "gfx11-generic"),              \
@@ -2322,7 +2325,7 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
     const char *ConvChar =
         (opts::Output == opts::GNU) ? "0x%" PRIx64 : "0x%" PRIX64;
     OS << format(ConvChar, V);
-    return OS.str();
+    return Str;
   };
 
   auto FormatFlags = [](uint64_t V,
@@ -2330,7 +2333,7 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
     std::string Str;
     raw_string_ostream OS(Str);
     printFlags(V, Array, OS);
-    return OS.str();
+    return Str;
   };
 
   // Handle custom printing of architecture specific tags
@@ -5346,7 +5349,7 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
   switch (Type) {
   default:
     OS << format("<application-specific type 0x%x>", Type);
-    return OS.str();
+    return str;
   case GNU_PROPERTY_STACK_SIZE: {
     OS << "stack size: ";
     if (DataSize == sizeof(typename ELFT::uint))
@@ -5354,25 +5357,25 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
                     (uint64_t)(*(const typename ELFT::Addr *)Data.data()));
     else
       OS << format("<corrupt length: 0x%x>", DataSize);
-    return OS.str();
+    return str;
   }
   case GNU_PROPERTY_NO_COPY_ON_PROTECTED:
     OS << "no copy on protected";
     if (DataSize)
       OS << format(" <corrupt length: 0x%x>", DataSize);
-    return OS.str();
+    return str;
   case GNU_PROPERTY_AARCH64_FEATURE_1_AND:
   case GNU_PROPERTY_X86_FEATURE_1_AND:
     OS << ((Type == GNU_PROPERTY_AARCH64_FEATURE_1_AND) ? "aarch64 feature: "
                                                         : "x86 feature: ");
     if (DataSize != 4) {
       OS << format("<corrupt length: 0x%x>", DataSize);
-      return OS.str();
+      return str;
     }
     PrData = endian::read32<ELFT::Endianness>(Data.data());
     if (PrData == 0) {
       OS << "<None>";
-      return OS.str();
+      return str;
     }
     if (Type == GNU_PROPERTY_AARCH64_FEATURE_1_AND) {
       DumpBit(GNU_PROPERTY_AARCH64_FEATURE_1_BTI, "BTI");
@@ -5384,22 +5387,22 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
     }
     if (PrData)
       OS << format("<unknown flags: 0x%x>", PrData);
-    return OS.str();
+    return str;
   case GNU_PROPERTY_AARCH64_FEATURE_PAUTH:
     printAArch64PAuthABICoreInfo<ELFT>(OS, DataSize, Data);
-    return OS.str();
+    return str;
   case GNU_PROPERTY_X86_FEATURE_2_NEEDED:
   case GNU_PROPERTY_X86_FEATURE_2_USED:
     OS << "x86 feature "
        << (Type == GNU_PROPERTY_X86_FEATURE_2_NEEDED ? "needed: " : "used: ");
     if (DataSize != 4) {
       OS << format("<corrupt length: 0x%x>", DataSize);
-      return OS.str();
+      return str;
     }
     PrData = endian::read32<ELFT::Endianness>(Data.data());
     if (PrData == 0) {
       OS << "<None>";
-      return OS.str();
+      return str;
     }
     DumpBit(GNU_PROPERTY_X86_FEATURE_2_X86, "x86");
     DumpBit(GNU_PROPERTY_X86_FEATURE_2_X87, "x87");
@@ -5413,19 +5416,19 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
     DumpBit(GNU_PROPERTY_X86_FEATURE_2_XSAVEC, "XSAVEC");
     if (PrData)
       OS << format("<unknown flags: 0x%x>", PrData);
-    return OS.str();
+    return str;
   case GNU_PROPERTY_X86_ISA_1_NEEDED:
   case GNU_PROPERTY_X86_ISA_1_USED:
     OS << "x86 ISA "
        << (Type == GNU_PROPERTY_X86_ISA_1_NEEDED ? "needed: " : "used: ");
     if (DataSize != 4) {
       OS << format("<corrupt length: 0x%x>", DataSize);
-      return OS.str();
+      return str;
     }
     PrData = endian::read32<ELFT::Endianness>(Data.data());
     if (PrData == 0) {
       OS << "<None>";
-      return OS.str();
+      return str;
     }
     DumpBit(GNU_PROPERTY_X86_ISA_1_BASELINE, "x86-64-baseline");
     DumpBit(GNU_PROPERTY_X86_ISA_1_V2, "x86-64-v2");
@@ -5433,7 +5436,7 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
     DumpBit(GNU_PROPERTY_X86_ISA_1_V4, "x86-64-v4");
     if (PrData)
       OS << format("<unknown flags: 0x%x>", PrData);
-    return OS.str();
+    return str;
   }
 }
 
@@ -5453,7 +5456,7 @@ static SmallVector<std::string, 4> getGNUPropertyList(ArrayRef<uint8_t> Arr) {
     raw_string_ostream OS(str);
     if (Arr.size() < PaddedSize) {
       OS << format("<corrupt type (0x%x) datasz: 0x%x>", Type, DataSize);
-      Properties.push_back(OS.str());
+      Properties.push_back(str);
       break;
     }
     Properties.push_back(
@@ -5492,7 +5495,7 @@ template <typename ELFT> static GNUAbiTag getGNUAbiTag(ArrayRef<uint8_t> Desc) {
   std::string str;
   raw_string_ostream ABI(str);
   ABI << Major << "." << Minor << "." << Patch;
-  return {std::string(OSName), ABI.str(), /*IsValid=*/true};
+  return {std::string(OSName), str, /*IsValid=*/true};
 }
 
 static std::string getGNUBuildId(ArrayRef<uint8_t> Desc) {
@@ -5500,7 +5503,7 @@ static std::string getGNUBuildId(ArrayRef<uint8_t> Desc) {
   raw_string_ostream OS(str);
   for (uint8_t B : Desc)
     OS << format_hex_no_prefix(B, 2);
-  return OS.str();
+  return str;
 }
 
 static StringRef getDescAsStringRef(ArrayRef<uint8_t> Desc) {
@@ -5670,11 +5673,11 @@ getFreeBSDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc, bool IsCore) {
     std::string FlagsStr;
     raw_string_ostream OS(FlagsStr);
     printFlags(Value, ArrayRef(FreeBSDFeatureCtlFlags), OS);
-    if (OS.str().empty())
+    if (FlagsStr.empty())
       OS << "0x" << utohexstr(Value);
     else
       OS << "(0x" << utohexstr(Value) << ")";
-    return FreeBSDNote{"Feature flags", OS.str()};
+    return FreeBSDNote{"Feature flags", FlagsStr};
   }
   default:
     return std::nullopt;
@@ -5822,7 +5825,7 @@ static AMDGPUNote getAMDGPUNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
       return {"", ""};
     }
     MsgPackDoc.toYAML(StrOS);
-    return {"AMDGPU Metadata", StrOS.str()};
+    return {"AMDGPU Metadata", MetadataString};
   }
   }
 }

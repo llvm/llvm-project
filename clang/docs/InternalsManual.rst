@@ -315,6 +315,17 @@ Description:
   than ``1`` are not supported.  This formatter is currently hard-coded to use
   English ordinals.
 
+**"human" format**
+
+Example:
+  ``"total size is %human0 bytes"``
+Class:
+  Integers
+Description:
+  This is a formatter which represents the argument number in a human readable
+  format: the value ``123`` stays ``123``, ``12345`` becomes ``12.34k``,
+  ``6666666` becomes ``6.67M``, and so on for 'G' and 'T'.
+
 **"objcclass" format**
 
 Example:

@@ -202,16 +202,16 @@ func.func @bad_designate_out_rank(%arg0 : !fir.ref<!fir.array<10xi32>>) {
 }
 
 // -----
-func.func @bad_designate_out_type(%arg0 : !fir.ref<!fir.complex<4>>) {
-  // expected-error@+1 {{'hlfir.designate' op result element type is not consistent with operands, expected '!fir.real<4>'}}
-  %0 = hlfir.designate %arg0 imag:  (!fir.ref<!fir.complex<4>>) -> !fir.ref<!fir.complex<4>>
+func.func @bad_designate_out_type(%arg0 : !fir.ref<complex<f32>>) {
+  // expected-error@+1 {{'hlfir.designate' op result element type is not consistent with operands, expected 'f32'}}
+  %0 = hlfir.designate %arg0 imag:  (!fir.ref<complex<f32>>) -> !fir.ref<complex<f64>>
   return
 }
 
 // -----
-func.func @bad_designate_out_type(%arg0 : !fir.ref<!fir.box<!fir.complex<4>>>) {
+func.func @bad_designate_out_type(%arg0 : !fir.ref<!fir.box<complex<f32>>>) {
   // expected-error@+1 {{'hlfir.designate' op result type must only be a box address type if it designates a component that is a fir.box or fir.class and if there are no indices, substrings, and complex part}}
-  %0 = hlfir.designate %arg0 imag:  (!fir.ref<!fir.box<!fir.complex<4>>>) -> !fir.ref<!fir.box<!fir.real<4>>>
+  %0 = hlfir.designate %arg0 imag:  (!fir.ref<!fir.box<complex<f32>>>) -> !fir.ref<!fir.box<f32>>
   return
 }
 

@@ -71,9 +71,9 @@ private:
 };
 
 template <class _Duration>
-_LIBCPP_NORETURN _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI void __throw_nonexistent_local_time(
+[[noreturn]] _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI void __throw_nonexistent_local_time(
     [[maybe_unused]] const local_time<_Duration>& __time, [[maybe_unused]] const local_info& __info) {
-#    ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#    if _LIBCPP_HAS_EXCEPTIONS
   throw nonexistent_local_time(__time, __info);
 #    else
   _LIBCPP_VERBOSE_ABORT("nonexistent_local_time was thrown in -fno-exceptions mode");
@@ -115,9 +115,9 @@ private:
 };
 
 template <class _Duration>
-_LIBCPP_NORETURN _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI void __throw_ambiguous_local_time(
+[[noreturn]] _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI void __throw_ambiguous_local_time(
     [[maybe_unused]] const local_time<_Duration>& __time, [[maybe_unused]] const local_info& __info) {
-#    ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#    if _LIBCPP_HAS_EXCEPTIONS
   throw ambiguous_local_time(__time, __info);
 #    else
   _LIBCPP_VERBOSE_ABORT("ambiguous_local_time was thrown in -fno-exceptions mode");

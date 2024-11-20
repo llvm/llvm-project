@@ -43,9 +43,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI leap_second(const leap_second&)            = default;
   _LIBCPP_HIDE_FROM_ABI leap_second& operator=(const leap_second&) = default;
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI constexpr sys_seconds date() const noexcept { return __date_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr sys_seconds date() const noexcept { return __date_; }
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI constexpr seconds value() const noexcept { return __value_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr seconds value() const noexcept { return __value_; }
 
 private:
   sys_seconds __date_;
@@ -122,7 +122,7 @@ private:
 
 } // namespace chrono
 
-#  endif //_LIBCPP_STD_VER >= 20
+#  endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

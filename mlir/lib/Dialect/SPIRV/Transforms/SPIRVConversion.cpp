@@ -659,9 +659,9 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
 /// This function is meant to handle the **compute** side; so it does not
 /// involve storage classes in its logic. The storage side is expected to be
 /// handled by MemRef conversion logic.
-static std::optional<Value> castToSourceType(const spirv::TargetEnv &targetEnv,
-                                             OpBuilder &builder, Type type,
-                                             ValueRange inputs, Location loc) {
+static Value castToSourceType(const spirv::TargetEnv &targetEnv,
+                              OpBuilder &builder, Type type, ValueRange inputs,
+                              Location loc) {
   // We can only cast one value in SPIR-V.
   if (inputs.size() != 1) {
     auto castOp = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
@@ -1459,7 +1459,7 @@ SPIRVTypeConverter::SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr,
   addTargetMaterialization([](OpBuilder &builder, Type type, ValueRange inputs,
                               Location loc) {
     auto cast = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
-    return std::optional<Value>(cast.getResult(0));
+    return cast.getResult(0);
   });
 }
 
@@ -1573,8 +1573,8 @@ bool SPIRVConversionTarget::isLegalOp(Operation *op) {
 // Public functions for populating patterns
 //===----------------------------------------------------------------------===//
 
-void mlir::populateBuiltinFuncToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
-                                              RewritePatternSet &patterns) {
+void mlir::populateBuiltinFuncToSPIRVPatterns(
+    const SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
   patterns.add<FuncOpConversion>(typeConverter, patterns.getContext());
 }
 

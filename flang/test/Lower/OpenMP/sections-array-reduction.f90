@@ -35,8 +35,7 @@ end subroutine
 ! CHECK:           omp.parallel {
 ! CHECK:             %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.array<?xf32>>
 ! CHECK:             fir.store %[[VAL_2]]#1 to %[[VAL_3]] : !fir.ref<!fir.box<!fir.array<?xf32>>>
-! CHECK:             omp.sections reduction(byref @add_reduction_byref_box_Uxf32 -> %[[VAL_3]] : !fir.ref<!fir.box<!fir.array<?xf32>>>) {
-! CHECK:             ^bb0(%[[VAL_4:.*]]: !fir.ref<!fir.box<!fir.array<?xf32>>>):
+! CHECK:             omp.sections reduction(byref @add_reduction_byref_box_Uxf32 %[[VAL_3]] -> %[[VAL_4:.*]] : !fir.ref<!fir.box<!fir.array<?xf32>>>) {
 ! CHECK:               omp.section {
 ! CHECK:               ^bb0(%[[VAL_5:.*]]: !fir.ref<!fir.box<!fir.array<?xf32>>>):
 ! [...]

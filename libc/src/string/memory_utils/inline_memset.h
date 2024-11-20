@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMSET_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMSET_H
 
-#include "src/__support/macros/config.h"                   // LIBC_INLINE
+#include "src/__support/macros/attributes.h"               // LIBC_INLINE
 #include "src/__support/macros/properties/architectures.h" // LIBC_TARGET_ARCH_IS_
 #include "src/string/memory_utils/utils.h"                 // Ptr, CPtr
 

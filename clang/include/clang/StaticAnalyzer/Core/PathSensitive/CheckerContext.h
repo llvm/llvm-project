@@ -69,6 +69,7 @@ public:
   /// the state of the program before the checker ran. Note, checkers should
   /// not retain the node in their state since the nodes might get invalidated.
   ExplodedNode *getPredecessor() { return Pred; }
+  const ProgramPoint getLocation() const { return Location; }
   const ProgramStateRef &getState() const { return Pred->getState(); }
 
   /// Check if the checker changed the state of the execution; ex: added

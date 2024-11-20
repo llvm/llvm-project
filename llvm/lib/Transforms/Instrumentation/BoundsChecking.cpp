@@ -27,7 +27,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cstdint>
 #include <utility>
 
 using namespace llvm;
@@ -194,14 +193,13 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
     IRB.SetInsertPoint(TrapBB);
 
     Intrinsic::ID IntrID = DebugTrapBB ? Intrinsic::ubsantrap : Intrinsic::trap;
-    auto *F = Intrinsic::getDeclaration(Fn->getParent(), IntrID);
 
     CallInst *TrapCall;
     if (DebugTrapBB) {
-      TrapCall =
-          IRB.CreateCall(F, ConstantInt::get(IRB.getInt8Ty(), Fn->size()));
+      TrapCall = IRB.CreateIntrinsic(
+          IntrID, {}, ConstantInt::get(IRB.getInt8Ty(), Fn->size()));
     } else {
-      TrapCall = IRB.CreateCall(F, {});
+      TrapCall = IRB.CreateIntrinsic(IntrID, {}, {});
     }
 
     TrapCall->setDoesNotReturn();

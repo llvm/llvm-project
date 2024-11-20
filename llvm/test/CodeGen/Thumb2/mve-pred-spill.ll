@@ -156,11 +156,10 @@ define arm_aapcs_vfpcc <8 x i16> @shuffle1_v8i16(<8 x i16> %src, <8 x i16> %a) {
 ; CHECK-BE-NEXT:    .pad #8
 ; CHECK-BE-NEXT:    sub sp, #8
 ; CHECK-BE-NEXT:    vrev64.16 q4, q1
-; CHECK-BE-NEXT:    vmov.i32 q1, #0x0
-; CHECK-BE-NEXT:    vrev64.16 q2, q0
-; CHECK-BE-NEXT:    vrev32.16 q1, q1
-; CHECK-BE-NEXT:    vcmp.i16 eq, q2, zr
-; CHECK-BE-NEXT:    vpsel q1, q4, q1
+; CHECK-BE-NEXT:    vrev64.16 q1, q0
+; CHECK-BE-NEXT:    vcmp.i16 eq, q1, zr
+; CHECK-BE-NEXT:    vmov.i32 q0, #0x0
+; CHECK-BE-NEXT:    vpsel q1, q4, q0
 ; CHECK-BE-NEXT:    vstr p0, [sp, #4] @ 4-byte Spill
 ; CHECK-BE-NEXT:    vrev64.16 q0, q1
 ; CHECK-BE-NEXT:    bl ext_i16
@@ -209,11 +208,10 @@ define arm_aapcs_vfpcc <16 x i8> @shuffle1_v16i8(<16 x i8> %src, <16 x i8> %a) {
 ; CHECK-BE-NEXT:    .pad #8
 ; CHECK-BE-NEXT:    sub sp, #8
 ; CHECK-BE-NEXT:    vrev64.8 q4, q1
-; CHECK-BE-NEXT:    vmov.i32 q1, #0x0
-; CHECK-BE-NEXT:    vrev64.8 q2, q0
-; CHECK-BE-NEXT:    vrev32.8 q1, q1
-; CHECK-BE-NEXT:    vcmp.i8 eq, q2, zr
-; CHECK-BE-NEXT:    vpsel q1, q4, q1
+; CHECK-BE-NEXT:    vrev64.8 q1, q0
+; CHECK-BE-NEXT:    vcmp.i8 eq, q1, zr
+; CHECK-BE-NEXT:    vmov.i32 q0, #0x0
+; CHECK-BE-NEXT:    vpsel q1, q4, q0
 ; CHECK-BE-NEXT:    vstr p0, [sp, #4] @ 4-byte Spill
 ; CHECK-BE-NEXT:    vrev64.8 q0, q1
 ; CHECK-BE-NEXT:    bl ext_i8
