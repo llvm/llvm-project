@@ -370,7 +370,8 @@ bool InstrProfWriter::addMemProfData(memprof::IndexedMemProfData Incoming,
       if (addMemProfCallStack(CSId, CS, Warn))
         return false;
 
-  if (MemProfData.Records.empty())
+  // Add one record at a time if randomization is requested.
+  if (MemProfData.Records.empty() && !MemprofGenerateRandomHotness)
     MemProfData.Records = std::move(Incoming.Records);
   else
     for (const auto &[GUID, Record] : Incoming.Records)
