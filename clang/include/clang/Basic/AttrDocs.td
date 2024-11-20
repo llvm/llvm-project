@@ -1649,6 +1649,8 @@ initializers exist):
     }, {
       .count = sizeof(buf) / sizeof(*buf),
       // warning: field 'element_size' is not explicitly initialized
+      // (Note that a missing initializer for 'flags' is not diagnosed, because
+      // the field is not marked as requiring explicit initialization.)
     });
   }
 

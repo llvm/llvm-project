@@ -1473,6 +1473,30 @@ template<typename T> struct Outer {
 };
 Outer<int>::Inner outerinner;
 
+struct Polymorphic { virtual ~Polymorphic() { } };
+
+template<class... Bases>
+struct Inherit : Bases... { // #TYPE_INHERIT
+  int g1; // #FIELD_G1
+};
+
+template<class... Bases>
+struct InheritWithExplicit : Bases... { // #TYPE_INHERIT_WITH_EXPLICIT
+  int g2 [[clang::requires_explicit_initialization]]; // #FIELD_G2
+};
+
+struct Special {};
+
+template<>
+struct Inherit<Special> {
+  int g3 [[clang::requires_explicit_initialization]]; // #FIELD_G3
+};
+
+template<>
+struct InheritWithExplicit<Special> {
+  int g4; // #FIELD_G4
+};
+
 void aggregate() {
   struct NonAgg {
     NonAgg() { }
@@ -1490,7 +1514,7 @@ void aggregate() {
   };
 
   struct C {
-    [[clang::requires_explicit_initialization]] int c1 = 2; // #FIELD_C1
+    [[clang::requires_explicit_initialization]] int c1; // #FIELD_C1
     C() = default;  // Test pre-C++20 aggregates
   };
 
@@ -1573,4 +1597,16 @@ void aggregate() {
   // expected-note@#FIELD_D2 {{'d2' declared here}}
   E e;
   (void)e;
+
+  InheritWithExplicit<> agg;  // expected-warning {{field in 'InheritWithExplicit<>' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_G2 {{'g2' declared here}}
+  (void)agg;
+
+  InheritWithExplicit<Polymorphic> polymorphic;  // expected-warning@#FIELD_G2 {{'requires_explicit_initialization' attribute is ignored in non-aggregate type 'InheritWithExplicit<Polymorphic>'}}
+  (void)polymorphic;
+
+  Inherit<Special> specialized_explicit;  // expected-warning {{field in 'Inherit<Special>' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_G3 {{'g3' declared here}}
+  (void)specialized_explicit;
+
+  InheritWithExplicit<Special> specialized_implicit;  // no-warning
+  (void)specialized_implicit;
 }
