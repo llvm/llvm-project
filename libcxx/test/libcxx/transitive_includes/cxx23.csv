@@ -410,13 +410,11 @@ forward_list limits
 forward_list new
 forward_list tuple
 forward_list version
-fstream array
 fstream bitset
 fstream cctype
 fstream cerrno
 fstream climits
 fstream clocale
-fstream cmath
 fstream compare
 fstream cstddef
 fstream cstdint
@@ -427,7 +425,6 @@ fstream ctime
 fstream cwchar
 fstream cwctype
 fstream filesystem
-fstream format
 fstream initializer_list
 fstream iomanip
 fstream ios
@@ -436,9 +433,6 @@ fstream istream
 fstream limits
 fstream locale
 fstream new
-fstream optional
-fstream ostream
-fstream print
 fstream ratio
 fstream stdexcept
 fstream streambuf
@@ -1081,13 +1075,11 @@ string_view limits
 string_view new
 string_view stdexcept
 string_view version
-strstream array
 strstream bitset
 strstream cctype
 strstream cerrno
 strstream climits
 strstream clocale
-strstream cmath
 strstream compare
 strstream cstddef
 strstream cstdint
@@ -1097,7 +1089,6 @@ strstream cstring
 strstream ctime
 strstream cwchar
 strstream cwctype
-strstream format
 strstream initializer_list
 strstream ios
 strstream iosfwd
@@ -1105,9 +1096,6 @@ strstream istream
 strstream limits
 strstream locale
 strstream new
-strstream optional
-strstream ostream
-strstream print
 strstream ratio
 strstream stdexcept
 strstream streambuf
