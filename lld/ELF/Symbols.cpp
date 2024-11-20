@@ -295,7 +295,7 @@ void elf::printTraceSymbol(const Symbol &sym, StringRef name) {
   else
     s = ": definition of ";
 
-  message(toStr(ctx, sym.file) + s + name);
+  message(toStr(sym.file->ctx, sym.file) + s + name);
 }
 
 static void recordWhyExtract(Ctx &ctx, const InputFile *reference,
