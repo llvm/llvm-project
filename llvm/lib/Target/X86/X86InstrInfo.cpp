@@ -6293,16 +6293,16 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
                            get(X86::VBROADCASTF64X4Zrm), X86::sub_ymm);
   case X86::VMOVAPSZ128mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVAPSmr),
-                            get(X86::VEXTRACTF32x4Zmri), X86::sub_xmm);
+                            get(X86::VEXTRACTF32X4Zmri), X86::sub_xmm);
   case X86::VMOVUPSZ128mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVUPSmr),
-                            get(X86::VEXTRACTF32x4Zmri), X86::sub_xmm);
+                            get(X86::VEXTRACTF32X4Zmri), X86::sub_xmm);
   case X86::VMOVAPSZ256mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVAPSYmr),
-                            get(X86::VEXTRACTF64x4Zmri), X86::sub_ymm);
+                            get(X86::VEXTRACTF64X4Zmri), X86::sub_ymm);
   case X86::VMOVUPSZ256mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVUPSYmr),
-                            get(X86::VEXTRACTF64x4Zmri), X86::sub_ymm);
+                            get(X86::VEXTRACTF64X4Zmri), X86::sub_ymm);
   case X86::MOV32ri64: {
     Register Reg = MIB.getReg(0);
     Register Reg32 = RI.getSubReg(Reg, X86::sub_32bit);
