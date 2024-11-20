@@ -138,13 +138,17 @@ public:
   }
 };
 
-#define LIST_SUB_TESTS(OutType, InType, func)                                  \
-  using LlvmLibcSubTest = SubTest<OutType, InType>;                            \
-  TEST_F(LlvmLibcSubTest, SpecialNumbers) { test_special_numbers(&func); }     \
-  TEST_F(LlvmLibcSubTest, InvalidOperations) {                                 \
+#define LIST_SUB_TESTS(suffix, OutType, InType, func)                          \
+  using LlvmLibcSubTest##suffix = SubTest<OutType, InType>;                    \
+  TEST_F(LlvmLibcSubTest##suffix, SpecialNumbers) {                            \
+    test_special_numbers(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibcSubTest##suffix, InvalidOperations) {                         \
     test_invalid_operations(&func);                                            \
   }                                                                            \
-  TEST_F(LlvmLibcSubTest, RangeErrors) { test_range_errors(&func); }           \
-  TEST_F(LlvmLibcSubTest, InexactResults) { test_inexact_results(&func); }
+  TEST_F(LlvmLibcSubTest##suffix, RangeErrors) { test_range_errors(&func); }   \
+  TEST_F(LlvmLibcSubTest##suffix, InexactResults) {                            \
+    test_inexact_results(&func);                                               \
+  }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_SUBTEST_H

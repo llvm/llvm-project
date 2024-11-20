@@ -66,9 +66,11 @@ public:
   }
 };
 
-#define LIST_ADD_TESTS(OutType, InType, func)                                  \
-  using LlvmLibcAddTest = AddTest<OutType, InType>;                            \
-  TEST_F(LlvmLibcAddTest, SubnormalRange) { test_subnormal_range(&func); }     \
-  TEST_F(LlvmLibcAddTest, NormalRange) { test_normal_range(&func); }
+#define LIST_ADD_TESTS(suffix, OutType, InType, func)                          \
+  using LlvmLibcAddTest##suffix = AddTest<OutType, InType>;                    \
+  TEST_F(LlvmLibcAddTest##suffix, SubnormalRange) {                            \
+    test_subnormal_range(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibcAddTest##suffix, NormalRange) { test_normal_range(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_ADDTEST_H

@@ -11,7 +11,6 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
-#include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/macros/properties/os.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -148,14 +147,20 @@ public:
   }
 };
 
-#define LIST_ADD_TESTS(OutType, InType, func)                                  \
-  using LlvmLibcAddTest = AddTest<OutType, InType>;                            \
-  TEST_F(LlvmLibcAddTest, SpecialNumbers) { test_special_numbers(&func); }     \
-  TEST_F(LlvmLibcAddTest, InvalidOperations) {                                 \
+#define LIST_ADD_TESTS(suffix, OutType, InType, func)                          \
+  using LlvmLibcAddTest##suffix = AddTest<OutType, InType>;                    \
+  TEST_F(LlvmLibcAddTest##suffix, SpecialNumbers) {                            \
+    test_special_numbers(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibcAddTest##suffix, InvalidOperations) {                         \
     test_invalid_operations(&func);                                            \
   }                                                                            \
-  TEST_F(LlvmLibcAddTest, RangeErrors) { test_range_errors(&func); }           \
-  TEST_F(LlvmLibcAddTest, InexactResults) { test_inexact_results(&func); }     \
-  TEST_F(LlvmLibcAddTest, MixedNormality) { test_mixed_normality(&func); }
+  TEST_F(LlvmLibcAddTest##suffix, RangeErrors) { test_range_errors(&func); }   \
+  TEST_F(LlvmLibcAddTest##suffix, InexactResults) {                            \
+    test_inexact_results(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibcAddTest##suffix, MixedNormality) {                            \
+    test_mixed_normality(&func);                                               \
+  }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_ADDTEST_H

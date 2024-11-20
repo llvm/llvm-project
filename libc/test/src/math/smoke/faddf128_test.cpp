@@ -10,4 +10,4 @@
 
 #include "src/math/faddf128.h"
 
-LIST_ADD_TESTS(float, float128, LIBC_NAMESPACE::faddf128)
+LIST_ADD_TESTS(FloatFloat128, float, float128, LIBC_NAMESPACE::faddf128)
