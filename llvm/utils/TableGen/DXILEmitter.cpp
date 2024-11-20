@@ -56,6 +56,7 @@ struct DXILOperationDesc {
   SmallVector<const Record *> OverloadRecs;
   SmallVector<const Record *> StageRecs;
   SmallVector<const Record *> AttrRecs;
+  SmallVector<const Record *> PropRecs;
   SmallVector<DXILIntrinsicSelect> IntrinsicSelects;
   SmallVector<StringRef, 4>
       ShaderStages; // shader stages to which this applies, empty for all.
@@ -175,6 +176,13 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
 
   for (const Record *CR : Recs) {
     AttrRecs.push_back(CR);
+  }
+
+  Recs = R->getValueAsListOfDefs("properties");
+
+  // Get property records
+  for (const Record *CR : Recs) {
+    PropRecs.push_back(CR);
   }
 
   // Get the operation class
@@ -348,6 +356,28 @@ static std::string getAttributeListString(ArrayRef<const Record *> Recs) {
   return ListString;
 }
 
+/// Return a string representation of valid property information denoted
+// by input records
+//
+/// \param Recs A vector of records of TableGen Property records
+/// \return std::string string representation of properties list string
+//          {Attr1, Attr2, ...}
+static std::string getPropertyListString(ArrayRef<const Record *> Recs) {
+  std::string ListString = "";
+  std::string Prefix = "";
+  ListString.append("{");
+
+  std::string CommaPrefix = "";
+  for (const auto *Rec : Recs) {
+    ListString.append(CommaPrefix)
+        .append("dxil::Property::")
+        .append(Rec->getName());
+    CommaPrefix = ", ";
+  }
+  ListString.append("}");
+  return ListString;
+}
+
 /// Emit a mapping of DXIL opcode to opname
 static void emitDXILOpCodes(ArrayRef<DXILOperationDesc> Ops, raw_ostream &OS) {
   OS << "#ifdef DXIL_OPCODE\n";
@@ -384,6 +414,30 @@ static void emitDXILAttributes(const RecordKeeper &Records, raw_ostream &OS) {
     OS << "DXIL_ATTRIBUTE(" << Attr->getName() << ")\n";
   OS << "#undef DXIL_ATTRIBUTE\n";
   OS << "#endif\n\n";
+}
+
+/// Emit a list of DXIL op properties and their query functions
+static void emitDXILProperties(const RecordKeeper &Records, raw_ostream &OS) {
+  // Generate their definitions
+  OS << "#ifdef DXIL_PROPERTY\n";
+  for (const Record *Prop: Records.getAllDerivedDefinitions("DXILProperty"))
+    OS << "DXIL_PROPERTY(" << Prop->getName() << ")\n";
+  OS << "#undef DXIL_PROPERTY\n";
+  OS << "#endif\n\n";
+}
+
+static void emitDXILPropertyHelpers(const RecordKeeper &Records, raw_ostream &OS) {
+  // Generate their helper functions
+  for (const Record *Prop: Records.getAllDerivedDefinitions("DXILProperty")) {
+    OS << "[[maybe_unused]]\n";
+    OS << "static bool has" << Prop->getName() << "(dxil::OpCode Op) {\n";
+    OS << "  auto *OpCodeProp = getOpCodeProperty(Op);\n";
+    OS << "  for (auto Prop : OpCodeProp->Properties)\n";
+    OS << "    if (Prop == dxil::Property::" << Prop->getName() << ")\n";
+    OS << "      return true;\n";
+    OS << "  return false;\n";
+    OS << "}\n\n";
+  }
 }
 
 /// Emit a list of DXIL op function types
@@ -482,7 +536,8 @@ static void emitDXILOperationTable(ArrayRef<DXILOperationDesc> Ops,
        << OpClassStrings.get(Op.OpClass.data()) << ", "
        << getOverloadMaskString(Op.OverloadRecs) << ", "
        << getStageMaskString(Op.StageRecs) << ", "
-       << getAttributeListString(Op.AttrRecs) << ", " << Op.OverloadParamIndex
+       << getAttributeListString(Op.AttrRecs) << ", "
+       << getPropertyListString(Op.PropRecs) << ", " << Op.OverloadParamIndex
        << " }";
     Prefix = ",\n";
   }
@@ -588,12 +643,14 @@ static void emitDxilOperation(const RecordKeeper &Records, raw_ostream &OS) {
   emitDXILOpClasses(Records, OS);
   emitDXILOpParamTypes(Records, OS);
   emitDXILAttributes(Records, OS);
+  emitDXILProperties(Records, OS);
   emitDXILOpFunctionTypes(DXILOps, OS);
   emitDXILIntrinsicArgSelectTypes(Records, OS);
   emitDXILIntrinsicMap(DXILOps, OS);
   OS << "#ifdef DXIL_OP_OPERATION_TABLE\n\n";
   emitDXILOperationTableDataStructs(Records, OS);
   emitDXILOperationTable(DXILOps, OS);
+  emitDXILPropertyHelpers(Records, OS);
   OS << "#undef DXIL_OP_OPERATION_TABLE\n";
   OS << "#endif\n\n";
 }

@@ -35,6 +35,11 @@ enum class Attribute : unsigned {
 #include "DXILOperation.inc"
 };
 
+enum class Property : unsigned {
+#define DXIL_PROPERTY(Name) Name,
+#include "DXILOperation.inc"
+};
+
 } // namespace dxil
 } // namespace llvm
 

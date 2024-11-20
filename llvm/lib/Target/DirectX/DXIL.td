@@ -279,6 +279,18 @@ def ReadOnly : DXILAttribute;
 def NoDuplicate : DXILAttribute;
 def NoReturn : DXILAttribute;
 
+// A property is simply used to mark a DXIL op belongs to a sub-group of
+// DXIL ops, and it is used to query if a particular holds this property.
+// This is used for static analysis of DXIL ops.
+class DXILProperty;
+
+def IsBarrier : DXILProperty;
+def IsDerivative : DXILProperty;
+def IsGradient : DXILProperty;
+def IsFeedback : DXILProperty;
+def IsWave : DXILProperty;
+def RequiresUniformInputs : DXILProperty;
+
 class Overloads<Version ver, list<DXILOpParamType> ols> {
   Version dxil_version = ver;
   list<DXILOpParamType> overload_types = ols;
@@ -376,6 +388,9 @@ class DXILOp<int opcode, DXILOpClass opclass> {
 
   // Versioned attributes of operation
   list<Attributes> attributes = [];
+
+  // List of properties. Default to no properties.
+  list<DXILProperty> properties = [];
 }
 
 // Concrete definitions of DXIL Operations

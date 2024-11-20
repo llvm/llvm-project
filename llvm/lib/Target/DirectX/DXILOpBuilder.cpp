@@ -159,6 +159,7 @@ struct OpCodeProperty {
   llvm::SmallVector<OpOverload> Overloads;
   llvm::SmallVector<OpStage> Stages;
   llvm::SmallVector<OpAttribute> Attributes;
+  llvm::SmallVector<dxil::Property> Properties;
   int OverloadParamIndex; // parameter index which control the overload.
                           // When < 0, should be only 1 overload type.
 };
