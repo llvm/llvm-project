@@ -143,7 +143,7 @@ uint32_t AMDGPU::calcEFlags() const {
   case ELFABIVERSION_AMDGPU_HSA_V6:
     return calcEFlagsV6();
   default:
-    ErrAlways(ctx) << "unknown abi version: " << Twine(abiVersion);
+    ErrAlways(ctx) << "unknown abi version: " << abiVersion;
     return 0;
   }
 }
