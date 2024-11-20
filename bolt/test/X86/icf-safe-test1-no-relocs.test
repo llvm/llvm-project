@@ -7,7 +7,6 @@
 # RUN: llvm-bolt --no-threads %t.exe --icf -debug -debug-only=bolt-icf -o %t.bolt 2>&1 | FileCheck --check-prefix=ICFCHECK %s
 # RUN: not llvm-bolt --no-threads %t.exe --icf=safe -debug -debug-only=bolt-icf -o %t.bolt 2>&1 | FileCheck --check-prefix=SAFEICFCHECK %s
 
-## Check that BOLT successfully folded a function with jump table:
 # ICFCHECK:      ICF iteration 1
 # ICFCHECK-NEXT: folding _Z6barAddii into _Z6fooAddii
 # ICFCHECK-NEXT: folding _Z6barMulii into _Z6fooMulii
