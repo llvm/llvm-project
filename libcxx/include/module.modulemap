@@ -844,7 +844,6 @@ module std [system] {
 
   module atomic {
     module aliases                { header "__atomic/aliases.h" }
-    module atomic_base            { header "__atomic/atomic_base.h" }
     module atomic_flag            { header "__atomic/atomic_flag.h" }
     module atomic_init            { header "__atomic/atomic_init.h" }
     module atomic_lock_free       { header "__atomic/atomic_lock_free.h" }

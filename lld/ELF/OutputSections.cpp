@@ -72,6 +72,10 @@ OutputSection::OutputSection(Ctx &ctx, StringRef name, uint32_t type,
                   /*info=*/0, /*link=*/0),
       ctx(ctx) {}
 
+uint64_t OutputSection::getLMA() const {
+  return ptLoad ? addr + ptLoad->lmaOffset : addr;
+}
+
 // We allow sections of types listed below to merged into a
 // single progbits section. This is typically done by linker
 // scripts. Merging nobits and progbits will force disk space

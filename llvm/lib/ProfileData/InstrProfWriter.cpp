@@ -19,7 +19,6 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/ProfileCommon.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
@@ -370,7 +369,8 @@ bool InstrProfWriter::addMemProfData(memprof::IndexedMemProfData Incoming,
       if (addMemProfCallStack(CSId, CS, Warn))
         return false;
 
-  if (MemProfData.Records.empty())
+  // Add one record at a time if randomization is requested.
+  if (MemProfData.Records.empty() && !MemprofGenerateRandomHotness)
     MemProfData.Records = std::move(Incoming.Records);
   else
     for (const auto &[GUID, Record] : Incoming.Records)

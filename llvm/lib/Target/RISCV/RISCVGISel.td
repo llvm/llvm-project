@@ -174,6 +174,9 @@ def : StPat<store, SD, GPR, PtrVT>;
 def : LdPat<load, LH, i16>;
 def : StPat<store, SH, GPR, i16>;
 
+def : LdPat<extloadi8, LBU, i16>; // Prefer unsigned due to no c.lb in Zcb.
+def : StPat<truncstorei8, SB, GPR, i16>;
+
 //===----------------------------------------------------------------------===//
 // RV64 i32 patterns not used by SelectionDAG
 //===----------------------------------------------------------------------===//

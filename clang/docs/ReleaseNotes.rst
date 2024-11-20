@@ -356,6 +356,8 @@ Non-comprehensive list of changes in this release
   issues with the sanitizer because the counter is automatically set.
 
 - ``__builtin_reduce_add`` function can now be used in constant expressions.
+- ``__builtin_reduce_mul`` function can now be used in constant expressions.
+- ``__builtin_reduce_and`` function can now be used in constant expressions.
 
 New Compiler Flags
 ------------------
@@ -554,6 +556,8 @@ Improvements to Clang's diagnostics
     {
       getS(); // Now diagnoses "Reason 2", previously diagnoses "Reason 1"
     }
+
+- Clang now diagnoses ``= delete("reason")`` extension warnings only in pedantic mode rather than on by default. (#GH109311).
 
 - Clang now omits shadowing warnings for parameter names in explicit object member functions (#GH95707).
 

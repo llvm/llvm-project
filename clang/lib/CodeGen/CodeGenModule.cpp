@@ -733,7 +733,7 @@ void CodeGenModule::checkAliases() {
   for (const GlobalDecl &GD : Aliases) {
     StringRef MangledName = getMangledName(GD);
     llvm::GlobalValue *Alias = GetGlobalValue(MangledName);
-    Alias->replaceAllUsesWith(llvm::UndefValue::get(Alias->getType()));
+    Alias->replaceAllUsesWith(llvm::PoisonValue::get(Alias->getType()));
     Alias->eraseFromParent();
   }
 }
@@ -5572,7 +5572,7 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
         }
       } else {
         ErrorUnsupported(D, "static initializer");
-        Init = llvm::UndefValue::get(getTypes().ConvertType(T));
+        Init = llvm::PoisonValue::get(getTypes().ConvertType(T));
       }
     } else {
       Init = Initializer;
