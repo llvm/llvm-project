@@ -154,6 +154,7 @@ C++ Specific Potentially Breaking Changes
   for this changed in C++20. (GH#85550)
 
   .. code-block:: c++
+
     struct NonLiteral {
       NonLiteral() {}
       ~NonLiteral() {}
