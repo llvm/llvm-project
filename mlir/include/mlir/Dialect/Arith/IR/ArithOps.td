@@ -61,26 +61,35 @@ class Arith_TotalIntBinaryOp<string mnemonic, list<Trait> traits = []> :
 // Base class for floating point unary operations.
 class Arith_FloatUnaryOp<string mnemonic, list<Trait> traits = []> :
     Arith_UnaryOp<mnemonic,
-      !listconcat([DeclareOpInterfaceMethods<ArithFastMathInterface>],
+      !listconcat([DeclareOpInterfaceMethods<ArithFastMathInterface>,
+                   DeclareOpInterfaceMethods<ArithDenormalModeInterface>],
                   traits)>,
     Arguments<(ins FloatLike:$operand,
       DefaultValuedAttr<
-        Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath)>,
+        Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath,
+      DefaultValuedAttr<
+        Arith_DenormalModeAttr, "::mlir::arith::DenormalMode::ieee">:$denormal)>,
     Results<(outs FloatLike:$result)> {
   let assemblyFormat = [{ $operand (`fastmath` `` $fastmath^)?
+                          (`denormal` `` $denormal^)?
                           attr-dict `:` type($result) }];
 }
 
 // Base class for floating point binary operations.
 class Arith_FloatBinaryOp<string mnemonic, list<Trait> traits = []> :
     Arith_BinaryOp<mnemonic,
-      !listconcat([Pure, DeclareOpInterfaceMethods<ArithFastMathInterface>],
+      !listconcat([Pure, 
+                   DeclareOpInterfaceMethods<ArithFastMathInterface>,
+                   DeclareOpInterfaceMethods<ArithDenormalModeInterface>],
                   traits)>,
     Arguments<(ins FloatLike:$lhs, FloatLike:$rhs,
       DefaultValuedAttr<
-        Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath)>,
+        Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath,
+      DefaultValuedAttr<
+        Arith_DenormalModeAttr, "::mlir::arith::DenormalMode::ieee">:$denormal)>,
     Results<(outs FloatLike:$result)> {
-  let assemblyFormat = [{ $lhs `,` $rhs (`fastmath` `` $fastmath^)?
+  let assemblyFormat = [{ $lhs `,` $rhs (`fastmath` `` $fastmath^)? 
+                          (`denormal` `` $denormal^)?
                           attr-dict `:` type($result) }];
 }
 
@@ -1085,7 +1094,6 @@ def Arith_MinUIOp : Arith_TotalIntBinaryOp<"minui", [Commutative]> {
   let hasFolder = 1;
 }
 
-
 //===----------------------------------------------------------------------===//
 // MulFOp
 //===----------------------------------------------------------------------===//
@@ -1111,8 +1119,6 @@ def Arith_MulFOp : Arith_FloatBinaryOp<"mulf", [Commutative]> {
     %x = arith.mulf %y, %z : tensor<4x?xbf16>
     ```
 
-    TODO: In the distant future, this will accept optional attributes for fast
-    math, contraction, rounding mode, and other controls.
   }];
   let hasFolder = 1;
   let hasCanonicalizer = 1;
