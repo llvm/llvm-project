@@ -57,11 +57,108 @@
 #include <memory>
 #include <optional>
 #include <system_error>
+
+// Add these includes at the top
+#include "llvm/Support/MD5.h"
+#include <cstdlib>
+#include <map>
+
 using namespace clang;
 using namespace clang::driver;
 using namespace clang::driver::options;
 using namespace llvm;
 using namespace llvm::opt;
+
+// Helper function to parse CLANG_AS_SWAP environment variable
+static std::map<uint64_t, std::string> parseSwapConfig() {
+    std::map<uint64_t, std::string> swapMap;
+
+    const char* swapConfig = std::getenv("CLANG_AS_SWAP");
+    if (!swapConfig) return swapMap;
+
+    StringRef config(swapConfig);
+    SmallVector<StringRef, 8> pairs;
+    config.split(pairs, ',');
+
+    for (StringRef pair : pairs) {
+        SmallVector<StringRef, 2> hashAndFile;
+        pair.split(hashAndFile, ':');
+        if (hashAndFile.size() != 2) continue;
+
+        uint64_t hash;
+        if (!hashAndFile[0].getAsInteger(16, hash)) {
+            swapMap[hash] = hashAndFile[1].str();
+        }
+    }
+
+    return swapMap;
+}
+
+// Helper function to get file content
+static std::unique_ptr<MemoryBuffer> getFileContent(StringRef Path, DiagnosticsEngine &Diags) {
+    ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
+        MemoryBuffer::getFileOrSTDIN(Path, /*IsText=*/true);
+
+    if (std::error_code EC = BufferOrErr.getError()) {
+        Diags.Report(diag::err_fe_error_reading) << Path << EC.message();
+        return nullptr;
+    }
+
+    return std::move(*BufferOrErr);
+}
+
+// Function to handle debug output
+static void handleDebugOutput(StringRef InputFile, StringRef Content) {
+    if (const char* dbg = std::getenv("DBG_CLANG_AS")) {
+        if (dbg[0] == '1') {
+            MD5 Hasher;
+            Hasher.update(Content);
+            MD5::MD5Result Result = Hasher.final();
+
+            // Use the low() method to get lower 64 bits
+            uint64_t Hash64 = Result.low();
+
+            llvm::errs() << "DBG_CLANG_AS: Input file: " << InputFile
+                         << "\nMD5 (lower 64 bits): 0x"
+                         << llvm::format_hex(Hash64, 16) << "\n";
+        }
+    }
+}
+
+// Function to handle content swapping
+static std::unique_ptr<MemoryBuffer> handleContentSwap(
+    StringRef InputFile,
+    StringRef OrigContent,
+    DiagnosticsEngine &Diags) {
+
+    auto swapMap = parseSwapConfig();
+    if (swapMap.empty()) {
+        return nullptr;
+    }
+
+    // Calculate MD5 of original content
+    MD5 Hasher;
+    Hasher.update(OrigContent);
+    MD5::MD5Result Result = Hasher.final();
+
+    // Use the low() method to get lower 64 bits
+    uint64_t Hash64 = Result.low();
+
+    // Check if we need to swap content
+    auto it = swapMap.find(Hash64);
+    if (it != swapMap.end()) {
+        // Found matching hash, try to load replacement content
+        auto NewBuffer = getFileContent(it->second, Diags);
+        if (NewBuffer) {
+            llvm::errs() << "CLANG_AS_SWAP: Replacing content of " << InputFile
+                        << "\nOriginal hash: 0x" << llvm::format_hex(Hash64, 16)
+                        << "\nReplacement file: " << it->second << "\n";
+            return NewBuffer;
+        }
+    }
+
+    return nullptr;
+}
 
 namespace {
 
@@ -414,29 +511,35 @@ getOutputStream(StringRef Path, DiagnosticsEngine &Diags, bool Binary) {
 
 static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
                                  DiagnosticsEngine &Diags) {
-  // Get the target specific parser.
+
+  // Read original input file
+  auto Buffer = getFileContent(Opts.InputFile, Diags);
+  if (!Buffer) return true;
+
+  // Handle debug output if enabled
+  handleDebugOutput(Opts.InputFile, Buffer->getBuffer());
+
+  // Check for content swap
+  if (auto NewBuffer = handleContentSwap(Opts.InputFile, Buffer->getBuffer(), Diags)) {
+      Buffer = std::move(NewBuffer);
+  }
+
+  // Get the target specific parser
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(Opts.Triple, Error);
   if (!TheTarget)
-    return Diags.Report(diag::err_target_unknown_triple) << Opts.Triple;
-
-  ErrorOr<std::unique_ptr<MemoryBuffer>> Buffer =
-      MemoryBuffer::getFileOrSTDIN(Opts.InputFile, /*IsText=*/true);
-
-  if (std::error_code EC = Buffer.getError()) {
-    return Diags.Report(diag::err_fe_error_reading)
-           << Opts.InputFile << EC.message();
-  }
+      return Diags.Report(diag::err_target_unknown_triple) << Opts.Triple;
 
   SourceMgr SrcMgr;
 
-  // Tell SrcMgr about this buffer, which is what the parser will pick up.
-  unsigned BufferIndex = SrcMgr.AddNewSourceBuffer(std::move(*Buffer), SMLoc());
+  // Tell SrcMgr about this buffer, which is what the parser will pick up
+  unsigned BufferIndex = SrcMgr.AddNewSourceBuffer(std::move(Buffer), SMLoc());
 
   // Record the location of the include directories so that the lexer can find
   // it later.
   SrcMgr.setIncludeDirs(Opts.IncludePaths);
 
+  // Rest of original implementation...
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(Opts.Triple));
   assert(MRI && "Unable to create target register info!");
 
