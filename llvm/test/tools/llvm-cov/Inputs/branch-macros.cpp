@@ -14,31 +14,31 @@
 
 // CHECK: |{{ +}}[[C3:3|1]]|bool func(
 bool func(int a, int b) {
-  bool c = COND1 && COND2; // BRCOV: |  |  |  Branch ([[@LINE-12]]:15): [True: 1, False: [[C2:2|1]]]
-                           // BRCOV: |  |  |  Branch ([[@LINE-12]]:15): [True: 0, False: 1]
-  bool d = COND3;          // BRCOV: |  |  |  |  |  Branch ([[@LINE-14]]:15): [True: 1, False: [[C2]]]
-                           // BRCOV: |  |  |  |  |  Branch ([[@LINE-14]]:15): [True: 0, False: 1]
-  bool e = MACRO1;         // BRCOV: |  |  |  |  |  |  |  Branch ([[@LINE-16]]:15): [True: 1, False: [[C2]]]
-                           // BRCOV: |  |  |  |  |  |  |  Branch ([[@LINE-16]]:15): [True: 0, False: 1]
-  bool f = MACRO2;         // BRCOV: |  |  |  |  |  |  |  |  |  Branch ([[@LINE-18]]:15): [True: 1, False: [[C2]]]
-                           // BRCOV: |  |  |  |  |  |  |  |  |  Branch ([[@LINE-18]]:15): [True: 0, False: 1]
-  bool g = MACRO3;         // BRCOV: |  |  |  |  |  |  |  |  |  |  |  Branch ([[@LINE-20]]:15): [True: 1, False: [[C2]]]
-                           // BRCOV: |  |  |  |  |  |  |  |  |  |  |  Branch ([[@LINE-20]]:15): [True: 0, False: 1]
+  bool c = COND1 && COND2; // CHECK: |  |  |  Branch ([[@LINE-12]]:15): [True: 1, False: [[C2:2|1]]]
+                           // CHECK: |  |  |  Branch ([[@LINE-12]]:15): [True: 0, False: 1]
+  bool d = COND3;          // CHECK: |  |  |  |  |  Branch ([[@LINE-14]]:15): [True: 1, False: [[C2]]]
+                           // CHECK: |  |  |  |  |  Branch ([[@LINE-14]]:15): [True: 0, False: 1]
+  bool e = MACRO1;         // CHECK: |  |  |  |  |  |  |  Branch ([[@LINE-16]]:15): [True: 1, False: [[C2]]]
+                           // CHECK: |  |  |  |  |  |  |  Branch ([[@LINE-16]]:15): [True: 0, False: 1]
+  bool f = MACRO2;         // CHECK: |  |  |  |  |  |  |  |  |  Branch ([[@LINE-18]]:15): [True: 1, False: [[C2]]]
+                           // CHECK: |  |  |  |  |  |  |  |  |  Branch ([[@LINE-18]]:15): [True: 0, False: 1]
+  bool g = MACRO3;         // CHECK: |  |  |  |  |  |  |  |  |  |  |  Branch ([[@LINE-20]]:15): [True: 1, False: [[C2]]]
+                           // CHECK: |  |  |  |  |  |  |  |  |  |  |  Branch ([[@LINE-20]]:15): [True: 0, False: 1]
   return c && d && e && f && g;
-                           // BRCOV: |  Branch ([[@LINE-1]]:10): [True: 0, False: [[C3]]]
-                           // BRCOV: |  Branch ([[@LINE-2]]:15): [True: 0, False: 0]
-                           // BRCOV: |  Branch ([[@LINE-3]]:20): [True: 0, False: 0]
-                           // BRCOV: |  Branch ([[@LINE-4]]:25): [True: 0, False: 0]
-                           // BRCOV: |  Branch ([[@LINE-5]]:30): [True: 0, False: 0]
+                           // CHECK: |  Branch ([[@LINE-1]]:10): [True: 0, False: [[C3]]]
+                           // CHECK: |  Branch ([[@LINE-2]]:15): [True: 0, False: 0]
+                           // CHECK: |  Branch ([[@LINE-3]]:20): [True: 0, False: 0]
+                           // CHECK: |  Branch ([[@LINE-4]]:25): [True: 0, False: 0]
+                           // CHECK: |  Branch ([[@LINE-5]]:30): [True: 0, False: 0]
 }
 
 
 bool func2(int a, int b) {
-    bool h = MACRO3 || COND4;  // BRCOV: |  |  |  |  |  |  |  |  |  |  |  Branch ([[@LINE-32]]:15): [True: 1, False: [[C2]]]
-                               // BRCOV: |  |  |  |  |  |  |  |  |  |  |  Branch ([[@LINE-32]]:15): [True: 0, False: 1]
-                               // BRCOV: |  |  |  |  |  |  |  Branch ([[@LINE-34]]:15): [True: 1, False: [[C2]]]
-                               // BRCOV: |  |  |  |  |  |  |  Branch ([[@LINE-34]]:15): [True: 0, False: 1]
-                               // BRCOV: |  |  |  Branch ([[@LINE-33]]:15): [True: 1, False: [[C2]]]
+    bool h = MACRO3 || COND4;  // CHECK: |  |  |  |  |  |  |  |  |  |  |  Branch ([[@LINE-32]]:15): [True: 1, False: [[C2]]]
+                               // CHECK: |  |  |  |  |  |  |  |  |  |  |  Branch ([[@LINE-32]]:15): [True: 0, False: 1]
+                               // CHECK: |  |  |  |  |  |  |  Branch ([[@LINE-34]]:15): [True: 1, False: [[C2]]]
+                               // CHECK: |  |  |  |  |  |  |  Branch ([[@LINE-34]]:15): [True: 0, False: 1]
+                               // CHECK: |  |  |  Branch ([[@LINE-33]]:15): [True: 1, False: [[C2]]]
   return h;
 }
 

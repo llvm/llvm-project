@@ -1,5 +1,5 @@
 // RUN: llvm-profdata merge %S/Inputs/branch-logical-mixed.proftext -o %t.profdata
-// RUN: llvm-cov show --show-branches=count %S/Inputs/branch-logical-mixed.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs | FileCheck %S/Inputs/branch-logical-mixed.cpp -check-prefixes=CHECK,BRCOV
+// RUN: llvm-cov show --show-branches=count %S/Inputs/branch-logical-mixed.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs | FileCheck %S/Inputs/branch-logical-mixed.cpp
 // RUN: llvm-cov report --show-branch-summary %S/Inputs/branch-logical-mixed.o32l -instr-profile %t.profdata -show-functions -path-equivalence=/tmp,%S/Inputs %S/Inputs/branch-logical-mixed.cpp
 | FileCheck %s -check-prefix=REPORT
 
