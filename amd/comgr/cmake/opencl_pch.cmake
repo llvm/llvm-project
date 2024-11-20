@@ -50,3 +50,7 @@ endfunction()
 
 generate_pch(1.2)
 generate_pch(2.0)
+
+# hash the opencl header and pass the result to comgr compilation
+file(SHA256 ${OPENCL_C_H} OPENCL_C_SHA)
+list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS "OPENCL_C_SHA=${OPENCL_C_SHA}")
