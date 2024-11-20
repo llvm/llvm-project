@@ -695,7 +695,7 @@ bool PolynomialMultiplyRecognize::matchLeftShift(SelectInst *SelI,
 
   using namespace PatternMatch;
 
-  CmpInst::Predicate P;
+  CmpPredicate P;
   Value *A = nullptr, *B = nullptr, *C = nullptr;
 
   if (!match(CondV, m_ICmp(P, m_And(m_Value(A), m_Value(B)), m_Value(C))) &&
@@ -810,7 +810,7 @@ bool PolynomialMultiplyRecognize::matchRightShift(SelectInst *SelI,
   using namespace PatternMatch;
 
   Value *C = nullptr;
-  CmpInst::Predicate P;
+  CmpPredicate P;
   bool TrueIfZero;
 
   if (match(CondV, m_c_ICmp(P, m_Value(C), m_Zero()))) {
