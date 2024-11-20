@@ -896,6 +896,8 @@ public:
   bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
                                           unsigned ScalarOpdIdx) const;
 
+  /// Identifies if the vector form of the intrinsic is overloaded on the type of
+  /// the operand at index \p OpdIdx, or on the return type if \p OpdIdx is -1.
   bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
                                               int ScalarOpdIdx) const;
 
