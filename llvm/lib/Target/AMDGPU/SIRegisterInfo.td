@@ -1161,7 +1161,8 @@ def SSrcOrLds_b32 : SrcRegOrImm9 <SRegOrLds_32, "OPW32", "OPERAND_REG_IMM_INT32"
 class SrcRegOrImmDeferred9<RegisterClass regClass, string opWidth,
                            string operandType, int immWidth, int OperandSemantics>
     : RegOrImmOperand<regClass, operandType> {
-  let DecoderMethod = "decodeSrcRegOrImmDeferred9<AMDGPUDisassembler::" #
+  string DecoderMethodName = "decodeSrcRegOrImmDeferred9";
+  let DecoderMethod = DecoderMethodName # "<AMDGPUDisassembler::" #
                       opWidth # ", " # immWidth # ", " # OperandSemantics # ">";
 }
 
@@ -1221,6 +1222,13 @@ def VSrc_v2f32 : SrcRegOrImm9 <VS_64, "OPW64", "OPERAND_REG_IMM_V2FP32", 32, Ope
 def VSrc_bf16_Deferred : SrcRegOrImmDeferred9<VS_32, "OPW16", "OPERAND_REG_IMM_BF16_DEFERRED", 16, OperandSemantics.BF16>;
 def VSrc_f16_Deferred : SrcRegOrImmDeferred9<VS_32, "OPW16", "OPERAND_REG_IMM_FP16_DEFERRED", 16, OperandSemantics.FP16>;
 def VSrc_f32_Deferred : SrcRegOrImmDeferred9<VS_32, "OPW32", "OPERAND_REG_IMM_FP32_DEFERRED", 32, OperandSemantics.FP32>;
+
+// True 16 Operands
+def VSrcT_f16_Lo128_Deferred : SrcRegOrImmDeferred9<VS_16_Lo128, "OPW16",
+                                                   "OPERAND_REG_IMM_FP16_DEFERRED", 16, OperandSemantics.FP16> {
+  let DecoderMethodName = "decodeOperand_VSrcT16_Lo128_Deferred";
+  let EncoderMethod = "getMachineOpValueT16Lo128";
+}
 
 def VSrcFake16_bf16_Lo128_Deferred
   : SrcRegOrImmDeferred9<VS_32_Lo128, "OPW16", "OPERAND_REG_IMM_BF16_DEFERRED", 16, OperandSemantics.BF16>;

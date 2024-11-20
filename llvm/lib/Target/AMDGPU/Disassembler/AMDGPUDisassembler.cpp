@@ -347,6 +347,25 @@ static DecodeStatus decodeOperand_VSrcT16_Lo128(MCInst &Inst, unsigned Imm,
 
 template <AMDGPUDisassembler::OpWidthTy OpWidth, unsigned ImmWidth,
           unsigned OperandSemantics>
+static DecodeStatus
+decodeOperand_VSrcT16_Lo128_Deferred(MCInst &Inst, unsigned Imm,
+                                     uint64_t /*Addr*/,
+                                     const MCDisassembler *Decoder) {
+  const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  assert(isUInt<9>(Imm) && "9-bit encoding expected");
+
+  if (Imm & AMDGPU::EncValues::IS_VGPR) {
+    bool IsHi = Imm & (1 << 7);
+    unsigned RegIdx = Imm & 0x7f;
+    return addOperand(Inst, DAsm->createVGPR16Operand(RegIdx, IsHi));
+  }
+  return addOperand(Inst, DAsm->decodeNonVGPRSrcOp(
+                              OpWidth, Imm & 0xFF, true, ImmWidth,
+                              (AMDGPU::OperandSemantics)OperandSemantics));
+}
+
+template <AMDGPUDisassembler::OpWidthTy OpWidth, unsigned ImmWidth,
+          unsigned OperandSemantics>
 static DecodeStatus decodeOperand_VSrcT16(MCInst &Inst, unsigned Imm,
                                           uint64_t /*Addr*/,
                                           const MCDisassembler *Decoder) {
