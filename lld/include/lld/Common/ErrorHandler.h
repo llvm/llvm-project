@@ -164,6 +164,7 @@ class SyncStream {
 public:
   mutable llvm::raw_string_ostream os{buf};
   SyncStream(ErrorHandler &e, DiagLevel level) : e(e), level(level) {}
+  SyncStream(SyncStream &&o) : e(o.e), level(o.level), buf(std::move(o.buf)) {}
   ~SyncStream();
 };
 
