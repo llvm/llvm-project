@@ -9825,6 +9825,22 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
             : HasVOffset ? AMDGPU::BUFFER_LOAD_DWORD_LDS_OFFEN
                          : AMDGPU::BUFFER_LOAD_DWORD_LDS_OFFSET;
       break;
+    case 12:
+      if (!Subtarget->hasLDSLoadB96_B128())
+        return SDValue();
+      Opc = HasVIndex ? HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX3_LDS_BOTHEN
+                                   : AMDGPU::BUFFER_LOAD_DWORDX3_LDS_IDXEN
+                      : HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX3_LDS_OFFEN
+                                   : AMDGPU::BUFFER_LOAD_DWORDX3_LDS_OFFSET;
+      break;
+    case 16:
+      if (!Subtarget->hasLDSLoadB96_B128())
+        return SDValue();
+      Opc = HasVIndex ? HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX4_LDS_BOTHEN
+                                   : AMDGPU::BUFFER_LOAD_DWORDX4_LDS_IDXEN
+                      : HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX4_LDS_OFFEN
+                                   : AMDGPU::BUFFER_LOAD_DWORDX4_LDS_OFFSET;
+      break;
     }
 
     SDValue M0Val = copyToM0(DAG, Chain, DL, Op.getOperand(3));
