@@ -876,7 +876,7 @@ defm FMLA_VG2_M2ZZI_H : sme2p1_multi_vec_array_vg2_index_16b<"fmla", 0b00, 0b100
 defm FMLA_VG4_M4ZZI_H : sme2p1_multi_vec_array_vg4_index_16b<"fmla", 0b000, ZZZZ_h_mul_r, ZPR4b16, nxv8f16, int_aarch64_sme_fmla_lane_vg1x4>;
 defm FMLA_VG2_M2ZZ_H :  sme2_dot_mla_add_sub_array_vg2_single<"fmla", 0b0011100, MatrixOp16, ZZ_h, ZPR4b16, nxv8f16, int_aarch64_sme_fmla_single_vg1x2>;
 defm FMLA_VG4_M4ZZ_H :  sme2_dot_mla_add_sub_array_vg4_single<"fmla", 0b0111100, MatrixOp16, ZZZZ_h, ZPR4b16, nxv8f16, int_aarch64_sme_fmla_single_vg1x4>;
-defm FMLA_VG2_M2Z4Z_H : sme2_dot_mla_add_sub_array_vg2_multi<"fmla", 0b0100001, MatrixOp16, ZZ_h_mul_r, nxv8f16, int_aarch64_sme_fmla_vg1x2>;
+defm FMLA_VG2_M2Z2Z_H : sme2_dot_mla_add_sub_array_vg2_multi<"fmla", 0b0100001, MatrixOp16, ZZ_h_mul_r, nxv8f16, int_aarch64_sme_fmla_vg1x2>;
 defm FMLA_VG4_M4Z4Z_H : sme2_dot_mla_add_sub_array_vg4_multi<"fmla", 0b0100001, MatrixOp16, ZZZZ_h_mul_r, nxv8f16, int_aarch64_sme_fmla_vg1x4>;
 
 defm FMLS_VG2_M2ZZI_H : sme2p1_multi_vec_array_vg2_index_16b<"fmls", 0b00, 0b101, ZZ_h_mul_r, ZPR4b16, nxv8f16, int_aarch64_sme_fmls_lane_vg1x2>;
