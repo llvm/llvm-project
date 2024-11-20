@@ -86,11 +86,9 @@ void ExternalNameConversionPass::runOnOperation() {
   renameFuncOrGlobalInModule(op);
 
   // Do the same in GPU modules.
-  if (auto mod = mlir::dyn_cast_or_null<mlir::ModuleOp>(*op)) {
-    for (auto gpuMod : mod.getOps<mlir::gpu::GPUModuleOp>()) {
+  if (auto mod = mlir::dyn_cast_or_null<mlir::ModuleOp>(*op))
+    for (auto gpuMod : mod.getOps<mlir::gpu::GPUModuleOp>())
       renameFuncOrGlobalInModule(gpuMod);
-    }
-  }
 
   if (remappings.empty())
     return;
