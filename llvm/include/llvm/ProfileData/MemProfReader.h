@@ -47,17 +47,20 @@ public:
   }
 
   // Return a const reference to the internal Id to Frame mappings.
+  LLVM_DEPRECATED("Use takeMemProfData instead", "takeMemProfData")
   const llvm::DenseMap<FrameId, Frame> &getFrameMapping() const {
     return IdToFrame;
   }
 
   // Return a const reference to the internal Id to call stacks.
+  LLVM_DEPRECATED("Use takeMemProfData instead", "takeMemProfData")
   const llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> &
   getCallStacks() const {
     return CSIdToCallStack;
   }
 
   // Return a const reference to the internal function profile data.
+  LLVM_DEPRECATED("Use takeMemProfData instead", "takeMemProfData")
   const llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> &
   getProfileData() const {
     return FunctionProfileData;
