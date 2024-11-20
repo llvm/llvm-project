@@ -266,9 +266,8 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
 
 void emitUninitializedExplicitInitFields(Sema &S, const RecordDecl *R) {
   for (const FieldDecl *Field : R->fields()) {
-    if (Field->hasAttr<ExplicitInitAttr>()) {
+    if (Field->hasAttr<ExplicitInitAttr>())
       S.Diag(Field->getLocation(), diag::note_entity_declared_at) << Field;
-    }
   }
 }
 

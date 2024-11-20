@@ -1118,9 +1118,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
     } else if (!T.isCXX98PODType(Context))
       data().PlainOldData = false;
 
-    if (Field->hasAttr<ExplicitInitAttr>() && !Field->hasInClassInitializer()) {
+    if (Field->hasAttr<ExplicitInitAttr>() && !Field->hasInClassInitializer())
       setHasUninitializedExplicitInitFields(true);
-    }
 
     if (T->isReferenceType()) {
       if (!Field->hasInClassInitializer())
@@ -2207,13 +2206,12 @@ void CXXRecordDecl::completeDefinition(CXXFinalOverriderMap *FinalOverriders) {
   if (isAggregate() && hasUserDeclaredConstructor() &&
       !Context.getLangOpts().CPlusPlus20) {
     // Diagnose any aggregate behavior changes in C++20
-    for (field_iterator I = field_begin(), E = field_end(); I != E; ++I) {
-      if (const auto *attr = I->getAttr<ExplicitInitAttr>()) {
+    for (const FieldDecl *FD : fields()) {
+      if (const auto *AT = FD->getAttr<ExplicitInitAttr>())
         Context.getDiagnostics().Report(
-            attr->getLocation(),
+            AT->getLocation(),
             diag::warn_cxx20_compat_requires_explicit_init_non_aggregate)
-            << attr << Context.getRecordType(this);
-      }
+            << AT << Context.getRecordType(this);
     }
   }
 
@@ -2221,12 +2219,11 @@ void CXXRecordDecl::completeDefinition(CXXFinalOverriderMap *FinalOverriders) {
     // Diagnose any fields that required explicit initialization in a
     // non-aggregate type. (Note that the fields may not be directly in this
     // type, but in a subobject. In such cases we don't emit diagnoses here.)
-    for (field_iterator I = field_begin(), E = field_end(); I != E; ++I) {
-      if (const auto *attr = I->getAttr<ExplicitInitAttr>()) {
-        Context.getDiagnostics().Report(attr->getLocation(),
+    for (const FieldDecl *FD : fields()) {
+      if (const auto *AT = FD->getAttr<ExplicitInitAttr>())
+        Context.getDiagnostics().Report(AT->getLocation(),
                                         diag::warn_attribute_needs_aggregate)
-            << attr << Context.getRecordType(this);
-      }
+            << AT << Context.getRecordType(this);
     }
     setHasUninitializedExplicitInitFields(false);
   }
