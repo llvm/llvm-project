@@ -40,5 +40,10 @@ func.func @_QPsum_in_device(%arg0: !fir.ref<!fir.array<?xi32>> {cuf.data_attr = 
   return
 }
 
+// Check that intrinsic simplification is disable in CUDA Fortran context. The simplified intrinsic is
+// created in the module op but the device func will be migrated into a gpu module op resulting in a
+// missing symbol error. 
+// The simplified intrinsic could also be migrated to the gpu module but the choice as not be made
+// at this point.
 // CHECK-LABEL: func.func @_QPsum_in_device
 // CHECK-NOT: fir.call @_FortranASumInteger4x1_contract_simplified
