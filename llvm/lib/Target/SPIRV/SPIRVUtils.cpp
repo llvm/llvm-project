@@ -519,14 +519,18 @@ bool PartialOrderingVisitor::CanBeVisited(BasicBlock *BB) const {
 }
 
 size_t PartialOrderingVisitor::GetNodeRank(BasicBlock *BB) const {
-  size_t result = 0;
+  auto It = BlockToOrder.find(BB);
+  if (It != BlockToOrder.end())
+    return It->second.Rank;
 
+  size_t result = 0;
   for (BasicBlock *P : predecessors(BB)) {
     // Ignore back-edges.
     if (DT.dominates(BB, P))
       continue;
 
     auto Iterator = BlockToOrder.end();
+
     Loop *L = LI.getLoopFor(P);
     BasicBlock *Latch = L ? L->getLoopLatch() : nullptr;
 
@@ -541,7 +545,11 @@ size_t PartialOrderingVisitor::GetNodeRank(BasicBlock *BB) const {
       Iterator = BlockToOrder.find(Latch);
     }
 
-    assert(Iterator != BlockToOrder.end());
+    // This block hasn't been ranked yet. Ignoring.
+    // This doesn't happen often, but when dealing with irreducible CFG, we have
+    // to rank nodes without knowing the rank of all their predecessors.
+    if (Iterator == BlockToOrder.end())
+      continue;
     result = std::max(result, Iterator->second.Rank + 1);
   }
 
@@ -552,15 +560,27 @@ size_t PartialOrderingVisitor::visit(BasicBlock *BB, size_t Unused) {
   ToVisit.push(BB);
   Queued.insert(BB);
 
+  // When the graph is irreducible, we can end up in a case where each
+  // node has a predecessor we haven't ranked yet.
+  // When such case arise, we have to pick a node to continue.
+  // This index is used to determine when we looped through all candidates.
+  // Each time a candidate is processed, this counter is reset.
+  // If the index is larger than the queue size, it means we looped.
+  size_t QueueIndex = 0;
+
   while (ToVisit.size() != 0) {
     BasicBlock *BB = ToVisit.front();
     ToVisit.pop();
 
-    if (!CanBeVisited(BB)) {
+    // Either the node is a candidate, or we looped already, and this is
+    // the first node we tried.
+    if (!CanBeVisited(BB) && QueueIndex <= ToVisit.size()) {
       ToVisit.push(BB);
+      QueueIndex++;
       continue;
     }
 
+    QueueIndex = 0;
     size_t Rank = GetNodeRank(BB);
     OrderInfo Info = {Rank, BlockToOrder.size()};
     BlockToOrder.emplace(BB, Info);

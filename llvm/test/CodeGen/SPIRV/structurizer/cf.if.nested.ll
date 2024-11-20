@@ -34,28 +34,28 @@
 ; CHECK:    %[[#bb30:]] = OpLabel
 ; CHECK:                  OpSelectionMerge %[[#bb31:]] None
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb32:]] %[[#bb33:]]
-; CHECK:    %[[#bb32:]] = OpLabel
+; CHECK:     %[[#bb32]] = OpLabel
 ; CHECK:                  OpSelectionMerge %[[#bb34:]] None
-; CHECK:                  OpBranchConditional %[[#]] %[[#bb35:]] %[[#bb34:]]
-; CHECK:    %[[#bb33:]] = OpLabel
+; CHECK:                  OpBranchConditional %[[#]] %[[#bb35:]] %[[#bb34]]
+; CHECK:     %[[#bb33]] = OpLabel
 ; CHECK:                  OpSelectionMerge %[[#bb36:]] None
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb37:]] %[[#bb38:]]
-; CHECK:    %[[#bb35:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb34:]]
-; CHECK:    %[[#bb37:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb36:]]
-; CHECK:    %[[#bb38:]] = OpLabel
+; CHECK:     %[[#bb35]] = OpLabel
+; CHECK:                  OpBranch %[[#bb34]]
+; CHECK:     %[[#bb37]] = OpLabel
+; CHECK:                  OpBranch %[[#bb36]]
+; CHECK:     %[[#bb38]] = OpLabel
 ; CHECK:                  OpSelectionMerge %[[#bb39:]] None
-; CHECK:                  OpBranchConditional %[[#]] %[[#bb40:]] %[[#bb39:]]
-; CHECK:    %[[#bb34:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb31:]]
-; CHECK:    %[[#bb40:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb39:]]
-; CHECK:    %[[#bb39:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb36:]]
-; CHECK:    %[[#bb36:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb31:]]
-; CHECK:    %[[#bb31:]] = OpLabel
+; CHECK:                  OpBranchConditional %[[#]] %[[#bb40:]] %[[#bb39]]
+; CHECK:     %[[#bb34]] = OpLabel
+; CHECK:                  OpBranch %[[#bb31]]
+; CHECK:     %[[#bb40]] = OpLabel
+; CHECK:                  OpBranch %[[#bb39]]
+; CHECK:     %[[#bb39]] = OpLabel
+; CHECK:                  OpBranch %[[#bb36]]
+; CHECK:     %[[#bb36]] = OpLabel
+; CHECK:                  OpBranch %[[#bb31]]
+; CHECK:     %[[#bb31]] = OpLabel
 ; CHECK:                  OpReturnValue %[[#]]
 ; CHECK:                  OpFunctionEnd
 ; CHECK: %[[#func_26:]] = OpFunction %[[#void:]] DontInline %[[#]]
