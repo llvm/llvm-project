@@ -2095,12 +2095,22 @@ public:
         std::get<std::optional<std::list<OmpMapClause::TypeModifier>>>(x.t);
     auto &iter = std::get<std::optional<std::list<OmpIteratorModifier>>>(x.t);
     auto &type = std::get<std::optional<std::list<OmpMapClause::Type>>>(x.t);
+    auto &mapper = std::get<OmpMapperIdentifier>(x.t);
 
     // For a given list of items, if the item has a value, then walk it.
     // Print commas between items that have values.
     // Return 'true' if something did get printed, otherwise 'false'.
     bool needComma{false};
+    if (mapper.v) {
+      Word("MAPPER(");
+      Walk(*mapper.v);
+      Put(")");
+      needComma = true;
+    }
     if (typeMod) {
+      if (needComma) {
+        Put(", ");
+      }
       Walk(*typeMod);
       needComma = true;
     }

@@ -546,6 +546,7 @@ public:
   NODE_ENUM(OmpLinearModifier, Type)
   NODE(parser, OmpLoopDirective)
   NODE(parser, OmpMapClause)
+  NODE(parser, OmpMapperIdentifier)
   NODE_ENUM(OmpMapClause, TypeModifier)
   NODE_ENUM(OmpMapClause, Type)
   static std::string GetNodeName(const llvm::omp::Clause &x) {
