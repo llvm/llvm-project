@@ -287,12 +287,6 @@ public:
                       std::unique_ptr<DWARFContext> DwCtx,
                       JournalingStreams Logger);
 
-  /// Returns addend of a relocation.
-  static int64_t getRelocationAddend(const ELFObjectFileBase *Obj,
-                                     const RelocationRef &Rel);
-  /// Returns symbol of a relocation.
-  static uint32_t getRelocationSymbol(const ELFObjectFileBase *Obj,
-                                      const RelocationRef &Rel);
   /// Superset of compiler units that will contain overwritten code that needs
   /// new debug info. In a few cases, functions may end up not being
   /// overwritten, but it is okay to re-generate debug info for them.

@@ -2138,7 +2138,7 @@ bool RewriteInstance::analyzeRelocation(
     return true;
 
   ExtractedValue = Relocation::extractValue(RType, *Value, Rel.getOffset());
-  Addend = BinaryContext::getRelocationAddend(InputFile, Rel);
+  Addend = getRelocationAddend(InputFile, Rel);
 
   const bool IsPCRelative = Relocation::isPCRelative(RType);
   const uint64_t PCRelOffset = IsPCRelative && !IsAArch64 ? Rel.getOffset() : 0;
@@ -2338,7 +2338,7 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
     StringRef SymbolName = "<none>";
     MCSymbol *Symbol = nullptr;
     uint64_t SymbolAddress = 0;
-    const uint64_t Addend = BinaryContext::getRelocationAddend(InputFile, Rel);
+    const uint64_t Addend = getRelocationAddend(InputFile, Rel);
 
     symbol_iterator SymbolIter = Rel.getSymbol();
     if (SymbolIter != InputFile->symbol_end()) {
@@ -2363,7 +2363,7 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
       IsJmpRelocation[RType] = true;
 
     if (Symbol)
-      SymbolIndex[Symbol] = BinaryContext::getRelocationSymbol(InputFile, Rel);
+      SymbolIndex[Symbol] = getRelocationSymbol(InputFile, Rel);
 
     BC->addDynamicRelocation(Rel.getOffset(), Symbol, RType, Addend);
   }

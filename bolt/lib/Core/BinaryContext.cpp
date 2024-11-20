@@ -90,54 +90,6 @@ cl::opt<bolt::BinaryContext::ICFLevel>
         cl::ZeroOrMore, cl::ValueOptional, cl::cat(BoltOptCategory));
 } // namespace opts
 
-namespace {
-template <typename ELFT>
-int64_t getRelocationAddend(const ELFObjectFile<ELFT> *Obj,
-                            const RelocationRef &RelRef) {
-  using ELFShdrTy = typename ELFT::Shdr;
-  using Elf_Rela = typename ELFT::Rela;
-  int64_t Addend = 0;
-  const ELFFile<ELFT> &EF = Obj->getELFFile();
-  DataRefImpl Rel = RelRef.getRawDataRefImpl();
-  const ELFShdrTy *RelocationSection = cantFail(EF.getSection(Rel.d.a));
-  switch (RelocationSection->sh_type) {
-  default:
-    llvm_unreachable("unexpected relocation section type");
-  case ELF::SHT_REL:
-    break;
-  case ELF::SHT_RELA: {
-    const Elf_Rela *RelA = Obj->getRela(Rel);
-    Addend = RelA->r_addend;
-    break;
-  }
-  }
-
-  return Addend;
-}
-
-template <typename ELFT>
-uint32_t getRelocationSymbol(const ELFObjectFile<ELFT> *Obj,
-                             const RelocationRef &RelRef) {
-  using ELFShdrTy = typename ELFT::Shdr;
-  uint32_t Symbol = 0;
-  const ELFFile<ELFT> &EF = Obj->getELFFile();
-  DataRefImpl Rel = RelRef.getRawDataRefImpl();
-  const ELFShdrTy *RelocationSection = cantFail(EF.getSection(Rel.d.a));
-  switch (RelocationSection->sh_type) {
-  default:
-    llvm_unreachable("unexpected relocation section type");
-  case ELF::SHT_REL:
-    Symbol = Obj->getRel(Rel)->getSymbol(EF.isMips64EL());
-    break;
-  case ELF::SHT_RELA:
-    Symbol = Obj->getRela(Rel)->getSymbol(EF.isMips64EL());
-    break;
-  }
-
-  return Symbol;
-}
-} // anonymous namespace
-
 namespace llvm {
 namespace bolt {
 
@@ -216,16 +168,6 @@ BinaryContext::~BinaryContext() {
   for (std::pair<const uint64_t, JumpTable *> JTI : JumpTables)
     delete JTI.second;
   clearBinaryData();
-}
-
-uint32_t BinaryContext::getRelocationSymbol(const ELFObjectFileBase *Obj,
-                                            const RelocationRef &Rel) {
-  return ::getRelocationSymbol(cast<ELF64LEObjectFile>(Obj), Rel);
-}
-
-int64_t BinaryContext::getRelocationAddend(const ELFObjectFileBase *Obj,
-                                           const RelocationRef &Rel) {
-  return ::getRelocationAddend(cast<ELF64LEObjectFile>(Obj), Rel);
 }
 
 /// Create BinaryContext for a given architecture \p ArchName and

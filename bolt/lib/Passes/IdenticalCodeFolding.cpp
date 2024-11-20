@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/IdenticalCodeFolding.h"
-#include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Rewrite/RewriteInstance.h"
@@ -356,7 +355,7 @@ void IdenticalCodeFolding::processDataRelocations(
     const ELFObjectFileBase *ELFObj = dyn_cast<ELFObjectFileBase>(OwningObj);
     if (!ELFObj)
       llvm_unreachable("Only ELFObjectFileBase is supported");
-    const int64_t Addend = BinaryContext::getRelocationAddend(ELFObj, Rel);
+    const int64_t Addend = getRelocationAddend(ELFObj, Rel);
     BinaryFunction *BF = BC.getBinaryFunctionAtAddress(SymbolAddress + Addend);
     if (!BF)
       continue;

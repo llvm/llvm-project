@@ -1115,3 +1115,65 @@ void Relocation::print(raw_ostream &OS) const {
     OS << ", 0x" << Twine::utohexstr(Addend);
   OS << ", 0x" << Twine::utohexstr(Value);
 }
+
+namespace {
+template <typename ELFT>
+int64_t getRelocationAddend(const llvm::object::ELFObjectFile<ELFT> *Obj,
+                            const llvm::object::RelocationRef &RelRef) {
+  using ELFShdrTy = typename ELFT::Shdr;
+  using Elf_Rela = typename ELFT::Rela;
+  int64_t Addend = 0;
+  const llvm::object::ELFFile<ELFT> &EF = Obj->getELFFile();
+  llvm::object::DataRefImpl Rel = RelRef.getRawDataRefImpl();
+  const ELFShdrTy *RelocationSection = cantFail(EF.getSection(Rel.d.a));
+  switch (RelocationSection->sh_type) {
+  default:
+    llvm_unreachable("unexpected relocation section type");
+  case ELF::SHT_REL:
+    break;
+  case ELF::SHT_RELA: {
+    const Elf_Rela *RelA = Obj->getRela(Rel);
+    Addend = RelA->r_addend;
+    break;
+  }
+  }
+
+  return Addend;
+}
+
+template <typename ELFT>
+uint32_t getRelocationSymbol(const llvm::object::ELFObjectFile<ELFT> *Obj,
+                             const llvm::object::RelocationRef &RelRef) {
+  using ELFShdrTy = typename ELFT::Shdr;
+  uint32_t Symbol = 0;
+  const llvm::object::ELFFile<ELFT> &EF = Obj->getELFFile();
+  llvm::object::DataRefImpl Rel = RelRef.getRawDataRefImpl();
+  const ELFShdrTy *RelocationSection = cantFail(EF.getSection(Rel.d.a));
+  switch (RelocationSection->sh_type) {
+  default:
+    llvm_unreachable("unexpected relocation section type");
+  case ELF::SHT_REL:
+    Symbol = Obj->getRel(Rel)->getSymbol(EF.isMips64EL());
+    break;
+  case ELF::SHT_RELA:
+    Symbol = Obj->getRela(Rel)->getSymbol(EF.isMips64EL());
+    break;
+  }
+
+  return Symbol;
+}
+} // namespace
+
+namespace llvm {
+namespace bolt {
+uint32_t getRelocationSymbol(const llvm::object::ELFObjectFileBase *Obj,
+                             const llvm::object::RelocationRef &Rel) {
+  return ::getRelocationSymbol(cast<llvm::object::ELF64LEObjectFile>(Obj), Rel);
+}
+
+int64_t getRelocationAddend(const llvm::object::ELFObjectFileBase *Obj,
+                            const llvm::object::RelocationRef &Rel) {
+  return ::getRelocationAddend(cast<llvm::object::ELF64LEObjectFile>(Obj), Rel);
+}
+} // namespace bolt
+} // namespace llvm
