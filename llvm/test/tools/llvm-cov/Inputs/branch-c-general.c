@@ -86,11 +86,11 @@ third:
   while (i < 3) {               // BRCOV: Branch ([[@LINE]]:10): [True: 0, False: 1]
   loop2:
     switch (i) {
-    case 0:                     // BRCOV: Branch ([[@LINE]]:5): [True: 1, Folded]
+    case 0:                     // CHECK: Branch ([[@LINE]]:5): [True: 1, Folded]
       goto first;
-    case 1:                     // BRCOV: Branch ([[@LINE]]:5): [True: 1, Folded]
+    case 1:                     // CHECK: Branch ([[@LINE]]:5): [True: 1, Folded]
       goto second;
-    case 2:                     // BRCOV: Branch ([[@LINE]]:5): [True: 1, Folded]
+    case 2:                     // CHECK: Branch ([[@LINE]]:5): [True: 1, Folded]
       goto third;
     }
   }
@@ -110,30 +110,30 @@ void switches() {               // CHECK: @LINE|{{.*}}switches()
 
   // No cases -> no weights
   switch (weights[0]) {
-  default:                      // BRCOV: Branch ([[@LINE]]:3): [True: 1, Folded]
+  default:                      // CHECK: Branch ([[@LINE]]:3): [True: 1, Folded]
     break;
   }
                                 // BRCOV: Branch ([[@LINE+1]]:63): [True: [[C15:15|1]], False: 0]
   for (int i = 0, len = sizeof(weights) / sizeof(weights[0]); i < len; ++i) {
     switch (i[weights]) {
-    case 1:                     // BRCOV: Branch ([[@LINE]]:5): [True: 1, Folded]
+    case 1:                     // CHECK: Branch ([[@LINE]]:5): [True: 1, Folded]
       if (i) {}                 // BRCOV: Branch ([[@LINE]]:11): [True: 0, False: 1]
       // fallthrough
-    case 2:                     // BRCOV: Branch ([[@LINE]]:5): [True: [[C2]], Folded]
+    case 2:                     // CHECK: Branch ([[@LINE]]:5): [True: [[C2:2|1]], Folded]
       if (i) {}                 // BRCOV: Branch ([[@LINE]]:11): [True: [[C2]], False: 1]
       break;
-    case 3:                     // BRCOV: Branch ([[@LINE]]:5): [True: [[C3:3|1]], Folded]
+    case 3:                     // CHECK: Branch ([[@LINE]]:5): [True: [[C3:3|1]], Folded]
       if (i) {}                 // BRCOV: Branch ([[@LINE]]:11): [True: [[C3]], False: 0]
       continue;
-    case 4:                     // BRCOV: Branch ([[@LINE]]:5): [True: [[C4:4|1]], Folded]
+    case 4:                     // CHECK: Branch ([[@LINE]]:5): [True: [[C4:4|1]], Folded]
       if (i) {}                 // BRCOV: Branch ([[@LINE]]:11): [True: [[C4]], False: 0]
       switch (i) {
-      case 6 ... 9:             // BRCOV: Branch ([[@LINE]]:7): [True: [[C4]], Folded]
+      case 6 ... 9:             // CHECK: Branch ([[@LINE]]:7): [True: [[C4]], Folded]
         if (i) {}               // BRCOV: Branch ([[@LINE]]:13): [True: [[C4]], False: 0]
         continue;
       }
 
-    default:                    // BRCOV: Branch ([[@LINE]]:5): [True: [[C5:5|1]], Folded]
+    default:                    // CHECK: Branch ([[@LINE]]:5): [True: [[C5:5|1]], Folded]
       if (i == len - 1)         // BRCOV: Branch ([[@LINE]]:11): [True: 1, False: [[C4]]]
         return;
     }
@@ -147,21 +147,21 @@ void switches() {               // CHECK: @LINE|{{.*}}switches()
 void big_switch() {             // CHECK: @LINE|{{.*}}big_switch()
   for (int i = 0; i < 32; ++i) {// BRCOV: Branch ([[@LINE]]:19): [True: [[C32:32|1]], False: 1]
     switch (1 << i) {
-    case (1 << 0):              // BRCOV: Branch ([[@LINE]]:5): [True: 1, Folded]
+    case (1 << 0):              // CHECK: Branch ([[@LINE]]:5): [True: 1, Folded]
       if (i) {}                 // BRCOV: Branch ([[@LINE]]:11): [True: 0, False: 1]
       // fallthrough
-    case (1 << 1):              // BRCOV: Branch ([[@LINE]]:5): [True: 1, Folded]
+    case (1 << 1):              // CHECK: Branch ([[@LINE]]:5): [True: 1, Folded]
       if (i) {}                 // BRCOV: Branch ([[@LINE]]:11): [True: 1, False: 1]
       break;
-    case (1 << 2) ... (1 << 12):// BRCOV: Branch ([[@LINE]]:5): [True: [[C11:11|1]], Folded]
+    case (1 << 2) ... (1 << 12):// CHECK: Branch ([[@LINE]]:5): [True: [[C11:11|1]], Folded]
       if (i) {}                 // BRCOV: Branch ([[@LINE]]:11): [True: [[C11]], False: 0]
       break;
       // The branch for the large case range above appears after the case body.
 
-    case (1 << 13):             // BRCOV: Branch ([[@LINE]]:5): [True: 1, Folded]
+    case (1 << 13):             // CHECK: Branch ([[@LINE]]:5): [True: 1, Folded]
       if (i) {}                 // BRCOV: Branch ([[@LINE]]:11): [True: 1, False: 0]
       break;
-    case (1 << 14) ... (1 << 28)://BRCOV: Branch ([[@LINE]]:5): [True: [[C15]], Folded]
+    case (1 << 14) ... (1 << 28)://CHECK: Branch ([[@LINE]]:5): [True: [[C15:15|1]], Folded]
       if (i) {}                 // BRCOV: Branch ([[@LINE]]:11): [True: [[C15]], False: 0]
       break;
     // The branch for the large case range above appears after the case body.
@@ -169,7 +169,7 @@ void big_switch() {             // CHECK: @LINE|{{.*}}big_switch()
     case (1 << 29) ... ((1 << 29) + 1):
       if (i) {}                 // BRCOV: Branch ([[@LINE]]:11): [True: 1, False: 0]
       break;
-    default:                    // BRCOV: Branch ([[@LINE]]:5): [True: [[C2]], Folded]
+    default:                    // CHECK: Branch ([[@LINE]]:5): [True: [[C2:2|1]], Folded]
       if (i) {}                 // BRCOV: Branch ([[@LINE]]:11): [True: [[C2]], False: 0]
       break;
     }

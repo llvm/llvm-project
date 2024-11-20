@@ -192,7 +192,7 @@ jumps
 # Func Hash:
 15051420506203462683
 # Num Counters:
-38
+39
 # Counter Values:
 1
 1
@@ -232,6 +232,7 @@ jumps
 1
 1
 1
+0
 
 main
 # Func Hash:
@@ -263,7 +264,7 @@ switches
 # Func Hash:
 43242458792028222
 # Num Counters:
-29
+30
 # Counter Values:
 1
 1
@@ -292,6 +293,7 @@ switches
 1
 1
 1
+0
 0
 0
 
