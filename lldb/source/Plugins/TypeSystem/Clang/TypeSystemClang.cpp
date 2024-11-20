@@ -9343,7 +9343,7 @@ ConstString TypeSystemClang::DeclGetName(void *opaque_decl) {
     clang::NamedDecl *nd =
         llvm::dyn_cast<NamedDecl>((clang::Decl *)opaque_decl);
     if (nd != nullptr)
-      return ConstString(nd->getDeclName().getAsString());
+      return ConstString(GetTypeNameForDecl(nd, /*qualified=*/false));
   }
   return ConstString();
 }
