@@ -431,7 +431,7 @@ public:
   lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
                                                   bool stop_others) override;
 
-  StructuredDataImpl *GetLanguageSpecificData(StackFrame &frame) override;
+  StructuredData::ObjectSP GetLanguageSpecificData(SymbolContext sc) override;
 
   /// If you are at the initial instruction of the frame passed in,
   /// then this will examine the call arguments, and if any of them is
