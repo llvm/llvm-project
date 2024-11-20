@@ -710,6 +710,30 @@ void LiveIntervals::pruneValue(LiveRange &LR, SlotIndex Kill,
 // Register allocator hooks.
 //
 
+/// Returns true if the physreg has multiple regunits that can be accessed
+/// as independent registers.
+///
+/// Returns 'true' for e.g.:
+///   gpr64_0_gpr64_1
+//               => two independently accessible registers gpr64_0 and gpr64_1.
+///
+/// Returns 'false' for e.g.:
+///   gpr64_0:   => accessible register, reads/writes 64bits
+///   gpr32_0:   => accessible sub-regsiter of gpr64_0, reads/writes 32bits
+//    gpr32_0_hi => top 32bits of gpr64_0, not independently accessible.
+static bool hasMultipleAddressableRegUnits(const TargetRegisterInfo *TRI,
+                                           MCPhysReg PhysReg) {
+  unsigned NumAddressableRegUnits = 0;
+  for (MCRegUnit U : TRI->regunits(PhysReg)) {
+    for (MCRegUnitRootIterator RI(U, TRI); RI.isValid(); ++RI)
+      if (!TRI->isArtificial(*RI) && TRI->isInAllocatableClass(*RI))
+        NumAddressableRegUnits++;
+    if (NumAddressableRegUnits > 1)
+      return true;
+  }
+  return false;
+}
+
 void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
   // Keep track of regunit ranges.
   SmallVector<std::pair<const LiveRange*, LiveRange::const_iterator>, 8> RU;
@@ -736,6 +760,18 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
         continue;
       RU.push_back(std::make_pair(&RURange, RURange.find(LI.begin()->end)));
     }
+
+    // If parts of a physical register for a given liverange, as assigned by the
+    // register allocator, can be used to store other values not represented by
+    // this liverange, then `LiveIntervals::addKillFlags` normally avoids adding
+    // a kill flag on the use of this register when the value's liverange ends.
+    //
+    // However, if all the other regunits are artificial, then we can still
+    // safely add the kill flag, since those parts of the register can never be
+    // accessed independently.
+    bool AssumeOtherUnitsCanBeUsed =
+        hasMultipleAddressableRegUnits(TRI, PhysReg);
+
     // Every instruction that kills Reg corresponds to a segment range end
     // point.
     for (LiveInterval::const_iterator RI = LI.begin(), RE = LI.end(); RI != RE;
@@ -780,7 +816,7 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
         // are actually never written by %2. After assignment the <kill>
         // flag at the read instruction is invalid.
         LaneBitmask DefinedLanesMask;
-        if (LI.hasSubRanges()) {
+        if (LI.hasSubRanges() && AssumeOtherUnitsCanBeUsed) {
           // Compute a mask of lanes that are defined.
           DefinedLanesMask = LaneBitmask::getNone();
           for (const LiveInterval::SubRange &SR : LI.subranges())
