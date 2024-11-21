@@ -11,6 +11,7 @@
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/tools.h"
 #include <variant>
 
@@ -195,7 +196,7 @@ bool OmpStructureChecker::CheckAllowedClause(llvmOmpClause clause) {
 
   if (!llvm::omp::isAllowedClauseForDirective(dir, clause, version)) {
     unsigned allowedInVersion{[&] {
-      for (unsigned v : {45, 50, 51, 52, 60}) {
+      for (unsigned v : llvm::omp::getOpenMPVersions()) {
         if (v <= version) {
           continue;
         }
@@ -683,8 +684,7 @@ void OmpStructureChecker::CheckIteratorRange(
   }
 }
 
-void OmpStructureChecker::CheckIteratorModifier(
-    const parser::OmpIteratorModifier &x) {
+void OmpStructureChecker::CheckIteratorModifier(const parser::OmpIterator &x) {
   // Check if all iterator variables have integer type.
   for (auto &&iterSpec : x.v) {
     bool isInteger{true};
@@ -980,12 +980,14 @@ void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
   // constructs inside LOOP may add the relevant information. Scan reduction is
   // supported only in loop constructs, so same checks are not applicable to
   // other directives.
+  using ReductionModifier = parser::OmpReductionModifier;
   for (const auto &clause : clauseList.v) {
     if (const auto *reductionClause{
             std::get_if<parser::OmpClause::Reduction>(&clause.u)}) {
-      const auto &maybeModifier{
-          std::get<std::optional<ReductionModifier>>(reductionClause->v.t)};
-      if (maybeModifier && *maybeModifier == ReductionModifier::Inscan) {
+      auto &modifiers{OmpGetModifiers(reductionClause->v)};
+      auto *maybeModifier{OmpGetUniqueModifier<ReductionModifier>(modifiers)};
+      if (maybeModifier &&
+          maybeModifier->v == ReductionModifier::Value::Inscan) {
         const auto &objectList{
             std::get<parser::OmpObjectList>(reductionClause->v.t)};
         auto checkReductionSymbolInScan = [&](const parser::Name *name) {
@@ -1859,21 +1861,21 @@ void OmpStructureChecker::CheckTargetUpdate() {
 }
 
 void OmpStructureChecker::CheckTaskDependenceType(
-    const parser::OmpTaskDependenceType::Type &x) {
+    const parser::OmpTaskDependenceType::Value &x) {
   // Common checks for task-dependence-type (DEPEND and UPDATE clauses).
   unsigned version{context_.langOptions().OpenMPVersion};
   unsigned since{0};
 
   switch (x) {
-  case parser::OmpTaskDependenceType::Type::In:
-  case parser::OmpTaskDependenceType::Type::Out:
-  case parser::OmpTaskDependenceType::Type::Inout:
+  case parser::OmpTaskDependenceType::Value::In:
+  case parser::OmpTaskDependenceType::Value::Out:
+  case parser::OmpTaskDependenceType::Value::Inout:
     break;
-  case parser::OmpTaskDependenceType::Type::Mutexinoutset:
-  case parser::OmpTaskDependenceType::Type::Depobj:
+  case parser::OmpTaskDependenceType::Value::Mutexinoutset:
+  case parser::OmpTaskDependenceType::Value::Depobj:
     since = 50;
     break;
-  case parser::OmpTaskDependenceType::Type::Inoutset:
+  case parser::OmpTaskDependenceType::Value::Inoutset:
     since = 52;
     break;
   }
@@ -1888,14 +1890,14 @@ void OmpStructureChecker::CheckTaskDependenceType(
 }
 
 void OmpStructureChecker::CheckDependenceType(
-    const parser::OmpDependenceType::Type &x) {
+    const parser::OmpDependenceType::Value &x) {
   // Common checks for dependence-type (DEPEND and UPDATE clauses).
   unsigned version{context_.langOptions().OpenMPVersion};
   unsigned deprecatedIn{~0u};
 
   switch (x) {
-  case parser::OmpDependenceType::Type::Source:
-  case parser::OmpDependenceType::Type::Sink:
+  case parser::OmpDependenceType::Value::Source:
+  case parser::OmpDependenceType::Value::Sink:
     deprecatedIn = 52;
     break;
   }
@@ -2851,20 +2853,27 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Destroy &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Reduction &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_reduction);
-  if (CheckReductionOperators(x)) {
-    CheckReductionTypeList(x);
-  }
-  if (const auto &maybeModifier{
-          std::get<std::optional<ReductionModifier>>(x.v.t)}) {
-    const ReductionModifier modifier{*maybeModifier};
-    CheckReductionModifier(modifier);
+  if (OmpVerifyModifiers(x.v, GetContext().clauseSource, context_)) {
+    if (CheckReductionOperators(x)) {
+      CheckReductionTypeList(x);
+    }
+    auto &modifiers{OmpGetModifiers(x.v)};
+    using ReductionModifier = parser::OmpReductionModifier;
+    if (auto *maybeModifier{
+            OmpGetUniqueModifier<ReductionModifier>(modifiers)}) {
+      CheckReductionModifier(*maybeModifier);
+    }
   }
 }
 
 bool OmpStructureChecker::CheckReductionOperators(
     const parser::OmpClause::Reduction &x) {
-
-  const auto &definedOp{std::get<parser::OmpReductionOperator>(x.v.t)};
+  auto &modifiers{OmpGetModifiers(x.v)};
+  const auto *definedOp{
+      OmpGetUniqueModifier<parser::OmpReductionIdentifier>(modifiers)};
+  if (!definedOp) {
+    return false;
+  }
   bool ok = false;
   common::visit(
       common::visitors{
@@ -2897,7 +2906,7 @@ bool OmpStructureChecker::CheckReductionOperators(
             }
           },
       },
-      definedOp.u);
+      definedOp->u);
 
   return ok;
 }
@@ -2929,7 +2938,12 @@ bool OmpStructureChecker::CheckIntrinsicOperator(
 
 static bool IsReductionAllowedForType(
     const parser::OmpClause::Reduction &x, const DeclTypeSpec &type) {
-  const auto &definedOp{std::get<parser::OmpReductionOperator>(x.v.t)};
+  auto &modifiers{OmpGetModifiers(x.v)};
+  const auto *definedOp{
+      OmpGetUniqueModifier<parser::OmpReductionIdentifier>(modifiers)};
+  if (!definedOp) {
+    return false;
+  }
   // TODO: user defined reduction operators. Just allow everything for now.
   bool ok{true};
 
@@ -3003,7 +3017,7 @@ static bool IsReductionAllowedForType(
             }
           },
       },
-      definedOp.u);
+      definedOp->u);
 
   return ok;
 }
@@ -3036,8 +3050,9 @@ void OmpStructureChecker::CheckReductionTypeList(
 }
 
 void OmpStructureChecker::CheckReductionModifier(
-    const ReductionModifier &modifier) {
-  if (modifier == ReductionModifier::Default) {
+    const parser::OmpReductionModifier &modifier) {
+  using ReductionModifier = parser::OmpReductionModifier;
+  if (modifier.v == ReductionModifier::Value::Default) {
     // The default one is always ok.
     return;
   }
@@ -3050,7 +3065,7 @@ void OmpStructureChecker::CheckReductionModifier(
     context_.Say(GetContext().clauseSource,
         "REDUCTION modifier on LOOP directive must be DEFAULT"_err_en_US);
   }
-  if (modifier == ReductionModifier::Task) {
+  if (modifier.v == ReductionModifier::Value::Task) {
     // "Task" is only allowed on worksharing or "parallel" directive.
     static llvm::omp::Directive worksharing[]{
         llvm::omp::Directive::OMPD_do, llvm::omp::Directive::OMPD_scope,
@@ -3066,7 +3081,7 @@ void OmpStructureChecker::CheckReductionModifier(
           "Modifier 'TASK' on REDUCTION clause is only allowed with "
           "PARALLEL or worksharing directive"_err_en_US);
     }
-  } else if (modifier == ReductionModifier::Inscan) {
+  } else if (modifier.v == ReductionModifier::Value::Inscan) {
     // "Inscan" is only allowed on worksharing-loop, worksharing-loop simd,
     // or "simd" directive.
     // The worksharing-loop directives are OMPD_do and OMPD_for. Only the
@@ -3383,28 +3398,27 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Defaultmap &x) {
           ThisVersion(version), TryVersion(50));
     }
   }
-  using VariableCategory = parser::OmpDefaultmapClause::VariableCategory;
-  auto maybeCategory{std::get<std::optional<VariableCategory>>(x.v.t)};
-  if (!maybeCategory) {
-    if (version <= 45) {
-      context_.Say(GetContext().clauseSource,
-          "The DEFAULTMAP clause requires a variable-category SCALAR in %s, %s"_warn_en_US,
-          ThisVersion(version), TryVersion(50));
-    }
-  } else {
-    VariableCategory category{*maybeCategory};
+  if (!OmpVerifyModifiers(x.v, GetContext().clauseSource, context_)) {
+    // If modifier verification fails, return early.
+    return;
+  }
+  auto &modifiers{OmpGetModifiers(x.v)};
+  auto *maybeCategory{
+      OmpGetUniqueModifier<parser::OmpVariableCategory>(modifiers)};
+  if (maybeCategory) {
+    using VariableCategory = parser::OmpVariableCategory;
+    VariableCategory::Value category{maybeCategory->v};
     unsigned tryVersion{0};
-    if (version <= 45 && category != VariableCategory::Scalar) {
+    if (version <= 45 && category != VariableCategory::Value::Scalar) {
       tryVersion = 50;
     }
-    if (version < 52 && category == VariableCategory::All) {
+    if (version < 52 && category == VariableCategory::Value::All) {
       tryVersion = 52;
     }
     if (tryVersion) {
       context_.Say(GetContext().clauseSource,
           "%s is not allowed in %s, %s"_warn_en_US,
-          parser::ToUpperCaseLetters(
-              parser::OmpDefaultmapClause::EnumToString(category)),
+          parser::ToUpperCaseLetters(VariableCategory::EnumToString(category)),
           ThisVersion(version), TryVersion(tryVersion));
     }
   }
@@ -3484,7 +3498,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_map);
   using TypeMod = parser::OmpMapClause::TypeModifier;
   using Type = parser::OmpMapClause::Type;
-  using IterMod = parser::OmpIteratorModifier;
+  using IterMod = parser::OmpIterator;
 
   unsigned version{context_.langOptions().OpenMPVersion};
   if (auto commas{std::get<bool>(x.v.t)}; !commas && version >= 52) {
@@ -3637,7 +3651,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
       if (taskDep) {
         if (version == 50) {
           invalidDep = taskDep->GetTaskDepType() ==
-              parser::OmpTaskDependenceType::Type::Depobj;
+              parser::OmpTaskDependenceType::Value::Depobj;
         }
       } else {
         invalidDep = true;
@@ -3684,7 +3698,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
         }
       }
     }
-    if (std::get<std::optional<parser::OmpIteratorModifier>>(taskDep->t)) {
+    if (std::get<std::optional<parser::OmpIterator>>(taskDep->t)) {
       unsigned allowedInVersion{50};
       if (version < allowedInVersion) {
         context_.Say(GetContext().clauseSource,
@@ -3923,7 +3937,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Update &x) {
     if (version >= 51) {
       bool invalidDep{false};
       if (taskType) {
-        invalidDep = taskType->v == parser::OmpTaskDependenceType::Type::Depobj;
+        invalidDep =
+            taskType->v == parser::OmpTaskDependenceType::Value::Depobj;
       } else {
         invalidDep = true;
       }
@@ -4058,7 +4073,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::From &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_from);
   unsigned version{context_.langOptions().OpenMPVersion};
   using ExpMod = parser::OmpFromClause::Expectation;
-  using IterMod = parser::OmpIteratorModifier;
+  using IterMod = parser::OmpIterator;
 
   if (auto &expMod{std::get<std::optional<std::list<ExpMod>>>(x.v.t)}) {
     unsigned allowedInVersion{51};
@@ -4122,7 +4137,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::To &x) {
   }
   assert(GetContext().directive == llvm::omp::OMPD_target_update);
   using ExpMod = parser::OmpFromClause::Expectation;
-  using IterMod = parser::OmpIteratorModifier;
+  using IterMod = parser::OmpIterator;
 
   if (auto &expMod{std::get<std::optional<std::list<ExpMod>>>(x.v.t)}) {
     unsigned allowedInVersion{51};
