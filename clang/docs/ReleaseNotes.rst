@@ -565,6 +565,8 @@ Improvements to Clang's diagnostics
 - Clang now correctly recognises code after a call to a ``[[noreturn]]`` constructor
   as unreachable (#GH63009).
 
+- Clang now omits shadowing warnings for parameter names in explicit object member functions (#GH95707).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
