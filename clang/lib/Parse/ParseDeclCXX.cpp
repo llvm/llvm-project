@@ -266,12 +266,7 @@ void Parser::ParseInnerNamespace(const InnerNamespaceInfoList &InnerNSs,
   if (index == InnerNSs.size()) {
     while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) &&
            Tok.isNot(tok::eof)) {
-      ParsedAttributes DeclAttrs(AttrFactory);
-      ParsedAttributes DeclSpecAttrs(AttrFactory);
-      while (MaybeParseCXX11Attributes(DeclAttrs) ||
-              MaybeParseGNUAttributes(DeclSpecAttrs))
-        ;
-      ParseExternalDeclaration(DeclAttrs, DeclSpecAttrs);
+      ParseExternalDeclarationWithAttrs();
     }
 
     // The caller is what called check -- we are simply calling
@@ -426,12 +421,7 @@ Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context) {
         break;
       [[fallthrough]];
     default:
-      ParsedAttributes DeclAttrs(AttrFactory);
-      ParsedAttributes DeclSpecAttrs(AttrFactory);
-      while (MaybeParseCXX11Attributes(DeclAttrs) ||
-             MaybeParseGNUAttributes(DeclSpecAttrs))
-        ;
-      ParseExternalDeclaration(DeclAttrs, DeclSpecAttrs);
+      ParseExternalDeclarationWithAttrs();
       continue;
     }
 
@@ -468,13 +458,7 @@ Decl *Parser::ParseExportDeclaration() {
       Tok.is(tok::l_brace) ? Tok.getLocation() : SourceLocation());
 
   if (Tok.isNot(tok::l_brace)) {
-    // FIXME: Factor out a ParseExternalDeclarationWithAttrs.
-    ParsedAttributes DeclAttrs(AttrFactory);
-    ParsedAttributes DeclSpecAttrs(AttrFactory);
-    while (MaybeParseCXX11Attributes(DeclAttrs) ||
-            MaybeParseGNUAttributes(DeclSpecAttrs))
-      ;
-    ParseExternalDeclaration(DeclAttrs, DeclSpecAttrs);
+    ParseExternalDeclarationWithAttrs();
     return Actions.ActOnFinishExportDecl(getCurScope(), ExportDecl,
                                          SourceLocation());
   }
@@ -484,12 +468,7 @@ Decl *Parser::ParseExportDeclaration() {
 
   while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) &&
          Tok.isNot(tok::eof)) {
-    ParsedAttributes DeclAttrs(AttrFactory);
-    ParsedAttributes DeclSpecAttrs(AttrFactory);
-    while (MaybeParseCXX11Attributes(DeclAttrs) ||
-            MaybeParseGNUAttributes(DeclSpecAttrs))
-      ;
-    ParseExternalDeclaration(DeclAttrs, DeclSpecAttrs);
+    ParseExternalDeclarationWithAttrs();
   }
 
   T.consumeClose();
