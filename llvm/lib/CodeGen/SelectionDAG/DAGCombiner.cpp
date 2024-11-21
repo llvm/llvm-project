@@ -149,6 +149,11 @@ static cl::opt<bool> EnableVectorFCopySignExtendRound(
     cl::desc(
         "Enable merging extends and rounds into FCOPYSIGN on vector types"));
 
+static cl::opt<unsigned int>
+    MaxSteps("has-predecessor-max-steps", cl::Hidden, cl::init(8192),
+             cl::desc("DAG combiner limit number of steps when searching DAG "
+                      "for predecessor nodes"));
+
 namespace {
 
   class DAGCombiner {
@@ -18911,7 +18916,6 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
   // can be folded with this one. We should do this to avoid having to keep
   // a copy of the original base pointer.
   SmallVector<SDNode *, 16> OtherUses;
-  constexpr unsigned int MaxSteps = 8192;
   if (isa<ConstantSDNode>(Offset))
     for (SDNode::use_iterator UI = BasePtr->use_begin(),
                               UE = BasePtr->use_end();
@@ -19089,7 +19093,7 @@ static bool shouldCombineToPostInc(SDNode *N, SDValue Ptr, SDNode *PtrUse,
                                    IsMasked, OtherPtr, TLI)) {
         SmallVector<const SDNode *, 2> Worklist;
         Worklist.push_back(Use);
-        if (SDNode::hasPredecessorHelper(N, Visited, Worklist))
+        if (SDNode::hasPredecessorHelper(N, Visited, Worklist, MaxSteps))
           return false;
       }
     }
@@ -19130,7 +19134,6 @@ static SDNode *getPostIndexedLoadStoreOp(SDNode *N, bool &IsLoad,
     // Check for #2.
     SmallPtrSet<const SDNode *, 32> Visited;
     SmallVector<const SDNode *, 8> Worklist;
-    constexpr unsigned int MaxSteps = 8192;
     // Ptr is predecessor to both N and Op.
     Visited.insert(Ptr.getNode());
     Worklist.push_back(N);
