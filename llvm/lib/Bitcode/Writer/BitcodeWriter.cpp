@@ -4227,7 +4227,7 @@ static void collectMemProfCallStacks(
 // indexed by a CallStackId which in this case is implicitly determined by the
 // order of function summaries and their allocation infos being written.
 static DenseMap<CallStackId, LinearCallStackId> writeMemoryProfileRadixTree(
-    MapVector<CallStackId, llvm::SmallVector<LinearFrameId>> &CallStacks,
+    MapVector<CallStackId, llvm::SmallVector<LinearFrameId>> &&CallStacks,
     BitstreamWriter &Stream, unsigned RadixAbbrev) {
   assert(!CallStacks.empty());
   DenseMap<unsigned, FrameStat> FrameHistogram =
@@ -4601,7 +4601,7 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
   // radix tree array are identified based on this order.
   MapVector<CallStackId, llvm::SmallVector<LinearFrameId>> CallStacks;
   for (const Function &F : M) {
-    // Summary emission does not support anonymous functions, they have to
+    // Summary emission does not support anonymous functions, they have to be
     // renamed using the anonymous function renaming pass.
     if (!F.hasName())
       report_fatal_error("Unexpected anonymous function when writing summary");
@@ -4622,7 +4622,8 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
   // linearized tree array.
   DenseMap<CallStackId, LinearCallStackId> CallStackPos;
   if (!CallStacks.empty())
-    CallStackPos = writeMemoryProfileRadixTree(CallStacks, Stream, RadixAbbrev);
+    CallStackPos =
+        writeMemoryProfileRadixTree(std::move(CallStacks), Stream, RadixAbbrev);
 
   // Keep track of the current index into the CallStackPos map.
   CallStackId CallStackCount = 0;
@@ -4862,7 +4863,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   // linearized tree array.
   DenseMap<CallStackId, LinearCallStackId> CallStackPos;
   if (!CallStacks.empty())
-    CallStackPos = writeMemoryProfileRadixTree(CallStacks, Stream, RadixAbbrev);
+    CallStackPos =
+        writeMemoryProfileRadixTree(std::move(CallStacks), Stream, RadixAbbrev);
 
   // Keep track of the current index into the CallStackPos map.
   CallStackId CallStackCount = 0;

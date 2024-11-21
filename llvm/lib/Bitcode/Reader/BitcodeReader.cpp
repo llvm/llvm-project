@@ -7558,6 +7558,7 @@ SmallVector<unsigned> ModuleSummaryIndexBitcodeReader::parseAllocInfoContext(
   if (RadixArray.empty()) {
     unsigned NumStackEntries = Record[I++];
     assert(Record.size() - I >= NumStackEntries);
+    StackIdList.reserve(NumStackEntries);
     for (unsigned J = 0; J < NumStackEntries; J++) {
       assert(Record[I] < StackIds.size());
       StackIdList.push_back(
@@ -7572,6 +7573,7 @@ SmallVector<unsigned> ModuleSummaryIndexBitcodeReader::parseAllocInfoContext(
     // increasing linear order.
     assert(RadixIndex < RadixArray.size());
     unsigned NumStackIds = RadixArray[RadixIndex++];
+    StackIdList.reserve(NumStackIds);
     while (NumStackIds--) {
       assert(RadixIndex < RadixArray.size());
       unsigned Elem = RadixArray[RadixIndex];
