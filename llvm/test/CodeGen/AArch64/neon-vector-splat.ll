@@ -85,3 +85,13 @@ define <2 x i64> @shuffle7(ptr %P) {
   %sv2i64 = shufflevector <2 x i64> %lv2i64, <2 x i64> undef, <2 x i32> zeroinitializer
   ret <2 x i64> %sv2i64
 }
+
+define <2 x ptr> @shuffle8(ptr %P) {
+; CHECK-LABEL: shuffle8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1r { v0.2d }, [x0]
+; CHECK-NEXT:    ret
+  %lv2ptr = load <2 x ptr>, ptr %P
+  %sv2ptr = shufflevector <2 x ptr> %lv2ptr, <2 x ptr> undef, <2 x i32> zeroinitializer
+  ret <2 x ptr> %sv2ptr
+}

@@ -304,12 +304,12 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
     CurrentElement->setBitSize(*FormValue.getAsUnsignedConstant());
     break;
   case dwarf::DW_AT_call_file:
-    CurrentElement->setCallFilenameIndex(GetAsUnsignedConstant());
+    CurrentElement->setCallFilenameIndex(IncrementFileIndex
+                                             ? GetAsUnsignedConstant() + 1
+                                             : GetAsUnsignedConstant());
     break;
   case dwarf::DW_AT_call_line:
-    CurrentElement->setCallLineNumber(IncrementFileIndex
-                                          ? GetAsUnsignedConstant() + 1
-                                          : GetAsUnsignedConstant());
+    CurrentElement->setCallLineNumber(GetAsUnsignedConstant());
     break;
   case dwarf::DW_AT_comp_dir:
     CompileUnit->setCompilationDirectory(dwarf::toStringRef(FormValue));

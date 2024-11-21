@@ -2,25 +2,6 @@
 # RUN: llc -mtriple=riscv32 -run-pass=instruction-select %s -o - \
 # RUN: | FileCheck %s
 
---- |
-  define void @load_i8(ptr %addr) { ret void }
-  define void @load_i16(ptr %addr) { ret void }
-  define void @load_i32(ptr %addr) { ret void }
-  define void @zextload_i8(ptr %addr) { ret void }
-  define void @zextload_i16(ptr %addr) { ret void }
-  define void @sextload_i8(ptr %addr) { ret void }
-  define void @sextload_i16(ptr %addr) { ret void }
-  define void @load_p0(ptr %addr) { ret void }
-  define void @load_fi_i32() {
-    %ptr0 = alloca i32
-    ret void
-  }
-  define void @load_fi_gep_i32() {
-    %ptr0 = alloca [2 x i32]
-    ret void
-  }
-  define void @load_gep_i32(ptr %addr) { ret void }
-...
 ---
 name:            load_i8
 legalized:       true
@@ -204,15 +185,15 @@ regBankSelected: true
 tracksRegLiveness: true
 
 stack:
-  - { id: 0, name: ptr0, offset: 0, size: 4, alignment: 4 }
+  - { id: 0, offset: 0, size: 4, alignment: 4 }
 
 body:            |
   bb.0:
     ; CHECK-LABEL: name: load_fi_i32
-    ; CHECK: [[LW:%[0-9]+]]:gpr = LW %stack.0.ptr0, 0 :: (load (s32))
+    ; CHECK: [[LW:%[0-9]+]]:gpr = LW %stack.0, 0 :: (load (s32))
     ; CHECK-NEXT: $x10 = COPY [[LW]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(p0) = G_FRAME_INDEX %stack.0.ptr0
+    %0:gprb(p0) = G_FRAME_INDEX %stack.0
     %1:gprb(s32) = G_LOAD %0(p0) :: (load (s32))
     $x10 = COPY %1(s32)
     PseudoRET implicit $x10
@@ -225,15 +206,15 @@ regBankSelected: true
 tracksRegLiveness: true
 
 stack:
-  - { id: 0, name: ptr0, offset: 0, size: 8, alignment: 4 }
+  - { id: 0, offset: 0, size: 8, alignment: 4 }
 
 body:            |
   bb.0:
     ; CHECK-LABEL: name: load_fi_gep_i32
-    ; CHECK: [[LW:%[0-9]+]]:gpr = LW %stack.0.ptr0, 4 :: (load (s32))
+    ; CHECK: [[LW:%[0-9]+]]:gpr = LW %stack.0, 4 :: (load (s32))
     ; CHECK-NEXT: $x10 = COPY [[LW]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(p0) = G_FRAME_INDEX %stack.0.ptr0
+    %0:gprb(p0) = G_FRAME_INDEX %stack.0
     %1:gprb(s32) = G_CONSTANT i32 4
     %2:gprb(p0) = G_PTR_ADD %0(p0), %1(s32)
     %3:gprb(s32) = G_LOAD %2(p0) :: (load (s32))

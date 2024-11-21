@@ -468,7 +468,6 @@ public:
     /// Callback before changing MCInstrDesc. This should not modify the MI
     /// directly.
     virtual void MF_HandleChangeDesc(MachineInstr &MI, const MCInstrDesc &TID) {
-      return;
     }
   };
 
@@ -867,6 +866,10 @@ public:
   /// specific MachineBasicBlock is specified, only that block and those after
   /// it are renumbered.
   void RenumberBlocks(MachineBasicBlock *MBBFrom = nullptr);
+
+  /// Return an estimate of the function's code size,
+  /// taking into account block and function alignment
+  int64_t estimateFunctionSizeInBytes();
 
   /// print - Print out the MachineFunction in a format suitable for debugging
   /// to the specified stream.

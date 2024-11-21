@@ -598,11 +598,14 @@ llvm::LogicalResult VariableAssignBufferization::matchAndRewrite(
     return rewriter.notifyMatchFailure(assign, "AssignOp may imply allocation");
 
   hlfir::Entity rhs{assign.getRhs()};
-  // TODO: ExprType check is here to avoid conflicts with
-  // ElementalAssignBufferization pattern. We need to combine
-  // these matchers into a single one that applies to AssignOp.
-  if (mlir::isa<hlfir::ExprType>(rhs.getType()))
-    return rewriter.notifyMatchFailure(assign, "RHS is not in memory");
+
+  // To avoid conflicts with ElementalAssignBufferization pattern, we avoid
+  // matching RHS when it is an `ExprType` defined by an `ElementalOp`; which is
+  // among the main criteria matched by ElementalAssignBufferization.
+  if (mlir::isa<hlfir::ExprType>(rhs.getType()) &&
+      mlir::isa<hlfir::ElementalOp>(rhs.getDefiningOp()))
+    return rewriter.notifyMatchFailure(
+        assign, "RHS is an ExprType defined by ElementalOp");
 
   if (!rhs.isArray())
     return rewriter.notifyMatchFailure(assign,

@@ -16,6 +16,7 @@
 #include <__algorithm/upper_bound.h>
 #include <__atomic/atomic.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__exception/terminate.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/move_iterator.h>
@@ -37,7 +38,6 @@
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
-#include <cstddef>
 #include <new>
 #include <optional>
 

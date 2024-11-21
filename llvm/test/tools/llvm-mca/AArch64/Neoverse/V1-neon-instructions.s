@@ -1373,17 +1373,17 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      2     0.25                        fcmlt	d20, d21, #0.0
 # CHECK-NEXT:  1      2     0.25                        fcmlt	s10, s11, #0.0
 # CHECK-NEXT:  1      2     0.25                        fcmlt	v0.4s, v0.4s, #0.0
-# CHECK-NEXT:  1      2     0.25                        fcvtas	d21, d14
-# CHECK-NEXT:  1      2     0.25                        fcvtas	s12, s13
-# CHECK-NEXT:  1      2     0.25                        fcvtas	h12, h13
+# CHECK-NEXT:  1      3     0.50                        fcvtas	d21, d14
+# CHECK-NEXT:  2      4     1.00                        fcvtas	s12, s13
+# CHECK-NEXT:  4      6     1.00                        fcvtas	h12, h13
 # CHECK-NEXT:  1      3     0.50                        fcvtas	v0.2d, v0.2d
 # CHECK-NEXT:  1      3     0.50                        fcvtas	v0.2s, v0.2s
 # CHECK-NEXT:  2      4     1.00                        fcvtas	v0.4h, v0.4h
 # CHECK-NEXT:  2      4     1.00                        fcvtas	v0.4s, v0.4s
 # CHECK-NEXT:  4      6     1.00                        fcvtas	v0.8h, v0.8h
-# CHECK-NEXT:  1      2     0.25                        fcvtau	d21, d14
-# CHECK-NEXT:  1      2     0.25                        fcvtau	s12, s13
-# CHECK-NEXT:  1      2     0.25                        fcvtau	h12, h13
+# CHECK-NEXT:  1      3     0.50                        fcvtau	d21, d14
+# CHECK-NEXT:  2      4     1.00                        fcvtau	s12, s13
+# CHECK-NEXT:  4      6     1.00                        fcvtau	h12, h13
 # CHECK-NEXT:  1      3     0.50                        fcvtau	v0.2d, v0.2d
 # CHECK-NEXT:  1      3     0.50                        fcvtau	v0.2s, v0.2s
 # CHECK-NEXT:  2      4     1.00                        fcvtau	v0.4h, v0.4h
@@ -1393,17 +1393,17 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  2      4     1.00                        fcvtl	v0.4s, v0.4h
 # CHECK-NEXT:  1      3     0.50                        fcvtl2	v0.2d, v0.4s
 # CHECK-NEXT:  2      4     1.00                        fcvtl2	v0.4s, v0.8h
-# CHECK-NEXT:  1      2     0.25                        fcvtms	d21, d14
-# CHECK-NEXT:  1      2     0.25                        fcvtms	s22, s13
-# CHECK-NEXT:  1      2     0.25                        fcvtms	h22, h13
+# CHECK-NEXT:  1      3     0.50                        fcvtms	d21, d14
+# CHECK-NEXT:  2      4     1.00                        fcvtms	s22, s13
+# CHECK-NEXT:  4      6     1.00                        fcvtms	h22, h13
 # CHECK-NEXT:  1      3     0.50                        fcvtms	v0.2d, v0.2d
 # CHECK-NEXT:  1      3     0.50                        fcvtms	v0.2s, v0.2s
 # CHECK-NEXT:  2      4     1.00                        fcvtms	v0.4h, v0.4h
 # CHECK-NEXT:  2      4     1.00                        fcvtms	v0.4s, v0.4s
 # CHECK-NEXT:  4      6     1.00                        fcvtms	v0.8h, v0.8h
-# CHECK-NEXT:  1      2     0.25                        fcvtmu	d21, d14
-# CHECK-NEXT:  1      2     0.25                        fcvtmu	s12, s13
-# CHECK-NEXT:  1      2     0.25                        fcvtmu	h12, h13
+# CHECK-NEXT:  1      3     0.50                        fcvtmu	d21, d14
+# CHECK-NEXT:  2      4     1.00                        fcvtmu	s12, s13
+# CHECK-NEXT:  4      6     1.00                        fcvtmu	h12, h13
 # CHECK-NEXT:  1      3     0.50                        fcvtmu	v0.2d, v0.2d
 # CHECK-NEXT:  1      3     0.50                        fcvtmu	v0.2s, v0.2s
 # CHECK-NEXT:  2      4     1.00                        fcvtmu	v0.4h, v0.4h
@@ -1413,33 +1413,33 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  2      4     1.00                        fcvtn	v0.4h, v0.4s
 # CHECK-NEXT:  1      3     0.50                        fcvtn2	v0.4s, v0.2d
 # CHECK-NEXT:  2      4     1.00                        fcvtn2	v0.8h, v0.4s
-# CHECK-NEXT:  1      2     0.25                        fcvtns	d21, d14
-# CHECK-NEXT:  1      2     0.25                        fcvtns	s22, s13
-# CHECK-NEXT:  1      2     0.25                        fcvtns	h22, h13
+# CHECK-NEXT:  1      3     0.50                        fcvtns	d21, d14
+# CHECK-NEXT:  2      4     1.00                        fcvtns	s22, s13
+# CHECK-NEXT:  4      6     1.00                        fcvtns	h22, h13
 # CHECK-NEXT:  1      3     0.50                        fcvtns	v0.2d, v0.2d
 # CHECK-NEXT:  1      3     0.50                        fcvtns	v0.2s, v0.2s
 # CHECK-NEXT:  2      4     1.00                        fcvtns	v0.4h, v0.4h
 # CHECK-NEXT:  2      4     1.00                        fcvtns	v0.4s, v0.4s
 # CHECK-NEXT:  4      6     1.00                        fcvtns	v0.8h, v0.8h
-# CHECK-NEXT:  1      2     0.25                        fcvtnu	d21, d14
-# CHECK-NEXT:  1      2     0.25                        fcvtnu	s12, s13
-# CHECK-NEXT:  1      2     0.25                        fcvtnu	h12, h13
+# CHECK-NEXT:  1      3     0.50                        fcvtnu	d21, d14
+# CHECK-NEXT:  2      4     1.00                        fcvtnu	s12, s13
+# CHECK-NEXT:  4      6     1.00                        fcvtnu	h12, h13
 # CHECK-NEXT:  1      3     0.50                        fcvtnu	v0.2d, v0.2d
 # CHECK-NEXT:  1      3     0.50                        fcvtnu	v0.2s, v0.2s
 # CHECK-NEXT:  2      4     1.00                        fcvtnu	v0.4h, v0.4h
 # CHECK-NEXT:  2      4     1.00                        fcvtnu	v0.4s, v0.4s
 # CHECK-NEXT:  4      6     1.00                        fcvtnu	v0.8h, v0.8h
-# CHECK-NEXT:  1      2     0.25                        fcvtps	d21, d14
-# CHECK-NEXT:  1      2     0.25                        fcvtps	s22, s13
-# CHECK-NEXT:  1      2     0.25                        fcvtps	h22, h13
+# CHECK-NEXT:  1      3     0.50                        fcvtps	d21, d14
+# CHECK-NEXT:  2      4     1.00                        fcvtps	s22, s13
+# CHECK-NEXT:  4      6     1.00                        fcvtps	h22, h13
 # CHECK-NEXT:  1      3     0.50                        fcvtps	v0.2d, v0.2d
 # CHECK-NEXT:  1      3     0.50                        fcvtps	v0.2s, v0.2s
 # CHECK-NEXT:  2      4     1.00                        fcvtps	v0.4h, v0.4h
 # CHECK-NEXT:  2      4     1.00                        fcvtps	v0.4s, v0.4s
 # CHECK-NEXT:  4      6     1.00                        fcvtps	v0.8h, v0.8h
-# CHECK-NEXT:  1      2     0.25                        fcvtpu	d21, d14
-# CHECK-NEXT:  1      2     0.25                        fcvtpu	s12, s13
-# CHECK-NEXT:  1      2     0.25                        fcvtpu	h12, h13
+# CHECK-NEXT:  1      3     0.50                        fcvtpu	d21, d14
+# CHECK-NEXT:  2      4     1.00                        fcvtpu	s12, s13
+# CHECK-NEXT:  4      6     1.00                        fcvtpu	h12, h13
 # CHECK-NEXT:  1      3     0.50                        fcvtpu	v0.2d, v0.2d
 # CHECK-NEXT:  1      3     0.50                        fcvtpu	v0.2s, v0.2s
 # CHECK-NEXT:  2      4     1.00                        fcvtpu	v0.4h, v0.4h
@@ -1448,33 +1448,33 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      3     0.50                        fcvtxn	s22, d13
 # CHECK-NEXT:  1      3     0.50                        fcvtxn	v0.2s, v0.2d
 # CHECK-NEXT:  1      3     0.50                        fcvtxn2	v0.4s, v0.2d
-# CHECK-NEXT:  1      2     0.25                        fcvtzs	d21, d12, #1
-# CHECK-NEXT:  1      2     0.25                        fcvtzs	d21, d14
-# CHECK-NEXT:  1      2     0.25                        fcvtzs	s12, s13
-# CHECK-NEXT:  1      2     0.25                        fcvtzs	s21, s12, #1
-# CHECK-NEXT:  1      2     0.25                        fcvtzs	h21, h14
-# CHECK-NEXT:  1      2     0.25                        fcvtzs	h21, h12, #1
+# CHECK-NEXT:  1      3     0.50                        fcvtzs	d21, d12, #1
+# CHECK-NEXT:  1      3     0.50                        fcvtzs	d21, d14
+# CHECK-NEXT:  2      4     1.00                        fcvtzs	s12, s13
+# CHECK-NEXT:  2      4     1.00                        fcvtzs	s21, s12, #1
+# CHECK-NEXT:  4      6     1.00                        fcvtzs	h21, h14
+# CHECK-NEXT:  4      6     1.00                        fcvtzs	h21, h12, #1
 # CHECK-NEXT:  1      3     0.50                        fcvtzs	v0.2d, v0.2d
-# CHECK-NEXT:  1      2     0.25                        fcvtzs	v0.2d, v0.2d, #3
+# CHECK-NEXT:  1      3     0.50                        fcvtzs	v0.2d, v0.2d, #3
 # CHECK-NEXT:  1      3     0.50                        fcvtzs	v0.2s, v0.2s
-# CHECK-NEXT:  1      2     0.25                        fcvtzs	v0.2s, v0.2s, #3
+# CHECK-NEXT:  1      3     0.50                        fcvtzs	v0.2s, v0.2s, #3
 # CHECK-NEXT:  2      4     1.00                        fcvtzs	v0.4h, v0.4h
 # CHECK-NEXT:  2      4     1.00                        fcvtzs	v0.4s, v0.4s
-# CHECK-NEXT:  1      2     0.25                        fcvtzs	v0.4s, v0.4s, #3
+# CHECK-NEXT:  2      4     1.00                        fcvtzs	v0.4s, v0.4s, #3
 # CHECK-NEXT:  4      6     1.00                        fcvtzs	v0.8h, v0.8h
-# CHECK-NEXT:  1      2     0.25                        fcvtzu	d21, d12, #1
-# CHECK-NEXT:  1      2     0.25                        fcvtzu	d21, d14
-# CHECK-NEXT:  1      2     0.25                        fcvtzu	s12, s13
-# CHECK-NEXT:  1      2     0.25                        fcvtzu	s21, s12, #1
-# CHECK-NEXT:  1      2     0.25                        fcvtzu	h12, h13
-# CHECK-NEXT:  1      2     0.25                        fcvtzu	h21, h12, #1
+# CHECK-NEXT:  1      3     0.50                        fcvtzu	d21, d12, #1
+# CHECK-NEXT:  1      3     0.50                        fcvtzu	d21, d14
+# CHECK-NEXT:  2      4     1.00                        fcvtzu	s12, s13
+# CHECK-NEXT:  2      4     1.00                        fcvtzu	s21, s12, #1
+# CHECK-NEXT:  4      6     1.00                        fcvtzu	h12, h13
+# CHECK-NEXT:  4      6     1.00                        fcvtzu	h21, h12, #1
 # CHECK-NEXT:  1      3     0.50                        fcvtzu	v0.2d, v0.2d
-# CHECK-NEXT:  1      2     0.25                        fcvtzu	v0.2d, v0.2d, #3
+# CHECK-NEXT:  1      3     0.50                        fcvtzu	v0.2d, v0.2d, #3
 # CHECK-NEXT:  1      3     0.50                        fcvtzu	v0.2s, v0.2s
-# CHECK-NEXT:  1      2     0.25                        fcvtzu	v0.2s, v0.2s, #3
+# CHECK-NEXT:  1      3     0.50                        fcvtzu	v0.2s, v0.2s, #3
 # CHECK-NEXT:  2      4     1.00                        fcvtzu	v0.4h, v0.4h
 # CHECK-NEXT:  2      4     1.00                        fcvtzu	v0.4s, v0.4s
-# CHECK-NEXT:  1      2     0.25                        fcvtzu	v0.4s, v0.4s, #3
+# CHECK-NEXT:  2      4     1.00                        fcvtzu	v0.4s, v0.4s, #3
 # CHECK-NEXT:  4      6     1.00                        fcvtzu	v0.8h, v0.8h
 # CHECK-NEXT:  1      15    3.50                        fdiv	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT:  1      10    3.50                        fdiv	v0.2s, v0.2s, v0.2s
@@ -1768,17 +1768,17 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      2     0.25                        saddw2	v0.2d, v0.2d, v0.4s
 # CHECK-NEXT:  1      2     0.25                        saddw2	v0.4s, v0.4s, v0.8h
 # CHECK-NEXT:  1      2     0.25                        saddw2	v0.8h, v0.8h, v0.16b
-# CHECK-NEXT:  1      2     0.25                        scvtf	d21, d12
-# CHECK-NEXT:  1      2     0.25                        scvtf	d21, d12, #64
-# CHECK-NEXT:  1      2     0.25                        scvtf	s22, s13
-# CHECK-NEXT:  1      2     0.25                        scvtf	s22, s13, #32
+# CHECK-NEXT:  1      3     0.50                        scvtf	d21, d12
+# CHECK-NEXT:  1      3     0.50                        scvtf	d21, d12, #64
+# CHECK-NEXT:  2      4     1.00                        scvtf	s22, s13
+# CHECK-NEXT:  2      4     1.00                        scvtf	s22, s13, #32
 # CHECK-NEXT:  1      3     0.50                        scvtf	v0.2d, v0.2d
-# CHECK-NEXT:  1      2     0.25                        scvtf	v0.2d, v0.2d, #3
+# CHECK-NEXT:  1      3     0.50                        scvtf	v0.2d, v0.2d, #3
 # CHECK-NEXT:  1      3     0.50                        scvtf	v0.2s, v0.2s
-# CHECK-NEXT:  1      2     0.25                        scvtf	v0.2s, v0.2s, #3
+# CHECK-NEXT:  1      3     0.50                        scvtf	v0.2s, v0.2s, #3
 # CHECK-NEXT:  2      4     1.00                        scvtf	v0.4h, v0.4h
 # CHECK-NEXT:  2      4     1.00                        scvtf	v0.4s, v0.4s
-# CHECK-NEXT:  1      2     0.25                        scvtf	v0.4s, v0.4s, #3
+# CHECK-NEXT:  2      4     1.00                        scvtf	v0.4s, v0.4s, #3
 # CHECK-NEXT:  4      6     1.00                        scvtf	v0.8h, v0.8h
 # CHECK-NEXT:  1      3     0.25                        sdot	v0.2s, v0.8b, v0.4b[2]
 # CHECK-NEXT:  1      3     0.25                        sdot	v0.2s, v0.8b, v0.8b
@@ -2210,17 +2210,17 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      2     0.25                        uaddw2	v0.2d, v0.2d, v0.4s
 # CHECK-NEXT:  1      2     0.25                        uaddw2	v0.4s, v0.4s, v0.8h
 # CHECK-NEXT:  1      2     0.25                        uaddw2	v0.8h, v0.8h, v0.16b
-# CHECK-NEXT:  1      2     0.25                        ucvtf	d21, d14
-# CHECK-NEXT:  1      2     0.25                        ucvtf	d21, d14, #64
-# CHECK-NEXT:  1      2     0.25                        ucvtf	s22, s13
-# CHECK-NEXT:  1      2     0.25                        ucvtf	s22, s13, #32
+# CHECK-NEXT:  1      3     0.50                        ucvtf	d21, d14
+# CHECK-NEXT:  1      3     0.50                        ucvtf	d21, d14, #64
+# CHECK-NEXT:  2      4     1.00                        ucvtf	s22, s13
+# CHECK-NEXT:  2      4     1.00                        ucvtf	s22, s13, #32
 # CHECK-NEXT:  1      3     0.50                        ucvtf	v0.2d, v0.2d
-# CHECK-NEXT:  1      2     0.25                        ucvtf	v0.2d, v0.2d, #3
+# CHECK-NEXT:  1      3     0.50                        ucvtf	v0.2d, v0.2d, #3
 # CHECK-NEXT:  1      3     0.50                        ucvtf	v0.2s, v0.2s
-# CHECK-NEXT:  1      2     0.25                        ucvtf	v0.2s, v0.2s, #3
+# CHECK-NEXT:  1      3     0.50                        ucvtf	v0.2s, v0.2s, #3
 # CHECK-NEXT:  2      4     1.00                        ucvtf	v0.4h, v0.4h
 # CHECK-NEXT:  2      4     1.00                        ucvtf	v0.4s, v0.4s
-# CHECK-NEXT:  1      2     0.25                        ucvtf	v0.4s, v0.4s, #3
+# CHECK-NEXT:  2      4     1.00                        ucvtf	v0.4s, v0.4s, #3
 # CHECK-NEXT:  4      6     1.00                        ucvtf	v0.8h, v0.8h
 # CHECK-NEXT:  1      3     0.25                        udot	v0.2s, v0.8b, v0.4b[2]
 # CHECK-NEXT:  1      3     0.25                        udot	v0.2s, v0.8b, v0.8b
@@ -2465,7 +2465,7 @@ zip2 v0.8h, v0.8h, v0.8h
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]    [9]    [10]
-# CHECK-NEXT:  -      -      -      -     26.67  49.17  49.17  18.75  7.75   7.75   7.75   401.00 370.50 355.50 325.00
+# CHECK-NEXT:  -      -      -      -     26.67  49.17  49.17  18.75  7.75   7.75   7.75   431.00 356.50 385.50 311.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]    [9]    [10]   Instructions:
@@ -2614,17 +2614,17 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcmlt	d20, d21, #0.0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcmlt	s10, s11, #0.0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcmlt	v0.4s, v0.4s, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtas	d21, d14
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtas	s12, s13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtas	h12, h13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtas	d21, d14
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtas	s12, s13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtas	h12, h13
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtas	v0.2d, v0.2d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtas	v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtas	v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtas	v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtas	v0.8h, v0.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtau	d21, d14
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtau	s12, s13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtau	h12, h13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtau	d21, d14
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtau	s12, s13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtau	h12, h13
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtau	v0.2d, v0.2d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtau	v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtau	v0.4h, v0.4h
@@ -2634,17 +2634,17 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtl	v0.4s, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtl2	v0.2d, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtl2	v0.4s, v0.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtms	d21, d14
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtms	s22, s13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtms	h22, h13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtms	d21, d14
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtms	s22, s13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtms	h22, h13
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtms	v0.2d, v0.2d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtms	v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtms	v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtms	v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtms	v0.8h, v0.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtmu	d21, d14
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtmu	s12, s13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtmu	h12, h13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtmu	d21, d14
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtmu	s12, s13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtmu	h12, h13
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtmu	v0.2d, v0.2d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtmu	v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtmu	v0.4h, v0.4h
@@ -2654,33 +2654,33 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtn	v0.4h, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtn2	v0.4s, v0.2d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtn2	v0.8h, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtns	d21, d14
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtns	s22, s13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtns	h22, h13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtns	d21, d14
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtns	s22, s13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtns	h22, h13
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtns	v0.2d, v0.2d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtns	v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtns	v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtns	v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtns	v0.8h, v0.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtnu	d21, d14
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtnu	s12, s13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtnu	h12, h13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtnu	d21, d14
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtnu	s12, s13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtnu	h12, h13
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtnu	v0.2d, v0.2d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtnu	v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtnu	v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtnu	v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtnu	v0.8h, v0.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtps	d21, d14
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtps	s22, s13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtps	h22, h13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtps	d21, d14
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtps	s22, s13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtps	h22, h13
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtps	v0.2d, v0.2d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtps	v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtps	v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtps	v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtps	v0.8h, v0.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtpu	d21, d14
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtpu	s12, s13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtpu	h12, h13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtpu	d21, d14
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtpu	s12, s13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtpu	h12, h13
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtpu	v0.2d, v0.2d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtpu	v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtpu	v0.4h, v0.4h
@@ -2689,33 +2689,33 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtxn	s22, d13
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtxn	v0.2s, v0.2d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtxn2	v0.4s, v0.2d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtzs	d21, d12, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtzs	d21, d14
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtzs	s12, s13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtzs	s21, s12, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtzs	h21, h14
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtzs	h21, h12, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzs	d21, d12, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzs	d21, d14
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtzs	s12, s13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtzs	s21, s12, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtzs	h21, h14
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtzs	h21, h12, #1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzs	v0.2d, v0.2d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtzs	v0.2d, v0.2d, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzs	v0.2d, v0.2d, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzs	v0.2s, v0.2s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtzs	v0.2s, v0.2s, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzs	v0.2s, v0.2s, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtzs	v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtzs	v0.4s, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtzs	v0.4s, v0.4s, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtzs	v0.4s, v0.4s, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtzs	v0.8h, v0.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtzu	d21, d12, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtzu	d21, d14
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtzu	s12, s13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtzu	s21, s12, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtzu	h12, h13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtzu	h21, h12, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzu	d21, d12, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzu	d21, d14
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtzu	s12, s13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtzu	s21, s12, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtzu	h12, h13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtzu	h21, h12, #1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzu	v0.2d, v0.2d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtzu	v0.2d, v0.2d, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzu	v0.2d, v0.2d, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzu	v0.2s, v0.2s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtzu	v0.2s, v0.2s, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzu	v0.2s, v0.2s, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtzu	v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtzu	v0.4s, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcvtzu	v0.4s, v0.4s, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtzu	v0.4s, v0.4s, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     fcvtzu	v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     3.50    -     3.50    -     fdiv	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     3.50    -     3.50    -     fdiv	v0.2s, v0.2s, v0.2s
@@ -3009,17 +3009,17 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   saddw2	v0.2d, v0.2d, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   saddw2	v0.4s, v0.4s, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   saddw2	v0.8h, v0.8h, v0.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   scvtf	d21, d12
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   scvtf	d21, d12, #64
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   scvtf	s22, s13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   scvtf	s22, s13, #32
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     scvtf	d21, d12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     scvtf	d21, d12, #64
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     scvtf	s22, s13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     scvtf	s22, s13, #32
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     scvtf	v0.2d, v0.2d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   scvtf	v0.2d, v0.2d, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     scvtf	v0.2d, v0.2d, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     scvtf	v0.2s, v0.2s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   scvtf	v0.2s, v0.2s, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     scvtf	v0.2s, v0.2s, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     scvtf	v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     scvtf	v0.4s, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   scvtf	v0.4s, v0.4s, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     scvtf	v0.4s, v0.4s, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     scvtf	v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   sdot	v0.2s, v0.8b, v0.4b[2]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   sdot	v0.2s, v0.8b, v0.8b
@@ -3451,17 +3451,17 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   uaddw2	v0.2d, v0.2d, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   uaddw2	v0.4s, v0.4s, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   uaddw2	v0.8h, v0.8h, v0.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   ucvtf	d21, d14
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   ucvtf	d21, d14, #64
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   ucvtf	s22, s13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   ucvtf	s22, s13, #32
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     ucvtf	d21, d14
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     ucvtf	d21, d14, #64
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     ucvtf	s22, s13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     ucvtf	s22, s13, #32
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     ucvtf	v0.2d, v0.2d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   ucvtf	v0.2d, v0.2d, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     ucvtf	v0.2d, v0.2d, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     ucvtf	v0.2s, v0.2s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   ucvtf	v0.2s, v0.2s, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     ucvtf	v0.2s, v0.2s, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     ucvtf	v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     ucvtf	v0.4s, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   ucvtf	v0.4s, v0.4s, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     ucvtf	v0.4s, v0.4s, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     ucvtf	v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   udot	v0.2s, v0.8b, v0.4b[2]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   udot	v0.2s, v0.8b, v0.8b

@@ -22,6 +22,7 @@
 #include <cassert>
 #include <shared_mutex>
 #include <thread>
+#include <type_traits>
 #include <vector>
 
 #include "make_test_thread.h"

@@ -222,6 +222,13 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
     case DW_TAG_variable:
       break;
 
+    case DW_TAG_member:
+      // Only in DWARF 4 and earlier `static const` members of a struct, a class
+      // or a union have an entry tag `DW_TAG_member`
+      if (unit.GetVersion() >= 5)
+        continue;
+      break;
+
     default:
       continue;
     }
@@ -362,6 +369,18 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
         set.namespaces.Insert(ConstString(name), ref);
       break;
 
+    case DW_TAG_member: {
+      // In DWARF 4 and earlier `static const` members of a struct, a class or a
+      // union have an entry tag `DW_TAG_member`, and are also tagged as
+      // `DW_AT_declaration`, but otherwise follow the same rules as
+      // `DW_TAG_variable`.
+      bool parent_is_class_type = false;
+      if (auto parent = die.GetParent())
+        parent_is_class_type = DWARFDIE(&unit, parent).IsStructUnionOrClass();
+      if (!parent_is_class_type || !is_declaration)
+        break;
+      [[fallthrough]];
+    }
     case DW_TAG_variable:
       if (name && has_location_or_const_value && is_global_or_static_variable) {
         set.globals.Insert(ConstString(name), ref);

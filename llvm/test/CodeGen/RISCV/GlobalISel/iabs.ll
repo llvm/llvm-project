@@ -17,8 +17,7 @@ define i8 @abs8(i8 %x) {
 ; RV32I-LABEL: abs8:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a1, a0, 24
-; RV32I-NEXT:    srai a1, a1, 24
-; RV32I-NEXT:    srai a1, a1, 7
+; RV32I-NEXT:    srai a1, a1, 31
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    xor a0, a0, a1
 ; RV32I-NEXT:    ret
@@ -32,10 +31,9 @@ define i8 @abs8(i8 %x) {
 ;
 ; RV64I-LABEL: abs8:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 24
-; RV64I-NEXT:    sraiw a1, a1, 24
-; RV64I-NEXT:    sraiw a1, a1, 7
-; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    slli a1, a0, 56
+; RV64I-NEXT:    srai a1, a1, 63
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -53,8 +51,7 @@ define i16 @abs16(i16 %x) {
 ; RV32I-LABEL: abs16:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a1, a0, 16
-; RV32I-NEXT:    srai a1, a1, 16
-; RV32I-NEXT:    srai a1, a1, 15
+; RV32I-NEXT:    srai a1, a1, 31
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    xor a0, a0, a1
 ; RV32I-NEXT:    ret
@@ -68,10 +65,9 @@ define i16 @abs16(i16 %x) {
 ;
 ; RV64I-LABEL: abs16:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 16
-; RV64I-NEXT:    sraiw a1, a1, 16
-; RV64I-NEXT:    sraiw a1, a1, 15
-; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    slli a1, a0, 48
+; RV64I-NEXT:    srai a1, a1, 63
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -102,14 +98,14 @@ define i32 @abs32(i32 %x) {
 ; RV64I-LABEL: abs32:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sraiw a1, a0, 31
-; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: abs32:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    negw a1, a0
 ; RV64ZBB-NEXT:    sext.w a0, a0
+; RV64ZBB-NEXT:    neg a1, a0
 ; RV64ZBB-NEXT:    max a0, a0, a1
 ; RV64ZBB-NEXT:    ret
   %abs = tail call i32 @llvm.abs.i32(i32 %x, i1 true)

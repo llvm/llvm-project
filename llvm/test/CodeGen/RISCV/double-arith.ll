@@ -844,8 +844,7 @@ define double @fnmadd_d_3(double %a, double %b, double %c) nounwind {
 ; RV32IZFINXZDINX-LABEL: fnmadd_d_3:
 ; RV32IZFINXZDINX:       # %bb.0:
 ; RV32IZFINXZDINX-NEXT:    fmadd.d a0, a0, a2, a4
-; RV32IZFINXZDINX-NEXT:    lui a2, 524288
-; RV32IZFINXZDINX-NEXT:    xor a1, a1, a2
+; RV32IZFINXZDINX-NEXT:    fneg.d a0, a0
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fnmadd_d_3:
@@ -890,9 +889,7 @@ define double @fnmadd_nsz(double %a, double %b, double %c) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fnmadd_nsz:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    fmadd.d a0, a0, a2, a4
-; RV32IZFINXZDINX-NEXT:    lui a2, 524288
-; RV32IZFINXZDINX-NEXT:    xor a1, a1, a2
+; RV32IZFINXZDINX-NEXT:    fnmadd.d a0, a0, a2, a4
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fnmadd_nsz:

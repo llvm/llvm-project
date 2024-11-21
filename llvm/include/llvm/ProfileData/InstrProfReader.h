@@ -669,7 +669,8 @@ public:
 class IndexedMemProfReader {
 private:
   /// The MemProf version.
-  memprof::IndexedVersion Version = memprof::Version0;
+  memprof::IndexedVersion Version =
+      static_cast<memprof::IndexedVersion>(memprof::MinimumSupportedVersion);
   /// MemProf profile schema (if available).
   memprof::MemProfSchema Schema;
   /// MemProf record profile data on-disk indexed via llvm::md5(FunctionName).
@@ -694,6 +695,9 @@ public:
 
   Expected<memprof::MemProfRecord>
   getMemProfRecord(const uint64_t FuncNameHash) const;
+
+  DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>>
+  getMemProfCallerCalleePairs() const;
 };
 
 /// Reader for the indexed binary instrprof format.
@@ -790,6 +794,11 @@ public:
   /// llvm::md5(Name).
   Expected<memprof::MemProfRecord> getMemProfRecord(uint64_t FuncNameHash) {
     return MemProfReader.getMemProfRecord(FuncNameHash);
+  }
+
+  DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>>
+  getMemProfCallerCalleePairs() {
+    return MemProfReader.getMemProfCallerCalleePairs();
   }
 
   /// Fill Counts with the profile data for the given function name.

@@ -701,16 +701,15 @@ Error ObjectLinkingLayer::handleRemoveResources(JITDylib &JD, ResourceKey K) {
 void ObjectLinkingLayer::handleTransferResources(JITDylib &JD,
                                                  ResourceKey DstKey,
                                                  ResourceKey SrcKey) {
-  auto I = Allocs.find(SrcKey);
-  if (I != Allocs.end()) {
-    auto &SrcAllocs = I->second;
+  if (Allocs.contains(SrcKey)) {
+    // DstKey may not be in the DenseMap yet, so the following line may resize
+    // the container and invalidate iterators and value references.
     auto &DstAllocs = Allocs[DstKey];
+    auto &SrcAllocs = Allocs[SrcKey];
     DstAllocs.reserve(DstAllocs.size() + SrcAllocs.size());
     for (auto &Alloc : SrcAllocs)
       DstAllocs.push_back(std::move(Alloc));
 
-    // Erase SrcKey entry using value rather than iterator I: I may have been
-    // invalidated when we looked up DstKey.
     Allocs.erase(SrcKey);
   }
 

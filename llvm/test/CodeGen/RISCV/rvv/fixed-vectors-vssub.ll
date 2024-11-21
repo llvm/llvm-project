@@ -448,6 +448,7 @@ define <2 x i64> @ssub_v2i64_vx(<2 x i64> %va, i64 %b) {
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
 ; RV32-NEXT:    vssub.vv v8, v8, v9
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ssub_v2i64_vx:
@@ -496,6 +497,7 @@ define <4 x i64> @ssub_v4i64_vx(<4 x i64> %va, i64 %b) {
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
 ; RV32-NEXT:    vssub.vv v8, v8, v10
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ssub_v4i64_vx:
@@ -544,6 +546,7 @@ define <8 x i64> @ssub_v8i64_vx(<8 x i64> %va, i64 %b) {
 ; RV32-NEXT:    vlse64.v v12, (a0), zero
 ; RV32-NEXT:    vssub.vv v8, v8, v12
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ssub_v8i64_vx:
@@ -592,6 +595,7 @@ define <16 x i64> @ssub_v16i64_vx(<16 x i64> %va, i64 %b) {
 ; RV32-NEXT:    vlse64.v v16, (a0), zero
 ; RV32-NEXT:    vssub.vv v8, v8, v16
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ssub_v16i64_vx:

@@ -182,6 +182,12 @@ static bool ShouldDiagnoseAvailabilityInContext(
       return false;
   }
 
+  if (K == AR_Deprecated) {
+    if (const auto *VD = dyn_cast<VarDecl>(OffendingDecl))
+      if (VD->isLocalVarDeclOrParm() && VD->isDeprecated())
+        return true;
+  }
+
   // Checks if we should emit the availability diagnostic in the context of C.
   auto CheckContext = [&](const Decl *C) {
     if (K == AR_NotYetIntroduced) {

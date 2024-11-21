@@ -5536,6 +5536,7 @@ define void @mulhu_vx_v2i64(ptr %x) {
 ; RV32-NEXT:    vsrl.vi v8, v8, 1
 ; RV32-NEXT:    vse64.v v8, (a0)
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: mulhu_vx_v2i64:
@@ -5643,6 +5644,7 @@ define void @mulhs_vx_v2i64(ptr %x) {
 ; RV32-NEXT:    vadd.vv v8, v8, v9
 ; RV32-NEXT:    vse64.v v8, (a0)
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: mulhs_vx_v2i64:

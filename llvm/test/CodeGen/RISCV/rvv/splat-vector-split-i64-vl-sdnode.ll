@@ -79,6 +79,7 @@ define i32 @splat_vector_split_i64() {
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 3
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
     %1 = insertelement <vscale x 2 x i64> zeroinitializer, i64 3, i64 3
     %2 = tail call <vscale x 2 x i64> @llvm.bitreverse.nxv2i64(<vscale x 2 x i64> %1)

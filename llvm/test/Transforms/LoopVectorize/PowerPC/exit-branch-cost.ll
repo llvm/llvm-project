@@ -33,13 +33,13 @@ define i1 @select_exit_cond(ptr %start, ptr %end, i64 %N) {
 ; CHECK-NEXT:    [[VEC_PHI15:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP48:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI16:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP49:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI17:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP50:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
-; CHECK-NEXT:    [[STEP_ADD4:%.*]] = add <2 x i64> [[STEP_ADD]], <i64 2, i64 2>
-; CHECK-NEXT:    [[STEP_ADD5:%.*]] = add <2 x i64> [[STEP_ADD4]], <i64 2, i64 2>
-; CHECK-NEXT:    [[STEP_ADD6:%.*]] = add <2 x i64> [[STEP_ADD5]], <i64 2, i64 2>
-; CHECK-NEXT:    [[STEP_ADD7:%.*]] = add <2 x i64> [[STEP_ADD6]], <i64 2, i64 2>
-; CHECK-NEXT:    [[STEP_ADD8:%.*]] = add <2 x i64> [[STEP_ADD7]], <i64 2, i64 2>
-; CHECK-NEXT:    [[STEP_ADD9:%.*]] = add <2 x i64> [[STEP_ADD8]], <i64 2, i64 2>
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add <2 x i64> [[STEP_ADD]], splat (i64 2)
+; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add <2 x i64> [[STEP_ADD_2]], splat (i64 2)
+; CHECK-NEXT:    [[STEP_ADD_4:%.*]] = add <2 x i64> [[STEP_ADD_3]], splat (i64 2)
+; CHECK-NEXT:    [[STEP_ADD_5:%.*]] = add <2 x i64> [[STEP_ADD_4]], splat (i64 2)
+; CHECK-NEXT:    [[STEP_ADD_6:%.*]] = add <2 x i64> [[STEP_ADD_5]], splat (i64 2)
+; CHECK-NEXT:    [[STEP_ADD_7:%.*]] = add <2 x i64> [[STEP_ADD_6]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
@@ -66,14 +66,14 @@ define i1 @select_exit_cond(ptr %start, ptr %end, i64 %N) {
 ; CHECK-NEXT:    [[TMP24:%.*]] = zext <2 x i8> [[WIDE_LOAD29]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP25:%.*]] = zext <2 x i8> [[WIDE_LOAD30]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP26:%.*]] = zext <2 x i8> [[WIDE_LOAD31]] to <2 x i64>
-; CHECK-NEXT:    [[TMP27:%.*]] = shl <2 x i64> [[VEC_IND]], <i64 1, i64 1>
-; CHECK-NEXT:    [[TMP28:%.*]] = shl <2 x i64> [[STEP_ADD]], <i64 1, i64 1>
-; CHECK-NEXT:    [[TMP29:%.*]] = shl <2 x i64> [[STEP_ADD4]], <i64 1, i64 1>
-; CHECK-NEXT:    [[TMP30:%.*]] = shl <2 x i64> [[STEP_ADD5]], <i64 1, i64 1>
-; CHECK-NEXT:    [[TMP31:%.*]] = shl <2 x i64> [[STEP_ADD6]], <i64 1, i64 1>
-; CHECK-NEXT:    [[TMP32:%.*]] = shl <2 x i64> [[STEP_ADD7]], <i64 1, i64 1>
-; CHECK-NEXT:    [[TMP33:%.*]] = shl <2 x i64> [[STEP_ADD8]], <i64 1, i64 1>
-; CHECK-NEXT:    [[TMP34:%.*]] = shl <2 x i64> [[STEP_ADD9]], <i64 1, i64 1>
+; CHECK-NEXT:    [[TMP27:%.*]] = shl <2 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    [[TMP28:%.*]] = shl <2 x i64> [[STEP_ADD]], splat (i64 1)
+; CHECK-NEXT:    [[TMP29:%.*]] = shl <2 x i64> [[STEP_ADD_2]], splat (i64 1)
+; CHECK-NEXT:    [[TMP30:%.*]] = shl <2 x i64> [[STEP_ADD_3]], splat (i64 1)
+; CHECK-NEXT:    [[TMP31:%.*]] = shl <2 x i64> [[STEP_ADD_4]], splat (i64 1)
+; CHECK-NEXT:    [[TMP32:%.*]] = shl <2 x i64> [[STEP_ADD_5]], splat (i64 1)
+; CHECK-NEXT:    [[TMP33:%.*]] = shl <2 x i64> [[STEP_ADD_6]], splat (i64 1)
+; CHECK-NEXT:    [[TMP34:%.*]] = shl <2 x i64> [[STEP_ADD_7]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP35:%.*]] = shl <2 x i64> [[TMP19]], [[TMP27]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = shl <2 x i64> [[TMP20]], [[TMP28]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = shl <2 x i64> [[TMP21]], [[TMP29]]
@@ -91,7 +91,7 @@ define i1 @select_exit_cond(ptr %start, ptr %end, i64 %N) {
 ; CHECK-NEXT:    [[TMP49]] = or <2 x i64> [[TMP41]], [[VEC_PHI16]]
 ; CHECK-NEXT:    [[TMP50]] = or <2 x i64> [[TMP42]], [[VEC_PHI17]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[STEP_ADD9]], <i64 2, i64 2>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[STEP_ADD_7]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP51:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP51]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

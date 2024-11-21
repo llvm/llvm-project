@@ -153,8 +153,8 @@ RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s,
   case R_HEX_TPREL_LO16:
     return R_TPREL;
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -198,8 +198,8 @@ static uint32_t findMaskR6(uint32_t insn) {
     if ((0xff000000 & insn) == i.cmpMask)
       return i.relocMask;
 
-  error("unrecognized instruction for 6_X relocation: 0x" +
-        utohexstr(insn));
+  ErrAlways(ctx) << "unrecognized instruction for 6_X relocation: 0x"
+                 << utohexstr(insn);
   return 0;
 }
 
@@ -246,8 +246,8 @@ static uint32_t findMaskR16(uint32_t insn) {
     if ((0xff000000 & insn) == i.cmpMask)
       return i.relocMask;
 
-  error("unrecognized instruction for 16_X type: 0x" +
-        utohexstr(insn));
+  ErrAlways(ctx) << "unrecognized instruction for 16_X type: 0x"
+                 << utohexstr(insn);
   return 0;
 }
 

@@ -450,6 +450,18 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.sqrtulr
     libc.src.stdfix.uhksqrtus
     libc.src.stdfix.uksqrtui
+    libc.src.stdfix.hrbits
+    libc.src.stdfix.uhrbits
+    libc.src.stdfix.rbits
+    libc.src.stdfix.urbits
+    libc.src.stdfix.lrbits
+    libc.src.stdfix.ulrbits
+    libc.src.stdfix.hkbits
+    libc.src.stdfix.uhkbits
+    libc.src.stdfix.kbits
+    libc.src.stdfix.ukbits
+    libc.src.stdfix.lkbits
+    libc.src.stdfix.ulkbits   
   )
 endif()
 

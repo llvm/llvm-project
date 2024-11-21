@@ -14,5 +14,6 @@ unittest("SandboxVectorizerTests") {
     "IntervalTest.cpp",
     "LegalityTest.cpp",
     "SchedulerTest.cpp",
+    "VecUtilsTest.cpp",
   ]
 }

@@ -813,8 +813,8 @@ void TypeInfer::expandOverloads(TypeSetByHwMode &VTS) const {
 
 void TypeInfer::expandOverloads(TypeSetByHwMode::SetType &Out,
                                 const TypeSetByHwMode::SetType &Legal) const {
-  if (Out.count(MVT::iPTRAny)) {
-    Out.erase(MVT::iPTRAny);
+  if (Out.count(MVT::pAny)) {
+    Out.erase(MVT::pAny);
     Out.insert(MVT::iPTR);
   } else if (Out.count(MVT::iAny)) {
     Out.erase(MVT::iAny);
@@ -1838,7 +1838,7 @@ MVT::SimpleValueType SDNodeInfo::getKnownType(unsigned ResNo) const {
 
 static unsigned GetNumNodeResults(const Record *Operator,
                                   CodeGenDAGPatterns &CDP) {
-  if (Operator->getName() == "set" || Operator->getName() == "implicit")
+  if (Operator->getName() == "set")
     return 0; // All return nothing.
 
   if (Operator->isSubClassOf("Intrinsic"))
@@ -2461,7 +2461,8 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
       ValueTypeByHwMode VVT = TP.getInfer().getConcrete(Types[0], false);
       for (auto &P : VVT) {
         MVT::SimpleValueType VT = P.second.SimpleTy;
-        if (VT == MVT::iPTR || VT == MVT::iPTRAny)
+        // Can only check for types of a known size
+        if (VT == MVT::iPTR)
           continue;
         unsigned Size = MVT(VT).getFixedSizeInBits();
         // Make sure that the value is representable for this type.
@@ -2944,8 +2945,7 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
       !Operator->isSubClassOf("Instruction") &&
       !Operator->isSubClassOf("SDNodeXForm") &&
       !Operator->isSubClassOf("Intrinsic") &&
-      !Operator->isSubClassOf("ComplexPattern") &&
-      Operator->getName() != "set" && Operator->getName() != "implicit")
+      !Operator->isSubClassOf("ComplexPattern") && Operator->getName() != "set")
     error("Unrecognized node '" + Operator->getName() + "'!");
 
   //  Check to see if this is something that is illegal in an input pattern.
@@ -3452,21 +3452,6 @@ void CodeGenDAGPatterns::FindPatternInputsAndOutputs(
     bool isUse = HandleUse(I, Pat, InstInputs);
     if (!isUse && Pat->getTransformFn())
       I.error("Cannot specify a transform function for a non-input value!");
-    return;
-  }
-
-  if (Pat->getOperator()->getName() == "implicit") {
-    for (unsigned i = 0, e = Pat->getNumChildren(); i != e; ++i) {
-      TreePatternNode &Dest = Pat->getChild(i);
-      if (!Dest.isLeaf())
-        I.error("implicitly defined value should be a register!");
-
-      const DefInit *Val = dyn_cast<DefInit>(Dest.getLeafValue());
-      if (!Val || !Val->getDef()->isSubClassOf("Register"))
-        I.error("implicitly defined value should be a register!");
-      if (Val)
-        InstImpResults.push_back(Val->getDef());
-    }
     return;
   }
 

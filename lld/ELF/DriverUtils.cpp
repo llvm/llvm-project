@@ -62,14 +62,14 @@ static void handleColorDiagnostics(opt::InputArgList &args) {
   else if (s == "never")
     lld::errs().enable_colors(false);
   else if (s != "auto")
-    error("unknown option: --color-diagnostics=" + s);
+    ErrAlways(ctx) << "unknown option: --color-diagnostics=" << s;
 }
 
 static cl::TokenizerCallback getQuotingStyle(opt::InputArgList &args) {
   if (auto *arg = args.getLastArg(OPT_rsp_quoting)) {
     StringRef s = arg->getValue();
     if (s != "windows" && s != "posix")
-      error("invalid response file quoting: " + s);
+      ErrAlways(ctx) << "invalid response file quoting: " << s;
     if (s == "windows")
       return cl::TokenizeWindowsCommandLine;
     return cl::TokenizeGNUCommandLine;
@@ -122,15 +122,16 @@ opt::InputArgList ELFOptTable::parse(ArrayRef<const char *> argv) {
 
   handleColorDiagnostics(args);
   if (missingCount)
-    error(Twine(args.getArgString(missingIndex)) + ": missing argument");
+    ErrAlways(ctx) << Twine(args.getArgString(missingIndex))
+                   << ": missing argument";
 
   for (opt::Arg *arg : args.filtered(OPT_UNKNOWN)) {
     std::string nearest;
     if (findNearest(arg->getAsString(args), nearest) > 1)
-      error("unknown argument '" + arg->getAsString(args) + "'");
+      ErrAlways(ctx) << "unknown argument '" << arg->getAsString(args) << "'";
     else
-      error("unknown argument '" + arg->getAsString(args) +
-            "', did you mean '" + nearest + "'");
+      ErrAlways(ctx) << "unknown argument '" << arg->getAsString(args)
+                     << "', did you mean '" << nearest << "'";
   }
   return args;
 }

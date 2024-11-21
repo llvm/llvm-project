@@ -4,8 +4,8 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 
 define void @storefloat(<4 x float> %data, i32 %index) {
 
-  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding
-  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 217, %dx.types.Handle [[BIND]]
+  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217,
+  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4f32_1_0_0(
           i32 0, i32 0, i32 1, i32 0, i1 false)
@@ -27,8 +27,8 @@ define void @storefloat(<4 x float> %data, i32 %index) {
 
 define void @storeint(<4 x i32> %data, i32 %index) {
 
-  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding
-  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 217, %dx.types.Handle [[BIND]]
+  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217,
+  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", <4 x i32>, 1, 0, 0)
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4i32_1_0_0(
           i32 0, i32 0, i32 1, i32 0, i1 false)
@@ -47,8 +47,8 @@ define void @storeint(<4 x i32> %data, i32 %index) {
 
 define void @storehalf(<4 x half> %data, i32 %index) {
 
-  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding
-  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 217, %dx.types.Handle [[BIND]]
+  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217,
+  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", <4 x half>, 1, 0, 0)
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4f16_1_0_0(
           i32 0, i32 0, i32 1, i32 0, i1 false)
@@ -70,8 +70,8 @@ define void @storehalf(<4 x half> %data, i32 %index) {
 
 define void @storei16(<4 x i16> %data, i32 %index) {
 
-  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding
-  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 217, %dx.types.Handle [[BIND]]
+  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217,
+  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", <4 x i16>, 1, 0, 0)
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4i16_1_0_0(
           i32 0, i32 0, i32 1, i32 0, i1 false)

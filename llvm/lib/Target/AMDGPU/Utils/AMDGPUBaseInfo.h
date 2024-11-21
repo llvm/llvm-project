@@ -46,6 +46,7 @@ struct IsaVersion;
 /// within a generic family.
 namespace GenericVersion {
 static constexpr unsigned GFX9 = 1;
+static constexpr unsigned GFX9_4 = 1;
 static constexpr unsigned GFX10_1 = 1;
 static constexpr unsigned GFX10_3 = 1;
 static constexpr unsigned GFX11 = 1;
@@ -919,7 +920,8 @@ getIntegerPairAttribute(const Function &F, StringRef Name,
 ///
 /// \returns false if any error occurs.
 SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
-                                             unsigned Size);
+                                             unsigned Size,
+                                             unsigned DefaultVal = 0);
 
 /// Represents the counter values to wait for in an s_waitcnt instruction.
 ///

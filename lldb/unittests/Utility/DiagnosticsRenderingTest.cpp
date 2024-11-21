@@ -46,16 +46,20 @@ TEST_F(ErrorDisplayTest, RenderStatus) {
     std::string result =
         Render({DiagnosticDetail{loc2, eSeverityError, "X", "X"},
                 DiagnosticDetail{loc1, eSeverityError, "Y", "Y"}});
-    ASSERT_LT(StringRef(result).find("Y"), StringRef(result).find("X"));
+    // Unintuitively the later diagnostic appears first in the string:
+    //    ^   ^
+    //    |   second
+    //    first
+    ASSERT_GT(StringRef(result).find("Y"), StringRef(result).find("X"));
   }
   {
     // Test that diagnostics in reverse order are emitted correctly.
-    SourceLocation loc1 = {FileSpec{"a.c"}, 2, 10, 0, false, true};
+    SourceLocation loc1 = {FileSpec{"a.c"}, 1, 10, 0, false, true};
     SourceLocation loc2 = {FileSpec{"a.c"}, 1, 20, 0, false, true};
     std::string result =
         Render({DiagnosticDetail{loc2, eSeverityError, "X", "X"},
                 DiagnosticDetail{loc1, eSeverityError, "Y", "Y"}});
-    ASSERT_LT(StringRef(result).find("Y"), StringRef(result).find("X"));
+    ASSERT_GT(StringRef(result).find("Y"), StringRef(result).find("X"));
   }
   {
     // Test that range diagnostics are emitted correctly.

@@ -24,7 +24,6 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include <optional>
@@ -563,8 +562,8 @@ bool isMAC(unsigned Opc) {
          Opc == AMDGPU::V_FMAC_LEGACY_F32_e64_gfx10 ||
          Opc == AMDGPU::V_FMAC_DX9_ZERO_F32_e64_gfx11 ||
          Opc == AMDGPU::V_FMAC_F16_e64_gfx10 ||
-         Opc == AMDGPU::V_FMAC_F16_t16_e64_gfx11 ||
-         Opc == AMDGPU::V_FMAC_F16_t16_e64_gfx12 ||
+         Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx11 ||
+         Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx12 ||
          Opc == AMDGPU::V_DOT2C_F32_F16_e64_vi ||
          Opc == AMDGPU::V_DOT2C_I32_I16_e64_vi ||
          Opc == AMDGPU::V_DOT4C_I32_I8_e64_vi ||
@@ -1307,15 +1306,16 @@ getIntegerPairAttribute(const Function &F, StringRef Name,
 }
 
 SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
-                                             unsigned Size) {
+                                             unsigned Size,
+                                             unsigned DefaultVal) {
   assert(Size > 2);
-  SmallVector<unsigned> Default(Size, 0);
+  SmallVector<unsigned> Default(Size, DefaultVal);
 
   Attribute A = F.getFnAttribute(Name);
   if (!A.isStringAttribute())
     return Default;
 
-  SmallVector<unsigned> Vals(Size, 0);
+  SmallVector<unsigned> Vals(Size, DefaultVal);
 
   LLVMContext &Ctx = F.getContext();
 

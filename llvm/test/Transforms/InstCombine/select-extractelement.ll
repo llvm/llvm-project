@@ -215,7 +215,7 @@ define <4 x i32> @extract_cond_type_mismatch(<4 x i32> %x, <4 x i32> %y, <5 x i1
 
 define i32 @inf_loop_partial_undef(<2 x i1> %a, <2 x i1> %b, <2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @inf_loop_partial_undef(
-; CHECK-NEXT:    [[T5:%.*]] = add nsw <2 x i32> [[Y:%.*]], <i32 2147483647, i32 2147483647>
+; CHECK-NEXT:    [[T5:%.*]] = add nsw <2 x i32> [[Y:%.*]], splat (i32 2147483647)
 ; CHECK-NEXT:    [[T6:%.*]] = icmp sge <2 x i32> [[T5]], [[X:%.*]]
 ; CHECK-NEXT:    [[AB:%.*]] = and <2 x i1> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[T7:%.*]] = select <2 x i1> [[AB]], <2 x i1> [[T6]], <2 x i1> <i1 true, i1 poison>

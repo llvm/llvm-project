@@ -58,22 +58,22 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX2-NEXT:    [[WIDE_LOAD8:%.*]] = load <8 x i32>, ptr [[TMP5]], align 4
 ; AVX2-NEXT:    [[WIDE_LOAD9:%.*]] = load <8 x i32>, ptr [[TMP6]], align 4
 ; AVX2-NEXT:    [[WIDE_LOAD10:%.*]] = load <8 x i32>, ptr [[TMP7]], align 4
-; AVX2-NEXT:    [[TMP8:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD]], <i32 -12, i32 -12, i32 -12, i32 -12, i32 -12, i32 -12, i32 -12, i32 -12>
-; AVX2-NEXT:    [[TMP9:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD8]], <i32 -12, i32 -12, i32 -12, i32 -12, i32 -12, i32 -12, i32 -12, i32 -12>
-; AVX2-NEXT:    [[TMP10:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD9]], <i32 -12, i32 -12, i32 -12, i32 -12, i32 -12, i32 -12, i32 -12, i32 -12>
-; AVX2-NEXT:    [[TMP11:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD10]], <i32 -12, i32 -12, i32 -12, i32 -12, i32 -12, i32 -12, i32 -12, i32 -12>
-; AVX2-NEXT:    [[TMP12:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD]], <i32 13, i32 13, i32 13, i32 13, i32 13, i32 13, i32 13, i32 13>
-; AVX2-NEXT:    [[TMP13:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD8]], <i32 13, i32 13, i32 13, i32 13, i32 13, i32 13, i32 13, i32 13>
-; AVX2-NEXT:    [[TMP14:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD9]], <i32 13, i32 13, i32 13, i32 13, i32 13, i32 13, i32 13, i32 13>
-; AVX2-NEXT:    [[TMP15:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD10]], <i32 13, i32 13, i32 13, i32 13, i32 13, i32 13, i32 13, i32 13>
+; AVX2-NEXT:    [[TMP8:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD]], splat (i32 -12)
+; AVX2-NEXT:    [[TMP9:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD8]], splat (i32 -12)
+; AVX2-NEXT:    [[TMP10:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD9]], splat (i32 -12)
+; AVX2-NEXT:    [[TMP11:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD10]], splat (i32 -12)
+; AVX2-NEXT:    [[TMP12:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD]], splat (i32 13)
+; AVX2-NEXT:    [[TMP13:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD8]], splat (i32 13)
+; AVX2-NEXT:    [[TMP14:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD9]], splat (i32 13)
+; AVX2-NEXT:    [[TMP15:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD10]], splat (i32 13)
 ; AVX2-NEXT:    [[TMP16:%.*]] = or <8 x i1> [[TMP8]], [[TMP12]]
 ; AVX2-NEXT:    [[TMP17:%.*]] = or <8 x i1> [[TMP9]], [[TMP13]]
 ; AVX2-NEXT:    [[TMP18:%.*]] = or <8 x i1> [[TMP10]], [[TMP14]]
 ; AVX2-NEXT:    [[TMP19:%.*]] = or <8 x i1> [[TMP11]], [[TMP15]]
-; AVX2-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> <i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42>, ptr [[NEXT_GEP]], i32 4, <8 x i1> [[TMP16]])
-; AVX2-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> <i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42>, ptr [[TMP5]], i32 4, <8 x i1> [[TMP17]])
-; AVX2-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> <i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42>, ptr [[TMP6]], i32 4, <8 x i1> [[TMP18]])
-; AVX2-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> <i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42>, ptr [[TMP7]], i32 4, <8 x i1> [[TMP19]])
+; AVX2-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> splat (i32 42), ptr [[NEXT_GEP]], i32 4, <8 x i1> [[TMP16]])
+; AVX2-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> splat (i32 42), ptr [[TMP5]], i32 4, <8 x i1> [[TMP17]])
+; AVX2-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> splat (i32 42), ptr [[TMP6]], i32 4, <8 x i1> [[TMP18]])
+; AVX2-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> splat (i32 42), ptr [[TMP7]], i32 4, <8 x i1> [[TMP19]])
 ; AVX2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; AVX2-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; AVX2-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

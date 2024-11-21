@@ -309,7 +309,8 @@ void LinkerScript::processInsertCommands() {
   SmallVector<OutputDesc *, 0> moves;
   for (const InsertCommand &cmd : insertCommands) {
     if (ctx.arg.enableNonContiguousRegions)
-      error("INSERT cannot be used with --enable-non-contiguous-regions");
+      ErrAlways(ctx)
+          << "INSERT cannot be used with --enable-non-contiguous-regions";
 
     for (StringRef name : cmd.names) {
       // If base is empty, it may have been discarded by
@@ -330,8 +331,8 @@ void LinkerScript::processInsertCommands() {
           return to != nullptr && to->osec.name == cmd.where;
         });
     if (insertPos == sectionCommands.end()) {
-      error("unable to insert " + cmd.names[0] +
-            (cmd.isAfter ? " after " : " before ") + cmd.where);
+      ErrAlways(ctx) << "unable to insert " << cmd.names[0]
+                     << (cmd.isAfter ? " after " : " before ") << cmd.where;
     } else {
       if (cmd.isAfter)
         ++insertPos;
@@ -598,12 +599,12 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
     SectionClassDesc *scd =
         sectionClasses.lookup(CachedHashStringRef(cmd->classRef));
     if (!scd) {
-      errorOrWarn("undefined section class '" + cmd->classRef + "'");
+      Err(ctx) << "undefined section class '" << cmd->classRef << "'";
       return ret;
     }
     if (!scd->sc.assigned) {
-      errorOrWarn("section class '" + cmd->classRef + "' referenced by '" +
-                  outCmd.name + "' before class definition");
+      Err(ctx) << "section class '" << cmd->classRef << "' referenced by '"
+               << outCmd.name << "' before class definition";
       return ret;
     }
 
@@ -613,8 +614,8 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
           continue;
         bool isSpill = sec->parent && isa<OutputSection>(sec->parent);
         if (!sec->parent || (isSpill && outCmd.name == "/DISCARD/")) {
-          errorOrWarn("section '" + sec->name +
-                      "' cannot spill from/to /DISCARD/");
+          Err(ctx) << "section '" << sec->name
+                   << "' cannot spill from/to /DISCARD/";
           continue;
         }
         if (isSpill)
@@ -652,7 +653,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
 
 void LinkerScript::discard(InputSectionBase &s) {
   if (&s == ctx.in.shStrTab.get())
-    error("discarding " + s.name + " section is not allowed");
+    ErrAlways(ctx) << "discarding " << s.name << " section is not allowed";
 
   s.markDead();
   s.parent = nullptr;
@@ -737,21 +738,21 @@ void LinkerScript::processSectionCommands() {
   // Process OVERWRITE_SECTIONS first so that it can overwrite the main script
   // or orphans.
   if (ctx.arg.enableNonContiguousRegions && !overwriteSections.empty())
-    error("OVERWRITE_SECTIONS cannot be used with "
-          "--enable-non-contiguous-regions");
+    ErrAlways(ctx) << "OVERWRITE_SECTIONS cannot be used with "
+                      "--enable-non-contiguous-regions";
   DenseMap<CachedHashStringRef, OutputDesc *> map;
   size_t i = 0;
   for (OutputDesc *osd : overwriteSections) {
     OutputSection *osec = &osd->osec;
     if (process(osec) &&
         !map.try_emplace(CachedHashStringRef(osec->name), osd).second)
-      warn("OVERWRITE_SECTIONS specifies duplicate " + osec->name);
+      Warn(ctx) << "OVERWRITE_SECTIONS specifies duplicate " << osec->name;
   }
   for (SectionCommand *&base : sectionCommands) {
     if (auto *osd = dyn_cast<OutputDesc>(base)) {
       OutputSection *osec = &osd->osec;
       if (OutputDesc *overwrite = map.lookup(CachedHashStringRef(osec->name))) {
-        log(overwrite->osec.location + " overwrites " + osec->name);
+        Log(ctx) << overwrite->osec.location << " overwrites " << osec->name;
         overwrite->osec.sectionIndex = i++;
         base = overwrite;
       } else if (process(osec)) {
@@ -795,9 +796,9 @@ void LinkerScript::processSectionCommands() {
         for (InputSectionBase *isec : isd->sectionBases)
           if (isa<PotentialSpillSection>(isec) ||
               potentialSpillLists.contains(isec))
-            errorOrWarn("section '" + isec->name +
-                        "' cannot spill from/to INSERT section '" + os->name +
-                        "'");
+            Err(ctx) << "section '" << isec->name
+                     << "' cannot spill from/to INSERT section '" << os->name
+                     << "'";
       }
     }
   }
@@ -815,8 +816,8 @@ void LinkerScript::processSectionCommands() {
     for (InputSectionDescription *isd : sc->sc.commands) {
       for (InputSectionBase *sec : isd->sectionBases) {
         if (sec->parent && isa<SectionClass>(sec->parent)) {
-          errorOrWarn("section class '" + sec->parent->name +
-                      "' is unreferenced");
+          Err(ctx) << "section class '" << sec->parent->name
+                   << "' is unreferenced";
           goto nextClass;
         }
       }
@@ -1052,9 +1053,9 @@ void LinkerScript::diagnoseOrphanHandling() const {
 
     StringRef name = getOutputSectionName(sec);
     if (ctx.arg.orphanHandling == OrphanHandlingPolicy::Error)
-      error(toString(sec) + " is being placed in '" + name + "'");
+      ErrAlways(ctx) << sec << " is being placed in '" << name << "'";
     else
-      warn(toString(sec) + " is being placed in '" + name + "'");
+      Warn(ctx) << sec << " is being placed in '" << name << "'";
   }
 }
 
@@ -1064,7 +1065,8 @@ void LinkerScript::diagnoseMissingSGSectionAddress() const {
 
   OutputSection *sec = findByName(sectionCommands, ".gnu.sgstubs");
   if (sec && !sec->addrExpr && !ctx.arg.sectionStartMap.count(".gnu.sgstubs"))
-    error("no address assigned to the veneers output section " + sec->name);
+    ErrAlways(ctx) << "no address assigned to the veneers output section "
+                   << sec->name;
 }
 
 // This function searches for a memory region to place the given output
@@ -1082,8 +1084,9 @@ LinkerScript::findMemoryRegion(OutputSection *sec, MemoryRegion *hint) {
           return ByteCommand::classof(comm);
         });
     if (!sec->memoryRegionName.empty() && hasInputOrByteCommand)
-      warn("ignoring memory region assignment for non-allocatable section '" +
-           sec->name + "'");
+      Warn(ctx)
+          << "ignoring memory region assignment for non-allocatable section '"
+          << sec->name << "'";
     return {nullptr, nullptr};
   }
 
@@ -1092,7 +1095,8 @@ LinkerScript::findMemoryRegion(OutputSection *sec, MemoryRegion *hint) {
   if (!sec->memoryRegionName.empty()) {
     if (MemoryRegion *m = memoryRegions.lookup(sec->memoryRegionName))
       return {m, m};
-    error("memory region '" + sec->memoryRegionName + "' not declared");
+    ErrAlways(ctx) << "memory region '" << sec->memoryRegionName
+                   << "' not declared";
     return {nullptr, nullptr};
   }
 
@@ -1114,7 +1118,8 @@ LinkerScript::findMemoryRegion(OutputSection *sec, MemoryRegion *hint) {
   }
 
   // Otherwise, no suitable region was found.
-  error("no memory region specified for section '" + sec->name + "'");
+  ErrAlways(ctx) << "no memory region specified for section '" << sec->name
+                 << "'";
   return {nullptr, nullptr};
 }
 
@@ -1396,7 +1401,8 @@ void LinkerScript::adjustSectionsAfterSorting() {
         if (MemoryRegion *m = memoryRegions.lookup(sec->lmaRegionName))
           sec->lmaRegion = m;
         else
-          error("memory region '" + sec->lmaRegionName + "' not declared");
+          ErrAlways(ctx) << "memory region '" << sec->lmaRegionName
+                         << "' not declared";
       }
       std::tie(sec->memRegion, hint) = findMemoryRegion(sec, hint);
     }
@@ -1462,7 +1468,7 @@ void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
 
   // Error if we were explicitly asked to allocate headers.
   if (hasExplicitHeaders)
-    error("could not allocate headers");
+    ErrAlways(ctx) << "could not allocate headers";
 
   ctx.out.elfHeader->ptLoad = nullptr;
   ctx.out.programHeaders->ptLoad = nullptr;
@@ -1682,7 +1688,7 @@ ExprValue LinkerScript::getSymbolValue(StringRef name, const Twine &loc) {
   if (name == ".") {
     if (state)
       return {state->outSec, false, dot - state->outSec->addr, loc};
-    error(loc + ": unable to get location counter value");
+    ErrAlways(ctx) << loc << ": unable to get location counter value";
     return 0;
   }
 
@@ -1700,7 +1706,7 @@ ExprValue LinkerScript::getSymbolValue(StringRef name, const Twine &loc) {
         return {nullptr, false, 0, loc};
   }
 
-  error(loc + ": symbol not found: " + name);
+  ErrAlways(ctx) << loc << ": symbol not found: " << name;
   return 0;
 }
 
@@ -1722,8 +1728,8 @@ SmallVector<size_t, 0> LinkerScript::getPhdrIndices(OutputSection *cmd) {
     if (std::optional<size_t> idx = getPhdrIndex(phdrsCommands, s))
       ret.push_back(*idx);
     else if (s != "NONE")
-      error(cmd->location + ": program header '" + s +
-            "' is not listed in PHDRS");
+      ErrAlways(ctx) << cmd->location << ": program header '" << s
+                     << "' is not listed in PHDRS";
   }
   return ret;
 }
@@ -1765,15 +1771,15 @@ static void checkMemoryRegion(const MemoryRegion *region,
   uint64_t osecEnd = addr + osec->size;
   uint64_t regionEnd = region->getOrigin() + region->getLength();
   if (osecEnd > regionEnd) {
-    error("section '" + osec->name + "' will not fit in region '" +
-          region->name + "': overflowed by " + Twine(osecEnd - regionEnd) +
-          " bytes");
+    ErrAlways(ctx) << "section '" << osec->name << "' will not fit in region '"
+                   << region->name << "': overflowed by "
+                   << Twine(osecEnd - regionEnd) << " bytes";
   }
 }
 
 void LinkerScript::checkFinalScriptConditions() const {
   for (StringRef err : recordedErrors)
-    errorOrWarn(err);
+    Err(ctx) << err;
   for (const OutputSection *sec : ctx.outputSections) {
     if (const MemoryRegion *memoryRegion = sec->memRegion)
       checkMemoryRegion(memoryRegion, sec, sec->addr);

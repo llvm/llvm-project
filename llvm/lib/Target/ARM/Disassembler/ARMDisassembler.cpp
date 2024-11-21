@@ -6686,6 +6686,13 @@ static unsigned FixedRegForVSTRVLDR_SYSREG(unsigned Opcode) {
   case ARM::VLDR_P0_pre:
   case ARM::VLDR_P0_post:
     return ARM::P0;
+  case ARM::VSTR_FPSCR_NZCVQC_off:
+  case ARM::VSTR_FPSCR_NZCVQC_pre:
+  case ARM::VSTR_FPSCR_NZCVQC_post:
+  case ARM::VLDR_FPSCR_NZCVQC_off:
+  case ARM::VLDR_FPSCR_NZCVQC_pre:
+  case ARM::VLDR_FPSCR_NZCVQC_post:
+    return ARM::FPSCR;
   default:
     return 0;
   }

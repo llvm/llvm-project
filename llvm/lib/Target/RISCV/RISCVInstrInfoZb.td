@@ -596,7 +596,7 @@ def : Pat<(and (or (shl GPR:$rs2, (XLenVT 8)),
           (PACKH GPR:$rs1, GPR:$rs2)>;
 def : Pat<(or (shl (zexti8 (XLenVT GPR:$rs2)), (XLenVT 24)),
               (shl (zexti8 (XLenVT GPR:$rs1)), (XLenVT 16))),
-          (SLLI (PACKH GPR:$rs1, GPR:$rs2), (XLenVT 16))>;
+          (SLLI (XLenVT (PACKH GPR:$rs1, GPR:$rs2)), (XLenVT 16))>;
 
 def : Pat<(binop_allhusers<or> (shl GPR:$rs2, (XLenVT 8)),
                                (zexti8 (XLenVT GPR:$rs1))),
@@ -612,7 +612,8 @@ def : Pat<(or (or
               (or
                   (shl (zexti8 (XLenVT GPR:$op0rs2)), (XLenVT 8)),
                   (zexti8 (XLenVT GPR:$op0rs1)))),
-          (PACK (PACKH GPR:$op0rs1, GPR:$op0rs2), (PACKH GPR:$op1rs1, GPR:$op1rs2))>;
+          (PACK (XLenVT (PACKH GPR:$op0rs1, GPR:$op0rs2)),
+                (XLenVT (PACKH GPR:$op1rs1, GPR:$op1rs2)))>;
 }
 
 let Predicates = [HasStdExtZbkb, IsRV64] in {
