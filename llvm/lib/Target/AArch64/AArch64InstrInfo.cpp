@@ -9700,13 +9700,20 @@ void AArch64InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
 
   if (TRI.isGeneralPurposeRegister(MF, Reg)) {
     BuildMI(MBB, Iter, DL, get(AArch64::MOVZXi), Reg).addImm(0).addImm(0);
-  } else if (STI.hasSVE()) {
+  } else if (STI.isSVEorStreamingSVEAvailable()) {
     BuildMI(MBB, Iter, DL, get(AArch64::DUP_ZI_D), Reg)
       .addImm(0)
       .addImm(0);
-  } else {
+  } else if (STI.isNeonAvailable()) {
     BuildMI(MBB, Iter, DL, get(AArch64::MOVIv2d_ns), Reg)
       .addImm(0);
+  } else {
+    // This is a streaming-compatible function without SVE. We don't have full
+    // Neon (just FPRs), so we can at most use the first 64-bit sub-register.
+    // So given `movi v..` would be illegal use `fmov d..` instead.
+    assert(STI.hasNEON() && "Expected to have NEON.");
+    Register Reg64 = TRI.getSubReg(Reg, AArch64::dsub);
+    BuildMI(MBB, Iter, DL, get(AArch64::FMOVD0), Reg64);
   }
 }
 
