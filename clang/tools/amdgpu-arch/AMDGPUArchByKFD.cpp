@@ -17,7 +17,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include <memory>
-#include <string>
 
 using namespace llvm;
 
@@ -55,8 +54,8 @@ int printGPUsByKFD() {
          ++Lines) {
       StringRef Line(*Lines);
       if (Line.consume_front("gfx_target_version")) {
-        Line.drop_while([](char C) { return std::isspace(C); });
-        if (Line.consumeInteger(10, GFXVersion))
+        if (Line.drop_while([](char C) { return std::isspace(C); })
+                .consumeInteger(10, GFXVersion))
           return 1;
         break;
       }
