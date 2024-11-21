@@ -150,7 +150,7 @@ std::optional<ResultTy> maybeApply(FuncTy &&func,
                                    const std::optional<ArgTy> &arg) {
   if (!arg)
     return std::nullopt;
-  return std::move(func(*arg));
+  return func(*arg);
 }
 
 template <
@@ -160,7 +160,7 @@ template <
 std::optional<ResultTy> maybeApplyToV(FuncTy &&func, const ArgTy *arg) {
   if (!arg)
     return std::nullopt;
-  return std::move(func(arg->v));
+  return func(arg->v);
 }
 
 std::optional<Object> getBaseObject(const Object &object,
