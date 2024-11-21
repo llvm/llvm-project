@@ -2,6 +2,10 @@
 
 .intel_syntax
 
-# CHECK: vinsertps $176, 76(%r14,%rdi,8), %xmm2, %xmm2 # xmm2 = xmm2[0,1,2],mem[0]
+# CHECK: insertps  $176, (%rax), %xmm2        # xmm2 = xmm2[0,1,2],mem[0]
+# CHECK: vinsertps $176, (%rax), %xmm2, %xmm2 # xmm2 = xmm2[0,1,2],mem[0]
+# CHECK: vinsertps $176, (%rax), %xmm29, %xmm0 # xmm0 = xmm29[0,1,2],mem[0]
 
-vinsertps xmm2,xmm2,dword ptr [r14+rdi*8+0x4C],0x0B0
+insertps xmm2, dword ptr [rax], 0x0B0
+vinsertps xmm2,xmm2,dword ptr [rax],0x0B0
+vinsertps xmm0,xmm29,dword ptr [rax],0x0B0
