@@ -34,22 +34,21 @@ void test_invalid_call_1(int s) {
 
 int some_func2(int a, int b);
 void test_invalid_call_2() {
+  // CHECK:   -RecoveryExpr {{.*}} 'int' contains-errors
+  // CHECK-NEXT: `-UnresolvedLookupExpr {{.*}} '<overloaded function type>' lvalue (ADL) = 'some_func2'
+  some_func2(,);
+
+  // CHECK:   -RecoveryExpr {{.*}} 'int' contains-errors
+  // CHECK-NEXT: `-UnresolvedLookupExpr {{.*}} '<overloaded function type>' lvalue (ADL) = 'some_func2'
+  some_func2(,,);
+
   // CHECK:   `-RecoveryExpr {{.*}} 'int' contains-errors
   // CHECK-NEXT: |-UnresolvedLookupExpr {{.*}} '<overloaded function type>' lvalue (ADL) = 'some_func2'
   // CHECK-NEXT: `-IntegerLiteral {{.*}} 'int' 1
-  some_func2(1, );
-}
+  some_func2(1,);
 
-void test_invalid_call_3() {
-  // CHECK:   `-RecoveryExpr {{.*}} 'int' contains-errors
-  // CHECK-NEXT: -UnresolvedLookupExpr {{.*}} '<overloaded function type>' lvalue (ADL) = 'some_func2'
-  some_func2(,);
-}
-
-void test_invalid_call_4() {
-  // CHECK:   `-RecoveryExpr {{.*}} 'int' contains-errors
-  // CHECK-NEXT: -UnresolvedLookupExpr {{.*}} '<overloaded function type>' lvalue (ADL) = 'some_func2'
-  some_func2(,,);
+  // CHECK-NOT: `-RecoveryExpr
+  some_func2(,1);
 }
 
 int ambig_func(double);
