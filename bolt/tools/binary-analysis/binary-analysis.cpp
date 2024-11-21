@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/MC/TargetRegistry.h"
