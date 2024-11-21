@@ -3440,6 +3440,16 @@ struct OmpObject {
 
 WRAPPER_CLASS(OmpObjectList, std::list<OmpObject>);
 
+#define MODIFIER_BOILERPLATE(...) \
+  struct Modifier { \
+    using Variant = std::variant<__VA_ARGS__>; \
+    UNION_CLASS_BOILERPLATE(Modifier); \
+    CharBlock source; \
+    Variant u; \
+  }
+
+#define MODIFIERS() std::optional<std::list<Modifier>>
+
 inline namespace modifier {
 // For uniformity, in all keyword modifiers the name of the type defined
 // by ENUM_CLASS is "Value", e.g.
@@ -3505,10 +3515,18 @@ struct OmpLinearModifier {
 //   - |                                            // since 4.5, until 5.2
 //   + | * | .AND. | .OR. | .EQV. | .NEQV. |        // since 4.5
 //   MIN | MAX | IAND | IOR | IEOR                  // since 4.5
-//
 struct OmpReductionIdentifier {
   UNION_CLASS_BOILERPLATE(OmpReductionIdentifier);
   std::variant<DefinedOperator, ProcedureDesignator> u;
+};
+
+// Ref: [5.0:300-302], [5.1:332-334], [5.2:134-137]
+//
+// reduction-modifier ->
+//   DEFAULT | INSCAN | TASK                        // since 5.0
+struct OmpReductionModifier {
+  ENUM_CLASS(Value, Default, Inscan, Task);
+  WRAPPER_CLASS_BOILERPLATE(OmpReductionModifier, Value);
 };
 
 // Ref: [4.5:169-170], [5.0:254-256], [5.1:287-289], [5.2:321]
@@ -3520,6 +3538,17 @@ struct OmpReductionIdentifier {
 struct OmpTaskDependenceType {
   ENUM_CLASS(Value, In, Out, Inout, Inoutset, Mutexinoutset, Depobj)
   WRAPPER_CLASS_BOILERPLATE(OmpTaskDependenceType, Value);
+};
+
+// Ref: [4.5:229-230], [5.0:324-325], [5.1:357-358], [5.2:161-162]
+//
+// variable-category ->
+//   SCALAR |                                       // since 4.5
+//   AGGREGATE | ALLOCATABLE | POINTER |            // since 5.0
+//   ALL                                            // since 5.2
+struct OmpVariableCategory {
+  ENUM_CLASS(Value, Aggregate, All, Allocatable, Pointer, Scalar)
+  WRAPPER_CLASS_BOILERPLATE(OmpVariableCategory, Value);
 };
 } // namespace modifier
 
@@ -3578,8 +3607,8 @@ struct OmpDefaultmapClause {
   TUPLE_CLASS_BOILERPLATE(OmpDefaultmapClause);
   ENUM_CLASS(
       ImplicitBehavior, Alloc, To, From, Tofrom, Firstprivate, None, Default)
-  ENUM_CLASS(VariableCategory, All, Scalar, Aggregate, Allocatable, Pointer)
-  std::tuple<ImplicitBehavior, std::optional<VariableCategory>> t;
+  MODIFIER_BOILERPLATE(OmpVariableCategory);
+  std::tuple<ImplicitBehavior, MODIFIERS()> t;
 };
 
 // 2.13.9 iteration-offset -> +/- non-negative-constant
@@ -3775,14 +3804,16 @@ struct OmpProcBindClause {
   WRAPPER_CLASS_BOILERPLATE(OmpProcBindClause, Type);
 };
 
-// 2.15.3.6 reduction-clause -> REDUCTION (reduction-identifier:
-//                                         variable-name-list)
+// Ref: [4.5:201-207], [5.0:300-302], [5.1:332-334], [5.2:134-137]
+//
+// reduction-clause ->
+//    REDUCTION(reduction-identifier: list) |       // since 4.5
+//    REDUCTION([reduction-modifier,]
+//        reduction-identifier: list)               // since 5.0
 struct OmpReductionClause {
   TUPLE_CLASS_BOILERPLATE(OmpReductionClause);
-  ENUM_CLASS(ReductionModifier, Inscan, Task, Default)
-  std::tuple<std::optional<ReductionModifier>, OmpReductionIdentifier,
-      OmpObjectList>
-      t;
+  MODIFIER_BOILERPLATE(OmpReductionModifier, OmpReductionIdentifier);
+  std::tuple<MODIFIERS(), OmpObjectList> t;
 };
 
 // 2.7.1 sched-modifier -> MONOTONIC | NONMONOTONIC | SIMD

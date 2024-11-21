@@ -19,6 +19,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include <list>
@@ -518,8 +519,14 @@ public:
   }
 
   bool Pre(const parser::OmpClause::Reduction &x) {
-    const parser::OmpReductionIdentifier &opr{
-        std::get<parser::OmpReductionIdentifier>(x.v.t)};
+    const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
+    ResolveOmpObjectList(objList, Symbol::Flag::OmpReduction);
+
+    auto &modifiers{OmpGetModifiers(x.v)};
+    if (!modifiers) {
+      return false;
+    }
+
     auto createDummyProcSymbol = [&](const parser::Name *name) {
       // If name resolution failed, create a dummy symbol
       const auto namePair{
@@ -530,30 +537,35 @@ public:
       }
       name->symbol = &newSymbol;
     };
-    if (const auto *procD{parser::Unwrap<parser::ProcedureDesignator>(opr.u)}) {
-      if (const auto *name{parser::Unwrap<parser::Name>(procD->u)}) {
-        if (!name->symbol) {
-          if (!ResolveName(name)) {
-            createDummyProcSymbol(name);
+
+    for (auto &mod : *modifiers) {
+      if (!std::holds_alternative<parser::OmpReductionIdentifier>(mod.u)) {
+        continue;
+      }
+      auto &opr{std::get<parser::OmpReductionIdentifier>(mod.u)};
+      if (auto *procD{parser::Unwrap<parser::ProcedureDesignator>(opr.u)}) {
+        if (auto *name{parser::Unwrap<parser::Name>(procD->u)}) {
+          if (!name->symbol) {
+            if (!ResolveName(name)) {
+              createDummyProcSymbol(name);
+            }
           }
         }
-      }
-      if (const auto *procRef{
-              parser::Unwrap<parser::ProcComponentRef>(procD->u)}) {
-        if (!procRef->v.thing.component.symbol) {
-          if (!ResolveName(&procRef->v.thing.component)) {
-            createDummyProcSymbol(&procRef->v.thing.component);
+        if (auto *procRef{parser::Unwrap<parser::ProcComponentRef>(procD->u)}) {
+          if (!procRef->v.thing.component.symbol) {
+            if (!ResolveName(&procRef->v.thing.component)) {
+              createDummyProcSymbol(&procRef->v.thing.component);
+            }
           }
         }
       }
     }
-    const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
-    ResolveOmpObjectList(objList, Symbol::Flag::OmpReduction);
-    using ReductionModifier = parser::OmpReductionClause::ReductionModifier;
-    const auto &maybeModifier{
-        std::get<std::optional<ReductionModifier>>(x.v.t)};
-    if (maybeModifier && *maybeModifier == ReductionModifier::Inscan) {
-      ResolveOmpObjectList(objList, Symbol::Flag::OmpInScanReduction);
+    using ReductionModifier = parser::OmpReductionModifier;
+    if (auto *maybeModifier{
+            OmpGetUniqueModifier<ReductionModifier>(modifiers)}) {
+      if (maybeModifier->v == ReductionModifier::Value::Inscan) {
+        ResolveOmpObjectList(objList, Symbol::Flag::OmpInScanReduction);
+      }
     }
     return false;
   }
