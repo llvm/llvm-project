@@ -99,7 +99,7 @@ cl::opt<std::string>
     ReadPerfEvents("perf-script-events",
                    cl::desc("skip perf event collection by supplying a "
                             "perf-script output in a textual format"),
-                   cl::cat(AggregatorCategory));
+                   cl::ReallyHidden, cl::init(""), cl::cat(AggregatorCategory));
 
 static cl::opt<bool>
 TimeAggregator("time-aggr",
@@ -2132,9 +2132,9 @@ std::error_code DataAggregator::parseMMapEvents() {
       assert(MMapInfo.BaseAddress == BinaryMMapInfo[MMapInfo.PID].BaseAddress &&
              "Base address on multiple segment mappings should match");
 
-    // Update section size.
-    uint64_t EndAddress = MMapInfo.MMapAddress + MMapInfo.Size;
-    uint64_t Size = EndAddress - BinaryMMapInfo[MMapInfo.PID].BaseAddress;
+    // Update mapping size.
+    const uint64_t EndAddress = MMapInfo.MMapAddress + MMapInfo.Size;
+    const uint64_t Size = EndAddress - BinaryMMapInfo[MMapInfo.PID].BaseAddress;
     if (Size > BinaryMMapInfo[MMapInfo.PID].Size)
       BinaryMMapInfo[MMapInfo.PID].Size = Size;
   }
