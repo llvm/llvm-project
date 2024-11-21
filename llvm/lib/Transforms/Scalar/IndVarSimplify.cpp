@@ -1335,11 +1335,12 @@ static bool optimizeLoopExitWithUnknownExitCount(
   Visited.insert(OldCond);
   Worklist.push_back(OldCond);
 
-  std::optional<ScalarEvolution::LoopGuards> LoopGuards;
-  auto GetLoopGuards = [&LoopGuards, &L, &SE]() {
-    if (!LoopGuards)
-      LoopGuards.emplace(ScalarEvolution::LoopGuards::collect(L, *SE));
-    return *LoopGuards;
+  std::optional<ScalarEvolution::LoopGuards> CachedLoopGuards;
+  auto GetLoopGuards = [&CachedLoopGuards, &L,
+                        &SE]() -> const ScalarEvolution::LoopGuards & {
+    if (!CachedLoopGuards)
+      CachedLoopGuards.emplace(ScalarEvolution::LoopGuards::collect(L, *SE));
+    return *CachedLoopGuards;
   };
 
   auto GoThrough = [&](Value *V) {

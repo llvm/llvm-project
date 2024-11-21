@@ -1206,10 +1206,11 @@ public:
   ///
   /// If \p AllowPredicates is set, this call will try to use a minimal set of
   /// SCEV predicates in order to return an exact answer.
-  ExitLimit computeExitLimitFromCond(const Loop *L, Value *ExitCond,
-                                     std::function<LoopGuards()> GetLoopGuards,
-                                     bool ExitIfTrue, bool ControlsOnlyExit,
-                                     bool AllowPredicates = false);
+  ExitLimit
+  computeExitLimitFromCond(const Loop *L, Value *ExitCond,
+                           function_ref<const LoopGuards &()> GetLoopGuards,
+                           bool ExitIfTrue, bool ControlsOnlyExit,
+                           bool AllowPredicates = false);
 
   /// A predicate is said to be monotonically increasing if may go from being
   /// false to being true as the loop iterates, but never the other way
@@ -1841,7 +1842,7 @@ private:
   /// this call will try to use a minimal set of SCEV predicates in order to
   /// return an exact answer.
   ExitLimit computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
-                             std::function<LoopGuards()> GetLoopGuards,
+                             function_ref<const LoopGuards &()> GetLoopGuards,
                              bool IsOnlyExit, bool AllowPredicates = false);
 
   // Helper functions for computeExitLimitFromCond to avoid exponential time
@@ -1876,15 +1877,15 @@ private:
 
   ExitLimit computeExitLimitFromCondCached(
       ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond,
-      std::function<LoopGuards()> GetLoopGuards, bool ExitIfTrue,
+      function_ref<const LoopGuards &()> GetLoopGuards, bool ExitIfTrue,
       bool ControlsOnlyExit, bool AllowPredicates);
   ExitLimit computeExitLimitFromCondImpl(
       ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond,
-      std::function<LoopGuards()> GetLoopGuards, bool ExitIfTrue,
+      function_ref<const LoopGuards &()> GetLoopGuards, bool ExitIfTrue,
       bool ControlsOnlyExit, bool AllowPredicates);
   std::optional<ScalarEvolution::ExitLimit> computeExitLimitFromCondFromBinOp(
       ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond,
-      std::function<LoopGuards()> GetLoopGuards, bool ExitIfTrue,
+      function_ref<const LoopGuards &()> GetLoopGuards, bool ExitIfTrue,
       bool ControlsOnlyExit, bool AllowPredicates);
 
   /// Compute the number of times the backedge of the specified loop will
@@ -1892,27 +1893,28 @@ private:
   /// ExitCond and ExitIfTrue. If AllowPredicates is set, this call will try
   /// to use a minimal set of SCEV predicates in order to return an exact
   /// answer.
-  ExitLimit computeExitLimitFromICmp(const Loop *L, ICmpInst *ExitCond,
-                                     std::function<LoopGuards()> GetLoopGuards,
-                                     bool ExitIfTrue, bool IsSubExpr,
-                                     bool AllowPredicates = false);
+  ExitLimit
+  computeExitLimitFromICmp(const Loop *L, ICmpInst *ExitCond,
+                           function_ref<const LoopGuards &()> GetLoopGuards,
+                           bool ExitIfTrue, bool IsSubExpr,
+                           bool AllowPredicates = false);
 
   /// Variant of previous which takes the components representing an ICmp
   /// as opposed to the ICmpInst itself.  Note that the prior version can
   /// return more precise results in some cases and is preferred when caller
   /// has a materialized ICmp.
-  ExitLimit computeExitLimitFromICmp(const Loop *L, ICmpInst::Predicate Pred,
-                                     const SCEV *LHS, const SCEV *RHS,
-                                     std::function<LoopGuards()> GetLoopGuards,
-                                     bool IsSubExpr,
-                                     bool AllowPredicates = false);
+  ExitLimit
+  computeExitLimitFromICmp(const Loop *L, ICmpInst::Predicate Pred,
+                           const SCEV *LHS, const SCEV *RHS,
+                           function_ref<const LoopGuards &()> GetLoopGuards,
+                           bool IsSubExpr, bool AllowPredicates = false);
 
   /// Compute the number of times the backedge of the specified loop will
   /// execute if its exit condition were a switch with a single exiting case
   /// to ExitingBB.
   ExitLimit computeExitLimitFromSingleExitSwitch(
       const Loop *L, SwitchInst *Switch, BasicBlock *ExitingBB,
-      std::function<LoopGuards()> GetLoopGuards, bool IsSubExpr);
+      function_ref<const LoopGuards &()> GetLoopGuards, bool IsSubExpr);
 
   /// Compute the exit limit of a loop that is controlled by a
   /// "(IV >> 1) != 0" type comparison.  We cannot compute the exact trip
@@ -1937,7 +1939,7 @@ private:
   /// If AllowPredicates is set, this call will try to use a minimal set of
   /// SCEV predicates in order to return an exact answer.
   ExitLimit howFarToZero(const SCEV *V, const Loop *L,
-                         std::function<LoopGuards()> GetLoopGuards,
+                         function_ref<const LoopGuards &()> GetLoopGuards,
                          bool IsSubExpr, bool AllowPredicates = false);
 
   /// Return the number of times an exit condition checking the specified

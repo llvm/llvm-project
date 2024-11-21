@@ -8806,11 +8806,11 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
   const SCEV *MayExitMaxBECount = nullptr;
   bool MustExitMaxOrZero = false;
   bool IsOnlyExit = ExitingBlocks.size() == 1;
-  std::optional<LoopGuards> LoopGuards;
-  auto GetLoopGuards = [&LoopGuards, &L, this]() {
-    if (!LoopGuards)
-      LoopGuards.emplace(LoopGuards::collect(L, *this));
-    return *LoopGuards;
+  std::optional<LoopGuards> CachedLoopGuards;
+  auto GetLoopGuards = [&CachedLoopGuards, &L, this]() -> const LoopGuards & {
+    if (!CachedLoopGuards)
+      CachedLoopGuards.emplace(LoopGuards::collect(L, *this));
+    return *CachedLoopGuards;
   };
 
   // Compute the ExitLimit for each loop exit. Use this to populate ExitCounts
@@ -8901,10 +8901,10 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
                            MaxBECount, MaxOrZero);
 }
 
-ScalarEvolution::ExitLimit
-ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
-                                  std::function<LoopGuards()> GetLoopGuards,
-                                  bool IsOnlyExit, bool AllowPredicates) {
+ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimit(
+    const Loop *L, BasicBlock *ExitingBlock,
+    function_ref<const LoopGuards &()> GetLoopGuards, bool IsOnlyExit,
+    bool AllowPredicates) {
   assert(L->contains(ExitingBlock) && "Exit count for non-loop block?");
   // If our exiting block does not dominate the latch, then its connection with
   // loop's exit limit may be far from trivial.
@@ -8942,8 +8942,9 @@ ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
 }
 
 ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCond(
-    const Loop *L, Value *ExitCond, std::function<LoopGuards()> GetLoopGuards,
-    bool ExitIfTrue, bool ControlsOnlyExit, bool AllowPredicates) {
+    const Loop *L, Value *ExitCond,
+    function_ref<const LoopGuards &()> GetLoopGuards, bool ExitIfTrue,
+    bool ControlsOnlyExit, bool AllowPredicates) {
   ScalarEvolution::ExitLimitCacheTy Cache(L, ExitIfTrue, AllowPredicates);
   return computeExitLimitFromCondCached(Cache, L, ExitCond, GetLoopGuards,
                                         ExitIfTrue, ControlsOnlyExit,
@@ -8984,7 +8985,7 @@ void ScalarEvolution::ExitLimitCache::insert(const Loop *L, Value *ExitCond,
 
 ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondCached(
     ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond,
-    std::function<LoopGuards()> GetLoopGuards, bool ExitIfTrue,
+    function_ref<const LoopGuards &()> GetLoopGuards, bool ExitIfTrue,
     bool ControlsOnlyExit, bool AllowPredicates) {
 
   if (auto MaybeEL = Cache.find(L, ExitCond, ExitIfTrue, ControlsOnlyExit,
@@ -9000,7 +9001,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondCached(
 
 ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondImpl(
     ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond,
-    std::function<LoopGuards()> GetLoopGuards, bool ExitIfTrue,
+    function_ref<const LoopGuards &()> GetLoopGuards, bool ExitIfTrue,
     bool ControlsOnlyExit, bool AllowPredicates) {
   // Handle BinOp conditions (And, Or).
   if (auto LimitFromBinOp = computeExitLimitFromCondFromBinOp(
@@ -9066,7 +9067,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondImpl(
 std::optional<ScalarEvolution::ExitLimit>
 ScalarEvolution::computeExitLimitFromCondFromBinOp(
     ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond,
-    std::function<LoopGuards()> GetLoopGuards, bool ExitIfTrue,
+    function_ref<const LoopGuards &()> GetLoopGuards, bool ExitIfTrue,
     bool ControlsOnlyExit, bool AllowPredicates) {
   // Check if the controlling expression for this loop is an And or Or.
   Value *Op0, *Op1;
@@ -9147,7 +9148,7 @@ ScalarEvolution::computeExitLimitFromCondFromBinOp(
 
 ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
     const Loop *L, ICmpInst *ExitCond,
-    std::function<LoopGuards()> GetLoopGuards, bool ExitIfTrue,
+    function_ref<const LoopGuards &()> GetLoopGuards, bool ExitIfTrue,
     bool ControlsOnlyExit, bool AllowPredicates) {
   // If the condition was exit on true, convert the condition to exit on false
   ICmpInst::Predicate Pred;
@@ -9176,7 +9177,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
 }
 ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
     const Loop *L, ICmpInst::Predicate Pred, const SCEV *LHS, const SCEV *RHS,
-    std::function<LoopGuards()> GetLoopGuards, bool ControlsOnlyExit,
+    function_ref<const LoopGuards &()> GetLoopGuards, bool ControlsOnlyExit,
     bool AllowPredicates) {
 
   // Try to evaluate any dependencies out of the loop.
@@ -9350,7 +9351,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
 ScalarEvolution::ExitLimit
 ScalarEvolution::computeExitLimitFromSingleExitSwitch(
     const Loop *L, SwitchInst *Switch, BasicBlock *ExitingBlock,
-    std::function<LoopGuards()> GetLoopGuards, bool ControlsOnlyExit) {
+    function_ref<const LoopGuards &()> GetLoopGuards, bool ControlsOnlyExit) {
   assert(!L->contains(ExitingBlock) && "Not an exiting block!");
 
   // Give up if the exit is the default dest of a switch.
@@ -10504,7 +10505,7 @@ SolveQuadraticAddRecRange(const SCEVAddRecExpr *AddRec,
 
 ScalarEvolution::ExitLimit
 ScalarEvolution::howFarToZero(const SCEV *V, const Loop *L,
-                              std::function<LoopGuards()> GetLoopGuards,
+                              function_ref<const LoopGuards &()> GetLoopGuards,
                               bool ControlsOnlyExit, bool AllowPredicates) {
 
   // This is only used for loops with a "x != y" exit test. The exit condition
