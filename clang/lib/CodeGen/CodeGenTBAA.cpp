@@ -246,7 +246,22 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
       // Be conservative if the type isn't a RecordType. We are specifically
       // required to do this for member pointers until we implement the
       // similar-types rule.
-      if (!Ty->isRecordType())
+      const auto *RT = Ty->getAs<RecordType>();
+      if (!RT)
+        return AnyPtr;
+
+      // For unnamed structs or unions C's compatible types rule applies. Two
+      // compatible types in different compilation units can have different
+      // mangled names, meaning the metadata emitted below would incorrectly
+      // mark them as no-alias. Use AnyPtr for such types in both C and C++, as
+      // C and C++ types may be visible when doing LTO.
+      //
+      // Note that using AnyPtr is overly conservative. We could summarize the
+      // members of the type, as per the C compatibility rule in the future.
+      // This also covers anonymous structs and unions, which have a different
+      // compatibility rule, but it doesn't matter because you can never have a
+      // pointer to an anonymous struct or union.
+      if (!RT->getDecl()->getDeclName())
         return AnyPtr;
 
       // For non-builtin types use the mangled name of the canonical type.
