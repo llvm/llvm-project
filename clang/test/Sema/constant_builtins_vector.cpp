@@ -777,3 +777,23 @@ static_assert(__builtin_reduce_and((vector4int){(int)~0x11111111, (int)~0x222222
 static_assert(__builtin_reduce_and((vector4long){(long long)~0x1111111111111111L, (long long)~0x2222222222222222L, (long long)~0x4444444444444444L, (long long)-1}) == 0x8888888888888888L);
 static_assert(__builtin_reduce_and((vector4uint){0x11111111U, 0x22222222U, 0x44444444U, 0x88888888U}) == 0U);
 static_assert(__builtin_reduce_and((vector4ulong){0x1111111111111111UL, 0x2222222222222222UL, 0x4444444444444444UL, 0x8888888888888888UL}) == 0L);
+
+static_assert(__builtin_reduce_or((vector4char){}) == 0);
+static_assert(__builtin_reduce_or((vector4char){(char)0x11, (char)0x22, (char)0x44, (char)0x88}) == (char)0xFF);
+static_assert(__builtin_reduce_or((vector4short){(short)0x1111, (short)0x2222, (short)0x4444, (short)0x8888}) == (short)0xFFFF);
+static_assert(__builtin_reduce_or((vector4int){(int)0x11111111, (int)0x22222222, (int)0x44444444, (int)0x88888888}) == (int)0xFFFFFFFF);
+static_assert(__builtin_reduce_or((vector4long){(long long)0x1111111111111111L, (long long)0x2222222222222222L, (long long)0x4444444444444444L, (long long)0x8888888888888888L}) == (long long)0xFFFFFFFFFFFFFFFFL);
+static_assert(__builtin_reduce_or((vector4char){(char)0, (char)0x22, (char)0x44, (char)0x88}) == ~0x11);
+static_assert(__builtin_reduce_or((vector4short){(short)0x1111, (short)0, (short)0x4444, (short)0x8888}) == ~0x2222);
+static_assert(__builtin_reduce_or((vector4int){(int)0x11111111, (int)0x22222222, (int)0, (int)0x88888888}) == ~0x44444444);
+static_assert(__builtin_reduce_or((vector4long){(long long)0x1111111111111111L, (long long)0x2222222222222222L, (long long)0x4444444444444444L, (long long)0}) == ~0x8888888888888888L);
+static_assert(__builtin_reduce_or((vector4uint){0x11111111U, 0x22222222U, 0x44444444U, 0x88888888U}) == 0xFFFFFFFFU);
+static_assert(__builtin_reduce_or((vector4ulong){0x1111111111111111UL, 0x2222222222222222UL, 0x4444444444444444UL, 0x8888888888888888UL}) == 0xFFFFFFFFFFFFFFFFL);
+
+static_assert(__builtin_reduce_xor((vector4char){}) == 0);
+static_assert(__builtin_reduce_xor((vector4char){(char)0x11, (char)0x22, (char)0x44, (char)0x88}) == (char)0xFF);
+static_assert(__builtin_reduce_xor((vector4short){(short)0x1111, (short)0x2222, (short)0x4444, (short)0x8888}) == (short)0xFFFF);
+static_assert(__builtin_reduce_xor((vector4int){(int)0x11111111, (int)0x22222222, (int)0x44444444, (int)0x88888888}) == (int)0xFFFFFFFF);
+static_assert(__builtin_reduce_xor((vector4long){(long long)0x1111111111111111L, (long long)0x2222222222222222L, (long long)0x4444444444444444L, (long long)0x8888888888888888L}) == (long long)0xFFFFFFFFFFFFFFFFL);
+static_assert(__builtin_reduce_xor((vector4uint){0x11111111U, 0x22222222U, 0x44444444U, 0x88888888U}) == 0xFFFFFFFFU);
+static_assert(__builtin_reduce_xor((vector4ulong){0x1111111111111111UL, 0x2222222222222222UL, 0x4444444444444444UL, 0x8888888888888888UL}) == 0xFFFFFFFFFFFFFFFFUL);

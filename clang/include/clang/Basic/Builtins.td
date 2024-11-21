@@ -1486,13 +1486,13 @@ def ReduceMinimum : Builtin {
 
 def ReduceXor : Builtin {
   let Spellings = ["__builtin_reduce_xor"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ReduceOr : Builtin {
   let Spellings = ["__builtin_reduce_or"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
