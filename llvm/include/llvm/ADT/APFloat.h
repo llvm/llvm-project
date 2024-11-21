@@ -311,7 +311,8 @@ struct APFloatBase {
   static unsigned int semanticsIntSizeInBits(const fltSemantics&, bool);
   static bool semanticsHasZero(const fltSemantics &);
   static bool semanticsHasSignedRepr(const fltSemantics &);
-  static bool semanticsHasNanOrInf(const fltSemantics &);
+  static bool semanticsHasInf(const fltSemantics &);
+  static bool semanticsHasNaN(const fltSemantics &);
 
   // Returns true if any number described by \p Src can be precisely represented
   // by a normal (not subnormal) value in \p Dst.
