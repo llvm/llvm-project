@@ -599,9 +599,12 @@ Error RewriteInstance::discoverStorage() {
   // weird ASLR mapping addresses (4KB aligned)
   if (opts::Hugify && !BC->HasFixedLoadAddress) {
     NextAvailableAddress += BC->PageAlign;
-    BC->outs() << "BOLT-INFO: Hugify, Additional huge page from left side due to"
-               << "weird ASLR mapping addresses(4KB aligned): " << NextAvailableAddress
-               << '\n';
+    if (opts::Verbosity >= 1) {
+      BC->outs()
+          << "BOLT-INFO: Hugify, Additional huge page from left side due to"
+          << "weird ASLR mapping addresses(4KB aligned): "
+          << NextAvailableAddress << '\n';
+    }
   }
 
   if (!opts::UseGnuStack && !BC->IsLinuxKernel) {
@@ -5863,11 +5866,17 @@ void RewriteInstance::rewriteFile() {
   // Write all allocatable sections - reloc-mode text is written here as well
   for (BinarySection &Section : BC->allocatableSections()) {
     if (!Section.isFinalized() || !Section.getOutputData()) {
-      BC->outs() << "BOLT: new section is finalized or !getOutputData, skip " << Section.getName() << '\n';
+      LLVM_DEBUG(if (opts::Verbosity > 1) {
+        dbgs() << "BOLT-INFO: new section is finalized or !getOutputData, skip "
+                   << Section.getName() << '\n';
+      });
       continue;
     }
     if (Section.isLinkOnly()) {
-      BC->outs() << "BOLT: new section is link only, skip " << Section.getName() << '\n';
+      LLVM_DEBUG(if (opts::Verbosity > 1) {
+        dbgs() << "BOLT-INFO: new section is link only, skip "
+                   << Section.getName() << '\n';
+      });
       continue;
     }
 

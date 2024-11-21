@@ -172,6 +172,7 @@ extern "C" void __bolt_hugify_self_impl() {
 
 /// This is hooking ELF's entry, it needs to save all machine state.
 extern "C" __attribute((naked)) void __bolt_hugify_self() {
+  // clang-format off
 #if defined(__x86_64__)
   __asm__ __volatile__(SAVE_ALL "call __bolt_hugify_self_impl\n" RESTORE_ALL
                                 "jmp __bolt_hugify_start_program\n"
@@ -185,5 +186,6 @@ extern "C" __attribute((naked)) void __bolt_hugify_self() {
 #else
   __exit(1);
 #endif
+  // clang-format on
 }
 #endif
