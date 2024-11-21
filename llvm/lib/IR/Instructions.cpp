@@ -1752,8 +1752,17 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
   if (isa<UndefValue>(Mask) || isa<ConstantAggregateZero>(Mask))
     return true;
 
+  // NOTE: Through vector ConstantInt we have the potential to support more
+  // than just zero splat masks but that requires a LangRef change.
+  if (isa<ScalableVectorType>(MaskTy))
+    return false;
+
+  unsigned V1Size = cast<FixedVectorType>(V1->getType())->getNumElements();
+
+  if (const auto *CI = dyn_cast<ConstantInt>(Mask))
+    return !CI->uge(V1Size * 2);
+
   if (const auto *MV = dyn_cast<ConstantVector>(Mask)) {
-    unsigned V1Size = cast<FixedVectorType>(V1->getType())->getNumElements();
     for (Value *Op : MV->operands()) {
       if (auto *CI = dyn_cast<ConstantInt>(Op)) {
         if (CI->uge(V1Size*2))
@@ -1766,7 +1775,6 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
   }
 
   if (const auto *CDS = dyn_cast<ConstantDataSequential>(Mask)) {
-    unsigned V1Size = cast<FixedVectorType>(V1->getType())->getNumElements();
     for (unsigned i = 0, e = cast<FixedVectorType>(MaskTy)->getNumElements();
          i != e; ++i)
       if (CDS->getElementAsInteger(i) >= V1Size*2)
