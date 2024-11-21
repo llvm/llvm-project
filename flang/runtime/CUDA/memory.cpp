@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/CUDA/memory.h"
+#include "../assign-impl.h"
 #include "../terminator.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/CUDA/descriptor.h"
@@ -118,6 +119,24 @@ void RTDECL(CUFDataTransferDescDesc)(Descriptor *dstDesc, Descriptor *srcDesc,
   }
   Fortran::runtime::Assign(
       *dstDesc, *srcDesc, terminator, MaybeReallocate, memmoveFct);
+}
+
+void RTDECL(CUFDataTransferCstDesc)(Descriptor *dstDesc, Descriptor *srcDesc,
+    unsigned mode, const char *sourceFile, int sourceLine) {
+  MemmoveFct memmoveFct;
+  Terminator terminator{sourceFile, sourceLine};
+  if (mode == kHostToDevice) {
+    memmoveFct = &MemmoveHostToDevice;
+  } else if (mode == kDeviceToHost) {
+    memmoveFct = &MemmoveDeviceToHost;
+  } else if (mode == kDeviceToDevice) {
+    memmoveFct = &MemmoveDeviceToDevice;
+  } else {
+    terminator.Crash("host to host copy not supported");
+  }
+
+  Fortran::runtime::DoFromSourceAssign(
+      *dstDesc, *srcDesc, terminator, memmoveFct);
 }
 
 void RTDECL(CUFDataTransferDescDescNoRealloc)(Descriptor *dstDesc,

@@ -1,4 +1,4 @@
-//===- ClangOpenCLBuiltinEmitter.cpp - Generate Clang OpenCL Builtin handling
+//===-- ClangOpenCLBuiltinEmitter.cpp - Generate OpenCL Builtin handling --===//
 //
 //                     The LLVM Compiler Infrastructure
 //
