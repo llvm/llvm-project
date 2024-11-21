@@ -69,6 +69,11 @@ protected:
 private:
   bool mayUseShortThunk = true;
   virtual void writeLong(uint8_t *buf) = 0;
+  // A thunk may be written out as a short or long, and we may not know which
+  // type at thunk creation time. In some thunk implementations the long thunk
+  // has additional mapping symbols. Thus function can be overridden to add
+  // these additional mapping symbols.
+  virtual void addLongMapSyms() {}
 };
 
 // AArch64 long range Thunks.
@@ -82,6 +87,8 @@ public:
 
 private:
   void writeLong(uint8_t *buf) override;
+  void addLongMapSyms() override;
+  ThunkSection *tsec = nullptr;
 };
 
 class AArch64ADRPThunk final : public AArch64Thunk {
@@ -148,6 +155,8 @@ private:
   // can create layout oscillations in certain corner cases which would prevent
   // the layout from converging.
   bool mayUseShortThunk = true;
+  // See comment in AArch64Thunk.
+  virtual void addLongMapSyms() {}
 };
 
 // Base class for Thumb-2 thunks.
@@ -176,6 +185,8 @@ public:
 private:
   // See comment in ARMThunk above.
   bool mayUseShortThunk = true;
+  // See comment in AArch64Thunk.
+  virtual void addLongMapSyms() {}
 };
 
 // Specific ARM Thunk implementations. The naming convention is:
@@ -229,6 +240,10 @@ public:
   uint32_t sizeLong() override { return 12; }
   void writeLong(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
+
+private:
+  void addLongMapSyms() override;
+  ThunkSection *tsec = nullptr;
 };
 
 class ThumbV6MABSXOLongThunk final : public ThumbThunk {
@@ -249,6 +264,10 @@ public:
   uint32_t sizeLong() override { return 16; }
   void writeLong(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
+
+private:
+  void addLongMapSyms() override;
+  ThunkSection *tsec = nullptr;
 };
 
 // Architectures v4, v5 and v6 do not support the movt/movw instructions. v5 and
@@ -267,6 +286,10 @@ public:
   uint32_t sizeLong() override { return 8; }
   void writeLong(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
+
+private:
+  void addLongMapSyms() override;
+  ThunkSection *tsec = nullptr;
 };
 
 // Implementations of Thunks for v4. BLX is not supported, and loads
@@ -279,6 +302,10 @@ public:
   uint32_t sizeLong() override { return 16; }
   void writeLong(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
+
+private:
+  void addLongMapSyms() override;
+  ThunkSection *tsec = nullptr;
 };
 
 class ARMV4PILongThunk final : public ARMThunk {
@@ -289,6 +316,10 @@ public:
   uint32_t sizeLong() override { return 12; }
   void writeLong(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
+
+private:
+  void addLongMapSyms() override;
+  ThunkSection *tsec = nullptr;
 };
 
 class ThumbV4PILongBXThunk final : public ThumbThunk {
@@ -299,6 +330,10 @@ public:
   uint32_t sizeLong() override { return 16; }
   void writeLong(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
+
+private:
+  void addLongMapSyms() override;
+  ThunkSection *tsec = nullptr;
 };
 
 class ThumbV4PILongThunk final : public ThumbThunk {
@@ -309,6 +344,10 @@ public:
   uint32_t sizeLong() override { return 20; }
   void writeLong(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
+
+private:
+  void addLongMapSyms() override;
+  ThunkSection *tsec = nullptr;
 };
 
 class ARMV4ABSLongBXThunk final : public ARMThunk {
@@ -319,6 +358,10 @@ public:
   uint32_t sizeLong() override { return 12; }
   void writeLong(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
+
+private:
+  void addLongMapSyms() override;
+  ThunkSection *tsec = nullptr;
 };
 
 class ThumbV4ABSLongBXThunk final : public ThumbThunk {
@@ -329,6 +372,10 @@ public:
   uint32_t sizeLong() override { return 12; }
   void writeLong(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
+
+private:
+  void addLongMapSyms() override;
+  ThunkSection *tsec = nullptr;
 };
 
 class ThumbV4ABSLongThunk final : public ThumbThunk {
@@ -339,6 +386,10 @@ public:
   uint32_t sizeLong() override { return 16; }
   void writeLong(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
+
+private:
+  void addLongMapSyms() override;
+  ThunkSection *tsec = nullptr;
 };
 
 // The AVR devices need thunks for R_AVR_LO8_LDI_GS/R_AVR_HI8_LDI_GS
@@ -560,6 +611,8 @@ bool AArch64Thunk::getMayUseShortThunk() {
   uint64_t s = getAArch64ThunkDestVA(ctx, destination, addend);
   uint64_t p = getThunkTargetSym()->getVA(ctx);
   mayUseShortThunk = llvm::isInt<28>(s - p);
+  if (!mayUseShortThunk)
+    addLongMapSyms();
   return mayUseShortThunk;
 }
 
@@ -602,8 +655,12 @@ void AArch64ABSLongThunk::addSymbols(ThunkSection &isec) {
   addSymbol(ctx.saver.save("__AArch64AbsLongThunk_" + destination.getName()),
             STT_FUNC, 0, isec);
   addSymbol("$x", STT_NOTYPE, 0, isec);
-  if (!getMayUseShortThunk())
-    addSymbol("$d", STT_NOTYPE, 8, isec);
+  tsec = &isec;
+  (void)getMayUseShortThunk();
+}
+
+void AArch64ABSLongThunk::addLongMapSyms() {
+  addSymbol("$d", STT_NOTYPE, 8, *tsec);
 }
 
 // This Thunk has a maximum range of 4Gb, this is sufficient for all programs
@@ -691,11 +748,14 @@ bool ARMThunk::getMayUseShortThunk() {
   uint64_t s = getARMThunkDestVA(ctx, destination);
   if (s & 1) {
     mayUseShortThunk = false;
+    addLongMapSyms();
     return false;
   }
   uint64_t p = getThunkTargetSym()->getVA(ctx);
   int64_t offset = s - p - 8;
   mayUseShortThunk = llvm::isInt<26>(offset);
+  if (!mayUseShortThunk)
+    addLongMapSyms();
   return mayUseShortThunk;
 }
 
@@ -729,16 +789,19 @@ bool ARMThunk::isCompatibleWith(const InputSection &isec,
 //    (see comment for mayUseShortThunk)
 // && the arch supports Thumb branch range extension.
 bool ThumbThunk::getMayUseShortThunk() {
-  if (!mayUseShortThunk || !ctx.arg.armJ1J2BranchEncoding)
+  if (!mayUseShortThunk)
     return false;
   uint64_t s = getARMThunkDestVA(ctx, destination);
-  if ((s & 1) == 0) {
+  if ((s & 1) == 0 || !ctx.arg.armJ1J2BranchEncoding) {
     mayUseShortThunk = false;
+    addLongMapSyms();
     return false;
   }
   uint64_t p = getThunkTargetSym()->getVA(ctx) & ~1;
   int64_t offset = s - p - 4;
   mayUseShortThunk = llvm::isInt<25>(offset);
+  if (!mayUseShortThunk)
+    addLongMapSyms();
   return mayUseShortThunk;
 }
 
@@ -856,8 +919,12 @@ void ThumbV6MABSLongThunk::addSymbols(ThunkSection &isec) {
   addSymbol(ctx.saver.save("__Thumbv6MABSLongThunk_" + destination.getName()),
             STT_FUNC, 1, isec);
   addSymbol("$t", STT_NOTYPE, 0, isec);
-  if (!getMayUseShortThunk())
-    addSymbol("$d", STT_NOTYPE, 8, isec);
+  tsec = &isec;
+  (void)getMayUseShortThunk();
+}
+
+void ThumbV6MABSLongThunk::addLongMapSyms() {
+  addSymbol("$d", STT_NOTYPE, 8, *tsec);
 }
 
 void ThumbV6MABSXOLongThunk::writeLong(uint8_t *buf) {
@@ -912,8 +979,12 @@ void ThumbV6MPILongThunk::addSymbols(ThunkSection &isec) {
   addSymbol(ctx.saver.save("__Thumbv6MPILongThunk_" + destination.getName()),
             STT_FUNC, 1, isec);
   addSymbol("$t", STT_NOTYPE, 0, isec);
-  if (!getMayUseShortThunk())
-    addSymbol("$d", STT_NOTYPE, 12, isec);
+  tsec = &isec;
+  (void)getMayUseShortThunk();
+}
+
+void ThumbV6MPILongThunk::addLongMapSyms() {
+  addSymbol("$d", STT_NOTYPE, 12, *tsec);
 }
 
 void ARMV5LongLdrPcThunk::writeLong(uint8_t *buf) {
@@ -927,8 +998,12 @@ void ARMV5LongLdrPcThunk::addSymbols(ThunkSection &isec) {
   addSymbol(ctx.saver.save("__ARMv5LongLdrPcThunk_" + destination.getName()),
             STT_FUNC, 0, isec);
   addSymbol("$a", STT_NOTYPE, 0, isec);
-  if (!getMayUseShortThunk())
-    addSymbol("$d", STT_NOTYPE, 4, isec);
+  tsec = &isec;
+  (void)getMayUseShortThunk();
+}
+
+void ARMV5LongLdrPcThunk::addLongMapSyms() {
+  addSymbol("$d", STT_NOTYPE, 4, *tsec);
 }
 
 void ARMV4ABSLongBXThunk::writeLong(uint8_t *buf) {
@@ -943,8 +1018,12 @@ void ARMV4ABSLongBXThunk::addSymbols(ThunkSection &isec) {
   addSymbol(ctx.saver.save("__ARMv4ABSLongBXThunk_" + destination.getName()),
             STT_FUNC, 0, isec);
   addSymbol("$a", STT_NOTYPE, 0, isec);
-  if (!getMayUseShortThunk())
-    addSymbol("$d", STT_NOTYPE, 8, isec);
+  tsec = &isec;
+  (void)getMayUseShortThunk();
+}
+
+void ARMV4ABSLongBXThunk::addLongMapSyms() {
+  addSymbol("$d", STT_NOTYPE, 8, *tsec);
 }
 
 void ThumbV4ABSLongBXThunk::writeLong(uint8_t *buf) {
@@ -961,9 +1040,13 @@ void ThumbV4ABSLongBXThunk::addSymbols(ThunkSection &isec) {
   addSymbol(ctx.saver.save("__Thumbv4ABSLongBXThunk_" + destination.getName()),
             STT_FUNC, 1, isec);
   addSymbol("$t", STT_NOTYPE, 0, isec);
-  addSymbol("$a", STT_NOTYPE, 4, isec);
-  if (!getMayUseShortThunk())
-    addSymbol("$d", STT_NOTYPE, 8, isec);
+  tsec = &isec;
+  (void)getMayUseShortThunk();
+}
+
+void ThumbV4ABSLongBXThunk::addLongMapSyms() {
+  addSymbol("$a", STT_NOTYPE, 4, *tsec);
+  addSymbol("$d", STT_NOTYPE, 8, *tsec);
 }
 
 void ThumbV4ABSLongThunk::writeLong(uint8_t *buf) {
@@ -981,9 +1064,13 @@ void ThumbV4ABSLongThunk::addSymbols(ThunkSection &isec) {
   addSymbol(ctx.saver.save("__Thumbv4ABSLongThunk_" + destination.getName()),
             STT_FUNC, 1, isec);
   addSymbol("$t", STT_NOTYPE, 0, isec);
-  addSymbol("$a", STT_NOTYPE, 4, isec);
-  if (!getMayUseShortThunk())
-    addSymbol("$d", STT_NOTYPE, 12, isec);
+  tsec = &isec;
+  (void)getMayUseShortThunk();
+}
+
+void ThumbV4ABSLongThunk::addLongMapSyms() {
+  addSymbol("$a", STT_NOTYPE, 4, *tsec);
+  addSymbol("$d", STT_NOTYPE, 12, *tsec);
 }
 
 void ARMV4PILongBXThunk::writeLong(uint8_t *buf) {
@@ -1000,8 +1087,12 @@ void ARMV4PILongBXThunk::addSymbols(ThunkSection &isec) {
   addSymbol(ctx.saver.save("__ARMv4PILongBXThunk_" + destination.getName()),
             STT_FUNC, 0, isec);
   addSymbol("$a", STT_NOTYPE, 0, isec);
-  if (!getMayUseShortThunk())
-    addSymbol("$d", STT_NOTYPE, 12, isec);
+  tsec = &isec;
+  (void)getMayUseShortThunk();
+}
+
+void ARMV4PILongBXThunk::addLongMapSyms() {
+  addSymbol("$d", STT_NOTYPE, 12, *tsec);
 }
 
 void ARMV4PILongThunk::writeLong(uint8_t *buf) {
@@ -1017,8 +1108,12 @@ void ARMV4PILongThunk::addSymbols(ThunkSection &isec) {
   addSymbol(ctx.saver.save("__ARMv4PILongThunk_" + destination.getName()),
             STT_FUNC, 0, isec);
   addSymbol("$a", STT_NOTYPE, 0, isec);
-  if (!getMayUseShortThunk())
-    addSymbol("$d", STT_NOTYPE, 8, isec);
+  tsec = &isec;
+  (void)getMayUseShortThunk();
+}
+
+void ARMV4PILongThunk::addLongMapSyms() {
+  addSymbol("$d", STT_NOTYPE, 8, *tsec);
 }
 
 void ThumbV4PILongBXThunk::writeLong(uint8_t *buf) {
@@ -1037,9 +1132,13 @@ void ThumbV4PILongBXThunk::addSymbols(ThunkSection &isec) {
   addSymbol(ctx.saver.save("__Thumbv4PILongBXThunk_" + destination.getName()),
             STT_FUNC, 1, isec);
   addSymbol("$t", STT_NOTYPE, 0, isec);
-  addSymbol("$a", STT_NOTYPE, 4, isec);
-  if (!getMayUseShortThunk())
-    addSymbol("$d", STT_NOTYPE, 12, isec);
+  tsec = &isec;
+  (void)getMayUseShortThunk();
+}
+
+void ThumbV4PILongBXThunk::addLongMapSyms() {
+  addSymbol("$a", STT_NOTYPE, 4, *tsec);
+  addSymbol("$d", STT_NOTYPE, 12, *tsec);
 }
 
 void ThumbV4PILongThunk::writeLong(uint8_t *buf) {
@@ -1059,9 +1158,13 @@ void ThumbV4PILongThunk::addSymbols(ThunkSection &isec) {
   addSymbol(ctx.saver.save("__Thumbv4PILongThunk_" + destination.getName()),
             STT_FUNC, 1, isec);
   addSymbol("$t", STT_NOTYPE, 0, isec);
-  addSymbol("$a", STT_NOTYPE, 4, isec);
-  if (!getMayUseShortThunk())
-    addSymbol("$d", STT_NOTYPE, 16, isec);
+  tsec = &isec;
+  (void)getMayUseShortThunk();
+}
+
+void ThumbV4PILongThunk::addLongMapSyms() {
+  addSymbol("$a", STT_NOTYPE, 4, *tsec);
+  addSymbol("$d", STT_NOTYPE, 16, *tsec);
 }
 
 // Use the long jump which covers a range up to 8MiB.

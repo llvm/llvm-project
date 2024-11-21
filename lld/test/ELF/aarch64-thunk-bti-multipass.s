@@ -40,15 +40,11 @@ _start:
 // CHECK-LABEL: <_start>:
 // CHECK-NEXT: 10001000: bl  0x10002004 <__AArch64AbsLongThunk_fn1>
 
-/// FIXME, the 2nd ldr and udf are a result of mapping symbols being generated
-/// on Thunk insertion. When that is fixed in lld they will be data statements
-/// like in __AArch64AbsLongThunk_far below.
 // CHECK-LABEL: <__AArch64AbsLongThunk_fn1>:
 // CHECK-NEXT: 10002004: ldr     x16, 0x1000200c <__AArch64AbsLongThunk_fn1+0x8>
 // CHECK-NEXT:           br      x16
-// CHECK-NEXT:           ldr     w0, 0x1000260c <__AArch64AbsLongThunk_fn1+0x608>
-// CHECK-NEXT:           udf     #0x0
-
+// CHECK-NEXT:           00 30 00 18    .word   0x18003000
+// CHECK-NEXT:           00 00 00 00    .word   0x00000000
 
 .section .text.1, "ax", %progbits
 .balign 0x1000
