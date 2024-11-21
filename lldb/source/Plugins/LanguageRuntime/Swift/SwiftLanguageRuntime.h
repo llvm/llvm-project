@@ -839,7 +839,6 @@ private:
 /// For UnwindPlans, these use eh_frame / dwarf register numbering.
 struct AsyncUnwindRegisterNumbers {
   uint32_t async_ctx_regnum;
-  uint32_t fp_regnum;
   uint32_t pc_regnum;
 
   /// All register numbers in this struct are given in the eRegisterKindDWARF

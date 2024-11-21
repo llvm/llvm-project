@@ -2298,14 +2298,12 @@ GetAsyncUnwindRegisterNumbers(llvm::Triple::ArchType triple) {
   case llvm::Triple::x86_64: {
     AsyncUnwindRegisterNumbers regnums;
     regnums.async_ctx_regnum = dwarf_r14_x86_64;
-    regnums.fp_regnum = dwarf_rbp_x86_64;
     regnums.pc_regnum = dwarf_rip_x86_64;
     return regnums;
   }
   case llvm::Triple::aarch64: {
     AsyncUnwindRegisterNumbers regnums;
     regnums.async_ctx_regnum = arm64_dwarf::x22;
-    regnums.fp_regnum = arm64_dwarf::fp;
     regnums.pc_regnum = arm64_dwarf::pc;
     return regnums;
   }
