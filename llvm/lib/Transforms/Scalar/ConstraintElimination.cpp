@@ -1511,18 +1511,29 @@ static bool checkOrAndOpImpliedByOther(
   if (OtherOpIdx != 0 && isa<SelectInst>(JoinOp))
     return false;
 
-  if (!match(JoinOp->getOperand(OtherOpIdx),
-             m_ICmp(Pred, m_Value(A), m_Value(B))))
-    return false;
-
-  // For OR, check if the negated condition implies CmpToCheck.
-  bool IsOr = match(JoinOp, m_LogicalOr());
-  if (IsOr)
-    Pred = CmpInst::getInversePredicate(Pred);
-
   // Optimistically add fact from first condition.
   unsigned OldSize = DFSInStack.size();
-  Info.addFact(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
+  // For OR, check if the negated condition implies CmpToCheck.
+  bool IsOr = match(JoinOp, m_LogicalOr());
+  SmallVector<Value *, 4> Worklist({JoinOp->getOperand(OtherOpIdx)});
+  while (!Worklist.empty()) {
+    Value *Val = Worklist.pop_back_val();
+    Value *LHS, *RHS;
+    ICmpInst::Predicate Pred;
+    if (match(Val, m_ICmp(Pred, m_Value(LHS), m_Value(RHS)))) {
+      if (IsOr)
+        Pred = CmpInst::getInversePredicate(Pred);
+      Info.addFact(Pred, LHS, RHS, CB.NumIn, CB.NumOut, DFSInStack);
+      continue;
+    }
+    if (IsOr ? match(Val, m_LogicalOr(m_Value(LHS), m_Value(RHS)))
+             : match(Val, m_LogicalAnd(m_Value(LHS), m_Value(RHS)))) {
+      Worklist.push_back(LHS);
+      Worklist.push_back(RHS);
+      continue;
+    }
+    return false;
+  }
   if (OldSize == DFSInStack.size())
     return false;
 
