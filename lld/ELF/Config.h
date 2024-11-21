@@ -9,6 +9,7 @@
 #ifndef LLD_ELF_CONFIG_H
 #define LLD_ELF_CONFIG_H
 
+#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
@@ -546,6 +547,7 @@ struct Ctx {
   LinkerScript *script;
   std::unique_ptr<TargetInfo> target;
 
+  CommonLinkerContext *commonCtx;
   ErrorHandler *errHandler;
 
   // These variables are initialized by Writer and should not be used before
@@ -671,6 +673,14 @@ LLVM_LIBRARY_VISIBILITY extern Ctx ctx;
 // VER_NDX_GLOBAL. This helper returns other elements.
 static inline ArrayRef<VersionDefinition> namedVersionDefs(Ctx &ctx) {
   return llvm::ArrayRef(ctx.arg.versionDefinitions).slice(2);
+}
+
+inline llvm::BumpPtrAllocator &bAlloc(Ctx &ctx) {
+  return ctx.commonCtx->bAlloc;
+}
+inline llvm::StringSaver &saver(Ctx &ctx) { return ctx.commonCtx->saver; }
+inline llvm::UniqueStringSaver &uniqueSaver(Ctx &ctx) {
+  return ctx.commonCtx->uniqueSaver;
 }
 
 struct ELFSyncStream : SyncStream {
