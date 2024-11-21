@@ -227,7 +227,7 @@ jobs:
     - name: Build Stage 1 Clang
       shell: bash
       run: |
-        if "${{ steps.needs.prepare.outputs.multi-stage}}" = "true"; then
+        if [ "${{ steps.needs.prepare.outputs.multi-stage}}" = "true" ]; then
           ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-package
           mv ${{ steps.setup-stage.outputs.build-prefix  }}/build/tools/clang/stage2-bins/${{ needs.prepare.outputs.release-binary-filename }} .
         else
@@ -238,7 +238,7 @@ jobs:
         fi
     
     - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
-      if: needs.prepare.outputs.multi-stage == "false"
+      if: needs.prepare.outputs.multi-stage == 'false'
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-release-binary
         # Due to path differences on Windows when running in bash vs running on node,
@@ -248,7 +248,7 @@ jobs:
 
     # Clean up some build files to reduce size of artifact.
     - name: Clean Up Build Directory
-      if: needs.prepare.outputs.multi-stage == "false"
+      if: needs.prepare.outputs.multi-stage == 'false'
       shell: bash
       run: |
         find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname ${{ needs.prepare.outputs.release-binary-filename }} -delete
@@ -256,12 +256,12 @@ jobs:
     
     - name: Run Tests
       shell: bash
-      if: needs.prepare.outputs.multi-stage == "false"
+      if: needs.prepare.outputs.multi-stage == 'false'
       run: |
         ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-check-all
 
     - name: Save Stage
-      if: needs.prepare.outputs.multi-stage == "true"
+      if: needs.prepare.outputs.multi-stage == 'true'
       uses: ./workflows-main/.github/workflows/release-binaries-save-stage
       with:
         build-prefix: ${{ steps.setup-stage.outputs.build-prefix }}
