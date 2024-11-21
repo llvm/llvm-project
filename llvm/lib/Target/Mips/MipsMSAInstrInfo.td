@@ -229,12 +229,6 @@ def vsplati64_elt : PatFrag<(ops node:$v, node:$i),
                             (MipsVSHF (vsplati64_splat_d node:$i),
                                       node:$v, node:$v)>;
 
-class SplatPatLeaf<Operand opclass, dag frag, code pred = [{}],
-                   SDNodeXForm xform = NOOP_SDNodeXForm>
-  : PatLeaf<frag, pred, xform> {
-  Operand OpClass = opclass;
-}
-
 class SplatComplexPattern<Operand opclass, ValueType ty, int numops, string fn,
                           list<SDNode> roots = [],
                           list<SDNodeProperty> props = []> :
