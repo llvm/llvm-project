@@ -101,7 +101,7 @@ fir.global linkonce @_QQclX5465737420504153534544 constant : !fir.char<1,11> {
 
 // CHECK: fir.global linkonce @_QQclX5465737420504153534544 {data_attr = #cuf.cuda<constant>} constant : !fir.char<1,11>
 
-// CHECK-LABEL: gpu.module @cuda_device_mod [#nvvm.target]
+// CHECK-LABEL: gpu.module @cuda_device_mod
 // CHECK: fir.global linkonce @_QQclX5465737420504153534544 {data_attr = #cuf.cuda<constant>} constant
 
 // -----
@@ -142,5 +142,5 @@ func.func private @_FortranAioEndIoStatement(!fir.ref<i8>) -> i32 attributes {fi
 
 // CHECK: fir.global linkonce @_QQclX5465737420504153534544 {data_attr = #cuf.cuda<constant>} constant : !fir.char<1,11>
 
-// CHECK-LABEL: gpu.module @cuda_device_mod [#nvvm.target]
+// CHECK-LABEL: gpu.module @cuda_device_mod 
 // CHECK: fir.global linkonce @_QQclX5465737420504153534544 {data_attr = #cuf.cuda<constant>} constant
