@@ -26,7 +26,6 @@ using namespace llvm;
 using namespace llvm::memprof;
 using testing::Contains;
 using testing::ElementsAre;
-using testing::FieldsAre;
 using testing::Pair;
 using testing::SizeIs;
 using testing::UnorderedElementsAre;
@@ -323,7 +322,7 @@ makeRecordV2(std::initializer_list<::llvm::memprof::CallStackId> AllocFrames,
   for (const auto &CSId : AllocFrames) {
     // We don't populate IndexedAllocationInfo::CallStack because we use it only
     // in Version1.
-    MR.AllocSites.push_back({{}, CSId, Block, Schema});
+    MR.AllocSites.emplace_back(CSId, Block, Schema);
   }
   for (const auto &CSId : CallSiteFrames)
     MR.CallSiteIds.push_back(CSId);
@@ -434,31 +433,30 @@ attributes #1 = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "t
   ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
                     Succeeded());
 
-  const std::pair<memprof::FrameId, memprof::Frame> Frames[] = {
-      // The call sites within foo.
-      {0, {GUIDFoo, 1, 8, false}},
-      {1, {GUIDFoo, 2, 3, false}},
-      {2, {GUIDFoo, 3, 3, false}},
-      // Line/column numbers below don't matter.
-      {3, {GUIDBar, 9, 9, false}},
-      {4, {GUIDZzz, 9, 9, false}},
-      {5, {GUIDBaz, 9, 9, false}}};
-  for (const auto &[FrameId, Frame] : Frames)
-    Writer.addMemProfFrame(FrameId, Frame, Err);
-
-  const std::pair<memprof::CallStackId, SmallVector<memprof::FrameId>>
-      CallStacks[] = {
-          {0x111, {3, 0}}, // bar called by foo
-          {0x222, {4, 1}}, // zzz called by foo
-          {0x333, {5, 2}}  // baz called by foo
-      };
-  for (const auto &[CSId, CallStack] : CallStacks)
-    Writer.addMemProfCallStack(CSId, CallStack, Err);
-
   const IndexedMemProfRecord IndexedMR = makeRecordV2(
       /*AllocFrames=*/{0x111, 0x222, 0x333},
       /*CallSiteFrames=*/{}, MIB, memprof::getHotColdSchema());
-  Writer.addMemProfRecord(/*Id=*/0x9999, IndexedMR);
+
+  memprof::IndexedMemProfData MemProfData;
+  // The call sites within foo.
+  MemProfData.Frames.try_emplace(0, GUIDFoo, 1, 8, false);
+  MemProfData.Frames.try_emplace(1, GUIDFoo, 2, 3, false);
+  MemProfData.Frames.try_emplace(2, GUIDFoo, 3, 3, false);
+  // Line/column numbers below don't matter.
+  MemProfData.Frames.try_emplace(3, GUIDBar, 9, 9, false);
+  MemProfData.Frames.try_emplace(4, GUIDZzz, 9, 9, false);
+  MemProfData.Frames.try_emplace(5, GUIDBaz, 9, 9, false);
+  MemProfData.CallStacks.try_emplace(
+      0x111,
+      std::initializer_list<memprof::FrameId>{3, 0}); // bar called by foo
+  MemProfData.CallStacks.try_emplace(
+      0x222,
+      std::initializer_list<memprof::FrameId>{4, 1}); // zzz called by foo
+  MemProfData.CallStacks.try_emplace(
+      0x333,
+      std::initializer_list<memprof::FrameId>{5, 2}); // baz called by foo
+  MemProfData.Records.try_emplace(0x9999, IndexedMR);
+  Writer.addMemProfData(MemProfData, Err);
 
   auto Profile = Writer.writeBuffer();
 
