@@ -206,19 +206,17 @@ def HasStdExtM : Predicate<"Subtarget->hasStdExtM()">,
 def FeatureStdExtZaamo
     : RISCVExtension<"zaamo", 1, 0,
                      "'Zaamo' (Atomic Memory Operations)">;
-def HasStdExtAOrZaamo
+def HasStdExtZaamo
     : Predicate<"Subtarget->hasStdExtZaamo()">,
       AssemblerPredicate<(any_of FeatureStdExtZaamo),
-                         "'A' (Atomic Instructions) or "
                          "'Zaamo' (Atomic Memory Operations)">;
 
 def FeatureStdExtZalrsc
     : RISCVExtension<"zalrsc", 1, 0,
                      "'Zalrsc' (Load-Reserved/Store-Conditional)">;
-def HasStdExtAOrZalrsc
+def HasStdExtZalrsc
     : Predicate<"Subtarget->hasStdExtZalrsc()">,
       AssemblerPredicate<(any_of FeatureStdExtZalrsc),
-                         "'A' (Atomic Instructions) or "
                          "'Zalrsc' (Load-Reserved/Store-Conditional)">;
 
 def FeatureStdExtA
