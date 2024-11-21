@@ -15,6 +15,9 @@
 //
 // from_chars_result from_chars(const char* first, const char* last,
 //                              double& value, chars_format fmt = chars_format::general)
+//
+// from_chars_result from_chars(const char* first, const char* last,
+//                              long double& value, chars_format fmt = chars_format::general)
 
 #include <array>
 #include <charconv>
@@ -1518,6 +1521,25 @@ struct test_hex {
 //   test/std/utilities/charconv/charconv.msvc/test.cpp
 // uses random values. This tests contains errors found by this test.
 void test_random_errors() {
+#ifdef TEST_LONG_DOUBLE_IS_DOUBLE
+  {
+    const char* s    = "4.219902180869891e-2788";
+    const char* last = s + std::strlen(s) - 1;
+
+    // last + 1 contains a digit. When that value is parsed the exponent is
+    // e-2788 which returns std::errc::result_out_of_range and the value 0.
+    // the proper exponent is e-278, which can be represented by a
+    // long double whose format is same as double.
+
+    long double value             = 0.25L;
+    std::from_chars_result result = std::from_chars(s, last, value);
+
+    assert(result.ec == std::errc{});
+    assert(result.ptr == last);
+    assert(value == 4.219902180869891e-278L);
+  }
+  // TODO: Add more precise cases when the implementation for long double is complete.
+#endif
   {
     const char* s    = "4.219902180869891e-2788";
     const char* last = s + std::strlen(s) - 1;

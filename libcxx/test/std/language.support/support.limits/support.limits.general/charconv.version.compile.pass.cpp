@@ -50,16 +50,16 @@
 #   error "__cpp_lib_constexpr_charconv should not be defined before c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
+# if defined(TEST_LONG_DOUBLE_IS_DOUBLE)
 #   ifndef __cpp_lib_to_chars
 #     error "__cpp_lib_to_chars should be defined in c++17"
 #   endif
 #   if __cpp_lib_to_chars != 201611L
 #     error "__cpp_lib_to_chars should have the value 201611L in c++17"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_to_chars
-#     error "__cpp_lib_to_chars should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_to_chars should not be defined when the requirement 'defined(TEST_LONG_DOUBLE_IS_DOUBLE)' is not met!"
 #   endif
 # endif
 
@@ -69,16 +69,16 @@
 #   error "__cpp_lib_constexpr_charconv should not be defined before c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
+# if defined(TEST_LONG_DOUBLE_IS_DOUBLE)
 #   ifndef __cpp_lib_to_chars
 #     error "__cpp_lib_to_chars should be defined in c++20"
 #   endif
 #   if __cpp_lib_to_chars != 201611L
 #     error "__cpp_lib_to_chars should have the value 201611L in c++20"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_to_chars
-#     error "__cpp_lib_to_chars should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_to_chars should not be defined when the requirement 'defined(TEST_LONG_DOUBLE_IS_DOUBLE)' is not met!"
 #   endif
 # endif
 
@@ -91,16 +91,16 @@
 #   error "__cpp_lib_constexpr_charconv should have the value 202207L in c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
+# if defined(TEST_LONG_DOUBLE_IS_DOUBLE)
 #   ifndef __cpp_lib_to_chars
 #     error "__cpp_lib_to_chars should be defined in c++23"
 #   endif
 #   if __cpp_lib_to_chars != 201611L
 #     error "__cpp_lib_to_chars should have the value 201611L in c++23"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_to_chars
-#     error "__cpp_lib_to_chars should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_to_chars should not be defined when the requirement 'defined(TEST_LONG_DOUBLE_IS_DOUBLE)' is not met!"
 #   endif
 # endif
 
@@ -113,16 +113,16 @@
 #   error "__cpp_lib_constexpr_charconv should have the value 202207L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
+# if defined(TEST_LONG_DOUBLE_IS_DOUBLE)
 #   ifndef __cpp_lib_to_chars
 #     error "__cpp_lib_to_chars should be defined in c++26"
 #   endif
 #   if __cpp_lib_to_chars != 202306L
 #     error "__cpp_lib_to_chars should have the value 202306L in c++26"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_to_chars
-#     error "__cpp_lib_to_chars should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_to_chars should not be defined when the requirement 'defined(TEST_LONG_DOUBLE_IS_DOUBLE)' is not met!"
 #   endif
 # endif
 

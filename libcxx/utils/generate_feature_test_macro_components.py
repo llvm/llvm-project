@@ -1333,7 +1333,8 @@ feature_test_macros = [
                 "c++26": 202306,  # P2497R0 Testing for success or failure of <charconv> functions
             },
             "headers": ["charconv"],
-            "unimplemented": True,
+            "test_suite_guard": "defined(TEST_LONG_DOUBLE_IS_DOUBLE)",
+            "libcxx_guard": "_LIBCPP_LONG_DOUBLE_IS_DOUBLE",
         },
         {
             "name": "__cpp_lib_to_string",
@@ -1532,7 +1533,9 @@ def produce_macros_definition_for_std(std):
             result += "# if %s\n" % tc["libcxx_guard"]
             inner_indent += 2
         if get_value_before(tc["values"], std) is not None:
-            assert "test_suite_guard" not in tc.keys()
+            # TRANSITION, __cpp_lib_to_chars has different values
+            # but needs to be guarded.
+            # assert "test_suite_guard" not in tc.keys()
             result += "# undef  %s\n" % tc["name"]
         line = "#%sdefine %s" % ((" " * inner_indent), tc["name"])
         line += " " * (indent - len(line))

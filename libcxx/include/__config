@@ -1231,6 +1231,12 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER 0
 #  endif
 
+#  if defined(_MSC_VER) || __SIZEOF_LONG_DOUBLE__ == __SIZEOF_DOUBLE__
+#    define _LIBCPP_LONG_DOUBLE_IS_DOUBLE 1
+#  else
+#    define _LIBCPP_LONG_DOUBLE_IS_DOUBLE 0
+#  endif
+
 #endif // __cplusplus
 
 #endif // _LIBCPP___CONFIG

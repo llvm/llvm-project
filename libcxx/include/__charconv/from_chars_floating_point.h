@@ -64,6 +64,18 @@ from_chars(const char* __first, const char* __last, double& __value, chars_forma
   return std::__from_chars<double>(__first, __last, __value, __fmt);
 }
 
+#  if _LIBCPP_LONG_DOUBLE_IS_DOUBLE
+_LIBCPP_AVAILABILITY_FROM_CHARS_FLOATING_POINT _LIBCPP_HIDE_FROM_ABI inline from_chars_result
+from_chars(const char* __first, const char* __last, long double& __value, chars_format __fmt = chars_format::general) {
+  double __dval;
+  const auto __result = std::__from_chars<double>(__first, __last, __dval, __fmt);
+  if (__result.ec != errc::invalid_argument)
+    __value = __dval;
+  return __result;
+}
+// TODO: Complete the implementation for platforms where long double has a different format from double.
+#  endif
+
 #endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD

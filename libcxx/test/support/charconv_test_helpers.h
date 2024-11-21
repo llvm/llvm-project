@@ -317,7 +317,11 @@ auto all_unsigned = type_list<
     >();
 auto integrals = concat(all_signed, all_unsigned);
 
-auto all_floats = type_list< float, double >(); //TODO: Add long double
+#ifdef TEST_LONG_DOUBLE_IS_DOUBLE // TODO: Remove this condition when the implementation for long double is complete.
+auto all_floats = type_list< float, double, long double >();
+#else
+auto all_floats = type_list< float, double >();
+#endif
 
 template <template <typename> class Fn, typename... Ts>
 TEST_CONSTEXPR_CXX23 void
