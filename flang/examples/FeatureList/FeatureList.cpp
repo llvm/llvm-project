@@ -468,7 +468,7 @@ public:
   READ_FEATURE(OmpDefaultClause::Type)
   READ_FEATURE(OmpDefaultmapClause)
   READ_FEATURE(OmpDefaultmapClause::ImplicitBehavior)
-  READ_FEATURE(OmpDefaultmapClause::VariableCategory)
+  READ_FEATURE(OmpVariableCategory::Value)
   READ_FEATURE(OmpDependClause)
   READ_FEATURE(OmpDependClause::TaskDep)
   READ_FEATURE(OmpDoacross::Sink)

@@ -70,7 +70,11 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpLinearModifier>();
 template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpReductionIdentifier>();
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpReductionModifier>();
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpTaskDependenceType>();
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpVariableCategory>();
 
 // Explanation of terminology:
 //
