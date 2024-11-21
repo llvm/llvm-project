@@ -1063,8 +1063,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       });
     }
 
-    if (CodeGenOpts.XRayInstrumentFunctions &&
-        !CodeGenOpts.XRayDefaultOptions.empty()) {
+    if (!CodeGenOpts.XRayDefaultOptions.empty()) {
       PB.registerOptimizerLastEPCallback(
           [](ModulePassManager &MPM, OptimizationLevel Level,
              ThinOrFullLTOPhase) { MPM.addPass(XRayPreparationPass()); });
