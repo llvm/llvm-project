@@ -5690,7 +5690,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     Attrs = Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::NoInline);
 
   // Add call-site always_inline attribute if exists.
-  if (InAlwaysInlineAttributedStmt)
+  // Note: This corresponds to the [[clang::always_inline]] statement attribute.
+  if (InAlwaysInlineAttributedStmt &&
+      !CGM.getTargetCodeGenInfo().wouldInliningViolateFunctionCallABI(
+          CallerDecl, CalleeDecl))
     Attrs =
         Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::AlwaysInline);
 
