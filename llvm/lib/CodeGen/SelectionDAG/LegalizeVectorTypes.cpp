@@ -4237,7 +4237,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_TruncateHelper(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
-  auto Opc = N->getOpcode();
+  unsigned Opc = N->getOpcode();
   bool isStrict = Opc == ISD::STRICT_FSETCC || Opc == ISD::STRICT_FSETCCS;
   assert(N->getValueType(0).isVector() &&
          N->getOperand(isStrict ? 1 : 0).getValueType().isVector() &&
