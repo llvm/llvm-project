@@ -15,11 +15,12 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
 #include "src/__support/integer_literals.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include "common_constants.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // 128-bit precision dyadic floating point numbers.
 using Float128 = typename fputil::DyadicFloat<128>;
@@ -821,8 +822,8 @@ constexpr Float128 BIG_COEFFS[4]{
     {Sign::NEG, -128, 0x80000000'00000000'00000000'00000000_u128},
 };
 
-LIBC_INLINE double log1p_accurate(int e_x, int index,
-                                  fputil::DoubleDouble m_x) {
+[[maybe_unused]] LIBC_INLINE double log1p_accurate(int e_x, int index,
+                                                   fputil::DoubleDouble m_x) {
   Float128 e_x_f128(static_cast<float>(e_x));
   Float128 sum = fputil::quick_mul(LOG_2, e_x_f128);
   sum = fputil::quick_add(sum, LOG_R1[index]);
@@ -881,7 +882,6 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
 
   constexpr int EXP_BIAS = FPBits_t::EXP_BIAS;
   constexpr int FRACTION_LEN = FPBits_t::FRACTION_LEN;
-  constexpr uint64_t FRACTION_MASK = FPBits_t::FRACTION_MASK;
   FPBits_t xbits(x);
   uint64_t x_u = xbits.uintval();
 
@@ -926,8 +926,8 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
       //   log(1 + x) = nextafter(x, -inf) for FE_DOWNWARD, or
       //                                       FE_TOWARDZERO and x > 0,
       //              = x                  otherwise.
-      if (LIBC_UNLIKELY(xbits.is_zero()))
-        return x;
+      if (x == 0.0)
+        return x + x; // Handle FTZ/DAZ correctly.
 
       volatile float tp = 1.0f;
       volatile float tn = -1.0f;
@@ -942,7 +942,7 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
         return FPBits_t(x_u + 1).get_val();
       }
 
-      return x;
+      return (x + x == 0.0) ? x + x : x;
     }
     x_dd = fputil::exact_add(1.0, x);
   }
@@ -953,12 +953,12 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
   //   |x_dd.lo| < ulp(x_dd.hi)
 
   FPBits_t xhi_bits(x_dd.hi);
+  uint64_t xhi_frac = xhi_bits.get_mantissa();
   x_u = xhi_bits.uintval();
   // Range reduction:
   // Find k such that |x_hi - k * 2^-7| <= 2^-8.
-  int idx =
-      static_cast<int>(((x_u & FRACTION_MASK) + (1ULL << (FRACTION_LEN - 8))) >>
-                       (FRACTION_LEN - 7));
+  int idx = static_cast<int>((xhi_frac + (1ULL << (FRACTION_LEN - 8))) >>
+                             (FRACTION_LEN - 7));
   int x_e = xhi_bits.get_exponent() + (idx >> 7);
   double e_x = static_cast<double>(x_e);
 
@@ -973,17 +973,21 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
   constexpr double ERR_HI[2] = {0x1.0p-85, 0.0};
   double err_hi = ERR_HI[hi == 0.0];
 
-  // Scaling factior = 2^(-xh_bits.get_exponent())
-  uint64_t s_u = (static_cast<uint64_t>(EXP_BIAS) << (FRACTION_LEN + 1)) -
-                 (x_u & FPBits_t::EXP_MASK);
-  // When the exponent of x is 2^1023, its inverse, 2^(-1023), is subnormal.
-  const double EXPONENT_CORRECTION[2] = {0.0, 0x1.0p-1023};
-  double scaling = FPBits_t(s_u).get_val() + EXPONENT_CORRECTION[s_u == 0];
+  // Scale x_dd by 2^(-xh_bits.get_exponent()).
+  int64_t s_u = static_cast<int64_t>(x_u & FPBits_t::EXP_MASK) -
+                (static_cast<int64_t>(EXP_BIAS) << FRACTION_LEN);
   // Normalize arguments:
   //   1 <= m_dd.hi < 2
   //   |m_dd.lo| < 2^-52.
   // This is exact.
-  fputil::DoubleDouble m_dd{scaling * x_dd.lo, scaling * x_dd.hi};
+  uint64_t m_hi = FPBits_t::one().uintval() | xhi_frac;
+
+  uint64_t m_lo =
+      FPBits_t(x_dd.lo).abs().get_val() > x_dd.hi * 0x1.0p-127
+          ? static_cast<uint64_t>(cpp::bit_cast<int64_t>(x_dd.lo) - s_u)
+          : 0;
+
+  fputil::DoubleDouble m_dd{FPBits_t(m_lo).get_val(), FPBits_t(m_hi).get_val()};
 
   // Perform range reduction:
   //   r * m - 1 = r * (m_dd.hi + m_dd.lo) - 1
@@ -1041,4 +1045,4 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
   return log1p_accurate(x_e, idx, v_dd);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

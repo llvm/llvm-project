@@ -13,16 +13,18 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/PrettyStackTrace.h"
+#include "clang/Basic/TemplateKinds.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/LiteralSupport.h"
-#include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaCodeCompletion.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <numeric>
@@ -157,8 +159,8 @@ void Parser::CheckForTemplateAndDigraph(Token &Next, ParsedType ObjectType,
 bool Parser::ParseOptionalCXXScopeSpecifier(
     CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHadErrors,
     bool EnteringContext, bool *MayBePseudoDestructor, bool IsTypename,
-    const IdentifierInfo **LastII, bool OnlyNamespace,
-    bool InUsingDeclaration) {
+    const IdentifierInfo **LastII, bool OnlyNamespace, bool InUsingDeclaration,
+    bool Disambiguation) {
   assert(getLangOpts().CPlusPlus &&
          "Call sites of this function should be guarded by checking for C++");
 
@@ -270,9 +272,9 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
         cutOffParsing();
         // Code completion for a nested-name-specifier, where the code
         // completion token follows the '::'.
-        Actions.CodeCompleteQualifiedId(getCurScope(), SS, EnteringContext,
-                                        InUsingDeclaration, ObjectType.get(),
-                                        SavedType.get(SS.getBeginLoc()));
+        Actions.CodeCompletion().CodeCompleteQualifiedId(
+            getCurScope(), SS, EnteringContext, InUsingDeclaration,
+            ObjectType.get(), SavedType.get(SS.getBeginLoc()));
         // Include code completion token into the range of the scope otherwise
         // when we try to annotate the scope tokens the dangling code completion
         // token will cause assertion in
@@ -526,13 +528,11 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
       UnqualifiedId TemplateName;
       TemplateName.setIdentifier(&II, Tok.getLocation());
       bool MemberOfUnknownSpecialization;
-      if (TemplateNameKind TNK = Actions.isTemplateName(getCurScope(), SS,
-                                              /*hasTemplateKeyword=*/false,
-                                                        TemplateName,
-                                                        ObjectType,
-                                                        EnteringContext,
-                                                        Template,
-                                              MemberOfUnknownSpecialization)) {
+      if (TemplateNameKind TNK = Actions.isTemplateName(
+              getCurScope(), SS,
+              /*hasTemplateKeyword=*/false, TemplateName, ObjectType,
+              EnteringContext, Template, MemberOfUnknownSpecialization,
+              Disambiguation)) {
         // If lookup didn't find anything, we treat the name as a template-name
         // anyway. C++20 requires this, and in prior language modes it improves
         // error recovery. But before we commit to this, check that we actually
@@ -555,7 +555,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
         continue;
       }
 
-      if (MemberOfUnknownSpecialization && (ObjectType || SS.isSet()) &&
+      if (MemberOfUnknownSpecialization && !Disambiguation &&
+          (ObjectType || SS.isSet()) &&
           (IsTypename || isTemplateArgumentList(1) == TPResult::True)) {
         // If we had errors before, ObjectType can be dependent even without any
         // templates. Do not report missing template keyword in that case.
@@ -954,8 +955,9 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
         if (Tok.is(tok::code_completion) &&
             !(getLangOpts().ObjC && Tentative)) {
           cutOffParsing();
-          Actions.CodeCompleteLambdaIntroducer(getCurScope(), Intro,
-                                               /*AfterAmpersand=*/false);
+          Actions.CodeCompletion().CodeCompleteLambdaIntroducer(
+              getCurScope(), Intro,
+              /*AfterAmpersand=*/false);
           break;
         }
 
@@ -971,10 +973,11 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
       // If we're in Objective-C++ and we have a bare '[', then this is more
       // likely to be a message receiver.
       if (getLangOpts().ObjC && Tentative && First)
-        Actions.CodeCompleteObjCMessageReceiver(getCurScope());
+        Actions.CodeCompletion().CodeCompleteObjCMessageReceiver(getCurScope());
       else
-        Actions.CodeCompleteLambdaIntroducer(getCurScope(), Intro,
-                                             /*AfterAmpersand=*/false);
+        Actions.CodeCompletion().CodeCompleteLambdaIntroducer(
+            getCurScope(), Intro,
+            /*AfterAmpersand=*/false);
       break;
     }
 
@@ -1020,8 +1023,9 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
 
         if (Tok.is(tok::code_completion)) {
           cutOffParsing();
-          Actions.CodeCompleteLambdaIntroducer(getCurScope(), Intro,
-                                               /*AfterAmpersand=*/true);
+          Actions.CodeCompletion().CodeCompleteLambdaIntroducer(
+              getCurScope(), Intro,
+              /*AfterAmpersand=*/true);
           break;
         }
       }
@@ -1340,9 +1344,13 @@ static void DiagnoseStaticSpecifierRestrictions(Parser &P,
 ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                      LambdaIntroducer &Intro) {
   SourceLocation LambdaBeginLoc = Intro.Range.getBegin();
-  Diag(LambdaBeginLoc, getLangOpts().CPlusPlus11
-                           ? diag::warn_cxx98_compat_lambda
-                           : diag::ext_lambda);
+  if (getLangOpts().HLSL)
+    Diag(LambdaBeginLoc, diag::ext_hlsl_lambda) << /*HLSL*/ 1;
+  else
+    Diag(LambdaBeginLoc, getLangOpts().CPlusPlus11
+                             ? diag::warn_cxx98_compat_lambda
+                             : diag::ext_lambda)
+        << /*C++*/ 0;
 
   PrettyStackTraceLoc CrashInfo(PP.getSourceManager(), LambdaBeginLoc,
                                 "lambda expression parsing");
@@ -1571,12 +1579,14 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                       DynamicExceptionRanges.data(), DynamicExceptions.size(),
                       NoexceptExpr.isUsable() ? NoexceptExpr.get() : nullptr,
                       /*ExceptionSpecTokens*/ nullptr,
-                      /*DeclsInPrototype=*/std::nullopt, LParenLoc,
-                      FunLocalRangeEnd, D, TrailingReturnType,
-                      TrailingReturnTypeLoc, &DS),
+                      /*DeclsInPrototype=*/{}, LParenLoc, FunLocalRangeEnd, D,
+                      TrailingReturnType, TrailingReturnTypeLoc, &DS),
                   std::move(Attributes), DeclEndLoc);
 
-    Actions.ActOnLambdaClosureQualifiers(Intro, MutableLoc);
+    // We have called ActOnLambdaClosureQualifiers for parentheses-less cases
+    // above.
+    if (HasParentheses)
+      Actions.ActOnLambdaClosureQualifiers(Intro, MutableLoc);
 
     if (HasParentheses && Tok.is(tok::kw_requires))
       ParseTrailingRequiresClause(D);
@@ -2031,9 +2041,10 @@ Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
     auto RunSignatureHelp = [&]() {
       QualType PreferredType;
       if (TypeRep)
-        PreferredType = Actions.ProduceConstructorSignatureHelp(
-            TypeRep.get()->getCanonicalTypeInternal(), DS.getEndLoc(), Exprs,
-            T.getOpenLocation(), /*Braced=*/false);
+        PreferredType =
+            Actions.CodeCompletion().ProduceConstructorSignatureHelp(
+                TypeRep.get()->getCanonicalTypeInternal(), DS.getEndLoc(),
+                Exprs, T.getOpenLocation(), /*Braced=*/false);
       CalledSignatureHelp = true;
       return PreferredType;
     };
@@ -2140,7 +2151,8 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
 
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
-    Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Condition);
+    Actions.CodeCompletion().CodeCompleteOrdinaryName(
+        getCurScope(), SemaCodeCompletion::PCC_Condition);
     return Sema::ConditionError();
   }
 
@@ -2446,6 +2458,11 @@ void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
                        Policy);                                                \
     break;
 #include "clang/Basic/OpenCLImageTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case tok::kw_##Name:                                                         \
+    DS.SetTypeSpecType(DeclSpec::TST_##Name, Loc, PrevSpec, DiagID, Policy);   \
+    break;
+#include "clang/Basic/HLSLIntangibleTypes.def"
 
   case tok::annot_decltype:
   case tok::kw_decltype:
@@ -2792,7 +2809,7 @@ bool Parser::ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
       // Don't try to parse any further.
       cutOffParsing();
       // Code completion for the operator name.
-      Actions.CodeCompleteOperatorName(getCurScope());
+      Actions.CodeCompletion().CodeCompleteOperatorName(getCurScope());
       return true;
     }
 
@@ -3020,13 +3037,23 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
           SS, ObjectType, ObjectHadErrors,
           TemplateKWLoc ? *TemplateKWLoc : SourceLocation(), Id, IdLoc,
           EnteringContext, Result, TemplateSpecified);
-    else if (TemplateSpecified &&
-             Actions.ActOnTemplateName(
-                 getCurScope(), SS, *TemplateKWLoc, Result, ObjectType,
-                 EnteringContext, Template,
-                 /*AllowInjectedClassName*/ true) == TNK_Non_template)
-      return true;
 
+    if (TemplateSpecified) {
+      TemplateNameKind TNK =
+          Actions.ActOnTemplateName(getCurScope(), SS, *TemplateKWLoc, Result,
+                                    ObjectType, EnteringContext, Template,
+                                    /*AllowInjectedClassName=*/true);
+      if (TNK == TNK_Non_template)
+        return true;
+
+      // C++2c [tem.names]p6
+      // A name prefixed by the keyword template shall be followed by a template
+      // argument list or refer to a class template or an alias template.
+      if ((TNK == TNK_Function_template || TNK == TNK_Dependent_template_name ||
+           TNK == TNK_Var_template) &&
+          !Tok.is(tok::less))
+        Diag(IdLoc, diag::missing_template_arg_list_after_template_kw);
+    }
     return false;
   }
 
@@ -3350,10 +3377,12 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
         // the passing DeclaratorInfo is valid, e.g. running SignatureHelp on
         // `new decltype(invalid) (^)`.
         if (TypeRep)
-          PreferredType = Actions.ProduceConstructorSignatureHelp(
-              TypeRep.get()->getCanonicalTypeInternal(),
-              DeclaratorInfo.getEndLoc(), ConstructorArgs, ConstructorLParen,
-              /*Braced=*/false);
+          PreferredType =
+              Actions.CodeCompletion().ProduceConstructorSignatureHelp(
+                  TypeRep.get()->getCanonicalTypeInternal(),
+                  DeclaratorInfo.getEndLoc(), ConstructorArgs,
+                  ConstructorLParen,
+                  /*Braced=*/false);
         CalledSignatureHelp = true;
         return PreferredType;
       };
@@ -3991,6 +4020,9 @@ ExprResult Parser::ParseArrayTypeTrait() {
 
     ExprResult DimExpr = ParseExpression();
     T.consumeClose();
+
+    if (DimExpr.isInvalid())
+      return ExprError();
 
     return Actions.ActOnArrayTypeTrait(ATT, Loc, Ty.get(), DimExpr.get(),
                                        T.getCloseLocation());

@@ -281,7 +281,7 @@ public:
     }
     if constexpr (bits == 80) { // x87
       // 7FFF8000000000000000 is Infinity, not NaN, on 80387 & later.
-      infinity.IBSET(63);
+      infinity = infinity.IBSET(63);
     }
     return {infinity};
   }

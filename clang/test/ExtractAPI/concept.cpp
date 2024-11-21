@@ -51,7 +51,7 @@ template<typename T> concept Foo = true;
         },
         {
           "kind": "text",
-          "spelling": "<"
+          "spelling": " <"
         },
         {
           "kind": "keyword",

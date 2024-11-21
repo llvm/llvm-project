@@ -10,9 +10,9 @@
 ;; behaviour is maintained. If it is discovered that it is profitable to remove
 ;; these intrinsics in instcombine then it's okay to remove this test.
 
-; CHECK: @llvm.dbg.value(metadata i32 undef
-; CHECK: @llvm.dbg.value(metadata i32 0
-; CHECK: @llvm.dbg.value(metadata i32 1
+; CHECK: #dbg_value(i32 undef
+; CHECK: #dbg_value(i32 0
+; CHECK: #dbg_value(i32 1
 
 define dso_local void @_Z3funv() local_unnamed_addr !dbg !7 {
 entry:

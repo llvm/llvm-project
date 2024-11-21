@@ -14,7 +14,7 @@
 #define LLVM_LIB_TARGET_NVPTX_NVPTXTARGETMACHINE_H
 
 #include "NVPTXSubtarget.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include <optional>
 #include <utility>
 
@@ -22,7 +22,7 @@ namespace llvm {
 
 /// NVPTXTargetMachine
 ///
-class NVPTXTargetMachine : public LLVMTargetMachine {
+class NVPTXTargetMachine : public CodeGenTargetMachineImpl {
   bool is64bit;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   NVPTX::DrvInterface drvInterface;
@@ -66,8 +66,7 @@ public:
 
   void registerDefaultAliasAnalyses(AAManager &AAM) override;
 
-  void registerPassBuilderCallbacks(PassBuilder &PB,
-                                    bool PopulateClassToPassNames) override;
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 

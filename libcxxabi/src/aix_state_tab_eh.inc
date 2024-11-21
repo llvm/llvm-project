@@ -681,7 +681,7 @@ static uintptr_t* skip_non_cxx_eh_aware_frames(uint32_t* Pc, uintptr_t* Sp) {
 // xlclang++ compiled code. If __xlc_exception_handle() is called by
 // non-C++ EH aware functions, their frames are skipped until a C++ EH aware
 // frame is found.
-// Note: make sure __xlc_excpetion_handle() is a non-leaf function. Currently
+// Note: make sure __xlc_exception_handle() is a non-leaf function. Currently
 // it calls skip_non_cxx_eh_aware_frames(), which in turn calls abort().
 _LIBCXXABI_FUNC_VIS uintptr_t __xlc_exception_handle() {
   // Get the SP of this function, i.e., __xlc_exception_handle().

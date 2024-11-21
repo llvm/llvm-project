@@ -18,6 +18,9 @@ class FuncOp;
 namespace bufferization {
 struct OneShotBufferizationOptions;
 
+/// Maps from symbol table to its corresponding dealloc helper function.
+using DeallocHelperMap = llvm::DenseMap<Operation *, func::FuncOp>;
+
 //===----------------------------------------------------------------------===//
 // Passes
 //===----------------------------------------------------------------------===//
@@ -34,6 +37,11 @@ std::unique_ptr<Pass> createBufferDeallocationPass();
 std::unique_ptr<Pass> createOwnershipBasedBufferDeallocationPass(
     DeallocationOptions options = DeallocationOptions());
 
+/// Creates a pass that finds all temporary allocations
+/// and attempts to move the deallocation after the last user/dependency 
+/// of the allocation, thereby optimizing allocation liveness.
+std::unique_ptr<Pass> createOptimizeAllocationLivenessPass();
+
 /// Creates a pass that optimizes `bufferization.dealloc` operations. For
 /// example, it reduces the number of alias checks needed at runtime using
 /// static alias analysis.
@@ -46,7 +54,7 @@ std::unique_ptr<Pass> createLowerDeallocationsPass();
 /// Adds the conversion pattern of the `bufferization.dealloc` operation to the
 /// given pattern set for use in other transformation passes.
 void populateBufferizationDeallocLoweringPattern(
-    RewritePatternSet &patterns, func::FuncOp deallocLibraryFunc);
+    RewritePatternSet &patterns, const DeallocHelperMap &deallocHelperFuncMap);
 
 /// Construct the library function needed for the fully generic
 /// `bufferization.dealloc` lowering implemented in the LowerDeallocations pass.
@@ -155,7 +163,7 @@ struct BufferResultsToOutParamsOpts {
 
   // Filter function; returns true if the function should be converted.
   // Defaults to true, i.e. all functions are converted.
-  llvm::function_ref<bool(func::FuncOp *)> filterFn = [](func::FuncOp *func) {
+  std::function<bool(func::FuncOp *)> filterFn = [](func::FuncOp *func) {
     return true;
   };
 
@@ -192,10 +200,6 @@ std::unique_ptr<Pass> createEmptyTensorToAllocTensorPass();
 /// Drop all memref function results that are equivalent to a function argument.
 LogicalResult dropEquivalentBufferResults(ModuleOp module);
 
-/// Creates a pass that finalizes a partial bufferization by removing remaining
-/// bufferization.to_tensor and bufferization.to_memref operations.
-std::unique_ptr<OperationPass<func::FuncOp>> createFinalizingBufferizePass();
-
 /// Create a pass that bufferizes all ops that implement BufferizableOpInterface
 /// with One-Shot Bufferize.
 std::unique_ptr<Pass> createOneShotBufferizePass();
@@ -220,9 +224,6 @@ createPromoteBuffersToStackPass(std::function<bool(Value)> isSmallAlloc);
 /// Create a pass that tries to eliminate tensor.empty ops that are anchored on
 /// insert_slice ops.
 std::unique_ptr<Pass> createEmptyTensorEliminationPass();
-
-/// Create a pass that bufferizes ops from the bufferization dialect.
-std::unique_ptr<Pass> createBufferizationBufferizePass();
 
 //===----------------------------------------------------------------------===//
 // Registration

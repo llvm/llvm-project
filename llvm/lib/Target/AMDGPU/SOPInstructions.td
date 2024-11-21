@@ -65,6 +65,9 @@ class SOP1_Real<bits<8> op, SOP1_Pseudo ps, string real_name = ps.Mnemonic> :
   let isCall             = ps.isCall;
   let isBranch           = ps.isBranch;
   let isBarrier          = ps.isBarrier;
+  let Uses               = ps.Uses;
+  let Defs               = ps.Defs;
+  let isConvergent       = ps.isConvergent;
 
   // encoding
   bits<7> sdst;
@@ -212,6 +215,11 @@ let isMoveImm = 1 in {
     def S_CMOV_B64 : SOP1_64 <"s_cmov_b64">;
   } // End Uses = [SCC]
 } // End isMoveImm = 1
+
+// Variant of S_MOV_B32 used for reading from volatile registers like
+// SRC_POPS_EXITING_WAVE_ID.
+let hasSideEffects = 1 in
+def S_MOV_B32_sideeffects : SOP1_32 <"s_mov_b32">;
 
 let Defs = [SCC] in {
   def S_NOT_B32 : SOP1_32 <"s_not_b32",
@@ -450,13 +458,13 @@ let hasSideEffects = 1 in {
 let has_sdst = 0 in {
 let Uses = [M0] in {
 def S_BARRIER_SIGNAL_M0 : SOP1_Pseudo <"s_barrier_signal m0", (outs), (ins),
-  "", [(int_amdgcn_s_barrier_signal_var M0)]>{
+  "", []>{
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
 }
 
 def S_BARRIER_SIGNAL_ISFIRST_M0 : SOP1_Pseudo <"s_barrier_signal_isfirst m0", (outs), (ins),
-  "", [(set SCC, (int_amdgcn_s_barrier_signal_isfirst_var M0))]>{
+  "", []>{
   let Defs = [SCC];
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
@@ -570,6 +578,9 @@ class SOP2_Real<SOP_Pseudo ps, string name = ps.Mnemonic> :
   let mayStore             = ps.mayStore;
   let Constraints          = ps.Constraints;
   let DisableEncoding      = ps.DisableEncoding;
+  let Uses                 = ps.Uses;
+  let Defs                 = ps.Defs;
+  let isConvergent         = ps.isConvergent;
 
   // encoding
   bits<7> sdst;
@@ -629,12 +640,12 @@ class SOP2_64_32_32 <string opName, list<dag> pattern=[]> : SOP2_Pseudo <
 
 
 let Defs = [SCC] in { // Carry out goes to SCC
-let isCommutable = 1 in {
+let isCommutable = 1, isAdd = 1 in {
 def S_ADD_U32 : SOP2_32 <"s_add_u32">;
 def S_ADD_I32 : SOP2_32 <"s_add_i32",
   [(set i32:$sdst, (UniformBinFrag<add> SSrc_b32:$src0, SSrc_b32:$src1))]
 >;
-} // End isCommutable = 1
+} // End isCommutable = 1, isAdd = 1
 
 def S_SUB_U32 : SOP2_32 <"s_sub_u32">;
 def S_SUB_I32 : SOP2_32 <"s_sub_i32",
@@ -985,6 +996,9 @@ class SOPK_Real<SOPK_Pseudo ps, string name = ps.Mnemonic> :
   let isTerminator       = ps.isTerminator;
   let isReturn           = ps.isReturn;
   let isBarrier          = ps.isBarrier;
+  let Uses               = ps.Uses;
+  let Defs               = ps.Defs;
+  let isConvergent       = ps.isConvergent;
 
   // encoding
   bits<7>  sdst;
@@ -1190,11 +1204,15 @@ let SubtargetPredicate = isGFX9Plus in {
   }
 } // End SubtargetPredicate = isGFX9Plus
 
+def VersionImm : S16ImmOperand {
+  let DecoderMethod = "decodeVersionImm";
+}
+
 let SubtargetPredicate = isGFX10Plus in {
   def S_VERSION : SOPK_Pseudo<
       "s_version",
       (outs),
-      (ins s16imm:$simm16),
+      (ins VersionImm:$simm16),
       "$simm16"> {
     let has_sdst = 0;
   }
@@ -1245,6 +1263,9 @@ class SOPC_Real<bits<7> op, SOPC_Pseudo ps> :
   let SchedRW              = ps.SchedRW;
   let mayLoad              = ps.mayLoad;
   let mayStore             = ps.mayStore;
+  let Uses                 = ps.Uses;
+  let Defs                 = ps.Defs;
+  let isConvergent         = ps.isConvergent;
 
   // encoding
   bits<8> src0;
@@ -1440,6 +1461,9 @@ class SOPP_Real<SOPP_Pseudo ps, string name = ps.Mnemonic> :
   let isCall               = ps.isCall;
   let isBranch             = ps.isBranch;
   let isBarrier            = ps.isBarrier;
+  let Uses                 = ps.Uses;
+  let Defs                 = ps.Defs;
+  let isConvergent         = ps.isConvergent;
   bits <16> simm16;
 }
 
@@ -1580,14 +1604,16 @@ def S_BARRIER_WAIT : SOPP_Pseudo <"s_barrier_wait", (ins i16imm:$simm16), "$simm
   let isConvergent = 1;
 }
 
-def S_BARRIER_LEAVE : SOPP_Pseudo <"s_barrier_leave", (ins), "",
-  [(set SCC, (int_amdgcn_s_barrier_leave))]> {
+def S_BARRIER_LEAVE : SOPP_Pseudo <"s_barrier_leave", (ins)> {
   let SchedRW = [WriteBarrier];
   let simm16 = 0;
   let fixed_imm = 1;
   let isConvergent = 1;
   let Defs = [SCC];
 }
+
+def S_BARRIER_LEAVE_IMM : SOPP_Pseudo <"s_barrier_leave",
+    (ins i16imm:$simm16), "$simm16", [(int_amdgcn_s_barrier_leave timm:$simm16)]>;
 
 def S_WAKEUP : SOPP_Pseudo <"s_wakeup", (ins) > {
   let SubtargetPredicate = isGFX8Plus;
@@ -1728,11 +1754,6 @@ let OtherPredicates = [HasExportInsts] in
                                 "$simm16">;
 } // End SubtargetPredicate = isGFX11Plus
 
-let SubtargetPredicate = HasVGPRSingleUseHintInsts in {
-  def S_SINGLEUSE_VDST :
-    SOPP_Pseudo<"s_singleuse_vdst", (ins s16imm:$simm16), "$simm16">;
-} // End SubtargetPredicate = HasVGPRSingeUseHintInsts
-
 let SubtargetPredicate = isGFX12Plus, hasSideEffects = 1 in {
   def S_WAIT_LOADCNT :
     SOPP_Pseudo<"s_wait_loadcnt", (ins s16imm:$simm16), "$simm16",
@@ -1866,6 +1887,12 @@ let SubtargetPredicate = isNotGFX9Plus in {
 def : GetFPModePat<fpmode_mask_gfx6plus>;
 }
 
+let SubtargetPredicate = isGFX9GFX10 in
+def : GCNPat<
+  (int_amdgcn_pops_exiting_wave_id),
+  (S_MOV_B32_sideeffects (i32 SRC_POPS_EXITING_WAVE_ID))
+>;
+
 //===----------------------------------------------------------------------===//
 // SOP2 Patterns
 //===----------------------------------------------------------------------===//
@@ -1941,19 +1968,9 @@ def : ScalarNot2Pat<S_ORN2_B64, or, v2i32>;
 // Target-specific instruction encodings.
 //===----------------------------------------------------------------------===//
 
-class Select_gfx12<string opName> : SIMCInstr<opName, SIEncodingFamily.GFX12> {
-  Predicate AssemblerPredicate = isGFX12Only;
-  string DecoderNamespace      = "GFX12";
-}
-
-class Select_gfx11<string opName> : SIMCInstr<opName, SIEncodingFamily.GFX11> {
-  Predicate AssemblerPredicate = isGFX11Only;
-  string DecoderNamespace      = "GFX11";
-}
-
-class Select_gfx10<string opName> : SIMCInstr<opName, SIEncodingFamily.GFX10> {
-  Predicate AssemblerPredicate = isGFX10Only;
-  string DecoderNamespace      = "GFX10";
+class Select<GFXGen Gen, string opName> : SIMCInstr<opName, Gen.Subtarget> {
+  Predicate AssemblerPredicate = Gen.AssemblerPredicate;
+  string DecoderNamespace = Gen.DecoderNamespace;
 }
 
 class Select_vi<string opName> : SIMCInstr<opName, SIEncodingFamily.VI> {
@@ -1973,7 +1990,7 @@ class Select_gfx6_gfx7<string opName> : SIMCInstr<opName, SIEncodingFamily.SI> {
 multiclass SOP1_Real_gfx11<bits<8> op, string name = !tolower(NAME)> {
   defvar ps = !cast<SOP1_Pseudo>(NAME);
   def _gfx11 : SOP1_Real<op, ps, name>,
-               Select_gfx11<ps.PseudoInstr>;
+               Select<GFX11Gen, ps.PseudoInstr>;
   if !ne(ps.Mnemonic, name) then
     def : AMDGPUMnemonicAlias<ps.Mnemonic, name> {
       let AssemblerPredicate = isGFX11Only;
@@ -1983,7 +2000,7 @@ multiclass SOP1_Real_gfx11<bits<8> op, string name = !tolower(NAME)> {
 multiclass SOP1_Real_gfx12<bits<8> op, string name = !tolower(NAME)> {
   defvar ps = !cast<SOP1_Pseudo>(NAME);
   def _gfx12 : SOP1_Real<op, ps, name>,
-               Select_gfx12<ps.PseudoInstr>;
+               Select<GFX12Gen, ps.PseudoInstr>;
   if !ne(ps.Mnemonic, name) then
     def : AMDGPUMnemonicAlias<ps.Mnemonic, name> {
       let AssemblerPredicate = isGFX12Plus;
@@ -1992,7 +2009,7 @@ multiclass SOP1_Real_gfx12<bits<8> op, string name = !tolower(NAME)> {
 
 multiclass SOP1_M0_Real_gfx12<bits<8> op> {
   def _gfx12 : SOP1_Real<op, !cast<SOP1_Pseudo>(NAME)>,
-               Select_gfx12<!cast<SOP1_Pseudo>(NAME).PseudoInstr> {
+               Select<GFX12Gen, !cast<SOP1_Pseudo>(NAME).PseudoInstr> {
     let Inst{7-0} = M0_gfx11plus.HWEncoding{7-0}; // Set Src0 encoding to M0
   }
 }
@@ -2000,7 +2017,7 @@ multiclass SOP1_M0_Real_gfx12<bits<8> op> {
 multiclass SOP1_IMM_Real_gfx12<bits<8> op> {
   defvar ps = !cast<SOP1_Pseudo>(NAME);
   def _gfx12 : SOP1_Real<op, ps>,
-               Select_gfx12<ps.PseudoInstr>;
+               Select<GFX12Gen, ps.PseudoInstr>;
 }
 
 multiclass SOP1_Real_gfx11_gfx12<bits<8> op, string name = !tolower(NAME)> :
@@ -2111,7 +2128,7 @@ defm S_RNDNE_F16         : SOP1_Real_gfx11_gfx12<0x06e>;
 multiclass SOP1_Real_gfx10<bits<8> op> {
   defvar ps = !cast<SOP1_Pseudo>(NAME);
   def _gfx10 : SOP1_Real<op, ps>,
-               Select_gfx10<ps.PseudoInstr>;
+               Select<GFX10Gen, ps.PseudoInstr>;
 }
 
 multiclass SOP1_Real_gfx10_gfx11_gfx12<bits<8> op> :
@@ -2210,7 +2227,7 @@ defm S_ABS_I32            : SOP1_Real_gfx6_gfx7_gfx10<0x034>;
 multiclass SOP2_Real_gfx12<bits<7> op, string name = !tolower(NAME)> {
   defvar ps = !cast<SOP2_Pseudo>(NAME);
   def _gfx12 : SOP2_Real32<op, ps, name>,
-               Select_gfx12<ps.PseudoInstr>;
+               Select<GFX12Gen, ps.PseudoInstr>;
   if !ne(ps.Mnemonic, name) then
     def : AMDGPUMnemonicAlias<ps.Mnemonic, name> {
       let AssemblerPredicate = isGFX12Plus;
@@ -2229,7 +2246,7 @@ defm S_MAXIMUM_F16 : SOP2_Real_gfx12<0x052>;
 multiclass SOP2_Real_gfx11<bits<7> op, string name = !tolower(NAME)> {
   defvar ps = !cast<SOP2_Pseudo>(NAME);
   def _gfx11 : SOP2_Real32<op, ps, name>,
-               Select_gfx11<ps.PseudoInstr>;
+               Select<GFX11Gen, ps.PseudoInstr>;
   if !ne(ps.Mnemonic, name) then
     def : AMDGPUMnemonicAlias<ps.Mnemonic, name> {
       let AssemblerPredicate = isGFX11Only;
@@ -2292,12 +2309,12 @@ defm S_MUL_U64         : SOP2_Real_gfx12<0x055>;
 
 multiclass SOP2_Real_FMAK_gfx12<bits<7> op> {
   def _gfx12 : SOP2_Real64<op, !cast<SOP2_Pseudo>(NAME)>,
-               Select_gfx12<!cast<SOP2_Pseudo>(NAME).PseudoInstr>;
+               Select<GFX12Gen, !cast<SOP2_Pseudo>(NAME).PseudoInstr>;
 }
 
 multiclass SOP2_Real_FMAK_gfx11<bits<7> op> {
   def _gfx11 : SOP2_Real64<op, !cast<SOP2_Pseudo>(NAME)>,
-               Select_gfx11<!cast<SOP2_Pseudo>(NAME).PseudoInstr>;
+               Select<GFX11Gen, !cast<SOP2_Pseudo>(NAME).PseudoInstr>;
 }
 
 multiclass SOP2_Real_FMAK_gfx11_gfx12<bits<7> op> :
@@ -2334,7 +2351,7 @@ defm S_MAX_F16 : SOP2_Real_gfx11_Renamed_gfx12<0x04c, "s_max_num_f16">;
 multiclass SOP2_Real_gfx10<bits<7> op> {
   defvar ps = !cast<SOP2_Pseudo>(NAME);
   def _gfx10 : SOP2_Real32<op, ps>,
-               Select_gfx10<ps.PseudoInstr>;
+               Select<GFX10Gen, ps.PseudoInstr>;
 }
 
 multiclass SOP2_Real_gfx10_gfx11_gfx12<bits<7> op> :
@@ -2419,7 +2436,7 @@ defm S_ABSDIFF_I32 : SOP2_Real_gfx6_gfx7_gfx10<0x02c>;
 multiclass SOPK_Real32_gfx12<bits<5> op, string name = !tolower(NAME)> {
   defvar ps = !cast<SOPK_Pseudo>(NAME);
   def _gfx12 : SOPK_Real32<op, ps, name>,
-               Select_gfx12<ps.PseudoInstr>;
+               Select<GFX12Gen, ps.PseudoInstr>;
   if !ne(ps.Mnemonic, name) then
     def : AMDGPUMnemonicAlias<ps.Mnemonic, name> {
       let AssemblerPredicate = isGFX12Plus;
@@ -2428,17 +2445,17 @@ multiclass SOPK_Real32_gfx12<bits<5> op, string name = !tolower(NAME)> {
 
 multiclass SOPK_Real32_gfx11<bits<5> op> {
   def _gfx11 : SOPK_Real32<op, !cast<SOPK_Pseudo>(NAME)>,
-               Select_gfx11<!cast<SOPK_Pseudo>(NAME).PseudoInstr>;
+               Select<GFX11Gen, !cast<SOPK_Pseudo>(NAME).PseudoInstr>;
 }
 
 multiclass SOPK_Real64_gfx12<bits<5> op> {
   def _gfx12 : SOPK_Real64<op, !cast<SOPK_Pseudo>(NAME)>,
-               Select_gfx12<!cast<SOPK_Pseudo>(NAME).PseudoInstr>;
+               Select<GFX12Gen, !cast<SOPK_Pseudo>(NAME).PseudoInstr>;
 }
 
 multiclass SOPK_Real64_gfx11<bits<5> op> {
   def _gfx11 : SOPK_Real64<op, !cast<SOPK_Pseudo>(NAME)>,
-               Select_gfx11<!cast<SOPK_Pseudo>(NAME).PseudoInstr>;
+               Select<GFX11Gen, !cast<SOPK_Pseudo>(NAME).PseudoInstr>;
 }
 
 multiclass SOPK_Real32_gfx11_gfx12<bits<5> op> :
@@ -2465,13 +2482,13 @@ defm S_WAITCNT_LGKMCNT      : SOPK_Real32_gfx11<0x01b>;
 multiclass SOPK_Real32_gfx10<bits<5> op> {
   defvar ps = !cast<SOPK_Pseudo>(NAME);
   def _gfx10 : SOPK_Real32<op, ps>,
-               Select_gfx10<ps.PseudoInstr>;
+               Select<GFX10Gen, ps.PseudoInstr>;
 }
 
 multiclass SOPK_Real64_gfx10<bits<5> op> {
   defvar ps = !cast<SOPK_Pseudo>(NAME);
   def _gfx10 : SOPK_Real64<op, ps>,
-               Select_gfx10<ps.PseudoInstr>;
+               Select<GFX10Gen, ps.PseudoInstr>;
 }
 
 multiclass SOPK_Real32_gfx10_gfx11<bits<5> op> :
@@ -2550,7 +2567,7 @@ defm S_SETREG_IMM32_B32 : SOPK_Real64_gfx6_gfx7_gfx10<0x015>;
 multiclass SOPP_Real_32_gfx12<bits<7> op, string name = !tolower(NAME)> {
   defvar ps = !cast<SOPP_Pseudo>(NAME);
   def _gfx12 : SOPP_Real_32<op, ps, name>,
-               Select_gfx12<ps.PseudoInstr>;
+               Select<GFX12Gen, ps.PseudoInstr>;
   if !ne(ps.Mnemonic, name) then
     def : AMDGPUMnemonicAlias<ps.Mnemonic, name> {
       let AssemblerPredicate = isGFX12Plus;
@@ -2577,7 +2594,7 @@ defm S_WAIT_STORECNT_DSCNT  : SOPP_Real_32_gfx12<0x049>;
 multiclass SOPP_Real_32_gfx11<bits<7> op, string name = !tolower(NAME)> {
   defvar ps = !cast<SOPP_Pseudo>(NAME);
   def _gfx11 : SOPP_Real_32<op, ps, name>,
-               Select_gfx11<ps.PseudoInstr>,
+               Select<GFX11Gen, ps.PseudoInstr>,
                SOPPRelaxTable<0, ps.KeyName, "_gfx11">;
   if !ne(ps.Mnemonic, name) then
     def : AMDGPUMnemonicAlias<ps.Mnemonic, name> {
@@ -2587,13 +2604,13 @@ multiclass SOPP_Real_32_gfx11<bits<7> op, string name = !tolower(NAME)> {
 
 multiclass SOPP_Real_64_gfx12<bits<7> op> {
   def _gfx12 : SOPP_Real_64<op, !cast<SOPP_Pseudo>(NAME), !cast<SOPP_Pseudo>(NAME).Mnemonic>,
-               Select_gfx12<!cast<SOPP_Pseudo>(NAME).PseudoInstr>,
+               Select<GFX12Gen, !cast<SOPP_Pseudo>(NAME).PseudoInstr>,
                SOPPRelaxTable<1, !cast<SOPP_Pseudo>(NAME).KeyName, "_gfx12">;
 }
 
 multiclass SOPP_Real_64_gfx11<bits<7> op> {
   def _gfx11 : SOPP_Real_64<op, !cast<SOPP_Pseudo>(NAME), !cast<SOPP_Pseudo>(NAME).Mnemonic>,
-               Select_gfx11<!cast<SOPP_Pseudo>(NAME).PseudoInstr>,
+               Select<GFX11Gen, !cast<SOPP_Pseudo>(NAME).PseudoInstr>,
                SOPPRelaxTable<1, !cast<SOPP_Pseudo>(NAME).KeyName, "_gfx11">;
 }
 
@@ -2657,12 +2674,6 @@ defm S_ICACHE_INV                 : SOPP_Real_32_gfx11_gfx12<0x03c>;
 defm S_BARRIER                    : SOPP_Real_32_gfx11<0x03d>;
 
 //===----------------------------------------------------------------------===//
-// SOPP - GFX1150, GFX12.
-//===----------------------------------------------------------------------===//
-
-defm S_SINGLEUSE_VDST             : SOPP_Real_32_gfx11_gfx12<0x013>;
-
-//===----------------------------------------------------------------------===//
 // SOPP - GFX6, GFX7, GFX8, GFX9, GFX10
 //===----------------------------------------------------------------------===//
 
@@ -2683,7 +2694,7 @@ multiclass SOPP_Real_32_gfx8_gfx9<bits<7> op> {
 multiclass SOPP_Real_32_gfx10<bits<7> op> {
   defvar ps = !cast<SOPP_Pseudo>(NAME);
   def _gfx10 : SOPP_Real_32<op, ps>,
-               Select_gfx10<ps.PseudoInstr>,
+               Select<GFX10Gen, ps.PseudoInstr>,
                SOPPRelaxTable<0, ps.KeyName, "_gfx10">;
 }
 
@@ -2720,7 +2731,7 @@ multiclass SOPP_Real_64_gfx8_gfx9<bits<7> op> {
 multiclass SOPP_Real_64_gfx10<bits<7> op> {
   defvar ps = !cast<SOPP_Pseudo>(NAME);
   def _gfx10 : SOPP_Real_64<op, ps>,
-               Select_gfx10<ps.PseudoInstr>,
+               Select<GFX10Gen, ps.PseudoInstr>,
                SOPPRelaxTable<1, ps.KeyName, "_gfx10">;
 }
 
@@ -2786,12 +2797,12 @@ defm S_CBRANCH_CDBGSYS_AND_USER : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_
 
 multiclass SOPC_Real_gfx12<bits<7> op> {
   def _gfx12 : SOPC_Real<op, !cast<SOPC_Pseudo>(NAME)>,
-               Select_gfx12<!cast<SOPC_Pseudo>(NAME).PseudoInstr>;
+               Select<GFX12Gen, !cast<SOPC_Pseudo>(NAME).PseudoInstr>;
 }
 
 multiclass SOPC_Real_gfx11<bits<7> op> {
   def _gfx11 : SOPC_Real<op, !cast<SOPC_Pseudo>(NAME)>,
-               Select_gfx11<!cast<SOPC_Pseudo>(NAME).PseudoInstr>;
+               Select<GFX11Gen, !cast<SOPC_Pseudo>(NAME).PseudoInstr>;
 }
 
 multiclass SOPC_Real_gfx11_gfx12<bits<7> op> :
@@ -2853,7 +2864,7 @@ multiclass SOPC_Real_gfx8_gfx9<bits<7> op> {
 multiclass SOPC_Real_gfx10<bits<7> op> {
   defvar ps = !cast<SOPC_Pseudo>(NAME);
   def _gfx10 : SOPC_Real<op, ps>,
-               Select_gfx10<ps.PseudoInstr>;
+               Select<GFX10Gen, ps.PseudoInstr>;
 }
 
 multiclass SOPC_Real_gfx8_gfx9_gfx10<bits<7> op> :

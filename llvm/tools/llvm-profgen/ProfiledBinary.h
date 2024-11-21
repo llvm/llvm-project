@@ -167,9 +167,10 @@ public:
   void trackInlineesOptimizedAway(MCPseudoProbeDecoder &ProbeDecoder);
 
   using ProbeFrameStack = SmallVector<std::pair<StringRef, uint32_t>>;
-  void trackInlineesOptimizedAway(MCPseudoProbeDecoder &ProbeDecoder,
-                                  MCDecodedPseudoProbeInlineTree &ProbeNode,
-                                  ProbeFrameStack &Context);
+  void
+  trackInlineesOptimizedAway(MCPseudoProbeDecoder &ProbeDecoder,
+                             const MCDecodedPseudoProbeInlineTree &ProbeNode,
+                             ProbeFrameStack &Context);
 
   void dump() { RootContext.dumpTree(); }
 
@@ -290,6 +291,9 @@ class ProfiledBinary {
 
   // Whether we need to symbolize all instructions to get function context size.
   bool TrackFuncContextSize = false;
+
+  // Whether this is a kernel image;
+  bool IsKernel = false;
 
   // Indicate if the base loading address is parsed from the mmap event or uses
   // the preferred address
@@ -428,6 +432,14 @@ public:
 
   bool usePseudoProbes() const { return UsePseudoProbes; }
   bool useFSDiscriminator() const { return UseFSDiscriminator; }
+  bool isKernel() const { return IsKernel; }
+
+  static bool isKernelImageName(StringRef BinaryName) {
+    return BinaryName == "[kernel.kallsyms]" ||
+           BinaryName == "[kernel.kallsyms]_stext" ||
+           BinaryName == "[kernel.kallsyms]_text";
+  }
+
   // Get the index in CodeAddressVec for the address
   // As we might get an address which is not the code
   // here it would round to the next valid code address by
@@ -565,7 +577,7 @@ public:
   void getInlineContextForProbe(const MCDecodedPseudoProbe *Probe,
                                 SampleContextFrameVector &InlineContextStack,
                                 bool IncludeLeaf = false) const {
-    SmallVector<MCPseduoProbeFrameLocation, 16> ProbeInlineContext;
+    SmallVector<MCPseudoProbeFrameLocation, 16> ProbeInlineContext;
     ProbeDecoder.getInlineContextForProbe(Probe, ProbeInlineContext,
                                           IncludeLeaf);
     for (uint32_t I = 0; I < ProbeInlineContext.size(); I++) {

@@ -23,35 +23,50 @@ module m
   end subroutine vol_dum_int_arr
 
   subroutine test_all_subprograms()
-    !WARNING: actual argument associated with VOLATILE dummy argument 'my_int=' is not a variable
+    !WARNING: Actual argument associated with VOLATILE dummy argument 'my_int=' is not definable
+    !BECAUSE: '6_4' is not a variable or pointer
     call vol_dum_int(6)
-    !WARNING: actual argument associated with VOLATILE dummy argument 'my_int=' is not a variable
+    !WARNING: Actual argument associated with VOLATILE dummy argument 'my_int=' is not definable
+    !BECAUSE: '18_4' is not a variable or pointer
     call vol_dum_int(6+12)
-    !WARNING: actual argument associated with VOLATILE dummy argument 'my_int=' is not a variable
+    !WARNING: Actual argument associated with VOLATILE dummy argument 'my_int=' is not definable
+    !BECAUSE: '72_4' is not a variable or pointer
     call vol_dum_int(6*12)
-    !WARNING: actual argument associated with VOLATILE dummy argument 'my_int=' is not a variable
+    !WARNING: Actual argument associated with VOLATILE dummy argument 'my_int=' is not definable
+    !BECAUSE: '-3_4' is not a variable or pointer
     call vol_dum_int(-6/2)
-    !WARNING: actual argument associated with VOLATILE dummy argument 'my_real=' is not a variable
+    !WARNING: Actual argument associated with VOLATILE dummy argument 'my_real=' is not definable
+    !BECAUSE: '3.1415927410125732421875_4' is not a variable or pointer
     call vol_dum_real(3.141592653)
-    !WARNING: actual argument associated with VOLATILE dummy argument 'my_real=' is not a variable
+    !WARNING: Actual argument associated with VOLATILE dummy argument 'my_real=' is not definable
+    !BECAUSE: '3.1415927410125732421875_4' is not a variable or pointer
     call vol_dum_real(3.141592653 + (-10.6e-11))
-    !WARNING: actual argument associated with VOLATILE dummy argument 'my_real=' is not a variable
+    !WARNING: Actual argument associated with VOLATILE dummy argument 'my_real=' is not definable
+    !BECAUSE: '3.3300884272335906644002534449100494384765625e-10_4' is not a variable or pointer
     call vol_dum_real(3.141592653 * 10.6e-11)
-    !WARNING: actual argument associated with VOLATILE dummy argument 'my_real=' is not a variable
+    !WARNING: Actual argument associated with VOLATILE dummy argument 'my_real=' is not definable
+    !BECAUSE: '-2.9637666816e10_4' is not a variable or pointer
     call vol_dum_real(3.141592653 / (-10.6e-11))
-    !WARNING: actual argument associated with VOLATILE dummy argument 'my_complex=' is not a variable
+    !WARNING: Actual argument associated with VOLATILE dummy argument 'my_complex=' is not definable
+    !BECAUSE: '(1._4,3.2000000476837158203125_4)' is not a variable or pointer
     call vol_dum_complex((1., 3.2))
-    !WARNING: actual argument associated with VOLATILE dummy argument 'my_complex=' is not a variable
+    !WARNING: Actual argument associated with VOLATILE dummy argument 'my_complex=' is not definable
+    !BECAUSE: '(-1._4,6.340000152587890625_4)' is not a variable or pointer
     call vol_dum_complex((1., 3.2) + (-2., 3.14))
-    !WARNING: actual argument associated with VOLATILE dummy argument 'my_complex=' is not a variable
+    !WARNING: Actual argument associated with VOLATILE dummy argument 'my_complex=' is not definable
+    !BECAUSE: '(-1.2048000335693359375e1_4,-3.2599999904632568359375_4)' is not a variable or pointer
     call vol_dum_complex((1., 3.2) * (-2., 3.14))
-    !WARNING: actual argument associated with VOLATILE dummy argument 'my_complex=' is not a variable
+    !WARNING: Actual argument associated with VOLATILE dummy argument 'my_complex=' is not definable
+    !BECAUSE: '(5.80680549144744873046875e-1_4,-6.8833148479461669921875e-1_4)' is not a variable or pointer
     call vol_dum_complex((1., 3.2) / (-2., 3.14))
-    !WARNING: actual argument associated with VOLATILE dummy argument 'my_int_arr=' is not a variable
+    !WARNING: Actual argument associated with VOLATILE dummy argument 'my_int_arr=' is not definable
+    !BECAUSE: '[INTEGER(4)::1_4,2_4,3_4,4_4]' is not a variable or pointer
     call vol_dum_int_arr((/ 1, 2, 3, 4 /))
-    !WARNING: actual argument associated with VOLATILE dummy argument 'my_int_arr=' is not a variable
+    !WARNING: Actual argument associated with VOLATILE dummy argument 'my_int_arr=' is not definable
+    !BECAUSE: 'reshape([INTEGER(4)::1_4,2_4,3_4,4_4],shape=[2,2])' is not a variable or pointer
     call vol_dum_int_arr(reshape((/ 1, 2, 3, 4 /), (/ 2, 2/)))
-    !WARNING: actual argument associated with VOLATILE dummy argument 'my_int_arr=' is not a variable
+    !WARNING: Actual argument associated with VOLATILE dummy argument 'my_int_arr=' is not definable
+    !BECAUSE: '[INTEGER(4)::1_4,2_4,3_4,4_4]' is not a variable or pointer
     call vol_dum_int_arr((/ 1, 2, 3, 4 /))
   end subroutine test_all_subprograms
 end module m

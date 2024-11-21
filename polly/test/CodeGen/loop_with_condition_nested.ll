@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -basic-aa -polly-print-ast -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -basic-aa -polly-codegen < %s | opt -passes='print<loops>' -disable-output 2>&1 | FileCheck %s -check-prefix=LOOPS
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa '-passes=print<polly-ast>' -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -passes=polly-codegen < %s | opt -passes='print<loops>' -disable-output 2>&1 | FileCheck %s -check-prefix=LOOPS
 
 
 ;#include <string.h>

@@ -37,6 +37,8 @@ add_flang_library(FortranLower
   VectorSubscripts.cpp
   
   DEPENDS
+  CUFAttrs
+  CUFDialect
   FIRDialect
   FIRTransforms
   HLFIRDialect
@@ -44,6 +46,8 @@ add_flang_library(FortranLower
   ${extension_libs}
 
   LINK_LIBS
+  CUFAttrs
+  CUFDialect
   FIRDialect
   FIRDialectSupport
   FIRBuilder

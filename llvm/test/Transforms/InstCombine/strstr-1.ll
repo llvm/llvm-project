@@ -37,7 +37,7 @@ define ptr @test_simplify2(ptr %str) {
 
 define ptr @test_simplify3() {
 ; CHECK-LABEL: @test_simplify3(
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([6 x i8], ptr @.str2, i64 0, i64 1)
+; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @.str2, i64 1)
 ;
   %ret = call ptr @strstr(ptr @.str2, ptr @.str3)
   ret ptr %ret

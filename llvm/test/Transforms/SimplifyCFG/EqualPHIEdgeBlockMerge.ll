@@ -104,8 +104,8 @@ define i8 @testmergesome(i32 %u, ptr %A) {
 ; CHECK-LABEL: @testmergesome(
 ; CHECK-NEXT:  V:
 ; CHECK-NEXT:    switch i32 [[U:%.*]], label [[Y:%.*]] [
-; CHECK-NEXT:    i32 0, label [[W:%.*]]
-; CHECK-NEXT:    i32 3, label [[Z:%.*]]
+; CHECK-NEXT:      i32 0, label [[W:%.*]]
+; CHECK-NEXT:      i32 3, label [[Z:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       W:
 ; CHECK-NEXT:    store i32 1, ptr [[A:%.*]], align 4
@@ -148,9 +148,9 @@ define i8 @testmergesome2(i32 %u, ptr %A) {
 ; CHECK-LABEL: @testmergesome2(
 ; CHECK-NEXT:  V:
 ; CHECK-NEXT:    switch i32 [[U:%.*]], label [[W:%.*]] [
-; CHECK-NEXT:    i32 4, label [[Y:%.*]]
-; CHECK-NEXT:    i32 1, label [[Y]]
-; CHECK-NEXT:    i32 2, label [[Y]]
+; CHECK-NEXT:      i32 4, label [[Y:%.*]]
+; CHECK-NEXT:      i32 1, label [[Y]]
+; CHECK-NEXT:      i32 2, label [[Y]]
 ; CHECK-NEXT:    ]
 ; CHECK:       W:
 ; CHECK-NEXT:    store i32 1, ptr [[A:%.*]], align 4

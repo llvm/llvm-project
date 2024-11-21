@@ -166,7 +166,9 @@ static Value *foldMulShl1(BinaryOperator &Mul, bool CommuteOperands,
   if (match(Y, m_OneUse(m_Add(m_BinOp(Shift), m_One()))) &&
       match(Shift, m_OneUse(m_Shl(m_One(), m_Value(Z))))) {
     bool PropagateNSW = HasNSW && Shift->hasNoSignedWrap();
-    Value *FrX = Builder.CreateFreeze(X, X->getName() + ".fr");
+    Value *FrX = X;
+    if (!isGuaranteedNotToBeUndef(X))
+      FrX = Builder.CreateFreeze(X, X->getName() + ".fr");
     Value *Shl = Builder.CreateShl(FrX, Z, "mulshl", HasNUW, PropagateNSW);
     return Builder.CreateAdd(Shl, FrX, Mul.getName(), HasNUW, PropagateNSW);
   }
@@ -177,7 +179,9 @@ static Value *foldMulShl1(BinaryOperator &Mul, bool CommuteOperands,
   // This increases uses of X, so it may require a freeze, but that is still
   // expected to be an improvement because it removes the multiply.
   if (match(Y, m_OneUse(m_Not(m_OneUse(m_Shl(m_AllOnes(), m_Value(Z))))))) {
-    Value *FrX = Builder.CreateFreeze(X, X->getName() + ".fr");
+    Value *FrX = X;
+    if (!isGuaranteedNotToBeUndef(X))
+      FrX = Builder.CreateFreeze(X, X->getName() + ".fr");
     Value *Shl = Builder.CreateShl(FrX, Z, "mulshl");
     return Builder.CreateSub(Shl, FrX, Mul.getName());
   }
@@ -223,11 +227,13 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     Value *NewOp;
     Constant *C1, *C2;
     const APInt *IVal;
-    if (match(&I, m_Mul(m_Shl(m_Value(NewOp), m_Constant(C2)),
-                        m_Constant(C1))) &&
+    if (match(&I, m_Mul(m_Shl(m_Value(NewOp), m_ImmConstant(C2)),
+                        m_ImmConstant(C1))) &&
         match(C1, m_APInt(IVal))) {
       // ((X << C2)*C1) == (X * (C1 << C2))
-      Constant *Shl = ConstantExpr::getShl(C1, C2);
+      Constant *Shl =
+          ConstantFoldBinaryOpOperands(Instruction::Shl, C1, C2, DL);
+      assert(Shl && "Constant folding of immediate constants failed");
       BinaryOperator *Mul = cast<BinaryOperator>(I.getOperand(0));
       BinaryOperator *BO = BinaryOperator::CreateMul(NewOp, Shl);
       if (HasNUW && Mul->hasNoUnsignedWrap())
@@ -363,6 +369,28 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
       return BinaryOperator::CreateMul(NegOp0, X);
   }
 
+  if (Op0->hasOneUse()) {
+    // (mul (div exact X, C0), C1)
+    //    -> (div exact X, C0 / C1)
+    // iff C0 % C1 == 0 and X / (C0 / C1) doesn't create UB.
+    const APInt *C1;
+    auto UDivCheck = [&C1](const APInt &C) { return C.urem(*C1).isZero(); };
+    auto SDivCheck = [&C1](const APInt &C) {
+      APInt Quot, Rem;
+      APInt::sdivrem(C, *C1, Quot, Rem);
+      return Rem.isZero() && !Quot.isAllOnes();
+    };
+    if (match(Op1, m_APInt(C1)) &&
+        (match(Op0, m_Exact(m_UDiv(m_Value(X), m_CheckedInt(UDivCheck)))) ||
+         match(Op0, m_Exact(m_SDiv(m_Value(X), m_CheckedInt(SDivCheck)))))) {
+      auto BOpc = cast<BinaryOperator>(Op0)->getOpcode();
+      return BinaryOperator::CreateExact(
+          BOpc, X,
+          Builder.CreateBinOp(BOpc, cast<BinaryOperator>(Op0)->getOperand(1),
+                              Op1));
+    }
+  }
+
   // (X / Y) *  Y = X - (X % Y)
   // (X / Y) * -Y = (X % Y) - X
   {
@@ -390,7 +418,9 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
       auto RemOpc = Div->getOpcode() == Instruction::UDiv ? Instruction::URem
                                                           : Instruction::SRem;
       // X must be frozen because we are increasing its number of uses.
-      Value *XFreeze = Builder.CreateFreeze(X, X->getName() + ".fr");
+      Value *XFreeze = X;
+      if (!isGuaranteedNotToBeUndef(X))
+        XFreeze = Builder.CreateFreeze(X, X->getName() + ".fr");
       Value *Rem = Builder.CreateBinOp(RemOpc, XFreeze, DivOp1);
       if (DivOp1 == Y)
         return BinaryOperator::CreateSub(XFreeze, Rem);
@@ -877,6 +907,24 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
     if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
       return BinaryOperator::CreateFMulFMF(X, NegC, &I);
 
+  if (I.hasNoNaNs() && I.hasNoSignedZeros()) {
+    // (uitofp bool X) * Y --> X ? Y : 0
+    // Y * (uitofp bool X) --> X ? Y : 0
+    // Note INF * 0 is NaN.
+    if (match(Op0, m_UIToFP(m_Value(X))) &&
+        X->getType()->isIntOrIntVectorTy(1)) {
+      auto *SI = SelectInst::Create(X, Op1, ConstantFP::get(I.getType(), 0.0));
+      SI->copyFastMathFlags(I.getFastMathFlags());
+      return SI;
+    }
+    if (match(Op1, m_UIToFP(m_Value(X))) &&
+        X->getType()->isIntOrIntVectorTy(1)) {
+      auto *SI = SelectInst::Create(X, Op0, ConstantFP::get(I.getType(), 0.0));
+      SI->copyFastMathFlags(I.getFastMathFlags());
+      return SI;
+    }
+  }
+
   // (select A, B, C) * (select A, D, E) --> select A, (B*D), (C*E)
   if (Value *V = SimplifySelectsFeedingBinaryOp(I, Op0, Op1))
     return replaceInstUsesWith(I, V);
@@ -1110,29 +1158,39 @@ static Value *foldIDivShl(BinaryOperator &I, InstCombiner::BuilderTy &Builder) {
   return nullptr;
 }
 
-/// This function implements the transforms common to both integer division
-/// instructions (udiv and sdiv). It is called by the visitors to those integer
-/// division instructions.
-/// Common integer divide transforms
-Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
+/// Common integer divide/remainder transforms
+Instruction *InstCombinerImpl::commonIDivRemTransforms(BinaryOperator &I) {
+  assert(I.isIntDivRem() && "Unexpected instruction");
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+
+  // If any element of a constant divisor fixed width vector is zero or undef
+  // the behavior is undefined and we can fold the whole op to poison.
+  auto *Op1C = dyn_cast<Constant>(Op1);
+  Type *Ty = I.getType();
+  auto *VTy = dyn_cast<FixedVectorType>(Ty);
+  if (Op1C && VTy) {
+    unsigned NumElts = VTy->getNumElements();
+    for (unsigned i = 0; i != NumElts; ++i) {
+      Constant *Elt = Op1C->getAggregateElement(i);
+      if (Elt && (Elt->isNullValue() || isa<UndefValue>(Elt)))
+        return replaceInstUsesWith(I, PoisonValue::get(Ty));
+    }
+  }
+
   if (Instruction *Phi = foldBinopWithPhiOperands(I))
     return Phi;
-
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  bool IsSigned = I.getOpcode() == Instruction::SDiv;
-  Type *Ty = I.getType();
 
   // The RHS is known non-zero.
   if (Value *V = simplifyValueKnownNonZero(I.getOperand(1), *this, I))
     return replaceOperand(I, 1, V);
 
-  // Handle cases involving: [su]div X, (select Cond, Y, Z)
-  // This does not apply for fdiv.
+  // Handle cases involving: div/rem X, (select Cond, Y, Z)
   if (simplifyDivRemOfSelectWithZeroOp(I))
     return &I;
 
   // If the divisor is a select-of-constants, try to constant fold all div ops:
-  // C / (select Cond, TrueC, FalseC) --> select Cond, (C / TrueC), (C / FalseC)
+  // C div/rem (select Cond, TrueC, FalseC) --> select Cond, (C div/rem TrueC),
+  // (C div/rem FalseC)
   // TODO: Adapt simplifyDivRemOfSelectWithZeroOp to allow this and other folds.
   if (match(Op0, m_ImmConstant()) &&
       match(Op1, m_Select(m_Value(), m_ImmConstant(), m_ImmConstant()))) {
@@ -1140,6 +1198,21 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
                                           /*FoldWithMultiUse*/ true))
       return R;
   }
+
+  return nullptr;
+}
+
+/// This function implements the transforms common to both integer division
+/// instructions (udiv and sdiv). It is called by the visitors to those integer
+/// division instructions.
+/// Common integer divide transforms
+Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
+  if (Instruction *Res = commonIDivRemTransforms(I))
+    return Res;
+
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  bool IsSigned = I.getOpcode() == Instruction::SDiv;
+  Type *Ty = I.getType();
 
   const APInt *C2;
   if (match(Op1, m_APInt(C2))) {
@@ -1232,7 +1305,9 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
       // 1 / 0 --> undef ; 1 / 1 --> 1 ; 1 / -1 --> -1 ; 1 / anything else --> 0
       // (Op1 + 1) u< 3 ? Op1 : 0
       // Op1 must be frozen because we are increasing its number of uses.
-      Value *F1 = Builder.CreateFreeze(Op1, Op1->getName() + ".fr");
+      Value *F1 = Op1;
+      if (!isGuaranteedNotToBeUndef(Op1))
+        F1 = Builder.CreateFreeze(Op1, Op1->getName() + ".fr");
       Value *Inc = Builder.CreateAdd(F1, Op0);
       Value *Cmp = Builder.CreateICmpULT(Inc, ConstantInt::get(Ty, 3));
       return SelectInst::Create(Cmp, F1, ConstantInt::get(Ty, 0));
@@ -1377,6 +1452,18 @@ static Value *takeLog2(IRBuilderBase &Builder, Value *Op, unsigned Depth,
     if (Value *LogX = takeLog2(Builder, X, Depth, AssumeNonZero, DoFold))
       return IfFold([&]() { return Builder.CreateZExt(LogX, Op->getType()); });
 
+  // log2(trunc x) -> trunc log2(X)
+  // FIXME: Require one use?
+  if (match(Op, m_Trunc(m_Value(X)))) {
+    auto *TI = cast<TruncInst>(Op);
+    if (AssumeNonZero || TI->hasNoUnsignedWrap())
+      if (Value *LogX = takeLog2(Builder, X, Depth, AssumeNonZero, DoFold))
+        return IfFold([&]() {
+          return Builder.CreateTrunc(LogX, Op->getType(), "",
+                                     /*IsNUW=*/TI->hasNoUnsignedWrap());
+        });
+  }
+
   // log2(X << Y) -> log2(X) + Y
   // FIXME: Require one use unless X is 1?
   if (match(Op, m_Shl(m_Value(X), m_Value(Y)))) {
@@ -1385,6 +1472,24 @@ static Value *takeLog2(IRBuilderBase &Builder, Value *Op, unsigned Depth,
     if (AssumeNonZero || BO->hasNoUnsignedWrap() || BO->hasNoSignedWrap())
       if (Value *LogX = takeLog2(Builder, X, Depth, AssumeNonZero, DoFold))
         return IfFold([&]() { return Builder.CreateAdd(LogX, Y); });
+  }
+
+  // log2(X >>u Y) -> log2(X) - Y
+  // FIXME: Require one use?
+  if (match(Op, m_LShr(m_Value(X), m_Value(Y)))) {
+    auto *PEO = cast<PossiblyExactOperator>(Op);
+    if (AssumeNonZero || PEO->isExact())
+      if (Value *LogX = takeLog2(Builder, X, Depth, AssumeNonZero, DoFold))
+        return IfFold([&]() { return Builder.CreateSub(LogX, Y); });
+  }
+
+  // log2(X & Y) -> either log2(X) or log2(Y)
+  // This requires `AssumeNonZero` as `X & Y` may be zero when X != Y.
+  if (AssumeNonZero && match(Op, m_And(m_Value(X), m_Value(Y)))) {
+    if (Value *LogX = takeLog2(Builder, X, Depth, AssumeNonZero, DoFold))
+      return IfFold([&]() { return LogX; });
+    if (Value *LogY = takeLog2(Builder, Y, Depth, AssumeNonZero, DoFold))
+      return IfFold([&]() { return LogY; });
   }
 
   // log2(Cond ? X : Y) -> Cond ? log2(X) : log2(Y)
@@ -1677,7 +1782,7 @@ Instruction *InstCombinerImpl::foldFDivConstantDivisor(BinaryOperator &I) {
 
   // -X / C --> X / -C
   Value *X;
-  const DataLayout &DL = I.getModule()->getDataLayout();
+  const DataLayout &DL = I.getDataLayout();
   if (match(I.getOperand(0), m_FNeg(m_Value(X))))
     if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
       return BinaryOperator::CreateFDivFMF(X, NegC, &I);
@@ -1722,7 +1827,7 @@ static Instruction *foldFDivConstantDividend(BinaryOperator &I) {
 
   // C / -X --> -C / X
   Value *X;
-  const DataLayout &DL = I.getModule()->getDataLayout();
+  const DataLayout &DL = I.getDataLayout();
   if (match(I.getOperand(1), m_FNeg(m_Value(X))))
     if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
       return BinaryOperator::CreateFDivFMF(NegC, X, &I);
@@ -2058,28 +2163,10 @@ static Instruction *simplifyIRemMulShl(BinaryOperator &I,
 /// remainder instructions.
 /// Common integer remainder transforms
 Instruction *InstCombinerImpl::commonIRemTransforms(BinaryOperator &I) {
-  if (Instruction *Phi = foldBinopWithPhiOperands(I))
-    return Phi;
+  if (Instruction *Res = commonIDivRemTransforms(I))
+    return Res;
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-
-  // The RHS is known non-zero.
-  if (Value *V = simplifyValueKnownNonZero(I.getOperand(1), *this, I))
-    return replaceOperand(I, 1, V);
-
-  // Handle cases involving: rem X, (select Cond, Y, Z)
-  if (simplifyDivRemOfSelectWithZeroOp(I))
-    return &I;
-
-  // If the divisor is a select-of-constants, try to constant fold all rem ops:
-  // C % (select Cond, TrueC, FalseC) --> select Cond, (C % TrueC), (C % FalseC)
-  // TODO: Adapt simplifyDivRemOfSelectWithZeroOp to allow this and other folds.
-  if (match(Op0, m_ImmConstant()) &&
-      match(Op1, m_Select(m_Value(), m_ImmConstant(), m_ImmConstant()))) {
-    if (Instruction *R = FoldOpIntoSelect(I, cast<SelectInst>(Op1),
-                                          /*FoldWithMultiUse*/ true))
-      return R;
-  }
 
   if (isa<Constant>(Op1)) {
     if (Instruction *Op0I = dyn_cast<Instruction>(Op0)) {
@@ -2145,7 +2232,9 @@ Instruction *InstCombinerImpl::visitURem(BinaryOperator &I) {
   // Op0 urem C -> Op0 < C ? Op0 : Op0 - C, where C >= signbit.
   // Op0 must be frozen because we are increasing its number of uses.
   if (match(Op1, m_Negative())) {
-    Value *F0 = Builder.CreateFreeze(Op0, Op0->getName() + ".fr");
+    Value *F0 = Op0;
+    if (!isGuaranteedNotToBeUndef(Op0))
+      F0 = Builder.CreateFreeze(Op0, Op0->getName() + ".fr");
     Value *Cmp = Builder.CreateICmpULT(F0, Op1);
     Value *Sub = Builder.CreateSub(F0, Op1);
     return SelectInst::Create(Cmp, F0, Sub);
@@ -2157,7 +2246,9 @@ Instruction *InstCombinerImpl::visitURem(BinaryOperator &I) {
   // urem Op0, (sext i1 X) --> (Op0 == -1) ? 0 : Op0
   Value *X;
   if (match(Op1, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
-    Value *FrozenOp0 = Builder.CreateFreeze(Op0, Op0->getName() + ".frozen");
+    Value *FrozenOp0 = Op0;
+    if (!isGuaranteedNotToBeUndef(Op0))
+      FrozenOp0 = Builder.CreateFreeze(Op0, Op0->getName() + ".frozen");
     Value *Cmp =
         Builder.CreateICmpEQ(FrozenOp0, ConstantInt::getAllOnesValue(Ty));
     return SelectInst::Create(Cmp, ConstantInt::getNullValue(Ty), FrozenOp0);
@@ -2168,7 +2259,9 @@ Instruction *InstCombinerImpl::visitURem(BinaryOperator &I) {
     Value *Val =
         simplifyICmpInst(ICmpInst::ICMP_ULT, X, Op1, SQ.getWithInstruction(&I));
     if (Val && match(Val, m_One())) {
-      Value *FrozenOp0 = Builder.CreateFreeze(Op0, Op0->getName() + ".frozen");
+      Value *FrozenOp0 = Op0;
+      if (!isGuaranteedNotToBeUndef(Op0))
+        FrozenOp0 = Builder.CreateFreeze(Op0, Op0->getName() + ".frozen");
       Value *Cmp = Builder.CreateICmpEQ(FrozenOp0, Op1);
       return SelectInst::Create(Cmp, ConstantInt::getNullValue(Ty), FrozenOp0);
     }

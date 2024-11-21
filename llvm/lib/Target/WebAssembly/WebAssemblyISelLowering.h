@@ -76,8 +76,6 @@ private:
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
   bool isVectorLoadExtDesirable(SDValue ExtVal) const override;
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
-  bool shouldSinkOperands(Instruction *I,
-                          SmallVectorImpl<Use *> &Ops) const override;
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
   bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
@@ -111,10 +109,6 @@ private:
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
 
-  const char *getClearCacheBuiltinName() const override {
-    report_fatal_error("llvm.clear_cache is not supported on wasm");
-  }
-
   bool
   shouldSimplifyDemandedVectorElts(SDValue Op,
                                    const TargetLoweringOpt &TLO) const override;
@@ -142,6 +136,8 @@ private:
   SDValue LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerStore(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerMUL_LOHI(SDValue Op, SelectionDAG &DAG) const;
+  SDValue Replace128Op(SDNode *N, SelectionDAG &DAG) const;
 
   // Custom DAG combine hooks
   SDValue

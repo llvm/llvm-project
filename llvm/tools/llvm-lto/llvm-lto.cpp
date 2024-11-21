@@ -407,6 +407,64 @@ static void printIndexStats() {
   }
 }
 
+/// Print the lto symbol attributes.
+static void printLTOSymbolAttributes(lto_symbol_attributes Attrs) {
+  outs() << "{ ";
+  unsigned Permission = Attrs & LTO_SYMBOL_PERMISSIONS_MASK;
+  switch (Permission) {
+  case LTO_SYMBOL_PERMISSIONS_CODE:
+    outs() << "function ";
+    break;
+  case LTO_SYMBOL_PERMISSIONS_DATA:
+    outs() << "data ";
+    break;
+  case LTO_SYMBOL_PERMISSIONS_RODATA:
+    outs() << "constant ";
+    break;
+  }
+  unsigned Definition = Attrs & LTO_SYMBOL_DEFINITION_MASK;
+  switch (Definition) {
+  case LTO_SYMBOL_DEFINITION_REGULAR:
+    outs() << "defined ";
+    break;
+  case LTO_SYMBOL_DEFINITION_TENTATIVE:
+    outs() << "common ";
+    break;
+  case LTO_SYMBOL_DEFINITION_WEAK:
+    outs() << "weak ";
+    break;
+  case LTO_SYMBOL_DEFINITION_UNDEFINED:
+    outs() << "extern ";
+    break;
+  case LTO_SYMBOL_DEFINITION_WEAKUNDEF:
+    outs() << "extern-weak ";
+    break;
+  }
+  unsigned Scope = Attrs & LTO_SYMBOL_SCOPE_MASK;
+  switch (Scope) {
+  case LTO_SYMBOL_SCOPE_INTERNAL:
+    outs() << "internal ";
+    break;
+  case LTO_SYMBOL_SCOPE_HIDDEN:
+    outs() << "hidden ";
+    break;
+  case LTO_SYMBOL_SCOPE_PROTECTED:
+    outs() << "protected ";
+    break;
+  case LTO_SYMBOL_SCOPE_DEFAULT:
+    outs() << "default ";
+    break;
+  case LTO_SYMBOL_SCOPE_DEFAULT_CAN_BE_HIDDEN:
+    outs() << "omitted ";
+    break;
+  }
+  if (Attrs & LTO_SYMBOL_COMDAT)
+    outs() << "comdat ";
+  if (Attrs & LTO_SYMBOL_ALIAS)
+    outs() << "alias ";
+  outs() << "}";
+}
+
 /// Load each IR file and dump certain information based on active flags.
 ///
 /// The main point here is to provide lit-testable coverage for the LTOModule
@@ -421,8 +479,11 @@ static void testLTOModule(const TargetOptions &Options) {
     if (ListSymbolsOnly) {
       // List the symbols.
       outs() << Filename << ":\n";
-      for (int I = 0, E = Module->getSymbolCount(); I != E; ++I)
-        outs() << Module->getSymbolName(I) << "\n";
+      for (int I = 0, E = Module->getSymbolCount(); I != E; ++I) {
+        outs() << Module->getSymbolName(I) << "    ";
+        printLTOSymbolAttributes(Module->getSymbolAttributes(I));
+        outs() << "\n";
+      }
     }
     if (QueryHasCtorDtor)
       outs() << Filename
@@ -691,9 +752,10 @@ private:
 
       // Build a map of module to the GUIDs and summary objects that should
       // be written to its index.
-      std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
+      ModuleToSummariesForIndexTy ModuleToSummariesForIndex;
+      GVSummaryPtrSet DecSummaries;
       ThinGenerator.gatherImportedSummariesForModule(
-          *TheModule, *Index, ModuleToSummariesForIndex, *Input);
+          *TheModule, *Index, ModuleToSummariesForIndex, DecSummaries, *Input);
 
       std::string OutputName = OutputFilename;
       if (OutputName.empty()) {
@@ -703,7 +765,7 @@ private:
       std::error_code EC;
       raw_fd_ostream OS(OutputName, EC, sys::fs::OpenFlags::OF_None);
       error(EC, "error opening the file '" + OutputName + "'");
-      writeIndexToFile(*Index, OS, &ModuleToSummariesForIndex);
+      writeIndexToFile(*Index, OS, &ModuleToSummariesForIndex, &DecSummaries);
     }
   }
 

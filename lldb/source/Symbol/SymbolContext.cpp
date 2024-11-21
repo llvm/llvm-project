@@ -706,20 +706,18 @@ LineEntry SymbolContext::GetFunctionStartLineEntry() const {
   return LineEntry();
 }
 
-bool SymbolContext::GetAddressRangeFromHereToEndLine(uint32_t end_line,
-                                                     AddressRange &range,
-                                                     Status &error) {
+llvm::Error
+SymbolContext::GetAddressRangeFromHereToEndLine(uint32_t end_line,
+                                                AddressRange &range) {
   if (!line_entry.IsValid()) {
-    error.SetErrorString("Symbol context has no line table.");
-    return false;
+    return llvm::createStringError("Symbol context has no line table.");
   }
 
   range = line_entry.range;
   if (line_entry.line > end_line) {
-    error.SetErrorStringWithFormat(
+    return llvm::createStringError(
         "end line option %d must be after the current line: %d", end_line,
         line_entry.line);
-    return false;
   }
 
   uint32_t line_index = 0;
@@ -740,35 +738,32 @@ bool SymbolContext::GetAddressRangeFromHereToEndLine(uint32_t end_line,
   if (!found) {
     // Can't find the index of the SymbolContext's line entry in the
     // SymbolContext's CompUnit.
-    error.SetErrorString(
+    return llvm::createStringError(
         "Can't find the current line entry in the CompUnit - can't process "
         "the end-line option");
-    return false;
   }
 
   line_index = comp_unit->FindLineEntry(line_index, end_line, nullptr, false,
                                         &end_entry);
   if (line_index == UINT32_MAX) {
-    error.SetErrorStringWithFormat(
+    return llvm::createStringError(
         "could not find a line table entry corresponding "
         "to end line number %d",
         end_line);
-    return false;
   }
 
   Block *func_block = GetFunctionBlock();
   if (func_block && func_block->GetRangeIndexContainingAddress(
                         end_entry.range.GetBaseAddress()) == UINT32_MAX) {
-    error.SetErrorStringWithFormat(
+    return llvm::createStringError(
         "end line number %d is not contained within the current function.",
         end_line);
-    return false;
   }
 
   lldb::addr_t range_size = end_entry.range.GetBaseAddress().GetFileAddress() -
                             range.GetBaseAddress().GetFileAddress();
   range.SetByteSize(range_size);
-  return true;
+  return llvm::Error::success();
 }
 
 const Symbol *SymbolContext::FindBestGlobalDataSymbol(ConstString name,
@@ -875,7 +870,7 @@ const Symbol *SymbolContext::FindBestGlobalDataSymbol(ConstString name,
         symbol->GetDescription(&ss, eDescriptionLevelFull, &target);
       }
       ss.PutChar('\n');
-      error.SetErrorString(ss.GetData());
+      error = Status::FromErrorString(ss.GetData());
       return nullptr;
     } else if (external_symbols.size()) {
       return external_symbols[0];
@@ -886,7 +881,7 @@ const Symbol *SymbolContext::FindBestGlobalDataSymbol(ConstString name,
         symbol->GetDescription(&ss, eDescriptionLevelVerbose, &target);
         ss.PutChar('\n');
       }
-      error.SetErrorString(ss.GetData());
+      error = Status::FromErrorString(ss.GetData());
       return nullptr;
     } else if (internal_symbols.size()) {
       return internal_symbols[0];

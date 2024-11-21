@@ -33,8 +33,8 @@ struct __is_less_than_comparable<_Tp, _Up, __void_t<decltype(std::declval<_Tp>()
 };
 
 template <class _Tp, class _Up, __enable_if_t<__is_less_than_comparable<const _Tp*, const _Up*>::value, int> = 0>
-_LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") bool __is_pointer_in_range(
-    const _Tp* __begin, const _Tp* __end, const _Up* __ptr) {
+_LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") bool
+__is_pointer_in_range(const _Tp* __begin, const _Tp* __end, const _Up* __ptr) {
   _LIBCPP_ASSERT_VALID_INPUT_RANGE(std::__is_valid_range(__begin, __end), "[__begin, __end) is not a valid range");
 
   if (__libcpp_is_constant_evaluated()) {
@@ -48,13 +48,21 @@ _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address
 }
 
 template <class _Tp, class _Up, __enable_if_t<!__is_less_than_comparable<const _Tp*, const _Up*>::value, int> = 0>
-_LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") bool __is_pointer_in_range(
-    const _Tp* __begin, const _Tp* __end, const _Up* __ptr) {
+_LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") bool
+__is_pointer_in_range(const _Tp* __begin, const _Tp* __end, const _Up* __ptr) {
   if (__libcpp_is_constant_evaluated())
     return false;
 
   return reinterpret_cast<const char*>(__begin) <= reinterpret_cast<const char*>(__ptr) &&
          reinterpret_cast<const char*>(__ptr) < reinterpret_cast<const char*>(__end);
+}
+
+template <class _Tp, class _Up>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
+__is_overlapping_range(const _Tp* __begin, const _Tp* __end, const _Up* __begin2) {
+  auto __size = __end - __begin;
+  auto __end2 = __begin2 + __size;
+  return std::__is_pointer_in_range(__begin, __end, __begin2) || std::__is_pointer_in_range(__begin2, __end2, __begin);
 }
 
 _LIBCPP_END_NAMESPACE_STD

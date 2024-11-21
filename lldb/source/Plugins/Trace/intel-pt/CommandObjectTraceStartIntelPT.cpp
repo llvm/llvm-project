@@ -37,8 +37,8 @@ Status CommandObjectThreadTraceStartIntelPT::CommandOptions::SetOptionValue(
             ParsingUtils::ParseUserFriendlySizeExpression(option_arg))
       m_ipt_trace_size = *bytes;
     else
-      error.SetErrorStringWithFormat("invalid bytes expression for '%s'",
-                                     option_arg.str().c_str());
+      error = Status::FromErrorStringWithFormat(
+          "invalid bytes expression for '%s'", option_arg.str().c_str());
     break;
   }
   case 't': {
@@ -49,8 +49,8 @@ Status CommandObjectThreadTraceStartIntelPT::CommandOptions::SetOptionValue(
     int64_t psb_period;
     if (option_arg.empty() || option_arg.getAsInteger(0, psb_period) ||
         psb_period < 0)
-      error.SetErrorStringWithFormat("invalid integer value for option '%s'",
-                                     option_arg.str().c_str());
+      error = Status::FromErrorStringWithFormat(
+          "invalid integer value for option '%s'", option_arg.str().c_str());
     else
       m_psb_period = psb_period;
     break;
@@ -78,7 +78,7 @@ bool CommandObjectThreadTraceStartIntelPT::DoExecuteOnThreads(
     llvm::ArrayRef<lldb::tid_t> tids) {
   if (Error err = m_trace.Start(tids, m_options.m_ipt_trace_size,
                                 m_options.m_enable_tsc, m_options.m_psb_period))
-    result.SetError(Status(std::move(err)));
+    result.SetError(std::move(err));
   else
     result.SetStatus(eReturnStatusSuccessFinishResult);
 
@@ -102,8 +102,8 @@ Status CommandObjectProcessTraceStartIntelPT::CommandOptions::SetOptionValue(
             ParsingUtils::ParseUserFriendlySizeExpression(option_arg))
       m_ipt_trace_size = *bytes;
     else
-      error.SetErrorStringWithFormat("invalid bytes expression for '%s'",
-                                     option_arg.str().c_str());
+      error = Status::FromErrorStringWithFormat(
+          "invalid bytes expression for '%s'", option_arg.str().c_str());
     break;
   }
   case 'l': {
@@ -111,8 +111,8 @@ Status CommandObjectProcessTraceStartIntelPT::CommandOptions::SetOptionValue(
             ParsingUtils::ParseUserFriendlySizeExpression(option_arg))
       m_process_buffer_size_limit = *bytes;
     else
-      error.SetErrorStringWithFormat("invalid bytes expression for '%s'",
-                                     option_arg.str().c_str());
+      error = Status::FromErrorStringWithFormat(
+          "invalid bytes expression for '%s'", option_arg.str().c_str());
     break;
   }
   case 't': {
@@ -131,8 +131,8 @@ Status CommandObjectProcessTraceStartIntelPT::CommandOptions::SetOptionValue(
     int64_t psb_period;
     if (option_arg.empty() || option_arg.getAsInteger(0, psb_period) ||
         psb_period < 0)
-      error.SetErrorStringWithFormat("invalid integer value for option '%s'",
-                                     option_arg.str().c_str());
+      error = Status::FromErrorStringWithFormat(
+          "invalid integer value for option '%s'", option_arg.str().c_str());
     else
       m_psb_period = psb_period;
     break;
@@ -164,7 +164,7 @@ void CommandObjectProcessTraceStartIntelPT::DoExecute(
           m_options.m_ipt_trace_size, m_options.m_process_buffer_size_limit,
           m_options.m_enable_tsc, m_options.m_psb_period,
           m_options.m_per_cpu_tracing, m_options.m_disable_cgroup_filtering))
-    result.SetError(Status(std::move(err)));
+    result.SetError(std::move(err));
   else
     result.SetStatus(eReturnStatusSuccessFinishResult);
 }

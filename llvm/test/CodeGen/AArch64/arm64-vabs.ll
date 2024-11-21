@@ -2,15 +2,7 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck -check-prefixes=CHECK,CHECK-SD %s
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for abs_8b
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for abs_16b
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for abs_4h
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for abs_8h
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for abs_2s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for abs_4s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for abs_1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for abs_1d_honestly
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fabds
+; CHECK-GI:  warning: Instruction selection used fallback path for fabds
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fabdd
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uabd_i64
 
@@ -289,26 +281,27 @@ define i32 @uabd16b_rdx_i32(<16 x i8> %a, <16 x i8> %b) {
 ;
 ; CHECK-GI-LABEL: uabd16b_rdx_i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ushll.8h v2, v0, #0
-; CHECK-GI-NEXT:    ushll.8h v3, v1, #0
-; CHECK-GI-NEXT:    ushll2.8h v0, v0, #0
-; CHECK-GI-NEXT:    ushll2.8h v1, v1, #0
-; CHECK-GI-NEXT:    usubl.4s v4, v2, v3
-; CHECK-GI-NEXT:    usubl2.4s v2, v2, v3
-; CHECK-GI-NEXT:    usubl.4s v3, v0, v1
-; CHECK-GI-NEXT:    usubl2.4s v0, v0, v1
-; CHECK-GI-NEXT:    cmlt.4s v1, v4, #0
-; CHECK-GI-NEXT:    cmlt.4s v5, v2, #0
-; CHECK-GI-NEXT:    neg.4s v16, v4
-; CHECK-GI-NEXT:    cmlt.4s v6, v3, #0
-; CHECK-GI-NEXT:    cmlt.4s v7, v0, #0
-; CHECK-GI-NEXT:    neg.4s v17, v2
-; CHECK-GI-NEXT:    neg.4s v18, v3
-; CHECK-GI-NEXT:    neg.4s v19, v0
-; CHECK-GI-NEXT:    bsl.16b v1, v16, v4
-; CHECK-GI-NEXT:    bit.16b v2, v17, v5
-; CHECK-GI-NEXT:    bit.16b v3, v18, v6
-; CHECK-GI-NEXT:    bit.16b v0, v19, v7
+; CHECK-GI-NEXT:    usubl.8h v3, v0, v1
+; CHECK-GI-NEXT:    movi.2d v2, #0000000000000000
+; CHECK-GI-NEXT:    usubl2.8h v0, v0, v1
+; CHECK-GI-NEXT:    sshll.4s v1, v3, #0
+; CHECK-GI-NEXT:    sshll2.4s v4, v3, #0
+; CHECK-GI-NEXT:    sshll.4s v5, v0, #0
+; CHECK-GI-NEXT:    sshll2.4s v6, v0, #0
+; CHECK-GI-NEXT:    ssubw2.4s v3, v2, v3
+; CHECK-GI-NEXT:    ssubw2.4s v0, v2, v0
+; CHECK-GI-NEXT:    cmlt.4s v2, v1, #0
+; CHECK-GI-NEXT:    cmlt.4s v7, v4, #0
+; CHECK-GI-NEXT:    neg.4s v16, v1
+; CHECK-GI-NEXT:    cmlt.4s v17, v5, #0
+; CHECK-GI-NEXT:    cmlt.4s v18, v6, #0
+; CHECK-GI-NEXT:    neg.4s v19, v5
+; CHECK-GI-NEXT:    bit.16b v1, v16, v2
+; CHECK-GI-NEXT:    mov.16b v2, v7
+; CHECK-GI-NEXT:    bif.16b v0, v6, v18
+; CHECK-GI-NEXT:    bsl.16b v2, v3, v4
+; CHECK-GI-NEXT:    mov.16b v3, v17
+; CHECK-GI-NEXT:    bsl.16b v3, v19, v5
 ; CHECK-GI-NEXT:    add.4s v1, v1, v2
 ; CHECK-GI-NEXT:    add.4s v0, v3, v0
 ; CHECK-GI-NEXT:    add.4s v0, v1, v0
@@ -336,26 +329,27 @@ define i32 @sabd16b_rdx_i32(<16 x i8> %a, <16 x i8> %b) {
 ;
 ; CHECK-GI-LABEL: sabd16b_rdx_i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    sshll.8h v2, v0, #0
-; CHECK-GI-NEXT:    sshll.8h v3, v1, #0
-; CHECK-GI-NEXT:    sshll2.8h v0, v0, #0
-; CHECK-GI-NEXT:    sshll2.8h v1, v1, #0
-; CHECK-GI-NEXT:    ssubl.4s v4, v2, v3
-; CHECK-GI-NEXT:    ssubl2.4s v2, v2, v3
-; CHECK-GI-NEXT:    ssubl.4s v3, v0, v1
-; CHECK-GI-NEXT:    ssubl2.4s v0, v0, v1
-; CHECK-GI-NEXT:    cmlt.4s v1, v4, #0
-; CHECK-GI-NEXT:    cmlt.4s v5, v2, #0
-; CHECK-GI-NEXT:    neg.4s v16, v4
-; CHECK-GI-NEXT:    cmlt.4s v6, v3, #0
-; CHECK-GI-NEXT:    cmlt.4s v7, v0, #0
-; CHECK-GI-NEXT:    neg.4s v17, v2
-; CHECK-GI-NEXT:    neg.4s v18, v3
-; CHECK-GI-NEXT:    neg.4s v19, v0
-; CHECK-GI-NEXT:    bsl.16b v1, v16, v4
-; CHECK-GI-NEXT:    bit.16b v2, v17, v5
-; CHECK-GI-NEXT:    bit.16b v3, v18, v6
-; CHECK-GI-NEXT:    bit.16b v0, v19, v7
+; CHECK-GI-NEXT:    ssubl.8h v3, v0, v1
+; CHECK-GI-NEXT:    movi.2d v2, #0000000000000000
+; CHECK-GI-NEXT:    ssubl2.8h v0, v0, v1
+; CHECK-GI-NEXT:    sshll.4s v1, v3, #0
+; CHECK-GI-NEXT:    sshll2.4s v4, v3, #0
+; CHECK-GI-NEXT:    sshll.4s v5, v0, #0
+; CHECK-GI-NEXT:    sshll2.4s v6, v0, #0
+; CHECK-GI-NEXT:    ssubw2.4s v3, v2, v3
+; CHECK-GI-NEXT:    ssubw2.4s v0, v2, v0
+; CHECK-GI-NEXT:    cmlt.4s v2, v1, #0
+; CHECK-GI-NEXT:    cmlt.4s v7, v4, #0
+; CHECK-GI-NEXT:    neg.4s v16, v1
+; CHECK-GI-NEXT:    cmlt.4s v17, v5, #0
+; CHECK-GI-NEXT:    cmlt.4s v18, v6, #0
+; CHECK-GI-NEXT:    neg.4s v19, v5
+; CHECK-GI-NEXT:    bit.16b v1, v16, v2
+; CHECK-GI-NEXT:    mov.16b v2, v7
+; CHECK-GI-NEXT:    bif.16b v0, v6, v18
+; CHECK-GI-NEXT:    bsl.16b v2, v3, v4
+; CHECK-GI-NEXT:    mov.16b v3, v17
+; CHECK-GI-NEXT:    bsl.16b v3, v19, v5
 ; CHECK-GI-NEXT:    add.4s v1, v1, v2
 ; CHECK-GI-NEXT:    add.4s v0, v3, v0
 ; CHECK-GI-NEXT:    add.4s v0, v1, v0
@@ -1045,21 +1039,37 @@ define <4 x i32> @abs_4s(ptr %A) nounwind {
 }
 
 define <1 x i64> @abs_1d(<1 x i64> %A) nounwind {
-; CHECK-LABEL: abs_1d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    abs d0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: abs_1d:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    abs d0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: abs_1d:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov x8, d0
+; CHECK-GI-NEXT:    fmov x9, d0
+; CHECK-GI-NEXT:    neg x8, x8
+; CHECK-GI-NEXT:    cmp x9, #0
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    fcsel d0, d0, d1, gt
+; CHECK-GI-NEXT:    ret
   %abs = call <1 x i64> @llvm.aarch64.neon.abs.v1i64(<1 x i64> %A)
   ret <1 x i64> %abs
 }
 
 define i64 @abs_1d_honestly(i64 %A) nounwind {
-; CHECK-LABEL: abs_1d_honestly:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    abs d0, d0
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: abs_1d_honestly:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov d0, x0
+; CHECK-SD-NEXT:    abs d0, d0
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: abs_1d_honestly:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    cmp x0, #0
+; CHECK-GI-NEXT:    cneg x0, x0, le
+; CHECK-GI-NEXT:    ret
   %abs = call i64 @llvm.aarch64.neon.abs.i64(i64 %A)
   ret i64 %abs
 }
@@ -1797,30 +1807,13 @@ define <2 x i64> @uabd_i32(<2 x i32> %a, <2 x i32> %b) {
 define <2 x i128> @uabd_i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: uabd_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov.d x8, v0[1]
-; CHECK-NEXT:    mov.d x9, v1[1]
-; CHECK-NEXT:    fmov x10, d0
-; CHECK-NEXT:    fmov x11, d1
-; CHECK-NEXT:    asr x12, x10, #63
-; CHECK-NEXT:    asr x13, x11, #63
-; CHECK-NEXT:    subs x10, x10, x11
-; CHECK-NEXT:    asr x11, x8, #63
-; CHECK-NEXT:    asr x14, x9, #63
-; CHECK-NEXT:    sbc x12, x12, x13
-; CHECK-NEXT:    subs x8, x8, x9
-; CHECK-NEXT:    sbc x9, x11, x14
-; CHECK-NEXT:    asr x13, x12, #63
-; CHECK-NEXT:    asr x11, x9, #63
-; CHECK-NEXT:    eor x10, x10, x13
-; CHECK-NEXT:    eor x8, x8, x11
-; CHECK-NEXT:    eor x9, x9, x11
-; CHECK-NEXT:    subs x2, x8, x11
-; CHECK-NEXT:    eor x8, x12, x13
-; CHECK-NEXT:    sbc x3, x9, x11
-; CHECK-NEXT:    subs x9, x10, x13
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    sbc x1, x8, x13
-; CHECK-NEXT:    mov.d v0[1], x1
+; CHECK-NEXT:    cmgt.2d v2, v0, v1
+; CHECK-NEXT:    sub.2d v0, v0, v1
+; CHECK-NEXT:    mov x1, xzr
+; CHECK-NEXT:    mov x3, xzr
+; CHECK-NEXT:    eor.16b v0, v0, v2
+; CHECK-NEXT:    sub.2d v0, v2, v0
+; CHECK-NEXT:    mov.d x2, v0[1]
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
   %aext = sext <2 x i64> %a to <2 x i128>

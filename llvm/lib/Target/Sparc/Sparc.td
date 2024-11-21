@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 include "llvm/Target/Target.td"
+include "llvm/TableGen/SearchableTable.td"
 
 //===----------------------------------------------------------------------===//
 // SPARC Subtarget features.
@@ -33,6 +34,9 @@ def FeatureNoFMULS
 def FeatureV9
   : SubtargetFeature<"v9", "IsV9", "true",
                      "Enable SPARC-V9 instructions">;
+def FeatureV8Plus
+  : SubtargetFeature<"v8plus", "IsV8Plus", "true",
+                     "Enable V8+ mode, allowing use of 64-bit V9 instructions in 32-bit code">;
 def FeatureV8Deprecated
   : SubtargetFeature<"deprecated-v8", "UseV8DeprecatedInsts", "true",
                      "Enable deprecated V8 instructions in V9 mode">;
@@ -91,6 +95,7 @@ foreach i = 0 ... 5 in
 //===----------------------------------------------------------------------===//
 
 include "SparcASITags.td"
+include "SparcPrefetchTags.td"
 include "SparcRegisterInfo.td"
 include "SparcCallingConv.td"
 include "SparcSchedule.td"

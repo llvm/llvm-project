@@ -57,11 +57,13 @@ public:
 */
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__exception/exception.h>
+#include <__type_traits/integral_constant.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__verbose_abort>
-#include <cstddef>
 #include <cstdint>
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -275,13 +277,14 @@ struct __type_info_implementations {
           __impl;
 };
 
-#    if defined(__arm64__) && __has_cpp_attribute(clang::ptrauth_vtable_pointer)
-#      if __has_feature(ptrauth_type_info_discriminated_vtable_pointer)
+#    if __has_cpp_attribute(_Clang::__ptrauth_vtable_pointer__)
+#      if __has_feature(ptrauth_type_info_vtable_pointer_discrimination)
 #        define _LIBCPP_TYPE_INFO_VTABLE_POINTER_AUTH                                                                  \
-          [[clang::ptrauth_vtable_pointer(process_independent, address_discrimination, type_discrimination)]]
+          [[_Clang::__ptrauth_vtable_pointer__(process_independent, address_discrimination, type_discrimination)]]
 #      else
 #        define _LIBCPP_TYPE_INFO_VTABLE_POINTER_AUTH                                                                  \
-          [[clang::ptrauth_vtable_pointer(process_independent, no_address_discrimination, no_extra_discrimination)]]
+          [[_Clang::__ptrauth_vtable_pointer__(                                                                        \
+              process_independent, no_address_discrimination, no_extra_discrimination)]]
 #      endif
 #    else
 #      define _LIBCPP_TYPE_INFO_VTABLE_POINTER_AUTH
@@ -371,8 +374,8 @@ private:
 #endif // defined(_LIBCPP_ABI_VCRUNTIME) && _HAS_EXCEPTIONS == 0
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_cast() {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_cast() {
+#if _LIBCPP_HAS_EXCEPTIONS
   throw bad_cast();
 #else
   _LIBCPP_VERBOSE_ABORT("bad_cast was thrown in -fno-exceptions mode");
@@ -381,6 +384,7 @@ _LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_cast() {
 _LIBCPP_END_NAMESPACE_STD
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <cstddef>
 #  include <cstdlib>
 #  include <type_traits>
 #endif

@@ -21,10 +21,10 @@
  */
 
 #include <clc/clc.h>
+#include <clc/clcmacro.h>
 
 #include "math.h"
 #include "sincospiF_piby4.h"
-#include "../clcmacro.h"
 #ifdef cl_khr_fp64
 #include "sincosD_piby4.h"
 #endif
@@ -129,3 +129,5 @@ _CLC_OVERLOAD _CLC_DEF double sinpi(double x)
 _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, sinpi, double)
 
 #endif
+
+_CLC_DEFINE_UNARY_BUILTIN_FP16(sinpi)

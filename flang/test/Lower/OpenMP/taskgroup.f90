@@ -1,4 +1,6 @@
-!RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
+! REQUIRES: openmp_runtime
+
+!RUN: %flang_fc1 -emit-hlfir %openmp_flags %s -o - | FileCheck %s
 
 ! The "allocate" clause has been removed, because it needs to be used
 ! together with a privatizing clause. The only such clause for "taskgroup"

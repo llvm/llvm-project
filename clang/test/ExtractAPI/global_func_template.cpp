@@ -52,7 +52,7 @@ template<typename T> T Fizz(int Buzz);
         },
         {
           "kind": "text",
-          "spelling": "<"
+          "spelling": " <"
         },
         {
           "kind": "keyword",
@@ -186,7 +186,7 @@ template<typename T> T Fizz(int Buzz);
         },
         {
           "kind": "text",
-          "spelling": "<"
+          "spelling": " <"
         },
         {
           "kind": "keyword",

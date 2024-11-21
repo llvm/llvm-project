@@ -18,8 +18,10 @@
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include <type_traits>
@@ -48,12 +50,14 @@ static Value getTensorOperand(tensor::InsertSliceOp op) {
 namespace {
 /// Merge extract_slice operation with load/transferRead operation.
 class TransferReadOfExtractSliceOpFolder final
-    : public OpRewritePattern<vector::TransferReadOp> {
+    : public vector::MaskableOpRewritePattern<vector::TransferReadOp> {
 public:
-  using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
+  using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
-  LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
-                                PatternRewriter &rewriter) const override;
+  FailureOr<mlir::Value>
+  matchAndRewriteMaskableOp(vector::TransferReadOp readOp,
+                            vector::MaskingOpInterface maskOp,
+                            PatternRewriter &rewriter) const override;
 };
 
 /// Merge insert_slice operation with store/transferWriteOp operation.
@@ -64,6 +68,10 @@ public:
 
   LogicalResult matchAndRewrite(tensor::InsertSliceOp insertSliceOp,
                                 PatternRewriter &rewriter) const override;
+
+private:
+  static bool
+  doesTransferWriteCoverInsertSlice(vector::TransferWriteOp writeOp);
 };
 } // namespace
 
@@ -84,8 +92,10 @@ static LogicalResult preconditionsFoldExtractOrInsertWithTransferOp(
   return success();
 }
 
-LogicalResult TransferReadOfExtractSliceOpFolder::matchAndRewrite(
-    vector::TransferReadOp readOp, PatternRewriter &rewriter) const {
+FailureOr<mlir::Value>
+TransferReadOfExtractSliceOpFolder::matchAndRewriteMaskableOp(
+    vector::TransferReadOp readOp, vector::MaskingOpInterface maskOp,
+    PatternRewriter &rewriter) const {
   auto extractSliceOp =
       getTensorOperand(readOp).getDefiningOp<tensor::ExtractSliceOp>();
   if (!extractSliceOp)
@@ -95,7 +105,7 @@ LogicalResult TransferReadOfExtractSliceOpFolder::matchAndRewrite(
       preconditionsFoldExtractOrInsertWithTransferOp(rewriter, readOp,
                                                      extractSliceOp);
   if (failed(preconditionResult))
-    return preconditionResult;
+    return rewriter.notifyMatchFailure(readOp, "Failed preconditions");
 
   SmallVector<Value> indices(readOp.getIndices().begin(),
                              readOp.getIndices().end());
@@ -105,15 +115,17 @@ LogicalResult TransferReadOfExtractSliceOpFolder::matchAndRewrite(
       extractSliceOp.getMixedStrides(), extractSliceOp.getDroppedDims(),
       indices, sourceIndices);
 
-  rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
-      readOp, readOp.getVectorType(), extractSliceOp.getSource(), sourceIndices,
+  Operation *newOp = rewriter.create<vector::TransferReadOp>(
+      readOp.getLoc(), readOp.getVectorType(), extractSliceOp.getSource(),
+      sourceIndices,
       AffineMapAttr::get(expandDimsToRank(
           readOp.getPermutationMap(), extractSliceOp.getSourceType().getRank(),
           extractSliceOp.getDroppedDims())),
       readOp.getPadding(),
       /*mask=*/Value(), readOp.getInBoundsAttr());
-
-  return success();
+  if (maskOp)
+    newOp = mlir::vector::maskOperation(rewriter, newOp, maskOp.getMask());
+  return newOp->getResults()[0];
 }
 
 LogicalResult InsertSliceOfTransferWriteOpFolder::matchAndRewrite(
@@ -128,6 +140,10 @@ LogicalResult InsertSliceOfTransferWriteOpFolder::matchAndRewrite(
                                                      insertSliceOp);
   if (failed(preconditionResult))
     return preconditionResult;
+
+  if (!doesTransferWriteCoverInsertSlice(writeOp))
+    return rewriter.notifyMatchFailure(
+        insertSliceOp, "transfer_write does not cover insert_slice");
 
   SmallVector<Value> indices(writeOp.getIndices().begin(),
                              writeOp.getIndices().end());
@@ -145,6 +161,17 @@ LogicalResult InsertSliceOfTransferWriteOpFolder::matchAndRewrite(
       writeOp.getInBoundsAttr());
 
   return success();
+}
+
+bool InsertSliceOfTransferWriteOpFolder::doesTransferWriteCoverInsertSlice(
+    vector::TransferWriteOp writeOp) {
+  if (writeOp.getShapedType().hasStaticShape())
+    return llvm::equal(writeOp.getVectorType().getShape(),
+                       writeOp.getShapedType().getShape());
+
+  // TODO: Use ValueBoundsConstraintSet for dynamic shapes.
+
+  return false;
 }
 
 template <typename OpTy>

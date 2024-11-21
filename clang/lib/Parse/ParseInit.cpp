@@ -10,14 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/TokenKinds.h"
-#include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/Designator.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -204,8 +205,9 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator(
 
       if (Tok.is(tok::code_completion)) {
         cutOffParsing();
-        Actions.CodeCompleteDesignator(DesignatorCompletion.PreferredBaseType,
-                                       DesignatorCompletion.InitExprs, Desig);
+        Actions.CodeCompletion().CodeCompleteDesignator(
+            DesignatorCompletion.PreferredBaseType,
+            DesignatorCompletion.InitExprs, Desig);
         return ExprError();
       }
       if (Tok.isNot(tok::identifier)) {
@@ -426,6 +428,34 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator(
   return ExprError();
 }
 
+ExprResult Parser::createEmbedExpr() {
+  assert(Tok.getKind() == tok::annot_embed);
+  EmbedAnnotationData *Data =
+      reinterpret_cast<EmbedAnnotationData *>(Tok.getAnnotationValue());
+  ExprResult Res;
+  ASTContext &Context = Actions.getASTContext();
+  SourceLocation StartLoc = ConsumeAnnotationToken();
+  if (Data->BinaryData.size() == 1) {
+    Res = IntegerLiteral::Create(
+        Context, llvm::APInt(CHAR_BIT, (unsigned char)Data->BinaryData.back()),
+        Context.UnsignedCharTy, StartLoc);
+  } else {
+    auto CreateStringLiteralFromStringRef = [&](StringRef Str, QualType Ty) {
+      llvm::APSInt ArraySize =
+          Context.MakeIntValue(Str.size(), Context.getSizeType());
+      QualType ArrayTy = Context.getConstantArrayType(
+          Ty, ArraySize, nullptr, ArraySizeModifier::Normal, 0);
+      return StringLiteral::Create(Context, Str, StringLiteralKind::Ordinary,
+                                   false, ArrayTy, StartLoc);
+    };
+
+    StringLiteral *BinaryDataArg = CreateStringLiteralFromStringRef(
+        Data->BinaryData, Context.UnsignedCharTy);
+    Res = Actions.ActOnEmbedExpr(StartLoc, BinaryDataArg);
+  }
+  return Res;
+}
+
 /// ParseBraceInitializer - Called when parsing an initializer that has a
 /// leading open brace.
 ///
@@ -457,7 +487,7 @@ ExprResult Parser::ParseBraceInitializer() {
                           : diag::ext_c_empty_initializer);
     }
     // Match the '}'.
-    return Actions.ActOnInitList(LBraceLoc, std::nullopt, ConsumeBrace());
+    return Actions.ActOnInitList(LBraceLoc, {}, ConsumeBrace());
   }
 
   // Enter an appropriate expression evaluation context for an initializer list.
@@ -471,7 +501,7 @@ ExprResult Parser::ParseBraceInitializer() {
   auto RunSignatureHelp = [&] {
     QualType PreferredType;
     if (!LikelyType.isNull())
-      PreferredType = Actions.ProduceConstructorSignatureHelp(
+      PreferredType = Actions.CodeCompletion().ProduceConstructorSignatureHelp(
           LikelyType->getCanonicalTypeInternal(), T.getOpenLocation(),
           InitExprs, T.getOpenLocation(), /*Braced=*/true);
     CalledSignatureHelp = true;
@@ -499,6 +529,8 @@ ExprResult Parser::ParseBraceInitializer() {
     ExprResult SubElt;
     if (MayBeDesignationStart())
       SubElt = ParseInitializerWithPotentialDesignator(DesignatorCompletion);
+    else if (Tok.getKind() == tok::annot_embed)
+      SubElt = createEmbedExpr();
     else
       SubElt = ParseInitializer();
 

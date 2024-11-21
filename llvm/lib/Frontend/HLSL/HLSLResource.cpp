@@ -13,7 +13,6 @@
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/IR/Module.h"
 
 using namespace llvm;
 using namespace llvm::hlsl;
@@ -49,6 +48,10 @@ uint32_t FrontendResource::getSpace() {
   return cast<ConstantInt>(
              cast<ConstantAsMetadata>(Entry->getOperand(5))->getValue())
       ->getLimitedValue();
+}
+
+FrontendResource::FrontendResource(MDNode *E) : Entry(E) {
+  assert(Entry->getNumOperands() == 6 && "Unexpected metadata shape");
 }
 
 FrontendResource::FrontendResource(GlobalVariable *GV, ResourceKind RK,

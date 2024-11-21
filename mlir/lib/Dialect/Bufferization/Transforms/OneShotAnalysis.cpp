@@ -273,26 +273,6 @@ static bool happensBefore(Operation *a, Operation *b,
   return false;
 }
 
-static bool isReachable(Block *from, Block *to, ArrayRef<Block *> except) {
-  DenseSet<Block *> visited;
-  SmallVector<Block *> worklist;
-  for (Block *succ : from->getSuccessors())
-    worklist.push_back(succ);
-  while (!worklist.empty()) {
-    Block *next = worklist.pop_back_val();
-    if (llvm::is_contained(except, next))
-      continue;
-    if (next == to)
-      return true;
-    if (visited.contains(next))
-      continue;
-    visited.insert(next);
-    for (Block *succ : next->getSuccessors())
-      worklist.push_back(succ);
-  }
-  return false;
-}
-
 /// Return `true` if op dominance can be used to rule out a read-after-write
 /// conflicts based on the ordering of ops. Returns `false` if op dominance
 /// cannot be used to due region-based loops.
@@ -428,8 +408,8 @@ static bool canUseOpDominanceDueToBlocks(OpOperand *uRead, OpOperand *uWrite,
   Block *writeBlock = uWrite->getOwner()->getBlock();
   for (Value def : definitions) {
     Block *defBlock = def.getParentBlock();
-    if (isReachable(readBlock, writeBlock, {defBlock}) &&
-        isReachable(writeBlock, readBlock, {defBlock}))
+    if (readBlock->isReachable(writeBlock, {defBlock}) &&
+        writeBlock->isReachable(readBlock, {defBlock}))
       return false;
   }
 
@@ -611,7 +591,7 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
   // Before going through the main RaW analysis, find cases where a buffer must
   // be privatized due to parallelism. If the result of a write is never read,
   // privatization is not necessary (and large parts of the IR are likely dead).
-  if (!usesRead.empty()) {
+  if (options.checkParallelRegions && !usesRead.empty()) {
     for (OpOperand *uConflictingWrite : usesWrite) {
       // Find the allocation point or last write (definition) of the buffer.
       // Note: In contrast to `findDefinitions`, this also returns results of
@@ -725,23 +705,23 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
                                      "mutually exclusive regions\n");
           continue;
         }
-      }
 
-      // Two equivalent operands of the same op are not conflicting if the op
-      // bufferizes to element-wise access. I.e., all loads at a position happen
-      // before all stores to the same position.
-      if (conflictingWritingOp == readingOp) {
-        if (auto bufferizableOp = options.dynCastBufferizableOp(readingOp)) {
-          if (bufferizableOp.bufferizesToElementwiseAccess(
-                  state, {uRead, uConflictingWrite})) {
-            if (hasEquivalentValueInReverseUseDefChain(
-                    state, uRead->get(), uConflictingWrite->get()) ||
-                hasEquivalentValueInReverseUseDefChain(
-                    state, uConflictingWrite->get(), uRead->get())) {
-              LLVM_DEBUG(
-                  llvm::dbgs()
-                  << "  no conflict: op bufferizes to element-wise access\n");
-              continue;
+        // Two equivalent operands of the same op are not conflicting if the op
+        // bufferizes to element-wise access. I.e., all loads at a position
+        // happen before all stores to the same position.
+        if (conflictingWritingOp == readingOp) {
+          if (auto bufferizableOp = options.dynCastBufferizableOp(readingOp)) {
+            if (bufferizableOp.bufferizesToElementwiseAccess(
+                    state, {uRead, uConflictingWrite})) {
+              if (hasEquivalentValueInReverseUseDefChain(
+                      state, uRead->get(), uConflictingWrite->get()) ||
+                  hasEquivalentValueInReverseUseDefChain(
+                      state, uConflictingWrite->get(), uRead->get())) {
+                LLVM_DEBUG(
+                    llvm::dbgs()
+                    << "  no conflict: op bufferizes to element-wise access\n");
+                continue;
+              }
             }
           }
         }
@@ -1299,7 +1279,7 @@ static void annotateOpsWithAliasSets(Operation *op,
       std::string buffer;
       llvm::raw_string_ostream stream(buffer);
       alias.printAsOperand(stream, asmState);
-      aliases.push_back(b.getStringAttr(stream.str()));
+      aliases.push_back(b.getStringAttr(buffer));
     });
     return b.getArrayAttr(aliases);
   };

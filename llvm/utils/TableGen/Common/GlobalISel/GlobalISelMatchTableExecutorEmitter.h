@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_GLOBALISELMATCHTABLEEXECUTOREMITTER_H
-#define LLVM_UTILS_TABLEGEN_GLOBALISELMATCHTABLEEXECUTOREMITTER_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_GLOBALISELMATCHTABLEEXECUTOREMITTER_H
+#define LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_GLOBALISELMATCHTABLEEXECUTOREMITTER_H
 
 #include "Common/SubtargetFeatureInfo.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -42,7 +42,7 @@ class GlobalISelMatchTableExecutorEmitter {
   /// Emits an enum + an array that stores references to
   /// \p ComplexOperandMatchers.
   void emitComplexPredicates(raw_ostream &OS,
-                             ArrayRef<Record *> ComplexOperandMatchers);
+                             ArrayRef<const Record *> ComplexOperandMatchers);
 
   /// Emits an enum + an array that stores references to
   /// \p CustomOperandRenderers.
@@ -182,10 +182,6 @@ public:
   /// Emit additional content in emitExecutorImpl
   virtual void emitAdditionalImpl(raw_ostream &OS) {}
 
-  /// Emit additional content in emitTemporariesDecl.
-  virtual void emitAdditionalTemporariesDecl(raw_ostream &OS,
-                                             StringRef Indent) {}
-
   /// Emit additional content in emitTemporariesInit.
   virtual void emitAdditionalTemporariesInit(raw_ostream &OS) {}
 
@@ -210,7 +206,7 @@ public:
   void emitExecutorImpl(raw_ostream &OS, const gi::MatchTable &Table,
                         ArrayRef<gi::LLTCodeGen> TypeObjects,
                         ArrayRef<gi::RuleMatcher> Rules,
-                        ArrayRef<Record *> ComplexOperandMatchers,
+                        ArrayRef<const Record *> ComplexOperandMatchers,
                         ArrayRef<StringRef> CustomOperandRenderers,
                         StringRef IfDefName);
   void emitPredicateBitset(raw_ostream &OS, StringRef IfDefName);
@@ -227,4 +223,4 @@ public:
 };
 } // namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_GLOBALISELMATCHTABLEEXECUTOREMITTER_H

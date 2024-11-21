@@ -972,7 +972,7 @@ value llvm_dibuild_create_parameter_variable_bytecode(value *argv, int arg) {
 value llvm_dibuild_insert_declare_before_native(value Builder, value Storage,
                                                 value VarInfo, value Expr,
                                                 value DebugLoc, value Instr) {
-  LLVMDbgRecordRef Value = LLVMDIBuilderInsertDeclareBefore(
+  LLVMDbgRecordRef Value = LLVMDIBuilderInsertDeclareRecordBefore(
       DIBuilder_val(Builder), Value_val(Storage), Metadata_val(VarInfo),
       Metadata_val(Expr), Metadata_val(DebugLoc), Value_val(Instr));
   return to_val(Value);
@@ -992,7 +992,7 @@ value llvm_dibuild_insert_declare_before_bytecode(value *argv, int arg) {
 value llvm_dibuild_insert_declare_at_end_native(value Builder, value Storage,
                                                 value VarInfo, value Expr,
                                                 value DebugLoc, value Block) {
-  LLVMDbgRecordRef Value = LLVMDIBuilderInsertDeclareAtEnd(
+  LLVMDbgRecordRef Value = LLVMDIBuilderInsertDeclareRecordAtEnd(
       DIBuilder_val(Builder), Value_val(Storage), Metadata_val(VarInfo),
       Metadata_val(Expr), Metadata_val(DebugLoc), BasicBlock_val(Block));
   return to_val(Value);

@@ -33,6 +33,10 @@ together.
 
 Some important things to think about w.r.t. canonicalization patterns:
 
+*   The goal of canonicalization is to make subsequent analyses and
+    optimizations more effective. Therefore, performance improvements are not
+    necessary for canonicalization.
+
 *   Pass pipelines should not rely on the canonicalizer pass for correctness.
     They should work correctly with all instances of the canonicalization pass
     removed.
@@ -50,6 +54,39 @@ Some important things to think about w.r.t. canonicalization patterns:
 
 *   It is always good to eliminate operations entirely when possible, e.g. by
     folding known identities (like "x + 0 = x").
+
+*   Pattens with expensive running time (i.e. have O(n) complexity) or
+    complicated cost models don't belong to canonicalization: since the
+    algorithm is executed iteratively until fixed-point we want patterns that
+    execute quickly (in particular their matching phase).
+
+*   Canonicalize shouldn't lose the semantic of original operation: the original
+    information should always be recoverable from the transformed IR.
+
+For example, a pattern that transform
+
+```
+  %transpose = linalg.transpose
+      ins(%input : tensor<1x2x3xf32>)
+      outs(%init1 : tensor<2x1x3xf32>)
+      dimensions = [1, 0, 2]
+  %out = linalg.transpose
+      ins(%tranpose: tensor<2x1x3xf32>)
+      outs(%init2 : tensor<3x1x2xf32>)
+      permutation = [2, 1, 0]
+```
+
+to
+
+```
+  %out= linalg.transpose
+      ins(%input : tensor<1x2x3xf32>)
+      outs(%init2: tensor<3x1x2xf32>)
+      permutation = [2, 0, 1]
+```
+
+is a good canonicalization pattern because it removes a redundant operation,
+making other analysis optimizations and more efficient.
 
 ## Globally Applied Rules
 
@@ -189,7 +226,7 @@ each of the operands, returning the corresponding constant attribute. These
 operands are those that implement the `ConstantLike` trait. If any of the
 operands are non-constant, a null `Attribute` value is provided instead. For
 example, if MyOp provides three operands [`a`, `b`, `c`], but only `b` is
-constant then `adaptor` will return Attribute() for `getA()` and `getC()`, 
+constant then `adaptor` will return Attribute() for `getA()` and `getC()`,
 and b-value for `getB()`.
 
 Also above, is the use of `OpFoldResult`. This class represents the possible

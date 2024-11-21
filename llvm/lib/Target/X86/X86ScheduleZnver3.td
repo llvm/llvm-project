@@ -33,13 +33,10 @@ def Znver3Model : SchedMachineModel {
   // The op cache is organized as an associative cache with 64 sets and 8 ways.
   // At each set-way intersection is an entry containing up to 8 macro ops.
   // The maximum capacity of the op cache is 4K ops.
-  // Agner, 22.5 µop cache
-  // The size of the µop cache is big enough for holding most critical loops.
-  // FIXME: PR50584: MachineScheduler/PostRAScheduler have quadradic complexity,
-  //        with large values here the compilation of certain loops
-  //        ends up taking way too long.
-  // let LoopMicroOpBufferSize = 4096;
-  let LoopMicroOpBufferSize = 512;
+  // Assuming a maximum dispatch of 8 ops/cy and a mispredict cost of 12cy from
+  // the op-cache, we limit the loop buffer to 8*12 = 96 to avoid loop unrolling
+  // leading to excessive filling of the op-cache from frontend.
+  let LoopMicroOpBufferSize = 96;
   // AMD SOG 19h, 2.6.2 L1 Data Cache
   // The L1 data cache has a 4- or 5- cycle integer load-to-use latency.
   // AMD SOG 19h, 2.12 L1 Data Cache
@@ -992,21 +989,21 @@ def Zn3WriteVEXTRACTF128rr_VEXTRACTI128rr : SchedWriteRes<[Zn3FPFMisc0]> {
   let ReleaseAtCycles = [1];
   let NumMicroOps = 1;
 }
-def : InstRW<[Zn3WriteVEXTRACTF128rr_VEXTRACTI128rr], (instrs VEXTRACTF128rr, VEXTRACTI128rr)>;
+def : InstRW<[Zn3WriteVEXTRACTF128rr_VEXTRACTI128rr], (instrs VEXTRACTF128rri, VEXTRACTI128rri)>;
 
 def Zn3WriteVEXTRACTI128mr : SchedWriteRes<[Zn3FPFMisc0, Zn3FPSt, Zn3Store]> {
   let Latency = !add(Znver3Model.LoadLatency, Zn3WriteVEXTRACTF128rr_VEXTRACTI128rr.Latency);
   let ReleaseAtCycles = [1, 1, 1];
   let NumMicroOps = !add(Zn3WriteVEXTRACTF128rr_VEXTRACTI128rr.NumMicroOps, 1);
 }
-def : InstRW<[Zn3WriteVEXTRACTI128mr], (instrs VEXTRACTI128mr, VEXTRACTF128mr)>;
+def : InstRW<[Zn3WriteVEXTRACTI128mr], (instrs VEXTRACTI128mri, VEXTRACTF128mri)>;
 
 def Zn3WriteVINSERTF128rmr : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPFMisc0]> {
   let Latency = !add(Znver3Model.LoadLatency, Zn3WriteVEXTRACTF128rr_VEXTRACTI128rr.Latency);
   let ReleaseAtCycles = [1, 1, 1];
   let NumMicroOps = !add(Zn3WriteVEXTRACTF128rr_VEXTRACTI128rr.NumMicroOps, 0);
 }
-def : InstRW<[Zn3WriteVINSERTF128rmr], (instrs VINSERTF128rm)>;
+def : InstRW<[Zn3WriteVINSERTF128rmr], (instrs VINSERTF128rmi)>;
 
 defm : Zn3WriteResYMM<WriteVecStoreY, [Zn3FPSt, Zn3Store], Znver3Model.StoreLatency, [1, 1], 1>;
 defm : Zn3WriteResXMM<WriteVecStoreNT, [Zn3FPSt, Zn3Store], Znver3Model.StoreLatency, [1, 1], 1>;
@@ -1338,14 +1335,14 @@ def Zn3WriteVPERM2I128rr_VPERM2F128rr : SchedWriteRes<[Zn3FPVShuf]> {
   let ReleaseAtCycles = [1];
   let NumMicroOps = 1;
 }
-def : InstRW<[Zn3WriteVPERM2I128rr_VPERM2F128rr], (instrs VPERM2I128rr, VPERM2F128rr)>;
+def : InstRW<[Zn3WriteVPERM2I128rr_VPERM2F128rr], (instrs VPERM2I128rri, VPERM2F128rri)>;
 
 def Zn3WriteVPERM2F128rm : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPVShuf]> {
   let Latency = !add(Znver3Model.LoadLatency, Zn3WriteVPERM2I128rr_VPERM2F128rr.Latency);
   let ReleaseAtCycles = [1, 1, 1];
   let NumMicroOps = !add(Zn3WriteVPERM2I128rr_VPERM2F128rr.NumMicroOps, 0);
 }
-def : InstRW<[Zn3WriteVPERM2F128rm], (instrs VPERM2F128rm)>;
+def : InstRW<[Zn3WriteVPERM2F128rm], (instrs VPERM2F128rmi)>;
 
 def Zn3WriteVPERMPSYrm : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPVShuf]> {
   let Latency = !add(Znver3Model.LoadLatency, 7);

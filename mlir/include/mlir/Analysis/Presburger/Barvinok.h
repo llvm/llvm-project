@@ -29,7 +29,6 @@
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/Analysis/Presburger/PresburgerRelation.h"
 #include "mlir/Analysis/Presburger/QuasiPolynomial.h"
-#include <bitset>
 #include <optional>
 
 namespace mlir {
@@ -74,7 +73,7 @@ inline PolyhedronH defineHRep(int numVars, int numSymbols = 0) {
 /// Barvinok, A., and J. E. Pommersheim. "An algorithmic theory of lattice
 /// points in polyhedra." p. 107 If it has more rays than the dimension, return
 /// 0.
-MPInt getIndex(const ConeV &cone);
+DynamicAPInt getIndex(const ConeV &cone);
 
 /// Given a cone in H-representation, return its dual. The dual cone is in
 /// V-representation.

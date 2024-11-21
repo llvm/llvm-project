@@ -73,7 +73,7 @@ enum _LIBCPP_DEPRECATED_IN_CXX17 codecvt_mode { consume_header = 4, generate_hea
 template <class _Elem>
 class __codecvt_utf8;
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 class _LIBCPP_EXPORTED_FROM_ABI __codecvt_utf8<wchar_t> : public codecvt<wchar_t, char, mbstate_t> {
   unsigned long __maxcode_;
@@ -112,7 +112,7 @@ protected:
   int do_length(state_type&, const extern_type* __frm, const extern_type* __end, size_t __mx) const override;
   int do_max_length() const _NOEXCEPT override;
 };
-#  endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <>
@@ -203,7 +203,7 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
 template <class _Elem, bool _LittleEndian>
 class __codecvt_utf16;
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 class _LIBCPP_EXPORTED_FROM_ABI __codecvt_utf16<wchar_t, false> : public codecvt<wchar_t, char, mbstate_t> {
   unsigned long __maxcode_;
@@ -281,7 +281,7 @@ protected:
   int do_length(state_type&, const extern_type* __frm, const extern_type* __end, size_t __mx) const override;
   int do_max_length() const _NOEXCEPT override;
 };
-#  endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <>
@@ -433,8 +433,8 @@ protected:
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Elem, unsigned long _Maxcode = 0x10ffff, codecvt_mode _Mode = (codecvt_mode)0>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf16
-    : public __codecvt_utf16<_Elem, _Mode & little_endian> {
+class _LIBCPP_TEMPLATE_VIS
+_LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf16 : public __codecvt_utf16<_Elem, _Mode & little_endian> {
 public:
   _LIBCPP_HIDE_FROM_ABI explicit codecvt_utf16(size_t __refs = 0)
       : __codecvt_utf16<_Elem, _Mode & little_endian>(__refs, _Maxcode, _Mode) {}
@@ -448,7 +448,7 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
 template <class _Elem>
 class __codecvt_utf8_utf16;
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 class _LIBCPP_EXPORTED_FROM_ABI __codecvt_utf8_utf16<wchar_t> : public codecvt<wchar_t, char, mbstate_t> {
   unsigned long __maxcode_;
@@ -487,7 +487,7 @@ protected:
   int do_length(state_type&, const extern_type* __frm, const extern_type* __end, size_t __mx) const override;
   int do_max_length() const _NOEXCEPT override;
 };
-#  endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <>

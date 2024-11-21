@@ -2,12 +2,14 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --force-byref-reduction %s -o - | FileCheck %s
 
 ! CHECK-LABEL:   omp.declare_reduction @ieor_byref_i32 : !fir.ref<i32>
-! CHECK-SAME:    init {
-! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>):
-! CHECK:            %[[C0_1:.*]] = arith.constant 0 : i32
+! CHECK-SAME:    alloc {
 ! CHECK:            %[[REF:.*]] = fir.alloca i32
-! CHECK:            fir.store %[[C0_1]] to %[[REF]] : !fir.ref<i32>
 ! CHECK:            omp.yield(%[[REF]] : !fir.ref<i32>)
+! CHECK-LABEL:   } init {
+! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>, %[[ALLOC:.*]]: !fir.ref<i32>):
+! CHECK:            %[[C0_1:.*]] = arith.constant 0 : i32
+! CHECK:            fir.store %[[C0_1]] to %[[ALLOC]] : !fir.ref<i32>
+! CHECK:            omp.yield(%[[ALLOC]] : !fir.ref<i32>)
 
 ! CHECK-LABEL:   } combiner {
 ! CHECK:         ^bb0(%[[ARG0:.*]]: !fir.ref<i32>, %[[ARG1:.*]]: !fir.ref<i32>):
@@ -26,9 +28,9 @@
 
 
 !CHECK: omp.parallel
-!CHECK: %[[I_REF:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
+!CHECK: %[[I_REF:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 !CHECK: %[[I_DECL:.*]]:2 = hlfir.declare %[[I_REF]] {uniq_name = "_QFreduction_ieorEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: omp.wsloop byref reduction(@ieor_byref_i32 %[[X_DECL]]#0 -> %[[PRV:.+]] : !fir.ref<i32>)
+!CHECK: omp.wsloop reduction(byref @ieor_byref_i32 %[[X_DECL]]#0 -> %[[PRV:.+]] : !fir.ref<i32>)
 !CHECK-NEXT: omp.loop_nest
 !CHECK: %[[PRV_DECL:.+]]:2 = hlfir.declare %[[PRV]] {{.*}} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: fir.store %{{.*}} to %[[I_DECL]]#1 : !fir.ref<i32>
@@ -40,7 +42,6 @@
 !CHECK: %[[RES:.+]] = arith.xori %[[LPRV]], %[[Y_I]] : i32
 !CHECK: hlfir.assign %[[RES]] to %[[PRV_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK: omp.yield
-!CHECK: omp.terminator
 !CHECK: omp.terminator
 
 subroutine reduction_ieor(y)

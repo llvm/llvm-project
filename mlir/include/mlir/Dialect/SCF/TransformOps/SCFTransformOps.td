@@ -38,6 +38,17 @@ def ApplySCFStructuralConversionPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplySCFToControlFlowPatternsOp : Op<Transform_Dialect,
+    "apply_conversion_patterns.scf.scf_to_control_flow",
+    [DeclareOpInterfaceMethods<ConversionPatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns that lower structured control flow ops to unstructured
+    control flow.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def Transform_ScfForOp : Transform_ConcreteOpType<"scf.for">;
 
 def ForallToForOp : Op<Transform_Dialect, "loop.forall_to_for",
@@ -59,6 +70,32 @@ def ForallToForOp : Op<Transform_Dialect, "loop.forall_to_for",
     is not associated with a single `scf.forall` payload operation.
     Returns as many handles as the given `forall` op has induction variables
     that are associated with the generated `scf.for` loops.
+    Produces a silenceable failure if another number of resulting handles is
+    requested.
+  }];
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs Variadic<TransformHandleTypeInterface>:$transformed);
+
+  let assemblyFormat = "$target attr-dict `:` functional-type(operands, results)";
+}
+
+def ForallToParallelOp : Op<Transform_Dialect, "loop.forall_to_parallel",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let summary = "Converts scf.forall into a nest of scf.for operations";
+  let description = [{
+    Converts the `scf.forall` operation pointed to by the given handle into an
+    `scf.parallel` operation.
+
+    The operand handle must be associated with exactly one payload operation.
+
+    Loops with outputs are not supported.
+
+    #### Return Modes
+
+    Consumes the operand handle. Produces a silenceable failure if the operand
+    is not associated with a single `scf.forall` payload operation.
+    Returns a handle to the new `scf.parallel` operation.
     Produces a silenceable failure if another number of resulting handles is
     requested.
   }];
@@ -109,7 +146,7 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
   let summary = "Peels the first or last iteration of the loop";
   let description = [{
      Rewrite the given loop with a main loop and a partial (first or last) loop.
-     When the `peelFront` option is set as true, the first iteration is peeled off.
+     When the `peelFront` option is set to true, the first iteration is peeled off.
      Otherwise, updates the given loop so that its step evenly divides its range and puts
      the remaining iteration into a separate loop or a conditional.
 
@@ -119,18 +156,20 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
      #### Return modes
 
      This operation ignores non-scf::ForOp ops and drops them in the return.
+     The op returns two loops, the peeled loop which has trip count divisible
+     by the step, and the remainder loop.
 
-     When `peelFront` is true, this operation returns two scf::ForOp Ops, the
-     first scf::ForOp corresponds to the first iteration of the loop which can
-     be canonicalized away in the following optimization. The second loop Op
-     contains the remaining iteration, and the new lower bound is the original
-     lower bound plus the number of steps.
+     When `peelFront` is true, the first result (remainder loop) executes all
+     but the first iteration of the target loop. The second result (peeled
+     loop) corresponds to the first iteration of the loop which can be
+     canonicalized away in the following optimizations.
 
-     When `peelFront` is not true, this operation returns two scf::ForOp Ops, with the first
-     scf::ForOp satisfying: "the loop trip count is divisible by the step".
-     The second loop Op contains the remaining iteration. Note that even though the
-     Payload IR modification may be performed in-place, this operation consumes
-     the operand handle and produces a new one.
+     When `peelFront` is false, the first result (peeled loop) is the portion
+     of the target loop with the highest upper bound that is divisible by the
+     step. The second result (remainder loop) contains the remaining iterations. 
+     
+     Note that even though the Payload IR modification may be performed
+     in-place, this operation consumes the operand handle and produces a new one.
 
      #### Return Modes
 
@@ -243,7 +282,41 @@ def LoopUnrollOp : Op<Transform_Dialect, "loop.unroll",
     This operation ignores non-`scf.for`, non-`affine.for` ops and drops them
     in the return. If all the operations referred to by the `target` operand
     unroll properly, the transform succeeds. Otherwise the transform produces a
-    silencebale failure.
+    silenceable failure.
+
+    Does not return handles as the operation may result in the loop being
+    removed after a full unrolling.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                       ConfinedAttr<I64Attr, [IntPositive]>:$factor);
+
+  let assemblyFormat = "$target attr-dict `:` type($target)";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::Operation *target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
+def LoopUnrollAndJamOp : Op<Transform_Dialect, "loop.unroll_and_jam",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     TransformOpInterface, TransformEachOpTrait]> {
+  let summary = "Unrolls and jam the given loop with the given unroll factor";
+  let description = [{
+    Unrolls & jams each loop associated with the given handle to have up to the given
+    number of loop body copies per iteration. If the unroll factor is larger
+    than the loop trip count, the latter is used as the unroll factor instead.
+
+    #### Return modes
+
+    This operation ignores non-`scf.for`, non-`affine.for` ops and drops them
+    in the return. If all the operations referred to by the `target` operand
+    unroll properly, the transform succeeds. Otherwise the transform produces a
+    silenceable failure.
 
     Does not return handles as the operation may result in the loop being
     removed after a full unrolling.

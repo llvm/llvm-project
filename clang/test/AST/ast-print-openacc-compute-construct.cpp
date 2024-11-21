@@ -130,5 +130,33 @@ void foo() {
 //CHECK: #pragma acc parallel device_type(SomeStructImpl)
 #pragma acc parallel device_type (SomeStructImpl)
   while(true);
+
+//CHECK: #pragma acc parallel reduction(+: iPtr)
+#pragma acc parallel reduction(+: iPtr)
+  while(true);
+//CHECK: #pragma acc parallel reduction(*: i)
+#pragma acc parallel reduction(*: i)
+  while(true);
+//CHECK: #pragma acc parallel reduction(max: SomeB)
+#pragma acc parallel reduction(max: SomeB)
+  while(true);
+//CHECK: #pragma acc parallel reduction(min: iPtr)
+#pragma acc parallel reduction(min: iPtr)
+  while(true);
+//CHECK: #pragma acc parallel reduction(&: i)
+#pragma acc parallel reduction(&: i)
+  while(true);
+//CHECK: #pragma acc parallel reduction(|: SomeB)
+#pragma acc parallel reduction(|: SomeB)
+  while(true);
+//CHECK: #pragma acc parallel reduction(^: iPtr)
+#pragma acc parallel reduction(^: iPtr)
+  while(true);
+//CHECK: #pragma acc parallel reduction(&&: i)
+#pragma acc parallel reduction(&&: i)
+  while(true);
+//CHECK: #pragma acc parallel reduction(||: SomeB)
+#pragma acc parallel reduction(||: SomeB)
+  while(true);
 }
 

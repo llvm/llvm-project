@@ -88,11 +88,9 @@ bool OmpRewriteMutator::Pre(parser::OpenMPAtomicConstruct &x) {
 
   auto findMemOrderClause =
       [](const std::list<parser::OmpAtomicClause> &clauses) {
-        return std::find_if(
-                   clauses.begin(), clauses.end(), [](const auto &clause) {
-                     return std::get_if<parser::OmpMemoryOrderClause>(
-                         &clause.u);
-                   }) != clauses.end();
+        return llvm::any_of(clauses, [](const auto &clause) {
+          return std::get_if<parser::OmpMemoryOrderClause>(&clause.u);
+        });
       };
 
   // Get the clause list to which the new memory order clause must be added,

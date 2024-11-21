@@ -1,13 +1,7 @@
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/mips)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/sparc)
-
 add_header(
   error_number_macros
   HDR
     error-number-macros.h
-  DEPENDS
-    .mips.error_number_macros
-    .sparc.error_number_macros
 )
 
 add_header(

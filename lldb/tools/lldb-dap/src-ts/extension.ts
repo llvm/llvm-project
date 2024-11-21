@@ -14,13 +14,42 @@ function createDefaultLLDBDapOptions(): LLDBDapOptions {
       session: vscode.DebugSession,
       packageJSONExecutable: vscode.DebugAdapterExecutable | undefined,
     ): Promise<vscode.DebugAdapterExecutable | undefined> {
-      const path = vscode.workspace
-        .getConfiguration("lldb-dap", session.workspaceFolder)
-        .get<string>("executable-path");
-      if (path) {
-        return new vscode.DebugAdapterExecutable(path, []);
+      const config = vscode.workspace.getConfiguration(
+        "lldb-dap",
+        session.workspaceFolder,
+      );
+      const path = config.get<string>("executable-path");
+      const log_path = config.get<string>("log-path");
+
+      let env: { [key: string]: string } = {};
+      if (log_path) {
+        env["LLDBDAP_LOG"] = log_path;
       }
-      return packageJSONExecutable;
+      const configEnvironment = config.get<{ [key: string]: string }>("environment") || {};
+      if (path) {
+        const dbgOptions = {
+          env: {
+            ...configEnvironment,
+            ...env,
+          }
+        };
+        return new vscode.DebugAdapterExecutable(path, [], dbgOptions);
+      } else if (packageJSONExecutable) {
+        return new vscode.DebugAdapterExecutable(
+          packageJSONExecutable.command,
+          packageJSONExecutable.args,
+          {
+            ...packageJSONExecutable.options,
+            env: {
+              ...packageJSONExecutable.options?.env,
+              ...configEnvironment,
+              ...env,
+            },
+          },
+        );
+      } else {
+        return undefined;
+      }
     },
   };
 }
@@ -41,6 +70,26 @@ export class LLDBDapExtension extends DisposableContext {
         this.lldbDapOptions.debuggerType,
         new LLDBDapDescriptorFactory(this.lldbDapOptions),
       ),
+    );
+
+    this.pushSubscription(
+      vscode.workspace.onDidChangeConfiguration(async (event) => {
+        if (event.affectsConfiguration("lldb-dap.executable-path")) {
+          const dapPath = vscode.workspace
+            .getConfiguration("lldb-dap")
+            .get<string>("executable-path");
+
+          if (dapPath) {
+            const fileUri = vscode.Uri.file(dapPath);
+            if (
+              await LLDBDapDescriptorFactory.isValidDebugAdapterPath(fileUri)
+            ) {
+              return;
+            }
+          }
+          LLDBDapDescriptorFactory.showLLDBDapNotFoundMessage(dapPath || "");
+        }
+      }),
     );
   }
 }

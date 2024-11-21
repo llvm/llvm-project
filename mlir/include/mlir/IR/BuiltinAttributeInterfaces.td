@@ -483,7 +483,7 @@ def MemRefLayoutAttrInterface : AttrInterface<"MemRefLayoutAttrInterface"> {
 
     InterfaceMethod<
       "Check if the current layout is applicable to the provided shape",
-      "::mlir::LogicalResult", "verifyLayout",
+      "::llvm::LogicalResult", "verifyLayout",
       (ins "::llvm::ArrayRef<int64_t>":$shape,
            "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError),
       [{}],

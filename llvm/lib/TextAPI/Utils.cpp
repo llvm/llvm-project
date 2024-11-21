@@ -120,6 +120,9 @@ bool llvm::MachO::isPrivateLibrary(StringRef Path, bool IsSymLink) {
   if (Path.starts_with("/System/Library/PrivateFrameworks"))
     return true;
 
+  if (Path.starts_with("/System/Library/SubFrameworks"))
+    return true;
+
   // Everything in /usr/lib/swift (including sub-directories) are considered
   // public.
   if (Path.consume_front("/usr/lib/swift/"))
@@ -184,7 +187,7 @@ llvm::Expected<Regex> llvm::MachO::createRegexFromGlob(StringRef Glob) {
       break;
     }
     default:
-      if (RegexMetachars.find(C) != StringRef::npos)
+      if (RegexMetachars.contains(C))
         RegexString.push_back('\\');
       RegexString.push_back(C);
     }
@@ -215,7 +218,7 @@ llvm::MachO::parseAliasList(std::unique_ptr<llvm::MemoryBuffer> &Buffer) {
     if (L.starts_with("#"))
       continue;
     StringRef Symbol, Remain, Alias;
-    // Base symbol is seperated by whitespace.
+    // Base symbol is separated by whitespace.
     std::tie(Symbol, Remain) = getToken(L);
     // The Alias symbol ends before a comment or EOL.
     std::tie(Alias, Remain) = getToken(Remain, "#");

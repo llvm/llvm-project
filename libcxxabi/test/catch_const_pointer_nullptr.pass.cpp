@@ -8,16 +8,11 @@
 
 // UNSUPPORTED: no-exceptions
 
+// Clang and GCC emit warnings about exceptions of type 'Child' being caught by
+// an earlier handler of type 'Base'.
+// ADDITIONAL_COMPILE_FLAGS: -Wno-exceptions
+
 #include <cassert>
-
-// Clang emits  warnings about exceptions of type 'Child' being caught by
-// an earlier handler of type 'Base'. Congrats clang, you've just
-// diagnosed the behavior under test.
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Wexceptions"
-#endif
-
-#if __has_feature(cxx_nullptr)
 
 struct A {};
 
@@ -123,18 +118,6 @@ void test6()
         assert(false);
     }
 }
-
-
-#else
-
-void test1() {}
-void test2() {}
-void test3() {}
-void test4() {}
-void test5() {}
-void test6() {}
-
-#endif
 
 int main(int, char**) {
     test1();

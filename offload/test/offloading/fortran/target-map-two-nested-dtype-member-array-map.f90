@@ -1,12 +1,6 @@
-! Offloading test checking interaction of an
-! explicit member map utilising array bounds
-! REQUIRES: flang, amdgcn-amd-amdhsa
-! UNSUPPORTED: nvptx64-nvidia-cuda
-! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
-! UNSUPPORTED: aarch64-unknown-linux-gnu
-! UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
-! UNSUPPORTED: x86_64-pc-linux-gnu
-! UNSUPPORTED: x86_64-pc-linux-gnu-LTO
+! Offloading test checking interaction of an explicit member map utilising 
+! array bounds
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main
@@ -24,10 +18,10 @@ program main
     real(4) :: break_3
     type(array) :: nested
     end type scalar_array
-  
+
     type(scalar_array) :: scalar_arr1
     type(scalar_array) :: scalar_arr2
-    
+
   do i = 1, 10
     scalar_arr1%nested%array_z(i) = i
     scalar_arr2%nested%array_z(i) = i
@@ -37,7 +31,7 @@ program main
     do i = 3, 6
       scalar_arr2%nested%array_ix(i) = scalar_arr1%nested%array_z(i)
     end do
-    
+
     do i = 3, 6
       scalar_arr1%nested%array_ix(i) = scalar_arr2%nested%array_z(i)
     end do

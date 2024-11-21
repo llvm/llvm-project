@@ -9,6 +9,7 @@
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/TraceCursor.h"
 #include <optional>
+#include <stack>
 
 #ifndef LLDB_TARGET_TRACE_INSTRUCTION_DUMPER_H
 #define LLDB_TARGET_TRACE_INSTRUCTION_DUMPER_H

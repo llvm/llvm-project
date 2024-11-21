@@ -60,7 +60,7 @@ define i32 @or_and_not_constant_commute3(i32 %a, i32 %b) {
 
 define <2 x i7> @or_and_not_constant_commute0_splat(<2 x i7> %a, <2 x i7> %b) {
 ; CHECK-LABEL: @or_and_not_constant_commute0_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i7> [[A:%.*]], <i7 42, i7 42>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i7> [[A:%.*]], splat (i7 42)
 ; CHECK-NEXT:    [[T3:%.*]] = or <2 x i7> [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i7> [[T3]]
 ;
@@ -118,13 +118,13 @@ define i8 @or_and_or_commute1(i8 %x) {
 
 define <2 x i8> @or_and_or_commute1_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @or_and_or_commute1_splat(
-; CHECK-NEXT:    [[XN:%.*]] = or <2 x i8> [[X:%.*]], <i8 16, i8 16>
+; CHECK-NEXT:    [[XN:%.*]] = or <2 x i8> [[X:%.*]], splat (i8 16)
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[XN]])
-; CHECK-NEXT:    [[X1:%.*]] = and <2 x i8> [[XN]], <i8 59, i8 59>
+; CHECK-NEXT:    [[X1:%.*]] = and <2 x i8> [[XN]], splat (i8 59)
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[X1]])
-; CHECK-NEXT:    [[X2:%.*]] = and <2 x i8> [[X]], <i8 64, i8 64>
+; CHECK-NEXT:    [[X2:%.*]] = and <2 x i8> [[X]], splat (i8 64)
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[X2]])
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[XN]], <i8 123, i8 123>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[XN]], splat (i8 123)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %xn = or <2 x i8> %x, <i8 16, i8 16>
@@ -162,14 +162,14 @@ define i8 @or_and_or_commute2(i8 %x, i8 %y) {
 
 define <2 x i8> @or_and_or_commute2_splat(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @or_and_or_commute2_splat(
-; CHECK-NEXT:    [[N:%.*]] = lshr <2 x i8> [[Y:%.*]], <i8 6, i8 6>
+; CHECK-NEXT:    [[N:%.*]] = lshr <2 x i8> [[Y:%.*]], splat (i8 6)
 ; CHECK-NEXT:    [[XN:%.*]] = or <2 x i8> [[N]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[XN]])
-; CHECK-NEXT:    [[X1:%.*]] = and <2 x i8> [[XN]], <i8 -69, i8 -69>
+; CHECK-NEXT:    [[X1:%.*]] = and <2 x i8> [[XN]], splat (i8 -69)
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[X1]])
-; CHECK-NEXT:    [[X2:%.*]] = and <2 x i8> [[X]], <i8 64, i8 64>
+; CHECK-NEXT:    [[X2:%.*]] = and <2 x i8> [[X]], splat (i8 64)
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[X2]])
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[XN]], <i8 -5, i8 -5>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[XN]], splat (i8 -5)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %n = lshr <2 x i8> %y, <i8 6, i8 6>
@@ -234,16 +234,16 @@ define i8 @or_and2_or2(i8 %x) {
 
 define <2 x i8> @or_and2_or2_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @or_and2_or2_splat(
-; CHECK-NEXT:    [[O1:%.*]] = or <2 x i8> [[X:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[O1:%.*]] = or <2 x i8> [[X:%.*]], splat (i8 1)
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[O1]])
-; CHECK-NEXT:    [[O2:%.*]] = or <2 x i8> [[X]], <i8 2, i8 2>
+; CHECK-NEXT:    [[O2:%.*]] = or <2 x i8> [[X]], splat (i8 2)
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[O2]])
-; CHECK-NEXT:    [[X1:%.*]] = and <2 x i8> [[O1]], <i8 -71, i8 -71>
+; CHECK-NEXT:    [[X1:%.*]] = and <2 x i8> [[O1]], splat (i8 -71)
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[X1]])
-; CHECK-NEXT:    [[X2:%.*]] = and <2 x i8> [[O2]], <i8 66, i8 66>
+; CHECK-NEXT:    [[X2:%.*]] = and <2 x i8> [[O2]], splat (i8 66)
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[X2]])
-; CHECK-NEXT:    [[BITFIELD:%.*]] = and <2 x i8> [[X]], <i8 -8, i8 -8>
-; CHECK-NEXT:    [[R:%.*]] = or disjoint <2 x i8> [[BITFIELD]], <i8 3, i8 3>
+; CHECK-NEXT:    [[BITFIELD:%.*]] = and <2 x i8> [[X]], splat (i8 -8)
+; CHECK-NEXT:    [[R:%.*]] = or disjoint <2 x i8> [[BITFIELD]], splat (i8 3)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %o1 = or <2 x i8> %x, <i8 1, i8 1>
@@ -277,8 +277,8 @@ define i8 @and_or_hoist_mask(i8 %a, i8 %b) {
 
 define <2 x i8> @and_xor_hoist_mask_vec_splat(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @and_xor_hoist_mask_vec_splat(
-; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[A:%.*]], <i8 6, i8 6>
-; CHECK-NEXT:    [[B_MASKED:%.*]] = and <2 x i8> [[B:%.*]], <i8 3, i8 3>
+; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[A:%.*]], splat (i8 6)
+; CHECK-NEXT:    [[B_MASKED:%.*]] = and <2 x i8> [[B:%.*]], splat (i8 3)
 ; CHECK-NEXT:    [[AND:%.*]] = xor <2 x i8> [[SH]], [[B_MASKED]]
 ; CHECK-NEXT:    ret <2 x i8> [[AND]]
 ;
@@ -305,9 +305,9 @@ define i8 @and_xor_hoist_mask_commute(i8 %a, i8 %b) {
 
 define <2 x i8> @and_or_hoist_mask_commute_vec_splat(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @and_or_hoist_mask_commute_vec_splat(
-; CHECK-NEXT:    [[C:%.*]] = mul <2 x i8> [[B:%.*]], <i8 3, i8 3>
-; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[A:%.*]], <i8 6, i8 6>
-; CHECK-NEXT:    [[C_MASKED:%.*]] = and <2 x i8> [[C]], <i8 3, i8 3>
+; CHECK-NEXT:    [[C:%.*]] = mul <2 x i8> [[B:%.*]], splat (i8 3)
+; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[A:%.*]], splat (i8 6)
+; CHECK-NEXT:    [[C_MASKED:%.*]] = and <2 x i8> [[C]], splat (i8 3)
 ; CHECK-NEXT:    [[AND:%.*]] = or <2 x i8> [[C_MASKED]], [[SH]]
 ; CHECK-NEXT:    ret <2 x i8> [[AND]]
 ;
@@ -385,7 +385,7 @@ define i8 @or_or_and_noOneUse(i8 %a, i8 %b, i8 %c, i8 %d) {
 ; CHECK-NEXT:    call void @use(i8 [[AND1]])
 ; CHECK-NEXT:    [[AND2:%.*]] = and i8 [[A]], [[D:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[AND2]])
-; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[AND2]], [[C:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[C:%.*]], [[AND2]]
 ; CHECK-NEXT:    call void @use(i8 [[OR1]])
 ; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[OR1]], [[AND1]]
 ; CHECK-NEXT:    ret i8 [[OR2]]
@@ -405,7 +405,7 @@ define i8 @or_or_and_pat1(i8 %a, i8 %b, i8 %c, i8 %d) {
 ; CHECK-LABEL: @or_or_and_pat1(
 ; CHECK-NEXT:    [[CT:%.*]] = udiv i8 42, [[C:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[D:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[CT]], [[TMP2]]
 ; CHECK-NEXT:    ret i8 [[OR2]]
 ;
@@ -439,7 +439,7 @@ define i8 @or_or_and_pat3(i8 %a, i8 %b, i8 %c, i8 %d) {
 ; CHECK-LABEL: @or_or_and_pat3(
 ; CHECK-NEXT:    [[CT:%.*]] = udiv i8 42, [[C:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[D:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[CT]], [[TMP2]]
 ; CHECK-NEXT:    ret i8 [[OR2]]
 ;
@@ -472,7 +472,7 @@ define i8 @or_or_and_pat4(i8 %a, i8 %b, i8 %c, i8 %d) {
 define i8 @or_or_and_pat5(i8 %a, i8 %b, i8 %c, i8 %d) {
 ; CHECK-LABEL: @or_or_and_pat5(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[D:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[TMP2]], [[C:%.*]]
 ; CHECK-NEXT:    ret i8 [[OR2]]
 ;
@@ -502,7 +502,7 @@ define i8 @or_or_and_pat6(i8 %a, i8 %b, i8 %c, i8 %d) {
 define i8 @or_or_and_pat7(i8 %a, i8 %b, i8 %c, i8 %d) {
 ; CHECK-LABEL: @or_or_and_pat7(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[D:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[TMP2]], [[C:%.*]]
 ; CHECK-NEXT:    ret i8 [[OR2]]
 ;
@@ -535,7 +535,7 @@ define i8 @or_and_or_noOneUse(i8 %a, i8 %b, i8 %c, i8 %d) {
 ; CHECK-NEXT:    call void @use(i8 [[AND1]])
 ; CHECK-NEXT:    [[AND2:%.*]] = and i8 [[A]], [[D:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[AND2]])
-; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[AND2]], [[C:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[C:%.*]], [[AND2]]
 ; CHECK-NEXT:    call void @use(i8 [[OR1]])
 ; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[AND1]], [[OR1]]
 ; CHECK-NEXT:    ret i8 [[OR2]]
@@ -555,7 +555,7 @@ define i8 @or_and_or_pat1(i8 %a, i8 %b, i8 %c, i8 %d) {
 ; CHECK-LABEL: @or_and_or_pat1(
 ; CHECK-NEXT:    [[CT:%.*]] = udiv i8 42, [[C:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[D:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[CT]], [[TMP2]]
 ; CHECK-NEXT:    ret i8 [[OR2]]
 ;
@@ -589,7 +589,7 @@ define i8 @or_and_or_pat3(i8 %a, i8 %b, i8 %c, i8 %d) {
 ; CHECK-LABEL: @or_and_or_pat3(
 ; CHECK-NEXT:    [[CT:%.*]] = udiv i8 42, [[C:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[D:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[CT]], [[TMP2]]
 ; CHECK-NEXT:    ret i8 [[OR2]]
 ;
@@ -622,7 +622,7 @@ define i8 @or_and_or_pat4(i8 %a, i8 %b, i8 %c, i8 %d) {
 define i8 @or_and_or_pat5(i8 %a, i8 %b, i8 %c, i8 %d) {
 ; CHECK-LABEL: @or_and_or_pat5(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[D:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[TMP2]], [[C:%.*]]
 ; CHECK-NEXT:    ret i8 [[OR2]]
 ;
@@ -652,7 +652,7 @@ define i8 @or_and_or_pat6(i8 %a, i8 %b, i8 %c, i8 %d) {
 define i8 @or_and_or_pat7(i8 %a, i8 %b, i8 %c, i8 %d) {
 ; CHECK-LABEL: @or_and_or_pat7(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[D:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[TMP2]], [[C:%.*]]
 ; CHECK-NEXT:    ret i8 [[OR2]]
 ;
@@ -687,8 +687,8 @@ define i32 @or_or_and_noOneUse_fail1(i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void @use2(i32 [[AND]])
 ; CHECK-NEXT:    [[AND1:%.*]] = or i32 [[B:%.*]], 157
 ; CHECK-NEXT:    [[OR:%.*]] = and i32 [[SHR]], [[AND1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[B]], 23
-; CHECK-NEXT:    [[AND9:%.*]] = and i32 [[TMP1]], 157
+; CHECK-NEXT:    [[SHR8:%.*]] = lshr i32 [[B]], 23
+; CHECK-NEXT:    [[AND9:%.*]] = and i32 [[SHR8]], 157
 ; CHECK-NEXT:    [[R:%.*]] = or i32 [[OR]], [[AND9]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -714,7 +714,7 @@ define { i1, i1, i1, i1, i1 } @or_or_and_noOneUse_fail2(i1 %a_0, i1 %a_1, i1 %a_
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[A_1:%.*]], [[B_1:%.*]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i1 [[TMP3]], true
 ; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP0]], [[A_1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP2]], [[A_1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[A_1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = and i1 [[TMP6]], [[B_1]]
 ; CHECK-NEXT:    [[D:%.*]] = or i1 [[TMP7]], [[TMP5]]
 ; CHECK-NEXT:    [[DOTNOT1:%.*]] = or i1 [[TMP1]], [[TMP3]]

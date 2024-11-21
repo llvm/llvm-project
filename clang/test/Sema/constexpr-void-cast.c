@@ -1,8 +1,12 @@
 // RUN: %clang_cc1 -x c -fsyntax-only %s -verify=c -std=c11
 // RUN: %clang_cc1 -x c -fsyntax-only %s -pedantic -verify=c-pedantic -std=c11
+// RUN: %clang_cc1 -x c -fsyntax-only %s -verify=c -std=c11 -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -x c -fsyntax-only %s -pedantic -verify=c-pedantic -std=c11 -fexperimental-new-constant-interpreter
 //
 // RUN: %clang_cc1 -x c++ -fsyntax-only %s -verify=cxx
 // RUN: %clang_cc1 -x c++ -fsyntax-only %s -pedantic -verify=cxx-pedantic
+// RUN: %clang_cc1 -x c++ -fsyntax-only %s -verify=cxx -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -x c++ -fsyntax-only %s -pedantic -verify=cxx-pedantic -fexperimental-new-constant-interpreter
 
 // c-no-diagnostics
 // cxx-no-diagnostics

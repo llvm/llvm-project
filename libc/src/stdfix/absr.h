@@ -10,11 +10,12 @@
 #define LLVM_LIBC_SRC_STDFIX_ABSR_H
 
 #include "include/llvm-libc-macros/stdfix-macros.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 fract absr(fract x);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDFIX_ABSR_H

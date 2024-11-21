@@ -11,7 +11,7 @@ spirv.module Logical GLSL450 {
     // CHECK: [[VAR1:%.*]] = spirv.mlir.addressof @var1 : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4 x f32>)>, Input>
     // CHECK-NEXT: spirv.AccessChain [[VAR1]][{{.*}}, {{.*}}] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4 x f32>)>, Input>
     %1 = spirv.mlir.addressof @var1 : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Input>
-    %2 = spirv.AccessChain %1[%0, %0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Input>, i32, i32
+    %2 = spirv.AccessChain %1[%0, %0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Input>, i32, i32 -> !spirv.ptr<f32, Input>
     spirv.Return
   }
 }
@@ -330,7 +330,7 @@ spirv.module Logical GLSL450 {
 // TODO: Fix test case after initialization with normal constant is addressed
 // spirv.module Logical GLSL450 {
 //   %0 = spirv.Constant 4.0 : f32
-//   // CHECK1: spirv.Variable init(%0) : !spirv.ptr<f32, Private>
+//   COM: CHECK: spirv.Variable init(%0) : !spirv.ptr<f32, Private>
 //   spirv.GlobalVariable @var1 init(%0) : !spirv.ptr<f32, Private>
 // }
 
@@ -372,7 +372,7 @@ spirv.module Logical GLSL450 {
 // TODO: Fix test case after initialization with constant is addressed
 // spirv.module Logical GLSL450 {
 //   %0 = spirv.Constant 4.0 : f32
-//   // CHECK1: spirv.GlobalVariable @var1 initializer(%0) {binding = 5 : i32} : !spirv.ptr<f32, Private>
+//   COM: CHECK: spirv.GlobalVariable @var1 initializer(%0) {binding = 5 : i32} : !spirv.ptr<f32, Private>
 //   spirv.GlobalVariable @var1 initializer(%0) {binding = 5 : i32} : !spirv.ptr<f32, Private>
 // }
 

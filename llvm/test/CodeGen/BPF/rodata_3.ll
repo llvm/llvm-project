@@ -1,6 +1,6 @@
 ; REQUIRES: x86_64-linux
-; RUN: llc < %s -march=bpfel -verify-machineinstrs | FileCheck --check-prefix=CHECK-EL %s
-; RUN: llc < %s -march=bpfeb -verify-machineinstrs | FileCheck --check-prefix=CHECK-EB %s
+; RUN: llc < %s -march=bpfel -mcpu=v1 -verify-machineinstrs | FileCheck --check-prefix=CHECK-EL %s
+; RUN: llc < %s -march=bpfeb -mcpu=v1 -verify-machineinstrs | FileCheck --check-prefix=CHECK-EB %s
 ;
 ; This test requires little-endian host, so we specific x86_64-linux here.
 ; Source code:

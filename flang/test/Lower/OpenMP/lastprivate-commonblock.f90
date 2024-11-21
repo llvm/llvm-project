@@ -1,6 +1,6 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
 
-!CHECK: fir.global common @[[CB_C:.*]](dense<0> : vector<8xi8>) : !fir.array<8xi8>
+!CHECK: fir.global common @[[CB_C:.*]](dense<0> : vector<8xi8>) {alignment = 4 : i64} : !fir.array<8xi8>
 !CHECK-LABEL: func.func @_QPlastprivate_common
 !CHECK:      %[[CB_C_REF:.*]] = fir.address_of(@[[CB_C]]) : !fir.ref<!fir.array<8xi8>>
 !CHECK:      %[[CB_C_REF_CVT:.*]] = fir.convert %[[CB_C_REF]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
@@ -26,13 +26,12 @@
 !CHECK:          fir.if %[[LAST_ITER]] {
 !CHECK:            fir.store %[[V]] to %{{.*}} : !fir.ref<i32>
 !CHECK:            %[[PRIVATE_X_VAL:.*]] = fir.load %[[PRIVATE_X_DECL]]#0 : !fir.ref<f32>
-!CHECK:            hlfir.assign %[[PRIVATE_X_VAL]] to %[[X_DECL]]#0 temporary_lhs : f32, !fir.ref<f32>
+!CHECK:            hlfir.assign %[[PRIVATE_X_VAL]] to %[[X_DECL]]#0 : f32, !fir.ref<f32>
 !CHECK:            %[[PRIVATE_Y_VAL:.*]] = fir.load %[[PRIVATE_Y_DECL]]#0 : !fir.ref<f32>
-!CHECK:            hlfir.assign %[[PRIVATE_Y_VAL]] to %[[Y_DECL]]#0 temporary_lhs : f32, !fir.ref<f32>
+!CHECK:            hlfir.assign %[[PRIVATE_Y_VAL]] to %[[Y_DECL]]#0 : f32, !fir.ref<f32>
 !CHECK:          }
 !CHECK:          omp.yield
 !CHECK:        }
-!CHECK:        omp.terminator
 !CHECK:      }
 subroutine lastprivate_common
   common /c/ x, y

@@ -792,7 +792,6 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <__algorithm/find.h>
 #include <__algorithm/search.h>
 #include <__assert>
-#include <__availability>
 #include <__config>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/default_sentinel.h>
@@ -984,8 +983,8 @@ public:
 };
 
 template <regex_constants::error_type _Ev>
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_regex_error() {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_regex_error() {
+#if _LIBCPP_HAS_EXCEPTIONS
   throw regex_error(_Ev);
 #else
   _LIBCPP_VERBOSE_ABORT("regex_error was thrown in -fno-exceptions mode");
@@ -1055,19 +1054,19 @@ private:
 
   template <class _ForwardIterator>
   string_type __transform_primary(_ForwardIterator __f, _ForwardIterator __l, char) const;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
   template <class _ForwardIterator>
   string_type __transform_primary(_ForwardIterator __f, _ForwardIterator __l, wchar_t) const;
 #endif
   template <class _ForwardIterator>
   string_type __lookup_collatename(_ForwardIterator __f, _ForwardIterator __l, char) const;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
   template <class _ForwardIterator>
   string_type __lookup_collatename(_ForwardIterator __f, _ForwardIterator __l, wchar_t) const;
 #endif
   template <class _ForwardIterator>
   char_class_type __lookup_classname(_ForwardIterator __f, _ForwardIterator __l, bool __icase, char) const;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
   template <class _ForwardIterator>
   char_class_type __lookup_classname(_ForwardIterator __f, _ForwardIterator __l, bool __icase, wchar_t) const;
 #endif
@@ -1076,7 +1075,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI int __regex_traits_value(char __ch, int __radix) const {
     return __regex_traits_value(static_cast<unsigned char>(__ch), __radix);
   }
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
   _LIBCPP_HIDE_FROM_ABI int __regex_traits_value(wchar_t __ch, int __radix) const;
 #endif
 };
@@ -1137,7 +1136,7 @@ regex_traits<_CharT>::__transform_primary(_ForwardIterator __f, _ForwardIterator
   return __d;
 }
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 template <class _CharT>
 template <class _ForwardIterator>
 typename regex_traits<_CharT>::string_type
@@ -1181,7 +1180,7 @@ regex_traits<_CharT>::__lookup_collatename(_ForwardIterator __f, _ForwardIterato
   return __r;
 }
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 template <class _CharT>
 template <class _ForwardIterator>
 typename regex_traits<_CharT>::string_type
@@ -1209,7 +1208,7 @@ regex_traits<_CharT>::__lookup_collatename(_ForwardIterator __f, _ForwardIterato
   }
   return __r;
 }
-#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 // lookup_classname
 
@@ -1224,7 +1223,7 @@ regex_traits<_CharT>::__lookup_classname(_ForwardIterator __f, _ForwardIterator 
   return std::__get_classname(__s.c_str(), __icase);
 }
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 template <class _CharT>
 template <class _ForwardIterator>
 typename regex_traits<_CharT>::char_class_type
@@ -1240,7 +1239,7 @@ regex_traits<_CharT>::__lookup_classname(_ForwardIterator __f, _ForwardIterator 
   }
   return __get_classname(__n.c_str(), __icase);
 }
-#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 template <class _CharT>
 bool regex_traits<_CharT>::isctype(char_type __c, char_class_type __m) const {
@@ -1291,7 +1290,7 @@ int regex_traits<_CharT>::__regex_traits_value(unsigned char __ch, int __radix) 
   return -1;
 }
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 template <class _CharT>
 inline int regex_traits<_CharT>::__regex_traits_value(wchar_t __ch, int __radix) const {
   return __regex_traits_value(static_cast<unsigned char>(__ct_->narrow(__ch, char_type())), __radix);
@@ -1346,13 +1345,12 @@ struct __state {
 
 template <class _CharT>
 class __node {
-  __node(const __node&);
-  __node& operator=(const __node&);
-
 public:
   typedef std::__state<_CharT> __state;
 
   _LIBCPP_HIDE_FROM_ABI __node() {}
+  __node(const __node&)            = delete;
+  __node& operator=(const __node&) = delete;
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL
   virtual ~__node() {}
 
@@ -1940,7 +1938,7 @@ public:
 
 template <>
 _LIBCPP_EXPORTED_FROM_ABI void __match_any_but_newline<char>::__exec(__state&) const;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 _LIBCPP_EXPORTED_FROM_ABI void __match_any_but_newline<wchar_t>::__exec(__state&) const;
 #endif
@@ -1953,13 +1951,13 @@ class __match_char : public __owns_one_state<_CharT> {
 
   _CharT __c_;
 
-  __match_char(const __match_char&);
-  __match_char& operator=(const __match_char&);
-
 public:
   typedef std::__state<_CharT> __state;
 
   _LIBCPP_HIDE_FROM_ABI __match_char(_CharT __c, __node<_CharT>* __s) : base(__s), __c_(__c) {}
+
+  __match_char(const __match_char&)            = delete;
+  __match_char& operator=(const __match_char&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
@@ -1985,14 +1983,14 @@ class __match_char_icase : public __owns_one_state<_CharT> {
   _Traits __traits_;
   _CharT __c_;
 
-  __match_char_icase(const __match_char_icase&);
-  __match_char_icase& operator=(const __match_char_icase&);
-
 public:
   typedef std::__state<_CharT> __state;
 
   _LIBCPP_HIDE_FROM_ABI __match_char_icase(const _Traits& __traits, _CharT __c, __node<_CharT>* __s)
       : base(__s), __traits_(__traits), __c_(__traits.translate_nocase(__c)) {}
+
+  __match_char_icase(const __match_char_icase&)            = delete;
+  __match_char_icase& operator=(const __match_char_icase&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
@@ -2018,14 +2016,14 @@ class __match_char_collate : public __owns_one_state<_CharT> {
   _Traits __traits_;
   _CharT __c_;
 
-  __match_char_collate(const __match_char_collate&);
-  __match_char_collate& operator=(const __match_char_collate&);
-
 public:
   typedef std::__state<_CharT> __state;
 
   _LIBCPP_HIDE_FROM_ABI __match_char_collate(const _Traits& __traits, _CharT __c, __node<_CharT>* __s)
       : base(__s), __traits_(__traits), __c_(__traits.translate(__c)) {}
+
+  __match_char_collate(const __match_char_collate&)            = delete;
+  __match_char_collate& operator=(const __match_char_collate&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
@@ -2062,9 +2060,6 @@ class __bracket_expression : public __owns_one_state<_CharT> {
   bool __collate_;
   bool __might_have_digraph_;
 
-  __bracket_expression(const __bracket_expression&);
-  __bracket_expression& operator=(const __bracket_expression&);
-
 public:
   typedef std::__state<_CharT> __state;
 
@@ -2078,6 +2073,9 @@ public:
         __icase_(__icase),
         __collate_(__collate),
         __might_have_digraph_(__traits_.getloc().name() != "C") {}
+
+  __bracket_expression(const __bracket_expression&)            = delete;
+  __bracket_expression& operator=(const __bracket_expression&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 
@@ -2264,7 +2262,7 @@ template <class _CharT, class _Traits = regex_traits<_CharT> >
 class _LIBCPP_TEMPLATE_VIS basic_regex;
 
 typedef basic_regex<char> regex;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 typedef basic_regex<wchar_t> wregex;
 #endif
 
@@ -2700,15 +2698,15 @@ class __lookahead : public __owns_one_state<_CharT> {
   unsigned __mexp_;
   bool __invert_;
 
-  __lookahead(const __lookahead&);
-  __lookahead& operator=(const __lookahead&);
-
 public:
   typedef std::__state<_CharT> __state;
 
   _LIBCPP_HIDE_FROM_ABI
   __lookahead(const basic_regex<_CharT, _Traits>& __exp, bool __invert, __node<_CharT>* __s, unsigned __mexp)
       : base(__s), __exp_(__exp), __mexp_(__mexp), __invert_(__invert) {}
+
+  __lookahead(const __lookahead&)            = delete;
+  __lookahead& operator=(const __lookahead&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
@@ -3923,7 +3921,7 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_character_escape(
       if (__hd == -1)
         __throw_regex_error<regex_constants::error_escape>();
       __sum = 16 * __sum + static_cast<unsigned>(__hd);
-      // fallthrough
+      _LIBCPP_FALLTHROUGH();
     case 'x':
       ++__first;
       if (__first == __last)
@@ -4183,7 +4181,7 @@ void basic_regex<_CharT, _Traits>::__push_lookahead(const basic_regex& __exp, bo
 
 typedef sub_match<const char*> csub_match;
 typedef sub_match<string::const_iterator> ssub_match;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 typedef sub_match<const wchar_t*> wcsub_match;
 typedef sub_match<wstring::const_iterator> wssub_match;
 #endif
@@ -4215,11 +4213,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI int compare(const string_type& __s) const { return str().compare(__s); }
   _LIBCPP_HIDE_FROM_ABI int compare(const value_type* __s) const { return str().compare(__s); }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(sub_match& __s)
-#ifndef _LIBCPP_CXX03_LANG
-      _NOEXCEPT(__is_nothrow_swappable<_BidirectionalIterator>::value)
-#endif // _LIBCPP_CXX03_LANG
-  {
+  _LIBCPP_HIDE_FROM_ABI void swap(sub_match& __s) _NOEXCEPT_(__is_nothrow_swappable_v<_BidirectionalIterator>) {
     this->pair<_BidirectionalIterator, _BidirectionalIterator>::swap(__s);
     std::swap(matched, __s.matched);
   }
@@ -4532,7 +4526,7 @@ operator<<(basic_ostream<_CharT, _ST>& __os, const sub_match<_BiIter>& __m) {
 
 typedef match_results<const char*> cmatch;
 typedef match_results<string::const_iterator> smatch;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 typedef match_results<const wchar_t*> wcmatch;
 typedef match_results<wstring::const_iterator> wsmatch;
 #endif
@@ -4583,7 +4577,7 @@ public:
   // size:
   _LIBCPP_HIDE_FROM_ABI size_type size() const _NOEXCEPT { return __matches_.size(); }
   _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT { return __matches_.max_size(); }
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT { return size() == 0; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT { return size() == 0; }
 
   // element access:
   _LIBCPP_HIDE_FROM_ABI difference_type length(size_type __sub = 0) const {
@@ -4701,6 +4695,9 @@ private:
 
   template <class, class>
   friend class __lookahead;
+
+  template <class, class, class>
+  friend class regex_iterator;
 };
 
 template <class _BidirectionalIterator, class _Allocator>
@@ -5324,7 +5321,7 @@ class _LIBCPP_TEMPLATE_VIS regex_iterator;
 
 typedef regex_iterator<const char*> cregex_iterator;
 typedef regex_iterator<string::const_iterator> sregex_iterator;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 typedef regex_iterator<const wchar_t*> wcregex_iterator;
 typedef regex_iterator<wstring::const_iterator> wsregex_iterator;
 #endif
@@ -5411,7 +5408,9 @@ template <class _BidirectionalIterator, class _CharT, class _Traits>
 regex_iterator<_BidirectionalIterator, _CharT, _Traits>&
 regex_iterator<_BidirectionalIterator, _CharT, _Traits>::operator++() {
   __flags_ |= regex_constants::__no_update_pos;
-  _BidirectionalIterator __start = __match_[0].second;
+  _BidirectionalIterator __start        = __match_[0].second;
+  _BidirectionalIterator __prefix_start = __start;
+
   if (__match_[0].first == __match_[0].second) {
     if (__start == __end_) {
       __match_ = value_type();
@@ -5425,9 +5424,21 @@ regex_iterator<_BidirectionalIterator, _CharT, _Traits>::operator++() {
     else
       ++__start;
   }
+
   __flags_ |= regex_constants::match_prev_avail;
-  if (!std::regex_search(__start, __end_, __match_, *__pregex_, __flags_))
+  if (!std::regex_search(__start, __end_, __match_, *__pregex_, __flags_)) {
     __match_ = value_type();
+
+  } else {
+    // The Standard mandates that if `regex_search` returns true ([re.regiter.incr]), "`match.prefix().first` shall be
+    // equal to the previous value of `match[0].second`... It is unspecified how the implementation makes these
+    // adjustments." The adjustment is necessary if we incremented `__start` above (the branch that deals with
+    // zero-length matches).
+    auto& __prefix   = __match_.__prefix_;
+    __prefix.first   = __prefix_start;
+    __prefix.matched = __prefix.first != __prefix.second;
+  }
+
   return *this;
 }
 
@@ -5440,7 +5451,7 @@ class _LIBCPP_TEMPLATE_VIS regex_token_iterator;
 
 typedef regex_token_iterator<const char*> cregex_token_iterator;
 typedef regex_token_iterator<string::const_iterator> sregex_token_iterator;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 typedef regex_token_iterator<const wchar_t*> wcregex_token_iterator;
 typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #endif
@@ -5799,7 +5810,7 @@ using match_results _LIBCPP_AVAILABILITY_PMR =
 using cmatch _LIBCPP_AVAILABILITY_PMR = match_results<const char*>;
 using smatch _LIBCPP_AVAILABILITY_PMR = match_results<std::pmr::string::const_iterator>;
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 using wcmatch _LIBCPP_AVAILABILITY_PMR = match_results<const wchar_t*>;
 using wsmatch _LIBCPP_AVAILABILITY_PMR = match_results<std::pmr::wstring::const_iterator>;
 #  endif

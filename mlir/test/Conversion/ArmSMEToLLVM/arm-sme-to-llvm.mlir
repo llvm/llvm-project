@@ -448,134 +448,134 @@ func.func @arm_sme_store_tile_slice_ver_f64(%tile_slice_index : index, %mask : v
 }
 
 //===----------------------------------------------------------------------===//
-// arm_sme.move_vector_to_tile_slice
+// arm_sme.insert_tile_slice
 //===----------------------------------------------------------------------===//
 
 // -----
 
-// CHECK-LABEL: @arm_sme_move_vector_to_tile_slice_hor_i32
+// CHECK-LABEL: @arm_sme_insert_tile_slice_hor_i32
 // CHECK: "arm_sme.intr.write.horiz"({{.*}}) <{tile_id = 0 : i32}> : (i32, vector<[4]xi1>, vector<[4]xi32>) -> ()
-func.func @arm_sme_move_vector_to_tile_slice_hor_i32(%vector : vector<[4]xi32>, %tile_slice_index : index) -> () {
+func.func @arm_sme_insert_tile_slice_hor_i32(%vector : vector<[4]xi32>, %tile_slice_index : index) -> () {
   %c0 = arith.constant 0 : index
   %tile = arm_sme.get_tile : vector<[4]x[4]xi32>
-  %tile_update = arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index : vector<[4]xi32> into vector<[4]x[4]xi32>
+  %tile_update = arm_sme.insert_tile_slice %vector, %tile[%tile_slice_index] : vector<[4]xi32> into vector<[4]x[4]xi32>
   "test.some_use" (%tile_update) : (vector<[4]x[4]xi32>) -> ()
   return
 }
 
 // -----
 
-// CHECK-LABEL: @arm_sme_move_vector_to_tile_slice_ver_bf16
+// CHECK-LABEL: @arm_sme_insert_tile_slice_ver_bf16
 // CHECK: "arm_sme.intr.write.vert"({{.*}}) <{tile_id = 0 : i32}> : (i32, vector<[8]xi1>, vector<[8]xbf16>) -> ()
-func.func @arm_sme_move_vector_to_tile_slice_ver_bf16(%vector : vector<[8]xbf16>, %tile_slice_index : index) -> () {
+func.func @arm_sme_insert_tile_slice_ver_bf16(%vector : vector<[8]xbf16>, %tile_slice_index : index) -> () {
   %c0 = arith.constant 0 : index
   %tile = arm_sme.get_tile : vector<[8]x[8]xbf16>
-  %tile_update =  arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index layout<vertical> : vector<[8]xbf16> into vector<[8]x[8]xbf16>
+  %tile_update =  arm_sme.insert_tile_slice %vector, %tile[%tile_slice_index] layout<vertical> : vector<[8]xbf16> into vector<[8]x[8]xbf16>
   "test.some_use" (%tile_update) : (vector<[8]x[8]xbf16>) -> ()
   return
 }
 
 //===----------------------------------------------------------------------===//
-// arm_sme.move_tile_slice_to_vector
+// arm_sme.extract_tile_slice
 //===----------------------------------------------------------------------===//
 
 // -----
 
-// CHECK-LABEL: @arm_sme_move_tile_slice_to_vector_i8
+// CHECK-LABEL: @arm_sme_extract_tile_slice_i8
 // CHECK: "arm_sme.intr.read.horiz"({{.*}}) <{tile_id = 0 : i32}> : (vector<[16]xi8>, vector<[16]xi1>, i32) -> vector<[16]xi8>
-func.func @arm_sme_move_tile_slice_to_vector_i8(%tile_slice_index : index) -> vector<[16]xi8> {
+func.func @arm_sme_extract_tile_slice_i8(%tile_slice_index : index) -> vector<[16]xi8> {
   %tile = arm_sme.get_tile : vector<[16]x[16]xi8>
-  %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[16]xi8> from vector<[16]x[16]xi8>
+  %slice = arm_sme.extract_tile_slice %tile[%tile_slice_index] : vector<[16]xi8> from vector<[16]x[16]xi8>
   return %slice : vector<[16]xi8>
 }
 
 // -----
 
-// CHECK-LABEL: @arm_sme_move_tile_slice_to_vector_i16
+// CHECK-LABEL: @arm_sme_extract_tile_slice_i16
 // CHECK: "arm_sme.intr.read.horiz"({{.*}}) <{tile_id = 0 : i32}> : (vector<[8]xi16>, vector<[8]xi1>, i32) -> vector<[8]xi16>
-func.func @arm_sme_move_tile_slice_to_vector_i16(%tile_slice_index : index) -> vector<[8]xi16> {
+func.func @arm_sme_extract_tile_slice_i16(%tile_slice_index : index) -> vector<[8]xi16> {
   %tile = arm_sme.get_tile : vector<[8]x[8]xi16>
-  %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[8]xi16> from vector<[8]x[8]xi16>
+  %slice = arm_sme.extract_tile_slice %tile[%tile_slice_index] : vector<[8]xi16> from vector<[8]x[8]xi16>
   return %slice : vector<[8]xi16>
 }
 
 // -----
 
-// CHECK-LABEL: @arm_sme_move_tile_slice_to_vector_i32
+// CHECK-LABEL: @arm_sme_extract_tile_slice_i32
 // CHECK: "arm_sme.intr.read.horiz"({{.*}}) <{tile_id = 0 : i32}> : (vector<[4]xi32>, vector<[4]xi1>, i32) -> vector<[4]xi32>
-func.func @arm_sme_move_tile_slice_to_vector_i32(%tile_slice_index : index) -> vector<[4]xi32> {
+func.func @arm_sme_extract_tile_slice_i32(%tile_slice_index : index) -> vector<[4]xi32> {
   %tile = arm_sme.get_tile : vector<[4]x[4]xi32>
-  %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[4]xi32> from vector<[4]x[4]xi32>
+  %slice = arm_sme.extract_tile_slice %tile[%tile_slice_index] : vector<[4]xi32> from vector<[4]x[4]xi32>
   return %slice : vector<[4]xi32>
 }
 
 // -----
 
-// CHECK-LABEL: @arm_sme_move_tile_slice_to_vector_i64
+// CHECK-LABEL: @arm_sme_extract_tile_slice_i64
 // CHECK: "arm_sme.intr.read.horiz"({{.*}}) <{tile_id = 0 : i32}> : (vector<[2]xi64>, vector<[2]xi1>, i32) -> vector<[2]xi64>
-func.func @arm_sme_move_tile_slice_to_vector_i64(%tile_slice_index : index) -> vector<[2]xi64> {
+func.func @arm_sme_extract_tile_slice_i64(%tile_slice_index : index) -> vector<[2]xi64> {
   %tile = arm_sme.get_tile : vector<[2]x[2]xi64>
-  %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[2]xi64> from vector<[2]x[2]xi64>
+  %slice = arm_sme.extract_tile_slice %tile[%tile_slice_index] : vector<[2]xi64> from vector<[2]x[2]xi64>
   return %slice : vector<[2]xi64>
 }
 
 // -----
 
-// CHECK-LABEL: @arm_sme_move_tile_slice_to_vector_i128
+// CHECK-LABEL: @arm_sme_extract_tile_slice_i128
 // CHECK: "arm_sme.intr.read.horiz"({{.*}}) <{tile_id = 0 : i32}> : (vector<[1]xi128>, vector<[1]xi1>, i32) -> vector<[1]xi128>
-func.func @arm_sme_move_tile_slice_to_vector_i128(%tile_slice_index : index) -> vector<[1]xi128> {
+func.func @arm_sme_extract_tile_slice_i128(%tile_slice_index : index) -> vector<[1]xi128> {
   %tile = arm_sme.get_tile : vector<[1]x[1]xi128>
-  %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[1]xi128> from vector<[1]x[1]xi128>
+  %slice = arm_sme.extract_tile_slice %tile[%tile_slice_index] : vector<[1]xi128> from vector<[1]x[1]xi128>
   return %slice : vector<[1]xi128>
 }
 
 // -----
 
-// CHECK-LABEL: @arm_sme_move_tile_slice_to_vector_f16
+// CHECK-LABEL: @arm_sme_extract_tile_slice_f16
 // CHECK: "arm_sme.intr.read.horiz"({{.*}}) <{tile_id = 0 : i32}> : (vector<[8]xf16>, vector<[8]xi1>, i32) -> vector<[8]xf16>
-func.func @arm_sme_move_tile_slice_to_vector_f16(%tile_slice_index : index) -> vector<[8]xf16> {
+func.func @arm_sme_extract_tile_slice_f16(%tile_slice_index : index) -> vector<[8]xf16> {
   %tile = arm_sme.get_tile : vector<[8]x[8]xf16>
-  %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[8]xf16> from vector<[8]x[8]xf16>
+  %slice = arm_sme.extract_tile_slice %tile[%tile_slice_index] : vector<[8]xf16> from vector<[8]x[8]xf16>
   return %slice : vector<[8]xf16>
 }
 
 // -----
 
-// CHECK-LABEL: @arm_sme_move_tile_slice_to_vector_bf16
+// CHECK-LABEL: @arm_sme_extract_tile_slice_bf16
 // CHECK: "arm_sme.intr.read.horiz"({{.*}}) <{tile_id = 0 : i32}> : (vector<[8]xbf16>, vector<[8]xi1>, i32) -> vector<[8]xbf16>
-func.func @arm_sme_move_tile_slice_to_vector_bf16(%tile_slice_index : index) -> vector<[8]xbf16> {
+func.func @arm_sme_extract_tile_slice_bf16(%tile_slice_index : index) -> vector<[8]xbf16> {
   %tile = arm_sme.get_tile : vector<[8]x[8]xbf16>
-  %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[8]xbf16> from vector<[8]x[8]xbf16>
+  %slice = arm_sme.extract_tile_slice %tile[%tile_slice_index] : vector<[8]xbf16> from vector<[8]x[8]xbf16>
   return %slice : vector<[8]xbf16>
 }
 
 // -----
 
-// CHECK-LABEL: @arm_sme_move_tile_slice_to_vector_f32
+// CHECK-LABEL: @arm_sme_extract_tile_slice_f32
 // CHECK: "arm_sme.intr.read.horiz"({{.*}}) <{tile_id = 0 : i32}> : (vector<[4]xf32>, vector<[4]xi1>, i32) -> vector<[4]xf32>
-func.func @arm_sme_move_tile_slice_to_vector_f32(%tile_slice_index : index) -> vector<[4]xf32> {
+func.func @arm_sme_extract_tile_slice_f32(%tile_slice_index : index) -> vector<[4]xf32> {
   %tile = arm_sme.get_tile : vector<[4]x[4]xf32>
-  %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[4]xf32> from vector<[4]x[4]xf32>
+  %slice = arm_sme.extract_tile_slice %tile[%tile_slice_index] : vector<[4]xf32> from vector<[4]x[4]xf32>
   return %slice : vector<[4]xf32>
 }
 
 // -----
 
-// CHECK-LABEL: @arm_sme_move_tile_slice_to_vector_f64
+// CHECK-LABEL: @arm_sme_extract_tile_slice_f64
 // CHECK: "arm_sme.intr.read.horiz"({{.*}}) <{tile_id = 0 : i32}> : (vector<[2]xf64>, vector<[2]xi1>, i32) -> vector<[2]xf64>
-func.func @arm_sme_move_tile_slice_to_vector_f64(%tile_slice_index : index) -> vector<[2]xf64> {
+func.func @arm_sme_extract_tile_slice_f64(%tile_slice_index : index) -> vector<[2]xf64> {
   %tile = arm_sme.get_tile : vector<[2]x[2]xf64>
-  %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[2]xf64> from vector<[2]x[2]xf64>
+  %slice = arm_sme.extract_tile_slice %tile[%tile_slice_index] : vector<[2]xf64> from vector<[2]x[2]xf64>
   return %slice : vector<[2]xf64>
 }
 
 // -----
 
-// CHECK-LABEL: @arm_sme_move_tile_slice_to_vector_ver_i128
+// CHECK-LABEL: @arm_sme_extract_tile_slice_ver_i128
 // CHECK: "arm_sme.intr.read.vert"({{.*}}) <{tile_id = 0 : i32}> : (vector<[1]xi128>, vector<[1]xi1>, i32) -> vector<[1]xi128>
-func.func @arm_sme_move_tile_slice_to_vector_ver_i128(%tile_slice_index : index) -> vector<[1]xi128> {
+func.func @arm_sme_extract_tile_slice_ver_i128(%tile_slice_index : index) -> vector<[1]xi128> {
   %tile = arm_sme.get_tile : vector<[1]x[1]xi128>
-  %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] layout<vertical> : vector<[1]xi128> from vector<[1]x[1]xi128>
+  %slice = arm_sme.extract_tile_slice %tile[%tile_slice_index] layout<vertical> : vector<[1]xi128> from vector<[1]x[1]xi128>
   return %slice : vector<[1]xi128>
 }
 
@@ -629,18 +629,18 @@ func.func @arm_sme_streaming_vl_double_words() -> index {
 
 // CHECK-LABEL: arm_sme_fmopa_2way_f16f16_to_f32
 // CHECK: "arm_sme.intr.mopa.wide"({{.*}}) <{tile_id = 0 : i32}> : (vector<[8]xi1>, vector<[8]xi1>, vector<[8]xf16>, vector<[8]xf16>) -> ()
-func.func @arm_sme_fmopa_2way_f16f16_to_f32(%vecA: vector<[8]xf16>, %vecB: vector<[8]xf16>) -> vector<[4]x[4]xf32> {
+func.func @arm_sme_fmopa_2way_f16f16_to_f32(%vecA: vector<[8]xf16>, %vecB: vector<[8]xf16>) {
   %result = arm_sme.fmopa_2way %vecA, %vecB : vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
-  return %result : vector<[4]x[4]xf32>
+  "test.some_use"(%result) : (vector<[4]x[4]xf32>) -> ()
 }
 
 // -----
 
 // CHECK-LABEL: arm_sme_fmopa_2way_bf16bf16_to_f32
 // CHECK: "arm_sme.intr.mopa.wide"({{.*}}) <{tile_id = 0 : i32}> : (vector<[8]xi1>, vector<[8]xi1>, vector<[8]xbf16>, vector<[8]xbf16>) -> ()
-func.func @arm_sme_fmopa_2way_bf16bf16_to_f32(%vecA: vector<[8]xbf16>, %vecB: vector<[8]xbf16>) -> vector<[4]x[4]xf32> {
+func.func @arm_sme_fmopa_2way_bf16bf16_to_f32(%vecA: vector<[8]xbf16>, %vecB: vector<[8]xbf16>) {
   %result = arm_sme.fmopa_2way %vecA, %vecB : vector<[8]xbf16>, vector<[8]xbf16> into vector<[4]x[4]xf32>
-  return %result : vector<[4]x[4]xf32>
+  "test.some_use"(%result) : (vector<[4]x[4]xf32>) -> ()
 }
 
 //===----------------------------------------------------------------------===//
@@ -651,18 +651,18 @@ func.func @arm_sme_fmopa_2way_bf16bf16_to_f32(%vecA: vector<[8]xbf16>, %vecB: ve
 
 // CHECK-LABEL: arm_sme_fmops_2way_f16f16_to_f32
 // CHECK: "arm_sme.intr.mops.wide"({{.*}}) <{tile_id = 0 : i32}> : (vector<[8]xi1>, vector<[8]xi1>, vector<[8]xf16>, vector<[8]xf16>) -> ()
-func.func @arm_sme_fmops_2way_f16f16_to_f32(%vecA: vector<[8]xf16>, %vecB: vector<[8]xf16>) -> vector<[4]x[4]xf32> {
+func.func @arm_sme_fmops_2way_f16f16_to_f32(%vecA: vector<[8]xf16>, %vecB: vector<[8]xf16>) {
   %result = arm_sme.fmops_2way %vecA, %vecB : vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
-  return %result : vector<[4]x[4]xf32>
+  "test.some_use"(%result) : (vector<[4]x[4]xf32>) -> ()
 }
 
 // -----
 
 // CHECK-LABEL: arm_sme_fmops_2way_bf16bf16_to_f32
 // CHECK: "arm_sme.intr.mops.wide"({{.*}}) <{tile_id = 0 : i32}> : (vector<[8]xi1>, vector<[8]xi1>, vector<[8]xbf16>, vector<[8]xbf16>) -> ()
-func.func @arm_sme_fmops_2way_bf16bf16_to_f32(%vecA: vector<[8]xbf16>, %vecB: vector<[8]xbf16>) -> vector<[4]x[4]xf32> {
+func.func @arm_sme_fmops_2way_bf16bf16_to_f32(%vecA: vector<[8]xbf16>, %vecB: vector<[8]xbf16>) {
   %result = arm_sme.fmops_2way %vecA, %vecB : vector<[8]xbf16>, vector<[8]xbf16> into vector<[4]x[4]xf32>
-  return %result : vector<[4]x[4]xf32>
+  "test.some_use"(%result) : (vector<[4]x[4]xf32>) -> ()
 }
 
 //===----------------------------------------------------------------------===//
@@ -673,9 +673,9 @@ func.func @arm_sme_fmops_2way_bf16bf16_to_f32(%vecA: vector<[8]xbf16>, %vecB: ve
 
 // CHECK-LABEL: arm_sme_smopa_2way_i16i16_to_i32
 // CHECK: "arm_sme.intr.smopa.za32"({{.*}}) <{tile_id = 0 : i32}> : (vector<[8]xi1>, vector<[8]xi1>, vector<[8]xi16>, vector<[8]xi16>) -> ()
-func.func @arm_sme_smopa_2way_i16i16_to_i32(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) -> vector<[4]x[4]xi32> {
+func.func @arm_sme_smopa_2way_i16i16_to_i32(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) {
   %result = arm_sme.smopa_2way %vecA, %vecB : vector<[8]xi16>, vector<[8]xi16> into vector<[4]x[4]xi32>
-  return %result : vector<[4]x[4]xi32>
+  "test.some_use"(%result) : (vector<[4]x[4]xi32>) -> ()
 }
 
 //===----------------------------------------------------------------------===//
@@ -686,9 +686,9 @@ func.func @arm_sme_smopa_2way_i16i16_to_i32(%vecA: vector<[8]xi16>, %vecB: vecto
 
 // CHECK-LABEL: arm_sme_smops_2way_i16i16_to_i32
 // CHECK: "arm_sme.intr.smops.za32"({{.*}}) <{tile_id = 0 : i32}> : (vector<[8]xi1>, vector<[8]xi1>, vector<[8]xi16>, vector<[8]xi16>) -> ()
-func.func @arm_sme_smops_2way_i16i16_to_i32(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) -> vector<[4]x[4]xi32> {
+func.func @arm_sme_smops_2way_i16i16_to_i32(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) {
   %result = arm_sme.smops_2way %vecA, %vecB : vector<[8]xi16>, vector<[8]xi16> into vector<[4]x[4]xi32>
-  return %result : vector<[4]x[4]xi32>
+  "test.some_use"(%result) : (vector<[4]x[4]xi32>) -> ()
 }
 
 //===----------------------------------------------------------------------===//
@@ -699,9 +699,10 @@ func.func @arm_sme_smops_2way_i16i16_to_i32(%vecA: vector<[8]xi16>, %vecB: vecto
 
 // CHECK-LABEL: arm_sme_umopa_2way_i16i16_to_i32
 // CHECK: "arm_sme.intr.umopa.za32"({{.*}}) <{tile_id = 0 : i32}> : (vector<[8]xi1>, vector<[8]xi1>, vector<[8]xi16>, vector<[8]xi16>) -> ()
-func.func @arm_sme_umopa_2way_i16i16_to_i32(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) -> vector<[4]x[4]xi32> {
+func.func @arm_sme_umopa_2way_i16i16_to_i32(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) {
   %result = arm_sme.umopa_2way %vecA, %vecB : vector<[8]xi16>, vector<[8]xi16> into vector<[4]x[4]xi32>
-  return %result : vector<[4]x[4]xi32>
+  "test.some_use"(%result) : (vector<[4]x[4]xi32>) -> ()
+  return
 }
 
 //===----------------------------------------------------------------------===//
@@ -712,9 +713,10 @@ func.func @arm_sme_umopa_2way_i16i16_to_i32(%vecA: vector<[8]xi16>, %vecB: vecto
 
 // CHECK-LABEL: arm_sme_umops_2way_i16i16_to_i32
 // CHECK: "arm_sme.intr.umops.za32"({{.*}}) <{tile_id = 0 : i32}> : (vector<[8]xi1>, vector<[8]xi1>, vector<[8]xi16>, vector<[8]xi16>) -> ()
-func.func @arm_sme_umops_2way_i16i16_to_i32(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) -> vector<[4]x[4]xi32> {
+func.func @arm_sme_umops_2way_i16i16_to_i32(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) {
   %result = arm_sme.umops_2way %vecA, %vecB : vector<[8]xi16>, vector<[8]xi16> into vector<[4]x[4]xi32>
-  return %result : vector<[4]x[4]xi32>
+  "test.some_use"(%result) : (vector<[4]x[4]xi32>) -> ()
+  return
 }
 
 //===----------------------------------------------------------------------===//
@@ -725,18 +727,20 @@ func.func @arm_sme_umops_2way_i16i16_to_i32(%vecA: vector<[8]xi16>, %vecB: vecto
 
 // CHECK-LABEL: arm_sme_smopa_4way_i8i8_to_i32
 // CHECK: "arm_sme.intr.smopa.wide"({{.*}}) <{tile_id = 0 : i32}> : (vector<[16]xi1>, vector<[16]xi1>, vector<[16]xi8>, vector<[16]xi8>) -> ()
-func.func @arm_sme_smopa_4way_i8i8_to_i32(%vecA: vector<[16]xi8>, %vecB: vector<[16]xi8>) -> vector<[4]x[4]xi32> {
+func.func @arm_sme_smopa_4way_i8i8_to_i32(%vecA: vector<[16]xi8>, %vecB: vector<[16]xi8>) {
   %result = arm_sme.smopa_4way %vecA, %vecB : vector<[16]xi8>, vector<[16]xi8> into vector<[4]x[4]xi32>
-  return %result : vector<[4]x[4]xi32>
+  "test.some_use"(%result) : (vector<[4]x[4]xi32>) -> ()
+  return
 }
 
 // -----
 
 // CHECK-LABEL: arm_sme_smopa_4way_i16i16_to_i64
 // CHECK: "arm_sme.intr.smopa.wide"({{.*}}) <{tile_id = 0 : i32}> : (vector<[8]xi1>, vector<[8]xi1>, vector<[8]xi16>, vector<[8]xi16>) -> ()
-func.func @arm_sme_smopa_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) -> vector<[2]x[2]xi64> {
+func.func @arm_sme_smopa_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) {
   %result = arm_sme.smopa_4way %vecA, %vecB : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
-  return %result : vector<[2]x[2]xi64>
+  "test.some_use"(%result) : (vector<[2]x[2]xi64>) -> ()
+  return
 }
 
 //===----------------------------------------------------------------------===//
@@ -747,18 +751,20 @@ func.func @arm_sme_smopa_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vecto
 
 // CHECK-LABEL: arm_sme_smops_4way_i8i8_to_i32
 // CHECK: "arm_sme.intr.smops.wide"({{.*}}) <{tile_id = 0 : i32}> : (vector<[16]xi1>, vector<[16]xi1>, vector<[16]xi8>, vector<[16]xi8>) -> ()
-func.func @arm_sme_smops_4way_i8i8_to_i32(%vecA: vector<[16]xi8>, %vecB: vector<[16]xi8>) -> vector<[4]x[4]xi32> {
+func.func @arm_sme_smops_4way_i8i8_to_i32(%vecA: vector<[16]xi8>, %vecB: vector<[16]xi8>) {
   %result = arm_sme.smops_4way %vecA, %vecB : vector<[16]xi8>, vector<[16]xi8> into vector<[4]x[4]xi32>
-  return %result : vector<[4]x[4]xi32>
+  "test.some_use"(%result) : (vector<[4]x[4]xi32>) -> ()
+  return
 }
 
 // -----
 
 // CHECK-LABEL: arm_sme_smops_4way_i16i16_to_i64
 // CHECK: "arm_sme.intr.smops.wide"({{.*}}) <{tile_id = 0 : i32}> : (vector<[8]xi1>, vector<[8]xi1>, vector<[8]xi16>, vector<[8]xi16>) -> ()
-func.func @arm_sme_smops_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) -> vector<[2]x[2]xi64> {
+func.func @arm_sme_smops_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) {
   %result = arm_sme.smops_4way %vecA, %vecB : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
-  return %result : vector<[2]x[2]xi64>
+  "test.some_use"(%result) : (vector<[2]x[2]xi64>) -> ()
+  return
 }
 
 //===----------------------------------------------------------------------===//
@@ -769,18 +775,20 @@ func.func @arm_sme_smops_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vecto
 
 // CHECK-LABEL: arm_sme_umopa_4way_i8i8_to_i32
 // CHECK: "arm_sme.intr.umopa.wide"({{.*}}) <{tile_id = 0 : i32}> : (vector<[16]xi1>, vector<[16]xi1>, vector<[16]xi8>, vector<[16]xi8>) -> ()
-func.func @arm_sme_umopa_4way_i8i8_to_i32(%vecA: vector<[16]xi8>, %vecB: vector<[16]xi8>) -> vector<[4]x[4]xi32> {
+func.func @arm_sme_umopa_4way_i8i8_to_i32(%vecA: vector<[16]xi8>, %vecB: vector<[16]xi8>) {
   %result = arm_sme.umopa_4way %vecA, %vecB : vector<[16]xi8>, vector<[16]xi8> into vector<[4]x[4]xi32>
-  return %result : vector<[4]x[4]xi32>
+  "test.some_use"(%result) : (vector<[4]x[4]xi32>) -> ()
+  return
 }
 
 // -----
 
 // CHECK-LABEL: arm_sme_umopa_4way_i16i16_to_i64
 // CHECK: "arm_sme.intr.umopa.wide"({{.*}}) <{tile_id = 0 : i32}> : (vector<[8]xi1>, vector<[8]xi1>, vector<[8]xi16>, vector<[8]xi16>) -> ()
-func.func @arm_sme_umopa_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) -> vector<[2]x[2]xi64> {
+func.func @arm_sme_umopa_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) {
   %result = arm_sme.umopa_4way %vecA, %vecB : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
-  return %result : vector<[2]x[2]xi64>
+  "test.some_use"(%result) : (vector<[2]x[2]xi64>) -> ()
+  return
 }
 
 //===----------------------------------------------------------------------===//
@@ -791,18 +799,20 @@ func.func @arm_sme_umopa_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vecto
 
 // CHECK-LABEL: arm_sme_umops_4way_i8i8_to_i32
 // CHECK: "arm_sme.intr.umops.wide"({{.*}}) <{tile_id = 0 : i32}> : (vector<[16]xi1>, vector<[16]xi1>, vector<[16]xi8>, vector<[16]xi8>) -> ()
-func.func @arm_sme_umops_4way_i8i8_to_i32(%vecA: vector<[16]xi8>, %vecB: vector<[16]xi8>) -> vector<[4]x[4]xi32> {
+func.func @arm_sme_umops_4way_i8i8_to_i32(%vecA: vector<[16]xi8>, %vecB: vector<[16]xi8>) {
   %result = arm_sme.umops_4way %vecA, %vecB : vector<[16]xi8>, vector<[16]xi8> into vector<[4]x[4]xi32>
-  return %result : vector<[4]x[4]xi32>
+  "test.some_use"(%result) : (vector<[4]x[4]xi32>) -> ()
+  return
 }
 
 // -----
 
 // CHECK-LABEL: arm_sme_umops_4way_i16i16_to_i64
 // CHECK: "arm_sme.intr.umops.wide"({{.*}}) <{tile_id = 0 : i32}> : (vector<[8]xi1>, vector<[8]xi1>, vector<[8]xi16>, vector<[8]xi16>) -> ()
-func.func @arm_sme_umops_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) -> vector<[2]x[2]xi64> {
+func.func @arm_sme_umops_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) {
   %result = arm_sme.umops_4way %vecA, %vecB : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
-  return %result : vector<[2]x[2]xi64>
+  "test.some_use"(%result) : (vector<[2]x[2]xi64>) -> ()
+  return
 }
 
 //===----------------------------------------------------------------------===//
@@ -813,18 +823,20 @@ func.func @arm_sme_umops_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vecto
 
 // CHECK-LABEL: arm_sme_sumopa_4way_i8i8_to_i32
 // CHECK: "arm_sme.intr.sumopa.wide"({{.*}}) <{tile_id = 0 : i32}> : (vector<[16]xi1>, vector<[16]xi1>, vector<[16]xi8>, vector<[16]xi8>) -> ()
-func.func @arm_sme_sumopa_4way_i8i8_to_i32(%vecA: vector<[16]xi8>, %vecB: vector<[16]xi8>) -> vector<[4]x[4]xi32> {
+func.func @arm_sme_sumopa_4way_i8i8_to_i32(%vecA: vector<[16]xi8>, %vecB: vector<[16]xi8>) {
   %result = arm_sme.sumopa_4way %vecA, %vecB : vector<[16]xi8>, vector<[16]xi8> into vector<[4]x[4]xi32>
-  return %result : vector<[4]x[4]xi32>
+  "test.some_use"(%result) : (vector<[4]x[4]xi32>) -> ()
+  return
 }
 
 // -----
 
 // CHECK-LABEL: arm_sme_sumopa_4way_i16i16_to_i64
 // CHECK: "arm_sme.intr.sumopa.wide"({{.*}}) <{tile_id = 0 : i32}> : (vector<[8]xi1>, vector<[8]xi1>, vector<[8]xi16>, vector<[8]xi16>) -> ()
-func.func @arm_sme_sumopa_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) -> vector<[2]x[2]xi64> {
+func.func @arm_sme_sumopa_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) {
   %result = arm_sme.sumopa_4way %vecA, %vecB : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
-  return %result : vector<[2]x[2]xi64>
+  "test.some_use"(%result) : (vector<[2]x[2]xi64>) -> ()
+  return
 }
 
 //===----------------------------------------------------------------------===//
@@ -835,18 +847,20 @@ func.func @arm_sme_sumopa_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vect
 
 // CHECK-LABEL: arm_sme_sumops_4way_i8i8_to_i32
 // CHECK: "arm_sme.intr.sumops.wide"({{.*}}) <{tile_id = 0 : i32}> : (vector<[16]xi1>, vector<[16]xi1>, vector<[16]xi8>, vector<[16]xi8>) -> ()
-func.func @arm_sme_sumops_4way_i8i8_to_i32(%vecA: vector<[16]xi8>, %vecB: vector<[16]xi8>) -> vector<[4]x[4]xi32> {
+func.func @arm_sme_sumops_4way_i8i8_to_i32(%vecA: vector<[16]xi8>, %vecB: vector<[16]xi8>) {
   %result = arm_sme.sumops_4way %vecA, %vecB : vector<[16]xi8>, vector<[16]xi8> into vector<[4]x[4]xi32>
-  return %result : vector<[4]x[4]xi32>
+  "test.some_use"(%result) : (vector<[4]x[4]xi32>) -> ()
+  return
 }
 
 // -----
 
 // CHECK-LABEL: arm_sme_sumops_4way_i16i16_to_i64
 // CHECK: "arm_sme.intr.sumops.wide"({{.*}}) <{tile_id = 0 : i32}> : (vector<[8]xi1>, vector<[8]xi1>, vector<[8]xi16>, vector<[8]xi16>) -> ()
-func.func @arm_sme_sumops_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) -> vector<[2]x[2]xi64> {
+func.func @arm_sme_sumops_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) {
   %result = arm_sme.sumops_4way %vecA, %vecB : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
-  return %result : vector<[2]x[2]xi64>
+  "test.some_use"(%result) : (vector<[2]x[2]xi64>) -> ()
+  return
 }
 
 //===----------------------------------------------------------------------===//
@@ -857,18 +871,20 @@ func.func @arm_sme_sumops_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vect
 
 // CHECK-LABEL: arm_sme_usmopa_4way_i8i8_to_i32
 // CHECK: "arm_sme.intr.usmopa.wide"({{.*}}) <{tile_id = 0 : i32}> : (vector<[16]xi1>, vector<[16]xi1>, vector<[16]xi8>, vector<[16]xi8>) -> ()
-func.func @arm_sme_usmopa_4way_i8i8_to_i32(%vecA: vector<[16]xi8>, %vecB: vector<[16]xi8>) -> vector<[4]x[4]xi32> {
-  %reuslt = arm_sme.usmopa_4way %vecA, %vecB : vector<[16]xi8>, vector<[16]xi8> into vector<[4]x[4]xi32>
-  return %reuslt : vector<[4]x[4]xi32>
+func.func @arm_sme_usmopa_4way_i8i8_to_i32(%vecA: vector<[16]xi8>, %vecB: vector<[16]xi8>) {
+  %result = arm_sme.usmopa_4way %vecA, %vecB : vector<[16]xi8>, vector<[16]xi8> into vector<[4]x[4]xi32>
+  "test.some_use"(%result) : (vector<[4]x[4]xi32>) -> ()
+  return
 }
 
 // -----
 
 // CHECK-LABEL: arm_sme_usmopa_4way_i16i16_to_i64
 // CHECK: "arm_sme.intr.usmopa.wide"({{.*}}) <{tile_id = 0 : i32}> : (vector<[8]xi1>, vector<[8]xi1>, vector<[8]xi16>, vector<[8]xi16>) -> ()
-func.func @arm_sme_usmopa_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) -> vector<[2]x[2]xi64> {
-  %reuslt = arm_sme.usmopa_4way %vecA, %vecB : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
-  return %reuslt : vector<[2]x[2]xi64>
+func.func @arm_sme_usmopa_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) {
+  %result = arm_sme.usmopa_4way %vecA, %vecB : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
+  "test.some_use"(%result) : (vector<[2]x[2]xi64>) -> ()
+  return
 }
 
 //===----------------------------------------------------------------------===//
@@ -879,16 +895,45 @@ func.func @arm_sme_usmopa_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vect
 
 // CHECK-LABEL: arm_sme_usmops_4way_i8i8_to_i32
 // CHECK: "arm_sme.intr.usmops.wide"({{.*}}) <{tile_id = 0 : i32}> : (vector<[16]xi1>, vector<[16]xi1>, vector<[16]xi8>, vector<[16]xi8>) -> ()
-func.func @arm_sme_usmops_4way_i8i8_to_i32(%vecA: vector<[16]xi8>, %vecB: vector<[16]xi8>) -> vector<[4]x[4]xi32> {
-  %reuslt = arm_sme.usmops_4way %vecA, %vecB : vector<[16]xi8>, vector<[16]xi8> into vector<[4]x[4]xi32>
-  return %reuslt : vector<[4]x[4]xi32>
+func.func @arm_sme_usmops_4way_i8i8_to_i32(%vecA: vector<[16]xi8>, %vecB: vector<[16]xi8>) {
+  %result = arm_sme.usmops_4way %vecA, %vecB : vector<[16]xi8>, vector<[16]xi8> into vector<[4]x[4]xi32>
+  "test.some_use"(%result) : (vector<[4]x[4]xi32>) -> ()
+  return
 }
 
 // -----
 
 // CHECK-LABEL: arm_sme_usmops_4way_i16i16_to_i64
 // CHECK: "arm_sme.intr.usmops.wide"({{.*}}) <{tile_id = 0 : i32}> : (vector<[8]xi1>, vector<[8]xi1>, vector<[8]xi16>, vector<[8]xi16>) -> ()
-func.func @arm_sme_usmops_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) -> vector<[2]x[2]xi64> {
-  %reuslt = arm_sme.usmops_4way %vecA, %vecB : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
-  return %reuslt : vector<[2]x[2]xi64>
+func.func @arm_sme_usmops_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) {
+  %result = arm_sme.usmops_4way %vecA, %vecB : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
+  "test.some_use"(%result) : (vector<[2]x[2]xi64>) -> ()
+  return
+}
+
+//===----------------------------------------------------------------------===//
+// Operations on SME tile types allowed after conversion
+//===----------------------------------------------------------------------===//
+
+// -----
+
+// The following operations on SME tile types are permitted after conversion:
+//
+//   - arm_sme.copy_tile
+//   - arm_sme.get_tile
+//   - cf.br
+//   - any unregistered op such as 'test.some_use'.
+//
+// this test verifies this. Conversion will fail for operations with SME tile
+// types not in this list, this is tested in 'unsupported.mlir'.
+
+func.func @ops_on_tiles_legal_post_conversion(%ub : index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %tile = arm_sme.get_tile : vector<[4]x[4]xf32>
+  %copy = arm_sme.copy_tile %tile : vector<[4]x[4]xf32>
+  cf.br ^bb1(%copy : vector<[4]x[4]xf32>)
+^bb1(%x : vector<[4]x[4]xf32>):
+  "test.some_use"(%x) : (vector<[4]x[4]xf32>) -> ()
+  return
 }

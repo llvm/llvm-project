@@ -269,6 +269,11 @@ static cl::list<ValidationEvent> ValidationCounters(
         "counter to validate benchmarking assumptions"),
     cl::CommaSeparated, cl::cat(BenchmarkOptions), ValidationEventOptions());
 
+static cl::opt<int> BenchmarkProcessCPU(
+    "benchmark-process-cpu",
+    cl::desc("The CPU number that the benchmarking process should executon on"),
+    cl::cat(BenchmarkOptions), cl::init(-1));
+
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
 
 // Helper function that logs the error(s) and exits.
@@ -418,8 +423,12 @@ static void runBenchmarkConfigurations(
         std::optional<StringRef> DumpFile;
         if (DumpObjectToDisk.getNumOccurrences())
           DumpFile = DumpObjectToDisk;
+        const std::optional<int> BenchmarkCPU =
+            BenchmarkProcessCPU == -1
+                ? std::nullopt
+                : std::optional(BenchmarkProcessCPU.getValue());
         auto [Err, BenchmarkResult] =
-            Runner.runConfiguration(std::move(RC), DumpFile);
+            Runner.runConfiguration(std::move(RC), DumpFile, BenchmarkCPU);
         if (Err) {
           // Errors from executing the snippets are fine.
           // All other errors are a framework issue and should fail.
@@ -470,9 +479,11 @@ void benchmarkMain() {
 #endif
   }
 
-  InitializeAllAsmPrinters();
-  InitializeAllAsmParsers();
   InitializeAllExegesisTargets();
+#define LLVM_EXEGESIS(TargetName)                                              \
+  LLVMInitialize##TargetName##AsmPrinter();                                    \
+  LLVMInitialize##TargetName##AsmParser();
+#include "llvm/Config/TargetExegesis.def"
 
   const LLVMState State =
       ExitOnErr(LLVMState::Create(TripleName, MCPU, "", UseDummyPerfCounters));
@@ -621,9 +632,11 @@ static void analysisMain() {
         "and --analysis-inconsistencies-output-file must be specified");
   }
 
-  InitializeAllAsmPrinters();
-  InitializeAllDisassemblers();
   InitializeAllExegesisTargets();
+#define LLVM_EXEGESIS(TargetName)                                              \
+  LLVMInitialize##TargetName##AsmPrinter();                                    \
+  LLVMInitialize##TargetName##Disassembler();
+#include "llvm/Config/TargetExegesis.def"
 
   auto MemoryBuffer = ExitOnFileError(
       BenchmarkFile,
@@ -690,9 +703,11 @@ int main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
 
   // Initialize targets so we can print them when flag --version is specified.
-  InitializeAllTargetInfos();
-  InitializeAllTargets();
-  InitializeAllTargetMCs();
+#define LLVM_EXEGESIS(TargetName)                                              \
+  LLVMInitialize##TargetName##Target();                                        \
+  LLVMInitialize##TargetName##TargetInfo();                                    \
+  LLVMInitialize##TargetName##TargetMC();
+#include "llvm/Config/TargetExegesis.def"
 
   // Register the Target and CPU printer for --version.
   cl::AddExtraVersionPrinter(sys::printDefaultTargetAndDetectedCPU);

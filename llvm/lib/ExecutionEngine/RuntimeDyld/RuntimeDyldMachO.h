@@ -17,11 +17,6 @@
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/Format.h"
 
-#define DEBUG_TYPE "dyld"
-
-using namespace llvm;
-using namespace llvm::object;
-
 namespace llvm {
 class RuntimeDyldMachO : public RuntimeDyldImpl {
 protected:
@@ -162,6 +157,4 @@ public:
 
 } // end namespace llvm
 
-#undef DEBUG_TYPE
-
-#endif
+#endif // LLVM_LIB_EXECUTIONENGINE_RUNTIMEDYLD_RUNTIMEDYLDMACHO_H

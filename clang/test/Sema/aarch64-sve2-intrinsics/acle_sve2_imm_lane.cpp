@@ -1,7 +1,7 @@
 // REQUIRES: aarch64-registered-target
 
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sve2 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sve2 -fsyntax-only -verify %s
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
@@ -78,6 +78,14 @@ void test_range_0_7()
   SVE_ACLE_FUNC(svqrdmlsh_lane,_s16,,)(svundef_s16(), svundef_s16(), svundef_s16(), -1);
   // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 7]}}
   SVE_ACLE_FUNC(svqrdmulh_lane,_s16,,)(svundef_s16(), svundef_s16(), -1);
+  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 7]}}
+  SVE_ACLE_FUNC(svluti2_lane,_s16,,)(svundef_s16(), svundef_u8(), -1);
+  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 7]}}
+  SVE_ACLE_FUNC(svluti2_lane,_u16,,)(svundef_u16(), svundef_u8(), -1);
+  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 7]}}
+  SVE_ACLE_FUNC(svluti2_lane,_f16,,)(svundef_f16(), svundef_u8(), -1);
+  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 7]}}
+  SVE_ACLE_FUNC(svluti2_lane,_bf16,,)(svundef_bf16(), svundef_u8(), -1);
 }
 
 void test_range_0_3()
@@ -146,6 +154,26 @@ void test_range_0_3()
   SVE_ACLE_FUNC(svqdmullb_lane,_s64,,)(svundef_s32(), svundef_s32(), 4);
   // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 3]}}
   SVE_ACLE_FUNC(svqdmullt_lane,_s64,,)(svundef_s32(), svundef_s32(), -1);
+  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 3]}}
+  SVE_ACLE_FUNC(svluti2_lane,_s8,,)(svundef_s8(), svundef_u8(), -1);
+  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 3]}}
+  SVE_ACLE_FUNC(svluti2_lane,_u8,,)(svundef_u8(), svundef_u8(), -1);
+  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 3]}}
+  SVE_ACLE_FUNC(svluti4_lane,_s16,,)(svundef_s16(), svundef_u8(), -1);
+  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 3]}}
+  SVE_ACLE_FUNC(svluti4_lane,_u16,,)(svundef_u16(), svundef_u8(), -1);
+  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 3]}}
+  SVE_ACLE_FUNC(svluti4_lane,_f16,,)(svundef_f16(), svundef_u8(), -1);
+  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 3]}}
+  SVE_ACLE_FUNC(svluti4_lane,_bf16,,)(svundef_bf16(), svundef_u8(), -1);
+  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 3]}}
+  SVE_ACLE_FUNC(svluti4_lane,_s16,_x2,)(svcreate2_s16(svundef_s16(),svundef_s16()), svundef_u8(), -1);
+  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 3]}}
+  SVE_ACLE_FUNC(svluti4_lane,_u16,_x2,)(svcreate2_u16(svundef_u16(),svundef_u16()), svundef_u8(), -1);
+  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 3]}}
+  SVE_ACLE_FUNC(svluti4_lane,_f16,_x2,)(svcreate2_f16(svundef_f16(),svundef_f16()), svundef_u8(), -1);
+  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 3]}}
+  SVE_ACLE_FUNC(svluti4_lane,_bf16,_x2,)(svcreate2_bf16(svundef_bf16(),svundef_bf16()), svundef_u8(), -1);
 }
 
 void test_range_0_1()
@@ -180,4 +208,8 @@ void test_range_0_1()
   SVE_ACLE_FUNC(svqrdmlsh_lane,_s64,,)(svundef_s64(), svundef_s64(), svundef_s64(), 2);
   // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 1]}}
   SVE_ACLE_FUNC(svqrdmulh_lane,_s64,,)(svundef_s64(), svundef_s64(), 2);
+  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 1]}}
+  SVE_ACLE_FUNC(svluti4_lane,_s8,,)(svundef_s8(), svundef_u8(), -1);
+  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 1]}}
+  SVE_ACLE_FUNC(svluti4_lane,_u8,,)(svundef_u8(), svundef_u8(), -1);
 }

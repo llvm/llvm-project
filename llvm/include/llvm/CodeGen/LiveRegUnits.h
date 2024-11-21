@@ -43,7 +43,7 @@ public:
   /// For a machine instruction \p MI, adds all register units used in
   /// \p UsedRegUnits and defined or clobbered in \p ModifiedRegUnits. This is
   /// useful when walking over a range of instructions to track registers
-  /// used or defined seperately.
+  /// used or defined separately.
   static void accumulateUsedDefed(const MachineInstr &MI,
                                   LiveRegUnits &ModifiedRegUnits,
                                   LiveRegUnits &UsedRegUnits,

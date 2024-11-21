@@ -150,6 +150,39 @@ func.func @transfer_read_2d_transpose_with_mask_f32(%src : memref<?x?xf32>, %mas
 
 // -----
 
+// CHECK-LABEL: @fold_transpose_into_load
+// CHECK-NOT: arm_sme.tile_store
+// CHECK: arm_sme.tile_load {{.*}} layout<vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
+// CHECK-NOT: arm_sme.tile_store
+func.func @fold_transpose_into_load(%src : memref<?x?xf32>) {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = [true, true]} : memref<?x?xf32>, vector<[4]x[4]xf32>
+  %1 = vector.transpose %0, [1, 0] : vector<[4]x[4]xf32> to vector<[4]x[4]xf32>
+  "prevent.dce"(%1) : (vector<[4]x[4]xf32>) -> ()
+}
+
+// -----
+
+/// Transposes with more than a single use cannot be folded into load and will
+/// instead be transposed via memory.
+
+// CHECK-LABEL: @fold_transpose_into_load_multi_use
+// CHECK: arm_sme.tile_load {{.*}} : memref<?x?xf32>, vector<[4]x[4]xf32>
+// CHECK: arm_sme.tile_store {{.*}} : memref<?x?xf32>, vector<[4]x[4]xf32>
+// CHECK: %[[TILE_TRANSPOSED_VIA_MEM:.*]] = arm_sme.tile_load {{.*}} layout<vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
+// CHECK: "prevent.dce"(%[[TILE_TRANSPOSED_VIA_MEM]]) : (vector<[4]x[4]xf32>) -> ()
+func.func @fold_transpose_into_load_multi_use(%src : memref<?x?xf32>) {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %src[%c0, %c0], %pad {in_bounds = [true, true]} : memref<?x?xf32>, vector<[4]x[4]xf32>
+  "test.some_use"(%0) : (vector<[4]x[4]xf32>) -> ()
+  %1 = vector.transpose %0, [1, 0] : vector<[4]x[4]xf32> to vector<[4]x[4]xf32>
+  "prevent.dce"(%1) : (vector<[4]x[4]xf32>) -> ()
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // vector.transfer_write
 //===----------------------------------------------------------------------===//
@@ -301,6 +334,50 @@ func.func @transfer_write_2d_transpose_with_mask_bf16(%vector : vector<[8]x[8]xb
   return
 }
 
+// -----
+
+// CHECK-LABEL: func.func @transfer_write_slice(
+// CHECK-SAME:                                  %[[VECTOR:.*]]: vector<[4]x[4]xf32>,
+// CHECK-SAME:                                  %[[DEST:.*]]: memref<?x?xf32>,
+// CHECK-SAME:                                  %[[INDEX:.*]]: index) {
+// CHECK:         %[[C0:.*]] = arith.constant 0 : index
+// CHECK:         %[[MASK:.*]] = arith.constant dense<true> : vector<[4]xi1>
+// CHECK:         arm_sme.store_tile_slice %[[VECTOR]], %[[INDEX]], %[[MASK]], %[[DEST]][%[[INDEX]], %[[C0]]] : memref<?x?xf32>, vector<[4]xi1>, vector<[4]x[4]xf32>
+func.func @transfer_write_slice(%vector: vector<[4]x[4]xf32>, %dest : memref<?x?xf32>, %slice_index: index) {
+  %c0 = arith.constant 0 : index
+  %slice = vector.extract %vector[%slice_index] : vector<[4]xf32> from vector<[4]x[4]xf32>
+  vector.transfer_write %slice, %dest[%slice_index, %c0] { in_bounds = [true] }: vector<[4]xf32>, memref<?x?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @transfer_write_slice_with_mask(
+// CHECK-SAME:                                            %[[VECTOR:.*]]: vector<[4]x[4]xf32>,
+// CHECK-SAME:                                            %[[DEST:.*]]: memref<?x?xf32>,
+// CHECK-SAME:                                            %[[MASK:.*]]: vector<[4]xi1>,
+// CHECK-SAME:                                            %[[INDEX:.*]]: index) {
+// CHECK:         %[[C0:.*]] = arith.constant 0 : index
+// CHECK:         arm_sme.store_tile_slice %[[VECTOR]], %[[INDEX]], %[[MASK]], %[[DEST]][%[[INDEX]], %[[C0]]] : memref<?x?xf32>, vector<[4]xi1>, vector<[4]x[4]xf32>
+func.func @transfer_write_slice_with_mask(%vector: vector<[4]x[4]xf32>, %dest : memref<?x?xf32>, %mask: vector<[4]xi1>, %slice_index: index) {
+  %c0 = arith.constant 0 : index
+  %slice = vector.extract %vector[%slice_index] : vector<[4]xf32> from vector<[4]x[4]xf32>
+  vector.transfer_write %slice, %dest[%slice_index, %c0], %mask { in_bounds = [true] }: vector<[4]xf32>, memref<?x?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @transfer_write_vertical_slice
+// CHECK: arm_sme.store_tile_slice {{.*}} layout<vertical>
+func.func @transfer_write_vertical_slice(%vector: vector<[4]x[4]xf32>, %dest : memref<?x?xf32>, %slice_index: index) {
+  %c0 = arith.constant 0 : index
+   %slice = arm_sme.extract_tile_slice %vector[%slice_index] layout<vertical>
+            : vector<[4]xf32> from vector<[4]x[4]xf32>
+  vector.transfer_write %slice, %dest[%slice_index, %c0] { in_bounds = [true] }: vector<[4]xf32>, memref<?x?xf32>
+  return
+}
+
 //===----------------------------------------------------------------------===//
 // vector.broadcast
 //===----------------------------------------------------------------------===//
@@ -317,7 +394,7 @@ func.func @transfer_write_2d_transpose_with_mask_bf16(%vector : vector<[8]x[8]xb
 // CHECK: %[[VSCALE:.*]] = vector.vscale
 // CHECK: %[[NUM_TILE_SLICES:.*]] = arith.muli %[[VSCALE]], %[[C4]] : index
 // CHECK: %[[TILE:.*]] = scf.for %[[TILE_SLICE_INDEX:.*]] = %[[C0]] to %[[NUM_TILE_SLICES]] step %[[C1]] iter_args(%[[CURRENT_TILE:.*]] = %[[INIT_TILE]]) -> (vector<[4]x[4]xi32>) {
-// CHECK:   %[[NEW_TILE:.*]] = arm_sme.move_vector_to_tile_slice %[[SRC_1D]], %[[CURRENT_TILE]], %[[TILE_SLICE_INDEX]] : vector<[4]xi32> into vector<[4]x[4]xi32>
+// CHECK:   %[[NEW_TILE:.*]] = arm_sme.insert_tile_slice %[[SRC_1D]], %[[CURRENT_TILE]][%[[TILE_SLICE_INDEX]]] : vector<[4]xi32> into vector<[4]x[4]xi32>
 // CHECK:   scf.yield %[[NEW_TILE]] : vector<[4]x[4]xi32>
 // CHECK: "prevent.dce"(%[[TILE]]) : (vector<[4]x[4]xi32>) -> ()
 func.func @broadcast_vec2d_from_i32(%arg0: i32) {
@@ -332,7 +409,7 @@ func.func @broadcast_vec2d_from_i32(%arg0: i32) {
 // CHECK-SAME:                                          %[[SRC:.*]]: vector<f32>) {
 // CHECK: %[[SRC_1D:.*]] = vector.broadcast %[[SRC]] : vector<f32> to vector<[4]xf32>
 // CHECK: scf.for
-// CHECK:   arm_sme.move_vector_to_tile_slice %[[SRC_1D]], {{.*}}
+// CHECK:   arm_sme.insert_tile_slice %[[SRC_1D]], {{.*}}
 func.func @broadcast_vec2d_from_vec0d(%arg0: vector<f32>) {
   %0 = vector.broadcast %arg0 : vector<f32> to vector<[4]x[4]xf32>
   "prevent.dce"(%0) : (vector<[4]x[4]xf32>) -> ()
@@ -345,7 +422,7 @@ func.func @broadcast_vec2d_from_vec0d(%arg0: vector<f32>) {
 // CHECK-SAME:                                          %[[SRC:.*]]: vector<[8]xi16>) {
 // CHECK-NOT: vector.broadcast
 // CHECK: scf.for
-// CHECK:   arm_sme.move_vector_to_tile_slice %[[SRC]], {{.*}}
+// CHECK:   arm_sme.insert_tile_slice %[[SRC]], {{.*}}
 func.func @broadcast_vec2d_from_vec1d(%arg0: vector<[8]xi16>) {
   %0 = vector.broadcast %arg0 : vector<[8]xi16> to vector<[8]x[8]xi16>
   "prevent.dce"(%0) : (vector<[8]x[8]xi16>) -> ()
@@ -365,7 +442,7 @@ func.func @broadcast_vec2d_from_vec1d(%arg0: vector<[8]xi16>) {
 // CHECK:   %[[VSCALE:.*]] = vector.vscale
 // CHECK:   %[[NUM_TILE_SLICES:.*]] = arith.muli %[[VSCALE]], %{{.*}} : index
 // CHECK:   scf.for {{.*}} to %[[NUM_TILE_SLICES]] {{.*}} {
-// CHECK:     arm_sme.move_vector_to_tile_slice %[[BCST]], {{.*}} : vector<[4]xi32> into vector<[4]x[4]xi32>
+// CHECK:     arm_sme.insert_tile_slice %[[BCST]], {{.*}} : vector<[4]xi32> into vector<[4]x[4]xi32>
 func.func @splat_vec2d_from_i32(%arg0: i32) {
   %0 = vector.splat %arg0 : vector<[4]x[4]xi32>
   "prevent.dce"(%0) : (vector<[4]x[4]xi32>) -> ()
@@ -378,7 +455,7 @@ func.func @splat_vec2d_from_i32(%arg0: i32) {
 // CHECK-SAME:      %[[SRC:.*]]: f16) {
 // CHECK:   %[[BCST:.*]] = vector.broadcast %[[SRC]] : f16 to vector<[8]xf16>
 // CHECK:   scf.for
-// CHECK:     arm_sme.move_vector_to_tile_slice %[[BCST]], {{.*}} : vector<[8]xf16> into vector<[8]x[8]xf16>
+// CHECK:     arm_sme.insert_tile_slice %[[BCST]], {{.*}} : vector<[8]xf16> into vector<[8]x[8]xf16>
 func.func @splat_vec2d_from_f16(%arg0: f16) {
   %0 = vector.splat %arg0 : vector<[8]x[8]xf16>
   "prevent.dce"(%0) : (vector<[8]x[8]xf16>) -> ()
@@ -618,7 +695,7 @@ func.func @vector_print_tile(%tile: vector<[4]x[4]xf32>)
 // CHECK-DAG:     %[[VSCALE:.*]] = vector.vscale
 // CHECK-DAG:     %[[NUM_TILE_SLICES:.*]] = arith.muli %[[VSCALE]], %[[C4]] : index
 // CHECK-NEXT:      scf.for %[[TILE_SLICE_INDEX:.*]] = %[[C0]] to %[[NUM_TILE_SLICES]] step %[[C1]] {
-// CHECK-NEXT:        %[[TILE_SLICE:.*]] = arm_sme.move_tile_slice_to_vector %[[TILE]][%[[TILE_SLICE_INDEX]]] : vector<[4]xf32> from vector<[4]x[4]xf32>
+// CHECK-NEXT:        %[[TILE_SLICE:.*]] = arm_sme.extract_tile_slice %[[TILE]][%[[TILE_SLICE_INDEX]]] : vector<[4]xf32> from vector<[4]x[4]xf32>
 // CHECK-NEXT:        vector.print %[[TILE_SLICE]] : vector<[4]xf32>
 
 //===----------------------------------------------------------------------===//
@@ -848,7 +925,7 @@ func.func @vector_store_i128(%arg0 : memref<?x?xi128>) {
 // CHECK-SAME:                       %[[INDEX:.*]]: index)
 func.func @vector_insert_slice_i32(%slice: vector<[4]xi32>, %row: index) -> vector<[4]x[4]xi32>{
   // CHECK-NEXT: %[[TILE:.*]] = arm_sme.get_tile : vector<[4]x[4]xi32>
-  // CHECK-NEXT: arm_sme.move_vector_to_tile_slice %[[SLICE]], %[[TILE]], %[[INDEX]] : vector<[4]xi32> into vector<[4]x[4]xi32>
+  // CHECK-NEXT: arm_sme.insert_tile_slice %[[SLICE]], %[[TILE]][%[[INDEX]]] : vector<[4]xi32> into vector<[4]x[4]xi32>
   %tile = arm_sme.get_tile : vector<[4]x[4]xi32>
   %new_tile = vector.insert %slice, %tile[%row] : vector<[4]xi32> into vector<[4]x[4]xi32>
   return %new_tile : vector<[4]x[4]xi32>
@@ -858,7 +935,7 @@ func.func @vector_insert_slice_i32(%slice: vector<[4]xi32>, %row: index) -> vect
 
 // CHECK-LABEL: @vector_insert_slice_i8
 func.func @vector_insert_slice_i8(%slice: vector<[16]xi8>, %row: index) -> vector<[16]x[16]xi8> {
-  // CHECK: arm_sme.move_vector_to_tile_slice %{{.*}} : vector<[16]xi8> into vector<[16]x[16]xi8>
+  // CHECK: arm_sme.insert_tile_slice %{{.*}} : vector<[16]xi8> into vector<[16]x[16]xi8>
   %tile = arm_sme.get_tile : vector<[16]x[16]xi8>
   %new_tile = vector.insert %slice, %tile[%row] : vector<[16]xi8> into vector<[16]x[16]xi8>
   return %new_tile : vector<[16]x[16]xi8>
@@ -868,7 +945,7 @@ func.func @vector_insert_slice_i8(%slice: vector<[16]xi8>, %row: index) -> vecto
 
 // CHECK-LABEL: @vector_insert_slice_i16
 func.func @vector_insert_slice_i16(%slice: vector<[8]xi16>, %row: index) -> vector<[8]x[8]xi16> {
-  // CHECK: arm_sme.move_vector_to_tile_slice %{{.*}} : vector<[8]xi16> into vector<[8]x[8]xi16>
+  // CHECK: arm_sme.insert_tile_slice %{{.*}} : vector<[8]xi16> into vector<[8]x[8]xi16>
   %tile = arm_sme.get_tile : vector<[8]x[8]xi16>
   %new_tile = vector.insert %slice, %tile[%row] : vector<[8]xi16> into vector<[8]x[8]xi16>
   return %new_tile : vector<[8]x[8]xi16>
@@ -878,7 +955,7 @@ func.func @vector_insert_slice_i16(%slice: vector<[8]xi16>, %row: index) -> vect
 
 // CHECK-LABEL: @vector_insert_slice_i64
 func.func @vector_insert_slice_i64(%slice: vector<[2]xi64>, %row: index) -> vector<[2]x[2]xi64> {
-  // CHECK: arm_sme.move_vector_to_tile_slice %{{.*}} : vector<[2]xi64> into vector<[2]x[2]xi64>
+  // CHECK: arm_sme.insert_tile_slice %{{.*}} : vector<[2]xi64> into vector<[2]x[2]xi64>
   %tile = arm_sme.get_tile : vector<[2]x[2]xi64>
   %new_tile = vector.insert %slice, %tile[%row] : vector<[2]xi64> into vector<[2]x[2]xi64>
   return %new_tile : vector<[2]x[2]xi64>
@@ -888,7 +965,7 @@ func.func @vector_insert_slice_i64(%slice: vector<[2]xi64>, %row: index) -> vect
 
 // CHECK-LABEL: @vector_insert_slice_i128
 func.func @vector_insert_slice_i128(%slice: vector<[1]xi128>, %row: index) -> vector<[1]x[1]xi128> {
-  // CHECK: arm_sme.move_vector_to_tile_slice %{{.*}} : vector<[1]xi128> into vector<[1]x[1]xi128>
+  // CHECK: arm_sme.insert_tile_slice %{{.*}} : vector<[1]xi128> into vector<[1]x[1]xi128>
   %tile = arm_sme.get_tile : vector<[1]x[1]xi128>
   %new_tile = vector.insert %slice, %tile[%row] : vector<[1]xi128> into vector<[1]x[1]xi128>
   return %new_tile : vector<[1]x[1]xi128>
@@ -898,7 +975,7 @@ func.func @vector_insert_slice_i128(%slice: vector<[1]xi128>, %row: index) -> ve
 
 // CHECK-LABEL: @vector_insert_slice_f16
 func.func @vector_insert_slice_f16(%slice: vector<[8]xf16>, %row: index) -> vector<[8]x[8]xf16> {
-  // CHECK: arm_sme.move_vector_to_tile_slice %{{.*}} : vector<[8]xf16> into vector<[8]x[8]xf16>
+  // CHECK: arm_sme.insert_tile_slice %{{.*}} : vector<[8]xf16> into vector<[8]x[8]xf16>
   %tile = arm_sme.get_tile : vector<[8]x[8]xf16>
   %new_tile = vector.insert %slice, %tile[%row] : vector<[8]xf16> into vector<[8]x[8]xf16>
   return %new_tile : vector<[8]x[8]xf16>
@@ -908,7 +985,7 @@ func.func @vector_insert_slice_f16(%slice: vector<[8]xf16>, %row: index) -> vect
 
 // CHECK-LABEL: @vector_insert_slice_bf16
 func.func @vector_insert_slice_bf16(%slice: vector<[8]xbf16>, %row: index) -> vector<[8]x[8]xbf16> {
-  // CHECK: arm_sme.move_vector_to_tile_slice %{{.*}} : vector<[8]xbf16> into vector<[8]x[8]xbf16>
+  // CHECK: arm_sme.insert_tile_slice %{{.*}} : vector<[8]xbf16> into vector<[8]x[8]xbf16>
   %tile = arm_sme.get_tile : vector<[8]x[8]xbf16>
   %new_tile = vector.insert %slice, %tile[%row] : vector<[8]xbf16> into vector<[8]x[8]xbf16>
   return %new_tile : vector<[8]x[8]xbf16>
@@ -918,7 +995,7 @@ func.func @vector_insert_slice_bf16(%slice: vector<[8]xbf16>, %row: index) -> ve
 
 // CHECK-LABEL: @vector_insert_slice_f32
 func.func @vector_insert_slice_f32(%slice: vector<[4]xf32>, %row: index) -> vector<[4]x[4]xf32> {
-  // CHECK: arm_sme.move_vector_to_tile_slice %{{.*}} : vector<[4]xf32> into vector<[4]x[4]xf32>
+  // CHECK: arm_sme.insert_tile_slice %{{.*}} : vector<[4]xf32> into vector<[4]x[4]xf32>
   %tile = arm_sme.get_tile : vector<[4]x[4]xf32>
   %new_tile = vector.insert %slice, %tile[%row] : vector<[4]xf32> into vector<[4]x[4]xf32>
   return %new_tile : vector<[4]x[4]xf32>
@@ -928,7 +1005,7 @@ func.func @vector_insert_slice_f32(%slice: vector<[4]xf32>, %row: index) -> vect
 
 // CHECK-LABEL: @vector_insert_slice_f64
 func.func @vector_insert_slice_f64(%slice: vector<[2]xf64>, %row: index) -> vector<[2]x[2]xf64> {
-  // CHECK: arm_sme.move_vector_to_tile_slice %{{.*}} : vector<[2]xf64> into vector<[2]x[2]xf64>
+  // CHECK: arm_sme.insert_tile_slice %{{.*}} : vector<[2]xf64> into vector<[2]x[2]xf64>
   %tile = arm_sme.get_tile : vector<[2]x[2]xf64>
   %new_tile = vector.insert %slice, %tile[%row] : vector<[2]xf64> into vector<[2]x[2]xf64>
   return %new_tile : vector<[2]x[2]xf64>
@@ -942,9 +1019,9 @@ func.func @vector_insert_slice_f64(%slice: vector<[2]xf64>, %row: index) -> vect
 // CHECK-SAME:                         %[[COL:.*]]: index)
 func.func @vector_insert_element_i32(%el: i32, %row: index, %col: index) -> vector<[4]x[4]xi32> {
   // CHECK-NEXT: %[[TILE:.*]] = arm_sme.get_tile : vector<[4]x[4]xi32>
-  // CHECK-NEXT: %[[SLICE:.*]] = arm_sme.move_tile_slice_to_vector %[[TILE]][%[[ROW]]] : vector<[4]xi32> from vector<[4]x[4]xi32>
+  // CHECK-NEXT: %[[SLICE:.*]] = arm_sme.extract_tile_slice %[[TILE]][%[[ROW]]] : vector<[4]xi32> from vector<[4]x[4]xi32>
   // CHECK-NEXT: %[[NEW_SLICE:.*]] = vector.insert %[[EL]], %[[SLICE]] [%[[COL]]] : i32 into vector<[4]xi32>
-  // CHECK-NEXT: arm_sme.move_vector_to_tile_slice %[[NEW_SLICE]], %[[TILE]], %[[ROW]] : vector<[4]xi32> into vector<[4]x[4]xi32>
+  // CHECK-NEXT: arm_sme.insert_tile_slice %[[NEW_SLICE]], %[[TILE]][%[[ROW]]] : vector<[4]xi32> into vector<[4]x[4]xi32>
   %tile = arm_sme.get_tile : vector<[4]x[4]xi32>
   %new_tile = vector.insert %el, %tile[%row, %col] : i32 into vector<[4]x[4]xi32>
   return %new_tile : vector<[4]x[4]xi32>
@@ -955,8 +1032,8 @@ func.func @vector_insert_element_i32(%el: i32, %row: index, %col: index) -> vect
 // CHECK-LABEL: @vector_insert_element_i8
 func.func @vector_insert_element_i8(%el: i8, %row: index, %col: index) -> vector<[16]x[16]xi8> {
   // CHECK: %[[TILE:.*]] = arm_sme.get_tile : vector<[16]x[16]xi8>
-  // CHECK: arm_sme.move_tile_slice_to_vector %[[TILE]]{{.*}} : vector<[16]xi8> from vector<[16]x[16]xi8>
-  // CHECK: arm_sme.move_vector_to_tile_slice %{{.*}}, %[[TILE]], %{{.*}} : vector<[16]xi8> into vector<[16]x[16]xi8>
+  // CHECK: arm_sme.extract_tile_slice %[[TILE]]{{.*}} : vector<[16]xi8> from vector<[16]x[16]xi8>
+  // CHECK: arm_sme.insert_tile_slice %{{.*}}, %[[TILE]][%{{.*}}] : vector<[16]xi8> into vector<[16]x[16]xi8>
   %tile = arm_sme.get_tile : vector<[16]x[16]xi8>
   %new_tile = vector.insert %el, %tile[%row, %col] : i8 into vector<[16]x[16]xi8>
   return %new_tile : vector<[16]x[16]xi8>
@@ -967,8 +1044,8 @@ func.func @vector_insert_element_i8(%el: i8, %row: index, %col: index) -> vector
 // CHECK-LABEL: @vector_insert_element_i16
 func.func @vector_insert_element_i16(%el: i16, %row: index, %col: index) -> vector<[8]x[8]xi16> {
   // CHECK: %[[TILE:.*]] = arm_sme.get_tile : vector<[8]x[8]xi16>
-  // CHECK: arm_sme.move_tile_slice_to_vector %[[TILE]]{{.*}} : vector<[8]xi16> from vector<[8]x[8]xi16>
-  // CHECK: arm_sme.move_vector_to_tile_slice %{{.*}}, %[[TILE]], %{{.*}} : vector<[8]xi16> into vector<[8]x[8]xi16>
+  // CHECK: arm_sme.extract_tile_slice %[[TILE]]{{.*}} : vector<[8]xi16> from vector<[8]x[8]xi16>
+  // CHECK: arm_sme.insert_tile_slice %{{.*}}, %[[TILE]][%{{.*}}] : vector<[8]xi16> into vector<[8]x[8]xi16>
   %tile = arm_sme.get_tile : vector<[8]x[8]xi16>
   %new_tile = vector.insert %el, %tile[%row, %col] : i16 into vector<[8]x[8]xi16>
   return %new_tile : vector<[8]x[8]xi16>
@@ -979,8 +1056,8 @@ func.func @vector_insert_element_i16(%el: i16, %row: index, %col: index) -> vect
 // CHECK-LABEL: @vector_insert_element_i64
 func.func @vector_insert_element_i64(%el: i64, %row: index, %col: index) -> vector<[2]x[2]xi64> {
   // CHECK: %[[TILE:.*]] = arm_sme.get_tile : vector<[2]x[2]xi64>
-  // CHECK: arm_sme.move_tile_slice_to_vector %[[TILE]]{{.*}} : vector<[2]xi64> from vector<[2]x[2]xi64>
-  // CHECK: arm_sme.move_vector_to_tile_slice %{{.*}}, %[[TILE]], %{{.*}} : vector<[2]xi64> into vector<[2]x[2]xi64>
+  // CHECK: arm_sme.extract_tile_slice %[[TILE]]{{.*}} : vector<[2]xi64> from vector<[2]x[2]xi64>
+  // CHECK: arm_sme.insert_tile_slice %{{.*}}, %[[TILE]][%{{.*}}] : vector<[2]xi64> into vector<[2]x[2]xi64>
   %tile = arm_sme.get_tile : vector<[2]x[2]xi64>
   %new_tile = vector.insert %el, %tile[%row, %col] : i64 into vector<[2]x[2]xi64>
   return %new_tile : vector<[2]x[2]xi64>
@@ -991,8 +1068,8 @@ func.func @vector_insert_element_i64(%el: i64, %row: index, %col: index) -> vect
 // CHECK-LABEL: @vector_insert_element_i128
 func.func @vector_insert_element_i128(%el: i128, %row: index, %col: index) -> vector<[1]x[1]xi128> {
   // CHECK: %[[TILE:.*]] = arm_sme.get_tile : vector<[1]x[1]xi128>
-  // CHECK: arm_sme.move_tile_slice_to_vector %[[TILE]]{{.*}} : vector<[1]xi128> from vector<[1]x[1]xi128>
-  // CHECK: arm_sme.move_vector_to_tile_slice %{{.*}}, %[[TILE]], %{{.*}} : vector<[1]xi128> into vector<[1]x[1]xi128>
+  // CHECK: arm_sme.extract_tile_slice %[[TILE]]{{.*}} : vector<[1]xi128> from vector<[1]x[1]xi128>
+  // CHECK: arm_sme.insert_tile_slice %{{.*}}, %[[TILE]][%{{.*}}] : vector<[1]xi128> into vector<[1]x[1]xi128>
   %tile = arm_sme.get_tile : vector<[1]x[1]xi128>
   %new_tile = vector.insert %el, %tile[%row, %col] : i128 into vector<[1]x[1]xi128>
   return %new_tile : vector<[1]x[1]xi128>
@@ -1003,8 +1080,8 @@ func.func @vector_insert_element_i128(%el: i128, %row: index, %col: index) -> ve
 // CHECK-LABEL: @vector_insert_element_f16
 func.func @vector_insert_element_f16(%el: f16, %row: index, %col: index) -> vector<[8]x[8]xf16> {
   // CHECK: %[[TILE:.*]] = arm_sme.get_tile : vector<[8]x[8]xf16>
-  // CHECK: arm_sme.move_tile_slice_to_vector %[[TILE]]{{.*}} : vector<[8]xf16> from vector<[8]x[8]xf16>
-  // CHECK: arm_sme.move_vector_to_tile_slice %{{.*}}, %[[TILE]], %{{.*}} : vector<[8]xf16> into vector<[8]x[8]xf16>
+  // CHECK: arm_sme.extract_tile_slice %[[TILE]]{{.*}} : vector<[8]xf16> from vector<[8]x[8]xf16>
+  // CHECK: arm_sme.insert_tile_slice %{{.*}}, %[[TILE]][%{{.*}}] : vector<[8]xf16> into vector<[8]x[8]xf16>
   %tile = arm_sme.get_tile : vector<[8]x[8]xf16>
   %new_tile = vector.insert %el, %tile[%row, %col] : f16 into vector<[8]x[8]xf16>
   return %new_tile : vector<[8]x[8]xf16>
@@ -1015,8 +1092,8 @@ func.func @vector_insert_element_f16(%el: f16, %row: index, %col: index) -> vect
 // CHECK-LABEL: @vector_insert_element_bf16
 func.func @vector_insert_element_bf16(%el: bf16, %row: index, %col: index) -> vector<[8]x[8]xbf16> {
   // CHECK: %[[TILE:.*]] = arm_sme.get_tile : vector<[8]x[8]xbf16>
-  // CHECK: arm_sme.move_tile_slice_to_vector %[[TILE]]{{.*}} : vector<[8]xbf16> from vector<[8]x[8]xbf16>
-  // CHECK: arm_sme.move_vector_to_tile_slice %{{.*}}, %[[TILE]], %{{.*}} : vector<[8]xbf16> into vector<[8]x[8]xbf16>
+  // CHECK: arm_sme.extract_tile_slice %[[TILE]]{{.*}} : vector<[8]xbf16> from vector<[8]x[8]xbf16>
+  // CHECK: arm_sme.insert_tile_slice %{{.*}}, %[[TILE]][%{{.*}}] : vector<[8]xbf16> into vector<[8]x[8]xbf16>
   %tile = arm_sme.get_tile : vector<[8]x[8]xbf16>
   %new_tile = vector.insert %el, %tile[%row, %col] : bf16 into vector<[8]x[8]xbf16>
   return %new_tile : vector<[8]x[8]xbf16>
@@ -1027,8 +1104,8 @@ func.func @vector_insert_element_bf16(%el: bf16, %row: index, %col: index) -> ve
 // CHECK-LABEL: @vector_insert_element_f32
 func.func @vector_insert_element_f32(%el: f32, %row: index, %col: index) -> vector<[4]x[4]xf32> {
   // CHECK: %[[TILE:.*]] = arm_sme.get_tile : vector<[4]x[4]xf32>
-  // CHECK: arm_sme.move_tile_slice_to_vector %[[TILE]]{{.*}} : vector<[4]xf32> from vector<[4]x[4]xf32>
-  // CHECK: arm_sme.move_vector_to_tile_slice %{{.*}}, %[[TILE]], %{{.*}} : vector<[4]xf32> into vector<[4]x[4]xf32>
+  // CHECK: arm_sme.extract_tile_slice %[[TILE]]{{.*}} : vector<[4]xf32> from vector<[4]x[4]xf32>
+  // CHECK: arm_sme.insert_tile_slice %{{.*}}, %[[TILE]][%{{.*}}] : vector<[4]xf32> into vector<[4]x[4]xf32>
   %tile = arm_sme.get_tile : vector<[4]x[4]xf32>
   %new_tile = vector.insert %el, %tile[%row, %col] : f32 into vector<[4]x[4]xf32>
   return %new_tile : vector<[4]x[4]xf32>
@@ -1039,15 +1116,15 @@ func.func @vector_insert_element_f32(%el: f32, %row: index, %col: index) -> vect
 // CHECK-LABEL: @vector_insert_element_f64
 func.func @vector_insert_element_f64(%el: f64, %row: index, %col: index) -> vector<[2]x[2]xf64> {
   // CHECK: %[[TILE:.*]] = arm_sme.get_tile : vector<[2]x[2]xf64>
-  // CHECK: arm_sme.move_tile_slice_to_vector %[[TILE]]{{.*}} : vector<[2]xf64> from vector<[2]x[2]xf64>
-  // CHECK: arm_sme.move_vector_to_tile_slice %{{.*}}, %[[TILE]], %{{.*}} : vector<[2]xf64> into vector<[2]x[2]xf64>
+  // CHECK: arm_sme.extract_tile_slice %[[TILE]]{{.*}} : vector<[2]xf64> from vector<[2]x[2]xf64>
+  // CHECK: arm_sme.insert_tile_slice %{{.*}}, %[[TILE]][%{{.*}}] : vector<[2]xf64> into vector<[2]x[2]xf64>
   %tile = arm_sme.get_tile : vector<[2]x[2]xf64>
   %new_tile = vector.insert %el, %tile[%row, %col] : f64 into vector<[2]x[2]xf64>
   return %new_tile : vector<[2]x[2]xf64>
 }
 
 //===----------------------------------------------------------------------===//
-// vector.extract
+// vector.extract --> arm_sme.extract_tile_slice
 //===----------------------------------------------------------------------===//
 
 // -----
@@ -1056,7 +1133,7 @@ func.func @vector_insert_element_f64(%el: f64, %row: index, %col: index) -> vect
 // CHECK-SAME:                            %[[INDEX:.*]]: index)
 func.func @vector_extract_slice_i32(%row: index) -> vector<[4]xi32> {
   // CHECK: %[[TILE:.*]] = arm_sme.get_tile : vector<[4]x[4]xi32>
-  // CHECK: arm_sme.move_tile_slice_to_vector %[[TILE]][%[[INDEX]]] : vector<[4]xi32> from vector<[4]x[4]xi32>
+  // CHECK: arm_sme.extract_tile_slice %[[TILE]][%[[INDEX]]] : vector<[4]xi32> from vector<[4]x[4]xi32>
   %tile = arm_sme.get_tile : vector<[4]x[4]xi32>
   %slice = vector.extract %tile[%row] : vector<[4]xi32> from vector<[4]x[4]xi32>
   return %slice : vector<[4]xi32>
@@ -1066,7 +1143,7 @@ func.func @vector_extract_slice_i32(%row: index) -> vector<[4]xi32> {
 
 // CHECK-LABEL: @vector_extract_slice_i8
 func.func @vector_extract_slice_i8(%row: index) -> vector<[16]xi8> {
-  // CHECK: arm_sme.move_tile_slice_to_vector {{.*}} : vector<[16]xi8> from vector<[16]x[16]xi8>
+  // CHECK: arm_sme.extract_tile_slice {{.*}} : vector<[16]xi8> from vector<[16]x[16]xi8>
   %tile = arm_sme.get_tile : vector<[16]x[16]xi8>
   %slice = vector.extract %tile[%row] : vector<[16]xi8> from vector<[16]x[16]xi8>
   return %slice : vector<[16]xi8>
@@ -1076,7 +1153,7 @@ func.func @vector_extract_slice_i8(%row: index) -> vector<[16]xi8> {
 
 // CHECK-LABEL: @vector_extract_slice_i16
 func.func @vector_extract_slice_i16(%row: index) -> vector<[8]xi16> {
-  // CHECK: arm_sme.move_tile_slice_to_vector {{.*}} : vector<[8]xi16> from vector<[8]x[8]xi16>
+  // CHECK: arm_sme.extract_tile_slice {{.*}} : vector<[8]xi16> from vector<[8]x[8]xi16>
   %tile = arm_sme.get_tile : vector<[8]x[8]xi16>
   %slice = vector.extract %tile[%row] : vector<[8]xi16> from vector<[8]x[8]xi16>
   return %slice : vector<[8]xi16>
@@ -1086,7 +1163,7 @@ func.func @vector_extract_slice_i16(%row: index) -> vector<[8]xi16> {
 
 // CHECK-LABEL: @vector_extract_slice_i64
 func.func @vector_extract_slice_i64(%row: index) -> vector<[2]xi64> {
-  // CHECK: arm_sme.move_tile_slice_to_vector {{.*}} : vector<[2]xi64> from vector<[2]x[2]xi64>
+  // CHECK: arm_sme.extract_tile_slice {{.*}} : vector<[2]xi64> from vector<[2]x[2]xi64>
   %tile = arm_sme.get_tile : vector<[2]x[2]xi64>
   %slice = vector.extract %tile[%row] : vector<[2]xi64> from vector<[2]x[2]xi64>
   return %slice : vector<[2]xi64>
@@ -1096,7 +1173,7 @@ func.func @vector_extract_slice_i64(%row: index) -> vector<[2]xi64> {
 
 // CHECK-LABEL: @vector_extract_slice_i128
 func.func @vector_extract_slice_i128(%row: index) -> vector<[1]xi128> {
-  // CHECK: arm_sme.move_tile_slice_to_vector {{.*}} : vector<[1]xi128> from vector<[1]x[1]xi128>
+  // CHECK: arm_sme.extract_tile_slice {{.*}} : vector<[1]xi128> from vector<[1]x[1]xi128>
   %tile = arm_sme.get_tile : vector<[1]x[1]xi128>
   %slice = vector.extract %tile[%row] : vector<[1]xi128> from vector<[1]x[1]xi128>
   return %slice : vector<[1]xi128>
@@ -1106,7 +1183,7 @@ func.func @vector_extract_slice_i128(%row: index) -> vector<[1]xi128> {
 
 // CHECK-LABEL: @vector_extract_slice_f16
 func.func @vector_extract_slice_f16(%row: index) -> vector<[8]xf16> {
-  // CHECK: arm_sme.move_tile_slice_to_vector {{.*}} : vector<[8]xf16> from vector<[8]x[8]xf16>
+  // CHECK: arm_sme.extract_tile_slice {{.*}} : vector<[8]xf16> from vector<[8]x[8]xf16>
   %tile = arm_sme.get_tile : vector<[8]x[8]xf16>
   %slice = vector.extract %tile[%row] : vector<[8]xf16> from vector<[8]x[8]xf16>
   return %slice : vector<[8]xf16>
@@ -1116,7 +1193,7 @@ func.func @vector_extract_slice_f16(%row: index) -> vector<[8]xf16> {
 
 // CHECK-LABEL: @vector_extract_slice_bf16
 func.func @vector_extract_slice_bf16(%row: index) -> vector<[8]xbf16> {
-  // CHECK: arm_sme.move_tile_slice_to_vector {{.*}} : vector<[8]xbf16> from vector<[8]x[8]xbf16>
+  // CHECK: arm_sme.extract_tile_slice {{.*}} : vector<[8]xbf16> from vector<[8]x[8]xbf16>
   %tile = arm_sme.get_tile : vector<[8]x[8]xbf16>
   %slice = vector.extract %tile[%row] : vector<[8]xbf16> from vector<[8]x[8]xbf16>
   return %slice : vector<[8]xbf16>
@@ -1126,7 +1203,7 @@ func.func @vector_extract_slice_bf16(%row: index) -> vector<[8]xbf16> {
 
 // CHECK-LABEL: @vector_extract_slice_f32
 func.func @vector_extract_slice_f32(%row: index) -> vector<[4]xf32> {
-  // CHECK: arm_sme.move_tile_slice_to_vector {{.*}} : vector<[4]xf32> from vector<[4]x[4]xf32>
+  // CHECK: arm_sme.extract_tile_slice {{.*}} : vector<[4]xf32> from vector<[4]x[4]xf32>
   %tile = arm_sme.get_tile : vector<[4]x[4]xf32>
   %slice = vector.extract %tile[%row] : vector<[4]xf32> from vector<[4]x[4]xf32>
   return %slice : vector<[4]xf32>
@@ -1136,7 +1213,7 @@ func.func @vector_extract_slice_f32(%row: index) -> vector<[4]xf32> {
 
 // CHECK-LABEL: @vector_extract_slice_f64
 func.func @vector_extract_slice_f64(%row: index) -> vector<[2]xf64> {
-  // CHECK: arm_sme.move_tile_slice_to_vector {{.*}} : vector<[2]xf64> from vector<[2]x[2]xf64>
+  // CHECK: arm_sme.extract_tile_slice {{.*}} : vector<[2]xf64> from vector<[2]x[2]xf64>
   %tile = arm_sme.get_tile : vector<[2]x[2]xf64>
   %slice = vector.extract %tile[%row] : vector<[2]xf64> from vector<[2]x[2]xf64>
   return %slice : vector<[2]xf64>
@@ -1149,7 +1226,7 @@ func.func @vector_extract_slice_f64(%row: index) -> vector<[2]xf64> {
 // CHECK-SAME:                          %[[COL:.*]]: index)
 func.func @vector_extract_element(%row: index, %col: index) -> i32 {
   // CHECK-NEXT: %[[TILE:.*]] = arm_sme.get_tile : vector<[4]x[4]xi32>
-  // CHECK-NEXT: %[[SLICE:.*]] = arm_sme.move_tile_slice_to_vector %[[TILE]][%[[ROW]]] : vector<[4]xi32> from vector<[4]x[4]xi32>
+  // CHECK-NEXT: %[[SLICE:.*]] = arm_sme.extract_tile_slice %[[TILE]][%[[ROW]]] : vector<[4]xi32> from vector<[4]x[4]xi32>
   // CHECK-NEXT: %[[EL:.*]] = vector.extract %[[SLICE]]{{\[}}%[[COL]]] : i32 from vector<[4]xi32>
   %tile = arm_sme.get_tile : vector<[4]x[4]xi32>
   %el = vector.extract %tile[%row, %col] : i32 from vector<[4]x[4]xi32>
@@ -1160,7 +1237,7 @@ func.func @vector_extract_element(%row: index, %col: index) -> i32 {
 
 // CHECK-LABEL: @vector_extract_element_i8
 func.func @vector_extract_element_i8(%row: index, %col: index) -> i8 {
-  // CHECK: %[[SLICE:.*]] = arm_sme.move_tile_slice_to_vector %{{.*}} : vector<[16]xi8> from vector<[16]x[16]xi8>
+  // CHECK: %[[SLICE:.*]] = arm_sme.extract_tile_slice %{{.*}} : vector<[16]xi8> from vector<[16]x[16]xi8>
   // CHECK-NEXT: %{{.*}} = vector.extract %[[SLICE]]{{\[}}%{{.*}}] : i8 from vector<[16]xi8>
   %tile = arm_sme.get_tile : vector<[16]x[16]xi8>
   %el = vector.extract %tile[%row, %col] : i8 from vector<[16]x[16]xi8>
@@ -1171,7 +1248,7 @@ func.func @vector_extract_element_i8(%row: index, %col: index) -> i8 {
 
 // CHECK-LABEL: @vector_extract_element_i16
 func.func @vector_extract_element_i16(%row: index, %col: index) -> i16 {
-  // CHECK: %[[SLICE:.*]] = arm_sme.move_tile_slice_to_vector %{{.*}} : vector<[8]xi16> from vector<[8]x[8]xi16>
+  // CHECK: %[[SLICE:.*]] = arm_sme.extract_tile_slice %{{.*}} : vector<[8]xi16> from vector<[8]x[8]xi16>
   // CHECK-NEXT: %{{.*}} = vector.extract %[[SLICE]]{{\[}}%{{.*}}] : i16 from vector<[8]xi16>
   %tile = arm_sme.get_tile : vector<[8]x[8]xi16>
   %el = vector.extract %tile[%row, %col] : i16 from vector<[8]x[8]xi16>
@@ -1182,7 +1259,7 @@ func.func @vector_extract_element_i16(%row: index, %col: index) -> i16 {
 
 // CHECK-LABEL: @vector_extract_element_i64
 func.func @vector_extract_element_i64(%row: index, %col: index) -> i64 {
-  // CHECK: %[[SLICE:.*]] = arm_sme.move_tile_slice_to_vector %{{.*}} : vector<[2]xi64> from vector<[2]x[2]xi64>
+  // CHECK: %[[SLICE:.*]] = arm_sme.extract_tile_slice %{{.*}} : vector<[2]xi64> from vector<[2]x[2]xi64>
   // CHECK-NEXT: %{{.*}} = vector.extract %[[SLICE]]{{\[}}%{{.*}}] : i64 from vector<[2]xi64>
   %tile = arm_sme.get_tile : vector<[2]x[2]xi64>
   %el = vector.extract %tile[%row, %col] : i64 from vector<[2]x[2]xi64>
@@ -1193,7 +1270,7 @@ func.func @vector_extract_element_i64(%row: index, %col: index) -> i64 {
 
 // CHECK-LABEL: @vector_extract_element_i128
 func.func @vector_extract_element_i128(%row: index, %col: index) -> i128 {
-  // CHECK: %[[SLICE:.*]] = arm_sme.move_tile_slice_to_vector %{{.*}} : vector<[1]xi128> from vector<[1]x[1]xi128>
+  // CHECK: %[[SLICE:.*]] = arm_sme.extract_tile_slice %{{.*}} : vector<[1]xi128> from vector<[1]x[1]xi128>
   // CHECK-NEXT: %{{.*}} = vector.extract %[[SLICE]]{{\[}}%{{.*}}] : i128 from vector<[1]xi128>
   %tile = arm_sme.get_tile : vector<[1]x[1]xi128>
   %el = vector.extract %tile[%row, %col] : i128 from vector<[1]x[1]xi128>
@@ -1204,7 +1281,7 @@ func.func @vector_extract_element_i128(%row: index, %col: index) -> i128 {
 
 // CHECK-LABEL: @vector_extract_element_f16
 func.func @vector_extract_element_f16(%row: index, %col: index) -> f16 {
-  // CHECK: %[[SLICE:.*]] = arm_sme.move_tile_slice_to_vector %{{.*}} : vector<[8]xf16> from vector<[8]x[8]xf16>
+  // CHECK: %[[SLICE:.*]] = arm_sme.extract_tile_slice %{{.*}} : vector<[8]xf16> from vector<[8]x[8]xf16>
   // CHECK-NEXT: %{{.*}} = vector.extract %[[SLICE]]{{\[}}%{{.*}}] : f16 from vector<[8]xf16>
   %tile = arm_sme.get_tile : vector<[8]x[8]xf16>
   %el = vector.extract %tile[%row, %col] : f16 from vector<[8]x[8]xf16>
@@ -1215,7 +1292,7 @@ func.func @vector_extract_element_f16(%row: index, %col: index) -> f16 {
 
 // CHECK-LABEL: @vector_extract_element_bf16
 func.func @vector_extract_element_bf16(%row: index, %col: index) -> bf16 {
-  // CHECK: %[[SLICE:.*]] = arm_sme.move_tile_slice_to_vector %{{.*}} : vector<[8]xbf16> from vector<[8]x[8]xbf16>
+  // CHECK: %[[SLICE:.*]] = arm_sme.extract_tile_slice %{{.*}} : vector<[8]xbf16> from vector<[8]x[8]xbf16>
   // CHECK-NEXT: %{{.*}} = vector.extract %[[SLICE]]{{\[}}%{{.*}}] : bf16 from vector<[8]xbf16>
   %tile = arm_sme.get_tile : vector<[8]x[8]xbf16>
   %el = vector.extract %tile[%row, %col] : bf16 from vector<[8]x[8]xbf16>
@@ -1226,7 +1303,7 @@ func.func @vector_extract_element_bf16(%row: index, %col: index) -> bf16 {
 
 // CHECK-LABEL: @vector_extract_element_f32
 func.func @vector_extract_element_f32(%row: index, %col: index) -> f32 {
-  // CHECK: %[[SLICE:.*]] = arm_sme.move_tile_slice_to_vector %{{.*}} : vector<[4]xf32> from vector<[4]x[4]xf32>
+  // CHECK: %[[SLICE:.*]] = arm_sme.extract_tile_slice %{{.*}} : vector<[4]xf32> from vector<[4]x[4]xf32>
   // CHECK-NEXT: %{{.*}} = vector.extract %[[SLICE]]{{\[}}%{{.*}}] : f32 from vector<[4]xf32>
   %tile = arm_sme.get_tile : vector<[4]x[4]xf32>
   %el = vector.extract %tile[%row, %col] : f32 from vector<[4]x[4]xf32>
@@ -1237,9 +1314,43 @@ func.func @vector_extract_element_f32(%row: index, %col: index) -> f32 {
 
 // CHECK-LABEL: @vector_extract_element_f64
 func.func @vector_extract_element_f64(%row: index, %col: index) -> f64 {
-  // CHECK: %[[SLICE:.*]] = arm_sme.move_tile_slice_to_vector %{{.*}} : vector<[2]xf64> from vector<[2]x[2]xf64>
+  // CHECK: %[[SLICE:.*]] = arm_sme.extract_tile_slice %{{.*}} : vector<[2]xf64> from vector<[2]x[2]xf64>
   // CHECK-NEXT: %{{.*}} = vector.extract %[[SLICE]]{{\[}}%{{.*}}] : f64 from vector<[2]xf64>
   %tile = arm_sme.get_tile : vector<[2]x[2]xf64>
   %el = vector.extract %tile[%row, %col] : f64 from vector<[2]x[2]xf64>
   return %el : f64
+}
+
+//===----------------------------------------------------------------------===//
+// vector.extract --> arm_sve.psel
+//===----------------------------------------------------------------------===//
+
+// -----
+
+// CHECK-LABEL: @dynamic_vector_extract_mask_to_psel(
+// CHECK-SAME:    %[[A:.*]]:  index, %[[B:.*]]: index, %[[INDEX:.*]]: index)
+func.func @dynamic_vector_extract_mask_to_psel(%a: index, %b: index, %index: index) -> vector<[8]xi1>
+{
+  // CHECK: %[[MASK_ROWS:.*]] = vector.create_mask %[[A]] : vector<[4]xi1>
+  // CHECK: %[[MASK_COLS:.*]] = vector.create_mask %[[B]] : vector<[8]xi1>
+  // CHECK: arm_sve.psel %[[MASK_COLS]], %[[MASK_ROWS]][%[[INDEX]]] : vector<[8]xi1>, vector<[4]xi1>
+  %mask = vector.create_mask %a, %b : vector<[4]x[8]xi1>
+  %slice = vector.extract %mask[%index] : vector<[8]xi1> from vector<[4]x[8]xi1>
+  return %slice : vector<[8]xi1>
+}
+
+// -----
+
+// CHECK-LABEL: @vector_extract_mask_to_psel(
+// CHECK-SAME:                               %[[A:.*]]: index,
+// CHECK-SAME:                               %[[B:.*]]: index)
+func.func @vector_extract_mask_to_psel(%a: index, %b: index) -> vector<[2]xi1>
+{
+  // CHECK: %[[C1:.*]] = arith.constant 1 : index
+  // CHECK: %[[MASK_ROWS:.*]] = vector.create_mask %[[A]] : vector<[16]xi1>
+  // CHECK: %[[MASK_COLS:.*]] = vector.create_mask %[[B]] : vector<[2]xi1>
+  // CHECK: arm_sve.psel %[[MASK_COLS]], %[[MASK_ROWS]][%[[C1]]] : vector<[2]xi1>, vector<[16]xi1>
+  %mask = vector.create_mask %a, %b : vector<[16]x[2]xi1>
+  %slice = vector.extract %mask[1] : vector<[2]xi1> from vector<[16]x[2]xi1>
+  return %slice : vector<[2]xi1>
 }

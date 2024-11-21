@@ -63,7 +63,7 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple) {
   if (TraitSelector::TraitSelectorEnum == TraitSelector::device_arch) {        \
     if (TargetTriple.getArch() == TargetTriple.getArchTypeForLLVMName(Str))    \
       ActiveTraits.set(unsigned(TraitProperty::Enum));                         \
-    if (StringRef(Str) == StringRef("x86_64") &&                               \
+    if (StringRef(Str) == "x86_64" &&                                          \
         TargetTriple.getArch() == Triple::x86_64)                              \
       ActiveTraits.set(unsigned(TraitProperty::Enum));                         \
   }

@@ -47,20 +47,41 @@ public:
   }
 
   // Return a const reference to the internal Id to Frame mappings.
+  LLVM_DEPRECATED("Use takeMemProfData instead", "takeMemProfData")
   const llvm::DenseMap<FrameId, Frame> &getFrameMapping() const {
     return IdToFrame;
   }
 
   // Return a const reference to the internal Id to call stacks.
+  LLVM_DEPRECATED("Use takeMemProfData instead", "takeMemProfData")
   const llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> &
   getCallStacks() const {
     return CSIdToCallStack;
   }
 
   // Return a const reference to the internal function profile data.
+  LLVM_DEPRECATED("Use takeMemProfData instead", "takeMemProfData")
   const llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> &
   getProfileData() const {
     return FunctionProfileData;
+  }
+
+  // Take the complete profile data.
+  IndexedMemProfData takeMemProfData() {
+    // TODO: Once we replace the three member variables, namely IdToFrame,
+    // CSIdToCallStack, and FunctionProfileData, with MemProfData, replace the
+    // following code with just "return std::move(MemProfData);".
+    IndexedMemProfData MemProfData;
+    // Copy key-value pairs because IdToFrame uses DenseMap, whereas
+    // IndexedMemProfData::Frames uses MapVector.
+    for (const auto &[FrameId, F] : IdToFrame)
+      MemProfData.Frames.try_emplace(FrameId, F);
+    // Copy key-value pairs because CSIdToCallStack uses DenseMap, whereas
+    // IndexedMemProfData::CallStacks uses MapVector.
+    for (const auto &[CSId, CS] : CSIdToCallStack)
+      MemProfData.CallStacks.try_emplace(CSId, CS);
+    MemProfData.Records = FunctionProfileData;
+    return MemProfData;
   }
 
   virtual Error
@@ -76,8 +97,8 @@ public:
       Callback =
           std::bind(&MemProfReader::idToFrame, this, std::placeholders::_1);
 
-    memprof::CallStackIdConverter<decltype(CSIdToCallStack)> CSIdConv(
-        CSIdToCallStack, Callback);
+    CallStackIdConverter<decltype(CSIdToCallStack)> CSIdConv(CSIdToCallStack,
+                                                             Callback);
 
     const IndexedMemProfRecord &IndexedRecord = Iter->second;
     GuidRecord = {
@@ -96,18 +117,31 @@ public:
   virtual ~MemProfReader() = default;
 
   // Initialize the MemProfReader with the frame mappings and profile contents.
+  LLVM_DEPRECATED("Construct MemProfReader with IndexedMemProfData",
+                  "MemProfReader")
   MemProfReader(
       llvm::DenseMap<FrameId, Frame> FrameIdMap,
       llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> ProfData);
 
   // Initialize the MemProfReader with the frame mappings, call stack mappings,
   // and profile contents.
+  LLVM_DEPRECATED("Construct MemProfReader with IndexedMemProfData",
+                  "MemProfReader")
   MemProfReader(
       llvm::DenseMap<FrameId, Frame> FrameIdMap,
       llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> CSIdMap,
       llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> ProfData)
       : IdToFrame(std::move(FrameIdMap)), CSIdToCallStack(std::move(CSIdMap)),
         FunctionProfileData(std::move(ProfData)) {}
+
+  // Initialize the MemProfReader with the given MemProf profile.
+  MemProfReader(IndexedMemProfData MemProfData) {
+    for (const auto &[FrameId, F] : MemProfData.Frames)
+      IdToFrame.try_emplace(FrameId, F);
+    for (const auto &[CSId, CS] : MemProfData.CallStacks)
+      CSIdToCallStack.try_emplace(CSId, CS);
+    FunctionProfileData = std::move(MemProfData.Records);
+  }
 
 protected:
   // A helper method to extract the frame from the IdToFrame map.
@@ -137,7 +171,7 @@ class RawMemProfReader final : public MemProfReader {
 public:
   RawMemProfReader(const RawMemProfReader &) = delete;
   RawMemProfReader &operator=(const RawMemProfReader &) = delete;
-  virtual ~RawMemProfReader() override = default;
+  virtual ~RawMemProfReader() override;
 
   // Prints the contents of the profile in YAML format.
   void printYAML(raw_ostream &OS);
@@ -161,7 +195,7 @@ public:
   // Returns a list of build ids recorded in the segment information.
   static std::vector<std::string> peekBuildIds(MemoryBuffer *DataBuffer);
 
-  virtual Error
+  Error
   readNextRecord(GuidMemProfRecordPair &GuidRecord,
                  std::function<const Frame(const FrameId)> Callback) override;
 
@@ -205,8 +239,14 @@ private:
 
   object::SectionedAddress getModuleOffset(uint64_t VirtualAddress);
 
+  llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>>
+  readMemInfoBlocks(const char *Ptr);
+
   // The profiled binary.
   object::OwningBinary<object::Binary> Binary;
+  // Version of raw memprof binary currently being read. Defaults to most up
+  // to date version.
+  uint64_t MemprofRawVersion = MEMPROF_RAW_VERSION;
   // The preferred load address of the executable segment.
   uint64_t PreferredTextSegmentAddress = 0;
   // The base address of the text segment in the process during profiling.

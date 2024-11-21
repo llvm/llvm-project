@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/WindowsResource.h"
 #include "llvm/Option/Arg.h"
@@ -39,6 +40,7 @@
 #include <optional>
 
 using namespace llvm::COFF;
+using namespace llvm::object;
 using namespace llvm::opt;
 using namespace llvm;
 using llvm::sys::Process;
@@ -413,7 +415,7 @@ std::string LinkerDriver::createDefaultXml() {
        << "  </dependency>\n";
   }
   os << "</assembly>\n";
-  return os.str();
+  return ret;
 }
 
 std::string
@@ -632,18 +634,6 @@ err:
   fatal("invalid /export: " + arg);
 }
 
-static StringRef undecorate(COFFLinkerContext &ctx, StringRef sym) {
-  if (ctx.config.machine != I386)
-    return sym;
-  // In MSVC mode, a fully decorated stdcall function is exported
-  // as-is with the leading underscore (with type IMPORT_NAME).
-  // In MinGW mode, a decorated stdcall function gets the underscore
-  // removed, just like normal cdecl functions.
-  if (sym.starts_with("_") && sym.contains('@') && !ctx.config.mingw)
-    return sym;
-  return sym.starts_with("_") ? sym.substr(1) : sym;
-}
-
 // Convert stdcall/fastcall style symbols into unsuffixed symbols,
 // with or without a leading underscore. (MinGW specific.)
 static StringRef killAt(StringRef sym, bool prefix) {
@@ -693,11 +683,29 @@ void LinkerDriver::fixupExports() {
   for (Export &e : ctx.config.exports) {
     if (!e.exportAs.empty()) {
       e.exportName = e.exportAs;
-    } else if (!e.forwardTo.empty()) {
-      e.exportName = undecorate(ctx, e.name);
-    } else {
-      e.exportName = undecorate(ctx, e.extName.empty() ? e.name : e.extName);
+      continue;
     }
+
+    StringRef sym =
+        !e.forwardTo.empty() || e.extName.empty() ? e.name : e.extName;
+    if (ctx.config.machine == I386 && sym.starts_with("_")) {
+      // In MSVC mode, a fully decorated stdcall function is exported
+      // as-is with the leading underscore (with type IMPORT_NAME).
+      // In MinGW mode, a decorated stdcall function gets the underscore
+      // removed, just like normal cdecl functions.
+      if (ctx.config.mingw || !sym.contains('@')) {
+        e.exportName = sym.substr(1);
+        continue;
+      }
+    }
+    if (isArm64EC(ctx.config.machine) && !e.data && !e.constant) {
+      if (std::optional<std::string> demangledName =
+              getArm64ECDemangledFunctionName(sym)) {
+        e.exportName = saver().save(*demangledName);
+        continue;
+      }
+    }
+    e.exportName = sym;
   }
 
   if (ctx.config.killAt && ctx.config.machine == I386) {
@@ -850,21 +858,22 @@ COFFOptTable::COFFOptTable() : GenericOptTable(infoTable, true) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.
-static void handleColorDiagnostics(opt::InputArgList &args) {
+static void handleColorDiagnostics(COFFLinkerContext &ctx,
+                                   opt::InputArgList &args) {
   auto *arg = args.getLastArg(OPT_color_diagnostics, OPT_color_diagnostics_eq,
                               OPT_no_color_diagnostics);
   if (!arg)
     return;
   if (arg->getOption().getID() == OPT_color_diagnostics) {
-    lld::errs().enable_colors(true);
+    ctx.e.errs().enable_colors(true);
   } else if (arg->getOption().getID() == OPT_no_color_diagnostics) {
-    lld::errs().enable_colors(false);
+    ctx.e.errs().enable_colors(false);
   } else {
     StringRef s = arg->getValue();
     if (s == "always")
-      lld::errs().enable_colors(true);
+      ctx.e.errs().enable_colors(true);
     else if (s == "never")
-      lld::errs().enable_colors(false);
+      ctx.e.errs().enable_colors(false);
     else if (s != "auto")
       error("unknown option: --color-diagnostics=" + s);
   }
@@ -926,12 +935,12 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
   }
 
   // Handle /WX early since it converts missing argument warnings to errors.
-  errorHandler().fatalWarnings = args.hasFlag(OPT_WX, OPT_WX_no, false);
+  ctx.e.fatalWarnings = args.hasFlag(OPT_WX, OPT_WX_no, false);
 
   if (missingCount)
     fatal(Twine(args.getArgString(missingIndex)) + ": missing argument");
 
-  handleColorDiagnostics(args);
+  handleColorDiagnostics(ctx, args);
 
   for (opt::Arg *arg : args.filtered(OPT_UNKNOWN)) {
     std::string nearest;
@@ -1011,7 +1020,7 @@ std::vector<const char *> ArgParser::tokenize(StringRef s) {
 }
 
 void LinkerDriver::printHelp(const char *argv0) {
-  ctx.optTable.printHelp(lld::outs(),
+  ctx.optTable.printHelp(ctx.e.outs(),
                          (std::string(argv0) + " [options] file...").c_str(),
                          "LLVM Linker", false);
 }

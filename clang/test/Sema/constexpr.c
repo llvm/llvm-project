@@ -357,3 +357,37 @@ void infsNaNs() {
   constexpr double db5 = LD_SNAN; // expected-error {{constexpr initializer evaluates to nan which is not exactly representable in type 'const double'}}
   constexpr double db6 = INF;
 }
+
+constexpr struct S9 s9 = {  }; // expected-error {{variable has incomplete type 'const struct S9'}} \
+                               // expected-note {{forward declaration of 'struct S9'}}
+
+struct S10 {
+  signed long long i : 8;
+};
+constexpr struct S10 c = { 255 };
+// FIXME-expected-error@-1 {{constexpr initializer evaluates to 255 which is not exactly representable in 'long long' bit-field with width 8}}
+// See: GH#101299
+
+void constexprif() {
+  if constexpr (300) {} //expected-error {{expected '(' after 'if'}}
+}
+void constevalif() {
+  if consteval (300) {} //expected-error {{expected '(' after 'if'}}
+}
+
+struct S11 {
+  int len;
+};
+void ghissue112516() {
+  struct S11 *s11 = 0;
+  constexpr int num = s11->len; // expected-error {{constexpr variable 'num' must be initialized by a constant expression}}
+  void *Arr[num];
+}
+
+void ghissue109095() {
+  constexpr char c[] = { 'a' };
+  constexpr int i = c[1]; // expected-error {{constexpr variable 'i' must be initialized by a constant expression}}\
+                          // expected-note {{declared here}}
+  _Static_assert(i == c[0]); // expected-error {{static assertion expression is not an integral constant expression}}\
+                             // expected-note {{initializer of 'i' is not a constant expression}}
+}

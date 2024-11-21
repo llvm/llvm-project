@@ -3,6 +3,7 @@
 import sys
 
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
+config.llvm_src_root = "@LLVM_SOURCE_DIR@"
 config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
 config.llvm_shlib_ext = "@SHLIBEXT@"
 config.llvm_shlib_dir = lit_config.substitute(path(r"@SHLIBDIR@"))
@@ -25,7 +26,7 @@ config.mlir_cmake_dir = "@MLIR_CMAKE_DIR@"
 config.mlir_lib_dir = "@MLIR_LIB_DIR@"
 
 config.build_examples = @LLVM_BUILD_EXAMPLES@
-config.run_cuda_tests = @MLIR_ENABLE_CUDA_CONVERSIONS@
+config.run_nvptx_tests = @LLVM_HAS_NVPTX_TARGET@
 config.enable_cuda_runner = @MLIR_ENABLE_CUDA_RUNNER@
 config.run_rocm_tests = @MLIR_ENABLE_ROCM_CONVERSIONS@
 config.enable_rocm_runner = @MLIR_ENABLE_ROCM_RUNNER@
@@ -53,6 +54,11 @@ config.mlir_run_cuda_sm80_lt_tests = @MLIR_RUN_CUDA_SM80_LT_TESTS@
 config.mlir_run_cuda_sm90_tests = @MLIR_RUN_CUDA_SM90_TESTS@
 config.mlir_include_integration_tests = @MLIR_INCLUDE_INTEGRATION_TESTS@
 config.arm_emulator_executable = "@ARM_EMULATOR_EXECUTABLE@"
+# Some tests marked with 'UNSUPPORTED: target=aarch64{{.*}}' are still run when
+# configured with ARM_EMULATOR_EXECUTABLE and the default target is not aarch64.
+# Add feature 'mlir_arm_emulator' here and to UNSUPPORTED list of such tests.
+if config.arm_emulator_executable:
+    config.available_features.add("mlir_arm_emulator")
 config.arm_emulator_options = "@ARM_EMULATOR_OPTIONS@"
 config.arm_emulator_mlir_cpu_runner_executable = "@ARM_EMULATOR_MLIR_CPU_RUNNER_EXECUTABLE@"
 config.arm_emulator_lli_executable = "@ARM_EMULATOR_LLI_EXECUTABLE@"

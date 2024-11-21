@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s
 
 ; Make sure code generation does not break in case an 'error block' is detected
 ; outside of the scope. In this situation, we should not affect code generation.

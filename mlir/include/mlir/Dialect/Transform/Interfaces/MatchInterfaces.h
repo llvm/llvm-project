@@ -102,8 +102,8 @@ public:
   }
 
   void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-    onlyReadsHandle(this->getOperation()->getOperands(), effects);
-    producesHandle(this->getOperation()->getResults(), effects);
+    onlyReadsHandle(this->getOperation()->getOpOperands(), effects);
+    producesHandle(this->getOperation()->getOpResults(), effects);
     onlyReadsPayload(effects);
   }
 };
@@ -163,8 +163,8 @@ public:
   }
 
   void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-    onlyReadsHandle(this->getOperation()->getOperands(), effects);
-    producesHandle(this->getOperation()->getResults(), effects);
+    onlyReadsHandle(this->getOperation()->getOpOperands(), effects);
+    producesHandle(this->getOperation()->getOpResults(), effects);
     onlyReadsPayload(effects);
   }
 };

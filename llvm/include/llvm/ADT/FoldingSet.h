@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/xxhash.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -294,10 +295,17 @@ public:
   FoldingSetNodeIDRef() = default;
   FoldingSetNodeIDRef(const unsigned *D, size_t S) : Data(D), Size(S) {}
 
-  /// ComputeHash - Compute a strong hash value for this FoldingSetNodeIDRef,
-  /// used to lookup the node in the FoldingSetBase.
+  // Compute a strong hash value used to lookup the node in the FoldingSetBase.
+  // The hash value is not guaranteed to be deterministic across processes.
   unsigned ComputeHash() const {
     return static_cast<unsigned>(hash_combine_range(Data, Data + Size));
+  }
+
+  // Compute a deterministic hash value across processes that is suitable for
+  // on-disk serialization.
+  unsigned computeStableHash() const {
+    return static_cast<unsigned>(xxh3_64bits(ArrayRef(
+        reinterpret_cast<const uint8_t *>(Data), sizeof(unsigned) * Size)));
   }
 
   bool operator==(FoldingSetNodeIDRef) const;
@@ -366,10 +374,17 @@ public:
   /// object to be used to compute a new profile.
   inline void clear() { Bits.clear(); }
 
-  /// ComputeHash - Compute a strong hash value for this FoldingSetNodeID, used
-  /// to lookup the node in the FoldingSetBase.
+  // Compute a strong hash value for this FoldingSetNodeID, used to lookup the
+  // node in the FoldingSetBase. The hash value is not guaranteed to be
+  // deterministic across processes.
   unsigned ComputeHash() const {
     return FoldingSetNodeIDRef(Bits.data(), Bits.size()).ComputeHash();
+  }
+
+  // Compute a deterministic hash value across processes that is suitable for
+  // on-disk serialization.
+  unsigned computeStableHash() const {
+    return FoldingSetNodeIDRef(Bits.data(), Bits.size()).computeStableHash();
   }
 
   /// operator== - Used to compare two nodes to each other.

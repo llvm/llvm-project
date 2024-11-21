@@ -8,8 +8,29 @@ target triple = "x86_64-pc-linux-gnu"
 declare void @"some_call"(ptr addrspace(1))
 declare i32 @"personality_function"()
 
-; CHECK-LABEL: test_invoke:
 define ptr addrspace(1) @test_invoke(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d, ptr addrspace(1) %e, ptr addrspace(1) %f, ptr addrspace(1) %g, ptr addrspace(1) %h, ptr addrspace(1) %j, ptr addrspace(1) %k, ptr addrspace(1) %l, ptr addrspace(1) %m, ptr addrspace(1) %n, ptr addrspace(1) %o, ptr addrspace(1) %p, ptr addrspace(1) %q, ptr addrspace(1) %r, ptr addrspace(1) %s, ptr addrspace(1) %t)
+; CHECK-LABEL: test_invoke:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
+; CHECK-NEXT:    movq %rdi, (%rsp)
+; CHECK-NEXT:  .Ltmp0:
+; CHECK-NEXT:    callq some_call@PLT
+; CHECK-NEXT:  .Ltmp3:
+; CHECK-NEXT:  .Ltmp1:
+; CHECK-NEXT:  # %bb.1: # %invoke_safepoint_normal_dest
+; CHECK-NEXT:    movq (%rsp), %rax
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB0_2: # %exceptional_return
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:  .Ltmp2:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
 gc "statepoint-example" personality ptr @"personality_function" {
 entry:
   %0 = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void (ptr addrspace(1))) @some_call, i32 1, i32 0, ptr addrspace(1) %t, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %t)]
@@ -25,8 +46,19 @@ exceptional_return:
   ret ptr addrspace(1) null
 }
 
-; CHECK-LABEL: test_call:
 define ptr addrspace(1) @test_call(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d, ptr addrspace(1) %e, ptr addrspace(1) %f, ptr addrspace(1) %g, ptr addrspace(1) %h, ptr addrspace(1) %j, ptr addrspace(1) %k, ptr addrspace(1) %l, ptr addrspace(1) %m, ptr addrspace(1) %n, ptr addrspace(1) %o, ptr addrspace(1) %p, ptr addrspace(1) %q, ptr addrspace(1) %r, ptr addrspace(1) %s, ptr addrspace(1) %t)
+; CHECK-LABEL: test_call:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
+; CHECK-NEXT:    movq %rdi, (%rsp)
+; CHECK-NEXT:    callq some_call@PLT
+; CHECK-NEXT:  .Ltmp4:
+; CHECK-NEXT:    movq (%rsp), %rax
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
 gc "statepoint-example" personality ptr @"personality_function" {
 entry:
   %0 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void (ptr addrspace(1))) @some_call, i32 1, i32 0, ptr addrspace(1) %t, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %t)]

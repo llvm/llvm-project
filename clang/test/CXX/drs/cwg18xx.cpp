@@ -3,8 +3,8 @@
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,cxx98-14,cxx11-17,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,cxx11-17,since-cxx11,since-cxx14,cxx17 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx23,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx23,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -56,7 +56,7 @@ namespace cwg1804 { // cwg1804: 2.7
 template <typename, typename>
 struct A {
   void f1();
-  
+
   template <typename V>
   void f2(V);
 
@@ -73,7 +73,7 @@ struct A {
 template <typename U>
 struct A<int, U> {
   void f1();
-  
+
   template <typename V>
   void f2(V);
 
@@ -97,7 +97,7 @@ class D {
 template <typename U>
 struct A<double, U> {
   void f1();
-  
+
   template <typename V>
   void f2(V);
 
@@ -206,7 +206,7 @@ namespace cwg1814 { // cwg1814: yes
 #endif
 }
 
-namespace cwg1815 { // cwg1815: 19
+namespace cwg1815 { // cwg1815: 20
 #if __cplusplus >= 201402L
   struct A { int &&r = 0; };
   A a = {};
@@ -230,6 +230,8 @@ namespace cwg1815 { // cwg1815: 19
 #endif
 #endif
 }
+
+// cwg1818 is in cwg1818.cpp
 
 namespace cwg1820 { // cwg1820: 3.5
 typedef int A;
@@ -373,6 +375,98 @@ namespace cwg1837 { // cwg1837: 3.3
 #endif
 }
 
+namespace cwg1862 { // cwg1862: no
+template<class T>
+struct A {
+  struct B {
+    void e();
+  };
+  
+  void f();
+  
+  struct D {
+    void g();
+  };
+  
+  T h();
+
+  template<T U>
+  T i();
+};
+
+template<>
+struct A<int> {
+  struct B {
+    void e();
+  };
+  
+  int f();
+  
+  struct D {
+    void g();
+  };
+  
+  template<int U>
+  int i();
+};
+
+template<>
+struct A<float*> {
+  int* h();
+};
+
+class C {
+  int private_int;
+
+  template<class T>
+  friend struct A<T>::B;
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>::' for friend class declaration is not supported; turning off access control for 'C'}}
+
+  template<class T>
+  friend void A<T>::f();
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>::' for friend class declaration is not supported; turning off access control for 'C'}}
+
+  // FIXME: this is ill-formed, because A<T>​::​D does not end with a simple-template-id
+  template<class T>
+  friend void A<T>::D::g();
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>::D::' for friend class declaration is not supported; turning off access control for 'C'}}
+  
+  template<class T>
+  friend int *A<T*>::h();
+  // expected-warning@-1 {{dependent nested name specifier 'A<T *>::' for friend class declaration is not supported; turning off access control for 'C'}}
+  
+  template<class T>
+  template<T U>
+  friend T A<T>::i();
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>::' for friend class declaration is not supported; turning off access control for 'C'}}
+};
+
+C c;
+
+template<class T>
+void A<T>::B::e() { (void)c.private_int; }
+void A<int>::B::e() { (void)c.private_int; }
+
+template<class T>
+void A<T>::f() { (void)c.private_int; }
+int A<int>::f() { (void)c.private_int; return 0; }
+
+// FIXME: both definition of 'D::g' are not friends, so they don't have access to 'private_int' 
+template<class T>
+void A<T>::D::g() { (void)c.private_int; }
+void A<int>::D::g() { (void)c.private_int; }
+
+template<class T>
+T A<T>::h() { (void)c.private_int; }
+int* A<float*>::h() { (void)c.private_int; return 0; }
+
+template<class T>
+template<T U>
+T A<T>::i() { (void)c.private_int; }
+template<int U>
+int A<int>::i() { (void)c.private_int; }
+} // namespace cwg1862
+
 namespace cwg1872 { // cwg1872: 9
 #if __cplusplus >= 201103L
   template<typename T> struct A : T {
@@ -397,8 +491,12 @@ namespace cwg1872 { // cwg1872: 9
   static_assert(y == 0);
 #endif
   constexpr int z = A<Z>().f();
-  // since-cxx11-error@-1 {{constexpr variable 'z' must be initialized by a constant expression}}
-  //   since-cxx11-note@-2 {{non-literal type 'A<Z>' cannot be used in a constant expression}}
+  // since-cxx11-error@-1 {{constexpr variable 'z' must be initialized by a constant expression}}a
+#if __cplusplus < 202302L
+  //   since-cxx11-note@-3 {{non-literal type 'A<Z>' cannot be used in a constant expression}}
+#else
+  //   since-cxx23-note@-5 {{cannot construct object of type 'A<cwg1872::Z>' with virtual base class in a constant expression}}
+#endif
 #endif
 }
 
@@ -448,6 +546,8 @@ namespace cwg1881 { // cwg1881: 7
   static_assert(__is_standard_layout(C), "");
   static_assert(!__is_standard_layout(D), "");
 }
+
+// cwg1884 is in cwg1884.cpp
 
 namespace cwg1890 { // cwg1890: no drafting 2018-06-04
 // FIXME: current consensus for CWG2335 is that the examples are well-formed.
@@ -542,3 +642,86 @@ namespace H {
   struct S s;
 }
 }
+
+namespace cwg1898 { // cwg1898: 2.7
+void e(int) {} // #cwg1898-e
+void e(int) {}
+// expected-error@-1 {{redefinition of 'e'}}
+//   expected-note@#cwg1898-e {{previous definition is here}}
+
+void e2(int) {}
+void e2(long) {} // OK, different type
+
+void f(int) {} // #cwg1898-f
+void f(const int) {}
+// expected-error@-1 {{redefinition of 'f'}}
+//   expected-note@#cwg1898-f {{previous definition is here}}
+
+void g(int) {} // #cwg1898-g
+void g(volatile int) {}
+// since-cxx20-warning@-1 {{volatile-qualified parameter type 'volatile int' is deprecated}}
+// expected-error@-2 {{redefinition of 'g'}}
+//   expected-note@#cwg1898-g {{previous definition is here}}
+
+void h(int *) {} // #cwg1898-h
+void h(int[]) {}
+// expected-error@-1 {{redefinition of 'h'}}
+//   expected-note@#cwg1898-h {{previous definition is here}}
+
+void h2(int *) {} // #cwg1898-h2
+void h2(int[2]) {}
+// expected-error@-1 {{redefinition of 'h2'}}
+//   expected-note@#cwg1898-h2 {{previous definition is here}}
+
+void h3(int (*)[2]) {} // #cwg1898-h3
+void h3(int [3][2]) {}
+// expected-error@-1 {{redefinition of 'h3'}}
+//   expected-note@#cwg1898-h3 {{previous definition is here}}
+
+void h4(int (*)[2]) {}
+void h4(int [3][3]) {} // OK, differ in non-top-level extent of array
+
+void i(int *) {}
+void i(const int *) {} // OK, pointee cv-qualification is not discarded
+
+void i2(int *) {} // #cwg1898-i2
+void i2(int * const) {}
+// expected-error@-1 {{redefinition of 'i2'}}
+//   expected-note@#cwg1898-i2 {{previous definition is here}}
+
+void j(void(*)()) {} // #cwg1898-j
+void j(void()) {}
+// expected-error@-1 {{redefinition of 'j'}}
+//   expected-note@#cwg1898-j {{previous definition is here}}
+
+void j2(void(int)) {} // #cwg1898-j2
+void j2(void(const int)) {}
+// expected-error@-1 {{redefinition of 'j2'}}
+//   expected-note@#cwg1898-j2 {{previous definition is here}}
+
+struct A {
+  void k(int) {} // #cwg1898-k
+  void k(int) {}
+  // expected-error@-1 {{class member cannot be redeclared}}
+  //   expected-note@#cwg1898-k {{previous definition is here}}
+};
+
+struct B : A {
+  void k(int) {} // OK, shadows A::k
+};
+
+void l() {}
+void l(...) {}
+
+#if __cplusplus >= 201103L
+template <typename T>
+void m(T) {}
+template <typename... Ts>
+void m(Ts...) {}
+
+template <typename T, typename U>
+void m2(T, U) {}
+template <typename... Ts, typename U>
+void m2(Ts..., U) {}
+#endif
+} // namespace cwg1898

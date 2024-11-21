@@ -17,6 +17,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -214,9 +215,9 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
     // Simplify the GEP to handle 'gep x, 0' -> x etc.
     if (Value *V = simplifyGEPInst(GEP->getSourceElementType(), GEPOps[0],
                                    ArrayRef<Value *>(GEPOps).slice(1),
-                                   GEP->isInBounds(), {DL, TLI, DT, AC})) {
-      for (unsigned i = 0, e = GEPOps.size(); i != e; ++i)
-        RemoveInstInputs(GEPOps[i], InstInputs);
+                                   GEP->getNoWrapFlags(), {DL, TLI, DT, AC})) {
+      for (Value *Op : GEPOps)
+        RemoveInstInputs(Op, InstInputs);
 
       return addAsInput(V);
     }
@@ -390,7 +391,7 @@ Value *PHITransAddr::insertTranslatedSubExpr(
         InVal->getName() + ".phi.trans.insert",
         PredBB->getTerminator()->getIterator());
     Result->setDebugLoc(Inst->getDebugLoc());
-    Result->setIsInBounds(GEP->isInBounds());
+    Result->setNoWrapFlags(GEP->getNoWrapFlags());
     NewInsts.push_back(Result);
     return Result;
   }

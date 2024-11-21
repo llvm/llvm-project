@@ -1,0 +1,23 @@
+#RUN: sed -e "s,SRC_CPUSUBTYPE,0x80000002,g" %s | yaml2obj -o -| llvm-objdump --macho -p - 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=V0
+#RUN: sed -e "s,SRC_CPUSUBTYPE,0x81000002,g" %s | yaml2obj -o -| llvm-objdump --macho -p - 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=V1
+#RUN: sed -e "s,SRC_CPUSUBTYPE,0xc1000002,g" %s | yaml2obj -o -| llvm-objdump --macho -p - 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=V1K
+#RUN: sed -e "s,SRC_CPUSUBTYPE,0x00000002,g" %s | yaml2obj -o -| llvm-objdump --macho -p - 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=VNONE
+
+# CHECK: Mach header
+# CHECK:       magic cputype cpusubtype  caps    filetype ncmds sizeofcmds      flags
+# V0:    MH_MAGIC_64   ARM64          E  PAC00     OBJECT     0          0 0x00000000
+# V1:    MH_MAGIC_64   ARM64          E  PAC01     OBJECT     0          0 0x00000000
+# V1K:   MH_MAGIC_64   ARM64          E  PAK01     OBJECT     0          0 0x00000000
+# VNONE: MH_MAGIC_64   ARM64          E  0x00      OBJECT     0          0 0x00000000
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x0100000C
+  cpusubtype:      SRC_CPUSUBTYPE
+  filetype:        0x00000001
+  ncmds:           0
+  sizeofcmds:      0
+  flags:           0x00000000
+  reserved:        0x00000000
+...

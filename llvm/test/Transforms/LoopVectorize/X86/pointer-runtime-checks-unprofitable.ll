@@ -83,7 +83,7 @@ for.body:
 
   %gep.D = getelementptr inbounds double, ptr %D, i64 %iv
   %l.D = load double, ptr %gep.D
-  %p.4 = call double @llvm.pow.f64(double %p.3, double %l.D)
+  %p.4 = call double @llvm.pow.f64(double %p.2, double %l.D)
   %p.5 = call double @llvm.pow.f64(double %p.4, double %p.3)
   %mul = fmul double 2.0, %p.5
   %mul.2 = fmul double %mul, 2.0

@@ -198,9 +198,7 @@ Status RegisterContextThreadMemory::ReadRegisterValueFromMemory(
   if (m_reg_ctx_sp)
     return m_reg_ctx_sp->ReadRegisterValueFromMemory(reg_info, src_addr,
                                                      src_len, reg_value);
-  Status error;
-  error.SetErrorString("invalid register context");
-  return error;
+  return Status::FromErrorString("invalid register context");
 }
 
 Status RegisterContextThreadMemory::WriteRegisterValueToMemory(
@@ -210,7 +208,5 @@ Status RegisterContextThreadMemory::WriteRegisterValueToMemory(
   if (m_reg_ctx_sp)
     return m_reg_ctx_sp->WriteRegisterValueToMemory(reg_info, dst_addr, dst_len,
                                                     reg_value);
-  Status error;
-  error.SetErrorString("invalid register context");
-  return error;
+  return Status::FromErrorString("invalid register context");
 }

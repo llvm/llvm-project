@@ -29,7 +29,7 @@ class TestDecoratorsNoDebugInfoClass(TestBase):
         self.assertIsNone(self.getDebugInfo())
 
     @expectedFailureAll
-    def test_xfail_regexp(self):
+    def test_xfail_empty(self):
         """Test that expectedFailureAll can be empty (but please just use expectedFailure)"""
         self.fail()
 
@@ -92,7 +92,7 @@ class TestDecorators(TestBase):
         # self.assertNotEqual(self.getDebugInfo(), "dwarf")
 
     @expectedFailureAll
-    def test_xfail_regexp(self):
+    def test_xfail_empty(self):
         """Test that xfail can be empty"""
         self.fail()
 

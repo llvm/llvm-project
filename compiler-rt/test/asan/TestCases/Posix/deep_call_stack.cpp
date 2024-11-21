@@ -1,4 +1,5 @@
 // Check that UAR mode can handle very deep recusrion.
+// REQUIRES: shell
 // RUN: %clangxx_asan -O2 %s -o %t
 // RUN: ulimit -s 4096
 // RUN: %env_asan_opts=detect_stack_use_after_return=1 %run %t 2>&1 | FileCheck %s

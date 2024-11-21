@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-opt-isl -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly '-passes=print<polly-opt-isl>' -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Check that the disable_nonforced metadata is honored; optimization
 ; heuristics/rescheduling must not be applied.

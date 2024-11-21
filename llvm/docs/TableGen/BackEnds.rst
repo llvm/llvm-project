@@ -717,6 +717,12 @@ This class provides six fields.
 
 * ``bit PrimaryKeyEarlyOut``. See the third example below.
 
+* ``bit PrimaryKeyReturnRange``. when set to 1, modifies the lookup function’s
+  definition to return a range of results rather than a single pointer to the
+  object. This feature proves useful when multiple objects meet the criteria
+  specified by the lookup function. Currently, it is supported only for primary
+  lookup functions. Refer to the second example below for further details.
+
 TableGen attempts to deduce the type of each of the table fields so that it
 can format the C++ initializers in the emitted table. It can deduce ``bit``,
 ``bits<n>``, ``string``, ``Intrinsic``, and ``Instruction``.  These can be
@@ -883,6 +889,84 @@ Here is the generated C++ code.
     return &*Idx;
   }
 
+In the above example, lets add one more record with encoding same as that of
+record ``CEntry<"Pear",  CBaz, 15>``.
+
+.. code-block:: text
+
+  def CFoobar : CEnum;
+  def : CEntry<"Banana", CFoobar, 15>;
+
+Below is the new generated ``CTable``
+
+.. code-block:: text
+
+  #ifdef GET_Table_IMPL
+  constexpr CEntry Table[] = {
+    { "Apple", CFoo, 0xA }, // 0
+    { "Apple", CBar, 0xD }, // 1
+    { "Banana", CFoobar, 0xF }, // 2
+    { "Pear", CBaz, 0xF }, // 3
+  };
+
+Since ``Banana`` lexicographically appears first, therefore in the ``CEntry``
+table, record with name ``Banana`` will come before the record with name
+``Pear``. Because of this, the ``lookupCEntryByEncoding`` function will always
+return a pointer to the record with name ``Banana`` even though in some cases
+the correct result can be the record with name ``Pear``. Such kind of scenario
+makes the exisitng lookup function insufficient because they always return a
+pointer to a single entry from the table, but instead it should return a range
+of results because multiple entries match the criteria sought by the lookup
+function. In this case, the definition of the lookup function needs to be
+modified to return a range of results which can be done by setting
+``PrimaryKeyReturnRange``.
+
+.. code-block:: text
+
+  def CTable : GenericTable {
+    let FilterClass = "CEntry";
+    let Fields = ["Name", "Kind", "Encoding"];
+    string TypeOf_Kind = "CEnum";
+    let PrimaryKey = ["Encoding"];
+    let PrimaryKeyName = "lookupCEntryByEncoding";
+    let PrimaryKeyReturnRange = true;
+  }
+
+Here is the modified lookup function.
+
+.. code-block:: text
+
+  llvm::iterator_range<const CEntry *> lookupCEntryByEncoding(uint16_t Encoding) {
+    struct KeyType {
+      uint16_t Encoding;
+    };
+    KeyType Key = {Encoding};
+    struct Comp {
+      bool operator()(const CEntry &LHS, const KeyType &RHS) const {
+        if (LHS.Encoding < RHS.Encoding)
+          return true;
+        if (LHS.Encoding > RHS.Encoding)
+          return false;
+        return false;
+      }
+      bool operator()(const KeyType &LHS, const CEntry &RHS) const {
+        if (LHS.Encoding < RHS.Encoding)
+          return true;
+        if (LHS.Encoding > RHS.Encoding)
+          return false;
+        return false;
+      }
+    };
+    auto Table = ArrayRef(Table);
+    auto It = std::equal_range(Table.begin(), Table.end(), Key, Comp());
+    return llvm::make_range(It.first, It.second);
+  }
+
+The new lookup function will return an iterator range with first pointer to the
+first result and the last pointer to the last matching result from the table.
+However, please note that the support for emitting modified definition exists
+for ``PrimaryKeyName`` only.
+
 The ``PrimaryKeyEarlyOut`` field, when set to 1, modifies the lookup
 function so that it tests the first field of the primary key to determine
 whether it is within the range of the collected records' primary keys. If
@@ -986,6 +1070,8 @@ function. This class provides three fields.
 * ``list<string> Key``. The list of fields that make up the secondary key.
 
 * ``bit EarlyOut``. See the third example in `Generic Tables`_.
+
+* ``bit ReturnRange``. See the second example in `Generic Tables`_.
 
 Here is an example of a secondary key added to the ``CTable`` above. The
 generated function looks up entries based on the ``Name`` and ``Kind`` fields.

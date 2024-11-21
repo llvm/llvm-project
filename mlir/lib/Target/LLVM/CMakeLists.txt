@@ -32,6 +32,8 @@ endif()
 add_mlir_dialect_library(MLIRNVVMTarget
   NVVM/Target.cpp
 
+  OBJECT
+
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
 
@@ -47,7 +49,7 @@ add_mlir_dialect_library(MLIRNVVMTarget
   MLIRNVVMToLLVMIRTranslation
   )
 
-if(MLIR_ENABLE_CUDA_CONVERSIONS)
+if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
   # Find the CUDA toolkit.
   find_package(CUDAToolkit)
 
@@ -68,17 +70,23 @@ if(MLIR_ENABLE_CUDA_CONVERSIONS)
     if(MLIR_ENABLE_NVPTXCOMPILER)
       # Find the `nvptxcompiler` library.
       # TODO: Bump the MLIR CMake version to 3.25 and use `CUDA::nvptxcompiler_static`.
-      find_library(MLIR_NVPTXCOMPILER_LIB nvptxcompiler_static
+      find_library(MLIR_NVPTXCOMPILER_LIB_PATH nvptxcompiler_static
                   PATHS ${CUDAToolkit_LIBRARY_DIR} NO_DEFAULT_PATH)
 
       # Fail if `nvptxcompiler_static` couldn't be found.
-      if(MLIR_NVPTXCOMPILER_LIB STREQUAL "MLIR_NVPTXCOMPILER_LIB-NOTFOUND")
+      if(MLIR_NVPTXCOMPILER_LIB_PATH STREQUAL "MLIR_NVPTXCOMPILER_LIB_PATH-NOTFOUND")
         message(FATAL_ERROR
                 "Requested using the `nvptxcompiler` library backend but it couldn't be found.")
       endif()
 
+      add_library(MLIR_NVPTXCOMPILER_LIB STATIC IMPORTED GLOBAL)
+      # Downstream projects can modify this path and use it in CMake. For example:
+      # add_library(MLIR_NVPTXCOMPILER_LIB STATIC IMPORTED GLOBAL)
+      # set_property(TARGET MLIR_NVPTXCOMPILER_LIB PROPERTY IMPORTED_LOCATION ${...})  
+      # where `...` is to be replaced with the path to the library.
+      set_property(TARGET MLIR_NVPTXCOMPILER_LIB PROPERTY IMPORTED_LOCATION ${MLIR_NVPTXCOMPILER_LIB_PATH})
       # Link against `nvptxcompiler_static`. TODO: use `CUDA::nvptxcompiler_static`.
-      target_link_libraries(MLIRNVVMTarget PRIVATE ${MLIR_NVPTXCOMPILER_LIB})
+      target_link_libraries(MLIRNVVMTarget PRIVATE MLIR_NVPTXCOMPILER_LIB)
       target_include_directories(obj.MLIRNVVMTarget PUBLIC ${CUDAToolkit_INCLUDE_DIRS})
     endif()
   else()
@@ -108,8 +116,12 @@ endif()
 
 add_mlir_dialect_library(MLIRROCDLTarget
   ROCDL/Target.cpp
+  ROCDL/Utils.cpp
+
+  OBJECT
 
   LINK_COMPONENTS
+  FrontendOffloading
   MCParser
   ${AMDGPU_LIBS}
 
@@ -123,17 +135,18 @@ add_mlir_dialect_library(MLIRROCDLTarget
   )
 
 if(MLIR_ENABLE_ROCM_CONVERSIONS)
-  if (NOT ("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD))
-    message(SEND_ERROR
-      "Building mlir with ROCm support requires the AMDGPU backend")
-  endif()
-
   if (DEFINED ROCM_PATH)
     set(DEFAULT_ROCM_PATH "${ROCM_PATH}" CACHE PATH "Fallback path to search for ROCm installs")
   elseif(DEFINED ENV{ROCM_PATH})
     set(DEFAULT_ROCM_PATH "$ENV{ROCM_PATH}" CACHE PATH "Fallback path to search for ROCm installs")
   else()
-    set(DEFAULT_ROCM_PATH "/opt/rocm" CACHE PATH "Fallback path to search for ROCm installs")
+    if (WIN32)
+      # Avoid setting an UNIX path for Windows.
+      # TODO: Eventually migrate to FindHIP once it becomes a part of CMake.
+      set(DEFAULT_ROCM_PATH "" CACHE PATH "Fallback path to search for ROCm installs")
+    else()
+      set(DEFAULT_ROCM_PATH "/opt/rocm" CACHE PATH "Fallback path to search for ROCm installs")
+    endif()
   endif()
   message(VERBOSE "MLIR Default ROCM toolkit path: ${DEFAULT_ROCM_PATH}")
 

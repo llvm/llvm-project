@@ -1,4 +1,5 @@
 add_custom_target(lldb-api-test-deps)
+set_target_properties(lldb-api-test-deps PROPERTIES FOLDER "LLDB/Tests")
 add_dependencies(lldb-api-test-deps lldb-test-depends)
 
 add_lit_testsuites(LLDB-API
@@ -35,7 +36,7 @@ set(LLDB_TEST_ARCH
 # Users can override LLDB_TEST_USER_ARGS to specify arbitrary arguments to pass to the script
 set(LLDB_TEST_USER_ARGS
   ""
-  CACHE STRING "Specify additional arguments to pass to test runner. Seperate \
+  CACHE STRING "Specify additional arguments to pass to test runner. Separate \
 items with \";\". For example: '-C;gcc;-C;clang;-A;i386;-A;x86_64'")
 
 set(LLDB_TEST_COMMON_ARGS_VAR
@@ -48,6 +49,20 @@ set(LLDB_DEFAULT_TEST_EXECUTABLE "${LLVM_RUNTIME_OUTPUT_INTDIR}/lldb${CMAKE_EXEC
 
 set(LLDB_DEFAULT_TEST_DSYMUTIL "${LLVM_TOOLS_BINARY_DIR}/dsymutil${CMAKE_EXECUTABLE_SUFFIX}")
 
+if(LLDB_TEST_MAKE)
+  set(LLDB_DEFAULT_TEST_MAKE ${LLDB_TEST_MAKE})
+else()
+  find_program(LLDB_DEFAULT_TEST_MAKE make gmake)
+  if(LLDB_DEFAULT_TEST_MAKE)
+    message(STATUS "Found make: ${LLDB_DEFAULT_TEST_MAKE}")
+  else()
+    message(STATUS "Not found: make")
+    message(WARNING
+          "Many LLDB API tests require 'make' tool. Please provide it in Path "
+          "or pass via LLDB_TEST_MAKE.")
+  endif()
+endif()
+
 if (TARGET clang)
   set(LLDB_DEFAULT_TEST_COMPILER "${LLVM_TOOLS_BINARY_DIR}/clang${CMAKE_EXECUTABLE_SUFFIX}")
 else()
@@ -57,6 +72,7 @@ endif()
 set(LLDB_TEST_EXECUTABLE "${LLDB_DEFAULT_TEST_EXECUTABLE}" CACHE PATH "lldb executable used for testing")
 set(LLDB_TEST_COMPILER "${LLDB_DEFAULT_TEST_COMPILER}" CACHE PATH "C Compiler to use for building LLDB test inferiors")
 set(LLDB_TEST_DSYMUTIL "${LLDB_DEFAULT_TEST_DSYMUTIL}" CACHE PATH "dsymutil used for generating dSYM bundles")
+set(LLDB_TEST_MAKE "${LLDB_DEFAULT_TEST_MAKE}" CACHE PATH "make tool used for building test executables")
 
 if ("${LLDB_TEST_COMPILER}" STREQUAL "")
   message(FATAL_ERROR "LLDB test compiler not specified. Tests will not run.")
@@ -78,14 +94,6 @@ if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
   if (NOT LLDB_TEST_HIDE_CONSOLE_WINDOWS)
     set(LLDB_TEST_COMMON_ARGS_VAR ${LLDB_TEST_COMMON_ARGS_VAR} --show-inferior-console)
   endif()
-endif()
-
-if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows|Darwin")
-  list(APPEND LLDB_TEST_COMMON_ARGS_VAR
-    --env ARCHIVER=${CMAKE_AR} --env OBJCOPY=${CMAKE_OBJCOPY})
-else()
-  list(APPEND LLDB_TEST_COMMON_ARGS_VAR
-    --env OBJCOPY=${LLVM_TOOLS_BINARY_DIR}/llvm-objcopy${CMAKE_EXECUTABLE_SUFFIX})
 endif()
 
 if (NOT "${LLDB_LIT_TOOLS_DIR}" STREQUAL "")

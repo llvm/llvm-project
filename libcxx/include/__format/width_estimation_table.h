@@ -63,7 +63,7 @@
 
 #include <__algorithm/ranges_upper_bound.h>
 #include <__config>
-#include <cstddef>
+#include <__cstddef/ptrdiff_t.h>
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -237,7 +237,7 @@ inline constexpr uint32_t __table_upper_bound = 0x0003fffd;
 
 /// Returns the estimated width of a Unicode code point.
 ///
-/// \pre The code point is a valid Unicode code point.
+/// \\pre The code point is a valid Unicode code point.
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr int __estimated_width(const char32_t __code_point) noexcept {
   // Since __table_upper_bound contains the unshifted range do the
   // comparison without shifting.
@@ -263,7 +263,7 @@ inline constexpr uint32_t __table_upper_bound = 0x0003fffd;
 
 } // namespace __width_estimation_table
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

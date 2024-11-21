@@ -65,7 +65,6 @@
 #include "llvm/Transforms/Scalar/GVNExpression.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -132,7 +131,7 @@ public:
         ActiveBlocks.remove(BB);
         continue;
       }
-      Insts.push_back(BB->getTerminator()->getPrevNode());
+      Insts.push_back(BB->getTerminator()->getPrevNonDebugInstruction());
     }
     if (Insts.empty())
       Fail = true;
@@ -168,7 +167,7 @@ public:
       if (Inst == &Inst->getParent()->front())
         ActiveBlocks.remove(Inst->getParent());
       else
-        NewInsts.push_back(Inst->getPrevNode());
+        NewInsts.push_back(Inst->getPrevNonDebugInstruction());
     }
     if (NewInsts.empty()) {
       Fail = true;
@@ -535,14 +534,10 @@ public:
     uint32_t e = ExpressionNumbering[exp];
     if (!e) {
       hash_code H = exp->getHashValue([=](Value *V) { return lookupOrAdd(V); });
-      auto I = HashNumbering.find(H);
-      if (I != HashNumbering.end()) {
-        e = I->second;
-      } else {
-        e = nextValueNumber++;
-        HashNumbering[H] = e;
-        ExpressionNumbering[exp] = e;
-      }
+      auto [I, Inserted] = HashNumbering.try_emplace(H, nextValueNumber);
+      e = I->second;
+      if (Inserted)
+        ExpressionNumbering[exp] = nextValueNumber++;
     }
     ValueNumbering[V] = e;
     return e;
@@ -883,7 +878,7 @@ void GVNSink::sinkLastInstruction(ArrayRef<BasicBlock *> Blocks,
                                   BasicBlock *BBEnd) {
   SmallVector<Instruction *, 4> Insts;
   for (BasicBlock *BB : Blocks)
-    Insts.push_back(BB->getTerminator()->getPrevNode());
+    Insts.push_back(BB->getTerminator()->getPrevNonDebugInstruction());
   Instruction *I0 = Insts.front();
 
   SmallVector<Value *, 4> NewOperands;
@@ -921,8 +916,10 @@ void GVNSink::sinkLastInstruction(ArrayRef<BasicBlock *> Blocks,
     }
 
   for (auto *I : Insts)
-    if (I != I0)
+    if (I != I0) {
       I->replaceAllUsesWith(I0);
+      I0->applyMergedLocation(I0->getDebugLoc(), I->getDebugLoc());
+    }
   foldPointlessPHINodes(BBEnd);
 
   // Finally nuke all instructions apart from the common instruction.

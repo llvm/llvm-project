@@ -1427,20 +1427,18 @@ codelayout::computeExtTspLayout(ArrayRef<uint64_t> NodeSizes,
 
 double codelayout::calcExtTspScore(ArrayRef<uint64_t> Order,
                                    ArrayRef<uint64_t> NodeSizes,
-                                   ArrayRef<uint64_t> NodeCounts,
                                    ArrayRef<EdgeCount> EdgeCounts) {
   // Estimate addresses of the blocks in memory.
-  std::vector<uint64_t> Addr(NodeSizes.size(), 0);
-  for (size_t Idx = 1; Idx < Order.size(); Idx++) {
+  SmallVector<uint64_t> Addr(NodeSizes.size(), 0);
+  for (uint64_t Idx = 1; Idx < Order.size(); Idx++)
     Addr[Order[Idx]] = Addr[Order[Idx - 1]] + NodeSizes[Order[Idx - 1]];
-  }
-  std::vector<uint64_t> OutDegree(NodeSizes.size(), 0);
-  for (auto Edge : EdgeCounts)
+  SmallVector<uint64_t> OutDegree(NodeSizes.size(), 0);
+  for (auto &Edge : EdgeCounts)
     ++OutDegree[Edge.src];
 
   // Increase the score for each jump.
   double Score = 0;
-  for (auto Edge : EdgeCounts) {
+  for (auto &Edge : EdgeCounts) {
     bool IsConditional = OutDegree[Edge.src] > 1;
     Score += ::extTSPScore(Addr[Edge.src], NodeSizes[Edge.src], Addr[Edge.dst],
                            Edge.count, IsConditional);
@@ -1449,13 +1447,11 @@ double codelayout::calcExtTspScore(ArrayRef<uint64_t> Order,
 }
 
 double codelayout::calcExtTspScore(ArrayRef<uint64_t> NodeSizes,
-                                   ArrayRef<uint64_t> NodeCounts,
                                    ArrayRef<EdgeCount> EdgeCounts) {
-  std::vector<uint64_t> Order(NodeSizes.size());
-  for (size_t Idx = 0; Idx < NodeSizes.size(); Idx++) {
+  SmallVector<uint64_t> Order(NodeSizes.size());
+  for (uint64_t Idx = 0; Idx < NodeSizes.size(); Idx++)
     Order[Idx] = Idx;
-  }
-  return calcExtTspScore(Order, NodeSizes, NodeCounts, EdgeCounts);
+  return calcExtTspScore(Order, NodeSizes, EdgeCounts);
 }
 
 std::vector<uint64_t> codelayout::computeCacheDirectedLayout(

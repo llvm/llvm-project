@@ -20,6 +20,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/CGData/CodeGenData.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PassManager.h"
@@ -143,7 +144,7 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
         writeIndexToFile(Index, OS);
 
         Path = OutputFileName + "index.dot";
-        raw_fd_ostream OSDot(Path, EC, sys::fs::OpenFlags::OF_None);
+        raw_fd_ostream OSDot(Path, EC, sys::fs::OpenFlags::OF_Text);
         if (EC)
           reportOpenError(Path, EC.message());
         Index.exportToDot(OSDot, GUIDPreservedSymbols);
@@ -181,22 +182,20 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
 #define HANDLE_EXTENSION(Ext)                                                  \
   llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
 #include "llvm/Support/Extension.def"
+#undef HANDLE_EXTENSION
 
 static void RegisterPassPlugins(ArrayRef<std::string> PassPlugins,
                                 PassBuilder &PB) {
 #define HANDLE_EXTENSION(Ext)                                                  \
   get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
 #include "llvm/Support/Extension.def"
+#undef HANDLE_EXTENSION
 
   // Load requested pass plugins and let them register pass builder callbacks
   for (auto &PluginFN : PassPlugins) {
     auto PassPlugin = PassPlugin::Load(PluginFN);
-    if (!PassPlugin) {
-      errs() << "Failed to load passes from '" << PluginFN
-             << "'. Request ignored.\n";
-      continue;
-    }
-
+    if (!PassPlugin)
+      report_fatal_error(PassPlugin.takeError(), /*gen_crash_diag=*/false);
     PassPlugin->registerPassBuilderCallbacks(PB);
   }
 }
@@ -339,6 +338,16 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   if (!Conf.DisableVerify)
     MPM.addPass(VerifierPass());
 
+  if (PrintPipelinePasses) {
+    std::string PipelineStr;
+    raw_string_ostream OS(PipelineStr);
+    MPM.printPipeline(OS, [&PIC](StringRef ClassName) {
+      auto PassName = PIC.getPassNameForClassName(ClassName);
+      return PassName.empty() ? ClassName : PassName;
+    });
+    outs() << "pipeline-passes: " << PipelineStr << '\n';
+  }
+
   MPM.run(Mod, MAM);
 }
 
@@ -452,9 +461,8 @@ static void splitCodeGen(const Config &C, TargetMachine *TM,
         CodegenThreadPool.async(
             [&](const SmallString<0> &BC, unsigned ThreadId) {
               LTOLLVMContext Ctx(C);
-              Expected<std::unique_ptr<Module>> MOrErr = parseBitcodeFile(
-                  MemoryBufferRef(StringRef(BC.data(), BC.size()), "ld-temp.o"),
-                  Ctx);
+              Expected<std::unique_ptr<Module>> MOrErr =
+                  parseBitcodeFile(MemoryBufferRef(BC.str(), "ld-temp.o"), Ctx);
               if (!MOrErr)
                 report_fatal_error("Failed to read bitcode");
               std::unique_ptr<Module> MPartInCtx = std::move(MOrErr.get());
@@ -560,6 +568,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
                        const FunctionImporter::ImportMapTy &ImportList,
                        const GVSummaryMapTy &DefinedGlobals,
                        MapVector<StringRef, BitcodeModule> *ModuleMap,
+                       bool CodeGenOnly, AddStreamFn IRAddStream,
                        const std::vector<uint8_t> &CmdArgs) {
   Expected<const Target *> TOrErr = initAndLookupTarget(Conf, Mod);
   if (!TOrErr)
@@ -581,7 +590,9 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   Mod.setPartialSampleProfileRatio(CombinedIndex);
 
   LLVM_DEBUG(dbgs() << "Running ThinLTO\n");
-  if (Conf.CodeGenOnly) {
+  if (CodeGenOnly) {
+    // If CodeGenOnly is set, we only perform code generation and skip
+    // optimization. This value may differ from Conf.CodeGenOnly.
     codegen(Conf, TM.get(), AddStream, Task, Mod, CombinedIndex);
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
   }
@@ -592,10 +603,18 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   auto OptimizeAndCodegen =
       [&](Module &Mod, TargetMachine *TM,
           std::unique_ptr<ToolOutputFile> DiagnosticOutputFile) {
+        // Perform optimization and code generation for ThinLTO.
         if (!opt(Conf, TM, Task, Mod, /*IsThinLTO=*/true,
                  /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,
                  CmdArgs))
           return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+
+        // Save the current module before the first codegen round.
+        // Note that the second codegen round runs only `codegen()` without
+        // running `opt()`. We're not reaching here as it's bailed out earlier
+        // with `CodeGenOnly` which has been set in `SecondRoundThinBackend`.
+        if (IRAddStream)
+          cgdata::saveModuleForTwoRounds(Mod, Task, IRAddStream);
 
         codegen(Conf, TM, AddStream, Task, Mod, CombinedIndex);
         return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
@@ -721,7 +740,7 @@ bool lto::initImportList(const Module &M,
       if (Summary->modulePath() == M.getModuleIdentifier())
         continue;
       // Add an entry to provoke importing by thinBackend.
-      ImportList[Summary->modulePath()].insert(GUID);
+      ImportList.addGUID(Summary->modulePath(), GUID, Summary->importType());
     }
   }
   return true;

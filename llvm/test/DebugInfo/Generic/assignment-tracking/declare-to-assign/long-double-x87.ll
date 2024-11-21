@@ -11,7 +11,7 @@
 ;; alloca (80 bits) can be represented with assignment tracking. Create a
 ;; fragment for the dbg.assign for bits 0-80.
 
-; CHECK: llvm.dbg.assign(metadata i1 undef, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 80), metadata ![[#]], metadata ptr %f, metadata !DIExpression())
+; CHECK: #dbg_assign(i1 undef, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 0, 80), ![[#]], ptr %f, !DIExpression(),
 
 define dso_local void @_Z3funv() #0 !dbg !10 {
 entry:

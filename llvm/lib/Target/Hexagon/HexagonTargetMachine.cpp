@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/VLIWMachineScheduler.h"
-#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
@@ -58,6 +57,10 @@ static cl::opt<bool>
 static cl::opt<bool>
     DisableHCP("disable-hcp", cl::Hidden,
                cl::desc("Disable Hexagon constant propagation"));
+
+static cl::opt<bool> DisableHexagonMask(
+    "disable-mask", cl::Hidden,
+    cl::desc("Disable Hexagon specific Mask generation pass"));
 
 static cl::opt<bool> DisableStoreWidening("disable-store-widen", cl::Hidden,
                                           cl::init(false),
@@ -180,6 +183,8 @@ void initializeHexagonGenMuxPass(PassRegistry &);
 void initializeHexagonHardwareLoopsPass(PassRegistry &);
 void initializeHexagonLoopIdiomRecognizeLegacyPassPass(PassRegistry &);
 void initializeHexagonLoopAlignPass(PassRegistry &);
+void initializeHexagonMaskPass(PassRegistry &);
+void initializeHexagonMergeActivateWeightPass(PassRegistry &);
 void initializeHexagonNewValueJumpPass(PassRegistry &);
 void initializeHexagonOptAddrModePass(PassRegistry &);
 void initializeHexagonPacketizerPass(PassRegistry &);
@@ -213,6 +218,8 @@ FunctionPass *createHexagonISelDag(HexagonTargetMachine &TM,
                                    CodeGenOptLevel OptLevel);
 FunctionPass *createHexagonLoopAlign();
 FunctionPass *createHexagonLoopRescheduling();
+FunctionPass *createHexagonMask();
+FunctionPass *createHexagonMergeActivateWeight();
 FunctionPass *createHexagonNewValueJump();
 FunctionPass *createHexagonOptAddrMode();
 FunctionPass *createHexagonOptimizeSZextends();
@@ -254,7 +261,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTarget() {
   initializeHexagonVectorCombineLegacyPass(PR);
   initializeHexagonVectorLoopCarriedReuseLegacyPassPass(PR);
   initializeHexagonVExtractPass(PR);
-  initializeHexagonDAGToDAGISelPass(PR);
+  initializeHexagonDAGToDAGISelLegacyPass(PR);
 }
 
 HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
@@ -266,7 +273,7 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
     // Specify the vector alignment explicitly. For v512x1, the calculated
     // alignment would be 512*alignment(i1), which is 512 bytes, instead of
     // the required minimum of 64 bytes.
-    : LLVMTargetMachine(
+    : CodeGenTargetMachineImpl(
           T,
           "e-m:e-p:32:32:32-a:0-n16:32-"
           "i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-"
@@ -312,8 +319,7 @@ HexagonTargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
-void HexagonTargetMachine::registerPassBuilderCallbacks(
-    PassBuilder &PB, bool PopulateClassToPassNames) {
+void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "HexagonPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 
@@ -475,10 +481,13 @@ void HexagonPassConfig::addPostRegAlloc() {
 }
 
 void HexagonPassConfig::addPreSched2() {
+  bool NoOpt = (getOptLevel() == CodeGenOptLevel::None);
   addPass(createHexagonCopyToCombine());
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(&IfConverterID);
   addPass(createHexagonSplitConst32AndConst64());
+  if (!NoOpt && !DisableHexagonMask)
+    addPass(createHexagonMask());
 }
 
 void HexagonPassConfig::addPreEmitPass() {

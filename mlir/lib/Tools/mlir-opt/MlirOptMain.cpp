@@ -30,8 +30,8 @@
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Pass/PassRegistry.h"
 #include "mlir/Support/FileUtilities.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/Timing.h"
 #include "mlir/Support/ToolUtilities.h"
 #include "mlir/Tools/ParseUtilities.h"
@@ -119,6 +119,10 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
                  "parsing"),
         cl::location(useExplicitModuleFlag), cl::init(false));
 
+    static cl::opt<bool, /*ExternalStorage=*/true> listPasses(
+        "list-passes", cl::desc("Print the list of registered passes and exit"),
+        cl::location(listPassesFlag), cl::init(false));
+
     static cl::opt<bool, /*ExternalStorage=*/true> runReproducer(
         "run-reproducer", cl::desc("Run the pipeline stored in the reproducer"),
         cl::location(runReproducerFlag), cl::init(false));
@@ -154,6 +158,11 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         "verify-each",
         cl::desc("Run the verifier after each transformation pass"),
         cl::location(verifyPassesFlag), cl::init(true));
+
+    static cl::opt<bool, /*ExternalStorage=*/true> disableVerifyOnParsing(
+        "mlir-very-unsafe-disable-verifier-on-parsing",
+        cl::desc("Disable the verifier on parsing (very unsafe)"),
+        cl::location(disableVerifierOnParsingFlag), cl::init(false));
 
     static cl::opt<bool, /*ExternalStorage=*/true> verifyRoundtrip(
         "verify-roundtrip",
@@ -266,6 +275,8 @@ LogicalResult loadIRDLDialects(StringRef irdlFile, MLIRContext &ctx) {
 
   // Parse the input file.
   OwningOpRef<ModuleOp> module(parseSourceFile<ModuleOp>(sourceMgr, &ctx));
+  if (!module)
+    return failure();
 
   // Load IRDL dialects.
   return irdl::loadDialects(module.get());
@@ -304,10 +315,9 @@ static LogicalResult doVerifyRoundTrip(Operation *op,
                 OpPrintingFlags().printGenericOpForm().enableDebugInfo());
     }
     FallbackAsmResourceMap fallbackResourceMap;
-    ParserConfig parseConfig(&roundtripContext, /*verifyAfterParse=*/true,
+    ParserConfig parseConfig(&roundtripContext, config.shouldVerifyOnParsing(),
                              &fallbackResourceMap);
-    roundtripModule =
-        parseSourceString<Operation *>(ostream.str(), parseConfig);
+    roundtripModule = parseSourceString<Operation *>(buffer, parseConfig);
     if (!roundtripModule) {
       op->emitOpError() << "failed to parse " << testType
                         << " content back, cannot verify round-trip.\n";
@@ -372,7 +382,7 @@ performActions(raw_ostream &os,
   // untouched.
   PassReproducerOptions reproOptions;
   FallbackAsmResourceMap fallbackResourceMap;
-  ParserConfig parseConfig(context, /*verifyAfterParse=*/true,
+  ParserConfig parseConfig(context, config.shouldVerifyOnParsing(),
                            &fallbackResourceMap);
   if (config.shouldRunReproducer())
     reproOptions.attachResourceParser(parseConfig);
@@ -521,12 +531,20 @@ static LogicalResult printRegisteredDialects(DialectRegistry &registry) {
   return success();
 }
 
+static LogicalResult printRegisteredPassesAndReturn() {
+  mlir::printRegisteredPasses();
+  return success();
+}
+
 LogicalResult mlir::MlirOptMain(llvm::raw_ostream &outputStream,
                                 std::unique_ptr<llvm::MemoryBuffer> buffer,
                                 DialectRegistry &registry,
                                 const MlirOptMainConfig &config) {
   if (config.shouldShowDialects())
     return printRegisteredDialects(registry);
+
+  if (config.shouldListPasses())
+    return printRegisteredPassesAndReturn();
 
   // The split-input-file mode is a very specific mode that slices the file
   // up into small pieces and checks each independently.
@@ -563,6 +581,9 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv,
 
   if (config.shouldShowDialects())
     return printRegisteredDialects(registry);
+
+  if (config.shouldListPasses())
+    return printRegisteredPassesAndReturn();
 
   // When reading from stdin and the input is a tty, it is often a user mistake
   // and the process "appears to be stuck". Print a message to let the user know

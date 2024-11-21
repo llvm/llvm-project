@@ -11,10 +11,10 @@ target triple = "x86_64-pc-linux-gnu"
 define void @t0(i4 %cond,  i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h) {
 ; CHECK-LABEL: @t0(
 ; CHECK-NEXT:    switch i4 [[COND:%.*]], label [[END:%.*]] [
-; CHECK-NEXT:    i4 0, label [[END_SINK_SPLIT:%.*]]
-; CHECK-NEXT:    i4 -1, label [[END_SINK_SPLIT]]
-; CHECK-NEXT:    i4 1, label [[BB1:%.*]]
-; CHECK-NEXT:    i4 -2, label [[BB1]]
+; CHECK-NEXT:      i4 0, label [[END_SINK_SPLIT:%.*]]
+; CHECK-NEXT:      i4 -1, label [[END_SINK_SPLIT]]
+; CHECK-NEXT:      i4 1, label [[BB1:%.*]]
+; CHECK-NEXT:      i4 -2, label [[BB1]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[END_SINK_SPLIT]]
@@ -61,10 +61,10 @@ end:
 define void @t1(i4 %cond, i1 %cond.loop, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h) {
 ; CHECK-LABEL: @t1(
 ; CHECK-NEXT:    switch i4 [[COND:%.*]], label [[END_EARLY:%.*]] [
-; CHECK-NEXT:    i4 0, label [[BB0:%.*]]
-; CHECK-NEXT:    i4 -1, label [[BB0]]
-; CHECK-NEXT:    i4 1, label [[BB1:%.*]]
-; CHECK-NEXT:    i4 -2, label [[BB1]]
+; CHECK-NEXT:      i4 0, label [[BB0:%.*]]
+; CHECK-NEXT:      i4 -1, label [[BB0]]
+; CHECK-NEXT:      i4 1, label [[BB1:%.*]]
+; CHECK-NEXT:      i4 -2, label [[BB1]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb0:
 ; CHECK-NEXT:    [[V0:%.*]] = add i32 [[A:%.*]], [[B:%.*]]

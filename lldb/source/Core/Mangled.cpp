@@ -19,6 +19,7 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-enumerations.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Compiler.h"
@@ -48,8 +49,15 @@ Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef const name) {
   if (name.starts_with("_R"))
     return Mangled::eManglingSchemeRustV0;
 
-  if (name.starts_with("_D"))
-    return Mangled::eManglingSchemeD;
+  if (name.starts_with("_D")) {
+    // A dlang mangled name begins with `_D`, followed by a numeric length. One
+    // known exception is the symbol `_Dmain`.
+    // See `SymbolName` and `LName` in
+    // https://dlang.org/spec/abi.html#name_mangling
+    llvm::StringRef buf = name.drop_front(2);
+    if (!buf.empty() && (llvm::isDigit(buf.front()) || name == "_Dmain"))
+      return Mangled::eManglingSchemeD;
+  }
 
   if (name.starts_with("_Z"))
     return Mangled::eManglingSchemeItanium;

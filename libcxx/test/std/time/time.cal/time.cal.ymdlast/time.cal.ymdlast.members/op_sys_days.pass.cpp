@@ -14,8 +14,9 @@
 //  Returns: sys_days{year()/month()/day()}.
 
 #include <chrono>
-#include <type_traits>
 #include <cassert>
+#include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 

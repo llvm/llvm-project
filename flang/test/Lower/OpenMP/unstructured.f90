@@ -1,6 +1,7 @@
 ! Test unstructured code adjacent to and inside OpenMP constructs.
 
-! RUN: bbc %s -fopenmp -emit-hlfir -o "-" | FileCheck %s
+! RUN: bbc %s -fopenmp -emit-hlfir -o "-" \
+! RUN: | FileCheck %s
 
 ! CHECK-LABEL: func @_QPss1{{.*}} {
 ! CHECK:   br ^bb1
@@ -59,17 +60,17 @@ subroutine ss2(n) ! unstructured OpenMP construct; loop exit inside construct
 end
 
 ! CHECK-LABEL: func @_QPss3{{.*}} {
-! CHECK:   omp.parallel {
+! CHECK:   omp.parallel private(@{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
 ! CHECK:     %[[ALLOCA_K:.*]] = fir.alloca i32 {bindc_name = "k", pinned}
 ! CHECK:     %[[K_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_K]] {uniq_name = "_QFss3Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:     %[[ALLOCA_1:.*]] = fir.alloca i32 {{{.*}}, pinned}
-! CHECK:     %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_1]] {uniq_name = "_QFss3Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:     %[[ALLOCA_2:.*]] = fir.alloca i32 {{{.*}}, pinned}
-! CHECK:     %[[OMP_LOOP_K_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_2]] {uniq_name = "_QFss3Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
 ! CHECK:     br ^bb1
 ! CHECK:   ^bb1:  // 2 preds: ^bb0, ^bb3
 ! CHECK:     cond_br %{{[0-9]*}}, ^bb2, ^bb4
 ! CHECK:   ^bb2:  // pred: ^bb1
+
+! CHECK:     %[[ALLOCA_2:.*]] = fir.alloca i32 {{{.*}}, pinned, {{.*}}}
+! CHECK:     %[[OMP_LOOP_K_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_2]] {uniq_name = "_QFss3Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:     omp.wsloop {
 ! CHECK:       omp.loop_nest (%[[ARG1:.*]]) : {{.*}} {
 ! CHECK:         fir.store %[[ARG1]] to %[[OMP_LOOP_K_DECL]]#1 : !fir.ref<i32>
@@ -78,8 +79,11 @@ end
 ! CHECK:         @_FortranAioOutputInteger32(%{{.*}}, %[[LOAD_1]])
 ! CHECK:         omp.yield
 ! CHECK:       }
-! CHECK:       omp.terminator
 ! CHECK:     }
+
+! CHECK:     %[[ALLOCA_1:.*]] = fir.alloca i32 {{{.*}}, pinned, {{.*}}}
+! CHECK:     %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_1]] {uniq_name = "_QFss3Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
 ! CHECK:     omp.wsloop {
 ! CHECK:       omp.loop_nest (%[[ARG2:.*]]) : {{.*}} {
 ! CHECK:         fir.store %[[ARG2]] to %[[OMP_LOOP_J_DECL]]#1 : !fir.ref<i32>
@@ -96,7 +100,6 @@ end
 ! CHECK:       ^bb6:  // 2 preds: ^bb2, ^bb4
 ! CHECK:         omp.yield
 ! CHECK:       }
-! CHECK:       omp.terminator
 ! CHECK:     }
 ! CHECK:     br ^bb1
 ! CHECK:   ^bb4:  // pred: ^bb1
@@ -124,8 +127,8 @@ subroutine ss3(n) ! nested unstructured OpenMP constructs
 end
 
 ! CHECK-LABEL: func @_QPss4{{.*}} {
-! CHECK:       omp.parallel {
-! CHECK:         %[[ALLOCA:.*]] = fir.alloca i32 {{{.*}}, pinned}
+! CHECK:       omp.parallel private(@{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
+! CHECK:         %[[ALLOCA:.*]] = fir.alloca i32 {{{.*}}, pinned, uniq_name = "_QFss4Ej"}
 ! CHECK:         %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "_QFss4Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:         omp.wsloop {
 ! CHECK-NEXT:      omp.loop_nest (%[[ARG:.*]]) : {{.*}} {
@@ -136,11 +139,9 @@ end
 ! CHECK:              @_FortranAioBeginExternalListOutput
 ! CHECK:              %[[LOAD:.*]] = fir.load %[[OMP_LOOP_J_DECL]]#0 : !fir.ref<i32>
 ! CHECK:              @_FortranAioOutputInteger32(%{{.*}}, %[[LOAD]])
-! CHECK:             } else {
 ! CHECK:             }
 ! CHECK-NEXT:        omp.yield
 ! CHECK-NEXT:      }
-! CHECK-NEXT:      omp.terminator
 ! CHECK-NEXT:    }
 ! CHECK:         omp.terminator
 ! CHECK-NEXT:  }
@@ -158,7 +159,7 @@ subroutine ss4(n) ! CYCLE in OpenMP wsloop constructs
 end
 
 ! CHECK-LABEL: func @_QPss5() {
-! CHECK:  omp.parallel  {
+! CHECK:  omp.parallel private(@{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
 ! CHECK:    omp.wsloop {
 ! CHECK:      omp.loop_nest {{.*}} {
 ! CHECK:        br ^[[BB1:.*]]
@@ -175,7 +176,6 @@ end
 ! CHECK:      ^[[BB6]]:
 ! CHECK:        omp.yield
 ! CHECK:      }
-! CHECK:      omp.terminator
 ! CHECK:    }
 ! CHECK:    omp.terminator
 ! CHECK:  }
@@ -197,7 +197,7 @@ subroutine ss5() ! EXIT inside OpenMP wsloop (inside parallel)
 end
 
 ! CHECK-LABEL: func @_QPss6() {
-! CHECK:  omp.parallel  {
+! CHECK:  omp.parallel private(@{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
 ! CHECK:    br ^[[BB1_OUTER:.*]]
 ! CHECK:  ^[[BB1_OUTER]]:
 ! CHECK:    cond_br %{{.*}}, ^[[BB2_OUTER:.*]], ^[[BB3_OUTER:.*]]
@@ -218,7 +218,6 @@ end
 ! CHECK:      ^[[BB6]]:
 ! CHECK:        omp.yield
 ! CHECK:      }
-! CHECK:      omp.terminator
 ! CHECK:    }
 ! CHECK:    br ^[[BB1_OUTER]]
 ! CHECK:  ^[[BB3_OUTER]]:
@@ -265,7 +264,6 @@ end
 ! CHECK-NEXT:       ^[[BB6]]:
 ! CHECK:         omp.yield
 ! CHECK:       }
-! CHECK:       omp.terminator
 ! CHECK:     }
 ! CHECK:     omp.terminator
 ! CHECK:   }
@@ -306,7 +304,6 @@ end
 ! CHECK-NEXT:      ^[[BB6]]:
 ! CHECK:        omp.yield
 ! CHECK:      }
-! CHECK:      omp.terminator
 ! CHECK:    }
 ! CHECK:    omp.terminator
 ! CHECK:  }
@@ -325,8 +322,8 @@ subroutine ss8() ! EXIT inside OpenMP parallel do
 end
 
 ! CHECK-LABEL: func @_QPss9() {
-! CHECK:  omp.parallel  {
-! CHECK-NEXT:    omp.parallel  {
+! CHECK:    omp.parallel  {
+! CHECK-NEXT: omp.parallel private(@{{.*}} %{{.*}}#0 -> %{{.*}}, @{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
 ! CHECK:      br ^[[BB1:.*]]
 ! CHECK:         ^[[BB1]]:
 ! CHECK:      cond_br %{{.*}}, ^[[BB2:.*]], ^[[BB5:.*]]

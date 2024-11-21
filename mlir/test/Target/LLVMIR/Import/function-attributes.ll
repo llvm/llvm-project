@@ -13,14 +13,14 @@ define internal spir_func void @spir_func_internal() {
 ; // -----
 
 ; CHECK-LABEL: @func_readnone
-; CHECK-SAME:  attributes {memory = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
+; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
 ; CHECK:   llvm.return
 define void @func_readnone() readnone {
   ret void
 }
 
 ; CHECK-LABEL: @func_readnone_indirect
-; CHECK-SAME:  attributes {memory = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
+; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
 declare void @func_readnone_indirect() #0
 attributes #0 = { readnone }
 
@@ -152,7 +152,7 @@ define void @entry_count() !prof !1 {
 ; // -----
 
 ; CHECK-LABEL: @func_memory
-; CHECK-SAME:  attributes {memory = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite>}
+; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite>}
 ; CHECK:   llvm.return
 define void @func_memory() memory(readwrite, argmem: none) {
   ret void
@@ -163,11 +163,10 @@ define void @func_memory() memory(readwrite, argmem: none) {
 ; CHECK-LABEL: @passthrough_combined
 ; CHECK-SAME: attributes {passthrough = [
 ; CHECK-DAG: ["alignstack", "16"]
-; CHECK-DAG: "noinline"
 ; CHECK-DAG: "probe-stack"
 ; CHECK-DAG: ["alloc-family", "malloc"]
 ; CHECK:   llvm.return
-define void @passthrough_combined() alignstack(16) noinline "probe-stack" "alloc-family"="malloc" {
+define void @passthrough_combined() alignstack(16) "probe-stack" "alloc-family"="malloc" {
   ret void
 }
 
@@ -344,3 +343,57 @@ declare void @func_attr_no_signed_zeros_fp_math_true() "no-signed-zeros-fp-math"
 ; CHECK-LABEL: @func_attr_no_signed_zeros_fp_math_false
 ; CHECK-SAME: attributes {no_signed_zeros_fp_math = false}
 declare void @func_attr_no_signed_zeros_fp_math_false() "no-signed-zeros-fp-math"="false"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_denormal_fp_math_ieee
+; CHECK-SAME: attributes {denormal_fp_math = "ieee"}
+declare void @func_attr_denormal_fp_math_ieee() "denormal-fp-math"="ieee"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_denormal_fp_math_f32_preserve_sign
+; CHECK-SAME: attributes {denormal_fp_math_f32 = "preserve-sign"}
+declare void @func_attr_denormal_fp_math_f32_preserve_sign() "denormal-fp-math-f32"="preserve-sign"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_fp_contract_fast
+; CHECK-SAME: attributes {fp_contract = "fast"}
+declare void @func_attr_fp_contract_fast() "fp-contract"="fast"
+
+// -----
+
+; CHECK-LABEL: @noinline_attribute
+; CHECK-SAME: attributes {no_inline}
+declare void @noinline_attribute() noinline
+
+// -----
+
+; CHECK-LABEL: @alwaysinline_attribute
+; CHECK-SAME: attributes {always_inline}
+declare void @alwaysinline_attribute() alwaysinline
+
+// -----
+
+; CHECK-LABEL: @optnone_attribute
+; CHECK-SAME: attributes {no_inline, optimize_none}
+declare void @optnone_attribute() noinline optnone
+
+// -----
+
+; CHECK-LABEL: @convergent_attribute
+; CHECK-SAME: attributes {convergent}
+declare void @convergent_attribute() convergent
+
+// -----
+
+; CHECK-LABEL: @nounwind_attribute
+; CHECK-SAME: attributes {no_unwind}
+declare void @nounwind_attribute() nounwind
+
+// -----
+
+; CHECK-LABEL: @willreturn_attribute
+; CHECK-SAME: attributes {will_return}
+declare void @willreturn_attribute() willreturn

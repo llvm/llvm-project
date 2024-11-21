@@ -35,7 +35,7 @@ entry:
   call void @llvm.dbg.value(metadata ptr %1, metadata !18, metadata !20), !dbg !19
 ; CHECK: define void @salvage_load
 ; CHECK-NEXT: entry:
-; CHECK-NEXT: call void @llvm.dbg.value(metadata ptr poison
+; CHECK-NEXT: #dbg_value(ptr poison
   store ptr %1, ptr %im_not_dead, align 8
   ret void, !dbg !21
 }
@@ -46,8 +46,8 @@ entry:
   call void @llvm.dbg.value(metadata ptr %queue, metadata !24, metadata !20), !dbg !23
 ; CHECK: define void @salvage_bitcast
 ; CHECK-NEXT: entry:
-; CHECK-NEXT: call void @llvm.dbg.value(metadata ptr %queue,
-; CHECK-SAME:                           metadata !DIExpression(DW_OP_plus_uconst, 0))
+; CHECK-NEXT: #dbg_value(ptr %queue,
+; CHECK-SAME:                           !DIExpression(DW_OP_plus_uconst, 0),
   store ptr %queue, ptr %im_not_dead, align 8
   ret void, !dbg !23
 }
@@ -60,8 +60,8 @@ entry:
   call void @llvm.dbg.value(metadata ptr %1, metadata !27, metadata !20), !dbg !26
 ; CHECK: define void @salvage_gep0
 ; CHECK-NEXT: entry:
-; CHECK-NEXT: call void @llvm.dbg.value(metadata ptr %queue,
-; CHECK-SAME:                           metadata !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_plus_uconst, 0, DW_OP_stack_value))
+; CHECK-NEXT: #dbg_value(ptr %queue,
+; CHECK-SAME:                           !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_stack_value),
   store ptr %1, ptr %im_not_dead, align 8
   ret void, !dbg !26
 }
@@ -74,8 +74,8 @@ entry:
   call void @llvm.dbg.value(metadata ptr %1, metadata !30, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32)), !dbg !29
 ; CHECK: define void @salvage_gep1
 ; CHECK-NEXT: entry:
-; CHECK-NEXT: call void @llvm.dbg.value(metadata ptr %queue,
-; CHECK-SAME:     metadata !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_stack_value, DW_OP_LLVM_fragment, 0, 32))
+; CHECK-NEXT: #dbg_value(ptr %queue,
+; CHECK-SAME:     !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_stack_value, DW_OP_LLVM_fragment, 0, 32),
   store ptr %1, ptr %im_not_dead, align 8
   ret void, !dbg !29
 }
@@ -88,8 +88,8 @@ entry:
   call void @llvm.dbg.value(metadata ptr %1, metadata !33, metadata !DIExpression(DW_OP_stack_value)), !dbg !32
 ; CHECK: define void @salvage_gep2
 ; CHECK-NEXT: entry:
-; CHECK-NEXT: call void @llvm.dbg.value(metadata ptr %queue,
-; CHECK-SAME:     metadata !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_stack_value))
+; CHECK-NEXT: #dbg_value(ptr %queue,
+; CHECK-SAME:     !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_stack_value),
   store ptr %1, ptr %im_not_dead, align 8
   ret void, !dbg !32
 }

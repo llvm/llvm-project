@@ -38,8 +38,9 @@ ABIArgInfo DefaultABIInfo::classifyArgumentType(QualType Ty) const {
                                 : Context.LongLongTy))
       return getNaturalAlignIndirect(Ty);
 
-  return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
-                                            : ABIArgInfo::getDirect());
+  return (isPromotableIntegerTypeForABI(Ty)
+              ? ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty))
+              : ABIArgInfo::getDirect());
 }
 
 ABIArgInfo DefaultABIInfo::classifyReturnType(QualType RetTy) const {
@@ -71,19 +72,12 @@ void DefaultABIInfo::computeInfo(CGFunctionInfo &FI) const {
     I.info = classifyArgumentType(I.type);
 }
 
-Address DefaultABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                  QualType Ty) const {
-  return EmitVAArgInstr(CGF, VAListAddr, Ty, classifyArgumentType(Ty));
-}
-
-ABIArgInfo CodeGen::coerceToIntArray(QualType Ty, ASTContext &Context,
-                                     llvm::LLVMContext &LLVMContext) {
-  // Alignment and Size are measured in bits.
-  const uint64_t Size = Context.getTypeSize(Ty);
-  const uint64_t Alignment = Context.getTypeAlign(Ty);
-  llvm::Type *IntType = llvm::Type::getIntNTy(LLVMContext, Alignment);
-  const uint64_t NumElements = (Size + Alignment - 1) / Alignment;
-  return ABIArgInfo::getDirect(llvm::ArrayType::get(IntType, NumElements));
+RValue DefaultABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                 QualType Ty, AggValueSlot Slot) const {
+  return CGF.EmitLoadOfAnyValue(
+      CGF.MakeAddrLValue(
+          EmitVAArgInstr(CGF, VAListAddr, Ty, classifyArgumentType(Ty)), Ty),
+      Slot);
 }
 
 void CodeGen::AssignToArrayRange(CodeGen::CGBuilderTy &Builder,
@@ -199,12 +193,12 @@ CodeGen::emitVoidPtrDirectVAArg(CodeGenFunction &CGF, Address VAListAddr,
   return Addr.withElementType(DirectTy);
 }
 
-Address CodeGen::emitVoidPtrVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                  QualType ValueTy, bool IsIndirect,
-                                  TypeInfoChars ValueInfo,
-                                  CharUnits SlotSizeAndAlign,
-                                  bool AllowHigherAlign,
-                                  bool ForceRightAdjust) {
+RValue CodeGen::emitVoidPtrVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                 QualType ValueTy, bool IsIndirect,
+                                 TypeInfoChars ValueInfo,
+                                 CharUnits SlotSizeAndAlign,
+                                 bool AllowHigherAlign, AggValueSlot Slot,
+                                 bool ForceRightAdjust) {
   // The size and alignment of the value that was passed directly.
   CharUnits DirectSize, DirectAlign;
   if (IsIndirect) {
@@ -230,7 +224,7 @@ Address CodeGen::emitVoidPtrVAArg(CodeGenFunction &CGF, Address VAListAddr,
     Addr = Address(CGF.Builder.CreateLoad(Addr), ElementTy, ValueInfo.Align);
   }
 
-  return Addr;
+  return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(Addr, ValueTy), Slot);
 }
 
 Address CodeGen::emitMergePHI(CodeGenFunction &CGF, Address Addr1,
@@ -304,6 +298,41 @@ bool CodeGen::isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays,
   for (const auto *I : RD->fields())
     if (!isEmptyField(Context, I, AllowArrays, AsIfNoUniqueAddr))
       return false;
+  return true;
+}
+
+bool CodeGen::isEmptyFieldForLayout(const ASTContext &Context,
+                                    const FieldDecl *FD) {
+  if (FD->isZeroLengthBitField(Context))
+    return true;
+
+  if (FD->isUnnamedBitField())
+    return false;
+
+  return isEmptyRecordForLayout(Context, FD->getType());
+}
+
+bool CodeGen::isEmptyRecordForLayout(const ASTContext &Context, QualType T) {
+  const RecordType *RT = T->getAs<RecordType>();
+  if (!RT)
+    return false;
+
+  const RecordDecl *RD = RT->getDecl();
+
+  // If this is a C++ record, check the bases first.
+  if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+    if (CXXRD->isDynamicClass())
+      return false;
+
+    for (const auto &I : CXXRD->bases())
+      if (!isEmptyRecordForLayout(Context, I.getType()))
+        return false;
+  }
+
+  for (const auto *I : RD->fields())
+    if (!isEmptyFieldForLayout(Context, I))
+      return false;
+
   return true;
 }
 

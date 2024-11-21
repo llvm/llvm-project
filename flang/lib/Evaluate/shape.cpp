@@ -885,8 +885,12 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
         intrinsic->name == "ubound") {
       // For LBOUND/UBOUND, these are the array-valued cases (no DIM=)
       if (!call.arguments().empty() && call.arguments().front()) {
-        return Shape{
-            MaybeExtentExpr{ExtentExpr{call.arguments().front()->Rank()}}};
+        if (IsAssumedRank(*call.arguments().front())) {
+          return Shape{MaybeExtentExpr{}};
+        } else {
+          return Shape{
+              MaybeExtentExpr{ExtentExpr{call.arguments().front()->Rank()}}};
+        }
       }
     } else if (intrinsic->name == "all" || intrinsic->name == "any" ||
         intrinsic->name == "count" || intrinsic->name == "iall" ||
@@ -1033,7 +1037,7 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
       } else if (context_) {
         if (auto moldTypeAndShape{characteristics::TypeAndShape::Characterize(
                 call.arguments().at(1), *context_)}) {
-          if (GetRank(moldTypeAndShape->shape()) == 0) {
+          if (moldTypeAndShape->Rank() == 0) {
             // SIZE= is absent and MOLD= is scalar: result is scalar
             return ScalarShape();
           } else {

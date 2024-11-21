@@ -2,7 +2,7 @@
 // UNSUPPORTED: target={{.*-windows.*}}, target={{.*}}-macosx{{.*}}, target={{.*-darwin.*}}, target={{.*}}-aix{{.*}}
 
 // Generate dummy fat object
-// RUN: %clang -O0 -target %itanium_abi_triple %s -c -o %t.host.o
+// RUN: %clang -O0 --target=%itanium_abi_triple %s -c -o %t.host.o
 // RUN: echo 'Content of device file' > %t.tgt.o
 // RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-%itanium_abi_triple -input=%t.host.o -input=%t.tgt.o -output=%t.fat.obj
 

@@ -78,4 +78,3 @@ add_lit_testsuite(check-asan-abi "Running the AddressSanitizerABI tests"
   ${ASAN_ABI_TESTSUITES}
   ${exclude_from_check_all}
   DEPENDS ${ASAN_ABI_TEST_DEPS})
-set_target_properties(check-asan-abi PROPERTIES FOLDER "Compiler-RT Misc")

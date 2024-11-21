@@ -41,8 +41,10 @@
   define void @anyext_on_fpr() { ret void }
   define void @anyext_on_fpr8() { ret void }
 
-...
+  define void @load_s32_gpr_LD1() { ret void }
+  define void @load_s32_gpr_GIM() { ret void }
 
+...
 ---
 name:            load_s64_gpr
 legalized:       true
@@ -57,7 +59,9 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: load_s64_gpr
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[COPY]], 0 :: (load (s64) from %ir.addr)
     ; CHECK-NEXT: $x0 = COPY [[LDRXui]]
     %0(p0) = COPY $x0
@@ -79,7 +83,9 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: load_s32_gpr
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRWui:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 0 :: (load (s32) from %ir.addr)
     ; CHECK-NEXT: $w0 = COPY [[LDRWui]]
     %0(p0) = COPY $x0
@@ -97,7 +103,9 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: load_s16_gpr_anyext
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRHHui:%[0-9]+]]:gpr32 = LDRHHui [[COPY]], 0 :: (load (s16) from %ir.addr)
     ; CHECK-NEXT: $w0 = COPY [[LDRHHui]]
     %0:gpr(p0) = COPY $x0
@@ -119,7 +127,9 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: load_s16_gpr
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRHHui:%[0-9]+]]:gpr32 = LDRHHui [[COPY]], 0 :: (load (s16) from %ir.addr)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[LDRHHui]]
     ; CHECK-NEXT: $w0 = COPY [[COPY1]]
@@ -139,7 +149,9 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: load_s8_gpr_anyext
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load (s8) from %ir.addr)
     ; CHECK-NEXT: $w0 = COPY [[LDRBBui]]
     %0:gpr(p0) = COPY $x0
@@ -161,7 +173,9 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: load_s8_gpr
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load (s8) from %ir.addr)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[LDRBBui]]
     ; CHECK-NEXT: $w0 = COPY [[COPY1]]
@@ -188,7 +202,9 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: load_fi_s64_gpr
-    ; CHECK: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui %stack.0.ptr0, 0 :: (load (s64))
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui %stack.0.ptr0, 0 :: (load (s64))
     ; CHECK-NEXT: $x0 = COPY [[LDRXui]]
     %0(p0) = G_FRAME_INDEX %stack.0.ptr0
     %1(s64) = G_LOAD %0 :: (load (s64))
@@ -211,7 +227,9 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: load_gep_128_s64_gpr
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[COPY]], 16 :: (load (s64) from %ir.addr)
     ; CHECK-NEXT: $x0 = COPY [[LDRXui]]
     %0(p0) = COPY $x0
@@ -237,7 +255,9 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: load_gep_512_s32_gpr
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRWui:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 128 :: (load (s32) from %ir.addr)
     ; CHECK-NEXT: $w0 = COPY [[LDRWui]]
     %0(p0) = COPY $x0
@@ -263,7 +283,9 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: load_gep_64_s16_gpr
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRHHui:%[0-9]+]]:gpr32 = LDRHHui [[COPY]], 32 :: (load (s16) from %ir.addr)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[LDRHHui]]
     ; CHECK-NEXT: $w0 = COPY [[COPY1]]
@@ -291,7 +313,9 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: load_gep_1_s8_gpr
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 1 :: (load (s8) from %ir.addr)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[LDRBBui]]
     ; CHECK-NEXT: $w0 = COPY [[COPY1]]
@@ -317,7 +341,9 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: load_s64_fpr
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[COPY]], 0 :: (load (s64) from %ir.addr)
     ; CHECK-NEXT: $d0 = COPY [[LDRDui]]
     %0(p0) = COPY $x0
@@ -339,7 +365,9 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: load_s32_fpr
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRSui:%[0-9]+]]:fpr32 = LDRSui [[COPY]], 0 :: (load (s32) from %ir.addr)
     ; CHECK-NEXT: $s0 = COPY [[LDRSui]]
     %0(p0) = COPY $x0
@@ -361,7 +389,9 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: load_s16_fpr
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRHui:%[0-9]+]]:fpr16 = LDRHui [[COPY]], 0 :: (load (s16) from %ir.addr)
     ; CHECK-NEXT: $h0 = COPY [[LDRHui]]
     %0(p0) = COPY $x0
@@ -383,7 +413,9 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: load_s8_fpr
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRBui:%[0-9]+]]:fpr8 = LDRBui [[COPY]], 0 :: (load (s8) from %ir.addr)
     ; CHECK-NEXT: $b0 = COPY [[LDRBui]]
     %0(p0) = COPY $x0
@@ -407,7 +439,9 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: load_gep_8_s64_fpr
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[COPY]], 1 :: (load (s64) from %ir.addr)
     ; CHECK-NEXT: $d0 = COPY [[LDRDui]]
     %0(p0) = COPY $x0
@@ -433,7 +467,9 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: load_gep_16_s32_fpr
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRSui:%[0-9]+]]:fpr32 = LDRSui [[COPY]], 4 :: (load (s32) from %ir.addr)
     ; CHECK-NEXT: $s0 = COPY [[LDRSui]]
     %0(p0) = COPY $x0
@@ -459,7 +495,9 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: load_gep_64_s16_fpr
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRHui:%[0-9]+]]:fpr16 = LDRHui [[COPY]], 32 :: (load (s16) from %ir.addr)
     ; CHECK-NEXT: $h0 = COPY [[LDRHui]]
     %0(p0) = COPY $x0
@@ -485,7 +523,9 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: load_gep_32_s8_fpr
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRBui:%[0-9]+]]:fpr8 = LDRBui [[COPY]], 32 :: (load (s8) from %ir.addr)
     ; CHECK-NEXT: $b0 = COPY [[LDRBui]]
     %0(p0) = COPY $x0
@@ -508,7 +548,9 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: load_v2s32
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[COPY]], 0 :: (load (<2 x s32>) from %ir.addr)
     ; CHECK-NEXT: $d0 = COPY [[LDRDui]]
     %0(p0) = COPY $x0
@@ -529,7 +571,9 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: load_v2s64
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (load (<2 x s64>) from %ir.addr)
     ; CHECK-NEXT: $q0 = COPY [[LDRQui]]
     %0(p0) = COPY $x0
@@ -711,4 +755,64 @@ body:             |
     $w0 = COPY %24(s32)
     RET_ReallyLR
 
+...
+---
+name:            load_s32_gpr_LD1
+legalized:       true
+regBankSelected: true
+
+body:             |
+  bb.0:
+    liveins: $q0, $x0
+
+    ; CHECK-LABEL: name: load_s32_gpr_LD1
+    ; CHECK: liveins: $q0, $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LD1i32_:%[0-9]+]]:fpr128 = LD1i32 [[COPY]], 0, [[COPY1]] :: (load (s32))
+    ; CHECK-NEXT: $q0 = COPY [[LD1i32_]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %0:fpr(<4 x s32>) = COPY $q0
+    %1:gpr(p0) = COPY $x0
+    %2:fpr(s32) = G_LOAD %1(p0) :: (load (s32))
+    %3:gpr(s32) = G_CONSTANT i32 3
+    %5:gpr(s64) = G_CONSTANT i64 0
+    %4:fpr(<4 x s32>) = G_INSERT_VECTOR_ELT %0, %2(s32), %5(s64)
+    $q0 = COPY %4(<4 x s32>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+
+name:            load_s32_gpr_GIM
+legalized:       true
+regBankSelected: true
+
+body:             |
+  bb.0:
+    liveins: $q0, $x0
+    ;This test should not select an LD1 instruction as there is a store instruction between G_INSERT_VECTOR_ELT and G_LOAD 
+    ; CHECK-LABEL: name: load_s32_gpr_GIM
+    ; CHECK: liveins: $q0, $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LDRSui:%[0-9]+]]:fpr32 = LDRSui [[COPY1]], 0 :: (load (s32))
+    ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 3
+    ; CHECK-NEXT: STRWui [[MOVi32imm]], [[COPY1]], 0 :: (store (s32))
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[LDRSui]], %subreg.ssub
+    ; CHECK-NEXT: [[INSvi32lane:%[0-9]+]]:fpr128 = INSvi32lane [[COPY]], 0, [[INSERT_SUBREG]], 0
+    ; CHECK-NEXT: $q0 = COPY [[INSvi32lane]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %0:fpr(<4 x s32>) = COPY $q0
+    %1:gpr(p0) = COPY $x0
+    %2:fpr(s32) = G_LOAD %1(p0) :: (load (s32))
+    %3:gpr(s32) = G_CONSTANT i32 3
+    G_STORE %3(s32), %1(p0) :: (store (s32))
+    %5:gpr(s64) = G_CONSTANT i64 0
+    %4:fpr(<4 x s32>) = G_INSERT_VECTOR_ELT %0, %2(s32), %5(s64)
+    $q0 = COPY %4(<4 x s32>)
+    RET_ReallyLR implicit $q0
 ...

@@ -8,6 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 
 using namespace clang;
@@ -32,8 +33,8 @@ public:
   ABIArgInfo classifyArgumentType(QualType Ty) const;
 
   void computeInfo(CGFunctionInfo &FI) const override;
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
   bool isUnsupportedType(QualType T) const;
   ABIArgInfo coerceToIntArrayWithLimit(QualType Ty, unsigned MaxSize) const;
 };
@@ -78,14 +79,20 @@ public:
   // Adds a NamedMDNode with GV, Name, and Operand as operands, and adds the
   // resulting MDNode to the nvvm.annotations MDNode.
   static void addNVVMMetadata(llvm::GlobalValue *GV, StringRef Name,
-                              int Operand);
+                              int Operand,
+                              const SmallVectorImpl<int> &GridConstantArgs);
+
+  static void addNVVMMetadata(llvm::GlobalValue *GV, StringRef Name,
+                              int Operand) {
+    addNVVMMetadata(GV, Name, Operand, SmallVector<int, 1>(0));
+  }
 
 private:
   static void emitBuiltinSurfTexDeviceCopy(CodeGenFunction &CGF, LValue Dst,
                                            LValue Src) {
     llvm::Value *Handle = nullptr;
     llvm::Constant *C =
-        llvm::dyn_cast<llvm::Constant>(Src.getAddress(CGF).emitRawPointer(CGF));
+        llvm::dyn_cast<llvm::Constant>(Src.getAddress().emitRawPointer(CGF));
     // Lookup `addrspacecast` through the constant pointer if any.
     if (auto *ASC = llvm::dyn_cast_or_null<llvm::AddrSpaceCastOperator>(C))
       C = llvm::cast<llvm::Constant>(ASC->getPointerOperand());
@@ -203,8 +210,11 @@ ABIArgInfo NVPTXABIInfo::classifyArgumentType(QualType Ty) const {
 void NVPTXABIInfo::computeInfo(CGFunctionInfo &FI) const {
   if (!getCXXABI().classifyReturnType(FI))
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
-  for (auto &I : FI.arguments())
-    I.info = classifyArgumentType(I.type);
+
+  for (auto &&[ArgumentsCount, I] : llvm::enumerate(FI.arguments()))
+    I.info = ArgumentsCount < FI.getNumRequiredArgs()
+                 ? classifyArgumentType(I.type)
+                 : ABIArgInfo::getDirect();
 
   // Always honor user-specified calling convention.
   if (FI.getCallingConvention() != llvm::CallingConv::C)
@@ -213,9 +223,12 @@ void NVPTXABIInfo::computeInfo(CGFunctionInfo &FI) const {
   FI.setEffectiveCallingConvention(getRuntimeCC());
 }
 
-Address NVPTXABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                QualType Ty) const {
-  llvm_unreachable("NVPTX does not support varargs");
+RValue NVPTXABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                               QualType Ty, AggValueSlot Slot) const {
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*IsIndirect=*/false,
+                          getContext().getTypeInfoInChars(Ty),
+                          CharUnits::fromQuantity(1),
+                          /*AllowHigherAlign=*/true, Slot);
 }
 
 void NVPTXTargetCodeGenInfo::setTargetAttributes(
@@ -234,7 +247,8 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
   }
 
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
-  if (!FD) return;
+  if (!FD)
+    return;
 
   llvm::Function *F = cast<llvm::Function>(GV);
 
@@ -257,8 +271,13 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
     // __global__ functions cannot be called from the device, we do not
     // need to set the noinline attribute.
     if (FD->hasAttr<CUDAGlobalAttr>()) {
+      SmallVector<int, 10> GCI;
+      for (auto IV : llvm::enumerate(FD->parameters()))
+        if (IV.value()->hasAttr<CUDAGridConstantAttr>())
+          // For some reason arg indices are 1-based in NVVM
+          GCI.push_back(IV.index() + 1);
       // Create !{<func-ref>, metadata !"kernel", i32 1} node
-      addNVVMMetadata(F, "kernel", 1);
+      addNVVMMetadata(F, "kernel", 1, GCI);
     }
     if (CUDALaunchBoundsAttr *Attr = FD->getAttr<CUDALaunchBoundsAttr>())
       M.handleCUDALaunchBoundsAttr(F, Attr);
@@ -270,18 +289,27 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
   }
 }
 
-void NVPTXTargetCodeGenInfo::addNVVMMetadata(llvm::GlobalValue *GV,
-                                             StringRef Name, int Operand) {
+void NVPTXTargetCodeGenInfo::addNVVMMetadata(
+    llvm::GlobalValue *GV, StringRef Name, int Operand,
+    const SmallVectorImpl<int> &GridConstantArgs) {
   llvm::Module *M = GV->getParent();
   llvm::LLVMContext &Ctx = M->getContext();
 
   // Get "nvvm.annotations" metadata node
   llvm::NamedMDNode *MD = M->getOrInsertNamedMetadata("nvvm.annotations");
 
-  llvm::Metadata *MDVals[] = {
+  SmallVector<llvm::Metadata *, 5> MDVals = {
       llvm::ConstantAsMetadata::get(GV), llvm::MDString::get(Ctx, Name),
       llvm::ConstantAsMetadata::get(
           llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), Operand))};
+  if (!GridConstantArgs.empty()) {
+    SmallVector<llvm::Metadata *, 10> GCM;
+    for (int I : GridConstantArgs)
+      GCM.push_back(llvm::ConstantAsMetadata::get(
+          llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), I)));
+    MDVals.append({llvm::MDString::get(Ctx, "grid_constant"),
+                   llvm::MDNode::get(Ctx, GCM)});
+  }
   // Append metadata to nvvm.annotations
   MD->addOperand(llvm::MDNode::get(Ctx, MDVals));
 }
@@ -303,7 +331,7 @@ NVPTXTargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &CGM,
   return llvm::ConstantExpr::getAddrSpaceCast(
       llvm::ConstantPointerNull::get(NPT), PT);
 }
-}
+} // namespace
 
 void CodeGenModule::handleCUDALaunchBoundsAttr(llvm::Function *F,
                                                const CUDALaunchBoundsAttr *Attr,

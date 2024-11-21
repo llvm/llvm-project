@@ -17,6 +17,7 @@
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMAttrDefs.td"
+include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
 include "flang/Optimizer/Dialect/FIRDialect.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
@@ -60,6 +61,12 @@ class fir_SimpleOneResultOp<string mnemonic, list<Trait> traits = []> :
     fir_SimpleOp<mnemonic, traits> {
   let builders = [fir_OneResultOpBuilder];
 }
+
+// Whether a type is a BaseBoxType or a reference to a BaseBoxType.
+def IsBoxAddressOrValueTypePred
+        : CPred<"::fir::isBoxAddressOrValue($_self)">;
+def fir_BoxAddressOrValueType : Type<IsBoxAddressOrValueTypePred,
+    "fir.box or fir.class type or reference">;
 
 //===----------------------------------------------------------------------===//
 // Memory SSA operations
@@ -116,6 +123,13 @@ def fir_AllocaOp : fir_Op<"alloca", [AttrSizedOperandSegments,
     the copy of each constant need not exceed that of the CALL statement.
     Indeed, a user would likely expect a good Fortran compiler to perform such
     an optimization.
+
+    Stack allocations have a maximum lifetime concept: their uses must not
+    exceed the lifetime of the closest parent operation with the
+    AutomaticAllocationScope trait, IsIsolatedFromAbove trait, or
+    LoopLikeOpInterface trait. This restriction is meant to ease the
+    insertion of stack save and restore operations, and to ease the conversion
+    of stack allocation into heap allocation.
 
     Until Fortran 2018, procedures defaulted to non-recursive. A legal
     implementation could therefore convert stack allocations to global
@@ -176,11 +190,17 @@ def fir_AllocaOp : fir_Op<"alloca", [AttrSizedOperandSegments,
     mlir::Type getAllocatedType();
     bool hasLenParams() { return !getTypeparams().empty(); }
     bool hasShapeOperands() { return !getShape().empty(); }
+    bool isDynamic() {return hasLenParams() || hasShapeOperands();}
     unsigned numLenParams() { return getTypeparams().size(); }
     operand_range getLenParams() { return getTypeparams(); }
     unsigned numShapeOperands() { return getShape().size(); }
     operand_range getShapeOperands() { return getShape(); }
     static mlir::Type getRefTy(mlir::Type ty);
+    /// Is this an operation that owns the alloca directly made in its region?
+    static bool ownsNestedAlloca(mlir::Operation* op);
+    /// Get the parent region that owns this alloca. Nullptr if none can be
+    /// identified.
+    mlir::Region* getOwnerRegion();
   }];
 }
 
@@ -762,7 +782,10 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
           lower bounds and extents may not be known until runtime),
         - slice: an array section can be described with a slice triple,
         - typeparams: for emboxing a derived type with LEN type parameters,
+        - sourceBox: A box to read information from such as CFI type,
+          type descriptor or element size to populate the new descriptor.
         - accessMap: unused/experimental.
+        - allocator_idx: specify special allocator to use.
   }];
 
   let arguments = (ins
@@ -771,7 +794,8 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
     Optional<fir_SliceType>:$slice,
     Variadic<AnyIntegerType>:$typeparams,
     Optional<fir_ClassType>:$sourceBox,
-    OptionalAttr<AffineMapAttr>:$accessMap
+    OptionalAttr<AffineMapAttr>:$accessMap,
+    OptionalAttr<I32Attr>:$allocator_idx
   );
 
   let results = (outs BoxOrClassType);
@@ -781,9 +805,11 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
       "mlir::Value":$memref, CArg<"mlir::Value", "{}">:$shape,
       CArg<"mlir::Value", "{}">:$slice,
       CArg<"mlir::ValueRange", "{}">:$typeparams,
-      CArg<"mlir::Value", "{}">:$sourceBox),
+      CArg<"mlir::Value", "{}">:$sourceBox,
+      CArg<"mlir::IntegerAttr", "{}">:$allocator_idx),
     [{ return build($_builder, $_state, resultTypes, memref, shape, slice,
-                    typeparams, sourceBox, mlir::AffineMapAttr{}); }]>
+                    typeparams, sourceBox, mlir::AffineMapAttr{},
+                    allocator_idx); }]>
   ];
 
   let assemblyFormat = [{
@@ -797,7 +823,7 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
   let extraClassDeclaration = [{
     bool hasLenParams() { return !getTypeparams().empty(); }
     unsigned numLenParams() { return getTypeparams().size(); }
-    unsigned getSourceBoxOffset() {
+    unsigned getSourceBoxOperandIndex() {
       return 1 + (getShape() ? 1 : 0) + (getSlice() ? 1 : 0)
           + numLenParams();
     }
@@ -850,6 +876,43 @@ def fir_ReboxOp : fir_Op<"rebox", [NoMemoryEffect, AttrSizedOperandSegments]> {
 
   let assemblyFormat = [{
     $box (`(` $shape^ `)`)? (`[` $slice^ `]`)?
+        attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def fir_ReboxAssumedRankOp : fir_Op<"rebox_assumed_rank",
+  [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "create an assumed-rank box given another assumed-rank box";
+
+  let description = [{
+    Limited version of fir.rebox for assumed-rank. Only the lower bounds,
+    attribute, and element type may change.
+
+    The input may be a box or a reference to a box, in which case the operation
+    reads the incoming reference.
+    Since a fir.shift cannot be built without knowing the rank statically,
+    lower bound changes are encoded via a LowerBoundModifierAttribute.
+    Attribute and element type change are encoded in the result type.
+    Changing the element type is only allowed if the input type is a derived
+    type that extends the output element type.
+
+    Example:
+    ```
+      fir.rebox_assumed_rank %1 lbs zeroes : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+    ```    
+  }];
+
+  let arguments = (ins
+    AnyRefOrBoxType:$box,
+    fir_LowerBoundModifierAttribute:$lbs_modifier
+  );
+
+  let results = (outs BoxOrClassType);
+
+  let assemblyFormat = [{
+    $box `lbs` $lbs_modifier
         attr-dict `:` functional-type(operands, results)
   }];
 
@@ -1127,6 +1190,23 @@ def fir_BoxIsArrayOp : fir_SimpleOp<"box_isarray", [NoMemoryEffect]> {
   let results = (outs BoolLike);
 }
 
+def fir_IsAssumedSizeOp : fir_SimpleOp<"is_assumed_size", [NoMemoryEffect]> {
+  let summary = "detect if a boxed value is an assumed-size array";
+
+  let description = [{
+    Fir box SSA values may describe assumed-size arrays. This operation
+    allows detecting this, even for assumed-rank box.
+
+    ```
+      %a = fir.is_assumed_size %b : (!fir.box<!fir.array<*:f64>>) -> i1
+    ```
+  }];
+
+  let arguments = (ins BoxOrClassType:$val);
+
+  let results = (outs BoolLike);
+}
+
 def fir_BoxIsPtrOp : fir_SimpleOp<"box_isptr", [NoMemoryEffect]> {
   let summary = "is the boxed value a POINTER?";
 
@@ -1167,7 +1247,8 @@ def fir_BoxProcHostOp : fir_SimpleOp<"boxproc_host", [NoMemoryEffect]> {
   let results = (outs fir_ReferenceType);
 }
 
-def fir_BoxRankOp : fir_SimpleOneResultOp<"box_rank", [NoMemoryEffect]> {
+def fir_BoxRankOp : fir_SimpleOneResultOp<"box_rank",
+  [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "return the number of dimensions for the boxed value";
 
   let description = [{
@@ -1184,7 +1265,7 @@ def fir_BoxRankOp : fir_SimpleOneResultOp<"box_rank", [NoMemoryEffect]> {
     descriptor may be either an array or a scalar, so the value is nonnegative.
   }];
 
-  let arguments = (ins fir_BoxType:$val);
+  let arguments = (ins fir_BoxAddressOrValueType:$box);
 
   let results = (outs AnyIntegerType);
 }
@@ -1649,6 +1730,7 @@ def fir_ArrayCoorOp : fir_Op<"array_coor",
   }];
 
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 def fir_CoordinateOp : fir_Op<"coordinate_of", [NoMemoryEffect]> {
@@ -2062,8 +2144,8 @@ class region_Op<string mnemonic, list<Trait> traits = []> :
   let hasVerifier = 1;
 }
 
-def fir_DoLoopOp : region_Op<"do_loop",
-    [DeclareOpInterfaceMethods<LoopLikeOpInterface,
+def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<LoopLikeOpInterface,
         ["getYieldedValuesMutable"]>]> {
   let summary = "generalized loop operation";
   let description = [{
@@ -2093,9 +2175,12 @@ def fir_DoLoopOp : region_Op<"do_loop",
     Index:$lowerBound,
     Index:$upperBound,
     Index:$step,
+    Variadic<AnyType>:$reduceOperands,
     Variadic<AnyType>:$initArgs,
     OptionalAttr<UnitAttr>:$unordered,
-    OptionalAttr<UnitAttr>:$finalValue
+    OptionalAttr<UnitAttr>:$finalValue,
+    OptionalAttr<ArrayAttr>:$reduceAttrs,
+    OptionalAttr<LoopAnnotationAttr>:$loopAnnotation
   );
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$region);
@@ -2106,6 +2191,8 @@ def fir_DoLoopOp : region_Op<"do_loop",
       "mlir::Value":$step, CArg<"bool", "false">:$unordered,
       CArg<"bool", "false">:$finalCountValue,
       CArg<"mlir::ValueRange", "std::nullopt">:$iterArgs,
+      CArg<"mlir::ValueRange", "std::nullopt">:$reduceOperands,
+      CArg<"llvm::ArrayRef<mlir::Attribute>", "{}">:$reduceAttrs,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>
   ];
 
@@ -2118,11 +2205,12 @@ def fir_DoLoopOp : region_Op<"do_loop",
       return getBody()->getArguments().drop_front();
     }
     mlir::Operation::operand_range getIterOperands() {
-      return getOperands().drop_front(getNumControlOperands());
+      return getOperands()
+          .drop_front(getNumControlOperands() + getNumReduceOperands());
     }
     llvm::MutableArrayRef<mlir::OpOperand> getInitsMutable() {
-      return
-          getOperation()->getOpOperands().drop_front(getNumControlOperands());
+      return getOperation()->getOpOperands()
+          .drop_front(getNumControlOperands() + getNumReduceOperands());
     }
 
     void setLowerBound(mlir::Value bound) { (*this)->setOperand(0, bound); }
@@ -2137,11 +2225,25 @@ def fir_DoLoopOp : region_Op<"do_loop",
     unsigned getNumControlOperands() { return 3; }
     /// Does the operation hold operands for loop-carried values
     bool hasIterOperands() {
-      return (*this)->getNumOperands() > getNumControlOperands();
+      return getNumIterOperands() > 0;
+    }
+    /// Does the operation hold operands for reduction variables
+    bool hasReduceOperands() {
+      return getNumReduceOperands() > 0;
+    }
+    /// Get Number of variadic operands
+    unsigned getNumOperands(unsigned idx) {
+      auto segments = (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(
+        getOperandSegmentSizeAttr());
+      return static_cast<unsigned>(segments[idx]);
+    }
+    // Get Number of reduction operands
+    unsigned getNumReduceOperands() {
+      return getNumOperands(3);
     }
     /// Get Number of loop-carried values
     unsigned getNumIterOperands() {
-      return (*this)->getNumOperands() - getNumControlOperands();
+      return getNumOperands(4);
     }
 
     /// Get the body of the loop
@@ -2330,6 +2432,7 @@ def fir_CallOp : fir_Op<"call",
   let arguments = (ins
     OptionalAttr<SymbolRefAttr>:$callee,
     Variadic<AnyType>:$args,
+    OptionalAttr<fir_FortranProcedureFlagsAttr>:$procedure_attrs,
     DefaultValuedAttr<Arith_FastMathAttr,
                       "::mlir::arith::FastMathFlags::none">:$fastmath
   );
@@ -2413,7 +2516,8 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
     StrAttr:$method,
     fir_ClassType:$object,
     Variadic<AnyType>:$args,
-    OptionalAttr<I32Attr>:$pass_arg_pos
+    OptionalAttr<I32Attr>:$pass_arg_pos,
+    OptionalAttr<fir_FortranProcedureFlagsAttr>:$procedure_attrs
   );
 
   let results = (outs Variadic<AnyType>:$results);
@@ -2422,7 +2526,8 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
 
   let assemblyFormat = [{
     $method `(` $object `:` qualified(type($object)) `)`
-    ( `(` $args^ `:` type($args) `)` )? (`->` type($results)^)? attr-dict
+    ( `(` $args^ `:` type($args) `)` )? (`->` type($results)^)?
+    (`proc_attrs` $procedure_attrs^)? attr-dict
   }];
 
   let extraClassDeclaration = [{
@@ -2433,66 +2538,6 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
     // operand[0] is the object (of class type)
     operand_iterator arg_operand_begin() { return operand_begin() + 1; }
     operand_iterator arg_operand_end() { return operand_end(); }
-  }];
-}
-
-def fir_CUDAKernelLaunch : fir_Op<"cuda_kernel_launch", [CallOpInterface,
-    AttrSizedOperandSegments]> {
-  let summary = "call CUDA kernel";
-
-  let description = [{
-    Launch a CUDA kernel from the host.
-
-    ```
-      // launch simple kernel with no arguments. bytes and stream value are
-      // optional in the chevron notation.
-      fir.cuda_kernel_launch @kernel<<<%gx, %gy, %bx, %by, %bz>>>()
-    ```
-  }];
-
-  let arguments = (ins
-    SymbolRefAttr:$callee,
-    I32:$grid_x,
-    I32:$grid_y,
-    I32:$grid_z,
-    I32:$block_x,
-    I32:$block_y,
-    I32:$block_z,
-    Optional<I32>:$bytes,
-    Optional<I32>:$stream,
-    Variadic<AnyType>:$args
-  );
-
-  let assemblyFormat = [{
-    $callee `<` `<` `<` $grid_x `,` $grid_y `,` $grid_z `,`$block_x `,`
-        $block_y `,` $block_z ( `,` $bytes^ ( `,` $stream^ )? )? `>` `>` `>`
-        `` `(` $args `)` ( `:` `(` type($args)^ `)` )? attr-dict
-  }];
-
-  let extraClassDeclaration = [{
-    mlir::CallInterfaceCallable getCallableForCallee() {
-      return getCalleeAttr();
-    }
-
-    void setCalleeFromCallable(mlir::CallInterfaceCallable callee) {
-      (*this)->setAttr(getCalleeAttrName(), callee.get<mlir::SymbolRefAttr>());
-    }
-    mlir::FunctionType getFunctionType();
-
-    unsigned getNbNoArgOperand() {
-      unsigned nbNoArgOperand = 5; // grids and blocks values are always present.
-      if (getBytes()) ++nbNoArgOperand;
-      if (getStream()) ++nbNoArgOperand;
-      return nbNoArgOperand;
-    }
-
-    operand_range getArgOperands() {
-      return {operand_begin() + getNbNoArgOperand(), operand_end()};
-    }
-    mlir::MutableOperandRange getArgOperandsMutable() {
-      return mlir::MutableOperandRange(
-          *this, getNbNoArgOperand(), getArgs().size() - 1);
-    }
   }];
 }
 
@@ -2566,38 +2611,15 @@ class fir_UnaryArithmeticOp<string mnemonic, list<Trait> traits = []> :
   let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
-def fir_ConstcOp : fir_Op<"constc", [NoMemoryEffect]> {
-  let summary = "create a complex constant";
-
-  let description = [{
-    A complex constant. Similar to the standard dialect complex type, but this
-    extension allows constants with APFloat values that are not supported in
-    the standard dialect.
-  }];
-
-  let results = (outs fir_ComplexType);
-
-  let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1;
-
-  let extraClassDeclaration = [{
-    static constexpr llvm::StringRef getRealAttrName() { return "real"; }
-    static constexpr llvm::StringRef getImagAttrName() { return "imaginary"; }
-
-    mlir::Attribute getReal() { return (*this)->getAttr(getRealAttrName()); }
-    mlir::Attribute getImaginary() { return (*this)->getAttr(getImagAttrName()); }
-  }];
-}
-
 class ComplexUnaryArithmeticOp<string mnemonic, list<Trait> traits = []> :
       fir_UnaryArithmeticOp<mnemonic, traits>,
-      Arguments<(ins fir_ComplexType:$operand)>;
+      Arguments<(ins AnyFirComplex:$operand)>;
 
 def fir_NegcOp : ComplexUnaryArithmeticOp<"negc">;
 
 class ComplexArithmeticOp<string mnemonic, list<Trait> traits = []> :
       fir_ArithmeticOp<mnemonic, traits>,
-      Arguments<(ins fir_ComplexType:$lhs, fir_ComplexType:$rhs,
+      Arguments<(ins AnyFirComplex:$lhs, AnyFirComplex:$rhs,
           DefaultValuedAttr<Arith_FastMathAttr,
                             "::mlir::arith::FastMathFlags::none">:$fastmath)>;
 
@@ -2621,8 +2643,8 @@ def fir_CmpcOp : fir_Op<"cmpc",
   }];
 
   let arguments = (ins
-      fir_ComplexType:$lhs,
-      fir_ComplexType:$rhs,
+      AnyFirComplex:$lhs,
+      AnyFirComplex:$rhs,
       DefaultValuedAttr<Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath);
 
   let results = (outs AnyLogicalLike);
@@ -2670,7 +2692,7 @@ def fir_AddrOfOp : fir_OneResultOp<"address_of", [NoMemoryEffect]> {
   let assemblyFormat = "`(` $symbol `)` attr-dict `:` type($resTy)";
 }
 
-def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
+def fir_ConvertOp : fir_SimpleOneResultOp<"convert", [NoMemoryEffect]> {
   let summary = "encapsulates all Fortran entity type conversions";
 
   let description = [{
@@ -2678,6 +2700,9 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
     Not all pairs of types have conversions. When types T and U are the same
     type, this instruction is a NOP and may be folded away. This also supports
     integer to pointer conversion and pointer to integer conversion.
+
+    This operation also allows limited interaction between FIR and LLVM
+    dialects by allowing conversion between FIR pointer types and llvm.ptr type.
 
     ```
       %v = ... : i64
@@ -2688,6 +2713,7 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
   }];
 
   let arguments = (ins AnyType:$value);
+  let results = (outs AnyType:$res);
 
   let assemblyFormat = [{
     $value attr-dict `:` functional-type($value, results)
@@ -2709,8 +2735,8 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
 }
 
 def FortranTypeAttr : Attr<And<[CPred<"mlir::isa<mlir::TypeAttr>($_self)">,
-    Or<[CPred<"mlir::isa<fir::CharacterType, fir::ComplexType, "
-              "fir::IntegerType, fir::LogicalType, fir::RealType, "
+    Or<[CPred<"mlir::isa<fir::CharacterType, fir::IntegerType,"
+              "fir::LogicalType, mlir::FloatType, mlir::ComplexType,"
               "fir::RecordType>(mlir::cast<mlir::TypeAttr>($_self).getValue())"
     >]>]>, "Fortran surface type"> {
   let storageType = [{ ::mlir::TypeAttr }];
@@ -2797,7 +2823,8 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     OptionalAttr<UnitAttr>:$constant,
     OptionalAttr<UnitAttr>:$target,
     OptionalAttr<StrAttr>:$linkName,
-    OptionalAttr<fir_CUDADataAttributeAttr>:$cuda_attr
+    OptionalAttr<cuf_DataAttributeAttr>:$data_attr,
+    OptionalAttr<I64Attr>:$alignment
   );
 
   let regions = (region AtMostRegion<1>:$region);
@@ -2931,7 +2958,10 @@ def fir_TypeInfoOp : fir_Op<"type_info",
 
   let hasVerifier = 1;
 
-  let regions = (region MaxSizedRegion<1>:$dispatch_table);
+  let regions = (region
+    MaxSizedRegion<1>:$dispatch_table,
+    MaxSizedRegion<1>:$component_info
+  );
 
   let builders = [
     OpBuilder<(ins "fir::RecordType":$type, "fir::RecordType":$parent_type,
@@ -2942,6 +2972,7 @@ def fir_TypeInfoOp : fir_Op<"type_info",
     $sym_name (`noinit` $no_init^)? (`nodestroy` $no_destroy^)?
     (`nofinal` $no_final^)? (`extends` $parent_type^)? attr-dict `:` $type
     (`dispatch_table` $dispatch_table^)?
+    (`component_info` $component_info^)?
   }];
 
   let extraClassDeclaration = [{
@@ -2983,6 +3014,24 @@ def fir_DTEntryOp : fir_Op<"dt_entry", [HasParent<"TypeInfoOp">]> {
   let extraClassDeclaration = [{
     static constexpr llvm::StringRef getProcAttrNameStr() { return "proc"; }
   }];
+}
+
+def fir_DTComponentOp : fir_Op<"dt_component", [HasParent<"TypeInfoOp">]> {
+  let summary = "define extra information about a component inside fir.type_info";
+
+  let description = [{
+    ```
+      fir.dt_component i lbs [-1,2] init @init_val
+    ```
+  }];
+
+  let arguments = (ins
+    StrAttr:$name,
+    OptionalAttr<DenseI64ArrayAttr>:$lower_bounds,
+    OptionalAttr<FlatSymbolRefAttr>:$init_val
+  );
+
+  let assemblyFormat = "$name (`lbs` $lower_bounds^)? (`init` $init_val^)? attr-dict";
 }
 
 def fir_AbsentOp : fir_OneResultOp<"absent", [NoMemoryEffect]> {
@@ -3029,7 +3078,7 @@ def fir_IsPresentOp : fir_SimpleOp<"is_present", [NoMemoryEffect]> {
 // debug information so we would like to keep this around even if the value
 // is not used.
 def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
-    MemoryEffects<[MemWrite<DebuggingResource>]>,
+    MemoryEffects<[MemAlloc<DebuggingResource>]>,
     DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
   let summary = "declare a variable";
 
@@ -3077,7 +3126,7 @@ def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
     Optional<fir_DummyScopeType>:$dummy_scope,
     Builtin_StringAttr:$uniq_name,
     OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
-    OptionalAttr<fir_CUDADataAttributeAttr>:$cuda_attr
+    OptionalAttr<cuf_DataAttributeAttr>:$data_attr
   );
 
   let results = (outs AnyRefOrBox);
@@ -3128,125 +3177,6 @@ def fir_BoxOffsetOp : fir_Op<"box_offset", [NoMemoryEffect]> {
   let builders = [
     OpBuilder<(ins "mlir::Value":$boxRef, "fir::BoxFieldAttr":$field)>
   ];
-}
-
-def fir_CUDAKernelOp : fir_Op<"cuda_kernel", [AttrSizedOperandSegments,
-    DeclareOpInterfaceMethods<LoopLikeOpInterface>]> {
-
-  let description = [{
-    Represent the CUDA Fortran kernel directive. The operation is a loop like
-    operation that represents the iteration range of the embedded loop nest.
-
-    When grid or block variadic operands are empty, a `*` only syntax was used
-    in the Fortran code.
-    If the `*` is mixed with values for either grid or block, these are
-    represented by a 0 constant value.
-  }];
-
-  let arguments = (ins
-    Variadic<I32>:$grid, // empty means `*`
-    Variadic<I32>:$block, // empty means `*`
-    Optional<I32>:$stream,
-    Variadic<Index>:$lowerbound,
-    Variadic<Index>:$upperbound,
-    Variadic<Index>:$step,
-    OptionalAttr<I64Attr>:$n
-  );
-
-  let regions = (region AnyRegion:$region);
-
-  let assemblyFormat = [{
-    `<` `<` `<` custom<CUFKernelValues>($grid, type($grid)) `,` 
-                custom<CUFKernelValues>($block, type($block))
-        ( `,` `stream` `=` $stream^ )? `>` `>` `>`
-        custom<CUFKernelLoopControl>($region, $lowerbound, type($lowerbound),
-            $upperbound, type($upperbound), $step, type($step))
-        attr-dict
-  }];
-
-  let hasVerifier = 1;
-}
-
-def fir_CUDADataTransferOp : fir_Op<"cuda_data_transfer", []> {
-  let summary = "Represent a data transfer between host and device memory";
-
-  let description = [{
-    CUDA Fortran allows data transfer to be done via intrinsic assignment
-    between a host and a device variable. This operation is used to materialized
-    the data transfer between the lhs and rhs memory references.
-    The kind of transfer is specified in the attribute. 
-
-    ```
-      adev = a ! transfer host to device
-      a = adev ! transfer device to host
-      bdev = adev ! transfer device to device
-    ```
-  }];
-
-  let arguments = (ins Arg<AnyReferenceLike, "", [MemWrite]>:$src,
-                       Arg<AnyReferenceLike, "", [MemRead]>:$dst,
-                       fir_CUDADataTransferKindAttr:$transfer_kind);
-
-  let assemblyFormat = [{
-    $src `to` $dst attr-dict `:` type(operands)
-  }];
-}
-
-def fir_CUDAAllocateOp : fir_Op<"cuda_allocate", [AttrSizedOperandSegments,
-    MemoryEffects<[MemAlloc<DefaultResource>]>]> {
-  let summary = "Perform the device allocation of data of an allocatable";
-
-  let description = [{
-    The fir.cuda_allocate operation performs the allocation on the device
-    of the data of an allocatable. The descriptor passed to the operation
-    is initialized before with the standard flang runtime calls.
-  }];
-
-  let arguments = (ins Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
-                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
-                       Optional<AnyIntegerType>:$stream,
-                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$pinned,
-                       Arg<Optional<AnyRefOrBoxType>, "", [MemRead]>:$source,
-                       fir_CUDADataAttributeAttr:$cuda_attr,
-                       UnitAttr:$hasStat);
-
-  let results = (outs AnyIntegerType:$stat);
-
-  let assemblyFormat = [{
-    $box `:` qualified(type($box))
-    ( `source` `(` $source^ `:` qualified(type($source) )`)` )?
-    ( `errmsg` `(` $errmsg^ `:` type($errmsg) `)` )?
-    ( `stream` `(` $stream^ `:` type($stream) `)` )?
-    ( `pinned` `(` $pinned^ `:` type($pinned) `)` )?
-    attr-dict `->` type($stat)
-  }];
-
-  let hasVerifier = 1;
-}
-
-def fir_CUDADeallocateOp : fir_Op<"cuda_deallocate",
-    [MemoryEffects<[MemFree<DefaultResource>]>]> {
-  let summary = "Perform the device deallocation of data of an allocatable";
-
-  let description = [{
-    The fir.cuda_deallocate operation performs the deallocation on the device
-    of the data of an allocatable.
-  }];
-
-  let arguments = (ins Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
-                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
-                       fir_CUDADataAttributeAttr:$cuda_attr,
-                       UnitAttr:$hasStat);
-
-  let results = (outs AnyIntegerType:$stat);
-
-  let assemblyFormat = [{
-    $box `:` qualified(type($box))
-    ( `errmsg` `(` $errmsg^ `:` type($errmsg) `)` )?
-    attr-dict `->` type($stat)
-  }];
-
-  let hasVerifier = 1;
 }
 
 def fir_DummyScopeOp : fir_Op<"dummy_scope",
@@ -3327,64 +3257,6 @@ def fir_DummyScopeOp : fir_Op<"dummy_scope",
 
   let results = (outs fir_DummyScopeType);
   let assemblyFormat = "attr-dict `:` type(results)";
-}
-
-def fir_CUDAAllocOp : fir_Op<"cuda_alloc", [AttrSizedOperandSegments,
-    MemoryEffects<[MemAlloc]>]> {
-  let summary = "Allocate an object on device";
-
-  let description = [{
-    This is a drop in replacement for fir.alloca and fir.allocmem for device
-    object. Any device, managed or unified object declared in an host
-    subprogram needs to be allocated in the device memory through runtime calls.
-    The fir.cuda_alloc is an abstraction to the runtime calls and works together
-    with fir.cuda_free.
-  }];
-
-  let arguments = (ins
-    TypeAttr:$in_type,
-    OptionalAttr<StrAttr>:$uniq_name,
-    OptionalAttr<StrAttr>:$bindc_name,
-    Variadic<AnyIntegerType>:$typeparams,
-    Variadic<AnyIntegerType>:$shape,
-    fir_CUDADataAttributeAttr:$cuda_attr
-  );
-
-  let results = (outs fir_ReferenceType:$ptr);
-
-  let assemblyFormat = [{
-    $in_type (`(` $typeparams^ `:` type($typeparams) `)`)?
-        (`,` $shape^ `:` type($shape) )?  attr-dict `->` qualified(type($ptr))
-  }];
-
-  let builders = [
-    OpBuilder<(ins "mlir::Type":$inType, "llvm::StringRef":$uniqName,
-      "llvm::StringRef":$bindcName,
-      "fir::CUDADataAttributeAttr":$cudaAttr,
-      CArg<"mlir::ValueRange", "{}">:$typeparams,
-      CArg<"mlir::ValueRange", "{}">:$shape,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
-
-  let hasVerifier = 1;
-}
-
-def fir_CUDAFreeOp : fir_Op<"cuda_free", [MemoryEffects<[MemFree]>]> {
-  let summary = "Free a device allocated object";
-
-  let description = [{
-    The fir.cuda_free operation frees the memory allocated by fir.cuda_alloc.
-    This is used for non-allocatable device, managed and unified device
-    variables declare in host subprogram.
-  }];
-
-  let arguments = (ins
-    Arg<AnyReferenceLike, "", [MemFree]>:$devptr,
-    fir_CUDADataAttributeAttr:$cuda_attr
-  );
-
-  let assemblyFormat = "$devptr `:` qualified(type($devptr)) attr-dict";
-
-  let hasVerifier = 1;
 }
 
 #endif

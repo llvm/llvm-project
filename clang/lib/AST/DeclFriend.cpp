@@ -12,13 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/DeclFriend.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/LLVM.h"
-#include "llvm/Support/Casting.h"
 #include <cassert>
 #include <cstddef>
 
@@ -31,11 +30,11 @@ FriendDecl *FriendDecl::getNextFriendSlowCase() {
                            NextFriend.get(getASTContext().getExternalSource()));
 }
 
-FriendDecl *FriendDecl::Create(ASTContext &C, DeclContext *DC,
-                               SourceLocation L,
-                               FriendUnion Friend,
-                               SourceLocation FriendL,
-                          ArrayRef<TemplateParameterList *> FriendTypeTPLists) {
+FriendDecl *
+FriendDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L,
+                   FriendUnion Friend, SourceLocation FriendL,
+                   SourceLocation EllipsisLoc,
+                   ArrayRef<TemplateParameterList *> FriendTypeTPLists) {
 #ifndef NDEBUG
   if (Friend.is<NamedDecl *>()) {
     const auto *D = Friend.get<NamedDecl*>();
@@ -56,8 +55,8 @@ FriendDecl *FriendDecl::Create(ASTContext &C, DeclContext *DC,
   std::size_t Extra =
       FriendDecl::additionalSizeToAlloc<TemplateParameterList *>(
           FriendTypeTPLists.size());
-  auto *FD = new (C, DC, Extra) FriendDecl(DC, L, Friend, FriendL,
-                                           FriendTypeTPLists);
+  auto *FD = new (C, DC, Extra)
+      FriendDecl(DC, L, Friend, FriendL, EllipsisLoc, FriendTypeTPLists);
   cast<CXXRecordDecl>(DC)->pushFriendDecl(FD);
   return FD;
 }

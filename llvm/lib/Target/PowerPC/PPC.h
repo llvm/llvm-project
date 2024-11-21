@@ -53,7 +53,6 @@ class ModulePass;
   FunctionPass *createPPCPreEmitPeepholePass();
   FunctionPass *createPPCExpandAtomicPseudoPass();
   FunctionPass *createPPCCTRLoopsPass();
-  ModulePass *createPPCMergeStringPoolPass();
   void LowerPPCMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                     AsmPrinter &AP);
   bool LowerPPCMachineOperandToMCOperand(const MachineOperand &MO,
@@ -78,8 +77,7 @@ class ModulePass;
   void initializePPCMIPeepholePass(PassRegistry&);
   void initializePPCExpandAtomicPseudoPass(PassRegistry &);
   void initializePPCCTRLoopsPass(PassRegistry &);
-  void initializePPCDAGToDAGISelPass(PassRegistry &);
-  void initializePPCMergeStringPoolPass(PassRegistry &);
+  void initializePPCDAGToDAGISelLegacyPass(PassRegistry &);
 
   extern char &PPCVSXFMAMutateID;
 

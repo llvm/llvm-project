@@ -99,7 +99,6 @@ bool MCAsmParser::TokError(const Twine &Msg, SMRange Range) {
 }
 
 bool MCAsmParser::Error(SMLoc L, const Twine &Msg, SMRange Range) {
-
   MCPendingError PErr;
   PErr.Loc = L;
   Msg.toVector(PErr.Msg);
