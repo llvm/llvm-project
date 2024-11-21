@@ -21054,8 +21054,7 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
           // precedes this use.
           InstantiateFunctionDefinition(E->getBeginLoc(), FD,
                                         /*Recursive=*/false,
-                                        /*DefinitionRequired=*/true,
-                                        /*AtEndOfTU=*/false);
+                                        /*DefinitionRequired=*/true);
         }
         // Produce a properly-typed reference to the function.
         CXXScopeSpec SS;
