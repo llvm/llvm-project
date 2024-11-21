@@ -1990,4 +1990,37 @@ std::optional<int> GetDummyArgumentNumber(const Symbol *symbol) {
   return std::nullopt;
 }
 
+// Given a symbol that is a SubprogramNameDetails in a submodule, try to
+// find its interface definition in its module or ancestor submodule.
+const Symbol *FindAncestorModuleProcedure(const Symbol *symInSubmodule) {
+  if (symInSubmodule && symInSubmodule->owner().IsSubmodule()) {
+    if (const auto *nameDetails{
+            symInSubmodule->detailsIf<semantics::SubprogramNameDetails>()};
+        nameDetails &&
+        nameDetails->kind() == semantics::SubprogramKind::Module) {
+      const Symbol *next{symInSubmodule->owner().symbol()};
+      while (const Symbol * submodSym{next}) {
+        next = nullptr;
+        if (const auto *modDetails{
+                submodSym->detailsIf<semantics::ModuleDetails>()};
+            modDetails && modDetails->isSubmodule() && modDetails->scope()) {
+          if (const semantics::Scope & parent{modDetails->scope()->parent()};
+              parent.IsSubmodule() || parent.IsModule()) {
+            if (auto iter{parent.find(symInSubmodule->name())};
+                iter != parent.end()) {
+              const Symbol &proc{iter->second->GetUltimate()};
+              if (IsProcedure(proc)) {
+                return &proc;
+              }
+            } else if (parent.IsSubmodule()) {
+              next = parent.symbol();
+            }
+          }
+        }
+      }
+    }
+  }
+  return nullptr;
+}
+
 } // namespace Fortran::semantics

@@ -889,6 +889,12 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::MUL, MVT::i1, Promote);
 
+  if (Subtarget->hasBF16ConversionInsts()) {
+    setOperationAction(ISD::FP_ROUND, MVT::v2bf16, Legal);
+    setOperationAction(ISD::FP_ROUND, MVT::bf16, Legal);
+    setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Legal);
+  }
+
   setTargetDAGCombine({ISD::ADD,
                        ISD::UADDO_CARRY,
                        ISD::SUB,
@@ -3942,8 +3948,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (InGlue)
     Ops.push_back(InGlue);
 
-  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
-
   // If we're doing a tall call, use a TC_RETURN here rather than an
   // actual call instruction.
   if (IsTailCall) {
@@ -3959,11 +3963,11 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       break;
     }
 
-    return DAG.getNode(OPC, DL, NodeTys, Ops);
+    return DAG.getNode(OPC, DL, MVT::Other, Ops);
   }
 
   // Returns a chain and a flag for retval copy to use.
-  SDValue Call = DAG.getNode(AMDGPUISD::CALL, DL, NodeTys, Ops);
+  SDValue Call = DAG.getNode(AMDGPUISD::CALL, DL, {MVT::Other, MVT::Glue}, Ops);
   Chain = Call.getValue(0);
   InGlue = Call.getValue(1);
 
@@ -9821,6 +9825,22 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
             : HasVOffset ? AMDGPU::BUFFER_LOAD_DWORD_LDS_OFFEN
                          : AMDGPU::BUFFER_LOAD_DWORD_LDS_OFFSET;
       break;
+    case 12:
+      if (!Subtarget->hasLDSLoadB96_B128())
+        return SDValue();
+      Opc = HasVIndex ? HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX3_LDS_BOTHEN
+                                   : AMDGPU::BUFFER_LOAD_DWORDX3_LDS_IDXEN
+                      : HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX3_LDS_OFFEN
+                                   : AMDGPU::BUFFER_LOAD_DWORDX3_LDS_OFFSET;
+      break;
+    case 16:
+      if (!Subtarget->hasLDSLoadB96_B128())
+        return SDValue();
+      Opc = HasVIndex ? HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX4_LDS_BOTHEN
+                                   : AMDGPU::BUFFER_LOAD_DWORDX4_LDS_IDXEN
+                      : HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX4_LDS_OFFEN
+                                   : AMDGPU::BUFFER_LOAD_DWORDX4_LDS_OFFSET;
+      break;
     }
 
     SDValue M0Val = copyToM0(DAG, Chain, DL, Op.getOperand(3));
@@ -9840,11 +9860,16 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     Ops.push_back(Rsrc);
     Ops.push_back(Op.getOperand(6 + OpOffset)); // soffset
     Ops.push_back(Op.getOperand(7 + OpOffset)); // imm offset
+    bool IsGFX12Plus = AMDGPU::isGFX12Plus(*Subtarget);
     unsigned Aux = Op.getConstantOperandVal(8 + OpOffset);
-    Ops.push_back(
-        DAG.getTargetConstant(Aux & AMDGPU::CPol::ALL, DL, MVT::i8)); // cpol
     Ops.push_back(DAG.getTargetConstant(
-        Aux & AMDGPU::CPol::SWZ_pregfx12 ? 1 : 0, DL, MVT::i8)); // swz
+        Aux & (IsGFX12Plus ? AMDGPU::CPol::ALL : AMDGPU::CPol::ALL_pregfx12),
+        DL, MVT::i8)); // cpol
+    Ops.push_back(DAG.getTargetConstant(
+        Aux & (IsGFX12Plus ? AMDGPU::CPol::SWZ : AMDGPU::CPol::SWZ_pregfx12)
+            ? 1
+            : 0,
+        DL, MVT::i8));                                           // swz
     Ops.push_back(M0Val.getValue(0));                            // Chain
     Ops.push_back(M0Val.getValue(1));                            // Glue
 
@@ -9889,6 +9914,16 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       break;
     case 4:
       Opc = AMDGPU::GLOBAL_LOAD_LDS_DWORD;
+      break;
+    case 12:
+      if (!Subtarget->hasLDSLoadB96_B128())
+        return SDValue();
+      Opc = AMDGPU::GLOBAL_LOAD_LDS_DWORDX3;
+      break;
+    case 16:
+      if (!Subtarget->hasLDSLoadB96_B128())
+        return SDValue();
+      Opc = AMDGPU::GLOBAL_LOAD_LDS_DWORDX4;
       break;
     }
 

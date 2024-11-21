@@ -27,7 +27,7 @@ if (NOT PACKAGE_VERSION)
 endif()
 
 if(NOT DEFINED LLVM_SHLIB_SYMBOL_VERSION)
-  # "Symbol version prefix for libLLVM.so"
+  # "Symbol version prefix for libLLVM.so and libclang-cpp.so"
   set(LLVM_SHLIB_SYMBOL_VERSION "LLVM_${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
 endif()
 
@@ -864,7 +864,7 @@ if(MSVC)
   if (BUILD_SHARED_LIBS)
     message(FATAL_ERROR "BUILD_SHARED_LIBS options is not supported on Windows.")
   endif()
- else()
+else()
   option(LLVM_BUILD_LLVM_C_DYLIB "Build libllvm-c re-export library (Darwin only)" OFF)
 endif()
 

@@ -3240,6 +3240,24 @@ bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
                     : HasVOffset ? AMDGPU::BUFFER_LOAD_DWORD_LDS_OFFEN
                                  : AMDGPU::BUFFER_LOAD_DWORD_LDS_OFFSET;
     break;
+  case 12:
+    if (!Subtarget->hasLDSLoadB96_B128())
+      return false;
+
+    Opc = HasVIndex ? HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX3_LDS_BOTHEN
+                                 : AMDGPU::BUFFER_LOAD_DWORDX3_LDS_IDXEN
+                    : HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX3_LDS_OFFEN
+                                 : AMDGPU::BUFFER_LOAD_DWORDX3_LDS_OFFSET;
+    break;
+  case 16:
+    if (!Subtarget->hasLDSLoadB96_B128())
+      return false;
+
+    Opc = HasVIndex ? HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX4_LDS_BOTHEN
+                                 : AMDGPU::BUFFER_LOAD_DWORDX4_LDS_IDXEN
+                    : HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX4_LDS_OFFEN
+                                 : AMDGPU::BUFFER_LOAD_DWORDX4_LDS_OFFSET;
+    break;
   }
 
   MachineBasicBlock *MBB = MI.getParent();
@@ -3267,9 +3285,14 @@ bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
   MIB.add(MI.getOperand(1));            // rsrc
   MIB.add(MI.getOperand(5 + OpOffset)); // soffset
   MIB.add(MI.getOperand(6 + OpOffset)); // imm offset
+  bool IsGFX12Plus = AMDGPU::isGFX12Plus(STI);
   unsigned Aux = MI.getOperand(7 + OpOffset).getImm();
-  MIB.addImm(Aux & AMDGPU::CPol::ALL);                  // cpol
-  MIB.addImm(Aux & AMDGPU::CPol::SWZ_pregfx12 ? 1 : 0); // swz
+  MIB.addImm(Aux & (IsGFX12Plus ? AMDGPU::CPol::ALL
+                                : AMDGPU::CPol::ALL_pregfx12)); // cpol
+  MIB.addImm(
+      Aux & (IsGFX12Plus ? AMDGPU::CPol::SWZ : AMDGPU::CPol::SWZ_pregfx12)
+          ? 1
+          : 0); // swz
 
   MachineMemOperand *LoadMMO = *MI.memoperands_begin();
   MachinePointerInfo LoadPtrI = LoadMMO->getPointerInfo();
@@ -3328,6 +3351,16 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
     break;
   case 4:
     Opc = AMDGPU::GLOBAL_LOAD_LDS_DWORD;
+    break;
+  case 12:
+    if (!Subtarget->hasLDSLoadB96_B128())
+      return false;
+    Opc = AMDGPU::GLOBAL_LOAD_LDS_DWORDX3;
+    break;
+  case 16:
+    if (!Subtarget->hasLDSLoadB96_B128())
+      return false;
+    Opc = AMDGPU::GLOBAL_LOAD_LDS_DWORDX4;
     break;
   }
 

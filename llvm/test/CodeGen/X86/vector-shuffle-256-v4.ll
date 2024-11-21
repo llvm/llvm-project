@@ -725,7 +725,7 @@ define <4 x double> @shuffle_v4f64_0z3z(<4 x double> %a, <4 x double> %b) {
 ; ALL-LABEL: shuffle_v4f64_0z3z:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[3],ymm1[2]
+; ALL-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[3],ymm1[3]
 ; ALL-NEXT:    retq
   %shuffle = shufflevector <4 x double> %a, <4 x double> <double 0.000000e+00, double undef, double undef, double undef>, <4 x i32> <i32 0, i32 4, i32 3, i32 4>
   ret <4 x double> %shuffle
@@ -735,7 +735,7 @@ define <4 x double> @shuffle_v4f64_1z2z(<4 x double> %a, <4 x double> %b) {
 ; ALL-LABEL: shuffle_v4f64_1z2z:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],ymm1[0],ymm0[2],ymm1[2]
+; ALL-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[2],ymm1[3]
 ; ALL-NEXT:    retq
   %1 = shufflevector <4 x double> %a, <4 x double> <double 0.000000e+00, double undef, double undef, double undef>, <4 x i32> <i32 1, i32 4, i32 2, i32 4>
   ret <4 x double> %1
@@ -1202,7 +1202,7 @@ define <4 x i64> @shuffle_v4i64_2u35(<4 x i64> %a, <4 x i64> %b) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
-; AVX1-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[3],ymm1[3]
+; AVX1-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[3],ymm1[3]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: shuffle_v4i64_2u35:
@@ -1952,7 +1952,7 @@ define <4 x i64> @shuffle_v4i64_1z2z(<4 x i64> %a, <4 x i64> %b) {
 ; AVX1-LABEL: shuffle_v4i64_1z2z:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],ymm1[0],ymm0[2],ymm1[2]
+; AVX1-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[2],ymm1[3]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-SLOW-LABEL: shuffle_v4i64_1z2z:
@@ -2038,9 +2038,7 @@ define <4 x double> @add_v4f64_024u_135u_reverse(<4 x double> %a, <4 x double> %
 ; AVX1-LABEL: add_v4f64_024u_135u_reverse:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm1
-; AVX1-NEXT:    vshufpd {{.*#+}} ymm2 = ymm0[0],ymm1[1],ymm0[3],ymm1[3]
-; AVX1-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; AVX1-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: add_v4f64_024u_135u_reverse:
