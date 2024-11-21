@@ -123,19 +123,23 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O2-ZCMP-NEXT:    slli a1, a1, 1
 ; SPILL-O2-ZCMP-NEXT:    sub sp, sp, a1
 ; SPILL-O2-ZCMP-NEXT:    mv s0, a0
-; SPILL-O2-ZCMP-NEXT:    vs1r.v v8, (sp) # Unknown-size Folded Spill
+; SPILL-O2-ZCMP-NEXT:    addi a1, sp, 16
+; SPILL-O2-ZCMP-NEXT:    vs1r.v v8, (a1) # Unknown-size Folded Spill
 ; SPILL-O2-ZCMP-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; SPILL-O2-ZCMP-NEXT:    vfadd.vv v9, v8, v9
 ; SPILL-O2-ZCMP-NEXT:    csrr a0, vlenb
 ; SPILL-O2-ZCMP-NEXT:    add a0, a0, sp
+; SPILL-O2-ZCMP-NEXT:    addi a0, a0, 16
 ; SPILL-O2-ZCMP-NEXT:    vs1r.v v9, (a0) # Unknown-size Folded Spill
 ; SPILL-O2-ZCMP-NEXT:    lui a0, %hi(.L.str)
 ; SPILL-O2-ZCMP-NEXT:    addi a0, a0, %lo(.L.str)
 ; SPILL-O2-ZCMP-NEXT:    call puts
 ; SPILL-O2-ZCMP-NEXT:    csrr a0, vlenb
 ; SPILL-O2-ZCMP-NEXT:    add a0, a0, sp
+; SPILL-O2-ZCMP-NEXT:    addi a0, a0, 16
 ; SPILL-O2-ZCMP-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; SPILL-O2-ZCMP-NEXT:    vl1r.v v9, (sp) # Unknown-size Folded Reload
+; SPILL-O2-ZCMP-NEXT:    addi a0, sp, 16
+; SPILL-O2-ZCMP-NEXT:    vl1r.v v9, (a0) # Unknown-size Folded Reload
 ; SPILL-O2-ZCMP-NEXT:    vsetvli zero, s0, e64, m1, ta, ma
 ; SPILL-O2-ZCMP-NEXT:    vfadd.vv v8, v9, v8
 ; SPILL-O2-ZCMP-NEXT:    csrr a0, vlenb
