@@ -60,27 +60,6 @@ if(LIBC_BUILD_GPU_LOADER OR (LLVM_LIBC_GPU_BUILD AND NOT LLVM_RUNTIMES_BUILD))
   add_subdirectory(utils/gpu)
 endif()
 
-set(NEED_LIBC_HDRGEN FALSE)
-if(NOT LLVM_RUNTIMES_BUILD)
-  if("libc" IN_LIST LLVM_ENABLE_RUNTIMES)
-    set(NEED_LIBC_HDRGEN TRUE)
-  else()
-    foreach(_name ${LLVM_RUNTIME_TARGETS})
-      if("libc" IN_LIST RUNTIMES_${_name}_LLVM_ENABLE_RUNTIMES)
-        set(NEED_LIBC_HDRGEN TRUE)
-        break()
-      endif()
-    endforeach()
-  endif()
-endif()
-if(NEED_LIBC_HDRGEN)
-  # When libc is build as part of the runtimes/bootstrap build's CMake run, we
-  # only need to build the host tools to build the libc. So, we just do enough
-  # to build libc-hdrgen and return.
-  return()
-endif()
-unset(NEED_LIBC_HDRGEN)
-
 option(LIBC_CMAKE_VERBOSE_LOGGING
   "Log details warnings and notifications during CMake configuration." OFF)
 
