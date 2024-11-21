@@ -358,6 +358,34 @@ Changes to LLDB
 
 * LLDB now parses shared libraries in parallel, resulting in an average 2x speedup when attaching (only available on Darwin platforms) and launching (available on all platforms).
 
+* On the command line, LLDB now limits tab completions to your terminal width to avoid wrapping.
+
+  Old:
+  ```
+  Available completions:
+          _regexp-attach    -- Attach to process by ID or name.
+          _regexp-break     -- Set a breakpoint using one of several shorthand
+  formats.
+          _regexp-bt        -- Show backtrace of the current thread's call sta
+  ck. Any numeric argument displays at most that many frames. The argument 'al
+  l' displays all threads. Use 'settings set frame-format' to customize the pr
+  inting of individual frames and 'settings set thread-format' to customize th
+  e thread header. Frame recognizers may filter thelist. Use 'thread backtrace
+  -u (--unfiltered)' to see them all.
+          _regexp-display   -- Evaluate an expression at every stop (see 'help
+  target stop-hook'.)
+
+  ```
+
+  New:
+  ```
+  Available completions:
+          _regexp-attach    -- Attach to process by ID or name.
+          _regexp-break     -- Set a breakpoint using one of several shorth...
+          _regexp-bt        -- Show backtrace of the current thread's call ...
+          _regexp-display   -- Evaluate an expression at every stop (see 'h...
+  ```
+
 Changes to BOLT
 ---------------------------------
 
