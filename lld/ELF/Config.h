@@ -174,13 +174,13 @@ private:
   bool inLib = false;
 
   std::unique_ptr<BitcodeCompiler> lto;
-  std::vector<InputFile *> files;
+  SmallVector<std::unique_ptr<InputFile>, 0> files, ltoObjectFiles;
 
 public:
   // See InputFile::groupId.
   uint32_t nextGroupId;
   bool isInGroup;
-  InputFile *armCmseImpLib = nullptr;
+  std::unique_ptr<InputFile> armCmseImpLib;
   SmallVector<std::pair<StringRef, unsigned>, 0> archiveFiles;
 };
 
