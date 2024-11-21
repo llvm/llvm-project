@@ -17,8 +17,10 @@ add_header(
     __llvm-libc-common.h
 )
 
+# TODO: Can we simplify this macro expansion?
+# https://github.com/llvm/llvm-project/issues/117254
 macro(add_header_macro TARGET_NAME YAML_FILE DEF_FILE GEN_HDR DEPENDS)
-  add_gen_header2(
+  add_gen_header(
     ${TARGET_NAME}
     YAML_FILE ${YAML_FILE}
     DEF_FILE ${DEF_FILE}
