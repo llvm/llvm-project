@@ -15454,6 +15454,23 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
         MRI.setRegClass(Op.getReg(), NewRC);
       }
 
+      if (TII->isMAI(MI)) {
+        // The ordinary src0, src1, src2 were legalized above.
+        //
+        // We have to also legalize the appended v_mfma_ld_scale_b32 operands,
+        // as a separate instruction.
+        int Src0Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                                 AMDGPU::OpName::scale_src0);
+        if (Src0Idx != -1) {
+          int Src1Idx = Src0Idx + 2;
+          assert(Src1Idx = AMDGPU::getNamedOperandIdx(
+                     MI.getOpcode(), AMDGPU::OpName::scale_src1));
+          if (TII->usesConstantBus(MRI, MI, Src0Idx) &&
+              TII->usesConstantBus(MRI, MI, Src1Idx))
+            TII->legalizeOpWithMove(MI, Src1Idx);
+        }
+      }
+
       if (!HasAGPRs)
         return;
 

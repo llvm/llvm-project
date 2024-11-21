@@ -1115,6 +1115,12 @@ public:
                        const MachineOperand &MO,
                        const MCOperandInfo &OpInfo) const;
 
+  bool usesConstantBus(const MachineRegisterInfo &MRI, const MachineInstr &MI,
+                       int OpIdx) const {
+    return usesConstantBus(MRI, MI.getOperand(OpIdx),
+                           MI.getDesc().operands()[OpIdx]);
+  }
+
   /// Return true if this instruction has any modifiers.
   ///  e.g. src[012]_mod, omod, clamp.
   bool hasModifiers(unsigned Opcode) const;

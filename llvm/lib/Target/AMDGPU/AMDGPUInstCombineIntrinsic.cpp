@@ -1258,6 +1258,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (isa<UndefValue>(Src)) {
       return IC.replaceInstUsesWith(II, Src);
     }
+    return std::nullopt;
   }
   }
   if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
