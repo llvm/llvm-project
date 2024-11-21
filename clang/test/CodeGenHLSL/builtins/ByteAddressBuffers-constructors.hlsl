@@ -3,7 +3,7 @@
 
 // NOTE: SPIRV codegen for resource types is not yet implemented
 
-ByteAddressBuffer Buffer: register(u0, space0);
+ByteAddressBuffer Buffer: register(t0);
 
 // CHECK: class.hlsl::ByteAddressBuffer" = type <{ target("dx.RawBuffer", i8, 1, 1), i8, [3 x i8] }>
 
