@@ -268,6 +268,40 @@ void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
   }
 }
 
+static bool IsPointerLikeType(QualType QT) {
+  QT = QT.getNonReferenceType();
+  if (QT->isPointerType())
+    return true;
+  auto *RD = QT->getAsCXXRecordDecl();
+  if (!RD)
+    return false;
+  RD = RD->getCanonicalDecl();
+  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
+    RD = CTSD->getSpecializedTemplate()->getTemplatedDecl();
+  return RD->hasAttr<PointerAttr>();
+}
+
+void Sema::inferLifetimeCaptureByAttribute(FunctionDecl *FD) {
+  if (!FD)
+    return;
+  auto *MD = dyn_cast<CXXMethodDecl>(FD);
+  if (!MD || !MD->getIdentifier() || !MD->getParent()->isInStdNamespace())
+    return;
+  static const llvm::StringSet<> CapturingMethods{"insert", "push",
+                                                  "push_front", "push_back"};
+  if (!CapturingMethods.contains(MD->getName()))
+    return;
+  for (ParmVarDecl *PVD : MD->parameters()) {
+    if (PVD->hasAttr<LifetimeCaptureByAttr>())
+      return;
+    if (IsPointerLikeType(PVD->getType())) {
+      int CaptureByThis[] = {LifetimeCaptureByAttr::THIS};
+      PVD->addAttr(
+          LifetimeCaptureByAttr::CreateImplicit(Context, CaptureByThis, 1));
+    }
+  }
+}
+
 void Sema::inferNullableClassAttribute(CXXRecordDecl *CRD) {
   static const llvm::StringSet<> Nullable{
       "auto_ptr",         "shared_ptr", "unique_ptr",         "exception_ptr",

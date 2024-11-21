@@ -366,3 +366,82 @@ void use() {
   capture3(std::string(), x3); // expected-warning {{object whose reference is captured by 'x3' will be destroyed at the end of the full-expression}}
 }
 } // namespace temporary_views
+
+// ****************************************************************************
+// Inferring annotation for STL containers
+// ****************************************************************************
+namespace inferred_capture_by {
+const std::string* getLifetimeBoundPointer(const std::string &s [[clang::lifetimebound]]);
+const std::string* getNotLifetimeBoundPointer(const std::string &s);
+
+namespace with_string_views {
+std::string_view getLifetimeBoundView(const std::string& s [[clang::lifetimebound]]);
+std::string_view getNotLifetimeBoundView(const std::string& s);
+void use() {
+  std::string local;
+  std::vector<std::string_view> views;
+  views.push_back(std::string()); // expected-warning {{object whose reference is captured by 'views' will be destroyed at the end of the full-expression}}
+  views.insert(views.begin(), 
+            std::string()); // expected-warning {{object whose reference is captured by 'views' will be destroyed at the end of the full-expression}}
+  views.push_back(getLifetimeBoundView(std::string())); // expected-warning {{object whose reference is captured by 'views' will be destroyed at the end of the full-expression}}
+  views.push_back(getNotLifetimeBoundView(std::string()));
+  views.push_back(local);
+  views.insert(views.end(), local);
+
+  std::vector<std::string> strings;
+  strings.push_back(std::string());
+  strings.insert(strings.begin(), std::string());
+}
+} // namespace with_string_views
+
+namespace with_pointers {
+const std::string* getLifetimeBoundPointer(const std::string &s [[clang::lifetimebound]]);
+const std::string* getLifetimeBoundPointer(std::string_view s [[clang::lifetimebound]]);
+const std::string* getNotLifetimeBoundPointer(const std::string &s);
+std::string_view getLifetimeBoundView(const std::string& s [[clang::lifetimebound]]);
+
+void use() {
+  std::string local;
+  std::vector<const std::string*> pointers;
+  pointers.push_back(getLifetimeBoundPointer(std::string())); // expected-warning {{object whose reference is captured by 'pointers' will be destroyed at the end of the full-expression}}
+  pointers.push_back(getLifetimeBoundPointer(*getLifetimeBoundPointer(std::string()))); // expected-warning {{object whose reference is captured by 'pointers' will be destroyed at the end of the full-expression}}
+  pointers.push_back(getLifetimeBoundPointer(getLifetimeBoundView(std::string()))); // expected-warning {{object whose reference is captured by 'pointers' will be destroyed at the end of the full-expression}}
+  pointers.push_back(getLifetimeBoundPointer(local));
+
+  pointers.push_back(getLifetimeBoundPointer(*getNotLifetimeBoundPointer(std::string())));
+  pointers.push_back(getNotLifetimeBoundPointer(std::string()));
+}
+} // namespace with_pointers
+
+namespace with_optional {
+class [[gsl::Pointer()]] my_view : public std::string_view {};
+class non_pointer_view : public std::string_view {};
+
+std::optional<std::string> getOptionalString();
+std::optional<std::string_view> getOptionalView();
+std::optional<std::string_view> getOptionalViewLifetimebound(const std::string& s [[clang::lifetimebound]]);
+std::optional<my_view> getOptionalMyView();
+std::optional<non_pointer_view> getOptionalNonPointerView();
+my_view getMyView();
+non_pointer_view getNonPointerView();
+
+void use() {
+  std::string local;
+  std::vector<std::string_view> views;
+  
+  std::optional<std::string_view> optional;
+  views.push_back(optional.value());
+  views.push_back(getOptionalString().value()); // expected-warning {{object whose reference is captured by 'views' will be destroyed at the end of the full-expression}}
+  views.push_back(getOptionalView().value());
+  views.push_back(getOptionalViewLifetimebound(std::string()).value()); // FIXME: Diagnose it.
+  views.push_back(getOptionalMyView().value());
+
+  views.push_back(getOptionalNonPointerView().value());
+  views.push_back(getMyView());
+  views.push_back(getNonPointerView());
+  views.push_back(std::string_view{});
+  views.push_back(my_view{});
+  views.push_back(non_pointer_view{});
+}
+} // namespace with_optional
+} // namespace inferred_capture_by
