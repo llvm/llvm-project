@@ -167,7 +167,11 @@ A **partial** list of flags RealtimeSanitizer respects:
    * - ``halt_on_error``
      - ``true``
      - boolean
-     - Exit after first reported error. If false (continue after a detected error), deduplicates error stacks so errors appear only once.
+     - Exit after first reported error.
+   * - ``suppress_equal_stacks``
+     - ``true``
+     - boolean
+     - If true, suppress duplicate reports (i.e. only print each unique error once). Only particularly useful when ``halt_on_error=false``.
    * - ``print_stats_on_exit``
      - ``false``
      - boolean
