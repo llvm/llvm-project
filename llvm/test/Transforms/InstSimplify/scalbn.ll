@@ -80,8 +80,8 @@ define double @scalbn_check0n() {
   ret %call
 }
 
-define double @scalbn_check0n() {
-; CHECK-LABEL: @scalbn_check0n(
+define double @scalbn_check0n2() {
+; CHECK-LABEL: @scalbn_check0n2(
 ; CHECK-NEXT:    ret double 0.5
 ;
   %call = call double @scalbn(double 1.0, i32 -1)
