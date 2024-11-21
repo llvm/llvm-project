@@ -151,7 +151,7 @@ bool isARMBareMetal(const llvm::Triple &Triple) {
 
   return true;
 }
-} // namespace clang
+} // namespace toolchains
 } // namespace driver
 } // namespace clang
 
