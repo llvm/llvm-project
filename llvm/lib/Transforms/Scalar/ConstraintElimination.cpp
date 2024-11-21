@@ -767,7 +767,7 @@ ConstraintTy ConstraintInfo::getConstraintForSolving(CmpInst::Predicate Pred,
   if (CmpInst::isSigned(Pred) &&
       isKnownNonNegative(Op0, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1) &&
       isKnownNonNegative(Op1, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1))
-    Pred = CmpInst::getUnsignedPredicate(Pred);
+    Pred = ICmpInst::getUnsignedPredicate(Pred);
 
   SmallVector<Value *> NewVariables;
   ConstraintTy R = getConstraint(Pred, Op0, Op1, NewVariables);
@@ -857,7 +857,7 @@ void ConstraintInfo::transferToOtherSystem(
     if (IsKnownNonNegative(B)) {
       addFact(CmpInst::ICMP_SGE, A, ConstantInt::get(B->getType(), 0), NumIn,
               NumOut, DFSInStack);
-      addFact(CmpInst::getSignedPredicate(Pred), A, B, NumIn, NumOut,
+      addFact(ICmpInst::getSignedPredicate(Pred), A, B, NumIn, NumOut,
               DFSInStack);
     }
     break;
@@ -867,7 +867,7 @@ void ConstraintInfo::transferToOtherSystem(
     if (IsKnownNonNegative(A)) {
       addFact(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), 0), NumIn,
               NumOut, DFSInStack);
-      addFact(CmpInst::getSignedPredicate(Pred), A, B, NumIn, NumOut,
+      addFact(ICmpInst::getSignedPredicate(Pred), A, B, NumIn, NumOut,
               DFSInStack);
     }
     break;
