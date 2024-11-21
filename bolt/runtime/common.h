@@ -156,7 +156,7 @@ struct timespec {
 #elif defined(__x86_64__)
 #include "sys_x86_64.h"
 #else
- exit(1);
+#error "For AArch64/ARM64 and X86_64 only."
 #endif
 
 constexpr uint32_t BufSize = 10240;
