@@ -15,6 +15,6 @@ The goal is to make it easy using a plug-in framework to add you own analyses.
 
 ## How to add your own binary analysis
 
-_TODO: this section needs to be written. Ideally, we should have an simple
+_TODO: this section needs to be written. Ideally, we should have a simple
 "example" or "template" analysis that can be the starting point for implementing
 custom analyses_

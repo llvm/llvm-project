@@ -1,3 +1,19 @@
+//===- bolt/tools/binary-analysis/binary-analysis.cpp ---------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This is a generic binary analysis tool, where multiple different specific
+// binary analyses can be plugged in to. The binary analyses are mostly built
+// on top of BOLT components.
+//
+//===----------------------------------------------------------------------===//
+
+
+
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/MC/TargetRegistry.h"
