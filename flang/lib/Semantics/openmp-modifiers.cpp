@@ -129,6 +129,22 @@ OmpGetDescriptor<parser::OmpReductionIdentifier>() {
 }
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpReductionModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"reduction-modifier",
+      /*props=*/
+      {
+          {45, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {45, {Clause::OMPC_reduction}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpTaskDependenceType>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"task-dependence-type",
@@ -139,6 +155,23 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpTaskDependenceType>() {
       /*clauses=*/
       {
           {52, {Clause::OMPC_depend, Clause::OMPC_update}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpVariableCategory>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"variable-category",
+      /*props=*/
+      {
+          {45, {OmpProperty::Required, OmpProperty::Unique}},
+          {50, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {45, {Clause::OMPC_defaultmap}},
       },
   };
   return desc;
