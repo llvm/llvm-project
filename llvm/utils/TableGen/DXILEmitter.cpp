@@ -426,19 +426,16 @@ static void emitDXILProperties(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#endif\n\n";
 }
 
-static void emitDXILPropertyHelpers(const RecordKeeper &Records,
-                                    raw_ostream &OS) {
-  // Generate their helper functions
-  for (const Record *Prop : Records.getAllDerivedDefinitions("DXILProperty")) {
-    OS << "[[maybe_unused]]\n";
-    OS << "static bool has" << Prop->getName() << "(dxil::OpCode Op) {\n";
-    OS << "  auto *OpCodeProp = getOpCodeProperty(Op);\n";
-    OS << "  for (auto Prop : OpCodeProp->Properties)\n";
-    OS << "    if (Prop == dxil::Property::" << Prop->getName() << ")\n";
-    OS << "      return true;\n";
-    OS << "  return false;\n";
-    OS << "}\n\n";
-  }
+static void emitDXILPropertyHelper(raw_ostream &OS) {
+  // Generate helper function to query all the functions
+  OS << "[[maybe_unused]]\n";
+  OS << "static bool hasProperty(dxil::OpCode Op, dxil::Property Prop) {\n";
+  OS << "  auto *OpCodeProp = getOpCodeProperty(Op);\n";
+  OS << "  for (auto CurProp : OpCodeProp->Properties)\n";
+  OS << "    if (CurProp == Prop)\n";
+  OS << "      return true;\n";
+  OS << "  return false;\n";
+  OS << "}\n\n";
 }
 
 /// Emit a list of DXIL op function types
@@ -651,7 +648,7 @@ static void emitDxilOperation(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#ifdef DXIL_OP_OPERATION_TABLE\n\n";
   emitDXILOperationTableDataStructs(Records, OS);
   emitDXILOperationTable(DXILOps, OS);
-  emitDXILPropertyHelpers(Records, OS);
+  emitDXILPropertyHelper(OS);
   OS << "#undef DXIL_OP_OPERATION_TABLE\n";
   OS << "#endif\n\n";
 }
