@@ -1809,6 +1809,8 @@ namespace llvm {
     ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
 
     TargetLoweringBase::AtomicExpansionKind
+    shouldCastAtomicLoadInIR(LoadInst *LI) const override;
+    TargetLoweringBase::AtomicExpansionKind
     shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
     TargetLoweringBase::AtomicExpansionKind
     shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
