@@ -4363,10 +4363,15 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
         // In an inbounds GEP with an offset that is nonnegative even when
         // interpreted as signed, assume there is no unsigned overflow.
         SDNodeFlags Flags;
-        if (NW.hasNoUnsignedWrap() ||
-            (Offs.isNonNegative() && NW.hasNoUnsignedSignedWrap()))
+        if (NW.hasNoUnsignedWrap()) {
+          if (!Offs.isNonNegative() && NW.hasNoUnsignedSignedWrap()) {
+            Flags.setNoUnsignedWrap(false);
+          } else {
+            Flags.setNoUnsignedWrap(true);
+          }
+        } else if (Offs.isNonNegative() && NW.hasNoUnsignedSignedWrap()) {
           Flags.setNoUnsignedWrap(true);
-
+        }
         OffsVal = DAG.getSExtOrTrunc(OffsVal, dl, N.getValueType());
 
         N = DAG.getNode(ISD::ADD, dl, N.getValueType(), N, OffsVal, Flags);
