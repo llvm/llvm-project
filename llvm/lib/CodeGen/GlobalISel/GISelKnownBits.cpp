@@ -148,9 +148,8 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   LLT DstTy = MRI.getType(R);
 
   // Handle the case where this is called on a register that does not have a
-  // type constraint (i.e. it has a register class constraint instead). This is
-  // unlikely to occur except by looking through copies but it is possible for
-  // the initial register being queried to be in this state.
+  // type constraint. For example, it may be post-ISel or this target might not
+  // preserve the type when early-selecting instructions.
   if (!DstTy.isValid()) {
     Known = KnownBits();
     return;

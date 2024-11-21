@@ -350,7 +350,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
 
       case _CharT('Y'):
         // Depending on the platform's libc the range of supported years is
-        // limited. Intead of of testing all conditions use the internal
+        // limited. Instead of of testing all conditions use the internal
         // implementation unconditionally.
         __formatter::__format_year(__sstr, __t.tm_year + 1900);
         break;
