@@ -376,7 +376,11 @@ def AArch64fadda_p : PatFrags<(ops node:$op1, node:$op2, node:$op3),
      (AArch64fadda_p_node (SVEAllActive), node:$op2,
              (vselect node:$op1, node:$op3, (splat_vector (f64 fpimm_minus0))))]>;
 
-def SDT_AArch64PTest : SDTypeProfile<0, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>]>;
+def SDT_AArch64PTest : SDTypeProfile<1, 2, [
+  SDTCisVT<0, i32>,  // out flags
+  SDTCisVec<1>,      // governing predicate
+  SDTCisSameAs<2, 1> // source predicate
+]>;
 def AArch64ptest     : SDNode<"AArch64ISD::PTEST", SDT_AArch64PTest>;
 def AArch64ptest_any : SDNode<"AArch64ISD::PTEST_ANY", SDT_AArch64PTest>;
 
