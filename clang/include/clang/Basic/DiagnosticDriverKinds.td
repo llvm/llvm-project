@@ -556,7 +556,7 @@ def err_test_module_file_extension_format : Error<
   "'blockname:major:minor:hashed:user info'">;
 
 def err_drv_module_output_with_multiple_arch : Error<
-  "option '-fmodule-output' can't be used with multiple arch options">;
+  "option '-fmodule-output' cannot be used with multiple arch options">;
 
 def err_modules_no_lsv : Error<"standard C++ modules require "
   "the -fmodules-local-submodule-visibility -cc1 option">;
