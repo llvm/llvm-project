@@ -251,7 +251,7 @@ struct FrontendOptions {
   /// Enable color diagnostics.
   unsigned showColors : 1;
 
-  /// print the supported cpus for the current target
+  /// Print the supported cpus for the current target
   unsigned printSupportedCPUs : 1;
 
   /// Enable Provenance to character-stream mapping. Allows e.g. IDEs to find
