@@ -15462,9 +15462,8 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
         int Src0Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
                                                  AMDGPU::OpName::scale_src0);
         if (Src0Idx != -1) {
-          int Src1Idx = Src0Idx + 2;
-          assert(Src1Idx = AMDGPU::getNamedOperandIdx(
-                     MI.getOpcode(), AMDGPU::OpName::scale_src1));
+          int Src1Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                                   AMDGPU::OpName::scale_src1);
           if (TII->usesConstantBus(MRI, MI, Src0Idx) &&
               TII->usesConstantBus(MRI, MI, Src1Idx))
             TII->legalizeOpWithMove(MI, Src1Idx);
