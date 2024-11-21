@@ -77,7 +77,7 @@ define void @noalias_metadata_load_may_not_execute() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 16
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[A]]
-; CHECK-NEXT:    [[GEP_PROMOTED:%.*]] = load i32, ptr [[GEP]], align 4, !tbaa [[TBAA3:![0-9]+]], !noalias [[META7:![0-9]+]]
+; CHECK-NEXT:    [[GEP_PROMOTED:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[ADD1:%.*]] = phi i32 [ [[GEP_PROMOTED]], [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[LOOP_LATCH:%.*]] ]
@@ -92,7 +92,7 @@ define void @noalias_metadata_load_may_not_execute() {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_HEADER]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[ADD2:%.*]] = phi i32 [ [[ADD]], [[LOOP_LATCH]] ], [ [[ADD1]], [[LOOP_HEADER]] ]
-; CHECK-NEXT:    store i32 [[ADD2]], ptr [[GEP]], align 4, !tbaa [[TBAA3]], !noalias [[META7]]
+; CHECK-NEXT:    store i32 [[ADD2]], ptr [[GEP]], align 4, !tbaa [[TBAA3:![0-9]+]], !noalias [[META7:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:

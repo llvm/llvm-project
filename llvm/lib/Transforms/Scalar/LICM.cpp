@@ -2030,7 +2030,9 @@ bool llvm::promoteLoopAccessesToScalars(
 
   bool DereferenceableInPH = false;
   bool StoreIsGuanteedToExecute = false;
+  bool LoadIsGuanteedToExecute = false;
   bool FoundLoadToPromote = false;
+
   // Goes from Unknown to either Safe or Unsafe, but can't switch between them.
   enum {
     StoreSafe,
@@ -2088,11 +2090,15 @@ bool llvm::promoteLoopAccessesToScalars(
         FoundLoadToPromote = true;
 
         Align InstAlignment = Load->getAlign();
+        bool GuaranteedToExecute =
+            SafetyInfo->isGuaranteedToExecute(*UI, DT, CurLoop);
+        LoadIsGuanteedToExecute |= GuaranteedToExecute;
 
         // Note that proving a load safe to speculate requires proving
         // sufficient alignment at the target location.  Proving it guaranteed
         // to execute does as well.  Thus we can increase our guaranteed
         // alignment as well.
+
         if (!DereferenceableInPH || (InstAlignment > Alignment))
           if (isSafeToExecuteUnconditionally(
                   *Load, DT, TLI, CurLoop, SafetyInfo, ORE,
@@ -2247,7 +2253,7 @@ bool llvm::promoteLoopAccessesToScalars(
       PreheaderLoad->setOrdering(AtomicOrdering::Unordered);
     PreheaderLoad->setAlignment(Alignment);
     PreheaderLoad->setDebugLoc(DebugLoc());
-    if (AATags)
+    if (AATags && LoadIsGuanteedToExecute)
       PreheaderLoad->setAAMetadata(AATags);
 
     MemoryAccess *PreheaderLoadMemoryAccess = MSSAU.createMemoryAccessInBB(
