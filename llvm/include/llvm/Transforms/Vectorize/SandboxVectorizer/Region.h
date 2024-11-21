@@ -128,7 +128,6 @@ public:
   bool runOnRegion(Region &R, const Analyses &A) final;
 };
 
-
 } // namespace llvm::sandboxir
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_REGION_H
