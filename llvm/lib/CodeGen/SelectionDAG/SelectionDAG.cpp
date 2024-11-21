@@ -1787,6 +1787,12 @@ SDValue SelectionDAG::getIntPtrConstant(uint64_t Val, const SDLoc &DL,
   return getConstant(Val, DL, TLI->getPointerTy(getDataLayout()), isTarget);
 }
 
+SDValue SelectionDAG::getSignedIntPtrConstant(int64_t Val, const SDLoc &DL,
+                                              bool isTarget) {
+  return getSignedConstant(Val, DL, TLI->getPointerTy(getDataLayout()),
+                           isTarget);
+}
+
 SDValue SelectionDAG::getShiftAmountConstant(uint64_t Val, EVT VT,
                                              const SDLoc &DL) {
   assert(VT.isInteger() && "Shift amount is not an integer type!");
