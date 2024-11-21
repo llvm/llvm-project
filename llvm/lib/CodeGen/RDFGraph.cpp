@@ -1515,15 +1515,13 @@ void DataFlowGraph::linkRefUp(Instr IA, NodeAddr<T> TA, DefStack &DS) {
   for (auto I = DS.top(), E = DS.bottom(); I != E; I.down()) {
     RegisterRef QR = I->Addr->getRegRef(*this);
 
-    // Skip all defs that are aliased to any of the defs that we have already
-    // seen. If this completes a cover of RR, stop the stack traversal.
-    bool Alias = Defs.hasAliasOf(QR);
-    bool Cover = Defs.insert(QR).hasCoverOf(RR);
-    if (Alias) {
-      if (Cover)
-        break;
+    // Skip all defs that we have already seen.
+    // If this completes a cover of RR, stop the stack traversal.
+    bool Seen = Defs.hasCoverOf(QR);
+    if (Seen)
       continue;
-    }
+
+    bool Cover = Defs.insert(QR).hasCoverOf(RR);
 
     // The reaching def.
     Def RDA = *I;
