@@ -4393,10 +4393,20 @@ bool canMergeRegUpdate(MachineBasicBlock::iterator II, unsigned Reg,
     int64_t Offset = MI.getOperand(2).getImm() << Shift;
     if (MI.getOpcode() == AArch64::SUBXri)
       Offset = -Offset;
-    int64_t AbsPostOffset = std::abs(Offset - Size);
-    const int64_t kMaxOffset =
-        0xFFF; // Max encoding for unshifted ADDXri / SUBXri
-    if (AbsPostOffset <= kMaxOffset && AbsPostOffset % 16 == 0) {
+    int64_t PostOffset = Offset - Size;
+    // TagStoreEdit::emitLoop might emit either an ADD/SUB after the loop, or
+    // an STGPostIndex which does the last 16 bytes of tag write. Which one is
+    // chosen depends on the alignment of the loop size, but the difference
+    // between the valid ranges for the two instructions is small, so we
+    // conservatively assume that it could be either case here.
+    //
+    // Max offset of STGPostIndex, minus the 16 byte tag write folded into that
+    // instruction.
+    const int64_t kMaxOffset = 4080 - 16;
+    // Max offset of SUBXri.
+    const int64_t kMinOffset = -4095;
+    if (PostOffset <= kMaxOffset && PostOffset >= kMinOffset &&
+        PostOffset % 16 == 0) {
       *TotalOffset = Offset;
       return true;
     }

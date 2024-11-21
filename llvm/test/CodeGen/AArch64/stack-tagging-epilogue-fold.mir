@@ -53,8 +53,9 @@ body:             |
     ; CHECK-NEXT: renamable $x10 = COPY renamable $x9
     ; CHECK-NEXT: dead early-clobber renamable $x11, dead early-clobber renamable $x10 = STGloop_wback 4080, killed renamable $x10, implicit-def dead $nzcv
     ; CHECK-NEXT: ST2Gi renamable $x8, renamable $x8, 0
-    ; CHECK-NEXT: dead early-clobber $x8, early-clobber $sp = frame-destroy STGloop_wback 4096, $sp, implicit-def $nzcv
-    ; CHECK-NEXT: $sp = frame-destroy STGPostIndex $sp, $sp, 256
+    ; CHECK-NEXT: $x9 = ADDXri $sp, 0, 0
+    ; CHECK-NEXT: dead early-clobber $x8, dead early-clobber $x9 = STGloop_wback 4112, $x9, implicit-def $nzcv
+    ; CHECK-NEXT: $sp = frame-destroy ADDXri $sp, 2, 12
     ; CHECK-NEXT: early-clobber $sp, $fp = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.5)
     ; CHECK-NEXT: RET_ReallyLR
     /* Prologue */
