@@ -17,29 +17,48 @@ namespace interp {
 
 enum class Endian { Little, Big };
 
-/// Returns the value of the bit in the given sequence of bytes.
-static inline bool bitof(const std::byte *B, unsigned BitIndex) {
-  return (B[BitIndex / 8] & (std::byte{1} << (BitIndex % 8))) != std::byte{0};
-}
+/// A quantity in bits.
+struct Bits {
+  size_t N = 0;
+  Bits() = default;
+  static Bits zero() { return Bits(0); }
+  explicit Bits(size_t Quantity) : N(Quantity) {}
+  size_t getQuantity() const { return N; }
+  size_t roundToBytes() const { return N / 8; }
+  size_t getOffsetInByte() const { return N % 8; }
+  bool isFullByte() const { return N % 8 == 0; }
+  bool nonZero() const { return N != 0; }
 
-/// Returns whether \p N is a full byte offset or size.
-static inline bool fullByte(unsigned N) { return N % 8 == 0; }
+  Bits operator-(Bits Other) { return Bits(N - Other.N); }
+  Bits operator+(Bits Other) { return Bits(N + Other.N); }
+  Bits operator+=(size_t O) {
+    N += O;
+    return *this;
+  }
+};
+
+/// A quantity in bytes.
+struct Bytes {
+  size_t N;
+  explicit Bytes(size_t Quantity) : N(Quantity) {}
+  size_t getQuantity() const { return N; }
+  Bits toBits() const { return Bits(N * 8); }
+};
 
 /// Track what bits have been initialized to known values and which ones
 /// have indeterminate value.
-/// All offsets are in bits.
 struct BitcastBuffer {
-  size_t FinalBitSize = 0;
+  Bits FinalBitSize;
   std::unique_ptr<std::byte[]> Data;
 
-  BitcastBuffer(size_t FinalBitSize) : FinalBitSize(FinalBitSize) {
-    assert(fullByte(FinalBitSize));
-    unsigned ByteSize = FinalBitSize / 8;
+  BitcastBuffer(Bits FinalBitSize) : FinalBitSize(FinalBitSize) {
+    assert(FinalBitSize.isFullByte());
+    unsigned ByteSize = FinalBitSize.roundToBytes();
     Data = std::make_unique<std::byte[]>(ByteSize);
   }
 
   /// Returns the buffer size in bits.
-  size_t size() const { return FinalBitSize; }
+  Bits size() const { return FinalBitSize; }
 
   /// Returns \c true if all bits in the buffer have been initialized.
   bool allInitialized() const {
@@ -50,15 +69,15 @@ struct BitcastBuffer {
   /// Push \p BitWidth bits at \p BitOffset from \p In into the buffer.
   /// \p TargetEndianness is the endianness of the target we're compiling for.
   /// \p In must hold at least \p BitWidth many bits.
-  void pushData(const std::byte *In, size_t BitOffset, size_t BitWidth,
+  void pushData(const std::byte *In, Bits BitOffset, Bits BitWidth,
                 Endian TargetEndianness);
 
   /// Copy \p BitWidth bits at offset \p BitOffset from the buffer.
   /// \p TargetEndianness is the endianness of the target we're compiling for.
   ///
   /// The returned output holds exactly (\p FullBitWidth / 8) bytes.
-  std::unique_ptr<std::byte[]> copyBits(unsigned BitOffset, unsigned BitWidth,
-                                        unsigned FullBitWidth,
+  std::unique_ptr<std::byte[]> copyBits(Bits BitOffset, Bits BitWidth,
+                                        Bits FullBitWidth,
                                         Endian TargetEndianness) const;
 };
 

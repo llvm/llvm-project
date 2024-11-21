@@ -10,44 +10,51 @@
 using namespace clang;
 using namespace clang::interp;
 
-void BitcastBuffer::pushData(const std::byte *In, size_t BitOffset,
-                             size_t BitWidth, Endian TargetEndianness) {
-  for (unsigned It = 0; It != BitWidth; ++It) {
-    bool BitValue = bitof(In, It);
+/// Returns the value of the bit in the given sequence of bytes.
+static inline bool bitof(const std::byte *B, Bits BitIndex) {
+  return (B[BitIndex.roundToBytes()] &
+          (std::byte{1} << BitIndex.getOffsetInByte())) != std::byte{0};
+}
+
+void BitcastBuffer::pushData(const std::byte *In, Bits BitOffset, Bits BitWidth,
+                             Endian TargetEndianness) {
+  for (unsigned It = 0; It != BitWidth.getQuantity(); ++It) {
+    bool BitValue = bitof(In, Bits(It));
     if (!BitValue)
       continue;
 
-    unsigned DstBit;
+    Bits DstBit;
     if (TargetEndianness == Endian::Little)
-      DstBit = BitOffset + It;
+      DstBit = BitOffset + Bits(It);
     else
-      DstBit = size() - BitOffset - BitWidth + It;
+      DstBit = size() - BitOffset - BitWidth + Bits(It);
 
-    unsigned DstByte = (DstBit / 8);
-    Data[DstByte] |= std::byte{1} << (DstBit % 8);
+    size_t DstByte = DstBit.roundToBytes();
+    Data[DstByte] |= std::byte{1} << DstBit.getOffsetInByte();
   }
 }
 
 std::unique_ptr<std::byte[]>
-BitcastBuffer::copyBits(unsigned BitOffset, unsigned BitWidth,
-                        unsigned FullBitWidth, Endian TargetEndianness) const {
-  assert(BitWidth <= FullBitWidth);
-  assert(fullByte(FullBitWidth));
-  auto Out = std::make_unique<std::byte[]>(FullBitWidth / 8);
+BitcastBuffer::copyBits(Bits BitOffset, Bits BitWidth, Bits FullBitWidth,
+                        Endian TargetEndianness) const {
+  assert(BitWidth.getQuantity() <= FullBitWidth.getQuantity());
+  assert(FullBitWidth.isFullByte());
+  auto Out = std::make_unique<std::byte[]>(FullBitWidth.roundToBytes());
 
-  for (unsigned It = 0; It != BitWidth; ++It) {
-    unsigned BitIndex;
+  for (unsigned It = 0; It != BitWidth.getQuantity(); ++It) {
+    Bits BitIndex;
     if (TargetEndianness == Endian::Little)
-      BitIndex = BitOffset + It;
+      BitIndex = BitOffset + Bits(It);
     else
-      BitIndex = size() - BitWidth - BitOffset + It;
+      BitIndex = size() - BitWidth - BitOffset + Bits(It);
 
     bool BitValue = bitof(Data.get(), BitIndex);
     if (!BitValue)
       continue;
-    unsigned DstBit = It;
-    unsigned DstByte = (DstBit / 8);
-    Out[DstByte] |= std::byte{1} << (DstBit % 8);
+
+    Bits DstBit = Bits(It);
+    size_t DstByte = DstBit.roundToBytes();
+    Out[DstByte] |= std::byte{1} << DstBit.getOffsetInByte();
   }
 
   return Out;
