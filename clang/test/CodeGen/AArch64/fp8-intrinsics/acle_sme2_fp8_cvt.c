@@ -4,78 +4,78 @@
 
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -target-feature +sme2 -target-feature +fp8 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -target-feature +sme2 -target-feature +fp8 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -DSME_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sme -target-feature +sme2 -target-feature +fp8 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
-// RUN: %clang_cc1 -DSME_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sme -target-feature +sme2 -target-feature +fp8 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sme -target-feature +sme2 -target-feature +fp8 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sme -target-feature +sme2 -target-feature +fp8 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -target-feature +sme2 -target-feature +fp8 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
-#include <arm_sme.h>
+#include <arm_sve.h>
 
-#ifdef SME_OVERLOADED_FORMS
-#define SME_ACLE_FUNC(A1,A2_UNUSED,A3) A1##A3
+#ifdef SVE_OVERLOADED_FORMS
+#define SVE_ACLE_FUNC(A1,A2_UNUSED,A3) A1##A3
 #else
-#define SME_ACLE_FUNC(A1,A2,A3) A1##A2##A3
+#define SVE_ACLE_FUNC(A1,A2,A3) A1##A2##A3
 #endif
 
-// CHECK-LABEL: @test_cvt1l_f16_x2(
+// CHECK-LABEL: @test_cvtl1_f16_x2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPMR:%.*]])
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.fp8.f1cvtl.x2(<vscale x 16 x i8> [[ZN:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.fp8.cvtl1.x2.nxv8f16(<vscale x 16 x i8> [[ZN:%.*]])
 // CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z17test_cvt1l_f16_x2u13__SVMfloat8_tm(
+// CPP-CHECK-LABEL: @_Z17test_cvtl1_f16_x2u13__SVMfloat8_tm(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPMR:%.*]])
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.fp8.f1cvtl.x2(<vscale x 16 x i8> [[ZN:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.fp8.cvtl1.x2.nxv8f16(<vscale x 16 x i8> [[ZN:%.*]])
 // CPP-CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]]
 //
-svfloat16x2_t test_cvt1l_f16_x2(svmfloat8_t zn, uint64_t fpmr)  __arm_streaming {
-  return SME_ACLE_FUNC(svcvtl1_f16,_mf8,_x2_fpm)(zn, fpmr);
+svfloat16x2_t test_cvtl1_f16_x2(svmfloat8_t zn, uint64_t fpmr)  __arm_streaming {
+  return SVE_ACLE_FUNC(svcvtl1_f16,_mf8,_x2_fpm)(zn, fpmr);
 }
 
-// CHECK-LABEL: @test_cvt2l_f16_x2(
+// CHECK-LABEL: @test_cvtl2_f16_x2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPMR:%.*]])
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.fp8.f2cvtl.x2(<vscale x 16 x i8> [[ZN:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.fp8.cvtl2.x2.nxv8f16(<vscale x 16 x i8> [[ZN:%.*]])
 // CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z17test_cvt2l_f16_x2u13__SVMfloat8_tm(
+// CPP-CHECK-LABEL: @_Z17test_cvtl2_f16_x2u13__SVMfloat8_tm(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPMR:%.*]])
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.fp8.f2cvtl.x2(<vscale x 16 x i8> [[ZN:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.fp8.cvtl2.x2.nxv8f16(<vscale x 16 x i8> [[ZN:%.*]])
 // CPP-CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]]
 //
-svfloat16x2_t test_cvt2l_f16_x2(svmfloat8_t zn, uint64_t fpmr)  __arm_streaming {
-  return SME_ACLE_FUNC(svcvtl2_f16,_mf8,_x2_fpm)(zn, fpmr);
+svfloat16x2_t test_cvtl2_f16_x2(svmfloat8_t zn, uint64_t fpmr)  __arm_streaming {
+  return SVE_ACLE_FUNC(svcvtl2_f16,_mf8,_x2_fpm)(zn, fpmr);
 }
 
-// CHECK-LABEL: @test_cvt1l_bf16_x2(
+// CHECK-LABEL: @test_cvtl1_bf16_x2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPMR:%.*]])
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.fp8.bf1cvtl.x2(<vscale x 16 x i8> [[ZN:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fp8.cvtl1.x2.nxv8bf16(<vscale x 16 x i8> [[ZN:%.*]])
 // CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z18test_cvt1l_bf16_x2u13__SVMfloat8_tm(
+// CPP-CHECK-LABEL: @_Z18test_cvtl1_bf16_x2u13__SVMfloat8_tm(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPMR:%.*]])
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.fp8.bf1cvtl.x2(<vscale x 16 x i8> [[ZN:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fp8.cvtl1.x2.nxv8bf16(<vscale x 16 x i8> [[ZN:%.*]])
 // CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
-svbfloat16x2_t test_cvt1l_bf16_x2(svmfloat8_t zn, uint64_t fpmr)  __arm_streaming {
-  return SME_ACLE_FUNC(svcvtl1_bf16,_mf8,_x2_fpm)(zn, fpmr);
+svbfloat16x2_t test_cvtl1_bf16_x2(svmfloat8_t zn, uint64_t fpmr)  __arm_streaming {
+  return SVE_ACLE_FUNC(svcvtl1_bf16,_mf8,_x2_fpm)(zn, fpmr);
 }
 
-// CHECK-LABEL: @test_cvt2l_bf16_x2(
+// CHECK-LABEL: @test_cvtl2_bf16_x2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPMR:%.*]])
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.fp8.bf2cvtl.x2(<vscale x 16 x i8> [[ZN:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fp8.cvtl2.x2.nxv8bf16(<vscale x 16 x i8> [[ZN:%.*]])
 // CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z18test_cvt2l_bf16_x2u13__SVMfloat8_tm(
+// CPP-CHECK-LABEL: @_Z18test_cvtl2_bf16_x2u13__SVMfloat8_tm(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPMR:%.*]])
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.fp8.bf2cvtl.x2(<vscale x 16 x i8> [[ZN:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fp8.cvtl2.x2.nxv8bf16(<vscale x 16 x i8> [[ZN:%.*]])
 // CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
-svbfloat16x2_t test_cvt2l_bf16_x2(svmfloat8_t zn, uint64_t fpmr)  __arm_streaming {
-  return SME_ACLE_FUNC(svcvtl2_bf16,_mf8,_x2_fpm)(zn, fpmr);
+svbfloat16x2_t test_cvtl2_bf16_x2(svmfloat8_t zn, uint64_t fpmr)  __arm_streaming {
+  return SVE_ACLE_FUNC(svcvtl2_bf16,_mf8,_x2_fpm)(zn, fpmr);
 }

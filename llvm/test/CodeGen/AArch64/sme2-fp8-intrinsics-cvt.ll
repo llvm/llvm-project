@@ -8,7 +8,7 @@ define { <vscale x 8 x half>, <vscale x 8 x half> } @f1cvtl(<vscale x 16 x i8> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    f1cvtl { z0.h, z1.h }, z0.b
 ; CHECK-NEXT:    ret
-  %res = call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.fp8.f1cvtl.x2(<vscale x 16 x i8> %zm)
+  %res = call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.fp8.cvtl1.x2.nxv8f16(<vscale x 16 x i8> %zm)
   ret { <vscale x 8 x half>, <vscale x 8 x half> } %res
 }
 
@@ -17,7 +17,7 @@ define { <vscale x 8 x half>, <vscale x 8 x half> } @f2cvtl(<vscale x 16 x i8> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    f2cvtl { z0.h, z1.h }, z0.b
 ; CHECK-NEXT:    ret
-  %res = call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.fp8.f2cvtl.x2(<vscale x 16 x i8> %zm)
+  %res = call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.fp8.cvtl2.x2.nxvbf16(<vscale x 16 x i8> %zm)
   ret { <vscale x 8 x half>, <vscale x 8 x half> } %res
 }
 
@@ -28,7 +28,7 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @bf1cvtl(<vscale x 16 x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    bf1cvtl { z0.h, z1.h }, z0.b
 ; CHECK-NEXT:    ret
-  %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.fp8.bf1cvtl.x2(<vscale x 16 x i8> %zm)
+  %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fp8.cvtl1.x2.nxv8bf16(<vscale x 16 x i8> %zm)
   ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %res
 }
 
@@ -37,6 +37,6 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @bf2cvtl( <vscale x 16 x
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    bf2cvtl { z0.h, z1.h }, z0.b
 ; CHECK-NEXT:    ret
-  %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.fp8.bf2cvtl.x2(<vscale x 16 x i8> %zm)
+  %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fp8.cvtl2.x2.nxv8bf16(<vscale x 16 x i8> %zm)
   ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %res
 }

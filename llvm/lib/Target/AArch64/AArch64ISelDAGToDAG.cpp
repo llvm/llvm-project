@@ -5569,17 +5569,17 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       SelectMultiVectorLuti(Node, 4, AArch64::LUTI4_4ZZT2Z);
       return;
     }
-    case Intrinsic::aarch64_sme_fp8_bf1cvtl_x2:
-      SelectCVTIntrinsicFP8(Node, 2, AArch64::BF1CVTL_2ZZ_BtoH);
+    case Intrinsic::aarch64_sve_fp8_cvtl1_x2:
+      if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {AArch64::BF1CVTL_2ZZ_BtoH, AArch64::F1CVTL_2ZZ_BtoH}))
+        SelectCVTIntrinsicFP8(Node, 2, Opc);
       return;
-    case Intrinsic::aarch64_sme_fp8_f1cvtl_x2:
-      SelectCVTIntrinsicFP8(Node, 2, AArch64::F1CVTL_2ZZ_BtoH);
-      return;
-    case Intrinsic::aarch64_sme_fp8_bf2cvtl_x2:
-      SelectCVTIntrinsicFP8(Node, 2, AArch64::BF2CVTL_2ZZ_BtoH);
-      return;
-    case Intrinsic::aarch64_sme_fp8_f2cvtl_x2:
-      SelectCVTIntrinsicFP8(Node, 2, AArch64::F2CVTL_2ZZ_BtoH);
+    case Intrinsic::aarch64_sve_fp8_cvtl2_x2:
+      if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {AArch64::BF2CVTL_2ZZ_BtoH, AArch64::F2CVTL_2ZZ_BtoH}))
+        SelectCVTIntrinsicFP8(Node, 2, Opc);
       return;
     }
   } break;

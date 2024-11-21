@@ -3814,22 +3814,14 @@ let TargetPrefix = "aarch64" in {
                             [IntrNoMem]>;
 
   class SME2_FP8_CVT_X2_Single_Intrinsic
-    : DefaultAttrsIntrinsic<[llvm_nxv8f16_ty, llvm_nxv8f16_ty],
-                            [llvm_nxv16i8_ty],
-                            [IntrReadMem, IntrInaccessibleMemOnly]>;
-
-  class SME2_FP8_CVT_X2_Single_BF16_Intrinsic
-    : DefaultAttrsIntrinsic<[llvm_nxv8bf16_ty, llvm_nxv8bf16_ty],
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
                             [llvm_nxv16i8_ty],
                             [IntrReadMem, IntrInaccessibleMemOnly]>;
   //
   // CVT from half-precision/BFloat16 to delinterleaved FP8 multi-vectors
   //
-  def int_aarch64_sme_fp8_f1cvtl_x2 : SME2_FP8_CVT_X2_Single_Intrinsic;
-  def int_aarch64_sme_fp8_f2cvtl_x2 : SME2_FP8_CVT_X2_Single_Intrinsic;
-
-  def int_aarch64_sme_fp8_bf1cvtl_x2 : SME2_FP8_CVT_X2_Single_BF16_Intrinsic;
-  def int_aarch64_sme_fp8_bf2cvtl_x2 : SME2_FP8_CVT_X2_Single_BF16_Intrinsic;
+  def int_aarch64_sve_fp8_cvtl1_x2 : SME2_FP8_CVT_X2_Single_Intrinsic;
+  def int_aarch64_sve_fp8_cvtl2_x2 : SME2_FP8_CVT_X2_Single_Intrinsic;
 }
 
 // SVE2.1 - ZIPQ1, ZIPQ2, UZPQ1, UZPQ2
