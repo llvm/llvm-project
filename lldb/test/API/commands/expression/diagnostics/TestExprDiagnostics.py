@@ -184,6 +184,18 @@ note: candidate function not viable: requires single argument 'x', but 2 argumen
         # the first argument are probably stable enough that this test can check for them.
         self.assertIn("void NSLog(NSString *format", value.GetError().GetCString())
 
+    def test_error_type(self):
+        """Test the error reporting in the API"""
+        self.build()
+
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "// Break here", self.main_source_spec
+        )
+        frame = thread.GetFrameAtIndex(0)
+        value = frame.EvaluateExpression('#error("I am error.")')
+        error = value.GetError()
+        self.assertEqual(error.GetType(), lldb.eErrorTypeExpression)
+
     def test_command_expr_sbdata(self):
         """Test the structured diagnostics data"""
         self.build()
