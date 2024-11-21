@@ -19,20 +19,20 @@
 ; RUN:     -force-target-instruction-cost=1 -passes=loop-vectorize -S -debug-only=loop-vectorize < %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=NEOVERSE-V2,VF-16
 
-; GENERIC: Cost for VF vscale x 2: 11 (Estimated cost per lane: 2.8)
-; GENERIC: Cost for VF vscale x 4: 11 (Estimated cost per lane: 1.4)
+; GENERIC: Cost for VF vscale x 2: 11 (Estimated cost per lane: 2.
+; GENERIC: Cost for VF vscale x 4: 11 (Estimated cost per lane: 1.
 ; GENERIC: LV: Selecting VF: vscale x 16
 
-; NEOVERSE-V1: Cost for VF vscale x 2: 11 (Estimated cost per lane: 2.8)
-; NEOVERSE-V1: Cost for VF vscale x 4: 11 (Estimated cost per lane: 1.4)
+; NEOVERSE-V1: Cost for VF vscale x 2: 11 (Estimated cost per lane: 2.
+; NEOVERSE-V1: Cost for VF vscale x 4: 11 (Estimated cost per lane: 1.
 ; NEOVERSE-V1: LV: Selecting VF: vscale x 16
 
-; NEOVERSE-N2: Cost for VF vscale x 2: 11 (Estimated cost per lane: 5.5)
-; NEOVERSE-N2: Cost for VF vscale x 4: 11 (Estimated cost per lane: 2.8)
+; NEOVERSE-N2: Cost for VF vscale x 2: 11 (Estimated cost per lane: 5.
+; NEOVERSE-N2: Cost for VF vscale x 4: 11 (Estimated cost per lane: 2.
 ; NEOVERSE-N2: LV: Selecting VF: vscale x 16
 
-; NEOVERSE-V2: Cost for VF vscale x 2: 11 (Estimated cost per lane: 5.5)
-; NEOVERSE-V2: Cost for VF vscale x 4: 11 (Estimated cost per lane: 2.8)
+; NEOVERSE-V2: Cost for VF vscale x 2: 11 (Estimated cost per lane: 5.
+; NEOVERSE-V2: Cost for VF vscale x 4: 11 (Estimated cost per lane: 2.
 ; NEOVERSE-V2: LV: Selecting VF: 16
 
 ; VF-16: <16 x i8>

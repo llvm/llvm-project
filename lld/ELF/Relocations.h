@@ -163,7 +163,9 @@ class InputSectionDescription;
 
 class ThunkCreator {
 public:
-  ThunkCreator(Ctx &ctx) : ctx(ctx) {}
+  // Thunk may be incomplete. Avoid inline ctor/dtor.
+  ThunkCreator(Ctx &ctx);
+  ~ThunkCreator();
   // Return true if Thunks have been added to OutputSections
   bool createThunks(uint32_t pass, ArrayRef<OutputSection *> outputSections);
 
@@ -199,9 +201,10 @@ private:
   // original addend, so we cannot fold offset + addend. A nested pair is used
   // because DenseMapInfo is not specialized for std::tuple.
   llvm::DenseMap<std::pair<std::pair<SectionBase *, uint64_t>, int64_t>,
-                 std::vector<Thunk *>>
+                 SmallVector<std::unique_ptr<Thunk>, 0>>
       thunkedSymbolsBySectionAndAddend;
-  llvm::DenseMap<std::pair<Symbol *, int64_t>, std::vector<Thunk *>>
+  llvm::DenseMap<std::pair<Symbol *, int64_t>,
+                 SmallVector<std::unique_ptr<Thunk>, 0>>
       thunkedSymbols;
 
   // Find a Thunk from the Thunks symbol definition, we can use this to find
@@ -220,7 +223,7 @@ private:
   // to be reached via thunks that use indirect branches. A destination
   // needs at most one landing pad as that can be reused by all callers.
   llvm::DenseMap<std::pair<std::pair<SectionBase *, uint64_t>, int64_t>,
-                 Thunk *>
+                 std::unique_ptr<Thunk>>
       landingPadsBySectionAndAddend;
 
   // All the nonLandingPad thunks that have been created, in order of creation.

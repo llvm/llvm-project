@@ -4165,7 +4165,7 @@ static void writeWholeProgramDevirtResolution(
 
 static void writeTypeIdSummaryRecord(SmallVector<uint64_t, 64> &NameVals,
                                      StringTableBuilder &StrtabBuilder,
-                                     const std::string &Id,
+                                     StringRef Id,
                                      const TypeIdSummary &Summary) {
   NameVals.push_back(StrtabBuilder.add(Id));
   NameVals.push_back(Id.size());
@@ -4184,7 +4184,7 @@ static void writeTypeIdSummaryRecord(SmallVector<uint64_t, 64> &NameVals,
 
 static void writeTypeIdCompatibleVtableSummaryRecord(
     SmallVector<uint64_t, 64> &NameVals, StringTableBuilder &StrtabBuilder,
-    const std::string &Id, const TypeIdCompatibleVtableInfo &Summary,
+    StringRef Id, const TypeIdCompatibleVtableInfo &Summary,
     ValueEnumerator &VE) {
   NameVals.push_back(StrtabBuilder.add(Id));
   NameVals.push_back(Id.size());
@@ -5501,8 +5501,9 @@ void llvm::embedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
   // Save llvm.compiler.used and remove it.
   SmallVector<Constant *, 2> UsedArray;
   SmallVector<GlobalValue *, 4> UsedGlobals;
-  Type *UsedElementType = PointerType::getUnqual(M.getContext());
   GlobalVariable *Used = collectUsedGlobalVariables(M, UsedGlobals, true);
+  Type *UsedElementType = Used ? Used->getValueType()->getArrayElementType()
+                               : PointerType::getUnqual(M.getContext());
   for (auto *GV : UsedGlobals) {
     if (GV->getName() != "llvm.embedded.module" &&
         GV->getName() != "llvm.cmdline")

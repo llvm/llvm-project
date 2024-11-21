@@ -25,7 +25,7 @@ fir.global linkonce @_QQclX6995815537abaf90e86ce166af128f3a constant : !fir.char
 // CHECK: fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %[[CONV]], %{{.*}}) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 // CHECK: fir.global linkonce @_QQcl[[SYMBOL]] {data_attr = #cuf.cuda<constant>} constant : !fir.char<1,32>
 
-// CHECK-LABEL: gpu.module @cuda_device_mod [#nvvm.target]
+// CHECK-LABEL: gpu.module @cuda_device_mod
 // CHECK: fir.global linkonce @_QQclX6995815537abaf90e86ce166af128f3a
 
 // -----
@@ -51,7 +51,7 @@ fir.global linkonce @_QQclX6995815537abaf90e86ce166af128f3a constant : !fir.char
 // CHECK: fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %[[CONV]], %{{.*}}) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 // CHECK: fir.global linkonce @_QQcl[[SYMBOL]] constant : !fir.char<1,32>
 
-// CHECK-LABEL: gpu.module @cuda_device_mod [#nvvm.target]
+// CHECK-LABEL: gpu.module @cuda_device_mod
 // CHECK-NOT: fir.global linkonce @_QQclX6995815537abaf90e86ce166af128f3a
 
 // -----
@@ -101,7 +101,7 @@ fir.global linkonce @_QQclX5465737420504153534544 constant : !fir.char<1,11> {
 
 // CHECK: fir.global linkonce @_QQclX5465737420504153534544 {data_attr = #cuf.cuda<constant>} constant : !fir.char<1,11>
 
-// CHECK-LABEL: gpu.module @cuda_device_mod [#nvvm.target]
+// CHECK-LABEL: gpu.module @cuda_device_mod
 // CHECK: fir.global linkonce @_QQclX5465737420504153534544 {data_attr = #cuf.cuda<constant>} constant
 
 // -----
@@ -142,5 +142,5 @@ func.func private @_FortranAioEndIoStatement(!fir.ref<i8>) -> i32 attributes {fi
 
 // CHECK: fir.global linkonce @_QQclX5465737420504153534544 {data_attr = #cuf.cuda<constant>} constant : !fir.char<1,11>
 
-// CHECK-LABEL: gpu.module @cuda_device_mod [#nvvm.target]
+// CHECK-LABEL: gpu.module @cuda_device_mod 
 // CHECK: fir.global linkonce @_QQclX5465737420504153534544 {data_attr = #cuf.cuda<constant>} constant

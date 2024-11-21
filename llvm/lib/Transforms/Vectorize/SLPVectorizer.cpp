@@ -2234,7 +2234,7 @@ public:
       MapVector<unsigned, std::pair<unsigned, unsigned>> HashMap;
       // Try to be closer to the original results, if we have multiple lanes
       // with same cost. If 2 lanes have the same cost, use the one with the
-      // lowest index.
+      // highest index.
       for (int I = getNumLanes(); I > 0; --I) {
         unsigned Lane = I - 1;
         OperandsOrderData NumFreeOpsHash =
@@ -10308,10 +10308,10 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
             Idx = EMask[Idx];
         }
         CommonVF = E->Scalars.size();
-      } else if (std::optional<unsigned> Factor = E->getInterleaveFactor();
-                 Factor && E->Scalars.size() != Mask.size() &&
+      } else if (unsigned Factor = E->getInterleaveFactor();
+                 Factor > 0 && E->Scalars.size() != Mask.size() &&
                  ShuffleVectorInst::isDeInterleaveMaskOfFactor(CommonMask,
-                                                               *Factor)) {
+                                                               Factor)) {
         // Deinterleaved nodes are free.
         std::iota(CommonMask.begin(), CommonMask.end(), 0);
       }
@@ -15728,16 +15728,18 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
           return E->VectorizedValue;
         }
-        assert(isa<ShuffleVectorInst>(Src) &&
-               "Not supported shufflevector usage.");
-        auto *SVSrc = cast<ShuffleVectorInst>(Src);
-        assert(isa<PoisonValue>(SVSrc->getOperand(1)) &&
-               "Not supported shufflevector usage.");
         SmallVector<int> ThisMask(calculateShufflevectorMask(E->Scalars));
-        SmallVector<int> NewMask(ThisMask.size());
-        transform(ThisMask, NewMask.begin(),
-                  [&SVSrc](int Mask) { return SVSrc->getShuffleMask()[Mask]; });
-        V = Builder.CreateShuffleVector(SVSrc->getOperand(0), NewMask);
+        if (auto *SVSrc = dyn_cast<ShuffleVectorInst>(Src)) {
+          assert(isa<PoisonValue>(SVSrc->getOperand(1)) &&
+                 "Not supported shufflevector usage.");
+          SmallVector<int> NewMask(ThisMask.size());
+          transform(ThisMask, NewMask.begin(), [&SVSrc](int Mask) {
+            return SVSrc->getShuffleMask()[Mask];
+          });
+          V = Builder.CreateShuffleVector(SVSrc->getOperand(0), NewMask);
+        } else {
+          V = Builder.CreateShuffleVector(Src, ThisMask);
+        }
         propagateIRFlags(V, E->Scalars, VL0);
         if (auto *I = dyn_cast<Instruction>(V))
           V = propagateMetadata(I, E->Scalars);
@@ -17910,14 +17912,14 @@ void BoUpSLP::computeMinimumValueSizes() {
       ReductionBitWidth = 1;
     } else {
       for (Value *V : *UserIgnoreList) {
-        auto NumSignBits = ComputeNumSignBits(V, *DL, 0, AC, nullptr, DT);
-        auto NumTypeBits = DL->getTypeSizeInBits(V->getType());
+        unsigned NumSignBits = ComputeNumSignBits(V, *DL, 0, AC, nullptr, DT);
+        TypeSize NumTypeBits = DL->getTypeSizeInBits(V->getType());
         unsigned BitWidth1 = NumTypeBits - NumSignBits;
         if (!isKnownNonNegative(V, SimplifyQuery(*DL)))
           ++BitWidth1;
         unsigned BitWidth2 = BitWidth1;
         if (!RecurrenceDescriptor::isIntMinMaxRecurrenceKind(::getRdxKind(V))) {
-          auto Mask = DB->getDemandedBits(cast<Instruction>(V));
+          APInt Mask = DB->getDemandedBits(cast<Instruction>(V));
           BitWidth2 = Mask.getBitWidth() - Mask.countl_zero();
         }
         ReductionBitWidth =

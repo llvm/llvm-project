@@ -883,7 +883,7 @@ ConstantRangeList getIntersectedInitRangeList(ArrayRef<ArgumentInitInfo> Args,
 struct DSEState {
   Function &F;
   AliasAnalysis &AA;
-  EarliestEscapeInfo EI;
+  EarliestEscapeAnalysis EA;
 
   /// The single BatchAA instance that is used to cache AA queries. It will
   /// not be invalidated over the whole run. This is safe, because:
@@ -943,7 +943,7 @@ struct DSEState {
   DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA, DominatorTree &DT,
            PostDominatorTree &PDT, const TargetLibraryInfo &TLI,
            const LoopInfo &LI)
-      : F(F), AA(AA), EI(DT, &LI), BatchAA(AA, &EI), MSSA(MSSA), DT(DT),
+      : F(F), AA(AA), EA(DT, &LI), BatchAA(AA, &EA), MSSA(MSSA), DT(DT),
         PDT(PDT), TLI(TLI), DL(F.getDataLayout()), LI(LI) {
     // Collect blocks with throwing instructions not modeled in MemorySSA and
     // alloc-like objects.
@@ -1850,7 +1850,7 @@ struct DSEState {
             NowDeadInsts.push_back(OpI);
         }
 
-      EI.removeInstruction(DeadInst);
+      EA.removeInstruction(DeadInst);
       // Remove memory defs directly if they don't produce results, but only
       // queue other dead instructions for later removal. They may have been
       // used as memory locations that have been cached by BatchAA. Removing
