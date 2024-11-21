@@ -1881,6 +1881,15 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     config->installName = config->finalOutput;
   }
 
+  auto getClientName = [&]() {
+    StringRef cn = path::filename(config->finalOutput);
+    cn.consume_front("lib");
+    auto firstDotOrUnderscore = cn.find_first_of("._");
+    cn = cn.take_front(firstDotOrUnderscore);
+    return cn;
+  };
+  config->clientName = args.getLastArgValue(OPT_client_name, getClientName());
+
   if (args.hasArg(OPT_mark_dead_strippable_dylib)) {
     if (config->outputType != MH_DYLIB)
       warn("-mark_dead_strippable_dylib: ignored, only has effect with -dylib");

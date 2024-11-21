@@ -268,6 +268,26 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
     if (newFile->exportingFile)
       newFile->parseLoadCommands(mbref);
   }
+
+  if (explicitlyLinked && !newFile->allowableClients.empty()) {
+    bool allowed = std::any_of(
+        newFile->allowableClients.begin(), newFile->allowableClients.end(),
+        [&](StringRef allowableClient) {
+          // We only do a prefix match to match LD64's behaviour.
+          return allowableClient.starts_with(config->clientName);
+        });
+
+    // TODO: This behaviour doesn't quite match the latest available source
+    // release of LD64 (ld64-951.9), which allows "parents" and "siblings"
+    // to link to libraries even when they're not explicitly named as
+    // allowable clients. However, behaviour around this seems to have
+    // changed in the latest release of Xcode (ld64-1115.7.3), so it's not
+    // clear what the correct thing to do is yet.
+    if (!allowed)
+      error("cannot link directly with '" +
+            sys::path::filename(newFile->installName) + "' because " +
+            config->clientName + " is not an allowed client");
+  }
   return newFile;
 }
 
