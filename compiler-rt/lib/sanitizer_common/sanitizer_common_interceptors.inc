@@ -2393,13 +2393,13 @@ INTERCEPTOR(int, setitimer, int which, const void *new_value, void *old_value) {
 INTERCEPTOR(int, timespec_get, struct __sanitizer_timespec *ts, int base) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, timespec_get, ts, base);
-  // FIXME: under ASan the call below may write to freed memory and corrupt
-  // its metadata. See
-  // https://github.com/google/sanitizers/issues/321.
-  int res = REAL(timespec_get)(ts, base);
+  // We don't yet know if ts is addressable, so we use our own scratch buffer
+  struct __sanitizer_timespec ts_local;
+  int res = REAL(timespec_get)(&ts_local, base);
   if (res) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ts,
                                    sizeof(struct __sanitizer_timespec));
+    internal_memcpy(ts, &ts_local, sizeof(struct __sanitizer_timespec));
   }
   return res;
 }
