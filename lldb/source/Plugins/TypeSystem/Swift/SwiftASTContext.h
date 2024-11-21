@@ -535,6 +535,7 @@ public:
   void ClearModuleDependentCaches() override;
   void LogConfiguration(bool is_repl = false);
   bool HasTarget();
+  bool HasExplicitModules() const { return m_has_explicit_modules; }
   bool CheckProcessChanged();
 
   // FIXME: this should be removed once we figure out who should really own the

@@ -15,6 +15,7 @@
 #include "Plugins/TypeSystem/Swift/StoringDiagnosticConsumer.h"
 #include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 
+#include "SwiftASTContext.h"
 #include "TypeSystemSwift.h"
 #include "TypeSystemSwiftTypeRef.h"
 #include "lldb/Utility/Log.h"
@@ -1799,10 +1800,17 @@ void SwiftASTContext::AddExtraClangArgs(
     const std::vector<std::string> &module_search_paths,
     const std::vector<std::pair<std::string, bool>> framework_search_paths,
     StringRef overrideOpts) {
+  swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
+  auto defer = llvm::make_scope_exit([&]() {
+    // Detect explicitly-built modules.
+    m_has_explicit_modules =
+        llvm::any_of(importer_options.ExtraArgs, [](const std::string &arg) {
+          return StringRef(arg).starts_with("-fmodule-file=");
+        });
+  });
+
   if (ExtraArgs.empty())
     return;
-
-  swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
 
   // Detect cc1 flags.  When DirectClangCC1ModuleBuild is on then the
   // clang arguments in the serialized invocation are clang cc1 flags,
@@ -1834,12 +1842,6 @@ void SwiftASTContext::AddExtraClangArgs(
   applyOverrideOptions(importer_options.ExtraArgs, overrideOpts);
   if (HasNonexistentExplicitModule(importer_options.ExtraArgs))
     RemoveExplicitModules(importer_options.ExtraArgs);
-
-  // Detect explicitly-built modules.
-  m_has_explicit_modules =
-      llvm::any_of(importer_options.ExtraArgs, [](const std::string &arg) {
-        return StringRef(arg).starts_with("-fmodule-file=");
-      });
 }
 
 void SwiftASTContext::AddExtraClangCC1Args(
@@ -5484,6 +5486,9 @@ void SwiftASTContext::LogConfiguration(bool is_repl) {
   if (!clang_importer_options.BridgingHeader.empty())
     HEALTH_LOG_PRINTF("  Bridging Header               : %s",
                       clang_importer_options.BridgingHeader.c_str());
+  if (auto *expr_ctx = llvm::dyn_cast<SwiftASTContextForExpressions>(this))
+    HEALTH_LOG_PRINTF("  Explicit modules              : %s",
+                      expr_ctx->HasExplicitModules() ? "true" : "false");
 
   HEALTH_LOG_PRINTF(
       "  Extra clang arguments            : (%llu items)",

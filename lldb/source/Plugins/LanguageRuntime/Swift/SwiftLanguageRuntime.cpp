@@ -1179,20 +1179,32 @@ SwiftLanguageRuntimeImpl::GetObjectDescription(Stream &str,
   return RunObjectDescriptionExpr(object, expr_string, str);
 }
 
-StructuredDataImpl *
-SwiftLanguageRuntime::GetLanguageSpecificData(StackFrame &frame) {
-  auto sc = frame.GetSymbolContext(eSymbolContextFunction);
+StructuredData::ObjectSP
+SwiftLanguageRuntime::GetLanguageSpecificData(SymbolContext sc) {
   if (!sc.function)
-    return nullptr;
+    return {};
 
   auto dict_sp = std::make_shared<StructuredData::Dictionary>();
   auto symbol = sc.function->GetMangled().GetMangledName().GetStringRef();
   auto is_async = SwiftLanguageRuntime::IsAnySwiftAsyncFunctionSymbol(symbol);
   dict_sp->AddBooleanItem("IsSwiftAsyncFunction", is_async);
 
-  auto *data = new StructuredDataImpl;
-  data->SetObjectSP(dict_sp);
-  return data;
+  if (!m_process)
+    return dict_sp;
+
+  auto type_system_or_err =
+      m_process->GetTarget().GetScratchTypeSystemForLanguage(
+          eLanguageTypeSwift);
+  if (!type_system_or_err)
+    return dict_sp;
+
+  if (auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
+          type_system_or_err->get()))
+    if (auto *swift_ast_ctx = ts->GetSwiftASTContextOrNull(sc))
+      dict_sp->AddBooleanItem("SwiftExplicitModules",
+                              swift_ast_ctx->HasExplicitModules());
+
+  return dict_sp;
 }
 
 void SwiftLanguageRuntime::FindFunctionPointersInCall(

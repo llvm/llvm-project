@@ -93,9 +93,8 @@ public:
   // guess the language type from the mangled name.
   lldb::LanguageType GuessLanguage() const;
 
+  LLDB_DEPRECATED("Use SBFrame::IsHidden() instead.")
   bool IsSwiftThunk() const;
-
-  lldb::SBStructuredData GetLanguageSpecificData() const;
 
   /// Return true if this frame represents an inlined function.
   ///
@@ -125,6 +124,11 @@ public:
 
   lldb::SBValue EvaluateExpression(const char *expr,
                                    const SBExpressionOptions &options);
+
+  /// Language plugins can use this API to report language-specific
+  /// runtime information about this compile unit, such as additional
+  /// language version details or feature flags.
+  SBStructuredData GetLanguageSpecificData() const;
 
   /// Gets the lexical block that defines the stack frame. Another way to think
   /// of this is it will return the block that contains all of the variables
