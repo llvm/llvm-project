@@ -820,18 +820,33 @@ bool Prescanner::ExponentAndKind(TokenSequence &tokens) {
   if (ed != 'e' && ed != 'd') {
     return false;
   }
-  EmitCharAndAdvance(tokens, ed);
-  if (*at_ == '+' || *at_ == '-') {
-    EmitCharAndAdvance(tokens, *at_);
+  // Do some look-ahead to ensure that this 'e'/'d' is an exponent,
+  // not the start of an identifier that could be a macro.
+  const char *p{at_};
+  if (int n{IsSpace(++p)}) {
+    p += n;
   }
-  while (IsDecimalDigit(*at_)) {
-    EmitCharAndAdvance(tokens, *at_);
-  }
-  if (*at_ == '_') {
-    while (IsLegalInIdentifier(EmitCharAndAdvance(tokens, *at_))) {
+  if (*p == '+' || *p == '-') {
+    if (int n{IsSpace(++p)}) {
+      p += n;
     }
   }
-  return true;
+  if (IsDecimalDigit(*p)) { // it's an exponent
+    EmitCharAndAdvance(tokens, ed);
+    if (*at_ == '+' || *at_ == '-') {
+      EmitCharAndAdvance(tokens, *at_);
+    }
+    while (IsDecimalDigit(*at_)) {
+      EmitCharAndAdvance(tokens, *at_);
+    }
+    if (*at_ == '_') {
+      while (IsLegalInIdentifier(EmitCharAndAdvance(tokens, *at_))) {
+      }
+    }
+    return true;
+  } else {
+    return false;
+  }
 }
 
 void Prescanner::QuotedCharacterLiteral(
