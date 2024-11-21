@@ -23,7 +23,7 @@ AST_MATCHER(StringLiteral, isOrdinary) { return Node.isOrdinary(); }
 } // namespace
 
 UseStdPrintCheck::UseStdPrintCheck(StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
+    : ClangTidyCheck(Name, Context), PP(PP),
       StrictMode(Options.getLocalOrGlobal("StrictMode", false)),
       PrintfLikeFunctions(utils::options::parseStringList(
           Options.get("PrintfLikeFunctions", ""))),
