@@ -11,7 +11,7 @@ entry:
   store i32 %X, ptr %X.addr, align 4
   %0 = load i32, ptr %X.addr, align 4
   %cmp = icmp sgt i32 %0, 0
-  br i1 %cmp, label %if.then, label %if.else, !dx.controlflow.hints !0
+  br i1 %cmp, label %if.then, label %if.else, !hlsl.controlflow.hint !0
 
 if.then:                                          ; preds = %entry
   %1 = load i32, ptr %X.addr, align 4
@@ -40,7 +40,7 @@ entry:
   store i32 %X, ptr %X.addr, align 4
   %0 = load i32, ptr %X.addr, align 4
   %cmp = icmp sgt i32 %0, 0
-  br i1 %cmp, label %if.then, label %if.else, !dx.controlflow.hints !1
+  br i1 %cmp, label %if.then, label %if.else, !hlsl.controlflow.hint !1
 
 if.then:                                          ; preds = %entry
   %1 = load i32, ptr %X.addr, align 4
@@ -87,5 +87,5 @@ if.end:                                           ; preds = %if.else, %if.then
   ret i32 %3
 }
 
-!0 = !{!"dx.controlflow.hints", i32 1}
-!1 = !{!"dx.controlflow.hints", i32 2}
+!0 = !{!"hlsl.controlflow.hint", i32 1}
+!1 = !{!"hlsl.controlflow.hint", i32 2}
