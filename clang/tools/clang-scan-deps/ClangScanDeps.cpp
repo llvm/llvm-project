@@ -29,7 +29,6 @@
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/Timer.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 #include <mutex>
 #include <optional>
@@ -425,8 +424,7 @@ public:
     IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions{};
     TextDiagnosticPrinter DiagConsumer(ErrOS, &*DiagOpts);
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-        CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                            &*DiagOpts, &DiagConsumer,
+        CompilerInstance::createDiagnostics(&*DiagOpts, &DiagConsumer,
                                             /*ShouldOwnClient=*/false);
 
     for (auto &&M : Modules)
@@ -741,8 +739,7 @@ getCompilationDatabase(int argc, char **argv, std::string &ErrorMessage) {
         tooling::JSONCommandLineSyntax::AutoDetect);
 
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                          new DiagnosticOptions);
+      CompilerInstance::createDiagnostics(new DiagnosticOptions);
   driver::Driver TheDriver(CommandLine[0], llvm::sys::getDefaultTargetTriple(),
                            *Diags);
   TheDriver.setCheckInputsExist(false);

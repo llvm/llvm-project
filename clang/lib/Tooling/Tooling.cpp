@@ -387,8 +387,7 @@ bool ToolInvocation::run() {
   TextDiagnosticPrinter DiagnosticPrinter(llvm::errs(), DiagOpts);
   IntrusiveRefCntPtr<DiagnosticsEngine> Diagnostics =
       CompilerInstance::createDiagnostics(
-          Files->getVirtualFileSystem(), &*DiagOpts,
-          DiagConsumer ? DiagConsumer : &DiagnosticPrinter, false);
+          &*DiagOpts, DiagConsumer ? DiagConsumer : &DiagnosticPrinter, false);
   // Although `Diagnostics` are used only for command-line parsing, the custom
   // `DiagConsumer` might expect a `SourceManager` to be present.
   SourceManager SrcMgr(*Diagnostics, *Files);
@@ -457,8 +456,7 @@ bool FrontendActionFactory::runInvocation(
   std::unique_ptr<FrontendAction> ScopedToolAction(create());
 
   // Create the compiler's actual diagnostics engine.
-  Compiler.createDiagnostics(Files->getVirtualFileSystem(), DiagConsumer,
-                             /*ShouldOwnClient=*/false);
+  Compiler.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
   if (!Compiler.hasDiagnostics())
     return false;
 
@@ -654,8 +652,7 @@ public:
                      DiagnosticConsumer *DiagConsumer) override {
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromCompilerInvocation(
         Invocation, std::move(PCHContainerOps),
-        CompilerInstance::createDiagnostics(Files->getVirtualFileSystem(),
-                                            &Invocation->getDiagnosticOpts(),
+        CompilerInstance::createDiagnostics(&Invocation->getDiagnosticOpts(),
                                             DiagConsumer,
                                             /*ShouldOwnClient=*/false),
         Files);
