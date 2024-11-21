@@ -18,24 +18,14 @@ add_header(
 )
 
 macro(add_header_macro TARGET_NAME YAML_FILE DEF_FILE GEN_HDR DEPENDS)
-  if (LIBC_USE_NEW_HEADER_GEN)
-    add_gen_header2(
-      ${TARGET_NAME}
-      YAML_FILE ${YAML_FILE}
-      DEF_FILE ${DEF_FILE}
-      GEN_HDR ${GEN_HDR}
-      ${DEPENDS}
-      ${ARGN}
-    )
-  else()
-    add_gen_header(
-      ${TARGET_NAME}
-      DEF_FILE ${DEF_FILE}
-      GEN_HDR ${GEN_HDR}
-      ${DEPENDS}
-      ${ARGN}
-    )
-  endif()
+  add_gen_header2(
+    ${TARGET_NAME}
+    YAML_FILE ${YAML_FILE}
+    DEF_FILE ${DEF_FILE}
+    GEN_HDR ${GEN_HDR}
+    ${DEPENDS}
+    ${ARGN}
+  )
 endmacro()
 
 add_header_macro(

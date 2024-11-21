@@ -220,46 +220,13 @@ function(add_gen_header target_name)
 
   set(gen_hdr_script "${LIBC_BUILD_SCRIPTS_DIR}/gen_hdr.py")
 
-  file(GLOB td_includes ${LIBC_SOURCE_DIR}/spec/*.td)
-
   set(ENTRYPOINT_NAME_LIST_ARG ${TARGET_ENTRYPOINT_NAME_LIST})
   list(TRANSFORM ENTRYPOINT_NAME_LIST_ARG PREPEND "--e=")
-
-  if(LIBC_HDRGEN_EXE)
-    set(hdrgen_exe ${LIBC_HDRGEN_EXE})
-  else()
-    set(hdrgen_exe ${LIBC_TABLEGEN_EXE})
-    set(hdrgen_deps "${LIBC_TABLEGEN_EXE};${LIBC_TABLEGEN_TARGET}")
-  endif()
-  add_custom_command(
-    OUTPUT ${out_file}
-    COMMAND ${hdrgen_exe} -o ${out_file} --header ${ADD_GEN_HDR_GEN_HDR}
-            --def ${in_file} ${replacement_params} -I ${LIBC_SOURCE_DIR}
-           ${ENTRYPOINT_NAME_LIST_ARG}
-           ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
-
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DEPENDS ${in_file} ${fq_data_files} ${td_includes}
-            ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
-            ${hdrgen_deps}
-  )
 
   if(LIBC_TARGET_OS_IS_GPU)
     file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/llvm-libc-decls)
     file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/llvm-libc-decls/gpu)
     set(decl_out_file ${LIBC_INCLUDE_DIR}/llvm-libc-decls/${relative_path})
-    add_custom_command(
-      OUTPUT ${decl_out_file}
-      COMMAND ${hdrgen_exe} -o ${decl_out_file}
-              --header ${ADD_GEN_HDR_GEN_HDR} --def ${in_file} --export-decls
-              ${replacement_params} -I ${LIBC_SOURCE_DIR} ${ENTRYPOINT_NAME_LIST_ARG}
-              ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
-
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      DEPENDS ${in_file} ${fq_data_files} ${td_includes}
-              ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
-              ${hdrgen_deps}
-    )
   endif()
 
   if(ADD_GEN_HDR_DEPENDS)
