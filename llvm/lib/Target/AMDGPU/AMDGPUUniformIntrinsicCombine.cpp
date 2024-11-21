@@ -78,29 +78,39 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
   }
   case Intrinsic::amdgcn_ballot: {
     Value *Src = II.getArgOperand(0);
+<<<<<<< HEAD
     if (isDivergentUseWithNew(II.getOperandUse(0), UI, Tracker))
       return false;
     LLVM_DEBUG(dbgs() << "Found uniform ballot intrinsic: " << II << '\n');
 
-    bool Changed = false;
-    for (User *U : make_early_inc_range(II.users())) {
-      if (auto *ICmp = dyn_cast<ICmpInst>(U)) {
-        Value *Op0 = ICmp->getOperand(0);
-        Value *Op1 = ICmp->getOperand(1);
+    if (UI.isDivergentUse(II.getOperandUse(0)))
+      return false;
+    LLVM_DEBUG(dbgs() << "Found uniform ballot intrinsic: " << II << '\n');
+
         ICmpInst::Predicate Pred = ICmp->getPredicate();
         Value *OtherOp = Op0 == &II ? Op1 : Op0;
 
         if (Pred == ICmpInst::ICMP_EQ && match(OtherOp, m_Zero())) {
+<<<<<<< HEAD
           // Case: (icmp eq %ballot, 0) -> xor %ballot_arg, 1
           Instruction *NotOp =
               BinaryOperator::CreateNot(Src, "", ICmp->getIterator());
           Tracker[NotOp] = true; // NOT preserves uniformity
+=======
+          // Case (icmp eq %ballot, 0) -->  xor %ballot_arg, 1
+          Instruction *NotOp =
+              BinaryOperator::CreateNot(Src, "", ICmp->getIterator());
+>>>>>>> ee370a5a77ca ([AMDGPU] combine uniform AMDGPU lane Intrinsics)
           LLVM_DEBUG(dbgs() << "Replacing ICMP_EQ: " << *NotOp << '\n');
           ICmp->replaceAllUsesWith(NotOp);
           ICmp->eraseFromParent();
           Changed = true;
         } else if (Pred == ICmpInst::ICMP_NE && match(OtherOp, m_Zero())) {
+<<<<<<< HEAD
           // Case: (icmp ne %ballot, 0) -> %ballot_arg
+=======
+          // (icmp ne %ballot, 0)  -->  %ballot_arg
+>>>>>>> ee370a5a77ca ([AMDGPU] combine uniform AMDGPU lane Intrinsics)
           LLVM_DEBUG(dbgs() << "Replacing ICMP_NE with ballot argument: "
                             << *Src << '\n');
           ICmp->replaceAllUsesWith(Src);
@@ -120,11 +130,17 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
   return false;
 }
 
+<<<<<<< HEAD
 /// Iterates over intrinsic declarations in the module to optimize their uses.
 static bool runUniformIntrinsicCombine(Module &M, ModuleAnalysisManager &AM) {
   bool IsChanged = false;
   ValueMap<const Value *, bool> Tracker;
 
+=======
+/// Iterate over the Intrinsics use in the Module to optimise.
+static bool runUniformIntrinsicCombine(Module &M, ModuleAnalysisManager &AM) {
+  bool IsChanged = false;
+>>>>>>> ee370a5a77ca ([AMDGPU] combine uniform AMDGPU lane Intrinsics)
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   for (Function &F : M) {
@@ -138,11 +154,22 @@ static bool runUniformIntrinsicCombine(Module &M, ModuleAnalysisManager &AM) {
       continue;
     }
 
+<<<<<<< HEAD
     for (User *U : make_early_inc_range(F.users())) {
       auto *II = cast<IntrinsicInst>(U);
       Function *ParentF = II->getFunction();
       const auto &UI = FAM.getResult<UniformityInfoAnalysis>(*ParentF);
       IsChanged |= optimizeUniformIntrinsic(*II, UI, Tracker);
+=======
+    for (User *U : F.users()) {
+      auto *II = cast<IntrinsicInst>(U);
+      Function *ParentF = II->getFunction();
+      if (ParentF->isDeclaration())
+        continue;
+
+      const auto &UI = FAM.getResult<UniformityInfoAnalysis>(*ParentF);
+      IsChanged |= optimizeUniformIntrinsic(*II, UI);
+>>>>>>> ee370a5a77ca ([AMDGPU] combine uniform AMDGPU lane Intrinsics)
     }
   }
   return IsChanged;
