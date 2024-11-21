@@ -1146,20 +1146,19 @@ void AArch64TargetCodeGenInfo::checkFunctionABI(
   }
 }
 
-enum class ArmStreamingInlinability : uint8_t {
+enum ArmSMEInlinability : uint8_t {
   Ok = 0,
-  IncompatibleStreamingModes = 1,
   MismatchedStreamingCompatibility = 1 << 1,
-  CalleeHasNewZA = 1 << 2,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/CalleeHasNewZA),
+  IncompatibleStreamingModes = 1,
+  CalleeRequiresNewZA = 1 << 2,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/CalleeRequiresNewZA),
 };
 
-/// Determines if there are any streaming ABI issues with inlining \p Callee
-/// into \p Caller. Returns the issues in the ArmStreamingInlinability bit enum
-/// (multiple bits can be set).
-static ArmStreamingInlinability
-GetArmStreamingInlinability(const FunctionDecl *Caller,
-                            const FunctionDecl *Callee) {
+/// Determines if there are any Arm SME ABI issues with inlining \p Callee into
+/// \p Caller. Returns the issues in the ArmSMEInlinability bit enum (multiple
+/// bits can be set).
+static ArmSMEInlinability GetArmSMEInlinability(const FunctionDecl *Caller,
+                                                const FunctionDecl *Callee) {
   bool CallerIsStreaming =
       IsArmStreamingFunction(Caller, /*IncludeLocallyStreaming=*/true);
   bool CalleeIsStreaming =
@@ -1167,17 +1166,17 @@ GetArmStreamingInlinability(const FunctionDecl *Caller,
   bool CallerIsStreamingCompatible = isStreamingCompatible(Caller);
   bool CalleeIsStreamingCompatible = isStreamingCompatible(Callee);
 
-  ArmStreamingInlinability Inlinability = ArmStreamingInlinability::Ok;
+  ArmSMEInlinability Inlinability = ArmSMEInlinability::Ok;
 
   if (!CalleeIsStreamingCompatible &&
       (CallerIsStreaming != CalleeIsStreaming || CallerIsStreamingCompatible)) {
-    Inlinability |= ArmStreamingInlinability::MismatchedStreamingCompatibility;
+    Inlinability |= ArmSMEInlinability::MismatchedStreamingCompatibility;
     if (CalleeIsStreaming)
-      Inlinability |= ArmStreamingInlinability::IncompatibleStreamingModes;
+      Inlinability |= ArmSMEInlinability::IncompatibleStreamingModes;
   }
   if (auto *NewAttr = Callee->getAttr<ArmNewAttr>())
     if (NewAttr->isNewZA())
-      Inlinability |= ArmStreamingInlinability::CalleeHasNewZA;
+      Inlinability |= ArmSMEInlinability::CalleeRequiresNewZA;
 
   return Inlinability;
 }
@@ -1188,18 +1187,18 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABIStreaming(
   if (!Caller || !Callee || !Callee->hasAttr<AlwaysInlineAttr>())
     return;
 
-  ArmStreamingInlinability Inlinability =
-      GetArmStreamingInlinability(Caller, Callee);
+  ArmSMEInlinability Inlinability = GetArmSMEInlinability(Caller, Callee);
 
-  if (bool(Inlinability &
-           ArmStreamingInlinability::MismatchedStreamingCompatibility))
+  if ((Inlinability & ArmSMEInlinability::MismatchedStreamingCompatibility) !=
+      0)
     CGM.getDiags().Report(
-        CallLoc, bool(Inlinability &
-                      ArmStreamingInlinability::IncompatibleStreamingModes)
-                     ? diag::err_function_always_inline_attribute_mismatch
-                     : diag::warn_function_always_inline_attribute_mismatch)
+        CallLoc,
+        (Inlinability & ArmSMEInlinability::IncompatibleStreamingModes) != 0
+            ? diag::err_function_always_inline_attribute_mismatch
+            : diag::warn_function_always_inline_attribute_mismatch)
         << Caller->getDeclName() << Callee->getDeclName() << "streaming";
-  if (bool(Inlinability & ArmStreamingInlinability::CalleeHasNewZA))
+
+  if ((Inlinability & ArmSMEInlinability::CalleeRequiresNewZA) != 0)
     CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_new_za)
         << Callee->getDeclName();
 }
@@ -1238,8 +1237,7 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABI(CodeGenModule &CGM,
 bool AArch64TargetCodeGenInfo::wouldInliningViolateFunctionCallABI(
     const FunctionDecl *Caller, const FunctionDecl *Callee) const {
   return Caller && Callee &&
-         GetArmStreamingInlinability(Caller, Callee) !=
-             ArmStreamingInlinability::Ok;
+         GetArmSMEInlinability(Caller, Callee) != ArmSMEInlinability::Ok;
 }
 
 void AArch64ABIInfo::appendAttributeMangling(TargetClonesAttr *Attr,

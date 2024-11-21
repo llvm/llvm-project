@@ -1,23 +1,33 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -emit-llvm -target-feature +sme %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -emit-llvm -target-feature +sme %s -DUSE_FLATTEN -o - | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -emit-llvm -target-feature +sme %s -DUSE_ALWAYS_INLINE_STMT -o - | FileCheck %s
 
 // REQUIRES: aarch64-registered-target
 
 extern void was_inlined(void);
 
-#define __flatten  __attribute__((flatten))
+#if defined(USE_FLATTEN)
+    #define FN_ATTR __attribute__((flatten))
+    #define STMT_ATTR
+#elif defined(USE_ALWAYS_INLINE_STMT)
+    #define FN_ATTR
+    #define STMT_ATTR [[clang::always_inline]]
+#else
+    #error Expected USE_FLATTEN or USE_ALWAYS_INLINE_STMT to be defined.
+#endif
+
 void fn(void) { was_inlined(); }
 void fn_streaming_compatible(void) __arm_streaming_compatible { was_inlined(); }
 void fn_streaming(void) __arm_streaming { was_inlined(); }
 __arm_locally_streaming void fn_locally_streaming(void) { was_inlined(); }
 __arm_new("za") void fn_streaming_new_za(void) __arm_streaming { was_inlined(); }
 
-__flatten
+FN_ATTR
 void caller(void) {
-    fn();
-    fn_streaming_compatible();
-    fn_streaming();
-    fn_locally_streaming();
-    fn_streaming_new_za();
+    STMT_ATTR fn();
+    STMT_ATTR fn_streaming_compatible();
+    STMT_ATTR fn_streaming();
+    STMT_ATTR fn_locally_streaming();
+    STMT_ATTR fn_streaming_new_za();
 }
 // CHECK-LABEL: void @caller()
 //  CHECK-NEXT: entry:
@@ -27,12 +37,12 @@ void caller(void) {
 //  CHECK-NEXT:   call void @fn_locally_streaming
 //  CHECK-NEXT:   call void @fn_streaming_new_za
 
-__flatten void caller_streaming_compatible(void) __arm_streaming_compatible {
-    fn();
-    fn_streaming_compatible();
-    fn_streaming();
-    fn_locally_streaming();
-    fn_streaming_new_za();
+FN_ATTR void caller_streaming_compatible(void) __arm_streaming_compatible {
+    STMT_ATTR fn();
+    STMT_ATTR fn_streaming_compatible();
+    STMT_ATTR fn_streaming();
+    STMT_ATTR fn_locally_streaming();
+    STMT_ATTR fn_streaming_new_za();
 }
 // CHECK-LABEL: void @caller_streaming_compatible()
 //  CHECK-NEXT: entry:
@@ -42,12 +52,12 @@ __flatten void caller_streaming_compatible(void) __arm_streaming_compatible {
 //  CHECK-NEXT:   call void @fn_locally_streaming
 //  CHECK-NEXT:   call void @fn_streaming_new_za
 
-__flatten void caller_streaming(void) __arm_streaming {
-    fn();
-    fn_streaming_compatible();
-    fn_streaming();
-    fn_locally_streaming();
-    fn_streaming_new_za();
+FN_ATTR void caller_streaming(void) __arm_streaming {
+    STMT_ATTR fn();
+    STMT_ATTR fn_streaming_compatible();
+    STMT_ATTR fn_streaming();
+    STMT_ATTR fn_locally_streaming();
+    STMT_ATTR fn_streaming_new_za();
 }
 // CHECK-LABEL: void @caller_streaming()
 //  CHECK-NEXT: entry:
@@ -57,13 +67,13 @@ __flatten void caller_streaming(void) __arm_streaming {
 //  CHECK-NEXT:   call void @was_inlined
 //  CHECK-NEXT:   call void @fn_streaming_new_za
 
-__flatten __arm_locally_streaming
+FN_ATTR __arm_locally_streaming
 void caller_locally_streaming(void) {
-    fn();
-    fn_streaming_compatible();
-    fn_streaming();
-    fn_locally_streaming();
-    fn_streaming_new_za();
+    STMT_ATTR fn();
+    STMT_ATTR fn_streaming_compatible();
+    STMT_ATTR fn_streaming();
+    STMT_ATTR fn_locally_streaming();
+    STMT_ATTR fn_streaming_new_za();
 }
 // CHECK-LABEL: void @caller_locally_streaming()
 //  CHECK-NEXT: entry:
