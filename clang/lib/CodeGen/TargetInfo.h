@@ -101,6 +101,15 @@ public:
   /// Returns true if inlining the function call would produce incorrect code
   /// for the current target and should be ignored (even with the always_inline
   /// or flatten attributes).
+  ///
+  /// Note: This probably should be handled in LLVM. However, the `alwaysinline`
+  /// attribute currently means the inliner will ignore mismatched attributes
+  /// (which sometimes can generate invalid code). So, this hook allows targets
+  /// to avoid adding the `alwaysinline` attributes based on attributes or other
+  /// target-specific reasons.
+  ///
+  /// See previous discussion here:
+  /// https://discourse.llvm.org/t/rfc-avoid-inlining-alwaysinline-functions-when-they-cannot-be-inlined/79528
   virtual bool
   wouldInliningViolateFunctionCallABI(const FunctionDecl *Caller,
                                       const FunctionDecl *Callee) const {
