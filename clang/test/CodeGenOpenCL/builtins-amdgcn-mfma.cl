@@ -460,4 +460,11 @@ v16i test_mfma_i32_32x32x32_i8(v4i a, v4i b, v16i c) {
   return __builtin_amdgcn_mfma_i32_32x32x32_i8(a, b, c, 1, 2, 3);
 }
 
+// CHECK-GFX950-LABEL: @test_mfma_f32_16x16x32_bf16(
+// CHECK-GFX950: tail call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.bf16(<8 x bfloat> %a, <8 x bfloat> %b, <4 x float> %c, i32 1, i32 2, i32 3)
+v4f test_mfma_f32_16x16x32_bf16(v8bf16 a, v8bf16 b, v4f c)
+{
+  return __builtin_amdgcn_mfma_f32_16x16x32_bf16(a, b, c, 1, 2, 3);
+}
+
 #endif
