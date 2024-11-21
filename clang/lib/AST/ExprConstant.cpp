@@ -3261,8 +3261,8 @@ static bool HandleLValueDirectBase(EvalInfo &Info, const Expr *E, LValue &Obj,
     RL = &Info.Ctx.getASTRecordLayout(Derived);
   }
 
-  Obj.getLValueOffset() += RL->getBaseClassOffset(Base);
   Obj.addDecl(Info, E, Base, /*Virtual*/ false);
+  Obj.getLValueOffset() += RL->getBaseClassOffset(Base);
   return true;
 }
 
@@ -3286,8 +3286,8 @@ static bool HandleLValueBase(EvalInfo &Info, const Expr *E, LValue &Obj,
   // Find the virtual base class.
   if (DerivedDecl->isInvalidDecl()) return false;
   const ASTRecordLayout &Layout = Info.Ctx.getASTRecordLayout(DerivedDecl);
-  Obj.getLValueOffset() += Layout.getVBaseClassOffset(BaseDecl);
   Obj.addDecl(Info, E, BaseDecl, /*Virtual*/ true);
+  Obj.getLValueOffset() += Layout.getVBaseClassOffset(BaseDecl);
   return true;
 }
 
@@ -3330,8 +3330,8 @@ static bool HandleLValueMember(EvalInfo &Info, const Expr *E, LValue &LVal,
   }
 
   unsigned I = FD->getFieldIndex();
-  LVal.adjustOffset(Info.Ctx.toCharUnitsFromBits(RL->getFieldOffset(I)));
   LVal.addDecl(Info, E, FD);
+  LVal.adjustOffset(Info.Ctx.toCharUnitsFromBits(RL->getFieldOffset(I)));
   return true;
 }
 
@@ -13529,7 +13529,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
   case Builtin::BI__builtin_reduce_add:
   case Builtin::BI__builtin_reduce_mul:
-  case Builtin::BI__builtin_reduce_and: {
+  case Builtin::BI__builtin_reduce_and:
+  case Builtin::BI__builtin_reduce_or:
+  case Builtin::BI__builtin_reduce_xor: {
     APValue Source;
     if (!EvaluateAsRValue(Info, E->getArg(0), Source))
       return false;
@@ -13556,6 +13558,14 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       }
       case Builtin::BI__builtin_reduce_and: {
         Reduced &= Source.getVectorElt(EltNum).getInt();
+        break;
+      }
+      case Builtin::BI__builtin_reduce_or: {
+        Reduced |= Source.getVectorElt(EltNum).getInt();
+        break;
+      }
+      case Builtin::BI__builtin_reduce_xor: {
+        Reduced ^= Source.getVectorElt(EltNum).getInt();
         break;
       }
       }

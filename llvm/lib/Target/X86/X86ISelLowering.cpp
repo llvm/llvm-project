@@ -5372,7 +5372,7 @@ static bool getTargetShuffleMask(SDValue N, bool AllowSentinelZero,
     assert(N.getOperand(0).getValueType() == VT && "Unexpected value type");
     assert(N.getOperand(1).getValueType() == VT && "Unexpected value type");
     ImmN = N.getConstantOperandVal(N.getNumOperands() - 1);
-    DecodeINSERTPSMask(ImmN, Mask);
+    DecodeINSERTPSMask(ImmN, Mask, /*SrcIsMem=*/false);
     IsUnary = IsFakeUnary = N.getOperand(0) == N.getOperand(1);
     break;
   case X86ISD::EXTRQI:
