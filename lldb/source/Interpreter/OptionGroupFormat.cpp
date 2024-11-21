@@ -81,23 +81,23 @@ Status OptionGroupFormat::SetOptionValue(uint32_t option_idx,
 
   case 'c':
     if (m_count.GetDefaultValue() == 0) {
-      error.SetErrorString("--count option is disabled");
+      error = Status::FromErrorString("--count option is disabled");
     } else {
       error = m_count.SetValueFromString(option_arg);
       if (m_count.GetCurrentValue() == 0)
-        error.SetErrorStringWithFormat("invalid --count option value '%s'",
-                                       option_arg.str().c_str());
+        error = Status::FromErrorStringWithFormat(
+            "invalid --count option value '%s'", option_arg.str().c_str());
     }
     break;
 
   case 's':
     if (m_byte_size.GetDefaultValue() == 0) {
-      error.SetErrorString("--size option is disabled");
+      error = Status::FromErrorString("--size option is disabled");
     } else {
       error = m_byte_size.SetValueFromString(option_arg);
       if (m_byte_size.GetCurrentValue() == 0)
-        error.SetErrorStringWithFormat("invalid --size option value '%s'",
-                                       option_arg.str().c_str());
+        error = Status::FromErrorStringWithFormat(
+            "invalid --size option value '%s'", option_arg.str().c_str());
     }
     break;
 
@@ -122,8 +122,8 @@ Status OptionGroupFormat::SetOptionValue(uint32_t option_idx,
     if (!gdb_format_str.empty() ||
         (format == eFormatInvalid && byte_size == 0 && count == 0)) {
       // Nothing got set correctly
-      error.SetErrorStringWithFormat("invalid gdb format string '%s'",
-                                     option_arg.str().c_str());
+      error = Status::FromErrorStringWithFormat(
+          "invalid gdb format string '%s'", option_arg.str().c_str());
       return error;
     }
 
@@ -144,7 +144,7 @@ Status OptionGroupFormat::SetOptionValue(uint32_t option_idx,
       // Byte size is disabled, make sure it wasn't specified but if this is an
       // address, it's actually necessary to specify one so don't error out
       if (byte_size > 0 && format != lldb::eFormatAddressInfo) {
-        error.SetErrorString(
+        error = Status::FromErrorString(
             "this command doesn't support specifying a byte size");
         return error;
       }
@@ -158,7 +158,8 @@ Status OptionGroupFormat::SetOptionValue(uint32_t option_idx,
     } else {
       // Count is disabled, make sure it wasn't specified
       if (count > 0) {
-        error.SetErrorString("this command doesn't support specifying a count");
+        error = Status::FromErrorString(
+            "this command doesn't support specifying a count");
         return error;
       }
     }

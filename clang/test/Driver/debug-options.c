@@ -118,28 +118,29 @@
 // RUN: %clang_cl -### -c -Z7 -target x86_64-windows-msvc -- %s 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_NOTUNING %s
 
-// On the PS4/PS5, -g defaults to -gno-column-info, and we always generate the
-// arange section.
+// On the PS4/PS5, -g defaults to -gno-column-info. We default to always
+// generating the arange section, but keyed off SCE DebuggerTuning being in
+// play during codegen, instead of -generate-arange-section.
 // RUN: %clang -### -c %s -target x86_64-scei-ps4 2>&1 \
 // RUN:             | FileCheck -check-prefix=NOG_PS %s
 // RUN: %clang -### -c %s -target x86_64-sie-ps5 2>&1 \
 // RUN:             | FileCheck -check-prefix=NOG_PS %s
 /// PS4 will stay on v4 even if the generic default version changes.
 // RUN: %clang -### -c %s -g -target x86_64-scei-ps4 2>&1 \
-// RUN:             | FileCheck -check-prefixes=G_DWARF4,GARANGE,G_SCE,NOCI,FWD_TMPL_PARAMS %s
+// RUN:             | FileCheck -check-prefixes=G_DWARF4,G_SCE,NOCI,FWD_TMPL_PARAMS %s
 // RUN: %clang -### -c %s -g -target x86_64-sie-ps5 2>&1 \
-// RUN:             | FileCheck -check-prefixes=G_DWARF5,GARANGE,G_SCE,NOCI,FWD_TMPL_PARAMS %s
+// RUN:             | FileCheck -check-prefixes=G_DWARF5,G_SCE,NOCI,FWD_TMPL_PARAMS %s
 // RUN: %clang -### -c %s -g -gcolumn-info -target x86_64-scei-ps4 2>&1 \
 // RUN:             | FileCheck -check-prefix=CI %s
 // RUN: %clang -### -c %s -gsce -target x86_64-unknown-linux 2>&1 \
 // RUN:             | FileCheck -check-prefix=NOCI %s
 // RUN: %clang -### %s -g -flto=thin -target x86_64-scei-ps4 2>&1 \
-// RUN:             | FileCheck -check-prefix=SNLDTLTOGARANGE %s
+// RUN:             | FileCheck -check-prefix=LDGARANGE %s
 // RUN: %clang -### %s -g -flto=full -target x86_64-scei-ps4 2>&1 \
-// RUN:             | FileCheck -check-prefix=SNLDFLTOGARANGE %s
-// RUN: %clang -### %s -g -flto -target x86_64-scei-ps5 2>&1 \
-// RUN:             | FileCheck -check-prefix=LLDGARANGE %s
-// RUN: %clang -### %s -g -target x86_64-scei-ps5 2>&1 \
+// RUN:             | FileCheck -check-prefix=LDGARANGE %s
+// RUN: %clang -### %s -g -flto -target x86_64-sie-ps5 2>&1 \
+// RUN:             | FileCheck -check-prefix=LDGARANGE %s
+// RUN: %clang -### %s -g -target x86_64-sie-ps5 2>&1 \
 // RUN:             | FileCheck -check-prefix=LDGARANGE %s
 
 // On the AIX, -g defaults to limited debug info.
@@ -321,8 +322,7 @@
 //
 // NOG_PS: "-cc1"
 // NOG_PS-NOT: "-dwarf-version=
-// NOG_PS: "-generate-arange-section"
-// NOG_PS-NOT: "-dwarf-version=
+// NOG_PS-NOT: "-generate-arange-section"
 //
 // G_ERR: error: unknown argument:
 //
@@ -402,8 +402,7 @@
 //
 
 // LDGARANGE: {{".*ld.*"}} {{.*}}
-// LDGARANGE-NOT: "-plugin-opt=-generate-arange-section"
-// LLDGARANGE: {{".*lld.*"}} {{.*}} "-plugin-opt=-generate-arange-section"
+// LDGARANGE-NOT: -generate-arange-section"
 // SNLDTLTOGARANGE: {{".*orbis-ld.*"}} {{.*}} "-lto-thin-debug-options= -generate-arange-section"
 // SNLDFLTOGARANGE: {{".*orbis-ld.*"}} {{.*}} "-lto-debug-options= -generate-arange-section"
 

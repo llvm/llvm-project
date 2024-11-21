@@ -142,8 +142,8 @@ struct Corresponding {
     void d(this Corresponding&&);
     void d(this const Corresponding&);
     void d(this const int&);
-    void d(this const int);
-    void d(this int);
+    void d(this const int);  // expected-note {{previous declaration is here}}
+    void d(this int);        // expected-error {{class member cannot be redeclared}}
 
     void e(this const Corresponding&&); // expected-note {{here}}
     void e() const &&; // expected-error{{cannot be redeclared}}
@@ -171,9 +171,8 @@ struct CorrespondingTpl {
     void d(this Corresponding&&);
     void d(this const Corresponding&);
     void d(this const int&);
-    void d(this const int);
-    void d(this int);
-
+    void d(this const int); // expected-note {{previous declaration is here}}
+    void d(this int);       // expected-error {{class member cannot be redeclared}}
     void e(this const CorrespondingTpl&&); // expected-note {{here}}
     void e() const &&; // expected-error{{cannot be redeclared}}
 };
@@ -729,10 +728,10 @@ struct S2 {
 };
 
 S2& S2::operator=(this int&& self, const S2&) = default;
-// expected-error@-1 {{the type of the explicit object parameter of an explicitly-defaulted copy assignment operator should match the type of the class 'S2'}}
+// expected-error@-1 {{the type of the explicit object parameter of an explicitly-defaulted copy assignment operator should be reference to 'S2'}}
 
 S2& S2::operator=(this int&& self, S2&&) = default;
-// expected-error@-1 {{the type of the explicit object parameter of an explicitly-defaulted move assignment operator should match the type of the class 'S2'}}
+// expected-error@-1 {{the type of the explicit object parameter of an explicitly-defaulted move assignment operator should be reference to 'S2'}}
 
 struct Move {
     Move& operator=(this int&, Move&&) = default;
@@ -895,6 +894,10 @@ void g() {
 }
 
 namespace P2797 {
+
+int bar(void) { return 55; }
+int (&fref)(void) = bar;
+
 struct C {
   void c(this const C&);    // #first
   void c() &;               // #second
@@ -915,6 +918,199 @@ struct C {
     (&C::c)(C{});
     (&C::c)(*this);     // expected-error {{call to non-static member function without an object argument}}
     (&C::c)();
+
+    (&fref)();
   }
 };
+}
+
+namespace GH85992 {
+namespace N {
+struct A {
+  int f(this A);
+};
+
+int f(A);
+}
+
+struct S {
+  int (S::*x)(this int); // expected-error {{an explicit object parameter can only appear as the first parameter of a member function}}
+  int (*y)(this int); // expected-error {{an explicit object parameter can only appear as the first parameter of a member function}}
+  int (***z)(this int); // expected-error {{an explicit object parameter can only appear as the first parameter of a member function}}
+
+  int f(this S);
+  int ((g))(this S);
+  friend int h(this S); // expected-error {{an explicit object parameter cannot appear in a non-member function}}
+  int h(int x, int (*)(this S)); // expected-error {{an explicit object parameter can only appear as the first parameter of a member function}}
+
+  struct T {
+    int f(this T);
+  };
+
+  friend int T::f(this T);
+  friend int N::A::f(this N::A);
+  friend int N::f(this N::A); // expected-error {{an explicit object parameter cannot appear in a non-member function}}
+  int friend func(this T); // expected-error {{an explicit object parameter cannot appear in a non-member function}}
+};
+
+using T = int (*)(this int); // expected-error {{an explicit object parameter can only appear as the first parameter of a member function}}
+using U = int (S::*)(this int); // expected-error {{an explicit object parameter can only appear as the first parameter of a member function}}
+int h(this int); // expected-error {{an explicit object parameter cannot appear in a non-member function}}
+
+int S::f(this S) { return 1; }
+
+namespace a {
+void f();
+};
+void a::f(this auto) {} // expected-error {{an explicit object parameter cannot appear in a non-member function}}
+}
+
+struct R {
+  void f(this auto &&self, int &&r_value_ref) {} // expected-note {{candidate function template not viable: expects an rvalue for 2nd argument}}
+  void g(int &&r_value_ref) {
+	f(r_value_ref); // expected-error {{no matching member function for call to 'f'}}
+  }
+};
+
+namespace GH100329 {
+struct A {
+    bool operator == (this const int&, const A&);
+};
+bool A::operator == (this const int&, const A&) = default;
+// expected-error@-1 {{invalid parameter type for defaulted equality comparison operator; found 'const int &', expected 'const GH100329::A &'}}
+} // namespace GH100329
+
+namespace defaulted_assign {
+struct A {
+  A& operator=(this A, const A&) = default;
+  // expected-warning@-1 {{explicitly defaulted copy assignment operator is implicitly deleted}}
+  // expected-note@-2 {{function is implicitly deleted because its declared type does not match the type of an implicit copy assignment operator}}
+  A& operator=(this int, const A&) = default;
+  // expected-warning@-1 {{explicitly defaulted copy assignment operator is implicitly deleted}}
+  // expected-note@-2 {{function is implicitly deleted because its declared type does not match the type of an implicit copy assignment operator}}
+};
+} // namespace defaulted_assign
+
+namespace defaulted_compare {
+struct A {
+  bool operator==(this A&, const A&) = default;
+  // expected-error@-1 {{defaulted member equality comparison operator must be const-qualified}}
+  bool operator==(this const A, const A&) = default;
+  // expected-error@-1 {{invalid parameter type for defaulted equality comparison operator; found 'const A', expected 'const defaulted_compare::A &'}}
+  bool operator==(this A, A) = default;
+};
+struct B {
+  int a;
+  bool operator==(this B, B) = default;
+};
+static_assert(B{0} == B{0});
+static_assert(B{0} != B{1});
+template<B b>
+struct X;
+static_assert(__is_same(X<B{0}>, X<B{0}>));
+static_assert(!__is_same(X<B{0}>, X<B{1}>));
+} // namespace defaulted_compare
+
+namespace static_overloaded_operator {
+struct A {
+  template<auto N>
+  static void operator()(const char (&)[N]);
+  void operator()(this auto &&, auto &&);
+
+  void implicit_this() {
+    operator()("123");
+  }
+};
+
+struct B {
+  template<auto N>
+  void operator()(this auto &&, const char (&)[N]);
+  static void operator()(auto &&);
+
+  void implicit_this() {
+    operator()("123");
+  }
+};
+
+struct C {
+  template<auto N>
+  static void operator[](const char (&)[N]);
+  void operator[](this auto &&, auto &&);
+
+  void implicit_this() {
+    operator[]("123");
+  }
+};
+
+struct D {
+  template<auto N>
+  void operator[](this auto &&, const char (&)[N]);
+  static void operator[](auto &&);
+
+  void implicit_this() {
+    operator[]("123");
+  }
+};
+
+} // namespace static_overloaded_operator
+
+namespace GH102025 {
+struct Foo {
+  template <class T>
+  constexpr auto operator[](this T &&self, auto... i) // expected-note {{candidate template ignored: substitution failure [with T = Foo &, i:auto = <>]: member '_evaluate' used before its declaration}}
+      -> decltype(_evaluate(self, i...)) {
+    return self._evaluate(i...);
+  }
+
+private:
+  template <class T>
+  constexpr auto _evaluate(this T &&self, auto... i) -> decltype((i + ...));
+};
+
+int main() {
+  Foo foo;
+  return foo[]; // expected-error {{no viable overloaded operator[] for type 'Foo'}}
+}
+}
+
+namespace GH100394 {
+struct C1 {
+  void f(this const C1);
+  void f() const;        // ok
+};
+
+struct C2 {
+  void f(this const C2);    // expected-note {{previous declaration is here}}
+  void f(this volatile C2); // expected-error {{class member cannot be redeclared}} \
+                            // expected-warning {{volatile-qualified parameter type 'volatile C2' is deprecated}}
+};
+
+struct C3 {
+  void f(this volatile C3); // expected-note {{previous declaration is here}} \
+                            // expected-warning {{volatile-qualified parameter type 'volatile C3' is deprecated}}
+  void f(this const C3);    // expected-error {{class member cannot be redeclared}}
+};
+
+struct C4 {
+  void f(this const C4);          // expected-note {{previous declaration is here}}
+  void f(this const volatile C4); // expected-error {{class member cannot be redeclared}} \
+                                  // expected-warning {{volatile-qualified parameter type 'const volatile C4' is deprecated}}
+};
+}
+
+
+namespace GH112559 {
+struct Wrap  {};
+struct S {
+    constexpr operator Wrap (this const S& self) {
+        return Wrap{};
+    };
+    constexpr int operator <<(this Wrap self, int i) {
+        return 0;
+    }
+};
+// Purposefully invalid expression to check an assertion in the
+// expression recovery machinery.
+static_assert((S{} << 11) == a);
+// expected-error@-1 {{use of undeclared identifier 'a'}}
 }

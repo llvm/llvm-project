@@ -1403,6 +1403,12 @@ For instance, with a macOS process which has nothing mapped in the first
 The lack of `permissions:` indicates that none of read/write/execute are valid
 for this region.
 
+The stub must include `permissions:` key-value on all memory ranges
+that are valid to access in the inferior process -- the lack of
+`permissions:` means that this is an inaccessible (no page table
+entries exist, in a system using VM) memory range.  If a stub cannot
+determine actual permissions, return `rwx`.
+
 **Priority To Implement:** Medium
 
 This is nice to have, but it isn't necessary. It helps LLDB

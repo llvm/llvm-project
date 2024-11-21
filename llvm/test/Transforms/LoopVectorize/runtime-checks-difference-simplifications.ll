@@ -222,3 +222,78 @@ loop:
 exit:
   ret void
 }
+
+define void @check_creation_order(ptr %a, ptr %b, i32 %m) {
+; CHECK-LABEL: @check_creation_order(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B:%.*]] to i64
+; CHECK-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A:%.*]] to i64
+; CHECK-NEXT:    [[M_EXT:%.*]] = sext i32 [[M:%.*]] to i64
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr double, ptr [[A]], i64 [[M_EXT]]
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK:       vector.memcheck:
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nsw i64 [[M_EXT]], -8
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[A1]], [[B2]]
+; CHECK-NEXT:    [[DIFF_CHECK3:%.*]] = icmp ult i64 [[TMP1]], 32
+; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK3]]
+; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[INVARIANT_GEP]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr double, ptr [[TMP3]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[TMP4]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[B]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, ptr [[TMP5]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x double>, ptr [[TMP6]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <4 x double> [[WIDE_LOAD]], [[WIDE_LOAD4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds double, ptr [[TMP8]], i32 0
+; CHECK-NEXT:    store <4 x double> [[TMP7]], ptr [[TMP9]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 31996
+; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 31996, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr double, ptr [[INVARIANT_GEP]], i64 [[IV]]
+; CHECK-NEXT:    [[L_0:%.*]] = load double, ptr [[GEP]], align 8
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds double, ptr [[B]], i64 [[IV]]
+; CHECK-NEXT:    [[L_1:%.*]] = load double, ptr [[GEP_B]], align 8
+; CHECK-NEXT:    [[ADD3:%.*]] = fadd double [[L_0]], [[L_1]]
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    store double [[ADD3]], ptr [[GEP_A]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 31999
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %m.ext = sext i32 %m to i64
+  %invariant.gep = getelementptr double, ptr %a, i64 %m.ext
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr double, ptr %invariant.gep, i64 %iv
+  %l.0 = load double, ptr %gep, align 8
+  %gep.b = getelementptr inbounds double, ptr %b, i64 %iv
+  %l.1 = load double, ptr %gep.b, align 8
+  %add3 = fadd double %l.0, %l.1
+  %gep.a = getelementptr inbounds double, ptr %a, i64 %iv
+  store double %add3, ptr %gep.a, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 31999
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}

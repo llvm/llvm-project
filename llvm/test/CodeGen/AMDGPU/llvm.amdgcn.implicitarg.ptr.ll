@@ -310,10 +310,10 @@ define amdgpu_kernel void @kernel_implicitarg_no_struct_align_padding(<16 x i32>
 declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #2
 declare ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #2
 
-attributes #0 = { nounwind noinline }
-attributes #1 = { nounwind noinline "amdgpu-implicitarg-num-bytes"="48" }
+attributes #0 = { nounwind noinline "amdgpu-no-dispatch-ptr" "amdgpu-no-queue-ptr" }
+attributes #1 = { nounwind noinline "amdgpu-implicitarg-num-bytes"="48" "amdgpu-no-dispatch-ptr" "amdgpu-no-queue-ptr" }
 attributes #2 = { nounwind readnone speculatable }
-attributes #3 = { nounwind noinline "amdgpu-implicitarg-num-bytes"="0" }
+attributes #3 = { nounwind noinline "amdgpu-implicitarg-num-bytes"="0" "amdgpu-no-dispatch-ptr" "amdgpu-no-queue-ptr" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 CODE_OBJECT_VERSION}

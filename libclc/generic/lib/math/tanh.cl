@@ -21,9 +21,9 @@
  */
 
 #include <clc/clc.h>
+#include <clc/clcmacro.h>
 
 #include "math.h"
-#include "../clcmacro.h"
 
 _CLC_OVERLOAD _CLC_DEF float tanh(float x)
 {
@@ -144,3 +144,5 @@ _CLC_OVERLOAD _CLC_DEF double tanh(double x)
 _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, tanh, double);
 
 #endif // cl_khr_fp64
+
+_CLC_DEFINE_UNARY_BUILTIN_FP16(tanh)

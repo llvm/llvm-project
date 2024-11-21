@@ -1028,11 +1028,7 @@ EOF
 	echo ${UNAME_MACHINE}-unknown-linux-${LIBC}
 	exit ;;
     s390:Linux:*:* | s390x:Linux:*:*)
-	if [ "$(grep -Ei 'debian|ubuntu' /etc/lsb-release)" ]; then
-	    echo ${UNAME_MACHINE}-linux-gnu
-	else
-	    echo ${UNAME_MACHINE}-ibm-linux
-	fi
+	echo ${UNAME_MACHINE}-unknown-linux-gnu
 	exit ;;
     sh64*:Linux:*:*)
 	echo ${UNAME_MACHINE}-unknown-linux-gnu

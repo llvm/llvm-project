@@ -1840,6 +1840,22 @@ static enum CXChildVisitResult PrintTypeSize(CXCursor cursor, CXCursor p,
   return CXChildVisit_Recurse;
 }
 
+static enum CXChildVisitResult PrintBinOps(CXCursor C, CXCursor p,
+                                           CXClientData d) {
+  enum CXCursorKind ck = clang_getCursorKind(C);
+  enum CX_BinaryOperatorKind bok;
+  CXString opstr;
+  if (ck != CXCursor_BinaryOperator && ck != CXCursor_CompoundAssignOperator)
+    return CXChildVisit_Recurse;
+
+  PrintCursor(C, NULL);
+  bok = clang_Cursor_getBinaryOpcode(C);
+  opstr = clang_Cursor_getBinaryOpcodeStr(bok);
+  printf(" BinOp=%s %d\n", clang_getCString(opstr), bok);
+  clang_disposeString(opstr);
+  return CXChildVisit_Recurse;
+}
+
 /******************************************************************************/
 /* Mangling testing.                                                          */
 /******************************************************************************/
@@ -5098,6 +5114,8 @@ int cindextest_main(int argc, const char **argv) {
   else if (argc > 2 && strcmp(argv[1], "-test-print-bitwidth") == 0)
     return perform_test_load_source(argc - 2, argv + 2, "all",
                                     PrintBitWidth, 0);
+  else if (argc > 2 && strcmp(argv[1], "-test-print-binops") == 0)
+    return perform_test_load_source(argc - 2, argv + 2, "all", PrintBinOps, 0);
   else if (argc > 2 && strcmp(argv[1], "-test-print-mangle") == 0)
     return perform_test_load_tu(argv[2], "all", NULL, PrintMangledName, NULL);
   else if (argc > 2 && strcmp(argv[1], "-test-print-manglings") == 0)
@@ -5162,10 +5180,10 @@ int main(int argc, const char **argv) {
   thread_info client_data;
 
 #ifdef __MVS__
-  if (enableAutoConversion(fileno(stdout)) == -1)
+  if (enablezOSAutoConversion(fileno(stdout)) == -1)
     fprintf(stderr, "Setting conversion on stdout failed\n");
 
-  if (enableAutoConversion(fileno(stderr)) == -1)
+  if (enablezOSAutoConversion(fileno(stderr)) == -1)
     fprintf(stderr, "Setting conversion on stderr failed\n");
 #endif
 

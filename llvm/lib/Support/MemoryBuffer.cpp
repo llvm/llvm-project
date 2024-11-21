@@ -19,7 +19,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
@@ -505,7 +504,7 @@ getOpenFileImpl(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
 
 #ifdef __MVS__
   // Set codepage auto-conversion for z/OS.
-  if (auto EC = llvm::enableAutoConversion(FD))
+  if (auto EC = llvm::enablezOSAutoConversion(FD))
     return EC;
 #endif
 

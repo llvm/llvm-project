@@ -105,9 +105,8 @@ public:
   typedef iterator_type pointer;
 
   typedef typename iterator_traits<iterator_type>::reference __reference;
-  typedef typename conditional< is_reference<__reference>::value,
-                                __libcpp_remove_reference_t<__reference>&&,
-                                __reference >::type reference;
+  typedef __conditional_t<is_reference<__reference>::value, __libcpp_remove_reference_t<__reference>&&, __reference>
+      reference;
 #endif // _LIBCPP_STD_VER >= 20
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 explicit move_iterator(_Iter __i) : __current_(std::move(__i)) {}

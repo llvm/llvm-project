@@ -14,6 +14,7 @@
 #include "lldb/Symbol/Type.h"
 #include "lldb/lldb-private-enumerations.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/DebugInfo/DWARF/DWARFTypePrinter.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -222,6 +223,9 @@ DWARF:
           Attributes:
             - Attribute:       DW_AT_name
               Form:            DW_FORM_string
+        - Code:            0x4
+          Tag:             DW_TAG_namespace
+          Children:        DW_CHILDREN_yes
   debug_info:
     - Version:         4
       AddrSize:        8
@@ -235,6 +239,11 @@ DWARF:
         - AbbrCode:        0x3
           Values:
             - CStr:            STRUCT
+        - AbbrCode:        0x4
+        - AbbrCode:        0x3
+          Values:
+            - CStr:            STRUCT
+        - AbbrCode:        0x0
         - AbbrCode:        0x0
         - AbbrCode:        0x0
 )";
@@ -245,14 +254,17 @@ DWARF:
   DWARFUnit *unit = symbol_file->DebugInfo().GetUnitAtIndex(0);
   ASSERT_TRUE(unit);
 
-  auto make_namespace = [](llvm::StringRef name) {
+  auto make_namespace = [](const char *name) {
     return CompilerContext(CompilerContextKind::Namespace, ConstString(name));
   };
-  auto make_struct = [](llvm::StringRef name) {
-    return CompilerContext(CompilerContextKind::Struct, ConstString(name));
+  auto make_struct = [](const char *name) {
+    return CompilerContext(CompilerContextKind::ClassOrStruct,
+                           ConstString(name));
   };
   DWARFDIE struct_die = unit->DIE().GetFirstChild().GetFirstChild();
   ASSERT_TRUE(struct_die);
+  DWARFDIE anon_struct_die = struct_die.GetSibling().GetFirstChild();
+  ASSERT_TRUE(anon_struct_die);
   EXPECT_THAT(
       struct_die.GetDeclContext(),
       testing::ElementsAre(make_namespace("NAMESPACE"), make_struct("STRUCT")));
@@ -261,6 +273,18 @@ DWARF:
       testing::ElementsAre(make_namespace("NAMESPACE"), make_struct("STRUCT")));
   EXPECT_THAT(struct_die.GetDWARFDeclContext(),
               DWARFDeclContext({{DW_TAG_structure_type, "STRUCT"},
+                                {DW_TAG_namespace, "NAMESPACE"}}));
+  EXPECT_THAT(anon_struct_die.GetDeclContext(),
+              testing::ElementsAre(make_namespace("NAMESPACE"),
+                                   make_namespace(nullptr),
+                                   make_struct("STRUCT")));
+  EXPECT_THAT(anon_struct_die.GetTypeLookupContext(),
+              testing::ElementsAre(make_namespace("NAMESPACE"),
+                                   make_namespace(nullptr),
+                                   make_struct("STRUCT")));
+  EXPECT_THAT(anon_struct_die.GetDWARFDeclContext(),
+              DWARFDeclContext({{DW_TAG_structure_type, "STRUCT"},
+                                {DW_TAG_namespace, nullptr},
                                 {DW_TAG_namespace, "NAMESPACE"}}));
 }
 
@@ -356,7 +380,8 @@ DWARF:
     return CompilerContext(CompilerContextKind::Namespace, ConstString(name));
   };
   auto make_struct = [](llvm::StringRef name) {
-    return CompilerContext(CompilerContextKind::Struct, ConstString(name));
+    return CompilerContext(CompilerContextKind::ClassOrStruct,
+                           ConstString(name));
   };
   // Grab the "a::struct_t" type from the "a" namespace
   DWARFDIE a_struct_die = unit->DIE().GetFirstChild().GetFirstChild();
@@ -369,4 +394,128 @@ DWARF:
       unit->DIE().GetFirstChild().GetFirstChild().GetSibling().GetFirstChild();
   EXPECT_THAT(foo_struct_die.GetTypeLookupContext(),
               testing::ElementsAre(make_struct("struct_t")));
+}
+
+TEST(DWARFDIETest, TestDWARFTypePrinter) {
+  // Make sure we can get template parameters and qualified names correctly with
+  // DWARFTypePrinter when using -gsimple-template-names.
+
+  // 0x0000000b: DW_TAG_compile_unit
+  // 0x0000000c:   DW_TAG_base_type
+  //                 DW_AT_name      ("int")
+  // 0x00000011:   DW_TAG_structure_type
+  //                 DW_AT_name      ("t1")
+  // 0x00000015:     DW_TAG_template_type_parameter
+  //                   DW_AT_type    (0x0000001f "t3<int>")
+  // 0x0000001a:     DW_TAG_structure_type
+  //                   DW_AT_name    ("t2")
+  // 0x0000001e:     NULL
+  // 0x0000001f:   DW_TAG_structure_type
+  //                 DW_AT_name      ("t3")
+  // 0x00000023:     DW_TAG_template_type_parameter
+  //                   DW_AT_type    (0x0000000c "int")
+  // 0x00000028:     NULL
+  // 0x00000029:   NULL
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+DWARF:
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+        - Code:            0x2
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+        - Code:            0x3
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+        - Code:            0x4
+          Tag:             DW_TAG_template_type_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x5
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+        - Code:            0x6
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+        - Code:            0x7
+          Tag:             DW_TAG_template_type_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+  debug_info:
+    - Version:         4
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xDEADBEEFDEADBEEF
+              CStr:            int
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0xDEADBEEFDEADBEEF
+              CStr:            t1
+        - AbbrCode:        0x4
+          Values:
+            - Value:            0x0000001f # update
+        - AbbrCode:        0x5
+          Values:
+            - Value:           0xDEADBEEFDEADBEEF
+              CStr:            t2
+        - AbbrCode:        0x0
+        - AbbrCode:        0x6
+          Values:
+            - Value:           0xDEADBEEFDEADBEEF
+              CStr:            t3
+        - AbbrCode:        0x7
+          Values:
+            - Value:            0x0000000c # update
+        - AbbrCode:        0x0
+        - AbbrCode:        0x0)";
+  YAMLModuleTester t(yamldata);
+  auto *symbol_file =
+      llvm::cast<SymbolFileDWARF>(t.GetModule()->GetSymbolFile());
+  DWARFUnit *unit = symbol_file->DebugInfo().GetUnitAtIndex(0);
+  std::string debug_str;
+  StreamString debug_os;
+  unit->Dump(&debug_os);
+  ASSERT_TRUE(unit);
+
+  DWARFDIE t1_die = unit->GetDIE(0x11);
+  std::string template_name;
+  llvm::raw_string_ostream template_name_os(template_name);
+  llvm::DWARFTypePrinter<DWARFDIE> template_name_printer(template_name_os);
+  template_name_printer.appendAndTerminateTemplateParameters(t1_die);
+  EXPECT_THAT(template_name, "<t3<int> >");
+
+  DWARFDIE t2_die = unit->GetDIE(0x1a);
+  std::string qualified_name;
+  llvm::raw_string_ostream qualified_name_os(qualified_name);
+  llvm::DWARFTypePrinter<DWARFDIE> qualified_name_printer(qualified_name_os);
+  qualified_name_printer.appendQualifiedName(t2_die);
+  EXPECT_THAT(qualified_name, "t1<t3<int> >::t2");
 }

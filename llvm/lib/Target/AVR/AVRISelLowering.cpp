@@ -14,7 +14,6 @@
 #include "AVRISelLowering.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -198,22 +197,6 @@ AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
     // extending 8-bit to 16-bit. This may require infrastructure
     // improvements in how we treat 16-bit "registers" to be feasible.
   }
-
-  // Division rtlib functions (not supported), use divmod functions instead
-  setLibcallName(RTLIB::SDIV_I8, nullptr);
-  setLibcallName(RTLIB::SDIV_I16, nullptr);
-  setLibcallName(RTLIB::SDIV_I32, nullptr);
-  setLibcallName(RTLIB::UDIV_I8, nullptr);
-  setLibcallName(RTLIB::UDIV_I16, nullptr);
-  setLibcallName(RTLIB::UDIV_I32, nullptr);
-
-  // Modulus rtlib functions (not supported), use divmod functions instead
-  setLibcallName(RTLIB::SREM_I8, nullptr);
-  setLibcallName(RTLIB::SREM_I16, nullptr);
-  setLibcallName(RTLIB::SREM_I32, nullptr);
-  setLibcallName(RTLIB::UREM_I8, nullptr);
-  setLibcallName(RTLIB::UREM_I16, nullptr);
-  setLibcallName(RTLIB::UREM_I32, nullptr);
 
   // Division and modulus rtlib functions
   setLibcallName(RTLIB::SDIVREM_I8, "__divmodqi4");

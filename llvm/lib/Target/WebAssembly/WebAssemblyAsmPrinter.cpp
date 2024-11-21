@@ -18,12 +18,10 @@
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
-#include "WebAssembly.h"
 #include "WebAssemblyMCInstLower.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyRegisterInfo.h"
 #include "WebAssemblyRuntimeLibcallSignatures.h"
-#include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
@@ -39,6 +37,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCStreamer.h"
@@ -195,7 +194,7 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
       // can actually calculate the legal VTs.
       const WebAssemblyTargetLowering &TLI = *Subtarget->getTargetLowering();
       computeLegalValueVTs(TLI, GV->getParent()->getContext(),
-                           GV->getParent()->getDataLayout(), GlobalVT, VTs);
+                           GV->getDataLayout(), GlobalVT, VTs);
     }
     WebAssembly::wasmSymbolSetType(Sym, GlobalVT, VTs);
   }
@@ -517,7 +516,6 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
 
     // Silently ignore invalid metadata
     if (Entry.Prefix != wasm::WASM_FEATURE_PREFIX_USED &&
-        Entry.Prefix != wasm::WASM_FEATURE_PREFIX_REQUIRED &&
         Entry.Prefix != wasm::WASM_FEATURE_PREFIX_DISALLOWED)
       return;
 
@@ -681,6 +679,17 @@ void WebAssemblyAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case WebAssembly::COMPILER_FENCE:
     // This is a compiler barrier that prevents instruction reordering during
     // backend compilation, and should not be emitted.
+    break;
+  case WebAssembly::CATCH:
+  case WebAssembly::CATCH_S:
+  case WebAssembly::CATCH_REF:
+  case WebAssembly::CATCH_REF_S:
+  case WebAssembly::CATCH_ALL:
+  case WebAssembly::CATCH_ALL_S:
+  case WebAssembly::CATCH_ALL_REF:
+  case WebAssembly::CATCH_ALL_REF_S:
+    // These are pseudo instructions to represent catch clauses in try_table
+    // instruction to simulate block return values.
     break;
   default: {
     WebAssemblyMCInstLower MCInstLowering(OutContext, *this);

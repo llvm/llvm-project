@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --pass-pipeline='builtin.module(func.func(mem2reg))' --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --pass-pipeline='builtin.module(any(mem2reg))' --split-input-file | FileCheck %s
 
 // Verifies that allocators with mutliple slots are handled properly.
 
@@ -25,4 +25,17 @@ func.func @multi_slot_alloca_only_second() -> (i32, i32) {
   %3 = memref.load %1[] : memref<i32>
   %4 = memref.load %2[] : memref<i32>
   return %3, %4 : i32, i32
+}
+
+// -----
+
+// Checks that slots are not promoted if used in a graph region.
+
+// CHECK-LABEL: test.isolated_graph_region
+test.isolated_graph_region {
+  // CHECK: %{{[[:alnum:]]+}} = test.multi_slot_alloca
+  %slot = test.multi_slot_alloca : () -> (memref<i32>)
+  memref.store %a, %slot[] : memref<i32>
+  %a = memref.load %slot[] : memref<i32>
+  "test.foo"() : () -> ()
 }

@@ -130,6 +130,7 @@ void ModuloScheduleExpander::generatePipelinedLoop() {
   // Generate the prolog instructions that set up the pipeline.
   generateProlog(MaxStageCount, KernelBB, VRMap, PrologBBs);
   MF.insert(BB->getIterator(), KernelBB);
+  LIS.insertMBBInMaps(KernelBB);
 
   // Rearrange the instructions to generate the new, pipelined loop,
   // and update register names as needed.
@@ -210,6 +211,7 @@ void ModuloScheduleExpander::generateProlog(unsigned LastStage,
     NewBB->transferSuccessors(PredBB);
     PredBB->addSuccessor(NewBB);
     PredBB = NewBB;
+    LIS.insertMBBInMaps(NewBB);
 
     // Generate instructions for each appropriate stage. Process instructions
     // in original program order.
@@ -283,6 +285,7 @@ void ModuloScheduleExpander::generateEpilog(
 
     PredBB->replaceSuccessor(LoopExitBB, NewBB);
     NewBB->addSuccessor(LoopExitBB);
+    LIS.insertMBBInMaps(NewBB);
 
     if (EpilogStart == LoopExitBB)
       EpilogStart = NewBB;
@@ -739,7 +742,7 @@ void ModuloScheduleExpander::removeDeadInstructions(MachineBasicBlock *KernelBB,
       bool SawStore = false;
       // Check if it's safe to remove the instruction due to side effects.
       // We can, and want to, remove Phis here.
-      if (!MI->isSafeToMove(nullptr, SawStore) && !MI->isPHI()) {
+      if (!MI->isSafeToMove(SawStore) && !MI->isPHI()) {
         ++MI;
         continue;
       }
@@ -2664,8 +2667,8 @@ void ModuloScheduleExpanderMVE::calcNumUnroll() {
 void ModuloScheduleExpanderMVE::updateInstrDef(MachineInstr *NewMI,
                                                ValueMapTy &VRMap,
                                                bool LastDef) {
-  for (MachineOperand &MO : NewMI->operands()) {
-    if (!MO.isReg() || !MO.getReg().isVirtual() || !MO.isDef())
+  for (MachineOperand &MO : NewMI->all_defs()) {
+    if (!MO.getReg().isVirtual())
       continue;
     Register Reg = MO.getReg();
     const TargetRegisterClass *RC = MRI.getRegClass(Reg);
@@ -2763,8 +2766,8 @@ public:
   void runOnLoop(MachineFunction &MF, MachineLoop &L);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineLoopInfo>();
-    AU.addRequired<LiveIntervals>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -2774,13 +2777,13 @@ char ModuloScheduleTest::ID = 0;
 
 INITIALIZE_PASS_BEGIN(ModuloScheduleTest, "modulo-schedule-test",
                       "Modulo Schedule test pass", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(ModuloScheduleTest, "modulo-schedule-test",
                     "Modulo Schedule test pass", false, false)
 
 bool ModuloScheduleTest::runOnMachineFunction(MachineFunction &MF) {
-  MachineLoopInfo &MLI = getAnalysis<MachineLoopInfo>();
+  MachineLoopInfo &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   for (auto *L : MLI) {
     if (L->getTopBlock() != L->getBottomBlock())
       continue;
@@ -2810,7 +2813,7 @@ static void parseSymbolString(StringRef S, int &Cycle, int &Stage) {
 }
 
 void ModuloScheduleTest::runOnLoop(MachineFunction &MF, MachineLoop &L) {
-  LiveIntervals &LIS = getAnalysis<LiveIntervals>();
+  LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   MachineBasicBlock *BB = L.getTopBlock();
   dbgs() << "--- ModuloScheduleTest running on BB#" << BB->getNumber() << "\n";
 

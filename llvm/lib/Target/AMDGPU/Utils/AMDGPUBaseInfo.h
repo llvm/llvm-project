@@ -46,6 +46,7 @@ struct IsaVersion;
 /// within a generic family.
 namespace GenericVersion {
 static constexpr unsigned GFX9 = 1;
+static constexpr unsigned GFX9_4 = 1;
 static constexpr unsigned GFX10_1 = 1;
 static constexpr unsigned GFX10_3 = 1;
 static constexpr unsigned GFX11 = 1;
@@ -404,6 +405,7 @@ struct MIMGBaseOpcodeInfo {
   bool MSAA;
   bool BVH;
   bool A16;
+  bool NoReturn;
 };
 
 LLVM_READONLY
@@ -861,10 +863,15 @@ LLVM_READONLY
 bool isTrue16Inst(unsigned Opc);
 
 LLVM_READONLY
+bool isFP8DstSelInst(unsigned Opc);
+
+LLVM_READONLY
 bool isInvalidSingleUseConsumerInst(unsigned Opc);
 
 LLVM_READONLY
 bool isInvalidSingleUseProducerInst(unsigned Opc);
+
+bool isDPMACCInstruction(unsigned Opc);
 
 LLVM_READONLY
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc);
@@ -913,7 +920,8 @@ getIntegerPairAttribute(const Function &F, StringRef Name,
 ///
 /// \returns false if any error occurs.
 SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
-                                             unsigned Size);
+                                             unsigned Size,
+                                             unsigned DefaultVal = 0);
 
 /// Represents the counter values to wait for in an s_waitcnt instruction.
 ///
@@ -1307,21 +1315,21 @@ bool hasVOPD(const MCSubtargetInfo &STI);
 bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI);
 int getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR, int32_t ArgNumVGPR);
 unsigned hasKernargPreload(const MCSubtargetInfo &STI);
+bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST);
 
 /// Is Reg - scalar register
-bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI);
+bool isSGPR(MCRegister Reg, const MCRegisterInfo *TRI);
 
 /// \returns if \p Reg occupies the high 16-bits of a 32-bit register.
-/// The bit indicating isHi is the LSB of the encoding.
-bool isHi(unsigned Reg, const MCRegisterInfo &MRI);
+bool isHi16Reg(MCRegister Reg, const MCRegisterInfo &MRI);
 
 /// If \p Reg is a pseudo reg, return the correct hardware register given
 /// \p STI otherwise return \p Reg.
-unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI);
+MCRegister getMCReg(MCRegister Reg, const MCSubtargetInfo &STI);
 
 /// Convert hardware register \p Reg to a pseudo register
 LLVM_READNONE
-unsigned mc2PseudoReg(unsigned Reg);
+MCRegister mc2PseudoReg(MCRegister Reg);
 
 LLVM_READNONE
 bool isInlineValue(unsigned Reg);
@@ -1479,7 +1487,8 @@ uint64_t convertSMRDOffsetUnits(const MCSubtargetInfo &ST, uint64_t ByteOffset);
 /// S_LOAD instructions have a signed offset, on other subtargets it is
 /// unsigned. S_BUFFER has an unsigned offset for all subtargets.
 std::optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
-                                            int64_t ByteOffset, bool IsBuffer);
+                                            int64_t ByteOffset, bool IsBuffer,
+                                            bool HasSOffset = false);
 
 /// \return The encoding that can be used for a 32-bit literal offset in an SMRD
 /// instruction. This is only useful on CI.s

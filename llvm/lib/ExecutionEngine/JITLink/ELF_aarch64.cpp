@@ -29,6 +29,8 @@ using namespace llvm::jitlink;
 
 namespace {
 
+constexpr StringRef ELFGOTSymbolName = "_GLOBAL_OFFSET_TABLE_";
+
 class ELFJITLinker_aarch64 : public JITLinker<ELFJITLinker_aarch64> {
   friend class JITLinker<ELFJITLinker_aarch64>;
 
@@ -36,11 +38,83 @@ public:
   ELFJITLinker_aarch64(std::unique_ptr<JITLinkContext> Ctx,
                        std::unique_ptr<LinkGraph> G,
                        PassConfiguration PassConfig)
-      : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {}
+      : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {
+    if (shouldAddDefaultTargetPasses(getGraph().getTargetTriple()))
+      getPassConfig().PostAllocationPasses.push_back(
+          [this](LinkGraph &G) { return getOrCreateGOTSymbol(G); });
+  }
 
 private:
+  Symbol *GOTSymbol = nullptr;
+
   Error applyFixup(LinkGraph &G, Block &B, const Edge &E) const {
-    return aarch64::applyFixup(G, B, E);
+    return aarch64::applyFixup(G, B, E, GOTSymbol);
+  }
+
+  Error getOrCreateGOTSymbol(LinkGraph &G) {
+    auto DefineExternalGOTSymbolIfPresent =
+        createDefineExternalSectionStartAndEndSymbolsPass(
+            [&](LinkGraph &LG, Symbol &Sym) -> SectionRangeSymbolDesc {
+              if (Sym.getName() == ELFGOTSymbolName)
+                if (auto *GOTSection = G.findSectionByName(
+                        aarch64::GOTTableManager::getSectionName())) {
+                  GOTSymbol = &Sym;
+                  return {*GOTSection, true};
+                }
+              return {};
+            });
+
+    // Try to attach _GLOBAL_OFFSET_TABLE_ to the GOT if it's defined as an
+    // external.
+    if (auto Err = DefineExternalGOTSymbolIfPresent(G))
+      return Err;
+
+    // If we succeeded then we're done.
+    if (GOTSymbol)
+      return Error::success();
+
+    // Otherwise look for a GOT section: If it already has a start symbol we'll
+    // record it, otherwise we'll create our own.
+    // If there's a GOT section but we didn't find an external GOT symbol...
+    if (auto *GOTSection =
+            G.findSectionByName(aarch64::GOTTableManager::getSectionName())) {
+
+      // Check for an existing defined symbol.
+      for (auto *Sym : GOTSection->symbols())
+        if (Sym->getName() == ELFGOTSymbolName) {
+          GOTSymbol = Sym;
+          return Error::success();
+        }
+
+      // If there's no defined symbol then create one.
+      SectionRange SR(*GOTSection);
+      if (SR.empty())
+        GOTSymbol =
+            &G.addAbsoluteSymbol(ELFGOTSymbolName, orc::ExecutorAddr(), 0,
+                                 Linkage::Strong, Scope::Local, true);
+      else
+        GOTSymbol =
+            &G.addDefinedSymbol(*SR.getFirstBlock(), 0, ELFGOTSymbolName, 0,
+                                Linkage::Strong, Scope::Local, false, true);
+    }
+
+    // If we still haven't found a GOT symbol then double check the externals.
+    // We may have a GOT-relative reference but no GOT section, in which case
+    // we just need to point the GOT symbol at some address in this graph.
+    if (!GOTSymbol) {
+      for (auto *Sym : G.external_symbols()) {
+        if (Sym->getName() == ELFGOTSymbolName) {
+          auto Blocks = G.blocks();
+          if (!Blocks.empty()) {
+            G.makeAbsolute(*Sym, (*Blocks.begin())->getAddress());
+            GOTSymbol = Sym;
+            break;
+          }
+        }
+      }
+    }
+
+    return Error::success();
   }
 };
 
@@ -70,6 +144,7 @@ private:
     ELFPrel64,
     ELFAdrGOTPage21,
     ELFLd64GOTLo12,
+    ELFLd64GOTPAGELo15,
     ELFTLSDescAdrPage21,
     ELFTLSDescAddLo12,
     ELFTLSDescLd64Lo12,
@@ -125,6 +200,8 @@ private:
       return ELFAdrGOTPage21;
     case ELF::R_AARCH64_LD64_GOT_LO12_NC:
       return ELFLd64GOTLo12;
+    case ELF::R_AARCH64_LD64_GOTPAGE_LO15:
+      return ELFLd64GOTPAGELo15;
     case ELF::R_AARCH64_TLSDESC_ADR_PAGE21:
       return ELFTLSDescAdrPage21;
     case ELF::R_AARCH64_TLSDESC_ADD_LO12:
@@ -362,6 +439,10 @@ private:
       Kind = aarch64::RequestGOTAndTransformToPageOffset12;
       break;
     }
+    case ELFLd64GOTPAGELo15: {
+      Kind = aarch64::RequestGOTAndTransformToPageOffset15;
+      break;
+    }
     case ELFTLSDescAdrPage21: {
       Kind = aarch64::RequestTLSDescEntryAndTransformToPage21;
       break;
@@ -427,6 +508,8 @@ private:
       return "ELFAdrGOTPage21";
     case ELFLd64GOTLo12:
       return "ELFLd64GOTLo12";
+    case ELFLd64GOTPAGELo15:
+      return "ELFLd64GOTPAGELo15";
     case ELFTLSDescAdrPage21:
       return "ELFTLSDescAdrPage21";
     case ELFTLSDescAddLo12:

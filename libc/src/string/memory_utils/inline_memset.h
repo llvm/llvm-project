@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMSET_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMSET_H
 
-#include "src/__support/macros/config.h"                   // LIBC_INLINE
+#include "src/__support/macros/attributes.h"               // LIBC_INLINE
 #include "src/__support/macros/properties/architectures.h" // LIBC_TARGET_ARCH_IS_
 #include "src/string/memory_utils/utils.h"                 // Ptr, CPtr
 
@@ -34,13 +34,13 @@
 #error "Unsupported architecture"
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LIBC_INLINE static void inline_memset(void *dst, uint8_t value, size_t count) {
   LIBC_SRC_STRING_MEMORY_UTILS_MEMSET(reinterpret_cast<Ptr>(dst), value, count);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #undef LIBC_SRC_STRING_MEMORY_UTILS_MEMSET
 

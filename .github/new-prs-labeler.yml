@@ -69,7 +69,7 @@ PGO:
   - llvm/**/llvm-profdata/**/*
   - llvm/**/llvm-profgen/**/*
 
-vectorization:
+vectorizers:
   - llvm/lib/Transforms/Vectorize/**/*
   - llvm/include/llvm/Transforms/Vectorize/**/*
 
@@ -587,6 +587,12 @@ llvm:ir:
   - llvm/docs/LangRef.rst
   - llvm/unittests/IR/**
 
+llvm:SandboxIR:
+  - llvm/lib/SandboxIR/**
+  - llvm/include/llvm/SandboxIR/**
+  - llvm/docs/SandboxIR.md
+  - llvm/unittests/SandboxIR/**
+
 llvm:analysis:
   - llvm/lib/Analysis/**
   - llvm/include/llvm/Analysis/**
@@ -604,6 +610,14 @@ llvm:transforms:
   - llvm/include/llvm/Transforms/**
   - llvm/test/Transforms/**
   - llvm/unittests/Transforms/**
+
+llvm:instcombine:
+  - llvm/lib/Analysis/InstructionSimplify.cpp
+  - llvm/lib/Transforms/InstCombine/**
+  - llvm/include/llvm/Transforms/InstCombine/
+  - llvm/include/llvm/Analysis/InstructionSimplify.h
+  - llvm/test/Transforms/InstCombine/**
+  - llvm/test/Transforms/InstSimplify/**
 
 clangd:
   - clang-tools-extra/clangd/**
@@ -668,7 +682,7 @@ mlgo:
   - llvm/lib/CodeGen/ML*
   - llvm/unittests/CodeGen/ML*
   - llvm/test/CodeGen/MLRegAlloc/**
-  - llvm/utils/mlgo-utils/*
+  - llvm/utils/mlgo-utils/**
 
 tools:llvm-exegesis:
   - llvm/tools/llvm-exegesis/**
@@ -774,6 +788,29 @@ backend:AArch64:
   - llvm/test/MC/Disassembler/AArch64/**
   - clang/include/clang/Sema/SemaARM.h
   - clang/lib/Sema/SemaARM.cpp
+
+backend:Hexagon:
+  - clang/include/clang/Basic/BuiltinsHexagon*.def
+  - clang/include/clang/Sema/SemaHexagon.h
+  - clang/lib/Basic/Targets/Hexagon.*
+  - clang/lib/CodeGen/Targets/Hexagon.cpp
+  - clang/lib/Driver/ToolChains/Hexagon.*
+  - clang/lib/Sema/SemaHexagon.cpp
+  - lld/ELF/Arch/Hexagon.cpp
+  - lldb/source/Plugins/ABI/Hexagon/**
+  - lldb/source/Plugins/DynamicLoader/Hexagon-DYLD/**
+  - llvm/include/llvm/BinaryFormat/ELFRelocs/Hexagon.def
+  - llvm/include/llvm/IR/IntrinsicsHexagon*
+  - llvm/include/llvm/Support/Hexagon*
+  - llvm/lib/Support/Hexagon*
+  - llvm/lib/Target/Hexagon/**
+  - llvm/test/CodeGen/Hexagon/**
+  - llvm/test/CodeGen/*/Hexagon/**
+  - llvm/test/DebugInfo/*/Hexagon/**
+  - llvm/test/Transforms/*/Hexagon
+  - llvm/test/MC/Disassembler/Hexagon/**
+  - llvm/test/MC/Hexagon/**
+  - llvm/test/tools/llvm-objdump/ELF/Hexagon/**
 
 backend:loongarch:
   - llvm/include/llvm/IR/IntrinsicsLoongArch.td
@@ -967,6 +1004,13 @@ clang:openmp:
   - llvm/unittests/Frontend/OpenMP*
   - llvm/test/Transforms/OpenMP/**
 
+clang:as-a-library:
+  - clang/tools/libclang/**
+  - clang/bindings/**
+  - clang/include/clang-c/**
+  - clang/test/LibClang/**
+  - clang/unittest/libclang/**
+
 openmp:libomp:
   - any: ['openmp/**', '!openmp/libomptarget/**']
 
@@ -978,3 +1022,8 @@ bazel:
 
 offload:
   - offload/**
+
+tablegen:
+  - llvm/include/TableGen/**
+  - llvm/lib/TableGen/**
+  - llvm/utils/TableGen/**

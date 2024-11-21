@@ -1,0 +1,8 @@
+# RUN: yaml2obj %S/Inputs/corefile.yaml -o %t.corefile
+# RUN: yaml2obj %S/Inputs/a.out.yaml -o %t.out
+
+# RUN: %lldb -b -c %t.corefile %t.out -o 'target list ' | FileCheck %s --check-prefix BINARY
+# BINARY: target {{.*}} arch=armv7em-apple
+
+# RUN: %lldb -b %t.corefile -o 'target list' | FileCheck %s --check-prefix CORE
+# CORE: target {{.*}} arch=armv7-apple

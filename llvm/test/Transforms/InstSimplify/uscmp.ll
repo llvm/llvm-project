@@ -83,7 +83,7 @@ define i8 @ucmp_undef() {
 
 define <4 x i8> @ucmp_lt_splat() {
 ; CHECK-LABEL: define <4 x i8> @ucmp_lt_splat() {
-; CHECK-NEXT:    ret <4 x i8> <i8 -1, i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    ret <4 x i8> splat (i8 -1)
 ;
   %1 = call <4 x i8> @llvm.ucmp(<4 x i32> splat(i32 1), <4 x i32> splat(i32 3))
   ret <4 x i8> %1
@@ -222,11 +222,31 @@ define i8 @ucmp_with_addition2(i32 %x) {
 define <4 x i8> @ucmp_with_addition_vec(<4 x i32> %x) {
 ; CHECK-LABEL: define <4 x i8> @ucmp_with_addition_vec(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    ret <4 x i8> <i8 -1, i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    ret <4 x i8> splat (i8 -1)
 ;
   %1 = add nuw <4 x i32> %x, splat(i32 1)
   %2 = call <4 x i8> @llvm.ucmp(<4 x i32> %x, <4 x i32> %1)
   ret <4 x i8> %2
+}
+
+define i1 @scmp_eq_4(i32 %x, i32 %y) {
+; CHECK-LABEL: define i1 @scmp_eq_4(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    ret i1 false
+;
+  %1 = call i8 @llvm.scmp(i32 %x, i32 %y)
+  %2 = icmp eq i8 %1, 4
+  ret i1 %2
+}
+
+define i1 @ucmp_ne_negative_2(i32 %x, i32 %y) {
+; CHECK-LABEL: define i1 @ucmp_ne_negative_2(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
+  %2 = icmp ne i8 %1, -2
+  ret i1 %2
 }
 
 ; Negative case: mismatched signedness of predicates

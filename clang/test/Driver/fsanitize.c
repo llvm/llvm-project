@@ -197,6 +197,8 @@
 // CHECK-SANMT-MT: "-target-feature" "+mte"
 // CHECK-SANMT-MT-SAME: "-fsanitize=memtag-stack,memtag-heap,memtag-globals"
 
+// RUN: not %clang --target=aarch64-linux -fsanitize=memtag -Xclang -target-feature -Xclang +mte %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-MT
+
 // RUN: not %clang --target=aarch64-linux -fsanitize=memtag %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-NOMT-0
 // CHECK-SANMT-NOMT-0: '-fsanitize=memtag-stack' requires hardware support (+memtag)
 
@@ -611,6 +613,8 @@
 // RUN: %clang --target=arm-linux-gnu -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
 // RUN: %clang --target=aarch64-linux-gnu -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
 // RUN: %clang --target=arm-linux-android -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
+// RUN: %clang --target=arm-none-eabi -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
+// RUN: %clang --target=thumb-none-eabi -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
 // RUN: %clang --target=aarch64-linux-android -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
 // RUN: %clang --target=aarch64_be -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
 // RUN: %clang --target=riscv32 -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
@@ -724,8 +728,8 @@
 // NO-SP-NOT: stack-protector
 // NO-SP: "-fsanitize=safe-stack"
 // SP-ASAN: error: invalid argument '-fsanitize=safe-stack' not allowed with '-fsanitize=address'
-// SP: "-fsanitize=safe-stack"
 // SP: -stack-protector
+// SP: "-fsanitize=safe-stack"
 // NO-SP-NOT: stack-protector
 
 // RUN: %clang --target=powerpc64-unknown-linux-gnu -fsanitize=memory %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-SANM
@@ -861,6 +865,13 @@
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=integer -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-INTSAN-MINIMAL
 // CHECK-INTSAN-MINIMAL: "-fsanitize=integer-divide-by-zero,shift-base,shift-exponent,signed-integer-overflow,unsigned-integer-overflow,unsigned-shift-base,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change"
 // CHECK-INTSAN-MINIMAL: "-fsanitize-minimal-runtime"
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=implicit-conversion -fsanitize-trap=implicit-conversion %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-IMPL-CONV-TRAP
+// CHECK-IMPL-CONV-TRAP: "-fsanitize-trap=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change,implicit-bitfield-conversion"
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=implicit-conversion -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-IMPL-CONV-MINIMAL
+// CHECK-IMPL-CONV-MINIMAL: "-fsanitize=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change,implicit-bitfield-conversion"
+// CHECK-IMPL-CONV-MINIMAL: "-fsanitize-minimal-runtime"
 
 // RUN: %clang --target=aarch64-linux-android -march=armv8-a+memtag -fsanitize=memtag -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MEMTAG-MINIMAL
 // CHECK-MEMTAG-MINIMAL: "-fsanitize=memtag-stack,memtag-heap,memtag-globals"
@@ -1038,3 +1049,49 @@
 // RUN: not %clang --target=aarch64-none-elf -fsanitize=dataflow %s -### 2>&1 | FileCheck %s -check-prefix=UNSUPPORTED-BAREMETAL
 // RUN: not %clang --target=arm-arm-none-eabi -fsanitize=shadow-call-stack %s -### 2>&1 | FileCheck %s -check-prefix=UNSUPPORTED-BAREMETAL
 // UNSUPPORTED-BAREMETAL: unsupported option '-fsanitize={{.*}}' for target
+
+// RUN: %clang --target=x86_64-apple-darwin -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-X86-64-DARWIN
+// CHECK-RTSAN-X86-64-DARWIN-NOT: unsupported option
+
+// RUN: %clang --target=x86_64-apple-darwin -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-X86-64-DARWIN
+// CHECK-RTSAN-X86-64-DARWIN-NOT: unsupported option
+// RUN: %clang --target=x86_64-apple-macos -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-X86-64-MACOS
+// CHECK-RTSAN-X86-64-MACOS-NOT: unsupported option
+// RUN: %clang --target=arm64-apple-macos -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-ARM64-MACOS
+// CHECK-RTSAN-ARM64-MACOS-NOT: unsupported option
+
+// RUN: %clang --target=arm64-apple-ios-simulator -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-ARM64-IOSSIMULATOR
+// CHECK-RTSAN-ARM64-IOSSIMULATOR-NOT: unsupported option
+
+// RUN: %clang --target=arm64-apple-watchos-simulator -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-ARM64-WATCHOSSIMULATOR
+// CHECK-RTSAN-ARM64-WATCHOSSIMULATOR-NOT: unsupported option
+
+// RUN: %clang --target=arm64-apple-tvos-simulator -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-ARM64-TVOSSIMULATOR
+// CHECK-RTSAN-ARM64-TVOSSIMULATOR-NOT: unsupported option
+
+// RUN: %clang --target=x86_64-apple-ios-simulator -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-X86-64-IOSSIMULATOR
+// CHECK-RTSAN-X86-64-IOSSIMULATOR-NOT: unsupported option
+
+// RUN: %clang --target=x86_64-apple-watchos-simulator -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-X86-64-WATCHOSSIMULATOR
+// CHECK-RTSAN-X86-64-WATCHOSSIMULATOR-NOT: unsupported option
+
+// RUN: %clang --target=x86_64-apple-tvos-simulator -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-X86-64-TVOSSIMULATOR
+// CHECK-RTSAN-X86-64-TVOSSIMULATOR-NOT: unsupported option
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-X86-64-LINUX
+// CHECK-RTSAN-X86-64-LINUX-NOT: unsupported option
+
+// RUN: not %clang --target=i386-pc-openbsd -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-OPENBSD
+// CHECK-RTSAN-OPENBSD: unsupported option '-fsanitize=realtime' for target 'i386-pc-openbsd'
+
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=realtime,thread  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-REALTIME-TSAN
+// CHECK-REALTIME-TSAN: error: invalid argument '-fsanitize=realtime' not allowed with '-fsanitize=thread'
+
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=realtime,address  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-REALTIME-ASAN
+// CHECK-REALTIME-ASAN: error: invalid argument '-fsanitize=realtime' not allowed with '-fsanitize=address'
+
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=realtime,memory  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-REALTIME-MSAN
+// CHECK-REALTIME-MSAN: error: invalid argument '-fsanitize=realtime' not allowed with '-fsanitize=memory'
+
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=realtime,undefined  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-REALTIME-UBSAN
+// CHECK-REALTIME-UBSAN: error: invalid argument '-fsanitize=realtime' not allowed with '-fsanitize=undefined'

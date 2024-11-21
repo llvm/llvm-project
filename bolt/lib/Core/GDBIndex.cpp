@@ -23,7 +23,6 @@ void GDBIndex::updateGdbIndexSection(
     DebugARangesSectionWriter &ARangesSectionWriter) {
   if (!BC.getGdbIndexSection())
     return;
-
   // See https://sourceware.org/gdb/onlinedocs/gdb/Index-Section-Format.html
   // for .gdb_index section format.
 
@@ -141,7 +140,7 @@ void GDBIndex::updateGdbIndexSection(
     write64le(Buffer + 8, CUInfo.second.Length + 4);
     Buffer += 16;
   }
-
+  sortGDBIndexTUEntryVector();
   // Rewrite TU CU List, since abbrevs can be different.
   // Entry example:
   // 0: offset = 0x00000000, type_offset = 0x0000001e, type_signature =

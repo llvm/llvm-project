@@ -1,7 +1,7 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX12,W32 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX12,W64 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,-wavefrontsize64 %s 2>&1 | FileCheck --check-prefix=W32-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=-wavefrontsize32,+wavefrontsize64 %s 2>&1 | FileCheck --check-prefix=W64-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,+real-true16 -show-encoding %s | FileCheck --check-prefixes=GFX12,W32 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64,+real-true16 -show-encoding %s | FileCheck --check-prefixes=GFX12,W64 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,+real-true16 -filetype=null %s 2>&1 | FileCheck --check-prefix=W32-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64,+real-true16 -filetype=null %s 2>&1 | FileCheck --check-prefix=W64-ERR --implicit-check-not=error: %s
 
 v_add_co_ci_u32_dpp v5, vcc_lo, v1, v2, vcc_lo dpp8:[7,6,5,4,3,2,1,0]
 // W32: encoding: [0xe9,0x04,0x0a,0x40,0x01,0x77,0x39,0x05]
@@ -114,14 +114,20 @@ v_cvt_pkrtz_f16_f32 v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
 v_cvt_pkrtz_f16_f32 v255, v255, v255 dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX12: encoding: [0xe9,0xfe,0xff,0x5f,0xff,0x00,0x00,0x00]
 
-v_fmac_f16 v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
+v_fmac_f16 v5.l, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: encoding: [0xe9,0x04,0x0a,0x6c,0x01,0x77,0x39,0x05]
 
-v_fmac_f16 v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
+v_fmac_f16 v5.l, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0] fi:1
 // GFX12: encoding: [0xea,0x04,0x0a,0x6c,0x01,0x77,0x39,0x05]
 
-v_fmac_f16 v127, v127, v127 dpp8:[0,0,0,0,0,0,0,0] fi:0
+v_fmac_f16 v127.l, v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX12: encoding: [0xe9,0xfe,0xfe,0x6c,0x7f,0x00,0x00,0x00]
+
+v_fmac_f16 v5.h, v1.h, v2.h dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX12: encoding: [0xea,0x04,0x0b,0x6d,0x81,0x77,0x39,0x05]
+
+v_fmac_f16 v127.h, v127.h, v127.h dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX12: encoding: [0xe9,0xfe,0xff,0x6d,0xff,0x00,0x00,0x00]
 
 v_fmac_f32 v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: encoding: [0xe9,0x04,0x0a,0x56,0x01,0x77,0x39,0x05]

@@ -16,7 +16,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <iomanip>
 #include <sstream>
 #include <string>
@@ -32,7 +31,7 @@ cl::opt<InlinerFunctionImportStatsOpts> InlinerFunctionImportStats(
                clEnumValN(InlinerFunctionImportStatsOpts::Verbose, "verbose",
                           "printing of statistics for each inlined function")),
     cl::Hidden, cl::desc("Enable inliner stats for imported functions"));
-}
+} // namespace llvm
 
 ImportedFunctionsInliningStatistics::InlineGraphNode &
 ImportedFunctionsInliningStatistics::createInlineGraphNode(const Function &F) {

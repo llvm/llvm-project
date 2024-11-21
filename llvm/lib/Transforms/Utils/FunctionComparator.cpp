@@ -15,7 +15,6 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Attributes.h"
@@ -524,7 +523,7 @@ int FunctionComparator::cmpTypes(Type *TyL, Type *TyR) const {
   PointerType *PTyL = dyn_cast<PointerType>(TyL);
   PointerType *PTyR = dyn_cast<PointerType>(TyR);
 
-  const DataLayout &DL = FnL->getParent()->getDataLayout();
+  const DataLayout &DL = FnL->getDataLayout();
   if (PTyL && PTyL->getAddressSpace() == 0)
     TyL = DL.getIntPtrType(TyL);
   if (PTyR && PTyR->getAddressSpace() == 0)
@@ -805,7 +804,7 @@ int FunctionComparator::cmpGEPs(const GEPOperator *GEPL,
 
   // When we have target data, we can reduce the GEP down to the value in bytes
   // added to the address.
-  const DataLayout &DL = FnL->getParent()->getDataLayout();
+  const DataLayout &DL = FnL->getDataLayout();
   unsigned OffsetBitWidth = DL.getIndexSizeInBits(ASL);
   APInt OffsetL(OffsetBitWidth, 0), OffsetR(OffsetBitWidth, 0);
   if (GEPL->accumulateConstantOffset(DL, OffsetL) &&

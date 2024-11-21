@@ -32,6 +32,10 @@ class MCSectionMachO final : public MCSection {
   /// for example.
   unsigned Reserved2;
 
+  // The index of this section in MachObjectWriter::SectionOrder, which is
+  // different from MCSection::Ordinal.
+  unsigned LayoutOrder = 0;
+
   // The defining non-temporary symbol for each fragment.
   SmallVector<const MCSymbol *, 0> Atoms;
 
@@ -73,13 +77,15 @@ public:
 
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
-                            const MCExpr *Subsection) const override;
+                            uint32_t Subsection) const override;
   bool useCodeAlign() const override;
-  bool isVirtualSection() const override;
 
   void allocAtoms();
   const MCSymbol *getAtom(size_t I) const;
   void setAtom(size_t I, const MCSymbol *Sym);
+
+  unsigned getLayoutOrder() const { return LayoutOrder; }
+  void setLayoutOrder(unsigned Value) { LayoutOrder = Value; }
 
   static bool classof(const MCSection *S) {
     return S->getVariant() == SV_MachO;

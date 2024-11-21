@@ -56,7 +56,7 @@
    llvm-font-lock-keywords)
   "Keyword highlighting specification for `llvm-mir-mode'.")
 
- ;;;###autoload
+;;;###autoload
 (define-derived-mode llvm-mir-mode prog-mode "LLVM MIR"
   "A major mode for editing LLVM MIR files."
   (setq-local comment-start "; ")

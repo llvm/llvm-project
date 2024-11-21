@@ -9,8 +9,7 @@
 #include "AMDGPUBaseInfo.h"
 #include "SIDefines.h"
 
-namespace llvm {
-namespace AMDGPU {
+namespace llvm::AMDGPU {
 
 //===----------------------------------------------------------------------===//
 // Custom Operands.
@@ -646,14 +645,18 @@ unsigned const DfmtNfmt2UFmtGFX11[] = {
 
 namespace Swizzle {
 
+// clang-format off
 // This must be in sync with llvm::AMDGPU::Swizzle::Id enum members, see SIDefines.h.
-const char* const IdSymbolic[] = {
+const char *const IdSymbolic[] = {
   "QUAD_PERM",
   "BITMASK_PERM",
   "SWAP",
   "REVERSE",
   "BROADCAST",
+  "FFT",
+  "ROTATE",
 };
+// clang-format on
 
 } // namespace Swizzle
 
@@ -684,5 +687,4 @@ ArrayRef<GFXVersion> getGFXVersions() {
 
 } // namespace UCVersion
 
-} // namespace AMDGPU
-} // namespace llvm
+} // namespace llvm::AMDGPU

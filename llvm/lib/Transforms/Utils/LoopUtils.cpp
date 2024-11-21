@@ -445,21 +445,22 @@ TransformationMode llvm::hasLICMVersioningTransformation(const Loop *L) {
 }
 
 /// Does a BFS from a given node to all of its children inside a given loop.
-/// The returned vector of nodes includes the starting point.
-SmallVector<DomTreeNode *, 16>
-llvm::collectChildrenInLoop(DomTreeNode *N, const Loop *CurLoop) {
-  SmallVector<DomTreeNode *, 16> Worklist;
+/// The returned vector of basic blocks includes the starting point.
+SmallVector<BasicBlock *, 16> llvm::collectChildrenInLoop(DominatorTree *DT,
+                                                          DomTreeNode *N,
+                                                          const Loop *CurLoop) {
+  SmallVector<BasicBlock *, 16> Worklist;
   auto AddRegionToWorklist = [&](DomTreeNode *DTN) {
     // Only include subregions in the top level loop.
     BasicBlock *BB = DTN->getBlock();
     if (CurLoop->contains(BB))
-      Worklist.push_back(DTN);
+      Worklist.push_back(DTN->getBlock());
   };
 
   AddRegionToWorklist(N);
 
   for (size_t I = 0; I < Worklist.size(); I++) {
-    for (DomTreeNode *Child : Worklist[I]->children())
+    for (DomTreeNode *Child : DT->getNode(Worklist[I])->children())
       AddRegionToWorklist(Child);
   }
 
@@ -918,6 +919,44 @@ bool llvm::hasIterationCountInvariantInParent(Loop *InnerLoop,
   return true;
 }
 
+constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
+  switch (RK) {
+  default:
+    llvm_unreachable("Unexpected recurrence kind");
+  case RecurKind::Add:
+    return Intrinsic::vector_reduce_add;
+  case RecurKind::Mul:
+    return Intrinsic::vector_reduce_mul;
+  case RecurKind::And:
+    return Intrinsic::vector_reduce_and;
+  case RecurKind::Or:
+    return Intrinsic::vector_reduce_or;
+  case RecurKind::Xor:
+    return Intrinsic::vector_reduce_xor;
+  case RecurKind::FMulAdd:
+  case RecurKind::FAdd:
+    return Intrinsic::vector_reduce_fadd;
+  case RecurKind::FMul:
+    return Intrinsic::vector_reduce_fmul;
+  case RecurKind::SMax:
+    return Intrinsic::vector_reduce_smax;
+  case RecurKind::SMin:
+    return Intrinsic::vector_reduce_smin;
+  case RecurKind::UMax:
+    return Intrinsic::vector_reduce_umax;
+  case RecurKind::UMin:
+    return Intrinsic::vector_reduce_umin;
+  case RecurKind::FMax:
+    return Intrinsic::vector_reduce_fmax;
+  case RecurKind::FMin:
+    return Intrinsic::vector_reduce_fmin;
+  case RecurKind::FMaximum:
+    return Intrinsic::vector_reduce_fmaximum;
+  case RecurKind::FMinimum:
+    return Intrinsic::vector_reduce_fminimum;
+  }
+}
+
 unsigned llvm::getArithmeticReductionInstruction(Intrinsic::ID RdxID) {
   switch (RdxID) {
   case Intrinsic::vector_reduce_fadd:
@@ -1077,7 +1116,9 @@ Value *llvm::getOrderedReduction(IRBuilderBase &Builder, Value *Acc, Value *Src,
 
 // Helper to generate a log2 shuffle reduction.
 Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
-                                 unsigned Op, RecurKind RdxKind) {
+                                 unsigned Op,
+                                 TargetTransformInfo::ReductionShuffle RS,
+                                 RecurKind RdxKind) {
   unsigned VF = cast<FixedVectorType>(Src->getType())->getNumElements();
   // VF is a power of 2 so we can emit the reduction using log2(VF) shuffles
   // and vector ops, reducing the set of values being computed by half each
@@ -1091,18 +1132,10 @@ Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
   // will never be relevant here.  Note that it would be generally unsound to
   // propagate these from an intrinsic call to the expansion anyways as we/
   // change the order of operations.
-  Value *TmpVec = Src;
-  SmallVector<int, 32> ShuffleMask(VF);
-  for (unsigned i = VF; i != 1; i >>= 1) {
-    // Move the upper half of the vector to the lower half.
-    for (unsigned j = 0; j != i / 2; ++j)
-      ShuffleMask[j] = i / 2 + j;
-
-    // Fill the rest of the mask with undef.
-    std::fill(&ShuffleMask[i / 2], ShuffleMask.end(), -1);
-
+  auto BuildShuffledOp = [&Builder, &Op,
+                          &RdxKind](SmallVectorImpl<int> &ShuffleMask,
+                                    Value *&TmpVec) -> void {
     Value *Shuf = Builder.CreateShuffleVector(TmpVec, ShuffleMask, "rdx.shuf");
-
     if (Op != Instruction::ICmp && Op != Instruction::FCmp) {
       TmpVec = Builder.CreateBinOp((Instruction::BinaryOps)Op, TmpVec, Shuf,
                                    "bin.rdx");
@@ -1111,14 +1144,38 @@ Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
              "Invalid min/max");
       TmpVec = createMinMaxOp(Builder, RdxKind, TmpVec, Shuf);
     }
+  };
+
+  Value *TmpVec = Src;
+  if (TargetTransformInfo::ReductionShuffle::Pairwise == RS) {
+    SmallVector<int, 32> ShuffleMask(VF);
+    for (unsigned stride = 1; stride < VF; stride <<= 1) {
+      // Initialise the mask with undef.
+      std::fill(ShuffleMask.begin(), ShuffleMask.end(), -1);
+      for (unsigned j = 0; j < VF; j += stride << 1) {
+        ShuffleMask[j] = j + stride;
+      }
+      BuildShuffledOp(ShuffleMask, TmpVec);
+    }
+  } else {
+    SmallVector<int, 32> ShuffleMask(VF);
+    for (unsigned i = VF; i != 1; i >>= 1) {
+      // Move the upper half of the vector to the lower half.
+      for (unsigned j = 0; j != i / 2; ++j)
+        ShuffleMask[j] = i / 2 + j;
+
+      // Fill the rest of the mask with undef.
+      std::fill(&ShuffleMask[i / 2], ShuffleMask.end(), -1);
+      BuildShuffledOp(ShuffleMask, TmpVec);
+    }
   }
   // The result is in the first element of the vector.
   return Builder.CreateExtractElement(TmpVec, Builder.getInt32(0));
 }
 
-Value *llvm::createAnyOfTargetReduction(IRBuilderBase &Builder, Value *Src,
-                                        const RecurrenceDescriptor &Desc,
-                                        PHINode *OrigPhi) {
+Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
+                                  const RecurrenceDescriptor &Desc,
+                                  PHINode *OrigPhi) {
   assert(
       RecurrenceDescriptor::isAnyOfRecurrenceKind(Desc.getRecurrenceKind()) &&
       "Unexpected reduction kind");
@@ -1151,50 +1208,104 @@ Value *llvm::createAnyOfTargetReduction(IRBuilderBase &Builder, Value *Src,
   return Builder.CreateSelect(AnyOf, NewVal, InitVal, "rdx.select");
 }
 
-Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder, Value *Src,
-                                         RecurKind RdxKind) {
+Value *llvm::getReductionIdentity(Intrinsic::ID RdxID, Type *Ty,
+                                  FastMathFlags Flags) {
+  bool Negative = false;
+  switch (RdxID) {
+  default:
+    llvm_unreachable("Expecting a reduction intrinsic");
+  case Intrinsic::vector_reduce_add:
+  case Intrinsic::vector_reduce_mul:
+  case Intrinsic::vector_reduce_or:
+  case Intrinsic::vector_reduce_xor:
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_fadd:
+  case Intrinsic::vector_reduce_fmul: {
+    unsigned Opc = getArithmeticReductionInstruction(RdxID);
+    return ConstantExpr::getBinOpIdentity(Opc, Ty, false,
+                                          Flags.noSignedZeros());
+  }
+  case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_reduce_umin:
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_smax: {
+    Intrinsic::ID ScalarID = getMinMaxReductionIntrinsicOp(RdxID);
+    return ConstantExpr::getIntrinsicIdentity(ScalarID, Ty);
+  }
+  case Intrinsic::vector_reduce_fmax:
+  case Intrinsic::vector_reduce_fmaximum:
+    Negative = true;
+    [[fallthrough]];
+  case Intrinsic::vector_reduce_fmin:
+  case Intrinsic::vector_reduce_fminimum: {
+    bool PropagatesNaN = RdxID == Intrinsic::vector_reduce_fminimum ||
+                         RdxID == Intrinsic::vector_reduce_fmaximum;
+    const fltSemantics &Semantics = Ty->getFltSemantics();
+    return (!Flags.noNaNs() && !PropagatesNaN)
+               ? ConstantFP::getQNaN(Ty, Negative)
+           : !Flags.noInfs()
+               ? ConstantFP::getInfinity(Ty, Negative)
+               : ConstantFP::get(Ty, APFloat::getLargest(Semantics, Negative));
+  }
+  }
+}
+
+Value *llvm::getRecurrenceIdentity(RecurKind K, Type *Tp, FastMathFlags FMF) {
+  assert((!(K == RecurKind::FMin || K == RecurKind::FMax) ||
+          (FMF.noNaNs() && FMF.noSignedZeros())) &&
+         "nnan, nsz is expected to be set for FP min/max reduction.");
+  Intrinsic::ID RdxID = getReductionIntrinsicID(K);
+  return getReductionIdentity(RdxID, Tp, FMF);
+}
+
+Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
+                                   RecurKind RdxKind) {
   auto *SrcVecEltTy = cast<VectorType>(Src->getType())->getElementType();
+  auto getIdentity = [&]() {
+    return getRecurrenceIdentity(RdxKind, SrcVecEltTy,
+                                 Builder.getFastMathFlags());
+  };
   switch (RdxKind) {
   case RecurKind::Add:
-    return Builder.CreateAddReduce(Src);
   case RecurKind::Mul:
-    return Builder.CreateMulReduce(Src);
   case RecurKind::And:
-    return Builder.CreateAndReduce(Src);
   case RecurKind::Or:
-    return Builder.CreateOrReduce(Src);
   case RecurKind::Xor:
-    return Builder.CreateXorReduce(Src);
+  case RecurKind::SMax:
+  case RecurKind::SMin:
+  case RecurKind::UMax:
+  case RecurKind::UMin:
+  case RecurKind::FMax:
+  case RecurKind::FMin:
+  case RecurKind::FMinimum:
+  case RecurKind::FMaximum:
+    return Builder.CreateUnaryIntrinsic(getReductionIntrinsicID(RdxKind), Src);
   case RecurKind::FMulAdd:
   case RecurKind::FAdd:
-    return Builder.CreateFAddReduce(ConstantFP::getNegativeZero(SrcVecEltTy),
-                                    Src);
+    return Builder.CreateFAddReduce(getIdentity(), Src);
   case RecurKind::FMul:
-    return Builder.CreateFMulReduce(ConstantFP::get(SrcVecEltTy, 1.0), Src);
-  case RecurKind::SMax:
-    return Builder.CreateIntMaxReduce(Src, true);
-  case RecurKind::SMin:
-    return Builder.CreateIntMinReduce(Src, true);
-  case RecurKind::UMax:
-    return Builder.CreateIntMaxReduce(Src, false);
-  case RecurKind::UMin:
-    return Builder.CreateIntMinReduce(Src, false);
-  case RecurKind::FMax:
-    return Builder.CreateFPMaxReduce(Src);
-  case RecurKind::FMin:
-    return Builder.CreateFPMinReduce(Src);
-  case RecurKind::FMinimum:
-    return Builder.CreateFPMinimumReduce(Src);
-  case RecurKind::FMaximum:
-    return Builder.CreateFPMaximumReduce(Src);
+    return Builder.CreateFMulReduce(getIdentity(), Src);
   default:
     llvm_unreachable("Unhandled opcode");
   }
 }
 
-Value *llvm::createTargetReduction(IRBuilderBase &B,
-                                   const RecurrenceDescriptor &Desc, Value *Src,
-                                   PHINode *OrigPhi) {
+Value *llvm::createSimpleReduction(VectorBuilder &VBuilder, Value *Src,
+                                   const RecurrenceDescriptor &Desc) {
+  RecurKind Kind = Desc.getRecurrenceKind();
+  assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
+         "AnyOf reduction is not supported.");
+  Intrinsic::ID Id = getReductionIntrinsicID(Kind);
+  auto *SrcTy = cast<VectorType>(Src->getType());
+  Type *SrcEltTy = SrcTy->getElementType();
+  Value *Iden = getRecurrenceIdentity(Kind, SrcEltTy, Desc.getFastMathFlags());
+  Value *Ops[] = {Iden, Src};
+  return VBuilder.createSimpleReduction(Id, SrcTy, Ops);
+}
+
+Value *llvm::createReduction(IRBuilderBase &B,
+                             const RecurrenceDescriptor &Desc, Value *Src,
+                             PHINode *OrigPhi) {
   // TODO: Support in-order reductions based on the recurrence descriptor.
   // All ops in the reduction inherit fast-math-flags from the recurrence
   // descriptor.
@@ -1203,9 +1314,9 @@ Value *llvm::createTargetReduction(IRBuilderBase &B,
 
   RecurKind RK = Desc.getRecurrenceKind();
   if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
-    return createAnyOfTargetReduction(B, Src, Desc, OrigPhi);
+    return createAnyOfReduction(B, Src, Desc, OrigPhi);
 
-  return createSimpleTargetReduction(B, Src, RK);
+  return createSimpleReduction(B, Src, RK);
 }
 
 Value *llvm::createOrderedReduction(IRBuilderBase &B,
@@ -1218,6 +1329,21 @@ Value *llvm::createOrderedReduction(IRBuilderBase &B,
   assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
 
   return B.CreateFAddReduce(Start, Src);
+}
+
+Value *llvm::createOrderedReduction(VectorBuilder &VBuilder,
+                                    const RecurrenceDescriptor &Desc,
+                                    Value *Src, Value *Start) {
+  assert((Desc.getRecurrenceKind() == RecurKind::FAdd ||
+          Desc.getRecurrenceKind() == RecurKind::FMulAdd) &&
+         "Unexpected reduction kind");
+  assert(Src->getType()->isVectorTy() && "Expected a vector type");
+  assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
+
+  Intrinsic::ID Id = getReductionIntrinsicID(RecurKind::FAdd);
+  auto *SrcTy = cast<VectorType>(Src->getType());
+  Value *Ops[] = {Start, Src};
+  return VBuilder.createSimpleReduction(Id, SrcTy, Ops);
 }
 
 void llvm::propagateIRFlags(Value *I, ArrayRef<Value *> VL, Value *OpValue,
@@ -1816,8 +1942,7 @@ Value *llvm::addRuntimeChecks(
       expandBounds(PointerChecks, TheLoop, Loc, Exp, HoistRuntimeChecks);
 
   LLVMContext &Ctx = Loc->getContext();
-  IRBuilder<InstSimplifyFolder> ChkBuilder(Ctx,
-                                           Loc->getModule()->getDataLayout());
+  IRBuilder ChkBuilder(Ctx, InstSimplifyFolder(Loc->getDataLayout()));
   ChkBuilder.SetInsertPoint(Loc);
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;
@@ -1870,8 +1995,7 @@ Value *llvm::addDiffRuntimeChecks(
     function_ref<Value *(IRBuilderBase &, unsigned)> GetVF, unsigned IC) {
 
   LLVMContext &Ctx = Loc->getContext();
-  IRBuilder<InstSimplifyFolder> ChkBuilder(Ctx,
-                                           Loc->getModule()->getDataLayout());
+  IRBuilder ChkBuilder(Ctx, InstSimplifyFolder(Loc->getDataLayout()));
   ChkBuilder.SetInsertPoint(Loc);
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;

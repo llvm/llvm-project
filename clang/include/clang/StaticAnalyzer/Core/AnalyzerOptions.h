@@ -229,8 +229,6 @@ public:
   unsigned AnalyzerDisplayProgress : 1;
   unsigned AnalyzerNoteAnalysisEntryPoints : 1;
 
-  unsigned eagerlyAssumeBinOpBifurcation : 1;
-
   unsigned TrimGraph : 1;
   unsigned visualizeExplodedGraphWithGraphViz : 1;
   unsigned UnoptimizedCFG : 1;
@@ -293,9 +291,9 @@ public:
         ShowConfigOptionsList(false),
         ShouldEmitErrorsOnInvalidConfigValue(false), AnalyzeAll(false),
         AnalyzerDisplayProgress(false), AnalyzerNoteAnalysisEntryPoints(false),
-        eagerlyAssumeBinOpBifurcation(false), TrimGraph(false),
-        visualizeExplodedGraphWithGraphViz(false), UnoptimizedCFG(false),
-        PrintStats(false), NoRetryExhausted(false), AnalyzerWerror(false) {}
+        TrimGraph(false), visualizeExplodedGraphWithGraphViz(false),
+        UnoptimizedCFG(false), PrintStats(false), NoRetryExhausted(false),
+        AnalyzerWerror(false) {}
 
   /// Interprets an option's string value as a boolean. The "true" string is
   /// interpreted as true and the "false" string is interpreted as false.

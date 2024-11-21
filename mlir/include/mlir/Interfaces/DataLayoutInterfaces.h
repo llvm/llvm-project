@@ -15,6 +15,7 @@
 #ifndef MLIR_INTERFACES_DATALAYOUTINTERFACES_H
 #define MLIR_INTERFACES_DATALAYOUTINTERFACES_H
 
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/DenseMap.h"
@@ -23,6 +24,7 @@
 namespace mlir {
 class DataLayout;
 class DataLayoutEntryInterface;
+class DLTIQueryInterface;
 class TargetDeviceSpecInterface;
 class TargetSystemSpecInterface;
 using DataLayoutEntryKey = llvm::PointerUnion<Type, StringAttr>;
@@ -31,10 +33,7 @@ using DataLayoutEntryKey = llvm::PointerUnion<Type, StringAttr>;
 using DataLayoutEntryList = llvm::SmallVector<DataLayoutEntryInterface, 4>;
 using DataLayoutEntryListRef = llvm::ArrayRef<DataLayoutEntryInterface>;
 using TargetDeviceSpecListRef = llvm::ArrayRef<TargetDeviceSpecInterface>;
-using DeviceIDTargetDeviceSpecPair =
-    std::pair<StringAttr, TargetDeviceSpecInterface>;
-using DeviceIDTargetDeviceSpecPairListRef =
-    llvm::ArrayRef<DeviceIDTargetDeviceSpecPair>;
+using TargetDeviceSpecEntry = std::pair<StringAttr, TargetDeviceSpecInterface>;
 class DataLayoutOpInterface;
 class DataLayoutSpecInterface;
 class ModuleOp;
@@ -93,8 +92,7 @@ uint64_t getDefaultStackAlignment(DataLayoutEntryInterface entry);
 
 /// Returns the value of the property from the specified DataLayoutEntry. If the
 /// property is missing from the entry, returns std::nullopt.
-std::optional<int64_t>
-getDevicePropertyValueAsInt(DataLayoutEntryInterface entry);
+std::optional<Attribute> getDevicePropertyValue(DataLayoutEntryInterface entry);
 
 /// Given a list of data layout entries, returns a new list containing the
 /// entries with keys having the given type ID, i.e. belonging to the same type
@@ -246,9 +244,9 @@ public:
 
   /// Returns the value of the specified property if the property is defined for
   /// the given device ID, otherwise returns std::nullopt.
-  std::optional<int64_t>
-  getDevicePropertyValueAsInt(TargetSystemSpecInterface::DeviceID,
-                              StringAttr propertyName) const;
+  std::optional<Attribute>
+  getDevicePropertyValue(TargetSystemSpecInterface::DeviceID,
+                         StringAttr propertyName) const;
 
 private:
   /// Combined layout spec at the given scope.

@@ -20,9 +20,9 @@ define i32 @test0(ptr %v4) nounwind {
 entry:
   %v5 = load <1 x i64>, ptr %v4, align 8
   %v12 = bitcast <1 x i64> %v5 to <4 x i16>
-  %v13 = bitcast <4 x i16> %v12 to x86_mmx
-  %v14 = tail call x86_mmx @llvm.x86.sse.pshuf.w(x86_mmx %v13, i8 -18)
-  %v15 = bitcast x86_mmx %v14 to <4 x i16>
+  %v13 = bitcast <4 x i16> %v12 to <1 x i64>
+  %v14 = tail call <1 x i64> @llvm.x86.sse.pshuf.w(<1 x i64> %v13, i8 -18)
+  %v15 = bitcast <1 x i64> %v14 to <4 x i16>
   %v16 = bitcast <4 x i16> %v15 to <1 x i64>
   %v17 = extractelement <1 x i64> %v16, i32 0
   %v18 = bitcast i64 %v17 to <2 x i32>
@@ -52,12 +52,12 @@ entry:
   %0 = load i32, ptr %ptr, align 4
   %1 = insertelement <2 x i32> undef, i32 %0, i32 0
   %2 = insertelement <2 x i32> %1, i32 0, i32 1
-  %3 = bitcast <2 x i32> %2 to x86_mmx
-  %4 = bitcast x86_mmx %3 to i64
+  %3 = bitcast <2 x i32> %2 to <1 x i64>
+  %4 = bitcast <1 x i64> %3 to i64
   %5 = bitcast i64 %4 to <4 x i16>
-  %6 = bitcast <4 x i16> %5 to x86_mmx
-  %7 = tail call x86_mmx @llvm.x86.sse.pshuf.w(x86_mmx %6, i8 -24)
-  %8 = bitcast x86_mmx %7 to <4 x i16>
+  %6 = bitcast <4 x i16> %5 to <1 x i64>
+  %7 = tail call <1 x i64> @llvm.x86.sse.pshuf.w(<1 x i64> %6, i8 -24)
+  %8 = bitcast <1 x i64> %7 to <4 x i16>
   %9 = bitcast <4 x i16> %8 to <1 x i64>
   %10 = extractelement <1 x i64> %9, i32 0
   %11 = bitcast i64 %10 to <2 x i32>
@@ -82,9 +82,9 @@ define i32 @test2(ptr nocapture readonly %ptr) nounwind {
 ; X64-NEXT:    emms
 ; X64-NEXT:    retq
 entry:
-  %0 = load x86_mmx, ptr %ptr, align 8
-  %1 = tail call x86_mmx @llvm.x86.sse.pshuf.w(x86_mmx %0, i8 -24)
-  %2 = bitcast x86_mmx %1 to <4 x i16>
+  %0 = load <1 x i64>, ptr %ptr, align 8
+  %1 = tail call <1 x i64> @llvm.x86.sse.pshuf.w(<1 x i64> %0, i8 -24)
+  %2 = bitcast <1 x i64> %1 to <4 x i16>
   %3 = bitcast <4 x i16> %2 to <1 x i64>
   %4 = extractelement <1 x i64> %3, i32 0
   %5 = bitcast i64 %4 to <2 x i32>
@@ -93,40 +93,39 @@ entry:
   ret i32 %6
 }
 
-define i32 @test3(x86_mmx %a) nounwind {
+define i32 @test3(<1 x i64> %a) nounwind {
 ; X86-LABEL: test3:
 ; X86:       # %bb.0:
-; X86-NEXT:    movd %mm0, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test3:
 ; X64:       # %bb.0:
-; X64-NEXT:    movd %mm0, %eax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
-  %tmp0 = bitcast x86_mmx %a to <2 x i32>
+  %tmp0 = bitcast <1 x i64> %a to <2 x i32>
   %tmp1 = extractelement <2 x i32> %tmp0, i32 0
   ret i32 %tmp1
 }
 
 ; Verify we don't muck with extractelts from the upper lane.
-define i32 @test4(x86_mmx %a) nounwind {
+define i32 @test4(<1 x i64> %a) nounwind {
 ; X86-LABEL: test4:
 ; X86:       # %bb.0:
-; X86-NEXT:    movq2dq %mm0, %xmm0
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; X86-NEXT:    movd %xmm0, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test4:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq2dq %mm0, %xmm0
+; X64-NEXT:    movq %rdi, %xmm0
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X64-NEXT:    movd %xmm0, %eax
 ; X64-NEXT:    retq
-  %tmp0 = bitcast x86_mmx %a to <2 x i32>
+  %tmp0 = bitcast <1 x i64> %a to <2 x i32>
   %tmp1 = extractelement <2 x i32> %tmp0, i32 1
   ret i32 %tmp1
 }
 
-declare x86_mmx @llvm.x86.sse.pshuf.w(x86_mmx, i8)
+declare <1 x i64> @llvm.x86.sse.pshuf.w(<1 x i64>, i8)
 declare void @llvm.x86.mmx.emms()

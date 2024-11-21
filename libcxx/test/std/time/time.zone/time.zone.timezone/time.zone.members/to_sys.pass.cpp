@@ -89,7 +89,7 @@ static void test_nonexistent() {
   TEST_VALIDATE_EXCEPTION(
       std::chrono::nonexistent_local_time,
       [&]([[maybe_unused]] const std::chrono::nonexistent_local_time& e) {
-        std::string_view what =
+        [[maybe_unused]] std::string_view what =
             R"(1986-03-30 02:30:00.000000000 is in a gap between
 1986-03-30 02:00:00 CET and
 1986-03-30 03:00:00 CEST which are both equivalent to
@@ -103,7 +103,7 @@ static void test_nonexistent() {
   TEST_VALIDATE_EXCEPTION(
       std::chrono::nonexistent_local_time,
       [&]([[maybe_unused]] const std::chrono::nonexistent_local_time& e) {
-        std::string_view what =
+        [[maybe_unused]] std::string_view what =
             R"(1986-03-30 02:30:00.000000 is in a gap between
 1986-03-30 02:00:00 CET and
 1986-03-30 03:00:00 CEST which are both equivalent to
@@ -117,7 +117,7 @@ static void test_nonexistent() {
   TEST_VALIDATE_EXCEPTION(
       std::chrono::nonexistent_local_time,
       [&]([[maybe_unused]] const std::chrono::nonexistent_local_time& e) {
-        std::string_view what =
+        [[maybe_unused]] std::string_view what =
             R"(1986-03-30 02:30:00.000 is in a gap between
 1986-03-30 02:00:00 CET and
 1986-03-30 03:00:00 CEST which are both equivalent to
@@ -131,7 +131,7 @@ static void test_nonexistent() {
   TEST_VALIDATE_EXCEPTION(
       std::chrono::nonexistent_local_time,
       [&]([[maybe_unused]] const std::chrono::nonexistent_local_time& e) {
-        std::string_view what =
+        [[maybe_unused]] std::string_view what =
             R"(1986-03-30 02:30:00 is in a gap between
 1986-03-30 02:00:00 CET and
 1986-03-30 03:00:00 CEST which are both equivalent to
@@ -173,7 +173,7 @@ static void test_ambiguous() {
   TEST_VALIDATE_EXCEPTION(
       std::chrono::ambiguous_local_time,
       [&]([[maybe_unused]] const std::chrono::ambiguous_local_time& e) {
-        std::string_view what =
+        [[maybe_unused]] std::string_view what =
             R"(1986-09-28 02:30:00.000000000 is ambiguous.  It could be
 1986-09-28 02:30:00.000000000 CEST == 1986-09-28 00:30:00.000000000 UTC or
 1986-09-28 02:30:00.000000000 CET == 1986-09-28 01:30:00.000000000 UTC)";
@@ -186,7 +186,7 @@ static void test_ambiguous() {
   TEST_VALIDATE_EXCEPTION(
       std::chrono::ambiguous_local_time,
       [&]([[maybe_unused]] const std::chrono::ambiguous_local_time& e) {
-        std::string_view what =
+        [[maybe_unused]] std::string_view what =
             R"(1986-09-28 02:30:00.000000 is ambiguous.  It could be
 1986-09-28 02:30:00.000000 CEST == 1986-09-28 00:30:00.000000 UTC or
 1986-09-28 02:30:00.000000 CET == 1986-09-28 01:30:00.000000 UTC)";
@@ -199,7 +199,7 @@ static void test_ambiguous() {
   TEST_VALIDATE_EXCEPTION(
       std::chrono::ambiguous_local_time,
       [&]([[maybe_unused]] const std::chrono::ambiguous_local_time& e) {
-        std::string_view what =
+        [[maybe_unused]] std::string_view what =
             R"(1986-09-28 02:30:00.000 is ambiguous.  It could be
 1986-09-28 02:30:00.000 CEST == 1986-09-28 00:30:00.000 UTC or
 1986-09-28 02:30:00.000 CET == 1986-09-28 01:30:00.000 UTC)";
@@ -212,7 +212,7 @@ static void test_ambiguous() {
   TEST_VALIDATE_EXCEPTION(
       std::chrono::ambiguous_local_time,
       [&]([[maybe_unused]] const std::chrono::ambiguous_local_time& e) {
-        std::string_view what =
+        [[maybe_unused]] std::string_view what =
             R"(1986-09-28 02:30:00 is ambiguous.  It could be
 1986-09-28 02:30:00 CEST == 1986-09-28 00:30:00 UTC or
 1986-09-28 02:30:00 CET == 1986-09-28 01:30:00 UTC)";

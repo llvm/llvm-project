@@ -440,3 +440,86 @@ define <2 x double> @all_undef_f64x2() {
 ; CHECK-NEXT:    return $0
   ret <2 x double> undef
 }
+
+define <4 x i32> @load_zero_lane_i32x4(ptr %addr.a, ptr %addr.b, ptr %addr.c, ptr %addr.d) {
+; CHECK-LABEL: load_zero_lane_i32x4:
+; CHECK:         .functype load_zero_lane_i32x4 (i32, i32, i32, i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.load32_zero $push0=, 0($0)
+; CHECK-NEXT:    v128.load32_lane $push1=, 0($1), $pop0, 1
+; CHECK-NEXT:    v128.load32_lane $push2=, 0($2), $pop1, 2
+; CHECK-NEXT:    v128.load32_lane $push3=, 0($3), $pop2, 3
+; CHECK-NEXT:    return $pop3
+  %a = load i32, ptr %addr.a
+  %b = load i32, ptr %addr.b
+  %c = load i32, ptr %addr.c
+  %d = load i32, ptr %addr.d
+  %v = insertelement <4 x i32> undef, i32 %a, i32 0
+  %v.1 = insertelement <4 x i32> %v, i32 %b, i32 1
+  %v.2 = insertelement <4 x i32> %v.1, i32 %c, i32 2
+  %v.3 = insertelement <4 x i32> %v.2, i32 %d, i32 3
+  ret <4 x i32> %v.3
+}
+
+define <2 x i64> @load_zero_lane_i64x2(ptr %addr.a, ptr %addr.b) {
+; CHECK-LABEL: load_zero_lane_i64x2:
+; CHECK:         .functype load_zero_lane_i64x2 (i32, i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.load64_zero $push0=, 0($0)
+; CHECK-NEXT:    v128.load64_lane $push1=, 0($1), $pop0, 1
+; CHECK-NEXT:    return $pop1
+  %a = load i64, ptr %addr.a
+  %b = load i64, ptr %addr.b
+  %v = insertelement <2 x i64> undef, i64 %a, i32 0
+  %v.1 = insertelement <2 x i64> %v, i64 %b, i32 1
+  ret <2 x i64> %v.1
+}
+
+define <4 x float> @load_zero_lane_f32x4(ptr %addr.a, ptr %addr.b, ptr %addr.c, ptr %addr.d) {
+; CHECK-LABEL: load_zero_lane_f32x4:
+; CHECK:         .functype load_zero_lane_f32x4 (i32, i32, i32, i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.load32_zero $push0=, 0($0)
+; CHECK-NEXT:    v128.load32_lane $push1=, 0($1), $pop0, 1
+; CHECK-NEXT:    v128.load32_lane $push2=, 0($2), $pop1, 2
+; CHECK-NEXT:    v128.load32_lane $push3=, 0($3), $pop2, 3
+; CHECK-NEXT:    return $pop3
+  %a = load float, ptr %addr.a
+  %b = load float, ptr %addr.b
+  %c = load float, ptr %addr.c
+  %d = load float, ptr %addr.d
+  %v = insertelement <4 x float> undef, float %a, i32 0
+  %v.1 = insertelement <4 x float> %v, float %b, i32 1
+  %v.2 = insertelement <4 x float> %v.1, float %c, i32 2
+  %v.3 = insertelement <4 x float> %v.2, float %d, i32 3
+  ret <4 x float> %v.3
+}
+
+define <4 x float> @load_zero_undef_lane_f32x4(ptr %addr.a, ptr %addr.b) {
+; CHECK-LABEL: load_zero_undef_lane_f32x4:
+; CHECK:         .functype load_zero_undef_lane_f32x4 (i32, i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.load32_splat $push0=, 0($0)
+; CHECK-NEXT:    v128.load32_lane $push1=, 0($1), $pop0, 3
+; CHECK-NEXT:    return $pop1
+  %a = load float, ptr %addr.a
+  %b = load float, ptr %addr.b
+  %v = insertelement <4 x float> undef, float %a, i32 1
+  %v.1 = insertelement <4 x float> %v, float %b, i32 3
+  ret <4 x float> %v.1
+}
+
+define <2 x double> @load_zero_lane_f64x2(ptr %addr.a, ptr %addr.b) {
+; CHECK-LABEL: load_zero_lane_f64x2:
+; CHECK:         .functype load_zero_lane_f64x2 (i32, i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.load64_zero $push0=, 0($0)
+; CHECK-NEXT:    v128.load64_lane $push1=, 0($1), $pop0, 1
+; CHECK-NEXT:    return $pop1
+  %a = load double, ptr %addr.a
+  %b = load double, ptr %addr.b
+  %v = insertelement <2 x double> undef, double %a, i32 0
+  %v.1 = insertelement <2 x double> %v, double %b, i32 1
+  ret <2 x double> %v.1
+}
+

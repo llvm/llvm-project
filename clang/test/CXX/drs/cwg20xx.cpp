@@ -313,7 +313,8 @@ namespace cwg2083 { // cwg2083: partial
     int &r = a.x; // #cwg2083-r
     struct B {
       void f() {
-        // FIXME: We emit more errors than we should be. They are explictly marked below.
+        // FIXME: We emit more errors than we should be. They are explicitly
+        // marked below.
         a.x;
         // expected-warning@-1 {{expression result unused}}
         // expected-error@-2 {{reference to local variable 'a' declared in enclosing function 'cwg2083::discarded_lval'}} FIXME
@@ -399,6 +400,36 @@ namespace cwg2083 { // cwg2083: partial
   }
 #endif
 }
+
+namespace cwg2091 { // cwg2091: 10
+template<int &> struct X;
+template<int &N> void f(X<N>&);
+int n;
+void g(X<n> &x) { f(x); }
+
+namespace GH42233 {
+enum E { I };
+
+class AA { };
+E EV[1] = {I};
+
+template<class ENUM, const ENUM* const VALUES>
+struct S
+{
+  template< class E, const E* const V>
+    friend AA& operator<<( AA& os, const S<E,V>& e );
+};
+
+int f()
+{
+  S< E, EV > x;
+
+  AA a;
+  a << x;
+  return 0;
+}
+} // namespace GH42233
+} // namespace cwg2091 
 
 namespace cwg2094 { // cwg2094: 5
   struct A { int n; };

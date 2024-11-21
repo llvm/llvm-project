@@ -1,120 +1,204 @@
+.. _header_generation:
+
 Generating Public and Internal headers
 ======================================
 
-.. warning::
-  This page is severely out of date. Much of the information it contains may be
-  incorrect. Please only remove this warning once the page has been updated.
+This is a new implementation of the previous libc header generator. The old
+header generator (libc-hdrgen aka "Headergen") was based on TableGen, which
+created an awkward dependency on the rest of LLVM for our build system. By
+creating a new standalone Headergen we can eliminate these dependencies for
+easier cross compatibility.
 
-Other libc implementations make use of preprocessor macro tricks to make header
-files platform agnostic. When macros aren't suitable, they rely on build
-system tricks to pick the right set of files to compile and export. While these
-approaches have served them well, parts of their systems have become extremely
-complicated making it hard to modify, extend or maintain. To avoid these
-problems in llvm-libc, we use a header generation mechanism. The mechanism is
-driven by a *header configuration language*.
+There are 3 main components of the new Headergen. The first component are the
+YAML files that contain all the function header information and are separated by
+header specification and standard. The second component are the classes that are
+created for each component of the function header: macros, enumerations, types,
+function, arguments, and objects. The third component is the Python script that
+uses the class representation to deserialize YAML files into its specific
+components and then reserializes the components into the function header. The
+Python script also combines the generated header content with header definitions
+and extra macro and type inclusions from the .h.def file.
 
-Header Configuration Language
------------------------------
 
-Header configuration language consists of few special *commands*. The header
-generation mechanism takes an input file, which has an extension of
-``.h.def``, and produces a header file with ``.h`` extension. The header
-configuration language commands are listed in the input ``.h.def`` file. While
-reading a ``.h.def`` file, the header generation tool does two things:
+Instructions
+------------
 
-1. Copy the lines not containing commands as is into the output ``.h`` file.
-2. Replace the line on which a command occurs with some other text as directed
-   by the command. The replacement text can span multiple lines.
+Required Versions:
+  - Python Version: 3.8
+  - PyYAML Version: 5.1
 
-Command syntax
-~~~~~~~~~~~~~~
+1. Keep full-build mode on when building, otherwise headers will not be
+   generated.
+2. Once the build is complete, enter in the command line within the build
+   directory ``ninja check-newhdrgen`` to ensure that the integration tests are
+   passing.
+3. Then enter in the command line ``ninja libc`` to generate headers. Headers
+   will be in ``build/projects/libc/include`` or ``build/libc/include`` in a
+   runtime build. Sys spec headers will be located in
+   ``build/projects/libc/include/sys``.
 
-A command should be listed on a line by itself, and should not span more than
-one line. The first token to appear on the line is the command name prefixed
-with ``%%``. For example, a line with the ``include_file`` command should start
-with ``%%include_file``. There can be indentation spaces before the ``%%``
-prefix.
 
-Most commands typically take arguments. They are listed as a comma separated
-list of named identifiers within parenthesis, similar to the C function call
-syntax. Before performing the action corresponding to the command, the header
-generator replaces the arguments with concrete values.
+New Headergen is turned on by default, but if you want to use old Headergen,
+you can include this statement when building: ``-DLIBC_USE_NEW_HEADER_GEN=OFF``
 
-Argument Syntax
-~~~~~~~~~~~~~~~
+To add a function to the YAML files, you can either manually enter it in the
+YAML file corresponding to the header it belongs to or add it through the
+command line.
 
-Arguments are named indentifiers but prefixed with ``$`` and enclosed in ``{``
-and ``}``. For example, ``${path_to_constants}``.
+To add through the command line:
 
-Comments
-~~~~~~~~
+1. Make sure you are in the llvm-project directory.
 
-There can be cases wherein one wants to add comments in the .h.def file but
-does not want them to be copied into the generated header file. Such comments
-can be added by beginning the comment lines with the ``<!>`` prefix. Currently,
-comments have to be on lines of their own. That is, they cannot be suffixes like
-this:
+2. Enter in the command line:
 
-```
-%%include_file(a/b/c) <!> Path to c in b of a.  !!! WRONG SYNTAX
-```
+   .. code-block:: none
 
-Available Commands
-------------------
+     python3 libc/newhdrgen/yaml_to_classes.py
+     libc/newhdrgen/yaml/[yaml_file.yaml] --add_function "<return_type>" <function_name> "<function_arg1, function_arg2>" <standard> <guard> <attribute>
 
-Sub-sections below describe the commands currently available. Under each command
-is the description of the arguments to the command, and the action taken by the
-header generation tool when processing a command.
+   Example:
 
-``include_file``
-~~~~~~~~~~~~~~~~
+   .. code-block:: none
 
-This is a replacement command which should be listed in an input ``.h.def``
-file.
+      python3 libc/newhdrgen/yaml_to_classes.py
+      libc/newhdrgen/yaml/ctype.yaml --add_function "char" example_function
+      "int, void, const void" stdc example_float example_attribute
 
-Arguments
+   Keep in mind only the return_type and arguments have quotes around them. If
+   you do not have any guards or attributes you may enter "null" for both.
 
-  * **path argument** - An argument representing a path to a file. The file
-    should have an extension of ``.h.inc``.
+3. Check the YAML file that the added function is present. You will also get a
+   generated header file with the new addition in the newhdrgen directory to
+   examine.
 
-Action
+If you want to sort the functions alphabetically you can check out libc/newhdrgen/yaml_functions_sorted.py.
 
-  This command instructs that the line on which the command appears should be
-  replaced by the contents of the file whose path is passed as argument to the
-  command.
 
-``begin``
-~~~~~~~~~
+Testing
+-------
 
-This is not a replacement command. It is an error to list it in the input
-``.h.def`` file. It is normally listed in the files included by the
-``include_file`` command (the ``.h.inc`` files). A common use of this command it
-mark the beginning of what is to be included. This prevents copying items like
-license headers into the generated header file.
+New Headergen has an integration test that you may run once you have configured
+your CMake within the build directory. In the command line, enter the following:
+``ninja check-newhdrgen``. The integration test is one test that ensures the
+process of YAML to classes to generate headers works properly. If there are any
+new additions on formatting headers, make sure the test is updated with the
+specific addition.
 
-Arguments
+Integration Test can be found in: ``libc/newhdrgen/tests/test_integration.py``
 
-  None.
+File to modify if adding something to formatting:
+``libc/newhdrgen/tests/expected_output/test_header.h``
 
-Action
 
-  The header generator will only include content starting from the line after the
-  line on which this command is listed.
+Common Errors
+-------------
+1. Missing function specific component
 
-``public_api``
-~~~~~~~~~~~~~~
+   Example:
 
-This is a replacement command which should be listed in an input ``.h.def``
-file. The header file generator will replace this command with the public API of
-the target platform. See the build system document for more information on the
-relevant build rules. Also, see "Mechanics of public_api" to learn the mechanics
-of how the header generator replaces this command with the public API.
+   .. code-block:: none
 
-Arguments
+      "/llvm-project/libc/newhdrgen/yaml_to_classes.py", line 67, in yaml_to_classes function_data["return_type"]
 
-  None.
+   If you receive this error or any error pertaining to
+   ``function_data[function_specific_component]`` while building the headers
+   that means the function specific component is missing within the YAML files.
+   Through the call stack, you will be able to find the header file which has
+   the issue. Ensure there is no missing function specific component for that
+   YAML header file.
 
-Action
+2. CMake Error: require argument to be specified
 
-  The header generator will replace this command with the public API to be exposed
-  from the generated header file.
+   Example:
+
+   .. code-block:: none
+
+     CMake Error at:
+     /llvm-project/libc/cmake/modules/LLVMLibCHeaderRules.cmake:86 (message):
+     'add_gen_hdr2' rule requires GEN_HDR to be specified.
+     Call Stack (most recent call first):
+     /llvm-project/libc/include/CMakeLists.txt:22 (add_gen_header2)
+     /llvm-project/libc/include/CMakeLists.txt:62 (add_header_macro)
+
+   If you receive this error, there is a missing YAML file, h_def file, or
+   header name within the ``libc/include/CMakeLists.txt``. The last line in the
+   error call stack will point to the header where there is a specific component
+   missing. Ensure the correct style and required files are present:
+
+   | ``[header_name]``
+   | ``[../libc/newhdrgen/yaml/[yaml_file.yaml]``
+   | ``[header_name.h.def]``
+   | ``[header_name.h]``
+   | ``DEPENDS``
+   |   ``{Necessary Depend Files}``
+
+3. Command line: expected arguments
+
+   Example:
+
+   .. code-block:: none
+
+     usage: yaml_to_classes.py [-h] [--output_dir OUTPUT_DIR] [--h_def_file H_DEF_FILE]
+     [--add_function RETURN_TYPE NAME ARGUMENTS STANDARDS GUARD ATTRIBUTES]
+     [--e ENTRY_POINTS] [--export-decls]
+     yaml_file
+     yaml_to_classes.py:
+     error: argument --add_function: expected 6 arguments
+
+   In the process of adding a function, you may run into an issue where the
+   command line is requiring more arguments than what you currently have. Ensure
+   that all components of the new function are filled. Even if you do not have a
+   guard or attribute, make sure to put null in those two areas.
+
+4. Object has no attribute
+
+   Example:
+
+   .. code-block:: none
+
+     File "/llvm-project/libc/newhdrgen/header.py", line 60, in __str__ for
+     function in self.functions: AttributeError: 'HeaderFile' object has no
+     attribute 'functions'
+
+   When running ``ninja libc`` in the build directory to generate headers you
+   may receive the error above. Essentially this means that in
+   ``libc/newhdrgen/header.py`` there is a missing attribute named functions.
+   Make sure all function components are defined within this file and there are
+   no missing functions to add these components.
+
+5. Unknown type name
+
+   Example:
+
+   .. code-block:: none
+
+     /llvm-project/build/projects/libc/include/sched.h:20:25: error: unknown type
+     name 'size_t'; did you mean 'time_t'?
+     20 | int_sched_getcpucount(size_t, const cpu_set_t*) __NOEXCEPT
+      |           ^
+     /llvm-project/build/projects/libc/include/llvm-libc-types/time_t.h:15:24:
+     note: 'time_t' declared here
+     15 | typedef __INT64_TYPE__ time_t;
+     |                    ^
+
+   During the header generation process errors like the one above may occur
+   because there are missing types for a specific header file. Check the YAML
+   file corresponding to the header file and make sure all the necessary types
+   that are being used are input into the types as well. Delete the specific
+   header file from the build folder and re-run ``ninja libc`` to ensure the
+   types are being recognized.
+
+6. Test Integration Errors
+
+   Sometimes the integration test will fail but that
+   still means the process is working unless the comparison between the output
+   and expected_output is not showing. If that is the case make sure in
+   ``libc/newhdrgen/tests/test_integration.py`` there are no missing arguments
+   that run through the script.
+
+   If the integration tests are failing due to mismatching of lines or small
+   errors in spacing that is nothing to worry about. If this is happening while
+   you are making a new change to the formatting of the headers, then
+   ensure the expected output file
+   ``libc/newhdrgen/tests/expected_output/test_header.h`` has the changes you
+   are applying.

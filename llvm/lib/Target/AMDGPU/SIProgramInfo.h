@@ -98,16 +98,12 @@ struct LLVM_EXTERNAL_VISIBILITY SIProgramInfo {
     void reset(const MachineFunction &MF);
 
     /// Compute the value of the ComputePGMRsrc1 register.
-    uint64_t getComputePGMRSrc1(const GCNSubtarget &ST) const;
-    uint64_t getPGMRSrc1(CallingConv::ID CC, const GCNSubtarget &ST) const;
     const MCExpr *getComputePGMRSrc1(const GCNSubtarget &ST,
                                      MCContext &Ctx) const;
     const MCExpr *getPGMRSrc1(CallingConv::ID CC, const GCNSubtarget &ST,
                               MCContext &Ctx) const;
 
     /// Compute the value of the ComputePGMRsrc2 register.
-    uint64_t getComputePGMRSrc2() const;
-    uint64_t getPGMRSrc2(CallingConv::ID CC) const;
     const MCExpr *getComputePGMRSrc2(MCContext &Ctx) const;
     const MCExpr *getPGMRSrc2(CallingConv::ID CC, MCContext &Ctx) const;
 };

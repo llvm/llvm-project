@@ -11,14 +11,12 @@
 //===---------------------------------------------------------------------===//
 
 #include "LoongArch.h"
-#include "LoongArchInstrInfo.h"
 #include "LoongArchSubtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 
 using namespace llvm;
 #define DEBUG_TYPE "loongarch-dead-defs"
@@ -35,10 +33,10 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<LiveIntervals>();
-    AU.addPreserved<LiveIntervals>();
-    AU.addRequired<LiveIntervals>();
-    AU.addPreserved<SlotIndexes>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
+    AU.addPreserved<LiveIntervalsWrapperPass>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveDebugVariables>();
     AU.addPreserved<LiveStacks>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -63,7 +61,7 @@ bool LoongArchDeadRegisterDefinitions::runOnMachineFunction(
 
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  LiveIntervals &LIS = getAnalysis<LiveIntervals>();
+  LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   LLVM_DEBUG(dbgs() << "***** LoongArchDeadRegisterDefinitions *****\n");
 
   bool MadeChange = false;

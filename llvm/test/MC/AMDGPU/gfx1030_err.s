@@ -207,3 +207,7 @@ image_bvh_intersect_ray v[4:7], v[9:16], s[4:7] noa16
 
 image_bvh_intersect_ray v[39:42], [v50, v46, v23, v17, v16, v15, v21, v20], s[12:15] noa16
 // GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: image address size does not match a16
+
+// missing dim
+image_msaa_load v[1:4], v[5:7], s[8:15] dmask:0xf glc
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: missing dim operand

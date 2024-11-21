@@ -1,11 +1,11 @@
 # RUN: yaml2obj %s -o %t.o
-# RUN: llvm-readelf -A %t.o 2>&1 | FileCheck %s
+# RUN: llvm-readobj -A %t.o 2>&1 | FileCheck %s
 
 # CHECK:      BuildAttributes {
 # CHECK-NEXT:   FormatVersion: 0x41
 # CHECK-NEXT:   Section 1 {
-# CHECK-NEXT:     SectionLength: 22
-# CHECK-NEXT:     Vendor: armabi
+# CHECK-NEXT:     SectionLength: 6
+# CHECK-NEXT:     Vendor: aeabi
 # CHECK-NEXT:   }
 # CHECK-NEXT: }
 
@@ -18,6 +18,5 @@ FileHeader:
 Sections:
   - Name: .ARM.attributes
     Type: SHT_ARM_ATTRIBUTES
-    ContentArray: [ 0x41, 0x00, 0x00, 0x00, 0x16, 0x61, 0x72, 0x6D, 0x61, 0x62,
-    0x69, 0x00, 0x01, 0x0b, 0x00, 0x00, 0x00, 0x04, 0x01, 0x06, 0x01, 0x08,
-    0x01 ]
+    ContentArray: [ 0x41, 0x00, 0x00, 0x00, 0x06, 0x61, 0x65, 0x61, 0x62, 0x69,
+    0x00 ]

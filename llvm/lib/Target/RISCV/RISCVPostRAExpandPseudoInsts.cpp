@@ -12,10 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/RISCVMatInt.h"
 #include "RISCV.h"
 #include "RISCVInstrInfo.h"
-#include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 
@@ -88,10 +86,6 @@ bool RISCVPostRAExpandPseudo::expandMovImm(MachineBasicBlock &MBB,
   DebugLoc DL = MBBI->getDebugLoc();
 
   int64_t Val = MBBI->getOperand(1).getImm();
-
-  RISCVMatInt::InstSeq Seq =
-      RISCVMatInt::generateInstSeq(Val, MBB.getParent()->getSubtarget());
-  assert(!Seq.empty());
 
   Register DstReg = MBBI->getOperand(0).getReg();
   bool DstIsDead = MBBI->getOperand(0).isDead();

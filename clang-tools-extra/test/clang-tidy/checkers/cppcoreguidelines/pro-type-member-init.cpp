@@ -243,7 +243,7 @@ struct PositiveUninitializedBaseOrdering : public NegativeAggregateType,
 };
 
 // We shouldn't need to initialize anything because PositiveUninitializedBase
-// has a user-defined constructor.
+// has a user-provided constructor.
 struct NegativeUninitializedBase : public PositiveUninitializedBase {
   NegativeUninitializedBase() {}
 };

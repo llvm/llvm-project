@@ -428,7 +428,7 @@ public:
   ///     The section offset based address for this function.
   Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
            lldb::user_id_t func_type_uid, const Mangled &mangled,
-           Type *func_type, const AddressRange &range);
+           Type *func_type, AddressRanges ranges);
 
   /// Destructor.
   ~Function() override;
@@ -457,7 +457,8 @@ public:
   ///
   /// \param[out] line_no
   ///     The line number.
-  void GetStartLineSourceInfo(FileSpec &source_file, uint32_t &line_no);
+  void GetStartLineSourceInfo(lldb::SupportFileSP &source_file_sp,
+                              uint32_t &line_no);
 
   /// Find the file and line number of the source location of the end of the
   /// function.
@@ -649,8 +650,12 @@ protected:
   /// All lexical blocks contained in this function.
   Block m_block;
 
+  /// List of address ranges belonging to the function.
+  AddressRanges m_ranges;
+
   /// The function address range that covers the widest range needed to contain
-  /// all blocks
+  /// all blocks. DEPRECATED: do not use this field in new code as the range may
+  /// include addresses belonging to other functions.
   AddressRange m_range;
 
   /// The frame base expression for variables that are relative to the frame

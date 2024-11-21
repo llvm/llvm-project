@@ -13,7 +13,7 @@
 extern "C" {
 
 void __stack_chk_fail(void) {
-  LIBC_NAMESPACE::write_to_stderr("stack smashing detected");
+  LIBC_NAMESPACE::write_to_stderr("stack smashing detected\n");
   LIBC_NAMESPACE::abort();
 }
 

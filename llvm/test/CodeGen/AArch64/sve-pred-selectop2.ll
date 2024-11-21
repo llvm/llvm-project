@@ -1505,9 +1505,9 @@ define <vscale x 2 x i64> @sub_nxv2i64_y(<vscale x 2 x i64> %x, <vscale x 2 x i6
 ; CHECK-LABEL: sub_nxv2i64_y:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    sub z0.d, z0.d, z1.d
 ; CHECK-NEXT:    cmpgt p0.d, p0/z, z2.d, #0
-; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    subr z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 2 x i64> %n, zeroinitializer
@@ -1520,9 +1520,9 @@ define <vscale x 4 x i32> @sub_nxv4i32_y(<vscale x 4 x i32> %x, <vscale x 4 x i3
 ; CHECK-LABEL: sub_nxv4i32_y:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    sub z0.s, z0.s, z1.s
 ; CHECK-NEXT:    cmpgt p0.s, p0/z, z2.s, #0
-; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    subr z1.s, p0/m, z1.s, z0.s
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 4 x i32> %n, zeroinitializer
@@ -1535,9 +1535,9 @@ define <vscale x 8 x i16> @sub_nxv8i16_y(<vscale x 8 x i16> %x, <vscale x 8 x i1
 ; CHECK-LABEL: sub_nxv8i16_y:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    sub z0.h, z0.h, z1.h
 ; CHECK-NEXT:    cmpgt p0.h, p0/z, z2.h, #0
-; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
+; CHECK-NEXT:    subr z1.h, p0/m, z1.h, z0.h
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 8 x i16> %n, zeroinitializer
@@ -1550,9 +1550,9 @@ define <vscale x 16 x i8> @sub_nxv16i8_y(<vscale x 16 x i8> %x, <vscale x 16 x i
 ; CHECK-LABEL: sub_nxv16i8_y:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    sub z0.b, z0.b, z1.b
 ; CHECK-NEXT:    cmpgt p0.b, p0/z, z2.b, #0
-; CHECK-NEXT:    sel z0.b, p0, z0.b, z1.b
+; CHECK-NEXT:    subr z1.b, p0/m, z1.b, z0.b
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 16 x i8> %n, zeroinitializer
@@ -2517,10 +2517,10 @@ define <vscale x 4 x float> @fsub_nxv4f32_y(<vscale x 4 x float> %x, <vscale x 4
 ; CHECK-LABEL: fsub_nxv4f32_y:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fsub z0.s, z0.s, z1.s
 ; CHECK-NEXT:    fcmle p1.s, p0/z, z2.s, #0.0
 ; CHECK-NEXT:    not p0.b, p0/z, p1.b
-; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    fsubr z1.s, p0/m, z1.s, z0.s
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 4 x float> %n, zeroinitializer
@@ -2533,10 +2533,10 @@ define <vscale x 8 x half> @fsub_nxv8f16_y(<vscale x 8 x half> %x, <vscale x 8 x
 ; CHECK-LABEL: fsub_nxv8f16_y:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    fsub z0.h, z0.h, z1.h
 ; CHECK-NEXT:    fcmle p1.h, p0/z, z2.h, #0.0
 ; CHECK-NEXT:    not p0.b, p0/z, p1.b
-; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
+; CHECK-NEXT:    fsubr z1.h, p0/m, z1.h, z0.h
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 8 x half> %n, zeroinitializer
@@ -2549,10 +2549,10 @@ define <vscale x 2 x double> @fsub_nxv2f64_y(<vscale x 2 x double> %x, <vscale x
 ; CHECK-LABEL: fsub_nxv2f64_y:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    fsub z0.d, z0.d, z1.d
 ; CHECK-NEXT:    fcmle p1.d, p0/z, z2.d, #0.0
 ; CHECK-NEXT:    not p0.b, p0/z, p1.b
-; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    fsubr z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 2 x double> %n, zeroinitializer

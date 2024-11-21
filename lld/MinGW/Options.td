@@ -139,6 +139,8 @@ defm threads
 defm tsaware: B_disable<"tsaware",
     "Set the 'Terminal Server aware' flag", "Don't set the 'Terminal Server aware' flag">;
 defm undefined: Eq<"undefined", "Include symbol in the link, if available">;
+defm undefined_glob: EEq<"undefined-glob", "Force undefined symbol during linking">,
+  MetaVarName<"<pattern>">;
 defm whole_archive: B<"whole-archive",
     "Include all object files for following archives",
     "No longer include all object files for following archives">;
@@ -213,6 +215,9 @@ defm error_limit:
 def build_id: J<"build-id=">, HelpText<"Generate build ID note (pass none to disable)">, 
   MetaVarName<"<arg>">;
 def : F<"build-id">, Alias<build_id>, HelpText<"Alias for --build-id=">;
+def functionpadmin: J<"functionpadmin=">, HelpText<"Prepares an image for hotpatching">,
+  MetaVarName<"<arg>">;
+def : F<"functionpadmin">, Alias<functionpadmin>, HelpText<"Alias for --functionpadmin=">;
 
 // Alias
 def alias_Bdynamic_call_shared: Flag<["-"], "call_shared">, Alias<Bdynamic>;
@@ -242,6 +247,9 @@ defm: EqNoHelp<"plugin">;
 defm: EqNoHelp<"sysroot">;
 def: F<"sort-common">;
 def: F<"start-group">;
+
+// Ignored options, that produce warnings
+defm rpath: EqNoHelp<"rpath">;
 
 // Ignore GCC collect2 LTO plugin related options. Note that we don't support
 // GCC LTO, but GCC collect2 passes these options even in non-LTO mode.

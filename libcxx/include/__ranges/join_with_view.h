@@ -100,15 +100,15 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit join_with_view(_Range&& __r, range_value_t<_InnerRng> __e)
       : __base_(views::all(std::forward<_Range>(__r))), __pattern_(views::single(std::move(__e))) {}
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
     requires copy_constructible<_View>
   {
     return __base_;
   }
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI constexpr auto begin() {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() {
     if constexpr (forward_range<_View>) {
       constexpr bool __use_const = __simple_view<_View> && is_reference_v<_InnerRng> && __simple_view<_Pattern>;
       return __iterator<__use_const>{*this, ranges::begin(__base_)};
@@ -118,14 +118,14 @@ public:
     }
   }
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
     requires forward_range<const _View> && forward_range<const _Pattern> &&
              is_reference_v<range_reference_t<const _View>> && input_range<range_reference_t<const _View>>
   {
     return __iterator<true>{*this, ranges::begin(__base_)};
   }
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
     constexpr bool __use_const = __simple_view<_View> && __simple_view<_Pattern>;
     if constexpr (forward_range<_View> && is_reference_v<_InnerRng> && forward_range<_InnerRng> &&
                   common_range<_View> && common_range<_InnerRng>)
@@ -134,7 +134,7 @@ public:
       return __sentinel<__use_const>{*this};
   }
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
     requires forward_range<const _View> && forward_range<const _Pattern> &&
              is_reference_v<range_reference_t<const _View>> && input_range<range_reference_t<const _View>>
   {
@@ -312,7 +312,7 @@ public:
     }
   }
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const {
     using __reference = common_reference_t<iter_reference_t<_InnerIter>, iter_reference_t<_PatternIter>>;
     return std::visit([](auto& __it) -> __reference { return *__it; }, __inner_it_);
   }
@@ -373,13 +373,13 @@ public:
     return __tmp;
   }
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __iterator& __y)
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __iterator& __y)
     requires __ref_is_glvalue && forward_range<_Base> && equality_comparable<_InnerIter>
   {
     return __x.__outer_it_ == __y.__outer_it_ && __x.__inner_it_ == __y.__inner_it_;
   }
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI friend constexpr decltype(auto) iter_move(const __iterator& __x) {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI friend constexpr decltype(auto) iter_move(const __iterator& __x) {
     using __rvalue_reference =
         common_reference_t<iter_rvalue_reference_t<_InnerIter>, iter_rvalue_reference_t<_PatternIter>>;
     return std::visit<__rvalue_reference>(ranges::iter_move, __x.__inner_it_);
@@ -416,7 +416,7 @@ public:
 
   template <bool _OtherConst>
     requires sentinel_for<sentinel_t<_Base>, iterator_t<__maybe_const<_OtherConst, _View>>>
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI friend constexpr bool
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI friend constexpr bool
   operator==(const __iterator<_OtherConst>& __x, const __sentinel& __y) {
     return __x.__get_outer() == __y.__end_;
   }
@@ -426,7 +426,7 @@ namespace views {
 namespace __join_with_view {
 struct __fn {
   template <class _Range, class _Pattern>
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Pattern&& __pattern) const
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Pattern&& __pattern) const
       noexcept(noexcept(/**/ join_with_view(std::forward<_Range>(__range), std::forward<_Pattern>(__pattern))))
           -> decltype(/*--*/ join_with_view(std::forward<_Range>(__range), std::forward<_Pattern>(__pattern))) {
     return /*-------------*/ join_with_view(std::forward<_Range>(__range), std::forward<_Pattern>(__pattern));
@@ -434,9 +434,9 @@ struct __fn {
 
   template <class _Pattern>
     requires constructible_from<decay_t<_Pattern>, _Pattern>
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Pattern&& __pattern) const
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Pattern&& __pattern) const
       noexcept(is_nothrow_constructible_v<decay_t<_Pattern>, _Pattern>) {
-    return __range_adaptor_closure_t(std::__bind_back(*this, std::forward<_Pattern>(__pattern)));
+    return __pipeable(std::__bind_back(*this, std::forward<_Pattern>(__pattern)));
   }
 };
 } // namespace __join_with_view

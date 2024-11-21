@@ -7,9 +7,9 @@ target datalayout = "e-p:64:64:64"
 ; CHECK-LABEL: @test(
 ; CHECK: %tmp33.pre = load i16, ptr %P, align 2, !tbaa !0
 ; CHECK: br label %for.body
-define void @test(ptr %P, ptr %Q) nounwind {
+define void @test(ptr %P, ptr %Q, i1 %arg) nounwind {
 entry:
-  br i1 undef, label %bb.nph, label %for.end
+  br i1 %arg, label %bb.nph, label %for.end
 
 bb.nph:                                           ; preds = %entry
   br label %for.body

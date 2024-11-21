@@ -20,7 +20,6 @@
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/LoopRotationUtils.h"
@@ -64,11 +63,12 @@ PreservedAnalyses LoopRotatePass::run(Loop &L, LoopAnalysisManager &AM,
   // Vectorization requires loop-rotation. Use default threshold for loops the
   // user explicitly marked for vectorization, even when header duplication is
   // disabled.
-  int Threshold = EnableHeaderDuplication ||
-                          hasVectorizeTransformation(&L) == TM_ForcedByUser
-                      ? DefaultRotationThreshold
-                      : 0;
-  const DataLayout &DL = L.getHeader()->getModule()->getDataLayout();
+  int Threshold =
+      (EnableHeaderDuplication && !L.getHeader()->getParent()->hasMinSize()) ||
+              hasVectorizeTransformation(&L) == TM_ForcedByUser
+          ? DefaultRotationThreshold
+          : 0;
+  const DataLayout &DL = L.getHeader()->getDataLayout();
   const SimplifyQuery SQ = getBestSimplifyQuery(AR, DL);
 
   std::optional<MemorySSAUpdater> MSSAU;

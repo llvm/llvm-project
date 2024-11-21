@@ -16,12 +16,10 @@ using namespace mlir;
 
 namespace {
 
-std::optional<Value> materializeAsUnrealizedCast(OpBuilder &builder,
-                                                 Type resultType,
-                                                 ValueRange inputs,
-                                                 Location loc) {
+Value materializeAsUnrealizedCast(OpBuilder &builder, Type resultType,
+                                  ValueRange inputs, Location loc) {
   if (inputs.size() != 1)
-    return std::nullopt;
+    return Value();
 
   return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
       .getResult(0);

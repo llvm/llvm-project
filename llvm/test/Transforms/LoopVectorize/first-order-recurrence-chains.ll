@@ -19,8 +19,8 @@ define i16 @test_chained_first_order_recurrences_1(ptr %ptr) {
 ; CHECK-NEXT:    br i1 [[TMP8]], label %middle.block, label %vector.body
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 2
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI3:%.*]] = extractelement <4 x i16> [[TMP4]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT2:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
 ;
 entry:
@@ -62,8 +62,8 @@ define i16 @test_chained_first_order_recurrences_2(ptr %ptr) {
 ; CHECK-NEXT:    br i1 [[TMP8]], label %middle.block, label %vector.body, !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:      middle.block:
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i16> [[TMP4]], i32 2
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI3:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT2:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
 ;
 entry:
@@ -108,10 +108,10 @@ define i16 @test_chained_first_order_recurrences_3(ptr %ptr) {
 ; CHECK-NEXT:    br i1 [[TMP10]], label %middle.block, label %vector.body, !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:      middle.block:
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 2
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI4:%.*]] = extractelement <4 x i16> [[TMP4]], i32 2
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI8:%.*]] = extractelement <4 x i16> [[TMP5]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT7:%.*]] = extractelement <4 x i16> [[TMP5]], i32 3
 ;
 entry:
@@ -170,7 +170,7 @@ define void @test_first_order_recurrences_incoming_cycle_preheader(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD]] = load <4 x i16>, ptr [[TMP2]], align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i16> [[VECTOR_RECUR]], <4 x i16> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i16> [[TMP4]], <i16 10, i16 10, i16 10, i16 10>
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i16> [[TMP4]], splat (i16 10)
 ; CHECK-NEXT:    store <4 x i16> [[TMP5]], ptr [[TMP2]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
@@ -220,10 +220,10 @@ define i16 @test_chained_first_order_recurrences_3_reordered_1(ptr %ptr) {
 ; CHECK-NEXT:    br i1 [[TMP10]], label %middle.block, label %vector.body, !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:      middle.block:
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI8:%.*]] = extractelement <4 x i16> [[TMP5]], i32 2
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT7:%.*]] = extractelement <4 x i16> [[TMP5]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI4:%.*]] = extractelement <4 x i16> [[TMP4]], i32 2
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT7:%.*]] = extractelement <4 x i16> [[TMP5]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
 ;
 entry:
@@ -271,10 +271,10 @@ define i16 @test_chained_first_order_recurrences_3_reordered_2(ptr %ptr) {
 ; CHECK-NEXT:    br i1 [[TMP10]], label %middle.block, label %vector.body, !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:      middle.block:
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI4:%.*]] = extractelement <4 x i16> [[TMP4]], i32 2
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI8:%.*]] = extractelement <4 x i16> [[TMP5]], i32 2
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT7:%.*]] = extractelement <4 x i16> [[TMP5]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT7:%.*]] = extractelement <4 x i16> [[TMP5]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
 ;
 entry:
@@ -314,7 +314,7 @@ define i16 @test_chained_first_order_recurrences_3_for2_no_other_uses(ptr %ptr) 
 ; CHECK-NEXT:    [[TMP4]] = shufflevector <4 x i16> [[VECTOR_RECUR]], <4 x i16> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP5]] = shufflevector <4 x i16> [[VECTOR_RECUR1]], <4 x i16> [[TMP4]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i16> [[VECTOR_RECUR2]], <4 x i16> [[TMP5]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i16> [[TMP4]], <i16 10, i16 10, i16 10, i16 10>
+; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i16> [[TMP4]], splat (i16 10)
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i16> [[TMP7]], [[TMP6]]
 ; CHECK-NEXT:    store <4 x i16> [[TMP8]], ptr [[TMP2]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -322,10 +322,10 @@ define i16 @test_chained_first_order_recurrences_3_for2_no_other_uses(ptr %ptr) 
 ; CHECK-NEXT:    br i1 [[TMP10]], label %middle.block, label %vector.body, !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:      middle.block:
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 2
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI4:%.*]] = extractelement <4 x i16> [[TMP4]], i32 2
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI8:%.*]] = extractelement <4 x i16> [[TMP5]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT7:%.*]] = extractelement <4 x i16> [[TMP5]], i32 3
 ;
 entry:
@@ -365,17 +365,17 @@ define i16 @test_chained_first_order_recurrences_3_for1_for2_no_other_uses(ptr %
 ; CHECK-NEXT:    [[TMP4]] = shufflevector <4 x i16> [[VECTOR_RECUR]], <4 x i16> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP5]] = shufflevector <4 x i16> [[VECTOR_RECUR1]], <4 x i16> [[TMP4]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i16> [[VECTOR_RECUR2]], <4 x i16> [[TMP5]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i16> [[TMP6]], <i16 10, i16 10, i16 10, i16 10>
+; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i16> [[TMP6]], splat (i16 10)
 ; CHECK-NEXT:    store <4 x i16> [[TMP8]], ptr [[TMP2]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP10]], label %middle.block, label %vector.body, !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:      middle.block:
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 2
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI4:%.*]] = extractelement <4 x i16> [[TMP4]], i32 2
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI8:%.*]] = extractelement <4 x i16> [[TMP5]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT7:%.*]] = extractelement <4 x i16> [[TMP5]], i32 3
 ;
 entry:
@@ -413,7 +413,7 @@ define double @test_chained_first_order_recurrence_sink_users_1(ptr %ptr) {
 ; CHECK-NEXT:    [[WIDE_LOAD]] = load <4 x double>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP4]] = shufflevector <4 x double> [[VECTOR_RECUR]], <4 x double> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[VECTOR_RECUR1]], <4 x double> [[TMP4]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP6:%.*]] = fadd <4 x double> <double 1.000000e+01, double 1.000000e+01, double 1.000000e+01, double 1.000000e+01>, [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd <4 x double> splat (double 1.000000e+01), [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd <4 x double> [[TMP6]], [[TMP4]]
 ; CHECK-NEXT:    store <4 x double> [[TMP7]], ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -421,8 +421,8 @@ define double @test_chained_first_order_recurrence_sink_users_1(ptr %ptr) {
 ; CHECK-NEXT:    br i1 [[TMP9]], label %middle.block, label %vector.body, !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x double> [[WIDE_LOAD]], i32 2
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x double> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI3:%.*]] = extractelement <4 x double> [[TMP4]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x double> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT2:%.*]] = extractelement <4 x double> [[TMP4]], i32 3
 ;
 entry:
@@ -480,11 +480,11 @@ define i64 @test_first_order_recurrences_and_induction(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> [[VECTOR_RECUR]], <4 x i64> [[VEC_IND]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[PTR:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[TMP1]], <i64 10, i64 10, i64 10, i64 10>
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[TMP1]], splat (i64 10)
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
 ; CHECK-NEXT:    store <4 x i64> [[TMP4]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP5]], label %middle.block, label %vector.body
 ; CHECK:       middle.block:
@@ -520,11 +520,11 @@ define i64 @test_first_order_recurrences_and_induction2(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> [[VECTOR_RECUR]], <4 x i64> [[VEC_IND]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[PTR:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[TMP1]], <i64 10, i64 10, i64 10, i64 10>
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[TMP1]], splat (i64 10)
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
 ; CHECK-NEXT:    store <4 x i64> [[TMP4]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP5]], label %middle.block, label %vector.body
 ; CHECK:       middle.block:
@@ -661,9 +661,10 @@ define double @test_resinking_required(ptr %p, ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT9:%.*]] = extractelement <4 x double> [[TMP4]], i32 3
 ; CHECK-NEXT:    br i1 true, label %End, label %scalar.ph
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    phi double [ 0.000000e+00, %Entry ], [ [[VECTOR_RECUR_EXTRACT9]], %middle.block ]
-; CHECK-NEXT:    phi double [ 0.000000e+00, %Entry ], [ [[TMP3]], %middle.block ]
-; CHECK-NEXT:    phi double [ 0.000000e+00, %Entry ], [ [[TMP0]], %middle.block ]
+; CHECK-NEXT:    %bc.resume.val = phi i64 [ 0, %middle.block ], [ 0, %Entry ]
+; CHECK-NEXT:    phi double [ [[TMP0]], %middle.block ], [ 0.000000e+00, %Entry ]
+; CHECK-NEXT:    phi double [ [[TMP3]], %middle.block ], [ 0.000000e+00, %Entry ]
+; CHECK-NEXT:    phi double [ [[VECTOR_RECUR_EXTRACT9]], %middle.block ], [ 0.000000e+00, %Entry ]
 ; CHECK:      End:
 ; CHECK-NEXT:    = phi double [ {{.+}}, %Loop ], [ [[TMP0]], %middle.block ]
 ; CHECK-NEXT:    = phi double [ {{.+}}, %Loop ], [ [[TMP3]], %middle.block ]

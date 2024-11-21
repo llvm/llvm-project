@@ -76,13 +76,16 @@ public:
   Register isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
                               unsigned &MemBytes) const override;
 
+  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+
   void copyPhysRegVector(MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                          MCRegister DstReg, MCRegister SrcReg, bool KillSrc,
                          const TargetRegisterClass *RegClass) const;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                    const DebugLoc &DL, MCRegister DstReg, MCRegister SrcReg,
-                   bool KillSrc) const override;
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
 
   void storeRegToStackSlot(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI, Register SrcReg,
@@ -203,12 +206,16 @@ public:
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
 
   // Calculate target-specific information for a set of outlining candidates.
-  std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
-      std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
+  std::optional<std::unique_ptr<outliner::OutlinedFunction>>
+  getOutliningCandidateInfo(
+      const MachineModuleInfo &MMI,
+      std::vector<outliner::Candidate> &RepeatedSequenceLocs,
+      unsigned MinRepeats) const override;
 
   // Return if/how a given MachineInstr should be outlined.
   virtual outliner::InstrType
-  getOutliningTypeImpl(MachineBasicBlock::iterator &MBBI,
+  getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                       MachineBasicBlock::iterator &MBBI,
                        unsigned Flags) const override;
 
   // Insert a custom frame for outlined functions.
@@ -284,20 +291,7 @@ public:
   ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>
   getSerializableMachineMemOperandTargetFlags() const override;
 
-  unsigned getUndefInitOpcode(unsigned RegClassID) const override {
-    switch (RegClassID) {
-    case RISCV::VRRegClassID:
-      return RISCV::PseudoRVVInitUndefM1;
-    case RISCV::VRM2RegClassID:
-      return RISCV::PseudoRVVInitUndefM2;
-    case RISCV::VRM4RegClassID:
-      return RISCV::PseudoRVVInitUndefM4;
-    case RISCV::VRM8RegClassID:
-      return RISCV::PseudoRVVInitUndefM8;
-    default:
-      llvm_unreachable("Unexpected register class.");
-    }
-  }
+  unsigned getTailDuplicateSize(CodeGenOptLevel OptLevel) const override;
 
 protected:
   const RISCVSubtarget &STI;
@@ -345,8 +339,15 @@ std::optional<unsigned> getVectorLowDemandedScalarBits(uint16_t Opcode,
 // Returns the MC opcode of RVV pseudo instruction.
 unsigned getRVVMCOpcode(unsigned RVVPseudoOpcode);
 
+// For a (non-pseudo) RVV instruction \p Desc and the given \p Log2SEW, returns
+// the log2 EEW of the destination operand.
+unsigned getDestLog2EEW(const MCInstrDesc &Desc, unsigned Log2SEW);
+
 // Special immediate for AVL operand of V pseudo instructions to indicate VLMax.
 static constexpr int64_t VLMaxSentinel = -1LL;
+
+/// Given two VL operands, do we know that LHS <= RHS?
+bool isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS);
 
 // Mask assignments for floating-point
 static constexpr unsigned FPMASK_Negative_Infinity = 0x001;
@@ -379,7 +380,6 @@ struct RISCVMaskedPseudoInfo {
   uint16_t MaskedPseudo;
   uint16_t UnmaskedPseudo;
   uint8_t MaskOpIdx;
-  uint8_t MaskAffectsResult : 1;
 };
 #define GET_RISCVMaskedPseudosTable_DECL
 #include "RISCVGenSearchableTables.inc"

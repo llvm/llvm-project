@@ -164,20 +164,20 @@ rarely have to include this file directly).
   efficient to use the ``InstVisitor`` class to dispatch over the instruction
   type directly.
 
-``isa_and_nonnull<>``:
-  The ``isa_and_nonnull<>`` operator works just like the ``isa<>`` operator,
+``isa_and_present<>``:
+  The ``isa_and_present<>`` operator works just like the ``isa<>`` operator,
   except that it allows for a null pointer as an argument (which it then
   returns false).  This can sometimes be useful, allowing you to combine several
   null checks into one.
 
-``cast_or_null<>``:
-  The ``cast_or_null<>`` operator works just like the ``cast<>`` operator,
+``cast_if_present<>``:
+  The ``cast_if_present<>`` operator works just like the ``cast<>`` operator,
   except that it allows for a null pointer as an argument (which it then
   propagates).  This can sometimes be useful, allowing you to combine several
   null checks into one.
 
-``dyn_cast_or_null<>``:
-  The ``dyn_cast_or_null<>`` operator works just like the ``dyn_cast<>``
+``dyn_cast_if_present<>``:
+  The ``dyn_cast_if_present<>`` operator works just like the ``dyn_cast<>``
   operator, except that it allows for a null pointer as an argument (which it
   then propagates).  This can sometimes be useful, allowing you to combine
   several null checks into one.
@@ -1363,7 +1363,7 @@ Whatever code you want that control, use ``DebugCounter::shouldExecute`` to cont
     I->eraseFromParent();
 
 That's all you have to do. Now, using opt, you can control when this code triggers using
-the '``--debug-counter``' Options.To specify when to execute the codepath.
+the '``--debug-counter``' Options. To specify when to execute the codepath.
 
 .. code-block:: none
 
@@ -1392,6 +1392,7 @@ How to use reduce-chunk-list:
 First, Figure out the number of calls to the debug counter you want to minimize.
 To do so, run the compilation command causing you want to minimize with `-print-debug-counter` adding a `-mllvm` if needed.
 Than find the line with the counter of interest. it should look like:
+
 .. code-block:: none
 
   my-counter               : {5678,empty}
@@ -1400,6 +1401,7 @@ The number of calls to `my-counter` is 5678
 
 Than Find the minimum set of chunks that is interesting, with `reduce-chunk-list`.
 Build a reproducer script like:
+
 .. code-block:: bash
 
   #! /bin/bash
@@ -2066,8 +2068,10 @@ insertion/deleting/queries with low constant factors) and is very stingy with
 malloc traffic.
 
 Note that, unlike :ref:`std::set <dss_set>`, the iterators of ``SmallPtrSet``
-are invalidated whenever an insertion occurs.  Also, the values visited by the
-iterators are not visited in sorted order.
+are invalidated whenever an insertion or erasure occurs. The ``remove_if``
+method can be used to remove elements while iterating over the set.
+
+Also, the values visited by the iterators are not visited in sorted order.
 
 .. _dss_stringset:
 

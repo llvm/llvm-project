@@ -218,7 +218,7 @@ void ARMAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind)
   // Emit "B #20" instruction, which jumps over the next 24 bytes (because
   // register pc is 8 bytes ahead of the jump instruction by the moment CPU
   // is executing it).
-  // By analogy to ARMAsmPrinter::emitPseudoExpansionLowering() |case ARM::B|.
+  // By analogy to ARMAsmPrinter::lowerPseudoInstExpansion() |case ARM::B|.
   // It is not clear why |addReg(0)| is needed (the last operand).
   EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::Bcc).addImm(20)
     .addImm(ARMCC::AL).addReg(0));

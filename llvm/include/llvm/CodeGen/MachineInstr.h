@@ -119,6 +119,7 @@ public:
     Disjoint = 1 << 19,      // Each bit is zero in at least one of the inputs.
     NoUSWrap = 1 << 20,      // Instruction supports geps
                              // no unsigned signed wrap.
+    SameSign = 1 << 21       // Both operands have the same sign.
   };
 
 private:
@@ -303,6 +304,9 @@ private:
   /// Unique instruction number. Used by DBG_INSTR_REFs to refer to the values
   /// defined by this instruction.
   unsigned DebugInstrNum;
+
+  /// Cached opcode from MCID.
+  uint16_t Opcode;
 
   // Intrusive list support
   friend struct ilist_traits<MachineInstr>;
@@ -563,7 +567,7 @@ public:
   const MCInstrDesc &getDesc() const { return *MCID; }
 
   /// Returns the opcode of this MachineInstr.
-  unsigned getOpcode() const { return MCID->Opcode; }
+  unsigned getOpcode() const { return Opcode; }
 
   /// Retuns the total number of operands.
   unsigned getNumOperands() const { return NumOperands; }
@@ -639,7 +643,7 @@ public:
   /// Returns true if the instruction has implicit definition.
   bool hasImplicitDef() const {
     for (const MachineOperand &MO : implicit_operands())
-      if (MO.isDef() && MO.isImplicit())
+      if (MO.isDef())
         return true;
     return false;
   }
@@ -725,7 +729,7 @@ public:
     return make_range(operands_begin(),
                       operands_begin() + getNumExplicitDefs());
   }
-  /// Returns a range that includes all operands that are register uses.
+  /// Returns a range that includes all operands which may be register uses.
   /// This may include unrelated operands which are not register uses.
   iterator_range<mop_iterator> uses() {
     return make_range(operands_begin() + getNumExplicitDefs(), operands_end());
@@ -1320,6 +1324,11 @@ public:
     return getOpcode() == TargetOpcode::ANNOTATION_LABEL;
   }
 
+  bool isLifetimeMarker() const {
+    return getOpcode() == TargetOpcode::LIFETIME_START ||
+           getOpcode() == TargetOpcode::LIFETIME_END;
+  }
+
   /// Returns true if the MachineInstr represents a label.
   bool isLabel() const {
     return isEHLabel() || isGCLabel() || isAnnotationLabel();
@@ -1431,6 +1440,8 @@ public:
   bool isExtractSubreg() const {
     return getOpcode() == TargetOpcode::EXTRACT_SUBREG;
   }
+
+  bool isFakeUse() const { return getOpcode() == TargetOpcode::FAKE_USE; }
 
   /// Return true if the instruction behaves like a copy.
   /// This does not include native copy instructions.
@@ -1720,7 +1731,11 @@ public:
   /// Return true if it is safe to move this instruction. If
   /// SawStore is set to true, it means that there is a store (or call) between
   /// the instruction's location and its intended destination.
-  bool isSafeToMove(AAResults *AA, bool &SawStore) const;
+  bool isSafeToMove(bool &SawStore) const;
+
+  /// Return true if this instruction would be trivially dead if all of its
+  /// defined registers were dead.
+  bool wouldBeTriviallyDead() const;
 
   /// Returns true if this instruction's memory access aliases the memory
   /// access of Other.
@@ -1750,8 +1765,8 @@ public:
   bool isDereferenceableInvariantLoad() const;
 
   /// If the specified instruction is a PHI that always merges together the
-  /// same virtual register, return the register, otherwise return 0.
-  unsigned isConstantValuePHI() const;
+  /// same virtual register, return the register, otherwise return Register().
+  Register isConstantValuePHI() const;
 
   /// Return true if this instruction has side effects that are not modeled
   /// by mayLoad / mayStore, etc.

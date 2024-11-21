@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -fsyntax-only -verify -fptrauth-intrinsics %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -fsyntax-only -verify -fptrauth-intrinsics %s -fexperimental-new-constant-interpreter
 
 #if __has_feature(ptrauth_intrinsics)
 #warning Pointer authentication enabled!

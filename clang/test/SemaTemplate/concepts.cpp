@@ -1006,7 +1006,14 @@ template<class>
 concept Irrelevant = false;
 
 template <typename T>
-concept ErrorRequires = requires(ErrorRequires auto x) { x; }; // expected-error {{unknown type name 'ErrorRequires'}}
+concept ErrorRequires = requires(ErrorRequires auto x) { x; };
+// expected-error@-1 {{a concept definition cannot refer to itself}} \
+// expected-error@-1 {{'auto' not allowed in requires expression parameter}} \
+// expected-note@-1 {{declared here}}
+
+template<typename T> concept C1 = C1<T> && []<C1>(C1 auto) -> C1 auto {};
+//expected-error@-1 4{{a concept definition cannot refer to itself}} \
+//expected-note@-1 4{{declared here}}
 
 template<class T> void aaa(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
 requires (False<T> || False<T>) || False<T> {} // expected-note 3 {{'int' does not satisfy 'False'}}
@@ -1144,3 +1151,17 @@ int test() {
 }
 
 }
+
+namespace GH109780 {
+
+template <typename T>
+concept Concept; // expected-error {{expected '='}}
+
+bool val = Concept<int>;
+
+template <typename T>
+concept C = invalid; // expected-error {{use of undeclared identifier 'invalid'}}
+
+bool val2 = C<int>;
+
+} // namespace GH109780

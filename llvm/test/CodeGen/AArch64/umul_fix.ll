@@ -145,3 +145,17 @@ define <4 x i64> @vec3(<4 x i64> %x, <4 x i64> %y) nounwind {
   %tmp = call <4 x i64> @llvm.umul.fix.v4i64(<4 x i64> %x, <4 x i64> %y, i32 32)
   ret <4 x i64> %tmp
 }
+
+define <4 x i16> @widemul(<4 x i16> %x, <4 x i16> %y) nounwind {
+; CHECK-LABEL: widemul:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umull v0.4s, v0.4h, v1.4h
+; CHECK-NEXT:    shrn v1.4h, v0.4s, #16
+; CHECK-NEXT:    xtn v2.4h, v0.4s
+; CHECK-NEXT:    add v1.4h, v1.4h, v1.4h
+; CHECK-NEXT:    shl v0.4h, v1.4h, #11
+; CHECK-NEXT:    usra v0.4h, v2.4h, #4
+; CHECK-NEXT:    ret
+  %tmp = call <4 x i16> @llvm.umul.fix.v4i16(<4 x i16> %x, <4 x i16> %y, i32 4)
+  ret <4 x i16> %tmp
+}

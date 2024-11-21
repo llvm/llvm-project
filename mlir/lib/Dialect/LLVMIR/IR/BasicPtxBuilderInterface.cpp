@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h"
-#include "mlir/Support/LogicalResult.h"
 
 #define DEBUG_TYPE "ptx-builder"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
@@ -100,14 +99,12 @@ void PtxBuilder::insertValue(Value v, PTXRegisterMod itype) {
       } else {
         ss << getModifier() << getRegisterType(t) << ",";
       }
-      ss.flush();
     }
     return;
   }
   // Handle Scalars
   addValue(v);
   ss << getModifier() << getRegisterType(v) << ",";
-  ss.flush();
 }
 
 LLVM::InlineAsmOp PtxBuilder::build() {

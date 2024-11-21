@@ -57,7 +57,7 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasBulkMemory = false;
   bool HasExceptionHandling = false;
   bool HasExtendedConst = false;
-  bool HasHalfPrecision = false;
+  bool HasFP16 = false;
   bool HasMultiMemory = false;
   bool HasMultivalue = false;
   bool HasMutableGlobals = false;
@@ -65,6 +65,7 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasReferenceTypes = false;
   bool HasSignExt = false;
   bool HasTailCall = false;
+  bool HasWideArithmetic = false;
 
   std::string ABI;
 
@@ -90,9 +91,7 @@ public:
 
   StringRef getABI() const override;
   bool setABI(const std::string &Name) override;
-  bool useFP16ConversionIntrinsics() const override {
-    return !HasHalfPrecision;
-  }
+  bool useFP16ConversionIntrinsics() const override { return !HasFP16; }
 
 protected:
   void getTargetDefines(const LangOptions &Opts,
@@ -125,10 +124,10 @@ private:
     return VoidPtrBuiltinVaList;
   }
 
-  ArrayRef<const char *> getGCCRegNames() const final { return std::nullopt; }
+  ArrayRef<const char *> getGCCRegNames() const final { return {}; }
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const final {
-    return std::nullopt;
+    return {};
   }
 
   bool validateAsmConstraint(const char *&Name,

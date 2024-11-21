@@ -37,6 +37,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <stack>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -48,13 +49,10 @@ using namespace coverage;
 #define DEBUG_TYPE "coverage-mapping"
 
 Counter CounterExpressionBuilder::get(const CounterExpression &E) {
-  auto It = ExpressionIndices.find(E);
-  if (It != ExpressionIndices.end())
-    return Counter::getExpression(It->second);
-  unsigned I = Expressions.size();
-  Expressions.push_back(E);
-  ExpressionIndices[E] = I;
-  return Counter::getExpression(I);
+  auto [It, Inserted] = ExpressionIndices.try_emplace(E, Expressions.size());
+  if (Inserted)
+    Expressions.push_back(E);
+  return Counter::getExpression(It->second);
 }
 
 void CounterExpressionBuilder::extractTerms(Counter C, int Factor,
@@ -505,7 +503,7 @@ public:
       const auto &BranchParams = B->getBranchParams();
       PosToID[I] = BranchParams.ID;
       CondLoc[I] = B->startLoc();
-      Folded[I++] = (B->Count.isZero() && B->FalseCount.isZero());
+      Folded[I++] = (B->Count.isZero() || B->FalseCount.isZero());
     }
 
     // Using Profile Bitmap from runtime, mark the executed test vectors.
@@ -1532,9 +1530,9 @@ LineCoverageStats::LineCoverageStats(
 
   // if there is any starting segment at this line with a counter, it must be
   // mapped
-  Mapped |= std::any_of(
-      LineSegments.begin(), LineSegments.end(),
-      [](const auto *Seq) { return Seq->IsRegionEntry && Seq->HasCount; });
+  Mapped |= any_of(LineSegments, [](const auto *Seq) {
+    return Seq->IsRegionEntry && Seq->HasCount;
+  });
 
   if (!Mapped) {
     return;

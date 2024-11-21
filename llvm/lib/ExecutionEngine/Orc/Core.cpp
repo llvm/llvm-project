@@ -276,47 +276,6 @@ void AsynchronousSymbolQuery::detach() {
   QueryRegistrations.clear();
 }
 
-AbsoluteSymbolsMaterializationUnit::AbsoluteSymbolsMaterializationUnit(
-    SymbolMap Symbols)
-    : MaterializationUnit(extractFlags(Symbols)), Symbols(std::move(Symbols)) {}
-
-StringRef AbsoluteSymbolsMaterializationUnit::getName() const {
-  return "<Absolute Symbols>";
-}
-
-void AbsoluteSymbolsMaterializationUnit::materialize(
-    std::unique_ptr<MaterializationResponsibility> R) {
-  // Even though these are just absolute symbols we need to check for failure
-  // to resolve/emit: the tracker for these symbols may have been removed while
-  // the materialization was in flight (e.g. due to a failure in some action
-  // triggered by the queries attached to the resolution/emission of these
-  // symbols).
-  if (auto Err = R->notifyResolved(Symbols)) {
-    R->getExecutionSession().reportError(std::move(Err));
-    R->failMaterialization();
-    return;
-  }
-  if (auto Err = R->notifyEmitted({})) {
-    R->getExecutionSession().reportError(std::move(Err));
-    R->failMaterialization();
-    return;
-  }
-}
-
-void AbsoluteSymbolsMaterializationUnit::discard(const JITDylib &JD,
-                                                 const SymbolStringPtr &Name) {
-  assert(Symbols.count(Name) && "Symbol is not part of this MU");
-  Symbols.erase(Name);
-}
-
-MaterializationUnit::Interface
-AbsoluteSymbolsMaterializationUnit::extractFlags(const SymbolMap &Symbols) {
-  SymbolFlagsMap Flags;
-  for (const auto &[Name, Def] : Symbols)
-    Flags[Name] = Def.getFlags();
-  return MaterializationUnit::Interface(std::move(Flags), nullptr);
-}
-
 ReExportsMaterializationUnit::ReExportsMaterializationUnit(
     JITDylib *SourceJD, JITDylibLookupFlags SourceJDLookupFlags,
     SymbolAliasMap Aliases)
@@ -932,13 +891,21 @@ Error JITDylib::resolve(MaterializationResponsibility &MR,
           if (SymI->second.getFlags().hasError())
             SymbolsInErrorState.insert(KV.first);
           else {
-            auto Flags = KV.second.getFlags();
-            Flags &= ~JITSymbolFlags::Common;
-            assert(Flags ==
-                       (SymI->second.getFlags() & ~JITSymbolFlags::Common) &&
-                   "Resolved flags should match the declared flags");
+            if (SymI->second.getFlags() & JITSymbolFlags::Common) {
+              [[maybe_unused]] auto WeakOrCommon =
+                  JITSymbolFlags::Weak | JITSymbolFlags::Common;
+              assert((KV.second.getFlags() & WeakOrCommon) &&
+                     "Common symbols must be resolved as common or weak");
+              assert((KV.second.getFlags() & ~WeakOrCommon) ==
+                         (SymI->second.getFlags() & ~JITSymbolFlags::Common) &&
+                     "Resolving symbol with incorrect flags");
 
-            Worklist.push_back({SymI, {KV.second.getAddress(), Flags}});
+            } else
+              assert(KV.second.getFlags() == SymI->second.getFlags() &&
+                     "Resolved flags should match the declared flags");
+
+            Worklist.push_back(
+                {SymI, {KV.second.getAddress(), SymI->second.getFlags()}});
           }
         }
 
@@ -1266,7 +1233,7 @@ JITDylib::JITDylib(ExecutionSession &ES, std::string Name)
 
 std::pair<JITDylib::AsynchronousSymbolQuerySet,
           std::shared_ptr<SymbolDependenceMap>>
-JITDylib::removeTracker(ResourceTracker &RT) {
+JITDylib::IL_removeTracker(ResourceTracker &RT) {
   // Note: Should be called under the session lock.
   assert(State != Closed && "JD is defunct");
 
@@ -1305,9 +1272,7 @@ JITDylib::removeTracker(ResourceTracker &RT) {
       SymbolsToFail.push_back(Sym);
   }
 
-  AsynchronousSymbolQuerySet QueriesToFail;
-  auto Result = ES.runSessionLocked(
-      [&]() { return ES.IL_failSymbols(*this, std::move(SymbolsToFail)); });
+  auto Result = ES.IL_failSymbols(*this, std::move(SymbolsToFail));
 
   // Removed symbols should be taken out of the table altogether.
   for (auto &Sym : SymbolsToRemove) {
@@ -2198,7 +2163,8 @@ Error ExecutionSession::removeResourceTracker(ResourceTracker &RT) {
   runSessionLocked([&] {
     CurrentResourceManagers = ResourceManagers;
     RT.makeDefunct();
-    std::tie(QueriesToFail, FailedSymbols) = RT.getJITDylib().removeTracker(RT);
+    std::tie(QueriesToFail, FailedSymbols) =
+        RT.getJITDylib().IL_removeTracker(RT);
   });
 
   Error Err = Error::success();
@@ -2900,9 +2866,16 @@ Error ExecutionSession::OL_notifyResolved(MaterializationResponsibility &MR,
            "Resolving symbol outside this responsibility set");
     assert(!I->second.hasMaterializationSideEffectsOnly() &&
            "Can't resolve materialization-side-effects-only symbol");
-    assert((KV.second.getFlags() & ~JITSymbolFlags::Common) ==
-               (I->second & ~JITSymbolFlags::Common) &&
-           "Resolving symbol with incorrect flags");
+    if (I->second & JITSymbolFlags::Common) {
+      auto WeakOrCommon = JITSymbolFlags::Weak | JITSymbolFlags::Common;
+      assert((KV.second.getFlags() & WeakOrCommon) &&
+             "Common symbols must be resolved as common or weak");
+      assert((KV.second.getFlags() & ~WeakOrCommon) ==
+                 (I->second & ~JITSymbolFlags::Common) &&
+             "Resolving symbol with incorrect flags");
+    } else
+      assert(KV.second.getFlags() == I->second &&
+             "Resolving symbol with incorrect flags");
   }
 #endif
 
@@ -3593,6 +3566,21 @@ ExecutionSession::IL_failSymbols(JITDylib &JD,
       assert(MI.DefiningEDU->Symbols.count(NonOwningSymbolStringPtr(Name)) &&
              "Symbol does not appear in its DefiningEDU");
       MI.DefiningEDU->Symbols.erase(NonOwningSymbolStringPtr(Name));
+
+      // Remove this EDU from the dependants lists of its dependencies.
+      for (auto &[DepJD, DepSyms] : MI.DefiningEDU->Dependencies) {
+        for (auto DepSym : DepSyms) {
+          assert(DepJD->Symbols.count(SymbolStringPtr(DepSym)) &&
+                 "DepSym not in DepJD");
+          assert(DepJD->MaterializingInfos.count(SymbolStringPtr(DepSym)) &&
+                 "DepSym has not MaterializingInfo");
+          auto &SymMI = DepJD->MaterializingInfos[SymbolStringPtr(DepSym)];
+          assert(SymMI.DependantEDUs.count(MI.DefiningEDU.get()) &&
+                 "DefiningEDU missing from DependantEDUs list of dependency");
+          SymMI.DependantEDUs.erase(MI.DefiningEDU.get());
+        }
+      }
+
       MI.DefiningEDU = nullptr;
     } else {
       // Otherwise if there are any EDUs waiting on this symbol then move

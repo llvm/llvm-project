@@ -20,11 +20,8 @@
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
 #include <cmath>
 
 #define DEBUG_TYPE "amdgpu-simplifylib"
@@ -55,7 +52,7 @@ private:
   AssumptionCache *AC = nullptr;
   DominatorTree *DT = nullptr;
 
-  typedef llvm::AMDGPULibFunc FuncInfo;
+  using FuncInfo = llvm::AMDGPULibFunc;
 
   bool UnsafeFPMath = false;
 
@@ -136,7 +133,7 @@ protected:
   }
 
 public:
-  AMDGPULibCalls() {}
+  AMDGPULibCalls() = default;
 
   bool fold(CallInst *CI);
 
@@ -147,7 +144,7 @@ public:
   bool useNative(CallInst *CI);
 };
 
-} // end llvm namespace
+} // end namespace llvm
 
 template <typename IRB>
 static CallInst *CreateCallEx(IRB &B, FunctionCallee Callee, Value *Arg,
@@ -753,7 +750,7 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
         CI->setArgOperand(1, SplatArg1);
       }
 
-      CI->setCalledFunction(Intrinsic::getDeclaration(
+      CI->setCalledFunction(Intrinsic::getOrInsertDeclaration(
           CI->getModule(), Intrinsic::ldexp,
           {CI->getType(), CI->getArgOperand(1)->getType()}));
       return true;
@@ -788,7 +785,8 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
               B.CreateFPToSI(FPOp->getOperand(1), PownType->getParamType(1));
           // Have to drop any nofpclass attributes on the original call site.
           Call->removeParamAttrs(
-              1, AttributeFuncs::typeIncompatible(CastedArg->getType()));
+              1, AttributeFuncs::typeIncompatible(CastedArg->getType(),
+                                                  Call->getParamAttributes(1)));
           Call->setCalledFunction(PownFunc);
           Call->setArgOperand(1, CastedArg);
           return fold_pow(FPOp, B, PownInfo) || true;
@@ -861,9 +859,8 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
       Constant *nval;
       if (getArgType(FInfo) == AMDGPULibFunc::F32) {
         SmallVector<float, 0> FVal;
-        for (unsigned i = 0; i < DVal.size(); ++i) {
-          FVal.push_back((float)DVal[i]);
-        }
+        for (double D : DVal)
+          FVal.push_back((float)D);
         ArrayRef<float> tmp(FVal);
         nval = ConstantDataVector::get(context, tmp);
       } else { // F64
@@ -899,7 +896,7 @@ static double log2(double V) {
   return log(V) / numbers::ln2;
 #endif
 }
-}
+} // namespace llvm
 
 bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
                               const FuncInfo &FInfo) {
@@ -1035,7 +1032,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   // pown/pow ---> powr(fabs(x), y) | (x & ((int)y << 31))
   FunctionCallee ExpExpr;
   if (ShouldUseIntrinsic)
-    ExpExpr = Intrinsic::getDeclaration(M, Intrinsic::exp2, {FPOp->getType()});
+    ExpExpr = Intrinsic::getOrInsertDeclaration(M, Intrinsic::exp2,
+                                                {FPOp->getType()});
   else {
     ExpExpr = getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_EXP2, FInfo));
     if (!ExpExpr)
@@ -1082,9 +1080,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
       }
       if (getArgType(FInfo) == AMDGPULibFunc::F32) {
         SmallVector<float, 0> FVal;
-        for (unsigned i=0; i < DVal.size(); ++i) {
-          FVal.push_back((float)DVal[i]);
-        }
+        for (double D : DVal)
+          FVal.push_back((float)D);
         ArrayRef<float> tmp(FVal);
         cnval = ConstantDataVector::get(M->getContext(), tmp);
       } else {
@@ -1110,8 +1107,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   if (needlog) {
     FunctionCallee LogExpr;
     if (ShouldUseIntrinsic) {
-      LogExpr =
-          Intrinsic::getDeclaration(M, Intrinsic::log2, {FPOp->getType()});
+      LogExpr = Intrinsic::getOrInsertDeclaration(M, Intrinsic::log2,
+                                                  {FPOp->getType()});
     } else {
       LogExpr = getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_LOG2, FInfo));
       if (!LogExpr)
@@ -1300,8 +1297,8 @@ void AMDGPULibCalls::replaceLibCallWithSimpleIntrinsic(IRBuilder<> &B,
     }
   }
 
-  CI->setCalledFunction(
-      Intrinsic::getDeclaration(CI->getModule(), IntrID, {CI->getType()}));
+  CI->setCalledFunction(Intrinsic::getOrInsertDeclaration(
+      CI->getModule(), IntrID, {CI->getType()}));
 }
 
 bool AMDGPULibCalls::tryReplaceLibcallWithSimpleIntrinsic(

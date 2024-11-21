@@ -9,12 +9,6 @@
 // UNSUPPORTED: no-exceptions
 // UNSUPPORTED: c++03
 
-// The <unwind.h> header provided in the SDK of older Xcodes used to provide
-// an incorrectly aligned _Unwind_Exception type on non-ARM. That causes these
-// tests to fail when running against a system libc++abi and libunwind that was
-// compiled with an incorrect definition of _Unwind_Exception.
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12}}
-
 // Test that the address of the exception object is properly aligned as required
 // by the relevant ABI
 

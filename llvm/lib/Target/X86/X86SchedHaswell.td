@@ -1028,8 +1028,8 @@ def HWWriteResGroup17 : SchedWriteRes<[HWPort23,HWPort015]> {
   let NumMicroOps = 2;
   let ReleaseAtCycles = [1,1];
 }
-def: InstRW<[HWWriteResGroup17], (instrs VINSERTF128rm,
-                                         VINSERTI128rm,
+def: InstRW<[HWWriteResGroup17], (instrs VINSERTF128rmi,
+                                         VINSERTI128rmi,
                                          VPBLENDDrmi)>;
 
 def HWWriteResGroup17_2 : SchedWriteRes<[HWPort23,HWPort015]> {
@@ -1247,10 +1247,10 @@ def: InstRW<[HWWriteResGroup53_1], (instrs VPMOVSXBWYrm,
                                            VPMOVSXWDYrm,
                                            VPMOVZXWDYrm)>;
 
-def HWWriteResGroup57 : SchedWriteRes<[HWPort5,HWPort0156]> {
+def HWWriteResGroup57 : SchedWriteRes<[HWPort5]> {
   let Latency = 3;
-  let NumMicroOps = 3;
-  let ReleaseAtCycles = [2,1];
+  let NumMicroOps = 2;
+  let ReleaseAtCycles = [2];
 }
 def: InstRW<[HWWriteResGroup57], (instrs MMX_PACKSSDWrr,
                                          MMX_PACKSSWBrr,

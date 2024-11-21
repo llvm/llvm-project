@@ -362,7 +362,7 @@ void test13(void) {
 
   extern fnty ^test13_block;
   // CHECK-NEXT: [[TMP:%.*]] = load ptr, ptr @test13_block, align
-  // CHECK-NEXT: [[BLOCK_FN_PTR:%.*]] = getelementptr inbounds [[BLOCKTY:%.*]], ptr [[TMP]], i32 0, i32 3
+  // CHECK-NEXT: [[BLOCK_FN_PTR:%.*]] = getelementptr inbounds nuw [[BLOCKTY:%.*]], ptr [[TMP]], i32 0, i32 3
   // CHECK-NEXT: [[X_VAL:%.*]] = load ptr, ptr [[X]], align
   // CHECK-NEXT: [[X_TMP:%.*]] = call ptr @llvm.objc.retain(ptr [[X_VAL]]) [[NUW]]
   // CHECK-NEXT: [[BLOCK_FN_TMP:%.*]] = load ptr, ptr [[BLOCK_FN_PTR]]

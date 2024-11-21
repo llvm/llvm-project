@@ -8,18 +8,22 @@
 
 // This test fails because Clang no longer enables -fdelayed-template-parsing
 // by default on Windows with C++20 (#69431).
-// XFAIL: msvc && (clang-18 || clang-19)
+// XFAIL: msvc && (clang-18 || clang-19 || clang-20)
 
 // <cmath>
 
 #include <cmath>
+#include <array>
+#include <cassert>
 #include <limits>
 #include <type_traits>
-#include <cassert>
+#include <utility>
 
+#include "fp_compare.h"
 #include "test_macros.h"
 #include "hexfloat.h"
 #include "truncate_fp.h"
+#include "type_algorithms.h"
 
 // convertible to int/float/double/etc
 template <class T, int N=0>
@@ -705,15 +709,16 @@ void test_isinf()
     static_assert((std::is_same<decltype(std::isinf((float)0)), bool>::value), "");
 
     typedef decltype(std::isinf((double)0)) DoubleRetType;
-#if !defined(__linux__) || defined(__clang__)
-    static_assert((std::is_same<DoubleRetType, bool>::value), "");
-#else
+#if defined(__GLIBC__) && TEST_STD_VER == 03 && defined(TEST_COMPILER_CLANG)
     // GLIBC < 2.23 defines 'isinf(double)' with a return type of 'int' in
     // all C++ dialects. The test should tolerate this when libc++ can't work
-    // around it.
+    // around it via `_LIBCPP_PREFERRED_OVERLOAD`, which is only available
+    // in modern versions of Clang, and not elsewhere.
     // See: https://sourceware.org/bugzilla/show_bug.cgi?id=19439
     static_assert((std::is_same<DoubleRetType, bool>::value
                 || std::is_same<DoubleRetType, int>::value), "");
+#else
+    static_assert((std::is_same<DoubleRetType, bool>::value), "");
 #endif
 
     static_assert((std::is_same<decltype(std::isinf(0)), bool>::value), "");
@@ -791,15 +796,16 @@ void test_isnan()
     static_assert((std::is_same<decltype(std::isnan((float)0)), bool>::value), "");
 
     typedef decltype(std::isnan((double)0)) DoubleRetType;
-#if !defined(__linux__) || defined(__clang__)
-    static_assert((std::is_same<DoubleRetType, bool>::value), "");
-#else
-    // GLIBC < 2.23 defines 'isinf(double)' with a return type of 'int' in
+#if defined(__GLIBC__) && TEST_STD_VER == 03 && defined(TEST_COMPILER_CLANG)
+    // GLIBC < 2.23 defines 'isnan(double)' with a return type of 'int' in
     // all C++ dialects. The test should tolerate this when libc++ can't work
-    // around it.
+    // around it via `_LIBCPP_PREFERRED_OVERLOAD`, which is only available
+    // in modern versions of Clang, and not elsewhere.
     // See: https://sourceware.org/bugzilla/show_bug.cgi?id=19439
     static_assert((std::is_same<DoubleRetType, bool>::value
                 || std::is_same<DoubleRetType, int>::value), "");
+#else
+    static_assert((std::is_same<DoubleRetType, bool>::value), "");
 #endif
 
     static_assert((std::is_same<decltype(std::isnan(0)), bool>::value), "");
@@ -1113,6 +1119,56 @@ void test_fmin()
     assert(std::fmin(1,0) == 0);
 }
 
+#if TEST_STD_VER >= 17
+struct TestHypot3 {
+  template <class Real>
+  void operator()() const {
+    const auto check = [](Real elem, Real abs_tol) {
+      assert(std::isfinite(std::hypot(elem, Real(0), Real(0))));
+      assert(fptest_close(std::hypot(elem, Real(0), Real(0)), elem, abs_tol));
+      assert(std::isfinite(std::hypot(elem, elem, Real(0))));
+      assert(fptest_close(std::hypot(elem, elem, Real(0)), std::sqrt(Real(2)) * elem, abs_tol));
+      assert(std::isfinite(std::hypot(elem, elem, elem)));
+      assert(fptest_close(std::hypot(elem, elem, elem), std::sqrt(Real(3)) * elem, abs_tol));
+    };
+
+    { // check for overflow
+      const auto [elem, abs_tol] = []() -> std::array<Real, 2> {
+        if constexpr (std::is_same_v<Real, float>)
+          return {1e20f, 1e16f};
+        else if constexpr (std::is_same_v<Real, double>)
+          return {1e300, 1e287};
+        else { // long double
+#  if __DBL_MAX_EXP__ == __LDBL_MAX_EXP__
+          return {1e300l, 1e287l}; // 64-bit
+#  else
+          return {1e4000l, 1e3985l}; // 80- or 128-bit
+#  endif
+        }
+      }();
+      check(elem, abs_tol);
+    }
+
+    { // check for underflow
+      const auto [elem, abs_tol] = []() -> std::array<Real, 2> {
+        if constexpr (std::is_same_v<Real, float>)
+          return {1e-20f, 1e-24f};
+        else if constexpr (std::is_same_v<Real, double>)
+          return {1e-287, 1e-300};
+        else { // long double
+#  if __DBL_MAX_EXP__ == __LDBL_MAX_EXP__
+          return {1e-287l, 1e-300l}; // 64-bit
+#  else
+          return {1e-3985l, 1e-4000l}; // 80- or 128-bit
+#  endif
+        }
+      }();
+      check(elem, abs_tol);
+    }
+  }
+};
+#endif
+
 void test_hypot()
 {
     static_assert((std::is_same<decltype(std::hypot((float)0, (float)0)), float>::value), "");
@@ -1135,25 +1191,31 @@ void test_hypot()
     static_assert((std::is_same<decltype(hypot(Ambiguous(), Ambiguous())), Ambiguous>::value), "");
     assert(std::hypot(3,4) == 5);
 
-#if TEST_STD_VER > 14
-    static_assert((std::is_same<decltype(std::hypot((float)0, (float)0, (float)0)), float>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (bool)0, (float)0)), double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (unsigned short)0, (double)0)), double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (int)0, (long double)0)), long double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (double)0, (long)0)), double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (long double)0, (unsigned long)0)), long double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (int)0, (long long)0)), double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (int)0, (unsigned long long)0)), double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (double)0, (double)0)), double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (long double)0, (long double)0)), long double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (float)0, (double)0)), double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (float)0, (long double)0)), long double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (double)0, (long double)0)), long double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((int)0, (int)0, (int)0)), double>::value), "");
-    static_assert((std::is_same<decltype(hypot(Ambiguous(), Ambiguous(), Ambiguous())), Ambiguous>::value), "");
+#if TEST_STD_VER >= 17
+    // clang-format off
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (float)0,          (float)0)),              float>));
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (bool)0,           (float)0)),              double>));
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (unsigned short)0, (double)0)),             double>));
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (int)0,            (long double)0)),        long double>));
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (double)0,         (long)0)),               double>));
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (long double)0,    (unsigned long)0)),      long double>));
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (int)0,            (long long)0)),          double>));
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (int)0,            (unsigned long long)0)), double>));
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (double)0,         (double)0)),             double>));
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (long double)0,    (long double)0)),        long double>));
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (float)0,          (double)0)),             double>));
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (float)0,          (long double)0)),        long double>));
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (double)0,         (long double)0)),        long double>));
+    static_assert((std::is_same_v<decltype(std::hypot((int)0,   (int)0,            (int)0)),                double>));
+    static_assert((std::is_same_v<decltype(hypot(Ambiguous(), Ambiguous(), Ambiguous())), Ambiguous>));
+    // clang-format on
 
     assert(std::hypot(2,3,6) == 7);
     assert(std::hypot(1,4,8) == 9);
+
+    // Check for undue over-/underflows of intermediate results.
+    // See discussion at https://github.com/llvm/llvm-project/issues/92782.
+    types::for_each(types::floating_point_types(), TestHypot3());
 #endif
 }
 

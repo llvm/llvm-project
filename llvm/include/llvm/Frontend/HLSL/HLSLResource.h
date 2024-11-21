@@ -13,6 +13,7 @@
 #ifndef LLVM_FRONTEND_HLSL_HLSLRESOURCE_H
 #define LLVM_FRONTEND_HLSL_HLSLRESOURCE_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DXILABI.h"
 
 namespace llvm {
@@ -21,16 +22,8 @@ class MDNode;
 
 namespace hlsl {
 
-enum class ResourceClass : uint8_t {
-  SRV = 0,
-  UAV,
-  CBuffer,
-  Sampler,
-  Invalid,
-  NumClasses = Invalid,
-};
-
 // For now we use DXIL ABI enum values directly. This may change in the future.
+using dxil::ResourceClass;
 using dxil::ElementType;
 using dxil::ResourceKind;
 

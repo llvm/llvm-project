@@ -225,7 +225,7 @@ public:
   }
 
   /// Check whether the CPU string is valid.
-  bool isCPUStringValid(StringRef CPU) const {
+  virtual bool isCPUStringValid(StringRef CPU) const {
     auto Found = llvm::lower_bound(ProcDesc, CPU);
     return Found != ProcDesc.end() && StringRef(Found->Key) == CPU;
   }
@@ -239,6 +239,9 @@ public:
   ArrayRef<SubtargetFeatureKV> getAllProcessorFeatures() const {
     return ProcFeatures;
   }
+
+  /// Return the list of processor features currently enabled.
+  std::vector<SubtargetFeatureKV> getEnabledProcessorFeatures() const;
 
   /// HwMode IDs are stored and accessed in a bit set format, enabling
   /// users to efficiently retrieve specific IDs, such as the RegInfo
