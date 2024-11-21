@@ -60,3 +60,6 @@ s_monitor_sleep 0
 s_sendmsg sendmsg(MSG_SAVEWAVE_HAS_TDM)
 // GFX1210: s_sendmsg sendmsg(MSG_SAVEWAVE_HAS_TDM)     ; encoding: [0x0a,0x00,0xb6,0xbf]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: specified message id is not supported on this GPU
+
+s_barrier_wait -3
+// GFX1210: s_barrier_wait -3                       ; encoding: [0xfd,0xff,0x94,0xbf]

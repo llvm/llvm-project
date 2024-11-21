@@ -56,3 +56,15 @@ s_sendmsg_rtn_b64 s[2:3], sendmsg(MSG_RTN_GET_CLUSTER_BARRIER_STATE)
 s_get_shader_cycles_u64 s[2:3]
 // GFX1210: s_get_shader_cycles_u64 s[2:3]          ; encoding: [0x00,0x06,0x82,0xbe]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_barrier_signal -3
+// GFX1210: s_barrier_signal -3                     ; encoding: [0xc3,0x4e,0x80,0xbe]
+
+s_get_barrier_state s3, -3
+// GFX1210: s_get_barrier_state s3, -3              ; encoding: [0xc3,0x50,0x83,0xbe]
+
+s_get_barrier_state s3, -4
+// GFX1210: s_get_barrier_state s3, -4              ; encoding: [0xc4,0x50,0x83,0xbe]
+
+s_get_barrier_state s3, m0
+// GFX1210: s_get_barrier_state s3, m0              ; encoding: [0x7d,0x50,0x83,0xbe]

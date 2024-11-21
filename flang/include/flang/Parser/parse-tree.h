@@ -3544,7 +3544,7 @@ struct OmpDefaultmapClause {
   TUPLE_CLASS_BOILERPLATE(OmpDefaultmapClause);
   ENUM_CLASS(
       ImplicitBehavior, Alloc, To, From, Tofrom, Firstprivate, None, Default)
-  ENUM_CLASS(VariableCategory, Scalar, Aggregate, Allocatable, Pointer)
+  ENUM_CLASS(VariableCategory, All, Scalar, Aggregate, Allocatable, Pointer)
   std::tuple<ImplicitBehavior, std::optional<VariableCategory>> t;
 };
 
