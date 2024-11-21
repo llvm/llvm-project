@@ -586,6 +586,28 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = array<i32: 1, 2
 // CHECK:     {ptr @kernel_func, !"reqntidz", i32 32}
 // -----
 
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.cluster_dim = array<i32: 3, 5, 7>} {
+  llvm.return
+}
+
+// CHECK:     !nvvm.annotations =
+// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
+// CHECK:     {ptr @kernel_func, !"cluster_dim_x", i32 3}
+// CHECK:     {ptr @kernel_func, !"cluster_dim_y", i32 5}
+// CHECK:     {ptr @kernel_func, !"cluster_dim_z", i32 7}
+// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
+// -----
+
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.cluster_max_blocks = 8} {
+  llvm.return
+}
+
+// CHECK:     !nvvm.annotations =
+// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
+// CHECK:     {ptr @kernel_func, !"cluster_max_blocks", i32 8}
+// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
+// -----
+
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.minctasm = 16} {
   llvm.return
 }
