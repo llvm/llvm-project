@@ -137,6 +137,8 @@ public:
 
   bool CheckCompatibleParameterABI(FunctionDecl *New, FunctionDecl *Old);
 
+  bool isLegalTypeForHLSLSV_ThreadOrGroupID(QualType T, const ParsedAttr &AL);
+
   ExprResult ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg);
 
   QualType getInoutParameterType(QualType Ty);
