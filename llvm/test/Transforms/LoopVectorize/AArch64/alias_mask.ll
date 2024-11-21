@@ -28,7 +28,7 @@ define dso_local void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 16
-; CHECK-NEXT:    [[ALIAS_LANE_MASK:%.*]] = call <vscale x 16 x i1> @llvm.get.alias.lane.mask.nxv16i1.i64(i64 [[B2]], i64 [[C1]], i32 1, i1 true)
+; CHECK-NEXT:    [[ALIAS_LANE_MASK:%.*]] = call <vscale x 16 x i1> @llvm.experimental.get.alias.lane.mask.nxv16i1.i64.i64(i64 [[B2]], i64 [[C1]], i64 1, i1 true)
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP15:%.*]] = mul i64 [[TMP8]], 16
 ; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 [[N]], [[TMP15]]
@@ -109,7 +109,7 @@ define i32 @alias_mask_read_after_write(ptr noalias %a, ptr %b, ptr %c, i64 %n) 
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 4
-; CHECK-NEXT:    [[ALIAS_LANE_MASK:%.*]] = call <vscale x 4 x i1> @llvm.get.alias.lane.mask.nxv4i1.i64(i64 [[C2]], i64 [[B1]], i32 4, i1 false)
+; CHECK-NEXT:    [[ALIAS_LANE_MASK:%.*]] = call <vscale x 4 x i1> @llvm.experimental.get.alias.lane.mask.nxv4i1.i64.i64(i64 [[C2]], i64 [[B1]], i64 4, i1 false)
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP9]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 [[N]], [[TMP16]]
