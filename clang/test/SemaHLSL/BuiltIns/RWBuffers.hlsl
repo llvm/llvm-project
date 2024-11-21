@@ -48,18 +48,14 @@ RWBuffer<s> r6;
 // expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(Empty)' evaluated to false}}
 RWBuffer<Empty> r7;
 
-/* TODO: fix issue with incomplete type
-// error@+4 {{constraints not satisfied for class template 'RWBuffer'}}
-// note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_typed_resource_element_compatible<element_type> class RWBuffer}}
-// note@*:* {{because 'TemplatedBuffer<int>' does not satisfy '__is_typed_resource_element_compatible'}}
-// note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(TemplatedBuffer<int>)' evaluated to false}}
+// expected-error@+3 {{constraints not satisfied for class template 'RWBuffer'}}
+// expected-note@*:* {{because 'TemplatedBuffer<int>' does not satisfy '__is_typed_resource_element_compatible'}}
+// expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(TemplatedBuffer<int>)' evaluated to false}}
 RWBuffer<TemplatedBuffer<int> > r8;
-// error@+4 {{constraints not satisfied for class template 'RWBuffer'}}
-// note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_typed_resource_element_compatible<element_type> class RWBuffer}}
-// note@*:* {{because 'TemplatedVector<int>' does not satisfy '__is_typed_resource_element_compatible'}}
-// note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(TemplatedVector<int>)' evaluated to false}}
+// expected-error@+3 {{constraints not satisfied for class template 'RWBuffer'}}
+// expected-note@*:* {{because 'TemplatedVector<int>' does not satisfy '__is_typed_resource_element_compatible'}}
+// expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(TemplatedVector<int>)' evaluated to false}}
 RWBuffer<TemplatedVector<int> > r9;
-*/
 
 // arrays not allowed
 // expected-error@+3 {{constraints not satisfied for class template 'RWBuffer'}}
