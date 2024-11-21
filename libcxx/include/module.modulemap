@@ -1924,6 +1924,7 @@ module std [system] {
     }
     module error_condition    { header "__system_error/error_condition.h" }
     module system_error       { header "__system_error/system_error.h" }
+    module throw_system_error { header "__system_error/throw_system_error.h" }
 
     header "system_error"
     export *
