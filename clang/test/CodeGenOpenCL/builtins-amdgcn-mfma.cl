@@ -467,4 +467,11 @@ v4f test_mfma_f32_16x16x32_bf16(v8bf16 a, v8bf16 b, v4f c)
   return __builtin_amdgcn_mfma_f32_16x16x32_bf16(a, b, c, 1, 2, 3);
 }
 
+// CHECK-GFX950-LABEL: @test_smfmac_f32_16x16x64_f16
+// CHECK-GFX950: call <4 x float> @llvm.amdgcn.smfmac.f32.16x16x64.f16(<8 x half> %a, <16 x half> %b, <4 x float> %c, i32 %idx, i32 0, i32 0)
+void test_smfmac_f32_16x16x64_f16(global v4f* out, v8h a, v16h b, v4f c, int idx)
+{
+  *out = __builtin_amdgcn_smfmac_f32_16x16x64_f16(a, b, c, idx, 0, 0);
+}
+
 #endif
