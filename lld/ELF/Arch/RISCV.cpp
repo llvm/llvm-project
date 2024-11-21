@@ -1063,8 +1063,7 @@ static void mergeArch(Ctx &ctx, RISCVISAUtils::OrderedExtensionMap &mergedExts,
                       StringRef s) {
   auto maybeInfo = RISCVISAInfo::parseNormalizedArchString(s);
   if (!maybeInfo) {
-    Err(ctx) << sec << ": " << s << ": "
-             << maybeInfo.takeError();
+    Err(ctx) << sec << ": " << s << ": " << maybeInfo.takeError();
     return;
   }
 
