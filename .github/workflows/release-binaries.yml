@@ -520,7 +520,7 @@ jobs:
     if: >-
       always() &&
       github.repository == 'llvm/llvm-project'
-    runs-on: ${{ input.runs-on }}
+    runs-on: ${{ inputs.runs-on }}
     steps:
     - name: Checkout Actions
       uses: actions/checkout@v4
