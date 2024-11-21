@@ -22061,9 +22061,11 @@ SDValue RISCVTargetLowering::expandIndirectJTBranch(const SDLoc &dl,
   if (Subtarget.hasStdExtZicfilp()) {
     // When Zicfilp enabled, we need to use software guarded branch for jump
     // table branch.
-    SDValue JTInfo = DAG.getJumpTableDebugInfo(JTI, Value, dl);
-    return DAG.getNode(RISCVISD::SW_GUARDED_BRIND, dl, MVT::Other, JTInfo,
-                       Addr);
+    SDValue Chain = Value;
+    // Jump table debug info is only needed if CodeView is enabled.
+    if (DAG.getTarget().getTargetTriple().isOSBinFormatCOFF())
+      Chain = DAG.getJumpTableDebugInfo(JTI, Chain, dl);
+    return DAG.getNode(RISCVISD::SW_GUARDED_BRIND, dl, MVT::Other, Chain, Addr);
   }
   return TargetLowering::expandIndirectJTBranch(dl, Value, Addr, JTI, DAG);
 }
