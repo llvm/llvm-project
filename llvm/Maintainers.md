@@ -406,11 +406,6 @@ echristo@gmail.com (email), [echristo](https://github.com/echristo) (GitHub)
 Anton Korobeynikov \
 anton@korobeynikov.info (email), [asl](https://github.com/asl) (GitHub)
 
-#### ARM EABI
-
-Anton Korobeynikov \
-anton@korobeynikov.info (email), [asl](https://github.com/asl) (GitHub)
-
 #### LLVM Buildbot
 
 Galina Kistanova \
@@ -471,6 +466,7 @@ sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattn
 Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- SelectionDAG \
 Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
 Renato Golin (rengolin@systemcall.eu), [rengolin](https://github.com/rengolin)) -- ARM backend \
+Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- ARM EABI \
 Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management \
 
 ### Former maintainers of removed components
