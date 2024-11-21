@@ -25270,13 +25270,9 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
     const TargetFrameLowering &TFI = *Subtarget.getFrameLowering();
     const Align StackAlign = TFI.getStackAlign();
     if (hasInlineStackProbe(MF)) {
-      MachineRegisterInfo &MRI = MF.getRegInfo();
-
-      const TargetRegisterClass *AddrRegClass = getRegClassFor(SPTy);
-      Register Vreg = MRI.createVirtualRegister(AddrRegClass);
-      Chain = DAG.getCopyToReg(Chain, dl, Vreg, Size);
-      Result = DAG.getNode(X86ISD::PROBED_ALLOCA, dl, SPTy, Chain,
-                           DAG.getRegister(Vreg, SPTy));
+      Result = DAG.getNode(X86ISD::PROBED_ALLOCA, dl, {SPTy, MVT::Other},
+                           {Chain, Size});
+      Chain = Result.getValue(1);
     } else {
       SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
       Chain = SP.getValue(1);
@@ -25288,8 +25284,6 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
           DAG.getSignedConstant(~(Alignment->value() - 1ULL), dl, VT));
     Chain = DAG.getCopyToReg(Chain, dl, SPReg, Result); // Output chain
   } else if (SplitStack) {
-    MachineRegisterInfo &MRI = MF.getRegInfo();
-
     if (Is64Bit) {
       // The 64 bit implementation of segmented stacks needs to clobber both r10
       // r11. This makes it impossible to use it along with nested parameters.
@@ -25301,11 +25295,9 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
       }
     }
 
-    const TargetRegisterClass *AddrRegClass = getRegClassFor(SPTy);
-    Register Vreg = MRI.createVirtualRegister(AddrRegClass);
-    Chain = DAG.getCopyToReg(Chain, dl, Vreg, Size);
-    Result = DAG.getNode(X86ISD::SEG_ALLOCA, dl, SPTy, Chain,
-                                DAG.getRegister(Vreg, SPTy));
+    Result =
+        DAG.getNode(X86ISD::SEG_ALLOCA, dl, {SPTy, MVT::Other}, {Chain, Size});
+    Chain = Result.getValue(1);
   } else {
     SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
     Chain = DAG.getNode(X86ISD::DYN_ALLOCA, dl, NodeTys, Chain, Size);
