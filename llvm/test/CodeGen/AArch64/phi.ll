@@ -2,18 +2,6 @@
 ; RUN: llc -mtriple=aarch64 -global-isel=0 -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64 -global-isel=1 -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for tv2i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for tv3i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for tv4i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for tv2i16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for tv3i16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for tv3i32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for tv2i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for tv2f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for tv3f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for tv3f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for tv2f128
-
 define i8 @ti8(i1 %c, ptr %p, i8 %a, i8 %b) {
 ; CHECK-SD-LABEL: ti8:
 ; CHECK-SD:       // %bb.0: // %entry
@@ -271,15 +259,37 @@ e:
 }
 
 define <2 x i8> @tv2i8(i1 %c, ptr %p, <2 x i8> %a, <2 x i8> %b) {
-; CHECK-LABEL: tv2i8:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB9_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    fmov d1, d0
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB9_2: // %e
-; CHECK-NEXT:    fmov d0, d1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tv2i8:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB9_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    fmov d1, d0
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB9_2: // %e
+; CHECK-SD-NEXT:    fmov d0, d1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tv2i8:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB9_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:    mov v0.b[1], w8
+; CHECK-GI-NEXT:    fmov d1, d0
+; CHECK-GI-NEXT:    b .LBB9_3
+; CHECK-GI-NEXT:  .LBB9_2:
+; CHECK-GI-NEXT:    mov w8, v1.s[1]
+; CHECK-GI-NEXT:    mov v1.b[1], w8
+; CHECK-GI-NEXT:  .LBB9_3: // %e
+; CHECK-GI-NEXT:    umov w8, v1.b[0]
+; CHECK-GI-NEXT:    umov w9, v1.b[1]
+; CHECK-GI-NEXT:    mov v0.s[0], w8
+; CHECK-GI-NEXT:    mov v0.s[1], w9
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -291,19 +301,38 @@ e:
 }
 
 define <3 x i8> @tv3i8(i1 %c, ptr %p, <3 x i8> %a, <3 x i8> %b) {
-; CHECK-LABEL: tv3i8:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB10_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    mov w5, w2
-; CHECK-NEXT:    mov w6, w3
-; CHECK-NEXT:    mov w7, w4
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB10_2: // %e
-; CHECK-NEXT:    mov w0, w5
-; CHECK-NEXT:    mov w1, w6
-; CHECK-NEXT:    mov w2, w7
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tv3i8:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB10_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    mov w5, w2
+; CHECK-SD-NEXT:    mov w6, w3
+; CHECK-SD-NEXT:    mov w7, w4
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB10_2: // %e
+; CHECK-SD-NEXT:    mov w0, w5
+; CHECK-SD-NEXT:    mov w1, w6
+; CHECK-SD-NEXT:    mov w2, w7
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tv3i8:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB10_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    fmov s0, w2
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:    mov v0.b[1], w3
+; CHECK-GI-NEXT:    mov v0.b[2], w4
+; CHECK-GI-NEXT:    b .LBB10_3
+; CHECK-GI-NEXT:  .LBB10_2:
+; CHECK-GI-NEXT:    fmov s0, w5
+; CHECK-GI-NEXT:    mov v0.b[1], w6
+; CHECK-GI-NEXT:    mov v0.b[2], w7
+; CHECK-GI-NEXT:  .LBB10_3: // %e
+; CHECK-GI-NEXT:    umov w0, v0.b[0]
+; CHECK-GI-NEXT:    umov w1, v0.b[1]
+; CHECK-GI-NEXT:    umov w2, v0.b[2]
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -315,15 +344,30 @@ e:
 }
 
 define <4 x i8> @tv4i8(i1 %c, ptr %p, <4 x i8> %a, <4 x i8> %b) {
-; CHECK-LABEL: tv4i8:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB11_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    fmov d1, d0
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB11_2: // %e
-; CHECK-NEXT:    fmov d0, d1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tv4i8:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB11_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    fmov d1, d0
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB11_2: // %e
+; CHECK-SD-NEXT:    fmov d0, d1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tv4i8:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB11_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    ret
+; CHECK-GI-NEXT:  .LBB11_2:
+; CHECK-GI-NEXT:    uzp1 v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -410,15 +454,30 @@ e:
 }
 
 define <2 x i16> @tv2i16(i1 %c, ptr %p, <2 x i16> %a, <2 x i16> %b) {
-; CHECK-LABEL: tv2i16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB15_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    fmov d1, d0
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB15_2: // %e
-; CHECK-NEXT:    fmov d0, d1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tv2i16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB15_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    fmov d1, d0
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB15_2: // %e
+; CHECK-SD-NEXT:    fmov d0, d1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tv2i16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB15_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    ret
+; CHECK-GI-NEXT:  .LBB15_2:
+; CHECK-GI-NEXT:    uzp1 v0.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -661,8 +720,11 @@ define <3 x i64> @tv3i64(i1 %c, ptr %p, <3 x i64> %a, <3 x i64> %b) {
 ; CHECK-GI-NEXT:    tbz w0, #0, .LBB25_2
 ; CHECK-GI-NEXT:  // %bb.1: // %t
 ; CHECK-GI-NEXT:    fmov d6, d0
+; CHECK-GI-NEXT:    fmov d7, d2
 ; CHECK-GI-NEXT:    str wzr, [x1]
 ; CHECK-GI-NEXT:    mov v6.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov v2.16b, v7.16b
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    mov d1, v6.d[1]
 ; CHECK-GI-NEXT:    mov v0.16b, v6.16b
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
@@ -670,6 +732,7 @@ define <3 x i64> @tv3i64(i1 %c, ptr %p, <3 x i64> %a, <3 x i64> %b) {
 ; CHECK-GI-NEXT:  .LBB25_2:
 ; CHECK-GI-NEXT:    fmov d0, d3
 ; CHECK-GI-NEXT:    fmov d2, d5
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    mov v0.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
@@ -720,22 +783,40 @@ e:
 }
 
 define <2 x i128> @tv2i128(i1 %c, ptr %p, <2 x i128> %a, <2 x i128> %b) {
-; CHECK-LABEL: tv2i128:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB27_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    mov x6, x2
-; CHECK-NEXT:    mov x7, x3
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:    b .LBB27_3
-; CHECK-NEXT:  .LBB27_2:
-; CHECK-NEXT:    ldp x4, x5, [sp]
-; CHECK-NEXT:  .LBB27_3: // %e
-; CHECK-NEXT:    mov x0, x6
-; CHECK-NEXT:    mov x1, x7
-; CHECK-NEXT:    mov x2, x4
-; CHECK-NEXT:    mov x3, x5
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tv2i128:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB27_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    mov x6, x2
+; CHECK-SD-NEXT:    mov x7, x3
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:    b .LBB27_3
+; CHECK-SD-NEXT:  .LBB27_2:
+; CHECK-SD-NEXT:    ldp x4, x5, [sp]
+; CHECK-SD-NEXT:  .LBB27_3: // %e
+; CHECK-SD-NEXT:    mov x0, x6
+; CHECK-SD-NEXT:    mov x1, x7
+; CHECK-SD-NEXT:    mov x2, x4
+; CHECK-SD-NEXT:    mov x3, x5
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tv2i128:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB27_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    mov x9, x2
+; CHECK-GI-NEXT:    mov x10, x3
+; CHECK-GI-NEXT:    mov x2, x4
+; CHECK-GI-NEXT:    mov x3, x5
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:    mov x0, x9
+; CHECK-GI-NEXT:    mov x1, x10
+; CHECK-GI-NEXT:    ret
+; CHECK-GI-NEXT:  .LBB27_2:
+; CHECK-GI-NEXT:    ldp x2, x3, [sp]
+; CHECK-GI-NEXT:    mov x0, x6
+; CHECK-GI-NEXT:    mov x1, x7
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -998,8 +1079,11 @@ define <3 x double> @tv3f64(i1 %c, ptr %p, <3 x double> %a, <3 x double> %b) {
 ; CHECK-GI-NEXT:    tbz w0, #0, .LBB38_2
 ; CHECK-GI-NEXT:  // %bb.1: // %t
 ; CHECK-GI-NEXT:    fmov d6, d0
+; CHECK-GI-NEXT:    fmov d7, d2
 ; CHECK-GI-NEXT:    str wzr, [x1]
 ; CHECK-GI-NEXT:    mov v6.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov v2.16b, v7.16b
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    mov d1, v6.d[1]
 ; CHECK-GI-NEXT:    mov v0.16b, v6.16b
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
@@ -1007,6 +1091,7 @@ define <3 x double> @tv3f64(i1 %c, ptr %p, <3 x double> %a, <3 x double> %b) {
 ; CHECK-GI-NEXT:  .LBB38_2:
 ; CHECK-GI-NEXT:    fmov d0, d3
 ; CHECK-GI-NEXT:    fmov d2, d5
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    mov v0.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
@@ -1057,17 +1142,41 @@ e:
 }
 
 define <2 x fp128> @tv2f128(i1 %c, ptr %p, <2 x fp128> %a, <2 x fp128> %b) {
-; CHECK-LABEL: tv2f128:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB40_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    mov v2.16b, v0.16b
-; CHECK-NEXT:    mov v3.16b, v1.16b
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB40_2: // %e
-; CHECK-NEXT:    mov v0.16b, v2.16b
-; CHECK-NEXT:    mov v1.16b, v3.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tv2f128:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB40_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    mov v2.16b, v0.16b
+; CHECK-SD-NEXT:    mov v3.16b, v1.16b
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB40_2: // %e
+; CHECK-SD-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-NEXT:    mov v1.16b, v3.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tv2f128:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB40_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    mov d4, v1.d[1]
+; CHECK-GI-NEXT:    mov d5, v0.d[1]
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:    fmov d2, d0
+; CHECK-GI-NEXT:    fmov d3, d1
+; CHECK-GI-NEXT:    b .LBB40_3
+; CHECK-GI-NEXT:  .LBB40_2:
+; CHECK-GI-NEXT:    mov d4, v3.d[1]
+; CHECK-GI-NEXT:    mov d5, v2.d[1]
+; CHECK-GI-NEXT:  .LBB40_3: // %e
+; CHECK-GI-NEXT:    fmov x8, d2
+; CHECK-GI-NEXT:    fmov x9, d3
+; CHECK-GI-NEXT:    mov v0.d[0], x8
+; CHECK-GI-NEXT:    mov v1.d[0], x9
+; CHECK-GI-NEXT:    fmov x8, d5
+; CHECK-GI-NEXT:    fmov x9, d4
+; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v1.d[1], x9
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
