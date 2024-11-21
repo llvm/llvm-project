@@ -79,7 +79,7 @@ void CalleeSavedAnalysis::analyzeSaves() {
         // with it
         if (SRU.isStoreUsed(*FIE,
                             Prev ? SRU.expr_begin(*Prev) : SRU.expr_begin(BB),
-            /*IncludeLocalAccesses=*/false)) {
+                            /*IncludeLocalAccesses=*/false)) {
           BlacklistedRegs.set(FIE->RegOrImm);
           CalleeSaved.reset(FIE->RegOrImm);
           Prev = &Inst;
