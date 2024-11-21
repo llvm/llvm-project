@@ -4355,26 +4355,37 @@ void TagStoreEdit::emitLoop(MachineBasicBlock::iterator InsertI) {
 
   int64_t ExtraBaseRegUpdate =
       FrameRegUpdate ? (*FrameRegUpdate - FrameRegOffset.getFixed() - Size) : 0;
+  LLVM_DEBUG(dbgs() << "TagStoreEdit::emitLoop: LoopSize=" << LoopSize
+                    << ", Size=" << Size
+                    << ", ExtraBaseRegUpdate=" << ExtraBaseRegUpdate
+                    << ", FrameRegUpdate=" << FrameRegUpdate
+                    << ", FrameRegOffset.getFixed()="
+                    << FrameRegOffset.getFixed() << "\n");
   if (LoopSize < Size) {
     assert(FrameRegUpdate);
     assert(Size - LoopSize == 16);
     // Tag 16 more bytes at BaseReg and update BaseReg.
+    int64_t STGOffset = ExtraBaseRegUpdate + 16;
+    assert(STGOffset % 16 == 0 && STGOffset >= -4096 && STGOffset <= 4080 &&
+           "STG immediate out of range");
     BuildMI(*MBB, InsertI, DL,
             TII->get(ZeroData ? AArch64::STZGPostIndex : AArch64::STGPostIndex))
         .addDef(BaseReg)
         .addReg(BaseReg)
         .addReg(BaseReg)
-        .addImm(1 + ExtraBaseRegUpdate / 16)
+        .addImm(STGOffset / 16)
         .setMemRefs(CombinedMemRefs)
         .setMIFlags(FrameRegUpdateFlags);
   } else if (ExtraBaseRegUpdate) {
     // Update BaseReg.
+    int64_t AddSubOffset = std::abs(ExtraBaseRegUpdate);
+    assert(AddSubOffset <= 4095 && "ADD/SUB immediate out of range");
     BuildMI(
         *MBB, InsertI, DL,
         TII->get(ExtraBaseRegUpdate > 0 ? AArch64::ADDXri : AArch64::SUBXri))
         .addDef(BaseReg)
         .addReg(BaseReg)
-        .addImm(std::abs(ExtraBaseRegUpdate))
+        .addImm(AddSubOffset)
         .addImm(0)
         .setMIFlags(FrameRegUpdateFlags);
   }
