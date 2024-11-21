@@ -638,6 +638,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__utility/forward.h>
 #include <__utility/is_pointer_in_range.h>
 #include <__utility/move.h>
+#include <__utility/scope_guard.h>
 #include <__utility/swap.h>
 #include <__utility/unreachable.h>
 #include <climits>
@@ -928,6 +929,15 @@ private:
   };
 
   _LIBCPP_COMPRESSED_PAIR(__rep, __rep_, allocator_type, __alloc_);
+
+  // annotate the string with its size() at scope exit. The string has to be in a valid state at that point.
+  struct __annotate_new_size {
+    basic_string& __str_;
+
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __annotate_new_size(basic_string& __str) : __str_(__str) {}
+
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void operator()() { __str_.__annotate_new(__str_.size()); }
+  };
 
   // Construct a string with the given allocator and enough storage to hold `__size` characters, but
   // don't initialize the characters. The contents of the string, including the null terminator, must be
@@ -2171,6 +2181,7 @@ private:
         __alloc_ = __str.__alloc_;
       } else {
         __annotate_delete();
+        auto __guard       = std::__make_scope_guard(__annotate_new_size(*this));
         allocator_type __a = __str.__alloc_;
         auto __allocation  = std::__allocate_at_least(__a, __str.__get_long_cap());
         __begin_lifetime(__allocation.ptr, __allocation.count);
@@ -2180,7 +2191,6 @@ private:
         __set_long_pointer(__allocation.ptr);
         __set_long_cap(__allocation.count);
         __set_long_size(__str.size());
-        __annotate_new(__get_long_size());
       }
     }
   }
@@ -2248,11 +2258,11 @@ private:
     return std::__is_pointer_in_range(data(), data() + size() + 1, std::addressof(__v));
   }
 
-  [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI void __throw_length_error() const {
+  [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI static void __throw_length_error() {
     std::__throw_length_error("basic_string");
   }
 
-  [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI void __throw_out_of_range() const {
+  [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI static void __throw_out_of_range() {
     std::__throw_out_of_range("basic_string");
   }
 
@@ -2508,6 +2518,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
   size_type __cap =
       __old_cap < __ms / 2 - __alignment ? __recommend(std::max(__old_cap + __delta_cap, 2 * __old_cap)) : __ms - 1;
   __annotate_delete();
+  auto __guard      = std::__make_scope_guard(__annotate_new_size(*this));
   auto __allocation = std::__allocate_at_least(__alloc_, __cap + 1);
   pointer __p       = __allocation.ptr;
   __begin_lifetime(__p, __allocation.count);
@@ -2526,7 +2537,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
   __old_sz = __n_copy + __n_add + __sec_cp_sz;
   __set_long_size(__old_sz);
   traits_type::assign(__p[__old_sz], value_type());
-  __annotate_new(__old_sz);
 }
 
 // __grow_by is deprecated because it does not set the size. It may not update the size when the size is changed, and it
@@ -2550,7 +2560,6 @@ _LIBCPP_DEPRECATED_("use __grow_by_without_replace") basic_string<_CharT, _Trait
   pointer __old_p = __get_pointer();
   size_type __cap =
       __old_cap < __ms / 2 - __alignment ? __recommend(std::max(__old_cap + __delta_cap, 2 * __old_cap)) : __ms - 1;
-  __annotate_delete();
   auto __allocation = std::__allocate_at_least(__alloc_, __cap + 1);
   pointer __p       = __allocation.ptr;
   __begin_lifetime(__p, __allocation.count);
@@ -2575,11 +2584,12 @@ basic_string<_CharT, _Traits, _Allocator>::__grow_by_without_replace(
     size_type __n_copy,
     size_type __n_del,
     size_type __n_add) {
+  __annotate_delete();
+  auto __guard = std::__make_scope_guard(__annotate_new_size(*this));
   _LIBCPP_SUPPRESS_DEPRECATED_PUSH
   __grow_by(__old_cap, __delta_cap, __old_sz, __n_copy, __n_del, __n_add);
   _LIBCPP_SUPPRESS_DEPRECATED_POP
   __set_long_size(__old_sz - __n_del + __n_add);
-  __annotate_new(__old_sz - __n_del + __n_add);
 }
 
 // assign
@@ -3364,6 +3374,7 @@ template <class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 basic_string<_CharT, _Traits, _Allocator>::__shrink_or_extend(size_type __target_capacity) {
   __annotate_delete();
+  auto __guard    = std::__make_scope_guard(__annotate_new_size(*this));
   size_type __cap = capacity();
   size_type __sz  = size();
 
@@ -3393,9 +3404,8 @@ basic_string<_CharT, _Traits, _Allocator>::__shrink_or_extend(size_type __target
         // The Standard mandates shrink_to_fit() does not increase the capacity.
         // With equal capacity keep the existing buffer. This avoids extra work
         // due to swapping the elements.
-        if (__allocation.count - 1 > __target_capacity) {
+        if (__allocation.count - 1 > capacity()) {
           __alloc_traits::deallocate(__alloc_, __allocation.ptr, __allocation.count);
-          __annotate_new(__sz); // Undoes the __annotate_delete()
           return;
         }
         __new_data        = __allocation.ptr;
@@ -3420,7 +3430,6 @@ basic_string<_CharT, _Traits, _Allocator>::__shrink_or_extend(size_type __target
     __set_long_pointer(__new_data);
   } else
     __set_short_size(__sz);
-  __annotate_new(__sz);
 }
 
 template <class _CharT, class _Traits, class _Allocator>

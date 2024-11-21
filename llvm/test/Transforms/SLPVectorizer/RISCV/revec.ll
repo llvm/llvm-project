@@ -109,7 +109,7 @@ define void @test3(float %0) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr null, align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fcmp olt <2 x float> zeroinitializer, [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i1> @llvm.vector.insert.v4i1.v2i1(<4 x i1> poison, <2 x i1> <i1 true, i1 true>, i64 0)
+; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i1> @llvm.vector.insert.v4i1.v2i1(<4 x i1> poison, <2 x i1> splat (i1 true), i64 0)
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i1> @llvm.vector.insert.v4i1.v2i1(<4 x i1> [[TMP6]], <2 x i1> [[TMP5]], i64 2)
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> poison, <2 x float> [[TMP4]], i64 0)
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>

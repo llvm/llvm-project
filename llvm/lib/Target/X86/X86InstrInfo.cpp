@@ -22,7 +22,6 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveVariables.h"
-#include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -4738,6 +4737,7 @@ static bool isAMXOpcode(unsigned Opc) {
   case X86::TILELOADD_EVEX:
   case X86::TILESTORED_EVEX:
   case X86::PTILEPAIRLOAD:
+  case X86::PTILEPAIRSTORE:
     return true;
   }
 }
@@ -6266,16 +6266,16 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
                            get(X86::VBROADCASTF64X4Zrm), X86::sub_ymm);
   case X86::VMOVAPSZ128mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVAPSmr),
-                            get(X86::VEXTRACTF32x4Zmri), X86::sub_xmm);
+                            get(X86::VEXTRACTF32X4Zmri), X86::sub_xmm);
   case X86::VMOVUPSZ128mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVUPSmr),
-                            get(X86::VEXTRACTF32x4Zmri), X86::sub_xmm);
+                            get(X86::VEXTRACTF32X4Zmri), X86::sub_xmm);
   case X86::VMOVAPSZ256mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVAPSYmr),
-                            get(X86::VEXTRACTF64x4Zmri), X86::sub_ymm);
+                            get(X86::VEXTRACTF64X4Zmri), X86::sub_ymm);
   case X86::VMOVUPSZ256mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVUPSYmr),
-                            get(X86::VEXTRACTF64x4Zmri), X86::sub_ymm);
+                            get(X86::VEXTRACTF64X4Zmri), X86::sub_ymm);
   case X86::MOV32ri64: {
     Register Reg = MIB.getReg(0);
     Register Reg32 = RI.getSubReg(Reg, X86::sub_32bit);
@@ -7770,8 +7770,8 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VFIXUPIMMSSZrri:
     case X86::VFIXUPIMMSSZrrik:
     case X86::VFIXUPIMMSSZrrikz:
-    case X86::VFPCLASSSSZrr:
-    case X86::VFPCLASSSSZrrk:
+    case X86::VFPCLASSSSZri:
+    case X86::VFPCLASSSSZrik:
     case X86::VGETEXPSSZr:
     case X86::VGETEXPSSZrk:
     case X86::VGETEXPSSZrkz:
@@ -7939,8 +7939,8 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VFIXUPIMMSDZrri:
     case X86::VFIXUPIMMSDZrrik:
     case X86::VFIXUPIMMSDZrrikz:
-    case X86::VFPCLASSSDZrr:
-    case X86::VFPCLASSSDZrrk:
+    case X86::VFPCLASSSDZri:
+    case X86::VFPCLASSSDZrik:
     case X86::VGETEXPSDZr:
     case X86::VGETEXPSDZrk:
     case X86::VGETEXPSDZrkz:

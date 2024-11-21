@@ -61,8 +61,6 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     setCPUFeature(FEAT_RNG);
   if (hwcap2 & HWCAP2_I8MM)
     setCPUFeature(FEAT_I8MM);
-  if (hwcap2 & HWCAP2_DGH)
-    setCPUFeature(FEAT_DGH);
   if (hwcap2 & HWCAP2_FRINT)
     setCPUFeature(FEAT_FRINTTS);
   if (hwcap2 & HWCAP2_SVEF32MM)

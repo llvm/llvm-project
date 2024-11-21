@@ -47,7 +47,7 @@ enum CPUFeatures {
   FEAT_RCPC,
   FEAT_RCPC2,
   FEAT_FRINTTS,
-  FEAT_DGH,
+  RESERVED_FEAT_DGH, // previously used and now ABI legacy
   FEAT_I8MM,
   FEAT_BF16,
   RESERVED_FEAT_EBF16, // previously used and now ABI legacy

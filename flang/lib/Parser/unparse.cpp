@@ -1703,6 +1703,13 @@ public:
   void Unparse(const IntrinsicStmt &x) { // R1519
     Word("INTRINSIC :: "), Walk(x.v, ", ");
   }
+  void Unparse(const CallStmt::StarOrExpr &x) {
+    if (x.v) {
+      Walk(*x.v);
+    } else {
+      Word("*");
+    }
+  }
   void Unparse(const CallStmt::Chevrons &x) { // CUDA
     Walk(std::get<0>(x.t)); // grid
     Word(","), Walk(std::get<1>(x.t)); // block
@@ -2072,7 +2079,7 @@ public:
     Put(" = ");
     Walk(std::get<SubscriptTriplet>(x.t));
   }
-  void Unparse(const OmpIteratorModifier &x) {
+  void Unparse(const OmpIterator &x) {
     Word("ITERATOR(");
     Walk(x.v);
     Put(")");
@@ -2086,14 +2093,24 @@ public:
   void Unparse(const OmpMapClause &x) {
     auto &typeMod =
         std::get<std::optional<std::list<OmpMapClause::TypeModifier>>>(x.t);
-    auto &iter = std::get<std::optional<std::list<OmpIteratorModifier>>>(x.t);
+    auto &iter = std::get<std::optional<std::list<OmpIterator>>>(x.t);
     auto &type = std::get<std::optional<std::list<OmpMapClause::Type>>>(x.t);
+    auto &mapper = std::get<OmpMapperIdentifier>(x.t);
 
     // For a given list of items, if the item has a value, then walk it.
     // Print commas between items that have values.
     // Return 'true' if something did get printed, otherwise 'false'.
     bool needComma{false};
+    if (mapper.v) {
+      Word("MAPPER(");
+      Walk(*mapper.v);
+      Put(")");
+      needComma = true;
+    }
     if (typeMod) {
+      if (needComma) {
+        Put(", ");
+      }
       Walk(*typeMod);
       needComma = true;
     }
@@ -2130,7 +2147,7 @@ public:
     Walk(std::get<ScalarIntExpr>(x.t));
   }
   void Unparse(const OmpAffinityClause &x) {
-    Walk(std::get<std::optional<OmpIteratorModifier>>(x.t), ":");
+    Walk(std::get<std::optional<OmpIterator>>(x.t), ":");
     Walk(std::get<OmpObjectList>(x.t));
   }
   void Unparse(const OmpAlignedClause &x) {
@@ -2141,7 +2158,7 @@ public:
   void Unparse(const OmpFromClause &x) {
     auto &expect{
         std::get<std::optional<std::list<OmpFromClause::Expectation>>>(x.t)};
-    auto &iter{std::get<std::optional<std::list<OmpIteratorModifier>>>(x.t)};
+    auto &iter{std::get<std::optional<std::list<OmpIterator>>>(x.t)};
     bool needComma{false};
     if (expect) {
       Walk(*expect);
@@ -2174,13 +2191,13 @@ public:
   void Unparse(const OmpReductionClause &x) {
     Walk(std::get<std::optional<OmpReductionClause::ReductionModifier>>(x.t),
         ",");
-    Walk(std::get<OmpReductionOperator>(x.t));
+    Walk(std::get<OmpReductionIdentifier>(x.t));
     Put(":");
     Walk(std::get<OmpObjectList>(x.t));
   }
   void Unparse(const OmpDetachClause &x) { Walk(x.v); }
   void Unparse(const OmpInReductionClause &x) {
-    Walk(std::get<OmpReductionOperator>(x.t));
+    Walk(std::get<OmpReductionIdentifier>(x.t));
     Put(":");
     Walk(std::get<OmpObjectList>(x.t));
   }
@@ -2228,35 +2245,15 @@ public:
         std::get<std::optional<OmpNumTasksClause::Prescriptiveness>>(x.t), ":");
     Walk(std::get<ScalarIntExpr>(x.t));
   }
-  void Unparse(const OmpDependSinkVecLength &x) {
-    Walk(std::get<DefinedOperator>(x.t));
-    Walk(std::get<ScalarIntConstantExpr>(x.t));
+  void Unparse(const OmpDoacross::Sink &x) {
+    Word("SINK: ");
+    Walk(x.v.v);
   }
-  void Unparse(const OmpDependSinkVec &x) {
-    Walk(std::get<Name>(x.t));
-    Walk(std::get<std::optional<OmpDependSinkVecLength>>(x.t));
-  }
-  void Unparse(const OmpDependClause::InOut &x) {
+  void Unparse(const OmpDoacross::Source &) { Word("SOURCE"); }
+  void Unparse(const OmpDependClause::TaskDep &x) {
     Walk(std::get<OmpTaskDependenceType>(x.t));
     Put(":");
     Walk(std::get<OmpObjectList>(x.t));
-  }
-  bool Pre(const OmpDependClause &x) {
-    return common::visit(
-        common::visitors{
-            [&](const OmpDependClause::Source &) {
-              Word("SOURCE");
-              return false;
-            },
-            [&](const OmpDependClause::Sink &y) {
-              Word("SINK:");
-              Walk(y.v);
-              Put(")");
-              return false;
-            },
-            [&](const OmpDependClause::InOut &) { return true; },
-        },
-        x.u);
   }
   void Unparse(const OmpDefaultmapClause &x) {
     Walk(std::get<OmpDefaultmapClause::ImplicitBehavior>(x.t));
@@ -2266,7 +2263,7 @@ public:
   void Unparse(const OmpToClause &x) {
     auto &expect{
         std::get<std::optional<std::list<OmpToClause::Expectation>>>(x.t)};
-    auto &iter{std::get<std::optional<std::list<OmpIteratorModifier>>>(x.t)};
+    auto &iter{std::get<std::optional<std::list<OmpIterator>>>(x.t)};
     bool needComma{false};
     if (expect) {
       Walk(*expect);
@@ -2405,6 +2402,9 @@ public:
     switch (x.v) {
     case llvm::omp::Directive::OMPD_barrier:
       Word("BARRIER ");
+      break;
+    case llvm::omp::Directive::OMPD_scan:
+      Word("SCAN ");
       break;
     case llvm::omp::Directive::OMPD_taskwait:
       Word("TASKWAIT ");
@@ -2645,7 +2645,7 @@ public:
   }
   void Unparse(const OpenMPDeclareReductionConstruct &x) {
     Put("(");
-    Walk(std::get<OmpReductionOperator>(x.t)), Put(" : ");
+    Walk(std::get<OmpReductionIdentifier>(x.t)), Put(" : ");
     Walk(std::get<std::list<DeclarationTypeSpec>>(x.t), ","), Put(" : ");
     Walk(std::get<OmpReductionCombiner>(x.t));
     Put(")");
@@ -2663,6 +2663,22 @@ public:
               Walk(std::get<OmpClauseList>(z.t));
               Put("\n");
               EndOpenMP();
+              return false;
+            },
+            [&](const OpenMPDeclareMapperConstruct &z) {
+              Word("DECLARE MAPPER (");
+              const auto &spec{std::get<OmpDeclareMapperSpecifier>(z.t)};
+              if (auto mapname{std::get<std::optional<Name>>(spec.t)}) {
+                Walk(mapname);
+                Put(":");
+              }
+              Walk(std::get<TypeSpec>(spec.t));
+              Put("::");
+              Walk(std::get<Name>(spec.t));
+              Put(")");
+
+              Walk(std::get<OmpClauseList>(z.t));
+              Put("\n");
               return false;
             },
             [&](const OpenMPDeclareReductionConstruct &) {
@@ -2894,8 +2910,8 @@ public:
   WALK_NESTED_ENUM(
       OmpLastprivateClause, LastprivateModifier) // OMP lastprivate-modifier
   WALK_NESTED_ENUM(OmpScheduleModifierType, ModType) // OMP schedule-modifier
-  WALK_NESTED_ENUM(OmpLinearModifier, Type) // OMP linear-modifier
-  WALK_NESTED_ENUM(OmpTaskDependenceType, Type) // OMP task-dependence-type
+  WALK_NESTED_ENUM(OmpLinearModifier, Value) // OMP linear-modifier
+  WALK_NESTED_ENUM(OmpTaskDependenceType, Value) // OMP task-dependence-type
   WALK_NESTED_ENUM(OmpScheduleClause, ScheduleType) // OMP schedule-type
   WALK_NESTED_ENUM(OmpDeviceClause, DeviceModifier) // OMP device modifier
   WALK_NESTED_ENUM(OmpDeviceTypeClause, Type) // OMP DEVICE_TYPE
@@ -2945,11 +2961,9 @@ public:
       Word("*");
     }
   }
-  void Unparse(const CUFKernelDoConstruct::Directive &x) {
-    Word("!$CUF KERNEL DO");
-    Walk(" (", std::get<std::optional<ScalarIntConstantExpr>>(x.t), ")");
+  void Unparse(const CUFKernelDoConstruct::LaunchConfiguration &x) {
     Word(" <<<");
-    const auto &grid{std::get<1>(x.t)};
+    const auto &grid{std::get<0>(x.t)};
     if (grid.empty()) {
       Word("*");
     } else if (grid.size() == 1) {
@@ -2958,7 +2972,7 @@ public:
       Walk("(", grid, ",", ")");
     }
     Word(",");
-    const auto &block{std::get<2>(x.t)};
+    const auto &block{std::get<1>(x.t)};
     if (block.empty()) {
       Word("*");
     } else if (block.size() == 1) {
@@ -2966,10 +2980,16 @@ public:
     } else {
       Walk("(", block, ",", ")");
     }
-    if (const auto &stream{std::get<3>(x.t)}) {
+    if (const auto &stream{std::get<2>(x.t)}) {
       Word(",STREAM="), Walk(*stream);
     }
     Word(">>>");
+  }
+  void Unparse(const CUFKernelDoConstruct::Directive &x) {
+    Word("!$CUF KERNEL DO");
+    Walk(" (", std::get<std::optional<ScalarIntConstantExpr>>(x.t), ")");
+    Walk(std::get<std::optional<CUFKernelDoConstruct::LaunchConfiguration>>(
+        x.t));
     Walk(" ", std::get<std::list<CUFReduction>>(x.t), " ");
     Word("\n");
   }

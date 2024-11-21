@@ -190,7 +190,6 @@ template<class Callable, class ...Args>
 #include <__chrono/time_point.h>
 #include <__condition_variable/condition_variable.h>
 #include <__config>
-#include <__memory/shared_ptr.h>
 #include <__mutex/lock_guard.h>
 #include <__mutex/mutex.h>
 #include <__mutex/once_flag.h>

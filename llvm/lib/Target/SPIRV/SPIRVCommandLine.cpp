@@ -20,7 +20,7 @@
 
 using namespace llvm;
 
-static const std::map<std::string, SPIRV::Extension::Extension>
+static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
     SPIRVExtensionMap = {
         {"SPV_EXT_shader_atomic_float_add",
          SPIRV::Extension::Extension::SPV_EXT_shader_atomic_float_add},
@@ -30,6 +30,8 @@ static const std::map<std::string, SPIRV::Extension::Extension>
          SPIRV::Extension::Extension::SPV_EXT_shader_atomic_float_min_max},
         {"SPV_EXT_arithmetic_fence",
          SPIRV::Extension::Extension::SPV_EXT_arithmetic_fence},
+        {"SPV_EXT_demote_to_helper_invocation",
+         SPIRV::Extension::Extension::SPV_EXT_demote_to_helper_invocation},
         {"SPV_INTEL_arbitrary_precision_integers",
          SPIRV::Extension::Extension::SPV_INTEL_arbitrary_precision_integers},
         {"SPV_INTEL_cache_controls",
@@ -98,7 +100,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
       return O.error("Invalid extension list format: " + Token.str());
 
     llvm::StringRef ExtensionName = Token.substr(1);
-    auto NameValuePair = SPIRVExtensionMap.find(ExtensionName.str());
+    auto NameValuePair = SPIRVExtensionMap.find(ExtensionName);
 
     if (NameValuePair == SPIRVExtensionMap.end())
       return O.error("Unknown SPIR-V extension: " + Token.str());

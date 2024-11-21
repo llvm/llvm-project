@@ -1091,6 +1091,13 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
       // Two distinct element type arguments (re, im)
       marshal.emplace_back(eleTy, AT{});
       marshal.emplace_back(eleTy, AT{});
+    } else if (sem == &llvm::APFloat::IEEEquad()) {
+      // Use a type that will be translated into LLVM as:
+      // { fp128, fp128 }   struct of 2 fp128, byval
+      marshal.emplace_back(
+          fir::ReferenceType::get(mlir::TupleType::get(
+              eleTy.getContext(), mlir::TypeRange{eleTy, eleTy})),
+          AT{/*align=*/16, /*byval=*/true});
     } else {
       typeTodo(sem, loc, "argument");
     }
@@ -1108,10 +1115,41 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
       marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(),
                                                 mlir::TypeRange{eleTy, eleTy}),
                            AT{/*alignment=*/0, /*byval=*/true});
+    } else if (sem == &llvm::APFloat::IEEEquad()) {
+      // Use a type that will be translated into LLVM as:
+      // { fp128, fp128 }   struct of 2 fp128, sret, align 16
+      marshal.emplace_back(
+          fir::ReferenceType::get(mlir::TupleType::get(
+              eleTy.getContext(), mlir::TypeRange{eleTy, eleTy})),
+          AT{/*align=*/16, /*byval=*/false, /*sret=*/true});
     } else {
       typeTodo(sem, loc, "return");
     }
     return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  integerArgumentType(mlir::Location loc,
+                      mlir::IntegerType argTy) const override {
+    if (argTy.getWidth() == 32) {
+      // LA64 LP64D ABI requires unsigned 32 bit integers to be sign extended.
+      // Therefore, Flang also follows it if a function needs to be
+      // interoperable with C.
+      //
+      // Currently, it only adds `signext` attribute to the dummy arguments and
+      // return values in the function signatures, but it does not add the
+      // corresponding attribute to the actual arguments and return values in
+      // `fir.call` instruction. Thanks to LLVM's integration of all these
+      // attributes, the modification is still effective.
+      CodeGenSpecifics::Marshalling marshal;
+      AT::IntegerExtension intExt = AT::IntegerExtension::Sign;
+      marshal.emplace_back(argTy, AT{/*alignment=*/0, /*byval=*/false,
+                                     /*sret=*/false, /*append=*/false,
+                                     /*intExt=*/intExt});
+      return marshal;
+    }
+
+    return GenericTarget::integerArgumentType(loc, argTy);
   }
 };
 } // namespace

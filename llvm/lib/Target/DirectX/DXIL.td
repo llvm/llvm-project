@@ -754,6 +754,13 @@ def BufferStore : DXILOp<69, bufferStore> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
+def UpdateCounter : DXILOp<70, bufferUpdateCounter> {
+  let Doc = "increments/decrements a buffer counter";
+  let arguments = [HandleTy, Int8Ty];
+  let result = Int32Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def CheckAccessFullyMapped : DXILOp<71, checkAccessFullyMapped> {
   let Doc = "checks whether a Sample, Gather, or Load operation "
             "accessed mapped tiles in a tiled resource";
@@ -761,6 +768,14 @@ def CheckAccessFullyMapped : DXILOp<71, checkAccessFullyMapped> {
   let result = Int1Ty;
   let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
+def Discard : DXILOp<82, discard> {
+  let Doc = "discard the current pixel";
+  let LLVMIntrinsic = int_dx_discard;
+  let arguments = [Int1Ty];
+  let result = VoidTy;
+  let stages = [Stages<DXIL1_0, [pixel]>];
 }
 
 def ThreadId :  DXILOp<93, threadId> {
@@ -846,6 +861,14 @@ def CreateHandleFromBinding : DXILOp<217, createHandleFromBinding> {
   let stages = [Stages<DXIL1_6, [all_stages]>];
 }
 
+def WaveActiveAnyTrue : DXILOp<113, waveAnyTrue> {
+  let Doc = "returns true if the expression is true in any of the active lanes in the current wave";
+  let LLVMIntrinsic = int_dx_wave_any;
+  let arguments = [Int1Ty];
+  let result = Int1Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def WaveIsFirstLane :  DXILOp<110, waveIsFirstLane> {
   let Doc = "returns 1 for the first lane in the wave";
   let LLVMIntrinsic = int_dx_wave_is_first_lane;
@@ -869,6 +892,15 @@ def WaveGetLaneIndex : DXILOp<111, waveGetLaneIndex> {
   let Doc = "returns the index of the current lane in the wave";
   let LLVMIntrinsic = int_dx_wave_getlaneindex;
   let arguments = [];
+  let result = Int32Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def WaveAllBitCount : DXILOp<135, waveAllOp> {
+  let Doc = "returns the count of bits set to 1 across the wave";
+  let LLVMIntrinsic = int_dx_wave_active_countbits;
+  let arguments = [Int1Ty];
   let result = Int32Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];

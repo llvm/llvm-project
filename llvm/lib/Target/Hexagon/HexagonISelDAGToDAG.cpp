@@ -998,7 +998,6 @@ void HexagonDAGToDAGISel::SelectFDiv(SDNode *N) {
     FastFDiv(N);
   else
     FDiv(N);
-  return;
 }
 
 void HexagonDAGToDAGISel::Select(SDNode *N) {

@@ -19,16 +19,27 @@
 #define LLVM_LIBC_SRC___SUPPORT_RPC_RPC_H
 
 #include "rpc_util.h"
-#include "src/__support/CPP/algorithm.h" // max
-#include "src/__support/CPP/atomic.h"
-#include "src/__support/CPP/optional.h"
-#include "src/__support/GPU/utils.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace rpc {
+
+/// Use scoped atomic variants if they are available for the target.
+#if !__has_builtin(__scoped_atomic_load_n)
+#define __scoped_atomic_load_n(src, ord, scp) __atomic_load_n(src, ord)
+#define __scoped_atomic_store_n(dst, src, ord, scp)                            \
+  __atomic_store_n(dst, src, ord)
+#define __scoped_atomic_fetch_or(src, val, ord, scp)                           \
+  __atomic_fetch_or(src, val, ord)
+#define __scoped_atomic_fetch_and(src, val, ord, scp)                          \
+  __atomic_fetch_and(src, val, ord)
+#endif
+#if !__has_builtin(__scoped_atomic_thread_fence)
+#define __scoped_atomic_thread_fence(ord, scp) __atomic_thread_fence(ord)
+#endif
 
 /// A fixed size channel used to communicate between the RPC client and server.
 struct Buffer {
@@ -40,11 +51,11 @@ static_assert(sizeof(Buffer) == 64, "Buffer size mismatch");
 /// perform and which threads are active in the slots.
 struct Header {
   uint64_t mask;
-  uint16_t opcode;
+  uint32_t opcode;
 };
 
 /// The maximum number of parallel ports that the RPC interface can support.
-constexpr uint64_t MAX_PORT_COUNT = 4096;
+constexpr static uint64_t MAX_PORT_COUNT = 4096;
 
 /// A common process used to synchronize communication between a client and a
 /// server. The process contains a read-only inbox and a write-only outbox used
@@ -67,18 +78,18 @@ template <bool Invert> struct Process {
   LIBC_INLINE ~Process() = default;
 
   uint32_t port_count = 0;
-  cpp::Atomic<uint32_t> *inbox = nullptr;
-  cpp::Atomic<uint32_t> *outbox = nullptr;
+  uint32_t *inbox = nullptr;
+  uint32_t *outbox = nullptr;
   Header *header = nullptr;
   Buffer *packet = nullptr;
 
   static constexpr uint64_t NUM_BITS_IN_WORD = sizeof(uint32_t) * 8;
-  cpp::Atomic<uint32_t> lock[MAX_PORT_COUNT / NUM_BITS_IN_WORD] = {0};
+  uint32_t lock[MAX_PORT_COUNT / NUM_BITS_IN_WORD] = {0};
 
   LIBC_INLINE Process(uint32_t port_count, void *buffer)
-      : port_count(port_count), inbox(reinterpret_cast<cpp::Atomic<uint32_t> *>(
+      : port_count(port_count), inbox(reinterpret_cast<uint32_t *>(
                                     advance(buffer, inbox_offset(port_count)))),
-        outbox(reinterpret_cast<cpp::Atomic<uint32_t> *>(
+        outbox(reinterpret_cast<uint32_t *>(
             advance(buffer, outbox_offset(port_count)))),
         header(reinterpret_cast<Header *>(
             advance(buffer, header_offset(port_count)))),
@@ -101,16 +112,16 @@ template <bool Invert> struct Process {
 
   /// Retrieve the inbox state from memory shared between processes.
   LIBC_INLINE uint32_t load_inbox(uint64_t lane_mask, uint32_t index) const {
-    return gpu::broadcast_value(
-        lane_mask,
-        inbox[index].load(cpp::MemoryOrder::RELAXED, cpp::MemoryScope::SYSTEM));
+    return rpc::broadcast_value(
+        lane_mask, __scoped_atomic_load_n(&inbox[index], __ATOMIC_RELAXED,
+                                          __MEMORY_SCOPE_SYSTEM));
   }
 
   /// Retrieve the outbox state from memory shared between processes.
   LIBC_INLINE uint32_t load_outbox(uint64_t lane_mask, uint32_t index) const {
-    return gpu::broadcast_value(lane_mask,
-                                outbox[index].load(cpp::MemoryOrder::RELAXED,
-                                                   cpp::MemoryScope::SYSTEM));
+    return rpc::broadcast_value(
+        lane_mask, __scoped_atomic_load_n(&outbox[index], __ATOMIC_RELAXED,
+                                          __MEMORY_SCOPE_SYSTEM));
   }
 
   /// Signal to the other process that this one is finished with the buffer.
@@ -119,9 +130,9 @@ template <bool Invert> struct Process {
   /// cheaper than calling load_outbox to get the value to store.
   LIBC_INLINE uint32_t invert_outbox(uint32_t index, uint32_t current_outbox) {
     uint32_t inverted_outbox = !current_outbox;
-    atomic_thread_fence(cpp::MemoryOrder::RELEASE);
-    outbox[index].store(inverted_outbox, cpp::MemoryOrder::RELAXED,
-                        cpp::MemoryScope::SYSTEM);
+    __scoped_atomic_thread_fence(__ATOMIC_RELEASE, __MEMORY_SCOPE_SYSTEM);
+    __scoped_atomic_store_n(&outbox[index], inverted_outbox, __ATOMIC_RELAXED,
+                            __MEMORY_SCOPE_SYSTEM);
     return inverted_outbox;
   }
 
@@ -133,7 +144,7 @@ template <bool Invert> struct Process {
       sleep_briefly();
       in = load_inbox(lane_mask, index);
     }
-    atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
+    __scoped_atomic_thread_fence(__ATOMIC_ACQUIRE, __MEMORY_SCOPE_SYSTEM);
   }
 
   /// The packet is a linearly allocated array of buffers used to communicate
@@ -153,10 +164,9 @@ template <bool Invert> struct Process {
 
   /// Attempt to claim the lock at index. Return true on lock taken.
   /// lane_mask is a bitmap of the threads in the warp that would hold the
-  /// single lock on success, e.g. the result of gpu::get_lane_mask()
+  /// single lock on success, e.g. the result of rpc::get_lane_mask()
   /// The lock is held when the n-th bit of the lock bitfield is set.
-  [[clang::convergent]] LIBC_INLINE bool try_lock(uint64_t lane_mask,
-                                                  uint32_t index) {
+  LIBC_INLINE bool try_lock(uint64_t lane_mask, uint32_t index) {
     // On amdgpu, test and set to the nth lock bit and a sync_lane would suffice
     // On volta, need to handle differences between the threads running and
     // the threads that were detected in the previous call to get_lane_mask()
@@ -165,12 +175,12 @@ template <bool Invert> struct Process {
     // There may be threads active which are not in lane mask which must not
     // succeed in taking the lock, as otherwise it will leak. This is handled
     // by making threads which are not in lane_mask or with 0, a no-op.
-    uint32_t id = gpu::get_lane_id();
+    uint32_t id = rpc::get_lane_id();
     bool id_in_lane_mask = lane_mask & (1ul << id);
 
     // All threads in the warp call fetch_or. Possibly at the same time.
     bool before = set_nth(lock, index, id_in_lane_mask);
-    uint64_t packed = gpu::ballot(lane_mask, before);
+    uint64_t packed = rpc::ballot(lane_mask, before);
 
     // If every bit set in lane_mask is also set in packed, every single thread
     // in the warp failed to get the lock. Ballot returns unset for threads not
@@ -190,28 +200,27 @@ template <bool Invert> struct Process {
     // inlining the current function.
     bool holding_lock = lane_mask != packed;
     if (holding_lock)
-      atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
+      __scoped_atomic_thread_fence(__ATOMIC_ACQUIRE, __MEMORY_SCOPE_DEVICE);
     return holding_lock;
   }
 
   /// Unlock the lock at index. We need a lane sync to keep this function
   /// convergent, otherwise the compiler will sink the store and deadlock.
-  [[clang::convergent]] LIBC_INLINE void unlock(uint64_t lane_mask,
-                                                uint32_t index) {
+  LIBC_INLINE void unlock(uint64_t lane_mask, uint32_t index) {
     // Do not move any writes past the unlock.
-    atomic_thread_fence(cpp::MemoryOrder::RELEASE);
+    __scoped_atomic_thread_fence(__ATOMIC_RELEASE, __MEMORY_SCOPE_DEVICE);
 
     // Use exactly one thread to clear the nth bit in the lock array Must
     // restrict to a single thread to avoid one thread dropping the lock, then
     // an unrelated warp claiming the lock, then a second thread in this warp
     // dropping the lock again.
-    clear_nth(lock, index, gpu::is_first_lane(lane_mask));
-    gpu::sync_lane(lane_mask);
+    clear_nth(lock, index, rpc::is_first_lane(lane_mask));
+    rpc::sync_lane(lane_mask);
   }
 
   /// Number of bytes to allocate for an inbox or outbox.
   LIBC_INLINE static constexpr uint64_t mailbox_bytes(uint32_t port_count) {
-    return port_count * sizeof(cpp::Atomic<uint32_t>);
+    return port_count * sizeof(uint32_t);
   }
 
   /// Number of bytes to allocate for the buffer containing the packets.
@@ -242,24 +251,24 @@ template <bool Invert> struct Process {
   }
 
   /// Conditionally set the n-th bit in the atomic bitfield.
-  LIBC_INLINE static constexpr uint32_t set_nth(cpp::Atomic<uint32_t> *bits,
-                                                uint32_t index, bool cond) {
+  LIBC_INLINE static constexpr uint32_t set_nth(uint32_t *bits, uint32_t index,
+                                                bool cond) {
     uint32_t slot = index / NUM_BITS_IN_WORD;
     uint32_t bit = index % NUM_BITS_IN_WORD;
-    return bits[slot].fetch_or(static_cast<uint32_t>(cond) << bit,
-                               cpp::MemoryOrder::RELAXED,
-                               cpp::MemoryScope::DEVICE) &
+    return __scoped_atomic_fetch_or(&bits[slot],
+                                    static_cast<uint32_t>(cond) << bit,
+                                    __ATOMIC_RELAXED, __MEMORY_SCOPE_DEVICE) &
            (1u << bit);
   }
 
   /// Conditionally clear the n-th bit in the atomic bitfield.
-  LIBC_INLINE static constexpr uint32_t clear_nth(cpp::Atomic<uint32_t> *bits,
+  LIBC_INLINE static constexpr uint32_t clear_nth(uint32_t *bits,
                                                   uint32_t index, bool cond) {
     uint32_t slot = index / NUM_BITS_IN_WORD;
     uint32_t bit = index % NUM_BITS_IN_WORD;
-    return bits[slot].fetch_and(~0u ^ (static_cast<uint32_t>(cond) << bit),
-                                cpp::MemoryOrder::RELAXED,
-                                cpp::MemoryScope::DEVICE) &
+    return __scoped_atomic_fetch_and(&bits[slot],
+                                     ~0u ^ (static_cast<uint32_t>(cond) << bit),
+                                     __ATOMIC_RELAXED, __MEMORY_SCOPE_DEVICE) &
            (1u << bit);
   }
 };
@@ -269,9 +278,9 @@ template <typename F>
 LIBC_INLINE static void invoke_rpc(F &&fn, uint32_t lane_size,
                                    uint64_t lane_mask, Buffer *slot) {
   if constexpr (is_process_gpu()) {
-    fn(&slot[gpu::get_lane_id()], gpu::get_lane_id());
+    fn(&slot[rpc::get_lane_id()], rpc::get_lane_id());
   } else {
-    for (uint32_t i = 0; i < lane_size; i += gpu::get_lane_size())
+    for (uint32_t i = 0; i < lane_size; i += rpc::get_num_lanes())
       if (lane_mask & (1ul << i))
         fn(&slot[i], i);
   }
@@ -295,7 +304,7 @@ private:
 
   friend struct Client;
   friend struct Server;
-  friend class cpp::optional<Port<T>>;
+  friend class rpc::optional<Port<T>>;
 
 public:
   template <typename U> LIBC_INLINE void recv(U use);
@@ -308,15 +317,15 @@ public:
   template <typename A>
   LIBC_INLINE void recv_n(void **dst, uint64_t *size, A &&alloc);
 
-  LIBC_INLINE uint16_t get_opcode() const {
+  LIBC_INLINE uint32_t get_opcode() const {
     return process.header[index].opcode;
   }
 
-  LIBC_INLINE uint16_t get_index() const { return index; }
+  LIBC_INLINE uint32_t get_index() const { return index; }
 
   LIBC_INLINE void close() {
     // Wait for all lanes to finish using the port.
-    gpu::sync_lane(lane_mask);
+    rpc::sync_lane(lane_mask);
 
     // The server is passive, if it own the buffer when it closes we need to
     // give ownership back to the client.
@@ -346,14 +355,11 @@ struct Client {
       : process(port_count, buffer) {}
 
   using Port = rpc::Port<false>;
-  template <uint16_t opcode> LIBC_INLINE Port open();
+  template <uint32_t opcode> LIBC_INLINE Port open();
 
 private:
   Process<false> process;
 };
-static_assert(cpp::is_trivially_copyable<Client>::value &&
-                  sizeof(Process<true>) == sizeof(Process<false>),
-              "The client is not trivially copyable from the server");
 
 /// The RPC server used to respond to the client.
 struct Server {
@@ -366,7 +372,7 @@ struct Server {
       : process(port_count, buffer) {}
 
   using Port = rpc::Port<true>;
-  LIBC_INLINE cpp::optional<Port> try_open(uint32_t lane_size,
+  LIBC_INLINE rpc::optional<Port> try_open(uint32_t lane_size,
                                            uint32_t start = 0);
   LIBC_INLINE Port open(uint32_t lane_size);
 
@@ -450,7 +456,7 @@ LIBC_INLINE void Port<T>::send_n(const void *const *src, uint64_t *size) {
   send([&](Buffer *buffer, uint32_t id) {
     reinterpret_cast<uint64_t *>(buffer->data)[0] = lane_value(size, id);
     num_sends = is_process_gpu() ? lane_value(size, id)
-                                 : cpp::max(lane_value(size, id), num_sends);
+                                 : rpc::max(lane_value(size, id), num_sends);
     uint64_t len =
         lane_value(size, id) > sizeof(Buffer::data) - sizeof(uint64_t)
             ? sizeof(Buffer::data) - sizeof(uint64_t)
@@ -459,7 +465,7 @@ LIBC_INLINE void Port<T>::send_n(const void *const *src, uint64_t *size) {
   });
   uint64_t idx = sizeof(Buffer::data) - sizeof(uint64_t);
   uint64_t mask = process.header[index].mask;
-  while (gpu::ballot(mask, idx < num_sends)) {
+  while (rpc::ballot(mask, idx < num_sends)) {
     send([=](Buffer *buffer, uint32_t id) {
       uint64_t len = lane_value(size, id) - idx > sizeof(Buffer::data)
                          ? sizeof(Buffer::data)
@@ -483,7 +489,7 @@ LIBC_INLINE void Port<T>::recv_n(void **dst, uint64_t *size, A &&alloc) {
     lane_value(dst, id) =
         reinterpret_cast<uint8_t *>(alloc(lane_value(size, id)));
     num_recvs = is_process_gpu() ? lane_value(size, id)
-                                 : cpp::max(lane_value(size, id), num_recvs);
+                                 : rpc::max(lane_value(size, id), num_recvs);
     uint64_t len =
         lane_value(size, id) > sizeof(Buffer::data) - sizeof(uint64_t)
             ? sizeof(Buffer::data) - sizeof(uint64_t)
@@ -492,7 +498,7 @@ LIBC_INLINE void Port<T>::recv_n(void **dst, uint64_t *size, A &&alloc) {
   });
   uint64_t idx = sizeof(Buffer::data) - sizeof(uint64_t);
   uint64_t mask = process.header[index].mask;
-  while (gpu::ballot(mask, idx < num_recvs)) {
+  while (rpc::ballot(mask, idx < num_recvs)) {
     recv([=](Buffer *buffer, uint32_t id) {
       uint64_t len = lane_value(size, id) - idx > sizeof(Buffer::data)
                          ? sizeof(Buffer::data)
@@ -510,17 +516,16 @@ LIBC_INLINE void Port<T>::recv_n(void **dst, uint64_t *size, A &&alloc) {
 /// port. Each port instance uses an associated \p opcode to tell the server
 /// what to do. The Client interface provides the appropriate lane size to the
 /// port using the platform's returned value.
-template <uint16_t opcode>
-[[clang::convergent]] LIBC_INLINE Client::Port Client::open() {
+template <uint32_t opcode> LIBC_INLINE Client::Port Client::open() {
   // Repeatedly perform a naive linear scan for a port that can be opened to
   // send data.
-  for (uint32_t index = gpu::get_cluster_id();; ++index) {
+  for (uint32_t index = 0;; ++index) {
     // Start from the beginning if we run out of ports to check.
     if (index >= process.port_count)
       index = 0;
 
     // Attempt to acquire the lock on this index.
-    uint64_t lane_mask = gpu::get_lane_mask();
+    uint64_t lane_mask = rpc::get_lane_mask();
     if (!process.try_lock(lane_mask, index))
       continue;
 
@@ -534,22 +539,22 @@ template <uint16_t opcode>
       continue;
     }
 
-    if (gpu::is_first_lane(lane_mask)) {
+    if (rpc::is_first_lane(lane_mask)) {
       process.header[index].opcode = opcode;
       process.header[index].mask = lane_mask;
     }
-    gpu::sync_lane(lane_mask);
-    return Port(process, lane_mask, gpu::get_lane_size(), index, out);
+    rpc::sync_lane(lane_mask);
+    return Port(process, lane_mask, rpc::get_num_lanes(), index, out);
   }
 }
 
 /// Attempts to open a port to use as the server. The server can only open a
 /// port if it has a pending receive operation
-[[clang::convergent]] LIBC_INLINE cpp::optional<typename Server::Port>
+LIBC_INLINE rpc::optional<typename Server::Port>
 Server::try_open(uint32_t lane_size, uint32_t start) {
   // Perform a naive linear scan for a port that has a pending request.
   for (uint32_t index = start; index < process.port_count; ++index) {
-    uint64_t lane_mask = gpu::get_lane_mask();
+    uint64_t lane_mask = rpc::get_lane_mask();
     uint32_t in = process.load_inbox(lane_mask, index);
     uint32_t out = process.load_outbox(lane_mask, index);
 
@@ -572,16 +577,26 @@ Server::try_open(uint32_t lane_size, uint32_t start) {
 
     return Port(process, lane_mask, lane_size, index, out);
   }
-  return cpp::nullopt;
+  return rpc::nullopt;
 }
 
 LIBC_INLINE Server::Port Server::open(uint32_t lane_size) {
   for (;;) {
-    if (cpp::optional<Server::Port> p = try_open(lane_size))
-      return cpp::move(p.value());
+    if (rpc::optional<Server::Port> p = try_open(lane_size))
+      return rpc::move(p.value());
     sleep_briefly();
   }
 }
+
+#if !__has_builtin(__scoped_atomic_load_n)
+#undef __scoped_atomic_load_n
+#undef __scoped_atomic_store_n
+#undef __scoped_atomic_fetch_or
+#undef __scoped_atomic_fetch_and
+#endif
+#if !__has_builtin(__scoped_atomic_thread_fence)
+#undef __scoped_atomic_thread_fence
+#endif
 
 } // namespace rpc
 } // namespace LIBC_NAMESPACE_DECL

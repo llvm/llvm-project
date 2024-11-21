@@ -2475,7 +2475,9 @@ def Vector_MaskOp : Vector_Op<"mask", [
     should not. The `vector.mask` operation returns the value produced by the
     masked execution of the nested operation, if any. The masked-off lanes in
     the result vector are taken from the corresponding lanes of the pass-thru
-    argument, if provided, or left unmodified, otherwise.
+    argument, if provided, or left unmodified, otherwise. At this point, 0-D
+    vectors are not supported by `vector.mask`. They may be supported in the
+    future.
 
     The `vector.mask` operation does not prescribe how a maskable operation
     should be masked or how a masked operation should be lowered. Masking
@@ -2770,11 +2772,11 @@ def Vector_FlatTransposeOp : Vector_Op<"flat_transpose", [Pure,
                  TCresVTEtIsSameAsOpBase<0, 0>>]>,
     Arguments<(
       // TODO: tighten vector element types that make sense.
-      ins VectorOfRankAndType<[1],
+      ins FixedVectorOfRankAndType<[1],
             [AnySignlessInteger, AnySignedInteger, Index, AnyFloat]>:$matrix,
           I32Attr:$rows, I32Attr:$columns)>,
     Results<(
-      outs VectorOfRankAndType<[1],
+      outs FixedVectorOfRankAndType<[1],
              [AnySignlessInteger, AnySignedInteger, Index, AnyFloat]>:$res)> {
   let summary = "Vector matrix transposition on flattened 1-D MLIR vectors";
   let description = [{
@@ -2789,7 +2791,9 @@ def Vector_FlatTransposeOp : Vector_Op<"flat_transpose", [Pure,
     a 2-D matrix with <rows> rows and <columns> columns, and returns the
     transposed matrix in flattened form in 'res'.
 
-    Also see:
+    Note, the corresponding LLVM intrinsic, `@llvm.matrix.transpose.*`, does not
+    support scalable vectors. Hence, this Op is only available for fixed-width
+    vectors. Also see:
 
     http://llvm.org/docs/LangRef.html#llvm-matrix-transpose-intrinsic
 
