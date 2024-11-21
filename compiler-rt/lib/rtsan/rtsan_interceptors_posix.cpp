@@ -815,6 +815,22 @@ INTERCEPTOR(int, mkfifo, const char *pathname, mode_t mode) {
   return REAL(mkfifo)(pathname, mode);
 }
 
+INTERCEPTOR(pid_t, fork, void) {
+  __rtsan_notify_intercepted_call("fork");
+  return REAL(fork)();
+}
+
+INTERCEPTOR(int, execve, const char *filename, char *const argv[],
+            char *const envp[]) {
+  __rtsan_notify_intercepted_call("execve");
+  return REAL(execve)(filename, argv, envp);
+}
+
+// TODO: the `wait` family of functions is an oddity. In testing, if you
+// intercept them, Darwin seemingly ignores them, and linux never returns from
+// the test. Revisit this in the future, but hopefully intercepting fork/exec is
+// enough to dissuade usage of wait by proxy.
+
 #if SANITIZER_APPLE
 #define INT_TYPE_SYSCALL int
 #else
@@ -955,6 +971,9 @@ void __rtsan::InitializeInterceptors() {
 
   INTERCEPT_FUNCTION(pipe);
   INTERCEPT_FUNCTION(mkfifo);
+
+  INTERCEPT_FUNCTION(fork);
+  INTERCEPT_FUNCTION(execve);
 
   INTERCEPT_FUNCTION(syscall);
 }
