@@ -675,17 +675,13 @@ public:
   /// Note that this routine also replaces the diagnostic client,
   /// allocating one if one is not provided.
   ///
-  /// \param VFS is used for any IO needed when creating DiagnosticsEngine. It
-  /// doesn't replace VFS in the CompilerInstance (if any).
-  ///
   /// \param Client If non-NULL, a diagnostic client that will be
   /// attached to (and, then, owned by) the DiagnosticsEngine inside this AST
   /// unit.
   ///
   /// \param ShouldOwnClient If Client is non-NULL, specifies whether
   /// the diagnostic object should take ownership of the client.
-  void createDiagnostics(llvm::vfs::FileSystem &VFS,
-                         DiagnosticConsumer *Client = nullptr,
+  void createDiagnostics(DiagnosticConsumer *Client = nullptr,
                          bool ShouldOwnClient = true);
 
   /// Create a DiagnosticsEngine object with a the TextDiagnosticPrinter.
@@ -706,11 +702,10 @@ public:
   /// used by some diagnostics printers (for logging purposes only).
   ///
   /// \return The new object on success, or null on failure.
-  static IntrusiveRefCntPtr<DiagnosticsEngine>
-  createDiagnostics(llvm::vfs::FileSystem &VFS, DiagnosticOptions *Opts,
-                    DiagnosticConsumer *Client = nullptr,
-                    bool ShouldOwnClient = true,
-                    const CodeGenOptions *CodeGenOpts = nullptr);
+  static IntrusiveRefCntPtr<DiagnosticsEngine> createDiagnostics(
+      DiagnosticOptions *Opts, DiagnosticConsumer *Client = nullptr,
+      bool ShouldOwnClient = true, const CodeGenOptions *CodeGenOpts = nullptr,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
 
   /// Create the file manager and replace any existing one with it.
   ///
