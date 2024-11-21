@@ -73,9 +73,11 @@ TEST(LlvmLibcFreeStore, RemoveBestFit) {
   ASSERT_EQ(store.remove_best_fit(largest_small->inner_size()), largest_small);
   store.insert(largest_small);
 
-  // Search smallest for best fit.
-  ASSERT_EQ(store.remove_best_fit(smallest->inner_size() + 1), largest_small);
-  store.insert(largest_small);
+  // Search small list for best fit.
+  Block<> *next_smallest =
+      largest_small == smallest ? remainder : largest_small;
+  ASSERT_EQ(store.remove_best_fit(smallest->inner_size() + 1), next_smallest);
+  store.insert(next_smallest);
 
   // Continue search for best fit to large blocks.
   EXPECT_EQ(store.remove_best_fit(largest_small->inner_size() + 1), remainder);
