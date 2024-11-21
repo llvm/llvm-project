@@ -101,21 +101,20 @@ protected:
 
   bool SetFrameAtIndex(uint32_t idx, lldb::StackFrameSP &frame_sp);
 
-  /// Realizes frames up to (and including) end_idx (which can be greater than  
-  /// the actual number of frames.)  
+  /// Realizes frames up to (and including) end_idx (which can be greater than
+  /// the actual number of frames.)
   /// Returns true if the function was interrupted, false otherwise.
   /// Must be called with a shared_locked mutex.  This might unlock the
-  /// shared side if it needs to fetch more frames, but will reacquire the 
+  /// shared side if it needs to fetch more frames, but will reacquire the
   /// shared lock on the way out.
-  bool GetFramesUpTo(uint32_t end_idx, 
-      InterruptionControl allow_interrupt,
-      std::shared_lock<std::shared_mutex> &guard);
+  bool GetFramesUpTo(uint32_t end_idx, InterruptionControl allow_interrupt,
+                     std::shared_lock<std::shared_mutex> &guard);
 
   /// Does not hold the StackFrameList mutex.  Same comment as GetFramesUpTo.
   void GetOnlyConcreteFramesUpTo(uint32_t end_idx, Unwind &unwinder,
-      std::shared_lock<std::shared_mutex> &guard);
+                                 std::shared_lock<std::shared_mutex> &guard);
 
-  // This gets called without the StackFrameList lock held, callers should 
+  // This gets called without the StackFrameList lock held, callers should
   // hold the lock.
   void SynthesizeTailCallFrames(StackFrame &next_frame);
 
@@ -155,7 +154,7 @@ protected:
   /// if we need more frames we may swap shared for unique to fulfill that
   /// requirement.
   mutable std::shared_mutex m_list_mutex;
-  
+
   // Setting the inlined depth should be protected against other attempts to
   // change it, but since it doesn't mutate the list itself, we can limit the
   // critical regions it produces by having a separate mutex.
@@ -189,8 +188,9 @@ protected:
 
 private:
   uint32_t SetSelectedFrameNoLock(lldb_private::StackFrame *frame);
-  lldb::StackFrameSP GetFrameAtIndexNoLock(uint32_t idx,
-      std::shared_lock<std::shared_mutex> &guard);
+  lldb::StackFrameSP
+  GetFrameAtIndexNoLock(uint32_t idx,
+                        std::shared_lock<std::shared_mutex> &guard);
 
   StackFrameList(const StackFrameList &) = delete;
   const StackFrameList &operator=(const StackFrameList &) = delete;
