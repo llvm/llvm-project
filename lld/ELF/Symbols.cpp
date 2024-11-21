@@ -321,7 +321,7 @@ void elf::maybeWarnUnorderableSymbol(Ctx &ctx, const Symbol *sym) {
   auto *d = dyn_cast<Defined>(sym);
 
   auto report = [&](StringRef s) {
-    warn(toStr(ctx, file) + s + sym->getName());
+    Warn(ctx) << toStr(ctx, file) << s << sym->getName();
   };
 
   if (sym->isUndefined()) {
