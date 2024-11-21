@@ -875,8 +875,7 @@ def allowable_client : Separate<["-"], "allowable_client">,
     Group<grp_rare>;
 def client_name : Separate<["-"], "client_name">,
     MetaVarName<"<name>">,
-    HelpText<"Specifies a <name> this client should match with the -allowable_client <name> in a dependent dylib">,
-    Flags<[HelpHidden]>,
+    HelpText<"Specifies a <name> this client should match with the -allowable_client <name> in an explicitly linked dylib">,
     Group<grp_rare>;
 def umbrella : Separate<["-"], "umbrella">,
     MetaVarName<"<name>">,
