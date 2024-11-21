@@ -110,6 +110,7 @@
 // CHECK-NEXT:     zvl8192b             1.0       'Zvl' (Minimum Vector Length) 8192
 // CHECK-NEXT:     zhinx                1.0       'Zhinx' (Half Float in Integer)
 // CHECK-NEXT:     zhinxmin             1.0       'Zhinxmin' (Half Float in Integer Minimal)
+// CHECK-NEXT:     sha                  1.0       'Sha' (Augmented Hypervisor)
 // CHECK-NEXT:     shcounterenw         1.0       'Shcounterenw' (Support writeable hcounteren enable bit for any hpmcounter that is not read-only zero)
 // CHECK-NEXT:     shgatpa              1.0       'Sgatpa' (SvNNx4 mode supported for all modes supported by satp, as well as Bare)
 // CHECK-NEXT:     shtvala              1.0       'Shtvala' (htval provides all needed values)
@@ -119,6 +120,7 @@
 // CHECK-NEXT:     smaia                1.0       'Smaia' (Advanced Interrupt Architecture Machine Level)
 // CHECK-NEXT:     smcdeleg             1.0       'Smcdeleg' (Counter Delegation Machine Level)
 // CHECK-NEXT:     smcsrind             1.0       'Smcsrind' (Indirect CSR Access Machine Level)
+// CHECK-NEXT:     smdbltrp             1.0       'Smdbltrp' (Double Trap Machine Level)
 // CHECK-NEXT:     smepmp               1.0       'Smepmp' (Enhanced Physical Memory Protection)
 // CHECK-NEXT:     smmpm                1.0       'Smmpm' (Machine-level Pointer Masking for M-mode)
 // CHECK-NEXT:     smnpm                1.0       'Smnpm' (Machine-level Pointer Masking for next lower privilege mode)
@@ -130,6 +132,7 @@
 // CHECK-NEXT:     sscofpmf             1.0       'Sscofpmf' (Count Overflow and Mode-Based Filtering)
 // CHECK-NEXT:     sscounterenw         1.0       'Sscounterenw' (Support writeable scounteren enable bit for any hpmcounter that is not read-only zero)
 // CHECK-NEXT:     sscsrind             1.0       'Sscsrind' (Indirect CSR Access Supervisor Level)
+// CHECK-NEXT:     ssdbltrp             1.0       'Ssdbltrp' (Double Trap Supervisor Level)
 // CHECK-NEXT:     ssnpm                1.0       'Ssnpm' (Supervisor-level Pointer Masking for next lower privilege mode)
 // CHECK-NEXT:     sspm                 1.0       'Sspm' (Indicates Supervisor-mode Pointer Masking)
 // CHECK-NEXT:     ssqosid              1.0       'Ssqosid' (Quality-of-Service (QoS) Identifiers)
@@ -146,6 +149,7 @@
 // CHECK-NEXT:     svinval              1.0       'Svinval' (Fine-Grained Address-Translation Cache Invalidation)
 // CHECK-NEXT:     svnapot              1.0       'Svnapot' (NAPOT Translation Contiguity)
 // CHECK-NEXT:     svpbmt               1.0       'Svpbmt' (Page-Based Memory Types)
+// CHECK-NEXT:     svvptc               1.0       'svvptc' (Obviating Memory-Management Instructions after Marking PTEs Valid)
 // CHECK-NEXT:     xcvalu               1.0       'XCValu' (CORE-V ALU Operations)
 // CHECK-NEXT:     xcvbi                1.0       'XCVbi' (CORE-V Immediate Branching)
 // CHECK-NEXT:     xcvbitmanip          1.0       'XCVbitmanip' (CORE-V Bit Manipulation)
@@ -189,14 +193,14 @@
 // CHECK-NEXT:     rva20u64
 // CHECK-NEXT:     rva22s64
 // CHECK-NEXT:     rva22u64
-// CHECK-NEXT:     rvi20u32
-// CHECK-NEXT:     rvi20u64
-// CHECK-EMPTY:
-// CHECK-NEXT: Experimental Profiles
 // CHECK-NEXT:     rva23s64
 // CHECK-NEXT:     rva23u64
 // CHECK-NEXT:     rvb23s64
 // CHECK-NEXT:     rvb23u64
+// CHECK-NEXT:     rvi20u32
+// CHECK-NEXT:     rvi20u64
+// CHECK-EMPTY:
+// CHECK-NEXT: Experimental Profiles
 // CHECK-NEXT:     rvm23u32
 // CHECK-EMPTY:
 // CHECK-NEXT: Use -march to specify the target's extension.

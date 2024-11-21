@@ -12,9 +12,9 @@
 
 // Implements the STATICALLY-WIDEN exposition-only function. ([time.general]/2)
 
-#include <__concepts/same_as.h>
-#include <__config>
-#include <__format/concepts.h>
+#include <__cxx03/__concepts/same_as.h>
+#include <__cxx03/__config>
+#include <__cxx03/__format/concepts.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

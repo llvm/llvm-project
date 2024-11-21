@@ -10,8 +10,8 @@
 #ifndef _LIBCPP___FUNCTIONAL_IS_TRANSPARENT
 #define _LIBCPP___FUNCTIONAL_IS_TRANSPARENT
 
-#include <__config>
-#include <__type_traits/void_t.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/void_t.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

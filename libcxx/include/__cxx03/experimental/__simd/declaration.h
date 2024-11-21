@@ -10,8 +10,8 @@
 #ifndef _LIBCPP_EXPERIMENTAL___SIMD_DECLARATION_H
 #define _LIBCPP_EXPERIMENTAL___SIMD_DECLARATION_H
 
-#include <cstddef>
-#include <experimental/__config>
+#include <__cxx03/cstddef>
+#include <__cxx03/experimental/__config>
 
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
 

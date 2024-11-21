@@ -10,18 +10,18 @@
 #ifndef _LIBCPP___FILESYSTEM_OPERATIONS_H
 #define _LIBCPP___FILESYSTEM_OPERATIONS_H
 
-#include <__chrono/time_point.h>
-#include <__config>
-#include <__filesystem/copy_options.h>
-#include <__filesystem/file_status.h>
-#include <__filesystem/file_time_type.h>
-#include <__filesystem/file_type.h>
-#include <__filesystem/path.h>
-#include <__filesystem/perm_options.h>
-#include <__filesystem/perms.h>
-#include <__filesystem/space_info.h>
-#include <__system_error/error_code.h>
-#include <cstdint>
+#include <__cxx03/__chrono/time_point.h>
+#include <__cxx03/__config>
+#include <__cxx03/__filesystem/copy_options.h>
+#include <__cxx03/__filesystem/file_status.h>
+#include <__cxx03/__filesystem/file_time_type.h>
+#include <__cxx03/__filesystem/file_type.h>
+#include <__cxx03/__filesystem/path.h>
+#include <__cxx03/__filesystem/perm_options.h>
+#include <__cxx03/__filesystem/perms.h>
+#include <__cxx03/__filesystem/space_info.h>
+#include <__cxx03/__system_error/error_code.h>
+#include <__cxx03/cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

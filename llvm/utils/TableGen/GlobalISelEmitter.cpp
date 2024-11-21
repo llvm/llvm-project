@@ -38,7 +38,6 @@
 #include "Common/GlobalISel/GlobalISelMatchTable.h"
 #include "Common/GlobalISel/GlobalISelMatchTableExecutorEmitter.h"
 #include "Common/InfoByHwMode.h"
-#include "Common/SubtargetFeatureInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
@@ -460,6 +459,9 @@ private:
   /// std::nullopt otherwise.
   std::optional<const CodeGenRegisterClass *>
   inferRegClassFromPattern(const TreePatternNode &N);
+
+  Error constrainOperands(action_iterator InsertPt, RuleMatcher &M,
+                          unsigned InsnID, const TreePatternNode &Dst);
 
   /// Return the size of the MemoryVT in this predicate, if possible.
   std::optional<unsigned>
@@ -1013,6 +1015,15 @@ Error GlobalISelEmitter::importChildMatcher(
         return Error::success();
       }
     }
+  } else if (auto *ChildDefInit = dyn_cast<DefInit>(SrcChild.getLeafValue())) {
+    auto *ChildRec = ChildDefInit->getDef();
+    if (ChildRec->isSubClassOf("ValueType") && !SrcChild.hasName()) {
+      // An unnamed ValueType as in (sext_inreg GPR:$foo, i8). GISel represents
+      // this as a literal constant with the scalar size.
+      MVT::SimpleValueType VT = llvm::getValueType(ChildRec);
+      OM.addPredicate<LiteralIntOperandMatcher>(MVT(VT).getScalarSizeInBits());
+      return Error::success();
+    }
   }
 
   // Immediate arguments have no meaningful type to check as they don't have
@@ -1410,103 +1421,10 @@ GlobalISelEmitter::createAndImportSubInstructionRenderer(
   if (auto Error = InsertPtOrError.takeError())
     return std::move(Error);
 
-  // We need to make sure that when we import an INSERT_SUBREG as a
-  // subinstruction that it ends up being constrained to the correct super
-  // register and subregister classes.
-  auto OpName = Target.getInstruction(Dst.getOperator()).TheDef->getName();
-  if (OpName == "INSERT_SUBREG") {
-    auto SubClass = inferRegClassFromPattern(Dst.getChild(1));
-    if (!SubClass)
-      return failedImport(
-          "Cannot infer register class from INSERT_SUBREG operand #1");
-    std::optional<const CodeGenRegisterClass *> SuperClass =
-        inferSuperRegisterClassForNode(Dst.getExtType(0), Dst.getChild(0),
-                                       Dst.getChild(2));
-    if (!SuperClass)
-      return failedImport(
-          "Cannot infer register class for INSERT_SUBREG operand #0");
-    // The destination and the super register source of an INSERT_SUBREG must
-    // be the same register class.
-    M.insertAction<ConstrainOperandToRegClassAction>(
-        InsertPt, DstMIBuilder.getInsnID(), 0, **SuperClass);
-    M.insertAction<ConstrainOperandToRegClassAction>(
-        InsertPt, DstMIBuilder.getInsnID(), 1, **SuperClass);
-    M.insertAction<ConstrainOperandToRegClassAction>(
-        InsertPt, DstMIBuilder.getInsnID(), 2, **SubClass);
-    return InsertPtOrError.get();
-  }
+  if (auto Error =
+          constrainOperands(InsertPt, M, DstMIBuilder.getInsnID(), Dst))
+    return std::move(Error);
 
-  if (OpName == "EXTRACT_SUBREG") {
-    // EXTRACT_SUBREG selects into a subregister COPY but unlike most
-    // instructions, the result register class is controlled by the
-    // subregisters of the operand. As a result, we must constrain the result
-    // class rather than check that it's already the right one.
-    auto SuperClass = inferRegClassFromPattern(Dst.getChild(0));
-    if (!SuperClass)
-      return failedImport(
-          "Cannot infer register class from EXTRACT_SUBREG operand #0");
-
-    auto SubIdx = inferSubRegIndexForNode(Dst.getChild(1));
-    if (!SubIdx)
-      return failedImport("EXTRACT_SUBREG child #1 is not a subreg index");
-
-    const auto SrcRCDstRCPair =
-        (*SuperClass)->getMatchingSubClassWithSubRegs(CGRegs, *SubIdx);
-    assert(SrcRCDstRCPair->second && "Couldn't find a matching subclass");
-    M.insertAction<ConstrainOperandToRegClassAction>(
-        InsertPt, DstMIBuilder.getInsnID(), 0, *SrcRCDstRCPair->second);
-    M.insertAction<ConstrainOperandToRegClassAction>(
-        InsertPt, DstMIBuilder.getInsnID(), 1, *SrcRCDstRCPair->first);
-
-    // We're done with this pattern!  It's eligible for GISel emission; return
-    // it.
-    return InsertPtOrError.get();
-  }
-
-  // Similar to INSERT_SUBREG, we also have to handle SUBREG_TO_REG as a
-  // subinstruction.
-  if (OpName == "SUBREG_TO_REG") {
-    auto SubClass = inferRegClassFromPattern(Dst.getChild(1));
-    if (!SubClass)
-      return failedImport(
-          "Cannot infer register class from SUBREG_TO_REG child #1");
-    auto SuperClass =
-        inferSuperRegisterClass(Dst.getExtType(0), Dst.getChild(2));
-    if (!SuperClass)
-      return failedImport(
-          "Cannot infer register class for SUBREG_TO_REG operand #0");
-    M.insertAction<ConstrainOperandToRegClassAction>(
-        InsertPt, DstMIBuilder.getInsnID(), 0, **SuperClass);
-    M.insertAction<ConstrainOperandToRegClassAction>(
-        InsertPt, DstMIBuilder.getInsnID(), 2, **SubClass);
-    return InsertPtOrError.get();
-  }
-
-  if (OpName == "REG_SEQUENCE") {
-    auto SuperClass = inferRegClassFromPattern(Dst.getChild(0));
-    M.insertAction<ConstrainOperandToRegClassAction>(
-        InsertPt, DstMIBuilder.getInsnID(), 0, **SuperClass);
-
-    unsigned Num = Dst.getNumChildren();
-    for (unsigned I = 1; I != Num; I += 2) {
-      const TreePatternNode &SubRegChild = Dst.getChild(I + 1);
-
-      auto SubIdx = inferSubRegIndexForNode(SubRegChild);
-      if (!SubIdx)
-        return failedImport("REG_SEQUENCE child is not a subreg index");
-
-      const auto SrcRCDstRCPair =
-          (*SuperClass)->getMatchingSubClassWithSubRegs(CGRegs, *SubIdx);
-      assert(SrcRCDstRCPair->second && "Couldn't find a matching subclass");
-      M.insertAction<ConstrainOperandToRegClassAction>(
-          InsertPt, DstMIBuilder.getInsnID(), I, *SrcRCDstRCPair->second);
-    }
-
-    return InsertPtOrError.get();
-  }
-
-  M.insertAction<ConstrainOperandsToDefinitionAction>(InsertPt,
-                                                      DstMIBuilder.getInsnID());
   return InsertPtOrError.get();
 }
 
@@ -1792,6 +1710,116 @@ Error GlobalISelEmitter::importImplicitDefRenderers(
     BuildMIAction &DstMIBuilder, ArrayRef<const Record *> ImplicitDefs) const {
   if (!ImplicitDefs.empty())
     return failedImport("Pattern defines a physical register");
+  return Error::success();
+}
+
+Error GlobalISelEmitter::constrainOperands(action_iterator InsertPt,
+                                           RuleMatcher &M, unsigned InsnID,
+                                           const TreePatternNode &Dst) {
+  const Record *DstOp = Dst.getOperator();
+  const CodeGenInstruction &DstI = Target.getInstruction(DstOp);
+  StringRef DstIName = DstI.TheDef->getName();
+
+  if (DstIName == "COPY_TO_REGCLASS") {
+    // COPY_TO_REGCLASS does not provide operand constraints itself but the
+    // result is constrained to the class given by the second child.
+    const Record *DstIOpRec =
+        getInitValueAsRegClass(Dst.getChild(1).getLeafValue());
+
+    if (DstIOpRec == nullptr)
+      return failedImport("COPY_TO_REGCLASS operand #1 isn't a register class");
+
+    M.insertAction<ConstrainOperandToRegClassAction>(
+        InsertPt, InsnID, 0, Target.getRegisterClass(DstIOpRec));
+  } else if (DstIName == "EXTRACT_SUBREG") {
+    auto SuperClass = inferRegClassFromPattern(Dst.getChild(0));
+    if (!SuperClass)
+      return failedImport(
+          "Cannot infer register class from EXTRACT_SUBREG operand #0");
+
+    auto SubIdx = inferSubRegIndexForNode(Dst.getChild(1));
+    if (!SubIdx)
+      return failedImport("EXTRACT_SUBREG child #1 is not a subreg index");
+
+    // It would be nice to leave this constraint implicit but we're required
+    // to pick a register class so constrain the result to a register class
+    // that can hold the correct MVT.
+    //
+    // FIXME: This may introduce an extra copy if the chosen class doesn't
+    //        actually contain the subregisters.
+    const auto SrcRCDstRCPair =
+        (*SuperClass)->getMatchingSubClassWithSubRegs(CGRegs, *SubIdx);
+    if (!SrcRCDstRCPair) {
+      return failedImport("subreg index is incompatible "
+                          "with inferred reg class");
+    }
+
+    assert(SrcRCDstRCPair->second && "Couldn't find a matching subclass");
+    M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 0,
+                                                     *SrcRCDstRCPair->second);
+    M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 1,
+                                                     *SrcRCDstRCPair->first);
+  } else if (DstIName == "INSERT_SUBREG") {
+    // We need to constrain the destination, a super regsister source, and a
+    // subregister source.
+    auto SubClass = inferRegClassFromPattern(Dst.getChild(1));
+    if (!SubClass)
+      return failedImport(
+          "Cannot infer register class from INSERT_SUBREG operand #1");
+    auto SuperClass = inferSuperRegisterClassForNode(
+        Dst.getExtType(0), Dst.getChild(0), Dst.getChild(2));
+    if (!SuperClass)
+      return failedImport(
+          "Cannot infer register class for INSERT_SUBREG operand #0");
+    M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 0,
+                                                     **SuperClass);
+    M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 1,
+                                                     **SuperClass);
+    M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 2,
+                                                     **SubClass);
+  } else if (DstIName == "SUBREG_TO_REG") {
+    // We need to constrain the destination and subregister source.
+    // Attempt to infer the subregister source from the first child. If it has
+    // an explicitly given register class, we'll use that. Otherwise, we will
+    // fail.
+    auto SubClass = inferRegClassFromPattern(Dst.getChild(1));
+    if (!SubClass)
+      return failedImport(
+          "Cannot infer register class from SUBREG_TO_REG child #1");
+    // We don't have a child to look at that might have a super register node.
+    auto SuperClass =
+        inferSuperRegisterClass(Dst.getExtType(0), Dst.getChild(2));
+    if (!SuperClass)
+      return failedImport(
+          "Cannot infer register class for SUBREG_TO_REG operand #0");
+    M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 0,
+                                                     **SuperClass);
+    M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 2,
+                                                     **SubClass);
+  } else if (DstIName == "REG_SEQUENCE") {
+    auto SuperClass = inferRegClassFromPattern(Dst.getChild(0));
+
+    M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 0,
+                                                     **SuperClass);
+
+    unsigned Num = Dst.getNumChildren();
+    for (unsigned I = 1; I != Num; I += 2) {
+      const TreePatternNode &SubRegChild = Dst.getChild(I + 1);
+
+      auto SubIdx = inferSubRegIndexForNode(SubRegChild);
+      if (!SubIdx)
+        return failedImport("REG_SEQUENCE child is not a subreg index");
+
+      const auto SrcRCDstRCPair =
+          (*SuperClass)->getMatchingSubClassWithSubRegs(CGRegs, *SubIdx);
+
+      M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, I,
+                                                       *SrcRCDstRCPair->second);
+    }
+  } else {
+    M.insertAction<ConstrainOperandsToDefinitionAction>(InsertPt, InsnID);
+  }
+
   return Error::success();
 }
 
@@ -2090,9 +2118,9 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
         return failedImport(
             "Cannot infer register class for SUBREG_TO_REG operand #0");
       MatchedRC = *MaybeRegClass;
-    } else if (MatchedRC.get<const Record *>()->isSubClassOf("RegisterOperand"))
-      MatchedRC = MatchedRC.get<const Record *>()->getValueAsDef("RegClass");
-    else if (!MatchedRC.get<const Record *>()->isSubClassOf("RegisterClass"))
+    } else if (cast<const Record *>(MatchedRC)->isSubClassOf("RegisterOperand"))
+      MatchedRC = cast<const Record *>(MatchedRC)->getValueAsDef("RegClass");
+    else if (!cast<const Record *>(MatchedRC)->isSubClassOf("RegisterClass"))
       return failedImport("Dst MI def isn't a register class" + to_string(Dst));
 
     OperandMatcher &OM = InsnMatcher.getOperand(OpIdx);
@@ -2102,10 +2130,10 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     // GIM_CheckIsSameOperand predicates by the defineOperand method.
     OM.setSymbolicName(getMangledRootDefName(DstIOperand.Name));
     M.defineOperand(OM.getSymbolicName(), OM);
-    if (MatchedRC.is<const Record *>())
-      MatchedRC = &Target.getRegisterClass(MatchedRC.get<const Record *>());
+    if (auto *R = dyn_cast<const Record *>(MatchedRC))
+      MatchedRC = &Target.getRegisterClass(R);
     OM.addPredicate<RegisterBankOperandMatcher>(
-        *MatchedRC.get<const CodeGenRegisterClass *>());
+        *cast<const CodeGenRegisterClass *>(MatchedRC));
     ++OpIdx;
   }
 
@@ -2124,106 +2152,9 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
 
   // Constrain the registers to classes. This is normally derived from the
   // emitted instruction but a few instructions require special handling.
-  if (DstIName == "COPY_TO_REGCLASS") {
-    // COPY_TO_REGCLASS does not provide operand constraints itself but the
-    // result is constrained to the class given by the second child.
-    const Record *DstIOpRec =
-        getInitValueAsRegClass(Dst.getChild(1).getLeafValue());
-
-    if (DstIOpRec == nullptr)
-      return failedImport("COPY_TO_REGCLASS operand #1 isn't a register class");
-
-    M.addAction<ConstrainOperandToRegClassAction>(
-        0, 0, Target.getRegisterClass(DstIOpRec));
-  } else if (DstIName == "EXTRACT_SUBREG") {
-    auto SuperClass = inferRegClassFromPattern(Dst.getChild(0));
-    if (!SuperClass)
-      return failedImport(
-          "Cannot infer register class from EXTRACT_SUBREG operand #0");
-
-    auto SubIdx = inferSubRegIndexForNode(Dst.getChild(1));
-    if (!SubIdx)
-      return failedImport("EXTRACT_SUBREG child #1 is not a subreg index");
-
-    // It would be nice to leave this constraint implicit but we're required
-    // to pick a register class so constrain the result to a register class
-    // that can hold the correct MVT.
-    //
-    // FIXME: This may introduce an extra copy if the chosen class doesn't
-    //        actually contain the subregisters.
-    assert(Src.getExtTypes().size() == 1 &&
-           "Expected Src of EXTRACT_SUBREG to have one result type");
-
-    const auto SrcRCDstRCPair =
-        (*SuperClass)->getMatchingSubClassWithSubRegs(CGRegs, *SubIdx);
-    if (!SrcRCDstRCPair) {
-      return failedImport("subreg index is incompatible "
-                          "with inferred reg class");
-    }
-
-    assert(SrcRCDstRCPair->second && "Couldn't find a matching subclass");
-    M.addAction<ConstrainOperandToRegClassAction>(0, 0,
-                                                  *SrcRCDstRCPair->second);
-    M.addAction<ConstrainOperandToRegClassAction>(0, 1, *SrcRCDstRCPair->first);
-  } else if (DstIName == "INSERT_SUBREG") {
-    assert(Src.getExtTypes().size() == 1 &&
-           "Expected Src of INSERT_SUBREG to have one result type");
-    // We need to constrain the destination, a super regsister source, and a
-    // subregister source.
-    auto SubClass = inferRegClassFromPattern(Dst.getChild(1));
-    if (!SubClass)
-      return failedImport(
-          "Cannot infer register class from INSERT_SUBREG operand #1");
-    auto SuperClass = inferSuperRegisterClassForNode(
-        Src.getExtType(0), Dst.getChild(0), Dst.getChild(2));
-    if (!SuperClass)
-      return failedImport(
-          "Cannot infer register class for INSERT_SUBREG operand #0");
-    M.addAction<ConstrainOperandToRegClassAction>(0, 0, **SuperClass);
-    M.addAction<ConstrainOperandToRegClassAction>(0, 1, **SuperClass);
-    M.addAction<ConstrainOperandToRegClassAction>(0, 2, **SubClass);
-  } else if (DstIName == "SUBREG_TO_REG") {
-    // We need to constrain the destination and subregister source.
-    assert(Src.getExtTypes().size() == 1 &&
-           "Expected Src of SUBREG_TO_REG to have one result type");
-
-    // Attempt to infer the subregister source from the first child. If it has
-    // an explicitly given register class, we'll use that. Otherwise, we will
-    // fail.
-    auto SubClass = inferRegClassFromPattern(Dst.getChild(1));
-    if (!SubClass)
-      return failedImport(
-          "Cannot infer register class from SUBREG_TO_REG child #1");
-    // We don't have a child to look at that might have a super register node.
-    auto SuperClass =
-        inferSuperRegisterClass(Src.getExtType(0), Dst.getChild(2));
-    if (!SuperClass)
-      return failedImport(
-          "Cannot infer register class for SUBREG_TO_REG operand #0");
-    M.addAction<ConstrainOperandToRegClassAction>(0, 0, **SuperClass);
-    M.addAction<ConstrainOperandToRegClassAction>(0, 2, **SubClass);
-  } else if (DstIName == "REG_SEQUENCE") {
-    auto SuperClass = inferRegClassFromPattern(Dst.getChild(0));
-
-    M.addAction<ConstrainOperandToRegClassAction>(0, 0, **SuperClass);
-
-    unsigned Num = Dst.getNumChildren();
-    for (unsigned I = 1; I != Num; I += 2) {
-      TreePatternNode &SubRegChild = Dst.getChild(I + 1);
-
-      auto SubIdx = inferSubRegIndexForNode(SubRegChild);
-      if (!SubIdx)
-        return failedImport("REG_SEQUENCE child is not a subreg index");
-
-      const auto SrcRCDstRCPair =
-          (*SuperClass)->getMatchingSubClassWithSubRegs(CGRegs, *SubIdx);
-
-      M.addAction<ConstrainOperandToRegClassAction>(0, I,
-                                                    *SrcRCDstRCPair->second);
-    }
-  } else {
-    M.addAction<ConstrainOperandsToDefinitionAction>(0);
-  }
+  if (auto Error =
+          constrainOperands(M.actions_end(), M, DstMIBuilder.getInsnID(), Dst))
+    return std::move(Error);
 
   // Erase the root.
   unsigned RootInsnID = M.getInsnVarID(InsnMatcher);

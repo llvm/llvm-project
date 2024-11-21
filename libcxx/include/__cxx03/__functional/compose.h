@@ -10,11 +10,11 @@
 #ifndef _LIBCPP___FUNCTIONAL_COMPOSE_H
 #define _LIBCPP___FUNCTIONAL_COMPOSE_H
 
-#include <__config>
-#include <__functional/invoke.h>
-#include <__functional/perfect_forward.h>
-#include <__type_traits/decay.h>
-#include <__utility/forward.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/invoke.h>
+#include <__cxx03/__functional/perfect_forward.h>
+#include <__cxx03/__type_traits/decay.h>
+#include <__cxx03/__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -55,7 +55,6 @@ TYPE("c++",                      CXX,          PP_CXX,          "cpp",    phases
 TYPE("objective-c++-cpp-output", PP_ObjCXX,    INVALID,         "mii",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("objc++-cpp-output",        PP_ObjCXX_Alias, INVALID,      "mii",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("objective-c++",            ObjCXX,       PP_ObjCXX,       "mm",     phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
-TYPE("renderscript",             RenderScript, PP_C,            "rs",     phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("hlsl",                     HLSL,         PP_CXX,          "hlsl",   phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble)
 
 // C family input files to precompile.

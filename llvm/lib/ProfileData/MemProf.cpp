@@ -58,7 +58,6 @@ static size_t serializedSizeV3(const IndexedAllocationInfo &IAI,
 size_t IndexedAllocationInfo::serializedSize(const MemProfSchema &Schema,
                                              IndexedVersion Version) const {
   switch (Version) {
-  case Version0:
   case Version1:
     return serializedSizeV0(*this, Schema);
   case Version2:
@@ -69,12 +68,12 @@ size_t IndexedAllocationInfo::serializedSize(const MemProfSchema &Schema,
   llvm_unreachable("unsupported MemProf version");
 }
 
-static size_t serializedSizeV0(const IndexedMemProfRecord &Record,
+static size_t serializedSizeV1(const IndexedMemProfRecord &Record,
                                const MemProfSchema &Schema) {
   // The number of alloc sites to serialize.
   size_t Result = sizeof(uint64_t);
   for (const IndexedAllocationInfo &N : Record.AllocSites)
-    Result += N.serializedSize(Schema, Version0);
+    Result += N.serializedSize(Schema, Version1);
 
   // The number of callsites we have information for.
   Result += sizeof(uint64_t);
@@ -117,9 +116,8 @@ static size_t serializedSizeV3(const IndexedMemProfRecord &Record,
 size_t IndexedMemProfRecord::serializedSize(const MemProfSchema &Schema,
                                             IndexedVersion Version) const {
   switch (Version) {
-  case Version0:
   case Version1:
-    return serializedSizeV0(*this, Schema);
+    return serializedSizeV1(*this, Schema);
   case Version2:
     return serializedSizeV2(*this, Schema);
   case Version3:
@@ -128,7 +126,7 @@ size_t IndexedMemProfRecord::serializedSize(const MemProfSchema &Schema,
   llvm_unreachable("unsupported MemProf version");
 }
 
-static void serializeV0(const IndexedMemProfRecord &Record,
+static void serializeV1(const IndexedMemProfRecord &Record,
                         const MemProfSchema &Schema, raw_ostream &OS) {
   using namespace support;
 
@@ -197,9 +195,8 @@ void IndexedMemProfRecord::serialize(
     llvm::DenseMap<CallStackId, LinearCallStackId> *MemProfCallStackIndexes)
     const {
   switch (Version) {
-  case Version0:
   case Version1:
-    serializeV0(*this, Schema, OS);
+    serializeV1(*this, Schema, OS);
     return;
   case Version2:
     serializeV2(*this, Schema, OS);
@@ -211,7 +208,7 @@ void IndexedMemProfRecord::serialize(
   llvm_unreachable("unsupported MemProf version");
 }
 
-static IndexedMemProfRecord deserializeV0(const MemProfSchema &Schema,
+static IndexedMemProfRecord deserializeV1(const MemProfSchema &Schema,
                                           const unsigned char *Ptr) {
   using namespace support;
 
@@ -327,9 +324,8 @@ IndexedMemProfRecord::deserialize(const MemProfSchema &Schema,
                                   const unsigned char *Ptr,
                                   IndexedVersion Version) {
   switch (Version) {
-  case Version0:
   case Version1:
-    return deserializeV0(Schema, Ptr);
+    return deserializeV1(Schema, Ptr);
   case Version2:
     return deserializeV2(Schema, Ptr);
   case Version3:
@@ -440,10 +436,12 @@ CallStackId hashCallStack(ArrayRef<FrameId> CS) {
 // To quickly determine the location of the common prefix within RadixArray,
 // Indexes caches the indexes of the previous call stack's frames within
 // RadixArray.
-LinearCallStackId CallStackRadixTreeBuilder::encodeCallStack(
-    const llvm::SmallVector<FrameId> *CallStack,
-    const llvm::SmallVector<FrameId> *Prev,
-    const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes) {
+template <typename FrameIdTy>
+LinearCallStackId CallStackRadixTreeBuilder<FrameIdTy>::encodeCallStack(
+    const llvm::SmallVector<FrameIdTy> *CallStack,
+    const llvm::SmallVector<FrameIdTy> *Prev,
+    std::optional<const llvm::DenseMap<FrameIdTy, LinearFrameId>>
+        MemProfFrameIndexes) {
   // Compute the length of the common root prefix between Prev and CallStack.
   uint32_t CommonLen = 0;
   if (Prev) {
@@ -468,10 +466,11 @@ LinearCallStackId CallStackRadixTreeBuilder::encodeCallStack(
 
   // Copy the part of the call stack beyond the common prefix to RadixArray.
   assert(CommonLen <= CallStack->size());
-  for (FrameId F : llvm::drop_begin(llvm::reverse(*CallStack), CommonLen)) {
+  for (FrameIdTy F : llvm::drop_begin(llvm::reverse(*CallStack), CommonLen)) {
     // Remember the index of F in RadixArray.
     Indexes.push_back(RadixArray.size());
-    RadixArray.push_back(MemProfFrameIndexes.find(F)->second);
+    RadixArray.push_back(
+        MemProfFrameIndexes ? MemProfFrameIndexes->find(F)->second : F);
   }
   assert(CallStack->size() == Indexes.size());
 
@@ -483,11 +482,13 @@ LinearCallStackId CallStackRadixTreeBuilder::encodeCallStack(
   return RadixArray.size() - 1;
 }
 
-void CallStackRadixTreeBuilder::build(
-    llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
+template <typename FrameIdTy>
+void CallStackRadixTreeBuilder<FrameIdTy>::build(
+    llvm::MapVector<CallStackId, llvm::SmallVector<FrameIdTy>>
         &&MemProfCallStackData,
-    const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes,
-    llvm::DenseMap<FrameId, FrameStat> &FrameHistogram) {
+    std::optional<const llvm::DenseMap<FrameIdTy, LinearFrameId>>
+        MemProfFrameIndexes,
+    llvm::DenseMap<FrameIdTy, FrameStat> &FrameHistogram) {
   // Take the vector portion of MemProfCallStackData.  The vector is exactly
   // what we need to sort.  Also, we no longer need its lookup capability.
   llvm::SmallVector<CSIdPair, 0> CallStacks = MemProfCallStackData.takeVector();
@@ -539,7 +540,7 @@ void CallStackRadixTreeBuilder::build(
     // root.
     return std::lexicographical_compare(
         L.second.rbegin(), L.second.rend(), R.second.rbegin(), R.second.rend(),
-        [&](FrameId F1, FrameId F2) {
+        [&](FrameIdTy F1, FrameIdTy F2) {
           uint64_t H1 = FrameHistogram[F1].Count;
           uint64_t H2 = FrameHistogram[F2].Count;
           // Popular frames should come later because we encode call stacks from
@@ -589,7 +590,7 @@ void CallStackRadixTreeBuilder::build(
   // traverse CallStacks in the reverse order, then Call Stack 3 has the
   // complete call stack encoded without any pointers.  Call Stack 1 and 2 point
   // to appropriate prefixes of Call Stack 3.
-  const llvm::SmallVector<FrameId> *Prev = nullptr;
+  const llvm::SmallVector<FrameIdTy> *Prev = nullptr;
   for (const auto &[CSId, CallStack] : llvm::reverse(CallStacks)) {
     LinearCallStackId Pos =
         encodeCallStack(&CallStack, Prev, MemProfFrameIndexes);
@@ -612,10 +613,14 @@ void CallStackRadixTreeBuilder::build(
     V = RadixArray.size() - 1 - V;
 }
 
-llvm::DenseMap<FrameId, FrameStat>
-computeFrameHistogram(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
+// Explicitly instantiate class with the utilized FrameIdTy.
+template class CallStackRadixTreeBuilder<FrameId>;
+
+template <typename FrameIdTy>
+llvm::DenseMap<FrameIdTy, FrameStat>
+computeFrameHistogram(llvm::MapVector<CallStackId, llvm::SmallVector<FrameIdTy>>
                           &MemProfCallStackData) {
-  llvm::DenseMap<FrameId, FrameStat> Histogram;
+  llvm::DenseMap<FrameIdTy, FrameStat> Histogram;
 
   for (const auto &KV : MemProfCallStackData) {
     const auto &CS = KV.second;
@@ -627,6 +632,11 @@ computeFrameHistogram(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
   }
   return Histogram;
 }
+
+// Explicitly instantiate function with the utilized FrameIdTy.
+template llvm::DenseMap<FrameId, FrameStat> computeFrameHistogram<FrameId>(
+    llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
+        &MemProfCallStackData);
 
 void verifyIndexedMemProfRecord(const IndexedMemProfRecord &Record) {
   for (const auto &AS : Record.AllocSites) {

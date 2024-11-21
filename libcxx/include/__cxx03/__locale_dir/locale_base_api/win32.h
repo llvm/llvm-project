@@ -10,11 +10,11 @@
 #ifndef _LIBCPP___LOCALE_LOCALE_BASE_API_WIN32_H
 #define _LIBCPP___LOCALE_LOCALE_BASE_API_WIN32_H
 
-#include <__config>
-#include <cstddef>
-#include <locale.h> // _locale_t
-#include <stdio.h>
-#include <string>
+#include <__cxx03/__config>
+#include <__cxx03/cstddef>
+#include <__cxx03/locale.h> // _locale_t
+#include <__cxx03/stdio.h>
+#include <__cxx03/string>
 
 #define _X_ALL LC_ALL
 #define _X_COLLATE LC_COLLATE

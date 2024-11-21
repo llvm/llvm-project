@@ -9,11 +9,11 @@
 #ifndef _LIBCPP___COMPARE_SYNTH_THREE_WAY_H
 #define _LIBCPP___COMPARE_SYNTH_THREE_WAY_H
 
-#include <__compare/ordering.h>
-#include <__compare/three_way_comparable.h>
-#include <__concepts/boolean_testable.h>
-#include <__config>
-#include <__utility/declval.h>
+#include <__cxx03/__compare/ordering.h>
+#include <__cxx03/__compare/three_way_comparable.h>
+#include <__cxx03/__concepts/boolean_testable.h>
+#include <__cxx03/__config>
+#include <__cxx03/__utility/declval.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

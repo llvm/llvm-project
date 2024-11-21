@@ -27,7 +27,6 @@
 
 #include <sys/mman.h> // mmap()
 #include <time.h>     // clock_gettime(), time(), localtime_r() */
-#include <unistd.h>   // for read(), close()
 
 #define DEBUG_TYPE "orc"
 

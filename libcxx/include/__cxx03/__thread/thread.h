@@ -10,22 +10,22 @@
 #ifndef _LIBCPP___THREAD_THREAD_H
 #define _LIBCPP___THREAD_THREAD_H
 
-#include <__condition_variable/condition_variable.h>
-#include <__config>
-#include <__exception/terminate.h>
-#include <__functional/hash.h>
-#include <__functional/unary_function.h>
-#include <__memory/unique_ptr.h>
-#include <__mutex/mutex.h>
-#include <__system_error/system_error.h>
-#include <__thread/id.h>
-#include <__thread/support.h>
-#include <__utility/forward.h>
-#include <tuple>
+#include <__cxx03/__condition_variable/condition_variable.h>
+#include <__cxx03/__config>
+#include <__cxx03/__exception/terminate.h>
+#include <__cxx03/__functional/hash.h>
+#include <__cxx03/__functional/unary_function.h>
+#include <__cxx03/__memory/unique_ptr.h>
+#include <__cxx03/__mutex/mutex.h>
+#include <__cxx03/__system_error/system_error.h>
+#include <__cxx03/__thread/id.h>
+#include <__cxx03/__thread/support.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/tuple>
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
-#  include <locale>
-#  include <sstream>
+#  include <__cxx03/locale>
+#  include <__cxx03/sstream>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -33,7 +33,7 @@
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

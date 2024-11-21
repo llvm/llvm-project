@@ -210,7 +210,6 @@ add_libc_test(
   SRCS
     strdup_test.cpp
   DEPENDS
-    libc.include.stdlib
     libc.src.string.strdup
     libc.src.errno.errno
 )
@@ -315,7 +314,6 @@ add_libc_test(
   SRCS
     strndup_test.cpp
   DEPENDS
-    libc.include.stdlib
     libc.src.string.strndup
 )
 

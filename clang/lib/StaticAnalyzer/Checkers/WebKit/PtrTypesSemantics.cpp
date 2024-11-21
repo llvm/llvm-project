@@ -108,7 +108,8 @@ std::optional<bool> isRefCountable(const clang::CXXRecordDecl *R) {
 }
 
 std::optional<bool> isCheckedPtrCapable(const clang::CXXRecordDecl *R) {
-  return isSmartPtrCompatible(R, "incrementPtrCount", "decrementPtrCount");
+  return isSmartPtrCompatible(R, "incrementCheckedPtrCount",
+                              "decrementCheckedPtrCount");
 }
 
 bool isRefType(const std::string &Name) {
@@ -144,23 +145,35 @@ bool isCtorOfSafePtr(const clang::FunctionDecl *F) {
   return isCtorOfRefCounted(F) || isCtorOfCheckedPtr(F);
 }
 
-bool isSafePtrType(const clang::QualType T) {
+template <typename Predicate>
+static bool isPtrOfType(const clang::QualType T, Predicate Pred) {
   QualType type = T;
   while (!type.isNull()) {
     if (auto *elaboratedT = type->getAs<ElaboratedType>()) {
       type = elaboratedT->desugar();
       continue;
     }
-    if (auto *specialT = type->getAs<TemplateSpecializationType>()) {
-      if (auto *decl = specialT->getTemplateName().getAsTemplateDecl()) {
-        auto name = decl->getNameAsString();
-        return isRefType(name) || isCheckedPtr(name);
-      }
+    auto *SpecialT = type->getAs<TemplateSpecializationType>();
+    if (!SpecialT)
       return false;
-    }
-    return false;
+    auto *Decl = SpecialT->getTemplateName().getAsTemplateDecl();
+    if (!Decl)
+      return false;
+    return Pred(Decl->getNameAsString());
   }
   return false;
+}
+
+bool isSafePtrType(const clang::QualType T) {
+  return isPtrOfType(
+      T, [](auto Name) { return isRefType(Name) || isCheckedPtr(Name); });
+}
+
+bool isOwnerPtrType(const clang::QualType T) {
+  return isPtrOfType(T, [](auto Name) {
+    return isRefType(Name) || isCheckedPtr(Name) || Name == "unique_ptr" ||
+           Name == "UniqueRef" || Name == "LazyUniqueRef";
+  });
 }
 
 std::optional<bool> isUncounted(const QualType T) {
@@ -171,6 +184,16 @@ std::optional<bool> isUncounted(const QualType T) {
     }
   }
   return isUncounted(T->getAsCXXRecordDecl());
+}
+
+std::optional<bool> isUnchecked(const QualType T) {
+  if (auto *Subst = dyn_cast<SubstTemplateTypeParmType>(T)) {
+    if (auto *Decl = Subst->getAssociatedDecl()) {
+      if (isCheckedPtr(safeGetName(Decl)))
+        return false;
+    }
+  }
+  return isUnchecked(T->getAsCXXRecordDecl());
 }
 
 std::optional<bool> isUncounted(const CXXRecordDecl* Class)
@@ -187,7 +210,7 @@ std::optional<bool> isUncounted(const CXXRecordDecl* Class)
 }
 
 std::optional<bool> isUnchecked(const CXXRecordDecl *Class) {
-  if (isCheckedPtr(Class))
+  if (!Class || isCheckedPtr(Class))
     return false; // Cheaper than below
   return isCheckedPtrCapable(Class);
 }
@@ -200,10 +223,24 @@ std::optional<bool> isUncountedPtr(const QualType T) {
   return false;
 }
 
+std::optional<bool> isUncheckedPtr(const QualType T) {
+  if (T->isPointerType() || T->isReferenceType()) {
+    if (auto *CXXRD = T->getPointeeCXXRecordDecl())
+      return isUnchecked(CXXRD);
+  }
+  return false;
+}
+
 std::optional<bool> isUnsafePtr(const QualType T) {
   if (T->isPointerType() || T->isReferenceType()) {
     if (auto *CXXRD = T->getPointeeCXXRecordDecl()) {
-      return isUncounted(CXXRD) || isUnchecked(CXXRD);
+      auto isUncountedPtr = isUncounted(CXXRD);
+      auto isUncheckedPtr = isUnchecked(CXXRD);
+      if (isUncountedPtr && isUncheckedPtr)
+        return *isUncountedPtr || *isUncheckedPtr;
+      if (isUncountedPtr)
+        return *isUncountedPtr;
+      return isUncheckedPtr;
     }
   }
   return false;
@@ -478,6 +515,10 @@ public:
     auto *Callee = MCE->getMethodDecl();
     if (!Callee)
       return false;
+
+    auto Name = safeGetName(Callee);
+    if (Name == "ref" || Name == "incrementCheckedPtrCount")
+      return true;
 
     std::optional<bool> IsGetterOfRefCounted = isGetterOfSafePtr(Callee);
     if (IsGetterOfRefCounted && *IsGetterOfRefCounted)

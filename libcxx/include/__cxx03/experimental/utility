@@ -15,7 +15,7 @@
 
 // C++1y
 
-#include <utility>
+#include <__cxx03/utility>
 
 namespace std {
 namespace experimental {
@@ -30,8 +30,8 @@ inline namespace fundamentals_v1 {
 
  */
 
-#include <experimental/__config>
-#include <utility>
+#include <__cxx03/experimental/__config>
+#include <__cxx03/utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

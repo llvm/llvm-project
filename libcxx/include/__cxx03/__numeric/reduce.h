@@ -10,17 +10,17 @@
 #ifndef _LIBCPP___NUMERIC_REDUCE_H
 #define _LIBCPP___NUMERIC_REDUCE_H
 
-#include <__config>
-#include <__functional/operations.h>
-#include <__iterator/iterator_traits.h>
-#include <__utility/move.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/operations.h>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

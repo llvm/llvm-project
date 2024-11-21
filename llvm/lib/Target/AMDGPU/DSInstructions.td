@@ -194,7 +194,6 @@ class DS_1A1D_RET <string opName, RegisterClass rc = VGPR_32,
   (ins VGPR_32:$addr, data_op:$data0, Offset:$offset, gds:$gds),
   " $vdst, $addr, $data0$offset$gds"> {
 
-  let hasPostISelHook = 1;
   let has_data1 = 0;
   let IsAtomicRet = 1;
 }
@@ -223,7 +222,6 @@ class DS_1A2D_RET<string opName,
   (ins VGPR_32:$addr, src_op:$data0, src_op:$data1, Offset:$offset, gds:$gds),
   " $vdst, $addr, $data0, $data1$offset$gds"> {
 
-  let hasPostISelHook = 1;
   let IsAtomicRet = 1;
 }
 
@@ -248,7 +246,6 @@ class DS_1A2D_Off8_RET<string opName,
   " $vdst, $addr, $data0, $data1$offset0$offset1$gds"> {
 
   let has_offset = 0;
-  let hasPostISelHook = 1;
 }
 
 multiclass DS_1A2D_Off8_RET_mc<string opName,
@@ -795,12 +792,19 @@ defm : DSReadPat_mc <DS_READ_B32, vt, "load_local">;
 
 defm : DSReadPat_mc <DS_READ_U8, i16, "atomic_load_8_local">;
 defm : DSReadPat_mc <DS_READ_U8, i32, "atomic_load_8_local">;
+defm : DSReadPat_mc <DS_READ_U8, i16, "atomic_load_zext_8_local">;
+defm : DSReadPat_mc <DS_READ_U8, i32, "atomic_load_zext_8_local">;
+defm : DSReadPat_mc <DS_READ_I8, i16, "atomic_load_sext_8_local">;
+defm : DSReadPat_mc <DS_READ_I8, i32, "atomic_load_sext_8_local">;
 defm : DSReadPat_mc <DS_READ_U16, i16, "atomic_load_16_local">;
 defm : DSReadPat_mc <DS_READ_U16, i32, "atomic_load_16_local">;
+defm : DSReadPat_mc <DS_READ_U16, i32, "atomic_load_zext_16_local">;
+defm : DSReadPat_mc <DS_READ_I16, i32, "atomic_load_sext_16_local">;
 defm : DSReadPat_mc <DS_READ_B32, i32, "atomic_load_32_local">;
 defm : DSReadPat_mc <DS_READ_B64, i64, "atomic_load_64_local">;
 
 let OtherPredicates = [D16PreservesUnusedBits] in {
+// TODO: Atomic loads
 def : DSReadPat_D16<DS_READ_U16_D16_HI, load_d16_hi_local, v2i16>;
 def : DSReadPat_D16<DS_READ_U16_D16_HI, load_d16_hi_local, v2f16>;
 def : DSReadPat_D16<DS_READ_U8_D16_HI, az_extloadi8_d16_hi_local, v2i16>;

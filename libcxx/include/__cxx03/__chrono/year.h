@@ -10,17 +10,17 @@
 #ifndef _LIBCPP___CHRONO_YEAR_H
 #define _LIBCPP___CHRONO_YEAR_H
 
-#include <__chrono/duration.h>
-#include <__config>
-#include <compare>
-#include <limits>
+#include <__cxx03/__chrono/duration.h>
+#include <__cxx03/__config>
+#include <__cxx03/compare>
+#include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 #if _LIBCPP_STD_VER >= 20
 

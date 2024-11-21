@@ -3257,16 +3257,16 @@ InlineCostAnnotationPrinterPass::run(Function &F,
   const InlineParams Params = llvm::getInlineParams();
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
-      if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-        Function *CalledFunction = CI->getCalledFunction();
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
+        Function *CalledFunction = CB->getCalledFunction();
         if (!CalledFunction || CalledFunction->isDeclaration())
           continue;
         OptimizationRemarkEmitter ORE(CalledFunction);
-        InlineCostCallAnalyzer ICCA(*CalledFunction, *CI, Params, TTI,
+        InlineCostCallAnalyzer ICCA(*CalledFunction, *CB, Params, TTI,
                                     GetAssumptionCache, nullptr, &PSI, &ORE);
         ICCA.analyze();
         OS << "      Analyzing call of " << CalledFunction->getName()
-           << "... (caller:" << CI->getCaller()->getName() << ")\n";
+           << "... (caller:" << CB->getCaller()->getName() << ")\n";
         ICCA.print(OS);
         OS << "\n";
       }

@@ -58,7 +58,7 @@ PYBIND11_MODULE(_mlir, m) {
   // Registration decorators.
   m.def(
       "register_dialect",
-      [](py::object pyClass) {
+      [](py::type pyClass) {
         std::string dialectNamespace =
             pyClass.attr("DIALECT_NAMESPACE").cast<std::string>();
         PyGlobals::get().registerDialectImpl(dialectNamespace, pyClass);
@@ -68,9 +68,9 @@ PYBIND11_MODULE(_mlir, m) {
       "Class decorator for registering a custom Dialect wrapper");
   m.def(
       "register_operation",
-      [](const py::object &dialectClass, bool replace) -> py::cpp_function {
+      [](const py::type &dialectClass, bool replace) -> py::cpp_function {
         return py::cpp_function(
-            [dialectClass, replace](py::object opClass) -> py::object {
+            [dialectClass, replace](py::type opClass) -> py::type {
               std::string operationName =
                   opClass.attr("OPERATION_NAME").cast<std::string>();
               PyGlobals::get().registerOperationImpl(operationName, opClass,

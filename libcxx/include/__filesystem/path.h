@@ -22,11 +22,10 @@
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_pointer.h>
 #include <__utility/move.h>
-#include <cstddef>
 #include <string>
 #include <string_view>
 
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_LOCALIZATION
 #  include <iomanip> // for quoted
 #  include <locale>
 #endif
@@ -200,7 +199,7 @@ _LIBCPP_EXPORTED_FROM_ABI size_t __char_to_wide(const string&, wchar_t*, size_t)
 template <class _ECharT>
 struct _PathCVT;
 
-#  if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  if _LIBCPP_HAS_LOCALIZATION
 template <class _ECharT>
 struct _PathCVT {
   static_assert(__can_convert_char<_ECharT>::value, "Char type not convertible");
@@ -259,7 +258,7 @@ struct _PathCVT {
     __append_range(__dest, _Traits::__range_begin(__s), _Traits::__range_end(__s));
   }
 };
-#  endif // !_LIBCPP_HAS_NO_LOCALIZATION
+#  endif // _LIBCPP_HAS_LOCALIZATION
 
 template <>
 struct _PathCVT<__path_value> {
@@ -421,7 +420,7 @@ public:
   }
 
   /*
-  #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+  #if _LIBCPP_HAS_LOCALIZATION
     // TODO Implement locale conversions.
     template <class _Source, class = _EnableIfPathable<_Source, void> >
     path(const _Source& __src, const locale& __loc, format = format::auto_format);
@@ -683,7 +682,7 @@ public:
     return __s;
   }
 
-#    if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#    if _LIBCPP_HAS_LOCALIZATION
   template <class _ECharT, class _Traits = char_traits<_ECharT>, class _Allocator = allocator<_ECharT> >
   _LIBCPP_HIDE_FROM_ABI basic_string<_ECharT, _Traits, _Allocator> string(const _Allocator& __a = _Allocator()) const {
     using _Str = basic_string<_ECharT, _Traits, _Allocator>;
@@ -726,7 +725,7 @@ public:
     std::replace(__s.begin(), __s.end(), '\\', '/');
     return __s;
   }
-#    endif /* !_LIBCPP_HAS_NO_LOCALIZATION */
+#    endif // _LIBCPP_HAS_LOCALIZATION
 #  else    /* _LIBCPP_WIN32API */
 
   _LIBCPP_HIDE_FROM_ABI std::string string() const { return __pn_; }
@@ -736,7 +735,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI std::string u8string() const { return __pn_; }
 #    endif
 
-#    if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#    if _LIBCPP_HAS_LOCALIZATION
   template <class _ECharT, class _Traits = char_traits<_ECharT>, class _Allocator = allocator<_ECharT> >
   _LIBCPP_HIDE_FROM_ABI basic_string<_ECharT, _Traits, _Allocator> string(const _Allocator& __a = _Allocator()) const {
     using _CVT = __widen_from_utf8<sizeof(_ECharT) * __CHAR_BIT__>;
@@ -747,12 +746,12 @@ public:
     return __s;
   }
 
-#      ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#      if _LIBCPP_HAS_WIDE_CHARACTERS
   _LIBCPP_HIDE_FROM_ABI std::wstring wstring() const { return string<wchar_t>(); }
 #      endif
   _LIBCPP_HIDE_FROM_ABI std::u16string u16string() const { return string<char16_t>(); }
   _LIBCPP_HIDE_FROM_ABI std::u32string u32string() const { return string<char32_t>(); }
-#    endif /* !_LIBCPP_HAS_NO_LOCALIZATION */
+#    endif // _LIBCPP_HAS_LOCALIZATION
 
   // generic format observers
   _LIBCPP_HIDE_FROM_ABI std::string generic_string() const { return __pn_; }
@@ -762,19 +761,19 @@ public:
   _LIBCPP_HIDE_FROM_ABI std::string generic_u8string() const { return __pn_; }
 #    endif
 
-#    if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#    if _LIBCPP_HAS_LOCALIZATION
   template <class _ECharT, class _Traits = char_traits<_ECharT>, class _Allocator = allocator<_ECharT> >
   _LIBCPP_HIDE_FROM_ABI basic_string<_ECharT, _Traits, _Allocator>
   generic_string(const _Allocator& __a = _Allocator()) const {
     return string<_ECharT, _Traits, _Allocator>(__a);
   }
 
-#      ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#      if _LIBCPP_HAS_WIDE_CHARACTERS
   _LIBCPP_HIDE_FROM_ABI std::wstring generic_wstring() const { return string<wchar_t>(); }
 #      endif
   _LIBCPP_HIDE_FROM_ABI std::u16string generic_u16string() const { return string<char16_t>(); }
   _LIBCPP_HIDE_FROM_ABI std::u32string generic_u32string() const { return string<char32_t>(); }
-#    endif /* !_LIBCPP_HAS_NO_LOCALIZATION */
+#    endif // _LIBCPP_HAS_LOCALIZATION
 #  endif   /* !_LIBCPP_WIN32API */
 
 private:
@@ -867,7 +866,7 @@ public:
   iterator begin() const;
   iterator end() const;
 
-#  if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  if _LIBCPP_HAS_LOCALIZATION
   template <
       class _CharT,
       class _Traits,
@@ -896,7 +895,7 @@ public:
     __p = __tmp;
     return __is;
   }
-#  endif // !_LIBCPP_HAS_NO_LOCALIZATION
+#  endif // _LIBCPP_HAS_LOCALIZATION
 
 private:
   inline _LIBCPP_HIDE_FROM_ABI path& __assign_view(__string_view const& __s) {

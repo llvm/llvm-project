@@ -410,12 +410,14 @@ public:
       // clang-format off
     case LibFunc_acos:         case LibFunc_acosf:      case LibFunc_acosl:
     case LibFunc_asin:         case LibFunc_asinf:      case LibFunc_asinl:
+    case LibFunc_atan2:        case LibFunc_atan2f:     case LibFunc_atan2l:
     case LibFunc_atan:         case LibFunc_atanf:      case LibFunc_atanl:
     case LibFunc_ceil:         case LibFunc_ceilf:      case LibFunc_ceill:
     case LibFunc_copysign:     case LibFunc_copysignf:  case LibFunc_copysignl:
     case LibFunc_cos:          case LibFunc_cosf:       case LibFunc_cosl:
     case LibFunc_cosh:         case LibFunc_coshf:      case LibFunc_coshl:
     case LibFunc_exp2:         case LibFunc_exp2f:      case LibFunc_exp2l:
+    case LibFunc_exp10:        case LibFunc_exp10f:     case LibFunc_exp10l:
     case LibFunc_fabs:         case LibFunc_fabsf:      case LibFunc_fabsl:
     case LibFunc_floor:        case LibFunc_floorf:     case LibFunc_floorl:
     case LibFunc_fmax:         case LibFunc_fmaxf:      case LibFunc_fmaxl:

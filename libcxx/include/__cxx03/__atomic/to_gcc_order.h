@@ -9,8 +9,8 @@
 #ifndef _LIBCPP___ATOMIC_TO_GCC_ORDER_H
 #define _LIBCPP___ATOMIC_TO_GCC_ORDER_H
 
-#include <__atomic/memory_order.h>
-#include <__config>
+#include <__cxx03/__atomic/memory_order.h>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

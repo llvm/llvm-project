@@ -205,9 +205,9 @@ Instruction *InstCombinerImpl::foldBitcastExtElt(ExtractElementInst &Ext) {
     if (IsBigEndian)
       ExtIndexC = NumElts.getKnownMinValue() - 1 - ExtIndexC;
     unsigned ShiftAmountC = ExtIndexC * DestWidth;
-    if (!ShiftAmountC ||
-        (isDesirableIntType(X->getType()->getPrimitiveSizeInBits()) &&
-        Ext.getVectorOperand()->hasOneUse())) {
+    if ((!ShiftAmountC ||
+         isDesirableIntType(X->getType()->getPrimitiveSizeInBits())) &&
+        Ext.getVectorOperand()->hasOneUse()) {
       if (ShiftAmountC)
         X = Builder.CreateLShr(X, ShiftAmountC, "extelt.offset");
       if (DestTy->isFloatingPointTy()) {
@@ -2899,6 +2899,23 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     return I;
   if (Instruction *I = foldIdentityPaddedShuffles(SVI))
     return I;
+
+  if (match(RHS, m_Constant())) {
+    if (auto *SI = dyn_cast<SelectInst>(LHS)) {
+      // We cannot do this fold for elementwise select since ShuffleVector is
+      // not elementwise.
+      if (SI->getCondition()->getType()->isIntegerTy() &&
+          (isa<PoisonValue>(RHS) ||
+           isGuaranteedNotToBePoison(SI->getCondition()))) {
+        if (Instruction *I = FoldOpIntoSelect(SVI, SI))
+          return I;
+      }
+    }
+    if (auto *PN = dyn_cast<PHINode>(LHS)) {
+      if (Instruction *I = foldOpIntoPhi(SVI, PN))
+        return I;
+    }
+  }
 
   if (match(RHS, m_Poison()) && canEvaluateShuffled(LHS, Mask)) {
     Value *V = evaluateInDifferentElementOrder(LHS, Mask, Builder);

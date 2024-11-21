@@ -38,5 +38,10 @@ ENUM_LOWERINGOPT(Underscoring, unsigned, 1, 1)
 /// (i.e. wraps around as two's complement). Off by default.
 ENUM_LOWERINGOPT(IntegerWrapAround, unsigned, 1, 0)
 
+/// If true, add nsw flags to loop variable increments.
+/// Off by default.
+/// TODO: integrate this option with the above
+ENUM_LOWERINGOPT(NSWOnLoopVarInc, unsigned, 1, 0)
+
 #undef LOWERINGOPT
 #undef ENUM_LOWERINGOPT

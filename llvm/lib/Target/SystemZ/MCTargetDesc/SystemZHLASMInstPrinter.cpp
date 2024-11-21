@@ -19,7 +19,7 @@ using namespace llvm;
 
 void SystemZHLASMInstPrinter::printFormattedRegName(const MCAsmInfo *MAI,
                                                     MCRegister Reg,
-                                                    raw_ostream &O) const {
+                                                    raw_ostream &O) {
   const char *RegName = getRegisterName(Reg);
   // Skip register prefix so that only register number is left
   assert(isalpha(RegName[0]) && isdigit(RegName[1]));

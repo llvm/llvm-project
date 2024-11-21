@@ -13,7 +13,7 @@
 #ifndef LLVM_CLANG_LIB_CIR_CIRGENTYPECACHE_H
 #define LLVM_CLANG_LIB_CIR_CIRGENTYPECACHE_H
 
-namespace cir {
+namespace clang::CIRGen {
 
 /// This structure provides a set of types that are commonly used
 /// during IR emission. It's initialized once in CodeGenModule's
@@ -22,6 +22,6 @@ struct CIRGenTypeCache {
   CIRGenTypeCache() = default;
 };
 
-} // namespace cir
+} // namespace clang::CIRGen
 
 #endif // LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENTYPECACHE_H
