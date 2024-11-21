@@ -30,9 +30,9 @@ bool MCInstrAnalysis::evaluateBranch(const MCInst & /*Inst*/, uint64_t /*Addr*/,
   return false;
 }
 
-bool MCInstrAnalysis::evaluateInstruction(const MCInst &Inst,
-                                          uint64_t Addr, uint64_t Size,
-                                          uint64_t &Target, raw_ostream *TargetOS) const {
+bool MCInstrAnalysis::evaluateInstruction(const MCInst &Inst, uint64_t Addr,
+                                          uint64_t Size, uint64_t &Target,
+                                          raw_ostream *TargetOS) const {
   return false;
 }
 

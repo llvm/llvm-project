@@ -241,7 +241,8 @@ public:
   }
 
   bool evaluateInstruction(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                           uint64_t &Target, raw_ostream *TargetOS) const override {
+                           uint64_t &Target,
+                           raw_ostream *TargetOS) const override {
     switch(Inst.getOpcode()) {
     default:
       return false;
@@ -428,6 +429,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTargetMC() {
     TargetRegistry::RegisterNullTargetStreamer(*T,
                                                createRISCVNullTargetStreamer);
   }
-    TargetRegistry::RegisterMCInstrAnalysis(getTheRISCV32Target(), createRISCV32InstrAnalysis);
-    TargetRegistry::RegisterMCInstrAnalysis(getTheRISCV64Target(), createRISCV64InstrAnalysis);
+  TargetRegistry::RegisterMCInstrAnalysis(getTheRISCV32Target(),
+                                          createRISCV32InstrAnalysis);
+  TargetRegistry::RegisterMCInstrAnalysis(getTheRISCV64Target(),
+                                          createRISCV64InstrAnalysis);
 }
