@@ -197,6 +197,9 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
     return ELF::R_X86_64_TLSGD;
   case MCSymbolRefExpr::VK_GOTTPOFF:
     checkIs32(Ctx, Loc, Type);
+    if ((unsigned)Kind == X86::reloc_riprel_4byte_movq_load_rex2 ||
+        (unsigned)Kind == X86::reloc_riprel_4byte_relax_rex2)
+      return ELF::R_X86_64_CODE_4_GOTTPOFF;
     return ELF::R_X86_64_GOTTPOFF;
   case MCSymbolRefExpr::VK_TLSLD:
     checkIs32(Ctx, Loc, Type);
