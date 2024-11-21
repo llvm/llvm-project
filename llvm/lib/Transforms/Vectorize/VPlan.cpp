@@ -264,7 +264,7 @@ Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
     return Data.VPV2Vector[Def];
 
   auto GetBroadcastInstrs = [this, Def](Value *V) {
-    bool SafeToHoist = Def->isDefinedOutsideLoopRegions();
+    bool SafeToHoist = !Def->hasDefiningRecipe();
     if (VF.isScalar())
       return V;
     // Place the code for broadcasting invariant variables in the new preheader.
