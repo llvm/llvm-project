@@ -541,25 +541,41 @@ func.func @select(%arg0 : i1, %arg1 : i32, %arg2 : i32) -> i32 {
 // -----
 
 // CHECK-LABEL: @ceildivsi
+// CHECK-SAME: %[[ARG0:.*]]: i64) -> i64
 func.func @ceildivsi(%arg0 : i64) -> i64 {
-  // CHECK: llvm.icmp "sgt" %arg0, %1 : i64
-  // CHECK: llvm.select %3, %2, %0 : i1, i64
-  // CHECK: llvm.add %4, %arg0 : i64
-  // CHECK: llvm.sdiv %5, %arg0 : i64
-  // CHECK: llvm.add %6, %0 : i64
-  // CHECK: llvm.sub %1, %arg0 : i64
-  // CHECK: llvm.sdiv %8, %arg0 : i64
+  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(1 : i64) : i64
+  // CHECK: %[[CST1:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK: %[[CST2:.*]] = llvm.mlir.constant(-1 : i64) : i64
+  // CHECK: %[[CMP0:.*]] = llvm.icmp "sgt" %[[ARG0]], %[[CST1]] : i64
+  // CHECK: %[[SEL0:.*]] = llvm.select %[[CMP0]], %[[CST2]], %[[CST0]] : i1, i64
+  // CHECK: %[[ADD0:.*]] = llvm.add %[[SEL0]], %[[ARG0]] : i64
+  // CHECK: %[[DIV0:.*]] = llvm.sdiv %[[ADD0]], %[[ARG0]] : i64
+  // CHECK: %[[ADD1:.*]] = llvm.add %[[DIV0]], %[[CST0]] : i64
+  // CHECK: %[[SUB0:.*]] = llvm.sub %[[CST1]], %[[ARG0]] : i64
+  // CHECK: %[[DIV1:.*]] = llvm.sdiv %[[SUB0]], %[[ARG0]] : i64
+  // CHECK: %[[SUB1:.*]] = llvm.sub %[[CST1]], %[[DIV1]] : i64
+  // CHECK: %[[CMP1:.*]] = llvm.icmp "slt" %[[ARG0]], %[[CST1]] : i64
+  // CHECK: %[[CMP2:.*]] = llvm.icmp "sgt" %[[ARG0]], %[[CST1]] : i64
+  // CHECK: %[[CMP3:.*]] = llvm.icmp "slt" %[[ARG0]], %[[CST1]] : i64
+  // CHECK: %[[CMP4:.*]] = llvm.icmp "sgt" %[[ARG0]], %[[CST1]] : i64
+  // CHECK: %[[AND0:.*]] = llvm.and %[[CMP1]], %[[CMP3]] : i1
+  // CHECK: %[[AND1:.*]] = llvm.and %[[CMP2]], %[[CMP4]] : i1
+  // CHECK: %[[OR:.*]] = llvm.or %[[AND0]], %[[AND1]] : i1
+  // CHECK: %[[SEL1:.*]] = llvm.select %[[OR]], %[[ADD1]], %[[SUB1]] : i1, i64
   %0 = arith.ceildivsi %arg0, %arg0 : i64
   return %0: i64
 }
 
 // CHECK-LABEL: @ceildivui
+// CHECK-SAME: %[[ARG0:.*]]: i32) -> i32
 func.func @ceildivui(%arg0 : i32) -> i32 {
-  // CHECK: llvm.icmp "eq" %arg0, %0 : i32
-  // CHECK: llvm.sub %arg0, %2 : i32
-  // CHECK: llvm.udiv %3, %arg0 : i32
-  // CHECK: llvm.add %4, %2 : i32
-  // CHECK: llvm.select %1, %0, %5 : i1, i32
+// CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK: %[[CMP0:.*]] = llvm.icmp "eq" %[[ARG0]], %[[CST0]] : i32
+// CHECK: %[[CST1:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK: %[[SUB0:.*]] = llvm.sub %[[ARG0]], %[[CST1]] : i32
+// CHECK: %[[DIV0:.*]] = llvm.udiv %[[SUB0]], %[[ARG0]] : i32
+// CHECK: %[[ADD0:.*]] = llvm.add %[[DIV0]], %[[CST1]] : i32
+// CHECK: %[[SEL0:.*]] = llvm.select %[[CMP0]], %[[CST0]], %[[ADD0]] : i1, i32
   %0 = arith.ceildivui %arg0, %arg0 : i32
   return %0: i32
 }
@@ -567,12 +583,19 @@ func.func @ceildivui(%arg0 : i32) -> i32 {
 // -----
 
 // CHECK-LABEL: @floordivsi
+// CHECK-SAME: %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32) -> i32
 func.func @floordivsi(%arg0 : i32, %arg1 : i32) -> i32 {
-  // CHECK: %0 = llvm.sdiv %arg0, %arg1 : i32
-  // CHECK: %1 = llvm.mul %0, %arg1 : i32
-  // CHECK: %2 = llvm.icmp "ne" %arg0, %1 : i32
-  // CHECK: %3 = llvm.mlir.constant(0 : i32) : i32
-  // CHECK: %4 = llvm.icmp "slt" %arg0, %3 : i32
+  // CHECK: %[[SDIV:.*]] = llvm.sdiv %[[ARG0]], %[[ARG1]] : i32
+  // CHECK: %[[MUL0:.*]] = llvm.mul %[[SDIV]], %[[ARG1]] : i32
+  // CHECK: %[[CMP0:.*]] = llvm.icmp "ne" %[[ARG0]], %[[MUL0]] : i32
+  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: %[[CMP1:.*]] = llvm.icmp "slt" %[[ARG0]], %[[CST0]] : i32
+  // CHECK: %[[CMP2:.*]] = llvm.icmp "slt" %[[ARG1]], %[[CST0]] : i32
+  // CHECK: %[[CMP3:.*]] = llvm.icmp "ne" %[[CMP1]], %[[CMP2]] : i1
+  // CHECK: %[[AND:.*]] = llvm.and %[[CMP0]], %[[CMP3]] : i1
+  // CHECK: %[[CST1:.*]] = llvm.mlir.constant(-1 : i32) : i32
+  // CHECK: %[[ADD:.*]] = llvm.add %[[SDIV]], %[[CST1]] : i32
+  // CHECK: %[[SEL:.*]] = llvm.select %[[AND]], %[[ADD]], %[[SDIV]] : i1, i32
   %0 = arith.floordivsi %arg0, %arg1 : i32
   return %0 : i32
 }
