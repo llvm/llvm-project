@@ -140,7 +140,7 @@ int Test::runTests(const TestOptions &Options) {
   const char *reset = Options.PrintColor ? "\033[0m" : "";
 
   int TestCount = getNumTests();
-  if (TestCount) {
+  if (TestCount && !Options.Brief) {
     tlog << green << "[==========] " << reset << "Running " << TestCount
          << " test";
     if (TestCount > 1)
@@ -157,7 +157,8 @@ int Test::runTests(const TestOptions &Options) {
       continue;
     }
 
-    tlog << green << "[ RUN      ] " << reset << TestName << '\n';
+    if (!Options.Brief)
+      tlog << green << "[ RUN      ] " << reset << TestName << '\n';
     [[maybe_unused]] const uint64_t start_time = clock();
     RunContext Ctx;
     T->SetUp();
@@ -171,7 +172,12 @@ int Test::runTests(const TestOptions &Options) {
       ++FailCount;
       break;
     case RunContext::RunResult::Pass:
-      tlog << green << "[       OK ] " << reset << TestName;
+      if (!Options.Brief)
+        tlog << green << "[       OK ] " << reset << TestName;
+
+      if (Options.Brief)
+        break;
+
 #ifdef LIBC_TEST_USE_CLOCK
       tlog << " (";
       if (start_time > end_time) {
@@ -197,9 +203,11 @@ int Test::runTests(const TestOptions &Options) {
   }
 
   if (TestCount > 0) {
-    tlog << "Ran " << TestCount << " tests. "
-         << " PASS: " << TestCount - FailCount << ' ' << " FAIL: " << FailCount
-         << '\n';
+    if (!Options.Brief) {
+      tlog << "Ran " << TestCount << " tests. "
+           << " PASS: " << TestCount - FailCount << ' '
+           << " FAIL: " << FailCount << '\n';
+    }
   } else {
     tlog << "No tests run.\n";
     if (Options.TestFilter) {

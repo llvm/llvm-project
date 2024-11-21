@@ -31,6 +31,8 @@ TestOptions parseOptions(int argc, char **argv) {
       Options.PrintColor = false;
     else if (arg == "--gtest_print_time")
       Options.TimeInMs = true;
+    else if (arg == "--gtest_brief=1")
+      Options.Brief = true;
     // Ignore other unsupported gtest specific flags.
     else if (arg.starts_with("--gtest_"))
       continue;

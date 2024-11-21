@@ -108,6 +108,8 @@ struct TestOptions {
   bool PrintColor = true;
   // Should the test results print timing only in milliseconds, as GTest does?
   bool TimeInMs = false;
+  // Should passing tests be suppressed?
+  bool Brief = false;
 };
 
 // NOTE: One should not create instances and call methods on them directly. One

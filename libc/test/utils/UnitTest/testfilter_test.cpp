@@ -20,6 +20,9 @@ TEST(LlvmLibcTestFilterTest, NoFilter) {}
 
 TEST(LlvmLibcTestFilterTest, CheckCorrectFilter) {
   TestOptions Options;
+
+  Options.Brief = true;
+
   Options.TestFilter = "LlvmLibcTestFilterTest.NoFilter";
   ASSERT_EQ(LIBC_NAMESPACE::testing::Test::runTests(Options), 0);
 

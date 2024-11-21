@@ -235,7 +235,7 @@ function(create_libc_unittest fq_target_name)
   if(NOT LIBC_UNITTEST_NO_RUN_POSTBUILD)
     add_custom_target(
       ${fq_target_name}
-      COMMAND ${fq_build_target_name}
+      COMMAND ${fq_build_target_name} "--gtest_brief=\$\${BRIEF:-1}"
       COMMENT "Running unit test ${fq_target_name}"
     )
   endif()
@@ -526,7 +526,7 @@ function(add_integration_test test_name)
       $<TARGET_FILE:${fq_build_target_name}> ${INTEGRATION_TEST_ARGS})
   add_custom_target(
     ${fq_target_name}
-    COMMAND ${test_cmd}
+    COMMAND ${test_cmd} "--gtest_brief=\$\${BRIEF:-1}"
     COMMAND_EXPAND_LISTS
     COMMENT "Running integration test ${fq_target_name}"
   )
@@ -719,7 +719,7 @@ function(add_libc_hermetic test_name)
 
   add_custom_command(
     OUTPUT ${fq_target_name}-cmd
-    COMMAND ${test_cmd}
+    COMMAND ${test_cmd} "--gtest_brief=\$\${BRIEF:-1}"
     COMMAND_EXPAND_LISTS
     COMMENT "Running hermetic test ${fq_target_name}"
     ${LIBC_HERMETIC_TEST_JOB_POOL}
