@@ -439,6 +439,11 @@ INTERCEPTOR(int, nanosleep, const struct timespec *rqtp,
   return REAL(nanosleep)(rqtp, rmtp);
 }
 
+INTERCEPTOR(int, sched_yield, void) {
+  __rtsan_notify_intercepted_call("sched_yield");
+  return REAL(sched_yield)();
+}
+
 // Memory
 
 INTERCEPTOR(void *, calloc, SIZE_T num, SIZE_T size) {
@@ -819,6 +824,7 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(sleep);
   INTERCEPT_FUNCTION(usleep);
   INTERCEPT_FUNCTION(nanosleep);
+  INTERCEPT_FUNCTION(sched_yield);
 
   INTERCEPT_FUNCTION(accept);
   INTERCEPT_FUNCTION(bind);
