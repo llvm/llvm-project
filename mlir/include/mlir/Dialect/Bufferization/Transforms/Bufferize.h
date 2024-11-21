@@ -56,12 +56,6 @@ public:
 /// populateEliminateBufferizeMaterializationsPatterns.
 void populateBufferizeMaterializationLegality(ConversionTarget &target);
 
-/// Populate patterns to eliminate bufferize materializations.
-///
-/// In particular, these are the tensor_load/buffer_cast ops.
-void populateEliminateBufferizeMaterializationsPatterns(
-    const BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns);
-
 /// Bufferize `op` and its nested ops that implement `BufferizableOpInterface`.
 ///
 /// Note: This function does not resolve read-after-write conflicts. Use this
