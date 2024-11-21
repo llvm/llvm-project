@@ -72,6 +72,22 @@ bool Type::isScalableTy() const {
   return isScalableTy(Visited);
 }
 
+bool Type::containsNonGlobalTargetExtType(
+    SmallPtrSetImpl<const Type *> &Visited) const {
+  if (const auto *ATy = dyn_cast<ArrayType>(this))
+    return ATy->getElementType()->containsNonGlobalTargetExtType(Visited);
+  if (const auto *STy = dyn_cast<StructType>(this))
+    return STy->containsNonGlobalTargetExtType(Visited);
+  if (auto *TT = dyn_cast<TargetExtType>(this))
+    return !TT->hasProperty(TargetExtType::CanBeGlobal);
+  return false;
+}
+
+bool Type::containsNonGlobalTargetExtType() const {
+  SmallPtrSet<const Type *, 4> Visited;
+  return containsNonGlobalTargetExtType(Visited);
+}
+
 const fltSemantics &Type::getFltSemantics() const {
   switch (getTypeID()) {
   case HalfTyID: return APFloat::IEEEhalf();
@@ -422,6 +438,34 @@ bool StructType::isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const {
   if (!isOpaque())
     const_cast<StructType *>(this)->setSubclassData(
         getSubclassData() | SCDB_NotContainsScalableVector);
+  return false;
+}
+
+bool StructType::containsNonGlobalTargetExtType(
+    SmallPtrSetImpl<const Type *> &Visited) const {
+  if ((getSubclassData() & SCDB_ContainsNonGlobalTargetExtType) != 0)
+    return true;
+
+  if ((getSubclassData() & SCDB_NotContainsNonGlobalTargetExtType) != 0)
+    return false;
+
+  if (!Visited.insert(this).second)
+    return false;
+
+  for (Type *Ty : elements()) {
+    if (Ty->containsNonGlobalTargetExtType(Visited)) {
+      const_cast<StructType *>(this)->setSubclassData(
+          getSubclassData() | SCDB_ContainsNonGlobalTargetExtType);
+      return true;
+    }
+  }
+
+  // For structures that are opaque, return false but do not set the
+  // SCDB_NotContainsNonGlobalTargetExtType flag since it may gain non-global
+  // target extension types when it becomes non-opaque.
+  if (!isOpaque())
+    const_cast<StructType *>(this)->setSubclassData(
+        getSubclassData() | SCDB_NotContainsNonGlobalTargetExtType);
   return false;
 }
 
@@ -903,7 +947,7 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
 
   // DirectX resources
   if (Name.starts_with("dx."))
-    return TargetTypeInfo(PointerType::get(C, 0));
+    return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::CanBeGlobal);
 
   // Opaque types in the AMDGPU name space.
   if (Name == "amdgcn.named.barrier") {

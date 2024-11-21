@@ -238,6 +238,8 @@ public:
   /// Convert the current input lines into a UTF8 StringList
   StringList GetInputAsStringList(int line_count = UINT32_MAX);
 
+  size_t GetTerminalWidth() { return m_terminal_width; }
+
 private:
   /// Sets the lowest line number for multi-line editing sessions.  A value of
   /// zero suppresses line number printing in the prompt.

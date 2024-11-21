@@ -12,9 +12,6 @@
 
 #include "JITLinkGeneric.h"
 
-#include "llvm/Support/BinaryStreamReader.h"
-#include "llvm/Support/MemoryBuffer.h"
-
 #define DEBUG_TYPE "jitlink"
 
 namespace llvm {

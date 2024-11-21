@@ -4429,12 +4429,17 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     StackIdAbbv->Add(BitCodeAbbrevOp(bitc::FS_STACK_IDS));
     // numids x stackid
     StackIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
-    // FIXME: The stack ids are hashes that are close to 64 bits in size, so
-    // emitting as a pair of 32-bit fixed-width values, as we do for context
-    // ids, would be more efficient.
-    StackIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
+    // The stack ids are hashes that are close to 64 bits in size, so emitting
+    // as a pair of 32-bit fixed-width values is more efficient than a VBR.
+    StackIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
     unsigned StackIdAbbvId = Stream.EmitAbbrev(std::move(StackIdAbbv));
-    Stream.EmitRecord(bitc::FS_STACK_IDS, Index->stackIds(), StackIdAbbvId);
+    SmallVector<uint32_t> Vals;
+    Vals.reserve(Index->stackIds().size() * 2);
+    for (auto Id : Index->stackIds()) {
+      Vals.push_back(static_cast<uint32_t>(Id >> 32));
+      Vals.push_back(static_cast<uint32_t>(Id));
+    }
+    Stream.EmitRecord(bitc::FS_STACK_IDS, Vals, StackIdAbbvId);
   }
 
   // n x context id
@@ -4624,9 +4629,17 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     StackIdAbbv->Add(BitCodeAbbrevOp(bitc::FS_STACK_IDS));
     // numids x stackid
     StackIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
-    StackIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
+    // The stack ids are hashes that are close to 64 bits in size, so emitting
+    // as a pair of 32-bit fixed-width values is more efficient than a VBR.
+    StackIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
     unsigned StackIdAbbvId = Stream.EmitAbbrev(std::move(StackIdAbbv));
-    Stream.EmitRecord(bitc::FS_STACK_IDS, StackIds, StackIdAbbvId);
+    SmallVector<uint32_t> Vals;
+    Vals.reserve(StackIds.size() * 2);
+    for (auto Id : StackIds) {
+      Vals.push_back(static_cast<uint32_t>(Id >> 32));
+      Vals.push_back(static_cast<uint32_t>(Id));
+    }
+    Stream.EmitRecord(bitc::FS_STACK_IDS, Vals, StackIdAbbvId);
   }
 
   // Abbrev for FS_COMBINED_PROFILE.
@@ -5488,8 +5501,9 @@ void llvm::embedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
   // Save llvm.compiler.used and remove it.
   SmallVector<Constant *, 2> UsedArray;
   SmallVector<GlobalValue *, 4> UsedGlobals;
-  Type *UsedElementType = PointerType::getUnqual(M.getContext());
   GlobalVariable *Used = collectUsedGlobalVariables(M, UsedGlobals, true);
+  Type *UsedElementType = Used ? Used->getValueType()->getArrayElementType()
+                               : PointerType::getUnqual(M.getContext());
   for (auto *GV : UsedGlobals) {
     if (GV->getName() != "llvm.embedded.module" &&
         GV->getName() != "llvm.cmdline")

@@ -121,8 +121,10 @@ evan.cheng@apple.com (email)
 
 #### SelectionDAG
 
-Justin Bogner \
-mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
+Simon Pilgrim \
+llvm-dev@redking.me.uk (email), [RKSimon](https://github.com/RKSimon) (GitHub) \
+Craig Topper \
+craig.topper@sifive.com (email), [topperc](https://github.com/topperc) (GitHub)
 
 #### FastISel
 
@@ -199,7 +201,7 @@ mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
 #### Hexagon backend
 
 Sundeep Kushwaha \
-sundeepk@quicinc.com (email)
+sundeepk@quicinc.com (email), [SundeepKushwaha](https://github.com/SundeepKushwaha) (GitHub)
 
 #### Lanai backend
 
@@ -416,17 +418,17 @@ Others only have a lead maintainer listed here.
 
 [Bolt maintainers](https://github.com/llvm/llvm-project/blob/main/bolt/CODE_OWNERS.TXT)
 
-[Clang maintainers](https://github.com/llvm/llvm-project/blob/main/clang/CodeOwners.rst)
+[Clang maintainers](https://github.com/llvm/llvm-project/blob/main/clang/Maintainers.rst)
 
 [Clang-tools-extra maintainers](https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/CODE_OWNERS.TXT)
 
 [Compiler-rt maintainers](https://github.com/llvm/llvm-project/blob/main/compiler-rt/CODE_OWNERS.TXT)
 
-[Flang maintainers](https://github.com/llvm/llvm-project/blob/main/flang/CODE_OWNERS.TXT)
+[Flang maintainers](https://github.com/llvm/llvm-project/blob/main/flang/Maintainers.txt)
 
 [LLD maintainers](https://github.com/llvm/llvm-project/blob/main/lld/CODE_OWNERS.TXT)
 
-[LLDB maintainers](https://github.com/llvm/llvm-project/blob/main/lldb/CodeOwners.rst)
+[LLDB maintainers](https://github.com/llvm/llvm-project/blob/main/lldb/Maintainers.rst)
 
 #### libc++
 
@@ -461,7 +463,8 @@ sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattn
 
 ### Inactive or former component maintainers
 
-Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management
+Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- SelectionDAG \
+Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management \
 
 ### Former maintainers of removed components
 

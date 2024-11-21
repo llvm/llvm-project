@@ -215,8 +215,8 @@ static void handle_printf(rpc::Server::Port &port, TempStorage &temp_storage) {
 template <uint32_t lane_size>
 rpc_status_t handle_server_impl(
     rpc::Server &server,
-    const std::unordered_map<uint16_t, rpc_opcode_callback_ty> &callbacks,
-    const std::unordered_map<uint16_t, void *> &callback_data,
+    const std::unordered_map<uint32_t, rpc_opcode_callback_ty> &callbacks,
+    const std::unordered_map<uint32_t, void *> &callback_data,
     uint32_t &index) {
   auto port = server.try_open(lane_size, index);
   if (!port)
@@ -477,8 +477,8 @@ struct Device {
   void *buffer;
   rpc::Server server;
   rpc::Client client;
-  std::unordered_map<uint16_t, rpc_opcode_callback_ty> callbacks;
-  std::unordered_map<uint16_t, void *> callback_data;
+  std::unordered_map<uint32_t, rpc_opcode_callback_ty> callbacks;
+  std::unordered_map<uint32_t, void *> callback_data;
 };
 
 rpc_status_t rpc_server_init(rpc_device_t *rpc_device, uint64_t num_ports,
@@ -528,7 +528,7 @@ rpc_status_t rpc_handle_server(rpc_device_t rpc_device) {
   }
 }
 
-rpc_status_t rpc_register_callback(rpc_device_t rpc_device, uint16_t opcode,
+rpc_status_t rpc_register_callback(rpc_device_t rpc_device, uint32_t opcode,
                                    rpc_opcode_callback_ty callback,
                                    void *data) {
   if (!rpc_device.handle)

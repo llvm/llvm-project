@@ -42,6 +42,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/LongestCommonSequence.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <map>
 #include <set>
@@ -854,6 +855,37 @@ memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI) {
   }
 
   return Calls;
+}
+
+DenseMap<uint64_t, LocToLocMap>
+memprof::computeUndriftMap(Module &M, IndexedInstrProfReader *MemProfReader,
+                           const TargetLibraryInfo &TLI) {
+  DenseMap<uint64_t, LocToLocMap> UndriftMaps;
+
+  DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>> CallsFromProfile =
+      MemProfReader->getMemProfCallerCalleePairs();
+  DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>> CallsFromIR =
+      extractCallsFromIR(M, TLI);
+
+  // Compute an undrift map for each CallerGUID.
+  for (const auto &[CallerGUID, IRAnchors] : CallsFromIR) {
+    auto It = CallsFromProfile.find(CallerGUID);
+    if (It == CallsFromProfile.end())
+      continue;
+    const auto &ProfileAnchors = It->second;
+
+    LocToLocMap Matchings;
+    longestCommonSequence<LineLocation, GlobalValue::GUID>(
+        ProfileAnchors, IRAnchors, std::equal_to<GlobalValue::GUID>(),
+        [&](LineLocation A, LineLocation B) { Matchings.try_emplace(A, B); });
+    bool Inserted = UndriftMaps.try_emplace(CallerGUID, Matchings).second;
+
+    // The insertion must succeed because we visit each GUID exactly once.
+    assert(Inserted);
+    (void)Inserted;
+  }
+
+  return UndriftMaps;
 }
 
 static void

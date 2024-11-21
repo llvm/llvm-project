@@ -8350,9 +8350,15 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
     return;
 
   // Only warn about certain kinds of shadowing for class members.
-  if (NewDC && NewDC->isRecord()) {
+  if (NewDC) {
     // In particular, don't warn about shadowing non-class members.
-    if (!OldDC->isRecord())
+    if (NewDC->isRecord() && !OldDC->isRecord())
+      return;
+
+    // Skip shadowing check if we're in a class scope, dealing with an enum
+    // constant in a different context.
+    DeclContext *ReDC = NewDC->getRedeclContext();
+    if (ReDC->isRecord() && isa<EnumConstantDecl>(D) && !OldDC->Equals(ReDC))
       return;
 
     // TODO: should we warn about static data members shadowing
@@ -8362,7 +8368,6 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
     // This is hard to do perfectly because we might friend the
     // shadowing context, but that's just a false negative.
   }
-
 
   DeclarationName Name = R.getLookupName();
 
