@@ -663,7 +663,7 @@ AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagClient);
 
   auto VFS = llvm::vfs::getRealFileSystem();
-  ProcessWarningOptions(Diags, *DiagOpts,  *VFS, /*ReportDiags=*/false);
+  ProcessWarningOptions(Diags, *DiagOpts, *VFS, /*ReportDiags=*/false);
 
   Driver TheDriver((Twine(env::getLLVMPath()) + "/bin/clang").str(),
                    llvm::sys::getDefaultTargetTriple(), Diags,
@@ -719,7 +719,7 @@ AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
       // Internally this call refers to the invocation created above, so at
       // this point the DiagnosticsEngine should accurately reflect all user
       // requested configuration from Argv.
-      Clang->createDiagnostics(DiagClient, /* ShouldOwnClient */ false);
+      Clang->createDiagnostics(*VFS, DiagClient, /* ShouldOwnClient */ false);
       if (!Clang->hasDiagnostics()) {
         return AMD_COMGR_STATUS_ERROR;
       }
