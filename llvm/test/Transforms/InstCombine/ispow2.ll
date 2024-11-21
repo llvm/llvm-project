@@ -461,6 +461,19 @@ define i1 @isnot_pow2_ctpop(i32 %x) {
   ret i1 %r
 }
 
+define i1 @isnot_pow2_ctpop_samesign(i32 %x) {
+; CHECK-LABEL: @isnot_pow2_ctpop_samesign(
+; CHECK-NEXT:    [[T0:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[T0]], 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp samesign ugt i32 %t0, 1
+  %iszero = icmp eq i32 %x, 0
+  %r = or i1 %iszero, %cmp
+  ret i1 %r
+}
+
 define i1 @isnot_pow2_ctpop_logical(i32 %x) {
 ; CHECK-LABEL: @isnot_pow2_ctpop_logical(
 ; CHECK-NEXT:    [[T0:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
@@ -469,6 +482,19 @@ define i1 @isnot_pow2_ctpop_logical(i32 %x) {
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp ugt i32 %t0, 1
+  %iszero = icmp eq i32 %x, 0
+  %r = select i1 %iszero, i1 true, i1 %cmp
+  ret i1 %r
+}
+
+define i1 @isnot_pow2_ctpop_logical_samesign(i32 %x) {
+; CHECK-LABEL: @isnot_pow2_ctpop_logical_samesign(
+; CHECK-NEXT:    [[T0:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[T0]], 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp samesign ugt i32 %t0, 1
   %iszero = icmp eq i32 %x, 0
   %r = select i1 %iszero, i1 true, i1 %cmp
   ret i1 %r
@@ -524,6 +550,19 @@ define <2 x i1> @isnot_pow2_ctpop_commute_vec(<2 x i8> %x) {
 ;
   %t0 = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> %x)
   %cmp = icmp ugt <2 x i8> %t0, <i8 1, i8 1>
+  %iszero = icmp eq <2 x i8> %x, zeroinitializer
+  %r = or <2 x i1> %cmp, %iszero
+  ret <2 x i1> %r
+}
+
+define <2 x i1> @isnot_pow2_ctpop_commute_vec_samesign(<2 x i8> %x) {
+; CHECK-LABEL: @isnot_pow2_ctpop_commute_vec_samesign(
+; CHECK-NEXT:    [[T0:%.*]] = tail call range(i8 0, 9) <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[T0]], splat (i8 1)
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %t0 = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> %x)
+  %cmp = icmp samesign ugt <2 x i8> %t0, <i8 1, i8 1>
   %iszero = icmp eq <2 x i8> %x, zeroinitializer
   %r = or <2 x i1> %cmp, %iszero
   ret <2 x i1> %r
@@ -1532,6 +1571,21 @@ entry:
   ret i1 %sel
 }
 
+define i1 @has_single_bit_samesign(i32 %x) {
+; CHECK-LABEL: @has_single_bit_samesign(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[POPCNT:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = icmp eq i32 [[POPCNT]], 1
+; CHECK-NEXT:    ret i1 [[SEL]]
+;
+entry:
+  %cmp1 = icmp ne i32 %x, 0
+  %popcnt = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
+  %cmp2 = icmp samesign ult i32 %popcnt, 2
+  %sel = select i1 %cmp1, i1 %cmp2, i1 false
+  ret i1 %sel
+}
+
 define i1 @has_single_bit_inv(i32 %x) {
 ; CHECK-LABEL: @has_single_bit_inv(
 ; CHECK-NEXT:  entry:
@@ -1543,6 +1597,21 @@ entry:
   %cmp1 = icmp eq i32 %x, 0
   %popcnt = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
   %cmp2 = icmp ugt i32 %popcnt, 1
+  %sel = select i1 %cmp1, i1 true, i1 %cmp2
+  ret i1 %sel
+}
+
+define i1 @has_single_bit_inv_samesign(i32 %x) {
+; CHECK-LABEL: @has_single_bit_inv_samesign(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[POPCNT:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = icmp ne i32 [[POPCNT]], 1
+; CHECK-NEXT:    ret i1 [[SEL]]
+;
+entry:
+  %cmp1 = icmp eq i32 %x, 0
+  %popcnt = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
+  %cmp2 = icmp samesign ugt i32 %popcnt, 1
   %sel = select i1 %cmp1, i1 true, i1 %cmp2
   ret i1 %sel
 }
