@@ -11,6 +11,7 @@
 #include "DXILResourceAnalysis.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
@@ -21,6 +22,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
@@ -354,6 +356,32 @@ static void translateMetadata(Module &M, const DXILResourceMap &DRM,
       M.getOrInsertNamedMetadata("dx.entryPoints");
   for (auto *Entry : EntryFnMDNodes)
     EntryPointsNamedMD->addOperand(Entry);
+
+  for (auto &F : M) {
+    for (auto &BB : F) {
+      auto *BBTerminatorInst = BB.getTerminator();
+
+      auto *HlslControlFlowMD =
+          BBTerminatorInst->getMetadata("hlsl.controlflow.hint");
+
+      if (!HlslControlFlowMD || HlslControlFlowMD->getNumOperands() < 2)
+        continue;
+
+      MDBuilder MDHelper(M.getContext());
+      auto *Op1 =
+          mdconst::extract<ConstantInt>(HlslControlFlowMD->getOperand(1));
+
+      SmallVector<llvm::Metadata *, 2> Vals(
+          ArrayRef<Metadata *>{MDHelper.createString("dx.controlflow.hints"),
+                               MDHelper.createConstant(Op1)});
+
+      auto *MDNode = llvm::MDNode::get(M.getContext(), Vals);
+
+      BBTerminatorInst->setMetadata("dx.controlflow.hints", MDNode);
+      BBTerminatorInst->setMetadata("hlsl.controlflow.hint", nullptr);
+    }
+    F.clearMetadata();
+  }
 }
 
 PreservedAnalyses DXILTranslateMetadata::run(Module &M,

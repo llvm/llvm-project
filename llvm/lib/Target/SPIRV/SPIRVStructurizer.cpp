@@ -24,8 +24,8 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
-#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
@@ -1206,11 +1206,13 @@ public:
   }
 
   void createOpSelectMerge(IRBuilder<> *Builder, BlockAddress *MergeAddress) {
-    Instruction *BBTerminatoInst = Builder->GetInsertBlock()->getTerminator();
+    Instruction *BBTerminatorInst = Builder->GetInsertBlock()->getTerminator();
 
-    MDNode *BranchMdNode = getDxBranchHint(*BBTerminatoInst);
-    Value *MDNodeValue =
-        MetadataAsValue::get(Builder->getContext(), BranchMdNode);
+    MDNode *MDNode = BBTerminatorInst->getMetadata("hlsl.controlflow.hint");
+    if (MDNode && MDNode->getNumOperands() != 2)
+      llvm_unreachable("invalid metadata hlsl.controlflow.hint");
+
+    Value *MDNodeValue = MetadataAsValue::get(Builder->getContext(), MDNode);
 
     llvm::SmallVector<llvm::Value *, 2> Args = {MergeAddress, MDNodeValue};
 

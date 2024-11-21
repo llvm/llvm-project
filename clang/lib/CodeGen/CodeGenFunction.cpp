@@ -2057,7 +2057,6 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
 
   llvm::MDNode *Weights = nullptr;
   llvm::MDNode *Unpredictable = nullptr;
-  llvm::MDNode *ControlFlowHint = nullptr;
 
   // If the branch has a condition wrapped by __builtin_unpredictable,
   // create metadata that specifies that the branch is unpredictable.
@@ -2082,18 +2081,28 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
     Weights = createProfileWeights(TrueCount, CurrentCount - TrueCount);
   }
 
-  switch (HLSLBranchHintAttributedSpelling) {
+  auto *BrInst = Builder.CreateCondBr(CondV, TrueBlock, FalseBlock, Weights,
+                                      Unpredictable);
+  switch (HLSLControlFlowAttr) {
+  case HLSLControlFlowHintAttr::Microsoft_branch:
+  case HLSLControlFlowHintAttr::Microsoft_flatten: {
+    llvm::MDBuilder MDHelper(CGM.getLLVMContext());
 
-  case HLSLBranchHintAttr::Microsoft_branch:
-  case HLSLBranchHintAttr::Microsoft_flatten:
-    ControlFlowHint = createControlFlowHint(HLSLBranchHintAttributedSpelling);
-    break;
-  case HLSLBranchHintAttr::SpellingNotCalculated:
+    llvm::ConstantInt *BranchHintConstant =
+        HLSLControlFlowAttr ==
+                HLSLControlFlowHintAttr::Spelling::Microsoft_branch
+            ? llvm::ConstantInt::get(CGM.Int32Ty, 1)
+            : llvm::ConstantInt::get(CGM.Int32Ty, 2);
+
+    SmallVector<llvm::Metadata *, 2> Vals(
+        {MDHelper.createString("hlsl.controlflow.hint"),
+         MDHelper.createConstant(BranchHintConstant)});
+    BrInst->setMetadata("hlsl.controlflow.hint",
+                        llvm::MDNode::get(CGM.getLLVMContext(), Vals));
+  } break;
+  case HLSLControlFlowHintAttr::SpellingNotCalculated:
     break;
   }
-
-  Builder.CreateCondBr(CondV, TrueBlock, FalseBlock, Weights, Unpredictable,
-                       ControlFlowHint);
 }
 
 /// ErrorUnsupported - Print out an error that codegen doesn't support the

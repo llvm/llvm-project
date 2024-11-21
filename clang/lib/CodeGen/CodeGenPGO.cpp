@@ -1450,19 +1450,6 @@ static uint32_t scaleBranchWeight(uint64_t Weight, uint64_t Scale) {
   return Scaled;
 }
 
-llvm::MDNode *
-CodeGenFunction::createControlFlowHint(HLSLBranchHintAttr::Spelling S) const {
-  llvm::MDBuilder MDHelper(CGM.getLLVMContext());
-
-  SmallVector<llvm::Metadata *, 2> Vals(llvm::ArrayRef<llvm::Metadata *>{
-      MDHelper.createString("dx.controlflow.hints"),
-      S == HLSLBranchHintAttr::Spelling::Microsoft_branch
-          ? MDHelper.createConstant(llvm::ConstantInt::get(Int32Ty, 1))
-          : MDHelper.createConstant(llvm::ConstantInt::get(Int32Ty, 2))});
-
-  return llvm::MDNode::get(CGM.getLLVMContext(), Vals);
-}
-
 llvm::MDNode *CodeGenFunction::createProfileWeights(uint64_t TrueCount,
                                                     uint64_t FalseCount) const {
   // Check for empty weights.
