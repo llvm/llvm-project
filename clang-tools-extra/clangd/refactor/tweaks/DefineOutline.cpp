@@ -239,6 +239,8 @@ getFunctionSourceCode(const FunctionDecl *FD, const DeclContext *TargetContext,
           return;
 
         for (const NamedDecl *ND : Ref.Targets) {
+          if (ND->getKind() == Decl::TemplateTypeParm)
+            return;
           if (ND->getDeclContext() != Ref.Targets.front()->getDeclContext()) {
             elog("Targets from multiple contexts: {0}, {1}",
                  printQualifiedName(*Ref.Targets.front()),
