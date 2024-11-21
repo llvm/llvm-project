@@ -359,6 +359,15 @@ define amdgpu_kernel void @smfmac_f32_16x16x64_bf16(<8 x bfloat> %arg0, <16 x bf
   ret void
 }
 
+declare <4 x i32> @llvm.amdgcn.smfmac.i32.16x16x128.i8(<4 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32)
+
+; CHECK: DIVERGENT:   %result = call <4 x i32> @llvm.amdgcn.smfmac.i32.16x16x128.i8(<4 x i32> %arg0, <8 x i32> %arg1, <4 x i32> %arg2, i32 %arg3, i32 1, i32 2)
+define amdgpu_kernel void @smfmac_i32_16x16x128_i8(<4 x i32> %arg0, <8 x i32> %arg1, <4 x i32> %arg2, i32 %arg3, ptr addrspace(1) %out) {
+  %result = call <4 x i32> @llvm.amdgcn.smfmac.i32.16x16x128.i8(<4 x i32> %arg0, <8 x i32> %arg1, <4 x i32> %arg2, i32 %arg3, i32 1, i32 2)
+  store <4 x i32> %result, ptr addrspace(1) %out
+  ret void
+}
+
 
 declare i32 @llvm.amdgcn.ds.swizzle(i32, i32) #1
 declare i32 @llvm.amdgcn.permlane16.i32(i32, i32, i32, i32, i1, i1) #1
