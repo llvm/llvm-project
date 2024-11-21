@@ -10130,6 +10130,9 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                             InVectors.size() == 1 ? nullptr : InVectors.back(),
                             CommonMask);
       transformMaskAfterShuffle(CommonMask, CommonMask);
+    } else if (InVectors.size() == 2) {
+      Cost += createShuffle(InVectors.front(), InVectors.back(), CommonMask);
+      transformMaskAfterShuffle(CommonMask, CommonMask);
     }
     SameNodesEstimated = false;
     if (!E2 && InVectors.size() == 1) {
@@ -10147,8 +10150,14 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       Cost += createShuffle(InVectors.front(), &E1, CommonMask);
       transformMaskAfterShuffle(CommonMask, CommonMask);
     } else {
+      auto P = InVectors.front();
       Cost += createShuffle(&E1, E2, Mask);
-      transformMaskAfterShuffle(CommonMask, Mask);
+      unsigned VF = std::max(E1.getVectorFactor(), E2->getVectorFactor());
+      for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
+        if (Mask[Idx] != PoisonMaskElem)
+          CommonMask[Idx] = Idx + (InVectors.empty() ? 0 : VF);
+      Cost += createShuffle(P, InVectors.front(), CommonMask);
+      transformMaskAfterShuffle(CommonMask, CommonMask);
     }
   }
 
@@ -14007,9 +14016,10 @@ public:
       transformMaskAfterShuffle(CommonMask, CommonMask);
     }
     V1 = createShuffle(V1, V2, Mask);
+    unsigned VF = std::max(getVF(V1), getVF(Vec));
     for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
       if (Mask[Idx] != PoisonMaskElem)
-        CommonMask[Idx] = Idx + Sz;
+        CommonMask[Idx] = Idx + VF;
     InVectors.front() = Vec;
     if (InVectors.size() == 2)
       InVectors.back() = V1;
