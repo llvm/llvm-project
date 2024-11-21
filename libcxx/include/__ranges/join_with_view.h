@@ -153,24 +153,24 @@ template <input_range _Range>
 join_with_view(_Range&&, range_value_t<range_reference_t<_Range>>)
     -> join_with_view<views::all_t<_Range>, single_view<range_value_t<range_reference_t<_Range>>>>;
 
-template <class _Base, class _PatternBase>
+template <class _Base, class _PatternBase, class _InnerBase = range_reference_t<_Base>>
 struct __join_with_view_iterator_category {};
 
-template <class _Base, class _PatternBase>
-  requires is_reference_v<range_reference_t<_Base>> && forward_range<_Base> && forward_range<range_reference_t<_Base>>
-struct __join_with_view_iterator_category<_Base, _PatternBase> {
+template <class _Base, class _PatternBase, class _InnerBase>
+  requires is_reference_v<range_reference_t<_Base>> && forward_range<_Base> && forward_range<_InnerBase>
+struct __join_with_view_iterator_category<_Base, _PatternBase, _InnerBase> {
 private:
   static consteval auto __get_iterator_category() noexcept {
     using _OuterC   = iterator_traits<iterator_t<_Base>>::iterator_category;
-    using _InnerC   = iterator_traits<iterator_t<range_reference_t<_Base>>>::iterator_category;
+    using _InnerC   = iterator_traits<iterator_t<_InnerBase>>::iterator_category;
     using _PatternC = iterator_traits<iterator_t<_PatternBase>>::iterator_category;
 
-    if constexpr (!is_reference_v<common_reference_t<iter_reference_t<iterator_t<range_reference_t<_Base>>>,
+    if constexpr (!is_reference_v<common_reference_t<iter_reference_t<iterator_t<_InnerBase>>,
                                                      iter_reference_t<iterator_t<_PatternBase>>>>)
       return input_iterator_tag{};
     else if constexpr (derived_from<_OuterC, bidirectional_iterator_tag> &&
                        derived_from<_InnerC, bidirectional_iterator_tag> &&
-                       derived_from<_PatternC, bidirectional_iterator_tag> && common_range<range_reference_t<_Base>> &&
+                       derived_from<_PatternC, bidirectional_iterator_tag> && common_range<_InnerBase> &&
                        common_range<_PatternBase>)
       return bidirectional_iterator_tag{};
     else if constexpr (derived_from<_OuterC, forward_iterator_tag> && derived_from<_InnerC, forward_iterator_tag> &&
