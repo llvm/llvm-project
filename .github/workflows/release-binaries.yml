@@ -226,7 +226,7 @@ jobs:
     - name: Build Stage 1 Clang
       shell: bash
       run: |
-        if [ "${{ steps.needs.prepare.outputs.multi-stage}}" = "true" ]; then
+        if [ "${{ steps.needs.prepare.outputs.multi-stage}}" = "false" ]; then
           ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-package
           mv ${{ steps.setup-stage.outputs.build-prefix  }}/build/tools/clang/stage2-bins/${{ needs.prepare.outputs.release-binary-filename }} .
         else
