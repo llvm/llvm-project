@@ -104,3 +104,16 @@ def testFunctionCalls():
 # CHECK:   %1 = call @qux() : () -> f32
 # CHECK:   return
 # CHECK: }
+
+
+# CHECK-LABEL: TEST: testFunctionArgAttrs
+@constructAndPrintInModule
+def testFunctionArgAttrs():
+    foo = func.FuncOp("foo", ([("arg0", F32Type.get())], []))
+
+    assert len(foo.arg_attrs) == 1
+    assert foo.arg_attrs[0] = ir.DictAttr.get({})
+
+    foo.arg_attrs = [DictAttr.get({"test.foo": StringAttr.get("bar")})]
+
+    assert foo.arg_attrs[0]["test.foo"] == StringAttr.get("bar")
