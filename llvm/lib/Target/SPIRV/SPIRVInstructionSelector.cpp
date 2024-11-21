@@ -3292,9 +3292,6 @@ bool SPIRVInstructionSelector::selectGlobalValue(
     PointerBaseType = GR.getOrCreateSPIRVType(
         GVType, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, false);
   }
-  SPIRVType *ResType = GR.getOrCreateSPIRVPointerType(
-      PointerBaseType, I, TII,
-      addressSpaceToStorageClass(GV->getAddressSpace(), STI));
 
   std::string GlobalIdent;
   if (!GV->hasName()) {
@@ -3327,6 +3324,10 @@ bool SPIRVInstructionSelector::selectGlobalValue(
           STI.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)
               ? dyn_cast<Function>(GV)
               : nullptr;
+      SPIRVType *ResType = GR.getOrCreateSPIRVPointerType(
+          PointerBaseType, I, TII,
+          GVFun ? SPIRV::StorageClass::CodeSectionINTEL
+                : addressSpaceToStorageClass(GV->getAddressSpace(), STI));
       if (GVFun) {
         // References to a function via function pointers generate virtual
         // registers without a definition. We will resolve it later, during
@@ -3378,6 +3379,9 @@ bool SPIRVInstructionSelector::selectGlobalValue(
                  ? SPIRV::LinkageType::LinkOnceODR
                  : SPIRV::LinkageType::Export);
 
+  SPIRVType *ResType = GR.getOrCreateSPIRVPointerType(
+      PointerBaseType, I, TII,
+      addressSpaceToStorageClass(GV->getAddressSpace(), STI));
   Register Reg = GR.buildGlobalVariable(ResVReg, ResType, GlobalIdent, GV,
                                         Storage, Init, GlobalVar->isConstant(),
                                         HasLnkTy, LnkType, MIRBuilder, true);
