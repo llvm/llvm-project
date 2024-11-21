@@ -20031,7 +20031,7 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
 }
 
 TEST_F(FormatTest, AlignConsecutiveDeclarationsBlockComments) {
-  FormatStyle Style = getLLVMStyleWithColumns(80);
+  auto Style = getLLVMStyle();
   Style.AlignConsecutiveDeclarations.Enabled = true;
   Style.AlignConsecutiveDeclarations.AlignBlockComments = true;
   Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
@@ -20316,19 +20316,19 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
   EXPECT_EQ(Style.AlignConsecutiveAssignments,
             FormatStyle::AlignConsecutiveStyle(
                 {/*Enabled=*/false, /*AcrossEmptyLines=*/false,
-                 /*AcrossComments=*/false, /*AlignCompound=*/false,
+                 /*AcrossComments=*/false, /*AlignBlockComments=*/false,
+                 /*AlignCompound=*/false,
                  /*AlignFunctionDeclarations=*/false,
                  /*AlignFunctionPointers=*/false,
-                 /*PadOperators=*/true,
-                 /*AlignBlockComments=*/false}));
+                 /*PadOperators=*/true}));
   EXPECT_EQ(Style.AlignConsecutiveDeclarations,
             FormatStyle::AlignConsecutiveStyle(
                 {/*Enabled=*/false, /*AcrossEmptyLines=*/false,
-                 /*AcrossComments=*/false, /*AlignCompound=*/false,
+                 /*AcrossComments=*/false, /*AlignBlockComments=*/false,
+                 /*AlignCompound=*/false,
                  /*AlignFunctionDeclarations=*/true,
                  /*AlignFunctionPointers=*/false,
-                 /*PadOperators=*/false,
-                 /*AlignBlockComments=*/false}));
+                 /*PadOperators=*/false}));
   verifyFormat("void foo() {\n"
                "  int myVar = 5;\n"
                "  double x = 3.14;\n"

@@ -214,6 +214,28 @@ struct FormatStyle {
     ///   double e = 4;
     /// \endcode
     bool AcrossComments;
+    /// Only for ``AlignConsecutiveDeclarations``.  Whether block comments
+    /// are aligned in declarations.
+    /// \code
+    ///   true:
+    ///   bool someLongFunction(int                /*a*/,
+    ///                         bool               b,
+    ///                         const std::string& c);
+    ///
+    ///   const bool ret = someLongFunction(4    /*a*/,
+    ///                                     true /*b*/,
+    ///                                     str  /*c*/);
+    ///
+    ///   false:
+    ///   bool someLongFunction(int /*a*/,
+    ///                         bool b,
+    ///                         const std::string& c);
+    ///
+    ///   const bool ret = someLongFunction(4 /*a*/,
+    ///                                     true /*b*/,
+    ///                                     str /*c*/);
+    /// \endcode
+    bool AlignBlockComments;
     /// Only for ``AlignConsecutiveAssignments``.  Whether compound assignments
     /// like ``+=`` are aligned along with ``=``.
     /// \code
@@ -275,36 +297,14 @@ struct FormatStyle {
     ///   bbb >>= 2;
     /// \endcode
     bool PadOperators;
-    /// Only for ``AlignConsecutiveDeclarations``.  Whether block comments
-    /// are aligned in declarations.
-    /// \code
-    ///   true:
-    ///   someLongFunction(int                /*a*/,
-    ///                    bool               b,
-    ///                    const std::string& c)
-    ///
-    ///   const bool ret = someLongFunction(4    /*a*/,
-    ///                                     true /*b*/,
-    ///                                     str  /*c*/);
-    ///
-    ///   false:
-    ///   someLongFunction(int /*a*/,
-    ///                    bool b,
-    ///                    const std::string& c)
-    ///
-    ///   const bool ret = someLongFunction(4 /*a*/,
-    ///                                     true /*b*/,
-    ///                                     str /*c*/);
-    /// \endcode
-    bool AlignBlockComments;
     bool operator==(const AlignConsecutiveStyle &R) const {
       return Enabled == R.Enabled && AcrossEmptyLines == R.AcrossEmptyLines &&
              AcrossComments == R.AcrossComments &&
+             AlignBlockComments == R.AlignBlockComments &&
              AlignCompound == R.AlignCompound &&
              AlignFunctionDeclarations == R.AlignFunctionDeclarations &&
              AlignFunctionPointers == R.AlignFunctionPointers &&
-             PadOperators == R.PadOperators &&
-             AlignBlockComments == R.AlignBlockComments;
+             PadOperators == R.PadOperators;
     }
     bool operator!=(const AlignConsecutiveStyle &R) const {
       return !(*this == R);
