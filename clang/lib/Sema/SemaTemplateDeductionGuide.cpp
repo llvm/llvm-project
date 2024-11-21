@@ -1011,7 +1011,8 @@ buildInheritedConstructorDeductionGuideType(
 }
 
 static ArrayRef<TemplateArgument>
-getTemplateArgumentsFromDeductionGuideReturnType(CXXDeductionGuideDecl *DG) {
+getTemplateArgumentsFromDeductionGuideReturnType(ASTContext &Context,
+                                                 CXXDeductionGuideDecl *DG) {
   auto RType = DG->getReturnType();
 
   if (const auto *TST = RType->getAs<TemplateSpecializationType>())
@@ -1052,7 +1053,7 @@ getTemplateArgumentsFromDeductionGuideReturnType(CXXDeductionGuideDecl *DG) {
            "Expected the CC template for inherited ctor deduction guide to "
            "have a single partial specialization");
 
-    return PS[0]->getInjectedTemplateArgs();
+    return PS[0]->getInjectedTemplateArgs(Context);
   }
 
   llvm_unreachable("Unhandled deduction guide return type");
@@ -1082,7 +1083,7 @@ FunctionTemplateDecl *BuildDeductionGuideForTypeAlias(
 
   ArrayRef<TemplateArgument> FTemplateArgs =
       getTemplateArgumentsFromDeductionGuideReturnType(
-          cast<CXXDeductionGuideDecl>(F->getTemplatedDecl()));
+          Context, cast<CXXDeductionGuideDecl>(F->getTemplatedDecl()));
 
   // Deduce template arguments of the deduction guide f from the RHS of
   // the alias.
