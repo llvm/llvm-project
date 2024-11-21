@@ -214,7 +214,7 @@ define i64 @test10(i64 %a, i64 %b) {
   ret i64 %t2
 }
 
-define i64 @test11(i64 %a) {
+define i64 @test11(i64 noundef range(i64 1, 0) %a) {
 ; CHECK-LABEL: 'test11'
 ; CHECK-NEXT:  Classifying expressions for: @test11
 ; CHECK-NEXT:    %t0 = udiv i64 0, %a

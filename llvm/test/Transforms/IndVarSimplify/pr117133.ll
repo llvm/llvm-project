@@ -7,7 +7,7 @@ define i32 @widget() {
 ; CHECK-NEXT:  [[B:.*:]]
 ; CHECK-NEXT:    br label %[[B1:.*]]
 ; CHECK:       [[B1]]:
-; CHECK-NEXT:    br i1 false, label %[[B3:.*]], label %[[B8:.*]]
+; CHECK-NEXT:    br i1 true, label %[[B3:.*]], label %[[B8:.*]]
 ; CHECK:       [[B3]]:
 ; CHECK-NEXT:    br i1 true, label %[[B7:.*]], label %[[B5:.*]]
 ; CHECK:       [[B5]]:

@@ -5,7 +5,7 @@ define i32 @widget() {
 ; CHECK-LABEL: 'widget'
 ; CHECK-NEXT:  Classifying expressions for: @widget
 ; CHECK-NEXT:    %phi = phi i32 [ 0, %b ], [ %udiv6, %b5 ]
-; CHECK-NEXT:    --> ({0,+,1}<nuw><nsw><%b1> /u 0) U: empty-set S: empty-set Exits: <<Unknown>> LoopDispositions: { %b1: Computable }
+; CHECK-NEXT:    --> %phi U: [0,1) S: [0,1) Exits: <<Unknown>> LoopDispositions: { %b1: Variant }
 ; CHECK-NEXT:    %phi2 = phi i32 [ 1, %b ], [ %add, %b5 ]
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%b1> U: [1,2) S: [1,2) Exits: <<Unknown>> LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:    %udiv = udiv i32 10, %phi2
