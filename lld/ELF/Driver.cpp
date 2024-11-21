@@ -85,6 +85,7 @@ static void setConfigs(Ctx &ctx, opt::InputArgList &args);
 static void readConfigs(Ctx &ctx, opt::InputArgList &args);
 
 ELFSyncStream elf::Log(Ctx &ctx) { return {ctx, DiagLevel::Log}; }
+ELFSyncStream elf::Msg(Ctx &ctx) { return {ctx, DiagLevel::Msg}; }
 ELFSyncStream elf::Warn(Ctx &ctx) { return {ctx, DiagLevel::Warn}; }
 ELFSyncStream elf::Err(Ctx &ctx) {
   return {ctx, ctx.arg.noinhibitExec ? DiagLevel::Warn : DiagLevel::Err};
@@ -672,7 +673,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // of Libtool. We cannot convince every software developer to migrate to
   // the latest version and re-generate scripts. So we have this hack.
   if (args.hasArg(OPT_v) || args.hasArg(OPT_version))
-    message(getLLDVersion() + " (compatible with GNU linkers)");
+    Msg(ctx) << getLLDVersion() << " (compatible with GNU linkers)";
 
   if (const char *path = getReproduceOption(args)) {
     // Note that --reproduce is a debug option so you can ignore it
@@ -1151,10 +1152,10 @@ static void ltoValidateAllVtablesHaveTypeInfos(Ctx &ctx,
   ctx.ltoAllVtablesHaveTypeInfos = vtableSymbolsWithNoRTTI.empty();
   // Check for unmatched RTTI symbols
   for (StringRef s : vtableSymbolsWithNoRTTI) {
-    message(
-        "--lto-validate-all-vtables-have-type-infos: RTTI missing for vtable "
-        "_ZTV" +
-        s + ", --lto-whole-program-visibility disabled");
+    Msg(ctx) << "--lto-validate-all-vtables-have-type-infos: RTTI missing for "
+                "vtable "
+                "_ZTV"
+             << s << ", --lto-whole-program-visibility disabled";
   }
 }
 
