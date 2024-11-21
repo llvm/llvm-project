@@ -86,7 +86,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
