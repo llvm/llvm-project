@@ -468,11 +468,7 @@ struct AMDGPUDeviceImageTy : public DeviceImageTy {
   /// Unload the executable.
   Error unloadExecutable() {
     hsa_status_t Status = hsa_executable_destroy(Executable);
-    if (auto Err = Plugin::check(Status, "Error in hsa_executable_destroy: %s"))
-      return Err;
-
-    Status = hsa_code_object_destroy(CodeObject);
-    return Plugin::check(Status, "Error in hsa_code_object_destroy: %s");
+    return Plugin::check(Status, "Error in hsa_executable_destroy: %s");
   }
 
   /// Get the executable.
@@ -499,7 +495,6 @@ struct AMDGPUDeviceImageTy : public DeviceImageTy {
 private:
   /// The exectuable loaded on the agent.
   hsa_executable_t Executable;
-  hsa_code_object_t CodeObject;
   StringMap<offloading::amdgpu::AMDGPUKernelMetaData> KernelInfoMap;
   uint16_t ELFABIVersion;
 };
@@ -2954,10 +2949,11 @@ private:
 };
 
 Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
-  hsa_status_t Status;
-  Status = hsa_code_object_deserialize(getStart(), getSize(), "", &CodeObject);
-  if (auto Err =
-          Plugin::check(Status, "Error in hsa_code_object_deserialize: %s"))
+  hsa_code_object_reader_t Reader;
+  hsa_status_t Status =
+      hsa_code_object_reader_create_from_memory(getStart(), getSize(), &Reader);
+  if (auto Err = Plugin::check(
+          Status, "Error in hsa_code_object_reader_create_from_memory: %s"))
     return Err;
 
   Status = hsa_executable_create_alt(
@@ -2966,10 +2962,11 @@ Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
           Plugin::check(Status, "Error in hsa_executable_create_alt: %s"))
     return Err;
 
-  Status = hsa_executable_load_code_object(Executable, Device.getAgent(),
-                                           CodeObject, "");
-  if (auto Err =
-          Plugin::check(Status, "Error in hsa_executable_load_code_object: %s"))
+  hsa_loaded_code_object_t Object;
+  Status = hsa_executable_load_agent_code_object(Executable, Device.getAgent(),
+                                                 Reader, "", &Object);
+  if (auto Err = Plugin::check(
+          Status, "Error in hsa_executable_load_agent_code_object: %s"))
     return Err;
 
   Status = hsa_executable_freeze(Executable, "");
@@ -2983,6 +2980,11 @@ Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
 
   if (Result)
     return Plugin::error("Loaded HSA executable does not validate");
+
+  Status = hsa_code_object_reader_destroy(Reader);
+  if (auto Err =
+          Plugin::check(Status, "Error in hsa_code_object_reader_destroy: %s"))
+    return Err;
 
   if (auto Err = hsa_utils::readAMDGPUMetaDataFromImage(
           getMemoryBuffer(), KernelInfoMap, ELFABIVersion))
