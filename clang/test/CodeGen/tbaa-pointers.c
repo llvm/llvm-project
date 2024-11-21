@@ -190,8 +190,6 @@ typedef struct {
   int i1;
 } TypedefS;
 
-// FIXME: The !tbaa tag for unnamed structs doesn't account for compatible
-// types in C.
 void unamed_struct_typedef(TypedefS *ptr) {
 // COMMON-LABEL: define void @unamed_struct_typedef(
 // COMMON-SAME: ptr noundef [[PTRA:%.+]])
@@ -238,5 +236,4 @@ void unamed_struct_typedef(TypedefS *ptr) {
 // DEFAULT: [[S2_TY]]  = !{!"S2", [[ANY_POINTER]], i64 0}
 // COMMON:  [[INT_TAG]] = !{[[INT_TY:!.+]], [[INT_TY]], i64 0}
 // COMMON:  [[INT_TY]] = !{!"int", [[CHAR]], i64 0}
-// ENABLED: [[P1TYPEDEF]] = !{[[P1TYPEDEF_TY:!.+]],  [[P1TYPEDEF_TY]], i64 0}
-// ENABLED: [[P1TYPEDEF_TY]] = !{!"p1 _ZTS8TypedefS", [[ANY_POINTER]], i64 0}
+// ENABLED: [[P1TYPEDEF]] = !{[[ANY_POINTER]],  [[ANY_POINTER]], i64 0}
