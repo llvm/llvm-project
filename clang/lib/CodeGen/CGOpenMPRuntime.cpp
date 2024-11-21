@@ -4666,57 +4666,57 @@ void CGOpenMPRuntime::emitTaskLoopCall(CodeGenFunction &CGF, SourceLocation Loc,
                                CGF.getContext().VoidPtrTy);
   }
   enum { NoSchedule = 0, Grainsize = 1, NumTasks = 2 };
-  if( Data.HasModifier ){
+  if (Data.HasModifier) {
     llvm::Value *TaskArgs[] = {
-      UpLoc,
-      ThreadID,
-      Result.NewTask,
-      IfVal,
-      LBLVal.getPointer(CGF),
-      UBLVal.getPointer(CGF),
-      CGF.EmitLoadOfScalar(StLVal, Loc),
-      llvm::ConstantInt::getSigned(
-          CGF.IntTy, 1), // Always 1 because taskgroup emitted by the compiler
-      llvm::ConstantInt::getSigned(
-          CGF.IntTy, Data.Schedule.getPointer()
-                         ? Data.Schedule.getInt() ? NumTasks : Grainsize
-                         : NoSchedule),
-      Data.Schedule.getPointer()
-          ? CGF.Builder.CreateIntCast(Data.Schedule.getPointer(), CGF.Int64Ty,
-                                      /*isSigned=*/false)
-          : llvm::ConstantInt::get(CGF.Int64Ty, /*V=*/0),
-      llvm::ConstantInt::get(CGF.Int32Ty, 1), //strict modifier enabled
-      Result.TaskDupFn ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-                             Result.TaskDupFn, CGF.VoidPtrTy)
-                       : llvm::ConstantPointerNull::get(CGF.VoidPtrTy)};
-  CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                          CGM.getModule(), OMPRTL___kmpc_taskloop_5),
-                      TaskArgs);
-   } else {
-  llvm::Value *TaskArgs[] = {
-      UpLoc,
-      ThreadID,
-      Result.NewTask,
-      IfVal,
-      LBLVal.getPointer(CGF),
-      UBLVal.getPointer(CGF),
-      CGF.EmitLoadOfScalar(StLVal, Loc),
-      llvm::ConstantInt::getSigned(
-          CGF.IntTy, 1), // Always 1 because taskgroup emitted by the compiler
-      llvm::ConstantInt::getSigned(
-          CGF.IntTy, Data.Schedule.getPointer()
-                         ? Data.Schedule.getInt() ? NumTasks : Grainsize
-                         : NoSchedule),
-      Data.Schedule.getPointer()
-          ? CGF.Builder.CreateIntCast(Data.Schedule.getPointer(), CGF.Int64Ty,
-                                      /*isSigned=*/false)
-          : llvm::ConstantInt::get(CGF.Int64Ty, /*V=*/0),
-      Result.TaskDupFn ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-                             Result.TaskDupFn, CGF.VoidPtrTy)
-                       : llvm::ConstantPointerNull::get(CGF.VoidPtrTy)};
-  CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                          CGM.getModule(), OMPRTL___kmpc_taskloop),
-                      TaskArgs);
+        UpLoc,
+        ThreadID,
+        Result.NewTask,
+        IfVal,
+        LBLVal.getPointer(CGF),
+        UBLVal.getPointer(CGF),
+        CGF.EmitLoadOfScalar(StLVal, Loc),
+        llvm::ConstantInt::getSigned(
+            CGF.IntTy, 1), // Always 1 because taskgroup emitted by the compiler
+        llvm::ConstantInt::getSigned(
+            CGF.IntTy, Data.Schedule.getPointer()
+                           ? Data.Schedule.getInt() ? NumTasks : Grainsize
+                           : NoSchedule),
+        Data.Schedule.getPointer()
+            ? CGF.Builder.CreateIntCast(Data.Schedule.getPointer(), CGF.Int64Ty,
+                                        /*isSigned=*/false)
+            : llvm::ConstantInt::get(CGF.Int64Ty, /*V=*/0),
+        llvm::ConstantInt::get(CGF.Int32Ty, 1), // strict modifier enabled
+        Result.TaskDupFn ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+                               Result.TaskDupFn, CGF.VoidPtrTy)
+                         : llvm::ConstantPointerNull::get(CGF.VoidPtrTy)};
+    CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                            CGM.getModule(), OMPRTL___kmpc_taskloop_5),
+                        TaskArgs);
+  } else {
+    llvm::Value *TaskArgs[] = {
+        UpLoc,
+        ThreadID,
+        Result.NewTask,
+        IfVal,
+        LBLVal.getPointer(CGF),
+        UBLVal.getPointer(CGF),
+        CGF.EmitLoadOfScalar(StLVal, Loc),
+        llvm::ConstantInt::getSigned(
+            CGF.IntTy, 1), // Always 1 because taskgroup emitted by the compiler
+        llvm::ConstantInt::getSigned(
+            CGF.IntTy, Data.Schedule.getPointer()
+                           ? Data.Schedule.getInt() ? NumTasks : Grainsize
+                           : NoSchedule),
+        Data.Schedule.getPointer()
+            ? CGF.Builder.CreateIntCast(Data.Schedule.getPointer(), CGF.Int64Ty,
+                                        /*isSigned=*/false)
+            : llvm::ConstantInt::get(CGF.Int64Ty, /*V=*/0),
+        Result.TaskDupFn ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+                               Result.TaskDupFn, CGF.VoidPtrTy)
+                         : llvm::ConstantPointerNull::get(CGF.VoidPtrTy)};
+    CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                            CGM.getModule(), OMPRTL___kmpc_taskloop),
+                        TaskArgs);
   }
 }
 
