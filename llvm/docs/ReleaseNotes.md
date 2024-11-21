@@ -356,6 +356,8 @@ Changes to LLDB
 
 * A new setting `target.launch-working-dir` can be used to set a persistent cwd that is used by default by `process launch` and `run`.
 
+* LLDB now parses shared libraries in parallel, resulting in an average 2x speedup when attaching (only available on Darwin platforms) and launching (available on all platforms).
+
 Changes to BOLT
 ---------------------------------
 
