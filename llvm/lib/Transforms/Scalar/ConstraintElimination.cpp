@@ -1498,9 +1498,6 @@ static bool checkOrAndOpImpliedByOther(
     FactOrCheck &CB, ConstraintInfo &Info, Module *ReproducerModule,
     SmallVectorImpl<ReproducerEntry> &ReproducerCondStack,
     SmallVectorImpl<StackEntry> &DFSInStack) {
-
-  CmpInst::Predicate Pred;
-  Value *A, *B;
   Instruction *JoinOp = CB.getContextInst();
   CmpInst *CmpToCheck = cast<CmpInst>(CB.getInstructionToSimplify());
   unsigned OtherOpIdx = JoinOp->getOperand(0) == CmpToCheck ? 1 : 0;
@@ -1513,6 +1510,14 @@ static bool checkOrAndOpImpliedByOther(
 
   // Optimistically add fact from first condition.
   unsigned OldSize = DFSInStack.size();
+  auto InfoRestorer = make_scope_exit([&]() {
+    // Remove entries again.
+    while (OldSize < DFSInStack.size()) {
+      StackEntry E = DFSInStack.back();
+      removeEntryFromStack(E, Info, ReproducerModule, ReproducerCondStack,
+                           DFSInStack);
+    }
+  });
   // For OR, check if the negated condition implies CmpToCheck.
   bool IsOr = match(JoinOp, m_LogicalOr());
   SmallVector<Value *, 4> Worklist({JoinOp->getOperand(OtherOpIdx)});
@@ -1537,7 +1542,6 @@ static bool checkOrAndOpImpliedByOther(
   if (OldSize == DFSInStack.size())
     return false;
 
-  bool Changed = false;
   // Check if the second condition can be simplified now.
   if (auto ImpliedCondition =
           checkCondition(CmpToCheck->getPredicate(), CmpToCheck->getOperand(0),
@@ -1551,16 +1555,10 @@ static bool checkOrAndOpImpliedByOther(
           1 - OtherOpIdx,
           ConstantInt::getBool(JoinOp->getType(), *ImpliedCondition));
 
-    Changed = true;
+    return true;
   }
 
-  // Remove entries again.
-  while (OldSize < DFSInStack.size()) {
-    StackEntry E = DFSInStack.back();
-    removeEntryFromStack(E, Info, ReproducerModule, ReproducerCondStack,
-                         DFSInStack);
-  }
-  return Changed;
+  return false;
 }
 
 void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
