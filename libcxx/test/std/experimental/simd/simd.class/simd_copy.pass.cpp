@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: hwasan
 
 // Older versions of clang may encounter a backend error (see 0295c2ad):
 //   Pass-by-value arguments with alignment greater than register width are not supported.
