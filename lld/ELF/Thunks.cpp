@@ -69,6 +69,10 @@ protected:
 private:
   bool mayUseShortThunk = true;
   virtual void writeLong(uint8_t *buf) = 0;
+  // A thunk may be written out as a short or long, and we may not know which
+  // type at thunk creation time. In some thunk implementations the long thunk
+  // has additional mapping symbols. Thus function can be overridden to add
+  // these additional mapping symbols.
   virtual void addLongMapSyms() {}
 };
 
@@ -151,6 +155,7 @@ private:
   // can create layout oscillations in certain corner cases which would prevent
   // the layout from converging.
   bool mayUseShortThunk = true;
+  // See comment in AArch64Thunk.
   virtual void addLongMapSyms() {}
 };
 
@@ -180,6 +185,7 @@ public:
 private:
   // See comment in ARMThunk above.
   bool mayUseShortThunk = true;
+  // See comment in AArch64Thunk.
   virtual void addLongMapSyms() {}
 };
 
