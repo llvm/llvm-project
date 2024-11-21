@@ -712,6 +712,8 @@ Target Specific Changes
 AMDGPU Support
 ^^^^^^^^^^^^^^
 
+- Initial support for gfx950
+
 - Added headers ``gpuintrin.h`` and ``amdgpuintrin.h`` that contains common
   definitions for GPU builtin functions. This header can be included for OpenMP,
   CUDA, HIP, OpenCL, and C/C++.
