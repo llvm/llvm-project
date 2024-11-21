@@ -163,8 +163,7 @@ jobs:
     name: "Build Stage 1"
     needs: prepare
     if: >-
-      github.repository == 'llvm/llvm-project' &&
-      needs.prepare.outputs.multi-stage == 'true'
+      github.repository == 'llvm/llvm-project'
     runs-on: ${{ needs.prepare.outputs.runs-on }}
     steps:
 
