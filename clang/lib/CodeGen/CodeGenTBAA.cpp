@@ -246,7 +246,8 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
       // Be conservative if the type isn't a RecordType. We are specifically
       // required to do this for member pointers until we implement the
       // similar-types rule.
-      if (!Ty->isRecordType())
+      const auto *RT = Ty->getAs<RecordType>();
+      if (!RT)
         return AnyPtr;
 
       // For unnamed structs or unions C's compatible types rule applies. Two
@@ -260,8 +261,7 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
       // This also covers anonymous structs and unions, which have a different
       // compatibility rule, but it doesn't matter because you can never have a
       // pointer to an anonymous struct or union.
-      const auto *RT = Ty->getAs<RecordType>();
-      if (RT && !RT->getDecl()->getDeclName())
+      if (!RT->getDecl()->getDeclName())
         return AnyPtr;
 
       // For non-builtin types use the mangled name of the canonical type.
