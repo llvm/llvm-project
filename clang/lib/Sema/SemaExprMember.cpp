@@ -377,7 +377,7 @@ CheckExtVectorComponent(Sema &S, QualType baseType, ExprValueKind &VK,
   //
   // FIXME: This logic can be greatly simplified by splitting it along
   // halving/not halving and reworking the component checking.
-  const ExtVectorType *vecType = baseType->getAs<ExtVectorType>();
+  const ExtVectorType *vecType = baseType->castAs<ExtVectorType>();
 
   // The vector accessor can't exceed the number of elements.
   const char *compStr = CompName->getNameStart();
