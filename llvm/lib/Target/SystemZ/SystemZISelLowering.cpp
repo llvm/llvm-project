@@ -1444,15 +1444,15 @@ void SystemZTargetLowering::LowerAsmOperandForConstraint(
     case 'K': // Signed 16-bit constant
       if (auto *C = dyn_cast<ConstantSDNode>(Op))
         if (isInt<16>(C->getSExtValue()))
-          Ops.push_back(DAG.getTargetConstant(C->getSExtValue(), SDLoc(Op),
-                                              Op.getValueType()));
+          Ops.push_back(DAG.getSignedTargetConstant(
+              C->getSExtValue(), SDLoc(Op), Op.getValueType()));
       return;
 
     case 'L': // Signed 20-bit displacement (on all targets we support)
       if (auto *C = dyn_cast<ConstantSDNode>(Op))
         if (isInt<20>(C->getSExtValue()))
-          Ops.push_back(DAG.getTargetConstant(C->getSExtValue(), SDLoc(Op),
-                                              Op.getValueType()));
+          Ops.push_back(DAG.getSignedTargetConstant(
+              C->getSExtValue(), SDLoc(Op), Op.getValueType()));
       return;
 
     case 'M': // 0x7fffffff
@@ -2578,7 +2578,7 @@ static void adjustSubwordCmp(SelectionDAG &DAG, const SDLoc &DL,
   // Make sure that the second operand is an i32 with the right value.
   if (C.Op1.getValueType() != MVT::i32 ||
       Value != ConstOp1->getZExtValue())
-    C.Op1 = DAG.getConstant(Value, DL, MVT::i32);
+    C.Op1 = DAG.getConstant((uint32_t)Value, DL, MVT::i32);
 }
 
 // Return true if Op is either an unextended load, or a load suitable
@@ -4623,7 +4623,8 @@ SDValue SystemZTargetLowering::lowerATOMIC_LOAD_OP(SDValue Op,
   if (Opcode == SystemZISD::ATOMIC_LOADW_SUB)
     if (auto *Const = dyn_cast<ConstantSDNode>(Src2)) {
       Opcode = SystemZISD::ATOMIC_LOADW_ADD;
-      Src2 = DAG.getConstant(-Const->getSExtValue(), DL, Src2.getValueType());
+      Src2 = DAG.getSignedConstant(-Const->getSExtValue(), DL,
+                                   Src2.getValueType());
     }
 
   SDValue AlignedAddr, BitShift, NegBitShift;
