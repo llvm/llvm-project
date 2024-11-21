@@ -1470,8 +1470,7 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
   module_info.path.push_back(ConstString(module_name));
 
   swift::ModuleDecl *module_decl = nullptr;
-  auto module_decl_or_err = swift_ast_ctx->CreateModule(module_name,
-                                                        /*importInfo*/ {});
+  auto module_decl_or_err = swift_ast_ctx->CreateEmptyModule(module_name);
   if (!module_decl_or_err)
     llvm::consumeError(module_decl_or_err.takeError());
   else

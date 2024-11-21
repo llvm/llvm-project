@@ -309,12 +309,19 @@ public:
   /// \return the ExtraArgs of the ClangImporterOptions.
   const std::vector<std::string> &GetClangArguments();
 
+  /// Attempt to create an empty Swift module.
+  llvm::Expected<swift::ModuleDecl &>
+  CreateEmptyModule(std::string module_name);
+
   /// Attempt to create a Swift module.
   ///
   /// \param importInfo Information about which modules should be implicitly
   /// imported by each file of the module.
+  /// \param populateFiles A function which populates the files for the module.
+  /// Once called, the module's list of files may not change.
   llvm::Expected<swift::ModuleDecl &>
-  CreateModule(std::string module_name, swift::ImplicitImportInfo importInfo);
+  CreateModule(std::string module_name, swift::ImplicitImportInfo importInfo,
+               swift::ModuleDecl::PopulateFilesFn populateFiles);
 
   // This function should only be called when all search paths
   // for all items in a swift::ASTContext have been setup to
