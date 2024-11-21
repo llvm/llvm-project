@@ -4122,7 +4122,8 @@ VectorType mlir::vector::inferTransferOpMaskType(VectorType vecType,
   assert(invPermMap && "Inversed permutation map couldn't be computed");
   SmallVector<int64_t, 8> maskShape = invPermMap.compose(vecType.getShape());
 
-  // Turn a 0-D mask into a single-element 1-D mask.
+  // The MaskOp specification doesn't support 0-D vectors at the moment. Turn a
+  // 0-D mask into a single-element 1-D mask.
   if (maskShape.empty())
     maskShape.push_back(1);
 

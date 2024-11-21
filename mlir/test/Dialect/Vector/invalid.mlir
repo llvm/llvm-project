@@ -1752,7 +1752,6 @@ func.func @vector_mask_non_maskable_op(%a : vector<3x4xf32>) -> vector<3x4xf32> 
 
 // -----
 
-// We can support 0-D masks if eventually needed.
 func.func @vector_mask_0d_mask(%arg0: tensor<2x4xi32>,
                                %idx0: index, %idx1: index,
                                %m0: vector<i1>) -> vector<1x1x4xi32> {
