@@ -453,20 +453,17 @@ define void @test_compresstore_v128i16(ptr %p, <128 x i1> %mask, <128 x i16> %da
 ; RV64-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; RV64-NEXT:    vcompress.vm v24, v8, v0
 ; RV64-NEXT:    vcpop.m a2, v0
-; RV64-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
-; RV64-NEXT:    vse16.v v24, (a0)
 ; RV64-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v0, 8
-; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; RV64-NEXT:    vmv.x.s a2, v0
 ; RV64-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
-; RV64-NEXT:    vcompress.vm v24, v16, v8
+; RV64-NEXT:    vcompress.vm v0, v16, v8
 ; RV64-NEXT:    vcpop.m a1, v8
-; RV64-NEXT:    cpop a2, a2
+; RV64-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; RV64-NEXT:    vse16.v v24, (a0)
 ; RV64-NEXT:    slli a2, a2, 1
 ; RV64-NEXT:    add a0, a0, a2
 ; RV64-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
-; RV64-NEXT:    vse16.v v24, (a0)
+; RV64-NEXT:    vse16.v v0, (a0)
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: test_compresstore_v128i16:
@@ -673,20 +670,17 @@ define void @test_compresstore_v64i32(ptr %p, <64 x i1> %mask, <64 x i32> %data)
 ; RV32-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; RV32-NEXT:    vcompress.vm v24, v8, v0
 ; RV32-NEXT:    vcpop.m a2, v0
-; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; RV32-NEXT:    vse32.v v24, (a0)
 ; RV32-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; RV32-NEXT:    vslidedown.vi v8, v0, 4
-; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-NEXT:    vmv.x.s a2, v0
 ; RV32-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; RV32-NEXT:    vcompress.vm v24, v16, v8
+; RV32-NEXT:    vcompress.vm v0, v16, v8
 ; RV32-NEXT:    vcpop.m a1, v8
-; RV32-NEXT:    cpop a2, a2
+; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; RV32-NEXT:    vse32.v v24, (a0)
 ; RV32-NEXT:    slli a2, a2, 2
 ; RV32-NEXT:    add a0, a0, a2
 ; RV32-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; RV32-NEXT:    vse32.v v24, (a0)
+; RV32-NEXT:    vse32.v v0, (a0)
 ; RV32-NEXT:    ret
 entry:
   tail call void @llvm.masked.compressstore.v64i32(<64 x i32> %data, ptr align 4 %p, <64 x i1> %mask)
