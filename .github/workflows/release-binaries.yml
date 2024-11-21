@@ -60,6 +60,8 @@ jobs:
       enable-pgo: ${{ steps.vars.outputs.enable-pgo }}
       release-binary-basename: ${{ steps.vars.outputs.release-binary-basename }}
       release-binary-filename: ${{ steps.vars.outputs.release-binary-filename }}
+      runs-on: ${{ steps.vars.outputs.runs-on }}
+      multi-stage: ${{ steps.vars.outputs.multi-stage }}
 
     steps:
     # It's good practice to use setup-python, but this is also required on macos-14
@@ -144,12 +146,26 @@ jobs:
 
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         echo "build-flang=$build_flang" >> $GITHUB_OUTPUT
+        case "${{ inputs.runs-on }}" in
+          ubuntu-22.04)
+            runs_on="depot-${{ inputs.runs-on }}-16"
+            multi_stage="false"
+            ;;
+          *)
+            runs_on="${{ inputs.runs-on }}"
+            multi_stage="true"
+            ;;
+        esac
+        echo "runs-on=$runs_on" >> $GITHUB_OUTPUT
+        echo "multi-stage=$multi_stage" >> $GITHUB_OUTPUT
 
   build-stage1:
     name: "Build Stage 1"
     needs: prepare
-    if: github.repository == 'llvm/llvm-project'
-    runs-on: ${{ inputs.runs-on }}
+    if: >-
+      github.repository == 'llvm/llvm-project' &&
+      needs.prepare.outputs.multi-stage == 'true'
+    runs-on: ${{ needs.prepare.outputs.runs-on }}
     steps:
 
     - name: Checkout Actions
@@ -195,7 +211,7 @@ jobs:
         key: sccache-${{ runner.os }}-${{ runner.arch }}-release
         variant: sccache
 
-    - name: Build Stage 1 Clang
+    - name: Configure Stage 1 Clang
       id: build
       shell: bash
       run: |
@@ -208,12 +224,44 @@ jobs:
             -DBOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}" \
             -DCMAKE_C_COMPILER_LAUNCHER=sccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
-        ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build
-        # There is a race condition on the MacOS builders and this command is here
-        # to help debug that when it happens.
-        ls -ltr ${{ steps.setup-stage.outputs.build-prefix }}/build
+    - name: Build Stage 1 Clang
+      shell: bash
+      run: |
+        if "${{ steps.needs.prepare.outputs.multi-stage}}" = "true"; then
+          ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-package
+          mv ${{ steps.setup-stage.outputs.build-prefix  }}/build/tools/clang/stage2-bins/${{ needs.prepare.outputs.release-binary-filename }} .
+        else
+          ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build
+          # There is a race condition on the MacOS builders and this command is here
+          # to help debug that when it happens.
+          ls -ltr ${{ steps.setup-stage.outputs.build-prefix }}/build
+        fi
     
+    - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+      if: needs.prepare.outputs.multi-stage == "false"
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-release-binary
+        # Due to path differences on Windows when running in bash vs running on node,
+        # we need to search for files in the current workspace.
+        path: |
+          ${{ needs.prepare.outputs.release-binary-filename }}
+
+    # Clean up some build files to reduce size of artifact.
+    - name: Clean Up Build Directory
+      if: needs.prepare.outputs.multi-stage == "false"
+      shell: bash
+      run: |
+        find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname ${{ needs.prepare.outputs.release-binary-filename }} -delete
+        rm -Rf ${{ steps.setup-stage.outputs.build-prefix }}/build/tools/clang/stage2-bins/_CPack_Packages
+    
+    - name: Run Tests
+      shell: bash
+      if: needs.prepare.outputs.multi-stage == "false"
+      run: |
+        ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-check-all
+
     - name: Save Stage
+      if: needs.prepare.outputs.multi-stage == "true"
       uses: ./workflows-main/.github/workflows/release-binaries-save-stage
       with:
         build-prefix: ${{ steps.setup-stage.outputs.build-prefix }}
@@ -223,8 +271,10 @@ jobs:
     needs:
       - prepare
       - build-stage1
-    if: github.repository == 'llvm/llvm-project'
-    runs-on: ${{ inputs.runs-on }}
+    if: >- 
+      github.repository == 'llvm/llvm-project' &&
+      needs.prepare.outputs.multi-stage == 'true'
+    runs-on: ${{ needs.prepare.outputs.runs-on }}
     steps:
     - name: Checkout Actions
       uses: actions/checkout@v4
@@ -242,7 +292,9 @@ jobs:
 
     - name: Build Stage 2
       # Re-enable once PGO builds are supported.
-      if: needs.prepare.outputs.enable-pgo == 'true'
+      if: >-
+        needs.prepare.outputs.enable-pgo == 'true' &&
+        needs.prepare.outputs.multi-stage == 'true'
       shell: bash
       run: |
         ninja -C ${{ steps.setup-stage.outputs.build-prefix}}/build stage2-instrumented
@@ -257,8 +309,10 @@ jobs:
     needs:
       - prepare
       - build-stage2
-    if: github.repository == 'llvm/llvm-project'
-    runs-on: ${{ inputs.runs-on }}
+    if: >- 
+      github.repository == 'llvm/llvm-project' &&
+      needs.prepare.outputs.multi-stage == 'true'
+    runs-on: ${{ needs.prepare.outputs.runs-on }}
     steps:
     - name: Checkout Actions
       uses: actions/checkout@v4
@@ -307,7 +361,9 @@ jobs:
     needs:
       - prepare
       - build-stage3-clang
-    runs-on: ${{ inputs.runs-on }}
+    if: >- 
+      needs.prepare.outputs.multi-stage == 'true'
+    runs-on: ${{ needs.prepare.outputs.runs-on }}
     steps:
     - name: Checkout Actions
       uses: actions/checkout@v4
@@ -357,7 +413,7 @@ jobs:
     needs:
       - prepare
       - build-stage3-flang
-    runs-on: ${{ inputs.runs-on }}
+    runs-on: ${{ needs.prepare.outputs.runs-on }}
     steps:
     - name: Checkout Actions
       uses: actions/checkout@v4
@@ -409,6 +465,7 @@ jobs:
     needs:
       - prepare
       - build-stage3-all
+      - build-stage1
     if: >-
       always() &&
       github.event_name != 'pull_request' &&
@@ -469,8 +526,8 @@ jobs:
       - prepare
       - build-stage3-all
     if: >-
-      github.repository == 'llvm/llvm-project'
-    runs-on: ${{ inputs.runs-on }}
+      github.repository == 'llvm/llvm-project' &&
+    runs-on: ${{ needs.prepare.outputs.runs-on }}
     steps:
     - name: Checkout Actions
       uses: actions/checkout@v4
