@@ -13,7 +13,7 @@ define i16 @test() {
 ; CHECK-NEXT:    %sext = shl i16 %conv, 8
 ; CHECK-NEXT:    --> (18688 * (trunc i32 %xor to i16))<nuw> U: [-9472,-9471) S: [-9472,-9471)
 ; CHECK-NEXT:    %conv1 = ashr i16 %sext, 8
-; CHECK-NEXT:    --> (sext i8 (73 * (trunc i32 %xor to i8))<nuw> to i16) U: empty-set S: [-37,-36)
+; CHECK-NEXT:    --> (sext i8 (73 * (trunc i32 %xor to i8))<nuw> to i16) U: [-37,-36) S: [-37,-36)
 ; CHECK-NEXT:  Determining loop execution counts for: @test
 ;
 entry:

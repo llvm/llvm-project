@@ -11,7 +11,7 @@ define i32 @test() {
 ; CHECK-NEXT:    [[CONV1:%.*]] = ashr i16 [[SEXT]], 8
 ; CHECK-NEXT:    br label %[[LOOP_BODY:.*]]
 ; CHECK:       [[LOOP_BODY]]:
-; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[LOOP_BODY]]
+; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP_BODY]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[CONV3:%.*]] = zext i16 [[CONV1]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV3]]
