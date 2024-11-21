@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/SandboxIR/Pass.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Region.h"
 
 #include <memory>
 

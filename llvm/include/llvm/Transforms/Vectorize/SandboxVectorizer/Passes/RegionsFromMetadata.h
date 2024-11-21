@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/SandboxIR/Pass.h"
 #include "llvm/SandboxIR/PassManager.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Region.h"
 
 namespace llvm::sandboxir {
 

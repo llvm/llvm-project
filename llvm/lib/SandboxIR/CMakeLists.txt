@@ -8,7 +8,6 @@ add_llvm_component_library(LLVMSandboxIR
   Module.cpp
   Pass.cpp
   PassManager.cpp
-  Region.cpp
   Tracker.cpp
   Type.cpp
   User.cpp

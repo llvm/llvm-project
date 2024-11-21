@@ -14,6 +14,8 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/SandboxIR/Instruction.h"
+#include "llvm/SandboxIR/Pass.h"
+#include "llvm/SandboxIR/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm::sandboxir {
@@ -106,6 +108,26 @@ public:
   }
 #endif
 };
+
+/// A pass that runs on a Region.
+class RegionPass : public Pass {
+public:
+  /// \p Name can't contain any spaces or start with '-'.
+  RegionPass(StringRef Name) : Pass(Name) {}
+  /// \Returns true if it modifies \p R.
+  virtual bool runOnRegion(Region &R, const Analyses &A) = 0;
+};
+
+/// A PassManager for passes that operate on Regions.
+class RegionPassManager final : public PassManager<RegionPass, RegionPass> {
+public:
+  RegionPassManager(StringRef Name) : PassManager(Name) {}
+  RegionPassManager(StringRef Name, StringRef Pipeline,
+                    CreatePassFunc CreatePass)
+      : PassManager(Name, Pipeline, CreatePass) {}
+  bool runOnRegion(Region &R, const Analyses &A) final;
+};
+
 
 } // namespace llvm::sandboxir
 

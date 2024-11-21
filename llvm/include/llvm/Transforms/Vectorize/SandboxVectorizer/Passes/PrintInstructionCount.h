@@ -1,8 +1,7 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_PASSES_PRINTINSTRUCTIONCOUNT_H
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_PASSES_PRINTINSTRUCTIONCOUNT_H
 
-#include "llvm/SandboxIR/Pass.h"
-#include "llvm/SandboxIR/Region.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Region.h"
 
 namespace llvm::sandboxir {
 

@@ -19,6 +19,7 @@
 #include "llvm/SandboxIR/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Region.h"
 
 namespace llvm::sandboxir {
 

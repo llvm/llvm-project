@@ -20,14 +20,4 @@ bool FunctionPassManager::runOnFunction(Function &F, const Analyses &A) {
   return Change;
 }
 
-bool RegionPassManager::runOnRegion(Region &R, const Analyses &A) {
-  bool Change = false;
-  for (auto &Pass : Passes) {
-    Change |= Pass->runOnRegion(R, A);
-    // TODO: run the verifier.
-  }
-  // TODO: Check ChangeAll against hashes before/after.
-  return Change;
-}
-
 } // namespace llvm::sandboxir

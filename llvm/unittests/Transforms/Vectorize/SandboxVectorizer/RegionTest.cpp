@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/SandboxIR/Region.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Region.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/SandboxIR/Context.h"
 #include "llvm/SandboxIR/Function.h"
@@ -236,4 +236,131 @@ define i8 @foo(i8 %v0, i8 %v1) {
 #ifndef NDEBUG
   EXPECT_EQ(Rgn, *Regions[0].get());
 #endif
+}
+
+TEST_F(RegionTest, RegionPass) {
+  parseIR(C, R"IR(
+define i8 @foo(i8 %v0, i8 %v1) {
+  %t0 = add i8 %v0, 1
+  %t1 = add i8 %t0, %v1, !sandboxvec !0
+  %t2 = add i8 %t1, %v1, !sandboxvec !0
+  ret i8 %t1
+}
+
+!0 = distinct !{!"sandboxregion"}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+
+  class TestPass final : public sandboxir::RegionPass {
+    unsigned &InstCount;
+
+  public:
+    TestPass(unsigned &InstCount)
+        : RegionPass("test-pass"), InstCount(InstCount) {}
+    bool runOnRegion(sandboxir::Region &R, const sandboxir::Analyses &A) final {
+      for ([[maybe_unused]] auto &Inst : R) {
+        ++InstCount;
+      }
+      return false;
+    }
+  };
+  unsigned InstCount = 0;
+  TestPass TPass(InstCount);
+  // Check getName(),
+  EXPECT_EQ(TPass.getName(), "test-pass");
+  // Check runOnRegion();
+  llvm::SmallVector<std::unique_ptr<sandboxir::Region>> Regions =
+      sandboxir::Region::createRegionsFromMD(*F);
+  ASSERT_EQ(Regions.size(), 1u);
+  TPass.runOnRegion(*Regions[0], sandboxir::Analyses::emptyForTesting());
+  EXPECT_EQ(InstCount, 2u);
+#ifndef NDEBUG
+  {
+    // Check print().
+    std::string Buff;
+    llvm::raw_string_ostream SS(Buff);
+    TPass.print(SS);
+    EXPECT_EQ(Buff, "test-pass");
+  }
+  {
+    // Check operator<<().
+    std::string Buff;
+    llvm::raw_string_ostream SS(Buff);
+    SS << TPass;
+    EXPECT_EQ(Buff, "test-pass");
+  }
+  // Check pass name assertions.
+  class TestNamePass final : public sandboxir::RegionPass {
+  public:
+    TestNamePass(llvm::StringRef Name) : RegionPass(Name) {}
+    bool runOnRegion(sandboxir::Region &F, const sandboxir::Analyses &A) {
+      return false;
+    }
+  };
+  EXPECT_DEATH(TestNamePass("white space"), ".*whitespace.*");
+  EXPECT_DEATH(TestNamePass("-dash"), ".*start with.*");
+#endif
+}
+
+TEST_F(RegionTest, RegionPassManager) {
+  parseIR(C, R"IR(
+define i8 @foo(i8 %v0, i8 %v1) {
+  %t0 = add i8 %v0, 1
+  %t1 = add i8 %t0, %v1, !sandboxvec !0
+  %t2 = add i8 %t1, %v1, !sandboxvec !0
+  ret i8 %t1
+}
+
+!0 = distinct !{!"sandboxregion"}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+
+  class TestPass1 final : public sandboxir::RegionPass {
+    unsigned &InstCount;
+
+  public:
+    TestPass1(unsigned &InstCount)
+        : RegionPass("test-pass1"), InstCount(InstCount) {}
+    bool runOnRegion(sandboxir::Region &R, const sandboxir::Analyses &A) final {
+      for ([[maybe_unused]] auto &Inst : R)
+        ++InstCount;
+      return false;
+    }
+  };
+  class TestPass2 final : public sandboxir::RegionPass {
+    unsigned &InstCount;
+
+  public:
+    TestPass2(unsigned &InstCount)
+        : RegionPass("test-pass2"), InstCount(InstCount) {}
+    bool runOnRegion(sandboxir::Region &R, const sandboxir::Analyses &A) final {
+      for ([[maybe_unused]] auto &Inst : R)
+        ++InstCount;
+      return false;
+    }
+  };
+  unsigned InstCount1 = 0;
+  unsigned InstCount2 = 0;
+
+  sandboxir::RegionPassManager RPM("test-rpm");
+  RPM.addPass(std::make_unique<TestPass1>(InstCount1));
+  RPM.addPass(std::make_unique<TestPass2>(InstCount2));
+  // Check runOnRegion().
+  llvm::SmallVector<std::unique_ptr<sandboxir::Region>> Regions =
+      sandboxir::Region::createRegionsFromMD(*F);
+  ASSERT_EQ(Regions.size(), 1u);
+  RPM.runOnRegion(*Regions[0], sandboxir::Analyses::emptyForTesting());
+  EXPECT_EQ(InstCount1, 2u);
+  EXPECT_EQ(InstCount2, 2u);
+#ifndef NDEBUG
+  // Check dump().
+  std::string Buff;
+  llvm::raw_string_ostream SS(Buff);
+  RPM.print(SS);
+  EXPECT_EQ(Buff, "test-rpm(test-pass1,test-pass2)");
+#endif // NDEBUG
 }

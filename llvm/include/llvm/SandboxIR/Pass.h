@@ -20,7 +20,6 @@ class ScalarEvolution;
 namespace sandboxir {
 
 class Function;
-class Region;
 
 class Analyses {
   AAResults *AA = nullptr;
@@ -74,15 +73,6 @@ public:
   FunctionPass(StringRef Name) : Pass(Name) {}
   /// \Returns true if it modifies \p F.
   virtual bool runOnFunction(Function &F, const Analyses &A) = 0;
-};
-
-/// A pass that runs on a sandbox::Region.
-class RegionPass : public Pass {
-public:
-  /// \p Name can't contain any spaces or start with '-'.
-  RegionPass(StringRef Name) : Pass(Name) {}
-  /// \Returns true if it modifies \p R.
-  virtual bool runOnRegion(Region &R, const Analyses &A) = 0;
 };
 
 } // namespace sandboxir

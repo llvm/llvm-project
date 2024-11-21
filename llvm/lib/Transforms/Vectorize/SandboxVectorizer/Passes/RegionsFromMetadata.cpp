@@ -8,7 +8,7 @@
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/RegionsFromMetadata.h"
 
-#include "llvm/SandboxIR/Region.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Region.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerPassBuilder.h"
 
 namespace llvm::sandboxir {

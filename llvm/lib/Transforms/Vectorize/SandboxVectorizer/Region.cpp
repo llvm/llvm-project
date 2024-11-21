@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/SandboxIR/Region.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Region.h"
 #include "llvm/SandboxIR/Function.h"
 
 namespace llvm::sandboxir {
@@ -79,6 +79,16 @@ SmallVector<std::unique_ptr<Region>> Region::createRegionsFromMD(Function &F) {
     }
   }
   return Regions;
+}
+
+bool RegionPassManager::runOnRegion(Region &R, const Analyses &A) {
+  bool Change = false;
+  for (auto &Pass : Passes) {
+    Change |= Pass->runOnRegion(R, A);
+    // TODO: run the verifier.
+  }
+  // TODO: Check ChangeAll against hashes before/after.
+  return Change;
 }
 
 } // namespace llvm::sandboxir
