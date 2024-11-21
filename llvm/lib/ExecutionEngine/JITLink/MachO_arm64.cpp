@@ -594,6 +594,35 @@ createLinkGraphFromMachOObject_arm64(MemoryBufferRef ObjectBuffer) {
       .buildGraph();
 }
 
+static Error applyPACSigningToModInitPointers(LinkGraph &G) {
+  assert(G.getTargetTriple().getSubArch() == Triple::AArch64SubArch_arm64e &&
+         "PAC signing only valid for arm64e");
+
+  if (auto *ModInitSec = G.findSectionByName("__DATA,__mod_init_func")) {
+    for (auto *B : ModInitSec->blocks()) {
+      for (auto &E : B->edges()) {
+        if (E.getKind() == aarch64::Pointer64) {
+
+          // Check that we have room to encode pointer signing bits.
+          if (E.getAddend() >> 32)
+            return make_error<JITLinkError>(
+                "In " + G.getName() + ", __mod_init_func pointer at " +
+                formatv("{0:x}", B->getFixupAddress(E).getValue()) +
+                " has data in high bits of addend (addend >= 2^32)");
+
+          // Change edge to Pointer64Authenticated, encode signing:
+          // key = asia, discriminator = 0, diversity = 0.
+          Edge::AddendT SigningBits = 0x1ULL << 63;
+          E.setKind(aarch64::Pointer64Authenticated);
+          E.setAddend(E.getAddend() | SigningBits);
+        }
+      }
+    }
+  }
+
+  return Error::success();
+}
+
 void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
                       std::unique_ptr<JITLinkContext> Ctx) {
 
@@ -626,6 +655,7 @@ void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
 
     // If this is an arm64e graph then add pointer signing passes.
     if (G->getTargetTriple().isArm64e()) {
+      Config.PostPrunePasses.push_back(applyPACSigningToModInitPointers);
       Config.PostPrunePasses.push_back(
           aarch64::createEmptyPointerSigningFunction);
       Config.PreFixupPasses.push_back(
