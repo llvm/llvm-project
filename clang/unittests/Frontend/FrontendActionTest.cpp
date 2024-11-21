@@ -20,6 +20,7 @@
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 
@@ -90,7 +91,7 @@ TEST(ASTFrontendAction, Sanity) {
   invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance compiler;
   compiler.setInvocation(std::move(invocation));
-  compiler.createDiagnostics();
+  compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
 
   TestASTFrontendAction test_action;
   ASSERT_TRUE(compiler.ExecuteAction(test_action));
@@ -110,7 +111,7 @@ TEST(ASTFrontendAction, IncrementalParsing) {
   invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance compiler;
   compiler.setInvocation(std::move(invocation));
-  compiler.createDiagnostics();
+  compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
 
   TestASTFrontendAction test_action(/*enableIncrementalProcessing=*/true);
   ASSERT_TRUE(compiler.ExecuteAction(test_action));
@@ -137,7 +138,7 @@ TEST(ASTFrontendAction, LateTemplateIncrementalParsing) {
   invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance compiler;
   compiler.setInvocation(std::move(invocation));
-  compiler.createDiagnostics();
+  compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
 
   TestASTFrontendAction test_action(/*enableIncrementalProcessing=*/true,
                                     /*actOnEndOfTranslationUnit=*/true);
@@ -183,7 +184,7 @@ TEST(PreprocessorFrontendAction, EndSourceFile) {
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance Compiler;
   Compiler.setInvocation(std::move(Invocation));
-  Compiler.createDiagnostics();
+  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
 
   TestPPCallbacks *Callbacks = new TestPPCallbacks;
   TestPPCallbacksFrontendAction TestAction(Callbacks);
@@ -245,7 +246,8 @@ TEST(ASTFrontendAction, ExternalSemaSource) {
   CompilerInstance Compiler;
   Compiler.setInvocation(std::move(Invocation));
   auto *TDC = new TypoDiagnosticConsumer;
-  Compiler.createDiagnostics(TDC, /*ShouldOwnClient=*/true);
+  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem(), TDC,
+                             /*ShouldOwnClient=*/true);
   Compiler.setExternalSemaSource(new TypoExternalSemaSource(Compiler));
 
   SyntaxOnlyAction TestAction;
@@ -277,7 +279,7 @@ TEST(GeneratePCHFrontendAction, CacheGeneratedPCH) {
     Invocation->getTargetOpts().Triple = "x86_64-apple-darwin19.0.0";
     CompilerInstance Compiler;
     Compiler.setInvocation(std::move(Invocation));
-    Compiler.createDiagnostics();
+    Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
 
     GeneratePCHAction TestAction;
     ASSERT_TRUE(Compiler.ExecuteAction(TestAction));
