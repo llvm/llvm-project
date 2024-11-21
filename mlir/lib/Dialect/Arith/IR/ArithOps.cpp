@@ -2644,20 +2644,6 @@ Value mlir::arith::getReductionOp(AtomicRMWKind op, OpBuilder &builder,
 }
 
 //===----------------------------------------------------------------------===//
-// DenormalModeAttr
-//===----------------------------------------------------------------------===//
-
-LogicalResult DenormalModeAttr::verify(
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-    DenormalMode mode) {
-  auto value = static_cast<uint32_t>(mode);
-  bool isSingleBitSet = (value & (value - 1)) == 0;
-  if (!isSingleBitSet)
-    return emitError() << "expected only a single denormal mode";
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 

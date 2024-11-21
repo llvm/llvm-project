@@ -853,11 +853,3 @@ func.func @select_tensor_encoding(
   %0 = arith.select %arg0, %arg1, %arg2 : tensor<8xi1, "bar">, tensor<8xi32, "foo">
   return %0 : tensor<8xi32, "foo">
 }
-
-// -----
-
-func.func @test_denormal_mode(%arg0: f32, %arg1: f32) -> f32 {
-  // expected-error @below{{expected only a single denormal mode}}
-  %0 = arith.subf %arg0, %arg1 denormal<preserve_sign | positive_zero> : f32
-  return %0 : f32
-}
