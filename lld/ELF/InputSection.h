@@ -436,6 +436,7 @@ public:
   void replace(InputSection *other);
 
   static InputSection discarded;
+  static InputSection passthru;
 
 private:
   template <class ELFT, class RelTy> void copyRelocations(Ctx &, uint8_t *buf);

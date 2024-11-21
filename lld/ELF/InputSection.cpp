@@ -360,6 +360,7 @@ PotentialSpillSection::PotentialSpillSection(const InputSectionBase &source,
       isd(&isd) {}
 
 InputSection InputSection::discarded(nullptr, 0, 0, 0, ArrayRef<uint8_t>(), "");
+InputSection InputSection::passthru(nullptr, 0, 0, 0, ArrayRef<uint8_t>(), "");
 
 InputSection::InputSection(InputFile *f, uint64_t flags, uint32_t type,
                            uint32_t addralign, ArrayRef<uint8_t> data,
