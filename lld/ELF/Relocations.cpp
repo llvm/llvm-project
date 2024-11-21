@@ -123,7 +123,7 @@ void elf::reportRangeError(Ctx &ctx, uint8_t *loc, const Relocation &rel,
     hint += "; consider recompiling with -fdebug-types-section to reduce size "
             "of debug sections";
 
-  Err(ctx) << errPlace.loc << "relocation " << lld::toString(rel.type)
+  Err(ctx) << errPlace.loc << "relocation " << rel.type
            << " out of range: " << v.str() << " is not in [" << Twine(min).str()
            << ", " << Twine(max).str() << "]" << hint;
 }
