@@ -110,7 +110,9 @@ struct FactOrCheck {
                    /// min/mix intrinsic.
     InstCheck,     /// An instruction to simplify (e.g. an overflow math
                    /// intrinsics).
-    UseCheck       /// An use of a compare instruction to simplify.
+    UseCheck,      /// An use of a compare instruction to simplify.
+    BBCheck,       /// A basic block to check whether dominating conditions are
+                   /// satisfiable.
   };
 
   union {
@@ -136,6 +138,10 @@ struct FactOrCheck {
         NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()),
         Ty(EntryTy::UseCheck) {}
 
+  FactOrCheck(EntryTy Ty, DomTreeNode *DTN)
+      : Inst(DTN->getBlock()->getTerminator()), NumIn(DTN->getDFSNumIn()),
+        NumOut(DTN->getDFSNumOut()), Ty(Ty) {}
+
   FactOrCheck(DomTreeNode *DTN, CmpInst::Predicate Pred, Value *Op0, Value *Op1,
               ConditionTy Precond = ConditionTy())
       : Cond(Pred, Op0, Op1), DoesHold(Precond), NumIn(DTN->getDFSNumIn()),
@@ -155,6 +161,10 @@ struct FactOrCheck {
     return FactOrCheck(DTN, U);
   }
 
+  static FactOrCheck getCheck(DomTreeNode *DTN) {
+    return FactOrCheck(EntryTy::BBCheck, DTN);
+  }
+
   static FactOrCheck getCheck(DomTreeNode *DTN, CallInst *CI) {
     return FactOrCheck(EntryTy::InstCheck, DTN, CI);
   }
@@ -162,6 +172,8 @@ struct FactOrCheck {
   bool isCheck() const {
     return Ty == EntryTy::InstCheck || Ty == EntryTy::UseCheck;
   }
+
+  bool isBBCheck() const { return Ty == EntryTy::BBCheck; }
 
   Instruction *getContextInst() const {
     assert(!isConditionFact());
@@ -1053,6 +1065,11 @@ void State::addInfoForInductions(BasicBlock &BB) {
 }
 
 void State::addInfoFor(BasicBlock &BB) {
+  if (&BB != &BB.getParent()->getEntryBlock()) {
+    if (auto *DTN = DT.getNode(&BB))
+      WorkList.emplace_back(FactOrCheck::getCheck(DTN));
+  }
+
   addInfoForInductions(BB);
 
   // True as long as long as the current instruction is guaranteed to execute.
@@ -1753,6 +1770,41 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
       });
       removeEntryFromStack(E, Info, ReproducerModule.get(), ReproducerCondStack,
                            DFSInStack);
+    }
+
+    // Check whether the basic block is reachable.
+    if (CB.isBBCheck()) {
+      BasicBlock *BB = CB.getContextInst()->getParent();
+      LLVM_DEBUG(dbgs() << "Processing dominating conditions for BB "
+                        << BB->getName() << "\n");
+      auto markBBAsUnreachable = [&] {
+        LLVM_DEBUG(dbgs() << "BB " << BB->getName() << " is unreachable\n");
+        auto &Ctx = BB->getContext();
+        auto *Pred = BB->getSinglePredecessor();
+        auto *PredBranch =
+            Pred ? dyn_cast<BranchInst>(Pred->getTerminator()) : nullptr;
+        // Handle trivial cases with single predecessor.
+        if (PredBranch && PredBranch->isConditional())
+          PredBranch->setCondition(
+              ConstantInt::getBool(Ctx, BB == PredBranch->getSuccessor(1)));
+        else {
+          IRBuilder<> Builder(BB, BB->getFirstInsertionPt());
+          Builder.CreateStore(ConstantInt::getTrue(Ctx),
+                              PoisonValue::get(PointerType::getUnqual(Ctx)));
+        }
+        Changed = true;
+      };
+      auto SignedCS = Info.getCS(true);
+      if (!SignedCS.mayHaveSolution()) {
+        markBBAsUnreachable();
+        continue;
+      }
+      auto UnsignedCS = Info.getCS(false);
+      if (!UnsignedCS.mayHaveSolution()) {
+        markBBAsUnreachable();
+        continue;
+      }
+      continue;
     }
 
     // For a block, check if any CmpInsts become known based on the current set

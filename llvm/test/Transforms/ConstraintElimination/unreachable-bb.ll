@@ -10,7 +10,7 @@ define void @f(i32 noundef %v0, i32 noundef %v1, i32 noundef %v2) {
 ; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[CMP0]], [[CMP1]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[V0]], [[V2]]
 ; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[CMP2]], [[AND1]]
-; CHECK-NEXT:    br i1 [[AND2]], label %[[IF_THEN:.*]], label %[[RETURN:.*]]
+; CHECK-NEXT:    br i1 false, label %[[IF_THEN:.*]], label %[[RETURN:.*]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    call void @side_effect()
 ; CHECK-NEXT:    br label %[[RETURN]]

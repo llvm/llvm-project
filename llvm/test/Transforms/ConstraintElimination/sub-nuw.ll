@@ -265,7 +265,7 @@ define i1 @sub_nuw_i16_simp(i16 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[NEG2:%.*]] = sub nuw i16 [[A:%.*]], 305
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i16 0, [[NEG2]]
-; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
+; CHECK-NEXT:    br i1 false, label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
 ; CHECK:       exit.1:
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i16 [[A]], 0
 ; CHECK-NEXT:    ret i1 [[C_2]]
@@ -291,7 +291,7 @@ define i1 @sub_nuw_i64_simp(i64 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[NEG2:%.*]] = sub nuw i64 [[A:%.*]], 305
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i64 0, [[NEG2]]
-; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
+; CHECK-NEXT:    br i1 false, label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
 ; CHECK:       exit.1:
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i64 [[A]], 0
 ; CHECK-NEXT:    ret i1 [[C_2]]
@@ -317,7 +317,7 @@ define i1 @sub_nuw_neg_i16(i16 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[NEG2:%.*]] = sub nuw i16 [[A:%.*]], -305
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i16 0, [[NEG2]]
-; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
+; CHECK-NEXT:    br i1 false, label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
 ; CHECK:       exit.1:
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i16 [[A]], 0
 ; CHECK-NEXT:    ret i1 [[C_2]]
