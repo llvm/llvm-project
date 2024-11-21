@@ -42,7 +42,7 @@ namespace Fortran::semantics {
 // or post-modifier (i.e. item: modifier). The default is pre-.
 // Add an additional property that reflects the type of modifier.
 
-ENUM_CLASS(OmpProperty, Required, Unique, Exclusive, Ultimate, Post);
+ENUM_CLASS(OmpProperty, Required, Unique, Exclusive, Ultimate, Post)
 using OmpProperties = common::EnumSet<OmpProperty, OmpProperty_enumSize>;
 using OmpClauses =
     common::EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
