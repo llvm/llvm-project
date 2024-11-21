@@ -3112,6 +3112,39 @@ static Instruction *foldNestedSelects(SelectInst &OuterSelVal,
                             !IsAndVariant ? SelInner : InnerSel.FalseVal);
 }
 
+/// Return true if V is poison or \p Expected given that ValAssumedPoison is
+/// already poison. For example, if ValAssumedPoison is `icmp samesign X, 10`
+/// and V is `icmp ne X, 5`, impliesPoisonOrCond returns true.
+static bool impliesPoisonOrCond(const Value *ValAssumedPoison, const Value *V,
+                                bool Expected) {
+  if (impliesPoison(ValAssumedPoison, V))
+    return true;
+
+  // Handle the case that ValAssumedPoison is `icmp samesign pred X, C1` and V
+  // is `icmp pred X, C2`, where C1 is well-defined.
+  if (auto *ICmp = dyn_cast<ICmpInst>(ValAssumedPoison)) {
+    Value *LHS = ICmp->getOperand(0);
+    const APInt *RHSC1;
+    const APInt *RHSC2;
+    ICmpInst::Predicate Pred;
+    if (ICmp->hasSameSign() &&
+        match(ICmp->getOperand(1), m_APIntForbidPoison(RHSC1)) &&
+        match(V, m_ICmp(Pred, m_Specific(LHS), m_APIntAllowPoison(RHSC2)))) {
+      unsigned BitWidth = RHSC1->getBitWidth();
+      ConstantRange CRX =
+          RHSC1->isNonNegative()
+              ? ConstantRange(APInt::getSignedMinValue(BitWidth),
+                              APInt::getZero(BitWidth))
+              : ConstantRange(APInt::getZero(BitWidth),
+                              APInt::getSignedMinValue(BitWidth));
+      return CRX.icmp(Expected ? Pred : ICmpInst::getInversePredicate(Pred),
+                      *RHSC2);
+    }
+  }
+
+  return false;
+}
+
 Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
@@ -3133,13 +3166,13 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   // checks whether folding it does not convert a well-defined value into
   // poison.
   if (match(TrueVal, m_One())) {
-    if (impliesPoison(FalseVal, CondVal)) {
+    if (impliesPoisonOrCond(FalseVal, CondVal, /*Expected=*/false)) {
       // Change: A = select B, true, C --> A = or B, C
       return BinaryOperator::CreateOr(CondVal, FalseVal);
     }
 
     if (match(CondVal, m_OneUse(m_Select(m_Value(A), m_One(), m_Value(B)))) &&
-        impliesPoison(FalseVal, B)) {
+        impliesPoisonOrCond(FalseVal, B, /*Expected=*/false)) {
       // (A || B) || C --> A || (B | C)
       return replaceInstUsesWith(
           SI, Builder.CreateLogicalOr(A, Builder.CreateOr(B, FalseVal)));
@@ -3175,13 +3208,13 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   }
 
   if (match(FalseVal, m_Zero())) {
-    if (impliesPoison(TrueVal, CondVal)) {
+    if (impliesPoisonOrCond(TrueVal, CondVal, /*Expected=*/true)) {
       // Change: A = select B, C, false --> A = and B, C
       return BinaryOperator::CreateAnd(CondVal, TrueVal);
     }
 
     if (match(CondVal, m_OneUse(m_Select(m_Value(A), m_Value(B), m_Zero()))) &&
-        impliesPoison(TrueVal, B)) {
+        impliesPoisonOrCond(TrueVal, B, /*Expected=*/true)) {
       // (A && B) && C --> A && (B & C)
       return replaceInstUsesWith(
           SI, Builder.CreateLogicalAnd(A, Builder.CreateAnd(B, TrueVal)));
