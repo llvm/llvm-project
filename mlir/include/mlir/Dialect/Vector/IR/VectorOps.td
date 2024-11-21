@@ -417,16 +417,18 @@ def Vector_BroadcastOp :
   let hasVerifier = 1;
 }
 
-def Vector_ShuffleOp :
-  Vector_Op<"shuffle", [Pure,
-     PredOpTrait<"first operand v1 and result have same element type",
-                 TCresVTEtIsSameAsOpBase<0, 0>>,
-     PredOpTrait<"second operand v2 and result have same element type",
-                 TCresVTEtIsSameAsOpBase<0, 1>>,
-     InferTypeOpAdaptor]>,
-     Arguments<(ins AnyFixedVector:$v1, AnyFixedVector:$v2,
-                    DenseI64ArrayAttr:$mask)>,
-     Results<(outs AnyVector:$vector)> {
+def Vector_ShuffleOp
+    : Vector_Op<
+          "shuffle",
+          [Pure,
+           PredOpTrait<"first operand v1 and result have same element type",
+                       TCresVTEtIsSameAsOpBase<0, 0>>,
+           PredOpTrait<"second operand v2 and result have same element type",
+                       TCresVTEtIsSameAsOpBase<0, 1>>,
+           InferTypeOpAdaptor]>,
+      Arguments<(ins AnyFixedVectorOfAnyRank:$v1, AnyFixedVectorOfAnyRank:$v2,
+          DenseI64ArrayAttr:$mask)>,
+      Results<(outs AnyVector:$vector)> {
   let summary = "shuffle operation";
   let description = [{
     The shuffle operation constructs a permutation (or duplication) of elements
