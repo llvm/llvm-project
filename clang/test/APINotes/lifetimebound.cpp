@@ -11,6 +11,8 @@
 
 // CHECK-METHOD: CXXMethodDecl {{.+}} methodToAnnotate 
 // CHECK-METHOD-NEXT: ParmVarDecl {{.+}} p
+// CHECK-METHOD-NEXT: SwiftVersionedAdditionAttr
+// CHECK-METHOD-NEXT: LifetimeBoundAttr
 // CHECK-METHOD-NEXT: LifetimeBoundAttr
 
 // CHECK-METHOD-THIS: CXXMethodDecl {{.+}} annotateThis 'int *() {{\[\[}}clang::lifetimebound{{\]\]}}'
