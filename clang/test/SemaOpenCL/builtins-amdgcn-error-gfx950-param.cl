@@ -82,3 +82,9 @@ void test_smfmac_f32_16x16x64_bf16(global float4* out, bfloat8 a, bfloat16 b, fl
   *out = __builtin_amdgcn_smfmac_f32_16x16x64_bf16(a, b, c, idx, d, 0); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_16x16x64_bf16' must be a constant integer}}
   *out = __builtin_amdgcn_smfmac_f32_16x16x64_bf16(a, b, c, idx, 0, d); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_16x16x64_bf16' must be a constant integer}}
 }
+
+void test_smfmac_f32_32x32x32_bf16(global float16* out, bfloat8 a, bfloat16 b, float16 c, int idx, int d)
+{
+  *out = __builtin_amdgcn_smfmac_f32_32x32x32_bf16(a, b, c, idx, d, 0); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_32x32x32_bf16' must be a constant integer}}
+  *out = __builtin_amdgcn_smfmac_f32_32x32x32_bf16(a, b, c, idx, 0, d); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_32x32x32_bf16' must be a constant integer}}
+}
