@@ -7,7 +7,9 @@ _Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(float), "");
 _Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(float4), "");
 _Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(double2), "");
 
+// types must be complete
 _Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(RWBuffer<int>), "");
+_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(__hlsl_resource_t), "");
 
 struct s {
     int x;
