@@ -102,7 +102,6 @@ constexpr Parser<ForallAssignmentStmt> forallAssignmentStmt; // R1053
 constexpr Parser<ForallStmt> forallStmt; // R1055
 constexpr Parser<Selector> selector; // R1105
 constexpr Parser<EndSelectStmt> endSelectStmt; // R1143 & R1151 & R1155
-constexpr Parser<LoopControl> loopControl; // R1123
 constexpr Parser<ConcurrentHeader> concurrentHeader; // R1125
 constexpr Parser<IoUnit> ioUnit; // R1201, R1203
 constexpr Parser<FileUnitNumber> fileUnitNumber; // R1202
