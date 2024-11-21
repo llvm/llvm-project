@@ -6963,12 +6963,7 @@ static Function *emitTargetTaskProxyFunction(OpenMPIRBuilder &OMPBuilder,
     assert(ArgStructAlloca &&
            "Unable to find the alloca instruction corresponding to arguments "
            "for extracted function");
-    auto *ArgStructType =
-        dyn_cast<StructType>(ArgStructAlloca->getAllocatedType());
-
-    assert(ArgStructType &&
-           "Unable to find the struct type corresponding to the alloca "
-           "instruction");
+    auto *ArgStructType = cast<StructType>(ArgStructAlloca->getAllocatedType());
 
     AllocaInst *NewArgStructAlloca =
         Builder.CreateAlloca(ArgStructType, nullptr, "structArg");
