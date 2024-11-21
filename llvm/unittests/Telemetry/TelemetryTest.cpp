@@ -219,7 +219,7 @@ public:
   StringDestination(bool ShouldSanitize, std::string &Buf)
       : ShouldSanitize(ShouldSanitize), OS(Buf) {}
 
-  Error emitEntry(const TelemetryInfo *Entry) override {
+  Error receiveEntry(const TelemetryInfo *Entry) override {
     if (isa<VendorCommonTelemetryInfo>(Entry)) {
       if (auto *E = dyn_cast<VendorCommonTelemetryInfo>(Entry)) {
         if (ShouldSanitize) {
@@ -268,7 +268,7 @@ public:
   JsonStreamDestination(bool ShouldSanitize, TestContext *Ctxt)
       : ShouldSanitize(ShouldSanitize), CurrentContext(Ctxt) {}
 
-  Error emitEntry(const TelemetryInfo *Entry) override {
+  Error receiveEntry(const TelemetryInfo *Entry) override {
     if (auto *E = dyn_cast<VendorCommonTelemetryInfo>(Entry)) {
       if (ShouldSanitize) {
         if (isa<StartupEvent>(E) || isa<ExitEvent>(E)) {
@@ -405,7 +405,7 @@ public:
 private:
   void emitToDestinations(TelemetryInfo *Entry) {
     for (const auto &Dest : Destinations) {
-      llvm::Error err = Dest->emitEntry(Entry);
+      llvm::Error err = Dest->receiveEntry(Entry);
       if (err) {
         // Log it and move on.
       }

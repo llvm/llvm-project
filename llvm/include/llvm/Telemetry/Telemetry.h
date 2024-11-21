@@ -94,7 +94,7 @@ struct TelemetryInfo {
 class Destination {
 public:
   virtual ~Destination() = default;
-  virtual Error emitEntry(const TelemetryInfo *Entry) = 0;
+  virtual Error receiveEntry(const TelemetryInfo *Entry) = 0;
   virtual llvm::StringLiteral name() const = 0;
 };
 
