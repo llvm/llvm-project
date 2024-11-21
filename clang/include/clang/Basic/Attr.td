@@ -3297,7 +3297,7 @@ def Target : InheritableAttr {
   }];
 }
 
-def TargetVersion : DeclOrTypeAttr, TargetSpecificAttr<TargetArch<!listconcat(TargetAArch64.Arches, TargetRISCV.Arches)>> {
+def TargetVersion : InheritableAttr {
   let Spellings = [GCC<"target_version">];
   let Args = [StringArgument<"NamesStr">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
