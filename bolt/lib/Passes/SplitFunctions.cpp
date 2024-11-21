@@ -913,6 +913,7 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy &S) {
         for (const BinaryBasicBlock *LPB : BB->landing_pads())
           LandingPadFragments.push_back(LPB->getFragmentNum());
 
+      // Eliminate duplicate entries from the vector.
       llvm::sort(LandingPadFragments);
       auto Last = llvm::unique(LandingPadFragments);
       LandingPadFragments.erase(Last, LandingPadFragments.end());
