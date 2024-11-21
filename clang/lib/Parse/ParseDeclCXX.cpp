@@ -267,9 +267,11 @@ void Parser::ParseInnerNamespace(const InnerNamespaceInfoList &InnerNSs,
     while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) &&
            Tok.isNot(tok::eof)) {
       ParsedAttributes DeclAttrs(AttrFactory);
-      MaybeParseCXX11Attributes(DeclAttrs);
-      ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
-      ParseExternalDeclaration(DeclAttrs, EmptyDeclSpecAttrs);
+      ParsedAttributes DeclSpecAttrs(AttrFactory);
+      while (MaybeParseCXX11Attributes(DeclAttrs) ||
+              MaybeParseGNUAttributes(DeclSpecAttrs))
+        ;
+      ParseExternalDeclaration(DeclAttrs, DeclSpecAttrs);
     }
 
     // The caller is what called check -- we are simply calling
@@ -468,9 +470,11 @@ Decl *Parser::ParseExportDeclaration() {
   if (Tok.isNot(tok::l_brace)) {
     // FIXME: Factor out a ParseExternalDeclarationWithAttrs.
     ParsedAttributes DeclAttrs(AttrFactory);
-    MaybeParseCXX11Attributes(DeclAttrs);
-    ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
-    ParseExternalDeclaration(DeclAttrs, EmptyDeclSpecAttrs);
+    ParsedAttributes DeclSpecAttrs(AttrFactory);
+    while (MaybeParseCXX11Attributes(DeclAttrs) ||
+            MaybeParseGNUAttributes(DeclSpecAttrs))
+      ;
+    ParseExternalDeclaration(DeclAttrs, DeclSpecAttrs);
     return Actions.ActOnFinishExportDecl(getCurScope(), ExportDecl,
                                          SourceLocation());
   }
@@ -481,9 +485,11 @@ Decl *Parser::ParseExportDeclaration() {
   while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) &&
          Tok.isNot(tok::eof)) {
     ParsedAttributes DeclAttrs(AttrFactory);
-    MaybeParseCXX11Attributes(DeclAttrs);
-    ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
-    ParseExternalDeclaration(DeclAttrs, EmptyDeclSpecAttrs);
+    ParsedAttributes DeclSpecAttrs(AttrFactory);
+    while (MaybeParseCXX11Attributes(DeclAttrs) ||
+            MaybeParseGNUAttributes(DeclSpecAttrs))
+      ;
+    ParseExternalDeclaration(DeclAttrs, DeclSpecAttrs);
   }
 
   T.consumeClose();

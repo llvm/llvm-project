@@ -25,6 +25,9 @@ namespace PR17666 {
 
   typedef int __attribute__((aligned(int(1)))) T1;
   typedef int __attribute__((aligned(int))) T2; // expected-error {{expected '(' for function-style cast}}
+
+  class C;
+  __attribute__((attr)) [[nodiscard]] C f(); // expected-warning{{unknown attribute 'attr' ignored}}
 }
 
 __attribute((typename)) int x; // expected-warning {{unknown attribute 'typename' ignored}}

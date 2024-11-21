@@ -2432,9 +2432,11 @@ void Parser::ParseMicrosoftIfExistsExternalDeclaration() {
   // FIXME: Support module import within __if_exists?
   while (Tok.isNot(tok::r_brace) && !isEofOrEom()) {
     ParsedAttributes Attrs(AttrFactory);
-    MaybeParseCXX11Attributes(Attrs);
-    ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
-    DeclGroupPtrTy Result = ParseExternalDeclaration(Attrs, EmptyDeclSpecAttrs);
+    ParsedAttributes DeclSpecAttrs(AttrFactory);
+    while (MaybeParseCXX11Attributes(Attrs) ||
+            MaybeParseGNUAttributes(DeclSpecAttrs))
+      ;
+    DeclGroupPtrTy Result = ParseExternalDeclaration(Attrs, DeclSpecAttrs);
     if (Result && !getCurScope()->getParent())
       Actions.getASTConsumer().HandleTopLevelDecl(Result.get());
   }

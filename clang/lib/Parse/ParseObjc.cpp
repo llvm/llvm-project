@@ -2287,10 +2287,12 @@ Parser::ParseObjCAtImplementationDeclaration(SourceLocation AtLoc,
     ObjCImplParsingDataRAII ObjCImplParsing(*this, ObjCImpDecl);
     while (!ObjCImplParsing.isFinished() && !isEofOrEom()) {
       ParsedAttributes DeclAttrs(AttrFactory);
-      MaybeParseCXX11Attributes(DeclAttrs);
-      ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
+      ParsedAttributes DeclSpecAttrs(AttrFactory);
+      while (MaybeParseCXX11Attributes(DeclAttrs) ||
+              MaybeParseGNUAttributes(DeclSpecAttrs))
+        ;
       if (DeclGroupPtrTy DGP =
-              ParseExternalDeclaration(DeclAttrs, EmptyDeclSpecAttrs)) {
+              ParseExternalDeclaration(DeclAttrs, DeclSpecAttrs)) {
         DeclGroupRef DG = DGP.get();
         DeclsInGroup.append(DG.begin(), DG.end());
       }
