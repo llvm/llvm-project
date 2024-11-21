@@ -1,3 +1,7 @@
+/// Test that R_ARM_SBREL32 relocations in debug info are relocated as if the
+/// static base register (r9) is zero. Real DWARF info will use an expression to
+/// add this to the real value of the static base at runtime.
+
 // REQUIRES: arm
 // RUN: rm -rf %t && split-file %s %t && cd %t
 
@@ -16,10 +20,6 @@
 // DISASM-NEXT:        ...
 // DISASM-NEXT:       104: 00002000
 
-/// Test that R_ARM_SBREL32 relocations in debug info are relocated as if the
-/// static base register (r9) is zero. Real DWARF info will use an expression to
-/// add this to the real value of the static base at runtime.
-
 //--- lds.ld
 SECTIONS {
   data1 0x1000 : { *(data1) }
@@ -28,27 +28,27 @@ SECTIONS {
 
 //--- asm.s
   .text
-	.type	_start,%function
-	.globl	_start
+  .type _start,%function
+  .globl  _start
 _start:
   bx lr
   .size _start, .-_start
 
-	.section data1, "aw", %progbits
-	.type	rw,%object
-	.globl	rw
+  .section data1, "aw", %progbits
+  .type rw,%object
+  .globl  rw
 rw:
-	.long	42
-	.size	rw, 4
+  .long 42
+  .size rw, 4
 
-	.section data2, "aw", %progbits
-	.type	rw2,%object
-	.globl	rw2
+  .section data2, "aw", %progbits
+  .type rw2,%object
+  .globl  rw2
 rw2:
-	.long	1234
-	.size	rw2, 4
+  .long 1234
+  .size rw2, 4
 
-	.section	.debug_something, "", %progbits
-	.long	rw(sbrel)
+  .section  .debug_something, "", %progbits
+  .long rw(sbrel)
   .space 0x100
-	.long	rw2(sbrel)
+  .long rw2(sbrel)
