@@ -3274,3 +3274,18 @@ entry:
   %cmp = icmp ult i32 %add, 3
   ret i1 %cmp
 }
+
+define i1 @zext_range_check_ult_range_check_failure(i8 %x) {
+; CHECK-LABEL: @zext_range_check_ult_range_check_failure(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV]], -4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 253
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %conv = zext i8 %x to i32
+  %add = add i32 %conv, -4
+  %cmp = icmp ult i32 %add, 253
+  ret i1 %cmp
+}
