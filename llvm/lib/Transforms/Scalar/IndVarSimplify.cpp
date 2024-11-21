@@ -1335,6 +1335,13 @@ static bool optimizeLoopExitWithUnknownExitCount(
   Visited.insert(OldCond);
   Worklist.push_back(OldCond);
 
+  std::optional<ScalarEvolution::LoopGuards> LoopGuards;
+  auto GetLoopGuards = [&LoopGuards, &L, &SE]() {
+    if (!LoopGuards)
+      LoopGuards.emplace(ScalarEvolution::LoopGuards::collect(L, *SE));
+    return *LoopGuards;
+  };
+
   auto GoThrough = [&](Value *V) {
     Value *LHS = nullptr, *RHS = nullptr;
     if (Inverted) {
@@ -1371,7 +1378,7 @@ static bool optimizeLoopExitWithUnknownExitCount(
                        ScalarEvolution::ExitCountKind::SymbolicMaximum) ==
           MaxIter)
     for (auto *ICmp : LeafConditions) {
-      auto EL = SE->computeExitLimitFromCond(L, ICmp, Inverted,
+      auto EL = SE->computeExitLimitFromCond(L, ICmp, GetLoopGuards, Inverted,
                                              /*ControlsExit*/ false);
       const SCEV *ExitMax = EL.SymbolicMaxNotTaken;
       if (isa<SCEVCouldNotCompute>(ExitMax))

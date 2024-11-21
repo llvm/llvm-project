@@ -1112,6 +1112,46 @@ public:
   bool isKnownOnEveryIteration(ICmpInst::Predicate Pred,
                                const SCEVAddRecExpr *LHS, const SCEV *RHS);
 
+  class LoopGuards {
+    DenseMap<const SCEV *, const SCEV *> RewriteMap;
+    bool PreserveNUW = false;
+    bool PreserveNSW = false;
+    ScalarEvolution &SE;
+
+    LoopGuards(ScalarEvolution &SE) : SE(SE) {}
+
+    /// Recursively collect loop guards in \p Guards, starting from
+    /// block \p Block with predecessor \p Pred. The intended starting point
+    /// is to collect from a loop header and its predecessor.
+    static void
+    collectFromBlock(ScalarEvolution &SE, ScalarEvolution::LoopGuards &Guards,
+                     const BasicBlock *Block, const BasicBlock *Pred,
+                     SmallPtrSetImpl<const BasicBlock *> &VisitedBlocks,
+                     unsigned Depth = 0);
+
+    /// Collect loop guards in \p Guards, starting from PHINode \p
+    /// Phi, by calling \p collectFromBlock on the incoming blocks of
+    /// \Phi and trying to merge the found constraints into a single
+    /// combined one for \p Phi.
+    static void collectFromPHI(
+        ScalarEvolution &SE, ScalarEvolution::LoopGuards &Guards,
+        const PHINode &Phi, SmallPtrSetImpl<const BasicBlock *> &VisitedBlocks,
+        SmallDenseMap<const BasicBlock *, LoopGuards> &IncomingGuards,
+        unsigned Depth);
+
+  public:
+    /// Collect rewrite map for loop guards for loop \p L, together with flags
+    /// indicating if NUW and NSW can be preserved during rewriting.
+    static LoopGuards collect(const Loop *L, ScalarEvolution &SE);
+
+    /// Try to apply the collected loop guards to \p Expr.
+    const SCEV *rewrite(const SCEV *Expr) const;
+  };
+
+  /// Try to apply information from loop guards for \p L to \p Expr.
+  const SCEV *applyLoopGuards(const SCEV *Expr, const Loop *L);
+  const SCEV *applyLoopGuards(const SCEV *Expr, const LoopGuards &Guards);
+
   /// Information about the number of loop iterations for which a loop exit's
   /// branch condition evaluates to the not-taken path.  This is a temporary
   /// pair of exact and max expressions that are eventually summarized in
@@ -1167,6 +1207,7 @@ public:
   /// If \p AllowPredicates is set, this call will try to use a minimal set of
   /// SCEV predicates in order to return an exact answer.
   ExitLimit computeExitLimitFromCond(const Loop *L, Value *ExitCond,
+                                     std::function<LoopGuards()> GetLoopGuards,
                                      bool ExitIfTrue, bool ControlsOnlyExit,
                                      bool AllowPredicates = false);
 
@@ -1307,45 +1348,6 @@ public:
   /// this AddRec (such as range info) in case if new flags may potentially
   /// sharpen it.
   void setNoWrapFlags(SCEVAddRecExpr *AddRec, SCEV::NoWrapFlags Flags);
-
-  class LoopGuards {
-    DenseMap<const SCEV *, const SCEV *> RewriteMap;
-    bool PreserveNUW = false;
-    bool PreserveNSW = false;
-    ScalarEvolution &SE;
-
-    LoopGuards(ScalarEvolution &SE) : SE(SE) {}
-
-    /// Recursively collect loop guards in \p Guards, starting from
-    /// block \p Block with predecessor \p Pred. The intended starting point
-    /// is to collect from a loop header and its predecessor.
-    static void
-    collectFromBlock(ScalarEvolution &SE, ScalarEvolution::LoopGuards &Guards,
-                     const BasicBlock *Block, const BasicBlock *Pred,
-                     SmallPtrSetImpl<const BasicBlock *> &VisitedBlocks,
-                     unsigned Depth = 0);
-
-    /// Collect loop guards in \p Guards, starting from PHINode \p
-    /// Phi, by calling \p collectFromBlock on the incoming blocks of
-    /// \Phi and trying to merge the found constraints into a single
-    /// combined one for \p Phi.
-    static void collectFromPHI(
-        ScalarEvolution &SE, ScalarEvolution::LoopGuards &Guards,
-        const PHINode &Phi, SmallPtrSetImpl<const BasicBlock *> &VisitedBlocks,
-        SmallDenseMap<const BasicBlock *, LoopGuards> &IncomingGuards,
-        unsigned Depth);
-
-  public:
-    /// Collect rewrite map for loop guards for loop \p L, together with flags
-    /// indicating if NUW and NSW can be preserved during rewriting.
-    static LoopGuards collect(const Loop *L, ScalarEvolution &SE);
-
-    /// Try to apply the collected loop guards to \p Expr.
-    const SCEV *rewrite(const SCEV *Expr) const;
-  };
-
-  /// Try to apply information from loop guards for \p L to \p Expr.
-  const SCEV *applyLoopGuards(const SCEV *Expr, const Loop *L);
 
   /// Return true if the loop has no abnormal exits. That is, if the loop
   /// is not infinite, it must exit through an explicit edge in the CFG.
@@ -1650,10 +1652,6 @@ private:
   /// function as they are computed.
   DenseMap<const Loop *, BackedgeTakenInfo> PredicatedBackedgeTakenCounts;
 
-  /// Cache the collected loop guards of the loops of this function as they are
-  /// computed.
-  DenseMap<const Loop *, LoopGuards> LoopGuardsCache;
-
   /// Loops whose backedge taken counts directly use this non-constant SCEV.
   DenseMap<const SCEV *, SmallPtrSet<PointerIntPair<const Loop *, 1, bool>, 4>>
       BECountUsers;
@@ -1843,6 +1841,7 @@ private:
   /// this call will try to use a minimal set of SCEV predicates in order to
   /// return an exact answer.
   ExitLimit computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
+                             std::function<LoopGuards()> GetLoopGuards,
                              bool IsOnlyExit, bool AllowPredicates = false);
 
   // Helper functions for computeExitLimitFromCond to avoid exponential time
@@ -1875,17 +1874,17 @@ private:
 
   using ExitLimitCacheTy = ExitLimitCache;
 
-  ExitLimit computeExitLimitFromCondCached(ExitLimitCacheTy &Cache,
-                                           const Loop *L, Value *ExitCond,
-                                           bool ExitIfTrue,
-                                           bool ControlsOnlyExit,
-                                           bool AllowPredicates);
-  ExitLimit computeExitLimitFromCondImpl(ExitLimitCacheTy &Cache, const Loop *L,
-                                         Value *ExitCond, bool ExitIfTrue,
-                                         bool ControlsOnlyExit,
-                                         bool AllowPredicates);
+  ExitLimit computeExitLimitFromCondCached(
+      ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond,
+      std::function<LoopGuards()> GetLoopGuards, bool ExitIfTrue,
+      bool ControlsOnlyExit, bool AllowPredicates);
+  ExitLimit computeExitLimitFromCondImpl(
+      ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond,
+      std::function<LoopGuards()> GetLoopGuards, bool ExitIfTrue,
+      bool ControlsOnlyExit, bool AllowPredicates);
   std::optional<ScalarEvolution::ExitLimit> computeExitLimitFromCondFromBinOp(
-      ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond, bool ExitIfTrue,
+      ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond,
+      std::function<LoopGuards()> GetLoopGuards, bool ExitIfTrue,
       bool ControlsOnlyExit, bool AllowPredicates);
 
   /// Compute the number of times the backedge of the specified loop will
@@ -1894,8 +1893,8 @@ private:
   /// to use a minimal set of SCEV predicates in order to return an exact
   /// answer.
   ExitLimit computeExitLimitFromICmp(const Loop *L, ICmpInst *ExitCond,
-                                     bool ExitIfTrue,
-                                     bool IsSubExpr,
+                                     std::function<LoopGuards()> GetLoopGuards,
+                                     bool ExitIfTrue, bool IsSubExpr,
                                      bool AllowPredicates = false);
 
   /// Variant of previous which takes the components representing an ICmp
@@ -1904,16 +1903,16 @@ private:
   /// has a materialized ICmp.
   ExitLimit computeExitLimitFromICmp(const Loop *L, ICmpInst::Predicate Pred,
                                      const SCEV *LHS, const SCEV *RHS,
+                                     std::function<LoopGuards()> GetLoopGuards,
                                      bool IsSubExpr,
                                      bool AllowPredicates = false);
 
   /// Compute the number of times the backedge of the specified loop will
   /// execute if its exit condition were a switch with a single exiting case
   /// to ExitingBB.
-  ExitLimit computeExitLimitFromSingleExitSwitch(const Loop *L,
-                                                 SwitchInst *Switch,
-                                                 BasicBlock *ExitingBB,
-                                                 bool IsSubExpr);
+  ExitLimit computeExitLimitFromSingleExitSwitch(
+      const Loop *L, SwitchInst *Switch, BasicBlock *ExitingBB,
+      std::function<LoopGuards()> GetLoopGuards, bool IsSubExpr);
 
   /// Compute the exit limit of a loop that is controlled by a
   /// "(IV >> 1) != 0" type comparison.  We cannot compute the exact trip
@@ -1937,8 +1936,9 @@ private:
   /// value to zero will execute.  If not computable, return CouldNotCompute.
   /// If AllowPredicates is set, this call will try to use a minimal set of
   /// SCEV predicates in order to return an exact answer.
-  ExitLimit howFarToZero(const SCEV *V, const Loop *L, bool IsSubExpr,
-                         bool AllowPredicates = false);
+  ExitLimit howFarToZero(const SCEV *V, const Loop *L,
+                         std::function<LoopGuards()> GetLoopGuards,
+                         bool IsSubExpr, bool AllowPredicates = false);
 
   /// Return the number of times an exit condition checking the specified
   /// value for nonzero will execute.  If not computable, return

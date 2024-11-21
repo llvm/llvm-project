@@ -1945,13 +1945,16 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
         !isa<SCEVCouldNotCompute>(SrcEnd_) &&
         !isa<SCEVCouldNotCompute>(SinkStart_) &&
         !isa<SCEVCouldNotCompute>(SinkEnd_)) {
-      auto SrcEnd = SE.applyLoopGuards(SrcEnd_, InnermostLoop);
-      auto SinkStart = SE.applyLoopGuards(SinkStart_, InnermostLoop);
+      if (!LoopGuards)
+        LoopGuards.emplace(
+            ScalarEvolution::LoopGuards::collect(InnermostLoop, SE));
+      auto SrcEnd = SE.applyLoopGuards(SrcEnd_, *LoopGuards);
+      auto SinkStart = SE.applyLoopGuards(SinkStart_, *LoopGuards);
       if (SE.isKnownPredicate(CmpInst::ICMP_ULE, SrcEnd, SinkStart))
         return MemoryDepChecker::Dependence::NoDep;
 
-      auto SinkEnd = SE.applyLoopGuards(SinkEnd_, InnermostLoop);
-      auto SrcStart = SE.applyLoopGuards(SrcStart_, InnermostLoop);
+      auto SinkEnd = SE.applyLoopGuards(SinkEnd_, *LoopGuards);
+      auto SrcStart = SE.applyLoopGuards(SrcStart_, *LoopGuards);
       if (SE.isKnownPredicate(CmpInst::ICMP_ULE, SinkEnd, SrcStart))
         return MemoryDepChecker::Dependence::NoDep;
     }
@@ -2054,7 +2057,10 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
       return Dependence::NoDep;
     }
   } else {
-    Dist = SE.applyLoopGuards(Dist, InnermostLoop);
+    if (!LoopGuards)
+      LoopGuards.emplace(
+          ScalarEvolution::LoopGuards::collect(InnermostLoop, SE));
+    Dist = SE.applyLoopGuards(Dist, *LoopGuards);
   }
 
   // Negative distances are not plausible dependencies.
