@@ -375,7 +375,7 @@ cl::opt<unsigned long long> OverlapValueCutoff(
     cl::desc(
         "Function level overlap information for every function (with calling "
         "context for csspgo) in test "
-        "profile with max count value greater then the parameter value"),
+        "profile with max count value greater than the parameter value"),
     cl::sub(OverlapSubcommand));
 
 // Options specific to show subcommand.
