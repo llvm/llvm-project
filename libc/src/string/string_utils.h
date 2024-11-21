@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // Standalone string utility functions. Utilities requiring memory allocations
-// should be placed in allocating_string_utils.h intead.
+// should be placed in allocating_string_utils.h instead.
 //
 //===----------------------------------------------------------------------===//
 
