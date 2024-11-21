@@ -253,14 +253,7 @@ jobs:
         find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname ${{ needs.prepare.outputs.release-binary-filename }} -delete
         rm -Rf ${{ steps.setup-stage.outputs.build-prefix }}/build/tools/clang/stage2-bins/_CPack_Packages
     
-    - name: Run Tests
-      shell: bash
-      if: needs.prepare.outputs.multi-stage == 'false'
-      run: |
-        ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-check-all
-
     - name: Save Stage
-      if: needs.prepare.outputs.multi-stage == 'true'
       uses: ./workflows-main/.github/workflows/release-binaries-save-stage
       with:
         build-prefix: ${{ steps.setup-stage.outputs.build-prefix }}
@@ -525,8 +518,9 @@ jobs:
       - prepare
       - build-stage3-all
     if: >-
+      always() &&
       github.repository == 'llvm/llvm-project'
-    runs-on: ${{ needs.prepare.outputs.runs-on }}
+    runs-on: ${{ input.runs-on }}
     steps:
     - name: Checkout Actions
       uses: actions/checkout@v4
@@ -540,7 +534,7 @@ jobs:
       id: setup-stage
       uses: ./workflows/.github/workflows/release-binaries-setup-stage
       with:
-        previous-artifact: build-stage3-all
+        previous-artifact: ${{ (needs.prepare.outputs.multi-stage == 'false' && 'build-stage1') || 'build-stage3-all' }}
 
     - name: Run Tests
       shell: bash
