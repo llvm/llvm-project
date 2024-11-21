@@ -3190,9 +3190,8 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
     unsigned CmpBW = Ty->getScalarSizeInBits();
     unsigned NewCmpBW = NewCmpTy->getScalarSizeInBits();
     if (shouldChangeType(Ty, NewCmpTy)) {
-      if (auto ZExtCR = CR.exactIntersectWith(ConstantRange(
-              APInt::getZero(CmpBW), APInt::getOneBitSet(CmpBW, NewCmpBW)))) {
-        ConstantRange SrcCR = ZExtCR->truncate(NewCmpBW);
+      if (CR.getActiveBits() <= NewCmpBW) {
+        ConstantRange SrcCR = CR.truncate(NewCmpBW);
         CmpInst::Predicate EquivPred;
         APInt EquivInt;
         APInt EquivOffset;
