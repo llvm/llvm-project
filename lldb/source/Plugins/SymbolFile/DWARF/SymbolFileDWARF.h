@@ -61,7 +61,6 @@ class DWARFDebugAranges;
 class DWARFDebugInfo;
 class DWARFDebugInfoEntry;
 class DWARFDebugLine;
-class DWARFDebugRanges;
 class DWARFDeclContext;
 class DWARFFormValue;
 class DWARFTypeUnit;
@@ -227,8 +226,6 @@ public:
   llvm::DWARFDebugAbbrev *DebugAbbrev();
 
   DWARFDebugInfo &DebugInfo();
-
-  DWARFDebugRanges *GetDebugRanges();
 
   static bool SupportedVersion(uint16_t version);
 
@@ -559,7 +556,6 @@ protected:
   typedef std::set<DIERef> DIERefSet;
   typedef llvm::StringMap<DIERefSet> NameToOffsetMap;
   NameToOffsetMap m_function_scope_qualified_name_map;
-  std::unique_ptr<DWARFDebugRanges> m_ranges;
   UniqueDWARFASTTypeMap m_unique_ast_type_map;
   // A map from DIE to lldb_private::Type. For record type, the key might be
   // either declaration DIE or definition DIE.
