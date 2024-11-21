@@ -63,4 +63,15 @@ program main
   !$omp end target data
   !$omp end target teams
 
+  !$omp target teams map(to:a) map(from:n1,n2)
+  !PORTABILITY: If TARGET TEAMS DISTRIBUTE PARALLEL DO directive is nested inside TARGET region, the behaviour is unspecified
+  !$omp target teams distribute parallel do
+  do i=1, n1
+     do j=1, n2
+      res((i-1)*10+j) = i*j
+     end do
+  end do
+  !$omp end target teams distribute parallel do
+  !$omp end target teams
+
 end program main
