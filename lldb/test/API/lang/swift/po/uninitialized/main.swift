@@ -15,7 +15,7 @@ class POClass {
 
 func main() {
   var object: POClass
-  object = POClass() //% self.assertTrue(self.frame().FindVariable('object').GetObjectDescription() == 'error: <uninitialized>', 'po correctly detects uninitialized instances')
+  object = POClass() //% self.assertEqual(self.frame().FindVariable('object').GetObjectDescription(), None, 'po correctly detects uninitialized instances'); self.expect("po object", substrs=["<uninitialized>"])
   print("yay I am done") //% self.assertTrue('POClass:' in self.frame().FindVariable('object').GetObjectDescription())
 }
 
