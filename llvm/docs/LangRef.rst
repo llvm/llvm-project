@@ -3421,6 +3421,19 @@ function, provenance capture refers exclusively to the ability to perform
 accesses *after* the function returns. Memory accesses within the function
 itself are not considered pointer captures.
 
+Comparison of a pointer with a null pointer is generally also considered an
+address capture. As an exception, if the pointer is known to be either null
+or in bounds of an allocated object, it is not considered an address capture.
+As such, the following example does not capture the pointer argument due to
+the presence of the ``dereferenceable_or_null`` attribute:
+
+.. code-block:: llvm
+
+    define i1 @f(ptr dereferenceable_or_null(4) %a) {
+      %c = icmp eq ptr %a, null
+      ret i1 %c
+    }
+
 We can further say that the capture only occurs through a specific location.
 In the following example, the pointer (both address and provenance) is captured
 through the return value only:
