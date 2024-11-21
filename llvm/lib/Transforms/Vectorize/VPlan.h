@@ -3839,6 +3839,12 @@ public:
     return cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
   }
 
+  /// Return an iterator range over the VPIRBasicBlock wrapping the exit blocks
+  /// of the VPlan, that is leaf nodes except the scalar header. Defined in
+  /// VPlanHCFG, as the definition of the type needs access to the definitions
+  /// of VPBlockShallowTraversalWrapper.
+  auto getExitBlocks();
+
   /// The trip count of the original loop.
   VPValue *getTripCount() const {
     assert(TripCount && "trip count needs to be set before accessing it");
