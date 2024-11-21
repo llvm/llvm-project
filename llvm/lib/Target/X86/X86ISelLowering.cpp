@@ -29766,6 +29766,102 @@ static SDValue convertShiftLeftToScale(SDValue Amt, const SDLoc &dl,
   return SDValue();
 }
 
+// Given a vector of values, find a permutation such that every adjacent even-
+// odd pair has the same value. ~0 is reserved as a special value for wildcard,
+// which can be paired with any value. Returns true if a permutation is found.
+template <typename InputTy,
+         typename PermutationTy,
+         typename MapTy = std::unordered_map<typename InputTy::value_type,
+                                         std::pair<typename InputTy::value_type, typename PermutationTy::value_type>>>
+static bool PermuteAndPairVector(const InputTy& Inputs,
+                                 PermutationTy &Permutation) {
+  const auto Wildcard = ~typename InputTy::value_type();
+
+  // List of values to be paired, mapping an unpaired value to its current
+  // neighbor's value and index.
+  MapTy UnpairedInputs;
+  SmallVector<typename PermutationTy::value_type, 16> WildcardPairs;
+
+  Permutation.clear();
+  typename PermutationTy::value_type I = 0;
+  for (auto InputIt = Inputs.begin(), InputEnd = Inputs.end(); InputIt != InputEnd;) {
+    Permutation.push_back(I);
+    Permutation.push_back(I + 1);
+
+    auto Even = *InputIt++;
+    assert(InputIt != InputEnd && "Expected even number of elements");
+    auto Odd = *InputIt++;
+
+    // If both are wildcards, note it for later use by unpairable values.
+    if (Even == Wildcard && Odd == Wildcard) {
+      WildcardPairs.push_back(I);
+    }
+
+    // If both are equal, they are in good position.
+    if (Even != Odd) {
+      auto DoWork = [&] (auto &This, auto ThisIndex, auto Other, auto OtherIndex) {
+        if (This != Wildcard) {
+          // For non-wildcard value, check if it can pair with an exisiting
+          // unpaired value from UnpairedInputs, if so, swap with the unpaired
+          // value's neighbor, otherwise the current value is added to the map.
+          if (auto [MapIt, Inserted] = UnpairedInputs.try_emplace(This, std::make_pair(Other, OtherIndex)); !Inserted) {
+            auto [SwapValue, SwapIndex] = MapIt->second;
+            std::swap(Permutation[SwapIndex], Permutation[ThisIndex]);
+            This = SwapValue;
+            UnpairedInputs.erase(MapIt);
+
+            if (This == Other) {
+              if (This == Wildcard) {
+                // We freed up a wildcard pair by pairing two non-adjacent
+                // values, note it for later use by unpairable values.
+                WildcardPairs.push_back(I);
+              } else {
+                // The swapped element also forms a pair with Other, so it can
+                // be removed from the map.
+                assert(UnpairedInputs.count(This));
+                UnpairedInputs.erase(This);
+              }
+            } else {
+              // Swapped in an unpaired value, update its info.
+              if (This != Wildcard) {
+                assert(UnpairedInputs.count(This));
+                UnpairedInputs[This] = std::make_pair(Other, OtherIndex);
+              }
+              // If its neighbor is also in UnpairedInputs, update its info too.
+              if (auto OtherMapIt = UnpairedInputs.find(Other); OtherMapIt != UnpairedInputs.end() && OtherMapIt->second.second == ThisIndex) {
+                OtherMapIt->second.first = This;
+              }
+            }
+          }
+        }
+      };
+      DoWork(Even, I, Odd, I + 1);
+      if (Even != Odd) {
+        DoWork(Odd, I + 1, Even, I);
+      }
+    }
+    I += 2;
+  }
+
+  // Now check if each remaining unpaired neighboring values can be swapped with
+  // a wildcard pair to form two paired values.
+  for (auto &[Unpaired, V] : UnpairedInputs) {
+    auto [Neighbor, NeighborIndex]  = V;
+    if (Neighbor != Wildcard) {
+      assert(UnpairedInputs.count(Neighbor));
+      if (WildcardPairs.size()) {
+        std::swap(Permutation[WildcardPairs.back()], Permutation[NeighborIndex]);
+        WildcardPairs.pop_back();
+        // Mark the neighbor as processed.
+        UnpairedInputs[Neighbor].first = Wildcard;
+      } else {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
                           SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
@@ -30041,6 +30137,110 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       SDValue Subtraction =
           DAG.getNode(ISD::SUB, dl, VT, FlippedSignBit, SignBitMask);
       return Subtraction;
+    }
+  }
+
+  // ISD::SRA/SRL/SHL on vXi8 can be widened to vYi16 (Y = X/2) if the constant
+  // amounts can be shuffled such that every pair of adjacent elements has the
+  // same value. This introduces an extra shuffle before and after the shift,
+  // and it is profitable if the operand is aready a shuffle so that both can
+  // be merged, or if the extra shuffle is fast (can use VPSHUFB).
+  // (shift (shuffle X P1) S1) ->
+  // (shuffle (shift (shuffle X (shuffle P2 P1)) S2) P2^-1) where S2 can be
+  // widened, and P2^-1 is the inverse shuffle of P2.
+  if (ConstantAmt && (VT == MVT::v16i8 || VT == MVT::v32i8 || VT == MVT::v64i8) && R.hasOneUse() && Subtarget.hasSSE3()) {
+    bool Profitable = true;
+    // VPAND ymm only available on AVX2.
+    if (VT == MVT::v32i8 || VT == MVT::v64i8) {
+      Profitable = Subtarget.hasAVX2();
+    }
+
+    SmallVector<int, 64> Permutation;
+    SmallVector<uint16_t, 64> ShiftAmt;
+    for (size_t I = 0; I < Amt.getNumOperands(); ++I) {
+      if (Amt.getOperand(I).isUndef())
+        ShiftAmt.push_back(~0);
+      else
+        ShiftAmt.push_back(Amt.getConstantOperandVal(I));
+    }
+
+    if (Profitable && (VT == MVT::v32i8 || VT == MVT::v64i8)) {
+      Profitable = false;
+      constexpr size_t LaneBytes = 16;
+      const size_t NumLanes = VT.getVectorNumElements() / LaneBytes;
+
+      // For v32i8 or v64i8, we should check if we can generate a shuffle that
+      // may be lowered to VPSHUFB, because it is faster than VPERMB. This is
+      // possible if we can apply the same shuffle mask to each v16i8 lane.
+      // For example (assuming a lane has 4 elements for simplicity),
+      // <1, 2, 2, 1, 4, 3, 3, 4> is handled as <14, 23, 23, 14>, which can
+      // be shuffled to adjacent pairs <14, 14, 23, 23> with the VPSHUFB mask
+      // <0, 3, 2, 1> (or high level mask <0, 3, 2, 1, 4, 7, 6, 5>).
+      // Limitation: if there are some undef in shift amounts, this algorithm
+      // may not find a solution even if one exists, as here we only treat a
+      // VPSHUFB index as undef if all shuffle amounts of the same index modulo
+      // lane size are all undef.
+      // Since a byte can only be shifted by 7 bits without being UB, 4 bits are
+      // enough to represent the shift amount or undef (0xF).
+      std::array<uint16_t, LaneBytes> VPSHUFBShiftAmt = {};
+      for (size_t I = 0; I < LaneBytes; ++I)
+        for (size_t J = 0; J < NumLanes; ++J)
+          VPSHUFBShiftAmt[I] |= (ShiftAmt[I + J * LaneBytes] & 0xF) << (J * 4);
+      if (VT == MVT::v32i8) {
+        for (size_t I = 0; I < LaneBytes; ++I)
+          VPSHUFBShiftAmt[I] |= 0xFF00;
+      }
+      if (PermuteAndPairVector(VPSHUFBShiftAmt, Permutation)) {
+        // Found a VPSHUFB solution, offset the shuffle amount to other lanes.
+        Permutation.resize(VT.getVectorNumElements());
+        for (size_t I = 0; I < LaneBytes; ++I)
+          for (size_t J = 1; J < NumLanes; ++J)
+            Permutation[I + J * LaneBytes] = Permutation[I] + J * LaneBytes;
+        Profitable = true;
+      } else if (R.getOpcode() == ISD::VECTOR_SHUFFLE) {
+        // A slower shuffle is profitable if the operand is also a slow shuffle,
+        // such that they can be merged.
+        // TODO: Use TargetTransformInfo to systematically determine whether
+        // inner shuffle is slow. Currently we only check if it contains
+        // cross-lane shuffle.
+        if (ShuffleVectorSDNode *InnerShuffle = dyn_cast<ShuffleVectorSDNode>(R.getNode())) {
+          if (InnerShuffle->getMask().size() == VT.getVectorNumElements() &&
+              is128BitLaneCrossingShuffleMask(VT, InnerShuffle->getMask()))
+            Profitable = true;
+        }
+      }
+    }
+
+    // If it is still profitable at this point, and has not found a permutation
+    // yet, try again with any shuffle index.
+    if (Profitable && Permutation.empty()) {
+      PermuteAndPairVector<decltype(ShiftAmt), decltype(Permutation),
+                           SmallMapVector<uint16_t, std::pair<uint16_t, int>, 8>>(ShiftAmt, Permutation);
+    }
+
+    // Found a permutation P that can rearrange the shift amouts into adjacent
+    // pair of same values. Rewrite the shift S1(x) into P^-1(S2(P(x))).
+    if (!Permutation.empty()) {
+      SDValue InnerShuffle = DAG.getVectorShuffle(VT, dl, R, DAG.getUNDEF(VT), Permutation);
+      SmallVector<SDValue, 64> NewShiftAmt;
+      for (int Index : Permutation) {
+        NewShiftAmt.push_back(Amt.getOperand(Index));
+      }
+#ifndef NDEBUG
+      for (size_t I = 0; I < NewShiftAmt.size(); I += 2) {
+        SDValue Even = NewShiftAmt[I];
+        SDValue Odd = NewShiftAmt[I + 1];
+        assert(Even.isUndef() || Odd.isUndef() || Even->getAsZExtVal() == Odd->getAsZExtVal());
+      }
+#endif
+      SDValue NewShiftVector = DAG.getBuildVector(VT, dl, NewShiftAmt);
+      SDValue NewShift = DAG.getNode(Opc, dl, VT, InnerShuffle, NewShiftVector);
+      SmallVector<int, 64> InversePermutation(Permutation.size());
+      for (size_t I = 0; I < Permutation.size(); ++I) {
+        InversePermutation[Permutation[I]] = I;
+      }
+      SDValue OuterShuffle = DAG.getVectorShuffle(VT, dl, NewShift, DAG.getUNDEF(VT), InversePermutation);
+      return OuterShuffle;
     }
   }
 
