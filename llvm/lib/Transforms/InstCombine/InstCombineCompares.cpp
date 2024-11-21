@@ -3187,7 +3187,6 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
   Value *V;
   if (match(X, m_ZExt(m_Value(V)))) {
     Type *NewCmpTy = V->getType();
-    unsigned CmpBW = Ty->getScalarSizeInBits();
     unsigned NewCmpBW = NewCmpTy->getScalarSizeInBits();
     if (shouldChangeType(Ty, NewCmpTy)) {
       if (CR.getActiveBits() <= NewCmpBW) {
