@@ -497,16 +497,10 @@ public:
            RISCVMCRegisterClasses[RISCV::GPRF32RegClassID].contains(Reg.RegNum);
   }
 
-  bool isGPRF64Pair() const {
-    return Kind == KindTy::Register &&
-           RISCVMCRegisterClasses[RISCV::GPRF64PairRegClassID].contains(
-               Reg.RegNum);
-  }
-
   bool isGPRAsFPR() const { return isGPR() && Reg.IsGPRAsFPR; }
   bool isGPRAsFPR16() const { return isGPRF16() && Reg.IsGPRAsFPR; }
   bool isGPRAsFPR32() const { return isGPRF32() && Reg.IsGPRAsFPR; }
-  bool isGPRPairAsFPR64() const { return isGPRF64Pair() && Reg.IsGPRAsFPR; }
+  bool isGPRPairAsFPR64() const { return isGPRPair() && Reg.IsGPRAsFPR; }
 
   static bool evaluateConstantImm(const MCExpr *Expr, int64_t &Imm,
                                   RISCVMCExpr::VariantKind &VK) {
@@ -2405,7 +2399,7 @@ ParseStatus RISCVAsmParser::parseGPRPairAsFPR64(OperandVector &Operands) {
   const MCRegisterInfo *RI = getContext().getRegisterInfo();
   MCRegister Pair = RI->getMatchingSuperReg(
       Reg, RISCV::sub_gpr_even,
-      &RISCVMCRegisterClasses[RISCV::GPRF64PairRegClassID]);
+      &RISCVMCRegisterClasses[RISCV::GPRPairRegClassID]);
   Operands.push_back(RISCVOperand::createReg(Pair, S, E, /*isGPRAsFPR=*/true));
   return ParseStatus::Success;
 }

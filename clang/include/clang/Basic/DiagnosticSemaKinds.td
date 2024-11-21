@@ -9300,11 +9300,11 @@ def warn_unused_container_subscript_expr : Warning<
 def warn_unused_call : Warning<
   "ignoring return value of function declared with %0 attribute">,
   InGroup<UnusedValue>;
-def warn_unused_constructor : Warning<
-  "ignoring temporary created by a constructor declared with %0 attribute">,
+def warn_unused_return_type : Warning<
+  "ignoring %select{return value|temporary}0 of type %2 declared with %1 attribute%select{|: %4}3">,
   InGroup<UnusedValue>;
-def warn_unused_constructor_msg : Warning<
-  "ignoring temporary created by a constructor declared with %0 attribute: %1">,
+def warn_unused_constructor : Warning<
+  "ignoring temporary created by a constructor declared with %0 attribute%select{|: %2}1">,
   InGroup<UnusedValue>;
 def warn_side_effects_unevaluated_context : Warning<
   "expression with side effects has no effect in an unevaluated context">,
@@ -9313,10 +9313,7 @@ def warn_side_effects_typeid : Warning<
   "expression with side effects will be evaluated despite being used as an "
   "operand to 'typeid'">, InGroup<PotentiallyEvaluatedExpression>;
 def warn_unused_result : Warning<
-  "ignoring return value of function declared with %0 attribute">,
-  InGroup<UnusedResult>;
-def warn_unused_result_msg : Warning<
-  "ignoring return value of function declared with %0 attribute: %1">,
+  "ignoring return value of function declared with %0 attribute%select{|: %2}1">,
   InGroup<UnusedResult>;
 def warn_unused_result_typedef_unsupported_spelling : Warning<
   "'[[%select{nodiscard|gnu::warn_unused_result}0]]' attribute ignored when "
@@ -10132,10 +10129,11 @@ def err_lifetimebound_ctor_dtor : Error<
   "%select{constructor|destructor}0">;
 def err_lifetimebound_parameter_void_return_type : Error<
   "'lifetimebound' attribute cannot be applied to a parameter of a function "
-  "that returns void">;
+  "that returns void; did you mean 'lifetime_capture_by(X)'">;
 def err_lifetimebound_implicit_object_parameter_void_return_type : Error<
   "'lifetimebound' attribute cannot be applied to an implicit object "
-  "parameter of a function that returns void">;
+  "parameter of a function that returns void; "
+  "did you mean 'lifetime_capture_by(X)'">;
 
 // CHECK: returning address/reference of stack memory
 def warn_ret_stack_addr_ref : Warning<
@@ -10230,6 +10228,12 @@ def warn_dangling_pointer_assignment : Warning<
    "object backing %select{|the pointer }0%1 "
    "will be destroyed at the end of the full-expression">,
    InGroup<DanglingAssignment>;
+def warn_dangling_reference_captured : Warning<
+   "object whose reference is captured by '%0' will be destroyed at the end of "
+   "the full-expression">, InGroup<DanglingCapture>, DefaultIgnore;
+def warn_dangling_reference_captured_by_unknown : Warning<
+   "object whose reference is captured will be destroyed at the end of "
+   "the full-expression">, InGroup<DanglingCapture>, DefaultIgnore;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
