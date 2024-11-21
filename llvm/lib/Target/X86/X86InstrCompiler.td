@@ -2194,33 +2194,19 @@ let Predicates = [HasZU] in {
             (SUBREG_TO_REG (i64 0), (IMULZU16rri GR16:$src1, imm:$src2), sub_16bit)>;
   def : Pat<(i64 (zext (i16 (mul (loadi16 addr:$src1), imm:$src2)))),
             (SUBREG_TO_REG (i64 0), (IMULZU16rmi addr:$src1, imm:$src2), sub_16bit)>;
+}
   
-  // (mul (reg/mem), imm) -> imulzu
-  // Note this pattern doesn't explicitly require the zero-upper behaviour of imulzu,
-  // but instead avoids the zero-extend of the reg/mem operand that would be 
-  // required if the multiply were promoted to 32b to avoid partial-write stalls.
-  // The imulzu here simply doesn't incur any partial-write stalls.
-  def : Pat<(mul GR16:$src1, imm:$src2),
-            (IMULZU16rri GR16:$src1, imm:$src2)>;
-  def : Pat<(mul (loadi16 addr:$src1), imm:$src2),
-            (IMULZU16rmi addr:$src1, imm:$src2)>;
-}
-
 // mul reg, imm
-let Predicates = [NoZU] in {
-  def : Pat<(mul GR16:$src1, imm:$src2),
-            (IMUL16rri GR16:$src1, imm:$src2)>;
-}
+def : Pat<(mul GR16:$src1, imm:$src2),
+          (IMUL16rri GR16:$src1, imm:$src2)>;
 def : Pat<(mul GR32:$src1, imm:$src2),
           (IMUL32rri GR32:$src1, imm:$src2)>;
 def : Pat<(mul GR64:$src1, i64immSExt32:$src2),
           (IMUL64rri32 GR64:$src1, i64immSExt32:$src2)>;
 
 // reg = mul mem, imm
-let Predicates = [NoZU] in {
-  def : Pat<(mul (loadi16 addr:$src1), imm:$src2),
-            (IMUL16rmi addr:$src1, imm:$src2)>;
-}
+def : Pat<(mul (loadi16 addr:$src1), imm:$src2),
+          (IMUL16rmi addr:$src1, imm:$src2)>;
 def : Pat<(mul (loadi32 addr:$src1), imm:$src2),
           (IMUL32rmi addr:$src1, imm:$src2)>;
 def : Pat<(mul (loadi64 addr:$src1), i64immSExt32:$src2),

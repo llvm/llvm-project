@@ -3,9 +3,9 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-linux-gnu | FileCheck %s --check-prefix=NOZU
 
 ; Test generation of 16b imulzu when -mattr=+zu is specified.
-; The mulzu_* tests check for basic generation, which will fold away a zero-extend of the
-; result if present.
-; The following tests are modifications of selected test/CodeGen/X86/imul.ll tests with
+; The mulzu_* tests check for basic generation, which is limited to cases where a
+; zero-extend of the result can be folded into imulzu.
+; The remaining tests are modifications of selected test/CodeGen/X86/imul.ll tests with
 ; 16b multiplies, to check that common strength reductions in ISel are still performed
 ; when -mattr=+zu is in effect.
 ;
@@ -84,10 +84,14 @@ define i64 @mulzu_16_64_mem(ptr %P) {
     ret i64 %r
 }
 
+; The following mulzu cases check that imulzu is not
+; generated in the absence of a single zext user. The ZU/NOZU
+; cases should match.
+
 define void @mulzu_16_store(i16 %A, ptr %R) {
 ; ZU-LABEL: mulzu_16_store:
 ; ZU:       # %bb.0:
-; ZU-NEXT:    imulzuw $1234, %di, %ax # imm = 0x4D2
+; ZU-NEXT:    imull $1234, %edi, %eax # imm = 0x4D2
 ; ZU-NEXT:    movw %ax, (%rsi)
 ; ZU-NEXT:    retq
 ;
@@ -102,28 +106,85 @@ define void @mulzu_16_store(i16 %A, ptr %R) {
     ret void
 }
 
-define void @mulzu_16_store_mem(ptr %P, ptr %R) {
-; ZU-LABEL: mulzu_16_store_mem:
+define i32 @mulzu_16_store_32(i16 %A, ptr %R) {
+; ZU-LABEL: mulzu_16_store_32:
 ; ZU:       # %bb.0:
-; ZU-NEXT:    imulzuw $1234, (%rdi), %ax # imm = 0x4D2
+; ZU-NEXT:    imull $1234, %edi, %eax # imm = 0x4D2
 ; ZU-NEXT:    movw %ax, (%rsi)
+; ZU-NEXT:    movzwl %ax, %eax
 ; ZU-NEXT:    retq
 ;
-; NOZU-LABEL: mulzu_16_store_mem:
+; NOZU-LABEL: mulzu_16_store_32:
 ; NOZU:       # %bb.0:
-; NOZU-NEXT:    movzwl (%rdi), %eax
-; NOZU-NEXT:    imull $1234, %eax, %eax # imm = 0x4D2
+; NOZU-NEXT:    imull $1234, %edi, %eax # imm = 0x4D2
 ; NOZU-NEXT:    movw %ax, (%rsi)
+; NOZU-NEXT:    movzwl %ax, %eax
 ; NOZU-NEXT:    retq
-    %gep = getelementptr i16, ptr %P, i64 0
-    %gep1 = getelementptr i16, ptr %R, i64 0
-    %A = load i16, ptr %gep
+    %gep = getelementptr i16, ptr %R, i64 0
     %mul = mul i16 %A, 1234
-    store i16 %mul, ptr %gep1
-    ret void
+    store i16 %mul, ptr %gep
+    %r = zext i16 %mul to i32
+    ret i32 %r
+}
+
+define i64 @mulzu_16_store_64(i16 %A, ptr %R) {
+; ZU-LABEL: mulzu_16_store_64:
+; ZU:       # %bb.0:
+; ZU-NEXT:    imull $1234, %edi, %eax # imm = 0x4D2
+; ZU-NEXT:    movw %ax, (%rsi)
+; ZU-NEXT:    movzwl %ax, %eax
+; ZU-NEXT:    retq
+;
+; NOZU-LABEL: mulzu_16_store_64:
+; NOZU:       # %bb.0:
+; NOZU-NEXT:    imull $1234, %edi, %eax # imm = 0x4D2
+; NOZU-NEXT:    movw %ax, (%rsi)
+; NOZU-NEXT:    movzwl %ax, %eax
+; NOZU-NEXT:    retq
+    %gep = getelementptr i16, ptr %R, i64 0
+    %mul = mul i16 %A, 1234
+    store i16 %mul, ptr %gep
+    %r = zext i16 %mul to i64
+    ret i64 %r
+}
+
+define i32 @mulzu_sext_16_32(i16 %A) {
+; ZU-LABEL: mulzu_sext_16_32:
+; ZU:       # %bb.0:
+; ZU-NEXT:    imull $1234, %edi, %eax # imm = 0x4D2
+; ZU-NEXT:    cwtl
+; ZU-NEXT:    retq
+;
+; NOZU-LABEL: mulzu_sext_16_32:
+; NOZU:       # %bb.0:
+; NOZU-NEXT:    imull $1234, %edi, %eax # imm = 0x4D2
+; NOZU-NEXT:    cwtl
+; NOZU-NEXT:    retq
+    %mul = mul i16 %A, 1234
+    %r = sext i16 %mul to i32
+    ret i32 %r
+}
+
+define i64 @mulzu_sext_16_64(i16 %A) {
+; ZU-LABEL: mulzu_sext_16_64:
+; ZU:       # %bb.0:
+; ZU-NEXT:    imull $1234, %edi, %eax # imm = 0x4D2
+; ZU-NEXT:    movswq %ax, %rax
+; ZU-NEXT:    retq
+;
+; NOZU-LABEL: mulzu_sext_16_64:
+; NOZU:       # %bb.0:
+; NOZU-NEXT:    imull $1234, %edi, %eax # imm = 0x4D2
+; NOZU-NEXT:    movswq %ax, %rax
+; NOZU-NEXT:    retq
+    %mul = mul i16 %A, 1234
+    %r = sext i16 %mul to i64
+    ret i64 %r
 }
 
 ; Tests ported from test/CodeGen/X86/imul.ll follow from this point.
+; The generated code, which strength-reduces multiplies by certain
+; constants, should be unaffected by enabling zu.
 
 define i16 @mul4_16(i16 %A) {
 ;

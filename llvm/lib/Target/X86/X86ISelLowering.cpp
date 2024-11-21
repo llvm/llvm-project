@@ -58881,6 +58881,15 @@ bool X86TargetLowering::IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const {
     return Ld->getBasePtr() == St->getBasePtr();
   };
 
+  auto IsFoldableZext = [](SDValue Op) {
+    if (!Op.hasOneUse())
+      return false;
+    SDNode *User = *Op->use_begin();
+    EVT VT = User->getValueType(0);
+    return (User->getOpcode() == ISD::ZERO_EXTEND &&
+            (VT == MVT::i32 || VT == MVT::i64));
+  };
+
   bool Commute = false;
   switch (Op.getOpcode()) {
   default: return false;
@@ -58897,8 +58906,15 @@ bool X86TargetLowering::IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const {
       return false;
     break;
   }
-  case ISD::ADD:
   case ISD::MUL:
+    // When ZU is enabled, we prefer to not promote for MUL by a constant
+    // when there is an opportunity to fold a zext with imulzu.
+    if (Subtarget.hasZU() && IsFoldableZext(Op) &&
+        (isa<ConstantSDNode>(Op.getOperand(0)) ||
+         isa<ConstantSDNode>(Op.getOperand(1))))
+      return false;
+    [[fallthrough]];
+  case ISD::ADD:
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR:
@@ -58918,12 +58934,6 @@ bool X86TargetLowering::IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const {
       return false;
     if (IsFoldableAtomicRMW(N0, Op) ||
         (Commute && IsFoldableAtomicRMW(N1, Op)))
-      return false;
-    // When ZU is enabled, we prefer to not promote for MUL by a constant,
-    // since a 16b imulzu will not incur partial-write stalls, and may be
-    // able to fold away a zero-extend of the 16b result.
-    if (Subtarget.hasZU() && Op.getOpcode() == ISD::MUL &&
-        (isa<ConstantSDNode>(N0) || isa<ConstantSDNode>(N1)))
       return false;
   }
   }
