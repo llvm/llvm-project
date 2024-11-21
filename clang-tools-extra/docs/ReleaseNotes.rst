@@ -192,7 +192,7 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
-  additional functions to match.
+  additional functions to match, including C++ member functions.
 
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` to avoid triggering on
