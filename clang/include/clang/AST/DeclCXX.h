@@ -1995,7 +1995,8 @@ private:
   // in the case of alias template deduction or CTAD from inherited
   // constructors. The SourceDeductionGuideKind member indicates which of these
   // sources applies, or is None otherwise.
-  llvm::PointerIntPair<const CXXDeductionGuideDecl *, 2, SourceDeductionGuideKind>
+  llvm::PointerIntPair<const CXXDeductionGuideDecl *, 2,
+                       SourceDeductionGuideKind>
       SourceDeductionGuide;
   void setExplicitSpecifier(ExplicitSpecifier ES) { ExplicitSpec = ES; }
 

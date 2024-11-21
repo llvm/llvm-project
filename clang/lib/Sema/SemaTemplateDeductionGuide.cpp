@@ -945,11 +945,12 @@ struct InheritedConstructorDeductionInfo {
   TypeSourceInfo *CCType;
 };
 
-// Build the function type and return type for a deduction guide generated from an inherited constructor
-// C++23 [over.match.class.deduct]p1.10:
+// Build the function type and return type for a deduction guide generated from
+// an inherited constructor C++23 [over.match.class.deduct]p1.10:
 // ... the set contains the guides of A with the return type R
 // of each guide replaced with `typename CC<R>::type` ...
-std::pair<TypeSourceInfo *, QualType> buildInheritedConstructorDeductionGuideType(
+std::pair<TypeSourceInfo *, QualType>
+buildInheritedConstructorDeductionGuideType(
     Sema &SemaRef, const InheritedConstructorDeductionInfo &Info,
     TypeSourceInfo *SourceGuideTSI) {
   ASTContext &Context = SemaRef.Context;
@@ -961,8 +962,8 @@ std::pair<TypeSourceInfo *, QualType> buildInheritedConstructorDeductionGuideTyp
   // FIXME: There is currently no diagnostic emitted in this case,
   // as it is nontrivial to propagate substitution failure messages up
   // to the point where deduction guides are used-- we do not have a type
-  // with which we can create a deduction guide AST node and must encode the SFINAE
-  // message.
+  // with which we can create a deduction guide AST node and must encode the
+  // SFINAE message.
   Sema::SFINAETrap Trap(SemaRef);
 
   MultiLevelTemplateArgumentList Args;
@@ -974,7 +975,7 @@ std::pair<TypeSourceInfo *, QualType> buildInheritedConstructorDeductionGuideTyp
       Info.CCType, Args, Info.DerivedClassTemplate->getBeginLoc(),
       DeclarationName());
   if (!ReturnTypeTSI || Trap.hasErrorOccurred())
-    return { nullptr, QualType() };
+    return {nullptr, QualType()};
   QualType ReturnType = ReturnTypeTSI->getType();
 
   TypeLocBuilder TLB;
@@ -983,7 +984,8 @@ std::pair<TypeSourceInfo *, QualType> buildInheritedConstructorDeductionGuideTyp
   QualType FT = Context.getFunctionType(ReturnType, FPT->getParamTypes(),
                                         FPT->getExtProtoInfo());
   FunctionProtoTypeLoc NewTL = TLB.push<FunctionProtoTypeLoc>(FT);
-  const FunctionProtoTypeLoc &TL = SourceGuideTSI->getTypeLoc().getAs<FunctionProtoTypeLoc>();
+  const FunctionProtoTypeLoc &TL =
+      SourceGuideTSI->getTypeLoc().getAs<FunctionProtoTypeLoc>();
   NewTL.setLocalRangeBegin(TL.getLocalRangeBegin());
   NewTL.setLParenLoc(TL.getLParenLoc());
   NewTL.setRParenLoc(TL.getRParenLoc());
@@ -996,8 +998,8 @@ std::pair<TypeSourceInfo *, QualType> buildInheritedConstructorDeductionGuideTyp
   return {DGuideType, ReturnType};
 }
 
-static ArrayRef<TemplateArgument> getTemplateArgumentsFromDeductionGuideReturnType(
-    CXXDeductionGuideDecl *DG) {
+static ArrayRef<TemplateArgument>
+getTemplateArgumentsFromDeductionGuideReturnType(CXXDeductionGuideDecl *DG) {
   auto RType = DG->getReturnType();
 
   if (const auto *TST = RType->getAs<TemplateSpecializationType>())
@@ -1010,7 +1012,8 @@ static ArrayRef<TemplateArgument> getTemplateArgumentsFromDeductionGuideReturnTy
   // explicit deduction guide.
   if (const auto *ET = RType->getAs<ElaboratedType>()) {
     auto *TST = ET->getNamedType()->getAs<TemplateSpecializationType>();
-    assert(TST && "Expected ElaboratedType to name a TemplateSpecializationType");
+    assert(TST &&
+           "Expected ElaboratedType to name a TemplateSpecializationType");
     return TST->template_arguments();
   }
 
@@ -1020,15 +1023,22 @@ static ArrayRef<TemplateArgument> getTemplateArgumentsFromDeductionGuideReturnTy
     // the template arguments from the CC partial specialization,
     // which are the template arguments of the derived template.
     const Type *QualifierType = DNT->getQualifier()->getAsType();
-    assert(QualifierType && "Expected an inherited ctor deduction guide to have a type stored specifier");
+    assert(QualifierType && "Expected an inherited ctor deduction guide to "
+                            "have a type stored specifier");
 
-    const auto *CCSpecializationType = QualifierType->getAs<TemplateSpecializationType>();
-    assert(CCSpecializationType && "Expected an inherited ctor deduction guide to have a TemplateSpecializationType qualifier");
+    const auto *CCSpecializationType =
+        QualifierType->getAs<TemplateSpecializationType>();
+    assert(CCSpecializationType &&
+           "Expected an inherited ctor deduction guide to have a "
+           "TemplateSpecializationType qualifier");
 
-    const auto *TD = cast<ClassTemplateDecl>(CCSpecializationType->getTemplateName().getAsTemplateDecl());
+    const auto *TD = cast<ClassTemplateDecl>(
+        CCSpecializationType->getTemplateName().getAsTemplateDecl());
     SmallVector<ClassTemplatePartialSpecializationDecl *, 1> PS;
     TD->getPartialSpecializations(PS);
-    assert(PS.size() == 1 && "Expected the CC template for inherited ctor deduction guide to have a single partial specialization");
+    assert(PS.size() == 1 &&
+           "Expected the CC template for inherited ctor deduction guide to "
+           "have a single partial specialization");
 
     return PS[0]->getInjectedTemplateArgs();
   }
@@ -1058,7 +1068,9 @@ FunctionTemplateDecl *BuildDeductionGuideForTypeAlias(
   auto [Template, AliasRhsTemplateArgs] =
       getRHSTemplateDeclAndArgs(SemaRef, AliasTemplate);
 
-  ArrayRef<TemplateArgument> FTemplateArgs = getTemplateArgumentsFromDeductionGuideReturnType(cast<CXXDeductionGuideDecl>(F->getTemplatedDecl()));
+  ArrayRef<TemplateArgument> FTemplateArgs =
+      getTemplateArgumentsFromDeductionGuideReturnType(
+          cast<CXXDeductionGuideDecl>(F->getTemplatedDecl()));
 
   // Deduce template arguments of the deduction guide f from the RHS of
   // the alias.
@@ -1090,10 +1102,10 @@ FunctionTemplateDecl *BuildDeductionGuideForTypeAlias(
   // issues for practice cases, we probably need to extend it to continue
   // performing deduction for rest of arguments to align with the C++
   // standard.
-  SemaRef.DeduceTemplateArguments(
-      F->getTemplateParameters(), FTemplateArgs,
-      AliasRhsTemplateArgs, TDeduceInfo, DeduceResults,
-      /*NumberOfArgumentsMustMatch=*/false);
+  SemaRef.DeduceTemplateArguments(F->getTemplateParameters(), FTemplateArgs,
+                                  AliasRhsTemplateArgs, TDeduceInfo,
+                                  DeduceResults,
+                                  /*NumberOfArgumentsMustMatch=*/false);
 
   SmallVector<TemplateArgument> DeducedArgs;
   SmallVector<unsigned> NonDeducedTemplateParamsInFIndex;
@@ -1312,8 +1324,9 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
       QualType ReturnType =
           cast<FunctionProtoType>(FunctionType->getType())->getReturnType();
       if (FromInheritedCtor) {
-        std::tie(FunctionType, ReturnType) = buildInheritedConstructorDeductionGuideType(
-            SemaRef, *FromInheritedCtor, FunctionType);
+        std::tie(FunctionType, ReturnType) =
+            buildInheritedConstructorDeductionGuideType(
+                SemaRef, *FromInheritedCtor, FunctionType);
         if (!FunctionType)
           continue;
       }
@@ -1406,7 +1419,8 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
     TypeSourceInfo *BaseTSI, unsigned BaseIdx) {
   ASTContext &Context = SemaRef.Context;
   DeclContext *DC = Template->getDeclContext();
-  const TemplateSpecializationType *BaseTST = BaseTSI->getType()->getAs<TemplateSpecializationType>();
+  const TemplateSpecializationType *BaseTST =
+      BaseTSI->getType()->getAs<TemplateSpecializationType>();
   if (!BaseTST)
     return;
   SourceLocation BaseLoc = BaseTSI->getTypeLoc().getBeginLoc();
@@ -1582,7 +1596,8 @@ void DeclareImplicitDeductionGuidesFromInheritedConstructors(
   // ... having a member typedef `type` designating a template specialization
   // with the template argument list of A
   // but with [Template] as the template
-  TemplateName DerivedTN = Context.getCanonicalTemplateName(TemplateName(Template));
+  TemplateName DerivedTN =
+      Context.getCanonicalTemplateName(TemplateName(Template));
   QualType DerivedTST =
       Context.getTemplateSpecializationType(DerivedTN, SubstArgs);
 

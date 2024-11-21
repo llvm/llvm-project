@@ -12040,10 +12040,13 @@ static void NoteImplicitDeductionGuide(Sema &S, FunctionDecl *Fn) {
   // The definition of inherited constructor deduction guides is not
   // of particular use to end users, as the CC<R> return type cannot
   // be manually constructed. Instead, we show the guide we started with.
-  while (DG->getSourceDeductionGuideKind() == CXXDeductionGuideDecl::SourceDeductionGuideKind::InheritedConstructor) {
+  while (
+      DG->getSourceDeductionGuideKind() ==
+      CXXDeductionGuideDecl::SourceDeductionGuideKind::InheritedConstructor) {
     DG = DG->getSourceDeductionGuide();
-    S.Diag(DG->getLocation(), diag::note_ovl_candidate_inherited_constructor_source)
-      << (DG->isImplicit() ? 1 : 0);
+    S.Diag(DG->getLocation(),
+           diag::note_ovl_candidate_inherited_constructor_source)
+        << (DG->isImplicit() ? 1 : 0);
   }
 
   TemplateDecl *OriginTemplate =
