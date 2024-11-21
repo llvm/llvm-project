@@ -161,8 +161,6 @@ private:
   void HasInvalidDistributeNesting(const parser::OpenMPLoopConstruct &x);
   void HasInvalidLoopBinding(const parser::OpenMPLoopConstruct &x);
   // specific clause related
-  bool ScheduleModifierHasType(const parser::OmpScheduleClause &,
-      const parser::OmpScheduleModifierType::ModType &);
   void CheckAllowedMapTypes(const parser::OmpMapClause::Type &,
       const std::list<parser::OmpMapClause::Type> &);
   llvm::StringRef getClauseName(llvm::omp::Clause clause) override;
