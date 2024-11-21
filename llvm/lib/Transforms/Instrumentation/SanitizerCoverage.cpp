@@ -244,7 +244,7 @@ private:
   void InjectTraceForSwitch(Function &F,
                             ArrayRef<Instruction *> SwitchTraceTargets);
   bool InjectCoverage(Function &F, ArrayRef<BasicBlock *> AllBlocks,
-                      Value *&FunctionGateCmp, bool IsLeafFunc = true);
+                      bool IsLeafFunc = true);
   GlobalVariable *CreateFunctionLocalArrayInSection(size_t NumElements,
                                                     Function &F, Type *Ty,
                                                     const char *Section);
@@ -725,8 +725,7 @@ void ModuleSanitizerCoverage::instrumentFunction(Function &F) {
   if (Options.CollectControlFlow)
     createFunctionControlFlow(F);
 
-  Value *FunctionGateCmp = nullptr;
-  InjectCoverage(F, BlocksToInstrument, FunctionGateCmp, IsLeafFunc);
+  InjectCoverage(F, BlocksToInstrument, IsLeafFunc);
   InjectCoverageForIndirectCalls(F, IndirCalls);
   InjectTraceForCmp(F, CmpTraceTargets);
   InjectTraceForSwitch(F, SwitchTraceTargets);
@@ -820,8 +819,8 @@ Value *ModuleSanitizerCoverage::CreateFunctionLocalGateCmp(IRBuilder<> &IRB) {
 
 Instruction *ModuleSanitizerCoverage::CreateGateBranch(Function &F,
                                                        Value *&FunctionGateCmp,
-                                                      Instruction *IP) {
- if (!FunctionGateCmp) {
+                                                       Instruction *IP) {
+  if (!FunctionGateCmp) {
     // Create this in the entry block
     BasicBlock &BB = F.getEntryBlock();
     BasicBlock::iterator IP = BB.getFirstInsertionPt();
@@ -838,10 +837,10 @@ Instruction *ModuleSanitizerCoverage::CreateGateBranch(Function &F,
 
 bool ModuleSanitizerCoverage::InjectCoverage(Function &F,
                                              ArrayRef<BasicBlock *> AllBlocks,
-                                             Value *&FunctionGateCmp,
                                              bool IsLeafFunc) {
   if (AllBlocks.empty()) return false;
   CreateFunctionLocalArrays(F, AllBlocks);
+  Value *FunctionGateCmp = nullptr;
   for (size_t i = 0, N = AllBlocks.size(); i < N; i++)
     InjectCoverageAtBlock(F, *AllBlocks[i], i, FunctionGateCmp, IsLeafFunc);
   return true;
@@ -1033,19 +1032,10 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
                       ConstantInt::get(IntptrTy, Idx * 4)),
         PtrTy);
     if (Options.GatedCallbacks) {
-      if (!FunctionGateCmp) {
-        // Create this in the entry block
-        assert(IsEntryBB);
-        FunctionGateCmp = CreateFunctionLocalGateCmp(IRB);
-      }
-      // Set the branch weights in order to minimize the price paid when the
-      // gate is turned off, allowing the default enablement of this
-      // instrumentation with as little of a performance cost as possible
-      auto Weights = MDBuilder(*C).createBranchWeights(1, 100000);
-      auto ThenTerm =
-          SplitBlockAndInsertIfThen(FunctionGateCmp, &*IP, false, Weights);
-      IRBuilder<> ThenIRB(ThenTerm);
-      ThenIRB.CreateCall(SanCovTracePCGuard, GuardPtr)->setCannotMerge();
+      Instruction *I = &*IP;
+      auto GateBranch = CreateGateBranch(F, FunctionGateCmp, I);
+      IRBuilder<> GateIRB(GateBranch);
+      GateIRB.CreateCall(SanCovTracePCGuard, GuardPtr)->setCannotMerge();
     } else {
       IRB.CreateCall(SanCovTracePCGuard, GuardPtr)->setCannotMerge();
     }
