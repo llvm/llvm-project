@@ -454,26 +454,26 @@ TEST(MemProf, SymbolizationFilter) {
 }
 
 TEST(MemProf, BaseMemProfReader) {
-  llvm::DenseMap<FrameId, Frame> FrameIdMap;
+  llvm::memprof::IndexedMemProfData MemProfData;
   Frame F1(/*Hash=*/IndexedMemProfRecord::getGUID("foo"), /*LineOffset=*/20,
            /*Column=*/5, /*IsInlineFrame=*/true);
   Frame F2(/*Hash=*/IndexedMemProfRecord::getGUID("bar"), /*LineOffset=*/10,
            /*Column=*/2, /*IsInlineFrame=*/false);
-  FrameIdMap.insert({F1.hash(), F1});
-  FrameIdMap.insert({F2.hash(), F2});
+  MemProfData.Frames.insert({F1.hash(), F1});
+  MemProfData.Frames.insert({F2.hash(), F2});
 
-  llvm::MapVector<llvm::GlobalValue::GUID, IndexedMemProfRecord> ProfData;
+  llvm::SmallVector<FrameId> CallStack{F1.hash(), F2.hash()};
+  CallStackId CSId = llvm::memprof::hashCallStack(CallStack);
+  MemProfData.CallStacks.try_emplace(CSId, CallStack);
+
   IndexedMemProfRecord FakeRecord;
   MemInfoBlock Block;
   Block.AllocCount = 1U, Block.TotalAccessDensity = 4,
   Block.TotalLifetime = 200001;
-  std::array<FrameId, 2> CallStack{F1.hash(), F2.hash()};
-  FakeRecord.AllocSites.emplace_back(
-      /*CS=*/CallStack, /*CSId=*/llvm::memprof::hashCallStack(CallStack),
-      /*MB=*/Block);
-  ProfData.insert({F1.hash(), FakeRecord});
+  FakeRecord.AllocSites.emplace_back(/*CSId=*/CSId, /*MB=*/Block);
+  MemProfData.Records.insert({F1.hash(), FakeRecord});
 
-  MemProfReader Reader(FrameIdMap, ProfData);
+  MemProfReader Reader(MemProfData);
 
   llvm::SmallVector<MemProfRecord, 1> Records;
   for (const auto &KeyRecordPair : Reader) {
@@ -659,8 +659,8 @@ TEST(MemProf, RadixTreeBuilderEmpty) {
   llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> MemProfCallStackData;
   llvm::DenseMap<llvm::memprof::FrameId, llvm::memprof::FrameStat>
       FrameHistogram =
-          llvm::memprof::computeFrameHistogram(MemProfCallStackData);
-  llvm::memprof::CallStackRadixTreeBuilder Builder;
+          llvm::memprof::computeFrameHistogram<FrameId>(MemProfCallStackData);
+  llvm::memprof::CallStackRadixTreeBuilder<FrameId> Builder;
   Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
                 FrameHistogram);
   ASSERT_THAT(Builder.getRadixArray(), testing::IsEmpty());
@@ -677,8 +677,8 @@ TEST(MemProf, RadixTreeBuilderOne) {
   MemProfCallStackData.insert({llvm::memprof::hashCallStack(CS1), CS1});
   llvm::DenseMap<llvm::memprof::FrameId, llvm::memprof::FrameStat>
       FrameHistogram =
-          llvm::memprof::computeFrameHistogram(MemProfCallStackData);
-  llvm::memprof::CallStackRadixTreeBuilder Builder;
+          llvm::memprof::computeFrameHistogram<FrameId>(MemProfCallStackData);
+  llvm::memprof::CallStackRadixTreeBuilder<FrameId> Builder;
   Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
                 FrameHistogram);
   EXPECT_THAT(Builder.getRadixArray(), testing::ElementsAreArray({
@@ -704,8 +704,8 @@ TEST(MemProf, RadixTreeBuilderTwo) {
   MemProfCallStackData.insert({llvm::memprof::hashCallStack(CS2), CS2});
   llvm::DenseMap<llvm::memprof::FrameId, llvm::memprof::FrameStat>
       FrameHistogram =
-          llvm::memprof::computeFrameHistogram(MemProfCallStackData);
-  llvm::memprof::CallStackRadixTreeBuilder Builder;
+          llvm::memprof::computeFrameHistogram<FrameId>(MemProfCallStackData);
+  llvm::memprof::CallStackRadixTreeBuilder<FrameId> Builder;
   Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
                 FrameHistogram);
   EXPECT_THAT(Builder.getRadixArray(),
@@ -742,8 +742,8 @@ TEST(MemProf, RadixTreeBuilderSuccessiveJumps) {
   MemProfCallStackData.insert({llvm::memprof::hashCallStack(CS4), CS4});
   llvm::DenseMap<llvm::memprof::FrameId, llvm::memprof::FrameStat>
       FrameHistogram =
-          llvm::memprof::computeFrameHistogram(MemProfCallStackData);
-  llvm::memprof::CallStackRadixTreeBuilder Builder;
+          llvm::memprof::computeFrameHistogram<FrameId>(MemProfCallStackData);
+  llvm::memprof::CallStackRadixTreeBuilder<FrameId> Builder;
   Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
                 FrameHistogram);
   EXPECT_THAT(Builder.getRadixArray(),

@@ -16,6 +16,7 @@ typedef half   v16h  __attribute__((ext_vector_type(16)));
 typedef half   v32h  __attribute__((ext_vector_type(32)));
 typedef int    v2i   __attribute__((ext_vector_type(2)));
 typedef int    v4i   __attribute__((ext_vector_type(4)));
+typedef int    v8i   __attribute__((ext_vector_type(8)));
 typedef int    v16i  __attribute__((ext_vector_type(16)));
 typedef int    v32i  __attribute__((ext_vector_type(32)));
 typedef short  v2s   __attribute__((ext_vector_type(2)));
@@ -429,6 +430,34 @@ v16f test_mfma_f32_32x32x16_f16(v8h a, v8h b, v16f c)
 // CHECK-GFX950: tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x16.bf16(<8 x bfloat> %a, <8 x bfloat> %b, <16 x float> %c, i32 1, i32 2, i32 3)
 v16f test_mfma_f32_32x32x16_bf16(v8bf16 a, v8bf16 b, v16f c) {
   return __builtin_amdgcn_mfma_f32_32x32x16_bf16(a, b, c, 1, 2, 3);
+}
+
+// CHECK-GFX950-LABEL: @test_mfma_scale_f32_16x16x128_f8f6f4
+// CHECK-GFX950: [[EXTRACT_A:%.+]] = shufflevector <8 x i32> %a, <8 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
+// CHECK-GFX950: call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v6i32.v8i32(<6 x i32> [[EXTRACT_A]], <8 x i32> %b, <4 x float> %c, i32 3, i32 1, i32 2, i32 %scale_a, i32 3, i32 %scale_b)
+void test_mfma_scale_f32_16x16x128_f8f6f4(global v4f* out, v8i a, v8i b, v4f c, int scale_a, int scale_b)
+{
+  *out = __builtin_amdgcn_mfma_scale_f32_16x16x128_f8f6f4(a, b, c, 3, 1, 2, scale_a, 3, scale_b);
+}
+
+// CHECK-GFX950-LABEL: @test_mfma_scale_f32_32x32x64_f8f6f4
+// CHECK-GFX950: [[EXTRACT_A:%.+]] = shufflevector <8 x i32> %a, <8 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
+// CHECK-GFX950: call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v6i32.v8i32(<6 x i32> [[EXTRACT_A]], <8 x i32> %b, <16 x float> %c, i32 3, i32 1, i32 2, i32 %scale_a, i32 3, i32 %scale_b)
+void test_mfma_scale_f32_32x32x64_f8f6f4(global v16f* out, v8i a, v8i b, v16f c, int scale_a, int scale_b)
+{
+  *out = __builtin_amdgcn_mfma_scale_f32_32x32x64_f8f6f4(a, b, c, 3, 1, 2, scale_a, 3, scale_b);
+}
+
+// CHECK-GFX950-LABEL: @test_mfma_i32_16x16x64_i8(
+// CHECK-GFX950: tail call <4 x i32> @llvm.amdgcn.mfma.i32.16x16x64.i8(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, i32 1, i32 2, i32 3)
+v4i test_mfma_i32_16x16x64_i8(v4i a, v4i b, v4i c) {
+  return __builtin_amdgcn_mfma_i32_16x16x64_i8(a, b, c, 1, 2, 3);
+}
+
+// CHECK-GFX950-LABEL: @test_mfma_i32_32x32x32_i8(
+// CHECK-GFX950: tail call <16 x i32> @llvm.amdgcn.mfma.i32.32x32x32.i8(<4 x i32> %a, <4 x i32> %b, <16 x i32> %c, i32 1, i32 2, i32 3)
+v16i test_mfma_i32_32x32x32_i8(v4i a, v4i b, v16i c) {
+  return __builtin_amdgcn_mfma_i32_32x32x32_i8(a, b, c, 1, 2, 3);
 }
 
 #endif
