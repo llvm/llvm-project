@@ -444,6 +444,7 @@ TARGET_BUILTIN(__builtin_amdgcn_mfma_f32_32x32x16_bf16, "V16fV8yV8yV16fIiIiIi", 
 TARGET_BUILTIN(__builtin_amdgcn_mfma_i32_16x16x64_i8, "V4iV4iV4iV4iIiIiIi", "nc", "gfx950-insts")
 TARGET_BUILTIN(__builtin_amdgcn_mfma_i32_32x32x32_i8, "V16iV4iV4iV16iIiIiIi", "nc", "gfx950-insts")
 
+TARGET_BUILTIN(__builtin_amdgcn_smfmac_f32_16x16x64_f16, "V4fV8hV16hV4fiIiIi", "nc", "gfx950-insts")
 //===----------------------------------------------------------------------===//
 // GFX12+ only builtins.
 //===----------------------------------------------------------------------===//
