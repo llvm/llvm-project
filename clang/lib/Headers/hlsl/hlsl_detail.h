@@ -48,12 +48,32 @@ length_impl(T X) {
 }
 
 template <typename T, int N>
-enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
+constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
 length_vec_impl(vector<T, N> X) {
+#if (__has_builtin(__builtin_spirv_length))
+  return __builtin_spirv_length(X);
+#else
   vector<T, N> XSquared = X * X;
   T XSquaredSum = XSquared[0];
   [unroll] for (int i = 1; i < N; ++i) XSquaredSum += XSquared[i];
   return __builtin_elementwise_sqrt(XSquaredSum);
+#endif
+}
+
+template <typename T>
+constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
+distance_impl(T X, T Y) {
+  return length_impl(X - Y);
+}
+
+template <typename T, int N>
+constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
+distance_vec_impl(vector<T, N> X, vector<T, N> Y) {
+#if (__has_builtin(__builtin_spirv_distance))
+  return __builtin_spirv_distance(X, Y);
+#else
+  return length_vec_impl(X - Y);
+#endif
 }
 
 } // namespace __detail
