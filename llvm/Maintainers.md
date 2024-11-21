@@ -418,17 +418,17 @@ Others only have a lead maintainer listed here.
 
 [Bolt maintainers](https://github.com/llvm/llvm-project/blob/main/bolt/CODE_OWNERS.TXT)
 
-[Clang maintainers](https://github.com/llvm/llvm-project/blob/main/clang/CodeOwners.rst)
+[Clang maintainers](https://github.com/llvm/llvm-project/blob/main/clang/Maintainers.rst)
 
 [Clang-tools-extra maintainers](https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/CODE_OWNERS.TXT)
 
 [Compiler-rt maintainers](https://github.com/llvm/llvm-project/blob/main/compiler-rt/CODE_OWNERS.TXT)
 
-[Flang maintainers](https://github.com/llvm/llvm-project/blob/main/flang/CODE_OWNERS.TXT)
+[Flang maintainers](https://github.com/llvm/llvm-project/blob/main/flang/Maintainers.txt)
 
 [LLD maintainers](https://github.com/llvm/llvm-project/blob/main/lld/CODE_OWNERS.TXT)
 
-[LLDB maintainers](https://github.com/llvm/llvm-project/blob/main/lldb/CodeOwners.rst)
+[LLDB maintainers](https://github.com/llvm/llvm-project/blob/main/lldb/Maintainers.rst)
 
 #### libc++
 
