@@ -331,12 +331,14 @@ struct TemplateParameterListBuilder {
   //
   // template<typename T>
   // concept is_typed_resource_element_compatible =
-  // __builtin_hlsl_typed_resource_element_compatible<T> &&
-  // !__builtin_hlsl_is_intangible<T> template<typename element_type> requires
+  // __builtin_hlsl_typed_resource_element_compatible<T>
+  //
+  // template<typename element_type> requires
   // is_typed_resource_element_compatible<element_type>
   // struct RWBuffer {
   //     element_type Val;
   // };
+  //
   // int fn() {
   //     RWBuffer<int> Buf;
   // }
@@ -587,25 +589,7 @@ Expr *constructTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
       Context, BoolTy, NameLoc, UTT_IsTypedResourceElementCompatible,
       {TTypeSourceInfo}, NameLoc, true);
 
-  TypeTraitExpr *IsIntangibleExpr =
-      TypeTraitExpr::Create(Context, BoolTy, NameLoc, UTT_IsIntangibleType,
-                            {TTypeSourceInfo}, NameLoc, true);
-
-  UnaryOperator *NotIntangibleExpr = UnaryOperator::Create(
-      Context, IsIntangibleExpr, UO_Not, BoolTy, VK_LValue, OK_Ordinary,
-      NameLoc, false, FPOptionsOverride());
-
-  BinaryOperator *TypedResourceConstraintExpr =
-      BinaryOperator::Create(Context, TypedResExpr, // Left-hand side expression
-                             NotIntangibleExpr, // Right-hand side expression
-                             BO_LAnd,           // Binary operator kind (&&)
-                             BoolTy,            // Result type (bool)
-                             VK_LValue,         // Value kind
-                             OK_Ordinary,       // Object kind
-                             NameLoc,           // Source location of operator
-                             FPOptionsOverride());
-
-  return TypedResourceConstraintExpr;
+  return TypedResExpr;
 }
 
 ConceptDecl *constructTypedBufferConceptDecl(Sema &S, NamespaceDecl *NSD) {
