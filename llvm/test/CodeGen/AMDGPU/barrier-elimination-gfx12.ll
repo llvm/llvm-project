@@ -1,26 +1,26 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 < %s -global-isel | FileCheck %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}signal_unknown_wgs:
 ; CHECK: s_barrier_signal
 define amdgpu_kernel void @signal_unknown_wgs() {
-  tail call void @llvm.amdgcn.s.barrier.signal(i32 -1) #0
+  tail call void @llvm.amdgcn.s.barrier.signal(i32 -1)
   ret void
 }
 
 ; CHECK-LABEL: {{^}}signal_flat_wgs_attr_32_128:
 ; CHECK: s_barrier_signal
 define amdgpu_kernel void @signal_flat_wgs_attr_32_128() #1 {
-  tail call void @llvm.amdgcn.s.barrier.signal(i32 -1) #0
+  tail call void @llvm.amdgcn.s.barrier.signal(i32 -1)
   ret void
 }
 
-; CHECK-LABEL: {{^}}signal_flat_wgs_attr_32_64:
+; CHECK-LABEL: {{^}}signal_flat_wgs_attr_16_32:
 ; CHECK: :
 ; CHECK-NEXT: ; wave barrier
 ; CHECK-NEXT: s_endpgm
-define amdgpu_kernel void @signal_flat_wgs_attr_32_64() #2 {
-  tail call void @llvm.amdgcn.s.barrier.signal(i32 -1) #0
+define amdgpu_kernel void @signal_flat_wgs_attr_16_32() #2 {
+  tail call void @llvm.amdgcn.s.barrier.signal(i32 -1)
   ret void
 }
 
@@ -28,23 +28,23 @@ define amdgpu_kernel void @signal_flat_wgs_attr_32_64() #2 {
 ; CHECK-LABEL: {{^}}wait_unknown_wgs:
 ; CHECK: s_barrier_wait
 define amdgpu_kernel void @wait_unknown_wgs() {
-  tail call void @llvm.amdgcn.s.barrier.wait(i16 -1) #0
+  tail call void @llvm.amdgcn.s.barrier.wait(i16 -1)
   ret void
 }
 
 ; CHECK-LABEL: {{^}}wait_flat_wgs_attr_32_128:
 ; CHECK: s_barrier_wait
 define amdgpu_kernel void @wait_flat_wgs_attr_32_128() #1 {
-  tail call void @llvm.amdgcn.s.barrier.wait(i16 -1) #0
+  tail call void @llvm.amdgcn.s.barrier.wait(i16 -1)
   ret void
 }
 
-; CHECK-LABEL: {{^}}wait_flat_wgs_attr_32_64:
+; CHECK-LABEL: {{^}}wait_flat_wgs_attr_16_32:
 ; CHECK: :
 ; CHECK-NEXT: ; wave barrier
 ; CHECK-NEXT: s_endpgm
-define amdgpu_kernel void @wait_flat_wgs_attr_32_64() #2 {
-  tail call void @llvm.amdgcn.s.barrier.wait(i16 -1) #0
+define amdgpu_kernel void @wait_flat_wgs_attr_16_32() #2 {
+  tail call void @llvm.amdgcn.s.barrier.wait(i16 -1)
   ret void
 }
 
