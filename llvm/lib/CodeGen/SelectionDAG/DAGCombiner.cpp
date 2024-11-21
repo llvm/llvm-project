@@ -22752,14 +22752,13 @@ static SDValue scalarizeExtractedBinOp(SDNode *ExtElt, SelectionDAG &DAG,
   SDValue Vec = ExtElt->getOperand(0);
   SDValue Index = ExtElt->getOperand(1);
   auto *IndexC = dyn_cast<ConstantSDNode>(Index);
-  if (!IndexC ||
-      (!TLI.isBinOp(Vec.getOpcode()) && Vec.getOpcode() != ISD::SETCC) ||
-      !Vec.hasOneUse() || Vec->getNumValues() != 1)
+  unsigned Opc = Vec.getOpcode();
+  if (!IndexC || (!TLI.isBinOp(Opc) && Opc != ISD::SETCC) || !Vec.hasOneUse() ||
+      Vec->getNumValues() != 1)
     return SDValue();
 
   EVT ResVT = ExtElt->getValueType(0);
-  if (Vec.getOpcode() == ISD::SETCC &&
-      ResVT != Vec.getValueType().getVectorElementType())
+  if (Opc == ISD::SETCC && ResVT != Vec.getValueType().getVectorElementType())
     return SDValue();
 
   // Targets may want to avoid this to prevent an expensive register transfer.
@@ -22784,11 +22783,11 @@ static SDValue scalarizeExtractedBinOp(SDNode *ExtElt, SelectionDAG &DAG,
   Op0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, OpVT, Op0, Index);
   Op1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, OpVT, Op1, Index);
 
-  if (Vec.getOpcode() == ISD::SETCC)
+  if (Opc == ISD::SETCC)
     return DAG.getSetCC(DL, ResVT, Op0, Op1,
                         cast<CondCodeSDNode>(Vec->getOperand(2))->get());
   else
-    return DAG.getNode(Vec.getOpcode(), DL, ResVT, Op0, Op1);
+    return DAG.getNode(Opc, DL, ResVT, Op0, Op1);
 }
 
 // Given a ISD::EXTRACT_VECTOR_ELT, which is a glorified bit sequence extract,
