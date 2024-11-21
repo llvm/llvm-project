@@ -2457,13 +2457,13 @@ multiclass avx512_scalar_fpclass<bits<8> opc, string OpcodeStr,
                                  X86FoldableSchedWrite sched, X86VectorVTInfo _,
                                  Predicate prd> {
   let Predicates = [prd], ExeDomain = _.ExeDomain, Uses = [MXCSR] in {
-      def rr : AVX512<opc, MRMSrcReg, (outs _.KRC:$dst),
+      def ri : AVX512<opc, MRMSrcReg, (outs _.KRC:$dst),
                       (ins _.RC:$src1, i32u8imm:$src2),
                       OpcodeStr#_.Suffix#"\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                       [(set _.KRC:$dst,(X86Vfpclasss (_.VT _.RC:$src1),
                               (i32 timm:$src2)))]>,
                       Sched<[sched]>;
-      def rrk : AVX512<opc, MRMSrcReg, (outs _.KRC:$dst),
+      def rik : AVX512<opc, MRMSrcReg, (outs _.KRC:$dst),
                       (ins _.KRCWM:$mask, _.RC:$src1, i32u8imm:$src2),
                       OpcodeStr#_.Suffix#
                       "\t{$src2, $src1, $dst {${mask}}|$dst {${mask}}, $src1, $src2}",
@@ -2471,7 +2471,7 @@ multiclass avx512_scalar_fpclass<bits<8> opc, string OpcodeStr,
                                       (X86Vfpclasss_su (_.VT _.RC:$src1),
                                       (i32 timm:$src2))))]>,
                       EVEX_K, Sched<[sched]>;
-    def rm : AVX512<opc, MRMSrcMem, (outs _.KRC:$dst),
+    def mi : AVX512<opc, MRMSrcMem, (outs _.KRC:$dst),
                     (ins _.IntScalarMemOp:$src1, i32u8imm:$src2),
                     OpcodeStr#_.Suffix#
                               "\t{$src2, $src1, $dst|$dst, $src1, $src2}",
@@ -2479,7 +2479,7 @@ multiclass avx512_scalar_fpclass<bits<8> opc, string OpcodeStr,
                           (X86Vfpclasss (_.ScalarIntMemFrags addr:$src1),
                                         (i32 timm:$src2)))]>,
                     Sched<[sched.Folded, sched.ReadAfterFold]>;
-    def rmk : AVX512<opc, MRMSrcMem, (outs _.KRC:$dst),
+    def mik : AVX512<opc, MRMSrcMem, (outs _.KRC:$dst),
                     (ins _.KRCWM:$mask, _.IntScalarMemOp:$src1, i32u8imm:$src2),
                     OpcodeStr#_.Suffix#
                     "\t{$src2, $src1, $dst {${mask}}|$dst {${mask}}, $src1, $src2}",
@@ -2497,13 +2497,13 @@ multiclass avx512_vector_fpclass<bits<8> opc, string OpcodeStr,
                                  X86FoldableSchedWrite sched, X86VectorVTInfo _,
                                  string mem, list<Register> _Uses = [MXCSR]>{
   let ExeDomain = _.ExeDomain, Uses = _Uses in {
-  def rr : AVX512<opc, MRMSrcReg, (outs _.KRC:$dst),
+  def ri : AVX512<opc, MRMSrcReg, (outs _.KRC:$dst),
                       (ins _.RC:$src1, i32u8imm:$src2),
                       OpcodeStr#_.Suffix#"\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                       [(set _.KRC:$dst,(X86Vfpclass (_.VT _.RC:$src1),
                                        (i32 timm:$src2)))]>,
                       Sched<[sched]>;
-  def rrk : AVX512<opc, MRMSrcReg, (outs _.KRC:$dst),
+  def rik : AVX512<opc, MRMSrcReg, (outs _.KRC:$dst),
                       (ins _.KRCWM:$mask, _.RC:$src1, i32u8imm:$src2),
                       OpcodeStr#_.Suffix#
                       "\t{$src2, $src1, $dst {${mask}}|$dst {${mask}}, $src1, $src2}",
@@ -2511,7 +2511,7 @@ multiclass avx512_vector_fpclass<bits<8> opc, string OpcodeStr,
                                        (X86Vfpclass_su (_.VT _.RC:$src1),
                                        (i32 timm:$src2))))]>,
                       EVEX_K, Sched<[sched]>;
-  def rm : AVX512<opc, MRMSrcMem, (outs _.KRC:$dst),
+  def mi : AVX512<opc, MRMSrcMem, (outs _.KRC:$dst),
                     (ins _.MemOp:$src1, i32u8imm:$src2),
                     OpcodeStr#_.Suffix#"{"#mem#"}"#
                     "\t{$src2, $src1, $dst|$dst, $src1, $src2}",
@@ -2519,7 +2519,7 @@ multiclass avx512_vector_fpclass<bits<8> opc, string OpcodeStr,
                                      (_.VT (_.LdFrag addr:$src1)),
                                      (i32 timm:$src2)))]>,
                     Sched<[sched.Folded, sched.ReadAfterFold]>;
-  def rmk : AVX512<opc, MRMSrcMem, (outs _.KRC:$dst),
+  def mik : AVX512<opc, MRMSrcMem, (outs _.KRC:$dst),
                     (ins _.KRCWM:$mask, _.MemOp:$src1, i32u8imm:$src2),
                     OpcodeStr#_.Suffix#"{"#mem#"}"#
                     "\t{$src2, $src1, $dst {${mask}}|$dst {${mask}}, $src1, $src2}",
@@ -2527,7 +2527,7 @@ multiclass avx512_vector_fpclass<bits<8> opc, string OpcodeStr,
                                   (_.VT (_.LdFrag addr:$src1)),
                                   (i32 timm:$src2))))]>,
                     EVEX_K, Sched<[sched.Folded, sched.ReadAfterFold]>;
-  def rmb : AVX512<opc, MRMSrcMem, (outs _.KRC:$dst),
+  def mbi : AVX512<opc, MRMSrcMem, (outs _.KRC:$dst),
                     (ins _.ScalarMemOp:$src1, i32u8imm:$src2),
                     OpcodeStr#_.Suffix#"\t{$src2, ${src1}"#
                                       _.BroadcastStr#", $dst|$dst, ${src1}"
@@ -2536,7 +2536,7 @@ multiclass avx512_vector_fpclass<bits<8> opc, string OpcodeStr,
                                      (_.VT (_.BroadcastLdFrag addr:$src1)),
                                      (i32 timm:$src2)))]>,
                     EVEX_B, Sched<[sched.Folded, sched.ReadAfterFold]>;
-  def rmbk : AVX512<opc, MRMSrcMem, (outs _.KRC:$dst),
+  def mbik : AVX512<opc, MRMSrcMem, (outs _.KRC:$dst),
                     (ins _.KRCWM:$mask, _.ScalarMemOp:$src1, i32u8imm:$src2),
                     OpcodeStr#_.Suffix#"\t{$src2, ${src1}"#
                           _.BroadcastStr#", $dst {${mask}}|$dst {${mask}}, ${src1}"#
@@ -2551,21 +2551,21 @@ multiclass avx512_vector_fpclass<bits<8> opc, string OpcodeStr,
   // the memory form.
   def : InstAlias<OpcodeStr#_.Suffix#mem#
                   "\t{$src2, $src1, $dst|$dst, $src1, $src2}",
-                  (!cast<Instruction>(NAME#"rr")
+                  (!cast<Instruction>(NAME#"ri")
                    _.KRC:$dst, _.RC:$src1, i32u8imm:$src2), 0, "att">;
   def : InstAlias<OpcodeStr#_.Suffix#mem#
                   "\t{$src2, $src1, $dst {${mask}}|$dst {${mask}}, $src1, $src2}",
-                  (!cast<Instruction>(NAME#"rrk")
+                  (!cast<Instruction>(NAME#"rik")
                    _.KRC:$dst, _.KRCWM:$mask, _.RC:$src1, i32u8imm:$src2), 0, "att">;
   def : InstAlias<OpcodeStr#_.Suffix#mem#
                   "\t{$src2, ${src1}"#_.BroadcastStr#", $dst|$dst, ${src1}"#
                   _.BroadcastStr#", $src2}",
-                  (!cast<Instruction>(NAME#"rmb")
+                  (!cast<Instruction>(NAME#"mbi")
                    _.KRC:$dst, _.ScalarMemOp:$src1, i32u8imm:$src2), 0, "att">;
   def : InstAlias<OpcodeStr#_.Suffix#mem#
                   "\t{$src2, ${src1}"#_.BroadcastStr#", $dst {${mask}}|"
                   "$dst {${mask}}, ${src1}"#_.BroadcastStr#", $src2}",
-                  (!cast<Instruction>(NAME#"rmbk")
+                  (!cast<Instruction>(NAME#"mbik")
                    _.KRC:$dst, _.KRCWM:$mask, _.ScalarMemOp:$src1, i32u8imm:$src2), 0, "att">;
 }
 
