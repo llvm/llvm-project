@@ -459,8 +459,6 @@ Attribute Changes in Clang
 - Clang now supports ``[[clang::lifetime_capture_by(X)]]``. Similar to lifetimebound, this can be
   used to specify when a reference to a function parameter is captured by another capturing entity ``X``.
 
-- The ``target_version`` attribute is now only supported for AArch64 and RISC-V architectures.
-
 Improvements to Clang's diagnostics
 -----------------------------------
 
