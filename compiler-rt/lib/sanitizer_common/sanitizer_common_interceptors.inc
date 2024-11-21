@@ -2389,6 +2389,24 @@ INTERCEPTOR(int, setitimer, int which, const void *new_value, void *old_value) {
 #define INIT_GETITIMER
 #endif
 
+#if SANITIZER_INTERCEPT_TIMESPEC_GET
+INTERCEPTOR(int, timespec_get, struct __sanitizer_timespec *ts, int base) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, timespec_get, ts, base);
+  // FIXME: under ASan the call below may write to freed memory and corrupt
+  // its metadata. See
+  // https://github.com/google/sanitizers/issues/321.
+  int res = REAL(timespec_get)(ts, base);
+  if (res) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ts, sizeof(struct __sanitizer_timespec));
+  }
+  return res;
+}
+#define INIT_TIMESPEC_GET COMMON_INTERCEPT_FUNCTION(timespec_get);
+#else
+#define INIT_TIMESPEC_GET
+#endif
+
 #if SANITIZER_INTERCEPT_GLOB
 static void unpoison_glob_t(void *ctx, __sanitizer_glob_t *pglob) {
   COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pglob, sizeof(*pglob));
@@ -10324,6 +10342,7 @@ static void InitializeCommonInterceptors() {
   INIT_TIMER_CREATE;
   INIT_GETITIMER;
   INIT_TIME;
+  INIT_TIMESPEC_GET;
   INIT_GLOB;
   INIT_GLOB64;
   INIT___B64_TO;
