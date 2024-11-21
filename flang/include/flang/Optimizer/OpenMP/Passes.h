@@ -25,6 +25,11 @@ namespace flangomp {
 #define GEN_PASS_REGISTRATION
 #include "flang/Optimizer/OpenMP/Passes.h.inc"
 
+/// Impelements the logic specified in the 2.8.3  workshare Construct section of
+/// the OpenMP standard which specifies what statements or constructs shall be
+/// divided into units of work.
+bool shouldUseWorkshareLowering(mlir::Operation *op);
+
 } // namespace flangomp
 
 #endif // FORTRAN_OPTIMIZER_OPENMP_PASSES_H
