@@ -8760,6 +8760,18 @@ Attribute used by `clspv`_ (OpenCL-C to Vulkan SPIR-V compiler) to identify func
 }];
 }
 
+def NoTrivialAutoVarInitDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``__declspec(no_init_all)`` attribute disables the automatic initialization that the
+`-ftrivial-auto-var-init`_ flag would have applied to locals in a marked function, or instances of
+a marked type. Note that this attribute has no effect for locals that are automatically initialized
+without the `-ftrivial-auto-var-init`_ flag.
+
+.. _`-ftrivial-auto-var-init`: ClangCommandLineReference.html#cmdoption-clang-ftrivial-auto-var-init
+}];
+}
+
 def DocCatNonBlockingNonAllocating : DocumentationCategory<"Performance Constraint Attributes"> {
   let Content = [{
 The ``nonblocking``, ``blocking``, ``nonallocating`` and ``allocating`` attributes can be attached
