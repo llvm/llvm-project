@@ -4907,8 +4907,10 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   ctx.in.iplt = std::make_unique<IpltSection>(ctx);
   add(*ctx.in.iplt);
 
-  if (ctx.arg.andFeatures || !ctx.aarch64PauthAbiCoreInfo.empty())
-    add(*make<GnuPropertySection>(ctx));
+  if (ctx.arg.andFeatures || !ctx.aarch64PauthAbiCoreInfo.empty()) {
+    ctx.in.gnuProperty = std::make_unique<GnuPropertySection>(ctx);
+    add(*ctx.in.gnuProperty);
+  }
 
   if (ctx.arg.debugNames) {
     ctx.in.debugNames = std::make_unique<DebugNamesSection<ELFT>>(ctx);
@@ -4925,8 +4927,10 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   // section to control the executable-ness of the stack area, but that
   // is irrelevant these days. Stack area should always be non-executable
   // by default. So we emit this section unconditionally.
-  if (ctx.arg.relocatable)
-    add(*make<GnuStackSection>(ctx));
+  if (ctx.arg.relocatable) {
+    ctx.in.gnuStack = std::make_unique<GnuStackSection>(ctx);
+    add(*ctx.in.gnuStack);
+  }
 
   if (ctx.in.symTab)
     add(*ctx.in.symTab);
