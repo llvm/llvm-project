@@ -224,7 +224,7 @@ Status ProcessElfCore::DoLoadCore() {
   ArchSpec core_arch(m_core_module_sp->GetArchitecture());
   target_arch.MergeFrom(core_arch);
   GetTarget().SetArchitecture(target_arch);
- 
+
   SetUnixSignals(UnixSignals::Create(GetArchitecture()));
 
   // Ensure we found at least one thread that was stopped on a signal.
@@ -276,8 +276,13 @@ Status ProcessElfCore::DoLoadCore() {
 }
 
 void ProcessElfCore::UpdateBuildIdForNTFileEntries() {
+  Log *log = GetLog(LLDBLog::Process);
   for (NT_FILE_Entry &entry : m_nt_file_entries) {
     entry.uuid = FindBuidIdInCoreMemory(entry.start);
+    if (log && entry.uuid.IsValid())
+      LLDB_LOGF(log, "%s found UUID @ %16.16" PRIx64 ": %s \"%s\"",
+                __FUNCTION__, entry.start, entry.uuid.GetAsString().c_str(),
+                entry.path.c_str());
   }
 }
 
@@ -875,7 +880,7 @@ llvm::Error ProcessElfCore::parseOpenBSDNotes(llvm::ArrayRef<CoreNote> notes) {
 /// - NT_SIGINFO - Information about the signal that terminated the process
 /// - NT_AUXV - Process auxiliary vector
 /// - NT_FILE - Files mapped into memory
-/// 
+///
 /// Additionally, for each thread in the process the core file will contain at
 /// least the NT_PRSTATUS note, containing the thread id and general purpose
 /// registers. It may include additional notes for other register sets (floating
@@ -1034,15 +1039,20 @@ UUID ProcessElfCore::FindBuidIdInCoreMemory(lldb::addr_t address) {
     std::vector<uint8_t> note_bytes;
     note_bytes.resize(program_header.p_memsz);
 
-    byte_read = ReadMemory(program_header.p_vaddr, note_bytes.data(),
-                           program_header.p_memsz, error);
+    // We need to slide the address of the p_vaddr as these values don't get
+    // relocated in memory.
+    const lldb::addr_t vaddr = program_header.p_vaddr + address;
+    byte_read =
+        ReadMemory(vaddr, note_bytes.data(), program_header.p_memsz, error);
     if (byte_read != program_header.p_memsz)
       continue;
     DataExtractor segment_data(note_bytes.data(), note_bytes.size(),
                                GetByteOrder(), addr_size);
     auto notes_or_error = parseSegment(segment_data);
-    if (!notes_or_error)
+    if (!notes_or_error) {
+      llvm::consumeError(notes_or_error.takeError());
       return invalid_uuid;
+    }
     for (const CoreNote &note : *notes_or_error) {
       if (note.info.n_namesz == 4 &&
           note.info.n_type == llvm::ELF::NT_GNU_BUILD_ID &&
