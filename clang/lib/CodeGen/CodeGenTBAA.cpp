@@ -225,7 +225,7 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
     do {
       PtrDepth++;
       Ty = Ty->getPointeeType()->getBaseElementTypeUnsafe();
-    } while (Ty->isPointerType() || Ty->isArrayType());
+    } while (Ty->isPointerType());
     assert(!isa<VariableArrayType>(Ty));
     // When the underlying type is a builtin type, we compute the pointee type
     // string recursively, which is implicitly more forgiving than the standards
@@ -243,7 +243,7 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
               ->getString();
       TyName = Name;
     } else {
-      // Be conservative if the type isn't a RecordType. We are  specifically
+      // Be conservative if the type isn't a RecordType. We are specifically
       // required to do this for member pointers until we implement the
       // similar-types rule.
       if (!Ty->isRecordType())
