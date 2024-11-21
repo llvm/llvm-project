@@ -559,6 +559,8 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses ``= delete("reason")`` extension warnings only in pedantic mode rather than on by default. (#GH109311).
 
+- Clang now diagnoses missing return value in functions containing ``if consteval`` (#GH116485).
+
 - Improved error recovery for function call arguments with trailing commas (#GH100921).
 
 Improvements to Clang's time-trace

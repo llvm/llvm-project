@@ -3326,7 +3326,8 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
         K->mergeDIAssignID(J);
         break;
       case LLVMContext::MD_tbaa:
-        K->setMetadata(Kind, MDNode::getMostGenericTBAA(JMD, KMD));
+        if (DoesKMove)
+          K->setMetadata(Kind, MDNode::getMostGenericTBAA(JMD, KMD));
         break;
       case LLVMContext::MD_alias_scope:
         K->setMetadata(Kind, MDNode::getMostGenericAliasScope(JMD, KMD));
