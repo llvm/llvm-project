@@ -2968,6 +2968,35 @@ class AMDGPUMfmaIntrinsic<LLVMType DestTy, LLVMType SrcABTy> :
             [IntrConvergent, IntrNoMem,
              ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]>;
 
+
+// srcA's format is determined by cbsz. srcB's format is determined by
+// blgp.
+//
+// These should be <8 x i32> for f8 formats, <6 x i32> for f6 formats,
+// and <4 x i32> for f4 formats. If the format control bits imply a
+// smaller type than used, the high elements will be truncated.
+//
+// If the format control bits imply a larger type than used, the high
+// elements are padded with undef.
+
+class AMDGPUMfmaScaleIntrinsic<LLVMType DestTy> :
+  DefaultAttrsIntrinsic<[DestTy],
+            [llvm_anyvector_ty, llvm_anyvector_ty, DestTy,
+             llvm_i32_ty, // cbsz
+             llvm_i32_ty, // blgp
+             // llvm_i1_ty, // TODO: neg_src2
+             // llvm_i1_ty, // TODO: abs_src2
+             // llvm_i1_ty, // TODO: clamp
+             llvm_i32_ty, // op_sel (A matrix scale, 2-bits) // TODO: Make i2?
+             llvm_i32_ty, // v_mfma_ld_scale_b32 src0 (A matrix scale)
+             llvm_i32_ty, // op_sel (B matrix scale, 2-bits) // TODO: Make i2?
+             llvm_i32_ty  // v_mfma_ld_scale_b32 src1 (B matrix scale)
+            ],
+            [IntrConvergent, IntrNoMem,
+             ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>,
+             ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<7>>
+             ]>;
+
 defset list<Intrinsic> AMDGPUMFMAIntrinsics908 = {
 def int_amdgcn_mfma_f32_32x32x1f32  : AMDGPUMfmaIntrinsic<llvm_v32f32_ty, llvm_float_ty>;
 def int_amdgcn_mfma_f32_16x16x1f32  : AMDGPUMfmaIntrinsic<llvm_v16f32_ty, llvm_float_ty>;
@@ -3119,6 +3148,8 @@ def int_amdgcn_mfma_f32_16x16x32_f16 : AMDGPUMfmaIntrinsic<llvm_v4f32_ty, llvm_v
 def int_amdgcn_mfma_f32_32x32x16_f16 : AMDGPUMfmaIntrinsic<llvm_v16f32_ty, llvm_v8f16_ty>;
 
 def int_amdgcn_mfma_f32_32x32x16_bf16 : AMDGPUMfmaIntrinsic<llvm_v16f32_ty, llvm_v8bf16_ty>;
+def int_amdgcn_mfma_scale_f32_16x16x128_f8f6f4 : AMDGPUMfmaScaleIntrinsic<llvm_v4f32_ty>;
+def int_amdgcn_mfma_scale_f32_32x32x64_f8f6f4 : AMDGPUMfmaScaleIntrinsic<llvm_v16f32_ty>;
 }
 
 //===----------------------------------------------------------------------===//
