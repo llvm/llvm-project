@@ -254,7 +254,7 @@ isl_size isl_local_space_var_offset(__isl_keep isl_local_space *ls,
 	isl_space *space;
 
 	space = isl_local_space_peek_space(ls);
-	if (space < 0)
+	if (space == NULL)
 		return isl_size_error;
 	switch (type) {
 	case isl_dim_param:
