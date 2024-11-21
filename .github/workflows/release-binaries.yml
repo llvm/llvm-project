@@ -526,7 +526,7 @@ jobs:
       - prepare
       - build-stage3-all
     if: >-
-      github.repository == 'llvm/llvm-project' &&
+      github.repository == 'llvm/llvm-project'
     runs-on: ${{ needs.prepare.outputs.runs-on }}
     steps:
     - name: Checkout Actions
