@@ -240,6 +240,9 @@ void UseStartsEndsWithCheck::check(const MatchFinder::MatchResult &Result) {
                                        ReplacementFunction->getName());
 
   // Replace arguments and everything after the function call.
+  if (FindExpr->getNumArgs() == 0) {
+    return;
+  }
   Diag << FixItHint::CreateReplacement(
       CharSourceRange::getTokenRange(FindExpr->getArg(0)->getBeginLoc(),
                                      ComparisonExpr->getEndLoc()),
@@ -248,7 +251,6 @@ void UseStartsEndsWithCheck::check(const MatchFinder::MatchResult &Result) {
   // Add negation if necessary.
   if (Neg)
     Diag << FixItHint::CreateInsertion(FindExpr->getBeginLoc(), "!");
-
 }
 
 } // namespace clang::tidy::modernize

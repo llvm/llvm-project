@@ -298,6 +298,10 @@ void test_substr() {
     // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of substr() == [modernize-use-starts-ends-with]
     // CHECK-FIXES: str.starts_with(prefix);
 
+    str.substr(0, prefix.length()) == prefix;
+    // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of substr() == [modernize-use-starts-ends-with]
+    // CHECK-FIXES: str.starts_with(prefix);
+
     // Tests to verify macro behavior
     #define STARTS_WITH(X, Y) (X).substr(0, (Y).size()) == (Y)
     STARTS_WITH(str, prefix);
@@ -308,4 +312,6 @@ void test_substr() {
     #define STR() str
     SUBSTR(STR(), 0, 6) == "prefix";
     "prefix" == SUBSTR(STR(), 0, 6);
+
+    str.substr(0, strlen("hello123")) == "hello";
 }
