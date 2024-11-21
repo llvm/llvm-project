@@ -47,6 +47,7 @@ void test_invalid_call_2() {
   // CHECK-NEXT: `-IntegerLiteral {{.*}} 'int' 1
   some_func2(1,);
 
+  // FIXME: Handle invalid argument with recovery
   // CHECK-NOT: `-RecoveryExpr
   some_func2(,1);
 }
