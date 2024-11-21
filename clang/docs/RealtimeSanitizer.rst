@@ -203,6 +203,44 @@ Some issues with flags can be debugged using the ``verbosity=$NUM`` flag:
    misspelled_flag
    ...
 
+Additional customization
+------------------------
+
+In addition to ``__rtsan_default_options`` outlined above, you can provide definitions of other functions that affect how RTSan operates.
+
+To be notified on every error reported by RTsan, provide a definition of ``__sanitizer_report_error_summary``.
+
+.. code-block:: c
+
+   extern "C" void __sanitizer_report_error_summary(const char *error_summary) {
+      fprintf(stderr, "%s %s\n", "In custom handler! ", error_summary);
+      /* do other custom things */
+   }
+
+The error summary will be of the form: 
+
+.. code-block:: console
+
+   SUMMARY: RealtimeSanitizer: unsafe-library-call main.cpp:8 in process(std::__1::vector<int, std::__1::allocator<int>>&)
+
+To register a callback which will be invoked before a RTSan kills the process:
+
+.. code-block:: c
+
+  extern "C" void __sanitizer_set_death_callback(void (*callback)(void));
+
+  void custom_on_die_callback() {
+    fprintf(stderr, "In custom handler!")
+    /* do other custom things */
+  }
+
+  int main()
+  {
+    __sanitizer_set_death_callback(custom_on_die_callback);
+    ...
+  }
+
+
 Disabling and suppressing
 -------------------------
 

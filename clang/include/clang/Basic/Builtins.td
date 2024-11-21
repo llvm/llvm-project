@@ -1486,13 +1486,13 @@ def ReduceMinimum : Builtin {
 
 def ReduceXor : Builtin {
   let Spellings = ["__builtin_reduce_xor"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ReduceOr : Builtin {
   let Spellings = ["__builtin_reduce_or"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
@@ -4748,6 +4748,12 @@ def HLSLAny : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_any"];
   let Attributes = [NoThrow, Const];
   let Prototype = "bool(...)";
+}
+
+def HLSLWaveActiveAnyTrue : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_active_any_true"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "bool(bool)";
 }
 
 def HLSLWaveActiveCountBits : LangBuiltin<"HLSL_LANG"> {
