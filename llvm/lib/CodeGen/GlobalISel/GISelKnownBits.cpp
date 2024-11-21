@@ -537,7 +537,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     computeKnownBitsImpl(SrcReg, SrcOpKnown, SubDemandedElts, Depth + 1);
 
     if (SrcTy.isVector())
-      Known = SrcOpKnown;
+      Known = std::move(SrcOpKnown);
     else
       Known = SrcOpKnown.extractBits(BitWidth, BitWidth * DstIdx);
     break;

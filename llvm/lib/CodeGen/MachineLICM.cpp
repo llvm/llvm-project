@@ -151,7 +151,7 @@ namespace {
       if (Inserted) {
         SmallVector<MachineBasicBlock *, 8> ExitBlocks;
         CurLoop->getExitBlocks(ExitBlocks);
-        It->second = ExitBlocks;
+        It->second = std::move(ExitBlocks);
       }
       return is_contained(It->second, MBB);
     }
