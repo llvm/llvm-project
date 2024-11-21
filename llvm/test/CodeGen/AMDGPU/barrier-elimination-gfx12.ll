@@ -17,7 +17,6 @@ define amdgpu_kernel void @signal_flat_wgs_attr_32_128() #1 {
 
 ; CHECK-LABEL: {{^}}signal_flat_wgs_attr_16_32:
 ; CHECK: :
-; CHECK-NEXT: ; wave barrier
 ; CHECK-NEXT: s_endpgm
 define amdgpu_kernel void @signal_flat_wgs_attr_16_32() #2 {
   tail call void @llvm.amdgcn.s.barrier.signal(i32 -1)

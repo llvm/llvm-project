@@ -1832,18 +1832,23 @@ bool AMDGPUInstructionSelector::selectInitWholeWave(MachineInstr &MI) const {
 }
 
 bool AMDGPUInstructionSelector::selectSBarrier(MachineInstr &MI) const {
+  Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     unsigned WGSize = STI.getFlatWorkGroupSizes(MF->getFunction()).second;
     if (WGSize <= STI.getWavefrontSize()) {
-      MachineBasicBlock *MBB = MI.getParent();
-      const DebugLoc &DL = MI.getDebugLoc();
-      BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::WAVE_BARRIER));
+      // If the workgroup fits in a wave, remove s_barrier_signal and lower
+      // s_barrier/s_barrier_wait to wave_barrier.
+      if (IntrinsicID == Intrinsic::amdgcn_s_barrier ||
+          IntrinsicID == Intrinsic::amdgcn_s_barrier_wait) {
+        MachineBasicBlock *MBB = MI.getParent();
+        const DebugLoc &DL = MI.getDebugLoc();
+        BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::WAVE_BARRIER));
+      }
       MI.eraseFromParent();
       return true;
     }
   }
 
-  Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
   if (STI.hasSplitBarriers() && IntrinsicID == Intrinsic::amdgcn_s_barrier) {
     // On GFX12 lower s_barrier into s_barrier_signal_imm and s_barrier_wait
     MachineBasicBlock *MBB = MI.getParent();
