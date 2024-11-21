@@ -794,7 +794,9 @@ defm : DemangledGroupBuiltinWrapper<"__spirv_GroupAny", 2, 2, OpGroupAny>;
 defm : DemangledGroupBuiltin<"group_broadcast", WorkOrSub, OpGroupBroadcast>;
 defm : DemangledGroupBuiltinWrapper<"__spirv_GroupBroadcast", 3, 3, OpGroupBroadcast>;
 defm : DemangledGroupBuiltin<"group_non_uniform_broadcast", OnlySub, OpGroupNonUniformBroadcast>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBroadcast", 3, 3, OpGroupNonUniformBroadcast>;
 defm : DemangledGroupBuiltin<"group_broadcast_first", OnlySub, OpGroupNonUniformBroadcastFirst>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBroadcastFirst", 2, 2, OpGroupNonUniformBroadcastFirst>;
 
 // cl_khr_subgroup_non_uniform_vote
 defm : DemangledGroupBuiltin<"group_elect", OnlySub, OpGroupNonUniformElect>;

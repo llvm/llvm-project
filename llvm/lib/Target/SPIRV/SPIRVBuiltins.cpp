@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include <regex>
 #include <string>
 #include <tuple>
 
@@ -201,13 +202,34 @@ std::string lookupBuiltinNameHelper(StringRef DemangledCall) {
     BuiltinName = BuiltinName.substr(BuiltinName.find_last_of(' ') + 1);
   }
 
-  // Check if the extracted name begins with "__spirv_ImageSampleExplicitLod"
-  // contains return type information at the end "_R<type>", if so extract the
-  // plain builtin name without the type information.
-  if (StringRef(BuiltinName).contains("__spirv_ImageSampleExplicitLod") &&
-      StringRef(BuiltinName).contains("_R")) {
-    BuiltinName = BuiltinName.substr(0, BuiltinName.find("_R"));
-  }
+  // Check if the extracted name begins with:
+  // - "__spirv_ImageSampleExplicitLod"
+  // - "__spirv_ImageRead"
+  // - "__spirv_ImageQuerySizeLod"
+  // - "__spirv_UDotKHR"
+  // - "__spirv_SDotKHR"
+  // - "__spirv_SUDotKHR"
+  // - "__spirv_SDotAccSatKHR"
+  // - "__spirv_UDotAccSatKHR"
+  // - "__spirv_SUDotAccSatKHR"
+  // - "__spirv_ReadClockKHR"
+  // - "__spirv_SubgroupBlockReadINTEL"
+  // - "__spirv_SubgroupImageBlockReadINTEL"
+  // - "__spirv_Convert"
+  // - "__spirv_UConvert"
+  // - "__spirv_SConvert"
+  // - "__spirv_FConvert"
+  // - "__spirv_SatConvert"
+  // and contains return type information at the end "_R<type>".
+  // If so, extract the plain builtin name without the type information.
+  static const std::regex SpvWithR(
+      "(__spirv_(ImageSampleExplicitLod|ImageRead|ImageQuerySizeLod|UDotKHR|"
+      "SDotKHR|SUDotKHR|SDotAccSatKHR|UDotAccSatKHR|SUDotAccSatKHR|"
+      "ReadClockKHR|SubgroupBlockReadINTEL|SubgroupImageBlockReadINTEL|Convert|"
+      "UConvert|SConvert|FConvert|SatConvert).*)_R.*");
+  std::smatch Match;
+  if (std::regex_match(BuiltinName, Match, SpvWithR) && Match.size() > 2)
+    BuiltinName = Match[1].str();
 
   return BuiltinName;
 }
