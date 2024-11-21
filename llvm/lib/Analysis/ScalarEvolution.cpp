@@ -6314,8 +6314,10 @@ APInt ScalarEvolution::getConstantMultipleImpl(const SCEV *S) {
     return getConstantMultiple(Z->getOperand()).zext(BitWidth);
   }
   case scSignExtend: {
+    // Only multiples that are a power of 2 will hold after sext.
     const SCEVSignExtendExpr *E = cast<SCEVSignExtendExpr>(S);
-    return getConstantMultiple(E->getOperand()).sext(BitWidth);
+    uint32_t TZ = getMinTrailingZeros(E->getOperand());
+    return GetShiftedByZeros(TZ);
   }
   case scMulExpr: {
     const SCEVMulExpr *M = cast<SCEVMulExpr>(S);
@@ -11874,7 +11876,7 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
                                    CmpInst::Predicate P2) {
     assert(P1 != P2 && "Handled earlier!");
     return CmpInst::isRelational(P2) &&
-           P1 == CmpInst::getFlippedSignednessPredicate(P2);
+           P1 == ICmpInst::getFlippedSignednessPredicate(P2);
   };
   if (IsSignFlippedPredicate(Pred, FoundPred)) {
     // Unsigned comparison is the same as signed comparison when both the
@@ -15274,17 +15276,17 @@ void ScalarEvolution::LoopGuards::collectFromPHI(
     if (Inserted)
       collectFromBlock(SE, G->second, Phi.getParent(), InBlock, VisitedBlocks,
                        Depth + 1);
-    auto S = G->second.RewriteMap.find(
-        SE.getSCEV(Phi.getIncomingValue(IncomingIdx)));
-    if (S == G->second.RewriteMap.end())
+    auto &RewriteMap = G->second.RewriteMap;
+    if (RewriteMap.empty())
+      return {nullptr, scCouldNotCompute};
+    auto S = RewriteMap.find(SE.getSCEV(Phi.getIncomingValue(IncomingIdx)));
+    if (S == RewriteMap.end())
       return {nullptr, scCouldNotCompute};
     auto *SM = dyn_cast_if_present<SCEVMinMaxExpr>(S->second);
     if (!SM)
       return {nullptr, scCouldNotCompute};
     if (const SCEVConstant *C0 = dyn_cast<SCEVConstant>(SM->getOperand(0)))
       return {C0, SM->getSCEVType()};
-    if (const SCEVConstant *C1 = dyn_cast<SCEVConstant>(SM->getOperand(1)))
-      return {C1, SM->getSCEVType()};
     return {nullptr, scCouldNotCompute};
   };
   auto MergeMinMaxConst = [](MinMaxPattern P1,

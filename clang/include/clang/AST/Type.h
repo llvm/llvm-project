@@ -31,7 +31,6 @@
 #include "clang/Basic/PointerAuthOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Visibility.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"

@@ -399,6 +399,13 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item
                                                                         IDs
 
+     ``gfx950``                  ``amdgcn``   dGPU  - sramecc         - Architected                   *TBA*
+                                                    - tgsplit           flat
+                                                    - xnack             scratch                       .. TODO::
+                                                    - kernarg preload - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+
      **GCN GFX10.1 (RDNA 1)** [AMD-GCN-GFX10-RDNA1]_
      -----------------------------------------------------------------------------------------------------------------------
      ``gfx1010``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 5700
@@ -1390,6 +1397,16 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    used by hardware to control active lanes when used in EXEC register.
                                                    For example, ballot(i1 true) return EXEC mask.
 
+  llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4      Emit `v_mfma_scale_f32_16x16x128_f8f6f4` to set the scale factor. The
+                                                   last 4 operands correspond to the scale inputs.
+
+                                                   - 2-bit byte index to use for each lane for matrix A
+                                                   - Matrix A scale values
+                                                   - 2-bit byte index to use for each lane for matrix B
+                                                   - Matrix B scale values
+
+  llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4       Emit `v_mfma_scale_f32_32x32x64_f8f6f4`
+
   ==============================================   ==========================================================
 
 .. TODO::
@@ -2178,7 +2195,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX942``           0x04c      ``gfx942``
      *reserved*                                 0x04d      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1201``          0x04e      ``gfx1201``
-     *reserved*                                 0x04f      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX950``           0x04f      ``gfx950``
      *reserved*                                 0x050      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC``     0x051      ``gfx9-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC``  0x052      ``gfx10-1-generic``
@@ -5468,6 +5485,8 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        roundup(lds-size / (64 * 4))
                                                      GFX7-GFX11
                                                        roundup(lds-size / (128 * 4))
+                                                     GFX950
+                                                       roundup(lds-size / (320 * 4))
 
      24      1 bit   ENABLE_EXCEPTION_IEEE_754_FP    Wavefront starts execution
                      _INVALID_OPERATION              with specified exceptions

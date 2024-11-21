@@ -38,13 +38,10 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
-#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/BackendUtil.h"
@@ -55,7 +52,6 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
@@ -737,7 +733,7 @@ void CodeGenModule::checkAliases() {
   for (const GlobalDecl &GD : Aliases) {
     StringRef MangledName = getMangledName(GD);
     llvm::GlobalValue *Alias = GetGlobalValue(MangledName);
-    Alias->replaceAllUsesWith(llvm::UndefValue::get(Alias->getType()));
+    Alias->replaceAllUsesWith(llvm::PoisonValue::get(Alias->getType()));
     Alias->eraseFromParent();
   }
 }
@@ -1216,6 +1212,9 @@ void CodeGenModule::Release() {
     if (!LangOpts.isSignReturnAddressWithAKey())
       getModule().addModuleFlag(llvm::Module::Min,
                                 "sign-return-address-with-bkey", 1);
+
+    if (LangOpts.PointerAuthELFGOT)
+      getModule().addModuleFlag(llvm::Module::Min, "ptrauth-elf-got", 1);
 
     if (getTriple().isOSLinux()) {
       assert(getTriple().isOSBinFormatELF());
@@ -5573,7 +5572,7 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
         }
       } else {
         ErrorUnsupported(D, "static initializer");
-        Init = llvm::UndefValue::get(getTypes().ConvertType(T));
+        Init = llvm::PoisonValue::get(getTypes().ConvertType(T));
       }
     } else {
       Init = Initializer;

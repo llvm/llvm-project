@@ -750,6 +750,9 @@ vmovddup          (%rax), %ymm19 {k1}
 vmovddup          %ymm16, %ymm19 {z}{k1}
 vmovddup          (%rax), %ymm19 {z}{k1}
 
+{evex} vmovntdqa  (%rax), %xmm0
+{evex} vmovntdqa  (%rax), %ymm0
+
 vmovshdup         %xmm16, %xmm19
 vmovshdup         (%rax), %xmm19
 vmovshdup         %xmm16, %xmm19 {k1}
@@ -2397,6 +2400,8 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  2      9     0.33    *                   vmovddup	(%rax), %ymm19 {%k1}
 # CHECK-NEXT:  1      1     1.00                        vmovddup	%ymm16, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      9     0.33    *                   vmovddup	(%rax), %ymm19 {%k1} {z}
+# CHECK-NEXT:  1      7     0.33    *                   {evex}	vmovntdqa	(%rax), %xmm0
+# CHECK-NEXT:  1      8     0.33    *                   {evex}	vmovntdqa	(%rax), %ymm0
 # CHECK-NEXT:  1      1     0.50                        vmovshdup	%xmm16, %xmm19
 # CHECK-NEXT:  1      7     0.33    *                   vmovshdup	(%rax), %xmm19
 # CHECK-NEXT:  1      1     0.50                        vmovshdup	%xmm16, %xmm19 {%k1}
@@ -3269,7 +3274,7 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 404.53 412.53 328.33 328.33 46.00  797.53 3.20   46.00  46.00  46.00  3.20   328.33  -
+# CHECK-NEXT: 404.53 412.53 329.00 329.00 46.00  797.53 3.20   46.00  46.00  46.00  3.20   329.00  -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
@@ -3941,6 +3946,8 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT: 0.33   0.33   0.33   0.33    -     0.33    -      -      -      -      -     0.33    -     vmovddup	(%rax), %ymm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmovddup	%ymm16, %ymm19 {%k1} {z}
 # CHECK-NEXT: 0.33   0.33   0.33   0.33    -     0.33    -      -      -      -      -     0.33    -     vmovddup	(%rax), %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     {evex}	vmovntdqa	(%rax), %xmm0
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     {evex}	vmovntdqa	(%rax), %ymm0
 # CHECK-NEXT:  -     0.50    -      -      -     0.50    -      -      -      -      -      -      -     vmovshdup	%xmm16, %xmm19
 # CHECK-NEXT:  -      -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vmovshdup	(%rax), %xmm19
 # CHECK-NEXT:  -     0.50    -      -      -     0.50    -      -      -      -      -      -      -     vmovshdup	%xmm16, %xmm19 {%k1}

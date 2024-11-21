@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -154,9 +155,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(0, sXLen, sXLen);
 
   getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
+      .legalFor({{sXLen, s16}})
+      .legalFor(ST.is64Bit(), {{s64, s32}})
       .legalIf(all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
                    typeIsLegalIntOrFPVec(1, IntOrFPVecTys, ST)))
-      .legalFor(ST.is64Bit(), {{sXLen, s32}})
       .customIf(typeIsLegalBoolVec(1, BoolVecTys, ST))
       .maxScalar(0, sXLen);
 
@@ -234,8 +236,18 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(0, sXLen, sXLen);
 
   // TODO: transform illegal vector types into legal vector type
+  getActionDefinitionsBuilder(G_FREEZE)
+      .legalFor({s16, s32, p0})
+      .legalFor(ST.is64Bit(), {s64})
+      .legalIf(typeIsLegalBoolVec(0, BoolVecTys, ST))
+      .legalIf(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST))
+      .widenScalarToNextPow2(0)
+      .clampScalar(0, s16, sXLen);
+
+  // TODO: transform illegal vector types into legal vector type
+  // TODO: Merge with G_FREEZE?
   getActionDefinitionsBuilder(
-      {G_IMPLICIT_DEF, G_CONSTANT_FOLD_BARRIER, G_FREEZE})
+      {G_IMPLICIT_DEF, G_CONSTANT_FOLD_BARRIER})
       .legalFor({s32, sXLen, p0})
       .legalIf(typeIsLegalBoolVec(0, BoolVecTys, ST))
       .legalIf(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST))
@@ -271,12 +283,16 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   };
 
   LoadActions.legalForTypesWithMemDesc(
-      {{s32, p0, s8, getScalarMemAlign(8)},
+      {{s16, p0, s8, getScalarMemAlign(8)},
+       {s32, p0, s8, getScalarMemAlign(8)},
+       {s16, p0, s16, getScalarMemAlign(16)},
        {s32, p0, s16, getScalarMemAlign(16)},
        {s32, p0, s32, getScalarMemAlign(32)},
        {p0, p0, sXLen, getScalarMemAlign(XLen)}});
   StoreActions.legalForTypesWithMemDesc(
-      {{s32, p0, s8, getScalarMemAlign(8)},
+      {{s16, p0, s8, getScalarMemAlign(8)},
+       {s32, p0, s8, getScalarMemAlign(8)},
+       {s16, p0, s16, getScalarMemAlign(16)},
        {s32, p0, s16, getScalarMemAlign(16)},
        {s32, p0, s32, getScalarMemAlign(32)},
        {p0, p0, sXLen, getScalarMemAlign(XLen)}});
@@ -370,10 +386,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   LoadActions.widenScalarToNextPow2(0, /* MinSize = */ 8)
       .lowerIfMemSizeNotByteSizePow2()
-      .clampScalar(0, s32, sXLen)
+      .clampScalar(0, s16, sXLen)
       .lower();
   StoreActions
-      .clampScalar(0, s32, sXLen)
+      .clampScalar(0, s16, sXLen)
       .lowerIfMemSizeNotByteSizePow2()
       .lower();
 
@@ -391,7 +407,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder(G_BRCOND).legalFor({sXLen}).minScalar(0, sXLen);
 
-  getActionDefinitionsBuilder(G_BRJT).legalFor({{p0, sXLen}});
+  getActionDefinitionsBuilder(G_BRJT).customFor({{p0, sXLen}});
 
   getActionDefinitionsBuilder(G_BRINDIRECT).legalFor({p0});
 
@@ -668,6 +684,61 @@ bool RISCVLegalizerInfo::legalizeVAStart(MachineInstr &MI,
   assert(MI.hasOneMemOperand());
   MIRBuilder.buildStore(FINAddr, MI.getOperand(0).getReg(),
                         *MI.memoperands()[0]);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool RISCVLegalizerInfo::legalizeBRJT(MachineInstr &MI,
+                                      MachineIRBuilder &MIRBuilder) const {
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  auto &MF = *MI.getParent()->getParent();
+  const MachineJumpTableInfo *MJTI = MF.getJumpTableInfo();
+  unsigned EntrySize = MJTI->getEntrySize(MF.getDataLayout());
+
+  Register PtrReg = MI.getOperand(0).getReg();
+  LLT PtrTy = MRI.getType(PtrReg);
+  Register IndexReg = MI.getOperand(2).getReg();
+  LLT IndexTy = MRI.getType(IndexReg);
+
+  if (!isPowerOf2_32(EntrySize))
+    return false;
+
+  auto ShiftAmt = MIRBuilder.buildConstant(IndexTy, Log2_32(EntrySize));
+  IndexReg = MIRBuilder.buildShl(IndexTy, IndexReg, ShiftAmt).getReg(0);
+
+  auto Addr = MIRBuilder.buildPtrAdd(PtrTy, PtrReg, IndexReg);
+
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      MachinePointerInfo::getJumpTable(MF), MachineMemOperand::MOLoad,
+      EntrySize, Align(MJTI->getEntryAlignment(MF.getDataLayout())));
+
+  Register TargetReg;
+  switch (MJTI->getEntryKind()) {
+  default:
+    return false;
+  case MachineJumpTableInfo::EK_LabelDifference32: {
+    // For PIC, the sequence is:
+    // BRIND(load(Jumptable + index) + RelocBase)
+    // RelocBase can be JumpTable, GOT or some sort of global base.
+    unsigned LoadOpc =
+        STI.is64Bit() ? TargetOpcode::G_SEXTLOAD : TargetOpcode::G_LOAD;
+    auto Load = MIRBuilder.buildLoadInstr(LoadOpc, IndexTy, Addr, *MMO);
+    TargetReg = MIRBuilder.buildPtrAdd(PtrTy, PtrReg, Load).getReg(0);
+    break;
+  }
+  case MachineJumpTableInfo::EK_Custom32: {
+    auto Load = MIRBuilder.buildLoadInstr(TargetOpcode::G_SEXTLOAD, IndexTy,
+                                          Addr, *MMO);
+    TargetReg = MIRBuilder.buildIntToPtr(PtrTy, Load).getReg(0);
+    break;
+  }
+  case MachineJumpTableInfo::EK_BlockAddress:
+    TargetReg = MIRBuilder.buildLoad(PtrTy, Addr, *MMO).getReg(0);
+    break;
+  }
+
+  MIRBuilder.buildBrIndirect(TargetReg);
+
   MI.eraseFromParent();
   return true;
 }
@@ -1298,6 +1369,8 @@ bool RISCVLegalizerInfo::legalizeCustom(
     MI.eraseFromParent();
     return true;
   }
+  case TargetOpcode::G_BRJT:
+    return legalizeBRJT(MI, MIRBuilder);
   case TargetOpcode::G_VASTART:
     return legalizeVAStart(MI, MIRBuilder);
   case TargetOpcode::G_VSCALE:

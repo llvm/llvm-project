@@ -188,14 +188,15 @@ void Prescanner::Statement() {
     }
     break;
   }
-  case LineClassification::Kind::Source:
+  case LineClassification::Kind::Source: {
     BeginStatementAndAdvance();
+    bool checkLabelField{false};
     if (inFixedForm_) {
       if (features_.IsEnabled(LanguageFeature::OldDebugLines) &&
           (*at_ == 'D' || *at_ == 'd')) {
         NextChar();
       }
-      LabelField(tokens);
+      checkLabelField = true;
     } else {
       if (skipLeadingAmpersand_) {
         skipLeadingAmpersand_ = false;
@@ -207,38 +208,42 @@ void Prescanner::Statement() {
       } else {
         SkipSpaces();
       }
-      // Check for a leading identifier that might be a keyword macro
-      // that will expand to anything indicating a non-source line, like
-      // a comment marker or directive sentinel.  If so, disable line
-      // continuation, so that NextToken() won't consume anything from
-      // following lines.
-      if (IsLegalIdentifierStart(*at_)) {
-        // TODO: Only bother with these cases when any keyword macro has
-        // been defined with replacement text that could begin a comment
-        // or directive sentinel.
-        const char *p{at_};
-        while (IsLegalInIdentifier(*++p)) {
-        }
-        CharBlock id{at_, static_cast<std::size_t>(p - at_)};
-        if (preprocessor_.IsNameDefined(id) &&
-            !preprocessor_.IsFunctionLikeDefinition(id)) {
-          TokenSequence toks;
-          toks.Put(id, GetProvenance(at_));
-          if (auto replaced{preprocessor_.MacroReplacement(toks, *this)}) {
-            auto newLineClass{ClassifyLine(*replaced, GetCurrentProvenance())};
-            if (newLineClass.kind ==
-                LineClassification::Kind::CompilerDirective) {
-              directiveSentinel_ = newLineClass.sentinel;
-              disableSourceContinuation_ = false;
-            } else {
-              disableSourceContinuation_ =
-                  newLineClass.kind != LineClassification::Kind::Source;
-            }
+    }
+    // Check for a leading identifier that might be a keyword macro
+    // that will expand to anything indicating a non-source line, like
+    // a comment marker or directive sentinel.  If so, disable line
+    // continuation, so that NextToken() won't consume anything from
+    // following lines.
+    if (IsLegalIdentifierStart(*at_)) {
+      // TODO: Only bother with these cases when any keyword macro has
+      // been defined with replacement text that could begin a comment
+      // or directive sentinel.
+      const char *p{at_};
+      while (IsLegalInIdentifier(*++p)) {
+      }
+      CharBlock id{at_, static_cast<std::size_t>(p - at_)};
+      if (preprocessor_.IsNameDefined(id) &&
+          !preprocessor_.IsFunctionLikeDefinition(id)) {
+        checkLabelField = false;
+        TokenSequence toks;
+        toks.Put(id, GetProvenance(at_));
+        if (auto replaced{preprocessor_.MacroReplacement(toks, *this)}) {
+          auto newLineClass{ClassifyLine(*replaced, GetCurrentProvenance())};
+          if (newLineClass.kind ==
+              LineClassification::Kind::CompilerDirective) {
+            directiveSentinel_ = newLineClass.sentinel;
+            disableSourceContinuation_ = false;
+          } else {
+            disableSourceContinuation_ =
+                newLineClass.kind != LineClassification::Kind::Source;
           }
         }
       }
     }
-    break;
+    if (checkLabelField) {
+      LabelField(tokens);
+    }
+  } break;
   }
 
   while (NextToken(tokens)) {
@@ -815,18 +820,33 @@ bool Prescanner::ExponentAndKind(TokenSequence &tokens) {
   if (ed != 'e' && ed != 'd') {
     return false;
   }
-  EmitCharAndAdvance(tokens, ed);
-  if (*at_ == '+' || *at_ == '-') {
-    EmitCharAndAdvance(tokens, *at_);
+  // Do some look-ahead to ensure that this 'e'/'d' is an exponent,
+  // not the start of an identifier that could be a macro.
+  const char *p{at_};
+  if (int n{IsSpace(++p)}) {
+    p += n;
   }
-  while (IsDecimalDigit(*at_)) {
-    EmitCharAndAdvance(tokens, *at_);
-  }
-  if (*at_ == '_') {
-    while (IsLegalInIdentifier(EmitCharAndAdvance(tokens, *at_))) {
+  if (*p == '+' || *p == '-') {
+    if (int n{IsSpace(++p)}) {
+      p += n;
     }
   }
-  return true;
+  if (IsDecimalDigit(*p)) { // it's an exponent
+    EmitCharAndAdvance(tokens, ed);
+    if (*at_ == '+' || *at_ == '-') {
+      EmitCharAndAdvance(tokens, *at_);
+    }
+    while (IsDecimalDigit(*at_)) {
+      EmitCharAndAdvance(tokens, *at_);
+    }
+    if (*at_ == '_') {
+      while (IsLegalInIdentifier(EmitCharAndAdvance(tokens, *at_))) {
+      }
+    }
+    return true;
+  } else {
+    return false;
+  }
 }
 
 void Prescanner::QuotedCharacterLiteral(

@@ -19,6 +19,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include <list>
@@ -461,6 +462,14 @@ public:
   }
 
   // 2.15.3 Data-Sharing Attribute Clauses
+  bool Pre(const parser::OmpClause::Inclusive &x) {
+    ResolveOmpObjectList(x.v, Symbol::Flag::OmpInclusiveScan);
+    return false;
+  }
+  bool Pre(const parser::OmpClause::Exclusive &x) {
+    ResolveOmpObjectList(x.v, Symbol::Flag::OmpExclusiveScan);
+    return false;
+  }
   void Post(const parser::OmpDefaultClause &);
   bool Pre(const parser::OmpClause::Shared &x) {
     ResolveOmpObjectList(x.v, Symbol::Flag::OmpShared);
@@ -510,8 +519,14 @@ public:
   }
 
   bool Pre(const parser::OmpClause::Reduction &x) {
-    const parser::OmpReductionOperator &opr{
-        std::get<parser::OmpReductionOperator>(x.v.t)};
+    const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
+    ResolveOmpObjectList(objList, Symbol::Flag::OmpReduction);
+
+    auto &modifiers{OmpGetModifiers(x.v)};
+    if (!modifiers) {
+      return false;
+    }
+
     auto createDummyProcSymbol = [&](const parser::Name *name) {
       // If name resolution failed, create a dummy symbol
       const auto namePair{
@@ -522,25 +537,36 @@ public:
       }
       name->symbol = &newSymbol;
     };
-    if (const auto *procD{parser::Unwrap<parser::ProcedureDesignator>(opr.u)}) {
-      if (const auto *name{parser::Unwrap<parser::Name>(procD->u)}) {
-        if (!name->symbol) {
-          if (!ResolveName(name)) {
-            createDummyProcSymbol(name);
+
+    for (auto &mod : *modifiers) {
+      if (!std::holds_alternative<parser::OmpReductionIdentifier>(mod.u)) {
+        continue;
+      }
+      auto &opr{std::get<parser::OmpReductionIdentifier>(mod.u)};
+      if (auto *procD{parser::Unwrap<parser::ProcedureDesignator>(opr.u)}) {
+        if (auto *name{parser::Unwrap<parser::Name>(procD->u)}) {
+          if (!name->symbol) {
+            if (!ResolveName(name)) {
+              createDummyProcSymbol(name);
+            }
           }
         }
-      }
-      if (const auto *procRef{
-              parser::Unwrap<parser::ProcComponentRef>(procD->u)}) {
-        if (!procRef->v.thing.component.symbol) {
-          if (!ResolveName(&procRef->v.thing.component)) {
-            createDummyProcSymbol(&procRef->v.thing.component);
+        if (auto *procRef{parser::Unwrap<parser::ProcComponentRef>(procD->u)}) {
+          if (!procRef->v.thing.component.symbol) {
+            if (!ResolveName(&procRef->v.thing.component)) {
+              createDummyProcSymbol(&procRef->v.thing.component);
+            }
           }
         }
       }
     }
-    const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
-    ResolveOmpObjectList(objList, Symbol::Flag::OmpReduction);
+    using ReductionModifier = parser::OmpReductionModifier;
+    if (auto *maybeModifier{
+            OmpGetUniqueModifier<ReductionModifier>(modifiers)}) {
+      if (maybeModifier->v == ReductionModifier::Value::Inscan) {
+        ResolveOmpObjectList(objList, Symbol::Flag::OmpInScanReduction);
+      }
+    }
     return false;
   }
 
@@ -695,8 +721,9 @@ private:
       Symbol::Flag::OmpUseDevicePtr, Symbol::Flag::OmpUseDeviceAddr,
       Symbol::Flag::OmpIsDevicePtr, Symbol::Flag::OmpHasDeviceAddr};
 
-  Symbol::Flags ompFlagsRequireMark{
-      Symbol::Flag::OmpThreadprivate, Symbol::Flag::OmpDeclareTarget};
+  Symbol::Flags ompFlagsRequireMark{Symbol::Flag::OmpThreadprivate,
+      Symbol::Flag::OmpDeclareTarget, Symbol::Flag::OmpExclusiveScan,
+      Symbol::Flag::OmpInclusiveScan, Symbol::Flag::OmpInScanReduction};
 
   Symbol::Flags dataCopyingAttributeFlags{
       Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpCopyPrivate};
@@ -1629,6 +1656,7 @@ bool OmpAttributeVisitor::Pre(
   switch (standaloneDir.v) {
   case llvm::omp::Directive::OMPD_barrier:
   case llvm::omp::Directive::OMPD_ordered:
+  case llvm::omp::Directive::OMPD_scan:
   case llvm::omp::Directive::OMPD_target_enter_data:
   case llvm::omp::Directive::OMPD_target_exit_data:
   case llvm::omp::Directive::OMPD_target_update:
@@ -2434,6 +2462,16 @@ void OmpAttributeVisitor::ResolveOmpObject(
                   if (ultimateSymbol.test(Symbol::Flag::InNamelist)) {
                     context_.Say(name->source,
                         "Variable '%s' in NAMELIST cannot be in a REDUCTION clause"_err_en_US,
+                        name->ToString());
+                  }
+                }
+                if (ompFlag == Symbol::Flag::OmpInclusiveScan ||
+                    ompFlag == Symbol::Flag::OmpExclusiveScan) {
+                  if (!symbol->test(Symbol::Flag::OmpInScanReduction)) {
+                    context_.Say(name->source,
+                        "List item %s must appear in REDUCTION clause "
+                        "with the INSCAN modifier of the parent "
+                        "directive"_err_en_US,
                         name->ToString());
                   }
                 }
