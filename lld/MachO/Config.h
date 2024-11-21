@@ -164,6 +164,7 @@ struct Configuration {
   llvm::StringRef finalOutput;
 
   llvm::StringRef installName;
+  llvm::StringRef clientName;
   llvm::StringRef mapFile;
   llvm::StringRef ltoObjPath;
   llvm::StringRef thinLTOJobs;

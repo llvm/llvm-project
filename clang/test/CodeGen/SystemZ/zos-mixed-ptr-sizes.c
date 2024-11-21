@@ -12,42 +12,42 @@ struct Foo {
 void use_foo(struct Foo *f);
 
 void ptr32_to_ptr(struct Foo *f, int * __ptr32 i) {
-  // X64-LABEL: define void @ptr32_to_ptr(ptr noundef %f, ptr addrspace(1) noundef %i)
+  // X64-LABEL: define void @ptr32_to_ptr(ptr noundef initializes((8, 16)) %f, ptr addrspace(1) noundef %i)
   // X64: %{{.+}} = addrspacecast ptr addrspace(1) %i to ptr
   f->p64= i;
   use_foo(f);
 }
 
 void ptr_to_ptr32(struct Foo *f, int *i) {
-  // X64-LABEL: define void @ptr_to_ptr32(ptr noundef %f, ptr noundef %i)
+  // X64-LABEL: define void @ptr_to_ptr32(ptr noundef initializes((0, 4)) %f, ptr noundef %i)
   // X64: %{{.+}} = addrspacecast ptr %i to ptr addrspace(1)
   f->p32 = i;
   use_foo(f);
 }
 
 void ptr32_to_ptr32(struct Foo *f, int * __ptr32 i) {
-  // X64-LABEL: define void @ptr32_to_ptr32(ptr noundef %f, ptr addrspace(1) noundef %i)
+  // X64-LABEL: define void @ptr32_to_ptr32(ptr noundef initializes((0, 4)) %f, ptr addrspace(1) noundef %i)
   // X64-NOT: addrspacecast
   f->p32 = i;
   use_foo(f);
 }
 
 void ptr_to_ptr32_explicit_cast(struct Foo *f, int *i) {
-  // X64-LABEL: define void @ptr_to_ptr32_explicit_cast(ptr noundef %f, ptr noundef %i)
+  // X64-LABEL: define void @ptr_to_ptr32_explicit_cast(ptr noundef initializes((0, 4)) %f, ptr noundef %i)
   // X64: %{{.+}} = addrspacecast ptr %i to ptr addrspace(1)
   f->p32 = (int * __ptr32)i;
   use_foo(f);
 }
 
 void test_indexing(struct Foo *f) {
-  // X64-LABEL: define void @test_indexing(ptr noundef %f)
+  // X64-LABEL: define void @test_indexing(ptr noundef initializes((16, 24)) %f)
   // X64: addrspacecast ptr addrspace(1) {{%[0-9]}} to ptr
   f->cp64 = ((char * __ptr32 *)1028)[1];
   use_foo(f);
 }
 
 void test_indexing_2(struct Foo *f) {
-  // X64-LABEL: define void @test_indexing_2(ptr noundef %f)
+  // X64-LABEL: define void @test_indexing_2(ptr noundef initializes((16, 24)) %f)
   // X64: getelementptr inbounds i8, ptr addrspace(1) {{%[0-9]}}, i32 16
   // X64: getelementptr inbounds i8, ptr {{%[0-9]}}, i64 24
   f->cp64 = ((char *** __ptr32 *)1028)[1][2][3];
@@ -108,7 +108,7 @@ int test_misc_4() {
 }
 
 void test_misc_5(struct Foo *f) {
-  // X64-LABEL: define void @test_misc_5(ptr noundef %f)
+  // X64-LABEL: define void @test_misc_5(ptr noundef initializes((16, 24)) %f)
   // X64: addrspacecast ptr addrspace(1) %0 to ptr
   f->cp64  = *(char* __ptr32 *)(PSA_PTR + PSAAOLD);
   use_foo(f);
