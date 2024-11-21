@@ -71,6 +71,10 @@ clementval@gmail.com (email), clementval (GitHub), clementval (Discourse)
 Razvan Lupusoru \
 razvan.lupusoru@gmail.com (email), razvanlupusoru (GitHub), razvan.lupusoru (Discourse)
 
+#### CUDA Fortran
+Valentin Clement \
+clementval@gmail.com (email), clementval (GitHub), clementval (Discourse)
+
 #### Debug
 Abid Qadeer \
 haqadeer@amd.com (email), abidh (GitHub), abidh (Discourse)
