@@ -1205,7 +1205,6 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
     // alignment padding.
     int ScalarLocalVarSize = MFI.getStackSize() -
                              RVFI->getCalleeSavedStackSize() -
-                             RVFI->getRVPushStackSize() -
                              RVFI->getVarArgsSaveSize() + RVFI->getRVVPadding();
     Offset += StackOffset::get(ScalarLocalVarSize, RVFI->getRVVStackSize());
   }
