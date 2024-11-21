@@ -4504,37 +4504,6 @@ void PartitionIndexSection::writeTo(uint8_t *buf) {
   }
 }
 
-void InStruct::reset() {
-  attributes.reset();
-  riscvAttributes.reset();
-  bss.reset();
-  bssRelRo.reset();
-  got.reset();
-  gotPlt.reset();
-  igotPlt.reset();
-  relroPadding.reset();
-  armCmseSGSection.reset();
-  ppc64LongBranchTarget.reset();
-  mipsAbiFlags.reset();
-  mipsGot.reset();
-  mipsOptions.reset();
-  mipsReginfo.reset();
-  mipsRldMap.reset();
-  partEnd.reset();
-  partIndex.reset();
-  plt.reset();
-  iplt.reset();
-  ppc32Got2.reset();
-  ibtPlt.reset();
-  relaPlt.reset();
-  debugNames.reset();
-  gdbIndex.reset();
-  shStrTab.reset();
-  strTab.reset();
-  symTab.reset();
-  symTabShndx.reset();
-}
-
 static bool needsInterpSection(Ctx &ctx) {
   return !ctx.arg.relocatable && !ctx.arg.shared &&
          !ctx.arg.dynamicLinker.empty() && ctx.script->needsInterpSection();
