@@ -2475,7 +2475,9 @@ def Vector_MaskOp : Vector_Op<"mask", [
     should not. The `vector.mask` operation returns the value produced by the
     masked execution of the nested operation, if any. The masked-off lanes in
     the result vector are taken from the corresponding lanes of the pass-thru
-    argument, if provided, or left unmodified, otherwise.
+    argument, if provided, or left unmodified, otherwise. At this point, 0-D
+    vectors are not supported by `vector.mask`. They may be supported in the
+    future.
 
     The `vector.mask` operation does not prescribe how a maskable operation
     should be masked or how a masked operation should be lowered. Masking
