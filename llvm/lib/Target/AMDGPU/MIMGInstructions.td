@@ -509,7 +509,9 @@ class VIMAGE_NoSampler_gfx12<mimgopc op, string opcode,
 class VIMAGE_NoSampler_gfx13<mimgopc op, string opcode,
                              RegisterClass DataRC, int num_addrs,
                              bit enableDisasm=0>
-  : VIMAGE_NoSampler<op.GFX13, opcode, DataRC, (ins RsrcReg256Op:$rsrc), num_addrs, GFX13Gen, MIMGEncGfx13, enableDisasm>;
+  : VIMAGE_NoSampler<op.GFX13, opcode, DataRC, (ins RsrcReg256Op:$rsrc), num_addrs, GFX13Gen, MIMGEncGfx13, enableDisasm> {
+  let Inst{9-8} = cpol{8-7};
+}
 
 class VSAMPLE_Sampler<int op, string opcode, RegisterClass DataRC, dag RsrcIns, dag SampIns,
                             int num_addrs, GFXGen gfxGen, MIMGEncoding enc, RegisterClass Addr3RC = VGPR_32,
@@ -535,7 +537,9 @@ class VSAMPLE_Sampler_gfx12<mimgopc op, string opcode, RegisterClass DataRC,
 class VSAMPLE_Sampler_gfx13<mimgopc op, string opcode, RegisterClass DataRC,
                             int num_addrs, RegisterClass Addr3RC = VGPR_32,
                             bit enableDisasm=0>
-  : VSAMPLE_Sampler<op.GFX13, opcode, DataRC, (ins RsrcReg256Op:$rsrc), (ins RsrcReg128Op:$samp), num_addrs, GFX13Gen, MIMGEncGfx13, Addr3RC, enableDisasm>;
+  : VSAMPLE_Sampler<op.GFX13, opcode, DataRC, (ins RsrcReg256Op:$rsrc), (ins RsrcReg128Op:$samp), num_addrs, GFX13Gen, MIMGEncGfx13, Addr3RC, enableDisasm> {
+  let Inst{9-8} = cpol{8-7};
+}
 
 class VSAMPLE_Sampler_nortn<int op, string opcode, dag RsrcIns, GFXGen gfxGen, MIMGEncoding enc,
                             int num_addrs, RegisterClass Addr3RC = VGPR_32,
@@ -831,7 +835,9 @@ class VIMAGE_Store_gfx12<mimgopc op, string opcode,
 class VIMAGE_Store_gfx13<mimgopc op, string opcode,
                          RegisterClass DataRC, int num_addrs,
                          bit enableDisasm=0>
-  : VIMAGE_Store<op.GFX13, opcode, DataRC, (ins RsrcReg256Op:$rsrc), num_addrs, GFX13Gen, MIMGEncGfx13, enableDisasm>;
+  : VIMAGE_Store<op.GFX13, opcode, DataRC, (ins RsrcReg256Op:$rsrc), num_addrs, GFX13Gen, MIMGEncGfx13, enableDisasm> {
+  let Inst{9-8} = cpol{8-7};
+}
 
 multiclass MIMG_Store_Addr_Helper <mimgopc op, string asm,
                                   RegisterClass data_rc,
@@ -1068,7 +1074,9 @@ class VIMAGE_Atomic_gfx12<mimgopc op, string opcode,
 class VIMAGE_Atomic_gfx13<mimgopc op, string opcode,
                           RegisterClass DataRC, int num_addrs,
                           bit enableDisasm=0>
-  : VIMAGE_Atomic<op.GFX13, opcode, DataRC, (ins RsrcReg256Op:$rsrc), num_addrs, GFX13Gen, MIMGEncGfx13, enableDisasm>;
+  : VIMAGE_Atomic<op.GFX13, opcode, DataRC, (ins RsrcReg256Op:$rsrc), num_addrs, GFX13Gen, MIMGEncGfx13, enableDisasm> {
+  let Inst{9-8} = cpol{8-7};
+}
 
 
 class AMDGPUMnemonicAliasMIMG<string asm, string alias, Predicate Pred>

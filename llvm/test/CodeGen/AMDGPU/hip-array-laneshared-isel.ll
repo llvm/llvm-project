@@ -35,7 +35,7 @@ for.body:                                         ; preds = %for.cond
   %rem = srem i32 %3, 10
   %idxprom1 = sext i32 %rem to i64
   %arrayidx2 = getelementptr inbounds [10 x float], ptr addrspace(5) %array.ascast, i64 0, i64 %idxprom1
-; CHECK: SCRATCH_STORE_DWORD_SVS killed [[INLS]], killed {{%[0-9]+}}, %stack.0.array.ascast, 0, 2048, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.arrayidx2, addrspace 5)
+; CHECK: SCRATCH_STORE_DWORD_SVS killed [[INLS]], killed {{%[0-9]+}}, %stack.0.array.ascast, 0, 512, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.arrayidx2, addrspace 5)
   store float %2, ptr addrspace(5) %arrayidx2, align 4
   br label %for.inc
 
@@ -59,7 +59,7 @@ for.body6:                                        ; preds = %for.cond4
   %rem7 = srem i32 %6, 10
   %idxprom8 = sext i32 %rem7 to i64
   %arrayidx9 = getelementptr inbounds [10 x float], ptr addrspace(5) %array.ascast, i64 0, i64 %idxprom8
-; CHECK: [[TOLS:%[0-9]+]]:vgpr_32 = SCRATCH_LOAD_DWORD_SVS killed {{%[0-9]+}}, %stack.0.array.ascast, 0, 2048, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.arrayidx9, addrspace 5)
+; CHECK: [[TOLS:%[0-9]+]]:vgpr_32 = SCRATCH_LOAD_DWORD_SVS killed {{%[0-9]+}}, %stack.0.array.ascast, 0, 512, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.arrayidx9, addrspace 5)
   %7 = load float, ptr addrspace(5) %arrayidx9, align 4
   %8 = load i32, ptr addrspace(5) %i3.ascast, align 4
   %idxprom10 = sext i32 %8 to i64

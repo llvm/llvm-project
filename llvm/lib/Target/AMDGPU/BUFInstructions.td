@@ -2544,7 +2544,7 @@ class VBUFFER_Real <bits<8> op, BUF_Pseudo ps, string real_name> :
 
   bits<7>  srsrc;
   bits<7>  soffset;
-  bits<6>  cpol;
+  bits<9> cpol;
 
   let Inst{95-72} = !if(ps.has_offset, offset, ?);
   let Inst{71-64} = !if(ps.has_vaddr, vaddr, ?);
@@ -2599,6 +2599,7 @@ multiclass VBUFFER_MTBUF_Real_gfx12<bits<4> op, string real_name> {
 class VBUFFER_Real_gfx13<bits<8> op, BUF_Pseudo ps, string real_name> :
     VBUFFER_Real<op, ps, real_name>,
     SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX13> {
+  let Inst{9-8} = cpol{8-7};
   let AssemblerPredicate = isGFX13Only;
   let DecoderNamespace = "GFX13";
 }
