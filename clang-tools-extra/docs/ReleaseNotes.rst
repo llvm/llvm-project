@@ -164,7 +164,7 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-exception-escape
   <clang-tidy/checks/bugprone/exception-escape>` by fixing false positives
-  when consteval function with throw statements.
+  when a consteval function with throw statements.
 
 - Improved :doc:`bugprone-forwarding-reference-overload
   <clang-tidy/checks/bugprone/forwarding-reference-overload>` check by fixing
