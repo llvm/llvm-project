@@ -232,28 +232,28 @@ private:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _OuterIter& __get_outer() {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr _OuterIter& __get_outer() {
     if constexpr (forward_range<_Base>)
       return __outer_it_;
     else
       return *__parent_->__outer_it_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _OuterIter& __get_outer() const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr const _OuterIter& __get_outer() const {
     if constexpr (forward_range<_Base>)
       return __outer_it_;
     else
       return *__parent_->__outer_it_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto& __update_inner() {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr auto& __update_inner() {
     if constexpr (__ref_is_glvalue)
       return std::__as_lvalue(*__get_outer());
     else
       return __parent_->__inner_.__emplace_from([&]() -> decltype(auto) { return *__get_outer(); });
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto& __get_inner() {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr auto& __get_inner() {
     if constexpr (__ref_is_glvalue)
       return std::__as_lvalue(*__get_outer());
     else
@@ -283,7 +283,7 @@ private:
     }
   }
 
-  static consteval auto __get_iterator_concept() noexcept {
+  [[__nodiscard__]] static consteval auto __get_iterator_concept() noexcept {
     if constexpr (__ref_is_glvalue && bidirectional_range<_Base> && __bidirectional_common<_InnerBase> &&
                   __bidirectional_common<_PatternBase>)
       return bidirectional_iterator_tag{};
