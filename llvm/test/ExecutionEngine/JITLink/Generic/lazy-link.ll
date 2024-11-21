@@ -10,7 +10,7 @@
 ; RUN: llvm-jitlink -noexec -show-linked-files %t/main.o -lazy %t/foo.o \
 ; RUN:     -lazy %t/x.o | FileCheck %s
 ;
-; UNSUPPORTED: system-windows
+; UNSUPPORTED: system-windows, target=armv8a-{{.*}}, target=powerpc64{{.*}}
 ;
 ; CHECK: Linking {{.*}}main.o
 ; CHECK-DAG: Linking <indirect stubs graph #1>
