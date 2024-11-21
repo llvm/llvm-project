@@ -1952,8 +1952,8 @@ bool SPIRVInstructionSelector::selectWaveOpInst(Register ResVReg,
                  .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I,
                                                 IntTy, TII));
 
-  for (unsigned j = 2; j < I.getNumOperands(); j++) {
-    BMI.addUse(I.getOperand(j).getReg());
+  for (unsigned J = 2; J < I.getNumOperands(); J++) {
+    BMI.addUse(I.getOperand(J).getReg());
   }
 
   return BMI.constrainAllUses(TII, TRI, RBI);

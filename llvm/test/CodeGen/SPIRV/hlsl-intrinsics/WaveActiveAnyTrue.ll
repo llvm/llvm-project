@@ -4,14 +4,18 @@
 ; CHECK-DAG: %[[#bool:]] = OpTypeBool
 ; CHECK-DAG: %[[#uint:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#scope:]] = OpConstant %[[#uint]] 3
+; CHECK-DAG: OpCapability GroupNonUniformVote
 
 ; CHECK-LABEL: Begin function test_wave_any
-define i1 @test_wave_any(i1 %p1) {
+define i1 @test_wave_any(i1 %p1) #0 {
 entry:
 ; CHECK: %[[#param:]] = OpFunctionParameter %[[#bool]]
 ; CHECK: %{{.+}} = OpGroupNonUniformAny %[[#bool]] %[[#scope]] %[[#param]]
-  %ret = call i1 @llvm.spv.wave.any(i1 %p1)
+  %0 = call token @llvm.experimental.convergence.entry()
+  %ret = call i1 @llvm.spv.wave.any(i1 %p1) [ "convergencectrl"(token %0) ]
   ret i1 %ret
 }
 
-declare i1 @llvm.spv.wave.any(i1)
+declare i1 @llvm.spv.wave.any(i1) #0
+
+attributes #0 = { convergent }
