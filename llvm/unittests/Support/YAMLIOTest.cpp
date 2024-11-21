@@ -1540,9 +1540,9 @@ TEST(YAMLIO, TestReadWriteMySecondsSequence) {
 //===----------------------------------------------------------------------===//
 //  Test nested sequence
 //===----------------------------------------------------------------------===//
-using NestedStringSeq1 = std::array<std::string, 2>;
+using NestedStringSeq1 = llvm::SmallVector<std::string, 2>;
 using NestedStringSeq2 = std::array<NestedStringSeq1, 2>;
-using NestedStringSeq3 = std::array<NestedStringSeq2, 2>;
+using NestedStringSeq3 = std::vector<NestedStringSeq2>;
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(NestedStringSeq1)
 LLVM_YAML_IS_SEQUENCE_VECTOR(NestedStringSeq2)
@@ -1563,7 +1563,6 @@ using NestedIntSeq3 = std::array<NestedIntSeq2, 2>;
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(NestedIntSeq1)
 LLVM_YAML_IS_SEQUENCE_VECTOR(NestedIntSeq2)
-LLVM_YAML_IS_SEQUENCE_VECTOR(NestedIntSeq3)
 
 template <typename Ty> std::string ParseAndEmit(llvm::StringRef YAML) {
   Ty seq3;
