@@ -92,22 +92,18 @@ private:
   /// Select constant vector splats.
   virtual bool selectVSplat(SDNode *N, APInt &Imm,
                             unsigned MinSizeInBits) const;
-  /// Select constant vector splats whose value fits in a uimm1.
-  virtual bool selectVSplatUimm1(SDValue N, SDValue &Imm) const;
-  /// Select constant vector splats whose value fits in a uimm2.
-  virtual bool selectVSplatUimm2(SDValue N, SDValue &Imm) const;
-  /// Select constant vector splats whose value fits in a uimm3.
-  virtual bool selectVSplatUimm3(SDValue N, SDValue &Imm) const;
-  /// Select constant vector splats whose value fits in a uimm4.
-  virtual bool selectVSplatUimm4(SDValue N, SDValue &Imm) const;
-  /// Select constant vector splats whose value fits in a uimm5.
-  virtual bool selectVSplatUimm5(SDValue N, SDValue &Imm) const;
-  /// Select constant vector splats whose value fits in a uimm6.
-  virtual bool selectVSplatUimm6(SDValue N, SDValue &Imm) const;
-  /// Select constant vector splats whose value fits in a uimm8.
-  virtual bool selectVSplatUimm8(SDValue N, SDValue &Imm) const;
-  /// Select constant vector splats whose value fits in a simm5.
-  virtual bool selectVSplatSimm5(SDValue N, SDValue &Imm) const;
+  virtual bool selectVSplatCommon(SDValue N, SDValue &Imm, bool Signed,
+                                  unsigned ImmBitSize) const;
+  /// Select constant vector splats whose value fits in a uimm<Bits>.
+  template <unsigned Bits>
+  bool selectVSplatUimm(SDValue N, SDValue &Imm) const {
+    return selectVSplatCommon(N, Imm, false, Bits);
+  }
+  /// Select constant vector splats whose value fits in a simm<Bits>.
+  template <unsigned Bits>
+  bool selectVSplatSimm(SDValue N, SDValue &Imm) const {
+    return selectVSplatCommon(N, Imm, true, Bits);
+  }
   /// Select constant vector splats whose value is a power of 2.
   virtual bool selectVSplatUimmPow2(SDValue N, SDValue &Imm) const;
   /// Select constant vector splats whose value is the inverse of a

@@ -249,67 +249,67 @@ class SplatComplexPattern<Operand opclass, ValueType ty, int numops, string fn,
 }
 
 def vsplati8_uimm3 : SplatComplexPattern<vsplat_uimm3, v16i8, 1,
-                                         "selectVSplatUimm3",
+                                         "selectVSplatUimm<3>",
                                          [build_vector, bitconvert]>;
 
 def vsplati8_uimm4 : SplatComplexPattern<vsplat_uimm4, v16i8, 1,
-                                         "selectVSplatUimm4",
+                                         "selectVSplatUimm<4>",
                                          [build_vector, bitconvert]>;
 
 def vsplati8_uimm5 : SplatComplexPattern<vsplat_uimm5, v16i8, 1,
-                                         "selectVSplatUimm5",
+                                         "selectVSplatUimm<5>",
                                          [build_vector, bitconvert]>;
 
 def vsplati8_uimm8 : SplatComplexPattern<vsplat_uimm8, v16i8, 1,
-                                         "selectVSplatUimm8",
+                                         "selectVSplatUimm<8>",
                                          [build_vector, bitconvert]>;
 
 def vsplati8_simm5 : SplatComplexPattern<vsplat_simm5, v16i8, 1,
-                                         "selectVSplatSimm5",
+                                         "selectVSplatSimm<5>",
                                          [build_vector, bitconvert]>;
 
 def vsplati16_uimm3 : SplatComplexPattern<vsplat_uimm3, v8i16, 1,
-                                          "selectVSplatUimm3",
+                                          "selectVSplatUimm<3>",
                                           [build_vector, bitconvert]>;
 
 def vsplati16_uimm4 : SplatComplexPattern<vsplat_uimm4, v8i16, 1,
-                                          "selectVSplatUimm4",
+                                          "selectVSplatUimm<4>",
                                           [build_vector, bitconvert]>;
 
 def vsplati16_uimm5 : SplatComplexPattern<vsplat_uimm5, v8i16, 1,
-                                          "selectVSplatUimm5",
+                                          "selectVSplatUimm<5>",
                                           [build_vector, bitconvert]>;
 
 def vsplati16_simm5 : SplatComplexPattern<vsplat_simm5, v8i16, 1,
-                                          "selectVSplatSimm5",
+                                          "selectVSplatSimm<5>",
                                           [build_vector, bitconvert]>;
 
 def vsplati32_uimm2 : SplatComplexPattern<vsplat_uimm2, v4i32, 1,
-                                          "selectVSplatUimm2",
+                                          "selectVSplatUimm<2>",
                                           [build_vector, bitconvert]>;
 
 def vsplati32_uimm5 : SplatComplexPattern<vsplat_uimm5, v4i32, 1,
-                                          "selectVSplatUimm5",
+                                          "selectVSplatUimm<5>",
                                           [build_vector, bitconvert]>;
 
 def vsplati32_simm5 : SplatComplexPattern<vsplat_simm5, v4i32, 1,
-                                          "selectVSplatSimm5",
+                                          "selectVSplatSimm<5>",
                                           [build_vector, bitconvert]>;
 
 def vsplati64_uimm1 : SplatComplexPattern<vsplat_uimm1, v2i64, 1,
-                                          "selectVSplatUimm1",
+                                          "selectVSplatUimm<1>",
                                           [build_vector, bitconvert]>;
 
 def vsplati64_uimm5 : SplatComplexPattern<vsplat_uimm5, v2i64, 1,
-                                          "selectVSplatUimm5",
+                                          "selectVSplatUimm<5>",
                                           [build_vector, bitconvert]>;
 
 def vsplati64_uimm6 : SplatComplexPattern<vsplat_uimm6, v2i64, 1,
-                                          "selectVSplatUimm6",
+                                          "selectVSplatUimm<6>",
                                           [build_vector, bitconvert]>;
 
 def vsplati64_simm5 : SplatComplexPattern<vsplat_simm5, v2i64, 1,
-                                          "selectVSplatSimm5",
+                                          "selectVSplatSimm<5>",
                                           [build_vector, bitconvert]>;
 
 // Any build_vector that is a constant splat with a value that is an exact
