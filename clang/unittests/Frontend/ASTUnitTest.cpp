@@ -17,7 +17,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ToolOutputFile.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -42,18 +41,17 @@ protected:
 
     const char *Args[] = {"clang", "-xc++", InputFileName.c_str()};
 
-    auto VFS = llvm::vfs::getRealFileSystem();
-    Diags = CompilerInstance::createDiagnostics(*VFS, new DiagnosticOptions());
+    Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions());
 
     CreateInvocationOptions CIOpts;
     CIOpts.Diags = Diags;
-    CIOpts.VFS = VFS;
     CInvok = createInvocation(Args, std::move(CIOpts));
 
     if (!CInvok)
       return nullptr;
 
-    FileManager *FileMgr = new FileManager(FileSystemOptions(), VFS);
+    FileManager *FileMgr =
+        new FileManager(FileSystemOptions(), vfs::getRealFileSystem());
     PCHContainerOps = std::make_shared<PCHContainerOperations>();
 
     return ASTUnit::LoadFromCompilerInvocation(
@@ -136,8 +134,7 @@ TEST_F(ASTUnitTest, ModuleTextualHeader) {
 
   const char *Args[] = {"clang", "test.cpp", "-fmodule-map-file=m.modulemap",
                         "-fmodule-name=M"};
-  Diags =
-      CompilerInstance::createDiagnostics(*InMemoryFs, new DiagnosticOptions());
+  Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions());
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = Diags;
   CInvok = createInvocation(Args, std::move(CIOpts));
@@ -165,8 +162,7 @@ TEST_F(ASTUnitTest, LoadFromCommandLineEarlyError) {
 
   const char *Args[] = {"clang", "-target", "foobar", InputFileName.c_str()};
 
-  auto Diags = CompilerInstance::createDiagnostics(
-      *llvm::vfs::getRealFileSystem(), new DiagnosticOptions());
+  auto Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions());
   auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
   std::unique_ptr<clang::ASTUnit> ErrUnit;
 
@@ -193,8 +189,7 @@ TEST_F(ASTUnitTest, LoadFromCommandLineWorkingDirectory) {
   const char *Args[] = {"clang", "-working-directory", WorkingDir.c_str(),
                         InputFileName.c_str()};
 
-  auto Diags = CompilerInstance::createDiagnostics(
-      *llvm::vfs::getRealFileSystem(), new DiagnosticOptions());
+  auto Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions());
   auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
   std::unique_ptr<clang::ASTUnit> ErrUnit;
 
