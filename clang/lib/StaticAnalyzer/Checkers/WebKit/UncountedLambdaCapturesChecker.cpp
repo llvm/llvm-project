@@ -51,7 +51,8 @@ public:
 
       bool TraverseCXXMethodDecl(CXXMethodDecl *CXXMD) override {
         llvm::SaveAndRestore SavedDecl(ClsType);
-        ClsType = CXXMD->getThisType();
+        if (CXXMD && CXXMD->isInstance())
+          ClsType = CXXMD->getThisType();
         return DynamicRecursiveASTVisitor::TraverseCXXMethodDecl(CXXMD);
       }
 

@@ -1,5 +1,9 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=webkit.UncountedLambdaCapturesChecker -verify %s
 
+struct A {
+  static void b();
+};
+
 struct RefCountable {
   void ref() {}
   void deref() {}
