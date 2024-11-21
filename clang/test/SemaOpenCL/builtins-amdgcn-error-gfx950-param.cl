@@ -6,6 +6,7 @@ typedef float float16 __attribute__((ext_vector_type(16)));
 typedef half half8 __attribute__((ext_vector_type(8)));
 typedef half half16 __attribute__((ext_vector_type(16)));
 typedef __bf16 bfloat8 __attribute__((ext_vector_type(8)));
+typedef __bf16 bfloat16 __attribute__((ext_vector_type(16)));
 typedef int int4 __attribute__((ext_vector_type(4)));
 typedef int int8 __attribute__((ext_vector_type(8)));
 typedef int int16 __attribute__((ext_vector_type(16)));
@@ -74,4 +75,10 @@ void test_smfmac_f32_32x32x32_f16(global float16* out, half8 a, half16 b, float1
 {
   *out = __builtin_amdgcn_smfmac_f32_32x32x32_f16(a, b, c, idx, d, 0); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_32x32x32_f16' must be a constant integer}}
   *out = __builtin_amdgcn_smfmac_f32_32x32x32_f16(a, b, c, idx, 0, d); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_32x32x32_f16' must be a constant integer}}
+}
+
+void test_smfmac_f32_16x16x64_bf16(global float4* out, bfloat8 a, bfloat16 b, float4 c, int idx, int d)
+{
+  *out = __builtin_amdgcn_smfmac_f32_16x16x64_bf16(a, b, c, idx, d, 0); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_16x16x64_bf16' must be a constant integer}}
+  *out = __builtin_amdgcn_smfmac_f32_16x16x64_bf16(a, b, c, idx, 0, d); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_16x16x64_bf16' must be a constant integer}}
 }

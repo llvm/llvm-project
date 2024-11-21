@@ -3154,6 +3154,7 @@ def int_amdgcn_mfma_scale_f32_16x16x128_f8f6f4 : AMDGPUMfmaScaleIntrinsic<llvm_v
 def int_amdgcn_mfma_scale_f32_32x32x64_f8f6f4 : AMDGPUMfmaScaleIntrinsic<llvm_v16f32_ty>;
 def int_amdgcn_smfmac_f32_16x16x64_f16 : AMDGPUMSmfmacIntrinsic<llvm_v4f32_ty, llvm_v8f16_ty, llvm_v16f16_ty>;
 def int_amdgcn_smfmac_f32_32x32x32_f16 : AMDGPUMSmfmacIntrinsic<llvm_v16f32_ty, llvm_v8f16_ty, llvm_v16f16_ty>;
+def int_amdgcn_smfmac_f32_16x16x64_bf16 : AMDGPUMSmfmacIntrinsic<llvm_v4f32_ty, llvm_v8bf16_ty, llvm_v16bf16_ty>;
 }
 
 //===----------------------------------------------------------------------===//

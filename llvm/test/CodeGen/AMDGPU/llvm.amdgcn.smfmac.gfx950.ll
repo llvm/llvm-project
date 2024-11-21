@@ -621,6 +621,338 @@ define <16 x float> @test_smfmac_f32_32x32x32_f16__sgpr(<8 x half> inreg %arg0, 
   ret <16 x float> %result
 }
 
+; --------------------------------------------------------------------
+; llvm.amdgcn.smfmac.f32.16x16x64.bf16
+; --------------------------------------------------------------------
+
+declare <4 x float> @llvm.amdgcn.smfmac.f32.16x16x64.bf16(<8 x bfloat>, <16 x bfloat>, <4 x float>, i32, i32 immarg, i32 immarg)
+
+define amdgpu_kernel void @test_smfmac_f32_16x16x64_bf16__vgpr(ptr addrspace(1) %arg, <8 x bfloat> %a, <16 x bfloat> %b, i32 %idx) #0 {
+; SDAG-LABEL: test_smfmac_f32_16x16x64_bf16__vgpr:
+; SDAG:       ; %bb.0: ; %bb
+; SDAG-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x34
+; SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; SDAG-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; SDAG-NEXT:    v_mov_b32_e32 v16, 0
+; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; SDAG-NEXT:    global_load_dwordx4 v[8:11], v0, s[6:7]
+; SDAG-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x44
+; SDAG-NEXT:    s_load_dword s16, s[4:5], 0x64
+; SDAG-NEXT:    v_mov_b64_e32 v[14:15], s[2:3]
+; SDAG-NEXT:    v_mov_b64_e32 v[12:13], s[0:1]
+; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; SDAG-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
+; SDAG-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
+; SDAG-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
+; SDAG-NEXT:    v_mov_b32_e32 v17, s16
+; SDAG-NEXT:    s_waitcnt vmcnt(0)
+; SDAG-NEXT:    s_nop 0
+; SDAG-NEXT:    v_smfmac_f32_16x16x64_bf16 v[8:11], v[12:15], v[0:7], v17 cbsz:1 abid:2
+; SDAG-NEXT:    s_nop 6
+; SDAG-NEXT:    global_store_dwordx4 v16, v[8:11], s[6:7]
+; SDAG-NEXT:    s_endpgm
+;
+; GISEL-LABEL: test_smfmac_f32_16x16x64_bf16__vgpr:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x34
+; GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GISEL-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-NEXT:    global_load_dwordx4 v[8:11], v0, s[6:7]
+; GISEL-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x44
+; GISEL-NEXT:    s_load_dword s16, s[4:5], 0x64
+; GISEL-NEXT:    v_mov_b64_e32 v[14:15], s[2:3]
+; GISEL-NEXT:    v_mov_b64_e32 v[12:13], s[0:1]
+; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
+; GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
+; GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
+; GISEL-NEXT:    v_mov_b32_e32 v16, s16
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-NEXT:    s_nop 0
+; GISEL-NEXT:    v_smfmac_f32_16x16x64_bf16 v[8:11], v[12:15], v[0:7], v16 cbsz:1 abid:2
+; GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GISEL-NEXT:    s_nop 5
+; GISEL-NEXT:    global_store_dwordx4 v0, v[8:11], s[6:7]
+; GISEL-NEXT:    s_endpgm
+bb:
+  %id = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr <4 x float>, ptr addrspace(1) %arg, i32 %id
+  %in.1 = load <4 x float>, ptr addrspace(1) %gep
+  %mai.1 = tail call <4 x float> @llvm.amdgcn.smfmac.f32.16x16x64.bf16(<8 x bfloat> %a, <16 x bfloat> %b, <4 x float> %in.1, i32 %idx, i32 1, i32 2)
+  store <4 x float> %mai.1, ptr addrspace(1) %arg
+  ret void
+}
+
+define <4 x float> @test_smfmac_f32_16x16x64_bf16(<8 x bfloat> %arg0, <16 x bfloat> %arg1, <4 x float> %arg2, i32 %arg3) {
+; SDAG-LABEL: test_smfmac_f32_16x16x64_bf16:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    v_accvgpr_write_b32 a0, v12
+; SDAG-NEXT:    v_accvgpr_write_b32 a1, v13
+; SDAG-NEXT:    v_accvgpr_write_b32 a2, v14
+; SDAG-NEXT:    v_accvgpr_write_b32 a3, v15
+; SDAG-NEXT:    s_nop 1
+; SDAG-NEXT:    v_smfmac_f32_16x16x64_bf16 a[0:3], v[0:3], v[4:11], v16
+; SDAG-NEXT:    s_nop 6
+; SDAG-NEXT:    v_accvgpr_read_b32 v0, a0
+; SDAG-NEXT:    v_accvgpr_read_b32 v1, a1
+; SDAG-NEXT:    v_accvgpr_read_b32 v2, a2
+; SDAG-NEXT:    v_accvgpr_read_b32 v3, a3
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: test_smfmac_f32_16x16x64_bf16:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    v_lshrrev_b32_e32 v17, 16, v0
+; GISEL-NEXT:    v_lshrrev_b32_e32 v18, 16, v1
+; GISEL-NEXT:    v_lshrrev_b32_e32 v19, 16, v2
+; GISEL-NEXT:    v_lshrrev_b32_e32 v20, 16, v3
+; GISEL-NEXT:    v_mov_b32_sdwa v0, v17 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v1, v18 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v2, v19 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v3, v20 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_lshrrev_b32_e32 v17, 16, v4
+; GISEL-NEXT:    v_lshrrev_b32_e32 v18, 16, v5
+; GISEL-NEXT:    v_lshrrev_b32_e32 v19, 16, v6
+; GISEL-NEXT:    v_lshrrev_b32_e32 v20, 16, v7
+; GISEL-NEXT:    v_lshrrev_b32_e32 v21, 16, v8
+; GISEL-NEXT:    v_lshrrev_b32_e32 v22, 16, v9
+; GISEL-NEXT:    v_lshrrev_b32_e32 v23, 16, v10
+; GISEL-NEXT:    v_lshrrev_b32_e32 v24, 16, v11
+; GISEL-NEXT:    v_mov_b32_sdwa v4, v17 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v5, v18 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v6, v19 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v7, v20 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v8, v21 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v9, v22 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v10, v23 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v11, v24 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    s_nop 1
+; GISEL-NEXT:    v_smfmac_f32_16x16x64_bf16 v[12:15], v[0:3], v[4:11], v16
+; GISEL-NEXT:    s_nop 6
+; GISEL-NEXT:    v_mov_b32_e32 v0, v12
+; GISEL-NEXT:    v_mov_b32_e32 v1, v13
+; GISEL-NEXT:    v_mov_b32_e32 v2, v14
+; GISEL-NEXT:    v_mov_b32_e32 v3, v15
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %result = call <4 x float> @llvm.amdgcn.smfmac.f32.16x16x64.bf16(<8 x bfloat> %arg0, <16 x bfloat> %arg1, <4 x float> %arg2, i32 %arg3, i32 immarg 0, i32 immarg 0)
+  ret <4 x float> %result
+}
+
+define <4 x float> @test_smfmac_f32_16x16x64_bf16__flags0(<8 x bfloat> %arg0, <16 x bfloat> %arg1, <4 x float> %arg2, i32 %arg3) {
+; SDAG-LABEL: test_smfmac_f32_16x16x64_bf16__flags0:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    v_accvgpr_write_b32 a0, v12
+; SDAG-NEXT:    v_accvgpr_write_b32 a1, v13
+; SDAG-NEXT:    v_accvgpr_write_b32 a2, v14
+; SDAG-NEXT:    v_accvgpr_write_b32 a3, v15
+; SDAG-NEXT:    s_nop 1
+; SDAG-NEXT:    v_smfmac_f32_16x16x64_bf16 a[0:3], v[0:3], v[4:11], v16 cbsz:1 abid:3
+; SDAG-NEXT:    s_nop 6
+; SDAG-NEXT:    v_accvgpr_read_b32 v0, a0
+; SDAG-NEXT:    v_accvgpr_read_b32 v1, a1
+; SDAG-NEXT:    v_accvgpr_read_b32 v2, a2
+; SDAG-NEXT:    v_accvgpr_read_b32 v3, a3
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: test_smfmac_f32_16x16x64_bf16__flags0:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    v_lshrrev_b32_e32 v17, 16, v0
+; GISEL-NEXT:    v_lshrrev_b32_e32 v18, 16, v1
+; GISEL-NEXT:    v_lshrrev_b32_e32 v19, 16, v2
+; GISEL-NEXT:    v_lshrrev_b32_e32 v20, 16, v3
+; GISEL-NEXT:    v_mov_b32_sdwa v0, v17 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v1, v18 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v2, v19 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v3, v20 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_lshrrev_b32_e32 v17, 16, v4
+; GISEL-NEXT:    v_lshrrev_b32_e32 v18, 16, v5
+; GISEL-NEXT:    v_lshrrev_b32_e32 v19, 16, v6
+; GISEL-NEXT:    v_lshrrev_b32_e32 v20, 16, v7
+; GISEL-NEXT:    v_lshrrev_b32_e32 v21, 16, v8
+; GISEL-NEXT:    v_lshrrev_b32_e32 v22, 16, v9
+; GISEL-NEXT:    v_lshrrev_b32_e32 v23, 16, v10
+; GISEL-NEXT:    v_lshrrev_b32_e32 v24, 16, v11
+; GISEL-NEXT:    v_mov_b32_sdwa v4, v17 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v5, v18 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v6, v19 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v7, v20 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v8, v21 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v9, v22 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v10, v23 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v11, v24 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    s_nop 1
+; GISEL-NEXT:    v_smfmac_f32_16x16x64_bf16 v[12:15], v[0:3], v[4:11], v16 cbsz:1 abid:3
+; GISEL-NEXT:    s_nop 6
+; GISEL-NEXT:    v_mov_b32_e32 v0, v12
+; GISEL-NEXT:    v_mov_b32_e32 v1, v13
+; GISEL-NEXT:    v_mov_b32_e32 v2, v14
+; GISEL-NEXT:    v_mov_b32_e32 v3, v15
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %result = call <4 x float> @llvm.amdgcn.smfmac.f32.16x16x64.bf16(<8 x bfloat> %arg0, <16 x bfloat> %arg1, <4 x float> %arg2, i32 %arg3, i32 immarg 1, i32 immarg 3)
+  ret <4 x float> %result
+}
+
+define <4 x float> @test_smfmac_f32_16x16x64_bf16__flags1(<8 x bfloat> %arg0, <16 x bfloat> %arg1, <4 x float> %arg2, i32 %arg3) {
+; SDAG-LABEL: test_smfmac_f32_16x16x64_bf16__flags1:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    v_accvgpr_write_b32 a0, v12
+; SDAG-NEXT:    v_accvgpr_write_b32 a1, v13
+; SDAG-NEXT:    v_accvgpr_write_b32 a2, v14
+; SDAG-NEXT:    v_accvgpr_write_b32 a3, v15
+; SDAG-NEXT:    s_nop 1
+; SDAG-NEXT:    v_smfmac_f32_16x16x64_bf16 a[0:3], v[0:3], v[4:11], v16 cbsz:3 abid:1
+; SDAG-NEXT:    s_nop 6
+; SDAG-NEXT:    v_accvgpr_read_b32 v0, a0
+; SDAG-NEXT:    v_accvgpr_read_b32 v1, a1
+; SDAG-NEXT:    v_accvgpr_read_b32 v2, a2
+; SDAG-NEXT:    v_accvgpr_read_b32 v3, a3
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: test_smfmac_f32_16x16x64_bf16__flags1:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    v_lshrrev_b32_e32 v17, 16, v0
+; GISEL-NEXT:    v_lshrrev_b32_e32 v18, 16, v1
+; GISEL-NEXT:    v_lshrrev_b32_e32 v19, 16, v2
+; GISEL-NEXT:    v_lshrrev_b32_e32 v20, 16, v3
+; GISEL-NEXT:    v_mov_b32_sdwa v0, v17 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v1, v18 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v2, v19 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v3, v20 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_lshrrev_b32_e32 v17, 16, v4
+; GISEL-NEXT:    v_lshrrev_b32_e32 v18, 16, v5
+; GISEL-NEXT:    v_lshrrev_b32_e32 v19, 16, v6
+; GISEL-NEXT:    v_lshrrev_b32_e32 v20, 16, v7
+; GISEL-NEXT:    v_lshrrev_b32_e32 v21, 16, v8
+; GISEL-NEXT:    v_lshrrev_b32_e32 v22, 16, v9
+; GISEL-NEXT:    v_lshrrev_b32_e32 v23, 16, v10
+; GISEL-NEXT:    v_lshrrev_b32_e32 v24, 16, v11
+; GISEL-NEXT:    v_mov_b32_sdwa v4, v17 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v5, v18 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v6, v19 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v7, v20 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v8, v21 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v9, v22 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v10, v23 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    v_mov_b32_sdwa v11, v24 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GISEL-NEXT:    s_nop 1
+; GISEL-NEXT:    v_smfmac_f32_16x16x64_bf16 v[12:15], v[0:3], v[4:11], v16 cbsz:3 abid:1
+; GISEL-NEXT:    s_nop 6
+; GISEL-NEXT:    v_mov_b32_e32 v0, v12
+; GISEL-NEXT:    v_mov_b32_e32 v1, v13
+; GISEL-NEXT:    v_mov_b32_e32 v2, v14
+; GISEL-NEXT:    v_mov_b32_e32 v3, v15
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %result = call <4 x float> @llvm.amdgcn.smfmac.f32.16x16x64.bf16(<8 x bfloat> %arg0, <16 x bfloat> %arg1, <4 x float> %arg2, i32 %arg3, i32 immarg 3, i32 immarg 1)
+  ret <4 x float> %result
+}
+
+define <4 x float> @test_smfmac_f32_16x16x64_bf16__sgpr(<8 x bfloat> inreg %arg0, <16 x bfloat> inreg %arg1, <4 x float> inreg %arg2, i32 inreg %arg3) {
+; SDAG-LABEL: test_smfmac_f32_16x16x64_bf16__sgpr:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    v_mov_b32_e32 v8, s0
+; SDAG-NEXT:    v_mov_b32_e32 v9, s1
+; SDAG-NEXT:    v_mov_b32_e32 v10, s2
+; SDAG-NEXT:    v_mov_b32_e32 v11, s3
+; SDAG-NEXT:    v_mov_b32_e32 v0, s16
+; SDAG-NEXT:    v_mov_b32_e32 v1, s17
+; SDAG-NEXT:    v_mov_b32_e32 v2, s18
+; SDAG-NEXT:    v_mov_b32_e32 v3, s19
+; SDAG-NEXT:    v_mov_b32_e32 v4, s20
+; SDAG-NEXT:    v_mov_b32_e32 v5, s21
+; SDAG-NEXT:    v_mov_b32_e32 v6, s22
+; SDAG-NEXT:    v_mov_b32_e32 v7, s23
+; SDAG-NEXT:    v_accvgpr_write_b32 a0, s24
+; SDAG-NEXT:    v_accvgpr_write_b32 a1, s25
+; SDAG-NEXT:    v_accvgpr_write_b32 a2, s26
+; SDAG-NEXT:    v_accvgpr_write_b32 a3, s27
+; SDAG-NEXT:    v_mov_b32_e32 v12, s28
+; SDAG-NEXT:    s_nop 1
+; SDAG-NEXT:    v_smfmac_f32_16x16x64_bf16 a[0:3], v[8:11], v[0:7], v12
+; SDAG-NEXT:    s_nop 6
+; SDAG-NEXT:    v_accvgpr_read_b32 v0, a0
+; SDAG-NEXT:    v_accvgpr_read_b32 v1, a1
+; SDAG-NEXT:    v_accvgpr_read_b32 v2, a2
+; SDAG-NEXT:    v_accvgpr_read_b32 v3, a3
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: test_smfmac_f32_16x16x64_bf16__sgpr:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    s_lshr_b32 s4, s0, 16
+; GISEL-NEXT:    s_lshr_b32 s5, s1, 16
+; GISEL-NEXT:    s_lshl_b32 s4, s4, 16
+; GISEL-NEXT:    s_and_b32 s0, s0, 0xffff
+; GISEL-NEXT:    s_lshr_b32 s6, s2, 16
+; GISEL-NEXT:    s_or_b32 s0, s4, s0
+; GISEL-NEXT:    s_lshl_b32 s4, s5, 16
+; GISEL-NEXT:    s_and_b32 s1, s1, 0xffff
+; GISEL-NEXT:    s_lshr_b32 s7, s3, 16
+; GISEL-NEXT:    s_or_b32 s1, s4, s1
+; GISEL-NEXT:    s_lshl_b32 s4, s6, 16
+; GISEL-NEXT:    s_and_b32 s2, s2, 0xffff
+; GISEL-NEXT:    s_or_b32 s2, s4, s2
+; GISEL-NEXT:    s_lshl_b32 s4, s7, 16
+; GISEL-NEXT:    s_and_b32 s3, s3, 0xffff
+; GISEL-NEXT:    s_or_b32 s3, s4, s3
+; GISEL-NEXT:    s_lshr_b32 s4, s16, 16
+; GISEL-NEXT:    s_lshr_b32 s5, s17, 16
+; GISEL-NEXT:    s_lshl_b32 s4, s4, 16
+; GISEL-NEXT:    s_and_b32 s12, s16, 0xffff
+; GISEL-NEXT:    s_lshr_b32 s6, s18, 16
+; GISEL-NEXT:    s_or_b32 s4, s4, s12
+; GISEL-NEXT:    s_lshl_b32 s5, s5, 16
+; GISEL-NEXT:    s_and_b32 s12, s17, 0xffff
+; GISEL-NEXT:    s_lshr_b32 s7, s19, 16
+; GISEL-NEXT:    s_or_b32 s5, s5, s12
+; GISEL-NEXT:    s_lshl_b32 s6, s6, 16
+; GISEL-NEXT:    s_and_b32 s12, s18, 0xffff
+; GISEL-NEXT:    s_lshr_b32 s8, s20, 16
+; GISEL-NEXT:    s_or_b32 s6, s6, s12
+; GISEL-NEXT:    s_lshl_b32 s7, s7, 16
+; GISEL-NEXT:    s_and_b32 s12, s19, 0xffff
+; GISEL-NEXT:    s_lshr_b32 s9, s21, 16
+; GISEL-NEXT:    s_or_b32 s7, s7, s12
+; GISEL-NEXT:    s_lshl_b32 s8, s8, 16
+; GISEL-NEXT:    s_and_b32 s12, s20, 0xffff
+; GISEL-NEXT:    v_mov_b64_e32 v[14:15], s[2:3]
+; GISEL-NEXT:    s_lshr_b32 s10, s22, 16
+; GISEL-NEXT:    s_or_b32 s8, s8, s12
+; GISEL-NEXT:    s_lshl_b32 s9, s9, 16
+; GISEL-NEXT:    s_and_b32 s12, s21, 0xffff
+; GISEL-NEXT:    v_mov_b64_e32 v[12:13], s[0:1]
+; GISEL-NEXT:    s_lshr_b32 s11, s23, 16
+; GISEL-NEXT:    s_or_b32 s9, s9, s12
+; GISEL-NEXT:    s_lshl_b32 s10, s10, 16
+; GISEL-NEXT:    s_and_b32 s12, s22, 0xffff
+; GISEL-NEXT:    s_or_b32 s10, s10, s12
+; GISEL-NEXT:    s_lshl_b32 s11, s11, 16
+; GISEL-NEXT:    s_and_b32 s12, s23, 0xffff
+; GISEL-NEXT:    s_or_b32 s11, s11, s12
+; GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
+; GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[24:25]
+; GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[6:7]
+; GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[8:9]
+; GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[10:11]
+; GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[26:27]
+; GISEL-NEXT:    v_mov_b32_e32 v16, s28
+; GISEL-NEXT:    s_nop 1
+; GISEL-NEXT:    v_smfmac_f32_16x16x64_bf16 v[0:3], v[12:15], v[4:11], v16
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %result = call <4 x float> @llvm.amdgcn.smfmac.f32.16x16x64.bf16(<8 x bfloat> %arg0, <16 x bfloat> %arg1, <4 x float> %arg2, i32 %arg3, i32 immarg 0, i32 immarg 0)
+  ret <4 x float> %result
+}
+
 attributes #0 = { "amdgpu-flat-work-group-size"="1,256" }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GCN: {{.*}}
