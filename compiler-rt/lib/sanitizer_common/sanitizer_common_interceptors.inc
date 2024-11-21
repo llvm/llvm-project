@@ -2398,13 +2398,14 @@ INTERCEPTOR(int, timespec_get, struct __sanitizer_timespec *ts, int base) {
   // https://github.com/google/sanitizers/issues/321.
   int res = REAL(timespec_get)(ts, base);
   if (res) {
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ts, sizeof(struct __sanitizer_timespec));
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ts,
+                                   sizeof(struct __sanitizer_timespec));
   }
   return res;
 }
-#define INIT_TIMESPEC_GET COMMON_INTERCEPT_FUNCTION(timespec_get);
+#  define INIT_TIMESPEC_GET COMMON_INTERCEPT_FUNCTION(timespec_get);
 #else
-#define INIT_TIMESPEC_GET
+#  define INIT_TIMESPEC_GET
 #endif
 
 #if SANITIZER_INTERCEPT_GLOB
