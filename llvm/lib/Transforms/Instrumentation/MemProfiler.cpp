@@ -1121,6 +1121,10 @@ MemProfUsePass::MemProfUsePass(std::string MemoryProfileFile,
 }
 
 PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
+  // Return immediately if the module doesn't contain any function.
+  if (M.empty())
+    return PreservedAnalyses::all();
+
   LLVM_DEBUG(dbgs() << "Read in memory profile:");
   auto &Ctx = M.getContext();
   auto ReaderOrErr = IndexedInstrProfReader::create(MemoryProfileFileName, *FS);
