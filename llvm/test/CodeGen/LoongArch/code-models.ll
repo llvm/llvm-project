@@ -82,11 +82,11 @@ define void @call_external_sym(ptr %dst) {
 ; LARGE-NEXT:    .cfi_offset 1, -8
 ; LARGE-NEXT:    ori $a2, $zero, 1000
 ; LARGE-NEXT:    move $a1, $zero
-; LARGE-NEXT:    pcalau12i $ra, %pc_hi20(memset)
-; LARGE-NEXT:    addi.d $t8, $zero, %pc_lo12(memset)
-; LARGE-NEXT:    lu32i.d $t8, %pc64_lo20(memset)
-; LARGE-NEXT:    lu52i.d $t8, $t8, %pc64_hi12(memset)
-; LARGE-NEXT:    add.d $ra, $t8, $ra
+; LARGE-NEXT:    pcalau12i $ra, %got_pc_hi20(memset)
+; LARGE-NEXT:    addi.d $t8, $zero, %got_pc_lo12(memset)
+; LARGE-NEXT:    lu32i.d $t8, %got64_pc_lo20(memset)
+; LARGE-NEXT:    lu52i.d $t8, $t8, %got64_pc_hi12(memset)
+; LARGE-NEXT:    ldx.d $ra, $t8, $ra
 ; LARGE-NEXT:    jirl $ra, $ra, 0
 ; LARGE-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LARGE-NEXT:    addi.d $sp, $sp, 16

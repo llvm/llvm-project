@@ -105,11 +105,11 @@ define void @foo() nounwind {
 ; LARGE_NO_SCH-NEXT:    lu32i.d $t8, %got64_pc_lo20(gd)
 ; LARGE_NO_SCH-NEXT:    lu52i.d $t8, $t8, %got64_pc_hi12(gd)
 ; LARGE_NO_SCH-NEXT:    add.d $a0, $t8, $a0
-; LARGE_NO_SCH-NEXT:    pcalau12i $ra, %pc_hi20(__tls_get_addr)
-; LARGE_NO_SCH-NEXT:    addi.d $t8, $zero, %pc_lo12(__tls_get_addr)
-; LARGE_NO_SCH-NEXT:    lu32i.d $t8, %pc64_lo20(__tls_get_addr)
-; LARGE_NO_SCH-NEXT:    lu52i.d $t8, $t8, %pc64_hi12(__tls_get_addr)
-; LARGE_NO_SCH-NEXT:    add.d $ra, $t8, $ra
+; LARGE_NO_SCH-NEXT:    pcalau12i $ra, %got_pc_hi20(__tls_get_addr)
+; LARGE_NO_SCH-NEXT:    addi.d $t8, $zero, %got_pc_lo12(__tls_get_addr)
+; LARGE_NO_SCH-NEXT:    lu32i.d $t8, %got64_pc_lo20(__tls_get_addr)
+; LARGE_NO_SCH-NEXT:    lu52i.d $t8, $t8, %got64_pc_hi12(__tls_get_addr)
+; LARGE_NO_SCH-NEXT:    ldx.d $ra, $t8, $ra
 ; LARGE_NO_SCH-NEXT:    jirl $ra, $ra, 0
 ; LARGE_NO_SCH-NEXT:    ld.d $zero, $a0, 0
 ; LARGE_NO_SCH-NEXT:    pcalau12i $a0, %ld_pc_hi20(ld)
@@ -117,11 +117,11 @@ define void @foo() nounwind {
 ; LARGE_NO_SCH-NEXT:    lu32i.d $t8, %got64_pc_lo20(ld)
 ; LARGE_NO_SCH-NEXT:    lu52i.d $t8, $t8, %got64_pc_hi12(ld)
 ; LARGE_NO_SCH-NEXT:    add.d $a0, $t8, $a0
-; LARGE_NO_SCH-NEXT:    pcalau12i $ra, %pc_hi20(__tls_get_addr)
-; LARGE_NO_SCH-NEXT:    addi.d $t8, $zero, %pc_lo12(__tls_get_addr)
-; LARGE_NO_SCH-NEXT:    lu32i.d $t8, %pc64_lo20(__tls_get_addr)
-; LARGE_NO_SCH-NEXT:    lu52i.d $t8, $t8, %pc64_hi12(__tls_get_addr)
-; LARGE_NO_SCH-NEXT:    add.d $ra, $t8, $ra
+; LARGE_NO_SCH-NEXT:    pcalau12i $ra, %got_pc_hi20(__tls_get_addr)
+; LARGE_NO_SCH-NEXT:    addi.d $t8, $zero, %got_pc_lo12(__tls_get_addr)
+; LARGE_NO_SCH-NEXT:    lu32i.d $t8, %got64_pc_lo20(__tls_get_addr)
+; LARGE_NO_SCH-NEXT:    lu52i.d $t8, $t8, %got64_pc_hi12(__tls_get_addr)
+; LARGE_NO_SCH-NEXT:    ldx.d $ra, $t8, $ra
 ; LARGE_NO_SCH-NEXT:    jirl $ra, $ra, 0
 ; LARGE_NO_SCH-NEXT:    pcalau12i $a1, %ie_pc_hi20(ie)
 ; LARGE_NO_SCH-NEXT:    addi.d $t8, $zero, %ie_pc_lo12(ie)
@@ -162,11 +162,11 @@ define void @foo() nounwind {
 ; LARGE_SCH-NEXT:    lu32i.d $t8, %got64_pc_lo20(gd)
 ; LARGE_SCH-NEXT:    lu52i.d $t8, $t8, %got64_pc_hi12(gd)
 ; LARGE_SCH-NEXT:    add.d $a0, $t8, $a0
-; LARGE_SCH-NEXT:    pcalau12i $ra, %pc_hi20(__tls_get_addr)
-; LARGE_SCH-NEXT:    addi.d $t8, $zero, %pc_lo12(__tls_get_addr)
-; LARGE_SCH-NEXT:    lu32i.d $t8, %pc64_lo20(__tls_get_addr)
-; LARGE_SCH-NEXT:    lu52i.d $t8, $t8, %pc64_hi12(__tls_get_addr)
-; LARGE_SCH-NEXT:    add.d $ra, $t8, $ra
+; LARGE_SCH-NEXT:    pcalau12i $ra, %got_pc_hi20(__tls_get_addr)
+; LARGE_SCH-NEXT:    addi.d $t8, $zero, %got_pc_lo12(__tls_get_addr)
+; LARGE_SCH-NEXT:    lu32i.d $t8, %got64_pc_lo20(__tls_get_addr)
+; LARGE_SCH-NEXT:    lu52i.d $t8, $t8, %got64_pc_hi12(__tls_get_addr)
+; LARGE_SCH-NEXT:    ldx.d $ra, $t8, $ra
 ; LARGE_SCH-NEXT:    jirl $ra, $ra, 0
 ; LARGE_SCH-NEXT:    ld.d $zero, $a0, 0
 ; LARGE_SCH-NEXT:    pcalau12i $a0, %ld_pc_hi20(ld)
@@ -174,11 +174,11 @@ define void @foo() nounwind {
 ; LARGE_SCH-NEXT:    lu32i.d $t8, %got64_pc_lo20(ld)
 ; LARGE_SCH-NEXT:    lu52i.d $t8, $t8, %got64_pc_hi12(ld)
 ; LARGE_SCH-NEXT:    add.d $a0, $t8, $a0
-; LARGE_SCH-NEXT:    pcalau12i $ra, %pc_hi20(__tls_get_addr)
-; LARGE_SCH-NEXT:    addi.d $t8, $zero, %pc_lo12(__tls_get_addr)
-; LARGE_SCH-NEXT:    lu32i.d $t8, %pc64_lo20(__tls_get_addr)
-; LARGE_SCH-NEXT:    lu52i.d $t8, $t8, %pc64_hi12(__tls_get_addr)
-; LARGE_SCH-NEXT:    add.d $ra, $t8, $ra
+; LARGE_SCH-NEXT:    pcalau12i $ra, %got_pc_hi20(__tls_get_addr)
+; LARGE_SCH-NEXT:    addi.d $t8, $zero, %got_pc_lo12(__tls_get_addr)
+; LARGE_SCH-NEXT:    lu32i.d $t8, %got64_pc_lo20(__tls_get_addr)
+; LARGE_SCH-NEXT:    lu52i.d $t8, $t8, %got64_pc_hi12(__tls_get_addr)
+; LARGE_SCH-NEXT:    ldx.d $ra, $t8, $ra
 ; LARGE_SCH-NEXT:    jirl $ra, $ra, 0
 ; LARGE_SCH-NEXT:    pcalau12i $a1, %ie_pc_hi20(ie)
 ; LARGE_SCH-NEXT:    addi.d $t8, $zero, %ie_pc_lo12(ie)
