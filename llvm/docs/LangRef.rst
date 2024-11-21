@@ -1412,7 +1412,7 @@ Currently, only the following parameter attributes are defined:
       after the function returns.
 
     Additionally, it is possible to specify that the pointer is captured via
-    the return value only, by using ``caputres(ret: ...)``.
+    the return value only, by using ``captures(ret: ...)``.
 
     The `pointer capture section <pointercapture>` discusses these semantics
     in more detail.
