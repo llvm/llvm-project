@@ -14,6 +14,7 @@
 #ifndef LLVM_MC_MCINSTRANALYSIS_H
 #define LLVM_MC_MCINSTRANALYSIS_H
 
+#include "TargetRegistry.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -185,7 +186,7 @@ public:
   /// the target address. Return true success, and the address in Target.
   virtual bool
   evaluateInstruction(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                      uint64_t &Target, int ArchRegWidth) const;
+                      uint64_t &Target, raw_ostream *TargetOS) const;
 
   /// Given an instruction tries to get the address of a memory operand. Returns
   /// the address on success.

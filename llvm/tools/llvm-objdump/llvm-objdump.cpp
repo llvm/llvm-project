@@ -2323,9 +2323,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           if (Disassembled && DT->InstrAnalysis) {
             llvm::raw_ostream *TargetOS = &FOS;
             uint64_t Target;
-            int TargetArchBitWidth = DT->SubtargetInfo->getTargetTriple().getArchPointerBitWidth();
             bool PrintTarget = DT->InstrAnalysis->evaluateBranch(Inst, SectionAddr + Index, Size, Target) || 
-                               DT->InstrAnalysis->evaluateInstruction(Inst, SectionAddr + Index, Size, Target, TargetArchBitWidth);
+                               DT->InstrAnalysis->evaluateInstruction(Inst, SectionAddr + Index, Size, Target, TargetOS);
             if (!PrintTarget) {
               if (std::optional<uint64_t> MaybeTarget =
                       DT->InstrAnalysis->evaluateMemoryOperandAddress(
@@ -2361,9 +2360,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                     [=](const std::pair<uint64_t, SectionRef> &O) {
                       return O.first <= Target;
                     });
-                uint64_t TargetSecAddr = It == SectionAddresses.end() ? It->first : 0;
+                uint64_t TargetSecAddr = It == SectionAddresses.end() ? 0 : It->first;
                 bool FoundSymbols = false;
-                // missing case where begin == end as in this case, we are to return 0
                 while (It != SectionAddresses.begin()) {
                   --It;
                   if (It->first != TargetSecAddr) {
@@ -2491,7 +2489,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                           << ">";
               } else if (LabelAvailable) {
                 *TargetOS << " <" << AllLabels[Target] << ">";
-              } 
+              }
               // By convention, each record in the comment stream should be
               // terminated.
               if (TargetOS == &CommentStream)
