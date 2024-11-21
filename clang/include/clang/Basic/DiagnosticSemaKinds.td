@@ -6162,6 +6162,15 @@ def warn_static_local_in_extern_inline : Warning<
 def note_convert_inline_to_static : Note<
   "use 'static' to give inline function %0 internal linkage">;
 
+def warn_possible_object_duplication_mutable : Warning<
+  "%0 is mutable, has hidden visibility, and external linkage; it may be "
+  "duplicated when built into a shared library">,
+  InGroup<UniqueObjectDuplication>, DefaultIgnore;
+def warn_possible_object_duplication_init : Warning<
+  "%0 has hidden visibility, and external linkage; its initialization may run "
+  "more than once when built into a shared library">,
+  InGroup<UniqueObjectDuplication>, DefaultIgnore;
+
 def ext_redefinition_of_typedef : ExtWarn<
   "redefinition of typedef %0 is a C11 feature">,
   InGroup<DiagGroup<"typedef-redefinition"> >;

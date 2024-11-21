@@ -696,6 +696,7 @@ def SuspiciousMemaccess : DiagGroup<"suspicious-memaccess",
    NonTrivialMemaccess, MemsetTransposedArgs, SuspiciousBzero]>;
 def StaticInInline : DiagGroup<"static-in-inline">;
 def StaticLocalInInline : DiagGroup<"static-local-in-inline">;
+def UniqueObjectDuplication : DiagGroup<"unique-object-duplication">;
 def GNUStaticFloatInit : DiagGroup<"gnu-static-float-init">;
 def StaticFloatInit : DiagGroup<"static-float-init", [GNUStaticFloatInit]>;
 // Allow differentiation between GNU statement expressions in a macro versus
