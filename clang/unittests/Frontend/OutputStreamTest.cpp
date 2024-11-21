@@ -13,7 +13,6 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/FrontendTool/Utils.h"
 #include "clang/Lex/PreprocessorOptions.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -38,7 +37,7 @@ TEST(FrontendOutputTests, TestOutputStream) {
 
   Compiler.setOutputStream(std::move(IRStream));
   Compiler.setInvocation(std::move(Invocation));
-  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+  Compiler.createDiagnostics();
 
   bool Success = ExecuteCompilerInvocation(&Compiler);
   EXPECT_TRUE(Success);
@@ -63,7 +62,6 @@ TEST(FrontendOutputTests, TestVerboseOutputStreamShared) {
   Compiler.setInvocation(std::move(Invocation));
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
   Compiler.createDiagnostics(
-      *llvm::vfs::getRealFileSystem(),
       new TextDiagnosticPrinter(llvm::nulls(), &*DiagOpts), true);
   Compiler.setVerboseOutputStream(VerboseStream);
 
@@ -93,7 +91,6 @@ TEST(FrontendOutputTests, TestVerboseOutputStreamOwned) {
     Compiler.setInvocation(std::move(Invocation));
     IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
     Compiler.createDiagnostics(
-        *llvm::vfs::getRealFileSystem(),
         new TextDiagnosticPrinter(llvm::nulls(), &*DiagOpts), true);
     Compiler.setVerboseOutputStream(std::move(VerboseStream));
 
