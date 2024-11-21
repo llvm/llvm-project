@@ -1510,7 +1510,7 @@ def ReduceAdd : Builtin {
 
 def ReduceMul : Builtin {
   let Spellings = ["__builtin_reduce_mul"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
