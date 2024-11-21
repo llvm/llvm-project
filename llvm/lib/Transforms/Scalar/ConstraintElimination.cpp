@@ -1508,7 +1508,6 @@ static bool checkOrAndOpImpliedByOther(
   if (OtherOpIdx != 0 && isa<SelectInst>(JoinOp))
     return false;
 
-  // Optimistically add fact from first condition.
   unsigned OldSize = DFSInStack.size();
   auto InfoRestorer = make_scope_exit([&]() {
     // Remove entries again.
@@ -1518,16 +1517,18 @@ static bool checkOrAndOpImpliedByOther(
                            DFSInStack);
     }
   });
-  // For OR, check if the negated condition implies CmpToCheck.
   bool IsOr = match(JoinOp, m_LogicalOr());
   SmallVector<Value *, 4> Worklist({JoinOp->getOperand(OtherOpIdx)});
+  // Do a traversal of the AND/OR tree to add facts from leaf compares.
   while (!Worklist.empty()) {
     Value *Val = Worklist.pop_back_val();
     Value *LHS, *RHS;
     ICmpInst::Predicate Pred;
     if (match(Val, m_ICmp(Pred, m_Value(LHS), m_Value(RHS)))) {
+      // For OR, check if the negated condition implies CmpToCheck.
       if (IsOr)
         Pred = CmpInst::getInversePredicate(Pred);
+      // Optimistically add fact from the other compares in the AND/OR.
       Info.addFact(Pred, LHS, RHS, CB.NumIn, CB.NumOut, DFSInStack);
       continue;
     }
