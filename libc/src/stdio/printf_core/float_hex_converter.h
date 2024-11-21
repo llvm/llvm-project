@@ -29,9 +29,6 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
                                       const FormatSection &to_conv) {
   using LDBits = fputil::FPBits<long double>;
   using StorageType = LDBits::StorageType;
-  // All of the letters will be defined relative to variable a, which will be
-  // the appropriate case based on the name of the conversion. This converts any
-  // conversion name into the letter 'a' with the appropriate case.
 
   bool is_negative;
   int exponent;
