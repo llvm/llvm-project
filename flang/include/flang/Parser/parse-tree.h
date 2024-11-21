@@ -3457,6 +3457,17 @@ inline namespace modifier {
 //   ENUM_CLASS(Value, Keyword1, Keyword2);
 // };
 
+// Ref: [5.2:252-254]
+//
+// chunk-modifier ->
+//    SIMD                                          // since 5.2
+//
+// Prior to 5.2 "chunk-modifier" was a part of "modifier" on SCHEDULE clause.
+struct OmpChunkModifier {
+  ENUM_CLASS(Value, Simd)
+  WRAPPER_CLASS_BOILERPLATE(OmpChunkModifier, Value);
+};
+
 // Ref: [5.0:47-49], [5.1:49-51], [5.2:67-69]
 //
 // iterator-specifier ->
@@ -3506,6 +3517,30 @@ struct OmpIterator {
 struct OmpLinearModifier {
   ENUM_CLASS(Value, Ref, Uval, Val);
   WRAPPER_CLASS_BOILERPLATE(OmpLinearModifier, Value);
+};
+
+// Ref: [4.5:56-63], [5.0:101-109], [5.1:126-133], [5.2:252-254]
+//
+// modifier ->
+//    MONOTONIC | NONMONOTONIC | SIMD               // since 4.5, until 5.1
+// ordering-modifier ->
+//    MONOTONIC | NONMONOTONIC                      // since 5.2
+//
+// Until 5.1, the SCHEDULE clause accepted up to two instances of "modifier".
+// Since 5.2 "modifier" was replaced with "ordering-modifier" and "chunk-
+// modifier".
+struct OmpOrderingModifier {
+  ENUM_CLASS(Value, Monotonic, Nonmonotonic, Simd)
+  WRAPPER_CLASS_BOILERPLATE(OmpOrderingModifier, Value);
+};
+
+// Ref: [5.1:125-126], [5.2:233-234]
+//
+// order-modifier ->
+//    REPRODUCIBLE | UNCONSTRAINED                  // since 5.1
+struct OmpOrderModifier {
+  ENUM_CLASS(Value, Reproducible, Unconstrained)
+  WRAPPER_CLASS_BOILERPLATE(OmpOrderModifier, Value);
 };
 
 // Ref: [4.5:201-207], [5.0:293-299], [5.1:325-331], [5.2:124]
@@ -3786,16 +3821,16 @@ struct OmpMapClause {
       t;
 };
 
-// 2.9.5 order-clause -> ORDER ([order-modifier :]concurrent)
-struct OmpOrderModifier {
-  ENUM_CLASS(Kind, Reproducible, Unconstrained)
-  WRAPPER_CLASS_BOILERPLATE(OmpOrderModifier, Kind);
-};
-
+// Ref: [5.0:101-109], [5.1:126-134], [5.2:233-234]
+//
+// order-clause ->
+//    ORDER(CONCURRENT) |                           // since 5.0
+//    ORDER([order-modifier:] CONCURRENT)           // since 5.1
 struct OmpOrderClause {
   TUPLE_CLASS_BOILERPLATE(OmpOrderClause);
-  ENUM_CLASS(Type, Concurrent)
-  std::tuple<std::optional<OmpOrderModifier>, Type> t;
+  ENUM_CLASS(Ordering, Concurrent)
+  MODIFIER_BOILERPLATE(OmpOrderModifier);
+  std::tuple<MODIFIERS(), Ordering> t;
 };
 
 // 2.5 proc-bind-clause -> PROC_BIND (MASTER | CLOSE | SPREAD)
@@ -3816,27 +3851,19 @@ struct OmpReductionClause {
   std::tuple<MODIFIERS(), OmpObjectList> t;
 };
 
-// 2.7.1 sched-modifier -> MONOTONIC | NONMONOTONIC | SIMD
-struct OmpScheduleModifierType {
-  ENUM_CLASS(ModType, Monotonic, Nonmonotonic, Simd)
-  WRAPPER_CLASS_BOILERPLATE(OmpScheduleModifierType, ModType);
-};
-
-struct OmpScheduleModifier {
-  TUPLE_CLASS_BOILERPLATE(OmpScheduleModifier);
-  WRAPPER_CLASS(Modifier1, OmpScheduleModifierType);
-  WRAPPER_CLASS(Modifier2, OmpScheduleModifierType);
-  std::tuple<Modifier1, std::optional<Modifier2>> t;
-};
-
-// 2.7.1 schedule-clause -> SCHEDULE ([sched-modifier1] [, sched-modifier2]:]
-//                                    kind[, chunk_size])
+// Ref: [4.5:56-63], [5.0:101-109], [5.1:126-133], [5.2:252-254]
+//
+// schedule-clause ->
+//    SCHEDULE([modifier[, modifier]:]
+//        kind[, chunk-size])                       // since 4.5, until 5.1
+// schedule-clause ->
+//    SCHEDULE([ordering-modifier], chunk-modifier],
+//        kind[, chunk_size])                       // since 5.2
 struct OmpScheduleClause {
   TUPLE_CLASS_BOILERPLATE(OmpScheduleClause);
-  ENUM_CLASS(ScheduleType, Static, Dynamic, Guided, Auto, Runtime)
-  std::tuple<std::optional<OmpScheduleModifier>, ScheduleType,
-      std::optional<ScalarIntExpr>>
-      t;
+  ENUM_CLASS(Kind, Static, Dynamic, Guided, Auto, Runtime)
+  MODIFIER_BOILERPLATE(OmpOrderingModifier, OmpChunkModifier);
+  std::tuple<MODIFIERS(), Kind, std::optional<ScalarIntExpr>> t;
 };
 
 // Ref: [4.5:107-109], [5.0:176-180], [5.1:205-210], [5.2:167-168]
