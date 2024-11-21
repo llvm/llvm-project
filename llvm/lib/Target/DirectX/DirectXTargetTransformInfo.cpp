@@ -28,6 +28,8 @@ bool DirectXTTIImpl::isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
 bool DirectXTTIImpl::isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
                                                             int ScalarOpdIdx) {
   switch (ID) {
+  case Intrinsic::dx_asdouble:
+    return ScalarOpdIdx == 0;
   default:
     return ScalarOpdIdx == -1;
   }
