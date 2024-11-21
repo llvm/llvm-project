@@ -86,44 +86,13 @@ bool ExegesisRISCVTarget::matchesArch(Triple::ArchType Arch) const {
 // Stores constant value to a general-purpose (integer) register.
 static std::vector<MCInst> loadIntReg(const MCSubtargetInfo &STI, unsigned Reg,
                                       const APInt &Value) {
-  RISCVMatInt::InstSeq InstSeq =
-      RISCVMatInt::generateInstSeq(Value.getSExtValue(), STI);
-  // First instruction has form 'Op DestReg, X0, Imm'
-  MCRegister SrcReg = RISCV::X0;
-  MCRegister DestReg = Reg;
+  SmallVector<MCInst, 8> MCInstSeq;
   std::vector<MCInst> MatIntInstrs;
-  MatIntInstrs.reserve(InstSeq.size());
-  for (const RISCVMatInt::Inst &Inst : InstSeq) {
-    switch (Inst.getOpndKind()) {
-    case RISCVMatInt::Imm:
-      MatIntInstrs.push_back(MCInstBuilder(Inst.getOpcode())
-                                 .addReg(DestReg)
-                                 .addImm(Inst.getImm()));
-      break;
-    case RISCVMatInt::RegX0:
-      MatIntInstrs.push_back(MCInstBuilder(Inst.getOpcode())
-                                 .addReg(DestReg)
-                                 .addReg(SrcReg)
-                                 .addReg(RISCV::X0));
-      break;
-    case RISCVMatInt::RegReg:
-      MatIntInstrs.push_back(MCInstBuilder(Inst.getOpcode())
-                                 .addReg(DestReg)
-                                 .addReg(SrcReg)
-                                 .addReg(SrcReg));
-      break;
-    case RISCVMatInt::RegImm:
-      MatIntInstrs.push_back(MCInstBuilder(Inst.getOpcode())
-                                 .addReg(DestReg)
-                                 .addReg(SrcReg)
-                                 .addImm(Inst.getImm()));
-      break;
-    default:
-      llvm_unreachable("Unexpected kind!");
-    }
-    // Further instructions have form 'Op DestReg, DestReg, Imm'
-    SrcReg = DestReg;
-  }
+  MCRegister DestReg = Reg;
+
+  RISCVMatInt::generateMCInstSeq(Value.getSExtValue(), STI, DestReg, MCInstSeq);
+  std::copy(MCInstSeq.begin(), MCInstSeq.end(), MatIntInstrs.begin());
+
   return MatIntInstrs;
 }
 
