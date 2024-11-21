@@ -1908,7 +1908,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     // ensure both args have 3 elements
     int NumElementsArg1 =
-        TheCall->getArg(0)->getType()->casAs<VectorType>()->getNumElements();
+        TheCall->getArg(0)->getType()->castAs<VectorType>()->getNumElements();
     int NumElementsArg2 =
         TheCall->getArg(1)->getType()->castAs<VectorType>()->getNumElements();
 
