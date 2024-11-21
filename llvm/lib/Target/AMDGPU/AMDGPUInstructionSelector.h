@@ -364,6 +364,8 @@ private:
 
   void renderRoundMode(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
+  void renderScaledMAIIntrinsicOperand(MachineInstrBuilder &MIB,
+                                       const MachineInstr &MI, int OpIdx) const;
 
   bool isInlineImmediate(const APInt &Imm) const;
   bool isInlineImmediate(const APFloat &Imm) const;
