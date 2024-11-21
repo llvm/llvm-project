@@ -28,14 +28,14 @@ import a;
 
 NotEnoughParams notEnoughParams(1); // expected-error {{no viable constructor or deduction guide for deduction of template arguments}}
 
-// expected-note@a.cppm:* {{generated from 'Base<T>' constructor}}
+// expected-note@a.cppm:* 2{{inherited from implicit deduction guide declared here}}
 
 // expected-note@a.cppm:* {{candidate template ignored: could not match 'NotEnoughParams<T, U>' against 'int'}} \
 // expected-note@a.cppm:* {{implicit deduction guide declared as 'template <typename T, typename U> NotEnoughParams(NotEnoughParams<T, U>) -> NotEnoughParams<T, U>'}} \
 // expected-note@a.cppm:* {{candidate function template not viable: requires 2 arguments, but 1 was provided}} \
 // expected-note@a.cppm:* {{implicit deduction guide declared as 'template <typename T, typename U> NotEnoughParams(T t, U u) -> NotEnoughParams<T, U>'}}
 
-// expected-note@a.cppm:* {{candidate template ignored: could not deduce template arguments for 'NotEnoughParams<T, U>' from 'Base<T>' [with T = int]}} \
-// expected-note@a.cppm:* {{implicit deduction guide declared as 'template <typename T> NotEnoughParams(T) -> typename __ctad_CC_Base_to_NotEnoughParams_0<Base<T>>::type'}} \
+// expected-note@a.cppm:* {{candidate template ignored: could not deduce template arguments for 'NotEnoughParams<T, U>' from inherited constructor of 'Base<T>' [with T = int]}} \
+// expected-note@a.cppm:* {{implicit deduction guide declared as 'template <typename T> Base(T) -> Base<T>}} \
 // expected-note@a.cppm:* {{candidate template ignored: could not match 'Base<T>' against 'int'}} \
-// expected-note@a.cppm:* {{implicit deduction guide declared as 'template <typename T> NotEnoughParams(Base<T>) -> typename __ctad_CC_Base_to_NotEnoughParams_0<Base<T>>::type'}}
+// expected-note@a.cppm:* {{implicit deduction guide declared as 'template <typename T> Base(Base<T>) -> Base<T>}}

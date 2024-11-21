@@ -11795,16 +11795,16 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     // will manifest as substitution failures in the return type
     // partial specialization, so we show a generic diagnostic
     // in this case.
-    if (auto *DG = dyn_cast<CXXDeductionGuideDecl>(Templated);
+    if (const auto *DG = dyn_cast<CXXDeductionGuideDecl>(Templated);
         DG && DG->getSourceDeductionGuideKind() ==
                   CXXDeductionGuideDecl::SourceDeductionGuideKind::
                       InheritedConstructor) {
-      CXXDeductionGuideDecl *Source = DG->getSourceDeductionGuide();
+      const CXXDeductionGuideDecl *Source = DG->getSourceDeductionGuide();
       assert(Source &&
              "Inherited constructor deduction guides must have a source");
 
       auto GetDGDeducedTemplateType =
-          [](CXXDeductionGuideDecl *DG) -> QualType {
+          [](const CXXDeductionGuideDecl *DG) -> QualType {
         return QualType(cast<ClassTemplateDecl>(DG->getDeducedTemplate())
                             ->getTemplatedDecl()
                             ->getTypeForDecl(),
@@ -11815,15 +11815,8 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
       QualType InheritedRecordType = GetDGDeducedTemplateType(Source);
       S.Diag(Templated->getLocation(),
              diag::note_ovl_candidate_inherited_constructor_deduction_failure)
-          << DeducedRecordType << InheritedRecordType << TemplateArgString;
-
-      CXXConstructorDecl *Ctor = DG->getCorrespondingConstructor();
-      if (Ctor)
-        S.Diag(
-            Ctor->getBeginLoc(),
-            diag::
-                note_ovl_candidate_inherited_constructor_deduction_failure_source)
-            << InheritedRecordType;
+          << DeducedRecordType << InheritedRecordType << TemplateArgString
+          << DG->getParametersSourceRange();
       return;
     }
 
@@ -12041,9 +12034,18 @@ static void DiagnoseFailedExplicitSpec(Sema &S, OverloadCandidate *Cand) {
 }
 
 static void NoteImplicitDeductionGuide(Sema &S, FunctionDecl *Fn) {
-  auto *DG = dyn_cast<CXXDeductionGuideDecl>(Fn);
+  const auto *DG = dyn_cast<CXXDeductionGuideDecl>(Fn);
   if (!DG)
     return;
+  // The definition of inherited constructor deduction guides is not
+  // of particular use to end users, as the CC<R> return type cannot
+  // be manually constructed. Instead, we show the guide we started with.
+  while (DG->getSourceDeductionGuideKind() == CXXDeductionGuideDecl::SourceDeductionGuideKind::InheritedConstructor) {
+    DG = DG->getSourceDeductionGuide();
+    S.Diag(DG->getLocation(), diag::note_ovl_candidate_inherited_constructor_source)
+      << (DG->isImplicit() ? 1 : 0);
+  }
+
   TemplateDecl *OriginTemplate =
       DG->getDeclName().getCXXDeductionGuideTemplate();
   // We want to always print synthesized deduction guides for type aliases.

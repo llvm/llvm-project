@@ -1977,7 +1977,7 @@ private:
                         TypeSourceInfo *TInfo, SourceLocation EndLocation,
                         CXXConstructorDecl *Ctor, DeductionCandidate Kind,
                         Expr *TrailingRequiresClause,
-                        CXXDeductionGuideDecl *GeneratedFrom,
+                        const CXXDeductionGuideDecl *GeneratedFrom,
                         SourceDeductionGuideKind SourceKind)
       : FunctionDecl(CXXDeductionGuide, C, DC, StartLoc, NameInfo, T, TInfo,
                      SC_None, false, false, ConstexprSpecKind::Unspecified,
@@ -1995,7 +1995,7 @@ private:
   // in the case of alias template deduction or CTAD from inherited
   // constructors. The SourceDeductionGuideKind member indicates which of these
   // sources applies, or is None otherwise.
-  llvm::PointerIntPair<CXXDeductionGuideDecl *, 2, SourceDeductionGuideKind>
+  llvm::PointerIntPair<const CXXDeductionGuideDecl *, 2, SourceDeductionGuideKind>
       SourceDeductionGuide;
   void setExplicitSpecifier(ExplicitSpecifier ES) { ExplicitSpec = ES; }
 
@@ -2010,7 +2010,7 @@ public:
          CXXConstructorDecl *Ctor = nullptr,
          DeductionCandidate Kind = DeductionCandidate::Normal,
          Expr *TrailingRequiresClause = nullptr,
-         CXXDeductionGuideDecl *SourceDG = nullptr,
+         const CXXDeductionGuideDecl *SourceDG = nullptr,
          SourceDeductionGuideKind SK = SourceDeductionGuideKind::None);
 
   static CXXDeductionGuideDecl *CreateDeserialized(ASTContext &C,
@@ -2034,7 +2034,7 @@ public:
   /// Get the deduction guide from which this deduction guide was generated,
   /// if it was generated as part of alias template deduction or from an
   /// inherited constructor.
-  CXXDeductionGuideDecl *getSourceDeductionGuide() const {
+  const CXXDeductionGuideDecl *getSourceDeductionGuide() const {
     return SourceDeductionGuide.getPointer();
   }
 

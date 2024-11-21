@@ -4842,9 +4842,9 @@ def note_ovl_candidate_underqualified : Note<
 def note_ovl_candidate_substitution_failure : Note<
     "candidate template ignored: substitution failure%0%1">;
 def note_ovl_candidate_inherited_constructor_deduction_failure: Note<
-    "candidate template ignored: could not deduce template arguments for %0 from %1%2">;
-def note_ovl_candidate_inherited_constructor_deduction_failure_source: Note<
-    "generated from %0 constructor">;
+    "candidate template ignored: could not deduce template arguments for %0 from inherited constructor of %1%2">;
+def note_ovl_candidate_inherited_constructor_source: Note<
+    "inherited from %select{|implicit }0deduction guide declared here">;
 def note_ovl_candidate_disabled_by_enable_if : Note<
     "candidate template ignored: disabled by %0%1">;
 def note_ovl_candidate_disabled_by_requirement : Note<

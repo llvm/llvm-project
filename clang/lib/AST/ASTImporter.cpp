@@ -3999,7 +3999,7 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
         importExplicitSpecifier(Err, Guide->getExplicitSpecifier());
     CXXConstructorDecl *Ctor =
         importChecked(Err, Guide->getCorrespondingConstructor());
-    CXXDeductionGuideDecl *SourceDG =
+    const CXXDeductionGuideDecl *SourceDG =
         importChecked(Err, Guide->getSourceDeductionGuide());
     if (Err)
       return std::move(Err);

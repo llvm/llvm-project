@@ -2250,7 +2250,7 @@ CXXDeductionGuideDecl *CXXDeductionGuideDecl::Create(
     ExplicitSpecifier ES, const DeclarationNameInfo &NameInfo, QualType T,
     TypeSourceInfo *TInfo, SourceLocation EndLocation, CXXConstructorDecl *Ctor,
     DeductionCandidate Kind, Expr *TrailingRequiresClause,
-    CXXDeductionGuideDecl *GeneratedFrom, SourceDeductionGuideKind SourceKind) {
+    const CXXDeductionGuideDecl *GeneratedFrom, SourceDeductionGuideKind SourceKind) {
   return new (C, DC) CXXDeductionGuideDecl(
       C, DC, StartLoc, ES, NameInfo, T, TInfo, EndLocation, Ctor, Kind,
       TrailingRequiresClause, GeneratedFrom, SourceKind);
