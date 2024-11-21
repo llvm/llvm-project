@@ -314,29 +314,29 @@ private:
   TestContext *CurrentContext;
 };
 
-// Custom vendor-defined Telemeter that has additional data-collection point.
-class TestTelemeter : public Telemeter {
+// Custom vendor-defined Manager that has additional data-collection point.
+class TestManager : public Manager {
 public:
-  TestTelemeter(std::string SessionId, TestContext *Ctxt)
+  TestManager(std::string SessionId, TestContext *Ctxt)
       : CurrentContext(Ctxt), Uuid(SessionId), Counter(0) {}
 
-  static std::unique_ptr<TestTelemeter>
+  static std::unique_ptr<TestManager>
   createInstance(Config *config, TestContext *CurrentContext) {
     if (!config->EnableTelemetry)
       return nullptr;
     CurrentContext->ExpectedUuid = nextUuid();
-    std::unique_ptr<TestTelemeter> Telemeter = std::make_unique<TestTelemeter>(
+    std::unique_ptr<TestManager> Manager = std::make_unique<TestManager>(
         CurrentContext->ExpectedUuid, CurrentContext);
     // Set up Destination based on the given config.
     for (const std::string &Dest : config->AdditionalDestinations) {
       // The destination(s) are ALSO defined by vendor, so it should understand
       // what the name of each destination signifies.
       if (llvm::StringRef(Dest) == JSON_DEST) {
-        Telemeter->addDestination(
+        Manager->addDestination(
             std::make_unique<vendor_code::JsonStreamDestination>(
                 CurrentContext->SanitizeData, CurrentContext));
       } else if (llvm::StringRef(Dest) == STRING_DEST) {
-        Telemeter->addDestination(
+        Manager->addDestination(
             std::make_unique<vendor_code::StringDestination>(
                 CurrentContext->SanitizeData, CurrentContext->Buffer));
       } else {
@@ -344,7 +344,7 @@ public:
             llvm::Twine("unknown destination: ", Dest).str().c_str());
       }
     }
-    return Telemeter;
+    return Manager;
   }
 
   void atStartup(llvm::StringRef ToolPath, TelemetryInfo *Entry) override {
@@ -379,7 +379,7 @@ public:
   }
 
   void atMidpoint(TelemetryInfo *Entry) {
-    // The custom Telemeter can record and send additional data.
+    // The custom Manager can record and send additional data.
     if (auto *C = dyn_cast<CustomTelemetryEvent>(Entry)) {
       C->Msgs.push_back("Two");
       C->Msgs.push_back("Deux");
@@ -391,7 +391,7 @@ public:
 
   const std::string &getUuid() const { return Uuid; }
 
-  ~TestTelemeter() = default;
+  ~TestManager() = default;
 
   template <typename T> T makeDefaultTelemetryInfo() {
     T Ret;
@@ -477,14 +477,14 @@ auto ExitTime = StartTime + std::chrono::milliseconds(20);
 // milliseconds.
 auto ExitCompleteTime = ExitTime + std::chrono::milliseconds(10);
 
-void AtToolStart(std::string ToolName, vendor_code::TestTelemeter *T) {
+void AtToolStart(std::string ToolName, vendor_code::TestManager *T) {
   vendor_code::StartupEvent Entry =
       T->makeDefaultTelemetryInfo<vendor_code::StartupEvent>();
   Entry.Stats = {StartTime, InitCompleteTime};
   T->atStartup(ToolName, &Entry);
 }
 
-void AtToolExit(std::string ToolName, vendor_code::TestTelemeter *T) {
+void AtToolExit(std::string ToolName, vendor_code::TestManager *T) {
   vendor_code::ExitEvent Entry =
       T->makeDefaultTelemetryInfo<vendor_code::ExitEvent>();
   Entry.Stats = {ExitTime, ExitCompleteTime};
@@ -495,7 +495,7 @@ void AtToolExit(std::string ToolName, vendor_code::TestTelemeter *T) {
   T->atExit(ToolName, &Entry);
 }
 
-void AtToolMidPoint(vendor_code::TestTelemeter *T) {
+void AtToolMidPoint(vendor_code::TestManager *T) {
   vendor_code::CustomTelemetryEvent Entry =
       T->makeDefaultTelemetryInfo<vendor_code::CustomTelemetryEvent>();
   Entry.Stats = {MidPointTime, MidPointCompleteTime};
@@ -512,7 +512,7 @@ TEST(TelemetryTest, TelemetryDefault) {
   std::shared_ptr<llvm::telemetry::Config> Config =
       GetTelemetryConfig(CurrentContext);
   auto Tool =
-      vendor_code::TestTelemeter::createInstance(Config.get(), CurrentContext);
+      vendor_code::TestManager::createInstance(Config.get(), CurrentContext);
 
   EXPECT_EQ(nullptr, Tool.get());
 }
@@ -536,7 +536,7 @@ TEST(TelemetryTest, TelemetryEnabled) {
   Config->AdditionalDestinations.push_back(vendor_code::JSON_DEST.str());
 
   auto Tool =
-      vendor_code::TestTelemeter::createInstance(Config.get(), CurrentContext);
+      vendor_code::TestManager::createInstance(Config.get(), CurrentContext);
 
   AtToolStart(ToolName, Tool.get());
   AtToolMidPoint(Tool.get());
@@ -562,7 +562,7 @@ TEST(TelemetryTest, TelemetryEnabled) {
   // Check that the JsonDestination emitted properly
   {
 
-    // There should be 3 events emitted by the Telemeter (start, midpoint, exit)
+    // There should be 3 events emitted by the Manager (start, midpoint, exit)
     EXPECT_EQ(static_cast<size_t>(3), CurrentContext->EmittedJsons.size());
 
     const json::Value *StartupEntry =
@@ -614,7 +614,7 @@ TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
   Config->AdditionalDestinations.push_back(vendor_code::JSON_DEST.str());
 
   auto Tool =
-      vendor_code::TestTelemeter::createInstance(Config.get(), CurrentContext);
+      vendor_code::TestManager::createInstance(Config.get(), CurrentContext);
 
   AtToolStart(ToolName, Tool.get());
   AtToolMidPoint(Tool.get());
@@ -638,7 +638,7 @@ TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
   // Check that the JsonDestination emitted properly
   {
 
-    // There should be 3 events emitted by the Telemeter (start, midpoint, exit)
+    // There should be 3 events emitted by the Manager (start, midpoint, exit)
     EXPECT_EQ(static_cast<size_t>(3), CurrentContext->EmittedJsons.size());
 
     const json::Value *StartupEntry =
