@@ -15,7 +15,7 @@
 # CHECK-NEXT: error: Cannot disassemble around the current PC without a selected frame: no currently running process.
 # CHECK-NEXT: (lldb) disassemble --start-address 0x0
 # CHECK-NEXT: command-disassemble.s.tmp`foo:
-# CHECK-NEXT: command-disassemble.s.tmp[0x0] <+0>:   int    $0x10
+# CHECK-NEXT: command-disassemble.s.tmp[0x0] <+0>:   jmp    0x2 ; <+2>
 # CHECK-NEXT: command-disassemble.s.tmp[0x2] <+2>:   int    $0x11
 # CHECK-NEXT: command-disassemble.s.tmp[0x4] <+4>:   int    $0x12
 # CHECK-NEXT: command-disassemble.s.tmp[0x6] <+6>:   int    $0x13
@@ -41,7 +41,7 @@
 # CHECK-NEXT: error: End address before start address.
 # CHECK-NEXT: (lldb) disassemble --address 0x0
 # CHECK-NEXT: command-disassemble.s.tmp`foo:
-# CHECK-NEXT: command-disassemble.s.tmp[0x0] <+0>:  int    $0x10
+# CHECK-NEXT: command-disassemble.s.tmp[0x0] <+0>:  jmp    0x2 ; <+2>
 # CHECK-NEXT: command-disassemble.s.tmp[0x2] <+2>:  int    $0x11
 # CHECK-NEXT: command-disassemble.s.tmp[0x4] <+4>:  int    $0x12
 # CHECK-NEXT: command-disassemble.s.tmp[0x6] <+6>:  int    $0x13
@@ -63,7 +63,7 @@
 # CHECK:      command-disassemble.s.tmp[0x203e] <+8190>: int    $0x2a
 # CHECK-NEXT: (lldb) disassemble --start-address 0x0 --count 7
 # CHECK-NEXT: command-disassemble.s.tmp`foo:
-# CHECK-NEXT: command-disassemble.s.tmp[0x0] <+0>:  int    $0x10
+# CHECK-NEXT: command-disassemble.s.tmp[0x0] <+0>:  jmp    0x2 ; <+2>
 # CHECK-NEXT: command-disassemble.s.tmp[0x2] <+2>:  int    $0x11
 # CHECK-NEXT: command-disassemble.s.tmp[0x4] <+4>:  int    $0x12
 # CHECK-NEXT: command-disassemble.s.tmp[0x6] <+6>:  int    $0x13
@@ -101,8 +101,8 @@
 
         .text
 foo:
-        int $0x10
-        int $0x11
+        jmp 1f
+1:      int $0x11
         int $0x12
         int $0x13
         int $0x14

@@ -732,6 +732,10 @@ at the end to the next power of 2.
 
 These reductions support both fixed-sized and scalable vector types.
 
+The integer reduction intrinsics, including ``__builtin_reduce_add``,
+``__builtin_reduce_mul``, ``__builtin_reduce_and``, ``__builtin_reduce_or``,
+and ``__builtin_reduce_xor``, can be called in a ``constexpr`` context.
+
 Example:
 
 .. code-block:: c++
@@ -745,12 +749,10 @@ Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
 ======================================= ====================================================================== ==================================
          Name                            Operation                                                              Supported element types
 ======================================= ====================================================================== ==================================
- ET __builtin_reduce_max(VT a)           return x or y, whichever is larger; If exactly one argument is         integer and floating point types
-                                         a NaN, return the other argument. If both arguments are NaNs,
-                                         fmax() return a NaN.
- ET __builtin_reduce_min(VT a)           return x or y, whichever is smaller; If exactly one argument           integer and floating point types
-                                         is a NaN, return the other argument. If both arguments are
-                                         NaNs, fmax() return a NaN.
+ ET __builtin_reduce_max(VT a)           return the largest element of the vector. The floating point result    integer and floating point types
+                                         will always be a number unless all elements of the vector are NaN.
+ ET __builtin_reduce_min(VT a)           return the smallest element of the vector. The floating point result   integer and floating point types
+                                         will always be a number unless all elements of the vector are NaN.
  ET __builtin_reduce_add(VT a)           \+                                                                     integer types
  ET __builtin_reduce_mul(VT a)           \*                                                                     integer types
  ET __builtin_reduce_and(VT a)           &                                                                      integer types

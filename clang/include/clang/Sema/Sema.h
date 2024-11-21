@@ -1760,6 +1760,14 @@ public:
   /// Add [[gsl::Pointer]] attributes for std:: types.
   void inferGslPointerAttribute(TypedefNameDecl *TD);
 
+  LifetimeCaptureByAttr *ParseLifetimeCaptureByAttr(const ParsedAttr &AL,
+                                                    StringRef ParamName);
+  // Processes the argument 'X' in [[clang::lifetime_capture_by(X)]]. Since 'X'
+  // can be the name of a function parameter, we need to parse the function
+  // declaration and rest of the parameters before processesing 'X'. Therefore
+  // do this lazily instead of processing while parsing the annotation itself.
+  void LazyProcessLifetimeCaptureByParams(FunctionDecl *FD);
+
   /// Add _Nullable attributes for std:: types.
   void inferNullableClassAttribute(CXXRecordDecl *CRD);
 
@@ -2314,6 +2322,9 @@ public:
   /// \param FPOnly restricts the arguments to floating-point types.
   bool BuiltinVectorMath(CallExpr *TheCall, QualType &Res, bool FPOnly = false);
   bool BuiltinVectorToScalarMath(CallExpr *TheCall);
+
+  void checkLifetimeCaptureBy(FunctionDecl *FDecl, bool IsMemberFunction,
+                              const Expr *ThisArg, ArrayRef<const Expr *> Args);
 
   /// Handles the checks for format strings, non-POD arguments to vararg
   /// functions, NULL arguments passed to non-NULL parameters, diagnose_if

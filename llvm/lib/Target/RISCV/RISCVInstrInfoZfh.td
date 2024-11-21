@@ -293,7 +293,7 @@ def : PatFprFpr<fcopysign, FSGNJ_H, FPR16, f16>;
 def : PatFprFpr<riscv_fsgnjx, FSGNJX_H, FPR16, f16>;
 def : Pat<(f16 (fcopysign FPR16:$rs1, (f16 (fneg FPR16:$rs2)))), (FSGNJN_H $rs1, $rs2)>;
 def : Pat<(f16 (fcopysign FPR16:$rs1, FPR32:$rs2)),
-          (FSGNJ_H $rs1, (FCVT_H_S $rs2, FRM_DYN))>;
+          (FSGNJ_H $rs1, (f16 (FCVT_H_S $rs2, FRM_DYN)))>;
 
 // fmadd: rs1 * rs2 + rs3
 def : Pat<(f16 (any_fma FPR16:$rs1, FPR16:$rs2, FPR16:$rs3)),
@@ -588,7 +588,7 @@ def : Pat<(any_fpextend (f16 FPR16:$rs1)), (FCVT_D_H FPR16:$rs1, FRM_RNE)>;
 
 /// Float arithmetic operations
 def : Pat<(f16 (fcopysign FPR16:$rs1, FPR64:$rs2)),
-          (FSGNJ_H $rs1, (FCVT_H_D $rs2, FRM_DYN))>;
+          (FSGNJ_H $rs1, (f16 (FCVT_H_D $rs2, FRM_DYN)))>;
 def : Pat<(fcopysign FPR64:$rs1, (f16 FPR16:$rs2)), (FSGNJ_D $rs1, (FCVT_D_H $rs2, FRM_RNE))>;
 } // Predicates = [HasStdExtZfhmin, HasStdExtD]
 
@@ -613,5 +613,5 @@ def : Pat<(any_fpextend FPR16INX:$rs1), (FCVT_D_H_INX FPR16INX:$rs1, FRM_RNE)>;
 /// Float arithmetic operations
 def : Pat<(fcopysign FPR16INX:$rs1, FPR64INX:$rs2),
           (FSGNJ_H_INX $rs1, (FCVT_H_D_INX $rs2, 0b111))>;
-def : Pat<(fcopysign FPR64INX:$rs1, FPR16INX:$rs2), (FSGNJ_D_INX $rs1, (FCVT_D_H_INX $rs2, FRM_RNE))>;
+def : Pat<(fcopysign FPR64INX:$rs1, FPR16INX:$rs2), (FSGNJ_D_INX $rs1, (f64 (FCVT_D_H_INX $rs2, FRM_RNE)))>;
 } // Predicates = [HasStdExtZhinxmin, HasStdExtZdinx, IsRV64]

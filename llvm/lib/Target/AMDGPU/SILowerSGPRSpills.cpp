@@ -24,7 +24,6 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
-#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 

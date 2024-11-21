@@ -41,34 +41,30 @@ define internal void @SubRegLivenessUndefInPhi(i64 %cond) {
 ; CHECK-NEXT:  # %bb.1: # %Cond1
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vadd.vi v10, v8, 1
-; CHECK-NEXT:    vadd.vi v12, v8, 3
+; CHECK-NEXT:    vadd.vi v12, v8, 1
+; CHECK-NEXT:    vadd.vi v10, v8, 3
 ; CHECK-NEXT:    j .LBB2_3
 ; CHECK-NEXT:  .LBB2_2: # %Cond2
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vid.v v9
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 3
+; CHECK-NEXT:    vadd.vi v10, v9, 1
+; CHECK-NEXT:    vadd.vi v11, v9, 3
 ; CHECK-NEXT:    add a1, a0, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v8, v9, a0
-; CHECK-NEXT:    vsetvli a2, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vadd.vi v11, v9, 1
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
+; CHECK-NEXT:    vslideup.vx v12, v10, a0
 ; CHECK-NEXT:    vslideup.vx v10, v11, a0
-; CHECK-NEXT:    vsetvli a2, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vadd.vi v9, v9, 3
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vslideup.vx v12, v9, a0
 ; CHECK-NEXT:  .LBB2_3: # %UseSR
 ; CHECK-NEXT:    vl1r.v v14, (zero)
 ; CHECK-NEXT:    vsetivli zero, 4, e8, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v13, v14, v8
-; CHECK-NEXT:    vrgatherei16.vv v8, v14, v10
+; CHECK-NEXT:    vrgatherei16.vv v15, v14, v8
+; CHECK-NEXT:    vrgatherei16.vv v8, v14, v12
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vand.vv v8, v13, v8
+; CHECK-NEXT:    vand.vv v8, v15, v8
 ; CHECK-NEXT:    vsetivli zero, 4, e8, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v9, v14, v12
+; CHECK-NEXT:    vrgatherei16.vv v9, v14, v10
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vand.vv v8, v8, v9
 ; CHECK-NEXT:    vs1r.v v8, (zero)
@@ -120,10 +116,10 @@ define internal void @SubRegLivenessUndef() {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vl1r.v v14, (zero)
 ; CHECK-NEXT:    vsetivli zero, 4, e8, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v13, v14, v8
+; CHECK-NEXT:    vrgatherei16.vv v15, v14, v8
 ; CHECK-NEXT:    vrgatherei16.vv v9, v14, v10
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vand.vv v9, v13, v9
+; CHECK-NEXT:    vand.vv v9, v15, v9
 ; CHECK-NEXT:    vsetivli zero, 4, e8, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v11, v14, v12
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
