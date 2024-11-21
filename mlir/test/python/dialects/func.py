@@ -112,7 +112,7 @@ def testFunctionArgAttrs():
     foo = func.FuncOp("foo", ([("arg0", F32Type.get())], []))
 
     assert len(foo.arg_attrs) == 1
-    assert foo.arg_attrs[0] = ir.DictAttr.get({})
+    assert foo.arg_attrs[0] == DictAttr.get({})
 
     foo.arg_attrs = [DictAttr.get({"test.foo": StringAttr.get("bar")})]
 
