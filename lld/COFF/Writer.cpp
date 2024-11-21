@@ -2461,7 +2461,7 @@ void Writer::sortExceptionTables() {
     break;
   default:
     if (pdata.first)
-      lld::errs() << "warning: don't know how to handle .pdata.\n";
+      ctx.e.errs() << "warning: don't know how to handle .pdata\n";
     break;
   }
 }
