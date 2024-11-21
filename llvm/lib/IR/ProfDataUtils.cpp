@@ -150,13 +150,6 @@ MDNode *getBranchWeightMDNode(const Instruction &I) {
   return ProfileData;
 }
 
-MDNode *getDxBranchHint(const Instruction &I) {
-  MDNode *Node = I.getMetadata(LLVMContext::MD_dxil_controlflow_hints);
-  if (!isTargetMD(Node, "dx.controlflow.hints", 2))
-    return nullptr;
-  return Node;
-}
-
 MDNode *getValidBranchWeightMDNode(const Instruction &I) {
   auto *ProfileData = getBranchWeightMDNode(I);
   if (ProfileData && getNumBranchWeights(*ProfileData) == I.getNumSuccessors())

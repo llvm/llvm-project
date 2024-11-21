@@ -1101,14 +1101,11 @@ private:
   /// instruction.
   /// \returns The annotated instruction.
   template <typename InstTy>
-  InstTy *addBranchMetadata(InstTy *I, MDNode *Weights, MDNode *Unpredictable,
-                            MDNode *ControlFlowHint = nullptr) {
+  InstTy *addBranchMetadata(InstTy *I, MDNode *Weights, MDNode *Unpredictable) {
     if (Weights)
       I->setMetadata(LLVMContext::MD_prof, Weights);
     if (Unpredictable)
       I->setMetadata(LLVMContext::MD_unpredictable, Unpredictable);
-    if (ControlFlowHint)
-      I->setMetadata(LLVMContext::MD_dxil_controlflow_hints, ControlFlowHint);
     return I;
   }
 
@@ -1146,11 +1143,9 @@ public:
   /// instruction.
   BranchInst *CreateCondBr(Value *Cond, BasicBlock *True, BasicBlock *False,
                            MDNode *BranchWeights = nullptr,
-                           MDNode *Unpredictable = nullptr,
-                           MDNode *ControlFlowHint = nullptr) {
+                           MDNode *Unpredictable = nullptr) {
     return Insert(addBranchMetadata(BranchInst::Create(True, False, Cond),
-                                    BranchWeights, Unpredictable,
-                                    ControlFlowHint));
+                                    BranchWeights, Unpredictable));
   }
 
   /// Create a conditional 'br Cond, TrueDest, FalseDest'

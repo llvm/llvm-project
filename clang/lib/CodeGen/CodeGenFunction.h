@@ -616,8 +616,8 @@ public:
   bool InNoConvergentAttributedStmt = false;
 
   /// HLSL Branch attribute.
-  HLSLBranchHintAttr::Spelling HLSLBranchHintAttributedSpelling =
-      HLSLBranchHintAttr::SpellingNotCalculated;
+  HLSLControlFlowHintAttr::Spelling HLSLControlFlowAttr =
+      HLSLControlFlowHintAttr::SpellingNotCalculated;
 
   // The CallExpr within the current statement that the musttail attribute
   // applies to.  nullptr if there is no 'musttail' on the current statement.
@@ -1615,8 +1615,6 @@ private:
 
   /// Bitmap used by MC/DC to track condition outcomes of a boolean expression.
   Address MCDCCondBitmapAddr = Address::invalid();
-
-  llvm::MDNode *createControlFlowHint(HLSLBranchHintAttr::Spelling S) const;
 
   /// Calculate branch weights appropriate for PGO data
   llvm::MDNode *createProfileWeights(uint64_t TrueCount,

@@ -4,7 +4,7 @@
 // CHECK: define {{.*}} i32 {{.*}}test_branch{{.*}}(i32 {{.*}} [[VALD:%.*]])
 // CHECK: [[PARAM:%.*]] = load i32, ptr [[VALD]].addr, align 4
 // CHECK: [[CMP:%.*]] = icmp sgt i32 [[PARAM]], 0
-// CHECK: br i1 [[CMP]], label %if.then, label %if.else, !dx.controlflow.hints [[HINT_BRANCH:![0-9]+]]
+// CHECK: br i1 [[CMP]], label %if.then, label %if.else, !hlsl.controlflow.hint [[HINT_BRANCH:![0-9]+]]
 export int test_branch(int X){
     int resp;
     [branch] if (X > 0) {
@@ -19,7 +19,7 @@ export int test_branch(int X){
 // CHECK: define {{.*}} i32 {{.*}}test_flatten{{.*}}(i32 {{.*}} [[VALD:%.*]])
 // CHECK: [[PARAM:%.*]] = load i32, ptr [[VALD]].addr, align 4
 // CHECK: [[CMP:%.*]] = icmp sgt i32 [[PARAM]], 0
-// CHECK: br i1 [[CMP]], label %if.then, label %if.else, !dx.controlflow.hints [[HINT_FLATTEN:![0-9]+]]
+// CHECK: br i1 [[CMP]], label %if.then, label %if.else, !hlsl.controlflow.hint [[HINT_FLATTEN:![0-9]+]]
 export int test_flatten(int X){
     int resp;
     [flatten] if (X > 0) {
@@ -32,7 +32,7 @@ export int test_flatten(int X){
 }
 
 // CHECK: define {{.*}} i32 {{.*}}test_no_attr{{.*}}(i32 {{.*}} [[VALD:%.*]])
-// CHECK-NO: !dx.controlflow.hints
+// CHECK-NO: !hlsl.controlflow.hint
 export int test_no_attr(int X){
     int resp;
     if (X > 0) {
@@ -44,5 +44,5 @@ export int test_no_attr(int X){
     return resp;
 }
 
-//CHECK: [[HINT_BRANCH]] = !{!"dx.controlflow.hints", i32 1}
-//CHECK: [[HINT_FLATTEN]] = !{!"dx.controlflow.hints", i32 2}
+//CHECK: [[HINT_BRANCH]] = !{!"hlsl.controlflow.hint", i32 1}
+//CHECK: [[HINT_FLATTEN]] = !{!"hlsl.controlflow.hint", i32 2}

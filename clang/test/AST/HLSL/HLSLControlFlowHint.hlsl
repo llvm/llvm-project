@@ -2,7 +2,7 @@
 
 // CHECK: FunctionDecl 0x{{[0-9A-Fa-f]+}} <{{.*}}> {{.*}} used branch 'int (int)'
 // CHECK: AttributedStmt 0x{{[0-9A-Fa-f]+}} <<invalid sloc>
-// CHECK-NEXT: HLSLBranchHintAttr 0x{{[0-9A-Fa-f]+}} <{{.*}}> branch
+// CHECK-NEXT: -HLSLControlFlowHintAttr 0x{{[0-9A-Fa-f]+}} <{{.*}}> branch
 export int branch(int X){
     int resp;
     [branch] if (X > 0) {
@@ -16,7 +16,7 @@ export int branch(int X){
 
 // CHECK: FunctionDecl 0x{{[0-9A-Fa-f]+}} <{{.*}}> {{.*}} used flatten 'int (int)'
 // CHECK: AttributedStmt 0x{{[0-9A-Fa-f]+}} <<invalid sloc>
-// CHECK-NEXT: HLSLBranchHintAttr 0x{{[0-9A-Fa-f]+}} <{{.*}}> flatten
+// CHECK-NEXT: -HLSLControlFlowHintAttr 0x{{[0-9A-Fa-f]+}} <{{.*}}> flatten
 export int flatten(int X){
     int resp;
     [flatten] if (X > 0) {
@@ -30,7 +30,7 @@ export int flatten(int X){
 
 // CHECK: FunctionDecl 0x{{[0-9A-Fa-f]+}} <{{.*}}> {{.*}} used no_attr 'int (int)'
 // CHECK-NO: AttributedStmt 0x{{[0-9A-Fa-f]+}} <<invalid sloc>
-// CHECK-NO: HLSLBranchHintAttr
+// CHECK-NO: -HLSLControlFlowHintAttr
 export int no_attr(int X){
     int resp;
     if (X > 0) {
