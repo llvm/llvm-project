@@ -181,7 +181,11 @@ marksl@synopsys.com (email), [markschimmel](https://github.com/markschimmel) (Gi
 #### ARM backend
 
 David Green \
-david.green@arm.com (email), [davemgreen](https://github.com/davemgreen) (GitHub)
+david.green@arm.com (email), [davemgreen](https://github.com/davemgreen) (GitHub) \
+Oliver Stannard \
+oliver.stannard@arm.com (email), [ostannard](https://github.com/ostannard) (GitHub) \
+Nashe Mncube \
+nashe.mncube@arm.com (email), [nasherm](https://github.com/nasherm) (GitHub)
 
 #### AVR backend
 
