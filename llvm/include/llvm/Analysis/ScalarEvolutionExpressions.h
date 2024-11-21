@@ -233,6 +233,10 @@ public:
 
   bool hasNoSelfWrap() const { return getNoWrapFlags(FlagNW) != FlagAnyWrap; }
 
+  bool hasSafeWrap() const {
+    return getNoWrapFlags(FlagSafeWrap) != FlagAnyWrap;
+  }
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const SCEV *S) {
     return S->getSCEVType() == scAddExpr || S->getSCEVType() == scMulExpr ||

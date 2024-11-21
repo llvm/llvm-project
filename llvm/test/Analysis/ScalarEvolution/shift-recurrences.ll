@@ -323,7 +323,7 @@ define void @test_shl6(i1 %c) {
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,6) S: [1,6) Exits: 5 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %shiftamt = and i64 %iv, 1
-; CHECK-NEXT:    --> (zext i1 {false,+,true}<%loop> to i64) U: [0,2) S: [0,2) Exits: 0 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> (zext i1 {false,+,true}<sw><%loop> to i64) U: [0,2) S: [0,2) Exits: 0 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.shl.next = shl i64 %iv.shl, %shiftamt
 ; CHECK-NEXT:    --> %iv.shl.next U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: 16 LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_shl6

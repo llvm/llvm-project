@@ -25,11 +25,11 @@ define i32 @pr87798() {
 ; CHECK-NEXT:    %add4 = add i32 %mul, %phi
 ; CHECK-NEXT:    --> {0,+,0,+,2,+,5,+,3}<%bb1> U: full-set S: full-set Exits: 0 LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %and = and i32 %phi, 1
-; CHECK-NEXT:    --> (zext i1 {false,+,false,+,false,+,false,+,true}<%bb1> to i32) U: [0,2) S: [0,2) Exits: 0 LoopDispositions: { %bb1: Computable }
+; CHECK-NEXT:    --> (zext i1 {false,+,false,+,false,+,false,+,true}<sw><%bb1> to i32) U: [0,2) S: [0,2) Exits: 0 LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %add5 = add i32 %phi3, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%bb1> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %phi9 = phi i32 [ %and, %bb1 ]
-; CHECK-NEXT:    --> (zext i1 {false,+,false,+,false,+,false,+,true}<%bb1> to i32) U: [0,2) S: [0,2) --> 0 U: [0,1) S: [0,1)
+; CHECK-NEXT:    --> (zext i1 {false,+,false,+,false,+,false,+,true}<sw><%bb1> to i32) U: [0,2) S: [0,2) --> 0 U: [0,1) S: [0,1)
 ; CHECK-NEXT:    %zext = zext i32 %phi9 to i64
 ; CHECK-NEXT:    --> poison U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @pr87798

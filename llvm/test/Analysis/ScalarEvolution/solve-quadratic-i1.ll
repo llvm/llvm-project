@@ -15,7 +15,7 @@ define void @f0() {
 ; CHECK-NEXT:    %v3 = add nsw i16 %v1, %v0
 ; CHECK-NEXT:    --> {3,+,3,+,1}<%b1> U: full-set S: full-set Exits: 6 LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:    %v4 = and i16 %v3, 1
-; CHECK-NEXT:    --> (zext i1 {true,+,true,+,true}<%b1> to i16) U: [0,2) S: [0,2) Exits: 0 LoopDispositions: { %b1: Computable }
+; CHECK-NEXT:    --> (zext i1 {true,+,true,+,true}<sw><%b1> to i16) U: [0,2) S: [0,2) Exits: 0 LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @f0
 ; CHECK-NEXT:  Loop %b1: backedge-taken count is i6 1
 ; CHECK-NEXT:  Loop %b1: constant max backedge-taken count is i6 1
@@ -54,7 +54,7 @@ define void @f1() #0 {
 ; CHECK-NEXT:    %v3 = add i16 %v0, %v2
 ; CHECK-NEXT:    --> {3,+,4,+,1}<%b1> U: full-set S: full-set Exits: 12 LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:    %v4 = and i16 %v3, 1
-; CHECK-NEXT:    --> (zext i1 {true,+,false,+,true}<%b1> to i16) U: [0,2) S: [0,2) Exits: 0 LoopDispositions: { %b1: Computable }
+; CHECK-NEXT:    --> (zext i1 {true,+,false,+,true}<sw><%b1> to i16) U: [0,2) S: [0,2) Exits: 0 LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:    %v6 = add nuw nsw i32 %v1, 1
 ; CHECK-NEXT:    --> {4,+,1}<nuw><nsw><%b1> U: [4,7) S: [4,7) Exits: 6 LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:    %v7 = phi i32 [ %v1, %b1 ]
