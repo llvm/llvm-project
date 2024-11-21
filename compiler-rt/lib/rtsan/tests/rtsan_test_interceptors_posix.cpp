@@ -236,6 +236,12 @@ TEST(TestRtsanInterceptors, NanosleepDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+TEST(TestRtsanInterceptors, SchedYieldDiesWhenRealtime) {
+  auto Func = []() { sched_yield(); };
+  ExpectRealtimeDeath(Func, "sched_yield");
+  ExpectNonRealtimeSurvival(Func);
+}
+
 /*
     Filesystem
 */
