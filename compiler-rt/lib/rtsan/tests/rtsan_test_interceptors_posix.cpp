@@ -965,4 +965,17 @@ TEST_F(KqueueTest, Kevent64DiesWhenRealtime) {
 }
 #endif // SANITIZER_INTERCEPT_KQUEUE
 
+TEST(TestRtsanInterceptors, MkfifoDiesWhenRealtime) {
+  auto Func = []() { mkfifo("/tmp/rtsan_test_fifo", 0); };
+  ExpectRealtimeDeath(Func, "mkfifo");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, PipeDiesWhenRealtime) {
+  int fds[2];
+  auto Func = [&fds]() { pipe(fds); };
+  ExpectRealtimeDeath(Func, "pipe");
+  ExpectNonRealtimeSurvival(Func);
+}
+
 #endif // SANITIZER_POSIX

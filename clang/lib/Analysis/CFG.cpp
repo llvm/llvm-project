@@ -3177,10 +3177,13 @@ CFGBlock *CFGBuilder::VisitIfStmt(IfStmt *I) {
     if (!I->isConsteval())
       KnownVal = tryEvaluateBool(I->getCond());
 
-    // Add the successors.  If we know that specific branches are
+    // Add the successors. If we know that specific branches are
     // unreachable, inform addSuccessor() of that knowledge.
     addSuccessor(Block, ThenBlock, /* IsReachable = */ !KnownVal.isFalse());
     addSuccessor(Block, ElseBlock, /* IsReachable = */ !KnownVal.isTrue());
+
+    if (I->isConsteval())
+      return Block;
 
     // Add the condition as the last statement in the new block.  This may
     // create new blocks as the condition may contain control-flow.  Any newly

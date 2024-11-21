@@ -516,7 +516,6 @@ class FLAT_AtomicNoRet_Pseudo<string opName, dag outs, dag ins,
 class FLAT_AtomicRet_Pseudo<string opName, dag outs, dag ins,
                             string asm, list<dag> pattern = []>
   : FLAT_AtomicNoRet_Pseudo<opName, outs, ins, asm, pattern> {
-  let hasPostISelHook = 1;
   let has_vdst = 1;
   let glcValue = 1;
   let sccbValue = 0;

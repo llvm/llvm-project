@@ -959,9 +959,9 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
         if (NeedsLPAdjustment)
           LPOffsetExpr = MCBinaryExpr::createAdd(
               LPOffsetExpr, MCConstantExpr::create(1, *BC.Ctx), *BC.Ctx);
-        Streamer.emitValue(LPOffsetExpr, 4);
+        Streamer.emitULEB128Value(LPOffsetExpr);
       } else {
-        Streamer.emitIntValue(0, 4);
+        Streamer.emitULEB128IntValue(0);
       }
     };
   }
@@ -976,10 +976,12 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
     Streamer.emitLabel(TTBaseRefLabel);
   }
 
-  // Emit the landing pad call site table. We use signed data4 since we can emit
-  // a landing pad in a different part of the split function that could appear
-  // earlier in the address space than LPStart.
-  Streamer.emitIntValue(dwarf::DW_EH_PE_sdata4, 1);
+  // Emit encoding of entries in the call site table. The format is used for the
+  // call site start, length, and corresponding landing pad.
+  if (BC.HasFixedLoadAddress)
+    Streamer.emitIntValue(dwarf::DW_EH_PE_sdata4, 1);
+  else
+    Streamer.emitIntValue(dwarf::DW_EH_PE_uleb128, 1);
 
   MCSymbol *CSTStartLabel = BC.Ctx->createTempSymbol("CSTStart");
   MCSymbol *CSTEndLabel = BC.Ctx->createTempSymbol("CSTEnd");
@@ -996,8 +998,13 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
 
     // Start of the range is emitted relative to the start of current
     // function split part.
-    Streamer.emitAbsoluteSymbolDiff(BeginLabel, StartSymbol, 4);
-    Streamer.emitAbsoluteSymbolDiff(EndLabel, BeginLabel, 4);
+    if (BC.HasFixedLoadAddress) {
+      Streamer.emitAbsoluteSymbolDiff(BeginLabel, StartSymbol, 4);
+      Streamer.emitAbsoluteSymbolDiff(EndLabel, BeginLabel, 4);
+    } else {
+      Streamer.emitAbsoluteSymbolDiffAsULEB128(BeginLabel, StartSymbol);
+      Streamer.emitAbsoluteSymbolDiffAsULEB128(EndLabel, BeginLabel);
+    }
     emitLandingPad(CallSite.LP);
     Streamer.emitULEB128IntValue(CallSite.Action);
   }
