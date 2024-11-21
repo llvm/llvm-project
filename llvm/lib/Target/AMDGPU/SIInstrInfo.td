@@ -996,7 +996,7 @@ def extract_cpol : SDNodeXForm<timm, [{
       N->getZExtValue() & (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12
                                ? AMDGPU::CPol::ALL
                                : AMDGPU::CPol::ALL_pregfx12),
-      SDLoc(N), MVT::i8);
+      SDLoc(N), MVT::i16);
 }]>;
 
 def extract_swz : SDNodeXForm<timm, [{
