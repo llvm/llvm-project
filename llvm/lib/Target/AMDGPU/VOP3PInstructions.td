@@ -888,7 +888,7 @@ multiclass ScaledMAIInst_mc<string OpName, string UnscaledOpName_, SDPatternOper
 
 // Each of SrcA and SrcB can be encoded using 3 different sizes, so
 // define 9 permutations of register classes.
-multiclass MAIInst_SrcFormats_mc<string OpName, string ProfileSuffix, SDPatternOperator node = null_frag> {
+multiclass MAIInst_SrcFormats_mc<string OpName, string ProfileSuffix, SDPatternOperator node> {
   defvar HasAbid = false;
   defm _f8_f8 : MAIInst<OpName, "F32_V8I32_V8I32"#ProfileSuffix, node, HasAbid>;
   defm _f8_f6 : MAIInst<OpName, "F32_V8I32_V6I32"#ProfileSuffix, node, HasAbid>;
@@ -946,9 +946,9 @@ defm V_MFMA_F32_32X32X16_F16   : MAIInst<"v_mfma_f32_32x32x16f16",    "F32_V8F16
 defm V_MFMA_F32_32X32X16_BF16  : MAIInst<"v_mfma_f32_32x32x16bf16",   "F32_V8BF16_X16", int_amdgcn_mfma_f32_32x32x16_bf16>;
 
 defm V_MFMA_F32_16X16X128_F8F6F4 : MAIInst_SrcFormats_mc<"v_mfma_f32_16x16x128f8f6f4",
-  "_X128">;
+  "_X128", mfma_f32_16x16x128_f8f6f4>;
 defm V_MFMA_F32_32X32X64_F8F6F4 : MAIInst_SrcFormats_mc<"v_mfma_f32_32x32x64f8f6f4",
-  "_X512">;
+  "_X512", mfma_f32_32x32x64_f8f6f4>;
 
 defm V_MFMA_SCALE_F32_16X16X128_F8F6F4 : MAIInst_SrcFormats_Scaled_mc<
   "v_mfma_scale_f32_16x16x128_f8f6f4", "V_MFMA_F32_16X16X128_F8F6F4",
