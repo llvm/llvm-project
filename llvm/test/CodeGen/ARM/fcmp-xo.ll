@@ -54,12 +54,12 @@ define arm_aapcs_vfpcc float @float128(float %a0) local_unnamed_addr {
 ; NEON-LABEL: float128:
 ; NEON:       @ %bb.0:
 ; NEON-NEXT:    mov.w r0, #1124073472
-; NEON-NEXT:    vmov.f32 s4, #5.000000e-01
-; NEON-NEXT:    vmov d1, r0, r0
-; NEON-NEXT:    vmov.f32 s6, #-5.000000e-01
-; NEON-NEXT:    vcmp.f32 s2, s0
+; NEON-NEXT:    vmov.f32 s2, #5.000000e-01
+; NEON-NEXT:    vmov d3, r0, r0
+; NEON-NEXT:    vmov.f32 s4, #-5.000000e-01
+; NEON-NEXT:    vcmp.f32 s6, s0
 ; NEON-NEXT:    vmrs APSR_nzcv, fpscr
-; NEON-NEXT:    vselgt.f32 s0, s6, s4
+; NEON-NEXT:    vselgt.f32 s0, s4, s2
 ; NEON-NEXT:    bx lr
   %1 = fcmp nsz olt float %a0, 128.000000e+00
   %2 = select i1 %1, float -5.000000e-01, float 5.000000e-01
