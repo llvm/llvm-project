@@ -333,15 +333,15 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     return false;
   }
 
+  // bulk-memory-opt is a subset of bulk-memory.
+  if (HasBulkMemory) {
+    HasBulkMemoryOpt = true;
+  }
+  
   // The reference-types feature included the change to `call_indirect`
   // encodings to support overlong immediates.
   if (HasReferenceTypes) {
     HasCallIndirectOverlong = true;
-  }
-
-  // bulk-memory-opt is a subset of bulk-memory.
-  if (HasBulkMemory) {
-    HasBulkMemoryOpt = true;
   }
 
   return true;
