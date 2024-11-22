@@ -536,6 +536,16 @@ jobs:
       with:
         previous-artifact: ${{ (needs.prepare.outputs.multi-stage == 'false' && 'build-stage1') || 'build-stage3-all' }}
 
+    # Need sccache installed, because some stage1 objects are being built for the tests.
+    # FIXME: This probably shouldn't be happening.
+    - name: Setup sccache
+      uses: hendrikmuhs/ccache-action@ca3acd2731eef11f1572ccb126356c2f9298d35e # v1.2.9
+      with:
+        # Default to 2G to workaround: https://github.com/hendrikmuhs/ccache-action/issues/174
+        max-size: 2G
+        key: sccache-${{ runner.os }}-${{ runner.arch }}-release
+        variant: sccache
+
     - name: Run Tests
       shell: bash
       run: |
