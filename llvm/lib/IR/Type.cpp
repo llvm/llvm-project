@@ -799,10 +799,10 @@ TargetExtType::TargetExtType(LLVMContext &C, StringRef Name,
     // so we should convert any named struct types to anonymous
     // struct types in the parameter list
     Type *ConvertedTy = T;
-    if (auto *STy = dyn_cast<StructType>(T)) {
-      if (STy->hasName())
-        ConvertedTy = StructType::get(C, STy->elements(), /*isPacked=*/false);
-    }
+    if (auto *STy = dyn_cast<StructType>(T))
+      assert(!STy->hasName() &&
+             "named structs are not allowed in target extension types");
+
     *Params++ = ConvertedTy;
   }
 
