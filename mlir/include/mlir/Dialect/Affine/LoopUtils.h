@@ -22,6 +22,7 @@
 
 namespace mlir {
 class AffineMap;
+class FunctionOpInterface;
 class LoopLikeOpInterface;
 class OpBuilder;
 class Value;
@@ -88,7 +89,7 @@ LogicalResult promoteIfSingleIteration(AffineForOp forOp);
 
 /// Promotes all single iteration AffineForOp's in the Function, i.e., moves
 /// their body into the containing Block.
-void promoteSingleIterationLoops(func::FuncOp f);
+void promoteSingleIterationLoops(FunctionOpInterface f);
 
 /// Skew the operations in an affine.for's body with the specified
 /// operation-wise shifts. The shifts are with respect to the original execution
@@ -101,7 +102,7 @@ LogicalResult affineForOpBodySkew(AffineForOp forOp, ArrayRef<uint64_t> shifts,
 /// Identify valid and profitable bands of loops to tile. This is currently just
 /// a temporary placeholder to test the mechanics of tiled code generation.
 /// Returns all maximal outermost perfect loop nests to tile.
-void getTileableBands(func::FuncOp f,
+void getTileableBands(FunctionOpInterface f,
                       std::vector<SmallVector<AffineForOp, 6>> *bands);
 
 /// Tiles the specified band of perfectly nested loops creating tile-space loops
@@ -271,8 +272,8 @@ LogicalResult coalesceLoops(MutableArrayRef<AffineForOp> loops);
 void mapLoopToProcessorIds(scf::ForOp forOp, ArrayRef<Value> processorId,
                            ArrayRef<Value> numProcessors);
 
-/// Gathers all AffineForOps in 'func.func' grouped by loop depth.
-void gatherLoops(func::FuncOp func,
+/// Gathers all AffineForOps in `func` grouped by loop depth.
+void gatherLoops(FunctionOpInterface func,
                  std::vector<SmallVector<AffineForOp, 2>> &depthToLoops);
 
 /// Creates an AffineForOp while ensuring that the lower and upper bounds are

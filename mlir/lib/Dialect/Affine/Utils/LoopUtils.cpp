@@ -129,7 +129,8 @@ LogicalResult mlir::affine::promoteIfSingleIteration(AffineForOp forOp) {
   auto *parentBlock = forOp->getBlock();
   if (!iv.use_empty()) {
     if (forOp.hasConstantLowerBound()) {
-      OpBuilder topBuilder(forOp->getParentOfType<func::FuncOp>().getBody());
+      OpBuilder topBuilder(
+          forOp->getParentOfType<FunctionOpInterface>().getFunctionBody());
       auto constOp = topBuilder.create<arith::ConstantIndexOp>(
           forOp.getLoc(), forOp.getConstantLowerBound());
       iv.replaceAllUsesWith(constOp);
@@ -866,10 +867,10 @@ void mlir::affine::getPerfectlyNestedLoops(
 /// a temporary placeholder to test the mechanics of tiled code generation.
 /// Returns all maximal outermost perfect loop nests to tile.
 void mlir::affine::getTileableBands(
-    func::FuncOp f, std::vector<SmallVector<AffineForOp, 6>> *bands) {
+    FunctionOpInterface f, std::vector<SmallVector<AffineForOp, 6>> *bands) {
   // Get maximal perfect nest of 'affine.for' insts starting from root
   // (inclusive).
-  for (AffineForOp forOp : f.getOps<AffineForOp>()) {
+  for (AffineForOp forOp : f.getFunctionBody().getOps<AffineForOp>()) {
     SmallVector<AffineForOp, 6> band;
     getPerfectlyNestedLoops(band, forOp);
     bands->push_back(band);
@@ -1936,8 +1937,8 @@ static LogicalResult generateCopy(
   *nBegin = begin;
   *nEnd = end;
 
-  func::FuncOp f = begin->getParentOfType<func::FuncOp>();
-  OpBuilder topBuilder(f.getBody());
+  FunctionOpInterface f = begin->getParentOfType<FunctionOpInterface>();
+  OpBuilder topBuilder(f.getFunctionBody());
   Value zeroIndex = topBuilder.create<arith::ConstantIndexOp>(f.getLoc(), 0);
 
   *sizeInBytes = 0;
@@ -1956,8 +1957,9 @@ static LogicalResult generateCopy(
   OpBuilder &b = region.isWrite() ? epilogue : prologue;
 
   // Builder to create constants at the top level.
-  auto func = copyPlacementBlock->getParent()->getParentOfType<func::FuncOp>();
-  OpBuilder top(func.getBody());
+  auto func =
+      copyPlacementBlock->getParent()->getParentOfType<FunctionOpInterface>();
+  OpBuilder top(func.getFunctionBody());
 
   auto loc = region.loc;
   auto memref = region.memref;
@@ -2501,9 +2503,10 @@ gatherLoopsInBlock(Block *block, unsigned currLoopDepth,
   }
 }
 
-/// Gathers all AffineForOps in 'func.func' grouped by loop depth.
+/// Gathers all AffineForOps in `func` grouped by loop depth.
 void mlir::affine::gatherLoops(
-    func::FuncOp func, std::vector<SmallVector<AffineForOp, 2>> &depthToLoops) {
+    FunctionOpInterface func,
+    std::vector<SmallVector<AffineForOp, 2>> &depthToLoops) {
   for (auto &block : func)
     gatherLoopsInBlock(&block, /*currLoopDepth=*/0, depthToLoops);
 
