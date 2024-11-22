@@ -522,49 +522,47 @@ public:
     const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
     ResolveOmpObjectList(objList, Symbol::Flag::OmpReduction);
 
-    auto &modifiers{OmpGetModifiers(x.v)};
-    if (!modifiers) {
-      return false;
-    }
+    if (auto &modifiers{OmpGetModifiers(x.v)}) {
+      auto createDummyProcSymbol = [&](const parser::Name *name) {
+        // If name resolution failed, create a dummy symbol
+        const auto namePair{currScope().try_emplace(
+            name->source, Attrs{}, ProcEntityDetails{})};
+        auto &newSymbol{*namePair.first->second};
+        if (context_.intrinsics().IsIntrinsic(name->ToString())) {
+          newSymbol.attrs().set(Attr::INTRINSIC);
+        }
+        name->symbol = &newSymbol;
+      };
 
-    auto createDummyProcSymbol = [&](const parser::Name *name) {
-      // If name resolution failed, create a dummy symbol
-      const auto namePair{
-          currScope().try_emplace(name->source, Attrs{}, ProcEntityDetails{})};
-      auto &newSymbol{*namePair.first->second};
-      if (context_.intrinsics().IsIntrinsic(name->ToString())) {
-        newSymbol.attrs().set(Attr::INTRINSIC);
-      }
-      name->symbol = &newSymbol;
-    };
-
-    for (auto &mod : *modifiers) {
-      if (!std::holds_alternative<parser::OmpReductionIdentifier>(mod.u)) {
-        continue;
-      }
-      auto &opr{std::get<parser::OmpReductionIdentifier>(mod.u)};
-      if (auto *procD{parser::Unwrap<parser::ProcedureDesignator>(opr.u)}) {
-        if (auto *name{parser::Unwrap<parser::Name>(procD->u)}) {
-          if (!name->symbol) {
-            if (!ResolveName(name)) {
-              createDummyProcSymbol(name);
+      for (auto &mod : *modifiers) {
+        if (!std::holds_alternative<parser::OmpReductionIdentifier>(mod.u)) {
+          continue;
+        }
+        auto &opr{std::get<parser::OmpReductionIdentifier>(mod.u)};
+        if (auto *procD{parser::Unwrap<parser::ProcedureDesignator>(opr.u)}) {
+          if (auto *name{parser::Unwrap<parser::Name>(procD->u)}) {
+            if (!name->symbol) {
+              if (!ResolveName(name)) {
+                createDummyProcSymbol(name);
+              }
+            }
+          }
+          if (auto *procRef{
+                  parser::Unwrap<parser::ProcComponentRef>(procD->u)}) {
+            if (!procRef->v.thing.component.symbol) {
+              if (!ResolveName(&procRef->v.thing.component)) {
+                createDummyProcSymbol(&procRef->v.thing.component);
+              }
             }
           }
         }
-        if (auto *procRef{parser::Unwrap<parser::ProcComponentRef>(procD->u)}) {
-          if (!procRef->v.thing.component.symbol) {
-            if (!ResolveName(&procRef->v.thing.component)) {
-              createDummyProcSymbol(&procRef->v.thing.component);
-            }
-          }
-        }
       }
-    }
-    using ReductionModifier = parser::OmpReductionModifier;
-    if (auto *maybeModifier{
-            OmpGetUniqueModifier<ReductionModifier>(modifiers)}) {
-      if (maybeModifier->v == ReductionModifier::Value::Inscan) {
-        ResolveOmpObjectList(objList, Symbol::Flag::OmpInScanReduction);
+      using ReductionModifier = parser::OmpReductionModifier;
+      if (auto *maybeModifier{
+              OmpGetUniqueModifier<ReductionModifier>(modifiers)}) {
+        if (maybeModifier->v == ReductionModifier::Value::Inscan) {
+          ResolveOmpObjectList(objList, Symbol::Flag::OmpInScanReduction);
+        }
       }
     }
     return false;
