@@ -31,6 +31,11 @@ hfinkel@anl.gov (email), [hfinkel](https://github.com/hfinkel) (GitHub)
 Johannes Doerfert \
 jdoerfert@llnl.gov (email), [jdoerfert](https://github.com/jdoerfert) (GitHub)
 
+#### ConstraintElimination
+
+Florian Hahn \
+flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub)
+
 #### InferAddressSpaces
 
 Matt Arsenault \
