@@ -229,29 +229,26 @@ void UseStartsEndsWithCheck::check(const MatchFinder::MatchResult &Result) {
       CharSourceRange::getTokenRange(SearchExpr->getSourceRange()),
       *Result.SourceManager, Result.Context->getLangOpts());
 
-  auto Diag = diag(FindExpr->getExprLoc(),
-                   FindFun->getName() == "substr"
-                       ? "use %0 instead of %1() %select{==|!=}2"
-                       : "use %0 instead of %1() %select{==|!=}2 0")
-              << ReplacementFunction->getName() << FindFun->getName() << Neg;
+  auto Diagnostic = diag(FindExpr->getExprLoc(), "use %0 instead of %1")
+                    << ReplacementFunction->getName() << FindFun->getName();
 
   // Remove everything before the function call.
-  Diag << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
+  Diagnostic << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
       ComparisonExpr->getBeginLoc(), FindExpr->getBeginLoc()));
 
   // Rename the function to `starts_with` or `ends_with`.
-  Diag << FixItHint::CreateReplacement(FindExpr->getExprLoc(),
-                                       ReplacementFunction->getName());
+  Diagnostic << FixItHint::CreateReplacement(FindExpr->getExprLoc(),
+                                             ReplacementFunction->getName());
 
   // Replace arguments and everything after the function call.
-  Diag << FixItHint::CreateReplacement(
+  Diagnostic << FixItHint::CreateReplacement(
       CharSourceRange::getTokenRange(FindExpr->getArg(0)->getBeginLoc(),
                                      ComparisonExpr->getEndLoc()),
       (SearchExprText + ")").str());
 
   // Add negation if necessary.
   if (Neg)
-    Diag << FixItHint::CreateInsertion(FindExpr->getBeginLoc(), "!");
+    Diagnostic << FixItHint::CreateInsertion(FindExpr->getBeginLoc(), "!");
 }
 
 } // namespace clang::tidy::modernize

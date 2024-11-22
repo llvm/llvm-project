@@ -36,7 +36,7 @@ void test(std::string s, std::string_view sv, sub_string ss, sub_sub_string sss,
           string_like sl, string_like_camel slc, prefer_underscore_version puv,
           prefer_underscore_version_flip puvf) {
   s.find("a") == 0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of find() == 0
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of find [modernize-use-starts-ends-with]
   // CHECK-FIXES: s.starts_with("a");
 
   (((((s)).find("a")))) == ((0));
@@ -68,7 +68,7 @@ void test(std::string s, std::string_view sv, sub_string ss, sub_sub_string sss,
   // CHECK-FIXES: !s.starts_with("a");
 
   s.rfind("a", 0) == 0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of rfind() == 0
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of rfind [modernize-use-starts-ends-with]
   // CHECK-FIXES: s.starts_with("a");
 
   s.rfind(s, 0) == 0;
@@ -139,11 +139,11 @@ void test(std::string s, std::string_view sv, sub_string ss, sub_sub_string sss,
   // CHECK-FIXES: puvf.starts_with("a");
 
   s.compare(0, 1, "a") == 0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of compare() == 0
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of compare [modernize-use-starts-ends-with]
   // CHECK-FIXES: s.starts_with("a");
 
   s.compare(0, 1, "a") != 0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of compare() != 0
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of compare [modernize-use-starts-ends-with]
   // CHECK-FIXES: !s.starts_with("a");
 
   s.compare(0, strlen("a"), "a") == 0;
@@ -269,17 +269,17 @@ void test_substr() {
     
     // Basic pattern
     str.substr(0, 5) == "hello";
-    // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of substr() == [modernize-use-starts-ends-with]
+    // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of substr [modernize-use-starts-ends-with]
     // CHECK-FIXES: str.starts_with("hello");
     
     // With string literal on left side
     "hello" == str.substr(0, 5);
-    // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of substr() == [modernize-use-starts-ends-with]
+    // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of substr [modernize-use-starts-ends-with]
     // CHECK-FIXES: str.starts_with("hello");
     
     // Inequality comparison
     str.substr(0, 5) != "world";
-    // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of substr() != [modernize-use-starts-ends-with]
+    // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of substr [modernize-use-starts-ends-with]
     // CHECK-FIXES: !str.starts_with("world");
     
     // Ensure non-zero start position is not transformed
@@ -291,21 +291,21 @@ void test_substr() {
 
     // String literal with size calculation
     str.substr(0, strlen("hello")) == "hello";
-    // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of substr() == [modernize-use-starts-ends-with]
+    // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of substr [modernize-use-starts-ends-with]
     // CHECK-FIXES: str.starts_with("hello");
 
     str.substr(0, prefix.size()) == prefix;
-    // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of substr() == [modernize-use-starts-ends-with]
+    // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of substr [modernize-use-starts-ends-with]
     // CHECK-FIXES: str.starts_with(prefix);
 
     str.substr(0, prefix.length()) == prefix;
-    // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of substr() == [modernize-use-starts-ends-with]
+    // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of substr [modernize-use-starts-ends-with]
     // CHECK-FIXES: str.starts_with(prefix);
 
     // Tests to verify macro behavior
     #define MSG "hello"
     str.substr(0, strlen(MSG)) == MSG;
-    // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of substr() == [modernize-use-starts-ends-with]
+    // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of substr [modernize-use-starts-ends-with]
     // CHECK-FIXES: str.starts_with(MSG);
 
     #define STARTS_WITH(X, Y) (X).substr(0, (Y).size()) == (Y)
