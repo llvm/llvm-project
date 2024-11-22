@@ -252,7 +252,7 @@ void initializePseudoProbeInserterPass(PassRegistry &);
 void initializeRAGreedyPass(PassRegistry &);
 void initializeReachingDefAnalysisPass(PassRegistry &);
 void initializeReassociateLegacyPassPass(PassRegistry &);
-void initializeRegAllocEvictionAdvisorAnalysisPass(PassRegistry &);
+void initializeRegAllocEvictionAdvisorAnalysisLegacyPass(PassRegistry &);
 void initializeRegAllocFastPass(PassRegistry &);
 void initializeRegAllocPriorityAdvisorAnalysisPass(PassRegistry &);
 void initializeRegAllocScoringPass(PassRegistry &);
