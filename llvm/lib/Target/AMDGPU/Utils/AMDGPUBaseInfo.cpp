@@ -378,9 +378,6 @@ struct VOPTrue16Info {
   bool IsTrue16;
 };
 
-#define GET_FP8DstByteSelTable_DECL
-#define GET_FP8DstByteSelTable_IMPL
-
 struct DPMACCInstructionInfo {
   uint16_t Opcode;
   bool IsDPMACCInstruction;
