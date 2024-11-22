@@ -2541,7 +2541,6 @@ static void emitIsSubclass(CodeGenTarget &Target,
   OS << "  if (A == B)\n";
   OS << "    return true;\n\n";
 
-  bool EmittedSwitch = false;
   for (const auto &A : Infos) {
     std::vector<StringRef> SuperClasses;
     if (A.IsOptional)
@@ -2551,42 +2550,29 @@ static void emitIsSubclass(CodeGenTarget &Target,
         SuperClasses.push_back(B.Name);
     }
 
-    if (SuperClasses.empty())
-      continue;
-
-    // If this is the first SuperClass, emit the switch header.
-    if (!EmittedSwitch) {
-      OS << "  switch (A) {\n";
-      OS << "  default:\n";
-      OS << "    return false;\n";
-      EmittedSwitch = true;
-    }
-
-    OS << "\n  case " << A.Name << ":\n";
-
-    if (SuperClasses.size() == 1) {
-      OS << "    return B == " << SuperClasses.back() << ";\n";
+    if (SuperClasses.empty()) {
+      OS << "  static constexpr ArrayRef<uint16_t> " << A.Name << "_SuperClasses;\n";
       continue;
     }
 
-    if (!SuperClasses.empty()) {
-      OS << "    switch (B) {\n";
-      OS << "    default: return false;\n";
-      for (StringRef SC : SuperClasses)
-        OS << "    case " << SC << ": return true;\n";
-      OS << "    }\n";
-    } else {
-      // No case statement to emit
-      OS << "    return false;\n";
-    }
+    OS << "  static constexpr uint16_t " << A.Name << "_SuperClasses[] = {";
+    ListSeparator LS;
+    for (auto &SC : SuperClasses)
+      OS << LS << SC;
+    OS << "};\n";
   }
+  OS << "\n";
 
-  // If there were case statements emitted into the string stream write the
-  // default.
-  if (EmittedSwitch)
-    OS << "  }\n";
-  else
-    OS << "  return false;\n";
+  OS << "  static constexpr ArrayRef<uint16_t> SuperClassTable[] = {\n";
+  OS << "    {}, // InvalidMatchClass\n";
+  OS << "    {}, // OptionalMatchClass\n";
+  for (const auto &A : Infos)
+    OS << "    " << A.Name << "_SuperClasses,\n";
+  OS << "  };\n\n";
+
+  OS << "  ArrayRef<uint16_t> SuperClasses = SuperClassTable[(unsigned)A];\n";
+  OS << "  const uint16_t *It = lower_bound(SuperClasses, (unsigned)B);\n";
+  OS << "  return It != SuperClasses.end() && *It == (unsigned)B;\n";
 
   OS << "}\n\n";
 }
