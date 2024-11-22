@@ -1155,6 +1155,11 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     return getCmpSelInstrCost(Instruction::Select, ICA.getReturnType(),
                               ICA.getArgTypes()[0], CmpInst::BAD_ICMP_PREDICATE,
                               CostKind);
+  case Intrinsic::experimental_vp_splat: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    return LT.first *
+           getRISCVInstructionCost(RISCV::VMV_V_X, LT.second, CostKind);
+  }
   case Intrinsic::vp_reduce_add:
   case Intrinsic::vp_reduce_fadd:
   case Intrinsic::vp_reduce_mul:
