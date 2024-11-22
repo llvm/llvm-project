@@ -756,8 +756,6 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::EH_SJLJ_SETJMP, MVT::i32, Custom);
   setOperationAction(ISD::EH_SJLJ_LONGJMP, MVT::Other, Custom);
 
-
-
   // We want to use MVC in preference to even a single load/store pair.
   MaxStoresPerMemcpy = Subtarget.hasVector() ? 2 : 0;
   MaxStoresPerMemcpyOptSize = 0;
@@ -1024,40 +1022,41 @@ SystemZTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   
 
   // thisMBB:
+  const int64_t FPOffset = 0; // Slot 1. 
   const int64_t LabelOffset = 1 * PVT.getStoreSize(); // Slot 2.
+  const int64_t BCOffset = 2 * PVT.getStoreSize(); // Slot 3.
   const int64_t SPOffset = 3 * PVT.getStoreSize(); // Slot 4.
 
   // Buf address.
   Register BufReg = MI.getOperand(1).getReg();
 
-  unsigned LabelReg = 0;
   const TargetRegisterClass *PtrRC = getRegClassFor(PVT);
-  LabelReg = MRI.createVirtualRegister(PtrRC); 
+  unsigned LabelReg = MRI.createVirtualRegister(PtrRC); 
 
-  // prepare IP for longjmp.
+  // Prepare IP for longjmp.
   BuildMI(*thisMBB, MI, DL, TII->get(SystemZ::LARL), LabelReg)
           .addMBB(restoreMBB);
 
-  // store IP for return from jmp, slot 2, offset = 1.
+  // Store IP for return from jmp, slot 2, offset = 1.
   BuildMI(*thisMBB, MI, DL, TII->get(SystemZ::STG))
           .addReg(LabelReg)
           .addReg(BufReg)
           .addImm(LabelOffset)
           .addReg(0);
 
-  bool HasFP =  Subtarget.getFrameLowering()->hasFP(*MF);
+  auto *SpecialRegs = Subtarget.getSpecialRegisters();
+  bool HasFP = Subtarget.getFrameLowering()->hasFP(*MF);
   if (HasFP) {
-     const int64_t FPOffset = 0; 
      BuildMI(*thisMBB, MI, DL, TII->get(SystemZ::STG))
-          .addReg(SystemZ::R11D)
+          .addReg(SpecialRegs->getFramePointerRegister())
           .addReg(BufReg)
           .addImm(FPOffset)
           .addReg(0);
   }
   
-  // store SP.
+  // Store SP.
   BuildMI(*thisMBB, MI, DL, TII->get(SystemZ::STG))
-          .addReg(SystemZ::R15D)
+          .addReg(SpecialRegs->getStackPointerRegister())
           .addReg(BufReg)
           .addImm(SPOffset)
           .addReg(0);
@@ -1065,10 +1064,9 @@ SystemZTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   // Slot 3(Offset = 2) Backchain value (if building with -mbackchain).
   bool BackChain = MF->getSubtarget<SystemZSubtarget>().hasBackChain();
   if (BackChain) {
-     const int64_t BCOffset    = 2 * PVT.getStoreSize();
      Register BCReg = MRI.createVirtualRegister(RC);
      MIB = BuildMI(*thisMBB, MI, DL, TII->get(SystemZ::LG), BCReg)
-             .addReg(SystemZ::R15D)
+             .addReg(SpecialRegs->getStackPointerRegister())
              .addImm(0)
              .addReg(0);
 
@@ -1125,6 +1123,7 @@ SystemZTargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
          "Invalid Pointer Size!");
   Register BufReg = MI.getOperand(0).getReg();
   const TargetRegisterClass *RC = MRI.getRegClass(BufReg);
+  auto *SpecialRegs = Subtarget.getSpecialRegisters();
 
   Register Tmp = MRI.createVirtualRegister(RC);
   Register BCReg = MRI.createVirtualRegister(RC);
@@ -1141,7 +1140,8 @@ SystemZTargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
              .addImm(LabelOffset)
              .addReg(0);
 
-  MIB = BuildMI(*MBB, MI, DL, TII->get(SystemZ::LG), SystemZ::R11D)
+  MIB = BuildMI(*MBB, MI, DL, TII->get(SystemZ::LG), 
+               SpecialRegs->getFramePointerRegister())
              .addReg(BufReg)
              .addImm(FPOffset)
              .addReg(0);
@@ -1163,7 +1163,8 @@ SystemZTargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
              .addReg(0);
   }
 
-  MIB = BuildMI(*MBB, MI, DL, TII->get(SystemZ::LG), SystemZ::R15D)
+  MIB = BuildMI(*MBB, MI, DL, TII->get(SystemZ::LG), 
+                SpecialRegs->getStackPointerRegister())
              .addReg(BufReg)
              .addImm(SPOffset)
              .addReg(0);
@@ -1171,7 +1172,7 @@ SystemZTargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
   if (BackChain) {
      BuildMI(*MBB, MI, DL, TII->get(SystemZ::STG))
           .addReg(BCReg)
-          .addReg(SystemZ::R15D)
+          .addReg(SpecialRegs->getStackPointerRegister())
           .addImm(0)
           .addReg(0);
   }
@@ -1182,7 +1183,7 @@ SystemZTargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
   return MBB;
 }
 
-// Returns true if stack probing through inline assembly is requested.
+/// Returns true if stack probing through inline assembly is requested.
 bool SystemZTargetLowering::hasInlineStackProbe(const MachineFunction &MF) const {
   // If the function specifically requests inline stack probes, emit them.
   if (MF.getFunction().hasFnAttribute("probe-stack"))
@@ -6536,6 +6537,10 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerREADCYCLECOUNTER(Op, DAG);
   case ISD::EH_SJLJ_SETJMP:
   case ISD::EH_SJLJ_LONGJMP:
+    // These operations action  are Legal now, not Custom. The reason we need 
+    // to keep it here is that common code treats these Pseudos as Custom, 
+    // and expands them using EmitInstrWithCustomInserter in FinalizeISel.cpp
+    // after ISel.
     return Op;
 
   default:
