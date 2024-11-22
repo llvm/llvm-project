@@ -371,8 +371,8 @@ static ModRefResult getCallModRef(fir::CallOp call, mlir::Value var) {
   // Fortran semantics apply (e.g., a bare alloca/allocmem result may very well
   // be placed in an allocatable/pointer descriptor and escape).
 
-  // All the logic bellows are based on Fortran semantics and only holds if this
-  // is a call to a procedure form the Fortran source and this is a variable
+  // All the logic below is based on Fortran semantics and only holds if this
+  // is a call to a procedure from the Fortran source and this is a variable
   // from the Fortran source. Compiler generated temporaries or functions may
   // not adhere to this semantic.
   // TODO: add some opt-in or op-out mechanism for compiler generated temps.

@@ -45,6 +45,20 @@ end subroutine
 ! CHECK-LABEL: Testing : "_QPtest_saved_target"
 ! CHECK: test_effect_external -> test_var_target_xsaved#0: ModRef
 
+subroutine test_saved_target_2
+  use somemod, only : may_capture
+  implicit none
+  real, save, target :: test_var_target_xsaved
+  ! Pointer associations made to SAVE variables remain valid after the
+  ! procedure exit, so it cannot be ruled out that the variable has been
+  ! captured in a previous call to `test_var_target_xsaved` even though the
+  ! call to `test_effect_external` appears first here.
+  call test_effect_external()
+  call may_capture(test_var_target_xsaved)
+end subroutine
+! CHECK-LABEL: Testing : "_QPtest_saved_target_2"
+! CHECK: test_effect_external -> test_var_target_xsaved#0: ModRef
+
 subroutine test_saved_used_in_internal
   implicit none
   real, save :: test_var_saved_captured

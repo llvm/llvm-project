@@ -33,9 +33,9 @@ end subroutine
 
 subroutine test_associate()
   implicit none
-  real :: test_var_x(10)
+  real :: test_var_x(10), test_var_a(10)
   associate (test_var_y=>test_var_x)
-    test_var_y = test_effect_internal()
+     test_var_a = test_effect_internal()
   end associate
 contains
   function test_effect_internal() result(res)
@@ -44,6 +44,7 @@ contains
   end function
 end subroutine
 ! CHECK-LABEL: Testing : "_QPtest_associate"
+! CHECK: test_effect_internal -> test_var_a#0: NoModRef
 ! CHECK: test_effect_internal -> test_var_x#0: ModRef
 ! CHECK: test_effect_internal -> test_var_y#0: ModRef
 
@@ -55,7 +56,8 @@ subroutine effect_inside_internal()
   call internal_sub()
 contains
   subroutine internal_sub
-    test_var_x = test_effect_internal_func()
+    real :: test_var_y(10)
+    test_var_y = test_effect_internal_func()
   end subroutine
   function test_effect_internal_func() result(res)
     real :: res(10)
@@ -64,6 +66,7 @@ contains
 end subroutine
 ! CHECK-LABEL: Testing : "_QFeffect_inside_internalPinternal_sub"
 ! CHECK: test_effect_internal_func -> test_var_x#0: ModRef
+! CHECK: test_effect_internal_func -> test_var_y#0: NoModRef
 
 ! Test that captured variables are considered to be affected when calling
 ! any procedure
