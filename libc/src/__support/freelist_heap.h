@@ -90,8 +90,16 @@ LIBC_INLINE void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {
     init();
 
   size_t request_size = size;
-  if (alignment > alignof(max_align_t)) {
-    if (add_overflow(size, alignment - 1, request_size))
+
+  // TODO: usable_space should always be aligned to max_align_t.
+  if (alignment > alignof(max_align_t) ||
+      (Block<>::BLOCK_OVERHEAD % alignof(max_align_t) != 0)) {
+    // TODO: This bound isn't precisely calculated yet. It assumes one extra
+    // Block<>::ALIGNMENT to accomodate the possibility for padding block
+    // overhead. (alignment - 1) ensures that there is an aligned point
+    // somewhere in usable_space, but this isn't tight either, since
+    // usable_space is also already somewhat aligned.
+    if (add_overflow(size, (alignment - 1) + Block<>::ALIGNMENT, request_size))
       return nullptr;
   }
 

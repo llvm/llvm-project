@@ -46,11 +46,14 @@ TEST(LlvmLibcFreeStore, RemoveBestFit) {
   maybeBlock =
       smallest->split(sizeof(FreeList::Node) + sizeof(Block<>::offset_type));
   ASSERT_TRUE(maybeBlock.has_value());
+
   Block<> *largest_small = *maybeBlock;
   maybeBlock =
       largest_small->split(sizeof(FreeTrie::Node) +
                            sizeof(Block<>::offset_type) - alignof(max_align_t));
   ASSERT_TRUE(maybeBlock.has_value());
+  if (largest_small->inner_size() == smallest->inner_size())
+    largest_small = smallest;
   ASSERT_GE(largest_small->inner_size(), smallest->inner_size());
 
   Block<> *remainder = *maybeBlock;
@@ -58,7 +61,8 @@ TEST(LlvmLibcFreeStore, RemoveBestFit) {
   FreeStore store;
   store.set_range({0, 4096});
   store.insert(smallest);
-  store.insert(largest_small);
+  if (largest_small != smallest)
+    store.insert(largest_small);
   store.insert(remainder);
 
   // Find exact match for smallest.
@@ -69,9 +73,11 @@ TEST(LlvmLibcFreeStore, RemoveBestFit) {
   ASSERT_EQ(store.remove_best_fit(largest_small->inner_size()), largest_small);
   store.insert(largest_small);
 
-  // Search smallest for best fit.
-  ASSERT_EQ(store.remove_best_fit(smallest->inner_size() + 1), largest_small);
-  store.insert(largest_small);
+  // Search small list for best fit.
+  Block<> *next_smallest =
+      largest_small == smallest ? remainder : largest_small;
+  ASSERT_EQ(store.remove_best_fit(smallest->inner_size() + 1), next_smallest);
+  store.insert(next_smallest);
 
   // Continue search for best fit to large blocks.
   EXPECT_EQ(store.remove_best_fit(largest_small->inner_size() + 1), remainder);
