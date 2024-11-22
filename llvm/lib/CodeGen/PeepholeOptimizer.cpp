@@ -65,6 +65,7 @@
 //     C = copy A    <-- same-bank copy
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/PeepholeOptimizer.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -78,6 +79,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -147,8 +149,7 @@ namespace {
 class ValueTrackerResult;
 class RecurrenceInstr;
 
-class PeepholeOptimizer : public MachineFunctionPass,
-                          private MachineFunction::Delegate {
+class PeepholeOptimizer : private MachineFunction::Delegate {
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
@@ -156,30 +157,10 @@ class PeepholeOptimizer : public MachineFunctionPass,
   MachineLoopInfo *MLI = nullptr;
 
 public:
-  static char ID; // Pass identification
+  PeepholeOptimizer(MachineDominatorTree *DT, MachineLoopInfo *MLI)
+      : DT(DT), MLI(MLI) {}
 
-  PeepholeOptimizer() : MachineFunctionPass(ID) {
-    initializePeepholeOptimizerPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    MachineFunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<MachineLoopInfoWrapperPass>();
-    AU.addPreserved<MachineLoopInfoWrapperPass>();
-    if (Aggressive) {
-      AU.addRequired<MachineDominatorTreeWrapperPass>();
-      AU.addPreserved<MachineDominatorTreeWrapperPass>();
-    }
-  }
-
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
-  }
-
+  bool run(MachineFunction &MF);
   /// Track Def -> Use info used for rewriting copies.
   using RewriteMapTy = SmallDenseMap<RegSubRegPair, ValueTrackerResult>;
 
@@ -291,6 +272,33 @@ private:
 
   void MF_HandleChangeDesc(MachineInstr &MI, const MCInstrDesc &TID) override {
     deleteChangedCopy(MI);
+  }
+};
+
+class PeepholeOptimizerLegacy : public MachineFunctionPass {
+public:
+  static char ID; // Pass identification
+
+  PeepholeOptimizerLegacy() : MachineFunctionPass(ID) {
+    initializePeepholeOptimizerLegacyPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    AU.addPreserved<MachineLoopInfoWrapperPass>();
+    if (Aggressive) {
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
+      AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    }
+  }
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::IsSSA);
   }
 };
 
@@ -469,16 +477,16 @@ public:
 
 } // end anonymous namespace
 
-char PeepholeOptimizer::ID = 0;
+char PeepholeOptimizerLegacy::ID = 0;
 
-char &llvm::PeepholeOptimizerID = PeepholeOptimizer::ID;
+char &llvm::PeepholeOptimizerLegacyID = PeepholeOptimizerLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(PeepholeOptimizer, DEBUG_TYPE, "Peephole Optimizations",
-                      false, false)
+INITIALIZE_PASS_BEGIN(PeepholeOptimizerLegacy, DEBUG_TYPE,
+                      "Peephole Optimizations", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
-INITIALIZE_PASS_END(PeepholeOptimizer, DEBUG_TYPE, "Peephole Optimizations",
-                    false, false)
+INITIALIZE_PASS_END(PeepholeOptimizerLegacy, DEBUG_TYPE,
+                    "Peephole Optimizations", false, false)
 
 /// If instruction is a copy-like instruction, i.e. it reads a single register
 /// and writes a single register and it does not modify the source, and if the
@@ -1644,9 +1652,37 @@ bool PeepholeOptimizer::optimizeRecurrence(MachineInstr &PHI) {
   return Changed;
 }
 
-bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
+PreservedAnalyses
+PeepholeOptimizerPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+  auto *DT =
+      Aggressive ? &MFAM.getResult<MachineDominatorTreeAnalysis>(MF) : nullptr;
+  auto *MLI = &MFAM.getResult<MachineLoopAnalysis>(MF);
+  PeepholeOptimizer Impl(DT, MLI);
+  bool Changed = Impl.run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserve<MachineDominatorTreeAnalysis>();
+  PA.preserve<MachineLoopAnalysis>();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+bool PeepholeOptimizerLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
+  auto *DT = Aggressive
+                 ? &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree()
+                 : nullptr;
+  auto *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  PeepholeOptimizer Impl(DT, MLI);
+  return Impl.run(MF);
+}
+
+bool PeepholeOptimizer::run(MachineFunction &MF) {
 
   LLVM_DEBUG(dbgs() << "********** PEEPHOLE OPTIMIZER **********\n");
   LLVM_DEBUG(dbgs() << "********** Function: " << MF.getName() << '\n');
@@ -1657,9 +1693,6 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
   MRI = &MF.getRegInfo();
-  DT = Aggressive ? &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree()
-                  : nullptr;
-  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   MF.setDelegate(this);
 
   bool Changed = false;
