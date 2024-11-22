@@ -2576,18 +2576,15 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
     if (auto *clause{FindClause(llvm::omp::Clause::OMPC_schedule)}) {
       // only one schedule clause is allowed
       const auto &schedClause{std::get<parser::OmpClause::Schedule>(clause->u)};
-      if (ScheduleModifierHasType(schedClause.v,
-              parser::OmpScheduleModifierType::ModType::Nonmonotonic)) {
+      auto &modifiers{OmpGetModifiers(schedClause.v)};
+      auto *ordering{
+          OmpGetUniqueModifier<parser::OmpOrderingModifier>(modifiers)};
+      if (ordering &&
+          ordering->v == parser::OmpOrderingModifier::Value::Nonmonotonic) {
         if (FindClause(llvm::omp::Clause::OMPC_ordered)) {
           context_.Say(clause->source,
               "The NONMONOTONIC modifier cannot be specified "
               "if an ORDERED clause is specified"_err_en_US);
-        }
-        if (ScheduleModifierHasType(schedClause.v,
-                parser::OmpScheduleModifierType::ModType::Monotonic)) {
-          context_.Say(clause->source,
-              "The MONOTONIC and NONMONOTONIC modifiers "
-              "cannot be both specified"_err_en_US);
         }
       }
     }
@@ -2648,8 +2645,8 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
       if (auto *o_clause{FindClause(llvm::omp::Clause::OMPC_order)}) {
         const auto &orderClause{
             std::get<parser::OmpClause::Order>(o_clause->u)};
-        if (std::get<parser::OmpOrderClause::Type>(orderClause.v.t) ==
-            parser::OmpOrderClause::Type::Concurrent) {
+        if (std::get<parser::OmpOrderClause::Ordering>(orderClause.v.t) ==
+            parser::OmpOrderClause::Ordering::Concurrent) {
           context_.Say(sl_clause->source,
               "The `SAFELEN` clause cannot appear in the `SIMD` directive "
               "with `ORDER(CONCURRENT)` clause"_err_en_US);
@@ -2868,45 +2865,41 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Reduction &x) {
 
 bool OmpStructureChecker::CheckReductionOperators(
     const parser::OmpClause::Reduction &x) {
-  auto &modifiers{OmpGetModifiers(x.v)};
-  const auto *definedOp{
-      OmpGetUniqueModifier<parser::OmpReductionIdentifier>(modifiers)};
-  if (!definedOp) {
-    return false;
-  }
   bool ok = false;
-  common::visit(
-      common::visitors{
-          [&](const parser::DefinedOperator &dOpr) {
-            if (const auto *intrinsicOp{
-                    std::get_if<parser::DefinedOperator::IntrinsicOperator>(
-                        &dOpr.u)}) {
-              ok = CheckIntrinsicOperator(*intrinsicOp);
-            } else {
-              context_.Say(GetContext().clauseSource,
-                  "Invalid reduction operator in REDUCTION clause."_err_en_US,
-                  ContextDirectiveAsFortran());
-            }
-          },
-          [&](const parser::ProcedureDesignator &procD) {
-            const parser::Name *name{std::get_if<parser::Name>(&procD.u)};
-            if (name && name->symbol) {
-              const SourceName &realName{name->symbol->GetUltimate().name()};
-              if (realName == "max" || realName == "min" ||
-                  realName == "iand" || realName == "ior" ||
-                  realName == "ieor") {
-                ok = true;
-              }
-            }
-            if (!ok) {
-              context_.Say(GetContext().clauseSource,
-                  "Invalid reduction identifier in REDUCTION "
-                  "clause."_err_en_US,
-                  ContextDirectiveAsFortran());
-            }
-          },
-      },
-      definedOp->u);
+  auto &modifiers{OmpGetModifiers(x.v)};
+  if (const auto *ident{
+          OmpGetUniqueModifier<parser::OmpReductionIdentifier>(modifiers)}) {
+
+    auto visitOperator{[&](const parser::DefinedOperator &dOpr) {
+      if (const auto *intrinsicOp{
+              std::get_if<parser::DefinedOperator::IntrinsicOperator>(
+                  &dOpr.u)}) {
+        ok = CheckIntrinsicOperator(*intrinsicOp);
+      } else {
+        context_.Say(GetContext().clauseSource,
+            "Invalid reduction operator in REDUCTION clause."_err_en_US,
+            ContextDirectiveAsFortran());
+      }
+    }};
+
+    auto visitDesignator{[&](const parser::ProcedureDesignator &procD) {
+      const parser::Name *name{std::get_if<parser::Name>(&procD.u)};
+      if (name && name->symbol) {
+        const SourceName &realName{name->symbol->GetUltimate().name()};
+        if (realName == "max" || realName == "min" || realName == "iand" ||
+            realName == "ior" || realName == "ieor") {
+          ok = true;
+        }
+      }
+      if (!ok) {
+        context_.Say(GetContext().clauseSource,
+            "Invalid reduction identifier in REDUCTION "
+            "clause."_err_en_US,
+            ContextDirectiveAsFortran());
+      }
+    }};
+    common::visit(common::visitors{visitOperator, visitDesignator}, ident->u);
+  }
 
   return ok;
 }
@@ -3553,34 +3546,23 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
   }
 }
 
-bool OmpStructureChecker::ScheduleModifierHasType(
-    const parser::OmpScheduleClause &x,
-    const parser::OmpScheduleModifierType::ModType &type) {
-  const auto &modifier{
-      std::get<std::optional<parser::OmpScheduleModifier>>(x.t)};
-  if (modifier) {
-    const auto &modType1{
-        std::get<parser::OmpScheduleModifier::Modifier1>(modifier->t)};
-    const auto &modType2{
-        std::get<std::optional<parser::OmpScheduleModifier::Modifier2>>(
-            modifier->t)};
-    if (modType1.v.v == type || (modType2 && modType2->v.v == type)) {
-      return true;
-    }
-  }
-  return false;
-}
 void OmpStructureChecker::Enter(const parser::OmpClause::Schedule &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_schedule);
   const parser::OmpScheduleClause &scheduleClause = x.v;
+  if (!OmpVerifyModifiers(
+          scheduleClause, GetContext().clauseSource, context_)) {
+    return;
+  }
 
   // 2.7 Loop Construct Restriction
   if (llvm::omp::allDoSet.test(GetContext().directive)) {
-    const auto &kind{std::get<1>(scheduleClause.t)};
-    const auto &chunk{std::get<2>(scheduleClause.t)};
+    auto &modifiers{OmpGetModifiers(scheduleClause)};
+    auto kind{std::get<parser::OmpScheduleClause::Kind>(scheduleClause.t)};
+    auto &chunk{
+        std::get<std::optional<parser::ScalarIntExpr>>(scheduleClause.t)};
     if (chunk) {
-      if (kind == parser::OmpScheduleClause::ScheduleType::Runtime ||
-          kind == parser::OmpScheduleClause::ScheduleType::Auto) {
+      if (kind == parser::OmpScheduleClause::Kind::Runtime ||
+          kind == parser::OmpScheduleClause::Kind::Auto) {
         context_.Say(GetContext().clauseSource,
             "When SCHEDULE clause has %s specified, "
             "it must not have chunk size specified"_err_en_US,
@@ -3594,10 +3576,12 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Schedule &x) {
       }
     }
 
-    if (ScheduleModifierHasType(scheduleClause,
-            parser::OmpScheduleModifierType::ModType::Nonmonotonic)) {
-      if (kind != parser::OmpScheduleClause::ScheduleType::Dynamic &&
-          kind != parser::OmpScheduleClause::ScheduleType::Guided) {
+    auto *ordering{
+        OmpGetUniqueModifier<parser::OmpOrderingModifier>(modifiers)};
+    if (ordering &&
+        ordering->v == parser::OmpOrderingModifier::Value::Nonmonotonic) {
+      if (kind != parser::OmpScheduleClause::Kind::Dynamic &&
+          kind != parser::OmpScheduleClause::Kind::Guided) {
         context_.Say(GetContext().clauseSource,
             "The NONMONOTONIC modifier can only be specified with "
             "SCHEDULE(DYNAMIC) or SCHEDULE(GUIDED)"_err_en_US);

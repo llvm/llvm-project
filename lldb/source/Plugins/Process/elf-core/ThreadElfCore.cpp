@@ -50,7 +50,7 @@ using namespace lldb_private;
 
 // Construct a Thread object with given data
 ThreadElfCore::ThreadElfCore(Process &process, const ThreadData &td)
-    : Thread(process, td.tid), m_thread_reg_ctx_sp(), m_thread_name(td.name),
+    : Thread(process, td.tid), m_thread_name(td.name), m_thread_reg_ctx_sp(),
       m_gpregset_data(td.gpregset), m_notes(td.notes),
       m_siginfo(std::move(td.siginfo)) {}
 
