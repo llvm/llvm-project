@@ -309,8 +309,8 @@ entry:
 !9 = !{i64 8}
 !10 = distinct !{}
 !11 = !{i32 5, i32 6}
-!12 = !{}
-!13 = !{}
+!12 = distinct !{}
+!13 = distinct !{}
 ;.
 ; CHECK: [[TBAA0]] = !{[[LOOP1]], [[LOOP1]], i64 0}
 ; CHECK: [[LOOP1]] = !{!"scalar type", [[META2:![0-9]+]]}
