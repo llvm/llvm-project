@@ -10020,6 +10020,71 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                       Op.getOperand(5)})
                : SDValue();
   }
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_bf16_scatter2_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_bf16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_f16_scatter2_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_f16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_f32_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_bf16_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_f16_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_bf16_scatter2_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_bf16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_f16_scatter2_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_f16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_f32_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_bf16_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_f16_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_i4_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_i4_bf16_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_i4_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_i4_f16_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_i4_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_bf16_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_f16_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_u4_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_u4_bf16_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_u4_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_u4_f16_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_u4_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_bf16_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_f16_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_f32: {
+
+    SmallVector<SDValue> Ops;
+    for (unsigned I = 0, NumOp = Op->getNumOperands(); I < NumOp; ++I) {
+      auto NewOp = Op->getOperand(I);
+      if (I == Op->getNumOperands() - 3)
+        NewOp = DAG.getNode(ISD::SIGN_EXTEND, SDLoc(Op), MVT::i16, NewOp);
+      Ops.push_back(NewOp);
+    }
+
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SDLoc(Op), Op->getVTList(),
+                       Ops);
+  }
+
   case Intrinsic::amdgcn_addrspacecast_nonnull:
     return lowerADDRSPACECAST(Op, DAG);
   case Intrinsic::amdgcn_readlane:

@@ -198,7 +198,6 @@ class VOP6Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc128 {
 //===----------------------------------------------------------------------===//
 // VOPM Pseudos
 //===----------------------------------------------------------------------===//
-
 def PixelShape {
   int 8X4X8 = 0;
   int 4X4X8 = 1;
@@ -520,16 +519,18 @@ def VOPM_SWMMAC_I32_IU4_X128    : VOPM_SWMMAC_Profile_Int<[v8i32, v4i32, v8i32, 
 def VOPM_SWMMAC_F32_IU4_X128    : VOPM_SWMMAC_Profile_Int<[v8f32, v4i32, v8i32, i32, v8f32], 4>;
 def VOPM_SWMMAC_F32I32_IU4_X128 : VOPM_SWMMAC_Profile_Int<[v8f32, v4i32, v8i32, i32, v8i32], 4>;
 
-class Cvt_To_Tensor_Profile<list<ValueType> ArgTy, int PixelShape, int Scatter> : VOPMProfile<ArgTy, 1, 1, 0, 1> {
+class Cvt_To_Tensor_Profile<list<ValueType> ArgTy, int PixelShape, int Scatter> : VOPMProfile<ArgTy, 1, 1, 1, 1> {
   let Outs64 = !cond(!eq(Scatter, 1) : (outs DstRC64:$vdst),
                      !eq(Scatter, 2) : (outs DstRC64:$vdst, Src2RC64:$src2),
                      !eq(Scatter, 4) : (outs DstRC64:$vdst, Src2RC64:$src2, Src2RC64:$src3, Src2RC64:$src4));
 
-  let Ins64 = !if(HasSrc1, (ins Src0RC64:$src0, Src1RC64:$src1, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs),
-                           (ins Src0RC64:$src0, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs));
+  field RegisterOperand SSrcOp = getVOPMSSrcForVT<ArgTy[4]>.ret; 
 
-  dag InPat = !if(HasSrc1, (ins Src0VT:$src0, Src1VT:$src1, timm:$aux_data, i1:$clamp),
-                           (ins Src0VT:$src0, timm:$aux_data, i1:$clamp));
+  let Ins64 = !if(HasSrc1, (ins Src0RC64:$src0, SSrcOp:$ssrc, Src1RC64:$src1, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs),
+                           (ins Src0RC64:$src0, SSrcOp:$ssrc, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs));
+
+  dag InPat = !if(HasSrc1, (ins Src0VT:$src0, Src3VT:$ssrc, Src1VT:$src1, timm:$aux_data, i1:$clamp),
+                           (ins Src0VT:$src0, Src3VT:$ssrc, timm:$aux_data, i1:$clamp));
 
   list<SchedReadWrite> SchedRW = !cond(!eq(Scatter, 1) : [Write32Bit],
                                        !eq(Scatter, 2) : [Write32Bit, Write32Bit],
@@ -538,8 +539,8 @@ class Cvt_To_Tensor_Profile<list<ValueType> ArgTy, int PixelShape, int Scatter> 
   string DestAsm = !cond(!eq(Scatter, 1) : "$vdst",
                          !eq(Scatter, 2) : "$vdst, $src2",
                          !eq(Scatter, 4) : "$vdst, $src2, $src3, $src4");
-  string SrcAsm = !if(HasSrc1, "$src0, $src1$aux_data$clamp$idxs",
-                               "$src0$aux_data$clamp$idxs");
+  string SrcAsm = !if(HasSrc1, "$src0, $ssrc, $src1$aux_data$clamp$idxs",
+                               "$src0, $ssrc$aux_data$clamp$idxs");
   let Asm64 = DestAsm#", "#SrcAsm;
 
   int PrimTy = PixelShape;
@@ -549,23 +550,28 @@ class Cvt_To_Tensor_Profile<list<ValueType> ArgTy, int PixelShape, int Scatter> 
 // which does not matter in practice because constants/modifiers are not supported.
 // However, that helps reducing the number of profiles.
 //
-//                                                dest  src0   src1    src2
-//                                                dest  acc_in sr      dests[2-4]
-def VOPM_CVT_TO_TENSOR_16B_8x4 : Cvt_To_Tensor_Profile<[f32, v4f32, untyped, f32], 1, 4>;
-def VOPM_CVT_TO_TENSOR_8B_8x4 : Cvt_To_Tensor_Profile<[f32, v4f32, untyped, f32], 1, 2>;
-def VOPM_CVT_TO_TENSOR_4B_8x4 : Cvt_To_Tensor_Profile<[f32, v4f32, untyped, f32], 1, 2>;
+//                                                       dest  src0   src1    src2       ssrc
+//                                                       dest  acc_in sr      dests[2-4] scale
+def VOPM_CVT_TO_TENSOR_16B_8x4x8 : Cvt_To_Tensor_Profile<[v2f32, v4f32, untyped, v2f32, i16], PixelShape.8X4X8, 2>;
+def VOPM_CVT_TO_TENSOR_8B_8x4x8 : Cvt_To_Tensor_Profile<[v2f32, v4f32, untyped, untyped, i16], PixelShape.8X4X8, 1>;
+def VOPM_CVT_TO_TENSOR_4B_8x4x8 : Cvt_To_Tensor_Profile<[v2f32, v4f32, untyped, untyped, i16], PixelShape.8X4X8, 1>;
 
-def VOPM_CVT_TO_TENSOR_16B_4x4 : Cvt_To_Tensor_Profile<[f32, v4f32, untyped, f32], 0, 4>;
-def VOPM_CVT_TO_TENSOR_8B_4x4 : Cvt_To_Tensor_Profile<[f32, v4f32, untyped, f32], 0, 2>;
-def VOPM_CVT_TO_TENSOR_4B_4x4 : Cvt_To_Tensor_Profile<[f32, v4f32, untyped, untyped], 0, 1>;
+def VOPM_CVT_TO_TENSOR_16B_4x4x8 : Cvt_To_Tensor_Profile<[f32, v2f32, untyped, f32, i16], PixelShape.4X4X8, 2>;
+def VOPM_CVT_TO_TENSOR_8B_4x4x8 : Cvt_To_Tensor_Profile<[f32, v2f32, untyped, untyped, i16], PixelShape.4X4X8, 1>;
+def VOPM_CVT_TO_TENSOR_4B_4x4x8 : Cvt_To_Tensor_Profile<[f32, v2f32, untyped, untyped, i16], PixelShape.4X4X8, 1>;
 
-def VOPM_CVT_TO_TENSOR_16B_4x2 : Cvt_To_Tensor_Profile<[f32, v4f32, untyped, f32], 2, 2>;
-def VOPM_CVT_TO_TENSOR_8B_4x2 : Cvt_To_Tensor_Profile<[f32, v4f32, untyped, untyped], 2, 1>;
-def VOPM_CVT_TO_TENSOR_4B_4x2 : Cvt_To_Tensor_Profile<[f32, v4f32, untyped, untyped], 2, 1>;
+def VOPM_CVT_TO_TENSOR_16B_4x4x16 : Cvt_To_Tensor_Profile<[f32, v4f32, untyped, f32, i16], PixelShape.4X4X16, 4>;
+def VOPM_CVT_TO_TENSOR_8B_4x4x16 : Cvt_To_Tensor_Profile<[f32, v4f32, untyped, f32, i16], PixelShape.4X4X16, 2>;
+def VOPM_CVT_TO_TENSOR_4B_4x4x16 : Cvt_To_Tensor_Profile<[f32, v4f32, untyped, untyped, i16], PixelShape.4X4X16, 1>;
 
-def VOPM_CVT_TO_TENSOR_16B_ACC16B_4x2 : Cvt_To_Tensor_Profile<[f32, v2f32, untyped, f32], 2, 2>;
-def VOPM_CVT_TO_TENSOR_8B_ACC16B_4x2 : Cvt_To_Tensor_Profile<[f32, v2f32, untyped, untyped], 2, 1>;
-def VOPM_CVT_TO_TENSOR_4B_ACC16B_4x2 : Cvt_To_Tensor_Profile<[f32, v2f32, untyped, untyped], 2, 1>;
+def VOPM_CVT_TO_TENSOR_16B_ACC16B_4x2x16 : Cvt_To_Tensor_Profile<[f32, v2f32, untyped, f32, i16], PixelShape.4X2X16, 2>;
+def VOPM_CVT_TO_TENSOR_8B_ACC16B_4x2x16 : Cvt_To_Tensor_Profile<[f32, v2f32, untyped, untyped, i16], PixelShape.4X2X16, 1>;
+def VOPM_CVT_TO_TENSOR_4B_ACC16B_4x2x16 : Cvt_To_Tensor_Profile<[f32, v2f32, untyped, untyped, i16], PixelShape.4X2X16, 1>;
+
+def VOPM_CVT_TO_TENSOR_16B_4x2x16 : Cvt_To_Tensor_Profile<[f32, v4f32, untyped, f32, i16], PixelShape.4X2X16, 2>;
+def VOPM_CVT_TO_TENSOR_8B_4x2x16 : Cvt_To_Tensor_Profile<[f32, v4f32, untyped, untyped, i16], PixelShape.4X2X16, 1>;
+def VOPM_CVT_TO_TENSOR_4B_4x2x16 : Cvt_To_Tensor_Profile<[f32, v4f32, untyped, untyped, i16], PixelShape.4X2X16, 1>;
+
 
 class VOPM_Pseudo <VOPProfile P, list<dag> pattern = [], string opName = !tolower(NAME)> :
   VOP_Pseudo<opName, "", P, P.Outs64, P.Ins64, "", pattern> {
@@ -637,9 +643,10 @@ multiclass VOPM_Cvt_To_Tensor_Pseudo<string ProfileName> {
 }
 
 multiclass VOPM_Cvt_To_Tensor_Shape_Pseudo<string ProfilePrefix, int acc16bit> {
-  defm _8x4 : VOPM_Cvt_To_Tensor_Pseudo<ProfilePrefix #"_8x4">;
-  defm _4x4 : VOPM_Cvt_To_Tensor_Pseudo<ProfilePrefix #"_4x4">;
-  defm _4x2 : VOPM_Cvt_To_Tensor_Pseudo<ProfilePrefix # !if(!eq(acc16bit,1),"_ACC16B_4x2","_4x2")>;
+  defm _8x4x8 : VOPM_Cvt_To_Tensor_Pseudo<ProfilePrefix #"_8x4x8">;
+  defm _4x4x8 : VOPM_Cvt_To_Tensor_Pseudo<ProfilePrefix #"_4x4x8">;
+  defm _4x4x16 : VOPM_Cvt_To_Tensor_Pseudo<ProfilePrefix #"_4x4x16">;
+  defm _4x2x16 : VOPM_Cvt_To_Tensor_Pseudo<ProfilePrefix # !if(!eq(acc16bit,1),"_ACC16B_4x2x16","_4x2x16")>;
 }
 
 multiclass VOPM_Cvt_To_Tensor_Acc_Pseudo<string ProfilePrefix> {
@@ -998,7 +1005,7 @@ multiclass VOP3M_Cvt_To_Tensor_Real_Base<GFXGen Gen, bits<8> op,
       let AsmString = asmName # ps.Pfl.Asm64;
 
       defvar PrimTy = !cast<Cvt_To_Tensor_Profile>(ps.Pfl).PrimTy;
-      let Inst{80-79} = PrimTy;
+      let Inst{59-58} = PrimTy;
   }
 }
 
@@ -1043,7 +1050,7 @@ multiclass VOP5M_Cvt_To_Tensor_Real_Base<GFXGen Gen, bits<8> op,
       let AsmString = asmName # ps.Pfl.Asm64;
 
       defvar PrimTy = !cast<Cvt_To_Tensor_Profile>(ps.Pfl).PrimTy;
-      let Inst{80-79} = PrimTy;
+      let Inst{59-58} = PrimTy;
   }
 }
 
@@ -1265,21 +1272,24 @@ defm V_CONVOLVE_F32I32_IU4 : Conv_Real_gfx13 <0xf6>;
 defm V_CONVOLVE_F32I32_IU8 : Conv_Real_gfx13 <0xf7>;
 
 multiclass Cvt_To_Tensor_4b_Real_gfx13<bits<8> op> {
-  defm _8x4 : VOP3M_Cvt_To_Tensor_Real_Base<GFX13Gen, op, NAME#"_8x4", !tolower(NAME)>;
-  defm _4x4 : VOP3M_Cvt_To_Tensor_Real_Base<GFX13Gen, op, NAME#"_4x4", !tolower(NAME)>;
-  defm _4x2 : VOP3M_Cvt_To_Tensor_Real_Base<GFX13Gen, op, NAME#"_4x2", !tolower(NAME)>;
+  defm _8x4x8 : VOP3M_Cvt_To_Tensor_Real_Base<GFX13Gen, op, NAME#"_8x4x8", !tolower(NAME)>;
+  defm _4x4x8 : VOP3M_Cvt_To_Tensor_Real_Base<GFX13Gen, op, NAME#"_4x4x8", !tolower(NAME)>;
+  defm _4x4x16 : VOP3M_Cvt_To_Tensor_Real_Base<GFX13Gen, op, NAME#"_4x4x16", !tolower(NAME)>;
+  defm _4x2x16 : VOP3M_Cvt_To_Tensor_Real_Base<GFX13Gen, op, NAME#"_4x2x16", !tolower(NAME)>;
 }
 
 multiclass Cvt_To_Tensor_8b_Real_gfx13<bits<8> op> {
-  defm _8x4 : VOP3M_Cvt_To_Tensor_Real_Base<GFX13Gen, op, NAME#"_8x4", !tolower(NAME)>;
-  defm _4x4 : VOP3M_Cvt_To_Tensor_Real_Base<GFX13Gen, op, NAME#"_4x4", !tolower(NAME)>;
-  defm _4x2 : VOP3M_Cvt_To_Tensor_Real_Base<GFX13Gen, op, NAME#"_4x2", !tolower(NAME)>;
+  defm _8x4x8 : VOP3M_Cvt_To_Tensor_Real_Base<GFX13Gen, op, NAME#"_8x4x8", !tolower(NAME)>;
+  defm _4x4x8 : VOP3M_Cvt_To_Tensor_Real_Base<GFX13Gen, op, NAME#"_4x4x8", !tolower(NAME)>;
+  defm _4x4x16 : VOP3M_Cvt_To_Tensor_Real_Base<GFX13Gen, op, NAME#"_4x4x16", !tolower(NAME)>;
+  defm _4x2x16 : VOP3M_Cvt_To_Tensor_Real_Base<GFX13Gen, op, NAME#"_4x2x16", !tolower(NAME)>;
 }
 
 multiclass Cvt_To_Tensor_16b_Real_gfx13<bits<8> op> {
-  defm _8x4 : VOP5M_Cvt_To_Tensor_Real_Base<GFX13Gen, op, NAME#"_8x4", !tolower(NAME)>;
-  defm _4x4 : VOP5M_Cvt_To_Tensor_Real_Base<GFX13Gen, op, NAME#"_4x4", !tolower(NAME)>;
-  defm _4x2 : VOP3M_Cvt_To_Tensor_Real_Base<GFX13Gen, op, NAME#"_4x2", !tolower(NAME)>;
+  defm _8x4x8 : VOP3M_Cvt_To_Tensor_Real_Base<GFX13Gen, op, NAME#"_8x4x8", !tolower(NAME)>;
+  defm _4x4x8 : VOP3M_Cvt_To_Tensor_Real_Base<GFX13Gen, op, NAME#"_4x4x8", !tolower(NAME)>;
+  defm _4x4x16 : VOP5M_Cvt_To_Tensor_Real_Base<GFX13Gen, op, NAME#"_4x4x16", !tolower(NAME)>;
+  defm _4x2x16 : VOP3M_Cvt_To_Tensor_Real_Base<GFX13Gen, op, NAME#"_4x2x16", !tolower(NAME)>;
 }
 
 defm V_CVT_TO_TENSOR_I4_F32 : Cvt_To_Tensor_4b_Real_gfx13<0x30>;
@@ -1306,6 +1316,18 @@ defm V_CVT_TO_TENSOR_FP8_BF16 : Cvt_To_Tensor_8b_Real_gfx13<0x44>;
 defm V_CVT_TO_TENSOR_BF8_BF16 : Cvt_To_Tensor_8b_Real_gfx13<0x45>;
 defm V_CVT_TO_TENSOR_F16_BF16 : Cvt_To_Tensor_16b_Real_gfx13<0x46>;
 defm V_CVT_TO_TENSOR_BF16_BF16 : Cvt_To_Tensor_16b_Real_gfx13<0x47>;
+
+
+/* TODO-GFX13:
+
+V_CVT_TO_TENSOR_SR_FP8_F32	0x048
+V_CVT_TO_TENSOR_SR_BF8_F32	0x049
+V_CVT_TO_TENSOR_SR_FP8_F16	0x04a
+V_CVT_TO_TENSOR_SR_BF8_F16	0x04b
+V_CVT_TO_TENSOR_SR_FP8_BF16	0x04c
+V_CVT_TO_TENSOR_SR_BF8_BF16	0x04d
+*/
+
 
 multiclass SBA<string Suffix, bits<8> op> {
   defm NAME # "_" # Suffix : VOP3M_SBA_Real_Base<GFX13Gen, op>;
