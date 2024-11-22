@@ -388,6 +388,17 @@ llvm.func @rocdl.s.wait.dscnt() {
 
 // -----
 
+llvm.func @rocdl.readlane(%src : f32) -> f32 {
+  %cst0 = llvm.mlir.constant(0 : i32) : i32
+
+  // CHECK-LABEL: rocdl.readlane
+  // CHECK: rocdl.readlane %{{.*}} %{{.*}}
+  %ret = rocdl.readlane %src, %cst0 : (f32, i32) -> f32
+  llvm.return %ret : f32
+}
+
+// -----
+
 // expected-error@below {{attribute attached to unexpected op}}
 func.func private @expected_llvm_func() attributes { rocdl.kernel }
 

@@ -356,14 +356,14 @@ public:
   void adjustOutputSections();
   void adjustSectionsAfterSorting();
 
-  SmallVector<PhdrEntry *, 0> createPhdrs();
+  SmallVector<std::unique_ptr<PhdrEntry>, 0> createPhdrs();
   bool needsInterpSection();
 
   bool shouldKeep(InputSectionBase *s);
   std::pair<const OutputSection *, const Defined *> assignAddresses();
   bool spillSections();
   void erasePotentialSpillSections();
-  void allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs);
+  void allocateHeaders(SmallVector<std::unique_ptr<PhdrEntry>, 0> &phdrs);
   void processSectionCommands();
   void processSymbolAssignments();
   void declareSymbols();

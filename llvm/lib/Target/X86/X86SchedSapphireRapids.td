@@ -1666,8 +1666,8 @@ def : InstRW<[SPRWriteResGroup131], (instregex "^VBROADCAST(F|I)32X(8|2)Zrmk(z?)
                                                "^VMOVDQ(A|U)(32|64)Zrmk(z?)$",
                                                "^VPBROADCAST(D|Q)Zrmk(z?)$")>;
 def : InstRW<[SPRWriteResGroup131, ReadAfterVecLd], (instregex "^MMX_P(ADD|SUB)(B|D|Q|W)rm$")>;
-def : InstRW<[SPRWriteResGroup131, ReadAfterVecYLd], (instregex "^VINSERT(F|I)(32|64)x4Zrmi((k|kz)?)$",
-                                                                "^VINSERT(F|I)(32x8|64x2)Zrmi((k|kz)?)$",
+def : InstRW<[SPRWriteResGroup131, ReadAfterVecYLd], (instregex "^VINSERT(F|I)(32|64)X4Zrmi((k|kz)?)$",
+                                                                "^VINSERT(F|I)(32X8|64X2)Zrmi((k|kz)?)$",
                                                                 "^VP(ADD|SUB)(B|D|Q|W)Zrm$",
                                                                 "^VP(ADD|SUB)(D|Q)Zrm(b|k|kz)$",
                                                                 "^VP(ADD|SUB)(D|Q)Zrmbk(z?)$",
@@ -2710,7 +2710,7 @@ def : InstRW<[SPRWriteResGroup262], (instregex "^VBROADCAST(F|I)32X(2|4)Z256rmk(
                                                "^VMOVDQ(A|U)(32|64)Z256rmk(z?)$",
                                                "^VPBROADCAST(D|Q)Z256rmk(z?)$")>;
 def : InstRW<[SPRWriteResGroup262, ReadAfterVecYLd], (instregex "^VINSERT(F|I)128rmi$",
-                                                                "^VINSERT(F|I)(32x4|64x2)Z256rmi((k|kz)?)$",
+                                                                "^VINSERT(F|I)(32X4|64X2)Z256rmi((k|kz)?)$",
                                                                 "^VP(ADD|SUB)(B|D|Q|W)(Y|Z256)rm$",
                                                                 "^VP(ADD|SUB)(D|Q)Z256rm(b|k|kz)$",
                                                                 "^VP(ADD|SUB)(D|Q)Z256rmbk(z?)$",
