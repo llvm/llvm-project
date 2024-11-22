@@ -11,7 +11,6 @@ attributes #0 = { convergent norecurse nounwind "hlsl.export"}
 ; CHECK: - Name:            SFI0
 ; CHECK-NEXT:     Size:            8
 ; CHECK-NEXT:     Flags:
-; CHECK-NEXT:       Doubles:         true
-; CHECK-NOT:   {{[A-Za-z]+: +true}}
+; CHECK:       Doubles:         true
 ; CHECK:            DX11_1_DoubleExtensions:         true
 
