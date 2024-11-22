@@ -213,35 +213,35 @@ void test_amdgcn_builtin_amdgcn_convolve_f32_bf8_4x2_3x3(global v4f* out, v4f ac
 {
    *out = __builtin_amdgcn_convolve_f32_bf8_4x2(acc, weights, col_center, col_left, col_right, CONV_FILTER_3x3, true);
 }
-// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_4x2_3x3(
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_f16_bf8_4x2_3x3(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.3x3.v4bf16.v4bf16.v18i32.v3i32(<4 x bfloat> [[ACC:%.*]], <18 x i32> [[WEIGHTS:%.*]], <3 x i32> [[COL_CENTER:%.*]], <3 x i32> [[COL_LEFT:%.*]], <3 x i32> [[COL_RIGHT:%.*]], i32 8, i1 true)
-// CHECK-GFX1300-NEXT:    store <4 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.convolve.f16.bf8.3x3.v4f16.v4f16.v18i32.v3i32(<4 x half> [[ACC:%.*]], <18 x i32> [[WEIGHTS:%.*]], <3 x i32> [[COL_CENTER:%.*]], <3 x i32> [[COL_LEFT:%.*]], <3 x i32> [[COL_RIGHT:%.*]], i32 8, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_4x2_3x3(global v4bf16* out, v4bf16 acc, v18i weights, v3i col_center, v3i col_left, v3i col_right)
+void test_amdgcn_builtin_amdgcn_convolve_f16_bf8_4x2_3x3(global v4h* out, v4h acc, v18i weights, v3i col_center, v3i col_left, v3i col_right)
 {
-   *out = __builtin_amdgcn_convolve_bf16_bf8_4x2(acc, weights, col_center, col_left, col_right, CONV_FILTER_3x3, true);
+   *out = __builtin_amdgcn_convolve_f16_bf8_4x2(acc, weights, col_center, col_left, col_right, CONV_FILTER_3x3, true);
 }
-// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_4x4_3x3(
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_f16_bf8_4x4_3x3(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.3x3.v8bf16.v8bf16.v9i32.v3i32(<8 x bfloat> [[ACC:%.*]], <9 x i32> [[WEIGHTS:%.*]], <3 x i32> [[COL_CENTER:%.*]], <3 x i32> [[COL_LEFT:%.*]], <3 x i32> [[COL_RIGHT:%.*]], i32 8, i1 true)
-// CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.convolve.f16.bf8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> [[ACC:%.*]], <9 x i32> [[WEIGHTS:%.*]], <3 x i32> [[COL_CENTER:%.*]], <3 x i32> [[COL_LEFT:%.*]], <3 x i32> [[COL_RIGHT:%.*]], i32 8, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_4x4_3x3(global v8bf16* out, v8bf16 acc, v9i weights, v3i col_center, v3i col_left, v3i col_right)
+void test_amdgcn_builtin_amdgcn_convolve_f16_bf8_4x4_3x3(global v8h* out, v8h acc, v9i weights, v3i col_center, v3i col_left, v3i col_right)
 {
-   *out = __builtin_amdgcn_convolve_bf16_bf8_4x4(acc, weights, col_center, col_left, col_right, CONV_FILTER_3x3, true);
+   *out = __builtin_amdgcn_convolve_f16_bf8_4x4(acc, weights, col_center, col_left, col_right, CONV_FILTER_3x3, true);
 }
-// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_8x4_3x3(
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_f16_bf8_8x4_3x3(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.3x3.v8bf16.v8bf16.v5i32.v4i32(<8 x bfloat> [[ACC:%.*]], <5 x i32> [[WEIGHTS:%.*]], <4 x i32> [[COL_CENTER:%.*]], <4 x i32> [[COL_LEFT:%.*]], <4 x i32> [[COL_RIGHT:%.*]], i32 8, i1 true)
-// CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.convolve.f16.bf8.3x3.v8f16.v8f16.v5i32.v4i32(<8 x half> [[ACC:%.*]], <5 x i32> [[WEIGHTS:%.*]], <4 x i32> [[COL_CENTER:%.*]], <4 x i32> [[COL_LEFT:%.*]], <4 x i32> [[COL_RIGHT:%.*]], i32 8, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_8x4_3x3(global v8bf16* out, v8bf16 acc, v5i weights, v4i col_center, v4i col_left, v4i col_right)
+void test_amdgcn_builtin_amdgcn_convolve_f16_bf8_8x4_3x3(global v8h* out, v8h acc, v5i weights, v4i col_center, v4i col_left, v4i col_right)
 {
-   *out = __builtin_amdgcn_convolve_bf16_bf8_8x4(acc, weights, col_center, col_left, col_right, CONV_FILTER_3x3, true);
+   *out = __builtin_amdgcn_convolve_f16_bf8_8x4(acc, weights, col_center, col_left, col_right, CONV_FILTER_3x3, true);
 }
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_f32_f16_4x2_3x3(
 // CHECK-GFX1300-NEXT:  entry:
@@ -973,35 +973,35 @@ void test_amdgcn_builtin_amdgcn_convolve_f32_bf8_4x2_1x1_iter_1(global v4f* out,
 {
    *out = __builtin_amdgcn_convolve_f32_bf8_4x2(acc, weights, ten_it0, CONV_FILTER_1x1 | CONV_ITER_1, true);
 }
-// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_4x2_1x1_iter_1(
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_f16_bf8_4x2_1x1_iter_1(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.1x1.v4bf16.v4bf16.v2i32.i32(<4 x bfloat> [[ACC:%.*]], <2 x i32> [[WEIGHTS:%.*]], i32 [[TEN_IT0:%.*]], i32 undef, i32 undef, i32 undef, i32 0, i1 true)
-// CHECK-GFX1300-NEXT:    store <4 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.convolve.f16.bf8.1x1.v4f16.v4f16.v2i32.i32(<4 x half> [[ACC:%.*]], <2 x i32> [[WEIGHTS:%.*]], i32 [[TEN_IT0:%.*]], i32 undef, i32 undef, i32 undef, i32 0, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_4x2_1x1_iter_1(global v4bf16* out, v4bf16 acc, v2i weights, int ten_it0)
+void test_amdgcn_builtin_amdgcn_convolve_f16_bf8_4x2_1x1_iter_1(global v4h* out, v4h acc, v2i weights, int ten_it0)
 {
-   *out = __builtin_amdgcn_convolve_bf16_bf8_4x2(acc, weights, ten_it0, CONV_FILTER_1x1 | CONV_ITER_1, true);
+   *out = __builtin_amdgcn_convolve_f16_bf8_4x2(acc, weights, ten_it0, CONV_FILTER_1x1 | CONV_ITER_1, true);
 }
-// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_4x4_1x1_iter_1(
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_f16_bf8_4x4_1x1_iter_1(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.1x1.v8bf16.v8bf16.i32.i32(<8 x bfloat> [[ACC:%.*]], i32 [[WEIGHTS:%.*]], i32 [[TEN_IT0:%.*]], i32 undef, i32 undef, i32 undef, i32 0, i1 true)
-// CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.convolve.f16.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> [[ACC:%.*]], i32 [[WEIGHTS:%.*]], i32 [[TEN_IT0:%.*]], i32 undef, i32 undef, i32 undef, i32 0, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_4x4_1x1_iter_1(global v8bf16* out, v8bf16 acc, int weights, int ten_it0)
+void test_amdgcn_builtin_amdgcn_convolve_f16_bf8_4x4_1x1_iter_1(global v8h* out, v8h acc, int weights, int ten_it0)
 {
-   *out = __builtin_amdgcn_convolve_bf16_bf8_4x4(acc, weights, ten_it0, CONV_FILTER_1x1 | CONV_ITER_1, true);
+   *out = __builtin_amdgcn_convolve_f16_bf8_4x4(acc, weights, ten_it0, CONV_FILTER_1x1 | CONV_ITER_1, true);
 }
-// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_8x4_1x1_iter_1(
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_f16_bf8_8x4_1x1_iter_1(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.1x1.v8bf16.v8bf16.i32.v2i32(<8 x bfloat> [[ACC:%.*]], i32 [[WEIGHTS:%.*]], <2 x i32> [[TEN_IT0:%.*]], <2 x i32> undef, <2 x i32> undef, <2 x i32> undef, i32 0, i1 true)
-// CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.convolve.f16.bf8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> [[ACC:%.*]], i32 [[WEIGHTS:%.*]], <2 x i32> [[TEN_IT0:%.*]], <2 x i32> undef, <2 x i32> undef, <2 x i32> undef, i32 0, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_8x4_1x1_iter_1(global v8bf16* out, v8bf16 acc, int weights, v2i ten_it0)
+void test_amdgcn_builtin_amdgcn_convolve_f16_bf8_8x4_1x1_iter_1(global v8h* out, v8h acc, int weights, v2i ten_it0)
 {
-   *out = __builtin_amdgcn_convolve_bf16_bf8_8x4(acc, weights, ten_it0, CONV_FILTER_1x1 | CONV_ITER_1, true);
+   *out = __builtin_amdgcn_convolve_f16_bf8_8x4(acc, weights, ten_it0, CONV_FILTER_1x1 | CONV_ITER_1, true);
 }
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_f32_bf8_4x2_1x1_iter_2(
 // CHECK-GFX1300-NEXT:  entry:
@@ -1013,35 +1013,35 @@ void test_amdgcn_builtin_amdgcn_convolve_f32_bf8_4x2_1x1_iter_2(global v4f* out,
 {
    *out = __builtin_amdgcn_convolve_f32_bf8_4x2(acc, weights, ten_it0, ten_it1, CONV_FILTER_1x1 | CONV_ITER_2, true);
 }
-// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_4x2_1x1_iter_2(
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_f16_bf8_4x2_1x1_iter_2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.1x1.v4bf16.v4bf16.v4i32.i32(<4 x bfloat> [[ACC:%.*]], <4 x i32> [[WEIGHTS:%.*]], i32 [[TEN_IT0:%.*]], i32 [[TEN_IT1:%.*]], i32 undef, i32 undef, i32 4096, i1 true)
-// CHECK-GFX1300-NEXT:    store <4 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.convolve.f16.bf8.1x1.v4f16.v4f16.v4i32.i32(<4 x half> [[ACC:%.*]], <4 x i32> [[WEIGHTS:%.*]], i32 [[TEN_IT0:%.*]], i32 [[TEN_IT1:%.*]], i32 undef, i32 undef, i32 4096, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_4x2_1x1_iter_2(global v4bf16* out, v4bf16 acc, v4i weights, int ten_it0, int ten_it1)
+void test_amdgcn_builtin_amdgcn_convolve_f16_bf8_4x2_1x1_iter_2(global v4h* out, v4h acc, v4i weights, int ten_it0, int ten_it1)
 {
-   *out = __builtin_amdgcn_convolve_bf16_bf8_4x2(acc, weights, ten_it0, ten_it1, CONV_FILTER_1x1 | CONV_ITER_2, true);
+   *out = __builtin_amdgcn_convolve_f16_bf8_4x2(acc, weights, ten_it0, ten_it1, CONV_FILTER_1x1 | CONV_ITER_2, true);
 }
-// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_4x4_1x1_iter_2(
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_f16_bf8_4x4_1x1_iter_2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.1x1.v8bf16.v8bf16.v2i32.i32(<8 x bfloat> [[ACC:%.*]], <2 x i32> [[WEIGHTS:%.*]], i32 [[TEN_IT0:%.*]], i32 [[TEN_IT1:%.*]], i32 undef, i32 undef, i32 4096, i1 true)
-// CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.convolve.f16.bf8.1x1.v8f16.v8f16.v2i32.i32(<8 x half> [[ACC:%.*]], <2 x i32> [[WEIGHTS:%.*]], i32 [[TEN_IT0:%.*]], i32 [[TEN_IT1:%.*]], i32 undef, i32 undef, i32 4096, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_4x4_1x1_iter_2(global v8bf16* out, v8bf16 acc, v2i weights, int ten_it0, int ten_it1)
+void test_amdgcn_builtin_amdgcn_convolve_f16_bf8_4x4_1x1_iter_2(global v8h* out, v8h acc, v2i weights, int ten_it0, int ten_it1)
 {
-   *out = __builtin_amdgcn_convolve_bf16_bf8_4x4(acc, weights, ten_it0, ten_it1, CONV_FILTER_1x1 | CONV_ITER_2, true);
+   *out = __builtin_amdgcn_convolve_f16_bf8_4x4(acc, weights, ten_it0, ten_it1, CONV_FILTER_1x1 | CONV_ITER_2, true);
 }
-// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_8x4_1x1_iter_2(
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_f16_bf8_8x4_1x1_iter_2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.1x1.v8bf16.v8bf16.i32.v2i32(<8 x bfloat> [[ACC:%.*]], i32 [[WEIGHTS:%.*]], <2 x i32> [[TEN_IT0:%.*]], <2 x i32> [[TEN_IT1:%.*]], <2 x i32> undef, <2 x i32> undef, i32 4096, i1 true)
-// CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.convolve.f16.bf8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> [[ACC:%.*]], i32 [[WEIGHTS:%.*]], <2 x i32> [[TEN_IT0:%.*]], <2 x i32> [[TEN_IT1:%.*]], <2 x i32> undef, <2 x i32> undef, i32 4096, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_8x4_1x1_iter_2(global v8bf16* out, v8bf16 acc, int weights, v2i ten_it0, v2i ten_it1)
+void test_amdgcn_builtin_amdgcn_convolve_f16_bf8_8x4_1x1_iter_2(global v8h* out, v8h acc, int weights, v2i ten_it0, v2i ten_it1)
 {
-   *out = __builtin_amdgcn_convolve_bf16_bf8_8x4(acc, weights, ten_it0, ten_it1, CONV_FILTER_1x1 | CONV_ITER_2, true);
+   *out = __builtin_amdgcn_convolve_f16_bf8_8x4(acc, weights, ten_it0, ten_it1, CONV_FILTER_1x1 | CONV_ITER_2, true);
 }
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_f32_bf8_4x2_1x1_iter_3(
 // CHECK-GFX1300-NEXT:  entry:
@@ -1053,35 +1053,35 @@ void test_amdgcn_builtin_amdgcn_convolve_f32_bf8_4x2_1x1_iter_3(global v4f* out,
 {
    *out = __builtin_amdgcn_convolve_f32_bf8_4x2(acc, weights, ten_it0, ten_it1, ten_it2, CONV_FILTER_1x1 | CONV_ITER_3, true);
 }
-// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_4x2_1x1_iter_3(
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_f16_bf8_4x2_1x1_iter_3(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.1x1.v4bf16.v4bf16.v6i32.i32(<4 x bfloat> [[ACC:%.*]], <6 x i32> [[WEIGHTS:%.*]], i32 [[TEN_IT0:%.*]], i32 [[TEN_IT1:%.*]], i32 [[TEN_IT2:%.*]], i32 undef, i32 8192, i1 true)
-// CHECK-GFX1300-NEXT:    store <4 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.convolve.f16.bf8.1x1.v4f16.v4f16.v6i32.i32(<4 x half> [[ACC:%.*]], <6 x i32> [[WEIGHTS:%.*]], i32 [[TEN_IT0:%.*]], i32 [[TEN_IT1:%.*]], i32 [[TEN_IT2:%.*]], i32 undef, i32 8192, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_4x2_1x1_iter_3(global v4bf16* out, v4bf16 acc, v6i weights, int ten_it0, int ten_it1, int ten_it2)
+void test_amdgcn_builtin_amdgcn_convolve_f16_bf8_4x2_1x1_iter_3(global v4h* out, v4h acc, v6i weights, int ten_it0, int ten_it1, int ten_it2)
 {
-   *out = __builtin_amdgcn_convolve_bf16_bf8_4x2(acc, weights, ten_it0, ten_it1, ten_it2, CONV_FILTER_1x1 | CONV_ITER_3, true);
+   *out = __builtin_amdgcn_convolve_f16_bf8_4x2(acc, weights, ten_it0, ten_it1, ten_it2, CONV_FILTER_1x1 | CONV_ITER_3, true);
 }
-// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_4x4_1x1_iter_3(
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_f16_bf8_4x4_1x1_iter_3(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.1x1.v8bf16.v8bf16.v3i32.i32(<8 x bfloat> [[ACC:%.*]], <3 x i32> [[WEIGHTS:%.*]], i32 [[TEN_IT0:%.*]], i32 [[TEN_IT1:%.*]], i32 [[TEN_IT2:%.*]], i32 undef, i32 8192, i1 true)
-// CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.convolve.f16.bf8.1x1.v8f16.v8f16.v3i32.i32(<8 x half> [[ACC:%.*]], <3 x i32> [[WEIGHTS:%.*]], i32 [[TEN_IT0:%.*]], i32 [[TEN_IT1:%.*]], i32 [[TEN_IT2:%.*]], i32 undef, i32 8192, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_4x4_1x1_iter_3(global v8bf16* out, v8bf16 acc, v3i weights, int ten_it0, int ten_it1, int ten_it2)
+void test_amdgcn_builtin_amdgcn_convolve_f16_bf8_4x4_1x1_iter_3(global v8h* out, v8h acc, v3i weights, int ten_it0, int ten_it1, int ten_it2)
 {
-   *out = __builtin_amdgcn_convolve_bf16_bf8_4x4(acc, weights, ten_it0, ten_it1, ten_it2, CONV_FILTER_1x1 | CONV_ITER_3, true);
+   *out = __builtin_amdgcn_convolve_f16_bf8_4x4(acc, weights, ten_it0, ten_it1, ten_it2, CONV_FILTER_1x1 | CONV_ITER_3, true);
 }
-// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_8x4_1x1_iter_3(
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_f16_bf8_8x4_1x1_iter_3(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.1x1.v8bf16.v8bf16.v2i32.v2i32(<8 x bfloat> [[ACC:%.*]], <2 x i32> [[WEIGHTS:%.*]], <2 x i32> [[TEN_IT0:%.*]], <2 x i32> [[TEN_IT1:%.*]], <2 x i32> [[TEN_IT2:%.*]], <2 x i32> undef, i32 8192, i1 true)
-// CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.convolve.f16.bf8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> [[ACC:%.*]], <2 x i32> [[WEIGHTS:%.*]], <2 x i32> [[TEN_IT0:%.*]], <2 x i32> [[TEN_IT1:%.*]], <2 x i32> [[TEN_IT2:%.*]], <2 x i32> undef, i32 8192, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_8x4_1x1_iter_3(global v8bf16* out, v8bf16 acc, v2i weights, v2i ten_it0, v2i ten_it1, v2i ten_it2)
+void test_amdgcn_builtin_amdgcn_convolve_f16_bf8_8x4_1x1_iter_3(global v8h* out, v8h acc, v2i weights, v2i ten_it0, v2i ten_it1, v2i ten_it2)
 {
-   *out = __builtin_amdgcn_convolve_bf16_bf8_8x4(acc, weights, ten_it0, ten_it1, ten_it2, CONV_FILTER_1x1 | CONV_ITER_3, true);
+   *out = __builtin_amdgcn_convolve_f16_bf8_8x4(acc, weights, ten_it0, ten_it1, ten_it2, CONV_FILTER_1x1 | CONV_ITER_3, true);
 }
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_f32_bf8_4x2_1x1_iter_4(
 // CHECK-GFX1300-NEXT:  entry:
@@ -1093,35 +1093,35 @@ void test_amdgcn_builtin_amdgcn_convolve_f32_bf8_4x2_1x1_iter_4(global v4f* out,
 {
    *out = __builtin_amdgcn_convolve_f32_bf8_4x2(acc, weights, ten_it0, ten_it1, ten_it2, ten_it3, CONV_FILTER_1x1 | CONV_ITER_4, true);
 }
-// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_4x2_1x1_iter_4(
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_f16_bf8_4x2_1x1_iter_4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.1x1.v4bf16.v4bf16.v8i32.i32(<4 x bfloat> [[ACC:%.*]], <8 x i32> [[WEIGHTS:%.*]], i32 [[TEN_IT0:%.*]], i32 [[TEN_IT1:%.*]], i32 [[TEN_IT2:%.*]], i32 [[TEN_IT3:%.*]], i32 12288, i1 true)
-// CHECK-GFX1300-NEXT:    store <4 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.convolve.f16.bf8.1x1.v4f16.v4f16.v8i32.i32(<4 x half> [[ACC:%.*]], <8 x i32> [[WEIGHTS:%.*]], i32 [[TEN_IT0:%.*]], i32 [[TEN_IT1:%.*]], i32 [[TEN_IT2:%.*]], i32 [[TEN_IT3:%.*]], i32 12288, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_4x2_1x1_iter_4(global v4bf16* out, v4bf16 acc, v8i weights, int ten_it0, int ten_it1, int ten_it2, int ten_it3)
+void test_amdgcn_builtin_amdgcn_convolve_f16_bf8_4x2_1x1_iter_4(global v4h* out, v4h acc, v8i weights, int ten_it0, int ten_it1, int ten_it2, int ten_it3)
 {
-   *out = __builtin_amdgcn_convolve_bf16_bf8_4x2(acc, weights, ten_it0, ten_it1, ten_it2, ten_it3, CONV_FILTER_1x1 | CONV_ITER_4, true);
+   *out = __builtin_amdgcn_convolve_f16_bf8_4x2(acc, weights, ten_it0, ten_it1, ten_it2, ten_it3, CONV_FILTER_1x1 | CONV_ITER_4, true);
 }
-// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_4x4_1x1_iter_4(
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_f16_bf8_4x4_1x1_iter_4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.1x1.v8bf16.v8bf16.v4i32.i32(<8 x bfloat> [[ACC:%.*]], <4 x i32> [[WEIGHTS:%.*]], i32 [[TEN_IT0:%.*]], i32 [[TEN_IT1:%.*]], i32 [[TEN_IT2:%.*]], i32 [[TEN_IT3:%.*]], i32 12288, i1 true)
-// CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.convolve.f16.bf8.1x1.v8f16.v8f16.v4i32.i32(<8 x half> [[ACC:%.*]], <4 x i32> [[WEIGHTS:%.*]], i32 [[TEN_IT0:%.*]], i32 [[TEN_IT1:%.*]], i32 [[TEN_IT2:%.*]], i32 [[TEN_IT3:%.*]], i32 12288, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_4x4_1x1_iter_4(global v8bf16* out, v8bf16 acc, v4i weights, int ten_it0, int ten_it1, int ten_it2, int ten_it3)
+void test_amdgcn_builtin_amdgcn_convolve_f16_bf8_4x4_1x1_iter_4(global v8h* out, v8h acc, v4i weights, int ten_it0, int ten_it1, int ten_it2, int ten_it3)
 {
-   *out = __builtin_amdgcn_convolve_bf16_bf8_4x4(acc, weights, ten_it0, ten_it1, ten_it2, ten_it3, CONV_FILTER_1x1 | CONV_ITER_4, true);
+   *out = __builtin_amdgcn_convolve_f16_bf8_4x4(acc, weights, ten_it0, ten_it1, ten_it2, ten_it3, CONV_FILTER_1x1 | CONV_ITER_4, true);
 }
-// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_8x4_1x1_iter_4(
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_f16_bf8_8x4_1x1_iter_4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.1x1.v8bf16.v8bf16.v2i32.v2i32(<8 x bfloat> [[ACC:%.*]], <2 x i32> [[WEIGHTS:%.*]], <2 x i32> [[TEN_IT0:%.*]], <2 x i32> [[TEN_IT1:%.*]], <2 x i32> [[TEN_IT2:%.*]], <2 x i32> [[TEN_IT3:%.*]], i32 12288, i1 true)
-// CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.convolve.f16.bf8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> [[ACC:%.*]], <2 x i32> [[WEIGHTS:%.*]], <2 x i32> [[TEN_IT0:%.*]], <2 x i32> [[TEN_IT1:%.*]], <2 x i32> [[TEN_IT2:%.*]], <2 x i32> [[TEN_IT3:%.*]], i32 12288, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_builtin_amdgcn_convolve_bf16_bf8_8x4_1x1_iter_4(global v8bf16* out, v8bf16 acc, v2i weights, v2i ten_it0, v2i ten_it1, v2i ten_it2, v2i ten_it3)
+void test_amdgcn_builtin_amdgcn_convolve_f16_bf8_8x4_1x1_iter_4(global v8h* out, v8h acc, v2i weights, v2i ten_it0, v2i ten_it1, v2i ten_it2, v2i ten_it3)
 {
-   *out = __builtin_amdgcn_convolve_bf16_bf8_8x4(acc, weights, ten_it0, ten_it1, ten_it2, ten_it3, CONV_FILTER_1x1 | CONV_ITER_4, true);
+   *out = __builtin_amdgcn_convolve_f16_bf8_8x4(acc, weights, ten_it0, ten_it1, ten_it2, ten_it3, CONV_FILTER_1x1 | CONV_ITER_4, true);
 }
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_convolve_f32_f16_4x2_1x1_iter_1(
 // CHECK-GFX1300-NEXT:  entry:
