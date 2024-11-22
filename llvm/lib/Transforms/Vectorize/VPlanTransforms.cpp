@@ -1447,9 +1447,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   SmallVector<VPValue *> HeaderMasks = collectAllHeaderMasks(Plan);
 
   for (VPUser *U : Plan.getVF().users()) {
-    auto *CurRecipe = cast<VPRecipeBase>(U);
-
-    if (auto *R = dyn_cast<VPReverseVectorPointerRecipe>(CurRecipe))
+    if (auto *R = dyn_cast<VPReverseVectorPointerRecipe>(U))
       R->setOperand(1, &EVL);
   }
 
