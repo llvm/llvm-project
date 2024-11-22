@@ -527,7 +527,9 @@ bool Lexer::getRawToken(SourceLocation Loc, Token &Result,
 
   const char *StrData = Buffer.data()+LocInfo.second;
 
-  if (!IgnoreWhiteSpace && isWhitespace(StrData[0]))
+  if (!IgnoreWhiteSpace && (isWhitespace(StrData[0]) ||
+                            // Treat escaped newlines as whitespace.
+                            SkipEscapedNewLines(StrData) != StrData))
     return true;
 
   // Create a lexer starting at the beginning of this token.
