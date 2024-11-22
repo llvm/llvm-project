@@ -588,7 +588,7 @@ llvm::Function *CGHLSLRuntime::createResourceBindingInitFn() {
       auto *Slot = llvm::ConstantInt::get(CGM.IntTy, RBA->getSlotNumber());
       // FIXME: resource arrays are not yet implemented
       auto *Range = llvm::ConstantInt::get(CGM.IntTy, 1);
-      auto *Index = llvm::ConstantInt::get(CGM.IntTy, 0);
+      auto *Index = llvm::ConstantInt::get(CGM.IntTy, RBA->getSlotNumber());
       // FIXME: NonUniformResourceIndex bit is not yet implemented
       auto *NonUniform = llvm::ConstantInt::get(Int1Ty, false);
       llvm::Value *Args[] = {Space, Slot, Range, Index, NonUniform};

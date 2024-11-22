@@ -19,7 +19,7 @@ RWBuffer<float> Buf : register(u5, space3);
 
 // CHECK: define internal void @_init_resource_bindings() {
 // CHECK-NEXT: entry:
-// CHECK-DXIL-NEXT: %Buf_h = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.handle.fromBinding.tdx.TypedBuffer_f32_1_0_0t(i32 3, i32 5, i32 1, i32 0, i1 false)
+// CHECK-DXIL-NEXT: %Buf_h = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.handle.fromBinding.tdx.TypedBuffer_f32_1_0_0t(i32 3, i32 5, i32 1, i32 5, i1 false)
 // CHECK-DXIL-NEXT: store target("dx.TypedBuffer", float, 1, 0, 0) %Buf_h, ptr @Buf, align 4
 // CHECK-SPIRV-NEXT: %Buf_h = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.spv.handle.fromBinding.tdx.TypedBuffer_f32_1_0_0t(i32 3, i32 5, i32 1, i32 0, i1 false)
 // CHECK-SPIRV-NEXT: store target("dx.TypedBuffer", float, 1, 0, 0) %Buf_h, ptr @Buf, align 4
