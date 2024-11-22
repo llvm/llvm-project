@@ -2504,7 +2504,7 @@ static void emitValidateOperandClass(AsmMatcherInfo &Info, raw_ostream &OS) {
       OS << "    break;\n";
     } else
       OS << "    break;\n";
-    OS << "    }\n";
+    OS << "  }\n";
   }
   OS << "  } // end switch (Kind)\n\n";
 
