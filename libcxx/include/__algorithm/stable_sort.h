@@ -36,10 +36,9 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// Workaround for "constexpr placement new" bug in gcc (fixed in 14.2).
-// See https://github.com/llvm/llvm-project/pull/110320#discussion_r1788557715.
-#if (_LIBCPP_STD_VER >= 20) ||                                                                                         \
-    (!defined(__clang__) && defined(__GNUC__) && (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 <= 140100))
+// Making placement new available in constexpr contexts. This is necessary to work around a "constexpr placement new"
+// bug in gcc (fixed in 14.2). See https://github.com/llvm/llvm-project/pull/110320#discussion_r1788557715.
+#if _LIBCPP_STD_VER >= 20
 #  define _LIBCPP_MOVING_PLACEMENT_NEW(__ptr, __type, __move_func, __iter) std::construct_at(__ptr, __move_func(__iter))
 #else
 #  define _LIBCPP_MOVING_PLACEMENT_NEW(__ptr, __type, __move_func, __iter)                                             \
