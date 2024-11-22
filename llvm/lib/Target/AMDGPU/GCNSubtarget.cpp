@@ -54,7 +54,7 @@ static cl::opt<bool> UseAA("amdgpu-use-aa-in-codegen",
 static cl::opt<unsigned>
     NSAThreshold("amdgpu-nsa-threshold",
                  cl::desc("Number of addresses from which to enable MIMG NSA."),
-                 cl::init(3), cl::Hidden);
+                 cl::init(2), cl::Hidden);
 
 GCNSubtarget::~GCNSubtarget() = default;
 

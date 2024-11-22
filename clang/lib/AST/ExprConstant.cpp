@@ -13527,7 +13527,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(DidOverflow, E);
   }
 
-  case Builtin::BI__builtin_reduce_add: {
+  case Builtin::BI__builtin_reduce_add:
+  case Builtin::BI__builtin_reduce_mul: {
     APValue Source;
     if (!EvaluateAsRValue(Info, E->getArg(0), Source))
       return false;
@@ -13535,10 +13536,24 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     unsigned SourceLen = Source.getVectorLength();
     APSInt Reduced = Source.getVectorElt(0).getInt();
     for (unsigned EltNum = 1; EltNum < SourceLen; ++EltNum) {
-      if (!CheckedIntArithmetic(
-              Info, E, Reduced, Source.getVectorElt(EltNum).getInt(),
-              Reduced.getBitWidth() + 1, std::plus<APSInt>(), Reduced))
+      switch (BuiltinOp) {
+      default:
         return false;
+      case Builtin::BI__builtin_reduce_add: {
+        if (!CheckedIntArithmetic(
+                Info, E, Reduced, Source.getVectorElt(EltNum).getInt(),
+                Reduced.getBitWidth() + 1, std::plus<APSInt>(), Reduced))
+          return false;
+        break;
+      }
+      case Builtin::BI__builtin_reduce_mul: {
+        if (!CheckedIntArithmetic(
+                Info, E, Reduced, Source.getVectorElt(EltNum).getInt(),
+                Reduced.getBitWidth() * 2, std::multiplies<APSInt>(), Reduced))
+          return false;
+        break;
+      }
+      }
     }
 
     return Success(Reduced, E);

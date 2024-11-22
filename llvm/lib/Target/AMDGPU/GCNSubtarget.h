@@ -1410,6 +1410,18 @@ public:
   /// \returns true if the target has instructions with xf32 format support.
   bool hasXF32Insts() const { return HasXF32Insts; }
 
+  bool hasMinimum3Maximum3F32() const {
+    return HasMinimum3Maximum3F32;
+  }
+
+  bool hasMinimum3Maximum3F16() const {
+    return HasMinimum3Maximum3F16;
+  }
+
+  bool hasMin3Max3PKF16() const {
+    return HasMin3Max3PKF16;
+  }
+
   /// \returns true if the target supports using software to avoid hazards
   /// between VMEM and VALU instructions in some instances.
   bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }
@@ -1418,7 +1430,6 @@ public:
 
   bool hasTanhInsts() const { return HasTanhInsts; }
 
-  bool hasPrngInst() const { return HasPrngInst; }
   bool hasPermlane16Swap() const { return HasPermlane16Swap; }
   bool hasPermlane32Swap() const { return HasPermlane32Swap; }
   bool hasAshrPkInsts() const { return HasAshrPkInsts; }
@@ -1436,18 +1447,6 @@ public:
 
   bool hasVGPRIndexingRegisters() const { return HasVGPRIndexingRegisters; }
 
-  bool hasMinimum3Maximum3F32() const {
-    return HasMinimum3Maximum3F32;
-  }
-
-  bool hasMinimum3Maximum3F16() const {
-    return HasMinimum3Maximum3F16;
-  }
-
-  bool hasMin3Max3PKF16() const {
-    return HasMin3Max3PKF16;
-  }
-
   bool hasMinimum3Maximum3PKF16() const {
     return HasMinimum3Maximum3PKF16;
   }
@@ -1456,6 +1455,8 @@ public:
   /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that
   /// instruction.
   unsigned maxHardClauseLength() const { return MaxHardClauseLength; }
+
+  bool hasPrngInst() const { return HasPrngInst; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs

@@ -62,8 +62,12 @@ static void OnViolation(const BufferedStackTrace &stack,
   if (UNLIKELY(is_stack_novel)) {
     IncrementUniqueErrorCount();
 
-    PrintDiagnostics(info);
-    stack.Print();
+    {
+      ScopedErrorReportLock l;
+      PrintDiagnostics(info);
+      stack.Print();
+      PrintErrorSummary(info, stack);
+    }
 
     handle.inc_use_count_unsafe();
   }

@@ -10,10 +10,6 @@ declare <16 x float> @llvm.amdgcn.mfma.f32.32x32x16.bf16(<8 x bfloat>, <8 x bflo
 ; llvm.amdgcn.mfma.f32.32x32x16.bf16
 ; --------------------------------------------------------------------
 
-; --------------------------------------------------------------------
-; llvm.amdgcn.mfma.f32.32x32x16.bf16
-; --------------------------------------------------------------------
-
 define amdgpu_kernel void @test_mfma_f32_32x32x16_bf16(<8 x bfloat> %arg0, <8 x bfloat> %arg1, <16 x float> %arg2) #1 {
 ; SDAG-LABEL: test_mfma_f32_32x32x16_bf16:
 ; SDAG:       ; %bb.0:
