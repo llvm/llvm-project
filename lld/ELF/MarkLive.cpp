@@ -391,7 +391,7 @@ template <class ELFT> void elf::markLive(Ctx &ctx) {
   if (ctx.arg.printGcSections)
     for (InputSectionBase *sec : ctx.inputSections)
       if (!sec->isLive())
-        message("removing unused section " + toString(sec));
+        message("removing unused section " + toStr(ctx, sec));
 }
 
 template void elf::markLive<ELF32LE>(Ctx &);
