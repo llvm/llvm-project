@@ -250,8 +250,12 @@ define <4 x i32>  @u16tou32v4(<4 x i16> %a) {
 ; CHECK: %[[#]] = OpSatConvertUToS [[U64]] %[[#]]
 ; CHECK: %[[#]] = OpConvertPtrToU [[U64]] [[Arg1]]
 ; CHECK: %[[#]] = OpConvertUToPtr %[[#]] [[Arg2]]
+; CHECK: %[[#]] = OpUConvert [[U32v4]] %[[#]]
+; CHECK: %[[#]] = OpSConvert [[U32v4]] %[[#]]
+; CHECK: %[[#]] = OpConvertUToF [[F32]] %[[#]]
+; CHECK: %[[#]] = OpConvertUToF [[F32]] %[[#]]
 ; CHECK: OpFunctionEnd
-define dso_local spir_kernel void @test_wrappers(ptr addrspace(4) %arg, i64 %arg_ptr) {
+define dso_local spir_kernel void @test_wrappers(ptr addrspace(4) %arg, i64 %arg_ptr, <4 x i8> %arg_v2) {
   %r1 = call spir_func i32 @__spirv_ConvertFToU(float 0.000000e+00)
   %r2 = call spir_func i32 @__spirv_ConvertFToS(float 0.000000e+00)
   %r3 = call spir_func float @__spirv_ConvertSToF(i32 1)
@@ -264,6 +268,10 @@ define dso_local spir_kernel void @test_wrappers(ptr addrspace(4) %arg, i64 %arg
   %r10 = call spir_func i64 @__spirv_SatConvertUToS(i64 1)
   %r11 = call spir_func i64 @__spirv_ConvertPtrToU(ptr addrspace(4) %arg)
   %r12 = call spir_func ptr addrspace(4) @__spirv_ConvertUToPtr(i64 %arg_ptr)
+  %r13 = call spir_func <4 x i32> @_Z22__spirv_UConvert_Rint2Dv2_a(<4 x i8> %arg_v2)
+  %r14 = call spir_func <4 x i32> @_Z22__spirv_SConvert_Rint2Dv2_a(<4 x i8> %arg_v2)
+  %r15 = call spir_func float @_Z30__spirv_ConvertUToF_Rfloat_rtz(i64 %arg_ptr)
+  %r16 = call spir_func float @__spirv_ConvertUToF_Rfloat_rtz(i64 %arg_ptr)
   ret void
 }
 
@@ -279,3 +287,7 @@ declare dso_local spir_func i64 @__spirv_SatConvertSToU(i64)
 declare dso_local spir_func i64 @__spirv_SatConvertUToS(i64)
 declare dso_local spir_func i64 @__spirv_ConvertPtrToU(ptr addrspace(4))
 declare dso_local spir_func ptr addrspace(4) @__spirv_ConvertUToPtr(i64)
+declare dso_local spir_func <4 x i32> @_Z22__spirv_UConvert_Rint2Dv2_a(<4 x i8>)
+declare dso_local spir_func <4 x i32> @_Z22__spirv_SConvert_Rint2Dv2_a(<4 x i8>)
+declare dso_local spir_func float @_Z30__spirv_ConvertUToF_Rfloat_rtz(i64)
+declare dso_local spir_func float @__spirv_ConvertUToF_Rfloat_rtz(i64)

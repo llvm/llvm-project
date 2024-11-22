@@ -4405,7 +4405,7 @@ def fcoverage_prefix_map_EQ
     HelpText<"remap file source paths <old> to <new> in coverage mapping. If there are multiple options, prefix replacement is applied in reverse order starting from the last one">;
 def ffile_prefix_map_EQ
   : Joined<["-"], "ffile-prefix-map=">, Group<f_Group>,
-    HelpText<"remap file source paths in debug info, predefined preprocessor "
+    HelpText<"remap file source paths in debug info, coverage mapping, predefined preprocessor "
              "macros and __builtin_FILE(). Implies -ffile-reproducible.">;
 def fmacro_prefix_map_EQ
   : Joined<["-"], "fmacro-prefix-map=">, Group<f_Group>,
@@ -5413,6 +5413,10 @@ def mlam_bh : Flag<["-"], "mlam-bh">, Group<m_loongarch_Features_Group>,
   HelpText<"Enable amswap[_db].{b/h} and amadd[_db].{b/h}">;
 def mno_lam_bh : Flag<["-"], "mno-lam-bh">, Group<m_loongarch_Features_Group>,
   HelpText<"Disable amswap[_db].{b/h} and amadd[_db].{b/h}">;
+def mld_seq_sa : Flag<["-"], "mld-seq-sa">, Group<m_loongarch_Features_Group>,
+  HelpText<"Do not generate load-load barrier instructions (dbar 0x700)">;
+def mno_ld_seq_sa : Flag<["-"], "mno-ld-seq-sa">, Group<m_loongarch_Features_Group>,
+  HelpText<"Generate load-load barrier instructions (dbar 0x700)">;
 def mannotate_tablejump : Flag<["-"], "mannotate-tablejump">, Group<m_loongarch_Features_Group>,
   HelpText<"Enable annotate table jump instruction to correlate it with the jump table.">;
 def mno_annotate_tablejump : Flag<["-"], "mno-annotate-tablejump">, Group<m_loongarch_Features_Group>,

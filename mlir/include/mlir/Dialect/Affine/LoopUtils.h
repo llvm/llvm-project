@@ -301,6 +301,11 @@ separateFullTiles(MutableArrayRef<AffineForOp> nest,
 /// Walk an affine.for to find a band to coalesce.
 LogicalResult coalescePerfectlyNestedAffineLoops(AffineForOp op);
 
+/// Count the number of loops surrounding `operand` such that operand could be
+/// hoisted above.
+/// Stop counting at the first loop over which the operand cannot be hoisted.
+/// This counts any LoopLikeOpInterface, not just affine.for.
+int64_t numEnclosingInvariantLoops(OpOperand &operand);
 } // namespace affine
 } // namespace mlir
 
