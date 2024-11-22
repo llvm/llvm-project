@@ -53,6 +53,10 @@ enum FeatureKind : uint32_t {
   // Atomic memory swap and add instructions for byte and half word are
   // available.
   FK_LAM_BH = 1 << 10,
+
+  // Do not generate load-load barrier instructions (dbar 0x700).
+  FK_LD_SEQ_SA = 1 << 12,
+
 };
 
 struct FeatureInfo {
