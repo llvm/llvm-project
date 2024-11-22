@@ -1895,8 +1895,7 @@ static bool CheckResourceHandle(
   assert(TheCall->getNumArgs() >= ArgIndex);
   QualType ArgType = TheCall->getArg(ArgIndex)->getType();
   const HLSLAttributedResourceType *ResTy =
-      dyn_cast<HLSLAttributedResourceType>(
-          ArgType.getTypePtr()->getUnqualifiedDesugaredType());
+      ArgType.getTypePtr()->getAs<HLSLAttributedResourceType>();
   if (!ResTy) {
     S->Diag(TheCall->getArg(0)->getBeginLoc(),
             diag::err_typecheck_expect_hlsl_resource)

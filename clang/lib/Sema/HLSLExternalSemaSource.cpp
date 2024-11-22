@@ -247,7 +247,7 @@ struct BuiltinTypeDeclBuilder {
   }
 
   FieldDecl *getResourceHandleField() {
-    auto I = Fields.find("h");
+    auto I = Fields.find("__handle");
     assert(I != Fields.end() &&
            I->second->getType()->isHLSLAttributedResourceType() &&
            "record does not have resource handle field");

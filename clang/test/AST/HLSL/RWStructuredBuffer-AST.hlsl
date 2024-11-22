@@ -60,7 +60,7 @@ RWStructuredBuffer<int> Buffer;
 // CHECK-NEXT: MemberExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> '__hlsl_resource_t
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::raw_buffer]]
-// CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .h
+// CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> 'RWStructuredBuffer<element_type>' lvalue implicit this
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> 'int' 1
 // CHECK-NEXT: AlwaysInlineAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit always_inline
@@ -73,7 +73,7 @@ RWStructuredBuffer<int> Buffer;
 // CHECK-NEXT: MemberExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> '__hlsl_resource_t
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::raw_buffer]]
-// CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .h
+// CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> 'RWStructuredBuffer<element_type>' lvalue implicit this
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> 'int' -1
 // CHECK-NEXT: AlwaysInlineAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit always_inline

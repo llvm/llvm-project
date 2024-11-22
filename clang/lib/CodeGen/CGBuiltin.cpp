@@ -19374,10 +19374,11 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
   case Builtin::BI__builtin_hlsl_buffer_update_counter: {
     Value *ResHandle = EmitScalarExpr(E->getArg(0));
     Value *Offset = EmitScalarExpr(E->getArg(1));
+    Value *Offset_i8 = Builder.CreateIntCast(Offset, Int8Ty, true);
     return Builder.CreateIntrinsic(
         /*ReturnType=*/Offset->getType(),
         CGM.getHLSLRuntime().getBufferUpdateCounterIntrinsic(),
-        ArrayRef<Value *>{ResHandle, Offset}, nullptr);
+        ArrayRef<Value *>{ResHandle, Offset_i8}, nullptr);
   }
   case Builtin::BI__builtin_hlsl_elementwise_splitdouble: {
 
