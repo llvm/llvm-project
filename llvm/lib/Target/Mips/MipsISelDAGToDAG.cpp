@@ -150,44 +150,9 @@ bool MipsDAGToDAGISel::selectVSplat(SDNode *N, APInt &Imm,
   return false;
 }
 
-bool MipsDAGToDAGISel::selectVSplatUimm1(SDValue N, SDValue &Imm) const {
+bool MipsDAGToDAGISel::selectVSplatCommon(SDValue N, SDValue &Imm, bool Signed,
+                                          unsigned ImmBitSize) const {
   llvm_unreachable("Unimplemented function.");
-  return false;
-}
-
-bool MipsDAGToDAGISel::selectVSplatUimm2(SDValue N, SDValue &Imm) const {
-  llvm_unreachable("Unimplemented function.");
-  return false;
-}
-
-bool MipsDAGToDAGISel::selectVSplatUimm3(SDValue N, SDValue &Imm) const {
-  llvm_unreachable("Unimplemented function.");
-  return false;
-}
-
-bool MipsDAGToDAGISel::selectVSplatUimm4(SDValue N, SDValue &Imm) const {
-  llvm_unreachable("Unimplemented function.");
-  return false;
-}
-
-bool MipsDAGToDAGISel::selectVSplatUimm5(SDValue N, SDValue &Imm) const {
-  llvm_unreachable("Unimplemented function.");
-  return false;
-}
-
-bool MipsDAGToDAGISel::selectVSplatUimm6(SDValue N, SDValue &Imm) const {
-  llvm_unreachable("Unimplemented function.");
-  return false;
-}
-
-bool MipsDAGToDAGISel::selectVSplatUimm8(SDValue N, SDValue &Imm) const {
-  llvm_unreachable("Unimplemented function.");
-  return false;
-}
-
-bool MipsDAGToDAGISel::selectVSplatSimm5(SDValue N, SDValue &Imm) const {
-  llvm_unreachable("Unimplemented function.");
-  return false;
 }
 
 bool MipsDAGToDAGISel::selectVSplatUimmPow2(SDValue N, SDValue &Imm) const {
