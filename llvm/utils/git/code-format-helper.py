@@ -318,7 +318,7 @@ ALL_FORMATTERS = (DarkerFormatHelper(), ClangFormatHelper())
 def hook_main():
     # fill out args
     args = FormatArgs()
-    args.verbose = False
+    args.verbose = os.getenv("FORMAT_HOOK_VERBOSE", False)
 
     # find the changed files
     cmd = ["git", "diff", "--cached", "--name-only", "--diff-filter=d"]
@@ -338,6 +338,9 @@ def hook_main():
             print(f"Couldn't find {fmt.name}, can't check " + fmt.friendly_name.lower())
 
     if len(failed_fmts) > 0:
+        print(
+            "Pre-commit format hook failed, rerun with FORMAT_HOOK_VERBOSE=1 environment for verbose output"
+        )
         sys.exit(1)
 
     sys.exit(0)
