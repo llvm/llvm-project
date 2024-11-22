@@ -3703,8 +3703,11 @@ struct OmpLinearClause {
   std::variant<WithModifier, WithoutModifier> u;
 };
 
+WRAPPER_CLASS(OmpMapperIdentifier, std::optional<Name>);
+
 // 2.15.5.1 map ->
-//    MAP ([[map-type-modifier-list [,]] [iterator-modifier [,]] map-type : ]
+//    MAP ([MAPPER(mapper-identifier)] [[map-type-modifier-list [,]]
+//    [iterator-modifier [,]] map-type : ]
 //         variable-name-list)
 // map-type-modifier-list -> map-type-modifier [,] [...]
 // map-type-modifier -> ALWAYS | CLOSE | PRESENT | OMPX_HOLD
@@ -3718,7 +3721,8 @@ struct OmpMapClause {
   // The checks for satisfying those constraints are deferred to semantics.
   // In OpenMP 5.2 the non-comma syntax has been deprecated: keep the
   // information about separator presence to emit a diagnostic if needed.
-  std::tuple<std::optional<std::list<TypeModifier>>,
+  std::tuple<OmpMapperIdentifier, // Mapper name
+      std::optional<std::list<TypeModifier>>,
       std::optional<std::list<OmpIteratorModifier>>, // unique
       std::optional<std::list<Type>>, // unique
       OmpObjectList,
