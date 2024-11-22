@@ -1206,26 +1206,36 @@ public:
   /// For example, EQ->EQ, SLE->SLE, UGT->SGT, etc.
   /// @returns the predicate that would be the result if the operand were
   /// regarded as signed.
-  /// Return the signed version of the predicate
+  /// Return the signed version of the predicate.
   Predicate getSignedPredicate() const {
     return getSignedPredicate(getPredicate());
   }
 
-  /// This is a static version that you can use without an instruction.
-  /// Return the signed version of the predicate.
+  /// Return the signed version of the predicate: static variant.
   static Predicate getSignedPredicate(Predicate pred);
 
   /// For example, EQ->EQ, SLE->ULE, UGT->UGT, etc.
   /// @returns the predicate that would be the result if the operand were
   /// regarded as unsigned.
-  /// Return the unsigned version of the predicate
+  /// Return the unsigned version of the predicate.
   Predicate getUnsignedPredicate() const {
     return getUnsignedPredicate(getPredicate());
   }
 
-  /// This is a static version that you can use without an instruction.
-  /// Return the unsigned version of the predicate.
+  /// Return the unsigned version of the predicate: static variant.
   static Predicate getUnsignedPredicate(Predicate pred);
+
+  /// For example, SLT->ULT, ULT->SLT, SLE->ULE, ULE->SLE, EQ->Failed assert
+  /// @returns the unsigned version of the signed predicate pred or
+  ///          the signed version of the signed predicate pred.
+  static Predicate getFlippedSignednessPredicate(Predicate pred);
+
+  /// For example, SLT->ULT, ULT->SLT, SLE->ULE, ULE->SLE, EQ->Failed assert
+  /// @returns the unsigned version of the signed predicate pred or
+  ///          the signed version of the signed predicate pred.
+  Predicate getFlippedSignednessPredicate() const {
+    return getFlippedSignednessPredicate(getPredicate());
+  }
 
   void setSameSign(bool B = true) {
     SubclassOptionalData = (SubclassOptionalData & ~SameSign) | (B * SameSign);

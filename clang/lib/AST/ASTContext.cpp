@@ -3558,7 +3558,7 @@ ASTContext::adjustType(QualType Orig,
                        llvm::function_ref<QualType(QualType)> Adjust) const {
   switch (Orig->getTypeClass()) {
   case Type::Attributed: {
-    const auto *AT = dyn_cast<AttributedType>(Orig);
+    const auto *AT = cast<AttributedType>(Orig);
     return getAttributedType(AT->getAttrKind(),
                              adjustType(AT->getModifiedType(), Adjust),
                              adjustType(AT->getEquivalentType(), Adjust),

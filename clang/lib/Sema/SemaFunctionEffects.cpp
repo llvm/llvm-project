@@ -627,7 +627,7 @@ private:
           IsNoexcept = isNoexcept(FD);
         } else if (auto *BD = dyn_cast<BlockDecl>(D)) {
           if (auto *TSI = BD->getSignatureAsWritten()) {
-            auto *FPT = TSI->getType()->getAs<FunctionProtoType>();
+            auto *FPT = TSI->getType()->castAs<FunctionProtoType>();
             IsNoexcept = FPT->isNothrow() || BD->hasAttr<NoThrowAttr>();
           }
         }

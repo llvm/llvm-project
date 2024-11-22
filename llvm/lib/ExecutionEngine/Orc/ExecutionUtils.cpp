@@ -19,7 +19,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/MachOUniversal.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Target/TargetMachine.h"
 #include <string>

@@ -481,8 +481,8 @@ def simm12_plus1 : ImmLeaf<GRLenVT,
 
 // Return the negation of an immediate value.
 def NegImm : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(-N->getSExtValue(), SDLoc(N),
-                                   N->getValueType(0));
+  return CurDAG->getSignedTargetConstant(-N->getSExtValue(), SDLoc(N),
+                                         N->getValueType(0));
 }]>;
 
 // FP immediate patterns.
@@ -538,16 +538,16 @@ def AddiPair : PatLeaf<(imm), [{
 // Return -2048 if immediate is negative or 2047 if positive.
 def AddiPairImmLarge : SDNodeXForm<imm, [{
   int64_t Imm = N->getSExtValue() < 0 ? -2048 : 2047;
-  return CurDAG->getTargetConstant(Imm, SDLoc(N),
-                                   N->getValueType(0));
+  return CurDAG->getSignedTargetConstant(Imm, SDLoc(N),
+                                         N->getValueType(0));
 }]>;
 
 // Return imm - (imm < 0 ? -2048 : 2047).
 def AddiPairImmSmall : SDNodeXForm<imm, [{
   int64_t Imm = N->getSExtValue();
   int64_t Adj = Imm < 0 ? -2048 : 2047;
-  return CurDAG->getTargetConstant(Imm - Adj, SDLoc(N),
-                                   N->getValueType(0));
+  return CurDAG->getSignedTargetConstant(Imm - Adj, SDLoc(N),
+                                         N->getValueType(0));
 }]>;
 
 // Check if (mul r, imm) can be optimized to (SLLI (ALSL r, r, i0), i1),
@@ -711,15 +711,21 @@ class STORE_2RI14<bits<32> op>
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 1
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 1,
-    Constraints = "@earlyclobber $rd" in class AM_3R<bits<32> op>
+    IsSubjectToAMORdConstraint = 1 in {
+class AM_3R<bits<32> op>
     : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rk, GPRMemAtomic:$rj),
-            "$rd, $rk, $rj">;
+            "$rd, $rk, $rj"> {
+  let Constraints = "@earlyclobber $rd";
+}
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 1,
-    Constraints =
-        "@earlyclobber $rd_wb, $rd_wb = $rd" in class AMCAS_3R<bits<32> op>
+class AMCAS_3R<bits<32> op>
     : Fmt3R<op, (outs GPR:$rd_wb), (ins GPR:$rd, GPR:$rk, GPRMemAtomic:$rj),
-            "$rd, $rk, $rj">;
+            "$rd, $rk, $rj"> {
+  let Constraints = "@earlyclobber $rd_wb, $rd_wb = $rd";
+  let IsAMCAS = 1;
+}
+} // hasSideEffects = 0, mayLoad = 1, mayStore = 1,
+  // IsSubjectToAMORdConstraint = 1
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 class LLBase<bits<32> op>
