@@ -101,7 +101,7 @@ static cl::opt<bool>
                        cl::init(false), cl::Hidden);
 
 static cl::opt<bool> AggressivelySinkInstsIntoCycle(
-    "aggressively-sink-insts-to-avoid-spills",
+    "aggressive-sink-insts-into-cycles",
     cl::desc("Aggressively sink instructions into cycles to avoid "
              "register spills"),
     cl::init(false), cl::Hidden);
@@ -117,6 +117,8 @@ STATISTIC(NumCycleSunk, "Number of machine instructions sunk into a cycle");
 STATISTIC(NumSplit, "Number of critical edges split");
 STATISTIC(NumCoalesces, "Number of copies coalesced");
 STATISTIC(NumPostRACopySink, "Number of copies sunk after RA");
+
+using RegSubRegPair = TargetInstrInfo::RegSubRegPair;
 
 namespace {
 
@@ -263,11 +265,10 @@ private:
   bool SinkIntoCycle(MachineCycle *Cycle, MachineInstr &I);
 
   bool isDead(const MachineInstr *MI) const;
-  bool AggressivelySinkIntoCycle(
+  bool aggressivelySinkIntoCycle(
       MachineCycle *Cycle, MachineInstr &I,
-      DenseMap<MachineInstr *,
-               std::list<std::pair<MachineBasicBlock *, MachineInstr *>>>
-          SunkInstrs);
+      DenseMap<std::pair<MachineInstr *, MachineBasicBlock *>, MachineInstr *>
+          &SunkInstrs);
 
   bool isProfitableToSinkTo(Register Reg, MachineInstr &MI,
                             MachineBasicBlock *MBB,
@@ -692,8 +693,8 @@ void MachineSinking::FindCycleSinkCandidates(
     SmallVectorImpl<MachineInstr *> &Candidates) {
   for (auto &MI : *BB) {
     LLVM_DEBUG(dbgs() << "CycleSink: Analysing candidate: " << MI);
-    if (MI.isDebugInstr()) {
-      LLVM_DEBUG(dbgs() << "CycleSink: Dont sink debug instructions\n");
+    if (MI.isMetaInstruction()) {
+      LLVM_DEBUG(dbgs() << "CycleSink: Dont sink meta instructions\n");
       continue;
     }
     if (!TII->shouldSink(MI)) {
@@ -786,8 +787,11 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
     EverMadeChange = true;
   }
 
-  if (SinkInstsIntoCycle) {
+  if (SinkInstsIntoCycle || AggressivelySinkInstsIntoCycle) {
     SmallVector<MachineCycle *, 8> Cycles(CI->toplevel_cycles());
+
+    DenseMap<std::pair<MachineInstr *, MachineBasicBlock *>, MachineInstr *>
+        SunkInstrs;
     for (auto *Cycle : Cycles) {
       MachineBasicBlock *Preheader = Cycle->getCyclePreheader();
       if (!Preheader) {
@@ -801,7 +805,18 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
       // of a def-use chain, if there is any.
       // TODO: Sort the candidates using a cost-model.
       unsigned i = 0;
+
       for (MachineInstr *I : llvm::reverse(Candidates)) {
+        // AggressivelySinkInstsIntoCycle sinks a superset of instructions
+        // relative to regular cycle sinking. Thus, this option supercedes
+        // captures all sinking opportunites done
+        if (AggressivelySinkInstsIntoCycle) {
+          aggressivelySinkIntoCycle(Cycle, *I, SunkInstrs);
+          EverMadeChange = true;
+          ++NumCycleSunk;
+          continue;
+        }
+
         if (i++ == SinkIntoCycleLimit) {
           LLVM_DEBUG(dbgs() << "CycleSink:   Limit reached of instructions to "
                                "be analysed.");
@@ -810,30 +825,6 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
 
         if (!SinkIntoCycle(Cycle, *I))
           break;
-        EverMadeChange = true;
-        ++NumCycleSunk;
-      }
-    }
-  }
-
-  if (AggressivelySinkInstsIntoCycle) {
-    SmallVector<MachineCycle *, 8> Cycles(CI->toplevel_cycles());
-    DenseMap<MachineInstr *,
-             std::list<std::pair<MachineBasicBlock *, MachineInstr *>>>
-        SunkInstrs;
-    for (auto *Cycle : Cycles) {
-      MachineBasicBlock *Preheader = Cycle->getCyclePreheader();
-      if (!Preheader) {
-        LLVM_DEBUG(dbgs() << "AggressiveCycleSink: Can't find preheader\n");
-        continue;
-      }
-      SmallVector<MachineInstr *, 8> Candidates;
-      FindCycleSinkCandidates(Cycle, Preheader, Candidates);
-
-      // Walk the candidates in reverse order so that we start with the use
-      // of a def-use chain, if there is any.
-      for (MachineInstr *I : llvm::reverse(Candidates)) {
-        AggressivelySinkIntoCycle(Cycle, *I, SunkInstrs);
         EverMadeChange = true;
         ++NumCycleSunk;
       }
@@ -1615,31 +1606,27 @@ bool MachineSinking::hasStoreBetween(MachineBasicBlock *From,
   return HasAliasedStore;
 }
 
-/// Copy paste from DeadMachineInstructionElimImpl
-
 bool MachineSinking::isDead(const MachineInstr *MI) const {
   // Instructions without side-effects are dead iff they only define dead regs.
   // This function is hot and this loop returns early in the common case,
   // so only perform additional checks before this if absolutely necessary.
+
   for (const MachineOperand &MO : MI->all_defs()) {
     Register Reg = MO.getReg();
-    if (Reg.isPhysical()) {
+    if (Reg.isPhysical())
       return false;
-    } else {
-      if (MO.isDead()) {
+
+    if (MO.isDead()) {
 #ifndef NDEBUG
-        // Basic check on the register. All of them should be 'undef'.
-        for (auto &U : MRI->use_nodbg_operands(Reg))
-          assert(U.isUndef() && "'Undef' use on a 'dead' register is found!");
+      // Basic check on the register. All of them should be 'undef'.
+      for (auto &U : MRI->use_nodbg_operands(Reg))
+        assert(U.isUndef() && "'Undef' use on a 'dead' register is found!");
 #endif
-        continue;
-      }
-      for (const MachineInstr &Use : MRI->use_nodbg_instructions(Reg)) {
-        if (&Use != MI)
-          // This def has a non-debug use. Don't delete the instruction!
-          return false;
-      }
+      continue;
     }
+
+    if (!(MRI->hasAtMostUserInstrs(Reg, 0)))
+      return false;
   }
 
   // Technically speaking inline asm without side effects and no defs can still
@@ -1661,25 +1648,24 @@ bool MachineSinking::isDead(const MachineInstr *MI) const {
 /// In particular, it will sink into multiple successor blocks without limits
 /// based on the amount of sinking, or the type of ops being sunk (so long as
 /// they are safe to sink).
-bool MachineSinking::AggressivelySinkIntoCycle(
+bool MachineSinking::aggressivelySinkIntoCycle(
     MachineCycle *Cycle, MachineInstr &I,
-    DenseMap<MachineInstr *,
-             std::list<std::pair<MachineBasicBlock *, MachineInstr *>>>
-        SunkInstrs) {
+    DenseMap<std::pair<MachineInstr *, MachineBasicBlock *>, MachineInstr *>
+        &SunkInstrs) {
   LLVM_DEBUG(dbgs() << "AggressiveCycleSink: Finding sink block for: " << I);
   MachineBasicBlock *Preheader = Cycle->getCyclePreheader();
   assert(Preheader && "Cycle sink needs a preheader block");
-  SmallVector<std::pair<MachineOperand, MachineInstr *>> Uses;
+  SmallVector<std::pair<RegSubRegPair, MachineInstr *>> Uses;
   // TODO: support instructions with multiple defs
   if (I.getNumDefs() > 1)
     return false;
 
-  MachineOperand DefMO = I.getOperand(0);
+  MachineOperand &DefMO = I.getOperand(0);
   for (MachineInstr &MI : MRI->use_instructions(DefMO.getReg())) {
-    Uses.push_back({DefMO, &MI});
+    Uses.push_back({{DefMO.getReg(), DefMO.getSubReg()}, &MI});
   }
 
-  for (std::pair<MachineOperand, MachineInstr *> Entry : Uses) {
+  for (std::pair<RegSubRegPair, MachineInstr *> Entry : Uses) {
     MachineInstr *MI = Entry.second;
     LLVM_DEBUG(dbgs() << "AggressiveCycleSink:   Analysing use: " << MI);
     if (MI->isPHI()) {
@@ -1701,22 +1687,14 @@ bool MachineSinking::AggressivelySinkIntoCycle(
 
     MachineBasicBlock *SinkBlock = MI->getParent();
     MachineInstr *NewMI = nullptr;
+    std::pair<MachineInstr *, MachineBasicBlock *> MapEntry(&I, SinkBlock);
 
     // Check for the case in which we have already sunk a copy of this
     // instruction into the user block.
-    if (SunkInstrs.contains(&I)) {
-      auto SunkBlocks = SunkInstrs[&I];
-      auto Match = std::find_if(
-          SunkBlocks.begin(), SunkBlocks.end(),
-          [&SinkBlock](
-              std::pair<MachineBasicBlock *, MachineInstr *> SunkEntry) {
-            return SunkEntry.first == SinkBlock;
-          });
-      if (Match != SunkBlocks.end()) {
-        LLVM_DEBUG(dbgs() << "AggressiveCycleSink:   Already sunk to block: "
-                          << printMBBReference(*SinkBlock) << "\n");
-        NewMI = Match->second;
-      }
+    if (SunkInstrs.contains(MapEntry)) {
+      LLVM_DEBUG(dbgs() << "AggressiveCycleSink:   Already sunk to block: "
+                        << printMBBReference(*SinkBlock) << "\n");
+      NewMI = SunkInstrs[MapEntry];
     }
 
     // Create a copy of the instruction in the use block.
@@ -1733,7 +1711,7 @@ bool MachineSinking::AggressivelySinkIntoCycle(
       }
       SinkBlock->insert(SinkBlock->SkipPHIsAndLabels(SinkBlock->begin()),
                         NewMI);
-      SunkInstrs[&I].push_back({SinkBlock, NewMI});
+      SunkInstrs[MapEntry] = NewMI;
     }
 
     // Conservatively clear any kill flags on uses of sunk instruction
@@ -1748,9 +1726,9 @@ bool MachineSinking::AggressivelySinkIntoCycle(
     NewMI->setDebugLoc(DebugLoc());
 
     // Replace the use with the newly created virtual register.
-    MachineOperand UseMO = Entry.first;
-    MI->substituteRegister(UseMO.getReg(), NewMI->getOperand(0).getReg(),
-                           UseMO.getSubReg(), *TRI);
+    RegSubRegPair &UseReg = Entry.first;
+    MI->substituteRegister(UseReg.Reg, NewMI->getOperand(0).getReg(),
+                           UseReg.SubReg, *TRI);
   }
   // If we have replaced all uses, then delete the dead instruction
   if (isDead(&I))
