@@ -45,16 +45,6 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(CodeGenModule &CGM,
 
     llvm::Type *ElemType = CGM.getTypes().ConvertType(ContainedTy);
 
-    // target ext type parameters may not be named struct types
-    // so we should convert any named struct types to anonymous
-    // struct types in the parameter list
-    llvm::Type *ConvertedElemType = ElemType;
-    if (auto *STy = dyn_cast<llvm::StructType>(ElemType)) {
-      if (STy->hasName())
-        ConvertedElemType =
-            llvm::StructType::get(Ctx, STy->elements(), /*isPacked=*/false);
-    }
-
     llvm::StringRef TypeName =
         ResAttrs.RawBuffer ? "dx.RawBuffer" : "dx.TypedBuffer";
     SmallVector<unsigned, 3> Ints = {/*IsWriteable*/ ResAttrs.ResourceClass ==
@@ -63,7 +53,7 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(CodeGenModule &CGM,
     if (!ResAttrs.RawBuffer)
       Ints.push_back(/*IsSigned*/ ContainedTy->isSignedIntegerType());
 
-    return llvm::TargetExtType::get(Ctx, TypeName, {ConvertedElemType}, Ints);
+    return llvm::TargetExtType::get(Ctx, TypeName, {ElemType}, Ints);
   }
   case llvm::dxil::ResourceClass::CBuffer:
     llvm_unreachable("dx.CBuffer handles are not implemented yet");
