@@ -31,6 +31,9 @@ struct vector {
   void insert(iterator, T&&);
 };
 } // namespace std
+
+// CHECK-NOT:   LifetimeCaptureByAttr
+
 struct [[gsl::Pointer()]] View {};
 std::vector<View> views;
 // CHECK:   ClassTemplateSpecializationDecl {{.*}} struct vector definition implicit_instantiation
