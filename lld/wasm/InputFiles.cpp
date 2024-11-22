@@ -285,9 +285,9 @@ void ObjFile::addLegacyIndirectFunctionTableIfNeeded(
     return;
 
   // It's possible for an input to define tables and also use the indirect
-  // function table, but forget to compile with -mattr=+call-indirect-overlong.
-  // For these newer files, we require symbols for all tables, and
-  // relocations for all of their uses.
+  // function table, but forget to compile with -mattr=+call-indirect-overlong
+  // or -mattr=+reference-types. For these newer files, we require symbols for
+  // all tables, and relocations for all of their uses.
   if (tableSymbolCount != 0) {
     error(toString(this) +
           ": expected one symbol table entry for each of the " +
