@@ -20,7 +20,7 @@
 %struct.BSS1 = type <{ [12 x i8] }>
 
 ;CHECK: @.BSS1.0 = internal unnamed_addr global i32 0, align 32, !dbg ![[GVE1:.*]]
-;CHECK: @.BSS1.1 = internal unnamed_addr global i32 0, align 32, !dbg ![[GVE2:.*]], !dbg ![[GVE4:.*]]
+;CHECK: @.BSS1.1 = internal unnamed_addr global i32 0, align 4, !dbg ![[GVE2:.*]], !dbg ![[GVE4:.*]]
 ;CHECK: @.BSS1.2 = internal unnamed_addr global i32 0, align 8, !dbg ![[GVE3:.*]]
 
 @.BSS1 = internal global %struct.BSS1 zeroinitializer, align 32, !dbg !0, !dbg !7, !dbg !10, !dbg !27, !dbg !29
