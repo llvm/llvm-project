@@ -3092,97 +3092,96 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       break;
     }
 
-    case IMPORTS: {
+    case IMPORT: {
       // Validate the AST before processing any imports (otherwise, untangling
       // them can be error-prone and expensive).  A module will have a name and
       // will already have been validated, but this catches the PCH case.
       if (ASTReadResult Result = readUnhashedControlBlockOnce())
         return Result;
 
-      // Load each of the imported PCH files.
-      unsigned Idx = 0, N = Record.size();
-      while (Idx < N) {
-        // Read information about the AST file.
-        ModuleKind ImportedKind = (ModuleKind)Record[Idx++];
-        // Whether we're importing a standard c++ module.
-        bool IsImportingStdCXXModule = Record[Idx++];
-        // The import location will be the local one for now; we will adjust
-        // all import locations of module imports after the global source
-        // location info are setup, in ReadAST.
-        auto [ImportLoc, ImportModuleFileIndex] =
-            ReadUntranslatedSourceLocation(Record[Idx++]);
-        // The import location must belong to the current module file itself.
-        assert(ImportModuleFileIndex == 0);
-        off_t StoredSize = !IsImportingStdCXXModule ? (off_t)Record[Idx++] : 0;
-        time_t StoredModTime =
-            !IsImportingStdCXXModule ? (time_t)Record[Idx++] : 0;
+      unsigned Idx = 0;
+      // Read information about the AST file.
+      ModuleKind ImportedKind = (ModuleKind)Record[Idx++];
 
-        ASTFileSignature StoredSignature;
-        if (!IsImportingStdCXXModule) {
-          auto FirstSignatureByte = Record.begin() + Idx;
-          StoredSignature = ASTFileSignature::create(
-              FirstSignatureByte, FirstSignatureByte + ASTFileSignature::size);
-          Idx += ASTFileSignature::size;
+      // The import location will be the local one for now; we will adjust
+      // all import locations of module imports after the global source
+      // location info are setup, in ReadAST.
+      auto [ImportLoc, ImportModuleFileIndex] =
+          ReadUntranslatedSourceLocation(Record[Idx++]);
+      // The import location must belong to the current module file itself.
+      assert(ImportModuleFileIndex == 0);
+
+      StringRef ImportedName = ReadStringBlob(Record, Idx, Blob);
+
+      bool IsImportingStdCXXModule = Record[Idx++];
+
+      off_t StoredSize = 0;
+      time_t StoredModTime = 0;
+      ASTFileSignature StoredSignature;
+      std::string ImportedFile;
+
+      // For prebuilt and explicit modules first consult the file map for
+      // an override. Note that here we don't search prebuilt module
+      // directories if we're not importing standard c++ module, only the
+      // explicit name to file mappings. Also, we will still verify the
+      // size/signature making sure it is essentially the same file but
+      // perhaps in a different location.
+      if (ImportedKind == MK_PrebuiltModule || ImportedKind == MK_ExplicitModule)
+        ImportedFile = PP.getHeaderSearchInfo().getPrebuiltModuleFileName(
+            ImportedName, /*FileMapOnly*/ !IsImportingStdCXXModule);
+
+      if (IsImportingStdCXXModule && ImportedFile.empty()) {
+        Diag(diag::err_failed_to_find_module_file) << ImportedName;
+        return Missing;
+      }
+
+      if (!IsImportingStdCXXModule) {
+        StoredSize = (off_t)Record[Idx++];
+        StoredModTime = (time_t)Record[Idx++];
+
+        StringRef SignatureBytes = Blob.substr(0, ASTFileSignature::size);
+        StoredSignature = ASTFileSignature::create(SignatureBytes.begin(),
+                                                   SignatureBytes.end());
+        Blob = Blob.substr(ASTFileSignature::size);
+
+        if (ImportedFile.empty()) {
+          // Use BaseDirectoryAsWritten to ensure we use the same path in the
+          // ModuleCache as when writing.
+          ImportedFile =
+              ReadPathBlob(BaseDirectoryAsWritten, Record, Idx, Blob);
         }
+      }
 
-        std::string ImportedName = ReadString(Record, Idx);
-        std::string ImportedFile;
+      // If our client can't cope with us being out of date, we can't cope with
+      // our dependency being missing.
+      unsigned Capabilities = ClientLoadCapabilities;
+      if ((ClientLoadCapabilities & ARR_OutOfDate) == 0)
+        Capabilities &= ~ARR_Missing;
 
-        // For prebuilt and explicit modules first consult the file map for
-        // an override. Note that here we don't search prebuilt module
-        // directories if we're not importing standard c++ module, only the
-        // explicit name to file mappings. Also, we will still verify the
-        // size/signature making sure it is essentially the same file but
-        // perhaps in a different location.
-        if (ImportedKind == MK_PrebuiltModule || ImportedKind == MK_ExplicitModule)
-          ImportedFile = PP.getHeaderSearchInfo().getPrebuiltModuleFileName(
-              ImportedName, /*FileMapOnly*/ !IsImportingStdCXXModule);
+      // Load the AST file.
+      auto Result = ReadASTCore(ImportedFile, ImportedKind, ImportLoc, &F,
+                                Loaded, StoredSize, StoredModTime,
+                                StoredSignature, Capabilities);
 
-        // For C++20 Modules, we won't record the path to the imported modules
-        // in the BMI
-        if (!IsImportingStdCXXModule) {
-          if (ImportedFile.empty()) {
-            // Use BaseDirectoryAsWritten to ensure we use the same path in the
-            // ModuleCache as when writing.
-            ImportedFile = ReadPath(BaseDirectoryAsWritten, Record, Idx);
-          } else
-            SkipPath(Record, Idx);
-        } else if (ImportedFile.empty()) {
-          Diag(clang::diag::err_failed_to_find_module_file) << ImportedName;
-          return Missing;
-        }
+      // If we diagnosed a problem, produce a backtrace.
+      bool recompilingFinalized =
+          Result == OutOfDate && (Capabilities & ARR_OutOfDate) &&
+          getModuleManager().getModuleCache().isPCMFinal(F.FileName);
+      if (isDiagnosedResult(Result, Capabilities) || recompilingFinalized)
+        Diag(diag::note_module_file_imported_by)
+            << F.FileName << !F.ModuleName.empty() << F.ModuleName;
+      if (recompilingFinalized)
+        Diag(diag::note_module_file_conflict);
 
-        // If our client can't cope with us being out of date, we can't cope with
-        // our dependency being missing.
-        unsigned Capabilities = ClientLoadCapabilities;
-        if ((ClientLoadCapabilities & ARR_OutOfDate) == 0)
-          Capabilities &= ~ARR_Missing;
-
-        // Load the AST file.
-        auto Result = ReadASTCore(ImportedFile, ImportedKind, ImportLoc, &F,
-                                  Loaded, StoredSize, StoredModTime,
-                                  StoredSignature, Capabilities);
-
-        // If we diagnosed a problem, produce a backtrace.
-        bool recompilingFinalized =
-            Result == OutOfDate && (Capabilities & ARR_OutOfDate) &&
-            getModuleManager().getModuleCache().isPCMFinal(F.FileName);
-        if (isDiagnosedResult(Result, Capabilities) || recompilingFinalized)
-          Diag(diag::note_module_file_imported_by)
-              << F.FileName << !F.ModuleName.empty() << F.ModuleName;
-        if (recompilingFinalized)
-          Diag(diag::note_module_file_conflict);
-
-        switch (Result) {
-        case Failure: return Failure;
-          // If we have to ignore the dependency, we'll have to ignore this too.
-        case Missing:
-        case OutOfDate: return OutOfDate;
-        case VersionMismatch: return VersionMismatch;
-        case ConfigurationMismatch: return ConfigurationMismatch;
-        case HadErrors: return HadErrors;
-        case Success: break;
-        }
+      switch (Result) {
+      case Failure: return Failure;
+        // If we have to ignore the dependency, we'll have to ignore this too.
+      case Missing:
+      case OutOfDate: return OutOfDate;
+      case VersionMismatch: return VersionMismatch;
+      case ConfigurationMismatch: return ConfigurationMismatch;
+      case HadErrors: return HadErrors;
+      case Success: break;
       }
       break;
     }
@@ -5624,36 +5623,38 @@ bool ASTReader::readASTFileControlBlock(
       break;
     }
 
-    case IMPORTS: {
+    case IMPORT: {
       if (!NeedsImports)
         break;
 
-      unsigned Idx = 0, N = Record.size();
-      while (Idx < N) {
-        // Read information about the AST file.
+      unsigned Idx = 0;
+      // Read information about the AST file.
 
-        // Skip Kind
-        Idx++;
-        bool IsStandardCXXModule = Record[Idx++];
+      // Skip Kind
+      Idx++;
 
-        // Skip ImportLoc
-        Idx++;
+      // Skip ImportLoc
+      Idx++;
 
-        // In C++20 Modules, we don't record the path to imported
-        // modules in the BMI files.
-        if (IsStandardCXXModule) {
-          std::string ModuleName = ReadString(Record, Idx);
-          Listener.visitImport(ModuleName, /*Filename=*/"");
-          continue;
-        }
+      StringRef ModuleName = ReadStringBlob(Record, Idx, Blob);
 
-        // Skip Size, ModTime and Signature
-        Idx += 1 + 1 + ASTFileSignature::size;
-        std::string ModuleName = ReadString(Record, Idx);
-        std::string FilenameStr = ReadString(Record, Idx);
-        auto Filename = ResolveImportedPath(PathBuf, FilenameStr, ModuleDir);
-        Listener.visitImport(ModuleName, *Filename);
+      bool IsStandardCXXModule = Record[Idx++];
+
+      // In C++20 Modules, we don't record the path to imported
+      // modules in the BMI files.
+      if (IsStandardCXXModule) {
+        Listener.visitImport(ModuleName, /*Filename=*/"");
+        continue;
       }
+
+      // Skip Size and ModTime.
+      Idx += 1 + 1;
+      // Skip signature.
+      Blob = Blob.substr(ASTFileSignature::size);
+
+      StringRef FilenameStr = ReadStringBlob(Record, Idx, Blob);
+      auto Filename = ResolveImportedPath(PathBuf, FilenameStr, ModuleDir);
+      Listener.visitImport(ModuleName, *Filename);
       break;
     }
 
@@ -9602,6 +9603,14 @@ std::string ASTReader::ReadString(const RecordDataImpl &Record, unsigned &Idx) {
   return Result;
 }
 
+StringRef ASTReader::ReadStringBlob(const RecordDataImpl &Record, unsigned &Idx,
+                                    StringRef &Blob) {
+  unsigned Len = Record[Idx++];
+  StringRef Result = Blob.substr(0, Len);
+  Blob = Blob.substr(Len);
+  return Result;
+}
+
 std::string ASTReader::ReadPath(ModuleFile &F, const RecordData &Record,
                                 unsigned &Idx) {
   return ReadPath(F.BaseDirectory, Record, Idx);
@@ -9610,6 +9619,13 @@ std::string ASTReader::ReadPath(ModuleFile &F, const RecordData &Record,
 std::string ASTReader::ReadPath(StringRef BaseDirectory,
                                 const RecordData &Record, unsigned &Idx) {
   std::string Filename = ReadString(Record, Idx);
+  return ResolveImportedPathAndAllocate(PathBuf, Filename, BaseDirectory);
+}
+
+std::string ASTReader::ReadPathBlob(StringRef BaseDirectory,
+                                    const RecordData &Record, unsigned &Idx,
+                                    StringRef &Blob) {
+  StringRef Filename = ReadStringBlob(Record, Idx, Blob);
   return ResolveImportedPathAndAllocate(PathBuf, Filename, BaseDirectory);
 }
 

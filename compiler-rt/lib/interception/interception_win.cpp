@@ -696,7 +696,6 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x018a:  // mov al, byte ptr [rcx]
       return 2;
 
-    case 0x058A:  // 8A 05 XX XX XX XX : mov al, byte ptr [XX XX XX XX]
     case 0x7E80:  // 80 7E YY XX  cmp BYTE PTR [rsi+YY], XX
     case 0x7D80:  // 80 7D YY XX  cmp BYTE PTR [rbp+YY], XX
     case 0x7A80:  // 80 7A YY XX  cmp BYTE PTR [rdx+YY], XX
@@ -705,6 +704,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x7980:  // 80 79 YY XX  cmp BYTE ptr [rcx+YY], XX
       return 4;
 
+    case 0x058A:  // 8A 05 XX XX XX XX : mov al, byte ptr [XX XX XX XX]
     case 0x058B:  // 8B 05 XX XX XX XX : mov eax, dword ptr [XX XX XX XX]
       if (rel_offset)
         *rel_offset = 2;

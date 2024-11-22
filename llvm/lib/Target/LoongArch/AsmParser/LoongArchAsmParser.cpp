@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchInstPrinter.h"
 #include "MCTargetDesc/LoongArchMCExpr.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
@@ -668,13 +669,33 @@ static bool matchRegisterNameHelper(MCRegister &RegNo, StringRef Name) {
 
 bool LoongArchAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                        SMLoc &EndLoc) {
-  return Error(getLoc(), "invalid register number");
+  if (!tryParseRegister(Reg, StartLoc, EndLoc).isSuccess())
+    return Error(getLoc(), "invalid register name");
+
+  if (!LoongArchMCRegisterClasses[LoongArch::GPRRegClassID].contains(Reg) &&
+      !LoongArchMCRegisterClasses[LoongArch::FPR32RegClassID].contains(Reg))
+    return Error(getLoc(), "invalid register name");
+
+  return false;
 }
 
 ParseStatus LoongArchAsmParser::tryParseRegister(MCRegister &Reg,
                                                  SMLoc &StartLoc,
                                                  SMLoc &EndLoc) {
-  llvm_unreachable("Unimplemented function.");
+  const AsmToken &Tok = getParser().getTok();
+  StartLoc = Tok.getLoc();
+  EndLoc = Tok.getEndLoc();
+
+  parseOptionalToken(AsmToken::Dollar);
+  if (getLexer().getKind() != AsmToken::Identifier)
+    return ParseStatus::NoMatch;
+
+  StringRef Name = Tok.getIdentifier();
+  if (matchRegisterNameHelper(Reg, Name))
+    return ParseStatus::NoMatch;
+
+  getParser().Lex(); // Eat identifier token.
+  return ParseStatus::Success;
 }
 
 bool LoongArchAsmParser::classifySymbolRef(const MCExpr *Expr,
@@ -1560,12 +1581,14 @@ bool LoongArchAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
 
 unsigned LoongArchAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   unsigned Opc = Inst.getOpcode();
+  const MCInstrDesc &MCID = MII.get(Opc);
   switch (Opc) {
   default:
-    if (Opc >= LoongArch::AMADD_D && Opc <= LoongArch::AMXOR_W) {
+    if (LoongArchII::isSubjectToAMORdConstraint(MCID.TSFlags)) {
+      const bool IsAMCAS = LoongArchII::isAMCAS(MCID.TSFlags);
       MCRegister Rd = Inst.getOperand(0).getReg();
-      MCRegister Rk = Inst.getOperand(1).getReg();
-      MCRegister Rj = Inst.getOperand(2).getReg();
+      MCRegister Rk = Inst.getOperand(IsAMCAS ? 2 : 1).getReg();
+      MCRegister Rj = Inst.getOperand(IsAMCAS ? 3 : 2).getReg();
       if ((Rd == Rk || Rd == Rj) && Rd != LoongArch::R0)
         return Match_RequiresAMORdDifferRkRj;
     }

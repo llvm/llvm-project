@@ -212,9 +212,12 @@ defm guard_longjmp : B<"guard-longjmp",
   "Do not enable Control Flow Guard long jump hardening">;
 defm error_limit:
   EqLong<"error-limit", "Maximum number of errors to emit before stopping (0 = no limit)">;
-def build_id: J<"build-id=">, HelpText<"Generate build ID note (pass none to disable)">, 
+def build_id: J<"build-id=">, HelpText<"Generate build ID note (pass none to disable)">,
   MetaVarName<"<arg>">;
 def : F<"build-id">, Alias<build_id>, HelpText<"Alias for --build-id=">;
+def functionpadmin: J<"functionpadmin=">, HelpText<"Prepares an image for hotpatching">,
+  MetaVarName<"<arg>">;
+def : F<"functionpadmin">, Alias<functionpadmin>, HelpText<"Alias for --functionpadmin=">;
 
 // Alias
 def alias_Bdynamic_call_shared: Flag<["-"], "call_shared">, Alias<Bdynamic>;

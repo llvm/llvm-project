@@ -143,9 +143,6 @@ public:
 #include "llvm/Frontend/OpenMP/OMP.inc"
 
 private:
-  inline llvm::iterator_range<typename ClauseMapTy::iterator> GetClauses(
-      llvm::omp::Clause clauseId);
-
   bool CheckAllowedClause(llvmOmpClause clause);
   bool IsVariableListItem(const Symbol &sym);
   bool IsExtendedListItem(const Symbol &sym);
@@ -164,8 +161,6 @@ private:
   void HasInvalidDistributeNesting(const parser::OpenMPLoopConstruct &x);
   void HasInvalidLoopBinding(const parser::OpenMPLoopConstruct &x);
   // specific clause related
-  bool ScheduleModifierHasType(const parser::OmpScheduleClause &,
-      const parser::OmpScheduleModifierType::ModType &);
   void CheckAllowedMapTypes(const parser::OmpMapClause::Type &,
       const std::list<parser::OmpMapClause::Type> &);
   llvm::StringRef getClauseName(llvm::omp::Clause clause) override;
@@ -204,7 +199,7 @@ private:
   void CheckWorkshareBlockStmts(const parser::Block &, parser::CharBlock);
 
   void CheckIteratorRange(const parser::OmpIteratorSpecifier &x);
-  void CheckIteratorModifier(const parser::OmpIteratorModifier &x);
+  void CheckIteratorModifier(const parser::OmpIterator &x);
   void CheckLoopItrVariableIsInt(const parser::OpenMPLoopConstruct &x);
   void CheckDoWhile(const parser::OpenMPLoopConstruct &x);
   void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
@@ -220,8 +215,8 @@ private:
   void CheckSIMDNest(const parser::OpenMPConstruct &x);
   void CheckTargetNest(const parser::OpenMPConstruct &x);
   void CheckTargetUpdate();
-  void CheckDependenceType(const parser::OmpDependenceType::Type &x);
-  void CheckTaskDependenceType(const parser::OmpTaskDependenceType::Type &x);
+  void CheckDependenceType(const parser::OmpDependenceType::Value &x);
+  void CheckTaskDependenceType(const parser::OmpTaskDependenceType::Value &x);
   void CheckCancellationNest(
       const parser::CharBlock &source, const parser::OmpCancelType::Type &type);
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
@@ -229,10 +224,11 @@ private:
   bool CheckIntrinsicOperator(
       const parser::DefinedOperator::IntrinsicOperator &);
   void CheckReductionTypeList(const parser::OmpClause::Reduction &);
-  void CheckReductionModifier(const parser::OmpClause::Reduction &);
+  void CheckReductionModifier(const parser::OmpReductionModifier &);
   void CheckMasterNesting(const parser::OpenMPBlockConstruct &x);
   void ChecksOnOrderedAsBlock();
   void CheckBarrierNesting(const parser::OpenMPSimpleStandaloneConstruct &x);
+  void CheckScan(const parser::OpenMPSimpleStandaloneConstruct &x);
   void ChecksOnOrderedAsStandalone();
   void CheckOrderedDependClause(std::optional<std::int64_t> orderedValue);
   void CheckReductionArraySection(const parser::OmpObjectList &ompObjectList);
@@ -294,11 +290,6 @@ const T *OmpStructureChecker::FindDuplicateEntry(const std::list<T> &list) {
     }
   }
   return nullptr;
-}
-
-llvm::iterator_range<typename OmpStructureChecker::ClauseMapTy::iterator>
-OmpStructureChecker::GetClauses(llvm::omp::Clause clauseId) {
-  return llvm::make_range(FindClauses(clauseId));
 }
 
 } // namespace Fortran::semantics

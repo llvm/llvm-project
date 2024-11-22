@@ -18,20 +18,18 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Mangle.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/Basic/DarwinSDKInfo.h"
-#include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Attr.h"
@@ -48,7 +46,6 @@
 #include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaM68k.h"
 #include "clang/Sema/SemaMIPS.h"
 #include "clang/Sema/SemaMSP430.h"
@@ -64,7 +61,6 @@
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Demangle/Demangle.h"
-#include "llvm/IR/Assumptions.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/Support/Error.h"
@@ -725,8 +721,7 @@ static void handleExcludeFromExplicitInstantiationAttr(Sema &S, Decl *D,
 namespace {
 /// Determines if a given Expr references any of the given function's
 /// ParmVarDecls, or the function's implicit `this` parameter (if applicable).
-class ArgumentDependenceChecker
-    : public RecursiveASTVisitor<ArgumentDependenceChecker> {
+class ArgumentDependenceChecker : public DynamicRecursiveASTVisitor {
 #ifndef NDEBUG
   const CXXRecordDecl *ClassType;
 #endif
@@ -750,14 +745,14 @@ public:
     return Result;
   }
 
-  bool VisitCXXThisExpr(CXXThisExpr *E) {
+  bool VisitCXXThisExpr(CXXThisExpr *E) override {
     assert(E->getType()->getPointeeCXXRecordDecl() == ClassType &&
            "`this` doesn't refer to the enclosing class?");
     Result = true;
     return false;
   }
 
-  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
     if (const auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl()))
       if (Parms.count(PVD)) {
         Result = true;
@@ -7373,7 +7368,9 @@ void Sema::ProcessDeclAttributeList(
   // good to have a way to specify "these attributes must appear as a group",
   // for these. Additionally, it would be good to have a way to specify "these
   // attribute must never appear as a group" for attributes like cold and hot.
-  if (!D->hasAttr<OpenCLKernelAttr>()) {
+  if (!(D->hasAttr<OpenCLKernelAttr>() ||
+        (D->hasAttr<CUDAGlobalAttr>() &&
+         Context.getTargetInfo().getTriple().isSPIRV()))) {
     // These attributes cannot be applied to a non-kernel function.
     if (const auto *A = D->getAttr<ReqdWorkGroupSizeAttr>()) {
       // FIXME: This emits a different error message than

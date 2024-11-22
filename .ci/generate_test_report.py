@@ -309,10 +309,8 @@ class TestReports(unittest.TestCase):
 # If include failures is False, total number of test will be reported but their names
 # and output will not be.
 def _generate_report(title, junit_objects, size_limit=1024 * 1024, list_failures=True):
-    style = None
-
     if not junit_objects:
-        return ("", style)
+        return ("", "success")
 
     failures = {}
     tests_run = 0
@@ -403,22 +401,23 @@ if __name__ == "__main__":
 
     report, style = generate_report(args.title, args.junit_files)
 
-    p = subprocess.Popen(
-        [
-            "buildkite-agent",
-            "annotate",
-            "--context",
-            args.context,
-            "--style",
-            style,
-        ],
-        stdin=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
+    if report:
+        p = subprocess.Popen(
+            [
+                "buildkite-agent",
+                "annotate",
+                "--context",
+                args.context,
+                "--style",
+                style,
+            ],
+            stdin=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+        )
 
-    # The report can be larger than the buffer for command arguments so we send
-    # it over stdin instead.
-    _, err = p.communicate(input=report)
-    if p.returncode:
-        raise RuntimeError(f"Failed to send report to buildkite-agent:\n{err}")
+        # The report can be larger than the buffer for command arguments so we send
+        # it over stdin instead.
+        _, err = p.communicate(input=report)
+        if p.returncode:
+            raise RuntimeError(f"Failed to send report to buildkite-agent:\n{err}")

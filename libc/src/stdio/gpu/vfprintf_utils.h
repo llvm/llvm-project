@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/types/FILE.h"
+#include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/macros/config.h"
@@ -15,7 +16,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-template <uint16_t opcode>
+template <uint32_t opcode>
 LIBC_INLINE int vfprintf_impl(::FILE *__restrict file,
                               const char *__restrict format, size_t format_size,
                               va_list vlist) {

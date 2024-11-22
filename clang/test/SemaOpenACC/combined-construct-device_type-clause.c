@@ -207,7 +207,6 @@ void uses() {
   // expected-note@+1{{previous clause is here}}
 #pragma acc serial loop device_type(*) default_async(1)
   for(int i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented, clause ignored}}
 #pragma acc parallel loop device_type(*) async
   for(int i = 0; i < 5; ++i);
 
