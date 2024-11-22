@@ -5626,18 +5626,12 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
       }
       return false;
     };
-    SmallDenseMap<unsigned, unsigned, 16> PhiToId;
-    SmallVector<unsigned> Phis(TE.Scalars.size());
+    OrdersType Phis(TE.Scalars.size());
     std::iota(Phis.begin(), Phis.end(), 0);
-    OrdersType ResOrder(TE.Scalars.size());
-    for (unsigned Id = 0, Sz = TE.Scalars.size(); Id < Sz; ++Id)
-      PhiToId[Id] = Id;
     stable_sort(Phis, PHICompare);
-    for (unsigned Id = 0, Sz = Phis.size(); Id < Sz; ++Id)
-      ResOrder[Id] = PhiToId[Phis[Id]];
-    if (isIdentityOrder(ResOrder))
+    if (isIdentityOrder(Phis))
       return std::nullopt; // No need to reorder.
-    return std::move(ResOrder);
+    return std::move(Phis);
   }
   if (TE.isGather() && !TE.isAltShuffle() && allSameType(TE.Scalars)) {
     // TODO: add analysis of other gather nodes with extractelement
