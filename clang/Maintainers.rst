@@ -179,7 +179,7 @@ Thread Safety Analysis
 Function Effect Analysis
 ~~~~~~~~~~~~~~~~~~~~~~~~
 | Doug Wyatt
-| dwyatt\@apple.com (email), dougsonos (GitHub)
+| dwyatt\@apple.com (email), dougsonos (GitHub), dougsonos (Discourse)
 
 | Sirraide
 | aeternalmail\@gmail.com (email), Sirraide (GitHub), Ætérnal (Discord), Sirraide (Discourse)
