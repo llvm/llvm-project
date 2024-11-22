@@ -202,6 +202,8 @@ module attributes {transform.with_named_sequence} {
     %func_op = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.op<"func.func">
 
     transform.apply_patterns to %func_op {
+      // TODO: Split into two tests, one for each pattern
+      transform.apply_patterns.linalg.decompose_pad
       transform.apply_patterns.linalg.pad_vectorization
     } : !transform.op<"func.func">
     transform.yield
@@ -236,6 +238,8 @@ module attributes {transform.with_named_sequence} {
     %func_op = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.op<"func.func">
 
     transform.apply_patterns to %func_op {
+      // TODO: Split into two tests, one for each pattern
+      transform.apply_patterns.linalg.decompose_pad
       transform.apply_patterns.linalg.pad_vectorization
     } : !transform.op<"func.func">
     transform.yield
@@ -270,6 +274,8 @@ module attributes {transform.with_named_sequence} {
     %func_op = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.op<"func.func">
 
     transform.apply_patterns to %func_op {
+      // TODO: Split into two tests, one for each pattern
+      transform.apply_patterns.linalg.decompose_pad
       transform.apply_patterns.linalg.pad_vectorization
     } : !transform.op<"func.func">
     transform.yield
