@@ -466,9 +466,6 @@ body:             |
 # CHECK-NEXT: W0 [0B,16r:0) 0@0B-phi
 # CHECK-NEXT: W1 [0B,32r:0) 0@0B-phi
 # CHECK-NEXT: W2 [0B,48r:0) 0@0B-phi
-# CHECK-NEXT: W0_HI [0B,16r:0) 0@0B-phi
-# CHECK-NEXT: W1_HI [0B,32r:0) 0@0B-phi
-# CHECK-NEXT: W2_HI [0B,48r:0) 0@0B-phi
 # CHECK-NEXT: RegMasks:
 # CHECK-NEXT: ********** MACHINEINSTRS **********
 # CHECK-NEXT: # Machine code for function f: IsSSA, NoPHIs, TracksLiveness, NoVRegs
