@@ -1731,6 +1731,25 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     return true;
   }
+  case Intrinsic::amdgcn_rts_read_result_all_stop:
+  case Intrinsic::amdgcn_rts_read_result_ongoing:
+  case Intrinsic::amdgcn_rts_update_ray:
+  case Intrinsic::amdgcn_rts_ray_save:
+  case Intrinsic::amdgcn_rts_ray_restore: {
+    if (IntrID != Intrinsic::amdgcn_rts_ray_restore) {
+      Info.memVT = MVT::getVT(CI.getType());
+      Info.opc = ISD::INTRINSIC_W_CHAIN;
+    } else {
+      Info.memVT = MVT::i32;
+      Info.opc = ISD::INTRINSIC_VOID;
+    }
+    Info.flags |= MachineMemOperand::MOLoad;
+    if (IntrID == Intrinsic::amdgcn_rts_update_ray ||
+        IntrID == Intrinsic::amdgcn_rts_ray_save)
+      Info.flags |= MachineMemOperand::MOStore;
+
+    return true;
+  }
   case Intrinsic::amdgcn_s_prefetch_data:
   case Intrinsic::amdgcn_flat_prefetch:
   case Intrinsic::amdgcn_global_prefetch: {
@@ -12883,10 +12902,27 @@ static unsigned getBasePtrIndex(const MemSDNode *N) {
   }
 }
 
+static bool isRTS(const MemSDNode *N) {
+  if (N->getOpcode() == ISD::INTRINSIC_W_CHAIN ||
+      N->getOpcode() == ISD::INTRINSIC_VOID) {
+    unsigned IntrinID = N->getOperand(1)->getAsZExtVal();
+    if (IntrinID == Intrinsic::amdgcn_rts_read_result_all_stop ||
+        IntrinID == Intrinsic::amdgcn_rts_read_result_ongoing ||
+        IntrinID == Intrinsic::amdgcn_rts_update_ray ||
+        IntrinID == Intrinsic::amdgcn_rts_ray_restore ||
+        IntrinID == Intrinsic::amdgcn_rts_ray_save)
+      return true;
+  }
+  return false;
+}
+
 SDValue SITargetLowering::performMemSDNodeCombine(MemSDNode *N,
                                                   DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
   SDLoc SL(N);
+
+  if (isRTS(N))
+    return SDValue();
 
   unsigned PtrIdx = getBasePtrIndex(N);
   SDValue Ptr = N->getOperand(PtrIdx);

@@ -5335,6 +5335,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_discard_b32:
     case Intrinsic::amdgcn_discard_b128:
     case Intrinsic::amdgcn_discard_b1024:
+    case Intrinsic::amdgcn_rts_read_result_all_stop:
+    case Intrinsic::amdgcn_rts_read_result_ongoing:
+    case Intrinsic::amdgcn_rts_ray_save:
+    case Intrinsic::amdgcn_rts_ray_restore:
+    case Intrinsic::amdgcn_rts_update_ray:
       return getDefaultMappingAllVGPR(MI);
     case Intrinsic::amdgcn_ds_ordered_add:
     case Intrinsic::amdgcn_ds_ordered_swap: {

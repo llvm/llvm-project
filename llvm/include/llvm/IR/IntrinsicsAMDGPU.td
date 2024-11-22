@@ -3855,6 +3855,28 @@ defm int_amdgcn_cvt_to_tensor_bf16_f32 : AMDGPUCvtTensor<llvm_v2bf16_ty, llvm_v4
 defm int_amdgcn_cvt_to_tensor_bf16_f16 : AMDGPUCvtTensor<llvm_v2bf16_ty, llvm_v8f16_ty, llvm_v4f16_ty, llvm_v8f16_ty>;
 defm int_amdgcn_cvt_to_tensor_bf16_bf16 : AMDGPUCvtTensor<llvm_v2bf16_ty, llvm_v8bf16_ty, llvm_v4bf16_ty, llvm_v8bf16_ty>;
 
+class AMDGPU_rts_read_result: Intrinsic<
+       [llvm_i64_ty], [], [IntrReadMem, IntrHasSideEffects, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]
+>;
+
+def int_amdgcn_rts_read_result_all_stop : AMDGPU_rts_read_result;
+def int_amdgcn_rts_read_result_ongoing : AMDGPU_rts_read_result;
+
+def int_amdgcn_rts_update_ray: Intrinsic<
+  [llvm_i32_ty], [llvm_i64_ty], [IntrNoCallback, IntrHasSideEffects, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]
+>;
+
+def int_amdgcn_rts_flush: Intrinsic<
+  [], [], [IntrHasSideEffects, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]
+>;
+
+def int_amdgcn_rts_ray_save: Intrinsic<
+  [llvm_i32_ty], [], [IntrHasSideEffects, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]
+>;
+def int_amdgcn_rts_ray_restore: Intrinsic<
+  [], [llvm_i32_ty], [IntrReadMem, IntrHasSideEffects, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]
+>;
+
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//
