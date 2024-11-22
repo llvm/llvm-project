@@ -2048,7 +2048,8 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
                  ND));
 
   // This invariant should hold true in the future.
-  // Prior work: https://discourse.llvm.org/t/rfc-clang-diagnostic-for-demangling-failures/82835/8
+  // Prior work:
+  // https://discourse.llvm.org/t/rfc-clang-diagnostic-for-demangling-failures/82835/8
   // https://github.com/llvm/llvm-project/issues/111345
   // assert(llvm::isMangledName(MangledName) &&
   //        llvm::demangle(MangledName) != MangledName &&
