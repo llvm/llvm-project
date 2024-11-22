@@ -409,3 +409,23 @@ entry:
   %23 = fcmp ogt <8 x float> zeroinitializer, %19
   ret void
 }
+
+define void @test13(<8 x i32> %0, ptr %out0, ptr %out1, ptr %out2) {
+entry:
+  %1 = shufflevector <8 x i32> %0, <8 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = shufflevector <8 x i32> %0, <8 x i32> zeroinitializer, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %3 = shufflevector <8 x i32> %0, <8 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %4 = shufflevector <8 x i32> %0, <8 x i32> zeroinitializer, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  br label %for.end.loopexit
+
+for.end.loopexit:
+  %phi0 = phi <4 x i32> [ %1, %entry ]
+  %phi1 = phi <4 x i32> [ %2, %entry ]
+  %phi2 = phi <4 x i32> [ %3, %entry ]
+  %phi3 = phi <4 x i32> [ %4, %entry ]
+  %or0 = or <4 x i32> %phi1, zeroinitializer
+  store <4 x i32> %or0, ptr %out0, align 4
+  store <4 x i32> %1, ptr %out1, align 4
+  store <4 x i32> %4, ptr %out2, align 4
+  ret void
+}
