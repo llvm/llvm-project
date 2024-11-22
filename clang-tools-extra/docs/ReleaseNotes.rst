@@ -113,6 +113,12 @@ New checks
   pointer and store it as class members without handle the copy and move
   constructors and the assignments.
 
+- New :doc: `bugprone-conflicting-global-accesses
+  <clang-tidy/checks/bugprone/conflicting-global-accesses>` check.
+
+  Finds unsequenced conflicting actions (i.e. unsequenced write and read/write) 
+  on global variables nested in functions in the same translation unit.
+
 - New :doc:`bugprone-unintended-char-ostream-output
   <clang-tidy/checks/bugprone/unintended-char-ostream-output>` check.
 
@@ -127,6 +133,14 @@ New checks
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
+
+- New `cert-exp30-c <cert/exp30-c>` alias for 
+  `bugprone-conflicting-global-accesses
+  <clang-tidy/checks/bugprone/conflicting-global-accesses>`.
+
+- New `cert-exp50-cpp <cert/exp50-cpp>` alias for 
+  `bugprone-conflicting-global-accesses
+  <clang-tidy/checks/bugprone/conflicting-global-accesses>`.
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
