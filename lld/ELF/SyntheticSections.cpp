@@ -77,7 +77,7 @@ static ArrayRef<uint8_t> getVersion(Ctx &ctx) {
   // This is only for testing.
   StringRef s = getenv("LLD_VERSION");
   if (s.empty())
-    s = saver(ctx).save(Twine("Linker: ") + getLLDVersion());
+    s = ctx.saver.save(Twine("Linker: ") + getLLDVersion());
 
   // +1 to include the terminating '\0'.
   return {(const uint8_t *)s.data(), s.size() + 1};
@@ -270,7 +270,7 @@ MipsReginfoSection<ELFT>::create(Ctx &ctx) {
 
 InputSection *elf::createInterpSection(Ctx &ctx) {
   // StringSaver guarantees that the returned string ends with '\0'.
-  StringRef s = saver(ctx).save(ctx.arg.dynamicLinker);
+  StringRef s = ctx.saver.save(ctx.arg.dynamicLinker);
   ArrayRef<uint8_t> contents = {(const uint8_t *)s.data(), s.size() + 1};
 
   return make<InputSection>(ctx.internalFile, SHF_ALLOC, SHT_PROGBITS, 1,
