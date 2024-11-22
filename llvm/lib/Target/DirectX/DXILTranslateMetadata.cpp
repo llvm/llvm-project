@@ -298,7 +298,7 @@ static MDTuple *emitTopLevelLibraryNode(Module &M, MDNode *RMD,
 
 static void translateMetadata(Module &M, const DXILResourceMap &DRM,
                               const Resources &MDResources,
-                              const DXILModuleShaderFlagsInfo &ShaderFlags,
+                              const ModuleShaderFlags &ShaderFlags,
                               const ModuleMetadataInfo &MMDI) {
   LLVMContext &Ctx = M.getContext();
   IRBuilder<> IRB(Ctx);
@@ -327,18 +327,14 @@ static void translateMetadata(Module &M, const DXILResourceMap &DRM,
   }
 
   for (const EntryProperties &EntryProp : MMDI.EntryPropertyVec) {
-    Expected<const ComputedShaderFlags &> EntrySFMask =
+    const ComputedShaderFlags &EntrySFMask =
         ShaderFlags.getShaderFlagsMask(EntryProp.Entry);
-    if (Error E = EntrySFMask.takeError()) {
-      M.getContext().diagnose(
-          DiagnosticInfoTranslateMD(M, toString(std::move(E))));
-    }
 
     // If ShaderProfile is Library, mask is already consolidated in the
     // top-level library node. Hence it is not emitted.
     uint64_t EntryShaderFlags = 0;
     if (MMDI.ShaderProfile != Triple::EnvironmentType::Library) {
-      EntryShaderFlags = *EntrySFMask;
+      EntryShaderFlags = EntrySFMask;
       if (EntryProp.ShaderStage != MMDI.ShaderProfile) {
         M.getContext().diagnose(DiagnosticInfoTranslateMD(
             M,
@@ -365,8 +361,7 @@ PreservedAnalyses DXILTranslateMetadata::run(Module &M,
                                              ModuleAnalysisManager &MAM) {
   const DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
   const dxil::Resources &MDResources = MAM.getResult<DXILResourceMDAnalysis>(M);
-  const DXILModuleShaderFlagsInfo &ShaderFlags =
-      MAM.getResult<ShaderFlagsAnalysis>(M);
+  const ModuleShaderFlags &ShaderFlags = MAM.getResult<ShaderFlagsAnalysis>(M);
   const dxil::ModuleMetadataInfo MMDI = MAM.getResult<DXILMetadataAnalysis>(M);
 
   translateMetadata(M, DRM, MDResources, ShaderFlags, MMDI);
@@ -397,7 +392,7 @@ public:
         getAnalysis<DXILResourceWrapperPass>().getResourceMap();
     const dxil::Resources &MDResources =
         getAnalysis<DXILResourceMDWrapper>().getDXILResource();
-    const DXILModuleShaderFlagsInfo &ShaderFlags =
+    const ModuleShaderFlags &ShaderFlags =
         getAnalysis<ShaderFlagsAnalysisWrapper>().getShaderFlags();
     dxil::ModuleMetadataInfo MMDI =
         getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();

@@ -45,22 +45,6 @@ struct ComputedShaderFlags {
   constexpr uint64_t getMask(int Bit) const {
     return Bit != -1 ? 1ull << Bit : 0;
   }
-  operator uint64_t() const {
-    uint64_t FlagValue = 0;
-#define SHADER_FEATURE_FLAG(FeatureBit, DxilModuleBit, FlagName, Str)          \
-  FlagValue |= FlagName ? getMask(DxilModuleBit) : 0ull;
-#define DXIL_MODULE_FLAG(DxilModuleBit, FlagName, Str)                         \
-  FlagValue |= FlagName ? getMask(DxilModuleBit) : 0ull;
-#include "llvm/BinaryFormat/DXContainerConstants.def"
-    return FlagValue;
-  }
-  uint64_t getFeatureFlags() const {
-    uint64_t FeatureFlags = 0;
-#define SHADER_FEATURE_FLAG(FeatureBit, DxilModuleBit, FlagName, Str)          \
-  FeatureFlags |= FlagName ? getMask(FeatureBit) : 0ull;
-#include "llvm/BinaryFormat/DXContainerConstants.def"
-    return FeatureFlags;
-  }
 
   uint64_t getModuleFlags() const {
     uint64_t ModuleFlags = 0;
@@ -68,6 +52,22 @@ struct ComputedShaderFlags {
   ModuleFlags |= FlagName ? getMask(DxilModuleBit) : 0ull;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
     return ModuleFlags;
+  }
+
+  operator uint64_t() const {
+    uint64_t FlagValue = getModuleFlags();
+#define SHADER_FEATURE_FLAG(FeatureBit, DxilModuleBit, FlagName, Str)          \
+  FlagValue |= FlagName ? getMask(DxilModuleBit) : 0ull;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+    return FlagValue;
+  }
+
+  uint64_t getFeatureFlags() const {
+    uint64_t FeatureFlags = 0;
+#define SHADER_FEATURE_FLAG(FeatureBit, DxilModuleBit, FlagName, Str)          \
+  FeatureFlags |= FlagName ? getMask(FeatureBit) : 0ull;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+    return FeatureFlags;
   }
 
   void merge(const uint64_t IVal) {
@@ -83,11 +83,10 @@ struct ComputedShaderFlags {
   LLVM_DUMP_METHOD void dump() const { print(); }
 };
 
-struct DXILModuleShaderFlagsInfo {
-  DXILModuleShaderFlagsInfo(const Module &);
-  Expected<const ComputedShaderFlags &>
-  getShaderFlagsMask(const Function *) const;
-  const ComputedShaderFlags getCombinedFlags() const;
+struct ModuleShaderFlags {
+  void initialize(const Module &);
+  const ComputedShaderFlags &getShaderFlagsMask(const Function *) const;
+  const ComputedShaderFlags getCombinedFlags() const { return CombinedSFMask; }
 
 private:
   /// Vector of Function-Shader Flag mask pairs representing properties of each
@@ -107,9 +106,9 @@ class ShaderFlagsAnalysis : public AnalysisInfoMixin<ShaderFlagsAnalysis> {
 public:
   ShaderFlagsAnalysis() = default;
 
-  using Result = DXILModuleShaderFlagsInfo;
+  using Result = ModuleShaderFlags;
 
-  DXILModuleShaderFlagsInfo run(Module &M, ModuleAnalysisManager &AM);
+  ModuleShaderFlags run(Module &M, ModuleAnalysisManager &AM);
 };
 
 /// Printer pass for ShaderFlagsAnalysis results.
@@ -127,17 +126,16 @@ public:
 /// This is required because the passes that will depend on this are codegen
 /// passes which run through the legacy pass manager.
 class ShaderFlagsAnalysisWrapper : public ModulePass {
-  std::unique_ptr<DXILModuleShaderFlagsInfo> MSFI;
+  ModuleShaderFlags MSFI;
 
 public:
   static char ID;
 
   ShaderFlagsAnalysisWrapper() : ModulePass(ID) {}
 
-  const DXILModuleShaderFlagsInfo &getShaderFlags() { return *MSFI; }
+  const ModuleShaderFlags &getShaderFlags() { return MSFI; }
 
   bool runOnModule(Module &M) override;
-  void releaseMemory() override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();

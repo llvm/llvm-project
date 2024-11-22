@@ -78,9 +78,6 @@ bool DXContainerGlobals::runOnModule(Module &M) {
 }
 
 GlobalVariable *DXContainerGlobals::getFeatureFlags(Module &M) {
-  // TODO: Feature flags mask is obtained as a collection of feature flags
-  // of the shader flags of all functions in the module. Need to verify
-  // and modify the computation of feature flags to be used.
   uint64_t CombinedFeatureFlags = getAnalysis<ShaderFlagsAnalysisWrapper>()
                                       .getShaderFlags()
                                       .getCombinedFlags()
