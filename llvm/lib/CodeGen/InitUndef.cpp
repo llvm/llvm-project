@@ -164,14 +164,6 @@ bool InitUndef::handleSubReg(MachineFunction &MF, MachineInstr &MI,
     TRI->getCoveringSubRegIndexes(*MRI, TargetRegClass, NeedDef,
                                   SubRegIndexNeedInsert);
 
-    // It's not possible to create the INIT_UNDEF when there is no register
-    // class associated for the subreg. This may happen for artificial subregs
-    // that are not directly addressable.
-    if (any_of(SubRegIndexNeedInsert, [&](unsigned Ind) -> bool {
-          return !TRI->getSubRegisterClass(TargetRegClass, Ind);
-        }))
-      continue;
-
     Register LatestReg = Reg;
     for (auto ind : SubRegIndexNeedInsert) {
       Changed = true;
