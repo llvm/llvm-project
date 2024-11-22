@@ -15,7 +15,6 @@
 #include "AllocationOrder.h"
 #include "InterferenceCache.h"
 #include "RegAllocBase.h"
-#include "RegAllocEvictionAdvisor.h"
 #include "RegAllocPriorityAdvisor.h"
 #include "SplitKit.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -46,6 +45,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
@@ -164,7 +164,7 @@ INITIALIZE_PASS_DEPENDENCY(LiveRegMatrixWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(EdgeBundlesWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(SpillPlacementWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
-INITIALIZE_PASS_DEPENDENCY(RegAllocEvictionAdvisorAnalysis)
+INITIALIZE_PASS_DEPENDENCY(RegAllocEvictionAdvisorAnalysisLegacy)
 INITIALIZE_PASS_DEPENDENCY(RegAllocPriorityAdvisorAnalysis)
 INITIALIZE_PASS_END(RAGreedy, "greedy",
                 "Greedy Register Allocator", false, false)
@@ -219,7 +219,7 @@ void RAGreedy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<EdgeBundlesWrapperLegacy>();
   AU.addRequired<SpillPlacementWrapperLegacy>();
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
-  AU.addRequired<RegAllocEvictionAdvisorAnalysis>();
+  AU.addRequired<RegAllocEvictionAdvisorAnalysisLegacy>();
   AU.addRequired<RegAllocPriorityAdvisorAnalysis>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -2766,7 +2766,8 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
 
   ExtraInfo.emplace();
   EvictAdvisor =
-      getAnalysis<RegAllocEvictionAdvisorAnalysis>().getAdvisor(*MF, *this);
+      getAnalysis<RegAllocEvictionAdvisorAnalysisLegacy>().getAdvisor(*MF,
+                                                                      *this);
   PriorityAdvisor =
       getAnalysis<RegAllocPriorityAdvisorAnalysis>().getAdvisor(*MF, *this);
 

@@ -10,9 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegAllocEvictionAdvisor.h"
+#include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "AllocationOrder.h"
 #include "RegAllocGreedy.h"
+#include "RegAllocPriorityAdvisor.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
@@ -26,17 +27,18 @@
 
 using namespace llvm;
 
-static cl::opt<RegAllocEvictionAdvisorAnalysis::AdvisorMode> Mode(
+static cl::opt<RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode> Mode(
     "regalloc-enable-advisor", cl::Hidden,
-    cl::init(RegAllocEvictionAdvisorAnalysis::AdvisorMode::Default),
+    cl::init(RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Default),
     cl::desc("Enable regalloc advisor mode"),
     cl::values(
-        clEnumValN(RegAllocEvictionAdvisorAnalysis::AdvisorMode::Default,
+        clEnumValN(RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Default,
                    "default", "Default"),
-        clEnumValN(RegAllocEvictionAdvisorAnalysis::AdvisorMode::Release,
+        clEnumValN(RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Release,
                    "release", "precompiled"),
-        clEnumValN(RegAllocEvictionAdvisorAnalysis::AdvisorMode::Development,
-                   "development", "for training")));
+        clEnumValN(
+            RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Development,
+            "development", "for training")));
 
 static cl::opt<bool> EnableLocalReassignment(
     "enable-local-reassign", cl::Hidden,
@@ -59,59 +61,114 @@ cl::opt<unsigned> EvictInterferenceCutoff(
 #define LLVM_HAVE_TF_AOT
 #endif
 
-char RegAllocEvictionAdvisorAnalysis::ID = 0;
-INITIALIZE_PASS(RegAllocEvictionAdvisorAnalysis, "regalloc-evict",
+char RegAllocEvictionAdvisorAnalysisLegacy::ID = 0;
+INITIALIZE_PASS(RegAllocEvictionAdvisorAnalysisLegacy, "regalloc-evict",
                 "Regalloc eviction policy", false, true)
 
 namespace {
-class DefaultEvictionAdvisorAnalysis final
-    : public RegAllocEvictionAdvisorAnalysis {
+class DefaultEvictionAdvisorProvider final
+    : public RegAllocEvictionAdvisorProvider {
 public:
-  DefaultEvictionAdvisorAnalysis(bool NotAsRequested)
-      : RegAllocEvictionAdvisorAnalysis(AdvisorMode::Default),
+  DefaultEvictionAdvisorProvider(bool NotAsRequested)
+      : RegAllocEvictionAdvisorProvider(AdvisorMode::Default),
         NotAsRequested(NotAsRequested) {}
 
   // support for isa<> and dyn_cast.
-  static bool classof(const RegAllocEvictionAdvisorAnalysis *R) {
+  static bool classof(const RegAllocEvictionAdvisorProvider *R) {
     return R->getAdvisorMode() == AdvisorMode::Default;
   }
 
-private:
   std::unique_ptr<RegAllocEvictionAdvisor>
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
     return std::make_unique<DefaultEvictionAdvisor>(MF, RA);
   }
+
   bool doInitialization(Module &M) override {
     if (NotAsRequested)
       M.getContext().emitError("Requested regalloc eviction advisor analysis "
                                "could not be created. Using default");
-    return RegAllocEvictionAdvisorAnalysis::doInitialization(M);
+    return RegAllocEvictionAdvisorProvider::doInitialization(M);
   }
+
+private:
+  const bool NotAsRequested;
+};
+
+class DefaultEvictionAdvisorAnalysisLegacy final
+    : public RegAllocEvictionAdvisorAnalysisLegacy {
+public:
+  DefaultEvictionAdvisorAnalysisLegacy(bool NotAsRequested)
+      : RegAllocEvictionAdvisorAnalysisLegacy(AdvisorMode::Default),
+        NotAsRequested(NotAsRequested) {}
+
+  std::unique_ptr<RegAllocEvictionAdvisor>
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
+    return Provider->getAdvisor(MF, RA);
+  }
+
+  bool doInitialization(Module &M) override {
+    Provider.reset(new DefaultEvictionAdvisorProvider(NotAsRequested));
+    return Provider->doInitialization(M);
+  }
+
+  // support for isa<> and dyn_cast.
+  static bool classof(const RegAllocEvictionAdvisorAnalysisLegacy *R) {
+    return R->getAdvisorMode() == AdvisorMode::Default;
+  }
+
+private:
+  std::unique_ptr<DefaultEvictionAdvisorProvider> Provider;
   const bool NotAsRequested;
 };
 } // namespace
 
-template <> Pass *llvm::callDefaultCtor<RegAllocEvictionAdvisorAnalysis>() {
-  Pass *Ret = nullptr;
+AnalysisKey RegAllocEvictionAdvisorAnalysis::Key;
+
+RegAllocEvictionAdvisorAnalysis::Result
+RegAllocEvictionAdvisorAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
+  std::unique_ptr<RegAllocEvictionAdvisorProvider> Provider;
   switch (Mode) {
-  case RegAllocEvictionAdvisorAnalysis::AdvisorMode::Default:
-    Ret = new DefaultEvictionAdvisorAnalysis(/*NotAsRequested*/ false);
+  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Default:
+    Provider.reset(
+        new DefaultEvictionAdvisorProvider(/*NotAsRequested*/ false));
     break;
-  case RegAllocEvictionAdvisorAnalysis::AdvisorMode::Development:
+  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Development:
 #if defined(LLVM_HAVE_TFLITE)
-    Ret = createDevelopmentModeAdvisor();
+    Provider.reset(createDevelopmentModeAdvisorProvider());
 #endif
     break;
-  case RegAllocEvictionAdvisorAnalysis::AdvisorMode::Release:
-    Ret = createReleaseModeAdvisor();
+  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Release:
+    Provider.reset(createReleaseModeAdvisorProvider());
+    break;
+  }
+  if (!Provider)
+    Provider.reset(new DefaultEvictionAdvisorProvider(/*NotAsRequested*/ true));
+  Provider->doInitialization(M);
+  return Provider;
+}
+
+template <>
+Pass *llvm::callDefaultCtor<RegAllocEvictionAdvisorAnalysisLegacy>() {
+  Pass *Ret = nullptr;
+  switch (Mode) {
+  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Default:
+    Ret = new DefaultEvictionAdvisorAnalysisLegacy(/*NotAsRequested*/ false);
+    break;
+  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Development:
+#if defined(LLVM_HAVE_TFLITE)
+    Ret = createDevelopmentModeAdvisorAnalysisLegacy();
+#endif
+    break;
+  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Release:
+    Ret = createReleaseModeAdvisorAnalysisLegacy();
     break;
   }
   if (Ret)
     return Ret;
-  return new DefaultEvictionAdvisorAnalysis(/*NotAsRequested*/ true);
+  return new DefaultEvictionAdvisorAnalysisLegacy(/*NotAsRequested*/ true);
 }
 
-StringRef RegAllocEvictionAdvisorAnalysis::getPassName() const {
+StringRef RegAllocEvictionAdvisorAnalysisLegacy::getPassName() const {
   switch (getAdvisorMode()) {
   case AdvisorMode::Default:
     return "Default Regalloc Eviction Advisor";

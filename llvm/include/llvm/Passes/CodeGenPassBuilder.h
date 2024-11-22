@@ -57,6 +57,7 @@
 #include "llvm/CodeGen/PeepholeOptimizer.h"
 #include "llvm/CodeGen/PostRASchedulerList.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
+#include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/CodeGen/RegUsageInfoCollector.h"
 #include "llvm/CodeGen/RegUsageInfoPropagate.h"
@@ -1064,9 +1065,10 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addMachineSSAOptimization(
 template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addTargetRegisterAllocator(
     AddMachinePass &addPass, bool Optimized) const {
-  if (Optimized)
+  if (Optimized) {
+    addPass(RequireAnalysis<RegAllocEvictionAdvisorAnalysis>());
     addPass(RAGreedyPass());
-  else
+  } else
     addPass(RegAllocFastPass());
 }
 
