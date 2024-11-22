@@ -2399,8 +2399,8 @@ SDValue M68kTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
         // Block CopyFromReg so partial register stalls are avoided.
         T1.getOpcode() != ISD::CopyFromReg &&
         T2.getOpcode() != ISD::CopyFromReg) {
-      SDVTList VTs = DAG.getVTList(T1.getValueType(), MVT::Glue);
-      SDValue Cmov = DAG.getNode(M68kISD::CMOV, DL, VTs, T2, T1, CC, Cond);
+      SDValue Cmov =
+          DAG.getNode(M68kISD::CMOV, DL, T1.getValueType(), T2, T1, CC, Cond);
       return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), Cmov);
     }
   }
@@ -2418,9 +2418,8 @@ SDValue M68kTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 
   // M68kISD::CMOV means set the result (which is operand 1) to the RHS if
   // condition is true.
-  SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Glue);
   SDValue Ops[] = {Op2, Op1, CC, Cond};
-  return DAG.getNode(M68kISD::CMOV, DL, VTs, Ops);
+  return DAG.getNode(M68kISD::CMOV, DL, Op.getValueType(), Ops);
 }
 
 /// Return true if node is an ISD::AND or ISD::OR of two M68k::SETcc nodes

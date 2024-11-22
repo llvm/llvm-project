@@ -890,10 +890,9 @@ SDValue AVRTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue TargetCC;
   SDValue Cmp = getAVRCmp(LHS, RHS, CC, TargetCC, DAG, dl);
 
-  SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Glue);
   SDValue Ops[] = {TrueV, FalseV, TargetCC, Cmp};
 
-  return DAG.getNode(AVRISD::SELECT_CC, dl, VTs, Ops);
+  return DAG.getNode(AVRISD::SELECT_CC, dl, Op.getValueType(), Ops);
 }
 
 SDValue AVRTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
@@ -907,10 +906,9 @@ SDValue AVRTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
 
   SDValue TrueV = DAG.getConstant(1, DL, Op.getValueType());
   SDValue FalseV = DAG.getConstant(0, DL, Op.getValueType());
-  SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Glue);
   SDValue Ops[] = {TrueV, FalseV, TargetCC, Cmp};
 
-  return DAG.getNode(AVRISD::SELECT_CC, DL, VTs, Ops);
+  return DAG.getNode(AVRISD::SELECT_CC, DL, Op.getValueType(), Ops);
 }
 
 SDValue AVRTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
