@@ -971,7 +971,7 @@ let Predicates = [HasSVEorSME] in {
   def MOVPRFX_ZZ : sve_int_bin_cons_misc_0_c<0b00000001, "movprfx", ZPRAny>;
 } // End HasSVEorSME
 
-let Predicates = [HasSVE] in {
+let Predicates = [HasNonStreamingSVEorSME2p2] in {
   defm FEXPA_ZZ : sve_int_bin_cons_misc_0_c_fexpa<"fexpa", int_aarch64_sve_fexpa_x>;
 } // End HasSVE
 
