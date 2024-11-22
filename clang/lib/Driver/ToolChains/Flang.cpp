@@ -748,7 +748,7 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   } else if (isa<AssembleJobAction>(JA)) {
     CmdArgs.push_back("-emit-obj");
   } else if (isa<PrecompileJobAction>(JA)) {
-    // The Precompile job action is only needed for options such as -mcpu=help.
+    // The precompile job action is only needed for options such as -mcpu=help.
     // Those will already have been handled by the fc1 driver.
   } else {
     assert(false && "Unexpected action class for Flang tool.");
