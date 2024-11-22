@@ -6004,13 +6004,12 @@ void BoUpSLP::reorderTopToBottom() {
       }
       if ((TE->State == TreeEntry::Vectorize ||
            TE->State == TreeEntry::StridedVectorize) &&
-          isa<ExtractElementInst, ExtractValueInst, LoadInst, StoreInst,
-              InsertElementInst, ShuffleVectorInst>(TE->getMainOp())) {
+          (isa<ExtractElementInst, ExtractValueInst, LoadInst, StoreInst,
+               InsertElementInst>(TE->getMainOp()) ||
+           (SLPReVec && isa<ShuffleVectorInst>(TE->getMainOp())))) {
         assert(!TE->isAltShuffle() &&
                "Alternate instructions are only supported by BinaryOperator "
                "and CastInst.");
-        assert(!isa<ShuffleVectorInst>(TE->getMainOp()) ||
-               SLPReVec && "Only supported by REVEC.");
         // Build correct orders for extract{element,value}, loads and
         // stores.
         reorderOrder(TE->ReorderIndices, Mask);
