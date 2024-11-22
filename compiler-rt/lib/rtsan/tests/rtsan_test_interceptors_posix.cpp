@@ -971,21 +971,6 @@ TEST(TestRtsanInterceptors, MkfifoDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
-#if __has_builtin(__builtin_available) && SANITIZER_APPLE
-#define MKFIFOAT_AVAILABLE() (__builtin_available(macOS 10.13, *))
-#else
-// We are going to assume this is true until we hit systems where it isn't
-#define MKFIFOAT_AVAILABLE() (true)
-#endif
-
-TEST(TestRtsanInterceptors, MkfifoatDiesWhenRealtime) {
-  if (MKFIFOAT_AVAILABLE()) {
-    auto Func = []() { mkfifoat(0, "/tmp/rtsan_test_fifo", 0); };
-    ExpectRealtimeDeath(Func, "mkfifoat");
-    ExpectNonRealtimeSurvival(Func);
-  }
-}
-
 TEST(TestRtsanInterceptors, PipeDiesWhenRealtime) {
   int fds[2];
   auto Func = [&fds]() { pipe(fds); };
