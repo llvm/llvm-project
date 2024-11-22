@@ -1158,7 +1158,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::experimental_vp_splat: {
     auto LT = getTypeLegalizationCost(RetTy);
     // TODO: Lower i1 experimental_vp_splat
-    if (LT.second.getScalarType() == MVT::i1)
+    if (!ST->hasVInstructions() || LT.second.getScalarType() == MVT::i1)
       return InstructionCost::getInvalid();
     return LT.first * getRISCVInstructionCost(LT.second.isFloatingPoint()
                                                   ? RISCV::VFMV_V_F
