@@ -39,7 +39,7 @@ RUN cmake -B ./build -G Ninja ./llvm \
   -DCLANG_DEFAULT_LINKER="lld" \
   -DBOOTSTRAP_CLANG_PGO_TRAINING_DATA_SOURCE_DIR=/llvm-project-llvmorg-$LLVM_VERSION/llvm
 
-RUN ninja -C ./build stage2-instrumented-clang stage2-instrumented-lld stage2-clang-bolt stage2-install-distribution && ninja -C ./build install-distribution && rm -rf ./build
+RUN ninja -C ./build stage2-instrumented-clang stage2-clang-bolt stage2-install-distribution && ninja -C ./build install-distribution && rm -rf ./build
 
 FROM base
     
