@@ -286,6 +286,22 @@ void ProcessElfCore::UpdateBuildIdForNTFileEntries() {
   }
 }
 
+bool ProcessElfCore::GetModuleSpec(const FileSpec &module_file_spec,
+                                   const ArchSpec &arch,
+                                   ModuleSpec &module_spec) {
+  module_spec.Clear();
+  for (NT_FILE_Entry &entry : m_nt_file_entries) {
+    if (module_file_spec.GetPath() == entry.path) {
+      module_spec.GetFileSpec() = module_file_spec;
+      module_spec.GetArchitecture() = arch;
+      module_spec.GetUUID() = entry.uuid;
+      return true;
+    }
+  }
+
+  return false;
+}
+
 lldb_private::DynamicLoader *ProcessElfCore::GetDynamicLoader() {
   if (m_dyld_up.get() == nullptr)
     m_dyld_up.reset(DynamicLoader::FindPlugin(
