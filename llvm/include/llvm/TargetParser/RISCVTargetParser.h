@@ -60,6 +60,8 @@ void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
 void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
 bool hasFastScalarUnalignedAccess(StringRef CPU);
 bool hasFastVectorUnalignedAccess(StringRef CPU);
+bool hasValidCPUModel(StringRef CPU);
+CPUModel getCPUModel(StringRef CPU);
 
 } // namespace RISCV
 

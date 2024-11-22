@@ -57,6 +57,18 @@ bool hasFastVectorUnalignedAccess(StringRef CPU) {
   return Info && Info->FastVectorUnalignedAccess;
 }
 
+bool hasValidCPUModel(StringRef CPU) {
+  const CPUModel Model = getCPUModel(CPU);
+  return Model.MVendorID != 0 && Model.MArchID != 0 && Model.MImpID != 0;
+}
+
+CPUModel getCPUModel(StringRef CPU) {
+  const CPUInfo *Info = getCPUInfoByName(CPU);
+  if (!Info)
+    return {0, 0, 0};
+  return Info->Model;
+}
+
 bool parseCPU(StringRef CPU, bool IsRV64) {
   const CPUInfo *Info = getCPUInfoByName(CPU);
 
