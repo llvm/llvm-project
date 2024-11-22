@@ -1533,7 +1533,7 @@ SDValue LoongArchTargetLowering::lowerFRAMEADDR(SDValue Op,
   while (Depth--) {
     int Offset = -(GRLenInBytes * 2);
     SDValue Ptr = DAG.getNode(ISD::ADD, DL, VT, FrameAddr,
-                              DAG.getSignedIntPtrConstant(Offset, DL));
+                              DAG.getSignedConstant(Offset, DL, VT));
     FrameAddr =
         DAG.getLoad(VT, DL, DAG.getEntryNode(), Ptr, MachinePointerInfo());
   }
