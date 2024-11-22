@@ -901,7 +901,7 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy &S) {
   // have to be placed in the same fragment. When we split them, create
   // trampoline landing pads that will redirect the execution to real LPs.
   TrampolineSetType Trampolines;
-  if (!BC.HasFixedLoadAddress && BF.hasEHRanges() && BF.isSplit()) {
+  if (BF.hasEHRanges() && BF.isSplit()) {
     // If all landing pads for this fragment are grouped in one (potentially
     // different) fragment, we can set LPStart to the start of that fragment
     // and avoid trampoline code.
@@ -925,8 +925,12 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy &S) {
       } else if (LandingPadFragments.size() == 1) {
         BF.setLPFragment(FF.getFragmentNum(), LandingPadFragments.front());
       } else {
-        NeedsTrampolines = true;
-        break;
+        if (!BC.HasFixedLoadAddress) {
+          NeedsTrampolines = true;
+          break;
+        } else {
+          BF.setLPFragment(FF.getFragmentNum(), std::nullopt);
+        }
       }
     }
 
