@@ -371,8 +371,9 @@ int load(int argc, const char **argv, const char **envp, void *image,
     handle_error(err);
 
   // Load the code object's ISA information and executable data segments.
-  hsa_code_object_t object;
-  if (hsa_status_t err = hsa_code_object_deserialize(image, size, "", &object))
+  hsa_code_object_reader_t reader;
+  if (hsa_status_t err =
+          hsa_code_object_reader_create_from_memory(image, size, &reader))
     handle_error(err);
 
   hsa_executable_t executable;
@@ -381,8 +382,9 @@ int load(int argc, const char **argv, const char **envp, void *image,
           &executable))
     handle_error(err);
 
-  if (hsa_status_t err =
-          hsa_executable_load_code_object(executable, dev_agent, object, ""))
+  hsa_loaded_code_object_t object;
+  if (hsa_status_t err = hsa_executable_load_agent_code_object(
+          executable, dev_agent, reader, "", &object))
     handle_error(err);
 
   // No modifications to the executable are allowed  after this point.
@@ -396,6 +398,9 @@ int load(int argc, const char **argv, const char **envp, void *image,
     handle_error(err);
   if (result)
     handle_error(HSA_STATUS_ERROR);
+
+  if (hsa_status_t err = hsa_code_object_reader_destroy(reader))
+    handle_error(err);
 
   // Obtain memory pools to exchange data between the host and the device. The
   // fine-grained pool acts as pinned memory on the host for DMA transfers to
@@ -615,9 +620,6 @@ int load(int argc, const char **argv, const char **envp, void *image,
     handle_error(err);
 
   if (hsa_status_t err = hsa_executable_destroy(executable))
-    handle_error(err);
-
-  if (hsa_status_t err = hsa_code_object_destroy(object))
     handle_error(err);
 
   if (hsa_status_t err = hsa_shut_down())
