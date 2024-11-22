@@ -4816,8 +4816,10 @@ struct SplitDelinearizeSpanningLastLinearizeArg final
 
 void affine::AffineDelinearizeIndexOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
-  patterns.insert<CancelDelinearizeOfLinearizeDisjointExactTail,
-                  DropUnitExtentBasis, SplitDelinearizeSpanningLastLinearizeArg>(context);
+  patterns
+      .insert<CancelDelinearizeOfLinearizeDisjointExactTail,
+              DropUnitExtentBasis, SplitDelinearizeSpanningLastLinearizeArg>(
+          context);
 }
 
 //===----------------------------------------------------------------------===//
