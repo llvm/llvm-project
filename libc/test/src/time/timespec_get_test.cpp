@@ -13,17 +13,18 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcTimespecGet, Utc) {
-#ifndef LIBC_TARGET_ARCH_IS_GPU
   timespec ts;
   int result;
   result = LIBC_NAMESPACE::timespec_get(&ts, TIME_UTC);
+#ifdef LIBC_TARGET_ARCH_IS_GPU
+  ASSERT_EQ(result, 0);
+#else
   ASSERT_EQ(result, TIME_UTC);
   ASSERT_GT(ts.tv_sec, time_t(0));
 #endif
 }
 
 TEST(LlvmLibcTimespecGet, Monotonic) {
-#ifndef LIBC_TARGET_ARCH_IS_GPU
   timespec ts1, ts2;
   int result;
   result = LIBC_NAMESPACE::timespec_get(&ts1, TIME_MONOTONIC);
@@ -35,14 +36,11 @@ TEST(LlvmLibcTimespecGet, Monotonic) {
   if (ts2.tv_sec == ts1.tv_sec) {
     ASSERT_GE(ts2.tv_nsec, ts1.tv_nsec);
   }
-#endif
 }
 
 TEST(LlvmLibcTimespecGet, Unknown) {
-#ifndef LIBC_TARGET_ARCH_IS_GPU
   timespec ts;
   int result;
   result = LIBC_NAMESPACE::timespec_get(&ts, 0);
   ASSERT_EQ(result, 0);
-#endif
 }
