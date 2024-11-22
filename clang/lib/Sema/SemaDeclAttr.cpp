@@ -1215,8 +1215,7 @@ static void handlePreferredName(Sema &S, Decl *D, const ParsedAttr &AL) {
         << TT->getDecl();
 }
 
-static void handleNoSpecializations(Sema &S, Decl *D,
-                                          const ParsedAttr &AL) {
+static void handleNoSpecializations(Sema &S, Decl *D, const ParsedAttr &AL) {
   StringRef Message;
   if (AL.getNumArgs() != 0)
     S.checkStringLiteralArgumentAttr(AL, 0, Message);
