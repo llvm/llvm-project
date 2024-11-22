@@ -182,10 +182,14 @@ marksl@synopsys.com (email), [markschimmel](https://github.com/markschimmel) (Gi
 
 David Green \
 david.green@arm.com (email), [davemgreen](https://github.com/davemgreen) (GitHub) \
-Oliver Stannard \
+Oliver Stannard (Especially assembly/dissassembly) \
 oliver.stannard@arm.com (email), [ostannard](https://github.com/ostannard) (GitHub) \
 Nashe Mncube \
-nashe.mncube@arm.com (email), [nasherm](https://github.com/nasherm) (GitHub)
+nashe.mncube@arm.com (email), [nasherm](https://github.com/nasherm) (GitHub) \
+Peter Smith (Anything ABI) \
+peter.smith@arm.com (email), [smithp35](https://github.com/smithp35) (GitHub) \
+Ties Stuij (GlobalISel and early arch support) \
+ties.stuij@arm.com (email), [stuij](https://github.com/stuij) (GitHub) \
 
 #### AVR backend
 
