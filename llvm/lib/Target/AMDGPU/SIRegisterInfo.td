@@ -1357,6 +1357,7 @@ class AVDstOperand<RegisterClass regClass, string width>
   : AVOperand<regClass, "decodeAV10", width>;
 
 def AVDst_128 : AVDstOperand<AV_128, "OPW128">;
+def AVDst_256 : AVDstOperand<AV_256, "OPW256">;
 def AVDst_512 : AVDstOperand<AV_512, "OPW512">;
 
 class AVLdStOperand<RegisterClass regClass, string width>

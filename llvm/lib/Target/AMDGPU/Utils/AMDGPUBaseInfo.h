@@ -96,15 +96,15 @@ struct MAIInstInfo {
   bool is_gfx940_xdl;
 };
 
+struct CvtScaleF32_F32F16ToF8F4_Info {
+  unsigned Opcode;
+};
+
 struct MFMA_F8F6F4_Info {
   unsigned Opcode;
   unsigned F8F8Opcode;
   uint8_t NumRegsSrcA;
   uint8_t NumRegsSrcB;
-};
-
-struct CvtScaleF32_F32F16ToF8F4_Info {
-  unsigned Opcode;
 };
 
 #define GET_MIMGBaseOpcode_DECL
