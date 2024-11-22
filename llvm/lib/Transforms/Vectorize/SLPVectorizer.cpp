@@ -975,6 +975,9 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
       Type *Ty1 = Inst->getOperand(0)->getType();
       if (Ty0 == Ty1) {
         assert(InstOpcode == Opcode && "Expected same CmpInst opcode.");
+        assert(InstOpcode == AltOpcode &&
+               "Alternate instructions are only supported by BinaryOperator "
+               "and CastInst.");
         // Check for compatible operands. If the corresponding operands are not
         // compatible - need to perform alternate vectorization.
         CmpInst::Predicate CurrentPred = Inst->getPredicate();
@@ -1003,7 +1006,10 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
             AltPred == CurrentPred || AltPred == SwappedCurrentPred)
           continue;
       }
-    } else if (InstOpcode == Opcode || InstOpcode == AltOpcode) {
+    } else if (InstOpcode == Opcode) {
+      assert(InstOpcode == AltOpcode &&
+             "Alternate instructions are only supported by BinaryOperator and "
+             "CastInst.");
       if (auto *Gep = dyn_cast<GetElementPtrInst>(I)) {
         if (Gep->getNumOperands() != 2 ||
             Gep->getOperand(0)->getType() != IBase->getOperand(0)->getType())
@@ -2222,7 +2228,7 @@ public:
       MapVector<unsigned, std::pair<unsigned, unsigned>> HashMap;
       // Try to be closer to the original results, if we have multiple lanes
       // with same cost. If 2 lanes have the same cost, use the one with the
-      // lowest index.
+      // highest index.
       for (int I = getNumLanes(); I > 0; --I) {
         unsigned Lane = I - 1;
         OperandsOrderData NumFreeOpsHash =
@@ -5999,8 +6005,10 @@ void BoUpSLP::reorderTopToBottom() {
       if ((TE->State == TreeEntry::Vectorize ||
            TE->State == TreeEntry::StridedVectorize) &&
           isa<ExtractElementInst, ExtractValueInst, LoadInst, StoreInst,
-              InsertElementInst>(TE->getMainOp()) &&
-          !TE->isAltShuffle()) {
+              InsertElementInst>(TE->getMainOp())) {
+        assert(!TE->isAltShuffle() &&
+               "Alternate instructions are only supported by BinaryOperator "
+               "and CastInst.");
         // Build correct orders for extract{element,value}, loads and
         // stores.
         reorderOrder(TE->ReorderIndices, Mask);
@@ -6815,16 +6823,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
         // Check if it is profitable to try vectorizing gathered loads. It is
         // profitable if we have more than 3 consecutive loads or if we have
         // less but all users are vectorized or deleted.
-        bool AllowToVectorize =
-            NumElts >= 3 ||
-            any_of(ValueToGatherNodes.at(Slice.front()),
-                   [=](const TreeEntry *TE) {
-                     return TE->Scalars.size() == 2 &&
-                            ((TE->Scalars.front() == Slice.front() &&
-                              TE->Scalars.back() == Slice.back()) ||
-                             (TE->Scalars.front() == Slice.back() &&
-                              TE->Scalars.back() == Slice.front()));
-                   });
+        bool AllowToVectorize = false;
         // Check if it is profitable to vectorize 2-elements loads.
         if (NumElts == 2) {
           bool IsLegalBroadcastLoad = TTI->isLegalBroadcastLoad(
@@ -6861,6 +6860,19 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
             return true;
           };
           AllowToVectorize = CheckIfAllowed(Slice);
+        } else {
+          AllowToVectorize =
+              (NumElts >= 3 ||
+               any_of(ValueToGatherNodes.at(Slice.front()),
+                      [=](const TreeEntry *TE) {
+                        return TE->Scalars.size() == 2 &&
+                               ((TE->Scalars.front() == Slice.front() &&
+                                 TE->Scalars.back() == Slice.back()) ||
+                                (TE->Scalars.front() == Slice.back() &&
+                                 TE->Scalars.back() == Slice.front()));
+                      })) &&
+              hasFullVectorsOrPowerOf2(*TTI, Slice.front()->getType(),
+                                       Slice.size());
         }
         if (AllowToVectorize) {
           SmallVector<Value *> PointerOps;
@@ -6903,7 +6915,8 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
       }
       // Mark masked gathers candidates as vectorized, if any.
       for (unsigned Cnt : MaskedGatherVectorized) {
-        ArrayRef<LoadInst *> Slice = ArrayRef(Loads).slice(Cnt, NumElts);
+        ArrayRef<LoadInst *> Slice = ArrayRef(Loads).slice(
+            Cnt, std::min<unsigned>(NumElts, Loads.size() - Cnt));
         ArrayRef<Value *> Values(
             reinterpret_cast<Value *const *>(Slice.begin()), Slice.size());
         Results.emplace_back(Values, LoadsState::ScatterVectorize);
@@ -10125,6 +10138,9 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                             InVectors.size() == 1 ? nullptr : InVectors.back(),
                             CommonMask);
       transformMaskAfterShuffle(CommonMask, CommonMask);
+    } else if (InVectors.size() == 2) {
+      Cost += createShuffle(InVectors.front(), InVectors.back(), CommonMask);
+      transformMaskAfterShuffle(CommonMask, CommonMask);
     }
     SameNodesEstimated = false;
     if (!E2 && InVectors.size() == 1) {
@@ -10142,8 +10158,21 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       Cost += createShuffle(InVectors.front(), &E1, CommonMask);
       transformMaskAfterShuffle(CommonMask, CommonMask);
     } else {
+      auto P = InVectors.front();
       Cost += createShuffle(&E1, E2, Mask);
-      transformMaskAfterShuffle(CommonMask, Mask);
+      unsigned VF = Mask.size();
+      if (Value *V1 = P.dyn_cast<Value *>()) {
+        VF = std::max(VF,
+                      getNumElements(V1->getType()));
+      } else {
+        const auto *E = P.get<const TreeEntry *>();
+        VF = std::max(VF, E->getVectorFactor());
+      }
+      for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
+        if (Mask[Idx] != PoisonMaskElem)
+          CommonMask[Idx] = Idx + (InVectors.empty() ? 0 : VF);
+      Cost += createShuffle(P, InVectors.front(), CommonMask);
+      transformMaskAfterShuffle(CommonMask, CommonMask);
     }
   }
 
@@ -10291,10 +10320,10 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
             Idx = EMask[Idx];
         }
         CommonVF = E->Scalars.size();
-      } else if (std::optional<unsigned> Factor = E->getInterleaveFactor();
-                 Factor && E->Scalars.size() != Mask.size() &&
+      } else if (unsigned Factor = E->getInterleaveFactor();
+                 Factor > 0 && E->Scalars.size() != Mask.size() &&
                  ShuffleVectorInst::isDeInterleaveMaskOfFactor(CommonMask,
-                                                               *Factor)) {
+                                                               Factor)) {
         // Deinterleaved nodes are free.
         std::iota(CommonMask.begin(), CommonMask.end(), 0);
       }
@@ -13609,7 +13638,10 @@ Value *BoUpSLP::gather(
     } else {
       Vec = CreateShuffle(Root, Vec, Mask);
       if (auto *OI = dyn_cast<Instruction>(OriginalRoot);
-          OI && OI->hasNUses(0))
+          OI && OI->hasNUses(0) &&
+          none_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+            return TE->VectorizedValue == OI;
+          }))
         eraseInstruction(OI);
     }
   }
@@ -13999,9 +14031,10 @@ public:
       transformMaskAfterShuffle(CommonMask, CommonMask);
     }
     V1 = createShuffle(V1, V2, Mask);
+    unsigned VF = std::max(getVF(V1), getVF(Vec));
     for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
       if (Mask[Idx] != PoisonMaskElem)
-        CommonMask[Idx] = Idx + Sz;
+        CommonMask[Idx] = Idx + VF;
     InVectors.front() = Vec;
     if (InVectors.size() == 2)
       InVectors.back() = V1;
@@ -15635,7 +15668,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       SmallVector<Value *> OpVecs;
       SmallVector<Type *, 2> TysForDecl;
       // Add return type if intrinsic is overloaded on it.
-      if (UseIntrinsic && isVectorIntrinsicWithOverloadTypeAtArg(ID, -1))
+      if (UseIntrinsic && isVectorIntrinsicWithOverloadTypeAtArg(ID, -1, TTI))
         TysForDecl.push_back(VecTy);
       auto *CEI = cast<CallInst>(VL0);
       for (unsigned I : seq<unsigned>(0, CI->arg_size())) {
@@ -15650,7 +15683,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
               It->second.first < DL->getTypeSizeInBits(CEI->getType()))
             ScalarArg = Builder.getFalse();
           OpVecs.push_back(ScalarArg);
-          if (isVectorIntrinsicWithOverloadTypeAtArg(ID, I))
+          if (isVectorIntrinsicWithOverloadTypeAtArg(ID, I, TTI))
             TysForDecl.push_back(ScalarArg->getType());
           continue;
         }
@@ -15672,7 +15705,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         }
         LLVM_DEBUG(dbgs() << "SLP: OpVec[" << I << "]: " << *OpVec << "\n");
         OpVecs.push_back(OpVec);
-        if (UseIntrinsic && isVectorIntrinsicWithOverloadTypeAtArg(ID, I))
+        if (UseIntrinsic && isVectorIntrinsicWithOverloadTypeAtArg(ID, I, TTI))
           TysForDecl.push_back(OpVec->getType());
       }
 
@@ -15708,16 +15741,18 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
           return E->VectorizedValue;
         }
-        assert(isa<ShuffleVectorInst>(Src) &&
-               "Not supported shufflevector usage.");
-        auto *SVSrc = cast<ShuffleVectorInst>(Src);
-        assert(isa<PoisonValue>(SVSrc->getOperand(1)) &&
-               "Not supported shufflevector usage.");
         SmallVector<int> ThisMask(calculateShufflevectorMask(E->Scalars));
-        SmallVector<int> NewMask(ThisMask.size());
-        transform(ThisMask, NewMask.begin(),
-                  [&SVSrc](int Mask) { return SVSrc->getShuffleMask()[Mask]; });
-        V = Builder.CreateShuffleVector(SVSrc->getOperand(0), NewMask);
+        if (auto *SVSrc = dyn_cast<ShuffleVectorInst>(Src)) {
+          assert(isa<PoisonValue>(SVSrc->getOperand(1)) &&
+                 "Not supported shufflevector usage.");
+          SmallVector<int> NewMask(ThisMask.size());
+          transform(ThisMask, NewMask.begin(), [&SVSrc](int Mask) {
+            return SVSrc->getShuffleMask()[Mask];
+          });
+          V = Builder.CreateShuffleVector(SVSrc->getOperand(0), NewMask);
+        } else {
+          V = Builder.CreateShuffleVector(Src, ThisMask);
+        }
         propagateIRFlags(V, E->Scalars, VL0);
         if (auto *I = dyn_cast<Instruction>(V))
           V = propagateMetadata(I, E->Scalars);

@@ -148,6 +148,17 @@ C++ Specific Potentially Breaking Changes
     // Now diagnoses with an error.
     void f(int& i [[clang::lifetimebound]]);
 
+- Clang now rejects all field accesses on null pointers in constant expressions. The following code
+  used to work but will now be rejected:
+
+  .. code-block:: c++
+
+    struct S { int a; int b; };
+    constexpr const int *p = &((S*)nullptr)->b;
+
+  Previously, this code was erroneously accepted.
+
+
 ABI Changes in This Version
 ---------------------------
 
@@ -355,6 +366,11 @@ Non-comprehensive list of changes in this release
   The flexible array member (FAM) can now be accessed immediately without causing
   issues with the sanitizer because the counter is automatically set.
 
+- ``__builtin_reduce_add`` function can now be used in constant expressions.
+- ``__builtin_reduce_mul`` function can now be used in constant expressions.
+- ``__builtin_reduce_and`` function can now be used in constant expressions.
+- ``__builtin_reduce_or`` and ``__builtin_reduce_xor`` functions can now be used in constant expressions.
+
 New Compiler Flags
 ------------------
 
@@ -535,6 +551,33 @@ Improvements to Clang's diagnostics
 
 - Improved diagnostic message for ``__builtin_bit_cast`` size mismatch (#GH115870).
 
+- Clang now omits shadow warnings for enum constants in separate class scopes (#GH62588).
+
+- When diagnosing an unused return value of a type declared ``[[nodiscard]]``, the type
+  itself is now included in the diagnostic.
+
+- Clang will now prefer the ``[[nodiscard]]`` declaration on function declarations over ``[[nodiscard]]``
+  declaration on the return type of a function. Previously, when both have a ``[[nodiscard]]`` declaration attached,
+  the one on the return type would be preferred. This may affect the generated warning message:
+
+  .. code-block:: c++
+
+    struct [[nodiscard("Reason 1")]] S {};
+    [[nodiscard("Reason 2")]] S getS();
+    void use()
+    {
+      getS(); // Now diagnoses "Reason 2", previously diagnoses "Reason 1"
+    }
+
+- Clang now diagnoses ``= delete("reason")`` extension warnings only in pedantic mode rather than on by default. (#GH109311).
+
+- Clang now diagnoses missing return value in functions containing ``if consteval`` (#GH116485).
+
+- Clang now correctly recognises code after a call to a ``[[noreturn]]`` constructor
+  as unreachable (#GH63009).
+
+- Clang now omits shadowing warnings for parameter names in explicit object member functions (#GH95707).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -664,6 +707,8 @@ Bug Fixes to C++ Support
 - Name independent data members were not correctly initialized from default member initializers. (#GH114069)
 - Fixed expression transformation for ``[[assume(...)]]``, allowing using pack indexing expressions within the
   assumption if they also occur inside of a dependent lambda. (#GH114787)
+- Clang now uses valid deduced type locations when diagnosing functions with trailing return type
+  missing placeholder return type. (#GH78694)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -709,6 +754,8 @@ Target Specific Changes
 
 AMDGPU Support
 ^^^^^^^^^^^^^^
+
+- Initial support for gfx950
 
 - Added headers ``gpuintrin.h`` and ``amdgpuintrin.h`` that contains common
   definitions for GPU builtin functions. This header can be included for OpenMP,
@@ -768,6 +815,8 @@ X86 Support
 - Support ISA of ``AMX-AVX512``.
 - Support ISA of ``AMX-TF32``.
 - Support ISA of ``MOVRS``.
+
+- Supported ``-march/tune=diamondrapids``
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -857,9 +906,6 @@ AST Matchers
 
 - Ensure ``hasName`` matches template specializations across inline namespaces,
   making `matchesNodeFullSlow` and `matchesNodeFullFast` consistent.
-
-- The examples in the AST matcher reference are now tested and additional
-  examples and descriptions were added.
 
 clang-format
 ------------

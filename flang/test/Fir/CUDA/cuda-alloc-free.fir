@@ -73,7 +73,7 @@ func.func @_QPtest_type() {
 // CHECK: %[[CONV_BYTES:.*]] = fir.convert %[[BYTES]] : (index) -> i64
 // CHECK: fir.call @_FortranACUFMemAlloc(%[[CONV_BYTES]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
 
-gpu.module @cuda_device_mod [#nvvm.target] {
+gpu.module @cuda_device_mod {
   gpu.func @_QMalloc() kernel {
     %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QMallocEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     gpu.return 
@@ -82,5 +82,16 @@ gpu.module @cuda_device_mod [#nvvm.target] {
 
 // CHECK-LABEL: gpu.func @_QMalloc() kernel
 // CHECK: fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", uniq_name = "_QMallocEa"}
+
+func.func @_QQalloc_char() attributes {fir.bindc_name = "alloc_char"} {
+  %c1 = arith.constant 1 : index
+  %0 = cuf.alloc !fir.array<10x!fir.char<1>>(%c1 : index) {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFEa"} -> !fir.ref<!fir.array<10x!fir.char<1>>>
+  return
+}
+
+// CHECK-LABEL: func.func @_QQalloc_char()
+// CHECK: %[[BYTES:.*]] = arith.muli %c10{{.*}}, %c1{{.*}} : index
+// CHECK: %[[BYTES_CONV:.*]] = fir.convert %[[BYTES]] : (index) -> i64
+// CHECK: fir.call @_FortranACUFMemAlloc(%[[BYTES_CONV]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
 
 } // end module

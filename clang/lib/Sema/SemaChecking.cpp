@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CheckExprLifetime.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
@@ -25,7 +26,6 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/FormatString.h"
 #include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/NSAPI.h"
@@ -38,7 +38,6 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/AddressSpaces.h"
-#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
@@ -50,8 +49,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/SyncScope.h"
-#include "clang/Basic/TargetBuiltins.h"
-#include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Lexer.h" // TODO: Extract static functions to fix layering.
@@ -66,7 +63,6 @@
 #include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaHexagon.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaLoongArch.h"
 #include "clang/Sema/SemaMIPS.h"
 #include "clang/Sema/SemaNVPTX.h"
@@ -93,7 +89,6 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/AtomicOrdering.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -105,7 +100,6 @@
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
-#include <bitset>
 #include <cassert>
 #include <cctype>
 #include <cstddef>
@@ -3229,6 +3223,47 @@ void Sema::CheckArgAlignment(SourceLocation Loc, NamedDecl *FDecl,
         << ParamName << (FDecl != nullptr) << FDecl;
 }
 
+void Sema::checkLifetimeCaptureBy(FunctionDecl *FD, bool IsMemberFunction,
+                                  const Expr *ThisArg,
+                                  ArrayRef<const Expr *> Args) {
+  if (!FD || Args.empty())
+    return;
+  auto GetArgAt = [&](int Idx) -> const Expr * {
+    if (Idx == LifetimeCaptureByAttr::GLOBAL ||
+        Idx == LifetimeCaptureByAttr::UNKNOWN)
+      return nullptr;
+    if (IsMemberFunction && Idx == 0)
+      return ThisArg;
+    return Args[Idx - IsMemberFunction];
+  };
+  auto HandleCaptureByAttr = [&](const LifetimeCaptureByAttr *Attr,
+                                 unsigned ArgIdx) {
+    if (!Attr)
+      return;
+    Expr *Captured = const_cast<Expr *>(GetArgAt(ArgIdx));
+    for (int CapturingParamIdx : Attr->params()) {
+      Expr *Capturing = const_cast<Expr *>(GetArgAt(CapturingParamIdx));
+      CapturingEntity CE{Capturing};
+      // Ensure that 'Captured' outlives the 'Capturing' entity.
+      checkCaptureByLifetime(*this, CE, Captured);
+    }
+  };
+  for (unsigned I = 0; I < FD->getNumParams(); ++I)
+    HandleCaptureByAttr(FD->getParamDecl(I)->getAttr<LifetimeCaptureByAttr>(),
+                        I + IsMemberFunction);
+  // Check when the implicit object param is captured.
+  if (IsMemberFunction) {
+    TypeSourceInfo *TSI = FD->getTypeSourceInfo();
+    if (!TSI)
+      return;
+    AttributedTypeLoc ATL;
+    for (TypeLoc TL = TSI->getTypeLoc();
+         (ATL = TL.getAsAdjusted<AttributedTypeLoc>());
+         TL = ATL.getModifiedLoc())
+      HandleCaptureByAttr(ATL.getAttrAs<LifetimeCaptureByAttr>(), 0);
+  }
+}
+
 void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
                      const Expr *ThisArg, ArrayRef<const Expr *> Args,
                      bool IsMemberFunction, SourceLocation Loc,
@@ -3269,7 +3304,8 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
       }
     }
   }
-
+  if (FD)
+    checkLifetimeCaptureBy(FD, IsMemberFunction, ThisArg, Args);
   if (FDecl || Proto) {
     CheckNonNullArguments(*this, FDecl, Proto, Args, Loc);
 

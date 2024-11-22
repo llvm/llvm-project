@@ -229,6 +229,11 @@ void transform::ApplyEraseUnnecessaryInputsPatternsOp::populatePatterns(
   linalg::populateEraseUnnecessaryInputsPatterns(patterns);
 }
 
+void transform::ApplyDecomposeTensorPackUnpackPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateDecomposePackUnpackPatterns(patterns);
+}
+
 void transform::ApplyFoldUnitExtentDimsViaReshapesPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   linalg::ControlDropUnitDims options;

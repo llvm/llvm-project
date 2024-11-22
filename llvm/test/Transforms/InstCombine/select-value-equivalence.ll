@@ -90,7 +90,7 @@ define float @select_fcmp_fadd_oeq_not_zero(float %x, float %y) {
 ; CHECK-LABEL: define float @select_fcmp_fadd_oeq_not_zero(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
 ; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq float [[Y]], 2.000000e+00
-; CHECK-NEXT:    [[FADD:%.*]] = fadd float [[X]], [[Y]]
+; CHECK-NEXT:    [[FADD:%.*]] = fadd float [[X]], 2.000000e+00
 ; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[FCMP]], float [[FADD]], float [[X]]
 ; CHECK-NEXT:    ret float [[RETVAL]]
 ;
@@ -104,7 +104,7 @@ define float @select_fcmp_fadd_une_not_zero(float %x, float %y) {
 ; CHECK-LABEL: define float @select_fcmp_fadd_une_not_zero(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
 ; CHECK-NEXT:    [[FCMP:%.*]] = fcmp une float [[Y]], 2.000000e+00
-; CHECK-NEXT:    [[FADD:%.*]] = fadd float [[X]], [[Y]]
+; CHECK-NEXT:    [[FADD:%.*]] = fadd float [[X]], 2.000000e+00
 ; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[FCMP]], float [[X]], float [[FADD]]
 ; CHECK-NEXT:    ret float [[RETVAL]]
 ;
@@ -118,7 +118,7 @@ define float @select_fcmp_fadd_ueq_nnan_not_zero(float %x, float %y) {
 ; CHECK-LABEL: define float @select_fcmp_fadd_ueq_nnan_not_zero(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
 ; CHECK-NEXT:    [[FCMP:%.*]] = fcmp nnan ueq float [[Y]], 2.000000e+00
-; CHECK-NEXT:    [[FADD:%.*]] = fadd float [[X]], [[Y]]
+; CHECK-NEXT:    [[FADD:%.*]] = fadd float [[X]], 2.000000e+00
 ; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[FCMP]], float [[FADD]], float [[X]]
 ; CHECK-NEXT:    ret float [[RETVAL]]
 ;
@@ -132,7 +132,7 @@ define float @select_fcmp_fadd_one_nnan_not_zero(float %x, float %y) {
 ; CHECK-LABEL: define float @select_fcmp_fadd_one_nnan_not_zero(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
 ; CHECK-NEXT:    [[FCMP:%.*]] = fcmp nnan one float [[Y]], 2.000000e+00
-; CHECK-NEXT:    [[FADD:%.*]] = fadd float [[X]], [[Y]]
+; CHECK-NEXT:    [[FADD:%.*]] = fadd float [[X]], 2.000000e+00
 ; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[FCMP]], float [[X]], float [[FADD]]
 ; CHECK-NEXT:    ret float [[RETVAL]]
 ;
@@ -202,7 +202,7 @@ define <2 x float> @select_fcmp_fadd_oeq_not_zero_vec(<2 x float> %x, <2 x float
 ; CHECK-LABEL: define <2 x float> @select_fcmp_fadd_oeq_not_zero_vec(
 ; CHECK-SAME: <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq <2 x float> [[Y]], splat (float 2.000000e+00)
-; CHECK-NEXT:    [[FADD:%.*]] = fadd <2 x float> [[X]], [[Y]]
+; CHECK-NEXT:    [[FADD:%.*]] = fadd <2 x float> [[X]], splat (float 2.000000e+00)
 ; CHECK-NEXT:    [[RETVAL:%.*]] = select <2 x i1> [[FCMP]], <2 x float> [[FADD]], <2 x float> [[X]]
 ; CHECK-NEXT:    ret <2 x float> [[RETVAL]]
 ;
@@ -216,7 +216,7 @@ define <2 x float> @select_fcmp_fadd_une_not_zero_vec(<2 x float> %x, <2 x float
 ; CHECK-LABEL: define <2 x float> @select_fcmp_fadd_une_not_zero_vec(
 ; CHECK-SAME: <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[FCMP:%.*]] = fcmp une <2 x float> [[Y]], splat (float 2.000000e+00)
-; CHECK-NEXT:    [[FADD:%.*]] = fadd <2 x float> [[X]], [[Y]]
+; CHECK-NEXT:    [[FADD:%.*]] = fadd <2 x float> [[X]], splat (float 2.000000e+00)
 ; CHECK-NEXT:    [[RETVAL:%.*]] = select <2 x i1> [[FCMP]], <2 x float> [[X]], <2 x float> [[FADD]]
 ; CHECK-NEXT:    ret <2 x float> [[RETVAL]]
 ;
@@ -230,7 +230,7 @@ define <2 x float> @select_fcmp_fadd_ueq_nnan_not_zero_vec(<2 x float> %x, <2 x 
 ; CHECK-LABEL: define <2 x float> @select_fcmp_fadd_ueq_nnan_not_zero_vec(
 ; CHECK-SAME: <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[FCMP:%.*]] = fcmp nnan ueq <2 x float> [[Y]], splat (float 2.000000e+00)
-; CHECK-NEXT:    [[FADD:%.*]] = fadd <2 x float> [[X]], [[Y]]
+; CHECK-NEXT:    [[FADD:%.*]] = fadd <2 x float> [[X]], splat (float 2.000000e+00)
 ; CHECK-NEXT:    [[RETVAL:%.*]] = select <2 x i1> [[FCMP]], <2 x float> [[FADD]], <2 x float> [[X]]
 ; CHECK-NEXT:    ret <2 x float> [[RETVAL]]
 ;
@@ -244,7 +244,7 @@ define <2 x float> @select_fcmp_fadd_one_nnan_not_zero_vec(<2 x float> %x, <2 x 
 ; CHECK-LABEL: define <2 x float> @select_fcmp_fadd_one_nnan_not_zero_vec(
 ; CHECK-SAME: <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[FCMP:%.*]] = fcmp nnan one <2 x float> [[Y]], splat (float 2.000000e+00)
-; CHECK-NEXT:    [[FADD:%.*]] = fadd <2 x float> [[X]], [[Y]]
+; CHECK-NEXT:    [[FADD:%.*]] = fadd <2 x float> [[X]], splat (float 2.000000e+00)
 ; CHECK-NEXT:    [[RETVAL:%.*]] = select <2 x i1> [[FCMP]], <2 x float> [[X]], <2 x float> [[FADD]]
 ; CHECK-NEXT:    ret <2 x float> [[RETVAL]]
 ;
