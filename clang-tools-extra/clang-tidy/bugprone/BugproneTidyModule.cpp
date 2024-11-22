@@ -95,6 +95,7 @@
 #include "UnintendedCharOstreamOutputCheck.h"
 #include "UniquePtrArrayMismatchCheck.h"
 #include "UnsafeFunctionsCheck.h"
+#include "UnsequencedGlobalAccessesCheck.h"
 #include "UnusedLocalNonTrivialVariableCheck.h"
 #include "UnusedRaiiCheck.h"
 #include "UnusedReturnValueCheck.h"
@@ -128,6 +129,8 @@ public:
         "bugprone-chained-comparison");
     CheckFactories.registerCheck<ComparePointerToMemberVirtualFunctionCheck>(
         "bugprone-compare-pointer-to-member-virtual-function");
+    CheckFactories.registerCheck<UnsequencedGlobalAccessesCheck>(
+        "bugprone-unsequenced-global-accesses");
     CheckFactories.registerCheck<CopyConstructorInitCheck>(
         "bugprone-copy-constructor-init");
     CheckFactories.registerCheck<DanglingHandleCheck>(
