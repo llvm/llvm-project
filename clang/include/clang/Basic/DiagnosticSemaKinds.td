@@ -6418,6 +6418,12 @@ def warn_signed_bitfield_enum_conversion : Warning<
   InGroup<BitFieldEnumConversion>, DefaultIgnore;
 def note_change_bitfield_sign : Note<
   "consider making the bitfield type %select{unsigned|signed}0">;
+def warn_ms_bitfield_mismatched_storage_packing : Warning<
+  "bit-field %0 of type %1 has a different storage size (%2 vs %3 bytes) than the "
+  "preceding bit-field and may not be packed under MSVC ABI">,
+  InGroup<MSBitfieldCompatibility>, DefaultIgnore;
+def note_ms_bitfield_mismatched_storage_size_previous : Note<
+  "preceding bit-field %0 declared here with type %1">;
 
 def warn_missing_braces : Warning<
   "suggest braces around initialization of subobject">,

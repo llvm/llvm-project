@@ -631,6 +631,7 @@ def Packed : DiagGroup<"packed", [PackedNonPod]>;
 def PaddedBitField : DiagGroup<"padded-bitfield">;
 def Padded : DiagGroup<"padded", [PaddedBitField]>;
 def UnalignedAccess : DiagGroup<"unaligned-access">;
+def MSBitfieldCompatibility : DiagGroup<"ms-bitfield-packing-compatibility">;
 
 def PessimizingMove : DiagGroup<"pessimizing-move">;
 def ReturnStdMove : DiagGroup<"return-std-move">;

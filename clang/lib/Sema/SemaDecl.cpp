@@ -19001,9 +19001,9 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
 
   // Verify that all the fields are okay.
   SmallVector<FieldDecl*, 32> RecFields;
-
+  std::optional<const FieldDecl *> PreviousField;
   for (ArrayRef<Decl *>::iterator i = Fields.begin(), end = Fields.end();
-       i != end; ++i) {
+       i != end; PreviousField = cast<FieldDecl>(*i), ++i) {
     FieldDecl *FD = cast<FieldDecl>(*i);
 
     // Get the type for the field.
@@ -19213,6 +19213,29 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
 
     if (Record && FD->getType().isVolatileQualified())
       Record->setHasVolatileMember(true);
+    auto IsNonDependentBitField = [](const FieldDecl *FD) {
+      if (!FD->isBitField())
+        return false;
+      if (FD->getType()->isDependentType())
+        return false;
+      return true;
+    };
+
+    if (Record && PreviousField && IsNonDependentBitField(FD) &&
+        IsNonDependentBitField(*PreviousField)) {
+      unsigned FDStorageSize =
+          Context.getTypeSizeInChars(FD->getType()).getQuantity();
+      unsigned PreviousFieldStorageSize =
+          Context.getTypeSizeInChars((*PreviousField)->getType()).getQuantity();
+      if (FDStorageSize != PreviousFieldStorageSize) {
+        Diag(FD->getLocation(),
+             diag::warn_ms_bitfield_mismatched_storage_packing)
+            << FD << FD->getType() << FDStorageSize << PreviousFieldStorageSize;
+        Diag((*PreviousField)->getLocation(),
+             diag::note_ms_bitfield_mismatched_storage_size_previous)
+            << *PreviousField << (*PreviousField)->getType();
+      }
+    }
     // Keep track of the number of named members.
     if (FD->getIdentifier())
       ++NumNamedMembers;
