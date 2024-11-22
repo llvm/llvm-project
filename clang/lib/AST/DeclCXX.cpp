@@ -29,7 +29,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/DiagnosticAST.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"

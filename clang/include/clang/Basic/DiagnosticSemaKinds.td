@@ -2318,11 +2318,6 @@ def err_init_list_bad_dest_type : Error<
 def warn_cxx20_compat_aggregate_init_with_ctors : Warning<
   "aggregate initialization of type %0 with user-declared constructors "
   "is incompatible with C++20">, DefaultIgnore, InGroup<CXX20Compat>;
-def warn_cxx20_compat_requires_explicit_init_non_aggregate : Warning<
-  "explicit initialization of field %0 will not be enforced in C++20 and later "
-  "because %1 has a user-declared constructor, making the type no longer an "
-  "aggregate">,
-  DefaultIgnore, InGroup<CXX20Compat>;
 def warn_cxx17_compat_aggregate_init_paren_list : Warning<
   "aggregate initialization of type %0 from a parenthesized list of values "
   "is a C++20 extension">, DefaultIgnore, InGroup<CXX20>;
@@ -3155,10 +3150,6 @@ def warn_auto_var_is_id : Warning<
 def warn_attribute_ignored_no_calls_in_stmt: Warning<
   "%0 attribute is ignored because there exists no call expression inside the "
   "statement">,
-  InGroup<IgnoredAttributes>;
-
-def warn_attribute_needs_aggregate : Warning<
-  "%0 attribute is ignored in non-aggregate type %1">,
   InGroup<IgnoredAttributes>;
 
 def warn_attribute_ignored_non_function_pointer: Warning<
