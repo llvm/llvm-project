@@ -1171,7 +1171,9 @@ DiagnosedSilenceableFailure transform::LowerPackOp::applyToOne(
     transform::ApplyToEachResultList &transformResults,
     transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
-  FailureOr<LowerPackResult> res = lowerPack(rewriter, target);
+  bool allowInsertSliceLowering = getAllowInsertSliceLowering();
+  FailureOr<LowerPackResult> res =
+      lowerPack(rewriter, target, allowInsertSliceLowering);
   if (failed(res)) {
     return mlir::emitSilenceableFailure(target->getLoc())
            << "cannot lower to pad + expand + transpose";
@@ -1191,7 +1193,9 @@ DiagnosedSilenceableFailure transform::LowerUnPackOp::applyToOne(
     transform::ApplyToEachResultList &transformResults,
     transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
-  FailureOr<LowerUnPackOpResult> res = lowerUnPack(rewriter, target);
+  bool allowExtractSliceLowering = getAllowExtractSliceLowering();
+  FailureOr<LowerUnPackOpResult> res =
+      lowerUnPack(rewriter, target, allowExtractSliceLowering);
   if (failed(res)) {
     DiagnosedSilenceableFailure diag =
         emitSilenceableError()

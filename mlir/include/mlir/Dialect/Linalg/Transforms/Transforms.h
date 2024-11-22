@@ -1121,7 +1121,8 @@ struct LowerPackResult {
 
 /// Rewrite pack as pad + reshape + transpose.
 FailureOr<LowerPackResult> lowerPack(RewriterBase &rewriter,
-                                     tensor::PackOp packOp);
+                                     tensor::PackOp packOp,
+                                     bool allowInsertSliceLowering = true);
 
 struct LowerUnPackOpResult {
   tensor::EmptyOp emptyOp;
@@ -1131,8 +1132,9 @@ struct LowerUnPackOpResult {
 };
 
 /// Rewrite pack as empty + transpose + reshape + extract_slice.
-FailureOr<LowerUnPackOpResult> lowerUnPack(RewriterBase &rewriter,
-                                           tensor::UnPackOp unPackOp);
+FailureOr<LowerUnPackOpResult>
+lowerUnPack(RewriterBase &rewriter, tensor::UnPackOp unPackOp,
+            bool allowExtractSliceLowering = true);
 
 /// Struct to hold the result of a `pack` call.
 struct PackResult {
