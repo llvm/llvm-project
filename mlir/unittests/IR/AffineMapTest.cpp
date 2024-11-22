@@ -96,9 +96,18 @@ TEST(AffineMapTest, getInversePermutation) {
   AffineMap inverseMap1 = inversePermutation(map1);
   auto resultsInv1 = inverseMap1.getResults();
   EXPECT_EQ(resultsInv1.size(), 3UL);
-  EXPECT_TRUE(resultsInv1[0].isFunctionOfDim(2));
-  EXPECT_TRUE(resultsInv1[1].isFunctionOfDim(0));
-  EXPECT_TRUE(resultsInv1[2].isFunctionOfDim(3));
+
+  // 1.1 Expect d2
+  AffineDimExpr expr = llvm::dyn_cast<AffineDimExpr>(resultsInv1[0]);
+  EXPECT_TRUE(expr && expr.getPosition() == 2);
+
+  // 1.2 Expect d0
+  expr = llvm::dyn_cast<AffineDimExpr>(resultsInv1[1]);
+  EXPECT_TRUE(expr && expr.getPosition() == 0);
+
+  // 1.3 Expect d3
+  expr = llvm::dyn_cast<AffineDimExpr>(resultsInv1[2]);
+  EXPECT_TRUE(expr && expr.getPosition() == 3);
 
   // 2.   (d0, d1, d2) -> (d1, d0 + d1, d0, d2, d1, d2, d1, d0)
   auto sum = d0 + d1;
@@ -108,7 +117,16 @@ TEST(AffineMapTest, getInversePermutation) {
   AffineMap inverseMap2 = inversePermutation(map2);
   auto resultsInv2 = inverseMap2.getResults();
   EXPECT_EQ(resultsInv2.size(), 3UL);
-  EXPECT_TRUE(resultsInv1[0].isFunctionOfDim(2));
-  EXPECT_TRUE(resultsInv1[1].isFunctionOfDim(0));
-  EXPECT_TRUE(resultsInv1[2].isFunctionOfDim(3));
+
+  // 2.1 Expect d2
+  expr = llvm::dyn_cast<AffineDimExpr>(resultsInv2[0]);
+  EXPECT_TRUE(expr && expr.getPosition() == 2);
+
+  // 2.2 Expect d0
+  expr = llvm::dyn_cast<AffineDimExpr>(resultsInv2[1]);
+  EXPECT_TRUE(expr && expr.getPosition() == 0);
+
+  // 2.3 Expect d3
+  expr = llvm::dyn_cast<AffineDimExpr>(resultsInv2[2]);
+  EXPECT_TRUE(expr && expr.getPosition() == 3);
 }
