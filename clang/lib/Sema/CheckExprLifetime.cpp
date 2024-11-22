@@ -490,7 +490,7 @@ static bool isNormalAssignmentOperator(const FunctionDecl *FD) {
       if (MD && MD->isCXXInstanceMember())
         LHST = Ctx.getLValueReferenceType(MD->getFunctionObjectParameterType());
       else
-        LHST = MD->getParamDecl(0)->getType();
+        LHST = FD->getParamDecl(0)->getType();
       if (Ctx.hasSameType(RetT, LHST))
         return true;
     }
