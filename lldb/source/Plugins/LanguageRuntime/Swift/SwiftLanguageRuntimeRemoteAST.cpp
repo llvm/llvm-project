@@ -193,7 +193,7 @@ ConstString SwiftLanguageRuntimeImpl::GetDynamicTypeName_ClassRemoteAST(
       in_value.GetTargetSP());
   if (!ts)
     return {};
-  SwiftASTContext *swift_ast_ctx = ts->GetSwiftASTContext(sc);
+  SwiftASTContextSP swift_ast_ctx = ts->GetSwiftASTContext(sc);
   if (!swift_ast_ctx)
     return {};
 
@@ -232,7 +232,7 @@ SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ExistentialRemoteAST(
   if (!stack_frame_sp)
     return {};
   auto &sc = stack_frame_sp->GetSymbolContext(eSymbolContextFunction);
-  SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext(sc);
+  SwiftASTContextSP swift_ast_ctx = scratch_ctx->GetSwiftASTContext(sc);
   if (!swift_ast_ctx)
     return {};
 
@@ -285,7 +285,7 @@ CompilerType SwiftLanguageRuntimeImpl::BindGenericTypeParametersRemoteAST(
   if (!scratch_ctx)
     return base_type;
 
-  SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext(sc);
+  SwiftASTContextSP swift_ast_ctx = scratch_ctx->GetSwiftASTContext(sc);
   if (!swift_ast_ctx)
     return base_type;
   base_type = swift_ast_ctx->ImportType(base_type, error);
@@ -407,7 +407,7 @@ CompilerType SwiftLanguageRuntimeImpl::BindGenericTypeParametersRemoteAST(
 
     target_swift_type = target_swift_type.subst(
         [this, &stack_frame,
-         &swift_ast_ctx](swift::SubstitutableType *type) -> swift::Type {
+         swift_ast_ctx](swift::SubstitutableType *type) -> swift::Type {
           StreamString type_name;
           if (!SwiftLanguageRuntime::GetAbstractTypeName(type_name, type))
             return type;
@@ -460,7 +460,7 @@ CompilerType SwiftLanguageRuntimeImpl::MetadataPromise::FulfillTypePromise(
       *error = Status::FromErrorString("couldn't get Swift scratch context");
     return CompilerType();
   }
-  SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext(sc);
+  SwiftASTContextSP swift_ast_ctx = scratch_ctx->GetSwiftASTContext(sc);
   if (!swift_ast_ctx) {
     if (error)
       *error = Status::FromErrorString("couldn't get Swift scratch context");
@@ -497,7 +497,7 @@ SwiftLanguageRuntimeImpl::GetMetadataPromise(const SymbolContext &sc,
       for_object.GetTargetSP());
   if (!scratch_ctx)
     return nullptr;
-  SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext(sc);
+  SwiftASTContextSP swift_ast_ctx = scratch_ctx->GetSwiftASTContext(sc);
   if (!swift_ast_ctx)
     return nullptr;
   if (swift_ast_ctx->HasFatalErrors())

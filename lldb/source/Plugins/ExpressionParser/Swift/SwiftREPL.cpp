@@ -567,7 +567,7 @@ SwiftASTContextForExpressions *SwiftREPL::getSwiftASTContext() {
   // our own copy of the AST and using this separate AST for completion.
   //----------------------------------------------------------------------
   if (m_swift_ast)
-    return m_swift_ast;
+    return m_swift_ast.get();
 
   auto type_system_or_err =
       m_target.GetScratchTypeSystemForLanguage(eLanguageTypeSwift, false);
@@ -585,11 +585,9 @@ SwiftASTContextForExpressions *SwiftREPL::getSwiftASTContext() {
   if (!sc_list.GetSize())
     return nullptr;
 
-  auto *target_swift_ast =
-      llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
-          swift_ts->GetSwiftASTContext(sc_list[0]));
-  m_swift_ast = target_swift_ast;
-  return m_swift_ast;
+  m_swift_ast = std::static_pointer_cast<SwiftASTContextForExpressions>(
+      swift_ts->GetSwiftASTContext(sc_list[0]));
+  return m_swift_ast.get();
 }
 
 void SwiftREPL::CompleteCode(const std::string &current_code,

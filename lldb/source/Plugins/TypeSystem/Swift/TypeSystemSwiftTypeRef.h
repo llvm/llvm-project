@@ -68,12 +68,12 @@ public:
   ~TypeSystemSwiftTypeRef();
   TypeSystemSwiftTypeRef(Module &module);
   /// Get the corresponding SwiftASTContext, and create one if necessary.
-  SwiftASTContext *GetSwiftASTContext(const SymbolContext &sc) const override;
+  SwiftASTContextSP GetSwiftASTContext(const SymbolContext &sc) const override;
   /// Convenience helpers.
   SymbolContext GetSymbolContext(ExecutionContextScope *exe_scope) const;
   SymbolContext GetSymbolContext(const ExecutionContext *exe_ctx) const;
   /// Return SwiftASTContext, iff one has already been created.
-  virtual SwiftASTContext *
+  virtual SwiftASTContextSP
   GetSwiftASTContextOrNull(const SymbolContext &sc) const;
   TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() override { return *this; }
   const TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() const override {
@@ -541,8 +541,8 @@ public:
   static TypeSystemSwiftTypeRefForExpressionsSP
   GetForTarget(lldb::TargetSP target);
 
-  SwiftASTContext *GetSwiftASTContext(const SymbolContext &sc) const override;
-  SwiftASTContext *
+  SwiftASTContextSP GetSwiftASTContext(const SymbolContext &sc) const override;
+  SwiftASTContextSP
   GetSwiftASTContextOrNull(const SymbolContext &sc) const override;
   /// This API needs to be called for a REPL or Playground before the first call
   /// to GetSwiftASTContext is being made.
