@@ -2766,7 +2766,7 @@ public:
                                            FastMathFlags FMF,
                                            TTI::TargetCostKind CostKind) {
     if (auto *FTy = dyn_cast<FixedVectorType>(Ty);
-        FTy && Opcode == Instruction::Add &&
+        FTy && IsUnsigned && Opcode == Instruction::Add &&
         FTy->getElementType() == IntegerType::getInt1Ty(Ty->getContext())) {
       // Represent vector_reduce_add(ZExt(<n x i1>)) as
       // ZExtOrTrunc(ctpop(bitcast <n x i1> to in)).
