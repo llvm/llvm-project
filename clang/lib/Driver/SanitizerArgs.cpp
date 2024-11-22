@@ -37,8 +37,8 @@ static const SanitizerMask NotAllowedWithMinimalRuntime = SanitizerKind::Vptr;
 static const SanitizerMask NotAllowedWithExecuteOnly =
     SanitizerKind::Function | SanitizerKind::KCFI;
 static const SanitizerMask NeedsUnwindTables =
-    SanitizerKind::Address | SanitizerKind::HWAddress | SanitizerKind::Type | SanitizerKind::Thread |
-    SanitizerKind::Memory | SanitizerKind::DataFlow |
+    SanitizerKind::Address | SanitizerKind::HWAddress | SanitizerKind::Type |
+    SanitizerKind::Thread | SanitizerKind::Memory | SanitizerKind::DataFlow |
     SanitizerKind::NumericalStability;
 static const SanitizerMask SupportsCoverage =
     SanitizerKind::Address | SanitizerKind::HWAddress |
