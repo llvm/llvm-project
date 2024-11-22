@@ -3317,6 +3317,10 @@ void VPFirstOrderRecurrencePHIRecipe::execute(VPTransformState &State) {
 InstructionCost
 VPFirstOrderRecurrencePHIRecipe::computeCost(ElementCount VF,
                                              VPCostContext &Ctx) const {
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  if (VF.isScalar())
+  return Ctx.TTI.getCFInstrCost(Instruction::PHI, CostKind);
+
   if (VF.isScalable() && VF.getKnownMinValue() == 1)
     return InstructionCost::getInvalid();
 
@@ -3325,7 +3329,6 @@ VPFirstOrderRecurrencePHIRecipe::computeCost(ElementCount VF,
   Type *VectorTy =
       ToVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
 
-  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   return Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
                                 cast<VectorType>(VectorTy), Mask, CostKind,
                                 VF.getKnownMinValue() - 1);
