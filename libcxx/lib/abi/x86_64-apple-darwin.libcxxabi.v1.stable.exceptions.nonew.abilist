@@ -1594,8 +1594,6 @@
 {'is_defined': True, 'name': '__ZNSt3__13pmr20null_memory_resourceEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__13pmr20set_default_resourceEPNS0_15memory_resourceE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__13pmr25monotonic_buffer_resource11do_allocateEmm', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__13pmr25monotonic_buffer_resource14__chunk_footer25__try_allocate_from_chunkEmm', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__13pmr25monotonic_buffer_resource20__initial_descriptor25__try_allocate_from_chunkEmm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__13pmr28unsynchronized_pool_resource11do_allocateEmm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__13pmr28unsynchronized_pool_resource12__adhoc_pool13__do_allocateEPNS0_15memory_resourceEmm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__13pmr28unsynchronized_pool_resource12__adhoc_pool13__release_ptrEPNS0_15memory_resourceE', 'type': 'FUNC'}
