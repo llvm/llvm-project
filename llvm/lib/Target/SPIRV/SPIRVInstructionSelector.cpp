@@ -108,8 +108,8 @@ private:
                            unsigned Opcode) const;
 
   bool selectFirstBitSet64(Register ResVReg, const SPIRVType *ResType,
-                           MachineInstr &I, unsigned ExtendOpcode,
-                           unsigned BitSetOpcode, bool SwapPrimarySide) const;
+                           MachineInstr &I, unsigned BitSetOpcode,
+                           bool SwapPrimarySide) const;
 
   bool selectGlobalValue(Register ResVReg, MachineInstr &I,
                          const MachineInstr *Init = nullptr) const;
@@ -3171,9 +3171,11 @@ bool SPIRVInstructionSelector::selectFirstBitSet32(Register ResVReg,
       .constrainAllUses(TII, TRI, RBI);
 }
 
-bool SPIRVInstructionSelector::selectFirstBitSet64(
-    Register ResVReg, const SPIRVType *ResType, MachineInstr &I,
-    unsigned ExtendOpcode, unsigned BitSetOpcode, bool SwapPrimarySide) const {
+bool SPIRVInstructionSelector::selectFirstBitSet64(Register ResVReg,
+                                                   const SPIRVType *ResType,
+                                                   MachineInstr &I,
+                                                   unsigned BitSetOpcode,
+                                                   bool SwapPrimarySide) const {
   Register OpReg = I.getOperand(2).getReg();
 
   // 1. Split int64 into 2 pieces using a bitcast
@@ -3188,8 +3190,8 @@ bool SPIRVInstructionSelector::selectFirstBitSet64(
       selectOpWithSrcs(BitcastReg, PostCastType, I, {OpReg}, SPIRV::OpBitcast);
 
   // 2. Find the first set bit from the primary side for all the pieces in #1
-  Register FBPReg = MRI->createVirtualRegister(GR.getRegClass(PostCastType));
-  Result = Result && selectFirstBitSet32(FBPReg, PostCastType, I, BitcastReg,
+  Register FBSReg = MRI->createVirtualRegister(GR.getRegClass(PostCastType));
+  Result = Result && selectFirstBitSet32(FBSReg, PostCastType, I, BitcastReg,
                                          BitSetOpcode);
 
   // 3. Split result vector into high bits and low bits
@@ -3202,12 +3204,12 @@ bool SPIRVInstructionSelector::selectFirstBitSet64(
     // if scalar do a vector extract
     Result = Result &&
              selectOpWithSrcs(HighReg, ResType, I,
-                              {FBPReg, GR.getOrCreateConstInt(0, I, ResType,
+                              {FBSReg, GR.getOrCreateConstInt(0, I, ResType,
                                                               TII, ZeroAsNull)},
                               SPIRV::OpVectorExtractDynamic);
     Result = Result &&
              selectOpWithSrcs(LowReg, ResType, I,
-                              {FBPReg, GR.getOrCreateConstInt(1, I, ResType,
+                              {FBSReg, GR.getOrCreateConstInt(1, I, ResType,
                                                               TII, ZeroAsNull)},
                               SPIRV::OpVectorExtractDynamic);
   } else {
@@ -3216,11 +3218,11 @@ bool SPIRVInstructionSelector::selectFirstBitSet64(
                        TII.get(SPIRV::OpVectorShuffle))
                    .addDef(HighReg)
                    .addUse(GR.getSPIRVTypeID(ResType))
-                   .addUse(FBPReg)
+                   .addUse(FBSReg)
                    // Per the spec, repeat the vector if only one vec is needed
-                   .addUse(FBPReg);
+                   .addUse(FBSReg);
 
-    // high bits are stored in even indexes. Extract them from FBLReg
+    // high bits are stored in even indexes. Extract them from FBSReg
     for (unsigned J = 0; J < ComponentCount * 2; J += 2) {
       MIB.addImm(J);
     }
@@ -3230,11 +3232,11 @@ bool SPIRVInstructionSelector::selectFirstBitSet64(
                   TII.get(SPIRV::OpVectorShuffle))
               .addDef(LowReg)
               .addUse(GR.getSPIRVTypeID(ResType))
-              .addUse(FBPReg)
+              .addUse(FBSReg)
               // Per the spec, repeat the vector if only one vec is needed
-              .addUse(FBPReg);
+              .addUse(FBSReg);
 
-    // low bits are stored in odd indexes. Extract them from FBLReg
+    // low bits are stored in odd indexes. Extract them from FBSReg
     for (unsigned J = 1; J < ComponentCount * 2; J += 2) {
       MIB.addImm(J);
     }
@@ -3322,7 +3324,7 @@ bool SPIRVInstructionSelector::selectFirstBitHigh(Register ResVReg,
   case 32:
     return selectFirstBitSet32(ResVReg, ResType, I, OpReg, BitSetOpcode);
   case 64:
-    return selectFirstBitSet64(ResVReg, ResType, I, ExtendOpcode, BitSetOpcode,
+    return selectFirstBitSet64(ResVReg, ResType, I, BitSetOpcode,
                                /*SwapPrimarySide=*/false);
   default:
     report_fatal_error(
@@ -3348,7 +3350,7 @@ bool SPIRVInstructionSelector::selectFirstBitLow(Register ResVReg,
   case 32:
     return selectFirstBitSet32(ResVReg, ResType, I, OpReg, BitSetOpcode);
   case 64:
-    return selectFirstBitSet64(ResVReg, ResType, I, ExtendOpcode, BitSetOpcode,
+    return selectFirstBitSet64(ResVReg, ResType, I, BitSetOpcode,
                                /*SwapPrimarySide=*/true);
   default:
     report_fatal_error("spv_firstbitlow only supports 16,32,64 bits.");
