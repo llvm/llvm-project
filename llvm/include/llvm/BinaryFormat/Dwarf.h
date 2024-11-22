@@ -481,10 +481,10 @@ toDW_LNAME(SourceLanguage language) {
     return {{DW_LNAME_Move, 0}};
   case DW_LANG_Hylo:
     return {{DW_LNAME_Hylo, 0}};
-  case DW_LANG_BORLAND_Delphi:
-  case DW_LANG_CPP_for_OpenCL:
   case DW_LANG_Metal:
     return {{DW_LNAME_Metal, 0}};
+  case DW_LANG_BORLAND_Delphi:
+  case DW_LANG_CPP_for_OpenCL:
   case DW_LANG_lo_user:
   case DW_LANG_hi_user:
     return {};
