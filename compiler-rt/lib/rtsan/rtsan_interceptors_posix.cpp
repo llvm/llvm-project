@@ -439,6 +439,11 @@ INTERCEPTOR(int, nanosleep, const struct timespec *rqtp,
   return REAL(nanosleep)(rqtp, rmtp);
 }
 
+INTERCEPTOR(int, sched_yield, void) {
+  __rtsan_notify_intercepted_call("sched_yield");
+  return REAL(sched_yield)();
+}
+
 // Memory
 
 INTERCEPTOR(void *, calloc, SIZE_T num, SIZE_T size) {
@@ -746,16 +751,6 @@ INTERCEPTOR(int, mkfifo, const char *pathname, mode_t mode) {
   return REAL(mkfifo)(pathname, mode);
 }
 
-// see comment above about -Wunguarded-availability-new
-// and why we disable it here
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunguarded-availability-new"
-INTERCEPTOR(int, mkfifoat, int dirfd, const char *pathname, mode_t mode) {
-  __rtsan_notify_intercepted_call("mkfifoat");
-  return REAL(mkfifoat)(dirfd, pathname, mode);
-}
-#pragma clang diagnostic pop
-
 // Preinit
 void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(calloc);
@@ -829,6 +824,7 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(sleep);
   INTERCEPT_FUNCTION(usleep);
   INTERCEPT_FUNCTION(nanosleep);
+  INTERCEPT_FUNCTION(sched_yield);
 
   INTERCEPT_FUNCTION(accept);
   INTERCEPT_FUNCTION(bind);
@@ -859,7 +855,6 @@ void __rtsan::InitializeInterceptors() {
 
   INTERCEPT_FUNCTION(pipe);
   INTERCEPT_FUNCTION(mkfifo);
-  INTERCEPT_FUNCTION(mkfifoat);
 }
 
 #endif // SANITIZER_POSIX

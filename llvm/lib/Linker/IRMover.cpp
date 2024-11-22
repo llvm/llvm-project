@@ -1430,11 +1430,15 @@ Error IRLinker::linkModuleFlagsMetadata() {
       llvm_unreachable("not possible");
     case Module::Error: {
       // Emit an error if the values differ.
-      if (SrcOp->getOperand(2) != DstOp->getOperand(2))
-        return stringErr("linking module flags '" + ID->getString() +
-                         "': IDs have conflicting values in '" +
-                         SrcM->getModuleIdentifier() + "' and '" +
-                         DstM.getModuleIdentifier() + "'");
+      if (SrcOp->getOperand(2) != DstOp->getOperand(2)) {
+        std::string Str;
+        raw_string_ostream(Str)
+            << "linking module flags '" << ID->getString()
+            << "': IDs have conflicting values: '" << *SrcOp->getOperand(2)
+            << "' from " << SrcM->getModuleIdentifier() << ", and '"
+            << *DstOp->getOperand(2) << "' from " + DstM.getModuleIdentifier();
+        return stringErr(Str);
+      }
       continue;
     }
     case Module::Warning: {

@@ -84,7 +84,7 @@ define void @many_deps(ptr noalias %buckets, ptr %array, ptr %indices, ptr %othe
 ; NORMAL_DEP_LIMIT-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[GEP_INDICES]], align 4, !alias.scope [[META0:![0-9]+]]
 ; NORMAL_DEP_LIMIT-NEXT:    [[TMP11:%.*]] = zext <vscale x 4 x i32> [[WIDE_LOAD]] to <vscale x 4 x i64>
 ; NORMAL_DEP_LIMIT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], <vscale x 4 x i64> [[TMP11]]
-; NORMAL_DEP_LIMIT-NEXT:    call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> [[TMP12]], i32 1, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
+; NORMAL_DEP_LIMIT-NEXT:    call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> [[TMP12]], i32 1, <vscale x 4 x i1> splat (i1 true))
 ; NORMAL_DEP_LIMIT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[ARRAY]], i64 [[IV]]
 ; NORMAL_DEP_LIMIT-NEXT:    store <vscale x 4 x i32> [[VEC_IND]], ptr [[TMP13]], align 4, !alias.scope [[META3:![0-9]+]], !noalias [[META5:![0-9]+]]
 ; NORMAL_DEP_LIMIT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[OTHER]], i64 [[IV]]

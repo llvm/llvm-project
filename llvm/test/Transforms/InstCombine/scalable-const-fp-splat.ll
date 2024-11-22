@@ -4,7 +4,7 @@
 define <vscale x 2 x float> @shrink_splat_scalable_extend(<vscale x 2 x float> %a) {
 ; CHECK-LABEL: define <vscale x 2 x float> @shrink_splat_scalable_extend(
 ; CHECK-SAME: <vscale x 2 x float> [[A:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd <vscale x 2 x float> [[A]], shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> undef, float -1.000000e+00, i32 0), <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <vscale x 2 x float> [[A]], splat (float -1.000000e+00)
 ; CHECK-NEXT:    ret <vscale x 2 x float> [[TMP1]]
 ;
   %1 = shufflevector <vscale x 2 x float> insertelement (<vscale x 2 x float> undef, float -1.000000e+00, i32 0), <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
